@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="TempestTests"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="C:/Qt/Tools/mingw530_32/bin/mingw32-make.exe -f &quot;D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="C:/Qt/Tools/mingw530_32/bin/mingw32-make.exe -f &quot;D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="C:/Qt/Tools/mingw530_32/bin/mingw32-make.exe -f &quot;D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="C:/Qt/Tools/mingw530_32/bin/mingw32-make.exe -f &quot;D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="TempestTests">
+				<Option output="D:/Programming/MoltenTempest/MoltenTempest/Tests/bin/TempestTests.exe" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="..//bin"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DGTEST_LANGUAGE_CXX11"/>
+					<Add directory="D:/Programming/MoltenTempest/MoltenTempest/Tests/tests/../../Engine/include"/>
+					<Add directory="D:/Programming/MoltenTempest/MoltenTempest/Tests/googletest/googletest"/>
+					<Add directory="D:/Programming/MoltenTempest/MoltenTempest/Tests/googletest/googletest/include"/>
+					<Add directory="D:/Programming/MoltenTempest/MoltenTempest/Tests/googletest/googlemock"/>
+					<Add directory="D:/Programming/MoltenTempest/MoltenTempest/Tests/googletest/googlemock/include"/>
+					<Add directory="C:/Qt/Tools/mingw530_32/bin/../lib/gcc/i686-w64-mingw32/5.3.0/include"/>
+					<Add directory="C:/Qt/Tools/mingw530_32/bin/../lib/gcc/i686-w64-mingw32/5.3.0/include-fixed"/>
+					<Add directory="C:/Qt/Tools/mingw530_32/bin/../lib/gcc/i686-w64-mingw32/5.3.0/../../../../i686-w64-mingw32/include"/>
+					<Add directory="C:/Qt/Tools/mingw530_32/lib/gcc/../../i686-w64-mingw32/include/c++"/>
+					<Add directory="C:/Qt/Tools/mingw530_32/lib/gcc/../../i686-w64-mingw32/include/c++/i686-w64-mingw32"/>
+					<Add directory="C:/Qt/Tools/mingw530_32/lib/gcc/../../i686-w64-mingw32/include/c++/backward"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="C:/Qt/Tools/mingw530_32/bin/mingw32-make.exe -f &quot;D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/Makefile&quot;  VERBOSE=1 TempestTests"/>
+					<CompileFile command="C:/Qt/Tools/mingw530_32/bin/mingw32-make.exe -f &quot;D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="C:/Qt/Tools/mingw530_32/bin/mingw32-make.exe -f &quot;D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="C:/Qt/Tools/mingw530_32/bin/mingw32-make.exe -f &quot;D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="TempestTests/fast">
+				<Option output="D:/Programming/MoltenTempest/MoltenTempest/Tests/bin/TempestTests.exe" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="..//bin"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DGTEST_LANGUAGE_CXX11"/>
+					<Add directory="D:/Programming/MoltenTempest/MoltenTempest/Tests/tests/../../Engine/include"/>
+					<Add directory="D:/Programming/MoltenTempest/MoltenTempest/Tests/googletest/googletest"/>
+					<Add directory="D:/Programming/MoltenTempest/MoltenTempest/Tests/googletest/googletest/include"/>
+					<Add directory="D:/Programming/MoltenTempest/MoltenTempest/Tests/googletest/googlemock"/>
+					<Add directory="D:/Programming/MoltenTempest/MoltenTempest/Tests/googletest/googlemock/include"/>
+					<Add directory="C:/Qt/Tools/mingw530_32/bin/../lib/gcc/i686-w64-mingw32/5.3.0/include"/>
+					<Add directory="C:/Qt/Tools/mingw530_32/bin/../lib/gcc/i686-w64-mingw32/5.3.0/include-fixed"/>
+					<Add directory="C:/Qt/Tools/mingw530_32/bin/../lib/gcc/i686-w64-mingw32/5.3.0/../../../../i686-w64-mingw32/include"/>
+					<Add directory="C:/Qt/Tools/mingw530_32/lib/gcc/../../i686-w64-mingw32/include/c++"/>
+					<Add directory="C:/Qt/Tools/mingw530_32/lib/gcc/../../i686-w64-mingw32/include/c++/i686-w64-mingw32"/>
+					<Add directory="C:/Qt/Tools/mingw530_32/lib/gcc/../../i686-w64-mingw32/include/c++/backward"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="C:/Qt/Tools/mingw530_32/bin/mingw32-make.exe -f &quot;D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/Makefile&quot;  VERBOSE=1 TempestTests/fast"/>
+					<CompileFile command="C:/Qt/Tools/mingw530_32/bin/mingw32-make.exe -f &quot;D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="C:/Qt/Tools/mingw530_32/bin/mingw32-make.exe -f &quot;D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="C:/Qt/Tools/mingw530_32/bin/mingw32-make.exe -f &quot;D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="C:/Qt/Tools/mingw530_32/bin/mingw32-make.exe -f &quot;D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="C:/Qt/Tools/mingw530_32/bin/mingw32-make.exe -f &quot;D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="C:/Qt/Tools/mingw530_32/bin/mingw32-make.exe -f &quot;D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="C:/Qt/Tools/mingw530_32/bin/mingw32-make.exe -f &quot;D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="C:/Qt/Tools/mingw530_32/bin/mingw32-make.exe -f &quot;D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="C:/Qt/Tools/mingw530_32/bin/mingw32-make.exe -f &quot;D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="C:/Qt/Tools/mingw530_32/bin/mingw32-make.exe -f &quot;D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="C:/Qt/Tools/mingw530_32/bin/mingw32-make.exe -f &quot;D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="D:/Programming/MoltenTempest/MoltenTempest/Tests/googletest/googlemock/src/gmock-all.cc">
+			<Option target="TempestTests"/>
+		</Unit>
+		<Unit filename="D:/Programming/MoltenTempest/MoltenTempest/Tests/googletest/googletest/src/gtest-all.cc">
+			<Option target="TempestTests"/>
+		</Unit>
+		<Unit filename="D:/Programming/MoltenTempest/MoltenTempest/Tests/tests/allocator_test.cpp">
+			<Option target="TempestTests"/>
+		</Unit>
+		<Unit filename="D:/Programming/MoltenTempest/MoltenTempest/Tests/tests/main.cpp">
+			<Option target="TempestTests"/>
+		</Unit>
+		<Unit filename="D:/Programming/MoltenTempest/MoltenTempest/Tests/tests/utils_test.cpp">
+			<Option target="TempestTests"/>
+		</Unit>
+		<Unit filename="D:/Programming/MoltenTempest/MoltenTempest/Tests/tests/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>

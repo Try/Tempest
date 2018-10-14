@@ -1,0 +1,3 @@
+D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/CMakeFiles/TempestTests.dir
+D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/CMakeFiles/edit_cache.dir
+D:/Programming/MoltenTempest/MoltenTempest/Tests/build-tests/CMakeFiles/rebuild_cache.dir
