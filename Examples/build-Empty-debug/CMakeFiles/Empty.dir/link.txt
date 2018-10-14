@@ -1,3 +1,0 @@
-"C:\Program Files\CMake\bin\cmake.exe" -E remove -f CMakeFiles\Empty.dir/objects.a
-C:\Qt\Tools\mingw530_32\bin\ar.exe cr CMakeFiles\Empty.dir/objects.a @CMakeFiles\Empty.dir\objects1.rsp
-C:\Qt\Tools\mingw530_32\bin\g++.exe -g   -Wl,--whole-archive CMakeFiles\Empty.dir/objects.a -Wl,--no-whole-archive  -o D:\Programming\MoltenTempest\MoltenTempest\bin\Empty.exe -Wl,--out-implib,D:\Programming\MoltenTempest\lib\libEmpty.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\Empty.dir\linklibs.rsp

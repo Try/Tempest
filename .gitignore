@@ -1,8 +1,8 @@
 # Prerequisites
 *.d
 
-build-*-debug/
-build-*-release/
+*build-*-debug/
+*build-*-release/
 
 # Compiled Object files
 *.slo
