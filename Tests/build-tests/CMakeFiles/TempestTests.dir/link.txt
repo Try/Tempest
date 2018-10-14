@@ -1,3 +1,0 @@
-"C:\Program Files\CMake\bin\cmake.exe" -E remove -f CMakeFiles\TempestTests.dir/objects.a
-C:\Qt\Tools\mingw530_32\bin\ar.exe cr CMakeFiles\TempestTests.dir/objects.a @CMakeFiles\TempestTests.dir\objects1.rsp
-C:\Qt\Tools\mingw530_32\bin\g++.exe -g   -Wl,--whole-archive CMakeFiles\TempestTests.dir/objects.a -Wl,--no-whole-archive  -o D:\Programming\MoltenTempest\MoltenTempest\Tests\bin\TempestTests.exe -Wl,--out-implib,D:\Programming\MoltenTempest\MoltenTempest\Tests\lib\libTempestTests.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\TempestTests.dir\linklibs.rsp
