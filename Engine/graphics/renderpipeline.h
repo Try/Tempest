@@ -7,6 +7,7 @@ namespace Tempest {
 
 class Device;
 class CommandBuffer;
+class UniformsLayout;
 
 class RenderPipeline {
   public:

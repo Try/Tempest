@@ -11,6 +11,7 @@ class RenderPass;
 class FrameBuffer;
 class RenderPipeline;
 class VideoBuffer;
+class Uniforms;
 
 template<class T>
 class VertexBuffer;
@@ -30,7 +31,8 @@ class CommandBuffer {
     void beginRenderPass(const FrameBuffer& fbo, const RenderPass& p, uint32_t width, uint32_t height);
     void endRenderPass();
 
-    void setPipeline(Tempest::RenderPipeline& p);
+    void setPipeline(const Tempest::RenderPipeline& p);
+    void setUniforms(const Tempest::RenderPipeline& p,const Tempest::Uniforms& ubo);
 
     template<class T>
     void setVbo(const VertexBuffer<T>& vbo){ setVbo(vbo.impl); }

@@ -5,6 +5,8 @@
 #include <initializer_list>
 
 namespace Tempest {
+  class UniformsLayout;
+
   class AbstractGraphicsApi {
     protected:
       AbstractGraphicsApi() =default;
@@ -25,6 +27,10 @@ namespace Tempest {
       struct Shader       {};
       struct Uniforms     {};
       struct Buffer       {};
+      struct Desc         {
+        virtual ~Desc()=default;
+        virtual void bind(AbstractGraphicsApi::Buffer* memory, size_t size)=0;
+        };
       struct CommandBuffer{
         virtual ~CommandBuffer()=default;
         virtual void begin()=0;
@@ -36,6 +42,7 @@ namespace Tempest {
 
         virtual void clear(Image& img,float r, float g, float b, float a)=0;
         virtual void setPipeline(Pipeline& p)=0;
+        virtual void setUniforms(Pipeline& p,Desc& u)=0;
         virtual void setVbo(const Buffer& b)=0;
         virtual void draw(size_t vertexCount)=0;
         };
@@ -61,6 +68,7 @@ namespace Tempest {
       virtual void       destroy(Fbo* pass)=0;
 
       virtual Pipeline*  createPipeline(Device* d,Pass* pass,uint32_t width, uint32_t height,
+                                        const UniformsLayout& ulay,
                                         const std::initializer_list<Shader*>& sh)=0;
       virtual void       destroy(Pipeline* pass)=0;
 
@@ -81,6 +89,9 @@ namespace Tempest {
 
       virtual Buffer*    createBuffer(Device* d,const void *mem,size_t size,MemUsage usage)=0;
       virtual void       destroy(Buffer* cmd)=0;
+
+      virtual Desc*      createDescriptors(Device* d,Pipeline* p,Buffer* b,size_t size, size_t count)=0;
+      virtual void       destroy(Desc* cmd)=0;
 
       virtual uint32_t   nextImage(Device *d,Swapchain* sw,Semaphore* onReady)=0;
       virtual Image*     getImage(Device *d,Swapchain* sw,uint32_t id)=0;

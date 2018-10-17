@@ -11,6 +11,8 @@
 #include "vulkan/vsemaphore.h"
 #include "vulkan/vcommandpool.h"
 #include "vulkan/vcommandbuffer.h"
+#include "vulkan/vdescriptorarray.h"
+
 #include "deviceallocator.h"
 
 #include <vulkan/vulkan.hpp>
@@ -85,13 +87,14 @@ void VulkanApi::destroy(AbstractGraphicsApi::Fbo *pass) {
 AbstractGraphicsApi::Pipeline *VulkanApi::createPipeline(AbstractGraphicsApi::Device *d,
                                                          AbstractGraphicsApi::Pass *p,
                                                          uint32_t width, uint32_t height,
+                                                         const UniformsLayout &ulay,
                                                          const std::initializer_list<AbstractGraphicsApi::Shader*> &sh) {
   Shader*const*        arr=sh.begin();
   Detail::VDevice*     dx =reinterpret_cast<Detail::VDevice*>(d);
   Detail::VRenderPass* px =reinterpret_cast<Detail::VRenderPass*>(p);
   Detail::VShader*     vs =reinterpret_cast<Detail::VShader*>(arr[0]);
   Detail::VShader*     fs =reinterpret_cast<Detail::VShader*>(arr[1]);
-  return new Detail::VPipeline(*dx,*px,width,height,*vs,*fs);
+  return new Detail::VPipeline(*dx,*px,width,height,ulay,*vs,*fs);
   }
 
 void VulkanApi::destroy(AbstractGraphicsApi::Pipeline *pass) {
@@ -150,6 +153,26 @@ AbstractGraphicsApi::Buffer *VulkanApi::createBuffer(AbstractGraphicsApi::Device
 void VulkanApi::destroy(AbstractGraphicsApi::Buffer *cmd) {
   Detail::VBuffer* cx=reinterpret_cast<Detail::VBuffer*>(cmd);
   delete cx;
+  }
+
+AbstractGraphicsApi::Desc *VulkanApi::createDescriptors(AbstractGraphicsApi::Device*   d,
+                                                        AbstractGraphicsApi::Pipeline* p,
+                                                        AbstractGraphicsApi::Buffer*   b,
+                                                        size_t size,
+                                                        size_t count) {
+  Detail::VDevice*   dx = reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VPipeline* px = reinterpret_cast<Detail::VPipeline*>(p);
+  Detail::VBuffer*   bx = reinterpret_cast<Detail::VBuffer*>(b);
+
+  auto ret = Detail::VDescriptorArray::alloc(dx->device,px->uniformsLayout,count);
+  ret->bind(bx,size);
+
+  return ret;
+  }
+
+void VulkanApi::destroy(AbstractGraphicsApi::Desc *d) {
+  Detail::VDescriptorArray* dx = reinterpret_cast<Detail::VDescriptorArray*>(d);
+  Detail::VDescriptorArray::free(dx);
   }
 
 AbstractGraphicsApi::CommandBuffer *VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device *d,CmdPool *p) {

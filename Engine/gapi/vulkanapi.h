@@ -26,6 +26,7 @@ class VulkanApi : public AbstractGraphicsApi {
     void       destroy(Fbo* pass) override;
 
     Pipeline*  createPipeline(Device* d,Pass* pass,uint32_t width, uint32_t height,
+                              const UniformsLayout& ulay,
                               const std::initializer_list<Shader*>& frag) override;
     void       destroy       (Pipeline* pass) override;
 
@@ -43,6 +44,9 @@ class VulkanApi : public AbstractGraphicsApi {
 
     Buffer*    createBuffer(Device* d,const void *mem,size_t size,MemUsage usage) override;
     void       destroy(Buffer* cmd) override;
+
+    Desc*      createDescriptors(Device* d, Pipeline* p, Buffer* b, size_t size, size_t count) override;
+    void       destroy(Desc* d) override;
 
     CommandBuffer* createCommandBuffer(Device* d,CmdPool* pool) override;
     void           destroy            (CommandBuffer* cmd) override;

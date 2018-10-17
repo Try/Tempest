@@ -22,5 +22,5 @@ int Window::h() const {
 void Window::render() {
   }
 
-void Window::resizEvent(uint32_t /*w*/, uint32_t /*h*/) {
+void Window::resizeEvent(uint32_t /*w*/, uint32_t /*h*/) {
   }

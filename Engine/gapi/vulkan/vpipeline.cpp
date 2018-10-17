@@ -6,13 +6,102 @@
 
 #include <algorithm>
 
+#include <Tempest/UniformsLayout>
+
 using namespace Tempest::Detail;
 
 VPipeline::VPipeline(){
   }
 
-VPipeline::VPipeline(VDevice& device,VRenderPass& pass,uint32_t width,uint32_t height,VShader& vert,VShader& frag)
+VPipeline::VPipeline(VDevice& device,
+                     VRenderPass& pass, uint32_t width, uint32_t height,
+                     const UniformsLayout &ulay,
+                     VShader& vert, VShader& frag)
   : device(device.device) {
+  try {
+    initUboLayout(ulay);
+    initLayout();
+    initGraphicsPipeline(pass,width,height,vert,frag);
+    }
+  catch(...) {
+    cleanup();
+    throw;
+    }
+  }
+
+VPipeline::VPipeline(VPipeline &&other) {
+  std::swap(device,          other.device);
+  std::swap(uniformsLayout,  other.uniformsLayout);
+  std::swap(graphicsPipeline,other.graphicsPipeline);
+  std::swap(pipelineLayout,  other.pipelineLayout);
+  }
+
+VPipeline::~VPipeline() {
+  cleanup();
+  }
+
+void VPipeline::operator=(VPipeline &&other) {
+  std::swap(device,          other.device);
+  std::swap(uniformsLayout,  other.uniformsLayout);
+  std::swap(graphicsPipeline,other.graphicsPipeline);
+  std::swap(pipelineLayout,  other.pipelineLayout);
+  }
+
+void VPipeline::cleanup() {
+  if(pipelineLayout==VK_NULL_HANDLE)
+    return;
+  vkDeviceWaitIdle(device);
+  if(uniformsLayout!=VK_NULL_HANDLE)
+    vkDestroyDescriptorSetLayout(device,uniformsLayout,nullptr);
+  if(pipelineLayout!=VK_NULL_HANDLE)
+    vkDestroyPipelineLayout(device,pipelineLayout,nullptr);
+  if(graphicsPipeline!=VK_NULL_HANDLE)
+    vkDestroyPipeline(device,graphicsPipeline,nullptr);
+  }
+
+void VPipeline::initLayout() {
+  VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
+  pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+  pipelineLayoutInfo.pSetLayouts            = &uniformsLayout;
+  pipelineLayoutInfo.setLayoutCount         = 1;
+  pipelineLayoutInfo.pushConstantRangeCount = 0;
+
+  if(vkCreatePipelineLayout(device,&pipelineLayoutInfo,nullptr,&pipelineLayout)!=VK_SUCCESS)
+    throw std::runtime_error("failed to create pipeline layout!");
+  }
+
+void VPipeline::initUboLayout(const UniformsLayout &ulay) {
+  static const VkDescriptorType types[]={
+    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+    };
+
+  std::vector<VkDescriptorSetLayoutBinding> bind(ulay.size());
+  for(size_t i=0;i<bind.size();++i){
+    auto& b=bind[i];
+    auto& e=ulay[i];
+
+    b.binding         = e.layout;
+    b.descriptorCount = 1;
+    b.descriptorType  = types[e.cls];
+
+    b.stageFlags      = 0;
+    if(e.stage&UniformsLayout::Vertex)
+      b.stageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
+    if(e.stage&UniformsLayout::Fragment)
+      b.stageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+    }
+
+  VkDescriptorSetLayoutCreateInfo info={};
+  info.sType       =VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+  info.bindingCount=bind.size();
+  info.pBindings   =bind.data();
+
+  if(vkCreateDescriptorSetLayout(device,&info,nullptr,&uniformsLayout)!=VK_SUCCESS)
+    throw std::runtime_error("failed to create descriptor-set layout!");
+  }
+
+void VPipeline::initGraphicsPipeline(VRenderPass &pass, uint32_t width, uint32_t height, VShader &vert, VShader &frag) {
   VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
   vertShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
   vertShaderStageInfo.stage  = VK_SHADER_STAGE_VERTEX_BIT;
@@ -113,14 +202,6 @@ VPipeline::VPipeline(VDevice& device,VRenderPass& pass,uint32_t width,uint32_t h
   colorBlending.blendConstants[2] = 0.0f;
   colorBlending.blendConstants[3] = 0.0f;
 
-  VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-  pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-  pipelineLayoutInfo.setLayoutCount         = 0;
-  pipelineLayoutInfo.pushConstantRangeCount = 0;
-
-  if(vkCreatePipelineLayout(device.device,&pipelineLayoutInfo,nullptr,&pipelineLayout)!=VK_SUCCESS)
-    throw std::runtime_error("failed to create pipeline layout!");
-
   VkGraphicsPipelineCreateInfo pipelineInfo = {};
   pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
   pipelineInfo.stageCount          = 2;
@@ -136,26 +217,6 @@ VPipeline::VPipeline(VDevice& device,VRenderPass& pass,uint32_t width,uint32_t h
   pipelineInfo.subpass             = 0;
   pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
 
-  if(vkCreateGraphicsPipelines(device.device,VK_NULL_HANDLE,1,&pipelineInfo,nullptr,&graphicsPipeline)!=VK_SUCCESS)
+  if(vkCreateGraphicsPipelines(device,VK_NULL_HANDLE,1,&pipelineInfo,nullptr,&graphicsPipeline)!=VK_SUCCESS)
     throw std::runtime_error("failed to create graphics pipeline!");
-  }
-
-VPipeline::VPipeline(VPipeline &&other) {
-  std::swap(device,other.device);
-  std::swap(graphicsPipeline,other.graphicsPipeline);
-  std::swap(pipelineLayout,  other.pipelineLayout);
-  }
-
-VPipeline::~VPipeline() {
-  if(pipelineLayout==VK_NULL_HANDLE)
-    return;
-  vkDeviceWaitIdle(device);
-  vkDestroyPipeline      (device,graphicsPipeline,nullptr);
-  vkDestroyPipelineLayout(device,pipelineLayout,nullptr);
-  }
-
-void VPipeline::operator=(VPipeline &&other) {
-  std::swap(device,other.device);
-  std::swap(graphicsPipeline,other.graphicsPipeline);
-  std::swap(pipelineLayout,  other.pipelineLayout);
   }

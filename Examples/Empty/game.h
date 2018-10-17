@@ -7,6 +7,7 @@
 #include <Tempest/VulkanApi>
 #include <Tempest/Device>
 #include <Tempest/VertexBuffer>
+#include <Tempest/UniformsLayout>
 #include <vector>
 
 class Game : public Tempest::Window {
@@ -16,8 +17,8 @@ class Game : public Tempest::Window {
     Game(Tempest::VulkanApi& api);
 
   private:
-    void initSwapchain();
-    void resizEvent(uint32_t /*w*/,uint32_t /*h*/);
+    void initSwapchain(const Tempest::UniformsLayout &ulay);
+    void resizeEvent(uint32_t /*w*/,uint32_t /*h*/);
     void render();
 
     uint32_t width() const;
@@ -38,7 +39,9 @@ class Game : public Tempest::Window {
     Tempest::RenderPipeline             pipeline;
 
     Tempest::VertexBuffer<Point>        vbo;
-    Tempest::Uniforms                   ubo;
+
+    Tempest::UniformsLayout             ulay;
+    std::vector<Tempest::Uniforms>      ubo;
 
     std::vector<Tempest::Semaphore>     renderFinishedSemaphores;
     std::vector<Tempest::Semaphore>     imageAvailableSemaphores;

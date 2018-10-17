@@ -35,8 +35,12 @@ void CommandBuffer::endRenderPass() {
   impl.handler->endRenderPass();
   }
 
-void CommandBuffer::setPipeline(RenderPipeline &p) {
+void CommandBuffer::setPipeline(const RenderPipeline &p) {
   impl.handler->setPipeline(*p.impl.handler);
+  }
+
+void CommandBuffer::setUniforms(const Tempest::RenderPipeline& p,const Uniforms &ubo) {
+  impl.handler->setUniforms(*p.impl.handler,*ubo.desc.handler);
   }
 
 void CommandBuffer::draw(size_t size) {

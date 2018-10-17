@@ -32,15 +32,15 @@ class DeviceAllocator {
       size_t offset=0,size=0;
       };
 
-    Allocation alloc(size_t size, uint32_t typeBits){
+    Allocation alloc(size_t size, size_t align, uint32_t typeBits) {
       for(auto& i:pages){
         if(i.type==typeBits && i.allocated+size<=i.allSize){
-          auto ret=i.alloc(size,device);
+          auto ret=i.alloc(size,align,device);
           if(ret.page!=nullptr)
             return ret;
           }
         }
-      return rawAlloc(size,typeBits);
+      return rawAlloc(size,align,typeBits);
       }
 
     void free(const Allocation& a){
@@ -52,14 +52,14 @@ class DeviceAllocator {
       }
 
   private:
-    Allocation rawAlloc(size_t size, uint32_t typeBits){
+    Allocation rawAlloc(size_t size, size_t align, uint32_t typeBits){
       Page pg(std::max<uint32_t>(DEFAULT_PAGE_SIZE,size));
       pg.memory = device.alloc(pg.allSize,typeBits);
       pg.type   = typeBits;
       if(pg.memory==null)
         throw std::bad_alloc();
       pages.push_front(std::move(pg));
-      return pages.front().alloc(size,device);
+      return pages.front().alloc(size,align,device);
       }
 
     void       freeDevMemory(Memory mem){
@@ -88,12 +88,12 @@ struct DeviceAllocator<MemoryProvider>::Page : Block {
   uint32_t allSize=0;
   uint32_t allocated=0;
 
-  Page(uint32_t sz){
+  Page(uint32_t sz) noexcept {
     size   =sz;
     allSize=sz;
     }
 
-  Page(Page&& p){
+  Page(Page&& p) noexcept {
     std::swap(next,p.next);
     size  =p.size;
     offset=p.offset;
@@ -111,22 +111,22 @@ struct DeviceAllocator<MemoryProvider>::Page : Block {
       }
     }
 
-  bool operator==(const Page& other) const {
+  bool operator==(const Page& other) const noexcept {
     return memory==other.memory;
     }
 
-  Allocation alloc(size_t size,MemoryProvider& /*prov*/){
+  Allocation alloc(size_t size,size_t align,MemoryProvider& /*prov*/) noexcept {
     Block*   b=this;
-    while(b!=nullptr){
+    while(b!=nullptr) {
       if(size<=b->size) {
-        return alloc(*b,size);
+        return alloc(*b,size,align);
         }
       b=b->next;
       }
     return Allocation{};
     }
 
-  Allocation alloc(Block& b,size_t size) {
+  Allocation alloc(Block& b,size_t size,size_t align) noexcept {
     Allocation a;
     a.offset=b.offset;
     a.page  =this;
@@ -137,7 +137,7 @@ struct DeviceAllocator<MemoryProvider>::Page : Block {
     return a;
     }
 
-  void free(const Allocation& a) {
+  void free(const Allocation& a) noexcept {
     allocated -= a.size;
 
     Block* b=this;
@@ -164,7 +164,7 @@ struct DeviceAllocator<MemoryProvider>::Page : Block {
     b->offset=a.offset;
     }
 
-  void mergeWithNext(Block* b){
+  void mergeWithNext(Block* b) noexcept {
     while(b->next!=nullptr){
       if(b->offset+b->size==b->next->offset){
         b->size+=b->next->size;

@@ -14,7 +14,7 @@ class Window {
 
   protected:
     virtual void render();
-    virtual void resizEvent(uint32_t w,uint32_t h);
+    virtual void resizeEvent(uint32_t w,uint32_t h);
 
     SystemApi::Window* hwnd() const { return id; }
 
@@ -25,7 +25,7 @@ class Window {
         self->render();
         }
       void onResize(Tempest::SystemApi::Window*,uint32_t w,uint32_t h){
-        self->resizEvent(w,h);
+        self->resizeEvent(w,h);
         }
       Window* self;
       };

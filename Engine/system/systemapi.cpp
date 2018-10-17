@@ -120,6 +120,9 @@ LRESULT CALLBACK WindowProc( HWND   hWnd,
       PostQuitMessage(0);
       }
       break;
+    default:
+      if(cb)
+        cb->onRender(reinterpret_cast<SystemApi::Window*>(hWnd));
     }
   return DefWindowProc( hWnd, msg, wParam, lParam );
   }

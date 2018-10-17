@@ -2,30 +2,36 @@
 
 Game::Game(Tempest::VulkanApi& api)
   :device(api,hwnd()) {
-  for(int i=0;i<MAX_FRAMES_IN_FLIGHT;++i){
-    imageAvailableSemaphores.emplace_back(device);
-    renderFinishedSemaphores.emplace_back(device);
-    inFlightFences.emplace_back(device);
-    }
   std::initializer_list<Point> source = {
     {-0.5f, +0.5f},
     {+0.5f, +0.5f},
     {+0.0f, -0.5f}
     };
-  Ubo usrc={};
-
   vbo = device.loadVbo(source.begin(),source.size());
-  ubo = device.loadUniforms(&usrc,sizeof(usrc));
 
-  initSwapchain();
+  for(int i=0;i<MAX_FRAMES_IN_FLIGHT;++i){
+    imageAvailableSemaphores.emplace_back(device);
+    renderFinishedSemaphores.emplace_back(device);
+    inFlightFences.emplace_back(device);
+    }
+
+  ulay.add(0,Tempest::UniformsLayout::Ubo,Tempest::UniformsLayout::Fragment);
+
+  initSwapchain(ulay);
   }
 
-void Game::initSwapchain(){
+void Game::initSwapchain(const Tempest::UniformsLayout &ulay){
   auto vs  = device.loadShader("shader/vert.spv");
   auto fs  = device.loadShader("shader/frag.spv");
 
   pass     = device.pass();
-  pipeline = device.pipeline(pass,width(),height(),vs,fs);
+  pipeline = device.pipeline(pass,width(),height(),ulay,vs,fs);
+
+  if(ubo.size()==0) {
+    Ubo usrc={};
+    for(size_t i=0;i<3;++i)
+      ubo.emplace_back(device.loadUniforms(&usrc,sizeof(usrc),1,pipeline));
+    }
 
   commandBuffers.clear();
   fbo.clear();
@@ -41,6 +47,7 @@ void Game::initSwapchain(){
 
     buf.beginRenderPass(fbo[i],pass,width(),height());
     buf.setPipeline(pipeline);
+    buf.setUniforms(pipeline,ubo[i]);
     buf.setVbo(vbo);
     buf.draw(3);
     buf.endRenderPass();
@@ -49,8 +56,9 @@ void Game::initSwapchain(){
     }
   }
 
-void Game::resizEvent(uint32_t, uint32_t) {
-  initSwapchain();
+void Game::resizeEvent(uint32_t, uint32_t) {
+  device.reset();
+  initSwapchain(ulay);
   }
 
 uint32_t Game::width() const {
@@ -62,15 +70,21 @@ uint32_t Game::height() const {
   }
 
 void Game::render(){
-  Tempest::Fence&     frameReadyCpu=inFlightFences          [currentFrame];
-  Tempest::Semaphore& frameReady   =imageAvailableSemaphores[currentFrame];
-  Tempest::Semaphore& renderDone   =renderFinishedSemaphores[currentFrame];
+  try {
+    Tempest::Fence&     frameReadyCpu=inFlightFences          [currentFrame];
+    Tempest::Semaphore& frameReady   =imageAvailableSemaphores[currentFrame];
+    Tempest::Semaphore& renderDone   =renderFinishedSemaphores[currentFrame];
 
-  frameReadyCpu.wait();
+    frameReadyCpu.wait();
 
-  uint32_t imgId=device.nextImage(frameReady);
-  device.draw(commandBuffers[imgId],frameReady,renderDone,frameReadyCpu);
-  device.present(imgId,renderDone);
+    uint32_t imgId=device.nextImage(frameReady);
+    device.draw(commandBuffers[imgId],frameReady,renderDone,frameReadyCpu);
+    device.present(imgId,renderDone);
 
-  currentFrame=(currentFrame+1)%MAX_FRAMES_IN_FLIGHT;
+    currentFrame=(currentFrame+1)%MAX_FRAMES_IN_FLIGHT;
+    }
+  catch (...) {
+    device.reset();
+    initSwapchain(ulay);
+    }
   }

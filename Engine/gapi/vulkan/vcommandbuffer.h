@@ -37,6 +37,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void clear(AbstractGraphicsApi::Image& img, float r, float g, float b, float a);
     void setPipeline(AbstractGraphicsApi::Pipeline& p);
+    void setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u);
 
     void draw(size_t size);
     void setVbo(const AbstractGraphicsApi::Buffer& b);

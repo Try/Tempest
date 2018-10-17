@@ -7,7 +7,7 @@
 using namespace Tempest;
 
 Device::Impl::Impl(AbstractGraphicsApi &api, SystemApi::Window *w)
-  :api(api){
+  :api(api),hwnd(w){
   dev=api.createDevice(w);
   try {
     swapchain=api.createSwapchain(w,dev);
@@ -15,7 +15,7 @@ Device::Impl::Impl(AbstractGraphicsApi &api, SystemApi::Window *w)
   catch(...){
     api.destroy(dev);
     throw;
-  }
+    }
   }
 
 Device::Impl::~Impl() {
@@ -29,6 +29,14 @@ Device::Device(AbstractGraphicsApi &api, SystemApi::Window *w)
   }
 
 Device::~Device() {
+  }
+
+void Device::reset() {
+  api.destroy(swapchain);
+  swapchain=nullptr;
+  impl.swapchain=nullptr;
+  swapchain=api.createSwapchain(impl.hwnd,dev);
+  impl.swapchain=swapchain;
   }
 
 Frame Device::frame(uint32_t id) {
@@ -63,11 +71,11 @@ RenderPass Device::pass() {
   return f;
   }
 
-RenderPipeline Device::pipeline(RenderPass& pass,uint32_t w,uint32_t h,Shader& vs,Shader& fs) {
+RenderPipeline Device::pipeline(RenderPass& pass, uint32_t w, uint32_t h, const UniformsLayout &ulay, const Shader &vs, const Shader &fs) {
   if(w<=0 || h<=0 || !pass.impl || !vs.impl || !fs.impl)
     return RenderPipeline();
 
-  RenderPipeline f(*this,api.createPipeline(dev,pass.impl.handler,w,h,{vs.impl.handler,fs.impl.handler}));
+  RenderPipeline f(*this,api.createPipeline(dev,pass.impl.handler,w,h,ulay,{vs.impl.handler,fs.impl.handler}));
   return f;
   }
 
@@ -86,14 +94,14 @@ Semaphore Device::createSemaphore() {
   return f;
   }
 
-VideoBuffer Device::createVideoBuffer(const void *data,size_t size,AbstractGraphicsApi::MemUsage usage) {
+VideoBuffer Device::createVideoBuffer(const void *data, size_t size, AbstractGraphicsApi::MemUsage usage) {
   VideoBuffer buf(*this,api.createBuffer(dev,data,size,usage));
   return  buf;
   }
 
-Uniforms Device::loadUniforms(const void *mem, size_t size) {
-  VideoBuffer data=createVideoBuffer(mem,size,AbstractGraphicsApi::MemUsage::UniformBit);
-  Uniforms    ubo(std::move(data));
+Uniforms Device::loadUniforms(const void *mem, size_t size, size_t count, const RenderPipeline &owner) {
+  VideoBuffer data=createVideoBuffer(mem,size*count,AbstractGraphicsApi::MemUsage::UniformBit);
+  Uniforms    ubo(std::move(data),*this,api.createDescriptors(dev,owner.impl.handler,data.impl.handler,size,count));
   return ubo;
   }
 
@@ -131,4 +139,8 @@ void Device::destroy(CommandBuffer &c) {
 
 void Device::destroy(VideoBuffer &b) {
   api.destroy(b.impl.handler);
+  }
+
+void Device::destroy(Uniforms &u) {
+  api.destroy(u.desc.handler);
   }

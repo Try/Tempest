@@ -26,12 +26,15 @@ template<class T>
 class VertexBuffer;
 
 class Uniforms;
+class UniformsLayout;
 
 class Device {
   public:
     Device(AbstractGraphicsApi& api,SystemApi::Window* w);
     Device(const Device&)=delete;
     ~Device();
+
+    void           reset();
 
     Frame          frame(uint32_t id);
     uint32_t       nextImage(Semaphore& onReady);
@@ -43,11 +46,11 @@ class Device {
     template<class T>
     VertexBuffer<T> loadVbo(const T* arr,size_t arrSize);
 
-    Uniforms       loadUniforms(const void* data,size_t size);
+    Uniforms       loadUniforms(const void* data, size_t size, size_t count, const RenderPipeline& owner);
 
     FrameBuffer    frameBuffer(Frame &out, RenderPass& pass);
     RenderPass     pass    ();
-    RenderPipeline pipeline(RenderPass& pass, uint32_t width, uint32_t height, Shader &vs, Shader &fs);
+    RenderPipeline pipeline(RenderPass& pass, uint32_t width, uint32_t height,const UniformsLayout& ulay,const Shader &vs,const Shader &fs);
     CommandBuffer  commandBuffer();
 
   private:
@@ -58,6 +61,7 @@ class Device {
       AbstractGraphicsApi&            api;
       AbstractGraphicsApi::Device*    dev=nullptr;
       AbstractGraphicsApi::Swapchain* swapchain=nullptr;
+      SystemApi::Window*              hwnd=nullptr;
       };
 
     AbstractGraphicsApi&            api;
@@ -80,6 +84,7 @@ class Device {
     void       destroy(CommandPool&    c);
     void       destroy(CommandBuffer&  c);
     void       destroy(VideoBuffer&    b);
+    void       destroy(Uniforms&       u);
 
     void       begin(Frame& f,RenderPass& p);
     void       end  (Frame& f,RenderPass& p);
@@ -94,6 +99,7 @@ class Device {
   friend class CommandPool;
   friend class CommandBuffer;
   friend class VideoBuffer;
+  friend class Uniforms;
 
   template<class T>
   friend class VertexBuffer;

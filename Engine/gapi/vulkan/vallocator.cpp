@@ -1,4 +1,4 @@
-#include "vallocator.h"
+  #include "vallocator.h"
 
 #include "vdevice.h"
 #include "vbuffer.h"
@@ -52,13 +52,13 @@ VBuffer VAllocator::alloc(const void *mem, size_t size, AbstractGraphicsApi::Mem
   if(vkCreateBuffer(device,&createInfo,nullptr,&ret.impl)!=VkResult::VK_SUCCESS)
     throw std::runtime_error("failed to create buffer");
 
-  VkMemoryRequirements memoryRequirements;
-  vkGetBufferMemoryRequirements(device,ret.impl,&memoryRequirements);
+  VkMemoryRequirements memRq;
+  vkGetBufferMemoryRequirements(device,ret.impl,&memRq);
 
-  ret.page=allocator.alloc(size_t(memoryRequirements.size),memoryRequirements.memoryTypeBits);
+  ret.page=allocator.alloc(size_t(memRq.size),size_t(memRq.alignment),memRq.memoryTypeBits);
   if(!ret.page.page)
     throw std::runtime_error("failed to allocate memory");
-  commit(ret.page.page->memory,ret.impl,mem,ret.page.offset,size_t(memoryRequirements.size));
+  commit(ret.page.page->memory,ret.impl,mem,ret.page.offset,size);
   return ret;
   }
 
@@ -76,6 +76,6 @@ void VAllocator::commit(VkDeviceMemory dev,VkBuffer dest,const void* mem,size_t 
   memcpy(data,mem,size);
   vkUnmapMemory(device,dev);
 
-  if(vkBindBufferMemory(device,dest,dev,0)!=VkResult::VK_SUCCESS)
+  if(vkBindBufferMemory(device,dest,dev,offset)!=VkResult::VK_SUCCESS)
     throw std::runtime_error("failed to allocate device memory");
   }

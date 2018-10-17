@@ -7,6 +7,7 @@
 #include "vpipeline.h"
 #include "vbuffer.h"
 #include "vimage.h"
+#include "vdescriptorarray.h"
 #include "vswapchain.h"
 
 using namespace Tempest::Detail;
@@ -127,9 +128,16 @@ void VCommandBuffer::clear(AbstractGraphicsApi::Image& image,
                        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &clearToPresentBarrier);
   }
 
-void VCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline &p) {
+void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
   VPipeline& px=reinterpret_cast<VPipeline&>(p);
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,px.graphicsPipeline);
+  }
+
+void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p,AbstractGraphicsApi::Desc &u) {
+  VPipeline&        px=reinterpret_cast<VPipeline&>(p);
+  VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
+  vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,px.pipelineLayout,0,
+                          1,ux.desc, 0,nullptr);
   }
 
 void VCommandBuffer::draw(size_t size) {
