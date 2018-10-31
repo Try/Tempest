@@ -66,8 +66,7 @@ void VPipeline::initLayout() {
   pipelineLayoutInfo.setLayoutCount         = 1;
   pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-  if(vkCreatePipelineLayout(device,&pipelineLayoutInfo,nullptr,&pipelineLayout)!=VK_SUCCESS)
-    throw std::runtime_error("failed to create pipeline layout!");
+  vkAssert(vkCreatePipelineLayout(device,&pipelineLayoutInfo,nullptr,&pipelineLayout));
   }
 
 void VPipeline::initUboLayout(const UniformsLayout &ulay) {
@@ -97,8 +96,7 @@ void VPipeline::initUboLayout(const UniformsLayout &ulay) {
   info.bindingCount=bind.size();
   info.pBindings   =bind.data();
 
-  if(vkCreateDescriptorSetLayout(device,&info,nullptr,&uniformsLayout)!=VK_SUCCESS)
-    throw std::runtime_error("failed to create descriptor-set layout!");
+  vkAssert(vkCreateDescriptorSetLayout(device,&info,nullptr,&uniformsLayout));
   }
 
 void VPipeline::initGraphicsPipeline(VRenderPass &pass, uint32_t width, uint32_t height, VShader &vert, VShader &frag) {
@@ -217,6 +215,5 @@ void VPipeline::initGraphicsPipeline(VRenderPass &pass, uint32_t width, uint32_t
   pipelineInfo.subpass             = 0;
   pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
 
-  if(vkCreateGraphicsPipelines(device,VK_NULL_HANDLE,1,&pipelineInfo,nullptr,&graphicsPipeline)!=VK_SUCCESS)
-    throw std::runtime_error("failed to create graphics pipeline!");
+  vkAssert(vkCreateGraphicsPipelines(device,VK_NULL_HANDLE,1,&pipelineInfo,nullptr,&graphicsPipeline));
   }

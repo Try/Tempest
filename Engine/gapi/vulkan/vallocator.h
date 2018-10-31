@@ -16,7 +16,7 @@ class VAllocator {
       using DeviceMemory=VkDeviceMemory;
 
       VDevice*     device=nullptr;
-      DeviceMemory alloc(size_t size, uint32_t typeBits);
+      DeviceMemory alloc(size_t size, uint32_t typeId);
       void         free(DeviceMemory m);
       };
 
@@ -27,7 +27,7 @@ class VAllocator {
 
     using Allocation=typename Tempest::Detail::DeviceAllocator<Provider>::Allocation;
 
-    VBuffer alloc(const void *mem, size_t size, AbstractGraphicsApi::MemUsage usage);
+    VBuffer alloc(const void *mem, size_t size, MemUsage usage, BufferFlags bufFlg);
     void    free(VBuffer& buf);
 
   private:
@@ -35,7 +35,7 @@ class VAllocator {
     Provider                          provider;
     Detail::DeviceAllocator<Provider> allocator{provider};
 
-    void commit(VkDeviceMemory dev,VkBuffer dest,const void *mem,size_t offset,size_t size);
+    bool commit(VkDeviceMemory dev,VkBuffer dest,const void *mem,size_t offset,size_t size);
   };
 
 }}

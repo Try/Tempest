@@ -12,7 +12,7 @@
 
 using namespace Tempest::Detail;
 
-VCommandBuffer::VCommandBuffer(VDevice& device,VCommandPool& pool)
+VCommandBuffer::VCommandBuffer(VDevice& device, VCommandPool& pool)
   :device(device.device), pool(pool.impl) {
   VkCommandBufferAllocateInfo allocInfo = {};
   allocInfo.sType             =VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -20,8 +20,7 @@ VCommandBuffer::VCommandBuffer(VDevice& device,VCommandPool& pool)
   allocInfo.level             =VK_COMMAND_BUFFER_LEVEL_PRIMARY;
   allocInfo.commandBufferCount=1;
 
-  if(vkAllocateCommandBuffers(device.device,&allocInfo,&impl)!=VK_SUCCESS)
-    throw std::runtime_error("failed to allocate command buffers!");
+  vkAssert(vkAllocateCommandBuffers(device.device,&allocInfo,&impl));
   }
 
 VCommandBuffer::VCommandBuffer(VCommandBuffer &&other) {
@@ -31,9 +30,8 @@ VCommandBuffer::VCommandBuffer(VCommandBuffer &&other) {
   }
 
 VCommandBuffer::~VCommandBuffer() {
-  if(device==nullptr)
+  if(device==nullptr || impl==nullptr)
     return;
-  vkDeviceWaitIdle(device);
   vkFreeCommandBuffers(device,pool,1,&impl);
   }
 
@@ -43,19 +41,22 @@ void VCommandBuffer::operator=(VCommandBuffer &&other) {
   std::swap(impl,other.impl);
   }
 
-void VCommandBuffer::begin() {
+void VCommandBuffer::begin(Usage usageFlags) {
   VkCommandBufferBeginInfo beginInfo = {};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+  beginInfo.flags = usageFlags; //VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+  //beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
   //vkResetCommandBuffer();
-  if(vkBeginCommandBuffer(impl,&beginInfo)!=VK_SUCCESS)
-    throw std::runtime_error("failed to begin recording command buffer!");
+  vkAssert(vkBeginCommandBuffer(impl,&beginInfo));
+  }
+
+void VCommandBuffer::begin() {
+  begin(SIMULTANEOUS_USE_BIT);
   }
 
 void VCommandBuffer::end() {
-  if(vkEndCommandBuffer(impl)!=VK_SUCCESS)
-    throw std::runtime_error("failed to record command buffer!");
+  vkAssert(vkEndCommandBuffer(impl));
   }
 
 void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
@@ -152,5 +153,13 @@ void VCommandBuffer::setVbo(const Tempest::AbstractGraphicsApi::Buffer &b) {
   vkCmdBindVertexBuffers(
     impl, 0, buffers.size(),
     buffers.begin(),
-    offsets.begin() );
+        offsets.begin() );
+  }
+
+void VCommandBuffer::copy(VBuffer &dest, size_t offsetDest, const VBuffer &src,size_t offsetSrc,size_t size) {
+  VkBufferCopy copyRegion = {};
+  copyRegion.dstOffset = offsetDest;
+  copyRegion.srcOffset = offsetSrc;
+  copyRegion.size      = size;
+  vkCmdCopyBuffer(impl, src.impl, dest.impl, 1, &copyRegion);
   }

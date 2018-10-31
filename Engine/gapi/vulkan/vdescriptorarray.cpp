@@ -1,4 +1,6 @@
 #include "vbuffer.h"
+
+#include "vdevice.h"
 #include "vdescriptorarray.h"
 
 using namespace Tempest::Detail;
@@ -15,7 +17,7 @@ VDescriptorArray *VDescriptorArray::alloc(VkDevice device, VkDescriptorSetLayout
 
   VDescriptorArray* a=reinterpret_cast<VDescriptorArray*>(std::malloc(sizeof(VDescriptorArray)+(size-1)*sizeof(VkDescriptorSet)));
   if(a==nullptr)
-    throw std::runtime_error("failed to allocate descriptor sets!");
+    throw std::bad_alloc();
   new(a) VDescriptorArray();
 
   VkDescriptorPoolSize poolSize = {};
@@ -29,8 +31,7 @@ VDescriptorArray *VDescriptorArray::alloc(VkDevice device, VkDescriptorSetLayout
   //poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
   poolInfo.pPoolSizes    = &poolSize;
 
-  if(vkCreateDescriptorPool(device,&poolInfo,nullptr,&a->impl)!=VK_SUCCESS)
-    throw std::runtime_error("failed to create descriptor pool!");
+  vkAssert(vkCreateDescriptorPool(device,&poolInfo,nullptr,&a->impl));
 
   VkDescriptorSetAllocateInfo allocInfo = {};
   allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -38,9 +39,10 @@ VDescriptorArray *VDescriptorArray::alloc(VkDevice device, VkDescriptorSetLayout
   allocInfo.descriptorSetCount = size;
   allocInfo.pSetLayouts        = layouts.data();
 
-  if(vkAllocateDescriptorSets(device, &allocInfo, &a->desc[0])!=VK_SUCCESS) {
+  VkResult ret=vkAllocateDescriptorSets(device,&allocInfo,&a->desc[0]);
+  if(ret!=VK_SUCCESS) {
     vkDestroyDescriptorPool(device,a->impl,nullptr);
-    throw std::runtime_error("failed to allocate descriptor sets!");
+    vkAssert(ret);
     }
   a->count  = size;
   a->device = device;

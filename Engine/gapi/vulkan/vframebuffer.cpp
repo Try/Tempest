@@ -18,7 +18,7 @@ VFramebuffer::VFramebuffer(VDevice& device,VRenderPass& renderPass,VSwapchain& s
   framebufferInfo.layers          = 1;
 
   if(vkCreateFramebuffer(device.device,&framebufferInfo,nullptr,&impl)!=VK_SUCCESS)
-    throw std::runtime_error("failed to create framebuffer!");
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
   }
 
 VFramebuffer::VFramebuffer(VFramebuffer &&other) {

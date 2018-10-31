@@ -35,6 +35,7 @@ class Device {
     ~Device();
 
     void           reset();
+    uint32_t       swapchainImageCount() const;
 
     Frame          frame(uint32_t id);
     uint32_t       nextImage(Semaphore& onReady);
@@ -44,7 +45,7 @@ class Device {
     Shader         loadShader(const char* filename);
 
     template<class T>
-    VertexBuffer<T> loadVbo(const T* arr,size_t arrSize);
+    VertexBuffer<T> loadVbo(const T* arr,size_t arrSize,BufferFlags flg);
 
     Uniforms       loadUniforms(const void* data, size_t size, size_t count, const RenderPipeline& owner);
 
@@ -73,7 +74,7 @@ class Device {
 
     Fence      createFence();
     Semaphore  createSemaphore();
-    VideoBuffer createVideoBuffer(const void* data, size_t size, AbstractGraphicsApi::MemUsage usage);
+    VideoBuffer createVideoBuffer(const void* data, size_t size, MemUsage usage, BufferFlags flg);
 
     void       destroy(RenderPipeline& p);
     void       destroy(RenderPass&     p);
@@ -106,8 +107,8 @@ class Device {
   };
 
 template<class T>
-inline VertexBuffer<T> Device::loadVbo(const T* arr,size_t arrSize) {
-  VideoBuffer     data=createVideoBuffer(arr,arrSize*sizeof(T),AbstractGraphicsApi::MemUsage::VertexBuffer);
+inline VertexBuffer<T> Device::loadVbo(const T* arr, size_t arrSize, BufferFlags flg) {
+  VideoBuffer     data=createVideoBuffer(arr,arrSize*sizeof(T),MemUsage::VertexBuffer,flg);
   VertexBuffer<T> vbo(std::move(data));
   return vbo;
   }

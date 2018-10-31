@@ -45,7 +45,7 @@ VSwapchain::VSwapchain(VDevice &device, uint32_t w, uint32_t h)
   createInfo.clipped        = VK_TRUE;
 
   if(vkCreateSwapchainKHR(device.device, &createInfo, nullptr, &swapChain) != VK_SUCCESS)
-    throw std::runtime_error("failed to create swap chain!");
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
   vkGetSwapchainImagesKHR(device.device, swapChain, &imageCount, nullptr);
   swapChainImages.resize(imageCount);
@@ -117,9 +117,8 @@ void VSwapchain::createImageViews(VDevice &device) {
     createInfo.subresourceRange.baseArrayLayer = 0;
     createInfo.subresourceRange.layerCount     = 1;
 
-    if(vkCreateImageView(device.device,&createInfo,nullptr,&swapChainImageViews[i])!=VK_SUCCESS) {
-      throw std::runtime_error("failed to create image views!");
-      }
+    if(vkCreateImageView(device.device,&createInfo,nullptr,&swapChainImageViews[i])!=VK_SUCCESS)
+      throw std::system_error(Tempest::GraphicsErrc::NoDevice);
     }
   }
 

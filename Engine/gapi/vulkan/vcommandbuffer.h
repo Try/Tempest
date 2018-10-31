@@ -18,6 +18,12 @@ class VImage;
 
 class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
   public:
+     enum Usage {
+      ONE_TIME_SUBMIT_BIT      = 0x00000001,
+      RENDER_PASS_CONTINUE_BIT = 0x00000002,
+      SIMULTANEOUS_USE_BIT     = 0x00000004,
+      };
+
     VCommandBuffer()=delete;
     VCommandBuffer(VDevice &device,VCommandPool &pool);
     VCommandBuffer(VCommandBuffer&& other);
@@ -27,6 +33,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     VkCommandBuffer impl=nullptr;
 
+    void begin(Usage usageFlags);
     void begin();
     void end();
 
@@ -41,6 +48,8 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void draw(size_t size);
     void setVbo(const AbstractGraphicsApi::Buffer& b);
+
+    void copy(Detail::VBuffer& dest, size_t offsetDest, const Detail::VBuffer& src, size_t offsetSrc, size_t size);
 
   private:
     VkDevice        device=nullptr;

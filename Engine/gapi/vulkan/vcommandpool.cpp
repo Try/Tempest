@@ -14,8 +14,7 @@ VCommandPool::VCommandPool(VDevice& device)
   poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
   poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
 
-  if(vkCreateCommandPool(device.device,&poolInfo,nullptr,&impl) != VK_SUCCESS)
-    throw std::runtime_error("failed to create command pool!");
+  vkAssert(vkCreateCommandPool(device.device,&poolInfo,nullptr,&impl));
   }
 
 VCommandPool::VCommandPool(VCommandPool &&other) {

@@ -1,10 +1,12 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
+#include <stdexcept>
 #include <vulkan/vulkan.hpp>
 
 #include "vallocator.h"
 #include "vulkanapi.h"
+#include "exceptions/exception.h"
 
 namespace Tempest {
 namespace Detail{
@@ -14,6 +16,23 @@ class VCommandBuffer;
 
 class VFence;
 class VSemaphore;
+
+inline void vkAssert(VkResult code){
+  switch( code ) {
+    case VkResult::VK_SUCCESS:
+      return;
+    case VkResult::VK_ERROR_OUT_OF_DEVICE_MEMORY:
+      throw std::system_error(Tempest::GraphicsErrc::OutOfVideoMemory);
+    case VkResult::VK_ERROR_OUT_OF_HOST_MEMORY:
+      //throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
+      throw std::bad_alloc();
+    case VkResult::VK_ERROR_DEVICE_LOST:
+      throw DeviceLostException();
+
+    default:
+      throw std::runtime_error("engine internal error"); //TODO
+    }
+  }
 
 class VDevice : public AbstractGraphicsApi::Device {
   public:
@@ -50,9 +69,11 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     void                    draw(VCommandBuffer& cmd, VSemaphore& wait, VSemaphore& onReady, VFence& onReadyCpu);
 
+    void                    copyBuffer(Detail::VBuffer& dest, const Detail::VBuffer& src, size_t size);
+
     SwapChainSupportDetails querySwapChainSupport() { return querySwapChainSupport(physicalDevice); }
     QueueFamilyIndices      findQueueFamilies    () { return findQueueFamilies(physicalDevice);     }
-    uint32_t                memoryTypeIndex(uint32_t typeBits) const;
+    uint32_t                memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props) const;
 
   private:
     VkInstance             instance;

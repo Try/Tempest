@@ -1,6 +1,7 @@
 #include "vdevice.h"
 
 #include "vcommandbuffer.h"
+#include "vcommandpool.h"
 #include "vfence.h"
 #include "vsemaphore.h"
 #include "vswapchain.h"
@@ -25,7 +26,7 @@ VDevice::VDevice(VulkanApi &api, void *hwnd)
   vkEnumeratePhysicalDevices(api.instance, &deviceCount, nullptr);
 
   if(deviceCount==0)
-    throw std::runtime_error("failed to find GPUs with Vulkan support!");
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
   std::vector<VkPhysicalDevice> devices(deviceCount);
   vkEnumeratePhysicalDevices(api.instance, &deviceCount, devices.data());
@@ -37,7 +38,7 @@ VDevice::VDevice(VulkanApi &api, void *hwnd)
       }
 
   if(physicalDevice==nullptr)
-    throw std::runtime_error("failed to find a suitable GPU!");
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
   createLogicalDevice(api);
   vkGetPhysicalDeviceMemoryProperties(physicalDevice,&memoryProperties);
   allocator.setDevice(*this);
@@ -67,7 +68,7 @@ void VDevice::createSurface(VulkanApi &api,void* hwnd) {
   createInfo.hwnd      = HWND(hwnd);
 
   if(vkCreateWin32SurfaceKHR(api.instance,&createInfo,nullptr,&surface)!=VK_SUCCESS)
-    throw std::runtime_error("failed to create window surface!");
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
   }
 
 bool VDevice::isDeviceSuitable(VkPhysicalDevice device) {
@@ -185,23 +186,21 @@ void VDevice::createLogicalDevice(VulkanApi& api) {
     createInfo.enabledLayerCount = 0;
     }
 
-  if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device) != VK_SUCCESS) {
-    throw std::runtime_error("failed to create logical device!");
-    }
+  if(vkCreateDevice(physicalDevice, &createInfo, nullptr, &device)!=VK_SUCCESS)
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
   vkGetDeviceQueue(device, indices.graphicsFamily, 0, &graphicsQueue);
   vkGetDeviceQueue(device, indices.presentFamily,  0, &presentQueue);
   }
 
-uint32_t VDevice::memoryTypeIndex(uint32_t typeBits) const {
+uint32_t VDevice::memoryTypeIndex(uint32_t typeBits,VkMemoryPropertyFlags props) const {
   for(size_t i=0; i<memoryProperties.memoryTypeCount; ++i) {
     auto bit = (uint32_t(1) << i);
     if((typeBits & bit)!=0) {
-      if((memoryProperties.memoryTypes[i].propertyFlags & VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)!=0)
+      if((memoryProperties.memoryTypes[i].propertyFlags & props)!=0)
         return i;
       }
     }
-
   throw std::runtime_error("failed to get correct memory type");
   }
 
@@ -237,6 +236,25 @@ void VDevice::draw(VCommandBuffer& cmd, VSemaphore &wait, VSemaphore &onReady, V
   submitInfo.pSignalSemaphores    = &onReady.impl;
 
   onReadyCpu.reset();
-  if(vkQueueSubmit(graphicsQueue,1,&submitInfo,onReadyCpu.impl)!=VK_SUCCESS)
-    throw std::runtime_error("failed to submit draw command buffer!");
+  vkAssert(vkQueueSubmit(graphicsQueue,1,&submitInfo,onReadyCpu.impl));
+  }
+
+void VDevice::copyBuffer(VBuffer &dest, const VBuffer &src,size_t size) {
+  VCommandPool   pool(*this);
+  VCommandBuffer commandBuffer(*this,pool);
+
+  commandBuffer.begin(VCommandBuffer::ONE_TIME_SUBMIT_BIT);
+  commandBuffer.copy(dest,0,src,0,size);
+  commandBuffer.end();
+
+  VkSubmitInfo submitInfo = {};
+  submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submitInfo.commandBufferCount = 1;
+  submitInfo.pCommandBuffers    = &commandBuffer.impl;
+
+  vkQueueSubmit  (graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+  vkQueueWaitIdle(graphicsQueue);
+
+  vkFreeCommandBuffers(device, pool.impl, 1, &commandBuffer.impl);
+  commandBuffer.impl=nullptr; // no wait device
   }

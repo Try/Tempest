@@ -39,6 +39,10 @@ void Device::reset() {
   impl.swapchain=swapchain;
   }
 
+uint32_t Device::swapchainImageCount() const {
+  return swapchain->imageCount();
+  }
+
 Frame Device::frame(uint32_t id) {
   Frame fr(*this,api.getImage(dev,swapchain,id),id);
   return fr;
@@ -94,13 +98,13 @@ Semaphore Device::createSemaphore() {
   return f;
   }
 
-VideoBuffer Device::createVideoBuffer(const void *data, size_t size, AbstractGraphicsApi::MemUsage usage) {
-  VideoBuffer buf(*this,api.createBuffer(dev,data,size,usage));
+VideoBuffer Device::createVideoBuffer(const void *data, size_t size, MemUsage usage, BufferFlags flg) {
+  VideoBuffer buf(*this,api.createBuffer(dev,data,size,usage,flg));
   return  buf;
   }
 
 Uniforms Device::loadUniforms(const void *mem, size_t size, size_t count, const RenderPipeline &owner) {
-  VideoBuffer data=createVideoBuffer(mem,size*count,AbstractGraphicsApi::MemUsage::UniformBit);
+  VideoBuffer data=createVideoBuffer(mem,size*count,MemUsage::UniformBit,BufferFlags::Static);
   Uniforms    ubo(std::move(data),*this,api.createDescriptors(dev,owner.impl.handler,data.impl.handler,size,count));
   return ubo;
   }

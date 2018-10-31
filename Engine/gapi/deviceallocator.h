@@ -32,15 +32,15 @@ class DeviceAllocator {
       size_t offset=0,size=0;
       };
 
-    Allocation alloc(size_t size, size_t align, uint32_t typeBits) {
+    Allocation alloc(size_t size, size_t align, uint32_t typeId) {
       for(auto& i:pages){
-        if(i.type==typeBits && i.allocated+size<=i.allSize){
+        if(i.type==typeId && i.allocated+size<=i.allSize){
           auto ret=i.alloc(size,align,device);
           if(ret.page!=nullptr)
             return ret;
           }
         }
-      return rawAlloc(size,align,typeBits);
+      return rawAlloc(size,align,typeId);
       }
 
     void free(const Allocation& a){
@@ -52,10 +52,10 @@ class DeviceAllocator {
       }
 
   private:
-    Allocation rawAlloc(size_t size, size_t align, uint32_t typeBits){
+    Allocation rawAlloc(size_t size, size_t align, uint32_t typeId){
       Page pg(std::max<uint32_t>(DEFAULT_PAGE_SIZE,size));
-      pg.memory = device.alloc(pg.allSize,typeBits);
-      pg.type   = typeBits;
+      pg.memory = device.alloc(pg.allSize,typeId);
+      pg.type   = typeId;
       if(pg.memory==null)
         throw std::bad_alloc();
       pages.push_front(std::move(pg));

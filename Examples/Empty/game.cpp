@@ -1,13 +1,23 @@
 #include "game.h"
 
+#include <Tempest/Assets>
+#include <Tempest/Pixmap>
+#include <Tempest/Except>
+
 Game::Game(Tempest::VulkanApi& api)
   :device(api,hwnd()) {
+  Tempest::Assets data("shader");
+  auto vs=data["vert.spv"];
+  (void)vs;
+
+  Tempest::Pixmap pm("img/1.jpg");
+
   std::initializer_list<Point> source = {
     {-0.5f, +0.5f},
     {+0.5f, +0.5f},
     {+0.0f, -0.5f}
     };
-  vbo = device.loadVbo(source.begin(),source.size());
+  vbo = device.loadVbo(source.begin(),source.size(),Tempest::BufferFlags::Static);
 
   for(int i=0;i<MAX_FRAMES_IN_FLIGHT;++i){
     imageAvailableSemaphores.emplace_back(device);
@@ -27,16 +37,17 @@ void Game::initSwapchain(const Tempest::UniformsLayout &ulay){
   pass     = device.pass();
   pipeline = device.pipeline(pass,width(),height(),ulay,vs,fs);
 
+  const size_t imgC=device.swapchainImageCount();
   if(ubo.size()==0) {
     Ubo usrc={};
-    for(size_t i=0;i<3;++i)
+    for(size_t i=0;i<imgC;++i)
       ubo.emplace_back(device.loadUniforms(&usrc,sizeof(usrc),1,pipeline));
     }
 
   commandBuffers.clear();
   fbo.clear();
 
-  for(size_t i=0;i<3;++i) {
+  for(size_t i=0;i<imgC;++i) {
     Tempest::Frame frame=device.frame(i);
     fbo.emplace_back(device.frameBuffer(frame,pass));
     commandBuffers.emplace_back(device.commandBuffer());
@@ -83,7 +94,7 @@ void Game::render(){
 
     currentFrame=(currentFrame+1)%MAX_FRAMES_IN_FLIGHT;
     }
-  catch (...) {
+  catch(const Tempest::DeviceLostException&) {
     device.reset();
     initSwapchain(ulay);
     }

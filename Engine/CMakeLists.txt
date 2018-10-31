@@ -15,6 +15,7 @@ ENDIF()
 
 add_definitions(-DVULKAN_HPP_NO_EXCEPTIONS)
 add_definitions(-DVULKAN_HPP_NO_SMART_HANDLE)
+add_definitions(-DSTB_IMAGE_IMPLEMENTATION)
 
 include_directories("include"
                     "."

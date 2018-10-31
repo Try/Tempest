@@ -1,8 +1,9 @@
 #pragma once
 
 #include <Tempest/SystemApi>
-
 #include <initializer_list>
+
+#include "flags.h"
 
 namespace Tempest {
   class UniformsLayout;
@@ -13,13 +14,12 @@ namespace Tempest {
       ~AbstractGraphicsApi()=default;
 
     public:
-      enum class MemUsage : uint8_t {
-        UniformBit  =1<<0,
-        VertexBuffer=1<<1,
-        };
 
       struct Device       {};
-      struct Swapchain    {};
+      struct Swapchain    {
+        virtual ~Swapchain(){}
+        virtual uint32_t imageCount() const=0;
+        };
       struct Image        {};
       struct Fbo          {};
       struct Pass         {};
@@ -87,7 +87,7 @@ namespace Tempest {
       virtual CommandBuffer* createCommandBuffer(Device* d,CmdPool* pool)=0;
       virtual void       destroy(CommandBuffer* cmd)=0;
 
-      virtual Buffer*    createBuffer(Device* d,const void *mem,size_t size,MemUsage usage)=0;
+      virtual Buffer*    createBuffer(Device* d,const void *mem,size_t size,MemUsage usage,BufferFlags flg)=0;
       virtual void       destroy(Buffer* cmd)=0;
 
       virtual Desc*      createDescriptors(Device* d,Pipeline* p,Buffer* b,size_t size, size_t count)=0;

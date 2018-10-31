@@ -43,8 +43,7 @@ VRenderPass::VRenderPass(VDevice& device, VkFormat format)
   renderPassInfo.dependencyCount = 1;
   renderPassInfo.pDependencies   = &dependency;
 
-  if(vkCreateRenderPass(device.device,&renderPassInfo,nullptr,&renderPass)!=VK_SUCCESS)
-    throw std::runtime_error("failed to create render pass!");
+  vkAssert(vkCreateRenderPass(device.device,&renderPassInfo,nullptr,&renderPass));
   }
 
 VRenderPass::VRenderPass(VRenderPass &&other) {

@@ -42,7 +42,7 @@ class VulkanApi : public AbstractGraphicsApi {
     CmdPool*   createCommandPool(Device* d) override;
     void       destroy          (CmdPool* cmd) override;
 
-    Buffer*    createBuffer(Device* d,const void *mem,size_t size,MemUsage usage) override;
+    Buffer*    createBuffer(Device* d, const void *mem, size_t size, MemUsage usage, BufferFlags flg) override;
     void       destroy(Buffer* cmd) override;
 
     Desc*      createDescriptors(Device* d, Pipeline* p, Buffer* b, size_t size, size_t count) override;

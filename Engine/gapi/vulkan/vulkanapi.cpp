@@ -1,5 +1,7 @@
 #include "vulkanapi.h"
 
+#include "exceptions/exception.h"
+
 #include <set>
 #define VK_KHR_WIN32_SURFACE_EXTENSION_NAME "VK_KHR_win32_surface"
 
@@ -48,7 +50,7 @@ VulkanApi::VulkanApi(bool validation)
     }
 
   if(vkCreateInstance(&createInfo,nullptr,&instance)!=VK_SUCCESS)
-    throw std::runtime_error("failed to create instance!");
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
   }
 
 VulkanApi::~VulkanApi(){

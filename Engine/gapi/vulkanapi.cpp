@@ -143,11 +143,20 @@ void VulkanApi::destroy(AbstractGraphicsApi::CmdPool *cmd) {
   }
 
 AbstractGraphicsApi::Buffer *VulkanApi::createBuffer(AbstractGraphicsApi::Device *d,
-                                                     const void *mem, size_t size, MemUsage usage) {
-  Detail::VDevice* dx =reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VBuffer  buf=dx->allocator.alloc(mem,size,usage);
+                                                     const void *mem, size_t size,
+                                                     MemUsage usage,BufferFlags flg) {
+  Detail::VDevice* dx   =reinterpret_cast<Detail::VDevice*>(d);
+  if(flg==BufferFlags::Staging) {
+    Detail::VBuffer stage=dx->allocator.alloc(mem,size,usage,BufferFlags::Staging);
+    return new Detail::VBuffer(std::move(stage));
+    }
+  else {
+    Detail::VBuffer  stage=dx->allocator.alloc(mem,     size, MemUsage::TransferSrc,       BufferFlags::Staging);
+    Detail::VBuffer  buf  =dx->allocator.alloc(nullptr, size, usage|MemUsage::TransferDst, BufferFlags::Static );
 
-  return new  Detail::VBuffer(std::move(buf));
+    dx->copyBuffer(buf,stage,size);
+    return new Detail::VBuffer(std::move(buf));
+    }
   }
 
 void VulkanApi::destroy(AbstractGraphicsApi::Buffer *cmd) {
@@ -197,7 +206,7 @@ uint32_t VulkanApi::nextImage(Device *d,
   VkResult code=dx->nextImg(*sx,id,*rx);
   if(code==VK_ERROR_OUT_OF_DATE_KHR) {
     //todo
-    throw std::runtime_error("lost device");
+    throw DeviceLostException();
     }
 
   if(code!=VK_SUCCESS && code!=VK_SUBOPTIMAL_KHR)
@@ -232,7 +241,7 @@ void VulkanApi::present(Device *d,Swapchain *sw,uint32_t imageId,const Semaphore
   VkResult code = vkQueuePresentKHR(dx->presentQueue,&presentInfo);
   if(code==VK_ERROR_OUT_OF_DATE_KHR || code==VK_SUBOPTIMAL_KHR) {
     //todo
-    throw std::runtime_error("lost device");
+    throw DeviceLostException();
     } else
   if(code!=VK_SUCCESS) {
     throw std::runtime_error("failed to present swap chain image!");
@@ -268,6 +277,5 @@ void VulkanApi::draw(Device *d,
   submitInfo.pSignalSemaphores    = &rx->impl;
 
   onReadyCpu->reset();
-  if(vkQueueSubmit(dx->graphicsQueue,1,&submitInfo,rc->impl)!=VK_SUCCESS)
-    throw std::runtime_error("failed to submit draw command buffer!");
+  Detail::vkAssert(vkQueueSubmit(dx->graphicsQueue,1,&submitInfo,rc->impl));
   }

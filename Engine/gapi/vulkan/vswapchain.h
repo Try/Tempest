@@ -23,7 +23,7 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     uint32_t                 width()  const { return swapChainExtent.width;  }
     uint32_t                 height() const { return swapChainExtent.height; }
 
-    size_t                   imagesCount() const { return swapChainImageViews.size(); }
+    uint32_t                   imageCount() const { return uint32_t(swapChainImageViews.size()); }
 
     VkSwapchainKHR           swapChain=VK_NULL_HANDLE;
     std::vector<VkImageView> swapChainImageViews;

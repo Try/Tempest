@@ -9,8 +9,7 @@ VSemaphore::VSemaphore(VDevice &device)
   VkSemaphoreCreateInfo semaphoreInfo = {};
   semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-  if(vkCreateSemaphore(device.device,&semaphoreInfo,nullptr,&impl)!=VK_SUCCESS)
-    throw std::runtime_error("failed to create synchronization objects for a frame!");
+  vkAssert(vkCreateSemaphore(device.device,&semaphoreInfo,nullptr,&impl));
   }
 
 VSemaphore::VSemaphore(VSemaphore &&other) {

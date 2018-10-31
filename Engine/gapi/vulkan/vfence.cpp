@@ -10,8 +10,7 @@ VFence::VFence(VDevice &device)
   fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
   fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-  if(vkCreateFence(device.device,&fenceInfo,nullptr,&impl) != VK_SUCCESS)
-    throw std::runtime_error("failed to create synchronization objects for a frame!");
+  vkAssert(vkCreateFence(device.device,&fenceInfo,nullptr,&impl));
   }
 
 VFence::VFence(VFence &&other) {

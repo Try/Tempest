@@ -2,7 +2,7 @@
 
 #include "vdevice.h"
 
-#include <fstream>
+#include <Tempest/File>
 
 using namespace Tempest::Detail;
 
@@ -17,7 +17,7 @@ VShader::VShader(VDevice& device,const char *file)
   createInfo.pCode    = code.get();
 
   if(vkCreateShaderModule(device.device,&createInfo,nullptr,&impl)!=VK_SUCCESS)
-    throw std::runtime_error("failed to create shader module!");
+    throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
   }
 
 VShader::~VShader() {
@@ -26,18 +26,15 @@ VShader::~VShader() {
   }
 
 std::unique_ptr<uint32_t[]> VShader::load(const char *filename,uint32_t& size) {
-  std::ifstream file(filename, std::ios::ate | std::ios::binary);
-  if(!file.is_open())
-    throw std::runtime_error("failed to open file!");
+  Tempest::RFile file(filename);
 
-  size_t fileSize=size_t(file.tellg());
+  const size_t fileSize=file.size();
+  if(fileSize%4!=0)
+    throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
+
   std::unique_ptr<uint32_t[]> buffer(new uint32_t[fileSize/4]);
-
-  file.seekg(0);
-  file.read(reinterpret_cast<char*>(buffer.get()),int(fileSize));
-  file.close();
+  file.read(reinterpret_cast<char*>(buffer.get()),fileSize);
 
   size=uint32_t(fileSize);
-
   return buffer;
   }
