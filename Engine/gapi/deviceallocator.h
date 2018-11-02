@@ -6,7 +6,6 @@
 namespace Tempest {
 namespace Detail {
 
-//TODO: aligmnet
 template<class MemoryProvider>
 class DeviceAllocator {
   struct Page;
@@ -119,20 +118,54 @@ struct DeviceAllocator<MemoryProvider>::Page : Block {
     Block*   b=this;
     while(b!=nullptr) {
       if(size<=b->size) {
-        return alloc(*b,size,align);
+        size_t padding=b->offset%align;
+        if(padding==0)
+          return alloc(*b,size);
+
+        padding=align-padding;
+        if(size+padding==b->size) {
+          return alloc(*b,size,padding);
+          } else
+        if(size+padding<b->size){
+          Block* bp=new(std::nothrow) Block();
+          if(bp!=nullptr){
+            bp->next=b->next;
+            b->next =bp;
+
+            bp->size  =b->size-padding;
+            bp->offset=b->offset+padding;
+            b->size   =padding;
+
+            return alloc(*bp,size);
+            }
+          }
         }
       b=b->next;
       }
     return Allocation{};
     }
 
-  Allocation alloc(Block& b,size_t size,size_t align) noexcept {
+  Allocation alloc(Block& b,size_t size) noexcept {
     Allocation a;
     a.offset=b.offset;
     a.page  =this;
     a.size  =size;
 
     b.offset +=size;
+    b.size   -=size;
+    allocated+=size;
+    return a;
+    }
+
+  Allocation alloc(Block& b,size_t size,size_t padding) noexcept {
+    Allocation a;
+    a.offset=b.offset+padding;
+    a.page  =this;
+    a.size  =size;
+
+    size_t sz=size+padding;
+    b.offset +=sz;
+    b.size   -=sz;
     allocated+=size;
     return a;
     }

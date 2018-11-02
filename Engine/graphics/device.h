@@ -8,6 +8,7 @@
 #include <Tempest/RenderPipeline>
 #include <Tempest/Shader>
 #include <Tempest/Frame>
+#include <Tempest/Texture2d>
 #include <Tempest/Uniforms>
 
 #include "videobuffer.h"
@@ -24,6 +25,8 @@ class VideoBuffer;
 
 template<class T>
 class VertexBuffer;
+
+class Pixmap;
 
 class Uniforms;
 class UniformsLayout;
@@ -46,6 +49,8 @@ class Device {
 
     template<class T>
     VertexBuffer<T> loadVbo(const T* arr,size_t arrSize,BufferFlags flg);
+
+    Texture2d       loadTexture(const Pixmap& pm,bool mips=true);
 
     Uniforms       loadUniforms(const void* data, size_t size, size_t count, const RenderPipeline& owner);
 
@@ -86,6 +91,7 @@ class Device {
     void       destroy(CommandBuffer&  c);
     void       destroy(VideoBuffer&    b);
     void       destroy(Uniforms&       u);
+    void       destroy(Texture2d&      t);
 
     void       begin(Frame& f,RenderPass& p);
     void       end  (Frame& f,RenderPass& p);
@@ -104,6 +110,7 @@ class Device {
 
   template<class T>
   friend class VertexBuffer;
+  friend class Texture2d;
   };
 
 template<class T>

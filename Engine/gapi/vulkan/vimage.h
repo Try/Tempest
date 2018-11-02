@@ -3,6 +3,8 @@
 #include <Tempest/AbstractGraphicsApi>
 #include <vulkan/vulkan.hpp>
 
+#include "vallocator.h"
+
 namespace Tempest {
 namespace Detail {
 
@@ -18,6 +20,12 @@ class VImage : public AbstractGraphicsApi::Image {
     VkImage  impl              =VK_NULL_HANDLE;
     VkDevice device            =nullptr;
     uint32_t presentQueueFamily=uint32_t(-1);
+
+  private:
+    VAllocator*            alloc=nullptr;
+    VAllocator::Allocation page={};
+
+  friend class VAllocator;
   };
 
 }}

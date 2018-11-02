@@ -3,6 +3,7 @@
 
 *build-*-debug/
 *build-*-release/
+*build-tests/
 
 # Compiled Object files
 *.slo

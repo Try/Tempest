@@ -12,10 +12,13 @@
 #include "vulkan/vcommandpool.h"
 #include "vulkan/vcommandbuffer.h"
 #include "vulkan/vdescriptorarray.h"
+#include "vulkan/vtexture.h"
 
 #include "deviceallocator.h"
 
 #include <vulkan/vulkan.hpp>
+
+#include <Tempest/Pixmap>
 
 using namespace Tempest;
 
@@ -162,6 +165,21 @@ AbstractGraphicsApi::Buffer *VulkanApi::createBuffer(AbstractGraphicsApi::Device
 void VulkanApi::destroy(AbstractGraphicsApi::Buffer *cmd) {
   Detail::VBuffer* cx=reinterpret_cast<Detail::VBuffer*>(cmd);
   delete cx;
+  }
+
+AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Device *d, const Pixmap &p, bool mips) {
+  Detail::VDevice*   dx = reinterpret_cast<Detail::VDevice*>(d);
+
+  const uint32_t  size =p.w()*p.h()*4;
+  Detail::VBuffer stage=dx->allocator.alloc(p.data(),size,MemUsage::TransferSrc,BufferFlags::Staging);
+
+  auto ret=new Detail::VTexture(*dx,stage,p,mips);
+  return ret;
+  }
+
+void VulkanApi::destroy(AbstractGraphicsApi::Texture *t) {
+  Detail::VTexture* tx = reinterpret_cast<Detail::VTexture*>(t);
+  delete tx;
   }
 
 AbstractGraphicsApi::Desc *VulkanApi::createDescriptors(AbstractGraphicsApi::Device*   d,

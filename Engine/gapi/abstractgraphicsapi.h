@@ -7,6 +7,7 @@
 
 namespace Tempest {
   class UniformsLayout;
+  class Pixmap;
 
   class AbstractGraphicsApi {
     protected:
@@ -54,6 +55,7 @@ namespace Tempest {
         virtual void reset()=0;
         };
       struct Semaphore    {};
+      struct Texture      {};
 
       virtual Device*    createDevice(SystemApi::Window* w)=0;
       virtual void       destroy(Device* d)=0;
@@ -92,6 +94,9 @@ namespace Tempest {
 
       virtual Desc*      createDescriptors(Device* d,Pipeline* p,Buffer* b,size_t size, size_t count)=0;
       virtual void       destroy(Desc* cmd)=0;
+
+      virtual Texture*   createTexture(Device* d,const Pixmap& p,bool mips)=0;
+      virtual void       destroy(Texture* t)=0;
 
       virtual uint32_t   nextImage(Device *d,Swapchain* sw,Semaphore* onReady)=0;
       virtual Image*     getImage(Device *d,Swapchain* sw,uint32_t id)=0;

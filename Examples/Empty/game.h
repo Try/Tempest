@@ -39,6 +39,7 @@ class Game : public Tempest::Window {
     Tempest::RenderPipeline             pipeline;
 
     Tempest::VertexBuffer<Point>        vbo;
+    Tempest::Texture2d                  texture;
 
     Tempest::UniformsLayout             ulay;
     std::vector<Tempest::Uniforms>      ubo;

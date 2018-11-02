@@ -11,13 +11,14 @@ Game::Game(Tempest::VulkanApi& api)
   (void)vs;
 
   Tempest::Pixmap pm("img/1.jpg");
+  texture = device.loadTexture(pm);
 
   std::initializer_list<Point> source = {
     {-0.5f, +0.5f},
     {+0.5f, +0.5f},
     {+0.0f, -0.5f}
     };
-  vbo = device.loadVbo(source.begin(),source.size(),Tempest::BufferFlags::Static);
+  vbo     = device.loadVbo(source.begin(),source.size(),Tempest::BufferFlags::Static);
 
   for(int i=0;i<MAX_FRAMES_IN_FLIGHT;++i){
     imageAvailableSemaphores.emplace_back(device);

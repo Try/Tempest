@@ -48,6 +48,9 @@ class VulkanApi : public AbstractGraphicsApi {
     Desc*      createDescriptors(Device* d, Pipeline* p, Buffer* b, size_t size, size_t count) override;
     void       destroy(Desc* d) override;
 
+    Texture*   createTexture(Device* d,const Pixmap& p,bool mips) override;
+    void       destroy(Texture* t) override;
+
     CommandBuffer* createCommandBuffer(Device* d,CmdPool* pool) override;
     void           destroy            (CommandBuffer* cmd) override;
 

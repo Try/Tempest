@@ -65,6 +65,11 @@ Shader Device::loadShader(const char *filename) {
   return f;
   }
 
+Texture2d Device::loadTexture(const Pixmap &pm, bool mips) {
+  Texture2d t(*this,api.createTexture(dev,pm,mips));
+  return t;
+  }
+
 FrameBuffer Device::frameBuffer(Frame& out,RenderPass &pass) {
   FrameBuffer f(*this,api.createFbo(dev,swapchain,pass.impl.handler,out.id));
   return f;
@@ -147,4 +152,8 @@ void Device::destroy(VideoBuffer &b) {
 
 void Device::destroy(Uniforms &u) {
   api.destroy(u.desc.handler);
+  }
+
+void Device::destroy(Texture2d &t) {
+  api.destroy(t.impl.handler);
   }
