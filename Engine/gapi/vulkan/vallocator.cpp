@@ -1,8 +1,9 @@
 #include "vallocator.h"
-#include "vimage.h"
 
 #include "vdevice.h"
 #include "vbuffer.h"
+#include "vtexture.h"
+
 #include "exceptions/exception.h"
 
 #include <Tempest/Pixmap>
@@ -75,8 +76,8 @@ VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferFl
   return ret;
   }
 
-VImage VAllocator::alloc(const Pixmap& pm,bool mip, Tempest::MemUsage usage, Tempest::BufferFlags bufFlg) {
-  VImage ret;
+VTexture VAllocator::alloc(const Pixmap& pm,bool mip) {
+  VTexture ret;
   ret.alloc = this;
 
   VkImageCreateInfo imageInfo = {};
@@ -102,15 +103,24 @@ VImage VAllocator::alloc(const Pixmap& pm,bool mip, Tempest::MemUsage usage, Tem
   uint32_t typeId=provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
   ret.page=allocator.alloc(size_t(memRq.size),size_t(memRq.alignment),typeId);
-  if(!ret.page.page)// || !commit(ret.page.page->memory,ret.impl,mem,ret.page.offset,size))
+  if(!ret.page.page || !commit(ret.page.page->memory,ret.impl,ret.page.offset))
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
   return ret;
   }
 
 void VAllocator::free(VBuffer &buf) {
-  vkDeviceWaitIdle(device);
-  vkDestroyBuffer (device,buf.impl,nullptr);
+  if(buf.impl!=VK_NULL_HANDLE) {
+    vkDeviceWaitIdle(device);
+    vkDestroyBuffer (device,buf.impl,nullptr);
+    }
+  allocator.free(buf.page);
+  }
 
+void VAllocator::free(VTexture &buf) {
+  if(buf.impl!=VK_NULL_HANDLE) {
+    vkDeviceWaitIdle(device);
+    vkDestroyImage  (device,buf.impl,nullptr);
+    }
   allocator.free(buf.page);
   }
 
@@ -126,4 +136,8 @@ bool VAllocator::commit(VkDeviceMemory dev,VkBuffer dest,const void* mem,size_t 
   if(vkBindBufferMemory(device,dest,dev,offset)!=VkResult::VK_SUCCESS)
     return false;
   return true;
+  }
+
+bool VAllocator::commit(VkDeviceMemory dev, VkImage dest, size_t offset) {
+  return vkBindImageMemory(device, dest, dev, offset)==VkResult::VK_SUCCESS;
   }

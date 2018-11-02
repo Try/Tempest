@@ -239,12 +239,52 @@ void VDevice::draw(VCommandBuffer& cmd, VSemaphore &wait, VSemaphore &onReady, V
   vkAssert(vkQueueSubmit(graphicsQueue,1,&submitInfo,onReadyCpu.impl));
   }
 
-void VDevice::copyBuffer(VBuffer &dest, const VBuffer &src,size_t size) {
+void VDevice::copy(VBuffer &dest, const VBuffer &src,size_t size) {
   VCommandPool   pool(*this);
   VCommandBuffer commandBuffer(*this,pool);
 
   commandBuffer.begin(VCommandBuffer::ONE_TIME_SUBMIT_BIT);
   commandBuffer.copy(dest,0,src,0,size);
+  commandBuffer.end();
+
+  VkSubmitInfo submitInfo = {};
+  submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submitInfo.commandBufferCount = 1;
+  submitInfo.pCommandBuffers    = &commandBuffer.impl;
+
+  vkQueueSubmit  (graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+  vkQueueWaitIdle(graphicsQueue);
+
+  vkFreeCommandBuffers(device, pool.impl, 1, &commandBuffer.impl);
+  commandBuffer.impl=nullptr; // no wait device
+  }
+
+void VDevice::copy(VTexture &dest, uint32_t w, uint32_t h, const VBuffer &src) {
+  VCommandPool   pool(*this);
+  VCommandBuffer commandBuffer(*this,pool);
+
+  commandBuffer.begin(VCommandBuffer::ONE_TIME_SUBMIT_BIT);
+  commandBuffer.copy(dest,w,h,src);
+  commandBuffer.end();
+
+  VkSubmitInfo submitInfo = {};
+  submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submitInfo.commandBufferCount = 1;
+  submitInfo.pCommandBuffers    = &commandBuffer.impl;
+
+  vkQueueSubmit  (graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+  vkQueueWaitIdle(graphicsQueue);
+
+  vkFreeCommandBuffers(device, pool.impl, 1, &commandBuffer.impl);
+  commandBuffer.impl=nullptr; // no wait device
+  }
+
+void VDevice::changeLayout(VTexture &dest, VkImageLayout oldLayout, VkImageLayout newLayout) {
+  VCommandPool   pool(*this);
+  VCommandBuffer commandBuffer(*this,pool);
+
+  commandBuffer.begin(VCommandBuffer::ONE_TIME_SUBMIT_BIT);
+  commandBuffer.changeLayout(dest,oldLayout,newLayout);
   commandBuffer.end();
 
   VkSubmitInfo submitInfo = {};

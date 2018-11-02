@@ -17,6 +17,8 @@ class VCommandBuffer;
 class VFence;
 class VSemaphore;
 
+class VTexture;
+
 inline void vkAssert(VkResult code){
   switch( code ) {
     case VkResult::VK_SUCCESS:
@@ -69,7 +71,9 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     void                    draw(VCommandBuffer& cmd, VSemaphore& wait, VSemaphore& onReady, VFence& onReadyCpu);
 
-    void                    copyBuffer(Detail::VBuffer& dest, const Detail::VBuffer& src, size_t size);
+    void                    copy(Detail::VBuffer&  dest, const Detail::VBuffer& src, size_t size);
+    void                    copy(Detail::VTexture& dest, uint32_t w, uint32_t h, const Detail::VBuffer& src);
+    void                    changeLayout(Detail::VTexture& dest, VkImageLayout oldLayout, VkImageLayout newLayout);
 
     SwapChainSupportDetails querySwapChainSupport() { return querySwapChainSupport(physicalDevice); }
     QueueFamilyIndices      findQueueFamilies    () { return findQueueFamilies(physicalDevice);     }

@@ -14,6 +14,7 @@ class VCommandPool;
 
 class VPipeline;
 class VBuffer;
+class VTexture;
 class VImage;
 
 class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
@@ -49,7 +50,10 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void draw(size_t size);
     void setVbo(const AbstractGraphicsApi::Buffer& b);
 
-    void copy(Detail::VBuffer& dest, size_t offsetDest, const Detail::VBuffer& src, size_t offsetSrc, size_t size);
+    void copy(Detail::VBuffer&  dest, size_t offsetDest, const Detail::VBuffer& src, size_t offsetSrc, size_t size);
+    void copy(Detail::VTexture& dest, size_t width, size_t height, const Detail::VBuffer& src);
+
+    void changeLayout(Detail::VTexture& dest, VkImageLayout oldLayout, VkImageLayout newLayout);
 
   private:
     VkDevice        device=nullptr;

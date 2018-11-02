@@ -157,7 +157,7 @@ AbstractGraphicsApi::Buffer *VulkanApi::createBuffer(AbstractGraphicsApi::Device
     Detail::VBuffer  stage=dx->allocator.alloc(mem,     size, MemUsage::TransferSrc,       BufferFlags::Staging);
     Detail::VBuffer  buf  =dx->allocator.alloc(nullptr, size, usage|MemUsage::TransferDst, BufferFlags::Static );
 
-    dx->copyBuffer(buf,stage,size);
+    dx->copy(buf,stage,size);
     return new Detail::VBuffer(std::move(buf));
     }
   }
@@ -173,8 +173,10 @@ AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Devi
   const uint32_t  size =p.w()*p.h()*4;
   Detail::VBuffer stage=dx->allocator.alloc(p.data(),size,MemUsage::TransferSrc,BufferFlags::Staging);
 
-  auto ret=new Detail::VTexture(*dx,stage,p,mips);
-  return ret;
+  auto buf=dx->allocator.alloc(p,mips);
+  dx->changeLayout(buf, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+  dx->copy(buf,p.w(),p.h(),stage);
+  return new Detail::VTexture(std::move(buf));
   }
 
 void VulkanApi::destroy(AbstractGraphicsApi::Texture *t) {

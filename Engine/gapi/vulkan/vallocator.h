@@ -9,7 +9,7 @@ namespace Detail {
 
 class VDevice;
 class VBuffer;
-class VImage;
+class VTexture;
 
 class VAllocator {
   private:
@@ -28,9 +28,10 @@ class VAllocator {
 
     using Allocation=typename Tempest::Detail::DeviceAllocator<Provider>::Allocation;
 
-    VBuffer alloc(const void *mem, size_t size, MemUsage usage, BufferFlags bufFlg);
-    VImage  alloc(const Pixmap &pm, bool mip, MemUsage usage, BufferFlags bufFlg);
-    void    free(VBuffer& buf);
+    VBuffer  alloc(const void *mem,  size_t size, MemUsage usage, BufferFlags bufFlg);
+    VTexture alloc(const Pixmap &pm, bool mip);
+    void     free(VBuffer&  buf);
+    void     free(VTexture& buf);
 
   private:
     VkDevice                          device=nullptr;
@@ -38,6 +39,7 @@ class VAllocator {
     Detail::DeviceAllocator<Provider> allocator{provider};
 
     bool commit(VkDeviceMemory dev,VkBuffer dest,const void *mem,size_t offset,size_t size);
+    bool commit(VkDeviceMemory dev, VkImage  dest, size_t offset);
   };
 
 }}
