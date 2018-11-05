@@ -10,18 +10,36 @@
 
 using namespace Tempest::Detail;
 
+
+VPipeline::VUboLayout::VUboLayout(VkDevice dev, const Tempest::UniformsLayout &lay)
+  :dev(dev),impl(initUboLayout(dev,lay)){
+  }
+
+VPipeline::VUboLayout::VUboLayout(VkDevice dev,VkDescriptorSetLayout lay)
+  :dev(dev),impl(lay){
+  }
+
+VPipeline::VUboLayout::~VUboLayout() {
+  vkDeviceWaitIdle(dev);
+  vkDestroyDescriptorSetLayout(dev,impl,nullptr);
+  }
+
+
 VPipeline::VPipeline(){
   }
 
 VPipeline::VPipeline(VDevice& device,
                      VRenderPass& pass, uint32_t width, uint32_t height,
                      const UniformsLayout &ulay,
+                     std::shared_ptr<AbstractGraphicsApi::UniformsLay> &ulayImpl,
                      VShader& vert, VShader& frag)
   : device(device.device) {
   try {
-    initUboLayout(ulay);
-    initLayout();
-    initGraphicsPipeline(pass,width,height,vert,frag);
+    if(ulayImpl==nullptr)
+      ulayImpl=std::make_shared<VUboLayout>(device.device,initUboLayout(device.device,ulay));
+    VUboLayout* puLay=reinterpret_cast<VUboLayout*>(ulayImpl.get());
+    pipelineLayout  =initLayout(device.device,puLay->impl);
+    graphicsPipeline=initGraphicsPipeline(device.device,pipelineLayout,pass,width,height,vert,frag);
     }
   catch(...) {
     cleanup();
@@ -31,7 +49,6 @@ VPipeline::VPipeline(VDevice& device,
 
 VPipeline::VPipeline(VPipeline &&other) {
   std::swap(device,          other.device);
-  std::swap(uniformsLayout,  other.uniformsLayout);
   std::swap(graphicsPipeline,other.graphicsPipeline);
   std::swap(pipelineLayout,  other.pipelineLayout);
   }
@@ -42,7 +59,6 @@ VPipeline::~VPipeline() {
 
 void VPipeline::operator=(VPipeline &&other) {
   std::swap(device,          other.device);
-  std::swap(uniformsLayout,  other.uniformsLayout);
   std::swap(graphicsPipeline,other.graphicsPipeline);
   std::swap(pipelineLayout,  other.pipelineLayout);
   }
@@ -51,25 +67,25 @@ void VPipeline::cleanup() {
   if(pipelineLayout==VK_NULL_HANDLE)
     return;
   vkDeviceWaitIdle(device);
-  if(uniformsLayout!=VK_NULL_HANDLE)
-    vkDestroyDescriptorSetLayout(device,uniformsLayout,nullptr);
   if(pipelineLayout!=VK_NULL_HANDLE)
     vkDestroyPipelineLayout(device,pipelineLayout,nullptr);
   if(graphicsPipeline!=VK_NULL_HANDLE)
     vkDestroyPipeline(device,graphicsPipeline,nullptr);
   }
 
-void VPipeline::initLayout() {
+VkPipelineLayout VPipeline::initLayout(VkDevice device,VkDescriptorSetLayout uboLay) {
   VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
   pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-  pipelineLayoutInfo.pSetLayouts            = &uniformsLayout;
+  pipelineLayoutInfo.pSetLayouts            = &uboLay;
   pipelineLayoutInfo.setLayoutCount         = 1;
   pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-  vkAssert(vkCreatePipelineLayout(device,&pipelineLayoutInfo,nullptr,&pipelineLayout));
+  VkPipelineLayout ret;
+  vkAssert(vkCreatePipelineLayout(device,&pipelineLayoutInfo,nullptr,&ret));
+  return ret;
   }
 
-void VPipeline::initUboLayout(const UniformsLayout &ulay) {
+VkDescriptorSetLayout VPipeline::initUboLayout(VkDevice device, const UniformsLayout &ulay) {
   static const VkDescriptorType types[]={
     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
@@ -96,10 +112,14 @@ void VPipeline::initUboLayout(const UniformsLayout &ulay) {
   info.bindingCount=bind.size();
   info.pBindings   =bind.data();
 
-  vkAssert(vkCreateDescriptorSetLayout(device,&info,nullptr,&uniformsLayout));
+  VkDescriptorSetLayout ret;
+  vkAssert(vkCreateDescriptorSetLayout(device,&info,nullptr,&ret));
+  return ret;
   }
 
-void VPipeline::initGraphicsPipeline(VRenderPass &pass, uint32_t width, uint32_t height, VShader &vert, VShader &frag) {
+VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
+                                           VRenderPass &pass, uint32_t width, uint32_t height,
+                                           VShader &vert, VShader &frag) {
   VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
   vertShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
   vertShaderStageInfo.stage  = VK_SHADER_STAGE_VERTEX_BIT;
@@ -210,10 +230,12 @@ void VPipeline::initGraphicsPipeline(VRenderPass &pass, uint32_t width, uint32_t
   pipelineInfo.pRasterizationState = &rasterizer;
   pipelineInfo.pMultisampleState   = &multisampling;
   pipelineInfo.pColorBlendState    = &colorBlending;
-  pipelineInfo.layout              = pipelineLayout;
+  pipelineInfo.layout              = layout;
   pipelineInfo.renderPass          = pass.renderPass;
   pipelineInfo.subpass             = 0;
   pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
 
+  VkPipeline graphicsPipeline=VK_NULL_HANDLE;
   vkAssert(vkCreateGraphicsPipelines(device,VK_NULL_HANDLE,1,&pipelineInfo,nullptr,&graphicsPipeline));
+  return graphicsPipeline;
   }

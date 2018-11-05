@@ -34,6 +34,8 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     VkCommandBuffer impl=nullptr;
 
+    void reset();
+
     void begin(Usage usageFlags);
     void begin();
     void end();

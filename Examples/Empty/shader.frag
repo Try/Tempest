@@ -6,11 +6,12 @@ layout(binding = 0) uniform UniformBufferObject {
   float g;
   float b;
   } ubo;
+layout(binding = 1) uniform sampler2D texSampler;
 
 layout(location = 0) in  vec3 fragColor;
 
 layout(location = 0) out vec4 outColor;
 
 void main() {
-  outColor = vec4(fragColor+vec3(ubo.r,ubo.g,ubo.b), 1.0);
+  outColor = texture(texSampler, fragColor.xy);//vec4(fragColor+vec3(ubo.r,ubo.g,ubo.b), 1.0);
   }

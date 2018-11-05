@@ -2,11 +2,11 @@
 
 #include <Tempest/AbstractGraphicsApi>
 #include <Tempest/Device>
-#include "videobuffer.h"
 
 namespace Tempest {
 
 class Device;
+class UniformBuffer;
 
 class Uniforms {
   public:
@@ -15,12 +15,15 @@ class Uniforms {
     ~Uniforms();
     Uniforms& operator=(Uniforms&&);
 
+    void set(size_t layoutBind,const UniformBuffer& vbuf,size_t offset,size_t size);
+    void set(size_t layoutBind,const Texture2d& tex);
+
   private:
-    Uniforms(Tempest::VideoBuffer&& impl,Tempest::Device& dev,AbstractGraphicsApi::Desc* desc);
+    Uniforms(Tempest::Device& dev,AbstractGraphicsApi::Desc* desc);
 
     Tempest::Device*                         dev=nullptr;
     Detail::DPtr<AbstractGraphicsApi::Desc*> desc;
-    Tempest::VideoBuffer                     impl;
+    //Tempest::VideoBuffer                     impl;
 
   friend class Tempest::Device;
   friend class Tempest::CommandBuffer;

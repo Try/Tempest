@@ -5,6 +5,9 @@
 #include <vulkan/vulkan.hpp>
 
 #include "vallocator.h"
+#include "vcommandbuffer.h"
+#include "vcommandpool.h"
+#include "vfence.h"
 #include "vulkanapi.h"
 #include "exceptions/exception.h"
 
@@ -80,8 +83,21 @@ class VDevice : public AbstractGraphicsApi::Device {
     uint32_t                memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props) const;
 
   private:
+    struct DataHelper {
+      DataHelper(VDevice &owner);
+      VCommandPool           cmdPool;
+      VCommandBuffer         cmdBuffer;
+      VFence                 fence;
+      VkQueue                graphicsQueue=nullptr;
+      bool                   firstCommit=true;
+
+      void begin();
+      void end();
+      };
+
     VkInstance             instance;
     VkPhysicalDeviceMemoryProperties memoryProperties;
+    std::unique_ptr<DataHelper> data;
 
     void                    pickPhysicalDevice();
     bool                    isDeviceSuitable(VkPhysicalDevice device);

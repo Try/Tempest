@@ -3,6 +3,8 @@
 #include <Tempest/Semaphore>
 #include <Tempest/Fence>
 #include <Tempest/CommandPool>
+#include <Tempest/UniformsLayout>
+#include <Tempest/UniformBuffer>
 
 using namespace Tempest;
 
@@ -70,6 +72,12 @@ Texture2d Device::loadTexture(const Pixmap &pm, bool mips) {
   return t;
   }
 
+UniformBuffer Device::loadUbo(const void *mem, size_t size) {
+  VideoBuffer   data=createVideoBuffer(mem,size,MemUsage::UniformBit,BufferFlags::Static);
+  UniformBuffer ubo(std::move(data));
+  return ubo;
+  }
+
 FrameBuffer Device::frameBuffer(Frame& out,RenderPass &pass) {
   FrameBuffer f(*this,api.createFbo(dev,swapchain,pass.impl.handler,out.id));
   return f;
@@ -80,11 +88,12 @@ RenderPass Device::pass() {
   return f;
   }
 
-RenderPipeline Device::pipeline(RenderPass& pass, uint32_t w, uint32_t h, const UniformsLayout &ulay, const Shader &vs, const Shader &fs) {
+RenderPipeline Device::pipeline(RenderPass& pass, uint32_t w, uint32_t h, const UniformsLayout &ulay,
+                                const Shader &vs, const Shader &fs) {
   if(w<=0 || h<=0 || !pass.impl || !vs.impl || !fs.impl)
     return RenderPipeline();
 
-  RenderPipeline f(*this,api.createPipeline(dev,pass.impl.handler,w,h,ulay,{vs.impl.handler,fs.impl.handler}));
+  RenderPipeline f(*this,api.createPipeline(dev,pass.impl.handler,w,h,ulay,ulay.impl,{vs.impl.handler,fs.impl.handler}));
   return f;
   }
 
@@ -108,9 +117,10 @@ VideoBuffer Device::createVideoBuffer(const void *data, size_t size, MemUsage us
   return  buf;
   }
 
-Uniforms Device::loadUniforms(const void *mem, size_t size, size_t count, const RenderPipeline &owner) {
-  VideoBuffer data=createVideoBuffer(mem,size*count,MemUsage::UniformBit,BufferFlags::Static);
-  Uniforms    ubo(std::move(data),*this,api.createDescriptors(dev,owner.impl.handler,data.impl.handler,size,count));
+Uniforms Device::loadUniforms(const UniformsLayout &owner) {
+  if(owner.impl==nullptr)
+    owner.impl=api.createUboLayout(dev,owner);
+  Uniforms ubo(*this,api.createDescriptors(dev,owner.impl.get()));
   return ubo;
   }
 

@@ -42,13 +42,16 @@ void VCommandBuffer::operator=(VCommandBuffer &&other) {
   std::swap(impl,other.impl);
   }
 
+void VCommandBuffer::reset() {
+  vkResetCommandBuffer(impl,VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+  }
+
 void VCommandBuffer::begin(Usage usageFlags) {
   VkCommandBufferBeginInfo beginInfo = {};
   beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
   beginInfo.flags = usageFlags; //VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
   //beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-  //vkResetCommandBuffer();
   vkAssert(vkBeginCommandBuffer(impl,&beginInfo));
   }
 

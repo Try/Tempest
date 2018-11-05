@@ -26,23 +26,30 @@ Game::Game(Tempest::VulkanApi& api)
     inFlightFences.emplace_back(device);
     }
 
-  ulay.add(0,Tempest::UniformsLayout::Ubo,Tempest::UniformsLayout::Fragment);
+  ulay.add(0,Tempest::UniformsLayout::Ubo,    Tempest::UniformsLayout::Fragment);
+  ulay.add(1,Tempest::UniformsLayout::Texture,Tempest::UniformsLayout::Fragment);
 
   initSwapchain(ulay);
   }
 
 void Game::initSwapchain(const Tempest::UniformsLayout &ulay){
+  Ubo usrc={};
+
   auto vs  = device.loadShader("shader/vert.spv");
   auto fs  = device.loadShader("shader/frag.spv");
 
   pass     = device.pass();
   pipeline = device.pipeline(pass,width(),height(),ulay,vs,fs);
+  uboBuf   = device.loadUbo(&usrc,sizeof(usrc));
 
   const size_t imgC=device.swapchainImageCount();
   if(ubo.size()==0) {
-    Ubo usrc={};
-    for(size_t i=0;i<imgC;++i)
-      ubo.emplace_back(device.loadUniforms(&usrc,sizeof(usrc),1,pipeline));
+    for(size_t i=0;i<imgC;++i) {
+      Tempest::Uniforms u=device.loadUniforms(ulay);
+      u.set(0,uboBuf,0,sizeof(usrc));
+      u.set(1,texture);
+      ubo.emplace_back(std::move(u));
+      }
     }
 
   commandBuffers.clear();

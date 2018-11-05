@@ -29,6 +29,7 @@ class VertexBuffer;
 class Pixmap;
 
 class Uniforms;
+class UniformBuffer;
 class UniformsLayout;
 
 class Device {
@@ -51,8 +52,9 @@ class Device {
     VertexBuffer<T> loadVbo(const T* arr,size_t arrSize,BufferFlags flg);
 
     Texture2d       loadTexture(const Pixmap& pm,bool mips=true);
+    UniformBuffer  loadUbo(const void* data, size_t size);
 
-    Uniforms       loadUniforms(const void* data, size_t size, size_t count, const RenderPipeline& owner);
+    Uniforms       loadUniforms(const UniformsLayout &owner);
 
     FrameBuffer    frameBuffer(Frame &out, RenderPass& pass);
     RenderPass     pass    ();

@@ -25,8 +25,9 @@ class VulkanApi : public AbstractGraphicsApi {
     Fbo*       createFbo(Device *d, Swapchain *s, Pass* pass, uint32_t imageId) override;
     void       destroy(Fbo* pass) override;
 
-    Pipeline*  createPipeline(Device* d,Pass* pass,uint32_t width, uint32_t height,
+    Pipeline*  createPipeline(Device* d, Pass* pass, uint32_t width, uint32_t height,
                               const UniformsLayout& ulay,
+                              std::shared_ptr<UniformsLay> &ulayImpl,
                               const std::initializer_list<Shader*>& frag) override;
     void       destroy       (Pipeline* pass) override;
 
@@ -45,8 +46,10 @@ class VulkanApi : public AbstractGraphicsApi {
     Buffer*    createBuffer(Device* d, const void *mem, size_t size, MemUsage usage, BufferFlags flg) override;
     void       destroy(Buffer* cmd) override;
 
-    Desc*      createDescriptors(Device* d, Pipeline* p, Buffer* b, size_t size, size_t count) override;
+    Desc*      createDescriptors(Device* d, UniformsLay *lay) override;
     void       destroy(Desc* d) override;
+
+    std::shared_ptr<AbstractGraphicsApi::UniformsLay> createUboLayout(Device *d,const UniformsLayout&) override;
 
     Texture*   createTexture(Device* d,const Pixmap& p,bool mips) override;
     void       destroy(Texture* t) override;

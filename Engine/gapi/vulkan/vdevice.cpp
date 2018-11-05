@@ -18,8 +18,38 @@ static const std::initializer_list<const char*> deviceExtensions = {
   VK_KHR_SWAPCHAIN_EXTENSION_NAME
   };
 
+
+VDevice::DataHelper::DataHelper(VDevice &owner)
+  : cmdPool(owner,VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT),
+    cmdBuffer(owner,cmdPool),
+    fence(owner),
+    graphicsQueue(owner.graphicsQueue){
+  }
+
+void VDevice::DataHelper::begin() {
+  if(!firstCommit) {
+    fence.wait();
+    cmdBuffer.reset();
+    } else {
+    firstCommit=false;
+    }
+  cmdBuffer.begin(VCommandBuffer::ONE_TIME_SUBMIT_BIT);
+  }
+
+void VDevice::DataHelper::end() {
+  cmdBuffer.end();
+
+  VkSubmitInfo submitInfo = {};
+  submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submitInfo.commandBufferCount = 1;
+  submitInfo.pCommandBuffers    = &cmdBuffer.impl;
+
+  fence.reset();
+  vkQueueSubmit(graphicsQueue, 1, &submitInfo, fence.impl);
+  }
+
 VDevice::VDevice(VulkanApi &api, void *hwnd)
-  :instance(api.instance) {
+  :instance(api.instance)  {
   createSurface(api,HWND(hwnd));
 
   uint32_t deviceCount = 0;
@@ -41,10 +71,13 @@ VDevice::VDevice(VulkanApi &api, void *hwnd)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
   createLogicalDevice(api);
   vkGetPhysicalDeviceMemoryProperties(physicalDevice,&memoryProperties);
+
   allocator.setDevice(*this);
+  data.reset(new DataHelper(*this));
   }
 
 VDevice::~VDevice(){
+  data.reset();
   vkDeviceWaitIdle(device);
   vkDestroySurfaceKHR(instance,surface,nullptr);
   vkDestroyDevice(device,nullptr);
@@ -240,61 +273,19 @@ void VDevice::draw(VCommandBuffer& cmd, VSemaphore &wait, VSemaphore &onReady, V
   }
 
 void VDevice::copy(VBuffer &dest, const VBuffer &src,size_t size) {
-  VCommandPool   pool(*this);
-  VCommandBuffer commandBuffer(*this,pool);
-
-  commandBuffer.begin(VCommandBuffer::ONE_TIME_SUBMIT_BIT);
-  commandBuffer.copy(dest,0,src,0,size);
-  commandBuffer.end();
-
-  VkSubmitInfo submitInfo = {};
-  submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers    = &commandBuffer.impl;
-
-  vkQueueSubmit  (graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-  vkQueueWaitIdle(graphicsQueue);
-
-  vkFreeCommandBuffers(device, pool.impl, 1, &commandBuffer.impl);
-  commandBuffer.impl=nullptr; // no wait device
+  data->begin();
+  data->cmdBuffer.copy(dest,0,src,0,size);
+  data->end();
   }
 
 void VDevice::copy(VTexture &dest, uint32_t w, uint32_t h, const VBuffer &src) {
-  VCommandPool   pool(*this);
-  VCommandBuffer commandBuffer(*this,pool);
-
-  commandBuffer.begin(VCommandBuffer::ONE_TIME_SUBMIT_BIT);
-  commandBuffer.copy(dest,w,h,src);
-  commandBuffer.end();
-
-  VkSubmitInfo submitInfo = {};
-  submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers    = &commandBuffer.impl;
-
-  vkQueueSubmit  (graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-  vkQueueWaitIdle(graphicsQueue);
-
-  vkFreeCommandBuffers(device, pool.impl, 1, &commandBuffer.impl);
-  commandBuffer.impl=nullptr; // no wait device
+  data->begin();
+  data->cmdBuffer.copy(dest,w,h,src);
+  data->end();
   }
 
 void VDevice::changeLayout(VTexture &dest, VkImageLayout oldLayout, VkImageLayout newLayout) {
-  VCommandPool   pool(*this);
-  VCommandBuffer commandBuffer(*this,pool);
-
-  commandBuffer.begin(VCommandBuffer::ONE_TIME_SUBMIT_BIT);
-  commandBuffer.changeLayout(dest,oldLayout,newLayout);
-  commandBuffer.end();
-
-  VkSubmitInfo submitInfo = {};
-  submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers    = &commandBuffer.impl;
-
-  vkQueueSubmit  (graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-  vkQueueWaitIdle(graphicsQueue);
-
-  vkFreeCommandBuffers(device, pool.impl, 1, &commandBuffer.impl);
-  commandBuffer.impl=nullptr; // no wait device
+  data->begin();
+  data->cmdBuffer.changeLayout(dest,oldLayout,newLayout);
+  data->end();
   }

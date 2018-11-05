@@ -7,6 +7,7 @@ namespace Tempest {
 
 class Device;
 class CommandBuffer;
+class Uniforms;
 
 class VideoBuffer {
   public:
@@ -23,6 +24,7 @@ class VideoBuffer {
 
   friend class Tempest::Device;
   friend class Tempest::CommandBuffer;
+  friend class Tempest::Uniforms;
   };
 
 }

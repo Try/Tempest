@@ -8,6 +8,7 @@
 #include <Tempest/Device>
 #include <Tempest/VertexBuffer>
 #include <Tempest/UniformsLayout>
+#include <Tempest/UniformBuffer>
 #include <vector>
 
 class Game : public Tempest::Window {
@@ -42,6 +43,7 @@ class Game : public Tempest::Window {
     Tempest::Texture2d                  texture;
 
     Tempest::UniformsLayout             ulay;
+    Tempest::UniformBuffer              uboBuf;
     std::vector<Tempest::Uniforms>      ubo;
 
     std::vector<Tempest::Semaphore>     renderFinishedSemaphores;

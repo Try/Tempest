@@ -1,7 +1,11 @@
 #pragma once
 
+#include <Tempest/AbstractGraphicsApi>
+#include "../utility/dptr.h"
+
 #include <cstdint>
 #include <vector>
+#include <memory>
 
 namespace Tempest {
 
@@ -29,6 +33,9 @@ class UniformsLayout {
 
   private:
     std::vector<Binding> elt;
+    mutable std::shared_ptr<AbstractGraphicsApi::UniformsLay> impl;
+
+  friend class Device;
   };
 
 }

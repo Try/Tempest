@@ -10,7 +10,7 @@ class VDevice;
 
 class VCommandPool : public AbstractGraphicsApi::CmdPool {
   public:
-    VCommandPool(VDevice &device);
+    VCommandPool(VDevice &device, VkCommandPoolCreateFlags flags=0);
     VCommandPool(VCommandPool&& other);
     ~VCommandPool();
 

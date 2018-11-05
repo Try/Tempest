@@ -6,6 +6,7 @@
 namespace Tempest {
 
 class Device;
+class Uniforms;
 
 class Texture2d {
   public:
@@ -21,6 +22,7 @@ class Texture2d {
     Detail::DPtr<AbstractGraphicsApi::Texture*> impl;
 
   friend class Tempest::Device;
+  friend class Tempest::Uniforms;
   };
 
 }
