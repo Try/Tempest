@@ -10,7 +10,7 @@ Texture2d::Texture2d(Device &dev, AbstractGraphicsApi::Texture *impl)
   }
 
 Texture2d::~Texture2d(){
-  if(dev)
-    dev->destroy(*this);
+  //if(dev)
+  //  dev->destroy(*this);
   }
 

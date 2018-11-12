@@ -116,7 +116,6 @@ class Device {
     void       destroy(CommandBuffer&  c);
     void       destroy(VideoBuffer&    b);
     void       destroy(Uniforms&       u);
-    void       destroy(Texture2d&      t);
 
     void       begin(Frame& f,RenderPass& p);
     void       end  (Frame& f,RenderPass& p);

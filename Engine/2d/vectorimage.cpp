@@ -19,7 +19,7 @@ void VectorImage::endPaint() {
   }
 
 void VectorImage::setBrush(const Texture2d *t, float r, float g, float b, float a) {
-  brush = t;
+  brush = t ? Detail::ResourcePtr<Texture2d>(*t) : Detail::ResourcePtr<Texture2d>();
   }
 
 void VectorImage::clear() {
@@ -44,7 +44,7 @@ void VectorImage::makeActual(Device &dev) {
   if(f.outdated) {
     f.vbo=dev.loadVbo(buf,BufferFlags::Static);
     f.ubo=dev.uniforms(dev.builtin().brushTexture2dLayout());
-    f.ubo.set(0,*brush);
+    f.ubo.set(0,brush);
 
     f.outdated=false;
     outdatedCount--;

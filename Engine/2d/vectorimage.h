@@ -41,7 +41,8 @@ class VectorImage : public Tempest::PaintDevice {
       bool                         outdated=true;
       };
 
-    const Tempest::Texture2d*   brush=nullptr;
+    using TexPtr=Detail::ResourcePtr<Tempest::Texture2d>;
+    TexPtr                      brush;
 
     std::unique_ptr<PerFrame[]> frame;
     size_t                      frameCount=0;

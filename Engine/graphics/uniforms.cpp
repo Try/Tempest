@@ -26,6 +26,10 @@ void Uniforms::set(size_t layoutBind, const Texture2d &tex) {
   desc.handler->set(layoutBind,tex.impl.handler);
   }
 
+void Uniforms::set(size_t layoutBind, const Detail::ResourcePtr<Texture2d> &tex) {
+  desc.handler->set(layoutBind,tex.impl.handler);
+  }
+
 void Uniforms::set(size_t layoutBind, const UniformBuffer &vbuf, size_t offset, size_t size) {
   desc.handler->set(layoutBind,vbuf.impl.impl.handler,offset,size);
   }

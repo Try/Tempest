@@ -55,7 +55,7 @@ class VulkanApi : public AbstractGraphicsApi {
     std::shared_ptr<AbstractGraphicsApi::UniformsLay> createUboLayout(Device *d,const UniformsLayout&) override;
 
     Texture*   createTexture(Device* d,const Pixmap& p,bool mips) override;
-    void       destroy(Texture* t) override;
+    //void       destroy(Texture* t) override;
 
     CommandBuffer* createCommandBuffer(Device* d, CmdPool* pool, bool secondary) override;
     void           destroy            (CommandBuffer* cmd) override;

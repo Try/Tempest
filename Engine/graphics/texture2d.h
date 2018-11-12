@@ -18,11 +18,14 @@ class Texture2d {
   private:
     Texture2d(Tempest::Device& dev,AbstractGraphicsApi::Texture* impl);
 
-    Tempest::Device*                            dev =nullptr;
-    Detail::DPtr<AbstractGraphicsApi::Texture*> impl;
+    Tempest::Device*                                  dev =nullptr;
+    Detail::DSharedPtr<AbstractGraphicsApi::Texture*> impl;
 
   friend class Tempest::Device;
   friend class Tempest::Uniforms;
+
+  template<class T>
+  friend class Tempest::Detail::ResourcePtr;
   };
 
 }

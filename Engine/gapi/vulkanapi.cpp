@@ -183,10 +183,11 @@ AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Devi
   return new Detail::VTexture(std::move(buf));
   }
 
+/*
 void VulkanApi::destroy(AbstractGraphicsApi::Texture *t) {
   Detail::VTexture* tx = reinterpret_cast<Detail::VTexture*>(t);
   delete tx;
-  }
+  }*/
 
 AbstractGraphicsApi::Desc *VulkanApi::createDescriptors(AbstractGraphicsApi::Device*      d,
                                                         AbstractGraphicsApi::UniformsLay* lay) {

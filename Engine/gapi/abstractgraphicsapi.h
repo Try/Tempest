@@ -3,6 +3,7 @@
 #include <Tempest/SystemApi>
 #include <initializer_list>
 #include <memory>
+#include <atomic>
 
 #include "flags.h"
 
@@ -35,28 +36,33 @@ namespace Tempest {
 
     public:
 
+      struct Shared {
+        virtual ~Shared()=default;
+        std::atomic_uint_fast32_t counter{1};
+        };
+
       struct Device       {};
       struct Swapchain    {
         virtual ~Swapchain(){}
         virtual uint32_t imageCount() const=0;
         };
-      struct Texture      {};
-      struct Image        {};
-      struct Fbo          {};
-      struct Pass         {};
-      struct Pipeline     {};
-      struct Shader       {};
-      struct Uniforms     {};
-      struct UniformsLay  {
+      struct Texture:Shared {};
+      struct Image          {};
+      struct Fbo            {};
+      struct Pass           {};
+      struct Pipeline       {};
+      struct Shader         {};
+      struct Uniforms       {};
+      struct UniformsLay    {
         virtual ~UniformsLay()=default;
         };
-      struct Buffer       {};
-      struct Desc         {
+      struct Buffer         {};
+      struct Desc           {
         virtual ~Desc()=default;
         virtual void set(size_t id,AbstractGraphicsApi::Texture *tex)=0;
         virtual void set(size_t id,AbstractGraphicsApi::Buffer* buf,size_t offset,size_t size)=0;
         };
-      struct CommandBuffer{
+      struct CommandBuffer  {
         virtual ~CommandBuffer()=default;
         virtual void begin()=0;
         virtual void end()  =0;
@@ -72,14 +78,14 @@ namespace Tempest {
         virtual void setVbo(const Buffer& b)=0;
         virtual void draw(size_t vertexCount)=0;
         };
-      struct CmdPool      {};
+      struct CmdPool        {};
 
-      struct Fence        {
+      struct Fence          {
         virtual ~Fence()=default;
         virtual void wait() =0;
         virtual void reset()=0;
         };
-      struct Semaphore    {};
+      struct Semaphore      {};
 
       virtual Device*    createDevice(SystemApi::Window* w)=0;
       virtual void       destroy(Device* d)=0;
@@ -128,7 +134,7 @@ namespace Tempest {
       virtual void       destroy(Desc* cmd)=0;
 
       virtual Texture*   createTexture(Device* d,const Pixmap& p,bool mips)=0;
-      virtual void       destroy(Texture* t)=0;
+      //virtual void       destroy(Texture* t)=0;
 
       virtual uint32_t   nextImage(Device *d,Swapchain* sw,Semaphore* onReady)=0;
       virtual Image*     getImage(Device *d,Swapchain* sw,uint32_t id)=0;

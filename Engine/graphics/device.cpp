@@ -184,7 +184,3 @@ void Device::destroy(VideoBuffer &b) {
 void Device::destroy(Uniforms &u) {
   api.destroy(u.desc.handler);
   }
-
-void Device::destroy(Texture2d &t) {
-  api.destroy(t.impl.handler);
-  }
