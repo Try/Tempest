@@ -1,12 +1,15 @@
 #include "systemapi.h"
 
+#include <thread>
 #include <windows.h>
+#include <unordered_set>
 #include "exceptions/exception.h"
 
 using namespace Tempest;
 
 static LRESULT CALLBACK WindowProc(HWND hWnd,UINT msg,const WPARAM wParam,const LPARAM lParam );
 static const wchar_t* wndClassName=L"Tempest.Window";
+static std::unordered_set<SystemApi::Window*> windows;
 
 SystemApi::SystemApi() {}
 
@@ -54,26 +57,43 @@ SystemApi::Window *SystemApi::createWindow(SystemApi::WindowCallback *callback, 
   SetWindowLongPtr(window,GWLP_USERDATA,LONG_PTR(callback));
   //minsize.x = GetSystemMetrics(SM_CXMINTRACK);
   //minsize.y = GetSystemMetrics(SM_CYMINTRACK) + 1;
-  return reinterpret_cast<Window*>(window);
+  Window* wx = reinterpret_cast<Window*>(window);
+  try {
+    windows.insert(wx);
+    }
+  catch(...){
+    destroyWindow(wx);
+    throw;
+    }
+  return wx;
   }
 
 void SystemApi::destroyWindow(SystemApi::Window *w) {
+  windows.erase(w);
   DestroyWindow(HWND(w));
   }
 
 void SystemApi::exec() {
-  MSG  msg={};
   bool done=false;
   // main message loop
   while (!done) {
-    PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE);
-    if( msg.message==WM_QUIT ) { // check for a quit message
-      done = true;  // if found, quit app
+    MSG  msg={};
+    if(PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+      if( msg.message==WM_QUIT ) { // check for a quit message
+        done = true;  // if found, quit app
+        } else {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+        }
+      std::this_thread::yield();
       } else {
-      TranslateMessage(&msg);
-      DispatchMessage(&msg);
+      for(auto& i:windows){
+        HWND h = HWND(i);
+        SystemApi::WindowCallback* cb=reinterpret_cast<SystemApi::WindowCallback*>(GetWindowLongPtr(h,GWLP_USERDATA));
+        if(cb)
+          cb->onRender(reinterpret_cast<SystemApi::Window*>(h));
+        }
       }
-    //RedrawWindow(demo.window, nullptr, nullptr, RDW_INTERNALPAINT);
     }
   }
 
@@ -120,9 +140,9 @@ LRESULT CALLBACK WindowProc( HWND   hWnd,
       PostQuitMessage(0);
       }
       break;
-    default:
-      if(cb)
-        cb->onRender(reinterpret_cast<SystemApi::Window*>(hWnd));
+    //default:
+      //if(cb)
+      //  cb->onRender(reinterpret_cast<SystemApi::Window*>(hWnd));
     }
   return DefWindowProc( hWnd, msg, wParam, lParam );
   }

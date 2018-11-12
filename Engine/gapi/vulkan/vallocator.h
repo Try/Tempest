@@ -15,10 +15,17 @@ class VAllocator {
   private:
     struct Provider {
       using DeviceMemory=VkDeviceMemory;
+      ~Provider();
 
       VDevice*     device=nullptr;
+
+      DeviceMemory lastFree=VK_NULL_HANDLE;
+      uint32_t     lastType=0;
+      size_t       lastSize=0;
+
       DeviceMemory alloc(size_t size, uint32_t typeId);
-      void         free(DeviceMemory m);
+      void         free(DeviceMemory m, size_t size, uint32_t typeId);
+      void         freeLast();
       };
 
   public:
@@ -32,6 +39,8 @@ class VAllocator {
     VTexture alloc(const Pixmap &pm, bool mip);
     void     free(VBuffer&  buf);
     void     free(VTexture& buf);
+
+    void     freeLast() { provider.freeLast(); }
 
   private:
     VkDevice                          device=nullptr;

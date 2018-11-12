@@ -24,7 +24,10 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
       };
 
     VPipeline();
-    VPipeline(VDevice &device, VRenderPass &pass, uint32_t width, uint32_t height,
+    VPipeline(VDevice &device, VRenderPass &pass,
+              uint32_t width, uint32_t height,
+              const Decl::ComponentType *decl, size_t declSize,
+              size_t stride,
               const UniformsLayout& ulay,
               std::shared_ptr<AbstractGraphicsApi::UniformsLay> &ulayImpl,
               VShader &vert, VShader &frag);
@@ -42,8 +45,9 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     void cleanup();
     static VkPipelineLayout      initLayout(VkDevice device,VkDescriptorSetLayout uboLay);
     static VkDescriptorSetLayout initUboLayout(VkDevice device,const UniformsLayout &ulay);
-    static VkPipeline initGraphicsPipeline(VkDevice device,VkPipelineLayout layout,
-                                           VRenderPass& pass,uint32_t width, uint32_t height,
+    static VkPipeline initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
+                                           VRenderPass& pass, uint32_t width, uint32_t height,
+                                           const Decl::ComponentType *decl, size_t declSize, size_t stride,
                                            VShader &vert, VShader &frag);
   };
 

@@ -18,7 +18,6 @@ class VertexBuffer;
 
 class CommandBuffer {
   public:
-    CommandBuffer(Tempest::Device& owner);
     CommandBuffer(CommandBuffer&& f)=default;
     ~CommandBuffer();
     CommandBuffer& operator = (CommandBuffer&& other)=default;
@@ -31,18 +30,20 @@ class CommandBuffer {
     void beginRenderPass(const FrameBuffer& fbo, const RenderPass& p, uint32_t width, uint32_t height);
     void endRenderPass();
 
-    void setPipeline(const Tempest::RenderPipeline& p);
     void setUniforms(const Tempest::RenderPipeline& p,const Tempest::Uniforms& ubo);
 
     template<class T>
-    void setVbo(const VertexBuffer<T>& vbo){ setVbo(vbo.impl); }
+    void draw(const VertexBuffer<T>& vbo,size_t count){ implDraw(vbo.impl,count); }
 
-    void draw(size_t size);
+    void exec(const CommandBuffer& buf);
 
   private:
     CommandBuffer(Tempest::Device& dev,AbstractGraphicsApi::CommandBuffer* f);
 
-    void setVbo(const VideoBuffer &vbo);
+    void implDraw(const VideoBuffer& vbo,size_t size);
+
+    const RenderPipeline* curPipeline=nullptr;
+    const VideoBuffer*    curVbo     =nullptr;
 
     Tempest::Device*                                  dev=nullptr;
     Detail::DPtr<AbstractGraphicsApi::CommandBuffer*> impl;

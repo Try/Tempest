@@ -13,12 +13,12 @@
 
 using namespace Tempest::Detail;
 
-VCommandBuffer::VCommandBuffer(VDevice& device, VCommandPool& pool)
+VCommandBuffer::VCommandBuffer(VDevice& device, VCommandPool& pool, bool secondary)
   :device(device.device), pool(pool.impl) {
   VkCommandBufferAllocateInfo allocInfo = {};
   allocInfo.sType             =VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   allocInfo.commandPool       =pool.impl;
-  allocInfo.level             =VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  allocInfo.level             =secondary ? VK_COMMAND_BUFFER_LEVEL_SECONDARY : VK_COMMAND_BUFFER_LEVEL_PRIMARY;
   allocInfo.commandBufferCount=1;
 
   vkAssert(vkAllocateCommandBuffers(device.device,&allocInfo,&impl));
@@ -141,8 +141,15 @@ void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
 void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p,AbstractGraphicsApi::Desc &u) {
   VPipeline&        px=reinterpret_cast<VPipeline&>(p);
   VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
-  vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,px.pipelineLayout,0,
-                          1,ux.desc, 0,nullptr);
+  vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          px.pipelineLayout,0,
+                          1,ux.desc,
+                          0,nullptr);
+  }
+
+void VCommandBuffer::exec(const CommandBuffer &buf) {
+  const VCommandBuffer& cmd=reinterpret_cast<const VCommandBuffer&>(buf);
+  vkCmdExecuteCommands(impl,1,&cmd.impl);
   }
 
 void VCommandBuffer::draw(size_t size) {

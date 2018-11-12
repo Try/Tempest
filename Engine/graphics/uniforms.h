@@ -23,7 +23,6 @@ class Uniforms {
 
     Tempest::Device*                         dev=nullptr;
     Detail::DPtr<AbstractGraphicsApi::Desc*> desc;
-    //Tempest::VideoBuffer                     impl;
 
   friend class Tempest::Device;
   friend class Tempest::CommandBuffer;

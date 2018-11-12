@@ -18,8 +18,22 @@ void VAllocator::setDevice(VDevice &dev) {
   provider.device = &dev;
   }
 
+VAllocator::Provider::~Provider() {
+  if(lastFree!=VK_NULL_HANDLE)
+    vkFreeMemory(device->device,lastFree,nullptr);
+  }
+
 VAllocator::Provider::DeviceMemory VAllocator::Provider::alloc(size_t size,uint32_t typeId) {
-  VkDeviceMemory   memory=VK_NULL_HANDLE;
+  if(lastFree!=VK_NULL_HANDLE){
+    if(lastType==typeId && lastSize==size){
+      VkDeviceMemory memory=lastFree;
+      lastFree=VK_NULL_HANDLE;
+      return memory;
+      }
+    vkFreeMemory(device->device,lastFree,nullptr);
+    lastFree=VK_NULL_HANDLE;
+    }
+  VkDeviceMemory memory=VK_NULL_HANDLE;
 
   VkMemoryAllocateInfo vk_memoryAllocateInfo;
   vk_memoryAllocateInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -31,8 +45,19 @@ VAllocator::Provider::DeviceMemory VAllocator::Provider::alloc(size_t size,uint3
   return memory;
   }
 
-void VAllocator::Provider::free(VAllocator::Provider::DeviceMemory m) {
-  vkFreeMemory(device->device,m,nullptr);
+void VAllocator::Provider::free(VAllocator::Provider::DeviceMemory m, size_t size, uint32_t typeId) {
+  if(lastFree!=VK_NULL_HANDLE)
+    vkFreeMemory(device->device,lastFree,nullptr);
+
+  lastFree=m;
+  lastSize=size;
+  lastType=typeId;
+  }
+
+void VAllocator::Provider::freeLast() {
+  if(lastFree!=VK_NULL_HANDLE)
+    vkFreeMemory(device->device,lastFree,nullptr);
+  lastFree=VK_NULL_HANDLE;
   }
 
 VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferFlags bufFlg) {

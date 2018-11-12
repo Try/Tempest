@@ -10,9 +10,13 @@
 #include <Tempest/Frame>
 #include <Tempest/Texture2d>
 #include <Tempest/Uniforms>
+#include <Tempest/VertexBuffer>
+#include <Tempest/Builtin>
 
 #include "videobuffer.h"
+
 #include <memory>
+#include <vector>
 
 namespace Tempest {
 
@@ -22,10 +26,6 @@ class Semaphore;
 class CommandPool;
 
 class VideoBuffer;
-
-template<class T>
-class VertexBuffer;
-
 class Pixmap;
 
 class Uniforms;
@@ -34,15 +34,19 @@ class UniformsLayout;
 
 class Device {
   public:
-    Device(AbstractGraphicsApi& api,SystemApi::Window* w);
+    Device(AbstractGraphicsApi& api,SystemApi::Window* w,uint8_t maxFramesInFlight=2);
     Device(const Device&)=delete;
     ~Device();
 
     void           reset();
     uint32_t       swapchainImageCount() const;
+    uint8_t        maxFramesInFlight() const;
+    uint8_t        frameId() const;
+    uint64_t       frameCounter() const;
 
     Frame          frame(uint32_t id);
     uint32_t       nextImage(Semaphore& onReady);
+    void           draw(const CommandBuffer& cmd,const Semaphore& wait);
     void           draw(const CommandBuffer& cmd,const Semaphore& wait,Semaphore& done,Fence& fdone);
     void           present(uint32_t img,const Semaphore& wait);
 
@@ -51,25 +55,36 @@ class Device {
     template<class T>
     VertexBuffer<T> loadVbo(const T* arr,size_t arrSize,BufferFlags flg);
 
-    Texture2d       loadTexture(const Pixmap& pm,bool mips=true);
+    template<class T>
+    VertexBuffer<T> loadVbo(const std::vector<T> arr,BufferFlags flg){
+      return loadVbo(arr.data(),arr.size(),flg);
+      }
+
+    Texture2d      loadTexture(const Pixmap& pm,bool mips=true);
     UniformBuffer  loadUbo(const void* data, size_t size);
 
-    Uniforms       loadUniforms(const UniformsLayout &owner);
+    Uniforms       uniforms(const UniformsLayout &owner);
 
     FrameBuffer    frameBuffer(Frame &out, RenderPass& pass);
-    RenderPass     pass    ();
+    RenderPass     pass       (RenderPass::FboMode input,RenderPass::FboMode output);
+
+    template<class Vertex>
     RenderPipeline pipeline(RenderPass& pass, uint32_t width, uint32_t height,const UniformsLayout& ulay,const Shader &vs,const Shader &fs);
-    CommandBuffer  commandBuffer();
+
+    CommandBuffer  commandBuffer(/*bool secondary=false*/);
+
+    const Builtin& builtin() const;
 
   private:
     struct Impl {
-      Impl(AbstractGraphicsApi& api, SystemApi::Window *w);
+      Impl(AbstractGraphicsApi& api, SystemApi::Window *w,uint8_t maxFramesInFlight);
       ~Impl();
 
       AbstractGraphicsApi&            api;
       AbstractGraphicsApi::Device*    dev=nullptr;
       AbstractGraphicsApi::Swapchain* swapchain=nullptr;
       SystemApi::Window*              hwnd=nullptr;
+      const uint8_t                   maxFramesInFlight=1;
       };
 
     AbstractGraphicsApi&            api;
@@ -78,10 +93,18 @@ class Device {
     AbstractGraphicsApi::Swapchain* swapchain=nullptr;
 
     Tempest::CommandPool            mainCmdPool;
+    Tempest::Builtin                builtins;
+    uint64_t                        framesCounter=0;
+    uint8_t                         framesIdMod=0;
 
-    Fence      createFence();
-    Semaphore  createSemaphore();
+    Fence       createFence();
+    Semaphore   createSemaphore();
     VideoBuffer createVideoBuffer(const void* data, size_t size, MemUsage usage, BufferFlags flg);
+    RenderPipeline
+                implPipeline(RenderPass& pass, uint32_t width, uint32_t height, const UniformsLayout& ulay,
+                             const Shader &vs, const Shader &fs,
+                             const Decl::ComponentType *decl, size_t declSize,
+                             size_t stride);
 
     void       destroy(RenderPipeline& p);
     void       destroy(RenderPass&     p);
@@ -117,8 +140,21 @@ class Device {
 
 template<class T>
 inline VertexBuffer<T> Device::loadVbo(const T* arr, size_t arrSize, BufferFlags flg) {
+  if(arrSize==0)
+    return VertexBuffer<T>();
   VideoBuffer     data=createVideoBuffer(arr,arrSize*sizeof(T),MemUsage::VertexBuffer,flg);
-  VertexBuffer<T> vbo(std::move(data));
+  VertexBuffer<T> vbo(std::move(data),arrSize);
   return vbo;
+  }
+
+template<class Vertex>
+RenderPipeline Device::pipeline(RenderPass& pass, uint32_t width, uint32_t height,
+                                const UniformsLayout& ulay,const Shader &vs,const Shader &fs) {
+  static const auto decl=Tempest::vertexBufferDecl<Vertex>();
+  return implPipeline(pass,width,height,ulay,vs,fs,decl.begin(),decl.size(),sizeof(Vertex));
+  }
+
+inline uint8_t Device::frameId() const {
+  return framesIdMod;
   }
 }

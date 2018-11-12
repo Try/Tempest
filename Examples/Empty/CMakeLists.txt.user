@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 4.7.2, 2018-11-02T23:35:28. -->
+<!-- Written by QtCreator 4.7.2, 2018-11-11T18:58:02. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -88,14 +88,32 @@
      </valuemap>
      <valuemap type="QVariantMap" key="ProjectExplorer.BuildStepList.Step.1">
       <value type="bool" key="ProjectExplorer.BuildStep.Enabled">true</value>
-      <value type="QString" key="ProjectExplorer.ProcessStep.Arguments">-V %{sourceDir}/shader.vert %{sourceDir}/shader.frag</value>
+      <value type="QString" key="ProjectExplorer.ProcessStep.Arguments">-V %{sourceDir}/tex_brush.frag -o tex_brush.frag</value>
       <value type="QString" key="ProjectExplorer.ProcessStep.Command">D:/Program Files (x86)/VulkanSDK/1.0.65.1/Bin/glslangValidator.exe</value>
       <value type="QString" key="ProjectExplorer.ProcessStep.WorkingDirectory">%{sourceDir}/../../bin/shader</value>
       <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">Особый</value>
       <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName"></value>
       <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">ProjectExplorer.ProcessStep</value>
      </valuemap>
-     <value type="int" key="ProjectExplorer.BuildStepList.StepsCount">2</value>
+     <valuemap type="QVariantMap" key="ProjectExplorer.BuildStepList.Step.2">
+      <value type="bool" key="ProjectExplorer.BuildStep.Enabled">true</value>
+      <value type="QString" key="ProjectExplorer.ProcessStep.Arguments">-V %{sourceDir}/tex_brush.vert -o tex_brush.vert</value>
+      <value type="QString" key="ProjectExplorer.ProcessStep.Command">D:/Program Files (x86)/VulkanSDK/1.0.65.1/Bin/glslangValidator.exe</value>
+      <value type="QString" key="ProjectExplorer.ProcessStep.WorkingDirectory">%{sourceDir}/../../bin/shader</value>
+      <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">Особый</value>
+      <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName"></value>
+      <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">ProjectExplorer.ProcessStep</value>
+     </valuemap>
+     <valuemap type="QVariantMap" key="ProjectExplorer.BuildStepList.Step.3">
+      <value type="bool" key="ProjectExplorer.BuildStep.Enabled">true</value>
+      <value type="QString" key="ProjectExplorer.ProcessStep.Arguments">-V %{sourceDir}/shader.vert %{sourceDir}/shader.frag </value>
+      <value type="QString" key="ProjectExplorer.ProcessStep.Command">D:/Program Files (x86)/VulkanSDK/1.0.65.1/Bin/glslangValidator.exe</value>
+      <value type="QString" key="ProjectExplorer.ProcessStep.WorkingDirectory">%{sourceDir}/../../bin/shader</value>
+      <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">Особый</value>
+      <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName"></value>
+      <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">ProjectExplorer.ProcessStep</value>
+     </valuemap>
+     <value type="int" key="ProjectExplorer.BuildStepList.StepsCount">4</value>
      <value type="QString" key="ProjectExplorer.ProjectConfiguration.DefaultDisplayName">Сборка</value>
      <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName"></value>
      <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">ProjectExplorer.BuildSteps.Build</value>

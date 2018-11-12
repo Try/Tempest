@@ -9,25 +9,28 @@
 #include <Tempest/VertexBuffer>
 #include <Tempest/UniformsLayout>
 #include <Tempest/UniformBuffer>
+#include <Tempest/VectorImage>
+#include <Tempest/Event>
+
 #include <vector>
 
 class Game : public Tempest::Window {
   public:
-    enum { MAX_FRAMES_IN_FLIGHT=2 };
-
     Game(Tempest::VulkanApi& api);
+
+    struct Point {
+      float x,y,z;
+      float u,v;
+      };
 
   private:
     void initSwapchain(const Tempest::UniformsLayout &ulay);
+    void paintEvent(Tempest::PaintEvent& event);
     void resizeEvent(uint32_t /*w*/,uint32_t /*h*/);
     void render();
 
     uint32_t width() const;
     uint32_t height() const;
-
-    struct Point {
-      float x,y;
-      };
 
     struct Ubo {
       float r=1;
@@ -39,6 +42,8 @@ class Game : public Tempest::Window {
     Tempest::RenderPass                 pass;
     Tempest::RenderPipeline             pipeline;
 
+    Tempest::VectorImage                surface;
+
     Tempest::VertexBuffer<Point>        vbo;
     Tempest::Texture2d                  texture;
 
@@ -46,10 +51,17 @@ class Game : public Tempest::Window {
     Tempest::UniformBuffer              uboBuf;
     std::vector<Tempest::Uniforms>      ubo;
 
-    std::vector<Tempest::Semaphore>     renderFinishedSemaphores;
-    std::vector<Tempest::Semaphore>     imageAvailableSemaphores;
-    std::vector<Tempest::Fence>         inFlightFences;
-    std::vector<Tempest::CommandBuffer> commandBuffers;
+    struct FrameLocal {
+      FrameLocal(Tempest::Device& dev);
+      Tempest::Semaphore imageAvailable;
+      Tempest::Fence     gpuLock;
+      };
+
+    std::vector<FrameLocal> fLocal;
+
+    std::vector<Tempest::CommandBuffer> commandDynamic;
+    std::vector<Tempest::CommandBuffer> commandStatic;
+    std::vector<Tempest::Semaphore>     commandBuffersSemaphores;
+
     std::vector<Tempest::FrameBuffer>   fbo;
-    uint32_t                            currentFrame=0;
   };

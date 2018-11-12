@@ -21,7 +21,7 @@ static const std::initializer_list<const char*> deviceExtensions = {
 
 VDevice::DataHelper::DataHelper(VDevice &owner)
   : cmdPool(owner,VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT),
-    cmdBuffer(owner,cmdPool),
+    cmdBuffer(owner,cmdPool,false),
     fence(owner),
     graphicsQueue(owner.graphicsQueue){
   }
@@ -78,6 +78,7 @@ VDevice::VDevice(VulkanApi &api, void *hwnd)
 
 VDevice::~VDevice(){
   data.reset();
+  allocator.freeLast();
   vkDeviceWaitIdle(device);
   vkDestroySurfaceKHR(instance,surface,nullptr);
   vkDestroyDevice(device,nullptr);

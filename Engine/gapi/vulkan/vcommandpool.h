@@ -10,7 +10,7 @@ class VDevice;
 
 class VCommandPool : public AbstractGraphicsApi::CmdPool {
   public:
-    VCommandPool(VDevice &device, VkCommandPoolCreateFlags flags=0);
+    VCommandPool(VDevice &device, VkCommandPoolCreateFlags flags=VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
     VCommandPool(VCommandPool&& other);
     ~VCommandPool();
 

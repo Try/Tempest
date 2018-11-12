@@ -6,7 +6,6 @@
 namespace Tempest {
 
 class Device;
-class Painter;
 
 class Semaphore {
   public:

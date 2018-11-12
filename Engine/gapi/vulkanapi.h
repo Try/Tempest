@@ -25,7 +25,10 @@ class VulkanApi : public AbstractGraphicsApi {
     Fbo*       createFbo(Device *d, Swapchain *s, Pass* pass, uint32_t imageId) override;
     void       destroy(Fbo* pass) override;
 
-    Pipeline*  createPipeline(Device* d, Pass* pass, uint32_t width, uint32_t height,
+    Pipeline*  createPipeline(Device* d, Pass* pass,
+                              uint32_t width, uint32_t height,
+                              const Tempest::Decl::ComponentType *decl, size_t declSize,
+                              size_t stride,
                               const UniformsLayout& ulay,
                               std::shared_ptr<UniformsLay> &ulayImpl,
                               const std::initializer_list<Shader*>& frag) override;
@@ -54,7 +57,7 @@ class VulkanApi : public AbstractGraphicsApi {
     Texture*   createTexture(Device* d,const Pixmap& p,bool mips) override;
     void       destroy(Texture* t) override;
 
-    CommandBuffer* createCommandBuffer(Device* d,CmdPool* pool) override;
+    CommandBuffer* createCommandBuffer(Device* d, CmdPool* pool, bool secondary) override;
     void           destroy            (CommandBuffer* cmd) override;
 
     uint32_t       nextImage(Device *d,Swapchain* sw,Semaphore* onReady) override;

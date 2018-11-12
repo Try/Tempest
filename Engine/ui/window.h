@@ -22,7 +22,8 @@ class Window {
     struct Impl:SystemApi::WindowCallback {
       Impl(Window* self):self(self){}
       void onRender(Tempest::SystemApi::Window*) {
-        self->render();
+        if(self->w()>0 && self->h()>0)
+          self->render();
         }
       void onResize(Tempest::SystemApi::Window*,uint32_t w,uint32_t h){
         self->resizeEvent(w,h);

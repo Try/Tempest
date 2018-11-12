@@ -16,11 +16,18 @@ class RenderPipeline {
     ~RenderPipeline();
     RenderPipeline& operator = (RenderPipeline&& other)=default;
 
+    uint32_t w() const;
+    uint32_t h() const;
+
+    bool isEmpty() const { return impl.handler==nullptr; }
+
   private:
-    RenderPipeline(Tempest::Device& dev,AbstractGraphicsApi::Pipeline* img);
+    RenderPipeline(Tempest::Device& dev,AbstractGraphicsApi::Pipeline* p,uint32_t w,uint32_t h);
 
     Tempest::Device*                             dev=nullptr;
     Detail::DPtr<AbstractGraphicsApi::Pipeline*> impl;
+
+    uint32_t vpW=0,vpH=0;
 
   friend class Tempest::Device;
   friend class Tempest::CommandBuffer;

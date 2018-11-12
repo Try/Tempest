@@ -12,7 +12,7 @@ class DeviceAllocator {
   struct Block;
   public:
     enum {
-      DEFAULT_PAGE_SIZE=128*1024
+      DEFAULT_PAGE_SIZE=128*1024*1024
       };
     using Memory=typename MemoryProvider::DeviceMemory;
     static const constexpr Memory null=Memory{};
@@ -23,7 +23,7 @@ class DeviceAllocator {
 
     ~DeviceAllocator(){
       for(auto& i:pages)
-        device.free(i.memory);
+        device.free(i.memory,i.size,i.type);
       }
 
     struct Allocation {
@@ -45,7 +45,7 @@ class DeviceAllocator {
     void free(const Allocation& a){
       a.page->free(a);
       if(a.page->allocated==0){
-        device.free(a.page->memory);
+        device.free(a.page->memory,a.page->size,a.page->type);
         pages.remove(*a.page);
         }
       }
@@ -200,9 +200,10 @@ struct DeviceAllocator<MemoryProvider>::Page : Block {
   void mergeWithNext(Block* b) noexcept {
     while(b->next!=nullptr){
       if(b->offset+b->size==b->next->offset){
+        auto rm=b->next;
         b->size+=b->next->size;
         b->next=b->next->next;
-        delete b->next;
+        delete rm;
         } else {
         return;
         }

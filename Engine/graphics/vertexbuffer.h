@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include <Tempest/Device>
 #include "videobuffer.h"
 
 namespace Tempest {
@@ -15,15 +14,21 @@ class VertexBuffer {
     VertexBuffer(VertexBuffer&&)=default;
     VertexBuffer& operator=(VertexBuffer&&)=default;
 
+    size_t size() const { return sz; }
+
   private:
-    VertexBuffer(Tempest::VideoBuffer&& impl)
-      :impl(std::move(impl)) {
+    VertexBuffer(Tempest::VideoBuffer&& impl,size_t size)
+      :impl(std::move(impl)),sz(size) {
       }
 
     Tempest::VideoBuffer impl;
+    size_t               sz=0;
 
   friend class Tempest::Device;
   friend class Tempest::CommandBuffer;
   };
+
+template<class T>
+inline std::initializer_list<Decl::ComponentType> vertexBufferDecl(){ return{}; };
 
 }

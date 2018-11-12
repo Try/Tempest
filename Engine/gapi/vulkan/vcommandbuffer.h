@@ -26,7 +26,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
       };
 
     VCommandBuffer()=delete;
-    VCommandBuffer(VDevice &device,VCommandPool &pool);
+    VCommandBuffer(VDevice &device, VCommandPool &pool, bool secondary);
     VCommandBuffer(VCommandBuffer&& other);
     ~VCommandBuffer();
 
@@ -48,6 +48,8 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void clear(AbstractGraphicsApi::Image& img, float r, float g, float b, float a);
     void setPipeline(AbstractGraphicsApi::Pipeline& p);
     void setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u);
+
+    void exec(const AbstractGraphicsApi::CommandBuffer& buf);
 
     void draw(size_t size);
     void setVbo(const AbstractGraphicsApi::Buffer& b);

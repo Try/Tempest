@@ -10,6 +10,24 @@ namespace Tempest {
   class UniformsLayout;
   class Pixmap;
 
+  namespace Decl {
+  enum ComponentType:uint8_t {
+    float0 = 0, // just trick
+    float1 = 1,
+    float2 = 2,
+    float3 = 3,
+    float4 = 4,
+
+    color  = 5,
+    short2 = 6,
+    short4 = 7,
+
+    half2  = 8,
+    half4  = 9,
+    count
+    };
+  }
+
   class AbstractGraphicsApi {
     protected:
       AbstractGraphicsApi() =default;
@@ -50,6 +68,7 @@ namespace Tempest {
         virtual void clear(Image& img,float r, float g, float b, float a)=0;
         virtual void setPipeline(Pipeline& p)=0;
         virtual void setUniforms(Pipeline& p,Desc& u)=0;
+        virtual void exec(const AbstractGraphicsApi::CommandBuffer& buf)=0;
         virtual void setVbo(const Buffer& b)=0;
         virtual void draw(size_t vertexCount)=0;
         };
@@ -77,7 +96,10 @@ namespace Tempest {
       virtual std::shared_ptr<AbstractGraphicsApi::UniformsLay>
                          createUboLayout(Device *d,const UniformsLayout&)=0;
 
-      virtual Pipeline*  createPipeline(Device* d,Pass* pass,uint32_t width, uint32_t height,
+      virtual Pipeline*  createPipeline(Device* d,Pass* pass,
+                                        uint32_t width, uint32_t height,
+                                        const Tempest::Decl::ComponentType *decl, size_t declSize,
+                                        size_t stride,
                                         const UniformsLayout& ulay,
                                         std::shared_ptr<UniformsLay> &ulayImpl,
                                         const std::initializer_list<Shader*>& sh)=0;
@@ -96,7 +118,7 @@ namespace Tempest {
       virtual void       destroy(CmdPool* cmd)=0;
 
       virtual CommandBuffer*
-                         createCommandBuffer(Device* d,CmdPool* pool)=0;
+                         createCommandBuffer(Device* d,CmdPool* pool,bool secondary)=0;
       virtual void       destroy(CommandBuffer* cmd)=0;
 
       virtual Buffer*    createBuffer(Device* d,const void *mem,size_t size,MemUsage usage,BufferFlags flg)=0;

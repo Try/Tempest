@@ -8,8 +8,8 @@
 
 using namespace Tempest;
 
-Device::Impl::Impl(AbstractGraphicsApi &api, SystemApi::Window *w)
-  :api(api),hwnd(w){
+Device::Impl::Impl(AbstractGraphicsApi &api, SystemApi::Window *w, uint8_t maxFramesInFlight)
+  :api(api),hwnd(w),maxFramesInFlight(maxFramesInFlight){
   dev=api.createDevice(w);
   try {
     swapchain=api.createSwapchain(w,dev);
@@ -25,9 +25,9 @@ Device::Impl::~Impl() {
   api.destroy(dev);
   }
 
-Device::Device(AbstractGraphicsApi &api, SystemApi::Window *w)
-  :api(api), impl(api,w), dev(impl.dev), swapchain(impl.swapchain),
-   mainCmdPool(*this,api.createCommandPool(dev)) {
+Device::Device(AbstractGraphicsApi &api, SystemApi::Window *w, uint8_t maxFramesInFlight)
+  :api(api), impl(api,w,maxFramesInFlight), dev(impl.dev), swapchain(impl.swapchain),
+   mainCmdPool(*this,api.createCommandPool(dev)),builtins(*this) {
   }
 
 Device::~Device() {
@@ -45,6 +45,14 @@ uint32_t Device::swapchainImageCount() const {
   return swapchain->imageCount();
   }
 
+uint8_t Device::maxFramesInFlight() const {
+  return impl.maxFramesInFlight;
+  }
+
+uint64_t Device::frameCounter() const {
+  return framesCounter;
+  }
+
 Frame Device::frame(uint32_t id) {
   Frame fr(*this,api.getImage(dev,swapchain,id),id);
   return fr;
@@ -54,12 +62,18 @@ uint32_t Device::nextImage(Semaphore &onReady) {
   return api.nextImage(dev,swapchain,onReady.impl.handler);
   }
 
+void Device::draw(const CommandBuffer &cmd, const Semaphore &wait) {
+  api.draw(dev,swapchain,cmd.impl.handler,wait.impl.handler,nullptr,nullptr);
+  }
+
 void Device::draw(const CommandBuffer &cmd, const Semaphore &wait, Semaphore &done, Fence &fdone) {
   api.draw(dev,swapchain,cmd.impl.handler,wait.impl.handler,done.impl.handler,fdone.impl.handler);
   }
 
 void Device::present(uint32_t img,const Semaphore &wait) {
   api.present(dev,swapchain,img,wait.impl.handler);
+  framesCounter++;
+  framesIdMod=(framesIdMod+1)%maxFramesInFlight();
   }
 
 Shader Device::loadShader(const char *filename) {
@@ -83,23 +97,30 @@ FrameBuffer Device::frameBuffer(Frame& out,RenderPass &pass) {
   return f;
   }
 
-RenderPass Device::pass() {
+RenderPass Device::pass(RenderPass::FboMode input, RenderPass::FboMode output) {
   RenderPass f(*this,api.createPass(dev,swapchain));
   return f;
   }
 
-RenderPipeline Device::pipeline(RenderPass& pass, uint32_t w, uint32_t h, const UniformsLayout &ulay,
-                                const Shader &vs, const Shader &fs) {
+RenderPipeline Device::implPipeline(RenderPass& pass, uint32_t w, uint32_t h, const UniformsLayout &ulay,
+                                    const Shader &vs, const Shader &fs,
+                                    const Decl::ComponentType *decl, size_t declSize,
+                                    size_t stride) {
   if(w<=0 || h<=0 || !pass.impl || !vs.impl || !fs.impl)
     return RenderPipeline();
 
-  RenderPipeline f(*this,api.createPipeline(dev,pass.impl.handler,w,h,ulay,ulay.impl,{vs.impl.handler,fs.impl.handler}));
+  RenderPipeline f(*this,api.createPipeline(dev,pass.impl.handler,w,h,decl,declSize,stride,ulay,ulay.impl,{vs.impl.handler,fs.impl.handler}),w,h);
   return f;
   }
 
-CommandBuffer Device::commandBuffer() {
-  CommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler));
+CommandBuffer Device::commandBuffer(/*bool secondary*/) {
+  const bool secondary=false;
+  CommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,secondary));
   return buf;
+  }
+
+const Builtin &Device::builtin() const {
+  return builtins;
   }
 
 Fence Device::createFence() {
@@ -117,7 +138,7 @@ VideoBuffer Device::createVideoBuffer(const void *data, size_t size, MemUsage us
   return  buf;
   }
 
-Uniforms Device::loadUniforms(const UniformsLayout &owner) {
+Uniforms Device::uniforms(const UniformsLayout &owner) {
   if(owner.impl==nullptr)
     owner.impl=api.createUboLayout(dev,owner);
   Uniforms ubo(*this,api.createDescriptors(dev,owner.impl.get()));

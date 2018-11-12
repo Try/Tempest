@@ -30,6 +30,7 @@ VPipeline::VPipeline(){
 
 VPipeline::VPipeline(VDevice& device,
                      VRenderPass& pass, uint32_t width, uint32_t height,
+                     const Decl::ComponentType *decl, size_t declSize, size_t stride,
                      const UniformsLayout &ulay,
                      std::shared_ptr<AbstractGraphicsApi::UniformsLay> &ulayImpl,
                      VShader& vert, VShader& frag)
@@ -39,7 +40,7 @@ VPipeline::VPipeline(VDevice& device,
       ulayImpl=std::make_shared<VUboLayout>(device.device,initUboLayout(device.device,ulay));
     VUboLayout* puLay=reinterpret_cast<VUboLayout*>(ulayImpl.get());
     pipelineLayout  =initLayout(device.device,puLay->impl);
-    graphicsPipeline=initGraphicsPipeline(device.device,pipelineLayout,pass,width,height,vert,frag);
+    graphicsPipeline=initGraphicsPipeline(device.device,pipelineLayout,pass,width,height,decl,declSize,stride,vert,frag);
     }
   catch(...) {
     cleanup();
@@ -118,7 +119,10 @@ VkDescriptorSetLayout VPipeline::initUboLayout(VkDevice device, const UniformsLa
   }
 
 VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
-                                           VRenderPass &pass, uint32_t width, uint32_t height,
+                                           VRenderPass &pass,
+                                           uint32_t width, uint32_t height,
+                                           const Decl::ComponentType *decl, size_t declSize,
+                                           size_t stride,
                                            VShader &vert, VShader &frag) {
   VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
   vertShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -142,14 +146,33 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
 
   VkVertexInputBindingDescription vk_vertexInputBindingDescription;
   vk_vertexInputBindingDescription.binding   = 0;
-  vk_vertexInputBindingDescription.stride    = sizeof(float)*2;
+  vk_vertexInputBindingDescription.stride    = stride;
   vk_vertexInputBindingDescription.inputRate = VkVertexInputRate::VK_VERTEX_INPUT_RATE_VERTEX;
 
-  VkVertexInputAttributeDescription vk_vertexInputAttributeDescription;
-  vk_vertexInputAttributeDescription.location = 0;
-  vk_vertexInputAttributeDescription.binding  = 0;
-  vk_vertexInputAttributeDescription.format   = VkFormat::VK_FORMAT_R32G32_SFLOAT;
-  vk_vertexInputAttributeDescription.offset   = 0;
+  static const VkFormat vertFormats[]={
+    VkFormat::VK_FORMAT_UNDEFINED,
+    VkFormat::VK_FORMAT_R32_SFLOAT,
+    VkFormat::VK_FORMAT_R32G32_SFLOAT,
+    VkFormat::VK_FORMAT_R32G32B32_SFLOAT,
+    VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT,
+
+    VK_FORMAT_R8G8B8A8_UINT,
+
+    VK_FORMAT_R16G16_SNORM,
+    VK_FORMAT_R16G16B16A16_SNORM,
+
+    VK_FORMAT_R16G16_SNORM,
+    VK_FORMAT_R16G16B16A16_SNORM,
+    };
+
+  std::vector<VkVertexInputAttributeDescription> vsInput(declSize);
+  for(size_t i=0;i<declSize;++i){
+    auto& loc=vsInput[i];
+    loc.location = i;
+    loc.binding  = 0;
+    loc.format   = vertFormats[decl[i]];
+    loc.offset   = 0;
+    }
 
   VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
   vertexInputInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -157,8 +180,8 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   vertexInputInfo.flags = 0;
   vertexInputInfo.vertexBindingDescriptionCount   = 1;
   vertexInputInfo.pVertexBindingDescriptions      = &vk_vertexInputBindingDescription;
-  vertexInputInfo.vertexAttributeDescriptionCount = 1;
-  vertexInputInfo.pVertexAttributeDescriptions    = &vk_vertexInputAttributeDescription;
+  vertexInputInfo.vertexAttributeDescriptionCount = vsInput.size();
+  vertexInputInfo.pVertexAttributeDescriptions    = vsInput.data();
 
 
   VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};

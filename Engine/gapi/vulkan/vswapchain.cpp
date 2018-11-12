@@ -12,8 +12,9 @@ VSwapchain::VSwapchain(VDevice &device, uint32_t w, uint32_t h)
   VkPresentModeKHR   presentMode   = chooseSwapPresentMode  (swapChainSupport.presentModes);
   VkExtent2D         extent        = chooseSwapExtent       (swapChainSupport.capabilities,w,h);
 
+  const uint32_t maxImages=swapChainSupport.capabilities.maxImageCount==0 ? uint32_t(-1) : swapChainSupport.capabilities.maxImageCount;
   uint32_t imageCount=swapChainSupport.capabilities.minImageCount+1;
-  if(swapChainSupport.capabilities.maxImageCount>0 && imageCount>swapChainSupport.capabilities.maxImageCount)
+  if(swapChainSupport.capabilities.maxImageCount>0 && imageCount>maxImages)
     imageCount = swapChainSupport.capabilities.maxImageCount;
 
   auto indices = device.findQueueFamilies();

@@ -90,6 +90,8 @@ void VulkanApi::destroy(AbstractGraphicsApi::Fbo *pass) {
 AbstractGraphicsApi::Pipeline *VulkanApi::createPipeline(AbstractGraphicsApi::Device *d,
                                                          AbstractGraphicsApi::Pass *p,
                                                          uint32_t width, uint32_t height,
+                                                         const Decl::ComponentType *decl, size_t declSize,
+                                                         size_t stride,
                                                          const UniformsLayout &ulay,
                                                          std::shared_ptr<AbstractGraphicsApi::UniformsLay> &ulayImpl,
                                                          const std::initializer_list<AbstractGraphicsApi::Shader*> &sh) {
@@ -98,7 +100,7 @@ AbstractGraphicsApi::Pipeline *VulkanApi::createPipeline(AbstractGraphicsApi::De
   Detail::VRenderPass* px =reinterpret_cast<Detail::VRenderPass*>(p);
   Detail::VShader*     vs =reinterpret_cast<Detail::VShader*>(arr[0]);
   Detail::VShader*     fs =reinterpret_cast<Detail::VShader*>(arr[1]);
-  return new Detail::VPipeline(*dx,*px,width,height,ulay,ulayImpl,*vs,*fs);
+  return new Detail::VPipeline(*dx,*px,width,height,decl,declSize,stride,ulay,ulayImpl,*vs,*fs);
   }
 
 void VulkanApi::destroy(AbstractGraphicsApi::Pipeline *pass) {
@@ -192,8 +194,6 @@ AbstractGraphicsApi::Desc *VulkanApi::createDescriptors(AbstractGraphicsApi::Dev
   Detail::VPipeline::VUboLayout* ux = reinterpret_cast<Detail::VPipeline::VUboLayout*>(lay);
 
   auto ret = Detail::VDescriptorArray::alloc(dx->device,ux->impl);
-  // ret->bind(bx,size);
-
   return ret;
   }
 
@@ -207,10 +207,10 @@ std::shared_ptr<AbstractGraphicsApi::UniformsLay> VulkanApi::createUboLayout(Dev
   return std::make_shared<Detail::VPipeline::VUboLayout>(dx->device,lay);
   }
 
-AbstractGraphicsApi::CommandBuffer *VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device *d,CmdPool *p) {
+AbstractGraphicsApi::CommandBuffer *VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device *d,CmdPool *p,bool secondary) {
   Detail::VDevice*      dx=reinterpret_cast<Detail::VDevice*>(d);
   Detail::VCommandPool* px=reinterpret_cast<Detail::VCommandPool*>(p);
-  return new Detail::VCommandBuffer(*dx,*px);
+  return new Detail::VCommandBuffer(*dx,*px,secondary);
   }
 
 void VulkanApi::destroy(AbstractGraphicsApi::CommandBuffer *cmd) {
@@ -227,10 +227,8 @@ uint32_t VulkanApi::nextImage(Device *d,
 
   uint32_t id=uint32_t(-1);
   VkResult code=dx->nextImg(*sx,id,*rx);
-  if(code==VK_ERROR_OUT_OF_DATE_KHR) {
-    //todo
+  if(code==VK_ERROR_OUT_OF_DATE_KHR)
     throw DeviceLostException();
-    }
 
   if(code!=VK_SUCCESS && code!=VK_SUBOPTIMAL_KHR)
     throw std::runtime_error("failed to acquire swap chain image!");
@@ -289,16 +287,20 @@ void VulkanApi::draw(Device *d,
 
   VkSemaphore          waitSemaphores[] = {wx->impl};
   VkPipelineStageFlags waitStages[]     = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+
   submitInfo.waitSemaphoreCount = 1;
-  submitInfo.pWaitSemaphores   = waitSemaphores;
-  submitInfo.pWaitDstStageMask = waitStages;
+  submitInfo.pWaitSemaphores    = waitSemaphores;
+  submitInfo.pWaitDstStageMask  = waitStages;
 
   submitInfo.commandBufferCount = 1;
   submitInfo.pCommandBuffers    = &cx->impl;
 
-  submitInfo.signalSemaphoreCount = 1;
-  submitInfo.pSignalSemaphores    = &rx->impl;
+  if(rx!=nullptr) {
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores    = &rx->impl;
+    }
 
-  onReadyCpu->reset();
-  Detail::vkAssert(vkQueueSubmit(dx->graphicsQueue,1,&submitInfo,rc->impl));
+  if(onReadyCpu!=nullptr)
+    onReadyCpu->reset();
+  Detail::vkAssert(vkQueueSubmit(dx->graphicsQueue,1,&submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl));
   }
