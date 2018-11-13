@@ -13,7 +13,8 @@ Uniforms::Uniforms(Uniforms && u)
   }
 
 Uniforms::~Uniforms() {
-  dev->destroy(*this);
+  if(dev)
+    dev->destroy(*this);
   }
 
 Uniforms& Uniforms::operator=(Uniforms &&u) {
