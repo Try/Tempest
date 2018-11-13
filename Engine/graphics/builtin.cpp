@@ -3,12 +3,14 @@
 #include <Tempest/Device>
 #include <Tempest/PaintDevice>
 
+#include "shaders/shaders.inl"
+
 using namespace Tempest;
 
 Builtin::Builtin(Device &owner)
   :owner(owner) {
-  vs = owner.loadShader("shader/tex_brush.vert");
-  fs = owner.loadShader("shader/tex_brush.frag");
+  vs = owner.loadShader(reinterpret_cast<const char*>(tex_brush_vert_sprv),sizeof(tex_brush_vert_sprv));
+  fs = owner.loadShader(reinterpret_cast<const char*>(tex_brush_frag_sprv),sizeof(tex_brush_frag_sprv));
 
   ulay.add(0,Tempest::UniformsLayout::Texture,Tempest::UniformsLayout::Fragment);
   //ulay.add(1,Tempest::UniformsLayout::Ubo,    Tempest::UniformsLayout::Fragment);

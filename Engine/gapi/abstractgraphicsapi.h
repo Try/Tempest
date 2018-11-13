@@ -111,7 +111,7 @@ namespace Tempest {
                                         const std::initializer_list<Shader*>& sh)=0;
       virtual void       destroy(Pipeline* pass)=0;
 
-      virtual Shader*    createShader(Device *d,const char* file)=0;
+      virtual Shader*    createShader(Device *d,const char* source,size_t src_size)=0;
       virtual void       destroy(Shader* shader)=0;
 
       virtual Fence*     createFence(Device *d)=0;

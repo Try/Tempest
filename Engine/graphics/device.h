@@ -51,6 +51,7 @@ class Device {
     void           present(uint32_t img,const Semaphore& wait);
 
     Shader         loadShader(const char* filename);
+    Shader         loadShader(const char* source,const size_t length);
 
     template<class T>
     VertexBuffer<T> loadVbo(const T* arr,size_t arrSize,BufferFlags flg);

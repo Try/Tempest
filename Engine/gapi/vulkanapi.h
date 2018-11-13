@@ -34,7 +34,7 @@ class VulkanApi : public AbstractGraphicsApi {
                               const std::initializer_list<Shader*>& frag) override;
     void       destroy       (Pipeline* pass) override;
 
-    Shader*    createShader(AbstractGraphicsApi::Device *d,const char* file) override;
+    Shader*    createShader(AbstractGraphicsApi::Device *d, const char* source, size_t src_size) override;
     void       destroy     (Shader* shader) override;
 
     Fence*     createFence(Device *d) override;

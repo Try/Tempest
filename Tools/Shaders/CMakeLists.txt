@@ -1,0 +1,13 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 3.1)
+
+project(ShaderGen)
+set (CMAKE_CXX_STANDARD 14)
+
+
+set(CMAKE_BINARY_DIR ../../)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+add_executable(${PROJECT_NAME} "main.cpp")
+
+
+

@@ -10,17 +10,13 @@ class VDevice;
 
 class VShader:public AbstractGraphicsApi::Shader {
   public:
-    VShader(VDevice& device,const char* file);
+    VShader(VDevice& device, const char* source, size_t src_size);
     ~VShader();
 
     VkShaderModule impl;
 
   private:
     VkDevice device;
-
-    void cleanup();
-
-    std::unique_ptr<uint32_t[]> load(const char* file, uint32_t &size);
   };
 
 }}

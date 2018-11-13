@@ -5,6 +5,7 @@
 #include <Tempest/CommandPool>
 #include <Tempest/UniformsLayout>
 #include <Tempest/UniformBuffer>
+#include <Tempest/File>
 
 using namespace Tempest;
 
@@ -77,7 +78,21 @@ void Device::present(uint32_t img,const Semaphore &wait) {
   }
 
 Shader Device::loadShader(const char *filename) {
-  Shader f(*this,api.createShader(dev,filename));
+  Tempest::RFile file(filename);
+
+  const size_t fileSize=file.size();
+
+  std::unique_ptr<uint32_t[]> buffer(new uint32_t[(fileSize+3)/4]);
+  file.read(reinterpret_cast<char*>(buffer.get()),fileSize);
+
+  size_t size=uint32_t(fileSize);
+
+  Shader f(*this,api.createShader(dev,reinterpret_cast<const char*>(buffer.get()),size));
+  return f;
+  }
+
+Shader Device::loadShader(const char *source, const size_t length) {
+  Shader f(*this,api.createShader(dev,source,length));
   return f;
   }
 

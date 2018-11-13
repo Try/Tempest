@@ -108,9 +108,9 @@ void VulkanApi::destroy(AbstractGraphicsApi::Pipeline *pass) {
   delete px;
   }
 
-AbstractGraphicsApi::Shader *VulkanApi::createShader(AbstractGraphicsApi::Device *d, const char *file) {
+AbstractGraphicsApi::Shader *VulkanApi::createShader(AbstractGraphicsApi::Device *d, const char *source, size_t src_size) {
   Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
-  return new Detail::VShader(*dx,file);
+  return new Detail::VShader(*dx,source,src_size);
   }
 
 void VulkanApi::destroy(AbstractGraphicsApi::Shader *shader) {
