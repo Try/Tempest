@@ -51,7 +51,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void exec(const AbstractGraphicsApi::CommandBuffer& buf);
 
-    void draw(size_t size);
+    void draw(size_t offset, size_t size);
     void setVbo(const AbstractGraphicsApi::Buffer& b);
 
     void copy(Detail::VBuffer&  dest, size_t offsetDest, const Detail::VBuffer& src, size_t offsetSrc, size_t size);

@@ -35,14 +35,23 @@ void Painter::implSetColor(float r, float g, float b, float a) {
 
 void Painter::setBrush(const Brush& b) {
   dev.setBrush(b.tex,1,1,1,1);
+  invW=1.f/b.w();
+  invH=1.f/b.h();
   }
 
 void Painter::drawRect(int x, int y, int w, int h) {
-  implAddPoint(x,  y,  0,0);
-  implAddPoint(x+w,y,  1,0);
-  implAddPoint(x+w,y+h,1,1);
+  dev.setTopology(Triangles);
+  implAddPoint(x,  y,  0,     0);
+  implAddPoint(x+w,y,  w*invW,0);
+  implAddPoint(x+w,y+h,w*invW,h*invH);
 
-  implAddPoint(x,  y,  0,0);
-  implAddPoint(x+w,y+h,1,1);
-  implAddPoint(x,  y+h,0,1);
+  implAddPoint(x,  y,  0,     0);
+  implAddPoint(x+w,y+h,w*invW,h*invH);
+  implAddPoint(x,  y+h,0,     h*invH);
+  }
+
+void Painter::drawLine(int x1, int y1, int x2, int y2) {
+  dev.setTopology(Lines);
+  implAddPoint(x1,y1,0,0);
+  implAddPoint(x2,y2,x2-x1,y2-y1);
   }

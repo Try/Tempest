@@ -6,6 +6,7 @@
 #include <Tempest/UniformsLayout>
 #include <Tempest/UniformBuffer>
 #include <Tempest/File>
+#include <Tempest/Pixmap>
 
 using namespace Tempest;
 
@@ -97,7 +98,7 @@ Shader Device::loadShader(const char *source, const size_t length) {
   }
 
 Texture2d Device::loadTexture(const Pixmap &pm, bool mips) {
-  Texture2d t(*this,api.createTexture(dev,pm,mips));
+  Texture2d t(*this,api.createTexture(dev,pm,mips),pm.w(),pm.h());
   return t;
   }
 
@@ -120,11 +121,12 @@ RenderPass Device::pass(RenderPass::FboMode input, RenderPass::FboMode output) {
 RenderPipeline Device::implPipeline(RenderPass& pass, uint32_t w, uint32_t h, const UniformsLayout &ulay,
                                     const Shader &vs, const Shader &fs,
                                     const Decl::ComponentType *decl, size_t declSize,
-                                    size_t stride) {
+                                    size_t   stride,
+                                    Topology tp) {
   if(w<=0 || h<=0 || !pass.impl || !vs.impl || !fs.impl)
     return RenderPipeline();
 
-  RenderPipeline f(*this,api.createPipeline(dev,pass.impl.handler,w,h,decl,declSize,stride,ulay,ulay.impl,{vs.impl.handler,fs.impl.handler}),w,h);
+  RenderPipeline f(*this,api.createPipeline(dev,pass.impl.handler,w,h,decl,declSize,stride,tp,ulay,ulay.impl,{vs.impl.handler,fs.impl.handler}),w,h);
   return f;
   }
 
@@ -158,10 +160,6 @@ Uniforms Device::uniforms(const UniformsLayout &owner) {
     owner.impl=api.createUboLayout(dev,owner);
   Uniforms ubo(*this,api.createDescriptors(dev,owner.impl.get()));
   return ubo;
-  }
-
-void Device::destroy(RenderPipeline &p) {
-  api.destroy(p.impl.handler);
   }
 
 void Device::destroy(RenderPass &p) {

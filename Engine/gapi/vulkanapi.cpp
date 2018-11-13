@@ -92,6 +92,7 @@ AbstractGraphicsApi::Pipeline *VulkanApi::createPipeline(AbstractGraphicsApi::De
                                                          uint32_t width, uint32_t height,
                                                          const Decl::ComponentType *decl, size_t declSize,
                                                          size_t stride,
+                                                         Topology tp,
                                                          const UniformsLayout &ulay,
                                                          std::shared_ptr<AbstractGraphicsApi::UniformsLay> &ulayImpl,
                                                          const std::initializer_list<AbstractGraphicsApi::Shader*> &sh) {
@@ -100,12 +101,7 @@ AbstractGraphicsApi::Pipeline *VulkanApi::createPipeline(AbstractGraphicsApi::De
   Detail::VRenderPass* px =reinterpret_cast<Detail::VRenderPass*>(p);
   Detail::VShader*     vs =reinterpret_cast<Detail::VShader*>(arr[0]);
   Detail::VShader*     fs =reinterpret_cast<Detail::VShader*>(arr[1]);
-  return new Detail::VPipeline(*dx,*px,width,height,decl,declSize,stride,ulay,ulayImpl,*vs,*fs);
-  }
-
-void VulkanApi::destroy(AbstractGraphicsApi::Pipeline *pass) {
-  Detail::VPipeline* px=reinterpret_cast<Detail::VPipeline*>(pass);
-  delete px;
+  return new Detail::VPipeline(*dx,*px,width,height,decl,declSize,stride,tp,ulay,ulayImpl,*vs,*fs);
   }
 
 AbstractGraphicsApi::Shader *VulkanApi::createShader(AbstractGraphicsApi::Device *d, const char *source, size_t src_size) {

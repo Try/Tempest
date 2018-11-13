@@ -31,19 +31,23 @@ class CommandBuffer {
     void endRenderPass();
 
     void setUniforms(const Tempest::RenderPipeline& p,const Tempest::Uniforms& ubo);
+    void setUniforms(const Detail::ResourcePtr<Tempest::RenderPipeline>& p,const Tempest::Uniforms& ubo);
 
     template<class T>
-    void draw(const VertexBuffer<T>& vbo,size_t count){ implDraw(vbo.impl,count); }
+    void draw(const VertexBuffer<T>& vbo){ implDraw(vbo.impl,0,vbo.size()); }
+
+    template<class T>
+    void draw(const VertexBuffer<T>& vbo,size_t offset,size_t count){ implDraw(vbo.impl,offset,count); }
 
     void exec(const CommandBuffer& buf);
 
   private:
     CommandBuffer(Tempest::Device& dev,AbstractGraphicsApi::CommandBuffer* f);
 
-    void implDraw(const VideoBuffer& vbo,size_t size);
+    void implDraw(const VideoBuffer& vbo,size_t offset,size_t size);
 
-    const RenderPipeline* curPipeline=nullptr;
-    const VideoBuffer*    curVbo     =nullptr;
+    const AbstractGraphicsApi::Pipeline* curPipeline=nullptr;
+    const VideoBuffer*                   curVbo     =nullptr;
 
     Tempest::Device*                                  dev=nullptr;
     Detail::DPtr<AbstractGraphicsApi::CommandBuffer*> impl;

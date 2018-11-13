@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
+#include <Tempest/RenderPipeline>
 #include <Tempest/VertexBuffer>
 #include <initializer_list>
 
@@ -18,6 +19,10 @@ class PaintDevice {
       float r=0,g=0,b=0,a=0;
       };
 
+  protected:
+    using TexPtr =Detail::ResourcePtr<Tempest::Texture2d>;
+    using PipePtr=Detail::ResourcePtr<Tempest::RenderPipeline>;
+
     virtual void clear()=0;
     virtual void addPoint(const Point& p)=0;
     virtual void commitPoints()=0;
@@ -25,7 +30,10 @@ class PaintDevice {
     virtual void beginPaint(bool clear,uint32_t w,uint32_t h)=0;
     virtual void endPaint()=0;
 
-    virtual void setBrush(const Tempest::Texture2d* t,float r,float g,float b,float a)=0;
+    virtual void setBrush(const TexPtr& t,float r,float g,float b,float a)=0;
+    virtual void setTopology(Topology t)=0;
+
+  friend class Painter;
   };
 
 template<>

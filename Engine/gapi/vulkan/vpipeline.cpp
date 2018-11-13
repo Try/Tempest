@@ -31,6 +31,7 @@ VPipeline::VPipeline(){
 VPipeline::VPipeline(VDevice& device,
                      VRenderPass& pass, uint32_t width, uint32_t height,
                      const Decl::ComponentType *decl, size_t declSize, size_t stride,
+                     Topology tp,
                      const UniformsLayout &ulay,
                      std::shared_ptr<AbstractGraphicsApi::UniformsLay> &ulayImpl,
                      VShader& vert, VShader& frag)
@@ -40,7 +41,8 @@ VPipeline::VPipeline(VDevice& device,
       ulayImpl=std::make_shared<VUboLayout>(device.device,initUboLayout(device.device,ulay));
     VUboLayout* puLay=reinterpret_cast<VUboLayout*>(ulayImpl.get());
     pipelineLayout  =initLayout(device.device,puLay->impl);
-    graphicsPipeline=initGraphicsPipeline(device.device,pipelineLayout,pass,width,height,decl,declSize,stride,vert,frag);
+    graphicsPipeline=initGraphicsPipeline(device.device,pipelineLayout,pass,width,height,decl,declSize,stride,
+                                          tp,vert,frag);
     }
   catch(...) {
     cleanup();
@@ -122,7 +124,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
                                            VRenderPass &pass,
                                            uint32_t width, uint32_t height,
                                            const Decl::ComponentType *decl, size_t declSize,
-                                           size_t stride,
+                                           size_t stride,Topology tp,
                                            VShader &vert, VShader &frag) {
   VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
   vertShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -165,13 +167,32 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
     VK_FORMAT_R16G16B16A16_SNORM,
     };
 
+  static const uint32_t vertSize[]={
+    0,
+    4,
+    8,
+    12,
+    16,
+
+    4,
+
+    4,
+    8,
+
+    4,
+    8
+  };
+
+  uint32_t offset=0;
   std::vector<VkVertexInputAttributeDescription> vsInput(declSize);
   for(size_t i=0;i<declSize;++i){
     auto& loc=vsInput[i];
     loc.location = i;
     loc.binding  = 0;
     loc.format   = vertFormats[decl[i]];
-    loc.offset   = 0;
+    loc.offset   = offset;
+
+    offset+=vertSize[decl[i]];
     }
 
   VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
@@ -186,8 +207,10 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
 
   VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
   inputAssembly.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-  inputAssembly.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
   inputAssembly.primitiveRestartEnable = VK_FALSE;
+  if(tp==Triangles)
+    inputAssembly.topology              = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; else
+    inputAssembly.topology              = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 
   VkViewport viewport = {};
   viewport.x        = 0.0f;

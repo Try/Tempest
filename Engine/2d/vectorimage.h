@@ -16,7 +16,11 @@ class VectorImage : public Tempest::PaintDevice {
   public:
     VectorImage()=default;
 
-    void draw(Device& dev, CommandBuffer& cmd, RenderPass &pass);
+    uint32_t w() const { return info.w; }
+    uint32_t h() const { return info.h; }
+
+    void     draw(Device& dev, CommandBuffer& cmd, RenderPass &pass);
+    bool     load(const char* path);
 
   private:
     void clear() override;
@@ -26,13 +30,14 @@ class VectorImage : public Tempest::PaintDevice {
     void beginPaint(bool clear,uint32_t w,uint32_t h) override;
     void endPaint() override;
 
-    void setBrush(const Tempest::Texture2d* t,float r,float g,float b,float a) override;
+    void setBrush(const TexPtr& t,float r,float g,float b,float a) override;
+    void setTopology(Topology t) override;
 
-    std::vector<Point> buf;
     struct Block {
-      size_t begin=0;
-      size_t size =0;
-
+      size_t   begin=0;
+      size_t   size =0;
+      Topology tp   =Triangles;
+      PipePtr  pipeline;
       };
 
     struct PerFrame {
@@ -41,12 +46,16 @@ class VectorImage : public Tempest::PaintDevice {
       bool                         outdated=true;
       };
 
-    using TexPtr=Detail::ResourcePtr<Tempest::Texture2d>;
     TexPtr                      brush;
 
     std::unique_ptr<PerFrame[]> frame;
     size_t                      frameCount=0;
     size_t                      outdatedCount=0;
+
+    Topology                    topology=Triangles;
+
+    std::vector<Block> blocks;
+    std::vector<Point> buf;
 
     struct Info {
       uint32_t w=0,h=0;

@@ -6,6 +6,7 @@
 namespace Tempest {
 
 class Uniforms;
+class CommandBuffer;
 
 namespace Detail {
 
@@ -19,6 +20,7 @@ class DPtr {
     ~DPtr(){}
 
     DPtr& operator = (DPtr&& other) noexcept { std::swap(handler,other.handler); }
+    DPtr& operator = (const DPtr& other) = delete;
 
     bool operator !() const { return !handler; }
     operator bool() const { return bool(handler); }
@@ -85,10 +87,14 @@ class ResourcePtr {
     ResourcePtr()=default;
     ResourcePtr(const T& t):impl(t.impl){}
 
+    bool operator !() const { return !impl; }
+    operator bool() const { return bool(impl); }
+
   private:
     decltype(T::impl) impl;
 
   friend class Tempest::Uniforms;
+  friend class Tempest::CommandBuffer;
   };
 }
 }

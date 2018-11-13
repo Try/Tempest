@@ -29,6 +29,11 @@ namespace Tempest {
     };
   }
 
+  enum Topology : uint8_t {
+    Lines    =1,
+    Triangles=2
+    };
+
   class AbstractGraphicsApi {
     protected:
       AbstractGraphicsApi() =default;
@@ -46,23 +51,23 @@ namespace Tempest {
         virtual ~Swapchain(){}
         virtual uint32_t imageCount() const=0;
         };
-      struct Texture:Shared {};
-      struct Image          {};
-      struct Fbo            {};
-      struct Pass           {};
-      struct Pipeline       {};
-      struct Shader         {};
-      struct Uniforms       {};
-      struct UniformsLay    {
+      struct Texture:Shared  {};
+      struct Image           {};
+      struct Fbo             {};
+      struct Pass            {};
+      struct Pipeline:Shared {};
+      struct Shader          {};
+      struct Uniforms        {};
+      struct UniformsLay     {
         virtual ~UniformsLay()=default;
         };
-      struct Buffer         {};
-      struct Desc           {
+      struct Buffer          {};
+      struct Desc            {
         virtual ~Desc()=default;
         virtual void set(size_t id,AbstractGraphicsApi::Texture *tex)=0;
         virtual void set(size_t id,AbstractGraphicsApi::Buffer* buf,size_t offset,size_t size)=0;
         };
-      struct CommandBuffer  {
+      struct CommandBuffer   {
         virtual ~CommandBuffer()=default;
         virtual void begin()=0;
         virtual void end()  =0;
@@ -71,21 +76,21 @@ namespace Tempest {
                                      uint32_t width,uint32_t height)=0;
         virtual void endRenderPass()=0;
 
-        virtual void clear(Image& img,float r, float g, float b, float a)=0;
+        virtual void clear      (Image& img,float r, float g, float b, float a)=0;
         virtual void setPipeline(Pipeline& p)=0;
         virtual void setUniforms(Pipeline& p,Desc& u)=0;
-        virtual void exec(const AbstractGraphicsApi::CommandBuffer& buf)=0;
-        virtual void setVbo(const Buffer& b)=0;
-        virtual void draw(size_t vertexCount)=0;
+        virtual void exec       (const AbstractGraphicsApi::CommandBuffer& buf)=0;
+        virtual void setVbo     (const Buffer& b)=0;
+        virtual void draw       (size_t offset,size_t vertexCount)=0;
         };
-      struct CmdPool        {};
+      struct CmdPool         {};
 
-      struct Fence          {
+      struct Fence           {
         virtual ~Fence()=default;
         virtual void wait() =0;
         virtual void reset()=0;
         };
-      struct Semaphore      {};
+      struct Semaphore       {};
 
       virtual Device*    createDevice(SystemApi::Window* w)=0;
       virtual void       destroy(Device* d)=0;
@@ -106,10 +111,10 @@ namespace Tempest {
                                         uint32_t width, uint32_t height,
                                         const Tempest::Decl::ComponentType *decl, size_t declSize,
                                         size_t stride,
+                                        Topology tp,
                                         const UniformsLayout& ulay,
                                         std::shared_ptr<UniformsLay> &ulayImpl,
                                         const std::initializer_list<Shader*>& sh)=0;
-      virtual void       destroy(Pipeline* pass)=0;
 
       virtual Shader*    createShader(Device *d,const char* source,size_t src_size)=0;
       virtual void       destroy(Shader* shader)=0;

@@ -25,7 +25,10 @@ Game::Game(Tempest::VulkanApi& api)
   auto vs=data["vert.spv"];
   (void)vs;
 
-  Tempest::Pixmap pm("img/1.jpg");
+  VectorImage image;
+  image.load("img/test.svg");
+
+  Tempest::Pixmap pm("img/texture.png");
   texture = device.loadTexture(pm);
 
   std::initializer_list<Point> source = {
@@ -53,7 +56,7 @@ void Game::initSwapchain(const Tempest::UniformsLayout &ulay){
   auto fs  = device.loadShader("shader/frag.spv");
 
   pass     = device.pass(Tempest::RenderPass::Discard,Tempest::RenderPass::Preserve);
-  pipeline = device.pipeline<Point>(pass,width(),height(),ulay,vs,fs);
+  pipeline = device.pipeline<Point>(pass,width(),height(),Triangles,ulay,vs,fs);
   uboBuf   = device.loadUbo(&usrc,sizeof(usrc));
 
   const size_t imgC=device.swapchainImageCount();
@@ -82,7 +85,7 @@ void Game::initSwapchain(const Tempest::UniformsLayout &ulay){
 
     buf.beginRenderPass(fbo[i],pass,pipeline.w(),pipeline.h());
     buf.setUniforms(pipeline,ubo[i]);
-    buf.draw(vbo,3);
+    buf.draw(vbo,0,vbo.size());
     buf.endRenderPass();
 
     buf.end();
@@ -95,6 +98,8 @@ void Game::paintEvent(PaintEvent& event) {
   p.setBrush(texture);
   p.drawRect(100,50, 200,100);
   p.drawRect(300,150,10,10);
+
+  p.drawLine(100,100,200,200);
   }
 
 void Game::resizeEvent(uint32_t, uint32_t) {

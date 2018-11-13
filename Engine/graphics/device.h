@@ -70,7 +70,8 @@ class Device {
     RenderPass     pass       (RenderPass::FboMode input,RenderPass::FboMode output);
 
     template<class Vertex>
-    RenderPipeline pipeline(RenderPass& pass, uint32_t width, uint32_t height,const UniformsLayout& ulay,const Shader &vs,const Shader &fs);
+    RenderPipeline pipeline(RenderPass& pass, uint32_t width, uint32_t height,
+                            Topology tp, const UniformsLayout& ulay,const Shader &vs,const Shader &fs);
 
     CommandBuffer  commandBuffer(/*bool secondary=false*/);
 
@@ -105,9 +106,8 @@ class Device {
                 implPipeline(RenderPass& pass, uint32_t width, uint32_t height, const UniformsLayout& ulay,
                              const Shader &vs, const Shader &fs,
                              const Decl::ComponentType *decl, size_t declSize,
-                             size_t stride);
+                             size_t stride, Topology tp);
 
-    void       destroy(RenderPipeline& p);
     void       destroy(RenderPass&     p);
     void       destroy(FrameBuffer&    f);
     void       destroy(Shader&         s);
@@ -149,9 +149,10 @@ inline VertexBuffer<T> Device::loadVbo(const T* arr, size_t arrSize, BufferFlags
 
 template<class Vertex>
 RenderPipeline Device::pipeline(RenderPass& pass, uint32_t width, uint32_t height,
+                                Topology tp,
                                 const UniformsLayout& ulay,const Shader &vs,const Shader &fs) {
   static const auto decl=Tempest::vertexBufferDecl<Vertex>();
-  return implPipeline(pass,width,height,ulay,vs,fs,decl.begin(),decl.size(),sizeof(Vertex));
+  return implPipeline(pass,width,height,ulay,vs,fs,decl.begin(),decl.size(),sizeof(Vertex),tp);
   }
 
 inline uint8_t Device::frameId() const {

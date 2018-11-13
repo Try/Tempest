@@ -152,8 +152,8 @@ void VCommandBuffer::exec(const CommandBuffer &buf) {
   vkCmdExecuteCommands(impl,1,&cmd.impl);
   }
 
-void VCommandBuffer::draw(size_t size) {
-  vkCmdDraw(impl,size,1, 0,0);
+void VCommandBuffer::draw(size_t offset,size_t size) {
+  vkCmdDraw(impl,size, 1, offset,0);
   }
 
 void VCommandBuffer::setVbo(const Tempest::AbstractGraphicsApi::Buffer &b) {
@@ -162,8 +162,8 @@ void VCommandBuffer::setVbo(const Tempest::AbstractGraphicsApi::Buffer &b) {
   std::initializer_list<VkBuffer>     buffers = {vbo.impl};
   std::initializer_list<VkDeviceSize> offsets = {0};
   vkCmdBindVertexBuffers(
-    impl, 0, buffers.size(),
-    buffers.begin(),
+        impl, 0, buffers.size(),
+        buffers.begin(),
         offsets.begin() );
   }
 

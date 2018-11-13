@@ -9,8 +9,14 @@ RenderPipeline::RenderPipeline(Device &dev, AbstractGraphicsApi::Pipeline *p, ui
   }
 
 RenderPipeline::~RenderPipeline() {
-  if(dev)
-    dev->destroy(*this);
+  }
+
+RenderPipeline &RenderPipeline::operator =(RenderPipeline&& other) {
+  impl = std::move(other.impl);
+  std::swap(dev,other.dev);
+  vpW  = other.vpW;
+  vpH  = other.vpH;
+  return *this;
   }
 
 uint32_t RenderPipeline::w() const {

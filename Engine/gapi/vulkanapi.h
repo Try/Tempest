@@ -29,10 +29,10 @@ class VulkanApi : public AbstractGraphicsApi {
                               uint32_t width, uint32_t height,
                               const Tempest::Decl::ComponentType *decl, size_t declSize,
                               size_t stride,
+                              Topology tp,
                               const UniformsLayout& ulay,
                               std::shared_ptr<UniformsLay> &ulayImpl,
                               const std::initializer_list<Shader*>& frag) override;
-    void       destroy       (Pipeline* pass) override;
 
     Shader*    createShader(AbstractGraphicsApi::Device *d, const char* source, size_t src_size) override;
     void       destroy     (Shader* shader) override;

@@ -27,7 +27,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     VPipeline(VDevice &device, VRenderPass &pass,
               uint32_t width, uint32_t height,
               const Decl::ComponentType *decl, size_t declSize,
-              size_t stride,
+              size_t stride, Topology tp,
               const UniformsLayout& ulay,
               std::shared_ptr<AbstractGraphicsApi::UniformsLay> &ulayImpl,
               VShader &vert, VShader &frag);
@@ -48,6 +48,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     static VkPipeline initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
                                            VRenderPass& pass, uint32_t width, uint32_t height,
                                            const Decl::ComponentType *decl, size_t declSize, size_t stride,
+                                           Topology tp,
                                            VShader &vert, VShader &frag);
   };
 
