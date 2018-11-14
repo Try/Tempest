@@ -23,7 +23,7 @@ void VectorImage::endPaint() {
   outdatedCount=frameCount;
   }
 
-void VectorImage::setBrush(const TexPtr &t, float r, float g, float b, float a) {
+void VectorImage::setBrush(const TexPtr &t, const Color &c) {
   brush = t;
   }
 

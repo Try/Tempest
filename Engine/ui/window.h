@@ -1,10 +1,11 @@
 #pragma once
 
 #include <Tempest/SystemApi>
+#include <Tempest/Widget>
 
 namespace Tempest {
 
-class Window {
+class Window : public Widget {
   public:
     Window();
     virtual ~Window();

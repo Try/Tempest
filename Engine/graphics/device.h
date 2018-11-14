@@ -32,6 +32,8 @@ class Uniforms;
 class UniformBuffer;
 class UniformsLayout;
 
+class Color;
+
 class Device {
   public:
     Device(AbstractGraphicsApi& api,SystemApi::Window* w,uint8_t maxFramesInFlight=2);
@@ -67,7 +69,8 @@ class Device {
     Uniforms       uniforms(const UniformsLayout &owner);
 
     FrameBuffer    frameBuffer(Frame &out, RenderPass& pass);
-    RenderPass     pass       (RenderPass::FboMode input,RenderPass::FboMode output);
+    RenderPass     pass       (FboMode color,FboMode zbuf);
+    RenderPass     pass       (const Tempest::Color& color,FboMode zbuf);
 
     template<class Vertex>
     RenderPipeline pipeline(RenderPass& pass, uint32_t width, uint32_t height,

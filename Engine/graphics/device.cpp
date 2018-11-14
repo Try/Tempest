@@ -113,8 +113,13 @@ FrameBuffer Device::frameBuffer(Frame& out,RenderPass &pass) {
   return f;
   }
 
-RenderPass Device::pass(RenderPass::FboMode input, RenderPass::FboMode output) {
-  RenderPass f(*this,api.createPass(dev,swapchain));
+RenderPass Device::pass(FboMode color, FboMode zbuf) {
+  RenderPass f(*this,api.createPass(dev,swapchain,color,nullptr,zbuf,1.0));
+  return f;
+  }
+
+RenderPass Device::pass(const Color &color, FboMode zbuf) {
+  RenderPass f(*this,api.createPass(dev,swapchain,FboMode::PreserveOut,&color,zbuf,1.0));
   return f;
   }
 

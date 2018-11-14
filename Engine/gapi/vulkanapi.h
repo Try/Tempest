@@ -19,7 +19,9 @@ class VulkanApi : public AbstractGraphicsApi {
     void       destroy(Swapchain* d) override;
 
     Pass*      createPass(AbstractGraphicsApi::Device *d,
-                          AbstractGraphicsApi::Swapchain *s) override;
+                          AbstractGraphicsApi::Swapchain *s,
+                          FboMode in, const Color *clear,
+                          FboMode out, const float zclear) override;
     void       destroy   (Pass* pass) override;
 
     Fbo*       createFbo(Device *d, Swapchain *s, Pass* pass, uint32_t imageId) override;

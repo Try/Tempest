@@ -9,5 +9,5 @@ layout(location = 0) in  vec2 inUV;
 layout(location = 1) in  vec4 inColor;
 
 void main() {
-  outColor = texture(texSampler,inUV)*inColor;
+  outColor = texture(texSampler,inUV);//vec4(fragColor+vec3(ubo.r,ubo.g,ubo.b), 1.0);
   }

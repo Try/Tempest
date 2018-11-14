@@ -17,11 +17,11 @@ class Texture2d {
 
     uint32_t w() const { return texW; }
     uint32_t h() const { return texH; }
+    bool     isEmpty() const { return texW<=0 || texH<=0; }
 
   private:
     Texture2d(Tempest::Device& dev,AbstractGraphicsApi::Texture* impl,uint32_t w,uint32_t h);
 
-    Tempest::Device*                                  dev =nullptr;
     Detail::DSharedPtr<AbstractGraphicsApi::Texture*> impl;
     uint32_t                                          texW=0;
     uint32_t                                          texH=0;

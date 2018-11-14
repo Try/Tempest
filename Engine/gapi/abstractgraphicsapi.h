@@ -10,6 +10,7 @@
 namespace Tempest {
   class UniformsLayout;
   class Pixmap;
+  class Color;
 
   namespace Decl {
   enum ComponentType:uint8_t {
@@ -98,7 +99,9 @@ namespace Tempest {
       virtual Swapchain* createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d)=0;
       virtual void       destroy(Swapchain* d)=0;
 
-      virtual Pass*      createPass(Device *d,Swapchain *s)=0;
+      virtual Pass*      createPass(Device *d,Swapchain *s,
+                                    FboMode in,const Color* clear,
+                                    FboMode out,const float zclear)=0;
       virtual void       destroy(Pass* pass)=0;
 
       virtual Fbo*       createFbo(Device *d,Swapchain *s,Pass* pass,uint32_t imageId)=0;

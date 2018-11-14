@@ -10,10 +10,6 @@ class CommandBuffer;
 
 class RenderPass {
   public:
-    enum FboMode {
-      Preserve,
-      Discard
-      };
     RenderPass()=default;
     RenderPass(RenderPass&& f)=default;
     ~RenderPass();

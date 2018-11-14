@@ -55,7 +55,7 @@ void Game::initSwapchain(const Tempest::UniformsLayout &ulay){
   auto vs  = device.loadShader("shader/vert.spv");
   auto fs  = device.loadShader("shader/frag.spv");
 
-  pass     = device.pass(Tempest::RenderPass::Discard,Tempest::RenderPass::Preserve);
+  pass     = device.pass(Tempest::FboMode::PreserveOut,Tempest::FboMode::Discard);
   pipeline = device.pipeline<Point>(pass,width(),height(),Triangles,ulay,vs,fs);
   uboBuf   = device.loadUbo(&usrc,sizeof(usrc));
 
@@ -95,10 +95,13 @@ void Game::initSwapchain(const Tempest::UniformsLayout &ulay){
 void Game::paintEvent(PaintEvent& event) {
   Painter p(event);
 
-  p.setBrush(texture);
+  p.setBrush(Brush(texture));
   p.drawRect(100,50, 200,100);
-  p.drawRect(300,150,10,10);
 
+  p.setBrush(Brush(texture,Color(1,0,0,1)));
+  p.drawRect(300,150,texture.w(),texture.h());
+
+  p.setPen(Pen(Color(),4));
   p.drawLine(100,100,200,200);
   }
 
@@ -123,7 +126,7 @@ void Game::render(){
 
     context.gpuLock.wait();
 
-    uint32_t imgId=device.nextImage(context.imageAvailable);
+    const  uint32_t imgId=device.nextImage(context.imageAvailable);
 
     PaintEvent p(surface,w(),h());
     paintEvent(p);

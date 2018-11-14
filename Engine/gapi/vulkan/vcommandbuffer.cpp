@@ -76,7 +76,10 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
   renderPassInfo.renderArea.offset = {0, 0};
   renderPassInfo.renderArea.extent = {width,height};
 
-  VkClearValue clearColor = {{{0.0f, 0.0f, 1.0f, 1.0f}}};
+  VkClearValue clearColor = {{{pass->color.r(),
+                               pass->color.g(),
+                               pass->color.b(),
+                               pass->color.a() }}};
   renderPassInfo.clearValueCount = 1;
   renderPassInfo.pClearValues    = &clearColor;
 

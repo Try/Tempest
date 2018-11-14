@@ -140,12 +140,6 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
 
   VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
 
-  /*
-  VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
-  vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-  vertexInputInfo.vertexBindingDescriptionCount   = 0;
-  vertexInputInfo.vertexAttributeDescriptionCount = 0;*/
-
   VkVertexInputBindingDescription vk_vertexInputBindingDescription;
   vk_vertexInputBindingDescription.binding   = 0;
   vk_vertexInputBindingDescription.stride    = stride;
@@ -203,7 +197,6 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   vertexInputInfo.pVertexBindingDescriptions      = &vk_vertexInputBindingDescription;
   vertexInputInfo.vertexAttributeDescriptionCount = vsInput.size();
   vertexInputInfo.pVertexAttributeDescriptions    = vsInput.data();
-
 
   VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
   inputAssembly.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;

@@ -30,7 +30,7 @@ class VectorImage : public Tempest::PaintDevice {
     void beginPaint(bool clear,uint32_t w,uint32_t h) override;
     void endPaint() override;
 
-    void setBrush(const TexPtr& t,float r,float g,float b,float a) override;
+    void setBrush(const TexPtr& t,const Color& c) override;
     void setTopology(Topology t) override;
 
     struct Block {

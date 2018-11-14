@@ -5,17 +5,25 @@
 
 using namespace Tempest::Detail;
 
-VRenderPass::VRenderPass(VDevice& device, VkFormat format)
+VRenderPass::VRenderPass(VDevice& device, VkFormat format,
+                         FboMode in,  const Color *clear,
+                         FboMode out, const float zclear)
   :device(device.device) {
   VkAttachmentDescription colorAttachment = {};
   colorAttachment.format         = format;
   colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
-  colorAttachment.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
-  colorAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
+  colorAttachment.loadOp         = bool(in&FboMode::PreserveIn)  ? VK_ATTACHMENT_LOAD_OP_LOAD   : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  colorAttachment.storeOp        = bool(in&FboMode::PreserveOut) ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
   colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
   colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
   colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
   colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+  if(clear){
+    color=*clear;
+    colorAttachment.loadOp=VK_ATTACHMENT_LOAD_OP_CLEAR;
+    }
 
   VkAttachmentReference colorAttachmentRef = {};
   colorAttachmentRef.attachment = 0;

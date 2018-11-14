@@ -60,10 +60,12 @@ void VulkanApi::destroy(AbstractGraphicsApi::Swapchain *d) {
   }
 
 AbstractGraphicsApi::Pass *VulkanApi::createPass(AbstractGraphicsApi::Device *d,
-                                                 AbstractGraphicsApi::Swapchain *s) {
+                                                 AbstractGraphicsApi::Swapchain *s,
+                                                 FboMode in, const Color *clear,
+                                                 FboMode out, const float zclear) {
   Detail::VDevice*    dx=reinterpret_cast<Detail::VDevice*>(d);
   Detail::VSwapchain* sx=reinterpret_cast<Detail::VSwapchain*>(s);
-  return new Detail::VRenderPass(*dx,sx->format());
+  return new Detail::VRenderPass(*dx,sx->format(),in,clear,out,zclear);
   }
 
 void VulkanApi::destroy(AbstractGraphicsApi::Pass *pass) {

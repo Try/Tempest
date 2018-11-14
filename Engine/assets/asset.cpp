@@ -2,6 +2,3 @@
 
 using namespace Tempest;
 
-Asset::Asset() {
-
-  }
