@@ -109,6 +109,15 @@ uint32_t SystemApi::height(SystemApi::Window *w) {
   return uint32_t(rect.bottom-rect.top);
   }
 
+Rect SystemApi::windowClientRect(SystemApi::Window* w) {
+  RECT rectWindow;
+  GetClientRect( HWND(w), &rectWindow);
+  int cW = rectWindow.right  - rectWindow.left;
+  int cH = rectWindow.bottom - rectWindow.top;
+
+  return Rect(rectWindow.left,rectWindow.top,cW,cH);
+  }
+
 LRESULT CALLBACK WindowProc( HWND   hWnd,
                              UINT   msg,
                              const WPARAM wParam,
@@ -129,6 +138,14 @@ LRESULT CALLBACK WindowProc( HWND   hWnd,
 
     case WM_SIZE:
       if(wParam!=SIZE_MINIMIZED) {
+        RECT rpos = {0,0,0,0};
+        GetWindowRect( hWnd, &rpos );
+
+        RECT rectWindow;
+        GetClientRect( HWND(hWnd), &rectWindow);
+        int cW = rectWindow.right  - rectWindow.left;
+        int cH = rectWindow.bottom - rectWindow.top;
+
         int width  = lParam & 0xffff;
         int height = (uint32_t(lParam) & 0xffff0000) >> 16;
         if(cb)

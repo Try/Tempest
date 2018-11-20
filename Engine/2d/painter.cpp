@@ -231,7 +231,7 @@ void Painter::implDrawRect(int x1, int y1, int x2, int y2, float u1, float v1, f
   }
 
 void Painter::drawRect(int x, int y, int w, int h, float u1, float v1, float u2, float v2) {
-  implDrawRect(x,y,x+w,y+h,u1,v1,u2,v2);
+  implDrawRect(x,y,x+w,y+h, u1*invW,v1*invH,u2*invW,v2*invH);
   }
 
 void Painter::drawRect(int x, int y, int w, int h) {

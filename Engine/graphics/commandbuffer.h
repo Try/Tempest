@@ -34,6 +34,9 @@ class CommandBuffer {
     void setUniforms(const Tempest::RenderPipeline& p,const Tempest::Uniforms& ubo);
     void setUniforms(const Detail::ResourcePtr<Tempest::RenderPipeline>& p,const Tempest::Uniforms& ubo);
 
+    void setUniforms(const Tempest::RenderPipeline& p);
+    void setUniforms(const Detail::ResourcePtr<Tempest::RenderPipeline>& p);
+
     template<class T>
     void draw(const VertexBuffer<T>& vbo){ implDraw(vbo.impl,0,vbo.size()); }
 

@@ -15,7 +15,7 @@ class Painter {
       Clear,
       Preserve
       };
-    Painter(PaintEvent& ev, Mode m=Clear);
+    Painter(PaintEvent& ev, Mode m=Preserve);
     ~Painter();
 
     void setScissot(int x,int y,int w,int h);

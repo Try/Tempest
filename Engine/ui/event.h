@@ -162,12 +162,19 @@ class PaintEvent: public Event {
       setType( Paint );
       }
 
+    PaintEvent(PaintEvent& parent,int32_t dx,int32_t dy)
+      :dev(parent.dev),dx(dx),dy(dy),outW(parent.outW),outH(parent.outH){
+      setType( Paint );
+      }
+
     PaintDevice& device()  { return dev;  }
     uint32_t     w() const { return outW; }
     uint32_t     h() const { return outH; }
 
   private:
     PaintDevice& dev;
+    int32_t  dx=0;
+    int32_t  dy=0;
     uint32_t outW=0;
     uint32_t outH=0;
 

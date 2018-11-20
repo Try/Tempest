@@ -23,19 +23,28 @@ void VectorImage::endPaint() {
   outdatedCount=frameCount;
   }
 
-void VectorImage::setBrush(const TexPtr &t, const Color &c) {
-  brush = t;
-  }
+template<class T,T VectorImage::Block::*param>
+void VectorImage::setState(const T &t) {
+  // blocks.size()>0, see VectorImage::clear()
+  if(blocks.back().*param==t)
+    return;
 
-void VectorImage::setTopology(Topology t) {
-  if(blocks.back().size==0 || blocks.back().tp==t){
-    blocks.back().tp=t;
+  if(blocks.back().size==0){
+    blocks.back().*param=t;
     return;
     }
 
   blocks.emplace_back();
-  blocks.back().begin=buf.size();
-  blocks.back().tp=t;
+  blocks.back().begin =buf.size();
+  blocks.back().*param=t;
+  }
+
+void VectorImage::setBrush(const TexPtr &t, const Color &c) {
+  setState<TexPtr,&Block::brush>(t);
+  }
+
+void VectorImage::setTopology(Topology t) {
+  setState<Topology,&Block::tp>(t);
   }
 
 void VectorImage::clear() {
@@ -59,7 +68,7 @@ void VectorImage::commitPoints() {
     }
   }
 
-void VectorImage::makeActual(Device &dev) {
+void VectorImage::makeActual(Device &dev,RenderPass& pass) {
   if(!frame || frameCount!=dev.maxFramesInFlight()) {
     uint8_t count=dev.maxFramesInFlight();
     frame.reset(new PerFrame[count]);
@@ -69,8 +78,19 @@ void VectorImage::makeActual(Device &dev) {
   PerFrame& f=frame[dev.frameId()];
   if(f.outdated) {
     f.vbo=dev.loadVbo(buf,BufferFlags::Static);
-    f.ubo=dev.uniforms(dev.builtin().texture2dLayout());
-    f.ubo.set(0,brush);
+    f.blocks.reserve(blocks.size());
+    f.blocks.clear();
+
+    for(auto& i:blocks){
+      Uniforms ux;
+      if(i.brush) {
+        ux=dev.uniforms(dev.builtin().texture2d(pass,info.w,info.h).layout);
+        ux.set(0,i.brush);
+        } else {
+        ux=dev.uniforms(dev.builtin().empty(pass,info.w,info.h).layout);
+        }
+      f.blocks.push_back(std::move(ux));
+      }
 
     f.outdated=false;
     outdatedCount--;
@@ -80,21 +100,31 @@ void VectorImage::makeActual(Device &dev) {
   }
 
 void VectorImage::draw(Device & dev, CommandBuffer &cmd, RenderPass& pass) {
-  makeActual(dev);
+  makeActual(dev,pass);
 
   PerFrame& f=frame[dev.frameId()];
 
-  for(auto& b:blocks){
+  for(size_t i=0;i<blocks.size();++i){
+    auto& b=blocks[i];
+    auto& u=f.blocks[i];
+
     if(!b.pipeline) {
       const RenderPipeline* p;
-      if(b.tp==Triangles)
-        p=&dev.builtin().brushTexture2d(pass,info.w,info.h); else
-        p=&dev.builtin().penTexture2d  (pass,info.w,info.h);
-
+      if(b.brush) {
+        if(b.tp==Triangles)
+          p=&dev.builtin().texture2d(pass,info.w,info.h).brush; else
+          p=&dev.builtin().texture2d(pass,info.w,info.h).pen;
+        } else {
+        if(b.tp==Triangles)
+          p=&dev.builtin().empty(pass,info.w,info.h).brush; else
+          p=&dev.builtin().empty(pass,info.w,info.h).pen;
+        }
       b.pipeline=PipePtr(*p);
       }
 
-    cmd.setUniforms(b.pipeline,f.ubo);
+    if(b.brush)
+      cmd.setUniforms(b.pipeline,u); else
+      cmd.setUniforms(b.pipeline);
     cmd.draw(f.vbo,b.begin,b.size);
     }
   }

@@ -15,6 +15,11 @@ struct BasicSize;
 template<class T>
 struct BasicRect;
 
+enum Orienration:uint8_t {
+  Horizontal=0,
+  Vertical  =1
+  };
+
 
 template<class T>
 class BasicPoint<T,1> {

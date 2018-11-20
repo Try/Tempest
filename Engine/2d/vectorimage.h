@@ -21,9 +21,9 @@ class VectorImage : public Tempest::PaintDevice {
 
     void     draw(Device& dev, CommandBuffer& cmd, RenderPass &pass);
     bool     load(const char* path);
+    void     clear() override;
 
   private:
-    void clear() override;
     void addPoint(const Point& p) override;
     void commitPoints() override;
 
@@ -38,15 +38,15 @@ class VectorImage : public Tempest::PaintDevice {
       size_t   size =0;
       Topology tp   =Triangles;
       PipePtr  pipeline;
+      TexPtr   brush;
+
       };
 
     struct PerFrame {
       Tempest::VertexBuffer<Point> vbo;
-      Tempest::Uniforms            ubo;
+      std::vector<Uniforms>        blocks;
       bool                         outdated=true;
       };
-
-    TexPtr                      brush;
 
     std::unique_ptr<PerFrame[]> frame;
     size_t                      frameCount=0;
@@ -54,14 +54,17 @@ class VectorImage : public Tempest::PaintDevice {
 
     Topology                    topology=Triangles;
 
-    std::vector<Block> blocks;
-    std::vector<Point> buf;
+    std::vector<Block>          blocks;
+    std::vector<Point>          buf;
 
     struct Info {
       uint32_t w=0,h=0;
       };
     Info info;
 
-    void makeActual(Device& dev);
+    void makeActual(Device& dev,RenderPass& pass);
+
+    template<class T,T Block::*param>
+    void setState(const T& t);
   };
 }

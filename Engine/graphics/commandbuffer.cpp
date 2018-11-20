@@ -43,19 +43,27 @@ void CommandBuffer::endRenderPass() {
   }
 
 void CommandBuffer::setUniforms(const Tempest::RenderPipeline& p,const Uniforms &ubo) {
-  if(curPipeline!=p.impl.handler) {
-    impl.handler->setPipeline(*p.impl.handler);
-    curPipeline=p.impl.handler;
-    }
+  setUniforms(p);
   impl.handler->setUniforms(*p.impl.handler,*ubo.desc.handler);
   }
 
 void CommandBuffer::setUniforms(const Detail::ResourcePtr<RenderPipeline> &p, const Uniforms &ubo) {
+  setUniforms(p);
+  impl.handler->setUniforms(*p.impl.handler,*ubo.desc.handler);
+  }
+
+void CommandBuffer::setUniforms(const RenderPipeline &p) {
   if(curPipeline!=p.impl.handler) {
     impl.handler->setPipeline(*p.impl.handler);
     curPipeline=p.impl.handler;
     }
-  impl.handler->setUniforms(*p.impl.handler,*ubo.desc.handler);
+  }
+
+void CommandBuffer::setUniforms(const Detail::ResourcePtr<RenderPipeline> &p) {
+  if(curPipeline!=p.impl.handler) {
+    impl.handler->setPipeline(*p.impl.handler);
+    curPipeline=p.impl.handler;
+    }
   }
 
 void CommandBuffer::exec(const CommandBuffer &buf) {

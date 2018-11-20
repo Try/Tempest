@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Tempest/Rect>
 #include <cstdint>
 
 namespace Tempest{
@@ -23,6 +24,7 @@ class SystemApi {
 
     static uint32_t width (Window* w);
     static uint32_t height(Window* w);
+    static Rect     windowClientRect(SystemApi::Window *w);
   };
 
 }

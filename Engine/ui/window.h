@@ -5,6 +5,8 @@
 
 namespace Tempest {
 
+class VectorImage;
+
 class Window : public Widget {
   public:
     Window();
@@ -16,6 +18,7 @@ class Window : public Widget {
   protected:
     virtual void render();
     virtual void resizeEvent(uint32_t w,uint32_t h);
+    void         dispatchPaintEvent(VectorImage &e);
 
     SystemApi::Window* hwnd() const { return id; }
 
@@ -23,8 +26,9 @@ class Window : public Widget {
     struct Impl:SystemApi::WindowCallback {
       Impl(Window* self):self(self){}
       void onRender(Tempest::SystemApi::Window*) {
-        if(self->w()>0 && self->h()>0)
+        if(self->w()>0 && self->h()>0) {
           self->render();
+          }
         }
       void onResize(Tempest::SystemApi::Window*,uint32_t w,uint32_t h){
         self->resizeEvent(w,h);

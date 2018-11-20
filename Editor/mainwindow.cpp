@@ -6,6 +6,8 @@
 #include <Tempest/Painter>
 #include <Tempest/Rect>
 
+#include "ui/projecttree.h"
+
 using namespace Tempest;
 
 MainWindow::MainWindow(Tempest::VulkanApi& api)
@@ -20,7 +22,10 @@ MainWindow::MainWindow(Tempest::VulkanApi& api)
   }
 
 void MainWindow::setupUi() {
-  //setLayout(Horizontal);
+  setLayout(Horizontal);
+
+  addWidget(new ProjectTree());
+  addWidget(new Widget());//->resize(800,600);
   }
 
 void MainWindow::paintEvent(PaintEvent& event) {
@@ -30,7 +35,7 @@ void MainWindow::paintEvent(PaintEvent& event) {
   p.drawRect(0,0,w(),h());
 
   p.setPen(Pen(Color(),1));
-  p.drawLine(100,100,200,200);
+  p.drawLine(100,100,800,200);
   }
 
 void MainWindow::resizeEvent(uint32_t, uint32_t) {
@@ -62,8 +67,7 @@ void MainWindow::render(){
 
     const  uint32_t imgId=device.nextImage(context.imageAvailable);
 
-    PaintEvent p(surface,w(),h());
-    paintEvent(p);
+    dispatchPaintEvent(surface);
 
     cmd.begin();
     cmd.beginRenderPass(fbo[imgId],mainPass,w(),h());

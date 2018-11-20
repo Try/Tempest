@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 project(Editor)
 set (CMAKE_CXX_STANDARD 14)
 
-include_directories("../Engine/include")
+include_directories("../Engine/include" ".")
 link_directories   ("../lib")
 
 set(CMAKE_BINARY_DIR ../)
