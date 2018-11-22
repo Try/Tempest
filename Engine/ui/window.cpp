@@ -25,9 +25,6 @@ int Window::h() const {
 void Window::render() {
   }
 
-void Window::resizeEvent(uint32_t /*w*/, uint32_t /*h*/) {
-  }
-
 void Window::dispatchPaintEvent(VectorImage &surface) {
   surface.clear();
 

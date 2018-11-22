@@ -17,7 +17,6 @@ class Window : public Widget {
 
   protected:
     virtual void render();
-    virtual void resizeEvent(uint32_t w,uint32_t h);
     void         dispatchPaintEvent(VectorImage &e);
 
     SystemApi::Window* hwnd() const { return id; }
@@ -30,8 +29,17 @@ class Window : public Widget {
           self->render();
           }
         }
-      void onResize(Tempest::SystemApi::Window*,uint32_t w,uint32_t h){
-        self->resizeEvent(w,h);
+      void onResize(Tempest::SystemApi::Window*,int32_t w,int32_t h){
+        self->resize(w,h);
+        }
+
+      void onMouse(MouseEvent& e){
+        switch(e.type()) {
+          case Event::MouseDown: self->mouseDownEvent(e); break;
+          case Event::MouseUp:   self->mouseUpEvent(e);   break;
+          case Event::MouseMove: self->mouseMoveEvent(e); break;
+          default:break;
+          }
         }
       Window* self;
       };

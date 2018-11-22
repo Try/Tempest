@@ -25,7 +25,7 @@ void MainWindow::setupUi() {
   setLayout(Horizontal);
 
   addWidget(new ProjectTree());
-  addWidget(new Widget());//->resize(800,600);
+  addWidget(new Widget());
   }
 
 void MainWindow::paintEvent(PaintEvent& event) {
@@ -35,12 +35,16 @@ void MainWindow::paintEvent(PaintEvent& event) {
   p.drawRect(0,0,w(),h());
 
   p.setPen(Pen(Color(),1));
-  p.drawLine(100,100,800,200);
+  p.drawLine(100,100,mpos.x,mpos.y);
   }
 
-void MainWindow::resizeEvent(uint32_t, uint32_t) {
+void MainWindow::resizeEvent(SizeEvent&) {
   device.reset();
   initSwapchain();
+  }
+
+void MainWindow::mouseMoveEvent(MouseEvent &event) {
+  mpos=event.pos();
   }
 
 void MainWindow::initSwapchain(){

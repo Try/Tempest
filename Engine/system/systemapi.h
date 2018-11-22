@@ -5,6 +5,8 @@
 
 namespace Tempest{
 
+class MouseEvent;
+
 class SystemApi {
   private:
     SystemApi();
@@ -15,7 +17,8 @@ class SystemApi {
     struct WindowCallback {
       virtual ~WindowCallback()=default;
       virtual void onRender(Window* wx)=0;
-      virtual void onResize(Window* wx,uint32_t w,uint32_t h)=0;
+      virtual void onResize(Window* wx,int32_t w,int32_t h)=0;
+      virtual void onMouse(MouseEvent& e)=0;
       };
 
     static Window*  createWindow(WindowCallback* cb,uint32_t width,uint32_t height);

@@ -18,7 +18,7 @@ void ProjectTree::paintEvent(PaintEvent &e) {
   int bh   = int(background.h());
   int wpad = bw/3;
   int hpad = bh/3;
-  //p.drawRect(0,0,w(),hpad, 0,0,1,0.3f);
+
   p.drawRect(0,0,w()-wpad,hpad,    0,0,bw-wpad,hpad);
   p.drawRect(w()-wpad,0,wpad,hpad, bw-wpad,0,bw,hpad);
 

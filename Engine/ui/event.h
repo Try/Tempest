@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Tempest/Size>
 #include <cstdint>
 
 namespace Tempest {
@@ -179,5 +180,44 @@ class PaintEvent: public Event {
     uint32_t outH=0;
 
     using Event::accept;
+  };
+
+/*!
+ * \brief The SizeEvent class contains event parameters for resize events.
+ */
+class SizeEvent : public Event {
+  public:
+    SizeEvent(int w,int h): w(uint32_t(std::max(w,0))), h(uint32_t(std::max(h,0))) {
+      setType( Resize );
+      }
+    SizeEvent(uint32_t w,uint32_t h): w(w), h(h) {
+      setType( Resize );
+      }
+
+    const uint32_t w, h;
+
+    Tempest::Size size() const { return Size(int(w),int(h)); }
+  };
+
+/*!
+ * \brief The MouseEvent class contains event parameters for mouse and touch events.
+ */
+class MouseEvent : public Event {
+  public:
+    MouseEvent( int mx = -1, int my = -1,
+                MouseButton b = ButtonNone,
+                int mdelta = 0,
+                int mouseID = 0,
+                Type t = MouseMove )
+      :x(mx), y(my), delta(mdelta), button(b), mouseID(mouseID){
+      setType( t );
+      }
+
+    const int x, y, delta;
+    const MouseButton button;
+
+    const int mouseID;
+
+    Point pos() const { return Point(x,y); }
   };
 }

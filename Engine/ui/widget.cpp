@@ -73,12 +73,33 @@ Widget *Widget::takeWidget(Widget *w) {
 void Widget::setGeometry(const Rect &rect) {
   if(wrect==rect)
     return;
+  bool resize=(wrect.w!=rect.w || wrect.h!=rect.h);
   wrect=rect;
-  lay->applyLayout();
+
+  if(resize) {
+    lay->applyLayout();
+    SizeEvent e(uint32_t(rect.w),uint32_t(rect.h));
+    resizeEvent( e );
+    }
   }
 
 void Widget::setGeometry(int x, int y, int w, int h) {
   setGeometry(Rect(x,y,w,h));
+  }
+
+void Widget::resize(const Size &size) {
+  resize(size.w,size.h);
+  }
+
+void Widget::resize(int w, int h) {
+  if(wrect.w==w && wrect.h==h)
+    return;
+  wrect.w=w;
+  wrect.h=h;
+
+  lay->applyLayout();
+  SizeEvent e(w,h);
+  resizeEvent( e );
   }
 
 void Widget::setSizeHint(const Size &s) {
@@ -105,4 +126,20 @@ void Widget::setSizePolicy(const SizePolicy &sp) {
   }
 
 void Widget::paintEvent(PaintEvent&) {
+  }
+
+void Widget::resizeEvent(SizeEvent &e) {
+  e.accept();
+  }
+
+void Widget::mouseDownEvent(MouseEvent &e) {
+  e.ignore();
+  }
+
+void Widget::mouseUpEvent(MouseEvent &e) {
+  e.ignore();
+  }
+
+void Widget::mouseMoveEvent(MouseEvent &e) {
+  e.ignore();
   }

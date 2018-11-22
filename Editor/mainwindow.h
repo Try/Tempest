@@ -24,8 +24,9 @@ class MainWindow : public Tempest::Window {
     MainWindow(Tempest::VulkanApi& api);
 
   private:
-    void paintEvent(Tempest::PaintEvent& event);
-    void resizeEvent(uint32_t /*w*/,uint32_t /*h*/);
+    void paintEvent    (Tempest::PaintEvent& event) override;
+    void resizeEvent   (Tempest::SizeEvent & event) override;
+    void mouseMoveEvent(Tempest::MouseEvent& event) override;
 
     void setupUi();
 
@@ -39,6 +40,7 @@ class MainWindow : public Tempest::Window {
     Tempest::VectorImage surface;
 
     const Tempest::Texture2d& background = Resources::get<Tempest::Texture2d>("back.png");
+    Tempest::Point       mpos;
 
     struct FrameLocal {
       FrameLocal(Tempest::Device& dev):imageAvailable(dev),gpuLock(dev){}

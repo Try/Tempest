@@ -33,6 +33,8 @@ class Widget {
 
     void  setGeometry(const Rect& rect);
     void  setGeometry(int x,int y,int w,int h);
+    void 	resize(const Size& size);
+    void 	resize(int w,int h);
 
     int   w() const { return  wrect.w; }
     int   h() const { return  wrect.h; }
@@ -44,7 +46,12 @@ class Widget {
     void setSizePolicy(SizePolicyType h,SizePolicyType  v);
     void setSizePolicy(const SizePolicy& sp);
 
-    virtual void paintEvent(Tempest::PaintEvent& event);
+    virtual void paintEvent     (Tempest::PaintEvent& event);
+    virtual void resizeEvent    (Tempest::SizeEvent&  event);
+
+    virtual void mouseDownEvent (Tempest::MouseEvent& event);
+    virtual void mouseUpEvent   (Tempest::MouseEvent& event);
+    virtual void mouseMoveEvent (Tempest::MouseEvent& event);
 
   private:
     Widget*                 ow=nullptr;
@@ -52,6 +59,11 @@ class Widget {
     Tempest::Rect           wrect;
     Tempest::Size           szHint;
     Tempest::SizePolicy     szPolicy;
+
+    struct Additive {
+      uint16_t disable=0;
+      };
+    Additive                state;
 
     Layout*                 lay=reinterpret_cast<Layout*>(layBuf);
     char                    layBuf[sizeof(void*)*3]={};

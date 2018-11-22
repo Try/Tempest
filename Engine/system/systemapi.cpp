@@ -5,11 +5,50 @@
 #include <unordered_set>
 #include "exceptions/exception.h"
 
+#include <Tempest/Event>
+
 using namespace Tempest;
 
 static LRESULT CALLBACK WindowProc(HWND hWnd,UINT msg,const WPARAM wParam,const LPARAM lParam );
 static const wchar_t* wndClassName=L"Tempest.Window";
 static std::unordered_set<SystemApi::Window*> windows;
+
+static int getX_LPARAM(LPARAM lp) {
+  return (DWORD_PTR(lp)) & 0xffff;
+  }
+
+static int getY_LPARAM(LPARAM lp) {
+  return ((DWORD_PTR(lp)) >> 16) & 0xffff;
+  }
+
+static WORD get_Button_WPARAM(WPARAM lp) {
+  return ((DWORD_PTR(lp)) >> 16) & 0xffff;
+  }
+
+static Event::MouseButton toButton( UINT msg, DWORD wParam ){
+  if( msg==WM_LBUTTONDOWN ||
+      msg==WM_LBUTTONUP )
+    return Event::ButtonLeft;
+
+  if( msg==WM_RBUTTONDOWN  ||
+      msg==WM_RBUTTONUP)
+    return Event::ButtonRight;
+
+  if( msg==WM_MBUTTONDOWN ||
+      msg==WM_MBUTTONUP )
+    return Event::ButtonMid;
+
+  if( msg==WM_XBUTTONDOWN ||
+      msg==WM_XBUTTONUP ) {
+    const WORD btn = get_Button_WPARAM(wParam);
+    if(btn==XBUTTON1)
+      return Event::ButtonBack;
+    if(btn==XBUTTON2)
+      return Event::ButtonForward;
+    }
+
+  return Event::ButtonNone;
+  }
 
 SystemApi::SystemApi() {}
 
@@ -136,6 +175,50 @@ LRESULT CALLBACK WindowProc( HWND   hWnd,
       }
       break;
 
+    case WM_XBUTTONDOWN:
+    case WM_LBUTTONDOWN:
+    case WM_MBUTTONDOWN:
+    case WM_RBUTTONDOWN: {
+      SetCapture(hWnd);
+      MouseEvent e( getX_LPARAM(lParam),
+                    getY_LPARAM(lParam),
+                    toButton(msg,wParam),
+                    0,
+                    0,
+                    Event::MouseDown );
+      if(cb)
+        cb->onMouse(e);
+      }
+      break;
+
+    case WM_XBUTTONUP:
+    case WM_LBUTTONUP:
+    case WM_RBUTTONUP:
+    case WM_MBUTTONUP: {
+      ReleaseCapture();
+      MouseEvent e( getX_LPARAM(lParam),
+                    getY_LPARAM(lParam),
+                    toButton(msg,wParam),
+                    0,
+                    0,
+                    Event::MouseUp  );
+      if(cb)
+        cb->onMouse(e);
+      }
+      break;
+
+    case WM_MOUSEMOVE: {
+      MouseEvent e( getX_LPARAM(lParam),
+                    getY_LPARAM(lParam),
+                    Event::ButtonNone,
+                    0,
+                    0,
+                    Event::MouseMove  );
+      if(cb)
+        cb->onMouse(e);
+      }
+      break;
+
     case WM_SIZE:
       if(wParam!=SIZE_MINIMIZED) {
         RECT rpos = {0,0,0,0};
@@ -149,7 +232,7 @@ LRESULT CALLBACK WindowProc( HWND   hWnd,
         int width  = lParam & 0xffff;
         int height = (uint32_t(lParam) & 0xffff0000) >> 16;
         if(cb)
-          cb->onResize(reinterpret_cast<SystemApi::Window*>(hWnd),uint32_t(width),uint32_t(height));
+          cb->onResize(reinterpret_cast<SystemApi::Window*>(hWnd),width,height);
         }
       break;
 
