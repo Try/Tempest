@@ -5,13 +5,15 @@
 #include <Tempest/Except>
 #include <Tempest/Painter>
 #include <Tempest/Rect>
+#include <Tempest/Font>
+#include <Tempest/Sprite>
 
 #include "ui/projecttree.h"
 
 using namespace Tempest;
 
 MainWindow::MainWindow(Tempest::VulkanApi& api)
-  :device(api,hwnd()),resources(device) {
+  :device(api,hwnd()),resources(device),atlas(device) {
   for(uint8_t i=0;i<device.maxFramesInFlight();++i){
     fLocal.emplace_back(device);
     commandBuffersSemaphores.emplace_back(device);
@@ -22,6 +24,9 @@ MainWindow::MainWindow(Tempest::VulkanApi& api)
   }
 
 void MainWindow::setupUi() {
+  // Tempest::Font f("data/font/Roboto.ttf");
+  auto tst = atlas.load("data/toolbar.png");
+
   setLayout(Horizontal);
 
   addWidget(new ProjectTree());

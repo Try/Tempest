@@ -8,6 +8,7 @@ namespace Tempest {
 class Brush {
   public:
     Brush(const Tempest::Texture2d& texture);
+    Brush(const Tempest::Color& color);
     Brush(const Tempest::Texture2d& texture,const Tempest::Color& color);
 
     uint32_t w() const { return info.w; }

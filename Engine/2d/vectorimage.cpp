@@ -39,7 +39,7 @@ void VectorImage::setState(const T &t) {
   blocks.back().*param=t;
   }
 
-void VectorImage::setBrush(const TexPtr &t, const Color &c) {
+void VectorImage::setBrush(const TexPtr &t,const Color&) {
   setState<TexPtr,&Block::brush>(t);
   }
 

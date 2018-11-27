@@ -8,12 +8,13 @@ using namespace Tempest;
 Painter::Painter(PaintEvent &ev, Mode m) : dev(ev.device()) {
   float w=2.f/ev.w();
   float h=2.f/ev.h();
+  const Rect& r=ev.viewPort();
   tr = Transform(w,0,0,
                  0,h,0,
-                 -1,-1, 1);
+                 -1+r.x*w,-1+r.y*h, 1);
+
   implSetColor(1,1,1,1);
   setScissot(0,0,ev.w(),ev.h());
-
   dev.beginPaint(m==Clear,ev.w(),ev.h());
   }
 

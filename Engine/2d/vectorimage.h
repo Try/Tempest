@@ -39,7 +39,6 @@ class VectorImage : public Tempest::PaintDevice {
       Topology tp   =Triangles;
       PipePtr  pipeline;
       TexPtr   brush;
-
       };
 
     struct PerFrame {

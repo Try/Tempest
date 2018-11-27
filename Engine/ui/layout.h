@@ -39,5 +39,11 @@ class LinearLayout : public Layout {
 
   private:
     Orienration ori;
+
+    template<bool hor>
+    void implApplyLayout(Widget& w);
+
+    template<bool hor>
+    void implApplyLayout(Widget& w,size_t count,bool exp,int sum,int expCount);
   };
 }

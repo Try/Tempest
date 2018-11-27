@@ -34,12 +34,7 @@ class Window : public Widget {
         }
 
       void onMouse(MouseEvent& e){
-        switch(e.type()) {
-          case Event::MouseDown: self->mouseDownEvent(e); break;
-          case Event::MouseUp:   self->mouseUpEvent(e);   break;
-          case Event::MouseMove: self->mouseMoveEvent(e); break;
-          default:break;
-          }
+        self->dispatchMoveEvent(e);
         }
       Window* self;
       };

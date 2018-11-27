@@ -8,6 +8,12 @@ Brush::Brush(const Texture2d &texture)
   info.h=texture.h();
   }
 
+Brush::Brush(const Color &color)
+  :color(color){
+  info.w=1;
+  info.h=1;
+  }
+
 Brush::Brush(const Texture2d &texture, const Color &color)
   :tex(texture),color(color) {
   info.w=texture.w();

@@ -4,6 +4,45 @@
 
 using namespace Tempest;
 
+static int clamp(int min,int v,int max){
+  if(v<min)
+    return min;
+  if(v>max)
+    return max;
+  return v;
+  }
+
+template<bool v>
+inline int getW(const Size& w){
+  return w.w;
+  }
+
+template<>
+inline int getW<false>(const Size& w){
+  return w.h;
+  }
+
+template<bool v>
+inline int getW(const Rect& w){
+  return w.w;
+  }
+
+template<>
+inline int getW<false>(const Rect& w){
+  return w.h;
+  }
+
+template<bool v>
+inline int getType(const SizePolicy& sp){
+  return sp.typeH;
+  }
+
+template<>
+inline int getType<false>(const SizePolicy& w){
+  return w.typeV;
+  }
+
+
 Layout::Layout() {
   }
 
@@ -32,33 +71,74 @@ void Layout::bind(Widget *wx) {
   }
 
 void LinearLayout::applyLayout(Widget &w, Orienration ori) {
-  int    area=w.w();
-  int    h   =w.h();
-  int    hint=0;
-  bool   exp=false;
+  if(ori==Horizontal)
+    implApplyLayout<true>(w); else
+    implApplyLayout<false>(w);
+  }
+
+template<bool hor>
+void LinearLayout::implApplyLayout(Widget &w) {
+  int    fixSize =0;
+  int    prefSize=0;
+  int    expSize =0;
+
   size_t count=w.widgetsCount();
+  int    pref =0;
+  int    exp  =0;
+
   for(size_t i=0;i<count;++i){
-    hint+=w.widget(i).sizeHint().w;
+    Widget& wx = w.widget(i);
+
+    switch(getType<hor>(wx.sizePolicy())) {
+      case Fixed:
+        fixSize  += getW<hor>(wx.sizeHint());
+        break;
+      case Preferred:
+        prefSize += getW<hor>(wx.sizeHint());
+        pref++;
+        break;
+      case Expanding:
+        expSize  += getW<hor>(wx.sizeHint());
+        exp++;
+        break;
+      }
     }
 
-  if(exp) {
-    int x=0;
-    for(size_t i=0;i<count;++i){
-      Widget& wx = w.widget(i);
-      Size    sz = wx.sizeHint();
+  implApplyLayout<hor>(w,count,exp>0,(exp>0) ? expSize : prefSize,(exp>0) ? exp : pref);
+  }
 
-      wx.setGeometry(x,0,sz.w,h);
-      x+=sz.w;
-      }
-    //todo
-    } else {
-    int x=0;
-    for(size_t i=0;i<count;++i){
-      Widget& wx = w.widget(i);
-      Size    sz = wx.sizeHint();
+template<bool hor>
+void LinearLayout::implApplyLayout(Widget &w, size_t count, bool exp, int sum,int expCount) {
+  auto   client=w.clentRet();
+  const SizePolicyType tExp=(exp ? Expanding : Preferred);
 
-      wx.setGeometry(x,0,sz.w,h);
-      x+=sz.w;
+  int c      =hor ? client.x : client.y;
+  int h      =getW<!hor>(client);
+  int spacing=w.spacing();
+
+  for(size_t i=0;i<count;++i){
+    Widget& wx = w.widget(i);
+    auto&   sp = wx.sizePolicy();
+    Size    sz = wx.sizeHint();
+
+    int ww=getW<hor> (sz);
+    int wh=getW<!hor>(sz);
+
+    if(getType<hor>(sp)==tExp) {
+      ww   = clamp(getW<hor>(wx.minSize()),sum/expCount,getW<hor>(wx.maxSize()));
+      sum -= getW<hor>(sz);
+      expCount--;
       }
+
+    wh = clamp(getW<!hor>(wx.minSize()),wh,getW<!hor>(wx.maxSize()));
+    if(getType<!hor>(sp)==Expanding)
+      wh = h; else
+      wh = std::min(h,wh);
+
+    if(hor)
+      wx.setGeometry(c,client.y+(h-wh)/2,ww,wh); else
+      wx.setGeometry(client.x+(h-wh)/2,c,wh,ww);
+
+    c+=getW<hor>(sz)+spacing;
     }
   }

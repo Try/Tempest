@@ -34,6 +34,10 @@ void Widget::setLayout(Layout *l) {
   lay->bind(this);
   }
 
+void Widget::applyLayout() {
+  lay->applyLayout();
+  }
+
 void Widget::freeLayout() noexcept {
   if(reinterpret_cast<char*>(lay)!=layBuf){
     delete lay;
@@ -45,8 +49,12 @@ void Widget::freeLayout() noexcept {
 void Widget::dispatchPaintEvent(PaintEvent& e) {
   paintEvent(e);
   const size_t count=widgetsCount();
-  for(size_t i=0;i<count;++i)
-    widget(i).paintEvent(e);
+  for(size_t i=0;i<count;++i) {
+    Widget& wx=widget(i);
+
+    PaintEvent ex(e,wx.x(),wx.y(),wx.w(),wx.h());
+    wx.dispatchPaintEvent(ex);
+    }
   }
 
 void Widget::setOwner(Widget *w) {
@@ -67,6 +75,8 @@ Widget& Widget::addWidget(Widget *w) {
   }
 
 Widget *Widget::takeWidget(Widget *w) {
+  if(state.mouseFocus==w)
+    state.mouseFocus=nullptr;
   return lay->takeWidget(w);
   }
 
@@ -125,6 +135,57 @@ void Widget::setSizePolicy(const SizePolicy &sp) {
   lay->applyLayout();
   }
 
+void Widget::setMargins(const Margin &m) {
+  if(marg!=m){
+    marg=m;
+    lay->applyLayout();
+    }
+  }
+
+void Widget::setSpacing(int s) {
+  if(s!=spa){
+    spa=s;
+    lay->applyLayout();
+    }
+  }
+
+void Widget::setMaximumSize(const Size &s) {
+  if(szPolicy.maxSize==s)
+    return;
+
+  szPolicy.maxSize = s;
+
+  if( owner() )
+    owner()->applyLayout();
+
+  if(wrect.w>s.w || wrect.h>s.h)
+    setGeometry( wrect.x, wrect.y, std::min(s.w, wrect.w), std::min(s.h, wrect.h) );
+  }
+
+void Widget::setMinimumSize(const Size &s) {
+  if(szPolicy.minSize==s)
+    return;
+
+  szPolicy.minSize = s;
+  if( owner() )
+    owner()->applyLayout();
+
+  if(wrect.w<s.w || wrect.h<s.h )
+    setGeometry( wrect.x, wrect.y, std::max(s.w, wrect.w), std::max(s.h, wrect.h) );
+  }
+
+void Widget::setMaximumSize(int w, int h) {
+  setMaximumSize( Size(w,h) );
+  }
+
+void Widget::setMinimumSize(int w, int h) {
+  setMinimumSize( Size(w,h) );
+  }
+
+Rect Widget::clentRet() const {
+  return Rect(marg.left,marg.right,wrect.w-marg.xMargin(),wrect.h-marg.yMargin());
+  }
+
 void Widget::paintEvent(PaintEvent&) {
   }
 
@@ -142,4 +203,32 @@ void Widget::mouseUpEvent(MouseEvent &e) {
 
 void Widget::mouseMoveEvent(MouseEvent &e) {
   e.ignore();
+  }
+
+void Widget::dispatchMoveEvent(MouseEvent &event) {
+  Point pos=event.pos();
+  for(auto i:wx){
+    if(i->rect().contains(pos)){
+      MouseEvent ex(event.x - i->x(),
+                    event.y - i->y(),
+                    event.button,
+                    event.delta,
+                    event.mouseID,
+                    event.type());
+      i->dispatchMoveEvent(ex);
+      if(ex.isAccepted()) {
+        if(ex.type()==Event::MouseDown)
+          state.mouseFocus=i;
+        event.accept();
+        return;
+        }
+      }
+    }
+
+  switch(event.type()){
+    case Event::MouseDown: mouseDownEvent(event); break;
+    case Event::MouseUp:   mouseUpEvent  (event); break;
+    case Event::MouseMove: mouseMoveEvent(event); break;
+    default:break;
+    }
   }

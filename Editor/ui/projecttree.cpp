@@ -1,5 +1,6 @@
 #include "projecttree.h"
 
+#include <Tempest/Button>
 #include <Tempest/Painter>
 #include <Tempest/SizePolicy>
 
@@ -7,7 +8,10 @@ using namespace Tempest;
 
 ProjectTree::ProjectTree() {
   setSizeHint(200,0);
-  setSizePolicy(Fixed,Preferred);
+  setSizePolicy(Fixed,Expanding);
+  setLayout(Vertical);
+
+  addWidget(new Button());
   }
 
 void ProjectTree::paintEvent(PaintEvent &e) {

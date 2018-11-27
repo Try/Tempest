@@ -15,6 +15,8 @@
 #include <Tempest/Event>
 #include <Tempest/Pixmap>
 
+#include <Tempest/TextureAtlas>
+
 #include <vector>
 
 #include "resources.h"
@@ -33,8 +35,9 @@ class MainWindow : public Tempest::Window {
     void render();
     void initSwapchain();
 
-    Tempest::Device      device;
-    Resources            resources;
+    Tempest::Device       device;
+    Resources             resources;
+    Tempest::TextureAtlas atlas;
 
     Tempest::RenderPass  mainPass;
     Tempest::VectorImage surface;

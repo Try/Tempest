@@ -29,7 +29,7 @@ RFile::RFile(const std::u16string &path)
 
 void* RFile::implOpen(const wchar_t *wstr) {
   void* ret = CreateFileW(wstr,GENERIC_READ,0,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
-  if(ret==INVALID_HANDLE_VALUE)
+  if(ret==HANDLE(LONG_PTR(-1)))
     throw std::runtime_error("failed to open file!");
   return ret;
   }

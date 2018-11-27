@@ -163,8 +163,9 @@ class PaintEvent: public Event {
       setType( Paint );
       }
 
-    PaintEvent(PaintEvent& parent,int32_t dx,int32_t dy)
-      :dev(parent.dev),dx(dx),dy(dy),outW(parent.outW),outH(parent.outH){
+    PaintEvent(PaintEvent& parent,int32_t dx,int32_t dy,int32_t w,int32_t h)
+      :dev(parent.dev),outW(parent.outW),outH(parent.outH),
+        vp(parent.vp.x+dx,parent.vp.y+dy,w,h){
       setType( Paint );
       }
 
@@ -172,12 +173,14 @@ class PaintEvent: public Event {
     uint32_t     w() const { return outW; }
     uint32_t     h() const { return outH; }
 
+    const Rect&  viewPort() const { return vp; }
+
   private:
     PaintDevice& dev;
-    int32_t  dx=0;
-    int32_t  dy=0;
     uint32_t outW=0;
     uint32_t outH=0;
+
+    Rect     vp;
 
     using Event::accept;
   };
