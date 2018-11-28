@@ -19,8 +19,10 @@ class Pixmap final {
     Pixmap(const char16_t* path);
     Pixmap(const std::u16string& path);
 
+    Pixmap(const Pixmap& src);
     Pixmap(Pixmap&& p);
     Pixmap& operator=(Pixmap&& p);
+    Pixmap& operator=(const Pixmap& p);
 
     ~Pixmap();
 

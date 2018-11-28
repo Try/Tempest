@@ -27,6 +27,15 @@ struct Pixmap::Impl {
     memset(data,0,size);
     }
 
+  Impl(const Impl& other):w(other.w),h(other.h),bpp(other.bpp),frm(other.frm){
+    size_t size=w*h*bpp;
+    data=reinterpret_cast<stbi_uc*>(STBI_MALLOC(size));
+    if(!data)
+      throw std::bad_alloc();
+
+    memcpy(data,other.data,size);
+    }
+
   Impl(const Impl& other,Pixmap::Format conv):w(other.w),h(other.h),bpp(other.bpp),frm(conv) {
     bpp = bppFromFrm(frm);
 
@@ -140,7 +149,6 @@ Pixmap::Pixmap(const Pixmap &src, Pixmap::Format conv)
 
 Pixmap::Pixmap(uint32_t w, uint32_t h, Pixmap::Format frm)
   :impl(new Impl(w,h,frm)){
-
   }
 
 Pixmap::Pixmap(const char* path) {
@@ -163,12 +171,23 @@ Pixmap::Pixmap(const std::u16string &path) {
   impl.reset(new Impl(f));
   }
 
+Pixmap::Pixmap(const Pixmap &src)
+  :impl(new Impl(*src.impl)){
+  }
+
 Pixmap::Pixmap(Pixmap &&p)
   :impl(std::move(p.impl)){
   }
 
 Pixmap& Pixmap::operator=(Pixmap &&p) {
   impl=std::move(p.impl);
+  return *this;
+  }
+
+Pixmap& Pixmap::operator=(const Pixmap &p) {
+  if(p.impl.get()==&Impl::zero)
+    impl.reset(&Impl::zero); else
+    impl.reset(new Impl(*p.impl));
   return *this;
   }
 
