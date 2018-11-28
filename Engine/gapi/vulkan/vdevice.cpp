@@ -72,6 +72,8 @@ VDevice::VDevice(VulkanApi &api, void *hwnd)
   createLogicalDevice(api);
   vkGetPhysicalDeviceMemoryProperties(physicalDevice,&memoryProperties);
 
+  getCaps(caps);
+
   allocator.setDevice(*this);
   data.reset(new DataHelper(*this));
   }
@@ -236,6 +238,19 @@ uint32_t VDevice::memoryTypeIndex(uint32_t typeBits,VkMemoryPropertyFlags props)
       }
     }
   throw std::runtime_error("failed to get correct memory type");
+  }
+
+void VDevice::getCaps(AbstractGraphicsApi::Caps &c) {
+  /*
+   * formats support table: https://vulkan.lunarg.com/doc/view/1.0.30.0/linux/vkspec.chunked/ch31s03.html
+   */
+  VkFormatProperties frm={};
+  vkGetPhysicalDeviceFormatProperties(physicalDevice,VK_FORMAT_R8G8B8_UNORM,&frm);
+  c.rgb8  = (frm.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
+
+  vkGetPhysicalDeviceFormatProperties(physicalDevice,VK_FORMAT_R8G8B8A8_UNORM,&frm); // must-have
+  c.rgba8 = (frm.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
+
   }
 
 VkResult VDevice::present(VSwapchain &sw, const VSemaphore *wait, size_t wSize, uint32_t imageId) {

@@ -12,6 +12,7 @@ class Pixmap final {
       };
 
     Pixmap();
+    Pixmap(const Pixmap& src,Format conv);
     Pixmap(uint32_t w,uint32_t h,Format frm);
     Pixmap(const char* path);
     Pixmap(const std::string& path);
@@ -25,8 +26,9 @@ class Pixmap final {
 
     bool save(const char* path,const char* ext=nullptr);
 
-    uint32_t w() const;
-    uint32_t h() const;
+    uint32_t w()   const;
+    uint32_t h()   const;
+    uint32_t bpp() const;
 
     bool isEmpty() const;
 

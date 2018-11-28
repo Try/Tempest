@@ -68,6 +68,8 @@ class VulkanApi : public AbstractGraphicsApi {
 
     void           draw     (Device *d,Swapchain *sw,CommandBuffer* cmd,Semaphore* wait,Semaphore* onReady,Fence* onReadyCpu) override;
 
+    void           getCaps  (Device *d,Caps& caps) override;
+
   private:
     struct Impl;
     std::unique_ptr<Impl> impl;

@@ -30,6 +30,7 @@ Device::Impl::~Impl() {
 Device::Device(AbstractGraphicsApi &api, SystemApi::Window *w, uint8_t maxFramesInFlight)
   :api(api), impl(api,w,maxFramesInFlight), dev(impl.dev), swapchain(impl.swapchain),
    mainCmdPool(*this,api.createCommandPool(dev)),builtins(*this) {
+  api.getCaps(dev,devCaps);
   }
 
 Device::~Device() {
@@ -95,6 +96,10 @@ Shader Device::loadShader(const char *filename) {
 Shader Device::loadShader(const char *source, const size_t length) {
   Shader f(*this,api.createShader(dev,source,length));
   return f;
+  }
+
+const Device::Caps &Device::caps() const {
+
   }
 
 Texture2d Device::loadTexture(const Pixmap &pm, bool mips) {

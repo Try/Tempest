@@ -36,6 +36,8 @@ class Color;
 
 class Device {
   public:
+    using Caps=AbstractGraphicsApi::Caps;
+
     Device(AbstractGraphicsApi& api,SystemApi::Window* w,uint8_t maxFramesInFlight=2);
     Device(const Device&)=delete;
     ~Device();
@@ -54,6 +56,8 @@ class Device {
 
     Shader         loadShader(const char* filename);
     Shader         loadShader(const char* source,const size_t length);
+
+    const Caps&    caps() const;
 
     template<class T>
     VertexBuffer<T> loadVbo(const T* arr,size_t arrSize,BufferFlags flg);
@@ -96,6 +100,7 @@ class Device {
     Impl                            impl;
     AbstractGraphicsApi::Device*    dev=nullptr;
     AbstractGraphicsApi::Swapchain* swapchain=nullptr;
+    Caps                            devCaps;
 
     Tempest::CommandPool            mainCmdPool;
     Tempest::Builtin                builtins;

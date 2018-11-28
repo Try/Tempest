@@ -68,6 +68,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     VkQueue                 presentQueue  =nullptr;
 
     VAllocator              allocator;
+    AbstractGraphicsApi::Caps caps;
 
     VkResult                nextImg(VSwapchain& sw,uint32_t& imageId,VSemaphore& onReady);
     VkResult                present(VSwapchain& sw,const VSemaphore *wait,size_t wSize,uint32_t imageId);
@@ -81,6 +82,8 @@ class VDevice : public AbstractGraphicsApi::Device {
     SwapChainSupportDetails querySwapChainSupport() { return querySwapChainSupport(physicalDevice); }
     QueueFamilyIndices      findQueueFamilies    () { return findQueueFamilies(physicalDevice);     }
     uint32_t                memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props) const;
+
+    void                    getCaps(AbstractGraphicsApi::Caps& c);
 
   private:
     struct DataHelper {

@@ -90,32 +90,38 @@ Sprite TextureAtlas::tryLoad(TextureAtlas::Page &dest,const Pixmap &p) {
   return Sprite();
   }
 
-static uint32_t bytePerPix(const Pixmap& p){
-  switch(p.format()){
-    case Pixmap::Format::RGB:  return 3;
-    case Pixmap::Format::RGBA: return 4;
-    }
-  return 1;
-  }
-
 Sprite TextureAtlas::emplace(TextureAtlas::Page &dest, const Pixmap &p, uint32_t x, uint32_t y) {
   auto     data=reinterpret_cast<uint8_t*>(dest.cpu.data());
-  uint32_t dbpp=bytePerPix(dest.cpu);
-  uint32_t dx  =x*dbpp;
-  uint32_t dw  =p.w()*dbpp;
+  //uint32_t dbpp=4;//dest.cpu.bpp();
+  uint32_t dx  =x*4;
+  uint32_t dw  =dest.cpu.w()*4;
 
   auto     src =reinterpret_cast<const uint8_t*>(p.data());
-  uint32_t sbpp=bytePerPix(p);
+  uint32_t sbpp=p.bpp();
   uint32_t sw  =p.w()*sbpp;
   uint32_t sh  =p.h();//*sbpp;
 
-  if(dest.cpu.format()==p.format()){
-    for(uint32_t iy=0;iy<sh;++iy)
-      memcpy(data+((y+iy)*dw+dx),src+iy*sw,sw);
-    } else {
-    throw "TODO";
+  switch(p.format()) {
+    case Pixmap::Format::RGBA: {
+      for(uint32_t iy=0;iy<sh;++iy)
+        memcpy(data+((y+iy)*dw+dx),src+iy*sw,sw);
+      break;
+      }
+    case Pixmap::Format::RGB: {
+      for(uint32_t iy=0;iy<sh;++iy){
+        auto data0=data+((y+iy)*dw+dx);
+        auto src0 =src+iy*sw;
+        for(uint32_t ix=0,dx=0;ix<sw;dx+=4,ix+=3){
+          data0[dx  ]=src0[ix  ];
+          data0[dx+1]=src0[ix+1];
+          data0[dx+2]=src0[ix+2];
+          data0[dx+3]=255;
+          }
+        }
+      break;
+      }
     }
 
-  dest.cpu.save("dbg.png");
+  // dest.cpu.save("dbg.png");
   return Sprite(&dest,x,y,p.w(),p.h());
   }

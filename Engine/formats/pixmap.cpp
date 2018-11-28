@@ -9,11 +9,16 @@ using namespace Tempest;
 struct Pixmap::Impl {
   Impl()=default;
 
-  Impl(uint32_t w,uint32_t h,Pixmap::Format frm):w(w),h(h),frm(frm){
+  static uint32_t bppFromFrm(Pixmap::Format frm) {
     switch(frm) {
-      case Pixmap::Format::RGB:  bpp=3; break;
-      case Pixmap::Format::RGBA: bpp=4; break;
+      case Pixmap::Format::RGB:  return 3;
+      case Pixmap::Format::RGBA: return 4;
       }
+    return 1;
+    }
+
+  Impl(uint32_t w,uint32_t h,Pixmap::Format frm):w(w),h(h),frm(frm) {
+    bpp = bppFromFrm(frm);
 
     uint32_t size=w*h*bpp;
     data=reinterpret_cast<stbi_uc*>(STBI_MALLOC(size));
@@ -22,9 +27,33 @@ struct Pixmap::Impl {
     memset(data,0,size);
     }
 
+  Impl(const Impl& other,Pixmap::Format conv):w(other.w),h(other.h),bpp(other.bpp),frm(conv) {
+    bpp = bppFromFrm(frm);
+
+    size_t size=w*h*bpp;
+    data=reinterpret_cast<stbi_uc*>(STBI_MALLOC(size));
+    if(!data)
+      throw std::bad_alloc();
+
+    if(bpp==other.bpp) {
+      memcpy(data,other.data,size);
+      return;
+      }
+    if(bpp==4) {
+      const size_t obpp=other.bpp;
+      const size_t size=w*h;
+      for(size_t i=0;i<size;++i){
+        uint32_t&       pix=reinterpret_cast<uint32_t*>(data)[i];
+        const uint8_t*  s  =other.data+i*obpp;
+        pix = uint32_t(s[0])<<0 | uint32_t(s[1])<<8 | uint32_t(s[2])<<16 | uint32_t(255)<<24;
+        }
+      return;
+      }
+    }
+
   Impl(RFile& f){
     int iw=0,ih=0,channels=0;
-    data = load(f,iw,ih,channels,STBI_rgb_alpha);
+    data = load(f,iw,ih,channels,STBI_default);//STBI_rgb_alpha);
     w    = uint32_t(iw);
     h    = uint32_t(ih);
     bpp  = uint32_t(channels);
@@ -105,6 +134,10 @@ void Pixmap::Deleter::operator()(Pixmap::Impl *ptr) {
 Pixmap::Pixmap():impl(&Impl::zero){
   }
 
+Pixmap::Pixmap(const Pixmap &src, Pixmap::Format conv)
+  :impl(new Impl(*src.impl,conv)){
+  }
+
 Pixmap::Pixmap(uint32_t w, uint32_t h, Pixmap::Format frm)
   :impl(new Impl(w,h,frm)){
 
@@ -147,7 +180,7 @@ bool Pixmap::save(const char *path, const char *ext) {
     WFile f(path);
     if(ext==nullptr)
       ext="PNG";
-    impl->save(f,ext);
+    return impl->save(f,ext);
     }
   catch(...) {
     return false;
@@ -160,6 +193,10 @@ uint32_t Pixmap::w() const {
 
 uint32_t Pixmap::h() const {
   return impl->h;
+  }
+
+uint32_t Pixmap::bpp() const {
+  return uint32_t(impl->bpp);
   }
 
 bool Pixmap::isEmpty() const {

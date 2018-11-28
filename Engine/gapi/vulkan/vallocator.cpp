@@ -120,6 +120,15 @@ VTexture VAllocator::alloc(const Pixmap& pm,bool mip) {
   imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
   imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
 
+  switch(pm.format()) {
+    case Pixmap::Format::RGB:
+      imageInfo.format = VK_FORMAT_R8G8B8_UNORM;
+      break;
+    case Pixmap::Format::RGBA:
+      imageInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+      break;
+    }
+
   vkAssert(vkCreateImage(device, &imageInfo, nullptr, &ret.impl));
 
   VkMemoryRequirements memRq;

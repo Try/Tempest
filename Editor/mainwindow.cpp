@@ -26,6 +26,7 @@ MainWindow::MainWindow(Tempest::VulkanApi& api)
 void MainWindow::setupUi() {
   // Tempest::Font f("data/font/Roboto.ttf");
   auto tst = atlas.load("data/toolbar.png");
+  tst = atlas.load("img/2.jpg");
 
   setLayout(Horizontal);
 

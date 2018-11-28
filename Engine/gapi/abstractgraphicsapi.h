@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Tempest/SystemApi>
+
 #include <initializer_list>
 #include <memory>
 #include <atomic>
@@ -41,6 +42,11 @@ namespace Tempest {
       ~AbstractGraphicsApi()=default;
 
     public:
+      class Caps {
+        public:
+          bool rgb8 =false;
+          bool rgba8=false;
+        };
 
       struct Shared {
         virtual ~Shared()=default;
@@ -145,9 +151,10 @@ namespace Tempest {
       //virtual void       destroy(Texture* t)=0;
 
       virtual uint32_t   nextImage(Device *d,Swapchain* sw,Semaphore* onReady)=0;
-      virtual Image*     getImage(Device *d,Swapchain* sw,uint32_t id)=0;
+      virtual Image*     getImage (Device *d,Swapchain* sw,uint32_t id)=0;
       virtual void       present  (Device *d,Swapchain* sw,uint32_t imageId,const Semaphore *wait)=0;
       virtual void       draw     (Device *d,Swapchain *sw,CommandBuffer* cmd,Semaphore* wait,Semaphore* onReady,Fence* onReadyCpu)=0;
 
+      virtual void       getCaps  (Device *d,Caps& caps)=0;
     };
 }

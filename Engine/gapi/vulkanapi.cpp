@@ -168,15 +168,22 @@ void VulkanApi::destroy(AbstractGraphicsApi::Buffer *cmd) {
   delete cx;
   }
 
-AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Device *d, const Pixmap &p, bool mips) {
+AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Device *d, const Pixmap &pref, bool mips) {
   Detail::VDevice*   dx = reinterpret_cast<Detail::VDevice*>(d);
 
-  const uint32_t  size =p.w()*p.h()*4;
-  Detail::VBuffer stage=dx->allocator.alloc(p.data(),size,MemUsage::TransferSrc,BufferFlags::Staging);
+  const Pixmap* p=&pref;
+  Pixmap alt;
+  if( p->bpp()==3 && !dx->caps.rgb8 ){
+    alt = Pixmap(pref,Pixmap::Format::RGBA);
+    p   = &alt;
+    }
 
-  auto buf=dx->allocator.alloc(p,mips);
+  const uint32_t  size =p->w()*p->h()*p->bpp();
+  Detail::VBuffer stage=dx->allocator.alloc(p->data(),size,MemUsage::TransferSrc,BufferFlags::Staging);
+
+  auto buf=dx->allocator.alloc(*p,mips);
   dx->changeLayout(buf, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-  dx->copy(buf,p.w(),p.h(),stage);
+  dx->copy(buf,p->w(),p->h(),stage);
   dx->changeLayout(buf, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   return new Detail::VTexture(std::move(buf));
   }
@@ -302,4 +309,9 @@ void VulkanApi::draw(Device *d,
   if(onReadyCpu!=nullptr)
     onReadyCpu->reset();
   Detail::vkAssert(vkQueueSubmit(dx->graphicsQueue,1,&submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl));
+  }
+
+void VulkanApi::getCaps(Device *d,Caps &caps) {
+  Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
+  caps=dx->caps;
   }
