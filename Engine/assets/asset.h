@@ -11,23 +11,48 @@ class Asset {
 
     template<class T>
     const T& get() const {
-      auto p=impl->get(typeid(T));
+      using CleanT=typename std::remove_reference<typename std::remove_cv<T>::type>::type;
+
+      auto p=impl->get(typeid(CleanT));
       if(p!=nullptr)
-        return *reinterpret_cast<T*>(p);
+        return *reinterpret_cast<const T*>(p);
 
       static T empty;
       return empty;
       }
 
+    bool operator == (const Asset& other) const {
+      if(impl!=nullptr) {
+        return other.impl!=nullptr && impl->path()==other.impl->path();
+        }
+      return other==nullptr;
+      }
+
+    bool operator != (const Asset& other) const {
+      return !(*this==other);
+      }
+
   private:
     struct Impl {
+#ifdef __WINDOWS__
+      using str_path=std::u16string;
+#else
+      using str_path=std::string;
+#endif
       virtual ~Impl()=default;
-      virtual void* get(const std::type_info& t)=0;
+      virtual const void* get(const std::type_info& t)=0;
+      virtual const str_path& path() const = 0;
       };
 
-    Asset(Impl* i):impl(i){}
+    static size_t calcHash(Impl* i){
+      std::hash<Impl::str_path> h;
+      return h(i->path());
+      }
+
+    Asset(Impl* i):impl(i),hash(calcHash(i)){}
 
     std::shared_ptr<Impl> impl;
+    size_t                hash=0;
 
   friend class Assets;
   };

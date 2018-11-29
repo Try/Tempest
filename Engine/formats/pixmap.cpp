@@ -48,6 +48,7 @@ struct Pixmap::Impl {
       memcpy(data,other.data,size);
       return;
       }
+
     if(bpp==4) {
       const size_t obpp=other.bpp;
       const size_t size=w*h;
@@ -62,7 +63,7 @@ struct Pixmap::Impl {
 
   Impl(RFile& f){
     int iw=0,ih=0,channels=0;
-    data = load(f,iw,ih,channels,STBI_default);//STBI_rgb_alpha);
+    data = load(f,iw,ih,channels,STBI_default);
     w    = uint32_t(iw);
     h    = uint32_t(ih);
     bpp  = uint32_t(channels);

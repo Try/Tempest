@@ -2,9 +2,10 @@
 
 #include <Tempest/Platform>
 #include <Tempest/Asset>
+#include <Tempest/TextureAtlas>
 
 #include <memory>
-#include <unordered_map>
+#include <unordered_set>
 
 namespace Tempest {
 
@@ -28,16 +29,29 @@ class Assets final {
       };
 
   private:
+    struct AssetHash {
+      size_t operator()(const Asset& a) const{
+        return a.hash;
+        }
+      size_t operator()(const str_path& a) const{
+        std::hash<str_path> v;
+        return v(a);
+        }
+      };
+
     struct Directory:Provider {
       Directory(const char* path,Tempest::Device &dev);
       ~Directory() override=default;
 
       Asset open(const char* file) override;
-      Asset implOpen(const str_path& path);
+      Asset implOpen(str_path &&path);
 
       str_path                           path;
       Tempest::Device&                   device;
-      std::unordered_map<str_path,Asset> files;
+      Tempest::TextureAtlas              atlas;
+      std::vector<Asset>                 files;
+      //std::unordered_map<str_path,Asset> files;
+
       };
 
     struct TextureFile;
