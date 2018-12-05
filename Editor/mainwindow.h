@@ -32,7 +32,7 @@ class MainWindow : public Tempest::Window {
 
     void setupUi();
 
-    void render();
+    void render() override;
     void initSwapchain();
 
     Tempest::Device       device;

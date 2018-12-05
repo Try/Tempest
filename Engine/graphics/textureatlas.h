@@ -2,6 +2,7 @@
 
 #include <Tempest/Pixmap>
 #include <Tempest/Rect>
+#include "../gapi/rectalllocator.h"
 
 #include <vector>
 #include <mutex>
@@ -21,33 +22,24 @@ class TextureAtlas {
     Sprite load(const Pixmap& pm);
 
   private:
-    struct Page {
-      Page(int w,int h):rect(1),useCount(0){
-        rect[0]=Rect(0,0,w,h);
-        cpu=Pixmap(uint32_t(w),uint32_t(h),Pixmap::Format::RGBA);
+    Device& device;
+    struct MemoryProvider {
+      using DeviceMemory=Pixmap*;
+
+      DeviceMemory alloc(uint32_t w,uint32_t h){
+        return new Pixmap(w,h,Pixmap::Format::RGBA);
         }
 
-      Page*                 next=nullptr;
-      Pixmap                cpu;
-      std::vector<Rect>     rect;
-      std::atomic<int32_t>  useCount;
-      std::mutex            sync;
-
-      void addRef(){ useCount.fetch_add(1); }
-      void decRef(){
-        if(useCount.fetch_add(-1)==1)
-          delete this;
+      void free(DeviceMemory m){
+        delete m;
         }
       };
 
-    Device& device;
-    int     defPgSize=512; //TODO
-    Page    root;
+    using Allocation = typename Tempest::RectAlllocator<MemoryProvider>::Allocation;
 
-    std::mutex sync;
-
-    Sprite  tryLoad(Page& dest, const Pixmap& p);
-    Sprite  emplace(Page& dest, const Pixmap& p, uint32_t x, uint32_t y);
+    MemoryProvider                          provider;
+    Tempest::RectAlllocator<MemoryProvider> alloc;
+    void emplace(Allocation& dest, const Pixmap& p, uint32_t x, uint32_t y);
 
   friend class Sprite;
   };

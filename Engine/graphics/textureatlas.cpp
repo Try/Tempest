@@ -5,96 +5,25 @@
 using namespace Tempest;
 
 TextureAtlas::TextureAtlas(Device& device)
-  :device(device),root(defPgSize,defPgSize){
-  root.useCount.fetch_add(1);
+  :device(device),alloc(provider) {
   }
 
 TextureAtlas::~TextureAtlas() {
-  Page* pg=root.next;
-  while(pg) {
-    auto del=pg;
-    pg=pg->next;
-    delete del;
-    }
   }
 
 Sprite TextureAtlas::load(const Pixmap &pm) {
-  Page*  pg=&root;
-  Sprite ret;
-
-  pg->addRef();
-  while( true ) {
-    ret = tryLoad(*pg,pm);
-    if(!ret.isEmpty())
-      return ret;
-
-    {
-      std::lock_guard<std::mutex> guard(sync);
-      if(pg->next){
-        auto next=pg->next;
-        pg->decRef();
-        pg=next;
-        pg->addRef();
-        continue;
-        }
-      pg->next=new Page(defPgSize,defPgSize);
-      auto next=pg->next;
-      pg->decRef();
-      pg=next;
-      pg->addRef();
-    }
-
-    ret = tryLoad(*pg,pm);
-    if(!ret.isEmpty())
-      return ret;
-    pg->decRef();
-    throw std::bad_alloc();
-    }
+  auto a = alloc.alloc(int32_t(pm.w()),int32_t(pm.h()));
+  emplace(a,pm,a.x,a.y);
+  Sprite ret(a,pm.w(),pm.h());
+  return ret;
   }
 
-Sprite TextureAtlas::tryLoad(TextureAtlas::Page &dest,const Pixmap &p) {
-  std::lock_guard<std::mutex> guard(dest.sync);
-
-  int pw=int(p.w());
-  int ph=int(p.h());
-
-  for(size_t i=0;i<dest.rect.size();++i){
-    if(pw<dest.rect[i].w && ph<dest.rect[i].h){
-      Rect rd=dest.rect[i];
-      dest.rect[i]=Rect(rd.x+pw,rd.y+ph,rd.w-pw,rd.h-ph);
-      dest.rect.emplace_back(rd.x+pw,rd.y,rd.w-pw,ph);
-      dest.rect.emplace_back(rd.x,rd.y+ph,pw,rd.h-ph);
-      return emplace(dest,p,uint32_t(rd.x),uint32_t(rd.y));
-      }
-    if(pw==dest.rect[i].w && ph<dest.rect[i].h){
-      Rect rd=dest.rect[i];
-      dest.rect[i]=Rect(rd.x+pw,rd.y+ph,rd.w-pw,rd.h-ph);
-      //dest.rect.emplace_back(rd.x+pw,rd.y,rd.w-pw,ph);
-      dest.rect.emplace_back(rd.x,rd.y+ph,pw,rd.h-ph);
-      return emplace(dest,p,uint32_t(rd.x),uint32_t(rd.y));
-      }
-    if(pw<dest.rect[i].w && ph==dest.rect[i].h){
-      Rect rd=dest.rect[i];
-      dest.rect[i]=Rect(rd.x+pw,rd.y+ph,rd.w-pw,rd.h-ph);
-      dest.rect.emplace_back(rd.x+pw,rd.y,rd.w-pw,ph);
-      //dest.rect.emplace_back(rd.x,rd.y+ph,pw,rd.h-ph);
-      return emplace(dest,p,uint32_t(rd.x),uint32_t(rd.y));
-      }
-    if(pw==dest.rect[i].w && ph==dest.rect[i].h){
-      Point rd=dest.rect[i].pos();
-      dest.rect[i]=dest.rect.back();
-      dest.rect.pop_back();
-      return emplace(dest,p,uint32_t(rd.x),uint32_t(rd.y));
-      }
-    }
-  return Sprite();
-  }
-
-Sprite TextureAtlas::emplace(TextureAtlas::Page &dest, const Pixmap &p, uint32_t x, uint32_t y) {
-  auto     data=reinterpret_cast<uint8_t*>(dest.cpu.data());
+void TextureAtlas::emplace(TextureAtlas::Allocation &dest, const Pixmap &p, uint32_t x, uint32_t y) {
+  Pixmap& cpu = *dest.page->memory;
+  auto     data=reinterpret_cast<uint8_t*>(cpu.data());
   //uint32_t dbpp=4;//dest.cpu.bpp();
   uint32_t dx  =x*4;
-  uint32_t dw  =dest.cpu.w()*4;
+  uint32_t dw  =cpu.w()*4;
 
   auto     src =reinterpret_cast<const uint8_t*>(p.data());
   uint32_t sbpp=p.bpp();
@@ -122,6 +51,5 @@ Sprite TextureAtlas::emplace(TextureAtlas::Page &dest, const Pixmap &p, uint32_t
       }
     }
 
-  // dest.cpu.save("dbg.png");
-  return Sprite(&dest,x,y,p.w(),p.h());
+  cpu.save("dbg.png");
   }

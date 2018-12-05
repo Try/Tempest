@@ -14,11 +14,11 @@ class Sprite final {
     bool     isEmpty() const { return texW<=0 || texH<=0; }
 
   private:
-    Sprite(TextureAtlas::Page* page,uint32_t x,uint32_t y,uint32_t w,uint32_t h);
+    Sprite(TextureAtlas::Allocation a,uint32_t w,uint32_t h);
 
-    TextureAtlas::Page* page=nullptr;
-    uint32_t            texW=0;
-    uint32_t            texH=0;
+    TextureAtlas::Allocation alloc;
+    uint32_t                 texW=0;
+    uint32_t                 texH=0;
 
   friend class TextureAtlas;
   };

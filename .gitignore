@@ -34,3 +34,6 @@
 *.exe
 *.out
 *.app
+
+# Debug
+dbg.png
