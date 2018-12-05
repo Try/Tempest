@@ -38,6 +38,8 @@ class Painter {
 
     float invW    =1.f;
     float invH    =1.f;
+    float dU      =0.f;
+    float dV      =0.f;
     float penWidth=1.f;
 
     struct ScissorRect {

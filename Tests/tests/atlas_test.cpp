@@ -19,13 +19,26 @@ struct TestDevice {
     }
   };
 
-TEST(main, AlasAlloator) {
+using Allocation=typename Tempest::RectAlllocator<TestDevice>::Allocation;
+
+TEST(main, AlasAlloator0) {
   TestDevice device;
   Tempest::RectAlllocator<TestDevice> allocator(device);
 
   auto s1 = allocator.alloc(128,64);
   auto s2 = allocator.alloc(32,32);
 
-  allocator.free(s2);
-  allocator.free(s1);
+  s2=Allocation();
+  s1=Allocation();
+  }
+
+TEST(main, AlasAlloator1) {
+  TestDevice device;
+  Tempest::RectAlllocator<TestDevice> allocator(device);
+
+  auto s1 = allocator.alloc(128,64);
+  auto s2 = s1;
+
+  s2=Allocation();
+  s1=Allocation();
   }

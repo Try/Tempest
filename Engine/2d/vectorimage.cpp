@@ -40,7 +40,15 @@ void VectorImage::setState(const T &t) {
   }
 
 void VectorImage::setBrush(const TexPtr &t,const Color&) {
-  setState<TexPtr,&Block::brush>(t);
+  Texture tex={t,Sprite()};
+  setState<Texture,&Block::tex>(tex);
+  blocks.back().hasImg=bool(t);
+  }
+
+void VectorImage::setBrush(const Sprite &s, const Color&) {
+  Texture tex={TexPtr(),s};
+  setState<Texture,&Block::tex>(tex);
+  blocks.back().hasImg=!s.isEmpty();
   }
 
 void VectorImage::setTopology(Topology t) {
@@ -83,9 +91,11 @@ void VectorImage::makeActual(Device &dev,RenderPass& pass) {
 
     for(auto& i:blocks){
       Uniforms ux;
-      if(i.brush) {
+      if(i.hasImg) {
         ux=dev.uniforms(dev.builtin().texture2d(pass,info.w,info.h).layout);
-        ux.set(0,i.brush);
+        if(i.tex.brush)
+          ux.set(0,i.tex.brush); else
+          ux.set(0,i.tex.sprite.pageRawData(dev));
         } else {
         ux=dev.uniforms(dev.builtin().empty(pass,info.w,info.h).layout);
         }
@@ -110,7 +120,7 @@ void VectorImage::draw(Device & dev, CommandBuffer &cmd, RenderPass& pass) {
 
     if(!b.pipeline) {
       const RenderPipeline* p;
-      if(b.brush) {
+      if(b.hasImg) {
         if(b.tp==Triangles)
           p=&dev.builtin().texture2d(pass,info.w,info.h).brush; else
           p=&dev.builtin().texture2d(pass,info.w,info.h).pen;
@@ -122,7 +132,7 @@ void VectorImage::draw(Device & dev, CommandBuffer &cmd, RenderPass& pass) {
       b.pipeline=PipePtr(*p);
       }
 
-    if(b.brush)
+    if(b.hasImg)
       cmd.setUniforms(b.pipeline,u); else
       cmd.setUniforms(b.pipeline);
     cmd.draw(f.vbo,b.begin,b.size);

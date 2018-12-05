@@ -28,6 +28,8 @@ void MainWindow::setupUi() {
   auto tst = atlas.load("data/toolbar.png");
   tst = atlas.load("img/2.jpg");
 
+  spr=tst;
+
   setLayout(Horizontal);
 
   addWidget(new ProjectTree());
@@ -39,6 +41,9 @@ void MainWindow::paintEvent(PaintEvent& event) {
 
   p.setBrush(Brush(background));
   p.drawRect(0,0,w(),h());
+
+  p.setBrush(Brush(spr));
+  p.drawRect(300,100,spr.w(),spr.h());
 
   p.setPen(Pen(Color(),1));
   p.drawLine(100,100,mpos.x,mpos.y);

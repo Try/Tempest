@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Tempest/Texture2d>
 #include <Tempest/Pixmap>
 #include <Tempest/Rect>
 #include "../gapi/rectalllocator.h"
@@ -23,15 +24,30 @@ class TextureAtlas {
 
   private:
     Device& device;
+
+    struct Memory {
+      Memory()=default;
+      Memory(uint32_t w,uint32_t h):cpu(w,h,Pixmap::Format::RGBA){}
+      Memory(Memory&&)=default;
+
+      Memory& operator=(Memory&&)=default;
+
+      Pixmap            cpu;
+      mutable Texture2d gpu;
+      mutable bool      changed=true;
+      };
+
     struct MemoryProvider {
-      using DeviceMemory=Pixmap*;
+      using DeviceMemory=Memory;
 
       DeviceMemory alloc(uint32_t w,uint32_t h){
-        return new Pixmap(w,h,Pixmap::Format::RGBA);
+        DeviceMemory ret(w,h);
+        return ret;
         }
 
-      void free(DeviceMemory m){
-        delete m;
+      void free(DeviceMemory& m){
+        // nop
+        m=DeviceMemory();
         }
       };
 

@@ -14,32 +14,77 @@ class RectAlllocator {
 
   public:
     using Memory=typename MemoryProvider::DeviceMemory;
-    static const constexpr Memory null=Memory{};
 
     explicit RectAlllocator(MemoryProvider& device):device(device){}
 
     RectAlllocator(const RectAlllocator&)=delete;
 
     ~RectAlllocator(){
-      for(auto& i:pages)
-        device.free(i.memory);
       }
 
     struct Allocation {
+      Allocation()=default;
+      Allocation(Allocation&& t)
+        :page(t.page),id(t.id),x(t.x),y(t.y){
+        t.page=nullptr;
+        }
+
+      Allocation(const Allocation& t)
+        :page(t.page),id(t.id),x(t.x),y(t.y){
+        if(page!=nullptr)
+          page->node[id].usage++;
+        }
+
+      ~Allocation(){
+        if(page!=nullptr)
+          page->owner.free(*page,id);
+        }
+
+      Allocation& operator=(const Allocation& t) {
+        if(page==t.page)
+          return *this;
+
+        if(page==nullptr){
+          page=t.page;
+          } else {
+          auto& dev=page->owner;
+          dev.free(*page,id);
+          page=t.page;
+          }
+
+        id  =t.id;
+        x   =t.x;
+        y   =t.y;
+
+        page->node[id].usage++;
+        return *this;
+        }
+
+      Allocation& operator=(Allocation&& t) {
+        std::swap(page,t.page);
+        id = t.id;
+        x  = t.x;
+        y  = t.y;
+        return *this;
+        }
+
       Page*    page=nullptr;
       size_t   id  =0;
       uint32_t x   =0;
       uint32_t y   =0;
       };
 
-    Allocation alloc(int iw,int ih) {
+    Allocation alloc(uint32_t iw,uint32_t ih) {
+      if(iw==0 || ih==0)
+        return Allocation();
+
       for(auto& i:pages){
         auto a=alloc(i,iw,ih);
         if(a.page)
           return a;
         }
-      const int w=std::max(iw,defPageSize);
-      const int h=std::max(ih,defPageSize);
+      const uint32_t w=std::max(iw,defPageSize);
+      const uint32_t h=std::max(ih,defPageSize);
 
       pages.emplace_back(*this,w,h);
       auto a=alloc(pages.back(),iw,ih);
@@ -48,15 +93,10 @@ class RectAlllocator {
       throw std::bad_alloc();
       }
 
-    void free(Allocation& a){
-      if(a.page)
-        free(*a.page,a.id);
-      }
-
   private:
     MemoryProvider&   device;
     std::vector<Page> pages;
-    int               defPageSize=512;
+    uint32_t          defPageSize=512;
 
     struct Node {
       Node()=default;
@@ -80,6 +120,8 @@ class RectAlllocator {
         node[0] = Node{0,0,w,h,0};
         memory  = owner.device.alloc(w,h);
         }
+
+      Page(Page&&)=default;
 
       ~Page(){
         // memory!=null; 100%!!
@@ -143,8 +185,8 @@ class RectAlllocator {
           continue;
 
         if(pw<rd.w && ph<rd.h){
-          const int sq1 = (rd.w-pw)*(rd.h);
-          const int sq2 = (rd.w)*(rd.h-ph);
+          const uint32_t sq1 = (rd.w-pw)*(rd.h);
+          const uint32_t sq2 = (rd.w)*(rd.h-ph);
 
           rd.sub[0] = p.add(rd.x,rd.y,pw,ph,i);
           if(sq1<sq2) {
@@ -213,18 +255,16 @@ class RectAlllocator {
 
     void free(Page& p,size_t id) {
       p.node[id].usage--;
-
       while(p.node[id].usage==0) {
-        // recursive?
-        p.del(p.node[id].sub[0]);
-        p.del(p.node[id].sub[1]);
-        p.del(p.node[id].sub[2]);
-
         auto par=p.node[id].parent;
         if(par==id)
           return;
         p.node[par].usage--;
         id = p.node[id].parent;
+        }
+
+      while(p.node.size() && p.node.back().usage==0) {
+        p.node.pop_back();
         }
       }
   };

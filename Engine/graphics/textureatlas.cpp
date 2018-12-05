@@ -12,14 +12,15 @@ TextureAtlas::~TextureAtlas() {
   }
 
 Sprite TextureAtlas::load(const Pixmap &pm) {
-  auto a = alloc.alloc(int32_t(pm.w()),int32_t(pm.h()));
+  auto a = alloc.alloc(pm.w(),pm.h());
   emplace(a,pm,a.x,a.y);
-  Sprite ret(a,pm.w(),pm.h());
+  Sprite ret(std::move(a),pm.w(),pm.h());
   return ret;
   }
 
 void TextureAtlas::emplace(TextureAtlas::Allocation &dest, const Pixmap &p, uint32_t x, uint32_t y) {
-  Pixmap& cpu = *dest.page->memory;
+  dest.page->memory.changed=true;
+  Pixmap& cpu = dest.page->memory.cpu;
   auto     data=reinterpret_cast<uint8_t*>(cpu.data());
   //uint32_t dbpp=4;//dest.cpu.bpp();
   uint32_t dx  =x*4;
@@ -51,5 +52,5 @@ void TextureAtlas::emplace(TextureAtlas::Allocation &dest, const Pixmap &p, uint
       }
     }
 
-  cpu.save("dbg.png");
+  // cpu.save("dbg.png");
   }

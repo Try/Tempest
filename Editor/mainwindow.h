@@ -14,6 +14,7 @@
 #include <Tempest/VectorImage>
 #include <Tempest/Event>
 #include <Tempest/Pixmap>
+#include <Tempest/Sprite>
 
 #include <Tempest/TextureAtlas>
 
@@ -37,7 +38,9 @@ class MainWindow : public Tempest::Window {
 
     Tempest::Device       device;
     Resources             resources;
+
     Tempest::TextureAtlas atlas;
+    Tempest::Sprite       spr;
 
     Tempest::RenderPass  mainPass;
     Tempest::VectorImage surface;

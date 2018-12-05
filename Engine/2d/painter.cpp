@@ -188,11 +188,16 @@ void Painter::drawTrigImpl( float x0, float y0, float u0, float v0,
   }
 
 void Painter::setBrush(const Brush& b) {
-  dev.setBrush(b.tex,b.color);
+  if(b.tex) {
+    dev.setBrush(b.tex,b.color);
+    } else {
+    dev.setBrush(b.spr,b.color);
+    }
+  invW=b.info.invW;
+  invH=b.info.invH;
+  dU  =b.info.dx;
+  dV  =b.info.dy;
   implSetColor(b.color.r(),b.color.g(),b.color.b(),b.color.a());
-
-  invW=1.f/b.w();
-  invH=1.f/b.h();
   }
 
 void Painter::setPen(const Pen &p) {
@@ -232,15 +237,15 @@ void Painter::implDrawRect(int x1, int y1, int x2, int y2, float u1, float v1, f
   }
 
 void Painter::drawRect(int x, int y, int w, int h, float u1, float v1, float u2, float v2) {
-  implDrawRect(x,y,x+w,y+h, u1*invW,v1*invH,u2*invW,v2*invH);
+  implDrawRect(x,y,x+w,y+h, dU+u1*invW,dV+v1*invH,u2*invW+dU,v2*invH+dV);
   }
 
 void Painter::drawRect(int x, int y, int w, int h) {
-  implDrawRect(x,y,x+w,y+h,0,0,w*invW,h*invH);
+  implDrawRect(x,y,x+w,y+h, dU,dV,w*invW+dU,h*invH+dV);
   }
 
 void Painter::drawRect(int x, int y, unsigned w, unsigned h) {
-  implDrawRect(x,y,x+int(w),y+int(h),0,0,w*invW,h*invH);
+  implDrawRect(x,y,x+int(w),y+int(h), dU,dV,w*invW+dU,h*invH+dV);
   }
 
 void Painter::drawLine(int x1, int y1, int x2, int y2) {

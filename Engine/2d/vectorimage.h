@@ -4,6 +4,7 @@
 #include <Tempest/VertexBuffer>
 #include <Tempest/Rect>
 #include <Tempest/Uniforms>
+#include <Tempest/Sprite>
 
 #include <vector>
 
@@ -31,14 +32,25 @@ class VectorImage : public Tempest::PaintDevice {
     void endPaint() override;
 
     void setBrush(const TexPtr& t,const Color& c) override;
+    void setBrush(const Sprite& s,const Color& c) override;
     void setTopology(Topology t) override;
+
+    struct Texture {
+      TexPtr   brush;
+      Sprite   sprite;
+
+      bool     operator==(const Texture& t) const {
+        return brush==t.brush && sprite==t.sprite;
+        }
+      };
 
     struct Block {
       size_t   begin=0;
       size_t   size =0;
       Topology tp   =Triangles;
       PipePtr  pipeline;
-      TexPtr   brush;
+      bool     hasImg=false;
+      Texture  tex;
       };
 
     struct PerFrame {

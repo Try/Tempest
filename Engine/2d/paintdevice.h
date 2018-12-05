@@ -9,6 +9,7 @@ namespace Tempest {
 
 class Texture2d;
 class Color;
+class Sprite;
 
 class PaintDevice {
   public:
@@ -32,6 +33,7 @@ class PaintDevice {
     virtual void endPaint()=0;
 
     virtual void setBrush(const TexPtr& t,const Color& c)=0;
+    virtual void setBrush(const Sprite& s,const Color& c)=0;
     virtual void setTopology(Topology t)=0;
 
   friend class Painter;
