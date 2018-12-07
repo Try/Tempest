@@ -6,6 +6,8 @@
 namespace Tempest {
 
 class PaintDevice;
+class TextureAtlas;
+class Painter;
 
 class Event {
   public:
@@ -156,15 +158,17 @@ class Event {
 
 class PaintEvent: public Event {
   public:
-    PaintEvent(PaintDevice & p,uint32_t w,uint32_t h):dev(p),outW(w),outH(h) {
+    PaintEvent(PaintDevice & p,TextureAtlas& ta,uint32_t w,uint32_t h)
+      :dev(p),ta(ta),outW(w),outH(h) {
       setType( Paint );
       }
-    PaintEvent(PaintDevice & p,int32_t w,int32_t h):dev(p),outW(uint32_t(w)),outH(uint32_t(h)) {
+    PaintEvent(PaintDevice & p,TextureAtlas& ta,int32_t w,int32_t h)
+      :dev(p),ta(ta),outW(uint32_t(w)),outH(uint32_t(h)) {
       setType( Paint );
       }
 
     PaintEvent(PaintEvent& parent,int32_t dx,int32_t dy,int32_t w,int32_t h)
-      :dev(parent.dev),outW(parent.outW),outH(parent.outH),
+      :dev(parent.dev),ta(parent.ta),outW(parent.outW),outH(parent.outH),
         vp(parent.vp.x+dx,parent.vp.y+dy,w,h){
       setType( Paint );
       }
@@ -176,13 +180,16 @@ class PaintEvent: public Event {
     const Rect&  viewPort() const { return vp; }
 
   private:
-    PaintDevice& dev;
-    uint32_t outW=0;
-    uint32_t outH=0;
+    PaintDevice&  dev;
+    TextureAtlas& ta;
+    uint32_t      outW=0;
+    uint32_t      outH=0;
 
-    Rect     vp;
+    Rect          vp;
 
     using Event::accept;
+
+  friend class Painter;
   };
 
 /*!

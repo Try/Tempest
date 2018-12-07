@@ -21,10 +21,9 @@ class TextureAtlas {
     virtual ~TextureAtlas();
 
     Sprite load(const Pixmap& pm);
+    Sprite load(const void* data,uint32_t w,uint32_t h,Pixmap::Format format);
 
   private:
-    Device& device;
-
     struct Memory {
       Memory()=default;
       Memory(uint32_t w,uint32_t h):cpu(w,h,Pixmap::Format::RGBA){}
@@ -53,9 +52,13 @@ class TextureAtlas {
 
     using Allocation = typename Tempest::RectAlllocator<MemoryProvider>::Allocation;
 
+    void emplace(Allocation& dest, const void *img,
+                 uint32_t w, uint32_t h, Pixmap::Format frm,
+                 uint32_t x, uint32_t y);
+
+    Device&                                 device;
     MemoryProvider                          provider;
     Tempest::RectAlllocator<MemoryProvider> alloc;
-    void emplace(Allocation& dest, const Pixmap& p, uint32_t x, uint32_t y);
 
   friend class Sprite;
   };

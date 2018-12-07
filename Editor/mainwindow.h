@@ -15,6 +15,7 @@
 #include <Tempest/Event>
 #include <Tempest/Pixmap>
 #include <Tempest/Sprite>
+#include <Tempest/Font>
 
 #include <Tempest/TextureAtlas>
 
@@ -40,6 +41,7 @@ class MainWindow : public Tempest::Window {
     Resources             resources;
 
     Tempest::TextureAtlas atlas;
+    Tempest::Font         font;
     Tempest::Sprite       spr;
 
     Tempest::RenderPass  mainPass;

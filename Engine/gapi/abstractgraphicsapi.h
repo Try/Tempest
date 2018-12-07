@@ -12,6 +12,7 @@ namespace Tempest {
   class UniformsLayout;
   class Pixmap;
   class Color;
+  class RenderState;
 
   namespace Decl {
   enum ComponentType:uint8_t {
@@ -118,6 +119,7 @@ namespace Tempest {
 
       virtual Pipeline*  createPipeline(Device* d,Pass* pass,
                                         uint32_t width, uint32_t height,
+                                        const RenderState &st,
                                         const Tempest::Decl::ComponentType *decl, size_t declSize,
                                         size_t stride,
                                         Topology tp,

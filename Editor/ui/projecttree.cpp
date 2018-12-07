@@ -4,6 +4,8 @@
 #include <Tempest/Painter>
 #include <Tempest/SizePolicy>
 
+#include <Tempest/Brush>
+
 using namespace Tempest;
 
 ProjectTree::ProjectTree() {

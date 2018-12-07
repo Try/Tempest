@@ -1,6 +1,7 @@
 #include "button.h"
 
 #include <Tempest/Painter>
+#include <Tempest/Brush>
 
 using namespace Tempest;
 

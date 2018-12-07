@@ -2,19 +2,24 @@
 
 #include <Tempest/PaintDevice>
 #include <Tempest/Transform>
-#include <Tempest/Brush>
-#include <Tempest/Pen>
+#include <Tempest/Font>
 
 namespace Tempest {
 
 class PaintEvent;
+class Brush;
+class Pen;
 
 class Painter {
   public:
-    enum Mode {
+    enum Mode : uint8_t {
       Clear,
       Preserve
       };
+    using Blend=PaintDevice::Blend;
+    constexpr static auto NoBlend=Blend::NoBlend;
+    constexpr static auto Alpha  =Blend::Alpha;
+
     Painter(PaintEvent& ev, Mode m=Preserve);
     ~Painter();
 
@@ -23,6 +28,10 @@ class Painter {
 
     void setBrush(const Brush& b);
     void setPen  (const Pen&   p);
+    void setFont (const Font&  f);
+    void setBlend(const Blend  b);
+
+    const Font& font() const { return fnt; }
 
     void drawRect(int x,int y,int width,int height,
                   float u1,float v1,float u2,float v2);
@@ -31,9 +40,13 @@ class Painter {
 
     void drawLine(int x1,int y1,int x2,int y2);
 
+    void drawText(int x,int y,const char16_t* txt);
+
   private:
     PaintDevice&       dev;
+    TextureAtlas&      ta;
     PaintDevice::Point pt;
+    Tempest::Font      fnt;
     Tempest::Transform tr=Transform();
 
     float invW    =1.f;

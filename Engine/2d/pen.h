@@ -11,8 +11,9 @@ class Pen {
     float width() const { return penW; }
 
   private:
-    Color cl;
+    Color color;
     float penW=1.f;
+  friend class Painter;
   };
 
 }

@@ -60,6 +60,7 @@ class DSharedPtr {
         } else {
         if(handler)
           decRef();
+        handler=nullptr;
         }
       }
 

@@ -25,9 +25,9 @@ int Window::h() const {
 void Window::render() {
   }
 
-void Window::dispatchPaintEvent(VectorImage &surface) {
+void Window::dispatchPaintEvent(VectorImage &surface,TextureAtlas& ta) {
   surface.clear();
 
-  PaintEvent p(surface,this->w(),this->h());
+  PaintEvent p(surface,ta,this->w(),this->h());
   Widget::dispatchPaintEvent(p);
   }

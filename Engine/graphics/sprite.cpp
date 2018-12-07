@@ -11,14 +11,6 @@ Sprite::Sprite(TextureAtlas::Allocation a, uint32_t w, uint32_t h)
   :alloc(std::move(a)),texW(w),texH(h) {
   }
 
-bool Sprite::operator==(const Sprite &s) const {
-  return s.alloc.page==alloc.page && s.alloc.id==alloc.id;
-  }
-
-bool Sprite::operator!=(const Sprite &s) const {
-  return s.alloc.page!=alloc.page || s.alloc.id!=alloc.id;
-  }
-
 const Texture2d &Sprite::pageRawData(Device& dev) const {
   if(!alloc.page){
     static const Texture2d t;
@@ -40,4 +32,8 @@ const Rect Sprite::pageRect() const {
     }
   static Rect r;
   return r;
+  }
+
+void *Sprite::pageId() const {
+  return alloc.page;
   }

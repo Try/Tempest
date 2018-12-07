@@ -23,7 +23,28 @@ void VectorImage::endPaint() {
   outdatedCount=frameCount;
   }
 
-template<class T,T VectorImage::Block::*param>
+size_t VectorImage::pushState() {
+  size_t sz=stateStk.size();
+  stateStk.push_back(blocks.back());
+  return sz;
+  }
+
+void VectorImage::popState(size_t id) {
+  State& s = stateStk[id];
+  State& b = reinterpret_cast<State&>(blocks.back());
+  if(b==s)
+    return;
+  if(blocks.back().size==0) {
+    b=s;
+    } else {
+    blocks.emplace_back(s);
+    blocks.back().begin =buf.size();
+    blocks.back().size  =0;
+    }
+  stateStk.resize(id);
+  }
+
+template<class T,T VectorImage::State::*param>
 void VectorImage::setState(const T &t) {
   // blocks.size()>0, see VectorImage::clear()
   if(blocks.back().*param==t)
@@ -34,31 +55,37 @@ void VectorImage::setState(const T &t) {
     return;
     }
 
-  blocks.emplace_back();
+  blocks.push_back(blocks.back());
   blocks.back().begin =buf.size();
+  blocks.back().size  =0;
   blocks.back().*param=t;
   }
 
 void VectorImage::setBrush(const TexPtr &t,const Color&) {
   Texture tex={t,Sprite()};
-  setState<Texture,&Block::tex>(tex);
+  setState<Texture,&State::tex>(tex);
   blocks.back().hasImg=bool(t);
   }
 
 void VectorImage::setBrush(const Sprite &s, const Color&) {
   Texture tex={TexPtr(),s};
-  setState<Texture,&Block::tex>(tex);
+  setState<Texture,&State::tex>(tex);
   blocks.back().hasImg=!s.isEmpty();
   }
 
 void VectorImage::setTopology(Topology t) {
-  setState<Topology,&Block::tp>(t);
+  setState<Topology,&State::tp>(t);
+  }
+
+void VectorImage::setBlend(const Painter::Blend b) {
+  setState<Painter::Blend,&State::blend>(b);
   }
 
 void VectorImage::clear() {
   buf.clear();
   blocks.resize(1);
   blocks.back()=Block();
+  stateStk.clear();
   }
 
 void VectorImage::addPoint(const PaintDevice::Point &p) {
@@ -95,7 +122,7 @@ void VectorImage::makeActual(Device &dev,RenderPass& pass) {
         ux=dev.uniforms(dev.builtin().texture2d(pass,info.w,info.h).layout);
         if(i.tex.brush)
           ux.set(0,i.tex.brush); else
-          ux.set(0,i.tex.sprite.pageRawData(dev));
+          ux.set(0,i.tex.sprite.pageRawData(dev)); //TODO: oom
         } else {
         ux=dev.uniforms(dev.builtin().empty(pass,info.w,info.h).layout);
         }
@@ -121,13 +148,25 @@ void VectorImage::draw(Device & dev, CommandBuffer &cmd, RenderPass& pass) {
     if(!b.pipeline) {
       const RenderPipeline* p;
       if(b.hasImg) {
-        if(b.tp==Triangles)
-          p=&dev.builtin().texture2d(pass,info.w,info.h).brush; else
-          p=&dev.builtin().texture2d(pass,info.w,info.h).pen;
+        if(b.tp==Triangles){
+          if(b.blend==NoBlend)
+            p=&dev.builtin().texture2d(pass,info.w,info.h).brush; else
+            p=&dev.builtin().texture2d(pass,info.w,info.h).brushA;
+          } else {
+          if(b.blend==NoBlend)
+            p=&dev.builtin().texture2d(pass,info.w,info.h).pen; else
+            p=&dev.builtin().texture2d(pass,info.w,info.h).penA;
+          }
         } else {
-        if(b.tp==Triangles)
-          p=&dev.builtin().empty(pass,info.w,info.h).brush; else
-          p=&dev.builtin().empty(pass,info.w,info.h).pen;
+        if(b.tp==Triangles) {
+          if(b.blend==NoBlend)
+            p=&dev.builtin().empty(pass,info.w,info.h).brush; else
+            p=&dev.builtin().empty(pass,info.w,info.h).brushA;
+          } else {
+          if(b.blend==NoBlend)
+            p=&dev.builtin().empty(pass,info.w,info.h).pen; else
+            p=&dev.builtin().empty(pass,info.w,info.h).penA;
+          }
         }
       b.pipeline=PipePtr(*p);
       }
@@ -146,8 +185,8 @@ bool VectorImage::load(const char *file) {
 
   try {
     VectorImage img;
-    PaintEvent  event(img,int(image->width),int(image->height));
-    Painter     p(event);
+    //PaintEvent  event(img,int(image->width),int(image->height));
+    //Painter     p(event);
 
     for(NSVGshape* shape=image->shapes; shape!=nullptr; shape=shape->next) {
       for(NSVGpath* path=shape->paths; path!=nullptr; path=path->next) {

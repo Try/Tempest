@@ -3,5 +3,5 @@
 using namespace Tempest;
 
 Pen::Pen(const Color &cl, float w)
-  :cl(cl),penW(w) {
+  :color(cl),penW(w) {
   }

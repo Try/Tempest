@@ -3,6 +3,7 @@
 #include <Tempest/Texture2d>
 #include <Tempest/Color>
 #include <Tempest/Sprite>
+#include <Tempest/Painter>
 
 namespace Tempest {
 

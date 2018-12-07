@@ -13,11 +13,10 @@ class Sprite final {
     uint32_t h() const { return texH; }
     bool     isEmpty() const { return alloc.page==nullptr; }
 
-    bool     operator==(const Sprite& s) const;
-    bool     operator!=(const Sprite& s) const;
-
     const Tempest::Texture2d& pageRawData(Device &dev) const;
     const Rect                pageRect() const;
+
+    void*                     pageId() const;
 
   private:
     Sprite(TextureAtlas::Allocation a,uint32_t w,uint32_t h);

@@ -29,6 +29,7 @@ class VulkanApi : public AbstractGraphicsApi {
 
     Pipeline*  createPipeline(Device* d, Pass* pass,
                               uint32_t width, uint32_t height,
+                              const RenderState &st,
                               const Tempest::Decl::ComponentType *decl, size_t declSize,
                               size_t stride,
                               Topology tp,

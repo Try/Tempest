@@ -13,6 +13,6 @@ class ProjectTree : public Tempest::Widget {
   private:
     void paintEvent(Tempest::PaintEvent& event) override;
 
-    const Tempest::Sprite& background1 = Resources::get<Tempest::Sprite>("toolbar.png");
-    const Tempest::Texture2d& background = Resources::get<Tempest::Texture2d>("toolbar.png");
+    const Tempest::Sprite& background = Resources::get<Tempest::Sprite>("toolbar.png");
+    //const Tempest::Texture2d& background = Resources::get<Tempest::Texture2d>("toolbar.png");
   };

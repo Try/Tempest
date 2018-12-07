@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Tempest/RenderPipeline>
+#include <Tempest/RenderState>
 #include <Tempest/Shader>
 #include <Tempest/UniformsLayout>
 
@@ -17,6 +18,10 @@ class Builtin {
     struct Item {
       Tempest::RenderPipeline pen;
       Tempest::RenderPipeline brush;
+
+      Tempest::RenderPipeline penA;
+      Tempest::RenderPipeline brushA;
+
       Tempest::UniformsLayout layout;
       };
 
@@ -29,6 +34,7 @@ class Builtin {
     mutable Item            brushT2;
     mutable Item            brushE;
 
+    RenderState             stNormal, stBlend;
     Device&                 owner;
     Tempest::Shader         vsT2,fsT2,vsE,fsE;
 

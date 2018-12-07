@@ -6,6 +6,7 @@
 namespace Tempest {
 
 class VectorImage;
+class TextureAtlas;
 
 class Window : public Widget {
   public:
@@ -17,7 +18,7 @@ class Window : public Widget {
 
   protected:
     virtual void render();
-    void         dispatchPaintEvent(VectorImage &e);
+    void         dispatchPaintEvent(VectorImage &e,TextureAtlas &ta);
 
     SystemApi::Window* hwnd() const { return id; }
 

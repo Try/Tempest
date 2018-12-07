@@ -1,12 +1,10 @@
 #include "mainwindow.h"
 
-#include <Tempest/Assets>
-#include <Tempest/Pixmap>
 #include <Tempest/Except>
 #include <Tempest/Painter>
-#include <Tempest/Rect>
-#include <Tempest/Font>
-#include <Tempest/Sprite>
+
+#include <Tempest/Brush>
+#include <Tempest/Pen>
 
 #include "ui/projecttree.h"
 
@@ -24,11 +22,10 @@ MainWindow::MainWindow(Tempest::VulkanApi& api)
   }
 
 void MainWindow::setupUi() {
-  // Tempest::Font f("data/font/Roboto.ttf");
-  auto tst = atlas.load("data/toolbar.png");
-  tst = atlas.load("img/2.jpg");
+  font = Font("data/font/Roboto.ttf");
+  auto lt = font.letter(u'a',atlas);
 
-  spr=tst;
+  spr = atlas.load("img/tst.png");
 
   setLayout(Horizontal);
 
@@ -45,8 +42,11 @@ void MainWindow::paintEvent(PaintEvent& event) {
   p.setBrush(Brush(spr));
   p.drawRect(300,100,spr.w(),spr.h());
 
-  p.setPen(Pen(Color(),1));
+  p.setPen(Pen(Color(0,0,0,1),1));
   p.drawLine(100,100,mpos.x,mpos.y);
+
+  p.setFont(font);
+  p.drawText(300,200,u"Hello world!");
   }
 
 void MainWindow::resizeEvent(SizeEvent&) {
@@ -82,7 +82,7 @@ void MainWindow::render(){
 
     const  uint32_t imgId=device.nextImage(context.imageAvailable);
 
-    dispatchPaintEvent(surface);
+    dispatchPaintEvent(surface,atlas);
 
     cmd.begin();
     cmd.beginRenderPass(fbo[imgId],mainPass,w(),h());

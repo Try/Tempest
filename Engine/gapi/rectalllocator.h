@@ -56,7 +56,8 @@ class RectAlllocator {
         x   =t.x;
         y   =t.y;
 
-        page->node[id].usage++;
+        if(page)
+          page->node[id].usage++;
         return *this;
         }
 
@@ -68,7 +69,7 @@ class RectAlllocator {
         return *this;
         }
 
-      Page*    page=nullptr;
+      Page*    page=nullptr; //FIXME: potentialy dangling pointer
       size_t   id  =0;
       uint32_t x   =0;
       uint32_t y   =0;
@@ -90,13 +91,14 @@ class RectAlllocator {
       auto a=alloc(pages.back(),iw,ih);
       if(a.page)
         return a;
+      pages.pop_back();
       throw std::bad_alloc();
       }
 
   private:
     MemoryProvider&   device;
     std::vector<Page> pages;
-    uint32_t          defPageSize=512;
+    uint32_t          defPageSize=512; //TODO: get-set
 
     struct Node {
       Node()=default;
@@ -263,9 +265,9 @@ class RectAlllocator {
         id = p.node[id].parent;
         }
 
-      while(p.node.size() && p.node.back().usage==0) {
-        p.node.pop_back();
-        }
+      //while(p.node.size() && p.node.back().usage==0) {
+        //p.node.pop_back();
+        //}
       }
   };
 

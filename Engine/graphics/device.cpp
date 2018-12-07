@@ -128,7 +128,8 @@ RenderPass Device::pass(const Color &color, FboMode zbuf) {
   return f;
   }
 
-RenderPipeline Device::implPipeline(RenderPass& pass, uint32_t w, uint32_t h, const UniformsLayout &ulay,
+RenderPipeline Device::implPipeline(RenderPass& pass, uint32_t w, uint32_t h,
+                                    const RenderState &st,const UniformsLayout &ulay,
                                     const Shader &vs, const Shader &fs,
                                     const Decl::ComponentType *decl, size_t declSize,
                                     size_t   stride,
@@ -136,7 +137,7 @@ RenderPipeline Device::implPipeline(RenderPass& pass, uint32_t w, uint32_t h, co
   if(w<=0 || h<=0 || !pass.impl || !vs.impl || !fs.impl)
     return RenderPipeline();
 
-  RenderPipeline f(*this,api.createPipeline(dev,pass.impl.handler,w,h,decl,declSize,stride,tp,ulay,ulay.impl,{vs.impl.handler,fs.impl.handler}),w,h);
+  RenderPipeline f(*this,api.createPipeline(dev,pass.impl.handler,w,h,st,decl,declSize,stride,tp,ulay,ulay.impl,{vs.impl.handler,fs.impl.handler}),w,h);
   return f;
   }
 

@@ -50,8 +50,6 @@ class Assets final {
       Tempest::Device&                   device;
       Tempest::TextureAtlas              atlas;
       std::vector<Asset>                 files;
-      //std::unordered_map<str_path,Asset> files;
-
       };
 
     struct TextureFile;

@@ -33,6 +33,7 @@ class UniformBuffer;
 class UniformsLayout;
 
 class Color;
+class RenderState;
 
 class Device {
   public:
@@ -78,7 +79,8 @@ class Device {
 
     template<class Vertex>
     RenderPipeline pipeline(RenderPass& pass, uint32_t width, uint32_t height,
-                            Topology tp, const UniformsLayout& ulay,const Shader &vs,const Shader &fs);
+                            Topology tp,const RenderState& st,
+                            const UniformsLayout& ulay,const Shader &vs,const Shader &fs);
 
     CommandBuffer  commandBuffer(/*bool secondary=false*/);
 
@@ -111,7 +113,8 @@ class Device {
     Semaphore   createSemaphore();
     VideoBuffer createVideoBuffer(const void* data, size_t size, MemUsage usage, BufferFlags flg);
     RenderPipeline
-                implPipeline(RenderPass& pass, uint32_t width, uint32_t height, const UniformsLayout& ulay,
+                implPipeline(RenderPass& pass, uint32_t width, uint32_t height,
+                             const RenderState &st, const UniformsLayout& ulay,
                              const Shader &vs, const Shader &fs,
                              const Decl::ComponentType *decl, size_t declSize,
                              size_t stride, Topology tp);
@@ -157,10 +160,10 @@ inline VertexBuffer<T> Device::loadVbo(const T* arr, size_t arrSize, BufferFlags
 
 template<class Vertex>
 RenderPipeline Device::pipeline(RenderPass& pass, uint32_t width, uint32_t height,
-                                Topology tp,
-                                const UniformsLayout& ulay,const Shader &vs,const Shader &fs) {
+                                Topology tp, const RenderState &st,
+                                const UniformsLayout& ulay, const Shader &vs, const Shader &fs) {
   static const auto decl=Tempest::vertexBufferDecl<Vertex>();
-  return implPipeline(pass,width,height,ulay,vs,fs,decl.begin(),decl.size(),sizeof(Vertex),tp);
+  return implPipeline(pass,width,height,st,ulay,vs,fs,decl.begin(),decl.size(),sizeof(Vertex),tp);
   }
 
 inline uint8_t Device::frameId() const {

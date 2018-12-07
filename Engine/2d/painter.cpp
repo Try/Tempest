@@ -2,10 +2,13 @@
 
 #include <Tempest/PaintDevice>
 #include <Tempest/Event>
+#include <Tempest/Brush>
+#include <Tempest/Pen>
 
 using namespace Tempest;
 
-Painter::Painter(PaintEvent &ev, Mode m) : dev(ev.device()) {
+Painter::Painter(PaintEvent &ev, Mode m)
+  : dev(ev.device()), ta(ev.ta) {
   float w=2.f/ev.w();
   float h=2.f/ev.h();
   const Rect& r=ev.viewPort();
@@ -202,6 +205,7 @@ void Painter::setBrush(const Brush& b) {
 
 void Painter::setPen(const Pen &p) {
   penWidth=p.width();
+  implSetColor(p.color.r(),p.color.g(),p.color.b(),p.color.a());
   //dev.setPen();
   }
 
@@ -256,4 +260,28 @@ void Painter::drawLine(int x1, int y1, int x2, int y2) {
   dev.setTopology(Lines);
   implAddPoint(x1,y1,0,0);
   implAddPoint(x2,y2,x2-x1,y2-y1);
+  }
+
+void Painter::setFont(const Font &f) {
+  fnt=f;
+  }
+
+void Painter::setBlend(const Painter::Blend b) {
+  dev.setBlend(b);
+  }
+
+void Painter::drawText(int x, int y, const char16_t *txt) {
+  auto s = dev.pushState();
+  setBlend(Alpha);
+  for(;*txt;++txt) {
+    auto& l=fnt.letter(*txt,ta);
+
+    if(!l.view.isEmpty()) {
+      setBrush(l.view);
+      drawRect(x+l.dpos.x,y+l.dpos.y,l.view.w(),l.view.h());
+      }
+
+    x += l.advance.x;
+    }
+  dev.popState(s);
   }

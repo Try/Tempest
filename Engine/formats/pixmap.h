@@ -7,8 +7,9 @@ namespace Tempest {
 class Pixmap final {
   public:
     enum class Format : uint8_t {
-      RGB    =0,
-      RGBA   =1
+      A    = 0,
+      RGB  = 1,
+      RGBA = 2
       };
 
     Pixmap();

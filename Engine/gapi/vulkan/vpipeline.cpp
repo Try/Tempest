@@ -7,6 +7,7 @@
 #include <algorithm>
 
 #include <Tempest/UniformsLayout>
+#include <Tempest/RenderState>
 
 using namespace Tempest::Detail;
 
@@ -30,6 +31,7 @@ VPipeline::VPipeline(){
 
 VPipeline::VPipeline(VDevice& device,
                      VRenderPass& pass, uint32_t width, uint32_t height,
+                     const RenderState &st,
                      const Decl::ComponentType *decl, size_t declSize, size_t stride,
                      Topology tp,
                      const UniformsLayout &ulay,
@@ -41,7 +43,8 @@ VPipeline::VPipeline(VDevice& device,
       ulayImpl=std::make_shared<VUboLayout>(device.device,initUboLayout(device.device,ulay));
     VUboLayout* puLay=reinterpret_cast<VUboLayout*>(ulayImpl.get());
     pipelineLayout  =initLayout(device.device,puLay->impl);
-    graphicsPipeline=initGraphicsPipeline(device.device,pipelineLayout,pass,width,height,decl,declSize,stride,
+    graphicsPipeline=initGraphicsPipeline(device.device,pipelineLayout,pass,st,
+                                          width,height,decl,declSize,stride,
                                           tp,vert,frag);
     }
   catch(...) {
@@ -121,7 +124,7 @@ VkDescriptorSetLayout VPipeline::initUboLayout(VkDevice device, const UniformsLa
   }
 
 VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
-                                           VRenderPass &pass,
+                                           VRenderPass &pass,const RenderState &st,
                                            uint32_t width, uint32_t height,
                                            const Decl::ComponentType *decl, size_t declSize,
                                            size_t stride,Topology tp,
@@ -244,9 +247,27 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   multisampling.sampleShadingEnable  = VK_FALSE;
   multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
+  static const VkBlendFactor blend[] = {
+    VK_BLEND_FACTOR_ZERO,                 //GL_ZERO,
+    VK_BLEND_FACTOR_ONE,                  //GL_ONE,
+    VK_BLEND_FACTOR_SRC_COLOR,            //GL_SRC_COLOR,
+    VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR,  //GL_ONE_MINUS_SRC_COLOR,
+    VK_BLEND_FACTOR_SRC_ALPHA,            //GL_SRC_ALPHA,
+    VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,  //GL_ONE_MINUS_SRC_ALPHA,
+    VK_BLEND_FACTOR_DST_ALPHA,            //GL_DST_ALPHA,
+    VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA,  //GL_ONE_MINUS_DST_ALPHA,
+    VK_BLEND_FACTOR_DST_COLOR,            //GL_DST_COLOR,
+    VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR,  //GL_ONE_MINUS_DST_COLOR,
+    VK_BLEND_FACTOR_SRC_ALPHA_SATURATE,   //GL_SRC_ALPHA_SATURATE,
+    VK_BLEND_FACTOR_ZERO
+    };
   VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
   colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-  colorBlendAttachment.blendEnable    = VK_FALSE;
+  colorBlendAttachment.blendEnable    = st.hasBlend() ? VK_TRUE : VK_FALSE;
+  colorBlendAttachment.dstColorBlendFactor = blend[uint8_t(st.blendDest())];
+  colorBlendAttachment.srcColorBlendFactor = blend[uint8_t(st.blendSource())];
+  colorBlendAttachment.dstAlphaBlendFactor = colorBlendAttachment.dstColorBlendFactor;
+  colorBlendAttachment.srcAlphaBlendFactor = colorBlendAttachment.srcColorBlendFactor;
 
   VkPipelineColorBlendStateCreateInfo colorBlending = {};
   colorBlending.sType             = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;

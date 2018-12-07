@@ -11,6 +11,7 @@ struct Pixmap::Impl {
 
   static uint32_t bppFromFrm(Pixmap::Format frm) {
     switch(frm) {
+      case Pixmap::Format::A:    return 1;
       case Pixmap::Format::RGB:  return 3;
       case Pixmap::Format::RGBA: return 4;
       }
@@ -52,13 +53,27 @@ struct Pixmap::Impl {
     if(bpp==4) {
       const size_t obpp=other.bpp;
       const size_t size=w*h;
-      for(size_t i=0;i<size;++i){
-        uint32_t&       pix=reinterpret_cast<uint32_t*>(data)[i];
-        const uint8_t*  s  =other.data+i*obpp;
-        pix = uint32_t(s[0])<<0 | uint32_t(s[1])<<8 | uint32_t(s[2])<<16 | uint32_t(255)<<24;
+      if(obpp==3){
+        // RGB -> RGBA
+        for(size_t i=0;i<size;++i){
+          uint32_t&       pix=reinterpret_cast<uint32_t*>(data)[i];
+          const uint8_t*  s  =other.data+i*3;
+          pix = uint32_t(s[0])<<0 | uint32_t(s[1])<<8 | uint32_t(s[2])<<16 | uint32_t(255)<<24;
+          }
+        }
+      else if(obpp==1){
+        // A -> RGBA
+        for(size_t i=0;i<size;++i){
+          uint32_t&       pix=reinterpret_cast<uint32_t*>(data)[i];
+          const uint8_t*  s  =other.data+i;
+          pix = uint32_t(255)<<0 | uint32_t(255)<<8 | uint32_t(255)<<16 | uint32_t(s[0])<<24;
+          }
         }
       return;
       }
+
+    //TODO
+    throw std::runtime_error("unimplemented");
     }
 
   Impl(RFile& f){

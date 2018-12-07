@@ -92,6 +92,7 @@ void VulkanApi::destroy(AbstractGraphicsApi::Fbo *pass) {
 AbstractGraphicsApi::Pipeline *VulkanApi::createPipeline(AbstractGraphicsApi::Device *d,
                                                          AbstractGraphicsApi::Pass *p,
                                                          uint32_t width, uint32_t height,
+                                                         const RenderState &st,
                                                          const Decl::ComponentType *decl, size_t declSize,
                                                          size_t stride,
                                                          Topology tp,
@@ -103,7 +104,7 @@ AbstractGraphicsApi::Pipeline *VulkanApi::createPipeline(AbstractGraphicsApi::De
   Detail::VRenderPass* px =reinterpret_cast<Detail::VRenderPass*>(p);
   Detail::VShader*     vs =reinterpret_cast<Detail::VShader*>(arr[0]);
   Detail::VShader*     fs =reinterpret_cast<Detail::VShader*>(arr[1]);
-  return new Detail::VPipeline(*dx,*px,width,height,decl,declSize,stride,tp,ulay,ulayImpl,*vs,*fs);
+  return new Detail::VPipeline(*dx,*px,width,height,st,decl,declSize,stride,tp,ulay,ulayImpl,*vs,*fs);
   }
 
 AbstractGraphicsApi::Shader *VulkanApi::createShader(AbstractGraphicsApi::Device *d, const char *source, size_t src_size) {

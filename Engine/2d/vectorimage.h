@@ -25,32 +25,52 @@ class VectorImage : public Tempest::PaintDevice {
     void     clear() override;
 
   private:
-    void addPoint(const Point& p) override;
-    void commitPoints() override;
+    void   addPoint(const Point& p) override;
+    void   commitPoints() override;
 
-    void beginPaint(bool clear,uint32_t w,uint32_t h) override;
-    void endPaint() override;
+    void   beginPaint(bool clear,uint32_t w,uint32_t h) override;
+    void   endPaint() override;
 
-    void setBrush(const TexPtr& t,const Color& c) override;
-    void setBrush(const Sprite& s,const Color& c) override;
-    void setTopology(Topology t) override;
+    size_t pushState() override;
+    void   popState(size_t id) override;
+
+    void   setBrush(const TexPtr& t,const Color& c) override;
+    void   setBrush(const Sprite& s,const Color& c) override;
+    void   setTopology(Topology t) override;
+    void   setBlend(const Blend b) override;
 
     struct Texture {
       TexPtr   brush;
-      Sprite   sprite;
+      Sprite   sprite; //TODO: dangling sprites
 
       bool     operator==(const Texture& t) const {
-        return brush==t.brush && sprite==t.sprite;
+        return brush==t.brush && sprite.pageId()==t.sprite.pageId();
         }
       };
 
-    struct Block {
-      size_t   begin=0;
-      size_t   size =0;
-      Topology tp   =Triangles;
-      PipePtr  pipeline;
-      bool     hasImg=false;
-      Texture  tex;
+    struct State {
+      Topology       tp    =Triangles;
+      Blend          blend =NoBlend;
+      Texture        tex;
+
+      bool operator == (const State& s) const {
+        return tp==s.tp && blend==s.blend && tex==s.tex;
+        }
+      };
+
+    struct Block : State {
+      Block()=default;
+      Block(Block&&)=default;
+      Block(const Block&)=default;
+      Block(const State& s):State(s){}
+
+      Block& operator=(const Block&)=default;
+
+      size_t         begin=0;
+      size_t         size =0;
+      PipePtr        pipeline;
+
+      bool           hasImg=false;
       };
 
     struct PerFrame {
@@ -65,6 +85,7 @@ class VectorImage : public Tempest::PaintDevice {
 
     Topology                    topology=Triangles;
 
+    std::vector<State>          stateStk;
     std::vector<Block>          blocks;
     std::vector<Point>          buf;
 
@@ -75,7 +96,7 @@ class VectorImage : public Tempest::PaintDevice {
 
     void makeActual(Device& dev,RenderPass& pass);
 
-    template<class T,T Block::*param>
+    template<class T,T State::*param>
     void setState(const T& t);
   };
 }
