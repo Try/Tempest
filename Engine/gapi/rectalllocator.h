@@ -41,8 +41,12 @@ class RectAlllocator {
         }
 
       Allocation& operator=(const Allocation& t) {
-        if(page==t.page)
+        if(page==t.page) {
+          id  =t.id;
+          x   =t.x;
+          y   =t.y;
           return *this;
+          }
 
         if(page==nullptr){
           page=t.page;

@@ -1,18 +1,19 @@
 #pragma once
 
 #include <Tempest/Texture2d>
-#include <Tempest/Color>
 #include <Tempest/Sprite>
-#include <Tempest/Painter>
+#include <Tempest/Color>
+#include <Tempest/PaintDevice>
 
 namespace Tempest {
 
 class Brush {
   public:
-    Brush(const Tempest::Texture2d& texture);
-    Brush(const Tempest::Color& color);
-    Brush(const Tempest::Texture2d& texture,const Tempest::Color& color);
-    Brush(const Tempest::Sprite&    texture);
+    Brush();
+    Brush(const Tempest::Texture2d& texture,PaintDevice::Blend b=PaintDevice::Alpha);
+    Brush(const Tempest::Color&     color,  PaintDevice::Blend b=PaintDevice::Alpha);
+    Brush(const Tempest::Texture2d& texture,const Tempest::Color& color,PaintDevice::Blend b=PaintDevice::Alpha);
+    Brush(const Tempest::Sprite&    texture,PaintDevice::Blend b=PaintDevice::Alpha);
 
     uint32_t w() const { return info.w; }
     uint32_t h() const { return info.h; }
@@ -22,6 +23,7 @@ class Brush {
     TexPtr                      tex;
     Sprite                      spr;
     Tempest::Color              color;
+    PaintDevice::Blend          blend=PaintDevice::NoBlend;
 
     struct Info {
       uint32_t w=0,h=0;

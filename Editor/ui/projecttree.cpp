@@ -14,6 +14,8 @@ ProjectTree::ProjectTree() {
   setLayout(Vertical);
 
   addWidget(new Button());
+  addWidget(new Button());
+  addWidget(new Button());
   }
 
 void ProjectTree::paintEvent(PaintEvent &e) {

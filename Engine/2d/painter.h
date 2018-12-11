@@ -3,12 +3,12 @@
 #include <Tempest/PaintDevice>
 #include <Tempest/Transform>
 #include <Tempest/Font>
+#include <Tempest/Brush>
+#include <Tempest/Pen>
 
 namespace Tempest {
 
 class PaintEvent;
-class Brush;
-class Pen;
 
 class Painter {
   public:
@@ -29,7 +29,6 @@ class Painter {
     void setBrush(const Brush& b);
     void setPen  (const Pen&   p);
     void setFont (const Font&  f);
-    void setBlend(const Blend  b);
 
     const Font& font() const { return fnt; }
 
@@ -43,17 +42,26 @@ class Painter {
     void drawText(int x,int y,const char16_t* txt);
 
   private:
+    enum State:uint8_t {
+      StNo   =0,
+      StBrush=1,
+      StPen  =2
+      };
     PaintDevice&       dev;
     TextureAtlas&      ta;
     PaintDevice::Point pt;
+
+    State              state=StNo;
+    Tempest::Brush     brush;
+    Tempest::Pen       pen;
     Tempest::Font      fnt;
+
     Tempest::Transform tr=Transform();
 
     float invW    =1.f;
     float invH    =1.f;
     float dU      =0.f;
     float dV      =0.f;
-    float penWidth=1.f;
 
     struct ScissorRect {
       int x=0,y=0,x1=0,y1=0;
@@ -63,6 +71,9 @@ class Painter {
       float x,y;
       float u,v;
       };
+
+    void implBrush(const Brush& b);
+    void implPen  (const Pen&   p);
 
     void implAddPoint   (int x, int y, float u, float v);
     void implAddPointRaw(float x, float y, float u, float v);

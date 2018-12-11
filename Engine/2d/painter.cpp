@@ -191,26 +191,44 @@ void Painter::drawTrigImpl( float x0, float y0, float u0, float v0,
   }
 
 void Painter::setBrush(const Brush& b) {
-  if(b.tex) {
-    dev.setBrush(b.tex,b.color);
-    } else {
-    dev.setBrush(b.spr,b.color);
-    }
+  if(state==StBrush)
+    implBrush(b);
+
+  brush=b;
   invW=b.info.invW;
   invH=b.info.invH;
   dU  =b.info.dx;
   dV  =b.info.dy;
-  implSetColor(b.color.r(),b.color.g(),b.color.b(),b.color.a());
   }
 
 void Painter::setPen(const Pen &p) {
-  penWidth=p.width();
+  if(state==StPen)
+    implPen(p);
+  pen=p;
+  }
+
+void Painter::implBrush(const Brush &b) {
+  if(b.tex) {
+    dev.setState(b.tex,b.color);
+    } else {
+    dev.setState(b.spr,b.color);
+    }
+  dev.setBlend(b.blend);
+  implSetColor(b.color.r(),b.color.g(),b.color.b(),b.color.a());
+  }
+
+void Painter::implPen(const Pen &p) {
+  dev.setState(Brush::TexPtr(),p.color);
+  dev.setBlend(Blend::NoBlend);
   implSetColor(p.color.r(),p.color.g(),p.color.b(),p.color.a());
-  //dev.setPen();
   }
 
 void Painter::implDrawRect(int x1, int y1, int x2, int y2, float u1, float v1, float u2, float v2) {
-  dev.setTopology(Triangles);
+  if(state!=StBrush) {
+    dev.setTopology(Triangles);
+    implBrush(brush);
+    }
+
   if(x1<scissor.x){
     int dx=scissor.x-x1;
     x1+=dx;
@@ -253,11 +271,15 @@ void Painter::drawRect(int x, int y, unsigned w, unsigned h) {
   }
 
 void Painter::drawLine(int x1, int y1, int x2, int y2) {
+  if(state!=StPen){
+    dev.setTopology(Lines);
+    implPen(pen);
+    }
+  /*
   if(penWidth>1.f){
     float dx=-(y2-y1),dy=x2-x1;
     return;
-    }
-  dev.setTopology(Lines);
+    }*/
   implAddPoint(x1,y1,0,0);
   implAddPoint(x2,y2,x2-x1,y2-y1);
   }
@@ -266,13 +288,9 @@ void Painter::setFont(const Font &f) {
   fnt=f;
   }
 
-void Painter::setBlend(const Painter::Blend b) {
-  dev.setBlend(b);
-  }
-
 void Painter::drawText(int x, int y, const char16_t *txt) {
-  auto s = dev.pushState();
-  setBlend(Alpha);
+  auto pb=brush;
+
   for(;*txt;++txt) {
     auto& l=fnt.letter(*txt,ta);
 
@@ -283,5 +301,6 @@ void Painter::drawText(int x, int y, const char16_t *txt) {
 
     x += l.advance.x;
     }
-  dev.popState(s);
+
+  setBrush(pb);
   }

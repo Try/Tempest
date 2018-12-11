@@ -34,10 +34,26 @@ class VectorImage : public Tempest::PaintDevice {
     size_t pushState() override;
     void   popState(size_t id) override;
 
-    void   setBrush(const TexPtr& t,const Color& c) override;
-    void   setBrush(const Sprite& s,const Color& c) override;
+    void   setState(const TexPtr& t,const Color& c) override;
+    void   setState(const Sprite& s,const Color& c) override;
     void   setTopology(Topology t) override;
     void   setBlend(const Blend b) override;
+
+    struct SpriteLock {
+      std::vector<Sprite> spr;
+      void insert(const Sprite& s) {
+        for(size_t i=spr.size();i>0;){
+          --i;
+          Sprite& sb=spr[i];
+          if(sb.pageId()  ==s.pageId() &&
+             sb.pageRect()==s.pageRect())
+            return;
+          }
+        spr.push_back(s);
+        }
+
+      void clear() { spr.clear(); }
+      };
 
     struct Texture {
       TexPtr   brush;
@@ -88,6 +104,7 @@ class VectorImage : public Tempest::PaintDevice {
     std::vector<State>          stateStk;
     std::vector<Block>          blocks;
     std::vector<Point>          buf;
+    SpriteLock                  slock;
 
     struct Info {
       uint32_t w=0,h=0;

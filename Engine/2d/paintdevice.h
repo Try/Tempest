@@ -40,8 +40,8 @@ class PaintDevice {
     virtual size_t pushState()=0;
     virtual void   popState(size_t id)=0;
 
-    virtual void   setBrush(const TexPtr& t,const Color& c)=0;
-    virtual void   setBrush(const Sprite& s,const Color& c)=0;
+    virtual void   setState(const TexPtr& t,const Color& c)=0;
+    virtual void   setState(const Sprite& s,const Color& c)=0;
     virtual void   setTopology(Topology t)=0;
     virtual void   setBlend(const Blend b)=0;
 

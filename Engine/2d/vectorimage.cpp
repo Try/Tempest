@@ -61,16 +61,18 @@ void VectorImage::setState(const T &t) {
   blocks.back().*param=t;
   }
 
-void VectorImage::setBrush(const TexPtr &t,const Color&) {
+void VectorImage::setState(const TexPtr &t,const Color&) {
   Texture tex={t,Sprite()};
   setState<Texture,&State::tex>(tex);
   blocks.back().hasImg=bool(t);
   }
 
-void VectorImage::setBrush(const Sprite &s, const Color&) {
+void VectorImage::setState(const Sprite &s, const Color&) {
   Texture tex={TexPtr(),s};
   setState<Texture,&State::tex>(tex);
   blocks.back().hasImg=!s.isEmpty();
+
+  slock.insert(s);
   }
 
 void VectorImage::setTopology(Topology t) {
@@ -86,6 +88,7 @@ void VectorImage::clear() {
   blocks.resize(1);
   blocks.back()=Block();
   stateStk.clear();
+  slock.clear();
   }
 
 void VectorImage::addPoint(const PaintDevice::Point &p) {
