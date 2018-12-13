@@ -46,6 +46,9 @@ class Assets final {
       Asset open(const char* file) override;
       Asset implOpen(str_path &&path);
 
+      template<class ClsAsset,class File>
+      std::pair<Asset,bool> implOpenTry(str_path &path);
+
       str_path                           path;
       Tempest::Device&                   device;
       Tempest::TextureAtlas              atlas;
@@ -53,6 +56,7 @@ class Assets final {
       };
 
     struct TextureFile;
+    struct FontFile;
 
     std::unique_ptr<Provider> impl;
   };

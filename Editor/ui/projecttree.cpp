@@ -12,8 +12,13 @@ ProjectTree::ProjectTree() {
   setSizeHint(200,0);
   setSizePolicy(Fixed,Expanding);
   setLayout(Vertical);
+  setMargins(8);
 
-  addWidget(new Button());
+  Button* b=new Button();
+  b->setText("text");
+  b->setFont(font);
+
+  addWidget(b);
   addWidget(new Button());
   addWidget(new Button());
   }

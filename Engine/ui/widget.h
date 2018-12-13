@@ -30,6 +30,7 @@ class Widget {
     const Widget* owner() const { return ow; }
 
     const Tempest::Rect& rect()     const { return wrect; }
+    Tempest::Size        size()     const { return Size(wrect.w,wrect.h); }
     const Tempest::Size& sizeHint() const { return szHint; }
 
     void  setGeometry(const Rect& rect);
@@ -83,7 +84,7 @@ class Widget {
     Tempest::Size           szHint;
     Tempest::SizePolicy     szPolicy;
     Tempest::Margin         marg;
-    int                     spa=0;
+    int                     spa=2;
 
     struct Additive {
       Widget*  mouseFocus=nullptr;

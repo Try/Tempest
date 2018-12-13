@@ -104,11 +104,16 @@ void LinearLayout::implApplyLayout(Widget &w) {
       }
     }
 
-  implApplyLayout<hor>(w,count,exp>0,(exp>0) ? expSize : prefSize,(exp>0) ? exp : pref);
+  int freeSpace = getW<hor>(w.size())-(hor ? w.margins().xMargin() : w.margins().yMargin());
+  freeSpace -= (fixSize+prefSize+expSize);
+  freeSpace -= (count==0 ? 0 : (int(count)-1)*w.spacing());
+  if(freeSpace<0)
+    freeSpace=0;
+  implApplyLayout<hor>(w,count,exp>0,((exp>0) ? expSize : prefSize),freeSpace,(exp>0) ? exp : pref);
   }
 
 template<bool hor>
-void LinearLayout::implApplyLayout(Widget &w, size_t count, bool exp, int sum,int expCount) {
+void LinearLayout::implApplyLayout(Widget &w, size_t count, bool exp, int sum, int free, int expCount) {
   auto   client=w.clentRet();
   const SizePolicyType tExp=(exp ? Expanding : Preferred);
 
@@ -116,29 +121,41 @@ void LinearLayout::implApplyLayout(Widget &w, size_t count, bool exp, int sum,in
   int h      =getW<!hor>(client);
   int spacing=w.spacing();
 
+  if(expCount>0){
+    sum+=free;
+    free=0;
+    }
+
   for(size_t i=0;i<count;++i){
     Widget& wx = w.widget(i);
     auto&   sp = wx.sizePolicy();
     Size    sz = wx.sizeHint();
+    const int freeSpace=free/int(count+1-i);
+    c+=freeSpace;
+    free-=freeSpace;
 
     int ww=getW<hor> (sz);
     int wh=getW<!hor>(sz);
 
     if(getType<hor>(sp)==tExp) {
       ww   = clamp(getW<hor>(wx.minSize()),sum/expCount,getW<hor>(wx.maxSize()));
-      sum -= getW<hor>(sz);
+      sum -= ww;
       expCount--;
       }
 
-    wh = clamp(getW<!hor>(wx.minSize()),wh,getW<!hor>(wx.maxSize()));
-    if(getType<!hor>(sp)==Expanding)
+    wh = clamp(getW<!hor>(wx.minSize()), wh, getW<!hor>(wx.maxSize()));
+    if(getType<!hor>(sp)!=Fixed)
       wh = h; else
       wh = std::min(h,wh);
 
-    if(hor)
-      wx.setGeometry(c,client.y+(h-wh)/2,ww,wh); else
+    if(hor) {
+      wx.setGeometry(c,client.y+(h-wh)/2,ww,wh);
+      c+=ww;
+      } else {
       wx.setGeometry(client.x+(h-wh)/2,c,wh,ww);
+      c+=ww;
+      }
 
-    c+=getW<hor>(sz)+spacing;
+    c+=spacing;
     }
   }

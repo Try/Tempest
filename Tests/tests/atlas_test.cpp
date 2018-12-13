@@ -1,5 +1,5 @@
 #include "../gapi/deviceallocator.h"
-#include "../gapi/rectalllocator.h"
+#include "../gapi/rectallocator.h"
 
 #include <gtest/gtest.h>
 #include <gmock/gmock-matchers.h>
@@ -19,11 +19,11 @@ struct TestDevice {
     }
   };
 
-using Allocation=typename Tempest::RectAlllocator<TestDevice>::Allocation;
+using Allocation=typename Tempest::RectAllocator<TestDevice>::Allocation;
 
 TEST(main, AlasAlloator0) {
   TestDevice device;
-  Tempest::RectAlllocator<TestDevice> allocator(device);
+  Tempest::RectAllocator<TestDevice> allocator(device);
 
   auto s1 = allocator.alloc(128,64);
   auto s2 = allocator.alloc(32,32);
@@ -34,7 +34,7 @@ TEST(main, AlasAlloator0) {
 
 TEST(main, AlasAlloator1) {
   TestDevice device;
-  Tempest::RectAlllocator<TestDevice> allocator(device);
+  Tempest::RectAllocator<TestDevice> allocator(device);
 
   auto s1 = allocator.alloc(128,64);
   auto s2 = s1;

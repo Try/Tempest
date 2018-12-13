@@ -37,8 +37,8 @@ static uint32_t getBpp(Pixmap::Format format){
 void TextureAtlas::emplace(TextureAtlas::Allocation &dest, const void* img,
                            uint32_t pw, uint32_t ph, Pixmap::Format format,
                            uint32_t x, uint32_t y) {
-  dest.page->memory.changed=true;
-  Pixmap& cpu = dest.page->memory.cpu;
+  dest.memory().changed=true;
+  Pixmap& cpu = dest.memory().cpu;
   auto     data=reinterpret_cast<uint8_t*>(cpu.data());
   //uint32_t dbpp=4;//dest.cpu.bpp();
   uint32_t dx  =x*4;

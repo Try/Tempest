@@ -25,7 +25,7 @@
 
 class MainWindow : public Tempest::Window {
   public:
-    MainWindow(Tempest::VulkanApi& api);
+    explicit MainWindow(Tempest::VulkanApi& api);
 
   private:
     void paintEvent    (Tempest::PaintEvent& event) override;
@@ -51,7 +51,7 @@ class MainWindow : public Tempest::Window {
     Tempest::Point       mpos;
 
     struct FrameLocal {
-      FrameLocal(Tempest::Device& dev):imageAvailable(dev),gpuLock(dev){}
+      explicit FrameLocal(Tempest::Device& dev):imageAvailable(dev),gpuLock(dev){}
       Tempest::Semaphore imageAvailable;
       Tempest::Fence     gpuLock;
       };

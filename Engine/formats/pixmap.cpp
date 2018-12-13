@@ -1,6 +1,8 @@
 #include "pixmap.h"
 
 #include <Tempest/File>
+#include <Tempest/Except>
+
 #include "thirdparty/stb_image.h"
 #include "thirdparty/stb_image_write.h"
 
@@ -79,6 +81,10 @@ struct Pixmap::Impl {
   Impl(RFile& f){
     int iw=0,ih=0,channels=0;
     data = load(f,iw,ih,channels,STBI_default);
+
+    if(data==nullptr && channels==0)
+      throw std::system_error(Tempest::SystemErrc::UnableToLoadAsset);
+
     w    = uint32_t(iw);
     h    = uint32_t(ih);
     bpp  = uint32_t(channels);

@@ -12,12 +12,12 @@ Sprite::Sprite(TextureAtlas::Allocation a, uint32_t w, uint32_t h)
   }
 
 const Texture2d &Sprite::pageRawData(Device& dev) const {
-  if(!alloc.page){
+  if(!alloc.owner){
     static const Texture2d t;
     return t;
     }
 
-  auto& mem=alloc.page->memory;
+  auto& mem=alloc.memory();
   if( mem.changed ){
     mem.gpu=dev.loadTexture(mem.cpu,false);
     mem.changed=false;
@@ -26,14 +26,13 @@ const Texture2d &Sprite::pageRawData(Device& dev) const {
   }
 
 const Rect Sprite::pageRect() const {
-  if(alloc.page){
-    auto& node=alloc.page->node[alloc.id];
-    return Rect(int(node.x),int(node.y),int(alloc.page->w),int(alloc.page->h));
+  if(alloc.owner){
+    return alloc.pageRect();
     }
   static Rect r;
   return r;
   }
 
 void *Sprite::pageId() const {
-  return alloc.page;
+  return reinterpret_cast<void*>(uintptr_t(alloc.pageId()));
   }

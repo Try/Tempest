@@ -44,6 +44,6 @@ class LinearLayout : public Layout {
     void implApplyLayout(Widget& w);
 
     template<bool hor>
-    void implApplyLayout(Widget& w,size_t count,bool exp,int sum,int expCount);
+    void implApplyLayout(Widget& w,size_t count,bool exp,int sum,int free,int expCount);
   };
 }

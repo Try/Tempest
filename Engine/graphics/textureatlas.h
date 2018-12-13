@@ -3,7 +3,7 @@
 #include <Tempest/Texture2d>
 #include <Tempest/Pixmap>
 #include <Tempest/Rect>
-#include "../gapi/rectalllocator.h"
+#include "../gapi/rectallocator.h"
 
 #include <vector>
 #include <mutex>
@@ -50,7 +50,7 @@ class TextureAtlas {
         }
       };
 
-    using Allocation = typename Tempest::RectAlllocator<MemoryProvider>::Allocation;
+    using Allocation = typename Tempest::RectAllocator<MemoryProvider>::Allocation;
 
     void emplace(Allocation& dest, const void *img,
                  uint32_t w, uint32_t h, Pixmap::Format frm,
@@ -58,7 +58,7 @@ class TextureAtlas {
 
     Device&                                 device;
     MemoryProvider                          provider;
-    Tempest::RectAlllocator<MemoryProvider> alloc;
+    Tempest::RectAllocator<MemoryProvider> alloc;
 
   friend class Sprite;
   };

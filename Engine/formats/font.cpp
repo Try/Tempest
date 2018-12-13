@@ -1,5 +1,7 @@
 #include "font.h"
 
+#include <Tempest/Except>
+
 #include "thirdparty/stb_truetype.h"
 
 #include <unordered_map>
@@ -20,7 +22,8 @@ struct FontElement::Impl {
       }
     };
 
-  Impl(const char *filename) {
+  template<class CharT>
+  Impl(const CharT *filename) {
     if(filename==nullptr)
       return;
 
@@ -38,10 +41,12 @@ struct FontElement::Impl {
     delete data;
     }
 
-  const Letter& letter(char16_t ch,float size,TextureAtlas& tex) {
+  const Letter& letter(char16_t ch,float size,TextureAtlas* tex) {
     auto cc=map.find(Key{size,ch});
-    if(cc!=map.end())
-      return cc->second;
+    if(cc!=map.end()){
+      if(cc->second.hasView || tex==nullptr)
+        return cc->second;
+      }
 
     if(this->size==0){
       static const Letter l;
@@ -52,20 +57,21 @@ struct FontElement::Impl {
     int ax=0;
     float    scale  = stbtt_ScaleForPixelHeight(&info,size);
     stbtt_GetCodepointHMetrics(&info,ch,&ax,nullptr);
-    uint8_t* bitmap = stbtt_GetCodepointBitmap (&info, 0,scale, ch, &w, &h, &dx, &dy);
+    uint8_t* bitmap = tex==nullptr ? nullptr : stbtt_GetCodepointBitmap (&info, 0,scale, ch, &w, &h, &dx, &dy);
 
-    Letter lt;
+    Letter src;
     try {
       if(bitmap!=nullptr) {
-        lt.view = tex.load(bitmap,uint32_t(w),uint32_t(h),Pixmap::Format::A);
+        src.view = tex->load(bitmap,uint32_t(w),uint32_t(h),Pixmap::Format::A);
         stbtt_FreeBitmap(bitmap,nullptr);
         }
 
-      auto ins = map.insert(std::make_pair(Key{size,ch},lt));
+      auto ins = map.insert(std::make_pair(Key{size,ch},std::move(src)));
       Letter& lt = ins.first->second;
       lt.size    = Size(w,h);
       lt.dpos    = Point(dx,dy);
       lt.advance = Point(int(ax*scale),int(lineGap*scale));
+      lt.hasView = (tex!=nullptr);
       return lt;
       }
     catch(...) {
@@ -87,31 +93,77 @@ struct FontElement::Impl {
   };
 
 FontElement::FontElement()
-  :FontElement(nullptr){
+  :FontElement(static_cast<const char*>(nullptr)){
   }
 
-FontElement::FontElement(const char *file)
+FontElement::FontElement(std::nullptr_t)
+  :FontElement(){
+  }
+
+template<class CharT>
+FontElement::FontElement(const CharT *file,std::true_type)
   :ptr(std::make_shared<Impl>(file)) {
   if(file) {
-    stbtt_InitFont(&ptr->info,ptr->data,0);
-
+    if(stbtt_InitFont(&ptr->info,ptr->data,0)==0)
+      throw std::system_error(Tempest::SystemErrc::UnableToLoadAsset);
     stbtt_GetFontVMetrics(&ptr->info,&ptr->ascent,&ptr->descent,&ptr->lineGap);
     }
   }
 
-const FontElement::Letter& FontElement::letter(char16_t ch, float size, TextureAtlas &tex) const {
-  return ptr->letter(ch,size,tex);
+FontElement::FontElement(const char *file)
+  :FontElement(file,std::true_type()) {
   }
 
-Font::Font(const char *file)
+FontElement::FontElement(const char16_t *file)
+  :FontElement(file,std::true_type()) {
+  }
+
+FontElement::FontElement(const std::string& file)
+  :FontElement(file.c_str(),std::true_type()) {
+  }
+
+FontElement::FontElement(const std::u16string& file)
+  :FontElement(file.c_str(),std::true_type()) {
+  }
+
+const FontElement::LetterGeometry& FontElement::letterGeometry(char16_t ch, float size) const { //FIXME: UB?
+  return reinterpret_cast<const LetterGeometry&>(ptr->letter(ch,size,nullptr));
+  }
+
+const FontElement::Letter& FontElement::letter(char16_t ch, float size, TextureAtlas &tex) const {
+  return ptr->letter(ch,size,&tex);
+  }
+
+template<class CharT>
+Font::Font(const CharT *file,std::true_type)
   : fnt{{file,nullptr},{nullptr,nullptr}}{
   fnt[1][0]=fnt[0][0];
   fnt[1][1]=fnt[0][0];
   fnt[0][1]=fnt[0][0];
   }
 
-void Font::setSize(float sz) {
+Font::Font(const char *file)
+  : Font(file,std::true_type()){
+  }
+
+Font::Font(const std::string &file)
+  : Font(file.c_str(),std::true_type()){
+  }
+
+Font::Font(const char16_t *file)
+  : Font(file,std::true_type()){
+  }
+
+Font::Font(const std::u16string &file)
+  : Font(file.c_str(),std::true_type()){
+  }
+
+void Font::setPixelSize(float sz) {
   size=sz;
+  }
+
+const Font::LetterGeometry &Font::letterGeometry(char16_t ch) const {
+  return fnt[0][0].letterGeometry(ch,size);
   }
 
 const Font::Letter &Font::letter(char16_t ch, TextureAtlas &tex) const {

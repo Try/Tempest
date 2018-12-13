@@ -1,5 +1,7 @@
 #include "wfile.h"
 
+#include <Tempest/Except>
+
 #include <windows.h>
 #include <stdexcept>
 
@@ -30,7 +32,7 @@ WFile::WFile(const std::u16string &path)
 void* WFile::implOpen(const wchar_t *wstr) {
   void* ret = CreateFileW(wstr,GENERIC_WRITE,0,nullptr,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,nullptr);
   if(ret==HANDLE(LONG_PTR(-1)))
-    throw std::runtime_error("failed to open file!");
+    throw std::system_error(Tempest::SystemErrc::UnableToOpenFile);
   return ret;
   }
 

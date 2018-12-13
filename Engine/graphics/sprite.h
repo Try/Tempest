@@ -11,7 +11,7 @@ class Sprite final {
 
     uint32_t w() const { return texW; }
     uint32_t h() const { return texH; }
-    bool     isEmpty() const { return alloc.page==nullptr; }
+    bool     isEmpty() const { return alloc.owner==nullptr; }
 
     const Tempest::Texture2d& pageRawData(Device &dev) const;
     const Rect                pageRect() const;

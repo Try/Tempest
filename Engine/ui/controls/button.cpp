@@ -10,6 +10,16 @@ Button::Button() {
   setSizePolicy(Preferred,Fixed);
   }
 
+void Button::setText(const char *text) {
+  textM=TextModel(text);
+  setSizeHint(textM.sizeHint());
+  }
+
+void Button::setFont(const Font &f) {
+  textM.setFont(f);
+  setSizeHint(textM.sizeHint());
+  }
+
 void Button::mouseDownEvent(MouseEvent &e) {
   if(e.button!=Event::ButtonLeft){
     e.ignore();
@@ -20,6 +30,6 @@ void Button::mouseDownEvent(MouseEvent &e) {
 void Button::paintEvent(PaintEvent &e) {
   Painter p(e);
 
-  p.setBrush(Color(0,0,0,0.8f));
+  p.setBrush(Color(0,0,0,0.2f));
   p.drawRect(0,0,w(),h());
   }

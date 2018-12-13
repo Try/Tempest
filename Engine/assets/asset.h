@@ -22,10 +22,10 @@ class Asset {
       }
 
     bool operator == (const Asset& other) const {
-      if(impl!=nullptr) {
+      if(impl!=nullptr)
         return other.impl!=nullptr && impl->path()==other.impl->path();
-        }
-      return other==nullptr;
+
+      return other.impl==nullptr;
       }
 
     bool operator != (const Asset& other) const {
@@ -44,12 +44,12 @@ class Asset {
       virtual const str_path& path() const = 0;
       };
 
-    static size_t calcHash(Impl* i){
+    static size_t calcHash(Impl& i) noexcept {
       std::hash<Impl::str_path> h;
-      return h(i->path());
+      return h(i.path());
       }
 
-    Asset(Impl* i):impl(i),hash(calcHash(i)){}
+    Asset(std::shared_ptr<Impl>&& i) noexcept :impl(std::move(i)),hash(calcHash(*impl)){}
 
     std::shared_ptr<Impl> impl;
     size_t                hash=0;

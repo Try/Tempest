@@ -5,7 +5,7 @@
 
 class Resources {
   public:
-    Resources(Tempest::Device& device);
+    explicit Resources(Tempest::Device& device);
     ~Resources();
 
     template<class T>

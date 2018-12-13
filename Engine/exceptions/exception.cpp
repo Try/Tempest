@@ -12,6 +12,10 @@ std::string SystemErrCategory::message(int ev) const {
       return "Unable to register window class";
     case SystemErrc::UnableToCreateWindow:
       return "Unable to create window";
+    case SystemErrc::UnableToOpenFile:
+      return "Unable to open file";
+    case SystemErrc::UnableToLoadAsset:
+      return "Unable to load asset";
     }
   return "(unrecognized error)";
   }
@@ -27,10 +31,14 @@ const char *GraphicsErrCategory::name() const noexcept {
 
 std::string GraphicsErrCategory::message(int ev) const {
   switch(static_cast<GraphicsErrc>(ev)){
+    case GraphicsErrc::NoDevice:
+      return "No device";
     case GraphicsErrc::OutOfVideoMemory:
       return "Out of device memory";
     case GraphicsErrc::OutOfHostMemory:
       return "Out of memory";
+    case GraphicsErrc::InvalidShaderModule:
+      return "Invalid shader module";
     }
   return "(unrecognized error)";
   }

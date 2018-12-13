@@ -8,92 +8,109 @@
 namespace Tempest {
 
 template<class MemoryProvider>
-class RectAlllocator {
+class RectAllocator {
   private:
     struct Page;
+    struct Node;
 
   public:
     using Memory=typename MemoryProvider::DeviceMemory;
 
-    explicit RectAlllocator(MemoryProvider& device):device(device){}
+    explicit RectAllocator(MemoryProvider& device):device(device){}
 
-    RectAlllocator(const RectAlllocator&)=delete;
+    RectAllocator(const RectAllocator&)=delete;
 
-    ~RectAlllocator(){
+    ~RectAllocator(){
       }
 
     struct Allocation {
       Allocation()=default;
       Allocation(Allocation&& t)
-        :page(t.page),id(t.id),x(t.x),y(t.y){
-        t.page=nullptr;
+        :owner(t.owner),id(t.id),x(t.x),y(t.y){
+        t.owner=nullptr;
         }
 
       Allocation(const Allocation& t)
-        :page(t.page),id(t.id),x(t.x),y(t.y){
-        if(page!=nullptr)
-          page->node[id].usage++;
+        :owner(t.owner),id(t.id),x(t.x),y(t.y){
+        if(owner!=nullptr)
+          owner->addRef(id,x,y);
         }
 
       ~Allocation(){
-        if(page!=nullptr)
-          page->owner.free(*page,id);
+        if(owner!=nullptr)
+          owner->free(id,x,y);
         }
 
       Allocation& operator=(const Allocation& t) {
-        if(page==t.page) {
+        if(owner==t.owner && id==t.id) {
           id  =t.id;
           x   =t.x;
           y   =t.y;
           return *this;
           }
 
-        if(page==nullptr){
-          page=t.page;
+        if(owner==nullptr){
+          owner=t.owner;
           } else {
-          auto& dev=page->owner;
-          dev.free(*page,id);
-          page=t.page;
+          owner->free(id,x,y);
+          owner=t.owner;
           }
 
         id  =t.id;
         x   =t.x;
         y   =t.y;
 
-        if(page)
-          page->node[id].usage++;
+        if(owner)
+          owner->addRef(id,x,y);
         return *this;
         }
 
       Allocation& operator=(Allocation&& t) {
-        std::swap(page,t.page);
+        std::swap(owner,t.owner);
         id = t.id;
         x  = t.x;
         y  = t.y;
         return *this;
         }
 
-      Page*    page=nullptr; //FIXME: potentialy dangling pointer
-      size_t   id  =0;
-      uint32_t x   =0;
-      uint32_t y   =0;
+      Memory& memory(){
+        return owner->pages[id].memory;
+        }
+
+      const Memory& memory() const {
+        return owner->pages[id].memory;
+        }
+
+      Rect pageRect() const {
+        auto& p=owner->pages[id];
+        return Rect(int(x),int(y),int(p.w),int(p.h));
+        }
+
+      void* pageId() const {
+        return &owner[id];
+        }
+
+      RectAllocator* owner=nullptr;
+      size_t         id   =0;
+      uint32_t       x    =0;
+      uint32_t       y    =0;
       };
 
     Allocation alloc(uint32_t iw,uint32_t ih) {
       if(iw==0 || ih==0)
         return Allocation();
 
-      for(auto& i:pages){
-        auto a=alloc(i,iw,ih);
-        if(a.page)
+      for(size_t i=0;i<pages.size();++i){
+        auto a=alloc(pages[i],i,iw,ih);
+        if(a.owner)
           return a;
         }
       const uint32_t w=std::max(iw,defPageSize);
       const uint32_t h=std::max(ih,defPageSize);
 
       pages.emplace_back(*this,w,h);
-      auto a=alloc(pages.back(),iw,ih);
-      if(a.page)
+      auto a=alloc(pages.back(),pages.size()-1,iw,ih);
+      if(a.owner)
         return a;
       pages.pop_back();
       throw std::bad_alloc();
@@ -122,7 +139,7 @@ class RectAlllocator {
       };
 
     struct Page {
-      Page(RectAlllocator& owner,uint32_t w,uint32_t h):owner(owner),node(1),w(w),h(h) {
+      Page(RectAllocator& owner,uint32_t w,uint32_t h):owner(owner),node(1),w(w),h(h) {
         node[0] = Node{0,0,w,h,0};
         memory  = owner.device.alloc(w,h);
         }
@@ -164,18 +181,43 @@ class RectAlllocator {
         node.pop_back();
         }
 
-      RectAlllocator&   owner;
+      size_t find(uint32_t x,uint32_t y) const {
+        size_t id=0;
+        while(true) {
+          const Node* n=&node[id];
+          if(n->sub[0]==0) // n is leaf
+            return id;
+
+          if(n->x==x && n->y==y) { // sub[0] is always leaf or zero
+            id=n->sub[0];
+            continue;
+            }
+
+          if(n->sub[1]!=0) {
+            const Node& nx=node[n->sub[1]];
+            if(nx.x<=x && nx.y<=y &&
+               x<nx.x+nx.w && y<nx.y+nx.h){
+              id=n->sub[1];
+              continue;
+              }
+            }
+
+          id=n->sub[2];
+          }
+        }
+
+      RectAllocator&   owner;
       Memory            memory={};
       std::vector<Node> node;
       const uint32_t    w=0;
       const uint32_t    h=0;
       };
 
-    Allocation alloc(Page& p,uint32_t pw,uint32_t ph) {
+    Allocation alloc(Page& p,size_t pageId,uint32_t pw,uint32_t ph) {
       size_t sz0=p.node.size();
 
       try {
-        return tryAlloc(p,pw,ph);
+        return tryAlloc(p,pageId,pw,ph);
         }
       catch(...) {
         p.node.resize(sz0);
@@ -183,7 +225,7 @@ class RectAlllocator {
         }
       }
 
-    Allocation tryAlloc(Page& p,uint32_t pw,uint32_t ph) {
+    Allocation tryAlloc(Page& p,size_t pageId,uint32_t pw,uint32_t ph) {
       size_t sz0=p.node.size();
       for(size_t i=0;i<sz0;++i){
         Node rd=p.node[i];
@@ -203,7 +245,7 @@ class RectAlllocator {
             rd.sub[2] = p.add(rd.x+pw,rd.y,   rd.w-pw,ph,     i);
             }
 
-          Allocation a = emplace(p,rd.sub[0],uint32_t(rd.x),uint32_t(rd.y));
+          Allocation a = emplace(p,pageId,rd.sub[0],uint32_t(rd.x),uint32_t(rd.y));
           rd.usage  = 1;
           p.node[i] = rd;
           return a;
@@ -213,7 +255,7 @@ class RectAlllocator {
           rd.sub[0] = p.add(rd.x, rd.y,    pw, ph,      i);
           rd.sub[1] = p.add(rd.x, rd.y+ph, pw, rd.h-ph, i);
 
-          Allocation a = emplace(p,rd.sub[0],uint32_t(rd.x),uint32_t(rd.y));
+          Allocation a = emplace(p,pageId,rd.sub[0],uint32_t(rd.x),uint32_t(rd.y));
           rd.usage  = 1;
           p.node[i] = rd;
           return a;
@@ -223,14 +265,14 @@ class RectAlllocator {
           rd.sub[0] = p.add(rd.x, rd.y,    pw, ph,      i);
           rd.sub[1] = p.add(rd.x+pw, rd.y, rd.w-pw, ph, i);
 
-          Allocation a = emplace(p,rd.sub[0],uint32_t(rd.x),uint32_t(rd.y));
+          Allocation a = emplace(p,pageId,rd.sub[0],uint32_t(rd.x),uint32_t(rd.y));
           rd.usage  = 1;
           p.node[i] = rd;
           return a;
           }
 
         if(pw==rd.w && ph==rd.h){
-          Allocation a = emplace(p,i,uint32_t(rd.x),uint32_t(rd.y));
+          Allocation a = emplace(p,pageId,i,uint32_t(rd.x),uint32_t(rd.y));
           rd.usage  = 1;
           p.node[i] = rd;
           return a;
@@ -240,7 +282,7 @@ class RectAlllocator {
       return Allocation();
       }
 
-    Allocation emplace(Page &dest,size_t nId,uint32_t x, uint32_t y) {
+    Allocation emplace(Page &dest,size_t pageId,size_t nId,uint32_t x, uint32_t y) {
       Node* nx  =&dest.node[nId];
       Node* zero=&dest.node[0];
 
@@ -252,26 +294,36 @@ class RectAlllocator {
         }
 
       Allocation a;
-      a.page = &dest;
-      a.id   = nId;
-      a.x    = x;
-      a.y    = y;
+      a.owner = this;
+      a.id    = pageId;
+      a.x     = x;
+      a.y     = y;
       return a;
+      }
+
+    void addRef(size_t pageId,uint32_t x,uint32_t y) {
+      Page& p = pages[pageId];
+      p.node[p.find(x,y)].usage++;
+      }
+
+    void free(size_t pageId,uint32_t x,uint32_t y) {
+      Page& p = pages[pageId];
+      free(p,p.find(x,y));
       }
 
     void free(Page& p,size_t id) {
       p.node[id].usage--;
       while(p.node[id].usage==0) {
+        // recursive?
+        p.del(p.node[id].sub[0]);
+        p.del(p.node[id].sub[1]);
+        p.del(p.node[id].sub[2]);
         auto par=p.node[id].parent;
         if(par==id)
           return;
         p.node[par].usage--;
         id = p.node[id].parent;
         }
-
-      //while(p.node.size() && p.node.back().usage==0) {
-        //p.node.pop_back();
-        //}
       }
   };
 

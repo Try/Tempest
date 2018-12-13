@@ -8,6 +8,7 @@
 #include <Tempest/Pixmap>
 #include <Tempest/Texture2d>
 #include <Tempest/Sprite>
+#include <Tempest/Font>
 
 using namespace Tempest;
 
@@ -32,6 +33,7 @@ struct Assets::TextureFile : Asset::Impl {
       value=Pixmap();
       return &spr;
       }
+
     return nullptr;
     }
 
@@ -58,6 +60,25 @@ struct Assets::TextureFile : Asset::Impl {
   Pixmap                 value;
   Texture2d              tex;
   Sprite                 spr;
+  };
+
+struct Assets::FontFile : Asset::Impl {
+  FontFile(Font&& f,Assets::str_path&& path,Directory& owner)
+    :owner(owner),fpath(path),fnt(std::move(f)) {}
+
+  const void* get(const std::type_info& t) override {
+    if(t==typeid(Font))
+      return &fnt;
+    return nullptr;
+    }
+
+  const str_path& path() const override {
+    return fpath;
+    }
+
+  Directory&             owner;
+  const Assets::str_path fpath;
+  Font                   fnt;
   };
 
 Assets::Assets(const char* path, Tempest::Device &dev) {
@@ -120,12 +141,34 @@ Asset Assets::Directory::open(const char *file) {
   }
 
 Asset Assets::Directory::implOpen(Assets::str_path&& fpath) {
+  {
+    auto a=implOpenTry<Pixmap,TextureFile>(fpath);
+    if(a.second)
+      return a.first;
+  }
+  {
+    auto a=implOpenTry<Font,FontFile>(fpath);
+    if(a.second)
+      return a.first;
+  }
+  return Asset();
+  }
+
+template<class ClsAsset,class File>
+std::pair<Asset,bool> Assets::Directory::implOpenTry(Assets::str_path& fpath) { // std::optional?
   try {
-    Tempest::Pixmap p(fpath);
-    return Asset(new TextureFile(std::move(p),std::move(fpath),*this));
+    ClsAsset p(fpath);
+    try {
+      auto ptr=std::make_shared<File>(std::move(p),std::move(fpath),*this);
+      return std::make_pair(Asset(std::move(ptr)),true);
+      }
+    catch(...) {
+      // fail, but asset file is valid
+      return std::make_pair(Asset(),false);
+      }
     }
   catch(...){
-    // not image
+    // unable to load -> next codec
     }
-  return Asset();
+  return std::make_pair(Asset(),false);
   }

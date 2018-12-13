@@ -4,9 +4,9 @@ PROJECT(TempestTests LANGUAGES CXX)
 
 set (CMAKE_CXX_STANDARD 14)
 set(CMAKE_BINARY_DIR ../)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../bin)
 
 
 include_directories("../../Engine/include")
@@ -39,4 +39,5 @@ add_executable(${PROJECT_NAME}
                ${GTestSrc}/src/gtest-all.cc
                ${GMockSrc}/src/gmock-all.cc)
 add_test(${PROJECT_NAME} COMMAND ${PROJECT_NAME})
+target_link_libraries(${PROJECT_NAME} MoltenTempest)
 

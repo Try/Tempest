@@ -10,7 +10,9 @@ class DeviceLostException : std::exception{
 
 enum class SystemErrc {
   InvalidWindowClass   = 0,
-  UnableToCreateWindow = 1
+  UnableToCreateWindow = 1,
+  UnableToOpenFile     = 2,
+  UnableToLoadAsset    = 3
   };
 
 struct SystemErrCategory : std::error_category {
