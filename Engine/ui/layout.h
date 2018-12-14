@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstring>
-#include "utility/utility.h"
+#include "../utility/utility.h"
 
 namespace Tempest {
 

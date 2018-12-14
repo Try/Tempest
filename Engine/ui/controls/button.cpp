@@ -6,18 +6,21 @@
 using namespace Tempest;
 
 Button::Button() {
+  setMargins(8);
   setSizeHint(128,27);
   setSizePolicy(Preferred,Fixed);
   }
 
 void Button::setText(const char *text) {
-  textM=TextModel(text);
-  setSizeHint(textM.sizeHint());
+  textM.setText(text);
+  setSizeHint(textM.sizeHint(),margins());
+
+  //update();
   }
 
 void Button::setFont(const Font &f) {
   textM.setFont(f);
-  setSizeHint(textM.sizeHint());
+  setSizeHint(textM.sizeHint(),margins());
   }
 
 void Button::mouseDownEvent(MouseEvent &e) {
@@ -32,4 +35,7 @@ void Button::paintEvent(PaintEvent &e) {
 
   p.setBrush(Color(0,0,0,0.2f));
   p.drawRect(0,0,w(),h());
+
+  auto s=textM.wrapSize();
+  textM.paint(p,(w()-s.w)/2,int(h()+s.h)/2);
   }

@@ -26,6 +26,7 @@
 class MainWindow : public Tempest::Window {
   public:
     explicit MainWindow(Tempest::VulkanApi& api);
+    ~MainWindow() override;
 
   private:
     void paintEvent    (Tempest::PaintEvent& event) override;
@@ -38,9 +39,9 @@ class MainWindow : public Tempest::Window {
     void initSwapchain();
 
     Tempest::Device       device;
+    Tempest::TextureAtlas atlas;
     Resources             resources;
 
-    Tempest::TextureAtlas atlas;
     Tempest::Font         font;
     Tempest::Sprite       spr;
 

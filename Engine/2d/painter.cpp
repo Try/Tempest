@@ -288,7 +288,20 @@ void Painter::setFont(const Font &f) {
   fnt=f;
   }
 
+void Painter::drawText(int x, int y, const char *txt) {
+  if(txt==nullptr)
+    return;
+  implDrawText(x,y,txt); //TODO: utf8
+  }
+
 void Painter::drawText(int x, int y, const char16_t *txt) {
+  if(txt==nullptr)
+    return;
+  implDrawText(x,y,txt);
+  }
+
+template<class CharT>
+void Painter::implDrawText(int x,int y,const CharT* txt){
   auto pb=brush;
 
   for(;*txt;++txt) {

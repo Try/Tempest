@@ -6,15 +6,10 @@ using namespace Tempest;
 
 Widget::Widget() {
   new(layBuf) Layout();
-
   }
 
 Widget::~Widget() {
-  std::vector<Widget*> rm=std::move(wx);
-  for(auto& w:rm)
-    w->ow=nullptr;
-  for(auto& w:rm)
-    delete w;
+  removeAllWidgets();
   freeLayout();
   }
 
@@ -36,6 +31,14 @@ void Widget::setLayout(Layout *l) {
 
 void Widget::applyLayout() {
   lay->applyLayout();
+  }
+
+void Widget::removeAllWidgets() {
+  std::vector<Widget*> rm=std::move(wx);
+  for(auto& w:rm)
+    w->ow=nullptr;
+  for(auto& w:rm)
+    delete w;
   }
 
 void Widget::freeLayout() noexcept {
@@ -117,6 +120,10 @@ void Widget::setSizeHint(const Size &s) {
     return;
   szHint=s;
   lay->applyLayout();
+  }
+
+void Widget::setSizeHint(const Size &s, const Margin &add) {
+  setSizeHint(Size(s.w+add.xMargin(),s.h+add.yMargin()));
   }
 
 void Widget::setSizePolicy(SizePolicyType h, SizePolicyType v) {

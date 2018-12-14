@@ -5,13 +5,14 @@
 
 #include <Tempest/Brush>
 #include <Tempest/Pen>
+#include <Tempest/Layout>
 
 #include "ui/projecttree.h"
 
 using namespace Tempest;
 
 MainWindow::MainWindow(Tempest::VulkanApi& api)
-  :device(api,hwnd()),resources(device),atlas(device) {
+  :device(api,hwnd()),atlas(device),resources(device) {
   for(uint8_t i=0;i<device.maxFramesInFlight();++i){
     fLocal.emplace_back(device);
     commandBuffersSemaphores.emplace_back(device);
@@ -19,6 +20,10 @@ MainWindow::MainWindow(Tempest::VulkanApi& api)
 
   initSwapchain();
   setupUi();
+  }
+
+MainWindow::~MainWindow() {
+  removeAllWidgets();
   }
 
 void MainWindow::setupUi() {
@@ -46,7 +51,7 @@ void MainWindow::paintEvent(PaintEvent& event) {
   p.drawLine(100,100,mpos.x,mpos.y);
 
   p.setFont(font);
-  p.drawText(300,200,u"Hello world!");
+  p.drawText(300,100,u"Hello world!");
   }
 
 void MainWindow::resizeEvent(SizeEvent&) {

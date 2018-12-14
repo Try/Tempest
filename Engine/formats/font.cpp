@@ -9,6 +9,8 @@
 using namespace Tempest;
 
 struct FontElement::Impl {
+  enum { MIN_BUF_SZ=512 };
+
   struct Key {
     float    size;
     char16_t ch;
@@ -33,62 +35,133 @@ struct FontElement::Impl {
 
     if(file.read(data,size)!=size) {
       delete data;
-      throw std::bad_alloc(); //TODO
+      throw std::system_error(Tempest::SystemErrc::UnableToLoadAsset);
       }
     }
 
   ~Impl() {
     delete data;
+    std::free(rasterBuf);
+    }
+
+  uint8_t* ttfMalloc(size_t sz){
+    if(sz<rasterSz)
+      return rasterBuf;
+    sz = std::max<size_t>(sz,MIN_BUF_SZ);
+    void* p=std::realloc(rasterBuf,sz);
+    if(p==nullptr)
+      return nullptr;
+    rasterBuf=reinterpret_cast<uint8_t*>(p);
+    rasterSz =sz;
+    return rasterBuf;
+    }
+
+  uint8_t* getGlyphBitmapSubpixel(stbtt_fontinfo *info,
+                                  float scale,int  glyph,
+                                  int&  width,int& height,
+                                  int&  xoff, int& yoff) {
+    assert(scale>0.f);
+
+    stbtt_vertex *vertices;
+    int num_verts = stbtt_GetGlyphShape(info, glyph, &vertices);
+
+    int ix0,iy0,ix1,iy1;
+    stbtt_GetGlyphBitmapBoxSubpixel(info, glyph, scale, scale, 0.f/*shift_x*/, 0.f/*shift_y*/, &ix0,&iy0,&ix1,&iy1);
+
+    stbtt__bitmap gbm={};
+    // now we get the size
+    gbm.w = (ix1 - ix0);
+    gbm.h = (iy1 - iy0);
+
+    width  = gbm.w;
+    height = gbm.h;
+
+    xoff   = ix0;
+    yoff   = iy0;
+
+    if(gbm.w>0 && gbm.h>0) {
+      gbm.pixels = ttfMalloc(size_t(gbm.w*gbm.h));
+      if(gbm.pixels!=nullptr) {
+        gbm.stride = gbm.w;
+        stbtt_Rasterize(&gbm, 0.35f, vertices, num_verts, scale, scale, 0.f/*shift_x*/, 0.f/*shift_y*/, ix0, iy0, 1, info->userdata);
+        }
+      }
+
+    STBTT_free(vertices,info->userdata);
+    return gbm.pixels;
+    }
+
+  static const Letter& nullLater(){
+    static const Letter l;
+    return l;
     }
 
   const Letter& letter(char16_t ch,float size,TextureAtlas* tex) {
+    {
+    std::lock_guard<std::mutex> guard(syncMap);
     auto cc=map.find(Key{size,ch});
     if(cc!=map.end()){
       if(cc->second.hasView || tex==nullptr)
         return cc->second;
       }
+    }
 
-    if(this->size==0){
-      static const Letter l;
-      return l;
-      }
+    if(this->size==0)
+      return nullLater();
+    return allocLetter(ch,size,tex);
+    }
 
-    int w=0,h=0, dx=0,dy=0;
+  const Letter& allocLetter(char16_t ch,float size,TextureAtlas* tex) {
+    const float scale = stbtt_ScaleForPixelHeight(&info,size);
+    if(!(scale>0.f))
+      return nullLater();
+
+    int w=0,h=0,dx=0,dy=0;
     int ax=0;
-    float    scale  = stbtt_ScaleForPixelHeight(&info,size);
-    stbtt_GetCodepointHMetrics(&info,ch,&ax,nullptr);
-    uint8_t* bitmap = tex==nullptr ? nullptr : stbtt_GetCodepointBitmap (&info, 0,scale, ch, &w, &h, &dx, &dy);
 
-    Letter src;
-    try {
-      if(bitmap!=nullptr) {
-        src.view = tex->load(bitmap,uint32_t(w),uint32_t(h),Pixmap::Format::A);
-        stbtt_FreeBitmap(bitmap,nullptr);
-        }
+    const int index = stbtt_FindGlyphIndex(&info,ch);
+    stbtt_GetGlyphHMetrics(&info,index,&ax,nullptr);
 
-      auto ins = map.insert(std::make_pair(Key{size,ch},std::move(src)));
-      Letter& lt = ins.first->second;
-      lt.size    = Size(w,h);
-      lt.dpos    = Point(dx,dy);
-      lt.advance = Point(int(ax*scale),int(lineGap*scale));
-      lt.hasView = (tex!=nullptr);
-      return lt;
-      }
-    catch(...) {
+    Sprite spr;
+    if(tex!=nullptr){
+      std::lock_guard<std::mutex> guard(syncMem);
+      uint8_t* bitmap=getGlyphBitmapSubpixel(&info,scale,index,w,h,dx,dy);
       if(bitmap!=nullptr)
-        stbtt_FreeBitmap(bitmap,nullptr);
-      throw;
+        spr = tex->load(bitmap,uint32_t(w),uint32_t(h),Pixmap::Format::A);
+      } else {
+      int ix0=0,ix1=0,iy0=0,iy1=0;
+      stbtt_GetGlyphBitmapBoxSubpixel(&info,index,scale,scale,0.f,0.f,&ix0,&iy0,&ix1,&iy1);
+
+      w  = (ix1 - ix0);
+      h  = (iy1 - iy0);
+      dx = ix0;
+      dy = iy0;
       }
+
+    std::lock_guard<std::mutex> guard(syncMap);
+    Letter& lt = map[Key{size,ch}];
+    lt.view    = std::move(spr);
+    lt.size    = Size(w,h);
+    lt.dpos    = Point(dx,dy);
+    lt.advance = Point(int(ax*scale),int(lineGap*scale));
+    lt.hasView = (tex!=nullptr);
+    // FIXME: rehash can kill previous lt;
+    return lt;
     }
 
   uint8_t*       data=nullptr;
   uint32_t       size=0;
   stbtt_fontinfo info={};
 
+  std::mutex     syncMem;
+  uint8_t*       rasterBuf=nullptr;
+  size_t         rasterSz =0;
+
   int ascent =0;
   int descent=0;
   int lineGap=0;
 
+  std::mutex                           syncMap;
   std::unordered_map<Key,Letter,KHash> map;
   };
 

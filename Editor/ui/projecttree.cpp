@@ -15,8 +15,8 @@ ProjectTree::ProjectTree() {
   setMargins(8);
 
   Button* b=new Button();
-  b->setText("text");
   b->setFont(font);
+  b->setText("text");
 
   addWidget(b);
   addWidget(new Button());

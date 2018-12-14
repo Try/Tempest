@@ -8,20 +8,28 @@
 
 namespace Tempest {
 
+class Painter;
+
 class TextModel final {
   public:
     TextModel()=default;
     TextModel(const char* text);
 
-    void setFont(const Font& f);
+    void        setText(const char* text);
+    void        setFont(const Font& f);
+    const Font& font() const;
 
     const Size& sizeHint() const;
+    Size        wrapSize() const;
+
+    void        paint(Painter& p, int x, int y) const;
 
   private:
-    void calcSize() const;
+    void        calcSize() const;
 
     struct Sz {
       Size sizeHint;
+      int  wrapHeight=0;
       bool actual=false;
       };
     mutable Sz sz;

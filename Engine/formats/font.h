@@ -65,6 +65,6 @@ class Font final {
     Font(const CharT* file,std::true_type);
 
     FontElement fnt[2][2];
-    float       size=16.f;
+    float       size=18.f;
   };
 }

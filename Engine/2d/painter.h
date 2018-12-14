@@ -39,6 +39,7 @@ class Painter {
 
     void drawLine(int x1,int y1,int x2,int y2);
 
+    void drawText(int x,int y,const char*     txt);
     void drawText(int x,int y,const char16_t* txt);
 
   private:
@@ -88,6 +89,9 @@ class Painter {
                        FPoint *out, int stage);
     void implDrawRect(int x1, int y1, int x2, int y2,
                       float u1, float v1, float u2, float v2);
+
+    template<class CharT>
+    void implDrawText(int x,int y,const CharT* txt);
   };
 
 }

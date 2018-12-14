@@ -23,6 +23,7 @@ class Widget {
 
     size_t  widgetsCount() const { return wx.size(); }
     Widget& widget(size_t i) { return *wx[i]; }
+    void    removeAllWidgets();
     Widget& addWidget(Widget* w);
     Widget* takeWidget(Widget* w);
 
@@ -66,6 +67,7 @@ class Widget {
 
   protected:
     void setSizeHint(const Tempest::Size& s);
+    void setSizeHint(const Tempest::Size& s,const Margin& add);
     void setSizeHint(int w,int h) { return setSizeHint(Size(w,h)); }
 
     virtual void paintEvent       (Tempest::PaintEvent& event);
