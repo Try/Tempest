@@ -17,7 +17,8 @@ Sprite TextureAtlas::load(const Pixmap &pm) {
 
 Sprite TextureAtlas::load(const void *data, uint32_t w, uint32_t h, Pixmap::Format format) {
   auto a = alloc.alloc(w,h);
-  emplace(a,data,w,h,format,a.x,a.y);
+  auto p = a.pos();
+  emplace(a,data,w,h,format,uint32_t(p.x),uint32_t(p.y));
   Sprite ret(std::move(a),w,h);
   return ret;
   }

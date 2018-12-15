@@ -34,5 +34,5 @@ const Rect Sprite::pageRect() const {
   }
 
 void *Sprite::pageId() const {
-  return reinterpret_cast<void*>(uintptr_t(alloc.pageId()));
+  return alloc.pageId();
   }

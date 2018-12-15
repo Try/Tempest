@@ -19,11 +19,16 @@ struct TestDevice {
     }
   };
 
-using Allocation=typename Tempest::RectAllocator<TestDevice>::Allocation;
+using Allocator =Tempest::RectAllocator<TestDevice>;
+using Allocation=typename Allocator::Allocation;
+template<class T>
+using Block     =typename Allocator::Block<T>;
+template<class T>
+using BAllocator=typename Allocator::Allocator<T>;
 
-TEST(main, AlasAlloator0) {
+TEST(main, AtlasAlloator0) {
   TestDevice device;
-  Tempest::RectAllocator<TestDevice> allocator(device);
+  Allocator  allocator(device);
 
   auto s1 = allocator.alloc(128,64);
   auto s2 = allocator.alloc(32,32);
@@ -32,13 +37,31 @@ TEST(main, AlasAlloator0) {
   s1=Allocation();
   }
 
-TEST(main, AlasAlloator1) {
+TEST(main, AtlasAlloator1) {
   TestDevice device;
-  Tempest::RectAllocator<TestDevice> allocator(device);
+  Allocator  allocator(device);
 
   auto s1 = allocator.alloc(128,64);
   auto s2 = s1;
 
   s2=Allocation();
   s1=Allocation();
+  }
+
+TEST(main, AtlasBlockAlloator0) {
+  Block<int> b;
+  int* v0 = b.alloc();
+  int* v1 = b.alloc();
+  b.free(v1);
+  b.free(v0);
+  }
+
+TEST(main, AtlasBlockAlloator1) {
+  BAllocator<int> b;
+  int* st[64]={};
+  for(int i=0;i<64;++i)
+    st[i] = b.alloc();
+
+  for(int i=0;i<64;++i)
+    b.free(st[i]);
   }
