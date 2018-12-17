@@ -49,6 +49,15 @@ void Widget::freeLayout() noexcept {
     }
   }
 
+void Widget::implDisableSum(Widget *root,int diff) noexcept {
+  root->state.disable += diff;
+
+  const std::vector<Widget*> & w = root->wx;
+
+  for( Widget* wx:w )
+    implDisableSum(wx,diff);
+  }
+
 void Widget::dispatchPaintEvent(PaintEvent& e) {
   paintEvent(e);
   const size_t count=widgetsCount();
@@ -68,7 +77,7 @@ void Widget::setOwner(Widget *w) {
   ow=w;
   }
 
-Widget& Widget::addWidget(Widget *w) {
+Widget& Widget::implAddWidget(Widget *w) {
   if(w==nullptr)
     throw std::invalid_argument("null widget");
   wx.emplace_back(w);
@@ -83,11 +92,37 @@ Widget *Widget::takeWidget(Widget *w) {
   return lay->takeWidget(w);
   }
 
+Point Widget::mapToRoot(const Point &p) const {
+  const Widget* w=this;
+  Point ret=p;
+
+  while(w!=nullptr){
+    ret += w->pos();
+    w   =  w->owner();
+    }
+
+  return ret;
+  }
+
+void Widget::setPosition(int x, int y) {
+  if(wrect.x==x && wrect.y==y)
+    return;
+
+  wrect.x = x;
+  wrect.y = y;
+  update();
+  }
+
+void Widget::setPosition(const Point &pos) {
+  setPosition(pos.x,pos.y);
+  }
+
 void Widget::setGeometry(const Rect &rect) {
   if(wrect==rect)
     return;
   bool resize=(wrect.w!=rect.w || wrect.h!=rect.h);
   wrect=rect;
+  update();
 
   if(resize) {
     lay->applyLayout();
@@ -119,11 +154,16 @@ void Widget::setSizeHint(const Size &s) {
   if(szHint==s)
     return;
   szHint=s;
-  lay->applyLayout();
+  if(ow!=nullptr)
+    ow->lay->applyLayout();
   }
 
 void Widget::setSizeHint(const Size &s, const Margin &add) {
   setSizeHint(Size(s.w+add.xMargin(),s.h+add.yMargin()));
+  }
+
+void Widget::setSizePolicy(SizePolicyType hv) {
+  setSizePolicy(hv,hv);
   }
 
 void Widget::setSizePolicy(SizePolicyType h, SizePolicyType v) {
@@ -132,14 +172,16 @@ void Widget::setSizePolicy(SizePolicyType h, SizePolicyType v) {
   szPolicy.typeH=h;
   szPolicy.typeV=v;
 
-  lay->applyLayout();
+  if(ow!=nullptr)
+    ow->lay->applyLayout();
   }
 
 void Widget::setSizePolicy(const SizePolicy &sp) {
   if(szPolicy==sp)
     return;
   szPolicy=sp;
-  lay->applyLayout();
+  if(ow!=nullptr)
+    ow->lay->applyLayout();
   }
 
 void Widget::setMargins(const Margin &m) {
@@ -193,6 +235,46 @@ Rect Widget::clentRet() const {
   return Rect(marg.left,marg.right,wrect.w-marg.xMargin(),wrect.h-marg.yMargin());
   }
 
+void Widget::setEnabled(bool e) {
+  if(e==wstate.enabled)
+    return;
+
+  if(wstate.enabled) {
+    wstate.enabled=false;
+    implDisableSum(this,+1);
+    } else {
+    wstate.enabled=true;
+    implDisableSum(this,-1);
+    }
+  update();
+  }
+
+bool Widget::isEnabled() const {
+  return state.disable==0;
+  }
+
+bool Widget::isEnabledTo(const Widget *ancestor) const {
+  const Widget* w = this;
+  while( w ){
+    if(!w->wstate.enabled)
+       return false;
+    if( w==ancestor )
+       return true;
+    w = w->owner();
+    }
+  return true;
+  }
+
+void Widget::update() {
+  Widget* w=this;
+  while(w!=nullptr){
+    if(w->state.needToUpdate)
+      return;
+    w->state.needToUpdate=true;
+    w = w->owner();
+    }
+  }
+
 void Widget::paintEvent(PaintEvent&) {
   }
 
@@ -212,7 +294,21 @@ void Widget::mouseMoveEvent(MouseEvent &e) {
   e.ignore();
   }
 
+void Widget::mouseDragEvent(MouseEvent &e) {
+  e.ignore();
+  }
+
 void Widget::dispatchMoveEvent(MouseEvent &event) {
+  switch(event.type()){
+    case Event::MouseDown: dispatchMouseDown(event); break;
+    case Event::MouseUp:   dispatchMouseUp  (event); break;
+    case Event::MouseMove: dispatchMouseMove(event); break;
+    case Event::MouseDrag: dispatchMouseDrag(event); break;
+    default:break;
+    }
+  }
+
+void Widget::dispatchMouseDown(MouseEvent &event) {
   Point pos=event.pos();
   for(auto i:wx){
     if(i->rect().contains(pos)){
@@ -232,10 +328,57 @@ void Widget::dispatchMoveEvent(MouseEvent &event) {
       }
     }
 
-  switch(event.type()){
-    case Event::MouseDown: mouseDownEvent(event); break;
-    case Event::MouseUp:   mouseUpEvent  (event); break;
-    case Event::MouseMove: mouseMoveEvent(event); break;
-    default:break;
+  mouseDownEvent(event);
+  }
+
+void Widget::dispatchMouseUp(MouseEvent &event) {
+  if(state.mouseFocus!=nullptr) {
+    MouseEvent ex(event.x - state.mouseFocus->x(),
+                  event.y - state.mouseFocus->y(),
+                  event.button,
+                  event.delta,
+                  event.mouseID,
+                  event.type());
+    state.mouseFocus->dispatchMouseUp(ex);
+    state.mouseFocus=nullptr;
+    } else {
+    mouseUpEvent(event);
+    }
+  }
+
+void Widget::dispatchMouseMove(MouseEvent &event) {
+  Point pos=event.pos();
+  for(auto i:wx){
+    if(i->rect().contains(pos)){
+      MouseEvent ex(event.x - i->x(),
+                    event.y - i->y(),
+                    event.button,
+                    event.delta,
+                    event.mouseID,
+                    event.type());
+      i->dispatchMoveEvent(ex);
+      if(ex.isAccepted()) {
+        if(ex.type()==Event::MouseDown)
+          state.mouseFocus=i;
+        event.accept();
+        return;
+        }
+      }
+    }
+
+  mouseMoveEvent(event);
+  }
+
+void Widget::dispatchMouseDrag(MouseEvent &event) {
+  if(state.mouseFocus!=nullptr) {
+    MouseEvent ex(event.x - state.mouseFocus->x(),
+                  event.y - state.mouseFocus->y(),
+                  event.button,
+                  event.delta,
+                  event.mouseID,
+                  event.type());
+    state.mouseFocus->dispatchMouseDrag(ex);
+    } else {
+    mouseDragEvent(event);
     }
   }

@@ -208,14 +208,24 @@ LRESULT CALLBACK WindowProc( HWND   hWnd,
       break;
 
     case WM_MOUSEMOVE: {
-      MouseEvent e( getX_LPARAM(lParam),
-                    getY_LPARAM(lParam),
-                    Event::ButtonNone,
-                    0,
-                    0,
-                    Event::MouseMove  );
-      if(cb)
-        cb->onMouse(e);
+      if(cb) {
+        MouseEvent e0( getX_LPARAM(lParam),
+                       getY_LPARAM(lParam),
+                       Event::ButtonNone,
+                       0,
+                       0,
+                       Event::MouseDrag  );
+        cb->onMouse(e0);
+        if(!e0.isAccepted()) {
+          MouseEvent e1( getX_LPARAM(lParam),
+                         getY_LPARAM(lParam),
+                         Event::ButtonNone,
+                         0,
+                         0,
+                         Event::MouseMove  );
+          cb->onMouse(e1);
+          }
+        }
       }
       break;
 

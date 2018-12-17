@@ -19,6 +19,7 @@ class Painter {
     using Blend=PaintDevice::Blend;
     constexpr static auto NoBlend=Blend::NoBlend;
     constexpr static auto Alpha  =Blend::Alpha;
+    constexpr static auto Add    =Blend::Add;
 
     Painter(PaintEvent& ev, Mode m=Preserve);
     ~Painter();
@@ -76,7 +77,7 @@ class Painter {
     void implBrush(const Brush& b);
     void implPen  (const Pen&   p);
 
-    void implAddPoint   (int x, int y, float u, float v);
+    void implAddPoint   (float x, float y, float u, float v);
     void implAddPointRaw(float x, float y, float u, float v);
     void implSetColor   (float r,float g,float b,float a);
 

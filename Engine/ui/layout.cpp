@@ -90,9 +90,17 @@ void LinearLayout::implApplyLayout(Widget &w) {
     Widget& wx = w.widget(i);
 
     switch(getType<hor>(wx.sizePolicy())) {
-      case Fixed:
-        fixSize  += getW<hor>(wx.sizeHint());
+      case Fixed: {
+        int max  = getW<hor>(wx.maxSize());
+        int min  = getW<hor>(wx.minSize());
+        int hint = getW<hor>(wx.sizeHint());
+        if(hint>max)
+          hint=max;
+        if(hint<min)
+          hint=min;
+        fixSize+=hint;
         break;
+        }
       case Preferred:
         prefSize += getW<hor>(wx.sizeHint());
         pref++;
@@ -134,13 +142,15 @@ void LinearLayout::implApplyLayout(Widget &w, size_t count, bool exp, int sum, i
     c+=freeSpace;
     free-=freeSpace;
 
-    int ww=getW<hor> (sz);
+    int ww=0;
     int wh=getW<!hor>(sz);
 
     if(getType<hor>(sp)==tExp) {
       ww   = clamp(getW<hor>(wx.minSize()),sum/expCount,getW<hor>(wx.maxSize()));
       sum -= ww;
       expCount--;
+      } else {
+      ww   = clamp(getW<hor>(wx.minSize()),getW<hor> (sz),getW<hor>(wx.maxSize()));
       }
 
     wh = clamp(getW<!hor>(wx.minSize()), wh, getW<!hor>(wx.maxSize()));

@@ -18,7 +18,8 @@ class PaintDevice {
 
     enum Blend : uint8_t {
       NoBlend,
-      Alpha
+      Alpha,
+      Add
       };
 
     struct Point {

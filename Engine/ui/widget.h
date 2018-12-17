@@ -24,16 +24,22 @@ class Widget {
     size_t  widgetsCount() const { return wx.size(); }
     Widget& widget(size_t i) { return *wx[i]; }
     void    removeAllWidgets();
-    Widget& addWidget(Widget* w);
+    template<class T>
+    T&      addWidget(T* w);
     Widget* takeWidget(Widget* w);
 
           Widget* owner()       { return ow; }
     const Widget* owner() const { return ow; }
 
+    Point   mapToRoot( const Point & p ) const;
+
+    Point                pos()      const { return Point(wrect.x,wrect.y);}
     const Tempest::Rect& rect()     const { return wrect; }
     Tempest::Size        size()     const { return Size(wrect.w,wrect.h); }
     const Tempest::Size& sizeHint() const { return szHint; }
 
+    void  setPosition(int x,int y);
+    void  setPosition(const Point& pos);
     void  setGeometry(const Rect& rect);
     void  setGeometry(int x,int y,int w,int h);
     void 	resize(const Size& size);
@@ -44,6 +50,7 @@ class Widget {
     int   w() const { return  wrect.w; }
     int   h() const { return  wrect.h; }
 
+    void setSizePolicy(SizePolicyType hv);
     void setSizePolicy(SizePolicyType h,SizePolicyType  v);
     void setSizePolicy(const SizePolicy& sp);
     const SizePolicy& sizePolicy() const { return szPolicy; }
@@ -63,7 +70,14 @@ class Widget {
     void setSpacing( int s );
     int  spacing() const { return spa; }
 
-    Rect  clentRet() const;
+    Rect clentRet() const;
+
+    void setEnabled(bool e);
+    bool isEnabled() const;
+    bool isEnabledTo(const Widget* ancestor) const;
+
+    void update();
+    bool needToUpdate() const { return state.needToUpdate; }
 
   protected:
     void setSizeHint(const Tempest::Size& s);
@@ -76,6 +90,7 @@ class Widget {
     virtual void mouseDownEvent   (Tempest::MouseEvent& event);
     virtual void mouseUpEvent     (Tempest::MouseEvent& event);
     virtual void mouseMoveEvent   (Tempest::MouseEvent& event);
+    virtual void mouseDragEvent   (Tempest::MouseEvent& event);
 
     virtual void dispatchMoveEvent(Tempest::MouseEvent& event);
 
@@ -90,15 +105,30 @@ class Widget {
 
     struct Additive {
       Widget*  mouseFocus=nullptr;
-      uint16_t disable=0;
+
+      uint16_t disable     =0;
+      bool     needToUpdate=false;
       };
     Additive                state;
+
+    struct State {
+      bool                  enabled=true;
+      };
+    State                   wstate;
 
     Layout*                 lay=reinterpret_cast<Layout*>(layBuf);
     char                    layBuf[sizeof(void*)*3]={};
 
     void                    freeLayout() noexcept;
+    void                    implDisableSum(Widget *root,int diff) noexcept;
+    Widget&                 implAddWidget(Widget* w);
+
     void                    dispatchPaintEvent(PaintEvent &e);
+
+    void                    dispatchMouseDown (Tempest::MouseEvent &e);
+    void                    dispatchMouseUp   (Tempest::MouseEvent &e);
+    void                    dispatchMouseMove (Tempest::MouseEvent &e);
+    void                    dispatchMouseDrag (Tempest::MouseEvent &e);
 
     void                    setOwner(Widget* w);
 
@@ -106,4 +136,9 @@ class Widget {
   friend class Window;
   };
 
+template<class T>
+T& Widget::addWidget(T* w){
+  implAddWidget(w);
+  return *w;
+  }
 }

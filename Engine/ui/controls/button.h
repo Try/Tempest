@@ -14,12 +14,18 @@ class Button : public Widget {
     void setText(const char* text);
     void setFont(const Font& f);
 
+    void setIcon(const Sprite& s);
+
   protected:
     void mouseDownEvent(Tempest::MouseEvent& e) override;
+    void mouseUpEvent  (Tempest::MouseEvent& e) override;
     void paintEvent    (Tempest::PaintEvent& e) override;
 
   private:
     TextModel textM;
+    Sprite    icon;
+
+    void invalidateSizeHint();
   };
 
 }

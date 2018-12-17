@@ -8,6 +8,7 @@ Window::Window()
   :impl(this) {
   id = Tempest::SystemApi::createWindow(&impl,800,600);
   setGeometry(SystemApi::windowClientRect(id));
+  update();
   }
 
 Window::~Window() {

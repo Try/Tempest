@@ -19,6 +19,9 @@ class Builtin {
       Tempest::RenderPipeline pen;
       Tempest::RenderPipeline brush;
 
+      Tempest::RenderPipeline penB;
+      Tempest::RenderPipeline brushB;
+
       Tempest::RenderPipeline penA;
       Tempest::RenderPipeline brushA;
 
@@ -34,7 +37,7 @@ class Builtin {
     mutable Item            brushT2;
     mutable Item            brushE;
 
-    RenderState             stNormal, stBlend;
+    RenderState             stNormal, stBlend, stAlpha;
     Device&                 owner;
     Tempest::Shader         vsT2,fsT2,vsE,fsE;
 

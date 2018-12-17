@@ -8,6 +8,7 @@
 #include <Tempest/Layout>
 
 #include "ui/projecttree.h"
+#include "ui/mdiwindow.h"
 
 using namespace Tempest;
 
@@ -35,7 +36,8 @@ void MainWindow::setupUi() {
   setLayout(Horizontal);
 
   addWidget(new ProjectTree());
-  addWidget(new Widget());
+  Widget& mdi = addWidget(new Widget());
+  mdi.addWidget(new MdiWindow());
   }
 
 void MainWindow::paintEvent(PaintEvent& event) {
@@ -45,10 +47,10 @@ void MainWindow::paintEvent(PaintEvent& event) {
   p.drawRect(0,0,w(),h());
 
   p.setBrush(Brush(spr));
-  p.drawRect(300,100,spr.w(),spr.h());
+  p.drawRect(w()-spr.w(),h()-spr.h(),spr.w(),spr.h());
 
-  p.setPen(Pen(Color(0,0,0,1),1));
-  p.drawLine(100,100,mpos.x,mpos.y);
+  // p.setPen(Pen(Color(0,0,0,1),1));
+  // p.drawLine(100,100,mpos.x,mpos.y);
 
   p.setFont(font);
   p.drawText(300,100,u"Hello world!");
@@ -87,7 +89,8 @@ void MainWindow::render(){
 
     const  uint32_t imgId=device.nextImage(context.imageAvailable);
 
-    dispatchPaintEvent(surface,atlas);
+    if(needToUpdate())
+      dispatchPaintEvent(surface,atlas);
 
     cmd.begin();
     cmd.beginRenderPass(fbo[imgId],mainPass,w(),h());

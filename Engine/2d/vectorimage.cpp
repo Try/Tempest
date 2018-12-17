@@ -154,20 +154,28 @@ void VectorImage::draw(Device & dev, CommandBuffer &cmd, RenderPass& pass) {
         if(b.tp==Triangles){
           if(b.blend==NoBlend)
             p=&dev.builtin().texture2d(pass,info.w,info.h).brush; else
+          if(b.blend==Alpha)
+            p=&dev.builtin().texture2d(pass,info.w,info.h).brushB; else
             p=&dev.builtin().texture2d(pass,info.w,info.h).brushA;
           } else {
           if(b.blend==NoBlend)
             p=&dev.builtin().texture2d(pass,info.w,info.h).pen; else
+          if(b.blend==Alpha)
+            p=&dev.builtin().texture2d(pass,info.w,info.h).penB; else
             p=&dev.builtin().texture2d(pass,info.w,info.h).penA;
           }
         } else {
         if(b.tp==Triangles) {
           if(b.blend==NoBlend)
             p=&dev.builtin().empty(pass,info.w,info.h).brush; else
+          if(b.blend==Alpha)
+            p=&dev.builtin().empty(pass,info.w,info.h).brushB; else
             p=&dev.builtin().empty(pass,info.w,info.h).brushA;
           } else {
           if(b.blend==NoBlend)
             p=&dev.builtin().empty(pass,info.w,info.h).pen; else
+          if(b.blend==Alpha)
+            p=&dev.builtin().empty(pass,info.w,info.h).penB; else
             p=&dev.builtin().empty(pass,info.w,info.h).penA;
           }
         }

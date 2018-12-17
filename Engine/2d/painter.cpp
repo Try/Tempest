@@ -9,8 +9,8 @@ using namespace Tempest;
 
 Painter::Painter(PaintEvent &ev, Mode m)
   : dev(ev.device()), ta(ev.ta) {
-  float w=2.f/ev.w();
-  float h=2.f/ev.h();
+  float w=2.f/(ev.w());
+  float h=2.f/(ev.h());
   const Rect& r=ev.viewPort();
   tr = Transform(w,0,0,
                  0,h,0,
@@ -44,7 +44,7 @@ void Painter::setScissot(int x, int y, unsigned w, unsigned h) {
   scissor.y1 = y+int(h);
   }
 
-void Painter::implAddPoint(int x, int y, float u, float v) {
+void Painter::implAddPoint(float x, float y, float u, float v) {
   tr.map(x,y,pt.x,pt.y);
   pt.u=u;
   pt.v=v;
@@ -280,8 +280,8 @@ void Painter::drawLine(int x1, int y1, int x2, int y2) {
     float dx=-(y2-y1),dy=x2-x1;
     return;
     }*/
-  implAddPoint(x1,y1,0,0);
-  implAddPoint(x2,y2,x2-x1,y2-y1);
+  implAddPoint(x1+0.5f,y1+0.5f,0,0);
+  implAddPoint(x2+0.5f,y2+0.5f,x2-x1,y2-y1);
   }
 
 void Painter::setFont(const Font &f) {

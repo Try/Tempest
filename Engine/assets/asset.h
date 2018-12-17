@@ -13,9 +13,11 @@ class Asset {
     const T& get() const {
       using CleanT=typename std::remove_reference<typename std::remove_cv<T>::type>::type;
 
-      auto p=impl->get(typeid(CleanT));
-      if(p!=nullptr)
-        return *reinterpret_cast<const T*>(p);
+      if(impl!=nullptr) {
+        auto p=impl->get(typeid(CleanT));
+        if(p!=nullptr)
+          return *reinterpret_cast<const T*>(p);
+        }
 
       static T empty;
       return empty;
