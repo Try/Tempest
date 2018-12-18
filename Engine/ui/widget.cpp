@@ -4,8 +4,19 @@
 
 using namespace Tempest;
 
+struct Widget::Iterator {
+  Iterator(Widget* owner):nodes(&owner->wx){
+    //owner->iterator=this;
+    }
+
+  size_t                id=0;
+  std::vector<Widget*>* nodes;
+  std::vector<Widget*>  deleteLater;
+  };
+
 Widget::Widget() {
-  new(layBuf) Layout();
+  lay = new(layBuf) Layout();
+  lay->bind(this);
   }
 
 Widget::~Widget() {
@@ -82,6 +93,8 @@ Widget& Widget::implAddWidget(Widget *w) {
     throw std::invalid_argument("null widget");
   wx.emplace_back(w);
   w->setOwner(this);
+  if(state.disable>0)
+    implDisableSum(w,state.disable);
   lay->applyLayout();
   return *w;
   }
@@ -89,6 +102,10 @@ Widget& Widget::implAddWidget(Widget *w) {
 Widget *Widget::takeWidget(Widget *w) {
   if(state.mouseFocus==w)
     state.mouseFocus=nullptr;
+  if(state.moveFocus==w)
+    state.moveFocus=nullptr;
+  if(state.disable>0)
+    implDisableSum(w,-state.disable);
   return lay->takeWidget(w);
   }
 
@@ -184,6 +201,10 @@ void Widget::setSizePolicy(const SizePolicy &sp) {
     ow->lay->applyLayout();
   }
 
+void Widget::setFocusPolicy(FocusPolicy f) {
+  fcPolicy=f;
+  }
+
 void Widget::setMargins(const Margin &m) {
   if(marg!=m){
     marg=m;
@@ -236,14 +257,14 @@ Rect Widget::clentRet() const {
   }
 
 void Widget::setEnabled(bool e) {
-  if(e==wstate.enabled)
+  if(e!=wstate.disabled)
     return;
 
-  if(wstate.enabled) {
-    wstate.enabled=false;
+  if(!wstate.disabled) {
+    wstate.disabled=true;
     implDisableSum(this,+1);
     } else {
-    wstate.enabled=true;
+    wstate.disabled=false;
     implDisableSum(this,-1);
     }
   update();
@@ -256,13 +277,46 @@ bool Widget::isEnabled() const {
 bool Widget::isEnabledTo(const Widget *ancestor) const {
   const Widget* w = this;
   while( w ){
-    if(!w->wstate.enabled)
+    if(w->wstate.disabled)
        return false;
     if( w==ancestor )
        return true;
     w = w->owner();
     }
   return true;
+  }
+
+void Widget::setFocus(bool b) {
+  implSetFocus(&Additive::clickFocus,&State::focus,b);
+  }
+
+void Widget::implSetFocus(Widget* Additive::*add, bool State::*flag, bool value) {
+  if(wstate.*flag==value)
+    return;
+
+  Widget* w=this;
+  while(true) {
+    if(w->state.*add!=nullptr || w->owner()==nullptr) {
+      while(true) {
+        auto mv=w->state.*add;
+        w->state.*add=nullptr;
+        if(mv==nullptr){
+          w->wstate.*flag=false;
+          break;
+          }
+        w=mv;
+        }
+
+      w=this;
+      wstate.*flag=true;
+      while(w->owner()) {
+        w->owner()->state.*add=w;
+        w = w->owner();
+        }
+      break;
+      }
+    w = w->owner();
+    }
   }
 
 void Widget::update() {
@@ -320,8 +374,7 @@ void Widget::dispatchMouseDown(MouseEvent &event) {
                     event.type());
       i->dispatchMoveEvent(ex);
       if(ex.isAccepted()) {
-        if(ex.type()==Event::MouseDown)
-          state.mouseFocus=i;
+        state.mouseFocus=i;
         event.accept();
         return;
         }
@@ -358,8 +411,7 @@ void Widget::dispatchMouseMove(MouseEvent &event) {
                     event.type());
       i->dispatchMoveEvent(ex);
       if(ex.isAccepted()) {
-        if(ex.type()==Event::MouseDown)
-          state.mouseFocus=i;
+        implSetFocus(&Additive::moveFocus,&State::moveFocus,true);
         event.accept();
         return;
         }

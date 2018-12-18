@@ -34,7 +34,6 @@ MdiWindow::MdiWindow() {
   close.setMinimumSize(27,27);
   close.setSizePolicy(Fixed);
   close.setIcon(Resources::get<Sprite>("icon/close.png"));
-  //btn.setText("x");
   }
 
 void MdiWindow::paintEvent(PaintEvent &e) {

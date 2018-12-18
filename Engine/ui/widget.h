@@ -10,6 +10,14 @@ namespace Tempest {
 
 class Layout;
 
+enum FocusPolicy : uint8_t {
+  NoFocus     = 0,
+  TabFocus    = 1,
+  ClickFocus  = 2,
+  StrongFocus = TabFocus|ClickFocus,
+  WheelFocus  = 4|StrongFocus
+  };
+
 class Widget {
   public:
     Widget();
@@ -55,6 +63,9 @@ class Widget {
     void setSizePolicy(const SizePolicy& sp);
     const SizePolicy& sizePolicy() const { return szPolicy; }
 
+    FocusPolicy focusPolicy() const { return fcPolicy; }
+    void setFocusPolicy( FocusPolicy f );
+
     void setMargins(const Margin& m);
     const Margin& margins() const { return marg; }
 
@@ -76,6 +87,9 @@ class Widget {
     bool isEnabled() const;
     bool isEnabledTo(const Widget* ancestor) const;
 
+    void setFocus(bool b);
+    bool hasFocus() const { return wstate.focus; }
+
     void update();
     bool needToUpdate() const { return state.needToUpdate; }
 
@@ -95,16 +109,21 @@ class Widget {
     virtual void dispatchMoveEvent(Tempest::MouseEvent& event);
 
   private:
+    struct Iterator;
+
     Widget*                 ow=nullptr;
     std::vector<Widget*>    wx;
     Tempest::Rect           wrect;
     Tempest::Size           szHint;
     Tempest::SizePolicy     szPolicy;
+    FocusPolicy             fcPolicy=NoFocus;
     Tempest::Margin         marg;
     int                     spa=2;
 
     struct Additive {
       Widget*  mouseFocus=nullptr;
+      Widget*  moveFocus =nullptr;
+      Widget*  clickFocus=nullptr;
 
       uint16_t disable     =0;
       bool     needToUpdate=false;
@@ -112,7 +131,9 @@ class Widget {
     Additive                state;
 
     struct State {
-      bool                  enabled=true;
+      bool                  disabled =false;
+      bool                  focus    =false;
+      bool                  moveFocus=false;
       };
     State                   wstate;
 
@@ -122,6 +143,7 @@ class Widget {
     void                    freeLayout() noexcept;
     void                    implDisableSum(Widget *root,int diff) noexcept;
     Widget&                 implAddWidget(Widget* w);
+    void                    implSetFocus(Widget* Additive::*add,bool State::* flag,bool value);
 
     void                    dispatchPaintEvent(PaintEvent &e);
 
