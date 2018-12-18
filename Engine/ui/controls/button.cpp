@@ -6,9 +6,10 @@
 using namespace Tempest;
 
 Button::Button() {
-  setMargins(8);
+  setMargins(4);
   setSizeHint(27,27);
   setSizePolicy(Preferred,Fixed);
+  setFocusPolicy(ClickFocus);
   }
 
 void Button::setText(const char *text) {
@@ -53,7 +54,10 @@ void Button::paintEvent(PaintEvent &e) {
   int dx=0;
   if(!icon.isEmpty()) {
     p.setBrush(icon);
-    p.drawRect(m.left,(h()-int(icon.h()))/2,icon.w(),icon.h());
+    int x=m.left;
+    if(textM.isEmpty())
+      x=(w()-int(icon.w()))/2;
+    p.drawRect(x,(h()-int(icon.h()))/2,icon.w(),icon.h());
     dx = dx+int(icon.w())+spacing();
     }
 

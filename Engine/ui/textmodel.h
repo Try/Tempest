@@ -22,6 +22,8 @@ class TextModel final {
     const Size& sizeHint() const;
     Size        wrapSize() const;
 
+    bool        isEmpty()  const;
+
     void        paint(Painter& p, int x, int y) const;
 
   private:

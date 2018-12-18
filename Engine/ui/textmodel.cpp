@@ -38,6 +38,10 @@ Size TextModel::wrapSize() const {
   return Size(sz.sizeHint.w,sz.wrapHeight);
   }
 
+bool TextModel::isEmpty() const {
+  return text.size()<=1;
+  }
+
 void TextModel::paint(Painter &p,int x,int y) const {
   p.setFont(fnt);
 
