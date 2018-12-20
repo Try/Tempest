@@ -15,8 +15,8 @@ class Brush {
     Brush(const Tempest::Texture2d& texture,const Tempest::Color& color,PaintDevice::Blend b=PaintDevice::Alpha);
     Brush(const Tempest::Sprite&    texture,PaintDevice::Blend b=PaintDevice::Alpha);
 
-    uint32_t w() const { return info.w; }
-    uint32_t h() const { return info.h; }
+    int w() const { return info.w; }
+    int h() const { return info.h; }
 
   private:
     using TexPtr=Detail::ResourcePtr<Tempest::Texture2d>;
@@ -26,7 +26,7 @@ class Brush {
     PaintDevice::Blend          blend=PaintDevice::NoBlend;
 
     struct Info {
-      uint32_t w=0,h=0;
+      int      w=0,h=0;
       float    invW=0;
       float    invH=0;
       float    dx  =0;

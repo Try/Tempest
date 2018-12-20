@@ -57,9 +57,9 @@ class Texture2d {
     ~Texture2d();
     Texture2d& operator=(Texture2d&&)=default;
 
-    uint32_t w() const { return texW; }
-    uint32_t h() const { return texH; }
-    bool     isEmpty() const { return texW<=0 || texH<=0; }
+    int  w() const { return texW; }
+    int  h() const { return texH; }
+    bool isEmpty() const { return texW<=0 || texH<=0; }
 
     const Sampler& sampler() const { return smp; }
     void setSampler(const Sampler& s) { smp=s; }
@@ -68,8 +68,8 @@ class Texture2d {
     Texture2d(Tempest::Device& dev,AbstractGraphicsApi::Texture* impl,uint32_t w,uint32_t h);
 
     Detail::DSharedPtr<AbstractGraphicsApi::Texture*> impl;
-    uint32_t                                          texW=0;
-    uint32_t                                          texH=0;
+    int                                               texW=0;
+    int                                               texH=0;
     Sampler                                           smp;
 
   friend class Tempest::Device;

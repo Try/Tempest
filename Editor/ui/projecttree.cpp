@@ -27,8 +27,8 @@ void ProjectTree::paintEvent(PaintEvent &e) {
   Painter p(e);
 
   p.setBrush(background);
-  int bw   = int(background.w());
-  int bh   = int(background.h());
+  int bw   = background.w();
+  int bh   = background.h();
   int wpad = bw/3;
   int hpad = bh/3;
 

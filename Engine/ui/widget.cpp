@@ -20,6 +20,8 @@ Widget::Widget() {
   }
 
 Widget::~Widget() {
+  if(ow)
+    ow->takeWidget(this);
   removeAllWidgets();
   freeLayout();
   }

@@ -8,7 +8,7 @@ Sprite::Sprite() {
   }
 
 Sprite::Sprite(TextureAtlas::Allocation a, uint32_t w, uint32_t h)
-  :alloc(std::move(a)),texW(w),texH(h) {
+  :alloc(std::move(a)),texW(int(w)),texH(int(h)) {
   }
 
 const Texture2d &Sprite::pageRawData(Device& dev) const {

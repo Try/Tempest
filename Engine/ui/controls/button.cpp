@@ -56,9 +56,9 @@ void Button::paintEvent(PaintEvent &e) {
     p.setBrush(icon);
     int x=m.left;
     if(textM.isEmpty())
-      x=(w()-int(icon.w()))/2;
-    p.drawRect(x,(h()-int(icon.h()))/2,icon.w(),icon.h());
-    dx = dx+int(icon.w())+spacing();
+      x=(w()-icon.w())/2;
+    p.drawRect(x,(h()-icon.h())/2,icon.w(),icon.h());
+    dx = dx+icon.w()+spacing();
     }
 
   auto ts=textM.wrapSize();
