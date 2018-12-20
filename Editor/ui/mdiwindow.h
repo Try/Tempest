@@ -12,6 +12,8 @@ class MdiWindow : public Tempest::Panel {
     void mouseDownEvent(Tempest::MouseEvent& e);
     void mouseDragEvent(Tempest::MouseEvent& e);
 
+    void close();
+
     struct {
       bool l=false;
       bool r=false;

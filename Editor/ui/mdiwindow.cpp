@@ -34,6 +34,7 @@ MdiWindow::MdiWindow() {
   close.setMinimumSize(27,27);
   close.setSizePolicy(Fixed);
   close.setIcon(Resources::get<Sprite>("icon/close.png"));
+  close.onClick.bind(this,&MdiWindow::close);
   }
 
 void MdiWindow::paintEvent(PaintEvent &e) {
@@ -114,5 +115,9 @@ void MdiWindow::mouseDragEvent(MouseEvent& e) {
 
   setGeometry(nrect);
   update();
+  }
+
+void MdiWindow::close() {
+  delete this;
   }
 

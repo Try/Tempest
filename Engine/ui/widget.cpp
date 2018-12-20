@@ -394,8 +394,9 @@ void Widget::dispatchMouseUp(MouseEvent &event) {
                   event.delta,
                   event.mouseID,
                   event.type());
-    state.mouseFocus->dispatchMouseUp(ex);
+    auto ref=state.mouseFocus;
     state.mouseFocus=nullptr;
+    ref->dispatchMouseUp(ex);
     } else {
     mouseUpEvent(event);
     }
