@@ -38,7 +38,7 @@ class Signal<void(Args...args)> {
 
       TImpl<T,Ret,TArgs...> ref(obj,fn);
       for(auto i=b;i!=e;i=i->next()){
-        if(i->is(ref.tag,&ref,sizeof(ref))) {
+        if(i->is(ref.tag,&ref)) {
           storage.erase(i,sizeof(ref));
           return;
           }
@@ -66,7 +66,7 @@ class Signal<void(Args...args)> {
       virtual void        call(Args&... a) const=0;
       virtual const Impl* next() const=0;
 
-      virtual bool is(TypeTag type,void* ob,size_t size) const = 0;
+      virtual bool is(TypeTag type,void* ob) const = 0;
       };
 
     template<class T,class Ret,class ... TArgs>
@@ -80,6 +80,10 @@ class Signal<void(Args...args)> {
 
       TImpl(T* obj,Ret (T::*fn)(TArgs...a)):obj(obj),fn(fn){}
 
+      bool operator==(const TImpl& other) const {
+        return obj==other.obj && fn==other.fn;
+        }
+
       void call(Args&... a) const override {
         (obj->*fn)(a...);
         }
@@ -88,8 +92,8 @@ class Signal<void(Args...args)> {
         return reinterpret_cast<const Impl*>(reinterpret_cast<const char*>(this)+sizeof(*this));
         }
 
-      bool is(TypeTag type,void* ob,size_t size) const override {
-        return type==tag && std::memcmp(this,ob,size)==0;
+      bool is(TypeTag type,void* ob) const override {
+        return type==tag && *this==*reinterpret_cast<TImpl*>(ob);
         }
       };
 
@@ -104,6 +108,10 @@ class Signal<void(Args...args)> {
 
       TImplConst(T* obj,Ret (T::*fn)(TArgs...a) const ):obj(obj),fn(fn){}
 
+      bool operator==(const TImplConst& other) const {
+        return obj==other.obj && fn==other.fn;
+        }
+
       void call(Args&... a) const override {
         (obj->*fn)(a...);
         }
@@ -112,8 +120,8 @@ class Signal<void(Args...args)> {
         return reinterpret_cast<const Impl*>(reinterpret_cast<const char*>(this)+sizeof(*this));
         }
 
-      bool is(TypeTag type,void* ob,size_t size) const override {
-        return type==tag && std::memcmp(this,ob,size)==0;
+      bool is(TypeTag type,void* ob) const override {
+        return type==tag && *this==*reinterpret_cast<TImplConst*>(ob);
         }
       };
 
