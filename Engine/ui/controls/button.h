@@ -2,6 +2,7 @@
 
 #include <Tempest/Widget>
 #include <Tempest/TextModel>
+#include <Tempest/Signal>
 
 namespace Tempest {
 
@@ -15,6 +16,8 @@ class Button : public Widget {
     void setFont(const Font& f);
 
     void setIcon(const Sprite& s);
+
+    Signal<void()> onClick;
 
   protected:
     void mouseDownEvent(Tempest::MouseEvent& e) override;

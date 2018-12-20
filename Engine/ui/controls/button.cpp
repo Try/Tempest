@@ -40,8 +40,8 @@ void Button::mouseDownEvent(MouseEvent &e) {
     }
   }
 
-void Button::mouseUpEvent(MouseEvent &e) {
-  e.accept();
+void Button::mouseUpEvent(MouseEvent&) {
+  onClick();
   }
 
 void Button::paintEvent(PaintEvent &e) {
