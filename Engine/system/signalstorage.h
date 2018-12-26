@@ -44,6 +44,7 @@ class SgStorage {
     template<class T,class...Args>
     void push(Args...args) {
       static_assert(alignof(T)==alignof(std::max_align_t),"bad aligment");
+      static_assert(std::is_trivially_copyable<T>::value,""); //for realloc
 
       if(data==nullptr) {
         data=reinterpret_cast<Data*>(std::malloc(sizeOfData+sizeof(T)));

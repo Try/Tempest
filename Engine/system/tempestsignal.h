@@ -38,7 +38,7 @@ class Signal<void(Args...args)> {
 
       TImpl<T,Ret,TArgs...> ref(obj,fn);
       for(auto i=b;i!=e;i=i->next()){
-        if(i->is(ref.tag,&ref)) {
+        if(i->equals(ref)) {
           storage.erase(i,sizeof(ref));
           return;
           }
@@ -56,72 +56,102 @@ class Signal<void(Args...args)> {
       }
 
   private:
-    enum TypeTag:uint8_t {
-      T_MemFn,
-      T_MemFnConst
-      };
+    template<class T,class Ret,class ... TArgs>
+    struct TImpl;
 
-    struct Impl { // force maximum aligment to emplace Impl's into SignalStorage
-      virtual ~Impl(){}
-      virtual void        call(Args&... a) const=0;
-      virtual const Impl* next() const=0;
+    template<class T,class Ret,class ... TArgs>
+    struct TImplConst;
 
-      virtual bool is(TypeTag type,void* ob) const = 0;
+    struct alignas(std::max_align_t) Impl { // force maximum aligment to emplace Impl's into SignalStorage
+      struct VTbl {
+        void (*call)  (const void* self,Args&... a);
+        bool (*equals)(const void* self,const Impl& other);
+        size_t size;
+        };
+
+      const VTbl* vtbl;
+
+      void call(Args&... a) const {
+        vtbl->call(this,a...);
+        }
+
+      const Impl* next() const {
+        return reinterpret_cast<const Impl*>(reinterpret_cast<const char*>(this)+vtbl->size);
+        }
+
+      bool equals(Impl& other) const {
+        if(vtbl==other.vtbl){
+          return vtbl->equals(this,other);
+          }
+        return false;
+        }
       };
 
     template<class T,class Ret,class ... TArgs>
-    struct TImpl : Impl {
-      static constexpr const TypeTag tag=T_MemFn;
-      union {
-        T*  obj;
-        std::max_align_t align;
-        };
+    struct alignas(std::max_align_t) TImpl : Impl {
+      T*  obj;
       Ret (T::*fn)(TArgs...a);
 
-      TImpl(T* obj,Ret (T::*fn)(TArgs...a)):obj(obj),fn(fn){}
-
-      bool operator==(const TImpl& other) const {
-        return obj==other.obj && fn==other.fn;
+      TImpl(T* obj,Ret (T::*fn)(TArgs...a)):obj(obj),fn(fn){
+        this->vtbl = getVtbl();
         }
 
-      void call(Args&... a) const override {
-        (obj->*fn)(a...);
+      static const typename Impl::VTbl* getVtbl(){
+        static const auto t=implVtbl();
+        return &t;
         }
 
-      const Impl* next() const override {
-        return reinterpret_cast<const Impl*>(reinterpret_cast<const char*>(this)+sizeof(*this));
+      static typename Impl::VTbl implVtbl(){
+        typename Impl::VTbl t;
+        t.call   = &call;
+        t.equals = &equals;
+        t.size   = sizeof(TImpl);
+        return t;
         }
 
-      bool is(TypeTag type,void* ob) const override {
-        return type==tag && *this==*reinterpret_cast<TImpl*>(ob);
+      static bool equals(const void* self,const Impl& other) {
+        auto& a=*reinterpret_cast<const TImpl*>(self);
+        auto& b=*reinterpret_cast<const TImpl*>(&other);
+        return a.obj==b.obj && a.fn==b.fn;
+        }
+
+      static void call(const void* self,Args&... a) {
+        auto& ptr=*reinterpret_cast<const TImpl*>(self);
+        ((ptr.obj)->*(ptr.fn))(a...);
         }
       };
 
     template<class T,class Ret,class ... TArgs>
-    struct TImplConst : Impl {
-      static constexpr const TypeTag tag=T_MemFnConst;
-      union {
-        T*  obj;
-        std::max_align_t align;
-        };
+    struct alignas(std::max_align_t) TImplConst : Impl {
+      T* obj;
       Ret (T::*fn)(TArgs...a) const;
 
-      TImplConst(T* obj,Ret (T::*fn)(TArgs...a) const ):obj(obj),fn(fn){}
-
-      bool operator==(const TImplConst& other) const {
-        return obj==other.obj && fn==other.fn;
+      TImplConst(T* obj,Ret (T::*fn)(TArgs...a) const):obj(obj),fn(fn){
+        this->vtbl = getVtbl();
         }
 
-      void call(Args&... a) const override {
-        (obj->*fn)(a...);
+      static const typename Impl::VTbl* getVtbl(){
+        static const auto t=implVtbl();
+        return &t;
         }
 
-      const Impl* next() const override {
-        return reinterpret_cast<const Impl*>(reinterpret_cast<const char*>(this)+sizeof(*this));
+      static typename Impl::VTbl implVtbl(){
+        typename Impl::VTbl t;
+        t.call   = &call;
+        t.equals = &equals;
+        t.size   = sizeof(TImplConst);
+        return t;
         }
 
-      bool is(TypeTag type,void* ob) const override {
-        return type==tag && *this==*reinterpret_cast<TImplConst*>(ob);
+      static bool equals(const void* self,const Impl& other) {
+        auto& a=*reinterpret_cast<const TImplConst*>(self);
+        auto& b=*reinterpret_cast<const TImplConst*>(&other);
+        return a.obj==b.obj && a.fn==b.fn;
+        }
+
+      static void call(const void* self,Args&... a) {
+        auto& ptr=*reinterpret_cast<const TImplConst*>(self);
+        ((ptr.obj)->*(ptr.fn))(a...);
         }
       };
 
