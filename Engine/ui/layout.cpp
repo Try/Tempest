@@ -54,15 +54,26 @@ Widget *Layout::at(size_t i) {
   return w->wx[i];
   }
 
-Widget *Layout::takeWidget(Widget *wx) {
+size_t Layout::find(Widget *wx) const {
   for(size_t i=0;i<w->wx.size();++i)
-    if(w->wx[i]==wx) {
-      w->wx.erase(w->wx.begin()+int(i));
-      wx->ow=nullptr;
-      applyLayout();
-      return wx;
-      }
+    if(w->wx[i]==wx)
+      return i;
+  return size_t(-1);
+  }
+
+Widget *Layout::takeWidget(size_t i) {
+  if(i<w->wx.size()){
+    Widget* wx=w->wx[i];
+    w->wx.erase(w->wx.begin()+int(i));
+    wx->ow=nullptr;
+    applyLayout();
+    return wx;
+    }
   return nullptr;
+  }
+
+Widget *Layout::takeWidget(Widget *wx) {
+  return takeWidget(find(wx));
   }
 
 void Layout::bind(Widget *wx) {

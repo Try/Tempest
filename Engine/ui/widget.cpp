@@ -5,13 +5,50 @@
 using namespace Tempest;
 
 struct Widget::Iterator {
-  Iterator(Widget* owner):nodes(&owner->wx){
-    //owner->iterator=this;
+  Iterator(Widget* owner)
+    :owner(owner),nodes(&owner->wx){
+    owner->iterator=this;
+    }
+  ~Iterator(){
+    if(owner!=nullptr)
+      owner->iterator=nullptr;
+    }
+
+  void onDelete() {
+    deleteLater=std::move(*nodes);
+    nodes=&deleteLater;
+    owner=nullptr;
+    }
+
+  void onDelete(size_t i,Widget* wx){
+    if(i<=id)
+      id--;
+    if(getPtr==wx)
+      getPtr=nullptr;
+    }
+
+  bool hasNext() const {
+    return id<nodes->size();
+    }
+
+  void next(){
+    ++id;
+    }
+
+  Widget* getLast(){
+    return getPtr;
+    }
+
+  Widget* get() {
+    getPtr=(*nodes)[id];
+    return getPtr;
     }
 
   size_t                id=0;
+  Widget*               owner=nullptr;
   std::vector<Widget*>* nodes;
   std::vector<Widget*>  deleteLater;
+  Widget*               getPtr=nullptr;
   };
 
 Widget::Widget() {
@@ -22,6 +59,8 @@ Widget::Widget() {
 Widget::~Widget() {
   if(ow)
     ow->takeWidget(this);
+  if(iterator!=nullptr)
+    iterator->onDelete();
   removeAllWidgets();
   freeLayout();
   }
@@ -108,7 +147,10 @@ Widget *Widget::takeWidget(Widget *w) {
     state.moveFocus=nullptr;
   if(state.disable>0)
     implDisableSum(w,-state.disable);
-  return lay->takeWidget(w);
+  const size_t id=lay->find(w);
+  if(iterator!=nullptr)
+    iterator->onDelete(id,w);
+  return lay->takeWidget(id);
   }
 
 Point Widget::mapToRoot(const Point &p) const {
@@ -366,7 +408,9 @@ void Widget::dispatchMoveEvent(MouseEvent &event) {
 
 void Widget::dispatchMouseDown(MouseEvent &event) {
   Point pos=event.pos();
-  for(auto i:wx){
+  Iterator it(this);
+  for(;it.hasNext();it.next()) {
+    Widget* i=it.get();
     if(i->rect().contains(pos)){
       MouseEvent ex(event.x - i->x(),
                     event.y - i->y(),
@@ -374,16 +418,17 @@ void Widget::dispatchMouseDown(MouseEvent &event) {
                     event.delta,
                     event.mouseID,
                     event.type());
-      i->dispatchMoveEvent(ex);
-      if(ex.isAccepted()) {
-        state.mouseFocus=i;
+      i->dispatchMouseDown(ex);
+      if(ex.isAccepted() && it.owner!=nullptr) {
+        it.owner->state.mouseFocus=it.getLast();
         event.accept();
         return;
         }
       }
     }
 
-  mouseDownEvent(event);
+  if(it.owner!=nullptr)
+    it.owner->mouseDownEvent(event);
   }
 
 void Widget::dispatchMouseUp(MouseEvent &event) {

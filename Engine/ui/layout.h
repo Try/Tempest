@@ -14,6 +14,8 @@ class Layout {
 
     size_t  count() const;
     Widget* at(size_t i);
+    size_t  find(Widget* w) const;
+    Widget* takeWidget(size_t i);
     Widget* takeWidget(Widget* w);
 
     virtual void applyLayout(){}

@@ -119,6 +119,7 @@ class Widget {
     FocusPolicy             fcPolicy=NoFocus;
     Tempest::Margin         marg;
     int                     spa=2;
+    Iterator*               iterator=nullptr;
 
     struct Additive {
       Widget*  mouseFocus=nullptr;
