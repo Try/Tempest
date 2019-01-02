@@ -38,16 +38,29 @@ void Button::mouseDownEvent(MouseEvent &e) {
     e.ignore();
     return;
     }
+  //onClick();
   }
 
 void Button::mouseUpEvent(MouseEvent&) {
   onClick();
   }
 
+void Button::mouseMoveEvent(MouseEvent &e) {
+  e.accept();
+  }
+
+void Button::mouseEnterEvent(MouseEvent&) {
+  update();
+  }
+
+void Button::mouseLeaveEvent(MouseEvent&) {
+  update();
+  }
+
 void Button::paintEvent(PaintEvent &e) {
   Painter p(e);
 
-  p.setBrush(Color(0,0,0,0.2f));
+  p.setBrush(isMouseOver() ? Color(0,0,0,0.2f) : Color(0,0,0,0.02f));
   p.drawRect(0,0,w(),h());
 
   auto& m = margins();

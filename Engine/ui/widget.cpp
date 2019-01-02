@@ -331,12 +331,15 @@ bool Widget::isEnabledTo(const Widget *ancestor) const {
   }
 
 void Widget::setFocus(bool b) {
-  implSetFocus(&Additive::clickFocus,&State::focus,b);
+  implSetFocus(&Additive::clickFocus,&State::focus,b,nullptr);
   }
 
-void Widget::implSetFocus(Widget* Additive::*add, bool State::*flag, bool value) {
+void Widget::implSetFocus(Widget* Additive::*add, bool State::*flag, bool value,const MouseEvent* parent) {
   if(wstate.*flag==value)
     return;
+
+  Widget* previous=nullptr;
+  Widget* next    =this;
 
   Widget* w=this;
   while(true) {
@@ -346,21 +349,47 @@ void Widget::implSetFocus(Widget* Additive::*add, bool State::*flag, bool value)
         w->state.*add=nullptr;
         if(mv==nullptr){
           w->wstate.*flag=false;
+          previous = w;
           break;
           }
         w=mv;
         }
 
       w=this;
-      wstate.*flag=true;
       while(w->owner()) {
         w->owner()->state.*add=w;
         w = w->owner();
         }
-      break;
+      next->wstate.*flag=true;
+
+      if(parent!=nullptr)
+        implExcFocus(Event::MouseEnter,previous,next,*parent); else
+        implExcFocus(Event::MouseEnter,previous,next,MouseEvent());
+      return;
       }
     w = w->owner();
     }
+  }
+
+void Widget::implExcFocus(Event::Type type,Widget *prev,Widget *next,const MouseEvent& parent) {
+  if(prev!=nullptr){
+    auto mpos = next->mapToRoot(parent.pos()) - prev->mapToRoot(Point());
+    MouseEvent ex(mpos.x,
+                  mpos.y,
+                  parent.button,
+                  parent.delta,
+                  parent.mouseID,
+                  Event::MouseLeave);
+    prev->mouseLeaveEvent(ex);
+    }
+
+  MouseEvent ex(parent.x,
+                parent.y,
+                parent.button,
+                parent.delta,
+                parent.mouseID,
+                type);
+  next->mouseEnterEvent(ex);
   }
 
 void Widget::update() {
@@ -393,6 +422,14 @@ void Widget::mouseMoveEvent(MouseEvent &e) {
   }
 
 void Widget::mouseDragEvent(MouseEvent &e) {
+  e.ignore();
+  }
+
+void Widget::mouseEnterEvent(MouseEvent &e) {
+  e.ignore();
+  }
+
+void Widget::mouseLeaveEvent(MouseEvent &e) {
   e.ignore();
   }
 
@@ -449,7 +486,9 @@ void Widget::dispatchMouseUp(MouseEvent &event) {
 
 void Widget::dispatchMouseMove(MouseEvent &event) {
   Point pos=event.pos();
-  for(auto i:wx){
+  Iterator it(this);
+  for(;it.hasNext();it.next()) {
+    Widget* i=it.get();
     if(i->rect().contains(pos)){
       MouseEvent ex(event.x - i->x(),
                     event.y - i->y(),
@@ -457,16 +496,19 @@ void Widget::dispatchMouseMove(MouseEvent &event) {
                     event.delta,
                     event.mouseID,
                     event.type());
-      i->dispatchMoveEvent(ex);
-      if(ex.isAccepted()) {
-        implSetFocus(&Additive::moveFocus,&State::moveFocus,true);
+      if(ex.isAccepted() && it.owner!=nullptr) {
+        i->dispatchMoveEvent(ex);
         event.accept();
-        return;
         }
+      return;
       }
     }
 
-  mouseMoveEvent(event);
+  if(it.owner!=nullptr) {
+    it.owner->mouseMoveEvent(event);
+    if(it.owner!=nullptr)
+      implSetFocus(&Additive::moveFocus,&State::moveFocus,true,&event);
+    }
   }
 
 void Widget::dispatchMouseDrag(MouseEvent &event) {

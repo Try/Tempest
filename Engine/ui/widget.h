@@ -93,6 +93,8 @@ class Widget {
     void update();
     bool needToUpdate() const { return state.needToUpdate; }
 
+    bool isMouseOver()  const { return wstate.moveFocus; }
+
   protected:
     void setSizeHint(const Tempest::Size& s);
     void setSizeHint(const Tempest::Size& s,const Margin& add);
@@ -105,6 +107,9 @@ class Widget {
     virtual void mouseUpEvent     (Tempest::MouseEvent& event);
     virtual void mouseMoveEvent   (Tempest::MouseEvent& event);
     virtual void mouseDragEvent   (Tempest::MouseEvent& event);
+
+    virtual void mouseEnterEvent  (Tempest::MouseEvent& event);
+    virtual void mouseLeaveEvent  (Tempest::MouseEvent& event);
 
     virtual void dispatchMoveEvent(Tempest::MouseEvent& event);
 
@@ -144,7 +149,8 @@ class Widget {
     void                    freeLayout() noexcept;
     void                    implDisableSum(Widget *root,int diff) noexcept;
     Widget&                 implAddWidget(Widget* w);
-    void                    implSetFocus(Widget* Additive::*add,bool State::* flag,bool value);
+    void                    implSetFocus(Widget* Additive::*add,bool State::* flag,bool value,const MouseEvent* parent);
+    static void             implExcFocus(Event::Type type,Widget* prev, Widget* next, const MouseEvent& parent);
 
     void                    dispatchPaintEvent(PaintEvent &e);
 
