@@ -116,7 +116,12 @@ void Widget::dispatchPaintEvent(PaintEvent& e) {
   for(size_t i=0;i<count;++i) {
     Widget& wx=widget(i);
 
-    PaintEvent ex(e,wx.x(),wx.y(),wx.w(),wx.h());
+    Rect r = e.viewPort();
+    r.x -= wx.x();
+    r.y -= wx.y();
+    Rect sc = r.intersected(Rect(0,0,wx.w(),wx.h()));
+
+    PaintEvent ex(e,wx.x(),wx.y(),sc.x,sc.y,sc.w,sc.h);
     wx.dispatchPaintEvent(ex);
     }
   }

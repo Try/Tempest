@@ -4,7 +4,13 @@
 
 class MdiWindow : public Tempest::Panel {
   public:
+    class Content : public Tempest::Widget {
+
+      };
+
     MdiWindow();
+
+    static MdiWindow* mkWindow(Content* c);
 
   private:
     struct Top;
@@ -20,8 +26,10 @@ class MdiWindow : public Tempest::Panel {
       bool t=false;
       bool b=false;
 
-      Tempest::Point mpos;
-      Tempest::Rect  origin;
+      Tempest::Point   mpos;
+      Tempest::Rect    origin;
+
+      Tempest::Widget* content=nullptr;
       } m;
   };
 

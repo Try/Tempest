@@ -31,7 +31,9 @@ class Painter {
     void setPen  (const Pen&   p);
     void setFont (const Font&  f);
 
-    const Font& font() const { return fnt; }
+    const Brush& brush() const { return bru; }
+    const Pen&   pen()   const { return pn;  }
+    const Font&  font()  const { return fnt; }
 
     void drawRect(int x,int y,int width,int height,
                   float u1,float v1,float u2,float v2);
@@ -54,8 +56,8 @@ class Painter {
     PaintDevice::Point pt;
 
     State              state=StNo;
-    Tempest::Brush     brush;
-    Tempest::Pen       pen;
+    Tempest::Brush     bru;
+    Tempest::Pen       pn;
     Tempest::Font      fnt;
 
     Tempest::Transform tr=Transform();
@@ -91,8 +93,7 @@ class Painter {
     void implDrawRect(int x1, int y1, int x2, int y2,
                       float u1, float v1, float u2, float v2);
 
-    template<class CharT>
-    void implDrawText(int x,int y,const CharT* txt);
+  friend class Font;
   };
 
 }

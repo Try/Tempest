@@ -5,19 +5,22 @@
 #include <Tempest/Brush>
 #include <Tempest/Pen>
 
+#include "../utility/utf8_helper.h"
+
 using namespace Tempest;
 
 Painter::Painter(PaintEvent &ev, Mode m)
   : dev(ev.device()), ta(ev.ta) {
   float w=2.f/(ev.w());
   float h=2.f/(ev.h());
-  const Rect& r=ev.viewPort();
+  const Point& dp=ev.orign();
+  const Rect&  r =ev.viewPort();
   tr = Transform(w,0,0,
                  0,h,0,
-                 -1+r.x*w,-1+r.y*h, 1);
+                 -1+dp.x*w,-1+dp.y*h, 1);
 
   implSetColor(1,1,1,1);
-  setScissot(0,0,ev.w(),ev.h());
+  setScissot(r.x,r.y,r.w,r.h);
   dev.beginPaint(m==Clear,ev.w(),ev.h());
   }
 
@@ -194,7 +197,7 @@ void Painter::setBrush(const Brush& b) {
   if(state==StBrush)
     implBrush(b);
 
-  brush=b;
+  bru=b;
   invW=b.info.invW;
   invH=b.info.invH;
   dU  =b.info.dx;
@@ -204,7 +207,7 @@ void Painter::setBrush(const Brush& b) {
 void Painter::setPen(const Pen &p) {
   if(state==StPen)
     implPen(p);
-  pen=p;
+  pn=p;
   }
 
 void Painter::implBrush(const Brush &b) {
@@ -226,29 +229,41 @@ void Painter::implPen(const Pen &p) {
 void Painter::implDrawRect(int x1, int y1, int x2, int y2, float u1, float v1, float u2, float v2) {
   if(state!=StBrush) {
     dev.setTopology(Triangles);
-    implBrush(brush);
+    implBrush(bru);
     }
 
   if(x1<scissor.x){
     int dx=scissor.x-x1;
     x1+=dx;
+    if(x1>=x2)
+      return;
     u1+=dx*invW;
     }
+
   if(scissor.x1<x2){
     int dx=scissor.x1-x2;
     x2+=dx;
+    if(x1>=x2)
+      return;
     u2+=dx*invW;
     }
+
   if(y1<scissor.y){
     int dy=scissor.y-y1;
     y1+=dy;
+    if(y1>=y2)
+      return;
     v1+=dy*invH;
     }
+
   if(scissor.y1<y2){
     int dy=scissor.y1-y2;
     y2+=dy;
-    v2+=dy*invW;
+    if(y1>=y2)
+      return;
+    v2+=dy*invH;
     }
+
   implAddPoint(x1,y1, u1,v1);
   implAddPoint(x2,y1, u2,v1);
   implAddPoint(x2,y2, u2,v2);
@@ -273,7 +288,7 @@ void Painter::drawRect(int x, int y, unsigned w, unsigned h) {
 void Painter::drawLine(int x1, int y1, int x2, int y2) {
   if(state!=StPen){
     dev.setTopology(Lines);
-    implPen(pen);
+    implPen(pn);
     }
   /*
   if(penWidth>1.f){
@@ -291,18 +306,25 @@ void Painter::setFont(const Font &f) {
 void Painter::drawText(int x, int y, const char *txt) {
   if(txt==nullptr)
     return;
-  implDrawText(x,y,txt); //TODO: utf8
+  auto pb=bru;
+  Utf8Iterator i(txt);
+  while(i.hasData()) {
+    auto l=fnt.letter(i.next(),ta);
+
+    if(!l.view.isEmpty()) {
+      setBrush(l.view);
+      drawRect(x+l.dpos.x,y+l.dpos.y,l.view.w(),l.view.h());
+      }
+
+    x += l.advance.x;
+    }
+  setBrush(pb);
   }
 
 void Painter::drawText(int x, int y, const char16_t *txt) {
   if(txt==nullptr)
     return;
-  implDrawText(x,y,txt);
-  }
-
-template<class CharT>
-void Painter::implDrawText(int x,int y,const CharT* txt){
-  auto pb=brush;
+  auto pb=bru;
 
   for(;*txt;++txt) {
     auto& l=fnt.letter(*txt,ta);
@@ -317,3 +339,4 @@ void Painter::implDrawText(int x,int y,const CharT* txt){
 
   setBrush(pb);
   }
+

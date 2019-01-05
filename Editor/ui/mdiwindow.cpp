@@ -22,6 +22,8 @@ MdiWindow::MdiWindow() {
   setLayout(Vertical);
 
   Top& top = addWidget(new Top);
+  m.content=&addWidget(new Widget());
+  m.content->setLayout(Vertical);
 
   top.addWidget(new Widget());
 
@@ -35,6 +37,12 @@ MdiWindow::MdiWindow() {
   close.setSizePolicy(Fixed);
   close.setIcon(Resources::get<Sprite>("icon/close.png"));
   close.onClick.bind(this,&MdiWindow::close);
+  }
+
+MdiWindow *MdiWindow::mkWindow(MdiWindow::Content *c) {
+  auto ret = new MdiWindow();
+  ret->m.content->addWidget(c);
+  return ret;
   }
 
 void MdiWindow::paintEvent(PaintEvent &e) {

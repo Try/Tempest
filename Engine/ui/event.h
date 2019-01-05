@@ -159,17 +159,17 @@ class Event {
 class PaintEvent: public Event {
   public:
     PaintEvent(PaintDevice & p,TextureAtlas& ta,uint32_t w,uint32_t h)
-      :dev(p),ta(ta),outW(w),outH(h) {
-      setType( Paint );
+      : PaintEvent(p,ta,int(w),int(h)) {
       }
     PaintEvent(PaintDevice & p,TextureAtlas& ta,int32_t w,int32_t h)
-      :dev(p),ta(ta),outW(uint32_t(w)),outH(uint32_t(h)) {
+      : dev(p),ta(ta),outW(uint32_t(w)),outH(uint32_t(h)),
+        vp(0,0,w,h) {
       setType( Paint );
       }
 
-    PaintEvent(PaintEvent& parent,int32_t dx,int32_t dy,int32_t w,int32_t h)
-      :dev(parent.dev),ta(parent.ta),outW(parent.outW),outH(parent.outH),
-        vp(parent.vp.x+dx,parent.vp.y+dy,w,h){
+    PaintEvent(PaintEvent& parent,int32_t dx,int32_t dy,int32_t x,int32_t y,int32_t w,int32_t h)
+      : dev(parent.dev),ta(parent.ta),outW(parent.outW),outH(parent.outH),
+        dp(parent.dp.x+dx,parent.dp.y+dy),vp(x,y,w,h){
       setType( Paint );
       }
 
@@ -177,6 +177,7 @@ class PaintEvent: public Event {
     uint32_t     w() const { return outW; }
     uint32_t     h() const { return outH; }
 
+    const Point& orign()    const { return dp; }
     const Rect&  viewPort() const { return vp; }
 
   private:
@@ -185,6 +186,7 @@ class PaintEvent: public Event {
     uint32_t      outW=0;
     uint32_t      outH=0;
 
+    Point         dp;
     Rect          vp;
 
     using Event::accept;

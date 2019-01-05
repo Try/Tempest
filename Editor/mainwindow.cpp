@@ -7,6 +7,7 @@
 #include <Tempest/Pen>
 #include <Tempest/Layout>
 
+#include "editor/texteditor.h"
 #include "ui/projecttree.h"
 #include "ui/mdiwindow.h"
 
@@ -37,7 +38,9 @@ void MainWindow::setupUi() {
 
   addWidget(new ProjectTree());
   Widget& mdi = addWidget(new Widget());
-  mdi.addWidget(new MdiWindow());
+
+  //mdi.addWidget(new MdiWindow());
+  mdi.addWidget(MdiWindow::mkWindow(new TextEditor()));
   }
 
 void MainWindow::paintEvent(PaintEvent& event) {
