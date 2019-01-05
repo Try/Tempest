@@ -85,6 +85,7 @@ void TextModel::calcSize() const {
       y =  std::max(-l.dpos.y,y);
       }
     }
+  w = std::max(w,x);
 
   sz.wrapHeight=y+top;
   sz.sizeHint  =Size(int(std::ceil(w)),top+int(fnt.pixelSize()));
