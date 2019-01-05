@@ -9,6 +9,8 @@
 
 namespace Tempest {
 
+class Painter;
+
 class FontElement final {
   public:
     FontElement();
@@ -58,7 +60,12 @@ class Font final {
     float pixelSize() const { return size; }
 
     const LetterGeometry& letterGeometry(char16_t ch) const;
+    const LetterGeometry& letterGeometry(char32_t ch) const;
     const Letter&         letter(char16_t ch,TextureAtlas& tex) const;
+    const Letter&         letter(char32_t ch,TextureAtlas& tex) const;
+
+    const Letter&         letter(char16_t ch,Painter& tex) const;
+    const Letter&         letter(char32_t ch,Painter& tex) const;
 
   private:
     template<class CharT>

@@ -21,6 +21,8 @@ class TextModel final {
 
     const Size& sizeHint() const;
     Size        wrapSize() const;
+    int         w() const { return sizeHint().w; }
+    int         h() const { return sizeHint().h; }
 
     bool        isEmpty()  const;
 

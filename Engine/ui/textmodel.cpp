@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include <Tempest/Painter>
+#include "utility/utf8_helper.h"
 
 using namespace Tempest;
 
@@ -42,27 +43,50 @@ bool TextModel::isEmpty() const {
   return text.size()<=1;
   }
 
-void TextModel::paint(Painter &p,int x,int y) const {
-  p.setFont(fnt);
+void TextModel::paint(Painter &p,int fx,int fy) const {
+  auto  b = p.brush();
+  float x = fx;
+  int   y = fy;
 
-  const char* txt=text.data();
-  p.drawText(x,y,txt);
+  Utf8Iterator i(text.data());
+  while(i.hasData()){
+    char32_t ch = i.next();
+    auto l=fnt.letter(ch,p);
+    if(ch=='\n'){
+      x =  0;
+      y += fnt.pixelSize();
+      } else {
+      if(!l.view.isEmpty()) {
+        p.setBrush(l.view);
+        p.drawRect(int(x+l.dpos.x),y+l.dpos.y,l.view.w(),l.view.h());
+        }
+      x += l.advance.x;
+      }
+    }
+
+  p.setBrush(b);
   }
 
 void TextModel::calcSize() const {
-  float x=0;
-  int   y=0;
+  float x=0, w=0;
+  int   y=0, top=0;
 
-  const char* txt=text.data();
-  if(txt!=nullptr) {
-    for(;*txt;++txt) {
-      auto& l=fnt.letterGeometry(*txt); //TODO: utf8
+  Utf8Iterator i(text.data());
+  while(i.hasData()){
+    char32_t ch = i.next();
+    if(ch=='\n'){
+      w = std::max(w,x);
+      x = 0;
+      y = 0;
+      top+=fnt.pixelSize();
+      } else {
+      auto l=fnt.letterGeometry(ch);
       x += l.advance.x;
       y =  std::max(-l.dpos.y,y);
       }
     }
 
-  sz.wrapHeight=y;
-  sz.sizeHint  =Size(int(std::ceil(x)),int(std::ceil(fnt.pixelSize())));
+  sz.wrapHeight=y+top;
+  sz.sizeHint  =Size(int(std::ceil(w)),top+int(fnt.pixelSize()));
   sz.actual    =true;
   }

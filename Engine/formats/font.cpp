@@ -1,6 +1,7 @@
 #include "font.h"
 
 #include <Tempest/Except>
+#include <Tempest/Painter>
 
 #include "thirdparty/stb_truetype.h"
 
@@ -239,6 +240,22 @@ const Font::LetterGeometry &Font::letterGeometry(char16_t ch) const {
   return fnt[0][0].letterGeometry(ch,size);
   }
 
+const Font::LetterGeometry &Font::letterGeometry(char32_t ch) const {
+  return fnt[0][0].letterGeometry(ch,size); //TODO
+  }
+
 const Font::Letter &Font::letter(char16_t ch, TextureAtlas &tex) const {
   return fnt[0][0].letter(ch,size,tex);
+  }
+
+const Font::Letter &Font::letter(char32_t ch, TextureAtlas &tex) const {
+  return fnt[0][0].letter(ch,size,tex); //TODO
+  }
+
+const Font::Letter &Font::letter(char16_t ch, Painter &p) const {
+  return letter(ch,p.ta);
+  }
+
+const Font::Letter &Font::letter(char32_t ch, Painter &p) const {
+  return letter(ch,p.ta);
   }
