@@ -24,6 +24,10 @@ void TextEdit::setFont(const Font &f) {
   update();
   }
 
+void TextEdit::mouseDownEvent(MouseEvent &e) {
+  cursor = textM.charAt(e.pos());
+  }
+
 void TextEdit::paintEvent(PaintEvent &e) {
   Painter p(e);
   p.setBrush(Color(0,0,0,0.2f));

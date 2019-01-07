@@ -13,10 +13,13 @@ class TextEdit : public Tempest::Widget {
     void setFont(const Font& f);
 
   protected:
-    void paintEvent(Tempest::PaintEvent& e) override;
+    void mouseDownEvent(Tempest::MouseEvent& e) override;
+
+    void paintEvent    (Tempest::PaintEvent& e) override;
 
   private:
-    TextModel textM;
+    TextModel         textM;
+    TextModel::Cursor cursor;
 
     void      invalidateSizeHint();
   };

@@ -75,8 +75,6 @@ void Button::paintEvent(PaintEvent &e) {
     }
 
   auto ts=textM.wrapSize();
-  //auto is=icon.size();
-
   textM.paint(p,m.left+dx+(w()-ts.w-dx-margins().xMargin())/2,int(h()+ts.h)/2);
   }
 

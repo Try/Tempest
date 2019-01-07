@@ -11,5 +11,5 @@ TextEditor::TextEditor(){
   setLayout(Vertical);
   TextEdit& ln = addWidget(new TextEdit());
   ln.setFont(font);
-  ln.setText("Caption\nLine 1\nLine2");
+  ln.setText("Caption\nLine 1\nLine 2");
   }

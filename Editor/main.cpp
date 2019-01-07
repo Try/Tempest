@@ -1,12 +1,7 @@
-#include <Tempest/SystemApi>
 #include <Tempest/VulkanApi>
 
-#include <Tempest/Device>
-#include <Tempest/Painter>
 #include <Tempest/Window>
-#include <Tempest/Fence>
-#include <Tempest/Semaphore>
-#include <Tempest/VertexBuffer>
+#include <Tempest/Application>
 
 #include <vector>
 
@@ -16,7 +11,6 @@ int main() {
   Tempest::VulkanApi api;
   MainWindow         wx(api);
 
-  Tempest::SystemApi::exec();
-
-  return 0;
+  Tempest::Application app;
+  return app.exec();
   }
