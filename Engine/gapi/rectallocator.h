@@ -165,7 +165,7 @@ class RectAllocator {
 
       void decref() {
         Node* nx=this;
-        if(nx->refcount.fetch_add(-1,std::memory_order_acq_rel)!=0)
+        if(nx->refcount.fetch_add(-1,std::memory_order_acq_rel)!=1)
           return;
 
         Node* ow=nx->owner;
@@ -175,6 +175,7 @@ class RectAllocator {
           if(nx==nullptr || nx->hasLeafs())
             return;
           }
+        delete this;
         }
 
       Point pos() const { return Point(x,y); }

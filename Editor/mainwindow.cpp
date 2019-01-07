@@ -25,7 +25,7 @@ MainWindow::MainWindow(Tempest::VulkanApi& api)
   }
 
 MainWindow::~MainWindow() {
-  removeAllWidgets();
+  //removeAllWidgets();
   }
 
 void MainWindow::setupUi() {
