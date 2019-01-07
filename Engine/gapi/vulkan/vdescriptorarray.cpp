@@ -14,8 +14,6 @@ VDescriptorArray::~VDescriptorArray() {
   }
 
 VDescriptorArray *VDescriptorArray::alloc(VkDevice device, VkDescriptorSetLayout lay) {
-  std::vector<VkDescriptorSetLayout> layouts(1,lay); //FIXME
-
   VDescriptorArray* a=reinterpret_cast<VDescriptorArray*>(std::malloc(sizeof(VDescriptorArray)));
   if(a==nullptr)
     throw std::bad_alloc();
@@ -41,7 +39,7 @@ VDescriptorArray *VDescriptorArray::alloc(VkDevice device, VkDescriptorSetLayout
   allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
   allocInfo.descriptorPool     = a->impl;
   allocInfo.descriptorSetCount = 1;
-  allocInfo.pSetLayouts        = layouts.data();
+  allocInfo.pSetLayouts        = &lay;
 
   VkResult ret=vkAllocateDescriptorSets(device,&allocInfo,&a->desc[0]);
   if(ret!=VK_SUCCESS) {
