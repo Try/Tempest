@@ -112,7 +112,7 @@ void SystemApi::destroyWindow(SystemApi::Window *w) {
   DestroyWindow(HWND(w));
   }
 
-void SystemApi::exec() {
+int SystemApi::exec() {
   bool done=false;
   // main message loop
   while (!done) {
@@ -134,6 +134,7 @@ void SystemApi::exec() {
         }
       }
     }
+  return 0;
   }
 
 uint32_t SystemApi::width(SystemApi::Window *w) {

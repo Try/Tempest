@@ -6,6 +6,7 @@
 namespace Tempest{
 
 class MouseEvent;
+class Application;
 
 class SystemApi {
   private:
@@ -23,11 +24,15 @@ class SystemApi {
 
     static Window*  createWindow(WindowCallback* cb,uint32_t width,uint32_t height);
     static void     destroyWindow(Window* w);
-    static void     exec();
 
     static uint32_t width (Window* w);
     static uint32_t height(Window* w);
     static Rect     windowClientRect(SystemApi::Window *w);
+
+  private:
+    static int      exec();
+
+  friend class Application;
   };
 
 }

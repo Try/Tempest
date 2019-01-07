@@ -55,7 +55,7 @@ class Utf8Iterator {
   public:
     Utf8Iterator(const char* str):Utf8Iterator(str,str==nullptr ? 0 :  std::strlen(str)){}
     Utf8Iterator(const char* str,size_t len)
-      :str(reinterpret_cast<const uint8_t*>(str)),end(this->str+len){}
+      :str(reinterpret_cast<const uint8_t*>(str)),beg(this->str),end(this->str+len){}
 
     char32_t operator*() const {
       const auto l = Detail::utf8LetterLength(str);
@@ -101,6 +101,10 @@ class Utf8Iterator {
       return '\0';
       }
 
+    size_t pos() const {
+      return size_t(str-beg);
+      }
+
     bool hasData() const {
       return str<end;
       }
@@ -111,6 +115,7 @@ class Utf8Iterator {
 
   private:
     const uint8_t* str;
+    const uint8_t* beg;
     const uint8_t* end;
   };
 }
