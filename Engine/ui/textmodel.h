@@ -15,9 +15,20 @@ class TextModel final {
     TextModel()=default;
     TextModel(const char* text);
 
-    class Cursor {
-      size_t line  =0;
-      size_t offset=0;
+    class Cursor final {
+      private:
+        size_t line  =size_t(-1);
+        size_t offset=0;
+
+      public:
+        bool operator == (const Cursor& c) const {
+          return line==c.line && offset==c.offset;
+          }
+
+        bool operator != (const Cursor& c) const {
+          return line!=c.line || offset!=c.offset;
+          }
+
       friend class TextModel;
       };
 
@@ -36,6 +47,12 @@ class TextModel final {
 
     Cursor      charAt(const Point& p) const { return charAt(p.x,p.y); }
     Cursor      charAt(int x,int y) const;
+    Point       mapToCoords(Cursor c) const;
+
+    void        drawCursor(Painter& p,int x,int y,Cursor c) const;
+    void        drawCursor(Painter& p,int x,int y,Cursor s,Cursor e) const;
+
+    bool        isValid(Cursor c) const;
 
   private:
     void        calcSize() const;

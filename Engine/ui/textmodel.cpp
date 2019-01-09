@@ -147,5 +147,70 @@ TextModel::Cursor TextModel::charAt(int x, int y) const {
       }
     px += l.advance.x;
     }
+  c.offset = ln.size;
   return c;
+  }
+
+Point TextModel::mapToCoords(TextModel::Cursor c) const {
+  if(!isValid(c))
+    return Point();
+  Point p;
+  p.y = int(c.line*fnt.pixelSize());
+  auto& ln = line[c.line];
+  Utf8Iterator str(ln.txt,ln.size);
+
+  for(size_t i=0;str.hasData() && i<c.offset;++i){
+    char32_t ch = str.next();
+    auto l=fnt.letterGeometry(ch);
+    p.x += l.advance.x;
+    }
+  return p;
+  }
+
+bool TextModel::isValid(TextModel::Cursor c) const {
+  if(c.line>=line.size())
+    return false;
+  return c.offset<=line[c.line].size;
+  }
+
+void TextModel::drawCursor(Painter& p, int x, int y,TextModel::Cursor c) const {
+  if(!isValid(c))
+    return;
+
+  auto pos = mapToCoords(c)+Point(x,y);
+
+  auto b = p.brush();
+  p.setBrush(Color(0,0,1,1));
+  p.drawRect(pos.x,pos.y,3,int(fnt.pixelSize()));
+  p.setBrush(b);
+  }
+
+void TextModel::drawCursor(Painter &p, int x, int y, TextModel::Cursor s, TextModel::Cursor e) const {
+  if(!isValid(s) || !isValid(e))
+    return;
+
+  auto b = p.brush();
+  p.setBrush(Color(0,0,1,1));
+  if(s.line>e.line)
+    std::swap(s,e);
+
+  if(s.line!=e.line) {
+    auto t = std::min(int(s.line),int(e.line))+1;
+    auto b = std::max(int(s.line),int(e.line))-1;
+
+    if(t<=b)
+      p.drawRect(x,y+int(t*fnt.pixelSize()),w(),int(b*fnt.pixelSize()));
+    auto posS = mapToCoords(s);
+    p.drawRect(x+posS.x,y+posS.y,w()-posS.x,int(fnt.pixelSize()));
+    auto posE = mapToCoords(e);
+    p.drawRect(x,y+posE.y,posE.x,int(fnt.pixelSize()));
+    } else {
+    auto posS = mapToCoords(s);
+    auto posE = mapToCoords(e);
+    int s = std::min(posS.x,posE.x);
+    int e = std::max(posS.x,posE.x);
+    p.drawRect(x+s,y+posS.y,x+e-s,int(fnt.pixelSize()));
+    }
+
+  p.setBrush(b);
   }
