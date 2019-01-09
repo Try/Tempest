@@ -30,7 +30,12 @@ class SystemApi {
     static Rect     windowClientRect(SystemApi::Window *w);
 
   private:
-    static int      exec();
+    struct AppCallBack {
+      virtual ~AppCallBack()=default;
+      virtual uint32_t onTimer()=0;
+      };
+
+    static int      exec(AppCallBack& cb);
 
   friend class Application;
   };

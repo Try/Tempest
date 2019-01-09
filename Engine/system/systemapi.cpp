@@ -1,11 +1,11 @@
 #include "systemapi.h"
 
-#include <thread>
-#include <windows.h>
-#include <unordered_set>
 #include "exceptions/exception.h"
-
 #include <Tempest/Event>
+#include <thread>
+#include <unordered_set>
+
+#include <windows.h>
 
 using namespace Tempest;
 
@@ -13,12 +13,20 @@ static LRESULT CALLBACK WindowProc(HWND hWnd,UINT msg,const WPARAM wParam,const 
 static const wchar_t* wndClassName=L"Tempest.Window";
 static std::unordered_set<SystemApi::Window*> windows;
 
+static int getIntParam(DWORD_PTR v){
+  if(v>std::numeric_limits<int16_t>::max())
+    return int(v)-std::numeric_limits<uint16_t>::max();
+  return int(v);
+  }
+
 static int getX_LPARAM(LPARAM lp) {
-  return (DWORD_PTR(lp)) & 0xffff;
+  DWORD_PTR x = (DWORD_PTR(lp)) & 0xffff;
+  return getIntParam(x);
   }
 
 static int getY_LPARAM(LPARAM lp) {
-  return ((DWORD_PTR(lp)) >> 16) & 0xffff;
+  DWORD_PTR y = ((DWORD_PTR(lp)) >> 16) & 0xffff;
+  return getIntParam(y);
   }
 
 static WORD get_Button_WPARAM(WPARAM lp) {
@@ -112,11 +120,11 @@ void SystemApi::destroyWindow(SystemApi::Window *w) {
   DestroyWindow(HWND(w));
   }
 
-int SystemApi::exec() {
+int SystemApi::exec(AppCallBack& cb) {
   bool done=false;
   // main message loop
   while (!done) {
-    MSG  msg={};
+    MSG msg={};
     if(PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
       if( msg.message==WM_QUIT ) { // check for a quit message
         done = true;  // if found, quit app
@@ -126,6 +134,8 @@ int SystemApi::exec() {
         }
       std::this_thread::yield();
       } else {
+      if(cb.onTimer()==0)
+        Sleep(1);
       for(auto& i:windows){
         HWND h = HWND(i);
         SystemApi::WindowCallback* cb=reinterpret_cast<SystemApi::WindowCallback*>(GetWindowLongPtr(h,GWLP_USERDATA));
