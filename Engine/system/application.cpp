@@ -1,11 +1,50 @@
 #include "application.h"
 
 #include <Tempest/SystemApi>
+#include <Tempest/Timer>
+
 #include <thread>
 
 using namespace Tempest;
 
-Application::Application() { 
+struct Application::Impl : SystemApi::AppCallBack {
+  static std::vector<Timer*> timer;
+  static size_t              timerI;
+
+  static void addTimer(Timer& t){
+    timer.push_back(&t);
+    }
+
+  static void delTimer(Timer& t){
+    for(size_t i=0;i<timer.size();++i)
+      if(timer[i]==&t){
+        timer.erase(timer.begin()+int(i));
+        if(timerI>=i)
+          timerI--;
+        return;
+        }
+    }
+
+  uint32_t onTimer() override {
+    auto now = Application::tickCount();
+    size_t count=0;
+    for(timerI=0;timerI<timer.size();++timerI){
+      Timer& t = *timer[timerI];
+      if(t.process(now))
+        count++;
+      }
+    return count;
+    }
+  };
+
+std::vector<Timer*> Application::Impl::timer;
+size_t              Application::Impl::timerI=size_t(-1);
+
+Application::Application()
+  :impl(new Impl()){
+  }
+
+Application::~Application(){
   }
 
 void Application::sleep(unsigned int msec) {
@@ -19,5 +58,13 @@ uint64_t Application::tickCount() {
   }
 
 int Application::exec(){
-  return SystemApi::exec();
+  return SystemApi::exec(*impl);
+  }
+
+void Application::implAddTimer(Timer &t) {
+  Impl::addTimer(t);
+  }
+
+void Application::implDelTimer(Timer &t) {
+  Impl::delTimer(t);
   }
