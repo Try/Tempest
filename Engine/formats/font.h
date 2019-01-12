@@ -37,6 +37,8 @@ class FontElement final {
     const LetterGeometry& letterGeometry(char16_t ch,float size) const;
     const Letter&         letter(char16_t ch,float size,TextureAtlas& tex) const;
 
+    Size                  textSize(const char* text, float fontSize) const;
+
   private:
     template<class CharT>
     FontElement(const CharT* file,std::true_type);
@@ -66,6 +68,8 @@ class Font final {
 
     const Letter&         letter(char16_t ch,Painter& tex) const;
     const Letter&         letter(char32_t ch,Painter& tex) const;
+
+    Size                  textSize(const char* text) const;
 
   private:
     template<class CharT>

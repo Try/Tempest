@@ -11,6 +11,13 @@ Window::Window()
   update();
   }
 
+Window::Window(Window::ShowMode sm)
+  :impl(this) {
+  id = Tempest::SystemApi::createWindow(&impl,SystemApi::ShowMode(sm));
+  setGeometry(SystemApi::windowClientRect(id));
+  update();
+  }
+
 Window::~Window() {
   Tempest::SystemApi::destroyWindow(id);
   }

@@ -107,6 +107,7 @@ class Widget {
     virtual void mouseUpEvent     (Tempest::MouseEvent& event);
     virtual void mouseMoveEvent   (Tempest::MouseEvent& event);
     virtual void mouseDragEvent   (Tempest::MouseEvent& event);
+    virtual void mouseWheelEvent  (Tempest::MouseEvent& event);
 
     virtual void mouseEnterEvent  (Tempest::MouseEvent& event);
     virtual void mouseLeaveEvent  (Tempest::MouseEvent& event);
@@ -158,6 +159,7 @@ class Widget {
     void                    dispatchMouseUp   (Tempest::MouseEvent &e);
     void                    dispatchMouseMove (Tempest::MouseEvent &e);
     void                    dispatchMouseDrag (Tempest::MouseEvent &e);
+    void                    dispatchMouseWhell(Tempest::MouseEvent &e);
 
     void                    setOwner(Widget* w);
 

@@ -71,7 +71,9 @@ void CommandBuffer::exec(const CommandBuffer &buf) {
   }
 
 void CommandBuffer::implDraw(const VideoBuffer& vbo, size_t offset, size_t size) {
-  if(curVbo!=&vbo && vbo.impl) {
+  if(!vbo.impl)
+    return;
+  if(curVbo!=&vbo) {
     impl.handler->setVbo(*vbo.impl.handler);
     curVbo=&vbo;
     }

@@ -2,6 +2,7 @@
 
 #include <Tempest/Except>
 #include <Tempest/Painter>
+#include "../utility/utf8_helper.h"
 
 #include "thirdparty/stb_truetype.h"
 
@@ -208,6 +209,21 @@ const FontElement::Letter& FontElement::letter(char16_t ch, float size, TextureA
   return ptr->letter(ch,size,&tex);
   }
 
+Size FontElement::textSize(const char *text,float fontSize) const {
+  Utf8Iterator i(text,std::strlen(text));
+
+  Size ret;
+  while(i.hasData()){
+    char32_t c = i.next();
+    auto&    g = letterGeometry(c,fontSize);
+
+    ret.h = std::max(ret.h,g.size.h);
+    ret.w += g.advance.x;
+    }
+
+  return ret;
+  }
+
 template<class CharT>
 Font::Font(const CharT *file,std::true_type)
   : fnt{{file,nullptr},{nullptr,nullptr}}{
@@ -258,4 +274,8 @@ const Font::Letter &Font::letter(char16_t ch, Painter &p) const {
 
 const Font::Letter &Font::letter(char32_t ch, Painter &p) const {
   return letter(ch,p.ta);
+  }
+
+Size Font::textSize(const char *text) const {
+  return fnt[0][0].textSize(text,size);
   }

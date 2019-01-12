@@ -4,6 +4,8 @@
 
 namespace Tempest {
 
+class IDevice;
+
 class Pixmap final {
   public:
     enum class Format : uint8_t {
@@ -19,6 +21,7 @@ class Pixmap final {
     Pixmap(const std::string& path);
     Pixmap(const char16_t* path);
     Pixmap(const std::u16string& path);
+    Pixmap(IDevice& input);
 
     Pixmap(const Pixmap& src);
     Pixmap(Pixmap&& p);

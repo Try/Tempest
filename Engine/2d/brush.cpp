@@ -41,3 +41,15 @@ Brush::Brush(const Sprite &texture, PaintDevice::Blend b)
   info.dx   = r.x*info.invW;
   info.dy   = r.y*info.invH;
   }
+
+Brush::Brush(const Sprite &texture, const Color &color, PaintDevice::Blend b)
+  :spr(texture),color(color),blend(b) {
+  auto r = spr.pageRect();
+
+  info.w    = texture.w();
+  info.h    = texture.h();
+  info.invW = 1.f/r.w;
+  info.invH = 1.f/r.h;
+  info.dx   = r.x*info.invW;
+  info.dy   = r.y*info.invH;
+  }

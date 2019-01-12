@@ -91,6 +91,9 @@ class ResourcePtr {
     bool operator !() const { return !impl; }
     operator bool() const { return bool(impl); }
 
+    bool operator==(const ResourcePtr& other) const { return impl.handler==other.impl.handler; }
+    bool operator!=(const ResourcePtr& other) const { return impl.handler!=other.impl.handler; }
+
   private:
     decltype(T::impl) impl;
 

@@ -229,6 +229,7 @@ void Painter::implPen(const Pen &p) {
 void Painter::implDrawRect(int x1, int y1, int x2, int y2, float u1, float v1, float u2, float v2) {
   if(state!=StBrush) {
     dev.setTopology(Triangles);
+    state=StBrush;
     implBrush(bru);
     }
 
@@ -288,6 +289,7 @@ void Painter::drawRect(int x, int y, unsigned w, unsigned h) {
 void Painter::drawLine(int x1, int y1, int x2, int y2) {
   if(state!=StPen){
     dev.setTopology(Lines);
+    state=StBrush;
     implPen(pn);
     }
   /*
@@ -312,7 +314,7 @@ void Painter::drawText(int x, int y, const char *txt) {
     auto l=fnt.letter(i.next(),ta);
 
     if(!l.view.isEmpty()) {
-      setBrush(l.view);
+      setBrush(Brush(l.view,pb.color,pb.blend));
       drawRect(x+l.dpos.x,y+l.dpos.y,l.view.w(),l.view.h());
       }
 
@@ -330,7 +332,7 @@ void Painter::drawText(int x, int y, const char16_t *txt) {
     auto& l=fnt.letter(*txt,ta);
 
     if(!l.view.isEmpty()) {
-      setBrush(l.view);
+      setBrush(Brush(l.view,pb.color,pb.blend));
       drawRect(x+l.dpos.x,y+l.dpos.y,l.view.w(),l.view.h());
       }
 

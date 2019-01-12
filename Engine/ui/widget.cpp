@@ -89,6 +89,11 @@ void Widget::removeAllWidgets() {
   std::vector<Widget*> rm=std::move(wx);
   for(auto& w:rm)
     w->ow=nullptr;
+
+  state.moveFocus =nullptr;
+  state.mouseFocus=nullptr;
+  state.clickFocus=nullptr;
+
   for(auto& w:rm)
     delete w;
   }
@@ -430,6 +435,10 @@ void Widget::mouseDragEvent(MouseEvent &e) {
   e.ignore();
   }
 
+void Widget::mouseWheelEvent(MouseEvent &e) {
+  e.ignore();
+  }
+
 void Widget::mouseEnterEvent(MouseEvent &e) {
   e.ignore();
   }
@@ -440,10 +449,11 @@ void Widget::mouseLeaveEvent(MouseEvent &e) {
 
 void Widget::dispatchMoveEvent(MouseEvent &event) {
   switch(event.type()){
-    case Event::MouseDown: dispatchMouseDown(event); break;
-    case Event::MouseUp:   dispatchMouseUp  (event); break;
-    case Event::MouseMove: dispatchMouseMove(event); break;
-    case Event::MouseDrag: dispatchMouseDrag(event); break;
+    case Event::MouseDown:  dispatchMouseDown (event); break;
+    case Event::MouseUp:    dispatchMouseUp   (event); break;
+    case Event::MouseMove:  dispatchMouseMove (event); break;
+    case Event::MouseDrag:  dispatchMouseDrag (event); break;
+    case Event::MouseWheel: dispatchMouseWhell(event); break;
     default:break;
     }
   }
@@ -528,4 +538,28 @@ void Widget::dispatchMouseDrag(MouseEvent &event) {
     } else {
     mouseDragEvent(event);
     }
+  }
+
+void Widget::dispatchMouseWhell(MouseEvent &event) {
+  Point pos=event.pos();
+  Iterator it(this);
+  for(;it.hasNext();it.next()) {
+    Widget* i=it.get();
+    if(i->rect().contains(pos)){
+      MouseEvent ex(event.x - i->x(),
+                    event.y - i->y(),
+                    event.button,
+                    event.delta,
+                    event.mouseID,
+                    event.type());
+      if(ex.isAccepted() && it.owner!=nullptr) {
+        i->dispatchMouseWhell(ex);
+        event.accept();
+        }
+      return;
+      }
+    }
+
+  if(it.owner!=nullptr)
+    it.owner->mouseWheelEvent(event);
   }

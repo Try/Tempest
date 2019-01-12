@@ -155,7 +155,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
     VkFormat::VK_FORMAT_R32G32B32_SFLOAT,
     VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT,
 
-    VK_FORMAT_R8G8B8A8_UINT,
+    VK_FORMAT_A8B8G8R8_UNORM_PACK32,
 
     VK_FORMAT_R16G16_SNORM,
     VK_FORMAT_R16G16B16A16_SNORM,

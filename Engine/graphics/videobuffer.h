@@ -12,9 +12,9 @@ class Uniforms;
 class VideoBuffer {
   public:
     VideoBuffer()=default;
-    VideoBuffer(VideoBuffer&&)=default;
+    VideoBuffer(VideoBuffer&&);
     ~VideoBuffer();
-    VideoBuffer& operator=(VideoBuffer&&)=default;
+    VideoBuffer& operator=(VideoBuffer&&);
 
   private:
     VideoBuffer(Tempest::Device& dev,AbstractGraphicsApi::Buffer* impl);

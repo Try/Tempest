@@ -29,6 +29,7 @@ void Timer::setRunning(bool b) {
     } else {
     Application::implDelTimer(*this);
     }
+  m.running = b;
   }
 
 bool Timer::process(uint64_t now) {

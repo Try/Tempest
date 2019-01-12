@@ -22,12 +22,30 @@ class SystemApi {
       virtual void onMouse(MouseEvent& e)=0;
       };
 
+    enum ShowMode : uint8_t {
+      Minimized,
+      Normal,
+      Maximized,
+      FullScreen
+      };
+
     static Window*  createWindow(WindowCallback* cb,uint32_t width,uint32_t height);
+    static Window*  createWindow(WindowCallback* cb,ShowMode sm);
     static void     destroyWindow(Window* w);
 
     static uint32_t width (Window* w);
     static uint32_t height(Window* w);
     static Rect     windowClientRect(SystemApi::Window *w);
+
+    struct TranslateKeyPair final {
+      uint16_t src;
+      uint16_t result;
+      };
+
+    static uint16_t translateKey(uint64_t scancode);
+
+  protected:
+    void setupKeyTranslate(const TranslateKeyPair k[]);
 
   private:
     struct AppCallBack {
@@ -36,6 +54,8 @@ class SystemApi {
       };
 
     static int      exec(AppCallBack& cb);
+    static bool     initWindowClass();
+    static bool     implInitWindowClass();
 
   friend class Application;
   };

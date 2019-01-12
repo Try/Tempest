@@ -14,6 +14,7 @@ class Brush {
     Brush(const Tempest::Color&     color,  PaintDevice::Blend b=PaintDevice::Alpha);
     Brush(const Tempest::Texture2d& texture,const Tempest::Color& color,PaintDevice::Blend b=PaintDevice::Alpha);
     Brush(const Tempest::Sprite&    texture,PaintDevice::Blend b=PaintDevice::Alpha);
+    Brush(const Tempest::Sprite&    texture,const Tempest::Color& color,PaintDevice::Blend b=PaintDevice::Alpha);
 
     int w() const { return info.w; }
     int h() const { return info.h; }

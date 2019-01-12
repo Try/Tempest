@@ -232,4 +232,20 @@ class MouseEvent : public Event {
 
     Point pos() const { return Point(x,y); }
   };
+
+class KeyEvent: public Event {
+  public:
+    KeyEvent(KeyType  k = K_NoKey, Type t = KeyDown):key(k){
+      setType( t );
+      }
+    KeyEvent(uint32_t k, Type t = KeyDown ):key(K_NoKey), code(k){
+      setType( t );
+      }
+    KeyEvent(KeyType k, uint32_t k1, Type t = KeyDown):key(k), code(k1){
+      setType( t );
+      }
+
+    const KeyType  key =K_NoKey;
+    const uint32_t code=0;
+  };
 }

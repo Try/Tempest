@@ -78,7 +78,7 @@ struct Pixmap::Impl {
     throw std::runtime_error("unimplemented");
     }
 
-  Impl(RFile& f){
+  Impl(IDevice& f){
     int iw=0,ih=0,channels=0;
     data = load(f,iw,ih,channels,STBI_default);
 
@@ -191,6 +191,10 @@ Pixmap::Pixmap(const char16_t *path) {
 Pixmap::Pixmap(const std::u16string &path) {
   RFile f(path);
   impl.reset(new Impl(f));
+  }
+
+Pixmap::Pixmap(IDevice &input) {
+  impl.reset(new Impl(input));
   }
 
 Pixmap::Pixmap(const Pixmap &src)

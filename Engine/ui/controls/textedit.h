@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Tempest/TextModel>
+#include <Tempest/UndoStack>
 #include <Tempest/Timer>
 #include <Tempest/Widget>
 
@@ -21,6 +22,8 @@ class TextEdit : public Tempest::Widget {
 
   private:
     TextModel         textM;
+    UndoStack         stk;
+
     TextModel::Cursor selS,selE;
 
     Timer             anim;
