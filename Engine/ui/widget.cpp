@@ -511,11 +511,13 @@ void Widget::dispatchMouseMove(MouseEvent &event) {
                     event.delta,
                     event.mouseID,
                     event.type());
-      if(ex.isAccepted() && it.owner!=nullptr) {
+      if(it.owner!=nullptr) {
         i->dispatchMoveEvent(ex);
-        event.accept();
+        if(ex.isAccepted()) {
+          event.accept();
+          return;
+          }
         }
-      return;
       }
     }
 
@@ -552,11 +554,13 @@ void Widget::dispatchMouseWhell(MouseEvent &event) {
                     event.delta,
                     event.mouseID,
                     event.type());
-      if(ex.isAccepted() && it.owner!=nullptr) {
+      if(it.owner!=nullptr) {
         i->dispatchMouseWhell(ex);
-        event.accept();
+        if(ex.isAccepted()) {
+          event.accept();
+          return;
+          }
         }
-      return;
       }
     }
 
