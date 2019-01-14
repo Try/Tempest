@@ -57,20 +57,22 @@ class Texture2d {
     ~Texture2d();
     Texture2d& operator=(Texture2d&&)=default;
 
-    int  w() const { return texW; }
-    int  h() const { return texH; }
-    bool isEmpty() const { return texW<=0 || texH<=0; }
+    int           w() const { return texW; }
+    int           h() const { return texH; }
+    bool          isEmpty() const { return texW<=0 || texH<=0; }
+    TextureFormat format() const { return frm; }
 
     const Sampler& sampler() const { return smp; }
     void setSampler(const Sampler& s) { smp=s; }
 
   private:
-    Texture2d(Tempest::Device& dev,AbstractGraphicsApi::Texture* impl,uint32_t w,uint32_t h);
+    Texture2d(Tempest::Device& dev,AbstractGraphicsApi::Texture* impl,uint32_t w,uint32_t h,TextureFormat frm);
 
     Detail::DSharedPtr<AbstractGraphicsApi::Texture*> impl;
     int                                               texW=0;
     int                                               texH=0;
     Sampler                                           smp;
+    TextureFormat                                     frm=RGBA8;
 
   friend class Tempest::Device;
   friend class Tempest::Uniforms;

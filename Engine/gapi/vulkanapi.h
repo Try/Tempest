@@ -20,11 +20,13 @@ class VulkanApi : public AbstractGraphicsApi {
 
     Pass*      createPass(AbstractGraphicsApi::Device *d,
                           AbstractGraphicsApi::Swapchain *s,
-                          FboMode in, const Color *clear,
-                          FboMode out, const float zclear) override;
+                          TextureFormat zformat,
+                          FboMode fcolor, const Color *clear,
+                          FboMode fzbuf, const float *zclear) override;
     void       destroy   (Pass* pass) override;
 
     Fbo*       createFbo(Device *d, Swapchain *s, Pass* pass, uint32_t imageId) override;
+    Fbo*       createFbo(Device *d, Swapchain *s, Pass* pass, uint32_t imageId, Texture* zbuf) override;
     void       destroy(Fbo* pass) override;
 
     Pipeline*  createPipeline(Device* d, Pass* pass,
@@ -58,6 +60,7 @@ class VulkanApi : public AbstractGraphicsApi {
     std::shared_ptr<AbstractGraphicsApi::UniformsLay> createUboLayout(Device *d,const UniformsLayout&) override;
 
     Texture*   createTexture(Device* d,const Pixmap& p,bool mips) override;
+    Texture*   createTexture(Device* d,const uint32_t w,const uint32_t h,bool mips, TextureFormat frm) override;
     //void       destroy(Texture* t) override;
 
     CommandBuffer* createCommandBuffer(Device* d, CmdPool* pool, bool secondary) override;

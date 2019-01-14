@@ -37,6 +37,14 @@ namespace Tempest {
     Triangles=2
     };
 
+  enum TextureFormat : uint8_t {
+    Undefined,
+    Alpha,
+    RGB8,
+    RGBA8,
+    Depth16
+    };
+
   class AbstractGraphicsApi {
     protected:
       AbstractGraphicsApi() =default;
@@ -58,6 +66,8 @@ namespace Tempest {
       struct Swapchain    {
         virtual ~Swapchain(){}
         virtual uint32_t imageCount() const=0;
+        virtual uint32_t w() const=0;
+        virtual uint32_t h() const=0;
         };
       struct Texture:Shared  {};
       struct Image           {};
@@ -107,11 +117,13 @@ namespace Tempest {
       virtual void       destroy(Swapchain* d)=0;
 
       virtual Pass*      createPass(Device *d,Swapchain *s,
+                                    TextureFormat zformat,
                                     FboMode in,const Color* clear,
-                                    FboMode out,const float zclear)=0;
+                                    FboMode out,const float* zclear)=0;
       virtual void       destroy(Pass* pass)=0;
 
       virtual Fbo*       createFbo(Device *d,Swapchain *s,Pass* pass,uint32_t imageId)=0;
+      virtual Fbo*       createFbo(Device *d,Swapchain *s,Pass* pass,uint32_t imageId,Texture* zbuf)=0;
       virtual void       destroy(Fbo* pass)=0;
 
       virtual std::shared_ptr<AbstractGraphicsApi::UniformsLay>
@@ -150,6 +162,7 @@ namespace Tempest {
       virtual void       destroy(Desc* cmd)=0;
 
       virtual Texture*   createTexture(Device* d,const Pixmap& p,bool mips)=0;
+      virtual Texture*   createTexture(Device* d,const uint32_t w,const uint32_t h,bool mips, TextureFormat frm)=0;
       //virtual void       destroy(Texture* t)=0;
 
       virtual uint32_t   nextImage(Device *d,Swapchain* sw,Semaphore* onReady)=0;

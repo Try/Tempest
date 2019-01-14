@@ -121,6 +121,9 @@ VTexture VAllocator::alloc(const Pixmap& pm,bool mip) {
   imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
 
   switch(pm.format()) {
+    case Pixmap::Format::A:
+      imageInfo.format = VK_FORMAT_R8_UNORM;
+      break;
     case Pixmap::Format::RGB:
       imageInfo.format = VK_FORMAT_R8G8B8_UNORM;
       break;
@@ -143,7 +146,7 @@ VTexture VAllocator::alloc(const Pixmap& pm,bool mip) {
   return ret;
   }
 
-VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, bool mip) {
+VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, bool mip, TextureFormat frm) {
   VTexture ret;
   ret.alloc = this;
 
@@ -161,8 +164,15 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, bool mip) {
   imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
   imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
 
-  //TODO
-  imageInfo.format = VK_FORMAT_D16_UNORM;
+  static const VkFormat vfrm[]={
+    VK_FORMAT_UNDEFINED,
+    VK_FORMAT_R8_UNORM,
+    VK_FORMAT_R8G8B8_UNORM,
+    VK_FORMAT_R8G8B8A8_UNORM,
+    VK_FORMAT_D16_UNORM
+    };
+
+  imageInfo.format = vfrm[frm];
 
   vkAssert(vkCreateImage(device, &imageInfo, nullptr, &ret.impl));
 
