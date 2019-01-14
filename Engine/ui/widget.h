@@ -141,6 +141,7 @@ class Widget {
       bool                  disabled =false;
       bool                  focus    =false;
       bool                  moveFocus=false;
+      bool                  mousePressed=false;
       };
     State                   wstate;
 

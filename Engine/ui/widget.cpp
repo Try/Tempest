@@ -479,8 +479,11 @@ void Widget::dispatchMouseDown(MouseEvent &event) {
       }
     }
 
-  if(it.owner!=nullptr)
+  if(it.owner!=nullptr) {
     it.owner->mouseDownEvent(event);
+    if(event.isAccepted() && it.owner)
+      it.owner->wstate.mousePressed=true;
+    }
   }
 
 void Widget::dispatchMouseUp(MouseEvent &event) {
@@ -495,7 +498,10 @@ void Widget::dispatchMouseUp(MouseEvent &event) {
     state.mouseFocus=nullptr;
     ref->dispatchMouseUp(ex);
     } else {
-    mouseUpEvent(event);
+    if(wstate.mousePressed) {
+      wstate.mousePressed=false;
+      mouseUpEvent(event);
+      }
     }
   }
 
@@ -538,7 +544,9 @@ void Widget::dispatchMouseDrag(MouseEvent &event) {
                   event.type());
     state.mouseFocus->dispatchMouseDrag(ex);
     } else {
-    mouseDragEvent(event);
+    if(wstate.mousePressed) {
+      mouseDragEvent(event);
+      }
     }
   }
 
