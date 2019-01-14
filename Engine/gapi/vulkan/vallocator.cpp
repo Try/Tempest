@@ -143,6 +143,41 @@ VTexture VAllocator::alloc(const Pixmap& pm,bool mip) {
   return ret;
   }
 
+VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, bool mip) {
+  VTexture ret;
+  ret.alloc = this;
+
+  VkImageCreateInfo imageInfo = {};
+  imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+  imageInfo.imageType     = VK_IMAGE_TYPE_2D;
+  imageInfo.extent.width  = w;
+  imageInfo.extent.height = h;
+  imageInfo.extent.depth  = 1;
+  imageInfo.mipLevels     = 1;
+  imageInfo.arrayLayers   = 1;
+  imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
+  imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  imageInfo.usage         = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
+  imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
+
+  //TODO
+  imageInfo.format = VK_FORMAT_D16_UNORM;
+
+  vkAssert(vkCreateImage(device, &imageInfo, nullptr, &ret.impl));
+
+  VkMemoryRequirements memRq;
+  vkGetImageMemoryRequirements(device, ret.impl, &memRq);
+
+  uint32_t typeId=provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+  ret.page=allocator.alloc(size_t(memRq.size),size_t(memRq.alignment),typeId);
+  if(!ret.page.page || !commit(ret.page.page->memory,ret.impl,ret.page.offset))
+    throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
+  ret.createView(device,imageInfo.format);
+  return ret;
+  }
+
 void VAllocator::free(VBuffer &buf) {
   if(buf.impl!=VK_NULL_HANDLE) {
     vkDeviceWaitIdle(device);
