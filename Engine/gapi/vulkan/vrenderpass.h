@@ -13,9 +13,10 @@ class VSwapchain;
 class VRenderPass : public AbstractGraphicsApi::Pass {
   public:
     VRenderPass()=default;
-    VRenderPass(VDevice &device,VkFormat format,
-                FboMode in,const Color* clear,
-                FboMode out,const float zclear);
+    VRenderPass(VDevice &device,
+                VkFormat format, VkFormat zformat,
+                FboMode color, const Color* clear,
+                FboMode zbuf, const float *zclear);
     VRenderPass(VRenderPass&& other);
     ~VRenderPass();
 
@@ -23,9 +24,12 @@ class VRenderPass : public AbstractGraphicsApi::Pass {
 
     VkRenderPass   renderPass=VK_NULL_HANDLE;
     Tempest::Color color;
+    float          zclear=1.0f;
+
+    uint8_t        attachCount=1;
 
   private:
-    VkDevice     device=nullptr;
+    VkDevice       device=nullptr;
   };
 
 }}

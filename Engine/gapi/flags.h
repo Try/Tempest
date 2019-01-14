@@ -38,6 +38,7 @@ enum class FboMode : uint8_t {
   Discard    =0,
   PreserveIn =1<<0,
   PreserveOut=1<<1,
+  Clear      =1<<2,
   Preserve   =(PreserveOut|PreserveIn),
   };
 

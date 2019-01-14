@@ -12,6 +12,7 @@ class FrameBuffer;
 class RenderPipeline;
 class VideoBuffer;
 class Uniforms;
+class Texture2d;
 
 template<class T>
 class VertexBuffer;
@@ -27,6 +28,7 @@ class CommandBuffer {
     void begin();
     void end();
 
+    void beginRenderPass(const FrameBuffer& fbo, const RenderPass& p);
     void beginRenderPass(const FrameBuffer& fbo, const RenderPass& p, int width, int height);
     void beginRenderPass(const FrameBuffer& fbo, const RenderPass& p, uint32_t width, uint32_t height);
     void endRenderPass();

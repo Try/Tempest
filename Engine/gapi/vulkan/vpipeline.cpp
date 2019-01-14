@@ -231,11 +231,11 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   rasterizer.sType                   = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
   rasterizer.pNext                   = nullptr;
   rasterizer.flags                   = 0;
-  rasterizer.depthClampEnable        = VK_FALSE;
   rasterizer.rasterizerDiscardEnable = VK_FALSE;
   rasterizer.polygonMode             = VkPolygonMode::VK_POLYGON_MODE_FILL;
   rasterizer.cullMode                = VkCullModeFlagBits::VK_CULL_MODE_NONE;
   rasterizer.frontFace               = VkFrontFace::VK_FRONT_FACE_COUNTER_CLOCKWISE;
+  rasterizer.depthClampEnable        = VK_FALSE;
   rasterizer.depthBiasEnable         = VK_FALSE;
   rasterizer.depthBiasConstantFactor = 0.0f;
   rasterizer.depthBiasClamp          = 0.0f;
@@ -280,6 +280,29 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   colorBlending.blendConstants[2] = 0.0f;
   colorBlending.blendConstants[3] = 0.0f;
 
+  static const VkCompareOp zMode[]={
+    VK_COMPARE_OP_ALWAYS,
+    VK_COMPARE_OP_NEVER,
+
+    VK_COMPARE_OP_GREATER,
+    VK_COMPARE_OP_LESS,
+
+    VK_COMPARE_OP_GREATER_OR_EQUAL,
+    VK_COMPARE_OP_LESS_OR_EQUAL,
+
+    VK_COMPARE_OP_NOT_EQUAL,
+    VK_COMPARE_OP_EQUAL,
+    VK_COMPARE_OP_ALWAYS
+    };
+
+  VkPipelineDepthStencilStateCreateInfo depthStencil = {};
+  depthStencil.sType                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+  depthStencil.depthTestEnable       = st.zTestMode()!=RenderState::ZTestMode::Always ? VK_TRUE : VK_FALSE;
+  depthStencil.depthWriteEnable      = VK_TRUE;
+  depthStencil.depthCompareOp        = zMode[uint32_t(st.zTestMode())];
+  depthStencil.depthBoundsTestEnable = VK_FALSE;
+  depthStencil.stencilTestEnable     = VK_FALSE;
+
   VkGraphicsPipelineCreateInfo pipelineInfo = {};
   pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
   pipelineInfo.stageCount          = 2;
@@ -289,6 +312,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   pipelineInfo.pViewportState      = &viewportState;
   pipelineInfo.pRasterizationState = &rasterizer;
   pipelineInfo.pMultisampleState   = &multisampling;
+  pipelineInfo.pDepthStencilState  = &depthStencil;
   pipelineInfo.pColorBlendState    = &colorBlending;
   pipelineInfo.layout              = layout;
   pipelineInfo.renderPass          = pass.renderPass;

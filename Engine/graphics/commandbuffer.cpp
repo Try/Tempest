@@ -29,6 +29,10 @@ void CommandBuffer::end() {
   impl.handler->end();
   }
 
+void CommandBuffer::beginRenderPass(const FrameBuffer &fbo, const RenderPass &p) {
+  beginRenderPass(fbo,p,fbo.w(),fbo.h());
+  }
+
 void CommandBuffer::beginRenderPass(const FrameBuffer &fbo, const RenderPass &p, int width, int height) {
   beginRenderPass(fbo,p,uint32_t(width),uint32_t(height));
   }

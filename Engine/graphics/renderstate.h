@@ -24,6 +24,21 @@ class RenderState final {
       Count
       };
 
+    enum class ZTestMode : uint8_t {
+      Always,
+      Never,
+
+      Greater,
+      Less,
+
+      GEqual,
+      LEqual,
+
+      NOEqual,
+      Equal,
+      Count
+      };
+
     void setBlendSource(BlendMode s) { blendS=s; }
     void setBlendDest  (BlendMode d) { blendD=d; }
 
@@ -32,9 +47,13 @@ class RenderState final {
 
     bool hasBlend() const { return blendS!=BlendMode::one || blendD!=BlendMode::zero; }
 
+    void setZTestMode(ZTestMode z){ zmode=z; }
+    ZTestMode zTestMode() const { return zmode; }
+
   private:
     BlendMode blendS=BlendMode::one;
     BlendMode blendD=BlendMode::zero;
+    ZTestMode zmode =ZTestMode::Always;
   };
 
 }

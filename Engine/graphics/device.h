@@ -68,14 +68,19 @@ class Device {
       return loadVbo(arr.data(),arr.size(),flg);
       }
 
+    Texture2d      createTexture(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips);
     Texture2d      loadTexture(const Pixmap& pm,bool mips=true);
     UniformBuffer  loadUbo(const void* data, size_t size);
 
     Uniforms       uniforms(const UniformsLayout &owner);
 
     FrameBuffer    frameBuffer(Frame &out, RenderPass& pass);
-    RenderPass     pass       (FboMode color,FboMode zbuf);
-    RenderPass     pass       (const Tempest::Color& color,FboMode zbuf);
+    FrameBuffer    frameBuffer(Frame &out, Texture2d& zbuf, RenderPass& pass);
+
+    RenderPass     pass       (FboMode color, FboMode zbuf, TextureFormat zbufFormat);
+    RenderPass     pass       (const Tempest::Color& color);
+    RenderPass     pass       (const Tempest::Color& color,FboMode zbuf, TextureFormat zbufFormat);
+    RenderPass     pass       (const Tempest::Color& color,const float zbuf, TextureFormat zbufFormat);
 
     template<class Vertex>
     RenderPipeline pipeline(RenderPass& pass, uint32_t width, uint32_t height,

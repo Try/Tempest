@@ -20,10 +20,10 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     void operator=(VSwapchain&& other);
 
     VkFormat                 format() const { return swapChainImageFormat;   }
-    uint32_t                 width()  const { return swapChainExtent.width;  }
-    uint32_t                 height() const { return swapChainExtent.height; }
+    uint32_t                 w()      const { return swapChainExtent.width;  }
+    uint32_t                 h()      const { return swapChainExtent.height; }
 
-    uint32_t                   imageCount() const { return uint32_t(swapChainImageViews.size()); }
+    uint32_t                 imageCount() const { return uint32_t(swapChainImageViews.size()); }
 
     VkSwapchainKHR           swapChain=VK_NULL_HANDLE;
     std::vector<VkImageView> swapChainImageViews;

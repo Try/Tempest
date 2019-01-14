@@ -99,11 +99,21 @@ Shader Device::loadShader(const char *source, const size_t length) {
   }
 
 const Device::Caps &Device::caps() const {
+  return devCaps;
+  }
 
+Texture2d Device::createTexture(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips) {
+  Texture2d t(*this,api.createTexture(dev,w,h,mips,frm),w,h,frm);
+  return t;
   }
 
 Texture2d Device::loadTexture(const Pixmap &pm, bool mips) {
-  Texture2d t(*this,api.createTexture(dev,pm,mips),pm.w(),pm.h());
+  TextureFormat frm[]={
+    TextureFormat::Alpha,
+    TextureFormat::RGB8,
+    TextureFormat::RGBA8,
+    };
+  Texture2d t(*this,api.createTexture(dev,pm,mips),pm.w(),pm.h(),frm[uint8_t(pm.format())]);
   return t;
   }
 
@@ -114,17 +124,32 @@ UniformBuffer Device::loadUbo(const void *mem, size_t size) {
   }
 
 FrameBuffer Device::frameBuffer(Frame& out,RenderPass &pass) {
-  FrameBuffer f(*this,api.createFbo(dev,swapchain,pass.impl.handler,out.id));
+  FrameBuffer f(*this,api.createFbo(dev,swapchain,pass.impl.handler,out.id),swapchain->w(),swapchain->h());
   return f;
   }
 
-RenderPass Device::pass(FboMode color, FboMode zbuf) {
-  RenderPass f(*this,api.createPass(dev,swapchain,color,nullptr,zbuf,1.0));
+FrameBuffer Device::frameBuffer(Frame &out, Texture2d &zbuf, RenderPass &pass) {
+  FrameBuffer f(*this,api.createFbo(dev,swapchain,pass.impl.handler,out.id,zbuf.impl.handler),swapchain->w(),swapchain->h());
   return f;
   }
 
-RenderPass Device::pass(const Color &color, FboMode zbuf) {
-  RenderPass f(*this,api.createPass(dev,swapchain,FboMode::PreserveOut,&color,zbuf,1.0));
+RenderPass Device::pass(FboMode color, FboMode zbuf, TextureFormat zbufFormat) {
+  RenderPass f(*this,api.createPass(dev,swapchain,zbufFormat,color,nullptr,zbuf,nullptr));
+  return f;
+  }
+
+RenderPass Device::pass(const Color &color) {
+  RenderPass f(*this,api.createPass(dev,swapchain,TextureFormat::Undefined,FboMode::PreserveOut,&color,FboMode::Clear,nullptr));
+  return f;
+  }
+
+RenderPass Device::pass(const Color &color, FboMode zbuf, TextureFormat zbufFormat) {
+  RenderPass f(*this,api.createPass(dev,swapchain,zbufFormat,FboMode::PreserveOut,&color,zbuf,nullptr));
+  return f;
+  }
+
+RenderPass Device::pass(const Color &color, const float zbuf, TextureFormat zbufFormat) {
+  RenderPass f(*this,api.createPass(dev,swapchain,zbufFormat,FboMode::PreserveOut,&color,FboMode::PreserveOut,&zbuf));
   return f;
   }
 

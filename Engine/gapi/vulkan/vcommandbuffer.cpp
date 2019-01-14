@@ -76,12 +76,16 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
   renderPassInfo.renderArea.offset = {0, 0};
   renderPassInfo.renderArea.extent = {width,height};
 
-  VkClearValue clearColor = {{{pass->color.r(),
-                               pass->color.g(),
-                               pass->color.b(),
-                               pass->color.a() }}};
-  renderPassInfo.clearValueCount = 1;
-  renderPassInfo.pClearValues    = &clearColor;
+  VkClearValue clear[2]={};
+  clear[0].color.float32[0]=pass->color.r();
+  clear[0].color.float32[1]=pass->color.g();
+  clear[0].color.float32[2]=pass->color.b();
+  clear[0].color.float32[3]=pass->color.a();
+
+  clear[1].depthStencil.depth=pass->zclear;
+
+  renderPassInfo.clearValueCount = pass->attachCount;
+  renderPassInfo.pClearValues    = clear;
 
   vkCmdBeginRenderPass(impl, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
   }
@@ -205,6 +209,7 @@ void VCommandBuffer::changeLayout(VTexture &dest,VkImageLayout oldLayout, VkImag
   barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
   barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
   barrier.image                           = dest.impl;
+
   barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
   barrier.subresourceRange.baseMipLevel   = 0;
   barrier.subresourceRange.levelCount     = 1;
@@ -220,6 +225,14 @@ void VCommandBuffer::changeLayout(VTexture &dest,VkImageLayout oldLayout, VkImag
 
     sourceStage      = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    } else
+  if(oldLayout==VK_IMAGE_LAYOUT_UNDEFINED && newLayout==VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT|VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+    sourceStage           = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    destinationStage      = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     } else
   if(oldLayout==VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout==VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -239,5 +252,5 @@ void VCommandBuffer::changeLayout(VTexture &dest,VkImageLayout oldLayout, VkImag
       0, nullptr,
       0, nullptr,
       1, &barrier
-  );
+        );
   }

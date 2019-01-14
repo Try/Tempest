@@ -3,6 +3,7 @@
 #include "vdevice.h"
 #include "vrenderpass.h"
 #include "vswapchain.h"
+#include "vtexture.h"
 
 using namespace Tempest::Detail;
 
@@ -13,8 +14,25 @@ VFramebuffer::VFramebuffer(VDevice& device,VRenderPass& renderPass,VSwapchain& s
   framebufferInfo.renderPass      = renderPass.renderPass;
   framebufferInfo.pAttachments    = &swapchain.swapChainImageViews[image];
   framebufferInfo.attachmentCount = 1;
-  framebufferInfo.width           = swapchain.width();
-  framebufferInfo.height          = swapchain.height();
+  framebufferInfo.width           = swapchain.w();
+  framebufferInfo.height          = swapchain.h();
+  framebufferInfo.layers          = 1;
+
+  if(vkCreateFramebuffer(device.device,&framebufferInfo,nullptr,&impl)!=VK_SUCCESS)
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+  }
+
+VFramebuffer::VFramebuffer(VDevice &device, VRenderPass &renderPass, VSwapchain &swapchain, size_t image, VTexture &texture)
+  :device(device.device) {
+  VkImageView attach[2] = {swapchain.swapChainImageViews[image],texture.view};
+
+  VkFramebufferCreateInfo framebufferInfo = {};
+  framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+  framebufferInfo.renderPass      = renderPass.renderPass;
+  framebufferInfo.pAttachments    = attach;
+  framebufferInfo.attachmentCount = 2;
+  framebufferInfo.width           = swapchain.w();
+  framebufferInfo.height          = swapchain.h();
   framebufferInfo.layers          = 1;
 
   if(vkCreateFramebuffer(device.device,&framebufferInfo,nullptr,&impl)!=VK_SUCCESS)

@@ -3,8 +3,8 @@
 
 using namespace Tempest;
 
-FrameBuffer::FrameBuffer(Device &dev, AbstractGraphicsApi::Fbo *impl)
-  :dev(&dev),impl(impl) {
+FrameBuffer::FrameBuffer(Device &dev, AbstractGraphicsApi::Fbo *impl, uint32_t w, uint32_t h)
+  :dev(&dev),impl(impl),mw(w),mh(h) {
   }
 
 FrameBuffer::~FrameBuffer() {
