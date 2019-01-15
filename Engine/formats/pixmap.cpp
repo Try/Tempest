@@ -3,8 +3,15 @@
 #include <Tempest/File>
 #include <Tempest/Except>
 
+#include <vector>
+#include <cstring>
+
+#include <squish.h>
+
 #include "thirdparty/stb_image.h"
 #include "thirdparty/stb_image_write.h"
+
+#include "ddsdef.h"
 
 using namespace Tempest;
 
@@ -134,16 +141,98 @@ struct Pixmap::Impl {
     stbi__start_callbacks(s,&stbi__stdio_callbacks,reinterpret_cast<void*>(f));
     }
 
+  static bool isDDS(const stbi__context& s) {
+    return s.buflen>=4 && std::memcmp(reinterpret_cast<const char*>(s.buffer_start),"DDS ",4)==0;
+    }
+
   static stbi_uc* load(IDevice& f,int& x,int& y,int& comp,int req_comp){
     unsigned char *result;
     stbi__context s;
     stbi__start_file(&s,&f);
+
+    if(isDDS(s))
+      return loadDDS(&s,x,y,comp);
+
     result = stbi__load_and_postprocess_8bit(&s,&x,&y,&comp,req_comp);
     if( result ){
       // need to 'unget' all the characters in the IO buffer
       // fseek(f, - (int) (s.img_buffer_end - s.img_buffer), SEEK_CUR);
       }
     return result;
+    }
+
+  static stbi_uc* loadDDS(stbi__context* s,int& x,int& y,int& bpp){
+    using namespace Tempest::Detail;
+
+    stbi_uc head[4]={};
+    stbi__getn(s,head,4);
+
+    DDSURFACEDESC2 ddsd;
+    if(stbi__getn(s,reinterpret_cast<stbi_uc*>(&ddsd),sizeof(ddsd))==0)
+      return nullptr;
+    x = int(ddsd.dwWidth);
+    y = int(ddsd.dwHeight);
+
+    int compressType = squish::kDxt1;
+    switch( ddsd.ddpfPixelFormat.dwFourCC ) {
+      case FOURCC_DXT1:
+        bpp    = 3;
+        compressType = squish::kDxt1;
+        break;
+
+      case FOURCC_DXT3:
+        bpp    = 4;
+        compressType = squish::kDxt3;
+        break;
+
+      case FOURCC_DXT5:
+        bpp    = 4;
+        compressType = squish::kDxt5;
+        break;
+
+      default:
+        return nullptr;
+      }
+
+    if( ddsd.dwLinearSize == 0 ) {
+      //return false;
+      }
+
+    size_t blockcount = size_t(((x+3)/4)*((y+3)/4));
+    size_t blocksize  = (compressType==squish::kDxt1) ? 8 : 16;
+    size_t bufferSize = blockcount*blocksize;
+
+    std::unique_ptr<stbi_uc[]> ddsv(new(std::nothrow) stbi_uc[bufferSize]);
+    if(!ddsv || stbi__getn(s,ddsv.get(),int(bufferSize))!=1 )
+      return nullptr;
+
+    bpp = 4;
+    return ddsToRgba(ddsv.get(),uint32_t(x),uint32_t(y),compressType);
+    }
+
+  static stbi_uc* ddsToRgba(const stbi_uc* dds,const uint32_t w,const uint32_t h,const int frm){
+    squish::u8 pixels[4][4][4];
+
+    stbi_uc*       px        = reinterpret_cast<stbi_uc*>(STBI_MALLOC(w*h*4));
+    const uint32_t bpp       = 4;
+    const uint32_t w4        = (w+3)/4;
+    const uint32_t blocksize = (frm==squish::kDxt1) ? 8 : 16;
+
+    if(px==nullptr)
+      return nullptr;
+
+    for(uint32_t i=0; i<w; i+=4)
+      for(uint32_t r=0; r<h; r+=4){
+        uint32_t pos = ((i/4) + (r/4)*w4)*blocksize;
+        squish::Decompress( &pixels[0][0][0], &dds[pos], frm );
+
+        for(uint32_t x=0; x<4; ++x)
+          for(uint32_t y=0; y<4; ++y){
+            uint8_t * v = &px[ (i+x + (r+y)*w)*bpp ];
+            std::memcpy( v, pixels[y][x], bpp);
+            }
+        }
+    return px;
     }
 
   stbi_uc*       data = nullptr;

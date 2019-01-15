@@ -25,6 +25,7 @@ void CommandBuffer::begin() {
 
 void CommandBuffer::end() {
   curVbo=nullptr;
+  curIbo=nullptr;
   curPipeline=nullptr;
   impl.handler->end();
   }
@@ -81,5 +82,23 @@ void CommandBuffer::implDraw(const VideoBuffer& vbo, size_t offset, size_t size)
     impl.handler->setVbo(*vbo.impl.handler);
     curVbo=&vbo;
     }
+  if(curIbo!=nullptr) {
+    impl.handler->setIbo(nullptr,Detail::IndexClass::i16);
+    curIbo=nullptr;
+    }
   impl.handler->draw(offset,size);
+  }
+
+void CommandBuffer::implDraw(const VideoBuffer &vbo, const VideoBuffer &ibo, Detail::IndexClass index, size_t offset, size_t size) {
+  if(!vbo.impl || !ibo.impl)
+    return;
+  if(curVbo!=&vbo) {
+    impl.handler->setVbo(*vbo.impl.handler);
+    curVbo=&vbo;
+    }
+  if(curIbo!=&ibo) {
+    impl.handler->setIbo(ibo.impl.handler,index);
+    curIbo=&ibo;
+    }
+  impl.handler->drawIndexed(offset,size,0);
   }

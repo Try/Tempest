@@ -18,7 +18,7 @@ VTexture::~VTexture() {
     alloc->free(*this);
   }
 
-void VTexture::createView(VkDevice device,VkFormat format) {
+void VTexture::createView(VkDevice device,VkFormat format,uint32_t mipCount) {
   VkImageViewCreateInfo viewInfo = {};
   viewInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   viewInfo.image                           = impl;
@@ -28,15 +28,15 @@ void VTexture::createView(VkDevice device,VkFormat format) {
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; else
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   viewInfo.subresourceRange.baseMipLevel   = 0;
-  viewInfo.subresourceRange.levelCount     = 1;
+  viewInfo.subresourceRange.levelCount     = mipCount;
   viewInfo.subresourceRange.baseArrayLayer = 0;
   viewInfo.subresourceRange.layerCount     = 1;
 
   vkAssert(vkCreateImageView(device, &viewInfo, nullptr, &view));
-  createTextureSampler(device);
+  createTextureSampler(device,mipCount);
   }
 
-void VTexture::createTextureSampler(VkDevice device) {
+void VTexture::createTextureSampler(VkDevice device,uint32_t mipCount) {
   VkSamplerCreateInfo samplerInfo = {};
   samplerInfo.sType            = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 
@@ -53,6 +53,9 @@ void VTexture::createTextureSampler(VkDevice device) {
   samplerInfo.compareEnable           = VK_FALSE;
   samplerInfo.compareOp               = VK_COMPARE_OP_ALWAYS;
   samplerInfo.mipmapMode              = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+
+  samplerInfo.minLod                  = 0;
+  samplerInfo.maxLod                  = static_cast<float>(mipCount);
 
   vkAssert(vkCreateSampler(device, &samplerInfo, nullptr, &sampler));
   }

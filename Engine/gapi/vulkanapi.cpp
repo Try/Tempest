@@ -168,7 +168,7 @@ void VulkanApi::destroy(AbstractGraphicsApi::CmdPool *cmd) {
 AbstractGraphicsApi::Buffer *VulkanApi::createBuffer(AbstractGraphicsApi::Device *d,
                                                      const void *mem, size_t size,
                                                      MemUsage usage,BufferFlags flg) {
-  Detail::VDevice* dx   =reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VDevice* dx = reinterpret_cast<Detail::VDevice*>(d);
   if(flg==BufferFlags::Staging) {
     Detail::VBuffer stage=dx->allocator.alloc(mem,size,usage,BufferFlags::Staging);
     return new Detail::VBuffer(std::move(stage));
@@ -196,22 +196,26 @@ AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Devi
     alt = Pixmap(pref,Pixmap::Format::RGBA);
     p   = &alt;
     }
+  const uint32_t  mipCnt = mips ? mipCount(p->w(),p->h()) : 1;
 
   const uint32_t  size =p->w()*p->h()*p->bpp();
   Detail::VBuffer stage=dx->allocator.alloc(p->data(),size,MemUsage::TransferSrc,BufferFlags::Staging);
 
-  auto buf=dx->allocator.alloc(*p,mips);
-  dx->changeLayout(buf, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+  Detail::VTexture buf=dx->allocator.alloc(*p,mipCnt);
+  dx->changeLayout(buf, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,mipCnt);
   dx->copy(buf,p->w(),p->h(),stage);
-  dx->changeLayout(buf, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  if(mipCnt>1)
+    dx->generateMipmap(buf,VK_FORMAT_R8G8B8A8_UNORM,p->w(),p->h(),mipCnt); else
+    dx->changeLayout(buf, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipCnt);
   return new Detail::VTexture(std::move(buf));
   }
 
 AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Device *d, const uint32_t w, const uint32_t h, bool mips, TextureFormat frm) {
   Detail::VDevice*   dx = reinterpret_cast<Detail::VDevice*>(d);
 
-  auto buf=dx->allocator.alloc(w,h,mips,frm);
-  dx->changeLayout(buf, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL/*TODO*/);
+  const uint32_t mipCnt = mips ? mipCount(w,h) : 1;
+  auto buf=dx->allocator.alloc(w,h,mipCnt,frm);
+  dx->changeLayout(buf, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL/*TODO*/,mipCnt);
   return new Detail::VTexture(std::move(buf));
   }
 
@@ -335,4 +339,8 @@ void VulkanApi::draw(Device *d,
 void VulkanApi::getCaps(Device *d,Caps &caps) {
   Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
   caps=dx->caps;
+  }
+
+uint32_t VulkanApi::mipCount(uint32_t w, uint32_t h) {
+  return uint32_t(std::floor(std::log2(std::max(w,h)))) + 1;
   }

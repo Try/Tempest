@@ -30,8 +30,8 @@ class VTexture : public AbstractGraphicsApi::Texture {
     VAllocator*            alloc =nullptr;
     VAllocator::Allocation page  ={};
 
-    void                   createView(VkDevice device, VkFormat format);
-    void                   createTextureSampler(VkDevice device);
+    void                   createView(VkDevice device, VkFormat format, uint32_t mipCount);
+    void                   createTextureSampler(VkDevice device, uint32_t mipCount);
 
     friend class VAllocator;
   };

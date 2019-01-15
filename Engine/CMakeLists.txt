@@ -21,6 +21,7 @@ add_definitions(-DSTB_IMAGE_WRITE_IMPLEMENTATION)
 
 include_directories("include"
                     "."
+                    "thirdparty/squish"
                     "$ENV{VK_SDK_PATH}/Include")
 link_directories(${PROJECT_NAME} "$ENV{VK_SDK_PATH}/Lib32")
 

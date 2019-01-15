@@ -11,6 +11,7 @@
 #include <Tempest/Texture2d>
 #include <Tempest/Uniforms>
 #include <Tempest/VertexBuffer>
+#include <Tempest/IndexBuffer>
 #include <Tempest/Builtin>
 
 #include "videobuffer.h"
@@ -66,6 +67,14 @@ class Device {
     template<class T>
     VertexBuffer<T> loadVbo(const std::vector<T> arr,BufferFlags flg){
       return loadVbo(arr.data(),arr.size(),flg);
+      }
+
+    template<class T>
+    IndexBuffer<T>  loadIbo(const T* arr,size_t arrSize,BufferFlags flg);
+
+    template<class T>
+    VertexBuffer<T> loadIbo(const std::vector<T> arr,BufferFlags flg){
+      return loadIbo(arr.data(),arr.size(),flg);
       }
 
     Texture2d      createTexture(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips);
@@ -161,6 +170,15 @@ inline VertexBuffer<T> Device::loadVbo(const T* arr, size_t arrSize, BufferFlags
   VideoBuffer     data=createVideoBuffer(arr,arrSize*sizeof(T),MemUsage::VertexBuffer,flg);
   VertexBuffer<T> vbo(std::move(data),arrSize);
   return vbo;
+  }
+
+template<class T>
+inline IndexBuffer<T> Device::loadIbo(const T* arr, size_t arrSize, BufferFlags flg) {
+  if(arrSize==0)
+    return IndexBuffer<T>();
+  VideoBuffer     data=createVideoBuffer(arr,arrSize*sizeof(T),MemUsage::IndexBuffer,flg);
+  IndexBuffer<T>  ibo(std::move(data),arrSize);
+  return ibo;
   }
 
 template<class Vertex>

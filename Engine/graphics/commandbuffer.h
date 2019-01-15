@@ -17,6 +17,9 @@ class Texture2d;
 template<class T>
 class VertexBuffer;
 
+template<class T>
+class IndexBuffer;
+
 class CommandBuffer {
   public:
     CommandBuffer(CommandBuffer&& f)=default;
@@ -45,15 +48,24 @@ class CommandBuffer {
     template<class T>
     void draw(const VertexBuffer<T>& vbo,size_t offset,size_t count){ implDraw(vbo.impl,offset,count); }
 
+    template<class T,class I>
+    void draw(const VertexBuffer<T>& vbo,const IndexBuffer<I>& ibo){ implDraw(vbo.impl,ibo.impl,Detail::indexCls<I>(),0,ibo.size()); }
+
+    template<class T,class I>
+    void draw(const VertexBuffer<T>& vbo,const IndexBuffer<I>& ibo,size_t offset,size_t count)
+         { implDraw(vbo.impl,ibo.impl,Detail::indexCls<I>(),offset,count); }
+
     void exec(const CommandBuffer& buf);
 
   private:
     CommandBuffer(Tempest::Device& dev,AbstractGraphicsApi::CommandBuffer* f);
 
     void implDraw(const VideoBuffer& vbo,size_t offset,size_t size);
+    void implDraw(const VideoBuffer& vbo,const VideoBuffer& ibo,Detail::IndexClass index,size_t offset,size_t size);
 
     const AbstractGraphicsApi::Pipeline* curPipeline=nullptr;
     const VideoBuffer*                   curVbo     =nullptr;
+    const VideoBuffer*                   curIbo     =nullptr;
 
     Tempest::Device*                                  dev=nullptr;
     Detail::DPtr<AbstractGraphicsApi::CommandBuffer*> impl;

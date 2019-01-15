@@ -45,6 +45,21 @@ namespace Tempest {
     Depth16
     };
 
+  namespace Detail {
+    enum class IndexClass:uint8_t {
+      i16=0,
+      i32
+      };
+    template<class T>
+    inline IndexClass indexCls() { return IndexClass::i16; }
+
+    template<>
+    inline IndexClass indexCls<uint16_t>() { return IndexClass::i16; }
+
+    template<>
+    inline IndexClass indexCls<uint32_t>() { return IndexClass::i32; }
+    }
+
   class AbstractGraphicsApi {
     protected:
       AbstractGraphicsApi() =default;
@@ -99,7 +114,9 @@ namespace Tempest {
         virtual void setUniforms(Pipeline& p,Desc& u)=0;
         virtual void exec       (const AbstractGraphicsApi::CommandBuffer& buf)=0;
         virtual void setVbo     (const Buffer& b)=0;
+        virtual void setIbo     (const Buffer* b,Detail::IndexClass cls)=0;
         virtual void draw       (size_t offset,size_t vertexCount)=0;
+        virtual void drawIndexed(size_t ioffset, size_t isize, size_t voffset)=0;
         };
       struct CmdPool         {};
 

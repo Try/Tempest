@@ -9,6 +9,7 @@ enum class MemUsage : uint8_t {
   TransferDst =1<<1,
   UniformBit  =1<<2,
   VertexBuffer=1<<3,
+  IndexBuffer =1<<4,
   };
 
 inline MemUsage operator | (MemUsage a,const MemUsage& b) {

@@ -81,6 +81,8 @@ VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferFl
     createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
   if(bool(usage & MemUsage::VertexBuffer))
     createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+  if(bool(usage & MemUsage::IndexBuffer))
+    createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 
   vkAssert(vkCreateBuffer(device,&createInfo,nullptr,&ret.impl));
 
@@ -101,7 +103,7 @@ VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferFl
   return ret;
   }
 
-VTexture VAllocator::alloc(const Pixmap& pm,bool mip) {
+VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip) {
   VTexture ret;
   ret.alloc = this;
 
@@ -111,7 +113,7 @@ VTexture VAllocator::alloc(const Pixmap& pm,bool mip) {
   imageInfo.extent.width  = pm.w();
   imageInfo.extent.height = pm.h();
   imageInfo.extent.depth  = 1;
-  imageInfo.mipLevels     = 1;
+  imageInfo.mipLevels     = mip;
   imageInfo.arrayLayers   = 1;
   imageInfo.format        = VK_FORMAT_R8G8B8A8_UNORM;
   imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
@@ -119,6 +121,9 @@ VTexture VAllocator::alloc(const Pixmap& pm,bool mip) {
   imageInfo.usage         = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
   imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
   imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
+
+  if(mip>1)
+    imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
   switch(pm.format()) {
     case Pixmap::Format::A:
@@ -142,11 +147,11 @@ VTexture VAllocator::alloc(const Pixmap& pm,bool mip) {
   ret.page=allocator.alloc(size_t(memRq.size),size_t(memRq.alignment),typeId);
   if(!ret.page.page || !commit(ret.page.page->memory,ret.impl,ret.page.offset))
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
-  ret.createView(device,imageInfo.format);
+  ret.createView(device,imageInfo.format,mip);
   return ret;
   }
 
-VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, bool mip, TextureFormat frm) {
+VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mip, TextureFormat frm) {
   VTexture ret;
   ret.alloc = this;
 
@@ -156,7 +161,7 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, bool mip, Texture
   imageInfo.extent.width  = w;
   imageInfo.extent.height = h;
   imageInfo.extent.depth  = 1;
-  imageInfo.mipLevels     = 1;
+  imageInfo.mipLevels     = mip;
   imageInfo.arrayLayers   = 1;
   imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
   imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -184,7 +189,7 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, bool mip, Texture
   ret.page=allocator.alloc(size_t(memRq.size),size_t(memRq.alignment),typeId);
   if(!ret.page.page || !commit(ret.page.page->memory,ret.impl,ret.page.offset))
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
-  ret.createView(device,imageInfo.format);
+  ret.createView(device,imageInfo.format,mip);
   return ret;
   }
 

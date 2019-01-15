@@ -300,8 +300,15 @@ void VDevice::copy(VTexture &dest, uint32_t w, uint32_t h, const VBuffer &src) {
   data->end();
   }
 
-void VDevice::changeLayout(VTexture &dest, VkImageLayout oldLayout, VkImageLayout newLayout) {
+void VDevice::changeLayout(VTexture &dest, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount) {
   data->begin();
-  data->cmdBuffer.changeLayout(dest,oldLayout,newLayout);
+  data->cmdBuffer.changeLayout(dest,oldLayout,newLayout,mipCount);
   data->end();
   }
+
+void VDevice::generateMipmap(VTexture& image, VkFormat frm, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
+  data->begin();
+  data->cmdBuffer.generateMipmap(image,physicalDevice,frm,texWidth,texHeight,mipLevels);
+  data->end();
+  }
+
