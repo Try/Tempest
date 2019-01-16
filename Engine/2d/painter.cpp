@@ -314,7 +314,7 @@ void Painter::drawText(int x, int y, const char *txt) {
     auto l=fnt.letter(i.next(),ta);
 
     if(!l.view.isEmpty()) {
-      setBrush(Brush(l.view,pb.color,pb.blend));
+      setBrush(Brush(l.view,pb.color,PaintDevice::Alpha));
       drawRect(x+l.dpos.x,y+l.dpos.y,l.view.w(),l.view.h());
       }
 
