@@ -68,8 +68,9 @@ namespace Tempest {
     public:
       class Caps {
         public:
-          bool rgb8 =false;
-          bool rgba8=false;
+          bool     rgb8 =false;
+          bool     rgba8=false;
+          uint64_t minUboAligment=1;
         };
 
       struct Shared {

@@ -28,7 +28,7 @@ VDevice::DataHelper::DataHelper(VDevice &owner)
 
 void VDevice::DataHelper::begin() {
   if(!firstCommit) {
-    fence.wait();
+    wait();
     cmdBuffer.reset();
     } else {
     firstCommit=false;
@@ -45,7 +45,15 @@ void VDevice::DataHelper::end() {
   submitInfo.pCommandBuffers    = &cmdBuffer.impl;
 
   fence.reset();
+  hasToWait=true;
   vkQueueSubmit(graphicsQueue, 1, &submitInfo, fence.impl);
+  }
+
+void VDevice::DataHelper::wait() {
+  if(hasToWait)  {
+    hasToWait=false;
+    fence.wait();
+    }
   }
 
 VDevice::VDevice(VulkanApi &api, void *hwnd)
@@ -251,6 +259,9 @@ void VDevice::getCaps(AbstractGraphicsApi::Caps &c) {
   vkGetPhysicalDeviceFormatProperties(physicalDevice,VK_FORMAT_R8G8B8A8_UNORM,&frm); // must-have
   c.rgba8 = (frm.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
 
+  VkPhysicalDeviceProperties limits;
+  vkGetPhysicalDeviceProperties(physicalDevice,&limits);
+  c.minUboAligment = limits.limits.minUniformBufferOffsetAlignment;
   }
 
 VkResult VDevice::present(VSwapchain &sw, const VSemaphore *wait, size_t wSize, uint32_t imageId) {
@@ -310,5 +321,9 @@ void VDevice::generateMipmap(VTexture& image, VkFormat frm, uint32_t texWidth, u
   data->begin();
   data->cmdBuffer.generateMipmap(image,physicalDevice,frm,texWidth,texHeight,mipLevels);
   data->end();
+  }
+
+void VDevice::waitData() {
+  data->wait();
   }
 

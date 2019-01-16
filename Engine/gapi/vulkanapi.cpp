@@ -313,6 +313,8 @@ void VulkanApi::draw(Device *d,
   auto*                   rx=reinterpret_cast<const Detail::VSemaphore*>(onReady);
   auto*                   rc=reinterpret_cast<const Detail::VFence*>(onReadyCpu);
 
+  //dx->waitData();
+
   VkSubmitInfo submitInfo = {};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 

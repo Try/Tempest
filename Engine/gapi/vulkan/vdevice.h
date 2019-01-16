@@ -80,6 +80,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     void                    changeLayout(Detail::VTexture& dest, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount);
 
     void                    generateMipmap(VTexture& image, VkFormat frm, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
+    void                    waitData();
 
     SwapChainSupportDetails querySwapChainSupport() { return querySwapChainSupport(physicalDevice); }
     QueueFamilyIndices      findQueueFamilies    () { return findQueueFamilies(physicalDevice);     }
@@ -95,9 +96,11 @@ class VDevice : public AbstractGraphicsApi::Device {
       VFence                 fence;
       VkQueue                graphicsQueue=nullptr;
       bool                   firstCommit=true;
+      bool                   hasToWait=false;
 
       void begin();
       void end();
+      void wait();
       };
 
     VkInstance             instance;
