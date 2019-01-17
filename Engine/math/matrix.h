@@ -7,13 +7,13 @@ namespace Tempest{
 class Matrix4x4 final {
   public:
     Matrix4x4()=default;
-    Matrix4x4( const Matrix4x4& other );
+    Matrix4x4( const Matrix4x4& other )=default;
     Matrix4x4( const float data[/*16*/] );
     Matrix4x4( float a11, float a12, float a13, float a14,
                float a21, float a22, float a23, float a24,
                float a31, float a32, float a33, float a34,
                float a41, float a42, float a43, float a44 );
-    ~Matrix4x4();
+    ~Matrix4x4()=default;
 
     void identity();
 
@@ -76,10 +76,7 @@ class Matrix4x4 final {
 
     void perspective( float angle, float aspect, float zNear, float zFar);
 
-    Matrix4x4& operator = ( const Matrix4x4& other ) {
-      std::memcpy(this,&other,sizeof(other));
-      return *this;
-      }
+    Matrix4x4& operator = ( const Matrix4x4& other )=default;
 
     bool operator == ( const Matrix4x4& other ) const {
       return std::memcmp(this,&other,sizeof(*this))==0;

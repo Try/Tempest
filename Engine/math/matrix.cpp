@@ -272,9 +272,7 @@ static void NvMultMatf(float result[4][4], const float a[4][4], const float b[4]
 
 using namespace Tempest;
 
-Matrix4x4::Matrix4x4( const Matrix4x4& other ){
-    setData( other.data() );
-    }
+static_assert(std::is_trivially_copyable<Matrix4x4>::value,"must be trivial");
 
 Matrix4x4::Matrix4x4( const float data[/*16*/] ){
     setData( data );
@@ -288,9 +286,6 @@ Matrix4x4::Matrix4x4( float a11, float a12, float a13, float a14,
           a21, a22, a23, a24,
           a31, a32, a33, a34,
           a41, a42, a43, a44 );
-  }
-
-Matrix4x4::~Matrix4x4(){
   }
 
 void Matrix4x4::identity(){
