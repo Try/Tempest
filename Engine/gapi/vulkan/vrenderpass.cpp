@@ -79,22 +79,22 @@ VRenderPass::VRenderPass(VDevice& device,
   renderPassInfo.dependencyCount = 1;
   renderPassInfo.pDependencies   = &dependency;
 
-  vkAssert(vkCreateRenderPass(device.device,&renderPassInfo,nullptr,&renderPass));
+  vkAssert(vkCreateRenderPass(device.device,&renderPassInfo,nullptr,&impl));
   }
 
 VRenderPass::VRenderPass(VRenderPass &&other) {
   std::swap(device,other.device);
-  std::swap(renderPass,other.renderPass);
+  std::swap(impl,other.impl);
   }
 
 VRenderPass::~VRenderPass(){
   if(device==nullptr)
     return;
   vkDeviceWaitIdle(device);
-  vkDestroyRenderPass(device,renderPass,nullptr);
+  vkDestroyRenderPass(device,impl,nullptr);
   }
 
 void VRenderPass::operator=(VRenderPass &&other) {
   std::swap(device,other.device);
-  std::swap(renderPass,other.renderPass);
+  std::swap(impl,other.impl);
   }

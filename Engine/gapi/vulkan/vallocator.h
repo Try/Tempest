@@ -43,6 +43,8 @@ class VAllocator {
 
     void     freeLast() { provider.freeLast(); }
 
+    bool     update(VBuffer& dest, const void *mem, size_t offset,  size_t size);
+
   private:
     VkDevice                          device=nullptr;
     Provider                          provider;

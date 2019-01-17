@@ -252,12 +252,14 @@ void VDevice::getCaps(AbstractGraphicsApi::Caps &c) {
   /*
    * formats support table: https://vulkan.lunarg.com/doc/view/1.0.30.0/linux/vkspec.chunked/ch31s03.html
    */
+  VkFormatFeatureFlags imageRqFlags = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT|VK_FORMAT_FEATURE_BLIT_DST_BIT|VK_FORMAT_FEATURE_BLIT_SRC_BIT;
   VkFormatProperties frm={};
   vkGetPhysicalDeviceFormatProperties(physicalDevice,VK_FORMAT_R8G8B8_UNORM,&frm);
-  c.rgb8  = (frm.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
+  c.rgb8  = (frm.optimalTilingFeatures & imageRqFlags) &&
+            (frm.linearTilingFeatures  & imageRqFlags);
 
   vkGetPhysicalDeviceFormatProperties(physicalDevice,VK_FORMAT_R8G8B8A8_UNORM,&frm); // must-have
-  c.rgba8 = (frm.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT);
+  c.rgba8 = (frm.optimalTilingFeatures & imageRqFlags);
 
   VkPhysicalDeviceProperties limits;
   vkGetPhysicalDeviceProperties(physicalDevice,&limits);

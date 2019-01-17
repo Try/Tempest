@@ -47,13 +47,17 @@ class RenderState final {
 
     bool hasBlend() const { return blendS!=BlendMode::one || blendD!=BlendMode::zero; }
 
-    void setZTestMode(ZTestMode z){ zmode=z; }
+    void      setZTestMode(ZTestMode z){ zmode=z; }
     ZTestMode zTestMode() const { return zmode; }
+
+    void      setRasterDiscardEnabled(bool e) { discard=e; }
+    bool      isRasterDiscardEnabled() const { return discard; }
 
   private:
     BlendMode blendS=BlendMode::one;
     BlendMode blendD=BlendMode::zero;
     ZTestMode zmode =ZTestMode::Always;
+    bool      discard=false;
   };
 
 }

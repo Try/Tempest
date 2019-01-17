@@ -36,6 +36,10 @@ Device::Device(AbstractGraphicsApi &api, SystemApi::Window *w, uint8_t maxFrames
 Device::~Device() {
   }
 
+void Device::waitIdle() {
+  api.waitIdle(impl.dev);
+  }
+
 void Device::reset() {
   api.destroy(swapchain);
   swapchain=nullptr;
@@ -56,13 +60,18 @@ uint64_t Device::frameCounter() const {
   return framesCounter;
   }
 
+uint32_t Device::imageId() const {
+  return imgId;
+  }
+
 Frame Device::frame(uint32_t id) {
   Frame fr(*this,api.getImage(dev,swapchain,id),id);
   return fr;
   }
 
 uint32_t Device::nextImage(Semaphore &onReady) {
-  return api.nextImage(dev,swapchain,onReady.impl.handler);
+  imgId = api.nextImage(dev,swapchain,onReady.impl.handler);
+  return imgId;
   }
 
 void Device::draw(const CommandBuffer &cmd, const Semaphore &wait) {
@@ -118,7 +127,9 @@ Texture2d Device::loadTexture(const Pixmap &pm, bool mips) {
   }
 
 UniformBuffer Device::loadUbo(const void *mem, size_t size) {
-  VideoBuffer   data=createVideoBuffer(mem,size,MemUsage::UniformBit,BufferFlags::Static);
+  if(size==0)
+    return UniformBuffer();
+  VideoBuffer   data=createVideoBuffer(mem,size,MemUsage::UniformBit,BufferFlags::Dynamic);
   UniformBuffer ubo(std::move(data));
   return ubo;
   }
@@ -166,9 +177,13 @@ RenderPipeline Device::implPipeline(RenderPass& pass, uint32_t w, uint32_t h,
   return f;
   }
 
-CommandBuffer Device::commandBuffer(/*bool secondary*/) {
-  const bool secondary=false;
-  CommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,secondary));
+CommandBuffer Device::commandBuffer() {
+  CommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,CmdType::Primary));
+  return buf;
+  }
+
+CommandBuffer Device::commandSecondaryBuffer() {
+  CommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,CmdType::Secondary));
   return buf;
   }
 
@@ -187,14 +202,14 @@ Semaphore Device::createSemaphore() {
   }
 
 VideoBuffer Device::createVideoBuffer(const void *data, size_t size, MemUsage usage, BufferFlags flg) {
-  VideoBuffer buf(*this,api.createBuffer(dev,data,size,usage,flg));
+  VideoBuffer buf(*this,api.createBuffer(dev,data,size,usage,flg),size);
   return  buf;
   }
 
 Uniforms Device::uniforms(const UniformsLayout &owner) {
   if(owner.impl==nullptr)
     owner.impl=api.createUboLayout(dev,owner);
-  Uniforms ubo(*this,api.createDescriptors(dev,owner.impl.get()));
+  Uniforms ubo(*this,api.createDescriptors(dev,owner,owner.impl.get()));
   return ubo;
   }
 

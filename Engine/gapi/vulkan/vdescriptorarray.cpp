@@ -1,5 +1,7 @@
 #include "vbuffer.h"
 
+#include <Tempest/UniformsLayout>
+
 #include "vdevice.h"
 #include "vdescriptorarray.h"
 #include "vtexture.h"
@@ -13,18 +15,26 @@ VDescriptorArray::~VDescriptorArray() {
   vkDestroyDescriptorPool(device,impl,nullptr);
   }
 
-VDescriptorArray *VDescriptorArray::alloc(VkDevice device, VkDescriptorSetLayout lay) {
+VDescriptorArray *VDescriptorArray::alloc(VkDevice device, const UniformsLayout& lay, VkDescriptorSetLayout &layImpl) {
   VDescriptorArray* a=reinterpret_cast<VDescriptorArray*>(std::malloc(sizeof(VDescriptorArray)));
   if(a==nullptr)
     throw std::bad_alloc();
   new(a) VDescriptorArray();
 
-  std::array<VkDescriptorPoolSize,2> poolSize = {{}};
+  a->hint.resize(lay.size());
+  for(size_t i=0;i<lay.size();++i){
+    a->hint[i].isDyn = (lay[i].cls==UniformsLayout::UboDyn);
+    }
+
+  std::array<VkDescriptorPoolSize,3> poolSize = {{}};
   poolSize[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   poolSize[0].descriptorCount = 1;
 
   poolSize[1].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
   poolSize[1].descriptorCount = 1;
+
+  poolSize[2].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+  poolSize[2].descriptorCount = 1;
 
   VkDescriptorPoolCreateInfo poolInfo = {};
   poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -39,7 +49,7 @@ VDescriptorArray *VDescriptorArray::alloc(VkDevice device, VkDescriptorSetLayout
   allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
   allocInfo.descriptorPool     = a->impl;
   allocInfo.descriptorSetCount = 1;
-  allocInfo.pSetLayouts        = &lay;
+  allocInfo.pSetLayouts        = &layImpl;
 
   VkResult ret=vkAllocateDescriptorSets(device,&allocInfo,&a->desc[0]);
   if(ret!=VK_SUCCESS) {
@@ -90,7 +100,7 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf,
   descriptorWrite.dstSet          = desc[0];
   descriptorWrite.dstBinding      = uint32_t(id);
   descriptorWrite.dstArrayElement = 0;
-  descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  descriptorWrite.descriptorType  = hint[id].isDyn ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   descriptorWrite.descriptorCount = 1;
   descriptorWrite.pBufferInfo     = &bufferInfo;
 

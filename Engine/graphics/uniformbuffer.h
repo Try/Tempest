@@ -10,6 +10,9 @@ class UniformBuffer {
     UniformBuffer(UniformBuffer&&)=default;
     UniformBuffer& operator=(UniformBuffer&&)=default;
 
+    void   update(const void* data,size_t offset,size_t size) { return impl.update(data,offset,size); }
+    size_t size() const { return impl.size(); }
+
   private:
     UniformBuffer(Tempest::VideoBuffer&& impl)
       :impl(std::move(impl)) {

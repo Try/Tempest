@@ -11,7 +11,7 @@ VFramebuffer::VFramebuffer(VDevice& device,VRenderPass& renderPass,VSwapchain& s
   :device(device.device) {
   VkFramebufferCreateInfo framebufferInfo = {};
   framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-  framebufferInfo.renderPass      = renderPass.renderPass;
+  framebufferInfo.renderPass      = renderPass.impl;
   framebufferInfo.pAttachments    = &swapchain.swapChainImageViews[image];
   framebufferInfo.attachmentCount = 1;
   framebufferInfo.width           = swapchain.w();
@@ -28,7 +28,7 @@ VFramebuffer::VFramebuffer(VDevice &device, VRenderPass &renderPass, VSwapchain 
 
   VkFramebufferCreateInfo framebufferInfo = {};
   framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-  framebufferInfo.renderPass      = renderPass.renderPass;
+  framebufferInfo.renderPass      = renderPass.impl;
   framebufferInfo.pAttachments    = attach;
   framebufferInfo.attachmentCount = 2;
   framebufferInfo.width           = swapchain.w();

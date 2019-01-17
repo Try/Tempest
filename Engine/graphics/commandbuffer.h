@@ -29,6 +29,7 @@ class CommandBuffer {
     void clear(Frame& fr,float r,float g,float b,float a);
 
     void begin();
+    void begin(const FrameBuffer& fbo, const RenderPass& p);
     void end();
 
     void beginRenderPass(const FrameBuffer& fbo, const RenderPass& p);
@@ -36,7 +37,8 @@ class CommandBuffer {
     void beginRenderPass(const FrameBuffer& fbo, const RenderPass& p, uint32_t width, uint32_t height);
     void endRenderPass();
 
-    void setUniforms(const Tempest::RenderPipeline& p,const Tempest::Uniforms& ubo);
+    void setUniforms(const Tempest::RenderPipeline& p, const Tempest::Uniforms& ubo);
+    void setUniforms(const Tempest::RenderPipeline& p, const Tempest::Uniforms& ubo, size_t offc, const uint32_t *offv);
     void setUniforms(const Detail::ResourcePtr<Tempest::RenderPipeline>& p,const Tempest::Uniforms& ubo);
 
     void setUniforms(const Tempest::RenderPipeline& p);

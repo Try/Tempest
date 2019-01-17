@@ -94,6 +94,8 @@ VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferFl
     props|=VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
   if(bool(bufFlg&BufferFlags::Static))
     props|=VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+  if(bool(bufFlg&BufferFlags::Dynamic))
+    props|=(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
   uint32_t typeId=provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits(props));
 
@@ -122,8 +124,10 @@ VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip) {
   imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
   imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
 
-  if(mip>1)
+  if(mip>1) {
+    // TODO: test VK_FORMAT_FEATURE_BLIT_DST_BIT
     imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    }
 
   switch(pm.format()) {
     case Pixmap::Format::A:
@@ -195,7 +199,7 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mi
 
 void VAllocator::free(VBuffer &buf) {
   if(buf.impl!=VK_NULL_HANDLE) {
-    vkDeviceWaitIdle(device);
+    //vkDeviceWaitIdle(device);
     vkDestroyBuffer (device,buf.impl,nullptr);
     }
   allocator.free(buf.page);
@@ -218,6 +222,18 @@ void VAllocator::free(VTexture &buf) {
     vkDestroyImage  (device,buf.impl,nullptr);
     }
   allocator.free(buf.page);
+  }
+
+bool VAllocator::update(VBuffer &dest, const void *mem, size_t offset, size_t size) {
+  auto& page = dest.page;
+  // TODO: roundup offset, size to VkPhysicalDeviceLimits::nonCoherentAtomSiz
+  void* data=nullptr;
+  if(vkMapMemory(device,page.page->memory,page.offset+offset,size,0,&data)!=VkResult::VK_SUCCESS)
+    return false;
+  std::memcpy(data,mem,size);
+
+  vkUnmapMemory(device,page.page->memory);
+  return true;
   }
 
 bool VAllocator::commit(VkDeviceMemory dev,VkBuffer dest,const void* mem,size_t offset,size_t size) {

@@ -19,14 +19,14 @@ class VImage;
 
 class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
   public:
-     enum Usage {
+     enum Usage : uint32_t {
       ONE_TIME_SUBMIT_BIT      = 0x00000001,
       RENDER_PASS_CONTINUE_BIT = 0x00000002,
       SIMULTANEOUS_USE_BIT     = 0x00000004,
       };
 
     VCommandBuffer()=delete;
-    VCommandBuffer(VDevice &device, VCommandPool &pool, bool secondary);
+    VCommandBuffer(VDevice &device, VCommandPool &pool, CmdType secondary);
     VCommandBuffer(VCommandBuffer&& other);
     ~VCommandBuffer();
 
@@ -37,7 +37,10 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void reset();
 
     void begin(Usage usageFlags);
+    void begin(Usage usageFlags,VFramebuffer& fbo,VRenderPass& rpass);
+
     void begin();
+    void begin(AbstractGraphicsApi::Fbo* f,AbstractGraphicsApi::Pass* p);
     void end();
 
     void beginRenderPass(AbstractGraphicsApi::Fbo* f,
@@ -47,7 +50,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void clear(AbstractGraphicsApi::Image& img, float r, float g, float b, float a);
     void setPipeline(AbstractGraphicsApi::Pipeline& p);
-    void setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u);
+    void setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u, size_t offc, const uint32_t* offv);
 
     void exec(const AbstractGraphicsApi::CommandBuffer& buf);
 

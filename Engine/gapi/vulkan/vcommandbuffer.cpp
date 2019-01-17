@@ -13,12 +13,12 @@
 
 using namespace Tempest::Detail;
 
-VCommandBuffer::VCommandBuffer(VDevice& device, VCommandPool& pool, bool secondary)
+VCommandBuffer::VCommandBuffer(VDevice& device, VCommandPool& pool, CmdType secondary)
   :device(device.device), pool(pool.impl) {
   VkCommandBufferAllocateInfo allocInfo = {};
   allocInfo.sType             =VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   allocInfo.commandPool       =pool.impl;
-  allocInfo.level             =secondary ? VK_COMMAND_BUFFER_LEVEL_SECONDARY : VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  allocInfo.level             =(secondary==CmdType::Secondary) ? VK_COMMAND_BUFFER_LEVEL_SECONDARY : VK_COMMAND_BUFFER_LEVEL_PRIMARY;
   allocInfo.commandBufferCount=1;
 
   vkAssert(vkAllocateCommandBuffers(device.device,&allocInfo,&impl));
@@ -55,8 +55,28 @@ void VCommandBuffer::begin(Usage usageFlags) {
   vkAssert(vkBeginCommandBuffer(impl,&beginInfo));
   }
 
+void VCommandBuffer::begin(VCommandBuffer::Usage usageFlags, VFramebuffer &fbo, VRenderPass &rpass) {
+  VkCommandBufferInheritanceInfo inheritanceInfo={};
+  inheritanceInfo.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+  inheritanceInfo.framebuffer = fbo.impl;
+  inheritanceInfo.renderPass  = rpass.impl;
+
+  VkCommandBufferBeginInfo beginInfo = {};
+  beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  beginInfo.flags            = usageFlags;
+  beginInfo.pInheritanceInfo = &inheritanceInfo;
+
+  vkAssert(vkBeginCommandBuffer(impl,&beginInfo));
+  }
+
 void VCommandBuffer::begin() {
-  begin(SIMULTANEOUS_USE_BIT);
+  begin(Usage(SIMULTANEOUS_USE_BIT));
+  }
+
+void VCommandBuffer::begin(Tempest::AbstractGraphicsApi::Fbo *f, Tempest::AbstractGraphicsApi::Pass *p) {
+  VFramebuffer* fbo =reinterpret_cast<VFramebuffer*>(f);
+  VRenderPass*  pass=reinterpret_cast<VRenderPass*>(p);
+  begin(Usage(SIMULTANEOUS_USE_BIT|RENDER_PASS_CONTINUE_BIT),*fbo,*pass);
   }
 
 void VCommandBuffer::end() {
@@ -71,7 +91,7 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
 
   VkRenderPassBeginInfo renderPassInfo = {};
   renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  renderPassInfo.renderPass        = pass->renderPass;
+  renderPassInfo.renderPass        = pass->impl;
   renderPassInfo.framebuffer       = fbo->impl;
   renderPassInfo.renderArea.offset = {0, 0};
   renderPassInfo.renderArea.extent = {width,height};
@@ -145,13 +165,13 @@ void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,px.graphicsPipeline);
   }
 
-void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p,AbstractGraphicsApi::Desc &u) {
+void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u, size_t offc, const uint32_t *offv) {
   VPipeline&        px=reinterpret_cast<VPipeline&>(p);
   VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
   vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,
                           px.pipelineLayout,0,
                           1,ux.desc,
-                          0,nullptr);
+                          offc,offv);
   }
 
 void VCommandBuffer::exec(const CommandBuffer &buf) {

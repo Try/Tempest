@@ -22,7 +22,7 @@ class VRenderPass : public AbstractGraphicsApi::Pass {
 
     void operator=(VRenderPass&& other);
 
-    VkRenderPass   renderPass=VK_NULL_HANDLE;
+    VkRenderPass   impl=VK_NULL_HANDLE;
     Tempest::Color color;
     float          zclear=1.0f;
 

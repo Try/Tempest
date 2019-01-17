@@ -17,3 +17,8 @@ VBuffer::~VBuffer() {
   if(alloc!=nullptr)
     alloc->free(*this);
   }
+
+void VBuffer::update(const void *data, size_t off, size_t sz) {
+  if(alloc!=nullptr)
+    alloc->update(*this,data,off,sz);
+  }

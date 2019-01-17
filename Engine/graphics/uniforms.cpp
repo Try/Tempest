@@ -23,6 +23,10 @@ Uniforms& Uniforms::operator=(Uniforms &&u) {
   return *this;
   }
 
+void Uniforms::set(size_t layoutBind, const UniformBuffer &vbuf) {
+  set(layoutBind,vbuf,0,vbuf.size());
+  }
+
 void Uniforms::set(size_t layoutBind, const Texture2d &tex) {
   if(tex.impl.handler)
     desc.handler->set(layoutBind,tex.impl.handler);

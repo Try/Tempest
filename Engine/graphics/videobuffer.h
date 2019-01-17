@@ -16,11 +16,15 @@ class VideoBuffer {
     ~VideoBuffer();
     VideoBuffer& operator=(VideoBuffer&&);
 
+    void   update(const void* data,size_t offset,size_t size);
+    size_t size() const { return sz; }
+
   private:
-    VideoBuffer(Tempest::Device& dev,AbstractGraphicsApi::Buffer* impl);
+    VideoBuffer(Tempest::Device& dev,AbstractGraphicsApi::Buffer* impl,size_t size);
 
     Tempest::Device*                           dev =nullptr;
     Detail::DPtr<AbstractGraphicsApi::Buffer*> impl;
+    size_t                                     sz=0;
 
   friend class Tempest::Device;
   friend class Tempest::CommandBuffer;

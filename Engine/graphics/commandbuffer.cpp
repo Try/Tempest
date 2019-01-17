@@ -23,6 +23,10 @@ void CommandBuffer::begin() {
   impl.handler->begin();
   }
 
+void CommandBuffer::begin(const FrameBuffer &fbo, const RenderPass &p) {
+  impl.handler->begin(fbo.impl.handler,p.impl.handler);
+  }
+
 void CommandBuffer::end() {
   curVbo=nullptr;
   curIbo=nullptr;
@@ -49,12 +53,17 @@ void CommandBuffer::endRenderPass() {
 
 void CommandBuffer::setUniforms(const Tempest::RenderPipeline& p,const Uniforms &ubo) {
   setUniforms(p);
-  impl.handler->setUniforms(*p.impl.handler,*ubo.desc.handler);
+  impl.handler->setUniforms(*p.impl.handler,*ubo.desc.handler,0,nullptr);
+  }
+
+void CommandBuffer::setUniforms(const Tempest::RenderPipeline& p,const Uniforms &ubo,size_t offc,const uint32_t* offv) {
+  setUniforms(p);
+  impl.handler->setUniforms(*p.impl.handler,*ubo.desc.handler,offc,offv);
   }
 
 void CommandBuffer::setUniforms(const Detail::ResourcePtr<RenderPipeline> &p, const Uniforms &ubo) {
   setUniforms(p);
-  impl.handler->setUniforms(*p.impl.handler,*ubo.desc.handler);
+  impl.handler->setUniforms(*p.impl.handler,*ubo.desc.handler,0,nullptr);
   }
 
 void CommandBuffer::setUniforms(const RenderPipeline &p) {

@@ -37,6 +37,11 @@ namespace Tempest {
     Triangles=2
     };
 
+  enum class CmdType : uint8_t {
+    Primary,
+    Secondary
+    };
+
   enum TextureFormat : uint8_t {
     Undefined,
     Alpha,
@@ -95,7 +100,10 @@ namespace Tempest {
       struct UniformsLay     {
         virtual ~UniformsLay()=default;
         };
-      struct Buffer          {};
+      struct Buffer          {
+        virtual ~Buffer()=default;
+        virtual void update(const void* data,size_t off,size_t sz)=0;
+        };
       struct Desc            {
         virtual ~Desc()=default;
         virtual void set(size_t id,AbstractGraphicsApi::Texture *tex)=0;
@@ -104,6 +112,7 @@ namespace Tempest {
       struct CommandBuffer   {
         virtual ~CommandBuffer()=default;
         virtual void begin()=0;
+        virtual void begin(AbstractGraphicsApi::Fbo* f,AbstractGraphicsApi::Pass*  p)=0;
         virtual void end()  =0;
         virtual void beginRenderPass(AbstractGraphicsApi::Fbo* f,
                                      AbstractGraphicsApi::Pass*  p,
@@ -112,7 +121,7 @@ namespace Tempest {
 
         virtual void clear      (Image& img,float r, float g, float b, float a)=0;
         virtual void setPipeline(Pipeline& p)=0;
-        virtual void setUniforms(Pipeline& p,Desc& u)=0;
+        virtual void setUniforms(Pipeline& p,Desc& u, size_t offc, const uint32_t* offv)=0;
         virtual void exec       (const AbstractGraphicsApi::CommandBuffer& buf)=0;
         virtual void setVbo     (const Buffer& b)=0;
         virtual void setIbo     (const Buffer* b,Detail::IndexClass cls)=0;
@@ -130,6 +139,7 @@ namespace Tempest {
 
       virtual Device*    createDevice(SystemApi::Window* w)=0;
       virtual void       destroy(Device* d)=0;
+      virtual void       waitIdle(Device* d)=0;
 
       virtual Swapchain* createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d)=0;
       virtual void       destroy(Swapchain* d)=0;
@@ -170,13 +180,13 @@ namespace Tempest {
       virtual void       destroy(CmdPool* cmd)=0;
 
       virtual CommandBuffer*
-                         createCommandBuffer(Device* d,CmdPool* pool,bool secondary)=0;
+                         createCommandBuffer(Device* d,CmdPool* pool,CmdType type)=0;
       virtual void       destroy(CommandBuffer* cmd)=0;
 
       virtual Buffer*    createBuffer(Device* d,const void *mem,size_t size,MemUsage usage,BufferFlags flg)=0;
       virtual void       destroy(Buffer* cmd)=0;
 
-      virtual Desc*      createDescriptors(Device* d,UniformsLay* p)=0;
+      virtual Desc*      createDescriptors(Device* d,const Tempest::UniformsLayout& p,AbstractGraphicsApi::UniformsLay* layP)=0;
       virtual void       destroy(Desc* cmd)=0;
 
       virtual Texture*   createTexture(Device* d,const Pixmap& p,bool mips)=0;

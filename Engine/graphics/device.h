@@ -44,11 +44,13 @@ class Device {
     Device(const Device&)=delete;
     ~Device();
 
+    void           waitIdle();
     void           reset();
     uint32_t       swapchainImageCount() const;
     uint8_t        maxFramesInFlight() const;
     uint8_t        frameId() const;
     uint64_t       frameCounter() const;
+    uint32_t       imageId() const;
 
     Frame          frame(uint32_t id);
     uint32_t       nextImage(Semaphore& onReady);
@@ -96,7 +98,8 @@ class Device {
                             Topology tp,const RenderState& st,
                             const UniformsLayout& ulay,const Shader &vs,const Shader &fs);
 
-    CommandBuffer  commandBuffer(/*bool secondary=false*/);
+    CommandBuffer  commandBuffer();
+    CommandBuffer  commandSecondaryBuffer();
 
     const Builtin& builtin() const;
 
@@ -122,6 +125,7 @@ class Device {
     Tempest::Builtin                builtins;
     uint64_t                        framesCounter=0;
     uint8_t                         framesIdMod=0;
+    uint32_t                        imgId=0;
 
     Fence       createFence();
     Semaphore   createSemaphore();

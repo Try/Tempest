@@ -14,6 +14,7 @@ class VulkanApi : public AbstractGraphicsApi {
 
     Device*      createDevice(SystemApi::Window* w) override;
     void         destroy(Device* d) override;
+    void         waitIdle(Device* d) override;
 
     Swapchain*   createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d) override;
     void         destroy(Swapchain* d) override;
@@ -54,7 +55,7 @@ class VulkanApi : public AbstractGraphicsApi {
     Buffer*       createBuffer(Device* d, const void *mem, size_t size, MemUsage usage, BufferFlags flg) override;
     void          destroy(Buffer* cmd) override;
 
-    Desc*         createDescriptors(Device* d, UniformsLay *lay) override;
+    Desc*         createDescriptors(Device* d, const UniformsLayout &lay, AbstractGraphicsApi::UniformsLay* layP) override;
     void          destroy(Desc* d) override;
 
     std::shared_ptr<AbstractGraphicsApi::UniformsLay> createUboLayout(Device *d,const UniformsLayout&) override;
@@ -63,7 +64,7 @@ class VulkanApi : public AbstractGraphicsApi {
     Texture*      createTexture(Device* d,const uint32_t w,const uint32_t h,bool mips, TextureFormat frm) override;
     //void       destroy(Texture* t) override;
 
-    CommandBuffer* createCommandBuffer(Device* d, CmdPool* pool, bool secondary) override;
+    CommandBuffer* createCommandBuffer(Device* d, CmdPool* pool, CmdType secondary) override;
     void           destroy            (CommandBuffer* cmd) override;
 
     uint32_t       nextImage(Device *d,Swapchain* sw,Semaphore* onReady) override;

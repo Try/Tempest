@@ -94,6 +94,7 @@ VkPipelineLayout VPipeline::initLayout(VkDevice device,VkDescriptorSetLayout ubo
 VkDescriptorSetLayout VPipeline::initUboLayout(VkDevice device, const UniformsLayout &ulay) {
   static const VkDescriptorType types[]={
     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
     };
 
@@ -231,9 +232,9 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   rasterizer.sType                   = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
   rasterizer.pNext                   = nullptr;
   rasterizer.flags                   = 0;
-  rasterizer.rasterizerDiscardEnable = VK_FALSE;
+  rasterizer.rasterizerDiscardEnable = st.isRasterDiscardEnabled() ? VK_TRUE : VK_FALSE;
   rasterizer.polygonMode             = VkPolygonMode::VK_POLYGON_MODE_FILL;
-  rasterizer.cullMode                = VkCullModeFlagBits::VK_CULL_MODE_NONE;
+  rasterizer.cullMode                = VkCullModeFlagBits::VK_CULL_MODE_FRONT_BIT;
   rasterizer.frontFace               = VkFrontFace::VK_FRONT_FACE_COUNTER_CLOCKWISE;
   rasterizer.depthClampEnable        = VK_FALSE;
   rasterizer.depthBiasEnable         = VK_FALSE;
@@ -315,7 +316,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   pipelineInfo.pDepthStencilState  = &depthStencil;
   pipelineInfo.pColorBlendState    = &colorBlending;
   pipelineInfo.layout              = layout;
-  pipelineInfo.renderPass          = pass.renderPass;
+  pipelineInfo.renderPass          = pass.impl;
   pipelineInfo.subpass             = 0;
   pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
 
