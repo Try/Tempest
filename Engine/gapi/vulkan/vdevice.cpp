@@ -21,7 +21,7 @@ static const std::initializer_list<const char*> deviceExtensions = {
 
 VDevice::DataHelper::DataHelper(VDevice &owner)
   : cmdPool(owner,VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT),
-    cmdBuffer(owner,cmdPool,false),
+    cmdBuffer(owner,cmdPool,CmdType::Primary),
     fence(owner),
     graphicsQueue(owner.graphicsQueue){
   }
@@ -241,7 +241,7 @@ uint32_t VDevice::memoryTypeIndex(uint32_t typeBits,VkMemoryPropertyFlags props)
   for(size_t i=0; i<memoryProperties.memoryTypeCount; ++i) {
     auto bit = (uint32_t(1) << i);
     if((typeBits & bit)!=0) {
-      if((memoryProperties.memoryTypes[i].propertyFlags & props)!=0)
+      if((memoryProperties.memoryTypes[i].propertyFlags & props)==props)
         return i;
       }
     }
