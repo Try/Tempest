@@ -75,7 +75,7 @@ namespace Tempest {
         public:
           bool     rgb8 =false;
           bool     rgba8=false;
-          uint64_t minUboAligment=1;
+          size_t   minUboAligment=1;
         };
 
       struct Shared {

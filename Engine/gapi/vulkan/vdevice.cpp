@@ -263,7 +263,7 @@ void VDevice::getCaps(AbstractGraphicsApi::Caps &c) {
 
   VkPhysicalDeviceProperties limits;
   vkGetPhysicalDeviceProperties(physicalDevice,&limits);
-  c.minUboAligment = limits.limits.minUniformBufferOffsetAlignment;
+  c.minUboAligment = size_t(limits.limits.minUniformBufferOffsetAlignment);
   }
 
 VkResult VDevice::present(VSwapchain &sw, const VSemaphore *wait, size_t wSize, uint32_t imageId) {

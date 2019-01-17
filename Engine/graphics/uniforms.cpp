@@ -39,5 +39,6 @@ void Uniforms::set(size_t layoutBind, const Detail::ResourcePtr<Texture2d> &tex)
 
 void Uniforms::set(size_t layoutBind, const UniformBuffer &vbuf, size_t offset, size_t size) {
   if(vbuf.impl.impl.handler)
-    desc.handler->set(layoutBind,vbuf.impl.impl.handler,offset,size);
+    desc.handler->set(layoutBind,vbuf.impl.impl.handler,offset,size); else
+    throw std::logic_error("invalid uniform buffer");
   }
