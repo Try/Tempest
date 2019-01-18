@@ -29,6 +29,8 @@ struct VulkanApi::Impl : public Detail::VulkanApi {
 
   DeviceMemory alloc(size_t size, uint32_t typeBits);
   void         free(DeviceMemory m);
+
+  std::vector<VkCommandBuffer> cmdBuf;
   };
 
 VulkanApi::VulkanApi() {
@@ -319,7 +321,6 @@ void VulkanApi::draw(Device *d,
                      Semaphore *onReady,
                      Fence *onReadyCpu) {
   Detail::VDevice*        dx=reinterpret_cast<Detail::VDevice*>(d);
-  //Detail::VSwapchain*     sx=reinterpret_cast<Detail::VSwapchain*>(sw);
   Detail::VCommandBuffer* cx=reinterpret_cast<Detail::VCommandBuffer*>(cmd);
   auto*                   wx=reinterpret_cast<const Detail::VSemaphore*>(wait);
   auto*                   rx=reinterpret_cast<const Detail::VSemaphore*>(onReady);
@@ -339,6 +340,47 @@ void VulkanApi::draw(Device *d,
 
   submitInfo.commandBufferCount = 1;
   submitInfo.pCommandBuffers    = &cx->impl;
+
+  if(rx!=nullptr) {
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores    = &rx->impl;
+    }
+
+  if(onReadyCpu!=nullptr)
+    onReadyCpu->reset();
+  Detail::vkAssert(vkQueueSubmit(dx->graphicsQueue,1,&submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl));
+  }
+
+void VulkanApi::draw(AbstractGraphicsApi::Device *d,
+                     AbstractGraphicsApi::Swapchain*,
+                     AbstractGraphicsApi::CommandBuffer **cmd, size_t count,
+                     AbstractGraphicsApi::Semaphore *wait,
+                     AbstractGraphicsApi::Semaphore *onReady,
+                     AbstractGraphicsApi::Fence *onReadyCpu) {
+  Detail::VDevice*        dx=reinterpret_cast<Detail::VDevice*>(d);
+  auto*                   wx=reinterpret_cast<const Detail::VSemaphore*>(wait);
+  auto*                   rx=reinterpret_cast<const Detail::VSemaphore*>(onReady);
+  auto*                   rc=reinterpret_cast<const Detail::VFence*>(onReadyCpu);
+
+  auto& cmdBuf = impl->cmdBuf;
+  cmdBuf.resize(count);
+  for(size_t i=0;i<count;++i){
+    Detail::VCommandBuffer* cx=reinterpret_cast<Detail::VCommandBuffer*>(cmd[i]);
+    cmdBuf[i] = cx->impl;
+    }
+
+  VkSubmitInfo submitInfo = {};
+  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+  VkSemaphore          waitSemaphores[] = {wx->impl};
+  VkPipelineStageFlags waitStages[]     = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+
+  submitInfo.waitSemaphoreCount = 1;
+  submitInfo.pWaitSemaphores    = waitSemaphores;
+  submitInfo.pWaitDstStageMask  = waitStages;
+
+  submitInfo.commandBufferCount = count;
+  submitInfo.pCommandBuffers    = cmdBuf.data();
 
   if(rx!=nullptr) {
     submitInfo.signalSemaphoreCount = 1;

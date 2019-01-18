@@ -72,6 +72,7 @@ class VulkanApi : public AbstractGraphicsApi {
     void           present  (Device *d,Swapchain* sw,uint32_t imageId, const Semaphore *wait) override;
 
     void           draw     (Device *d,Swapchain *sw,CommandBuffer* cmd,Semaphore* wait,Semaphore* onReady,Fence* onReadyCpu) override;
+    void           draw     (Device *d,Swapchain *sw,CommandBuffer** cmd,size_t count,Semaphore* wait,Semaphore* onReady,Fence* onReadyCpu) override;
 
     void           getCaps  (Device *d,Caps& caps) override;
 

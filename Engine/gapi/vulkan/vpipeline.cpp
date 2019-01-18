@@ -228,14 +228,21 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   viewportState.scissorCount  = 1;
   viewportState.pScissors     = &scissor;
 
+  static const VkCullModeFlags cullMode[]={
+    VK_CULL_MODE_BACK_BIT,
+    VK_CULL_MODE_FRONT_BIT,
+    0,
+    0
+    };
+
   VkPipelineRasterizationStateCreateInfo rasterizer = {};
   rasterizer.sType                   = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
   rasterizer.pNext                   = nullptr;
   rasterizer.flags                   = 0;
   rasterizer.rasterizerDiscardEnable = st.isRasterDiscardEnabled() ? VK_TRUE : VK_FALSE;
   rasterizer.polygonMode             = VkPolygonMode::VK_POLYGON_MODE_FILL;
-  rasterizer.cullMode                = VkCullModeFlagBits::VK_CULL_MODE_FRONT_BIT;
-  rasterizer.frontFace               = VkFrontFace::VK_FRONT_FACE_COUNTER_CLOCKWISE;
+  rasterizer.cullMode                = cullMode[uint32_t(st.cullFaceMode())];//VkCullModeFlagBits::VK_CULL_MODE_FRONT_BIT;
+  rasterizer.frontFace               = VkFrontFace::VK_FRONT_FACE_CLOCKWISE;
   rasterizer.depthClampEnable        = VK_FALSE;
   rasterizer.depthBiasEnable         = VK_FALSE;
   rasterizer.depthBiasConstantFactor = 0.0f;

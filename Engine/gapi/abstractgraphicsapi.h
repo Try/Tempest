@@ -112,11 +112,14 @@ namespace Tempest {
       struct CommandBuffer   {
         virtual ~CommandBuffer()=default;
         virtual void begin()=0;
-        virtual void begin(AbstractGraphicsApi::Fbo* f,AbstractGraphicsApi::Pass*  p)=0;
+        virtual void begin(AbstractGraphicsApi::Pass* p)=0;
         virtual void end()  =0;
         virtual void beginRenderPass(AbstractGraphicsApi::Fbo* f,
                                      AbstractGraphicsApi::Pass*  p,
                                      uint32_t width,uint32_t height)=0;
+        virtual void beginSecondaryPass(AbstractGraphicsApi::Fbo* f,
+                                        AbstractGraphicsApi::Pass*  p,
+                                        uint32_t width,uint32_t height)=0;
         virtual void endRenderPass()=0;
 
         virtual void clear      (Image& img,float r, float g, float b, float a)=0;
@@ -196,7 +199,8 @@ namespace Tempest {
       virtual uint32_t   nextImage(Device *d,Swapchain* sw,Semaphore* onReady)=0;
       virtual Image*     getImage (Device *d,Swapchain* sw,uint32_t id)=0;
       virtual void       present  (Device *d,Swapchain* sw,uint32_t imageId,const Semaphore *wait)=0;
-      virtual void       draw     (Device *d,Swapchain *sw,CommandBuffer* cmd,Semaphore* wait,Semaphore* onReady,Fence* onReadyCpu)=0;
+      virtual void       draw     (Device *d,Swapchain *sw,CommandBuffer*  cmd,Semaphore* wait,Semaphore* onReady,Fence* onReadyCpu)=0;
+      virtual void       draw     (Device *d,Swapchain *sw,CommandBuffer** cmd,size_t count,Semaphore* wait,Semaphore* onReady,Fence* onReadyCpu)=0;
 
       virtual void       getCaps  (Device *d,Caps& caps)=0;
     };

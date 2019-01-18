@@ -55,10 +55,10 @@ void VCommandBuffer::begin(Usage usageFlags) {
   vkAssert(vkBeginCommandBuffer(impl,&beginInfo));
   }
 
-void VCommandBuffer::begin(VCommandBuffer::Usage usageFlags, VFramebuffer &fbo, VRenderPass &rpass) {
+void VCommandBuffer::begin(VCommandBuffer::Usage usageFlags, VRenderPass &rpass) {
   VkCommandBufferInheritanceInfo inheritanceInfo={};
   inheritanceInfo.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-  inheritanceInfo.framebuffer = fbo.impl;
+  inheritanceInfo.framebuffer = VK_NULL_HANDLE;//fbo.impl;
   inheritanceInfo.renderPass  = rpass.impl;
 
   VkCommandBufferBeginInfo beginInfo = {};
@@ -73,10 +73,9 @@ void VCommandBuffer::begin() {
   begin(Usage(SIMULTANEOUS_USE_BIT));
   }
 
-void VCommandBuffer::begin(Tempest::AbstractGraphicsApi::Fbo *f, Tempest::AbstractGraphicsApi::Pass *p) {
-  VFramebuffer* fbo =reinterpret_cast<VFramebuffer*>(f);
+void VCommandBuffer::begin(Tempest::AbstractGraphicsApi::Pass *p) {
   VRenderPass*  pass=reinterpret_cast<VRenderPass*>(p);
-  begin(Usage(SIMULTANEOUS_USE_BIT|RENDER_PASS_CONTINUE_BIT),*fbo,*pass);
+  begin(Usage(SIMULTANEOUS_USE_BIT|RENDER_PASS_CONTINUE_BIT),*pass);
   }
 
 void VCommandBuffer::end() {
@@ -108,6 +107,33 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
   renderPassInfo.pClearValues    = clear;
 
   vkCmdBeginRenderPass(impl, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+  }
+
+void VCommandBuffer::beginSecondaryPass(Tempest::AbstractGraphicsApi::Fbo *f,
+                                        Tempest::AbstractGraphicsApi::Pass *p,
+                                        uint32_t width, uint32_t height) {
+  VFramebuffer* fbo =reinterpret_cast<VFramebuffer*>(f);
+  VRenderPass*  pass=reinterpret_cast<VRenderPass*>(p);
+
+  VkRenderPassBeginInfo renderPassInfo = {};
+  renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+  renderPassInfo.renderPass        = pass->impl;
+  renderPassInfo.framebuffer       = fbo->impl;
+  renderPassInfo.renderArea.offset = {0, 0};
+  renderPassInfo.renderArea.extent = {width,height};
+
+  VkClearValue clear[2]={};
+  clear[0].color.float32[0]=pass->color.r();
+  clear[0].color.float32[1]=pass->color.g();
+  clear[0].color.float32[2]=pass->color.b();
+  clear[0].color.float32[3]=pass->color.a();
+
+  clear[1].depthStencil.depth=pass->zclear;
+
+  renderPassInfo.clearValueCount = pass->attachCount;
+  renderPassInfo.pClearValues    = clear;
+
+  vkCmdBeginRenderPass(impl, &renderPassInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
   }
 
 void VCommandBuffer::endRenderPass() {

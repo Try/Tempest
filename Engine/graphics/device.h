@@ -54,8 +54,9 @@ class Device {
 
     Frame          frame(uint32_t id);
     uint32_t       nextImage(Semaphore& onReady);
-    void           draw(const CommandBuffer& cmd,const Semaphore& wait);
-    void           draw(const CommandBuffer& cmd,const Semaphore& wait,Semaphore& done,Fence& fdone);
+    void           draw(const CommandBuffer&  cmd,const Semaphore& wait);
+    void           draw(const CommandBuffer&  cmd,const Semaphore& wait,Semaphore& done,Fence& fdone);
+    void           draw(const CommandBuffer*  cmd[],size_t count,const Semaphore& wait,Semaphore& done,Fence& fdone);
     void           present(uint32_t img,const Semaphore& wait);
 
     Shader         loadShader(const char* filename);
@@ -113,6 +114,8 @@ class Device {
       AbstractGraphicsApi::Swapchain* swapchain=nullptr;
       SystemApi::Window*              hwnd=nullptr;
       const uint8_t                   maxFramesInFlight=1;
+
+      std::vector<AbstractGraphicsApi::CommandBuffer*> cmdBuf;
       };
 
     AbstractGraphicsApi&            api;

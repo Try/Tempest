@@ -28,13 +28,16 @@ class CommandBuffer {
 
     void clear(Frame& fr,float r,float g,float b,float a);
 
-    void begin();
-    void begin(const FrameBuffer& fbo, const RenderPass& p);
+    void begin();//primal
+    void begin(const RenderPass& p);//secondary
     void end();
 
     void beginRenderPass(const FrameBuffer& fbo, const RenderPass& p);
     void beginRenderPass(const FrameBuffer& fbo, const RenderPass& p, int width, int height);
     void beginRenderPass(const FrameBuffer& fbo, const RenderPass& p, uint32_t width, uint32_t height);
+
+    void beginSecondaryPasses(const FrameBuffer& fbo, const RenderPass& p);
+    void beginSecondaryPasses(const FrameBuffer& fbo, const RenderPass& p, uint32_t width, uint32_t height);
     void endRenderPass();
 
     void setUniforms(const Tempest::RenderPipeline& p, const Tempest::Uniforms& ubo);

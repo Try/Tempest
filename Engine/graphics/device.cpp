@@ -19,7 +19,7 @@ Device::Impl::Impl(AbstractGraphicsApi &api, SystemApi::Window *w, uint8_t maxFr
   catch(...){
     api.destroy(dev);
     throw;
-    }
+    }  
   }
 
 Device::Impl::~Impl() {
@@ -80,6 +80,13 @@ void Device::draw(const CommandBuffer &cmd, const Semaphore &wait) {
 
 void Device::draw(const CommandBuffer &cmd, const Semaphore &wait, Semaphore &done, Fence &fdone) {
   api.draw(dev,swapchain,cmd.impl.handler,wait.impl.handler,done.impl.handler,fdone.impl.handler);
+  }
+
+void Device::draw(const Tempest::CommandBuffer *cmd[], size_t count, const Semaphore &wait, Semaphore &done, Fence &fdone) {
+  impl.cmdBuf.resize(count);
+  for(size_t i=0;i<count;++i)
+    impl.cmdBuf[i] = cmd[i]->impl.handler;
+  api.draw(dev,swapchain,impl.cmdBuf.data(),count,wait.impl.handler,done.impl.handler,fdone.impl.handler);
   }
 
 void Device::present(uint32_t img,const Semaphore &wait) {

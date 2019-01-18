@@ -37,15 +37,18 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void reset();
 
     void begin(Usage usageFlags);
-    void begin(Usage usageFlags,VFramebuffer& fbo,VRenderPass& rpass);
+    void begin(Usage usageFlags, VRenderPass& rpass);
 
     void begin();
-    void begin(AbstractGraphicsApi::Fbo* f,AbstractGraphicsApi::Pass* p);
+    void begin(AbstractGraphicsApi::Pass* p);
     void end();
 
     void beginRenderPass(AbstractGraphicsApi::Fbo* f,
                          AbstractGraphicsApi::Pass*  p,
                          uint32_t width,uint32_t height);
+    void beginSecondaryPass(AbstractGraphicsApi::Fbo* f,
+                            AbstractGraphicsApi::Pass*  p,
+                            uint32_t width,uint32_t height);
     void endRenderPass();
 
     void clear(AbstractGraphicsApi::Image& img, float r, float g, float b, float a);

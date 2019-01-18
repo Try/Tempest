@@ -23,8 +23,8 @@ void CommandBuffer::begin() {
   impl.handler->begin();
   }
 
-void CommandBuffer::begin(const FrameBuffer &fbo, const RenderPass &p) {
-  impl.handler->begin(fbo.impl.handler,p.impl.handler);
+void CommandBuffer::begin(const RenderPass &p) {
+  impl.handler->begin(p.impl.handler);
   }
 
 void CommandBuffer::end() {
@@ -44,6 +44,14 @@ void CommandBuffer::beginRenderPass(const FrameBuffer &fbo, const RenderPass &p,
 
 void CommandBuffer::beginRenderPass(const FrameBuffer &fbo, const RenderPass &p,uint32_t width,uint32_t height) {
   impl.handler->beginRenderPass(fbo.impl.handler,p.impl.handler,width,height);
+  }
+
+void CommandBuffer::beginSecondaryPasses(const FrameBuffer &fbo, const RenderPass &p) {
+  impl.handler->beginSecondaryPass(fbo.impl.handler,p.impl.handler,fbo.w(),fbo.h());
+  }
+
+void CommandBuffer::beginSecondaryPasses(const FrameBuffer &fbo, const RenderPass &p, uint32_t width, uint32_t height) {
+  impl.handler->beginSecondaryPass(fbo.impl.handler,p.impl.handler,width,height);
   }
 
 void CommandBuffer::endRenderPass() {

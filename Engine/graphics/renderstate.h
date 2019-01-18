@@ -39,6 +39,13 @@ class RenderState final {
       Count
       };
 
+    enum class CullMode : uint8_t {
+      Back=0,
+      Front,
+      NoCull,
+      Count
+      };
+
     void setBlendSource(BlendMode s) { blendS=s; }
     void setBlendDest  (BlendMode d) { blendD=d; }
 
@@ -53,10 +60,14 @@ class RenderState final {
     void      setRasterDiscardEnabled(bool e) { discard=e; }
     bool      isRasterDiscardEnabled() const { return discard; }
 
+    CullMode cullFaceMode() const { return cull; }
+    void     setCullFaceMode(CullMode use) { cull=use; }
+
   private:
     BlendMode blendS=BlendMode::one;
     BlendMode blendD=BlendMode::zero;
     ZTestMode zmode =ZTestMode::Always;
+    CullMode  cull  =CullMode::Back;
     bool      discard=false;
   };
 
