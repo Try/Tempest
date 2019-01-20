@@ -22,23 +22,21 @@ class IndexBuffer;
 
 class CommandBuffer {
   public:
+    CommandBuffer()=default;
     CommandBuffer(CommandBuffer&& f)=default;
     ~CommandBuffer();
     CommandBuffer& operator = (CommandBuffer&& other)=default;
-
-    void clear(Frame& fr,float r,float g,float b,float a);
 
     void begin();//primal
     void begin(const RenderPass& p);//secondary
     void end();
 
-    void beginRenderPass(const FrameBuffer& fbo, const RenderPass& p);
-    void beginRenderPass(const FrameBuffer& fbo, const RenderPass& p, int width, int height);
-    void beginRenderPass(const FrameBuffer& fbo, const RenderPass& p, uint32_t width, uint32_t height);
+    void setPass(const FrameBuffer& fbo, const RenderPass& p);
+    void setPass(const FrameBuffer& fbo, const RenderPass& p, int      width, int      height);
+    void setPass(const FrameBuffer& fbo, const RenderPass& p, uint32_t width, uint32_t height);
 
-    void beginSecondaryPasses(const FrameBuffer& fbo, const RenderPass& p);
-    void beginSecondaryPasses(const FrameBuffer& fbo, const RenderPass& p, uint32_t width, uint32_t height);
-    void endRenderPass();
+    void setSecondaryPass(const FrameBuffer& fbo, const RenderPass& p);
+    void setSecondaryPass(const FrameBuffer& fbo, const RenderPass& p,uint32_t width, uint32_t height);
 
     void setUniforms(const Tempest::RenderPipeline& p, const Tempest::Uniforms& ubo);
     void setUniforms(const Tempest::RenderPipeline& p, const Tempest::Uniforms& ubo, size_t offc, const uint32_t *offv);
@@ -68,9 +66,21 @@ class CommandBuffer {
     void implDraw(const VideoBuffer& vbo,size_t offset,size_t size);
     void implDraw(const VideoBuffer& vbo,const VideoBuffer& ibo,Detail::IndexClass index,size_t offset,size_t size);
 
+    void implEndRenderPass();
+
     const AbstractGraphicsApi::Pipeline* curPipeline=nullptr;
     const VideoBuffer*                   curVbo     =nullptr;
     const VideoBuffer*                   curIbo     =nullptr;
+
+    struct Pass {
+      const FrameBuffer* fbo   =nullptr;
+      const RenderPass*  pass  =nullptr;
+      uint32_t           width =0;
+      uint32_t           height=0;
+
+      bool               active=false;
+      };
+    Pass curPass;
 
     Tempest::Device*                                  dev=nullptr;
     Detail::DPtr<AbstractGraphicsApi::CommandBuffer*> impl;

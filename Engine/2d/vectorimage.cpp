@@ -148,6 +148,9 @@ void VectorImage::draw(Device & dev, CommandBuffer &cmd, RenderPass& pass) {
     auto& b=blocks[i];
     auto& u=f.blocks[i];
 
+    if(b.size==0)
+      continue;
+
     if(!b.pipeline) {
       const RenderPipeline* p;
       if(b.hasImg) {
