@@ -33,8 +33,8 @@ struct VulkanApi::Impl : public Detail::VulkanApi {
   std::vector<VkCommandBuffer> cmdBuf;
   };
 
-VulkanApi::VulkanApi() {
-  impl.reset(new Impl(true));
+VulkanApi::VulkanApi(ApiFlags f) {
+  impl.reset(new Impl(bool(f&ApiFlags::Validation)));
   }
 
 VulkanApi::~VulkanApi(){

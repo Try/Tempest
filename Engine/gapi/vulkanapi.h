@@ -9,7 +9,7 @@ namespace Tempest {
 
 class VulkanApi : public AbstractGraphicsApi {
   public:
-    VulkanApi();
+    explicit VulkanApi(ApiFlags f=ApiFlags::NoFlags);
     virtual ~VulkanApi();
 
     Device*      createDevice(SystemApi::Window* w) override;

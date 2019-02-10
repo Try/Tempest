@@ -32,6 +32,19 @@ namespace Tempest {
     };
   }
 
+  enum class ApiFlags : uint16_t{
+    NoFlags   =0,
+    Validation=1
+    };
+
+  inline ApiFlags operator | (ApiFlags a, ApiFlags b){
+    return ApiFlags(uint16_t(a)|uint16_t(b));
+    }
+
+  inline ApiFlags operator & (ApiFlags a, ApiFlags b){
+    return ApiFlags(uint16_t(a)&uint16_t(b));
+    }
+
   enum Topology : uint8_t {
     Lines    =1,
     Triangles=2
