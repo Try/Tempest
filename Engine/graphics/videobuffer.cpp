@@ -23,6 +23,7 @@ VideoBuffer &VideoBuffer::operator=(VideoBuffer &&other) {
   std::swap(dev,other.dev);
   impl = std::move(other.impl);
   sz   = other.sz;
+  return *this;
   }
 
 void VideoBuffer::update(const void *data, size_t offset, size_t size) {
@@ -32,4 +33,3 @@ void VideoBuffer::update(const void *data, size_t offset, size_t size) {
     throw std::logic_error("invalid VideoBuffer update range");
   impl.handler->update(data,offset,size);
   }
-

@@ -44,6 +44,10 @@ class Window : public Widget {
       void onMouse(MouseEvent& e){
         self->dispatchMoveEvent(e);
         }
+
+      void onKey(KeyEvent& e){
+        self->dispatchKeyEvent(e);
+        }
       Window* self;
       };
 

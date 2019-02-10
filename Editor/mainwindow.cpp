@@ -73,7 +73,7 @@ void MainWindow::initSwapchain(){
   commandDynamic.clear();
   fbo.clear();
 
-  mainPass=device.pass(FboMode::PreserveOut,FboMode::Discard);
+  mainPass=device.pass(FboMode::Preserve|FboMode::PresentOut,FboMode::Discard,TextureFormat::Undefined);
 
   for(size_t i=0;i<imgC;++i) {
     Tempest::Frame frame=device.frame(i);
@@ -96,9 +96,8 @@ void MainWindow::render(){
       dispatchPaintEvent(surface,atlas);
 
     cmd.begin();
-    cmd.beginRenderPass(fbo[imgId],mainPass,w(),h());
+    cmd.setPass(fbo[imgId],mainPass);
     surface.draw(device,cmd,mainPass);
-    cmd.endRenderPass();
     cmd.end();
 
     device.draw(cmd,context.imageAvailable,renderDone,context.gpuLock);

@@ -26,6 +26,8 @@ class VDescriptorArray : public AbstractGraphicsApi::Desc {
 
     void                     set   (size_t id, AbstractGraphicsApi::Texture *tex) override;
     void                     set   (size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset, size_t size) override;
+
+    static void              addPoolSize(VkDescriptorPoolSize* p, size_t& sz, VkDescriptorType elt);
   };
 
 }}

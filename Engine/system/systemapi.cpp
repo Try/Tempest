@@ -68,9 +68,42 @@ static Event::MouseButton toButton( UINT msg, DWORD wParam ){
   return Event::ButtonNone;
   }
 
-SystemApi::SystemApi() {}
+SystemApi::SystemApi() {
+  }
 
-bool SystemApi::implInitWindowClass() {
+bool SystemApi::implInitApi() {
+  static TranslateKeyPair k[] = {
+    { VK_LCONTROL, Event::K_Control },
+    { VK_RCONTROL, Event::K_Control },
+    { VK_CONTROL,  Event::K_Control },
+
+    { VK_LEFT,     Event::K_Left    },
+    { VK_RIGHT,    Event::K_Right   },
+    { VK_UP,       Event::K_Up      },
+    { VK_DOWN,     Event::K_Down    },
+
+    { VK_ESCAPE,   Event::K_ESCAPE  },
+    { VK_BACK,     Event::K_Back    },
+    { VK_TAB,      Event::K_Tab     },
+    { VK_SHIFT,    Event::K_Shift   },
+    { VK_DELETE,   Event::K_Delete  },
+    { VK_INSERT,   Event::K_Insert  },
+    { VK_HOME,     Event::K_Home    },
+    { VK_END,      Event::K_End     },
+    { VK_PAUSE,    Event::K_Pause   },
+    { VK_RETURN,   Event::K_Return  },
+    { VK_SPACE,    Event::K_Space   },
+
+    { VK_F1,       Event::K_F1 },
+    { 0x30,        Event::K_0  },
+    { 0x41,        Event::K_A  },
+
+    { 0,         Event::K_NoKey }
+    };
+
+  setupKeyTranslate(k);
+  //setFuncKeysCount(24);
+
   WNDCLASSEXW winClass={};
 
   // Initialize the window class structure:
@@ -94,13 +127,13 @@ bool SystemApi::implInitWindowClass() {
   return true;
   }
 
-bool SystemApi::initWindowClass() {
-  static const bool flag = implInitWindowClass();
+bool SystemApi::initApi() {
+  static const bool flag = implInitApi();
   (void)flag;
   }
 
 SystemApi::Window *SystemApi::createWindow(SystemApi::WindowCallback *callback, uint32_t width, uint32_t height) {
-  initWindowClass();
+  initApi();
   // Create window with the registered class:
   RECT wr = {0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
   AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
@@ -348,16 +381,16 @@ LRESULT CALLBACK WindowProc( HWND   hWnd,
        }
 
     case WM_KEYDOWN: {
-       SystemApi::translateKey(wParam);
-    /*
-       SystemAPI::emitEvent( w,
-                             makeKeyEvent(wParam),
-                             makeKeyEvent(wParam, true),
-                             Event::KeyDown );*/
+       auto key = SystemApi::translateKey(wParam);
+       Tempest::KeyEvent e(Event::KeyType(key),Event::KeyDown);
+       cb->onKey(e);
       }
       break;
 
     case WM_KEYUP: {
+      auto key = SystemApi::translateKey(wParam);
+      Tempest::KeyEvent e(Event::KeyType(key),Event::KeyUp);
+      cb->onKey(e);
       }
       break;
 

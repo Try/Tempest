@@ -18,7 +18,7 @@ VTexture::~VTexture() {
     alloc->free(*this);
   }
 
-void VTexture::createView(VkDevice device,VkFormat format,uint32_t mipCount) {
+void VTexture::createView(VkDevice device,VkFormat format,VkSampler s,uint32_t mipCount) {
   VkImageViewCreateInfo viewInfo = {};
   viewInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   viewInfo.image                           = impl;
@@ -33,29 +33,5 @@ void VTexture::createView(VkDevice device,VkFormat format,uint32_t mipCount) {
   viewInfo.subresourceRange.layerCount     = 1;
 
   vkAssert(vkCreateImageView(device, &viewInfo, nullptr, &view));
-  createTextureSampler(device,mipCount);
-  }
-
-void VTexture::createTextureSampler(VkDevice device,uint32_t mipCount) {
-  VkSamplerCreateInfo samplerInfo = {};
-  samplerInfo.sType            = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-
-  samplerInfo.magFilter               = VK_FILTER_LINEAR;
-  samplerInfo.minFilter               = VK_FILTER_LINEAR;
-  samplerInfo.addressModeU            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-  samplerInfo.addressModeV            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-  samplerInfo.addressModeW            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-  //samplerInfo.anisotropyEnable        = VK_TRUE;
-  //samplerInfo.maxAnisotropy           = 16;
-  samplerInfo.maxAnisotropy           = 1.0;
-  samplerInfo.borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-  samplerInfo.unnormalizedCoordinates = VK_FALSE;
-  samplerInfo.compareEnable           = VK_FALSE;
-  samplerInfo.compareOp               = VK_COMPARE_OP_ALWAYS;
-  samplerInfo.mipmapMode              = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-
-  samplerInfo.minLod                  = 0;
-  samplerInfo.maxLod                  = static_cast<float>(mipCount);
-
-  vkAssert(vkCreateSampler(device, &samplerInfo, nullptr, &sampler));
+  sampler = s;
   }

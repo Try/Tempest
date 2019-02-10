@@ -21,7 +21,7 @@ class Event {
       return accepted;
       }
 
-    enum Type {
+    enum Type : uint16_t {
       NoEvent = 0,
       MouseDown,
       MouseUp,
@@ -42,7 +42,7 @@ class Event {
       Custom = 512
       };
 
-    enum MouseButton {
+    enum MouseButton : uint8_t {
       ButtonNone = 0,
       ButtonLeft,
       ButtonRight,
@@ -51,7 +51,7 @@ class Event {
       ButtonForward
       };
 
-    enum KeyType {
+    enum KeyType : uint8_t {
       K_NoKey = 0,
       K_ESCAPE,
 
@@ -72,6 +72,7 @@ class Event {
       K_End,
       K_Pause,
       K_Shift,
+      K_Space,
 
       K_F1,
       K_F2,
@@ -247,5 +248,15 @@ class KeyEvent: public Event {
 
     const KeyType  key =K_NoKey;
     const uint32_t code=0;
+  };
+
+class FocusEvent: public Event {
+  public:
+    FocusEvent( bool in, FocusReason reason ): in(in), reason(reason) {
+      setType( Focus );
+      }
+
+    const bool        in;
+    const FocusReason reason;
   };
 }

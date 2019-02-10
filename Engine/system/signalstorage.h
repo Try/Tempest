@@ -39,7 +39,14 @@ class SgStorage {
       if(data!=nullptr)
         data->addRef();
       }
+    SgStorage(SgStorage&& other):data(other.data){
+      other.data=nullptr;
+      }
     SgStorage& operator=(const SgStorage&)=delete;
+    SgStorage& operator=(SgStorage&& other){
+      std::swap(other.data,data);
+      return *this;
+      }
 
     template<class T,class...Args>
     void push(Args...args) {

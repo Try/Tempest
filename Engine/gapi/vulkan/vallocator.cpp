@@ -15,6 +15,7 @@ VAllocator::VAllocator() {
 
 void VAllocator::setDevice(VDevice &dev) {
   device          = dev.device;
+  samplers.device = dev.device;
   provider.device = &dev;
   }
 
@@ -151,7 +152,9 @@ VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip) {
   ret.page=allocator.alloc(size_t(memRq.size),size_t(memRq.alignment),typeId);
   if(!ret.page.page || !commit(ret.page.page->memory,ret.impl,ret.page.offset))
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
-  ret.createView(device,imageInfo.format,mip);
+
+  auto s = samplers.get(mip);
+  ret.createView(device,imageInfo.format,s,mip);
   return ret;
   }
 
@@ -193,7 +196,9 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mi
   ret.page=allocator.alloc(size_t(memRq.size),size_t(memRq.alignment),typeId);
   if(!ret.page.page || !commit(ret.page.page->memory,ret.impl,ret.page.offset))
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
-  ret.createView(device,imageInfo.format,mip);
+
+  auto s = samplers.get(mip);
+  ret.createView(device,imageInfo.format,s,mip);
   return ret;
   }
 
@@ -208,7 +213,7 @@ void VAllocator::free(VBuffer &buf) {
 void VAllocator::free(VTexture &buf) {
   if(buf.sampler!=VK_NULL_HANDLE) {
     vkDeviceWaitIdle  (device);
-    vkDestroySampler  (device,buf.sampler,nullptr);
+    samplers.free(buf.sampler);
     vkDestroyImageView(device,buf.view,nullptr);
     vkDestroyImage    (device,buf.impl,nullptr);
     }
@@ -226,7 +231,6 @@ void VAllocator::free(VTexture &buf) {
 
 bool VAllocator::update(VBuffer &dest, const void *mem, size_t offset, size_t size) {
   auto& page = dest.page;
-  // TODO: roundup offset, size to VkPhysicalDeviceLimits::nonCoherentAtomSiz
   void* data=nullptr;
   if(vkMapMemory(device,page.page->memory,page.offset+offset,size,0,&data)!=VkResult::VK_SUCCESS)
     return false;

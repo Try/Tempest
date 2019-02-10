@@ -3,6 +3,7 @@
 #include <Tempest/AbstractGraphicsApi>
 #include <vulkan/vulkan.hpp>
 #include "gapi/deviceallocator.h"
+#include "vsamplercache.h"
 
 namespace Tempest {
 namespace Detail {
@@ -41,13 +42,14 @@ class VAllocator {
     void     free(VBuffer&  buf);
     void     free(VTexture& buf);
 
-    void     freeLast() { provider.freeLast(); }
+    void     freeLast() { provider.freeLast(); samplers.freeLast(); }
 
     bool     update(VBuffer& dest, const void *mem, size_t offset,  size_t size);
 
   private:
     VkDevice                          device=nullptr;
     Provider                          provider;
+    VSamplerCache                     samplers;
     Detail::DeviceAllocator<Provider> allocator{provider};
 
     bool commit(VkDeviceMemory dev,VkBuffer dest,const void *mem,size_t offset,size_t size);

@@ -115,6 +115,7 @@ void VectorImage::makeActual(Device &dev,RenderPass& pass) {
 
   PerFrame& f=frame[dev.frameId()];
   if(f.outdated) {
+    //if(f.vbo.size()==buf.size())
     f.vbo=dev.loadVbo(buf,BufferFlags::Static);
     f.blocks.reserve(blocks.size());
     f.blocks.clear();

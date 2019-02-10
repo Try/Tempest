@@ -16,6 +16,8 @@ class Signal<void(Args...args)> {
   public:
     Signal()=default;
     Signal(const Signal&)=delete;
+    Signal(Signal&& other)=default;
+    Signal& operator=(Signal&& other)=default;
 
     template<class T,class Base,class Ret,class ... TArgs>
     void bind(T* obj,Ret (Base::*fn)(TArgs...a)) {

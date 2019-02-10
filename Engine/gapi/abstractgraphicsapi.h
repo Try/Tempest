@@ -102,7 +102,7 @@ namespace Tempest {
         };
       struct Buffer          {
         virtual ~Buffer()=default;
-        virtual void update(const void* data,size_t off,size_t sz)=0;
+        virtual void  update(const void* data,size_t off,size_t sz)=0;
         };
       struct Desc            {
         virtual ~Desc()=default;

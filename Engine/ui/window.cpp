@@ -8,6 +8,7 @@ Window::Window()
   :impl(this) {
   id = Tempest::SystemApi::createWindow(&impl,800,600);
   setGeometry(SystemApi::windowClientRect(id));
+  setFocus(true);
   update();
   }
 
@@ -15,6 +16,7 @@ Window::Window(Window::ShowMode sm)
   :impl(this) {
   id = Tempest::SystemApi::createWindow(&impl,SystemApi::ShowMode(sm));
   setGeometry(SystemApi::windowClientRect(id));
+  setFocus(true);
   update();
   }
 

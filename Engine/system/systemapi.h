@@ -6,6 +6,7 @@
 namespace Tempest{
 
 class MouseEvent;
+class KeyEvent;
 class Application;
 
 class SystemApi {
@@ -20,6 +21,7 @@ class SystemApi {
       virtual void onRender(Window* wx)=0;
       virtual void onResize(Window* wx,int32_t w,int32_t h)=0;
       virtual void onMouse(MouseEvent& e)=0;
+      virtual void onKey  (KeyEvent&   e)=0;
       };
 
     enum ShowMode : uint8_t {
@@ -45,7 +47,7 @@ class SystemApi {
     static uint16_t translateKey(uint64_t scancode);
 
   protected:
-    void setupKeyTranslate(const TranslateKeyPair k[]);
+    static void setupKeyTranslate(const TranslateKeyPair k[]);
 
   private:
     struct AppCallBack {
@@ -54,8 +56,8 @@ class SystemApi {
       };
 
     static int      exec(AppCallBack& cb);
-    static bool     initWindowClass();
-    static bool     implInitWindowClass();
+    static bool     initApi();
+    static bool     implInitApi();
 
   friend class Application;
   };

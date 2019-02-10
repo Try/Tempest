@@ -27,20 +27,24 @@ VDescriptorArray *VDescriptorArray::alloc(VkDevice device, const UniformsLayout&
     }
 
   std::array<VkDescriptorPoolSize,3> poolSize = {{}};
-  poolSize[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  poolSize[0].descriptorCount = 1;
+  size_t pSize=0;
 
-  poolSize[1].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-  poolSize[1].descriptorCount = 1;
-
-  poolSize[2].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-  poolSize[2].descriptorCount = 1;
+  for(size_t i=0;i<lay.size();++i){
+    auto cls = lay[i].cls;
+    switch(cls) {
+      case UniformsLayout::Ubo:     addPoolSize(&poolSize[0],pSize,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);         break;
+      case UniformsLayout::UboDyn:  addPoolSize(&poolSize[0],pSize,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC); break;
+      case UniformsLayout::Texture: addPoolSize(&poolSize[0],pSize,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER); break;
+      }
+    }
+  if(pSize==0)
+    return nullptr;
 
   VkDescriptorPoolCreateInfo poolInfo = {};
   poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
   poolInfo.maxSets       = 1;
   //poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-  poolInfo.poolSizeCount = poolSize.size();
+  poolInfo.poolSizeCount = pSize;
   poolInfo.pPoolSizes    = poolSize.data();
 
   vkAssert(vkCreateDescriptorPool(device,&poolInfo,nullptr,&a->impl));
@@ -105,4 +109,14 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf,
   descriptorWrite.pBufferInfo     = &bufferInfo;
 
   vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+  }
+
+void VDescriptorArray::addPoolSize(VkDescriptorPoolSize *p, size_t &sz, VkDescriptorType elt) {
+  for(size_t i=0;i<sz;++i){
+    if(p[i].type==elt)
+      p[i].descriptorCount++;
+    }
+  p[sz].type=elt;
+  p[sz].descriptorCount=1;
+  sz++;
   }

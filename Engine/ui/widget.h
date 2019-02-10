@@ -109,10 +109,16 @@ class Widget {
     virtual void mouseDragEvent   (Tempest::MouseEvent& event);
     virtual void mouseWheelEvent  (Tempest::MouseEvent& event);
 
+    virtual void keyDownEvent     (Tempest::KeyEvent&   event);
+    virtual void keyUpEvent       (Tempest::KeyEvent&   event);
+
     virtual void mouseEnterEvent  (Tempest::MouseEvent& event);
     virtual void mouseLeaveEvent  (Tempest::MouseEvent& event);
 
+    virtual void focusEvent       (Tempest::FocusEvent& event);
+
     virtual void dispatchMoveEvent(Tempest::MouseEvent& event);
+    virtual void dispatchKeyEvent (Tempest::KeyEvent&   event);
 
   private:
     struct Iterator;
@@ -130,7 +136,7 @@ class Widget {
     struct Additive {
       Widget*  mouseFocus=nullptr;
       Widget*  moveFocus =nullptr;
-      Widget*  clickFocus=nullptr;
+      Widget*  focus     =nullptr;
 
       uint16_t disable     =0;
       bool     needToUpdate=false;
@@ -153,6 +159,10 @@ class Widget {
     Widget&                 implAddWidget(Widget* w);
     void                    implSetFocus(Widget* Additive::*add,bool State::* flag,bool value,const MouseEvent* parent);
     static void             implExcFocus(Event::Type type,Widget* prev, Widget* next, const MouseEvent& parent);
+    static void             implClearFocus(Widget* w,Widget* Additive::*add, bool State::*flag);
+    static Widget*          implTrieRoot(Widget* w);
+    bool                    checkFocus() const { return wstate.focus || state.focus; }
+    void                    implAttachFocus();
 
     void                    dispatchPaintEvent(PaintEvent &e);
 
@@ -161,6 +171,8 @@ class Widget {
     void                    dispatchMouseMove (Tempest::MouseEvent &e);
     void                    dispatchMouseDrag (Tempest::MouseEvent &e);
     void                    dispatchMouseWhell(Tempest::MouseEvent &e);
+    void                    dispatchKeyDown   (Tempest::KeyEvent   &e);
+    void                    dispatchKeyUp     (Tempest::KeyEvent   &e);
 
     void                    setOwner(Widget* w);
 

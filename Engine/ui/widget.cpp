@@ -92,7 +92,7 @@ void Widget::removeAllWidgets() {
 
   state.moveFocus =nullptr;
   state.mouseFocus=nullptr;
-  state.clickFocus=nullptr;
+  state.focus     =nullptr;
 
   for(auto& w:rm)
     delete w;
@@ -142,11 +142,25 @@ void Widget::setOwner(Widget *w) {
 Widget& Widget::implAddWidget(Widget *w) {
   if(w==nullptr)
     throw std::invalid_argument("null widget");
+  if(w->checkFocus()) {
+    while(true) {
+      implClearFocus(this,&Additive::focus,&State::focus);
+      auto root=implTrieRoot(this);
+      if(root==nullptr || !root->checkFocus())
+        break;
+      }
+    if(w->checkFocus())
+      implAttachFocus();
+    }
+
   wx.emplace_back(w);
   w->setOwner(this);
+  if(w->checkFocus())
+    state.focus = w;
   if(state.disable>0)
     implDisableSum(w,state.disable);
   lay->applyLayout();
+  update();
   return *w;
   }
 
@@ -155,6 +169,13 @@ Widget *Widget::takeWidget(Widget *w) {
     state.mouseFocus=nullptr;
   if(state.moveFocus==w)
     state.moveFocus=nullptr;
+  if(state.focus==w) {
+    auto wx = this;
+    while(wx!=nullptr){
+      wx->state.focus=nullptr;
+      wx = wx->owner();
+      }
+    }
   if(state.disable>0)
     implDisableSum(w,-state.disable);
   const size_t id=lay->find(w);
@@ -341,7 +362,7 @@ bool Widget::isEnabledTo(const Widget *ancestor) const {
   }
 
 void Widget::setFocus(bool b) {
-  implSetFocus(&Additive::clickFocus,&State::focus,b,nullptr);
+  implSetFocus(&Additive::focus,&State::focus,b,nullptr);
   }
 
 void Widget::implSetFocus(Widget* Additive::*add, bool State::*flag, bool value,const MouseEvent* parent) {
@@ -377,6 +398,39 @@ void Widget::implSetFocus(Widget* Additive::*add, bool State::*flag, bool value,
         implExcFocus(Event::MouseEnter,previous,next,MouseEvent());
       return;
       }
+    w = w->owner();
+    }
+  }
+
+void Widget::implClearFocus(Widget *wx,Widget* Additive::*add, bool State::*flag) {
+  Widget* w=implTrieRoot(wx);
+  while(w!=nullptr) {
+    if(w->state.*add!=nullptr) {
+      auto x = w->state.*add;
+      w->state.*add=nullptr;
+      w = x;
+      continue;
+      }
+    if(w->wstate.*flag){
+      FocusEvent e(false,Event::FocusReason::UnknownReason);
+      w->wstate.*flag=false;
+      w->focusEvent(e);
+      }
+    return;
+    }
+  }
+
+Widget *Widget::implTrieRoot(Widget *w) {
+  while(w->owner()!=nullptr)
+    w = w->owner();
+  return w;
+  }
+
+void Widget::implAttachFocus() {
+  Widget* w = this, *prev=nullptr;
+  while(w!=nullptr) {
+    w->state.focus = prev;
+    prev=w;
     w = w->owner();
     }
   }
@@ -439,11 +493,23 @@ void Widget::mouseWheelEvent(MouseEvent &e) {
   e.ignore();
   }
 
+void Widget::keyDownEvent(KeyEvent &e) {
+  e.ignore();
+  }
+
+void Widget::keyUpEvent(KeyEvent &e) {
+  e.ignore();
+  }
+
 void Widget::mouseEnterEvent(MouseEvent &e) {
   e.ignore();
   }
 
 void Widget::mouseLeaveEvent(MouseEvent &e) {
+  e.ignore();
+  }
+
+void Widget::focusEvent(FocusEvent &e) {
   e.ignore();
   }
 
@@ -454,6 +520,14 @@ void Widget::dispatchMoveEvent(MouseEvent &event) {
     case Event::MouseMove:  dispatchMouseMove (event); break;
     case Event::MouseDrag:  dispatchMouseDrag (event); break;
     case Event::MouseWheel: dispatchMouseWhell(event); break;
+    default:break;
+    }
+  }
+
+void Widget::dispatchKeyEvent(KeyEvent &event) {
+  switch(event.type()){
+    case Event::KeyDown: dispatchKeyDown (event); break;
+    case Event::KeyUp:   dispatchKeyUp   (event); break;
     default:break;
     }
   }
@@ -574,4 +648,24 @@ void Widget::dispatchMouseWhell(MouseEvent &event) {
 
   if(it.owner!=nullptr)
     it.owner->mouseWheelEvent(event);
+  }
+
+void Widget::dispatchKeyDown(KeyEvent &event) {
+  if(state.focus!=nullptr) {
+    KeyEvent ex(event.key,event.code,event.type());
+    state.focus->dispatchKeyDown(ex);
+    } else {
+    if(wstate.focus)
+      keyDownEvent(event);
+    }
+  }
+
+void Widget::dispatchKeyUp(KeyEvent &event) {
+  if(state.focus!=nullptr) {
+    KeyEvent ex(event.key,event.code,event.type());
+    state.focus->dispatchKeyUp(ex);
+    } else {
+    if(wstate.focus)
+      keyUpEvent(event);
+    }
   }

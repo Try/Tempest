@@ -38,6 +38,8 @@ class Texture2d {
       ClampMode uClamp   =ClampMode::Repeat;
       ClampMode vClamp   =ClampMode::Repeat;
 
+      bool      anisotropic=true;
+
       void setClamping(ClampMode c){
         uClamp = c;
         vClamp = c;
@@ -49,7 +51,18 @@ class Texture2d {
         mipFilter = f;
         }
 
-      bool anisotropic=true;
+      bool operator==(const Sampler& s) const {
+        return minFilter==s.minFilter &&
+               magFilter==s.magFilter &&
+               mipFilter==s.mipFilter &&
+               uClamp   ==s.uClamp    &&
+               vClamp   ==s.vClamp    &&
+               anisotropic==s.anisotropic;
+        }
+
+      bool operator!=(const Sampler& s) const {
+        return !(*this==s);
+        }
       };
 
     Texture2d()=default;
