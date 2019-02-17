@@ -47,7 +47,7 @@ class SystemApi {
     static uint16_t translateKey(uint64_t scancode);
 
   protected:
-    static void setupKeyTranslate(const TranslateKeyPair k[]);
+    static void setupKeyTranslate(const TranslateKeyPair k[], uint16_t funcCount);
 
   private:
     struct AppCallBack {

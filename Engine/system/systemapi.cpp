@@ -72,7 +72,7 @@ SystemApi::SystemApi() {
   }
 
 bool SystemApi::implInitApi() {
-  static TranslateKeyPair k[] = {
+  static const TranslateKeyPair k[] = {
     { VK_LCONTROL, Event::K_Control },
     { VK_RCONTROL, Event::K_Control },
     { VK_CONTROL,  Event::K_Control },
@@ -101,8 +101,8 @@ bool SystemApi::implInitApi() {
     { 0,         Event::K_NoKey }
     };
 
-  setupKeyTranslate(k);
-  //setFuncKeysCount(24);
+
+  setupKeyTranslate(k,24);
 
   WNDCLASSEXW winClass={};
 
@@ -130,6 +130,7 @@ bool SystemApi::implInitApi() {
 bool SystemApi::initApi() {
   static const bool flag = implInitApi();
   (void)flag;
+  return true;
   }
 
 SystemApi::Window *SystemApi::createWindow(SystemApi::WindowCallback *callback, uint32_t width, uint32_t height) {
@@ -222,11 +223,12 @@ uint16_t SystemApi::translateKey(uint64_t scancode) {
   return Event::K_NoKey;
   }
 
-void SystemApi::setupKeyTranslate( const TranslateKeyPair k[] ) {
+void SystemApi::setupKeyTranslate(const TranslateKeyPair k[], uint16_t funcCount ) {
   ki.keys.clear();
   ki.a. clear();
   ki.k0.clear();
   ki.f1.clear();
+  ki.fkeysCount = funcCount;
 
   for( size_t i=0; k[i].result!=Event::K_NoKey; ++i ){
     if( k[i].result==Event::K_A )
@@ -379,6 +381,7 @@ LRESULT CALLBACK WindowProc( HWND   hWnd,
                               Event::MouseWheel );
        cb->onMouse(e);
        }
+      break;
 
     case WM_KEYDOWN: {
        auto key = SystemApi::translateKey(wParam);
