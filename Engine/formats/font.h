@@ -70,6 +70,7 @@ class Font final {
     const Letter&         letter(char32_t ch,Painter& tex) const;
 
     Size                  textSize(const char* text) const;
+    Size                  textSize(const std::string& text) const;
 
   private:
     template<class CharT>

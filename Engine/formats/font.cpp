@@ -279,3 +279,7 @@ const Font::Letter &Font::letter(char32_t ch, Painter &p) const {
 Size Font::textSize(const char *text) const {
   return fnt[0][0].textSize(text,size);
   }
+
+Size Font::textSize(const std::string &text) const {
+  return textSize(text.c_str());
+  }

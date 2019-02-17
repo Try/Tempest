@@ -342,3 +342,11 @@ void Painter::drawText(int x, int y, const char16_t *txt) {
   setBrush(pb);
   }
 
+void Painter::drawText(int x, int y, const std::string &txt) {
+  return drawText(x,y,txt.c_str());
+  }
+
+void Painter::drawText(int x, int y, const std::u16string &txt) {
+  return drawText(x,y,txt.c_str());
+  }
+

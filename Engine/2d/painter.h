@@ -45,6 +45,9 @@ class Painter {
     void drawText(int x,int y,const char*     txt);
     void drawText(int x,int y,const char16_t* txt);
 
+    void drawText(int x,int y,const std::string& txt);
+    void drawText(int x,int y,const std::u16string& txt);
+
   private:
     enum State:uint8_t {
       StNo   =0,
