@@ -21,7 +21,8 @@ class AlignedArray final {
     size_t   size()        const { return sz; }
     size_t   byteSize()    const { return sz*alignedSize; }
     size_t   elementSize() const { return alignedSize; }
-    void     resize(size_t sz);
+    void     resize (size_t sz);
+    void     reserve(size_t sz){ reserveSz=sz; }
 
           T& operator[](size_t i);
     const T& operator[](size_t i) const;
@@ -31,8 +32,11 @@ class AlignedArray final {
   private:
     void*  buf=nullptr;
     T&     get(void* ptr,size_t i) { return *reinterpret_cast<T*>(reinterpret_cast<char*>(ptr)+i*alignedSize); }
+    void*  implRealloc(void* buf,size_t sz);
 
-    size_t sz =0;
+    size_t sz         =0;
+    size_t actualSz   =0;
+    size_t reserveSz  =0;
     size_t alignedSize=1;
   };
 
@@ -59,8 +63,8 @@ AlignedArray<T>::~AlignedArray(){
 
 template<class T>
 AlignedArray<T>& AlignedArray<T>::operator=(AlignedArray&& other) {
-  std::swap(buf,         other.buf);
   std::swap(sz,          other.sz);
+  std::swap(actualSz,    other.actualSz);
   std::swap(buf,         other.buf);
   std::swap(alignedSize, other.alignedSize);
   }
@@ -68,7 +72,7 @@ AlignedArray<T>& AlignedArray<T>::operator=(AlignedArray&& other) {
 template<class T>
 void AlignedArray<T>::resize(size_t size){
   if(sz<size) {
-    void* n = std::realloc(buf,size*alignedSize);
+    void* n = implRealloc(buf,size);
     if(n==nullptr)
       throw std::bad_alloc();
     buf=n;
@@ -93,11 +97,22 @@ void AlignedArray<T>::resize(size_t size){
       --i;
       get(buf,i).~T();
       }
-    void* n = std::realloc(buf,size*alignedSize);
+    void* n = implRealloc(buf,size);
     if(n!=nullptr)
       buf=n;
     sz=size;
     }
+  }
+
+template<class T>
+void *AlignedArray<T>::implRealloc(void *buf, size_t sz) {
+  sz = std::max(reserveSz,sz);
+  if(sz==actualSz)
+    return buf;
+  void*  n = std::realloc(buf,sz*alignedSize);
+  if(n!=nullptr)
+    actualSz=sz;
+  return n;
   }
 
 template<class T>
