@@ -226,7 +226,8 @@ void VAllocator::free(VTexture &buf) {
     vkDeviceWaitIdle(device);
     vkDestroyImage  (device,buf.impl,nullptr);
     }
-  allocator.free(buf.page);
+  if(buf.page.page!=nullptr)
+    allocator.free(buf.page);
   }
 
 bool VAllocator::update(VBuffer &dest, const void *mem, size_t offset, size_t size) {
