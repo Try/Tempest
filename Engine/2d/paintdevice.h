@@ -12,6 +12,25 @@ class Texture2d;
 class Color;
 class Sprite;
 
+enum AlignFlag : uint8_t {
+  NoAlign      = 0,
+  AlignLeft    = 1,
+  AlignHCenter = 2,
+  AlignRight   = 4,
+
+  AlignTop     = 8,
+  AlignVCenter = 16,
+  AlignBottom  = 32
+  };
+
+inline AlignFlag operator | (AlignFlag a,const AlignFlag& b) {
+  return AlignFlag(uint8_t(a)|uint8_t(b));
+  }
+
+inline AlignFlag operator & (MemUsage a,const AlignFlag& b) {
+  return AlignFlag(uint8_t(a)&uint8_t(b));
+  }
+
 class PaintDevice {
   public:
     virtual ~PaintDevice()=default;
