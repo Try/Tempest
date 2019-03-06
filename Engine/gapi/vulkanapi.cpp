@@ -71,7 +71,7 @@ AbstractGraphicsApi::Pass *VulkanApi::createPass(AbstractGraphicsApi::Device *d,
                                                  TextureFormat zformat,
                                                  FboMode fcolor, const Color *clear,
                                                  FboMode fzbuf, const float *zclear) {
-  static VkFormat zfrm=VkFormat::VK_FORMAT_UNDEFINED;
+  VkFormat zfrm=VkFormat::VK_FORMAT_UNDEFINED;
   if(zformat==TextureFormat::Depth16)
     zfrm=VkFormat::VK_FORMAT_D16_UNORM;
 
@@ -191,7 +191,7 @@ AbstractGraphicsApi::Buffer *VulkanApi::createBuffer(AbstractGraphicsApi::Device
     Detail::VBuffer  buf  =dx->allocator.alloc(nullptr, size, usage|MemUsage::TransferDst, BufferFlags::Static );
 
     dx->copy(buf,stage,size);
-    dx->waitData();
+    dx->waitData(); // wait before stage.~VBuffer
     return new Detail::VBuffer(std::move(buf));
     }
   }
@@ -307,6 +307,7 @@ void VulkanApi::present(Device *d,Swapchain *sw,uint32_t imageId,const Semaphore
   presentInfo.pSwapchains     = swapChains;
   presentInfo.pImageIndices   = &imageId;
 
+  dx->waitData();
   VkResult code = vkQueuePresentKHR(dx->presentQueue,&presentInfo);
   if(code==VK_ERROR_OUT_OF_DATE_KHR || code==VK_SUBOPTIMAL_KHR) {
     //todo
