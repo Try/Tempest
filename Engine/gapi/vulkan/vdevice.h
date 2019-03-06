@@ -74,8 +74,6 @@ class VDevice : public AbstractGraphicsApi::Device {
     VkResult                nextImg(VSwapchain& sw,uint32_t& imageId,VSemaphore& onReady);
     VkResult                present(VSwapchain& sw,const VSemaphore *wait,size_t wSize,uint32_t imageId);
 
-    void                    draw(VCommandBuffer& cmd, VSemaphore& wait, VSemaphore& onReady, VFence& onReadyCpu);
-
     void                    copy(Detail::VBuffer&  dest, const Detail::VBuffer& src, size_t size);
     void                    copy(Detail::VTexture& dest, uint32_t w, uint32_t h, const Detail::VBuffer& src);
     void                    changeLayout(Detail::VTexture& dest, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount);
@@ -88,7 +86,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     uint32_t                memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props) const;
 
     void                    getCaps(AbstractGraphicsApi::Caps& c);
-    void                    submitQueue(VkQueue q, VkSubmitInfo& info, VkFence fence);
+    void                    submitQueue(VkQueue q, VkSubmitInfo& info, VkFence fence, bool waitData);
 
   private:
     struct DataHelper {
@@ -98,7 +96,9 @@ class VDevice : public AbstractGraphicsApi::Device {
       VCommandBuffer         cmdBuffer;
       VFence                 fence;
       VkQueue                graphicsQueue=nullptr;
-      bool                   firstCommit=true;
+      std::atomic_flag       firstCommit=ATOMIC_FLAG_INIT;
+
+      std::mutex             waitSync;
       bool                   hasToWait=false;
 
       void begin();

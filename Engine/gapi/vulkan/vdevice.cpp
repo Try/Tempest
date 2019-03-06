@@ -28,11 +28,9 @@ VDevice::DataHelper::DataHelper(VDevice &owner)
   }
 
 void VDevice::DataHelper::begin() {
-  if(!firstCommit) {
+  if(firstCommit.test_and_set()) {
     wait();
     cmdBuffer.reset();
-    } else {
-    firstCommit=false;
     }
   cmdBuffer.begin(VCommandBuffer::ONE_TIME_SUBMIT_BIT);
   }
@@ -45,15 +43,18 @@ void VDevice::DataHelper::end() {
   submitInfo.commandBufferCount = 1;
   submitInfo.pCommandBuffers    = &cmdBuffer.impl;
 
-  fence.reset();
+  std::lock_guard<std::mutex> g1(owner.syncQueue);
+  std::lock_guard<std::mutex> g2(waitSync);
   hasToWait=true;
-  owner.submitQueue(graphicsQueue,submitInfo,fence.impl);
+  fence.reset();
+  Detail::vkAssert(vkQueueSubmit(owner.graphicsQueue,1,&submitInfo,fence.impl));
   }
 
 void VDevice::DataHelper::wait() {
+  std::lock_guard<std::mutex> guard(waitSync);
   if(hasToWait)  {
-    hasToWait=false;
     fence.wait();
+    hasToWait=false;
     }
   }
 
@@ -212,6 +213,7 @@ void VDevice::createLogicalDevice(VulkanApi& api) {
     }
 
   VkPhysicalDeviceFeatures deviceFeatures = {};
+  deviceFeatures.samplerAnisotropy = VK_TRUE;
 
   VkDeviceCreateInfo createInfo = {};
   createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -262,13 +264,21 @@ void VDevice::getCaps(AbstractGraphicsApi::Caps &c) {
   vkGetPhysicalDeviceFormatProperties(physicalDevice,VK_FORMAT_R8G8B8A8_UNORM,&frm); // must-have
   c.rgba8 = (frm.optimalTilingFeatures & imageRqFlags);
 
-  VkPhysicalDeviceProperties limits;
-  vkGetPhysicalDeviceProperties(physicalDevice,&limits);
-  c.minUboAligment = size_t(limits.limits.minUniformBufferOffsetAlignment);
+  VkPhysicalDeviceProperties prop={};
+  vkGetPhysicalDeviceProperties(physicalDevice,&prop);
+  c.minUboAligment = size_t(prop.limits.minUniformBufferOffsetAlignment);
+
+  VkPhysicalDeviceFeatures supportedFeatures={};
+  vkGetPhysicalDeviceFeatures(physicalDevice,&supportedFeatures);
+
+  c.anisotropy    = supportedFeatures.samplerAnisotropy;
+  c.maxAnisotropy = prop.limits.maxSamplerAnisotropy;
   }
 
-void VDevice::submitQueue(VkQueue q,VkSubmitInfo& submitInfo,VkFence fence) {
+void VDevice::submitQueue(VkQueue q,VkSubmitInfo& submitInfo,VkFence fence,bool wd) {
   std::lock_guard<std::mutex> guard(syncQueue);
+  if(wd)
+    waitData();
   Detail::vkAssert(vkQueueSubmit(q,1,&submitInfo,fence));
   }
 
@@ -285,26 +295,6 @@ VkResult VDevice::present(VSwapchain &sw, const VSemaphore *wait, size_t wSize, 
   presentInfo.pImageIndices   = &imageId;
 
   return vkQueuePresentKHR(presentQueue,&presentInfo);
-  }
-
-void VDevice::draw(VCommandBuffer& cmd, VSemaphore &wait, VSemaphore &onReady, VFence &onReadyCpu) {
-  VkSubmitInfo submitInfo = {};
-  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-  VkSemaphore          waitSemaphores[] = {wait.impl};
-  VkPipelineStageFlags waitStages[]     = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-  submitInfo.waitSemaphoreCount = 1;
-  submitInfo.pWaitSemaphores   = waitSemaphores;
-  submitInfo.pWaitDstStageMask = waitStages;
-
-  submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers    = &cmd.impl;
-
-  submitInfo.signalSemaphoreCount = 1;
-  submitInfo.pSignalSemaphores    = &onReady.impl;
-
-  onReadyCpu.reset();
-  submitQueue(graphicsQueue,submitInfo,onReadyCpu.impl);
   }
 
 void VDevice::copy(VBuffer &dest, const VBuffer &src,size_t size) {
