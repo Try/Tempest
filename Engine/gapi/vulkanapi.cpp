@@ -329,8 +329,6 @@ void VulkanApi::draw(Device *d,
   auto*                   rx=reinterpret_cast<const Detail::VSemaphore*>(onReady);
   auto*                   rc=reinterpret_cast<const Detail::VFence*>(onReadyCpu);
 
-  //dx->waitData();
-
   VkSubmitInfo submitInfo = {};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -351,7 +349,8 @@ void VulkanApi::draw(Device *d,
 
   if(onReadyCpu!=nullptr)
     onReadyCpu->reset();
-  dx->submitQueue(dx->graphicsQueue,submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl);
+
+  dx->submitQueue(dx->graphicsQueue,submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl,true);
   }
 
 void VulkanApi::draw(AbstractGraphicsApi::Device *d,
@@ -392,7 +391,8 @@ void VulkanApi::draw(AbstractGraphicsApi::Device *d,
 
   if(onReadyCpu!=nullptr)
     onReadyCpu->reset();
-  dx->submitQueue(dx->graphicsQueue,submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl);
+
+  dx->submitQueue(dx->graphicsQueue,submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl,true);
   }
 
 void VulkanApi::getCaps(Device *d,Caps &caps) {

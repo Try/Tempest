@@ -32,6 +32,12 @@ void VSamplerCache::freeLast() {
   chunks.clear();
   }
 
+void VSamplerCache::setDevice(VDevice &dev) {
+  device        = dev.device;
+  anisotropy    = dev.caps.anisotropy;
+  maxAnisotropy = dev.caps.maxAnisotropy;
+  }
+
 VSamplerCache::Chunk &VSamplerCache::chunk(uint32_t mipCount) {
   for(auto& i:chunks)
     if(i.mipCount==mipCount)
@@ -62,9 +68,13 @@ VkSampler VSamplerCache::alloc(const Tempest::Texture2d::Sampler &s, uint32_t mi
   samplerInfo.addressModeU            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
   samplerInfo.addressModeV            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
   samplerInfo.addressModeW            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-  //samplerInfo.anisotropyEnable        = VK_TRUE;
-  //samplerInfo.maxAnisotropy           = 16;
-  samplerInfo.maxAnisotropy           = 1.0;
+  if(s.anisotropic && anisotropy){
+    samplerInfo.anisotropyEnable        = VK_TRUE;
+    samplerInfo.maxAnisotropy           = maxAnisotropy;
+    } else {
+    samplerInfo.anisotropyEnable        = VK_FALSE;
+    samplerInfo.maxAnisotropy           = 1.f;
+    }
   samplerInfo.borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
   samplerInfo.unnormalizedCoordinates = VK_FALSE;
   samplerInfo.compareEnable           = VK_FALSE;

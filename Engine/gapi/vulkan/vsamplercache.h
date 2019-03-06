@@ -7,6 +7,8 @@
 namespace Tempest {
 namespace Detail {
 
+class VDevice;
+
 class VSamplerCache {
   public:
     VSamplerCache();
@@ -17,7 +19,7 @@ class VSamplerCache {
     void      free(VkSampler s);
     void      freeLast();
 
-    VkDevice           device =nullptr;
+    void      setDevice(VDevice &dev);
 
   private:
     struct Id {
@@ -33,6 +35,10 @@ class VSamplerCache {
 
     std::mutex         sync;
     std::vector<Chunk> chunks;
+
+    VkDevice           device    =nullptr;
+    bool               anisotropy=false;
+    float              maxAnisotropy=1.f;
 
     Chunk&             chunk(uint32_t mipCount);
     Id                 alloc(Chunk& c,const Texture2d::Sampler& s);

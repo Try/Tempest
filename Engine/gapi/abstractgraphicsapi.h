@@ -89,6 +89,9 @@ namespace Tempest {
           bool     rgb8 =false;
           bool     rgba8=false;
           size_t   minUboAligment=1;
+
+          bool     anisotropy=false;
+          float    maxAnisotropy=1.0f;
         };
 
       struct Shared {

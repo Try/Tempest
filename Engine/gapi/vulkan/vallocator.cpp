@@ -15,8 +15,8 @@ VAllocator::VAllocator() {
 
 void VAllocator::setDevice(VDevice &dev) {
   device          = dev.device;
-  samplers.device = dev.device;
   provider.device = &dev;
+  samplers.setDevice(dev);
   }
 
 VAllocator::Provider::~Provider() {
