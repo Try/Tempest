@@ -176,6 +176,8 @@ AbstractGraphicsApi::Buffer *VulkanApi::createBuffer(AbstractGraphicsApi::Device
                                                      const void *mem, size_t size,
                                                      MemUsage usage,BufferFlags flg) {
   Detail::VDevice* dx = reinterpret_cast<Detail::VDevice*>(d);
+  
+  std::lock_guard<std::mutex> guard(dx->allocSync);
   if(flg==BufferFlags::Dynamic) {
     Detail::VBuffer stage=dx->allocator.alloc(mem,size,usage,BufferFlags::Dynamic);
     return new Detail::VBuffer(std::move(stage));
@@ -209,11 +211,11 @@ AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Devi
     p   = &alt;
     }
   const uint32_t  mipCnt = mips ? mipCount(p->w(),p->h()) : 1;
-
   const uint32_t  size =p->w()*p->h()*p->bpp();
-  Detail::VBuffer stage=dx->allocator.alloc(p->data(),size,MemUsage::TransferSrc,BufferFlags::Staging);
-
-  Detail::VTexture buf=dx->allocator.alloc(*p,mipCnt);
+  
+  std::lock_guard<std::mutex> guard(dx->allocSync);
+  Detail::VBuffer  stage=dx->allocator.alloc(p->data(),size,MemUsage::TransferSrc,BufferFlags::Staging);
+  Detail::VTexture buf  =dx->allocator.alloc(*p,mipCnt);
   dx->changeLayout(buf, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,mipCnt);
   dx->copy(buf,p->w(),p->h(),stage);
   if(mipCnt>1)
@@ -225,8 +227,9 @@ AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Devi
 
 AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Device *d, const uint32_t w, const uint32_t h, bool mips, TextureFormat frm) {
   Detail::VDevice*   dx = reinterpret_cast<Detail::VDevice*>(d);
-
   const uint32_t mipCnt = mips ? mipCount(w,h) : 1;
+  
+  std::lock_guard<std::mutex> guard(dx->allocSync);
   auto buf=dx->allocator.alloc(w,h,mipCnt,frm);
   dx->changeLayout(buf, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL/*TODO*/,mipCnt);
   return new Detail::VTexture(std::move(buf));
@@ -348,7 +351,7 @@ void VulkanApi::draw(Device *d,
 
   if(onReadyCpu!=nullptr)
     onReadyCpu->reset();
-  Detail::vkAssert(vkQueueSubmit(dx->graphicsQueue,1,&submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl));
+  dx->submitQueue(dx->graphicsQueue,submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl);
   }
 
 void VulkanApi::draw(AbstractGraphicsApi::Device *d,
@@ -389,7 +392,7 @@ void VulkanApi::draw(AbstractGraphicsApi::Device *d,
 
   if(onReadyCpu!=nullptr)
     onReadyCpu->reset();
-  Detail::vkAssert(vkQueueSubmit(dx->graphicsQueue,1,&submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl));
+  dx->submitQueue(dx->graphicsQueue,submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl);
   }
 
 void VulkanApi::getCaps(Device *d,Caps &caps) {

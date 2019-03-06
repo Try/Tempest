@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <forward_list>
+#include <mutex>
 
 namespace Tempest {
 namespace Detail {
@@ -32,6 +33,7 @@ class DeviceAllocator {
       };
 
     Allocation alloc(size_t size, size_t align, uint32_t typeId) {
+      std::lock_guard<std::mutex> guard(sync);
       for(auto& i:pages){
         if(i.type==typeId && i.allocated+size<=i.allSize){
           auto ret=i.alloc(size,align,device);
@@ -43,6 +45,7 @@ class DeviceAllocator {
       }
 
     void free(const Allocation& a){
+      std::lock_guard<std::mutex> guard(sync);
       a.page->free(a);
       if(a.page->allocated==0){
         device.free(a.page->memory,a.page->size,a.page->type);
@@ -66,6 +69,7 @@ class DeviceAllocator {
       }
 
     MemoryProvider&         device;
+    std::mutex              sync;
     std::forward_list<Page> pages;
   };
 

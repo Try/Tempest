@@ -20,7 +20,8 @@ static const std::initializer_list<const char*> deviceExtensions = {
 
 
 VDevice::DataHelper::DataHelper(VDevice &owner)
-  : cmdPool(owner,VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT),
+  : owner(owner),
+    cmdPool(owner,VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT),
     cmdBuffer(owner,cmdPool,CmdType::Primary),
     fence(owner),
     graphicsQueue(owner.graphicsQueue){
@@ -46,7 +47,7 @@ void VDevice::DataHelper::end() {
 
   fence.reset();
   hasToWait=true;
-  vkQueueSubmit(graphicsQueue, 1, &submitInfo, fence.impl);
+  owner.submitQueue(graphicsQueue,submitInfo,fence.impl);
   }
 
 void VDevice::DataHelper::wait() {
@@ -266,6 +267,11 @@ void VDevice::getCaps(AbstractGraphicsApi::Caps &c) {
   c.minUboAligment = size_t(limits.limits.minUniformBufferOffsetAlignment);
   }
 
+void VDevice::submitQueue(VkQueue q,VkSubmitInfo& submitInfo,VkFence fence) {
+  std::lock_guard<std::mutex> guard(syncQueue);
+  Detail::vkAssert(vkQueueSubmit(q,1,&submitInfo,fence));
+  }
+
 VkResult VDevice::present(VSwapchain &sw, const VSemaphore *wait, size_t wSize, uint32_t imageId) {
   VkPresentInfoKHR presentInfo = {};
   presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -298,7 +304,7 @@ void VDevice::draw(VCommandBuffer& cmd, VSemaphore &wait, VSemaphore &onReady, V
   submitInfo.pSignalSemaphores    = &onReady.impl;
 
   onReadyCpu.reset();
-  vkAssert(vkQueueSubmit(graphicsQueue,1,&submitInfo,onReadyCpu.impl));
+  submitQueue(graphicsQueue,submitInfo,onReadyCpu.impl);
   }
 
 void VDevice::copy(VBuffer &dest, const VBuffer &src,size_t size) {

@@ -69,6 +69,7 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     VAllocator              allocator;
     AbstractGraphicsApi::Caps caps;
+    std::mutex              allocSync;
 
     VkResult                nextImg(VSwapchain& sw,uint32_t& imageId,VSemaphore& onReady);
     VkResult                present(VSwapchain& sw,const VSemaphore *wait,size_t wSize,uint32_t imageId);
@@ -87,10 +88,12 @@ class VDevice : public AbstractGraphicsApi::Device {
     uint32_t                memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props) const;
 
     void                    getCaps(AbstractGraphicsApi::Caps& c);
+    void                    submitQueue(VkQueue q, VkSubmitInfo& info, VkFence fence);
 
   private:
     struct DataHelper {
       DataHelper(VDevice &owner);
+      VDevice&               owner;
       VCommandPool           cmdPool;
       VCommandBuffer         cmdBuffer;
       VFence                 fence;
@@ -106,6 +109,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     VkInstance             instance;
     VkPhysicalDeviceMemoryProperties memoryProperties;
     std::unique_ptr<DataHelper> data;
+    std::mutex                  syncQueue;
 
     void                    pickPhysicalDevice();
     bool                    isDeviceSuitable(VkPhysicalDevice device);
