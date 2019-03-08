@@ -1,9 +1,9 @@
-#ifndef LOG_H
-#define LOG_H
+#pragma once
 
 #include <sstream>
 #include <mutex>
 #include <cstdint>
+#include <thread>
 
 namespace Tempest{
 
@@ -41,19 +41,20 @@ class Log {
 
     static void flush(Mode m, char*& msg, size_t& count);
     static void write(Mode m, char*& out, size_t& count, const std::string& msg);
-    static void write(Mode m, char*& out, size_t& count, const char*  msg);
-    static void write(Mode m, char*& out, size_t& count, char     msg);
-    static void write(Mode m, char*& out, size_t& count, int8_t   msg);
-    static void write(Mode m, char*& out, size_t& count, uint8_t  msg);
-    static void write(Mode m, char*& out, size_t& count, int16_t  msg);
-    static void write(Mode m, char*& out, size_t& count, uint16_t msg);
-    static void write(Mode m, char*& out, size_t& count, int32_t  msg);
-    static void write(Mode m, char*& out, size_t& count, uint32_t msg);
-    static void write(Mode m, char*& out, size_t& count, uint64_t msg);
-    static void write(Mode m, char*& out, size_t& count, int64_t  msg);
-    static void write(Mode m, char*& out, size_t& count, float    msg);
-    static void write(Mode m, char*& out, size_t& count, double   msg);
-    static void write(Mode m, char*& out, size_t& count, void*    msg);
+    static void write(Mode m, char*& out, size_t& count, const char*     msg);
+    static void write(Mode m, char*& out, size_t& count, char            msg);
+    static void write(Mode m, char*& out, size_t& count, int8_t          msg);
+    static void write(Mode m, char*& out, size_t& count, uint8_t         msg);
+    static void write(Mode m, char*& out, size_t& count, int16_t         msg);
+    static void write(Mode m, char*& out, size_t& count, uint16_t        msg);
+    static void write(Mode m, char*& out, size_t& count, int32_t         msg);
+    static void write(Mode m, char*& out, size_t& count, uint32_t        msg);
+    static void write(Mode m, char*& out, size_t& count, uint64_t        msg);
+    static void write(Mode m, char*& out, size_t& count, int64_t         msg);
+    static void write(Mode m, char*& out, size_t& count, float           msg);
+    static void write(Mode m, char*& out, size_t& count, double          msg);
+    static void write(Mode m, char*& out, size_t& count, void*           msg);
+    static void write(Mode m, char*& out, size_t& count, std::thread::id msg);
 
     static void printImpl(Mode m,char* out, size_t count);
     template<class T, class ... Args>
@@ -73,5 +74,3 @@ class Log {
     static std::mutex mutex;
   };
 }
-
-#endif // LOG_H

@@ -6,6 +6,8 @@
 #include "vsemaphore.h"
 #include "vswapchain.h"
 
+#include <Tempest/Log>
+#include <thread>
 #include <set>
 
 using namespace Tempest::Detail;
@@ -70,6 +72,7 @@ VDevice::VDevice(VulkanApi &api, void *hwnd)
 
   std::vector<VkPhysicalDevice> devices(deviceCount);
   vkEnumeratePhysicalDevices(api.instance, &deviceCount, devices.data());
+  //std::swap(devices[0],devices[1]);
 
   for(const auto& device:devices)
     if(isDeviceSuitable(device)){
@@ -258,11 +261,11 @@ void VDevice::getCaps(AbstractGraphicsApi::Caps &c) {
   VkFormatFeatureFlags imageRqFlags = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT|VK_FORMAT_FEATURE_BLIT_DST_BIT|VK_FORMAT_FEATURE_BLIT_SRC_BIT;
   VkFormatProperties frm={};
   vkGetPhysicalDeviceFormatProperties(physicalDevice,VK_FORMAT_R8G8B8_UNORM,&frm);
-  c.rgb8  = (frm.optimalTilingFeatures & imageRqFlags) &&
-            (frm.linearTilingFeatures  & imageRqFlags);
+  c.rgb8  = ((frm.optimalTilingFeatures & imageRqFlags)==imageRqFlags) &&
+            ((frm.linearTilingFeatures  & imageRqFlags)==imageRqFlags) ;
 
   vkGetPhysicalDeviceFormatProperties(physicalDevice,VK_FORMAT_R8G8B8A8_UNORM,&frm); // must-have
-  c.rgba8 = (frm.optimalTilingFeatures & imageRqFlags);
+  c.rgba8 = (frm.optimalTilingFeatures & imageRqFlags)==imageRqFlags;
 
   VkPhysicalDeviceProperties prop={};
   vkGetPhysicalDeviceProperties(physicalDevice,&prop);
@@ -297,31 +300,68 @@ VkResult VDevice::present(VSwapchain &sw, const VSemaphore *wait, size_t wSize, 
   return vkQueuePresentKHR(presentQueue,&presentInfo);
   }
 
-void VDevice::copy(VBuffer &dest, const VBuffer &src,size_t size) {
-  data->begin();
-  data->cmdBuffer.copy(dest,0,src,0,size);
-  data->end();
-  }
-
-void VDevice::copy(VTexture &dest, uint32_t w, uint32_t h, const VBuffer &src) {
-  data->begin();
-  data->cmdBuffer.copy(dest,w,h,src);
-  data->end();
-  }
-
-void VDevice::changeLayout(VTexture &dest, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount) {
-  data->begin();
-  data->cmdBuffer.changeLayout(dest,oldLayout,newLayout,mipCount);
-  data->end();
-  }
-
-void VDevice::generateMipmap(VTexture& image, VkFormat frm, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
-  data->begin();
-  data->cmdBuffer.generateMipmap(image,physicalDevice,frm,texWidth,texHeight,mipLevels);
-  data->end();
-  }
-
 void VDevice::waitData() {
   data->wait();
   }
 
+
+VDevice::Data::Data(VDevice &dev)
+  :dev(dev){
+  }
+
+VDevice::Data::~Data() {
+  try {
+    commit();
+    }
+  catch(...) {
+    std::hash<std::thread::id> h;
+    Tempest::Log::e("data queue commit failed at thread[",h(std::this_thread::get_id()),"]");
+  }
+  }
+
+void VDevice::Data::flush(const VBuffer &src, size_t size) {
+  if(commited){
+    dev.data->begin();
+    commited=false;
+    }
+  dev.data->cmdBuffer.flush(src,size);
+  }
+
+void VDevice::Data::copy(VBuffer &dest, const VBuffer &src, size_t size) {
+  if(commited){
+    dev.data->begin();
+    commited=false;
+    }
+  dev.data->cmdBuffer.copy(dest,0,src,0,size);
+  }
+
+void VDevice::Data::copy(VTexture &dest, uint32_t w, uint32_t h, const VBuffer &src) {
+  if(commited){
+    dev.data->begin();
+    commited=false;
+    }
+  dev.data->cmdBuffer.copy(dest,w,h,src);
+  }
+
+void VDevice::Data::changeLayout(VTexture &dest, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount) {
+  if(commited){
+    dev.data->begin();
+    commited=false;
+    }
+  dev.data->cmdBuffer.changeLayout(dest,oldLayout,newLayout,mipCount);
+  }
+
+void VDevice::Data::generateMipmap(VTexture &image, VkFormat frm, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
+  if(commited){
+    dev.data->begin();
+    commited=false;
+    }
+  dev.data->cmdBuffer.generateMipmap(image,dev.physicalDevice,frm,texWidth,texHeight,mipLevels);
+  }
+
+void VDevice::Data::commit() {
+  if(commited)
+    return;
+  dev.data->end();
+  commited=true;
+  }

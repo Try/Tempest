@@ -31,9 +31,9 @@ void VFence::operator=(VFence &&other) {
   }
 
 void VFence::wait() {
-  vkWaitForFences(device,1,&impl,VK_TRUE,std::numeric_limits<uint64_t>::max());
+  vkAssert(vkWaitForFences(device,1,&impl,VK_TRUE,std::numeric_limits<uint64_t>::max()));
   }
 
-void VFence::reset() {
-  vkResetFences(device,1,&impl);
+void VFence::reset() {  
+  vkAssert(vkResetFences(device,1,&impl));
   }

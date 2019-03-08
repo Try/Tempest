@@ -19,17 +19,12 @@
 #include <vulkan/vulkan.hpp>
 
 #include <Tempest/Pixmap>
+#include <Tempest/Log>
 
 using namespace Tempest;
 
-
 struct VulkanApi::Impl : public Detail::VulkanApi {
-  using VulkanApi::VulkanApi; 
-  using DeviceMemory=VkDeviceMemory;
-
-  DeviceMemory alloc(size_t size, uint32_t typeBits);
-  void         free(DeviceMemory m);
-
+  using VulkanApi::VulkanApi;
   std::vector<VkCommandBuffer> cmdBuf;
   };
 
@@ -176,8 +171,7 @@ AbstractGraphicsApi::Buffer *VulkanApi::createBuffer(AbstractGraphicsApi::Device
                                                      const void *mem, size_t size,
                                                      MemUsage usage,BufferFlags flg) {
   Detail::VDevice* dx = reinterpret_cast<Detail::VDevice*>(d);
-  
-  std::lock_guard<std::mutex> guard(dx->allocSync);
+
   if(flg==BufferFlags::Dynamic) {
     Detail::VBuffer stage=dx->allocator.alloc(mem,size,usage,BufferFlags::Dynamic);
     return new Detail::VBuffer(std::move(stage));
@@ -190,7 +184,12 @@ AbstractGraphicsApi::Buffer *VulkanApi::createBuffer(AbstractGraphicsApi::Device
     Detail::VBuffer  stage=dx->allocator.alloc(mem,     size, MemUsage::TransferSrc,       BufferFlags::Staging);
     Detail::VBuffer  buf  =dx->allocator.alloc(nullptr, size, usage|MemUsage::TransferDst, BufferFlags::Static );
 
-    dx->copy(buf,stage,size);
+    std::lock_guard<std::mutex> guard(dx->allocSync);
+    Detail::VDevice::Data dat(*dx);
+    dat.flush(stage,size);
+    dat.copy(buf,stage,size);
+    dat.commit();
+
     dx->waitData(); // wait before stage.~VBuffer
     return new Detail::VBuffer(std::move(buf));
     }
@@ -202,7 +201,7 @@ void VulkanApi::destroy(AbstractGraphicsApi::Buffer *cmd) {
   }
 
 AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Device *d, const Pixmap &pref, bool mips) {
-  Detail::VDevice*   dx = reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VDevice* dx = reinterpret_cast<Detail::VDevice*>(d);
 
   const Pixmap* p=&pref;
   Pixmap alt;
@@ -212,15 +211,20 @@ AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Devi
     }
   const uint32_t  mipCnt = mips ? mipCount(p->w(),p->h()) : 1;
   const uint32_t  size =p->w()*p->h()*p->bpp();
-  
+
+  VkFormat         format=VK_FORMAT_R8G8B8A8_UNORM;
+  Detail::VBuffer  stage =dx->allocator.alloc(p->data(),size,MemUsage::TransferSrc,BufferFlags::Staging);
+  Detail::VTexture buf   =dx->allocator.alloc(*p,mipCnt,format);
+
   std::lock_guard<std::mutex> guard(dx->allocSync);
-  Detail::VBuffer  stage=dx->allocator.alloc(p->data(),size,MemUsage::TransferSrc,BufferFlags::Staging);
-  Detail::VTexture buf  =dx->allocator.alloc(*p,mipCnt);
-  dx->changeLayout(buf, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,mipCnt);
-  dx->copy(buf,p->w(),p->h(),stage);
+  Detail::VDevice::Data dat(*dx);
+  dat.changeLayout(buf, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,mipCnt);
+  dat.copy(buf,p->w(),p->h(),stage);
   if(mipCnt>1)
-    dx->generateMipmap(buf,VK_FORMAT_R8G8B8A8_UNORM,p->w(),p->h(),mipCnt); else
-    dx->changeLayout(buf, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipCnt);
+    dat.generateMipmap(buf,format,p->w(),p->h(),mipCnt); else
+    dat.changeLayout(buf, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipCnt);
+  dat.commit();
+
   dx->waitData();
   return new Detail::VTexture(std::move(buf));
   }
@@ -231,7 +235,12 @@ AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Devi
   
   std::lock_guard<std::mutex> guard(dx->allocSync);
   auto buf=dx->allocator.alloc(w,h,mipCnt,frm);
-  dx->changeLayout(buf, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL/*TODO*/,mipCnt);
+
+  Detail::VDevice::Data dat(*dx);
+  dat.changeLayout(buf, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL/*TODO*/,mipCnt);
+  dat.commit();
+
+  dx->waitData();
   return new Detail::VTexture(std::move(buf));
   }
 
@@ -351,6 +360,7 @@ void VulkanApi::draw(Device *d,
   if(onReadyCpu!=nullptr)
     onReadyCpu->reset();
 
+  std::lock_guard<std::mutex> guard(dx->allocSync);
   dx->submitQueue(dx->graphicsQueue,submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl,true);
   }
 

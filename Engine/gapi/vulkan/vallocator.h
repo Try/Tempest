@@ -37,7 +37,7 @@ class VAllocator {
     using Allocation=typename Tempest::Detail::DeviceAllocator<Provider>::Allocation;
 
     VBuffer  alloc(const void *mem,  size_t size, MemUsage usage, BufferFlags bufFlg);
-    VTexture alloc(const Pixmap &pm, uint32_t mip);
+    VTexture alloc(const Pixmap &pm, uint32_t mip, VkFormat &outfrm);
     VTexture alloc(const uint32_t w, const uint32_t h, const uint32_t mip, TextureFormat frm);
     void     free(VBuffer&  buf);
     void     free(VTexture& buf);
@@ -52,8 +52,8 @@ class VAllocator {
     VSamplerCache                     samplers;
     Detail::DeviceAllocator<Provider> allocator{provider};
 
-    bool commit(VkDeviceMemory dev,VkBuffer dest,const void *mem,size_t offset,size_t size);
-    bool commit(VkDeviceMemory dev, VkImage  dest, size_t offset);
+    bool commit(VkDeviceMemory dev, std::mutex& mmapSync, VkBuffer dest, const void *mem, size_t offset, size_t size);
+    bool commit(VkDeviceMemory dev, std::mutex& mmapSync, VkImage  dest, size_t offset);
   };
 
 }}

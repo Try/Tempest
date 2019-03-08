@@ -63,6 +63,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void setVbo(const AbstractGraphicsApi::Buffer& b);
     void setIbo(const AbstractGraphicsApi::Buffer* b,Detail::IndexClass cls);
 
+    void flush(const Detail::VBuffer& src, size_t size);
     void copy(Detail::VBuffer&  dest, size_t offsetDest, const Detail::VBuffer& src, size_t offsetSrc, size_t size);
     void copy(Detail::VTexture& dest, size_t width, size_t height, const Detail::VBuffer& src);
 

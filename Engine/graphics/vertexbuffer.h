@@ -8,7 +8,7 @@ namespace Tempest {
 class Device;
 
 template<class T>
-class VertexBuffer {
+class VertexBuffer final {
   public:
     VertexBuffer()=default;
     VertexBuffer(VertexBuffer&&)=default;

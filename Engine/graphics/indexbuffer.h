@@ -19,7 +19,7 @@ namespace Detail {
   }
 
 template<class T>
-class IndexBuffer {
+class IndexBuffer final {
   public:
     static_assert(Detail::IsIndexType<T>::value,"unsupported index type");
 

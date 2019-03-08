@@ -4,7 +4,7 @@
 
 namespace Tempest {
 
-class UniformBuffer {
+class UniformBuffer final {
   public:
     UniformBuffer()=default;
     UniformBuffer(UniformBuffer&&)=default;

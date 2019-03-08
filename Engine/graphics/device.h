@@ -68,7 +68,7 @@ class Device {
     VertexBuffer<T> loadVbo(const T* arr,size_t arrSize,BufferFlags flg);
 
     template<class T>
-    VertexBuffer<T> loadVbo(const std::vector<T> arr,BufferFlags flg){
+    VertexBuffer<T> loadVbo(const std::vector<T>& arr,BufferFlags flg){
       return loadVbo(arr.data(),arr.size(),flg);
       }
 
@@ -76,7 +76,7 @@ class Device {
     IndexBuffer<T>  loadIbo(const T* arr,size_t arrSize,BufferFlags flg);
 
     template<class T>
-    VertexBuffer<T> loadIbo(const std::vector<T> arr,BufferFlags flg){
+    VertexBuffer<T> loadIbo(const std::vector<T>& arr,BufferFlags flg){
       return loadIbo(arr.data(),arr.size(),flg);
       }
 

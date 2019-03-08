@@ -86,10 +86,11 @@ struct DeviceAllocator<MemoryProvider>::Page : Block {
   using    Block::size;
   using    Block::offset;
 
-  Memory   memory =null;
-  uint32_t type   =0;
-  uint32_t allSize=0;
-  uint32_t allocated=0;
+  Memory     memory =null;
+  std::mutex mmapSync;
+  uint32_t   type   =0;
+  uint32_t   allSize=0;
+  uint32_t   allocated=0;
 
   Page(uint32_t sz) noexcept {
     size   =sz;

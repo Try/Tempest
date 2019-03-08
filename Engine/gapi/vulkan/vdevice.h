@@ -8,7 +8,7 @@
 #include "vcommandbuffer.h"
 #include "vcommandpool.h"
 #include "vfence.h"
-#include "vulkanapi.h"
+#include "vulkanapi_impl.h"
 #include "exceptions/exception.h"
 
 namespace Tempest {
@@ -74,11 +74,6 @@ class VDevice : public AbstractGraphicsApi::Device {
     VkResult                nextImg(VSwapchain& sw,uint32_t& imageId,VSemaphore& onReady);
     VkResult                present(VSwapchain& sw,const VSemaphore *wait,size_t wSize,uint32_t imageId);
 
-    void                    copy(Detail::VBuffer&  dest, const Detail::VBuffer& src, size_t size);
-    void                    copy(Detail::VTexture& dest, uint32_t w, uint32_t h, const Detail::VBuffer& src);
-    void                    changeLayout(Detail::VTexture& dest, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount);
-
-    void                    generateMipmap(VTexture& image, VkFormat frm, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
     void                    waitData();
 
     SwapChainSupportDetails querySwapChainSupport() { return querySwapChainSupport(physicalDevice); }
@@ -87,6 +82,25 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     void                    getCaps(AbstractGraphicsApi::Caps& c);
     void                    submitQueue(VkQueue q, VkSubmitInfo& info, VkFence fence, bool waitData);
+
+    class Data final {
+      public:
+        Data(VDevice& dev);
+        ~Data();
+
+        void flush(const Detail::VBuffer& src, size_t size);
+        void copy(Detail::VBuffer&  dest, const Detail::VBuffer& src, size_t size);
+        void copy(Detail::VTexture& dest, uint32_t w, uint32_t h, const Detail::VBuffer& src);
+
+        void changeLayout(Detail::VTexture& dest, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount);
+        void generateMipmap(VTexture& image, VkFormat frm, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
+
+        void commit();
+
+      private:
+        VDevice& dev;
+        bool     commited=true;
+      };
 
   private:
     struct DataHelper {

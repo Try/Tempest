@@ -236,6 +236,28 @@ void VCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer *b,Detail::IndexCl
   vkCmdBindIndexBuffer(impl,ibo.impl,0,type[uint32_t(cls)]);
   }
 
+void VCommandBuffer::flush(const VBuffer &src, size_t size) {
+  VkBufferMemoryBarrier barrier={};
+  barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+
+  barrier.srcAccessMask = 0;
+  barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.buffer              =src.impl;
+  barrier.offset              =0;
+  barrier.size                =size;
+
+  vkCmdPipelineBarrier(
+      impl,
+      VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+      0,
+      0, nullptr,
+      1, &barrier,
+      0, nullptr
+        );
+  }
+
 void VCommandBuffer::copy(VBuffer &dest, size_t offsetDest, const VBuffer &src,size_t offsetSrc,size_t size) {
   VkBufferCopy copyRegion = {};
   copyRegion.dstOffset = offsetDest;
