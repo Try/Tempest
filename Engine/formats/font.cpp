@@ -7,24 +7,84 @@
 #include "thirdparty/stb_truetype.h"
 
 #include <unordered_map>
+#include <bitset>
 
 using namespace Tempest;
 
+namespace Tempest {
+namespace Detail {
+  template<size_t lvl>
+  struct Bucket {
+    std::unique_ptr<Bucket<lvl-1>> next[256];
+    };
+
+  template<>
+  struct Bucket<1> {
+    FontElement::Letter     letter[256];
+    std::bitset<256>        ex;
+    };
+  }
+}
+
+struct FontElement::LetterTable {
+  struct Chunk {
+    uint32_t          size=0;
+    Detail::Bucket<3> next[256];
+    };
+
+  std::vector<Chunk> chunk;
+
+  Letter& at(float sz,char32_t ch){
+    return *implFind(sz,ch,true);
+    }
+
+  Letter* find(float sz,char32_t ch){
+    return implFind(sz,ch,false);
+    }
+
+  Letter* implFind(float sz,char32_t ch,bool create){
+    uint32_t size = uint32_t(sz*100);
+
+    for(auto& i:chunk)
+      if(i.size==size)
+        return implFind(i,uint32_t(ch),create);
+
+    chunk.emplace_back();
+    chunk.back().size=size;
+    return implFind(chunk.back(),uint32_t(ch),create);
+    }
+
+  Letter* implFind(Chunk& c,uint32_t ch,bool create){
+    uint8_t* key = reinterpret_cast<uint8_t*>(&ch);
+    auto&    b   = c.next[*key];
+    return implFind(b,key+1,create);
+    }
+
+  template<size_t lvl>
+  Letter* implFind(Detail::Bucket<lvl>& b,const uint8_t* k,bool create){
+    auto& ptr = b.next[*k];
+    if(ptr==nullptr && create)
+      ptr.reset(new Detail::Bucket<lvl-1>());
+    if(ptr==nullptr)
+      return nullptr;
+    return implFind(*b.next[*k],k+1,create);
+    }
+
+  Letter* implFind(Detail::Bucket<1>& b,const uint8_t* pk,bool create){
+    auto k = *pk;
+    if(!b.ex[k]){
+      if(create){
+        b.ex[k]=true;
+        return &b.letter[k];
+        }
+      return nullptr;
+      }
+    return &b.letter[k];
+    }
+  };
+
 struct FontElement::Impl {
   enum { MIN_BUF_SZ=512 };
-
-  struct Key {
-    float    size;
-    char16_t ch;
-
-    bool operator==(const Key& k) const { return size==k.size && ch==k.ch; }
-    };
-
-  struct KHash {
-    size_t operator()(const Key& k) const {
-      return size_t(k.size)^size_t(k.ch);
-      }
-    };
 
   template<class CharT>
   Impl(const CharT *filename) {
@@ -98,13 +158,13 @@ struct FontElement::Impl {
     return l;
     }
 
-  const Letter& letter(char16_t ch,float size,TextureAtlas* tex) {
+  const Letter& letter(char32_t ch,float size,TextureAtlas* tex) {
     {
     std::lock_guard<std::mutex> guard(syncMap);
-    auto cc=map.find(Key{size,ch});
-    if(cc!=map.end()){
-      if(cc->second.hasView || tex==nullptr)
-        return cc->second;
+    auto cc=map.find(size,ch);
+    if(cc!=nullptr){
+      if(cc->hasView || tex==nullptr)
+        return *cc;
       }
     }
 
@@ -113,7 +173,7 @@ struct FontElement::Impl {
     return allocLetter(ch,size,tex);
     }
 
-  const Letter& allocLetter(char16_t ch,float size,TextureAtlas* tex) {
+  const Letter& allocLetter(char32_t ch,float size,TextureAtlas* tex) {
     const float scale = stbtt_ScaleForPixelHeight(&info,size);
     if(!(scale>0.f))
       return nullLater();
@@ -121,7 +181,7 @@ struct FontElement::Impl {
     int w=0,h=0,dx=0,dy=0;
     int ax=0;
 
-    const int index = stbtt_FindGlyphIndex(&info,ch);
+    const int index = stbtt_FindGlyphIndex(&info,int(ch));
     stbtt_GetGlyphHMetrics(&info,index,&ax,nullptr);
 
     Sprite spr;
@@ -141,7 +201,7 @@ struct FontElement::Impl {
       }
 
     std::lock_guard<std::mutex> guard(syncMap);
-    Letter& lt = map[Key{size,ch}];
+    Letter& lt = map.at(size,ch);
     lt.view    = std::move(spr);
     lt.size    = Size(w,h);
     lt.dpos    = Point(dx,dy);
@@ -164,7 +224,8 @@ struct FontElement::Impl {
   int lineGap=0;
 
   std::mutex                           syncMap;
-  std::unordered_map<Key,Letter,KHash> map;
+  LetterTable                          map;
+  //std::unordered_map<Key,Letter,KHash> map;
   };
 
 FontElement::FontElement()
@@ -201,11 +262,11 @@ FontElement::FontElement(const std::u16string& file)
   :FontElement(file.c_str(),std::true_type()) {
   }
 
-const FontElement::LetterGeometry& FontElement::letterGeometry(char16_t ch, float size) const { //FIXME: UB?
+const FontElement::LetterGeometry& FontElement::letterGeometry(char32_t ch, float size) const { //FIXME: UB?
   return reinterpret_cast<const LetterGeometry&>(ptr->letter(ch,size,nullptr));
   }
 
-const FontElement::Letter& FontElement::letter(char16_t ch, float size, TextureAtlas &tex) const {
+const FontElement::Letter& FontElement::letter(char32_t ch, float size, TextureAtlas &tex) const {
   return ptr->letter(ch,size,&tex);
   }
 

@@ -34,8 +34,8 @@ class FontElement final {
         bool            hasView=false;
       };
 
-    const LetterGeometry& letterGeometry(char16_t ch,float size) const;
-    const Letter&         letter(char16_t ch,float size,TextureAtlas& tex) const;
+    const LetterGeometry& letterGeometry(char32_t ch, float size) const;
+    const Letter&         letter(char32_t ch,float size,TextureAtlas& tex) const;
 
     Size                  textSize(const char* text, float fontSize) const;
 
@@ -43,6 +43,7 @@ class FontElement final {
     template<class CharT>
     FontElement(const CharT* file,std::true_type);
 
+    struct LetterTable;
     struct Impl;
     std::shared_ptr<Impl> ptr;
   };
