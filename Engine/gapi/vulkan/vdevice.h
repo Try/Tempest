@@ -64,6 +64,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     VkPhysicalDevice        physicalDevice=nullptr;
     VkDevice                device        =nullptr;
 
+    std::mutex              graphicsSync;
     VkQueue                 graphicsQueue =nullptr;
     VkQueue                 presentQueue  =nullptr;
 
@@ -98,32 +99,36 @@ class VDevice : public AbstractGraphicsApi::Device {
         void commit();
 
       private:
-        VDevice& dev;
-        bool     commited=true;
+        VDevice&                    dev;
+        std::lock_guard<std::mutex> sync;
+        bool                        commited=true;
       };
 
   private:
-    struct DataHelper {
-      DataHelper(VDevice &owner);
-      VDevice&               owner;
-      VCommandPool           cmdPool;
-      VCommandBuffer         cmdBuffer;
-      VFence                 fence;
-      VkQueue                graphicsQueue=nullptr;
-      std::atomic_flag       firstCommit=ATOMIC_FLAG_INIT;
+    class DataHelper {
+      public:
+        DataHelper(VDevice &owner);
 
-      std::mutex             waitSync;
-      bool                   hasToWait=false;
+        void begin();
+        void end();
+        void wait();
 
-      void begin();
-      void end();
-      void wait();
+        VDevice&               owner;
+        VCommandPool           cmdPool;
+        VCommandBuffer         cmdBuffer;
+
+      private:
+        std::atomic_flag       firstCommit=ATOMIC_FLAG_INIT;
+        VFence                 fence;
+        VkQueue                graphicsQueue=nullptr;
+
+        std::mutex             waitSync;
+        bool                   hasToWait=false;
       };
 
     VkInstance             instance;
     VkPhysicalDeviceMemoryProperties memoryProperties;
     std::unique_ptr<DataHelper> data;
-    std::mutex                  syncQueue;
 
     void                    pickPhysicalDevice();
     bool                    isDeviceSuitable(VkPhysicalDevice device);

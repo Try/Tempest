@@ -184,7 +184,6 @@ AbstractGraphicsApi::Buffer *VulkanApi::createBuffer(AbstractGraphicsApi::Device
     Detail::VBuffer  stage=dx->allocator.alloc(mem,     size, MemUsage::TransferSrc,       BufferFlags::Staging);
     Detail::VBuffer  buf  =dx->allocator.alloc(nullptr, size, usage|MemUsage::TransferDst, BufferFlags::Static );
 
-    std::lock_guard<std::mutex> guard(dx->allocSync);
     Detail::VDevice::Data dat(*dx);
     dat.flush(stage,size);
     dat.copy(buf,stage,size);
@@ -216,7 +215,6 @@ AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Devi
   Detail::VBuffer  stage =dx->allocator.alloc(p->data(),size,MemUsage::TransferSrc,BufferFlags::Staging);
   Detail::VTexture buf   =dx->allocator.alloc(*p,mipCnt,format);
 
-  std::lock_guard<std::mutex> guard(dx->allocSync);
   Detail::VDevice::Data dat(*dx);
   dat.changeLayout(buf, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,mipCnt);
   dat.copy(buf,p->w(),p->h(),stage);
@@ -233,7 +231,6 @@ AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Devi
   Detail::VDevice*   dx = reinterpret_cast<Detail::VDevice*>(d);
   const uint32_t mipCnt = mips ? mipCount(w,h) : 1;
   
-  std::lock_guard<std::mutex> guard(dx->allocSync);
   auto buf=dx->allocator.alloc(w,h,mipCnt,frm);
 
   Detail::VDevice::Data dat(*dx);
@@ -317,6 +314,7 @@ void VulkanApi::present(Device *d,Swapchain *sw,uint32_t imageId,const Semaphore
   presentInfo.pImageIndices   = &imageId;
 
   dx->waitData();
+  std::lock_guard<std::mutex> g(dx->graphicsSync); // if dx->presentQueue==dx->graphicsQueue
   VkResult code = vkQueuePresentKHR(dx->presentQueue,&presentInfo);
   if(code==VK_ERROR_OUT_OF_DATE_KHR || code==VK_SUBOPTIMAL_KHR) {
     //todo
@@ -360,7 +358,6 @@ void VulkanApi::draw(Device *d,
   if(onReadyCpu!=nullptr)
     onReadyCpu->reset();
 
-  std::lock_guard<std::mutex> guard(dx->allocSync);
   dx->submitQueue(dx->graphicsQueue,submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl,true);
   }
 

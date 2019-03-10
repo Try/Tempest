@@ -45,10 +45,11 @@ void VDevice::DataHelper::end() {
   submitInfo.commandBufferCount = 1;
   submitInfo.pCommandBuffers    = &cmdBuffer.impl;
 
-  std::lock_guard<std::mutex> g1(owner.syncQueue);
+  std::lock_guard<std::mutex> guard(owner.graphicsSync);
   std::lock_guard<std::mutex> g2(waitSync);
   hasToWait=true;
   fence.reset();
+
   Detail::vkAssert(vkQueueSubmit(owner.graphicsQueue,1,&submitInfo,fence.impl));
   }
 
@@ -279,7 +280,7 @@ void VDevice::getCaps(AbstractGraphicsApi::Caps &c) {
   }
 
 void VDevice::submitQueue(VkQueue q,VkSubmitInfo& submitInfo,VkFence fence,bool wd) {
-  std::lock_guard<std::mutex> guard(syncQueue);
+  std::lock_guard<std::mutex> guard(graphicsSync);
   if(wd)
     waitData();
   Detail::vkAssert(vkQueueSubmit(q,1,&submitInfo,fence));
@@ -306,7 +307,7 @@ void VDevice::waitData() {
 
 
 VDevice::Data::Data(VDevice &dev)
-  :dev(dev){
+  :dev(dev),sync(dev.allocSync){
   }
 
 VDevice::Data::~Data() {
@@ -362,6 +363,6 @@ void VDevice::Data::generateMipmap(VTexture &image, VkFormat frm, uint32_t texWi
 void VDevice::Data::commit() {
   if(commited)
     return;
-  dev.data->end();
   commited=true;
+  dev.data->end();
   }

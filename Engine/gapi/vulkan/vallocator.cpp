@@ -103,11 +103,11 @@ VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferFl
 
   uint32_t typeId=provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits(props));
 
-  // Tempest::Log::d("+stage ",__func__," ",std::this_thread::get_id());
   ret.page=allocator.alloc(size_t(memRq.size),size_t(memRq.alignment),typeId);
-  if(!ret.page.page || !commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,mem,ret.page.offset,size))
+  if(!ret.page.page)
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
-  //Tempest::Log::d("~stage ",__func__," ",std::this_thread::get_id());
+  if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,mem,ret.page.offset,size))
+    throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
   return ret;
   }
 
@@ -210,7 +210,6 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mi
 
 void VAllocator::free(VBuffer &buf) {
   if(buf.impl!=VK_NULL_HANDLE) {
-    //vkDeviceWaitIdle(device);
     vkDestroyBuffer (device,buf.impl,nullptr);
     }
   allocator.free(buf.page);
@@ -249,30 +248,21 @@ bool VAllocator::update(VBuffer &dest, const void *mem, size_t offset, size_t si
   }
 
 bool VAllocator::commit(VkDeviceMemory dev, std::mutex &mmapSync, VkBuffer dest, const void* mem, size_t offset, size_t size) {
-  //Tempest::Log::d("+commit ",__func__," ",int(dev)," ",std::this_thread::get_id());
-  std::lock_guard<std::mutex> g(mmapSync); // on practice bind requires external sync
-
-  //Tempest::Log::d("+bind ",__func__," ",int(dev)," ",std::this_thread::get_id());
   if(vkBindBufferMemory(device,dest,dev,offset)!=VkResult::VK_SUCCESS)
     return false;
-  //Tempest::Log::d("~bind ",__func__," ",int(dev)," ",std::this_thread::get_id());
 
   if(mem!=nullptr) {
+    std::lock_guard<std::mutex> g(mmapSync); // on practice bind requires external sync
     void* data=nullptr;
-    //Tempest::Log::d("+map ",__func__," ",int(dev)," ",std::this_thread::get_id());
     if(vkMapMemory(device,dev,offset,size,0,&data)!=VkResult::VK_SUCCESS)
       return false;
     memcpy(data,mem,size);
     vkUnmapMemory(device,dev);
-    //Tempest::Log::d("~map ",__func__," ",int(dev)," ",std::this_thread::get_id());
     }
 
-  //Tempest::Log::d("~commit ",__func__," ",int(dev)," ",std::this_thread::get_id());
   return true;
   }
 
-bool VAllocator::commit(VkDeviceMemory dev, std::mutex& mmapSync, VkImage dest, size_t offset) {
-  std::lock_guard<std::mutex> g(mmapSync);
-  (void)mmapSync;
+bool VAllocator::commit(VkDeviceMemory dev, std::mutex& /*mmapSync*/, VkImage dest, size_t offset) {
   return vkBindImageMemory(device, dest, dev, offset)==VkResult::VK_SUCCESS;
   }
