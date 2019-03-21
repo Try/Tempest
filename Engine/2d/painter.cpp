@@ -311,7 +311,10 @@ void Painter::drawText(int x, int y, const char *txt) {
   auto pb=bru;
   Utf8Iterator i(txt);
   while(i.hasData()) {
-    auto l=fnt.letter(i.next(),ta);
+    auto c=i.next();
+    if(c=='\0')
+      return;
+    auto l=fnt.letter(c,ta);
 
     if(!l.view.isEmpty()) {
       setBrush(Brush(l.view,pb.color,PaintDevice::Alpha));

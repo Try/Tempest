@@ -276,6 +276,8 @@ Size FontElement::textSize(const char *text,float fontSize) const {
   Size ret;
   while(i.hasData()){
     char32_t c = i.next();
+    if(c=='\0')
+      return ret;
     auto&    g = letterGeometry(c,fontSize);
 
     ret.h = std::max(ret.h,g.size.h);
