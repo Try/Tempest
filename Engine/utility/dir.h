@@ -14,6 +14,9 @@ class Dir {
       };
     static bool scan(const char*        path,std::function<void(const std::string&,FileType)> cb);
     static bool scan(const std::string& path,std::function<void(const std::string&,FileType)> cb);
+
+    static bool scan(const char16_t*       path,std::function<void(const std::u16string&,FileType)> cb);
+    static bool scan(const std::u16string& path,std::function<void(const std::u16string&,FileType)> cb);
   };
 
 }

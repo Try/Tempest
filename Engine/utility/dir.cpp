@@ -82,3 +82,35 @@ bool Dir::scan(const char *name, std::function<void(const std::string&,FileType)
 #endif
   return true;
   }
+
+bool Dir::scan(const std::u16string &path, std::function<void (const std::u16string &, Dir::FileType)> cb) {
+  return scan(path.c_str(),cb);
+  }
+
+bool Dir::scan(const char16_t *path, std::function<void (const std::u16string &, Dir::FileType)> cb) {
+#if defined(__WINDOWS__) || defined(__WINDOWS_PHONE__)
+  WIN32_FIND_DATAW ffd;
+  HANDLE hFind = INVALID_HANDLE_VALUE;
+
+  std::u16string rg = path;
+  rg += u"/*";
+
+  hFind = FindFirstFileExW( reinterpret_cast<const WCHAR*>(rg.c_str()),
+                            FindExInfoStandard, &ffd,
+                            FindExSearchNameMatch, nullptr, 0);
+  if(INVALID_HANDLE_VALUE==hFind)
+    return false;
+
+  while( FindNextFileW(hFind, &ffd)!=0 ){
+    std::u16string path=reinterpret_cast<const char16_t*>(ffd.cFileName);
+    if(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+      cb(path,FT_Dir); else
+      cb(path,FT_File);
+    }
+  if( GetLastError() != ERROR_NO_MORE_FILES )
+    return false;
+#else
+#warning "TODO: Dir::scan"
+#endif
+  return true;
+  }
