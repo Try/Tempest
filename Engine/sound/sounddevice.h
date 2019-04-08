@@ -5,6 +5,7 @@
 namespace Tempest {
 
 class Sound;
+class SoundEffect;
 class IDevice;
 
 class SoundDevice final {

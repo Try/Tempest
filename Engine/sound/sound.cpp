@@ -51,6 +51,37 @@ const int32_t Sound::indexTable[] = {
   -1, -1, -1, -1, 2, 4, 6, 8
   };
 
+Sound::Data::~Data() {
+  if(buffer)
+    alDeleteBuffers(1, &buffer);
+  }
+
+uint64_t Sound::Data::timeLength() const {
+  int size=0,fr=0,bits=0,channels=0;
+  alGetBufferi(buffer, AL_SIZE,      &size);
+  alGetBufferi(buffer, AL_BITS,      &bits);
+  alGetBufferi(buffer, AL_CHANNELS,  &channels);
+  alGetBufferi(buffer, AL_FREQUENCY, &fr);
+
+  if(channels<=0 || fr<=0)
+    return 0;
+  int ssize   = (bits/8)*channels;
+  if(ssize<=0)
+    return 0;
+  int samples = size/ssize;
+  return uint64_t(samples*1000)/uint64_t(fr);
+  }
+
+bool Tempest::Sound::isEmpty() const {
+  return data==nullptr;
+  }
+
+uint64_t Tempest::Sound::timeLength() const {
+  if(data)
+    return data->timeLength();
+  return 0;
+  }
+
 Sound::Sound(IDevice& f) {
   std::vector<char> buf;
 
@@ -70,6 +101,7 @@ Sound::Sound(IDevice& f) {
   uint32_t        dataSize=0;
   std::unique_ptr<char> data = readWAVFull(mem,header,fmt,dataSize);
 
+  int format=0;
   if(data) {
     switch(fmt.bitsPerSample) {
       case 4:
@@ -85,7 +117,7 @@ Sound::Sound(IDevice& f) {
         return;
       }
 
-    upload(data.get(),dataSize,fmt.samplesPerSec);
+    upload(data.get(),format,dataSize,fmt.samplesPerSec);
     } else {
     /*
     OggVorbis_File vf;
@@ -104,39 +136,6 @@ Sound::Sound(IDevice& f) {
     ov_clear(&vf);
     */
     }
-  }
-
-Sound::Sound(Sound &&s)
-  :source(s.source),buffer(s.buffer),format(s.format){
-  s.source = 0;
-  s.buffer = 0;
-  s.format = 0;
-  }
-
-Sound::~Sound() {
-  if(source)
-    alDeleteSources(1, &source);
-  if(buffer)
-    alDeleteBuffers(1, &buffer);
-  }
-
-Sound &Sound::operator =(Sound &&s) {
-  std::swap(source, s.source);
-  std::swap(buffer, s.buffer);
-  std::swap(format, s.format);
-  return *this;
-  }
-
-void Sound::play() {
-  if(source==0)
-    return;
-  alSourcePlay(source);
-  }
-
-void Sound::pause() {
-  if(source==0)
-    return;
-  alSourcePause(source);
   }
 
 std::unique_ptr<char> Sound::readWAVFull(IDevice &f, WAVEHeader& header, FmtChunk& fmt, size_t& dataSize) {
@@ -175,12 +174,11 @@ std::unique_ptr<char> Sound::readWAVFull(IDevice &f, WAVEHeader& header, FmtChun
   return buffer;
   }
 
-void Sound::upload(char* data, size_t size, size_t rate) {
-  alGenBuffers(1, &buffer);
-  alBufferData(buffer, format, data, int(size), int(rate));
-
-  alGenSources(1, &source);
-  alSourcei(source, AL_BUFFER, int(buffer));
+void Sound::upload(char* bytes, int format, size_t size, size_t rate) {
+  auto d = std::make_shared<Data>();
+  alGenBuffers(1, &d->buffer);
+  alBufferData(d->buffer, format, bytes, int(size), int(rate));
+  data = d;
   }
 
 void Sound::decodeAdPcm(const FmtChunk& fmt,const uint8_t* src,uint32_t dataSize,uint32_t maxSamples) {
@@ -213,8 +211,7 @@ void Sound::decodeAdPcm(const FmtChunk& fmt,const uint8_t* src,uint32_t dataSize
     sample += block_pcm_samples;
     }
 
-  format = AL_FORMAT_MONO16;
-  upload(reinterpret_cast<char*>(dest.data()),dest.size(),fmt.samplesPerSec);
+  upload(reinterpret_cast<char*>(dest.data()),AL_FORMAT_MONO16,dest.size(),fmt.samplesPerSec);
   }
 
 int Sound::decodeAdPcmBlock(int16_t *outbuf, const uint8_t *inbuf, size_t inbufsize, uint16_t channels) {
