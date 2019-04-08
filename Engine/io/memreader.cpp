@@ -33,4 +33,5 @@ uint8_t MemReader::peek() {
 size_t MemReader::seek(size_t advance) {
   size_t c = std::min(advance, sz-pos);
   pos += c;
+  return c;
   }
