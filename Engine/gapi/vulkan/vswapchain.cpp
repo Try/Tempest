@@ -138,11 +138,14 @@ VkSurfaceFormatKHR VSwapchain::chooseSwapSurfaceFormat(const std::vector<VkSurfa
 
 
 VkPresentModeKHR VSwapchain::chooseSwapPresentMode(const std::vector<VkPresentModeKHR> &availablePresentModes) {
+  /** intel says mailbox is better option for games
+    * https://www.reddit.com/r/vulkan/comments/7xm0n4/screentearing_with_vk_present_mode_mailbox_khr/
+    **/
   std::initializer_list<VkPresentModeKHR> modes={
+    VK_PRESENT_MODE_MAILBOX_KHR,      // vsync; wait until vsync
     VK_PRESENT_MODE_FIFO_KHR,         // vsync; optimal
     VK_PRESENT_MODE_FIFO_RELAXED_KHR, // vsync; optimal, but tearing
     VK_PRESENT_MODE_IMMEDIATE_KHR,    // no vsync
-    VK_PRESENT_MODE_MAILBOX_KHR       // vsync; wait until vsync
     };
 
   for(auto mode:modes){
