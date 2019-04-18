@@ -1,6 +1,8 @@
 #ifndef AL_AL_H
 #define AL_AL_H
 
+#include <AL/alc.h>
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -474,6 +476,7 @@ AL_API ALenum AL_APIENTRY alGetEnumValue(const ALchar *ename);
 AL_API void AL_APIENTRY alListenerf(ALenum param, ALfloat value);
 AL_API void AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat value2, ALfloat value3);
 AL_API void AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values);
+AL_API void AL_APIENTRY alListenerfvCt(ALCcontext *Context, ALenum param, const ALfloat *values);
 AL_API void AL_APIENTRY alListeneri(ALenum param, ALint value);
 AL_API void AL_APIENTRY alListener3i(ALenum param, ALint value1, ALint value2, ALint value3);
 AL_API void AL_APIENTRY alListeneriv(ALenum param, const ALint *values);
@@ -489,8 +492,10 @@ AL_API void AL_APIENTRY alGetListeneriv(ALenum param, ALint *values);
 
 /** Create Source objects. */
 AL_API void AL_APIENTRY alGenSources(ALsizei n, ALuint *sources);
+AL_API void AL_APIENTRY alGenSourcesCt(ALCcontext* ctx,ALsizei n, ALuint *sources);
 /** Delete Source objects. */
 AL_API void AL_APIENTRY alDeleteSources(ALsizei n, const ALuint *sources);
+AL_API void AL_APIENTRY alDeleteSourcesCt(ALCcontext *Context,ALsizei n, const ALuint *sources);
 /** Verify a handle is a valid Source. */
 AL_API ALboolean AL_APIENTRY alIsSource(ALuint source);
 
@@ -498,7 +503,9 @@ AL_API ALboolean AL_APIENTRY alIsSource(ALuint source);
 AL_API void AL_APIENTRY alSourcef(ALuint source, ALenum param, ALfloat value);
 AL_API void AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3);
 AL_API void AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat *values);
+AL_API void AL_APIENTRY alSourcefvCt(ALCcontext *Context, ALuint source, ALenum param, const ALfloat *values);
 AL_API void AL_APIENTRY alSourcei(ALuint source, ALenum param, ALint value);
+AL_API void AL_APIENTRY alSourceiCt(ALCcontext *ctx,ALuint source, ALenum param, ALint value);
 AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, ALint value2, ALint value3);
 AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum param, const ALint *values);
 
@@ -506,6 +513,7 @@ AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum param, const ALint *val
 AL_API void AL_APIENTRY alGetSourcef(ALuint source, ALenum param, ALfloat *value);
 AL_API void AL_APIENTRY alGetSource3f(ALuint source, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3);
 AL_API void AL_APIENTRY alGetSourcefv(ALuint source, ALenum param, ALfloat *values);
+AL_API void AL_APIENTRY alGetSourcefvCt(ALCcontext *Context,ALuint source, ALenum param, ALfloat *values);
 AL_API void AL_APIENTRY alGetSourcei(ALuint source,  ALenum param, ALint *value);
 AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum param, ALint *value1, ALint *value2, ALint *value3);
 AL_API void AL_APIENTRY alGetSourceiv(ALuint source,  ALenum param, ALint *values);
@@ -513,12 +521,14 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source,  ALenum param, ALint *value
 
 /** Play, replay, or resume (if paused) a list of Sources */
 AL_API void AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources);
+AL_API void AL_APIENTRY alSourcePlayvCt(ALCcontext *Context,ALsizei n, const ALuint *sources);
 /** Stop a list of Sources */
 AL_API void AL_APIENTRY alSourceStopv(ALsizei n, const ALuint *sources);
 /** Rewind a list of Sources */
 AL_API void AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources);
 /** Pause a list of Sources */
 AL_API void AL_APIENTRY alSourcePausev(ALsizei n, const ALuint *sources);
+AL_API void AL_APIENTRY alSourcePausevCt(ALCcontext *Context,ALsizei n, const ALuint *sources);
 
 /** Play, replay, or resume a Source */
 AL_API void AL_APIENTRY alSourcePlay(ALuint source);

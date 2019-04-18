@@ -16,18 +16,28 @@ class SoundDevice final {
 
     SoundDevice& operator = ( const SoundDevice& s) = delete;
 
-    Sound load(const char* fname);
-    Sound load(Tempest::IDevice& d);
+    SoundEffect load(const char* fname);
+    SoundEffect load(Tempest::IDevice& d);
+    SoundEffect load(const Sound& snd);
 
     void process();
     void suspend();
 
+    void setListenerPosition(float x,float y,float z);
+    void setListenerDirection(float dx, float dy, float dz, float ux, float uy, float uz);
+
   private:
     struct Data;
-    void* device();
-    void  setDevice(void *newDevice);
+    struct Device;
+
+    void* context();
 
     std::unique_ptr<Data> data;
+
+    static std::shared_ptr<Device> device();
+    static std::shared_ptr<Device> implDevice();
+
+  friend class SoundEffect;
   };
 
 }

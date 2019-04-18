@@ -106,7 +106,18 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
 
 AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
 {
-    ALCcontext *Context;
+  ALCcontext *Context;
+
+  Context = GetContextRef();
+  if(!Context) return;
+
+  alListenerfvCt(Context,param,values);
+
+  ALCcontext_DecRef(Context);
+}
+
+AL_API ALvoid AL_APIENTRY alListenerfvCt(ALCcontext *Context, ALenum param, const ALfloat *values)
+{
 
     if(values)
     {
@@ -123,9 +134,6 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
                 return;
         }
     }
-
-    Context = GetContextRef();
-    if(!Context) return;
 
     al_try
     {
@@ -154,8 +162,6 @@ AL_API ALvoid AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values)
         }
     }
     al_endtry;
-
-    ALCcontext_DecRef(Context);
 }
 
 

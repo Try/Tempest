@@ -2,11 +2,13 @@
 
 #include <Tempest/IDevice>
 #include <Tempest/MemReader>
+#include <Tempest/File>
+
 #include <vector>
 #include <cstring>
 
-#include <AL/al.h>
 #include <AL/alc.h>
+#include <AL/al.h>
 
 using namespace Tempest;
 
@@ -72,17 +74,42 @@ uint64_t Sound::Data::timeLength() const {
   return uint64_t(samples*1000)/uint64_t(fr);
   }
 
-bool Tempest::Sound::isEmpty() const {
+Sound::Sound(const char *path) {
+  Tempest::RFile f(path);
+  implLoad(f);
+  }
+
+Sound::Sound(const std::string &path) {
+  Tempest::RFile f(path);
+  implLoad(f);
+  }
+
+Sound::Sound(const char16_t *path) {
+  Tempest::RFile f(path);
+  implLoad(f);
+  }
+
+Sound::Sound(const std::u16string &path) {
+  Tempest::RFile f(path);
+  implLoad(f);
+  }
+
+Sound::Sound(IDevice& f) {
+  implLoad(f);
+  }
+
+bool Sound::isEmpty() const {
   return data==nullptr;
   }
 
-uint64_t Tempest::Sound::timeLength() const {
+uint64_t Sound::timeLength() const {
   if(data)
     return data->timeLength();
   return 0;
   }
 
-Sound::Sound(IDevice& f) {
+void Sound::implLoad(IDevice &f) {
+  /*
   std::vector<char> buf;
 
   {
@@ -95,6 +122,8 @@ Sound::Sound(IDevice& f) {
   }
 
   Tempest::MemReader mem(buf.data(), buf.size());
+  */
+  auto& mem = f;
 
   WAVEHeader      header={};
   FmtChunk        fmt={};
