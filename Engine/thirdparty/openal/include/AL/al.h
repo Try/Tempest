@@ -517,6 +517,7 @@ AL_API void AL_APIENTRY alGetSourcefvCt(ALCcontext *Context,ALuint source, ALenu
 AL_API void AL_APIENTRY alGetSourcei(ALuint source,  ALenum param, ALint *value);
 AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum param, ALint *value1, ALint *value2, ALint *value3);
 AL_API void AL_APIENTRY alGetSourceiv(ALuint source,  ALenum param, ALint *values);
+AL_API void AL_APIENTRY alGetSourceivCt(ALCcontext *context,ALuint source,  ALenum param, ALint *values);
 
 
 /** Play, replay, or resume (if paused) a list of Sources */

@@ -50,8 +50,17 @@ void SoundEffect::pause() {
   alSourcePausevCt(ctx,1,&source);
   }
 
+bool SoundEffect::isEmpty() const {
+  return data==nullptr;
+  }
+
 bool SoundEffect::isFinished() const {
-  return currentTime()>=timeLength();
+  if(source==0)
+    return 0;
+  int32_t state=0;
+  ALCcontext* ctx = reinterpret_cast<ALCcontext*>(this->ctx);
+  alGetSourceivCt(ctx,source,AL_SOURCE_STATE,&state);
+  return state==AL_STOPPED;
   }
 
 uint64_t Tempest::SoundEffect::timeLength() const {
@@ -61,6 +70,8 @@ uint64_t Tempest::SoundEffect::timeLength() const {
   }
 
 uint64_t Tempest::SoundEffect::currentTime() const {
+  if(source==0)
+    return 0;
   float result=0;
   ALCcontext* ctx = reinterpret_cast<ALCcontext*>(this->ctx);
   alGetSourcefvCt(ctx, source, AL_SEC_OFFSET, &result);

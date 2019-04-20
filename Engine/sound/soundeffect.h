@@ -18,8 +18,9 @@ class SoundEffect final {
     void play();
     void pause();
 
-    bool     isFinished() const;
-    uint64_t timeLength() const;
+    bool     isEmpty()     const;
+    bool     isFinished()  const;
+    uint64_t timeLength()  const;
     uint64_t currentTime() const;
 
     void setPosition(float x,float y,float z);

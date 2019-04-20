@@ -1829,12 +1829,17 @@ AL_API void AL_APIENTRY alGetSource3i(ALuint source, ALenum param, ALint *value1
 
 AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum param, ALint *values)
 {
-    ALCcontext *Context;
+  ALCcontext *Context;
+
+  Context = GetContextRef();
+  if(!Context) return;
+
+  ALCcontext_DecRef(Context);
+}
+
+AL_API void AL_APIENTRY alGetSourceivCt(ALCcontext *Context,ALuint source, ALenum param, ALint *values)
+{
     ALsource   *Source;
-
-    Context = GetContextRef();
-    if(!Context) return;
-
     if((Source=LookupSource(Context, source)) == NULL)
         alSetError(Context, AL_INVALID_NAME);
     else if(!values)
@@ -1843,8 +1848,6 @@ AL_API void AL_APIENTRY alGetSourceiv(ALuint source, ALenum param, ALint *values
         alSetError(Context, AL_INVALID_ENUM);
     else
         GetSourceiv(Source, Context, param, values);
-
-    ALCcontext_DecRef(Context);
 }
 
 
