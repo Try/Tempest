@@ -78,7 +78,6 @@ namespace Tempest {
     };
 
   enum class ClampMode : uint8_t {
-    Clamp,
     ClampToBorder,
     ClampToEdge,
     MirroredRepeat,

@@ -50,6 +50,17 @@ inline VkFormat nativeFormat(TextureFormat f){
   return vfrm[f];
   }
 
+inline VkSamplerAddressMode nativeFormat(ClampMode f){
+  static const VkSamplerAddressMode vfrm[]={
+    VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+    VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+    VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
+    VK_SAMPLER_ADDRESS_MODE_REPEAT,
+    VK_SAMPLER_ADDRESS_MODE_REPEAT,
+    };
+  return vfrm[int(f)];
+  }
+
 class VDevice : public AbstractGraphicsApi::Device {
   public:
     struct QueueFamilyIndices {

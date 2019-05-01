@@ -65,8 +65,8 @@ VkSampler VSamplerCache::alloc(const Sampler2d &s, uint32_t mipCount) {
 
   samplerInfo.magFilter               = VK_FILTER_LINEAR;
   samplerInfo.minFilter               = VK_FILTER_LINEAR;
-  samplerInfo.addressModeU            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-  samplerInfo.addressModeV            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+  samplerInfo.addressModeU            = nativeFormat(s.uClamp);
+  samplerInfo.addressModeV            = nativeFormat(s.vClamp);
   samplerInfo.addressModeW            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
   if(s.anisotropic && anisotropy){
     samplerInfo.anisotropyEnable        = VK_TRUE;
@@ -75,7 +75,7 @@ VkSampler VSamplerCache::alloc(const Sampler2d &s, uint32_t mipCount) {
     samplerInfo.anisotropyEnable        = VK_FALSE;
     samplerInfo.maxAnisotropy           = 1.f;
     }
-  samplerInfo.borderColor             = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+  samplerInfo.borderColor             = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
   samplerInfo.unnormalizedCoordinates = VK_FALSE;
   samplerInfo.compareEnable           = VK_FALSE;
   samplerInfo.compareOp               = VK_COMPARE_OP_ALWAYS;
