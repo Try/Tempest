@@ -88,11 +88,13 @@ class Device {
 
     FrameBuffer    frameBuffer(Frame &out, RenderPass& pass);
     FrameBuffer    frameBuffer(Frame &out, Texture2d& zbuf, RenderPass& pass);
+    FrameBuffer    frameBuffer(Texture2d &out, Texture2d& zbuf, RenderPass& pass);
 
     RenderPass     pass       (FboMode color, FboMode zbuf, TextureFormat zbufFormat);
     RenderPass     pass       (const Tempest::Color& color);
     RenderPass     pass       (const Tempest::Color& color,FboMode zbuf, TextureFormat zbufFormat);
-    RenderPass     pass       (const Tempest::Color& color,const float zbuf, TextureFormat zbufFormat);
+    RenderPass     pass       (const Tempest::Color& color,const float zbuf,TextureFormat zbufFormat);
+    RenderPass     pass       (const Tempest::Color& color,const float zbuf,TextureFormat clFormat,TextureFormat zbufFormat);
 
     template<class Vertex>
     RenderPipeline pipeline(RenderPass& pass, uint32_t width, uint32_t height,

@@ -31,6 +31,11 @@ void CommandBuffer::end() {
   impl.handler->end();
   }
 
+void CommandBuffer::setPass(const RenderPass &p) {
+  if(curPass.active)
+    impl.handler->next(p.impl.handler);
+  }
+
 void CommandBuffer::implEndRenderPass() {
   curPipeline = nullptr;
   curPass     = Pass();
@@ -100,9 +105,22 @@ void CommandBuffer::setUniforms(const Detail::ResourcePtr<RenderPipeline> &p) {
     }
   }
 
+void CommandBuffer::setViewport(int x, int y, int w, int h) {
+  impl.handler->setViewport(Rect(x,y,w,h));
+  }
+
+void CommandBuffer::setViewport(const Rect &vp) {
+  impl.handler->setViewport(vp);
+  }
+
 void CommandBuffer::exec(const CommandBuffer &buf) {
   if(buf.impl.handler)
     impl.handler->exec(*buf.impl.handler);
+  }
+
+void CommandBuffer::changeLayout(Texture2d &t, TextureLayout prev, TextureLayout next) {
+  if(t.impl.handler)
+    impl.handler->changeLayout(*t.impl.handler,prev,next);
   }
 
 void CommandBuffer::implDraw(const VideoBuffer& vbo, size_t offset, size_t size) {

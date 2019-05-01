@@ -67,12 +67,24 @@ AbstractGraphicsApi::Pass *VulkanApi::createPass(AbstractGraphicsApi::Device *d,
                                                  FboMode fcolor, const Color *clear,
                                                  FboMode fzbuf, const float *zclear) {
   VkFormat zfrm=VkFormat::VK_FORMAT_UNDEFINED;
-  if(zformat==TextureFormat::Depth16)
+  if(isDepthFormat(zformat))
     zfrm=VkFormat::VK_FORMAT_D16_UNORM;
 
   Detail::VDevice*    dx=reinterpret_cast<Detail::VDevice*>(d);
   Detail::VSwapchain* sx=reinterpret_cast<Detail::VSwapchain*>(s);
   return new Detail::VRenderPass(*dx,sx->format(),zfrm,fcolor,clear,fzbuf,zclear);
+  }
+
+AbstractGraphicsApi::Pass *VulkanApi::createPass(AbstractGraphicsApi::Device *d,
+                                                 TextureFormat clFormat,
+                                                 TextureFormat zformat,
+                                                 FboMode fcolor, const Color *clear,
+                                                 FboMode fzbuf, const float *zclear) {
+  VkFormat zfrm     = Detail::nativeFormat(zformat);
+  VkFormat colorFrm = Detail::nativeFormat(clFormat);
+
+  Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
+  return new Detail::VRenderPass(*dx,colorFrm,zfrm,fcolor,clear,fzbuf,zclear);
   }
 
 void VulkanApi::destroy(AbstractGraphicsApi::Pass *pass) {
@@ -102,6 +114,19 @@ AbstractGraphicsApi::Fbo *VulkanApi::createFbo(AbstractGraphicsApi::Device *d,
   Detail::VTexture*    tx=reinterpret_cast<Detail::VTexture*>(zbuf);
 
   return new Detail::VFramebuffer(*dx,*px,*sx,imageId,*tx);
+  }
+
+AbstractGraphicsApi::Fbo *VulkanApi::createFbo(AbstractGraphicsApi::Device *d,
+                                               uint32_t w,uint32_t h,
+                                               AbstractGraphicsApi::Pass *pass,
+                                               AbstractGraphicsApi::Texture *tcl,
+                                               AbstractGraphicsApi::Texture *zbuf) {
+  Detail::VDevice*     dx=reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VRenderPass* px=reinterpret_cast<Detail::VRenderPass*>(pass);
+  Detail::VTexture*    cl=reinterpret_cast<Detail::VTexture*>(tcl);
+  Detail::VTexture*    tx=reinterpret_cast<Detail::VTexture*>(zbuf);
+
+  return new Detail::VFramebuffer(*dx,*px,w,h,*cl,*tx);
   }
 
 void VulkanApi::destroy(AbstractGraphicsApi::Fbo *pass) {
@@ -234,7 +259,13 @@ AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Devi
   auto buf=dx->allocator.alloc(w,h,mipCnt,frm);
 
   Detail::VDevice::Data dat(*dx);
-  dat.changeLayout(buf, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL/*TODO*/,mipCnt);
+  VkImageLayout lay = VK_IMAGE_LAYOUT_UNDEFINED;
+  if(isDepthFormat(frm)) {
+    lay = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    } else {
+    lay = VK_IMAGE_LAYOUT_GENERAL; //VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    }
+  dat.changeLayout(buf, VK_IMAGE_LAYOUT_UNDEFINED, lay, mipCnt);
   dat.commit();
 
   dx->waitData();

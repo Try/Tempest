@@ -46,6 +46,8 @@ class VAllocator {
 
     bool     update(VBuffer& dest, const void *mem, size_t offset,  size_t size);
 
+    void     updateSampler(VkSampler& smp, const Sampler2d& s, uint32_t mipCount);
+
   private:
     VkDevice                          device=nullptr;
     Provider                          provider;

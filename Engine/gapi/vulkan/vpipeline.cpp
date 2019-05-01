@@ -311,6 +311,12 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   depthStencil.depthBoundsTestEnable = VK_FALSE;
   depthStencil.stencilTestEnable     = VK_FALSE;
 
+  VkPipelineDynamicStateCreateInfo dynamic = {};
+  dynamic.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+  const VkDynamicState dySt[1]={VK_DYNAMIC_STATE_VIEWPORT};
+  dynamic.pDynamicStates    = dySt;
+  dynamic.dynamicStateCount = 1;
+
   VkGraphicsPipelineCreateInfo pipelineInfo = {};
   pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
   pipelineInfo.stageCount          = 2;
@@ -322,6 +328,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   pipelineInfo.pMultisampleState   = &multisampling;
   pipelineInfo.pDepthStencilState  = &depthStencil;
   pipelineInfo.pColorBlendState    = &colorBlending;
+  //pipelineInfo.pDynamicState       = &dynamic;
   pipelineInfo.layout              = layout;
   pipelineInfo.renderPass          = pass.impl;
   pipelineInfo.subpass             = 0;

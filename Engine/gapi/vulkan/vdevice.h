@@ -39,6 +39,17 @@ inline void vkAssert(VkResult code){
     }
   }
 
+inline VkFormat nativeFormat(TextureFormat f){
+  static const VkFormat vfrm[]={
+    VK_FORMAT_UNDEFINED,
+    VK_FORMAT_R8_UNORM,
+    VK_FORMAT_R8G8B8_UNORM,
+    VK_FORMAT_R8G8B8A8_UNORM,
+    VK_FORMAT_D16_UNORM
+    };
+  return vfrm[f];
+  }
+
 class VDevice : public AbstractGraphicsApi::Device {
   public:
     struct QueueFamilyIndices {

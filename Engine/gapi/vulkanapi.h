@@ -19,8 +19,14 @@ class VulkanApi : public AbstractGraphicsApi {
     Swapchain*   createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d) override;
     void         destroy(Swapchain* d) override;
 
-    Pass*        createPass(AbstractGraphicsApi::Device *d,
-                            AbstractGraphicsApi::Swapchain *s,
+    Pass*        createPass(Device *d,
+                            Swapchain* sw,
+                            TextureFormat zformat,
+                            FboMode fcolor, const Color *clear,
+                            FboMode fzbuf, const float *zclear) override;
+
+    Pass*        createPass(Device *d,
+                            TextureFormat clFormat,
                             TextureFormat zformat,
                             FboMode fcolor, const Color *clear,
                             FboMode fzbuf, const float *zclear) override;
@@ -28,6 +34,7 @@ class VulkanApi : public AbstractGraphicsApi {
 
     Fbo*         createFbo(Device *d, Swapchain *s, Pass* pass, uint32_t imageId) override;
     Fbo*         createFbo(Device *d, Swapchain *s, Pass* pass, uint32_t imageId, Texture* zbuf) override;
+    Fbo*         createFbo(Device *d, uint32_t w, uint32_t h, Pass* pass, Texture* cl, Texture* zbuf) override;
     void         destroy(Fbo* pass) override;
 
     Pipeline*    createPipeline(Device* d, Pass* pass,

@@ -8,8 +8,9 @@ namespace Tempest {
 class Device;
 class CommandBuffer;
 
-class FrameBuffer {
+class FrameBuffer final {
   public:
+    FrameBuffer()=default;
     FrameBuffer(FrameBuffer&& f)=default;
     ~FrameBuffer();
     FrameBuffer& operator = (FrameBuffer&& other)=default;

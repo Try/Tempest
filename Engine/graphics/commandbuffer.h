@@ -31,6 +31,7 @@ class CommandBuffer {
     void begin(const RenderPass& p);//secondary
     void end();
 
+    void setPass(const RenderPass& p);
     void setPass(const FrameBuffer& fbo, const RenderPass& p);
     void setPass(const FrameBuffer& fbo, const RenderPass& p, int      width, int      height);
     void setPass(const FrameBuffer& fbo, const RenderPass& p, uint32_t width, uint32_t height);
@@ -44,6 +45,9 @@ class CommandBuffer {
 
     void setUniforms(const Tempest::RenderPipeline& p);
     void setUniforms(const Detail::ResourcePtr<Tempest::RenderPipeline>& p);
+
+    void setViewport(int x,int y,int w,int h);
+    void setViewport(const Rect& vp);
 
     template<class T>
     void draw(const VertexBuffer<T>& vbo){ implDraw(vbo.impl,0,vbo.size()); }
@@ -59,6 +63,8 @@ class CommandBuffer {
          { implDraw(vbo.impl,ibo.impl,Detail::indexCls<I>(),offset,count); }
 
     void exec(const CommandBuffer& buf);
+
+    void changeLayout(Texture2d& t,TextureLayout prev,TextureLayout next);
 
   private:
     CommandBuffer(Tempest::Device& dev,AbstractGraphicsApi::CommandBuffer* f);

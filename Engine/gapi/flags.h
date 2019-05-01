@@ -53,4 +53,9 @@ inline FboMode operator & (FboMode a,const FboMode& b) {
   return FboMode(uint8_t(a)&uint8_t(b));
   }
 
+enum class TextureLayout : uint8_t {
+  Undefined,
+  Sampler,
+  ColorAttach,
+  };
 }

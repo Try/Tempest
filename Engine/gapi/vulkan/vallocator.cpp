@@ -178,19 +178,10 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mi
   imageInfo.arrayLayers   = 1;
   imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
   imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  imageInfo.usage         = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  imageInfo.usage         = isDepthFormat(frm) ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT : (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT|VK_IMAGE_USAGE_SAMPLED_BIT);
   imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
   imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
-
-  static const VkFormat vfrm[]={
-    VK_FORMAT_UNDEFINED,
-    VK_FORMAT_R8_UNORM,
-    VK_FORMAT_R8G8B8_UNORM,
-    VK_FORMAT_R8G8B8A8_UNORM,
-    VK_FORMAT_D16_UNORM
-    };
-
-  imageInfo.format = vfrm[frm];
+  imageInfo.format        = nativeFormat(frm);
 
   vkAssert(vkCreateImage(device, &imageInfo, nullptr, &ret.impl));
 
@@ -247,12 +238,18 @@ bool VAllocator::update(VBuffer &dest, const void *mem, size_t offset, size_t si
   return true;
   }
 
-bool VAllocator::commit(VkDeviceMemory dev, std::mutex &mmapSync, VkBuffer dest, const void* mem, size_t offset, size_t size) {
+void VAllocator::updateSampler(VkSampler &smp, const Tempest::Sampler2d &s,uint32_t mipCount) {
+  auto ns = samplers.get(s,mipCount);
+  samplers.free(smp);
+  smp = ns;
+  }
+
+bool VAllocator::commit(VkDeviceMemory dev, std::mutex &mmapSync, VkBuffer dest, const void* mem, size_t offset, size_t size) { 
+  std::lock_guard<std::mutex> g(mmapSync); // on practice bind requires external sync
   if(vkBindBufferMemory(device,dest,dev,offset)!=VkResult::VK_SUCCESS)
     return false;
-
   if(mem!=nullptr) {
-    std::lock_guard<std::mutex> g(mmapSync); // on practice bind requires external sync
+    //std::lock_guard<std::mutex> g(mmapSync); // on practice bind requires external sync
     void* data=nullptr;
     if(vkMapMemory(device,dev,offset,size,0,&data)!=VkResult::VK_SUCCESS)
       return false;
@@ -263,6 +260,7 @@ bool VAllocator::commit(VkDeviceMemory dev, std::mutex &mmapSync, VkBuffer dest,
   return true;
   }
 
-bool VAllocator::commit(VkDeviceMemory dev, std::mutex& /*mmapSync*/, VkImage dest, size_t offset) {
+bool VAllocator::commit(VkDeviceMemory dev, std::mutex& mmapSync, VkImage dest, size_t offset) {
+  std::lock_guard<std::mutex> g(mmapSync); // on practice bind requires external sync
   return vkBindImageMemory(device, dest, dev, offset)==VkResult::VK_SUCCESS;
   }

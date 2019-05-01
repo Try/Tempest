@@ -63,6 +63,64 @@ namespace Tempest {
     Depth16
     };
 
+  inline bool isDepthFormat(TextureFormat f){
+    return f==TextureFormat::Depth16;
+    }
+
+  //! Способы фильтрации текстуры.
+  enum class Filter : uint8_t {
+    //! ближайшая фильтрация
+    Nearest,
+    //! линейная фильтрация
+    Linear,
+    //! Count
+    Count
+    };
+
+  enum class ClampMode : uint8_t {
+    Clamp,
+    ClampToBorder,
+    ClampToEdge,
+    MirroredRepeat,
+    Repeat,
+    Count
+    };
+
+  struct Sampler2d final {
+    Filter    minFilter=Filter::Linear;
+    Filter    magFilter=Filter::Linear;
+    Filter    mipFilter=Filter::Linear;
+
+    ClampMode uClamp   =ClampMode::Repeat;
+    ClampMode vClamp   =ClampMode::Repeat;
+
+    bool      anisotropic=true;
+
+    void setClamping(ClampMode c){
+      uClamp = c;
+      vClamp = c;
+      }
+
+    void setFiltration(Filter f){
+      minFilter = f;
+      magFilter = f;
+      mipFilter = f;
+      }
+
+    bool operator==(const Sampler2d& s) const {
+      return minFilter==s.minFilter &&
+             magFilter==s.magFilter &&
+             mipFilter==s.mipFilter &&
+             uClamp   ==s.uClamp    &&
+             vClamp   ==s.vClamp    &&
+             anisotropic==s.anisotropic;
+      }
+
+    bool operator!=(const Sampler2d& s) const {
+      return !(*this==s);
+      }
+    };
+
   namespace Detail {
     enum class IndexClass:uint8_t {
       i16=0,
@@ -102,11 +160,13 @@ namespace Tempest {
       struct Device       {};
       struct Swapchain    {
         virtual ~Swapchain(){}
-        virtual uint32_t imageCount() const=0;
-        virtual uint32_t w() const=0;
-        virtual uint32_t h() const=0;
+        virtual uint32_t      imageCount() const=0;
+        virtual uint32_t      w() const=0;
+        virtual uint32_t      h() const=0;
         };
-      struct Texture:Shared  {};
+      struct Texture:Shared  {
+        virtual void setSampler(const Sampler2d& s)=0;
+        };
       struct Image           {};
       struct Fbo             {};
       struct Pass            {};
@@ -129,6 +189,7 @@ namespace Tempest {
         virtual ~CommandBuffer()=default;
         virtual void begin()=0;
         virtual void begin(AbstractGraphicsApi::Pass* p)=0;
+        virtual void next (AbstractGraphicsApi::Pass* p)=0;
         virtual void end()  =0;
         virtual void beginRenderPass(AbstractGraphicsApi::Fbo* f,
                                      AbstractGraphicsApi::Pass*  p,
@@ -138,14 +199,16 @@ namespace Tempest {
                                         uint32_t width,uint32_t height)=0;
         virtual void endRenderPass()=0;
 
-        virtual void clear      (Image& img,float r, float g, float b, float a)=0;
-        virtual void setPipeline(Pipeline& p)=0;
-        virtual void setUniforms(Pipeline& p,Desc& u, size_t offc, const uint32_t* offv)=0;
-        virtual void exec       (const AbstractGraphicsApi::CommandBuffer& buf)=0;
-        virtual void setVbo     (const Buffer& b)=0;
-        virtual void setIbo     (const Buffer* b,Detail::IndexClass cls)=0;
-        virtual void draw       (size_t offset,size_t vertexCount)=0;
-        virtual void drawIndexed(size_t ioffset, size_t isize, size_t voffset)=0;
+        virtual void clear       (Image& img,float r, float g, float b, float a)=0;
+        virtual void setPipeline (Pipeline& p)=0;
+        virtual void setViewport (const Rect& r)=0;
+        virtual void setUniforms (Pipeline& p,Desc& u, size_t offc, const uint32_t* offv)=0;
+        virtual void exec        (const AbstractGraphicsApi::CommandBuffer& buf)=0;
+        virtual void changeLayout(Texture& t,TextureLayout prev,TextureLayout next)=0;
+        virtual void setVbo      (const Buffer& b)=0;
+        virtual void setIbo      (const Buffer* b,Detail::IndexClass cls)=0;
+        virtual void draw        (size_t offset,size_t vertexCount)=0;
+        virtual void drawIndexed (size_t ioffset, size_t isize, size_t voffset)=0;
         };
       struct CmdPool         {};
 
@@ -163,7 +226,13 @@ namespace Tempest {
       virtual Swapchain* createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d)=0;
       virtual void       destroy(Swapchain* d)=0;
 
-      virtual Pass*      createPass(Device *d,Swapchain *s,
+      virtual Pass*      createPass(Device *d,
+                                    Swapchain* sw,
+                                    TextureFormat zformat,
+                                    FboMode in,const Color* clear,
+                                    FboMode out,const float* zclear)=0;
+      virtual Pass*      createPass(Device *d,
+                                    TextureFormat clFormat,
                                     TextureFormat zformat,
                                     FboMode in,const Color* clear,
                                     FboMode out,const float* zclear)=0;
@@ -171,6 +240,7 @@ namespace Tempest {
 
       virtual Fbo*       createFbo(Device *d,Swapchain *s,Pass* pass,uint32_t imageId)=0;
       virtual Fbo*       createFbo(Device *d,Swapchain *s,Pass* pass,uint32_t imageId,Texture* zbuf)=0;
+      virtual Fbo*       createFbo(Device *d,uint32_t w, uint32_t h,Pass* pass,Texture* cl,Texture* zbuf)=0;
       virtual void       destroy(Fbo* pass)=0;
 
       virtual std::shared_ptr<AbstractGraphicsApi::UniformsLay>

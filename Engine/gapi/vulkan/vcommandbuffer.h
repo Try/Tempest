@@ -41,6 +41,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void begin();
     void begin(AbstractGraphicsApi::Pass* p);
+    void next (AbstractGraphicsApi::Pass* p);
     void end();
 
     void beginRenderPass(AbstractGraphicsApi::Fbo* f,
@@ -54,6 +55,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void clear(AbstractGraphicsApi::Image& img, float r, float g, float b, float a);
     void setPipeline(AbstractGraphicsApi::Pipeline& p);
     void setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u, size_t offc, const uint32_t* offv);
+    void setViewport(const Rect& r);
 
     void exec(const AbstractGraphicsApi::CommandBuffer& buf);
 
@@ -67,6 +69,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void copy(Detail::VBuffer&  dest, size_t offsetDest, const Detail::VBuffer& src, size_t offsetSrc, size_t size);
     void copy(Detail::VTexture& dest, size_t width, size_t height, const Detail::VBuffer& src);
 
+    void changeLayout(AbstractGraphicsApi::Texture& t,TextureLayout prev,TextureLayout next);
     void changeLayout(Detail::VTexture& dest, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount);
     void generateMipmap(VTexture& image, VkPhysicalDevice pdev, VkFormat imageFormat,
                         uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);

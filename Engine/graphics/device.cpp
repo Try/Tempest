@@ -151,6 +151,13 @@ FrameBuffer Device::frameBuffer(Frame &out, Texture2d &zbuf, RenderPass &pass) {
   return f;
   }
 
+FrameBuffer Device::frameBuffer(Texture2d &out, Texture2d &zbuf, RenderPass &pass) {
+  uint32_t w = uint32_t(out.w());
+  uint32_t h = uint32_t(out.h());
+  FrameBuffer f(*this,api.createFbo(dev,w,h,pass.impl.handler,out.impl.handler,zbuf.impl.handler),w,h);
+  return f;
+  }
+
 RenderPass Device::pass(FboMode color, FboMode zbuf, TextureFormat zbufFormat) {
   RenderPass f(*this,api.createPass(dev,swapchain,zbufFormat,color,nullptr,zbuf,nullptr));
   return f;
@@ -168,6 +175,11 @@ RenderPass Device::pass(const Color &color, FboMode zbuf, TextureFormat zbufForm
 
 RenderPass Device::pass(const Color &color, const float zbuf, TextureFormat zbufFormat) {
   RenderPass f(*this,api.createPass(dev,swapchain,zbufFormat,FboMode::PreserveOut,&color,FboMode::PreserveOut,&zbuf));
+  return f;
+  }
+
+RenderPass Device::pass(const Color &color, const float zbuf, TextureFormat clFormat, TextureFormat zbufFormat) {
+  RenderPass f(*this,api.createPass(dev,clFormat,zbufFormat,FboMode::PreserveOut,&color,FboMode::PreserveOut,&zbuf));
   return f;
   }
 
