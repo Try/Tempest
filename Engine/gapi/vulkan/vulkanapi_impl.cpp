@@ -56,14 +56,8 @@ VulkanApi::VulkanApi(bool validation)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
   if(validation) {
-    auto vkCreateDebugReportCallbackEXT = PFN_vkCreateDebugReportCallbackEXT(vkGetInstanceProcAddr(instance,"vkCreateDebugReportCallbackEXT"));
-    /*
-    PFN_vkDebugReportMessageEXT vkDebugReportMessageEXT =
-        reinterpret_cast<PFN_vkDebugReportMessageEXT>
-            (vkGetInstanceProcAddr(instance, "vkDebugReportMessageEXT"));
-    PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT =
-        reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>
-            (vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT"));*/
+    auto vkCreateDebugReportCallbackEXT = PFN_vkCreateDebugReportCallbackEXT (vkGetInstanceProcAddr(instance,"vkCreateDebugReportCallbackEXT"));
+    vkDestroyDebugReportCallbackEXT     = PFN_vkDestroyDebugReportCallbackEXT(vkGetInstanceProcAddr(instance,"vkDestroyDebugReportCallbackEXT"));
 
     /* Setup callback creation information */
     VkDebugReportCallbackCreateInfoEXT callbackCreateInfo;
@@ -76,7 +70,6 @@ VulkanApi::VulkanApi(bool validation)
     callbackCreateInfo.pUserData   = nullptr;
 
     /* Register the callback */
-    VkDebugReportCallbackEXT callback;
     VkResult result = vkCreateDebugReportCallbackEXT(instance, &callbackCreateInfo, nullptr, &callback);
     if(result!=VK_SUCCESS)
       Log::e("unable to setup validation callback");
@@ -84,7 +77,8 @@ VulkanApi::VulkanApi(bool validation)
   }
 
 VulkanApi::~VulkanApi(){
-  //TODO: remove dbg callback
+  if( vkDestroyDebugReportCallbackEXT )
+    vkDestroyDebugReportCallbackEXT(instance,callback,nullptr);
   vkDestroyInstance(instance,nullptr);
   }
 

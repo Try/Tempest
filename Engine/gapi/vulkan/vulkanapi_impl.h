@@ -24,6 +24,9 @@ class VulkanApi {
         const char*                 pLayerPrefix,
         const char*                 pMessage,
         void*                       pUserData);
+
+    VkDebugReportCallbackEXT            callback;
+    PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT = nullptr;
   };
 
 }}
