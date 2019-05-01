@@ -99,3 +99,8 @@ void SoundEffect::setRefDistance(float dist) {
   ALCcontext* ctx = reinterpret_cast<ALCcontext*>(this->ctx);
   alSourcefvCt(ctx, source, AL_REFERENCE_DISTANCE, &dist);
   }
+
+void SoundEffect::setVolume(float val) {
+  ALCcontext* ctx = reinterpret_cast<ALCcontext*>(this->ctx);
+  alSourcefvCt(ctx, source, AL_GAIN, &val);
+  }

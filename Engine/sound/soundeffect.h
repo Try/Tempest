@@ -26,6 +26,7 @@ class SoundEffect final {
     void setPosition(float x,float y,float z);
     void setMaxDistance(float dist);
     void setRefDistance(float dist);
+    void setVolume(float val);
 
   private:
     SoundEffect(SoundDevice& dev,const Sound &src);
