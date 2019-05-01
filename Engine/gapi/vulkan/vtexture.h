@@ -21,10 +21,12 @@ class VTexture : public AbstractGraphicsApi::Texture {
     ~VTexture();
 
     VTexture& operator=(const VTexture& other)=delete;
+    void setSampler(const Sampler2d& s);
 
-    VkImage     impl   =VK_NULL_HANDLE;
-    VkImageView view   =VK_NULL_HANDLE;
-    VkSampler   sampler=VK_NULL_HANDLE;
+    VkImage     impl    =VK_NULL_HANDLE;
+    VkImageView view    =VK_NULL_HANDLE;
+    VkSampler   sampler =VK_NULL_HANDLE;
+    uint32_t    mipCount=1;
 
   private:
     VAllocator*            alloc =nullptr;

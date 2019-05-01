@@ -9,13 +9,13 @@ namespace Detail {
 
 class VDevice;
 
-class VSamplerCache {
+class VSamplerCache final {
   public:
     VSamplerCache();
     ~VSamplerCache();
 
     VkSampler get(uint32_t mipCount);
-    VkSampler get(const Texture2d::Sampler& s, uint32_t mipCount);
+    VkSampler get(const Sampler2d& s, uint32_t mipCount);
     void      free(VkSampler s);
     void      freeLast();
 
@@ -23,8 +23,8 @@ class VSamplerCache {
 
   private:
     struct Id {
-      Texture2d::Sampler smp;
-      VkSampler          sampler=VK_NULL_HANDLE;
+      Sampler2d smp;
+      VkSampler sampler=VK_NULL_HANDLE;
       };
 
     struct Chunk {
@@ -41,8 +41,8 @@ class VSamplerCache {
     float              maxAnisotropy=1.f;
 
     Chunk&             chunk(uint32_t mipCount);
-    Id                 alloc(Chunk& c,const Texture2d::Sampler& s);
-    VkSampler          alloc(const Texture2d::Sampler& s, uint32_t mipCount);
+    Id                 alloc(Chunk& c,const Sampler2d& s);
+    VkSampler          alloc(const Sampler2d& s, uint32_t mipCount);
   };
 
 }}

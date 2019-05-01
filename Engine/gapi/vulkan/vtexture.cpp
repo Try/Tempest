@@ -6,11 +6,12 @@
 using namespace Tempest::Detail;
 
 VTexture::VTexture(VTexture &&other) {
-  std::swap(impl,   other.impl);
-  std::swap(view,   other.view);
-  std::swap(sampler,other.sampler);
-  std::swap(alloc,  other.alloc);
-  std::swap(page,   other.page);
+  std::swap(impl,    other.impl);
+  std::swap(view,    other.view);
+  std::swap(sampler, other.sampler);
+  std::swap(mipCount,other.mipCount);
+  std::swap(alloc,   other.alloc);
+  std::swap(page,    other.page);
   }
 
 VTexture::~VTexture() {
@@ -18,7 +19,11 @@ VTexture::~VTexture() {
     alloc->free(*this);
   }
 
-void VTexture::createView(VkDevice device,VkFormat format,VkSampler s,uint32_t mipCount) {
+void VTexture::setSampler(const Sampler2d &s) {
+  alloc->updateSampler(sampler,s,mipCount);
+  }
+
+void VTexture::createView(VkDevice device,VkFormat format,VkSampler s,uint32_t mips) {
   VkImageViewCreateInfo viewInfo = {};
   viewInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   viewInfo.image                           = impl;
@@ -28,10 +33,11 @@ void VTexture::createView(VkDevice device,VkFormat format,VkSampler s,uint32_t m
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; else
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   viewInfo.subresourceRange.baseMipLevel   = 0;
-  viewInfo.subresourceRange.levelCount     = mipCount;
+  viewInfo.subresourceRange.levelCount     = mips;
   viewInfo.subresourceRange.baseArrayLayer = 0;
   viewInfo.subresourceRange.layerCount     = 1;
 
   vkAssert(vkCreateImageView(device, &viewInfo, nullptr, &view));
-  sampler = s;
+  sampler  = s;
+  mipCount = mips;
   }

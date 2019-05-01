@@ -11,10 +11,10 @@ VSamplerCache::~VSamplerCache() {
   }
 
 VkSampler VSamplerCache::get(uint32_t mipCount) {
-  return get(Tempest::Texture2d::Sampler(),mipCount);
+  return get(Tempest::Sampler2d(),mipCount);
   }
 
-VkSampler VSamplerCache::get(const Tempest::Texture2d::Sampler &s,uint32_t mipCount) {
+VkSampler VSamplerCache::get(const Sampler2d &s, uint32_t mipCount) {
   std::lock_guard<std::mutex> guard(sync);
 
   auto& c = chunk(mipCount);
@@ -46,7 +46,7 @@ VSamplerCache::Chunk &VSamplerCache::chunk(uint32_t mipCount) {
   return chunks.back();
   }
 
-VSamplerCache::Id VSamplerCache::alloc(VSamplerCache::Chunk &c, const Tempest::Texture2d::Sampler &s) {
+VSamplerCache::Id VSamplerCache::alloc(VSamplerCache::Chunk &c, const Sampler2d &s) {
   for(auto& i:c.samp)
     if(i.smp==s)
       return i;
@@ -58,7 +58,7 @@ VSamplerCache::Id VSamplerCache::alloc(VSamplerCache::Chunk &c, const Tempest::T
   return c.samp.back();
   }
 
-VkSampler VSamplerCache::alloc(const Tempest::Texture2d::Sampler &s, uint32_t mipCount) {
+VkSampler VSamplerCache::alloc(const Sampler2d &s, uint32_t mipCount) {
   VkSampler           sampler=VK_NULL_HANDLE;
   VkSamplerCreateInfo samplerInfo = {};
   samplerInfo.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
