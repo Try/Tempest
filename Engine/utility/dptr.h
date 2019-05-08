@@ -32,7 +32,11 @@ template<class Handler>
 class DSharedPtr {
   public:
     DSharedPtr()=default;
-    explicit DSharedPtr(Handler h):handler(h){}
+    explicit DSharedPtr(Handler h):handler(h){
+      if(handler)
+        addRef();
+      }
+
     DSharedPtr(const DSharedPtr& t):handler(t.handler){
       if(handler)
         addRef();

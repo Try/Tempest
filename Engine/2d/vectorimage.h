@@ -74,6 +74,11 @@ class VectorImage : public Tempest::PaintDevice {
         }
       };
 
+    enum UboType : uint8_t {
+      UT_NoImg,
+      UT_Img,
+      };
+
     struct Block : State {
       Block()=default;
       Block(Block&&)=default;
@@ -92,6 +97,9 @@ class VectorImage : public Tempest::PaintDevice {
     struct PerFrame {
       Tempest::VertexBuffer<Point> vbo;
       std::vector<Uniforms>        blocks;
+      std::vector<UboType>         blocksType;
+      uint32_t                     imgW=0;
+      uint32_t                     imgH=0;
       bool                         outdated=true;
       };
 

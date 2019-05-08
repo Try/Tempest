@@ -111,7 +111,7 @@ VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferFl
   return ret;
   }
 
-VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip,VkFormat& outfrm) {
+VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip,VkFormat format) {
   VTexture ret;
   ret.alloc = this;
 
@@ -123,31 +123,18 @@ VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip,VkFormat& outfrm) {
   imageInfo.extent.depth  = 1;
   imageInfo.mipLevels     = mip;
   imageInfo.arrayLayers   = 1;
-  imageInfo.format        = VK_FORMAT_R8G8B8A8_UNORM;
+  imageInfo.format        = format;
   imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
   imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  imageInfo.usage         = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
   imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
   imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
+  imageInfo.usage         = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
   if(mip>1) {
     // TODO: test VK_FORMAT_FEATURE_BLIT_DST_BIT
     imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     }
 
-  switch(pm.format()) {
-    case Pixmap::Format::A:
-      imageInfo.format = VK_FORMAT_R8_UNORM;
-      break;
-    case Pixmap::Format::RGB:
-      imageInfo.format = VK_FORMAT_R8G8B8_UNORM;
-      break;
-    case Pixmap::Format::RGBA:
-      imageInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
-      break;
-    }
-
-  outfrm = imageInfo.format;
   vkAssert(vkCreateImage(device, &imageInfo, nullptr, &ret.impl));
 
   VkMemoryRequirements memRq;

@@ -8,7 +8,13 @@
 #include <Tempest/File>
 #include <Tempest/Pixmap>
 
+#include <Tempest/Except>
+
 using namespace Tempest;
+
+static uint32_t mipCount(uint32_t w, uint32_t h) {
+  return uint32_t(std::floor(std::log2(std::max(w,h)))) + 1;
+  }
 
 Device::Impl::Impl(AbstractGraphicsApi &api, SystemApi::Window *w, uint8_t maxFramesInFlight)
   :api(api),hwnd(w),maxFramesInFlight(maxFramesInFlight){
@@ -119,17 +125,45 @@ const Device::Caps &Device::caps() const {
   }
 
 Texture2d Device::createTexture(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips) {
-  Texture2d t(*this,api.createTexture(dev,w,h,mips,frm),w,h,frm);
+  if(!devCaps.hasSamplerFormat(frm) && !devCaps.hasAttachFormat(frm))
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
+  uint32_t mipCnt = mips ? mipCount(w,h) : 1;
+  Texture2d t(*this,api.createTexture(dev,w,h,mipCnt,frm),w,h,frm);
   return t;
   }
 
 Texture2d Device::loadTexture(const Pixmap &pm, bool mips) {
-  TextureFormat frm[]={
+  static const TextureFormat frm[]={
     TextureFormat::Alpha,
     TextureFormat::RGB8,
     TextureFormat::RGBA8,
+    TextureFormat::DXT1,
+    TextureFormat::DXT3,
+    TextureFormat::DXT5,
     };
-  Texture2d t(*this,api.createTexture(dev,pm,mips),pm.w(),pm.h(),frm[uint8_t(pm.format())]);
+  TextureFormat format = frm[uint8_t(pm.format())];
+  uint32_t      mipCnt = mips ? mipCount(pm.w(),pm.h()) : 1;
+  const Pixmap* p=&pm;
+  Pixmap alt;
+
+  if(isCompressedFormat(format)){
+    if(devCaps.hasSamplerFormat(format) && (!mips || pm.mipCount()>1)){
+      //format = TextureFormat::DXT1;
+      mipCnt = pm.mipCount();
+      } else {
+      alt    = Pixmap(pm,Pixmap::Format::RGBA);
+      p      = &alt;
+      format = TextureFormat::RGBA8;
+      }
+    }
+
+  if(format==TextureFormat::RGB8 && !devCaps.hasSamplerFormat(format)){
+    alt    = Pixmap(pm,Pixmap::Format::RGBA);
+    p      = &alt;
+    format = TextureFormat::RGBA8;
+    }
+
+  Texture2d t(*this,api.createTexture(dev,*p,format,mipCnt),p->w(),p->h(),format);
   return t;
   }
 
@@ -258,10 +292,6 @@ void Device::destroy(CommandPool &p) {
 
 void Device::destroy(CommandBuffer &c) {
   api.destroy(c.impl.handler);
-  }
-
-void Device::destroy(VideoBuffer &b) {
-  api.destroy(b.impl.handler);
   }
 
 void Device::destroy(Uniforms &u) {

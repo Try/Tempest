@@ -117,20 +117,34 @@ void VectorImage::makeActual(Device &dev,RenderPass& pass) {
   if(f.outdated) {
     //if(f.vbo.size()==buf.size())
     f.vbo=dev.loadVbo(buf,BufferFlags::Static);
-    f.blocks.reserve(blocks.size());
-    f.blocks.clear();
 
-    for(auto& i:blocks){
-      Uniforms ux;
-      if(i.hasImg) {
-        ux=dev.uniforms(dev.builtin().texture2d(pass,info.w,info.h).layout);
-        if(i.tex.brush)
-          ux.set(0,i.tex.brush); else
-          ux.set(0,i.tex.sprite.pageRawData(dev)); //TODO: oom
-        } else {
+    f.blocksType.resize(blocks.size());
+    f.blocks    .resize(blocks.size());
+
+    if(info.w!=f.imgW || info.h!=f.imgH){
+      f.imgW = info.w;
+      f.imgH = info.h;
+      // invalidate on resize
+      for(auto& i:f.blocks)
+        i = Uniforms();
+      }
+
+    for(size_t i=0;i<blocks.size();++i){
+      auto&     b =blocks[i];
+      Uniforms& ux=f.blocks[i];
+      UboType   t =(b.hasImg) ? UT_Img : UT_NoImg;
+
+      if(ux.isEmpty() || f.blocksType[i]!=t){
+        if(t==UT_Img)
+          ux=dev.uniforms(dev.builtin().texture2d(pass,info.w,info.h).layout); else
         ux=dev.uniforms(dev.builtin().empty(pass,info.w,info.h).layout);
+        f.blocksType[i] = t;
         }
-      f.blocks.push_back(std::move(ux));
+      if(t==UT_Img) {
+        if(b.tex.brush)
+          ux.set(0,b.tex.brush); else
+          ux.set(0,b.tex.sprite.pageRawData(dev)); //TODO: oom
+        }
       }
 
     f.outdated=false;

@@ -192,69 +192,76 @@ void VulkanApi::destroy(AbstractGraphicsApi::CmdPool *cmd) {
   delete cx;
   }
 
-AbstractGraphicsApi::Buffer *VulkanApi::createBuffer(AbstractGraphicsApi::Device *d,
+AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device *d,
                                                      const void *mem, size_t size,
                                                      MemUsage usage,BufferFlags flg) {
   Detail::VDevice* dx = reinterpret_cast<Detail::VDevice*>(d);
 
   if(flg==BufferFlags::Dynamic) {
     Detail::VBuffer stage=dx->allocator.alloc(mem,size,usage,BufferFlags::Dynamic);
-    return new Detail::VBuffer(std::move(stage));
+    return PBuffer(new Detail::VBuffer(std::move(stage)));
     }
   if(flg==BufferFlags::Staging) {
     Detail::VBuffer stage=dx->allocator.alloc(mem,size,usage,BufferFlags::Staging);
-    return new Detail::VBuffer(std::move(stage));
+    return PBuffer(new Detail::VBuffer(std::move(stage)));
     }
   else {
     Detail::VBuffer  stage=dx->allocator.alloc(mem,     size, MemUsage::TransferSrc,       BufferFlags::Staging);
     Detail::VBuffer  buf  =dx->allocator.alloc(nullptr, size, usage|MemUsage::TransferDst, BufferFlags::Static );
 
+    Detail::DSharedPtr<Detail::VBuffer*> pstage(new Detail::VBuffer(std::move(stage)));
+    Detail::DSharedPtr<Detail::VBuffer*> pbuf  (new Detail::VBuffer(std::move(buf)));
+
     Detail::VDevice::Data dat(*dx);
-    dat.flush(stage,size);
-    dat.copy(buf,stage,size);
+    dat.flush(*pstage.handler,size);
+    dat.hold(pbuf);
+    dat.hold(pstage); // preserve stage buffer, until gpu side copy is finished
+    dat.copy(*pbuf.handler,*pstage.handler,size);
     dat.commit();
 
-    dx->waitData(); // wait before stage.~VBuffer
-    return new Detail::VBuffer(std::move(buf));
+    //dx->waitData(); // wait before stage.~VBuffer TODO: preserve staging buffer
+    return PBuffer(pbuf.handler);
     }
   }
 
-void VulkanApi::destroy(AbstractGraphicsApi::Buffer *cmd) {
-  Detail::VBuffer* cx=reinterpret_cast<Detail::VBuffer*>(cmd);
-  delete cx;
-  }
-
-AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Device *d, const Pixmap &pref, bool mips) {
-  Detail::VDevice* dx = reinterpret_cast<Detail::VDevice*>(d);
-
-  const Pixmap* p=&pref;
-  Pixmap alt;
-  if( p->bpp()==3 && !dx->caps.rgb8 ){
-    alt = Pixmap(pref,Pixmap::Format::RGBA);
-    p   = &alt;
-    }
-  const uint32_t  mipCnt = mips ? mipCount(p->w(),p->h()) : 1;
-  const uint32_t  size =p->w()*p->h()*p->bpp();
-
-  VkFormat         format=VK_FORMAT_R8G8B8A8_UNORM;
-  Detail::VBuffer  stage =dx->allocator.alloc(p->data(),size,MemUsage::TransferSrc,BufferFlags::Staging);
-  Detail::VTexture buf   =dx->allocator.alloc(*p,mipCnt,format);
+AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Device *d, const Pixmap &p, TextureFormat frm, uint32_t mipCnt) {
+  Detail::VDevice* dx     = reinterpret_cast<Detail::VDevice*>(d);
+  const uint32_t   size   = p.dataSize();
+  VkFormat         format = Detail::nativeFormat(frm);
+  Detail::VBuffer  stage  = dx->allocator.alloc(p.data(),size,MemUsage::TransferSrc,BufferFlags::Staging);
+  Detail::VTexture buf    = dx->allocator.alloc(p,mipCnt,format);
 
   Detail::VDevice::Data dat(*dx);
   dat.changeLayout(buf, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,mipCnt);
-  dat.copy(buf,p->w(),p->h(),stage);
-  if(mipCnt>1)
-    dat.generateMipmap(buf,format,p->w(),p->h(),mipCnt); else
+  if(isCompressedFormat(frm)){
+    size_t blocksize  = (frm==TextureFormat::DXT1) ? 8 : 16;
+    size_t bufferSize = 0;
+
+    size_t w = size_t(p.w()), h = size_t(p.h());
+    for(size_t i=0; i<mipCnt; i++){
+      size_t blockcount = ((w+3)/4)*((h+3)/4);
+      dat.copy(buf,w,h,i,stage,bufferSize);
+
+      bufferSize += blockcount*blocksize;
+      w = std::max<size_t>(1,w/2);
+      h = std::max<size_t>(1,h/2);
+      }
+
     dat.changeLayout(buf, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipCnt);
+    } else {
+    dat.copy(buf,p.w(),p.h(),0,stage,0);
+    if(mipCnt>1)
+      dat.generateMipmap(buf,format,p.w(),p.h(),mipCnt); else
+      dat.changeLayout(buf, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipCnt);
+    }
   dat.commit();
 
   dx->waitData();
   return new Detail::VTexture(std::move(buf));
   }
 
-AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Device *d, const uint32_t w, const uint32_t h, bool mips, TextureFormat frm) {
+AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Device *d, const uint32_t w, const uint32_t h, uint32_t mipCnt, TextureFormat frm) {
   Detail::VDevice*   dx = reinterpret_cast<Detail::VDevice*>(d);
-  const uint32_t mipCnt = mips ? mipCount(w,h) : 1;
   
   auto buf=dx->allocator.alloc(w,h,mipCnt,frm);
 
@@ -439,6 +446,3 @@ void VulkanApi::getCaps(Device *d,Caps &caps) {
   caps=dx->caps;
   }
 
-uint32_t VulkanApi::mipCount(uint32_t w, uint32_t h) {
-  return uint32_t(std::floor(std::log2(std::max(w,h)))) + 1;
-  }

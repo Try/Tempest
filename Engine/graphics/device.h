@@ -42,7 +42,7 @@ class Device {
 
     Device(AbstractGraphicsApi& api,SystemApi::Window* w,uint8_t maxFramesInFlight=2);
     Device(const Device&)=delete;
-    ~Device();
+    virtual ~Device();
 
     void           waitIdle();
     void           reset();
@@ -149,7 +149,6 @@ class Device {
     void       destroy(Semaphore&      s);
     void       destroy(CommandPool&    c);
     void       destroy(CommandBuffer&  c);
-    void       destroy(VideoBuffer&    b);
     void       destroy(Uniforms&       u);
 
     void       begin(Frame& f,RenderPass& p);

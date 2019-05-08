@@ -11,7 +11,10 @@ class Pixmap final {
     enum class Format : uint8_t {
       A    = 0,
       RGB  = 1,
-      RGBA = 2
+      RGBA = 2,
+      DXT1 = 3,
+      DXT3 = 4,
+      DXT5 = 5,
       };
 
     Pixmap();
@@ -35,11 +38,13 @@ class Pixmap final {
     uint32_t w()   const;
     uint32_t h()   const;
     uint32_t bpp() const;
+    uint32_t mipCount() const;
 
     bool isEmpty() const;
 
     const void* data() const;
     void*       data();
+    size_t      dataSize() const;
 
     Format format() const;
 

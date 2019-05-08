@@ -28,10 +28,11 @@ inline std::error_code make_error_code(Tempest::SystemErrc e) noexcept {
 
 
 enum class GraphicsErrc {
-  NoDevice            = 0,
-  OutOfVideoMemory    = 1,
-  OutOfHostMemory     = 2,
-  InvalidShaderModule = 3
+  NoDevice                 = 0,
+  OutOfVideoMemory         = 1,
+  OutOfHostMemory          = 2,
+  InvalidShaderModule      = 3,
+  UnsupportedTextureFormat = 4,
   };
 
 struct GraphicsErrCategory : std::error_category {

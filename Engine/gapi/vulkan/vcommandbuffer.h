@@ -67,7 +67,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void flush(const Detail::VBuffer& src, size_t size);
     void copy(Detail::VBuffer&  dest, size_t offsetDest, const Detail::VBuffer& src, size_t offsetSrc, size_t size);
-    void copy(Detail::VTexture& dest, size_t width, size_t height, const Detail::VBuffer& src);
+    void copy(Detail::VTexture& dest, size_t width, size_t height, size_t mip, const Detail::VBuffer& src, size_t offset);
 
     void changeLayout(AbstractGraphicsApi::Texture& t,TextureLayout prev,TextureLayout next);
     void changeLayout(Detail::VTexture& dest, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount);

@@ -59,16 +59,15 @@ class VulkanApi : public AbstractGraphicsApi {
     CmdPool*      createCommandPool(Device* d) override;
     void          destroy          (CmdPool* cmd) override;
 
-    Buffer*       createBuffer(Device* d, const void *mem, size_t size, MemUsage usage, BufferFlags flg) override;
-    void          destroy(Buffer* cmd) override;
+    PBuffer       createBuffer(Device* d, const void *mem, size_t size, MemUsage usage, BufferFlags flg) override;
 
     Desc*         createDescriptors(Device* d, const UniformsLayout &lay, AbstractGraphicsApi::UniformsLay* layP) override;
     void          destroy(Desc* d) override;
 
     std::shared_ptr<AbstractGraphicsApi::UniformsLay> createUboLayout(Device *d,const UniformsLayout&) override;
 
-    Texture*      createTexture(Device* d,const Pixmap& p,bool mips) override;
-    Texture*      createTexture(Device* d,const uint32_t w,const uint32_t h,bool mips, TextureFormat frm) override;
+    Texture*      createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips) override;
+    Texture*      createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;
     //void       destroy(Texture* t) override;
 
     CommandBuffer* createCommandBuffer(Device* d, CmdPool* pool, CmdType secondary) override;
@@ -88,7 +87,6 @@ class VulkanApi : public AbstractGraphicsApi {
     std::unique_ptr<Impl> impl;
 
     bool           setupValidationLayer();
-    static uint32_t mipCount(uint32_t w,uint32_t h);
   };
 
 }

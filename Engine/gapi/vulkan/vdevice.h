@@ -45,7 +45,11 @@ inline VkFormat nativeFormat(TextureFormat f){
     VK_FORMAT_R8_UNORM,
     VK_FORMAT_R8G8B8_UNORM,
     VK_FORMAT_R8G8B8A8_UNORM,
-    VK_FORMAT_D16_UNORM
+    VK_FORMAT_R16G16_UNORM,
+    VK_FORMAT_D16_UNORM,
+    VK_FORMAT_BC1_RGBA_UNORM_BLOCK,
+    VK_FORMAT_BC2_UNORM_BLOCK,
+    VK_FORMAT_BC3_UNORM_BLOCK,
     };
   return vfrm[f];
   }
@@ -78,6 +82,8 @@ class VDevice : public AbstractGraphicsApi::Device {
       std::vector<VkSurfaceFormatKHR> formats;
       std::vector<VkPresentModeKHR>   presentModes;
       };
+
+    using BufPtr = Detail::DSharedPtr<VBuffer*>;
 
     VDevice(VulkanApi& api,void* hwnd);
     ~VDevice();
@@ -113,11 +119,12 @@ class VDevice : public AbstractGraphicsApi::Device {
 
         void flush(const Detail::VBuffer& src, size_t size);
         void copy(Detail::VBuffer&  dest, const Detail::VBuffer& src, size_t size);
-        void copy(Detail::VTexture& dest, uint32_t w, uint32_t h, const Detail::VBuffer& src);
+        void copy(Detail::VTexture& dest, uint32_t w, uint32_t h, uint32_t mip, const Detail::VBuffer& src, size_t offset);
 
         void changeLayout(Detail::VTexture& dest, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount);
         void generateMipmap(VTexture& image, VkFormat frm, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
 
+        void hold(BufPtr& b);
         void commit();
 
       private:
@@ -138,6 +145,7 @@ class VDevice : public AbstractGraphicsApi::Device {
         VDevice&               owner;
         VCommandPool           cmdPool;
         VCommandBuffer         cmdBuffer;
+        std::vector<BufPtr>    hold;
 
       private:
         std::atomic_flag       firstCommit=ATOMIC_FLAG_INIT;

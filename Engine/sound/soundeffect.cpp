@@ -56,7 +56,7 @@ bool SoundEffect::isEmpty() const {
 
 bool SoundEffect::isFinished() const {
   if(source==0)
-    return 0;
+    return true;
   int32_t state=0;
   ALCcontext* ctx = reinterpret_cast<ALCcontext*>(this->ctx);
   alGetSourceivCt(ctx,source,AL_SOURCE_STATE,&state);

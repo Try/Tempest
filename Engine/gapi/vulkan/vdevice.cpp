@@ -5,6 +5,7 @@
 #include "vfence.h"
 #include "vsemaphore.h"
 #include "vswapchain.h"
+#include "vbuffer.h"
 
 #include <Tempest/Log>
 #include <thread>
@@ -27,6 +28,7 @@ VDevice::DataHelper::DataHelper(VDevice &owner)
     cmdBuffer(owner,cmdPool,CmdType::Primary),
     fence(owner),
     graphicsQueue(owner.graphicsQueue){
+  hold.reserve(32);
   }
 
 void VDevice::DataHelper::begin() {
@@ -38,8 +40,6 @@ void VDevice::DataHelper::begin() {
   }
 
 void VDevice::DataHelper::end() {
-  cmdBuffer.end();
-
   VkSubmitInfo submitInfo = {};
   submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
   submitInfo.commandBufferCount = 1;
@@ -47,6 +47,8 @@ void VDevice::DataHelper::end() {
 
   std::lock_guard<std::mutex> guard(owner.graphicsSync);
   std::lock_guard<std::mutex> g2(waitSync);
+
+  cmdBuffer.end();
   hasToWait=true;
   fence.reset();
 
@@ -57,6 +59,7 @@ void VDevice::DataHelper::wait() {
   std::lock_guard<std::mutex> guard(waitSync);
   if(hasToWait)  {
     fence.wait();
+    hold.clear();
     hasToWait=false;
     }
   }
@@ -216,8 +219,12 @@ void VDevice::createLogicalDevice(VulkanApi& api) {
     queueCreateInfos.push_back(queueCreateInfo);
     }
 
+  VkPhysicalDeviceFeatures supportedFeatures={};
+  vkGetPhysicalDeviceFeatures(physicalDevice,&supportedFeatures);
+
   VkPhysicalDeviceFeatures deviceFeatures = {};
-  deviceFeatures.samplerAnisotropy = VK_TRUE;
+  deviceFeatures.samplerAnisotropy    = supportedFeatures.samplerAnisotropy;
+  deviceFeatures.textureCompressionBC = supportedFeatures.textureCompressionBC;
 
   VkDeviceCreateInfo createInfo = {};
   createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -259,7 +266,9 @@ void VDevice::getCaps(AbstractGraphicsApi::Caps &c) {
   /*
    * formats support table: https://vulkan.lunarg.com/doc/view/1.0.30.0/linux/vkspec.chunked/ch31s03.html
    */
-  VkFormatFeatureFlags imageRqFlags = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT|VK_FORMAT_FEATURE_BLIT_DST_BIT|VK_FORMAT_FEATURE_BLIT_SRC_BIT;
+  VkFormatFeatureFlags imageRqFlags   = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT|VK_FORMAT_FEATURE_BLIT_DST_BIT|VK_FORMAT_FEATURE_BLIT_SRC_BIT;
+  VkFormatFeatureFlags imageRqFlagsBC = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+  VkFormatFeatureFlags attachRqFlags  = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT|VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
   VkFormatProperties frm={};
   vkGetPhysicalDeviceFormatProperties(physicalDevice,VK_FORMAT_R8G8B8_UNORM,&frm);
   c.rgb8  = ((frm.optimalTilingFeatures & imageRqFlags)==imageRqFlags) &&
@@ -277,6 +286,26 @@ void VDevice::getCaps(AbstractGraphicsApi::Caps &c) {
 
   c.anisotropy    = supportedFeatures.samplerAnisotropy;
   c.maxAnisotropy = prop.limits.maxSamplerAnisotropy;
+
+  uint64_t smpFormat=0,attFormat=0;
+  for(size_t i=0;i<TextureFormat::Last;++i){
+    VkFormat f = Detail::nativeFormat(TextureFormat(i));
+    vkGetPhysicalDeviceFormatProperties(physicalDevice,f,&frm);
+    if(isCompressedFormat(TextureFormat(i))){
+      if((frm.optimalTilingFeatures & imageRqFlagsBC)==imageRqFlagsBC){
+        smpFormat |= (1<<i);
+        }
+      } else {
+      if((frm.optimalTilingFeatures & imageRqFlags)==imageRqFlags){
+        smpFormat |= (1<<i);
+        }
+      }
+    if((frm.optimalTilingFeatures & attachRqFlags)==attachRqFlags){
+      attFormat |= (1<<i);
+      }
+    }
+  c.setSamplerFormats(smpFormat);
+  c.setAttachFormats (attFormat);
   }
 
 void VDevice::submitQueue(VkQueue q,VkSubmitInfo& submitInfo,VkFence fence,bool wd) {
@@ -317,7 +346,7 @@ VDevice::Data::~Data() {
   catch(...) {
     std::hash<std::thread::id> h;
     Tempest::Log::e("data queue commit failed at thread[",h(std::this_thread::get_id()),"]");
-  }
+    }
   }
 
 void VDevice::Data::flush(const VBuffer &src, size_t size) {
@@ -336,12 +365,12 @@ void VDevice::Data::copy(VBuffer &dest, const VBuffer &src, size_t size) {
   dev.data->cmdBuffer.copy(dest,0,src,0,size);
   }
 
-void VDevice::Data::copy(VTexture &dest, uint32_t w, uint32_t h, const VBuffer &src) {
+void VDevice::Data::copy(VTexture &dest, uint32_t w, uint32_t h, uint32_t mip, const VBuffer &src, size_t offset) {
   if(commited){
     dev.data->begin();
     commited=false;
     }
-  dev.data->cmdBuffer.copy(dest,w,h,src);
+  dev.data->cmdBuffer.copy(dest,w,h,mip,src,offset);
   }
 
 void VDevice::Data::changeLayout(VTexture &dest, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount) {
@@ -358,6 +387,10 @@ void VDevice::Data::generateMipmap(VTexture &image, VkFormat frm, uint32_t texWi
     commited=false;
     }
   dev.data->cmdBuffer.generateMipmap(image,dev.physicalDevice,frm,texWidth,texHeight,mipLevels);
+  }
+
+void VDevice::Data::hold(BufPtr &b) {
+  dev.data->hold.emplace_back(b);
   }
 
 void VDevice::Data::commit() {

@@ -6,6 +6,7 @@
 #include <memory>
 #include <atomic>
 
+#include "../utility/dptr.h"
 #include "flags.h"
 
 namespace Tempest {
@@ -60,11 +61,20 @@ namespace Tempest {
     Alpha,
     RGB8,
     RGBA8,
-    Depth16
+    RG16,
+    Depth16,
+    DXT1,
+    DXT3,
+    DXT5,
+    Last
     };
 
   inline bool isDepthFormat(TextureFormat f){
     return f==TextureFormat::Depth16;
+    }
+
+  inline bool isCompressedFormat(TextureFormat f){
+    return f==TextureFormat::DXT1 || f==TextureFormat::DXT3 || f==TextureFormat::DXT5;
     }
 
   //! Способы фильтрации текстуры.
@@ -149,11 +159,21 @@ namespace Tempest {
 
           bool     anisotropy=false;
           float    maxAnisotropy=1.0f;
+
+          bool     hasSamplerFormat(TextureFormat f) const;
+          bool     hasAttachFormat (TextureFormat f) const;
+
+          void     setSamplerFormats(uint64_t t) { smpFormat = t; }
+          void     setAttachFormats (uint64_t t) { attFormat = t; }
+
+        private:
+          uint64_t smpFormat=0;
+          uint64_t attFormat=0;
         };
 
       struct Shared {
         virtual ~Shared()=default;
-        std::atomic_uint_fast32_t counter{1};
+        std::atomic_uint_fast32_t counter{0};
         };
 
       struct Device       {};
@@ -175,7 +195,7 @@ namespace Tempest {
       struct UniformsLay     {
         virtual ~UniformsLay()=default;
         };
-      struct Buffer          {
+      struct Buffer:Shared   {
         virtual ~Buffer()=default;
         virtual void  update(const void* data,size_t off,size_t sz)=0;
         };
@@ -217,6 +237,8 @@ namespace Tempest {
         virtual void reset()=0;
         };
       struct Semaphore       {};
+
+      using PBuffer = Detail::DSharedPtr<Buffer*>;
 
       virtual Device*    createDevice(SystemApi::Window* w)=0;
       virtual void       destroy(Device* d)=0;
@@ -271,14 +293,13 @@ namespace Tempest {
                          createCommandBuffer(Device* d,CmdPool* pool,CmdType type)=0;
       virtual void       destroy(CommandBuffer* cmd)=0;
 
-      virtual Buffer*    createBuffer(Device* d,const void *mem,size_t size,MemUsage usage,BufferFlags flg)=0;
-      virtual void       destroy(Buffer* cmd)=0;
+      virtual PBuffer    createBuffer(Device* d,const void *mem,size_t size,MemUsage usage,BufferFlags flg)=0;
 
       virtual Desc*      createDescriptors(Device* d,const Tempest::UniformsLayout& p,AbstractGraphicsApi::UniformsLay* layP)=0;
       virtual void       destroy(Desc* cmd)=0;
 
-      virtual Texture*   createTexture(Device* d,const Pixmap& p,bool mips)=0;
-      virtual Texture*   createTexture(Device* d,const uint32_t w,const uint32_t h,bool mips, TextureFormat frm)=0;
+      virtual Texture*   createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips)=0;
+      virtual Texture*   createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm)=0;
       //virtual void       destroy(Texture* t)=0;
 
       virtual uint32_t   nextImage(Device *d,Swapchain* sw,Semaphore* onReady)=0;

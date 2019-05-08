@@ -206,8 +206,8 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   inputAssembly.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
   inputAssembly.primitiveRestartEnable = VK_FALSE;
   if(tp==Triangles)
-    inputAssembly.topology              = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; else
-    inputAssembly.topology              = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; else
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 
   VkViewport viewport = {};
   viewport.x        = 0.0f;

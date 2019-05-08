@@ -293,13 +293,13 @@ void VCommandBuffer::copy(VBuffer &dest, size_t offsetDest, const VBuffer &src,s
   vkCmdCopyBuffer(impl, src.impl, dest.impl, 1, &copyRegion);
   }
 
-void VCommandBuffer::copy(VTexture &dest, size_t width, size_t height, const VBuffer &src) {
+void VCommandBuffer::copy(VTexture &dest, size_t width, size_t height, size_t mip, const VBuffer &src, size_t offset) {
   VkBufferImageCopy region = {};
-  region.bufferOffset = 0;
-  region.bufferRowLength = 0;
+  region.bufferOffset      = offset;
+  region.bufferRowLength   = 0;
   region.bufferImageHeight = 0;
   region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  region.imageSubresource.mipLevel = 0;
+  region.imageSubresource.mipLevel = mip;
   region.imageSubresource.baseArrayLayer = 0;
   region.imageSubresource.layerCount = 1;
   region.imageOffset = {0, 0, 0};

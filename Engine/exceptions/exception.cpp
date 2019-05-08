@@ -39,6 +39,8 @@ std::string GraphicsErrCategory::message(int ev) const {
       return "Out of memory";
     case GraphicsErrc::InvalidShaderModule:
       return "Invalid shader module";
+    case GraphicsErrc::UnsupportedTextureFormat:
+      return "Usage of texture format whitch is not supported by device";
     }
   return "(unrecognized error)";
   }
