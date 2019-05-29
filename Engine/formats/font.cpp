@@ -207,7 +207,6 @@ struct FontElement::Impl {
     lt.dpos    = Point(dx,dy);
     lt.advance = Point(int(ax*scale),int(lineGap*scale));
     lt.hasView = (tex!=nullptr);
-    // FIXME: rehash can kill previous lt;
     return lt;
     }
 
@@ -225,7 +224,6 @@ struct FontElement::Impl {
 
   std::mutex                           syncMap;
   LetterTable                          map;
-  //std::unordered_map<Key,Letter,KHash> map;
   };
 
 FontElement::FontElement()
