@@ -199,6 +199,9 @@ std::unique_ptr<char> Sound::readWAVFull(IDevice &f, WAVEHeader& header, FmtChun
       }
     else if(f.seek(head.size)!=head.size)
       return nullptr;
+
+    if(head.size%2!=0 && f.seek(1)!=1)
+      return nullptr;
     }
   return buffer;
   }

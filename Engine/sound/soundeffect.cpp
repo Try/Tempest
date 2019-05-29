@@ -86,6 +86,27 @@ void SoundEffect::setPosition(float x, float y, float z) {
   alSourcefvCt(ctx, source, AL_POSITION, p);
   }
 
+std::array<float,3> SoundEffect::position() const {
+  std::array<float,3> ret={};
+  if(source==0)
+    return ret;
+  ALCcontext* ctx = reinterpret_cast<ALCcontext*>(this->ctx);
+  alGetSourcefvCt(ctx,source,AL_POSITION,&ret[0]);
+  return ret;
+  }
+
+float SoundEffect::x() const {
+  return position()[0];
+  }
+
+float SoundEffect::y() const {
+  return position()[1];
+  }
+
+float SoundEffect::z() const {
+  return position()[2];
+  }
+
 void SoundEffect::setMaxDistance(float dist) {
   if(source==0)
     return;
@@ -101,6 +122,17 @@ void SoundEffect::setRefDistance(float dist) {
   }
 
 void SoundEffect::setVolume(float val) {
+  if(source==0)
+    return;
   ALCcontext* ctx = reinterpret_cast<ALCcontext*>(this->ctx);
   alSourcefvCt(ctx, source, AL_GAIN, &val);
+  }
+
+float SoundEffect::volume() const {
+  if(source==0)
+    return 0;
+  float val=0;
+  ALCcontext* ctx = reinterpret_cast<ALCcontext*>(this->ctx);
+  alGetSourcefvCt(ctx, source, AL_GAIN, &val);
+  return val;
   }
