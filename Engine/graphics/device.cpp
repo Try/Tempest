@@ -193,50 +193,54 @@ FrameBuffer Device::frameBuffer(Texture2d &out, Texture2d &zbuf, RenderPass &pas
   }
 
 RenderPass Device::pass(FboMode color, FboMode zbuf, TextureFormat zbufFormat) {
-  RenderPass f(*this,api.createPass(dev,swapchain,zbufFormat,color,nullptr,zbuf,nullptr));
+  RenderPass f(api.createPass(dev,swapchain,zbufFormat,color,nullptr,zbuf,nullptr));
   return f;
   }
 
 RenderPass Device::pass(const Color &color) {
-  RenderPass f(*this,api.createPass(dev,swapchain,TextureFormat::Undefined,FboMode::PreserveOut,&color,FboMode::Clear,nullptr));
+  RenderPass f(api.createPass(dev,swapchain,TextureFormat::Undefined,FboMode::PreserveOut,&color,FboMode::Clear,nullptr));
   return f;
   }
 
 RenderPass Device::pass(const Color &color, FboMode zbuf, TextureFormat zbufFormat) {
-  RenderPass f(*this,api.createPass(dev,swapchain,zbufFormat,FboMode::PreserveOut,&color,zbuf,nullptr));
+  RenderPass f(api.createPass(dev,swapchain,zbufFormat,FboMode::PreserveOut,&color,zbuf,nullptr));
   return f;
   }
 
 RenderPass Device::pass(const Color &color, const float zbuf, TextureFormat zbufFormat) {
-  RenderPass f(*this,api.createPass(dev,swapchain,zbufFormat,FboMode::PreserveOut,&color,FboMode::PreserveOut,&zbuf));
+  RenderPass f(api.createPass(dev,swapchain,zbufFormat,FboMode::PreserveOut,&color,FboMode::PreserveOut,&zbuf));
   return f;
   }
 
 RenderPass Device::pass(const Color &color, const float zbuf, TextureFormat clFormat, TextureFormat zbufFormat) {
-  RenderPass f(*this,api.createPass(dev,clFormat,zbufFormat,FboMode::PreserveOut,&color,FboMode::PreserveOut,&zbuf));
+  RenderPass f(api.createPass(dev,clFormat,zbufFormat,FboMode::PreserveOut,&color,FboMode::PreserveOut,&zbuf));
   return f;
   }
 
-RenderPipeline Device::implPipeline(RenderPass& pass, uint32_t w, uint32_t h,
-                                    const RenderState &st,const UniformsLayout &ulay,
+RenderPipeline Device::implPipeline(const RenderState &st,const UniformsLayout &ulay,
                                     const Shader &vs, const Shader &fs,
                                     const Decl::ComponentType *decl, size_t declSize,
                                     size_t   stride,
                                     Topology tp) {
-  if(w<=0 || h<=0 || !pass.impl || !vs.impl || !fs.impl)
+  if(!vs.impl || !fs.impl)
     return RenderPipeline();
 
-  RenderPipeline f(*this,api.createPipeline(dev,pass.impl.handler,w,h,st,decl,declSize,stride,tp,ulay,ulay.impl,{vs.impl.handler,fs.impl.handler}),w,h);
+  RenderPipeline f(*this,api.createPipeline(dev,st,decl,declSize,stride,tp,ulay,ulay.impl,{vs.impl.handler,fs.impl.handler}));
   return f;
   }
 
-CommandBuffer Device::commandBuffer() {
-  CommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,CmdType::Primary));
+PrimaryCommandBuffer Device::commandBuffer() {
+  PrimaryCommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,nullptr,CmdType::Primary));
   return buf;
   }
 
-CommandBuffer Device::commandSecondaryBuffer() {
-  CommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,CmdType::Secondary));
+CommandBuffer Device::commandSecondaryBuffer(const RenderPass& pass, int32_t vpWidth, int32_t vpHeight) {
+  CommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,pass.impl.handler,CmdType::Secondary),uint32_t(vpWidth),uint32_t(vpHeight));
+  return buf;
+  }
+
+CommandBuffer Device::commandSecondaryBuffer(const RenderPass& pass, uint32_t vpWidth, uint32_t vpHeight) {
+  CommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,pass.impl.handler,CmdType::Secondary),vpWidth,vpHeight);
   return buf;
   }
 
@@ -266,16 +270,8 @@ Uniforms Device::uniforms(const UniformsLayout &owner) {
   return ubo;
   }
 
-void Device::destroy(RenderPass &p) {
-  api.destroy(p.impl.handler);
-  }
-
 void Device::destroy(FrameBuffer &f) {
   api.destroy(f.impl.handler);
-  }
-
-void Device::destroy(Shader &p) {
-  api.destroy(p.impl.handler);
   }
 
 void Device::destroy(Fence &f) {

@@ -5,11 +5,9 @@
 
 using namespace Tempest;
 
-Shader::Shader(Device &dev, AbstractGraphicsApi::Shader *impl)
-  :dev(&dev),impl(impl) {
+Shader::Shader(Device &dev, Detail::DSharedPtr<AbstractGraphicsApi::Shader*>&& impl)
+  :dev(&dev),impl(std::move(impl)) {
   }
 
 Shader::~Shader(){
-  if(dev)
-    dev->destroy(*this);
   }

@@ -97,12 +97,12 @@ class Device {
     RenderPass     pass       (const Tempest::Color& color,const float zbuf,TextureFormat clFormat,TextureFormat zbufFormat);
 
     template<class Vertex>
-    RenderPipeline pipeline(RenderPass& pass, uint32_t width, uint32_t height,
-                            Topology tp,const RenderState& st,
+    RenderPipeline pipeline(Topology tp,const RenderState& st,
                             const UniformsLayout& ulay,const Shader &vs,const Shader &fs);
 
-    CommandBuffer  commandBuffer();
-    CommandBuffer  commandSecondaryBuffer();
+    PrimaryCommandBuffer commandBuffer();
+    CommandBuffer        commandSecondaryBuffer(const RenderPass &pass,int32_t  vpWidth,int32_t vpHeight);
+    CommandBuffer        commandSecondaryBuffer(const RenderPass &pass,uint32_t vpWidth,uint32_t vpHeight);
 
     const Builtin& builtin() const;
 
@@ -136,15 +136,12 @@ class Device {
     Semaphore   createSemaphore();
     VideoBuffer createVideoBuffer(const void* data, size_t size, MemUsage usage, BufferFlags flg);
     RenderPipeline
-                implPipeline(RenderPass& pass, uint32_t width, uint32_t height,
-                             const RenderState &st, const UniformsLayout& ulay,
+                implPipeline(const RenderState &st, const UniformsLayout& ulay,
                              const Shader &vs, const Shader &fs,
                              const Decl::ComponentType *decl, size_t declSize,
                              size_t stride, Topology tp);
 
-    void       destroy(RenderPass&     p);
     void       destroy(FrameBuffer&    f);
-    void       destroy(Shader&         s);
     void       destroy(Fence&          f);
     void       destroy(Semaphore&      s);
     void       destroy(CommandPool&    c);
@@ -190,11 +187,10 @@ inline IndexBuffer<T> Device::loadIbo(const T* arr, size_t arrSize, BufferFlags 
   }
 
 template<class Vertex>
-RenderPipeline Device::pipeline(RenderPass& pass, uint32_t width, uint32_t height,
-                                Topology tp, const RenderState &st,
+RenderPipeline Device::pipeline(Topology tp, const RenderState &st,
                                 const UniformsLayout& ulay, const Shader &vs, const Shader &fs) {
   static const auto decl=Tempest::vertexBufferDecl<Vertex>();
-  return implPipeline(pass,width,height,st,ulay,vs,fs,decl.begin(),decl.size(),sizeof(Vertex),tp);
+  return implPipeline(st,ulay,vs,fs,decl.begin(),decl.size(),sizeof(Vertex),tp);
   }
 
 inline uint8_t Device::frameId() const {

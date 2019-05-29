@@ -5,8 +5,10 @@
 
 using namespace Tempest;
 
-CommandBuffer::CommandBuffer(Device &dev, AbstractGraphicsApi::CommandBuffer *impl)
+CommandBuffer::CommandBuffer(Device &dev, AbstractGraphicsApi::CommandBuffer *impl,uint32_t vpWidth,uint32_t vpHeight)
   :dev(&dev),impl(impl) {
+  vp.width  = vpWidth;
+  vp.height = vpHeight;
   }
 
 CommandBuffer::~CommandBuffer() {
@@ -17,63 +19,12 @@ void CommandBuffer::begin() {
   impl.handler->begin();
   }
 
-void CommandBuffer::begin(const RenderPass &p) {
-  impl.handler->begin(p.impl.handler);
-  }
-
 void CommandBuffer::end() {
-  if(curPass.active)
-    implEndRenderPass();
-  curPass     = Pass();
+  implEndRenderPass();
   curVbo      = nullptr;
   curIbo      = nullptr;
   curPipeline = nullptr;
   impl.handler->end();
-  }
-
-void CommandBuffer::setPass(const RenderPass &p) {
-  if(curPass.active)
-    impl.handler->next(p.impl.handler);
-  }
-
-void CommandBuffer::implEndRenderPass() {
-  curPipeline = nullptr;
-  curPass     = Pass();
-  impl.handler->endRenderPass();
-  }
-
-void CommandBuffer::setPass(const FrameBuffer &fbo, const RenderPass &p) {
-  setPass(fbo,p,fbo.w(),fbo.h());
-  }
-
-void CommandBuffer::setPass(const FrameBuffer &fbo, const RenderPass &p, int width, int height) {
-  setPass(fbo,p,uint32_t(width),uint32_t(height));
-  }
-
-void CommandBuffer::setPass(const FrameBuffer &fbo, const RenderPass &p, uint32_t width, uint32_t height) {
-  if(curPass.active)
-    implEndRenderPass();
-  impl.handler->beginRenderPass(fbo.impl.handler,p.impl.handler,width,height);
-  curPass.fbo    = &fbo;
-  curPass.pass   = &p;
-  curPass.width  = width;
-  curPass.height = height;
-  curPass.active = true;
-  }
-
-void CommandBuffer::setSecondaryPass(const FrameBuffer &fbo, const RenderPass &p) {
-  setSecondaryPass(fbo,p,fbo.w(),fbo.h());
-  }
-
-void CommandBuffer::setSecondaryPass(const FrameBuffer &fbo, const RenderPass &p, uint32_t width, uint32_t height) {
-  if(curPass.active)
-    implEndRenderPass();
-  impl.handler->beginSecondaryPass(fbo.impl.handler,p.impl.handler,width,height);
-  curPass.fbo    = &fbo;
-  curPass.pass   = &p;
-  curPass.width  = width;
-  curPass.height = height;
-  curPass.active = true;
   }
 
 void CommandBuffer::setUniforms(const Tempest::RenderPipeline& p,const Uniforms &ubo) {
@@ -93,14 +44,14 @@ void CommandBuffer::setUniforms(const Detail::ResourcePtr<RenderPipeline> &p, co
 
 void CommandBuffer::setUniforms(const RenderPipeline &p) {
   if(curPipeline!=p.impl.handler) {
-    impl.handler->setPipeline(*p.impl.handler);
+    impl.handler->setPipeline(*p.impl.handler,vp.width,vp.height);
     curPipeline=p.impl.handler;
     }
   }
 
 void CommandBuffer::setUniforms(const Detail::ResourcePtr<RenderPipeline> &p) {
   if(curPipeline!=p.impl.handler) {
-    impl.handler->setPipeline(*p.impl.handler);
+    impl.handler->setPipeline(*p.impl.handler,vp.width,vp.height);
     curPipeline=p.impl.handler;
     }
   }
@@ -111,11 +62,6 @@ void CommandBuffer::setViewport(int x, int y, int w, int h) {
 
 void CommandBuffer::setViewport(const Rect &vp) {
   impl.handler->setViewport(vp);
-  }
-
-void CommandBuffer::exec(const CommandBuffer &buf) {
-  if(buf.impl.handler)
-    impl.handler->exec(*buf.impl.handler);
   }
 
 void CommandBuffer::changeLayout(Texture2d &t, TextureLayout prev, TextureLayout next) {
@@ -149,4 +95,54 @@ void CommandBuffer::implDraw(const VideoBuffer &vbo, const VideoBuffer &ibo, Det
     curIbo=&ibo;
     }
   impl.handler->drawIndexed(offset,size,0);
+  }
+
+
+void PrimaryCommandBuffer::setPass(const FrameBuffer &fbo, const RenderPass &p) {
+  setPass(fbo,p,fbo.w(),fbo.h());
+  }
+
+void PrimaryCommandBuffer::setPass(const FrameBuffer &fbo, const RenderPass &p, int width, int height) {
+  setPass(fbo,p,uint32_t(width),uint32_t(height));
+  }
+
+void PrimaryCommandBuffer::setPass(const FrameBuffer &fbo, const RenderPass &p, uint32_t width, uint32_t height) {
+  implEndRenderPass();
+  impl.handler->beginRenderPass(fbo.impl.handler,p.impl.handler,width,height);
+  curPass.fbo  = &fbo;
+  curPass.pass = &p;
+  curPass.mode = Prime;
+
+  vp.width     = width;
+  vp.height    = height;
+  }
+
+void PrimaryCommandBuffer::implEndRenderPass() {
+  if(curPass.mode==Idle)
+    return;
+  curPipeline = nullptr;
+  curPass     = Pass();
+  impl.handler->endRenderPass();
+  }
+
+void PrimaryCommandBuffer::exec(const FrameBuffer &fbo, const RenderPass &p, const CommandBuffer &buf) {
+  exec(fbo,p,fbo.w(),fbo.h(),buf);
+  }
+
+void PrimaryCommandBuffer::exec(const FrameBuffer& fbo, const RenderPass& p,uint32_t width, uint32_t height,const CommandBuffer &buf) {
+  if(buf.impl.handler==nullptr)
+    return;
+
+  if(curPass.fbo!=&fbo || curPass.pass!=&p || vp.width!=width || vp.height!=height || curPass.mode!=Second) {
+    implEndRenderPass();
+    impl.handler->beginSecondaryPass(fbo.impl.handler,p.impl.handler,width,height);
+
+    curPass.fbo  = &fbo;
+    curPass.pass = &p;
+    vp.width     = width;
+    vp.height    = height;
+    curPass.mode = Second;
+    }
+
+  impl.handler->exec(*buf.impl.handler);
   }

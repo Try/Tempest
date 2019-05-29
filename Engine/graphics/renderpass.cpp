@@ -4,11 +4,9 @@
 
 using namespace Tempest;
 
-RenderPass::RenderPass(Device &dev, AbstractGraphicsApi::Pass *impl)
-  :dev(&dev),impl(impl) {
+RenderPass::RenderPass(Detail::DSharedPtr<AbstractGraphicsApi::Pass *> &&impl)
+  :impl(std::move(impl)) {
   }
 
 RenderPass::~RenderPass() {
-  if(dev)
-    dev->destroy(*this);
   }

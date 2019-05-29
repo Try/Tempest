@@ -20,7 +20,7 @@ class VectorImage : public Tempest::PaintDevice {
     uint32_t w() const { return info.w; }
     uint32_t h() const { return info.h; }
 
-    void     draw(Device& dev, CommandBuffer& cmd, RenderPass &pass);
+    void     draw(Device& dev, CommandBuffer& cmd);
     bool     load(const char* path);
     void     clear() override;
 
@@ -119,7 +119,7 @@ class VectorImage : public Tempest::PaintDevice {
       };
     Info info;
 
-    void makeActual(Device& dev,RenderPass& pass);
+    void makeActual(Device& dev);
 
     template<class T,T State::*param>
     void setState(const T& t);

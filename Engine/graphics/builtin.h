@@ -28,8 +28,8 @@ class Builtin {
       Tempest::UniformsLayout layout;
       };
 
-    const Item& texture2d(RenderPass& p, uint32_t w, uint32_t h) const;
-    const Item& empty    (RenderPass& p, uint32_t w, uint32_t h) const;
+    const Item& texture2d() const;
+    const Item& empty    () const;
 
     void  reset() const;
 

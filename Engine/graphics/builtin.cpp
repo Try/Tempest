@@ -24,33 +24,31 @@ Builtin::Builtin(Device &owner)
   brushT2.layout.add(0,Tempest::UniformsLayout::Texture,Tempest::UniformsLayout::Fragment);
   }
 
-const Builtin::Item &Builtin::texture2d(RenderPass& pass,uint32_t w,uint32_t h) const {
-  if(brushT2.brush.isEmpty() || brushT2.brush.w()!=w || brushT2.brush.h()!=h) {
-    brushT2.pen    = owner.pipeline<PaintDevice::Point>(pass,w,h,Lines,    stNormal,brushT2.layout,vsT2,fsT2);
-    brushT2.brush  = owner.pipeline<PaintDevice::Point>(pass,w,h,Triangles,stNormal,brushT2.layout,vsT2,fsT2);
+const Builtin::Item &Builtin::texture2d() const {
+  if(brushT2.brush.isEmpty()) {
+    brushT2.pen    = owner.pipeline<PaintDevice::Point>(Lines,    stNormal,brushT2.layout,vsT2,fsT2);
+    brushT2.brush  = owner.pipeline<PaintDevice::Point>(Triangles,stNormal,brushT2.layout,vsT2,fsT2);
 
-    brushT2.penB   = owner.pipeline<PaintDevice::Point>(pass,w,h,Lines,    stBlend,brushT2.layout,vsT2,fsT2);
-    brushT2.brushB = owner.pipeline<PaintDevice::Point>(pass,w,h,Triangles,stBlend,brushT2.layout,vsT2,fsT2);
+    brushT2.penB   = owner.pipeline<PaintDevice::Point>(Lines,    stBlend,brushT2.layout,vsT2,fsT2);
+    brushT2.brushB = owner.pipeline<PaintDevice::Point>(Triangles,stBlend,brushT2.layout,vsT2,fsT2);
 
-    brushT2.penA   = owner.pipeline<PaintDevice::Point>(pass,w,h,Lines,    stAlpha,brushT2.layout,vsT2,fsT2);
-    brushT2.brushA = owner.pipeline<PaintDevice::Point>(pass,w,h,Triangles,stAlpha,brushT2.layout,vsT2,fsT2);
+    brushT2.penA   = owner.pipeline<PaintDevice::Point>(Lines,    stAlpha,brushT2.layout,vsT2,fsT2);
+    brushT2.brushA = owner.pipeline<PaintDevice::Point>(Triangles,stAlpha,brushT2.layout,vsT2,fsT2);
     }
-  //TODO
   return brushT2;
   }
 
-const Builtin::Item &Builtin::empty(RenderPass &pass, uint32_t w, uint32_t h) const {
-  if(brushE.brush.isEmpty() || brushE.brush.w()!=w || brushE.brush.h()!=h) {
-    brushE.pen   = owner.pipeline<PaintDevice::Point>(pass,w,h,Lines,    stNormal,brushE.layout,vsE,fsE);
-    brushE.brush = owner.pipeline<PaintDevice::Point>(pass,w,h,Triangles,stNormal,brushE.layout,vsE,fsE);
+const Builtin::Item &Builtin::empty() const {
+  if(brushE.brush.isEmpty()) {
+    brushE.pen   = owner.pipeline<PaintDevice::Point>(Lines,    stNormal,brushE.layout,vsE,fsE);
+    brushE.brush = owner.pipeline<PaintDevice::Point>(Triangles,stNormal,brushE.layout,vsE,fsE);
 
-    brushE.penB   = owner.pipeline<PaintDevice::Point>(pass,w,h,Lines,    stBlend,brushE.layout,vsE,fsE);
-    brushE.brushB = owner.pipeline<PaintDevice::Point>(pass,w,h,Triangles,stBlend,brushE.layout,vsE,fsE);
+    brushE.penB   = owner.pipeline<PaintDevice::Point>(Lines,    stBlend,brushE.layout,vsE,fsE);
+    brushE.brushB = owner.pipeline<PaintDevice::Point>(Triangles,stBlend,brushE.layout,vsE,fsE);
 
-    brushE.penA   = owner.pipeline<PaintDevice::Point>(pass,w,h,Lines,    stAlpha,brushE.layout,vsE,fsE);
-    brushE.brushA = owner.pipeline<PaintDevice::Point>(pass,w,h,Triangles,stAlpha,brushE.layout,vsE,fsE);
+    brushE.penA   = owner.pipeline<PaintDevice::Point>(Lines,    stAlpha,brushE.layout,vsE,fsE);
+    brushE.brushA = owner.pipeline<PaintDevice::Point>(Triangles,stAlpha,brushE.layout,vsE,fsE);
     }
-  //TODO
   return brushE;
   }
 

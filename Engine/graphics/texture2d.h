@@ -25,7 +25,7 @@ class Texture2d {
     void setSampler(const Sampler2d &s);
 
   private:
-    Texture2d(Tempest::Device& dev,AbstractGraphicsApi::Texture* impl,uint32_t w,uint32_t h,TextureFormat frm);
+    Texture2d(Tempest::Device& dev,AbstractGraphicsApi::PTexture&& impl,uint32_t w,uint32_t h,TextureFormat frm);
 
     Detail::DSharedPtr<AbstractGraphicsApi::Texture*> impl;
     int                                               texW=0;

@@ -6,6 +6,7 @@
 #include "vsemaphore.h"
 #include "vswapchain.h"
 #include "vbuffer.h"
+#include "vtexture.h"
 
 #include <Tempest/Log>
 #include <thread>
@@ -25,17 +26,18 @@ static const std::initializer_list<const char*> deviceExtensions = {
 VDevice::DataHelper::DataHelper(VDevice &owner)
   : owner(owner),
     cmdPool(owner,VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT),
-    cmdBuffer(owner,cmdPool,CmdType::Primary),
+    cmdBuffer(owner,cmdPool,nullptr,CmdType::Primary),
     fence(owner),
     graphicsQueue(owner.graphicsQueue){
   hold.reserve(32);
   }
 
+VDevice::DataHelper::~DataHelper() {
+  wait();
+  }
+
 void VDevice::DataHelper::begin() {
-  if(firstCommit.test_and_set()) {
-    wait();
-    cmdBuffer.reset();
-    }
+  wait();
   cmdBuffer.begin(VCommandBuffer::ONE_TIME_SUBMIT_BIT);
   }
 
@@ -59,6 +61,7 @@ void VDevice::DataHelper::wait() {
   std::lock_guard<std::mutex> guard(waitSync);
   if(hasToWait)  {
     fence.wait();
+    cmdBuffer.reset();
     hold.clear();
     hasToWait=false;
     }
@@ -390,7 +393,19 @@ void VDevice::Data::generateMipmap(VTexture &image, VkFormat frm, uint32_t texWi
   }
 
 void VDevice::Data::hold(BufPtr &b) {
-  dev.data->hold.emplace_back(b);
+  if(commited){
+    dev.data->begin();
+    commited=false;
+    }
+  dev.data->hold.emplace_back(ResPtr(b.handler));
+  }
+
+void VDevice::Data::hold(TexPtr &b) {
+  if(commited){
+    dev.data->begin();
+    commited=false;
+    }
+  dev.data->hold.emplace_back(ResPtr(b.handler));
   }
 
 void VDevice::Data::commit() {

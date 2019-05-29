@@ -30,22 +30,23 @@ VPipeline::VPipeline(){
   }
 
 VPipeline::VPipeline(VDevice& device,
-                     VRenderPass& pass, uint32_t width, uint32_t height,
                      const RenderState &st,
-                     const Decl::ComponentType *decl, size_t declSize, size_t stride,
+                     const Decl::ComponentType *idecl, size_t declSize, size_t stride,
                      Topology tp,
                      const UniformsLayout &ulay,
                      std::shared_ptr<AbstractGraphicsApi::UniformsLay> &ulayImpl,
                      VShader& vert, VShader& frag)
-  : device(device.device) {
+  : device(device.device), st(st), declSize(declSize), stride(stride), tp(tp), vs(&vert), fs(&frag) {
   try {
     if(ulayImpl==nullptr)
       ulayImpl=std::make_shared<VUboLayout>(device.device,initUboLayout(device.device,ulay));
+
+    decl.reset(new Decl::ComponentType[declSize]);
+    std::memcpy(decl.get(),idecl,declSize*sizeof(Decl::ComponentType));
+
     VUboLayout* puLay=reinterpret_cast<VUboLayout*>(ulayImpl.get());
-    pipelineLayout  =initLayout(device.device,puLay->impl);
-    graphicsPipeline=initGraphicsPipeline(device.device,pipelineLayout,pass,st,
-                                          width,height,decl,declSize,stride,
-                                          tp,vert,frag);
+    pipelineLayout   =initLayout(device.device,puLay->impl);
+    // instance(pass,width,height);
     }
   catch(...) {
     cleanup();
@@ -54,9 +55,9 @@ VPipeline::VPipeline(VDevice& device,
   }
 
 VPipeline::VPipeline(VPipeline &&other) {
-  std::swap(device,          other.device);
-  std::swap(graphicsPipeline,other.graphicsPipeline);
-  std::swap(pipelineLayout,  other.pipelineLayout);
+  std::swap(device,         other.device);
+  std::swap(inst,           other.inst);
+  std::swap(pipelineLayout, other.pipelineLayout);
   }
 
 VPipeline::~VPipeline() {
@@ -64,9 +65,28 @@ VPipeline::~VPipeline() {
   }
 
 void VPipeline::operator=(VPipeline &&other) {
-  std::swap(device,          other.device);
-  std::swap(graphicsPipeline,other.graphicsPipeline);
-  std::swap(pipelineLayout,  other.pipelineLayout);
+  std::swap(device,         other.device);
+  std::swap(inst,           other.inst);
+  std::swap(pipelineLayout, other.pipelineLayout);
+  }
+
+VPipeline::Inst &VPipeline::instance(VRenderPass &pass, uint32_t width, uint32_t height) {
+  for(auto& i:inst)
+    if(i.w==width && i.h==height)
+      return i;
+  VkPipeline val=VK_NULL_HANDLE;
+  try {
+    val = initGraphicsPipeline(device,pipelineLayout,pass,st,
+                               width,height,decl.get(),declSize,stride,
+                               tp,*vs.handler,*fs.handler);
+    inst.emplace_back(width,height,&pass,val);
+    }
+  catch(...) {
+    if(val!=VK_NULL_HANDLE)
+      vkDestroyPipeline(device,val,nullptr);
+    throw;
+    }
+  return inst.back();
   }
 
 void VPipeline::cleanup() {
@@ -75,8 +95,8 @@ void VPipeline::cleanup() {
   vkDeviceWaitIdle(device);
   if(pipelineLayout!=VK_NULL_HANDLE)
     vkDestroyPipelineLayout(device,pipelineLayout,nullptr);
-  if(graphicsPipeline!=VK_NULL_HANDLE)
-    vkDestroyPipeline(device,graphicsPipeline,nullptr);
+  for(auto& i:inst)
+    vkDestroyPipeline(device,i.val,nullptr);
   }
 
 VkPipelineLayout VPipeline::initLayout(VkDevice device,VkDescriptorSetLayout uboLay) {

@@ -188,9 +188,9 @@ namespace Tempest {
         };
       struct Image           {};
       struct Fbo             {};
-      struct Pass            {};
+      struct Pass:Shared     {};
       struct Pipeline:Shared {};
-      struct Shader          {};
+      struct Shader:Shared   {};
       struct Uniforms        {};
       struct UniformsLay     {
         virtual ~UniformsLay()=default;
@@ -207,8 +207,6 @@ namespace Tempest {
       struct CommandBuffer   {
         virtual ~CommandBuffer()=default;
         virtual void begin()=0;
-        virtual void begin(AbstractGraphicsApi::Pass* p)=0;
-        virtual void next (AbstractGraphicsApi::Pass* p)=0;
         virtual void end()  =0;
         virtual void beginRenderPass(AbstractGraphicsApi::Fbo* f,
                                      AbstractGraphicsApi::Pass*  p,
@@ -219,7 +217,7 @@ namespace Tempest {
         virtual void endRenderPass()=0;
 
         virtual void clear       (Image& img,float r, float g, float b, float a)=0;
-        virtual void setPipeline (Pipeline& p)=0;
+        virtual void setPipeline (Pipeline& p,uint32_t w,uint32_t h)=0;
         virtual void setViewport (const Rect& r)=0;
         virtual void setUniforms (Pipeline& p,Desc& u, size_t offc, const uint32_t* offv)=0;
         virtual void exec        (const AbstractGraphicsApi::CommandBuffer& buf)=0;
@@ -238,7 +236,11 @@ namespace Tempest {
         };
       struct Semaphore       {};
 
-      using PBuffer = Detail::DSharedPtr<Buffer*>;
+      using PBuffer   = Detail::DSharedPtr<Buffer*>;
+      using PTexture  = Detail::DSharedPtr<Texture*>;
+      using PPipeline = Detail::DSharedPtr<Pipeline*>;
+      using PPass     = Detail::DSharedPtr<Pass*>;
+      using PShader   = Detail::DSharedPtr<Shader*>;
 
       virtual Device*    createDevice(SystemApi::Window* w)=0;
       virtual void       destroy(Device* d)=0;
@@ -247,17 +249,16 @@ namespace Tempest {
       virtual Swapchain* createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d)=0;
       virtual void       destroy(Swapchain* d)=0;
 
-      virtual Pass*      createPass(Device *d,
+      virtual PPass      createPass(Device *d,
                                     Swapchain* sw,
                                     TextureFormat zformat,
                                     FboMode in,const Color* clear,
                                     FboMode out,const float* zclear)=0;
-      virtual Pass*      createPass(Device *d,
+      virtual PPass      createPass(Device *d,
                                     TextureFormat clFormat,
                                     TextureFormat zformat,
                                     FboMode in,const Color* clear,
                                     FboMode out,const float* zclear)=0;
-      virtual void       destroy(Pass* pass)=0;
 
       virtual Fbo*       createFbo(Device *d,Swapchain *s,Pass* pass,uint32_t imageId)=0;
       virtual Fbo*       createFbo(Device *d,Swapchain *s,Pass* pass,uint32_t imageId,Texture* zbuf)=0;
@@ -267,8 +268,7 @@ namespace Tempest {
       virtual std::shared_ptr<AbstractGraphicsApi::UniformsLay>
                          createUboLayout(Device *d,const UniformsLayout&)=0;
 
-      virtual Pipeline*  createPipeline(Device* d,Pass* pass,
-                                        uint32_t width, uint32_t height,
+      virtual PPipeline  createPipeline(Device* d,
                                         const RenderState &st,
                                         const Tempest::Decl::ComponentType *decl, size_t declSize,
                                         size_t stride,
@@ -277,8 +277,7 @@ namespace Tempest {
                                         std::shared_ptr<UniformsLay> &ulayImpl,
                                         const std::initializer_list<Shader*>& sh)=0;
 
-      virtual Shader*    createShader(Device *d,const char* source,size_t src_size)=0;
-      virtual void       destroy(Shader* shader)=0;
+      virtual PShader    createShader(Device *d,const char* source,size_t src_size)=0;
 
       virtual Fence*     createFence(Device *d)=0;
       virtual void       destroy(Fence* fence)=0;
@@ -290,7 +289,7 @@ namespace Tempest {
       virtual void       destroy(CmdPool* cmd)=0;
 
       virtual CommandBuffer*
-                         createCommandBuffer(Device* d,CmdPool* pool,CmdType type)=0;
+                         createCommandBuffer(Device* d,CmdPool* pool,Pass* pass,CmdType type)=0;
       virtual void       destroy(CommandBuffer* cmd)=0;
 
       virtual PBuffer    createBuffer(Device* d,const void *mem,size_t size,MemUsage usage,BufferFlags flg)=0;
@@ -298,8 +297,8 @@ namespace Tempest {
       virtual Desc*      createDescriptors(Device* d,const Tempest::UniformsLayout& p,AbstractGraphicsApi::UniformsLay* layP)=0;
       virtual void       destroy(Desc* cmd)=0;
 
-      virtual Texture*   createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips)=0;
-      virtual Texture*   createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm)=0;
+      virtual PTexture   createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips)=0;
+      virtual PTexture   createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm)=0;
       //virtual void       destroy(Texture* t)=0;
 
       virtual uint32_t   nextImage(Device *d,Swapchain* sw,Semaphore* onReady)=0;

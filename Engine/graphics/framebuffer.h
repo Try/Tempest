@@ -7,6 +7,7 @@ namespace Tempest {
 
 class Device;
 class CommandBuffer;
+class PrimaryCommandBuffer;
 
 class FrameBuffer final {
   public:
@@ -27,5 +28,6 @@ class FrameBuffer final {
 
   friend class Tempest::Device;
   friend class Tempest::CommandBuffer;
+  friend class Tempest::PrimaryCommandBuffer;
   };
 }

@@ -7,8 +7,9 @@ namespace Tempest {
 
 class Device;
 class CommandBuffer;
+class PrimaryCommandBuffer;
 
-class RenderPass {
+class RenderPass final {
   public:
     RenderPass()=default;
     RenderPass(RenderPass&& f)=default;
@@ -16,13 +17,12 @@ class RenderPass {
     RenderPass& operator = (RenderPass&& other)=default;
 
   private:
-    RenderPass(Tempest::Device& dev,AbstractGraphicsApi::Pass* img);
-
-    Tempest::Device*                         dev=nullptr;
-    Detail::DPtr<AbstractGraphicsApi::Pass*> impl;
+    RenderPass(Detail::DSharedPtr<AbstractGraphicsApi::Pass*>&& img);
+    Detail::DSharedPtr<AbstractGraphicsApi::Pass*> impl;
 
   friend class Tempest::Device;
   friend class Tempest::CommandBuffer;
+  friend class Tempest::PrimaryCommandBuffer;
   };
 
 }

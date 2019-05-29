@@ -106,7 +106,7 @@ void VectorImage::commitPoints() {
     }
   }
 
-void VectorImage::makeActual(Device &dev,RenderPass& pass) {
+void VectorImage::makeActual(Device &dev) {
   if(!frame || frameCount!=dev.maxFramesInFlight()) {
     uint8_t count=dev.maxFramesInFlight();
     frame.reset(new PerFrame[count]);
@@ -136,8 +136,8 @@ void VectorImage::makeActual(Device &dev,RenderPass& pass) {
 
       if(ux.isEmpty() || f.blocksType[i]!=t){
         if(t==UT_Img)
-          ux=dev.uniforms(dev.builtin().texture2d(pass,info.w,info.h).layout); else
-        ux=dev.uniforms(dev.builtin().empty(pass,info.w,info.h).layout);
+          ux=dev.uniforms(dev.builtin().texture2d().layout); else
+        ux=dev.uniforms(dev.builtin().empty().layout);
         f.blocksType[i] = t;
         }
       if(t==UT_Img) {
@@ -154,8 +154,8 @@ void VectorImage::makeActual(Device &dev,RenderPass& pass) {
     }
   }
 
-void VectorImage::draw(Device & dev, CommandBuffer &cmd, RenderPass& pass) {
-  makeActual(dev,pass);
+void VectorImage::draw(Device & dev, CommandBuffer &cmd) {
+  makeActual(dev);
 
   PerFrame& f=frame[dev.frameId()];
 
@@ -171,30 +171,30 @@ void VectorImage::draw(Device & dev, CommandBuffer &cmd, RenderPass& pass) {
       if(b.hasImg) {
         if(b.tp==Triangles){
           if(b.blend==NoBlend)
-            p=&dev.builtin().texture2d(pass,info.w,info.h).brush; else
+            p=&dev.builtin().texture2d().brush; else
           if(b.blend==Alpha)
-            p=&dev.builtin().texture2d(pass,info.w,info.h).brushB; else
-            p=&dev.builtin().texture2d(pass,info.w,info.h).brushA;
+            p=&dev.builtin().texture2d().brushB; else
+            p=&dev.builtin().texture2d().brushA;
           } else {
           if(b.blend==NoBlend)
-            p=&dev.builtin().texture2d(pass,info.w,info.h).pen; else
+            p=&dev.builtin().texture2d().pen; else
           if(b.blend==Alpha)
-            p=&dev.builtin().texture2d(pass,info.w,info.h).penB; else
-            p=&dev.builtin().texture2d(pass,info.w,info.h).penA;
+            p=&dev.builtin().texture2d().penB; else
+            p=&dev.builtin().texture2d().penA;
           }
         } else {
         if(b.tp==Triangles) {
           if(b.blend==NoBlend)
-            p=&dev.builtin().empty(pass,info.w,info.h).brush; else
+            p=&dev.builtin().empty().brush; else
           if(b.blend==Alpha)
-            p=&dev.builtin().empty(pass,info.w,info.h).brushB; else
-            p=&dev.builtin().empty(pass,info.w,info.h).brushA;
+            p=&dev.builtin().empty().brushB; else
+            p=&dev.builtin().empty().brushA;
           } else {
           if(b.blend==NoBlend)
-            p=&dev.builtin().empty(pass,info.w,info.h).pen; else
+            p=&dev.builtin().empty().pen; else
           if(b.blend==Alpha)
-            p=&dev.builtin().empty(pass,info.w,info.h).penB; else
-            p=&dev.builtin().empty(pass,info.w,info.h).penA;
+            p=&dev.builtin().empty().penB; else
+            p=&dev.builtin().empty().penA;
           }
         }
       b.pipeline=PipePtr(*p);

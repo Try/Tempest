@@ -19,26 +19,24 @@ class VulkanApi : public AbstractGraphicsApi {
     Swapchain*   createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d) override;
     void         destroy(Swapchain* d) override;
 
-    Pass*        createPass(Device *d,
+    PPass        createPass(Device *d,
                             Swapchain* sw,
                             TextureFormat zformat,
                             FboMode fcolor, const Color *clear,
                             FboMode fzbuf, const float *zclear) override;
 
-    Pass*        createPass(Device *d,
+    PPass        createPass(Device *d,
                             TextureFormat clFormat,
                             TextureFormat zformat,
                             FboMode fcolor, const Color *clear,
                             FboMode fzbuf, const float *zclear) override;
-    void         destroy   (Pass* pass) override;
 
     Fbo*         createFbo(Device *d, Swapchain *s, Pass* pass, uint32_t imageId) override;
     Fbo*         createFbo(Device *d, Swapchain *s, Pass* pass, uint32_t imageId, Texture* zbuf) override;
     Fbo*         createFbo(Device *d, uint32_t w, uint32_t h, Pass* pass, Texture* cl, Texture* zbuf) override;
     void         destroy(Fbo* pass) override;
 
-    Pipeline*    createPipeline(Device* d, Pass* pass,
-                                uint32_t width, uint32_t height,
+    PPipeline    createPipeline(Device* d,
                                 const RenderState &st,
                                 const Tempest::Decl::ComponentType *decl, size_t declSize,
                                 size_t stride,
@@ -47,8 +45,7 @@ class VulkanApi : public AbstractGraphicsApi {
                                 std::shared_ptr<UniformsLay> &ulayImpl,
                                 const std::initializer_list<Shader*>& frag) override;
 
-    Shader*       createShader(AbstractGraphicsApi::Device *d, const char* source, size_t src_size) override;
-    void          destroy     (Shader* shader) override;
+    PShader       createShader(AbstractGraphicsApi::Device *d, const char* source, size_t src_size) override;
 
     Fence*        createFence(Device *d) override;
     void          destroy    (Fence* fence) override;
@@ -66,11 +63,11 @@ class VulkanApi : public AbstractGraphicsApi {
 
     std::shared_ptr<AbstractGraphicsApi::UniformsLay> createUboLayout(Device *d,const UniformsLayout&) override;
 
-    Texture*      createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips) override;
-    Texture*      createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;
+    PTexture     createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips) override;
+    PTexture     createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;
     //void       destroy(Texture* t) override;
 
-    CommandBuffer* createCommandBuffer(Device* d, CmdPool* pool, CmdType secondary) override;
+    CommandBuffer* createCommandBuffer(Device* d, CmdPool* pool, Pass *pass, CmdType secondary) override;
     void           destroy            (CommandBuffer* cmd) override;
 
     uint32_t       nextImage(Device *d,Swapchain* sw,Semaphore* onReady) override;

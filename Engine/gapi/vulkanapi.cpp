@@ -61,7 +61,7 @@ void VulkanApi::destroy(AbstractGraphicsApi::Swapchain *d) {
   delete s;
   }
 
-AbstractGraphicsApi::Pass *VulkanApi::createPass(AbstractGraphicsApi::Device *d,
+AbstractGraphicsApi::PPass VulkanApi::createPass(AbstractGraphicsApi::Device *d,
                                                  AbstractGraphicsApi::Swapchain *s,
                                                  TextureFormat zformat,
                                                  FboMode fcolor, const Color *clear,
@@ -72,10 +72,10 @@ AbstractGraphicsApi::Pass *VulkanApi::createPass(AbstractGraphicsApi::Device *d,
 
   Detail::VDevice*    dx=reinterpret_cast<Detail::VDevice*>(d);
   Detail::VSwapchain* sx=reinterpret_cast<Detail::VSwapchain*>(s);
-  return new Detail::VRenderPass(*dx,sx->format(),zfrm,fcolor,clear,fzbuf,zclear);
+  return PPass(new Detail::VRenderPass(*dx,sx->format(),zfrm,fcolor,clear,fzbuf,zclear));
   }
 
-AbstractGraphicsApi::Pass *VulkanApi::createPass(AbstractGraphicsApi::Device *d,
+AbstractGraphicsApi::PPass VulkanApi::createPass(AbstractGraphicsApi::Device *d,
                                                  TextureFormat clFormat,
                                                  TextureFormat zformat,
                                                  FboMode fcolor, const Color *clear,
@@ -84,12 +84,7 @@ AbstractGraphicsApi::Pass *VulkanApi::createPass(AbstractGraphicsApi::Device *d,
   VkFormat colorFrm = Detail::nativeFormat(clFormat);
 
   Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
-  return new Detail::VRenderPass(*dx,colorFrm,zfrm,fcolor,clear,fzbuf,zclear);
-  }
-
-void VulkanApi::destroy(AbstractGraphicsApi::Pass *pass) {
-  Detail::VRenderPass* px=reinterpret_cast<Detail::VRenderPass*>(pass);
-  delete px;
+  return PPass(new Detail::VRenderPass(*dx,colorFrm,zfrm,fcolor,clear,fzbuf,zclear));
   }
 
 AbstractGraphicsApi::Fbo *VulkanApi::createFbo(AbstractGraphicsApi::Device *d,
@@ -134,9 +129,7 @@ void VulkanApi::destroy(AbstractGraphicsApi::Fbo *pass) {
   delete px;
   }
 
-AbstractGraphicsApi::Pipeline *VulkanApi::createPipeline(AbstractGraphicsApi::Device *d,
-                                                         AbstractGraphicsApi::Pass *p,
-                                                         uint32_t width, uint32_t height,
+AbstractGraphicsApi::PPipeline VulkanApi::createPipeline(AbstractGraphicsApi::Device *d,
                                                          const RenderState &st,
                                                          const Decl::ComponentType *decl, size_t declSize,
                                                          size_t stride,
@@ -146,20 +139,14 @@ AbstractGraphicsApi::Pipeline *VulkanApi::createPipeline(AbstractGraphicsApi::De
                                                          const std::initializer_list<AbstractGraphicsApi::Shader*> &sh) {
   Shader*const*        arr=sh.begin();
   Detail::VDevice*     dx =reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VRenderPass* px =reinterpret_cast<Detail::VRenderPass*>(p);
   Detail::VShader*     vs =reinterpret_cast<Detail::VShader*>(arr[0]);
   Detail::VShader*     fs =reinterpret_cast<Detail::VShader*>(arr[1]);
-  return new Detail::VPipeline(*dx,*px,width,height,st,decl,declSize,stride,tp,ulay,ulayImpl,*vs,*fs);
+  return PPipeline(new Detail::VPipeline(*dx,st,decl,declSize,stride,tp,ulay,ulayImpl,*vs,*fs));
   }
 
-AbstractGraphicsApi::Shader *VulkanApi::createShader(AbstractGraphicsApi::Device *d, const char *source, size_t src_size) {
+AbstractGraphicsApi::PShader VulkanApi::createShader(AbstractGraphicsApi::Device *d, const char *source, size_t src_size) {
   Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
-  return new Detail::VShader(*dx,source,src_size);
-  }
-
-void VulkanApi::destroy(AbstractGraphicsApi::Shader *shader) {
-  Detail::VShader* sx=reinterpret_cast<Detail::VShader*>(shader);
-  delete sx;
+  return PShader(new Detail::VShader(*dx,source,src_size));
   }
 
 AbstractGraphicsApi::Fence *VulkanApi::createFence(AbstractGraphicsApi::Device *d) {
@@ -219,20 +206,26 @@ AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device
     dat.copy(*pbuf.handler,*pstage.handler,size);
     dat.commit();
 
-    //dx->waitData(); // wait before stage.~VBuffer TODO: preserve staging buffer
+    //dx->waitData();
     return PBuffer(pbuf.handler);
     }
   }
 
-AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Device *d, const Pixmap &p, TextureFormat frm, uint32_t mipCnt) {
+AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Device *d, const Pixmap &p, TextureFormat frm, uint32_t mipCnt) {
   Detail::VDevice* dx     = reinterpret_cast<Detail::VDevice*>(d);
   const uint32_t   size   = p.dataSize();
   VkFormat         format = Detail::nativeFormat(frm);
   Detail::VBuffer  stage  = dx->allocator.alloc(p.data(),size,MemUsage::TransferSrc,BufferFlags::Staging);
   Detail::VTexture buf    = dx->allocator.alloc(p,mipCnt,format);
 
+  Detail::DSharedPtr<Detail::VBuffer*>  pstage(new Detail::VBuffer (std::move(stage)));
+  Detail::DSharedPtr<Detail::VTexture*> pbuf  (new Detail::VTexture(std::move(buf)));
+
   Detail::VDevice::Data dat(*dx);
-  dat.changeLayout(buf, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,mipCnt);
+  dat.hold(pstage);
+  dat.hold(pbuf);
+
+  dat.changeLayout(*pbuf.handler, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,mipCnt);
   if(isCompressedFormat(frm)){
     size_t blocksize  = (frm==TextureFormat::DXT1) ? 8 : 16;
     size_t bufferSize = 0;
@@ -240,30 +233,31 @@ AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Devi
     size_t w = size_t(p.w()), h = size_t(p.h());
     for(size_t i=0; i<mipCnt; i++){
       size_t blockcount = ((w+3)/4)*((h+3)/4);
-      dat.copy(buf,w,h,i,stage,bufferSize);
+      dat.copy(*pbuf.handler,w,h,i,*pstage.handler,bufferSize);
 
       bufferSize += blockcount*blocksize;
       w = std::max<size_t>(1,w/2);
       h = std::max<size_t>(1,h/2);
       }
 
-    dat.changeLayout(buf, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipCnt);
+    dat.changeLayout(*pbuf.handler, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipCnt);
     } else {
-    dat.copy(buf,p.w(),p.h(),0,stage,0);
+    dat.copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
     if(mipCnt>1)
-      dat.generateMipmap(buf,format,p.w(),p.h(),mipCnt); else
-      dat.changeLayout(buf, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipCnt);
+      dat.generateMipmap(*pbuf.handler,format,p.w(),p.h(),mipCnt); else
+      dat.changeLayout(*pbuf.handler, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipCnt);
     }
   dat.commit();
 
-  dx->waitData();
-  return new Detail::VTexture(std::move(buf));
+  //dx->waitData();
+  return PTexture(pbuf.handler);
   }
 
-AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Device *d, const uint32_t w, const uint32_t h, uint32_t mipCnt, TextureFormat frm) {
-  Detail::VDevice*   dx = reinterpret_cast<Detail::VDevice*>(d);
+AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Device *d, const uint32_t w, const uint32_t h, uint32_t mipCnt, TextureFormat frm) {
+  Detail::VDevice* dx = reinterpret_cast<Detail::VDevice*>(d);
   
-  auto buf=dx->allocator.alloc(w,h,mipCnt,frm);
+  Detail::VTexture buf=dx->allocator.alloc(w,h,mipCnt,frm);
+  Detail::DSharedPtr<Detail::VTexture*> pbuf(new Detail::VTexture(std::move(buf)));
 
   Detail::VDevice::Data dat(*dx);
   VkImageLayout lay = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -272,11 +266,13 @@ AbstractGraphicsApi::Texture *VulkanApi::createTexture(AbstractGraphicsApi::Devi
     } else {
     lay = VK_IMAGE_LAYOUT_GENERAL; //VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     }
-  dat.changeLayout(buf, VK_IMAGE_LAYOUT_UNDEFINED, lay, mipCnt);
+
+  dat.hold(pbuf);
+  dat.changeLayout(*pbuf.handler, VK_IMAGE_LAYOUT_UNDEFINED, lay, mipCnt);
   dat.commit();
 
-  dx->waitData();
-  return new Detail::VTexture(std::move(buf));
+  //dx->waitData();
+  return PTexture(pbuf.handler);
   }
 
 AbstractGraphicsApi::Desc *VulkanApi::createDescriptors(AbstractGraphicsApi::Device*      d,
@@ -299,10 +295,12 @@ std::shared_ptr<AbstractGraphicsApi::UniformsLay> VulkanApi::createUboLayout(Dev
   return std::make_shared<Detail::VPipeline::VUboLayout>(dx->device,lay);
   }
 
-AbstractGraphicsApi::CommandBuffer *VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device *d,CmdPool *p,CmdType cmdType) {
+AbstractGraphicsApi::CommandBuffer *VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device *d, CmdPool *p,
+                                                                   Pass* pass, CmdType cmdType) {
   Detail::VDevice*      dx=reinterpret_cast<Detail::VDevice*>(d);
   Detail::VCommandPool* px=reinterpret_cast<Detail::VCommandPool*>(p);
-  return new Detail::VCommandBuffer(*dx,*px,cmdType);
+  Detail::VRenderPass*  rp=reinterpret_cast<Detail::VRenderPass*>(pass);
+  return new Detail::VCommandBuffer(*dx,*px,rp,cmdType);
   }
 
 void VulkanApi::destroy(AbstractGraphicsApi::CommandBuffer *cmd) {

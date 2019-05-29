@@ -3,6 +3,8 @@
 #include <Tempest/AbstractGraphicsApi>
 #include <vulkan/vulkan.hpp>
 
+#include "../utility/dptr.h"
+
 namespace Tempest {
 namespace Detail {
 
@@ -26,22 +28,18 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
       };
 
     VCommandBuffer()=delete;
-    VCommandBuffer(VDevice &device, VCommandPool &pool, CmdType secondary);
+    VCommandBuffer(VDevice &device, VCommandPool &pool, VRenderPass* rp, CmdType secondary);
     VCommandBuffer(VCommandBuffer&& other);
     ~VCommandBuffer();
 
-    void operator=(VCommandBuffer&& other);
+    VCommandBuffer& operator=(VCommandBuffer&& other);
 
     VkCommandBuffer impl=nullptr;
 
     void reset();
 
-    void begin(Usage usageFlags);
-    void begin(Usage usageFlags, VRenderPass& rpass);
-
+    void begin(Usage usage); // internal
     void begin();
-    void begin(AbstractGraphicsApi::Pass* p);
-    void next (AbstractGraphicsApi::Pass* p);
     void end();
 
     void beginRenderPass(AbstractGraphicsApi::Fbo* f,
@@ -53,7 +51,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void endRenderPass();
 
     void clear(AbstractGraphicsApi::Image& img, float r, float g, float b, float a);
-    void setPipeline(AbstractGraphicsApi::Pipeline& p);
+    void setPipeline(AbstractGraphicsApi::Pipeline& p, uint32_t w, uint32_t h);
     void setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u, size_t offc, const uint32_t* offv);
     void setViewport(const Rect& r);
 
@@ -75,8 +73,10 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
                         uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
 
   private:
-    VkDevice        device=nullptr;
-    VkCommandPool   pool  =VK_NULL_HANDLE;
+    VkDevice                         device=nullptr;
+    VkCommandPool                    pool  =VK_NULL_HANDLE;
+    Detail::DSharedPtr<VRenderPass*> pass;
+    Detail::DSharedPtr<VRenderPass*> currentRp;
   };
 
 }}

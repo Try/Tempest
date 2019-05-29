@@ -18,19 +18,13 @@ class RenderPipeline final {
     ~RenderPipeline();
     RenderPipeline& operator = (RenderPipeline&& other);
 
-    uint32_t w() const;
-    uint32_t h() const;
-
-    Size size()    const { return Size(int(vpW),int(vpH)); }
     bool isEmpty() const { return impl.handler==nullptr; }
 
   private:
-    RenderPipeline(Tempest::Device& dev,AbstractGraphicsApi::Pipeline* p,uint32_t w,uint32_t h);
+    RenderPipeline(Tempest::Device& dev,Detail::DSharedPtr<AbstractGraphicsApi::Pipeline*>&& p);
 
     Tempest::Device*                                   dev=nullptr;
     Detail::DSharedPtr<AbstractGraphicsApi::Pipeline*> impl;
-
-    uint32_t vpW=0,vpH=0;
 
   friend class Tempest::Device;
   friend class Tempest::CommandBuffer;

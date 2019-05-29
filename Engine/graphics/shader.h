@@ -7,7 +7,7 @@ namespace Tempest {
 
 class Device;
 
-class Shader {
+class Shader final {
   public:
     Shader()=default;
     Shader(Shader&&)=default;
@@ -15,10 +15,10 @@ class Shader {
     Shader& operator=(Shader&&)=default;
 
   private:
-    Shader(Tempest::Device& dev,AbstractGraphicsApi::Shader* impl);
+    Shader(Tempest::Device& dev,Detail::DSharedPtr<AbstractGraphicsApi::Shader*>&& impl);
 
-    Tempest::Device*                           dev =nullptr;
-    Detail::DPtr<AbstractGraphicsApi::Shader*> impl;
+    Tempest::Device*                                 dev =nullptr;
+    Detail::DSharedPtr<AbstractGraphicsApi::Shader*> impl;
 
   friend class Tempest::Device;
   };

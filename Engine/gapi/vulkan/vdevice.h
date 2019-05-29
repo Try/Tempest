@@ -83,7 +83,9 @@ class VDevice : public AbstractGraphicsApi::Device {
       std::vector<VkPresentModeKHR>   presentModes;
       };
 
+    using ResPtr = Detail::DSharedPtr<AbstractGraphicsApi::Shared*>;
     using BufPtr = Detail::DSharedPtr<VBuffer*>;
+    using TexPtr = Detail::DSharedPtr<VTexture*>;
 
     VDevice(VulkanApi& api,void* hwnd);
     ~VDevice();
@@ -117,6 +119,7 @@ class VDevice : public AbstractGraphicsApi::Device {
         Data(VDevice& dev);
         ~Data();
 
+        void start();
         void flush(const Detail::VBuffer& src, size_t size);
         void copy(Detail::VBuffer&  dest, const Detail::VBuffer& src, size_t size);
         void copy(Detail::VTexture& dest, uint32_t w, uint32_t h, uint32_t mip, const Detail::VBuffer& src, size_t offset);
@@ -125,6 +128,7 @@ class VDevice : public AbstractGraphicsApi::Device {
         void generateMipmap(VTexture& image, VkFormat frm, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
 
         void hold(BufPtr& b);
+        void hold(TexPtr& b);
         void commit();
 
       private:
@@ -137,6 +141,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     class DataHelper {
       public:
         DataHelper(VDevice &owner);
+        ~DataHelper();
 
         void begin();
         void end();
@@ -145,10 +150,9 @@ class VDevice : public AbstractGraphicsApi::Device {
         VDevice&               owner;
         VCommandPool           cmdPool;
         VCommandBuffer         cmdBuffer;
-        std::vector<BufPtr>    hold;
+        std::vector<ResPtr>    hold;
 
       private:
-        std::atomic_flag       firstCommit=ATOMIC_FLAG_INIT;
         VFence                 fence;
         VkQueue                graphicsQueue=nullptr;
 

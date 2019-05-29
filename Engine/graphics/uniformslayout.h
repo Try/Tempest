@@ -9,7 +9,7 @@
 
 namespace Tempest {
 
-class UniformsLayout {
+class UniformsLayout final {
   public:
     enum Class : uint8_t {
       Ubo    =0,

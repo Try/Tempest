@@ -13,8 +13,8 @@
 
 using namespace Tempest::Detail;
 
-VCommandBuffer::VCommandBuffer(VDevice& device, VCommandPool& pool, CmdType secondary)
-  :device(device.device), pool(pool.impl) {
+VCommandBuffer::VCommandBuffer(VDevice& device, VCommandPool& pool, VRenderPass *rp, CmdType secondary)
+  :device(device.device), pool(pool.impl), pass(rp) {
   VkCommandBufferAllocateInfo allocInfo = {};
   allocInfo.sType             =VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   allocInfo.commandPool       =pool.impl;
@@ -25,9 +25,11 @@ VCommandBuffer::VCommandBuffer(VDevice& device, VCommandPool& pool, CmdType seco
   }
 
 VCommandBuffer::VCommandBuffer(VCommandBuffer &&other) {
-  std::swap(device,other.device);
-  std::swap(pool,other.pool);
-  std::swap(impl,other.impl);
+  std::swap(device,   other.device);
+  std::swap(pool,     other.pool);
+  std::swap(pass,     other.pass);
+  std::swap(currentRp,other.currentRp);
+  std::swap(impl,     other.impl);
   }
 
 VCommandBuffer::~VCommandBuffer() {
@@ -36,65 +38,50 @@ VCommandBuffer::~VCommandBuffer() {
   vkFreeCommandBuffers(device,pool,1,&impl);
   }
 
-void VCommandBuffer::operator=(VCommandBuffer &&other) {
-  std::swap(device,other.device);
-  std::swap(pool,other.pool);
-  std::swap(impl,other.impl);
+VCommandBuffer& VCommandBuffer::operator=(VCommandBuffer &&other) {
+  std::swap(device,   other.device);
+  std::swap(pool,     other.pool);
+  std::swap(pass,     other.pass);
+  std::swap(currentRp,other.currentRp);
+  std::swap(impl,     other.impl);
+  return *this;
   }
 
 void VCommandBuffer::reset() {
   vkResetCommandBuffer(impl,VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+  currentRp = Detail::DSharedPtr<VRenderPass*>{};
   }
 
-void VCommandBuffer::begin(Usage usageFlags) {
-  VkCommandBufferBeginInfo beginInfo = {};
-  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  beginInfo.flags = usageFlags; //VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-  //beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-  vkAssert(vkBeginCommandBuffer(impl,&beginInfo));
+void VCommandBuffer::begin() {
+  begin(SIMULTANEOUS_USE_BIT);
   }
 
-void VCommandBuffer::begin(VCommandBuffer::Usage usageFlags, VRenderPass &rpass) {
+void VCommandBuffer::begin(Usage usage) {
+  VkCommandBufferUsageFlags      usageFlags = usage;//SIMULTANEOUS_USE_BIT;
   VkCommandBufferInheritanceInfo inheritanceInfo={};
-  inheritanceInfo.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-  inheritanceInfo.framebuffer = VK_NULL_HANDLE;//fbo.impl;
-  inheritanceInfo.renderPass  = rpass.impl;
+
+  // secondary pass
+  if(pass.handler!=nullptr && pass.handler->impl!=VK_NULL_HANDLE){
+    inheritanceInfo.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+    inheritanceInfo.framebuffer = VK_NULL_HANDLE;
+    inheritanceInfo.renderPass  = pass.handler->impl;
+
+    usageFlags = SIMULTANEOUS_USE_BIT|RENDER_PASS_CONTINUE_BIT;
+    currentRp = pass;
+    } else {
+    currentRp = Detail::DSharedPtr<VRenderPass*>{};
+    }
 
   VkCommandBufferBeginInfo beginInfo = {};
   beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
   beginInfo.flags            = usageFlags;
-  beginInfo.pInheritanceInfo = &inheritanceInfo;
-
-  vkAssert(vkBeginCommandBuffer(impl,&beginInfo));
-  }
-
-void VCommandBuffer::begin() {
-  begin(Usage(SIMULTANEOUS_USE_BIT));
-  }
-
-void VCommandBuffer::begin(Tempest::AbstractGraphicsApi::Pass *p) {
-  VRenderPass*  pass=reinterpret_cast<VRenderPass*>(p);
-  begin(Usage(SIMULTANEOUS_USE_BIT|RENDER_PASS_CONTINUE_BIT),*pass);
-  }
-
-void VCommandBuffer::next(Tempest::AbstractGraphicsApi::Pass *p) {
-  VRenderPass&  rpass=*reinterpret_cast<VRenderPass*>(p);
-
-  VkCommandBufferInheritanceInfo inheritanceInfo={};
-  inheritanceInfo.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-  inheritanceInfo.framebuffer = VK_NULL_HANDLE;//fbo.impl;
-  inheritanceInfo.renderPass  = rpass.impl;
-
-  VkCommandBufferBeginInfo beginInfo = {};
-  beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  beginInfo.flags            = SIMULTANEOUS_USE_BIT|RENDER_PASS_CONTINUE_BIT;
-  beginInfo.pInheritanceInfo = &inheritanceInfo;
+  beginInfo.pInheritanceInfo = inheritanceInfo.renderPass!=VK_NULL_HANDLE ? &inheritanceInfo : nullptr;
 
   vkAssert(vkBeginCommandBuffer(impl,&beginInfo));
   }
 
 void VCommandBuffer::end() {
+  currentRp = Detail::DSharedPtr<VRenderPass*>{};
   vkAssert(vkEndCommandBuffer(impl));
   }
 
@@ -103,6 +90,8 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
                                      uint32_t width,uint32_t height) {
   VFramebuffer* fbo =reinterpret_cast<VFramebuffer*>(f);
   VRenderPass*  pass=reinterpret_cast<VRenderPass*>(p);
+
+  currentRp     = Detail::DSharedPtr<VRenderPass*>(pass);
 
   VkRenderPassBeginInfo renderPassInfo = {};
   renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -202,9 +191,11 @@ void VCommandBuffer::clear(AbstractGraphicsApi::Image& image,
                        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &clearToPresentBarrier);
   }
 
-void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
-  VPipeline& px=reinterpret_cast<VPipeline&>(p);
-  vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,px.graphicsPipeline);
+void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p,uint32_t w,uint32_t h) {
+  VPipeline&   px=reinterpret_cast<VPipeline&>(p);
+  VRenderPass& rp=reinterpret_cast<VRenderPass&>(*currentRp.handler);
+  auto& v = px.instance(rp,w,h);
+  vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v.val);
   }
 
 void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u, size_t offc, const uint32_t *offv) {
@@ -314,15 +305,61 @@ void VCommandBuffer::copy(VTexture &dest, size_t width, size_t height, size_t mi
 
 void VCommandBuffer::changeLayout(Tempest::AbstractGraphicsApi::Texture &t,
                                   Tempest::TextureLayout prev, Tempest::TextureLayout next) {
+  VkImageMemoryBarrier barrier = {};
+  barrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+  barrier.oldLayout           = VK_IMAGE_LAYOUT_GENERAL;
+  barrier.newLayout           = VK_IMAGE_LAYOUT_GENERAL;
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.image               = reinterpret_cast<VTexture&>(t).impl;
+
+  barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+  barrier.subresourceRange.baseMipLevel   = 0;
+  barrier.subresourceRange.levelCount     = 1/*mipCount*/;
+  barrier.subresourceRange.baseArrayLayer = 0;
+  barrier.subresourceRange.layerCount     = 1;
+
+  vkCmdPipelineBarrier(
+      impl,
+      VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+      0,
+      0, nullptr,
+      0, nullptr,
+      0, &barrier
+      );
+  /*
   VkImageLayout frm[]={
     VK_IMAGE_LAYOUT_UNDEFINED,
     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
     };
-  changeLayout(reinterpret_cast<VTexture&>(t),frm[uint8_t(prev)],frm[uint8_t(next)],1);
+  changeLayout(reinterpret_cast<VTexture&>(t),frm[uint8_t(prev)],frm[uint8_t(next)],1);*/
   }
 
 void VCommandBuffer::changeLayout(VTexture &dest,VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount) {
+  /*
+  VkImageMemoryBarrier barrier = {};
+  barrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+  barrier.oldLayout           = oldLayout;
+  barrier.newLayout           = newLayout;
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.image               = dest.impl;
+
+  barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+  barrier.subresourceRange.baseMipLevel   = 0;
+  barrier.subresourceRange.levelCount     = mipCount;
+  barrier.subresourceRange.baseArrayLayer = 0;
+  barrier.subresourceRange.layerCount     = 1;
+
+  vkCmdPipelineBarrier(
+      impl,
+      VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+      0,
+      0, nullptr,
+      0, nullptr,
+      1, &barrier
+      );*/
   VkImageMemoryBarrier barrier = {};
   barrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
   barrier.oldLayout           = oldLayout;

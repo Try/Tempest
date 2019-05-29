@@ -24,20 +24,11 @@ class CommandBuffer {
   public:
     CommandBuffer()=default;
     CommandBuffer(CommandBuffer&& f)=default;
-    ~CommandBuffer();
+    virtual ~CommandBuffer();
     CommandBuffer& operator = (CommandBuffer&& other)=default;
 
-    void begin();//primal
-    void begin(const RenderPass& p);//secondary
+    void begin();
     void end();
-
-    void setPass(const RenderPass& p);
-    void setPass(const FrameBuffer& fbo, const RenderPass& p);
-    void setPass(const FrameBuffer& fbo, const RenderPass& p, int      width, int      height);
-    void setPass(const FrameBuffer& fbo, const RenderPass& p, uint32_t width, uint32_t height);
-
-    void setSecondaryPass(const FrameBuffer& fbo, const RenderPass& p);
-    void setSecondaryPass(const FrameBuffer& fbo, const RenderPass& p,uint32_t width, uint32_t height);
 
     void setUniforms(const Tempest::RenderPipeline& p, const Tempest::Uniforms& ubo);
     void setUniforms(const Tempest::RenderPipeline& p, const Tempest::Uniforms& ubo, size_t offc, const uint32_t *offv);
@@ -62,36 +53,61 @@ class CommandBuffer {
     void draw(const VertexBuffer<T>& vbo,const IndexBuffer<I>& ibo,size_t offset,size_t count)
          { implDraw(vbo.impl,ibo.impl,Detail::indexCls<I>(),offset,count); }
 
-    void exec(const CommandBuffer& buf);
-
     void changeLayout(Texture2d& t,TextureLayout prev,TextureLayout next);
 
   private:
-    CommandBuffer(Tempest::Device& dev,AbstractGraphicsApi::CommandBuffer* f);
+    CommandBuffer(Tempest::Device& dev,AbstractGraphicsApi::CommandBuffer* f,uint32_t vpWidth,uint32_t vpHeight);
 
     void implDraw(const VideoBuffer& vbo,size_t offset,size_t size);
     void implDraw(const VideoBuffer& vbo,const VideoBuffer& ibo,Detail::IndexClass index,size_t offset,size_t size);
-
-    void implEndRenderPass();
+    virtual void implEndRenderPass(){}
 
     const AbstractGraphicsApi::Pipeline* curPipeline=nullptr;
     const VideoBuffer*                   curVbo     =nullptr;
     const VideoBuffer*                   curIbo     =nullptr;
 
+    enum Mode:uint8_t{
+      Idle   = 0,
+      Prime  = 1,
+      Second = 2
+      };
+
     struct Pass {
       const FrameBuffer* fbo   =nullptr;
       const RenderPass*  pass  =nullptr;
-      uint32_t           width =0;
-      uint32_t           height=0;
 
-      bool               active=false;
+      Mode               mode=Idle;
       };
-    Pass curPass;
+
+    struct Viewport {
+      uint32_t width =0;
+      uint32_t height=0;
+      };
 
     Tempest::Device*                                  dev=nullptr;
     Detail::DPtr<AbstractGraphicsApi::CommandBuffer*> impl;
+    Viewport                                          vp;
 
+  friend class PrimaryCommandBuffer;
   friend class Tempest::Device;
   };
 
+class PrimaryCommandBuffer : public CommandBuffer {
+  public:
+    void setPass(const FrameBuffer& fbo, const RenderPass& p);
+    void setPass(const FrameBuffer& fbo, const RenderPass& p, int      width, int      height);
+    void setPass(const FrameBuffer& fbo, const RenderPass& p, uint32_t width, uint32_t height);
+
+    void exec(const FrameBuffer& fbo, const RenderPass& p, const CommandBuffer& buf);
+    void exec(const FrameBuffer& fbo, const RenderPass& p,uint32_t width, uint32_t height,const CommandBuffer& buf);
+
+  private:
+    PrimaryCommandBuffer(Tempest::Device& dev,AbstractGraphicsApi::CommandBuffer* f):CommandBuffer(dev,f,0,0){}
+
+    void implEndRenderPass();
+
+    Pass curPass;
+
+  friend class Tempest::Device;
+  };
 }
