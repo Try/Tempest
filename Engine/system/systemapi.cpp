@@ -144,7 +144,7 @@ SystemApi::Window *SystemApi::createWindow(SystemApi::WindowCallback *callback, 
                                 WS_OVERLAPPEDWINDOW |  // window style
                                 WS_VISIBLE | WS_SYSMENU,
                                 0, 0,                  // x/y coords
-                                wr.right - wr.left,    // width
+                                wr.right  - wr.left,   // width
                                 wr.bottom - wr.top,    // height
                                 nullptr,               // handle to parent
                                 nullptr,               // handle to menu
@@ -294,6 +294,39 @@ Rect SystemApi::windowClientRect(SystemApi::Window* w) {
   int cH = rectWindow.bottom - rectWindow.top;
 
   return Rect(rectWindow.left,rectWindow.top,cW,cH);
+  }
+
+bool SystemApi::setAsFullscreen(SystemApi::Window *wx,bool fullScreen) {
+  HWND hwnd = HWND(wx);
+  if(fullScreen==isFullscreen(wx))
+    return true;
+
+  const int w = GetSystemMetrics(SM_CXSCREEN);
+  const int h = GetSystemMetrics(SM_CYSCREEN);
+  if(fullScreen) {
+    //show full-screen
+    SetWindowLongPtr(hwnd, GWL_STYLE, WS_VISIBLE | WS_POPUP);
+    SetWindowPos    (hwnd, HWND_TOP, 0, 0, w, h, SWP_FRAMECHANGED);
+    ShowWindow      (hwnd, SW_SHOW);
+    } else {
+    SetWindowLongPtr(hwnd, GWL_STYLE, WS_VISIBLE | WS_OVERLAPPEDWINDOW);
+    SetWindowPos    (hwnd, nullptr, 0, 0, w, h, SWP_FRAMECHANGED);
+    ShowWindow      (hwnd, SW_MAXIMIZE);
+    }
+  return true;
+  }
+
+bool SystemApi::isFullscreen(SystemApi::Window *w) {
+  HWND hwnd = HWND(w);
+  return ULONG(GetWindowLongPtr(hwnd, GWL_STYLE)) & WS_POPUP;
+  }
+
+void SystemApi::setCursorPosition(int x, int y) {
+  SetCursorPos(x,y);
+  }
+
+void SystemApi::showCursor(bool show) {
+  ShowCursor(show ? TRUE : FALSE);
   }
 
 LRESULT CALLBACK WindowProc( HWND   hWnd,

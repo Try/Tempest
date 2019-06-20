@@ -39,6 +39,12 @@ class SystemApi {
     static uint32_t height(Window* w);
     static Rect     windowClientRect(SystemApi::Window *w);
 
+    static bool     setAsFullscreen(SystemApi::Window *w, bool fullScreen);
+    static bool     isFullscreen(SystemApi::Window *w);
+
+    static void     setCursorPosition(int x, int y);
+    static void     showCursor(bool show);
+
     struct TranslateKeyPair final {
       uint16_t src;
       uint16_t result;
