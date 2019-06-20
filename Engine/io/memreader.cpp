@@ -11,6 +11,12 @@ MemReader::MemReader(const char *vec, size_t sz):vec(reinterpret_cast<const uint
 MemReader::MemReader(const uint8_t *vec, size_t sz):vec(vec), sz(sz) {
   }
 
+MemReader::MemReader(const std::vector<char> &vec):MemReader(vec.data(),vec.size()){
+  }
+
+MemReader::MemReader(const std::vector<uint8_t> &vec):MemReader(vec.data(),vec.size()){
+  }
+
 size_t MemReader::read(void *dest, size_t count) {
   size_t c = std::min(count, sz-pos);
 
