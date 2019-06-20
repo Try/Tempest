@@ -618,9 +618,9 @@ void Widget::dispatchMouseDrag(MouseEvent &event) {
                   event.type());
     state.mouseFocus->dispatchMouseDrag(ex);
     } else {
-    if(wstate.mousePressed) {
-      mouseDragEvent(event);
-      }
+    if(wstate.mousePressed)
+      mouseDragEvent(event); else
+      event.ignore();
     }
   }
 
