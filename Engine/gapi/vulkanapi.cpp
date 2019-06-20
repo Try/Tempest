@@ -68,7 +68,7 @@ AbstractGraphicsApi::PPass VulkanApi::createPass(AbstractGraphicsApi::Device *d,
                                                  FboMode fzbuf, const float *zclear) {
   VkFormat zfrm=VkFormat::VK_FORMAT_UNDEFINED;
   if(isDepthFormat(zformat))
-    zfrm=VkFormat::VK_FORMAT_D16_UNORM;
+    zfrm=Detail::nativeFormat(zformat);
 
   Detail::VDevice*    dx=reinterpret_cast<Detail::VDevice*>(d);
   Detail::VSwapchain* sx=reinterpret_cast<Detail::VSwapchain*>(s);

@@ -15,7 +15,8 @@
 using namespace Tempest::Detail;
 
 static const std::initializer_list<const char*> validationLayers = {
-  "VK_LAYER_LUNARG_standard_validation"
+  "VK_LAYER_LUNARG_standard_validation",
+  "VK_LAYER_GOOGLE_threading"
   };
 
 static const std::initializer_list<const char*> deviceExtensions = {

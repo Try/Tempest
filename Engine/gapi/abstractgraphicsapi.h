@@ -63,6 +63,7 @@ namespace Tempest {
     RGBA8,
     RG16,
     Depth16,
+    Depth24x8,
     DXT1,
     DXT3,
     DXT5,
@@ -70,7 +71,7 @@ namespace Tempest {
     };
 
   inline bool isDepthFormat(TextureFormat f){
-    return f==TextureFormat::Depth16;
+    return f==TextureFormat::Depth16 || f==TextureFormat::Depth24x8;
     }
 
   inline bool isCompressedFormat(TextureFormat f){
