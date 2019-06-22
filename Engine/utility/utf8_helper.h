@@ -71,6 +71,22 @@ class Utf8Iterator {
       return '\0';
       }
 
+    char32_t peek() const {
+      const auto l = Detail::utf8LetterLength(str);
+
+      if(str+l>end){
+        return '\0';
+        }
+
+      switch(l){
+        case 1: return Detail::getChar1(str);
+        case 2: return Detail::getChar2(str);
+        case 3: return Detail::getChar3(str);
+        case 4: return Detail::getChar4(str);
+        }
+      return '\0';
+      }
+
     char32_t next(){
       const auto l = Detail::utf8LetterLength(str);
 
@@ -111,6 +127,18 @@ class Utf8Iterator {
 
     void operator ++ () {
       str += Detail::utf8LetterLength(str);
+      }
+
+    bool operator == (const Utf8Iterator& other) const {
+      return str==other.str &&
+             beg==other.beg &&
+             end==other.end;
+      }
+
+    bool operator != (const Utf8Iterator& other) const {
+      return str!=other.str ||
+             beg!=other.beg ||
+             end!=other.end;
       }
 
   private:
