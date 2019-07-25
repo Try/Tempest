@@ -60,7 +60,7 @@ bool SoundEffect::isFinished() const {
   int32_t state=0;
   ALCcontext* ctx = reinterpret_cast<ALCcontext*>(this->ctx);
   alGetSourceivCt(ctx,source,AL_SOURCE_STATE,&state);
-  return state==AL_STOPPED;
+  return state==AL_STOPPED || state==AL_INITIAL;
   }
 
 uint64_t Tempest::SoundEffect::timeLength() const {

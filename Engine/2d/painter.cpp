@@ -376,7 +376,7 @@ static Utf8Iterator advanceByLine(Utf8Iterator i, int& x, int w, Font& fnt, Text
     Utf8Iterator eow = advanceByWord(i,x,w,fnt,ta);
     ++wordCount;
 
-    if(x>=w && wordCount>0)
+    if(x>=w && wordCount>1)
       break;
     auto c=eow.next();
     if(c=='\0' || c=='\n'){
@@ -384,7 +384,7 @@ static Utf8Iterator advanceByLine(Utf8Iterator i, int& x, int w, Font& fnt, Text
       break;
       }
     auto l=fnt.letter(c,ta);
-    if(x+l.dpos.x+l.view.w()>=w && wordCount>0)
+    if(x+l.dpos.x+l.view.w()>=w && wordCount>1)
       break;
     x += l.advance.x;
     i = eow;
@@ -411,6 +411,8 @@ void Painter::drawText(int rx, int ry, int w, int /*h*/, const char *txt, AlignF
         setBrush(pb);
         return;
         }
+      if(c=='\n' || c=='\r')
+        continue;
       auto l=fnt.letter(c,ta);
 
       if(!l.view.isEmpty()) {
