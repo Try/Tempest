@@ -31,7 +31,7 @@ class Texture2d {
     int                                               texW=0;
     int                                               texH=0;
     Sampler2d                                         smp;
-    TextureFormat                                     frm=RGBA8;
+    TextureFormat                                     frm=Undefined;
 
   friend class Tempest::Device;
   friend class Tempest::Uniforms;

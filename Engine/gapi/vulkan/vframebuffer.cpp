@@ -56,6 +56,23 @@ VFramebuffer::VFramebuffer(VDevice &device, VRenderPass &renderPass, uint32_t w,
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
   }
 
+VFramebuffer::VFramebuffer(VDevice &device, VRenderPass &renderPass, uint32_t w, uint32_t h, VTexture &color)
+  :device(device.device) {
+  VkImageView attach[1] = {color.view};
+
+  VkFramebufferCreateInfo framebufferInfo = {};
+  framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+  framebufferInfo.renderPass      = renderPass.impl;
+  framebufferInfo.pAttachments    = attach;
+  framebufferInfo.attachmentCount = 1;
+  framebufferInfo.width           = w;
+  framebufferInfo.height          = h;
+  framebufferInfo.layers          = 1;
+
+  if(vkCreateFramebuffer(device.device,&framebufferInfo,nullptr,&impl)!=VK_SUCCESS)
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+  }
+
 VFramebuffer::VFramebuffer(VFramebuffer &&other) {
   std::swap(impl,other.impl);
   std::swap(device,other.device);

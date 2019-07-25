@@ -19,8 +19,8 @@ VRenderPass::VRenderPass(VDevice& device,
   colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
   colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
-  colorAttachment.initialLayout  = bool(color&FboMode::PreserveIn) ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_UNDEFINED;
-  colorAttachment.finalLayout    = bool(color&FboMode::PresentOut) ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR          : VK_IMAGE_LAYOUT_GENERAL;//VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+  colorAttachment.initialLayout  = bool(color&FboMode::PreserveIn) ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
+  colorAttachment.finalLayout    = bool(color&FboMode::PresentOut) ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR          : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
   VkAttachmentDescription& depthAttachment = attach[1];
   depthAttachment.format         = zformat;

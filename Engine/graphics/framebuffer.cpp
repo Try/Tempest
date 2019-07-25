@@ -8,5 +8,5 @@ FrameBuffer::FrameBuffer(Device &dev, AbstractGraphicsApi::Fbo *impl, uint32_t w
   }
 
 FrameBuffer::~FrameBuffer() {
-  dev->destroy(*this);
+  delete impl.handler;
   }

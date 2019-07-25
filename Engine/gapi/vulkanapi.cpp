@@ -124,9 +124,15 @@ AbstractGraphicsApi::Fbo *VulkanApi::createFbo(AbstractGraphicsApi::Device *d,
   return new Detail::VFramebuffer(*dx,*px,w,h,*cl,*tx);
   }
 
-void VulkanApi::destroy(AbstractGraphicsApi::Fbo *pass) {
-  Detail::VFramebuffer* px=reinterpret_cast<Detail::VFramebuffer*>(pass);
-  delete px;
+AbstractGraphicsApi::Fbo *VulkanApi::createFbo(AbstractGraphicsApi::Device *d,
+                                               uint32_t w, uint32_t h,
+                                               AbstractGraphicsApi::Pass *pass,
+                                               AbstractGraphicsApi::Texture *tcl) {
+  Detail::VDevice*     dx=reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VRenderPass* px=reinterpret_cast<Detail::VRenderPass*>(pass);
+  Detail::VTexture*    cl=reinterpret_cast<Detail::VTexture*>(tcl);
+
+  return new Detail::VFramebuffer(*dx,*px,w,h,*cl);
   }
 
 AbstractGraphicsApi::PPipeline VulkanApi::createPipeline(AbstractGraphicsApi::Device *d,
@@ -264,7 +270,8 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   if(isDepthFormat(frm)) {
     lay = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     } else {
-    lay = VK_IMAGE_LAYOUT_GENERAL; //VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    //lay = VK_IMAGE_LAYOUT_GENERAL;
+    lay = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     }
 
   dat.hold(pbuf);

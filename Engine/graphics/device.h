@@ -89,9 +89,11 @@ class Device {
     FrameBuffer    frameBuffer(Frame &out, RenderPass& pass);
     FrameBuffer    frameBuffer(Frame &out, Texture2d& zbuf, RenderPass& pass);
     FrameBuffer    frameBuffer(Texture2d &out, Texture2d& zbuf, RenderPass& pass);
+    FrameBuffer    frameBuffer(Texture2d &out, RenderPass& pass);
 
     RenderPass     pass       (FboMode color, FboMode zbuf, TextureFormat zbufFormat);
     RenderPass     pass       (const Tempest::Color& color);
+    RenderPass     pass       (const Tempest::Color& color,TextureFormat clFormat);
     RenderPass     pass       (const Tempest::Color& color,FboMode zbuf, TextureFormat zbufFormat);
     RenderPass     pass       (const Tempest::Color& color,const float zbuf,TextureFormat zbufFormat);
     RenderPass     pass       (const Tempest::Color& color,const float zbuf,TextureFormat clFormat,TextureFormat zbufFormat);
@@ -141,7 +143,6 @@ class Device {
                              const Decl::ComponentType *decl, size_t declSize,
                              size_t stride, Topology tp);
 
-    void       destroy(FrameBuffer&    f);
     void       destroy(Fence&          f);
     void       destroy(Semaphore&      s);
     void       destroy(CommandPool&    c);

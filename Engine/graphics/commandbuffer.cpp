@@ -64,9 +64,18 @@ void CommandBuffer::setViewport(const Rect &vp) {
   impl.handler->setViewport(vp);
   }
 
-void CommandBuffer::changeLayout(Texture2d &t, TextureLayout prev, TextureLayout next) {
+void CommandBuffer::exchangeLayout(Texture2d &t, TextureLayout src, TextureLayout dest) {
+  implEndRenderPass();
+
   if(t.impl.handler)
-    impl.handler->changeLayout(*t.impl.handler,prev,next);
+    impl.handler->changeLayout(*t.impl.handler,src,dest);
+  }
+
+void CommandBuffer::barrier(Texture2d &t, Stage in, Stage out) {
+  implEndRenderPass();
+
+  if(t.impl.handler)
+    impl.handler->barrier(*t.impl.handler,in,out);
   }
 
 void CommandBuffer::implDraw(const VideoBuffer& vbo, size_t offset, size_t size) {

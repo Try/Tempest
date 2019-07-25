@@ -192,6 +192,13 @@ FrameBuffer Device::frameBuffer(Texture2d &out, Texture2d &zbuf, RenderPass &pas
   return f;
   }
 
+FrameBuffer Device::frameBuffer(Texture2d &out, RenderPass &pass) {
+  uint32_t w = uint32_t(out.w());
+  uint32_t h = uint32_t(out.h());
+  FrameBuffer f(*this,api.createFbo(dev,w,h,pass.impl.handler,out.impl.handler),w,h);
+  return f;
+  }
+
 RenderPass Device::pass(FboMode color, FboMode zbuf, TextureFormat zbufFormat) {
   RenderPass f(api.createPass(dev,swapchain,zbufFormat,color,nullptr,zbuf,nullptr));
   return f;
@@ -199,6 +206,11 @@ RenderPass Device::pass(FboMode color, FboMode zbuf, TextureFormat zbufFormat) {
 
 RenderPass Device::pass(const Color &color) {
   RenderPass f(api.createPass(dev,swapchain,TextureFormat::Undefined,FboMode::PreserveOut,&color,FboMode::Clear,nullptr));
+  return f;
+  }
+
+RenderPass Device::pass(const Color &color, TextureFormat clFormat) {
+  RenderPass f(api.createPass(dev,clFormat,TextureFormat::Undefined,FboMode::PreserveOut,&color,FboMode::Clear,nullptr));
   return f;
   }
 
@@ -268,10 +280,6 @@ Uniforms Device::uniforms(const UniformsLayout &owner) {
     owner.impl=api.createUboLayout(dev,owner);
   Uniforms ubo(*this,api.createDescriptors(dev,owner,owner.impl.get()));
   return ubo;
-  }
-
-void Device::destroy(FrameBuffer &f) {
-  api.destroy(f.impl.handler);
   }
 
 void Device::destroy(Fence &f) {

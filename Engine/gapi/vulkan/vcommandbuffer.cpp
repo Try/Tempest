@@ -305,6 +305,15 @@ void VCommandBuffer::copy(VTexture &dest, size_t width, size_t height, size_t mi
 
 void VCommandBuffer::changeLayout(Tempest::AbstractGraphicsApi::Texture &t,
                                   Tempest::TextureLayout prev, Tempest::TextureLayout next) {
+  static const VkImageLayout frm[]={
+    VK_IMAGE_LAYOUT_UNDEFINED,
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    };
+  changeLayout(reinterpret_cast<VTexture&>(t),frm[uint8_t(prev)],frm[uint8_t(next)],VK_REMAINING_MIP_LEVELS);
+  }
+
+void VCommandBuffer::barrier(Tempest::AbstractGraphicsApi::Texture &t, Tempest::Stage prev, Tempest::Stage next) {
   VkImageMemoryBarrier barrier = {};
   barrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
   barrier.oldLayout           = VK_IMAGE_LAYOUT_GENERAL;
@@ -313,53 +322,36 @@ void VCommandBuffer::changeLayout(Tempest::AbstractGraphicsApi::Texture &t,
   barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   barrier.image               = reinterpret_cast<VTexture&>(t).impl;
 
+  barrier.srcAccessMask       = VK_ACCESS_SHADER_WRITE_BIT;
+  barrier.dstAccessMask       = VK_ACCESS_SHADER_READ_BIT;
+
   barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
   barrier.subresourceRange.baseMipLevel   = 0;
-  barrier.subresourceRange.levelCount     = 1/*mipCount*/;
+  barrier.subresourceRange.levelCount     = VK_REMAINING_MIP_LEVELS;
   barrier.subresourceRange.baseArrayLayer = 0;
   barrier.subresourceRange.layerCount     = 1;
 
+  static const VkPipelineStageFlags stagePrev[]={
+    VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+    VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT
+    };
+
+  static const VkPipelineStageFlags stageNx[]={
+    VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+    };
+
   vkCmdPipelineBarrier(
       impl,
-      VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+      stagePrev[int(prev)], stageNx[int(next)],
       0,
       0, nullptr,
       0, nullptr,
       0, &barrier
       );
-  /*
-  VkImageLayout frm[]={
-    VK_IMAGE_LAYOUT_UNDEFINED,
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-    };
-  changeLayout(reinterpret_cast<VTexture&>(t),frm[uint8_t(prev)],frm[uint8_t(next)],1);*/
   }
 
 void VCommandBuffer::changeLayout(VTexture &dest,VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount) {
-  /*
-  VkImageMemoryBarrier barrier = {};
-  barrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-  barrier.oldLayout           = oldLayout;
-  barrier.newLayout           = newLayout;
-  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.image               = dest.impl;
-
-  barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-  barrier.subresourceRange.baseMipLevel   = 0;
-  barrier.subresourceRange.levelCount     = mipCount;
-  barrier.subresourceRange.baseArrayLayer = 0;
-  barrier.subresourceRange.layerCount     = 1;
-
-  vkCmdPipelineBarrier(
-      impl,
-      VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-      0,
-      0, nullptr,
-      0, nullptr,
-      1, &barrier
-      );*/
   VkImageMemoryBarrier barrier = {};
   barrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
   barrier.oldLayout           = oldLayout;
@@ -377,6 +369,13 @@ void VCommandBuffer::changeLayout(VTexture &dest,VkImageLayout oldLayout, VkImag
   VkPipelineStageFlags sourceStage;
   VkPipelineStageFlags dstStageMask;
 
+  if(oldLayout==VK_IMAGE_LAYOUT_UNDEFINED && newLayout==VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    sourceStage  = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    dstStageMask = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+    } else
   if(oldLayout==VK_IMAGE_LAYOUT_UNDEFINED && newLayout==VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
     barrier.srcAccessMask = 0;
     barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -415,6 +414,14 @@ void VCommandBuffer::changeLayout(VTexture &dest,VkImageLayout oldLayout, VkImag
 
     sourceStage  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     dstStageMask = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+    } else
+  if(oldLayout==VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout==VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
+    barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT|VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    sourceStage  = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+    dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     } else
   if(oldLayout==VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout==VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;

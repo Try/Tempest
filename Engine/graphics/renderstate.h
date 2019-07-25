@@ -46,13 +46,13 @@ class RenderState final {
       Count
       };
 
-    void setBlendSource(BlendMode s) { blendS=s; }
-    void setBlendDest  (BlendMode d) { blendD=d; }
+    void      setBlendSource(BlendMode s) { blendS=s; }
+    void      setBlendDest  (BlendMode d) { blendD=d; }
 
     BlendMode blendSource() const { return blendS; }
     BlendMode blendDest()   const { return blendD; }
 
-    bool hasBlend() const { return blendS!=BlendMode::one || blendD!=BlendMode::zero; }
+    bool      hasBlend() const { return blendS!=BlendMode::one || blendD!=BlendMode::zero; }
 
     void      setZTestMode(ZTestMode z){ zmode=z; }
     ZTestMode zTestMode() const { return zmode; }
@@ -60,8 +60,8 @@ class RenderState final {
     void      setRasterDiscardEnabled(bool e) { discard=e; }
     bool      isRasterDiscardEnabled() const { return discard; }
 
-    CullMode cullFaceMode() const { return cull; }
-    void     setCullFaceMode(CullMode use) { cull=use; }
+    CullMode  cullFaceMode() const { return cull; }
+    void      setCullFaceMode(CullMode use) { cull=use; }
 
   private:
     BlendMode blendS=BlendMode::one;

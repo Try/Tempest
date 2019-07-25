@@ -34,7 +34,7 @@ class VulkanApi : public AbstractGraphicsApi {
     Fbo*         createFbo(Device *d, Swapchain *s, Pass* pass, uint32_t imageId) override;
     Fbo*         createFbo(Device *d, Swapchain *s, Pass* pass, uint32_t imageId, Texture* zbuf) override;
     Fbo*         createFbo(Device *d, uint32_t w, uint32_t h, Pass* pass, Texture* cl, Texture* zbuf) override;
-    void         destroy(Fbo* pass) override;
+    Fbo*         createFbo(Device *d, uint32_t w, uint32_t h, Pass* pass, Texture* cl) override;
 
     PPipeline    createPipeline(Device* d,
                                 const RenderState &st,

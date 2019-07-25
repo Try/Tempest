@@ -188,7 +188,9 @@ namespace Tempest {
         virtual void setSampler(const Sampler2d& s)=0;
         };
       struct Image           {};
-      struct Fbo             {};
+      struct Fbo             {
+        virtual ~Fbo(){}
+        };
       struct Pass:Shared     {};
       struct Pipeline:Shared {};
       struct Shader:Shared   {};
@@ -223,6 +225,7 @@ namespace Tempest {
         virtual void setUniforms (Pipeline& p,Desc& u, size_t offc, const uint32_t* offv)=0;
         virtual void exec        (const AbstractGraphicsApi::CommandBuffer& buf)=0;
         virtual void changeLayout(Texture& t,TextureLayout prev,TextureLayout next)=0;
+        virtual void barrier     (Texture& t,Stage prev,Stage next)=0;
         virtual void setVbo      (const Buffer& b)=0;
         virtual void setIbo      (const Buffer* b,Detail::IndexClass cls)=0;
         virtual void draw        (size_t offset,size_t vertexCount)=0;
@@ -264,7 +267,7 @@ namespace Tempest {
       virtual Fbo*       createFbo(Device *d,Swapchain *s,Pass* pass,uint32_t imageId)=0;
       virtual Fbo*       createFbo(Device *d,Swapchain *s,Pass* pass,uint32_t imageId,Texture* zbuf)=0;
       virtual Fbo*       createFbo(Device *d,uint32_t w, uint32_t h,Pass* pass,Texture* cl,Texture* zbuf)=0;
-      virtual void       destroy(Fbo* pass)=0;
+      virtual Fbo*       createFbo(Device *d,uint32_t w, uint32_t h,Pass* pass,Texture* cl)=0;
 
       virtual std::shared_ptr<AbstractGraphicsApi::UniformsLay>
                          createUboLayout(Device *d,const UniformsLayout&)=0;

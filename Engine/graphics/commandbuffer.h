@@ -53,7 +53,8 @@ class CommandBuffer {
     void draw(const VertexBuffer<T>& vbo,const IndexBuffer<I>& ibo,size_t offset,size_t count)
          { implDraw(vbo.impl,ibo.impl,Detail::indexCls<I>(),offset,count); }
 
-    void changeLayout(Texture2d& t,TextureLayout prev,TextureLayout next);
+    void exchangeLayout(Texture2d& t,TextureLayout src,TextureLayout dest);
+    void barrier(Texture2d& t, Stage in, Stage out);
 
   private:
     CommandBuffer(Tempest::Device& dev,AbstractGraphicsApi::CommandBuffer* f,uint32_t vpWidth,uint32_t vpHeight);
