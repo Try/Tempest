@@ -32,7 +32,12 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
 
     Context = GetContextRef();
     if(!Context) return;
+    alListenerfCt(Context,param,value);
+    ALCcontext_DecRef(Context);
+}
 
+AL_API ALvoid AL_APIENTRY alListenerfCt(ALCcontext *Context, ALenum param, ALfloat value)
+  {
     al_try
     {
         switch(param)
@@ -56,17 +61,21 @@ AL_API ALvoid AL_APIENTRY alListenerf(ALenum param, ALfloat value)
         }
     }
     al_endtry;
-
-    ALCcontext_DecRef(Context);
 }
 
 
 AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat value2, ALfloat value3)
 {
-    ALCcontext *Context;
+  ALCcontext *Context;
 
-    Context = GetContextRef();
-    if(!Context) return;
+  Context = GetContextRef();
+  if(!Context) return;
+  alListener3fCt(Context,param,value1,value2,value3);
+  ALCcontext_DecRef(Context);
+}
+
+AL_API ALvoid AL_APIENTRY alListener3fCt(ALCcontext *Context, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3)
+{
 
     al_try
     {
@@ -99,8 +108,6 @@ AL_API ALvoid AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat val
         }
     }
     al_endtry;
-
-    ALCcontext_DecRef(Context);
 }
 
 
@@ -130,7 +137,7 @@ AL_API ALvoid AL_APIENTRY alListenerfvCt(ALCcontext *Context, ALenum param, cons
 
             case AL_POSITION:
             case AL_VELOCITY:
-                alListener3f(param, values[0], values[1], values[2]);
+                alListener3fCt(Context,param, values[0], values[1], values[2]);
                 return;
         }
     }

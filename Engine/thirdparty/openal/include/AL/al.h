@@ -474,7 +474,9 @@ AL_API ALenum AL_APIENTRY alGetEnumValue(const ALchar *ename);
 
 /** Set Listener parameters */
 AL_API void AL_APIENTRY alListenerf(ALenum param, ALfloat value);
+AL_API void AL_APIENTRY alListenerfCt(ALCcontext *Context, ALenum param, ALfloat value);
 AL_API void AL_APIENTRY alListener3f(ALenum param, ALfloat value1, ALfloat value2, ALfloat value3);
+AL_API void AL_APIENTRY alListener3fCt(ALCcontext *Context, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3);
 AL_API void AL_APIENTRY alListenerfv(ALenum param, const ALfloat *values);
 AL_API void AL_APIENTRY alListenerfvCt(ALCcontext *Context, ALenum param, const ALfloat *values);
 AL_API void AL_APIENTRY alListeneri(ALenum param, ALint value);
