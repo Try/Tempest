@@ -256,6 +256,9 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ALfloat Pitch;
     ALfloat cw;
     ALint i, c;
+    ALfloat MinDist, MaxDist, ClampedDist, Distance, Position[3];
+    ALfloat Attenuation;
+    ALfloat Rolloff;
 
     /* Get device properties */
     NumSends  = Device->NumAuxSends;
@@ -265,12 +268,74 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
     ListenerGain = ALContext->Listener->Gain;
 
     /* Get source properties */
-    SourceVolume    = ALSource->Gain;
-    MinVolume       = ALSource->MinGain;
-    MaxVolume       = ALSource->MaxGain;
-    Pitch           = ALSource->Pitch;
-    Resampler       = ALSource->Resampler;
-    DirectChannels  = ALSource->DirectChannels;
+    SourceVolume   = ALSource->Gain;
+    MinVolume      = ALSource->MinGain;
+    MaxVolume      = ALSource->MaxGain;
+    Pitch          = ALSource->Pitch;
+    Resampler      = ALSource->Resampler;
+    DirectChannels = ALSource->DirectChannels;
+    MinDist        = ALSource->RefDistance;
+    MaxDist        = ALSource->MaxDistance;
+    Position[0]    = ALSource->Position[0];
+    Position[1]    = ALSource->Position[1];
+    Position[2]    = ALSource->Position[2];
+    Rolloff        = ALSource->RollOffFactor;
+
+    ALfloat (*RESTRICT Matrix)[4] = ALContext->Listener->Params.Matrix;
+    /* Transform source vectors */
+    aluMatrixVector(Position, 1.0f, Matrix);
+
+    /* Calculate distance attenuation */
+    Distance = sqrtf(aluDotproduct(Position, Position));
+    ClampedDist = Distance;
+
+    Attenuation = 1.0f;
+
+    switch(ALContext->SourceDistanceModel ? ALSource->DistanceModel :
+                                            ALContext->DistanceModel)
+    {
+        case InverseDistanceClamped:
+            ClampedDist = clampf(ClampedDist, MinDist, MaxDist);
+            if(MaxDist < MinDist)
+                break;
+            /*fall-through*/
+        case InverseDistance:
+            if(MinDist > 0.0f)
+            {
+                if((MinDist + (Rolloff * (ClampedDist - MinDist))) > 0.0f)
+                    Attenuation = MinDist / (MinDist + (Rolloff * (ClampedDist - MinDist)));
+            }
+            break;
+
+        case LinearDistanceClamped:
+            ClampedDist = clampf(ClampedDist, MinDist, MaxDist);
+            if(MaxDist < MinDist)
+                break;
+            /*fall-through*/
+        case LinearDistance:
+            if(MaxDist != MinDist)
+            {
+                Attenuation = 1.0f - (Rolloff*(ClampedDist-MinDist)/(MaxDist - MinDist));
+                Attenuation = maxf(Attenuation, 0.0f);
+            }
+            break;
+
+        case ExponentDistanceClamped:
+            ClampedDist = clampf(ClampedDist, MinDist, MaxDist);
+            if(MaxDist < MinDist)
+                break;
+            /*fall-through*/
+        case ExponentDistance:
+            if(ClampedDist > 0.0f && MinDist > 0.0f)
+            {
+                Attenuation = powf(ClampedDist/MinDist, -Rolloff);
+            }
+            break;
+
+        case DisableDistance:
+            ClampedDist = MinDist;
+            break;
+    }
 
     /* Calculate the stepping value */
     Channels = FmtMono;
@@ -309,7 +374,7 @@ ALvoid CalcNonAttnSourceParams(ALsource *ALSource, const ALCcontext *ALContext)
 
     /* Calculate gains */
     DryGain  = clampf(SourceVolume, MinVolume, MaxVolume);
-    DryGain *= ALSource->DirectGain * ListenerGain;
+    DryGain *= ALSource->DirectGain * ListenerGain * Attenuation;
     DryGainHF = ALSource->DirectGainHF;
     for(i = 0;i < NumSends;i++)
     {
