@@ -34,6 +34,7 @@ class SystemApi {
     static Window*  createWindow(WindowCallback* cb,uint32_t width,uint32_t height);
     static Window*  createWindow(WindowCallback* cb,ShowMode sm);
     static void     destroyWindow(Window* w);
+    static void     exit();
 
     static uint32_t width (Window* w);
     static uint32_t height(Window* w);

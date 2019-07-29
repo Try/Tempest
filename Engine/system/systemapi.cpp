@@ -4,6 +4,7 @@
 #include <Tempest/Event>
 #include <thread>
 #include <unordered_set>
+#include <atomic>
 
 #include <windows.h>
 
@@ -22,6 +23,7 @@ static LRESULT CALLBACK WindowProc(HWND hWnd,UINT msg,const WPARAM wParam,const 
 static const wchar_t*                         wndClassName=L"Tempest.Window";
 static std::unordered_set<SystemApi::Window*> windows;
 static KeyInf                                 ki;
+static std::atomic_bool                       isExit{0};
 
 static int getIntParam(DWORD_PTR v){
   if(v>std::numeric_limits<int16_t>::max())
@@ -193,6 +195,10 @@ void SystemApi::destroyWindow(SystemApi::Window *w) {
   DestroyWindow(HWND(w));
   }
 
+void SystemApi::exit() {
+  isExit.store(true);
+  }
+
 uint16_t SystemApi::translateKey(uint64_t scancode) {
   for(size_t i=0; i<ki.keys.size(); ++i)
     if( ki.keys[i].src==scancode )
@@ -249,13 +255,12 @@ void SystemApi::setupKeyTranslate(const TranslateKeyPair k[], uint16_t funcCount
   }
 
 int SystemApi::exec(AppCallBack& cb) {
-  bool done=false;
   // main message loop
-  while (!done) {
+  while (!isExit.load()) {
     MSG msg={};
     if(PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
       if( msg.message==WM_QUIT ) { // check for a quit message
-        done = true;  // if found, quit app
+        isExit.store(true);  // if found, quit app
         } else {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
