@@ -48,6 +48,7 @@ inline VkFormat nativeFormat(TextureFormat f){
     VK_FORMAT_R16G16_UNORM,
     VK_FORMAT_D16_UNORM,
     VK_FORMAT_X8_D24_UNORM_PACK32,
+    VK_FORMAT_D24_UNORM_S8_UINT,
     VK_FORMAT_BC1_RGBA_UNORM_BLOCK,
     VK_FORMAT_BC2_UNORM_BLOCK,
     VK_FORMAT_BC3_UNORM_BLOCK,
@@ -107,6 +108,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     VkResult                present(VSwapchain& sw,const VSemaphore *wait,size_t wSize,uint32_t imageId);
 
     void                    waitData();
+    const char*             renderer() const override;
 
     SwapChainSupportDetails querySwapChainSupport() { return querySwapChainSupport(physicalDevice); }
     QueueFamilyIndices      findQueueFamilies    () { return findQueueFamilies(physicalDevice);     }
@@ -161,9 +163,10 @@ class VDevice : public AbstractGraphicsApi::Device {
         bool                   hasToWait=false;
       };
 
-    VkInstance             instance;
+    VkInstance              instance;
     VkPhysicalDeviceMemoryProperties memoryProperties;
     std::unique_ptr<DataHelper> data;
+    char                    deviceName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE]={};
 
     void                    pickPhysicalDevice();
     bool                    isDeviceSuitable(VkPhysicalDevice device);

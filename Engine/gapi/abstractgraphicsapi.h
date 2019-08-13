@@ -64,6 +64,7 @@ namespace Tempest {
     RG16,
     Depth16,
     Depth24x8,
+    Depth24S8,
     DXT1,
     DXT3,
     DXT5,
@@ -163,13 +164,16 @@ namespace Tempest {
 
           bool     hasSamplerFormat(TextureFormat f) const;
           bool     hasAttachFormat (TextureFormat f) const;
+          bool     hasDepthFormat  (TextureFormat f) const;
 
-          void     setSamplerFormats(uint64_t t) { smpFormat = t; }
-          void     setAttachFormats (uint64_t t) { attFormat = t; }
+          void     setSamplerFormats(uint64_t t) { smpFormat  = t; }
+          void     setAttachFormats (uint64_t t) { attFormat  = t; }
+          void     setDepthFormat   (uint64_t t) { dattFormat = t;}
 
         private:
-          uint64_t smpFormat=0;
-          uint64_t attFormat=0;
+          uint64_t smpFormat =0;
+          uint64_t attFormat =0;
+          uint64_t dattFormat=0;
         };
 
       struct Shared {
@@ -177,7 +181,10 @@ namespace Tempest {
         std::atomic_uint_fast32_t counter{0};
         };
 
-      struct Device       {};
+      struct Device       {
+        virtual ~Device()=default;
+        virtual const char* renderer() const=0;
+        };
       struct Swapchain    {
         virtual ~Swapchain(){}
         virtual uint32_t      imageCount() const=0;

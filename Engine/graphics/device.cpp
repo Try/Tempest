@@ -125,7 +125,7 @@ const Device::Caps &Device::caps() const {
   }
 
 Texture2d Device::createTexture(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips) {
-  if(!devCaps.hasSamplerFormat(frm) && !devCaps.hasAttachFormat(frm))
+  if(!devCaps.hasSamplerFormat(frm) && !devCaps.hasAttachFormat(frm) && !devCaps.hasDepthFormat(frm))
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
   uint32_t mipCnt = mips ? mipCount(w,h) : 1;
   Texture2d t(*this,api.createTexture(dev,w,h,mipCnt,frm),w,h,frm);
@@ -258,6 +258,10 @@ CommandBuffer Device::commandSecondaryBuffer(const RenderPass& pass, uint32_t vp
 
 const Builtin &Device::builtin() const {
   return builtins;
+  }
+
+const char *Device::renderer() const {
+  return dev->renderer();
   }
 
 Fence Device::createFence() {

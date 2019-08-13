@@ -106,7 +106,8 @@ class Device {
     CommandBuffer        commandSecondaryBuffer(const RenderPass &pass,int32_t  vpWidth,int32_t vpHeight);
     CommandBuffer        commandSecondaryBuffer(const RenderPass &pass,uint32_t vpWidth,uint32_t vpHeight);
 
-    const Builtin& builtin() const;
+    const Builtin&       builtin() const;
+    const char*          renderer() const;
 
   private:
     struct Impl {

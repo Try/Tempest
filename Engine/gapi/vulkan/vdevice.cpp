@@ -211,7 +211,7 @@ void VDevice::createLogicalDevice(VulkanApi& api) {
   QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
 
   std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-  std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily, indices.presentFamily};
+  std::initializer_list<uint32_t>      uniqueQueueFamilies = {indices.graphicsFamily, indices.presentFamily};
 
   float queuePriority = 1.0f;
   for (uint32_t queueFamily : uniqueQueueFamilies) {
@@ -253,6 +253,10 @@ void VDevice::createLogicalDevice(VulkanApi& api) {
 
   vkGetDeviceQueue(device, indices.graphicsFamily, 0, &graphicsQueue);
   vkGetDeviceQueue(device, indices.presentFamily,  0, &presentQueue);
+
+  VkPhysicalDeviceProperties prop={};
+  vkGetPhysicalDeviceProperties(physicalDevice,&prop);
+  std::memcpy(deviceName,prop.deviceName,sizeof(deviceName));
   }
 
 uint32_t VDevice::memoryTypeIndex(uint32_t typeBits,VkMemoryPropertyFlags props) const {
@@ -273,6 +277,7 @@ void VDevice::getCaps(AbstractGraphicsApi::Caps &c) {
   VkFormatFeatureFlags imageRqFlags   = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT|VK_FORMAT_FEATURE_BLIT_DST_BIT|VK_FORMAT_FEATURE_BLIT_SRC_BIT;
   VkFormatFeatureFlags imageRqFlagsBC = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
   VkFormatFeatureFlags attachRqFlags  = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT|VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
+  VkFormatFeatureFlags depthAttflags  = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
   VkFormatProperties frm={};
   vkGetPhysicalDeviceFormatProperties(physicalDevice,VK_FORMAT_R8G8B8_UNORM,&frm);
   c.rgb8  = ((frm.optimalTilingFeatures & imageRqFlags)==imageRqFlags) &&
@@ -291,7 +296,7 @@ void VDevice::getCaps(AbstractGraphicsApi::Caps &c) {
   c.anisotropy    = supportedFeatures.samplerAnisotropy;
   c.maxAnisotropy = prop.limits.maxSamplerAnisotropy;
 
-  uint64_t smpFormat=0,attFormat=0;
+  uint64_t smpFormat=0, attFormat=0, dattFormat=0;
   for(size_t i=0;i<TextureFormat::Last;++i){
     VkFormat f = Detail::nativeFormat(TextureFormat(i));
     vkGetPhysicalDeviceFormatProperties(physicalDevice,f,&frm);
@@ -307,9 +312,13 @@ void VDevice::getCaps(AbstractGraphicsApi::Caps &c) {
     if((frm.optimalTilingFeatures & attachRqFlags)==attachRqFlags){
       attFormat |= (1<<i);
       }
+    if((frm.optimalTilingFeatures & depthAttflags)==depthAttflags){
+      dattFormat |= (1<<i);
+      }
     }
   c.setSamplerFormats(smpFormat);
   c.setAttachFormats (attFormat);
+  c.setDepthFormat   (dattFormat);
   }
 
 void VDevice::submitQueue(VkQueue q,VkSubmitInfo& submitInfo,VkFence fence,bool wd) {
@@ -336,6 +345,10 @@ VkResult VDevice::present(VSwapchain &sw, const VSemaphore *wait, size_t wSize, 
 
 void VDevice::waitData() {
   data->wait();
+  }
+
+const char *VDevice::renderer() const {
+  return deviceName;
   }
 
 
