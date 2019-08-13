@@ -30,7 +30,7 @@ RFile::RFile(const std::u16string &path)
   }
 
 void* RFile::implOpen(const wchar_t *wstr) {
-  void* ret = CreateFileW(wstr,GENERIC_READ,0,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
+  void* ret = CreateFileW(wstr,GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
   if(ret==HANDLE(LONG_PTR(-1)))
     throw std::system_error(Tempest::SystemErrc::UnableToOpenFile);
   return ret;
