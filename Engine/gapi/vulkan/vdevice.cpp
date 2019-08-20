@@ -215,6 +215,14 @@ void VDevice::createLogicalDevice(VulkanApi& api) {
 
   float queuePriority = 1.0f;
   for (uint32_t queueFamily : uniqueQueueFamilies) {
+    bool skip=false;
+    for(auto& i:queueCreateInfos)
+      if(i.queueFamilyIndex==queueFamily){
+        skip=true;
+        break;
+        }
+    if(skip)
+      continue;
     VkDeviceQueueCreateInfo queueCreateInfo = {};
     queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queueCreateInfo.queueFamilyIndex = queueFamily;
