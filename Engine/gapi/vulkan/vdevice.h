@@ -92,9 +92,10 @@ class VDevice : public AbstractGraphicsApi::Device {
     VDevice(VulkanApi& api,void* hwnd);
     ~VDevice();
 
-    VkSurfaceKHR            surface       =VK_NULL_HANDLE;
-    VkPhysicalDevice        physicalDevice=nullptr;
-    VkDevice                device        =nullptr;
+    VkSurfaceKHR            surface            =VK_NULL_HANDLE;
+    VkPhysicalDevice        physicalDevice     =nullptr;
+    VkDevice                device             =nullptr;
+    size_t                  nonCoherentAtomSize=1;
 
     std::mutex              graphicsSync;
     VkQueue                 graphicsQueue =nullptr;

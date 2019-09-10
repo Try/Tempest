@@ -63,6 +63,23 @@ void VAllocator::Provider::freeLast() {
   lastFree=VK_NULL_HANDLE;
   }
 
+static size_t GCD(size_t n1, size_t n2) {
+  if(n1==n2)
+    return n1;
+
+  if(n1<n2) {
+    size_t d = n2 - n1;
+    return GCD(n1, d);
+    } else {
+    size_t d = n1 - n2;
+    return GCD(n2, d);
+    }
+  }
+
+static size_t LCM(size_t n1, size_t n2)  {
+  return n1*n2 / GCD(n1, n2);
+  }
+
 VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferFlags bufFlg) {
   VBuffer ret;
   ret.alloc = this;
@@ -94,16 +111,18 @@ VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferFl
 
   uint32_t props=0;
   if(bool(bufFlg&BufferFlags::Staging))
-    props|=(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-    //props|=VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    props|=VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    //props|=(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT); to avoid vkFlushMappedMemoryRanges
   if(bool(bufFlg&BufferFlags::Static))
     props|=VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
   if(bool(bufFlg&BufferFlags::Dynamic))
-    props|=(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    props|=(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    //props|=(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
   uint32_t typeId=provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits(props));
 
-  ret.page=allocator.alloc(size_t(memRq.size),size_t(memRq.alignment),typeId);
+  const size_t align = LCM(size_t(memRq.alignment),provider.device->nonCoherentAtomSize);
+  ret.page=allocator.alloc(size_t(memRq.size),align,typeId);
   if(!ret.page.page)
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
   if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,mem,ret.page.offset,size))
@@ -215,12 +234,20 @@ void VAllocator::free(VTexture &buf) {
 
 bool VAllocator::update(VBuffer &dest, const void *mem, size_t offset, size_t size) {
   auto& page = dest.page;
-  void* data=nullptr;
+  void* data = nullptr;
 
   std::lock_guard<std::mutex> g(page.page->mmapSync);
   if(vkMapMemory(device,page.page->memory,page.offset+offset,size,0,&data)!=VkResult::VK_SUCCESS)
     return false;
   std::memcpy(data,mem,size);
+
+  VkMappedMemoryRange rgn={};
+  rgn.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+  rgn.memory = page.page->memory;
+  rgn.offset = page.offset+offset; //TODO: nonCoherentAtomSize
+  rgn.size   = size;
+  vkFlushMappedMemoryRanges(device,1,&rgn);
+
   vkUnmapMemory(device,page.page->memory);
   return true;
   }

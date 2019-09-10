@@ -327,6 +327,10 @@ void VDevice::getCaps(AbstractGraphicsApi::Caps &c) {
   c.setSamplerFormats(smpFormat);
   c.setAttachFormats (attFormat);
   c.setDepthFormat   (dattFormat);
+
+  nonCoherentAtomSize = size_t(prop.limits.nonCoherentAtomSize);
+  if(nonCoherentAtomSize==0)
+    nonCoherentAtomSize=1;
   }
 
 void VDevice::submitQueue(VkQueue q,VkSubmitInfo& submitInfo,VkFence fence,bool wd) {
