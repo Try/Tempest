@@ -45,6 +45,21 @@ struct GraphicsErrCategory : std::error_category {
 inline std::error_code make_error_code(Tempest::GraphicsErrc e) noexcept {
   return {static_cast<int>(e),Tempest::GraphicsErrCategory::instance()};
   }
+
+enum class SoundErrc {
+  NoDevice = 0,
+  };
+
+struct SoundErrCategory : std::error_category {
+  const char* name() const noexcept override;
+  std::string message(int ev) const override;
+
+  static const SoundErrCategory& instance();
+  };
+
+inline std::error_code make_error_code(Tempest::SoundErrc e) noexcept {
+  return {static_cast<int>(e),Tempest::SoundErrCategory::instance()};
+  }
 }
 
 namespace std {
@@ -53,6 +68,9 @@ struct is_error_code_enum<Tempest::SystemErrc> : true_type {};
 
 template<>
 struct is_error_code_enum<Tempest::GraphicsErrc> : true_type {};
+
+template<>
+struct is_error_code_enum<Tempest::SoundErrc> : true_type {};
 }
 
 

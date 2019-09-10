@@ -25,6 +25,7 @@ const SystemErrCategory &SystemErrCategory::instance() {
   return e;
   }
 
+
 const char *GraphicsErrCategory::name() const noexcept {
   return "Tempest.AbstractGraphicsApi.Error";
   }
@@ -47,5 +48,23 @@ std::string GraphicsErrCategory::message(int ev) const {
 
 const GraphicsErrCategory &GraphicsErrCategory::instance() {
   static GraphicsErrCategory e;
+  return e;
+  }
+
+
+const char *SoundErrCategory::name() const noexcept {
+  return "Tempest.SoundDevice.Error";
+  }
+
+std::string SoundErrCategory::message(int ev) const {
+  switch(static_cast<SoundErrc>(ev)){
+    case SoundErrc::NoDevice:
+      return "No device";
+    }
+  return "(unrecognized error)";
+  }
+
+const SoundErrCategory &SoundErrCategory::instance() {
+  static SoundErrCategory e;
   return e;
   }

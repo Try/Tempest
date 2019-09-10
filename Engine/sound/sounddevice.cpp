@@ -6,6 +6,7 @@
 #include <Tempest/File>
 #include <Tempest/Sound>
 #include <Tempest/SoundEffect>
+#include <Tempest/Except>
 
 #include <mutex>
 
@@ -29,6 +30,8 @@ struct SoundDevice::Device {
 SoundDevice::SoundDevice():data( new Data() ) {
   data->dev     = device();
   data->context = alcCreateContext(data->dev->dev,nullptr);
+  if(!data->context)
+    throw std::system_error(Tempest::SoundErrc::NoDevice);
   alcMakeContextCurrent(data->context);
   alDistanceModel(AL_LINEAR_DISTANCE);
   process();
