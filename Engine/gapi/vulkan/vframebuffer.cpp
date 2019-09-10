@@ -7,85 +7,135 @@
 
 using namespace Tempest::Detail;
 
-VFramebuffer::VFramebuffer(VDevice& device,VRenderPass& renderPass,VSwapchain& swapchain,size_t image)
-  :device(device.device) {
-  VkFramebufferCreateInfo framebufferInfo = {};
-  framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-  framebufferInfo.renderPass      = renderPass.impl;
-  framebufferInfo.pAttachments    = &swapchain.swapChainImageViews[image];
-  framebufferInfo.attachmentCount = 1;
-  framebufferInfo.width           = swapchain.w();
-  framebufferInfo.height          = swapchain.h();
-  framebufferInfo.layers          = 1;
-
-  if(vkCreateFramebuffer(device.device,&framebufferInfo,nullptr,&impl)!=VK_SUCCESS)
-    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+VFramebuffer::Inputs::Inputs(VSwapchain &swapchain, size_t image)
+  :sw(&swapchain), swImg(image) {
+  crt.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+  crt.renderPass      = VK_NULL_HANDLE;//renderPass.impl;
+  crt.pAttachments    = &swapchain.swapChainImageViews[image];
+  crt.attachmentCount = 1;
+  crt.width           = swapchain.w();
+  crt.height          = swapchain.h();
+  crt.layers          = 1;
   }
 
-VFramebuffer::VFramebuffer(VDevice &device, VRenderPass &renderPass, VSwapchain &swapchain, size_t image, VTexture &zbuf)
-  :device(device.device) {
+VFramebuffer::Inputs::Inputs(VSwapchain &swapchain, size_t image, VTexture &zbuf)
+  :sw(&swapchain), swImg(image) {
+  tx[0] = DSharedPtr<VTexture*>(&zbuf);
+
   VkImageView attach[2] = {swapchain.swapChainImageViews[image],zbuf.view};
 
-  VkFramebufferCreateInfo framebufferInfo = {};
-  framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-  framebufferInfo.renderPass      = renderPass.impl;
-  framebufferInfo.pAttachments    = attach;
-  framebufferInfo.attachmentCount = 2;
-  framebufferInfo.width           = swapchain.w();
-  framebufferInfo.height          = swapchain.h();
-  framebufferInfo.layers          = 1;
-
-  if(vkCreateFramebuffer(device.device,&framebufferInfo,nullptr,&impl)!=VK_SUCCESS)
-    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+  crt.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+  crt.renderPass      = VK_NULL_HANDLE;//renderPass.impl;
+  crt.pAttachments    = attach;
+  crt.attachmentCount = 2;
+  crt.width           = swapchain.w();
+  crt.height          = swapchain.h();
+  crt.layers          = 1;
   }
 
-VFramebuffer::VFramebuffer(VDevice &device, VRenderPass &renderPass, uint32_t w, uint32_t h, VTexture &color, VTexture &zbuf)
-  :device(device.device) {
-  VkImageView attach[2] = {color.view,zbuf.view};
-
-  VkFramebufferCreateInfo framebufferInfo = {};
-  framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-  framebufferInfo.renderPass      = renderPass.impl;
-  framebufferInfo.pAttachments    = attach;
-  framebufferInfo.attachmentCount = 2;
-  framebufferInfo.width           = w;
-  framebufferInfo.height          = h;
-  framebufferInfo.layers          = 1;
-
-  if(vkCreateFramebuffer(device.device,&framebufferInfo,nullptr,&impl)!=VK_SUCCESS)
-    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+VFramebuffer::Inputs::Inputs(uint32_t w, uint32_t h, VTexture &color) {
+  tx[1] = DSharedPtr<VTexture*>(&color);
+  crt.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+  //crt.renderPass      = renderPass.impl;
+  //crt.pAttachments    = attach;
+  crt.attachmentCount = 2;
+  crt.width           = w;
+  crt.height          = h;
+  crt.layers          = 1;
   }
 
-VFramebuffer::VFramebuffer(VDevice &device, VRenderPass &renderPass, uint32_t w, uint32_t h, VTexture &color)
-  :device(device.device) {
-  VkImageView attach[1] = {color.view};
+VFramebuffer::Inputs::Inputs(uint32_t w, uint32_t h, VTexture &color, VTexture &zbuf) {
+  tx[0] = DSharedPtr<VTexture*>(&zbuf);
+  tx[1] = DSharedPtr<VTexture*>(&color);
 
-  VkFramebufferCreateInfo framebufferInfo = {};
-  framebufferInfo.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-  framebufferInfo.renderPass      = renderPass.impl;
-  framebufferInfo.pAttachments    = attach;
-  framebufferInfo.attachmentCount = 1;
-  framebufferInfo.width           = w;
-  framebufferInfo.height          = h;
-  framebufferInfo.layers          = 1;
-
-  if(vkCreateFramebuffer(device.device,&framebufferInfo,nullptr,&impl)!=VK_SUCCESS)
-    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+  crt.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+  //crt.renderPass      = renderPass.impl;
+  //crt.pAttachments    = attach;
+  crt.attachmentCount = 2;
+  crt.width           = w;
+  crt.height          = h;
+  crt.layers          = 1;
   }
 
-VFramebuffer::VFramebuffer(VFramebuffer &&other) {
-  std::swap(impl,other.impl);
+VkFramebuffer VFramebuffer::Inputs::alloc(VkDevice device,VRenderPass &renderPass) {
+  VkImageView attach[2] = {};
+
+  if(sw!=nullptr){
+    if(tx[0].handler!=nullptr){
+      crt.attachmentCount = 2;
+      attach[0] = sw->swapChainImageViews[swImg];
+      attach[1] = tx[0].handler->view;
+      } else {
+      crt.attachmentCount = 1;
+      attach[0] = sw->swapChainImageViews[swImg];
+      }
+    } else {
+    if(tx[0].handler!=nullptr){
+      crt.attachmentCount = 2;
+      attach[0] = tx[1].handler->view;
+      attach[1] = tx[0].handler->view;
+      } else {
+      crt.attachmentCount = 1;
+      attach[0] = tx[1].handler->view;
+      }
+    }
+
+  crt.renderPass   = renderPass.impl;
+  crt.pAttachments = attach;
+
+  VkFramebuffer ret=VK_NULL_HANDLE;
+  if(vkCreateFramebuffer(device,&crt,nullptr,&ret)!=VK_SUCCESS)
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+  return ret;
+  }
+
+VFramebuffer::VFramebuffer(VDevice& device,VSwapchain& swapchain,size_t image)
+  :device(device.device),inputs(swapchain,image) {
+  }
+
+VFramebuffer::VFramebuffer(VDevice &device, VSwapchain &swapchain, size_t image, VTexture &zbuf)
+  :device(device.device),inputs(swapchain,image,zbuf) {
+  }
+
+VFramebuffer::VFramebuffer(VDevice &device, uint32_t w, uint32_t h, VTexture &color, VTexture &zbuf)
+  :device(device.device), inputs(w,h,color,zbuf) {
+  }
+
+VFramebuffer::VFramebuffer(VDevice &device, uint32_t w, uint32_t h, VTexture &color)
+  :device(device.device), inputs(w,h,color) {
+  }
+
+VFramebuffer::VFramebuffer(VFramebuffer &&other)
+  :inputs(other.inputs) {
+  std::swap(inst,other.inst);
   std::swap(device,other.device);
   }
 
 VFramebuffer::~VFramebuffer() {
-  if(impl==VK_NULL_HANDLE)
-    return;
   vkDeviceWaitIdle(device);
-  vkDestroyFramebuffer(device,impl,nullptr);
+  for(auto& i:inst)
+    vkDestroyFramebuffer(device,i.impl,nullptr);
   }
 
 void VFramebuffer::operator=(VFramebuffer &&other) {
-  std::swap(impl,other.impl);
+  std::swap(inst,  other.inst);
   std::swap(device,other.device);
+  std::swap(inputs,other.inputs);
+  }
+
+VFramebuffer::Inst &VFramebuffer::instance(VRenderPass &pass) {
+  for(auto& i:inst)
+    if(i.rp.handler==&pass)
+      return i;
+  VkFramebuffer val=VK_NULL_HANDLE;
+  try {
+    val = inputs.alloc(device,pass);
+    inst.emplace_back(&pass,val);
+    }
+  catch(...) {
+    if(val!=VK_NULL_HANDLE)
+      vkDestroyPipeline(device,val,nullptr);
+    throw;
+    }
+  return inst.back();
   }

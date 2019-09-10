@@ -175,27 +175,27 @@ UniformBuffer Device::loadUbo(const void *mem, size_t size) {
   return ubo;
   }
 
-FrameBuffer Device::frameBuffer(Frame& out,RenderPass &pass) {
-  FrameBuffer f(*this,api.createFbo(dev,swapchain,pass.impl.handler,out.id),swapchain->w(),swapchain->h());
+FrameBuffer Device::frameBuffer(Frame& out) {
+  FrameBuffer f(*this,api.createFbo(dev,swapchain,out.id),swapchain->w(),swapchain->h());
   return f;
   }
 
-FrameBuffer Device::frameBuffer(Frame &out, Texture2d &zbuf, RenderPass &pass) {
-  FrameBuffer f(*this,api.createFbo(dev,swapchain,pass.impl.handler,out.id,zbuf.impl.handler),swapchain->w(),swapchain->h());
+FrameBuffer Device::frameBuffer(Frame &out, Texture2d &zbuf) {
+  FrameBuffer f(*this,api.createFbo(dev,swapchain,out.id,zbuf.impl.handler),swapchain->w(),swapchain->h());
   return f;
   }
 
-FrameBuffer Device::frameBuffer(Texture2d &out, Texture2d &zbuf, RenderPass &pass) {
+FrameBuffer Device::frameBuffer(Texture2d &out, Texture2d &zbuf) {
   uint32_t w = uint32_t(out.w());
   uint32_t h = uint32_t(out.h());
-  FrameBuffer f(*this,api.createFbo(dev,w,h,pass.impl.handler,out.impl.handler,zbuf.impl.handler),w,h);
+  FrameBuffer f(*this,api.createFbo(dev,w,h,out.impl.handler,zbuf.impl.handler),w,h);
   return f;
   }
 
-FrameBuffer Device::frameBuffer(Texture2d &out, RenderPass &pass) {
+FrameBuffer Device::frameBuffer(Texture2d &out) {
   uint32_t w = uint32_t(out.w());
   uint32_t h = uint32_t(out.h());
-  FrameBuffer f(*this,api.createFbo(dev,w,h,pass.impl.handler,out.impl.handler),w,h);
+  FrameBuffer f(*this,api.createFbo(dev,w,h,out.impl.handler),w,h);
   return f;
   }
 

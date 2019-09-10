@@ -13,20 +13,43 @@ class VTexture;
 
 class VFramebuffer : public AbstractGraphicsApi::Fbo {
   public:
-    VFramebuffer()=default;
-    VFramebuffer(VDevice &device, VRenderPass &rp, VSwapchain &swapchain, size_t image);
-    VFramebuffer(VDevice &device, VRenderPass &rp, VSwapchain &swapchain, size_t image, VTexture& zbuf);
-    VFramebuffer(VDevice &device, VRenderPass &rp, uint32_t w, uint32_t h, VTexture& color, VTexture& texture);
-    VFramebuffer(VDevice &device, VRenderPass &rp, uint32_t w, uint32_t h, VTexture& color);
+    VFramebuffer(VDevice &device, VSwapchain &swapchain,  size_t image);
+    VFramebuffer(VDevice &device, VSwapchain &swapchain,  size_t image, VTexture& zbuf);
+    VFramebuffer(VDevice &device, uint32_t w, uint32_t h, VTexture& color, VTexture& zbuf);
+    VFramebuffer(VDevice &device, uint32_t w, uint32_t h, VTexture& color);
     VFramebuffer(VFramebuffer&& other);
     ~VFramebuffer();
 
     void operator=(VFramebuffer&& other);
 
-    VkFramebuffer impl=VK_NULL_HANDLE;
+    struct Inst final {
+      Inst(VRenderPass* rp,VkFramebuffer val):rp(rp),impl(val){}
+      Inst(Inst&&)=default;
+      Inst& operator = (Inst&&)=default;
+
+      Detail::DSharedPtr<VRenderPass*> rp;
+      VkFramebuffer                    impl=VK_NULL_HANDLE;
+      };
+    std::vector<Inst> inst;
+    Inst&             instance(VRenderPass &pass);
 
   private:
     VkDevice      device=nullptr;
+    struct Inputs {
+      Inputs(VSwapchain &swapchain,  size_t image);
+      Inputs(VSwapchain &swapchain,  size_t image, VTexture& zbuf);
+      Inputs(uint32_t w, uint32_t h, VTexture& color);
+      Inputs(uint32_t w, uint32_t h, VTexture& color, VTexture& zbuf);
+
+      VkFramebuffer alloc(VkDevice device,VRenderPass &rp);
+
+      VkFramebufferCreateInfo         crt={};
+      //Detail::DSharedPtr<VSwapchain*> sw;
+      VSwapchain*                     sw=nullptr;
+      size_t                          swImg=0;
+      Detail::DSharedPtr<VTexture*>   tx[2];
+      };
+    Inputs        inputs;
   };
 
 }}

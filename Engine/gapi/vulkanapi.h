@@ -31,10 +31,10 @@ class VulkanApi : public AbstractGraphicsApi {
                             FboMode fcolor, const Color *clear,
                             FboMode fzbuf, const float *zclear) override;
 
-    Fbo*         createFbo(Device *d, Swapchain *s, Pass* pass, uint32_t imageId) override;
-    Fbo*         createFbo(Device *d, Swapchain *s, Pass* pass, uint32_t imageId, Texture* zbuf) override;
-    Fbo*         createFbo(Device *d, uint32_t w, uint32_t h, Pass* pass, Texture* cl, Texture* zbuf) override;
-    Fbo*         createFbo(Device *d, uint32_t w, uint32_t h, Pass* pass, Texture* cl) override;
+    Fbo*         createFbo(Device *d, Swapchain *s, uint32_t imageId) override;
+    Fbo*         createFbo(Device *d, Swapchain *s, uint32_t imageId, Texture* zbuf) override;
+    Fbo*         createFbo(Device *d, uint32_t w, uint32_t h, Texture* cl, Texture* zbuf) override;
+    Fbo*         createFbo(Device *d, uint32_t w, uint32_t h, Texture* cl) override;
 
     PPipeline    createPipeline(Device* d,
                                 const RenderState &st,

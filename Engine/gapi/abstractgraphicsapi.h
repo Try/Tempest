@@ -271,10 +271,10 @@ namespace Tempest {
                                     FboMode in,const Color* clear,
                                     FboMode out,const float* zclear)=0;
 
-      virtual Fbo*       createFbo(Device *d,Swapchain *s,Pass* pass,uint32_t imageId)=0;
-      virtual Fbo*       createFbo(Device *d,Swapchain *s,Pass* pass,uint32_t imageId,Texture* zbuf)=0;
-      virtual Fbo*       createFbo(Device *d,uint32_t w, uint32_t h,Pass* pass,Texture* cl,Texture* zbuf)=0;
-      virtual Fbo*       createFbo(Device *d,uint32_t w, uint32_t h,Pass* pass,Texture* cl)=0;
+      virtual Fbo*       createFbo(Device *d,Swapchain *s,uint32_t imageId)=0;
+      virtual Fbo*       createFbo(Device *d,Swapchain *s,uint32_t imageId,Texture* zbuf)=0;
+      virtual Fbo*       createFbo(Device *d,uint32_t w, uint32_t h,Texture* cl,Texture* zbuf)=0;
+      virtual Fbo*       createFbo(Device *d,uint32_t w, uint32_t h,Texture* cl)=0;
 
       virtual std::shared_ptr<AbstractGraphicsApi::UniformsLay>
                          createUboLayout(Device *d,const UniformsLayout&)=0;

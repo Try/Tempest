@@ -96,7 +96,7 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
   VkRenderPassBeginInfo renderPassInfo = {};
   renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
   renderPassInfo.renderPass        = pass->impl;
-  renderPassInfo.framebuffer       = fbo->impl;
+  renderPassInfo.framebuffer       = fbo->instance(*pass).impl; //fbo->impl;
   renderPassInfo.renderArea.offset = {0, 0};
   renderPassInfo.renderArea.extent = {width,height};
 
@@ -123,7 +123,7 @@ void VCommandBuffer::beginSecondaryPass(Tempest::AbstractGraphicsApi::Fbo *f,
   VkRenderPassBeginInfo renderPassInfo = {};
   renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
   renderPassInfo.renderPass        = pass->impl;
-  renderPassInfo.framebuffer       = fbo->impl;
+  renderPassInfo.framebuffer       = fbo->instance(*pass).impl; //fbo->impl;
   renderPassInfo.renderArea.offset = {0, 0};
   renderPassInfo.renderArea.extent = {width,height};
 

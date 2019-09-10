@@ -86,10 +86,10 @@ class Device {
 
     Uniforms       uniforms(const UniformsLayout &owner);
 
-    FrameBuffer    frameBuffer(Frame &out, RenderPass& pass);
-    FrameBuffer    frameBuffer(Frame &out, Texture2d& zbuf, RenderPass& pass);
-    FrameBuffer    frameBuffer(Texture2d &out, Texture2d& zbuf, RenderPass& pass);
-    FrameBuffer    frameBuffer(Texture2d &out, RenderPass& pass);
+    FrameBuffer    frameBuffer(Frame &out);
+    FrameBuffer    frameBuffer(Frame &out,     Texture2d& zbuf);
+    FrameBuffer    frameBuffer(Texture2d &out);
+    FrameBuffer    frameBuffer(Texture2d &out, Texture2d& zbuf);
 
     RenderPass     pass       (FboMode color, FboMode zbuf, TextureFormat zbufFormat);
     RenderPass     pass       (const Tempest::Color& color);
