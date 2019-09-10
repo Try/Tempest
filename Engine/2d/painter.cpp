@@ -403,6 +403,8 @@ void Painter::drawText(int rx, int ry, int w, int /*h*/, const char *txt, AlignF
     // make next line
     x = 0;
     Utf8Iterator eol = advanceByLine(i,x,w,fnt,ta);
+    if(i==eol)
+      break;
 
     x = 0;
     while(i!=eol){
