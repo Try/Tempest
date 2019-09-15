@@ -29,7 +29,8 @@ void Uniforms::set(size_t layoutBind, const UniformBuffer &vbuf) {
 
 void Uniforms::set(size_t layoutBind, const Texture2d &tex) {
   if(tex.impl.handler)
-    desc.handler->set(layoutBind,tex.impl.handler);
+    desc.handler->set(layoutBind,tex.impl.handler); else
+    throw std::logic_error("invalid texture");
   }
 
 void Uniforms::set(size_t layoutBind, const Detail::ResourcePtr<Texture2d> &tex) {
