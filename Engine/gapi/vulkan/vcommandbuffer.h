@@ -28,7 +28,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
       };
 
     VCommandBuffer()=delete;
-    VCommandBuffer(VDevice &device, VCommandPool &pool, VRenderPass* rp, CmdType secondary);
+    VCommandBuffer(VDevice &device, VCommandPool &pool, VRenderPass* rp, VFramebuffer* fbo, CmdType secondary);
     VCommandBuffer(VCommandBuffer&& other);
     ~VCommandBuffer();
 
@@ -74,10 +74,13 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
                         uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
 
   private:
-    VkDevice                         device=nullptr;
-    VkCommandPool                    pool  =VK_NULL_HANDLE;
-    Detail::DSharedPtr<VRenderPass*> pass;
-    Detail::DSharedPtr<VRenderPass*> currentRp;
+    VkDevice                          device=nullptr;
+    VkCommandPool                     pool  =VK_NULL_HANDLE;
+    Detail::DSharedPtr<VRenderPass*>  currentRp;
+    Detail::DSharedPtr<VFramebuffer*> currentFbo;
+    // secondary cmd buf
+    Detail::DSharedPtr<VRenderPass*>  pass;
+    Detail::DSharedPtr<VFramebuffer*> fbo;
   };
 
 }}

@@ -20,11 +20,11 @@ class FrameBuffer final {
     uint32_t h() const { return mh; }
 
   private:
-    FrameBuffer(Tempest::Device& dev,AbstractGraphicsApi::Fbo* f,uint32_t w,uint32_t h);
+    FrameBuffer(Tempest::Device& dev,Detail::DSharedPtr<AbstractGraphicsApi::Fbo*>&& f,uint32_t w,uint32_t h);
 
-    Tempest::Device*                        dev=nullptr;
-    Detail::DPtr<AbstractGraphicsApi::Fbo*> impl;
-    uint32_t                                mw=0, mh=0;
+    Tempest::Device*                              dev=nullptr;
+    Detail::DSharedPtr<AbstractGraphicsApi::Fbo*> impl;
+    uint32_t                                      mw=0, mh=0;
 
   friend class Tempest::Device;
   friend class Tempest::CommandBuffer;

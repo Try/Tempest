@@ -17,6 +17,8 @@ CommandBuffer::~CommandBuffer() {
 
 void CommandBuffer::begin() {
   impl.handler->begin();
+  if(vp.width>0 && vp.height>0)
+    setViewport(0,0,int(vp.width),int(vp.height));
   }
 
 void CommandBuffer::end() {
@@ -25,6 +27,14 @@ void CommandBuffer::end() {
   curIbo      = nullptr;
   curPipeline = nullptr;
   impl.handler->end();
+  }
+
+void CommandBuffer::setViewport(int x, int y, int w, int h) {
+  impl.handler->setViewport(Rect(x,y,w,h));
+  }
+
+void CommandBuffer::setViewport(const Rect &vp) {
+  impl.handler->setViewport(vp);
   }
 
 void CommandBuffer::setUniforms(const Tempest::RenderPipeline& p,const Uniforms &ubo) {
@@ -54,14 +64,6 @@ void CommandBuffer::setUniforms(const Detail::ResourcePtr<RenderPipeline> &p) {
     impl.handler->setPipeline(*p.impl.handler,vp.width,vp.height);
     curPipeline=p.impl.handler;
     }
-  }
-
-void CommandBuffer::setViewport(int x, int y, int w, int h) {
-  impl.handler->setViewport(Rect(x,y,w,h));
-  }
-
-void CommandBuffer::setViewport(const Rect &vp) {
-  impl.handler->setViewport(vp);
   }
 
 void CommandBuffer::exchangeLayout(Texture2d &t, TextureLayout src, TextureLayout dest) {
@@ -124,6 +126,7 @@ void PrimaryCommandBuffer::setPass(const FrameBuffer &fbo, const RenderPass &p, 
 
   vp.width     = width;
   vp.height    = height;
+  setViewport(0,0,int(width),int(height));
   }
 
 void PrimaryCommandBuffer::implEndRenderPass() {

@@ -12,62 +12,51 @@ class VulkanApi : public AbstractGraphicsApi {
     explicit VulkanApi(ApiFlags f=ApiFlags::NoFlags);
     virtual ~VulkanApi();
 
-    Device*      createDevice(SystemApi::Window* w) override;
-    void         destroy(Device* d) override;
-    void         waitIdle(Device* d) override;
+    Device*        createDevice(SystemApi::Window* w) override;
+    void           destroy(Device* d) override;
+    void           waitIdle(Device* d) override;
 
-    Swapchain*   createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d) override;
-    void         destroy(Swapchain* d) override;
+    Swapchain*     createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d) override;
+    void           destroy(Swapchain* d) override;
 
-    PPass        createPass(Device *d,
-                            Swapchain* sw,
-                            TextureFormat zformat,
-                            FboMode fcolor, const Color *clear,
-                            FboMode fzbuf, const float *zclear) override;
+    PPass          createPass(Device *d, Swapchain* sw, const Attachment** att, size_t acount) override;
 
-    PPass        createPass(Device *d,
-                            TextureFormat clFormat,
-                            TextureFormat zformat,
-                            FboMode fcolor, const Color *clear,
-                            FboMode fzbuf, const float *zclear) override;
+    PFbo           createFbo(Device *d, Swapchain *s, uint32_t imageId) override;
+    PFbo           createFbo(Device *d, Swapchain *s, uint32_t imageId, Texture* zbuf) override;
+    PFbo           createFbo(Device *d, uint32_t w, uint32_t h, Texture* cl, Texture* zbuf) override;
+    PFbo           createFbo(Device *d, uint32_t w, uint32_t h, Texture* cl) override;
 
-    Fbo*         createFbo(Device *d, Swapchain *s, uint32_t imageId) override;
-    Fbo*         createFbo(Device *d, Swapchain *s, uint32_t imageId, Texture* zbuf) override;
-    Fbo*         createFbo(Device *d, uint32_t w, uint32_t h, Texture* cl, Texture* zbuf) override;
-    Fbo*         createFbo(Device *d, uint32_t w, uint32_t h, Texture* cl) override;
+    PPipeline      createPipeline(Device* d,
+                                  const RenderState &st,
+                                  const Tempest::Decl::ComponentType *decl, size_t declSize,
+                                  size_t stride,
+                                  Topology tp,
+                                  const UniformsLayout& ulay,
+                                  std::shared_ptr<UniformsLay> &ulayImpl,
+                                  const std::initializer_list<Shader*>& frag) override;
 
-    PPipeline    createPipeline(Device* d,
-                                const RenderState &st,
-                                const Tempest::Decl::ComponentType *decl, size_t declSize,
-                                size_t stride,
-                                Topology tp,
-                                const UniformsLayout& ulay,
-                                std::shared_ptr<UniformsLay> &ulayImpl,
-                                const std::initializer_list<Shader*>& frag) override;
+    PShader        createShader(AbstractGraphicsApi::Device *d, const char* source, size_t src_size) override;
 
-    PShader       createShader(AbstractGraphicsApi::Device *d, const char* source, size_t src_size) override;
+    Fence*         createFence(Device *d) override;
+    void           destroy    (Fence* fence) override;
 
-    Fence*        createFence(Device *d) override;
-    void          destroy    (Fence* fence) override;
+    Semaphore*     createSemaphore(Device *d) override;
+    void           destroy        (Semaphore* semaphore) override;
 
-    Semaphore*    createSemaphore(Device *d) override;
-    void          destroy        (Semaphore* semaphore) override;
+    CmdPool*       createCommandPool(Device* d) override;
+    void           destroy          (CmdPool* cmd) override;
 
-    CmdPool*      createCommandPool(Device* d) override;
-    void          destroy          (CmdPool* cmd) override;
+    PBuffer        createBuffer(Device* d, const void *mem, size_t size, MemUsage usage, BufferFlags flg) override;
 
-    PBuffer       createBuffer(Device* d, const void *mem, size_t size, MemUsage usage, BufferFlags flg) override;
-
-    Desc*         createDescriptors(Device* d, const UniformsLayout &lay, AbstractGraphicsApi::UniformsLay* layP) override;
-    void          destroy(Desc* d) override;
+    Desc*          createDescriptors(Device* d, const UniformsLayout &lay, AbstractGraphicsApi::UniformsLay* layP) override;
+    void           destroy(Desc* d) override;
 
     std::shared_ptr<AbstractGraphicsApi::UniformsLay> createUboLayout(Device *d,const UniformsLayout&) override;
 
-    PTexture     createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips) override;
-    PTexture     createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;
-    //void       destroy(Texture* t) override;
+    PTexture       createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips) override;
+    PTexture       createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;
 
-    CommandBuffer* createCommandBuffer(Device* d, CmdPool* pool, Pass *pass, CmdType secondary) override;
+    CommandBuffer* createCommandBuffer(Device* d, CmdPool* pool, Pass *pass, Fbo *fbo, CmdType secondary) override;
     void           destroy            (CommandBuffer* cmd) override;
 
     uint32_t       nextImage(Device *d,Swapchain* sw,Semaphore* onReady) override;

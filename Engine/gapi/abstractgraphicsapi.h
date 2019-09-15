@@ -14,6 +14,7 @@ namespace Tempest {
   class Pixmap;
   class Color;
   class RenderState;
+  class Attachment;
 
   namespace Decl {
   enum ComponentType:uint8_t {
@@ -195,10 +196,12 @@ namespace Tempest {
         virtual void setSampler(const Sampler2d& s)=0;
         };
       struct Image           {};
-      struct Fbo             {
+      struct Fbo:Shared      {
         virtual ~Fbo(){}
         };
-      struct Pass:Shared     {};
+      struct Pass:Shared     {
+        virtual ~Pass()=default;
+        };
       struct Pipeline:Shared {};
       struct Shader:Shared   {};
       struct Uniforms        {};
@@ -252,6 +255,7 @@ namespace Tempest {
       using PPipeline = Detail::DSharedPtr<Pipeline*>;
       using PPass     = Detail::DSharedPtr<Pass*>;
       using PShader   = Detail::DSharedPtr<Shader*>;
+      using PFbo      = Detail::DSharedPtr<Fbo*>;
 
       virtual Device*    createDevice(SystemApi::Window* w)=0;
       virtual void       destroy(Device* d)=0;
@@ -260,21 +264,12 @@ namespace Tempest {
       virtual Swapchain* createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d)=0;
       virtual void       destroy(Swapchain* d)=0;
 
-      virtual PPass      createPass(Device *d,
-                                    Swapchain* sw,
-                                    TextureFormat zformat,
-                                    FboMode in,const Color* clear,
-                                    FboMode out,const float* zclear)=0;
-      virtual PPass      createPass(Device *d,
-                                    TextureFormat clFormat,
-                                    TextureFormat zformat,
-                                    FboMode in,const Color* clear,
-                                    FboMode out,const float* zclear)=0;
+      virtual PPass      createPass(Device *d, Swapchain* sw, const Attachment** att, size_t acount)=0;
 
-      virtual Fbo*       createFbo(Device *d,Swapchain *s,uint32_t imageId)=0;
-      virtual Fbo*       createFbo(Device *d,Swapchain *s,uint32_t imageId,Texture* zbuf)=0;
-      virtual Fbo*       createFbo(Device *d,uint32_t w, uint32_t h,Texture* cl,Texture* zbuf)=0;
-      virtual Fbo*       createFbo(Device *d,uint32_t w, uint32_t h,Texture* cl)=0;
+      virtual PFbo       createFbo(Device *d,Swapchain *s,uint32_t imageId)=0;
+      virtual PFbo       createFbo(Device *d,Swapchain *s,uint32_t imageId,Texture* zbuf)=0;
+      virtual PFbo       createFbo(Device *d,uint32_t w, uint32_t h,Texture* cl,Texture* zbuf)=0;
+      virtual PFbo       createFbo(Device *d,uint32_t w, uint32_t h,Texture* cl)=0;
 
       virtual std::shared_ptr<AbstractGraphicsApi::UniformsLay>
                          createUboLayout(Device *d,const UniformsLayout&)=0;
@@ -300,7 +295,7 @@ namespace Tempest {
       virtual void       destroy(CmdPool* cmd)=0;
 
       virtual CommandBuffer*
-                         createCommandBuffer(Device* d,CmdPool* pool,Pass* pass,CmdType type)=0;
+                         createCommandBuffer(Device* d,CmdPool* pool,Pass* pass,Fbo* fbo,CmdType type)=0;
       virtual void       destroy(CommandBuffer* cmd)=0;
 
       virtual PBuffer    createBuffer(Device* d,const void *mem,size_t size,MemUsage usage,BufferFlags flg)=0;

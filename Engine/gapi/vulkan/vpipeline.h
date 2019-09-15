@@ -1,11 +1,10 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include "../utility/dptr.h"
-
-#include <vulkan/vulkan.hpp>
-
 #include <Tempest/RenderState>
+
+#include "../utility/dptr.h"
+#include <vulkan/vulkan.hpp>
 
 namespace Tempest {
 namespace Detail {
@@ -13,6 +12,7 @@ namespace Detail {
 class VShader;
 class VDevice;
 class VRenderPass;
+class VFramebuffer;
 
 class VPipeline : public AbstractGraphicsApi::Pipeline {
   public:
@@ -49,10 +49,9 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
       VkPipeline                       val;
       };
 
-    std::vector<Inst> inst;
     VkPipelineLayout  pipelineLayout  =VK_NULL_HANDLE;
 
-    Inst&             instance(VRenderPass &pass, uint32_t width, uint32_t height);
+    Inst&             instance(VRenderPass &pass, VFramebuffer& fbo, uint32_t width, uint32_t height);
 
   private:
     VkDevice                               device=nullptr;
@@ -61,12 +60,13 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     Topology                               tp=Topology::Triangles;
     Detail::DSharedPtr<VShader*>           vs,fs;
     std::unique_ptr<Decl::ComponentType[]> decl;
+    std::vector<Inst>                      inst;
 
     void cleanup();
     static VkPipelineLayout      initLayout(VkDevice device,VkDescriptorSetLayout uboLay);
     static VkDescriptorSetLayout initUboLayout(VkDevice device,const UniformsLayout &ulay);
     static VkPipeline            initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
-                                                      VRenderPass& pass, const RenderState &st, uint32_t width, uint32_t height,
+                                                      VRenderPass& pass, VFramebuffer &fbo, const RenderState &st, uint32_t width, uint32_t height,
                                                       const Decl::ComponentType *decl, size_t declSize, size_t stride,
                                                       Topology tp,
                                                       VShader &vert, VShader &frag);

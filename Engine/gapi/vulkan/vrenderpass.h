@@ -5,6 +5,9 @@
 #include <vulkan/vulkan.hpp>
 
 namespace Tempest {
+
+class Attachment;
+
 namespace Detail {
 
 class VDevice;
@@ -13,23 +16,28 @@ class VSwapchain;
 class VRenderPass : public AbstractGraphicsApi::Pass {
   public:
     VRenderPass()=default;
-    VRenderPass(VDevice &device,
-                VkFormat format, VkFormat zformat,
-                FboMode color, const Color* clear,
-                FboMode zbuf, const float *zclear);
+    VRenderPass(VDevice& device, const Attachment** attach, size_t attCount);
     VRenderPass(VRenderPass&& other);
     ~VRenderPass();
 
     void operator=(VRenderPass&& other);
 
-    VkRenderPass   impl=VK_NULL_HANDLE;
-    Tempest::Color color;
-    float          zclear=1.0f;
+    struct Inst {
+      VkRenderPass   impl=VK_NULL_HANDLE;
+      };
+    Inst&                         instance();
 
-    uint8_t        attachCount=1;
+    Tempest::Color                color;
+    float                         zclear=1.0f;
+
+    uint8_t                       attachCount=1;
 
   private:
-    VkDevice       device=nullptr;
+    VkDevice                      device=nullptr;
+    std::vector<Inst>             inst;
+    std::unique_ptr<Attachment[]> att;
+
+    VkRenderPass                  createInstance();
   };
 
 }}

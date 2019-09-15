@@ -41,7 +41,7 @@ class VFramebuffer : public AbstractGraphicsApi::Fbo {
       Inputs(uint32_t w, uint32_t h, VTexture& color);
       Inputs(uint32_t w, uint32_t h, VTexture& color, VTexture& zbuf);
 
-      VkFramebuffer alloc(VkDevice device,VRenderPass &rp);
+      VkFramebuffer alloc(VkDevice device, VkRenderPass rp);
 
       VkFramebufferCreateInfo         crt={};
       //Detail::DSharedPtr<VSwapchain*> sw;

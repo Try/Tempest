@@ -40,7 +40,7 @@ enum class FboMode : uint8_t {
   Discard    =0,
   PreserveIn =1<<0,
   PreserveOut=1<<1,
-  PresentOut =1<<2,
+  Submit     =(1<<2)|PreserveOut,
   Clear      =1<<3,
   Preserve   =(PreserveOut|PreserveIn),
   };

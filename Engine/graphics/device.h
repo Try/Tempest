@@ -91,20 +91,24 @@ class Device {
     FrameBuffer    frameBuffer(Texture2d &out);
     FrameBuffer    frameBuffer(Texture2d &out, Texture2d& zbuf);
 
+    RenderPass     pass(const Attachment& color);
+    RenderPass     pass(const Attachment& color,const Attachment& depth);
+    /*
     RenderPass     pass       (FboMode color, FboMode zbuf, TextureFormat zbufFormat);
     RenderPass     pass       (const Tempest::Color& color);
     RenderPass     pass       (const Tempest::Color& color,TextureFormat clFormat);
     RenderPass     pass       (const Tempest::Color& color,FboMode zbuf, TextureFormat zbufFormat);
     RenderPass     pass       (const Tempest::Color& color,const float zbuf,TextureFormat zbufFormat);
     RenderPass     pass       (const Tempest::Color& color,const float zbuf,TextureFormat clFormat,TextureFormat zbufFormat);
+    */
 
     template<class Vertex>
     RenderPipeline pipeline(Topology tp,const RenderState& st,
                             const UniformsLayout& ulay,const Shader &vs,const Shader &fs);
 
     PrimaryCommandBuffer commandBuffer();
-    CommandBuffer        commandSecondaryBuffer(const RenderPass &pass,int32_t  vpWidth,int32_t vpHeight);
-    CommandBuffer        commandSecondaryBuffer(const RenderPass &pass,uint32_t vpWidth,uint32_t vpHeight);
+    CommandBuffer        commandSecondaryBuffer(const RenderPass &pass, uint32_t w, uint32_t h);
+    CommandBuffer        commandSecondaryBuffer(const RenderPass &pass, const FrameBuffer &fbo);
 
     const Builtin&       builtin() const;
     const char*          renderer() const;

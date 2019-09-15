@@ -1,6 +1,8 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
+#include <Tempest/Color>
+
 #include "../utility/dptr.h"
 
 namespace Tempest {
@@ -8,6 +10,18 @@ namespace Tempest {
 class Device;
 class CommandBuffer;
 class PrimaryCommandBuffer;
+
+class Attachment final {
+  public:
+    Attachment()=default;
+    Attachment(const FboMode& m):mode(m){}
+    Attachment(const float& clr,const TextureFormat& frm):mode(FboMode::Clear),clear(clr),format(frm){}
+    Attachment(const Color& clr,const TextureFormat& frm):mode(FboMode::Clear),clear(clr),format(frm){}
+
+    FboMode       mode=FboMode::Preserve;
+    Color         clear{};
+    TextureFormat format=TextureFormat::Undefined;
+  };
 
 class RenderPass final {
   public:

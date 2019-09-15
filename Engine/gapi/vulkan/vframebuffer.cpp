@@ -57,7 +57,7 @@ VFramebuffer::Inputs::Inputs(uint32_t w, uint32_t h, VTexture &color, VTexture &
   crt.layers          = 1;
   }
 
-VkFramebuffer VFramebuffer::Inputs::alloc(VkDevice device,VRenderPass &renderPass) {
+VkFramebuffer VFramebuffer::Inputs::alloc(VkDevice device,VkRenderPass renderPass) {
   VkImageView attach[2] = {};
 
   if(sw!=nullptr){
@@ -80,7 +80,7 @@ VkFramebuffer VFramebuffer::Inputs::alloc(VkDevice device,VRenderPass &renderPas
       }
     }
 
-  crt.renderPass   = renderPass.impl;
+  crt.renderPass   = renderPass;
   crt.pAttachments = attach;
 
   VkFramebuffer ret=VK_NULL_HANDLE;
@@ -129,12 +129,13 @@ VFramebuffer::Inst &VFramebuffer::instance(VRenderPass &pass) {
       return i;
   VkFramebuffer val=VK_NULL_HANDLE;
   try {
-    val = inputs.alloc(device,pass);
+    VkRenderPass p = pass.instance().impl;
+    val = inputs.alloc(device,p);
     inst.emplace_back(&pass,val);
     }
   catch(...) {
     if(val!=VK_NULL_HANDLE)
-      vkDestroyPipeline(device,val,nullptr);
+      vkDestroyFramebuffer(device,val,nullptr);
     throw;
     }
   return inst.back();

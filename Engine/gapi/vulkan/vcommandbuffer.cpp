@@ -13,8 +13,8 @@
 
 using namespace Tempest::Detail;
 
-VCommandBuffer::VCommandBuffer(VDevice& device, VCommandPool& pool, VRenderPass *rp, CmdType secondary)
-  :device(device.device), pool(pool.impl), pass(rp) {
+VCommandBuffer::VCommandBuffer(VDevice& device, VCommandPool& pool, VRenderPass *rp, VFramebuffer *fbo, CmdType secondary)
+  :device(device.device), pool(pool.impl), pass(rp), fbo(fbo) {
   VkCommandBufferAllocateInfo allocInfo = {};
   allocInfo.sType             =VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   allocInfo.commandPool       =pool.impl;
@@ -25,11 +25,13 @@ VCommandBuffer::VCommandBuffer(VDevice& device, VCommandPool& pool, VRenderPass 
   }
 
 VCommandBuffer::VCommandBuffer(VCommandBuffer &&other) {
-  std::swap(device,   other.device);
-  std::swap(pool,     other.pool);
-  std::swap(pass,     other.pass);
-  std::swap(currentRp,other.currentRp);
-  std::swap(impl,     other.impl);
+  std::swap(device,    other.device);
+  std::swap(pool,      other.pool);
+  std::swap(pass,      other.pass);
+  std::swap(fbo,       other.fbo);
+  std::swap(currentRp, other.currentRp);
+  std::swap(currentFbo,other.currentFbo);
+  std::swap(impl,      other.impl);
   }
 
 VCommandBuffer::~VCommandBuffer() {
@@ -39,17 +41,20 @@ VCommandBuffer::~VCommandBuffer() {
   }
 
 VCommandBuffer& VCommandBuffer::operator=(VCommandBuffer &&other) {
-  std::swap(device,   other.device);
-  std::swap(pool,     other.pool);
-  std::swap(pass,     other.pass);
-  std::swap(currentRp,other.currentRp);
-  std::swap(impl,     other.impl);
+  std::swap(device,    other.device);
+  std::swap(pool,      other.pool);
+  std::swap(pass,      other.pass);
+  std::swap(fbo,       other.fbo);
+  std::swap(currentRp, other.currentRp);
+  std::swap(currentFbo,other.currentFbo);
+  std::swap(impl,      other.impl);
   return *this;
   }
 
 void VCommandBuffer::reset() {
   vkResetCommandBuffer(impl,VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
-  currentRp = Detail::DSharedPtr<VRenderPass*>{};
+  currentRp  = Detail::DSharedPtr<VRenderPass*>{};
+  currentFbo = Detail::DSharedPtr<VFramebuffer*>{};
   }
 
 void VCommandBuffer::begin() {
@@ -61,15 +66,20 @@ void VCommandBuffer::begin(Usage usage) {
   VkCommandBufferInheritanceInfo inheritanceInfo={};
 
   // secondary pass
-  if(pass.handler!=nullptr && pass.handler->impl!=VK_NULL_HANDLE){
-    inheritanceInfo.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-    inheritanceInfo.framebuffer = VK_NULL_HANDLE;
-    inheritanceInfo.renderPass  = pass.handler->impl;
+  if(pass.handler!=nullptr){
+    auto& inst = pass.handler->instance();
+    if(inst.impl!=VK_NULL_HANDLE) {
+      inheritanceInfo.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+      inheritanceInfo.framebuffer = VK_NULL_HANDLE;
+      inheritanceInfo.renderPass  = inst.impl;
 
-    usageFlags = SIMULTANEOUS_USE_BIT|RENDER_PASS_CONTINUE_BIT;
-    currentRp = pass;
+      usageFlags = SIMULTANEOUS_USE_BIT|RENDER_PASS_CONTINUE_BIT;
+      currentRp  = pass;
+      currentFbo = fbo;
+      }
     } else {
-    currentRp = Detail::DSharedPtr<VRenderPass*>{};
+    currentRp  = Detail::DSharedPtr<VRenderPass*>{};
+    currentFbo = Detail::DSharedPtr<VFramebuffer*>{};
     }
 
   VkCommandBufferBeginInfo beginInfo = {};
@@ -81,7 +91,8 @@ void VCommandBuffer::begin(Usage usage) {
   }
 
 void VCommandBuffer::end() {
-  currentRp = Detail::DSharedPtr<VRenderPass*>{};
+  currentRp  = Detail::DSharedPtr<VRenderPass*>{};
+  currentFbo = Detail::DSharedPtr<VFramebuffer*>{};
   vkAssert(vkEndCommandBuffer(impl));
   }
 
@@ -92,11 +103,12 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
   VRenderPass*  pass=reinterpret_cast<VRenderPass*>(p);
 
   currentRp     = Detail::DSharedPtr<VRenderPass*>(pass);
+  currentFbo    = Detail::DSharedPtr<VFramebuffer*>(fbo);
 
   VkRenderPassBeginInfo renderPassInfo = {};
   renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  renderPassInfo.renderPass        = pass->impl;
-  renderPassInfo.framebuffer       = fbo->instance(*pass).impl; //fbo->impl;
+  renderPassInfo.renderPass        = pass->instance().impl;
+  renderPassInfo.framebuffer       = fbo->instance(*pass).impl;
   renderPassInfo.renderArea.offset = {0, 0};
   renderPassInfo.renderArea.extent = {width,height};
 
@@ -122,7 +134,7 @@ void VCommandBuffer::beginSecondaryPass(Tempest::AbstractGraphicsApi::Fbo *f,
 
   VkRenderPassBeginInfo renderPassInfo = {};
   renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  renderPassInfo.renderPass        = pass->impl;
+  renderPassInfo.renderPass        = pass->instance().impl;
   renderPassInfo.framebuffer       = fbo->instance(*pass).impl; //fbo->impl;
   renderPassInfo.renderArea.offset = {0, 0};
   renderPassInfo.renderArea.extent = {width,height};
@@ -192,9 +204,10 @@ void VCommandBuffer::clear(AbstractGraphicsApi::Image& image,
   }
 
 void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p,uint32_t w,uint32_t h) {
-  VPipeline&   px=reinterpret_cast<VPipeline&>(p);
-  VRenderPass& rp=reinterpret_cast<VRenderPass&>(*currentRp.handler);
-  auto& v = px.instance(rp,w,h);
+  VPipeline&    px =reinterpret_cast<VPipeline&>   (p);
+  VRenderPass&  rp =reinterpret_cast<VRenderPass&> (*currentRp.handler);
+  VFramebuffer& fbo=reinterpret_cast<VFramebuffer&>(*currentFbo.handler);
+  auto& v = px.instance(rp,fbo,w,h);
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v.val);
   }
 
@@ -211,8 +224,8 @@ void VCommandBuffer::setViewport(const Tempest::Rect &r) {
   VkViewport vk={};
   vk.x        = r.x;
   vk.y        = r.y;
-  vk.width    = r.h;
-  vk.height   = r.w;
+  vk.width    = r.w;
+  vk.height   = r.h;
   vk.minDepth = 0;
   vk.maxDepth = 1;
   vkCmdSetViewport(impl,0,1,&vk);

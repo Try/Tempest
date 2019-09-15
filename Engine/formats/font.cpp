@@ -2,12 +2,17 @@
 
 #include <Tempest/Except>
 #include <Tempest/Painter>
+#include <Tempest/Platform>
+#include <Tempest/Log>
 #include "../utility/utf8_helper.h"
-
 #include "thirdparty/stb_truetype.h"
 
 #include <unordered_map>
 #include <bitset>
+
+#ifdef __WINDOWS__
+#include <Shlobj.h>
+#endif
 
 using namespace Tempest;
 
@@ -23,7 +28,26 @@ namespace Detail {
     FontElement::Letter     letter[256];
     std::bitset<256>        ex;
     };
+
+  static std::string getFontFolderPath() {
+#ifdef __WINDOWS__
+    char   path[MAX_PATH]={};
+    SHGetSpecialFolderPathA(nullptr,path,CSIDL_FONTS,false);
+    return path;
+#else
+    return "";
+#endif
+    }
+
+  static std::string getFallbackFont() {
+#ifdef __WINDOWS__
+    return getFontFolderPath()+"\\georgia.ttf";
+#else
+    return "";
+#endif
+    }
   }
+
 }
 
 struct FontElement::LetterTable {
@@ -170,11 +194,11 @@ struct FontElement::Impl {
 
     if(this->size==0)
       return nullLater();
-    return allocLetter(ch,size,tex);
+    return allocLetter(ch,size,tex,false);
     }
 
-  const Letter& allocLetter(char32_t ch,float size,TextureAtlas* tex) {
-    const float scale = stbtt_ScaleForPixelHeight(&info,size);
+  const Letter& allocLetter(char32_t ch,float size,TextureAtlas* tex,bool fallback) {
+    const float scale = stbtt_ScaleForPixelHeight(&info,size); //size/(ascent-descent);
     if(!(scale>0.f))
       return nullLater();
 
@@ -200,6 +224,12 @@ struct FontElement::Impl {
       dy = iy0;
       }
 
+    if((w<=0 || h<=0) && ax==0) {
+      if(!fallback)
+        return allocFallbackLetter(ch,size,tex);
+      return nullLater();
+      }
+
     std::lock_guard<std::mutex> guard(syncMap);
     Letter& lt = map.at(size,ch);
     lt.view    = std::move(spr);
@@ -208,6 +238,25 @@ struct FontElement::Impl {
     lt.advance = Point(int(ax*scale),int(lineGap*scale));
     lt.hasView = (tex!=nullptr);
     return lt;
+    }
+
+  const Letter& allocFallbackLetter(char32_t ch,float size,TextureAtlas* tex) {
+    try {
+      std::lock_guard<std::mutex> guard(syncMap);
+      if(fallback==nullptr){
+        fallback.reset(new Impl(Detail::getFallbackFont().c_str()));
+        if(stbtt_InitFont(&fallback->info,fallback->data,0)==0)
+          throw std::system_error(Tempest::SystemErrc::UnableToLoadAsset);
+        }
+
+      Letter  lf = fallback->allocLetter(ch,size,tex,true);
+      Letter& lt = map.at(size,ch);
+      lt = lf;
+      return lt;
+      }
+    catch (...) {
+      return nullLater();
+      }
     }
 
   uint8_t*       data=nullptr;
@@ -224,6 +273,7 @@ struct FontElement::Impl {
 
   std::mutex                           syncMap;
   LetterTable                          map;
+  std::unique_ptr<Impl>                fallback;
   };
 
 FontElement::FontElement()

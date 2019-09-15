@@ -199,6 +199,19 @@ FrameBuffer Device::frameBuffer(Texture2d &out) {
   return f;
   }
 
+RenderPass Device::pass(const Attachment &color) {
+  const Attachment* att[1]={&color};
+  RenderPass f(api.createPass(dev,swapchain,att,1));
+  return f;
+  }
+
+RenderPass Device::pass(const Attachment &color, const Attachment &depth) {
+  const Attachment* att[2]={&color,&depth};
+  RenderPass f(api.createPass(dev,swapchain,att,2));
+  return f;
+  }
+
+/*
 RenderPass Device::pass(FboMode color, FboMode zbuf, TextureFormat zbufFormat) {
   RenderPass f(api.createPass(dev,swapchain,zbufFormat,color,nullptr,zbuf,nullptr));
   return f;
@@ -227,7 +240,7 @@ RenderPass Device::pass(const Color &color, const float zbuf, TextureFormat zbuf
 RenderPass Device::pass(const Color &color, const float zbuf, TextureFormat clFormat, TextureFormat zbufFormat) {
   RenderPass f(api.createPass(dev,clFormat,zbufFormat,FboMode::PreserveOut,&color,FboMode::PreserveOut,&zbuf));
   return f;
-  }
+  }*/
 
 RenderPipeline Device::implPipeline(const RenderState &st,const UniformsLayout &ulay,
                                     const Shader &vs, const Shader &fs,
@@ -242,17 +255,21 @@ RenderPipeline Device::implPipeline(const RenderState &st,const UniformsLayout &
   }
 
 PrimaryCommandBuffer Device::commandBuffer() {
-  PrimaryCommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,nullptr,CmdType::Primary));
+  PrimaryCommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,nullptr,nullptr,CmdType::Primary));
   return buf;
   }
 
-CommandBuffer Device::commandSecondaryBuffer(const RenderPass& pass, int32_t vpWidth, int32_t vpHeight) {
-  CommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,pass.impl.handler,CmdType::Secondary),uint32_t(vpWidth),uint32_t(vpHeight));
+CommandBuffer Device::commandSecondaryBuffer(const RenderPass &pass,uint32_t w,uint32_t h) {
+  CommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,
+                                                  pass.impl.handler,nullptr,CmdType::Secondary),
+                    w,h);
   return buf;
   }
 
-CommandBuffer Device::commandSecondaryBuffer(const RenderPass& pass, uint32_t vpWidth, uint32_t vpHeight) {
-  CommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,pass.impl.handler,CmdType::Secondary),vpWidth,vpHeight);
+CommandBuffer Device::commandSecondaryBuffer(const RenderPass& pass, const FrameBuffer &fbo) {
+  CommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,
+                                                  pass.impl.handler,fbo.impl.handler,CmdType::Secondary),
+                    fbo.w(),fbo.h());
   return buf;
   }
 
