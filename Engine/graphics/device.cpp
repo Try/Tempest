@@ -190,6 +190,9 @@ FrameBuffer Device::frameBuffer(Frame &out, Texture2d &zbuf) {
   uint32_t w = swapchain->w();
   uint32_t h = swapchain->h();
 
+  if(int(w)!=zbuf.w() || int(h)!=zbuf.h())
+    throw IncompleteFboException();
+
   FrameBufferLayout lay(api.createFboLayout(dev,w,h,swapchain,att,2),w,h);
   FrameBuffer       f(*this,api.createFbo(dev,lay.impl.handler,swapchain,out.id,zbuf.impl.handler),std::move(lay));
   return f;
@@ -199,6 +202,9 @@ FrameBuffer Device::frameBuffer(Texture2d &out, Texture2d &zbuf) {
   TextureFormat att[2] = {out.format(),zbuf.format()};
   uint32_t w = uint32_t(out.w());
   uint32_t h = uint32_t(out.h());
+
+  if(out.w()!=zbuf.w() || out.h()!=zbuf.h())
+    throw IncompleteFboException();
 
   FrameBufferLayout lay(api.createFboLayout(dev,w,h,swapchain,att,2),w,h);
   FrameBuffer f(*this,api.createFbo(dev,lay.impl.handler,w,h,out.impl.handler,zbuf.impl.handler),std::move(lay));

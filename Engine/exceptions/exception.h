@@ -4,8 +4,12 @@
 
 namespace Tempest {
 
-class DeviceLostException : std::exception{
+class DeviceLostException : std::exception {
   const char* what() const noexcept override { return "device is lost"; }
+  };
+
+class IncompleteFboException : std::exception {
+  const char* what() const noexcept override { return "inconsistent framebuffer dimensions"; }
   };
 
 enum class SystemErrc {

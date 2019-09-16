@@ -187,7 +187,7 @@ namespace Tempest {
         virtual const char* renderer() const=0;
         };
       struct Swapchain    {
-        virtual ~Swapchain(){}
+        virtual ~Swapchain()=default;
         virtual uint32_t      imageCount() const=0;
         virtual uint32_t      w() const=0;
         virtual uint32_t      h() const=0;
@@ -200,7 +200,7 @@ namespace Tempest {
         virtual ~Fbo(){}
         };
       struct FboLayout:Shared      {
-        virtual ~FboLayout(){}
+        virtual ~FboLayout()=default;
         };
       struct Pass:Shared     {
         virtual ~Pass()=default;
