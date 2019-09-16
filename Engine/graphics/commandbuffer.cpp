@@ -12,7 +12,7 @@ CommandBuffer::CommandBuffer(Device &dev, AbstractGraphicsApi::CommandBuffer *im
   }
 
 CommandBuffer::~CommandBuffer() {
-  dev->destroy(*this);
+  delete impl.handler;
   }
 
 void CommandBuffer::begin() {
@@ -137,13 +137,12 @@ void PrimaryCommandBuffer::implEndRenderPass() {
   impl.handler->endRenderPass();
   }
 
-void PrimaryCommandBuffer::exec(const FrameBuffer &fbo, const RenderPass &p, const CommandBuffer &buf) {
-  exec(fbo,p,fbo.w(),fbo.h(),buf);
-  }
-
-void PrimaryCommandBuffer::exec(const FrameBuffer& fbo, const RenderPass& p,uint32_t width, uint32_t height,const CommandBuffer &buf) {
+void PrimaryCommandBuffer::exec(const FrameBuffer& fbo, const RenderPass& p,const CommandBuffer &buf) {
   if(buf.impl.handler==nullptr)
     return;
+
+  const uint32_t width =fbo.w();
+  const uint32_t height=fbo.h();
 
   if(curPass.fbo!=&fbo || curPass.pass!=&p || vp.width!=width || vp.height!=height || curPass.mode!=Second) {
     implEndRenderPass();

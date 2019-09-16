@@ -44,71 +44,63 @@ class Device {
     Device(const Device&)=delete;
     virtual ~Device();
 
-    void           waitIdle();
-    void           reset();
-    uint32_t       swapchainImageCount() const;
-    uint8_t        maxFramesInFlight() const;
-    uint8_t        frameId() const;
-    uint64_t       frameCounter() const;
-    uint32_t       imageId() const;
+    void                 waitIdle();
+    void                 reset();
+    uint32_t             swapchainImageCount() const;
+    uint8_t              maxFramesInFlight() const;
+    uint8_t              frameId() const;
+    uint64_t             frameCounter() const;
+    uint32_t             imageId() const;
 
-    Frame          frame(uint32_t id);
-    uint32_t       nextImage(Semaphore& onReady);
-    void           draw(const CommandBuffer&  cmd,const Semaphore& wait);
-    void           draw(const CommandBuffer&  cmd,const Semaphore& wait,Semaphore& done,Fence& fdone);
-    void           draw(const CommandBuffer*  cmd[],size_t count,const Semaphore& wait,Semaphore& done,Fence& fdone);
-    void           present(uint32_t img,const Semaphore& wait);
+    Frame                frame(uint32_t id);
+    uint32_t             nextImage(Semaphore& onReady);
+    void                 draw(const CommandBuffer&  cmd,const Semaphore& wait);
+    void                 draw(const CommandBuffer&  cmd,const Semaphore& wait,Semaphore& done,Fence& fdone);
+    void                 draw(const CommandBuffer*  cmd[],size_t count,const Semaphore& wait,Semaphore& done,Fence& fdone);
+    void                 present(uint32_t img,const Semaphore& wait);
 
-    Shader         loadShader(const char* filename);
-    Shader         loadShader(const char* source,const size_t length);
+    Shader               loadShader(const char* filename);
+    Shader               loadShader(const char* source,const size_t length);
 
-    const Caps&    caps() const;
-
-    template<class T>
-    VertexBuffer<T> loadVbo(const T* arr,size_t arrSize,BufferFlags flg);
+    const Caps&          caps() const;
 
     template<class T>
-    VertexBuffer<T> loadVbo(const std::vector<T>& arr,BufferFlags flg){
+    VertexBuffer<T>      loadVbo(const T* arr,size_t arrSize,BufferFlags flg);
+
+    template<class T>
+    VertexBuffer<T>      loadVbo(const std::vector<T>& arr,BufferFlags flg){
       return loadVbo(arr.data(),arr.size(),flg);
       }
 
     template<class T>
-    IndexBuffer<T>  loadIbo(const T* arr,size_t arrSize,BufferFlags flg);
+    IndexBuffer<T>       loadIbo(const T* arr,size_t arrSize,BufferFlags flg);
 
     template<class T>
-    VertexBuffer<T> loadIbo(const std::vector<T>& arr,BufferFlags flg){
+    VertexBuffer<T>      loadIbo(const std::vector<T>& arr,BufferFlags flg){
       return loadIbo(arr.data(),arr.size(),flg);
       }
 
-    Texture2d      createTexture(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips);
-    Texture2d      loadTexture(const Pixmap& pm,bool mips=true);
-    UniformBuffer  loadUbo(const void* data, size_t size);
+    Texture2d            createTexture(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips);
+    Texture2d            loadTexture(const Pixmap& pm,bool mips=true);
+    UniformBuffer        loadUbo(const void* data, size_t size);
 
-    Uniforms       uniforms(const UniformsLayout &owner);
+    Uniforms             uniforms(const UniformsLayout &owner);
 
-    FrameBuffer    frameBuffer(Frame &out);
-    FrameBuffer    frameBuffer(Frame &out,     Texture2d& zbuf);
-    FrameBuffer    frameBuffer(Texture2d &out);
-    FrameBuffer    frameBuffer(Texture2d &out, Texture2d& zbuf);
+    FrameBuffer          frameBuffer(Frame &out);
+    FrameBuffer          frameBuffer(Frame &out,     Texture2d& zbuf);
+    FrameBuffer          frameBuffer(Texture2d &out);
+    FrameBuffer          frameBuffer(Texture2d &out, Texture2d& zbuf);
 
-    RenderPass     pass(const Attachment& color);
-    RenderPass     pass(const Attachment& color,const Attachment& depth);
-    /*
-    RenderPass     pass       (FboMode color, FboMode zbuf, TextureFormat zbufFormat);
-    RenderPass     pass       (const Tempest::Color& color);
-    RenderPass     pass       (const Tempest::Color& color,TextureFormat clFormat);
-    RenderPass     pass       (const Tempest::Color& color,FboMode zbuf, TextureFormat zbufFormat);
-    RenderPass     pass       (const Tempest::Color& color,const float zbuf,TextureFormat zbufFormat);
-    RenderPass     pass       (const Tempest::Color& color,const float zbuf,TextureFormat clFormat,TextureFormat zbufFormat);
-    */
+    RenderPass           pass(const Attachment& color);
+    RenderPass           pass(const Attachment& color,const Attachment& depth);
 
     template<class Vertex>
-    RenderPipeline pipeline(Topology tp,const RenderState& st,
-                            const UniformsLayout& ulay,const Shader &vs,const Shader &fs);
+    RenderPipeline       pipeline(Topology tp,const RenderState& st,
+                                  const UniformsLayout& ulay,const Shader &vs,const Shader &fs);
 
     PrimaryCommandBuffer commandBuffer();
-    CommandBuffer        commandSecondaryBuffer(const RenderPass &pass, uint32_t w, uint32_t h);
-    CommandBuffer        commandSecondaryBuffer(const RenderPass &pass, const FrameBuffer &fbo);
+    CommandBuffer        commandSecondaryBuffer(const FrameBufferLayout &lay);
+    CommandBuffer        commandSecondaryBuffer(const FrameBuffer &fbo);
 
     const Builtin&       builtin() const;
     const char*          renderer() const;
@@ -151,7 +143,6 @@ class Device {
     void       destroy(Fence&          f);
     void       destroy(Semaphore&      s);
     void       destroy(CommandPool&    c);
-    void       destroy(CommandBuffer&  c);
     void       destroy(Uniforms&       u);
 
     void       begin(Frame& f,RenderPass& p);

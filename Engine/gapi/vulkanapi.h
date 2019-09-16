@@ -21,10 +21,13 @@ class VulkanApi : public AbstractGraphicsApi {
 
     PPass          createPass(Device *d, Swapchain* sw, const Attachment** att, size_t acount) override;
 
-    PFbo           createFbo(Device *d, Swapchain *s, uint32_t imageId) override;
-    PFbo           createFbo(Device *d, Swapchain *s, uint32_t imageId, Texture* zbuf) override;
-    PFbo           createFbo(Device *d, uint32_t w, uint32_t h, Texture* cl, Texture* zbuf) override;
-    PFbo           createFbo(Device *d, uint32_t w, uint32_t h, Texture* cl) override;
+    PFbo           createFbo(Device *d, FboLayout* lay, Swapchain *s, uint32_t imageId) override;
+    PFbo           createFbo(Device *d, FboLayout* lay, Swapchain *s, uint32_t imageId, Texture* zbuf) override;
+    PFbo           createFbo(Device *d, FboLayout* lay, uint32_t w, uint32_t h, Texture* cl, Texture* zbuf) override;
+    PFbo           createFbo(Device *d, FboLayout *lay, uint32_t w, uint32_t h, Texture* cl) override;
+
+    PFboLayout     createFboLayout(Device *d, uint32_t w, uint32_t h, Swapchain *s,
+                                   TextureFormat *att, size_t attCount) override;
 
     PPipeline      createPipeline(Device* d,
                                   const RenderState &st,
@@ -56,8 +59,7 @@ class VulkanApi : public AbstractGraphicsApi {
     PTexture       createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips) override;
     PTexture       createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;
 
-    CommandBuffer* createCommandBuffer(Device* d, CmdPool* pool, Pass *pass, Fbo *fbo, CmdType secondary) override;
-    void           destroy            (CommandBuffer* cmd) override;
+    CommandBuffer* createCommandBuffer(Device* d,CmdPool* pool,FboLayout* lay,Fbo* fbo,CmdType type) override;
 
     uint32_t       nextImage(Device *d,Swapchain* sw,Semaphore* onReady) override;
     Image*         getImage (Device *d,Swapchain* sw,uint32_t id) override;

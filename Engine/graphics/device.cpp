@@ -176,26 +176,42 @@ UniformBuffer Device::loadUbo(const void *mem, size_t size) {
   }
 
 FrameBuffer Device::frameBuffer(Frame& out) {
-  FrameBuffer f(*this,api.createFbo(dev,swapchain,out.id),swapchain->w(),swapchain->h());
+  TextureFormat att[1] = {TextureFormat::Undefined};
+  uint32_t w = swapchain->w();
+  uint32_t h = swapchain->h();
+
+  FrameBufferLayout lay(api.createFboLayout(dev,w,h,swapchain,att,1),w,h);
+  FrameBuffer       f(*this,api.createFbo(dev,lay.impl.handler,swapchain,out.id),std::move(lay));
   return f;
   }
 
 FrameBuffer Device::frameBuffer(Frame &out, Texture2d &zbuf) {
-  FrameBuffer f(*this,api.createFbo(dev,swapchain,out.id,zbuf.impl.handler),swapchain->w(),swapchain->h());
+  TextureFormat att[2] = {TextureFormat::Undefined,zbuf.format()};
+  uint32_t w = swapchain->w();
+  uint32_t h = swapchain->h();
+
+  FrameBufferLayout lay(api.createFboLayout(dev,w,h,swapchain,att,2),w,h);
+  FrameBuffer       f(*this,api.createFbo(dev,lay.impl.handler,swapchain,out.id,zbuf.impl.handler),std::move(lay));
   return f;
   }
 
 FrameBuffer Device::frameBuffer(Texture2d &out, Texture2d &zbuf) {
+  TextureFormat att[2] = {out.format(),zbuf.format()};
   uint32_t w = uint32_t(out.w());
   uint32_t h = uint32_t(out.h());
-  FrameBuffer f(*this,api.createFbo(dev,w,h,out.impl.handler,zbuf.impl.handler),w,h);
+
+  FrameBufferLayout lay(api.createFboLayout(dev,w,h,swapchain,att,2),w,h);
+  FrameBuffer f(*this,api.createFbo(dev,lay.impl.handler,w,h,out.impl.handler,zbuf.impl.handler),std::move(lay));
   return f;
   }
 
 FrameBuffer Device::frameBuffer(Texture2d &out) {
+  TextureFormat att[1] = {out.format()};
   uint32_t w = uint32_t(out.w());
   uint32_t h = uint32_t(out.h());
-  FrameBuffer f(*this,api.createFbo(dev,w,h,out.impl.handler),w,h);
+
+  FrameBufferLayout lay(api.createFboLayout(dev,w,h,swapchain,att,1),w,h);
+  FrameBuffer f(*this,api.createFbo(dev,lay.impl.handler,w,h,out.impl.handler),std::move(lay));
   return f;
   }
 
@@ -210,37 +226,6 @@ RenderPass Device::pass(const Attachment &color, const Attachment &depth) {
   RenderPass f(api.createPass(dev,swapchain,att,2));
   return f;
   }
-
-/*
-RenderPass Device::pass(FboMode color, FboMode zbuf, TextureFormat zbufFormat) {
-  RenderPass f(api.createPass(dev,swapchain,zbufFormat,color,nullptr,zbuf,nullptr));
-  return f;
-  }
-
-RenderPass Device::pass(const Color &color) {
-  RenderPass f(api.createPass(dev,swapchain,TextureFormat::Undefined,FboMode::PreserveOut,&color,FboMode::Clear,nullptr));
-  return f;
-  }
-
-RenderPass Device::pass(const Color &color, TextureFormat clFormat) {
-  RenderPass f(api.createPass(dev,clFormat,TextureFormat::Undefined,FboMode::PreserveOut,&color,FboMode::Clear,nullptr));
-  return f;
-  }
-
-RenderPass Device::pass(const Color &color, FboMode zbuf, TextureFormat zbufFormat) {
-  RenderPass f(api.createPass(dev,swapchain,zbufFormat,FboMode::PreserveOut,&color,zbuf,nullptr));
-  return f;
-  }
-
-RenderPass Device::pass(const Color &color, const float zbuf, TextureFormat zbufFormat) {
-  RenderPass f(api.createPass(dev,swapchain,zbufFormat,FboMode::PreserveOut,&color,FboMode::PreserveOut,&zbuf));
-  return f;
-  }
-
-RenderPass Device::pass(const Color &color, const float zbuf, TextureFormat clFormat, TextureFormat zbufFormat) {
-  RenderPass f(api.createPass(dev,clFormat,zbufFormat,FboMode::PreserveOut,&color,FboMode::PreserveOut,&zbuf));
-  return f;
-  }*/
 
 RenderPipeline Device::implPipeline(const RenderState &st,const UniformsLayout &ulay,
                                     const Shader &vs, const Shader &fs,
@@ -259,16 +244,17 @@ PrimaryCommandBuffer Device::commandBuffer() {
   return buf;
   }
 
-CommandBuffer Device::commandSecondaryBuffer(const RenderPass &pass,uint32_t w,uint32_t h) {
+CommandBuffer Device::commandSecondaryBuffer(const FrameBufferLayout &lay) {
   CommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,
-                                                  pass.impl.handler,nullptr,CmdType::Secondary),
-                    w,h);
+                                                  lay.impl.handler,nullptr,CmdType::Secondary),
+                    lay.w(),lay.h());
   return buf;
   }
 
-CommandBuffer Device::commandSecondaryBuffer(const RenderPass& pass, const FrameBuffer &fbo) {
+CommandBuffer Device::commandSecondaryBuffer(const FrameBuffer &fbo) {
+  auto& lay = fbo.layout();
   CommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,
-                                                  pass.impl.handler,fbo.impl.handler,CmdType::Secondary),
+                                                  lay.impl.handler,fbo.impl.handler,CmdType::Secondary),
                     fbo.w(),fbo.h());
   return buf;
   }
@@ -313,10 +299,6 @@ void Device::destroy(Semaphore &s) {
 
 void Device::destroy(CommandPool &p) {
   api.destroy(p.impl.handler);
-  }
-
-void Device::destroy(CommandBuffer &c) {
-  api.destroy(c.impl.handler);
   }
 
 void Device::destroy(Uniforms &u) {

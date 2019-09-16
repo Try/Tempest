@@ -5,6 +5,7 @@
 #include "vulkan/vrenderpass.h"
 #include "vulkan/vpipeline.h"
 #include "vulkan/vframebuffer.h"
+#include "vulkan/vframebufferlayout.h"
 #include "vulkan/vbuffer.h"
 #include "vulkan/vshader.h"
 #include "vulkan/vfence.h"
@@ -66,48 +67,79 @@ AbstractGraphicsApi::PPass VulkanApi::createPass(AbstractGraphicsApi::Device *d,
                                                  const Attachment** att,
                                                  size_t acount) {
   Detail::VDevice*    dx=reinterpret_cast<Detail::VDevice*>(d);
-  // Detail::VSwapchain* sx=reinterpret_cast<Detail::VSwapchain*>(s);
-  return PPass(new Detail::VRenderPass(*dx,att,acount));
+  Detail::VSwapchain* sx=reinterpret_cast<Detail::VSwapchain*>(s);
+  return PPass(new Detail::VRenderPass(*dx,*sx,att,uint8_t(acount)));
   }
 
 AbstractGraphicsApi::PFbo VulkanApi::createFbo(AbstractGraphicsApi::Device *d,
+                                               FboLayout* lay,
                                                AbstractGraphicsApi::Swapchain *s,
                                                uint32_t imageId) {
-  Detail::VDevice*     dx=reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VSwapchain*  sx=reinterpret_cast<Detail::VSwapchain*>(s);
+  Detail::VDevice*            dx=reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VFramebufferLayout* l =reinterpret_cast<Detail::VFramebufferLayout*>(lay);
+  Detail::VSwapchain*         sx=reinterpret_cast<Detail::VSwapchain*>(s);
 
-  return PFbo(new Detail::VFramebuffer(*dx,*sx,imageId));
+  return PFbo(new Detail::VFramebuffer(*dx,*l,*sx,imageId));
   }
 
 AbstractGraphicsApi::PFbo VulkanApi::createFbo(AbstractGraphicsApi::Device *d,
+                                               FboLayout* lay,
                                                AbstractGraphicsApi::Swapchain *s,
                                                uint32_t imageId,
                                                AbstractGraphicsApi::Texture *zbuf) {
-  Detail::VDevice*     dx=reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VSwapchain*  sx=reinterpret_cast<Detail::VSwapchain*>(s);
-  Detail::VTexture*    tx=reinterpret_cast<Detail::VTexture*>(zbuf);
+  Detail::VDevice*            dx=reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VFramebufferLayout* l =reinterpret_cast<Detail::VFramebufferLayout*>(lay);
+  Detail::VSwapchain*         sx=reinterpret_cast<Detail::VSwapchain*>(s);
+  Detail::VTexture*           tx=reinterpret_cast<Detail::VTexture*>(zbuf);
 
-  return PFbo(new Detail::VFramebuffer(*dx,*sx,imageId,*tx));
+  return PFbo(new Detail::VFramebuffer(*dx,*l,*sx,imageId,*tx));
   }
 
 AbstractGraphicsApi::PFbo VulkanApi::createFbo(AbstractGraphicsApi::Device *d,
+                                               FboLayout* lay,
                                                uint32_t w,uint32_t h,
                                                AbstractGraphicsApi::Texture *tcl,
                                                AbstractGraphicsApi::Texture *zbuf) {
-  Detail::VDevice*     dx=reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VTexture*    cl=reinterpret_cast<Detail::VTexture*>(tcl);
-  Detail::VTexture*    tx=reinterpret_cast<Detail::VTexture*>(zbuf);
+  Detail::VDevice*            dx=reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VFramebufferLayout* l =reinterpret_cast<Detail::VFramebufferLayout*>(lay);
+  Detail::VTexture*           cl=reinterpret_cast<Detail::VTexture*>(tcl);
+  Detail::VTexture*           tx=reinterpret_cast<Detail::VTexture*>(zbuf);
 
-  return PFbo(new Detail::VFramebuffer(*dx,w,h,*cl,*tx));
+  return PFbo(new Detail::VFramebuffer(*dx,*l,w,h,*cl,*tx));
   }
 
 AbstractGraphicsApi::PFbo VulkanApi::createFbo(AbstractGraphicsApi::Device *d,
+                                               AbstractGraphicsApi::FboLayout* lay,
                                                uint32_t w, uint32_t h,
                                                AbstractGraphicsApi::Texture *tcl) {
-  Detail::VDevice*     dx=reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VTexture*    cl=reinterpret_cast<Detail::VTexture*>(tcl);
+  Detail::VDevice*            dx=reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VTexture*           cl=reinterpret_cast<Detail::VTexture*>(tcl);
+  Detail::VFramebufferLayout* l =reinterpret_cast<Detail::VFramebufferLayout*>(lay);
 
-  return PFbo(new Detail::VFramebuffer(*dx,w,h,*cl));
+  return PFbo(new Detail::VFramebuffer(*dx,*l,w,h,*cl));
+  }
+
+AbstractGraphicsApi::PFboLayout VulkanApi::createFboLayout(AbstractGraphicsApi::Device *d,
+                                                           uint32_t /*w*/, uint32_t /*h*/,
+                                                           AbstractGraphicsApi::Swapchain *s,
+                                                           Tempest::TextureFormat *att,
+                                                           size_t attCount) {
+  Detail::VDevice*     dx=reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VSwapchain*  sx=reinterpret_cast<Detail::VSwapchain*>(s);
+
+  VkFormat frm[256] = {};
+  if(attCount>256)
+    throw std::logic_error("more then 256 attachments is not implemented"); //TODO
+
+  for(size_t i=0;i<attCount;++i){
+    frm[i] = Detail::nativeFormat(att[i]);
+    }
+
+  Detail::DSharedPtr<AbstractGraphicsApi::FboLayout*> impl{
+    new Detail::VFramebufferLayout(*dx,*sx,frm,uint8_t(attCount))
+    };
+
+  return impl;
   }
 
 AbstractGraphicsApi::PPipeline VulkanApi::createPipeline(AbstractGraphicsApi::Device *d,
@@ -245,7 +277,6 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   if(isDepthFormat(frm)) {
     lay = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     } else {
-    //lay = VK_IMAGE_LAYOUT_GENERAL;
     lay = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     }
 
@@ -277,18 +308,16 @@ std::shared_ptr<AbstractGraphicsApi::UniformsLay> VulkanApi::createUboLayout(Dev
   return std::make_shared<Detail::VPipeline::VUboLayout>(dx->device,lay);
   }
 
-AbstractGraphicsApi::CommandBuffer *VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device *d, CmdPool *p,
-                                                                   Pass* pass, Fbo* fbo, CmdType cmdType) {
-  Detail::VDevice*      dx=reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VCommandPool* px=reinterpret_cast<Detail::VCommandPool*>(p);
-  Detail::VRenderPass*  rp=reinterpret_cast<Detail::VRenderPass*>(pass);
-  Detail::VFramebuffer* fb=reinterpret_cast<Detail::VFramebuffer*>(fbo);
-  return new Detail::VCommandBuffer(*dx,*px,rp,fb,cmdType);
-  }
-
-void VulkanApi::destroy(AbstractGraphicsApi::CommandBuffer *cmd) {
-  Detail::VCommandBuffer* cx=reinterpret_cast<Detail::VCommandBuffer*>(cmd);
-  delete cx;
+AbstractGraphicsApi::CommandBuffer *VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device *d,
+                                                                   AbstractGraphicsApi::CmdPool *p,
+                                                                   AbstractGraphicsApi::FboLayout *lay,
+                                                                   AbstractGraphicsApi::Fbo *fbo,
+                                                                   CmdType cmdType) {
+  Detail::VDevice*             dx=reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VCommandPool*        px=reinterpret_cast<Detail::VCommandPool*>(p);
+  Detail::VFramebufferLayout*  l =reinterpret_cast<Detail::VFramebufferLayout*>(lay);
+  Detail::VFramebuffer*        fb=reinterpret_cast<Detail::VFramebuffer*>(fbo);
+  return new Detail::VCommandBuffer(*dx,*px,l ? &l->rp : nullptr,fb,cmdType);
   }
 
 uint32_t VulkanApi::nextImage(Device *d,

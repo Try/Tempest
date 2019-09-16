@@ -66,17 +66,14 @@ void VCommandBuffer::begin(Usage usage) {
   VkCommandBufferInheritanceInfo inheritanceInfo={};
 
   // secondary pass
-  if(pass.handler!=nullptr){
-    auto& inst = pass.handler->instance();
-    if(inst.impl!=VK_NULL_HANDLE) {
-      inheritanceInfo.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-      inheritanceInfo.framebuffer = VK_NULL_HANDLE;
-      inheritanceInfo.renderPass  = inst.impl;
+  if(pass.handler!=nullptr && pass.handler->impl!=VK_NULL_HANDLE){
+    inheritanceInfo.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+    inheritanceInfo.framebuffer = VK_NULL_HANDLE;
+    inheritanceInfo.renderPass  = pass.handler->impl; //TODO: RP from fbo
 
-      usageFlags = SIMULTANEOUS_USE_BIT|RENDER_PASS_CONTINUE_BIT;
-      currentRp  = pass;
-      currentFbo = fbo;
-      }
+    usageFlags = SIMULTANEOUS_USE_BIT|RENDER_PASS_CONTINUE_BIT;
+    currentRp  = pass;
+    currentFbo = fbo;
     } else {
     currentRp  = Detail::DSharedPtr<VRenderPass*>{};
     currentFbo = Detail::DSharedPtr<VFramebuffer*>{};
@@ -107,8 +104,8 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
 
   VkRenderPassBeginInfo renderPassInfo = {};
   renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  renderPassInfo.renderPass        = pass->instance().impl;
-  renderPassInfo.framebuffer       = fbo->instance(*pass).impl;
+  renderPassInfo.renderPass        = pass->impl;
+  renderPassInfo.framebuffer       = fbo->impl;
   renderPassInfo.renderArea.offset = {0, 0};
   renderPassInfo.renderArea.extent = {width,height};
 
@@ -120,7 +117,7 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
 
   clear[1].depthStencil.depth=pass->zclear;
 
-  renderPassInfo.clearValueCount = pass->attachCount;
+  renderPassInfo.clearValueCount = pass->attCount;
   renderPassInfo.pClearValues    = clear;
 
   vkCmdBeginRenderPass(impl, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
@@ -134,8 +131,8 @@ void VCommandBuffer::beginSecondaryPass(Tempest::AbstractGraphicsApi::Fbo *f,
 
   VkRenderPassBeginInfo renderPassInfo = {};
   renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  renderPassInfo.renderPass        = pass->instance().impl;
-  renderPassInfo.framebuffer       = fbo->instance(*pass).impl; //fbo->impl;
+  renderPassInfo.renderPass        = pass->impl;
+  renderPassInfo.framebuffer       = fbo->impl;
   renderPassInfo.renderArea.offset = {0, 0};
   renderPassInfo.renderArea.extent = {width,height};
 
@@ -147,7 +144,7 @@ void VCommandBuffer::beginSecondaryPass(Tempest::AbstractGraphicsApi::Fbo *f,
 
   clear[1].depthStencil.depth=pass->zclear;
 
-  renderPassInfo.clearValueCount = pass->attachCount;
+  renderPassInfo.clearValueCount = pass->attCount;
   renderPassInfo.pClearValues    = clear;
 
   vkCmdBeginRenderPass(impl, &renderPassInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);

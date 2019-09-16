@@ -352,7 +352,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   pipelineInfo.pColorBlendState    = &colorBlending;
   pipelineInfo.pDynamicState       = &dynamic;
   pipelineInfo.layout              = layout;
-  pipelineInfo.renderPass          = pass.instance().impl;
+  pipelineInfo.renderPass          = pass.impl;
   pipelineInfo.subpass             = 0;
   pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
 

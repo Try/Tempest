@@ -100,7 +100,6 @@ class PrimaryCommandBuffer : public CommandBuffer {
     void setPass(const FrameBuffer& fbo, const RenderPass& p, uint32_t width, uint32_t height);
 
     void exec(const FrameBuffer& fbo, const RenderPass& p, const CommandBuffer& buf);
-    void exec(const FrameBuffer& fbo, const RenderPass& p,uint32_t width, uint32_t height,const CommandBuffer& buf);
 
   private:
     PrimaryCommandBuffer(Tempest::Device& dev,AbstractGraphicsApi::CommandBuffer* f):CommandBuffer(dev,f,0,0){}
