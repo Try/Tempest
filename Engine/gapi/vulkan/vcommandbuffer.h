@@ -10,6 +10,7 @@ namespace Detail {
 
 class VRenderPass;
 class VFramebuffer;
+class VFramebufferLayout;
 
 class VDevice;
 class VCommandPool;
@@ -28,7 +29,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
       };
 
     VCommandBuffer()=delete;
-    VCommandBuffer(VDevice &device, VCommandPool &pool, VRenderPass* rp, VFramebuffer* fbo, CmdType secondary);
+    VCommandBuffer(VDevice &device, VCommandPool &pool, VFramebufferLayout* fbo, CmdType secondary);
     VCommandBuffer(VCommandBuffer&& other);
     ~VCommandBuffer();
 
@@ -74,13 +75,13 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
                         uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
 
   private:
-    VkDevice                          device=nullptr;
-    VkCommandPool                     pool  =VK_NULL_HANDLE;
-    Detail::DSharedPtr<VRenderPass*>  currentRp;
-    Detail::DSharedPtr<VFramebuffer*> currentFbo;
+    VkDevice                                device=nullptr;
+    VkCommandPool                           pool  =VK_NULL_HANDLE;
+    Detail::DSharedPtr<VFramebufferLayout*> currentFbo;
+    //Detail::DSharedPtr<VFramebufferLayout*> currentLay;
     // secondary cmd buf
-    Detail::DSharedPtr<VRenderPass*>  pass;
-    Detail::DSharedPtr<VFramebuffer*> fbo;
+    Detail::DSharedPtr<VFramebufferLayout*> fbo;
+    //Detail::DSharedPtr<VFramebufferLayout*> lay;
   };
 
 }}

@@ -7,7 +7,7 @@ namespace Tempest {
 
 class Device;
 
-class Fence {
+class Fence final {
   public:
     Fence(Tempest::Device& owner);
     Fence(Fence&& f)=default;

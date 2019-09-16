@@ -42,8 +42,8 @@ VFramebuffer::VFramebuffer(VDevice &device, VFramebufferLayout &lay, uint32_t w,
 
 VFramebuffer::VFramebuffer(VFramebuffer &&other) {
   std::swap(impl,  other.impl);
-  std::swap(device,other.device);
   std::swap(rp,    other.rp);
+  std::swap(device,other.device);
   }
 
 VFramebuffer::~VFramebuffer() {
@@ -54,14 +54,14 @@ VFramebuffer::~VFramebuffer() {
 
 void VFramebuffer::operator=(VFramebuffer &&other) {
   std::swap(impl,  other.impl);
-  std::swap(device,other.device);
   std::swap(rp,other.rp);
+  std::swap(device,other.device);
   }
 
 VkFramebuffer VFramebuffer::allocFbo(uint32_t w, uint32_t h, const VkImageView *attach, size_t cnt) {
   VkFramebufferCreateInfo crt={};
   crt.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-  crt.renderPass      = rp.handler->rp.impl;
+  crt.renderPass      = rp.handler->impl;
   crt.pAttachments    = attach;
   crt.attachmentCount = cnt;
   crt.width           = w;

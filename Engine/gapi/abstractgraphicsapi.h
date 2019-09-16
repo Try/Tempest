@@ -244,14 +244,18 @@ namespace Tempest {
         virtual void draw        (size_t offset,size_t vertexCount)=0;
         virtual void drawIndexed (size_t ioffset, size_t isize, size_t voffset)=0;
         };
-      struct CmdPool         {};
+      struct CmdPool         {
+        virtual ~CmdPool()=default;
+        };
 
       struct Fence           {
         virtual ~Fence()=default;
         virtual void wait() =0;
         virtual void reset()=0;
         };
-      struct Semaphore       {};
+      struct Semaphore       {
+        virtual ~Semaphore()=default;
+        };
 
       using PBuffer    = Detail::DSharedPtr<Buffer*>;
       using PTexture   = Detail::DSharedPtr<Texture*>;
@@ -293,16 +297,13 @@ namespace Tempest {
       virtual PShader    createShader(Device *d,const char* source,size_t src_size)=0;
 
       virtual Fence*     createFence(Device *d)=0;
-      virtual void       destroy(Fence* fence)=0;
 
       virtual Semaphore* createSemaphore(Device *d)=0;
-      virtual void       destroy(Semaphore* semaphore)=0;
 
       virtual CmdPool*   createCommandPool(Device* d)=0;
-      virtual void       destroy(CmdPool* cmd)=0;
 
       virtual CommandBuffer*
-                         createCommandBuffer(Device* d,CmdPool* pool,FboLayout* lay,Fbo* fbo,CmdType type)=0;
+                         createCommandBuffer(Device* d,CmdPool* pool,FboLayout* fbo,CmdType type)=0;
 
       virtual PBuffer    createBuffer(Device* d,const void *mem,size_t size,MemUsage usage,BufferFlags flg)=0;
 

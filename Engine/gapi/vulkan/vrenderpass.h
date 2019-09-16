@@ -12,6 +12,7 @@ namespace Detail {
 
 class VDevice;
 class VSwapchain;
+class VFramebufferLayout;
 
 class VRenderPass : public AbstractGraphicsApi::Pass {
   public:
@@ -21,21 +22,32 @@ class VRenderPass : public AbstractGraphicsApi::Pass {
 
     VRenderPass()=default;
     VRenderPass(VDevice& device, VSwapchain& sw, const Attachment** attach, uint8_t attCount);
-    VRenderPass(VDevice& device, VSwapchain& sw, const VkFormat*    attach, uint8_t attCount);
     VRenderPass(VRenderPass&& other);
     ~VRenderPass();
 
     void operator=(VRenderPass&& other);
 
+    struct Impl {
+      Impl(VFramebufferLayout &lay,VkRenderPass impl):lay(&lay),impl(impl){}
+      DSharedPtr<VFramebufferLayout*> lay;
+      VkRenderPass                    impl=VK_NULL_HANDLE;
+      };
+
+    Impl&                         instance(VFramebufferLayout &lay);
+
+    static VkRenderPass           createLayoutInstance(VkDevice &device, VSwapchain& sw, const VkFormat    *attach, uint8_t attCount);
+
     Tempest::Color                color;
     float                         zclear=1.0f;
     uint8_t                       attCount=0;
-    VkRenderPass                  impl=VK_NULL_HANDLE;
 
   private:
     VkDevice                      device=nullptr;
-    VkRenderPass                  createInstance(VSwapchain& sw, const Attachment **attach, uint8_t attCount);
-    VkRenderPass                  createLayoutInstance(VSwapchain& sw, const VkFormat    *attach, uint8_t attCount);
+    VSwapchain*                   swapchain=nullptr;
+    std::vector<Impl>             impl;
+    std::unique_ptr<Attachment[]> input;
+
+    static VkRenderPass           createInstance      (VkDevice &device, VSwapchain& sw, const Attachment *attach, const VkFormat *frm, uint8_t attCount);
   };
 
 }}

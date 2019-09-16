@@ -12,6 +12,5 @@ Semaphore::Semaphore(Device &dev, AbstractGraphicsApi::Semaphore *impl)
   }
 
 Semaphore::~Semaphore() {
-  if(dev)
-    dev->destroy(*this);
+  delete impl.handler;
   }

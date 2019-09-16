@@ -2,6 +2,7 @@
 
 #include "vdevice.h"
 #include "vframebuffer.h"
+#include "vframebufferlayout.h"
 #include "vrenderpass.h"
 #include "vshader.h"
 
@@ -71,17 +72,16 @@ void VPipeline::operator=(VPipeline &&other) {
   std::swap(pipelineLayout, other.pipelineLayout);
   }
 
-VPipeline::Inst &VPipeline::instance(VRenderPass &pass, VFramebuffer &fbo,
-                                     uint32_t width, uint32_t height) {
+VPipeline::Inst &VPipeline::instance(VFramebufferLayout &lay, uint32_t width, uint32_t height) {
   for(auto& i:inst)
     if(i.w==width && i.h==height)
       return i;
   VkPipeline val=VK_NULL_HANDLE;
   try {
-    val = initGraphicsPipeline(device,pipelineLayout,pass,fbo,st,
+    val = initGraphicsPipeline(device,pipelineLayout,lay,st,
                                width,height,decl.get(),declSize,stride,
                                tp,*vs.handler,*fs.handler);
-    inst.emplace_back(width,height,&pass,val);
+    inst.emplace_back(width,height,&lay,val);
     }
   catch(...) {
     if(val!=VK_NULL_HANDLE)
@@ -147,7 +147,7 @@ VkDescriptorSetLayout VPipeline::initUboLayout(VkDevice device, const UniformsLa
   }
 
 VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
-                                           VRenderPass &pass, VFramebuffer &, const RenderState &st,
+                                           const VFramebufferLayout &lay, const RenderState &st,
                                            uint32_t width, uint32_t height,
                                            const Decl::ComponentType *decl, size_t declSize,
                                            size_t stride, Topology tp,
@@ -352,7 +352,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   pipelineInfo.pColorBlendState    = &colorBlending;
   pipelineInfo.pDynamicState       = &dynamic;
   pipelineInfo.layout              = layout;
-  pipelineInfo.renderPass          = pass.impl;
+  pipelineInfo.renderPass          = lay.impl;
   pipelineInfo.subpass             = 0;
   pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
 

@@ -27,7 +27,7 @@ static const std::initializer_list<const char*> deviceExtensions = {
 VDevice::DataHelper::DataHelper(VDevice &owner)
   : owner(owner),
     cmdPool(owner,VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT),
-    cmdBuffer(owner,cmdPool,nullptr,nullptr,CmdType::Primary),
+    cmdBuffer(owner,cmdPool,nullptr,CmdType::Primary),
     fence(owner),
     graphicsQueue(owner.graphicsQueue){
   hold.reserve(32);

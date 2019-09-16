@@ -1,6 +1,7 @@
 #include "vrenderpass.h"
 
 #include "vdevice.h"
+#include "vframebufferlayout.h"
 #include "vswapchain.h"
 
 #include <Tempest/RenderPass>
@@ -8,40 +9,61 @@
 using namespace Tempest::Detail;
 
 VRenderPass::VRenderPass(VDevice& device, VSwapchain& sw, const Attachment **attach, uint8_t attCount)
-  : attCount(attCount), device(device.device) {
-  impl = createInstance(sw,attach,attCount);
-  }
-
-VRenderPass::VRenderPass(VDevice &device, VSwapchain &sw, const VkFormat *attach, uint8_t attCount)
-  : attCount(attCount), device(device.device) {
-  impl = createLayoutInstance(sw,attach,attCount);
+  : attCount(attCount), device(device.device), swapchain(&sw) {
+  input.reset(new Attachment[attCount]);
+  for(size_t i=0;i<attCount;++i)
+    input[i] = *attach[i];
+  //impl = createInstance(device.device,sw,attach,attCount);
   }
 
 VRenderPass::VRenderPass(VRenderPass &&other) {
   std::swap(color,other.color);
   std::swap(zclear,other.zclear);
   std::swap(attCount,other.attCount);
-  std::swap(impl,other.impl);
   std::swap(device,other.device);
+  std::swap(impl,other.impl);
+  std::swap(input,other.input);
   }
 
 VRenderPass::~VRenderPass(){
   if(device==nullptr)
     return;
   vkDeviceWaitIdle(device);
-  if(impl!=VK_NULL_HANDLE)
-    vkDestroyRenderPass(device,impl,nullptr);
+  for(auto& i:impl)
+    if(i.impl!=VK_NULL_HANDLE)
+      vkDestroyRenderPass(device,i.impl,nullptr);
   }
 
 void VRenderPass::operator=(VRenderPass &&other) {
   std::swap(color,other.color);
   std::swap(zclear,other.zclear);
   std::swap(attCount,other.attCount);
-  std::swap(impl,other.impl);
   std::swap(device,other.device);
+  std::swap(swapchain,other.swapchain);
+  std::swap(impl,other.impl);
+  std::swap(input,other.input);
   }
 
-VkRenderPass VRenderPass::createInstance(VSwapchain& sw, const Attachment **att, uint8_t attCount) {
+VRenderPass::Impl &VRenderPass::instance(VFramebufferLayout &lay) {
+  for(auto& i:impl)
+    if(lay.isCompatible(*i.lay.handler))
+      return i;
+
+  VkRenderPass val=VK_NULL_HANDLE;
+  try {
+    val = createInstance(device,*swapchain,input.get(),lay.frm.get(),attCount);
+    impl.emplace_back(lay,val);
+    }
+  catch(...) {
+    if(val!=VK_NULL_HANDLE)
+      vkDestroyPipeline(device,val,nullptr);
+    throw;
+    }
+  return impl.back();
+  }
+
+VkRenderPass VRenderPass::createInstance(VkDevice &device, VSwapchain& sw,
+                                         const Attachment *att, const VkFormat* format, uint8_t attCount) {
   VkRenderPass ret=VK_NULL_HANDLE;
 
   VkAttachmentDescription attach[2] = {};
@@ -55,9 +77,10 @@ VkRenderPass VRenderPass::createInstance(VSwapchain& sw, const Attachment **att,
   for(size_t i=0;i<attCount;++i){
     VkAttachmentDescription& a = attach[i];
     VkAttachmentReference&   r = ref[i];
-    const Attachment&        x = *att[i];
+    const Attachment&        x = att[i];
+    const VkFormat           f = format[i];
 
-    a.format         = Detail::nativeFormat(x.format);
+    a.format         = f;
     a.samples        = VK_SAMPLE_COUNT_1_BIT;
 
     a.loadOp         = bool(x.mode&FboMode::PreserveIn)  ? VK_ATTACHMENT_LOAD_OP_LOAD   : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -76,7 +99,7 @@ VkRenderPass VRenderPass::createInstance(VSwapchain& sw, const Attachment **att,
     a.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
     r.attachment=i;
-    if(isDepthFormat(x.format)) {
+    if(Detail::nativeIsDepthFormat(f)) {
       subpass.pDepthStencilAttachment = &r;
       a.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
       a.finalLayout   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
@@ -114,7 +137,7 @@ VkRenderPass VRenderPass::createInstance(VSwapchain& sw, const Attachment **att,
   return ret;
   }
 
-VkRenderPass VRenderPass::createLayoutInstance(VSwapchain &sw, const VkFormat *att, uint8_t attCount) {
+VkRenderPass VRenderPass::createLayoutInstance(VkDevice& device,VSwapchain &sw, const VkFormat *att, uint8_t attCount) {
   VkRenderPass ret=VK_NULL_HANDLE;
 
   VkAttachmentDescription attach[2] = {};

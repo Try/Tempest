@@ -129,7 +129,7 @@ AbstractGraphicsApi::PFboLayout VulkanApi::createFboLayout(AbstractGraphicsApi::
 
   VkFormat frm[256] = {};
   if(attCount>256)
-    throw std::logic_error("more then 256 attachments is not implemented"); //TODO
+    throw std::logic_error("more then 256 attachments is not implemented");
 
   for(size_t i=0;i<attCount;++i){
     frm[i] = Detail::nativeFormat(att[i]);
@@ -167,29 +167,14 @@ AbstractGraphicsApi::Fence *VulkanApi::createFence(AbstractGraphicsApi::Device *
   return new Detail::VFence(*dx);
   }
 
-void VulkanApi::destroy(AbstractGraphicsApi::Fence *f) {
-  Detail::VFence* fx=reinterpret_cast<Detail::VFence*>(f);
-  delete fx;
-  }
-
 AbstractGraphicsApi::Semaphore *VulkanApi::createSemaphore(AbstractGraphicsApi::Device *d) {
   Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
   return new Detail::VSemaphore(*dx);
   }
 
-void VulkanApi::destroy(AbstractGraphicsApi::Semaphore *s) {
-  Detail::VSemaphore* sx=reinterpret_cast<Detail::VSemaphore*>(s);
-  delete sx;
-  }
-
 AbstractGraphicsApi::CmdPool *VulkanApi::createCommandPool(AbstractGraphicsApi::Device *d) {
   Detail::VDevice* dx =reinterpret_cast<Detail::VDevice*>(d);
   return new Detail::VCommandPool(*dx);
-  }
-
-void VulkanApi::destroy(AbstractGraphicsApi::CmdPool *cmd) {
-  Detail::VCommandPool* cx=reinterpret_cast<Detail::VCommandPool*>(cmd);
-  delete cx;
   }
 
 AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device *d,
@@ -310,14 +295,12 @@ std::shared_ptr<AbstractGraphicsApi::UniformsLay> VulkanApi::createUboLayout(Dev
 
 AbstractGraphicsApi::CommandBuffer *VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device *d,
                                                                    AbstractGraphicsApi::CmdPool *p,
-                                                                   AbstractGraphicsApi::FboLayout *lay,
-                                                                   AbstractGraphicsApi::Fbo *fbo,
+                                                                   FboLayout *fbo,
                                                                    CmdType cmdType) {
   Detail::VDevice*             dx=reinterpret_cast<Detail::VDevice*>(d);
   Detail::VCommandPool*        px=reinterpret_cast<Detail::VCommandPool*>(p);
-  Detail::VFramebufferLayout*  l =reinterpret_cast<Detail::VFramebufferLayout*>(lay);
-  Detail::VFramebuffer*        fb=reinterpret_cast<Detail::VFramebuffer*>(fbo);
-  return new Detail::VCommandBuffer(*dx,*px,l ? &l->rp : nullptr,fb,cmdType);
+  Detail::VFramebufferLayout*  fb=reinterpret_cast<Detail::VFramebufferLayout*>(fbo);
+  return new Detail::VCommandBuffer(*dx,*px,fb,cmdType);
   }
 
 uint32_t VulkanApi::nextImage(Device *d,

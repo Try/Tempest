@@ -140,9 +140,6 @@ class Device {
                              const Decl::ComponentType *decl, size_t declSize,
                              size_t stride, Topology tp);
 
-    void       destroy(Fence&          f);
-    void       destroy(Semaphore&      s);
-    void       destroy(CommandPool&    c);
     void       destroy(Uniforms&       u);
 
     void       begin(Frame& f,RenderPass& p);

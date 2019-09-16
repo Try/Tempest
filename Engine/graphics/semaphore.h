@@ -7,7 +7,7 @@ namespace Tempest {
 
 class Device;
 
-class Semaphore {
+class Semaphore final {
   public:
     Semaphore(Tempest::Device& owner);
     Semaphore(Semaphore&& f)=default;

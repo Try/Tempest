@@ -24,10 +24,10 @@ class VFramebuffer : public AbstractGraphicsApi::Fbo {
     void operator=(VFramebuffer&& other);
 
     VkFramebuffer                           impl=VK_NULL_HANDLE;
+    Detail::DSharedPtr<VFramebufferLayout*> rp;
 
   private:
     VkDevice                                device=nullptr;
-    Detail::DSharedPtr<VFramebufferLayout*> rp;
 
     VkFramebuffer allocFbo(uint32_t w, uint32_t h,const VkImageView* attach,size_t cnt);
   };

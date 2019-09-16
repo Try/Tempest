@@ -15,12 +15,11 @@ class Attachment final {
   public:
     Attachment()=default;
     Attachment(const FboMode& m):mode(m){}
-    Attachment(const float& clr,const TextureFormat& frm):mode(FboMode::Clear),clear(clr),format(frm){}
-    Attachment(const Color& clr,const TextureFormat& frm):mode(FboMode::Clear),clear(clr),format(frm){}
+    Attachment(const FboMode& m,const float& clr):mode(m | FboMode::Clear),clear(clr){}
+    Attachment(const FboMode& m,const Color& clr):mode(m | FboMode::Clear),clear(clr){}
 
     FboMode       mode=FboMode::Preserve;
     Color         clear{};
-    TextureFormat format=TextureFormat::Undefined;
   };
 
 class RenderPass final {

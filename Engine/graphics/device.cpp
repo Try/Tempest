@@ -246,23 +246,19 @@ RenderPipeline Device::implPipeline(const RenderState &st,const UniformsLayout &
   }
 
 PrimaryCommandBuffer Device::commandBuffer() {
-  PrimaryCommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,nullptr,nullptr,CmdType::Primary));
+  PrimaryCommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,nullptr,CmdType::Primary));
   return buf;
   }
 
 CommandBuffer Device::commandSecondaryBuffer(const FrameBufferLayout &lay) {
   CommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,
-                                                  lay.impl.handler,nullptr,CmdType::Secondary),
+                                                  lay.impl.handler,CmdType::Secondary),
                     lay.w(),lay.h());
   return buf;
   }
 
 CommandBuffer Device::commandSecondaryBuffer(const FrameBuffer &fbo) {
-  auto& lay = fbo.layout();
-  CommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,
-                                                  lay.impl.handler,fbo.impl.handler,CmdType::Secondary),
-                    fbo.w(),fbo.h());
-  return buf;
+  return commandSecondaryBuffer(fbo.layout());
   }
 
 const Builtin &Device::builtin() const {
@@ -293,18 +289,6 @@ Uniforms Device::uniforms(const UniformsLayout &owner) {
     owner.impl=api.createUboLayout(dev,owner);
   Uniforms ubo(*this,api.createDescriptors(dev,owner,owner.impl.get()));
   return ubo;
-  }
-
-void Device::destroy(Fence &f) {
-  api.destroy(f.impl.handler);
-  }
-
-void Device::destroy(Semaphore &s) {
-  api.destroy(s.impl.handler);
-  }
-
-void Device::destroy(CommandPool &p) {
-  api.destroy(p.impl.handler);
   }
 
 void Device::destroy(Uniforms &u) {

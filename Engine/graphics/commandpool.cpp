@@ -9,6 +9,5 @@ CommandPool::CommandPool(Device &dev, AbstractGraphicsApi::CmdPool *impl)
   }
 
 CommandPool::~CommandPool() {
-  if(dev)
-    dev->destroy(*this);
+  delete impl.handler;
   }

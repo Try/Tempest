@@ -41,13 +41,9 @@ class VulkanApi : public AbstractGraphicsApi {
     PShader        createShader(AbstractGraphicsApi::Device *d, const char* source, size_t src_size) override;
 
     Fence*         createFence(Device *d) override;
-    void           destroy    (Fence* fence) override;
-
     Semaphore*     createSemaphore(Device *d) override;
-    void           destroy        (Semaphore* semaphore) override;
 
     CmdPool*       createCommandPool(Device* d) override;
-    void           destroy          (CmdPool* cmd) override;
 
     PBuffer        createBuffer(Device* d, const void *mem, size_t size, MemUsage usage, BufferFlags flg) override;
 
@@ -59,7 +55,7 @@ class VulkanApi : public AbstractGraphicsApi {
     PTexture       createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips) override;
     PTexture       createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;
 
-    CommandBuffer* createCommandBuffer(Device* d,CmdPool* pool,FboLayout* lay,Fbo* fbo,CmdType type) override;
+    CommandBuffer* createCommandBuffer(Device* d, CmdPool* pool, FboLayout* fbo, CmdType type) override;
 
     uint32_t       nextImage(Device *d,Swapchain* sw,Semaphore* onReady) override;
     Image*         getImage (Device *d,Swapchain* sw,uint32_t id) override;

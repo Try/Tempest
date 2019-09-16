@@ -11,8 +11,8 @@ namespace Detail {
 
 class VShader;
 class VDevice;
-class VRenderPass;
 class VFramebuffer;
+class VFramebufferLayout;
 
 class VPipeline : public AbstractGraphicsApi::Pipeline {
   public:
@@ -39,19 +39,19 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     void operator=(VPipeline&& other);
 
     struct Inst final {
-      Inst(uint32_t w,uint32_t h,VRenderPass* rp,VkPipeline val):w(w),h(h),rp(rp),val(val){}
+      Inst(uint32_t w,uint32_t h,VFramebufferLayout* lay,VkPipeline val):w(w),h(h),lay(lay),val(val){}
       Inst(Inst&&)=default;
       Inst& operator = (Inst&&)=default;
 
-      uint32_t                         w=0;
-      uint32_t                         h=0;
-      Detail::DSharedPtr<VRenderPass*> rp;
-      VkPipeline                       val;
+      uint32_t                                w=0;
+      uint32_t                                h=0;
+      Detail::DSharedPtr<VFramebufferLayout*> lay;
+      VkPipeline                              val;
       };
 
     VkPipelineLayout  pipelineLayout  =VK_NULL_HANDLE;
 
-    Inst&             instance(VRenderPass &pass, VFramebuffer& fbo, uint32_t width, uint32_t height);
+    Inst&             instance(VFramebufferLayout &lay, uint32_t width, uint32_t height);
 
   private:
     VkDevice                               device=nullptr;
@@ -66,7 +66,8 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     static VkPipelineLayout      initLayout(VkDevice device,VkDescriptorSetLayout uboLay);
     static VkDescriptorSetLayout initUboLayout(VkDevice device,const UniformsLayout &ulay);
     static VkPipeline            initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
-                                                      VRenderPass& pass, VFramebuffer &fbo, const RenderState &st, uint32_t width, uint32_t height,
+                                                      const VFramebufferLayout &lay, const RenderState &st,
+                                                      uint32_t width, uint32_t height,
                                                       const Decl::ComponentType *decl, size_t declSize, size_t stride,
                                                       Topology tp,
                                                       VShader &vert, VShader &frag);

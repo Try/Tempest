@@ -12,7 +12,7 @@ Fence::Fence(Device &dev, AbstractGraphicsApi::Fence *impl)
   }
 
 Fence::~Fence() {
-  dev->destroy(*this);
+  delete impl.handler;
   }
 
 void Fence::wait() {
