@@ -11,14 +11,24 @@ using namespace Tempest::Detail;
 VRenderPass::VRenderPass(VDevice& device, VSwapchain& sw, const Attachment **attach, uint8_t attCount)
   : attCount(attCount), device(device.device), swapchain(&sw) {
   input.reset(new Attachment[attCount]);
+  clear.reset(new VkClearValue[attCount]);
   for(size_t i=0;i<attCount;++i)
     input[i] = *attach[i];
+
+  for(size_t i=0;i<attCount;++i) {
+    auto& cl = attach[i]->clear;
+    clear[i].color.float32[0] = cl.r();
+    clear[i].color.float32[1] = cl.g();
+    clear[i].color.float32[2] = cl.b();
+    clear[i].color.float32[3] = cl.a();
+
+    clear[i].depthStencil.depth = cl.r();
+    }
   //impl = createInstance(device.device,sw,attach,attCount);
   }
 
 VRenderPass::VRenderPass(VRenderPass &&other) {
-  std::swap(color,other.color);
-  std::swap(zclear,other.zclear);
+  std::swap(clear,other.clear);
   std::swap(attCount,other.attCount);
   std::swap(device,other.device);
   std::swap(impl,other.impl);
@@ -35,8 +45,7 @@ VRenderPass::~VRenderPass(){
   }
 
 void VRenderPass::operator=(VRenderPass &&other) {
-  std::swap(color,other.color);
-  std::swap(zclear,other.zclear);
+  std::swap(clear,other.clear);
   std::swap(attCount,other.attCount);
   std::swap(device,other.device);
   std::swap(swapchain,other.swapchain);
@@ -90,8 +99,7 @@ VkRenderPass VRenderPass::createInstance(VkDevice &device, VSwapchain& sw,
       a.format = sw.format();
 
     if(bool(x.mode&FboMode::Clear)) {
-      a.loadOp  = VK_ATTACHMENT_LOAD_OP_CLEAR;
-      a.storeOp = VK_ATTACHMENT_STORE_OP_STORE; //FIXME
+      a.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
       }
 
     // Stencil not implemented

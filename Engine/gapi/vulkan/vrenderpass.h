@@ -33,19 +33,18 @@ class VRenderPass : public AbstractGraphicsApi::Pass {
       VkRenderPass                    impl=VK_NULL_HANDLE;
       };
 
-    Impl&                         instance(VFramebufferLayout &lay);
+    Impl&                           instance(VFramebufferLayout &lay);
 
-    static VkRenderPass           createLayoutInstance(VkDevice &device, VSwapchain& sw, const VkFormat    *attach, uint8_t attCount);
+    static VkRenderPass             createLayoutInstance(VkDevice &device, VSwapchain& sw, const VkFormat    *attach, uint8_t attCount);
 
-    Tempest::Color                color;
-    float                         zclear=1.0f;
-    uint8_t                       attCount=0;
+    std::unique_ptr<VkClearValue[]> clear;
+    uint8_t                         attCount=0;
 
   private:
-    VkDevice                      device=nullptr;
-    VSwapchain*                   swapchain=nullptr;
-    std::vector<Impl>             impl;
-    std::unique_ptr<Attachment[]> input;
+    VkDevice                        device=nullptr;
+    VSwapchain*                     swapchain=nullptr;
+    std::vector<Impl>               impl;
+    std::unique_ptr<Attachment[]>   input;
 
     static VkRenderPass           createInstance      (VkDevice &device, VSwapchain& sw, const Attachment *attach, const VkFormat *frm, uint8_t attCount);
   };

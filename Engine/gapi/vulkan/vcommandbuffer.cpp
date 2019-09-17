@@ -101,16 +101,8 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
   renderPassInfo.renderArea.offset = {0, 0};
   renderPassInfo.renderArea.extent = {width,height};
 
-  VkClearValue clear[2]={};
-  clear[0].color.float32[0]=pass->color.r();
-  clear[0].color.float32[1]=pass->color.g();
-  clear[0].color.float32[2]=pass->color.b();
-  clear[0].color.float32[3]=pass->color.a();
-
-  clear[1].depthStencil.depth=pass->zclear;
-
-  renderPassInfo.clearValueCount = pass->attCount;
-  renderPassInfo.pClearValues    = clear;
+  renderPassInfo.clearValueCount   = pass->attCount;
+  renderPassInfo.pClearValues      = pass->clear.get();
 
   vkCmdBeginRenderPass(impl, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
   }
@@ -128,16 +120,8 @@ void VCommandBuffer::beginSecondaryPass(Tempest::AbstractGraphicsApi::Fbo *f,
   renderPassInfo.renderArea.offset = {0, 0};
   renderPassInfo.renderArea.extent = {width,height};
 
-  VkClearValue clear[2]={};
-  clear[0].color.float32[0]=pass->color.r();
-  clear[0].color.float32[1]=pass->color.g();
-  clear[0].color.float32[2]=pass->color.b();
-  clear[0].color.float32[3]=pass->color.a();
-
-  clear[1].depthStencil.depth=pass->zclear;
-
-  renderPassInfo.clearValueCount = pass->attCount;
-  renderPassInfo.pClearValues    = clear;
+  renderPassInfo.clearValueCount   = pass->attCount;
+  renderPassInfo.pClearValues      = pass->clear.get();
 
   vkCmdBeginRenderPass(impl, &renderPassInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
   }
