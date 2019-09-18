@@ -93,16 +93,17 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
   VRenderPass*  pass=reinterpret_cast<VRenderPass*>(p);
 
   currentFbo = fbo->rp;
+  auto& rp   = pass->instance(*fbo->rp.handler);
 
   VkRenderPassBeginInfo renderPassInfo = {};
   renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  renderPassInfo.renderPass        = pass->instance(*fbo->rp.handler).impl;
+  renderPassInfo.renderPass        = rp.impl;
   renderPassInfo.framebuffer       = fbo->impl;
   renderPassInfo.renderArea.offset = {0, 0};
   renderPassInfo.renderArea.extent = {width,height};
 
   renderPassInfo.clearValueCount   = pass->attCount;
-  renderPassInfo.pClearValues      = pass->clear.get();
+  renderPassInfo.pClearValues      = rp.clear.get();
 
   vkCmdBeginRenderPass(impl, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
   }
@@ -113,15 +114,17 @@ void VCommandBuffer::beginSecondaryPass(Tempest::AbstractGraphicsApi::Fbo *f,
   VFramebuffer* fbo =reinterpret_cast<VFramebuffer*>(f);
   VRenderPass*  pass=reinterpret_cast<VRenderPass*>(p);
 
+  auto& rp   = pass->instance(*fbo->rp.handler);
+
   VkRenderPassBeginInfo renderPassInfo = {};
   renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  renderPassInfo.renderPass        = pass->instance(*fbo->rp.handler).impl;
+  renderPassInfo.renderPass        = rp.impl;
   renderPassInfo.framebuffer       = fbo->impl;
   renderPassInfo.renderArea.offset = {0, 0};
   renderPassInfo.renderArea.extent = {width,height};
 
   renderPassInfo.clearValueCount   = pass->attCount;
-  renderPassInfo.pClearValues      = pass->clear.get();
+  renderPassInfo.pClearValues      = rp.clear.get();
 
   vkCmdBeginRenderPass(impl, &renderPassInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
   }

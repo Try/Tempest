@@ -28,16 +28,17 @@ class VRenderPass : public AbstractGraphicsApi::Pass {
     void operator=(VRenderPass&& other);
 
     struct Impl {
-      Impl(VFramebufferLayout &lay,VkRenderPass impl):lay(&lay),impl(impl){}
+      Impl(VFramebufferLayout &lay,VkRenderPass impl,std::unique_ptr<VkClearValue[]>&& clr)
+        :lay(&lay),impl(impl),clear(std::move(clr)){}
       DSharedPtr<VFramebufferLayout*> lay;
       VkRenderPass                    impl=VK_NULL_HANDLE;
+      std::unique_ptr<VkClearValue[]> clear;
       };
 
     Impl&                           instance(VFramebufferLayout &lay);
 
     static VkRenderPass             createLayoutInstance(VkDevice &device, VSwapchain& sw, const VkFormat    *attach, uint8_t attCount);
 
-    std::unique_ptr<VkClearValue[]> clear;
     uint8_t                         attCount=0;
 
   private:

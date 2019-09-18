@@ -11,24 +11,12 @@ using namespace Tempest::Detail;
 VRenderPass::VRenderPass(VDevice& device, VSwapchain& sw, const Attachment **attach, uint8_t attCount)
   : attCount(attCount), device(device.device), swapchain(&sw) {
   input.reset(new Attachment[attCount]);
-  clear.reset(new VkClearValue[attCount]);
   for(size_t i=0;i<attCount;++i)
     input[i] = *attach[i];
-
-  for(size_t i=0;i<attCount;++i) {
-    auto& cl = attach[i]->clear;
-    clear[i].color.float32[0] = cl.r();
-    clear[i].color.float32[1] = cl.g();
-    clear[i].color.float32[2] = cl.b();
-    clear[i].color.float32[3] = cl.a();
-
-    clear[i].depthStencil.depth = cl.r();
-    }
   //impl = createInstance(device.device,sw,attach,attCount);
   }
 
 VRenderPass::VRenderPass(VRenderPass &&other) {
-  std::swap(clear,other.clear);
   std::swap(attCount,other.attCount);
   std::swap(device,other.device);
   std::swap(impl,other.impl);
@@ -45,7 +33,6 @@ VRenderPass::~VRenderPass(){
   }
 
 void VRenderPass::operator=(VRenderPass &&other) {
-  std::swap(clear,other.clear);
   std::swap(attCount,other.attCount);
   std::swap(device,other.device);
   std::swap(swapchain,other.swapchain);
@@ -60,8 +47,21 @@ VRenderPass::Impl &VRenderPass::instance(VFramebufferLayout &lay) {
 
   VkRenderPass val=VK_NULL_HANDLE;
   try {
+    std::unique_ptr<VkClearValue[]> clear(new VkClearValue[attCount]());
+    for(size_t i=0;i<attCount;++i) {
+      auto& cl = input[i].clear;
+      if(Detail::nativeIsDepthFormat(lay.frm[i])){
+        clear[i].depthStencil.depth   = cl.r();
+        clear[i].depthStencil.stencil = 0;
+        } else {
+        clear[i].color.float32[0] = cl.r();
+        clear[i].color.float32[1] = cl.g();
+        clear[i].color.float32[2] = cl.b();
+        clear[i].color.float32[3] = cl.a();
+        }
+      }
     val = createInstance(device,*swapchain,input.get(),lay.frm.get(),attCount);
-    impl.emplace_back(lay,val);
+    impl.emplace_back(lay,val,std::move(clear));
     }
   catch(...) {
     if(val!=VK_NULL_HANDLE)
