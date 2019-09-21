@@ -113,8 +113,10 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf,
 
 void VDescriptorArray::addPoolSize(VkDescriptorPoolSize *p, size_t &sz, VkDescriptorType elt) {
   for(size_t i=0;i<sz;++i){
-    if(p[i].type==elt)
+    if(p[i].type==elt) {
       p[i].descriptorCount++;
+      return;
+      }
     }
   p[sz].type=elt;
   p[sz].descriptorCount=1;
