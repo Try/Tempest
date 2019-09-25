@@ -60,6 +60,9 @@ class RenderState final {
     void      setRasterDiscardEnabled(bool e) { discard=e; }
     bool      isRasterDiscardEnabled() const { return discard; }
 
+    void      setZWriteEnabled(bool e) { zdiscard=!e; }
+    bool      isZWriteEnabled() const { return !zdiscard; }
+
     CullMode  cullFaceMode() const { return cull; }
     void      setCullFaceMode(CullMode use) { cull=use; }
 
@@ -69,6 +72,7 @@ class RenderState final {
     ZTestMode zmode =ZTestMode::Always;
     CullMode  cull  =CullMode::Back;
     bool      discard=false;
+    bool      zdiscard=false;
   };
 
 }
