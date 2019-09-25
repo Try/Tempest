@@ -80,7 +80,7 @@ void Log::write(Mode m, char *&out, size_t &count, double msg) {
   write(m,out,count,sym);
   }
 
-void Log::write(Log::Mode m, char *&out, size_t &count, void *msg) {
+void Log::write(Log::Mode m, char *&out, size_t &count, const void *msg) {
   char sym[sizeof(void*)*2+3];
   sym[sizeof(sym)-1] = '\0';
   int pos = sizeof(sym)-2;
