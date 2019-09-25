@@ -5,20 +5,18 @@
 
 using namespace Tempest;
 
-VideoBuffer::VideoBuffer(Device &dev, AbstractGraphicsApi::PBuffer&& impl, size_t size)
-  :dev(&dev),impl(std::move(impl)),sz(size) {
+VideoBuffer::VideoBuffer(Device &, AbstractGraphicsApi::PBuffer&& impl, size_t size)
+  :impl(std::move(impl)),sz(size) {
   }
 
 VideoBuffer::VideoBuffer(VideoBuffer &&other)
-  :dev(other.dev),impl(std::move(other.impl)),sz(other.sz){
-  other.dev=nullptr;
+  :impl(std::move(other.impl)),sz(other.sz){
   }
 
 VideoBuffer::~VideoBuffer(){
   }
 
 VideoBuffer &VideoBuffer::operator=(VideoBuffer &&other) {
-  std::swap(dev,other.dev);
   impl = std::move(other.impl);
   sz   = other.sz;
   return *this;

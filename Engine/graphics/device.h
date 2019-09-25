@@ -73,6 +73,14 @@ class Device {
       }
 
     template<class T>
+    VertexBufferDyn<T>   loadVboDyn(const T* arr,size_t arrSize);
+
+    template<class T>
+    VertexBufferDyn<T>   loadVboDyn(const std::vector<T>& arr){
+      return loadVboDyn(arr.data(),arr.size());
+      }
+
+    template<class T>
     IndexBuffer<T>       loadIbo(const T* arr,size_t arrSize,BufferFlags flg);
 
     template<class T>
@@ -159,6 +167,9 @@ class Device {
 
   template<class T>
   friend class VertexBuffer;
+  template<class T>
+  friend class VertexBufferDyn;
+
   friend class Texture2d;
   };
 
@@ -168,6 +179,15 @@ inline VertexBuffer<T> Device::loadVbo(const T* arr, size_t arrSize, BufferFlags
     return VertexBuffer<T>();
   VideoBuffer     data=createVideoBuffer(arr,arrSize*sizeof(T),MemUsage::VertexBuffer,flg);
   VertexBuffer<T> vbo(std::move(data),arrSize);
+  return vbo;
+  }
+
+template<class T>
+inline VertexBufferDyn<T> Device::loadVboDyn(const T *arr, size_t arrSize) {
+  if(arrSize==0)
+    return VertexBufferDyn<T>();
+  VideoBuffer        data=createVideoBuffer(arr,arrSize*sizeof(T),MemUsage::VertexBuffer,BufferFlags::Dynamic);
+  VertexBufferDyn<T> vbo(std::move(data),arrSize);
   return vbo;
   }
 
