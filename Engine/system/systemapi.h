@@ -45,14 +45,7 @@ class SystemApi {
     static void     setCursorPosition(int x, int y);
     static void     showCursor(bool show);
 
-    struct TranslateKeyPair final {
-      uint16_t src;
-      uint16_t result;
-      };
-
   protected:
-    static void setupKeyTranslate(const TranslateKeyPair k[], uint16_t funcCount);
-
     struct AppCallBack {
       virtual ~AppCallBack()=default;
       virtual uint32_t onTimer()=0;

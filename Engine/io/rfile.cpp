@@ -32,7 +32,11 @@ RFile::RFile(const std::string &path)
   }
 
 RFile::RFile(const char16_t *path) {
+#ifdef __WINDOWS__
+  handle = implOpen(reinterpret_cast<const wchar_t*>(path));
+#else
   handle = implOpen(Detail::toUtf8(path).c_str());
+#endif
   }
 
 RFile::RFile(const std::u16string &path)

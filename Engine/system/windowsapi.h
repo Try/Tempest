@@ -4,11 +4,13 @@
 
 namespace Tempest {
 
-class WindowsApi : SystemApi {
+class WindowsApi final : SystemApi {
+  public:
+    static uint16_t translateKey(uint64_t scancode);
+
   private:
     WindowsApi();
 
-  protected:
     Window*  implCreateWindow(WindowCallback* cb,uint32_t width,uint32_t height) override;
     Window*  implCreateWindow(WindowCallback* cb,ShowMode sm) override;
     void     implDestroyWindow(Window* w) override;
@@ -26,15 +28,15 @@ class WindowsApi : SystemApi {
 
     int      implExec(AppCallBack& cb) override;
 
+    struct KeyInf;
     struct TranslateKeyPair final {
       uint16_t src;
       uint16_t result;
       };
 
-    static uint16_t translateKey(uint64_t scancode);
+    static void     setupKeyTranslate(const TranslateKeyPair k[], uint16_t funcCount);
 
-  protected:
-    static void setupKeyTranslate(const TranslateKeyPair k[], uint16_t funcCount);
+    static KeyInf ki;
 
   friend class SystemApi;
   };

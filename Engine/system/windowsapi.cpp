@@ -2,23 +2,28 @@
 
 #ifdef __WINDOWS__
 
+#include <Tempest/Event>
+#include <Tempest/Except>
+
+#include <atomic>
+#include <unordered_set>
+#include <thread>
+
 #include <windows.h>
 
 using namespace Tempest;
 
-struct KeyInf {
-  KeyInf(){}
-
-  std::vector<SystemApi::TranslateKeyPair> keys;
-  std::vector<SystemApi::TranslateKeyPair> a, k0, f1;
-  uint16_t                                 fkeysCount=1;
+struct WindowsApi::KeyInf {
+  std::vector<WindowsApi::TranslateKeyPair> keys;
+  std::vector<WindowsApi::TranslateKeyPair> a, k0, f1;
+  uint16_t                                  fkeysCount=1;
   };
 
 static LRESULT CALLBACK WindowProc(HWND hWnd,UINT msg,const WPARAM wParam,const LPARAM lParam );
 
 static const wchar_t*                         wndClassName=L"Tempest.Window";
 static std::unordered_set<SystemApi::Window*> windows;
-static KeyInf                                 ki;
+WindowsApi::KeyInf                            WindowsApi::ki;
 static std::atomic_bool                       isExit{0};
 
 static int getIntParam(DWORD_PTR v){
@@ -122,7 +127,6 @@ WindowsApi::WindowsApi() {
   }
 
 SystemApi::Window *WindowsApi::implCreateWindow(SystemApi::WindowCallback *callback, uint32_t width, uint32_t height) {
-  initApi();
   // Create window with the registered class:
   RECT wr = {0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
   AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
@@ -181,7 +185,7 @@ void WindowsApi::implDestroyWindow(SystemApi::Window *w) {
   DestroyWindow(HWND(w));
   }
 
-void SystemApi::implExit() {
+void WindowsApi::implExit() {
   isExit.store(true);
   }
 
@@ -316,7 +320,7 @@ void WindowsApi::implSetCursorPosition(int x, int y) {
   SetCursorPos(x,y);
   }
 
-void SystemApi::implShowCursor(bool show) {
+void WindowsApi::implShowCursor(bool show) {
   ShowCursor(show ? TRUE : FALSE);
   }
 
@@ -334,7 +338,7 @@ LRESULT CALLBACK WindowProc( HWND   hWnd,
       //Tempest::CloseEvent e;
       //SystemAPI::emitEvent(w, e);
       //if( !e.isAccepted() )
-        PostQuitMessage(0);
+      PostQuitMessage(0);
       }
       break;
 
@@ -408,14 +412,14 @@ LRESULT CALLBACK WindowProc( HWND   hWnd,
       break;
 
     case WM_KEYDOWN: {
-       auto key = SystemApi::translateKey(wParam);
-       Tempest::KeyEvent e(Event::KeyType(key),Event::KeyDown);
-       cb->onKey(e);
+      auto key = WindowsApi::translateKey(wParam);
+      Tempest::KeyEvent e(Event::KeyType(key),Event::KeyDown);
+      cb->onKey(e);
       }
       break;
 
     case WM_KEYUP: {
-      auto key = SystemApi::translateKey(wParam);
+      auto key = WindowsApi::translateKey(wParam);
       Tempest::KeyEvent e(Event::KeyType(key),Event::KeyUp);
       cb->onKey(e);
       }
@@ -423,13 +427,13 @@ LRESULT CALLBACK WindowProc( HWND   hWnd,
 
     case WM_SIZE:
       if(wParam!=SIZE_MINIMIZED) {
-        RECT rpos = {0,0,0,0};
-        GetWindowRect( hWnd, &rpos );
+        // RECT rpos = {0,0,0,0};
+        // GetWindowRect( hWnd, &rpos );
 
-        RECT rectWindow;
-        GetClientRect( HWND(hWnd), &rectWindow);
-        int cW = rectWindow.right  - rectWindow.left;
-        int cH = rectWindow.bottom - rectWindow.top;
+        // RECT rectWindow;
+        // GetClientRect( HWND(hWnd), &rectWindow);
+        // int cW = rectWindow.right  - rectWindow.left;
+        // int cH = rectWindow.bottom - rectWindow.top;
 
         int width  = lParam & 0xffff;
         int height = (uint32_t(lParam) & 0xffff0000) >> 16;
