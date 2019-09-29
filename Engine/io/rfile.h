@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Tempest/IDevice>
+#include <Tempest/Platform>
 #include <string>
 
 namespace Tempest {
