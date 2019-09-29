@@ -1,12 +1,21 @@
 #include "vulkanapi_impl.h"
 
 #include <Tempest/Log>
+#include <Tempest/Platform>
+
 #include "exceptions/exception.h"
 
 #include <set>
 #include <thread>
 
 #define VK_KHR_WIN32_SURFACE_EXTENSION_NAME "VK_KHR_win32_surface"
+#define VK_KHR_XLIB_SURFACE_EXTENSION_NAME  "VK_KHR_xlib_surface"
+
+#if defined(__WINDOWS__)
+#define SURFACE_EXTENSION_NAME VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+#elif defined(__LINUX__)
+#define SURFACE_EXTENSION_NAME VK_KHR_XLIB_SURFACE_EXTENSION_NAME
+#endif
 
 using namespace Tempest::Detail;
 
@@ -39,7 +48,7 @@ VulkanApi::VulkanApi(bool validation)
   auto extensions = std::initializer_list<const char*>{
     VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
     VK_KHR_SURFACE_EXTENSION_NAME,
-    VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+    SURFACE_EXTENSION_NAME,
     };
 
   createInfo.enabledExtensionCount   = static_cast<uint32_t>(extensions.size());
@@ -52,7 +61,8 @@ VulkanApi::VulkanApi(bool validation)
     createInfo.enabledLayerCount = 0;
     }
 
-  if(vkCreateInstance(&createInfo,nullptr,&instance)!=VK_SUCCESS)
+  VkResult ret = vkCreateInstance(&createInfo,nullptr,&instance);
+  if(ret!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
   if(validation) {
