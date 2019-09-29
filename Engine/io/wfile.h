@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Tempest/ODevice>
+#include <Tempest/Platform>
 #include <string>
 
 namespace Tempest {
@@ -18,7 +19,11 @@ class WFile : public Tempest::ODevice {
 
   private:
     void* handle=nullptr;
+#ifdef __WINDOWS__
     static void* implOpen(const wchar_t* wstr);
+#else
+    static void* implOpen(const char* cstr);
+#endif
   };
 
 }

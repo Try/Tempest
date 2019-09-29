@@ -1,6 +1,7 @@
 #include "textureatlas.h"
 
 #include <Tempest/Sprite>
+#include <cstring>
 
 using namespace Tempest;
 
@@ -53,7 +54,7 @@ void TextureAtlas::emplace(TextureAtlas::Allocation &dest, const void* img,
   switch(format) {
     case Pixmap::Format::RGBA: {
       for(uint32_t iy=0;iy<sh;++iy)
-        memcpy(data+((y+iy)*dw+dx),src+iy*sw,sw);
+        std::memcpy(data+((y+iy)*dw+dx),src+iy*sw,sw);
       break;
       }
     case Pixmap::Format::RGB: {

@@ -21,7 +21,11 @@ class RFile : public Tempest::IDevice {
 
   private:
     void* handle=nullptr;
+#ifdef __WINDOWS__
     static void* implOpen(const wchar_t* wstr);
+#else
+    static void* implOpen(const char* cstr);
+#endif
   };
 
 }

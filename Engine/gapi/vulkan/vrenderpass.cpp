@@ -65,7 +65,7 @@ VRenderPass::Impl &VRenderPass::instance(VFramebufferLayout &lay) {
     }
   catch(...) {
     if(val!=VK_NULL_HANDLE)
-      vkDestroyPipeline(device,val,nullptr);
+      vkDestroyRenderPass(device,val,nullptr);
     throw;
     }
   return impl.back();

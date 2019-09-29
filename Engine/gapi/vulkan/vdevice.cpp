@@ -7,10 +7,18 @@
 #include "vswapchain.h"
 #include "vbuffer.h"
 #include "vtexture.h"
+#include "system/x11api.h"
 
 #include <Tempest/Log>
 #include <thread>
 #include <set>
+
+#ifdef __LINUX__
+#define VK_USE_PLATFORM_XLIB_KHR
+#include <X11/Xlib.h>
+#include <vulkan/vulkan_xlib.h>
+#undef Always
+#endif
 
 using namespace Tempest::Detail;
 
@@ -70,7 +78,7 @@ void VDevice::DataHelper::wait() {
 
 VDevice::VDevice(VulkanApi &api, void *hwnd)
   :instance(api.instance)  {
-  createSurface(api,HWND(hwnd));
+  createSurface(api,hwnd);
 
   uint32_t deviceCount = 0;
   vkEnumeratePhysicalDevices(api.instance, &deviceCount, nullptr);
@@ -117,6 +125,7 @@ VkResult VDevice::nextImg(VSwapchain& sw,uint32_t& imageId,VSemaphore& onReady) 
   }
 
 void VDevice::createSurface(VulkanApi &api,void* hwnd) {
+#ifdef __WINDOWS__
   auto connection=GetModuleHandle(nullptr);
 
   VkWin32SurfaceCreateInfoKHR createInfo={};
@@ -126,6 +135,16 @@ void VDevice::createSurface(VulkanApi &api,void* hwnd) {
 
   if(vkCreateWin32SurfaceKHR(api.instance,&createInfo,nullptr,&surface)!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+#elif defined(__LINUX__)
+  VkXlibSurfaceCreateInfoKHR createInfo = {};
+  createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+  createInfo.dpy    = reinterpret_cast<Display*>(X11Api::display());
+  createInfo.window = Window(hwnd);
+  if(vkCreateXlibSurfaceKHR(api.instance, &createInfo, nullptr, &surface)!=VK_SUCCESS)
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+#else
+#warning "wsi for vulkan not implemented on this platform"
+#endif
   }
 
 bool VDevice::isDeviceSuitable(VkPhysicalDevice device) {

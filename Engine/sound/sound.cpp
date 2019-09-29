@@ -125,9 +125,9 @@ void Sound::implLoad(IDevice &f) {
   */
   auto& mem = f;
 
-  WAVEHeader      header={};
-  FmtChunk        fmt={};
-  uint32_t        dataSize=0;
+  WAVEHeader header={};
+  FmtChunk   fmt={};
+  size_t     dataSize=0;
   std::unique_ptr<char> data = readWAVFull(mem,header,fmt,dataSize);
 
   int format=0;
@@ -192,7 +192,7 @@ std::unique_ptr<char> Sound::readWAVFull(IDevice &f, WAVEHeader& header, FmtChun
       dataSize = head.size;
       }
     else if(head.is("fmt ")){
-      size_t sz=std::min(head.size,sizeof(fmt));
+      size_t sz=std::min<size_t>(head.size,sizeof(fmt));
       if(f.read(&fmt,sz)!=sz)
         return nullptr;
       f.seek(head.size-sz);
@@ -296,7 +296,7 @@ int Sound::decodeAdPcmBlock(int16_t *outbuf, const uint8_t *inbuf, size_t inbufs
         index  [ch] += indexTable[(*inbuf >> 4) & 0x7];
         index  [ch] = std::min<int8_t>(std::max<int8_t>(index[ch],0),88);
         pcmdata[ch] = std::min(std::max(pcmdata[ch],-32768),32767);
-        outbuf [(i*2+1)*channels] = int16_t(pcmdata[ch]);;
+        outbuf [(i*2+1)*channels] = int16_t(pcmdata[ch]);
 
         inbuf++;
         }

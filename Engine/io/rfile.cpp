@@ -2,12 +2,19 @@
 
 #include <Tempest/Except>
 
+#ifdef __WINDOWS__
 #include <windows.h>
+#else
+#include <cstdio>
+#include "utility/utf8_helper.h"
+#endif
+
 #include <stdexcept>
 
 using namespace Tempest;
 
 RFile::RFile(const char *name) {
+#ifdef __WINDOWS__
   std::wstring path;
   const int len=MultiByteToWideChar(CP_UTF8,0,name,-1,nullptr,0);
   if(len>1){
@@ -15,6 +22,9 @@ RFile::RFile(const char *name) {
     MultiByteToWideChar(CP_UTF8,0,name,-1,&path[0],int(path.size()));
     }
   handle=implOpen(path.c_str());
+#else
+  handle=implOpen(name);
+#endif
   }
 
 RFile::RFile(const std::string &path)
@@ -22,39 +32,67 @@ RFile::RFile(const std::string &path)
   }
 
 RFile::RFile(const char16_t *path) {
-  handle=implOpen(reinterpret_cast<const wchar_t*>(path));
+  handle = implOpen(Detail::toUtf8(path).c_str());
   }
 
 RFile::RFile(const std::u16string &path)
   :RFile(path.c_str()){
   }
 
+#ifdef __WINDOWS__
 void* RFile::implOpen(const wchar_t *wstr) {
   void* ret = CreateFileW(wstr,GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
   if(ret==HANDLE(LONG_PTR(-1)))
     throw std::system_error(Tempest::SystemErrc::UnableToOpenFile);
   return ret;
   }
+#else
+void* RFile::implOpen(const char *cstr) {
+  void* ret = fopen(cstr,"r");
+  if(ret==nullptr)
+    throw std::system_error(Tempest::SystemErrc::UnableToOpenFile);
+  return ret;
+  }
+#endif
 
 RFile::~RFile() {
+#ifdef __WINDOWS__
   if(handle!=nullptr)
     CloseHandle(HANDLE(handle));
+#else
+  if(handle!=nullptr)
+    fclose(reinterpret_cast<FILE*>(handle));
+#endif
   }
 
 size_t RFile::read(void *dest, size_t size) {
+#ifdef __WINDOWS__
   HANDLE fn          = HANDLE(handle);
   DWORD  dwBytesRead = size;
   DWORD  cnt         = ReadFile(fn, dest, size, &dwBytesRead, nullptr) ? dwBytesRead : 0;
 
   return cnt;
+#else
+  return fread(dest,size,1,reinterpret_cast<FILE*>(handle));
+#endif
   }
 
 size_t RFile::size() const {
+#ifdef __WINDOWS__
   HANDLE fn = HANDLE(handle);
   return GetFileSize(fn,nullptr);
+#else
+  FILE* f = reinterpret_cast<FILE*>(handle);
+  const long curr = ftell(f);
+  fseek(f,0,SEEK_END);
+  const long size = ftell(f);
+  fseek(f,curr,SEEK_SET);
+  return size_t(size);
+#endif
   }
 
 uint8_t RFile::peek() {
+#ifdef __WINDOWS__
   uint8_t ret = 0;
   HANDLE  fn  = HANDLE(handle);
 
@@ -66,9 +104,17 @@ uint8_t RFile::peek() {
 
   SetFilePointer(fn,current,nullptr,FILE_BEGIN);
   return 0;
+#else
+  uint8_t ch=0;
+  fread(&ch,1,1,reinterpret_cast<FILE*>(handle));
+  if(fseek(reinterpret_cast<FILE*>(handle),-1,SEEK_CUR)==0)
+    return ch;
+  return 0;
+#endif
   }
 
 size_t RFile::seek(size_t advance) {
+#ifdef __WINDOWS__
   HANDLE fn      = HANDLE(handle);
   LONG   current = LONG(SetFilePointer(fn,0,nullptr,FILE_CURRENT));
   LONG   npos    = LONG(SetFilePointer(fn,LONG(advance),nullptr,FILE_CURRENT));
@@ -76,4 +122,9 @@ size_t RFile::seek(size_t advance) {
   if(npos>current)
     return size_t(npos-current);
   return 0;
+#else
+  if(fseek(reinterpret_cast<FILE*>(handle),long(advance),SEEK_CUR)==0)
+    return advance;
+  return 0;
+#endif
   }

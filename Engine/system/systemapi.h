@@ -1,18 +1,16 @@
 #pragma once
 
+#include <Tempest/Platform>
 #include <Tempest/Rect>
 #include <cstdint>
 
-namespace Tempest{
+namespace Tempest {
 
 class MouseEvent;
 class KeyEvent;
 class Application;
 
 class SystemApi {
-  private:
-    SystemApi();
-
   public:
     struct Window;
 
@@ -31,6 +29,7 @@ class SystemApi {
       FullScreen
       };
 
+    virtual ~SystemApi()=default;
     static Window*  createWindow(WindowCallback* cb,uint32_t width,uint32_t height);
     static Window*  createWindow(WindowCallback* cb,ShowMode sm);
     static void     destroyWindow(Window* w);
@@ -51,20 +50,35 @@ class SystemApi {
       uint16_t result;
       };
 
-    static uint16_t translateKey(uint64_t scancode);
-
   protected:
     static void setupKeyTranslate(const TranslateKeyPair k[], uint16_t funcCount);
 
-  private:
     struct AppCallBack {
       virtual ~AppCallBack()=default;
       virtual uint32_t onTimer()=0;
       };
 
-    static int      exec(AppCallBack& cb);
-    static bool     initApi();
-    static bool     implInitApi();
+    SystemApi();
+    virtual Window*  implCreateWindow (WindowCallback* cb,uint32_t width,uint32_t height) = 0;
+    virtual Window*  implCreateWindow (WindowCallback* cb,ShowMode sm) = 0;
+    virtual void     implDestroyWindow(Window* w) = 0;
+    virtual void     implExit() = 0;
+
+    virtual uint32_t implWidth (Window* w) = 0;
+    virtual uint32_t implHeight(Window* w) = 0;
+    virtual Rect     implWindowClientRect(SystemApi::Window *w) = 0;
+
+    virtual bool     implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) = 0;
+    virtual bool     implIsFullscreen(SystemApi::Window *w) = 0;
+
+    virtual void     implSetCursorPosition(int x, int y) = 0;
+    virtual void     implShowCursor(bool show) = 0;
+
+    virtual int      implExec(AppCallBack& cb) = 0;
+
+  private:
+    static int        exec(AppCallBack& cb);
+    static SystemApi& inst();
 
   friend class Application;
   };

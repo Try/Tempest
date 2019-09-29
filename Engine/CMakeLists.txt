@@ -18,12 +18,11 @@ add_definitions(-DVULKAN_HPP_NO_SMART_HANDLE)
 add_definitions(-DSTB_IMAGE_IMPLEMENTATION)
 add_definitions(-DSTB_TRUETYPE_IMPLEMENTATION)
 add_definitions(-DSTB_IMAGE_WRITE_IMPLEMENTATION)
+
 if(WIN32)
   # add_definitions(-DHAVE_DSOUND)
   add_definitions(-DHAVE_WINMM)
   add_definitions(-DHAVE_WINDOWS_H)
-  add_definitions(-DAL_BUILD_LIBRARY)
-  add_definitions(-DAL_ALEXT_PROTOTYPES)
   file(GLOB AlcBackend
     "thirdparty/openal/Alc/backends/winmm.c"
     "thirdparty/openal/Alc/backends/null.c"
@@ -31,14 +30,27 @@ if(WIN32)
 
     )
 endif()
+if(UNIX)
+  # add_definitions(-DHAVE_DSOUND)
+  # add_definitions(-DHAVE_ALSA)
+  file(GLOB AlcBackend
+    "thirdparty/openal/Alc/backends/null.c"
+    "thirdparty/openal/Alc/backends/loopback.c"
+
+    )
+endif()
+
+add_definitions(-DAL_BUILD_LIBRARY)
+add_definitions(-DAL_ALEXT_PROTOTYPES)
 
 include_directories("include"
                     "."
                     "thirdparty/openal/include"
                     "thirdparty/openal/openal32/include"
                     "thirdparty/squish"
-                    "$ENV{VK_SDK_PATH}/Include")
+                    "$ENV{VK_SDK_PATH}/include")
 link_directories(${PROJECT_NAME} "$ENV{VK_SDK_PATH}/Lib32")
+link_directories(${PROJECT_NAME} "$ENV{VK_SDK_PATH}/lib")
 
 file(GLOB SOURCES
     "include/*"
@@ -58,7 +70,12 @@ file(GLOB SOURCES
 
 add_library( ${PROJECT_NAME} SHARED ${SOURCES} ${AlcBackend} )
 
-target_link_libraries(${PROJECT_NAME} vulkan-1)
+if(WIN32)
+  target_link_libraries(${PROJECT_NAME} vulkan-1)
+else()
+  target_link_libraries(${PROJECT_NAME} vulkan X11 GL)
+endif()
+
 if(WIN32)
   target_link_libraries(${PROJECT_NAME} winmm)
 endif()

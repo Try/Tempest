@@ -4,6 +4,8 @@
 
 #ifdef __WINDOWS__
 #include <windows.h>
+#else
+#include <dirent.h>
 #endif
 
 using namespace Tempest;
@@ -54,22 +56,18 @@ bool Dir::scan(const char *name, std::function<void(const std::string&,FileType)
   dirent *dp;
   DIR *dirp;
 
-  dirp = opendir( s.c_str() );
+  dirp = opendir(name);
 
+  std::string tmp;
   while (dirp) {
     errno = 0;
-    if ((dp = readdir(dirp)) != NULL) {
+    if ((dp = readdir(dirp)) != nullptr) {
       std::u16string str;
 
-      uint8_t* s = (uint8_t*)dp->d_name;
-      str = SystemAPI::toUtf16((char*)s);
-
-      FileType type=FT_File;
-      //struct stat statbuf;
+      tmp = dp->d_name;
       if(dp->d_type==DT_DIR)
-        type=FT_Dir;
-      cb( str,type );
-      //Log() <<"'"<< dp->d_name <<"': " << len;
+        cb(tmp,FT_Dir); else
+        cb(tmp,FT_File);
       } else {
       if( errno == 0 ) {
         closedir(dirp);

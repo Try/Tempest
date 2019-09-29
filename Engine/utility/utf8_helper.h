@@ -3,6 +3,9 @@
 #include <cstdlib>
 #include <cstdint>
 #include <cstring>
+#include <string>
+#include <codecvt>
+#include <locale>
 
 namespace Tempest {
 namespace Detail {
@@ -49,6 +52,11 @@ inline uint32_t getChar4(const uint8_t* str) {
   return code_point;
   }
 
+inline std::string toUtf8(const std::u16string& s){
+  std::string u8_conv = std::wstring_convert<
+      std::codecvt_utf8_utf16<char16_t>, char16_t>{}.to_bytes(s);
+  return u8_conv; //FIXME: codecvt is optional c++ feature
+  }
 }
 
 class Utf8Iterator {
