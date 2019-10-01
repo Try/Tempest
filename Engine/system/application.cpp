@@ -3,6 +3,7 @@
 #include <Tempest/SystemApi>
 #include <Tempest/Timer>
 
+#include <vector>
 #include <thread>
 
 using namespace Tempest;
@@ -33,7 +34,7 @@ struct Application::Impl : SystemApi::AppCallBack {
       if(t.process(now))
         count++;
       }
-    return count;
+    return uint32_t(count);
     }
   };
 

@@ -8,6 +8,7 @@
 #include <atomic>
 #include <unordered_set>
 #include <thread>
+#include <vector>
 
 #include <windows.h>
 

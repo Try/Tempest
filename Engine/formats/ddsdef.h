@@ -4,6 +4,7 @@
 
 namespace Tempest {
   namespace Detail {
+    typedef uint32_t PTR32;
     typedef uint32_t DWORD;
     typedef uint16_t WORD;
 
@@ -12,6 +13,7 @@ namespace Tempest {
       DWORD       dwColorSpaceHighValue;
       };
 
+#pragma pack(push,1)
     struct DDPIXELFORMAT {
       DWORD       dwSize;                 // size of structure
       DWORD       dwFlags;                // pixel format flags
@@ -92,7 +94,7 @@ namespace Tempest {
         };
       DWORD      dwAlphaBitDepth;
       DWORD      dwReserved;
-      void*      lpSurface;
+      PTR32      lpSurface;
       union {
         DDCOLORKEY ddckCKDestOverlay;
         DWORD      dwEmptyFaceColor;
@@ -112,4 +114,5 @@ namespace Tempest {
     const unsigned int FOURCC_DXT3 = 861165636;
     const unsigned int FOURCC_DXT5 = 894720068;
     }
+#pragma pack(pop)
   }

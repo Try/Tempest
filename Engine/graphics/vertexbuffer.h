@@ -2,6 +2,7 @@
 
 #include <Tempest/AbstractGraphicsApi>
 #include "videobuffer.h"
+#include <vector>
 
 namespace Tempest {
 

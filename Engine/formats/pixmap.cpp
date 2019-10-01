@@ -189,7 +189,7 @@ struct Pixmap::Impl {
     stbi_uc head[4]={};
     stbi__getn(s,head,4);
 
-    DDSURFACEDESC2 ddsd;
+    DDSURFACEDESC2 ddsd={};
     if(stbi__getn(s,reinterpret_cast<stbi_uc*>(&ddsd),sizeof(ddsd))==0)
       return nullptr;
     x = int(ddsd.dwWidth);

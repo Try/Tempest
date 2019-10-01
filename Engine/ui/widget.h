@@ -4,6 +4,7 @@
 #include <Tempest/SizePolicy>
 #include <Tempest/Event>
 
+#include <vector>
 #include <memory>
 
 namespace Tempest {

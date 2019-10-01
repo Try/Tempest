@@ -49,8 +49,11 @@ include_directories("include"
                     "thirdparty/openal/openal32/include"
                     "thirdparty/squish"
                     "$ENV{VK_SDK_PATH}/include")
-link_directories(${PROJECT_NAME} "$ENV{VK_SDK_PATH}/Lib32")
-link_directories(${PROJECT_NAME} "$ENV{VK_SDK_PATH}/lib")
+if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
+  link_directories(${PROJECT_NAME} "$ENV{VK_SDK_PATH}/lib")
+else()
+  link_directories(${PROJECT_NAME} "$ENV{VK_SDK_PATH}/Lib32")
+endif()
 
 file(GLOB SOURCES
     "include/*"
