@@ -54,29 +54,32 @@ bool Dir::scan(const char *name, std::function<void(const std::string&,FileType)
   if( GetLastError() != ERROR_NO_MORE_FILES )
     return false;
 #else
-  dirent *dp;
-  DIR *dirp;
+  DIR *dirp = opendir(name);
+  if(dirp==nullptr)
+    return false;
 
-  dirp = opendir(name);
-
-  std::string tmp;
-  while (dirp) {
-    errno = 0;
-    if ((dp = readdir(dirp)) != nullptr) {
-      std::u16string str;
-
-      tmp = dp->d_name;
-      if(dp->d_type==DT_DIR)
-        cb(tmp,FT_Dir); else
-        cb(tmp,FT_File);
-      } else {
-      if( errno == 0 ) {
+  try {
+    std::string tmp;
+    while (dirp) {
+      errno = 0;
+      if(dirent* dp = readdir(dirp)) {
+        tmp = dp->d_name;
+        if(dp->d_type==DT_DIR)
+          cb(tmp,FT_Dir); else
+          cb(tmp,FT_File);
+        } else {
+        if( errno == 0 ) {
+          closedir(dirp);
+          return true;
+          }
         closedir(dirp);
-        return true;
+        return false;
         }
-      closedir(dirp);
-      return false;
       }
+    }
+  catch(...) {
+    closedir(dirp);
+    throw;
     }
 #endif
   return true;
@@ -109,7 +112,34 @@ bool Dir::scan(const char16_t *path, std::function<void (const std::u16string &,
   if( GetLastError() != ERROR_NO_MORE_FILES )
     return false;
 #else
-#warning "TODO: Dir::scan"
+  std::string name = TextCodec::toUtf8(path);
+  DIR *dirp = opendir(name.c_str());
+  if(dirp==nullptr)
+    return false;
+
+  try {
+    std::u16string tmp;
+    while (dirp) {
+      errno = 0;
+      if(dirent* dp = readdir(dirp)) {
+        tmp = TextCodec::toUtf16(dp->d_name);
+        if(dp->d_type==DT_DIR)
+          cb(tmp,FT_Dir); else
+          cb(tmp,FT_File);
+        } else {
+        if( errno == 0 ) {
+          closedir(dirp);
+          return true;
+          }
+        closedir(dirp);
+        return false;
+        }
+      }
+    }
+  catch(...) {
+    closedir(dirp);
+    throw;
+    }
 #endif
   return true;
   }
