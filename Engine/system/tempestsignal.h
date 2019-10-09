@@ -38,7 +38,7 @@ class Signal<void(Args...args)> {
       auto b = storage.begin();
       auto e = storage.end();
 
-      TImpl<T,Ret,TArgs...> ref(obj,fn);
+      TImpl<T,Base,Ret,TArgs...> ref(obj,fn);
       for(auto i=b;i!=e;i=i->next()){
         if(i->equals(ref)) {
           storage.erase(i,sizeof(ref));
