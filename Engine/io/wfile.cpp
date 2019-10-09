@@ -1,12 +1,12 @@
 #include "wfile.h"
 
 #include <Tempest/Except>
+#include <Tempest/TextCodec>
 
 #ifdef __WINDOWS__
 #include <windows.h>
 #else
 #include <cstdio>
-#include "utility/utf8_helper.h"
 #endif
 
 #include <stdexcept>
@@ -35,7 +35,7 @@ WFile::WFile(const char16_t *path) {
 #ifdef __WINDOWS__
   handle = implOpen(reinterpret_cast<const wchar_t*>(path));
 #else
-  handle = implOpen(Detail::toUtf8(path).c_str());
+  handle = implOpen(TextCodec::toUtf8(path).c_str());
 #endif
   }
 

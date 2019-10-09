@@ -52,10 +52,93 @@ inline uint32_t getChar4(const uint8_t* str) {
   return code_point;
   }
 
-inline std::string toUtf8(const std::u16string& s){
-  std::string u8_conv = std::wstring_convert<
-      std::codecvt_utf8_utf16<char16_t>, char16_t>{}.to_bytes(s);
-  return u8_conv; //FIXME: codecvt is optional c++ feature
+inline uint8_t codepointToUtf8(uint32_t cp) {
+  if(cp > 0x10FFFF || cp == 0xFFFE || cp == 0xFFFF) {
+    return 1;
+    } else {
+    // There are seven "UTF-16 surrogates" that are illegal in UTF-8.
+    switch(cp) {
+      case 0xD800:
+      case 0xDB7F:
+      case 0xDB80:
+      case 0xDBFF:
+      case 0xDC00:
+      case 0xDF80:
+      case 0xDFFF:
+        return 1;
+      }
+    }
+
+  if(cp < 0x80)
+    return 1;
+  if(cp < 0x800)
+    return 2;
+  if(cp < 0x10000)
+    return 3;
+  return 4;
+  }
+
+inline uint8_t codepointToUtf8(uint32_t cp, char *dst) {
+  if(cp > 0x10FFFF || cp == 0xFFFE || cp == 0xFFFF) {
+    cp = '?';
+    } else {
+    // There are seven "UTF-16 surrogates" that are illegal in UTF-8.
+    switch(cp) {
+      case 0xD800:
+      case 0xDB7F:
+      case 0xDB80:
+      case 0xDBFF:
+      case 0xDC00:
+      case 0xDF80:
+      case 0xDFFF:
+        cp = '?';
+      }
+    }
+
+  if(cp < 0x80) {
+    dst[0] = char(cp);
+    return 1;
+    }
+
+  if(cp < 0x800) {
+    dst[0] = char((cp >> 6) | 128 | 64);
+    dst[1] = char(cp & 0x3F) | 128;
+    return 2;
+    }
+
+  if(cp < 0x10000) {
+    dst[0] = char((cp >> 12) | 128 | 64 | 32);
+    dst[1] = char((cp >> 6) & 0x3F) | 128;
+    dst[2] = char(cp & 0x3F) | 128;
+    return 3;
+    }
+
+  dst[0] = char((cp >> 18) | 128 | 64 | 32 | 16);
+  dst[1] = char((cp >> 12) & 0x3F) | 128;
+  dst[2] = char((cp >> 6) & 0x3F) | 128;
+  dst[3] = char(cp & 0x3F) | 128;
+  return 4;
+  }
+
+inline uint8_t utf8ToCodepoint(const uint8_t* str,uint32_t& cp) {
+  uint8_t lead = *str;
+  if(lead < 0x80) {
+    cp = getChar1(str);
+    return 1;
+    }
+  if((lead >> 5) == 0x6) {
+    cp = getChar2(str);
+    return 2;
+    }
+  if((lead >> 4) == 0xe) {
+    cp = getChar3(str);
+    return 3;
+    }
+  if((lead >> 3) == 0x1e) {
+    cp = getChar4(str);
+    return 4;
+    }
+  return 0;
   }
 }
 

@@ -1,6 +1,7 @@
 #include "dir.h"
 
 #include <Tempest/Platform>
+#include <Tempest/TextCodec>
 
 #ifdef __WINDOWS__
 #include <windows.h>
