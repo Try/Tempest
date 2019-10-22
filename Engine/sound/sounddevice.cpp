@@ -20,6 +20,8 @@ struct SoundDevice::Data {
 struct SoundDevice::Device {
   Device() {
     dev = alcOpenDevice(nullptr);
+    if(dev==nullptr)
+      throw std::system_error(Tempest::SoundErrc::NoDevice);
     }
   ~Device(){
     alcCloseDevice(dev);
@@ -28,10 +30,12 @@ struct SoundDevice::Device {
   };
 
 SoundDevice::SoundDevice():data( new Data() ) {
-  data->dev     = device();
+  data->dev = device();
+
   data->context = alcCreateContext(data->dev->dev,nullptr);
-  if(!data->context)
+  if(data->context==nullptr)
     throw std::system_error(Tempest::SoundErrc::NoDevice);
+
   alcMakeContextCurrent(data->context);
   alDistanceModel(AL_LINEAR_DISTANCE);
   process();
