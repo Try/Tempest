@@ -84,13 +84,13 @@ set_target_properties(
     )
 
 if(WIN32)
-  target_link_libraries(${PROJECT_NAME} vulkan-1)
+  target_link_libraries(${PROJECT_NAME} PRIVATE vulkan-1)
 else()
-  target_link_libraries(${PROJECT_NAME} vulkan X11 GL)
+  target_link_libraries(${PROJECT_NAME} PRIVATE vulkan X11 GL)
 endif()
 
 if(WIN32)
-  target_link_libraries(${PROJECT_NAME} winmm)
+  target_link_libraries(${PROJECT_NAME} PRIVATE winmm)
 endif()
 
 install(
