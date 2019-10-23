@@ -3,11 +3,9 @@ cmake_minimum_required(VERSION 3.4)
 project(MoltenTempest)
 set(CMAKE_CXX_STANDARD 14)
 
+option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
+
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-set(CMAKE_BINARY_DIR ../)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 if(WIN32)
   add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
@@ -50,6 +48,7 @@ include_directories("include"
                     "thirdparty/openal/openal32/include"
                     "thirdparty/squish"
                     "$ENV{VK_SDK_PATH}/include")
+
 if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
   link_directories(${PROJECT_NAME} "$ENV{VK_SDK_PATH}/lib")
 else()
@@ -57,7 +56,6 @@ else()
 endif()
 
 file(GLOB SOURCES
-    "include/*"
     "*.h"
     "*.cpp"
     "**/*.h"
@@ -72,7 +70,18 @@ file(GLOB SOURCES
     "**/**/**/**/*.cpp"
   )
 
-add_library( ${PROJECT_NAME} SHARED ${SOURCES} ${AlcBackend} )
+# FIXME: the headers include some SOURCES files so installing them is useless
+# the files in include should be the headers themselves!
+file(GLOB PUB_HEADERS
+    "include/Tempest/**"
+    )
+
+add_library(${PROJECT_NAME} ${SOURCES} ${AlcBackend})
+
+set_target_properties(
+    ${PROJECT_NAME} PROPERTIES
+    PUBLIC_HEADER ${PUB_HEADERS}
+    )
 
 if(WIN32)
   target_link_libraries(${PROJECT_NAME} vulkan-1)
@@ -83,3 +92,10 @@ endif()
 if(WIN32)
   target_link_libraries(${PROJECT_NAME} winmm)
 endif()
+
+install(
+    TARGETS ${PROJECT_NAME}
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    PUBLIC_HEADER DESTINATION include/${PROJECT_NAME}
+    )
