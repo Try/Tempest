@@ -8,10 +8,10 @@ namespace Tempest {
 
 class RFile : public Tempest::IDevice {
   public:
-    RFile(const char*     path);
-    RFile(const std::string& path);
-    RFile(const char16_t* path);
-    RFile(const std::u16string& path);
+    explicit RFile(const char*     path);
+    explicit RFile(const std::string& path);
+    explicit RFile(const char16_t* path);
+    explicit RFile(const std::u16string& path);
     ~RFile() override;
 
     size_t  read(void* to,size_t size) override;

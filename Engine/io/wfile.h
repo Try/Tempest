@@ -8,10 +8,10 @@ namespace Tempest {
 
 class WFile : public Tempest::ODevice {
   public:
-    WFile(const char*     path);
-    WFile(const std::string& path);
-    WFile(const char16_t* path);
-    WFile(const std::u16string& path);
+    explicit WFile(const char*     path);
+    explicit WFile(const std::string& path);
+    explicit WFile(const char16_t* path);
+    explicit WFile(const std::u16string& path);
     ~WFile() override;
 
     size_t  write(const void* val,size_t size) override;
