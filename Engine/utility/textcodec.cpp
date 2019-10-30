@@ -33,7 +33,7 @@ std::u16string TextCodec::toUtf16(const char *inS) {
 
   for(size_t i=0;s[i];) {
     uint32_t cp = 0;
-    size_t   l  = Detail::utf8ToCodepoint(&s[sz],cp);
+    size_t   l  = Detail::utf8ToCodepoint(&s[i],cp);
 
     if(cp > 0xFFFF)
       sz+=2; else
@@ -42,10 +42,11 @@ std::u16string TextCodec::toUtf16(const char *inS) {
     i+=l;
     }
 
-  std::u16string u(sz,'?'); sz=0;
+  std::u16string u(sz,'?');
+  size_t l = 0;
   for(size_t i=0;i<sz;) {
     uint32_t cp = 0;
-    size_t   l  = Detail::utf8ToCodepoint(&s[sz],cp);
+    l += Detail::utf8ToCodepoint(&s[l],cp);
 
     if(cp > 0xFFFF) {
       cp -= 0x10000;
