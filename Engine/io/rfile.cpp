@@ -43,6 +43,11 @@ RFile::RFile(const std::u16string &path)
   :RFile(path.c_str()){
   }
 
+RFile::RFile(RFile &&other)
+  :handle(other.handle) {
+  other.handle = nullptr;
+  }
+
 #ifdef __WINDOWS__
 void* RFile::implOpen(const wchar_t *wstr) {
   void* ret = CreateFileW(wstr,GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
@@ -67,6 +72,11 @@ RFile::~RFile() {
   if(handle!=nullptr)
     fclose(reinterpret_cast<FILE*>(handle));
 #endif
+  }
+
+RFile &RFile::operator =(RFile &&other) {
+  std::swap(handle,other.handle);
+  return *this;
   }
 
 size_t RFile::read(void *dest, size_t size) {

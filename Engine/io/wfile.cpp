@@ -43,6 +43,11 @@ WFile::WFile(const std::u16string &path)
   :WFile(path.c_str()){
   }
 
+WFile::WFile(WFile &&other)
+  :handle(other.handle){
+  other.handle = nullptr;
+  }
+
 #ifdef __WINDOWS__
 void* WFile::implOpen(const wchar_t *wstr) {
   void* ret = CreateFileW(wstr,GENERIC_WRITE,0,nullptr,CREATE_ALWAYS,FILE_ATTRIBUTE_NORMAL,nullptr);
@@ -67,6 +72,11 @@ WFile::~WFile() {
   if(handle!=nullptr)
     fclose(reinterpret_cast<FILE*>(handle));
 #endif
+  }
+
+WFile &WFile::operator =(WFile &&other) {
+  std::swap(handle,other.handle);
+  return *this;
   }
 
 size_t WFile::write(const void *val, size_t size) {

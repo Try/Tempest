@@ -12,7 +12,10 @@ class RFile : public Tempest::IDevice {
     explicit RFile(const std::string& path);
     explicit RFile(const char16_t* path);
     explicit RFile(const std::u16string& path);
+    RFile(RFile&& other);
     ~RFile() override;
+
+    RFile& operator = (RFile&& other);
 
     size_t  read(void* to,size_t size) override;
     size_t  size() const override;
