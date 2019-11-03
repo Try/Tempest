@@ -276,8 +276,9 @@ struct FontElement::Impl {
   std::unique_ptr<Impl>                fallback;
   };
 
-FontElement::FontElement()
-  :FontElement(static_cast<const char*>(nullptr)){
+FontElement::FontElement() {
+  static std::shared_ptr<Impl> dummy = std::make_shared<Impl>(static_cast<const char*>(nullptr));
+  ptr = dummy;
   }
 
 FontElement::FontElement(std::nullptr_t)
