@@ -109,20 +109,6 @@ uint64_t Sound::timeLength() const {
   }
 
 void Sound::implLoad(IDevice &f) {
-  /*
-  std::vector<char> buf;
-
-  {
-    char b[2048];
-    size_t sz = f.read(b,sizeof(b));
-    while( sz>0 ){
-      buf.insert( buf.end(), b, b+sz );
-      sz = f.read(b,sizeof(b));
-      }
-  }
-
-  Tempest::MemReader mem(buf.data(), buf.size());
-  */
   auto& mem = f;
 
   WAVEHeader header={};
@@ -147,23 +133,6 @@ void Sound::implLoad(IDevice &f) {
       }
 
     upload(data.get(),format,dataSize,fmt.samplesPerSec);
-    } else {
-    /*
-    OggVorbis_File vf;
-
-    vorbis_info* vi = 0;
-
-    Buf input;
-    int64_t uiPCMSamples = 0;
-    data = convertOggToPCM( vf, &input, buf.size(), &buf[0], vi, uiPCMSamples );
-
-    if( vi->channels == 1 )
-      format = AL_FORMAT_MONO16; else
-      format = AL_FORMAT_STEREO16;
-
-    upload( data, uiPCMSamples * vi->channels * sizeof(short), vi->rate );
-    ov_clear(&vf);
-    */
     }
   }
 

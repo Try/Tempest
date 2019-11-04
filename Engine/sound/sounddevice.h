@@ -5,6 +5,7 @@
 namespace Tempest {
 
 class Sound;
+class SoundProducer;
 class SoundEffect;
 class IDevice;
 
@@ -19,6 +20,7 @@ class SoundDevice final {
     SoundEffect load(const char* fname);
     SoundEffect load(Tempest::IDevice& d);
     SoundEffect load(const Sound& snd);
+    SoundEffect load(std::unique_ptr<SoundProducer> &&p);
 
     void process();
     void suspend();

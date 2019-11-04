@@ -51,7 +51,8 @@ inline std::error_code make_error_code(Tempest::GraphicsErrc e) noexcept {
   }
 
 enum class SoundErrc {
-  NoDevice = 0,
+  NoDevice             = 0,
+  InvalidChannelsCount = 1
   };
 
 struct SoundErrCategory : std::error_category {

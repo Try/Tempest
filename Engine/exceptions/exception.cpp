@@ -60,6 +60,8 @@ std::string SoundErrCategory::message(int ev) const {
   switch(static_cast<SoundErrc>(ev)){
     case SoundErrc::NoDevice:
       return "No device";
+    case SoundErrc::InvalidChannelsCount:
+      return "Sound channels count must be 1 or 2";
     }
   return "(unrecognized error)";
   }

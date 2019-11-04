@@ -8,6 +8,7 @@
 #include <Tempest/SoundEffect>
 #include <Tempest/Except>
 
+#include <vector>
 #include <mutex>
 
 using namespace Tempest;
@@ -26,7 +27,8 @@ struct SoundDevice::Device {
   ~Device(){
     alcCloseDevice(dev);
     }
-  ALCdevice* dev;
+
+  ALCdevice* dev=nullptr;
   };
 
 SoundDevice::SoundDevice():data( new Data() ) {
@@ -60,6 +62,10 @@ SoundEffect SoundDevice::load(IDevice &d) {
 
 SoundEffect SoundDevice::load(const Sound &snd) {
   return SoundEffect(*this,snd);
+  }
+
+SoundEffect SoundDevice::load(std::unique_ptr<SoundProducer>&& p) {
+  return SoundEffect(*this,std::move(p));
   }
 
 void SoundDevice::process() {

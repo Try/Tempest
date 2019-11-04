@@ -2097,7 +2097,14 @@ AL_API ALvoid AL_APIENTRY alSourceRewindv(ALsizei n, const ALuint *sources)
 
 AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei nb, const ALuint *buffers)
 {
-    ALCcontext *Context;
+  ALCcontext *Context = GetContextRef();
+  if(!Context) return;
+  alSourceQueueBuffersCt(Context,source,nb,buffers);
+  ALCcontext_DecRef(Context);
+}
+
+AL_API ALvoid AL_APIENTRY alSourceQueueBuffersCt(ALCcontext *Context,ALuint source, ALsizei nb, const ALuint *buffers)
+{
     ALsource   *Source;
     ALsizei    i;
     ALbufferlistitem *BufferListStart = NULL;
@@ -2106,9 +2113,6 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei nb, const 
 
     if(nb == 0)
         return;
-
-    Context = GetContextRef();
-    if(!Context) return;
 
     al_try
     {
@@ -2227,22 +2231,24 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei nb, const 
         }
     }
     al_endtry;
-
-    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint source, ALsizei nb, ALuint *buffers)
 {
-    ALCcontext *Context;
+  ALCcontext *Context = GetContextRef();
+  if(!Context) return;
+  alSourceUnqueueBuffersCt(Context,source,nb,buffers);
+  ALCcontext_DecRef(Context);
+}
+
+AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffersCt(ALCcontext *Context,ALuint source, ALsizei nb, ALuint *buffers)
+{
     ALsource   *Source;
     ALsizei    i;
     ALbufferlistitem *BufferList;
 
     if(nb == 0)
         return;
-
-    Context = GetContextRef();
-    if(!Context) return;
 
     al_try
     {
@@ -2282,8 +2288,6 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffers(ALuint source, ALsizei nb, ALui
         UnlockContext(Context);
     }
     al_endtry;
-
-    ALCcontext_DecRef(Context);
 }
 
 

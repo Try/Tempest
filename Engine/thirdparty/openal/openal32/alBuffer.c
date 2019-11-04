@@ -182,12 +182,16 @@ static const char aLawCompressTable[128] = {
 
 AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
 {
-    ALCcontext *Context;
+  ALCcontext *Context;
+  Context = GetContextRef();
+  if(!Context) return;
+  alGenBuffersCt(Context,n,buffers);
+  ALCcontext_DecRef(Context);
+}
+
+AL_API ALvoid AL_APIENTRY alGenBuffersCt(ALCcontext *Context, ALsizei n, ALuint *buffers)
+{
     ALsizei    cur = 0;
-
-    Context = GetContextRef();
-    if(!Context) return;
-
     al_try
     {
         ALCdevice *device = Context->Device;
@@ -222,8 +226,6 @@ AL_API ALvoid AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers)
             alDeleteBuffers(cur, buffers);
     }
     al_endtry;
-
-    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers)
@@ -288,16 +290,20 @@ AL_API ALboolean AL_APIENTRY alIsBuffer(ALuint buffer)
 
 AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq)
 {
+  ALCcontext *Context = GetContextRef();
+  if(!Context) return;
+  alBufferDataCt(Context,buffer,format,data,size,freq);
+  ALCcontext_DecRef(Context);
+}
+
+AL_API ALvoid AL_APIENTRY alBufferDataCt(ALCcontext *Context, ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq)
+{
     enum UserFmtChannels SrcChannels;
     enum UserFmtType SrcType;
-    ALCcontext *Context;
     ALuint FrameSize;
     ALenum NewFormat;
     ALbuffer *ALBuf;
     ALenum err;
-
-    Context = GetContextRef();
-    if(!Context) return;
 
     al_try
     {
@@ -397,8 +403,6 @@ AL_API ALvoid AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoi
         }
     }
     al_endtry;
-
-    ALCcontext_DecRef(Context);
 }
 
 AL_API ALvoid AL_APIENTRY alBufferSubDataSOFT(ALuint buffer, ALenum format, const ALvoid *data, ALsizei offset, ALsizei length)

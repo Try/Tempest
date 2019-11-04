@@ -544,12 +544,15 @@ AL_API void AL_APIENTRY alSourcePause(ALuint source);
 
 /** Queue buffers onto a source */
 AL_API void AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei nb, const ALuint *buffers);
+AL_API void AL_APIENTRY alSourceQueueBuffersCt(ALCcontext *Context,ALuint source, ALsizei nb, const ALuint *buffers);
 /** Unqueue processed buffers from a source */
 AL_API void AL_APIENTRY alSourceUnqueueBuffers(ALuint source, ALsizei nb, ALuint *buffers);
+AL_API void AL_APIENTRY alSourceUnqueueBuffersCt(ALCcontext *Context,ALuint source, ALsizei nb, ALuint *buffers);
 
 
 /** Create Buffer objects */
 AL_API void AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers);
+AL_API void AL_APIENTRY alGenBuffersCt(ALCcontext *Context, ALsizei n, ALuint *buffers);
 /** Delete Buffer objects */
 AL_API void AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers);
 /** Verify a handle is a valid Buffer */
@@ -557,6 +560,7 @@ AL_API ALboolean AL_APIENTRY alIsBuffer(ALuint buffer);
 
 /** Specifies the data to be copied into a buffer */
 AL_API void AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq);
+AL_API void AL_APIENTRY alBufferDataCt(ALCcontext *Context, ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq);
 
 /** Set Buffer parameters, */
 AL_API void AL_APIENTRY alBufferf(ALuint buffer, ALenum param, ALfloat value);

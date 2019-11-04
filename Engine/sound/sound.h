@@ -31,7 +31,7 @@ class Sound final {
 
     struct Data {
       ~Data();
-      uint32_t buffer = 0;
+      uint32_t buffer=0;
       uint64_t timeLength() const;
       };
     std::shared_ptr<Data> data;
