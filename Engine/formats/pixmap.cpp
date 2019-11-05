@@ -33,7 +33,7 @@ struct Pixmap::Impl {
   Impl(uint32_t w,uint32_t h,Pixmap::Format frm):w(w),h(h),frm(frm) {
     bpp = bppFromFrm(frm);
 
-    dataSz = w*h*bpp;
+    dataSz = size_t(w)*size_t(h)*size_t(bpp);
     data   = reinterpret_cast<stbi_uc*>(STBI_MALLOC(dataSz));
     if(!data)
       throw std::bad_alloc();
@@ -41,7 +41,7 @@ struct Pixmap::Impl {
     }
 
   Impl(const Impl& other):w(other.w),h(other.h),bpp(other.bpp),dataSz(other.dataSz),frm(other.frm),mipCnt(other.mipCnt){
-    size_t size=w*h*bpp;
+    size_t size=size_t(w)*size_t(h)*size_t(bpp);
     data=reinterpret_cast<stbi_uc*>(STBI_MALLOC(size));
     if(!data)
       throw std::bad_alloc();
@@ -52,7 +52,7 @@ struct Pixmap::Impl {
   Impl(const Impl& other,Pixmap::Format conv):w(other.w),h(other.h),bpp(other.bpp),frm(conv) {
     bpp = bppFromFrm(frm);
 
-    size_t size=w*h*bpp;
+    size_t size=size_t(w)*size_t(h)*size_t(bpp);
     data=reinterpret_cast<stbi_uc*>(STBI_MALLOC(size));
     if(!data)
       throw std::bad_alloc();
@@ -64,7 +64,7 @@ struct Pixmap::Impl {
       }
 
     if(frm==Format::RGBA) {
-      const size_t size=w*h;
+      const size_t size=size_t(w)*size_t(h);
       if(other.frm==Format::RGB){
         // RGB -> RGBA
         for(size_t i=0;i<size;++i){

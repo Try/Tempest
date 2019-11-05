@@ -207,9 +207,9 @@ void TextModel::drawCursor(Painter &p, int x, int y, TextModel::Cursor s, TextMo
     } else {
     auto posS = mapToCoords(s);
     auto posE = mapToCoords(e);
-    int s = std::min(posS.x,posE.x);
-    int e = std::max(posS.x,posE.x);
-    p.drawRect(x+s,y+posS.y,x+e-s,int(fnt.pixelSize()));
+    int is = std::min(posS.x,posE.x);
+    int ie = std::max(posS.x,posE.x);
+    p.drawRect(x+is,y+posS.y,x+ie-is,int(fnt.pixelSize()));
     }
 
   p.setBrush(b);

@@ -120,13 +120,13 @@ struct FontElement::Impl {
     data = new uint8_t[size];
 
     if(file.read(data,size)!=size) {
-      delete data;
+      delete[] data;
       throw std::system_error(Tempest::SystemErrc::UnableToLoadAsset);
       }
     }
 
   ~Impl() {
-    delete data;
+    delete[] data;
     std::free(rasterBuf);
     }
 
