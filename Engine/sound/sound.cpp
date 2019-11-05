@@ -114,7 +114,7 @@ void Sound::implLoad(IDevice &f) {
   WAVEHeader header={};
   FmtChunk   fmt={};
   size_t     dataSize=0;
-  std::unique_ptr<char> data = readWAVFull(mem,header,fmt,dataSize);
+  std::unique_ptr<char[]> data = readWAVFull(mem,header,fmt,dataSize);
 
   int format=0;
   if(data) {
@@ -136,8 +136,8 @@ void Sound::implLoad(IDevice &f) {
     }
   }
 
-std::unique_ptr<char> Sound::readWAVFull(IDevice &f, WAVEHeader& header, FmtChunk& fmt, size_t& dataSize) {
-  std::unique_ptr<char> buffer;
+std::unique_ptr<char[]> Sound::readWAVFull(IDevice &f, WAVEHeader& header, FmtChunk& fmt, size_t& dataSize) {
+  std::unique_ptr<char[]> buffer;
 
   size_t res = f.read(&header,sizeof(WAVEHeader));
   if(res!=sizeof(WAVEHeader))
