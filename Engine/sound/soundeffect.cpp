@@ -26,7 +26,7 @@ struct SoundEffect::Impl {
       return;
     ALCcontext* ctx = context();
     alGenSourcesCt(ctx, 1, &source);
-    alSourceiCt(ctx, source, AL_BUFFER, int(data->buffer));
+    alSourceBufferCt(ctx, source, reinterpret_cast<ALbuffer*>(data->buffer));
     }
 
   Impl(SoundDevice &dev, std::unique_ptr<SoundProducer> &&src)
@@ -58,16 +58,27 @@ struct SoundEffect::Impl {
     ALsizei        freq = src.frequency;
     ALenum         frm  = src.channels==2 ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16;
     auto           ctx  = context();
-    ALuint         qBuffer[NUM_BUF]={};
+    ALbuffer*      qBuffer[NUM_BUF]={};
     int16_t        bufData[BUFSZ*2]={};
     ALint          state=AL_INITIAL;
+    ALint          zero=0;
 
-    alGenBuffersCt(ctx, NUM_BUF, qBuffer);
+    for(size_t i=0;i<NUM_BUF;++i){
+      auto b = alNewBuffer();
+      if(b==nullptr){
+        for(size_t r=0;r<i;++r)
+          alDelBuffer(b);
+        return;
+        }
+      qBuffer[i] = b;
+      }
+
     for(int i=0;i<NUM_BUF;++i) {
       renderSound(src,bufData,BUFSZ);
       alBufferDataCt(ctx, qBuffer[i], frm, bufData, BUFSZ*sizeof(int16_t)*2, freq);
       }
     alSourceQueueBuffersCt(ctx,source,NUM_BUF,qBuffer);
+    alSourceivCt(ctx,source,AL_LOOPING,&zero);
     alSourcePlayvCt(ctx,1,&source);
 
     while(threadFlag.load()) {
@@ -79,12 +90,14 @@ struct SoundEffect::Impl {
         continue;
         }
 
-      ALuint nextBuffer=0;
-      alSourceUnqueueBuffersCt(ctx,source,1,&nextBuffer);
+      for(int i=0;i<bufProcessed;++i) {
+        ALbuffer* nextBuffer=nullptr;
+        alSourceUnqueueBuffersCt(ctx,source,1,&nextBuffer);
 
-      renderSound(src,bufData,BUFSZ);
-      alBufferDataCt(ctx, nextBuffer, frm, bufData, BUFSZ*sizeof(int16_t)*2, freq);
-      alSourceQueueBuffersCt(ctx,source,1,&nextBuffer);
+        renderSound(src,bufData,BUFSZ);
+        alBufferDataCt(ctx, nextBuffer, frm, bufData, BUFSZ*sizeof(int16_t)*2, freq);
+        alSourceQueueBuffersCt(ctx,source,1,&nextBuffer);
+        }
 
       if(bufProcessed==1){
         uint64_t t = (uint64_t(1000u)*BUFSZ)/uint64_t(freq);
@@ -95,7 +108,9 @@ struct SoundEffect::Impl {
       if(state==AL_STOPPED)
         alSourcePlayvCt(ctx,1,&source); //HACK
       }
-    alDeleteBuffers(NUM_BUF,qBuffer);
+
+    for(size_t i=0;i<NUM_BUF;++i)
+      alDelBuffer(qBuffer[i]);
     }
 
   void renderSound(SoundProducer& src,int16_t* data,size_t sz) noexcept {

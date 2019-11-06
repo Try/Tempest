@@ -40,7 +40,8 @@ ALvoid alSetError(ALCcontext *Context, ALenum errorCode)
         raise(SIGTRAP);
 #endif
     }
-    CompExchangeInt(&Context->LastError, AL_NO_ERROR, errorCode);
+    if(Context!=NULL)
+      CompExchangeInt(&Context->LastError, AL_NO_ERROR, errorCode);
 }
 
 AL_API ALenum AL_APIENTRY alGetError(void)

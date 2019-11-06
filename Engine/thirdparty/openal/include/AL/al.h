@@ -62,6 +62,7 @@ typedef double ALdouble;
 /** void type (for opaque pointers only) */
 typedef void ALvoid;
 
+typedef struct ALbuffer ALbuffer;
 
 /* Enumerant values begin at column 50. No tabs. */
 
@@ -507,9 +508,10 @@ AL_API void AL_APIENTRY alSource3f(ALuint source, ALenum param, ALfloat value1, 
 AL_API void AL_APIENTRY alSourcefv(ALuint source, ALenum param, const ALfloat *values);
 AL_API void AL_APIENTRY alSourcefvCt(ALCcontext *Context, ALuint source, ALenum param, const ALfloat *values);
 AL_API void AL_APIENTRY alSourcei(ALuint source, ALenum param, ALint value);
-AL_API void AL_APIENTRY alSourceiCt(ALCcontext *ctx,ALuint source, ALenum param, ALint value);
 AL_API void AL_APIENTRY alSource3i(ALuint source, ALenum param, ALint value1, ALint value2, ALint value3);
 AL_API void AL_APIENTRY alSourceiv(ALuint source, ALenum param, const ALint *values);
+AL_API void AL_APIENTRY alSourceivCt(ALCcontext *Context, ALuint source, ALenum param, const ALint *values);
+AL_API ALenum AL_APIENTRY alSourceBufferCt(ALCcontext *Context, ALuint source, ALbuffer *buffer);
 
 /** Get Source parameters. */
 AL_API void AL_APIENTRY alGetSourcef(ALuint source, ALenum param, ALfloat *value);
@@ -544,23 +546,25 @@ AL_API void AL_APIENTRY alSourcePause(ALuint source);
 
 /** Queue buffers onto a source */
 AL_API void AL_APIENTRY alSourceQueueBuffers(ALuint source, ALsizei nb, const ALuint *buffers);
-AL_API void AL_APIENTRY alSourceQueueBuffersCt(ALCcontext *Context,ALuint source, ALsizei nb, const ALuint *buffers);
+AL_API void AL_APIENTRY alSourceQueueBuffersCt(ALCcontext *Context,ALuint source, ALsizei nb, ALbuffer **buffers);
 /** Unqueue processed buffers from a source */
 AL_API void AL_APIENTRY alSourceUnqueueBuffers(ALuint source, ALsizei nb, ALuint *buffers);
-AL_API void AL_APIENTRY alSourceUnqueueBuffersCt(ALCcontext *Context,ALuint source, ALsizei nb, ALuint *buffers);
+AL_API void AL_APIENTRY alSourceUnqueueBuffersCt(ALCcontext *Context,ALuint source, ALsizei nb, ALbuffer **buffers);
 
 
 /** Create Buffer objects */
 AL_API void AL_APIENTRY alGenBuffers(ALsizei n, ALuint *buffers);
 AL_API void AL_APIENTRY alGenBuffersCt(ALCcontext *Context, ALsizei n, ALuint *buffers);
+AL_API ALbuffer* AL_APIENTRY alNewBuffer();
 /** Delete Buffer objects */
 AL_API void AL_APIENTRY alDeleteBuffers(ALsizei n, const ALuint *buffers);
+AL_API void AL_APIENTRY alDelBuffer(ALbuffer* ALBuf);
 /** Verify a handle is a valid Buffer */
 AL_API ALboolean AL_APIENTRY alIsBuffer(ALuint buffer);
 
 /** Specifies the data to be copied into a buffer */
-AL_API void AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq);
-AL_API void AL_APIENTRY alBufferDataCt(ALCcontext *Context, ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq);
+AL_API void      AL_APIENTRY alBufferData(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq);
+AL_API ALboolean AL_APIENTRY alBufferDataCt(ALCcontext *Context, ALbuffer* buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei freq);
 
 /** Set Buffer parameters, */
 AL_API void AL_APIENTRY alBufferf(ALuint buffer, ALenum param, ALfloat value);
@@ -577,6 +581,8 @@ AL_API void AL_APIENTRY alGetBufferfv(ALuint buffer, ALenum param, ALfloat *valu
 AL_API void AL_APIENTRY alGetBufferi(ALuint buffer, ALenum param, ALint *value);
 AL_API void AL_APIENTRY alGetBuffer3i(ALuint buffer, ALenum param, ALint *value1, ALint *value2, ALint *value3);
 AL_API void AL_APIENTRY alGetBufferiv(ALuint buffer, ALenum param, ALint *values);
+
+AL_API ALenum AL_APIENTRY alGetBufferiCt(ALbuffer* Buffer, ALenum param, ALint *value);
 
 /** Pointer-to-function type, useful for dynamically getting AL entry points. */
 typedef void          (AL_APIENTRY *LPALENABLE)(ALenum capability);

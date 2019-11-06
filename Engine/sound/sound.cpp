@@ -3,6 +3,7 @@
 #include <Tempest/IDevice>
 #include <Tempest/MemReader>
 #include <Tempest/File>
+#include <Tempest/Except>
 
 #include <vector>
 #include <cstring>
@@ -54,16 +55,18 @@ const int32_t Sound::indexTable[] = {
   };
 
 Sound::Data::~Data() {
-  if(buffer)
-    alDeleteBuffers(1, &buffer);
+  alDelBuffer(reinterpret_cast<ALbuffer*>(buffer));
   }
 
 uint64_t Sound::Data::timeLength() const {
+  auto buf = reinterpret_cast<ALbuffer*>(buffer);
   int size=0,fr=0,bits=0,channels=0;
-  alGetBufferi(buffer, AL_SIZE,      &size);
-  alGetBufferi(buffer, AL_BITS,      &bits);
-  alGetBufferi(buffer, AL_CHANNELS,  &channels);
-  alGetBufferi(buffer, AL_FREQUENCY, &fr);
+  if(alGetBufferiCt(buf, AL_SIZE,      &size)    !=AL_NO_ERROR ||
+     alGetBufferiCt(buf, AL_BITS,      &bits)    !=AL_NO_ERROR ||
+     alGetBufferiCt(buf, AL_CHANNELS,  &channels)!=AL_NO_ERROR ||
+     alGetBufferiCt(buf, AL_FREQUENCY, &fr)      !=AL_NO_ERROR) {
+    throw std::system_error(Tempest::SoundErrc::NoDevice);
+    }
 
   if(channels<=0 || fr<=0)
     return 0;
@@ -176,9 +179,17 @@ std::unique_ptr<char[]> Sound::readWAVFull(IDevice &f, WAVEHeader& header, FmtCh
   }
 
 void Sound::upload(char* bytes, int format, size_t size, size_t rate) {
+  auto b = alNewBuffer();
+  if(!b)
+    throw std::bad_alloc();
+
+  if(!alBufferDataCt(nullptr, b, format, bytes, int(size), int(rate))) {
+    alDelBuffer(b);
+    throw std::bad_alloc();
+    }
+
   auto d = std::make_shared<Data>();
-  alGenBuffers(1, &d->buffer);
-  alBufferData(d->buffer, format, bytes, int(size), int(rate));
+  d->buffer=b;
   data = d;
   }
 
