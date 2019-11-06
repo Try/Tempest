@@ -82,10 +82,11 @@ struct SoundEffect::Impl {
     alSourcePlayvCt(ctx,1,&source);
 
     while(threadFlag.load()) {
-      int bufProcessed=0;
+      int bufInQueue=0, bufProcessed=0;
+      alGetSourceivCt(ctx,source, AL_BUFFERS_QUEUED,    &bufInQueue);
       alGetSourceivCt(ctx,source, AL_BUFFERS_PROCESSED, &bufProcessed);
 
-      if(bufProcessed==0){
+      if(bufInQueue>2 && bufProcessed==0){
         std::this_thread::yield();
         continue;
         }
@@ -99,7 +100,7 @@ struct SoundEffect::Impl {
         alSourceQueueBuffersCt(ctx,source,1,&nextBuffer);
         }
 
-      if(bufProcessed==1){
+      if(bufInQueue==1){
         uint64_t t = (uint64_t(1000u)*BUFSZ)/uint64_t(freq);
         std::this_thread::sleep_for(std::chrono::milliseconds(t));
         }
