@@ -46,11 +46,12 @@ struct SoundEffect::Impl {
 
     ALCcontext* ctx = context();
     if(threadFlag.load()) {
-      alSourcePausevCt(ctx,1,&source);
       threadFlag.store(false);
       producerThread.join();
+      producer.reset();
+      } else {
+      alDeleteSourcesCt(ctx, 1, &source);
       }
-    alDeleteSourcesCt(ctx, 1, &source);
     }
 
   void soundThreadFn() {
@@ -110,8 +111,11 @@ struct SoundEffect::Impl {
         alSourcePlayvCt(ctx,1,&source); //HACK
       }
 
+    alSourcePausevCt(ctx,1,&source);
+    alDeleteSourcesCt(ctx, 1, &source);
     for(size_t i=0;i<NUM_BUF;++i)
       alDelBuffer(qBuffer[i]);
+    source=0;
     }
 
   void renderSound(SoundProducer& src,int16_t* data,size_t sz) noexcept {
@@ -123,8 +127,8 @@ struct SoundEffect::Impl {
     }
 
   SoundDevice*                   dev    = nullptr;
-  uint32_t                       source = 0;
   std::shared_ptr<Sound::Data>   data;
+  uint32_t                       source = 0;
 
   std::thread                    producerThread;
   std::atomic_bool               threadFlag={false};
