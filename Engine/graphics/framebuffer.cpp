@@ -19,3 +19,17 @@ FrameBuffer::~FrameBuffer() {
 const FrameBufferLayout& FrameBuffer::layout() const {
   return lay;
   }
+
+bool FrameBufferLayout::operator != (const FrameBufferLayout &fbo) const {
+  return !(*this==fbo);
+  }
+
+bool FrameBufferLayout::operator == (const FrameBufferLayout &fbo) const {
+  if(mw!=fbo.mw || mh!=fbo.mh)
+    return false;
+  if(impl.handler==fbo.impl.handler)
+    return true;
+  if(impl.handler==nullptr || fbo.impl.handler==nullptr)
+    return false;
+  return impl.handler->equals(*fbo.impl.handler);
+  }

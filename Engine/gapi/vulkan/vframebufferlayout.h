@@ -23,6 +23,7 @@ class VFramebufferLayout : public AbstractGraphicsApi::FboLayout {
     uint8_t                     attCount=0;
 
     bool                        isCompatible(const VFramebufferLayout& other) const;
+    bool                        equals(const FboLayout& other) override;
 
   private:
     VkDevice     device=nullptr;

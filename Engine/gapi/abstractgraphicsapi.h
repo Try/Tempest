@@ -201,6 +201,7 @@ namespace Tempest {
         };
       struct FboLayout:Shared      {
         virtual ~FboLayout()=default;
+        virtual bool equals(const FboLayout&)=0;
         };
       struct Pass:Shared     {
         virtual ~Pass()=default;

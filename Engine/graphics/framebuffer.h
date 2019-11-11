@@ -17,6 +17,9 @@ class FrameBufferLayout final {
     uint32_t w() const { return mw; }
     uint32_t h() const { return mh; }
 
+    bool operator == (const FrameBufferLayout& fbo) const;
+    bool operator != (const FrameBufferLayout& fbo) const;
+
   private:
     FrameBufferLayout()=default;
     FrameBufferLayout(Detail::DSharedPtr<AbstractGraphicsApi::FboLayout*>&& f,uint32_t w,uint32_t h);
