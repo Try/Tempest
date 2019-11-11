@@ -91,7 +91,7 @@ class Device {
       return loadIbo(arr.data(),arr.size(),flg);
       }
 
-    Texture2d            createTexture(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips);
+    Texture2d            texture(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips);
     Texture2d            loadTexture(const Pixmap& pm,bool mips=true);
     UniformBuffer        loadUbo(const void* data, size_t size);
     Pixmap               readPixels(const Texture2d& t);

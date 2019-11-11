@@ -138,7 +138,7 @@ const Device::Caps &Device::caps() const {
   return devCaps;
   }
 
-Texture2d Device::createTexture(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips) {
+Texture2d Device::texture(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips) {
   if(!devCaps.hasSamplerFormat(frm) && !devCaps.hasAttachFormat(frm) && !devCaps.hasDepthFormat(frm))
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
   uint32_t mipCnt = mips ? mipCount(w,h) : 1;
