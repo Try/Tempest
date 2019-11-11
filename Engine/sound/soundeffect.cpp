@@ -101,6 +101,7 @@ struct SoundEffect::Impl {
         alSourceQueueBuffersCt(ctx,source,1,&nextBuffer);
         }
 
+      alGetSourceivCt(ctx,source, AL_BUFFERS_QUEUED, &bufInQueue);
       if(bufInQueue==1){
         uint64_t t = (uint64_t(1000u)*BUFSZ)/uint64_t(freq);
         std::this_thread::sleep_for(std::chrono::milliseconds(t));
