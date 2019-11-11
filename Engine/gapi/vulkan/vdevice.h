@@ -136,9 +136,10 @@ class VDevice : public AbstractGraphicsApi::Device {
         void start();
         void flush(const Detail::VBuffer& src, size_t size);
         void copy(Detail::VBuffer&  dest, const Detail::VBuffer& src, size_t size);
-        void copy(Detail::VTexture& dest, uint32_t w, uint32_t h, uint32_t mip, const Detail::VBuffer& src, size_t offset);
+        void copy(Detail::VTexture& dest, uint32_t w, uint32_t h, uint32_t mip, const Detail::VBuffer&  src, size_t offset);
+        void copy(Detail::VBuffer&  dest, uint32_t w, uint32_t h, uint32_t mip, const Detail::VTexture& src, size_t offset);
 
-        void changeLayout(Detail::VTexture& dest, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount);
+        void changeLayout(Detail::VTexture& dest, VkFormat frm, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount);
         void generateMipmap(VTexture& image, VkFormat frm, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
 
         void hold(BufPtr& b);

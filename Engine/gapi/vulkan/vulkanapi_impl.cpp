@@ -20,7 +20,8 @@
 using namespace Tempest::Detail;
 
 static const std::initializer_list<const char*> validationLayers = {
-  "VK_LAYER_LUNARG_standard_validation"
+  "VK_LAYER_LUNARG_standard_validation",
+  "VK_LAYER_LUNARG_core_validation"
   };
 
 static const std::vector<const char*> deviceExtensions = {

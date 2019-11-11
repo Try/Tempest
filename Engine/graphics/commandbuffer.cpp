@@ -70,7 +70,7 @@ void CommandBuffer::exchangeLayout(Texture2d &t, TextureLayout src, TextureLayou
   implEndRenderPass();
 
   if(t.impl.handler)
-    impl.handler->changeLayout(*t.impl.handler,src,dest);
+    impl.handler->changeLayout(*t.impl.handler,t.frm,src,dest);
   }
 
 void CommandBuffer::barrier(Texture2d &t, Stage in, Stage out) {

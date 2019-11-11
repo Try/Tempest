@@ -112,12 +112,11 @@ VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferFl
   uint32_t props=0;
   if(bool(bufFlg&BufferFlags::Staging))
     props|=VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-    //props|=(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT); to avoid vkFlushMappedMemoryRanges
+    //props|=(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);// to avoid vkFlushMappedMemoryRanges
   if(bool(bufFlg&BufferFlags::Static))
     props|=VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
   if(bool(bufFlg&BufferFlags::Dynamic))
     props|=(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    //props|=(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
   uint32_t typeId=provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits(props));
 
@@ -184,7 +183,9 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mi
   imageInfo.arrayLayers   = 1;
   imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
   imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  imageInfo.usage         = isDepthFormat(frm) ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT : (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT|VK_IMAGE_USAGE_SAMPLED_BIT);
+  imageInfo.usage         = isDepthFormat(frm) ?
+        (VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) :
+        (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT|VK_IMAGE_USAGE_SAMPLED_BIT|VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
   imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
   imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
   imageInfo.format        = nativeFormat(frm);
@@ -244,9 +245,30 @@ bool VAllocator::update(VBuffer &dest, const void *mem, size_t offset, size_t si
   VkMappedMemoryRange rgn={};
   rgn.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
   rgn.memory = page.page->memory;
+  rgn.offset = page.offset+offset;
+  rgn.size   = (size%provider.device->nonCoherentAtomSize==0) ? size : VK_WHOLE_SIZE;
+  vkFlushMappedMemoryRanges(device,1,&rgn);
+
+  vkUnmapMemory(device,page.page->memory);
+  return true;
+  }
+
+bool VAllocator::read(VBuffer &src, void *mem, size_t offset, size_t size) {
+  auto& page = src.page;
+  void* data = nullptr;
+
+  std::lock_guard<std::mutex> g(page.page->mmapSync);
+  if(vkMapMemory(device,page.page->memory,page.offset+offset,size,0,&data)!=VkResult::VK_SUCCESS)
+    return false;
+
+  VkMappedMemoryRange rgn={};
+  rgn.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+  rgn.memory = page.page->memory;
   rgn.offset = page.offset+offset; //TODO: nonCoherentAtomSize
   rgn.size   = size;
-  vkFlushMappedMemoryRanges(device,1,&rgn);
+  vkInvalidateMappedMemoryRanges(device,1,&rgn);
+
+  std::memcpy(mem,data,size);
 
   vkUnmapMemory(device,page.page->memory);
   return true;

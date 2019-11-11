@@ -81,18 +81,32 @@ uint32_t Device::nextImage(Semaphore &onReady) {
   }
 
 void Device::draw(const CommandBuffer &cmd, const Semaphore &wait) {
-  api.draw(dev,swapchain,cmd.impl.handler,wait.impl.handler,nullptr,nullptr);
+  api.draw(dev,cmd.impl.handler,wait.impl.handler,nullptr,nullptr);
   }
 
 void Device::draw(const CommandBuffer &cmd, const Semaphore &wait, Semaphore &done, Fence &fdone) {
-  api.draw(dev,swapchain,cmd.impl.handler,wait.impl.handler,done.impl.handler,fdone.impl.handler);
+  api.draw(dev,cmd.impl.handler,wait.impl.handler,done.impl.handler,fdone.impl.handler);
   }
 
-void Device::draw(const Tempest::CommandBuffer *cmd[], size_t count, const Semaphore &wait, Semaphore &done, Fence &fdone) {
+void Device::draw(const Tempest::CommandBuffer *cmd[], size_t count,
+                  const Semaphore *wait[], size_t waitCnt,
+                  Semaphore *done[], size_t doneCnt,
+                  Fence *fdone) {
   impl.cmdBuf.resize(count);
   for(size_t i=0;i<count;++i)
     impl.cmdBuf[i] = cmd[i]->impl.handler;
-  api.draw(dev,swapchain,impl.cmdBuf.data(),count,wait.impl.handler,done.impl.handler,fdone.impl.handler);
+
+  impl.semBuf.resize(waitCnt+doneCnt);
+  for(size_t i=0;i<waitCnt;++i)
+    impl.semBuf[i] = wait[i]->impl.handler;
+  for(size_t i=0;i<doneCnt;++i)
+    impl.semBuf[waitCnt+i] = done[i]->impl.handler;
+
+  api.draw(dev,
+           impl.cmdBuf.data(), count,
+           impl.semBuf.data(), waitCnt,
+           impl.semBuf.data()+waitCnt, doneCnt,
+           fdone->impl.handler);
   }
 
 void Device::present(uint32_t img,const Semaphore &wait) {
@@ -148,7 +162,6 @@ Texture2d Device::loadTexture(const Pixmap &pm, bool mips) {
 
   if(isCompressedFormat(format)){
     if(devCaps.hasSamplerFormat(format) && (!mips || pm.mipCount()>1)){
-      //format = TextureFormat::DXT1;
       mipCnt = pm.mipCount();
       } else {
       alt    = Pixmap(pm,Pixmap::Format::RGBA);
@@ -165,6 +178,12 @@ Texture2d Device::loadTexture(const Pixmap &pm, bool mips) {
 
   Texture2d t(*this,api.createTexture(dev,*p,format,mipCnt),p->w(),p->h(),format);
   return t;
+  }
+
+Pixmap Device::readPixels(const Texture2d &t) {
+  Pixmap pm;
+  api.readPixels(dev,pm,t.impl,t.format(),uint32_t(t.w()),uint32_t(t.h()),0);
+  return pm;
   }
 
 UniformBuffer Device::loadUbo(const void *mem, size_t size) {

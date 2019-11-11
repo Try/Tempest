@@ -26,7 +26,9 @@ using namespace Tempest;
 
 struct VulkanApi::Impl : public Detail::VulkanApi {
   using VulkanApi::VulkanApi;
+  std::mutex                   syncBuf;
   std::vector<VkCommandBuffer> cmdBuf;
+  std::vector<VkSemaphore>     semBuf;
   };
 
 VulkanApi::VulkanApi(ApiFlags f) {
@@ -191,8 +193,8 @@ AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device
     return PBuffer(new Detail::VBuffer(std::move(stage)));
     }
   else {
-    Detail::VBuffer  stage=dx->allocator.alloc(mem,     size, MemUsage::TransferSrc,       BufferFlags::Staging);
-    Detail::VBuffer  buf  =dx->allocator.alloc(nullptr, size, usage|MemUsage::TransferDst, BufferFlags::Static );
+    Detail::VBuffer  stage=dx->allocator.alloc(mem,     size, MemUsage::TransferSrc,      BufferFlags::Staging);
+    Detail::VBuffer  buf  =dx->allocator.alloc(nullptr, size, usage|MemUsage::TransferDst,BufferFlags::Static );
 
     Detail::DSharedPtr<Detail::VBuffer*> pstage(new Detail::VBuffer(std::move(stage)));
     Detail::DSharedPtr<Detail::VBuffer*> pbuf  (new Detail::VBuffer(std::move(buf)));
@@ -223,7 +225,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   dat.hold(pstage);
   dat.hold(pbuf);
 
-  dat.changeLayout(*pbuf.handler, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,mipCnt);
+  dat.changeLayout(*pbuf.handler, format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,mipCnt);
   if(isCompressedFormat(frm)){
     size_t blocksize  = (frm==TextureFormat::DXT1) ? 8 : 16;
     size_t bufferSize = 0;
@@ -238,12 +240,12 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
       h = std::max<size_t>(1,h/2);
       }
 
-    dat.changeLayout(*pbuf.handler, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipCnt);
+    dat.changeLayout(*pbuf.handler, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipCnt);
     } else {
     dat.copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
     if(mipCnt>1)
       dat.generateMipmap(*pbuf.handler,format,p.w(),p.h(),mipCnt); else
-      dat.changeLayout(*pbuf.handler, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipCnt);
+      dat.changeLayout(*pbuf.handler, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipCnt);
     }
   dat.commit();
 
@@ -266,11 +268,51 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
     }
 
   dat.hold(pbuf);
-  dat.changeLayout(*pbuf.handler, VK_IMAGE_LAYOUT_UNDEFINED, lay, mipCnt);
+  dat.changeLayout(*pbuf.handler, Detail::nativeFormat(frm), VK_IMAGE_LAYOUT_UNDEFINED, lay, mipCnt);
   dat.commit();
 
   //dx->waitData();
   return PTexture(pbuf.handler);
+  }
+
+void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PTexture t, TextureFormat frm,
+                           const uint32_t w, const uint32_t h, uint32_t mip) {
+  Detail::VDevice*  dx = reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VTexture* tx = reinterpret_cast<Detail::VTexture*>(t.handler);
+
+  size_t         bpp  = 0;
+  Pixmap::Format pfrm = Pixmap::Format::RGBA;
+  switch(frm) {
+    case TextureFormat::Undefined: bpp=0; break;
+    case TextureFormat::Last:      bpp=0; break;
+    case TextureFormat::Alpha:     bpp=1; pfrm = Pixmap::Format::A;   break;
+    case TextureFormat::RGB8:      bpp=3; pfrm = Pixmap::Format::RGB; break;
+    case TextureFormat::RGBA8:     bpp=4; break;
+    case TextureFormat::RG16:      bpp=4; break;
+    case TextureFormat::Depth16:   bpp=2; break;
+    case TextureFormat::Depth24S8: bpp=4; break;
+    case TextureFormat::Depth24x8: bpp=4; break;
+    // TODO: dxt
+    case TextureFormat::DXT1:      bpp=0; break;
+    case TextureFormat::DXT3:      bpp=0; break;
+    case TextureFormat::DXT5:      bpp=0; break;
+    }
+
+  const size_t    size  = w*h*bpp;
+  Detail::VBuffer stage = dx->allocator.alloc(nullptr,size,MemUsage::TransferDst,BufferFlags::Staging);
+
+  Detail::VDevice::Data dat(*dx);
+
+  VkFormat format = Detail::nativeFormat(frm);
+  dat.changeLayout(*tx, format, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,     1);
+  dat.copy(stage,w,h,mip,*tx,0);
+  dat.changeLayout(*tx, format, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1);
+  dat.commit();
+
+  dx->waitData();
+
+  out = Pixmap(w,h,pfrm);
+  stage.read(out.data(),0,size);
   }
 
 AbstractGraphicsApi::Desc *VulkanApi::createDescriptors(AbstractGraphicsApi::Device*      d,
@@ -357,7 +399,6 @@ void VulkanApi::present(Device *d,Swapchain *sw,uint32_t imageId,const Semaphore
   }
 
 void VulkanApi::draw(Device *d,
-                     Swapchain *,
                      CommandBuffer *cmd,
                      Semaphore *wait,
                      Semaphore *onReady,
@@ -393,43 +434,50 @@ void VulkanApi::draw(Device *d,
   }
 
 void VulkanApi::draw(AbstractGraphicsApi::Device *d,
-                     AbstractGraphicsApi::Swapchain*,
                      AbstractGraphicsApi::CommandBuffer **cmd, size_t count,
-                     AbstractGraphicsApi::Semaphore *wait,
-                     AbstractGraphicsApi::Semaphore *onReady,
-                     AbstractGraphicsApi::Fence *onReadyCpu) {
-  Detail::VDevice*        dx=reinterpret_cast<Detail::VDevice*>(d);
-  auto*                   wx=reinterpret_cast<const Detail::VSemaphore*>(wait);
-  auto*                   rx=reinterpret_cast<const Detail::VSemaphore*>(onReady);
-  auto*                   rc=reinterpret_cast<const Detail::VFence*>(onReadyCpu);
+                     Semaphore **wait, size_t waitCnt,
+                     Semaphore **done, size_t doneCnt,
+                     Fence     *doneCpu) {
+  Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
 
-  auto& cmdBuf = impl->cmdBuf;
+  std::lock_guard<std::mutex> guard(impl->syncBuf);
+  auto& cmdBuf   = impl->cmdBuf;
+  auto& semBuf   = impl->semBuf;
+
   cmdBuf.resize(count);
-  for(size_t i=0;i<count;++i){
-    Detail::VCommandBuffer* cx=reinterpret_cast<Detail::VCommandBuffer*>(cmd[i]);
+  for(size_t i=0;i<count;++i) {
+    auto* cx=reinterpret_cast<Detail::VCommandBuffer*>(cmd[i]);
     cmdBuf[i] = cx->impl;
+    }
+
+  semBuf.resize(waitCnt+doneCnt);
+  for(size_t i=0;i<waitCnt;++i) {
+    auto* sx=reinterpret_cast<Detail::VSemaphore*>(wait[i]);
+    semBuf[i] = sx->impl;
+    }
+  for(size_t i=0;i<doneCnt;++i) {
+    auto* sx=reinterpret_cast<Detail::VSemaphore*>(done[i]);
+    semBuf[i+waitCnt] = sx->impl;
     }
 
   VkSubmitInfo submitInfo = {};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-  VkSemaphore          waitSemaphores[] = {wx->impl};
-  VkPipelineStageFlags waitStages[]     = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+  VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT};//VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
-  submitInfo.waitSemaphoreCount = 1;
-  submitInfo.pWaitSemaphores    = waitSemaphores;
-  submitInfo.pWaitDstStageMask  = waitStages;
+  submitInfo.waitSemaphoreCount   = waitCnt;
+  submitInfo.pWaitSemaphores      = semBuf.data();
+  submitInfo.pWaitDstStageMask    = waitStages;
 
-  submitInfo.commandBufferCount = count;
-  submitInfo.pCommandBuffers    = cmdBuf.data();
+  submitInfo.signalSemaphoreCount = doneCnt;
+  submitInfo.pSignalSemaphores    = semBuf.data()+waitCnt;
 
-  if(rx!=nullptr) {
-    submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores    = &rx->impl;
-    }
+  submitInfo.commandBufferCount   = count;
+  submitInfo.pCommandBuffers      = cmdBuf.data();
 
-  if(onReadyCpu!=nullptr)
-    onReadyCpu->reset();
+  if(doneCpu!=nullptr)
+    doneCpu->reset();
+  auto* rc=reinterpret_cast<Detail::VFence*>(doneCpu);
 
   dx->submitQueue(dx->graphicsQueue,submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl,true);
   }

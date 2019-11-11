@@ -421,12 +421,20 @@ void VDevice::Data::copy(VTexture &dest, uint32_t w, uint32_t h, uint32_t mip, c
   dev.data->cmdBuffer.copy(dest,w,h,mip,src,offset);
   }
 
-void VDevice::Data::changeLayout(VTexture &dest, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount) {
+void VDevice::Data::copy(VBuffer &dest, uint32_t w, uint32_t h, uint32_t mip, const VTexture &src, size_t offset) {
   if(commited){
     dev.data->begin();
     commited=false;
     }
-  dev.data->cmdBuffer.changeLayout(dest,oldLayout,newLayout,mipCount);
+  dev.data->cmdBuffer.copy(dest,w,h,mip,src,offset);
+  }
+
+void VDevice::Data::changeLayout(VTexture &dest, VkFormat frm, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount) {
+  if(commited){
+    dev.data->begin();
+    commited=false;
+    }
+  dev.data->cmdBuffer.changeLayout(dest,frm,oldLayout,newLayout,mipCount);
   }
 
 void VDevice::Data::generateMipmap(VTexture &image, VkFormat frm, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {

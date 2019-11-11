@@ -56,7 +56,10 @@ class Device {
     uint32_t             nextImage(Semaphore& onReady);
     void                 draw(const CommandBuffer&  cmd,const Semaphore& wait);
     void                 draw(const CommandBuffer&  cmd,const Semaphore& wait,Semaphore& done,Fence& fdone);
-    void                 draw(const CommandBuffer*  cmd[],size_t count,const Semaphore& wait,Semaphore& done,Fence& fdone);
+    void                 draw(const CommandBuffer*  cmd[],size_t count,
+                              const Semaphore* wait[], size_t waitCnt,
+                              Semaphore* done[], size_t doneCnt,
+                              Fence* fdone);
     void                 present(uint32_t img,const Semaphore& wait);
 
     Shader               loadShader(const char* filename);
@@ -91,6 +94,7 @@ class Device {
     Texture2d            createTexture(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips);
     Texture2d            loadTexture(const Pixmap& pm,bool mips=true);
     UniformBuffer        loadUbo(const void* data, size_t size);
+    Pixmap               readPixels(const Texture2d& t);
 
     Uniforms             uniforms(const UniformsLayout &owner);
 
@@ -125,6 +129,7 @@ class Device {
       const uint8_t                   maxFramesInFlight=1;
 
       std::vector<AbstractGraphicsApi::CommandBuffer*> cmdBuf;
+      std::vector<AbstractGraphicsApi::Semaphore*>     semBuf;
       };
 
     AbstractGraphicsApi&            api;

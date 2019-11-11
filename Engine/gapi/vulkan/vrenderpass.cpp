@@ -123,12 +123,12 @@ VkRenderPass VRenderPass::createInstance(VkDevice &device, VSwapchain& sw,
 
   VkSubpassDependency dependency = {};
   dependency.srcSubpass      = VK_SUBPASS_EXTERNAL;
-  dependency.srcStageMask    = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;//VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  dependency.srcStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
   dependency.srcAccessMask   = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
-
   dependency.dstSubpass      = 0;
-  dependency.dstStageMask    = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;//VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-  dependency.dstAccessMask   = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+  dependency.dstStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  dependency.dstAccessMask   = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+  dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
   dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
@@ -187,11 +187,11 @@ VkRenderPass VRenderPass::createLayoutInstance(VkDevice& device,VSwapchain &sw, 
 
   VkSubpassDependency dependency = {};
   dependency.srcSubpass      = VK_SUBPASS_EXTERNAL;
-  dependency.srcStageMask    = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+  dependency.srcStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
   dependency.srcAccessMask   = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
   dependency.dstSubpass      = 0;
-  dependency.dstStageMask    = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-  dependency.dstAccessMask   = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+  dependency.dstStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  dependency.dstAccessMask   = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
   dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
   VkRenderPassCreateInfo renderPassInfo = {};

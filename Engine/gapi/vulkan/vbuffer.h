@@ -16,6 +16,7 @@ class VBuffer : public AbstractGraphicsApi::Buffer {
 
     VBuffer& operator=(const VBuffer& other)=delete;
     void update(const void* data,size_t off,size_t sz);
+    void read  (void* data,size_t off,size_t sz);
 
     VkBuffer               impl=VK_NULL_HANDLE;
 

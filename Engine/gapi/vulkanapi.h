@@ -55,14 +55,21 @@ class VulkanApi : public AbstractGraphicsApi {
     PTexture       createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips) override;
     PTexture       createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;
 
+    void           readPixels(AbstractGraphicsApi::Device *d, Pixmap &out, const PTexture t, TextureFormat frm,
+                              const uint32_t w, const uint32_t h, uint32_t mip) override;
+
     CommandBuffer* createCommandBuffer(Device* d, CmdPool* pool, FboLayout* fbo, CmdType type) override;
 
     uint32_t       nextImage(Device *d,Swapchain* sw,Semaphore* onReady) override;
     Image*         getImage (Device *d,Swapchain* sw,uint32_t id) override;
     void           present  (Device *d,Swapchain* sw,uint32_t imageId, const Semaphore *wait) override;
 
-    void           draw     (Device *d,Swapchain *sw,CommandBuffer* cmd,Semaphore* wait,Semaphore* onReady,Fence* onReadyCpu) override;
-    void           draw     (Device *d,Swapchain *sw,CommandBuffer** cmd,size_t count,Semaphore* wait,Semaphore* onReady,Fence* onReadyCpu) override;
+    void           draw     (Device *d,CommandBuffer* cmd,Semaphore* wait,Semaphore* onReady,Fence* onReadyCpu) override;
+    void           draw     (Device *d,
+                             CommandBuffer** cmd, size_t count,
+                             Semaphore** wait, size_t waitCnt,
+                             Semaphore** done, size_t doneCnt,
+                             Fence *doneCpu) override;
 
     void           getCaps  (Device *d,Caps& caps) override;
 

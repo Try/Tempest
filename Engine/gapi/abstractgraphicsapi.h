@@ -237,7 +237,7 @@ namespace Tempest {
         virtual void setViewport (const Rect& r)=0;
         virtual void setUniforms (Pipeline& p,Desc& u, size_t offc, const uint32_t* offv)=0;
         virtual void exec        (const AbstractGraphicsApi::CommandBuffer& buf)=0;
-        virtual void changeLayout(Texture& t,TextureLayout prev,TextureLayout next)=0;
+        virtual void changeLayout(Texture& t,TextureFormat frm,TextureLayout prev,TextureLayout next)=0;
         virtual void barrier     (Texture& t,Stage prev,Stage next)=0;
         virtual void setVbo      (const Buffer& b)=0;
         virtual void setIbo      (const Buffer* b,Detail::IndexClass cls)=0;
@@ -312,12 +312,18 @@ namespace Tempest {
 
       virtual PTexture   createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips)=0;
       virtual PTexture   createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm)=0;
+      virtual void       readPixels   (AbstractGraphicsApi::Device *d, Pixmap &out,const PTexture t, TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip) = 0;
 
       virtual uint32_t   nextImage(Device *d,Swapchain* sw,Semaphore* onReady)=0;
       virtual Image*     getImage (Device *d,Swapchain* sw,uint32_t id)=0;
       virtual void       present  (Device *d,Swapchain* sw,uint32_t imageId,const Semaphore *wait)=0;
-      virtual void       draw     (Device *d,Swapchain *sw,CommandBuffer*  cmd,Semaphore* wait,Semaphore* onReady,Fence* onReadyCpu)=0;
-      virtual void       draw     (Device *d,Swapchain *sw,CommandBuffer** cmd,size_t count,Semaphore* wait,Semaphore* onReady,Fence* onReadyCpu)=0;
+
+      virtual void       draw     (Device *d,CommandBuffer*  cmd,Semaphore* wait,Semaphore* onReady,Fence* onReadyCpu)=0;
+      virtual void       draw     (Device *d,
+                                   CommandBuffer** cmd,size_t count,
+                                   Semaphore** wait, size_t waitCnt,
+                                   Semaphore** done, size_t doneCnt,
+                                   Fence* doneCpu)=0;
 
       virtual void       getCaps  (Device *d,Caps& caps)=0;
     };
