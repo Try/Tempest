@@ -57,7 +57,7 @@ void* WFile::implOpen(const wchar_t *wstr) {
   }
 #else
 void* WFile::implOpen(const char *cstr) {
-  void* ret = fopen(cstr,"w");
+  void* ret = fopen(cstr,"wb");
   if(ret==nullptr)
     throw std::system_error(Tempest::SystemErrc::UnableToOpenFile);
   return ret;

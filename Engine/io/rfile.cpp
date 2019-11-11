@@ -57,7 +57,7 @@ void* RFile::implOpen(const wchar_t *wstr) {
   }
 #else
 void* RFile::implOpen(const char *cstr) {
-  void* ret = fopen(cstr,"r");
+  void* ret = fopen(cstr,"rb");
   if(ret==nullptr)
     throw std::system_error(Tempest::SystemErrc::UnableToOpenFile);
   return ret;
