@@ -45,7 +45,7 @@ build_script:
   - cmake --build ../../build --target all
 
 test_script:
-  - '%APPVEYOR_BUILD_FOLDER%/build/TempestTests.exe'
+  - '%APPVEYOR_BUILD_FOLDER%/build/testsuite/TempestTests.exe'
 
 artifacts:
   - path: build/tempest/tempest.zip
