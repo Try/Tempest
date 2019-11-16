@@ -38,4 +38,7 @@ CMakeLists.txt.user*
 
 # Debug
 dbg.png
+
+# QtCreator
 Engine/CMakeLists.txt.user
+Tests/tests/CMakeLists.txt.user
