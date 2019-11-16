@@ -39,7 +39,7 @@ build_script:
   - gcc   --version
   - g++   --version
 
-  - cd ../Tests/tests
+  - cd '%APPVEYOR_BUILD_FOLDER%/Tests/tests
   - cmd: cmake -H. -B../../build -G "MinGW Makefiles" -DCMAKE_SH=CMAKE_SH-NOTFOUND -DBUILD_SHARED_LIBS:BOOL=ON -DBUILD_SHARED_MOLTEN_TEMPEST:BOOL=ON -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo "-DCMAKE_PREFIX_PATH:STRING=C:\Qt\Tools\mingw530_32\bin" "-DCMAKE_MAKE_PROGRAM:STRING=C:\Qt\Tools\mingw530_32\bin\mingw32-make.exe"
   - sh:  cmake -H. -B../../build -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DBUILD_SHARED_MOLTEN_TEMPEST:BOOL=ON
   - cmake --build ../../build --target all
