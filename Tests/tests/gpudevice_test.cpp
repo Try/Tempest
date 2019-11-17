@@ -16,6 +16,7 @@ TEST(main,VulkanApi) {
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
-      Log::d("Skipping vulkan testcase: ", e.what());
+      Log::d("Skipping vulkan testcase: ", e.what()); else
+      throw;
     }
   }

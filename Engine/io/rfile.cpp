@@ -120,7 +120,8 @@ uint8_t RFile::peek() {
   return 0;
 #else
   uint8_t ch=0;
-  fread(&ch,1,1,reinterpret_cast<FILE*>(handle));
+  if(fread(&ch,1,1,reinterpret_cast<FILE*>(handle))==0)
+    return 0;
   if(fseek(reinterpret_cast<FILE*>(handle),-1,SEEK_CUR)==0)
     return ch;
   return 0;
