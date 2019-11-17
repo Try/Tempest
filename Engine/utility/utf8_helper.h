@@ -140,6 +140,17 @@ inline uint8_t utf8ToCodepoint(const uint8_t* str,uint32_t& cp) {
     }
   return 0;
   }
+
+inline uint8_t utf16ToCodepoint(const uint16_t* str,uint32_t& cp) {
+  uint16_t lead = *str;
+  if(0xd800u<=lead && lead<=0xdbffu) {
+    uint32_t next = str[1];
+    cp = 0x10000 + (uint32_t(lead - 0xD800) << 10) + (next - 0xDC00);
+    return 2;
+    }
+  cp = lead;
+  return 1;
+  }
 }
 
 class Utf8Iterator {

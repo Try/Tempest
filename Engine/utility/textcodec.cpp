@@ -8,17 +8,25 @@ std::string TextCodec::toUtf8(const std::u16string &s) {
   return toUtf8(s.c_str());
   }
 
-std::string TextCodec::toUtf8(const char16_t *s) {
-  size_t sz=0;
+std::string TextCodec::toUtf8(const char16_t *inS) {
+  const uint16_t* s  = reinterpret_cast<const uint16_t*>(inS);
 
-  for(size_t i=0;s[i];++i)
-    sz += Detail::codepointToUtf8(s[i]);
+  size_t sz=0;
+  for(size_t i=0;s[i];) {
+    uint32_t cp = 0;
+    size_t   l  = Detail::utf16ToCodepoint(&s[i],cp);
+    sz += Detail::codepointToUtf8(cp);
+    i  += l;
+    }
 
   std::string u(sz,'?');
   sz=0;
-
-  for(size_t i=0;s[i];++i)
-    sz += Detail::codepointToUtf8(s[i],&u[sz]);
+  for(size_t i=0;s[i];) {
+    uint32_t cp = 0;
+    size_t   l  = Detail::utf16ToCodepoint(&s[i],cp);
+    sz += Detail::codepointToUtf8(cp,&u[sz]);
+    i  += l;
+    }
 
   return u;
   }
@@ -49,9 +57,9 @@ std::u16string TextCodec::toUtf16(const char *inS) {
     l += Detail::utf8ToCodepoint(&s[l],cp);
 
     if(cp > 0xFFFF) {
-      cp -= 0x10000;
+      cp  -= 0x10000;
       u[i] = 0xD800 + ((cp >> 10) & 0x3FF);
-      cp = 0xDC00 + (cp & 0x3FF);
+      cp   = 0xDC00 + (cp & 0x3FF);
       ++i;
       }
     u[i] = char16_t(cp);
