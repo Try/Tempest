@@ -43,6 +43,10 @@ add_executable(${PROJECT_NAME}
 set(BUILD_SHARED_LIBS ${BUILD_SHARED_MOLTEN_TEMPEST})
 add_subdirectory("${CMAKE_SOURCE_DIR}/../../Engine" build)
 
+if(UNIX)
+  target_link_libraries(${PROJECT_NAME} -lpthread)
+endif()
+
 add_test(${PROJECT_NAME} COMMAND ${PROJECT_NAME})
 target_link_libraries(${PROJECT_NAME} MoltenTempest)
 
