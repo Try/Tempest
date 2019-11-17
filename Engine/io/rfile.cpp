@@ -87,7 +87,7 @@ size_t RFile::read(void *dest, size_t size) {
 
   return cnt;
 #else
-  return fread(dest,size,1,reinterpret_cast<FILE*>(handle));
+  return fread(dest,1,size,reinterpret_cast<FILE*>(handle));
 #endif
   }
 

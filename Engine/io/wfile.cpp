@@ -85,7 +85,7 @@ size_t WFile::write(const void *val, size_t size) {
   DWORD dwBytesWriten = size;
   return WriteFile( fn, val, size, &dwBytesWriten, nullptr) ? dwBytesWriten : 0;
 #else
-  return fwrite(val,size,1,reinterpret_cast<FILE*>(handle));
+  return fwrite(val,1,size,reinterpret_cast<FILE*>(handle));
 #endif
   }
 
