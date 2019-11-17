@@ -44,8 +44,10 @@ build_script:
   - cmake --build ../../build --target all
 
 test_script:
-  - cd build/testsuite/
-  - TempestTests.exe
+  - cmd: cd %APPVEYOR_BUILD_FOLDER%\build\testsuite
+  - cmd: TempestTests.exe
+  - sh:  cd $APPVEYOR_BUILD_FOLDER\build\testsuite
+  - sh:  ./TempestTests
 
 artifacts:
   - path: build/tempest/tempest.zip
