@@ -46,7 +46,7 @@ build_script:
 test_script:
   - cmd: cd %APPVEYOR_BUILD_FOLDER%\build\testsuite
   - cmd: TempestTests.exe
-  - sh:  cd $APPVEYOR_BUILD_FOLDER\build\testsuite
+  - sh:  cd $APPVEYOR_BUILD_FOLDER/build/testsuite
   - sh:  ./TempestTests
 
 artifacts:
