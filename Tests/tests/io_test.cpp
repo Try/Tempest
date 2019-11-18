@@ -47,3 +47,42 @@ TEST(main,MemoryIO) {
   EXPECT_EQ(std::memcmp(buf,bytes,sizeof(bytes)),0);
   }
   }
+
+void UngetCommon(IDevice& fin){
+  char buf[sizeof(bytes)]={};
+  EXPECT_EQ(fin.read(buf,sizeof(buf)),sizeof(buf));
+
+  fin.unget(sizeof(buf));
+  EXPECT_EQ(fin.read(buf,sizeof(buf)),sizeof(buf));
+  EXPECT_EQ(std::memcmp(buf,bytes,sizeof(bytes)),0);
+
+  size_t shift=3;
+  fin.unget(shift);
+  EXPECT_EQ(fin.read(buf,shift),shift);
+  EXPECT_EQ(std::memcmp(buf,bytes+sizeof(bytes)-shift,shift),0);
+
+  fin.unget(shift);
+  EXPECT_EQ(fin.unget(sizeof(bytes))+shift,sizeof(bytes));
+  }
+
+TEST(main,MemoryUnget) {
+  std::vector<uint8_t> tmp;
+  {
+  MemWriter fout(tmp);
+  EXPECT_EQ(fout.write(bytes,sizeof(bytes)),sizeof(bytes));
+  EXPECT_EQ(tmp.size(),sizeof(bytes));
+  }
+
+  MemReader fin(tmp);
+  UngetCommon(fin);
+  }
+
+TEST(main,FileUnget) {
+  {
+  WFile fout("FileUnget.bin");
+  EXPECT_EQ(fout.write(bytes,sizeof(bytes)),sizeof(bytes));
+  }
+
+  RFile fin("FileUnget.bin");
+  UngetCommon(fin);
+  }

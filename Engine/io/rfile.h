@@ -22,6 +22,7 @@ class RFile : public Tempest::IDevice {
 
     uint8_t peek() override;
     size_t  seek(size_t advance) override;
+    size_t  unget(size_t advance) override;
 
   private:
     void* handle=nullptr;

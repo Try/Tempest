@@ -134,11 +134,37 @@ size_t RFile::seek(size_t advance) {
   LONG   current = LONG(SetFilePointer(fn,0,nullptr,FILE_CURRENT));
   LONG   npos    = LONG(SetFilePointer(fn,LONG(advance),nullptr,FILE_CURRENT));
 
+  if(INVALID_SET_FILE_POINTER==DWORD(npos))
+    return 0;
   if(npos>current)
     return size_t(npos-current);
   return 0;
 #else
   if(fseek(reinterpret_cast<FILE*>(handle),long(advance),SEEK_CUR)==0)
+    return advance;
+  return 0;
+#endif
+  }
+
+size_t RFile::unget(size_t advance) {
+#ifdef __WINDOWS__
+  HANDLE fn      = HANDLE(handle);
+  LONG   current = LONG(SetFilePointer(fn,0,nullptr,FILE_CURRENT));
+  if(LONG(advance)>current)
+    advance=size_t(current);
+  LONG   npos    = LONG(SetFilePointer(fn,-LONG(advance),nullptr,FILE_CURRENT));
+
+  if(INVALID_SET_FILE_POINTER==DWORD(npos))
+    return 0;
+  if(npos<current)
+    return size_t(current-npos);
+  return 0;
+#else
+  FILE* f = reinterpret_cast<FILE*>(handle);
+  const long current = ftell(f);
+  if(long(advance)>current)
+    advance=size_t(current);
+  if(fseek(f,-long(advance),SEEK_CUR)==0)
     return advance;
   return 0;
 #endif

@@ -41,3 +41,13 @@ size_t MemReader::seek(size_t advance) {
   pos += c;
   return c;
   }
+
+size_t MemReader::unget(size_t advance) {
+  if(advance>pos){
+    size_t ret = advance-(advance-pos);
+    pos = 0;
+    return ret;
+    }
+  pos-=advance;
+  return advance;
+  }

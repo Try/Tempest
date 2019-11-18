@@ -17,6 +17,8 @@ class MemReader : public IDevice {
     size_t  size() const override;
     uint8_t peek() override;
     size_t  seek(size_t advance) override;
+    size_t  unget(size_t advance) override;
+    size_t  cursorPosition() const { return pos; }
 
   private:
     const uint8_t* vec;
