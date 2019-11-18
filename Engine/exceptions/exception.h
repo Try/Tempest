@@ -16,7 +16,8 @@ enum class SystemErrc {
   InvalidWindowClass   = 0,
   UnableToCreateWindow = 1,
   UnableToOpenFile     = 2,
-  UnableToLoadAsset    = 3
+  UnableToLoadAsset    = 3,
+  UnableToSaveAsset    = 4,
   };
 
 struct SystemErrCategory : std::error_category {

@@ -3,15 +3,11 @@
 #include <Tempest/File>
 #include <Tempest/Except>
 
+#include "pixmapcodec.h"
+
 #include <vector>
 #include <cstring>
-
 #include <squish.h>
-
-#include "thirdparty/stb_image.h"
-#include "thirdparty/stb_image_write.h"
-
-#include "ddsdef.h"
 
 using namespace Tempest;
 
@@ -31,18 +27,17 @@ struct Pixmap::Impl {
     }
 
   Impl(uint32_t w,uint32_t h,Pixmap::Format frm):w(w),h(h),frm(frm) {
-    bpp = bppFromFrm(frm);
-
+    bpp    = bppFromFrm(frm);
     dataSz = size_t(w)*size_t(h)*size_t(bpp);
-    data   = reinterpret_cast<stbi_uc*>(STBI_MALLOC(dataSz));
+    data   = reinterpret_cast<uint8_t*>(std::malloc(dataSz));
     if(!data)
       throw std::bad_alloc();
-    memset(data,0,dataSz);
+    std::memset(data,0,dataSz);
     }
 
   Impl(const Impl& other):w(other.w),h(other.h),bpp(other.bpp),dataSz(other.dataSz),frm(other.frm),mipCnt(other.mipCnt){
     size_t size=size_t(w)*size_t(h)*size_t(bpp);
-    data=reinterpret_cast<stbi_uc*>(STBI_MALLOC(size));
+    data=reinterpret_cast<uint8_t*>(std::malloc(size));
     if(!data)
       throw std::bad_alloc();
 
@@ -53,7 +48,7 @@ struct Pixmap::Impl {
     bpp = bppFromFrm(frm);
 
     size_t size=size_t(w)*size_t(h)*size_t(bpp);
-    data=reinterpret_cast<stbi_uc*>(STBI_MALLOC(size));
+    data=reinterpret_cast<uint8_t*>(std::malloc(size));
     if(!data)
       throw std::bad_alloc();
 
@@ -101,150 +96,22 @@ struct Pixmap::Impl {
     }
 
   Impl(IDevice& f){
-    int iw=0,ih=0,channels=0;
     frm  = Pixmap::Format::RGBA;
-    data = load(f,iw,ih,frm,mipCnt,channels,dataSz,STBI_default);
+    data = PixmapCodec::loadImg(f,w,h,frm,mipCnt,bpp,dataSz);
 
-    if(data==nullptr && channels==0)
+    if(data==nullptr && bpp==0)
       throw std::system_error(Tempest::SystemErrc::UnableToLoadAsset);
-
-    w    = uint32_t(iw);
-    h    = uint32_t(ih);
-    bpp  = uint32_t(channels);
     }
 
   ~Impl(){
-    stbi_image_free(data);
+    PixmapCodec::freeImg(data);
     }
 
-  //TODO: ext
-  bool save(WFile& f,const char* /*ext*/){
-    int len=0;
-    int stride_bytes=0;
-
-    unsigned char *png = stbi_write_png_to_mem(data,stride_bytes,int(w),int(h),int(bpp),&len);
-    if(png==nullptr)
-      return false;
-
-    bool ret=(f.write(png,size_t(len))==size_t(len) && f.flush());
-    STBIW_FREE(png);
-    return ret;
+  void save(ODevice& f,const char* ext){
+    PixmapCodec::saveImg(f,ext,data,dataSz,w,h,frm);
     }
 
-  static int stbiRead(void *user, char *data, int size) {
-    return int(reinterpret_cast<IDevice*>(user)->read(data,size_t(size)));
-    }
-
-  static void stbiSkip(void *user, int n) {
-    reinterpret_cast<IDevice*>(user)->seek(size_t(n));
-    }
-
-  static int stbiEof(void */*user*/) {
-    return false;
-    //return reinterpret_cast<IDevice*>(user)->peek();
-    }
-
-  static void stbi__start_file(stbi__context *s, IDevice *f) {
-    static stbi_io_callbacks stbi__stdio_callbacks = {
-      stbiRead,
-      stbiSkip,
-      stbiEof,
-      };
-
-    stbi__start_callbacks(s,&stbi__stdio_callbacks,reinterpret_cast<void*>(f));
-    }
-
-  static bool isDDS(const stbi__context& s) {
-    return s.buflen>=4 && std::memcmp(reinterpret_cast<const char*>(s.buffer_start),"DDS ",4)==0;
-    }
-
-  static stbi_uc* load(IDevice& f,int& x,int& y,Pixmap::Format& frm,uint32_t& mipCnt,int& comp,size_t& dataSz,int req_comp){
-    unsigned char *result;
-    stbi__context s;
-    stbi__start_file(&s,&f);
-
-    if(isDDS(s))
-      return loadDDS(&s,x,y,frm,mipCnt,dataSz,comp);
-
-    result = stbi__load_and_postprocess_8bit(&s,&x,&y,&comp,req_comp);
-    if( result ){
-      // need to 'unget' all the characters in the IO buffer
-      // fseek(f, - (int) (s.img_buffer_end - s.img_buffer), SEEK_CUR);
-      }
-
-    if(comp==3) {
-      frm    = Pixmap::Format::RGB;
-      dataSz = size_t(x*y*3);
-      } else {
-      frm    = Pixmap::Format::RGBA;
-      dataSz = size_t(x*y*4);
-      }
-
-    return result;
-    }
-
-  static stbi_uc* loadDDS(stbi__context* s,int& x,int& y,Pixmap::Format& frm,uint32_t& mipCnt,size_t& dataSz,int& bpp){
-    using namespace Tempest::Detail;
-
-    stbi_uc head[4]={};
-    stbi__getn(s,head,4);
-
-    DDSURFACEDESC2 ddsd={};
-    if(stbi__getn(s,reinterpret_cast<stbi_uc*>(&ddsd),sizeof(ddsd))==0)
-      return nullptr;
-    x = int(ddsd.dwWidth);
-    y = int(ddsd.dwHeight);
-
-    int compressType = squish::kDxt1;
-    switch( ddsd.ddpfPixelFormat.dwFourCC ) {
-      case FOURCC_DXT1:
-        bpp          = 3;
-        compressType = squish::kDxt1;
-        frm          = Pixmap::Format::DXT1;
-        break;
-
-      case FOURCC_DXT3:
-        bpp          = 4;
-        compressType = squish::kDxt3;
-        frm          = Pixmap::Format::DXT3;
-        break;
-
-      case FOURCC_DXT5:
-        bpp          = 4;
-        compressType = squish::kDxt5;
-        frm          = Pixmap::Format::DXT5;
-        break;
-
-      default:
-        return nullptr;
-      }
-
-    if( ddsd.dwLinearSize == 0 ) {
-      //return false;
-      }
-
-    mipCnt            = std::max(1u, ddsd.dwMipMapCount);
-    size_t blocksize  = (compressType==squish::kDxt1) ? 8 : 16;
-    size_t bufferSize = 0;
-
-    size_t w = size_t(x), h = size_t(y);
-    for(size_t i=0; i<mipCnt; i++){
-      size_t blockcount = ((w+3)/4)*((h+3)/4);
-      bufferSize += blockcount*blocksize;
-      w = std::max<size_t>(1,w/2);
-      h = std::max<size_t>(1,h/2);
-      }
-
-    std::unique_ptr<stbi_uc[]> ddsv(new(std::nothrow) stbi_uc[bufferSize]);
-    if(!ddsv || stbi__getn(s,ddsv.get(),int(bufferSize))!=1 )
-      return nullptr;
-
-    bpp    = 0;
-    dataSz = bufferSize;
-    return ddsv.release();
-    }
-
-  static void ddsToRgba(stbi_uc* px,const stbi_uc* dds,const uint32_t w,const uint32_t h,const int frm) {
+  static void ddsToRgba(uint8_t* px,const uint8_t* dds,const uint32_t w,const uint32_t h,const int frm) {
     squish::u8 pixels[4][4][4];
 
     const uint32_t bpp       = 4;
@@ -264,7 +131,7 @@ struct Pixmap::Impl {
         }
     }
 
-  stbi_uc*       data   = nullptr;
+  uint8_t*       data   = nullptr;
   uint32_t       w      = 0;
   uint32_t       h      = 0;
   size_t         bpp    = 0;
@@ -340,16 +207,13 @@ Pixmap& Pixmap::operator=(const Pixmap &p) {
 Pixmap::~Pixmap() {
   }
 
-bool Pixmap::save(const char *path, const char *ext) {
-  try {
-    WFile f(path);
-    if(ext==nullptr)
-      ext="PNG";
-    return impl->save(f,ext);
-    }
-  catch(...) {
-    return false;
-    }
+void Pixmap::save(const char *path, const char *ext) const {
+  WFile f(path);
+  save(f,ext);
+  }
+
+void Pixmap::save(ODevice &f, const char *ext) const {
+  impl->save(f,ext);
   }
 
 uint32_t Pixmap::w() const {

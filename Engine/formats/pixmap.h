@@ -5,6 +5,7 @@
 namespace Tempest {
 
 class IDevice;
+class ODevice;
 
 class Pixmap final {
   public:
@@ -33,20 +34,21 @@ class Pixmap final {
 
     ~Pixmap();
 
-    bool save(const char* path,const char* ext=nullptr);
+    void        save(const char* path, const char* ext=nullptr) const;
+    void        save(ODevice&    fout, const char *ext=nullptr) const;
 
-    uint32_t w()   const;
-    uint32_t h()   const;
-    uint32_t bpp() const;
-    uint32_t mipCount() const;
+    uint32_t    w()   const;
+    uint32_t    h()   const;
+    uint32_t    bpp() const;
+    uint32_t    mipCount() const;
 
-    bool isEmpty() const;
+    bool        isEmpty() const;
 
     const void* data() const;
     void*       data();
     size_t      dataSize() const;
 
-    Format format() const;
+    Format      format() const;
 
   private:
     struct Impl;
