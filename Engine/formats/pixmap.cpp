@@ -134,7 +134,7 @@ struct Pixmap::Impl {
   uint8_t*       data   = nullptr;
   uint32_t       w      = 0;
   uint32_t       h      = 0;
-  size_t         bpp    = 0;
+  uint32_t       bpp    = 0;
   size_t         dataSz = 0;
   Pixmap::Format frm    = Pixmap::Format::RGB;
   uint32_t       mipCnt = 1;
