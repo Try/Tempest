@@ -4875,6 +4875,8 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
                ++s->img_n;
             }
             STBI_FREE(z->expanded); z->expanded = NULL;
+            // end of PNG chunk, read and skip CRC
+            stbi__get32be(s);
             return 1;
          }
 
