@@ -35,6 +35,7 @@ class WindowsApi final : SystemApi {
       };
 
     static void     setupKeyTranslate(const TranslateKeyPair k[], uint16_t funcCount);
+    static long     windowProc(void* hWnd, uint32_t msg, const uint32_t wParam, const long lParam);
 
     static KeyInf ki;
 

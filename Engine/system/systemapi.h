@@ -69,6 +69,14 @@ class SystemApi {
 
     virtual int      implExec(AppCallBack& cb) = 0;
 
+    static void      dispatchMouseDown (WindowCallback& cb,MouseEvent& e);
+    static void      dispatchMouseUp   (WindowCallback& cb,MouseEvent& e);
+    static void      dispatchMouseMove (WindowCallback& cb,MouseEvent& e);
+    static void      dispatchMouseWheel(WindowCallback& cb,MouseEvent& e);
+
+    static void      dispatchKeyDown   (WindowCallback& cb, Tempest::KeyEvent& e);
+    static void      dispatchKeyUp     (WindowCallback& cb, Tempest::KeyEvent& e);
+
   private:
     static int        exec(AppCallBack& cb);
     static SystemApi& inst();

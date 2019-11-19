@@ -5,6 +5,8 @@
 #include <Tempest/Event>
 #include <Tempest/Except>
 
+#include "system/eventdispatcher.h"
+
 #include <atomic>
 #include <unordered_set>
 #include <thread>
@@ -19,8 +21,6 @@ struct WindowsApi::KeyInf {
   std::vector<WindowsApi::TranslateKeyPair> a, k0, f1;
   uint16_t                                  fkeysCount=1;
   };
-
-static LRESULT CALLBACK WindowProc(HWND hWnd,UINT msg,const WPARAM wParam,const LPARAM lParam );
 
 static const wchar_t*                         wndClassName=L"Tempest.Window";
 static std::unordered_set<SystemApi::Window*> windows;
@@ -102,8 +102,13 @@ WindowsApi::WindowsApi() {
     { 0,         Event::K_NoKey }
     };
 
-
   setupKeyTranslate(k,24);
+
+  struct Private {
+    static LRESULT CALLBACK wProc(HWND hWnd,UINT msg,const WPARAM wParam,const LPARAM lParam ){
+      return WindowsApi::windowProc(hWnd,msg,wParam,lParam);
+      }
+    };
 
   WNDCLASSEXW winClass={};
 
@@ -111,7 +116,7 @@ WindowsApi::WindowsApi() {
   winClass.lpszClassName = wndClassName;
   winClass.cbSize        = sizeof(WNDCLASSEX);
   winClass.style         = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
-  winClass.lpfnWndProc   = WindowProc;
+  winClass.lpfnWndProc   = Private::wProc;
   winClass.hInstance     = GetModuleHandle(nullptr);
   winClass.hIcon         = LoadIcon( GetModuleHandle(nullptr), LPCTSTR(MAKEINTRESOURCE(32512)) );
   winClass.hIconSm       = LoadIcon( GetModuleHandle(nullptr), LPCTSTR(MAKEINTRESOURCE(32512)) );
@@ -325,55 +330,59 @@ void WindowsApi::implShowCursor(bool show) {
   ShowCursor(show ? TRUE : FALSE);
   }
 
-LRESULT CALLBACK WindowProc( HWND   hWnd,
-                             UINT   msg,
-                             const WPARAM wParam,
-                             const LPARAM lParam ) {
+long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const uint32_t wParam, const long lParam) {
+  HWND hWnd = HWND(_hWnd);
+
   SystemApi::WindowCallback* cb=reinterpret_cast<SystemApi::WindowCallback*>(GetWindowLongPtr(hWnd,GWLP_USERDATA));
   switch( msg ) {
     case WM_PAINT:{
       cb->onRender(reinterpret_cast<SystemApi::Window*>(hWnd));
-      }
       break;
+      }
+
     case WM_CLOSE:{
-      //Tempest::CloseEvent e;
-      //SystemAPI::emitEvent(w, e);
-      //if( !e.isAccepted() )
       PostQuitMessage(0);
-      }
       break;
+      }
+
+    case WM_DESTROY: {
+      PostQuitMessage(0);
+      break;
+      }
 
     case WM_XBUTTONDOWN:
     case WM_LBUTTONDOWN:
     case WM_MBUTTONDOWN:
     case WM_RBUTTONDOWN: {
       SetCapture(hWnd);
-      MouseEvent e( getX_LPARAM(lParam),
-                    getY_LPARAM(lParam),
-                    toButton(msg,wParam),
-                    0,
-                    0,
-                    Event::MouseDown );
-      if(cb)
-        cb->onMouse(e);
-      }
+      if(cb) {
+        MouseEvent e( getX_LPARAM(lParam),
+                      getY_LPARAM(lParam),
+                      toButton(msg,wParam),
+                      0,
+                      0,
+                      Event::MouseDown );
+        SystemApi::dispatchMouseDown(*cb,e);
+        }
       break;
+      }
 
     case WM_XBUTTONUP:
     case WM_LBUTTONUP:
     case WM_RBUTTONUP:
     case WM_MBUTTONUP: {
       ReleaseCapture();
-      MouseEvent e( getX_LPARAM(lParam),
-                    getY_LPARAM(lParam),
-                    toButton(msg,wParam),
-                    0,
-                    0,
-                    Event::MouseUp  );
-      if(cb)
-        cb->onMouse(e);
-      }
+      if(cb) {
+        MouseEvent e( getX_LPARAM(lParam),
+                      getY_LPARAM(lParam),
+                      toButton(msg,wParam),
+                      0,
+                      0,
+                      Event::MouseUp  );
+        SystemApi::dispatchMouseUp(*cb,e);
+        }
       break;
+      }
 
     case WM_MOUSEMOVE: {
       if(cb) {
@@ -383,48 +392,44 @@ LRESULT CALLBACK WindowProc( HWND   hWnd,
                        0,
                        0,
                        Event::MouseDrag  );
-        cb->onMouse(e0);
-        if(!e0.isAccepted()) {
-          MouseEvent e1( getX_LPARAM(lParam),
-                         getY_LPARAM(lParam),
-                         Event::ButtonNone,
-                         0,
-                         0,
-                         Event::MouseMove  );
-          cb->onMouse(e1);
-          }
+        SystemApi::dispatchMouseMove(*cb,e0);
         }
+      break;
       }
-      break;
     case WM_MOUSEWHEEL:{
-       POINT p;
-       p.x = getX_LPARAM(lParam);
-       p.y = getY_LPARAM(lParam);
+      if(cb) {
+        POINT p;
+        p.x = getX_LPARAM(lParam);
+        p.y = getY_LPARAM(lParam);
 
-       ScreenToClient(hWnd, &p);
-
-       Tempest::MouseEvent e( p.x, p.y,
-                              Tempest::Event::ButtonNone,
-                              GET_WHEEL_DELTA_WPARAM(wParam),
-                              0,
-                              Event::MouseWheel );
-       cb->onMouse(e);
-       }
+        ScreenToClient(hWnd, &p);
+        Tempest::MouseEvent e( p.x, p.y,
+                               Tempest::Event::ButtonNone,
+                               GET_WHEEL_DELTA_WPARAM(wParam),
+                               0,
+                               Event::MouseWheel );
+        SystemApi::dispatchMouseWheel(*cb,e);
+        }
       break;
+      }
 
     case WM_KEYDOWN: {
-      auto key = WindowsApi::translateKey(wParam);
-      Tempest::KeyEvent e(Event::KeyType(key),Event::KeyDown);
-      cb->onKey(e);
-      }
+      if(cb) {
+        auto key = WindowsApi::translateKey(wParam);
+        Tempest::KeyEvent e(Event::KeyType(key),Event::KeyDown);
+        SystemApi::dispatchKeyDown(*cb,e);
+        }
       break;
+      }
 
     case WM_KEYUP: {
-      auto key = WindowsApi::translateKey(wParam);
-      Tempest::KeyEvent e(Event::KeyType(key),Event::KeyUp);
-      cb->onKey(e);
-      }
+      if(cb) {
+        auto key = WindowsApi::translateKey(wParam);
+        Tempest::KeyEvent e(Event::KeyType(key),Event::KeyUp);
+        SystemApi::dispatchKeyUp(*cb,e);
+        }
       break;
+      }
 
     case WM_SIZE:
       if(wParam!=SIZE_MINIMIZED) {
@@ -442,15 +447,8 @@ LRESULT CALLBACK WindowProc( HWND   hWnd,
           cb->onResize(reinterpret_cast<SystemApi::Window*>(hWnd),width,height);
         }
       break;
-
-    case WM_DESTROY: {
-      PostQuitMessage(0);
-      }
-      break;
-    //default:
-      //if(cb)
-      //  cb->onRender(reinterpret_cast<SystemApi::Window*>(hWnd));
     }
   return DefWindowProc( hWnd, msg, wParam, lParam );
   }
+
 #endif

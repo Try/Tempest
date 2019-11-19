@@ -2,6 +2,7 @@
 
 #include "api/windowsapi.h"
 #include "api/x11api.h"
+#include "eventdispatcher.h"
 
 #include "exceptions/exception.h"
 #include <Tempest/Event>
@@ -10,6 +11,8 @@
 #include <atomic>
 
 using namespace Tempest;
+
+static EventDispatcher dispatcher;
 
 SystemApi::SystemApi() {
   }
@@ -21,6 +24,30 @@ SystemApi& SystemApi::inst() {
   static X11Api api;
 #endif
   return api;
+  }
+
+void SystemApi::dispatchMouseDown(WindowCallback &cb, MouseEvent &e) {
+  dispatcher.dispatchMouseDown(cb,e);
+  }
+
+void SystemApi::dispatchMouseUp(WindowCallback &cb, MouseEvent &e) {
+  dispatcher.dispatchMouseUp(cb,e);
+  }
+
+void SystemApi::dispatchMouseMove(WindowCallback &cb, MouseEvent &e) {
+  dispatcher.dispatchMouseMove(cb,e);
+  }
+
+void SystemApi::dispatchMouseWheel(WindowCallback &cb, MouseEvent &e) {
+  dispatcher.dispatchMouseWheel(cb,e);
+  }
+
+void SystemApi::dispatchKeyDown(SystemApi::WindowCallback &cb, KeyEvent &e) {
+  dispatcher.dispatchKeyDown(cb,e);
+  }
+
+void SystemApi::dispatchKeyUp(SystemApi::WindowCallback &cb, KeyEvent &e) {
+  dispatcher.dispatchKeyUp(cb,e);
   }
 
 SystemApi::Window *SystemApi::createWindow(SystemApi::WindowCallback *callback, uint32_t width, uint32_t height) {
