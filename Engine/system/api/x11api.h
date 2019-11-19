@@ -1,16 +1,16 @@
 #pragma once
 
-#include "systemapi.h"
+#include "system/systemapi.h"
 
 namespace Tempest {
 
-class WindowsApi final : SystemApi {
+class X11Api : public SystemApi {
   public:
-    static uint16_t translateKey(uint64_t scancode);
+    X11Api();
 
-  private:
-    WindowsApi();
+    static void* display();
 
+  protected:
     Window*  implCreateWindow(WindowCallback* cb,uint32_t width,uint32_t height) override;
     Window*  implCreateWindow(WindowCallback* cb,ShowMode sm) override;
     void     implDestroyWindow(Window* w) override;
@@ -27,18 +27,6 @@ class WindowsApi final : SystemApi {
     void     implShowCursor(bool show) override;
 
     int      implExec(AppCallBack& cb) override;
-
-    struct KeyInf;
-    struct TranslateKeyPair final {
-      uint16_t src;
-      uint16_t result;
-      };
-
-    static void     setupKeyTranslate(const TranslateKeyPair k[], uint16_t funcCount);
-
-    static KeyInf ki;
-
-  friend class SystemApi;
   };
 
 }

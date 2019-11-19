@@ -1,7 +1,7 @@
 #include "systemapi.h"
 
-#include "windowsapi.h"
-#include "x11api.h"
+#include "api/windowsapi.h"
+#include "api/x11api.h"
 
 #include "exceptions/exception.h"
 #include <Tempest/Event>
