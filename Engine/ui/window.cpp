@@ -4,17 +4,15 @@
 
 using namespace Tempest;
 
-Window::Window()
-  :impl(this) {
-  id = Tempest::SystemApi::createWindow(&impl,800,600);
+Window::Window() {
+  id = Tempest::SystemApi::createWindow(this,800,600);
   setGeometry(SystemApi::windowClientRect(id));
   setFocus(true);
   update();
   }
 
-Window::Window(Window::ShowMode sm)
-  :impl(this) {
-  id = Tempest::SystemApi::createWindow(&impl,SystemApi::ShowMode(sm));
+Window::Window(Window::ShowMode sm) {
+  id = Tempest::SystemApi::createWindow(this,SystemApi::ShowMode(sm));
   setGeometry(SystemApi::windowClientRect(id));
   setFocus(true);
   update();

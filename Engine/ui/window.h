@@ -10,13 +10,14 @@ class TextureAtlas;
 
 class Window : public Widget {
   public:
-    Window();
     enum ShowMode : uint8_t {
       Minimized,
       Normal,
       Maximized,
       FullScreen
       };
+
+    Window();
     Window( ShowMode sm );
     virtual ~Window();
 
@@ -30,29 +31,9 @@ class Window : public Widget {
     SystemApi::Window* hwnd() const { return id; }
 
   private:
-    struct Impl:SystemApi::WindowCallback {
-      Impl(Window* self):self(self){}
-      void onRender(Tempest::SystemApi::Window*) {
-        if(self->w()>0 && self->h()>0) {
-          self->render();
-          }
-        }
-      void onResize(Tempest::SystemApi::Window*,int32_t w,int32_t h){
-        self->resize(w,h);
-        }
-
-      void onMouse(MouseEvent& e){
-        self->dispatchMoveEvent(e);
-        }
-
-      void onKey(KeyEvent& e){
-        self->dispatchKeyEvent(e);
-        }
-      Window* self;
-      };
-
-    Impl               impl;
     SystemApi::Window* id=nullptr;
+
+  friend class SystemApi;
   };
 
 }

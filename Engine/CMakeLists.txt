@@ -72,15 +72,13 @@ file(GLOB SOURCES
 
 # FIXME: the headers include some SOURCES files so installing them is useless
 # the files in include should be the headers themselves!
-file(GLOB PUB_HEADERS
-    "include/Tempest/**"
-    )
+file(GLOB_RECURSE PUB_HEADERS "include/Tempest/**")
 
 add_library(${PROJECT_NAME} ${SOURCES} ${AlcBackend})
 
 set_target_properties(
     ${PROJECT_NAME} PROPERTIES
-    PUBLIC_HEADER ${PUB_HEADERS}
+    PUBLIC_HEADER "${PUB_HEADERS}"
     )
 
 if(WIN32)

@@ -4,52 +4,46 @@
 
 using namespace Tempest;
 
-struct Widget::Iterator {
-  Iterator(Widget* owner)
-    :owner(owner),nodes(&owner->wx){
-    owner->iterator=this;
-    }
-  ~Iterator(){
-    if(owner!=nullptr)
-      owner->iterator=nullptr;
-    }
+Widget::Iterator::Iterator(Widget* owner)
+  :owner(owner),nodes(&owner->wx){
+  owner->iterator=this;
+  }
 
-  void onDelete() {
-    deleteLater=std::move(*nodes);
-    nodes=&deleteLater;
-    owner=nullptr;
-    }
+Widget::Iterator::~Iterator(){
+  if(owner!=nullptr)
+    owner->iterator=nullptr;
+  }
 
-  void onDelete(size_t i,Widget* wx){
-    if(i<=id)
-      id--;
-    if(getPtr==wx)
-      getPtr=nullptr;
-    }
+void Widget::Iterator::onDelete() {
+  deleteLater=std::move(*nodes);
+  nodes=&deleteLater;
+  owner=nullptr;
+  }
 
-  bool hasNext() const {
-    return id<nodes->size();
-    }
+void Widget::Iterator::onDelete(size_t i,Widget* wx){
+  if(i<=id)
+    id--;
+  if(getPtr==wx)
+    getPtr=nullptr;
+  }
 
-  void next(){
-    ++id;
-    }
+bool Widget::Iterator::hasNext() const {
+  return id<nodes->size();
+  }
 
-  Widget* getLast(){
-    return getPtr;
-    }
+void Widget::Iterator::next() {
+  ++id;
+  }
 
-  Widget* get() {
-    getPtr=(*nodes)[id];
-    return getPtr;
-    }
+Widget* Widget::Iterator::getLast() {
+  return getPtr;
+  }
 
-  size_t                id=0;
-  Widget*               owner=nullptr;
-  std::vector<Widget*>* nodes;
-  std::vector<Widget*>  deleteLater;
-  Widget*               getPtr=nullptr;
-  };
+Widget* Widget::Iterator::get() {
+  getPtr=(*nodes)[id];
+  return getPtr;
+  }
+
 
 Widget::Widget() {
   lay = new(layBuf) Layout();
@@ -90,8 +84,6 @@ void Widget::removeAllWidgets() {
   for(auto& w:rm)
     w->ow=nullptr;
 
-  state.moveFocus =nullptr;
-  state.mouseFocus=nullptr;
   state.focus     =nullptr;
 
   for(auto& w:rm)
@@ -131,6 +123,12 @@ void Widget::dispatchPaintEvent(PaintEvent& e) {
     }
   }
 
+const std::shared_ptr<Widget::Ref>& Widget::selfReference() {
+  if(selfRef==nullptr)
+    selfRef = std::make_shared<Widget::Ref>(this);
+  return selfRef;
+  }
+
 void Widget::setOwner(Widget *w) {
   if(ow==w)
     return;
@@ -165,10 +163,6 @@ Widget& Widget::implAddWidget(Widget *w) {
   }
 
 Widget *Widget::takeWidget(Widget *w) {
-  if(state.mouseFocus==w)
-    state.mouseFocus=nullptr;
-  if(state.moveFocus==w)
-    state.moveFocus=nullptr;
   if(state.focus==w) {
     auto wx = this;
     while(wx!=nullptr){
@@ -511,161 +505,4 @@ void Widget::mouseLeaveEvent(MouseEvent &e) {
 
 void Widget::focusEvent(FocusEvent &e) {
   e.ignore();
-  }
-
-void Widget::dispatchMoveEvent(MouseEvent &event) {
-  switch(event.type()){
-    case Event::MouseDown:  dispatchMouseDown (event); break;
-    case Event::MouseUp:    dispatchMouseUp   (event); break;
-    case Event::MouseMove:  dispatchMouseMove (event); break;
-    case Event::MouseDrag:  dispatchMouseDrag (event); break;
-    case Event::MouseWheel: dispatchMouseWhell(event); break;
-    default:break;
-    }
-  }
-
-void Widget::dispatchKeyEvent(KeyEvent &event) {
-  switch(event.type()){
-    case Event::KeyDown: dispatchKeyDown (event); break;
-    case Event::KeyUp:   dispatchKeyUp   (event); break;
-    default:break;
-    }
-  }
-
-void Widget::dispatchMouseDown(MouseEvent &event) {
-  Point pos=event.pos();
-  Iterator it(this);
-  for(;it.hasNext();it.next()) {
-    Widget* i=it.get();
-    if(i->rect().contains(pos)){
-      MouseEvent ex(event.x - i->x(),
-                    event.y - i->y(),
-                    event.button,
-                    event.delta,
-                    event.mouseID,
-                    event.type());
-      i->dispatchMouseDown(ex);
-      if(ex.isAccepted() && it.owner!=nullptr) {
-        it.owner->state.mouseFocus=it.getLast();
-        event.accept();
-        return;
-        }
-      }
-    }
-
-  if(it.owner!=nullptr) {
-    it.owner->mouseDownEvent(event);
-    if(event.isAccepted() && it.owner)
-      it.owner->wstate.mousePressed=true;
-    }
-  }
-
-void Widget::dispatchMouseUp(MouseEvent &event) {
-  if(state.mouseFocus!=nullptr) {
-    MouseEvent ex(event.x - state.mouseFocus->x(),
-                  event.y - state.mouseFocus->y(),
-                  event.button,
-                  event.delta,
-                  event.mouseID,
-                  event.type());
-    auto ref=state.mouseFocus;
-    state.mouseFocus=nullptr;
-    ref->dispatchMouseUp(ex);
-    } else {
-    if(wstate.mousePressed) {
-      wstate.mousePressed=false;
-      mouseUpEvent(event);
-      }
-    }
-  }
-
-void Widget::dispatchMouseMove(MouseEvent &event) {
-  Point pos=event.pos();
-  Iterator it(this);
-  for(;it.hasNext();it.next()) {
-    Widget* i=it.get();
-    if(i->rect().contains(pos)){
-      MouseEvent ex(event.x - i->x(),
-                    event.y - i->y(),
-                    event.button,
-                    event.delta,
-                    event.mouseID,
-                    event.type());
-      if(it.owner!=nullptr) {
-        i->dispatchMoveEvent(ex);
-        if(ex.isAccepted()) {
-          event.accept();
-          return;
-          }
-        }
-      }
-    }
-
-  if(it.owner!=nullptr) {
-    it.owner->mouseMoveEvent(event);
-    if(it.owner!=nullptr)
-      implSetFocus(&Additive::moveFocus,&State::moveFocus,true,&event);
-    }
-  }
-
-void Widget::dispatchMouseDrag(MouseEvent &event) {
-  if(state.mouseFocus!=nullptr) {
-    MouseEvent ex(event.x - state.mouseFocus->x(),
-                  event.y - state.mouseFocus->y(),
-                  event.button,
-                  event.delta,
-                  event.mouseID,
-                  event.type());
-    state.mouseFocus->dispatchMouseDrag(ex);
-    } else {
-    if(wstate.mousePressed)
-      mouseDragEvent(event); else
-      event.ignore();
-    }
-  }
-
-void Widget::dispatchMouseWhell(MouseEvent &event) {
-  Point pos=event.pos();
-  Iterator it(this);
-  for(;it.hasNext();it.next()) {
-    Widget* i=it.get();
-    if(i->rect().contains(pos)){
-      MouseEvent ex(event.x - i->x(),
-                    event.y - i->y(),
-                    event.button,
-                    event.delta,
-                    event.mouseID,
-                    event.type());
-      if(it.owner!=nullptr) {
-        i->dispatchMouseWhell(ex);
-        if(ex.isAccepted()) {
-          event.accept();
-          return;
-          }
-        }
-      }
-    }
-
-  if(it.owner!=nullptr)
-    it.owner->mouseWheelEvent(event);
-  }
-
-void Widget::dispatchKeyDown(KeyEvent &event) {
-  if(state.focus!=nullptr) {
-    KeyEvent ex(event.key,event.code,event.type());
-    state.focus->dispatchKeyDown(ex);
-    } else {
-    if(wstate.focus)
-      keyDownEvent(event);
-    }
-  }
-
-void Widget::dispatchKeyUp(KeyEvent &event) {
-  if(state.focus!=nullptr) {
-    KeyEvent ex(event.key,event.code,event.type());
-    state.focus->dispatchKeyUp(ex);
-    } else {
-    if(wstate.focus)
-      keyUpEvent(event);
-    }
   }

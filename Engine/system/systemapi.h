@@ -8,19 +8,13 @@ namespace Tempest {
 
 class MouseEvent;
 class KeyEvent;
+class Widget;
 class Application;
+class Window;
 
 class SystemApi {
   public:
     struct Window;
-
-    struct WindowCallback {
-      virtual ~WindowCallback()=default;
-      virtual void onRender(Window* wx)=0;
-      virtual void onResize(Window* wx,int32_t w,int32_t h)=0;
-      virtual void onMouse(MouseEvent& e)=0;
-      virtual void onKey  (KeyEvent&   e)=0;
-      };
 
     enum ShowMode : uint8_t {
       Minimized,
@@ -30,8 +24,8 @@ class SystemApi {
       };
 
     virtual ~SystemApi()=default;
-    static Window*  createWindow(WindowCallback* cb,uint32_t width,uint32_t height);
-    static Window*  createWindow(WindowCallback* cb,ShowMode sm);
+    static Window*  createWindow(Tempest::Window* owner, uint32_t width, uint32_t height);
+    static Window*  createWindow(Tempest::Window* owner, ShowMode sm);
     static void     destroyWindow(Window* w);
     static void     exit();
 
@@ -52,8 +46,8 @@ class SystemApi {
       };
 
     SystemApi();
-    virtual Window*  implCreateWindow (WindowCallback* cb,uint32_t width,uint32_t height) = 0;
-    virtual Window*  implCreateWindow (WindowCallback* cb,ShowMode sm) = 0;
+    virtual Window*  implCreateWindow (Tempest::Window *owner,uint32_t width,uint32_t height) = 0;
+    virtual Window*  implCreateWindow (Tempest::Window *owner,ShowMode sm) = 0;
     virtual void     implDestroyWindow(Window* w) = 0;
     virtual void     implExit() = 0;
 
@@ -69,13 +63,14 @@ class SystemApi {
 
     virtual int      implExec(AppCallBack& cb) = 0;
 
-    static void      dispatchMouseDown (WindowCallback& cb,MouseEvent& e);
-    static void      dispatchMouseUp   (WindowCallback& cb,MouseEvent& e);
-    static void      dispatchMouseMove (WindowCallback& cb,MouseEvent& e);
-    static void      dispatchMouseWheel(WindowCallback& cb,MouseEvent& e);
+    static void      dispatchRender    (Tempest::Window& cb);
+    static void      dispatchMouseDown (Tempest::Window& cb,MouseEvent& e);
+    static void      dispatchMouseUp   (Tempest::Window& cb,MouseEvent& e);
+    static void      dispatchMouseMove (Tempest::Window& cb,MouseEvent& e);
+    static void      dispatchMouseWheel(Tempest::Window& cb,MouseEvent& e);
 
-    static void      dispatchKeyDown   (WindowCallback& cb, Tempest::KeyEvent& e);
-    static void      dispatchKeyUp     (WindowCallback& cb, Tempest::KeyEvent& e);
+    static void      dispatchKeyDown   (Tempest::Window& cb, Tempest::KeyEvent& e, uint32_t scancode);
+    static void      dispatchKeyUp     (Tempest::Window& cb, Tempest::KeyEvent& e, uint32_t scancode);
 
   private:
     static int        exec(AppCallBack& cb);

@@ -11,8 +11,8 @@ class WindowsApi final : SystemApi {
   private:
     WindowsApi();
 
-    Window*  implCreateWindow(WindowCallback* cb,uint32_t width,uint32_t height) override;
-    Window*  implCreateWindow(WindowCallback* cb,ShowMode sm) override;
+    Window*  implCreateWindow(Tempest::Window *owner, uint32_t width, uint32_t height) override;
+    Window*  implCreateWindow(Tempest::Window *owner, ShowMode sm) override;
     void     implDestroyWindow(Window* w) override;
     void     implExit() override;
 

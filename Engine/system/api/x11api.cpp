@@ -41,7 +41,7 @@ void *X11Api::display() {
   return dpy;
   }
 
-SystemApi::Window *X11Api::implCreateWindow(SystemApi::WindowCallback *cb, uint32_t w, uint32_t h) {
+SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, uint32_t h) {
   HWND * win = new HWND;
   GLint att[] = { GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None };
   XVisualInfo * vi = glXChooseVisual(dpy, 0, att);
@@ -68,8 +68,8 @@ SystemApi::Window *X11Api::implCreateWindow(SystemApi::WindowCallback *cb, uint3
   return reinterpret_cast<SystemApi::Window*>(win);
   }
 
-SystemApi::Window *X11Api::implCreateWindow(SystemApi::WindowCallback *cb, SystemApi::ShowMode sm) {
-  return implCreateWindow(cb,800,600); //TODO
+SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, SystemApi::ShowMode sm) {
+  return implCreateWindow(owner,800,600); //TODO
   }
 
 void X11Api::implDestroyWindow(SystemApi::Window *w) {

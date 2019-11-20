@@ -6,6 +6,8 @@
 
 #include "exceptions/exception.h"
 #include <Tempest/Event>
+#include <Tempest/Window>
+
 #include <thread>
 #include <unordered_set>
 #include <atomic>
@@ -17,6 +19,13 @@ static EventDispatcher dispatcher;
 SystemApi::SystemApi() {
   }
 
+void SystemApi::dispatchRender(Tempest::Window &w) {
+  if(w.w()>0 && w.h()>0) {
+    auto* wx = dynamic_cast<Tempest::Window*>(&w);
+    wx->render();
+    }
+  }
+
 SystemApi& SystemApi::inst() {
  #ifdef __WINDOWS__
   static WindowsApi api;
@@ -26,36 +35,36 @@ SystemApi& SystemApi::inst() {
   return api;
   }
 
-void SystemApi::dispatchMouseDown(WindowCallback &cb, MouseEvent &e) {
+void SystemApi::dispatchMouseDown(Tempest::Window &cb, MouseEvent &e) {
   dispatcher.dispatchMouseDown(cb,e);
   }
 
-void SystemApi::dispatchMouseUp(WindowCallback &cb, MouseEvent &e) {
+void SystemApi::dispatchMouseUp(Tempest::Window &cb, MouseEvent &e) {
   dispatcher.dispatchMouseUp(cb,e);
   }
 
-void SystemApi::dispatchMouseMove(WindowCallback &cb, MouseEvent &e) {
+void SystemApi::dispatchMouseMove(Tempest::Window &cb, MouseEvent &e) {
   dispatcher.dispatchMouseMove(cb,e);
   }
 
-void SystemApi::dispatchMouseWheel(WindowCallback &cb, MouseEvent &e) {
+void SystemApi::dispatchMouseWheel(Tempest::Window &cb, MouseEvent &e) {
   dispatcher.dispatchMouseWheel(cb,e);
   }
 
-void SystemApi::dispatchKeyDown(SystemApi::WindowCallback &cb, KeyEvent &e) {
-  dispatcher.dispatchKeyDown(cb,e);
+void SystemApi::dispatchKeyDown(Tempest::Window &cb, KeyEvent &e, uint32_t scancode) {
+  dispatcher.dispatchKeyDown(cb,e,scancode);
   }
 
-void SystemApi::dispatchKeyUp(SystemApi::WindowCallback &cb, KeyEvent &e) {
-  dispatcher.dispatchKeyUp(cb,e);
+void SystemApi::dispatchKeyUp(Tempest::Window &cb, KeyEvent &e, uint32_t scancode) {
+  dispatcher.dispatchKeyUp(cb,e,scancode);
   }
 
-SystemApi::Window *SystemApi::createWindow(SystemApi::WindowCallback *callback, uint32_t width, uint32_t height) {
-  return inst().implCreateWindow(callback,width,height);
+SystemApi::Window *SystemApi::createWindow(Tempest::Window *owner, uint32_t width, uint32_t height) {
+  return inst().implCreateWindow(owner,width,height);
   }
 
-SystemApi::Window *SystemApi::createWindow(SystemApi::WindowCallback *cb,ShowMode sm) {
-  return inst().implCreateWindow(cb,sm);
+SystemApi::Window *SystemApi::createWindow(Tempest::Window *owner, ShowMode sm) {
+  return inst().implCreateWindow(owner,sm);
   }
 
 void SystemApi::destroyWindow(SystemApi::Window *w) {

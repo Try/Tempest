@@ -132,7 +132,7 @@ WindowsApi::WindowsApi() {
     }
   }
 
-SystemApi::Window *WindowsApi::implCreateWindow(SystemApi::WindowCallback *callback, uint32_t width, uint32_t height) {
+SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, uint32_t width, uint32_t height) {
   // Create window with the registered class:
   RECT wr = {0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
   AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
@@ -152,7 +152,7 @@ SystemApi::Window *WindowsApi::implCreateWindow(SystemApi::WindowCallback *callb
   if( !window )
     throw std::system_error(Tempest::SystemErrc::UnableToCreateWindow);
 
-  SetWindowLongPtr(window,GWLP_USERDATA,LONG_PTR(callback));
+  SetWindowLongPtr(window,GWLP_USERDATA,LONG_PTR(owner));
   //minsize.x = GetSystemMetrics(SM_CXMINTRACK);
   //minsize.y = GetSystemMetrics(SM_CYMINTRACK) + 1;
   Window* wx = reinterpret_cast<Window*>(window);
@@ -166,23 +166,24 @@ SystemApi::Window *WindowsApi::implCreateWindow(SystemApi::WindowCallback *callb
   return wx;
   }
 
-SystemApi::Window *WindowsApi::implCreateWindow(SystemApi::WindowCallback *cb,ShowMode sm) {
+SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, ShowMode sm) {
   SystemApi::Window* hwnd = nullptr;
   if(sm==Maximized) {
     int w = GetSystemMetrics(SM_CXFULLSCREEN),
         h = GetSystemMetrics(SM_CYFULLSCREEN);
-    hwnd = createWindow(cb,uint32_t(w),uint32_t(h));
+    hwnd = createWindow(owner,uint32_t(w),uint32_t(h));
     ShowWindow(HWND(hwnd),SW_MAXIMIZE);
     }
   else if(sm==Minimized) {
-    hwnd =  createWindow(cb,800,600);
+    hwnd =  createWindow(owner,800,600);
     ShowWindow(HWND(hwnd),SW_MINIMIZE);
     }
   else {
-    hwnd =  createWindow(cb,800,600);
+    hwnd =  createWindow(owner,800,600);
     ShowWindow(HWND(hwnd),SW_NORMAL);
     }
-  // TODO: fullscreen
+  if(sm==FullScreen)
+    setAsFullscreen(hwnd,true);
   return hwnd;
   }
 
@@ -267,9 +268,9 @@ int WindowsApi::implExec(AppCallBack& cb) {
         Sleep(1);
       for(auto& i:windows){
         HWND h = HWND(i);
-        SystemApi::WindowCallback* cb=reinterpret_cast<SystemApi::WindowCallback*>(GetWindowLongPtr(h,GWLP_USERDATA));
+        Tempest::Window* cb=reinterpret_cast<Tempest::Window*>(GetWindowLongPtr(h,GWLP_USERDATA));
         if(cb)
-          cb->onRender(reinterpret_cast<SystemApi::Window*>(h));
+          SystemApi::dispatchRender(*cb);
         }
       }
     }
@@ -333,10 +334,11 @@ void WindowsApi::implShowCursor(bool show) {
 long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const uint32_t wParam, const long lParam) {
   HWND hWnd = HWND(_hWnd);
 
-  SystemApi::WindowCallback* cb=reinterpret_cast<SystemApi::WindowCallback*>(GetWindowLongPtr(hWnd,GWLP_USERDATA));
+  Tempest::Window* cb=reinterpret_cast<Tempest::Window*>(GetWindowLongPtr(hWnd,GWLP_USERDATA));
   switch( msg ) {
     case WM_PAINT:{
-      cb->onRender(reinterpret_cast<SystemApi::Window*>(hWnd));
+      if(cb)
+        SystemApi::dispatchRender(*cb);
       break;
       }
 
@@ -413,20 +415,22 @@ long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const uint32_t wParam, co
       break;
       }
 
-    case WM_KEYDOWN: {
-      if(cb) {
-        auto key = WindowsApi::translateKey(wParam);
-        Tempest::KeyEvent e(Event::KeyType(key),Event::KeyDown);
-        SystemApi::dispatchKeyDown(*cb,e);
-        }
-      break;
-      }
-
+    case WM_KEYDOWN:
     case WM_KEYUP: {
       if(cb) {
         auto key = WindowsApi::translateKey(wParam);
-        Tempest::KeyEvent e(Event::KeyType(key),Event::KeyUp);
-        SystemApi::dispatchKeyUp(*cb,e);
+
+        BYTE kboard[256]={};
+        GetKeyboardState(kboard);
+        WCHAR buf[2]={};
+        ToUnicode(wParam,0,kboard,buf,2,0);
+
+        uint32_t scan = MapVirtualKeyW(wParam,MAPVK_VK_TO_VSC);
+
+        Tempest::KeyEvent e(Event::KeyType(key),uint32_t(buf[0]),(msg==WM_KEYDOWN) ? Event::KeyDown : Event::KeyUp);
+        if(msg==WM_KEYDOWN)
+          SystemApi::dispatchKeyDown(*cb,e,scan); else
+          SystemApi::dispatchKeyUp  (*cb,e,scan);
         }
       break;
       }
@@ -444,7 +448,7 @@ long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const uint32_t wParam, co
         int width  = lParam & 0xffff;
         int height = (uint32_t(lParam) & 0xffff0000) >> 16;
         if(cb)
-          cb->onResize(reinterpret_cast<SystemApi::Window*>(hWnd),width,height);
+          cb->resize(width,height);
         }
       break;
     }

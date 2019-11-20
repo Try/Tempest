@@ -1,5 +1,4 @@
 #include <Tempest/Widget>
-#include <Tempest/Button>
 
 #include <gtest/gtest.h>
 #include <gmock/gmock-matchers.h>

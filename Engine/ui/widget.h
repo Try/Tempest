@@ -94,7 +94,7 @@ class Widget {
     void update();
     bool needToUpdate() const { return state.needToUpdate; }
 
-    bool isMouseOver()  const { return wstate.moveFocus; }
+    bool isMouseOver()  const { return wstate.moveOver; }
 
   protected:
     void setSizeHint(const Tempest::Size& s);
@@ -118,11 +118,29 @@ class Widget {
 
     virtual void focusEvent       (Tempest::FocusEvent& event);
 
-    virtual void dispatchMoveEvent(Tempest::MouseEvent& event);
-    virtual void dispatchKeyEvent (Tempest::KeyEvent&   event);
-
   private:
-    struct Iterator;
+    struct Iterator final {
+      Iterator(Widget* owner);
+      ~Iterator();
+
+      void    onDelete();
+      void    onDelete(size_t i,Widget* wx);
+      bool    hasNext() const;
+      void    next();
+      Widget* get();
+      Widget* getLast();
+
+      size_t                id=0;
+      Widget*               owner=nullptr;
+      std::vector<Widget*>* nodes;
+      std::vector<Widget*>  deleteLater;
+      Widget*               getPtr=nullptr;
+      };
+
+    struct Ref {
+      Ref(Widget* w):widget(w){}
+      Widget* widget = nullptr;
+      };
 
     Widget*                 ow=nullptr;
     std::vector<Widget*>    wx;
@@ -135,22 +153,19 @@ class Widget {
     Iterator*               iterator=nullptr;
 
     struct Additive {
-      Widget*  mouseFocus=nullptr;
-      Widget*  moveFocus =nullptr;
-      Widget*  focus     =nullptr;
-
-      uint16_t disable     =0;
-      bool     needToUpdate=false;
+      Widget*  focus        = nullptr;
+      uint16_t disable      = 0;
+      bool     needToUpdate = false;
       };
     Additive                state;
 
     struct State {
-      bool                  disabled =false;
-      bool                  focus    =false;
-      bool                  moveFocus=false;
-      bool                  mousePressed=false;
+      bool                  disabled = false;
+      bool                  focus    = false;
+      bool                  moveOver = false;
       };
     State                   wstate;
+    std::shared_ptr<Ref>    selfRef;
 
     Layout*                 lay=reinterpret_cast<Layout*>(layBuf);
     char                    layBuf[sizeof(void*)*3]={};
@@ -167,16 +182,10 @@ class Widget {
 
     void                    dispatchPaintEvent(PaintEvent &e);
 
-    void                    dispatchMouseDown (Tempest::MouseEvent &e);
-    void                    dispatchMouseUp   (Tempest::MouseEvent &e);
-    void                    dispatchMouseMove (Tempest::MouseEvent &e);
-    void                    dispatchMouseDrag (Tempest::MouseEvent &e);
-    void                    dispatchMouseWhell(Tempest::MouseEvent &e);
-    void                    dispatchKeyDown   (Tempest::KeyEvent   &e);
-    void                    dispatchKeyUp     (Tempest::KeyEvent   &e);
-
+    auto                    selfReference() -> const std::shared_ptr<Ref>&;
     void                    setOwner(Widget* w);
 
+  friend class EventDispatcher;
   friend class Layout;
   friend class Window;
   };
