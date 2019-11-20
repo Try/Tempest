@@ -80,22 +80,3 @@ TEST(main,EventDispatcher_MouseEvent) {
   EXPECT_EQ(b0.up,  1);
   EXPECT_EQ(b0.move,1);
   }
-
-TEST(main,EventDispatcher_KeyEent) {
-  EventDispatcher dis;
-
-  Widget wx;
-  wx.resize(1000,50);
-  wx.setLayout(Vertical);
-
-  TstButton& b0=wx.addWidget(new TstButton());
-  TstButton& b1=wx.addWidget(new TstButton());
-
-  auto evt0 = mkMEvent(Event::MouseDown,11,22);
-  dis.dispatchMouseDown(wx,evt0);
-  auto evt1 = mkMEvent(Event::MouseUp,11,22);
-  dis.dispatchMouseUp(wx,evt1);
-
-  auto k0 = mkKEvent(Event::K_0,Event::KeyDown);
-  dis.dispatchKeyDown(wx,k0);
-  }
