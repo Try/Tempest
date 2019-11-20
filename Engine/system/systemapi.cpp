@@ -16,7 +16,69 @@ using namespace Tempest;
 
 static EventDispatcher dispatcher;
 
+struct SystemApi::KeyInf {
+  std::vector<WindowsApi::TranslateKeyPair> keys;
+  std::vector<WindowsApi::TranslateKeyPair> a, k0, f1;
+  uint16_t                                  fkeysCount=1;
+  };
+SystemApi::KeyInf SystemApi::ki;
+
 SystemApi::SystemApi() {
+  }
+
+void SystemApi::setupKeyTranslate(const TranslateKeyPair k[], uint16_t funcCount ) {
+  ki.keys.clear();
+  ki.a. clear();
+  ki.k0.clear();
+  ki.f1.clear();
+  ki.fkeysCount = funcCount;
+
+  for( size_t i=0; k[i].result!=Event::K_NoKey; ++i ){
+    if( k[i].result==Event::K_A )
+      ki.a.push_back(k[i]); else
+    if( k[i].result==Event::K_0 )
+      ki.k0.push_back(k[i]); else
+    if( k[i].result==Event::K_F1 )
+      ki.f1.push_back(k[i]); else
+      ki.keys.push_back( k[i] );
+    }
+
+#ifndef __ANDROID__
+  ki.keys.shrink_to_fit();
+  ki.a. shrink_to_fit();
+  ki.k0.shrink_to_fit();
+  ki.f1.shrink_to_fit();
+#endif
+  }
+
+uint16_t SystemApi::translateKey(uint64_t scancode) {
+  for(size_t i=0; i<ki.keys.size(); ++i)
+    if( ki.keys[i].src==scancode )
+      return ki.keys[i].result;
+
+  for(size_t i=0; i<ki.k0.size(); ++i)
+    if( ki.k0[i].src<=scancode &&
+                      scancode<=ki.k0[i].src+9 ){
+      auto dx = ( scancode-ki.k0[i].src );
+      return Event::KeyType( ki.k0[i].result + dx );
+      }
+
+  uint16_t literalsCount = (Event::K_Z - Event::K_A);
+  for(size_t i=0; i<ki.a.size(); ++i)
+    if(ki.a[i].src<=scancode &&
+                    scancode<=ki.a[i].src+literalsCount ){
+      auto dx = ( scancode-ki.a[i].src );
+      return Event::KeyType( ki.a[i].result + dx );
+      }
+
+  for(size_t i=0; i<ki.f1.size(); ++i)
+    if(ki.f1[i].src<=scancode &&
+                     scancode<=ki.f1[i].src+ki.fkeysCount ){
+      auto dx = (scancode-ki.f1[i].src);
+      return Event::KeyType(ki.f1[i].result+dx);
+      }
+
+  return Event::K_NoKey;
   }
 
 void SystemApi::dispatchRender(Tempest::Window &w) {

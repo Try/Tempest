@@ -23,6 +23,11 @@ class SystemApi {
       FullScreen
       };
 
+    struct TranslateKeyPair final {
+      uint16_t src;
+      uint16_t result;
+      };
+
     virtual ~SystemApi()=default;
     static Window*  createWindow(Tempest::Window* owner, uint32_t width, uint32_t height);
     static Window*  createWindow(Tempest::Window* owner, ShowMode sm);
@@ -38,6 +43,9 @@ class SystemApi {
 
     static void     setCursorPosition(int x, int y);
     static void     showCursor(bool show);
+
+    static uint16_t translateKey(uint64_t scancode);
+    static void     setupKeyTranslate(const TranslateKeyPair k[], uint16_t funcCount);
 
   protected:
     struct AppCallBack {
@@ -75,6 +83,9 @@ class SystemApi {
   private:
     static int        exec(AppCallBack& cb);
     static SystemApi& inst();
+
+    struct KeyInf;
+    static KeyInf ki;
 
   friend class Application;
   };

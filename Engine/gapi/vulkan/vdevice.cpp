@@ -138,7 +138,7 @@ void VDevice::createSurface(VulkanApi &api,void* hwnd) {
   VkXlibSurfaceCreateInfoKHR createInfo = {};
   createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
   createInfo.dpy    = reinterpret_cast<Display*>(X11Api::display());
-  createInfo.window = Window(hwnd);
+  createInfo.window = ::Window(hwnd);
   if(vkCreateXlibSurfaceKHR(api.instance, &createInfo, nullptr, &surface)!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 #else
