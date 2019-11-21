@@ -21,7 +21,7 @@ class VRenderPass : public AbstractGraphicsApi::Pass {
       };
 
     VRenderPass()=default;
-    VRenderPass(VDevice& device, VSwapchain& sw, const Attachment** attach, uint8_t attCount);
+    VRenderPass(VDevice& device, const Attachment** attach, uint8_t attCount);
     VRenderPass(VRenderPass&& other);
     ~VRenderPass();
 
@@ -43,11 +43,10 @@ class VRenderPass : public AbstractGraphicsApi::Pass {
 
   private:
     VkDevice                        device=nullptr;
-    VSwapchain*                     swapchain=nullptr;
     std::vector<Impl>               impl;
     std::unique_ptr<Attachment[]>   input;
 
-    static VkRenderPass           createInstance      (VkDevice &device, VSwapchain& sw, const Attachment *attach, const VkFormat *frm, uint8_t attCount);
+    static VkRenderPass             createInstance      (VkDevice &device, VSwapchain* sw, const Attachment *attach, const VkFormat *frm, uint8_t attCount);
   };
 
 }}

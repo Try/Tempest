@@ -5,7 +5,7 @@
 
 using namespace Tempest;
 
-VideoBuffer::VideoBuffer(Device &, AbstractGraphicsApi::PBuffer&& impl, size_t size)
+VideoBuffer::VideoBuffer(HeadlessDevice &, AbstractGraphicsApi::PBuffer&& impl, size_t size)
   :impl(std::move(impl)),sz(size) {
   }
 

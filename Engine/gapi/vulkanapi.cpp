@@ -59,18 +59,11 @@ AbstractGraphicsApi::Swapchain *VulkanApi::createSwapchain(SystemApi::Window *w,
   return new Detail::VSwapchain(*dx,width,height);
   }
 
-void VulkanApi::destroy(AbstractGraphicsApi::Swapchain *d) {
-  Detail::VSwapchain* s=reinterpret_cast<Detail::VSwapchain*>(d);
-  delete s;
-  }
-
 AbstractGraphicsApi::PPass VulkanApi::createPass(AbstractGraphicsApi::Device *d,
-                                                 AbstractGraphicsApi::Swapchain *s,
                                                  const Attachment** att,
                                                  size_t acount) {
   Detail::VDevice*    dx=reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VSwapchain* sx=reinterpret_cast<Detail::VSwapchain*>(s);
-  return PPass(new Detail::VRenderPass(*dx,*sx,att,uint8_t(acount)));
+  return PPass(new Detail::VRenderPass(*dx,att,uint8_t(acount)));
   }
 
 AbstractGraphicsApi::PFbo VulkanApi::createFbo(AbstractGraphicsApi::Device *d,

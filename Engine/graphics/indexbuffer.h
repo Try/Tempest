@@ -37,7 +37,7 @@ class IndexBuffer final {
     Tempest::VideoBuffer impl;
     size_t               sz=0;
 
-  friend class Tempest::Device;
+  friend class Tempest::HeadlessDevice;
   friend class Tempest::CommandBuffer;
   };
 

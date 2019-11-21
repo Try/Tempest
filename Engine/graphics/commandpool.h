@@ -5,7 +5,7 @@
 
 namespace Tempest {
 
-class Device;
+class HeadlessDevice;
 
 class CommandPool {
   public:
@@ -15,12 +15,12 @@ class CommandPool {
     CommandPool& operator=(CommandPool&&)=default;
 
   private:
-    CommandPool(Tempest::Device& dev,AbstractGraphicsApi::CmdPool* impl);
+    CommandPool(Tempest::HeadlessDevice& dev,AbstractGraphicsApi::CmdPool* impl);
 
-    Tempest::Device*                           dev =nullptr;
+    Tempest::HeadlessDevice*                    dev =nullptr;
     Detail::DPtr<AbstractGraphicsApi::CmdPool*> impl;
 
-  friend class Tempest::Device;
+  friend class Tempest::HeadlessDevice;
   };
 
 }

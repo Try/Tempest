@@ -271,9 +271,8 @@ namespace Tempest {
       virtual void       waitIdle(Device* d)=0;
 
       virtual Swapchain* createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d)=0;
-      virtual void       destroy(Swapchain* d)=0;
 
-      virtual PPass      createPass(Device *d, Swapchain* sw, const Attachment** att, size_t acount)=0;
+      virtual PPass      createPass(Device *d, const Attachment** att, size_t acount)=0;
 
       virtual PFbo       createFbo(Device *d,FboLayout* lay,Swapchain *s,uint32_t imageId)=0;
       virtual PFbo       createFbo(Device *d,FboLayout* lay,Swapchain *s,uint32_t imageId,Texture* zbuf)=0;

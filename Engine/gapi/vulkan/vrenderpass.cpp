@@ -8,12 +8,11 @@
 
 using namespace Tempest::Detail;
 
-VRenderPass::VRenderPass(VDevice& device, VSwapchain& sw, const Attachment **attach, uint8_t attCount)
-  : attCount(attCount), device(device.device), swapchain(&sw) {
+VRenderPass::VRenderPass(VDevice& device, const Attachment **attach, uint8_t attCount)
+  : attCount(attCount), device(device.device) {
   input.reset(new Attachment[attCount]);
   for(size_t i=0;i<attCount;++i)
     input[i] = *attach[i];
-  //impl = createInstance(device.device,sw,attach,attCount);
   }
 
 VRenderPass::VRenderPass(VRenderPass &&other) {
@@ -35,7 +34,6 @@ VRenderPass::~VRenderPass(){
 void VRenderPass::operator=(VRenderPass &&other) {
   std::swap(attCount,other.attCount);
   std::swap(device,other.device);
-  std::swap(swapchain,other.swapchain);
   std::swap(impl,other.impl);
   std::swap(input,other.input);
   }
@@ -60,7 +58,7 @@ VRenderPass::Impl &VRenderPass::instance(VFramebufferLayout &lay) {
         clear[i].color.float32[3] = cl.a();
         }
       }
-    val = createInstance(device,*swapchain,input.get(),lay.frm.get(),attCount);
+    val = createInstance(device,lay.swapchain,input.get(),lay.frm.get(),attCount);
     impl.emplace_back(lay,val,std::move(clear));
     }
   catch(...) {
@@ -71,7 +69,7 @@ VRenderPass::Impl &VRenderPass::instance(VFramebufferLayout &lay) {
   return impl.back();
   }
 
-VkRenderPass VRenderPass::createInstance(VkDevice &device, VSwapchain& sw,
+VkRenderPass VRenderPass::createInstance(VkDevice &device, VSwapchain *sw,
                                          const Attachment *att, const VkFormat* format, uint8_t attCount) {
   VkRenderPass ret=VK_NULL_HANDLE;
 
@@ -96,7 +94,7 @@ VkRenderPass VRenderPass::createInstance(VkDevice &device, VSwapchain& sw,
     a.storeOp        = bool(x.mode&FboMode::PreserveOut) ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
     if(a.format==VK_FORMAT_UNDEFINED)
-      a.format = sw.format();
+      a.format = sw->format();
 
     if(bool(x.mode&FboMode::Clear)) {
       a.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;

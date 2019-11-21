@@ -5,7 +5,7 @@
 
 namespace Tempest {
 
-class Device;
+class HeadlessDevice;
 class CommandBuffer;
 class Uniforms;
 
@@ -21,12 +21,12 @@ class VideoBuffer {
     size_t size() const { return sz; }
 
   private:
-    VideoBuffer(Tempest::Device& dev, AbstractGraphicsApi::PBuffer &&impl, size_t size);
+    VideoBuffer(Tempest::HeadlessDevice& dev, AbstractGraphicsApi::PBuffer &&impl, size_t size);
 
     Detail::DSharedPtr<AbstractGraphicsApi::Buffer*> impl;
     size_t                                           sz=0;
 
-  friend class Tempest::Device;
+  friend class Tempest::HeadlessDevice;
   friend class Tempest::CommandBuffer;
   friend class Tempest::Uniforms;
   };

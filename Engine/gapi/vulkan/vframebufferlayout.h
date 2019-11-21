@@ -21,6 +21,7 @@ class VFramebufferLayout : public AbstractGraphicsApi::FboLayout {
     VkRenderPass                impl=VK_NULL_HANDLE;
     std::unique_ptr<VkFormat[]> frm;
     uint8_t                     attCount=0;
+    VSwapchain*                 swapchain=nullptr;
 
     bool                        isCompatible(const VFramebufferLayout& other) const;
     bool                        equals(const FboLayout& other) override;

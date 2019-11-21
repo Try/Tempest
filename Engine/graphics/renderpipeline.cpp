@@ -4,7 +4,7 @@
 
 using namespace Tempest;
 
-RenderPipeline::RenderPipeline(Device &dev, Detail::DSharedPtr<AbstractGraphicsApi::Pipeline *> &&p)
+RenderPipeline::RenderPipeline(HeadlessDevice &dev, Detail::DSharedPtr<AbstractGraphicsApi::Pipeline *> &&p)
   :dev(&dev),impl(std::move(p)) {
   }
 

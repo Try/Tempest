@@ -3,11 +3,11 @@
 
 using namespace Tempest;
 
-Semaphore::Semaphore(Device &owner)
+Semaphore::Semaphore(HeadlessDevice &owner)
   :Semaphore(owner.createSemaphore()) {
   }
 
-Semaphore::Semaphore(Device &dev, AbstractGraphicsApi::Semaphore *impl)
+Semaphore::Semaphore(HeadlessDevice &dev, AbstractGraphicsApi::Semaphore *impl)
   :dev(&dev),impl(impl) {
   }
 

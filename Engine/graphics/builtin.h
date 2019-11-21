@@ -7,12 +7,12 @@
 
 namespace Tempest {
 
-class Device;
+class HeadlessDevice;
 class RenderPass;
 
 class Builtin {
   private:
-    Builtin(Device& owner);
+    Builtin(HeadlessDevice& owner);
 
   public:
     struct Item {
@@ -38,10 +38,10 @@ class Builtin {
     mutable Item            brushE;
 
     RenderState             stNormal, stBlend, stAlpha;
-    Device&                 owner;
+    HeadlessDevice&         owner;
     Tempest::Shader         vsT2,fsT2,vsE,fsE;
 
-  friend class Device;
+  friend class HeadlessDevice;
   };
 
 }

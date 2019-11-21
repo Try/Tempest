@@ -10,7 +10,7 @@
 
 namespace Tempest {
 
-class Device;
+class HeadlessDevice;
 class CommandBuffer;
 
 class VectorImage : public Tempest::PaintDevice {

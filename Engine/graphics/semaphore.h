@@ -5,22 +5,24 @@
 
 namespace Tempest {
 
+class HeadlessDevice;
 class Device;
 
 class Semaphore final {
   public:
-    Semaphore(Tempest::Device& owner);
+    Semaphore(Tempest::HeadlessDevice& owner);
     Semaphore(Semaphore&& f)=default;
     ~Semaphore();
     Semaphore& operator = (Semaphore&& other)=default;
 
   private:
-    Semaphore(Tempest::Device& dev,AbstractGraphicsApi::Semaphore* f);
+    Semaphore(Tempest::HeadlessDevice& dev,AbstractGraphicsApi::Semaphore* f);
 
-    Tempest::Device*                              dev=nullptr;
+    Tempest::HeadlessDevice*                      dev=nullptr;
     Detail::DPtr<AbstractGraphicsApi::Semaphore*> impl;
 
   friend class Tempest::Device;
+  friend class Tempest::HeadlessDevice;
   };
 
 }

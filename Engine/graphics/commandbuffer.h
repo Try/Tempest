@@ -5,7 +5,7 @@
 
 namespace Tempest {
 
-class Device;
+class HeadlessDevice;
 class Frame;
 class RenderPass;
 class FrameBuffer;
@@ -57,7 +57,7 @@ class CommandBuffer {
     void barrier(Texture2d& t, Stage in, Stage out);
 
   private:
-    CommandBuffer(Tempest::Device& dev,AbstractGraphicsApi::CommandBuffer* f,uint32_t vpWidth,uint32_t vpHeight);
+    CommandBuffer(Tempest::HeadlessDevice& dev,AbstractGraphicsApi::CommandBuffer* f,uint32_t vpWidth,uint32_t vpHeight);
 
     void implDraw(const VideoBuffer& vbo,size_t offset,size_t size);
     void implDraw(const VideoBuffer& vbo,const VideoBuffer& ibo,Detail::IndexClass index,size_t offset,size_t size);
@@ -85,12 +85,12 @@ class CommandBuffer {
       uint32_t height=0;
       };
 
-    Tempest::Device*                                  dev=nullptr;
+    Tempest::HeadlessDevice*                          dev=nullptr;
     Detail::DPtr<AbstractGraphicsApi::CommandBuffer*> impl;
     Viewport                                          vp;
 
   friend class PrimaryCommandBuffer;
-  friend class Tempest::Device;
+  friend class Tempest::HeadlessDevice;
   };
 
 class PrimaryCommandBuffer : public CommandBuffer {
@@ -102,12 +102,12 @@ class PrimaryCommandBuffer : public CommandBuffer {
     void exec(const FrameBuffer& fbo, const RenderPass& p, const CommandBuffer& buf);
 
   private:
-    PrimaryCommandBuffer(Tempest::Device& dev,AbstractGraphicsApi::CommandBuffer* f):CommandBuffer(dev,f,0,0){}
+    PrimaryCommandBuffer(Tempest::HeadlessDevice& dev,AbstractGraphicsApi::CommandBuffer* f):CommandBuffer(dev,f,0,0){}
 
     void implEndRenderPass();
 
     Pass curPass;
 
-  friend class Tempest::Device;
+  friend class Tempest::HeadlessDevice;
   };
 }

@@ -5,11 +5,11 @@
 
 namespace Tempest {
 
-class Device;
+class HeadlessDevice;
 
 class Fence final {
   public:
-    Fence(Tempest::Device& owner);
+    Fence(Tempest::HeadlessDevice& owner);
     Fence(Fence&& f)=default;
     ~Fence();
     Fence& operator = (Fence&& other)=default;
@@ -18,11 +18,11 @@ class Fence final {
     void reset();
 
   private:
-    Fence(Tempest::Device& dev,AbstractGraphicsApi::Fence* f);
+    Fence(Tempest::HeadlessDevice& dev,AbstractGraphicsApi::Fence* f);
 
-    Tempest::Device*                          dev=nullptr;
+    Tempest::HeadlessDevice*                  dev=nullptr;
     Detail::DPtr<AbstractGraphicsApi::Fence*> impl;
 
-  friend class Tempest::Device;
+  friend class Tempest::HeadlessDevice;
   };
 }

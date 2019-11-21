@@ -7,7 +7,7 @@
 
 namespace Tempest {
 
-class Device;
+class HeadlessDevice;
 class CommandBuffer;
 class PrimaryCommandBuffer;
 
@@ -33,7 +33,7 @@ class RenderPass final {
     RenderPass(Detail::DSharedPtr<AbstractGraphicsApi::Pass*>&& img);
     Detail::DSharedPtr<AbstractGraphicsApi::Pass*> impl;
 
-  friend class Tempest::Device;
+  friend class Tempest::HeadlessDevice;
   friend class Tempest::CommandBuffer;
   friend class Tempest::PrimaryCommandBuffer;
   };

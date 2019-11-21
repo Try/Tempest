@@ -5,7 +5,7 @@
 
 using namespace Tempest;
 
-CommandBuffer::CommandBuffer(Device &dev, AbstractGraphicsApi::CommandBuffer *impl,uint32_t vpWidth,uint32_t vpHeight)
+CommandBuffer::CommandBuffer(HeadlessDevice &dev, AbstractGraphicsApi::CommandBuffer *impl, uint32_t vpWidth, uint32_t vpHeight)
   :dev(&dev),impl(impl) {
   vp.width  = vpWidth;
   vp.height = vpHeight;

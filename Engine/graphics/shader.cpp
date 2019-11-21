@@ -5,7 +5,7 @@
 
 using namespace Tempest;
 
-Shader::Shader(Device &dev, Detail::DSharedPtr<AbstractGraphicsApi::Shader*>&& impl)
+Shader::Shader(Tempest::HeadlessDevice &dev, Detail::DSharedPtr<AbstractGraphicsApi::Shader*>&& impl)
   :dev(&dev),impl(std::move(impl)) {
   }
 

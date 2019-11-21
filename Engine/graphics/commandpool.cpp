@@ -4,7 +4,7 @@
 
 using namespace Tempest;
 
-CommandPool::CommandPool(Device &dev, AbstractGraphicsApi::CmdPool *impl)
+CommandPool::CommandPool(Tempest::HeadlessDevice &dev, AbstractGraphicsApi::CmdPool *impl)
   :dev(&dev),impl(impl) {
   }
 

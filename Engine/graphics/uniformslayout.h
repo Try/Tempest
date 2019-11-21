@@ -36,7 +36,7 @@ class UniformsLayout final {
     std::vector<Binding> elt;
     mutable std::shared_ptr<AbstractGraphicsApi::UniformsLay> impl;
 
-  friend class Device;
+  friend class HeadlessDevice;
   };
 
 }

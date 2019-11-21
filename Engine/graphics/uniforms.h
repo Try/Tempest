@@ -1,12 +1,12 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include <Tempest/Device>
 
 namespace Tempest {
 
-class Device;
+class HeadlessDevice;
 class UniformBuffer;
+class Texture2d;
 
 class Uniforms {
   public:
@@ -23,12 +23,12 @@ class Uniforms {
     void set(size_t layoutBind,const Detail::ResourcePtr<Texture2d>& tex);
 
   private:
-    Uniforms(Tempest::Device& dev,AbstractGraphicsApi::Desc* desc);
+    Uniforms(Tempest::HeadlessDevice& dev,AbstractGraphicsApi::Desc* desc);
 
-    Tempest::Device*                         dev=nullptr;
+    Tempest::HeadlessDevice*                 dev=nullptr;
     Detail::DPtr<AbstractGraphicsApi::Desc*> desc;
 
-  friend class Tempest::Device;
+  friend class Tempest::HeadlessDevice;
   friend class Tempest::CommandBuffer;
   };
 

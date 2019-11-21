@@ -146,9 +146,7 @@ std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget &root, KeyEven
     }
   if(w->wstate.focus) {
     auto ptr = w->selfReference();
-    if(event.type()==Event::KeyDown)
-      w->keyDownEvent(event); else
-      w->keyUpEvent  (event);
+    w->keyDownEvent(event);
     if(event.isAccepted())
       return ptr;
     }
