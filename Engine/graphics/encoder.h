@@ -53,7 +53,7 @@ class Encoder<Tempest::CommandBuffer> {
     void draw(const VertexBuffer<T>& vbo,const IndexBuffer<I>& ibo,size_t offset,size_t count)
          { implDraw(vbo.impl,ibo.impl,Detail::indexCls<I>(),offset,count); }
 
-    void exchangeLayout(Texture2d &t, TextureLayout src, TextureLayout dest);
+    void setLayout(Texture2d &t, TextureLayout dest);
 
   private:
     Encoder(CommandBuffer* ow);
@@ -64,11 +64,18 @@ class Encoder<Tempest::CommandBuffer> {
       uint32_t height=0;
       };
 
+    struct ResState {
+      AbstractGraphicsApi::Texture* res = nullptr;
+      TextureLayout                 lay = TextureLayout::Undefined;
+      };
+
     struct State {
       const AbstractGraphicsApi::Pipeline* curPipeline=nullptr;
       const VideoBuffer*                   curVbo     =nullptr;
       const VideoBuffer*                   curIbo     =nullptr;
       Viewport                             vp;
+
+      std::vector<ResState>                resState;
       };
 
     Tempest::CommandBuffer*             owner=nullptr;
@@ -78,6 +85,7 @@ class Encoder<Tempest::CommandBuffer> {
     virtual void implEndRenderPass(){}
     void implDraw(const VideoBuffer& vbo, size_t offset, size_t size);
     void implDraw(const VideoBuffer &vbo, const VideoBuffer &ibo, Detail::IndexClass index, size_t offset, size_t size);
+    ResState* findState(AbstractGraphicsApi::Texture* t);
 
   friend class CommandBuffer;
   friend class Encoder<Tempest::PrimaryCommandBuffer>;

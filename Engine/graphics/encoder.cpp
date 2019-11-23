@@ -112,11 +112,28 @@ void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer &vbo, const Vid
   impl->drawIndexed(offset,size,0);
   }
 
-void Encoder<Tempest::CommandBuffer>::exchangeLayout(Texture2d &t, TextureLayout src, TextureLayout dest) {
-  implEndRenderPass();
+void Encoder<Tempest::CommandBuffer>::setLayout(Texture2d &t, TextureLayout dest) {
+  if(t.impl.handler==nullptr)
+    return;
 
-  if(t.impl.handler)
-    impl->changeLayout(*t.impl.handler,t.frm,src,dest);
+  ResState* st = findState(t.impl.handler);
+  if(st->lay==dest)
+    return;
+  implEndRenderPass();
+  impl->changeLayout(*t.impl.handler,t.frm,st->lay,dest);
+  st->lay = dest;
+  }
+
+Encoder<CommandBuffer>::ResState *Encoder<CommandBuffer>::findState(AbstractGraphicsApi::Texture *handler) {
+  for(auto& i:state.resState)
+    if(i.res==handler) {
+      return &i;
+      }
+  ResState st;
+  st.res = handler;
+  st.lay = TextureLayout::Undefined;
+  state.resState.push_back(st);
+  return &state.resState.back();
   }
 
 Encoder<PrimaryCommandBuffer>::Encoder(PrimaryCommandBuffer *ow)
