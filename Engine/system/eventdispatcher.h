@@ -27,6 +27,8 @@ class EventDispatcher final {
     void                         implSetMouseOver(const std::shared_ptr<Widget::Ref>& s);
     void                         implExcMouseOver(Widget *w, Widget *old);
 
+    std::shared_ptr<Widget::Ref> lock(std::weak_ptr<Widget::Ref>& w);
+
     std::weak_ptr<Widget::Ref>   mouseUp;
     std::weak_ptr<Widget::Ref>   mouseOver;
 

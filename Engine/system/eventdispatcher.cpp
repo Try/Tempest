@@ -10,7 +10,7 @@ void EventDispatcher::dispatchMouseDown(Widget &wnd, MouseEvent &e) {
   }
 
 void EventDispatcher::dispatchMouseUp(Widget &/*wnd*/, MouseEvent &e) {
-  auto w = mouseUp.lock();
+  auto w = lock(mouseUp);
   if(w==nullptr)
     return;
   auto p = mouseUp;
@@ -24,7 +24,7 @@ void EventDispatcher::dispatchMouseUp(Widget &/*wnd*/, MouseEvent &e) {
   }
 
 void EventDispatcher::dispatchMouseMove(Widget &wnd, MouseEvent &e) {
-  if(auto w = mouseUp.lock()) {
+  if(auto w = lock(mouseUp)) {
     MouseEvent e0( e.x,
                    e.y,
                    Event::ButtonNone,
@@ -36,7 +36,7 @@ void EventDispatcher::dispatchMouseMove(Widget &wnd, MouseEvent &e) {
       return;
     }
 
-  if(auto w = mouseUp.lock()) {
+  if(auto w = lock(mouseUp)) {
     MouseEvent e1( e.x,
                    e.y,
                    Event::ButtonNone,
@@ -75,7 +75,7 @@ void EventDispatcher::dispatchKeyUp(Widget &/*wnd*/, KeyEvent &e, uint32_t scanc
   auto it = keyUp.find(scancode);
   if(it==keyUp.end())
     return;
-  if(auto w = (*it).second.lock()){
+  if(auto w = lock((*it).second)){
     keyUp.erase(it);
     w->widget->keyUpEvent(e);
     }
@@ -179,4 +179,17 @@ void EventDispatcher::implExcMouseOver(Widget* w, Widget* old) {
     wx->wstate.moveOver = true;
     wx = wx->owner();
     }
+  }
+
+std::shared_ptr<Widget::Ref> EventDispatcher::lock(std::weak_ptr<Widget::Ref> &w) {
+  auto ptr = w.lock();
+  if(ptr==nullptr)
+    return nullptr;
+  Widget* wx = ptr.get()->widget;
+  while(wx->owner()!=nullptr) {
+    wx = wx->owner();
+    }
+  if(dynamic_cast<Window*>(wx))
+    return ptr;
+  return nullptr;
   }
