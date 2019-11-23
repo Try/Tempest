@@ -117,9 +117,6 @@ class HeadlessDevice {
 
       AbstractGraphicsApi&            api;
       AbstractGraphicsApi::Device*    dev=nullptr;
-
-      std::vector<AbstractGraphicsApi::CommandBuffer*> cmdBuf;
-      std::vector<AbstractGraphicsApi::Semaphore*>     semBuf;
       };
 
     AbstractGraphicsApi&            api;
@@ -137,6 +134,10 @@ class HeadlessDevice {
                              const Shader &vs, const Shader &fs,
                              const Decl::ComponentType *decl, size_t declSize,
                              size_t stride, Topology tp);
+    void        implDraw(const Tempest::PrimaryCommandBuffer *cmd[], AbstractGraphicsApi::CommandBuffer* hcmd[],  size_t count,
+                         const Semaphore* wait[], AbstractGraphicsApi::Semaphore*     hwait[], size_t waitCnt,
+                          Semaphore*      done[], AbstractGraphicsApi::Semaphore*     hdone[], size_t doneCnt,
+                         AbstractGraphicsApi::Fence*         fdone);
 
     void       destroy(Uniforms&       u);
 

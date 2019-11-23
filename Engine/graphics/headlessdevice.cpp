@@ -58,21 +58,45 @@ void HeadlessDevice::draw(const Tempest::PrimaryCommandBuffer *cmd[], size_t cou
                           const Semaphore *wait[], size_t waitCnt,
                           Semaphore *done[], size_t doneCnt,
                           Fence *fdone) {
-  impl.cmdBuf.resize(count);
-  for(size_t i=0;i<count;++i)
-    impl.cmdBuf[i] = cmd[i]->impl.handler;
+  if(count+waitCnt+doneCnt<64){
+    void* ptr[64];
+    auto cx = reinterpret_cast<AbstractGraphicsApi::CommandBuffer**>(ptr);
+    auto wx = reinterpret_cast<AbstractGraphicsApi::Semaphore**>(ptr+count);
+    auto dx = reinterpret_cast<AbstractGraphicsApi::Semaphore**>(ptr+count+waitCnt);
 
-  impl.semBuf.resize(waitCnt+doneCnt);
+    implDraw(cmd,  cx, count,
+             wait, wx, waitCnt,
+             done, dx, doneCnt,
+             fdone->impl.handler);
+    } else {
+    std::unique_ptr<void*[]> ptr(new void*[count+waitCnt+doneCnt]);
+    auto cx = reinterpret_cast<AbstractGraphicsApi::CommandBuffer**>(ptr.get());
+    auto wx = reinterpret_cast<AbstractGraphicsApi::Semaphore**>(ptr.get()+count);
+    auto dx = reinterpret_cast<AbstractGraphicsApi::Semaphore**>(ptr.get()+count+waitCnt);
+
+    implDraw(cmd,  cx, count,
+             wait, wx, waitCnt,
+             done, dx, doneCnt,
+             fdone->impl.handler);
+    }
+  }
+
+void HeadlessDevice::implDraw(const Tempest::PrimaryCommandBuffer* cmd[],  AbstractGraphicsApi::CommandBuffer*  hcmd[],  size_t count,
+                              const Semaphore*                     wait[], AbstractGraphicsApi::Semaphore*      hwait[], size_t waitCnt,
+                              Semaphore*                           done[], AbstractGraphicsApi::Semaphore*      hdone[], size_t doneCnt,
+                              AbstractGraphicsApi::Fence*          fdone) {
+  for(size_t i=0;i<count;++i)
+    hcmd[i] = cmd[i]->impl.handler;
   for(size_t i=0;i<waitCnt;++i)
-    impl.semBuf[i] = wait[i]->impl.handler;
+    hwait[i] = wait[i]->impl.handler;
   for(size_t i=0;i<doneCnt;++i)
-    impl.semBuf[waitCnt+i] = done[i]->impl.handler;
+    hdone[i] = done[i]->impl.handler;
 
   api.draw(dev,
-           impl.cmdBuf.data(), count,
-           impl.semBuf.data(), waitCnt,
-           impl.semBuf.data()+waitCnt, doneCnt,
-           fdone->impl.handler);
+           hcmd, count,
+           hwait, waitCnt,
+           hdone, doneCnt,
+           fdone);
   }
 
 Shader HeadlessDevice::loadShader(const char *filename) {
