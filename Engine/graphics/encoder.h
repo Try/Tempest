@@ -6,6 +6,8 @@
 
 #include "videobuffer.h"
 
+#include <vector>
+
 namespace Tempest {
 
 template<class T>
