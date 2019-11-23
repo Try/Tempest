@@ -38,7 +38,7 @@ class IndexBuffer final {
     size_t               sz=0;
 
   friend class Tempest::HeadlessDevice;
-  friend class Tempest::CommandBuffer;
+  friend class Tempest::Encoder<Tempest::CommandBuffer>;
   };
 
 }

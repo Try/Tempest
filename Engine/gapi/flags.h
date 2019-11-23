@@ -53,21 +53,6 @@ inline FboMode operator & (FboMode a,const FboMode& b) {
   return FboMode(uint8_t(a)&uint8_t(b));
   }
 
-
-enum class Stage : uint8_t {
-  Vertex   = 1,
-  Fragment = 1<<1
-  };
-
-inline Stage operator | (Stage a,const Stage& b) {
-  return Stage(uint8_t(a)|uint8_t(b));
-  }
-
-inline Stage operator & (Stage a,const Stage& b) {
-  return Stage(uint8_t(a)&uint8_t(b));
-  }
-
-
 enum class TextureLayout : uint8_t {
   Undefined,
   Sampler,

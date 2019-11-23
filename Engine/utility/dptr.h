@@ -7,6 +7,8 @@ namespace Tempest {
 
 class Uniforms;
 class CommandBuffer;
+template<class T>
+class Encoder;
 
 namespace Detail {
 
@@ -105,6 +107,8 @@ class ResourcePtr {
 
   friend class Tempest::Uniforms;
   friend class Tempest::CommandBuffer;
+  template<class TT>
+  friend class Tempest::Encoder;
   };
 }
 }

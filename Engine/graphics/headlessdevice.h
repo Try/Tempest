@@ -46,9 +46,9 @@ class HeadlessDevice {
 
     void                 waitIdle();
 
-    void                 draw(const CommandBuffer&  cmd,const Semaphore& wait);
-    void                 draw(const CommandBuffer&  cmd,const Semaphore& wait,Semaphore& done,Fence& fdone);
-    void                 draw(const CommandBuffer*  cmd[],size_t count,
+    void                 draw(const PrimaryCommandBuffer&  cmd,const Semaphore& wait);
+    void                 draw(const PrimaryCommandBuffer&  cmd,const Semaphore& wait,Semaphore& done,Fence& fdone);
+    void                 draw(const PrimaryCommandBuffer *cmd[], size_t count,
                               const Semaphore* wait[], size_t waitCnt,
                               Semaphore* done[], size_t doneCnt,
                               Fence* fdone);

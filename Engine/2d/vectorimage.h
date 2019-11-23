@@ -11,7 +11,8 @@
 namespace Tempest {
 
 class HeadlessDevice;
-class CommandBuffer;
+template<class T>
+class Encoder;
 
 class VectorImage : public Tempest::PaintDevice {
   public:
@@ -20,7 +21,7 @@ class VectorImage : public Tempest::PaintDevice {
     uint32_t w() const { return info.w; }
     uint32_t h() const { return info.h; }
 
-    void     draw(Device& dev, CommandBuffer& cmd);
+    void     draw(Device& dev, Encoder<CommandBuffer> &cmd);
     bool     load(const char* path);
     void     clear() override;
 

@@ -10,6 +10,8 @@ namespace Tempest {
 class HeadlessDevice;
 class CommandBuffer;
 class PrimaryCommandBuffer;
+template<class T>
+class Encoder;
 
 class Attachment final {
   public:
@@ -35,7 +37,7 @@ class RenderPass final {
 
   friend class Tempest::HeadlessDevice;
   friend class Tempest::CommandBuffer;
-  friend class Tempest::PrimaryCommandBuffer;
+  friend class Tempest::Encoder<Tempest::PrimaryCommandBuffer>;
   };
 
 }

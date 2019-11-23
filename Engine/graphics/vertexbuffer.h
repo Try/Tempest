@@ -12,6 +12,9 @@ template<class T>
 class VertexBufferDyn;
 
 template<class T>
+class Encoder;
+
+template<class T>
 class VertexBuffer {
   public:
     VertexBuffer()=default;
@@ -30,7 +33,7 @@ class VertexBuffer {
     size_t               sz=0;
 
   friend class Tempest::HeadlessDevice;
-  friend class Tempest::CommandBuffer;
+  friend class Tempest::Encoder<Tempest::CommandBuffer>;
   friend class Tempest::VertexBufferDyn<T>;
   };
 

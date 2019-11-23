@@ -70,7 +70,6 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void copy(Detail::VBuffer&  dest, size_t width, size_t height, size_t mip, const Detail::VTexture& src, size_t offset);
 
     void changeLayout(AbstractGraphicsApi::Texture& t, TextureFormat frm, TextureLayout prev, TextureLayout next);
-    void barrier     (AbstractGraphicsApi::Texture& t,Stage prev,Stage next);
     void changeLayout(Detail::VTexture& dest, VkFormat imageFormat, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount);
 
     void generateMipmap(VTexture& image, VkPhysicalDevice pdev, VkFormat imageFormat,

@@ -8,6 +8,8 @@ namespace Tempest {
 class Device;
 class HeadlessDevice;
 class Uniforms;
+template<class T>
+class Encoder;
 
 //! simple 2d texture class
 class Texture2d {
@@ -37,7 +39,7 @@ class Texture2d {
   friend class Tempest::Device;
   friend class Tempest::HeadlessDevice;
   friend class Tempest::Uniforms;
-  friend class Tempest::CommandBuffer;
+  friend class Encoder<Tempest::CommandBuffer>;
 
   template<class T>
   friend class Tempest::Detail::ResourcePtr;

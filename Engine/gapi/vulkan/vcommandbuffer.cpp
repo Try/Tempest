@@ -321,44 +321,6 @@ void VCommandBuffer::changeLayout(Tempest::AbstractGraphicsApi::Texture &t,
   changeLayout(reinterpret_cast<VTexture&>(t),Detail::nativeFormat(f),frm[uint8_t(prev)],frm[uint8_t(next)],VK_REMAINING_MIP_LEVELS);
   }
 
-void VCommandBuffer::barrier(Tempest::AbstractGraphicsApi::Texture &t, Tempest::Stage prev, Tempest::Stage next) {
-  VkImageMemoryBarrier barrier = {};
-  barrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-  barrier.oldLayout           = VK_IMAGE_LAYOUT_GENERAL;
-  barrier.newLayout           = VK_IMAGE_LAYOUT_GENERAL;
-  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.image               = reinterpret_cast<VTexture&>(t).impl;
-
-  barrier.srcAccessMask       = VK_ACCESS_SHADER_WRITE_BIT;
-  barrier.dstAccessMask       = VK_ACCESS_SHADER_READ_BIT;
-
-  barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-  barrier.subresourceRange.baseMipLevel   = 0;
-  barrier.subresourceRange.levelCount     = VK_REMAINING_MIP_LEVELS;
-  barrier.subresourceRange.baseArrayLayer = 0;
-  barrier.subresourceRange.layerCount     = 1;
-
-  static const VkPipelineStageFlags stagePrev[]={
-    VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-    VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT
-    };
-
-  static const VkPipelineStageFlags stageNx[]={
-    VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-    };
-
-  vkCmdPipelineBarrier(
-      impl,
-      stagePrev[int(prev)], stageNx[int(next)],
-      0,
-      0, nullptr,
-      0, nullptr,
-      0, &barrier
-      );
-  }
-
 void VCommandBuffer::changeLayout(VTexture &dest, VkFormat imageFormat,
                                   VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount) {
   VkImageMemoryBarrier barrier = {};

@@ -8,6 +8,8 @@ namespace Tempest {
 class HeadlessDevice;
 class CommandBuffer;
 class Uniforms;
+template<class T>
+class Encoder;
 
 class VideoBuffer {
   public:
@@ -29,6 +31,7 @@ class VideoBuffer {
   friend class Tempest::HeadlessDevice;
   friend class Tempest::CommandBuffer;
   friend class Tempest::Uniforms;
+  friend class Tempest::Encoder<Tempest::CommandBuffer>;
   };
 
 }

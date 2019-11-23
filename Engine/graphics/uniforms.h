@@ -5,8 +5,12 @@
 namespace Tempest {
 
 class HeadlessDevice;
+class CommandBuffer;
 class UniformBuffer;
 class Texture2d;
+
+template<class T>
+class Encoder;
 
 class Uniforms {
   public:
@@ -29,7 +33,7 @@ class Uniforms {
     Detail::DPtr<AbstractGraphicsApi::Desc*> desc;
 
   friend class Tempest::HeadlessDevice;
-  friend class Tempest::CommandBuffer;
+  friend class Tempest::Encoder<Tempest::CommandBuffer>;
   };
 
 }

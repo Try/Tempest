@@ -4,6 +4,7 @@
 #include <Tempest/Builtin>
 #include <Tempest/Painter>
 #include <Tempest/Event>
+#include <Tempest/Encoder>
 
 #define  NANOSVG_IMPLEMENTATION
 #include "thirdparty/nanosvg.h"
@@ -154,7 +155,7 @@ void VectorImage::makeActual(Device &dev) {
     }
   }
 
-void VectorImage::draw(Device & dev, CommandBuffer &cmd) {
+void VectorImage::draw(Device & dev, Encoder<CommandBuffer> &cmd) {
   makeActual(dev);
 
   PerFrame& f=frame[dev.frameId()];

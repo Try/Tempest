@@ -31,6 +31,7 @@ class FrameBufferLayout final {
   friend class Tempest::Device;
   friend class Tempest::HeadlessDevice;
   friend class Tempest::FrameBuffer;
+  friend class Tempest::CommandBuffer;
   };
 
 class FrameBuffer final {
@@ -56,7 +57,6 @@ class FrameBuffer final {
 
   friend class Tempest::Device;
   friend class Tempest::HeadlessDevice;
-  friend class Tempest::CommandBuffer;
-  friend class Tempest::PrimaryCommandBuffer;
+  friend class Tempest::Encoder<Tempest::PrimaryCommandBuffer>;
   };
 }

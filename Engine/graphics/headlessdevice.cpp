@@ -46,15 +46,15 @@ void HeadlessDevice::waitIdle() {
   api.waitIdle(impl.dev);
   }
 
-void HeadlessDevice::draw(const CommandBuffer &cmd, const Semaphore &wait) {
+void HeadlessDevice::draw(const PrimaryCommandBuffer &cmd, const Semaphore &wait) {
   api.draw(dev,cmd.impl.handler,wait.impl.handler,nullptr,nullptr);
   }
 
-void HeadlessDevice::draw(const CommandBuffer &cmd, const Semaphore &wait, Semaphore &done, Fence &fdone) {
+void HeadlessDevice::draw(const PrimaryCommandBuffer &cmd, const Semaphore &wait, Semaphore &done, Fence &fdone) {
   api.draw(dev,cmd.impl.handler,wait.impl.handler,done.impl.handler,fdone.impl.handler);
   }
 
-void HeadlessDevice::draw(const Tempest::CommandBuffer *cmd[], size_t count,
+void HeadlessDevice::draw(const Tempest::PrimaryCommandBuffer *cmd[], size_t count,
                           const Semaphore *wait[], size_t waitCnt,
                           Semaphore *done[], size_t doneCnt,
                           Fence *fdone) {

@@ -239,7 +239,6 @@ namespace Tempest {
         virtual void setUniforms (Pipeline& p,Desc& u, size_t offc, const uint32_t* offv)=0;
         virtual void exec        (const AbstractGraphicsApi::CommandBuffer& buf)=0;
         virtual void changeLayout(Texture& t,TextureFormat frm,TextureLayout prev,TextureLayout next)=0;
-        virtual void barrier     (Texture& t,Stage prev,Stage next)=0;
         virtual void setVbo      (const Buffer& b)=0;
         virtual void setIbo      (const Buffer* b,Detail::IndexClass cls)=0;
         virtual void draw        (size_t offset,size_t vertexCount)=0;

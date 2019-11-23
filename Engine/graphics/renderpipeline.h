@@ -10,6 +10,8 @@ namespace Tempest {
 class HeadlessDevice;
 class CommandBuffer;
 class UniformsLayout;
+template<class T>
+class Encoder;
 
 class RenderPipeline final {
   public:
@@ -28,6 +30,7 @@ class RenderPipeline final {
 
   friend class Tempest::HeadlessDevice;
   friend class Tempest::CommandBuffer;
+  friend class Tempest::Encoder<Tempest::CommandBuffer>;
 
   template<class T>
   friend class Tempest::Detail::ResourcePtr;
