@@ -41,11 +41,11 @@ struct TstButton:Button {
   };
 
 TEST(main,EventDispatcher_MouseEvent) {
-  EventDispatcher dis;
-
   Widget wx;
   wx.resize(1000,50);
   wx.setLayout(Vertical);
+
+  EventDispatcher dis(wx);
 
   TstButton& b0=wx.addWidget(new TstButton());
   TstButton& b1=wx.addWidget(new TstButton());

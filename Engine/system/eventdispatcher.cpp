@@ -5,6 +5,10 @@ using namespace Tempest;
 EventDispatcher::EventDispatcher() {
   }
 
+EventDispatcher::EventDispatcher(Widget &root)
+  :customRoot(&root){
+  }
+
 void EventDispatcher::dispatchMouseDown(Widget &wnd, MouseEvent &e) {
   mouseUp = implDispatch(wnd,e);
   }
@@ -189,7 +193,7 @@ std::shared_ptr<Widget::Ref> EventDispatcher::lock(std::weak_ptr<Widget::Ref> &w
   while(wx->owner()!=nullptr) {
     wx = wx->owner();
     }
-  if(dynamic_cast<Window*>(wx))
+  if(dynamic_cast<Window*>(wx) || wx==customRoot)
     return ptr;
   return nullptr;
   }

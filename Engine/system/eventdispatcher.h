@@ -10,6 +10,7 @@ namespace Tempest {
 class EventDispatcher final {
   public:
     EventDispatcher();
+    EventDispatcher(Widget& root);
 
     void dispatchMouseDown (Widget& wnd, Tempest::MouseEvent& event);
     void dispatchMouseUp   (Widget& wnd, Tempest::MouseEvent& event);
@@ -29,6 +30,7 @@ class EventDispatcher final {
 
     std::shared_ptr<Widget::Ref> lock(std::weak_ptr<Widget::Ref>& w);
 
+    Widget*                      customRoot=nullptr;
     std::weak_ptr<Widget::Ref>   mouseUp;
     std::weak_ptr<Widget::Ref>   mouseOver;
 
