@@ -208,7 +208,7 @@ Assets::str_path Assets::Directory::modulePath() {
 #elif defined(__LINUX__)
     using CHAR = char;
     CHAR term = CHAR('/');
-    str = dirname(str.c_str());
+    str = dirname(&str[0]);
 #else
 #error "TODO"
 #endif
