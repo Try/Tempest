@@ -7,6 +7,8 @@
 
 #ifdef __LINUX__
 #include <libgen.h>
+#include <linux/limits.h>
+#include <unistd.h>
 #endif
 
 #include <Tempest/Device>
@@ -176,29 +178,31 @@ Asset Assets::Directory::implOpen(str_path&& fpath) {
   return Asset();
   }
 
-Assets::str_path Assets::Directory::modulePath() {
 #if defined(__WINDOWS__)
-  WCHAR path[MAX_PATH]={};
-  GetModuleFileNameW(nullptr, path, MAX_PATH);
-
-  PathRemoveFileSpecW(path);
-  str_path str = reinterpret_cast<char16_t*>(path);
-  if(str.size()>0 &&  str.back()!='\\')
-     str.push_back('\\');
-  return str;
+static ssize_t implMouleFileName(wchar_t* out,size_t maxPath){
+  ssize_t len = ssize_t(GetModuleFileNameW(nullptr, out, maxPath));
+  if(len==maxPath)
+    return -1;
+  return len;
 #elif defined(__LINUX__)
-  char path[PATH_MAX]={};
-  ssize_t count = readlink("/proc/self/exe", path, PATH_MAX);
-  const char *path;
-  if(count != -1) {
-    str_path str = dirname(path);
-    if(str.size()>0 &&  str.back()!='/')
-       str.push_back('/');
-    }
-  return "";
+static ssize_t implMouleFileName(char* out,size_t maxPath){
+  return ::readlink("/proc/self/exe", out, maxPath);
 #else
 #error "TODO"
 #endif
+  }
+
+Assets::str_path Assets::Directory::modulePath() {
+  str_path str;
+  size_t sz=0;
+  while(true) {
+    sz+=256;
+    str.resize(sz);
+    ssize_t len = implMouleFileName(&str[0],sz);
+    if(len<0)
+      continue;
+    return str;
+    }
   }
 
 template<class ClsAsset,class File>
