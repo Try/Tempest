@@ -2,6 +2,11 @@
 
 #ifdef __WINDOWS__
 #include <windows.h>
+#include <shlwapi.h>
+#endif
+
+#ifdef __LINUX__
+#include <libgen.h>
 #endif
 
 #include <Tempest/Device>
@@ -9,6 +14,7 @@
 #include <Tempest/Texture2d>
 #include <Tempest/Sprite>
 #include <Tempest/Font>
+#include <Tempest/TextCodec>
 
 using namespace Tempest;
 
@@ -81,6 +87,30 @@ struct Assets::FontFile : Asset::Impl {
   Font                   fnt;
   };
 
+struct Assets::ShaderFile : Asset::Impl {
+  ShaderFile(Shader&& p,Assets::str_path&& path,Directory& owner)
+    :owner(owner),fpath(path),value(std::move(p)) {
+    }
+
+  static Shader tryOpen(Directory& owner,const Assets::str_path& fpath) {
+    return owner.device.loadShader(fpath.c_str());
+    }
+
+  const void* get(const std::type_info& t) override {
+    if(t==typeid(Tempest::Shader))
+      return &value;
+    return nullptr;
+    }
+
+  const str_path& path() const override {
+    return fpath;
+    }
+
+  Directory&             owner;
+  const Assets::str_path fpath;
+  Shader                 value;
+  };
+
 Assets::Assets(const char* path, Tempest::Device &dev) {
   impl.reset(new Directory(path,dev));
   }
@@ -93,21 +123,13 @@ Asset Assets::operator[](const char* file) const {
 
 Assets::Directory::Directory(const char *name, Device &dev)
 #ifndef __WINDOWS__
-  :path(name),device(dev),atlas(dev) {
-  if(path.size()!=0 && path.back()!='/')
-    path.push_back('/');
+  :path(modulePath()+name),device(dev),atlas(dev) {
 #else
   :device(dev),atlas(dev){
-  int len=MultiByteToWideChar(CP_UTF8,0,name,-1,nullptr,0);
-  if(len>1){
-    if(name[len-2]!='/')
-      len++;
-    path.resize(size_t(len-1));
-    MultiByteToWideChar(CP_UTF8,0,name,-1,reinterpret_cast<wchar_t*>(&path[0]),int(path.size()));
-    if(name[len-2]!='/')
-      path.back()='/';
-    }
+  path = modulePath()+TextCodec::toUtf16(name);
 #endif
+  if(path.size()!=0 && path.back()!='/')
+    path.push_back('/');
   }
 
 Asset Assets::Directory::open(const char *file) {
@@ -121,11 +143,6 @@ Asset Assets::Directory::open(const char *file) {
   memcpy(&fpath[0],path.c_str(),path.size()*sizeof(wchar_t));
   MultiByteToWideChar(CP_UTF8,0,file,-1,reinterpret_cast<wchar_t*>(&fpath[path.size()]),len-1);
 #endif
-  /*
-  auto i=files.find(fpath);
-  if(i!=files.end()){
-    return i->second;
-    }*/
 
   AssetHash ah;
   auto hash=ah(fpath);
@@ -140,7 +157,7 @@ Asset Assets::Directory::open(const char *file) {
   return a;
   }
 
-Asset Assets::Directory::implOpen(Assets::str_path&& fpath) {
+Asset Assets::Directory::implOpen(str_path&& fpath) {
   {
     auto a=implOpenTry<Pixmap,TextureFile>(fpath);
     if(a.second)
@@ -151,13 +168,62 @@ Asset Assets::Directory::implOpen(Assets::str_path&& fpath) {
     if(a.second)
       return a.first;
   }
+  {
+    auto a=implOpenTry<ShaderFile>(fpath);
+    if(a.second)
+      return a.first;
+  }
   return Asset();
   }
 
+Assets::str_path Assets::Directory::modulePath() {
+#if defined(__WINDOWS__)
+  WCHAR path[MAX_PATH]={};
+  GetModuleFileNameW(nullptr, path, MAX_PATH);
+
+  PathRemoveFileSpecW(path);
+  str_path str = reinterpret_cast<char16_t*>(path);
+  if(str.size()>0 &&  str.back()!='\\')
+     str.push_back('\\');
+  return str;
+#elif defined(__LINUX__)
+  char path[PATH_MAX]={};
+  ssize_t count = readlink("/proc/self/exe", path, PATH_MAX);
+  const char *path;
+  if(count != -1) {
+    str_path str = dirname(path);
+    if(str.size()>0 &&  str.back()!='/')
+       str.push_back('/');
+    }
+  return "";
+#else
+#error "TODO"
+#endif
+  }
+
 template<class ClsAsset,class File>
-std::pair<Asset,bool> Assets::Directory::implOpenTry(Assets::str_path& fpath) { // std::optional?
+std::pair<Asset,bool> Assets::Directory::implOpenTry(str_path& fpath) { // std::optional?
   try {
     ClsAsset p(fpath);
+    try {
+      auto ptr=std::make_shared<File>(std::move(p),std::move(fpath),*this);
+      return std::make_pair(Asset(std::move(ptr)),true);
+      }
+    catch(...) {
+      // fail, but asset file is valid
+      return std::make_pair(Asset(),false);
+      }
+    }
+  catch(...){
+    // unable to load -> next codec
+    }
+  return std::make_pair(Asset(),false);
+  }
+
+template<class File>
+std::pair<Asset,bool> Assets::Directory::implOpenTry(str_path& fpath) { // std::optional?
+  try {
+    auto p = File::tryOpen(*this,fpath);
     try {
       auto ptr=std::make_shared<File>(std::move(p),std::move(fpath),*this);
       return std::make_pair(Asset(std::move(ptr)),true);

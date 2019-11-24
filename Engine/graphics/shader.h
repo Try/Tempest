@@ -14,6 +14,8 @@ class Shader final {
     ~Shader();
     Shader& operator=(Shader&&)=default;
 
+    bool isEmpty() const { return impl.handler==nullptr; }
+
   private:
     Shader(Tempest::HeadlessDevice& dev,Detail::DSharedPtr<AbstractGraphicsApi::Shader*>&& impl);
 

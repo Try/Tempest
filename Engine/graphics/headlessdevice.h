@@ -25,6 +25,7 @@ class Fence;
 class Semaphore;
 
 class CommandPool;
+class RFile;
 
 class VideoBuffer;
 class Pixmap;
@@ -53,7 +54,9 @@ class HeadlessDevice {
                               Semaphore* done[], size_t doneCnt,
                               Fence* fdone);
 
-    Shader               loadShader(const char* filename);
+    Shader               loadShader(RFile&          file);
+    Shader               loadShader(const char*     filename);
+    Shader               loadShader(const char16_t* filename);
     Shader               loadShader(const char* source,const size_t length);
 
     const Caps&          caps() const;

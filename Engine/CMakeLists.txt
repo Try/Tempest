@@ -82,7 +82,7 @@ set_target_properties(
     )
 
 if(WIN32)
-  target_link_libraries(${PROJECT_NAME} PRIVATE vulkan-1)
+  target_link_libraries(${PROJECT_NAME} PRIVATE vulkan-1 shlwapi)
 else()
   target_link_libraries(${PROJECT_NAME} PRIVATE vulkan X11 GL)
 endif()

@@ -99,9 +99,7 @@ void HeadlessDevice::implDraw(const Tempest::PrimaryCommandBuffer* cmd[],  Abstr
            fdone);
   }
 
-Shader HeadlessDevice::loadShader(const char *filename) {
-  Tempest::RFile file(filename);
-
+Shader HeadlessDevice::loadShader(RFile &file) {
   const size_t fileSize=file.size();
 
   std::unique_ptr<uint32_t[]> buffer(new uint32_t[(fileSize+3)/4]);
@@ -111,6 +109,16 @@ Shader HeadlessDevice::loadShader(const char *filename) {
 
   Shader f(*this,api.createShader(dev,reinterpret_cast<const char*>(buffer.get()),size));
   return f;
+  }
+
+Shader HeadlessDevice::loadShader(const char *filename) {
+  Tempest::RFile file(filename);
+  return loadShader(file);
+  }
+
+Shader HeadlessDevice::loadShader(const char16_t *filename) {
+  Tempest::RFile file(filename);
+  return loadShader(file);
   }
 
 Shader HeadlessDevice::loadShader(const char *source, const size_t length) {

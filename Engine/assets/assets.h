@@ -49,14 +49,19 @@ class Assets final {
       template<class ClsAsset,class File>
       std::pair<Asset,bool> implOpenTry(str_path &path);
 
+      template<class File>
+      std::pair<Asset,bool> implOpenTry(str_path &path);
+
       str_path                           path;
       Tempest::Device&                   device;
       Tempest::TextureAtlas              atlas;
       std::vector<Asset>                 files;
+      str_path                           modulePath();
       };
 
     struct TextureFile;
     struct FontFile;
+    struct ShaderFile;
 
     std::unique_ptr<Provider> impl;
   };
