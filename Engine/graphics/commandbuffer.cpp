@@ -27,6 +27,14 @@ Encoder<CommandBuffer> CommandBuffer::startEncoding(HeadlessDevice &device, cons
   return Encoder<CommandBuffer>(this);
   }
 
+PrimaryCommandBuffer::PrimaryCommandBuffer(HeadlessDevice &dev, AbstractGraphicsApi::CommandBuffer *impl)
+  :dev(&dev), impl(impl){
+  }
+
+PrimaryCommandBuffer::~PrimaryCommandBuffer() {
+  delete impl.handler;
+  }
+
 Encoder<PrimaryCommandBuffer> PrimaryCommandBuffer::startEncoding(HeadlessDevice &device) {
   if(impl.handler!=nullptr && impl.handler->isRecording())
     throw ConcurentRecordingException();
@@ -35,8 +43,4 @@ Encoder<PrimaryCommandBuffer> PrimaryCommandBuffer::startEncoding(HeadlessDevice
     dev   = &device;
     }
   return Encoder<PrimaryCommandBuffer>(this);
-  }
-
-PrimaryCommandBuffer::PrimaryCommandBuffer(HeadlessDevice &dev, AbstractGraphicsApi::CommandBuffer *impl)
-  :dev(&dev), impl(impl){
   }

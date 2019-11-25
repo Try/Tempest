@@ -20,11 +20,11 @@ class FrameBufferLayout;
 class CommandBuffer;
 class PrimaryCommandBuffer;
 
-class CommandBuffer {
+class CommandBuffer final {
   public:
     CommandBuffer()=default;
     CommandBuffer(CommandBuffer&& f)=default;
-    virtual ~CommandBuffer();
+    ~CommandBuffer();
     CommandBuffer& operator = (CommandBuffer&& other)=default;
 
     auto startEncoding(Tempest::HeadlessDevice& dev,const FrameBufferLayout &lay) -> Encoder<CommandBuffer>;
@@ -44,8 +44,13 @@ class CommandBuffer {
   friend class Tempest::Encoder<PrimaryCommandBuffer>;
   };
 
-class PrimaryCommandBuffer {
+class PrimaryCommandBuffer final {
   public:
+    PrimaryCommandBuffer()=default;
+    PrimaryCommandBuffer(PrimaryCommandBuffer&& f)=default;
+    PrimaryCommandBuffer& operator = (PrimaryCommandBuffer&& other)=default;
+    ~PrimaryCommandBuffer();
+
     auto startEncoding(Tempest::HeadlessDevice& dev) -> Encoder<PrimaryCommandBuffer>;
 
   private:
