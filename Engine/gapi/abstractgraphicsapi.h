@@ -225,6 +225,7 @@ namespace Tempest {
         virtual ~CommandBuffer()=default;
         virtual void begin()=0;
         virtual void end()  =0;
+        virtual bool isRecording() const = 0;
         virtual void beginRenderPass(AbstractGraphicsApi::Fbo* f,
                                      AbstractGraphicsApi::Pass*  p,
                                      uint32_t width,uint32_t height)=0;

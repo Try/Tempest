@@ -12,6 +12,10 @@ class IncompleteFboException : std::exception {
   const char* what() const noexcept override { return "inconsistent framebuffer dimensions"; }
   };
 
+class ConcurentRecordingException : std::exception {
+  const char* what() const noexcept override { return "the command buffer is already in recording state"; }
+  };
+
 enum class SystemErrc {
   InvalidWindowClass   = 0,
   UnableToCreateWindow = 1,

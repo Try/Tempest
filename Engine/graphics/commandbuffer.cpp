@@ -3,6 +3,7 @@
 #include <Tempest/Device>
 #include <Tempest/RenderPipeline>
 #include <Tempest/Encoder>
+#include <Tempest/Except>
 
 using namespace Tempest;
 
@@ -17,6 +18,8 @@ CommandBuffer::~CommandBuffer() {
   }
 
 Encoder<CommandBuffer> CommandBuffer::startEncoding(HeadlessDevice &device, const FrameBufferLayout &lay) {
+  if(impl.handler!=nullptr && impl.handler->isRecording())
+    throw ConcurentRecordingException();
   if(impl.handler==nullptr || dev!=&device || layout.handler!=lay.impl.handler) {
     *this = device.commandSecondaryBuffer(lay);
     dev   = &device;
@@ -25,6 +28,8 @@ Encoder<CommandBuffer> CommandBuffer::startEncoding(HeadlessDevice &device, cons
   }
 
 Encoder<PrimaryCommandBuffer> PrimaryCommandBuffer::startEncoding(HeadlessDevice &device) {
+  if(impl.handler!=nullptr && impl.handler->isRecording())
+    throw ConcurentRecordingException();
   if(impl.handler==nullptr || dev!=&device) {
     *this = device.commandBuffer();
     dev   = &device;

@@ -51,8 +51,8 @@ class PrimaryCommandBuffer {
   private:
     PrimaryCommandBuffer(Tempest::HeadlessDevice& dev,AbstractGraphicsApi::CommandBuffer* impl);
 
-    Tempest::HeadlessDevice*                          dev=nullptr;
-    Detail::DPtr<AbstractGraphicsApi::CommandBuffer*> impl;
+    Tempest::HeadlessDevice*                            dev=nullptr;
+    Detail::DPtr<AbstractGraphicsApi::CommandBuffer*>   impl;
 
   friend class Tempest::HeadlessDevice;
   friend class Tempest::Encoder<PrimaryCommandBuffer>;

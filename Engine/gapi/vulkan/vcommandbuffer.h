@@ -42,6 +42,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void begin(Usage usage); // internal
     void begin();
     void end();
+    bool isRecording() const;
 
     void beginRenderPass(AbstractGraphicsApi::Fbo* f,
                          AbstractGraphicsApi::Pass*  p,
@@ -79,10 +80,9 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     VkDevice                                device=nullptr;
     VkCommandPool                           pool  =VK_NULL_HANDLE;
     Detail::DSharedPtr<VFramebufferLayout*> currentFbo;
-    //Detail::DSharedPtr<VFramebufferLayout*> currentLay;
     // secondary cmd buf
     Detail::DSharedPtr<VFramebufferLayout*> fbo;
-    //Detail::DSharedPtr<VFramebufferLayout*> lay;
+    bool                                    recording = false;
   };
 
 }}

@@ -79,11 +79,17 @@ void VCommandBuffer::begin(Usage usage) {
   beginInfo.pInheritanceInfo = inheritanceInfo.renderPass!=VK_NULL_HANDLE ? &inheritanceInfo : nullptr;
 
   vkAssert(vkBeginCommandBuffer(impl,&beginInfo));
+  recording = true;
   }
 
 void VCommandBuffer::end() {
   currentFbo = Detail::DSharedPtr<VFramebufferLayout*>{};
   vkAssert(vkEndCommandBuffer(impl));
+  recording = false;
+  }
+
+bool VCommandBuffer::isRecording() const {
+  return recording;
   }
 
 void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
@@ -316,7 +322,8 @@ void VCommandBuffer::changeLayout(Tempest::AbstractGraphicsApi::Texture &t,
   static const VkImageLayout frm[]={
     VK_IMAGE_LAYOUT_UNDEFINED,
     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
   changeLayout(reinterpret_cast<VTexture&>(t),Detail::nativeFormat(f),frm[uint8_t(prev)],frm[uint8_t(next)],VK_REMAINING_MIP_LEVELS);
   }
