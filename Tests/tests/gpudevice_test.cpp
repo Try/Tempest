@@ -1,6 +1,8 @@
 #include <Tempest/VulkanApi>
 #include <Tempest/Except>
 #include <Tempest/Device>
+#include <Tempest/Fence>
+#include <Tempest/Pixmap>
 #include <Tempest/Log>
 
 #include <gtest/gtest.h>
@@ -9,10 +11,121 @@
 using namespace testing;
 using namespace Tempest;
 
-TEST(main,VulkanApi) {
+struct Vertex {
+  float x,y;
+  };
+
+namespace Tempest {
+template<>
+inline VertexBufferDecl vertexBufferDecl<::Vertex>() {
+  return {Decl::float3,Decl::float3,Decl::float2,Decl::color};
+  }
+}
+
+static const Vertex   vboData[3] = {{-1,-1},{1,-1},{1,1}};
+static const uint16_t iboData[3] = {0,1,2};
+
+TEST(VulkanApi,VulkanApi) {
   try {
     VulkanApi api;
     (void)api;
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping vulkan testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+TEST(VulkanApi,Vbo) {
+  try {
+    VulkanApi      api{ApiFlags::Validation};
+    HeadlessDevice device(api);
+
+    auto vbo = device.loadVbo(vboData,3,BufferFlags::Static);
+    auto ibo = device.loadIbo(iboData,3,BufferFlags::Static);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping vulkan testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+TEST(VulkanApi,Shader) {
+  try {
+    VulkanApi      api{ApiFlags::Validation};
+    HeadlessDevice device(api);
+
+    auto vert = device.loadShader("shader/simple_test.vert.sprv");
+    auto frag = device.loadShader("shader/simple_test.frag.sprv");
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping vulkan testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+TEST(VulkanApi,Fbo) {
+  try {
+    VulkanApi      api{ApiFlags::Validation};
+    HeadlessDevice device(api);
+
+    auto tex = device.texture(TextureFormat::RGBA8,128,128,false);
+    auto fbo = device.frameBuffer(tex);
+    auto rp  = device.pass(Attachment(FboMode::PreserveOut,Color(0.f,0.f,1.f)));
+
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setPass(fbo,rp);
+    }
+
+    Fence sync(device);
+    device.draw(cmd,sync);
+    sync.wait();
+
+    auto pm = device.readPixels(tex);
+    pm.save("VulkanApi_Fbo.png");
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping vulkan testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+TEST(VulkanApi,Draw) {
+  try {
+    VulkanApi      api{ApiFlags::Validation};
+    HeadlessDevice device(api);
+
+    auto vbo  = device.loadVbo(vboData,3,BufferFlags::Static);
+    auto ibo  = device.loadIbo(iboData,3,BufferFlags::Static);
+
+    auto vert = device.loadShader("shader/simple_test.vert.sprv");
+    auto frag = device.loadShader("shader/simple_test.frag.sprv");
+    auto pipe = device.pipeline<Vertex>(Topology::Triangles,RenderState(),UniformsLayout(),vert,frag);
+
+    auto tex  = device.texture(TextureFormat::RGBA8,128,128,false);
+    auto fbo  = device.frameBuffer(tex);
+    auto rp   = device.pass(Attachment(FboMode::PreserveOut,Color(0.f,0.f,1.f)));
+
+    auto cmd  = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setPass(fbo,rp);
+      enc.setUniforms(pipe);
+      enc.draw(vbo,ibo);
+    }
+
+    Fence sync(device);
+    device.draw(cmd,sync);
+    sync.wait();
+
+    auto pm = device.readPixels(tex);
+    pm.save("VulkanApi_Draw.png");
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)

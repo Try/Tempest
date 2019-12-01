@@ -50,6 +50,11 @@ void HeadlessDevice::draw(const PrimaryCommandBuffer &cmd, const Semaphore &wait
   api.draw(dev,cmd.impl.handler,wait.impl.handler,nullptr,nullptr);
   }
 
+void HeadlessDevice::draw(const PrimaryCommandBuffer &cmd, Fence &fdone) {
+  const Tempest::PrimaryCommandBuffer *c[] = {&cmd};
+  draw(c,1,nullptr,0,nullptr,0,&fdone);
+  }
+
 void HeadlessDevice::draw(const PrimaryCommandBuffer &cmd, const Semaphore &wait, Semaphore &done, Fence &fdone) {
   api.draw(dev,cmd.impl.handler,wait.impl.handler,done.impl.handler,fdone.impl.handler);
   }

@@ -40,7 +40,7 @@ void VRenderPass::operator=(VRenderPass &&other) {
 
 VRenderPass::Impl &VRenderPass::instance(VFramebufferLayout &lay) {
   for(auto& i:impl)
-    if(lay.isCompatible(*i.lay.handler))
+    if(i.isCompatible(lay))
       return i;
 
   VkRenderPass val=VK_NULL_HANDLE;
@@ -58,6 +58,7 @@ VRenderPass::Impl &VRenderPass::instance(VFramebufferLayout &lay) {
         clear[i].color.float32[3] = cl.a();
         }
       }
+
     val = createInstance(device,lay.swapchain,input.get(),lay.frm.get(),attCount);
     impl.emplace_back(lay,val,std::move(clear));
     }
@@ -87,47 +88,23 @@ VkRenderPass VRenderPass::createInstance(VkDevice &device, VSwapchain *sw,
     const Attachment&        x = att[i];
     const VkFormat           f = format[i];
 
-    a.format         = f;
-    a.samples        = VK_SAMPLE_COUNT_1_BIT;
+    if(f==VK_FORMAT_UNDEFINED)
+      a.format = sw->format(); else
+      a.format = f;
 
-    a.loadOp         = bool(x.mode&FboMode::PreserveIn)  ? VK_ATTACHMENT_LOAD_OP_LOAD   : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    a.storeOp        = bool(x.mode&FboMode::PreserveOut) ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
-
-    if(a.format==VK_FORMAT_UNDEFINED)
-      a.format = sw->format();
-
-    if(bool(x.mode&FboMode::Clear)) {
-      a.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-      }
-
-    // Stencil not implemented
-    a.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    a.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-
+    a.samples = VK_SAMPLE_COUNT_1_BIT;
     r.attachment=i;
-    if(Detail::nativeIsDepthFormat(f)) {
-      subpass.pDepthStencilAttachment = &r;
-      a.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-      a.finalLayout   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-      r.layout        = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-      } else {
-      subpass.colorAttachmentCount    = 1; //TODO: multi-render target
-      subpass.pColorAttachments       = &r;
-      a.initialLayout  = bool(x.mode&FboMode::PreserveIn)          ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
-      a.finalLayout    = (x.mode&FboMode::Submit)==FboMode::Submit ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR          : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-      r.layout         = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-      }
+
+    setupAttach(a,r,x,subpass);
     }
 
   VkSubpassDependency dependency = {};
   dependency.srcSubpass      = VK_SUBPASS_EXTERNAL;
   dependency.srcStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-  dependency.srcAccessMask   = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+  dependency.srcAccessMask   = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
   dependency.dstSubpass      = 0;
   dependency.dstStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
   dependency.dstAccessMask   = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-  dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
   dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 
   VkRenderPassCreateInfo renderPassInfo = {};
@@ -141,6 +118,39 @@ VkRenderPass VRenderPass::createInstance(VkDevice &device, VSwapchain *sw,
 
   vkAssert(vkCreateRenderPass(device,&renderPassInfo,nullptr,&ret));
   return ret;
+  }
+
+void VRenderPass::setupAttach(VkAttachmentDescription &a, VkAttachmentReference& r,
+                              const Attachment& x, VkSubpassDescription& subpass) {
+  // Stencil not implemented
+  a.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  a.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
+  a.loadOp         = bool(x.mode&FboMode::PreserveIn)  ? VK_ATTACHMENT_LOAD_OP_LOAD   : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  a.storeOp        = bool(x.mode&FboMode::PreserveOut) ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  if(bool(x.mode&FboMode::Clear)) {
+    a.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    }
+
+  const bool init  = (a.loadOp ==VK_ATTACHMENT_LOAD_OP_LOAD);
+
+  // Note: finalLayout must not be VK_IMAGE_LAYOUT_UNDEFINED or VK_IMAGE_LAYOUT_PREINITIALIZED
+  // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkAttachmentDescription-finalLayout-00843
+  if(Detail::nativeIsDepthFormat(a.format)) {
+    subpass.pDepthStencilAttachment = &r;
+    a.initialLayout = init  ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
+    a.finalLayout   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    r.layout        = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    } else {
+    subpass.colorAttachmentCount    = 1; //TODO: multi-render target
+    subpass.pColorAttachments       = &r;
+    a.initialLayout  = init  ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
+    a.finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    r.layout         = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    if((x.mode&FboMode::Submit)==FboMode::Submit)
+      a.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    }
   }
 
 VkRenderPass VRenderPass::createLayoutInstance(VkDevice& device,VSwapchain &sw, const VkFormat *att, uint8_t attCount) {
@@ -203,4 +213,10 @@ VkRenderPass VRenderPass::createLayoutInstance(VkDevice& device,VSwapchain &sw, 
 
   vkAssert(vkCreateRenderPass(device,&renderPassInfo,nullptr,&ret));
   return ret;
+  }
+
+bool VRenderPass::Impl::isCompatible(VFramebufferLayout &l) const {
+  if(!lay.handler->isCompatible(l))
+    return false;
+  return true;
   }

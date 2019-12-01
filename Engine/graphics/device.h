@@ -19,7 +19,6 @@ class Device : public HeadlessDevice {
     uint8_t              maxFramesInFlight() const;
     uint8_t              frameId() const;
     uint64_t             frameCounter() const;
-    uint32_t             imageId() const;
 
     Frame                frame(uint32_t id);
     uint32_t             nextImage(Semaphore& onReady);

@@ -252,19 +252,6 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   Detail::VTexture buf=dx->allocator.alloc(w,h,mipCnt,frm);
   Detail::DSharedPtr<Detail::VTexture*> pbuf(new Detail::VTexture(std::move(buf)));
 
-  Detail::VDevice::Data dat(*dx);
-  VkImageLayout lay = VK_IMAGE_LAYOUT_UNDEFINED;
-  if(isDepthFormat(frm)) {
-    lay = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    } else {
-    lay = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    }
-
-  dat.hold(pbuf);
-  dat.changeLayout(*pbuf.handler, Detail::nativeFormat(frm), VK_IMAGE_LAYOUT_UNDEFINED, lay, mipCnt);
-  dat.commit();
-
-  //dx->waitData();
   return PTexture(pbuf.handler);
   }
 

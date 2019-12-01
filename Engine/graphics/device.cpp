@@ -39,10 +39,6 @@ uint64_t Device::frameCounter() const {
   return framesCounter;
   }
 
-uint32_t Device::imageId() const {
-  return imgId;
-  }
-
 Frame Device::frame(uint32_t id) {
   Frame fr(*this,api.getImage(implHandle(),impl.swapchain,id),id);
   return fr;

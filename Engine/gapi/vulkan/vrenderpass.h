@@ -33,6 +33,8 @@ class VRenderPass : public AbstractGraphicsApi::Pass {
       DSharedPtr<VFramebufferLayout*> lay;
       VkRenderPass                    impl=VK_NULL_HANDLE;
       std::unique_ptr<VkClearValue[]> clear;
+
+      bool                            isCompatible(VFramebufferLayout &lay) const;
       };
 
     Impl&                           instance(VFramebufferLayout &lay);
@@ -46,7 +48,14 @@ class VRenderPass : public AbstractGraphicsApi::Pass {
     std::vector<Impl>               impl;
     std::unique_ptr<Attachment[]>   input;
 
-    static VkRenderPass             createInstance      (VkDevice &device, VSwapchain* sw, const Attachment *attach, const VkFormat *frm, uint8_t attCount);
+    static VkRenderPass             createInstance      (VkDevice &device, VSwapchain* sw,
+                                                         const Attachment *attach, const VkFormat *frm,
+                                                         uint8_t attCount);
+
+    static void                     setupAttach(VkAttachmentDescription& desc,
+                                                VkAttachmentReference &r,
+                                                const Attachment &x,
+                                                VkSubpassDescription &subpass);
   };
 
 }}

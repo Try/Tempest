@@ -55,8 +55,6 @@ class Encoder<Tempest::CommandBuffer> {
     void draw(const VertexBuffer<T>& vbo,const IndexBuffer<I>& ibo,size_t offset,size_t count)
          { implDraw(vbo.impl,ibo.impl,Detail::indexCls<I>(),offset,count); }
 
-    void setLayout(Texture2d &t, TextureLayout dest);
-
   private:
     Encoder(CommandBuffer* ow);
     Encoder(AbstractGraphicsApi::CommandBuffer* impl);
@@ -66,28 +64,20 @@ class Encoder<Tempest::CommandBuffer> {
       uint32_t height=0;
       };
 
-    struct ResState {
-      AbstractGraphicsApi::Texture* res = nullptr;
-      TextureLayout                 lay = TextureLayout::Undefined;
-      };
-
     struct State {
       const AbstractGraphicsApi::Pipeline* curPipeline=nullptr;
       const VideoBuffer*                   curVbo     =nullptr;
       const VideoBuffer*                   curIbo     =nullptr;
       Viewport                             vp;
-
-      std::vector<ResState>                resState;
       };
 
     Tempest::CommandBuffer*             owner=nullptr;
     AbstractGraphicsApi::CommandBuffer* impl =nullptr;
     State                               state;
 
-    virtual void implEndRenderPass(){}
-    void implDraw(const VideoBuffer& vbo, size_t offset, size_t size);
-    void implDraw(const VideoBuffer &vbo, const VideoBuffer &ibo, Detail::IndexClass index, size_t offset, size_t size);
-    ResState* findState(AbstractGraphicsApi::Texture* t);
+    void         implDraw(const VideoBuffer& vbo, size_t offset, size_t size);
+    void         implDraw(const VideoBuffer &vbo, const VideoBuffer &ibo, Detail::IndexClass index,
+                          size_t offset, size_t size);
 
   friend class CommandBuffer;
   friend class Encoder<Tempest::PrimaryCommandBuffer>;
@@ -104,25 +94,31 @@ class Encoder<Tempest::PrimaryCommandBuffer> : public Encoder<Tempest::CommandBu
     void setPass(const FrameBuffer& fbo, const RenderPass& p, int      width, int      height);
     void setPass(const FrameBuffer& fbo, const RenderPass& p, uint32_t width, uint32_t height);
 
-    void exec(const FrameBuffer& fbo, const RenderPass& p, const CommandBuffer& buf);
+    void setLayout(Texture2d &t, TextureLayout dest);
+
+    void exec(const CommandBuffer& buf);
 
   private:
     Encoder(PrimaryCommandBuffer* ow);
-    void implEndRenderPass();
 
-    enum Mode : uint8_t {
-      Idle   = 0,
-      Prime  = 1,
-      Second = 2
+    struct ResState {
+      AbstractGraphicsApi::Texture* res     = nullptr;
+      TextureFormat                 frm     = TextureFormat::Undefined;
+      TextureLayout                 next    = TextureLayout::Undefined;
+      TextureLayout                 lay     = TextureLayout::Undefined;
+      bool                          pending = false;
       };
 
     struct Pass {
       const FrameBuffer* fbo  = nullptr;
       const RenderPass*  pass = nullptr;
-      Mode               mode = Idle;
       };
 
-    Pass     curPass;
+    void      implEndRenderPass();
+    ResState* findState(AbstractGraphicsApi::Texture* t);
+
+    Pass                  curPass;
+    std::vector<ResState> resState;
 
   friend class PrimaryCommandBuffer;
   };

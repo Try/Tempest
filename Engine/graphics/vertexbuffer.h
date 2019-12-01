@@ -14,6 +14,15 @@ class VertexBufferDyn;
 template<class T>
 class Encoder;
 
+class VertexBufferDecl final {
+  public:
+    VertexBufferDecl(const std::initializer_list<Decl::ComponentType>& i):data(i){}
+
+  private:
+    std::initializer_list<Decl::ComponentType> data;
+  friend class HeadlessDevice;
+  };
+
 template<class T>
 class VertexBuffer {
   public:
@@ -55,5 +64,5 @@ class VertexBufferDyn:public VertexBuffer<T> {
   };
 
 template<class T>
-inline std::initializer_list<Decl::ComponentType> vertexBufferDecl(){ return{}; };
+inline VertexBufferDecl vertexBufferDecl();
 }

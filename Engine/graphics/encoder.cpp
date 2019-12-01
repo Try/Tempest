@@ -44,7 +44,6 @@ Encoder<CommandBuffer> &Encoder<CommandBuffer>::operator =(Encoder<CommandBuffer
 Encoder<Tempest::CommandBuffer>::~Encoder() {
   if(impl==nullptr)
     return;
-  implEndRenderPass();
   impl->end();
   }
 
@@ -112,40 +111,19 @@ void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer &vbo, const Vid
   impl->drawIndexed(offset,size,0);
   }
 
-void Encoder<Tempest::CommandBuffer>::setLayout(Texture2d &t, TextureLayout dest) {
-  if(t.impl.handler==nullptr)
-    return;
-
-  ResState* st = findState(t.impl.handler);
-  if(st->lay==dest)
-    return;
-  implEndRenderPass();
-  impl->changeLayout(*t.impl.handler,t.frm,st->lay,dest);
-  st->lay = dest;
-  }
-
-Encoder<CommandBuffer>::ResState *Encoder<CommandBuffer>::findState(AbstractGraphicsApi::Texture *handler) {
-  for(auto& i:state.resState)
-    if(i.res==handler) {
-      return &i;
-      }
-  ResState st;
-  st.res = handler;
-  st.lay = TextureLayout::Undefined;
-  state.resState.push_back(st);
-  return &state.resState.back();
-  }
 
 Encoder<PrimaryCommandBuffer>::Encoder(PrimaryCommandBuffer *ow)
   :Encoder<CommandBuffer>(ow->impl.handler) {
   }
 
 Encoder<PrimaryCommandBuffer>::Encoder(Encoder<PrimaryCommandBuffer> &&e)
-  :Encoder<CommandBuffer>(std::move(e)) {
+  :Encoder<CommandBuffer>(std::move(e)), curPass(std::move(e.curPass)), resState(std::move(e.resState)) {
   }
 
 Encoder<PrimaryCommandBuffer> &Encoder<PrimaryCommandBuffer>::operator =(Encoder<PrimaryCommandBuffer> &&e) {
   Encoder<CommandBuffer>::operator=(std::move(e));
+  std::swap(curPass, e.curPass);
+  std::swap(resState,e.resState);
   return *this;
   }
 
@@ -170,7 +148,6 @@ void Encoder<PrimaryCommandBuffer>::setPass(const FrameBuffer &fbo, const Render
   impl->beginRenderPass(fbo.impl.handler,p.impl.handler,width,height);
   curPass.fbo  = &fbo;
   curPass.pass = &p;
-  curPass.mode = Prime;
 
   state.vp.width     = width;
   state.vp.height    = height;
@@ -178,31 +155,44 @@ void Encoder<PrimaryCommandBuffer>::setPass(const FrameBuffer &fbo, const Render
   }
 
 void Encoder<PrimaryCommandBuffer>::implEndRenderPass() {
-  if(curPass.mode==Idle)
-    return;
-  state.curPipeline = nullptr;
-  curPass           = Pass();
-  impl->endRenderPass();
-  }
-
-void Encoder<PrimaryCommandBuffer>::exec(const FrameBuffer& fbo, const RenderPass& p,const CommandBuffer &buf) {
-  if(buf.impl.handler==nullptr)
-    return;
-
-  const uint32_t width =fbo.w();
-  const uint32_t height=fbo.h();
-
-  if(curPass.fbo!=&fbo || curPass.pass!=&p ||
-     state.vp.width!=width || state.vp.height!=height || curPass.mode!=Second) {
-    implEndRenderPass();
-    impl->beginSecondaryPass(fbo.impl.handler,p.impl.handler,width,height);
-
-    curPass.fbo     = &fbo;
-    curPass.pass    = &p;
-    state.vp.width  = width;
-    state.vp.height = height;
-    curPass.mode    = Second;
+  if(curPass.pass!=nullptr) {
+    state.curPipeline = nullptr;
+    curPass           = Pass();
+    impl->endRenderPass();
     }
 
+  for(auto& i:resState)
+    if(i.pending) {
+      impl->changeLayout(*i.res,i.frm,i.lay,i.next);
+      i.lay     = i.next;
+      i.pending = false;
+      }
+  }
+
+Encoder<PrimaryCommandBuffer>::ResState *Encoder<PrimaryCommandBuffer>::findState(AbstractGraphicsApi::Texture *handler) {
+  for(auto& i:resState)
+    if(i.res==handler) {
+      return &i;
+      }
+  ResState st;
+  st.res = handler;
+  st.lay = TextureLayout::Undefined;
+  resState.push_back(st);
+  return &resState.back();
+  }
+
+void Encoder<Tempest::PrimaryCommandBuffer>::setLayout(Texture2d &t, TextureLayout dest) {
+  if(t.impl.handler==nullptr)
+    return;
+
+  ResState* st = findState(t.impl.handler);
+  st->frm      = t.frm;
+  st->next     = dest;
+  st->pending  = true;
+  }
+
+void Encoder<PrimaryCommandBuffer>::exec(const CommandBuffer &buf) {
+  if(buf.impl.handler==nullptr)
+    return;
   impl->exec(*buf.impl.handler);
   }

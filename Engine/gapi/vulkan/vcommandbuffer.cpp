@@ -14,8 +14,125 @@
 
 using namespace Tempest::Detail;
 
+struct VCommandBuffer::Secondarys final {
+  Secondarys(VkDevice device, VkCommandPool pool)
+    :device(device), pool(pool){
+    }
+
+  ~Secondarys() {
+    if(secondaryChunks.empty())
+      return;
+    vkFreeCommandBuffers(device,pool,secondaryChunks.size(),secondaryChunks.data());
+    }
+
+  void flushSecondary(VkCommandBuffer mainCmd) {
+    if(nonFlushed!=nullptr){
+      vkAssert(vkEndCommandBuffer(nonFlushed));
+      vkCmdExecuteCommands(mainCmd,1,&nonFlushed);
+      nonFlushed = nullptr;
+      }
+    }
+
+  void allocChunk(VkCommandBuffer mainCmd,const VFramebufferLayout& fboLay) {
+    flushSecondary(mainCmd);
+
+    VkCommandBuffer buffer = nullptr;
+    VkCommandBufferAllocateInfo allocInfo = {};
+    allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool        = pool;
+    allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+    allocInfo.commandBufferCount = 1;
+
+    vkAssert(vkAllocateCommandBuffers(device,&allocInfo,&buffer));
+    try {
+      VkCommandBufferInheritanceInfo inheritanceInfo={};
+      inheritanceInfo.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+      inheritanceInfo.framebuffer = VK_NULL_HANDLE;
+      inheritanceInfo.renderPass  = fboLay.impl;
+
+      VkCommandBufferBeginInfo beginInfo = {};
+      beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+      beginInfo.flags            = SIMULTANEOUS_USE_BIT|RENDER_PASS_CONTINUE_BIT;
+      beginInfo.pInheritanceInfo = &inheritanceInfo;
+
+      vkAssert(vkBeginCommandBuffer(buffer,&beginInfo));
+
+      secondaryChunks.push_back(buffer);
+      nonFlushed = buffer;
+      }
+    catch(...) {
+      vkFreeCommandBuffers(device,pool,1,&buffer);
+      throw;
+      }
+    }
+
+  VkCommandBuffer back() {
+    return secondaryChunks.back();
+    }
+
+  VkDevice                     device = nullptr;
+  VkCommandPool                pool   = VK_NULL_HANDLE;
+
+  VkCommandBuffer              nonFlushed=nullptr;
+  std::vector<VkCommandBuffer> secondaryChunks;
+  };
+
+struct VCommandBuffer::BuildState final {
+  Detail::DSharedPtr<VFramebufferLayout*> currentFbo;
+  RpState                                 state=NoPass;
+  Secondarys                              sec;
+
+  BuildState(VkDevice device, VkCommandPool pool)
+    :sec(device,pool){
+    }
+
+  void startPass(VkCommandBuffer impl, VFramebuffer* fbo, VRenderPass* pass,
+                 uint32_t width,uint32_t height) {
+    if(state!=NoPass)
+      vkCmdEndRenderPass(impl);
+
+    if(fbo->rp.handler->attCount!=pass->attCount)
+      throw IncompleteFboException();
+
+    auto& rp = pass->instance(*fbo->rp.handler);
+
+    VkRenderPassBeginInfo renderPassInfo = {};
+    renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass        = rp.impl;
+    renderPassInfo.framebuffer       = fbo->impl;
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = {width,height};
+
+    renderPassInfo.clearValueCount   = pass->attCount;
+    renderPassInfo.pClearValues      = rp.clear.get();
+    vkCmdBeginRenderPass(impl, &renderPassInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+
+    currentFbo = fbo->rp;
+    state = Pending;
+    }
+
+  void stopPass(VkCommandBuffer impl) {
+    sec.flushSecondary(impl);
+    vkCmdEndRenderPass(impl);
+    state = NoPass;
+    }
+
+  VkCommandBuffer adjustRp(VkCommandBuffer impl,bool sec) {
+    if(sec) {
+      state = Secondary;
+      return impl;
+      }
+
+    if(state!=Inline)
+      this->sec.allocChunk(impl,*currentFbo.handler);
+
+    state = Inline;
+    return this->sec.back();
+    }
+  };
+
 VCommandBuffer::VCommandBuffer(VDevice& device, VCommandPool& pool, VFramebufferLayout *fbo, CmdType secondary)
-  :device(device.device), pool(pool.impl), fbo(fbo) {
+  :device(device.device), pool(pool.impl), fboLay(fbo) {
   VkCommandBufferAllocateInfo allocInfo = {};
   allocInfo.sType             =VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   allocInfo.commandPool       =pool.impl;
@@ -26,31 +143,34 @@ VCommandBuffer::VCommandBuffer(VDevice& device, VCommandPool& pool, VFramebuffer
   }
 
 VCommandBuffer::VCommandBuffer(VCommandBuffer &&other) {
-  std::swap(device,    other.device);
-  std::swap(pool,      other.pool);
-  std::swap(fbo,       other.fbo);
-  std::swap(currentFbo,other.currentFbo);
-  std::swap(impl,      other.impl);
+  *this = std::move(other);
   }
 
 VCommandBuffer::~VCommandBuffer() {
   if(device==nullptr || impl==nullptr)
     return;
   vkFreeCommandBuffers(device,pool,1,&impl);
+  if(!chunks.empty())
+    vkFreeCommandBuffers(device,pool,chunks.size(),chunks.data());
   }
 
 VCommandBuffer& VCommandBuffer::operator=(VCommandBuffer &&other) {
-  std::swap(device,    other.device);
-  std::swap(pool,      other.pool);
-  std::swap(fbo,       other.fbo);
-  std::swap(currentFbo,other.currentFbo);
-  std::swap(impl,      other.impl);
+  std::swap(impl,   other.impl);
+  std::swap(device, other.device);
+  std::swap(pool,   other.pool);
+  std::swap(bstate, other.bstate);
+  std::swap(chunks, other.chunks);
+  std::swap(fboLay, other.fboLay);
   return *this;
   }
 
 void VCommandBuffer::reset() {
   vkResetCommandBuffer(impl,VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
-  currentFbo = Detail::DSharedPtr<VFramebufferLayout*>{};
+  if(!chunks.empty()) {
+    vkFreeCommandBuffers(device,pool,chunks.size(),chunks.data());
+    chunks.clear();
+    }
+  bstate.reset();
   }
 
 void VCommandBuffer::begin() {
@@ -58,19 +178,23 @@ void VCommandBuffer::begin() {
   }
 
 void VCommandBuffer::begin(Usage usage) {
-  VkCommandBufferUsageFlags      usageFlags = usage;//SIMULTANEOUS_USE_BIT;
+  VkCommandBufferUsageFlags      usageFlags = usage;
   VkCommandBufferInheritanceInfo inheritanceInfo={};
 
-  // secondary pass
-  if(fbo.handler!=nullptr  && fbo.handler->impl!=VK_NULL_HANDLE){
+  if(isSecondary()){
+    // secondary pass
     inheritanceInfo.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
     inheritanceInfo.framebuffer = VK_NULL_HANDLE;
-    inheritanceInfo.renderPass  = fbo.handler->impl;
+    inheritanceInfo.renderPass  = fboLay.handler->impl;
 
     usageFlags = SIMULTANEOUS_USE_BIT|RENDER_PASS_CONTINUE_BIT;
-    currentFbo = fbo;
+    //bstate->currentFbo = fboLay;
     } else {
-    currentFbo = Detail::DSharedPtr<VFramebufferLayout*>{};
+    // prime pass
+    if(usage==SIMULTANEOUS_USE_BIT) {
+      bstate.reset(new BuildState(device,pool));
+      bstate->currentFbo = Detail::DSharedPtr<VFramebufferLayout*>{};
+      }
     }
 
   VkCommandBufferBeginInfo beginInfo = {};
@@ -79,17 +203,18 @@ void VCommandBuffer::begin(Usage usage) {
   beginInfo.pInheritanceInfo = inheritanceInfo.renderPass!=VK_NULL_HANDLE ? &inheritanceInfo : nullptr;
 
   vkAssert(vkBeginCommandBuffer(impl,&beginInfo));
-  recording = true;
   }
 
 void VCommandBuffer::end() {
-  currentFbo = Detail::DSharedPtr<VFramebufferLayout*>{};
+  if(bstate!=nullptr) {
+    std::swap(chunks,bstate->sec.secondaryChunks);
+    bstate.reset();
+    }
   vkAssert(vkEndCommandBuffer(impl));
-  recording = false;
   }
 
 bool VCommandBuffer::isRecording() const {
-  return recording;
+  return bstate!=nullptr;
   }
 
 void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
@@ -98,110 +223,39 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
   VFramebuffer* fbo =reinterpret_cast<VFramebuffer*>(f);
   VRenderPass*  pass=reinterpret_cast<VRenderPass*>(p);
 
-  currentFbo = fbo->rp;
-  auto& rp   = pass->instance(*fbo->rp.handler);
-
-  VkRenderPassBeginInfo renderPassInfo = {};
-  renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  renderPassInfo.renderPass        = rp.impl;
-  renderPassInfo.framebuffer       = fbo->impl;
-  renderPassInfo.renderArea.offset = {0, 0};
-  renderPassInfo.renderArea.extent = {width,height};
-
-  renderPassInfo.clearValueCount   = pass->attCount;
-  renderPassInfo.pClearValues      = rp.clear.get();
-
-  vkCmdBeginRenderPass(impl, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-  }
-
-void VCommandBuffer::beginSecondaryPass(Tempest::AbstractGraphicsApi::Fbo *f,
-                                        Tempest::AbstractGraphicsApi::Pass *p,
-                                        uint32_t width, uint32_t height) {
-  VFramebuffer* fbo =reinterpret_cast<VFramebuffer*>(f);
-  VRenderPass*  pass=reinterpret_cast<VRenderPass*>(p);
-
-  auto& rp   = pass->instance(*fbo->rp.handler);
-
-  VkRenderPassBeginInfo renderPassInfo = {};
-  renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  renderPassInfo.renderPass        = rp.impl;
-  renderPassInfo.framebuffer       = fbo->impl;
-  renderPassInfo.renderArea.offset = {0, 0};
-  renderPassInfo.renderArea.extent = {width,height};
-
-  renderPassInfo.clearValueCount   = pass->attCount;
-  renderPassInfo.pClearValues      = rp.clear.get();
-
-  vkCmdBeginRenderPass(impl, &renderPassInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+  bstate->startPass(impl,fbo,pass,width,height);
   }
 
 void VCommandBuffer::endRenderPass() {
-  vkCmdEndRenderPass(impl);
-  }
-
-void VCommandBuffer::clear(AbstractGraphicsApi::Image& image,
-                           float r, float g, float b, float a) {
-  VImage&     img=reinterpret_cast<VImage&>(image);
-  uint32_t presentQueueFamily = img.presentQueueFamily;
-
-  VkImageSubresourceRange subResourceRange = {};
-  subResourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-  subResourceRange.baseMipLevel   = 0;
-  subResourceRange.levelCount     = 1;
-  subResourceRange.baseArrayLayer = 0;
-  subResourceRange.layerCount     = 1;
-
-  VkImageMemoryBarrier presentToClearBarrier = {};
-  presentToClearBarrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-  presentToClearBarrier.srcAccessMask       = VK_ACCESS_MEMORY_READ_BIT;
-  presentToClearBarrier.dstAccessMask       = VK_ACCESS_TRANSFER_WRITE_BIT;
-  presentToClearBarrier.oldLayout           = VK_IMAGE_LAYOUT_UNDEFINED;
-  presentToClearBarrier.newLayout           = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-  presentToClearBarrier.srcQueueFamilyIndex = presentQueueFamily;
-  presentToClearBarrier.dstQueueFamilyIndex = presentQueueFamily;
-  presentToClearBarrier.image               = img.impl;
-  presentToClearBarrier.subresourceRange    = subResourceRange;
-
-  VkImageMemoryBarrier clearToPresentBarrier = {};
-  clearToPresentBarrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-  clearToPresentBarrier.srcAccessMask       = VK_ACCESS_TRANSFER_WRITE_BIT;
-  clearToPresentBarrier.dstAccessMask       = VK_ACCESS_MEMORY_READ_BIT;
-  clearToPresentBarrier.oldLayout           = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-  clearToPresentBarrier.newLayout           = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-  clearToPresentBarrier.srcQueueFamilyIndex = presentQueueFamily;
-  clearToPresentBarrier.dstQueueFamilyIndex = presentQueueFamily;
-  clearToPresentBarrier.image               = img.impl;
-  clearToPresentBarrier.subresourceRange    = subResourceRange;
-
-  VkClearColorValue clearColor = { {r,g,b,a} };
-  VkClearValue clearValue = {};
-  clearValue.color = clearColor;
-
-  vkCmdPipelineBarrier(impl, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                       VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &presentToClearBarrier);
-  vkCmdClearColorImage(impl,img.impl,
-                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,&clearColor,1,&subResourceRange);
-  vkCmdPipelineBarrier(impl, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                       VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &clearToPresentBarrier);
+  bstate->stopPass(impl);
   }
 
 void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p,uint32_t w,uint32_t h) {
-  VPipeline&           px = reinterpret_cast<VPipeline&>          (p);
-  VFramebufferLayout&  l  = reinterpret_cast<VFramebufferLayout&> (*currentFbo.handler);
-  auto& v = px.instance(l,w,h);
-  vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v.val);
+  auto cmd = getBuffer();
+
+  VPipeline&           px = reinterpret_cast<VPipeline&>(p);
+  VFramebufferLayout*  l;
+  if(impl==cmd)
+    l = reinterpret_cast<VFramebufferLayout*>(fboLay.handler); else
+    l = reinterpret_cast<VFramebufferLayout*>(bstate->currentFbo.handler);
+  auto& v = px.instance(*l,w,h);
+  vkCmdBindPipeline(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,v.val);
   }
 
 void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u, size_t offc, const uint32_t *offv) {
+  auto cmd = getBuffer();
+
   VPipeline&        px=reinterpret_cast<VPipeline&>(p);
   VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
-  vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,
+  vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,
                           px.pipelineLayout,0,
                           1,ux.desc,
                           offc,offv);
   }
 
 void VCommandBuffer::setViewport(const Tempest::Rect &r) {
+  auto cmd = getBuffer();
+
   VkViewport vk={};
   vk.x        = r.x;
   vk.y        = r.y;
@@ -209,29 +263,33 @@ void VCommandBuffer::setViewport(const Tempest::Rect &r) {
   vk.height   = r.h;
   vk.minDepth = 0;
   vk.maxDepth = 1;
-  vkCmdSetViewport(impl,0,1,&vk);
+  vkCmdSetViewport(cmd,0,1,&vk);
   }
 
 void VCommandBuffer::exec(const CommandBuffer &buf) {
-  const VCommandBuffer& cmd=reinterpret_cast<const VCommandBuffer&>(buf);
-  vkCmdExecuteCommands(impl,1,&cmd.impl);
+  auto cmd = bstate->adjustRp(impl,true);
+  const VCommandBuffer& ecmd=reinterpret_cast<const VCommandBuffer&>(buf);
+  vkCmdExecuteCommands(cmd,1,&ecmd.impl);
   }
 
 void VCommandBuffer::draw(size_t offset,size_t size) {
-  vkCmdDraw(impl,size, 1, offset,0);
+  auto cmd = getBuffer();
+  vkCmdDraw(cmd,size, 1, offset,0);
   }
 
 void VCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset) {
-  vkCmdDrawIndexed(impl,isize,1, ioffset, int32_t(voffset),0);
+  auto cmd = getBuffer();
+  vkCmdDrawIndexed(cmd,isize,1, ioffset, int32_t(voffset),0);
   }
 
 void VCommandBuffer::setVbo(const Tempest::AbstractGraphicsApi::Buffer &b) {
+  auto cmd = getBuffer();
   const VBuffer& vbo=reinterpret_cast<const VBuffer&>(b);
 
   std::initializer_list<VkBuffer>     buffers = {vbo.impl};
   std::initializer_list<VkDeviceSize> offsets = {0};
   vkCmdBindVertexBuffers(
-        impl, 0, buffers.size(),
+        cmd, 0, buffers.size(),
         buffers.begin(),
         offsets.begin() );
   }
@@ -244,8 +302,10 @@ void VCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer *b,Detail::IndexCl
     VK_INDEX_TYPE_UINT16,
     VK_INDEX_TYPE_UINT32
     };
+
+  auto cmd = getBuffer();
   const VBuffer& ibo=reinterpret_cast<const VBuffer&>(*b);
-  vkCmdBindIndexBuffer(impl,ibo.impl,0,type[uint32_t(cls)]);
+  vkCmdBindIndexBuffer(cmd,ibo.impl,0,type[uint32_t(cls)]);
   }
 
 void VCommandBuffer::flush(const VBuffer &src, size_t size) {
@@ -434,6 +494,7 @@ void VCommandBuffer::changeLayout(VTexture &dest, VkFormat imageFormat,
 
   barrier.srcAccessMask = srcAccessMask;
   barrier.dstAccessMask = dstAccessMask;
+
   vkCmdPipelineBarrier(
       impl,
       sourceStage, destStage,
@@ -525,4 +586,14 @@ void VCommandBuffer::generateMipmap(VTexture& image,
                        0, nullptr,
                        0, nullptr,
                        1, &barrier);
+  }
+
+bool VCommandBuffer::isSecondary() const {
+  return fboLay.handler!=nullptr && fboLay.handler->impl!=VK_NULL_HANDLE;
+  }
+
+VkCommandBuffer VCommandBuffer::getBuffer() {
+  if(bstate==nullptr)
+    return impl;
+  return bstate->adjustRp(impl,false);
   }

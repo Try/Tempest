@@ -28,6 +28,25 @@ else()
 #  message( FATAL_ERROR "No googletest src dir found - set GOOGLETEST_DIR to enable!")
 endif()
 
+# GLSL to SPIRV compiler
+find_program(GLSLANGVALIDATOR glslangValidator)
+if(NOT GLSLANGVALIDATOR)
+  message(FATAL_ERROR "glslangValidator required")
+endif()
+
+function(compile_shader SOURCE)
+  set(OUTPUT_FILE "${CMAKE_CURRENT_BINARY_DIR}/testsuite/shader/${SOURCE}.sprv")
+  set(SOURCE_FILE "${CMAKE_SOURCE_DIR}/../shader/${SOURCE}")
+
+  add_custom_command(
+    OUTPUT ${OUTPUT_FILE}
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/testsuite/shader/"
+    COMMAND ${GLSLANGVALIDATOR} -V ${SOURCE_FILE} -o ${OUTPUT_FILE}
+    DEPENDS ${SOURCE_FILE})
+  set(SHADERS ${SHADERS} ${OUTPUT_FILE} PARENT_SCOPE)
+endfunction(compile_shader)
+
+
 file(GLOB SOURCES
   "*.h"
   "*.cpp"
@@ -35,8 +54,12 @@ file(GLOB SOURCES
 
 include_directories(${GTestSrc} ${GTestSrc}/include ${GMockSrc} ${GMockSrc}/include)
 
+compile_shader(simple_test.vert)
+compile_shader(simple_test.frag)
+
 add_executable(${PROJECT_NAME}
   ${SOURCES}
+  ${SHADERS}
   ${GTestSrc}/src/gtest-all.cc
   ${GMockSrc}/src/gmock-all.cc)
 
@@ -48,13 +71,14 @@ if(UNIX)
 endif()
 
 add_test(${PROJECT_NAME} COMMAND ${PROJECT_NAME})
+
 target_link_libraries(${PROJECT_NAME} MoltenTempest)
 
 # copy data to binary directory
 add_custom_command(
     TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_SOURCE_DIR}/../../bin/
+    COMMAND ${CMAKE_COMMAND}
+    -E copy_directory ${CMAKE_SOURCE_DIR}/../../bin/
     ${CMAKE_CURRENT_BINARY_DIR}/testsuite/data/)
 
 install(

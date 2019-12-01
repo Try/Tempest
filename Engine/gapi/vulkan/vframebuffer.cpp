@@ -10,7 +10,7 @@ using namespace Tempest::Detail;
 
 VFramebuffer::VFramebuffer(VDevice& device, VFramebufferLayout &lay, VSwapchain& swapchain, size_t image)
   :device(device.device) {
-  rp   = Detail::DSharedPtr<VFramebufferLayout*>(&lay);
+  rp = Detail::DSharedPtr<VFramebufferLayout*>(&lay);
 
   VkImageView attach[1] = {swapchain.swapChainImageViews[image]};
   impl = allocFbo(swapchain.w(),swapchain.h(),attach,1);

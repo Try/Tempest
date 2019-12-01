@@ -22,10 +22,17 @@ class VImage;
 
 class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
   public:
-     enum Usage : uint32_t {
+    enum Usage : uint32_t {
       ONE_TIME_SUBMIT_BIT      = 0x00000001,
       RENDER_PASS_CONTINUE_BIT = 0x00000002,
       SIMULTANEOUS_USE_BIT     = 0x00000004,
+      };
+
+    enum RpState : uint8_t {
+      NoPass,
+      Pending,
+      Inline,
+      Secondary
       };
 
     VCommandBuffer()=delete;
@@ -47,12 +54,8 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void beginRenderPass(AbstractGraphicsApi::Fbo* f,
                          AbstractGraphicsApi::Pass*  p,
                          uint32_t width,uint32_t height);
-    void beginSecondaryPass(AbstractGraphicsApi::Fbo* f,
-                            AbstractGraphicsApi::Pass*  p,
-                            uint32_t width,uint32_t height);
     void endRenderPass();
 
-    void clear(AbstractGraphicsApi::Image& img, float r, float g, float b, float a);
     void setPipeline(AbstractGraphicsApi::Pipeline& p, uint32_t w, uint32_t h);
     void setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u, size_t offc, const uint32_t* offv);
     void setViewport(const Rect& r);
@@ -77,12 +80,19 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
                         uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
 
   private:
+    struct BuildState;
+    struct Secondarys;
+
     VkDevice                                device=nullptr;
     VkCommandPool                           pool  =VK_NULL_HANDLE;
-    Detail::DSharedPtr<VFramebufferLayout*> currentFbo;
+    std::unique_ptr<BuildState>             bstate;
+    // prime cmd buf
+    std::vector<VkCommandBuffer>            chunks;
     // secondary cmd buf
-    Detail::DSharedPtr<VFramebufferLayout*> fbo;
-    bool                                    recording = false;
+    Detail::DSharedPtr<VFramebufferLayout*> fboLay;
+
+    bool            isSecondary() const;
+    VkCommandBuffer getBuffer();
   };
 
 }}

@@ -48,6 +48,7 @@ class HeadlessDevice {
     void                 waitIdle();
 
     void                 draw(const PrimaryCommandBuffer&  cmd,const Semaphore& wait);
+    void                 draw(const PrimaryCommandBuffer&  cmd,Fence& fdone);
     void                 draw(const PrimaryCommandBuffer&  cmd,const Semaphore& wait,Semaphore& done,Fence& fdone);
     void                 draw(const PrimaryCommandBuffer *cmd[], size_t count,
                               const Semaphore* wait[], size_t waitCnt,
@@ -195,7 +196,7 @@ template<class Vertex>
 RenderPipeline HeadlessDevice::pipeline(Topology tp, const RenderState &st,
                                         const UniformsLayout& ulay, const Shader &vs, const Shader &fs) {
   static const auto decl=Tempest::vertexBufferDecl<Vertex>();
-  return implPipeline(st,ulay,vs,fs,decl.begin(),decl.size(),sizeof(Vertex),tp);
+  return implPipeline(st,ulay,vs,fs,decl.data.begin(),decl.data.size(),sizeof(Vertex),tp);
   }
 
 }

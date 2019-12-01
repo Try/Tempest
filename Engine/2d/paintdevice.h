@@ -69,7 +69,7 @@ class PaintDevice {
   };
 
 template<>
-inline std::initializer_list<Decl::ComponentType> vertexBufferDecl<PaintDevice::Point>() {
+inline VertexBufferDecl vertexBufferDecl<PaintDevice::Point>() {
   return {Decl::float3,Decl::float2,Decl::float4};
   }
 }

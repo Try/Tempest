@@ -229,12 +229,8 @@ namespace Tempest {
         virtual void beginRenderPass(AbstractGraphicsApi::Fbo* f,
                                      AbstractGraphicsApi::Pass*  p,
                                      uint32_t width,uint32_t height)=0;
-        virtual void beginSecondaryPass(AbstractGraphicsApi::Fbo* f,
-                                        AbstractGraphicsApi::Pass*  p,
-                                        uint32_t width,uint32_t height)=0;
         virtual void endRenderPass()=0;
 
-        virtual void clear       (Image& img,float r, float g, float b, float a)=0;
         virtual void setPipeline (Pipeline& p,uint32_t w,uint32_t h)=0;
         virtual void setViewport (const Rect& r)=0;
         virtual void setUniforms (Pipeline& p,Desc& u, size_t offc, const uint32_t* offv)=0;

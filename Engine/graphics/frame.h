@@ -7,7 +7,7 @@ namespace Tempest {
 class Device;
 class CommandBuffer;
 
-class Frame {
+class Frame final {
   public:
     Frame();
     Frame(Frame&& f);

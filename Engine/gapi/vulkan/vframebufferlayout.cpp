@@ -4,7 +4,7 @@
 
 using namespace Tempest::Detail;
 
-VFramebufferLayout::VFramebufferLayout(VDevice& dev,VSwapchain &sw, const VkFormat *attach, uint8_t attCount)
+VFramebufferLayout::VFramebufferLayout(VDevice& dev, VSwapchain &sw, const VkFormat *attach, uint8_t attCount)
   :attCount(attCount), swapchain(&sw), device(dev.device) {
   impl = VRenderPass::createLayoutInstance(dev.device,sw,attach,attCount);
   frm.reset(new VkFormat[attCount]);
