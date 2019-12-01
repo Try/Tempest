@@ -10,7 +10,6 @@ class Device;
 
 class Semaphore final {
   public:
-    Semaphore(Tempest::HeadlessDevice& owner);
     Semaphore(Semaphore&& f)=default;
     ~Semaphore();
     Semaphore& operator = (Semaphore&& other)=default;

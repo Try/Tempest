@@ -103,6 +103,9 @@ class HeadlessDevice {
     RenderPipeline       pipeline(Topology tp,const RenderState& st,
                                   const UniformsLayout& ulay,const Shader &vs,const Shader &fs);
 
+    Fence                fence();
+    Semaphore            semaphore();
+
     PrimaryCommandBuffer commandBuffer();
     CommandBuffer        commandSecondaryBuffer(const FrameBufferLayout &lay);
     CommandBuffer        commandSecondaryBuffer(const FrameBuffer &fbo);
@@ -130,8 +133,6 @@ class HeadlessDevice {
     Tempest::CommandPool            mainCmdPool;
     Tempest::Builtin                builtins;
 
-    Fence       createFence();
-    Semaphore   createSemaphore();
     VideoBuffer createVideoBuffer(const void* data, size_t size, MemUsage usage, BufferFlags flg);
     RenderPipeline
                 implPipeline(const RenderState &st, const UniformsLayout& ulay,
@@ -150,8 +151,6 @@ class HeadlessDevice {
   friend class FrameBuffer;
   friend class Painter;
   friend class Shader;
-  friend class Fence;
-  friend class Semaphore;
   friend class CommandPool;
   friend class CommandBuffer;
   friend class VideoBuffer;

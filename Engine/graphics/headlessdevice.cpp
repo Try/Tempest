@@ -226,6 +226,16 @@ RenderPass HeadlessDevice::pass(const Attachment &color, const Attachment &depth
   return f;
   }
 
+Fence HeadlessDevice::fence() {
+  Fence f(*this,api.createFence(dev));
+  return f;
+  }
+
+Semaphore HeadlessDevice::semaphore() {
+  Semaphore f(*this,api.createSemaphore(dev));
+  return f;
+  }
+
 RenderPipeline HeadlessDevice::implPipeline(const RenderState &st,const UniformsLayout &ulay,
                                             const Shader &vs, const Shader &fs,
                                             const Decl::ComponentType *decl, size_t declSize,
@@ -264,16 +274,6 @@ const char *HeadlessDevice::renderer() const {
 
 AbstractGraphicsApi::Device *HeadlessDevice::implHandle() {
   return impl.dev;
-  }
-
-Fence HeadlessDevice::createFence() {
-  Fence f(*this,api.createFence(dev));
-  return f;
-  }
-
-Semaphore HeadlessDevice::createSemaphore() {
-  Semaphore f(*this,api.createSemaphore(dev));
-  return f;
   }
 
 VideoBuffer HeadlessDevice::createVideoBuffer(const void *data, size_t size, MemUsage usage, BufferFlags flg) {

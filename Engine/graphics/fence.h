@@ -9,7 +9,6 @@ class HeadlessDevice;
 
 class Fence final {
   public:
-    Fence(Tempest::HeadlessDevice& owner);
     Fence(Fence&& f)=default;
     ~Fence();
     Fence& operator = (Fence&& other)=default;

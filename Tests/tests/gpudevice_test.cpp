@@ -18,7 +18,7 @@ struct Vertex {
 namespace Tempest {
 template<>
 inline VertexBufferDecl vertexBufferDecl<::Vertex>() {
-  return {Decl::float3,Decl::float3,Decl::float2,Decl::color};
+  return {Decl::float2};
   }
 }
 
@@ -82,7 +82,7 @@ TEST(VulkanApi,Fbo) {
       enc.setPass(fbo,rp);
     }
 
-    Fence sync(device);
+    auto sync = device.fence();
     device.draw(cmd,sync);
     sync.wait();
 
@@ -120,7 +120,7 @@ TEST(VulkanApi,Draw) {
       enc.draw(vbo,ibo);
     }
 
-    Fence sync(device);
+    auto sync = device.fence();
     device.draw(cmd,sync);
     sync.wait();
 

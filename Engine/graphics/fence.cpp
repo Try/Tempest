@@ -3,10 +3,6 @@
 
 using namespace Tempest;
 
-Fence::Fence(HeadlessDevice &owner)
-  :Fence(owner.createFence()) {
-  }
-
 Fence::Fence(HeadlessDevice &dev, AbstractGraphicsApi::Fence *impl)
   :dev(&dev),impl(impl) {
   }
