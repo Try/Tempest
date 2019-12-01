@@ -73,6 +73,8 @@ void VPipeline::operator=(VPipeline &&other) {
   }
 
 VPipeline::Inst &VPipeline::instance(VFramebufferLayout &lay, uint32_t width, uint32_t height) {
+  std::lock_guard<SpinLock> guard(sync);
+
   for(auto& i:inst)
     if(i.w==width && i.h==height && i.lay.handler==&lay)
       return i;

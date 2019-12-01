@@ -39,6 +39,8 @@ void VRenderPass::operator=(VRenderPass &&other) {
   }
 
 VRenderPass::Impl &VRenderPass::instance(VFramebufferLayout &lay) {
+  std::lock_guard<SpinLock> guard(sync);
+
   for(auto& i:impl)
     if(i.isCompatible(lay))
       return i;

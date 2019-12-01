@@ -4,6 +4,8 @@
 #include <Tempest/Color>
 #include <vulkan/vulkan.hpp>
 
+#include "utility/spinlock.h"
+
 namespace Tempest {
 
 class Attachment;
@@ -47,6 +49,7 @@ class VRenderPass : public AbstractGraphicsApi::Pass {
     VkDevice                        device=nullptr;
     std::vector<Impl>               impl;
     std::unique_ptr<Attachment[]>   input;
+    SpinLock                        sync;
 
     static VkRenderPass             createInstance      (VkDevice &device, VSwapchain* sw,
                                                          const Attachment *attach, const VkFormat *frm,

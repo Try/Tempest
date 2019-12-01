@@ -4,6 +4,7 @@
 #include <Tempest/RenderState>
 
 #include "../utility/dptr.h"
+#include "../utility/spinlock.h"
 #include <vulkan/vulkan.hpp>
 
 namespace Tempest {
@@ -61,6 +62,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     Detail::DSharedPtr<VShader*>           vs,fs;
     std::unique_ptr<Decl::ComponentType[]> decl;
     std::vector<Inst>                      inst;
+    SpinLock                               sync;
 
     void cleanup();
     static VkPipelineLayout      initLayout(VkDevice device,VkDescriptorSetLayout uboLay);
