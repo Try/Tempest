@@ -30,7 +30,7 @@ class Encoder<Tempest::CommandBuffer> {
   public:
     Encoder(Encoder&& e);
     Encoder& operator = (Encoder&& e);
-    virtual ~Encoder();
+    virtual ~Encoder() noexcept(false);
 
     void setUniforms(const Tempest::RenderPipeline& p, const Uniforms &ubo);
     void setUniforms(const Tempest::RenderPipeline& p, const Uniforms &ubo, size_t offc, const uint32_t* offv);
@@ -88,7 +88,7 @@ class Encoder<Tempest::PrimaryCommandBuffer> : public Encoder<Tempest::CommandBu
   public:
     Encoder(Encoder&& e);
     Encoder& operator = (Encoder&& e);
-    virtual ~Encoder();
+    virtual ~Encoder() noexcept(false);
 
     void setPass(const FrameBuffer& fbo, const RenderPass& p);
     void setPass(const FrameBuffer& fbo, const RenderPass& p, int      width, int      height);

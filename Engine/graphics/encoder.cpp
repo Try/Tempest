@@ -41,7 +41,7 @@ Encoder<CommandBuffer> &Encoder<CommandBuffer>::operator =(Encoder<CommandBuffer
   return *this;
   }
 
-Encoder<Tempest::CommandBuffer>::~Encoder() {
+Encoder<Tempest::CommandBuffer>::~Encoder() noexcept(false) {
   if(impl==nullptr)
     return;
   impl->end();
@@ -127,7 +127,7 @@ Encoder<PrimaryCommandBuffer> &Encoder<PrimaryCommandBuffer>::operator =(Encoder
   return *this;
   }
 
-Encoder<Tempest::PrimaryCommandBuffer>::~Encoder() {
+Encoder<Tempest::PrimaryCommandBuffer>::~Encoder() noexcept(false) {
   if(impl==nullptr)
     return;
   implEndRenderPass();
@@ -145,13 +145,14 @@ void Encoder<PrimaryCommandBuffer>::setPass(const FrameBuffer &fbo, const Render
 
 void Encoder<PrimaryCommandBuffer>::setPass(const FrameBuffer &fbo, const RenderPass &p, uint32_t width, uint32_t height) {
   implEndRenderPass();
-  impl->beginRenderPass(fbo.impl.handler,p.impl.handler,width,height);
-  curPass.fbo  = &fbo;
-  curPass.pass = &p;
 
   state.vp.width     = width;
   state.vp.height    = height;
-  setViewport(0,0,int(width),int(height));
+  //setViewport(0,0,int(width),int(height));
+
+  impl->beginRenderPass(fbo.impl.handler,p.impl.handler,width,height);
+  curPass.fbo  = &fbo;
+  curPass.pass = &p;
   }
 
 void Encoder<PrimaryCommandBuffer>::implEndRenderPass() {

@@ -224,6 +224,10 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
   VRenderPass*  pass=reinterpret_cast<VRenderPass*>(p);
 
   bstate->startPass(impl,fbo,pass,width,height);
+
+  // setup dynamic state
+  // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#pipelines-dynamic-state
+  setViewport(Rect(0,0,int32_t(width),int32_t(height)));
   }
 
 void VCommandBuffer::endRenderPass() {
@@ -231,7 +235,7 @@ void VCommandBuffer::endRenderPass() {
   }
 
 void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p,uint32_t w,uint32_t h) {
-  auto cmd = getBuffer();
+  auto cmd = getBuffer(CmdRenderpass);
 
   VPipeline&           px = reinterpret_cast<VPipeline&>(p);
   VFramebufferLayout*  l;
@@ -243,7 +247,7 @@ void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p,uint32_t w,uin
   }
 
 void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u, size_t offc, const uint32_t *offv) {
-  auto cmd = getBuffer();
+  auto cmd = getBuffer(CmdRenderpass);
 
   VPipeline&        px=reinterpret_cast<VPipeline&>(p);
   VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
@@ -254,7 +258,7 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraph
   }
 
 void VCommandBuffer::setViewport(const Tempest::Rect &r) {
-  auto cmd = getBuffer();
+  auto cmd = getBuffer(CmdInline);
 
   VkViewport vk={};
   vk.x        = r.x;
@@ -273,17 +277,17 @@ void VCommandBuffer::exec(const CommandBuffer &buf) {
   }
 
 void VCommandBuffer::draw(size_t offset,size_t size) {
-  auto cmd = getBuffer();
+  auto cmd = getBuffer(CmdRenderpass);
   vkCmdDraw(cmd,size, 1, offset,0);
   }
 
 void VCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset) {
-  auto cmd = getBuffer();
+  auto cmd = getBuffer(CmdRenderpass);
   vkCmdDrawIndexed(cmd,isize,1, ioffset, int32_t(voffset),0);
   }
 
 void VCommandBuffer::setVbo(const Tempest::AbstractGraphicsApi::Buffer &b) {
-  auto cmd = getBuffer();
+  auto cmd = getBuffer(CmdRenderpass);
   const VBuffer& vbo=reinterpret_cast<const VBuffer&>(b);
 
   std::initializer_list<VkBuffer>     buffers = {vbo.impl};
@@ -303,7 +307,7 @@ void VCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer *b,Detail::IndexCl
     VK_INDEX_TYPE_UINT32
     };
 
-  auto cmd = getBuffer();
+  auto cmd = getBuffer(CmdRenderpass);
   const VBuffer& ibo=reinterpret_cast<const VBuffer&>(*b);
   vkCmdBindIndexBuffer(cmd,ibo.impl,0,type[uint32_t(cls)]);
   }
@@ -592,8 +596,16 @@ bool VCommandBuffer::isSecondary() const {
   return fboLay.handler!=nullptr && fboLay.handler->impl!=VK_NULL_HANDLE;
   }
 
-VkCommandBuffer VCommandBuffer::getBuffer() {
+VkCommandBuffer VCommandBuffer::getBuffer(CmdBuff id) {
   if(bstate==nullptr)
     return impl;
-  return bstate->adjustRp(impl,false);
+
+  switch(id) {
+    case CmdInline:
+      if(bstate->state==NoPass)
+        return impl;
+      return bstate->adjustRp(impl,false);
+    case CmdRenderpass:
+      return bstate->adjustRp(impl,false);
+    }
   }

@@ -91,8 +91,12 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     // secondary cmd buf
     Detail::DSharedPtr<VFramebufferLayout*> fboLay;
 
+    enum CmdBuff {
+      CmdInline,
+      CmdRenderpass,
+      };
     bool            isSecondary() const;
-    VkCommandBuffer getBuffer();
+    VkCommandBuffer getBuffer(CmdBuff cmd);
   };
 
 }}
