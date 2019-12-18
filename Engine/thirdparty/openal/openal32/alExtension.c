@@ -64,7 +64,7 @@ AL_API ALboolean AL_APIENTRY alIsExtensionPresent(const ALchar *extName)
         ptr = Context->ExtensionList;
         while(ptr && *ptr)
         {
-            if(strncasecmp(ptr, extName, len) == 0 &&
+            if(strncmp(ptr, extName, len) == 0 &&
                (ptr[len] == '\0' || isspace(ptr[len])))
             {
                 ret = AL_TRUE;

@@ -2,6 +2,7 @@
 
 #include <Tempest/IDevice>
 
+#include <algorithm>
 #include <cstring>
 #include <squish.h>
 #include "../ddsdef.h"
@@ -27,8 +28,8 @@ uint8_t* PixmapCodecDDS::load(PixmapCodec::Context &c, uint32_t &ow, uint32_t &o
   DDSURFACEDESC2 ddsd={};
   if(f.read(&ddsd,sizeof(ddsd))!=sizeof(ddsd))
     return nullptr;
-  ow = int(ddsd.dwWidth);
-  oh = int(ddsd.dwHeight);
+  ow = ddsd.dwWidth;
+  oh = ddsd.dwHeight;
 
   int compressType = squish::kDxt1;
   switch( ddsd.ddpfPixelFormat.dwFourCC ) {

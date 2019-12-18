@@ -11,8 +11,8 @@
 #include <Tempest/UniformsLayout>
 #include <Tempest/RenderState>
 
+using namespace Tempest;
 using namespace Tempest::Detail;
-
 
 VPipeline::VUboLayout::VUboLayout(VkDevice dev, const Tempest::UniformsLayout &lay)
   :dev(dev),impl(initUboLayout(dev,lay)){

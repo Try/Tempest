@@ -429,7 +429,7 @@ AL_API void AL_APIENTRY alSpeedOfSound(ALfloat value);
  * distance calculated is clamped between the reference and max distances.
  */
 #define AL_DISTANCE_MODEL                        0xD000
-AL_API void AL_APIENTRY alDistanceModel(ALenum distanceModel);
+AL_API void AL_APIENTRY alDistanceModel(ALCcontext* ctx, ALenum distanceModel);
 
 /** Distance model value. */
 #define AL_INVERSE_DISTANCE                      0xD001

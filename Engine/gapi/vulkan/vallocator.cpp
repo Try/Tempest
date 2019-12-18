@@ -10,6 +10,7 @@
 #include <Tempest/Log>
 #include <thread>
 
+using namespace Tempest;
 using namespace Tempest::Detail;
 
 VAllocator::VAllocator() {

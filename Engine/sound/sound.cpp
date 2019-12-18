@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <cstring>
+#include <algorithm>
 
 #include <AL/alc.h>
 #include <AL/al.h>

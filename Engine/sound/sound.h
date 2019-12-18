@@ -2,6 +2,7 @@
 
 #include <Tempest/IDevice>
 #include <memory>
+#include <string>
 
 namespace Tempest {
 

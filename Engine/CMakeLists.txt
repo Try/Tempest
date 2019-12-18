@@ -7,18 +7,25 @@ option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
-if(WIN32)
-  add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
-endif()
-
 add_definitions(-DVULKAN_HPP_NO_EXCEPTIONS)
 add_definitions(-DVULKAN_HPP_NO_SMART_HANDLE)
 add_definitions(-DSTB_IMAGE_IMPLEMENTATION)
 add_definitions(-DSTB_TRUETYPE_IMPLEMENTATION)
 add_definitions(-DSTB_IMAGE_WRITE_IMPLEMENTATION)
 add_definitions(-DAL_LIBTYPE_STATIC)
+add_definitions(-DAL_BUILD_LIBRARY)
+add_definitions(-DAL_ALEXT_PROTOTYPES)
 
+### Compillers
+if(MSVC)
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+  add_definitions(-DNOMINMAX)
+  add_compile_options(/MP1)
+endif()
+
+### Platforms
 if(WIN32)
+  add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
   # add_definitions(-DHAVE_DSOUND)
   add_definitions(-DHAVE_WINMM)
   add_definitions(-DHAVE_WINDOWS_H)
@@ -38,9 +45,6 @@ if(UNIX)
 
     )
 endif()
-
-add_definitions(-DAL_BUILD_LIBRARY)
-add_definitions(-DAL_ALEXT_PROTOTYPES)
 
 include_directories("include"
                     "."
@@ -83,12 +87,9 @@ set_target_properties(
 
 if(WIN32)
   target_link_libraries(${PROJECT_NAME} PRIVATE vulkan-1 shlwapi)
+  target_link_libraries(${PROJECT_NAME} PRIVATE winmm Kernel32)
 else()
   target_link_libraries(${PROJECT_NAME} PRIVATE vulkan X11 GL)
-endif()
-
-if(WIN32)
-  target_link_libraries(${PROJECT_NAME} PRIVATE winmm)
 endif()
 
 install(

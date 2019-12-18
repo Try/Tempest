@@ -558,13 +558,8 @@ AL_API ALvoid AL_APIENTRY alSpeedOfSound(ALfloat value)
     ALCcontext_DecRef(Context);
 }
 
-AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
+AL_API ALvoid AL_APIENTRY alDistanceModel(ALCcontext* Context, ALenum value)
 {
-    ALCcontext *Context;
-
-    Context = GetContextRef();
-    if(!Context) return;
-
     al_try
     {
         CHECK_VALUE(Context, value == AL_NONE ||
@@ -580,8 +575,6 @@ AL_API ALvoid AL_APIENTRY alDistanceModel(ALenum value)
             Context->UpdateSources = AL_TRUE;
     }
     al_endtry;
-
-    ALCcontext_DecRef(Context);
 }
 
 

@@ -12,6 +12,7 @@
 #include "vswapchain.h"
 #include "vtexture.h"
 
+using namespace Tempest;
 using namespace Tempest::Detail;
 
 struct VCommandBuffer::Secondarys final {
@@ -608,4 +609,5 @@ VkCommandBuffer VCommandBuffer::getBuffer(CmdBuff id) {
     case CmdRenderpass:
       return bstate->adjustRp(impl,false);
     }
+  assert(false && "invalid id value");
   }

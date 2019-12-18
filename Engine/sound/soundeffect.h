@@ -2,6 +2,7 @@
 
 #include <Tempest/Sound>
 #include <cstdint>
+#include <array>
 
 namespace Tempest {
 

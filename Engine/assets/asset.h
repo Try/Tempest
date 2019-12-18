@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <typeinfo>
+#include <string>
 
 namespace Tempest {
 

@@ -621,11 +621,6 @@ static const ALchar alExtList[] =
 
 static volatile ALCenum LastNullDeviceError = ALC_NO_ERROR;
 
-/* Thread-local current context */
-static pthread_key_t LocalContext;
-/* Process-wide current context */
-static ALCcontext *volatile GlobalContext = NULL;
-
 /* Mixing thread piority level */
 ALint RTPrioLevel;
 
@@ -640,7 +635,11 @@ enum LogLevel LogLevel = LogError;
 static ALCboolean TrapALCError = ALC_FALSE;
 
 /* One-time configuration init control */
+#if defined(_WIN32)
+static INIT_ONCE alc_config_once;
+#else
 static pthread_once_t alc_config_once = PTHREAD_ONCE_INIT;
+#endif
 
 /* Default effect that applies to sources that don't have an effect on send 0 */
 static ALeffect DefaultEffect;
@@ -762,45 +761,21 @@ static void alc_deinit(void) __attribute__((destructor));
 static void ReleaseThreadCtx(void *ptr);
 static void alc_init(void)
 {
-    const char *str;
-
     LogFile = stderr;
-
-    str = getenv("__ALSOFT_HALF_ANGLE_CONES");
-    if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
-        ConeScale *= 0.5f;
-
-    str = getenv("__ALSOFT_REVERSE_Z");
-    if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
-        ZScale *= -1.0f;
-
-    pthread_key_create(&LocalContext, ReleaseThreadCtx);
     InitializeCriticalSection(&ListLock);
     ThunkInit();
 }
 
+#if defined(_MSC_VER)
+static void alc_initconfig(PINIT_ONCE InitOnce, PVOID Parameter, PVOID *lpContex)
+#else
 static void alc_initconfig(void)
+#endif
 {
-    const char *devs, *str;
+    const char *devs;
     ALuint capfilter;
     float valf;
-    int i, n;
-
-    str = getenv("ALSOFT_LOGLEVEL");
-    if(str)
-    {
-        long lvl = strtol(str, NULL, 0);
-        if(lvl >= NoLog && lvl <= LogRef)
-            LogLevel = lvl;
-    }
-
-    str = getenv("ALSOFT_LOGFILE");
-    if(str && str[0])
-    {
-        FILE *logfile = fopen(str, "wat");
-        if(logfile) LogFile = logfile;
-        else ERR("Failed to open log file '%s'\n", str);
-    }
+    int i;
 
     {
         char buf[1024] = "";
@@ -818,35 +793,6 @@ static void alc_initconfig(void)
 #ifdef HAVE_NEON
     capfilter |= CPU_CAP_NEON;
 #endif
-    if(ConfigValueStr(NULL, "disable-cpu-exts", &str))
-    {
-        if(strcasecmp(str, "all") == 0)
-            capfilter = 0;
-        else
-        {
-            size_t len;
-            const char *next = str;
-
-            i = 0;
-            do {
-                str = next;
-                next = strchr(str, ',');
-
-                while(isspace(str[0]))
-                    str++;
-                if(!str[0] || str[0] == ',')
-                    continue;
-
-                len = (next ? ((size_t)(next-str)) : strlen(str));
-                if(strncasecmp(str, "sse", len) == 0)
-                    capfilter &= ~CPU_CAP_SSE;
-                else if(strncasecmp(str, "neon", len) == 0)
-                    capfilter &= ~CPU_CAP_NEON;
-                else
-                    WARN("Invalid CPU extension \"%s\"\n", str);
-            } while(next++);
-        }
-    }
     FillCPUCaps(capfilter);
 
 #ifdef _WIN32
@@ -855,45 +801,6 @@ static void alc_initconfig(void)
     RTPrioLevel = 0;
 #endif
     ConfigValueInt(NULL, "rt-prio", &RTPrioLevel);
-
-    if(ConfigValueStr(NULL, "resampler", &str))
-    {
-        if(strcasecmp(str, "point") == 0 || strcasecmp(str, "none") == 0)
-            DefaultResampler = PointResampler;
-        else if(strcasecmp(str, "linear") == 0)
-            DefaultResampler = LinearResampler;
-        else if(strcasecmp(str, "cubic") == 0)
-            DefaultResampler = CubicResampler;
-        else
-        {
-            char *end;
-
-            n = strtol(str, &end, 0);
-            if(*end == '\0' && (n == PointResampler || n == LinearResampler || n == CubicResampler))
-                DefaultResampler = n;
-            else
-                WARN("Invalid resampler: %s\n", str);
-        }
-    }
-
-    str = getenv("ALSOFT_TRAP_ERROR");
-    if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
-    {
-        TrapALError  = AL_TRUE;
-        TrapALCError = AL_TRUE;
-    }
-    else
-    {
-        str = getenv("ALSOFT_TRAP_AL_ERROR");
-        if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
-            TrapALError = AL_TRUE;
-        TrapALError = GetConfigValueBool(NULL, "trap-al-error", TrapALError);
-
-        str = getenv("ALSOFT_TRAP_ALC_ERROR");
-        if(str && (strcasecmp(str, "true") == 0 || strtol(str, NULL, 0) == 1))
-            TrapALCError = ALC_TRUE;
-        TrapALCError = GetConfigValueBool(NULL, "trap-alc-error", TrapALCError);
-    }
 
     if(ConfigValueFloat("reverb", "boost", &valf))
         ReverbBoost *= powf(10.0f, valf / 20.0f);
@@ -984,35 +891,14 @@ static void alc_initconfig(void)
     }
     BackendLoopback.Init(&BackendLoopback.Funcs);
 
-    if(ConfigValueStr(NULL, "excludefx", &str))
-    {
-        size_t len;
-        const char *next = str;
-
-        do {
-            str = next;
-            next = strchr(str, ',');
-
-            if(!str[0] || next == str)
-                continue;
-
-            len = (next ? ((size_t)(next-str)) : strlen(str));
-            for(n = 0;EffectList[n].name;n++)
-            {
-                if(len == strlen(EffectList[n].name) &&
-                   strncmp(EffectList[n].name, str, len) == 0)
-                    DisabledEffects[EffectList[n].type] = AL_TRUE;
-            }
-        } while(next++);
-    }
-
     InitEffect(&DefaultEffect);
-    str = getenv("ALSOFT_DEFAULT_REVERB");
-    if((str && str[0]) || ConfigValueStr(NULL, "default-reverb", &str))
-        LoadReverbPreset(str, &DefaultEffect);
 }
-#define DO_INITCONFIG() pthread_once(&alc_config_once, alc_initconfig)
 
+#if defined(_MSC_VER)
+#define DO_INITCONFIG() InitOnceExecuteOnce(&alc_config_once, alc_initconfig, NULL, NULL)
+#else
+#define DO_INITCONFIG() pthread_once(&alc_config_once, alc_initconfig)
+#endif
 
 /************************************************
  * Library deinitialization
@@ -1050,7 +936,6 @@ static void alc_deinit_safe(void)
 
     ThunkExit();
     DeleteCriticalSection(&ListLock);
-    pthread_key_delete(LocalContext);
 
     if(LogFile != stderr)
         fclose(LogFile);
@@ -1907,38 +1792,6 @@ static ALCvoid FreeContext(ALCcontext *context)
     free(context);
 }
 
-/* ReleaseContext
- *
- * Removes the context reference from the given device and removes it from
- * being current on the running thread or globally.
- */
-static void ReleaseContext(ALCcontext *context, ALCdevice *device)
-{
-    ALCcontext *volatile*tmp_ctx;
-
-    if(pthread_getspecific(LocalContext) == context)
-    {
-        WARN("%p released while current on thread\n", context);
-        pthread_setspecific(LocalContext, NULL);
-        ALCcontext_DecRef(context);
-    }
-
-    if(CompExchangePtr((XchgPtr*)&GlobalContext, context, NULL))
-        ALCcontext_DecRef(context);
-
-    ALCdevice_Lock(device);
-    tmp_ctx = &device->ContextList;
-    while(*tmp_ctx)
-    {
-        if(CompExchangePtr((XchgPtr*)tmp_ctx, context, context->next))
-            break;
-        tmp_ctx = &(*tmp_ctx)->next;
-    }
-    ALCdevice_Unlock(device);
-
-    ALCcontext_DecRef(context);
-}
-
 void ALCcontext_IncRef(ALCcontext *context)
 {
     RefCount ref;
@@ -1998,21 +1851,7 @@ static ALCcontext *VerifyContext(ALCcontext *context)
  */
 ALCcontext *GetContextRef(void)
 {
-    ALCcontext *context;
-
-    context = pthread_getspecific(LocalContext);
-    if(context)
-        ALCcontext_IncRef(context);
-    else
-    {
-        LockLists();
-        context = GlobalContext;
-        if(context)
-            ALCcontext_IncRef(context);
-        UnlockLists();
-    }
-
-    return context;
+    return NULL;
 }
 
 
@@ -2384,7 +2223,7 @@ ALC_API ALCboolean ALC_APIENTRY alcIsExtensionPresent(ALCdevice *device, const A
         const char *ptr = (device ? alcExtensionList : alcNoDeviceExtList);
         while(ptr && *ptr)
         {
-            if(strncasecmp(ptr, extName, len) == 0 &&
+            if(strncmp(ptr, extName, len) == 0 &&
                (ptr[len] == '\0' || isspace(ptr[len])))
             {
                 bResult = ALC_TRUE;
@@ -2545,7 +2384,6 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     Device = alcGetContextsDevice(context);
     if(Device)
     {
-        ReleaseContext(context, Device);
         if(!Device->ContextList)
         {
             ALCdevice_StopPlayback(Device);
@@ -2562,12 +2400,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
  */
 ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void)
 {
-    ALCcontext *Context;
-
-    Context = pthread_getspecific(LocalContext);
-    if(!Context) Context = GlobalContext;
-
-    return Context;
+    return NULL;
 }
 
 /* alcGetThreadContext
@@ -2576,9 +2409,7 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetCurrentContext(void)
  */
 ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
 {
-    ALCcontext *Context;
-    Context = pthread_getspecific(LocalContext);
-    return Context;
+    return NULL;
 }
 
 
@@ -2589,23 +2420,8 @@ ALC_API ALCcontext* ALC_APIENTRY alcGetThreadContext(void)
  */
 ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
 {
-    /* context must be valid or NULL */
-    if(context && !(context=VerifyContext(context)))
-    {
-        alcSetError(NULL, ALC_INVALID_CONTEXT);
-        return ALC_FALSE;
-    }
-    /* context's reference count is already incremented */
-    context = ExchangePtr((XchgPtr*)&GlobalContext, context);
-    if(context) ALCcontext_DecRef(context);
-
-    if((context=pthread_getspecific(LocalContext)) != NULL)
-    {
-        pthread_setspecific(LocalContext, NULL);
-        ALCcontext_DecRef(context);
-    }
-
-    return ALC_TRUE;
+    (void)context;
+    return ALC_FALSE;
 }
 
 /* alcSetThreadContext
@@ -2614,20 +2430,8 @@ ALC_API ALCboolean ALC_APIENTRY alcMakeContextCurrent(ALCcontext *context)
  */
 ALC_API ALCboolean ALC_APIENTRY alcSetThreadContext(ALCcontext *context)
 {
-    ALCcontext *old;
-
-    /* context must be valid or NULL */
-    if(context && !(context=VerifyContext(context)))
-    {
-        alcSetError(NULL, ALC_INVALID_CONTEXT);
-        return ALC_FALSE;
-    }
-    /* context's reference count is already incremented */
-    old = pthread_getspecific(LocalContext);
-    pthread_setspecific(LocalContext, context);
-    if(old) ALCcontext_DecRef(old);
-
-    return ALC_TRUE;
+    (void)context;
+    return ALC_FALSE;
 }
 
 
@@ -2668,9 +2472,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         alcSetError(NULL, ALC_INVALID_VALUE);
         return NULL;
     }
-
-    if(deviceName && (!deviceName[0] || strcasecmp(deviceName, alcDefaultName) == 0 || strcasecmp(deviceName, "openal-soft") == 0))
-        deviceName = NULL;
 
     device = al_calloc(16, sizeof(ALCdevice)+15+sizeof(ALeffectslot));
     if(!device)
@@ -2726,7 +2527,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
         for(i = 0;i < COUNTOF(chanlist);i++)
         {
-            if(strcasecmp(chanlist[i].name, fmt) == 0)
+            if(strcmp(chanlist[i].name, fmt) == 0)
             {
                 device->FmtChans = chanlist[i].chans;
                 device->Flags |= DEVICE_CHANNELS_REQUEST;
@@ -2754,7 +2555,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
 
         for(i = 0;i < COUNTOF(typelist);i++)
         {
-            if(strcasecmp(typelist[i].name, fmt) == 0)
+            if(strcmp(typelist[i].name, fmt) == 0)
             {
                 device->FmtType = typelist[i].type;
                 device->Flags |= DEVICE_SAMPLE_TYPE_REQUEST;
@@ -2799,7 +2600,7 @@ ALC_API ALCdevice* ALC_APIENTRY alcOpenDevice(const ALCchar *deviceName)
         ERR("Option 'format' is deprecated, please use 'channels' and 'sample-type'\n");
         for(i = 0;i < COUNTOF(formats);i++)
         {
-            if(strcasecmp(fmt, formats[i].name) == 0)
+            if(strcmp(fmt, formats[i].name) == 0)
             {
                 if(!(device->Flags&DEVICE_CHANNELS_REQUEST))
                     device->FmtChans = formats[i].channels;
@@ -2904,7 +2705,6 @@ ALC_API ALCboolean ALC_APIENTRY alcCloseDevice(ALCdevice *Device)
     while((ctx=Device->ContextList) != NULL)
     {
         WARN("Releasing context %p\n", ctx);
-        ReleaseContext(ctx, Device);
     }
     if((Device->Flags&DEVICE_RUNNING))
         ALCdevice_StopPlayback(Device);
@@ -2937,9 +2737,6 @@ ALC_API ALCdevice* ALC_APIENTRY alcCaptureOpenDevice(const ALCchar *deviceName, 
         alcSetError(NULL, ALC_INVALID_VALUE);
         return NULL;
     }
-
-    if(deviceName && (!deviceName[0] || strcasecmp(deviceName, alcDefaultName) == 0 || strcasecmp(deviceName, "openal-soft") == 0))
-        deviceName = NULL;
 
     device = al_calloc(16, sizeof(ALCdevice));
     if(!device)

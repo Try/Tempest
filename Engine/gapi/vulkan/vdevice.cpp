@@ -20,6 +20,7 @@
 #undef Always
 #endif
 
+using namespace Tempest;
 using namespace Tempest::Detail;
 
 static const std::initializer_list<const char*> validationLayers = {
@@ -290,7 +291,7 @@ uint32_t VDevice::memoryTypeIndex(uint32_t typeBits,VkMemoryPropertyFlags props)
     auto bit = (uint32_t(1) << i);
     if((typeBits & bit)!=0) {
       if((memoryProperties.memoryTypes[i].propertyFlags & props)==props)
-        return i;
+        return uint32_t(i);
       }
     }
   throw std::runtime_error("failed to get correct memory type");

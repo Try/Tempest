@@ -6,6 +6,7 @@
 
 #include <Tempest/RenderPass>
 
+using namespace Tempest;
 using namespace Tempest::Detail;
 
 VRenderPass::VRenderPass(VDevice& device, const Attachment **attach, uint8_t attCount)

@@ -6,6 +6,7 @@
 #include "vdescriptorarray.h"
 #include "vtexture.h"
 
+using namespace Tempest;
 using namespace Tempest::Detail;
 
 VDescriptorArray::~VDescriptorArray() {

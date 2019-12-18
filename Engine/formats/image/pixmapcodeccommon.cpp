@@ -6,6 +6,7 @@
 #include <Tempest/Except>
 
 #include <cstring>
+#include <algorithm>
 
 #define STBI_MALLOC(sz)           malloc(sz)
 #define STBI_REALLOC(p,newsz)     realloc(p,newsz)

@@ -21,10 +21,6 @@ struct TestDevice {
 
 using Allocator =Tempest::RectAllocator<TestDevice>;
 using Allocation=typename Allocator::Allocation;
-template<class T>
-using Block     =typename Allocator::Block<T>;
-template<class T>
-using BAllocator=typename Allocator::Allocator<T>;
 
 TEST(main, AtlasAlloator0) {
   TestDevice device;
@@ -49,19 +45,23 @@ TEST(main, AtlasAlloator1) {
   }
 
 TEST(main, AtlasBlockAlloator0) {
-  Block<int> b;
+  /*
+  Allocator::Block<int> b;
   int* v0 = b.alloc();
   int* v1 = b.alloc();
   b.free(v1);
   b.free(v0);
+  */
   }
 
 TEST(main, AtlasBlockAlloator1) {
-  BAllocator<int> b;
+  /*
+  Allocator::Allocator<int> b;
   int* st[64]={};
   for(int i=0;i<64;++i)
     st[i] = b.alloc();
 
   for(int i=0;i<64;++i)
     b.free(st[i]);
+    */
   }

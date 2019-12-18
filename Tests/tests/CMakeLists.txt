@@ -12,6 +12,11 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/testsuite)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/testsuite)
 
 add_definitions(-DGTEST_LANGUAGE_CXX11)
+if(MSVC)
+  add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+  add_definitions(-DNOMINMAX)
+endif()
+add_compile_options(/FS)
 
 if($ENV{GOOGLETEST_DIR})
   SET(GOOGLETEST_DIR $ENV{GOOGLETEST_DIR})
@@ -50,6 +55,8 @@ endfunction(compile_shader)
 file(GLOB SOURCES
   "*.h"
   "*.cpp"
+  "**/*.h"
+  "**/*.cpp"
   )
 
 include_directories(${GTestSrc} ${GTestSrc}/include ${GMockSrc} ${GMockSrc}/include)

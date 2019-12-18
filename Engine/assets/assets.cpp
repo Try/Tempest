@@ -179,11 +179,11 @@ Asset Assets::Directory::implOpen(str_path&& fpath) {
   }
 
 #if defined(__WINDOWS__)
-static ssize_t implMouleFileName(char16_t* out,size_t maxPath){
-  DWORD len = GetModuleFileNameW(nullptr, reinterpret_cast<wchar_t*>(out), maxPath);
+static int32_t implMouleFileName(char16_t* out,size_t maxPath){
+  DWORD len = GetModuleFileNameW(nullptr, reinterpret_cast<wchar_t*>(out), DWORD(maxPath));
   if(len==maxPath)
     return -1;
-  return ssize_t(len);
+  return int32_t(len);
 #elif defined(__LINUX__)
 static ssize_t implMouleFileName(char* out,size_t maxPath){
   return ::readlink("/proc/self/exe", out, maxPath);
@@ -198,7 +198,7 @@ Assets::str_path Assets::Directory::modulePath() {
   while(true) {
     sz+=256;
     str.resize(sz);
-    ssize_t len = implMouleFileName(&str[0],sz);
+    int32_t len = implMouleFileName(&str[0],sz);
     if(len<0)
       continue;
 #if defined(__WINDOWS__)

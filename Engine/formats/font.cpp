@@ -9,6 +9,7 @@
 
 #include <unordered_map>
 #include <bitset>
+#include <algorithm>
 
 #ifdef __WINDOWS__
 #include <Shlobj.h>

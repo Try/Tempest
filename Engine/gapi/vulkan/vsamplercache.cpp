@@ -2,6 +2,7 @@
 
 #include "vdevice.h"
 
+using namespace Tempest;
 using namespace Tempest::Detail;
 
 VSamplerCache::VSamplerCache(){

@@ -38,14 +38,12 @@ SoundDevice::SoundDevice():data( new Data() ) {
   if(data->context==nullptr)
     throw std::system_error(Tempest::SoundErrc::NoDevice);
 
-  alcMakeContextCurrent(data->context);
-  alDistanceModel(AL_LINEAR_DISTANCE);
+  alDistanceModel(data->context, AL_LINEAR_DISTANCE);
   process();
   }
 
 SoundDevice::~SoundDevice() {
   if( data->context ){
-    alcMakeContextCurrent(nullptr);
     alcDestroyContext(data->context);
     }
   }
