@@ -1897,6 +1897,28 @@ ALC_API ALCvoid ALC_APIENTRY alcProcessContext(ALCcontext *Context)
     (void)Context;
 }
 
+/* ReleaseContext
+ *
+ * Removes the context reference from the given device and removes it from
+ * being current on the running thread or globally.
+ */
+static void ReleaseContext(ALCcontext *context, ALCdevice *device)
+{
+    ALCcontext *volatile*tmp_ctx;
+
+    ALCdevice_Lock(device);
+    tmp_ctx = &device->ContextList;
+    while(*tmp_ctx)
+    {
+        if(CompExchangePtr((XchgPtr*)tmp_ctx, context, context->next))
+            break;
+        tmp_ctx = &(*tmp_ctx)->next;
+    }
+    ALCdevice_Unlock(device);
+
+    ALCcontext_DecRef(context);
+}
+
 
 /* alcGetString
  *
@@ -2384,6 +2406,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
     Device = alcGetContextsDevice(context);
     if(Device)
     {
+        ReleaseContext(context, Device);
         if(!Device->ContextList)
         {
             ALCdevice_StopPlayback(Device);
