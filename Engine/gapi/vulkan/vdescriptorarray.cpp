@@ -5,72 +5,57 @@
 #include "vdevice.h"
 #include "vdescriptorarray.h"
 #include "vtexture.h"
+#include "vuniformslay.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-VDescriptorArray::~VDescriptorArray() {
-  // It is invalid to call vkFreeDescriptorSets() with a pool
-  // created without setting VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
-  // vkFreeDescriptorSets(a->device,a->impl,a->count,a->desc);
-  vkDestroyDescriptorPool(device,impl,nullptr);
-  }
+VDescriptorArray::VDescriptorArray(VkDevice device, const UniformsLayout& lay,
+                                   std::shared_ptr<AbstractGraphicsApi::UniformsLay>& layP)
+  :device(device),lay(layP) {
+  Detail::VUniformsLay* layImpl = reinterpret_cast<Detail::VUniformsLay*>(this->lay.get());
 
-VDescriptorArray *VDescriptorArray::alloc(VkDevice device, const UniformsLayout& lay, VkDescriptorSetLayout &layImpl) {
-  VDescriptorArray* a=reinterpret_cast<VDescriptorArray*>(std::malloc(sizeof(VDescriptorArray)));
-  if(a==nullptr)
-    throw std::bad_alloc();
-  new(a) VDescriptorArray();
-
-  a->hint.resize(lay.size());
-  for(size_t i=0;i<lay.size();++i){
-    a->hint[i].isDyn = (lay[i].cls==UniformsLayout::UboDyn);
-    }
-
-  std::array<VkDescriptorPoolSize,3> poolSize = {{}};
+  VkDescriptorPoolSize poolSize[3] = {{}};
   size_t pSize=0;
 
   for(size_t i=0;i<lay.size();++i){
     auto cls = lay[i].cls;
     switch(cls) {
-      case UniformsLayout::Ubo:     addPoolSize(&poolSize[0],pSize,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);         break;
-      case UniformsLayout::UboDyn:  addPoolSize(&poolSize[0],pSize,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC); break;
-      case UniformsLayout::Texture: addPoolSize(&poolSize[0],pSize,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER); break;
+      case UniformsLayout::Ubo:     addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);         break;
+      case UniformsLayout::UboDyn:  addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC); break;
+      case UniformsLayout::Texture: addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER); break;
       }
     }
   if(pSize==0)
-    return nullptr;
+    return;
 
   VkDescriptorPoolCreateInfo poolInfo = {};
   poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
   poolInfo.maxSets       = 1;
   //poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
   poolInfo.poolSizeCount = pSize;
-  poolInfo.pPoolSizes    = poolSize.data();
+  poolInfo.pPoolSizes    = poolSize;
 
-  vkAssert(vkCreateDescriptorPool(device,&poolInfo,nullptr,&a->impl));
+  vkAssert(vkCreateDescriptorPool(device,&poolInfo,nullptr,&impl));
 
   VkDescriptorSetAllocateInfo allocInfo = {};
   allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-  allocInfo.descriptorPool     = a->impl;
+  allocInfo.descriptorPool     = impl;
   allocInfo.descriptorSetCount = 1;
-  allocInfo.pSetLayouts        = &layImpl;
+  allocInfo.pSetLayouts        = &layImpl->impl;
 
-  VkResult ret=vkAllocateDescriptorSets(device,&allocInfo,&a->desc[0]);
+  VkResult ret=vkAllocateDescriptorSets(device,&allocInfo,desc);
   if(ret!=VK_SUCCESS) {
-    vkDestroyDescriptorPool(device,a->impl,nullptr);
+    vkDestroyDescriptorPool(device,impl,nullptr);
     vkAssert(ret);
     }
-  a->count  = 1;
-  a->device = device;
-  return a;
   }
 
-void VDescriptorArray::free(VDescriptorArray *a) {
-  if(a==nullptr)
-    return;
-  a->~VDescriptorArray();
-  std::free(a);
+VDescriptorArray::~VDescriptorArray() {
+  // It is invalid to call vkFreeDescriptorSets() with a pool
+  // created without setting VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
+  // vkFreeDescriptorSets(a->device,a->impl,a->count,a->desc);
+  vkDestroyDescriptorPool(device,impl,nullptr);
   }
 
 void VDescriptorArray::set(size_t id,Tempest::AbstractGraphicsApi::Texture* t) {
@@ -100,12 +85,14 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf,
   bufferInfo.offset = offset;
   bufferInfo.range  = size;
 
+  Detail::VUniformsLay* layImpl = reinterpret_cast<Detail::VUniformsLay*>(lay.get());
+
   VkWriteDescriptorSet descriptorWrite = {};
   descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
   descriptorWrite.dstSet          = desc[0];
   descriptorWrite.dstBinding      = uint32_t(id);
   descriptorWrite.dstArrayElement = 0;
-  descriptorWrite.descriptorType  = hint[id].isDyn ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  descriptorWrite.descriptorType  = layImpl->hint[id];
   descriptorWrite.descriptorCount = 1;
   descriptorWrite.pBufferInfo     = &bufferInfo;
 

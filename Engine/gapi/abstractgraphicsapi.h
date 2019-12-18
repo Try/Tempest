@@ -303,7 +303,7 @@ namespace Tempest {
 
       virtual PBuffer    createBuffer(Device* d,const void *mem,size_t size,MemUsage usage,BufferFlags flg)=0;
 
-      virtual Desc*      createDescriptors(Device* d,const Tempest::UniformsLayout& p,AbstractGraphicsApi::UniformsLay* layP)=0;
+      virtual Desc*      createDescriptors(Device* d,const Tempest::UniformsLayout& p,std::shared_ptr<AbstractGraphicsApi::UniformsLay>& layP)=0;
       virtual void       destroy(Desc* cmd)=0;
 
       virtual PTexture   createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips)=0;

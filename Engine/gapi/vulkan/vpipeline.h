@@ -17,15 +17,6 @@ class VFramebufferLayout;
 
 class VPipeline : public AbstractGraphicsApi::Pipeline {
   public:
-    struct VUboLayout : AbstractGraphicsApi::UniformsLay {
-      VUboLayout(VkDevice dev, const UniformsLayout& lay);
-      VUboLayout(VkDevice dev, VkDescriptorSetLayout lay);
-      ~VUboLayout();
-
-      VkDevice              dev =nullptr;
-      VkDescriptorSetLayout impl=VK_NULL_HANDLE;
-      };
-
     VPipeline();
     VPipeline(VDevice &device,
               const RenderState &st,
@@ -66,7 +57,6 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
 
     void cleanup();
     static VkPipelineLayout      initLayout(VkDevice device,VkDescriptorSetLayout uboLay);
-    static VkDescriptorSetLayout initUboLayout(VkDevice device,const UniformsLayout &ulay);
     static VkPipeline            initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
                                                       const VFramebufferLayout &lay, const RenderState &st,
                                                       uint32_t width, uint32_t height,

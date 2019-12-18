@@ -284,7 +284,7 @@ VideoBuffer HeadlessDevice::createVideoBuffer(const void *data, size_t size, Mem
 Uniforms HeadlessDevice::uniforms(const UniformsLayout &owner) {
   if(owner.impl==nullptr)
     owner.impl=api.createUboLayout(dev,owner);
-  Uniforms ubo(*this,api.createDescriptors(dev,owner,owner.impl.get()));
+  Uniforms ubo(*this,api.createDescriptors(dev,owner,owner.impl));
   return ubo;
   }
 

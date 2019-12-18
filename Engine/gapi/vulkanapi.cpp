@@ -13,6 +13,7 @@
 #include "vulkan/vcommandpool.h"
 #include "vulkan/vcommandbuffer.h"
 #include "vulkan/vdescriptorarray.h"
+#include "vulkan/vuniformslay.h"
 #include "vulkan/vtexture.h"
 
 #include "deviceallocator.h"
@@ -297,22 +298,20 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
 
 AbstractGraphicsApi::Desc *VulkanApi::createDescriptors(AbstractGraphicsApi::Device*      d,
                                                         const UniformsLayout&             lay,
-                                                        AbstractGraphicsApi::UniformsLay* layP) {
-  Detail::VDevice*               dx = reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VPipeline::VUboLayout* ux = reinterpret_cast<Detail::VPipeline::VUboLayout*>(layP);
-
-  auto ret = Detail::VDescriptorArray::alloc(dx->device,lay,ux->impl);
+                                                        std::shared_ptr<AbstractGraphicsApi::UniformsLay>& layP) {
+  Detail::VDevice* dx = reinterpret_cast<Detail::VDevice*>(d);
+  auto ret = new Detail::VDescriptorArray(dx->device,lay,layP);
   return ret;
   }
 
 void VulkanApi::destroy(AbstractGraphicsApi::Desc *d) {
   Detail::VDescriptorArray* dx = reinterpret_cast<Detail::VDescriptorArray*>(d);
-  Detail::VDescriptorArray::free(dx);
+  delete dx;
   }
 
 std::shared_ptr<AbstractGraphicsApi::UniformsLay> VulkanApi::createUboLayout(Device *d, const UniformsLayout &lay) {
   Detail::VDevice* dx = reinterpret_cast<Detail::VDevice*>(d);
-  return std::make_shared<Detail::VPipeline::VUboLayout>(dx->device,lay);
+  return std::make_shared<Detail::VUniformsLay>(dx->device,lay);
   }
 
 AbstractGraphicsApi::CommandBuffer *VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device *d,

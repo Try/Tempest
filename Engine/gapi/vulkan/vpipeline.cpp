@@ -5,6 +5,7 @@
 #include "vframebufferlayout.h"
 #include "vrenderpass.h"
 #include "vshader.h"
+#include "vuniformslay.h"
 
 #include <algorithm>
 
@@ -13,20 +14,6 @@
 
 using namespace Tempest;
 using namespace Tempest::Detail;
-
-VPipeline::VUboLayout::VUboLayout(VkDevice dev, const Tempest::UniformsLayout &lay)
-  :dev(dev),impl(initUboLayout(dev,lay)){
-  }
-
-VPipeline::VUboLayout::VUboLayout(VkDevice dev,VkDescriptorSetLayout lay)
-  :dev(dev),impl(lay){
-  }
-
-VPipeline::VUboLayout::~VUboLayout() {
-  vkDeviceWaitIdle(dev);
-  vkDestroyDescriptorSetLayout(dev,impl,nullptr);
-  }
-
 
 VPipeline::VPipeline(){
   }
@@ -41,13 +28,13 @@ VPipeline::VPipeline(VDevice& device,
   : device(device.device), st(st), declSize(declSize), stride(stride), tp(tp), vs(&vert), fs(&frag) {
   try {
     if(ulayImpl==nullptr)
-      ulayImpl=std::make_shared<VUboLayout>(device.device,initUboLayout(device.device,ulay));
+      ulayImpl=std::make_shared<VUniformsLay>(device.device,ulay);
 
     decl.reset(new Decl::ComponentType[declSize]);
     std::memcpy(decl.get(),idecl,declSize*sizeof(Decl::ComponentType));
 
-    VUboLayout* puLay=reinterpret_cast<VUboLayout*>(ulayImpl.get());
-    pipelineLayout   =initLayout(device.device,puLay->impl);
+    VUniformsLay* puLay=reinterpret_cast<VUniformsLay*>(ulayImpl.get());
+    pipelineLayout = initLayout(device.device,puLay->impl);
     // instance(pass,width,height);
     }
   catch(...) {
@@ -112,39 +99,6 @@ VkPipelineLayout VPipeline::initLayout(VkDevice device,VkDescriptorSetLayout ubo
 
   VkPipelineLayout ret;
   vkAssert(vkCreatePipelineLayout(device,&pipelineLayoutInfo,nullptr,&ret));
-  return ret;
-  }
-
-VkDescriptorSetLayout VPipeline::initUboLayout(VkDevice device, const UniformsLayout &ulay) {
-  static const VkDescriptorType types[]={
-    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-    };
-
-  std::vector<VkDescriptorSetLayoutBinding> bind(ulay.size());
-  for(size_t i=0;i<bind.size();++i){
-    auto& b=bind[i];
-    auto& e=ulay[i];
-
-    b.binding         = e.layout;
-    b.descriptorCount = 1;
-    b.descriptorType  = types[e.cls];
-
-    b.stageFlags      = 0;
-    if(e.stage&UniformsLayout::Vertex)
-      b.stageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
-    if(e.stage&UniformsLayout::Fragment)
-      b.stageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
-    }
-
-  VkDescriptorSetLayoutCreateInfo info={};
-  info.sType       =VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  info.bindingCount=bind.size();
-  info.pBindings   =bind.data();
-
-  VkDescriptorSetLayout ret;
-  vkAssert(vkCreateDescriptorSetLayout(device,&info,nullptr,&ret));
   return ret;
   }
 
