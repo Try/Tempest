@@ -12,7 +12,7 @@ class Texture2d;
 template<class T>
 class Encoder;
 
-class Uniforms {
+class Uniforms final {
   public:
     Uniforms()=default;
     Uniforms(Uniforms&&);

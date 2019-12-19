@@ -22,6 +22,7 @@
 
 #include <Tempest/Pixmap>
 #include <Tempest/Log>
+#include <Tempest/UniformsLayout>
 
 using namespace Tempest;
 
@@ -299,14 +300,10 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
 AbstractGraphicsApi::Desc *VulkanApi::createDescriptors(AbstractGraphicsApi::Device*      d,
                                                         const UniformsLayout&             lay,
                                                         std::shared_ptr<AbstractGraphicsApi::UniformsLay>& layP) {
+  if(lay.size()==0)
+    return nullptr;
   Detail::VDevice* dx = reinterpret_cast<Detail::VDevice*>(d);
-  auto ret = new Detail::VDescriptorArray(dx->device,lay,layP);
-  return ret;
-  }
-
-void VulkanApi::destroy(AbstractGraphicsApi::Desc *d) {
-  Detail::VDescriptorArray* dx = reinterpret_cast<Detail::VDescriptorArray*>(d);
-  delete dx;
+  return new Detail::VDescriptorArray(dx->device,lay,layP);
   }
 
 std::shared_ptr<AbstractGraphicsApi::UniformsLay> VulkanApi::createUboLayout(Device *d, const UniformsLayout &lay) {

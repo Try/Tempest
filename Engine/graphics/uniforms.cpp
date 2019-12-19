@@ -14,8 +14,7 @@ Uniforms::Uniforms(Uniforms && u)
   }
 
 Uniforms::~Uniforms() {
-  if(dev)
-    dev->destroy(*this);
+  delete desc.handler;
   }
 
 Uniforms& Uniforms::operator=(Uniforms &&u) {

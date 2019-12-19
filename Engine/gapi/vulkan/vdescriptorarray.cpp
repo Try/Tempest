@@ -14,9 +14,45 @@ VDescriptorArray::VDescriptorArray(VkDevice device, const UniformsLayout& lay,
                                    std::shared_ptr<AbstractGraphicsApi::UniformsLay>& layP)
   :device(device),lay(layP) {
   Detail::VUniformsLay* layImpl = reinterpret_cast<Detail::VUniformsLay*>(this->lay.get());
+  if(layImpl->hint.size()==0)
+    return;
 
-  VkDescriptorPoolSize poolSize[3] = {{}};
-  size_t pSize=0;
+  std::lock_guard<Detail::SpinLock> guard(layImpl->sync);
+
+  for(auto& i:layImpl->pool){
+    if(i.freeCount==0)
+      continue;
+    if(allocDescSet(i.impl,layImpl->impl)) {
+      pool=&i;
+      pool->freeCount--;
+      return;
+      }
+    }
+
+  layImpl->pool.emplace_back();
+  auto& b = layImpl->pool.back();
+  b.impl  = allocPool(lay,layP,Detail::VUniformsLay::POOL_SIZE);
+  if(!allocDescSet(b.impl,layImpl->impl))
+    throw std::bad_alloc();
+  pool = &b;
+  pool->freeCount--;
+  }
+
+VDescriptorArray::~VDescriptorArray() {
+  if(desc==VK_NULL_HANDLE)
+    return;
+  Detail::VUniformsLay* layImpl = reinterpret_cast<Detail::VUniformsLay*>(this->lay.get());
+  std::lock_guard<Detail::SpinLock> guard(layImpl->sync);
+
+  vkFreeDescriptorSets(device,pool->impl,1,&desc);
+  pool->freeCount++;
+  }
+
+VkDescriptorPool VDescriptorArray::allocPool(const UniformsLayout& lay,
+                                             std::shared_ptr<AbstractGraphicsApi::UniformsLay> &/*layP*/,
+                                             size_t size) {
+  VkDescriptorPoolSize poolSize[3] = {};
+  size_t               pSize=0;
 
   for(size_t i=0;i<lay.size();++i){
     auto cls = lay[i].cls;
@@ -26,36 +62,35 @@ VDescriptorArray::VDescriptorArray(VkDevice device, const UniformsLayout& lay,
       case UniformsLayout::Texture: addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER); break;
       }
     }
-  if(pSize==0)
-    return;
+
+  for(auto& i:poolSize)
+    i.descriptorCount*=size;
 
   VkDescriptorPoolCreateInfo poolInfo = {};
   poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-  poolInfo.maxSets       = 1;
-  //poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+  poolInfo.maxSets       = size;
+  poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
   poolInfo.poolSizeCount = pSize;
   poolInfo.pPoolSizes    = poolSize;
 
-  vkAssert(vkCreateDescriptorPool(device,&poolInfo,nullptr,&impl));
-
-  VkDescriptorSetAllocateInfo allocInfo = {};
-  allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-  allocInfo.descriptorPool     = impl;
-  allocInfo.descriptorSetCount = 1;
-  allocInfo.pSetLayouts        = &layImpl->impl;
-
-  VkResult ret=vkAllocateDescriptorSets(device,&allocInfo,desc);
-  if(ret!=VK_SUCCESS) {
-    vkDestroyDescriptorPool(device,impl,nullptr);
-    vkAssert(ret);
-    }
+  VkDescriptorPool ret = VK_NULL_HANDLE;
+  vkAssert(vkCreateDescriptorPool(device,&poolInfo,nullptr,&ret));
+  return ret;
   }
 
-VDescriptorArray::~VDescriptorArray() {
-  // It is invalid to call vkFreeDescriptorSets() with a pool
-  // created without setting VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
-  // vkFreeDescriptorSets(a->device,a->impl,a->count,a->desc);
-  vkDestroyDescriptorPool(device,impl,nullptr);
+bool VDescriptorArray::allocDescSet(VkDescriptorPool pool, VkDescriptorSetLayout lay) {
+  VkDescriptorSetAllocateInfo allocInfo = {};
+  allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+  allocInfo.descriptorPool     = pool;
+  allocInfo.descriptorSetCount = 1;
+  allocInfo.pSetLayouts        = &lay;
+
+  VkResult ret=vkAllocateDescriptorSets(device,&allocInfo,&desc);
+  if(ret==VK_ERROR_FRAGMENTED_POOL)
+    return false;
+
+  vkAssert(ret);
+  return true;
   }
 
 void VDescriptorArray::set(size_t id,Tempest::AbstractGraphicsApi::Texture* t) {
@@ -68,7 +103,7 @@ void VDescriptorArray::set(size_t id,Tempest::AbstractGraphicsApi::Texture* t) {
 
   VkWriteDescriptorSet descriptorWrite = {};
   descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  descriptorWrite.dstSet          = desc[0];
+  descriptorWrite.dstSet          = desc;
   descriptorWrite.dstBinding      = uint32_t(id);
   descriptorWrite.dstArrayElement = 0;
   descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -89,7 +124,7 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf,
 
   VkWriteDescriptorSet descriptorWrite = {};
   descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  descriptorWrite.dstSet          = desc[0];
+  descriptorWrite.dstSet          = desc;
   descriptorWrite.dstBinding      = uint32_t(id);
   descriptorWrite.dstArrayElement = 0;
   descriptorWrite.descriptorType  = layImpl->hint[id];

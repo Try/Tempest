@@ -254,7 +254,7 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraph
   VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
   vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,
                           px.pipelineLayout,0,
-                          1,ux.desc,
+                          1,&ux.desc,
                           offc,offv);
   }
 

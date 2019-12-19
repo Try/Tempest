@@ -144,8 +144,6 @@ class HeadlessDevice {
                           Semaphore*      done[], AbstractGraphicsApi::Semaphore*     hdone[], size_t doneCnt,
                          AbstractGraphicsApi::Fence*         fdone);
 
-    void       destroy(Uniforms&       u);
-
   friend class RenderPipeline;
   friend class RenderPass;
   friend class FrameBuffer;

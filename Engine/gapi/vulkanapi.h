@@ -47,7 +47,6 @@ class VulkanApi : public AbstractGraphicsApi {
     PBuffer        createBuffer(Device* d, const void *mem, size_t size, MemUsage usage, BufferFlags flg) override;
 
     Desc*          createDescriptors(Device* d, const UniformsLayout &lay, std::shared_ptr<UniformsLay> &layP) override;
-    void           destroy(Desc* d) override;
 
     std::shared_ptr<AbstractGraphicsApi::UniformsLay> createUboLayout(Device *d,const UniformsLayout&) override;
 

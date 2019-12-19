@@ -287,7 +287,3 @@ Uniforms HeadlessDevice::uniforms(const UniformsLayout &owner) {
   Uniforms ubo(*this,api.createDescriptors(dev,owner,owner.impl));
   return ubo;
   }
-
-void HeadlessDevice::destroy(Uniforms &u) {
-  api.destroy(u.desc.handler);
-  }
