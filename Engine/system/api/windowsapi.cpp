@@ -277,7 +277,7 @@ long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const uint32_t wParam, co
     case WM_PAINT:{
       if(cb)
         SystemApi::dispatchRender(*cb);
-      break;
+      return DefWindowProc( hWnd, msg, wParam, lParam );
       }
 
     case WM_CLOSE:{
@@ -389,8 +389,10 @@ long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const uint32_t wParam, co
           cb->resize(width,height);
         }
       break;
+    default:
+      return DefWindowProc( hWnd, msg, wParam, lParam );
     }
-  return DefWindowProc( hWnd, msg, wParam, lParam );
+  return 0;
   }
 
 #endif
