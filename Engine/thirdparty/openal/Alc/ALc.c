@@ -635,7 +635,7 @@ enum LogLevel LogLevel = LogError;
 static ALCboolean TrapALCError = ALC_FALSE;
 
 /* One-time configuration init control */
-#if defined(_WIN32)
+#if defined(_MSC_VER)
 static INIT_ONCE alc_config_once;
 #else
 static pthread_once_t alc_config_once = PTHREAD_ONCE_INIT;
@@ -766,11 +766,7 @@ static void alc_init(void)
     ThunkInit();
 }
 
-#if defined(_MSC_VER)
-static void alc_initconfig(PINIT_ONCE InitOnce, PVOID Parameter, PVOID *lpContex)
-#else
-static void alc_initconfig(void)
-#endif
+static void impl_alc_initconfig(void)
 {
     const char *devs;
     ALuint capfilter;
@@ -892,6 +888,21 @@ static void alc_initconfig(void)
     BackendLoopback.Init(&BackendLoopback.Funcs);
 
     InitEffect(&DefaultEffect);
+}
+
+#if defined(_MSC_VER)
+static BOOL WINAPI alc_initconfig(PINIT_ONCE InitOnce, PVOID Parameter, PVOID *lpContex)
+#else
+static void alc_initconfig(void)
+#endif
+{
+  impl_alc_initconfig();
+#if defined(_MSC_VER)
+  (void)InitOnce;
+  (void)Parameter;
+  (void)lpContex;
+  return TRUE;
+#endif
 }
 
 #if defined(_MSC_VER)

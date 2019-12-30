@@ -426,7 +426,7 @@ void Painter::drawText(int rx, int ry, int w, int /*h*/, const char *txt, AlignF
 
       x += l.advance.x;
       }
-    y+=std::ceil(fnt.pixelSize());
+    y+=int(std::ceil(fnt.pixelSize()));
     }
   setBrush(pb);
   }

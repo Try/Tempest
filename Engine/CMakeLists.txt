@@ -20,30 +20,12 @@ add_definitions(-DAL_ALEXT_PROTOTYPES)
 if(MSVC)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   add_definitions(-DNOMINMAX)
-  add_compile_options(/MP1)
+  add_compile_options(/FS)
 endif()
 
 ### Platforms
 if(WIN32)
   add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
-  # add_definitions(-DHAVE_DSOUND)
-  add_definitions(-DHAVE_WINMM)
-  add_definitions(-DHAVE_WINDOWS_H)
-  file(GLOB AlcBackend
-    "thirdparty/openal/Alc/backends/winmm.c"
-    "thirdparty/openal/Alc/backends/null.c"
-    "thirdparty/openal/Alc/backends/loopback.c"
-
-    )
-endif()
-if(UNIX)
-  # add_definitions(-DHAVE_DSOUND)
-  # add_definitions(-DHAVE_ALSA)
-  file(GLOB AlcBackend
-    "thirdparty/openal/Alc/backends/null.c"
-    "thirdparty/openal/Alc/backends/loopback.c"
-
-    )
 endif()
 
 include_directories("include"
@@ -66,10 +48,8 @@ file(GLOB SOURCES
     "**/*.cpp"
     "**/**/*.h"
     "**/**/*.cpp"
-    "**/**/*.c"
     "**/**/**/*.h"
     "**/**/**/*.cpp"
-    "**/**/**/*.c"
     "**/**/**/**/*.h"
     "**/**/**/**/*.cpp"
   )
@@ -78,7 +58,9 @@ file(GLOB SOURCES
 # the files in include should be the headers themselves!
 file(GLOB_RECURSE PUB_HEADERS "include/Tempest/**")
 
-add_library(${PROJECT_NAME} ${SOURCES} ${AlcBackend})
+#add_library(${PROJECT_NAME} ${SOURCES} ${AlcBackend})
+add_subdirectory("thirdparty/openal")
+add_library(${PROJECT_NAME} ${SOURCES})
 
 set_target_properties(
     ${PROJECT_NAME} PROPERTIES
@@ -91,6 +73,8 @@ if(WIN32)
 else()
   target_link_libraries(${PROJECT_NAME} PRIVATE vulkan X11 GL)
 endif()
+
+target_link_libraries(${PROJECT_NAME} PRIVATE OpenAL)
 
 install(
     TARGETS ${PROJECT_NAME}

@@ -208,7 +208,7 @@ AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device
 
 AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Device *d, const Pixmap &p, TextureFormat frm, uint32_t mipCnt) {
   Detail::VDevice* dx     = reinterpret_cast<Detail::VDevice*>(d);
-  const uint32_t   size   = p.dataSize();
+  const uint32_t   size   = uint32_t(p.dataSize());
   VkFormat         format = Detail::nativeFormat(frm);
   Detail::VBuffer  stage  = dx->allocator.alloc(p.data(),size,MemUsage::TransferSrc,BufferFlags::Staging);
   Detail::VTexture buf    = dx->allocator.alloc(p,mipCnt,format);
@@ -225,14 +225,14 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
     size_t blocksize  = (frm==TextureFormat::DXT1) ? 8 : 16;
     size_t bufferSize = 0;
 
-    size_t w = size_t(p.w()), h = size_t(p.h());
-    for(size_t i=0; i<mipCnt; i++){
+    uint32_t w = uint32_t(p.w()), h = uint32_t(p.h());
+    for(uint32_t i=0; i<mipCnt; i++){
       size_t blockcount = ((w+3)/4)*((h+3)/4);
       dat.copy(*pbuf.handler,w,h,i,*pstage.handler,bufferSize);
 
       bufferSize += blockcount*blocksize;
-      w = std::max<size_t>(1,w/2);
-      h = std::max<size_t>(1,h/2);
+      w = std::max<uint32_t>(1,w/2);
+      h = std::max<uint32_t>(1,h/2);
       }
 
     dat.changeLayout(*pbuf.handler, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipCnt);
@@ -441,14 +441,14 @@ void VulkanApi::draw(AbstractGraphicsApi::Device *d,
 
   VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT};//VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
-  submitInfo.waitSemaphoreCount   = waitCnt;
+  submitInfo.waitSemaphoreCount   = uint32_t(waitCnt);
   submitInfo.pWaitSemaphores      = semBuf.data();
   submitInfo.pWaitDstStageMask    = waitStages;
 
-  submitInfo.signalSemaphoreCount = doneCnt;
+  submitInfo.signalSemaphoreCount = uint32_t(doneCnt);
   submitInfo.pSignalSemaphores    = semBuf.data()+waitCnt;
 
-  submitInfo.commandBufferCount   = count;
+  submitInfo.commandBufferCount   = uint32_t(count);
   submitInfo.pCommandBuffers      = cmdBuf.data();
 
   if(doneCpu!=nullptr)

@@ -16,48 +16,51 @@
 
 using namespace Tempest;
 
-char       Log::buffer[128]={};
-std::mutex Log::mutex;
+Log::Context& Log::getCtx() {
+  static Context ctx;
+  return ctx;
+  }
 
 void Log::flush(Mode m, char *&out, size_t &count) {
-  if(count!=sizeof(buffer)){
+  Context& c = getCtx();
+  if(count!=sizeof(c.buffer)){
     *out = '\0';
 
 #ifdef __ANDROID__
     switch (m) {
       case Error:
-        __android_log_print(ANDROID_LOG_ERROR, "app", "%s", buffer);
+        __android_log_print(ANDROID_LOG_ERROR, "app", "%s", c.buffer);
         break;
       case Debug:
-        __android_log_print(ANDROID_LOG_DEBUG, "app", "%s", buffer);
+        __android_log_print(ANDROID_LOG_DEBUG, "app", "%s", c.buffer);
         break;
       case Info:
       default:
-        __android_log_print(ANDROID_LOG_INFO,  "app", "%s", buffer);
+        __android_log_print(ANDROID_LOG_INFO,  "app", "%s", c.buffer);
         break;
       }
 #elif defined(__WINDOWS_PHONE__)
 #if !defined(_DEBUG)
-  OutputDebugStringA(buffer);
+  OutputDebugStringA(c.buffer);
   OutputDebugStringA("\r\n");
 #endif
 #else
 #if defined(_MSC_VER) && !defined(_NDEBUG)
   (void)m;
-  OutputDebugStringA(buffer);
+  OutputDebugStringA(c.buffer);
   OutputDebugStringA("\r\n");
 #else
   if( m==Error ){
-    std::cerr << buffer << std::endl;
+    std::cerr << c.buffer << std::endl;
     std::cerr.flush();
     }
     else
-    std::cout << buffer << std::endl;
+    std::cout << c.buffer << std::endl;
 #endif
 #endif
     }
-  out   = buffer;
-  count = sizeof(buffer)/sizeof(buffer[0]);
+  out   = c.buffer;
+  count = sizeof(c.buffer);
   }
 
 void Log::printImpl(Mode m,char* out, size_t count){

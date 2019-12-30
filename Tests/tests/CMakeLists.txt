@@ -16,7 +16,6 @@ if(MSVC)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   add_definitions(-DNOMINMAX)
 endif()
-add_compile_options(/FS)
 
 if($ENV{GOOGLETEST_DIR})
   SET(GOOGLETEST_DIR $ENV{GOOGLETEST_DIR})

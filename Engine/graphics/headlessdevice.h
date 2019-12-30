@@ -193,7 +193,7 @@ template<class Vertex>
 RenderPipeline HeadlessDevice::pipeline(Topology tp, const RenderState &st,
                                         const UniformsLayout& ulay, const Shader &vs, const Shader &fs) {
   static const auto decl=Tempest::vertexBufferDecl<Vertex>();
-  return implPipeline(st,ulay,vs,fs,decl.data.begin(),decl.data.size(),sizeof(Vertex),tp);
+  return implPipeline(st,ulay,vs,fs,decl.data,decl.size,sizeof(Vertex),tp);
   }
 
 }

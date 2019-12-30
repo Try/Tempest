@@ -64,7 +64,7 @@ class SgStorage {
         const size_t nsize=data->size+sizeof(T);
         data = implRealloc(data,nsize);
         new(data->byte+data->size) T(args...);
-        data->size=nsize;
+        data->size=uint32_t(nsize);
         }
       }
 

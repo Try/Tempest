@@ -7,37 +7,47 @@
 
 namespace Tempest{
 
-class Log {
+class Log final {
   public:
-    enum Mode{
+    template< class ... Args >
+    static void i(const Args& ... args){
+      Context& c = getCtx();
+      std::lock_guard<std::mutex> g(c.mutex);
+      (void)g;
+      printImpl(Info,c.buffer,sizeof(c.buffer),args...);
+      }
+
+    template< class ... Args >
+    static void d(const Args& ... args){
+      Context& c = getCtx();
+      std::lock_guard<std::mutex> g(c.mutex);
+      (void)g;
+      printImpl(Debug,c.buffer,sizeof(c.buffer),args...);
+      }
+
+    template< class ... Args >
+    static void e(const Args& ... args){
+      Context& c = getCtx();
+      std::lock_guard<std::mutex> g(c.mutex);
+      (void)g;
+      printImpl(Error,c.buffer,sizeof(c.buffer),args...);
+      }
+
+  private:
+    enum Mode {
       Info,
       Error,
       Debug
       };
 
-    template< class ... Args >
-    static void i(const Args& ... args){
-      std::lock_guard<std::mutex> g(mutex);
-      (void)g;
-      printImpl(Info,buffer,sizeof(buffer)/sizeof(buffer[0]),args...);
-      }
+    struct Context {
+      char buffer[128];
+      std::mutex mutex;
+      };
 
-    template< class ... Args >
-    static void d(const Args& ... args){
-      std::lock_guard<std::mutex> g(mutex);
-      (void)g;
-      printImpl(Debug,buffer,sizeof(buffer)/sizeof(buffer[0]),args...);
-      }
+    Log() = delete;
 
-    template< class ... Args >
-    static void e(const Args& ... args){
-      std::lock_guard<std::mutex> g(mutex);
-      (void)g;
-      printImpl(Error,buffer,sizeof(buffer)/sizeof(buffer[0]),args...);
-      }
-
-  private:
-    Log(){}
+    static Context& getCtx();
 
     static void flush(Mode m, char*& msg, size_t& count);
     static void write(Mode m, char*& out, size_t& count, const std::string& msg);
@@ -69,8 +79,5 @@ class Log {
 
     template< class T >
     static void writeUInt(Mode m, char*& out, size_t& count, T msg);
-
-    static char buffer[128];
-    static std::mutex mutex;
   };
 }

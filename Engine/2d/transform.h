@@ -12,7 +12,7 @@ class Transform {
               float m31,float m32,float m33=1.f);
 
     void   map(float x,float y,float& outX,float& outY) const;
-    PointF map(const Point& p) const { PointF r; map(p.x,p.y,r.x,r.y); return r; }
+    PointF map(const Point& p) const { PointF r; map(float(p.x),float(p.y),r.x,r.y); return r; }
 
     static const Transform& identity();
 
