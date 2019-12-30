@@ -38,4 +38,7 @@ file(GLOB SOURCES
   )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES} ${AlcBackend})
-target_link_libraries(${PROJECT_NAME} PRIVATE winmm Kernel32)
+
+if(WIN32)
+  target_link_libraries(${PROJECT_NAME} PRIVATE winmm Kernel32)
+endif()
