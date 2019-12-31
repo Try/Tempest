@@ -6,6 +6,9 @@ if(MSVC)
   add_definitions(-DNOMINMAX)
 endif()
 
+add_definitions(-DAL_LIBTYPE_STATIC)
+add_definitions(-DAL_BUILD_LIBRARY)
+
 include_directories("."
                     "include"
                     "openal32/include")

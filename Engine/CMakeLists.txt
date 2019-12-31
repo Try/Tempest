@@ -12,8 +12,6 @@ add_definitions(-DVULKAN_HPP_NO_SMART_HANDLE)
 add_definitions(-DSTB_IMAGE_IMPLEMENTATION)
 add_definitions(-DSTB_TRUETYPE_IMPLEMENTATION)
 add_definitions(-DSTB_IMAGE_WRITE_IMPLEMENTATION)
-add_definitions(-DAL_LIBTYPE_STATIC)
-add_definitions(-DAL_BUILD_LIBRARY)
 add_definitions(-DAL_ALEXT_PROTOTYPES)
 
 ### Compillers
