@@ -1,7 +1,9 @@
 #include "vswapchain.h"
 
 #include "vdevice.h"
+#include "vsemaphore.h"
 
+using namespace Tempest;
 using namespace Tempest::Detail;
 
 VSwapchain::VSwapchain(VDevice &device, uint32_t w, uint32_t h)
@@ -97,6 +99,29 @@ void VSwapchain::operator=(VSwapchain &&other) {
   std::swap(swapChainExtent,other.swapChainExtent);
   std::swap(swapChainImageFormat,other.swapChainImageFormat);
   std::swap(device,other.device);
+  }
+
+uint32_t VSwapchain::nextImage(AbstractGraphicsApi::Semaphore* onReady) {
+  Detail::VSemaphore* rx=reinterpret_cast<Detail::VSemaphore*>(onReady);
+
+  uint32_t id   = uint32_t(-1);
+  VkResult code = vkAcquireNextImageKHR(device,
+                                        swapChain,
+                                        std::numeric_limits<uint64_t>::max(),
+                                        rx->impl,
+                                        VK_NULL_HANDLE,
+                                        &id);
+  if(code==VK_ERROR_OUT_OF_DATE_KHR)
+    throw DeviceLostException();
+
+  if(code!=VK_SUCCESS && code!=VK_SUBOPTIMAL_KHR)
+    throw std::runtime_error("failed to acquire swap chain image!");
+  return id;
+  }
+
+Tempest::AbstractGraphicsApi::Image* VSwapchain::getImage(uint32_t id) {
+  Detail::VImage* img=&images[id];
+  return img;
   }
 
 void VSwapchain::createImageViews(VDevice &device) {

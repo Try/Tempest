@@ -10,6 +10,7 @@
 #include "vfence.h"
 #include "vulkanapi_impl.h"
 #include "exceptions/exception.h"
+#include "utility/spinlock.h"
 
 namespace Tempest {
 namespace Detail{
@@ -78,7 +79,9 @@ inline VkSamplerAddressMode nativeFormat(ClampMode f){
   }
 
 class VDevice : public AbstractGraphicsApi::Device {
-  public:
+  private:
+    class DataStream;
+
     struct QueueFamilyIndices {
       uint32_t graphicsFamily=uint32_t(-1);
       uint32_t presentFamily =uint32_t(-1);
@@ -95,6 +98,7 @@ class VDevice : public AbstractGraphicsApi::Device {
       std::vector<VkPresentModeKHR>   presentModes;
       };
 
+  public:
     using ResPtr = Detail::DSharedPtr<AbstractGraphicsApi::Shared*>;
     using BufPtr = Detail::DSharedPtr<VBuffer*>;
     using TexPtr = Detail::DSharedPtr<VTexture*>;
@@ -107,33 +111,40 @@ class VDevice : public AbstractGraphicsApi::Device {
     VkDevice                device             =nullptr;
     size_t                  nonCoherentAtomSize=1;
 
-    std::mutex              graphicsSync;
-    VkQueue                 graphicsQueue =nullptr;
-    VkQueue                 presentQueue  =nullptr;
+    struct Queue {
+      std::mutex sync;
+      VkQueue    impl=nullptr;
+      uint32_t   family=0;
 
-    VAllocator              allocator;
-    AbstractGraphicsApi::Caps caps;
+      void       submit(uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence);
+      VkResult   present(VkPresentInfoKHR& presentInfo);
+      };
+    Queue                   queues[3];
+    Queue*                  graphicsQueue=nullptr;
+    Queue*                  presentQueue =nullptr;
+
     std::mutex              allocSync;
+    VAllocator              allocator;
 
-    VkResult                nextImg(VSwapchain& sw,uint32_t& imageId,VSemaphore& onReady);
+    AbstractGraphicsApi::Caps caps;
+
     VkResult                present(VSwapchain& sw,const VSemaphore *wait,size_t wSize,uint32_t imageId);
 
     void                    waitData();
     const char*             renderer() const override;
+    void                    waitIdle() const override;
 
     SwapChainSupportDetails querySwapChainSupport() { return querySwapChainSupport(physicalDevice); }
     QueueFamilyIndices      findQueueFamilies    () { return findQueueFamilies(physicalDevice);     }
     uint32_t                memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props) const;
 
     void                    getCaps(AbstractGraphicsApi::Caps& c);
-    void                    submitQueue(VkQueue q, VkSubmitInfo& info, VkFence fence, bool waitData);
 
     class Data final {
       public:
         Data(VDevice& dev);
-        ~Data();
+        ~Data() noexcept(false);
 
-        void start();
         void flush(const Detail::VBuffer& src, size_t size);
         void copy(Detail::VBuffer&  dest, const Detail::VBuffer& src, size_t size);
         void copy(Detail::VTexture& dest, uint32_t w, uint32_t h, uint32_t mip, const Detail::VBuffer&  src, size_t offset);
@@ -147,16 +158,23 @@ class VDevice : public AbstractGraphicsApi::Device {
         void commit();
 
       private:
-        VDevice&                    dev;
         std::lock_guard<std::mutex> sync;
+        DataStream&                 stream;
+        VkPhysicalDevice            physicalDevice=VK_NULL_HANDLE;
         bool                        commited=true;
       };
 
   private:
-    class DataHelper {
+    enum  DataState : uint8_t {
+      StIdle      = 0,
+      StRecording = 1,
+      StWait      = 2,
+      };
+
+    class DataStream {
       public:
-        DataHelper(VDevice &owner);
-        ~DataHelper();
+        DataStream(VDevice &owner);
+        ~DataStream();
 
         void begin();
         void end();
@@ -167,18 +185,28 @@ class VDevice : public AbstractGraphicsApi::Device {
         VCommandBuffer         cmdBuffer;
         std::vector<ResPtr>    hold;
 
-      private:
         VFence                 fence;
-        VkQueue                graphicsQueue=nullptr;
-
-        std::mutex             waitSync;
-        bool                   hasToWait=false;
+        Queue*                 gpuQueue=nullptr;
+        std::atomic<DataState> state{StIdle};
       };
 
-    VkInstance              instance;
+    struct DataMgr {
+      DataMgr(VDevice& dev);
+      ~DataMgr();
+
+      DataStream& get();
+      void        wait();
+
+      static constexpr size_t     size=2;
+      SpinLock                    sync[size];
+      std::unique_ptr<DataStream> streams[size];
+      std::atomic_int             at{0};
+      };
+
+    VkInstance                       instance;
     VkPhysicalDeviceMemoryProperties memoryProperties;
-    std::unique_ptr<DataHelper> data;
-    char                    deviceName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE]={};
+    std::unique_ptr<DataMgr>         data;
+    char                             deviceName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE]={};
 
     void                    pickPhysicalDevice();
     bool                    isDeviceSuitable(VkPhysicalDevice device);

@@ -168,7 +168,7 @@ struct DeviceAllocator<MemoryProvider>::Page : Block {
     a.page  =this;
     a.size  =size;
 
-    size_t sz=size+padding;
+    uint32_t sz=uint32_t(size+padding);
     b.offset +=sz;
     b.size   -=sz;
     allocated+=size;

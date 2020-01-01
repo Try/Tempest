@@ -49,11 +49,6 @@ void VulkanApi::destroy(AbstractGraphicsApi::Device *d) {
   delete dx;
   }
 
-void VulkanApi::waitIdle(AbstractGraphicsApi::Device *d) {
-  Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
-  vkDeviceWaitIdle(dx->device);
-  }
-
 AbstractGraphicsApi::Swapchain *VulkanApi::createSwapchain(SystemApi::Window *w,AbstractGraphicsApi::Device *d) {
   Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
   const uint32_t width =SystemApi::width(w);
@@ -146,8 +141,8 @@ AbstractGraphicsApi::PPipeline VulkanApi::createPipeline(AbstractGraphicsApi::De
                                                          Topology tp,
                                                          const UniformsLayout &ulay,
                                                          std::shared_ptr<AbstractGraphicsApi::UniformsLay> &ulayImpl,
-                                                         const std::initializer_list<AbstractGraphicsApi::Shader*> &sh) {
-  Shader*const*        arr=sh.begin();
+                                                         const std::initializer_list<AbstractGraphicsApi::Shader*> &shaders) {
+  Shader*const*        arr=shaders.begin();
   Detail::VDevice*     dx =reinterpret_cast<Detail::VDevice*>(d);
   Detail::VShader*     vs =reinterpret_cast<Detail::VShader*>(arr[0]);
   Detail::VShader*     fs =reinterpret_cast<Detail::VShader*>(arr[1]);
@@ -321,31 +316,6 @@ AbstractGraphicsApi::CommandBuffer *VulkanApi::createCommandBuffer(AbstractGraph
   return new Detail::VCommandBuffer(*dx,*px,fb,cmdType);
   }
 
-uint32_t VulkanApi::nextImage(Device *d,
-                              AbstractGraphicsApi::Swapchain *sw,
-                              AbstractGraphicsApi::Semaphore *onReady) {
-  Detail::VDevice*    dx=reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VSwapchain* sx=reinterpret_cast<Detail::VSwapchain*>(sw);
-  Detail::VSemaphore* rx=reinterpret_cast<Detail::VSemaphore*>(onReady);
-
-  uint32_t id=uint32_t(-1);
-  VkResult code=dx->nextImg(*sx,id,*rx);
-  if(code==VK_ERROR_OUT_OF_DATE_KHR)
-    throw DeviceLostException();
-
-  if(code!=VK_SUCCESS && code!=VK_SUBOPTIMAL_KHR)
-    throw std::runtime_error("failed to acquire swap chain image!");
-  return id;
-  }
-
-AbstractGraphicsApi::Image *VulkanApi::getImage(AbstractGraphicsApi::Device*,
-                                                AbstractGraphicsApi::Swapchain *sw,
-                                                uint32_t id) {
-  Detail::VSwapchain* sx=reinterpret_cast<Detail::VSwapchain*>(sw);
-  Detail::VImage* img=&sx->images[id];
-  return img;
-  }
-
 void VulkanApi::present(Device *d,Swapchain *sw,uint32_t imageId,const Semaphore *wait) {
   Detail::VDevice*    dx=reinterpret_cast<Detail::VDevice*>(d);
   Detail::VSwapchain* sx=reinterpret_cast<Detail::VSwapchain*>(sw);
@@ -363,8 +333,8 @@ void VulkanApi::present(Device *d,Swapchain *sw,uint32_t imageId,const Semaphore
   presentInfo.pImageIndices   = &imageId;
 
   dx->waitData();
-  std::lock_guard<std::mutex> g(dx->graphicsSync); // if dx->presentQueue==dx->graphicsQueue
-  VkResult code = vkQueuePresentKHR(dx->presentQueue,&presentInfo);
+
+  VkResult code = dx->presentQueue->present(presentInfo);
   if(code==VK_ERROR_OUT_OF_DATE_KHR || code==VK_SUBOPTIMAL_KHR) {
     //todo
     throw DeviceLostException();
@@ -406,7 +376,8 @@ void VulkanApi::draw(Device *d,
   if(onReadyCpu!=nullptr)
     onReadyCpu->reset();
 
-  dx->submitQueue(dx->graphicsQueue,submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl,true);
+  dx->waitData();
+  dx->graphicsQueue->submit(1,&submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl);
   }
 
 void VulkanApi::draw(AbstractGraphicsApi::Device *d,
@@ -455,7 +426,8 @@ void VulkanApi::draw(AbstractGraphicsApi::Device *d,
     doneCpu->reset();
   auto* rc=reinterpret_cast<Detail::VFence*>(doneCpu);
 
-  dx->submitQueue(dx->graphicsQueue,submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl,true);
+  dx->waitData();
+  dx->graphicsQueue->submit(1,&submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl);
   }
 
 void VulkanApi::getCaps(Device *d,Caps &caps) {

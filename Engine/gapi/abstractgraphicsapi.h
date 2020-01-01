@@ -185,12 +185,7 @@ namespace Tempest {
       struct Device       {
         virtual ~Device()=default;
         virtual const char* renderer() const=0;
-        };
-      struct Swapchain    {
-        virtual ~Swapchain()=default;
-        virtual uint32_t      imageCount() const=0;
-        virtual uint32_t      w() const=0;
-        virtual uint32_t      h() const=0;
+        virtual void        waitIdle() const=0;
         };
       struct Texture:Shared  {
         virtual void setSampler(const Sampler2d& s)=0;
@@ -253,6 +248,14 @@ namespace Tempest {
       struct Semaphore       {
         virtual ~Semaphore()=default;
         };
+      struct Swapchain    {
+        virtual ~Swapchain()=default;
+        virtual uint32_t      nextImage(Semaphore* onReady)=0;
+        virtual Image*        getImage (uint32_t id)=0;
+        virtual uint32_t      imageCount() const=0;
+        virtual uint32_t      w() const=0;
+        virtual uint32_t      h() const=0;
+        };
 
       using PBuffer    = Detail::DSharedPtr<Buffer*>;
       using PTexture   = Detail::DSharedPtr<Texture*>;
@@ -264,7 +267,6 @@ namespace Tempest {
 
       virtual Device*    createDevice(SystemApi::Window* w)=0;
       virtual void       destroy(Device* d)=0;
-      virtual void       waitIdle(Device* d)=0;
 
       virtual Swapchain* createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d)=0;
 
@@ -309,8 +311,6 @@ namespace Tempest {
       virtual PTexture   createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm)=0;
       virtual void       readPixels   (AbstractGraphicsApi::Device *d, Pixmap &out,const PTexture t, TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip) = 0;
 
-      virtual uint32_t   nextImage(Device *d,Swapchain* sw,Semaphore* onReady)=0;
-      virtual Image*     getImage (Device *d,Swapchain* sw,uint32_t id)=0;
       virtual void       present  (Device *d,Swapchain* sw,uint32_t imageId,const Semaphore *wait)=0;
 
       virtual void       draw     (Device *d,CommandBuffer*  cmd,Semaphore* wait,Semaphore* onReady,Fence* onReadyCpu)=0;

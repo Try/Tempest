@@ -16,11 +16,10 @@ class Encoder;
 
 class VertexBufferDecl final {
   public:
-    VertexBufferDecl(const std::initializer_list<Decl::ComponentType>& i):data(&(*i.begin())),size(i.size()){}
+    VertexBufferDecl(const std::initializer_list<Decl::ComponentType>& i):data(i){}
 
   private:
-    const Decl::ComponentType* data;
-    size_t                     size;
+    const std::vector<Decl::ComponentType> data;
   friend class HeadlessDevice;
   };
 

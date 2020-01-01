@@ -43,7 +43,7 @@ HeadlessDevice::~HeadlessDevice() {
   }
 
 void HeadlessDevice::waitIdle() {
-  api.waitIdle(impl.dev);
+  impl.dev->waitIdle();
   }
 
 void HeadlessDevice::draw(const PrimaryCommandBuffer &cmd, const Semaphore &wait) {

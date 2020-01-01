@@ -40,12 +40,12 @@ uint64_t Device::frameCounter() const {
   }
 
 Frame Device::frame(uint32_t id) {
-  Frame fr(*this,api.getImage(implHandle(),impl.swapchain,id),id);
+  Frame fr(*this,impl.swapchain->getImage(id),id);
   return fr;
   }
 
 uint32_t Device::nextImage(Semaphore &onReady) {
-  imgId = api.nextImage(implHandle(),impl.swapchain,onReady.impl.handler);
+  imgId = impl.swapchain->nextImage(onReady.impl.handler);
   return imgId;
   }
 

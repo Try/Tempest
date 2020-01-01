@@ -14,7 +14,6 @@ class VulkanApi : public AbstractGraphicsApi {
 
     Device*        createDevice(SystemApi::Window* w) override;
     void           destroy(Device* d) override;
-    void           waitIdle(Device* d) override;
 
     Swapchain*     createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d) override;
 
@@ -35,14 +34,13 @@ class VulkanApi : public AbstractGraphicsApi {
                                   Topology tp,
                                   const UniformsLayout& ulay,
                                   std::shared_ptr<UniformsLay> &ulayImpl,
-                                  const std::initializer_list<Shader*>& frag) override;
+                                  const std::initializer_list<Shader*>& shaders) override;
 
     PShader        createShader(AbstractGraphicsApi::Device *d, const char* source, size_t src_size) override;
 
     Fence*         createFence(Device *d) override;
-    Semaphore*     createSemaphore(Device *d) override;
 
-    CmdPool*       createCommandPool(Device* d) override;
+    Semaphore*     createSemaphore(Device *d) override;
 
     PBuffer        createBuffer(Device* d, const void *mem, size_t size, MemUsage usage, BufferFlags flg) override;
 
@@ -56,10 +54,9 @@ class VulkanApi : public AbstractGraphicsApi {
     void           readPixels(AbstractGraphicsApi::Device *d, Pixmap &out, const PTexture t, TextureFormat frm,
                               const uint32_t w, const uint32_t h, uint32_t mip) override;
 
+    CmdPool*       createCommandPool(Device* d) override;
     CommandBuffer* createCommandBuffer(Device* d, CmdPool* pool, FboLayout* fbo, CmdType type) override;
 
-    uint32_t       nextImage(Device *d,Swapchain* sw,Semaphore* onReady) override;
-    Image*         getImage (Device *d,Swapchain* sw,uint32_t id) override;
     void           present  (Device *d,Swapchain* sw,uint32_t imageId, const Semaphore *wait) override;
 
     void           draw     (Device *d,CommandBuffer* cmd,Semaphore* wait,Semaphore* onReady,Fence* onReadyCpu) override;
@@ -74,8 +71,6 @@ class VulkanApi : public AbstractGraphicsApi {
   private:
     struct Impl;
     std::unique_ptr<Impl> impl;
-
-    bool           setupValidationLayer();
   };
 
 }

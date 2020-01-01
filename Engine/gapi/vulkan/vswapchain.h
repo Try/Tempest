@@ -6,6 +6,9 @@
 #include <vulkan/vulkan.hpp>
 
 namespace Tempest {
+
+class Semaphore;
+
 namespace Detail {
 
 class VDevice;
@@ -19,11 +22,13 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
 
     void operator=(VSwapchain&& other);
 
-    VkFormat                 format() const { return swapChainImageFormat;   }
-    uint32_t                 w()      const { return swapChainExtent.width;  }
-    uint32_t                 h()      const { return swapChainExtent.height; }
+    VkFormat                 format() const          { return swapChainImageFormat;   }
+    uint32_t                 w()      const override { return swapChainExtent.width;  }
+    uint32_t                 h()      const override { return swapChainExtent.height; }
 
-    uint32_t                 imageCount() const { return uint32_t(swapChainImageViews.size()); }
+    uint32_t                 imageCount() const override { return uint32_t(swapChainImageViews.size()); }
+    uint32_t                 nextImage(AbstractGraphicsApi::Semaphore* onReady) override;
+    AbstractGraphicsApi::Image* getImage (uint32_t id) override;
 
     VkSwapchainKHR           swapChain=VK_NULL_HANDLE;
     std::vector<VkImageView> swapChainImageViews;

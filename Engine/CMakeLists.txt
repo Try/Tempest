@@ -56,7 +56,6 @@ file(GLOB SOURCES
 # the files in include should be the headers themselves!
 file(GLOB_RECURSE PUB_HEADERS "include/Tempest/**")
 
-#add_library(${PROJECT_NAME} ${SOURCES} ${AlcBackend})
 add_subdirectory("thirdparty/openal")
 add_library(${PROJECT_NAME} ${SOURCES})
 
@@ -68,6 +67,9 @@ set_target_properties(
 if(WIN32)
   target_link_libraries(${PROJECT_NAME} PRIVATE vulkan-1 shlwapi)
   target_link_libraries(${PROJECT_NAME} PRIVATE winmm Kernel32)
+  if(MSVC)
+    target_link_libraries(${PROJECT_NAME} PRIVATE d3d12 dxgi)
+  endif()
 else()
   target_link_libraries(${PROJECT_NAME} PRIVATE vulkan X11 GL)
 endif()
