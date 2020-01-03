@@ -52,6 +52,26 @@ static Atom& wmDeleteMessage(){
   return w;
   }
 
+static Atom& _NET_WM_STATE(){
+  static Atom w  = XInternAtom( dpy, "_NET_WM_STATE", 0);
+  return w;
+  }
+
+static Atom& _NET_WM_STATE_MAXIMIZED_HORZ(){
+  static Atom w  = XInternAtom( dpy, "_NET_WM_STATE_MAXIMIZED_HORZ", 0);
+  return w;
+  }
+
+static Atom& _NET_WM_STATE_MAXIMIZED_VERT(){
+  static Atom w  = XInternAtom( dpy, "_NET_WM_STATE_MAXIMIZED_VERT", 0);
+  return w;
+  }
+
+static Atom& _NET_WM_STATE_FULLSCREEN(){
+  static Atom w  = XInternAtom( dpy, "_NET_WM_STATE_FULLSCREEN", 0);
+  return w;
+  }
+
 static Event::MouseButton toButton( XButtonEvent& msg ){
   if( msg.button==Button1 )
     return Event::ButtonLeft;
@@ -65,6 +85,23 @@ static Event::MouseButton toButton( XButtonEvent& msg ){
   return Event::ButtonNone;
   }
 
+static void maximizeWindow(HWND& w) {
+  Atom a[2];
+  a[0] = _NET_WM_STATE_MAXIMIZED_HORZ();
+  a[1] = _NET_WM_STATE_MAXIMIZED_VERT();
+
+  XChangeProperty ( dpy, w, _NET_WM_STATE(),
+    XA_ATOM, 32, PropModeReplace, (unsigned char*)a, 2);
+  XSync(dpy,False);
+  }
+
+static void alignGeometry(::Window w,Tempest::Window& owner) {
+  XWindowAttributes xwa={};
+  if(XGetWindowAttributes(dpy, HWND(w), &xwa)){
+    owner.resize(xwa.width, xwa.height);
+    }
+  }
+
 X11Api::X11Api() {
   dpy = XOpenDisplay(nullptr);
 
@@ -72,6 +109,33 @@ X11Api::X11Api() {
     throw std::runtime_error("cannot connect to X server!");
 
   root = DefaultRootWindow(dpy);
+
+  static const TranslateKeyPair k[] = {
+    { XK_KP_Left,   Event::K_Left   },
+    { XK_KP_Right,  Event::K_Right  },
+    { XK_KP_Up,     Event::K_Up     },
+    { XK_KP_Down,   Event::K_Down   },
+
+    { XK_Escape,    Event::K_ESCAPE },
+    { XK_Tab,       Event::K_Tab },
+    { XK_BackSpace, Event::K_Back   },
+    { XK_Delete,    Event::K_Delete },
+    { XK_Insert,    Event::K_Insert },
+    { XK_Home,      Event::K_Home   },
+    { XK_End,       Event::K_End    },
+    { XK_Pause,     Event::K_Pause  },
+    { XK_Return,    Event::K_Return },
+    { XK_Shift_L,   Event::K_Shift  },
+    { XK_Shift_R,   Event::K_Shift  },
+
+    { XK_F1,        Event::K_F1     },
+    {   48,         Event::K_0      },
+    {   97,         Event::K_A      },
+
+    { 0,            Event::K_NoKey  }
+    };
+
+  setupKeyTranslate(k,24);
   }
 
 void *X11Api::display() {
@@ -103,6 +167,10 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, 
 
   auto ret = reinterpret_cast<SystemApi::Window*>(win.ptr());
   windows[ret] = owner;
+  //maximizeWindow(win);
+  XMapWindow(dpy, win);
+  XSync(dpy,False);
+  alignGeometry(win,*owner);
   return ret;
   }
 
@@ -143,17 +211,17 @@ void X11Api::implExit() {
   }
 
 uint32_t X11Api::implWidth(SystemApi::Window *w) {
-  XWindowAttributes xwa;
-  XGetWindowAttributes(dpy, HWND(w), &xwa);
-
-  return uint32_t(xwa.width);
+  auto i = windows.find(w);
+  if(i!=windows.end())
+    return i->second->w();
+  return 0;
   }
 
 uint32_t X11Api::implHeight(SystemApi::Window *w) {
-  XWindowAttributes xwa;
-  XGetWindowAttributes(dpy, HWND(w), &xwa);
-
-  return uint32_t(xwa.height);
+  auto i = windows.find(w);
+  if(i!=windows.end())
+    return i->second->h();
+  return 0;
   }
 
 int X11Api::implExec(SystemApi::AppCallBack &cb) {
@@ -205,7 +273,9 @@ int X11Api::implExec(SystemApi::AppCallBack &cb) {
                             0,
                             0,
                             xev.type==ButtonPress ? Event::MouseDown : Event::MouseUp );
-              SystemApi::dispatchMouseUp(*cb, e);
+              if(xev.type==ButtonPress)
+                SystemApi::dispatchMouseDown(*cb, e);
+                SystemApi::dispatchMouseUp(*cb, e);
               }
             }
           break;
@@ -228,7 +298,7 @@ int X11Api::implExec(SystemApi::AppCallBack &cb) {
                                                 1,
                                                 &keysyms_per_keycode_return );
 
-            char txt[10];
+            char txt[10]={};
             XLookupString(&xev.xkey, txt, sizeof(txt)-1, ksym, nullptr );
 
             auto u16 = TextCodec::toUtf16(txt); // TODO: remove dynamic allocation
@@ -250,19 +320,10 @@ int X11Api::implExec(SystemApi::AppCallBack &cb) {
       if(cb.onTimer()==0)
         std::this_thread::yield();
       for(auto& i:windows) {
-        SystemApi::dispatchRender(*i.second);
-
         ::Window hWnd = HWND(i.first);
-        ::Window root;
-        int x, y;
-        unsigned ww, hh, border, depth;
-
         // artificial move/resize event
-        if( XGetGeometry(dpy, hWnd, &root, &x, &y, &ww, &hh, &border, &depth) ){
-          i.second->resize(int(ww),int(hh));
-          //SystemAPI::moveEvent( w, x, y );
-          //SystemAPI::sizeEvent( w, ww, hh );
-          }
+        alignGeometry(hWnd,*i.second);
+        SystemApi::dispatchRender(*i.second);
         }
       }
     }
