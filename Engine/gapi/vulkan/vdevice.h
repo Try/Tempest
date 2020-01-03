@@ -11,9 +11,10 @@
 #include "vulkanapi_impl.h"
 #include "exceptions/exception.h"
 #include "utility/spinlock.h"
+#include "utility/compiller_hints.h"
 
 namespace Tempest {
-namespace Detail{
+namespace Detail {
 
 class VSwapchain;
 class VCommandBuffer;
@@ -24,9 +25,10 @@ class VSemaphore;
 class VTexture;
 
 inline void vkAssert(VkResult code){
+  if(T_LIKELY(code==VkResult::VK_SUCCESS))
+    return;
+
   switch( code ) {
-    case VkResult::VK_SUCCESS:
-      return;
     case VkResult::VK_ERROR_OUT_OF_DEVICE_MEMORY:
       throw std::system_error(Tempest::GraphicsErrc::OutOfVideoMemory);
     case VkResult::VK_ERROR_OUT_OF_HOST_MEMORY:

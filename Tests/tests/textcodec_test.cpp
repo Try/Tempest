@@ -26,22 +26,35 @@ TEST(main,TextCodec_UTF8_0) {
   }
 
 TEST(main,TextCodec_UTF8_1) {
+#if !defined(_MSC_VER)
   std::string    u8  =  "z\u00df\u6c34";
   std::u16string u16 = u"z\u00df\u6c34";
 
   TextCodec_Base(u8,u16);
+#endif
   }
 
 TEST(main,TextCodec_UTF8_2) {
+#if !defined(_MSC_VER)
   std::string    u8  =  "\U0001f34c";
   std::u16string u16 = u"\U0001f34c";
 
   TextCodec_Base(u8,u16);
+#endif
   }
 
 TEST(main,TextCodec_UTF8_3) {
+#if !defined(_MSC_VER)
   std::string    u8  =  "z\u00df\u6c34\U0001f34c";
   std::u16string u16 = u"z\u00df\u6c34\U0001f34c";
+
+  TextCodec_Base(u8,u16);
+#endif
+  }
+
+TEST(main,TextCodec_UTF8_4) {
+  std::u16string u16 = u"z\u00df\u6c34\U0001f34c";
+  std::string    u8  = TextCodec::toUtf8(u16);
 
   TextCodec_Base(u8,u16);
   }
