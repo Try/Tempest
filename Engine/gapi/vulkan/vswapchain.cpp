@@ -63,6 +63,7 @@ VSwapchain::VSwapchain(VDevice &device, uint32_t w, uint32_t h)
     images[i].impl               = swapChainImages[i];
     images[i].device             = device.device;
     images[i].presentQueueFamily = indices.presentFamily;
+    images[i].format             = swapChainImageFormat;
     }
   }
 

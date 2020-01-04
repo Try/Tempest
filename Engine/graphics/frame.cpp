@@ -5,11 +5,11 @@ using namespace Tempest;
 Frame::Frame(){
   }
 
-Frame::Frame(Device &dev, AbstractGraphicsApi::Image *img,uint32_t id)
-  :dev(&dev),img(img),id(id) {
+Frame::Frame(AbstractGraphicsApi::Image *img, AbstractGraphicsApi::Swapchain* sw, uint32_t id)
+  :img(img),swapchain(sw),id(id) {
   }
 
-Frame::Frame(Frame &&f) : dev(f.dev), img(f.img) {
+Frame::Frame(Frame &&f) : img(f.img) {
   f.img=nullptr;
   }
 

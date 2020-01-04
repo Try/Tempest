@@ -22,14 +22,6 @@ Window::~Window() {
   Tempest::SystemApi::destroyWindow(id);
   }
 
-int Window::w() const {
-  return int(Tempest::SystemApi::width(id));
-  }
-
-int Window::h() const {
-  return int(Tempest::SystemApi::height(id));
-  }
-
 void Window::render() {
   }
 

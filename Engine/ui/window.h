@@ -21,9 +21,6 @@ class Window : public Widget {
     Window( ShowMode sm );
     virtual ~Window();
 
-    int w() const;
-    int h() const;
-
   protected:
     virtual void render();
     void         dispatchPaintEvent(VectorImage &e,TextureAtlas &ta);

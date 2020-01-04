@@ -131,6 +131,10 @@ Shader HeadlessDevice::loadShader(const char *source, const size_t length) {
   return f;
   }
 
+Swapchain HeadlessDevice::swapchain(SystemApi::Window* w) const {
+  return Swapchain(w,*impl.dev,api,2);
+  }
+
 const HeadlessDevice::Caps &HeadlessDevice::caps() const {
   return devCaps;
   }
@@ -189,6 +193,32 @@ UniformBuffer HeadlessDevice::loadUbo(const void *mem, size_t size) {
   VideoBuffer   data=createVideoBuffer(mem,size,MemUsage::UniformBit,BufferFlags::Dynamic);
   UniformBuffer ubo(std::move(data));
   return ubo;
+  }
+
+FrameBuffer HeadlessDevice::frameBuffer(Frame& out) {
+  auto swapchain = out.swapchain;
+  TextureFormat att[1] = {TextureFormat::Undefined};
+  uint32_t w = swapchain->w();
+  uint32_t h = swapchain->h();
+
+  FrameBufferLayout lay(api.createFboLayout(implHandle(),w,h,swapchain,att,1),w,h);
+  FrameBuffer       f(*this,api.createFbo(implHandle(),lay.impl.handler,swapchain,out.id),std::move(lay));
+  return f;
+  }
+
+FrameBuffer HeadlessDevice::frameBuffer(Frame &out, Texture2d &zbuf) {
+  auto swapchain = out.swapchain;
+
+  TextureFormat att[2] = {TextureFormat::Undefined,zbuf.format()};
+  uint32_t w = swapchain->w();
+  uint32_t h = swapchain->h();
+
+  if(int(w)!=zbuf.w() || int(h)!=zbuf.h())
+    throw IncompleteFboException();
+
+  FrameBufferLayout lay(api.createFboLayout(implHandle(),w,h,swapchain,att,2),w,h);
+  FrameBuffer       f(*this,api.createFbo(implHandle(),lay.impl.handler,swapchain,out.id,zbuf.impl.handler),std::move(lay));
+  return f;
   }
 
 FrameBuffer HeadlessDevice::frameBuffer(Texture2d &out, Texture2d &zbuf) {
@@ -256,7 +286,7 @@ PrimaryCommandBuffer HeadlessDevice::commandBuffer() {
 CommandBuffer HeadlessDevice::commandSecondaryBuffer(const FrameBufferLayout &lay) {
   CommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,
                                                   lay.impl.handler,CmdType::Secondary),
-                    lay.w(),lay.h());
+                    lay.mw,lay.mh);
   return buf;
   }
 

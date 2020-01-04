@@ -7,6 +7,7 @@ namespace Tempest {
 
 class HeadlessDevice;
 class Device;
+class Swapchain;
 
 class Semaphore final {
   public:
@@ -22,6 +23,7 @@ class Semaphore final {
 
   friend class Tempest::Device;
   friend class Tempest::HeadlessDevice;
+  friend class Tempest::Swapchain;
   };
 
 }

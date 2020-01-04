@@ -18,7 +18,6 @@ class VCommandPool;
 class VPipeline;
 class VBuffer;
 class VTexture;
-class VImage;
 
 class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
   public:

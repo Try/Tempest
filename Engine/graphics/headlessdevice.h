@@ -13,6 +13,7 @@
 #include <Tempest/VertexBuffer>
 #include <Tempest/IndexBuffer>
 #include <Tempest/Builtin>
+#include <Tempest/Swapchain>
 
 #include "videobuffer.h"
 
@@ -60,6 +61,8 @@ class HeadlessDevice {
     Shader               loadShader(const char16_t* filename);
     Shader               loadShader(const char* source,const size_t length);
 
+    Swapchain            swapchain(SystemApi::Window* w) const;
+
     const Caps&          caps() const;
 
     template<class T>
@@ -93,6 +96,8 @@ class HeadlessDevice {
 
     Uniforms             uniforms(const UniformsLayout &owner);
 
+    FrameBuffer          frameBuffer(Frame     &out);
+    FrameBuffer          frameBuffer(Frame     &out, Texture2d& zbuf);
     FrameBuffer          frameBuffer(Texture2d &out);
     FrameBuffer          frameBuffer(Texture2d &out, Texture2d& zbuf);
 

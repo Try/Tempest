@@ -5,7 +5,9 @@
 namespace Tempest {
 
 class Device;
+class HeadlessDevice;
 class CommandBuffer;
+class Swapchain;
 
 class Frame final {
   public:
@@ -14,14 +16,15 @@ class Frame final {
     ~Frame();
 
   private:
-    Frame(Tempest::Device& dev,AbstractGraphicsApi::Image* img,uint32_t id);
+    Frame(AbstractGraphicsApi::Image* img, AbstractGraphicsApi::Swapchain* sw, uint32_t id);
 
-    Tempest::Device*            dev=nullptr;
-    AbstractGraphicsApi::Image* img=nullptr;
-    uint32_t                    id =0;
+    AbstractGraphicsApi::Image*     img       = nullptr;
+    AbstractGraphicsApi::Swapchain* swapchain = nullptr;
+    uint32_t                        id        = 0;
 
   friend class Tempest::CommandBuffer;
-  friend class Tempest::Device;
+  friend class Tempest::HeadlessDevice;
+  friend class Tempest::Swapchain;
   };
 
 }

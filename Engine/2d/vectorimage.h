@@ -10,6 +10,7 @@
 
 namespace Tempest {
 
+class Swapchain;
 class HeadlessDevice;
 template<class T>
 class Encoder;
@@ -21,7 +22,7 @@ class VectorImage : public Tempest::PaintDevice {
     uint32_t w() const { return info.w; }
     uint32_t h() const { return info.h; }
 
-    void     draw(Device& dev, Encoder<CommandBuffer> &cmd);
+    void     draw(Device& dev, Swapchain& sw, Encoder<CommandBuffer> &cmd);
     bool     load(const char* path);
     void     clear() override;
 
@@ -120,7 +121,7 @@ class VectorImage : public Tempest::PaintDevice {
       };
     Info info;
 
-    void makeActual(Device& dev);
+    void makeActual(Device& dev, Swapchain& sw);
 
     template<class T,T State::*param>
     void setState(const T& t);

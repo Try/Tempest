@@ -15,9 +15,6 @@ class Texture2d;
 
 class FrameBufferLayout final {
   public:
-    uint32_t w() const { return mw; }
-    uint32_t h() const { return mh; }
-
     bool operator == (const FrameBufferLayout& fbo) const;
     bool operator != (const FrameBufferLayout& fbo) const;
 

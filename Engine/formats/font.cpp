@@ -117,7 +117,7 @@ struct FontElement::Impl {
       return;
 
     RFile file(filename);
-    size = file.size();
+    size = uint32_t(file.size());
     data = new uint8_t[size];
 
     if(file.read(data,size)!=size) {
