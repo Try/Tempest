@@ -23,7 +23,8 @@ uint8_t* PixmapCodecDDS::load(PixmapCodec::Context &c, uint32_t &ow, uint32_t &o
 
   auto& f = c.device;
   uint8_t head[4]={};
-  f.read(head,4);
+  if(f.read(head,4)!=4)
+    return nullptr;
 
   DDSURFACEDESC2 ddsd={};
   if(f.read(&ddsd,sizeof(ddsd))!=sizeof(ddsd))

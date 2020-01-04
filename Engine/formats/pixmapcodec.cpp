@@ -16,7 +16,8 @@ using namespace Tempest;
 PixmapCodec::Context::Context(IDevice &dev)
   :device(dev) {
   bufSiz = dev.read(buf,sizeof(buf));
-  dev.unget(bufSiz);
+  if(dev.unget(bufSiz)!=bufSiz)
+    throw std::system_error(Tempest::SystemErrc::UnableToLoadAsset);
   }
 
 size_t PixmapCodec::Context::peek(void* out,size_t n) const {
