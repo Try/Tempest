@@ -213,7 +213,7 @@ VDevice::SwapChainSupportDetails VDevice::querySwapChainSupport(VkPhysicalDevice
   return details;
   }
 
-void VDevice::createLogicalDevice(VulkanApi& api) {
+void VDevice::createLogicalDevice(VulkanApi& /*api*/) {
   QueueFamilyIndices     indices             = findQueueFamilies(physicalDevice);
   std::array<uint32_t,2> uniqueQueueFamilies = {indices.graphicsFamily, indices.presentFamily};
 
@@ -274,12 +274,17 @@ void VDevice::createLogicalDevice(VulkanApi& api) {
   std::memcpy(deviceName,prop.deviceName,sizeof(deviceName));
   }
 
-uint32_t VDevice::memoryTypeIndex(uint32_t typeBits,VkMemoryPropertyFlags props) const {
+VDevice::MemIndex VDevice::memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const {
   for(size_t i=0; i<memoryProperties.memoryTypeCount; ++i) {
     auto bit = (uint32_t(1) << i);
     if((typeBits & bit)!=0) {
-      if((memoryProperties.memoryTypes[i].propertyFlags & props)==props)
-        return uint32_t(i);
+      if((memoryProperties.memoryTypes[i].propertyFlags & props)==props) {
+        MemIndex ret;
+        ret.typeId = uint32_t(i);
+        // avoid bufferImageGranularity shenanigans
+        ret.headId = (tiling==VK_IMAGE_TILING_OPTIMAL && bufferImageGranularity>1) ? ret.typeId*2+1 : ret.typeId*2+0;
+        return ret;
+        }
       }
     }
   throw std::runtime_error("failed to get correct memory type");
@@ -338,6 +343,10 @@ void VDevice::getCaps(AbstractGraphicsApi::Caps &c) {
   nonCoherentAtomSize = size_t(prop.limits.nonCoherentAtomSize);
   if(nonCoherentAtomSize==0)
     nonCoherentAtomSize=1;
+
+  bufferImageGranularity = size_t(prop.limits.bufferImageGranularity);
+  if(bufferImageGranularity==0)
+    bufferImageGranularity=1;
   }
 
 VkResult VDevice::present(VSwapchain &sw, const VSemaphore *wait, size_t wSize, uint32_t imageId) {

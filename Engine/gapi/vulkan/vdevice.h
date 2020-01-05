@@ -108,12 +108,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     VDevice(VulkanApi& api,void* hwnd);
     ~VDevice();
 
-    VkSurfaceKHR            surface            =VK_NULL_HANDLE;
-    VkPhysicalDevice        physicalDevice     =nullptr;
-    VkDevice                device             =nullptr;
-    size_t                  nonCoherentAtomSize=1;
-
-    struct Queue {
+    struct Queue final {
       std::mutex sync;
       VkQueue    impl=nullptr;
       uint32_t   family=0;
@@ -121,6 +116,18 @@ class VDevice : public AbstractGraphicsApi::Device {
       void       submit(uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence);
       VkResult   present(VkPresentInfoKHR& presentInfo);
       };
+
+    struct MemIndex final {
+      uint32_t headId=0;
+      uint32_t typeId=0;
+      };
+
+    VkSurfaceKHR            surface            =VK_NULL_HANDLE;
+    VkPhysicalDevice        physicalDevice     =nullptr;
+    VkDevice                device             =nullptr;
+    size_t                  nonCoherentAtomSize=1;
+    size_t                  bufferImageGranularity=1;
+
     Queue                   queues[3];
     Queue*                  graphicsQueue=nullptr;
     Queue*                  presentQueue =nullptr;
@@ -138,7 +145,7 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     SwapChainSupportDetails querySwapChainSupport() { return querySwapChainSupport(physicalDevice); }
     QueueFamilyIndices      findQueueFamilies    () { return findQueueFamilies(physicalDevice);     }
-    uint32_t                memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props) const;
+    MemIndex                memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const;
 
     void                    getCaps(AbstractGraphicsApi::Caps& c);
 
@@ -216,8 +223,8 @@ class VDevice : public AbstractGraphicsApi::Device {
     bool                    checkDeviceExtensionSupport(VkPhysicalDevice device);
     SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 
-    void createSurface(VulkanApi &api,void* hwnd);
-    void createLogicalDevice(VulkanApi &api);
+    void                    createSurface(VulkanApi &api,void* hwnd);
+    void                    createLogicalDevice(VulkanApi &api);
   };
 
 }}

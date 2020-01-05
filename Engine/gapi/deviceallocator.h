@@ -32,16 +32,16 @@ class DeviceAllocator {
       size_t offset=0,size=0;
       };
 
-    Allocation alloc(size_t size, size_t align, uint32_t typeId) {
+    Allocation alloc(size_t size, size_t align, uint32_t heapId, uint32_t typeId) {
       std::lock_guard<std::mutex> guard(sync);
       for(auto& i:pages){
-        if(i.type==typeId && i.allocated+size<=i.allSize){
+        if(i.type==heapId && i.allocated+size<=i.allSize){
           auto ret=i.alloc(size,align,device);
           if(ret.page!=nullptr)
             return ret;
           }
         }
-      return rawAlloc(size,align,typeId);
+      return rawAlloc(size,align,heapId,typeId);
       }
 
     void free(const Allocation& a){
@@ -54,10 +54,10 @@ class DeviceAllocator {
       }
 
   private:
-    Allocation rawAlloc(size_t size, size_t align, uint32_t typeId){
+    Allocation rawAlloc(size_t size, size_t align, uint32_t heapId, uint32_t typeId){
       Page pg(std::max<uint32_t>(DEFAULT_PAGE_SIZE,size));
       pg.memory = device.alloc(pg.allSize,typeId);
-      pg.type   = typeId;
+      pg.type   = heapId;
       if(pg.memory==null)
         throw std::bad_alloc();
       pages.push_front(std::move(pg));

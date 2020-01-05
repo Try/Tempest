@@ -119,10 +119,10 @@ VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferFl
   if(bool(bufFlg&BufferFlags::Dynamic))
     props|=(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
-  uint32_t typeId=provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits(props));
+  VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits(props),VK_IMAGE_TILING_LINEAR);
 
   const size_t align = LCM(size_t(memRq.alignment),provider.device->nonCoherentAtomSize);
-  ret.page=allocator.alloc(size_t(memRq.size),align,typeId);
+  ret.page=allocator.alloc(size_t(memRq.size),align,memId.headId,memId.typeId);
   if(!ret.page.page)
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
   if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,mem,ret.page.offset,size))
@@ -159,9 +159,9 @@ VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip,VkFormat format) {
   VkMemoryRequirements memRq;
   vkGetImageMemoryRequirements(device, ret.impl, &memRq);
 
-  uint32_t typeId=provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+  VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,VK_IMAGE_TILING_OPTIMAL);
 
-  ret.page=allocator.alloc(size_t(memRq.size),size_t(memRq.alignment),typeId);
+  ret.page=allocator.alloc(size_t(memRq.size),size_t(memRq.alignment),memId.headId,memId.typeId);
   if(!ret.page.page || !commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset))
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
 
@@ -196,9 +196,9 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mi
   VkMemoryRequirements memRq;
   vkGetImageMemoryRequirements(device, ret.impl, &memRq);
 
-  uint32_t typeId=provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+  VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,VK_IMAGE_TILING_OPTIMAL);
 
-  ret.page=allocator.alloc(size_t(memRq.size),size_t(memRq.alignment),typeId);
+  ret.page=allocator.alloc(size_t(memRq.size),size_t(memRq.alignment),memId.headId,memId.typeId);
   if(!ret.page.page || !commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset))
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
 
