@@ -19,8 +19,12 @@
 
 using namespace Tempest::Detail;
 
-static const std::initializer_list<const char*> validationLayers = {
+static const std::initializer_list<const char*> validationLayersKHR = {
   "VK_LAYER_KHRONOS_validation"
+  };
+
+static const std::initializer_list<const char*> validationLayersLunarg = {
+  "VK_LAYER_LUNARG_core_validation"
   };
 
 static const std::vector<const char*> deviceExtensions = {
@@ -28,10 +32,13 @@ static const std::vector<const char*> deviceExtensions = {
   };
 
 VulkanApi::VulkanApi(bool validation)
-  :validation(validation){
-  /*
-  if(enableValidationLayers && !checkValidationLayerSupport())
-    throw std::runtime_error("validation layers requested, but not available!");*/
+  :validation(validation) {
+  std::initializer_list<const char*> validationLayers={};
+  if(validation) {
+    validationLayers = checkValidationLayerSupport();
+    if(validationLayers.size()==0)
+      Log::d("VulkanApi: no validation layers available");
+    }
 
   VkApplicationInfo appInfo = {};
   appInfo.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -90,6 +97,37 @@ VulkanApi::~VulkanApi(){
   if( vkDestroyDebugReportCallbackEXT )
     vkDestroyDebugReportCallbackEXT(instance,callback,nullptr);
   vkDestroyInstance(instance,nullptr);
+  }
+
+const std::initializer_list<const char*> VulkanApi::checkValidationLayerSupport() {
+  uint32_t layerCount=0;
+  vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+
+  std::vector<VkLayerProperties> availableLayers(layerCount);
+  vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+
+  if(layerSupport(availableLayers,validationLayersKHR))
+    return validationLayersKHR;
+
+  if(layerSupport(availableLayers,validationLayersLunarg))
+    return validationLayersLunarg;
+
+  return {};
+  }
+
+bool VulkanApi::layerSupport(const std::vector<VkLayerProperties>& sup,
+                             const std::initializer_list<const char*> dest) {
+  for(auto& i:dest) {
+    bool found=false;
+    for(auto& r:sup)
+      if(std::strcmp(r.layerName,i)==0) {
+        found = true;
+        break;
+        }
+    if(!found)
+      return false;
+    }
+  return true;
   }
 
 VkBool32 VulkanApi::debugReportCallback(VkDebugReportFlagsEXT      flags,

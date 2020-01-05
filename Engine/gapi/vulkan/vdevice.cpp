@@ -23,14 +23,9 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-static const std::initializer_list<const char*> validationLayers = {
-  "VK_LAYER_KHRONOS_validation"
-  };
-
 static const std::initializer_list<const char*> deviceExtensions = {
   VK_KHR_SWAPCHAIN_EXTENSION_NAME
   };
-
 
 VDevice::DataStream::DataStream(VDevice &owner)
   : owner(owner),
@@ -262,13 +257,6 @@ void VDevice::createLogicalDevice(VulkanApi& api) {
 
   createInfo.enabledExtensionCount   = static_cast<uint32_t>(deviceExtensions.size());
   createInfo.ppEnabledExtensionNames = deviceExtensions.begin();
-
-  if( api.validation ) {
-    createInfo.enabledLayerCount   = static_cast<uint32_t>(validationLayers.size());
-    createInfo.ppEnabledLayerNames = validationLayers.begin();
-    } else {
-    createInfo.enabledLayerCount = 0;
-    }
 
   if(vkCreateDevice(physicalDevice, &createInfo, nullptr, &device)!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);

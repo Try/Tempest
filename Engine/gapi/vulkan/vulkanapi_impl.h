@@ -12,9 +12,11 @@ class VulkanApi {
 
     const bool       validation;
     VkInstance       instance;
-    //VkDebugUtilsMessengerEXT callback;
 
   private:
+    const std::initializer_list<const char*> checkValidationLayerSupport();
+    bool layerSupport(const std::vector<VkLayerProperties>& sup,const std::initializer_list<const char*> dest);
+
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(
         VkDebugReportFlagsEXT       flags,
         VkDebugReportObjectTypeEXT  objectType,
