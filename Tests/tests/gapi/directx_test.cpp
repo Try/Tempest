@@ -26,6 +26,7 @@ static const Vertex   vboData[3] = {{-1,-1},{1,-1},{1,1}};
 static const uint16_t iboData[3] = {0,1,2};
 
 TEST(DirectX12Api,DirectX12Api) {
+#if defined(_MSC_VER)
   try {
     DirectX12Api api{ApiFlags::Validation};
     (void)api;
@@ -35,9 +36,11 @@ TEST(DirectX12Api,DirectX12Api) {
       Log::d("Skipping directx testcase: ", e.what()); else
       throw;
     }
+#endif
   }
 
 TEST(DirectX12Api,Vbo) {
+#if defined(_MSC_VER)
   try {
     DirectX12Api   api{ApiFlags::Validation};
     Device         device(api,nullptr);
@@ -50,4 +53,5 @@ TEST(DirectX12Api,Vbo) {
       Log::d("Skipping vulkan testcase: ", e.what()); else
       throw;
     }
+#endif
   }
