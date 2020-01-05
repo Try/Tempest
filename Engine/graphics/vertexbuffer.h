@@ -6,7 +6,7 @@
 
 namespace Tempest {
 
-class HeadlessDevice;
+class Device;
 
 template<class T>
 class VertexBufferDyn;
@@ -20,7 +20,7 @@ class VertexBufferDecl final {
 
   private:
     const std::vector<Decl::ComponentType> data;
-  friend class HeadlessDevice;
+  friend class Device;
   };
 
 template<class T>
@@ -41,7 +41,7 @@ class VertexBuffer {
     Tempest::VideoBuffer impl;
     size_t               sz=0;
 
-  friend class Tempest::HeadlessDevice;
+  friend class Tempest::Device;
   friend class Tempest::Encoder<Tempest::CommandBuffer>;
   friend class Tempest::VertexBufferDyn<T>;
   };
@@ -60,7 +60,7 @@ class VertexBufferDyn:public VertexBuffer<T> {
     VertexBufferDyn(Tempest::VideoBuffer&& impl,size_t size)
       :VertexBuffer<T>(std::move(impl),size) {
       }
-  friend class Tempest::HeadlessDevice;
+  friend class Tempest::Device;
   };
 
 template<class T>

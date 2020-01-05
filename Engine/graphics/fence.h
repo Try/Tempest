@@ -5,7 +5,7 @@
 
 namespace Tempest {
 
-class HeadlessDevice;
+class Device;
 
 class Fence final {
   public:
@@ -17,11 +17,11 @@ class Fence final {
     void reset();
 
   private:
-    Fence(Tempest::HeadlessDevice& dev,AbstractGraphicsApi::Fence* f);
+    Fence(Tempest::Device& dev,AbstractGraphicsApi::Fence* f);
 
-    Tempest::HeadlessDevice*                  dev=nullptr;
+    Tempest::Device*                          dev=nullptr;
     Detail::DPtr<AbstractGraphicsApi::Fence*> impl;
 
-  friend class Tempest::HeadlessDevice;
+  friend class Tempest::Device;
   };
 }

@@ -1,5 +1,5 @@
 #include <Tempest/VulkanApi>
-#include <Tempest/HeadlessDevice>
+#include <Tempest/Device>
 #include <Tempest/Painter>
 #include <Tempest/TextureAtlas>
 #include <Tempest/VectorImage>
@@ -12,11 +12,9 @@ using namespace testing;
 using namespace Tempest;
 
 TEST(main,Draw2d) {
-  /*
-  VulkanApi api;
-  Device    device(api,nullptr);
-
-  TextureAtlas atlas;
+  VulkanApi    api;
+  Device       device(api,nullptr);
+  TextureAtlas atlas(device);
 
   VectorImage  img;
 
@@ -24,5 +22,4 @@ TEST(main,Draw2d) {
   Painter p(ev);
 
   p.drawRect(0,0,32,32);
-  */
   }

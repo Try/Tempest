@@ -40,7 +40,7 @@ TEST(VulkanApi,VulkanApi) {
 TEST(VulkanApi,Vbo) {
   try {
     VulkanApi      api{ApiFlags::Validation};
-    HeadlessDevice device(api);
+    Device         device(api,nullptr);
 
     auto vbo = device.loadVbo(vboData,3,BufferFlags::Static);
     auto ibo = device.loadIbo(iboData,3,BufferFlags::Static);
@@ -55,7 +55,7 @@ TEST(VulkanApi,Vbo) {
 TEST(VulkanApi,Shader) {
   try {
     VulkanApi      api{ApiFlags::Validation};
-    HeadlessDevice device(api);
+    Device         device(api,nullptr);
 
     auto vert = device.loadShader("shader/simple_test.vert.sprv");
     auto frag = device.loadShader("shader/simple_test.frag.sprv");
@@ -70,7 +70,7 @@ TEST(VulkanApi,Shader) {
 TEST(VulkanApi,Fbo) {
   try {
     VulkanApi      api{ApiFlags::Validation};
-    HeadlessDevice device(api);
+    Device         device(api,nullptr);
 
     auto tex = device.texture(TextureFormat::RGBA8,128,128,false);
     auto fbo = device.frameBuffer(tex);
@@ -99,7 +99,7 @@ TEST(VulkanApi,Fbo) {
 TEST(VulkanApi,Draw) {
   try {
     VulkanApi      api{ApiFlags::Validation};
-    HeadlessDevice device(api);
+    Device         device(api,nullptr);
 
     auto vbo  = device.loadVbo(vboData,3,BufferFlags::Static);
     auto ibo  = device.loadIbo(iboData,3,BufferFlags::Static);

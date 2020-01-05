@@ -5,7 +5,6 @@
 
 namespace Tempest {
 
-class HeadlessDevice;
 class Device;
 class Swapchain;
 
@@ -16,13 +15,12 @@ class Semaphore final {
     Semaphore& operator = (Semaphore&& other)=default;
 
   private:
-    Semaphore(Tempest::HeadlessDevice& dev,AbstractGraphicsApi::Semaphore* f);
+    Semaphore(Tempest::Device& dev,AbstractGraphicsApi::Semaphore* f);
 
-    Tempest::HeadlessDevice*                      dev=nullptr;
+    Tempest::Device*                              dev=nullptr;
     Detail::DPtr<AbstractGraphicsApi::Semaphore*> impl;
 
   friend class Tempest::Device;
-  friend class Tempest::HeadlessDevice;
   friend class Tempest::Swapchain;
   };
 

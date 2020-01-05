@@ -1,11 +1,11 @@
 #include "uniforms.h"
 
-#include <Tempest/HeadlessDevice>
+#include <Tempest/Device>
 #include <Tempest/UniformBuffer>
 
 using namespace Tempest;
 
-Uniforms::Uniforms(HeadlessDevice &dev, AbstractGraphicsApi::Desc *desc)
+Uniforms::Uniforms(Device& dev, AbstractGraphicsApi::Desc *desc)
   :dev(&dev),desc(desc) {
   }
 

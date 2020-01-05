@@ -6,7 +6,7 @@
 
 namespace Tempest {
 
-class HeadlessDevice;
+class Device;
 class Frame;
 class RenderPipeline;
 class VideoBuffer;
@@ -27,19 +27,19 @@ class CommandBuffer final {
     ~CommandBuffer();
     CommandBuffer& operator = (CommandBuffer&& other)=default;
 
-    auto startEncoding(Tempest::HeadlessDevice& dev,const FrameBufferLayout &lay) -> Encoder<CommandBuffer>;
+    auto startEncoding(Tempest::Device& dev,const FrameBufferLayout &lay) -> Encoder<CommandBuffer>;
 
   private:
-    CommandBuffer(Tempest::HeadlessDevice& dev,AbstractGraphicsApi::CommandBuffer* impl,uint32_t vpWidth,uint32_t vpHeight);
+    CommandBuffer(Tempest::Device& dev,AbstractGraphicsApi::CommandBuffer* impl,uint32_t vpWidth,uint32_t vpHeight);
 
-    Tempest::HeadlessDevice*                            dev=nullptr;
+    Tempest::Device*                                    dev=nullptr;
     uint32_t                                            vpWidth =0;
     uint32_t                                            vpHeight=0;
     Detail::DPtr<AbstractGraphicsApi::CommandBuffer*>   impl;
     Detail::DSharedPtr<AbstractGraphicsApi::FboLayout*> layout;
 
   friend class PrimaryCommandBuffer;
-  friend class Tempest::HeadlessDevice;
+  friend class Tempest::Device;
   friend class Tempest::Encoder<CommandBuffer>;
   friend class Tempest::Encoder<PrimaryCommandBuffer>;
   };
@@ -51,15 +51,15 @@ class PrimaryCommandBuffer final {
     PrimaryCommandBuffer& operator = (PrimaryCommandBuffer&& other)=default;
     ~PrimaryCommandBuffer();
 
-    auto startEncoding(Tempest::HeadlessDevice& dev) -> Encoder<PrimaryCommandBuffer>;
+    auto startEncoding(Tempest::Device& dev) -> Encoder<PrimaryCommandBuffer>;
 
   private:
-    PrimaryCommandBuffer(Tempest::HeadlessDevice& dev,AbstractGraphicsApi::CommandBuffer* impl);
+    PrimaryCommandBuffer(Tempest::Device& dev,AbstractGraphicsApi::CommandBuffer* impl);
 
-    Tempest::HeadlessDevice*                            dev=nullptr;
+    Tempest::Device*                                    dev=nullptr;
     Detail::DPtr<AbstractGraphicsApi::CommandBuffer*>   impl;
 
-  friend class Tempest::HeadlessDevice;
+  friend class Tempest::Device;
   friend class Tempest::Encoder<PrimaryCommandBuffer>;
   };
 }

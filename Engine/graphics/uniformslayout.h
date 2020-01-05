@@ -9,6 +9,8 @@
 
 namespace Tempest {
 
+class Device;
+
 class UniformsLayout final {
   public:
     enum Class : uint8_t {
@@ -36,7 +38,7 @@ class UniformsLayout final {
     std::vector<Binding> elt;
     mutable std::shared_ptr<AbstractGraphicsApi::UniformsLay> impl;
 
-  friend class HeadlessDevice;
+  friend class Device;
   };
 
 }

@@ -40,7 +40,7 @@ TEST(DirectX12Api,DirectX12Api) {
 TEST(DirectX12Api,Vbo) {
   try {
     DirectX12Api   api{ApiFlags::Validation};
-    HeadlessDevice device(api);
+    Device         device(api,nullptr);
 
     auto vbo = device.loadVbo(vboData,3,BufferFlags::Static);
     auto ibo = device.loadIbo(iboData,3,BufferFlags::Static);

@@ -4,7 +4,7 @@
 
 namespace Tempest {
 
-class HeadlessDevice;
+class Device;
 class CommandBuffer;
 class UniformBuffer;
 class Texture2d;
@@ -27,12 +27,12 @@ class Uniforms final {
     void set(size_t layoutBind,const Detail::ResourcePtr<Texture2d>& tex);
 
   private:
-    Uniforms(Tempest::HeadlessDevice& dev,AbstractGraphicsApi::Desc* desc);
+    Uniforms(Tempest::Device& dev,AbstractGraphicsApi::Desc* desc);
 
-    Tempest::HeadlessDevice*                 dev=nullptr;
+    Tempest::Device*                         dev=nullptr;
     Detail::DPtr<AbstractGraphicsApi::Desc*> desc;
 
-  friend class Tempest::HeadlessDevice;
+  friend class Tempest::Device;
   friend class Tempest::Encoder<Tempest::CommandBuffer>;
   };
 

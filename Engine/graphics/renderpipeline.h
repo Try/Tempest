@@ -7,7 +7,7 @@
 
 namespace Tempest {
 
-class HeadlessDevice;
+class Device;
 class CommandBuffer;
 class UniformsLayout;
 template<class T>
@@ -23,12 +23,12 @@ class RenderPipeline final {
     bool isEmpty() const { return impl.handler==nullptr; }
 
   private:
-    RenderPipeline(Tempest::HeadlessDevice& dev,Detail::DSharedPtr<AbstractGraphicsApi::Pipeline*>&& p);
+    RenderPipeline(Tempest::Device& dev,Detail::DSharedPtr<AbstractGraphicsApi::Pipeline*>&& p);
 
-    Tempest::HeadlessDevice*                           dev=nullptr;
+    Tempest::Device*                                   dev=nullptr;
     Detail::DSharedPtr<AbstractGraphicsApi::Pipeline*> impl;
 
-  friend class Tempest::HeadlessDevice;
+  friend class Tempest::Device;
   friend class Tempest::CommandBuffer;
   friend class Tempest::Encoder<Tempest::CommandBuffer>;
 

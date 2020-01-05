@@ -3,7 +3,7 @@
 
 using namespace Tempest;
 
-Fence::Fence(HeadlessDevice &dev, AbstractGraphicsApi::Fence *impl)
+Fence::Fence(Device& dev, AbstractGraphicsApi::Fence *impl)
   :dev(&dev),impl(impl) {
   }
 

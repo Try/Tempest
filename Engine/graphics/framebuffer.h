@@ -6,7 +6,6 @@
 namespace Tempest {
 
 class Device;
-class HeadlessDevice;
 class CommandBuffer;
 class PrimaryCommandBuffer;
 class Frame;
@@ -26,7 +25,6 @@ class FrameBufferLayout final {
     uint32_t                                            mw=0, mh=0;
 
   friend class Tempest::Device;
-  friend class Tempest::HeadlessDevice;
   friend class Tempest::FrameBuffer;
   friend class Tempest::CommandBuffer;
   };
@@ -44,16 +42,15 @@ class FrameBuffer final {
     auto     layout() const -> const FrameBufferLayout&;
 
   private:
-    FrameBuffer(Tempest::HeadlessDevice& dev,
+    FrameBuffer(Tempest::Device& dev,
                 Detail::DSharedPtr<AbstractGraphicsApi::Fbo*>&& f,
                 FrameBufferLayout&& lay);
 
-    Tempest::HeadlessDevice*                      dev=nullptr;
+    Tempest::Device*                              dev=nullptr;
     Detail::DSharedPtr<AbstractGraphicsApi::Fbo*> impl;
     FrameBufferLayout                             lay;
 
   friend class Tempest::Device;
-  friend class Tempest::HeadlessDevice;
   friend class Tempest::Encoder<Tempest::PrimaryCommandBuffer>;
   };
 }

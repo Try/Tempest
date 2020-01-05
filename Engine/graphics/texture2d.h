@@ -6,7 +6,6 @@
 namespace Tempest {
 
 class Device;
-class HeadlessDevice;
 class Uniforms;
 template<class T>
 class Encoder;
@@ -31,7 +30,7 @@ class Texture2d {
     void setSampler(const Sampler2d &s);
 
   private:
-    Texture2d(Tempest::HeadlessDevice& dev,AbstractGraphicsApi::PTexture&& impl,uint32_t w,uint32_t h,TextureFormat frm);
+    Texture2d(Tempest::Device& dev,AbstractGraphicsApi::PTexture&& impl,uint32_t w,uint32_t h,TextureFormat frm);
 
     Detail::DSharedPtr<AbstractGraphicsApi::Texture*> impl;
     int                                               texW=0;
@@ -40,7 +39,6 @@ class Texture2d {
     TextureFormat                                     frm=Undefined;
 
   friend class Tempest::Device;
-  friend class Tempest::HeadlessDevice;
   friend class Tempest::Uniforms;
   friend class Encoder<Tempest::CommandBuffer>;
   friend class Encoder<Tempest::PrimaryCommandBuffer>;

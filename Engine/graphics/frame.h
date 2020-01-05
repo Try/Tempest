@@ -5,7 +5,6 @@
 namespace Tempest {
 
 class Device;
-class HeadlessDevice;
 class CommandBuffer;
 class Swapchain;
 
@@ -23,7 +22,7 @@ class Frame final {
     uint32_t                        id        = 0;
 
   friend class Tempest::CommandBuffer;
-  friend class Tempest::HeadlessDevice;
+  friend class Tempest::Device;
   friend class Tempest::Swapchain;
   };
 

@@ -20,7 +20,7 @@ class UniformBuffer final {
 
     Tempest::VideoBuffer impl;
 
-  friend class Tempest::HeadlessDevice;
+  friend class Tempest::Device;
   friend class Tempest::CommandBuffer;
   friend class Tempest::Uniforms;
   };

@@ -7,7 +7,7 @@ FrameBufferLayout::FrameBufferLayout(Detail::DSharedPtr<AbstractGraphicsApi::Fbo
   :impl(std::move(f)), mw(w), mh(h) {
   }
 
-FrameBuffer::FrameBuffer(HeadlessDevice &dev,
+FrameBuffer::FrameBuffer(Device& dev,
                          Detail::DSharedPtr<AbstractGraphicsApi::Fbo*> &&impl,
                          FrameBufferLayout &&lay)
   :dev(&dev),impl(std::move(impl)),lay(std::move(lay)) {

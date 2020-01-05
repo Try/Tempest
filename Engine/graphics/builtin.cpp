@@ -7,7 +7,7 @@
 
 using namespace Tempest;
 
-Builtin::Builtin(HeadlessDevice &owner)
+Builtin::Builtin(Device& owner)
   :owner(owner) {
   stBlend.setBlendSource(RenderState::BlendMode::src_alpha);
   stBlend.setBlendDest  (RenderState::BlendMode::one_minus_src_alpha);

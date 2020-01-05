@@ -11,7 +11,6 @@
 namespace Tempest {
 
 class Swapchain;
-class HeadlessDevice;
 template<class T>
 class Encoder;
 

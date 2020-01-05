@@ -4,13 +4,13 @@
 
 namespace Tempest {
 
-class HeadlessDevice;
+class Device;
 class Semaphore;
 class Frame;
 
 class Swapchain {
   public:
-    Swapchain(SystemApi::Window* w, HeadlessDevice& dev);
+    Swapchain(SystemApi::Window* w, Device& dev);
     Swapchain(Swapchain&&)=default;
     virtual ~Swapchain();
 
@@ -43,7 +43,6 @@ class Swapchain {
     uint8_t                                       framesIdMod=0;
     uint8_t                                       implMaxFramesInFlight=0;
 
-  friend class HeadlessDevice;
   friend class Device;
   };
 

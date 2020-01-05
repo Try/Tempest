@@ -5,7 +5,7 @@
 
 namespace Tempest {
 
-class HeadlessDevice;
+class Device;
 
 class Shader final {
   public:
@@ -17,12 +17,12 @@ class Shader final {
     bool isEmpty() const { return impl.handler==nullptr; }
 
   private:
-    Shader(Tempest::HeadlessDevice& dev,Detail::DSharedPtr<AbstractGraphicsApi::Shader*>&& impl);
+    Shader(Tempest::Device& dev,Detail::DSharedPtr<AbstractGraphicsApi::Shader*>&& impl);
 
-    Tempest::HeadlessDevice*                         dev =nullptr;
+    Tempest::Device*                                 dev = nullptr;
     Detail::DSharedPtr<AbstractGraphicsApi::Shader*> impl;
 
-  friend class Tempest::HeadlessDevice;
+  friend class Tempest::Device;
   };
 
 }

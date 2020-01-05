@@ -3,7 +3,7 @@
 
 using namespace Tempest;
 
-Semaphore::Semaphore(HeadlessDevice &dev, AbstractGraphicsApi::Semaphore *impl)
+Semaphore::Semaphore(Device &dev, AbstractGraphicsApi::Semaphore *impl)
   :dev(&dev),impl(impl) {
   }
 

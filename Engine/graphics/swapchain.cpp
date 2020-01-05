@@ -1,7 +1,7 @@
 #include "swapchain.h"
 
 #include <Tempest/Frame>
-#include <Tempest/HeadlessDevice>
+#include <Tempest/Device>
 #include <Tempest/Semaphore>
 
 using namespace Tempest;
@@ -11,7 +11,7 @@ Swapchain::Swapchain(SystemApi::Window* w, AbstractGraphicsApi::Device& dev, Abs
   reset();
   }
 
-Swapchain::Swapchain(SystemApi::Window* w, HeadlessDevice& dev) {
+Swapchain::Swapchain(SystemApi::Window* w, Device& dev) {
   *this = dev.swapchain(w);
   }
 

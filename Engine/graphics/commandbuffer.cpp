@@ -7,7 +7,7 @@
 
 using namespace Tempest;
 
-CommandBuffer::CommandBuffer(HeadlessDevice &dev, AbstractGraphicsApi::CommandBuffer *impl, uint32_t vpWidth, uint32_t vpHeight)
+CommandBuffer::CommandBuffer(Device& dev, AbstractGraphicsApi::CommandBuffer *impl, uint32_t vpWidth, uint32_t vpHeight)
   :dev(&dev),impl(impl) {
   this->vpWidth  = vpWidth;
   this->vpHeight = vpHeight;
@@ -17,7 +17,7 @@ CommandBuffer::~CommandBuffer() {
   delete impl.handler;
   }
 
-Encoder<CommandBuffer> CommandBuffer::startEncoding(HeadlessDevice &device, const FrameBufferLayout &lay) {
+Encoder<CommandBuffer> CommandBuffer::startEncoding(Device& device, const FrameBufferLayout &lay) {
   if(impl.handler!=nullptr && impl.handler->isRecording())
     throw ConcurentRecordingException();
   if(impl.handler==nullptr || dev!=&device || layout.handler!=lay.impl.handler) {
@@ -27,7 +27,7 @@ Encoder<CommandBuffer> CommandBuffer::startEncoding(HeadlessDevice &device, cons
   return Encoder<CommandBuffer>(this);
   }
 
-PrimaryCommandBuffer::PrimaryCommandBuffer(HeadlessDevice &dev, AbstractGraphicsApi::CommandBuffer *impl)
+PrimaryCommandBuffer::PrimaryCommandBuffer(Device& dev, AbstractGraphicsApi::CommandBuffer *impl)
   :dev(&dev), impl(impl){
   }
 
@@ -35,7 +35,7 @@ PrimaryCommandBuffer::~PrimaryCommandBuffer() {
   delete impl.handler;
   }
 
-Encoder<PrimaryCommandBuffer> PrimaryCommandBuffer::startEncoding(HeadlessDevice &device) {
+Encoder<PrimaryCommandBuffer> PrimaryCommandBuffer::startEncoding(Device& device) {
   if(impl.handler!=nullptr && impl.handler->isRecording())
     throw ConcurentRecordingException();
   if(impl.handler==nullptr || dev!=&device) {
