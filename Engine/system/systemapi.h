@@ -34,8 +34,6 @@ class SystemApi {
     static void     destroyWindow(Window* w);
     static void     exit();
 
-    static uint32_t width (Window* w);
-    static uint32_t height(Window* w);
     static Rect     windowClientRect(SystemApi::Window *w);
 
     static bool     setAsFullscreen(SystemApi::Window *w, bool fullScreen);
@@ -59,8 +57,6 @@ class SystemApi {
     virtual void     implDestroyWindow(Window* w) = 0;
     virtual void     implExit() = 0;
 
-    virtual uint32_t implWidth (Window* w) = 0;
-    virtual uint32_t implHeight(Window* w) = 0;
     virtual Rect     implWindowClientRect(SystemApi::Window *w) = 0;
 
     virtual bool     implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) = 0;

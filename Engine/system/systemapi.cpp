@@ -141,14 +141,6 @@ int SystemApi::exec(AppCallBack& cb) {
   return inst().implExec(cb);
   }
 
-uint32_t SystemApi::width(SystemApi::Window *w) {
-  return inst().implWidth(w);
-  }
-
-uint32_t SystemApi::height(SystemApi::Window *w) {
-  return inst().implHeight(w);
-  }
-
 Rect SystemApi::windowClientRect(SystemApi::Window* w) {
   return inst().implWindowClientRect(w);
   }

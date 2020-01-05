@@ -210,20 +210,6 @@ void X11Api::implExit() {
   isExit.store(true);
   }
 
-uint32_t X11Api::implWidth(SystemApi::Window *w) {
-  auto i = windows.find(w);
-  if(i!=windows.end())
-    return i->second->w();
-  return 0;
-  }
-
-uint32_t X11Api::implHeight(SystemApi::Window *w) {
-  auto i = windows.find(w);
-  if(i!=windows.end())
-    return i->second->h();
-  return 0;
-  }
-
 int X11Api::implExec(SystemApi::AppCallBack &cb) {
   // main message loop
   while (!isExit.load()) {

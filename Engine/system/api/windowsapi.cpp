@@ -215,18 +215,6 @@ int WindowsApi::implExec(AppCallBack& cb) {
   return 0;
   }
 
-uint32_t WindowsApi::implWidth(SystemApi::Window *w) {
-  RECT rect={};
-  GetClientRect(HWND(w),&rect);
-  return uint32_t(rect.right-rect.left);
-  }
-
-uint32_t WindowsApi::implHeight(SystemApi::Window *w) {
-  RECT rect={};
-  GetClientRect(HWND(w),&rect);
-  return uint32_t(rect.bottom-rect.top);
-  }
-
 Rect WindowsApi::implWindowClientRect(SystemApi::Window* w) {
   RECT rectWindow;
   GetClientRect( HWND(w), &rectWindow);

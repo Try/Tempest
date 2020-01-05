@@ -16,8 +16,6 @@ class X11Api : public SystemApi {
     void     implDestroyWindow(Window* w) override;
     void     implExit() override;
 
-    uint32_t implWidth (Window* w) override;
-    uint32_t implHeight(Window* w) override;
     Rect     implWindowClientRect(SystemApi::Window *w) override;
 
     bool     implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) override;
