@@ -71,7 +71,7 @@ if(WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE d3d12 dxgi)
   endif()
 else()
-  target_link_libraries(${PROJECT_NAME} PRIVATE vulkan X11 GL)
+  target_link_libraries(${PROJECT_NAME} PRIVATE vulkan X11)
 endif()
 
 target_link_libraries(${PROJECT_NAME} PRIVATE OpenAL)

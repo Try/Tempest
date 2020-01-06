@@ -5,7 +5,9 @@
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/Xos.h>
-#include <GL/glx.h> //FIXME
+#include <X11/keysymdef.h>
+#include <X11/Xutil.h>
+//#include <GL/glx.h> //FIXME
 
 #include <Tempest/Event>
 #include <Tempest/TextCodec>
@@ -143,14 +145,19 @@ void *X11Api::display() {
   }
 
 SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, uint32_t h) {
-  GLint att[] = { GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None };
-  XVisualInfo * vi = glXChooseVisual(dpy, 0, att);
-  XSetWindowAttributes    swa;
+  //GLint att[] = { GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None };
+  //XVisualInfo * vi = glXChooseVisual(dpy, 0, att);
+
+  long visualMask = VisualScreenMask;
+  int numberOfVisuals;
+  XVisualInfo vInfoTemplate = {};
+  vInfoTemplate.screen = DefaultScreen(dpy);
+  XVisualInfo * vi = XGetVisualInfo(dpy, visualMask, &vInfoTemplate, &numberOfVisuals);
 
   Colormap cmap;
   cmap = XCreateColormap(dpy, root, vi->visual, AllocNone);
 
-  swa.override_redirect = true;
+  XSetWindowAttributes swa={};
   swa.colormap   = cmap;
   swa.event_mask = PointerMotionMask | ExposureMask |
                    ButtonPressMask | ButtonReleaseMask |
@@ -260,7 +267,7 @@ int X11Api::implExec(SystemApi::AppCallBack &cb) {
                             0,
                             xev.type==ButtonPress ? Event::MouseDown : Event::MouseUp );
               if(xev.type==ButtonPress)
-                SystemApi::dispatchMouseDown(*cb, e);
+                SystemApi::dispatchMouseDown(*cb, e); else
                 SystemApi::dispatchMouseUp(*cb, e);
               }
             }
