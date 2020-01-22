@@ -42,6 +42,10 @@ enum class GraphicsErrc {
   OutOfHostMemory          = 2,
   InvalidShaderModule      = 3,
   UnsupportedTextureFormat = 4,
+  InvalidUniformBuffer     = 5,
+  InvalidTexture           = 6,
+  InvalidBufferUpdate      = 7,
+  TooLardgeUbo             = 8,
   };
 
 struct GraphicsErrCategory : std::error_category {

@@ -36,7 +36,7 @@ class VAllocator {
 
     using Allocation=typename Tempest::Detail::DeviceAllocator<Provider>::Allocation;
 
-    VBuffer  alloc(const void *mem,  size_t size, MemUsage usage, BufferFlags bufFlg);
+    VBuffer  alloc(const void *mem, size_t count,  size_t size, size_t alignedSz, MemUsage usage, BufferFlags bufFlg);
     VTexture alloc(const Pixmap &pm, uint32_t mip, VkFormat format);
     VTexture alloc(const uint32_t w, const uint32_t h, const uint32_t mip, TextureFormat frm);
     void     free(VBuffer&  buf);
@@ -44,8 +44,8 @@ class VAllocator {
 
     void     freeLast() { provider.freeLast(); samplers.freeLast(); }
 
-    bool     update(VBuffer& dest, const void *mem, size_t offset,  size_t size);
-    bool     read  (VBuffer& src,        void *mem, size_t offset,  size_t size);
+    bool     update(VBuffer& dest, const void *mem, size_t offset, size_t count, size_t size, size_t alignedSz);
+    bool     read  (VBuffer& src,        void *mem, size_t offset, size_t size);
 
     void     updateSampler(VkSampler& smp, const Sampler2d& s, uint32_t mipCount);
 
@@ -55,7 +55,8 @@ class VAllocator {
     VSamplerCache                     samplers;
     Detail::DeviceAllocator<Provider> allocator{provider};
 
-    bool commit(VkDeviceMemory dev, std::mutex& mmapSync, VkBuffer dest, const void *mem, size_t offset, size_t size);
+    bool commit(VkDeviceMemory dev, std::mutex& mmapSync, VkBuffer dest, size_t offset,
+                const void *mem, size_t count, size_t size, size_t alignedSz);
     bool commit(VkDeviceMemory dev, std::mutex& mmapSync, VkImage  dest, size_t offset);
   };
 

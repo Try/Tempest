@@ -23,6 +23,7 @@ class VUniformsLay : public AbstractGraphicsApi::UniformsLay {
     VkDevice                      dev =nullptr;
     VkDescriptorSetLayout         impl=VK_NULL_HANDLE;
     std::vector<VkDescriptorType> hint;
+    size_t                        offsetsCnt=0;
 
   private:
     enum {

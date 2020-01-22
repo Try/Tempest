@@ -159,6 +159,7 @@ namespace Tempest {
           bool     rgb8 =false;
           bool     rgba8=false;
           size_t   minUboAligment=1;
+          size_t   maxUboRange   =std::numeric_limits<size_t>::max();
 
           bool     anisotropy=false;
           float    maxAnisotropy=1.0f;
@@ -209,12 +210,12 @@ namespace Tempest {
         };
       struct Buffer:Shared   {
         virtual ~Buffer()=default;
-        virtual void  update(const void* data,size_t off,size_t sz)=0;
+        virtual void  update(const void* data,size_t off,size_t count,size_t sz,size_t alignedSz)=0;
         };
       struct Desc            {
         virtual ~Desc()=default;
         virtual void set(size_t id,AbstractGraphicsApi::Texture *tex)=0;
-        virtual void set(size_t id,AbstractGraphicsApi::Buffer* buf,size_t offset,size_t size)=0;
+        virtual void set(size_t id,AbstractGraphicsApi::Buffer* buf,size_t offset,size_t size,size_t align)=0;
         };
       struct CommandBuffer   {
         virtual ~CommandBuffer()=default;
@@ -303,7 +304,7 @@ namespace Tempest {
       virtual CommandBuffer*
                          createCommandBuffer(Device* d,CmdPool* pool,FboLayout* fbo,CmdType type)=0;
 
-      virtual PBuffer    createBuffer(Device* d,const void *mem,size_t size,MemUsage usage,BufferFlags flg)=0;
+      virtual PBuffer    createBuffer(Device* d,const void *mem,size_t count,size_t sz,size_t alignedSz,MemUsage usage,BufferFlags flg)=0;
 
       virtual Desc*      createDescriptors(Device* d,const Tempest::UniformsLayout& p,std::shared_ptr<AbstractGraphicsApi::UniformsLay>& layP)=0;
 

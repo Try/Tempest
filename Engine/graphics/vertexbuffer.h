@@ -53,8 +53,8 @@ class VertexBufferDyn:public VertexBuffer<T> {
     VertexBufferDyn(VertexBufferDyn&&)=default;
     VertexBufferDyn& operator=(VertexBufferDyn&&)=default;
 
-    void   update(const std::vector<T>& v)                    { return this->impl.update(v.data(),0,v.size()*sizeof(T)); }
-    void   update(const void* data,size_t offset,size_t size) { return this->impl.update(data,offset,size); }
+    void   update(const std::vector<T>& v)                 { return this->impl.update(v.data(),0,v.size(),sizeof(T),sizeof(T)); }
+    void   update(const T* data,size_t offset,size_t size) { return this->impl.update(data,offset,size,sizeof(T),sizeof(T)); }
 
   private:
     VertexBufferDyn(Tempest::VideoBuffer&& impl,size_t size)

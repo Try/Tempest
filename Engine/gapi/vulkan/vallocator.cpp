@@ -81,7 +81,8 @@ static size_t LCM(size_t n1, size_t n2)  {
   return n1*n2 / GCD(n1, n2);
   }
 
-VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferFlags bufFlg) {
+VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t alignedSz,
+                          MemUsage usage, BufferFlags bufFlg) {
   VBuffer ret;
   ret.alloc = this;
 
@@ -89,7 +90,7 @@ VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferFl
   createInfo.sType                 = VkStructureType::VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
   createInfo.pNext                 = nullptr;
   createInfo.flags                 = 0;
-  createInfo.size                  = size;
+  createInfo.size                  = count*alignedSz;
   createInfo.sharingMode           = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
   createInfo.queueFamilyIndexCount = 0;
   createInfo.pQueueFamilyIndices   = nullptr;
@@ -125,7 +126,8 @@ VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferFl
   ret.page=allocator.alloc(size_t(memRq.size),align,memId.headId,memId.typeId);
   if(!ret.page.page)
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
-  if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,mem,ret.page.offset,size))
+  if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset,
+             mem,count,size,alignedSz))
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
   return ret;
   }
@@ -234,14 +236,33 @@ void VAllocator::free(VTexture &buf) {
     allocator.free(buf.page);
   }
 
-bool VAllocator::update(VBuffer &dest, const void *mem, size_t offset, size_t size) {
+static void copyUpsample(const void *src, void* dest,
+                         size_t count, size_t size, size_t alignedSz){
+  if(src==nullptr)
+    return;
+
+  if(size==alignedSz) {
+    std::memcpy(dest,src,size*count);
+    } else {
+    auto s = reinterpret_cast<const uint8_t*>(src);
+    auto d = reinterpret_cast<uint8_t*>(dest);
+    for(size_t i=0;i<count;++i) {
+      std::memcpy(d+i*alignedSz,s+i*size,size);
+      }
+    }
+  }
+
+bool VAllocator::update(VBuffer &dest, const void *mem,
+                        size_t offset, size_t count, size_t size, size_t alignedSz) {
   auto& page = dest.page;
   void* data = nullptr;
 
   std::lock_guard<std::mutex> g(page.page->mmapSync);
-  if(vkMapMemory(device,page.page->memory,page.offset+offset,size,0,&data)!=VkResult::VK_SUCCESS)
+  if(vkMapMemory(device,page.page->memory,
+                 page.offset+offset*alignedSz,count*alignedSz,0,&data)!=VkResult::VK_SUCCESS)
     return false;
-  std::memcpy(data,mem,size);
+
+  copyUpsample(mem,data,count,size,alignedSz);
 
   VkMappedMemoryRange rgn={};
   rgn.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
@@ -281,16 +302,16 @@ void VAllocator::updateSampler(VkSampler &smp, const Tempest::Sampler2d &s,uint3
   smp = ns;
   }
 
-bool VAllocator::commit(VkDeviceMemory dev, std::mutex &mmapSync, VkBuffer dest, const void* mem, size_t offset, size_t size) { 
+bool VAllocator::commit(VkDeviceMemory dev, std::mutex &mmapSync, VkBuffer dest,
+                        size_t pageOffset, const void* mem,  size_t count, size_t size, size_t alignedSz) {
   std::lock_guard<std::mutex> g(mmapSync); // on practice bind requires external sync
-  if(vkBindBufferMemory(device,dest,dev,offset)!=VkResult::VK_SUCCESS)
+  if(vkBindBufferMemory(device,dest,dev,pageOffset)!=VK_SUCCESS)
     return false;
   if(mem!=nullptr) {
-    //std::lock_guard<std::mutex> g(mmapSync); // on practice bind requires external sync
     void* data=nullptr;
-    if(vkMapMemory(device,dev,offset,size,0,&data)!=VkResult::VK_SUCCESS)
+    if(vkMapMemory(device,dev,pageOffset,size,0,&data)!=VK_SUCCESS)
       return false;
-    memcpy(data,mem,size);
+    copyUpsample(mem,data,count,size,alignedSz);
     vkUnmapMemory(device,dev);
     }
 

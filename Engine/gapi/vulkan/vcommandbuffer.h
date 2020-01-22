@@ -15,6 +15,7 @@ class VFramebufferLayout;
 class VDevice;
 class VCommandPool;
 
+class VDescriptorArray;
 class VPipeline;
 class VBuffer;
 class VTexture;
@@ -96,6 +97,8 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
       };
     bool            isSecondary() const;
     VkCommandBuffer getBuffer(CmdBuff cmd);
+    void            implSetUniforms(VkCommandBuffer cmd, VPipeline& p, VDescriptorArray& u, size_t offc, const uint32_t* offv, uint32_t* buf);
+
   };
 
 }}

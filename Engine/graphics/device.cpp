@@ -136,7 +136,7 @@ Swapchain Device::swapchain(SystemApi::Window* w) const {
   return Swapchain(w,*impl.dev,api,2);
   }
 
-const Device::Caps &Device::caps() const {
+const Device::Caps& Device::caps() const {
   return devCaps;
   }
 
@@ -186,14 +186,6 @@ Pixmap Device::readPixels(const Texture2d &t) {
   Pixmap pm;
   api.readPixels(dev,pm,t.impl,t.format(),uint32_t(t.w()),uint32_t(t.h()),0);
   return pm;
-  }
-
-UniformBuffer Device::loadUbo(const void *mem, size_t size) {
-  if(size==0)
-    return UniformBuffer();
-  VideoBuffer   data=createVideoBuffer(mem,size,MemUsage::UniformBit,BufferFlags::Dynamic);
-  UniformBuffer ubo(std::move(data));
-  return ubo;
   }
 
 FrameBuffer Device::frameBuffer(Frame& out) {
@@ -303,8 +295,8 @@ const char* Device::renderer() const {
   return dev->renderer();
   }
 
-VideoBuffer Device::createVideoBuffer(const void *data, size_t size, MemUsage usage, BufferFlags flg) {
-  VideoBuffer buf(*this,api.createBuffer(dev,data,size,usage,flg),size);
+VideoBuffer Device::createVideoBuffer(const void *data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferFlags flg) {
+  VideoBuffer buf(*this,api.createBuffer(dev,data,count,size,alignedSz,usage,flg),count*alignedSz);
   return  buf;
   }
 

@@ -18,9 +18,9 @@ VBuffer::~VBuffer() {
     alloc->free(*this);
   }
 
-void VBuffer::update(const void *data, size_t off, size_t sz) {
+void VBuffer::update(const void *data, size_t off, size_t count, size_t sz, size_t alignedSz) {
   if(alloc!=nullptr)
-    alloc->update(*this,data,off,sz);
+    alloc->update(*this,data,off,count,sz,alignedSz);
   }
 
 void VBuffer::read(void *data, size_t off, size_t sz) {

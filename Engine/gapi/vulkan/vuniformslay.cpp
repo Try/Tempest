@@ -16,6 +16,10 @@ VUniformsLay::VUniformsLay(VkDevice dev, const Tempest::UniformsLayout &ulay)
     std::unique_ptr<VkDescriptorSetLayoutBinding[]> bind(new VkDescriptorSetLayoutBinding[ulay.size()]);
     implCreate(ulay,bind.get());
     }
+
+  for(auto& i:hint)
+    if(i==VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
+      offsetsCnt++;
   }
 
 VUniformsLay::~VUniformsLay() {

@@ -169,33 +169,32 @@ AbstractGraphicsApi::CmdPool *VulkanApi::createCommandPool(AbstractGraphicsApi::
   }
 
 AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device *d,
-                                                     const void *mem, size_t size,
+                                                     const void *mem, size_t count, size_t size, size_t alignedSz,
                                                      MemUsage usage,BufferFlags flg) {
   Detail::VDevice* dx = reinterpret_cast<Detail::VDevice*>(d);
 
   if(flg==BufferFlags::Dynamic) {
-    Detail::VBuffer stage=dx->allocator.alloc(mem,size,usage,BufferFlags::Dynamic);
+    Detail::VBuffer stage=dx->allocator.alloc(mem,count,size,alignedSz,usage,BufferFlags::Dynamic);
     return PBuffer(new Detail::VBuffer(std::move(stage)));
     }
   if(flg==BufferFlags::Staging) {
-    Detail::VBuffer stage=dx->allocator.alloc(mem,size,usage,BufferFlags::Staging);
+    Detail::VBuffer stage=dx->allocator.alloc(mem,count,size,alignedSz,usage,BufferFlags::Staging);
     return PBuffer(new Detail::VBuffer(std::move(stage)));
     }
   else {
-    Detail::VBuffer  stage=dx->allocator.alloc(mem,     size, MemUsage::TransferSrc,      BufferFlags::Staging);
-    Detail::VBuffer  buf  =dx->allocator.alloc(nullptr, size, usage|MemUsage::TransferDst,BufferFlags::Static );
+    Detail::VBuffer  stage=dx->allocator.alloc(mem,     count,size,alignedSz, MemUsage::TransferSrc,      BufferFlags::Staging);
+    Detail::VBuffer  buf  =dx->allocator.alloc(nullptr, count,size,alignedSz, usage|MemUsage::TransferDst,BufferFlags::Static );
 
     Detail::DSharedPtr<Detail::VBuffer*> pstage(new Detail::VBuffer(std::move(stage)));
     Detail::DSharedPtr<Detail::VBuffer*> pbuf  (new Detail::VBuffer(std::move(buf)));
 
     Detail::VDevice::Data dat(*dx);
-    dat.flush(*pstage.handler,size);
+    dat.flush(*pstage.handler,count*alignedSz);
     dat.hold(pbuf);
     dat.hold(pstage); // preserve stage buffer, until gpu side copy is finished
-    dat.copy(*pbuf.handler,*pstage.handler,size);
+    dat.copy(*pbuf.handler,*pstage.handler,count*alignedSz);
     dat.commit();
 
-    //dx->waitData();
     return PBuffer(pbuf.handler);
     }
   }
@@ -204,7 +203,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   Detail::VDevice* dx     = reinterpret_cast<Detail::VDevice*>(d);
   const uint32_t   size   = uint32_t(p.dataSize());
   VkFormat         format = Detail::nativeFormat(frm);
-  Detail::VBuffer  stage  = dx->allocator.alloc(p.data(),size,MemUsage::TransferSrc,BufferFlags::Staging);
+  Detail::VBuffer  stage  = dx->allocator.alloc(p.data(),size,1,1,MemUsage::TransferSrc,BufferFlags::Staging);
   Detail::VTexture buf    = dx->allocator.alloc(p,mipCnt,format);
 
   Detail::DSharedPtr<Detail::VBuffer*>  pstage(new Detail::VBuffer (std::move(stage)));
@@ -275,7 +274,7 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
     }
 
   const size_t    size  = w*h*bpp;
-  Detail::VBuffer stage = dx->allocator.alloc(nullptr,size,MemUsage::TransferDst,BufferFlags::Staging);
+  Detail::VBuffer stage = dx->allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferFlags::Staging);
 
   Detail::VDevice::Data dat(*dx);
 

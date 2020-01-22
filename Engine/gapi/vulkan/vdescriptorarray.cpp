@@ -17,6 +17,12 @@ VDescriptorArray::VDescriptorArray(VkDevice device, const UniformsLayout& lay,
   if(layImpl->hint.size()==0)
     return;
 
+  if(layImpl->offsetsCnt<=sizeof(multV)/sizeof(multV[0])) {
+    multiplier = multV;
+    } else {
+    multiplier = new size_t[layImpl->offsetsCnt];
+    }
+
   std::lock_guard<Detail::SpinLock> guard(layImpl->sync);
 
   for(auto& i:layImpl->pool){
@@ -41,6 +47,8 @@ VDescriptorArray::VDescriptorArray(VkDevice device, const UniformsLayout& lay,
 VDescriptorArray::~VDescriptorArray() {
   if(desc==VK_NULL_HANDLE)
     return;
+  if(multiplier!=multV)
+    delete multiplier;
   Detail::VUniformsLay* layImpl = reinterpret_cast<Detail::VUniformsLay*>(this->lay.get());
   std::lock_guard<Detail::SpinLock> guard(layImpl->sync);
 
@@ -113,7 +121,7 @@ void VDescriptorArray::set(size_t id,Tempest::AbstractGraphicsApi::Texture* t) {
   vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
   }
 
-void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf, size_t offset, size_t size) {
+void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf, size_t offset, size_t size, size_t align) {
   VBuffer* memory=reinterpret_cast<VBuffer*>(buf);
   VkDescriptorBufferInfo bufferInfo = {};
   bufferInfo.buffer = memory->impl;
@@ -132,6 +140,14 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf,
   descriptorWrite.pBufferInfo     = &bufferInfo;
 
   vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+
+  size_t alignId=size_t(-1);
+  for(size_t i=0;i<=id;++i) {
+    if(layImpl->hint[i]==VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
+      ++alignId;
+    }
+  if(alignId!=size_t(-1))
+    multiplier[alignId] = align;
   }
 
 void VDescriptorArray::addPoolSize(VkDescriptorPoolSize *p, size_t &sz, VkDescriptorType elt) {

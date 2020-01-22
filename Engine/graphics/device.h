@@ -14,6 +14,8 @@
 #include <Tempest/IndexBuffer>
 #include <Tempest/Builtin>
 #include <Tempest/Swapchain>
+#include <Tempest/UniformBuffer>
+#include <Tempest/Except>
 
 #include "videobuffer.h"
 
@@ -32,7 +34,6 @@ class VideoBuffer;
 class Pixmap;
 
 class Uniforms;
-class UniformBuffer;
 class UniformsLayout;
 
 class Color;
@@ -90,9 +91,14 @@ class Device {
       return loadIbo(arr.data(),arr.size(),flg);
       }
 
+    template<class T>
+    UniformBuffer<T>     loadUbo(const T* data, size_t size);
+
+    template<class T>
+    UniformBuffer<T>     loadUbo(const T& data);
+
     Texture2d            texture(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips);
     Texture2d            loadTexture(const Pixmap& pm,bool mips=true);
-    UniformBuffer        loadUbo(const void* data, size_t size);
     Pixmap               readPixels(const Texture2d& t);
 
     Uniforms             uniforms(const UniformsLayout &owner);
@@ -136,7 +142,7 @@ class Device {
     Tempest::CommandPool            mainCmdPool;
     Tempest::Builtin                builtins;
 
-    VideoBuffer createVideoBuffer(const void* data, size_t size, MemUsage usage, BufferFlags flg);
+    VideoBuffer createVideoBuffer(const void* data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferFlags flg);
     RenderPipeline
                 implPipeline(const RenderState &st, const UniformsLayout& ulay,
                              const Shader &vs, const Shader &fs,
@@ -169,7 +175,7 @@ template<class T>
 inline VertexBuffer<T> Device::loadVbo(const T* arr, size_t arrSize, BufferFlags flg) {
   if(arrSize==0)
     return VertexBuffer<T>();
-  VideoBuffer     data=createVideoBuffer(arr,arrSize*sizeof(T),MemUsage::VertexBuffer,flg);
+  VideoBuffer     data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::VertexBuffer,flg);
   VertexBuffer<T> vbo(std::move(data),arrSize);
   return vbo;
   }
@@ -178,7 +184,7 @@ template<class T>
 inline VertexBufferDyn<T> Device::loadVboDyn(const T *arr, size_t arrSize) {
   if(arrSize==0)
     return VertexBufferDyn<T>();
-  VideoBuffer        data=createVideoBuffer(arr,arrSize*sizeof(T),MemUsage::VertexBuffer,BufferFlags::Dynamic);
+  VideoBuffer        data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::VertexBuffer,BufferFlags::Dynamic);
   VertexBufferDyn<T> vbo(std::move(data),arrSize);
   return vbo;
   }
@@ -187,9 +193,28 @@ template<class T>
 inline IndexBuffer<T> Device::loadIbo(const T* arr, size_t arrSize, BufferFlags flg) {
   if(arrSize==0)
     return IndexBuffer<T>();
-  VideoBuffer     data=createVideoBuffer(arr,arrSize*sizeof(T),MemUsage::IndexBuffer,flg);
+  VideoBuffer     data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::IndexBuffer,flg);
   IndexBuffer<T>  ibo(std::move(data),arrSize);
   return ibo;
+  }
+
+template<class T>
+inline UniformBuffer<T> Device::loadUbo(const T *mem, size_t size) {
+  if(size==0)
+    return UniformBuffer<T>();
+  const size_t align   = devCaps.minUboAligment;
+  const size_t eltSize = ((sizeof(T)+align-1)/align)*align;
+
+  if(sizeof(T)>devCaps.maxUboRange)
+    throw std::system_error(Tempest::GraphicsErrc::TooLardgeUbo);
+  VideoBuffer      data=createVideoBuffer(mem,size,sizeof(T),eltSize,MemUsage::UniformBit,BufferFlags::Dynamic);
+  UniformBuffer<T> ubo(std::move(data),eltSize);
+  return ubo;
+  }
+
+template<class T>
+inline UniformBuffer<T> Device::loadUbo(const T& mem) {
+  return loadUbo(&mem,1);
   }
 
 template<class Vertex>

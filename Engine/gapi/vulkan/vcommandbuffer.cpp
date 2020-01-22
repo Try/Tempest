@@ -252,10 +252,24 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraph
 
   VPipeline&        px=reinterpret_cast<VPipeline&>(p);
   VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
+
+  if(offc<=128) {
+    uint32_t buf[128];
+    implSetUniforms(cmd,px,ux,offc,offv,buf);
+    } else {
+    std::unique_ptr<uint32_t[]> buf(new uint32_t[offc]);
+    implSetUniforms(cmd,px,ux,offc,offv,buf.get());
+    }
+  }
+
+void VCommandBuffer::implSetUniforms(VkCommandBuffer cmd, VPipeline& px, VDescriptorArray& ux,
+                                     size_t offc, const uint32_t* offv, uint32_t* buf) {
+  for(size_t i=0;i<offc;++i)
+    buf[i] = ux.multiplier[i]*offv[i];
   vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,
                           px.pipelineLayout,0,
                           1,&ux.desc,
-                          offc,offv);
+                          offc,buf);
   }
 
 void VCommandBuffer::setViewport(const Tempest::Rect &r) {

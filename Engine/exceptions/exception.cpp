@@ -16,6 +16,8 @@ std::string SystemErrCategory::message(int ev) const {
       return "Unable to open file";
     case SystemErrc::UnableToLoadAsset:
       return "Unable to load asset";
+    case SystemErrc::UnableToSaveAsset:
+      return "Unable to save asset";
     }
   return "(unrecognized error)";
   }
@@ -42,6 +44,14 @@ std::string GraphicsErrCategory::message(int ev) const {
       return "Invalid shader module";
     case GraphicsErrc::UnsupportedTextureFormat:
       return "Usage of texture format whitch is not supported by device";
+    case GraphicsErrc::InvalidUniformBuffer:
+      return "Invalid uniform buffer";
+    case GraphicsErrc::InvalidTexture:
+      return "Invalide texture";
+    case GraphicsErrc::InvalidBufferUpdate:
+      return "Invalid buffer update";
+    case GraphicsErrc::TooLardgeUbo:
+      return "Uniform buffer element is too large";
     }
   return "(unrecognized error)";
   }
