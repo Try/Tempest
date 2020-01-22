@@ -5,6 +5,12 @@ set(CMAKE_CXX_STANDARD 14)
 
 option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
 
+if(MSVC)
+  option(TEMPEST_BUILD_DIRECTX12   "Build directx12 support" ON )
+else()
+  option(TEMPEST_BUILD_DIRECTX12   "Build directx12 support" OFF)
+endif()
+
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 add_definitions(-DVULKAN_HPP_NO_EXCEPTIONS)
@@ -13,6 +19,9 @@ add_definitions(-DSTB_IMAGE_IMPLEMENTATION)
 add_definitions(-DSTB_TRUETYPE_IMPLEMENTATION)
 add_definitions(-DSTB_IMAGE_WRITE_IMPLEMENTATION)
 add_definitions(-DAL_ALEXT_PROTOTYPES)
+if(WIN32 AND BUILD_DIRECTX12)
+  add_definitions(-DTEMPEST_BUILD_DIRECTX12)
+endif()
 
 ### Compillers
 if(MSVC)
@@ -67,7 +76,7 @@ set_target_properties(
 if(WIN32)
   target_link_libraries(${PROJECT_NAME} PRIVATE vulkan-1 shlwapi)
   target_link_libraries(${PROJECT_NAME} PRIVATE winmm Kernel32)
-  if(MSVC)
+  if(TEMPEST_BUILD_DIRECTX12)
     target_link_libraries(${PROJECT_NAME} PRIVATE d3d12 dxgi)
   endif()
 else()

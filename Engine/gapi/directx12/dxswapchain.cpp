@@ -1,4 +1,4 @@
-#if defined(_MSC_VER)
+#if defined(TEMPEST_BUILD_DIRECTX12)
 
 #include "dxswapchain.h"
 

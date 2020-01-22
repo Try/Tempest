@@ -1,7 +1,5 @@
 #pragma once
 
-#pragma once
-
 #include <Tempest/AbstractGraphicsApi>
 #include <stdexcept>
 
@@ -9,10 +7,10 @@
 #include <d3d12.h>
 
 #include "gapi/directx12/comptr.h"
-
 #include "exceptions/exception.h"
 #include "utility/spinlock.h"
 #include "utility/compiller_hints.h"
+#include "dxallocator.h"
 
 namespace Tempest {
 
@@ -55,9 +53,20 @@ class DxDevice : public AbstractGraphicsApi::Device {
     const char*             renderer() const override;
     void                    waitIdle() const override;
 
-  private:
+    struct Data {
+
+      };
+
     ComPtr<ID3D12Device>       device;
-    ComPtr<ID3D12CommandQueue> cmdQueue;
+    DxAllocator                allocator;
+
+  private:
+    struct Queue {
+      ComPtr<ID3D12CommandQueue> impl;
+      };
+
+    char                       description[128] = {};
+    Queue                      cmdQueue;
   };
 
 }}

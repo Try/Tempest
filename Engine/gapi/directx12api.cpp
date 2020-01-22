@@ -1,12 +1,13 @@
 #include "directx12api.h"
 
-#if defined(_MSC_VER)
+#if defined(TEMPEST_BUILD_DIRECTX12)
 #include <dxgi1_6.h>
 #include <d3d12.h>
 
 #include "directx12/guid.h"
 #include "directx12/comptr.h"
 #include "directx12/dxdevice.h"
+#include "directx12/dxbuffer.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -92,7 +93,35 @@ AbstractGraphicsApi::Semaphore* DirectX12Api::createSemaphore(AbstractGraphicsAp
   return nullptr;
   }
 
-AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Device* d, const void* mem, size_t size, MemUsage usage, BufferFlags flg) {
+AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Device* d, const void* mem,
+                                                        size_t count,size_t sz,size_t alignedSz, MemUsage usage, BufferFlags flg) {
+  Detail::DxDevice* dx = reinterpret_cast<Detail::DxDevice*>(d);
+  (void)sz;
+
+  if(flg==BufferFlags::Dynamic || true) {
+    Detail::DxBuffer stage=dx->allocator.alloc(mem,count*alignedSz,usage,BufferFlags::Dynamic);
+    return PBuffer(new Detail::DxBuffer(std::move(stage)));
+    }
+  if(flg==BufferFlags::Staging) {
+    Detail::DxBuffer stage=dx->allocator.alloc(mem,count*alignedSz,usage,BufferFlags::Staging);
+    return PBuffer(new Detail::DxBuffer(std::move(stage)));
+    }/*
+  else {
+    Detail::DxBuffer  stage=dx->allocator.alloc(mem,     size, MemUsage::TransferSrc,      BufferFlags::Staging);
+    Detail::DxBuffer  buf  =dx->allocator.alloc(nullptr, size, usage|MemUsage::TransferDst,BufferFlags::Static );
+
+    Detail::DSharedPtr<Detail::DxBuffer*> pstage(new Detail::DxBuffer(std::move(stage)));
+    Detail::DSharedPtr<Detail::DxBuffer*> pbuf  (new Detail::DxBuffer(std::move(buf)));
+
+    DxDevice::Data dat(*dx);
+    dat.flush(*pstage.handler,size);
+    dat.hold(pbuf);
+    dat.hold(pstage); // preserve stage buffer, until gpu side copy is finished
+    dat.copy(*pbuf.handler,*pstage.handler,size);
+    dat.commit();
+
+    return PBuffer(pbuf.handler);
+    }*/
   return PBuffer();
   }
 
