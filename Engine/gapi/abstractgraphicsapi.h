@@ -277,7 +277,7 @@ namespace Tempest {
       using PFbo       = Detail::DSharedPtr<Fbo*>;
       using PFboLayout = Detail::DSharedPtr<FboLayout*>;
 
-      virtual Device*    createDevice(SystemApi::Window* w)=0;
+      virtual Device*    createDevice()=0;
       virtual void       destroy(Device* d)=0;
 
       virtual Swapchain* createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d)=0;

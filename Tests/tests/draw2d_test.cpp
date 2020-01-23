@@ -16,7 +16,7 @@ using namespace Tempest;
 TEST(main,Draw2d) {
   try {
     VulkanApi    api;
-    Device       device(api,nullptr);
+    Device       device(api);
     TextureAtlas atlas(device);
 
     VectorImage  img;

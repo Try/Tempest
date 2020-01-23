@@ -19,11 +19,12 @@ class SystemApi {
     struct Window;
 
     enum ShowMode : uint8_t {
-      Hidden,
       Minimized,
       Normal,
       Maximized,
-      FullScreen
+      FullScreen,
+
+      Hidden, //internal
       };
 
     struct TranslateKeyPair final {

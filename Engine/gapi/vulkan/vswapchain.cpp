@@ -6,80 +6,32 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-VSwapchain::VSwapchain(VDevice &device, uint32_t w, uint32_t h)
-  :device(device.device) {
-  auto swapChainSupport = device.querySwapChainSupport();
+VSwapchain::VSwapchain(VDevice &device, void* hwnd, uint32_t w, uint32_t h)
+  :instance(device.instance), device(device.device) {
+  try {
+    surface = device.createSurface(hwnd);
 
-  VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
-  VkPresentModeKHR   presentMode   = chooseSwapPresentMode  (swapChainSupport.presentModes);
-  VkExtent2D         extent        = chooseSwapExtent       (swapChainSupport.capabilities,w,h);
+    auto  swapChainSupport = device.querySwapChainSupport(surface);
+    uint32_t imgCount = chooseImageCount(swapChainSupport);
+    createSwapchain(device,swapChainSupport,w,h,imgCount);
 
-  const uint32_t maxImages=swapChainSupport.capabilities.maxImageCount==0 ? uint32_t(-1) : swapChainSupport.capabilities.maxImageCount;
-  uint32_t imageCount=swapChainSupport.capabilities.minImageCount+1;
-  if(swapChainSupport.capabilities.maxImageCount>0 && imageCount>maxImages)
-    imageCount = swapChainSupport.capabilities.maxImageCount;
+    vkGetSwapchainImagesKHR(device.device, swapChain, &imgCount, nullptr);
+    swapChainImages.resize(imgCount);
+    vkGetSwapchainImagesKHR(device.device, swapChain, &imgCount, swapChainImages.data());
 
-  auto indices = device.findQueueFamilies();
-  uint32_t queueFamilyIndices[] = {indices.graphicsFamily, indices.presentFamily};
-
-  VkSwapchainCreateInfoKHR createInfo = {};
-  createInfo.sType   = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-  createInfo.surface = device.surface;
-
-  createInfo.minImageCount    = imageCount;
-  createInfo.imageFormat      = surfaceFormat.format;
-  createInfo.imageColorSpace  = surfaceFormat.colorSpace;
-  createInfo.imageExtent      = extent;
-  createInfo.imageArrayLayers = 1;
-  //createInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-  createInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-
-  if( indices.graphicsFamily!=indices.presentFamily ) {
-    createInfo.imageSharingMode      = VK_SHARING_MODE_CONCURRENT;
-    createInfo.queueFamilyIndexCount = 2;
-    createInfo.pQueueFamilyIndices   = queueFamilyIndices;
-    } else {
-    createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    createImageViews(device);
     }
-
-  createInfo.preTransform   = swapChainSupport.capabilities.currentTransform;
-  createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-  createInfo.presentMode    = presentMode;
-  createInfo.clipped        = VK_TRUE;
-
-  if(vkCreateSwapchainKHR(device.device, &createInfo, nullptr, &swapChain) != VK_SUCCESS)
-    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
-
-  vkGetSwapchainImagesKHR(device.device, swapChain, &imageCount, nullptr);
-  swapChainImages.resize(imageCount);
-  vkGetSwapchainImagesKHR(device.device, swapChain, &imageCount, swapChainImages.data());
-
-  swapChainImageFormat = surfaceFormat.format;
-  swapChainExtent      = extent;
-
-  createImageViews(device);
-  images.resize(swapChainImageViews.size());
-  for(size_t i=0;i<images.size();++i) {
-    images[i].impl               = swapChainImages[i];
-    images[i].device             = device.device;
-    images[i].presentQueueFamily = indices.presentFamily;
-    images[i].format             = swapChainImageFormat;
+  catch(...) {
+    cleanup();
+    throw;
     }
-  }
-
-VSwapchain::VSwapchain(VSwapchain &&other) {
-  std::swap(swapChainImages,other.swapChainImages);
-  std::swap(swapChainImageViews,other.swapChainImageViews);
-  std::swap(swapChain,other.swapChain);
-  std::swap(swapChainExtent,other.swapChainExtent);
-  std::swap(swapChainImageFormat,other.swapChainImageFormat);
-  std::swap(device,other.device);
   }
 
 VSwapchain::~VSwapchain() {
-  if(device==nullptr)
-    return;
+  cleanup();
+  }
 
+void VSwapchain::cleanup() {
   for(size_t i=0;i<images.size();++i)
     images[i].device = nullptr;
 
@@ -91,38 +43,52 @@ VSwapchain::~VSwapchain() {
 
   if(swapChain!=VK_NULL_HANDLE)
     vkDestroySwapchainKHR(device,swapChain,nullptr);
+
+  if(surface!=VK_NULL_HANDLE)
+    vkDestroySurfaceKHR(instance,surface,nullptr);
   }
 
-void VSwapchain::operator=(VSwapchain &&other) {
-  std::swap(swapChainImages,other.swapChainImages);
-  std::swap(swapChainImageViews,other.swapChainImageViews);
-  std::swap(swapChain,other.swapChain);
-  std::swap(swapChainExtent,other.swapChainExtent);
-  std::swap(swapChainImageFormat,other.swapChainImageFormat);
-  std::swap(device,other.device);
-  }
+void VSwapchain::createSwapchain(VDevice& device, const VDevice::SwapChainSupport& swapChainSupport,uint32_t w,uint32_t h,uint32_t imgCount) {
+  auto& indices          = device.props;
+  const uint32_t qidx[]  = {device.props.presentFamily,device.props.graphicsFamily};
 
-uint32_t VSwapchain::nextImage(AbstractGraphicsApi::Semaphore* onReady) {
-  Detail::VSemaphore* rx=reinterpret_cast<Detail::VSemaphore*>(onReady);
+  VkBool32 support=false;
+  vkGetPhysicalDeviceSurfaceSupportKHR(device.physicalDevice,indices.presentFamily,surface,&support);
+  if(!support)
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
-  uint32_t id   = uint32_t(-1);
-  VkResult code = vkAcquireNextImageKHR(device,
-                                        swapChain,
-                                        std::numeric_limits<uint64_t>::max(),
-                                        rx->impl,
-                                        VK_NULL_HANDLE,
-                                        &id);
-  if(code==VK_ERROR_OUT_OF_DATE_KHR)
-    throw DeviceLostException();
+  VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats);
+  VkPresentModeKHR   presentMode   = chooseSwapPresentMode  (swapChainSupport.presentModes);
+  VkExtent2D         extent        = chooseSwapExtent       (swapChainSupport.capabilities,w,h);
 
-  if(code!=VK_SUCCESS && code!=VK_SUBOPTIMAL_KHR)
-    throw std::runtime_error("failed to acquire swap chain image!");
-  return id;
-  }
+  VkSwapchainCreateInfoKHR createInfo = {};
+  createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+  createInfo.surface          = surface;
+  createInfo.minImageCount    = imgCount;
+  createInfo.imageFormat      = surfaceFormat.format;
+  createInfo.imageColorSpace  = surfaceFormat.colorSpace;
+  createInfo.imageExtent      = extent;
+  createInfo.imageArrayLayers = 1;
+  createInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-Tempest::AbstractGraphicsApi::Image* VSwapchain::getImage(uint32_t id) {
-  Detail::VImage* img=&images[id];
-  return img;
+  if( indices.graphicsFamily!=indices.presentFamily ) {
+    createInfo.imageSharingMode      = VK_SHARING_MODE_CONCURRENT;
+    createInfo.queueFamilyIndexCount = 2;
+    createInfo.pQueueFamilyIndices   = qidx;
+    } else {
+    createInfo.imageSharingMode      = VK_SHARING_MODE_EXCLUSIVE;
+    }
+
+  createInfo.preTransform   = swapChainSupport.capabilities.currentTransform;
+  createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+  createInfo.presentMode    = presentMode;
+  createInfo.clipped        = VK_TRUE;
+
+  if(vkCreateSwapchainKHR(device.device, &createInfo, nullptr, &swapChain) != VK_SUCCESS)
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+
+  swapChainImageFormat = surfaceFormat.format;
+  swapChainExtent      = extent;
   }
 
 void VSwapchain::createImageViews(VDevice &device) {
@@ -146,6 +112,15 @@ void VSwapchain::createImageViews(VDevice &device) {
 
     if(vkCreateImageView(device.device,&createInfo,nullptr,&swapChainImageViews[i])!=VK_SUCCESS)
       throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+    }
+
+  auto& indices = device.props;
+  images.resize(swapChainImageViews.size());
+  for(size_t i=0;i<images.size();++i) {
+    images[i].impl               = swapChainImages[i];
+    images[i].device             = device.device;
+    images[i].presentQueueFamily = indices.presentFamily;
+    images[i].format             = swapChainImageFormat;
     }
   }
 
@@ -201,4 +176,35 @@ VkExtent2D VSwapchain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabili
                                  std::min(capabilities.maxImageExtent.height, actualExtent.height));
 
   return actualExtent;
+  }
+
+uint32_t VSwapchain::chooseImageCount(const VDevice::SwapChainSupport& support) const {
+  const uint32_t maxImages=support.capabilities.maxImageCount==0 ? uint32_t(-1) : support.capabilities.maxImageCount;
+  uint32_t imageCount=support.capabilities.minImageCount+1;
+  if(support.capabilities.maxImageCount>0 && imageCount>maxImages)
+    imageCount = support.capabilities.maxImageCount;
+  return imageCount;
+  }
+
+uint32_t VSwapchain::nextImage(AbstractGraphicsApi::Semaphore* onReady) {
+  Detail::VSemaphore* rx=reinterpret_cast<Detail::VSemaphore*>(onReady);
+
+  uint32_t id   = uint32_t(-1);
+  VkResult code = vkAcquireNextImageKHR(device,
+                                        swapChain,
+                                        std::numeric_limits<uint64_t>::max(),
+                                        rx->impl,
+                                        VK_NULL_HANDLE,
+                                        &id);
+  if(code==VK_ERROR_OUT_OF_DATE_KHR)
+    throw DeviceLostException();
+
+  if(code!=VK_SUCCESS && code!=VK_SUBOPTIMAL_KHR)
+    throw std::runtime_error("failed to acquire swap chain image!");
+  return id;
+  }
+
+Tempest::AbstractGraphicsApi::Image* VSwapchain::getImage(uint32_t id) {
+  Detail::VImage* img=&images[id];
+  return img;
   }

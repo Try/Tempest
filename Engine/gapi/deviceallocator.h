@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <forward_list>
 #include <mutex>
+#include <algorithm>
 
 namespace Tempest {
 namespace Detail {
@@ -55,7 +56,7 @@ class DeviceAllocator {
 
   private:
     Allocation rawAlloc(size_t size, size_t align, uint32_t heapId, uint32_t typeId){
-      Page pg(std::max<uint32_t>(DEFAULT_PAGE_SIZE,size));
+      Page pg(std::max<uint32_t>(DEFAULT_PAGE_SIZE,uint32_t(size)));
       pg.memory = device.alloc(pg.allSize,typeId);
       pg.type   = heapId;
       if(pg.memory==null)
@@ -137,9 +138,9 @@ struct DeviceAllocator<MemoryProvider>::Page : Block {
             bp->next=b->next;
             b->next =bp;
 
-            bp->size  =b->size-padding;
-            bp->offset=b->offset+padding;
-            b->size   =padding;
+            bp->size  =uint32_t(b->size-padding);
+            bp->offset=uint32_t(b->offset+padding);
+            b->size   =uint32_t(padding);
 
             return alloc(*bp,size);
             }
@@ -156,9 +157,9 @@ struct DeviceAllocator<MemoryProvider>::Page : Block {
     a.page  =this;
     a.size  =size;
 
-    b.offset +=size;
-    b.size   -=size;
-    allocated+=size;
+    b.offset +=uint32_t(size);
+    b.size   -=uint32_t(size);
+    allocated+=uint32_t(size);
     return a;
     }
 
@@ -171,25 +172,25 @@ struct DeviceAllocator<MemoryProvider>::Page : Block {
     uint32_t sz=uint32_t(size+padding);
     b.offset +=sz;
     b.size   -=sz;
-    allocated+=size;
+    allocated+=uint32_t(size);
     return a;
     }
 
   void free(const Allocation& a) noexcept {
-    allocated -= a.size;
+    allocated -= uint32_t(a.size);
 
     Block* b=this;
     while(b!=nullptr && (b->offset+b->size)<a.offset)
       b=b->next;
 
     if(b->offset+b->size==a.offset){
-      b->size+=a.size;
+      b->size+=uint32_t(a.size);
       mergeWithNext(b);
       return;
       }
     if(b->offset==a.offset+a.size){
-      b->offset=a.offset;
-      b->size +=a.size;
+      b->offset=uint32_t(a.offset);
+      b->size +=uint32_t(a.size);
       return;
       }
 
@@ -198,8 +199,8 @@ struct DeviceAllocator<MemoryProvider>::Page : Block {
       return; // no error, but sort of leak in Page
     *r=*b;
     b->next  =r;
-    b->size  =a.size;
-    b->offset=a.offset;
+    b->size  =uint32_t(a.size);
+    b->offset=uint32_t(a.offset);
     }
 
   void mergeWithNext(Block* b) noexcept {

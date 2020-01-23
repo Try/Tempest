@@ -8,11 +8,9 @@ using namespace Tempest::Detail;
 
 VCommandPool::VCommandPool(VDevice& device,VkCommandPoolCreateFlags flags)
   :device(device.device) {
-  auto queueFamilyIndices = device.findQueueFamilies();
-
   VkCommandPoolCreateInfo poolInfo = {};
   poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-  poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
+  poolInfo.queueFamilyIndex = device.props.graphicsFamily;
   poolInfo.flags            = flags;
 
   vkAssert(vkCreateCommandPool(device.device,&poolInfo,nullptr,&impl));

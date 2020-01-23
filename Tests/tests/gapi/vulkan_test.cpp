@@ -40,7 +40,7 @@ TEST(VulkanApi,VulkanApi) {
 TEST(VulkanApi,Vbo) {
   try {
     VulkanApi      api{ApiFlags::Validation};
-    Device         device(api,nullptr);
+    Device         device(api);
 
     auto vbo = device.loadVbo(vboData,3,BufferFlags::Static);
     auto ibo = device.loadIbo(iboData,3,BufferFlags::Static);
@@ -55,7 +55,7 @@ TEST(VulkanApi,Vbo) {
 TEST(VulkanApi,Shader) {
   try {
     VulkanApi      api{ApiFlags::Validation};
-    Device         device(api,nullptr);
+    Device         device(api);
 
     auto vert = device.loadShader("shader/simple_test.vert.sprv");
     auto frag = device.loadShader("shader/simple_test.frag.sprv");
@@ -70,7 +70,7 @@ TEST(VulkanApi,Shader) {
 TEST(VulkanApi,Fbo) {
   try {
     VulkanApi      api{ApiFlags::Validation};
-    Device         device(api,nullptr);
+    Device         device(api);
 
     auto tex = device.texture(TextureFormat::RGBA8,128,128,false);
     auto fbo = device.frameBuffer(tex);
@@ -99,14 +99,14 @@ TEST(VulkanApi,Fbo) {
 TEST(VulkanApi,Draw) {
   try {
     VulkanApi      api{ApiFlags::Validation};
-    Device         device(api,nullptr);
+    Device         device(api);
 
     auto vbo  = device.loadVbo(vboData,3,BufferFlags::Static);
     auto ibo  = device.loadIbo(iboData,3,BufferFlags::Static);
 
     auto vert = device.loadShader("shader/simple_test.vert.sprv");
     auto frag = device.loadShader("shader/simple_test.frag.sprv");
-    auto pipe = device.pipeline<Vertex>(Topology::Triangles,RenderState(),UniformsLayout(),vert,frag);
+    auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),UniformsLayout(),vert,frag);
 
     auto tex  = device.texture(TextureFormat::RGBA8,128,128,false);
     auto fbo  = device.frameBuffer(tex);
@@ -116,7 +116,7 @@ TEST(VulkanApi,Draw) {
     {
       auto enc = cmd.startEncoding(device);
       enc.setPass(fbo,rp);
-      enc.setUniforms(pipe);
+      enc.setUniforms(pso);
       enc.draw(vbo,ibo);
     }
 

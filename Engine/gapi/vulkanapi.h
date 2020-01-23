@@ -12,7 +12,7 @@ class VulkanApi : public AbstractGraphicsApi {
     explicit VulkanApi(ApiFlags f=ApiFlags::NoFlags);
     virtual ~VulkanApi();
 
-    Device*        createDevice(SystemApi::Window* w) override;
+    Device*        createDevice() override;
     void           destroy(Device* d) override;
 
     Swapchain*     createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d) override;

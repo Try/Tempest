@@ -54,7 +54,7 @@ void VUniformsLay::implCreate(const UniformsLayout &ulay,VkDescriptorSetLayoutBi
 
   VkDescriptorSetLayoutCreateInfo info={};
   info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  info.bindingCount = ulay.size();
+  info.bindingCount = uint32_t(ulay.size());
   info.pBindings    = bind;
 
   vkAssert(vkCreateDescriptorSetLayout(dev,&info,nullptr,&impl));

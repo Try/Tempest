@@ -6,12 +6,12 @@
 
 using namespace Tempest;
 
-Swapchain::Swapchain(SystemApi::Window* w, AbstractGraphicsApi::Device& dev, AbstractGraphicsApi& api, uint8_t maxFramesInFlight)
+Swapchain::Swapchain(AbstractGraphicsApi::Device& dev, AbstractGraphicsApi& api, SystemApi::Window* w, uint8_t maxFramesInFlight)
   : api(&api), dev(&dev), hwnd(w), implMaxFramesInFlight(maxFramesInFlight) {
   reset();
   }
 
-Swapchain::Swapchain(SystemApi::Window* w, Device& dev) {
+Swapchain::Swapchain(Device& dev, SystemApi::Window* w) {
   *this = dev.swapchain(w);
   }
 

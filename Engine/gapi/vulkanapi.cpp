@@ -40,8 +40,8 @@ VulkanApi::VulkanApi(ApiFlags f) {
 VulkanApi::~VulkanApi(){
   }
 
-AbstractGraphicsApi::Device *VulkanApi::createDevice(SystemApi::Window *w) {
-  return new Detail::VDevice(*impl,w);
+AbstractGraphicsApi::Device *VulkanApi::createDevice() {
+  return new Detail::VDevice(*impl);
   }
 
 void VulkanApi::destroy(AbstractGraphicsApi::Device *d) {
@@ -52,7 +52,7 @@ void VulkanApi::destroy(AbstractGraphicsApi::Device *d) {
 AbstractGraphicsApi::Swapchain *VulkanApi::createSwapchain(SystemApi::Window *w,AbstractGraphicsApi::Device *d) {
   Detail::VDevice* dx   = reinterpret_cast<Detail::VDevice*>(d);
   const Rect       rect = SystemApi::windowClientRect(w);
-  return new Detail::VSwapchain(*dx,uint32_t(rect.w),uint32_t(rect.h));
+  return new Detail::VSwapchain(*dx,w,uint32_t(rect.w),uint32_t(rect.h));
   }
 
 AbstractGraphicsApi::PPass VulkanApi::createPass(AbstractGraphicsApi::Device *d,

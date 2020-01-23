@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vimage.h"
+#include "vdevice.h"
 
 #include <Tempest/AbstractGraphicsApi>
 #include <vulkan/vulkan.hpp>
@@ -16,11 +17,11 @@ class VDevice;
 class VSwapchain : public AbstractGraphicsApi::Swapchain {
   public:
     VSwapchain()=default;
-    VSwapchain(VDevice& device,uint32_t w,uint32_t h);
-    VSwapchain(VSwapchain&& other);
-    ~VSwapchain();
+    VSwapchain(VDevice& device, void* hwnd, uint32_t w, uint32_t h);
+    VSwapchain(VSwapchain&& other) = delete;
+    ~VSwapchain() override;
 
-    void operator=(VSwapchain&& other);
+    VSwapchain& operator=(VSwapchain&& other) = delete;
 
     VkFormat                 format() const          { return swapChainImageFormat;   }
     uint32_t                 w()      const override { return swapChainExtent.width;  }
@@ -35,15 +36,22 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     std::vector<VImage>      images;
 
   private:
-    VkDevice                 device=nullptr;
-    VkFormat                 swapChainImageFormat=VK_FORMAT_UNDEFINED;
-    VkExtent2D               swapChainExtent={};
+    VkInstance               instance             = nullptr;
+    VkDevice                 device               = nullptr;
+    VkSurfaceKHR             surface              = VK_NULL_HANDLE;
 
+    VkFormat                 swapChainImageFormat = VK_FORMAT_UNDEFINED;
+    VkExtent2D               swapChainExtent={};
     std::vector<VkImage>     swapChainImages;
+
+    void                     cleanup();
+
+    void                     createSwapchain(VDevice& device, const VDevice::SwapChainSupport& support, uint32_t w, uint32_t h, uint32_t imgCount);
 
     VkSurfaceFormatKHR       chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
     VkPresentModeKHR         chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
     VkExtent2D               chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities, uint32_t w, uint32_t h);
+    uint32_t                 chooseImageCount(const VDevice::SwapChainSupport& support) const;
 
     void                     createImageViews(VDevice &device);
   };

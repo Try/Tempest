@@ -21,17 +21,17 @@ static uint32_t mipCount(uint32_t w, uint32_t h) {
   return n;
   }
 
-Device::Impl::Impl(AbstractGraphicsApi &api, SystemApi::Window *w, uint32_t maxFramesInFlight)
+Device::Impl::Impl(AbstractGraphicsApi &api, uint8_t maxFramesInFlight)
   :api(api),maxFramesInFlight(maxFramesInFlight) {
-  dev=api.createDevice(w);
+  dev=api.createDevice();
   }
 
 Device::Impl::~Impl() {
   api.destroy(dev);
   }
 
-Device::Device(AbstractGraphicsApi &api, SystemApi::Window *window, uint32_t maxFramesInFlight)
-  :api(api), impl(api,window,maxFramesInFlight), dev(impl.dev),
+Device::Device(AbstractGraphicsApi &api, uint8_t maxFramesInFlight)
+  :api(api), impl(api,maxFramesInFlight), dev(impl.dev),
    mainCmdPool(*this,api.createCommandPool(dev)),builtins(*this) {
   api.getCaps(dev,devCaps);
   }
@@ -39,7 +39,7 @@ Device::Device(AbstractGraphicsApi &api, SystemApi::Window *window, uint32_t max
 Device::~Device() {
   }
 
-uint32_t Device::maxFramesInFlight() const {
+uint8_t Device::maxFramesInFlight() const {
   return impl.maxFramesInFlight;
   }
 
@@ -133,7 +133,7 @@ Shader Device::loadShader(const char *source, const size_t length) {
   }
 
 Swapchain Device::swapchain(SystemApi::Window* w) const {
-  return Swapchain(w,*impl.dev,api,2);
+  return Swapchain(*impl.dev,api,w,impl.maxFramesInFlight);
   }
 
 const Device::Caps& Device::caps() const {

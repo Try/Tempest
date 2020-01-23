@@ -43,7 +43,7 @@ TEST(DirectX12Api,Vbo) {
 #if defined(_MSC_VER)
   try {
     DirectX12Api   api{ApiFlags::Validation};
-    Device         device(api,nullptr);
+    Device         device(api);
 
     auto vbo = device.loadVbo(vboData,3,BufferFlags::Static);
     auto ibo = device.loadIbo(iboData,3,BufferFlags::Static);

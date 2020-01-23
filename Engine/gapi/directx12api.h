@@ -12,7 +12,7 @@ class DirectX12Api : public AbstractGraphicsApi {
     explicit DirectX12Api(ApiFlags f=ApiFlags::NoFlags);
     virtual ~DirectX12Api();
 
-  Device*        createDevice(SystemApi::Window* w) override;
+  Device*        createDevice() override;
   void           destroy(Device* d) override;
 
   Swapchain*     createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d) override;

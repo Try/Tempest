@@ -32,7 +32,7 @@ DirectX12Api::DirectX12Api(ApiFlags f) {
 DirectX12Api::~DirectX12Api(){
   }
 
-AbstractGraphicsApi::Device* DirectX12Api::createDevice(SystemApi::Window*) {
+AbstractGraphicsApi::Device* DirectX12Api::createDevice() {
   return new DxDevice(*impl->DXGIFactory);
   }
 

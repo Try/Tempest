@@ -10,7 +10,7 @@ class Frame;
 
 class Swapchain {
   public:
-    Swapchain(SystemApi::Window* w, Device& dev);
+    Swapchain(Device& dev, SystemApi::Window* w);
     Swapchain(Swapchain&&)=default;
     virtual ~Swapchain();
 
@@ -31,7 +31,7 @@ class Swapchain {
     uint32_t             nextImage(Semaphore& onReady);
 
   private:
-    Swapchain(SystemApi::Window* w, AbstractGraphicsApi::Device& dev, AbstractGraphicsApi& api, uint8_t maxFramesInFlight);
+    Swapchain(AbstractGraphicsApi::Device& dev, AbstractGraphicsApi& api, SystemApi::Window* w, uint8_t maxFramesInFlight);
 
     Detail::DPtr<AbstractGraphicsApi::Swapchain*> impl;
     AbstractGraphicsApi*                          api =nullptr;

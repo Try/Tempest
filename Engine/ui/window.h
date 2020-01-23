@@ -11,16 +11,15 @@ class TextureAtlas;
 class Window : public Widget {
   public:
     enum ShowMode : uint8_t {
-      Hidden,
       Minimized,
       Normal,
       Maximized,
-      FullScreen
+      FullScreen,
       };
 
     Window();
     Window( ShowMode sm );
-    virtual ~Window();
+    ~Window() override;
 
   protected:
     virtual void render();

@@ -43,11 +43,11 @@ class Device {
   public:
     using Caps=AbstractGraphicsApi::Caps;
 
-    Device(AbstractGraphicsApi& api, SystemApi::Window *window, uint32_t maxFramesInFlight=2);
+    Device(AbstractGraphicsApi& api, uint8_t maxFramesInFlight=2);
     Device(const Device&)=delete;
     virtual ~Device();
 
-    uint32_t             maxFramesInFlight() const;
+    uint8_t              maxFramesInFlight() const;
     void                 waitIdle();
 
     void                 draw(const PrimaryCommandBuffer&  cmd,const Semaphore& wait);
@@ -127,12 +127,12 @@ class Device {
 
   private:
     struct Impl {
-      Impl(AbstractGraphicsApi& api,SystemApi::Window *w,uint32_t maxFramesInFlight);
+      Impl(AbstractGraphicsApi& api, uint8_t maxFramesInFlight);
       ~Impl();
 
       AbstractGraphicsApi&            api;
       AbstractGraphicsApi::Device*    dev=nullptr;
-      uint32_t                        maxFramesInFlight=1;
+      uint8_t                         maxFramesInFlight=1;
       };
 
     AbstractGraphicsApi&            api;
@@ -202,10 +202,10 @@ template<class T>
 inline UniformBuffer<T> Device::loadUbo(const T *mem, size_t size) {
   if(size==0)
     return UniformBuffer<T>();
-  const size_t align   = devCaps.minUboAligment;
+  const size_t align   = devCaps.ubo.offsetAlign;
   const size_t eltSize = ((sizeof(T)+align-1)/align)*align;
 
-  if(sizeof(T)>devCaps.maxUboRange)
+  if(sizeof(T)>devCaps.ubo.maxRange)
     throw std::system_error(Tempest::GraphicsErrc::TooLardgeUbo);
   VideoBuffer      data=createVideoBuffer(mem,size,sizeof(T),eltSize,MemUsage::UniformBit,BufferFlags::Dynamic);
   UniformBuffer<T> ubo(std::move(data),eltSize);

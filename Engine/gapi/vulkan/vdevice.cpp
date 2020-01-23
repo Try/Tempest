@@ -27,6 +27,30 @@ static const std::initializer_list<const char*> deviceExtensions = {
   VK_KHR_SWAPCHAIN_EXTENSION_NAME
   };
 
+class VDevice::FakeWindow final {
+  public:
+    FakeWindow(VDevice& dev)
+      :instance(dev.instance) {
+      try {
+        w = SystemApi::createWindow(nullptr,SystemApi::Hidden);
+        }
+      catch(std::system_error& err) {
+        if(err.code()!=SystemErrc::UnableToCreateWindow)
+          throw;
+        }
+      }
+    ~FakeWindow() {
+      if(surface!=VK_NULL_HANDLE)
+        vkDestroySurfaceKHR(instance,surface,nullptr);
+      if(w!=nullptr)
+        SystemApi::destroyWindow(w);
+      }
+
+    VkInstance         instance = nullptr;
+    SystemApi::Window* w        = nullptr;
+    VkSurfaceKHR       surface  = VK_NULL_HANDLE;
+  };
+
 VDevice::DataStream::DataStream(VDevice &owner)
   : owner(owner),
     cmdPool(owner,VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT),
@@ -72,9 +96,8 @@ void VDevice::DataStream::wait() {
     }
   }
 
-VDevice::VDevice(VulkanApi &api, void *hwnd)
+VDevice::VDevice(VulkanApi &api)
   :instance(api.instance)  {
-  createSurface(api,hwnd);
 
   uint32_t deviceCount = 0;
   vkEnumeratePhysicalDevices(api.instance, &deviceCount, nullptr);
@@ -86,32 +109,41 @@ VDevice::VDevice(VulkanApi &api, void *hwnd)
   vkEnumeratePhysicalDevices(api.instance, &deviceCount, devices.data());
   //std::swap(devices[0],devices[1]);
 
+  FakeWindow fakeWnd{*this};
+  fakeWnd.surface = createSurface(fakeWnd.w);
+
   for(const auto& device:devices)
-    if(isDeviceSuitable(device)){
-      physicalDevice = device;
-      break;
+    if(isDeviceSuitable(device,fakeWnd.surface)) {
+      implInit(api,device,fakeWnd.surface);
+      return;
       }
 
-  if(physicalDevice==nullptr)
-    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
-  createLogicalDevice(api);
+  throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+  }
+
+VDevice::~VDevice(){
+  vkDeviceWaitIdle(device);
+  data.reset();
+  allocator.freeLast();
+  vkDestroyDevice(device,nullptr);
+  }
+
+void VDevice::implInit(VulkanApi &api, VkPhysicalDevice pdev, VkSurfaceKHR surf) {
+  physicalDevice = pdev;
+
+  createLogicalDevice(api,surf);
   vkGetPhysicalDeviceMemoryProperties(physicalDevice,&memoryProperties);
 
-  getCaps(caps);
+  initCaps(caps);
 
   allocator.setDevice(*this);
   data.reset(new DataMgr(*this));
   }
 
-VDevice::~VDevice(){
-  data.reset();
-  allocator.freeLast();
-  vkDeviceWaitIdle(device);
-  vkDestroySurfaceKHR(instance,surface,nullptr);
-  vkDestroyDevice(device,nullptr);
-  }
-
-void VDevice::createSurface(VulkanApi &api,void* hwnd) {
+VkSurfaceKHR VDevice::createSurface(void* hwnd) {
+  if(hwnd==nullptr)
+    return VK_NULL_HANDLE;
+  VkSurfaceKHR ret = VK_NULL_HANDLE;
 #ifdef __WINDOWS__
   auto connection=GetModuleHandle(nullptr);
 
@@ -120,58 +152,67 @@ void VDevice::createSurface(VulkanApi &api,void* hwnd) {
   createInfo.hinstance = connection;
   createInfo.hwnd      = HWND(hwnd);
 
-  if(vkCreateWin32SurfaceKHR(api.instance,&createInfo,nullptr,&surface)!=VK_SUCCESS)
+  if(vkCreateWin32SurfaceKHR(instance,&createInfo,nullptr,&ret)!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 #elif defined(__LINUX__)
   VkXlibSurfaceCreateInfoKHR createInfo = {};
   createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
   createInfo.dpy    = reinterpret_cast<Display*>(X11Api::display());
   createInfo.window = ::Window(hwnd);
-  if(vkCreateXlibSurfaceKHR(api.instance, &createInfo, nullptr, &surface)!=VK_SUCCESS)
+  if(vkCreateXlibSurfaceKHR(api.instance, &createInfo, nullptr, &ret)!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 #else
 #warning "wsi for vulkan not implemented on this platform"
 #endif
+  return ret;
   }
 
-bool VDevice::isDeviceSuitable(VkPhysicalDevice device) {
-  QueueFamilyIndices indices = findQueueFamilies(device);
-  bool extensionsSupported   = checkDeviceExtensionSupport(device);
+bool VDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surf) {
+  DeviceProps prop                = deviceProps(device,surf);
+  bool        extensionsSupported = checkDeviceExtensionSupport(device);
 
   bool swapChainAdequate = false;
-  if(extensionsSupported) {
-    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
+  if(extensionsSupported && surf!=VK_NULL_HANDLE) {
+    auto swapChainSupport = querySwapChainSupport(device,surf);
     swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
     }
 
-  return indices.isComplete() && extensionsSupported && swapChainAdequate;
+  return prop.isComplete() && extensionsSupported && swapChainAdequate;
   }
 
-VDevice::QueueFamilyIndices VDevice::findQueueFamilies(VkPhysicalDevice device) {
-  QueueFamilyIndices indices;
-
+VDevice::DeviceProps VDevice::deviceProps(VkPhysicalDevice device, VkSurfaceKHR surf) {
   uint32_t queueFamilyCount = 0;
   vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
   std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
   vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 
-  uint32_t i = 0;
-  for(const auto& queueFamily : queueFamilies) {
-    if(queueFamily.queueCount>0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-      indices.graphicsFamily = i;
+  uint32_t graphics = uint32_t(-1);
+  uint32_t present  = uint32_t(-1);
+
+  for(size_t i=0;i<queueFamilyCount;++i) {
+    const auto& queueFamily = queueFamilies[i];
+    if(queueFamily.queueCount<=0)
+      continue;
+
+    if(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+      graphics = i;
 
     VkBool32 presentSupport=false;
-    vkGetPhysicalDeviceSurfaceSupportKHR(device,i,surface,&presentSupport);
+    vkGetPhysicalDeviceSurfaceSupportKHR(device,i,surf,&presentSupport);
 
-    if(queueFamily.queueCount>0 && presentSupport)
-      indices.presentFamily = i;
-
-    if(indices.isComplete())
-      break;
-    i++;
+    if(presentSupport)
+      present = i;
     }
-  return indices;
+
+  VkPhysicalDeviceProperties p={};
+  vkGetPhysicalDeviceProperties(device,&p);
+
+  DeviceProps prop;
+  prop.graphicsFamily = graphics;
+  prop.presentFamily  = present;
+  std::memcpy(prop.name,p.deviceName,sizeof(prop.name));
+  return prop;
   }
 
 bool VDevice::checkDeviceExtensionSupport(VkPhysicalDevice device) {
@@ -189,8 +230,8 @@ bool VDevice::checkDeviceExtensionSupport(VkPhysicalDevice device) {
   return requiredExtensions.empty();
   }
 
-VDevice::SwapChainSupportDetails VDevice::querySwapChainSupport(VkPhysicalDevice device) {
-  SwapChainSupportDetails details;
+VDevice::SwapChainSupport VDevice::querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface) {
+  SwapChainSupport details;
 
   vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
 
@@ -213,9 +254,9 @@ VDevice::SwapChainSupportDetails VDevice::querySwapChainSupport(VkPhysicalDevice
   return details;
   }
 
-void VDevice::createLogicalDevice(VulkanApi& /*api*/) {
-  QueueFamilyIndices     indices             = findQueueFamilies(physicalDevice);
-  std::array<uint32_t,2> uniqueQueueFamilies = {indices.graphicsFamily, indices.presentFamily};
+void VDevice::createLogicalDevice(VulkanApi& /*api*/,VkSurfaceKHR surf) {
+  props = deviceProps(physicalDevice,surf);
+  std::array<uint32_t,2> uniqueQueueFamilies = {props.graphicsFamily, props.presentFamily};
 
   float  queuePriority = 1.0f;
   size_t queueCnt      = 0;
@@ -263,15 +304,11 @@ void VDevice::createLogicalDevice(VulkanApi& /*api*/) {
 
   for(size_t i=0;i<queueCnt;++i) {
     vkGetDeviceQueue(device, queues[i].family, 0, &queues[i].impl);
-    if(queues[i].family==indices.graphicsFamily)
+    if(queues[i].family==props.graphicsFamily)
       graphicsQueue = &queues[i];
-    if(queues[i].family==indices.presentFamily)
+    if(queues[i].family==props.presentFamily)
       presentQueue = &queues[i];
     }
-
-  VkPhysicalDeviceProperties prop={};
-  vkGetPhysicalDeviceProperties(physicalDevice,&prop);
-  std::memcpy(deviceName,prop.deviceName,sizeof(deviceName));
   }
 
 VDevice::MemIndex VDevice::memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const {
@@ -290,7 +327,7 @@ VDevice::MemIndex VDevice::memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFl
   throw std::runtime_error("failed to get correct memory type");
   }
 
-void VDevice::getCaps(AbstractGraphicsApi::Caps &c) {
+void VDevice::initCaps(AbstractGraphicsApi::Caps &c) {
   /*
    * formats support table: https://vulkan.lunarg.com/doc/view/1.0.30.0/linux/vkspec.chunked/ch31s03.html
    */
@@ -308,7 +345,14 @@ void VDevice::getCaps(AbstractGraphicsApi::Caps &c) {
 
   VkPhysicalDeviceProperties prop={};
   vkGetPhysicalDeviceProperties(physicalDevice,&prop);
-  c.minUboAligment = size_t(prop.limits.minUniformBufferOffsetAlignment);
+
+  c.vbo.maxAttribs  = size_t(prop.limits.maxVertexInputAttributes);
+  c.vbo.maxRange    = size_t(prop.limits.maxVertexInputBindingStride);
+
+  c.ibo.maxValue    = size_t(prop.limits.maxDrawIndexedIndexValue);
+
+  c.ubo.offsetAlign = size_t(prop.limits.minUniformBufferOffsetAlignment);
+  c.ubo.maxRange    = size_t(prop.limits.maxUniformBufferRange);
 
   VkPhysicalDeviceFeatures supportedFeatures={};
   vkGetPhysicalDeviceFeatures(physicalDevice,&supportedFeatures);
@@ -369,7 +413,7 @@ void VDevice::waitData() {
   }
 
 const char *VDevice::renderer() const {
-  return deviceName;
+  return props.name;
   }
 
 void VDevice::waitIdle() const {

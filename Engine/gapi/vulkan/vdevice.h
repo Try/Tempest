@@ -83,10 +83,17 @@ inline VkSamplerAddressMode nativeFormat(ClampMode f){
 class VDevice : public AbstractGraphicsApi::Device {
   private:
     class DataStream;
+    class FakeWindow;
 
-    struct QueueFamilyIndices {
+  public:
+    using ResPtr = Detail::DSharedPtr<AbstractGraphicsApi::Shared*>;
+    using BufPtr = Detail::DSharedPtr<VBuffer*>;
+    using TexPtr = Detail::DSharedPtr<VTexture*>;
+
+    struct DeviceProps final {
       uint32_t graphicsFamily=uint32_t(-1);
       uint32_t presentFamily =uint32_t(-1);
+      char     name[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE]={};
 
       bool isComplete() {
         return graphicsFamily!=std::numeric_limits<uint32_t>::max() &&
@@ -94,19 +101,14 @@ class VDevice : public AbstractGraphicsApi::Device {
         }
       };
 
-    struct SwapChainSupportDetails {
+    struct SwapChainSupport final {
       VkSurfaceCapabilitiesKHR        capabilities={};
       std::vector<VkSurfaceFormatKHR> formats;
       std::vector<VkPresentModeKHR>   presentModes;
       };
 
-  public:
-    using ResPtr = Detail::DSharedPtr<AbstractGraphicsApi::Shared*>;
-    using BufPtr = Detail::DSharedPtr<VBuffer*>;
-    using TexPtr = Detail::DSharedPtr<VTexture*>;
-
-    VDevice(VulkanApi& api,void* hwnd);
-    ~VDevice();
+    VDevice(VulkanApi& api);
+    ~VDevice() override;
 
     struct Queue final {
       std::mutex sync;
@@ -122,7 +124,7 @@ class VDevice : public AbstractGraphicsApi::Device {
       uint32_t typeId=0;
       };
 
-    VkSurfaceKHR            surface            =VK_NULL_HANDLE;
+    VkInstance              instance           =nullptr;
     VkPhysicalDevice        physicalDevice     =nullptr;
     VkDevice                device             =nullptr;
     size_t                  nonCoherentAtomSize=1;
@@ -136,6 +138,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     VAllocator              allocator;
 
     AbstractGraphicsApi::Caps caps;
+    DeviceProps             props;
 
     VkResult                present(VSwapchain& sw,const VSemaphore *wait,size_t wSize,uint32_t imageId);
 
@@ -143,11 +146,9 @@ class VDevice : public AbstractGraphicsApi::Device {
     const char*             renderer() const override;
     void                    waitIdle() const override;
 
-    SwapChainSupportDetails querySwapChainSupport() { return querySwapChainSupport(physicalDevice); }
-    QueueFamilyIndices      findQueueFamilies    () { return findQueueFamilies(physicalDevice);     }
+    VkSurfaceKHR            createSurface(void* hwnd);
+    SwapChainSupport        querySwapChainSupport(VkSurfaceKHR surface) { return querySwapChainSupport(physicalDevice,surface); }
     MemIndex                memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const;
-
-    void                    getCaps(AbstractGraphicsApi::Caps& c);
 
     class Data final {
       public:
@@ -212,19 +213,18 @@ class VDevice : public AbstractGraphicsApi::Device {
       std::atomic_int             at{0};
       };
 
-    VkInstance                       instance;
     VkPhysicalDeviceMemoryProperties memoryProperties;
     std::unique_ptr<DataMgr>         data;
-    char                             deviceName[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE]={};
 
+    void                    implInit(VulkanApi &api, VkPhysicalDevice pdev, VkSurfaceKHR surf);
     void                    pickPhysicalDevice();
-    bool                    isDeviceSuitable(VkPhysicalDevice device);
-    QueueFamilyIndices      findQueueFamilies(VkPhysicalDevice device);
+    bool                    isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surf);
+    DeviceProps             deviceProps(VkPhysicalDevice device, VkSurfaceKHR surf);
+    void                    initCaps(AbstractGraphicsApi::Caps& c);
     bool                    checkDeviceExtensionSupport(VkPhysicalDevice device);
-    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
+    SwapChainSupport        querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface);
 
-    void                    createSurface(VulkanApi &api,void* hwnd);
-    void                    createLogicalDevice(VulkanApi &api);
+    void                    createLogicalDevice(VulkanApi &api, VkSurfaceKHR surf);
   };
 
 }}
