@@ -121,6 +121,10 @@ void SystemApi::dispatchKeyUp(Tempest::Window &cb, KeyEvent &e, uint32_t scancod
   dispatcher.dispatchKeyUp(cb,e,scancode);
   }
 
+void SystemApi::dispatchClose(Tempest::Window& cb, CloseEvent& e) {
+  dispatcher.dispatchClose(cb,e);
+  }
+
 SystemApi::Window *SystemApi::createWindow(Tempest::Window *owner, uint32_t width, uint32_t height) {
   return inst().implCreateWindow(owner,width,height);
   }

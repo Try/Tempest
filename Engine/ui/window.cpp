@@ -31,3 +31,7 @@ void Window::dispatchPaintEvent(VectorImage &surface,TextureAtlas& ta) {
   PaintEvent p(surface,ta,this->w(),this->h());
   Widget::dispatchPaintEvent(p);
   }
+
+void Window::closeEvent(CloseEvent& e) {
+  e.accept();
+  }

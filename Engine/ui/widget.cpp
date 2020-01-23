@@ -506,3 +506,7 @@ void Widget::mouseLeaveEvent(MouseEvent &e) {
 void Widget::focusEvent(FocusEvent &e) {
   e.ignore();
   }
+
+void Widget::closeEvent(CloseEvent& e) {
+  e.ignore();
+  }

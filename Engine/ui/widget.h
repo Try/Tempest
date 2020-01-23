@@ -117,6 +117,7 @@ class Widget {
     virtual void mouseLeaveEvent  (Tempest::MouseEvent& event);
 
     virtual void focusEvent       (Tempest::FocusEvent& event);
+    virtual void closeEvent       (Tempest::CloseEvent& event);
 
   private:
     struct Iterator final {

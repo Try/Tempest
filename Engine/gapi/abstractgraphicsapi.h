@@ -156,11 +156,22 @@ namespace Tempest {
     public:
       class Caps {
         public:
+          struct {
+            size_t maxAttribs  = 16;
+            size_t maxRange    = 2047;
+            } vbo;
+
+          struct {
+            size_t maxValue    = 0xFFFFFF;
+            } ibo;
+
+          struct {
+            size_t offsetAlign = 1;
+            size_t maxRange    = 16384;
+            } ubo;
+
           bool     rgb8 =false;
           bool     rgba8=false;
-          size_t   minUboAligment=1;
-          size_t   maxUboRange   =std::numeric_limits<size_t>::max();
-
           bool     anisotropy=false;
           float    maxAnisotropy=1.0f;
 

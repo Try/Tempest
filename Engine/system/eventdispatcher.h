@@ -19,6 +19,7 @@ class EventDispatcher final {
 
     void dispatchKeyDown   (Widget& wnd, Tempest::KeyEvent&   event, uint32_t scancode);
     void dispatchKeyUp     (Widget& wnd, Tempest::KeyEvent&   event, uint32_t scancode);
+    void dispatchClose     (Widget& wnd, Tempest::CloseEvent& event);
 
   private:
     std::shared_ptr<Widget::Ref> implDispatch(Tempest::Widget &w, Tempest::MouseEvent& event);

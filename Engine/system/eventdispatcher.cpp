@@ -85,6 +85,10 @@ void EventDispatcher::dispatchKeyUp(Widget &/*wnd*/, KeyEvent &e, uint32_t scanc
     }
   }
 
+void EventDispatcher::dispatchClose(Widget& wnd, CloseEvent& e) {
+  wnd.closeEvent(e);
+  }
+
 std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget& w,MouseEvent &event) {
   Point            pos=event.pos();
   Widget::Iterator it(&w);

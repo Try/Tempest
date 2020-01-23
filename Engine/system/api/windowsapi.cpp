@@ -161,19 +161,23 @@ SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, uint32_t
 
 SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, ShowMode sm) {
   SystemApi::Window* hwnd = nullptr;
-  if(sm==Maximized) {
-    int w = GetSystemMetrics(SM_CXFULLSCREEN),
-        h = GetSystemMetrics(SM_CYFULLSCREEN);
-    hwnd = createWindow(owner,uint32_t(w),uint32_t(h));
-    ShowWindow(HWND(hwnd),SW_MAXIMIZE);
+  if(sm==Hidden) {
+    hwnd = createWindow(owner,uint32_t(1),uint32_t(1));
+    ShowWindow(HWND(hwnd),SW_HIDE);
     }
   else if(sm==Minimized) {
     hwnd =  createWindow(owner,800,600);
     ShowWindow(HWND(hwnd),SW_MINIMIZE);
     }
-  else {
+  else if(sm==Normal) {
     hwnd =  createWindow(owner,800,600);
     ShowWindow(HWND(hwnd),SW_NORMAL);
+    }
+  else {
+    int w = GetSystemMetrics(SM_CXFULLSCREEN),
+        h = GetSystemMetrics(SM_CYFULLSCREEN);
+    hwnd = createWindow(owner,uint32_t(w),uint32_t(h));
+    ShowWindow(HWND(hwnd),SW_MAXIMIZE);
     }
   if(sm==FullScreen)
     setAsFullscreen(hwnd,true);
@@ -187,6 +191,7 @@ void WindowsApi::implDestroyWindow(SystemApi::Window *w) {
 
 void WindowsApi::implExit() {
   isExit.store(true);
+  PostQuitMessage(0);
   }
 
 int WindowsApi::implExec(AppCallBack& cb) {
@@ -269,12 +274,14 @@ long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const uint32_t wParam, co
       }
 
     case WM_CLOSE:{
-      PostQuitMessage(0);
-      break;
+      CloseEvent e;
+      SystemApi::dispatchClose(*cb,e);
+      if(e.isAccepted())
+        exit();
+      return 0;
       }
 
     case WM_DESTROY: {
-      PostQuitMessage(0);
       break;
       }
 

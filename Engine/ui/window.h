@@ -11,6 +11,7 @@ class TextureAtlas;
 class Window : public Widget {
   public:
     enum ShowMode : uint8_t {
+      Hidden,
       Minimized,
       Normal,
       Maximized,
@@ -24,6 +25,7 @@ class Window : public Widget {
   protected:
     virtual void render();
     void         dispatchPaintEvent(VectorImage &e,TextureAtlas &ta);
+    void         closeEvent       (Tempest::CloseEvent& event) override;
 
     SystemApi::Window* hwnd() const { return id; }
 

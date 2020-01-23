@@ -8,6 +8,8 @@ namespace Tempest {
 
 class MouseEvent;
 class KeyEvent;
+class CloseEvent;
+
 class Widget;
 class Application;
 class Window;
@@ -17,6 +19,7 @@ class SystemApi {
     struct Window;
 
     enum ShowMode : uint8_t {
+      Hidden,
       Minimized,
       Normal,
       Maximized,
@@ -68,13 +71,15 @@ class SystemApi {
     virtual int      implExec(AppCallBack& cb) = 0;
 
     static void      dispatchRender    (Tempest::Window& cb);
-    static void      dispatchMouseDown (Tempest::Window& cb,MouseEvent& e);
-    static void      dispatchMouseUp   (Tempest::Window& cb,MouseEvent& e);
-    static void      dispatchMouseMove (Tempest::Window& cb,MouseEvent& e);
-    static void      dispatchMouseWheel(Tempest::Window& cb,MouseEvent& e);
+    static void      dispatchMouseDown (Tempest::Window& cb, MouseEvent& e);
+    static void      dispatchMouseUp   (Tempest::Window& cb, MouseEvent& e);
+    static void      dispatchMouseMove (Tempest::Window& cb, MouseEvent& e);
+    static void      dispatchMouseWheel(Tempest::Window& cb, MouseEvent& e);
 
-    static void      dispatchKeyDown   (Tempest::Window& cb, Tempest::KeyEvent& e, uint32_t scancode);
-    static void      dispatchKeyUp     (Tempest::Window& cb, Tempest::KeyEvent& e, uint32_t scancode);
+    static void      dispatchKeyDown   (Tempest::Window& cb, KeyEvent& e, uint32_t scancode);
+    static void      dispatchKeyUp     (Tempest::Window& cb, KeyEvent& e, uint32_t scancode);
+
+    static void      dispatchClose     (Tempest::Window& cb, CloseEvent& e);
 
   private:
     static int        exec(AppCallBack& cb);

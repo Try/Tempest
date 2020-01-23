@@ -259,4 +259,9 @@ class FocusEvent: public Event {
     const bool        in;
     const FocusReason reason;
   };
+
+class CloseEvent: public Event {
+  public:
+    CloseEvent() { setType(Close); }
+  };
 }

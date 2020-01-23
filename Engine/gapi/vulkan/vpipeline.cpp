@@ -159,8 +159,14 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
     8
   };
 
+  VkVertexInputAttributeDescription                  vsInputsStk[16]={};
+  std::unique_ptr<VkVertexInputAttributeDescription> vsInputHeap;
+  VkVertexInputAttributeDescription*                 vsInput = vsInputsStk;
+  if(declSize>16) {
+    vsInputHeap.reset(new VkVertexInputAttributeDescription[declSize]);
+    vsInput = vsInputHeap.get();
+    }
   uint32_t offset=0;
-  std::vector<VkVertexInputAttributeDescription> vsInput(declSize);
   for(size_t i=0;i<declSize;++i){
     auto& loc=vsInput[i];
     loc.location = i;
@@ -177,8 +183,8 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   vertexInputInfo.flags = 0;
   vertexInputInfo.vertexBindingDescriptionCount   = 1;
   vertexInputInfo.pVertexBindingDescriptions      = &vk_vertexInputBindingDescription;
-  vertexInputInfo.vertexAttributeDescriptionCount = vsInput.size();
-  vertexInputInfo.pVertexAttributeDescriptions    = vsInput.data();
+  vertexInputInfo.vertexAttributeDescriptionCount = declSize;
+  vertexInputInfo.pVertexAttributeDescriptions    = vsInput;
 
   VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
   inputAssembly.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
