@@ -58,44 +58,44 @@ class Device {
                               Semaphore* done[], size_t doneCnt,
                               Fence* fdone);
 
+    Swapchain            swapchain(SystemApi::Window* w) const;
+
     Shader               loadShader(RFile&          file);
     Shader               loadShader(const char*     filename);
     Shader               loadShader(const char16_t* filename);
-    Shader               loadShader(const char* source,const size_t length);
-
-    Swapchain            swapchain(SystemApi::Window* w) const;
+    Shader               shader    (const char* source,const size_t length);
 
     const Caps&          caps() const;
 
     template<class T>
-    VertexBuffer<T>      loadVbo(const T* arr,size_t arrSize,BufferFlags flg);
+    VertexBuffer<T>      vbo(const T* arr,size_t arrSize,BufferFlags flg);
 
     template<class T>
-    VertexBuffer<T>      loadVbo(const std::vector<T>& arr,BufferFlags flg){
-      return loadVbo(arr.data(),arr.size(),flg);
+    VertexBuffer<T>      vbo(const std::vector<T>& arr,BufferFlags flg){
+      return vbo(arr.data(),arr.size(),flg);
       }
 
     template<class T>
-    VertexBufferDyn<T>   loadVboDyn(const T* arr,size_t arrSize);
+    VertexBufferDyn<T>   vboDyn(const T* arr,size_t arrSize);
 
     template<class T>
-    VertexBufferDyn<T>   loadVboDyn(const std::vector<T>& arr){
-      return loadVboDyn(arr.data(),arr.size());
+    VertexBufferDyn<T>   vboDyn(const std::vector<T>& arr){
+      return vboDyn(arr.data(),arr.size());
       }
 
     template<class T>
-    IndexBuffer<T>       loadIbo(const T* arr,size_t arrSize,BufferFlags flg);
+    IndexBuffer<T>       ibo(const T* arr,size_t arrSize,BufferFlags flg);
 
     template<class T>
-    VertexBuffer<T>      loadIbo(const std::vector<T>& arr,BufferFlags flg){
+    VertexBuffer<T>      ibo(const std::vector<T>& arr,BufferFlags flg){
       return loadIbo(arr.data(),arr.size(),flg);
       }
 
     template<class T>
-    UniformBuffer<T>     loadUbo(const T* data, size_t size);
+    UniformBuffer<T>     ubo(const T* data, size_t size);
 
     template<class T>
-    UniformBuffer<T>     loadUbo(const T& data);
+    UniformBuffer<T>     ubo(const T& data);
 
     Texture2d            texture(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips);
     Texture2d            loadTexture(const Pixmap& pm,bool mips=true);
@@ -172,7 +172,7 @@ class Device {
   };
 
 template<class T>
-inline VertexBuffer<T> Device::loadVbo(const T* arr, size_t arrSize, BufferFlags flg) {
+inline VertexBuffer<T> Device::vbo(const T* arr, size_t arrSize, BufferFlags flg) {
   if(arrSize==0)
     return VertexBuffer<T>();
   VideoBuffer     data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::VertexBuffer,flg);
@@ -181,7 +181,7 @@ inline VertexBuffer<T> Device::loadVbo(const T* arr, size_t arrSize, BufferFlags
   }
 
 template<class T>
-inline VertexBufferDyn<T> Device::loadVboDyn(const T *arr, size_t arrSize) {
+inline VertexBufferDyn<T> Device::vboDyn(const T *arr, size_t arrSize) {
   if(arrSize==0)
     return VertexBufferDyn<T>();
   VideoBuffer        data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::VertexBuffer,BufferFlags::Dynamic);
@@ -190,7 +190,7 @@ inline VertexBufferDyn<T> Device::loadVboDyn(const T *arr, size_t arrSize) {
   }
 
 template<class T>
-inline IndexBuffer<T> Device::loadIbo(const T* arr, size_t arrSize, BufferFlags flg) {
+inline IndexBuffer<T> Device::ibo(const T* arr, size_t arrSize, BufferFlags flg) {
   if(arrSize==0)
     return IndexBuffer<T>();
   VideoBuffer     data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::IndexBuffer,flg);
@@ -199,7 +199,7 @@ inline IndexBuffer<T> Device::loadIbo(const T* arr, size_t arrSize, BufferFlags 
   }
 
 template<class T>
-inline UniformBuffer<T> Device::loadUbo(const T *mem, size_t size) {
+inline UniformBuffer<T> Device::ubo(const T *mem, size_t size) {
   if(size==0)
     return UniformBuffer<T>();
   const size_t align   = devCaps.ubo.offsetAlign;
@@ -213,8 +213,8 @@ inline UniformBuffer<T> Device::loadUbo(const T *mem, size_t size) {
   }
 
 template<class T>
-inline UniformBuffer<T> Device::loadUbo(const T& mem) {
-  return loadUbo(&mem,1);
+inline UniformBuffer<T> Device::ubo(const T& mem) {
+  return ubo(&mem,1);
   }
 
 template<class Vertex>

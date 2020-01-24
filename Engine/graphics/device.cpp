@@ -127,7 +127,7 @@ Shader Device::loadShader(const char16_t *filename) {
   return loadShader(file);
   }
 
-Shader Device::loadShader(const char *source, const size_t length) {
+Shader Device::shader(const char *source, const size_t length) {
   Shader f(*this,api.createShader(dev,source,length));
   return f;
   }

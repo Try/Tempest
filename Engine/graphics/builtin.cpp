@@ -15,11 +15,11 @@ Builtin::Builtin(Device& owner)
   stAlpha.setBlendSource(RenderState::BlendMode::one);
   stAlpha.setBlendDest  (RenderState::BlendMode::one);
 
-  vsE  = owner.loadShader(reinterpret_cast<const char*>(empty_vert_sprv),sizeof(empty_vert_sprv));
-  fsE  = owner.loadShader(reinterpret_cast<const char*>(empty_frag_sprv),sizeof(empty_frag_sprv));
+  vsE  = owner.shader(reinterpret_cast<const char*>(empty_vert_sprv),sizeof(empty_vert_sprv));
+  fsE  = owner.shader(reinterpret_cast<const char*>(empty_frag_sprv),sizeof(empty_frag_sprv));
 
-  vsT2 = owner.loadShader(reinterpret_cast<const char*>(tex_brush_vert_sprv),sizeof(tex_brush_vert_sprv));
-  fsT2 = owner.loadShader(reinterpret_cast<const char*>(tex_brush_frag_sprv),sizeof(tex_brush_frag_sprv));
+  vsT2 = owner.shader(reinterpret_cast<const char*>(tex_brush_vert_sprv),sizeof(tex_brush_vert_sprv));
+  fsT2 = owner.shader(reinterpret_cast<const char*>(tex_brush_frag_sprv),sizeof(tex_brush_frag_sprv));
 
   brushT2.layout.add(0,Tempest::UniformsLayout::Texture,Tempest::UniformsLayout::Fragment);
   }

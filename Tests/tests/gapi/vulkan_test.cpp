@@ -42,8 +42,8 @@ TEST(VulkanApi,Vbo) {
     VulkanApi      api{ApiFlags::Validation};
     Device         device(api);
 
-    auto vbo = device.loadVbo(vboData,3,BufferFlags::Static);
-    auto ibo = device.loadIbo(iboData,3,BufferFlags::Static);
+    auto vbo = device.vbo(vboData,3,BufferFlags::Static);
+    auto ibo = device.ibo(iboData,3,BufferFlags::Static);
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
@@ -101,8 +101,8 @@ TEST(VulkanApi,Draw) {
     VulkanApi      api{ApiFlags::Validation};
     Device         device(api);
 
-    auto vbo  = device.loadVbo(vboData,3,BufferFlags::Static);
-    auto ibo  = device.loadIbo(iboData,3,BufferFlags::Static);
+    auto vbo  = device.vbo(vboData,3,BufferFlags::Static);
+    auto ibo  = device.ibo(iboData,3,BufferFlags::Static);
 
     auto vert = device.loadShader("shader/simple_test.vert.sprv");
     auto frag = device.loadShader("shader/simple_test.frag.sprv");
