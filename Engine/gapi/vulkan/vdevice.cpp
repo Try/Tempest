@@ -177,7 +177,11 @@ bool VDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surf) {
     swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
     }
 
-  return prop.isComplete() && extensionsSupported && swapChainAdequate;
+  // TODO: device selection api
+  return extensionsSupported &&
+         prop.graphicsFamily!=uint32_t(-1) &&
+         (prop.presentFamily!=uint32_t(-1) || surf==VK_NULL_HANDLE) &&
+         (swapChainAdequate || surf==VK_NULL_HANDLE);
   }
 
 VDevice::DeviceProps VDevice::deviceProps(VkPhysicalDevice device, VkSurfaceKHR surf) {
@@ -199,7 +203,8 @@ VDevice::DeviceProps VDevice::deviceProps(VkPhysicalDevice device, VkSurfaceKHR 
       graphics = i;
 
     VkBool32 presentSupport=false;
-    vkGetPhysicalDeviceSurfaceSupportKHR(device,i,surf,&presentSupport);
+    if(surf!=VK_NULL_HANDLE)
+      vkGetPhysicalDeviceSurfaceSupportKHR(device,i,surf,&presentSupport);
 
     if(presentSupport)
       present = i;
@@ -262,8 +267,10 @@ void VDevice::createLogicalDevice(VulkanApi& /*api*/,VkSurfaceKHR surf) {
   size_t queueCnt      = 0;
   VkDeviceQueueCreateInfo qinfo[3]={};
   for(size_t i=0;i<uniqueQueueFamilies.size();++i) {
-    auto& q      = queues[queueCnt];
-    auto  family = uniqueQueueFamilies[i];
+    auto&    q      = queues[queueCnt];
+    uint32_t family = uniqueQueueFamilies[i];
+    if(family==uint32_t(-1))
+      continue;
 
     bool nonUnique=false;
     for(size_t r=0;r<queueCnt;++r)

@@ -94,11 +94,6 @@ class VDevice : public AbstractGraphicsApi::Device {
       uint32_t graphicsFamily=uint32_t(-1);
       uint32_t presentFamily =uint32_t(-1);
       char     name[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE]={};
-
-      bool isComplete() {
-        return graphicsFamily!=std::numeric_limits<uint32_t>::max() &&
-               presentFamily !=std::numeric_limits<uint32_t>::max();
-        }
       };
 
     struct SwapChainSupport final {
