@@ -94,7 +94,7 @@ class Encoder<Tempest::PrimaryCommandBuffer> : public Encoder<Tempest::CommandBu
     void setPass(const FrameBuffer& fbo, const RenderPass& p, int      width, int      height);
     void setPass(const FrameBuffer& fbo, const RenderPass& p, uint32_t width, uint32_t height);
 
-    void setLayout(Texture2d &t, TextureLayout dest);
+    void setLayout(Attachment &t, TextureLayout dest);
 
     void exec(const CommandBuffer& buf);
 

@@ -56,9 +56,9 @@ AbstractGraphicsApi::Swapchain *VulkanApi::createSwapchain(SystemApi::Window *w,
   }
 
 AbstractGraphicsApi::PPass VulkanApi::createPass(AbstractGraphicsApi::Device *d,
-                                                 const Attachment** att,
+                                                 const FboMode** att,
                                                  size_t acount) {
-  Detail::VDevice*    dx=reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
   return PPass(new Detail::VRenderPass(*dx,att,uint8_t(acount)));
   }
 

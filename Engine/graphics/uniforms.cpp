@@ -30,6 +30,12 @@ void Uniforms::set(size_t layoutBind, const Texture2d &tex) {
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
   }
 
+void Uniforms::set(size_t layoutBind, const Attachment& tex) {
+  if(tex.tImpl.impl.handler)
+    desc.handler->set(layoutBind,tex.tImpl.impl.handler); else
+    throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
+  }
+
 void Uniforms::set(size_t layoutBind, const Detail::ResourcePtr<Texture2d> &tex) {
   if(tex.impl.handler)
     desc.handler->set(layoutBind,tex.impl.handler); else

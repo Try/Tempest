@@ -14,7 +14,7 @@ class CommandBuffer;
 class PrimaryCommandBuffer;
 
 //! simple 2d texture class
-class Texture2d {
+class Texture2d final {
   public:
     Texture2d()=default;
     Texture2d(Texture2d&&)=default;

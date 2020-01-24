@@ -7,12 +7,13 @@ namespace Tempest {
 class Device;
 class Semaphore;
 class Frame;
+class Attachment;
 
-class Swapchain {
+class Swapchain final {
   public:
     Swapchain(Device& dev, SystemApi::Window* w);
     Swapchain(Swapchain&&)=default;
-    virtual ~Swapchain();
+    ~Swapchain();
 
     Swapchain& operator = (Swapchain&& s);
 
@@ -27,7 +28,7 @@ class Swapchain {
     uint8_t              frameId() const;
     uint64_t             frameCounter() const;
 
-    Frame                frame(uint32_t id);
+    Attachment           frame(uint32_t id);
     uint32_t             nextImage(Semaphore& onReady);
 
   private:

@@ -1,6 +1,6 @@
 #include "swapchain.h"
 
-#include <Tempest/Frame>
+#include <Tempest/Attachment>
 #include <Tempest/Device>
 #include <Tempest/Semaphore>
 
@@ -65,8 +65,8 @@ uint8_t Swapchain::frameId() const {
   return framesIdMod;
   }
 
-Frame Swapchain::frame(uint32_t id) {
-  Frame fr(impl.handler->getImage(id),impl.handler,id);
+Attachment Swapchain::frame(uint32_t id) {
+  Attachment fr(impl.handler,id);
   return fr;
   }
 

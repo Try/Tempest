@@ -9,9 +9,9 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-VRenderPass::VRenderPass(VDevice& device, const Attachment **attach, uint8_t attCount)
+VRenderPass::VRenderPass(VDevice& device, const FboMode **attach, uint8_t attCount)
   : attCount(attCount), device(device.device) {
-  input.reset(new Attachment[attCount]);
+  input.reset(new FboMode[attCount]);
   for(size_t i=0;i<attCount;++i)
     input[i] = *attach[i];
   }
@@ -74,7 +74,7 @@ VRenderPass::Impl &VRenderPass::instance(VFramebufferLayout &lay) {
   }
 
 VkRenderPass VRenderPass::createInstance(VkDevice &device, VSwapchain *sw,
-                                         const Attachment *att, const VkFormat* format, uint8_t attCount) {
+                                         const FboMode *att, const VkFormat* format, uint8_t attCount) {
   VkRenderPass ret=VK_NULL_HANDLE;
 
   VkAttachmentDescription attach[2] = {};
@@ -88,7 +88,7 @@ VkRenderPass VRenderPass::createInstance(VkDevice &device, VSwapchain *sw,
   for(size_t i=0;i<attCount;++i){
     VkAttachmentDescription& a = attach[i];
     VkAttachmentReference&   r = ref[i];
-    const Attachment&        x = att[i];
+    const FboMode&           x = att[i];
     const VkFormat           f = format[i];
 
     if(f==VK_FORMAT_UNDEFINED)
@@ -124,14 +124,14 @@ VkRenderPass VRenderPass::createInstance(VkDevice &device, VSwapchain *sw,
   }
 
 void VRenderPass::setupAttach(VkAttachmentDescription &a, VkAttachmentReference& r,
-                              const Attachment& x, VkSubpassDescription& subpass) {
+                              const FboMode& x, VkSubpassDescription& subpass) {
   // Stencil not implemented
   a.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
   a.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
   a.loadOp         = bool(x.mode&FboMode::PreserveIn)  ? VK_ATTACHMENT_LOAD_OP_LOAD   : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
   a.storeOp        = bool(x.mode&FboMode::PreserveOut) ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
-  if(bool(x.mode&FboMode::Clear)) {
+  if(bool(x.mode&FboMode::ClearBit)) {
     a.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     }
 

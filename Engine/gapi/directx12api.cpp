@@ -44,7 +44,7 @@ AbstractGraphicsApi::Swapchain* DirectX12Api::createSwapchain(SystemApi::Window*
   return nullptr;
   }
 
-AbstractGraphicsApi::PPass DirectX12Api::createPass(AbstractGraphicsApi::Device* d, const Attachment** att, size_t acount) {
+AbstractGraphicsApi::PPass DirectX12Api::createPass(AbstractGraphicsApi::Device* d, const FboMode** att, size_t acount) {
   return PPass();
   }
 

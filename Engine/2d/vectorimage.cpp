@@ -117,7 +117,7 @@ void VectorImage::makeActual(Device &dev,Swapchain& sw) {
   PerFrame& f=frame[sw.frameId()];
   if(f.outdated) {
     //if(f.vbo.size()==buf.size())
-    f.vbo=dev.vbo(buf,BufferFlags::Static);
+    f.vbo=dev.vbo(buf);
 
     f.blocksType.resize(blocks.size());
     f.blocks    .resize(blocks.size());

@@ -13,16 +13,34 @@ class PrimaryCommandBuffer;
 template<class T>
 class Encoder;
 
-class Attachment final {
+class FboMode final {
   public:
-    Attachment()=default;
-    Attachment(const FboMode& m):mode(m){}
-    Attachment(const FboMode& m,const float& clr):mode(m | FboMode::Clear),clear(clr){}
-    Attachment(const FboMode& m,const Color& clr):mode(m | FboMode::Clear),clear(clr){}
+    enum {
+      ClearBit = 1<<2,
+      };
+    enum Mode {
+      Discard     = 0,
+      PreserveIn  = 1,
+      PreserveOut = 1<<1,
+      Preserve    = (PreserveIn|PreserveOut),
+      Submit      = (1<<3)|PreserveOut,
+      };
+    FboMode()=default;
+    FboMode(Mode m):mode(m){}
+    FboMode(Mode m,const float& clr):mode(m | ClearBit),clear(clr){}
+    FboMode(Mode m,const Color& clr):mode(m | ClearBit),clear(clr){}
 
-    FboMode       mode=FboMode::Preserve;
-    Color         clear{};
+    int   mode {Preserve};
+    Color clear{};
   };
+
+inline FboMode::Mode operator | (FboMode::Mode a,const FboMode::Mode& b) {
+  return FboMode::Mode(uint8_t(a)|uint8_t(b));
+  }
+
+inline FboMode::Mode operator & (FboMode::Mode a,const FboMode::Mode& b) {
+  return FboMode::Mode(uint8_t(a)&uint8_t(b));
+  }
 
 class RenderPass final {
   public:

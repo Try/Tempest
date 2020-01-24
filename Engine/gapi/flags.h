@@ -36,23 +36,6 @@ inline BufferFlags operator & (BufferFlags a,const BufferFlags& b) {
   }
 
 
-enum class FboMode : uint8_t {
-  Discard    =0,
-  PreserveIn =1<<0,
-  PreserveOut=1<<1,
-  Submit     =(1<<2)|PreserveOut,
-  Clear      =1<<3,
-  Preserve   =(PreserveOut|PreserveIn),
-  };
-
-inline FboMode operator | (FboMode a,const FboMode& b) {
-  return FboMode(uint8_t(a)|uint8_t(b));
-  }
-
-inline FboMode operator & (FboMode a,const FboMode& b) {
-  return FboMode(uint8_t(a)&uint8_t(b));
-  }
-
 enum class TextureLayout : uint8_t {
   Undefined,
   Sampler,

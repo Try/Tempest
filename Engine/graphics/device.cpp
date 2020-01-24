@@ -140,12 +140,12 @@ const Device::Caps& Device::caps() const {
   return devCaps;
   }
 
-Texture2d Device::texture(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips) {
+Attachment Device::attachment(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips) {
   if(!devCaps.hasSamplerFormat(frm) && !devCaps.hasAttachFormat(frm) && !devCaps.hasDepthFormat(frm))
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
   uint32_t mipCnt = mips ? mipCount(w,h) : 1;
   Texture2d t(*this,api.createTexture(dev,w,h,mipCnt,frm),w,h,frm);
-  return t;
+  return Attachment(std::move(t));
   }
 
 Texture2d Device::loadTexture(const Pixmap &pm, bool mips) {
@@ -188,63 +188,62 @@ Pixmap Device::readPixels(const Texture2d &t) {
   return pm;
   }
 
-FrameBuffer Device::frameBuffer(Frame& out) {
-  auto swapchain = out.swapchain;
-  TextureFormat att[1] = {TextureFormat::Undefined};
-  uint32_t w = swapchain->w();
-  uint32_t h = swapchain->h();
-
-  FrameBufferLayout lay(api.createFboLayout(dev,w,h,swapchain,att,1),w,h);
-  FrameBuffer       f(*this,api.createFbo(dev,lay.impl.handler,swapchain,out.id),std::move(lay));
-  return f;
+TextureFormat Device::formatOf(const Attachment& a) {
+  if(a.sImpl.swapchain!=nullptr)
+    return TextureFormat::Undefined;
+  return a.tImpl.frm;
   }
 
-FrameBuffer Device::frameBuffer(Frame &out, Texture2d &zbuf) {
-  auto swapchain = out.swapchain;
-
-  TextureFormat att[2] = {TextureFormat::Undefined,zbuf.format()};
-  uint32_t w = swapchain->w();
-  uint32_t h = swapchain->h();
-
-  if(int(w)!=zbuf.w() || int(h)!=zbuf.h())
-    throw IncompleteFboException();
-
-  FrameBufferLayout lay(api.createFboLayout(dev,w,h,swapchain,att,2),w,h);
-  FrameBuffer       f(*this,api.createFbo(dev,lay.impl.handler,swapchain,out.id,zbuf.impl.handler),std::move(lay));
-  return f;
-  }
-
-FrameBuffer Device::frameBuffer(Texture2d &out, Texture2d &zbuf) {
-  TextureFormat att[2] = {out.format(),zbuf.format()};
+FrameBuffer Device::frameBuffer(Attachment& out, Attachment& zbuf) {
+  TextureFormat att[2] = {formatOf(out),formatOf(zbuf)};
   uint32_t w = uint32_t(out.w());
   uint32_t h = uint32_t(out.h());
 
   if(out.w()!=zbuf.w() || out.h()!=zbuf.h())
     throw IncompleteFboException();
 
-  FrameBufferLayout lay(api.createFboLayout(dev,w,h,nullptr,att,2),w,h);
-  FrameBuffer f(*this,api.createFbo(dev,lay.impl.handler,w,h,out.impl.handler,zbuf.impl.handler),std::move(lay));
-  return f;
+  auto zImpl = textureCast(zbuf).impl.handler;
+  if(out.sImpl.swapchain!=nullptr) {
+    auto swapchain = out.sImpl.swapchain;
+    auto sId       = out.sImpl.id;
+
+    FrameBufferLayout lay(api.createFboLayout(dev,w,h,swapchain,att,2),w,h);
+    FrameBuffer       f(*this,api.createFbo(dev,lay.impl.handler,swapchain,sId,zImpl),std::move(lay));
+    return f;
+    } else {
+    FrameBufferLayout lay(api.createFboLayout(dev,w,h,nullptr,att,2),w,h);
+    FrameBuffer f(*this,api.createFbo(dev,lay.impl.handler,w,h,out.tImpl.impl.handler,zImpl),std::move(lay));
+    return f;
+    }
   }
 
-FrameBuffer Device::frameBuffer(Texture2d &out) {
-  TextureFormat att[1] = {out.format()};
+FrameBuffer Device::frameBuffer(Attachment &out) {
+  TextureFormat att[1] = {formatOf(out)};
   uint32_t w = uint32_t(out.w());
   uint32_t h = uint32_t(out.h());
 
-  FrameBufferLayout lay(api.createFboLayout(dev,w,h,nullptr,att,1),w,h);
-  FrameBuffer f(*this,api.createFbo(dev,lay.impl.handler,w,h,out.impl.handler),std::move(lay));
-  return f;
+  if(out.sImpl.swapchain!=nullptr) {
+    auto swapchain = out.sImpl.swapchain;
+    auto sId       = out.sImpl.id;
+
+    FrameBufferLayout lay(api.createFboLayout(dev,w,h,swapchain,att,1),w,h);
+    FrameBuffer       f(*this,api.createFbo(dev,lay.impl.handler,swapchain,sId),std::move(lay));
+    return f;
+    } else {
+    FrameBufferLayout lay(api.createFboLayout(dev,w,h,nullptr,att,1),w,h);
+    FrameBuffer f(*this,api.createFbo(dev,lay.impl.handler,w,h,out.tImpl.impl.handler),std::move(lay));
+    return f;
+    }
   }
 
-RenderPass Device::pass(const Attachment &color) {
-  const Attachment* att[1]={&color};
+RenderPass Device::pass(const FboMode &color) {
+  const FboMode* att[1]={&color};
   RenderPass f(api.createPass(dev,att,1));
   return f;
   }
 
-RenderPass Device::pass(const Attachment &color, const Attachment &depth) {
-  const Attachment* att[2]={&color,&depth};
+RenderPass Device::pass(const FboMode& color, const FboMode& depth) {
+  const FboMode* att[2]={&color,&depth};
   RenderPass f(api.createPass(dev,att,2));
   return f;
   }

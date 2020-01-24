@@ -42,8 +42,8 @@ TEST(VulkanApi,Vbo) {
     VulkanApi      api{ApiFlags::Validation};
     Device         device(api);
 
-    auto vbo = device.vbo(vboData,3,BufferFlags::Static);
-    auto ibo = device.ibo(iboData,3,BufferFlags::Static);
+    auto vbo = device.vbo(vboData,3);
+    auto ibo = device.ibo(iboData,3);
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
@@ -72,9 +72,9 @@ TEST(VulkanApi,Fbo) {
     VulkanApi      api{ApiFlags::Validation};
     Device         device(api);
 
-    auto tex = device.texture(TextureFormat::RGBA8,128,128,false);
+    auto tex = device.attachment(TextureFormat::RGBA8,128,128);
     auto fbo = device.frameBuffer(tex);
-    auto rp  = device.pass(Attachment(FboMode::PreserveOut,Color(0.f,0.f,1.f)));
+    auto rp  = device.pass(FboMode(FboMode::PreserveOut,Color(0.f,0.f,1.f)));
 
     auto cmd = device.commandBuffer();
     {
@@ -86,7 +86,7 @@ TEST(VulkanApi,Fbo) {
     device.draw(cmd,sync);
     sync.wait();
 
-    auto pm = device.readPixels(tex);
+    auto pm = device.readPixels(textureCast(tex));
     pm.save("VulkanApi_Fbo.png");
     }
   catch(std::system_error& e) {
@@ -101,16 +101,16 @@ TEST(VulkanApi,Draw) {
     VulkanApi      api{ApiFlags::Validation};
     Device         device(api);
 
-    auto vbo  = device.vbo(vboData,3,BufferFlags::Static);
-    auto ibo  = device.ibo(iboData,3,BufferFlags::Static);
+    auto vbo  = device.vbo(vboData,3);
+    auto ibo  = device.ibo(iboData,3);
 
     auto vert = device.loadShader("shader/simple_test.vert.sprv");
     auto frag = device.loadShader("shader/simple_test.frag.sprv");
     auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),UniformsLayout(),vert,frag);
 
-    auto tex  = device.texture(TextureFormat::RGBA8,128,128,false);
+    auto tex  = device.attachment(TextureFormat::RGBA8,128,128);
     auto fbo  = device.frameBuffer(tex);
-    auto rp   = device.pass(Attachment(FboMode::PreserveOut,Color(0.f,0.f,1.f)));
+    auto rp   = device.pass(FboMode(FboMode::PreserveOut,Color(0.f,0.f,1.f)));
 
     auto cmd  = device.commandBuffer();
     {
@@ -124,7 +124,7 @@ TEST(VulkanApi,Draw) {
     device.draw(cmd,sync);
     sync.wait();
 
-    auto pm = device.readPixels(tex);
+    auto pm = device.readPixels(textureCast(tex));
     pm.save("VulkanApi_Draw.png");
     }
   catch(std::system_error& e) {

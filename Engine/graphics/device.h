@@ -7,7 +7,7 @@
 #include <Tempest/FrameBuffer>
 #include <Tempest/RenderPipeline>
 #include <Tempest/Shader>
-#include <Tempest/Frame>
+#include <Tempest/Attachment>
 #include <Tempest/Texture2d>
 #include <Tempest/Uniforms>
 #include <Tempest/VertexBuffer>
@@ -68,11 +68,11 @@ class Device {
     const Caps&          caps() const;
 
     template<class T>
-    VertexBuffer<T>      vbo(const T* arr,size_t arrSize,BufferFlags flg);
+    VertexBuffer<T>      vbo(const T* arr,size_t arrSize);
 
     template<class T>
-    VertexBuffer<T>      vbo(const std::vector<T>& arr,BufferFlags flg){
-      return vbo(arr.data(),arr.size(),flg);
+    VertexBuffer<T>      vbo(const std::vector<T>& arr){
+      return vbo(arr.data(),arr.size());
       }
 
     template<class T>
@@ -84,11 +84,11 @@ class Device {
       }
 
     template<class T>
-    IndexBuffer<T>       ibo(const T* arr,size_t arrSize,BufferFlags flg);
+    IndexBuffer<T>       ibo(const T* arr,size_t arrSize);
 
     template<class T>
-    VertexBuffer<T>      ibo(const std::vector<T>& arr,BufferFlags flg){
-      return loadIbo(arr.data(),arr.size(),flg);
+    VertexBuffer<T>      ibo(const std::vector<T>& arr){
+      return loadIbo(arr.data(),arr.size());
       }
 
     template<class T>
@@ -97,19 +97,17 @@ class Device {
     template<class T>
     UniformBuffer<T>     ubo(const T& data);
 
-    Texture2d            texture(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips);
-    Texture2d            loadTexture(const Pixmap& pm,bool mips=true);
-    Pixmap               readPixels(const Texture2d& t);
-
     Uniforms             uniforms(const UniformsLayout &owner);
 
-    FrameBuffer          frameBuffer(Frame     &out);
-    FrameBuffer          frameBuffer(Frame     &out, Texture2d& zbuf);
-    FrameBuffer          frameBuffer(Texture2d &out);
-    FrameBuffer          frameBuffer(Texture2d &out, Texture2d& zbuf);
+    Attachment           attachment (TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips = false);
+    Texture2d            loadTexture(const Pixmap& pm,bool mips=true);
+    Pixmap               readPixels (const Texture2d& t);
 
-    RenderPass           pass(const Attachment& color);
-    RenderPass           pass(const Attachment& color,const Attachment& depth);
+    FrameBuffer          frameBuffer(Attachment& out);
+    FrameBuffer          frameBuffer(Attachment& out, Attachment& zbuf);
+
+    RenderPass           pass(const FboMode& color);
+    RenderPass           pass(const FboMode& color,const FboMode& depth);
 
     template<class Vertex>
     RenderPipeline       pipeline(Topology tp,const RenderState& st,
@@ -153,6 +151,8 @@ class Device {
                           Semaphore*      done[], AbstractGraphicsApi::Semaphore*     hdone[], size_t doneCnt,
                          AbstractGraphicsApi::Fence*         fdone);
 
+    static TextureFormat formatOf(const Attachment& a);
+
   friend class RenderPipeline;
   friend class RenderPass;
   friend class FrameBuffer;
@@ -172,10 +172,10 @@ class Device {
   };
 
 template<class T>
-inline VertexBuffer<T> Device::vbo(const T* arr, size_t arrSize, BufferFlags flg) {
+inline VertexBuffer<T> Device::vbo(const T* arr, size_t arrSize) {
   if(arrSize==0)
     return VertexBuffer<T>();
-  VideoBuffer     data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::VertexBuffer,flg);
+  VideoBuffer     data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::VertexBuffer,BufferFlags::Static);
   VertexBuffer<T> vbo(std::move(data),arrSize);
   return vbo;
   }
@@ -190,10 +190,10 @@ inline VertexBufferDyn<T> Device::vboDyn(const T *arr, size_t arrSize) {
   }
 
 template<class T>
-inline IndexBuffer<T> Device::ibo(const T* arr, size_t arrSize, BufferFlags flg) {
+inline IndexBuffer<T> Device::ibo(const T* arr, size_t arrSize) {
   if(arrSize==0)
     return IndexBuffer<T>();
-  VideoBuffer     data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::IndexBuffer,flg);
+  VideoBuffer     data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::IndexBuffer,BufferFlags::Static);
   IndexBuffer<T>  ibo(std::move(data),arrSize);
   return ibo;
   }

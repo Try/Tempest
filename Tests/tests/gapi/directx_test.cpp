@@ -45,8 +45,8 @@ TEST(DirectX12Api,Vbo) {
     DirectX12Api   api{ApiFlags::Validation};
     Device         device(api);
 
-    auto vbo = device.vbo(vboData,3,BufferFlags::Static);
-    auto ibo = device.ibo(iboData,3,BufferFlags::Static);
+    auto vbo = device.vbo(vboData,3);
+    auto ibo = device.ibo(iboData,3);
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)

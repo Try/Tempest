@@ -8,6 +8,7 @@ namespace Tempest {
 class Device;
 class CommandBuffer;
 class Texture2d;
+class Attachment;
 class VideoBuffer;
 
 template<class T>
@@ -26,7 +27,8 @@ class Uniforms final {
     void set(size_t layoutBind,const UniformBuffer<T>& vbuf);
     template<class T>
     void set(size_t layoutBind,const UniformBuffer<T>& vbuf,size_t offset,size_t size);
-    void set(size_t layoutBind,const Texture2d& tex);
+    void set(size_t layoutBind,const Texture2d&  tex);
+    void set(size_t layoutBind,const Attachment& tex);
     void set(size_t layoutBind,const Detail::ResourcePtr<Texture2d>& tex);
 
   private:

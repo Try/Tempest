@@ -17,7 +17,7 @@ class VulkanApi : public AbstractGraphicsApi {
 
     Swapchain*     createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d) override;
 
-    PPass          createPass(Device *d, const Attachment** att, size_t acount) override;
+    PPass          createPass(Device *d, const FboMode** att, size_t acount) override;
 
     PFbo           createFbo(Device *d, FboLayout* lay, Swapchain *s, uint32_t imageId) override;
     PFbo           createFbo(Device *d, FboLayout* lay, Swapchain *s, uint32_t imageId, Texture* zbuf) override;

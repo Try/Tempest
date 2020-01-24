@@ -1,5 +1,6 @@
 #include "encoder.h"
 
+#include <Tempest/Attachment>
 #include <Tempest/FrameBuffer>
 #include <Tempest/RenderPass>
 #include <Tempest/Texture2d>
@@ -182,12 +183,12 @@ Encoder<PrimaryCommandBuffer>::ResState *Encoder<PrimaryCommandBuffer>::findStat
   return &resState.back();
   }
 
-void Encoder<Tempest::PrimaryCommandBuffer>::setLayout(Texture2d &t, TextureLayout dest) {
-  if(t.impl.handler==nullptr)
+void Encoder<Tempest::PrimaryCommandBuffer>::setLayout(Attachment &t, TextureLayout dest) {
+  if(t.tImpl.impl.handler==nullptr)
     return;
 
-  ResState* st = findState(t.impl.handler);
-  st->frm      = t.frm;
+  ResState* st = findState(t.tImpl.impl.handler);
+  st->frm      = t.tImpl.frm;
   st->next     = dest;
   st->pending  = true;
   }

@@ -14,7 +14,7 @@ namespace Tempest {
   class Pixmap;
   class Color;
   class RenderState;
-  class Attachment;
+  class FboMode;
 
   namespace Decl {
   enum ComponentType:uint8_t {
@@ -282,7 +282,7 @@ namespace Tempest {
 
       virtual Swapchain* createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d)=0;
 
-      virtual PPass      createPass(Device *d, const Attachment** att, size_t acount)=0;
+      virtual PPass      createPass(Device *d, const FboMode** att, size_t acount)=0;
 
       virtual PFbo       createFbo(Device *d,FboLayout* lay,Swapchain *s,uint32_t imageId)=0;
       virtual PFbo       createFbo(Device *d,FboLayout* lay,Swapchain *s,uint32_t imageId,Texture* zbuf)=0;
