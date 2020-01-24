@@ -159,7 +159,7 @@ VkSurfaceKHR VDevice::createSurface(void* hwnd) {
   createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
   createInfo.dpy    = reinterpret_cast<Display*>(X11Api::display());
   createInfo.window = ::Window(hwnd);
-  if(vkCreateXlibSurfaceKHR(api.instance, &createInfo, nullptr, &ret)!=VK_SUCCESS)
+  if(vkCreateXlibSurfaceKHR(instance, &createInfo, nullptr, &ret)!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 #else
 #warning "wsi for vulkan not implemented on this platform"
