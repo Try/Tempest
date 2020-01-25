@@ -101,8 +101,14 @@ class Encoder<Tempest::PrimaryCommandBuffer> : public Encoder<Tempest::CommandBu
   private:
     Encoder(PrimaryCommandBuffer* ow);
 
+    struct StState {
+      AbstractGraphicsApi::Swapchain* sw;
+      uint32_t                        id;
+      };
+
     struct ResState {
-      AbstractGraphicsApi::Texture* res     = nullptr;
+      AbstractGraphicsApi::Texture* tRes    = nullptr;
+      StState                       sRes    = {};
       TextureFormat                 frm     = TextureFormat::Undefined;
       TextureLayout                 next    = TextureLayout::Undefined;
       TextureLayout                 lay     = TextureLayout::Undefined;
@@ -116,6 +122,7 @@ class Encoder<Tempest::PrimaryCommandBuffer> : public Encoder<Tempest::CommandBu
 
     void      implEndRenderPass();
     ResState* findState(AbstractGraphicsApi::Texture* t);
+    ResState* findState(AbstractGraphicsApi::Swapchain* s,uint32_t id);
 
     Pass                  curPass;
     std::vector<ResState> resState;

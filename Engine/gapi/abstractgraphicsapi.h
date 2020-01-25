@@ -199,6 +199,22 @@ namespace Tempest {
         virtual const char* renderer() const=0;
         virtual void        waitIdle() const=0;
         };
+      struct Fence           {
+        virtual ~Fence()=default;
+        virtual void wait() =0;
+        virtual void reset()=0;
+        };
+      struct Semaphore       {
+        virtual ~Semaphore()=default;
+        };
+      struct Swapchain    {
+        virtual ~Swapchain()=default;
+        virtual void          reset()=0;
+        virtual uint32_t      nextImage(Semaphore* onReady)=0;
+        virtual uint32_t      imageCount() const=0;
+        virtual uint32_t      w() const=0;
+        virtual uint32_t      h() const=0;
+        };
       struct Texture:Shared  {
         virtual void setSampler(const Sampler2d& s)=0;
         };
@@ -241,6 +257,7 @@ namespace Tempest {
         virtual void setViewport (const Rect& r)=0;
         virtual void setUniforms (Pipeline& p,Desc& u, size_t offc, const uint32_t* offv)=0;
         virtual void exec        (const AbstractGraphicsApi::CommandBuffer& buf)=0;
+        virtual void changeLayout(Swapchain& s, uint32_t id, TextureFormat frm, TextureLayout prev, TextureLayout next)=0;
         virtual void changeLayout(Texture& t,TextureFormat frm,TextureLayout prev,TextureLayout next)=0;
         virtual void setVbo      (const Buffer& b)=0;
         virtual void setIbo      (const Buffer* b,Detail::IndexClass cls)=0;
@@ -249,23 +266,6 @@ namespace Tempest {
         };
       struct CmdPool         {
         virtual ~CmdPool()=default;
-        };
-
-      struct Fence           {
-        virtual ~Fence()=default;
-        virtual void wait() =0;
-        virtual void reset()=0;
-        };
-      struct Semaphore       {
-        virtual ~Semaphore()=default;
-        };
-      struct Swapchain    {
-        virtual ~Swapchain()=default;
-        virtual void          reset()=0;
-        virtual uint32_t      nextImage(Semaphore* onReady)=0;
-        virtual uint32_t      imageCount() const=0;
-        virtual uint32_t      w() const=0;
-        virtual uint32_t      h() const=0;
         };
 
       using PBuffer    = Detail::DSharedPtr<Buffer*>;

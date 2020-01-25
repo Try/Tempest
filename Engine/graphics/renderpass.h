@@ -23,7 +23,6 @@ class FboMode final {
       PreserveIn  = 1,
       PreserveOut = 1<<1,
       Preserve    = (PreserveIn|PreserveOut),
-      Submit      = (1<<3)|PreserveOut,
       };
     FboMode()=default;
     FboMode(Mode m):mode(m){}

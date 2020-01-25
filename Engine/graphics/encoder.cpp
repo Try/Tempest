@@ -163,35 +163,62 @@ void Encoder<PrimaryCommandBuffer>::implEndRenderPass() {
     impl->endRenderPass();
     }
 
-  for(auto& i:resState)
-    if(i.pending) {
-      impl->changeLayout(*i.res,i.frm,i.lay,i.next);
+  for(auto& i:resState) {
+    if(i.pending==false)
+      continue;
+
+    if(i.tRes!=nullptr) {
+      impl->changeLayout(*i.tRes,i.frm,i.lay,i.next);
+      i.lay     = i.next;
+      i.pending = false;
+      } else
+    if(i.sRes.sw!=nullptr) {
+      impl->changeLayout(*i.sRes.sw,i.sRes.id,i.frm,i.lay,i.next);
       i.lay     = i.next;
       i.pending = false;
       }
+    }
   }
 
 Encoder<PrimaryCommandBuffer>::ResState*
   Encoder<PrimaryCommandBuffer>::findState(AbstractGraphicsApi::Texture *handler) {
   for(auto& i:resState)
-    if(i.res==handler) {
+    if(i.tRes==handler) {
       return &i;
       }
   ResState st;
-  st.res = handler;
-  st.lay = TextureLayout::Undefined;
+  st.tRes = handler;
+  st.lay  = TextureLayout::Undefined;
+  resState.push_back(st);
+  return &resState.back();
+  }
+
+Encoder<PrimaryCommandBuffer>::ResState*
+  Encoder<PrimaryCommandBuffer>::findState(AbstractGraphicsApi::Swapchain *handler, uint32_t id) {
+  for(auto& i:resState)
+    if(i.sRes.sw==handler && i.sRes.id==id) {
+      return &i;
+      }
+  ResState st;
+  st.sRes.sw = handler;
+  st.sRes.id = id;
+  st.lay     = TextureLayout::Undefined;
   resState.push_back(st);
   return &resState.back();
   }
 
 void Encoder<Tempest::PrimaryCommandBuffer>::setLayout(Attachment &t, TextureLayout dest) {
-  if(t.tImpl.impl.handler==nullptr)
-    return;
-
-  ResState* st = findState(t.tImpl.impl.handler);
-  st->frm      = t.tImpl.frm;
-  st->next     = dest;
-  st->pending  = true;
+  if(t.tImpl.impl.handler==nullptr) {
+    ResState* st = findState(t.sImpl.swapchain,t.sImpl.id);
+    st->frm      = TextureFormat::Undefined;
+    st->next     = dest;
+    st->pending  = true;
+    } else {
+    ResState* st = findState(t.tImpl.impl.handler);
+    st->frm      = t.tImpl.frm;
+    st->next     = dest;
+    st->pending  = true;
+    }
   }
 
 void Encoder<PrimaryCommandBuffer>::exec(const CommandBuffer &buf) {

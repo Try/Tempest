@@ -101,6 +101,7 @@ VkRenderPass VRenderPass::createInstance(VkDevice &device, VSwapchain *sw,
     setupAttach(a,r,x,subpass);
     }
 
+  /*
   VkSubpassDependency dependency = {};
   dependency.srcSubpass      = VK_SUBPASS_EXTERNAL;
   dependency.srcStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -109,6 +110,7 @@ VkRenderPass VRenderPass::createInstance(VkDevice &device, VSwapchain *sw,
   dependency.dstStageMask    = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
   dependency.dstAccessMask   = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
   dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+  */
 
   VkRenderPassCreateInfo renderPassInfo = {};
   renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -116,8 +118,8 @@ VkRenderPass VRenderPass::createInstance(VkDevice &device, VSwapchain *sw,
   renderPassInfo.pAttachments    = attach;
   renderPassInfo.subpassCount    = 1;
   renderPassInfo.pSubpasses      = &subpass;
-  renderPassInfo.dependencyCount = 1;
-  renderPassInfo.pDependencies   = &dependency;
+  renderPassInfo.dependencyCount = 0;
+  renderPassInfo.pDependencies   = nullptr;
 
   vkAssert(vkCreateRenderPass(device,&renderPassInfo,nullptr,&ret));
   return ret;
@@ -150,9 +152,6 @@ void VRenderPass::setupAttach(VkAttachmentDescription &a, VkAttachmentReference&
     a.initialLayout  = init  ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
     a.finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     r.layout         = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    if((x.mode&FboMode::Submit)==FboMode::Submit)
-      a.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     }
   }
 

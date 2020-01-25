@@ -31,12 +31,12 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
 
     VkSwapchainKHR           swapChain=VK_NULL_HANDLE;
     std::vector<VkImageView> swapChainImageViews;
+    std::vector<VkImage>     swapChainImages;
 
   private:
     VDevice&                 device;
     SystemApi::Window*       hwnd = nullptr;
     VkSurfaceKHR             surface = VK_NULL_HANDLE;
-    std::vector<VkImage>     swapChainImages;
 
     VkFormat                 swapChainImageFormat = VK_FORMAT_UNDEFINED;
     VkExtent2D               swapChainExtent={};

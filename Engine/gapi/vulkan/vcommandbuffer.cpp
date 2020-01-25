@@ -394,6 +394,22 @@ void VCommandBuffer::copy(VBuffer &dest, size_t width, size_t height, size_t mip
   vkCmdCopyImageToBuffer(impl, src.impl, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dest.impl, 1, &region);
   }
 
+void VCommandBuffer::changeLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id,
+                                  TextureFormat f,
+                                  TextureLayout prev, TextureLayout next) {
+  static const VkImageLayout frm[]={
+    VK_IMAGE_LAYOUT_UNDEFINED,
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+    };
+
+  auto& vs = reinterpret_cast<VSwapchain&>(s);
+  changeLayout(vs.swapChainImages[id],Detail::nativeFormat(f),
+               frm[uint8_t(prev)],frm[uint8_t(next)],VK_REMAINING_MIP_LEVELS);
+  }
+
 void VCommandBuffer::changeLayout(Tempest::AbstractGraphicsApi::Texture &t,
                                   Tempest::TextureFormat f,
                                   Tempest::TextureLayout prev, Tempest::TextureLayout next) {
@@ -402,28 +418,31 @@ void VCommandBuffer::changeLayout(Tempest::AbstractGraphicsApi::Texture &t,
     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
     };
-  changeLayout(reinterpret_cast<VTexture&>(t),Detail::nativeFormat(f),frm[uint8_t(prev)],frm[uint8_t(next)],VK_REMAINING_MIP_LEVELS);
+
+  auto& vt = reinterpret_cast<VTexture&>(t);
+  changeLayout(vt.impl,Detail::nativeFormat(f),
+               frm[uint8_t(prev)],frm[uint8_t(next)],VK_REMAINING_MIP_LEVELS);
   }
 
-void VCommandBuffer::changeLayout(VTexture &dest, VkFormat imageFormat,
+void VCommandBuffer::changeLayout(VkImage dest, VkFormat imageFormat,
                                   VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount) {
   VkImageMemoryBarrier barrier = {};
-  barrier.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-  barrier.oldLayout           = oldLayout;
-  barrier.newLayout           = newLayout;
-  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.image               = dest.impl;
+  barrier.sType                = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+  barrier.oldLayout            = oldLayout;
+  barrier.newLayout            = newLayout;
+  barrier.srcQueueFamilyIndex  = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex  = VK_QUEUE_FAMILY_IGNORED;
+  barrier.image                = dest;
 
-  barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
   barrier.subresourceRange.baseMipLevel   = 0;
   barrier.subresourceRange.levelCount     = mipCount;
   barrier.subresourceRange.baseArrayLayer = 0;
   barrier.subresourceRange.layerCount     = 1;
-
   if(Detail::nativeIsDepthFormat(imageFormat))
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; else
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
   VkPipelineStageFlags sourceStage   = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
   VkPipelineStageFlags destStage     = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
@@ -456,10 +475,13 @@ void VCommandBuffer::changeLayout(VTexture &dest, VkFormat imageFormat,
       srcAccessMask = 0;
       sourceStage   = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
       break;
+    case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+      srcAccessMask = 0;
+      sourceStage   = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+      break;
     case VK_IMAGE_LAYOUT_GENERAL:
     case VK_IMAGE_LAYOUT_PREINITIALIZED:
     case VK_IMAGE_LAYOUT_RANGE_SIZE:
-    case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
     case VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR:
     case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
     case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL:
@@ -497,10 +519,13 @@ void VCommandBuffer::changeLayout(VTexture &dest, VkFormat imageFormat,
       dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
       destStage     = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
       break;
+    case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+      dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT|VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+      destStage     = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+      break;
     case VK_IMAGE_LAYOUT_GENERAL:
     case VK_IMAGE_LAYOUT_PREINITIALIZED:
     case VK_IMAGE_LAYOUT_RANGE_SIZE:
-    case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
     case VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR:
     case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
     case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL:
