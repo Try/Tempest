@@ -51,7 +51,8 @@ class VulkanApi : public AbstractGraphicsApi {
     PTexture       createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips) override;
     PTexture       createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;
 
-    void           readPixels(AbstractGraphicsApi::Device *d, Pixmap &out, const PTexture t, TextureFormat frm,
+    void           readPixels(AbstractGraphicsApi::Device *d, Pixmap &out, const PTexture t,
+                              TextureLayout lay, TextureFormat frm,
                               const uint32_t w, const uint32_t h, uint32_t mip) override;
 
     CmdPool*       createCommandPool(Device* d) override;
@@ -59,8 +60,8 @@ class VulkanApi : public AbstractGraphicsApi {
 
     void           present  (Device *d,Swapchain* sw,uint32_t imageId, const Semaphore *wait) override;
 
-    void           draw     (Device *d,CommandBuffer* cmd,Semaphore* wait,Semaphore* onReady,Fence* onReadyCpu) override;
-    void           draw     (Device *d,
+    void           submit   (Device *d,CommandBuffer* cmd,Semaphore* wait,Semaphore* onReady,Fence* onReadyCpu) override;
+    void           submit   (Device *d,
                              CommandBuffer** cmd, size_t count,
                              Semaphore** wait, size_t waitCnt,
                              Semaphore** done, size_t doneCnt,

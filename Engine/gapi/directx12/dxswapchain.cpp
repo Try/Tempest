@@ -32,8 +32,4 @@ uint32_t DxSwapchain::nextImage(AbstractGraphicsApi::Semaphore* onReady) {
   return currImg%imgCount;
   }
 
-AbstractGraphicsApi::Image* DxSwapchain::getImage(uint32_t id) {
-  return nullptr;
-  }
-
 #endif

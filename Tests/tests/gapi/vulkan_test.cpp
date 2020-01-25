@@ -39,8 +39,8 @@ TEST(VulkanApi,VulkanApi) {
 
 TEST(VulkanApi,Vbo) {
   try {
-    VulkanApi      api{ApiFlags::Validation};
-    Device         device(api);
+    VulkanApi api{ApiFlags::Validation};
+    Device    device(api);
 
     auto vbo = device.vbo(vboData,3);
     auto ibo = device.ibo(iboData,3);
@@ -54,8 +54,8 @@ TEST(VulkanApi,Vbo) {
 
 TEST(VulkanApi,Shader) {
   try {
-    VulkanApi      api{ApiFlags::Validation};
-    Device         device(api);
+    VulkanApi api{ApiFlags::Validation};
+    Device    device(api);
 
     auto vert = device.loadShader("shader/simple_test.vert.sprv");
     auto frag = device.loadShader("shader/simple_test.frag.sprv");
@@ -69,8 +69,8 @@ TEST(VulkanApi,Shader) {
 
 TEST(VulkanApi,Fbo) {
   try {
-    VulkanApi      api{ApiFlags::Validation};
-    Device         device(api);
+    VulkanApi api{ApiFlags::Validation};
+    Device    device(api);
 
     auto tex = device.attachment(TextureFormat::RGBA8,128,128);
     auto fbo = device.frameBuffer(tex);
@@ -79,14 +79,15 @@ TEST(VulkanApi,Fbo) {
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
+      enc.setLayout(tex,TextureLayout::ColorAttach);
       enc.setPass(fbo,rp);
     }
 
     auto sync = device.fence();
-    device.draw(cmd,sync);
+    device.submit(cmd,sync);
     sync.wait();
 
-    auto pm = device.readPixels(textureCast(tex));
+    auto pm = device.readPixels(tex);
     pm.save("VulkanApi_Fbo.png");
     }
   catch(std::system_error& e) {
@@ -98,8 +99,8 @@ TEST(VulkanApi,Fbo) {
 
 TEST(VulkanApi,Draw) {
   try {
-    VulkanApi      api{ApiFlags::Validation};
-    Device         device(api);
+    VulkanApi api{ApiFlags::Validation};
+    Device    device(api);
 
     auto vbo  = device.vbo(vboData,3);
     auto ibo  = device.ibo(iboData,3);
@@ -115,16 +116,17 @@ TEST(VulkanApi,Draw) {
     auto cmd  = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
+      enc.setLayout(tex,TextureLayout::ColorAttach);
       enc.setPass(fbo,rp);
       enc.setUniforms(pso);
       enc.draw(vbo,ibo);
     }
 
     auto sync = device.fence();
-    device.draw(cmd,sync);
+    device.submit(cmd,sync);
     sync.wait();
 
-    auto pm = device.readPixels(textureCast(tex));
+    auto pm = device.readPixels(tex);
     pm.save("VulkanApi_Draw.png");
     }
   catch(std::system_error& e) {

@@ -171,7 +171,8 @@ void Encoder<PrimaryCommandBuffer>::implEndRenderPass() {
       }
   }
 
-Encoder<PrimaryCommandBuffer>::ResState *Encoder<PrimaryCommandBuffer>::findState(AbstractGraphicsApi::Texture *handler) {
+Encoder<PrimaryCommandBuffer>::ResState*
+  Encoder<PrimaryCommandBuffer>::findState(AbstractGraphicsApi::Texture *handler) {
   for(auto& i:resState)
     if(i.res==handler) {
       return &i;

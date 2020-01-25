@@ -28,7 +28,7 @@ class Swapchain final {
     uint8_t              frameId() const;
     uint64_t             frameCounter() const;
 
-    Attachment           frame(uint32_t id);
+    Attachment&          frame(uint32_t id);
     uint32_t             nextImage(Semaphore& onReady);
 
   private:
@@ -43,6 +43,8 @@ class Swapchain final {
     uint32_t                                      imgId=0;
     uint8_t                                       framesIdMod=0;
     uint8_t                                       implMaxFramesInFlight=0;
+
+    std::unique_ptr<Attachment[]>                 img;
 
   friend class Device;
   };

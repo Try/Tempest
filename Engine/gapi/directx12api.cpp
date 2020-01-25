@@ -142,7 +142,7 @@ AbstractGraphicsApi::PTexture DirectX12Api::createTexture(AbstractGraphicsApi::D
   return PTexture();
   }
 
-void DirectX12Api::readPixels(AbstractGraphicsApi::Device* d, Pixmap& out, const AbstractGraphicsApi::PTexture t, TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip) {
+void DirectX12Api::readPixels(AbstractGraphicsApi::Device* d, Pixmap& out, const AbstractGraphicsApi::PTexture t, TextureLayout lay, TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip) {
 
   }
 
@@ -158,14 +158,14 @@ void DirectX12Api::present(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::
 
   }
 
-void DirectX12Api::draw(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::CommandBuffer* cmd,
-                        AbstractGraphicsApi::Semaphore* wait, AbstractGraphicsApi::Semaphore* onReady, AbstractGraphicsApi::Fence* onReadyCpu) {
+void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::CommandBuffer* cmd,
+                          AbstractGraphicsApi::Semaphore* wait, AbstractGraphicsApi::Semaphore* onReady, AbstractGraphicsApi::Fence* onReadyCpu) {
 
   }
 
-void DirectX12Api::draw(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::CommandBuffer** cmd, size_t count,
-                        AbstractGraphicsApi::Semaphore** wait, size_t waitCnt, AbstractGraphicsApi::Semaphore** done,
-                        size_t doneCnt, AbstractGraphicsApi::Fence* doneCpu) {
+void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::CommandBuffer** cmd, size_t count,
+                          AbstractGraphicsApi::Semaphore** wait, size_t waitCnt, AbstractGraphicsApi::Semaphore** done,
+                          size_t doneCnt, AbstractGraphicsApi::Fence* doneCpu) {
 
   }
 

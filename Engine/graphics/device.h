@@ -50,13 +50,13 @@ class Device {
     uint8_t              maxFramesInFlight() const;
     void                 waitIdle();
 
-    void                 draw(const PrimaryCommandBuffer&  cmd,const Semaphore& wait);
-    void                 draw(const PrimaryCommandBuffer&  cmd,Fence& fdone);
-    void                 draw(const PrimaryCommandBuffer&  cmd,const Semaphore& wait,Semaphore& done,Fence& fdone);
-    void                 draw(const PrimaryCommandBuffer *cmd[], size_t count,
-                              const Semaphore* wait[], size_t waitCnt,
-                              Semaphore* done[], size_t doneCnt,
-                              Fence* fdone);
+    void                 submit(const PrimaryCommandBuffer&  cmd,const Semaphore& wait);
+    void                 submit(const PrimaryCommandBuffer&  cmd,Fence& fdone);
+    void                 submit(const PrimaryCommandBuffer&  cmd,const Semaphore& wait,Semaphore& done,Fence& fdone);
+    void                 submit(const PrimaryCommandBuffer *cmd[], size_t count,
+                                const Semaphore* wait[], size_t waitCnt,
+                                Semaphore* done[], size_t doneCnt,
+                                Fence* fdone);
 
     Swapchain            swapchain(SystemApi::Window* w) const;
 
@@ -101,7 +101,8 @@ class Device {
 
     Attachment           attachment (TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips = false);
     Texture2d            loadTexture(const Pixmap& pm,bool mips=true);
-    Pixmap               readPixels (const Texture2d& t);
+    Pixmap               readPixels (const Texture2d&  t);
+    Pixmap               readPixels (const Attachment& t);
 
     FrameBuffer          frameBuffer(Attachment& out);
     FrameBuffer          frameBuffer(Attachment& out, Attachment& zbuf);
@@ -146,10 +147,10 @@ class Device {
                              const Shader &vs, const Shader &fs,
                              const Decl::ComponentType *decl, size_t declSize,
                              size_t stride, Topology tp);
-    void        implDraw(const Tempest::PrimaryCommandBuffer *cmd[], AbstractGraphicsApi::CommandBuffer* hcmd[],  size_t count,
-                         const Semaphore* wait[], AbstractGraphicsApi::Semaphore*     hwait[], size_t waitCnt,
-                          Semaphore*      done[], AbstractGraphicsApi::Semaphore*     hdone[], size_t doneCnt,
-                         AbstractGraphicsApi::Fence*         fdone);
+    void        implSubmit(const Tempest::PrimaryCommandBuffer *cmd[], AbstractGraphicsApi::CommandBuffer* hcmd[],  size_t count,
+                           const Semaphore* wait[], AbstractGraphicsApi::Semaphore*     hwait[], size_t waitCnt,
+                           Semaphore*       done[], AbstractGraphicsApi::Semaphore*     hdone[], size_t doneCnt,
+                           AbstractGraphicsApi::Fence*         fdone);
 
     static TextureFormat formatOf(const Attachment& a);
 

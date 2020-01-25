@@ -28,7 +28,6 @@ class DxSwapchain : public AbstractGraphicsApi::Swapchain {
 
     uint32_t                 imageCount() const override { return imgCount; }
     uint32_t                 nextImage(AbstractGraphicsApi::Semaphore* onReady) override;
-    AbstractGraphicsApi::Image* getImage (uint32_t id) override;
 
   private:
     uint32_t                 currImg=0;

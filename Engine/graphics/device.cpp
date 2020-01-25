@@ -47,50 +47,50 @@ void Device::waitIdle() {
   impl.dev->waitIdle();
   }
 
-void Device::draw(const PrimaryCommandBuffer &cmd, const Semaphore &wait) {
-  api.draw(dev,cmd.impl.handler,wait.impl.handler,nullptr,nullptr);
+void Device::submit(const PrimaryCommandBuffer &cmd, const Semaphore &wait) {
+  api.submit(dev,cmd.impl.handler,wait.impl.handler,nullptr,nullptr);
   }
 
-void Device::draw(const PrimaryCommandBuffer &cmd, Fence &fdone) {
+void Device::submit(const PrimaryCommandBuffer &cmd, Fence &fdone) {
   const Tempest::PrimaryCommandBuffer *c[] = {&cmd};
-  draw(c,1,nullptr,0,nullptr,0,&fdone);
+  submit(c,1,nullptr,0,nullptr,0,&fdone);
   }
 
-void Device::draw(const PrimaryCommandBuffer &cmd, const Semaphore &wait, Semaphore &done, Fence &fdone) {
-  api.draw(dev,cmd.impl.handler,wait.impl.handler,done.impl.handler,fdone.impl.handler);
+void Device::submit(const PrimaryCommandBuffer &cmd, const Semaphore &wait, Semaphore &done, Fence &fdone) {
+  api.submit(dev,cmd.impl.handler,wait.impl.handler,done.impl.handler,fdone.impl.handler);
   }
 
-void Device::draw(const Tempest::PrimaryCommandBuffer *cmd[], size_t count,
-                  const Semaphore *wait[], size_t waitCnt,
-                  Semaphore *done[], size_t doneCnt,
-                  Fence *fdone) {
+void Device::submit(const Tempest::PrimaryCommandBuffer *cmd[], size_t count,
+                    const Semaphore *wait[], size_t waitCnt,
+                    Semaphore *done[], size_t doneCnt,
+                    Fence *fdone) {
   if(count+waitCnt+doneCnt<64){
     void* ptr[64];
     auto cx = reinterpret_cast<AbstractGraphicsApi::CommandBuffer**>(ptr);
     auto wx = reinterpret_cast<AbstractGraphicsApi::Semaphore**>(ptr+count);
     auto dx = reinterpret_cast<AbstractGraphicsApi::Semaphore**>(ptr+count+waitCnt);
 
-    implDraw(cmd,  cx, count,
-             wait, wx, waitCnt,
-             done, dx, doneCnt,
-             fdone->impl.handler);
+    implSubmit(cmd,  cx, count,
+               wait, wx, waitCnt,
+               done, dx, doneCnt,
+               fdone->impl.handler);
     } else {
     std::unique_ptr<void*[]> ptr(new void*[count+waitCnt+doneCnt]);
     auto cx = reinterpret_cast<AbstractGraphicsApi::CommandBuffer**>(ptr.get());
     auto wx = reinterpret_cast<AbstractGraphicsApi::Semaphore**>(ptr.get()+count);
     auto dx = reinterpret_cast<AbstractGraphicsApi::Semaphore**>(ptr.get()+count+waitCnt);
 
-    implDraw(cmd,  cx, count,
-             wait, wx, waitCnt,
-             done, dx, doneCnt,
-             fdone->impl.handler);
+    implSubmit(cmd,  cx, count,
+               wait, wx, waitCnt,
+               done, dx, doneCnt,
+               fdone->impl.handler);
     }
   }
 
-void Device::implDraw(const Tempest::PrimaryCommandBuffer* cmd[],  AbstractGraphicsApi::CommandBuffer*  hcmd[],  size_t count,
-                      const Semaphore*                     wait[], AbstractGraphicsApi::Semaphore*      hwait[], size_t waitCnt,
-                      Semaphore*                           done[], AbstractGraphicsApi::Semaphore*      hdone[], size_t doneCnt,
-                      AbstractGraphicsApi::Fence*          fdone) {
+void Device::implSubmit(const Tempest::PrimaryCommandBuffer* cmd[],  AbstractGraphicsApi::CommandBuffer*  hcmd[],  size_t count,
+                        const Semaphore*                     wait[], AbstractGraphicsApi::Semaphore*      hwait[], size_t waitCnt,
+                        Semaphore*                           done[], AbstractGraphicsApi::Semaphore*      hdone[], size_t doneCnt,
+                        AbstractGraphicsApi::Fence*          fdone) {
   for(size_t i=0;i<count;++i)
     hcmd[i] = cmd[i]->impl.handler;
   for(size_t i=0;i<waitCnt;++i)
@@ -98,11 +98,11 @@ void Device::implDraw(const Tempest::PrimaryCommandBuffer* cmd[],  AbstractGraph
   for(size_t i=0;i<doneCnt;++i)
     hdone[i] = done[i]->impl.handler;
 
-  api.draw(dev,
-           hcmd, count,
-           hwait, waitCnt,
-           hdone, doneCnt,
-           fdone);
+  api.submit(dev,
+             hcmd, count,
+             hwait, waitCnt,
+             hdone, doneCnt,
+             fdone);
   }
 
 Shader Device::loadShader(RFile &file) {
@@ -184,7 +184,14 @@ Texture2d Device::loadTexture(const Pixmap &pm, bool mips) {
 
 Pixmap Device::readPixels(const Texture2d &t) {
   Pixmap pm;
-  api.readPixels(dev,pm,t.impl,t.format(),uint32_t(t.w()),uint32_t(t.h()),0);
+  api.readPixels(dev,pm,t.impl,TextureLayout::Sampler,t.format(),uint32_t(t.w()),uint32_t(t.h()),0);
+  return pm;
+  }
+
+Pixmap Device::readPixels(const Attachment& t) {
+  Pixmap pm;
+  auto& tx = textureCast(t);
+  api.readPixels(dev,pm,tx.impl,TextureLayout::ColorAttach,tx.format(),uint32_t(t.w()),uint32_t(t.h()),0);
   return pm;
   }
 

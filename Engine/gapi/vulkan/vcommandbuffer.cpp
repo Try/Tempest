@@ -7,7 +7,6 @@
 #include "vrenderpass.h"
 #include "vpipeline.h"
 #include "vbuffer.h"
-#include "vimage.h"
 #include "vdescriptorarray.h"
 #include "vswapchain.h"
 #include "vtexture.h"
@@ -453,8 +452,11 @@ void VCommandBuffer::changeLayout(VTexture &dest, VkFormat imageFormat,
       //srcAccessMask |= VK_ACCESS_COLOR_ATTACHMENT_READ_NONCOHERENT_BIT_EXT;
       sourceStage   = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
       break;
-    case VK_IMAGE_LAYOUT_GENERAL:
     case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+      srcAccessMask = 0;
+      sourceStage   = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+      break;
+    case VK_IMAGE_LAYOUT_GENERAL:
     case VK_IMAGE_LAYOUT_PREINITIALIZED:
     case VK_IMAGE_LAYOUT_RANGE_SIZE:
     case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:

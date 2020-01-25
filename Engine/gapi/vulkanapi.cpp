@@ -51,8 +51,7 @@ void VulkanApi::destroy(AbstractGraphicsApi::Device *d) {
 
 AbstractGraphicsApi::Swapchain *VulkanApi::createSwapchain(SystemApi::Window *w,AbstractGraphicsApi::Device *d) {
   Detail::VDevice* dx   = reinterpret_cast<Detail::VDevice*>(d);
-  const Rect       rect = SystemApi::windowClientRect(w);
-  return new Detail::VSwapchain(*dx,w,uint32_t(rect.w),uint32_t(rect.h));
+  return new Detail::VSwapchain(*dx,w);
   }
 
 AbstractGraphicsApi::PPass VulkanApi::createPass(AbstractGraphicsApi::Device *d,
@@ -250,7 +249,8 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   return PTexture(pbuf.handler);
   }
 
-void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PTexture t, TextureFormat frm,
+void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PTexture t,
+                           TextureLayout lay, TextureFormat frm,
                            const uint32_t w, const uint32_t h, uint32_t mip) {
   Detail::VDevice*  dx = reinterpret_cast<Detail::VDevice*>(d);
   Detail::VTexture* tx = reinterpret_cast<Detail::VTexture*>(t.handler);
@@ -273,15 +273,32 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
     case TextureFormat::DXT5:      bpp=0; break;
     }
 
+  VkImageLayout play = VK_IMAGE_LAYOUT_GENERAL;
+  switch(lay) {
+    case TextureLayout::Undefined:
+    case TextureLayout::Sampler:
+      play = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+      break;
+    case TextureLayout::ColorAttach:
+      play = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+      break;
+    case TextureLayout::DepthAttach:
+      play = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+      break;
+    case TextureLayout::Present:
+      play = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+      break;
+    }
+
   const size_t    size  = w*h*bpp;
   Detail::VBuffer stage = dx->allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferFlags::Staging);
 
   Detail::VDevice::Data dat(*dx);
 
   VkFormat format = Detail::nativeFormat(frm);
-  dat.changeLayout(*tx, format, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,     1);
+  dat.changeLayout(*tx, format, play, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 1);
   dat.copy(stage,w,h,mip,*tx,0);
-  dat.changeLayout(*tx, format, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, 1);
+  dat.changeLayout(*tx, format, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, play, 1);
   dat.commit();
 
   dx->waitData();
@@ -342,11 +359,11 @@ void VulkanApi::present(Device *d,Swapchain *sw,uint32_t imageId,const Semaphore
     }
   }
 
-void VulkanApi::draw(Device *d,
-                     CommandBuffer *cmd,
-                     Semaphore *wait,
-                     Semaphore *onReady,
-                     Fence *onReadyCpu) {
+void VulkanApi::submit(Device *d,
+                       CommandBuffer *cmd,
+                       Semaphore *wait,
+                       Semaphore *onReady,
+                       Fence *onReadyCpu) {
   Detail::VDevice*        dx=reinterpret_cast<Detail::VDevice*>(d);
   Detail::VCommandBuffer* cx=reinterpret_cast<Detail::VCommandBuffer*>(cmd);
   auto*                   wx=reinterpret_cast<const Detail::VSemaphore*>(wait);
@@ -378,11 +395,11 @@ void VulkanApi::draw(Device *d,
   dx->graphicsQueue->submit(1,&submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl);
   }
 
-void VulkanApi::draw(AbstractGraphicsApi::Device *d,
-                     AbstractGraphicsApi::CommandBuffer **cmd, size_t count,
-                     Semaphore **wait, size_t waitCnt,
-                     Semaphore **done, size_t doneCnt,
-                     Fence     *doneCpu) {
+void VulkanApi::submit(AbstractGraphicsApi::Device *d,
+                       AbstractGraphicsApi::CommandBuffer **cmd, size_t count,
+                       Semaphore **wait, size_t waitCnt,
+                       Semaphore **done, size_t doneCnt,
+                       Fence     *doneCpu) {
   Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
 
   std::lock_guard<std::mutex> guard(impl->syncBuf);

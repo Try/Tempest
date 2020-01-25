@@ -202,7 +202,6 @@ namespace Tempest {
       struct Texture:Shared  {
         virtual void setSampler(const Sampler2d& s)=0;
         };
-      struct Image           {};
       struct Fbo:Shared      {
         virtual ~Fbo(){}
         };
@@ -262,8 +261,8 @@ namespace Tempest {
         };
       struct Swapchain    {
         virtual ~Swapchain()=default;
+        virtual void          reset()=0;
         virtual uint32_t      nextImage(Semaphore* onReady)=0;
-        virtual Image*        getImage (uint32_t id)=0;
         virtual uint32_t      imageCount() const=0;
         virtual uint32_t      w() const=0;
         virtual uint32_t      h() const=0;
@@ -321,12 +320,14 @@ namespace Tempest {
 
       virtual PTexture   createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips)=0;
       virtual PTexture   createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm)=0;
-      virtual void       readPixels   (AbstractGraphicsApi::Device *d, Pixmap &out,const PTexture t, TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip) = 0;
+      virtual void       readPixels   (AbstractGraphicsApi::Device *d, Pixmap &out,const PTexture t,
+                                       TextureLayout lay, TextureFormat frm,
+                                       const uint32_t w, const uint32_t h, uint32_t mip) = 0;
 
       virtual void       present  (Device *d,Swapchain* sw,uint32_t imageId,const Semaphore *wait)=0;
 
-      virtual void       draw     (Device *d,CommandBuffer*  cmd,Semaphore* wait,Semaphore* onReady,Fence* onReadyCpu)=0;
-      virtual void       draw     (Device *d,
+      virtual void       submit   (Device *d,CommandBuffer*  cmd,Semaphore* wait,Semaphore* onReady,Fence* onReadyCpu)=0;
+      virtual void       submit   (Device *d,
                                    CommandBuffer** cmd,size_t count,
                                    Semaphore** wait, size_t waitCnt,
                                    Semaphore** done, size_t doneCnt,

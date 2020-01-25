@@ -41,5 +41,6 @@ enum class TextureLayout : uint8_t {
   Sampler,
   ColorAttach,
   DepthAttach,
+  Present,
   };
 }

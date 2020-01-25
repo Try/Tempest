@@ -29,6 +29,7 @@ Swapchain& Swapchain::operator = (Swapchain&& s) {
   std::swap(imgId,                s.imgId);
   std::swap(framesIdMod,          s.framesIdMod);
   std::swap(implMaxFramesInFlight,s.implMaxFramesInFlight);
+  std::swap(img,                  s.img);
 
   return *this;
   }
@@ -48,9 +49,17 @@ void Swapchain::present(uint32_t img, const Semaphore& wait) {
   }
 
 void Swapchain::reset() {
-  delete impl.handler;
-  impl.handler = nullptr;
-  impl = api->createSwapchain(hwnd,this->dev);
+  if(impl.handler!=nullptr) {
+    impl.handler->reset();
+
+    size_t cnt = imageCount();
+    img.reset(new Attachment[cnt]);
+    for(size_t i=0;i<cnt;++i) {
+      img[i] = Attachment(impl.handler,i);
+      }
+    } else {
+    impl = api->createSwapchain(hwnd,this->dev);
+    }
   }
 
 uint32_t Swapchain::imageCount() const {
@@ -65,9 +74,8 @@ uint8_t Swapchain::frameId() const {
   return framesIdMod;
   }
 
-Attachment Swapchain::frame(uint32_t id) {
-  Attachment fr(impl.handler,id);
-  return fr;
+Attachment& Swapchain::frame(uint32_t id) {
+  return img[id];
   }
 
 uint32_t Swapchain::nextImage(Semaphore& onReady) {
