@@ -3,7 +3,7 @@
 #include <Tempest/Device>
 #include <Tempest/PaintDevice>
 
-#include "shaders/shaders.inl"
+#include "builtin_shader.h"
 
 using namespace Tempest;
 
@@ -15,11 +15,11 @@ Builtin::Builtin(Device& owner)
   stAlpha.setBlendSource(RenderState::BlendMode::one);
   stAlpha.setBlendDest  (RenderState::BlendMode::one);
 
-  vsE  = owner.shader(reinterpret_cast<const char*>(empty_vert_sprv),sizeof(empty_vert_sprv));
-  fsE  = owner.shader(reinterpret_cast<const char*>(empty_frag_sprv),sizeof(empty_frag_sprv));
+  vsE  = owner.shader(empty_vert_sprv,sizeof(empty_vert_sprv));
+  fsE  = owner.shader(empty_frag_sprv,sizeof(empty_frag_sprv));
 
-  vsT2 = owner.shader(reinterpret_cast<const char*>(tex_brush_vert_sprv),sizeof(tex_brush_vert_sprv));
-  fsT2 = owner.shader(reinterpret_cast<const char*>(tex_brush_frag_sprv),sizeof(tex_brush_frag_sprv));
+  vsT2 = owner.shader(tex_brush_vert_sprv,sizeof(tex_brush_vert_sprv));
+  fsT2 = owner.shader(tex_brush_frag_sprv,sizeof(tex_brush_frag_sprv));
 
   brushT2.layout.add(0,Tempest::UniformsLayout::Texture,Tempest::UniformsLayout::Fragment);
   }
@@ -50,15 +50,4 @@ const Builtin::Item &Builtin::empty() const {
     brushE.brushA = owner.pipeline<PaintDevice::Point>(Triangles,stAlpha,brushE.layout,vsE,fsE);
     }
   return brushE;
-  }
-
-void Builtin::reset() const {
-  brushT2.brush =RenderPipeline();
-  brushT2.pen   =RenderPipeline();
-  brushT2.brushA=RenderPipeline();
-  brushT2.penA  =RenderPipeline();
-  brushE.brush  =RenderPipeline();
-  brushE.pen    =RenderPipeline();
-  brushE.brushA =RenderPipeline();
-  brushE.penA   =RenderPipeline();
   }

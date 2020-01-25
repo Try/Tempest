@@ -36,7 +36,7 @@ class DirectX12Api : public AbstractGraphicsApi {
                                 std::shared_ptr<UniformsLay> &ulayImpl,
                                 const std::initializer_list<Shader*>& shaders) override;
 
-  PShader        createShader(AbstractGraphicsApi::Device *d, const char* source, size_t src_size) override;
+  PShader        createShader(AbstractGraphicsApi::Device *d, const void* source, size_t src_size) override;
 
   Fence*         createFence(Device *d) override;
 

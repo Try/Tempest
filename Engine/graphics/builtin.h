@@ -31,8 +31,6 @@ class Builtin final {
     const Item& texture2d() const;
     const Item& empty    () const;
 
-    void  reset() const;
-
   private:
     mutable Item            brushT2;
     mutable Item            brushE;

@@ -81,7 +81,7 @@ AbstractGraphicsApi::PPipeline DirectX12Api::createPipeline(AbstractGraphicsApi:
   return PPipeline();
   }
 
-AbstractGraphicsApi::PShader DirectX12Api::createShader(AbstractGraphicsApi::Device* d, const char* source, size_t src_size) {
+AbstractGraphicsApi::PShader DirectX12Api::createShader(AbstractGraphicsApi::Device* d, const void* source, size_t src_size) {
   return PShader();
   }
 

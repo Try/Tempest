@@ -303,7 +303,7 @@ namespace Tempest {
                                         std::shared_ptr<UniformsLay> &ulayImpl,
                                         const std::initializer_list<Shader*>& sh)=0;
 
-      virtual PShader    createShader(Device *d,const char* source,size_t src_size)=0;
+      virtual PShader    createShader(Device *d,const void* source,size_t src_size)=0;
 
       virtual Fence*     createFence(Device *d)=0;
 

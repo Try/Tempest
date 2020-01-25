@@ -63,7 +63,7 @@ class Device {
     Shader               loadShader(RFile&          file);
     Shader               loadShader(const char*     filename);
     Shader               loadShader(const char16_t* filename);
-    Shader               shader    (const char* source,const size_t length);
+    Shader               shader    (const void* source, const size_t length);
 
     const Caps&          caps() const;
 

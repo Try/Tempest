@@ -147,7 +147,7 @@ AbstractGraphicsApi::PPipeline VulkanApi::createPipeline(AbstractGraphicsApi::De
   return PPipeline(new Detail::VPipeline(*dx,st,decl,declSize,stride,tp,ulay,ulayImpl,*vs,*fs));
   }
 
-AbstractGraphicsApi::PShader VulkanApi::createShader(AbstractGraphicsApi::Device *d, const char *source, size_t src_size) {
+AbstractGraphicsApi::PShader VulkanApi::createShader(AbstractGraphicsApi::Device *d, const void* source, size_t src_size) {
   Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
   return PShader(new Detail::VShader(*dx,source,src_size));
   }
