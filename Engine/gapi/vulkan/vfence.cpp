@@ -21,7 +21,6 @@ VFence::VFence(VFence &&other) {
 VFence::~VFence() {
   if(device==nullptr)
     return;
-  vkDeviceWaitIdle(device);
   vkDestroyFence(device,impl,nullptr);
   }
 

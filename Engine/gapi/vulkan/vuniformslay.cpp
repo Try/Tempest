@@ -23,7 +23,6 @@ VUniformsLay::VUniformsLay(VkDevice dev, const Tempest::UniformsLayout &ulay)
   }
 
 VUniformsLay::~VUniformsLay() {
-  vkDeviceWaitIdle(dev);
   for(auto& i:pool)
     vkDestroyDescriptorPool(dev,i.impl,nullptr);
   vkDestroyDescriptorSetLayout(dev,impl,nullptr);

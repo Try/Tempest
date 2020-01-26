@@ -47,7 +47,6 @@ VFramebuffer::VFramebuffer(VFramebuffer &&other) {
   }
 
 VFramebuffer::~VFramebuffer() {
-  vkDeviceWaitIdle(device);
   if(impl!=VK_NULL_HANDLE)
     vkDestroyFramebuffer(device,impl,nullptr);
   }

@@ -83,7 +83,6 @@ VPipeline::Inst &VPipeline::instance(VFramebufferLayout &lay, uint32_t width, ui
 void VPipeline::cleanup() {
   if(pipelineLayout==VK_NULL_HANDLE)
     return;
-  vkDeviceWaitIdle(device);
   if(pipelineLayout!=VK_NULL_HANDLE)
     vkDestroyPipelineLayout(device,pipelineLayout,nullptr);
   for(auto& i:inst)

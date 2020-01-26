@@ -21,6 +21,5 @@ VShader::VShader(VDevice& device,const void *source,size_t src_size)
   }
 
 VShader::~VShader() {
-  vkDeviceWaitIdle(device);
   vkDestroyShaderModule(device,impl,nullptr);
   }

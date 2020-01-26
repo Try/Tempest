@@ -24,6 +24,5 @@ VCommandPool::VCommandPool(VCommandPool &&other) {
 VCommandPool::~VCommandPool() {
   if(device==nullptr)
     return;
-  vkDeviceWaitIdle(device);
   vkDestroyCommandPool(device,impl,nullptr);
   }

@@ -26,7 +26,6 @@ VRenderPass::VRenderPass(VRenderPass &&other) {
 VRenderPass::~VRenderPass(){
   if(device==nullptr)
     return;
-  vkDeviceWaitIdle(device);
   for(auto& i:impl)
     if(i.impl!=VK_NULL_HANDLE)
       vkDestroyRenderPass(device,i.impl,nullptr);

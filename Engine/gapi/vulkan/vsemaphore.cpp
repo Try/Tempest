@@ -20,7 +20,6 @@ VSemaphore::VSemaphore(VSemaphore &&other) {
 VSemaphore::~VSemaphore() {
   if(device==nullptr)
     return;
-  vkDeviceWaitIdle(device);
   vkDestroySemaphore(device,impl,nullptr);
   }
 

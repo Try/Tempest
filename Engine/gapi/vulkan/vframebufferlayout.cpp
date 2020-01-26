@@ -20,7 +20,6 @@ VFramebufferLayout::VFramebufferLayout(VFramebufferLayout &&other)
 VFramebufferLayout::~VFramebufferLayout() {
   if(device==nullptr)
     return;
-  vkDeviceWaitIdle(device);
   if(impl!=VK_NULL_HANDLE)
     vkDestroyRenderPass(device,impl,nullptr);
   }
