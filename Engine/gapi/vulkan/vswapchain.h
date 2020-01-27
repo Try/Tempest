@@ -26,12 +26,12 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     uint32_t                 h()      const override { return swapChainExtent.height; }
 
     void                     reset() override;
-    uint32_t                 imageCount() const override { return uint32_t(swapChainImageViews.size()); }
+    uint32_t                 imageCount() const override { return uint32_t(views.size()); }
     uint32_t                 nextImage(AbstractGraphicsApi::Semaphore* onReady) override;
 
     VkSwapchainKHR           swapChain=VK_NULL_HANDLE;
-    std::vector<VkImageView> swapChainImageViews;
-    std::vector<VkImage>     swapChainImages;
+    std::vector<VkImageView> views;
+    std::vector<VkImage>     images;
 
   private:
     VDevice&                 device;

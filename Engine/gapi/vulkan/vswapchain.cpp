@@ -28,11 +28,11 @@ VSwapchain::~VSwapchain() {
   }
 
 void VSwapchain::cleanupSwapchain() noexcept {
-  for(auto imageView : swapChainImageViews)
+  for(auto imageView : views)
     if(imageView!=VK_NULL_HANDLE)
       vkDestroyImageView(device.device,imageView,nullptr);
-  swapChainImageViews.clear();
-  swapChainImages.clear();
+  views.clear();
+  images.clear();
 
   if(swapChain!=VK_NULL_HANDLE)
     vkDestroySwapchainKHR(device.device,swapChain,nullptr);
@@ -117,15 +117,15 @@ void VSwapchain::createSwapchain(VDevice& device, const VDevice::SwapChainSuppor
 void VSwapchain::createImageViews(VDevice &device) {
   uint32_t imgCount=0;
   vkGetSwapchainImagesKHR(device.device, swapChain, &imgCount, nullptr);
-  swapChainImages.resize(imgCount);
-  vkGetSwapchainImagesKHR(device.device, swapChain, &imgCount, swapChainImages.data());
+  images.resize(imgCount);
+  vkGetSwapchainImagesKHR(device.device, swapChain, &imgCount, images.data());
 
-  swapChainImageViews.resize(swapChainImages.size());
+  views.resize(images.size());
 
-  for(size_t i=0; i<swapChainImages.size(); i++) {
+  for(size_t i=0; i<images.size(); i++) {
     VkImageViewCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    createInfo.image = swapChainImages[i];
+    createInfo.image = images[i];
     createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
     createInfo.format = swapChainImageFormat;
     createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -138,7 +138,7 @@ void VSwapchain::createImageViews(VDevice &device) {
     createInfo.subresourceRange.baseArrayLayer = 0;
     createInfo.subresourceRange.layerCount     = 1;
 
-    if(vkCreateImageView(device.device,&createInfo,nullptr,&swapChainImageViews[i])!=VK_SUCCESS)
+    if(vkCreateImageView(device.device,&createInfo,nullptr,&views[i])!=VK_SUCCESS)
       throw std::system_error(Tempest::GraphicsErrc::NoDevice);
     }
   }

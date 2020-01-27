@@ -186,7 +186,7 @@ struct VCommandBuffer::BuildState final {
     if(a.tex!=nullptr) {
       img = &findImg(a.tex->impl,frm,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
       } else {
-      img = &findImg(a.sw->swapChainImages[a.id],frm,VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+      img = &findImg(a.sw->images[a.id],frm,VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
       }
     owner.changeLayout(img->img,img->frm,img->lay,lay,VK_REMAINING_MIP_LEVELS);
     img->outdated = false;
@@ -487,7 +487,7 @@ void VCommandBuffer::changeLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id
     };
 
   auto& vs = reinterpret_cast<VSwapchain&>(s);
-  changeLayout(vs.swapChainImages[id],Detail::nativeFormat(f),
+  changeLayout(vs.images[id],Detail::nativeFormat(f),
                frm[uint8_t(prev)],frm[uint8_t(next)],VK_REMAINING_MIP_LEVELS);
   }
 
