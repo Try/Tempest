@@ -273,20 +273,20 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
     case TextureFormat::DXT5:      bpp=0; break;
     }
 
-  VkImageLayout play = VK_IMAGE_LAYOUT_GENERAL;
+  VkImageLayout pLay = VK_IMAGE_LAYOUT_GENERAL;
   switch(lay) {
     case TextureLayout::Undefined:
     case TextureLayout::Sampler:
-      play = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+      pLay = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
       break;
     case TextureLayout::ColorAttach:
-      play = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+      pLay = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
       break;
     case TextureLayout::DepthAttach:
-      play = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+      pLay = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
       break;
     case TextureLayout::Present:
-      play = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+      pLay = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
       break;
     }
 
@@ -296,9 +296,9 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
   Detail::VDevice::Data dat(*dx);
 
   VkFormat format = Detail::nativeFormat(frm);
-  dat.changeLayout(*tx, format, play, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 1);
+  dat.changeLayout(*tx, format, pLay, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 1);
   dat.copy(stage,w,h,mip,*tx,0);
-  dat.changeLayout(*tx, format, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, play, 1);
+  dat.changeLayout(*tx, format, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, pLay, 1);
   dat.commit();
 
   dx->waitData();

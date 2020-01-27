@@ -81,6 +81,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
                         uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
 
   private:
+    struct ImgState;
     struct BuildState;
     struct Secondarys;
 

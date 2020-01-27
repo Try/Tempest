@@ -8,25 +8,31 @@
 
 using namespace Tempest::Detail;
 
-VFramebuffer::VFramebuffer(VDevice& device, VFramebufferLayout &lay, VSwapchain& swapchain, size_t image)
+VFramebuffer::VFramebuffer(VDevice& device, VFramebufferLayout &lay,
+                           VSwapchain& swapchain, size_t image)
   :device(device.device) {
-  rp = Detail::DSharedPtr<VFramebufferLayout*>(&lay);
+  rp     = Detail::DSharedPtr<VFramebufferLayout*>(&lay);
+  attach = {{nullptr,&swapchain,image}};
 
   VkImageView attach[1] = {swapchain.swapChainImageViews[image]};
   impl = allocFbo(swapchain.w(),swapchain.h(),attach,1);
   }
 
-VFramebuffer::VFramebuffer(VDevice &device, VFramebufferLayout &lay, VSwapchain &swapchain, size_t image, VTexture &zbuf)
+VFramebuffer::VFramebuffer(VDevice &device, VFramebufferLayout &lay,
+                           VSwapchain &swapchain, size_t image, VTexture &zbuf)
   :device(device.device) {
-  rp = Detail::DSharedPtr<VFramebufferLayout*>(&lay);
+  rp     = Detail::DSharedPtr<VFramebufferLayout*>(&lay);
+  attach = { {nullptr,&swapchain,image},{&zbuf,nullptr,0}};
 
   VkImageView attach[2] = {swapchain.swapChainImageViews[image],zbuf.view};
   impl = allocFbo(swapchain.w(),swapchain.h(),attach,2);
   }
 
-VFramebuffer::VFramebuffer(VDevice &device, VFramebufferLayout &lay, uint32_t w, uint32_t h, VTexture &color, VTexture &zbuf)
+VFramebuffer::VFramebuffer(VDevice &device, VFramebufferLayout &lay, uint32_t w, uint32_t h,
+                           VTexture &color, VTexture &zbuf)
   :device(device.device) {
-  rp = Detail::DSharedPtr<VFramebufferLayout*>(&lay);
+  rp     = Detail::DSharedPtr<VFramebufferLayout*>(&lay);
+  attach = {{&color,nullptr,0},{&zbuf,nullptr,0}};
 
   VkImageView attach[2] = {color.view,zbuf.view};
   impl = allocFbo(w,h,attach,2);
@@ -34,7 +40,8 @@ VFramebuffer::VFramebuffer(VDevice &device, VFramebufferLayout &lay, uint32_t w,
 
 VFramebuffer::VFramebuffer(VDevice &device, VFramebufferLayout &lay, uint32_t w, uint32_t h, VTexture &color)
   :device(device.device) {
-  rp = Detail::DSharedPtr<VFramebufferLayout*>(&lay);
+  rp     = Detail::DSharedPtr<VFramebufferLayout*>(&lay);
+  attach = {{&color,nullptr,0}};
 
   VkImageView attach[1] = {color.view};
   impl = allocFbo(w,h,attach,1);

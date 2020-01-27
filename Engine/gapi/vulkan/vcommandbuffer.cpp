@@ -14,6 +14,14 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+struct VCommandBuffer::ImgState {
+  VkImage       img;
+  VkFormat      frm;
+  VkImageLayout lay;
+  VkImageLayout last;
+  bool          outdated;
+  };
+
 struct VCommandBuffer::Secondarys final {
   Secondarys(VkDevice device, VkCommandPool pool)
     :device(device), pool(pool){
@@ -81,6 +89,7 @@ struct VCommandBuffer::BuildState final {
   Detail::DSharedPtr<VFramebufferLayout*> currentFbo;
   RpState                                 state=NoPass;
   Secondarys                              sec;
+  std::vector<ImgState>                   imgState;
 
   BuildState(VkDevice device, VkCommandPool pool)
     :sec(device,pool){
@@ -128,6 +137,64 @@ struct VCommandBuffer::BuildState final {
 
     state = Inline;
     return this->sec.back();
+    }
+
+  void setLayout(VCommandBuffer& owner,VFramebuffer& fbo) {
+    for(auto& i:imgState)
+      i.outdated = true;
+
+    for(size_t i=0;i<fbo.attach.size();++i) {
+      VkFormat      frm = fbo.rp.handler->frm[i];
+      VkImageLayout lay = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+      if(Detail::nativeIsDepthFormat(frm))
+        lay = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+      setLayout(owner,fbo.attach[i],frm,lay);
+      }
+
+    flushLayout(owner);
+    }
+
+  void flushLayout(VCommandBuffer& owner) {
+    for(auto& i:imgState) {
+      if(!i.outdated)
+        continue;
+      if(Detail::nativeIsDepthFormat(i.frm))
+        continue; // no readable depth for now
+      owner.changeLayout(i.img,i.frm,i.lay,i.last,VK_REMAINING_MIP_LEVELS);
+      i.lay = i.last;
+      }
+    }
+
+  void finalizeLayout(VCommandBuffer& owner) {
+    for(auto& i:imgState)
+      i.outdated = true;
+    flushLayout(owner);
+    }
+
+  void setLayout(VCommandBuffer& owner,VFramebuffer::Attach& a, VkFormat frm, VkImageLayout lay) {
+    ImgState* img;
+    if(a.tex!=nullptr) {
+      img = &findImg(a.tex->impl,frm,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+      } else {
+      img = &findImg(a.sw->swapChainImages[a.id],frm,VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+      }
+    owner.changeLayout(img->img,img->frm,img->lay,lay,VK_REMAINING_MIP_LEVELS);
+    img->outdated = false;
+    img->lay = lay;
+    }
+
+  ImgState& findImg(VkImage img, VkFormat frm, VkImageLayout last) {
+    for(auto& i:imgState) {
+      if(i.img==img)
+        return i;
+      }
+    ImgState s={};
+    s.img     = img;
+    s.frm     = frm;
+    s.lay     = VK_IMAGE_LAYOUT_UNDEFINED;
+    s.last    = last;
+    imgState.push_back(s);
+    return imgState.back();
     }
   };
 
@@ -207,6 +274,7 @@ void VCommandBuffer::begin(Usage usage) {
 
 void VCommandBuffer::end() {
   if(bstate!=nullptr) {
+    bstate->finalizeLayout(*this); // flush last
     std::swap(chunks,bstate->sec.secondaryChunks);
     bstate.reset();
     }
@@ -223,6 +291,7 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
   VFramebuffer* fbo =reinterpret_cast<VFramebuffer*>(f);
   VRenderPass*  pass=reinterpret_cast<VRenderPass*>(p);
 
+  bstate->setLayout(*this,*fbo);
   bstate->startPass(impl,fbo,pass,width,height);
 
   // setup dynamic state

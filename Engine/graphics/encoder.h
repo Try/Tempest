@@ -94,26 +94,10 @@ class Encoder<Tempest::PrimaryCommandBuffer> : public Encoder<Tempest::CommandBu
     void setPass(const FrameBuffer& fbo, const RenderPass& p, int      width, int      height);
     void setPass(const FrameBuffer& fbo, const RenderPass& p, uint32_t width, uint32_t height);
 
-    void setLayout(Attachment &t, TextureLayout dest);
-
     void exec(const CommandBuffer& buf);
 
   private:
     Encoder(PrimaryCommandBuffer* ow);
-
-    struct StState {
-      AbstractGraphicsApi::Swapchain* sw;
-      uint32_t                        id;
-      };
-
-    struct ResState {
-      AbstractGraphicsApi::Texture* tRes    = nullptr;
-      StState                       sRes    = {};
-      TextureFormat                 frm     = TextureFormat::Undefined;
-      TextureLayout                 next    = TextureLayout::Undefined;
-      TextureLayout                 lay     = TextureLayout::Undefined;
-      bool                          pending = false;
-      };
 
     struct Pass {
       const FrameBuffer* fbo  = nullptr;
@@ -121,11 +105,7 @@ class Encoder<Tempest::PrimaryCommandBuffer> : public Encoder<Tempest::CommandBu
       };
 
     void      implEndRenderPass();
-    ResState* findState(AbstractGraphicsApi::Texture* t);
-    ResState* findState(AbstractGraphicsApi::Swapchain* s,uint32_t id);
-
-    Pass                  curPass;
-    std::vector<ResState> resState;
+    Pass      curPass;
 
   friend class PrimaryCommandBuffer;
   };

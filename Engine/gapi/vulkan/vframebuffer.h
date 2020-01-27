@@ -14,6 +14,12 @@ class VFramebufferLayout;
 
 class VFramebuffer : public AbstractGraphicsApi::Fbo {
   public:
+    struct Attach final {
+      VTexture*   tex=nullptr;
+      VSwapchain* sw =nullptr;
+      size_t      id =0;
+      };
+
     VFramebuffer(VDevice &device, VFramebufferLayout& lay, VSwapchain &swapchain,  size_t image);
     VFramebuffer(VDevice &device, VFramebufferLayout& lay, VSwapchain &swapchain,  size_t image, VTexture& zbuf);
     VFramebuffer(VDevice &device, VFramebufferLayout& lay, uint32_t w, uint32_t h, VTexture& color, VTexture& zbuf);
@@ -25,6 +31,7 @@ class VFramebuffer : public AbstractGraphicsApi::Fbo {
 
     VkFramebuffer                           impl=VK_NULL_HANDLE;
     Detail::DSharedPtr<VFramebufferLayout*> rp;
+    std::vector<Attach>                     attach;
 
   private:
     VkDevice                                device=nullptr;

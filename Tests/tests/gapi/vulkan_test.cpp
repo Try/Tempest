@@ -79,7 +79,6 @@ TEST(VulkanApi,Fbo) {
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setLayout(tex,TextureLayout::ColorAttach);
       enc.setPass(fbo,rp);
     }
 
@@ -116,7 +115,6 @@ TEST(VulkanApi,Draw) {
     auto cmd  = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setLayout(tex,TextureLayout::ColorAttach);
       enc.setPass(fbo,rp);
       enc.setUniforms(pso);
       enc.draw(vbo,ibo);
