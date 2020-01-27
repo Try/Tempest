@@ -214,12 +214,12 @@ FrameBuffer Device::frameBuffer(Attachment& out, Attachment& zbuf) {
     auto swapchain = out.sImpl.swapchain;
     auto sId       = out.sImpl.id;
 
-    FrameBufferLayout lay(api.createFboLayout(dev,w,h,swapchain,att,2),w,h);
-    FrameBuffer       f(*this,api.createFbo(dev,lay.impl.handler,swapchain,sId,zImpl),std::move(lay));
+    FrameBufferLayout lay(api.createFboLayout(dev,w,h,swapchain,att,2));
+    FrameBuffer       f(*this,api.createFbo(dev,lay.impl.handler,swapchain,sId,zImpl),std::move(lay),w,h);
     return f;
     } else {
-    FrameBufferLayout lay(api.createFboLayout(dev,w,h,nullptr,att,2),w,h);
-    FrameBuffer f(*this,api.createFbo(dev,lay.impl.handler,w,h,out.tImpl.impl.handler,zImpl),std::move(lay));
+    FrameBufferLayout lay(api.createFboLayout(dev,w,h,nullptr,att,2));
+    FrameBuffer f(*this,api.createFbo(dev,lay.impl.handler,w,h,out.tImpl.impl.handler,zImpl),std::move(lay),w,h);
     return f;
     }
   }
@@ -233,12 +233,12 @@ FrameBuffer Device::frameBuffer(Attachment &out) {
     auto swapchain = out.sImpl.swapchain;
     auto sId       = out.sImpl.id;
 
-    FrameBufferLayout lay(api.createFboLayout(dev,w,h,swapchain,att,1),w,h);
-    FrameBuffer       f(*this,api.createFbo(dev,lay.impl.handler,swapchain,sId),std::move(lay));
+    FrameBufferLayout lay(api.createFboLayout(dev,w,h,swapchain,att,1));
+    FrameBuffer       f(*this,api.createFbo(dev,lay.impl.handler,swapchain,sId),std::move(lay),w,h);
     return f;
     } else {
-    FrameBufferLayout lay(api.createFboLayout(dev,w,h,nullptr,att,1),w,h);
-    FrameBuffer f(*this,api.createFbo(dev,lay.impl.handler,w,h,out.tImpl.impl.handler),std::move(lay));
+    FrameBufferLayout lay(api.createFboLayout(dev,w,h,nullptr,att,1));
+    FrameBuffer f(*this,api.createFbo(dev,lay.impl.handler,w,h,out.tImpl.impl.handler),std::move(lay),w,h);
     return f;
     }
   }
@@ -284,8 +284,7 @@ PrimaryCommandBuffer Device::commandBuffer() {
 
 CommandBuffer Device::commandSecondaryBuffer(const FrameBufferLayout &lay) {
   CommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,
-                                                  lay.impl.handler,CmdType::Secondary),
-                    lay.mw,lay.mh);
+                                                  lay.impl.handler,CmdType::Secondary));
   return buf;
   }
 

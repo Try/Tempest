@@ -19,10 +19,9 @@ class FrameBufferLayout final {
 
   private:
     FrameBufferLayout()=default;
-    FrameBufferLayout(Detail::DSharedPtr<AbstractGraphicsApi::FboLayout*>&& f,uint32_t w,uint32_t h);
+    FrameBufferLayout(Detail::DSharedPtr<AbstractGraphicsApi::FboLayout*>&& f);
 
     Detail::DSharedPtr<AbstractGraphicsApi::FboLayout*> impl;
-    uint32_t                                            mw=0, mh=0;
 
   friend class Tempest::Device;
   friend class Tempest::FrameBuffer;
@@ -36,19 +35,20 @@ class FrameBuffer final {
     ~FrameBuffer();
     FrameBuffer& operator = (FrameBuffer&& other)=default;
 
-    uint32_t w() const { return lay.mw; }
-    uint32_t h() const { return lay.mh; }
+    uint32_t w() const { return mw; }
+    uint32_t h() const { return mh; }
 
     auto     layout() const -> const FrameBufferLayout&;
 
   private:
     FrameBuffer(Tempest::Device& dev,
                 Detail::DSharedPtr<AbstractGraphicsApi::Fbo*>&& f,
-                FrameBufferLayout&& lay);
+                FrameBufferLayout&& lay,uint32_t w,uint32_t h);
 
     Tempest::Device*                              dev=nullptr;
     Detail::DSharedPtr<AbstractGraphicsApi::Fbo*> impl;
     FrameBufferLayout                             lay;
+    uint32_t                                      mw=0, mh=0;
 
   friend class Tempest::Device;
   friend class Tempest::Encoder<Tempest::PrimaryCommandBuffer>;
