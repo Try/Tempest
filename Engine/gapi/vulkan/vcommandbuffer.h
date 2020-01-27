@@ -29,6 +29,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
       };
 
     enum RpState : uint8_t {
+      NoRecording,
       NoPass,
       Pending,
       Inline,

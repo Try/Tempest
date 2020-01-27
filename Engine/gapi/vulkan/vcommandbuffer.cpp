@@ -92,7 +92,17 @@ struct VCommandBuffer::BuildState final {
   std::vector<ImgState>                   imgState;
 
   BuildState(VkDevice device, VkCommandPool pool)
-    :sec(device,pool){
+    :sec(device,pool) {
+    imgState.reserve(64);
+    }
+
+  void clear() {
+    state = NoRecording;
+    imgState.clear();
+    }
+
+  bool isRecording() const {
+    return state!=NoRecording;
     }
 
   void startPass(VkCommandBuffer impl, VFramebuffer* fbo, VRenderPass* pass,
@@ -259,7 +269,9 @@ void VCommandBuffer::begin(Usage usage) {
     } else {
     // prime pass
     if(usage==SIMULTANEOUS_USE_BIT) {
-      bstate.reset(new BuildState(device,pool));
+      if(bstate==nullptr)
+        bstate.reset(new BuildState(device,pool));
+      bstate->state      = NoPass;
       bstate->currentFbo = Detail::DSharedPtr<VFramebufferLayout*>{};
       }
     }
@@ -276,13 +288,13 @@ void VCommandBuffer::end() {
   if(bstate!=nullptr) {
     bstate->finalizeLayout(*this); // flush last
     std::swap(chunks,bstate->sec.secondaryChunks);
-    bstate.reset();
+    bstate->clear();
     }
   vkAssert(vkEndCommandBuffer(impl));
   }
 
 bool VCommandBuffer::isRecording() const {
-  return bstate!=nullptr;
+  return bstate!=nullptr && bstate->isRecording();
   }
 
 void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
