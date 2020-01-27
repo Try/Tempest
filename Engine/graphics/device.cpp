@@ -191,7 +191,7 @@ Pixmap Device::readPixels(const Texture2d &t) {
 Pixmap Device::readPixels(const Attachment& t) {
   Pixmap pm;
   auto& tx = textureCast(t);
-  api.readPixels(dev,pm,tx.impl,TextureLayout::ColorAttach,tx.format(),uint32_t(t.w()),uint32_t(t.h()),0);
+  api.readPixels(dev,pm,tx.impl,TextureLayout::Sampler,tx.format(),uint32_t(t.w()),uint32_t(t.h()),0);
   return pm;
   }
 

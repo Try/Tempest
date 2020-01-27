@@ -27,14 +27,13 @@ class CommandBuffer final {
     ~CommandBuffer();
     CommandBuffer& operator = (CommandBuffer&& other)=default;
 
-    auto startEncoding(Tempest::Device& dev,const FrameBufferLayout &lay) -> Encoder<CommandBuffer>;
+    auto startEncoding(Tempest::Device& dev,const FrameBufferLayout &lay, Size wh) -> Encoder<CommandBuffer>;
+    auto startEncoding(Tempest::Device& dev,const FrameBufferLayout &lay, int w, int h) -> Encoder<CommandBuffer>;
 
   private:
-    CommandBuffer(Tempest::Device& dev,AbstractGraphicsApi::CommandBuffer* impl,uint32_t vpWidth,uint32_t vpHeight);
+    CommandBuffer(Tempest::Device& dev, AbstractGraphicsApi::CommandBuffer* impl);
 
     Tempest::Device*                                    dev=nullptr;
-    uint32_t                                            vpWidth =0;
-    uint32_t                                            vpHeight=0;
     Detail::DPtr<AbstractGraphicsApi::CommandBuffer*>   impl;
     Detail::DSharedPtr<AbstractGraphicsApi::FboLayout*> layout;
 

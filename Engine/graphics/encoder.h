@@ -56,7 +56,7 @@ class Encoder<Tempest::CommandBuffer> {
          { implDraw(vbo.impl,ibo.impl,Detail::indexCls<I>(),offset,count); }
 
   private:
-    Encoder(CommandBuffer* ow);
+    Encoder(CommandBuffer* ow,int w,int h);
     Encoder(AbstractGraphicsApi::CommandBuffer* impl);
 
     struct Viewport {

@@ -23,6 +23,7 @@ class Texture2d final {
 
     int           w() const { return texW; }
     int           h() const { return texH; }
+    Size          size() const { return Size(texW,texH); }
     bool          isEmpty() const { return texW<=0 || texH<=0; }
     TextureFormat format() const { return frm; }
 

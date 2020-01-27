@@ -19,6 +19,12 @@ int Attachment::h() const {
   return tImpl.h();
   }
 
+Size Attachment::size() const {
+  if(sImpl.swapchain)
+    return Size(int(sImpl.swapchain->w()),int(sImpl.swapchain->h()));
+  return tImpl.size();
+  }
+
 bool Attachment::isEmpty() const {
   if(sImpl.swapchain)
     return int(sImpl.swapchain->w()> 0 && sImpl.swapchain->h()>0);

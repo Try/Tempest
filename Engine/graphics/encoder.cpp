@@ -7,10 +7,10 @@
 
 using namespace Tempest;
 
-Encoder<Tempest::CommandBuffer>::Encoder(CommandBuffer* ow)
+Encoder<Tempest::CommandBuffer>::Encoder(CommandBuffer* ow,int w,int h)
   :owner(ow),impl(ow->impl.handler){
-  state.vp.width  = ow->vpWidth;
-  state.vp.height = ow->vpHeight;
+  state.vp.width  = uint32_t(w);
+  state.vp.height = uint32_t(h);
 
   impl->begin();
   if(state.vp.width>0 && state.vp.height>0)

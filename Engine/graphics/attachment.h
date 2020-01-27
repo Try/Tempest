@@ -21,6 +21,7 @@ class Attachment final {
 
     int              w() const;
     int              h() const;
+    Size             size() const;
     bool             isEmpty() const;
 
     friend       Texture2d& textureCast(Attachment& a);
