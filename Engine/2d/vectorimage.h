@@ -99,8 +99,6 @@ class VectorImage : public Tempest::PaintDevice {
       Tempest::VertexBuffer<Point> vbo;
       std::vector<Uniforms>        blocks;
       std::vector<UboType>         blocksType;
-      uint32_t                     imgW=0;
-      uint32_t                     imgH=0;
       bool                         outdated=true;
       };
 

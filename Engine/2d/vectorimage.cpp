@@ -122,14 +122,6 @@ void VectorImage::makeActual(Device &dev,Swapchain& sw) {
     f.blocksType.resize(blocks.size());
     f.blocks    .resize(blocks.size());
 
-    if(info.w!=f.imgW || info.h!=f.imgH){
-      f.imgW = info.w;
-      f.imgH = info.h;
-      // invalidate on resize
-      for(auto& i:f.blocks)
-        i = Uniforms();
-      }
-
     for(size_t i=0;i<blocks.size();++i){
       auto&     b =blocks[i];
       Uniforms& ux=f.blocks[i];

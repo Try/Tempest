@@ -25,12 +25,18 @@ struct VCommandBuffer::ImgState {
 struct VCommandBuffer::Secondarys final {
   Secondarys(VkDevice device, VkCommandPool pool)
     :device(device), pool(pool){
+    secondaryChunks.reserve(8);
     }
 
   ~Secondarys() {
-    if(secondaryChunks.empty())
-      return;
-    vkFreeCommandBuffers(device,pool,secondaryChunks.size(),secondaryChunks.data());
+    clear();
+    }
+
+  void clear() {
+    if(!secondaryChunks.empty()) {
+      vkFreeCommandBuffers(device,pool,secondaryChunks.size(),secondaryChunks.data());
+      secondaryChunks.clear();
+      }
     }
 
   void flushSecondary(VkCommandBuffer mainCmd) {
@@ -89,6 +95,7 @@ struct VCommandBuffer::BuildState final {
   Detail::DSharedPtr<VFramebufferLayout*> currentFbo;
   RpState                                 state=NoPass;
   Secondarys                              sec;
+  Tempest::Rect                           viewPort;
   std::vector<ImgState>                   imgState;
 
   BuildState(VkDevice device, VkCommandPool pool)
@@ -99,6 +106,7 @@ struct VCommandBuffer::BuildState final {
   void clear() {
     state = NoRecording;
     imgState.clear();
+    sec.clear();
     }
 
   bool isRecording() const {
@@ -136,14 +144,16 @@ struct VCommandBuffer::BuildState final {
     state = NoPass;
     }
 
-  VkCommandBuffer adjustRp(VkCommandBuffer impl,bool sec) {
-    if(sec) {
+  VkCommandBuffer adjustRp(VkCommandBuffer impl,bool secondary) {
+    if(secondary) {
       state = Secondary;
       return impl;
       }
 
-    if(state!=Inline)
-      this->sec.allocChunk(impl,*currentFbo.handler);
+    if(state!=Inline) {
+      sec.allocChunk(impl,*currentFbo.handler);
+      implSetViewport(sec.nonFlushed,viewPort);
+      }
 
     state = Inline;
     return this->sec.back();
@@ -206,9 +216,41 @@ struct VCommandBuffer::BuildState final {
     imgState.push_back(s);
     return imgState.back();
     }
+
+  void setViewport(VkCommandBuffer impl, const Tempest::Rect &r) {
+    viewPort = r;
+    switch(state) {
+      case NoRecording: // not possible
+        break;
+      case Pending:
+      case Secondary:
+        // delayed execution
+        break;
+      case NoPass:
+        // outside renderpass
+        implSetViewport(impl,r);
+        break;
+      case Inline:
+        // set of 'inline' commands
+        implSetViewport(sec.nonFlushed,r);
+        break;
+      }
+    }
+
+  void implSetViewport(VkCommandBuffer impl, const Tempest::Rect &r) {
+    VkViewport vk={};
+    vk.x        = r.x;
+    vk.y        = r.y;
+    vk.width    = r.w;
+    vk.height   = r.h;
+    vk.minDepth = 0;
+    vk.maxDepth = 1;
+    vkCmdSetViewport(impl,0,1,&vk);
+    }
   };
 
-VCommandBuffer::VCommandBuffer(VDevice& device, VCommandPool& pool, VFramebufferLayout *fbo, CmdType secondary)
+VCommandBuffer::VCommandBuffer(VDevice& device, VCommandPool& pool,
+                               VFramebufferLayout *fbo, CmdType secondary)
   :device(device.device), pool(pool.impl), fboLay(fbo) {
   VkCommandBufferAllocateInfo allocInfo = {};
   allocInfo.sType             =VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -258,7 +300,7 @@ void VCommandBuffer::begin(Usage usage) {
   VkCommandBufferUsageFlags      usageFlags = usage;
   VkCommandBufferInheritanceInfo inheritanceInfo={};
 
-  if(isSecondary()){
+  if(isSecondary()) {
     // secondary pass
     inheritanceInfo.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
     inheritanceInfo.framebuffer = VK_NULL_HANDLE;
@@ -353,16 +395,18 @@ void VCommandBuffer::implSetUniforms(VkCommandBuffer cmd, VPipeline& px, VDescri
   }
 
 void VCommandBuffer::setViewport(const Tempest::Rect &r) {
-  auto cmd = getBuffer(CmdInline);
-
-  VkViewport vk={};
-  vk.x        = r.x;
-  vk.y        = r.y;
-  vk.width    = r.w;
-  vk.height   = r.h;
-  vk.minDepth = 0;
-  vk.maxDepth = 1;
-  vkCmdSetViewport(cmd,0,1,&vk);
+  if(isSecondary()) {
+    VkViewport vk={};
+    vk.x        = r.x;
+    vk.y        = r.y;
+    vk.width    = r.w;
+    vk.height   = r.h;
+    vk.minDepth = 0;
+    vk.maxDepth = 1;
+    vkCmdSetViewport(impl,0,1,&vk);
+    } else {
+    bstate->setViewport(impl,r);
+    }
   }
 
 void VCommandBuffer::exec(const CommandBuffer &buf) {

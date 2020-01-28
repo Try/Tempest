@@ -53,7 +53,7 @@ class VDevice::FakeWindow final {
 
 VDevice::DataStream::DataStream(VDevice &owner)
   : owner(owner),
-    cmdPool(owner,VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT),
+    cmdPool(owner,VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT),
     cmdBuffer(owner,cmdPool,nullptr,CmdType::Primary),
     fence(owner),
     gpuQueue(owner.graphicsQueue){
