@@ -55,8 +55,12 @@ class Event {
       K_NoKey = 0,
       K_ESCAPE,
 
-      K_Control,
+      K_RControl,
+      K_LControl,
       K_Command, // APPLE command key
+
+      K_RShift,
+      K_LShift,
 
       K_Left,
       K_Up,
@@ -71,7 +75,6 @@ class Event {
       K_Home,
       K_End,
       K_Pause,
-      K_Shift,
       K_Space,
 
       K_F1,

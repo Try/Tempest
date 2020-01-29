@@ -113,28 +113,32 @@ X11Api::X11Api() {
   root = DefaultRootWindow(dpy);
 
   static const TranslateKeyPair k[] = {
-    { XK_KP_Left,   Event::K_Left   },
-    { XK_KP_Right,  Event::K_Right  },
-    { XK_KP_Up,     Event::K_Up     },
-    { XK_KP_Down,   Event::K_Down   },
+    { XK_KP_Left,   Event::K_Left     },
+    { XK_KP_Right,  Event::K_Right    },
+    { XK_KP_Up,     Event::K_Up       },
+    { XK_KP_Down,   Event::K_Down     },
 
-    { XK_Escape,    Event::K_ESCAPE },
-    { XK_Tab,       Event::K_Tab },
-    { XK_BackSpace, Event::K_Back   },
-    { XK_Delete,    Event::K_Delete },
-    { XK_Insert,    Event::K_Insert },
-    { XK_Home,      Event::K_Home   },
-    { XK_End,       Event::K_End    },
-    { XK_Pause,     Event::K_Pause  },
-    { XK_Return,    Event::K_Return },
-    { XK_Shift_L,   Event::K_Shift  },
-    { XK_Shift_R,   Event::K_Shift  },
+    { XK_Shift_L,   Event::K_LShift   },
+    { XK_Shift_R,   Event::K_RShift   },
 
-    { XK_F1,        Event::K_F1     },
-    {   48,         Event::K_0      },
-    {   97,         Event::K_A      },
+    { XK_Control_L, Event::K_LControl },
+    { XK_Control_R, Event::K_RControl },
 
-    { 0,            Event::K_NoKey  }
+    { XK_Escape,    Event::K_ESCAPE   },
+    { XK_Tab,       Event::K_Tab      },
+    { XK_BackSpace, Event::K_Back     },
+    { XK_Delete,    Event::K_Delete   },
+    { XK_Insert,    Event::K_Insert   },
+    { XK_Home,      Event::K_Home     },
+    { XK_End,       Event::K_End      },
+    { XK_Pause,     Event::K_Pause    },
+    { XK_Return,    Event::K_Return   },
+
+    { XK_F1,        Event::K_F1       },
+    {   48,         Event::K_0        },
+    {   97,         Event::K_A        },
+
+    { 0,            Event::K_NoKey    }
     };
 
   setupKeyTranslate(k,24);

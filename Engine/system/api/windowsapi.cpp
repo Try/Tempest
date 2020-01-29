@@ -67,32 +67,33 @@ static Event::MouseButton toButton( UINT msg, DWORD wParam ){
 
 WindowsApi::WindowsApi() {
   static const TranslateKeyPair k[] = {
-    { VK_LCONTROL, Event::K_Control },
-    { VK_RCONTROL, Event::K_Control },
-    { VK_CONTROL,  Event::K_Control },
+    { VK_LCONTROL, Event::K_LControl },
+    { VK_RCONTROL, Event::K_RControl },
 
-    { VK_LEFT,     Event::K_Left    },
-    { VK_RIGHT,    Event::K_Right   },
-    { VK_UP,       Event::K_Up      },
-    { VK_DOWN,     Event::K_Down    },
+    { VK_LSHIFT,   Event::K_LShift   },
+    { VK_RSHIFT,   Event::K_RShift   },
 
-    { VK_ESCAPE,   Event::K_ESCAPE  },
-    { VK_BACK,     Event::K_Back    },
-    { VK_TAB,      Event::K_Tab     },
-    { VK_SHIFT,    Event::K_Shift   },
-    { VK_DELETE,   Event::K_Delete  },
-    { VK_INSERT,   Event::K_Insert  },
-    { VK_HOME,     Event::K_Home    },
-    { VK_END,      Event::K_End     },
-    { VK_PAUSE,    Event::K_Pause   },
-    { VK_RETURN,   Event::K_Return  },
-    { VK_SPACE,    Event::K_Space   },
+    { VK_LEFT,     Event::K_Left     },
+    { VK_RIGHT,    Event::K_Right    },
+    { VK_UP,       Event::K_Up       },
+    { VK_DOWN,     Event::K_Down     },
 
-    { VK_F1,       Event::K_F1 },
-    { 0x30,        Event::K_0  },
-    { 0x41,        Event::K_A  },
+    { VK_ESCAPE,   Event::K_ESCAPE   },
+    { VK_BACK,     Event::K_Back     },
+    { VK_TAB,      Event::K_Tab      },
+    { VK_DELETE,   Event::K_Delete   },
+    { VK_INSERT,   Event::K_Insert   },
+    { VK_HOME,     Event::K_Home     },
+    { VK_END,      Event::K_End      },
+    { VK_PAUSE,    Event::K_Pause    },
+    { VK_RETURN,   Event::K_Return   },
+    { VK_SPACE,    Event::K_Space    },
 
-    { 0,         Event::K_NoKey }
+    { VK_F1,       Event::K_F1       },
+    { 0x30,        Event::K_0        },
+    { 0x41,        Event::K_A        },
+
+    { 0,           Event::K_NoKey    }
     };
 
   setupKeyTranslate(k,24);
@@ -351,12 +352,25 @@ long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const uint32_t wParam, co
     case WM_KEYDOWN:
     case WM_KEYUP: {
       if(cb) {
-        auto key = WindowsApi::translateKey(wParam);
+        uint32_t vkCode;
+        if(wParam == VK_SHIFT) {
+          uint32_t scancode = (lParam & 0x00ff0000) >> 16;
+          vkCode = MapVirtualKey(scancode, MAPVK_VSC_TO_VK_EX);
+          }
+        else if(wParam == VK_CONTROL) {
+          bool extended = (lParam & 0x01000000) != 0;
+          vkCode = extended ? VK_RCONTROL : VK_LCONTROL;
+          }
+        else {
+          vkCode = wParam;
+          }
+
+        auto key = WindowsApi::translateKey(vkCode);
 
         BYTE kboard[256]={};
         GetKeyboardState(kboard);
         WCHAR buf[2]={};
-        ToUnicode(wParam,0,kboard,buf,2,0);
+        ToUnicode(vkCode,0,kboard,buf,2,0);
 
         uint32_t scan = MapVirtualKeyW(wParam,MAPVK_VK_TO_VSC);
 
@@ -370,14 +384,6 @@ long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const uint32_t wParam, co
 
     case WM_SIZE:
       if(wParam!=SIZE_MINIMIZED) {
-        // RECT rpos = {0,0,0,0};
-        // GetWindowRect( hWnd, &rpos );
-
-        // RECT rectWindow;
-        // GetClientRect( HWND(hWnd), &rectWindow);
-        // int cW = rectWindow.right  - rectWindow.left;
-        // int cH = rectWindow.bottom - rectWindow.top;
-
         int width  = lParam & 0xffff;
         int height = (uint32_t(lParam) & 0xffff0000) >> 16;
         if(cb)
