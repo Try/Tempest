@@ -180,7 +180,7 @@ struct VCommandBuffer::BuildState final {
         continue;
       if(Detail::nativeIsDepthFormat(i.frm))
         continue; // no readable depth for now
-      owner.changeLayout(i.img,i.frm,i.lay,i.last,VK_REMAINING_MIP_LEVELS);
+      owner.changeLayout(i.img,i.frm,i.lay,i.last,VK_REMAINING_MIP_LEVELS,true);
       i.lay = i.last;
       }
     }
@@ -198,7 +198,7 @@ struct VCommandBuffer::BuildState final {
       } else {
       img = &findImg(a.sw->images[a.id],frm,VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
       }
-    owner.changeLayout(img->img,img->frm,img->lay,lay,VK_REMAINING_MIP_LEVELS);
+    owner.changeLayout(img->img,img->frm,img->lay,lay,VK_REMAINING_MIP_LEVELS,true);
     img->outdated = false;
     img->lay = lay;
     }
@@ -532,7 +532,7 @@ void VCommandBuffer::changeLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id
 
   auto& vs = reinterpret_cast<VSwapchain&>(s);
   changeLayout(vs.images[id],Detail::nativeFormat(f),
-               frm[uint8_t(prev)],frm[uint8_t(next)],VK_REMAINING_MIP_LEVELS);
+               frm[uint8_t(prev)],frm[uint8_t(next)],VK_REMAINING_MIP_LEVELS,false);
   }
 
 void VCommandBuffer::changeLayout(Tempest::AbstractGraphicsApi::Texture &t,
@@ -548,11 +548,12 @@ void VCommandBuffer::changeLayout(Tempest::AbstractGraphicsApi::Texture &t,
 
   auto& vt = reinterpret_cast<VTexture&>(t);
   changeLayout(vt.impl,Detail::nativeFormat(f),
-               frm[uint8_t(prev)],frm[uint8_t(next)],VK_REMAINING_MIP_LEVELS);
+               frm[uint8_t(prev)],frm[uint8_t(next)],VK_REMAINING_MIP_LEVELS,false);
   }
 
 void VCommandBuffer::changeLayout(VkImage dest, VkFormat imageFormat,
-                                  VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount) {
+                                  VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount,
+                                  bool byRegion) {
   VkImageMemoryBarrier barrier = {};
   barrier.sType                = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
   barrier.oldLayout            = oldLayout;
@@ -666,10 +667,14 @@ void VCommandBuffer::changeLayout(VkImage dest, VkFormat imageFormat,
   barrier.srcAccessMask = srcAccessMask;
   barrier.dstAccessMask = dstAccessMask;
 
+  VkDependencyFlags depFlg=0;
+  if(byRegion)
+    depFlg = VK_DEPENDENCY_BY_REGION_BIT;
+
   vkCmdPipelineBarrier(
       impl,
       sourceStage, destStage,
-      0,
+      depFlg,
       0, nullptr,
       0, nullptr,
       1, &barrier

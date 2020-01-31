@@ -108,8 +108,8 @@ void VectorImage::commitPoints() {
   }
 
 void VectorImage::makeActual(Device &dev,Swapchain& sw) {
-  if(!frame || frameCount!=sw.maxFramesInFlight()) {
-    uint8_t count=sw.maxFramesInFlight();
+  if(!frame || frameCount!=dev.maxFramesInFlight()) {
+    uint8_t count=dev.maxFramesInFlight();
     frame.reset(new PerFrame[count]);
     frameCount=count;
     }

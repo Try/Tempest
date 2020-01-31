@@ -87,6 +87,12 @@ void Device::submit(const Tempest::PrimaryCommandBuffer *cmd[], size_t count,
     }
   }
 
+void Device::present(Swapchain& sw, uint32_t img, const Semaphore& wait) {
+  api.present(dev,sw.impl.handler,img,wait.impl.handler);
+  sw.framesCounter++;
+  sw.framesIdMod=(sw.framesIdMod+1)%maxFramesInFlight();
+  }
+
 void Device::implSubmit(const Tempest::PrimaryCommandBuffer* cmd[],  AbstractGraphicsApi::CommandBuffer*  hcmd[],  size_t count,
                         const Semaphore*                     wait[], AbstractGraphicsApi::Semaphore*      hwait[], size_t waitCnt,
                         Semaphore*                           done[], AbstractGraphicsApi::Semaphore*      hdone[], size_t doneCnt,
@@ -133,7 +139,7 @@ Shader Device::shader(const void *source, const size_t length) {
   }
 
 Swapchain Device::swapchain(SystemApi::Window* w) const {
-  return Swapchain(*impl.dev,api,w,impl.maxFramesInFlight);
+  return Swapchain(api.createSwapchain(w,impl.dev));
   }
 
 const Device::Caps& Device::caps() const {

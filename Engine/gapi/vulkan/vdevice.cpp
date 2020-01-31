@@ -481,7 +481,7 @@ void VDevice::Data::changeLayout(VTexture &dest, VkFormat frm, VkImageLayout old
     stream.begin();
     commited=false;
     }
-  stream.cmdBuffer.changeLayout(dest.impl,frm,oldLayout,newLayout,mipCount);
+  stream.cmdBuffer.changeLayout(dest.impl,frm,oldLayout,newLayout,mipCount,false);
   }
 
 void VDevice::Data::generateMipmap(VTexture &image, VkFormat frm, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {

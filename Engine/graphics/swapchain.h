@@ -20,11 +20,9 @@ class Swapchain final {
     uint32_t             w() const;
     uint32_t             h() const;
 
-    void                 present(uint32_t img,const Semaphore& wait);
     void                 reset();
 
     uint32_t             imageCount() const;
-    uint8_t              maxFramesInFlight() const;
     uint8_t              frameId() const;
     uint64_t             frameCounter() const;
 
@@ -32,17 +30,15 @@ class Swapchain final {
     uint32_t             nextImage(Semaphore& onReady);
 
   private:
-    Swapchain(AbstractGraphicsApi::Device& dev, AbstractGraphicsApi& api, SystemApi::Window* w, uint8_t maxFramesInFlight);
+    Swapchain(AbstractGraphicsApi::Swapchain* sw);
+
+    void implReset();
 
     Detail::DPtr<AbstractGraphicsApi::Swapchain*> impl;
-    AbstractGraphicsApi*                          api =nullptr;
-    AbstractGraphicsApi::Device*                  dev =nullptr;
-    SystemApi::Window*                            hwnd=nullptr;
 
-    uint64_t                                      framesCounter=0;
     uint32_t                                      imgId=0;
+    uint64_t                                      framesCounter=0;
     uint8_t                                       framesIdMod=0;
-    uint8_t                                       implMaxFramesInFlight=0;
 
     std::unique_ptr<Attachment[]>                 img;
 

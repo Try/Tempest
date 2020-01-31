@@ -57,6 +57,7 @@ class Device {
                                 const Semaphore* wait[], size_t waitCnt,
                                 Semaphore* done[], size_t doneCnt,
                                 Fence* fdone);
+    void                 present(Swapchain& sw, uint32_t img, const Semaphore& wait);
 
     Swapchain            swapchain(SystemApi::Window* w) const;
 
