@@ -108,8 +108,8 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
 
   vkAssert(vkCreateBuffer(device,&createInfo,nullptr,&ret.impl));
 
-  VkMemoryRequirements memRq;
-  vkGetBufferMemoryRequirements(device,ret.impl,&memRq);
+  MemRequirements memRq={};
+  getMemoryRequirements(memRq,ret.impl);
 
   uint32_t props=0;
   if(bool(bufFlg&BufferFlags::Staging))
@@ -122,8 +122,11 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
 
   VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits(props),VK_IMAGE_TILING_LINEAR);
 
-  const size_t align = LCM(size_t(memRq.alignment),provider.device->nonCoherentAtomSize);
-  ret.page=allocator.alloc(size_t(memRq.size),align,memId.headId,memId.typeId);
+  const size_t align = LCM(memRq.alignment,provider.device->nonCoherentAtomSize);
+  if(memRq.dedicated)
+    ret.page=allocator.dedicatedAlloc(memRq.size,align,memId.headId,memId.typeId); else
+    ret.page=allocator.alloc(memRq.size,align,memId.headId,memId.typeId);
+
   if(!ret.page.page)
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
   if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset,
@@ -158,12 +161,15 @@ VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip,VkFormat format) {
 
   vkAssert(vkCreateImage(device, &imageInfo, nullptr, &ret.impl));
 
-  VkMemoryRequirements memRq;
-  vkGetImageMemoryRequirements(device, ret.impl, &memRq);
+  MemRequirements memRq={};
+  getImgMemoryRequirements(memRq,ret.impl);
 
   VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,VK_IMAGE_TILING_OPTIMAL);
 
-  ret.page=allocator.alloc(size_t(memRq.size),size_t(memRq.alignment),memId.headId,memId.typeId);
+  if(memRq.dedicated)
+    ret.page=allocator.dedicatedAlloc(memRq.size,memRq.alignment,memId.headId,memId.typeId); else
+    ret.page=allocator.alloc(memRq.size,memRq.alignment,memId.headId,memId.typeId);
+
   if(!ret.page.page || !commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset))
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
 
@@ -195,12 +201,15 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mi
 
   vkAssert(vkCreateImage(device, &imageInfo, nullptr, &ret.impl));
 
-  VkMemoryRequirements memRq;
-  vkGetImageMemoryRequirements(device, ret.impl, &memRq);
+  MemRequirements memRq={};
+  getImgMemoryRequirements(memRq,ret.impl);
 
   VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,VK_IMAGE_TILING_OPTIMAL);
 
-  ret.page=allocator.alloc(size_t(memRq.size),size_t(memRq.alignment),memId.headId,memId.typeId);
+  if(memRq.dedicated)
+    ret.page=allocator.dedicatedAlloc(memRq.size,memRq.alignment,memId.headId,memId.typeId); else
+    ret.page=allocator.alloc(memRq.size,memRq.alignment,memId.headId,memId.typeId);
+
   if(!ret.page.page || !commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset))
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
 
@@ -234,6 +243,70 @@ void VAllocator::free(VTexture &buf) {
     }
   if(buf.page.page!=nullptr)
     allocator.free(buf.page);
+  }
+
+void VAllocator::getMemoryRequirements(MemRequirements& out,VkBuffer buf) {
+  if(provider.device->props.hasMemRq2) {
+    VkBufferMemoryRequirementsInfo2KHR bufInfo = {};
+    bufInfo.sType  = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2_KHR;
+    bufInfo.buffer = buf;
+
+    VkMemoryDedicatedRequirementsKHR memDedicatedRq = {};
+    memDedicatedRq.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS_KHR;
+
+    VkMemoryRequirements2KHR memReq2 = {};
+    memReq2.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2_KHR;
+    if(provider.device->props.hasDedicatedAlloc)
+      memReq2.pNext = &memDedicatedRq;
+
+    provider.device->vkGetBufferMemoryRequirements2(device,&bufInfo,&memReq2);
+
+    out.size           = size_t(memReq2.memoryRequirements.size);
+    out.alignment      = size_t(memReq2.memoryRequirements.alignment);
+    out.memoryTypeBits = memReq2.memoryRequirements.memoryTypeBits;
+    out.dedicated =
+        (memDedicatedRq.requiresDedicatedAllocation != VK_FALSE) ||
+        (memDedicatedRq.prefersDedicatedAllocation  != VK_FALSE);
+    return;
+    }
+
+  VkMemoryRequirements memRq={};
+  vkGetBufferMemoryRequirements(device,buf,&memRq);
+  out.size           = size_t(memRq.size);
+  out.alignment      = size_t(memRq.alignment);
+  out.memoryTypeBits = memRq.memoryTypeBits;
+  }
+
+void VAllocator::getImgMemoryRequirements(MemRequirements& out, VkImage img) {
+  if(provider.device->props.hasMemRq2) {
+    VkImageMemoryRequirementsInfo2 bufInfo = {};
+    bufInfo.sType  = VK_STRUCTURE_TYPE_IMAGE_MEMORY_REQUIREMENTS_INFO_2_KHR;
+    bufInfo.image  = img;
+
+    VkMemoryDedicatedRequirementsKHR memDedicatedRq = {};
+    memDedicatedRq.sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_REQUIREMENTS_KHR;
+
+    VkMemoryRequirements2KHR memReq2 = {};
+    memReq2.sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2_KHR;
+    if(provider.device->props.hasDedicatedAlloc)
+      memReq2.pNext = &memDedicatedRq;
+
+    provider.device->vkGetImageMemoryRequirements2(device,&bufInfo,&memReq2);
+
+    out.size           = size_t(memReq2.memoryRequirements.size);
+    out.alignment      = size_t(memReq2.memoryRequirements.alignment);
+    out.memoryTypeBits = memReq2.memoryRequirements.memoryTypeBits;
+    out.dedicated =
+        (memDedicatedRq.requiresDedicatedAllocation != VK_FALSE) ||
+        (memDedicatedRq.prefersDedicatedAllocation  != VK_FALSE);
+    return;
+    }
+
+  VkMemoryRequirements memRq={};
+  vkGetImageMemoryRequirements(device,img,&memRq);
+  out.size           = size_t(memRq.size);
+  out.alignment      = size_t(memRq.alignment);
+  out.memoryTypeBits = memRq.memoryTypeBits;
   }
 
 static void copyUpsample(const void *src, void* dest,

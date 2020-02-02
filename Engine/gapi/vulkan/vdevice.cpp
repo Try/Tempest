@@ -23,7 +23,7 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-static const std::initializer_list<const char*> deviceExtensions = {
+static const std::initializer_list<const char*> requiredExtensions = {
   VK_KHR_SWAPCHAIN_EXTENSION_NAME
   };
 
@@ -221,18 +221,31 @@ VDevice::DeviceProps VDevice::deviceProps(VkPhysicalDevice device, VkSurfaceKHR 
   }
 
 bool VDevice::checkDeviceExtensionSupport(VkPhysicalDevice device) {
+  auto ext = extensionsList(device);
+
+  for(auto& i:requiredExtensions) {
+    if(!checkForExt(ext,i))
+      return false;
+    }
+
+  return true;
+  }
+
+std::vector<VkExtensionProperties> VDevice::extensionsList(VkPhysicalDevice device) {
   uint32_t extensionCount;
   vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
-  std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-  vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+  std::vector<VkExtensionProperties> ext(extensionCount);
+  vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, ext.data());
 
-  std::set<std::string> requiredExtensions(deviceExtensions.begin(),deviceExtensions.end());
+  return ext;
+  }
 
-  for(const auto& extension : availableExtensions)
-    requiredExtensions.erase(extension.extensionName);
-
-  return requiredExtensions.empty();
+bool VDevice::checkForExt(const std::vector<VkExtensionProperties>& list, const char* name) {
+  for(auto& r:list)
+    if(std::strcmp(name,r.extensionName)==0)
+      return true;
+  return false;
   }
 
 VDevice::SwapChainSupport VDevice::querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface) {
@@ -260,9 +273,20 @@ VDevice::SwapChainSupport VDevice::querySwapChainSupport(VkPhysicalDevice device
   }
 
 void VDevice::createLogicalDevice(VulkanApi& /*api*/,VkSurfaceKHR surf) {
-  props = deviceProps(physicalDevice,surf);
-  std::array<uint32_t,2> uniqueQueueFamilies = {props.graphicsFamily, props.presentFamily};
+  props    = deviceProps(physicalDevice,surf);
+  auto ext = extensionsList(physicalDevice);
 
+  std::vector<const char*> rqExt = requiredExtensions;
+  if(checkForExt(ext,VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME)) {
+    props.hasMemRq2 = true;
+    rqExt.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
+    }
+  if(checkForExt(ext,VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME)) {
+    props.hasDedicatedAlloc = true;
+    rqExt.push_back(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
+    }
+
+  std::array<uint32_t,2> uniqueQueueFamilies = {props.graphicsFamily, props.presentFamily};
   float  queuePriority = 1.0f;
   size_t queueCnt      = 0;
   VkDeviceQueueCreateInfo qinfo[3]={};
@@ -303,8 +327,8 @@ void VDevice::createLogicalDevice(VulkanApi& /*api*/,VkSurfaceKHR surf) {
   createInfo.pQueueCreateInfos    = &qinfo[0];
   createInfo.pEnabledFeatures     = &deviceFeatures;
 
-  createInfo.enabledExtensionCount   = static_cast<uint32_t>(deviceExtensions.size());
-  createInfo.ppEnabledExtensionNames = deviceExtensions.begin();
+  createInfo.enabledExtensionCount   = static_cast<uint32_t>(rqExt.size());
+  createInfo.ppEnabledExtensionNames = rqExt.data();
 
   if(vkCreateDevice(physicalDevice, &createInfo, nullptr, &device)!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
@@ -315,6 +339,13 @@ void VDevice::createLogicalDevice(VulkanApi& /*api*/,VkSurfaceKHR surf) {
       graphicsQueue = &queues[i];
     if(queues[i].family==props.presentFamily)
       presentQueue = &queues[i];
+    }
+
+  if(props.hasMemRq2) {
+    vkGetBufferMemoryRequirements2 = reinterpret_cast<PFN_vkGetBufferMemoryRequirements2KHR>
+        (vkGetDeviceProcAddr(device,"vkGetBufferMemoryRequirements2KHR"));
+    vkGetImageMemoryRequirements2 = reinterpret_cast<PFN_vkGetImageMemoryRequirements2KHR>
+        (vkGetDeviceProcAddr(device,"vkGetImageMemoryRequirements2KHR"));
     }
   }
 

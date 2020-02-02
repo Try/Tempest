@@ -29,6 +29,13 @@ class VAllocator {
       void         freeLast();
       };
 
+    struct MemRequirements {
+      size_t               size;
+      size_t               alignment;
+      uint32_t             memoryTypeBits;
+      bool                 dedicated;
+      };
+
   public:
     VAllocator();
 
@@ -54,6 +61,9 @@ class VAllocator {
     Provider                          provider;
     VSamplerCache                     samplers;
     Detail::DeviceAllocator<Provider> allocator{provider};
+
+    void getMemoryRequirements   (MemRequirements& out, VkBuffer buf);
+    void getImgMemoryRequirements(MemRequirements& out, VkImage  img);
 
     bool commit(VkDeviceMemory dev, std::mutex& mmapSync, VkBuffer dest, size_t offset,
                 const void *mem, size_t count, size_t size, size_t alignedSz);

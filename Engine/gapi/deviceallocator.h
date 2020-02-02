@@ -54,6 +54,11 @@ class DeviceAllocator {
         }
       }
 
+    Allocation dedicatedAlloc(size_t size, size_t align, uint32_t heapId, uint32_t typeId) {
+      std::lock_guard<std::mutex> guard(sync);
+      return rawAlloc(size,align,heapId,typeId);
+      }
+
   private:
     Allocation rawAlloc(size_t size, size_t align, uint32_t heapId, uint32_t typeId){
       Page pg(std::max<uint32_t>(DEFAULT_PAGE_SIZE,uint32_t(size)));

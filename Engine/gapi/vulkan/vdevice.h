@@ -94,6 +94,9 @@ class VDevice : public AbstractGraphicsApi::Device {
       uint32_t graphicsFamily=uint32_t(-1);
       uint32_t presentFamily =uint32_t(-1);
       char     name[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE]={};
+
+      bool     hasMemRq2        =false;
+      bool     hasDedicatedAlloc=false;
       };
 
     struct SwapChainSupport final {
@@ -134,6 +137,9 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     AbstractGraphicsApi::Caps caps;
     DeviceProps             props;
+
+    PFN_vkGetBufferMemoryRequirements2KHR vkGetBufferMemoryRequirements2 = nullptr;
+    PFN_vkGetImageMemoryRequirements2KHR  vkGetImageMemoryRequirements2  = nullptr;
 
     VkResult                present(VSwapchain& sw,const VSemaphore *wait,size_t wSize,uint32_t imageId);
 
@@ -217,6 +223,8 @@ class VDevice : public AbstractGraphicsApi::Device {
     DeviceProps             deviceProps(VkPhysicalDevice device, VkSurfaceKHR surf);
     void                    initCaps(AbstractGraphicsApi::Caps& c);
     bool                    checkDeviceExtensionSupport(VkPhysicalDevice device);
+    auto                    extensionsList(VkPhysicalDevice device) -> std::vector<VkExtensionProperties>;
+    bool                    checkForExt(const std::vector<VkExtensionProperties>& list,const char* name);
     SwapChainSupport        querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface);
 
     void                    createLogicalDevice(VulkanApi &api, VkSurfaceKHR surf);
