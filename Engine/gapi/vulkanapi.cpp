@@ -40,8 +40,12 @@ VulkanApi::VulkanApi(ApiFlags f) {
 VulkanApi::~VulkanApi(){
   }
 
-AbstractGraphicsApi::Device *VulkanApi::createDevice() {
-  return new Detail::VDevice(*impl);
+std::vector<AbstractGraphicsApi::Props> VulkanApi::devices() const {
+  return impl->devices();
+  }
+
+AbstractGraphicsApi::Device *VulkanApi::createDevice(const char* gpuName) {
+  return new Detail::VDevice(*impl,gpuName);
   }
 
 void VulkanApi::destroy(AbstractGraphicsApi::Device *d) {
@@ -445,8 +449,8 @@ void VulkanApi::submit(AbstractGraphicsApi::Device *d,
   dx->graphicsQueue->submit(1,&submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl);
   }
 
-void VulkanApi::getCaps(Device *d,Caps &caps) {
+void VulkanApi::getCaps(Device *d, Props& props) {
   Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
-  caps=dx->caps;
+  props=dx->props;
   }
 

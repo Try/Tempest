@@ -35,8 +35,8 @@ void VSamplerCache::freeLast() {
 
 void VSamplerCache::setDevice(VDevice &dev) {
   device        = dev.device;
-  anisotropy    = dev.caps.anisotropy;
-  maxAnisotropy = dev.caps.maxAnisotropy;
+  anisotropy    = dev.props.anisotropy;
+  maxAnisotropy = dev.props.maxAnisotropy;
   }
 
 VSamplerCache::Chunk &VSamplerCache::chunk(uint32_t mipCount) {

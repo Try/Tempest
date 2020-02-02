@@ -96,7 +96,7 @@ void VDevice::DataStream::wait() {
     }
   }
 
-VDevice::VDevice(VulkanApi &api)
+VDevice::VDevice(VulkanApi &api, const char* gpuName)
   :instance(api.instance)  {
 
   uint32_t deviceCount = 0;
@@ -112,11 +112,12 @@ VDevice::VDevice(VulkanApi &api)
   FakeWindow fakeWnd{*this};
   fakeWnd.surface = createSurface(fakeWnd.w);
 
-  for(const auto& device:devices)
-    if(isDeviceSuitable(device,fakeWnd.surface)) {
-      implInit(api,device,fakeWnd.surface);
+  for(const auto& device:devices) {
+    if(isDeviceSuitable(device,fakeWnd.surface,gpuName)) {
+      implInit(device,fakeWnd.surface);
       return;
       }
+    }
 
   throw std::system_error(Tempest::GraphicsErrc::NoDevice);
   }
@@ -128,14 +129,14 @@ VDevice::~VDevice(){
   vkDestroyDevice(device,nullptr);
   }
 
-void VDevice::implInit(VulkanApi &api, VkPhysicalDevice pdev, VkSurfaceKHR surf) {
+void VDevice::implInit(VkPhysicalDevice pdev, VkSurfaceKHR surf) {
+  Detail::VulkanApi::getDeviceProps(pdev,props);
+  deviceQueueProps(props,pdev,surf);
+
+  createLogicalDevice(pdev);
+  vkGetPhysicalDeviceMemoryProperties(pdev,&memoryProperties);
+
   physicalDevice = pdev;
-
-  createLogicalDevice(api,surf);
-  vkGetPhysicalDeviceMemoryProperties(physicalDevice,&memoryProperties);
-
-  initCaps(caps);
-
   allocator.setDevice(*this);
   data.reset(new DataMgr(*this));
   }
@@ -167,9 +168,15 @@ VkSurfaceKHR VDevice::createSurface(void* hwnd) {
   return ret;
   }
 
-bool VDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surf) {
-  DeviceProps prop                = deviceProps(device,surf);
-  bool        extensionsSupported = checkDeviceExtensionSupport(device);
+bool VDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surf, const char* gpuName) {
+  VkProps prop = {};
+  if(gpuName!=nullptr) {
+    Detail::VulkanApi::getDeviceProps(device,props);
+    if(std::strcmp(gpuName,props.name)!=0)
+      return false;
+    }
+  deviceQueueProps(prop,device,surf);
+  bool    extensionsSupported = checkDeviceExtensionSupport(device);
 
   bool swapChainAdequate = false;
   if(extensionsSupported && surf!=VK_NULL_HANDLE) {
@@ -184,7 +191,7 @@ bool VDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surf) {
          (swapChainAdequate || surf==VK_NULL_HANDLE);
   }
 
-VDevice::DeviceProps VDevice::deviceProps(VkPhysicalDevice device, VkSurfaceKHR surf) {
+void VDevice::deviceQueueProps(Detail::VulkanApi::VkProp& prop,VkPhysicalDevice device, VkSurfaceKHR surf) {
   uint32_t queueFamilyCount = 0;
   vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
@@ -213,11 +220,8 @@ VDevice::DeviceProps VDevice::deviceProps(VkPhysicalDevice device, VkSurfaceKHR 
   VkPhysicalDeviceProperties p={};
   vkGetPhysicalDeviceProperties(device,&p);
 
-  DeviceProps prop;
   prop.graphicsFamily = graphics;
   prop.presentFamily  = present;
-  std::memcpy(prop.name,p.deviceName,sizeof(prop.name));
-  return prop;
   }
 
 bool VDevice::checkDeviceExtensionSupport(VkPhysicalDevice device) {
@@ -272,9 +276,8 @@ VDevice::SwapChainSupport VDevice::querySwapChainSupport(VkPhysicalDevice device
   return details;
   }
 
-void VDevice::createLogicalDevice(VulkanApi& /*api*/,VkSurfaceKHR surf) {
-  props    = deviceProps(physicalDevice,surf);
-  auto ext = extensionsList(physicalDevice);
+void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
+  auto ext = extensionsList(pdev);
 
   std::vector<const char*> rqExt = requiredExtensions;
   if(checkForExt(ext,VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME)) {
@@ -314,7 +317,7 @@ void VDevice::createLogicalDevice(VulkanApi& /*api*/,VkSurfaceKHR surf) {
     }
 
   VkPhysicalDeviceFeatures supportedFeatures={};
-  vkGetPhysicalDeviceFeatures(physicalDevice,&supportedFeatures);
+  vkGetPhysicalDeviceFeatures(pdev,&supportedFeatures);
 
   VkPhysicalDeviceFeatures deviceFeatures = {};
   deviceFeatures.samplerAnisotropy    = supportedFeatures.samplerAnisotropy;
@@ -330,7 +333,7 @@ void VDevice::createLogicalDevice(VulkanApi& /*api*/,VkSurfaceKHR surf) {
   createInfo.enabledExtensionCount   = static_cast<uint32_t>(rqExt.size());
   createInfo.ppEnabledExtensionNames = rqExt.data();
 
-  if(vkCreateDevice(physicalDevice, &createInfo, nullptr, &device)!=VK_SUCCESS)
+  if(vkCreateDevice(pdev, &createInfo, nullptr, &device)!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
   for(size_t i=0;i<queueCnt;++i) {
@@ -363,72 +366,6 @@ VDevice::MemIndex VDevice::memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFl
       }
     }
   throw std::runtime_error("failed to get correct memory type");
-  }
-
-void VDevice::initCaps(AbstractGraphicsApi::Caps &c) {
-  /*
-   * formats support table: https://vulkan.lunarg.com/doc/view/1.0.30.0/linux/vkspec.chunked/ch31s03.html
-   */
-  VkFormatFeatureFlags imageRqFlags   = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT|VK_FORMAT_FEATURE_BLIT_DST_BIT|VK_FORMAT_FEATURE_BLIT_SRC_BIT;
-  VkFormatFeatureFlags imageRqFlagsBC = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
-  VkFormatFeatureFlags attachRqFlags  = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT|VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
-  VkFormatFeatureFlags depthAttflags  = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
-  VkFormatProperties frm={};
-  vkGetPhysicalDeviceFormatProperties(physicalDevice,VK_FORMAT_R8G8B8_UNORM,&frm);
-  c.rgb8  = ((frm.optimalTilingFeatures & imageRqFlags)==imageRqFlags) &&
-            ((frm.linearTilingFeatures  & imageRqFlags)==imageRqFlags) ;
-
-  vkGetPhysicalDeviceFormatProperties(physicalDevice,VK_FORMAT_R8G8B8A8_UNORM,&frm); // must-have
-  c.rgba8 = (frm.optimalTilingFeatures & imageRqFlags)==imageRqFlags;
-
-  VkPhysicalDeviceProperties prop={};
-  vkGetPhysicalDeviceProperties(physicalDevice,&prop);
-
-  c.vbo.maxAttribs  = size_t(prop.limits.maxVertexInputAttributes);
-  c.vbo.maxRange    = size_t(prop.limits.maxVertexInputBindingStride);
-
-  c.ibo.maxValue    = size_t(prop.limits.maxDrawIndexedIndexValue);
-
-  c.ubo.offsetAlign = size_t(prop.limits.minUniformBufferOffsetAlignment);
-  c.ubo.maxRange    = size_t(prop.limits.maxUniformBufferRange);
-
-  VkPhysicalDeviceFeatures supportedFeatures={};
-  vkGetPhysicalDeviceFeatures(physicalDevice,&supportedFeatures);
-
-  c.anisotropy    = supportedFeatures.samplerAnisotropy;
-  c.maxAnisotropy = prop.limits.maxSamplerAnisotropy;
-
-  uint64_t smpFormat=0, attFormat=0, dattFormat=0;
-  for(uint32_t i=0;i<TextureFormat::Last;++i){
-    VkFormat f = Detail::nativeFormat(TextureFormat(i));
-    vkGetPhysicalDeviceFormatProperties(physicalDevice,f,&frm);
-    if(isCompressedFormat(TextureFormat(i))){
-      if((frm.optimalTilingFeatures & imageRqFlagsBC)==imageRqFlagsBC){
-        smpFormat |= (1<<i);
-        }
-      } else {
-      if((frm.optimalTilingFeatures & imageRqFlags)==imageRqFlags){
-        smpFormat |= (1<<i);
-        }
-      }
-    if((frm.optimalTilingFeatures & attachRqFlags)==attachRqFlags){
-      attFormat |= (1<<i);
-      }
-    if((frm.optimalTilingFeatures & depthAttflags)==depthAttflags){
-      dattFormat |= (1<<i);
-      }
-    }
-  c.setSamplerFormats(smpFormat);
-  c.setAttachFormats (attFormat);
-  c.setDepthFormat   (dattFormat);
-
-  nonCoherentAtomSize = size_t(prop.limits.nonCoherentAtomSize);
-  if(nonCoherentAtomSize==0)
-    nonCoherentAtomSize=1;
-
-  bufferImageGranularity = size_t(prop.limits.bufferImageGranularity);
-  if(bufferImageGranularity==0)
-    bufferImageGranularity=1;
   }
 
 VkResult VDevice::present(VSwapchain &sw, const VSemaphore *wait, size_t wSize, uint32_t imageId) {

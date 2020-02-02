@@ -1,6 +1,9 @@
 #pragma once
 
 #include <vulkan/vulkan.hpp>
+#include <Tempest/AbstractGraphicsApi>
+
+#include "utility/spinlock.h"
 
 namespace Tempest {
 namespace Detail {
@@ -10,8 +13,23 @@ class VulkanApi {
     VulkanApi(bool enableValidationLayers=true);
     ~VulkanApi();
 
-    const bool       validation;
+    std::vector<AbstractGraphicsApi::Props> devices() const;
+
     VkInstance       instance;
+
+    struct VkProp:Tempest::AbstractGraphicsApi::Props {
+      uint32_t graphicsFamily=uint32_t(-1);
+      uint32_t presentFamily =uint32_t(-1);
+
+      size_t   nonCoherentAtomSize=0;
+      size_t   bufferImageGranularity=0;
+
+      bool     hasMemRq2        =false;
+      bool     hasDedicatedAlloc=false;
+      };
+
+    static void      getDeviceProps(VkPhysicalDevice physicalDevice, VkProp& c);
+    static void      getDevicePropsShort(VkPhysicalDevice physicalDevice, AbstractGraphicsApi::Props& c);
 
   private:
     const std::initializer_list<const char*> checkValidationLayerSupport();
@@ -27,8 +45,9 @@ class VulkanApi {
         const char*                 pMessage,
         void*                       pUserData);
 
-    VkDebugReportCallbackEXT            callback;
-    PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT = nullptr;
+    const bool                                      validation;
+    VkDebugReportCallbackEXT                        callback;
+    PFN_vkDestroyDebugReportCallbackEXT             vkDestroyDebugReportCallbackEXT = nullptr;
   };
 
 }}

@@ -21,19 +21,23 @@ static uint32_t mipCount(uint32_t w, uint32_t h) {
   return n;
   }
 
-Device::Impl::Impl(AbstractGraphicsApi &api, uint8_t maxFramesInFlight)
+Device::Impl::Impl(AbstractGraphicsApi &api, const char* name, uint8_t maxFramesInFlight)
   :api(api),maxFramesInFlight(maxFramesInFlight) {
-  dev=api.createDevice();
+  dev=api.createDevice(name);
   }
 
 Device::Impl::~Impl() {
   api.destroy(dev);
   }
 
-Device::Device(AbstractGraphicsApi &api, uint8_t maxFramesInFlight)
-  :api(api), impl(api,maxFramesInFlight), dev(impl.dev),
+Device::Device(AbstractGraphicsApi& api, uint8_t maxFramesInFlight)
+  :Device(api,nullptr,maxFramesInFlight){
+  }
+
+Device::Device(AbstractGraphicsApi &api, const char* name, uint8_t maxFramesInFlight)
+  :api(api), impl(api,name,maxFramesInFlight), dev(impl.dev),
    mainCmdPool(*this,api.createCommandPool(dev)),builtins(*this) {
-  api.getCaps(dev,devCaps);
+  api.getCaps(dev,devProps);
   }
 
 Device::~Device() {
@@ -142,12 +146,12 @@ Swapchain Device::swapchain(SystemApi::Window* w) const {
   return Swapchain(api.createSwapchain(w,impl.dev));
   }
 
-const Device::Caps& Device::caps() const {
-  return devCaps;
+const Device::Props& Device::properties() const {
+  return devProps;
   }
 
 Attachment Device::attachment(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips) {
-  if(!devCaps.hasSamplerFormat(frm) && !devCaps.hasAttachFormat(frm) && !devCaps.hasDepthFormat(frm))
+  if(!devProps.hasSamplerFormat(frm) && !devProps.hasAttachFormat(frm) && !devProps.hasDepthFormat(frm))
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
   uint32_t mipCnt = mips ? mipCount(w,h) : 1;
   Texture2d t(*this,api.createTexture(dev,w,h,mipCnt,frm),w,h,frm);
@@ -169,7 +173,7 @@ Texture2d Device::loadTexture(const Pixmap &pm, bool mips) {
   Pixmap alt;
 
   if(isCompressedFormat(format)){
-    if(devCaps.hasSamplerFormat(format) && (!mips || pm.mipCount()>1)){
+    if(devProps.hasSamplerFormat(format) && (!mips || pm.mipCount()>1)){
       mipCnt = pm.mipCount();
       } else {
       alt    = Pixmap(pm,Pixmap::Format::RGBA);
@@ -178,7 +182,7 @@ Texture2d Device::loadTexture(const Pixmap &pm, bool mips) {
       }
     }
 
-  if(format==TextureFormat::RGB8 && !devCaps.hasSamplerFormat(format)){
+  if(format==TextureFormat::RGB8 && !devProps.hasSamplerFormat(format)){
     alt    = Pixmap(pm,Pixmap::Format::RGBA);
     p      = &alt;
     format = TextureFormat::RGBA8;

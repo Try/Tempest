@@ -15,6 +15,7 @@ namespace Tempest {
   class Color;
   class RenderState;
   class FboMode;
+  class Device;
 
   namespace Decl {
   enum ComponentType:uint8_t {
@@ -154,8 +155,19 @@ namespace Tempest {
       ~AbstractGraphicsApi()=default;
 
     public:
-      class Caps {
+      enum DeviceType : uint8_t {
+        Unknown   = 0,
+        Virtual   = 1,
+        Cpu       = 2,
+        Integrated= 3,
+        Discrete  = 4,
+        };
+
+      class Props {
         public:
+          char       name[256]={};
+          DeviceType type=DeviceType::Unknown;
+
           struct {
             size_t maxAttribs  = 16;
             size_t maxRange    = 2047;
@@ -276,7 +288,8 @@ namespace Tempest {
       using PFbo       = Detail::DSharedPtr<Fbo*>;
       using PFboLayout = Detail::DSharedPtr<FboLayout*>;
 
-      virtual Device*    createDevice()=0;
+    protected:
+      virtual Device*    createDevice(const char* gpuName)=0;
       virtual void       destroy(Device* d)=0;
 
       virtual Swapchain* createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d)=0;
@@ -333,6 +346,8 @@ namespace Tempest {
                                    Semaphore** done, size_t doneCnt,
                                    Fence* doneCpu)=0;
 
-      virtual void       getCaps  (Device *d,Caps& caps)=0;
+      virtual void       getCaps  (Device *d,Props& caps)=0;
+
+    friend class Tempest::Device;
     };
 }

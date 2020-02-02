@@ -90,14 +90,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     using BufPtr = Detail::DSharedPtr<VBuffer*>;
     using TexPtr = Detail::DSharedPtr<VTexture*>;
 
-    struct DeviceProps final {
-      uint32_t graphicsFamily=uint32_t(-1);
-      uint32_t presentFamily =uint32_t(-1);
-      char     name[VK_MAX_PHYSICAL_DEVICE_NAME_SIZE]={};
-
-      bool     hasMemRq2        =false;
-      bool     hasDedicatedAlloc=false;
-      };
+    using VkProps = Detail::VulkanApi::VkProp;
 
     struct SwapChainSupport final {
       VkSurfaceCapabilitiesKHR        capabilities={};
@@ -105,7 +98,7 @@ class VDevice : public AbstractGraphicsApi::Device {
       std::vector<VkPresentModeKHR>   presentModes;
       };
 
-    VDevice(VulkanApi& api);
+    VDevice(VulkanApi& api,const char* gpuName);
     ~VDevice() override;
 
     struct Queue final {
@@ -135,8 +128,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     std::mutex              allocSync;
     VAllocator              allocator;
 
-    AbstractGraphicsApi::Caps caps;
-    DeviceProps             props;
+    VkProps                 props={};
 
     PFN_vkGetBufferMemoryRequirements2KHR vkGetBufferMemoryRequirements2 = nullptr;
     PFN_vkGetImageMemoryRequirements2KHR  vkGetImageMemoryRequirements2  = nullptr;
@@ -217,17 +209,16 @@ class VDevice : public AbstractGraphicsApi::Device {
     VkPhysicalDeviceMemoryProperties memoryProperties;
     std::unique_ptr<DataMgr>         data;
 
-    void                    implInit(VulkanApi &api, VkPhysicalDevice pdev, VkSurfaceKHR surf);
+    void                    implInit(VkPhysicalDevice pdev, VkSurfaceKHR surf);
     void                    pickPhysicalDevice();
-    bool                    isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surf);
-    DeviceProps             deviceProps(VkPhysicalDevice device, VkSurfaceKHR surf);
-    void                    initCaps(AbstractGraphicsApi::Caps& c);
+    bool                    isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surf, const char* gpuName);
+    void                    deviceQueueProps(VulkanApi::VkProp& prop, VkPhysicalDevice device, VkSurfaceKHR surf);
     bool                    checkDeviceExtensionSupport(VkPhysicalDevice device);
     auto                    extensionsList(VkPhysicalDevice device) -> std::vector<VkExtensionProperties>;
     bool                    checkForExt(const std::vector<VkExtensionProperties>& list,const char* name);
     SwapChainSupport        querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface);
 
-    void                    createLogicalDevice(VulkanApi &api, VkSurfaceKHR surf);
+    void                    createLogicalDevice(VkPhysicalDevice pdev);
   };
 
 }}

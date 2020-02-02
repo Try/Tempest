@@ -41,9 +41,10 @@ class RenderState;
 
 class Device {
   public:
-    using Caps=AbstractGraphicsApi::Caps;
+    using Props=AbstractGraphicsApi::Props;
 
     Device(AbstractGraphicsApi& api, uint8_t maxFramesInFlight=2);
+    Device(AbstractGraphicsApi& api, const char* name, uint8_t maxFramesInFlight=2);
     Device(const Device&)=delete;
     virtual ~Device();
 
@@ -66,7 +67,7 @@ class Device {
     Shader               loadShader(const char16_t* filename);
     Shader               shader    (const void* source, const size_t length);
 
-    const Caps&          caps() const;
+    const Props&         properties() const;
 
     template<class T>
     VertexBuffer<T>      vbo(const T* arr,size_t arrSize);
@@ -127,7 +128,7 @@ class Device {
 
   private:
     struct Impl {
-      Impl(AbstractGraphicsApi& api, uint8_t maxFramesInFlight);
+      Impl(AbstractGraphicsApi& api, const char* name, uint8_t maxFramesInFlight);
       ~Impl();
 
       AbstractGraphicsApi&            api;
@@ -138,7 +139,7 @@ class Device {
     AbstractGraphicsApi&            api;
     Impl                            impl;
     AbstractGraphicsApi::Device*    dev=nullptr;
-    Caps                            devCaps;
+    Props                           devProps;
     Tempest::CommandPool            mainCmdPool;
     Tempest::Builtin                builtins;
 
@@ -204,10 +205,10 @@ template<class T>
 inline UniformBuffer<T> Device::ubo(const T *mem, size_t size) {
   if(size==0)
     return UniformBuffer<T>();
-  const size_t align   = devCaps.ubo.offsetAlign;
+  const size_t align   = devProps.ubo.offsetAlign;
   const size_t eltSize = ((sizeof(T)+align-1)/align)*align;
 
-  if(sizeof(T)>devCaps.ubo.maxRange)
+  if(sizeof(T)>devProps.ubo.maxRange)
     throw std::system_error(Tempest::GraphicsErrc::TooLardgeUbo);
   VideoBuffer      data=createVideoBuffer(mem,size,sizeof(T),eltSize,MemUsage::UniformBit,BufferFlags::Dynamic);
   UniformBuffer<T> ubo(std::move(data),eltSize);

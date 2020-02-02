@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <cstdint>
+#include <vector>
 
 namespace Tempest {
 
@@ -12,7 +13,10 @@ class VulkanApi : public AbstractGraphicsApi {
     explicit VulkanApi(ApiFlags f=ApiFlags::NoFlags);
     virtual ~VulkanApi();
 
-    Device*        createDevice() override;
+    std::vector<Props> devices() const;
+
+  protected:
+    Device*        createDevice(const char* gpuName) override;
     void           destroy(Device* d) override;
 
     Swapchain*     createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d) override;
@@ -67,7 +71,7 @@ class VulkanApi : public AbstractGraphicsApi {
                              Semaphore** done, size_t doneCnt,
                              Fence *doneCpu) override;
 
-    void           getCaps  (Device *d,Caps& caps) override;
+    void           getCaps  (Device *d, Props& props) override;
 
   private:
     struct Impl;

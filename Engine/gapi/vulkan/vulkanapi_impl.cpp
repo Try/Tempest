@@ -4,6 +4,7 @@
 #include <Tempest/Platform>
 
 #include "exceptions/exception.h"
+#include "vdevice.h"
 
 #include <set>
 #include <thread>
@@ -25,10 +26,6 @@ static const std::initializer_list<const char*> validationLayersKHR = {
 
 static const std::initializer_list<const char*> validationLayersLunarg = {
   "VK_LAYER_LUNARG_core_validation"
-  };
-
-static const std::vector<const char*> deviceExtensions = {
-  VK_KHR_SWAPCHAIN_EXTENSION_NAME
   };
 
 VulkanApi::VulkanApi(bool validation)
@@ -128,6 +125,116 @@ bool VulkanApi::layerSupport(const std::vector<VkLayerProperties>& sup,
       return false;
     }
   return true;
+  }
+
+std::vector<Tempest::AbstractGraphicsApi::Props> VulkanApi::devices() const {
+  std::vector<Tempest::AbstractGraphicsApi::Props> devList;
+  uint32_t deviceCount = 0;
+  vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+
+  if(deviceCount==0)
+    return devList;
+
+  std::vector<VkPhysicalDevice> devices(deviceCount);
+  vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
+
+  devList.resize(devices.size());
+  for(size_t i=0;i<devList.size();++i) {
+    getDevicePropsShort(devices[i],devList[i]);
+    }
+  return devList;
+  }
+
+void VulkanApi::getDeviceProps(VkPhysicalDevice physicalDevice, VkProp& c) {
+  getDevicePropsShort(physicalDevice,c);
+
+  VkPhysicalDeviceProperties prop={};
+  vkGetPhysicalDeviceProperties(physicalDevice,&prop);
+  c.nonCoherentAtomSize = size_t(prop.limits.nonCoherentAtomSize);
+  if(c.nonCoherentAtomSize==0)
+    c.nonCoherentAtomSize=1;
+
+  c.bufferImageGranularity = size_t(prop.limits.bufferImageGranularity);
+  if(c.bufferImageGranularity==0)
+    c.bufferImageGranularity=1;
+  }
+
+void VulkanApi::getDevicePropsShort(VkPhysicalDevice physicalDevice, Tempest::AbstractGraphicsApi::Props& c) {
+  /*
+   * formats support table: https://vulkan.lunarg.com/doc/view/1.0.30.0/linux/vkspec.chunked/ch31s03.html
+   */
+  VkFormatFeatureFlags imageRqFlags   = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT|VK_FORMAT_FEATURE_BLIT_DST_BIT|VK_FORMAT_FEATURE_BLIT_SRC_BIT;
+  VkFormatFeatureFlags imageRqFlagsBC = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+  VkFormatFeatureFlags attachRqFlags  = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT|VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
+  VkFormatFeatureFlags depthAttflags  = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  VkFormatProperties frm={};
+  vkGetPhysicalDeviceFormatProperties(physicalDevice,VK_FORMAT_R8G8B8_UNORM,&frm);
+  c.rgb8  = ((frm.optimalTilingFeatures & imageRqFlags)==imageRqFlags) &&
+            ((frm.linearTilingFeatures  & imageRqFlags)==imageRqFlags) ;
+
+  vkGetPhysicalDeviceFormatProperties(physicalDevice,VK_FORMAT_R8G8B8A8_UNORM,&frm); // must-have
+  c.rgba8 = (frm.optimalTilingFeatures & imageRqFlags)==imageRqFlags;
+
+  VkPhysicalDeviceProperties prop={};
+  vkGetPhysicalDeviceProperties(physicalDevice,&prop);
+
+  std::memcpy(c.name,prop.deviceName,sizeof(c.name));
+
+  c.vbo.maxAttribs  = size_t(prop.limits.maxVertexInputAttributes);
+  c.vbo.maxRange    = size_t(prop.limits.maxVertexInputBindingStride);
+
+  c.ibo.maxValue    = size_t(prop.limits.maxDrawIndexedIndexValue);
+
+  c.ubo.offsetAlign = size_t(prop.limits.minUniformBufferOffsetAlignment);
+  c.ubo.maxRange    = size_t(prop.limits.maxUniformBufferRange);
+
+  VkPhysicalDeviceFeatures supportedFeatures={};
+  vkGetPhysicalDeviceFeatures(physicalDevice,&supportedFeatures);
+
+  c.anisotropy    = supportedFeatures.samplerAnisotropy;
+  c.maxAnisotropy = prop.limits.maxSamplerAnisotropy;
+
+  switch(prop.deviceType) {
+    case VK_PHYSICAL_DEVICE_TYPE_CPU:
+      c.type = AbstractGraphicsApi::DeviceType::Cpu;
+      break;
+    case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
+      c.type = AbstractGraphicsApi::DeviceType::Virtual;
+      break;
+    case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+      c.type = AbstractGraphicsApi::DeviceType::Integrated;
+      break;
+    case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+      c.type = AbstractGraphicsApi::DeviceType::Discrete;
+      break;
+    default:
+      c.type = AbstractGraphicsApi::DeviceType::Unknown;
+      break;
+    }
+
+  uint64_t smpFormat=0, attFormat=0, dattFormat=0;
+  for(uint32_t i=0;i<TextureFormat::Last;++i){
+    VkFormat f = Detail::nativeFormat(TextureFormat(i));
+    vkGetPhysicalDeviceFormatProperties(physicalDevice,f,&frm);
+    if(isCompressedFormat(TextureFormat(i))){
+      if((frm.optimalTilingFeatures & imageRqFlagsBC)==imageRqFlagsBC){
+        smpFormat |= (1<<i);
+        }
+      } else {
+      if((frm.optimalTilingFeatures & imageRqFlags)==imageRqFlags){
+        smpFormat |= (1<<i);
+        }
+      }
+    if((frm.optimalTilingFeatures & attachRqFlags)==attachRqFlags){
+      attFormat |= (1<<i);
+      }
+    if((frm.optimalTilingFeatures & depthAttflags)==depthAttflags){
+      dattFormat |= (1<<i);
+      }
+    }
+  c.setSamplerFormats(smpFormat);
+  c.setAttachFormats (attFormat);
+  c.setDepthFormat   (dattFormat);
   }
 
 VkBool32 VulkanApi::debugReportCallback(VkDebugReportFlagsEXT      flags,

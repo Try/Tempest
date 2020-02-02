@@ -32,7 +32,7 @@ DirectX12Api::DirectX12Api(ApiFlags f) {
 DirectX12Api::~DirectX12Api(){
   }
 
-AbstractGraphicsApi::Device* DirectX12Api::createDevice() {
+AbstractGraphicsApi::Device* DirectX12Api::createDevice(const char* gpuName) {
   return new DxDevice(*impl->DXGIFactory);
   }
 
@@ -169,7 +169,7 @@ void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::C
 
   }
 
-void DirectX12Api::getCaps(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Caps& caps) {
+void DirectX12Api::getCaps(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Props& caps) {
 
   }
 

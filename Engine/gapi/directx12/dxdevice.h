@@ -48,7 +48,7 @@ class DxDevice : public AbstractGraphicsApi::Device {
     DxDevice(IDXGIFactory4& dxgi);
     ~DxDevice() override;
 
-    AbstractGraphicsApi::Caps caps;
+    AbstractGraphicsApi::Props props;
 
     const char*             renderer() const override;
     void                    waitIdle() const override;
