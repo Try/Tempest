@@ -122,7 +122,7 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
 
   VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits(props),VK_IMAGE_TILING_LINEAR);
 
-  const size_t align = LCM(memRq.alignment,provider.device->nonCoherentAtomSize);
+  const size_t align = LCM(memRq.alignment,provider.device->props.nonCoherentAtomSize);
   if(memRq.dedicated)
     ret.page=allocator.dedicatedAlloc(memRq.size,align,memId.headId,memId.typeId); else
     ret.page=allocator.alloc(memRq.size,align,memId.headId,memId.typeId);
@@ -341,7 +341,7 @@ bool VAllocator::update(VBuffer &dest, const void *mem,
   rgn.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
   rgn.memory = page.page->memory;
   rgn.offset = page.offset+offset;
-  rgn.size   = (size%provider.device->nonCoherentAtomSize==0) ? size : VK_WHOLE_SIZE;
+  rgn.size   = (size%provider.device->props.nonCoherentAtomSize==0) ? size : VK_WHOLE_SIZE;
   vkFlushMappedMemoryRanges(device,1,&rgn);
 
   vkUnmapMemory(device,page.page->memory);

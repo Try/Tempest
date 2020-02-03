@@ -74,7 +74,7 @@ namespace Tempest {
     };
 
   inline bool isDepthFormat(TextureFormat f){
-    return f==TextureFormat::Depth16 || f==TextureFormat::Depth24x8;
+    return f==TextureFormat::Depth16 || f==TextureFormat::Depth24x8 || f==TextureFormat::Depth24S8;
     }
 
   inline bool isCompressedFormat(TextureFormat f){

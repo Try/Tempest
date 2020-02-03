@@ -360,7 +360,7 @@ VDevice::MemIndex VDevice::memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFl
         MemIndex ret;
         ret.typeId = uint32_t(i);
         // avoid bufferImageGranularity shenanigans
-        ret.headId = (tiling==VK_IMAGE_TILING_OPTIMAL && bufferImageGranularity>1) ? ret.typeId*2+1 : ret.typeId*2+0;
+        ret.headId = (tiling==VK_IMAGE_TILING_OPTIMAL && this->props.bufferImageGranularity>1) ? ret.typeId*2+1 : ret.typeId*2+0;
         return ret;
         }
       }

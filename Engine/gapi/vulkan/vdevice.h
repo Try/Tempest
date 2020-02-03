@@ -118,8 +118,6 @@ class VDevice : public AbstractGraphicsApi::Device {
     VkInstance              instance           =nullptr;
     VkPhysicalDevice        physicalDevice     =nullptr;
     VkDevice                device             =nullptr;
-    size_t                  nonCoherentAtomSize=1;
-    size_t                  bufferImageGranularity=1;
 
     Queue                   queues[3];
     Queue*                  graphicsQueue=nullptr;

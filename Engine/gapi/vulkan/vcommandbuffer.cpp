@@ -566,6 +566,9 @@ void VCommandBuffer::changeLayout(VkImage dest, VkFormat imageFormat,
   barrier.subresourceRange.levelCount     = mipCount;
   barrier.subresourceRange.baseArrayLayer = 0;
   barrier.subresourceRange.layerCount     = 1;
+
+  if(imageFormat==VK_FORMAT_D24_UNORM_S8_UINT)
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT; else
   if(Detail::nativeIsDepthFormat(imageFormat))
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; else
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
