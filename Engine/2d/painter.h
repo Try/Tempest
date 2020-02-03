@@ -37,6 +37,8 @@ class Painter {
 
     void drawRect(int x,int y,int width,int height,
                   float u1,float v1,float u2,float v2);
+    void drawRect(int x,int y,int width,int height,
+                  int u1,int v1,int u2,int v2);
     void drawRect(int x,int y,int width,int height);
     void drawRect(int x,int y,unsigned width,unsigned height);
 
