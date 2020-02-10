@@ -114,6 +114,7 @@ file(GLOB SOURCES
 file(GLOB_RECURSE PUB_HEADERS "include/Tempest/**")
 
 add_subdirectory("thirdparty/openal")
+add_subdirectory("thirdparty/spirv_cross")
 add_library(${PROJECT_NAME} ${GEN_SHADERS_HEADER} ${SOURCES})
 
 set_target_properties(
@@ -125,7 +126,7 @@ if(WIN32)
   target_link_libraries(${PROJECT_NAME} PRIVATE vulkan-1 shlwapi)
   target_link_libraries(${PROJECT_NAME} PRIVATE winmm Kernel32)
   if(TEMPEST_BUILD_DIRECTX12)
-    target_link_libraries(${PROJECT_NAME} PRIVATE d3d12 dxgi)
+    target_link_libraries(${PROJECT_NAME} PRIVATE d3d12 d3dcompiler dxgi)
   endif()
 else()
   target_link_libraries(${PROJECT_NAME} PRIVATE vulkan X11)
