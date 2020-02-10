@@ -21,8 +21,6 @@ class DxSwapchain : public AbstractGraphicsApi::Swapchain {
     DxSwapchain(DxSwapchain&& other);
     ~DxSwapchain() override;
 
-    void operator=(DxSwapchain&& other);
-
     uint32_t                 w()      const override { return imgW; }
     uint32_t                 h()      const override { return imgH; }
 

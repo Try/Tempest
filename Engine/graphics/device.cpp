@@ -118,7 +118,7 @@ void Device::implSubmit(const Tempest::PrimaryCommandBuffer* cmd[],  AbstractGra
 Shader Device::loadShader(RFile &file) {
   const size_t fileSize=file.size();
 
-  std::unique_ptr<uint32_t[]> buffer(new uint32_t[(fileSize+3)/4]);
+  std::unique_ptr<uint8_t[]> buffer(new uint8_t[fileSize]);
   file.read(reinterpret_cast<char*>(buffer.get()),fileSize);
 
   size_t size=uint32_t(fileSize);

@@ -202,7 +202,11 @@ namespace Tempest {
         };
 
       struct Shared {
-        virtual ~Shared()=default;
+        Shared()=default;
+        virtual ~Shared() = default;
+        Shared(const Shared&) = delete;
+        Shared& operator = (const Shared&) = delete;
+
         std::atomic_uint_fast32_t counter{0};
         };
 
