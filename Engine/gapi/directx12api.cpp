@@ -8,6 +8,7 @@
 #include "directx12/comptr.h"
 #include "directx12/dxdevice.h"
 #include "directx12/dxbuffer.h"
+#include "directx12/dxshader.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -81,8 +82,10 @@ AbstractGraphicsApi::PPipeline DirectX12Api::createPipeline(AbstractGraphicsApi:
   return PPipeline();
   }
 
-AbstractGraphicsApi::PShader DirectX12Api::createShader(AbstractGraphicsApi::Device* d, const void* source, size_t src_size) {
-  return PShader();
+AbstractGraphicsApi::PShader DirectX12Api::createShader(AbstractGraphicsApi::Device* d,
+                                                        const void* source, size_t src_size) {
+  Detail::DxDevice* dx=reinterpret_cast<Detail::DxDevice*>(d);
+  return PShader(new Detail::DxShader(*dx,source,src_size));
   }
 
 AbstractGraphicsApi::Fence* DirectX12Api::createFence(AbstractGraphicsApi::Device* d) {

@@ -1,6 +1,7 @@
 #if defined(TEMPEST_BUILD_DIRECTX12)
 
 #include "dxbuffer.h"
+#include <cassert>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -17,7 +18,7 @@ DxBuffer::DxBuffer(Tempest::Detail::DxBuffer&& other)
   }
 
 void DxBuffer::update(const void* data, size_t off, size_t count, size_t sz, size_t alignedSz) {
-
+  assert(0); //TODO: dx
   }
 
 #endif

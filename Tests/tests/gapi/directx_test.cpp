@@ -42,15 +42,33 @@ TEST(DirectX12Api,DirectX12Api) {
 TEST(DirectX12Api,Vbo) {
 #if defined(_MSC_VER)
   try {
-    DirectX12Api   api{ApiFlags::Validation};
-    Device         device(api);
+    DirectX12Api api{ApiFlags::Validation};
+    Device       device(api);
 
     auto vbo = device.vbo(vboData,3);
     auto ibo = device.ibo(iboData,3);
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
-      Log::d("Skipping vulkan testcase: ", e.what()); else
+      Log::d("Skipping directx testcase: ", e.what()); else
+      throw;
+    }
+#endif
+  }
+
+
+TEST(DirectX12Api,Shader) {
+#if defined(_MSC_VER)
+  try {
+    DirectX12Api api{ApiFlags::Validation};
+    Device       device(api);
+
+    auto vert = device.loadShader("shader/simple_test.vert.sprv");
+    auto frag = device.loadShader("shader/simple_test.frag.sprv");
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping directx testcase: ", e.what()); else
       throw;
     }
 #endif
