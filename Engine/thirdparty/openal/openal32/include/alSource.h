@@ -175,6 +175,7 @@ typedef struct ALsource
 
     /** Self ID */
     ALuint id;
+    CndEvent* Event;
 } ALsource;
 #define ALsource_Update(s,a)                 ((s)->Update(s,a))
 

@@ -123,7 +123,14 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     /* Get current buffer queue item */
     BufferListItem = Source->queue;
     for(j = 0;j < BuffersPlayed;j++)
+    {
+        if(BufferListItem==NULL)
+          return;
         BufferListItem = BufferListItem->next;
+    }
+
+    if(BufferListItem==NULL)
+      return;
 
     OutPos = 0;
     do {
@@ -406,7 +413,22 @@ ALvoid MixSource(ALsource *Source, ALCdevice *Device, ALuint SamplesToDo)
     } while(State == AL_PLAYING && OutPos < SamplesToDo);
 
     /* Update source info */
-    Source->state             = State;
+    if(!(Source->SourceType==AL_STREAMING && State==AL_STOPPED)){
+      Source->state = State;
+      } else
+    if(Source->queue==NULL) {
+      Source->state = State;
+      } else {
+      Source->state = Source->state;
+      }
+
+    if(Source->queue!=NULL)
+    {
+      if(Source->BuffersPlayed != BuffersPlayed)
+        EventSignal(Source->Event);
+    }
+
+    //Source->state             = State;
     Source->BuffersPlayed     = BuffersPlayed;
     Source->position          = DataPosInt;
     Source->position_fraction = DataPosFrac;

@@ -544,6 +544,71 @@ void WriteUnlock(RWLock *lock)
 }
 
 
+ALenum EventInit(CndEvent* evt)
+{
+#ifdef _MSC_VER
+    evt->hevent = CreateEvent(
+        NULL,  // default security attributes
+        FALSE, // auto-reset event
+        FALSE, // initial state is nonsignaled
+        NULL   // object name
+        );
+    if(evt->hevent == NULL)
+        return AL_OUT_OF_MEMORY;
+    return AL_NO_ERROR;
+#else
+  if(pthread_cond_init(&evt->cv,NULL)==0)
+  {
+      if(pthread_mutex_init(&evt->lock,NULL)==0)
+      {
+          return AL_NO_ERROR;
+      }
+      else
+      {
+          pthread_cond_destroy(&evt->cv);
+          return AL_OUT_OF_MEMORY;
+      }
+  }
+  else
+  {
+      return AL_OUT_OF_MEMORY;
+  }
+#endif
+}
+
+void EventFree(CndEvent* evt)
+{
+#ifdef _MSC_VER
+    CloseHandle(evt->hevent);
+#else
+  pthread_mutex_destroy(&evt->lock);
+  pthread_cond_destroy(&evt->cv);
+#endif
+}
+
+void EventWait(CndEvent* evt)
+{
+#ifdef _MSC_VER
+    WaitForSingleObject(
+      evt->hevent, // event handle
+      INFINITE);   // indefinite wait
+#else
+    pthread_mutex_lock(&evt->lock);
+    pthread_cond_wait(&evt->cv, &evt->lock);
+    pthread_mutex_unlock(&evt->lock);
+#endif
+}
+
+
+void EventSignal(CndEvent* evt)
+{
+#ifdef _MSC_VER
+    SetEvent(evt->hevent);
+#else
+    pthread_cond_signal(&evt->cv);
+#endif
+}
+
 void InitUIntMap(UIntMap *map, ALsizei limit)
 {
     map->array = NULL;

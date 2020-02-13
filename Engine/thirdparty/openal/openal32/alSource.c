@@ -600,6 +600,7 @@ static ALenum SetSourceiv(ALsource *Source, ALCcontext *Context, SrcIntProp prop
 
                 oldlist = ExchangePtr((XchgPtr*)&Source->queue, BufferListItem);
                 Source->BuffersInQueue = 1;
+                EventSignal(Source->Event);
 
                 ReadLock(&buffer->lock);
                 Source->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
@@ -1239,6 +1240,7 @@ AL_API ALvoid AL_APIENTRY alGenSourcesCt(ALCcontext* Context,ALsizei n, ALuint *
             if(!source)
                 al_throwerr(Context, AL_OUT_OF_MEMORY);
             InitSourceParams(source);
+            source->Event = &Context->Event;
 
             err = NewThunkEntry(&source->id);
             if(err == AL_NO_ERROR)
@@ -1299,6 +1301,7 @@ AL_API ALvoid AL_APIENTRY alDeleteSourcesCt(ALCcontext *Context,ALsizei n, const
 
             if((Source=RemoveSource(Context, sources[i])) == NULL)
                 continue;
+            EventSignal(Source->Event);
             FreeThunkEntry(Source->id);
 
             LockContext(Context);
@@ -1390,6 +1393,7 @@ AL_API ALenum AL_APIENTRY alSourceBufferCt(ALCcontext *Context, ALuint source, A
 
       oldlist = ExchangePtr((XchgPtr*)&Source->queue, BufferListItem);
       Source->BuffersInQueue = 1;
+      EventSignal(Source->Event);
 
       ReadLock(&buffer->lock);
       Source->NumChannels = ChannelsFromFmt(buffer->FmtChannels);
@@ -2409,6 +2413,7 @@ AL_API ALvoid AL_APIENTRY alSourceQueueBuffersCt(ALCcontext *Context,ALuint sour
 
       Source->BuffersInQueue += nb;
 
+      EventSignal(Source->Event);
       UnlockContext(Context);
   }
   al_catchany()
@@ -2524,11 +2529,11 @@ AL_API ALvoid AL_APIENTRY alSourceUnqueueBuffersCt(ALCcontext *Context,ALuint so
       }
       if(Source->queue)
           Source->queue->prev = NULL;
+      EventSignal(Source->Event);
       UnlockContext(Context);
   }
   al_endtry;
 }
-
 
 static ALvoid InitSourceParams(ALsource *Source)
 {

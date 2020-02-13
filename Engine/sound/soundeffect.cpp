@@ -61,7 +61,6 @@ struct SoundEffect::Impl {
     auto           ctx  = context();
     ALbuffer*      qBuffer[NUM_BUF]={};
     int16_t        bufData[BUFSZ*2]={};
-    ALint          state=AL_INITIAL;
     ALint          zero=0;
 
     for(size_t i=0;i<NUM_BUF;++i){
@@ -87,32 +86,25 @@ struct SoundEffect::Impl {
       alGetSourceivCt(ctx,source, AL_BUFFERS_QUEUED,    &bufInQueue);
       alGetSourceivCt(ctx,source, AL_BUFFERS_PROCESSED, &bufProcessed);
 
-      if(bufInQueue>2 && bufProcessed==0){
-        std::this_thread::yield();
+      int bufC = (bufInQueue-bufProcessed);
+      if(bufC>2){
+        alWait(ctx);
         continue;
         }
 
-      int bufC = (bufInQueue-bufProcessed);
-      for(int i=bufC;i<NUM_BUF;++i) {
+      for(int i=0;i<bufProcessed;++i) {
         ALbuffer* nextBuffer=nullptr;
         alSourceUnqueueBuffersCt(ctx,source,1,&nextBuffer);
+
+        if(nextBuffer==nullptr)
+          break;
 
         renderSound(src,bufData,BUFSZ);
         alBufferDataCt(ctx, nextBuffer, frm, bufData, BUFSZ*sizeof(int16_t)*2, freq);
         alSourceQueueBuffersCt(ctx,source,1,&nextBuffer);
         }
 
-      alGetSourceivCt(ctx,source, AL_BUFFERS_QUEUED,    &bufInQueue);
-      alGetSourceivCt(ctx,source, AL_BUFFERS_PROCESSED, &bufProcessed);
-      bufC = (bufInQueue-bufProcessed);
-      if(bufC>2){
-        uint64_t t = (uint64_t(1000u)*BUFSZ)/uint64_t(freq);
-        std::this_thread::sleep_for(std::chrono::milliseconds(t));
-        }
-
-      alGetSourceivCt(ctx,source,AL_SOURCE_STATE,&state);
-      if(state==AL_STOPPED)
-        alSourcePlayvCt(ctx,1,&source); //HACK
+      // alGetSourceivCt(ctx,source,AL_SOURCE_STATE,&state);
       }
 
     alSourcePausevCt(ctx,1,&source);

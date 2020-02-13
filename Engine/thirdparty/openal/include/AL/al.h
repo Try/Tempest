@@ -443,6 +443,7 @@ AL_API void AL_APIENTRY alDistanceModel(ALCcontext* ctx, ALenum distanceModel);
 AL_API void AL_APIENTRY alEnable(ALenum capability);
 AL_API void AL_APIENTRY alDisable(ALenum capability);
 AL_API ALboolean AL_APIENTRY alIsEnabled(ALenum capability);
+AL_API ALvoid AL_APIENTRY alWait(ALCcontext *Context);
 
 /** State retrieval. */
 AL_API const ALchar* AL_APIENTRY alGetString(ALenum param);

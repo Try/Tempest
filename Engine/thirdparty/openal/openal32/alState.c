@@ -665,3 +665,8 @@ AL_API ALvoid AL_APIENTRY alProcessUpdatesSOFT(void)
 
     ALCcontext_DecRef(Context);
 }
+
+AL_API ALvoid AL_APIENTRY alWait(ALCcontext *Context)
+{
+    EventWait(&Context->Event);
+}

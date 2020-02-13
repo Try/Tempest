@@ -677,9 +677,21 @@ struct ALCdevice_struct
 #define RemoveFilter(m, k) ((struct ALfilter*)RemoveUIntMapKey(&(m)->FilterMap, (k)))
 
 
+typedef struct {
+#ifdef _MSC_VER
+  HANDLE hevent;
+#else
+  pthread_cond_t  cv;
+  pthread_mutex_t lock;
+#endif
+  } CndEvent;
+
+
 struct ALCcontext_struct
 {
     volatile RefCount ref;
+
+    CndEvent Event;
 
     struct ALlistener *Listener;
 
@@ -773,6 +785,11 @@ void SetRTPriority(void);
 
 void SetDefaultChannelOrder(ALCdevice *device);
 void SetDefaultWFXChannelOrder(ALCdevice *device);
+
+ALenum EventInit  (CndEvent* evt);
+void   EventFree  (CndEvent* evt);
+void   EventWait  (CndEvent* evt);
+void   EventSignal(CndEvent* evt);
 
 const ALCchar *DevFmtTypeString(enum DevFmtType type);
 const ALCchar *DevFmtChannelsString(enum DevFmtChannels chans);

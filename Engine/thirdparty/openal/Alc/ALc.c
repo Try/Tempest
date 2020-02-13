@@ -1798,6 +1798,8 @@ static ALCvoid FreeContext(ALCcontext *context)
     ALCdevice_DecRef(context->Device);
     context->Device = NULL;
 
+    EventFree(&context->Event);
+
     //Invalidate context
     memset(context, 0, sizeof(ALCcontext));
     free(context);
@@ -2335,7 +2337,7 @@ ALC_API ALCenum ALC_APIENTRY alcGetEnumValue(ALCdevice *device, const ALCchar *e
 ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCint *attrList)
 {
     ALCcontext *ALContext;
-    ALCenum err;
+    ALCenum err = AL_NO_ERROR;
 
     LockLists();
     if(!(device=VerifyDevice(device)) || device->Type == Capture || !device->Connected)
@@ -2371,8 +2373,9 @@ ALC_API ALCcontext* ALC_APIENTRY alcCreateContext(ALCdevice *device, const ALCin
         ALContext->MaxActiveSources = 256;
         ALContext->ActiveSources = malloc(sizeof(ALContext->ActiveSources[0]) *
                                           ALContext->MaxActiveSources);
+        err = EventInit(&ALContext->Event);
     }
-    if(!ALContext || !ALContext->ActiveSources)
+    if(!ALContext || !ALContext->ActiveSources || err!=AL_NO_ERROR)
     {
         if(!device->ContextList)
         {
@@ -2412,6 +2415,7 @@ ALC_API ALCvoid ALC_APIENTRY alcDestroyContext(ALCcontext *context)
 {
     ALCdevice *Device;
 
+    EventSignal(&context->Event);
     LockLists();
     /* alcGetContextsDevice sets an error for invalid contexts */
     Device = alcGetContextsDevice(context);
