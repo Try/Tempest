@@ -20,6 +20,7 @@ class ComPtr final {
     T* operator -> () { return  p; }
     T& operator *  () { return *p; }
     T*& get() { return p; }
+    T*  get() const { return p; }
 
   private:
     T* p=nullptr;

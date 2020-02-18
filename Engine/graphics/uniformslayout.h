@@ -2,6 +2,7 @@
 
 #include <Tempest/AbstractGraphicsApi>
 #include "../utility/dptr.h"
+#include "../utility/spinlock.h"
 
 #include <cstdint>
 #include <vector>
@@ -36,7 +37,8 @@ class UniformsLayout final {
 
   private:
     std::vector<Binding> elt;
-    mutable std::shared_ptr<AbstractGraphicsApi::UniformsLay> impl;
+    mutable Detail::SpinLock                                      sync;
+    mutable Detail::DSharedPtr<AbstractGraphicsApi::UniformsLay*> impl;
 
   friend class Device;
   };

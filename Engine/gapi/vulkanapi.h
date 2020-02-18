@@ -31,13 +31,10 @@ class VulkanApi : public AbstractGraphicsApi {
     PFboLayout     createFboLayout(Device *d, uint32_t w, uint32_t h, Swapchain *s,
                                    TextureFormat *att, size_t attCount) override;
 
-    PPipeline      createPipeline(Device* d,
-                                  const RenderState &st,
+    PPipeline      createPipeline(Device* d, const RenderState &st,
                                   const Tempest::Decl::ComponentType *decl, size_t declSize,
-                                  size_t stride,
-                                  Topology tp,
-                                  const UniformsLayout& ulay,
-                                  std::shared_ptr<UniformsLay> &ulayImpl,
+                                  size_t stride, Topology tp,
+                                  const UniformsLay& ulayImpl,
                                   const std::initializer_list<Shader*>& shaders) override;
 
     PShader        createShader(AbstractGraphicsApi::Device *d, const void* source, size_t src_size) override;
@@ -48,9 +45,9 @@ class VulkanApi : public AbstractGraphicsApi {
 
     PBuffer        createBuffer(Device* d, const void *mem, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferFlags flg) override;
 
-    Desc*          createDescriptors(Device* d, const UniformsLayout &lay, std::shared_ptr<UniformsLay> &layP) override;
+    Desc*          createDescriptors(Device* d, const UniformsLayout &lay, UniformsLay& layP) override;
 
-    std::shared_ptr<AbstractGraphicsApi::UniformsLay> createUboLayout(Device *d,const UniformsLayout&) override;
+    PUniformsLay   createUboLayout(Device *d,const UniformsLayout&) override;
 
     PTexture       createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips) override;
     PTexture       createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;

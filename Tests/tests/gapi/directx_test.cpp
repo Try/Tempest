@@ -73,3 +73,21 @@ TEST(DirectX12Api,Shader) {
     }
 #endif
   }
+
+TEST(DirectX12Api,Pso) {
+#if defined(_MSC_VER)
+  try {
+    DirectX12Api api{ApiFlags::Validation};
+    Device       device(api);
+
+    auto vert = device.loadShader("shader/simple_test.vert.sprv");
+    auto frag = device.loadShader("shader/simple_test.frag.sprv");
+    auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),UniformsLayout(),vert,frag);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping directx testcase: ", e.what()); else
+      throw;
+    }
+#endif
+  }

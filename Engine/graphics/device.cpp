@@ -9,6 +9,8 @@
 #include <Tempest/Pixmap>
 #include <Tempest/Except>
 
+#include <mutex>
+
 using namespace Tempest;
 
 static uint32_t mipCount(uint32_t w, uint32_t h) {
@@ -113,6 +115,14 @@ void Device::implSubmit(const Tempest::PrimaryCommandBuffer* cmd[],  AbstractGra
              hwait, waitCnt,
              hdone, doneCnt,
              fdone);
+  }
+
+void Device::createInstance(const UniformsLayout& ulay) {
+  if(ulay.impl.handler==nullptr) {
+    std::lock_guard<Detail::SpinLock> guard(ulay.sync);
+    if(ulay.impl.handler==nullptr)
+      ulay.impl=api.createUboLayout(dev,ulay);
+    }
   }
 
 Shader Device::loadShader(RFile &file) {
@@ -283,7 +293,8 @@ RenderPipeline Device::implPipeline(const RenderState &st,const UniformsLayout &
   if(!vs.impl || !fs.impl)
     return RenderPipeline();
 
-  RenderPipeline f(*this,api.createPipeline(dev,st,decl,declSize,stride,tp,ulay,ulay.impl,{vs.impl.handler,fs.impl.handler}));
+  createInstance(ulay);
+  RenderPipeline f(*this,api.createPipeline(dev,st,decl,declSize,stride,tp,*ulay.impl.handler,{vs.impl.handler,fs.impl.handler}));
   return f;
   }
 
@@ -315,10 +326,9 @@ VideoBuffer Device::createVideoBuffer(const void *data, size_t count, size_t siz
   return  buf;
   }
 
-Uniforms Device::uniforms(const UniformsLayout &owner) {
-  if(owner.impl==nullptr)
-    owner.impl=api.createUboLayout(dev,owner);
-  Uniforms ubo(*this,api.createDescriptors(dev,owner,owner.impl));
+Uniforms Device::uniforms(const UniformsLayout &ulay) {
+  createInstance(ulay);
+  Uniforms ubo(*this,api.createDescriptors(dev,ulay,*ulay.impl.handler));
   return ubo;
   }
 

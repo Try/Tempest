@@ -247,7 +247,7 @@ namespace Tempest {
       struct Pipeline:Shared {};
       struct Shader:Shared   {};
       struct Uniforms        {};
-      struct UniformsLay     {
+      struct UniformsLay:Shared {
         virtual ~UniformsLay()=default;
         };
       struct Buffer:Shared   {
@@ -284,13 +284,14 @@ namespace Tempest {
         virtual ~CmdPool()=default;
         };
 
-      using PBuffer    = Detail::DSharedPtr<Buffer*>;
-      using PTexture   = Detail::DSharedPtr<Texture*>;
-      using PPipeline  = Detail::DSharedPtr<Pipeline*>;
-      using PPass      = Detail::DSharedPtr<Pass*>;
-      using PShader    = Detail::DSharedPtr<Shader*>;
-      using PFbo       = Detail::DSharedPtr<Fbo*>;
-      using PFboLayout = Detail::DSharedPtr<FboLayout*>;
+      using PBuffer      = Detail::DSharedPtr<Buffer*>;
+      using PTexture     = Detail::DSharedPtr<Texture*>;
+      using PPipeline    = Detail::DSharedPtr<Pipeline*>;
+      using PPass        = Detail::DSharedPtr<Pass*>;
+      using PShader      = Detail::DSharedPtr<Shader*>;
+      using PFbo         = Detail::DSharedPtr<Fbo*>;
+      using PFboLayout   = Detail::DSharedPtr<FboLayout*>;
+      using PUniformsLay = Detail::DSharedPtr<UniformsLay*>;
 
     protected:
       virtual Device*    createDevice(const char* gpuName)=0;
@@ -308,16 +309,13 @@ namespace Tempest {
       virtual PFboLayout createFboLayout(Device *d,uint32_t w, uint32_t h,Swapchain *s,
                                          TextureFormat *att, size_t attCount)=0;
 
-      virtual std::shared_ptr<AbstractGraphicsApi::UniformsLay>
+      virtual PUniformsLay
                          createUboLayout(Device *d,const UniformsLayout&)=0;
 
-      virtual PPipeline  createPipeline(Device* d,
-                                        const RenderState &st,
+      virtual PPipeline  createPipeline(Device* d, const RenderState &st,
                                         const Tempest::Decl::ComponentType *decl, size_t declSize,
-                                        size_t stride,
-                                        Topology tp,
-                                        const UniformsLayout& ulay,
-                                        std::shared_ptr<UniformsLay> &ulayImpl,
+                                        size_t stride, Topology tp,
+                                        const UniformsLay &ulayImpl,
                                         const std::initializer_list<Shader*>& sh)=0;
 
       virtual PShader    createShader(Device *d,const void* source,size_t src_size)=0;
@@ -333,7 +331,7 @@ namespace Tempest {
 
       virtual PBuffer    createBuffer(Device* d,const void *mem,size_t count,size_t sz,size_t alignedSz,MemUsage usage,BufferFlags flg)=0;
 
-      virtual Desc*      createDescriptors(Device* d,const Tempest::UniformsLayout& p,std::shared_ptr<AbstractGraphicsApi::UniformsLay>& layP)=0;
+      virtual Desc*      createDescriptors(Device* d,const Tempest::UniformsLayout& p,AbstractGraphicsApi::UniformsLay& layP)=0;
 
       virtual PTexture   createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips)=0;
       virtual PTexture   createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm)=0;

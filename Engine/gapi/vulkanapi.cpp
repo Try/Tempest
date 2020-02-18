@@ -15,6 +15,7 @@
 #include "vulkan/vdescriptorarray.h"
 #include "vulkan/vuniformslay.h"
 #include "vulkan/vtexture.h"
+#include "vulkan/vuniformslay.h"
 
 #include "deviceallocator.h"
 
@@ -141,14 +142,15 @@ AbstractGraphicsApi::PPipeline VulkanApi::createPipeline(AbstractGraphicsApi::De
                                                          const Decl::ComponentType *decl, size_t declSize,
                                                          size_t stride,
                                                          Topology tp,
-                                                         const UniformsLayout &ulay,
-                                                         std::shared_ptr<AbstractGraphicsApi::UniformsLay> &ulayImpl,
+                                                         const UniformsLay& ulayImpl,
                                                          const std::initializer_list<AbstractGraphicsApi::Shader*> &shaders) {
-  Shader*const*        arr=shaders.begin();
-  Detail::VDevice*     dx =reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VShader*     vs =reinterpret_cast<Detail::VShader*>(arr[0]);
-  Detail::VShader*     fs =reinterpret_cast<Detail::VShader*>(arr[1]);
-  return PPipeline(new Detail::VPipeline(*dx,st,decl,declSize,stride,tp,ulay,ulayImpl,*vs,*fs));
+  Shader*const*         arr= shaders.begin();
+  auto* dx = reinterpret_cast<Detail::VDevice*>(d);
+  auto* vs = reinterpret_cast<Detail::VShader*>(arr[0]);
+  auto* fs = reinterpret_cast<Detail::VShader*>(arr[1]);
+  auto& ul = reinterpret_cast<const Detail::VUniformsLay&>(ulayImpl);
+
+  return PPipeline(new Detail::VPipeline(*dx,st,decl,declSize,stride,tp,ul,*vs,*fs));
   }
 
 AbstractGraphicsApi::PShader VulkanApi::createShader(AbstractGraphicsApi::Device *d, const void* source, size_t src_size) {
@@ -313,16 +315,17 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
 
 AbstractGraphicsApi::Desc *VulkanApi::createDescriptors(AbstractGraphicsApi::Device*      d,
                                                         const UniformsLayout&             lay,
-                                                        std::shared_ptr<AbstractGraphicsApi::UniformsLay>& layP) {
+                                                        UniformsLay& ulayImpl) {
   if(lay.size()==0)
     return nullptr;
-  Detail::VDevice* dx = reinterpret_cast<Detail::VDevice*>(d);
-  return new Detail::VDescriptorArray(dx->device,lay,layP);
+  auto* dx = reinterpret_cast<Detail::VDevice*>(d);
+  auto& ul = reinterpret_cast<Detail::VUniformsLay&>(ulayImpl);
+  return new Detail::VDescriptorArray(dx->device,lay,ul);
   }
 
-std::shared_ptr<AbstractGraphicsApi::UniformsLay> VulkanApi::createUboLayout(Device *d, const UniformsLayout &lay) {
+AbstractGraphicsApi::PUniformsLay VulkanApi::createUboLayout(Device *d, const UniformsLayout &lay) {
   Detail::VDevice* dx = reinterpret_cast<Detail::VDevice*>(d);
-  return std::make_shared<Detail::VUniformsLay>(dx->device,lay);
+  return PUniformsLay(new Detail::VUniformsLay(dx->device,lay));
   }
 
 AbstractGraphicsApi::CommandBuffer *VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device *d,

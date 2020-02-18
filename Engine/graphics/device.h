@@ -153,6 +153,7 @@ class Device {
                            const Semaphore* wait[], AbstractGraphicsApi::Semaphore*     hwait[], size_t waitCnt,
                            Semaphore*       done[], AbstractGraphicsApi::Semaphore*     hdone[], size_t doneCnt,
                            AbstractGraphicsApi::Fence*         fdone);
+    void        createInstance(const UniformsLayout &ulay);
 
     static TextureFormat formatOf(const Attachment& a);
 

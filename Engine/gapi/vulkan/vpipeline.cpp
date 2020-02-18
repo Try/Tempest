@@ -18,23 +18,16 @@ using namespace Tempest::Detail;
 VPipeline::VPipeline(){
   }
 
-VPipeline::VPipeline(VDevice& device,
-                     const RenderState &st,
+VPipeline::VPipeline(VDevice& device, const RenderState &st,
                      const Decl::ComponentType *idecl, size_t declSize, size_t stride,
-                     Topology tp,
-                     const UniformsLayout &ulay,
-                     std::shared_ptr<AbstractGraphicsApi::UniformsLay> &ulayImpl,
+                     Topology tp, const VUniformsLay& ulay,
                      VShader& vert, VShader& frag)
   : device(device.device), st(st), declSize(declSize), stride(stride), tp(tp), vs(&vert), fs(&frag) {
   try {
-    if(ulayImpl==nullptr)
-      ulayImpl=std::make_shared<VUniformsLay>(device.device,ulay);
-
     decl.reset(new Decl::ComponentType[declSize]);
     std::memcpy(decl.get(),idecl,declSize*sizeof(Decl::ComponentType));
 
-    VUniformsLay* puLay=reinterpret_cast<VUniformsLay*>(ulayImpl.get());
-    pipelineLayout = initLayout(device.device,puLay->impl);
+    pipelineLayout = initLayout(device.device,ulay.impl);
     // instance(pass,width,height);
     }
   catch(...) {
@@ -123,7 +116,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
 
   VkVertexInputBindingDescription vk_vertexInputBindingDescription;
   vk_vertexInputBindingDescription.binding   = 0;
-  vk_vertexInputBindingDescription.stride    = stride;
+  vk_vertexInputBindingDescription.stride    = uint32_t(stride);
   vk_vertexInputBindingDescription.inputRate = VkVertexInputRate::VK_VERTEX_INPUT_RATE_VERTEX;
 
   static const VkFormat vertFormats[]={
@@ -168,7 +161,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   uint32_t offset=0;
   for(size_t i=0;i<declSize;++i){
     auto& loc=vsInput[i];
-    loc.location = i;
+    loc.location = uint32_t(i);
     loc.binding  = 0;
     loc.format   = vertFormats[decl[i]];
     loc.offset   = offset;
@@ -182,7 +175,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   vertexInputInfo.flags = 0;
   vertexInputInfo.vertexBindingDescriptionCount   = 1;
   vertexInputInfo.pVertexBindingDescriptions      = &vk_vertexInputBindingDescription;
-  vertexInputInfo.vertexAttributeDescriptionCount = declSize;
+  vertexInputInfo.vertexAttributeDescriptionCount = uint32_t(declSize);
   vertexInputInfo.pVertexAttributeDescriptions    = vsInput;
 
   VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};

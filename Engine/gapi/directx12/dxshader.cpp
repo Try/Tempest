@@ -11,8 +11,7 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-DxShader::DxShader(DxDevice& d, const void *source, size_t src_size)
-  : device(d.device.get()) {
+DxShader::DxShader(const void *source, size_t src_size) {
   if(src_size%4!=0)
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
 
@@ -45,18 +44,21 @@ DxShader::DxShader(DxDevice& d, const void *source, size_t src_size)
     default: // unimplemented
       throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
-  // Log::d(hlsl);
+  Log::d(hlsl);
 
-  ComPtr<ID3DBlob> errs;
   UINT compileFlags = 0; //D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
   HRESULT hr = D3DCompile(hlsl.c_str(),hlsl.size(),nullptr,nullptr,nullptr,"main",target,compileFlags,0,
-                      reinterpret_cast<ID3DBlob**>(&shader),reinterpret_cast<ID3DBlob**>(&errs));
+                      reinterpret_cast<ID3DBlob**>(&shader),nullptr);
   if(hr!=S_OK) {
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
   }
 
 DxShader::~DxShader() {
+  }
+
+D3D12_SHADER_BYTECODE DxShader::bytecode() {
+  return D3D12_SHADER_BYTECODE{shader->GetBufferPointer(),shader->GetBufferSize()};
   }
 
 #endif

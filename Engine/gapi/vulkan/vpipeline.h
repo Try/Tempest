@@ -14,16 +14,15 @@ class VShader;
 class VDevice;
 class VFramebuffer;
 class VFramebufferLayout;
+class VUniformsLay;
 
 class VPipeline : public AbstractGraphicsApi::Pipeline {
   public:
     VPipeline();
-    VPipeline(VDevice &device,
-              const RenderState &st,
+    VPipeline(VDevice &device, const RenderState &st,
               const Decl::ComponentType *decl, size_t declSize,
               size_t stride, Topology tp,
-              const UniformsLayout& ulay,
-              std::shared_ptr<AbstractGraphicsApi::UniformsLay> &ulayImpl,
+              const VUniformsLay& ulayImpl,
               VShader &vert, VShader &frag);
     VPipeline(VPipeline&& other);
     ~VPipeline();

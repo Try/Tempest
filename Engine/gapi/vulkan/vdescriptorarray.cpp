@@ -10,35 +10,33 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-VDescriptorArray::VDescriptorArray(VkDevice device, const UniformsLayout& lay,
-                                   std::shared_ptr<AbstractGraphicsApi::UniformsLay>& layP)
-  :device(device),lay(layP) {
-  Detail::VUniformsLay* layImpl = reinterpret_cast<Detail::VUniformsLay*>(this->lay.get());
-  if(layImpl->hint.size()==0)
+VDescriptorArray::VDescriptorArray(VkDevice device, const UniformsLayout& lay, VUniformsLay& vlay)
+  :device(device),lay(&vlay) {
+  if(vlay.hint.size()==0)
     return;
 
-  if(layImpl->offsetsCnt<=sizeof(multV)/sizeof(multV[0])) {
+  if(vlay.offsetsCnt<=sizeof(multV)/sizeof(multV[0])) {
     multiplier = multV;
     } else {
-    multiplier = new size_t[layImpl->offsetsCnt];
+    multiplier = new size_t[vlay.offsetsCnt];
     }
 
-  std::lock_guard<Detail::SpinLock> guard(layImpl->sync);
+  std::lock_guard<Detail::SpinLock> guard(vlay.sync);
 
-  for(auto& i:layImpl->pool){
+  for(auto& i:vlay.pool){
     if(i.freeCount==0)
       continue;
-    if(allocDescSet(i.impl,layImpl->impl)) {
+    if(allocDescSet(i.impl,vlay.impl)) {
       pool=&i;
       pool->freeCount--;
       return;
       }
     }
 
-  layImpl->pool.emplace_back();
-  auto& b = layImpl->pool.back();
-  b.impl  = allocPool(lay,layP,Detail::VUniformsLay::POOL_SIZE);
-  if(!allocDescSet(b.impl,layImpl->impl))
+  vlay.pool.emplace_back();
+  auto& b = vlay.pool.back();
+  b.impl  = allocPool(lay,Detail::VUniformsLay::POOL_SIZE);
+  if(!allocDescSet(b.impl,vlay.impl))
     throw std::bad_alloc();
   pool = &b;
   pool->freeCount--;
@@ -49,16 +47,14 @@ VDescriptorArray::~VDescriptorArray() {
     return;
   if(multiplier!=multV)
     delete multiplier;
-  Detail::VUniformsLay* layImpl = reinterpret_cast<Detail::VUniformsLay*>(this->lay.get());
+  Detail::VUniformsLay* layImpl = lay.handler;
   std::lock_guard<Detail::SpinLock> guard(layImpl->sync);
 
   vkFreeDescriptorSets(device,pool->impl,1,&desc);
   pool->freeCount++;
   }
 
-VkDescriptorPool VDescriptorArray::allocPool(const UniformsLayout& lay,
-                                             std::shared_ptr<AbstractGraphicsApi::UniformsLay> &/*layP*/,
-                                             size_t size) {
+VkDescriptorPool VDescriptorArray::allocPool(const UniformsLayout& lay, size_t size) {
   VkDescriptorPoolSize poolSize[3] = {};
   size_t               pSize=0;
 
@@ -128,7 +124,7 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf,
   bufferInfo.offset = offset;
   bufferInfo.range  = size;
 
-  Detail::VUniformsLay* layImpl = reinterpret_cast<Detail::VUniformsLay*>(lay.get());
+  Detail::VUniformsLay* layImpl = lay.handler;
 
   VkWriteDescriptorSet descriptorWrite = {};
   descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

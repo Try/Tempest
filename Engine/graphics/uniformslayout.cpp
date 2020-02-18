@@ -8,6 +8,6 @@ UniformsLayout &UniformsLayout::add(uint32_t layout,UniformsLayout::Class c,Unif
   e.cls   =c;
   e.stage =s;
   elt.push_back(e);
-  impl=nullptr;
+  impl=Detail::DSharedPtr<AbstractGraphicsApi::UniformsLay*>();
   return *this;
   }

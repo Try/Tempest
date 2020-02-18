@@ -2,7 +2,6 @@
 
 #include <Tempest/AbstractGraphicsApi>
 #include <d3d12.h>
-
 #include "gapi/directx12/comptr.h"
 
 namespace Tempest {
@@ -12,13 +11,11 @@ class DxDevice;
 
 class DxShader:public AbstractGraphicsApi::Shader {
   public:
-    DxShader(DxDevice& device, const void* source, size_t src_size);
+    DxShader(const void* source, size_t src_size);
     ~DxShader();
 
+    D3D12_SHADER_BYTECODE bytecode();
     ComPtr<ID3DBlob> shader;
-
-  private:
-    ID3D12Device* device=nullptr;
   };
 
 }}

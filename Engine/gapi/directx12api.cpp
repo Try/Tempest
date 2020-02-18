@@ -9,6 +9,8 @@
 #include "directx12/dxdevice.h"
 #include "directx12/dxbuffer.h"
 #include "directx12/dxshader.h"
+#include "directx12/dxpipeline.h"
+#include "directx12/dxuniformslay.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -76,16 +78,22 @@ AbstractGraphicsApi::PFboLayout DirectX12Api::createFboLayout(AbstractGraphicsAp
 
 AbstractGraphicsApi::PPipeline DirectX12Api::createPipeline(AbstractGraphicsApi::Device* d, const RenderState& st,
                                                             const Decl::ComponentType* decl, size_t declSize, size_t stride,
-                                                            Topology tp, const UniformsLayout& ulay,
-                                                            std::shared_ptr<AbstractGraphicsApi::UniformsLay>& ulayImpl,
+                                                            Topology tp,
+                                                            const UniformsLay& ulayImpl,
                                                             const std::initializer_list<AbstractGraphicsApi::Shader*>& shaders) {
-  return PPipeline();
+  Shader*const*        arr=shaders.begin();
+  auto* dx = reinterpret_cast<Detail::DxDevice*>(d);
+  auto* vs = reinterpret_cast<Detail::DxShader*>(arr[0]);
+  auto* fs = reinterpret_cast<Detail::DxShader*>(arr[1]);
+  auto& ul = reinterpret_cast<const Detail::DxUniformsLay&>(ulayImpl);
+
+  return PPipeline(new Detail::DxPipeline(*dx,st,decl,declSize,stride,tp,ul,*vs,*fs));
   }
 
 AbstractGraphicsApi::PShader DirectX12Api::createShader(AbstractGraphicsApi::Device* d,
                                                         const void* source, size_t src_size) {
-  Detail::DxDevice* dx=reinterpret_cast<Detail::DxDevice*>(d);
-  return PShader(new Detail::DxShader(*dx,source,src_size));
+  (void)d;
+  return PShader(new Detail::DxShader(source,src_size));
   }
 
 AbstractGraphicsApi::Fence* DirectX12Api::createFence(AbstractGraphicsApi::Device* d) {
@@ -108,8 +116,9 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
   if(flg==BufferFlags::Staging) {
     Detail::DxBuffer stage=dx->allocator.alloc(mem,count*alignedSz,usage,BufferFlags::Staging);
     return PBuffer(new Detail::DxBuffer(std::move(stage)));
-    }/*
+    }
   else {
+    /*
     Detail::DxBuffer  stage=dx->allocator.alloc(mem,     size, MemUsage::TransferSrc,      BufferFlags::Staging);
     Detail::DxBuffer  buf  =dx->allocator.alloc(nullptr, size, usage|MemUsage::TransferDst,BufferFlags::Static );
 
@@ -123,18 +132,19 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
     dat.copy(*pbuf.handler,*pstage.handler,size);
     dat.commit();
 
-    return PBuffer(pbuf.handler);
-    }*/
+    return PBuffer(pbuf.handler);*/
+    throw std::runtime_error("not implemented");
+    }
   return PBuffer();
   }
 
-AbstractGraphicsApi::Desc* DirectX12Api::createDescriptors(AbstractGraphicsApi::Device* d, const UniformsLayout& lay, std::shared_ptr<AbstractGraphicsApi::UniformsLay>& layP) {
+AbstractGraphicsApi::Desc* DirectX12Api::createDescriptors(AbstractGraphicsApi::Device* d, const UniformsLayout& lay, UniformsLay& layP) {
   return nullptr;
   }
 
-std::shared_ptr<AbstractGraphicsApi::UniformsLay>
-DirectX12Api::createUboLayout(AbstractGraphicsApi::Device* d, const UniformsLayout&) {
-  return nullptr;
+AbstractGraphicsApi::PUniformsLay DirectX12Api::createUboLayout(AbstractGraphicsApi::Device* d, const UniformsLayout& lay) {
+  Detail::DxDevice* dx = reinterpret_cast<Detail::DxDevice*>(d);
+  return PUniformsLay(new DxUniformsLay(*dx,lay));
   }
 
 AbstractGraphicsApi::PTexture DirectX12Api::createTexture(AbstractGraphicsApi::Device* d, const Pixmap& p, TextureFormat frm, uint32_t mips) {
