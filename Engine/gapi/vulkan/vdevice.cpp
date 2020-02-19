@@ -31,13 +31,7 @@ class VDevice::FakeWindow final {
   public:
     FakeWindow(VDevice& dev)
       :instance(dev.instance) {
-      try {
-        w = SystemApi::createWindow(nullptr,SystemApi::Hidden);
-        }
-      catch(std::system_error& err) {
-        if(err.code()!=SystemErrc::UnableToCreateWindow)
-          throw;
-        }
+      w = SystemApi::createWindow(nullptr,SystemApi::Hidden);
       }
     ~FakeWindow() {
       if(surface!=VK_NULL_HANDLE)

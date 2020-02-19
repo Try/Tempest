@@ -144,7 +144,7 @@ SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, uint32_t
                                 nullptr);              // no extra parameters
 
   if( !window )
-    throw std::system_error(Tempest::SystemErrc::UnableToCreateWindow);
+    return nullptr;
 
   SetWindowLongPtr(window,GWLP_USERDATA,LONG_PTR(owner));
   //minsize.x = GetSystemMetrics(SM_CXMINTRACK);

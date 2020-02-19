@@ -1,11 +1,14 @@
 #include "window.h"
 
 #include <Tempest/VectorImage>
+#include <Tempest/Except>
 
 using namespace Tempest;
 
 Window::Window() {
   id = Tempest::SystemApi::createWindow(this,800,600);
+  if(id==nullptr)
+    throw std::system_error(Tempest::SystemErrc::UnableToCreateWindow);
   setGeometry(SystemApi::windowClientRect(id));
   setFocus(true);
   update();
@@ -13,6 +16,8 @@ Window::Window() {
 
 Window::Window(Window::ShowMode sm) {
   id = Tempest::SystemApi::createWindow(this,SystemApi::ShowMode(sm));
+  if(id==nullptr)
+    throw std::system_error(Tempest::SystemErrc::UnableToCreateWindow);
   setGeometry(SystemApi::windowClientRect(id));
   setFocus(true);
   update();
