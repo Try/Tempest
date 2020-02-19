@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_DIRECTX12)
+
 #include "dxuniformslay.h"
 
 #include "dxdevice.h"
@@ -48,3 +50,5 @@ DxUniformsLay::DxUniformsLay(DxDevice& dev, const UniformsLayout& lay) {
   dxAssert(device.CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(),
                                       uuid<ID3D12RootSignature>(), reinterpret_cast<void**>(&impl)));
   }
+
+#endif
