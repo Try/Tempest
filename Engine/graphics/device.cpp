@@ -2,7 +2,6 @@
 
 #include <Tempest/Semaphore>
 #include <Tempest/Fence>
-#include <Tempest/CommandPool>
 #include <Tempest/UniformsLayout>
 #include <Tempest/UniformBuffer>
 #include <Tempest/File>
@@ -37,8 +36,7 @@ Device::Device(AbstractGraphicsApi& api, uint8_t maxFramesInFlight)
   }
 
 Device::Device(AbstractGraphicsApi &api, const char* name, uint8_t maxFramesInFlight)
-  :api(api), impl(api,name,maxFramesInFlight), dev(impl.dev),
-   mainCmdPool(*this,api.createCommandPool(dev)),builtins(*this) {
+  :api(api), impl(api,name,maxFramesInFlight), dev(impl.dev), builtins(*this) {
   api.getCaps(dev,devProps);
   }
 
@@ -299,13 +297,12 @@ RenderPipeline Device::implPipeline(const RenderState &st,const UniformsLayout &
   }
 
 PrimaryCommandBuffer Device::commandBuffer() {
-  PrimaryCommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,nullptr,CmdType::Primary));
+  PrimaryCommandBuffer buf(*this,api.createCommandBuffer(dev,nullptr,CmdType::Primary));
   return buf;
   }
 
 CommandBuffer Device::commandSecondaryBuffer(const FrameBufferLayout &lay) {
-  CommandBuffer buf(*this,api.createCommandBuffer(dev,mainCmdPool.impl.handler,
-                                                  lay.impl.handler,CmdType::Secondary));
+  CommandBuffer buf(*this,api.createCommandBuffer(dev,lay.impl.handler,CmdType::Secondary));
   return buf;
   }
 

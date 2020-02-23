@@ -2,14 +2,19 @@
 
 #include "dxuniformslay.h"
 
+#include <Tempest/UniformsLayout>
+
 #include "dxdevice.h"
 #include "guid.h"
+
+#include <cassert>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
 
 DxUniformsLay::DxUniformsLay(DxDevice& dev, const UniformsLayout& lay) {
   auto& device=*dev.device;
+  assert(lay.size()==0); //TODO
 
   D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
   featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;

@@ -168,11 +168,6 @@ AbstractGraphicsApi::Semaphore *VulkanApi::createSemaphore(AbstractGraphicsApi::
   return new Detail::VSemaphore(*dx);
   }
 
-AbstractGraphicsApi::CmdPool *VulkanApi::createCommandPool(AbstractGraphicsApi::Device *d) {
-  Detail::VDevice* dx =reinterpret_cast<Detail::VDevice*>(d);
-  return new Detail::VCommandPool(*dx);
-  }
-
 AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device *d,
                                                      const void *mem, size_t count, size_t size, size_t alignedSz,
                                                      MemUsage usage,BufferFlags flg) {
@@ -329,13 +324,11 @@ AbstractGraphicsApi::PUniformsLay VulkanApi::createUboLayout(Device *d, const Un
   }
 
 AbstractGraphicsApi::CommandBuffer *VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device *d,
-                                                                   AbstractGraphicsApi::CmdPool *p,
                                                                    FboLayout *fbo,
                                                                    CmdType cmdType) {
   Detail::VDevice*             dx=reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VCommandPool*        px=reinterpret_cast<Detail::VCommandPool*>(p);
   Detail::VFramebufferLayout*  fb=reinterpret_cast<Detail::VFramebufferLayout*>(fbo);
-  return new Detail::VCommandBuffer(*dx,*px,fb,cmdType);
+  return new Detail::VCommandBuffer(*dx,*dx->cmdMain,fb,cmdType);
   }
 
 void VulkanApi::present(Device *d,Swapchain *sw,uint32_t imageId,const Semaphore *wait) {

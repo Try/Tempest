@@ -57,16 +57,14 @@ class DxDevice : public AbstractGraphicsApi::Device {
 
       };
 
-    ComPtr<ID3D12Device>       device;
-    DxAllocator                allocator;
+    ComPtr<ID3D12Device>           device;
+    ComPtr<ID3D12CommandAllocator> cmdMain;
+    ComPtr<ID3D12CommandQueue>     cmdQueue;
+
+    DxAllocator                    allocator;
 
   private:
-    struct Queue {
-      ComPtr<ID3D12CommandQueue> impl;
-      };
-
-    char                       description[128] = {};
-    Queue                      cmdQueue;
+    char                           description[128] = {};
   };
 
 }}

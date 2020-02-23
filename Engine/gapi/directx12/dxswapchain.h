@@ -17,7 +17,7 @@ class DxDevice;
 class DxSwapchain : public AbstractGraphicsApi::Swapchain {
   public:
     DxSwapchain()=default;
-    DxSwapchain(DxDevice& device,uint32_t w,uint32_t h);
+    DxSwapchain(DxDevice& device, IDXGIFactory4& dxgi, SystemApi::Window* hwnd);
     DxSwapchain(DxSwapchain&& other);
     ~DxSwapchain() override;
 
@@ -27,10 +27,10 @@ class DxSwapchain : public AbstractGraphicsApi::Swapchain {
     uint32_t                 imageCount() const override { return imgCount; }
     uint32_t                 nextImage(AbstractGraphicsApi::Semaphore* onReady) override;
 
+    ComPtr<IDXGISwapChain3>  impl;
+
   private:
     uint32_t                 currImg=0;
-    ComPtr<IDXGISwapChain>   impl;
-
     uint32_t                 imgW=0, imgH=0;
     uint32_t                 imgCount=3;
   };

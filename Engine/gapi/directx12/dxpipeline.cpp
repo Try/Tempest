@@ -10,10 +10,9 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-DxPipeline::DxPipeline(DxDevice& device,
-                       const RenderState& st,
-                       const Decl::ComponentType* decl, size_t declSize, size_t stride, Topology tp,
-                       const DxUniformsLay& ulay,
+DxPipeline::DxPipeline(DxDevice& device, const RenderState& st,
+                       const Decl::ComponentType* decl, size_t declSize, size_t stride,
+                       Topology tp, const DxUniformsLay& ulay,
                        DxShader& vert, DxShader& frag) {
   static const DXGI_FORMAT vertFormats[]={
     DXGI_FORMAT_UNKNOWN,

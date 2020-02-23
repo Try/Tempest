@@ -8,7 +8,7 @@ namespace Detail {
 
 class VDevice;
 
-class VCommandPool : public AbstractGraphicsApi::CmdPool {
+class VCommandPool {
   public:
     VCommandPool(VDevice &device, VkCommandPoolCreateFlags flags=VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
     VCommandPool(VCommandPool&& other);

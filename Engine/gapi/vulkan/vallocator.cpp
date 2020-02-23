@@ -10,6 +10,8 @@
 #include <Tempest/Log>
 #include <thread>
 
+#include "gapi/graphicsmemutils.h"
+
 using namespace Tempest;
 using namespace Tempest::Detail;
 
@@ -307,22 +309,6 @@ void VAllocator::getImgMemoryRequirements(MemRequirements& out, VkImage img) {
   out.size           = size_t(memRq.size);
   out.alignment      = size_t(memRq.alignment);
   out.memoryTypeBits = memRq.memoryTypeBits;
-  }
-
-static void copyUpsample(const void *src, void* dest,
-                         size_t count, size_t size, size_t alignedSz){
-  if(src==nullptr)
-    return;
-
-  if(size==alignedSz) {
-    std::memcpy(dest,src,size*count);
-    } else {
-    auto s = reinterpret_cast<const uint8_t*>(src);
-    auto d = reinterpret_cast<uint8_t*>(dest);
-    for(size_t i=0;i<count;++i) {
-      std::memcpy(d+i*alignedSz,s+i*size,size);
-      }
-    }
   }
 
 bool VAllocator::update(VBuffer &dest, const void *mem,

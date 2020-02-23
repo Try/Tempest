@@ -1,7 +1,10 @@
 #if defined(TEMPEST_BUILD_DIRECTX12)
 
 #include "dxbuffer.h"
+#include "dxdevice.h"
 #include <cassert>
+
+#include "gapi/graphicsmemutils.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -18,7 +21,15 @@ DxBuffer::DxBuffer(Tempest::Detail::DxBuffer&& other)
   }
 
 void DxBuffer::update(const void* data, size_t off, size_t count, size_t sz, size_t alignedSz) {
-  assert(0); //TODO: dx
+  ID3D12Resource& ret = *impl;
+
+  D3D12_RANGE rgn = {off*alignedSz,count*alignedSz};
+  void*       mapped=nullptr;
+  dxAssert(ret.Map(0,&rgn,&mapped));
+
+  copyUpsample(data,mapped,count,sz,alignedSz);
+
+  ret.Unmap(0,&rgn);
   }
 
 #endif

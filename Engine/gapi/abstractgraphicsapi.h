@@ -152,9 +152,10 @@ namespace Tempest {
   class AbstractGraphicsApi {
     protected:
       AbstractGraphicsApi() =default;
-      ~AbstractGraphicsApi()=default;
 
     public:
+      virtual ~AbstractGraphicsApi()=default;
+
       enum DeviceType : uint8_t {
         Unknown   = 0,
         Virtual   = 1,
@@ -280,9 +281,6 @@ namespace Tempest {
         virtual void draw        (size_t offset,size_t vertexCount)=0;
         virtual void drawIndexed (size_t ioffset, size_t isize, size_t voffset)=0;
         };
-      struct CmdPool         {
-        virtual ~CmdPool()=default;
-        };
 
       using PBuffer      = Detail::DSharedPtr<Buffer*>;
       using PTexture     = Detail::DSharedPtr<Texture*>;
@@ -324,10 +322,8 @@ namespace Tempest {
 
       virtual Semaphore* createSemaphore(Device *d)=0;
 
-      virtual CmdPool*   createCommandPool(Device* d)=0;
-
       virtual CommandBuffer*
-                         createCommandBuffer(Device* d,CmdPool* pool,FboLayout* fbo,CmdType type)=0;
+                         createCommandBuffer(Device* d,FboLayout* fbo,CmdType type)=0;
 
       virtual PBuffer    createBuffer(Device* d,const void *mem,size_t count,size_t sz,size_t alignedSz,MemUsage usage,BufferFlags flg)=0;
 

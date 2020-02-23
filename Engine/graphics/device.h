@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include <Tempest/CommandPool>
 #include <Tempest/CommandBuffer>
 #include <Tempest/RenderPass>
 #include <Tempest/FrameBuffer>
@@ -140,7 +139,6 @@ class Device {
     Impl                            impl;
     AbstractGraphicsApi::Device*    dev=nullptr;
     Props                           devProps;
-    Tempest::CommandPool            mainCmdPool;
     Tempest::Builtin                builtins;
 
     VideoBuffer createVideoBuffer(const void* data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferFlags flg);

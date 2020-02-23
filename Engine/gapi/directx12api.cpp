@@ -11,6 +11,8 @@
 #include "directx12/dxshader.h"
 #include "directx12/dxpipeline.h"
 #include "directx12/dxuniformslay.h"
+#include "directx12/dxcommandbuffer.h"
+#include "directx12/dxswapchain.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -155,20 +157,20 @@ AbstractGraphicsApi::PTexture DirectX12Api::createTexture(AbstractGraphicsApi::D
   return PTexture();
   }
 
-void DirectX12Api::readPixels(AbstractGraphicsApi::Device* d, Pixmap& out, const AbstractGraphicsApi::PTexture t, TextureLayout lay, TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip) {
+void DirectX12Api::readPixels(AbstractGraphicsApi::Device* d, Pixmap& out, const AbstractGraphicsApi::PTexture t, TextureLayout lay,
+                              TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip) {
 
   }
 
-AbstractGraphicsApi::CmdPool* DirectX12Api::createCommandPool(AbstractGraphicsApi::Device* d) {
-  return nullptr;
+AbstractGraphicsApi::CommandBuffer* DirectX12Api::createCommandBuffer(AbstractGraphicsApi::Device* d, FboLayout* fbo, CmdType type) {
+  Detail::DxDevice* dx = reinterpret_cast<Detail::DxDevice*>(d);
+  return new DxCommandBuffer(*dx);
   }
 
-AbstractGraphicsApi::CommandBuffer* DirectX12Api::createCommandBuffer(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::CmdPool* pool,                                                                     AbstractGraphicsApi::FboLayout* fbo, CmdType type) {
-  return nullptr;
-  }
-
-void DirectX12Api::present(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Swapchain* sw, uint32_t imageId, const AbstractGraphicsApi::Semaphore* wait) {
-
+void DirectX12Api::present(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Swapchain* sw,
+                           uint32_t imageId, const AbstractGraphicsApi::Semaphore* wait) {
+  Detail::DxSwapchain* sx = reinterpret_cast<Detail::DxSwapchain*>(sw);
+  dxAssert(sx->impl->Present(1/*vsync*/, 0));
   }
 
 void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::CommandBuffer* cmd,
