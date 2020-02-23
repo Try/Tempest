@@ -1,22 +1,22 @@
-#include <Tempest/SystemApi>
+#include <Tempest/Application>
 #include <Tempest/VulkanApi>
 
 #include <Tempest/Device>
-#include <Tempest/Painter>
-#include <Tempest/Window>
-#include <Tempest/Fence>
-#include <Tempest/Semaphore>
-#include <Tempest/VertexBuffer>
-
-#include <vector>
 
 #include "game.h"
 
-int main() {
-  Tempest::VulkanApi api;
-  Game               wx(api);
+std::unique_ptr<Tempest::AbstractGraphicsApi> mkApi(const char* av) {
+  //if(std::strcmp(av,"dx12"))
+  //  return std::unique_ptr<Tempest::AbstractGraphicsApi>(new Tempest::Directx12Api{Tempest::ApiFlags::Validation});
+  return std::unique_ptr<Tempest::AbstractGraphicsApi>(new Tempest::VulkanApi{Tempest::ApiFlags::Validation});
+  }
 
-  Tempest::SystemApi::exec();
+int main(int argc,const char** argv) {
+  Tempest::Application app;
+  auto api = mkApi(argc>1 ? argv[1] : "");
 
-  return 0;
+  Tempest::Device device{*api};
+  Game            wx(device);
+
+  return app.exec();
   }
