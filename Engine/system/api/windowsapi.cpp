@@ -40,7 +40,7 @@ static WORD get_Button_WPARAM(WPARAM lp) {
   return ((DWORD_PTR(lp)) >> 16) & 0xffff;
   }
 
-static Event::MouseButton toButton( UINT msg, DWORD wParam ){
+static Event::MouseButton toButton( UINT msg, const unsigned long long wParam ){
   if( msg==WM_LBUTTONDOWN ||
       msg==WM_LBUTTONUP )
     return Event::ButtonLeft;
@@ -105,7 +105,6 @@ WindowsApi::WindowsApi() {
     };
 
   WNDCLASSEXW winClass={};
-
   // Initialize the window class structure:
   winClass.lpszClassName = wndClassName;
   winClass.cbSize        = sizeof(WNDCLASSEX);
@@ -120,16 +119,15 @@ WindowsApi::WindowsApi() {
   winClass.cbClsExtra    = 0;
   winClass.cbWndExtra    = 0;
 
-  // Register window class:
-  if(!RegisterClassExW(&winClass)) {
+  if(RegisterClassExW(&winClass)==0)
     throw std::system_error(Tempest::SystemErrc::InvalidWindowClass);
-    }
   }
 
 SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, uint32_t width, uint32_t height) {
-  // Create window with the registered class:
   RECT wr = {0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
   AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
+
+  HINSTANCE module = GetModuleHandle(nullptr);
   HWND window = CreateWindowExW(0,
                                 wndClassName,          // class name
                                 nullptr,               // app name
@@ -140,11 +138,12 @@ SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, uint32_t
                                 wr.bottom - wr.top,    // height
                                 nullptr,               // handle to parent
                                 nullptr,               // handle to menu
-                                GetModuleHandle(nullptr),          // hInstance
+                                module,                // hInstance
                                 nullptr);              // no extra parameters
 
-  if( !window )
+  if( !window ) {
     return nullptr;
+    }
 
   SetWindowLongPtr(window,GWLP_USERDATA,LONG_PTR(owner));
   //minsize.x = GetSystemMetrics(SM_CXMINTRACK);
@@ -263,10 +262,13 @@ void WindowsApi::implShowCursor(bool show) {
   ShowCursor(show ? TRUE : FALSE);
   }
 
-long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const uint32_t wParam, const long lParam) {
+long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long long wParam, const long long lParam) {
   HWND hWnd = HWND(_hWnd);
 
   Tempest::Window* cb=reinterpret_cast<Tempest::Window*>(GetWindowLongPtr(hWnd,GWLP_USERDATA));
+  if(cb==nullptr)
+    return DefWindowProcW( hWnd, msg, wParam, lParam );
+
   switch( msg ) {
     case WM_PAINT:{
       if(cb)
@@ -352,7 +354,7 @@ long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const uint32_t wParam, co
     case WM_KEYDOWN:
     case WM_KEYUP: {
       if(cb) {
-        uint32_t vkCode;
+        unsigned long long vkCode;
         if(wParam == VK_SHIFT) {
           uint32_t scancode = (lParam & 0x00ff0000) >> 16;
           vkCode = MapVirtualKey(scancode, MAPVK_VSC_TO_VK_EX);

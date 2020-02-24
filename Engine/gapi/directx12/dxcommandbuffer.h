@@ -6,6 +6,9 @@
 #include "comptr.h"
 
 namespace Tempest {
+
+class DirectX12Api;
+
 namespace Detail {
 
 class DxDevice;
@@ -35,6 +38,8 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
   private:
     DxDevice&                         dev;
     ComPtr<ID3D12GraphicsCommandList> impl;
+    bool                              recording=false;
+  friend class DirectX12Api;
   };
 
 }

@@ -13,22 +13,11 @@ VFence::VFence(VDevice &device)
   vkAssert(vkCreateFence(device.device,&fenceInfo,nullptr,&impl));
   }
 
-VFence::VFence(VFence &&other) {
-  std::swap(device,other.device);
-  std::swap(impl,other.impl);
-  }
-
 VFence::~VFence() {
   if(device==nullptr)
     return;
   vkDestroyFence(device,impl,nullptr);
   }
-
-void VFence::operator=(VFence &&other) {
-  std::swap(device,other.device);
-  std::swap(impl,other.impl);
-  }
-
 void VFence::wait() {
   vkAssert(vkWaitForFences(device,1,&impl,VK_TRUE,std::numeric_limits<uint64_t>::max()));
   }

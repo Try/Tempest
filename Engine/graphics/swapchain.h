@@ -26,7 +26,7 @@ class Swapchain final {
     uint8_t              frameId() const;
     uint64_t             frameCounter() const;
 
-    Attachment&          frame(uint32_t id);
+    Attachment&          frame(size_t id);
     uint32_t             nextImage(Semaphore& onReady);
 
   private:

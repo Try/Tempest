@@ -3,6 +3,8 @@
 #include "dxcommandbuffer.h"
 #include "dxdevice.h"
 
+#include "guid.h"
+
 #include <cassert>
 
 using namespace Tempest;
@@ -10,24 +12,27 @@ using namespace Tempest::Detail;
 
 DxCommandBuffer::DxCommandBuffer(DxDevice& d)
   : dev(d) {
-  auto u = __uuidof(ID3D12GraphicsCommandList);
   dxAssert(d.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, dev.cmdMain.get(), nullptr,
-                                       __uuidof(ID3D12GraphicsCommandList), reinterpret_cast<void**>(&impl)));
+                                       uuid<ID3D12GraphicsCommandList>(), reinterpret_cast<void**>(&impl)));
+  impl->Close();
   }
 
 void DxCommandBuffer::begin() {
-  impl->Reset(dev.cmdMain.get(),nullptr);
+  dxAssert(impl->Reset(dev.cmdMain.get(),nullptr));
+  recording = true;
   }
 
 void DxCommandBuffer::end() {
   dxAssert(impl->Close());
+  recording = false;
   }
 
 bool DxCommandBuffer::isRecording() const {
-  return false;
+  return recording;
   }
 
-void DxCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo* f, AbstractGraphicsApi::Pass* p, uint32_t width, uint32_t height) {
+void DxCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo* f, AbstractGraphicsApi::Pass* p,
+                                      uint32_t width, uint32_t height) {
   assert(0);
   }
 

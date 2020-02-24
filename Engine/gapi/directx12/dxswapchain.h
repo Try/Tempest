@@ -24,10 +24,13 @@ class DxSwapchain : public AbstractGraphicsApi::Swapchain {
     uint32_t                 w()      const override { return imgW; }
     uint32_t                 h()      const override { return imgH; }
 
+    void                     reset() override;
     uint32_t                 imageCount() const override { return imgCount; }
     uint32_t                 nextImage(AbstractGraphicsApi::Semaphore* onReady) override;
 
-    ComPtr<IDXGISwapChain3>  impl;
+    ComPtr<IDXGISwapChain3>                   impl;
+    ComPtr<ID3D12DescriptorHeap>              rtvHeap;
+    std::unique_ptr<ComPtr<ID3D12Resource>[]> views;
 
   private:
     uint32_t                 currImg=0;

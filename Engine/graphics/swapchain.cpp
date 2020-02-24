@@ -14,7 +14,7 @@ Swapchain::Swapchain(AbstractGraphicsApi::Swapchain* sw)
 void Swapchain::implReset() {
   size_t cnt = imageCount();
   img.reset(new Attachment[cnt]);
-  for(size_t i=0;i<cnt;++i) {
+  for(uint32_t i=0;i<cnt;++i) {
     img[i] = Attachment(impl.handler,i);
     }
   }
@@ -59,7 +59,7 @@ uint8_t Swapchain::frameId() const {
   return framesIdMod;
   }
 
-Attachment& Swapchain::frame(uint32_t id) {
+Attachment& Swapchain::frame(size_t id) {
   return img[id];
   }
 

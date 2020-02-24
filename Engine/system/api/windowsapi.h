@@ -24,7 +24,7 @@ class WindowsApi final : SystemApi {
 
     int      implExec(AppCallBack& cb) override;
 
-    static long     windowProc(void* hWnd, uint32_t msg, const uint32_t wParam, const long lParam);
+    static long long windowProc(void* hWnd, uint32_t msg, const unsigned long long wParam, const long long lParam);
 
   friend class SystemApi;
   };

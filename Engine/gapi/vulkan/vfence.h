@@ -11,10 +11,7 @@ class VDevice;
 class VFence : public AbstractGraphicsApi::Fence {
   public:
     VFence(VDevice& dev);
-    VFence(VFence&& other);
     ~VFence() override;
-
-    void operator=(VFence&& other);
 
     void wait() override;
     void reset() override;
