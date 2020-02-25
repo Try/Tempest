@@ -45,17 +45,26 @@ DxDevice::DxDevice(IDXGIFactory4& dxgi) {
   dxAssert(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, uuid<ID3D12CommandAllocator>(), reinterpret_cast<void**>(&cmdMain)));
 
   allocator.setDevice(*this);
+
+  dxAssert(device->CreateFence(DxFence::Waiting, D3D12_FENCE_FLAG_NONE,
+                               uuid<ID3D12Fence>(),
+                               reinterpret_cast<void**>(&idleFence)));
+  idleEvent = CreateEvent(nullptr, TRUE, TRUE, nullptr);
   }
 
 DxDevice::~DxDevice() {
+  CloseHandle(idleEvent);
   }
 
 const char* Detail::DxDevice::renderer() const {
   return description;
   }
 
-void Detail::DxDevice::waitIdle() const {
-  // TODO
+void Detail::DxDevice::waitIdle() {
+  idleFence->Signal(DxFence::Ready);
+  cmdQueue->Wait(idleFence.get(),DxFence::Ready);
+  idleFence->Signal(DxFence::Waiting);
+  ResetEvent(idleEvent);
   }
 
 #endif

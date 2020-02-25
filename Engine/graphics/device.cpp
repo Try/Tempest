@@ -297,12 +297,12 @@ RenderPipeline Device::implPipeline(const RenderState &st,const UniformsLayout &
   }
 
 PrimaryCommandBuffer Device::commandBuffer() {
-  PrimaryCommandBuffer buf(*this,api.createCommandBuffer(dev,nullptr,CmdType::Primary));
+  PrimaryCommandBuffer buf(*this,api.createCommandBuffer(dev));
   return buf;
   }
 
 CommandBuffer Device::commandSecondaryBuffer(const FrameBufferLayout &lay) {
-  CommandBuffer buf(*this,api.createCommandBuffer(dev,lay.impl.handler,CmdType::Secondary));
+  CommandBuffer buf(*this,api.createCommandBuffer(dev,lay.impl.handler));
   return buf;
   }
 

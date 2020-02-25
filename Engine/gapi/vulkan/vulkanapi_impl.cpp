@@ -218,18 +218,18 @@ void VulkanApi::getDevicePropsShort(VkPhysicalDevice physicalDevice, Tempest::Ab
     vkGetPhysicalDeviceFormatProperties(physicalDevice,f,&frm);
     if(isCompressedFormat(TextureFormat(i))){
       if((frm.optimalTilingFeatures & imageRqFlagsBC)==imageRqFlagsBC){
-        smpFormat |= (1<<i);
+        smpFormat |= (1u<<i);
         }
       } else {
       if((frm.optimalTilingFeatures & imageRqFlags)==imageRqFlags){
-        smpFormat |= (1<<i);
+        smpFormat |= (1u<<i);
         }
       }
     if((frm.optimalTilingFeatures & attachRqFlags)==attachRqFlags){
-      attFormat |= (1<<i);
+      attFormat |= (1u<<i);
       }
     if((frm.optimalTilingFeatures & depthAttflags)==depthAttflags){
-      dattFormat |= (1<<i);
+      dattFormat |= (1u<<i);
       }
     }
   c.setSamplerFormats(smpFormat);

@@ -22,331 +22,94 @@ struct VCommandBuffer::ImgState {
   bool          outdated;
   };
 
-struct VCommandBuffer::Secondarys final {
-  Secondarys(VkDevice device, VkCommandPool pool)
-    :device(device), pool(pool){
-    secondaryChunks.reserve(8);
-    }
 
-  ~Secondarys() {
-    clear();
-    }
-
-  void clear() {
-    if(!secondaryChunks.empty()) {
-      vkFreeCommandBuffers(device,pool,secondaryChunks.size(),secondaryChunks.data());
-      secondaryChunks.clear();
-      }
-    }
-
-  void flushSecondary(VkCommandBuffer mainCmd) {
-    if(nonFlushed!=nullptr){
-      vkAssert(vkEndCommandBuffer(nonFlushed));
-      vkCmdExecuteCommands(mainCmd,1,&nonFlushed);
-      nonFlushed = nullptr;
-      }
-    }
-
-  void allocChunk(VkCommandBuffer mainCmd,const VFramebufferLayout& fboLay) {
-    flushSecondary(mainCmd);
-
-    VkCommandBuffer buffer = nullptr;
-    VkCommandBufferAllocateInfo allocInfo = {};
-    allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool        = pool;
-    allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
-    allocInfo.commandBufferCount = 1;
-
-    vkAssert(vkAllocateCommandBuffers(device,&allocInfo,&buffer));
-    try {
-      VkCommandBufferInheritanceInfo inheritanceInfo={};
-      inheritanceInfo.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-      inheritanceInfo.framebuffer = VK_NULL_HANDLE;
-      inheritanceInfo.renderPass  = fboLay.impl;
-
-      VkCommandBufferBeginInfo beginInfo = {};
-      beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-      beginInfo.flags            = SIMULTANEOUS_USE_BIT|RENDER_PASS_CONTINUE_BIT;
-      beginInfo.pInheritanceInfo = &inheritanceInfo;
-
-      vkAssert(vkBeginCommandBuffer(buffer,&beginInfo));
-
-      secondaryChunks.push_back(buffer);
-      nonFlushed = buffer;
-      }
-    catch(...) {
-      vkFreeCommandBuffers(device,pool,1,&buffer);
-      throw;
-      }
-    }
-
-  VkCommandBuffer back() {
-    return secondaryChunks.back();
-    }
-
-  VkDevice                     device = nullptr;
-  VkCommandPool                pool   = VK_NULL_HANDLE;
-
-  VkCommandBuffer              nonFlushed=nullptr;
-  std::vector<VkCommandBuffer> secondaryChunks;
-  };
-
-struct VCommandBuffer::BuildState final {
-  Detail::DSharedPtr<VFramebufferLayout*> currentFbo;
-  RpState                                 state=NoPass;
-  Secondarys                              sec;
-  Tempest::Rect                           viewPort;
-  std::vector<ImgState>                   imgState;
-
-  BuildState(VkDevice device, VkCommandPool pool)
-    :sec(device,pool) {
-    imgState.reserve(64);
-    }
-
-  void clear() {
-    state = NoRecording;
-    imgState.clear();
-    sec.clear();
-    }
-
-  bool isRecording() const {
-    return state!=NoRecording;
-    }
-
-  void startPass(VkCommandBuffer impl, VFramebuffer* fbo, VRenderPass* pass,
-                 uint32_t width,uint32_t height) {
-    if(state!=NoPass)
-      vkCmdEndRenderPass(impl);
-
-    if(fbo->rp.handler->attCount!=pass->attCount)
-      throw IncompleteFboException();
-
-    auto& rp = pass->instance(*fbo->rp.handler);
-
-    VkRenderPassBeginInfo renderPassInfo = {};
-    renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass        = rp.impl;
-    renderPassInfo.framebuffer       = fbo->impl;
-    renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = {width,height};
-
-    renderPassInfo.clearValueCount   = pass->attCount;
-    renderPassInfo.pClearValues      = rp.clear.get();
-    vkCmdBeginRenderPass(impl, &renderPassInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-
-    currentFbo = fbo->rp;
-    state = Pending;
-    }
-
-  void stopPass(VkCommandBuffer impl) {
-    sec.flushSecondary(impl);
-    vkCmdEndRenderPass(impl);
-    state = NoPass;
-    }
-
-  VkCommandBuffer adjustRp(VkCommandBuffer impl,bool secondary) {
-    if(secondary) {
-      state = Secondary;
-      return impl;
-      }
-
-    if(state!=Inline) {
-      sec.allocChunk(impl,*currentFbo.handler);
-      implSetViewport(sec.nonFlushed,viewPort);
-      }
-
-    state = Inline;
-    return this->sec.back();
-    }
-
-  void setLayout(VCommandBuffer& owner,VFramebuffer& fbo) {
-    for(auto& i:imgState)
-      i.outdated = true;
-
-    for(size_t i=0;i<fbo.attach.size();++i) {
-      VkFormat      frm = fbo.rp.handler->frm[i];
-      VkImageLayout lay = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-      if(Detail::nativeIsDepthFormat(frm))
-        lay = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-      setLayout(owner,fbo.attach[i],frm,lay);
-      }
-
-    flushLayout(owner);
-    }
-
-  void flushLayout(VCommandBuffer& owner) {
-    for(auto& i:imgState) {
-      if(!i.outdated)
-        continue;
-      if(Detail::nativeIsDepthFormat(i.frm))
-        continue; // no readable depth for now
-      owner.changeLayout(i.img,i.frm,i.lay,i.last,VK_REMAINING_MIP_LEVELS,true);
-      i.lay = i.last;
-      }
-    }
-
-  void finalizeLayout(VCommandBuffer& owner) {
-    for(auto& i:imgState)
-      i.outdated = true;
-    flushLayout(owner);
-    }
-
-  void setLayout(VCommandBuffer& owner,VFramebuffer::Attach& a, VkFormat frm, VkImageLayout lay) {
-    ImgState* img;
-    if(a.tex!=nullptr) {
-      img = &findImg(a.tex->impl,frm,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-      } else {
-      img = &findImg(a.sw->images[a.id],frm,VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-      }
-    owner.changeLayout(img->img,img->frm,img->lay,lay,VK_REMAINING_MIP_LEVELS,true);
-    img->outdated = false;
-    img->lay = lay;
-    }
-
-  ImgState& findImg(VkImage img, VkFormat frm, VkImageLayout last) {
-    for(auto& i:imgState) {
-      if(i.img==img)
-        return i;
-      }
-    ImgState s={};
-    s.img     = img;
-    s.frm     = frm;
-    s.lay     = VK_IMAGE_LAYOUT_UNDEFINED;
-    s.last    = last;
-    imgState.push_back(s);
-    return imgState.back();
-    }
-
-  void setViewport(VkCommandBuffer impl, const Tempest::Rect &r) {
-    viewPort = r;
-    switch(state) {
-      case NoRecording: // not possible
-        break;
-      case Pending:
-      case Secondary:
-        // delayed execution
-        break;
-      case NoPass:
-        // outside renderpass
-        implSetViewport(impl,r);
-        break;
-      case Inline:
-        // set of 'inline' commands
-        implSetViewport(sec.nonFlushed,r);
-        break;
-      }
-    }
-
-  void implSetViewport(VkCommandBuffer impl, const Tempest::Rect &r) {
-    VkViewport vk={};
-    vk.x        = r.x;
-    vk.y        = r.y;
-    vk.width    = r.w;
-    vk.height   = r.h;
-    vk.minDepth = 0;
-    vk.maxDepth = 1;
-    vkCmdSetViewport(impl,0,1,&vk);
-    }
-  };
-
-VCommandBuffer::VCommandBuffer(VDevice& device, VCommandPool& pool,
-                               VFramebufferLayout *fbo, CmdType secondary)
-  :device(device.device), pool(pool.impl), fboLay(fbo) {
+VCommandBuffer::VCommandBuffer(VDevice& device, VCommandPool& pool)
+  :device(device.device), pool(pool.impl) {
   VkCommandBufferAllocateInfo allocInfo = {};
-  allocInfo.sType             =VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  allocInfo.commandPool       =pool.impl;
-  allocInfo.level             =(secondary==CmdType::Secondary) ? VK_COMMAND_BUFFER_LEVEL_SECONDARY : VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  allocInfo.commandBufferCount=1;
+  allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  allocInfo.commandPool        = pool.impl;
+  allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  allocInfo.commandBufferCount = 1;
 
   vkAssert(vkAllocateCommandBuffers(device.device,&allocInfo,&impl));
   }
 
-VCommandBuffer::VCommandBuffer(VCommandBuffer &&other) {
-  *this = std::move(other);
-  }
-
 VCommandBuffer::~VCommandBuffer() {
-  if(device==nullptr || impl==nullptr)
-    return;
   vkFreeCommandBuffers(device,pool,1,&impl);
-  if(!chunks.empty())
-    vkFreeCommandBuffers(device,pool,chunks.size(),chunks.data());
-  }
-
-VCommandBuffer& VCommandBuffer::operator=(VCommandBuffer &&other) {
-  std::swap(impl,   other.impl);
-  std::swap(device, other.device);
-  std::swap(pool,   other.pool);
-  std::swap(bstate, other.bstate);
-  std::swap(chunks, other.chunks);
-  std::swap(fboLay, other.fboLay);
-  return *this;
   }
 
 void VCommandBuffer::reset() {
   vkResetCommandBuffer(impl,VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
-  if(!chunks.empty()) {
-    vkFreeCommandBuffers(device,pool,chunks.size(),chunks.data());
-    chunks.clear();
-    }
-  bstate.reset();
+  chunks.clear();
   }
 
 void VCommandBuffer::begin() {
-  begin(SIMULTANEOUS_USE_BIT);
+  begin(VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
   }
 
-void VCommandBuffer::begin(Usage usage) {
-  VkCommandBufferUsageFlags      usageFlags = usage;
-  VkCommandBufferInheritanceInfo inheritanceInfo={};
-
-  if(isSecondary()) {
-    // secondary pass
-    inheritanceInfo.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
-    inheritanceInfo.framebuffer = VK_NULL_HANDLE;
-    inheritanceInfo.renderPass  = fboLay.handler->impl;
-
-    usageFlags = SIMULTANEOUS_USE_BIT|RENDER_PASS_CONTINUE_BIT;
-    //bstate->currentFbo = fboLay;
-    } else {
-    // prime pass
-    if(usage==SIMULTANEOUS_USE_BIT) {
-      if(bstate==nullptr)
-        bstate.reset(new BuildState(device,pool));
-      bstate->state      = NoPass;
-      bstate->currentFbo = Detail::DSharedPtr<VFramebufferLayout*>{};
-      }
-    }
+void VCommandBuffer::begin(VkCommandBufferUsageFlags flg) {
+  state = NoPass;
+  chunks.clear();
 
   VkCommandBufferBeginInfo beginInfo = {};
   beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  beginInfo.flags            = usageFlags;
-  beginInfo.pInheritanceInfo = inheritanceInfo.renderPass!=VK_NULL_HANDLE ? &inheritanceInfo : nullptr;
+  beginInfo.flags            = flg;
+  beginInfo.pInheritanceInfo = nullptr;
 
   vkAssert(vkBeginCommandBuffer(impl,&beginInfo));
   }
 
 void VCommandBuffer::end() {
-  if(bstate!=nullptr) {
-    bstate->finalizeLayout(*this); // flush last
-    std::swap(chunks,bstate->sec.secondaryChunks);
-    bstate->clear();
-    }
+  for(auto& i:imgState)
+    i.outdated = true;
+  flushLayout();
+  imgState.clear();
   vkAssert(vkEndCommandBuffer(impl));
+  state = NoRecording;
   }
 
 bool VCommandBuffer::isRecording() const {
-  return bstate!=nullptr && bstate->isRecording();
+  return state!=NoRecording;
   }
 
 void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
                                      AbstractGraphicsApi::Pass*  p,
                                      uint32_t width,uint32_t height) {
-  VFramebuffer* fbo =reinterpret_cast<VFramebuffer*>(f);
-  VRenderPass*  pass=reinterpret_cast<VRenderPass*>(p);
+  VFramebuffer& fbo =*reinterpret_cast<VFramebuffer*>(f);
+  VRenderPass&  pass=*reinterpret_cast<VRenderPass*>(p);
 
-  bstate->setLayout(*this,*fbo);
-  bstate->startPass(impl,fbo,pass,width,height);
+  for(auto& i:imgState)
+    i.outdated = true;
+
+  for(size_t i=0;i<fbo.attach.size();++i) {
+    VkFormat      frm = fbo.rp.handler->frm[i];
+    VkImageLayout lay = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    if(Detail::nativeIsDepthFormat(frm))
+      lay = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    setLayout(fbo.attach[i],frm,lay);
+    }
+
+  flushLayout();
+
+  if(fbo.rp.handler->attCount!=pass.attCount)
+    throw IncompleteFboException();
+
+  auto& rp = pass.instance(*fbo.rp.handler);
+  curFbo = fbo.rp;
+
+  VkRenderPassBeginInfo renderPassInfo = {};
+  renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+  renderPassInfo.renderPass        = rp.impl;
+  renderPassInfo.framebuffer       = fbo.impl;
+  renderPassInfo.renderArea.offset = {0, 0};
+  renderPassInfo.renderArea.extent = {width,height};
+
+  renderPassInfo.clearValueCount   = pass.attCount;
+  renderPassInfo.pClearValues      = rp.clear.get();
+
+  vkCmdBeginRenderPass(impl, &renderPassInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+
+  state = RenderPass;
 
   // setup dynamic state
   // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#pipelines-dynamic-state
@@ -354,101 +117,110 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
   }
 
 void VCommandBuffer::endRenderPass() {
-  bstate->stopPass(impl);
+  flushLastCmd();
+  vkCmdEndRenderPass(impl);
+  state = NoPass;
   }
 
 void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p,uint32_t w,uint32_t h) {
-  auto cmd = getBuffer(CmdRenderpass);
-
-  VPipeline&           px = reinterpret_cast<VPipeline&>(p);
-  VFramebufferLayout*  l;
-  if(impl==cmd)
-    l = reinterpret_cast<VFramebufferLayout*>(fboLay.handler); else
-    l = reinterpret_cast<VFramebufferLayout*>(bstate->currentFbo.handler);
-  auto& v = px.instance(*l,w,h);
-  vkCmdBindPipeline(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,v.val);
+  getChunk().setPipeline(p,w,h);
   }
 
-void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u, size_t offc, const uint32_t *offv) {
-  auto cmd = getBuffer(CmdRenderpass);
-
-  VPipeline&        px=reinterpret_cast<VPipeline&>(p);
-  VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
-
-  if(offc<=128) {
-    uint32_t buf[128];
-    implSetUniforms(cmd,px,ux,offc,offv,buf);
-    } else {
-    std::unique_ptr<uint32_t[]> buf(new uint32_t[offc]);
-    implSetUniforms(cmd,px,ux,offc,offv,buf.get());
-    }
-  }
-
-void VCommandBuffer::implSetUniforms(VkCommandBuffer cmd, VPipeline& px, VDescriptorArray& ux,
-                                     size_t offc, const uint32_t* offv, uint32_t* buf) {
-  for(size_t i=0;i<offc;++i)
-    buf[i] = ux.multiplier[i]*offv[i];
-  vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          px.pipelineLayout,0,
-                          1,&ux.desc,
-                          offc,buf);
+void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u,
+                                 size_t offc, const uint32_t *offv) {
+  lastChunk->setUniforms(p,u,offc,offv);
   }
 
 void VCommandBuffer::setViewport(const Tempest::Rect &r) {
-  if(isSecondary()) {
-    VkViewport vk={};
-    vk.x        = r.x;
-    vk.y        = r.y;
-    vk.width    = r.w;
-    vk.height   = r.h;
-    vk.minDepth = 0;
-    vk.maxDepth = 1;
-    vkCmdSetViewport(impl,0,1,&vk);
-    } else {
-    bstate->setViewport(impl,r);
-    }
+  viewPort.x        = float(r.x);
+  viewPort.y        = float(r.y);
+  viewPort.width    = float(r.w);
+  viewPort.height   = float(r.h);
+  viewPort.minDepth = 0;
+  viewPort.maxDepth = 1;
+
+  if(lastChunk!=nullptr)
+    vkCmdSetViewport(lastChunk->impl,0,1,&viewPort);
   }
 
-void VCommandBuffer::exec(const CommandBuffer &buf) {
-  auto cmd = bstate->adjustRp(impl,true);
-  const VCommandBuffer& ecmd=reinterpret_cast<const VCommandBuffer&>(buf);
-  vkCmdExecuteCommands(cmd,1,&ecmd.impl);
+void VCommandBuffer::exec(const CommandBundle &buf) {
+  flushLastCmd();
+  const VCommandBundle& ecmd=reinterpret_cast<const VCommandBundle&>(buf);
+  vkCmdExecuteCommands(impl,1,&ecmd.impl);
   }
 
 void VCommandBuffer::draw(size_t offset,size_t size) {
-  auto cmd = getBuffer(CmdRenderpass);
-  vkCmdDraw(cmd,size, 1, offset,0);
+  getChunk().draw(offset,size);
   }
 
 void VCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset) {
-  auto cmd = getBuffer(CmdRenderpass);
-  vkCmdDrawIndexed(cmd,isize,1, ioffset, int32_t(voffset),0);
+  getChunk().drawIndexed(ioffset,isize,voffset);
   }
 
 void VCommandBuffer::setVbo(const Tempest::AbstractGraphicsApi::Buffer &b) {
-  auto cmd = getBuffer(CmdRenderpass);
-  const VBuffer& vbo=reinterpret_cast<const VBuffer&>(b);
-
-  std::initializer_list<VkBuffer>     buffers = {vbo.impl};
-  std::initializer_list<VkDeviceSize> offsets = {0};
-  vkCmdBindVertexBuffers(
-        cmd, 0, buffers.size(),
-        buffers.begin(),
-        offsets.begin() );
+  getChunk().setVbo(b);
   }
 
 void VCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer *b,Detail::IndexClass cls) {
   if(b==nullptr)
     return;
+  getChunk().setIbo(b,cls);
+  }
 
-  static const VkIndexType type[]={
-    VK_INDEX_TYPE_UINT16,
-    VK_INDEX_TYPE_UINT32
-    };
+void VCommandBuffer::setLayout(VFramebuffer::Attach& a, VkFormat frm, VkImageLayout lay) {
+  ImgState* img;
+  if(a.tex!=nullptr) {
+    img = &findImg(a.tex->impl,frm,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    } else {
+    img = &findImg(a.sw->images[a.id],frm,VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    }
+  changeLayout(img->img,img->frm,img->lay,lay,VK_REMAINING_MIP_LEVELS,true);
+  img->outdated = false;
+  img->lay = lay;
+  }
 
-  auto cmd = getBuffer(CmdRenderpass);
-  const VBuffer& ibo=reinterpret_cast<const VBuffer&>(*b);
-  vkCmdBindIndexBuffer(cmd,ibo.impl,0,type[uint32_t(cls)]);
+VCommandBundle& VCommandBuffer::getChunk() {
+  if(lastChunk!=nullptr)
+    return *lastChunk;
+  chunks.emplace_back(device,pool,curFbo.handler);
+  lastChunk = &chunks.back();
+
+  lastChunk->begin();
+  vkCmdSetViewport(lastChunk->impl,0,1,&viewPort);
+  return *lastChunk;
+  }
+
+VCommandBuffer::ImgState& VCommandBuffer::findImg(VkImage img, VkFormat frm, VkImageLayout last) {
+  for(auto& i:imgState) {
+    if(i.img==img)
+      return i;
+    }
+  ImgState s={};
+  s.img     = img;
+  s.frm     = frm;
+  s.lay     = VK_IMAGE_LAYOUT_UNDEFINED;
+  s.last    = last;
+  imgState.push_back(s);
+  return imgState.back();
+  }
+
+void VCommandBuffer::flushLayout() {
+  for(auto& i:imgState) {
+    if(!i.outdated)
+      continue;
+    if(Detail::nativeIsDepthFormat(i.frm))
+      continue; // no readable depth for now
+    changeLayout(i.img,i.frm,i.lay,i.last,VK_REMAINING_MIP_LEVELS,true);
+    i.lay = i.last;
+    }
+  }
+
+void VCommandBuffer::flushLastCmd() {
+  if(lastChunk!=nullptr) {
+    lastChunk->end();
+    vkCmdExecuteCommands(impl,1,&lastChunk->impl);
+    lastChunk = nullptr;
+    }
   }
 
 void VCommandBuffer::flush(const VBuffer &src, size_t size) {
@@ -765,23 +537,4 @@ void VCommandBuffer::generateMipmap(VTexture& image,
                        0, nullptr,
                        0, nullptr,
                        1, &barrier);
-  }
-
-bool VCommandBuffer::isSecondary() const {
-  return fboLay.handler!=nullptr && fboLay.handler->impl!=VK_NULL_HANDLE;
-  }
-
-VkCommandBuffer VCommandBuffer::getBuffer(CmdBuff id) {
-  if(bstate==nullptr)
-    return impl;
-
-  switch(id) {
-    case CmdInline:
-      if(bstate->state==NoPass)
-        return impl;
-      return bstate->adjustRp(impl,false);
-    case CmdRenderpass:
-      return bstate->adjustRp(impl,false);
-    }
-  assert(false && "invalid id value");
   }

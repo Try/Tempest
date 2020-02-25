@@ -53,7 +53,8 @@ class DirectX12Api : public AbstractGraphicsApi {
                               TextureLayout lay, TextureFormat frm,
                               const uint32_t w, const uint32_t h, uint32_t mip) override;
 
-    CommandBuffer* createCommandBuffer(Device* d, FboLayout* fbo, CmdType type) override;
+    CommandBundle* createCommandBuffer(Device* d, FboLayout* fbo) override;
+    CommandBuffer* createCommandBuffer(Device* d) override;
 
     void           present  (Device *d,Swapchain* sw,uint32_t imageId, const Semaphore *wait) override;
 

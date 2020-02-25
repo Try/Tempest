@@ -18,7 +18,7 @@ class DxSwapchain : public AbstractGraphicsApi::Swapchain {
   public:
     DxSwapchain()=default;
     DxSwapchain(DxDevice& device, IDXGIFactory4& dxgi, SystemApi::Window* hwnd);
-    DxSwapchain(DxSwapchain&& other);
+    DxSwapchain(DxSwapchain&& other) = delete;
     ~DxSwapchain() override;
 
     uint32_t                 w()      const override { return imgW; }

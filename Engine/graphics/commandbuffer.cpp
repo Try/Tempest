@@ -7,7 +7,7 @@
 
 using namespace Tempest;
 
-CommandBuffer::CommandBuffer(Device& dev, AbstractGraphicsApi::CommandBuffer *impl)
+CommandBuffer::CommandBuffer(Device& dev, AbstractGraphicsApi::CommandBundle* impl)
   :dev(&dev),impl(impl) {
   }
 

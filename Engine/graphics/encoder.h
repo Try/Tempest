@@ -72,7 +72,7 @@ class Encoder<Tempest::CommandBuffer> {
       };
 
     Tempest::CommandBuffer*             owner=nullptr;
-    AbstractGraphicsApi::CommandBuffer* impl =nullptr;
+    AbstractGraphicsApi::CommandBundle* impl =nullptr;
     State                               state;
 
     void         implDraw(const VideoBuffer& vbo, size_t offset, size_t size);

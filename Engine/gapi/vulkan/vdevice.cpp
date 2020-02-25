@@ -48,7 +48,7 @@ class VDevice::FakeWindow final {
 VDevice::DataStream::DataStream(VDevice &owner)
   : owner(owner),
     cmdPool(owner,VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT),
-    cmdBuffer(owner,cmdPool,nullptr,CmdType::Primary),
+    cmdBuffer(owner,cmdPool),
     fence(owner),
     gpuQueue(owner.graphicsQueue){
   hold.reserve(32);
@@ -59,7 +59,7 @@ VDevice::DataStream::~DataStream() {
   }
 
 void VDevice::DataStream::begin() {
-  cmdBuffer.begin(VCommandBuffer::ONE_TIME_SUBMIT_BIT);
+  cmdBuffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
   }
 
 void VDevice::DataStream::end() {
@@ -387,7 +387,7 @@ const char *VDevice::renderer() const {
   return props.name;
   }
 
-void VDevice::waitIdle() const {
+void VDevice::waitIdle() {
   vkDeviceWaitIdle(device);
   }
 

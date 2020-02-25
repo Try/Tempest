@@ -17,18 +17,12 @@ using namespace Tempest::Detail;
 
 template<class Interface>
 DxFenceBase<Interface>::DxFenceBase(DxDevice& dev) {
+  dxAssert(dev.device->CreateFence(Ready, D3D12_FENCE_FLAG_NONE,
+                                   uuid<ID3D12Fence>(),
+                                   reinterpret_cast<void**>(&impl)));
   event = CreateEvent(nullptr, TRUE, TRUE, nullptr);
   if(event == nullptr)
     throw std::bad_alloc();
-  try {
-    dxAssert(dev.device->CreateFence(Ready, D3D12_FENCE_FLAG_NONE,
-                                     uuid<ID3D12Fence>(),
-                                     reinterpret_cast<void**>(&impl)));
-    }
-  catch(...) {
-    CloseHandle(event);
-    throw;
-    }
   }
 
 template<class Interface>
@@ -46,6 +40,7 @@ void DxFenceBase<Interface>::wait() {
 template<class Interface>
 void DxFenceBase<Interface>::reset() {
   dxAssert(impl->Signal(Waiting));
+  ResetEvent(event);
   }
 
 #endif

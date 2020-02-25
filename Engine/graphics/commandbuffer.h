@@ -31,10 +31,10 @@ class CommandBuffer final {
     auto startEncoding(Tempest::Device& dev,const FrameBufferLayout &lay, int w, int h) -> Encoder<CommandBuffer>;
 
   private:
-    CommandBuffer(Tempest::Device& dev, AbstractGraphicsApi::CommandBuffer* impl);
+    CommandBuffer(Tempest::Device& dev, AbstractGraphicsApi::CommandBundle* impl);
 
     Tempest::Device*                                    dev=nullptr;
-    Detail::DPtr<AbstractGraphicsApi::CommandBuffer*>   impl;
+    Detail::DPtr<AbstractGraphicsApi::CommandBundle*>   impl;
     Detail::DSharedPtr<AbstractGraphicsApi::FboLayout*> layout;
 
   friend class PrimaryCommandBuffer;

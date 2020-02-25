@@ -22,8 +22,8 @@ class DxFenceBase : public Interface {
     void wait();
     void reset();
 
-    HANDLE              event=nullptr;
     ComPtr<ID3D12Fence> impl;
+    HANDLE              event=nullptr;
   };
 
 using DxFence     = DxFenceBase<AbstractGraphicsApi::Fence>;

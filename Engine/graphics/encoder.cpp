@@ -149,7 +149,7 @@ void Encoder<PrimaryCommandBuffer>::setPass(const FrameBuffer &fbo, const Render
   state.vp.width     = width;
   state.vp.height    = height;
 
-  impl->beginRenderPass(fbo.impl.handler,p.impl.handler,width,height);
+  reinterpret_cast<AbstractGraphicsApi::CommandBuffer*>(impl)->beginRenderPass(fbo.impl.handler,p.impl.handler,width,height);
   curPass.fbo  = &fbo;
   curPass.pass = &p;
   }
@@ -158,12 +158,12 @@ void Encoder<PrimaryCommandBuffer>::implEndRenderPass() {
   if(curPass.pass!=nullptr) {
     state.curPipeline = nullptr;
     curPass           = Pass();
-    impl->endRenderPass();
+    reinterpret_cast<AbstractGraphicsApi::CommandBuffer*>(impl)->endRenderPass();
     }
   }
 
 void Encoder<PrimaryCommandBuffer>::exec(const CommandBuffer &buf) {
   if(buf.impl.handler==nullptr)
     return;
-  impl->exec(*buf.impl.handler);
+  reinterpret_cast<AbstractGraphicsApi::CommandBuffer*>(impl)->exec(*buf.impl.handler);
   }

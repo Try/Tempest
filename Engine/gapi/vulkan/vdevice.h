@@ -136,7 +136,7 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     void                    waitData();
     const char*             renderer() const override;
-    void                    waitIdle() const override;
+    void                    waitIdle() override;
 
     VkSurfaceKHR            createSurface(void* hwnd);
     SwapChainSupport        querySwapChainSupport(VkSurfaceKHR surface) { return querySwapChainSupport(physicalDevice,surface); }

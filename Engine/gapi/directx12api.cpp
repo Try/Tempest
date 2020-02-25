@@ -14,6 +14,7 @@
 #include "directx12/dxcommandbuffer.h"
 #include "directx12/dxswapchain.h"
 #include "directx12/dxfence.h"
+#include "directx12/dxframebuffer.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -79,9 +80,11 @@ AbstractGraphicsApi::PPass DirectX12Api::createPass(AbstractGraphicsApi::Device*
   return PPass();
   }
 
-AbstractGraphicsApi::PFbo DirectX12Api::createFbo(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::FboLayout* lay,
+AbstractGraphicsApi::PFbo DirectX12Api::createFbo(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::FboLayout*,
                                                   AbstractGraphicsApi::Swapchain* s, uint32_t imageId) {
-  return PFbo();
+  auto& dx = *reinterpret_cast<Detail::DxDevice*>   (d);
+  auto& sx = *reinterpret_cast<Detail::DxSwapchain*>(s);
+  return PFbo(new DxFramebuffer(dx,sx,imageId));
   }
 
 AbstractGraphicsApi::PFbo DirectX12Api::createFbo(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::FboLayout* lay, AbstractGraphicsApi::Swapchain* s,
@@ -172,25 +175,30 @@ AbstractGraphicsApi::Desc* DirectX12Api::createDescriptors(AbstractGraphicsApi::
   return nullptr;
   }
 
-AbstractGraphicsApi::PUniformsLay DirectX12Api::createUboLayout(AbstractGraphicsApi::Device* d, const UniformsLayout& lay) {
+AbstractGraphicsApi::PUniformsLay DirectX12Api::createUboLayout(Device* d, const UniformsLayout& lay) {
   Detail::DxDevice* dx = reinterpret_cast<Detail::DxDevice*>(d);
   return PUniformsLay(new DxUniformsLay(*dx,lay));
   }
 
-AbstractGraphicsApi::PTexture DirectX12Api::createTexture(AbstractGraphicsApi::Device* d, const Pixmap& p, TextureFormat frm, uint32_t mips) {
+AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mips) {
   return PTexture();
   }
 
-AbstractGraphicsApi::PTexture DirectX12Api::createTexture(AbstractGraphicsApi::Device* d, const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) {
+AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) {
   return PTexture();
   }
 
-void DirectX12Api::readPixels(AbstractGraphicsApi::Device* d, Pixmap& out, const AbstractGraphicsApi::PTexture t, TextureLayout lay,
+void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureLayout lay,
                               TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip) {
 
   }
 
-AbstractGraphicsApi::CommandBuffer* DirectX12Api::createCommandBuffer(AbstractGraphicsApi::Device* d, FboLayout* fbo, CmdType type) {
+AbstractGraphicsApi::CommandBundle* DirectX12Api::createCommandBuffer(Device* d, FboLayout*) {
+  Detail::DxDevice* dx = reinterpret_cast<Detail::DxDevice*>(d);
+  return new DxCommandBuffer(*dx);
+  }
+
+AbstractGraphicsApi::CommandBuffer* DirectX12Api::createCommandBuffer(Device* d) {
   Detail::DxDevice* dx = reinterpret_cast<Detail::DxDevice*>(d);
   return new DxCommandBuffer(*dx);
   }

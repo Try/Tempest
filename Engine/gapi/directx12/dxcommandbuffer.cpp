@@ -2,6 +2,7 @@
 
 #include "dxcommandbuffer.h"
 #include "dxdevice.h"
+#include "dxframebuffer.h"
 
 #include "guid.h"
 
@@ -33,11 +34,16 @@ bool DxCommandBuffer::isRecording() const {
 
 void DxCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo* f, AbstractGraphicsApi::Pass* p,
                                       uint32_t width, uint32_t height) {
-  assert(0);
+  auto& fbo  = *reinterpret_cast<DxFramebuffer*>(f);
+  auto  desc = fbo.rtvHeap->GetCPUDescriptorHandleForHeapStart();
+  impl->OMSetRenderTargets(fbo.viewsCount,&desc,TRUE,
+                           nullptr);
+  const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+  impl->ClearRenderTargetView(desc, clearColor, 0, nullptr);
   }
 
 void DxCommandBuffer::endRenderPass() {
-  assert(0);
+  //assert(0);
   }
 
 void Tempest::Detail::DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p, uint32_t w, uint32_t h) {
@@ -60,7 +66,7 @@ void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractGrap
   assert(0);
   }
 
-void DxCommandBuffer::exec(const AbstractGraphicsApi::CommandBuffer& buf) {
+void DxCommandBuffer::exec(const CommandBundle& buf) {
   assert(0);
   //impl->ExecuteBundle(); //BUNDLE!
   }

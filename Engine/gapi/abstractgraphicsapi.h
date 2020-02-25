@@ -53,11 +53,6 @@ namespace Tempest {
     Triangles=2
     };
 
-  enum class CmdType : uint8_t {
-    Primary,
-    Secondary
-    };
-
   enum TextureFormat : uint8_t {
     Undefined,
     Alpha,
@@ -202,29 +197,33 @@ namespace Tempest {
           uint64_t dattFormat=0;
         };
 
-      struct Shared {
-        Shared()=default;
-        virtual ~Shared() = default;
-        Shared(const Shared&) = delete;
-        Shared& operator = (const Shared&) = delete;
+      struct NoCopy {
+        NoCopy()=default;
+        virtual ~NoCopy() = default;
+        NoCopy(const NoCopy&) = delete;
+        NoCopy(NoCopy&&) = delete;
+        NoCopy& operator = (const NoCopy&) = delete;
+        NoCopy& operator = (NoCopy&&) = delete;
+        };
 
+      struct Shared:NoCopy {
         std::atomic_uint_fast32_t counter{0};
         };
 
-      struct Device       {
+      struct Device:NoCopy {
         virtual ~Device()=default;
         virtual const char* renderer() const=0;
-        virtual void        waitIdle() const=0;
+        virtual void        waitIdle() = 0;
         };
-      struct Fence           {
+      struct Fence:NoCopy {
         virtual ~Fence()=default;
         virtual void wait() =0;
         virtual void reset()=0;
         };
-      struct Semaphore       {
+      struct Semaphore:NoCopy {
         virtual ~Semaphore()=default;
         };
-      struct Swapchain    {
+      struct Swapchain:NoCopy {
         virtual ~Swapchain()=default;
         virtual void          reset()=0;
         virtual uint32_t      nextImage(Semaphore* onReady)=0;
@@ -255,31 +254,34 @@ namespace Tempest {
         virtual ~Buffer()=default;
         virtual void  update(const void* data,size_t off,size_t count,size_t sz,size_t alignedSz)=0;
         };
-      struct Desc            {
+      struct Desc:NoCopy   {
         virtual ~Desc()=default;
         virtual void set(size_t id,AbstractGraphicsApi::Texture *tex)=0;
         virtual void set(size_t id,AbstractGraphicsApi::Buffer* buf,size_t offset,size_t size,size_t align)=0;
         };
-      struct CommandBuffer   {
-        virtual ~CommandBuffer()=default;
+      struct CommandBundle:NoCopy {
+        virtual bool isRecording() const = 0;
         virtual void begin()=0;
         virtual void end()  =0;
-        virtual bool isRecording() const = 0;
-        virtual void beginRenderPass(AbstractGraphicsApi::Fbo* f,
-                                     AbstractGraphicsApi::Pass*  p,
-                                     uint32_t width,uint32_t height)=0;
-        virtual void endRenderPass()=0;
+        virtual void setPipeline(Pipeline& p,uint32_t w,uint32_t h)=0;
+        virtual void setViewport(const Rect& r)=0;
+        virtual void setUniforms(Pipeline& p,Desc& u, size_t offc, const uint32_t* offv)=0;
 
-        virtual void setPipeline (Pipeline& p,uint32_t w,uint32_t h)=0;
-        virtual void setViewport (const Rect& r)=0;
-        virtual void setUniforms (Pipeline& p,Desc& u, size_t offc, const uint32_t* offv)=0;
-        virtual void exec        (const AbstractGraphicsApi::CommandBuffer& buf)=0;
-        virtual void changeLayout(Swapchain& s, uint32_t id, TextureFormat frm, TextureLayout prev, TextureLayout next)=0;
-        virtual void changeLayout(Texture& t,TextureFormat frm,TextureLayout prev,TextureLayout next)=0;
         virtual void setVbo      (const Buffer& b)=0;
         virtual void setIbo      (const Buffer* b,Detail::IndexClass cls)=0;
         virtual void draw        (size_t offset,size_t vertexCount)=0;
         virtual void drawIndexed (size_t ioffset, size_t isize, size_t voffset)=0;
+        };
+      struct CommandBuffer:CommandBundle {
+        virtual ~CommandBuffer()=default;
+        virtual void beginRenderPass(AbstractGraphicsApi::Fbo* f,
+                                     AbstractGraphicsApi::Pass*  p,
+                                     uint32_t width,uint32_t height)=0;
+        virtual void endRenderPass()=0;
+        virtual void exec        (const AbstractGraphicsApi::CommandBundle& buf)=0;
+
+        virtual void changeLayout(Swapchain& s, uint32_t id, TextureFormat frm, TextureLayout prev, TextureLayout next)=0;
+        virtual void changeLayout(Texture& t,TextureFormat frm,TextureLayout prev,TextureLayout next)=0;
         };
 
       using PBuffer      = Detail::DSharedPtr<Buffer*>;
@@ -322,8 +324,11 @@ namespace Tempest {
 
       virtual Semaphore* createSemaphore(Device *d)=0;
 
+      virtual CommandBundle*
+                         createCommandBuffer(Device* d, FboLayout* fbo)=0;
       virtual CommandBuffer*
-                         createCommandBuffer(Device* d,FboLayout* fbo,CmdType type)=0;
+                         createCommandBuffer(Device* d)=0;
+
 
       virtual PBuffer    createBuffer(Device* d,const void *mem,size_t count,size_t sz,size_t alignedSz,MemUsage usage,BufferFlags flg)=0;
 

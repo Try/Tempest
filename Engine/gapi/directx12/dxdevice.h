@@ -11,6 +11,7 @@
 #include "utility/spinlock.h"
 #include "utility/compiller_hints.h"
 #include "dxallocator.h"
+#include "dxfence.h"
 
 namespace Tempest {
 
@@ -51,7 +52,7 @@ class DxDevice : public AbstractGraphicsApi::Device {
     AbstractGraphicsApi::Props props;
 
     const char*             renderer() const override;
-    void                    waitIdle() const override;
+    void                    waitIdle() override;
 
     struct Data {
 
@@ -65,6 +66,9 @@ class DxDevice : public AbstractGraphicsApi::Device {
 
   private:
     char                           description[128] = {};
+
+    ComPtr<ID3D12Fence>            idleFence;
+    HANDLE                         idleEvent=nullptr;
   };
 
 }}

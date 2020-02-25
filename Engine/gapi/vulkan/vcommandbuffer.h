@@ -3,6 +3,8 @@
 #include <Tempest/AbstractGraphicsApi>
 #include <vulkan/vulkan.hpp>
 
+#include "vcommandbundle.h"
+#include "vframebuffer.h"
 #include "../utility/dptr.h"
 
 namespace Tempest {
@@ -31,24 +33,19 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     enum RpState : uint8_t {
       NoRecording,
       NoPass,
-      Pending,
-      Inline,
-      Secondary
+      RenderPass
       };
 
     VCommandBuffer()=delete;
-    VCommandBuffer(VDevice &device, VCommandPool &pool, VFramebufferLayout* fbo, CmdType secondary);
-    VCommandBuffer(VCommandBuffer&& other);
+    VCommandBuffer(VDevice &device, VCommandPool &pool);
     ~VCommandBuffer();
-
-    VCommandBuffer& operator=(VCommandBuffer&& other);
 
     VkCommandBuffer impl=nullptr;
 
     void reset();
 
-    void begin(Usage usage); // internal
     void begin();
+    void begin(VkCommandBufferUsageFlags flg);
     void end();
     bool isRecording() const;
 
@@ -57,17 +54,17 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
                          uint32_t width,uint32_t height);
     void endRenderPass();
 
+    void exec(const AbstractGraphicsApi::CommandBundle& buf);
+
     void setPipeline(AbstractGraphicsApi::Pipeline& p, uint32_t w, uint32_t h);
     void setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u, size_t offc, const uint32_t* offv);
     void setViewport(const Rect& r);
 
-    void exec(const AbstractGraphicsApi::CommandBuffer& buf);
+    void setVbo(const AbstractGraphicsApi::Buffer& b);
+    void setIbo(const AbstractGraphicsApi::Buffer* b,Detail::IndexClass cls);
 
     void draw(size_t offset, size_t size);
     void drawIndexed(size_t ioffset, size_t isize, size_t voffset);
-
-    void setVbo(const AbstractGraphicsApi::Buffer& b);
-    void setIbo(const AbstractGraphicsApi::Buffer* b,Detail::IndexClass cls);
 
     void flush(const Detail::VBuffer& src, size_t size);
     void copy(Detail::VBuffer&  dest, size_t offsetDest, const Detail::VBuffer& src, size_t offsetSrc, size_t size);
@@ -83,25 +80,27 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
   private:
     struct ImgState;
-    struct BuildState;
-    struct Secondarys;
+
+    void            flushLastCmd();
+    void            flushLayout();
+
+    VCommandBuffer::ImgState&
+                    findImg(VkImage img, VkFormat frm, VkImageLayout last);
+    void            setLayout(VFramebuffer::Attach& a, VkFormat frm, VkImageLayout lay);
+
+    VCommandBundle& getChunk();
 
     VkDevice                                device=nullptr;
     VkCommandPool                           pool  =VK_NULL_HANDLE;
-    std::unique_ptr<BuildState>             bstate;
-    // prime cmd buf
-    std::vector<VkCommandBuffer>            chunks;
-    // secondary cmd buf
-    Detail::DSharedPtr<VFramebufferLayout*> fboLay;
 
-    enum CmdBuff {
-      CmdInline,
-      CmdRenderpass,
-      };
-    bool            isSecondary() const;
-    VkCommandBuffer getBuffer(CmdBuff cmd);
-    void            implSetUniforms(VkCommandBuffer cmd, VPipeline& p, VDescriptorArray& u, size_t offc, const uint32_t* offv, uint32_t* buf);
+    std::vector<VCommandBundle>             chunks;
+    VCommandBundle*                         lastChunk=nullptr;
 
+    std::vector<ImgState>                   imgState;
+
+    RpState                                 state=NoRecording;
+    Detail::DSharedPtr<VFramebufferLayout*> curFbo;
+    VkViewport                              viewPort={};
   };
 
 }}
