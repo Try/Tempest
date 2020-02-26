@@ -26,6 +26,8 @@ class VCommandBundle : public AbstractGraphicsApi::CommandBundle {
     VCommandBundle(VCommandBundle&& other);
     ~VCommandBundle();
 
+    VCommandBundle& operator = (VCommandBundle&& other);
+
     void reset();
 
     void begin();

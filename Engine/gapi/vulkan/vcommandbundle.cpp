@@ -22,7 +22,7 @@ VCommandBundle::VCommandBundle(VkDevice& device, VkCommandPool& pool, VFramebuff
   }
 
 VCommandBundle::VCommandBundle(VCommandBundle&& other)
-  :device(other.device),pool(other.pool), fboLay(other.fboLay) {
+  :device(other.device),pool(other.pool), impl(other.impl), fboLay(other.fboLay) {
   other.device = nullptr;
   other.impl   = nullptr;
   }
@@ -33,8 +33,18 @@ VCommandBundle::~VCommandBundle() {
   vkFreeCommandBuffers(device,pool,1,&impl);
   }
 
+VCommandBundle& VCommandBundle::operator =(VCommandBundle&& other) {
+  std::swap(device,other.device);
+  std::swap(pool,other.pool);
+  std::swap(impl,other.impl);
+  std::swap(recording,other.recording);
+  std::swap(fboLay,other.fboLay);
+
+  return *this;
+  }
+
 void VCommandBundle::reset() {
-  vkResetCommandBuffer(impl,VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+  vkResetCommandBuffer(impl,0);//VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
   }
 
 void VCommandBundle::begin() {

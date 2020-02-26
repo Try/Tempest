@@ -31,6 +31,9 @@ VCommandBuffer::VCommandBuffer(VDevice& device, VCommandPool& pool)
   allocInfo.commandBufferCount = 1;
 
   vkAssert(vkAllocateCommandBuffers(device.device,&allocInfo,&impl));
+
+  chunks  .reserve(8);
+  reserved.reserve(8);
   }
 
 VCommandBuffer::~VCommandBuffer() {
@@ -40,6 +43,7 @@ VCommandBuffer::~VCommandBuffer() {
 void VCommandBuffer::reset() {
   vkResetCommandBuffer(impl,VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
   chunks.clear();
+  reserved.clear();
   }
 
 void VCommandBuffer::begin() {
@@ -48,7 +52,9 @@ void VCommandBuffer::begin() {
 
 void VCommandBuffer::begin(VkCommandBufferUsageFlags flg) {
   state = NoPass;
-  chunks.clear();
+  reserved = std::move(chunks);
+  for(auto& i:reserved)
+    i.reset();
 
   VkCommandBufferBeginInfo beginInfo = {};
   beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -181,7 +187,22 @@ void VCommandBuffer::setLayout(VFramebuffer::Attach& a, VkFormat frm, VkImageLay
 VCommandBundle& VCommandBuffer::getChunk() {
   if(lastChunk!=nullptr)
     return *lastChunk;
-  chunks.emplace_back(device,pool,curFbo.handler);
+
+  for(size_t i=0; i<reserved.size(); ++i) {
+    auto& c = reserved[i];
+    if(c.fboLay.handler==curFbo.handler) {
+      chunks.emplace_back(std::move(c));
+      c = std::move(reserved.back());
+      reserved.pop_back();
+      lastChunk = &chunks.back();
+      break;
+      }
+    }
+  if(lastChunk==nullptr) {
+    chunks.emplace_back(device,pool,curFbo.handler);
+    lastChunk = &chunks.back();
+    }
+
   lastChunk = &chunks.back();
 
   lastChunk->begin();

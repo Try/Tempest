@@ -93,7 +93,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     VkDevice                                device=nullptr;
     VkCommandPool                           pool  =VK_NULL_HANDLE;
 
-    std::vector<VCommandBundle>             chunks;
+    std::vector<VCommandBundle>             chunks, reserved;
     VCommandBundle*                         lastChunk=nullptr;
 
     std::vector<ImgState>                   imgState;
