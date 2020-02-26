@@ -49,7 +49,7 @@ DxDevice::DxDevice(IDXGIFactory4& dxgi) {
   dxAssert(device->CreateFence(DxFence::Waiting, D3D12_FENCE_FLAG_NONE,
                                uuid<ID3D12Fence>(),
                                reinterpret_cast<void**>(&idleFence)));
-  idleEvent = CreateEvent(nullptr, TRUE, TRUE, nullptr);
+  idleEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
   }
 
 DxDevice::~DxDevice() {
@@ -61,10 +61,10 @@ const char* Detail::DxDevice::renderer() const {
   }
 
 void Detail::DxDevice::waitIdle() {
-  idleFence->Signal(DxFence::Ready);
-  cmdQueue->Wait(idleFence.get(),DxFence::Ready);
-  idleFence->Signal(DxFence::Waiting);
-  ResetEvent(idleEvent);
+  dxAssert(cmdQueue->Signal(idleFence.get(),DxFence::Ready));
+  dxAssert(idleFence->SetEventOnCompletion(DxFence::Ready,idleEvent));
+  WaitForSingleObjectEx(idleEvent, INFINITE, FALSE);
+  dxAssert(idleFence->Signal(DxFence::Waiting));
   }
 
 #endif

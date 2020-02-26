@@ -22,7 +22,6 @@ struct VCommandBuffer::ImgState {
   bool          outdated;
   };
 
-
 VCommandBuffer::VCommandBuffer(VDevice& device, VCommandPool& pool)
   :device(device.device), pool(pool.impl) {
   VkCommandBufferAllocateInfo allocInfo = {};
@@ -131,6 +130,24 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraph
   lastChunk->setUniforms(p,u,offc,offv);
   }
 
+void VCommandBuffer::draw(size_t offset,size_t size) {
+  lastChunk->draw(offset,size);
+  }
+
+void VCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset) {
+  lastChunk->drawIndexed(ioffset,isize,voffset);
+  }
+
+void VCommandBuffer::setVbo(const Tempest::AbstractGraphicsApi::Buffer &b) {
+  getChunk().setVbo(b);
+  }
+
+void VCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer *b,Detail::IndexClass cls) {
+  if(b==nullptr)
+    return;
+  getChunk().setIbo(b,cls);
+  }
+
 void VCommandBuffer::setViewport(const Tempest::Rect &r) {
   viewPort.x        = float(r.x);
   viewPort.y        = float(r.y);
@@ -149,24 +166,6 @@ void VCommandBuffer::exec(const CommandBundle &buf) {
   vkCmdExecuteCommands(impl,1,&ecmd.impl);
   }
 
-void VCommandBuffer::draw(size_t offset,size_t size) {
-  getChunk().draw(offset,size);
-  }
-
-void VCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset) {
-  getChunk().drawIndexed(ioffset,isize,voffset);
-  }
-
-void VCommandBuffer::setVbo(const Tempest::AbstractGraphicsApi::Buffer &b) {
-  getChunk().setVbo(b);
-  }
-
-void VCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer *b,Detail::IndexClass cls) {
-  if(b==nullptr)
-    return;
-  getChunk().setIbo(b,cls);
-  }
-
 void VCommandBuffer::setLayout(VFramebuffer::Attach& a, VkFormat frm, VkImageLayout lay) {
   ImgState* img;
   if(a.tex!=nullptr) {
@@ -176,7 +175,7 @@ void VCommandBuffer::setLayout(VFramebuffer::Attach& a, VkFormat frm, VkImageLay
     }
   changeLayout(img->img,img->frm,img->lay,lay,VK_REMAINING_MIP_LEVELS,true);
   img->outdated = false;
-  img->lay = lay;
+  img->lay      = lay;
   }
 
 VCommandBundle& VCommandBuffer::getChunk() {
@@ -212,6 +211,7 @@ void VCommandBuffer::flushLayout() {
       continue; // no readable depth for now
     changeLayout(i.img,i.frm,i.lay,i.last,VK_REMAINING_MIP_LEVELS,true);
     i.lay = i.last;
+    i.outdated = false;
     }
   }
 

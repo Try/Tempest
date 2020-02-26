@@ -13,7 +13,8 @@ using namespace Tempest::Detail;
 DxPipeline::DxPipeline(DxDevice& device, const RenderState& st,
                        const Decl::ComponentType* decl, size_t declSize, size_t stride,
                        Topology tp, const DxUniformsLay& ulay,
-                       DxShader& vert, DxShader& frag) {
+                       DxShader& vert, DxShader& frag)
+  :stride(UINT(stride)){
   static const DXGI_FORMAT vertFormats[]={
     DXGI_FORMAT_UNKNOWN,
     DXGI_FORMAT_R32_FLOAT,
@@ -45,6 +46,14 @@ DxPipeline::DxPipeline(DxDevice& device, const RenderState& st,
     4,
     8
   };
+
+  static const D3D_PRIMITIVE_TOPOLOGY dxTopolgy[]={
+    D3D_PRIMITIVE_TOPOLOGY_UNDEFINED,
+    D3D_PRIMITIVE_TOPOLOGY_LINELIST,
+    D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST
+  };
+
+  topology = dxTopolgy[int(tp)];
 
   D3D12_INPUT_ELEMENT_DESC                    vsInputsStk[16]={};
   std::unique_ptr<D3D12_INPUT_ELEMENT_DESC[]> vsInputHeap;
@@ -86,9 +95,10 @@ DxPipeline::DxPipeline(DxDevice& device, const RenderState& st,
 
   psoDesc.RasterizerState = getRaster(st);
   psoDesc.BlendState      = getBlend(st);
-  psoDesc.DepthStencilState.DepthEnable   = st.isZWriteEnabled() ? TRUE : FALSE;
-  psoDesc.DepthStencilState.DepthFunc     = depthFn[size_t(st.zTestMode())];
-  psoDesc.DepthStencilState.StencilEnable = FALSE;
+  psoDesc.DepthStencilState.DepthEnable    = st.zTestMode()!=RenderState::ZTestMode::Always ? TRUE : FALSE;
+  psoDesc.DepthStencilState.DepthWriteMask = st.isZWriteEnabled() ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
+  psoDesc.DepthStencilState.DepthFunc      = depthFn[size_t(st.zTestMode())];
+  psoDesc.DepthStencilState.StencilEnable  = FALSE;
 
   psoDesc.SampleMask            = UINT_MAX;
   psoDesc.SampleDesc.Quality    = 0;
@@ -97,10 +107,30 @@ DxPipeline::DxPipeline(DxDevice& device, const RenderState& st,
   if(tp==Triangles)
     psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE; else
     psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-  psoDesc.NumRenderTargets      = 1; // TODO: mrt
-  psoDesc.RTVFormats[0]         = DXGI_FORMAT_R8G8B8A8_UNORM;
 
-  dxAssert(device.device->CreateGraphicsPipelineState(&psoDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&pipelineState)));
+  psoDesc.NumRenderTargets = 1; // TODO: mrt
+  psoDesc.RTVFormats[0]    = DXGI_FORMAT_B8G8R8A8_UNORM; // TODO: pipeline instances
+
+  dxAssert(device.device->CreateGraphicsPipelineState(&psoDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&impl)));
+
+  // Create an empty root signature.
+  D3D12_ROOT_SIGNATURE_DESC desc={};
+  desc.NumParameters     = 0;
+  desc.pParameters       = nullptr;
+  desc.NumStaticSamplers = 0;
+  desc.pStaticSamplers   = nullptr;
+  desc.Flags             = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+  ComPtr<ID3DBlob> signature;
+  ComPtr<ID3DBlob> error;
+  dxAssert(D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1,
+                                       &signature.get(),
+                                       &error.get()));
+  dxAssert(device.device->CreateRootSignature(0,
+                                              signature->GetBufferPointer(),
+                                              signature->GetBufferSize(),
+                                              uuid<ID3D12RootSignature>(),
+                                              reinterpret_cast<void**>(&emptySign)));
   }
 
 D3D12_BLEND_DESC DxPipeline::getBlend(const RenderState& st) const {

@@ -62,7 +62,7 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t size, MemUsage usage, Buffer
   std::memcpy(mapped,mem,size);
   ret->Unmap(0,&rgn);
 
-  return DxBuffer(std::move(ret));
+  return DxBuffer(std::move(ret),UINT(size));
   }
 
 #endif

@@ -9,11 +9,13 @@ using namespace Tempest;
 
 Builtin::Builtin(Device& owner)
   :owner(owner) {
-  stBlend.setBlendSource(RenderState::BlendMode::src_alpha);
-  stBlend.setBlendDest  (RenderState::BlendMode::one_minus_src_alpha);
+  stBlend.setBlendSource  (RenderState::BlendMode::src_alpha);
+  stBlend.setBlendDest    (RenderState::BlendMode::one_minus_src_alpha);
+  stBlend.setZWriteEnabled(false);
 
-  stAlpha.setBlendSource(RenderState::BlendMode::one);
-  stAlpha.setBlendDest  (RenderState::BlendMode::one);
+  stAlpha.setBlendSource  (RenderState::BlendMode::one);
+  stAlpha.setBlendDest    (RenderState::BlendMode::one);
+  stAlpha.setZWriteEnabled(false);
 
   vsE  = owner.shader(empty_vert_sprv,sizeof(empty_vert_sprv));
   fsE  = owner.shader(empty_frag_sprv,sizeof(empty_frag_sprv));

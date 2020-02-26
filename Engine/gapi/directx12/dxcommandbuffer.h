@@ -2,6 +2,7 @@
 
 #include <Tempest/AbstractGraphicsApi>
 #include <d3d12.h>
+#include <vector>
 
 #include "comptr.h"
 
@@ -36,10 +37,22 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void drawIndexed (size_t ioffset, size_t isize, size_t voffset) override;
 
   private:
+    struct ImgState;
+
     DxDevice&                         dev;
     ComPtr<ID3D12GraphicsCommandList> impl;
     bool                              recording=false;
-  friend class DirectX12Api;
+
+    UINT                              vboStride=0;
+
+    std::vector<ImgState>             imgState;
+
+    void                       setLayout(ID3D12Resource* res, D3D12_RESOURCE_STATES lay);
+    void                       implChangeLayout(ID3D12Resource* res, D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES lay);
+    DxCommandBuffer::ImgState& findImg(ID3D12Resource* img, D3D12_RESOURCE_STATES last);
+    void                       flushLayout();
+
+    friend class Tempest::DirectX12Api;
   };
 
 }
