@@ -9,7 +9,7 @@ namespace Detail {
 
 class DxBuffer : public AbstractGraphicsApi::Buffer {
   public:
-    DxBuffer();
+    DxBuffer() = delete;
     DxBuffer(ComPtr<ID3D12Resource>&& b,UINT size);
     DxBuffer(DxBuffer&& other);
 

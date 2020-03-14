@@ -9,9 +9,6 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-DxBuffer::DxBuffer() {
-  }
-
 DxBuffer::DxBuffer(ComPtr<ID3D12Resource>&& b, UINT size)
   :impl(std::move(b)), size(size) {
   }

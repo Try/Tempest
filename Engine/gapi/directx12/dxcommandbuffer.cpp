@@ -48,9 +48,9 @@ bool DxCommandBuffer::isRecording() const {
   }
 
 void DxCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*  f,
-                                      AbstractGraphicsApi::Pass* p,
-                                      uint32_t /*width*/, uint32_t /*height*/) {
-  auto& fbo  = *reinterpret_cast<DxFramebuffer*>(f);
+                                      AbstractGraphicsApi::Pass* /*p*/,
+                                      uint32_t w, uint32_t h) {
+  auto& fbo = *reinterpret_cast<DxFramebuffer*>(f);
 
   for(auto& i:imgState)
     i.outdated = true;
@@ -67,19 +67,6 @@ void DxCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*  f,
                            nullptr);
   const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
   impl->ClearRenderTargetView(desc, clearColor, 0, nullptr);
-  }
-
-void DxCommandBuffer::endRenderPass() {
-  }
-
-void Tempest::Detail::DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p,
-                                                   uint32_t w, uint32_t h) {
-  DxPipeline& px = reinterpret_cast<DxPipeline&>(p);
-  vboStride = px.stride;
-
-  impl->SetPipelineState(px.impl.get());
-  impl->IASetPrimitiveTopology(px.topology);
-  impl->SetGraphicsRootSignature(px.emptySign.get());
 
   D3D12_VIEWPORT vp={};
   vp.TopLeftX = float(0.f);
@@ -96,6 +83,19 @@ void Tempest::Detail::DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi:
   sr.right  = LONG(w);
   sr.bottom = LONG(h);
   impl->RSSetScissorRects(1, &sr);
+  }
+
+void DxCommandBuffer::endRenderPass() {
+  }
+
+void Tempest::Detail::DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p,
+                                                   uint32_t w, uint32_t h) {
+  DxPipeline& px = reinterpret_cast<DxPipeline&>(p);
+  vboStride = px.stride;
+
+  impl->SetPipelineState(px.impl.get());
+  impl->SetGraphicsRootSignature(px.emptySign.get());
+  impl->IASetPrimitiveTopology(px.topology);
   }
 
 void DxCommandBuffer::setViewport(const Rect& r) {
