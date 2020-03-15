@@ -22,7 +22,9 @@ class Painter {
     constexpr static auto Add    =Blend::Add;
 
     Painter(PaintEvent& ev, Mode m=Preserve);
+    Painter(const Painter&)=delete;
     ~Painter();
+    Painter& operator = (const Painter&)=delete;
 
     void setScissot(int x,int y,int w,int h);
     void setScissot(int x,int y,unsigned w,unsigned h);
