@@ -4,18 +4,13 @@ project(MoltenTempest)
 set(CMAKE_CXX_STANDARD 14)
 
 option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
+SET(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 if(MSVC)
   option(TEMPEST_BUILD_DIRECTX12   "Build directx12 support" ON )
 else()
   option(TEMPEST_BUILD_DIRECTX12   "Build directx12 support" OFF)
 endif()
-
-FIND_PACKAGE(WindowsSDK)
-IF(WINDOWSSDK_FOUND)
-    get_windowssdk_library_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_LIB_DIRS)
-    get_windowssdk_include_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_INCLUDE_DIRS)
-ENDIF()
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
@@ -38,6 +33,15 @@ endif()
 
 ### Platforms
 if(WIN32)
+  find_package(WindowsSDK)
+  if(WINDOWSSDK_FOUND)
+      get_windowssdk_library_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_LIB_DIRS)
+      get_windowssdk_include_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_INCLUDE_DIRS)
+
+      include_directories("${WINSDK_INCLUDE_DIRS}")
+      link_directories(${PROJECT_NAME} "${WINSDK_LIB_DIRS}")
+  endif()
+
   add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
 endif()
 

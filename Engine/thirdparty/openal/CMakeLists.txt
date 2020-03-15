@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.4)
 
 project(OpenAL)
+SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/../../cmake")
 
 if(MSVC)
   add_definitions(-DNOMINMAX)
@@ -14,10 +15,8 @@ include_directories("."
                     "openal32/include")
 ### Platforms
 if(WIN32)
-  # add_definitions(-DHAVE_DSOUND)
   add_definitions(-DHAVE_WINMM)
   add_definitions(-DHAVE_DSOUND)
-  add_definitions(-DHAVE_WINDOWS_H)
   file(GLOB AlcBackend
     "Alc/backends/winmm.c"
     "Alc/backends/dsound.c"
