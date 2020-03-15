@@ -11,6 +11,12 @@ else()
   option(TEMPEST_BUILD_DIRECTX12   "Build directx12 support" OFF)
 endif()
 
+FIND_PACKAGE(WindowsSDK)
+IF(WINDOWSSDK_FOUND)
+    get_windowssdk_library_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_LIB_DIRS)
+    get_windowssdk_include_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_INCLUDE_DIRS)
+ENDIF()
+
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 add_definitions(-DVULKAN_HPP_NO_EXCEPTIONS)

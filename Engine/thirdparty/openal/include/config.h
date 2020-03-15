@@ -121,7 +121,7 @@
 // #define  HAVE_GUIDDEF_H
 
 /* Define if we have initguid.h */
-// #define  HAVE_INITGUID_H
+#define  HAVE_INITGUID_H
 
 /* Define if we have ieeefp.h */
 // #define  HAVE_IEEEFP_H

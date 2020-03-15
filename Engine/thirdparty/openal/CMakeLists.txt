@@ -16,9 +16,11 @@ include_directories("."
 if(WIN32)
   # add_definitions(-DHAVE_DSOUND)
   add_definitions(-DHAVE_WINMM)
+  add_definitions(-DHAVE_DSOUND)
   add_definitions(-DHAVE_WINDOWS_H)
   file(GLOB AlcBackend
     "Alc/backends/winmm.c"
+    "Alc/backends/dsound.c"
     "Alc/backends/null.c"
     "Alc/backends/loopback.c"
     )
@@ -43,5 +45,5 @@ file(GLOB SOURCES
 add_library(${PROJECT_NAME} STATIC ${SOURCES} ${AlcBackend})
 
 if(WIN32)
-  target_link_libraries(${PROJECT_NAME} PRIVATE winmm Kernel32)
+  target_link_libraries(${PROJECT_NAME} PRIVATE dxguid Dsound winmm Kernel32)
 endif()
