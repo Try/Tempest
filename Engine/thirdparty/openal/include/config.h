@@ -97,7 +97,9 @@
 #define HAVE_STDINT_H 1
 
 /* Define if we have windows.h */
-// #define  HAVE_WINDOWS_H
+#if (defined(WIN32) || defined(_WIN32))
+#define  HAVE_WINDOWS_H
+#endif
 
 /* Define if we have dlfcn.h */
 // #define  HAVE_DLFCN_H
@@ -117,11 +119,13 @@
 /* Define if we have cpuid.h */
 // #define  HAVE_CPUID_H
 
+#if (defined(WIN32) || defined(_WIN32))
 /* Define if we have guiddef.h */
-// #define  HAVE_GUIDDEF_H
+#define  HAVE_GUIDDEF_H
 
 /* Define if we have initguid.h */
 #define  HAVE_INITGUID_H
+#endif
 
 /* Define if we have ieeefp.h */
 // #define  HAVE_IEEEFP_H
