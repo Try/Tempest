@@ -125,6 +125,7 @@ file(GLOB_RECURSE PUB_HEADERS "include/Tempest/**")
 
 add_subdirectory("thirdparty/openal")
 add_subdirectory("thirdparty/spirv_cross")
+
 add_library(${PROJECT_NAME} ${GEN_SHADERS_HEADER} ${SOURCES})
 
 set_target_properties(

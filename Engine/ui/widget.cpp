@@ -108,6 +108,8 @@ void Widget::implDisableSum(Widget *root,int diff) noexcept {
   }
 
 void Widget::dispatchPaintEvent(PaintEvent& e) {
+  state.needToUpdate = false;
+
   paintEvent(e);
   const size_t count=widgetsCount();
   for(size_t i=0;i<count;++i) {

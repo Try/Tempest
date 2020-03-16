@@ -29,8 +29,9 @@ void EventDispatcher::dispatchMouseUp(Widget &/*wnd*/, MouseEvent &e) {
 
 void EventDispatcher::dispatchMouseMove(Widget &wnd, MouseEvent &e) {
   if(auto w = lock(mouseUp)) {
-    MouseEvent e0( e.x,
-                   e.y,
+    auto p = e.pos() - w->widget->mapToRoot(Point());
+    MouseEvent e0( p.x,
+                   p.y,
                    Event::ButtonNone,
                    0,
                    0,
@@ -41,8 +42,9 @@ void EventDispatcher::dispatchMouseMove(Widget &wnd, MouseEvent &e) {
     }
 
   if(auto w = lock(mouseUp)) {
-    MouseEvent e1( e.x,
-                   e.y,
+    auto p = e.pos() - w->widget->mapToRoot(Point());
+    MouseEvent e1( p.x,
+                   p.y,
                    Event::ButtonNone,
                    0,
                    0,
