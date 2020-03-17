@@ -88,8 +88,8 @@ class Device {
     IndexBuffer<T>       ibo(const T* arr,size_t arrSize);
 
     template<class T>
-    VertexBuffer<T>      ibo(const std::vector<T>& arr){
-      return loadIbo(arr.data(),arr.size());
+    IndexBuffer<T>       ibo(const std::vector<T>& arr){
+      return ibo(arr.data(),arr.size());
       }
 
     template<class T>
