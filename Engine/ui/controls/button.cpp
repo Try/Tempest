@@ -26,8 +26,12 @@ void Button::setFont(const Font &f) {
   update();
   }
 
-void Button::setIcon(const Sprite &s) {
-  icon=s;
+const Font& Button::font() const {
+  return textM.font();
+  }
+
+void Button::setIcon(const Icon& s) {
+  icn=s;
   invalidateSizeHint();
 
   update();
@@ -58,27 +62,13 @@ void Button::mouseLeaveEvent(MouseEvent&) {
   }
 
 void Button::paintEvent(PaintEvent &e) {
-  Painter p(e);
-
-  p.setBrush(isMouseOver() ? Color(0,0,0,0.2f) : Color(0,0,0,0.02f));
-  p.drawRect(0,0,w(),h());
-
-  auto& m = margins();
-  int dx=0;
-  if(!icon.isEmpty()) {
-    p.setBrush(icon);
-    int x=m.left;
-    if(textM.isEmpty())
-      x=(w()-icon.w())/2;
-    p.drawRect(x,(h()-icon.h())/2,icon.w(),icon.h());
-    dx = dx+icon.w()+spacing();
-    }
-
-  auto ts=textM.wrapSize();
-  textM.paint(p,m.left+dx+(w()-ts.w-dx-margins().xMargin())/2,int(h()+ts.h)/2);
+  Tempest::Painter p(e);
+  style().draw(p, this,  Style::E_Background,  state(),Rect(0,0,w(),h()),Style::Extra(*this));
+  style().draw(p, textM, Style::TE_ButtonTitle,state(),Rect(0,0,w(),h()),Style::Extra(*this));
   }
 
 void Button::invalidateSizeHint() {
+  auto& icon = icn.sprite(w(),h(),Icon::ST_Normal);
   Size sz=textM.sizeHint();
   Size is=icon.size();
 

@@ -6,6 +6,7 @@
 namespace Tempest {
 
 class Timer;
+class Style;
 
 class Application {
   public:
@@ -17,6 +18,9 @@ class Application {
     static uint64_t tickCount();
 
     int             exec();
+
+    void            setStyle(const Style* stl);
+    const Style&    style() const;
 
   private:
     struct Impl;

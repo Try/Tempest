@@ -309,6 +309,14 @@ void Painter::setFont(const Font &f) {
   fnt=f;
   }
 
+void Painter::translate(const Point& p) {
+  tr.translate(p);
+  }
+
+void Painter::translate(int x, int y) {
+  tr.translate(x,y);
+  }
+
 void Painter::drawText(int x, int y, const char *txt) {
   if(txt==nullptr)
     return;

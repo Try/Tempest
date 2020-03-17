@@ -133,7 +133,7 @@ void LinearLayout::implApplyLayout(Widget &w) {
 
 template<bool hor>
 void LinearLayout::implApplyLayout(Widget &w, size_t count, bool exp, int sum, int free, int expCount) {
-  auto   client=w.clentRet();
+  auto   client=w.clientRect();
   const SizePolicyType tExp=(exp ? Expanding : Preferred);
 
   int c      =hor ? client.x : client.y;

@@ -2,6 +2,7 @@
 
 #include <Tempest/SystemApi>
 #include <Tempest/Timer>
+#include <Tempest/Style>
 
 #include <vector>
 #include <thread>
@@ -11,6 +12,8 @@ using namespace Tempest;
 struct Application::Impl : SystemApi::AppCallBack {
   static std::vector<Timer*> timer;
   static size_t              timerI;
+
+  const Style*               style=nullptr;
 
   static void addTimer(Timer& t){
     timer.push_back(&t);
@@ -36,6 +39,14 @@ struct Application::Impl : SystemApi::AppCallBack {
       }
     return uint32_t(count);
     }
+
+  void setStyle(const Style* s) {
+    if(style!=nullptr)
+      style->implDecRef();
+    style = s;
+    if(style!=nullptr)
+      style->implAddRef();
+    }
   };
 
 std::vector<Timer*> Application::Impl::timer;
@@ -60,6 +71,18 @@ uint64_t Application::tickCount() {
 
 int Application::exec(){
   return SystemApi::exec(*impl);
+  }
+
+void Application::setStyle(const Style* stl) {
+  impl->setStyle(stl);
+  }
+
+const Style& Application::style() const {
+  if(impl->style!=nullptr) {
+    return *impl->style;
+    }
+  static Style def;
+  return def;
   }
 
 void Application::implAddTimer(Timer &t) {

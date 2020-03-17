@@ -14,6 +14,9 @@ class Transform {
     void   map(float x,float y,float& outX,float& outY) const;
     PointF map(const Point& p) const { PointF r; map(float(p.x),float(p.y),r.x,r.y); return r; }
 
+    void   translate(float x,float y);
+    void   translate(const Point& p);
+
     static const Transform& identity();
 
   private:

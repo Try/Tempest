@@ -3,6 +3,8 @@
 #include <Tempest/Rect>
 #include <Tempest/SizePolicy>
 #include <Tempest/Event>
+#include <Tempest/Style>
+#include <Tempest/WidgetState>
 
 #include <vector>
 #include <memory>
@@ -82,7 +84,7 @@ class Widget {
     void setSpacing( int s );
     int  spacing() const { return spa; }
 
-    Rect clentRet() const;
+    Rect clientRect() const;
 
     void setEnabled(bool e);
     bool isEnabled() const;
@@ -92,9 +94,14 @@ class Widget {
     bool hasFocus() const { return wstate.focus; }
 
     void update();
-    bool needToUpdate() const { return state.needToUpdate; }
+    bool needToUpdate() const { return astate.needToUpdate; }
 
     bool isMouseOver()  const { return wstate.moveOver; }
+
+    void               setStyle(const Style* stl);
+    const Style&       style() const;
+
+    const WidgetState& state() const { return wstate; }
 
   protected:
     void setSizeHint(const Tempest::Size& s);
@@ -158,27 +165,24 @@ class Widget {
       uint16_t disable      = 0;
       bool     needToUpdate = false;
       };
-    Additive                state;
+    Additive                astate;
+    WidgetState             wstate;
 
-    struct State {
-      bool                  disabled = false;
-      bool                  focus    = false;
-      bool                  moveOver = false;
-      };
-    State                   wstate;
     std::shared_ptr<Ref>    selfRef;
 
     Layout*                 lay=reinterpret_cast<Layout*>(layBuf);
     char                    layBuf[sizeof(void*)*3]={};
 
+    const Style*            stl = nullptr;
+
     void                    freeLayout() noexcept;
     void                    implDisableSum(Widget *root,int diff) noexcept;
     Widget&                 implAddWidget(Widget* w);
-    void                    implSetFocus(Widget* Additive::*add,bool State::* flag,bool value,const MouseEvent* parent);
+    void                    implSetFocus(Widget* Additive::*add, bool WidgetState::*flag, bool value, const MouseEvent* parent);
     static void             implExcFocus(Event::Type type,Widget* prev, Widget* next, const MouseEvent& parent);
-    static void             implClearFocus(Widget* w,Widget* Additive::*add, bool State::*flag);
+    static void             implClearFocus(Widget* w,Widget* Additive::*add, bool WidgetState::*flag);
     static Widget*          implTrieRoot(Widget* w);
-    bool                    checkFocus() const { return wstate.focus || state.focus; }
+    bool                    checkFocus() const { return wstate.focus || astate.focus; }
     void                    implAttachFocus();
 
     void                    dispatchPaintEvent(PaintEvent &e);

@@ -18,6 +18,16 @@ Transform::Transform(float m11, float m12, float m13,
   v[2][2]=m33;
   }
 
+void Transform::translate(float x, float y) {
+  v[2][0]+=x;
+  v[2][1]+=y;
+  }
+
+void Transform::translate(const Point& p) {
+  v[2][0]+=p.x;
+  v[2][1]+=p.y;
+  }
+
 const Transform &Transform::identity() {
   static Transform tr(1,0,0,
                       0,1,0,

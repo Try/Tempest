@@ -33,6 +33,9 @@ class Painter {
     void setPen  (const Pen&   p);
     void setFont (const Font&  f);
 
+    void translate(const Point& p);
+    void translate(int x,int y);
+
     const Brush& brush() const { return bru; }
     const Pen&   pen()   const { return pn;  }
     const Font&  font()  const { return fnt; }

@@ -151,8 +151,8 @@ void EventDispatcher::implMouseWhell(Widget& w,MouseEvent &event) {
 
 std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget &root, KeyEvent &event) {
   Widget* w = &root;
-  while(w->state.focus!=nullptr) {
-    w = w->state.focus;
+  while(w->astate.focus!=nullptr) {
+    w = w->astate.focus;
     }
   if(w->wstate.focus) {
     auto ptr = w->selfReference();

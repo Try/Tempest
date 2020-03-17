@@ -84,7 +84,7 @@ void Widget::removeAllWidgets() {
   for(auto& w:rm)
     w->ow=nullptr;
 
-  state.focus     =nullptr;
+  astate.focus = nullptr;
 
   for(auto& w:rm)
     delete w;
@@ -99,7 +99,7 @@ void Widget::freeLayout() noexcept {
   }
 
 void Widget::implDisableSum(Widget *root,int diff) noexcept {
-  root->state.disable += diff;
+  root->astate.disable += diff;
 
   const std::vector<Widget*> & w = root->wx;
 
@@ -108,7 +108,7 @@ void Widget::implDisableSum(Widget *root,int diff) noexcept {
   }
 
 void Widget::dispatchPaintEvent(PaintEvent& e) {
-  state.needToUpdate = false;
+  astate.needToUpdate = false;
 
   paintEvent(e);
   const size_t count=widgetsCount();
@@ -144,7 +144,7 @@ Widget& Widget::implAddWidget(Widget *w) {
     throw std::invalid_argument("null widget");
   if(w->checkFocus()) {
     while(true) {
-      implClearFocus(this,&Additive::focus,&State::focus);
+      implClearFocus(this,&Additive::focus,&WidgetState::focus);
       auto root=implTrieRoot(this);
       if(root==nullptr || !root->checkFocus())
         break;
@@ -156,24 +156,24 @@ Widget& Widget::implAddWidget(Widget *w) {
   wx.emplace_back(w);
   w->setOwner(this);
   if(w->checkFocus())
-    state.focus = w;
-  if(state.disable>0)
-    implDisableSum(w,state.disable);
+    astate.focus = w;
+  if(astate.disable>0)
+    implDisableSum(w,astate.disable);
   lay->applyLayout();
   update();
   return *w;
   }
 
 Widget *Widget::takeWidget(Widget *w) {
-  if(state.focus==w) {
+  if(astate.focus==w) {
     auto wx = this;
     while(wx!=nullptr){
-      wx->state.focus=nullptr;
+      wx->astate.focus=nullptr;
       wx = wx->owner();
       }
     }
-  if(state.disable>0)
-    implDisableSum(w,-state.disable);
+  if(astate.disable>0)
+    implDisableSum(w,-astate.disable);
   const size_t id=lay->find(w);
   if(iterator!=nullptr)
     iterator->onDelete(id,w);
@@ -323,7 +323,7 @@ void Widget::setMinimumSize(int w, int h) {
   setMinimumSize( Size(w,h) );
   }
 
-Rect Widget::clentRet() const {
+Rect Widget::clientRect() const {
   return Rect(marg.left,marg.right,wrect.w-marg.xMargin(),wrect.h-marg.yMargin());
   }
 
@@ -342,7 +342,7 @@ void Widget::setEnabled(bool e) {
   }
 
 bool Widget::isEnabled() const {
-  return state.disable==0;
+  return astate.disable==0;
   }
 
 bool Widget::isEnabledTo(const Widget *ancestor) const {
@@ -358,10 +358,10 @@ bool Widget::isEnabledTo(const Widget *ancestor) const {
   }
 
 void Widget::setFocus(bool b) {
-  implSetFocus(&Additive::focus,&State::focus,b,nullptr);
+  implSetFocus(&Additive::focus,&WidgetState::focus,b,nullptr);
   }
 
-void Widget::implSetFocus(Widget* Additive::*add, bool State::*flag, bool value,const MouseEvent* parent) {
+void Widget::implSetFocus(Widget* Additive::*add, bool WidgetState::*flag, bool value,const MouseEvent* parent) {
   if(wstate.*flag==value)
     return;
 
@@ -370,10 +370,10 @@ void Widget::implSetFocus(Widget* Additive::*add, bool State::*flag, bool value,
 
   Widget* w=this;
   while(true) {
-    if(w->state.*add!=nullptr || w->owner()==nullptr) {
+    if(w->astate.*add!=nullptr || w->owner()==nullptr) {
       while(true) {
-        auto mv=w->state.*add;
-        w->state.*add=nullptr;
+        auto mv=w->astate.*add;
+        w->astate.*add=nullptr;
         if(mv==nullptr){
           w->wstate.*flag=false;
           previous = w;
@@ -384,7 +384,7 @@ void Widget::implSetFocus(Widget* Additive::*add, bool State::*flag, bool value,
 
       w=this;
       while(w->owner()) {
-        w->owner()->state.*add=w;
+        w->owner()->astate.*add=w;
         w = w->owner();
         }
       next->wstate.*flag=true;
@@ -398,12 +398,12 @@ void Widget::implSetFocus(Widget* Additive::*add, bool State::*flag, bool value,
     }
   }
 
-void Widget::implClearFocus(Widget *wx,Widget* Additive::*add, bool State::*flag) {
+void Widget::implClearFocus(Widget *wx, Widget* Additive::*add, bool WidgetState::*flag) {
   Widget* w=implTrieRoot(wx);
   while(w!=nullptr) {
-    if(w->state.*add!=nullptr) {
-      auto x = w->state.*add;
-      w->state.*add=nullptr;
+    if(w->astate.*add!=nullptr) {
+      auto x = w->astate.*add;
+      w->astate.*add=nullptr;
       w = x;
       continue;
       }
@@ -425,7 +425,7 @@ Widget *Widget::implTrieRoot(Widget *w) {
 void Widget::implAttachFocus() {
   Widget* w = this, *prev=nullptr;
   while(w!=nullptr) {
-    w->state.focus = prev;
+    w->astate.focus = prev;
     prev=w;
     w = w->owner();
     }
@@ -455,10 +455,39 @@ void Widget::implExcFocus(Event::Type type,Widget *prev,Widget *next,const Mouse
 void Widget::update() {
   Widget* w=this;
   while(w!=nullptr){
-    if(w->state.needToUpdate)
+    if(w->astate.needToUpdate)
       return;
-    w->state.needToUpdate=true;
+    w->astate.needToUpdate=true;
     w = w->owner();
+    }
+  }
+
+void Widget::setStyle(const Style* s) {
+  if(s==stl)
+    return;
+
+  if(stl!=nullptr) {
+    stl->unpolish(*this);
+    stl->implDecRef();
+    }
+  stl = s;
+  if(stl!=nullptr) {
+    stl->implAddRef();
+    stl->polish(*this);
+    }
+  }
+
+const Style& Widget::style() const {
+  const Widget* r = this;
+  while(true) {
+    if(r->stl!=nullptr)
+      return *r->stl;
+    r = r->ow;
+    if(r==nullptr) {
+      // TODO: app style
+      static Style stlDef;
+      return stlDef;
+      }
     }
   }
 
