@@ -96,10 +96,10 @@ class VectorImage : public Tempest::PaintDevice {
       };
 
     struct PerFrame {
-      Tempest::VertexBuffer<Point> vbo;
-      std::vector<Uniforms>        blocks;
-      std::vector<UboType>         blocksType;
-      bool                         outdated=true;
+      Tempest::VertexBufferDyn<Point> vbo;
+      std::vector<Uniforms>           blocks;
+      std::vector<UboType>            blocksType;
+      bool                            outdated=true;
       };
 
     std::unique_ptr<PerFrame[]> frame;

@@ -116,8 +116,9 @@ void VectorImage::makeActual(Device &dev,Swapchain& sw) {
 
   PerFrame& f=frame[sw.frameId()];
   if(f.outdated) {
-    //if(f.vbo.size()==buf.size())
-    f.vbo=dev.vbo(buf);
+    if(f.vbo.size()==buf.size())
+      f.vbo.update(buf); else
+      f.vbo=dev.vboDyn(buf);
 
     f.blocksType.resize(blocks.size());
     f.blocks    .resize(blocks.size());
@@ -143,7 +144,7 @@ void VectorImage::makeActual(Device &dev,Swapchain& sw) {
     f.outdated=false;
     outdatedCount--;
     if(outdatedCount==0)
-      clear();
+      buf.clear();
     }
   }
 
