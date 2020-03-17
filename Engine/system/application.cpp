@@ -13,7 +13,7 @@ struct Application::Impl : SystemApi::AppCallBack {
   static std::vector<Timer*> timer;
   static size_t              timerI;
 
-  const Style*               style=nullptr;
+  static const Style*        style;
 
   static void addTimer(Timer& t){
     timer.push_back(&t);
@@ -40,7 +40,7 @@ struct Application::Impl : SystemApi::AppCallBack {
     return uint32_t(count);
     }
 
-  void setStyle(const Style* s) {
+  static void setStyle(const Style* s) {
     if(style!=nullptr)
       style->implDecRef();
     style = s;
@@ -51,6 +51,7 @@ struct Application::Impl : SystemApi::AppCallBack {
 
 std::vector<Timer*> Application::Impl::timer;
 size_t              Application::Impl::timerI=size_t(-1);
+const Style*        Application::Impl::style=nullptr;
 
 Application::Application()
   :impl(new Impl()){
@@ -74,12 +75,12 @@ int Application::exec(){
   }
 
 void Application::setStyle(const Style* stl) {
-  impl->setStyle(stl);
+  Impl::setStyle(stl);
   }
 
-const Style& Application::style() const {
-  if(impl->style!=nullptr) {
-    return *impl->style;
+const Style& Application::style() {
+  if(Impl::style!=nullptr) {
+    return *Impl::style;
     }
   static Style def;
   return def;

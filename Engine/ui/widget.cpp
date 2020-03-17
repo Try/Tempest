@@ -1,6 +1,7 @@
 #include "widget.h"
 
 #include <Tempest/Layout>
+#include <Tempest/Application>
 
 using namespace Tempest;
 
@@ -484,9 +485,7 @@ const Style& Widget::style() const {
       return *r->stl;
     r = r->ow;
     if(r==nullptr) {
-      // TODO: app style
-      static Style stlDef;
-      return stlDef;
+      return Application::style();
       }
     }
   }

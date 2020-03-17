@@ -14,13 +14,13 @@ class Application {
     Application(const Application&)=delete;
     virtual ~Application();
 
-    static void     sleep(unsigned int msec);
-    static uint64_t tickCount();
+    static void         sleep(unsigned int msec);
+    static uint64_t     tickCount();
 
-    int             exec();
+    int                 exec();
 
-    void            setStyle(const Style* stl);
-    const Style&    style() const;
+    static void         setStyle(const Style* stl);
+    static const Style& style();
 
   private:
     struct Impl;

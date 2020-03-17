@@ -6,9 +6,6 @@ using namespace Tempest;
 
 Panel::Panel() {
   resize(200, 400);
-  mouseTracking = false;
-  dragable      = false;
-
   setMargins(8);
   setLayout( Tempest::Horizontal );
   }
@@ -67,7 +64,5 @@ void Panel::gestureEvent(Tempest::AbstractGestureEvent &e) {
 
 void Panel::paintEvent( Tempest::PaintEvent &e ) {
   Tempest::Painter p(e);
-  p.setBrush(Color(0.0,0.0,0.0,0.5f));
-  p.drawRect(0,0,w(),h());
-  //style().draw(p,this,Style::E_Background,state(),Rect(0,0,w(),h()),Style::Extra(*this));
+  style().draw(p,this,Style::E_Background,state(),Rect(0,0,w(),h()),Style::Extra(*this));
   }

@@ -27,7 +27,8 @@ class Panel : public Tempest::Widget {
     void paintEvent(Tempest::PaintEvent &p);
 
   private:
-    bool mouseTracking, dragable;
+    bool           mouseTracking=false;
+    bool           dragable     =false;
     Tempest::Point mpos, oldPos;
   };
 /** @}*/

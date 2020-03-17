@@ -32,7 +32,6 @@ class  ScrollBar;
 class Style {
   public:
     Style();
-    Style(const Style* parent);
     virtual ~Style();
 
     struct Extra {
@@ -92,8 +91,6 @@ class Style {
       };
     virtual UIIntefaceIdiom idiom() const;
 
-    void setParent(const Style* stl);
-
     // common
     virtual void draw(Painter& p, Widget*   w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
     virtual void draw(Painter& p, Panel *   w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
@@ -116,8 +113,7 @@ class Style {
     static const Tempest::Sprite& iconSprite(const Icon& icon,const WidgetState &st, const Rect &r);
 
   private:
-    mutable uint32_t refCnt   = 0;
-    const Style*     parent   = nullptr;
+    mutable uint32_t           refCnt   = 0;
 
     mutable bool               cursorState = false;
     mutable Tempest::TextEdit* focused     = nullptr;

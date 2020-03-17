@@ -14,10 +14,10 @@
 
 using namespace Tempest;
 
-const Margin         Style::Extra::emptyMargin;
-const Icon           Style::Extra::emptyIcon;
-const Font           Style::Extra::emptyFont;
-const Color          Style::Extra::emptyColor;
+const Margin Style::Extra::emptyMargin;
+const Icon   Style::Extra::emptyIcon;
+const Font   Style::Extra::emptyFont;
+const Color  Style::Extra::emptyColor;
 
 Style::Extra::Extra(const Widget &owner)
   : margin(owner.margins()), icon(emptyIcon), font(emptyFont), fontColor(emptyColor) {
@@ -41,13 +41,7 @@ Style::Style() {
   anim.timeout.bind(this,&Style::processAnimation);
   }
 
-Style::Style(const Style *parent):parent(parent) {
-  if(parent!=nullptr)
-    parent->implAddRef();
-  }
-
 Style::~Style() {
-  setParent(nullptr);
   assert(polished==0);
   }
 
@@ -59,27 +53,11 @@ Style::UIIntefaceIdiom Style::idiom() const {
 #endif
   }
 
-void Style::setParent(const Style* stl) {
-  if( stl==this ) {
-    parent=nullptr;
-    return;
-    }
-  if(parent!=nullptr)
-    parent->implDecRef();
-  parent=stl;
-  if(parent!=nullptr)
-    parent->implAddRef();
-  }
-
-void Style::polish  (Widget& w) const {
+void Style::polish  (Widget&) const {
   polished++;
-  if(parent)
-    parent->polish(w);
   }
 
 void Style::unpolish(Widget& w) const {
-  if(parent)
-    parent->unpolish(w);
   if(&w==focused) {
     focused=nullptr;
     anim.stop();
@@ -102,8 +80,10 @@ void Style::draw(Painter& ,Widget*, Element, const WidgetState&, const Rect &, c
   }
 
 void Style::draw(Painter &p, Panel* w, Element e, const WidgetState &st, const Rect &r, const Extra& extra) const {
-  if(parent)
-    return parent->draw(p,w,e,st,r,extra);
+  (void)w;
+  (void)e;
+  (void)st;
+  (void)extra;
 
   p.translate(r.x,r.y);
 
@@ -122,8 +102,8 @@ void Style::draw(Painter &p, Panel* w, Element e, const WidgetState &st, const R
   }
 
 void Style::draw(Painter& p, Button *w, Element e, const WidgetState &st, const Rect &r, const Extra &extra) const {
-  if(parent)
-    return parent->draw(p,w,e,st,r,extra);
+  (void)w;
+  (void)extra;
 
   auto pen   = p.pen();
   auto brush = p.brush();
@@ -188,8 +168,9 @@ void Style::draw(Painter& p, Button *w, Element e, const WidgetState &st, const 
   }
 
 void Style::draw(Painter &p, CheckBox *w, Element e, const WidgetState &st, const Rect &r, const Style::Extra &extra) const {
-  if(parent)
-    return parent->draw(p,w,e,st,r,extra);
+  (void)w;
+  (void)e;
+  (void)extra;
 
   const int  s  = std::min(r.w,r.h);
   const Size sz = Size(s,s);
@@ -231,14 +212,15 @@ void Style::draw(Painter &p, CheckBox *w, Element e, const WidgetState &st, cons
   }
 
 void Style::draw(Painter &p, Label *w, Element e, const WidgetState &st, const Rect &r, const Style::Extra &extra) const {
-  if(parent)
-    return parent->draw(p,w,e,st,r,extra);
+  (void)p;
+  (void)w;
+  (void)e;
+  (void)st;
+  (void)extra;
+  // nop
   }
 
 void Style::draw(Painter &p, TextEdit* w, Element e, const WidgetState &st, const Rect &r, const Style::Extra &extra) const {
-  if(parent)
-    return parent->draw(p,w,e,st,r,extra);
-
   if(!st.focus && focused==w){
     focused=nullptr;
     anim.stop();
@@ -260,9 +242,6 @@ void Style::draw(Painter &p, ScrollBar*, Element e, const WidgetState &st, const
 
 void Style::draw(Painter &p, const std::u16string &text, Style::TextElement e,
                  const WidgetState &st, const Rect &r, const Style::Extra &extra) const {
-  if(parent)
-    return parent->draw(p,text,e,st,r,extra);
-
   /*
   const Margin& m = extra.margin;
 
@@ -305,9 +284,6 @@ void Style::draw(Painter &p, const std::u16string &text, Style::TextElement e,
 
 void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
                  const WidgetState &st, const Rect &r, const Style::Extra &extra) const {
-  if(parent)
-    return parent->draw(p,text,e,st,r,extra);
-
   /*
   const Margin& m  = extra.margin;
   const Rect    sc = p.scissor();
