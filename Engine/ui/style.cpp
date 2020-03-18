@@ -2,6 +2,7 @@
 
 #include <Tempest/Platform>
 
+#include <Tempest/Application>
 #include <Tempest/Painter>
 #include <Tempest/Widget>
 #include <Tempest/Button>
@@ -20,19 +21,19 @@ const Font   Style::Extra::emptyFont;
 const Color  Style::Extra::emptyColor;
 
 Style::Extra::Extra(const Widget &owner)
-  : margin(owner.margins()), icon(emptyIcon), font(emptyFont), fontColor(emptyColor) {
+  : margin(owner.margins()), icon(emptyIcon), fontColor(emptyColor) {
   }
 
 Style::Extra::Extra(const Button &owner)
-  : margin(owner.margins()), icon(owner.icon()), font(owner.font()), fontColor(emptyColor) {
+  : margin(owner.margins()), icon(owner.icon()), fontColor(emptyColor) {
   }
 /*
 Style::Extra::Extra(const Label &owner)
-  : margin(owner.margins()), icon(emptyIcon), font(owner.font()), fontColor(owner.textColor()) {
+  : margin(owner.margins()), icon(emptyIcon), fontColor(owner.textColor()) {
   }
 
 Style::Extra::Extra(const TextEdit &owner)
-  : margin(owner.margins()), icon(emptyIcon), font(owner.font()), fontColor(owner.textColor()) {
+  : margin(owner.margins()), icon(emptyIcon), fontColor(owner.textColor()) {
   }
 */
 
@@ -70,6 +71,13 @@ const Tempest::Sprite &Style::iconSprite(const Icon& icon,const WidgetState &st,
   return icon.sprite(sz,sz,st.disabled ? Icon::ST_Disabled : Icon::ST_Normal);
   }
 
+const Font& Style::textFont(const TextModel& txt, const WidgetState&) {
+  auto& fnt = txt.font();
+  if(fnt.isEmpty())
+    return Application::font();
+  return fnt;
+  }
+
 void Style::processAnimation() {
   cursorState=!cursorState;
   if(focused)
@@ -103,6 +111,7 @@ void Style::draw(Painter &p, Panel* w, Element e, const WidgetState &st, const R
 
 void Style::draw(Painter& p, Button *w, Element e, const WidgetState &st, const Rect &r, const Extra &extra) const {
   (void)w;
+  (void)e;
   (void)extra;
 
   auto pen   = p.pen();
@@ -120,14 +129,10 @@ void Style::draw(Painter& p, Button *w, Element e, const WidgetState &st, const 
       p.setBrush(Color(0.5f,0.5f,0.55f,0.75f)); else
       p.setBrush(Color(0.8f,0.8f,0.85f,0.75f));
     p.drawRect(0,0,r.w,r.h);
-    }
 
-  if( drawBackFrame ) {
     p.setPen(Color(0.25,0.25,0.25,1));
-
     p.drawLine(0,0,    r.w-1,0    );
     p.drawLine(0,r.h-1,r.w-1,r.h-1);
-
     p.drawLine(0,      0,    0,r.h-1);
     p.drawLine(r.w-1,  0,r.w-1,r.h  );
     }
@@ -162,9 +167,9 @@ void Style::draw(Painter& p, Button *w, Element e, const WidgetState &st, const 
       }
     }
 
-  p.translate(r.x,r.y);
-  p.setPen(pen);
+  p.translate(-r.x,-r.y);
   p.setBrush(brush);
+  p.setPen(pen);
   }
 
 void Style::draw(Painter &p, CheckBox *w, Element e, const WidgetState &st, const Rect &r, const Style::Extra &extra) const {
@@ -284,6 +289,8 @@ void Style::draw(Painter &p, const std::u16string &text, Style::TextElement e,
 
 void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
                  const WidgetState &st, const Rect &r, const Style::Extra &extra) const {
+  auto& fnt = textFont(text,st);
+  text.paint(p,fnt,r.x,r.y+r.h-(r.h-int(fnt.pixelSize()))/2);
   /*
   const Margin& m  = extra.margin;
   const Rect    sc = p.scissor();

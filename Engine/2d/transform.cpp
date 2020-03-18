@@ -19,13 +19,13 @@ Transform::Transform(float m11, float m12, float m13,
   }
 
 void Transform::translate(float x, float y) {
-  v[2][0]+=x;
-  v[2][1]+=y;
+  v[2][0] = v[0][0] * x + v[1][0] * y + v[2][0];
+  v[2][1] = v[0][1] * x + v[1][1] * y + v[2][1];
+  v[2][2] = v[0][2] * x + v[1][2] * y + v[2][2];
   }
 
 void Transform::translate(const Point& p) {
-  v[2][0]+=p.x;
-  v[2][1]+=p.y;
+  translate(p.x,p.y);
   }
 
 const Transform &Transform::identity() {

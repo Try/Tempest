@@ -43,7 +43,6 @@ class Style {
 
         const Margin&         margin;
         const Icon&           icon;
-        const Font&           font;
         const Color&          fontColor;
 
       private:
@@ -111,6 +110,7 @@ class Style {
     virtual void unpolish(Widget& w) const;
 
     static const Tempest::Sprite& iconSprite(const Icon& icon,const WidgetState &st, const Rect &r);
+    static const Tempest::Font&   textFont(const TextModel& txt,const WidgetState &st);
 
   private:
     mutable uint32_t           refCnt   = 0;

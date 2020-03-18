@@ -42,11 +42,21 @@ void Button::mouseDownEvent(MouseEvent &e) {
     e.ignore();
     return;
     }
-  //onClick();
+  if(!isEnabled())
+    return;
+  setPressed(e.button==Event::ButtonLeft);
+  update();
   }
 
-void Button::mouseUpEvent(MouseEvent&) {
-  onClick();
+void Button::mouseUpEvent(MouseEvent& e) {
+  if( e.x<=w() && e.y<=h() &&  e.x>=0 && e.y>=0 && isEnabled() ){
+    if(isPressed())
+      onClick();
+    else if(e.button==Event::ButtonRight)
+      showMenu();
+    }
+  setPressed(false);
+  update();
   }
 
 void Button::mouseMoveEvent(MouseEvent &e) {
@@ -63,8 +73,8 @@ void Button::mouseLeaveEvent(MouseEvent&) {
 
 void Button::paintEvent(PaintEvent &e) {
   Tempest::Painter p(e);
-  style().draw(p, this,  Style::E_Background,  state(),Rect(0,0,w(),h()),Style::Extra(*this));
-  style().draw(p, textM, Style::TE_ButtonTitle,state(),Rect(0,0,w(),h()),Style::Extra(*this));
+  style().draw(p,this, Style::E_Background,  state(),Rect(0,0,w(),h()),Style::Extra(*this));
+  style().draw(p,textM,Style::TE_ButtonTitle,state(),Rect(0,0,w(),h()),Style::Extra(*this));
   }
 
 void Button::invalidateSizeHint() {
@@ -77,4 +87,21 @@ void Button::invalidateSizeHint() {
   sz.h = std::max(sz.h,is.h);
 
   setSizeHint(sz,margins());
+  }
+
+void Button::setPressed(bool p) {
+  if(state().pressed==p)
+    return;
+  auto st=state();
+  st.pressed=p;
+  setWidgetState(st);
+  update();
+  }
+
+void Button::showMenu() {
+  // TODO
+  }
+
+bool Button::isPressed() const {
+  return state().pressed;
   }

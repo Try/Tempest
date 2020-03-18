@@ -1,5 +1,6 @@
 #include "painter.h"
 
+#include <Tempest/Application>
 #include <Tempest/PaintDevice>
 #include <Tempest/Event>
 #include <Tempest/Brush>
@@ -10,7 +11,7 @@
 using namespace Tempest;
 
 Painter::Painter(PaintEvent &ev, Mode m)
-  : dev(ev.device()), ta(ev.ta) {
+  : dev(ev.device()), ta(ev.ta), fnt(Application::font()) {
   float w=2.f/(ev.w());
   float h=2.f/(ev.h());
   const Point& dp=ev.orign();
@@ -293,7 +294,7 @@ void Painter::drawRect(int x, int y, unsigned w, unsigned h) {
 void Painter::drawLine(int x1, int y1, int x2, int y2) {
   if(state!=StPen){
     dev.setTopology(Lines);
-    state=StBrush;
+    state=StPen;
     implPen(pn);
     }
   /*

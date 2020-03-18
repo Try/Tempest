@@ -26,6 +26,8 @@ class Button : public Widget {
     void         setIcon(const Icon& s);
     const Icon&  icon() const { return icn; }
 
+    bool         isPressed() const;
+
     Signal<void()> onClick;
 
   protected:
@@ -39,10 +41,12 @@ class Button : public Widget {
     void paintEvent     (Tempest::PaintEvent& e) override;
 
   private:
-    TextModel textM;
-    Icon      icn;
+    TextModel    textM;
+    Icon         icn;
 
-    void invalidateSizeHint();
+    void         invalidateSizeHint(); //TODO: remove
+    void         setPressed(bool p);
+    void         showMenu();
   };
 
 }

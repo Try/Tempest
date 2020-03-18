@@ -44,6 +44,7 @@ class TextModel final {
     bool        isEmpty()  const;
 
     void        paint(Painter& p, int x, int y) const;
+    void        paint(Painter& p, const Font& fnt, int x, int y) const;
 
     Cursor      charAt(const Point& p) const { return charAt(p.x,p.y); }
     Cursor      charAt(int x,int y) const;

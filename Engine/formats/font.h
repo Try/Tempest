@@ -38,6 +38,7 @@ class FontElement final {
     const Letter&         letter(char32_t ch,float size,TextureAtlas& tex) const;
 
     Size                  textSize(const char* text, float fontSize) const;
+    bool                  isEmpty() const;
 
   private:
     template<class CharT>
@@ -59,8 +60,10 @@ class Font final {
     Font(const char16_t*       file);
     Font(const std::u16string& file);
 
-    void setPixelSize(float size);
+    void  setPixelSize(float size);
     float pixelSize() const { return size; }
+
+    bool  isEmpty() const;
 
     const LetterGeometry& letterGeometry(char16_t ch) const;
     const LetterGeometry& letterGeometry(char32_t ch) const;

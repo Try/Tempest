@@ -45,28 +45,37 @@ bool TextModel::isEmpty() const {
   return txt.size()<=1;
   }
 
-void TextModel::paint(Painter &p,int fx,int fy) const {
-  auto  b = p.brush();
-  float x = fx;
-  int   y = fy;
+void TextModel::paint(Painter& p, int x, int y) const {
+  paint(p,fnt,x,y);
+  }
 
+void TextModel::paint(Painter &p,const Font& fnt,int fx,int fy) const {
+  float x = fx;
+  float y = fy;
+
+  auto pb=p.brush();
   Utf8Iterator i(txt.data());
-  while(i.hasData()){
-    char32_t ch = i.next();
-    auto l=fnt.letter(ch,p);
+  while(i.hasData()) {
+    auto ch=i.next();
+    if(ch=='\0'){
+      p.setBrush(pb);
+      return;
+      }
     if(ch=='\n'){
       x =  0;
       y += fnt.pixelSize();
-      } else {
-      if(!l.view.isEmpty()) {
-        p.setBrush(l.view);
-        p.drawRect(int(x+l.dpos.x),y+l.dpos.y,l.view.w(),l.view.h());
-        }
-      x += l.advance.x;
+      continue;
       }
-    }
 
-  p.setBrush(b);
+    auto l=fnt.letter(ch,p);
+    if(!l.view.isEmpty()) {
+      p.setBrush(Brush(l.view,Color(1.0),PaintDevice::Alpha));
+      p.drawRect(int(x+l.dpos.x),int(y+l.dpos.y),l.view.w(),l.view.h());
+      }
+
+    x += l.advance.x;
+    }
+  p.setBrush(pb);
   }
 
 void TextModel::calcSize() const {

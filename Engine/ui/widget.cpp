@@ -251,6 +251,10 @@ void Widget::setSizeHint(const Size &s, const Margin &add) {
   setSizeHint(Size(s.w+add.xMargin(),s.h+add.yMargin()));
   }
 
+void Widget::setWidgetState(const WidgetState& st) {
+  wstate = st;
+  }
+
 void Widget::setSizePolicy(SizePolicyType hv) {
   setSizePolicy(hv,hv);
   }

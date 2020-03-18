@@ -3,6 +3,7 @@
 #include <Tempest/SystemApi>
 #include <Tempest/Timer>
 #include <Tempest/Style>
+#include <Tempest/Font>
 
 #include <vector>
 #include <thread>
@@ -14,6 +15,7 @@ struct Application::Impl : SystemApi::AppCallBack {
   static size_t              timerI;
 
   static const Style*        style;
+  static Font                font;
 
   static void addTimer(Timer& t){
     timer.push_back(&t);
@@ -52,6 +54,7 @@ struct Application::Impl : SystemApi::AppCallBack {
 std::vector<Timer*> Application::Impl::timer;
 size_t              Application::Impl::timerI=size_t(-1);
 const Style*        Application::Impl::style=nullptr;
+Font                Application::Impl::font;
 
 Application::Application()
   :impl(new Impl()){
@@ -84,6 +87,14 @@ const Style& Application::style() {
     }
   static Style def;
   return def;
+  }
+
+void Application::setFont(const Font& fnt) {
+  Impl::font = fnt;
+  }
+
+const Font& Application::font() {
+  return Impl::font;
   }
 
 void Application::implAddTimer(Timer &t) {

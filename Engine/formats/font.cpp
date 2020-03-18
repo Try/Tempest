@@ -337,6 +337,10 @@ Size FontElement::textSize(const char *text,float fontSize) const {
   return ret;
   }
 
+bool FontElement::isEmpty() const {
+  return ptr->size==0;
+  }
+
 template<class CharT>
 Font::Font(const CharT *file,std::true_type)
   : fnt{{file,nullptr},{nullptr,nullptr}}{
@@ -363,6 +367,11 @@ Font::Font(const std::u16string &file)
 
 void Font::setPixelSize(float sz) {
   size=sz;
+  }
+
+bool Font::isEmpty() const {
+  return fnt[0][0].isEmpty() || fnt[0][1].isEmpty() ||
+         fnt[1][0].isEmpty() || fnt[1][1].isEmpty();
   }
 
 const Font::LetterGeometry &Font::letterGeometry(char16_t ch) const {

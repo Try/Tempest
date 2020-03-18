@@ -7,6 +7,7 @@ namespace Tempest {
 
 class Timer;
 class Style;
+class Font;
 
 class Application {
   public:
@@ -21,6 +22,9 @@ class Application {
 
     static void         setStyle(const Style* stl);
     static const Style& style();
+
+    static void         setFont(const Font& fnt);
+    static const Font&  font();
 
   private:
     struct Impl;

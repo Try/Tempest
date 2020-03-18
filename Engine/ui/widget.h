@@ -108,6 +108,8 @@ class Widget {
     void setSizeHint(const Tempest::Size& s,const Margin& add);
     void setSizeHint(int w,int h) { return setSizeHint(Size(w,h)); }
 
+    void setWidgetState(const WidgetState& st);
+
     virtual void paintEvent       (Tempest::PaintEvent& event);
     virtual void resizeEvent      (Tempest::SizeEvent&  event);
 
