@@ -281,6 +281,7 @@ void Style::draw(Painter &p, const std::u16string &text, Style::TextElement e,
   if(dX!=0)
     dX+=8; // padding
 
+  auto& fnt = textFont(text,st);
   p.setFont (extra.font);
   p.setBrush(extra.fontColor);
   const int h=extra.font.textSize(text).h;
@@ -290,8 +291,7 @@ void Style::draw(Painter &p, const std::u16string &text, Style::TextElement e,
 
   p.drawText( m.left+dX, (r.h-h)/2, r.w-m.xMargin()-dX, h, text, flag );
 
-  p.translate(-r.x,-r.y);
-  */
+  p.translate(-r.x,-r.y);*/
   }
 
 void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
@@ -304,8 +304,33 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
   p.setScissor(sc.intersected(Rect(m.left, 0, r.w-m.xMargin(), r.h)));
   p.translate(m.left,0);
 
+  const Sprite& icon = iconSprite(extra.icon,st,r);
+  int dX=0;
+
+  if( !icon.size().isEmpty() ){
+    p.setBrush(icon);
+    if( text.isEmpty() ) {
+      p.drawRect( (r.w-icon.w())/2, (r.h-icon.h())/2, icon.w(), icon.h() );
+      } else {
+      p.drawRect( m.left, (r.h-icon.h())/2, icon.w(), icon.h() );
+      dX=icon.w();
+      }
+    }
+
+  if(e==TE_CheckboxTitle){
+    const int s = std::min(r.w,r.h);
+    if( dX<s )
+      dX=s;
+    }
+
+  if(dX!=0)
+    dX+=8; // padding
+
   auto& fnt = textFont(text,st);
-  text.paint(p,fnt,0,r.h-(r.h-int(fnt.pixelSize()))/2);
+  //text.paint(p,fnt,0,r.h-(r.h-int(fnt.pixelSize()))/2);
+  const int h=text.wrapSize().h;
+  text.paint(p, fnt, m.left+dX, r.h-(r.h-h)/2);
+  //text.paint(p, m.left+dX, (r.h-h)/2, r.w-m.xMargin()-dX, h, text, flag );
 
   /*
   if( st.focus && text.selectionBegin()==text.selectionEnd() ) {

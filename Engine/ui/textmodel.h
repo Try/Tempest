@@ -56,20 +56,23 @@ class TextModel final {
     bool        isValid(Cursor c) const;
 
   private:
-    void        calcSize() const;
-    void        buildIndex();
 
     struct Sz {
       Size sizeHint;
       int  wrapHeight=0;
       bool actual=false;
       };
-    mutable Sz sz;
 
     struct Line {
       const char* txt =nullptr;
       size_t      size=0;
       };
+
+    void        calcSize() const;
+    Sz          calcSize(const Font& fnt) const;
+    void        buildIndex();
+
+    mutable Sz        sz;
     std::vector<char> txt;
     std::vector<Line> line;
     Tempest::Font     fnt;

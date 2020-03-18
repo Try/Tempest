@@ -1,8 +1,9 @@
 #include "textmodel.h"
 
-#include <cstring>
-
+#include <Tempest/Application>
 #include <Tempest/Painter>
+
+#include <cstring>
 #include "utility/utf8_helper.h"
 
 using namespace Tempest;
@@ -79,6 +80,15 @@ void TextModel::paint(Painter &p,const Font& fnt,int fx,int fy) const {
   }
 
 void TextModel::calcSize() const {
+  if(fnt.isEmpty()) {
+    sz = calcSize(Application::font());
+    sz.actual = true;
+    } else {
+    sz = calcSize(fnt);
+    }
+  }
+
+TextModel::Sz TextModel::calcSize(const Font& fnt) const {
   float x=0, w=0;
   int   y=0, top=0;
 
@@ -89,7 +99,7 @@ void TextModel::calcSize() const {
       w = std::max(w,x);
       x = 0;
       y = 0;
-      top+=fnt.pixelSize();
+      top+=int(fnt.pixelSize());
       } else {
       auto l=fnt.letterGeometry(ch);
       x += l.advance.x;
@@ -98,9 +108,10 @@ void TextModel::calcSize() const {
     }
   w = std::max(w,x);
 
+  Sz sz;
   sz.wrapHeight=y+top;
   sz.sizeHint  =Size(int(std::ceil(w)),top+int(fnt.pixelSize()));
-  sz.actual    =true;
+  return sz;
   }
 
 void TextModel::buildIndex() {

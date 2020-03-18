@@ -61,6 +61,8 @@ Application::Application()
   }
 
 Application::~Application(){
+  setFont(Font());
+  setStyle(nullptr);
   }
 
 void Application::sleep(unsigned int msec) {
