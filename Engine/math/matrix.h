@@ -75,6 +75,7 @@ class Matrix4x4 final {
     void project(float & x, float & y, float & z ) const;
 
     void perspective( float angle, float aspect, float zNear, float zFar);
+    void ortho(int width, int height, float zNear, float zFar);
 
     Matrix4x4& operator = ( const Matrix4x4& other )=default;
 

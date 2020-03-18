@@ -524,6 +524,28 @@ void Matrix4x4::perspective(float angle, float aspect, float zNear, float zFar) 
   m[3][2] = -zNear*zFar/(zFar-zNear);
   }
 
+void Matrix4x4::ortho(int width,int height,float zNear, float zFar) {
+  m[0][0] = float(height)/float(width);
+  m[0][1] = 0.f;
+  m[0][2] = 0.f;
+  m[0][3] = 0.f;
+
+  m[1][0] = 0.f;
+  m[1][1] = 1.f;
+  m[1][2] = 0.f;
+  m[1][3] = 0.f;
+
+  m[2][0] = 0.f;
+  m[2][1] = 0.f;
+  m[2][2] = 2.f/(zFar - zNear);
+  m[2][3] = 0.f;
+
+  m[3][0] = 0.f;
+  m[3][1] = 0.f;
+  m[3][2] = 0.f;
+  m[3][3] = 1.f;
+  }
+
 void Tempest::Matrix4x4::set(int x, int y, float v) {
   m[x][y] = v;
   }
