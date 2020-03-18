@@ -21,7 +21,7 @@ Painter::Painter(PaintEvent &ev, Mode m)
                  -1+dp.x*w,-1+dp.y*h, 1);
 
   implSetColor(1,1,1,1);
-  setScissot(r.x,r.y,r.w,r.h);
+  setScissor(r.x,r.y,r.w,r.h);
   dev.beginPaint(m==Clear,ev.w(),ev.h());
   }
 
@@ -29,23 +29,27 @@ Painter::~Painter() {
   dev.endPaint();
   }
 
-void Painter::setScissot(int x, int y, int w, int h) {
-  scissor.x  = x;
-  scissor.y  = y;
-  scissor.x1 = x+w;
-  scissor.y1 = y+h;
+void Painter::setScissor(int x, int y, int w, int h) {
+  scRect.x  = x;
+  scRect.y  = y;
+  scRect.x1 = x+w;
+  scRect.y1 = y+h;
 
-  if(scissor.x>scissor.x1)
-    std::swap(scissor.x,scissor.x1);
-  if(scissor.y>scissor.y1)
-    std::swap(scissor.y,scissor.y1);
+  if(scRect.x>scRect.x1)
+    std::swap(scRect.x,scRect.x1);
+  if(scRect.y>scRect.y1)
+    std::swap(scRect.y,scRect.y1);
   }
 
-void Painter::setScissot(int x, int y, unsigned w, unsigned h) {
-  scissor.x  = x;
-  scissor.y  = y;
-  scissor.x1 = x+int(w);
-  scissor.y1 = y+int(h);
+void Painter::setScissor(int x, int y, unsigned w, unsigned h) {
+  scRect.x  = x;
+  scRect.y  = y;
+  scRect.x1 = x+int(w);
+  scRect.y1 = y+int(h);
+  }
+
+void Painter::setScissor(const Rect& r) {
+  setScissor(r.x,r.y,r.w,r.h);
   }
 
 void Painter::implAddPoint(float x, float y, float u, float v) {
@@ -85,7 +89,7 @@ void Painter::drawTrigImpl( float x0, float y0, float u0, float v0,
                             float x2, float y2, float u2, float v2,
                             FPoint* out,
                             int stage ) {
-  ScissorRect& s = scissor;
+  ScissorRect& s = scRect;
   FPoint*      r = out;
 
   float x[4] = {x0,x1,x2,x0};
@@ -234,32 +238,37 @@ void Painter::implDrawRect(int x1, int y1, int x2, int y2, float u1, float v1, f
     implBrush(bru);
     }
 
-  if(x1<scissor.x){
-    int dx=scissor.x-x1;
+  x1+=trans.x;
+  y1+=trans.y;
+  x2+=trans.x;
+  y2+=trans.y;
+
+  if(x1<scRect.x){
+    int dx=scRect.x-x1;
     x1+=dx;
     if(x1>=x2)
       return;
     u1+=dx*invW;
     }
 
-  if(scissor.x1<x2){
-    int dx=scissor.x1-x2;
+  if(scRect.x1<x2){
+    int dx=scRect.x1-x2;
     x2+=dx;
     if(x1>=x2)
       return;
     u2+=dx*invW;
     }
 
-  if(y1<scissor.y){
-    int dy=scissor.y-y1;
+  if(y1<scRect.y){
+    int dy=scRect.y-y1;
     y1+=dy;
     if(y1>=y2)
       return;
     v1+=dy*invH;
     }
 
-  if(scissor.y1<y2){
-    int dy=scissor.y1-y2;
+  if(scRect.y1<y2){
+    int dy=scRect.y1-y2;
     y2+=dy;
     if(y1>=y2)
       return;
@@ -302,6 +311,11 @@ void Painter::drawLine(int x1, int y1, int x2, int y2) {
     float dx=-(y2-y1),dy=x2-x1;
     return;
     }*/
+
+  x1+=trans.x;
+  y1+=trans.y;
+  x2+=trans.x;
+  y2+=trans.y;
   implAddPoint(x1+0.5f,y1+0.5f,0,0);
   implAddPoint(x2+0.5f,y2+0.5f,x2-x1,y2-y1);
   }
@@ -311,11 +325,11 @@ void Painter::setFont(const Font &f) {
   }
 
 void Painter::translate(const Point& p) {
-  tr.translate(p);
+  trans+=p;
   }
 
 void Painter::translate(int x, int y) {
-  tr.translate(x,y);
+  trans+=Point(x,y);
   }
 
 void Painter::drawText(int x, int y, const char *txt) {

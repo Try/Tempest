@@ -26,8 +26,9 @@ class Painter {
     ~Painter();
     Painter& operator = (const Painter&)=delete;
 
-    void setScissot(int x,int y,int w,int h);
-    void setScissot(int x,int y,unsigned w,unsigned h);
+    void setScissor(int x,int y,int w,int h);
+    void setScissor(int x,int y,unsigned w,unsigned h);
+    void setScissor(const Rect& rect);
 
     void setBrush(const Brush& b);
     void setPen  (const Pen&   p);
@@ -36,9 +37,10 @@ class Painter {
     void translate(const Point& p);
     void translate(int x,int y);
 
-    const Brush& brush() const { return bru; }
-    const Pen&   pen()   const { return pn;  }
-    const Font&  font()  const { return fnt; }
+    Rect         scissor() const { return Rect(scRect.x,scRect.y,scRect.x1-scRect.x,scRect.y1-scRect.y); }
+    const Brush& brush()   const { return bru; }
+    const Pen&   pen()     const { return pn;  }
+    const Font&  font()    const { return fnt; }
 
     void drawRect(int x,int y,int width,int height,
                   float u1,float v1,float u2,float v2);
@@ -72,6 +74,7 @@ class Painter {
     Tempest::Brush     bru;
     Tempest::Pen       pn;
     Tempest::Font      fnt;
+    Tempest::Point     trans;
 
     Tempest::Transform tr=Transform();
 
@@ -82,7 +85,7 @@ class Painter {
 
     struct ScissorRect {
       int x=0,y=0,x1=0,y1=0;
-      } scissor;
+      } scRect;
 
     struct FPoint{
       float x,y;
