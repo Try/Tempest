@@ -8,10 +8,12 @@
 
 #include <vector>
 #include <memory>
+#include <mutex>
 
 namespace Tempest {
 
 class Layout;
+class Shortcut;
 
 enum FocusPolicy : uint8_t {
   NoFocus     = 0,
@@ -152,6 +154,12 @@ class Widget {
       Widget* widget = nullptr;
       };
 
+    struct Additive {
+      Widget*  focus        = nullptr;
+      uint16_t disable      = 0;
+      bool     needToUpdate = false;
+      };
+
     Widget*                 ow=nullptr;
     std::vector<Widget*>    wx;
     Tempest::Rect           wrect;
@@ -162,13 +170,11 @@ class Widget {
     int                     spa=2;
     Iterator*               iterator=nullptr;
 
-    struct Additive {
-      Widget*  focus        = nullptr;
-      uint16_t disable      = 0;
-      bool     needToUpdate = false;
-      };
     Additive                astate;
     WidgetState             wstate;
+
+    static std::recursive_mutex syncSCuts;
+    std::vector<Shortcut*>  sCuts;
 
     std::shared_ptr<Ref>    selfRef;
 
@@ -176,6 +182,9 @@ class Widget {
     char                    layBuf[sizeof(void*)*3]={};
 
     const Style*            stl = nullptr;
+
+    void                    implRegisterSCut(Shortcut* s);
+    void                    implUnregisterSCut(Shortcut* s);
 
     void                    freeLayout() noexcept;
     void                    implDisableSum(Widget *root,int diff) noexcept;
@@ -194,6 +203,7 @@ class Widget {
 
   friend class EventDispatcher;
   friend class Layout;
+  friend class Shortcut;
   friend class Window;
   };
 

@@ -376,7 +376,10 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
 
         uint32_t scan = MapVirtualKeyW(wParam,MAPVK_VK_TO_VSC);
 
-        Tempest::KeyEvent e(Event::KeyType(key),uint32_t(buf[0]),(msg==WM_KEYDOWN) ? Event::KeyDown : Event::KeyUp);
+        Tempest::KeyEvent e(Event::KeyType(key),
+                            uint32_t(buf[0]),
+                            Event::M_NoModifier,
+                            (msg==WM_KEYDOWN) ? Event::KeyDown : Event::KeyUp);
         if(msg==WM_KEYDOWN)
           SystemApi::dispatchKeyDown(*cb,e,scan); else
           SystemApi::dispatchKeyUp  (*cb,e,scan);

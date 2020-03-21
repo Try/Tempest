@@ -5,6 +5,8 @@
 
 using namespace Tempest;
 
+std::recursive_mutex Widget::syncSCuts;
+
 Widget::Iterator::Iterator(Widget* owner)
   :owner(owner),nodes(&owner->wx){
   owner->iterator=this;
@@ -543,4 +545,14 @@ void Widget::focusEvent(FocusEvent &e) {
 
 void Widget::closeEvent(CloseEvent& e) {
   e.ignore();
+  }
+
+void Widget::implRegisterSCut(Shortcut* s) {
+  std::lock_guard<std::recursive_mutex> guard(syncSCuts);
+  sCuts.push_back(s);
+  }
+
+void Widget::implUnregisterSCut(Shortcut* s) {
+  std::lock_guard<std::recursive_mutex> guard(syncSCuts);
+  sCuts.resize( size_t(std::remove( sCuts.begin(), sCuts.end(), s ) - sCuts.begin()) );
   }

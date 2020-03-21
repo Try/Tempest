@@ -143,7 +143,15 @@ class Event {
       K_Last
       };
 
-    enum FocusReason {
+    enum Modifier : uint8_t {
+      M_NoModifier = 0,
+      M_Shift      = 1<<0,
+      M_Alt        = 1<<1,
+      M_Ctrl       = 1<<2,
+      M_Command    = 1<<3, // APPLE command key
+      };
+
+    enum FocusReason : uint8_t {
       TabReason,
       ClickReason,
       WheelReason,
@@ -239,18 +247,19 @@ class MouseEvent : public Event {
 
 class KeyEvent: public Event {
   public:
-    KeyEvent(KeyType  k = K_NoKey, Type t = KeyDown):key(k){
+    KeyEvent(KeyType  k = K_NoKey, Modifier m = M_NoModifier, Type t = KeyDown):key(k),modifier(m){
       setType( t );
       }
-    KeyEvent(uint32_t k, Type t = KeyDown ):key(K_NoKey), code(k){
+    KeyEvent(uint32_t k, Modifier m = M_NoModifier, Type t = KeyDown ):key(K_NoKey), code(k), modifier(m){
       setType( t );
       }
-    KeyEvent(KeyType k, uint32_t k1, Type t = KeyDown):key(k), code(k1){
+    KeyEvent(KeyType k, uint32_t k1, Modifier m = M_NoModifier, Type t = KeyDown):key(k), code(k1), modifier(m){
       setType( t );
       }
 
-    const KeyType  key =K_NoKey;
-    const uint32_t code=0;
+    const KeyType  key      = K_NoKey;
+    const uint32_t code     = 0;
+    const Modifier modifier = M_NoModifier;
   };
 
 class FocusEvent: public Event {

@@ -1,5 +1,8 @@
 #include "eventdispatcher.h"
 
+#include <Tempest/Shortcut>
+#include <Tempest/Platform>
+
 using namespace Tempest;
 
 EventDispatcher::EventDispatcher() {
@@ -17,12 +20,19 @@ void EventDispatcher::dispatchMouseUp(Widget &/*wnd*/, MouseEvent &e) {
   auto w = lock(mouseUp);
   if(w==nullptr)
     return;
-  auto p = mouseUp;
+  auto ptr = mouseUp;
   mouseUp.reset();
-  w->widget->mouseUpEvent(e);
+  auto p = e.pos() - w->widget->mapToRoot(Point());
+  MouseEvent e1( p.x,
+                 p.y,
+                 e.button,
+                 0,
+                 0,
+                 Event::MouseUp );
+  w->widget->mouseUpEvent(e1);
   if(!e.isAccepted())
     return;
-  if(auto w = p.lock()) {
+  if(auto w = ptr.lock()) {
     // w->widget->setFocus(true);
     }
   }
@@ -74,16 +84,25 @@ void EventDispatcher::dispatchKeyDown(Widget &wnd, KeyEvent &e, uint32_t scancod
   auto& k = keyUp[scancode];
   if(!k.expired())
     return; //TODO: key-repeat
-  k = implDispatch(wnd,e);
+
+  KeyEvent e1(e.key,e.code,mkModifier(),e.type());
+  handleModKey(e);
+
+  if(implShortcut(wnd,e1))
+    return;
+  k = implDispatch(wnd,e1);
   }
 
 void EventDispatcher::dispatchKeyUp(Widget &/*wnd*/, KeyEvent &e, uint32_t scancode) {
   auto it = keyUp.find(scancode);
   if(it==keyUp.end())
     return;
+  KeyEvent e1(e.key,e.code,mkModifier(),e.type());
+  handleModKey(e);
+
   if(auto w = lock((*it).second)){
     keyUp.erase(it);
-    w->widget->keyUpEvent(e);
+    w->widget->keyUpEvent(e1);
     }
   }
 
@@ -149,6 +168,31 @@ void EventDispatcher::implMouseWhell(Widget& w,MouseEvent &event) {
     it.owner->mouseWheelEvent(event);
   }
 
+bool EventDispatcher::implShortcut(Widget& w, KeyEvent& event) {
+  Widget::Iterator it(&w);
+  for(;it.hasNext();it.next()) {
+    Widget* i=it.get();
+    if(implShortcut(*i,event))
+      return true;
+    }
+
+  std::lock_guard<std::recursive_mutex> guard(Widget::syncSCuts);
+  for(auto& sc:w.sCuts) {
+    if(sc->key() !=event.key  && sc->key() !=KeyEvent::K_NoKey)
+      continue;
+    if(sc->lkey()!=event.code && sc->lkey()!=0)
+      continue;
+
+    if((sc->modifier()&event.modifier)!=sc->modifier())
+      continue;
+
+    sc->onActivated();
+    return true;
+    }
+
+  return false;
+  }
+
 std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget &root, KeyEvent &event) {
   Widget* w = &root;
   while(w->astate.focus!=nullptr) {
@@ -191,6 +235,26 @@ void EventDispatcher::implExcMouseOver(Widget* w, Widget* old) {
     }
   }
 
+void EventDispatcher::handleModKey(const KeyEvent& e) {
+  const bool v = e.type()==Event::KeyDown ? true : false;
+  switch(e.key) {
+    case Event::K_LControl:
+      keyMod.ctrlL = v;
+      break;
+    case Event::K_RControl:
+      keyMod.ctrlR = v;
+      break;
+    case Event::K_LShift:
+      keyMod.shiftL = v;
+      break;
+    case Event::K_RShift:
+      keyMod.shiftR = v;
+      break;
+    default:
+      break;
+    }
+  }
+
 std::shared_ptr<Widget::Ref> EventDispatcher::lock(std::weak_ptr<Widget::Ref> &w) {
   auto ptr = w.lock();
   if(ptr==nullptr)
@@ -202,4 +266,21 @@ std::shared_ptr<Widget::Ref> EventDispatcher::lock(std::weak_ptr<Widget::Ref> &w
   if(dynamic_cast<Window*>(wx) || wx==customRoot)
     return ptr;
   return nullptr;
+  }
+
+Event::Modifier EventDispatcher::mkModifier() const {
+  uint8_t ret = 0;
+  if(keyMod.ctrlL || keyMod.ctrlR)
+    ret |= Event::Modifier::M_Ctrl;
+  if(keyMod.altL || keyMod.altR)
+    ret |= Event::Modifier::M_Alt;
+  if(keyMod.shiftL || keyMod.shiftR)
+    ret |= Event::Modifier::M_Shift;
+#ifndef __OSX__
+  if(keyMod.ctrlL || keyMod.ctrlR)
+    ret |= Event::Modifier::M_Command;
+#else
+#error "TODO: implement apple-command key"
+#endif
+  return Event::Modifier(ret);
   }

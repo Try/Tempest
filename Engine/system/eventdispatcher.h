@@ -25,15 +25,31 @@ class EventDispatcher final {
     std::shared_ptr<Widget::Ref> implDispatch(Tempest::Widget &w, Tempest::MouseEvent& event);
     void                         implMouseWhell(Widget &w, MouseEvent &event);
 
+    bool                         implShortcut(Tempest::Widget &w, Tempest::KeyEvent& event);
     std::shared_ptr<Widget::Ref> implDispatch(Tempest::Widget &w, Tempest::KeyEvent&   event);
     void                         implSetMouseOver(const std::shared_ptr<Widget::Ref>& s);
     void                         implExcMouseOver(Widget *w, Widget *old);
+    void                         handleModKey(const KeyEvent& e);
 
     std::shared_ptr<Widget::Ref> lock(std::weak_ptr<Widget::Ref>& w);
 
     Widget*                      customRoot=nullptr;
     std::weak_ptr<Widget::Ref>   mouseUp;
     std::weak_ptr<Widget::Ref>   mouseOver;
+
+
+    struct Modify final {
+      bool ctrlL   = false;
+      bool ctrlR   = false;
+
+      bool altL    = false;
+      bool altR    = false;
+
+      bool shiftL  = false;
+      bool shiftR  = false;
+      };
+    Modify keyMod;
+    KeyEvent::Modifier mkModifier() const;
 
     std::unordered_map<uint32_t,std::weak_ptr<Widget::Ref>> keyUp;
   };
