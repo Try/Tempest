@@ -277,7 +277,7 @@ static ALuint DSoundPlaybackProc(ALvoid *ptr)
             }
 
             avail = WaitForSingleObjectEx(data->NotifyEvent, 2000, FALSE);
-            if(avail != WAIT_OBJECT_0)
+            if(avail != WAIT_OBJECT_0 && avail!=WAIT_TIMEOUT)
                 ERR("WaitForSingleObjectEx error: 0x%lx\n", avail);
             continue;
         }

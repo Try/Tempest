@@ -14,9 +14,15 @@ class Button : public Widget {
     Button();
 
     using Type=Tempest::WidgetState::ButtonType;
-    static constexpr Type T_PushButton=Type::T_PushButton;
-    static constexpr Type T_ToolButton=Type::T_ToolButton;
-    static constexpr Type T_FlatButton=Type::T_FlatButton;
+    static constexpr Type T_PushButton      = Type::T_PushButton;
+    static constexpr Type T_ToolButton      = Type::T_ToolButton;
+    static constexpr Type T_FlatButton      = Type::T_FlatButton;
+    static constexpr Type T_CheckableButton = Type::T_CheckableButton;
+
+    using CheckState=Tempest::WidgetState::CheckState;
+    static constexpr CheckState Unchecked       =CheckState::Unchecked;
+    static constexpr CheckState Checked         =CheckState::Checked;
+    static constexpr CheckState PartiallyChecked=CheckState::PartiallyChecked;
 
     void         setText(const char* text);
 
@@ -26,7 +32,11 @@ class Button : public Widget {
     void         setIcon(const Icon& s);
     const Icon&  icon() const { return icn; }
 
+    void         setButtonType(Type t);
+    Type         buttonType() const;
+
     bool         isPressed() const;
+    CheckState   isChecked() const;
 
     Signal<void()> onClick;
 
@@ -46,6 +56,7 @@ class Button : public Widget {
 
     void         invalidateSizeHint(); //TODO: remove
     void         setPressed(bool p);
+    void         setChecked(WidgetState::CheckState c);
     void         showMenu();
   };
 

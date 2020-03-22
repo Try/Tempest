@@ -37,6 +37,16 @@ void Button::setIcon(const Icon& s) {
   update();
   }
 
+void Button::setButtonType(Button::Type t) {
+  auto st = state();
+  st.button = t;
+  setWidgetState(st);
+  }
+
+Button::Type Button::buttonType() const {
+  return state().button;
+  }
+
 void Button::mouseDownEvent(MouseEvent &e) {
   if(e.button!=Event::ButtonLeft){
     e.ignore();
@@ -55,6 +65,12 @@ void Button::mouseUpEvent(MouseEvent& e) {
     else if(e.button==Event::ButtonRight)
       showMenu();
     }
+
+  if(buttonType()==T_CheckableButton) {
+    auto c = isChecked();
+    setChecked(c==Checked ? Unchecked : Checked);
+    }
+
   setPressed(false);
   update();
   }
@@ -98,10 +114,23 @@ void Button::setPressed(bool p) {
   update();
   }
 
+void Button::setChecked(WidgetState::CheckState c) {
+  if(state().checked==c)
+    return;
+  auto st=state();
+  st.checked=c;
+  setWidgetState(st);
+  update();
+  }
+
 void Button::showMenu() {
   // TODO
   }
 
 bool Button::isPressed() const {
   return state().pressed;
+  }
+
+Button::CheckState Button::isChecked() const {
+  return state().checked;
   }

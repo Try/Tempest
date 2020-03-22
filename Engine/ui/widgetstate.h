@@ -6,9 +6,10 @@ namespace Tempest {
   class WidgetState final {
     public:
       enum ButtonType : uint8_t {
-        T_PushButton = 0,
-        T_ToolButton = 1,
-        T_FlatButton = 2
+        T_PushButton      = 0,
+        T_ToolButton      = 1,
+        T_FlatButton      = 2,
+        T_CheckableButton = 3
         };
 
       enum CheckState : uint8_t {
