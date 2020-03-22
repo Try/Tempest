@@ -35,6 +35,9 @@ class Button : public Widget {
     void         setButtonType(Type t);
     Type         buttonType() const;
 
+    void         setChecked(bool c);
+    void         setChecked(WidgetState::CheckState c);
+
     bool         isPressed() const;
     CheckState   isChecked() const;
 
@@ -56,7 +59,6 @@ class Button : public Widget {
 
     void         invalidateSizeHint(); //TODO: remove
     void         setPressed(bool p);
-    void         setChecked(WidgetState::CheckState c);
     void         showMenu();
   };
 

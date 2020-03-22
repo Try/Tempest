@@ -121,7 +121,7 @@ void Style::draw(Painter& p, Button *w, Element e, const WidgetState &st, const 
   const Button::Type buttonType=st.button;
 
   const bool drawBackFrame = (buttonType!=Button::T_ToolButton || st.moveOver) &&
-                              buttonType!=Button::T_FlatButton;
+                             (buttonType!=Button::T_FlatButton || st.pressed);
   if( drawBackFrame ) {
     if(st.pressed || st.checked!=WidgetState::Unchecked)
       p.setBrush(Color(0.4f,0.4f,0.45f,0.75f)); else

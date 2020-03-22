@@ -59,16 +59,16 @@ void Button::mouseDownEvent(MouseEvent &e) {
   }
 
 void Button::mouseUpEvent(MouseEvent& e) {
-  if( e.x<=w() && e.y<=h() &&  e.x>=0 && e.y>=0 && isEnabled() ){
+  if( e.x<=w() && e.y<=h() &&  e.x>=0 && e.y>=0 && isEnabled() ) {
+    if(buttonType()==T_CheckableButton) {
+      auto c = isChecked();
+      setChecked(c==Checked ? Unchecked : Checked);
+      }
+
     if(isPressed())
       onClick();
     else if(e.button==Event::ButtonRight)
       showMenu();
-    }
-
-  if(buttonType()==T_CheckableButton) {
-    auto c = isChecked();
-    setChecked(c==Checked ? Unchecked : Checked);
     }
 
   setPressed(false);
@@ -112,6 +112,10 @@ void Button::setPressed(bool p) {
   st.pressed=p;
   setWidgetState(st);
   update();
+  }
+
+void Button::setChecked(bool c) {
+  setChecked(c ? Checked : Unchecked);
   }
 
 void Button::setChecked(WidgetState::CheckState c) {
