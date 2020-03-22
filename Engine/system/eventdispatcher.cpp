@@ -61,7 +61,7 @@ void EventDispatcher::dispatchMouseMove(Widget &wnd, MouseEvent &e) {
                    Event::MouseMove  );
     w->widget->mouseMoveEvent(e1);
     if(e.isAccepted()) {
-      implSetMouseOver(mouseUp.lock());
+      implSetMouseOver(mouseUp.lock(),e);
       return;
       }
     }
@@ -73,7 +73,7 @@ void EventDispatcher::dispatchMouseMove(Widget &wnd, MouseEvent &e) {
                  0,
                  Event::MouseMove  );
   auto wptr = implDispatch(wnd,e);
-  implSetMouseOver(wptr);
+  implSetMouseOver(wptr,e);
   }
 
 void EventDispatcher::dispatchMouseWheel(Widget &wnd, MouseEvent &e){
@@ -207,14 +207,33 @@ std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget &root, KeyEven
   return nullptr;
   }
 
-void EventDispatcher::implSetMouseOver(const std::shared_ptr<Widget::Ref> &wptr) {
-  if(wptr!=nullptr) {
-    if(auto old = mouseOver.lock()) {
-      implExcMouseOver(wptr->widget,old->widget);
-      } else {
-      implExcMouseOver(wptr->widget,nullptr);
-      }
-    mouseOver = wptr;
+void EventDispatcher::implSetMouseOver(const std::shared_ptr<Widget::Ref> &wptr,MouseEvent& orig) {
+  auto widget = wptr==nullptr ? nullptr : wptr->widget;
+  if(auto old = mouseOver.lock()) {
+    implExcMouseOver(widget,old->widget);
+
+    auto p = orig.pos() - old->widget->mapToRoot(Point());
+    MouseEvent e( p.x,
+                  p.y,
+                  Event::ButtonNone,
+                  0,
+                  0,
+                  Event::MouseLeave );
+    old->widget->mouseLeaveEvent(e);
+    } else {
+    implExcMouseOver(widget,nullptr);
+    }
+
+  mouseOver = wptr;
+  if(wptr!=nullptr && wptr->widget!=nullptr) {
+    auto p = orig.pos() - wptr->widget->mapToRoot(Point());
+    MouseEvent e( p.x,
+                  p.y,
+                  Event::ButtonNone,
+                  0,
+                  0,
+                  Event::MouseLeave );
+    wptr->widget->mouseEnterEvent(e);
     }
   }
 
