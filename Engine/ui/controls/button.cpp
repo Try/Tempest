@@ -19,6 +19,13 @@ void Button::setText(const char *text) {
   update();
   }
 
+void Button::setText(const std::string& text) {
+  textM.setText(text.c_str());
+  invalidateSizeHint();
+
+  update();
+  }
+
 void Button::setFont(const Font &f) {
   textM.setFont(f);
   invalidateSizeHint();
@@ -94,14 +101,7 @@ void Button::paintEvent(PaintEvent &e) {
   }
 
 void Button::invalidateSizeHint() {
-  auto& icon = icn.sprite(w(),h(),Icon::ST_Normal);
-  Size sz=textM.sizeHint();
-  Size is=icon.size();
-
-  if(is.w>0)
-    sz.w = sz.w+is.w+spacing();
-  sz.h = std::max(sz.h,is.h);
-
+  auto sz = style().sizeHint(this,Style::E_Background,&textM,Style::Extra(*this));
   setSizeHint(sz,margins());
   }
 

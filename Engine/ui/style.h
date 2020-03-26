@@ -38,12 +38,13 @@ class Style {
       public:
         Extra(const Widget&   owner);
         Extra(const Button&   owner);
-        // Extra(const Label&    owner);
+        Extra(const Label&    owner);
         // Extra(const LineEdit& owner);
 
         const Margin&         margin;
         const Icon&           icon;
         const Color&          fontColor;
+        int                   spacing=0;
 
       private:
         static const Tempest::Margin emptyMargin;
@@ -92,7 +93,7 @@ class Style {
 
     // common
     virtual void draw(Painter& p, Widget*   w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
-    virtual void draw(Painter& p, Panel *   w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
+    virtual void draw(Painter& p, Panel*    w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
     virtual void draw(Painter& p, Button*   w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
     virtual void draw(Painter& p, CheckBox* w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
     virtual void draw(Painter& p, Label*    w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
@@ -104,6 +105,12 @@ class Style {
     // text
     virtual void draw(Painter& p, const std::u16string& text, TextElement e, const WidgetState& st, const Rect& r, const Extra& extra) const;
     virtual void draw(Painter& p, const TextModel&      text, TextElement e, const WidgetState& st, const Rect& r, const Extra& extra) const;
+
+    // size hint
+    virtual Size sizeHint(Widget*   w, Element e, const TextModel* text, const Extra& extra) const;
+    virtual Size sizeHint(Panel*    w, Element e, const TextModel* text, const Extra& extra) const;
+    virtual Size sizeHint(Button*   w, Element e, const TextModel* text, const Extra& extra) const;
+    virtual Size sizeHint(Label*    w, Element e, const TextModel* text, const Extra& extra) const;
 
   protected:
     virtual void polish  (Widget& w) const;

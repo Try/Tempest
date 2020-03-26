@@ -8,8 +8,8 @@
 #include <Tempest/Button>
 #include <Tempest/Icon>
 #include <Tempest/TextEdit>
+#include <Tempest/Label>
 // #include <Tempest/CheckBox>
-// #include <Tempest/Label>
 
 #include <cassert>
 
@@ -21,19 +21,19 @@ const Font   Style::Extra::emptyFont;
 const Color  Style::Extra::emptyColor;
 
 Style::Extra::Extra(const Widget &owner)
-  : margin(owner.margins()), icon(emptyIcon), fontColor(emptyColor) {
+  : margin(owner.margins()), icon(emptyIcon), fontColor(emptyColor), spacing(owner.spacing()) {
   }
 
 Style::Extra::Extra(const Button &owner)
-  : margin(owner.margins()), icon(owner.icon()), fontColor(emptyColor) {
-  }
-/*
-Style::Extra::Extra(const Label &owner)
-  : margin(owner.margins()), icon(emptyIcon), fontColor(owner.textColor()) {
+  : margin(owner.margins()), icon(owner.icon()), fontColor(emptyColor), spacing(owner.spacing()) {
   }
 
+Style::Extra::Extra(const Label &owner)
+  : margin(owner.margins()), icon(emptyIcon), fontColor(owner.textColor()), spacing(owner.spacing()) {
+  }
+/*
 Style::Extra::Extra(const TextEdit &owner)
-  : margin(owner.margins()), icon(emptyIcon), fontColor(owner.textColor()) {
+  : margin(owner.margins()), icon(emptyIcon), fontColor(owner.textColor()), spacind(owner.spacing()) {
   }
 */
 
@@ -324,11 +324,10 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
     }
 
   if(dX!=0)
-    dX+=8; // padding
+    dX+=extra.spacing;
 
-  auto& fnt = textFont(text,st);
-  //text.paint(p,fnt,0,r.h-(r.h-int(fnt.pixelSize()))/2);
-  const int h=text.wrapSize().h;
+  auto&     fnt = textFont(text,st);
+  const int h   = text.wrapSize().h;
   text.paint(p, fnt, m.left+dX, r.h-(r.h-h)/2);
   //text.paint(p, m.left+dX, (r.h-h)/2, r.w-m.xMargin()-dX, h, text, flag );
 
@@ -339,6 +338,42 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
     }*/
   p.translate(-m.left,-0);
   p.setScissor(sc);
+  }
+
+Size Style::sizeHint(Widget*, Style::Element e, const TextModel* text, const Style::Extra& extra) const {
+  (void)e;
+  (void)text;
+  (void)extra;
+  return Size();
+  }
+
+Size Style::sizeHint(Panel*, Style::Element e, const TextModel* text, const Style::Extra& extra) const {
+  (void)e;
+  (void)text;
+  (void)extra;
+  return Size();
+  }
+
+Size Style::sizeHint(Button*, Style::Element e, const TextModel* text, const Style::Extra& extra) const {
+  (void)e;
+
+  Size  sz   = text!=nullptr ? text->sizeHint() : Size();
+  auto& icon = extra.icon.sprite(SizePolicy::maxWidgetSize().w,
+                                 sz.h+extra.margin.yMargin(),
+                                 Icon::ST_Normal);
+  Size  is   = icon.size();
+
+  if(is.w>0)
+    sz.w = sz.w+is.w+extra.spacing;
+  sz.h = std::max(sz.h,is.h);
+  return sz;
+  }
+
+Size Style::sizeHint(Label*, Style::Element e, const TextModel* text, const Style::Extra& extra) const {
+  (void)e;
+  (void)extra;
+  Size sz = text!=nullptr ? text->sizeHint() : Size();
+  return sz;
   }
 
 void Style::drawCursor(Painter &p,const WidgetState &st,int x,int h,bool animState) const {
