@@ -303,7 +303,7 @@ int X11Api::implExec(SystemApi::AppCallBack &cb) {
 
             uint32_t scan = xev.xkey.keycode;
 
-            Tempest::KeyEvent e(Event::KeyType(key),uint32_t(u16.size()>0 ? u16[0] : 0),(xev.type==KeyPress) ? Event::KeyDown : Event::KeyUp);
+            Tempest::KeyEvent e(Event::KeyType(key),uint32_t(u16.size()>0 ? u16[0] : 0),Event::M_NoModifier,(xev.type==KeyPress) ? Event::KeyDown : Event::KeyUp);
             if(xev.type==KeyPress)
               SystemApi::dispatchKeyDown(*cb,e,scan); else
               SystemApi::dispatchKeyUp  (*cb,e,scan);
