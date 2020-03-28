@@ -5,7 +5,7 @@
 
 #include "../utility/dptr.h"
 #include "../utility/spinlock.h"
-#include <vulkan/vulkan.hpp>
+#include "vulkan_sdk.h"
 
 namespace Tempest {
 namespace Detail {

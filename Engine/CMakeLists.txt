@@ -4,7 +4,8 @@ project(MoltenTempest)
 set(CMAKE_CXX_STANDARD 14)
 
 option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
-SET(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 if(MSVC)
   option(TEMPEST_BUILD_DIRECTX12   "Build directx12 support" ON )
@@ -12,17 +13,14 @@ else()
   option(TEMPEST_BUILD_DIRECTX12   "Build directx12 support" OFF)
 endif()
 
-set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-
-add_definitions(-DVULKAN_HPP_NO_EXCEPTIONS)
-add_definitions(-DVULKAN_HPP_NO_SMART_HANDLE)
-add_definitions(-DSTB_IMAGE_IMPLEMENTATION)
-add_definitions(-DSTB_TRUETYPE_IMPLEMENTATION)
-add_definitions(-DSTB_IMAGE_WRITE_IMPLEMENTATION)
-add_definitions(-DAL_ALEXT_PROTOTYPES)
-if(WIN32 AND TEMPEST_BUILD_DIRECTX12)
-  add_definitions(-DTEMPEST_BUILD_DIRECTX12)
+### The Library
+# avoid cmake link_directories issue
+if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
+  link_directories("$ENV{VK_SDK_PATH}/lib")
+else()
+  link_directories("$ENV{VK_SDK_PATH}/Lib32")
 endif()
+add_library(${PROJECT_NAME})
 
 ### Compillers
 if(MSVC)
@@ -41,9 +39,45 @@ if(WIN32)
       include_directories("${WINSDK_INCLUDE_DIRS}")
       link_directories(${PROJECT_NAME} "${WINSDK_LIB_DIRS}")
   endif()
-
-  add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
 endif()
+
+### squish
+target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/squish")
+
+### stb
+add_definitions(-DSTB_IMAGE_IMPLEMENTATION)
+add_definitions(-DSTB_TRUETYPE_IMPLEMENTATION)
+add_definitions(-DSTB_IMAGE_WRITE_IMPLEMENTATION)
+
+### OpenAl
+add_definitions(-DAL_ALEXT_PROTOTYPES)
+add_subdirectory("thirdparty/openal")
+target_link_libraries(${PROJECT_NAME} PRIVATE OpenAL)
+target_include_directories(${PROJECT_NAME} PRIVATE
+  "thirdparty/openal/include"
+  "thirdparty/openal/openal32/include")
+if(WIN32)
+  target_link_libraries(${PROJECT_NAME} PRIVATE winmm)
+endif()
+
+### Vulkan
+add_definitions(-DVULKAN_HPP_NO_EXCEPTIONS)
+add_definitions(-DVULKAN_HPP_NO_SMART_HANDLE)
+target_include_directories(${PROJECT_NAME} PRIVATE "$ENV{VK_SDK_PATH}/include")
+if(WIN32)
+  target_link_libraries(${PROJECT_NAME} PRIVATE vulkan-1)
+else()
+  target_link_libraries(${PROJECT_NAME} PRIVATE vulkan)
+endif()
+
+### Directx12
+if(WIN32 AND TEMPEST_BUILD_DIRECTX12)
+  add_definitions(-DTEMPEST_BUILD_DIRECTX12)
+  target_link_libraries(${PROJECT_NAME} PRIVATE d3d12 d3dcompiler dxgi)
+endif()
+
+### Spirv-cross
+add_subdirectory("thirdparty/spirv_cross")
 
 ### Shaders
 set(GEN_SHADERS_HEADER "${PROJECT_BINARY_DIR}/sprv/builtin_shader.h")
@@ -91,20 +125,8 @@ add_custom_command(
 add_custom_target(shaders
   DEPENDS ${GEN_SHADERS_HEADER}
   SOURCES ${SHADER_SOURCES} "${PROJECT_SOURCE_DIR}/shaders/link_shaders.cmake")
-
-include_directories("include"
-                    "."
-                    "thirdparty/openal/include"
-                    "thirdparty/openal/openal32/include"
-                    "thirdparty/squish"
-                    "$ENV{VK_SDK_PATH}/include"
-                    "${PROJECT_BINARY_DIR}/sprv")
-
-if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
-  link_directories(${PROJECT_NAME} "$ENV{VK_SDK_PATH}/lib")
-else()
-  link_directories(${PROJECT_NAME} "$ENV{VK_SDK_PATH}/Lib32")
-endif()
+target_include_directories(${PROJECT_NAME} PRIVATE "${PROJECT_BINARY_DIR}/sprv")
+add_dependencies(${PROJECT_NAME} shaders)
 
 file(GLOB SOURCES
     "*.h"
@@ -123,10 +145,9 @@ file(GLOB SOURCES
 # the files in include should be the headers themselves!
 file(GLOB_RECURSE PUB_HEADERS "include/Tempest/**")
 
-add_subdirectory("thirdparty/openal")
-add_subdirectory("thirdparty/spirv_cross")
-
-add_library(${PROJECT_NAME} ${GEN_SHADERS_HEADER} ${SOURCES})
+### Sources
+target_sources(${PROJECT_NAME} PRIVATE ${GEN_SHADERS_HEADER} ${SOURCES})
+include_directories("." "include")
 
 set_target_properties(
     ${PROJECT_NAME} PROPERTIES
@@ -134,17 +155,10 @@ set_target_properties(
     )
 
 if(WIN32)
-  target_link_libraries(${PROJECT_NAME} PRIVATE vulkan-1 shlwapi)
-  target_link_libraries(${PROJECT_NAME} PRIVATE winmm Kernel32)
-  if(TEMPEST_BUILD_DIRECTX12)
-    target_link_libraries(${PROJECT_NAME} PRIVATE d3d12 d3dcompiler dxgi)
-  endif()
+  target_link_libraries(${PROJECT_NAME} PRIVATE shlwapi Kernel32)
 else()
-  target_link_libraries(${PROJECT_NAME} PRIVATE vulkan X11)
+  target_link_libraries(${PROJECT_NAME} PRIVATE X11)
 endif()
-
-target_link_libraries(${PROJECT_NAME} PRIVATE OpenAL)
-add_dependencies(${PROJECT_NAME} shaders)
 
 install(
     TARGETS ${PROJECT_NAME}

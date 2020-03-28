@@ -69,7 +69,7 @@ VkFramebuffer VFramebuffer::allocFbo(uint32_t w, uint32_t h, const VkImageView *
   crt.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
   crt.renderPass      = rp.handler->impl;
   crt.pAttachments    = attach;
-  crt.attachmentCount = cnt;
+  crt.attachmentCount = uint32_t(cnt);
   crt.width           = w;
   crt.height          = h;
   crt.layers          = 1;

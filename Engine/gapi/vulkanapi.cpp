@@ -20,7 +20,7 @@
 
 #include "deviceallocator.h"
 
-#include <vulkan/vulkan.hpp>
+#include "vulkan/vulkan_sdk.h"
 
 #include <Tempest/Pixmap>
 #include <Tempest/Log>

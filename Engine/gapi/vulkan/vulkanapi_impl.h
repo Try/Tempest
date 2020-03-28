@@ -1,8 +1,8 @@
 #pragma once
 
-#include <vulkan/vulkan.hpp>
 #include <Tempest/AbstractGraphicsApi>
 
+#include "vulkan_sdk.h"
 #include "utility/spinlock.h"
 
 namespace Tempest {

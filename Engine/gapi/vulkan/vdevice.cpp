@@ -10,14 +10,21 @@
 #include "system/api/x11api.h"
 
 #include <Tempest/Log>
+#include <Tempest/Platform>
 #include <thread>
 #include <set>
 
-#ifdef __LINUX__
-#define VK_USE_PLATFORM_XLIB_KHR
-#include <X11/Xlib.h>
-#include <vulkan/vulkan_xlib.h>
-#undef Always
+#if defined(__WINDOWS__)
+#  define VK_USE_PLATFORM_WIN32_KHR
+#  include <windows.h>
+#  include <vulkan/vulkan_win32.h>
+#elif defined(__LINUX__)
+#  define VK_USE_PLATFORM_XLIB_KHR
+#  include <X11/Xlib.h>
+#  include <vulkan/vulkan_xlib.h>
+#  undef Always
+#else
+#  error "WSI is not implemented on this platform"
 #endif
 
 using namespace Tempest;
@@ -197,7 +204,7 @@ void VDevice::deviceQueueProps(Detail::VulkanApi::VkProp& prop,VkPhysicalDevice 
   uint32_t graphics = uint32_t(-1);
   uint32_t present  = uint32_t(-1);
 
-  for(size_t i=0;i<queueFamilyCount;++i) {
+  for(uint32_t i=0;i<queueFamilyCount;++i) {
     const auto& queueFamily = queueFamilies[i];
     if(queueFamily.queueCount<=0)
       continue;

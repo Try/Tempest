@@ -2,7 +2,7 @@
 
 #include <Tempest/AbstractGraphicsApi>
 #include <stdexcept>
-#include <vulkan/vulkan.hpp>
+#include "vulkan_sdk.h"
 
 #include "vallocator.h"
 #include "vcommandbuffer.h"

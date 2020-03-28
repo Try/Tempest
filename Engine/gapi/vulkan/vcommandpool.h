@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include <vulkan/vulkan.hpp>
+#include "vulkan_sdk.h"
 
 namespace Tempest {
 namespace Detail {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include <vulkan/vulkan.hpp>
+#include "vulkan_sdk.h"
 
 #include "vcommandbundle.h"
 #include "vframebuffer.h"
