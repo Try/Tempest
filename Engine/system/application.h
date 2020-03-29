@@ -30,7 +30,7 @@ class Application {
 
   private:
     struct Impl;
-    static std::unique_ptr<Impl> impl;
+    static Impl impl;
 
     static void     implAddTimer(Timer& t);
     static void     implDelTimer(Timer& t);

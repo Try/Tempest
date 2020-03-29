@@ -51,14 +51,13 @@ struct Application::Impl : SystemApi::AppCallBack {
     }
   };
 
-std::unique_ptr<Application::Impl> Application::impl = {};
+Application::Impl Application::impl = {};
 
 Application::Application() {
-  impl.reset(new Impl());
   }
 
 Application::~Application(){
-  impl.reset(nullptr);
+  impl.font = Font();
   }
 
 void Application::sleep(unsigned int msec) {
@@ -72,7 +71,7 @@ uint64_t Application::tickCount() {
   }
 
 int Application::exec(){
-  return SystemApi::exec(*impl);
+  return SystemApi::exec(impl);
   }
 
 bool Application::isRunning() {
@@ -80,36 +79,33 @@ bool Application::isRunning() {
   }
 
 void Application::processEvents() {
-  SystemApi::processEvent(*impl);
+  SystemApi::processEvent(impl);
   }
 
 void Application::setStyle(const Style* stl) {
-  impl->setStyle(stl);
+  impl.setStyle(stl);
   }
 
 const Style& Application::style() {
-  if(impl->style!=nullptr) {
-    return *impl->style;
+  if(impl.style!=nullptr) {
+    return *impl.style;
     }
   static Style def;
   return def;
   }
 
 void Application::setFont(const Font& fnt) {
-  impl->font = fnt;
+  impl.font = fnt;
   }
 
 const Font& Application::font() {
-  if(impl!=nullptr)
-    return impl->font;
-  static Font def;
-  return def;
+  return impl.font;
   }
 
 void Application::implAddTimer(Timer &t) {
-  impl->addTimer(t);
+  impl.addTimer(t);
   }
 
 void Application::implDelTimer(Timer &t) {
-  impl->delTimer(t);
+  impl.delTimer(t);
   }
