@@ -51,8 +51,8 @@ void TextModel::paint(Painter& p, int x, int y) const {
   }
 
 void TextModel::paint(Painter &p,const Font& fnt,int fx,int fy) const {
-  float x = fx;
-  float y = fy;
+  float x = float(fx);
+  float y = float(fy);
 
   auto pb=p.brush();
   Utf8Iterator i(txt.data());
