@@ -44,7 +44,7 @@ class Widget {
           Widget* owner()       { return ow; }
     const Widget* owner() const { return ow; }
 
-    Point   mapToRoot( const Point & p ) const;
+    Point   mapToRoot( const Point & p ) const noexcept;
 
     Point                pos()      const { return Point(wrect.x,wrect.y);}
     const Tempest::Rect& rect()     const { return wrect; }
@@ -92,10 +92,13 @@ class Widget {
     bool isEnabled() const;
     bool isEnabledTo(const Widget* ancestor) const;
 
+    void setVisible(bool v);
+    bool isVisible() const;
+
     void setFocus(bool b);
     bool hasFocus() const { return wstate.focus; }
 
-    void update();
+    void update() noexcept;
     bool needToUpdate() const { return astate.needToUpdate; }
 
     bool isMouseOver()  const { return wstate.moveOver; }

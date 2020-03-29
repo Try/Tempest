@@ -89,16 +89,24 @@ void LinearLayout::applyLayout(Widget &w, Orienration ori) {
 
 template<bool hor>
 void LinearLayout::implApplyLayout(Widget &w) {
-  int    fixSize =0;
-  int    prefSize=0;
-  int    expSize =0;
+  int    fixSize  = 0;
+  int    prefSize = 0;
+  int    expSize  = 0;
 
-  size_t count=w.widgetsCount();
-  int    pref =0;
-  int    exp  =0;
+  size_t count = w.widgetsCount();
+  int    pref  = 0;
+  int    exp   = 0;
+
+  size_t visCount = 0;
+  for(size_t i=0;i<count;++i){
+    if(w.widget(i).isVisible())
+      visCount++;
+    }
 
   for(size_t i=0;i<count;++i){
     Widget& wx = w.widget(i);
+    if(!wx.isVisible())
+      continue;
 
     switch(getType<hor>(wx.sizePolicy())) {
       case Fixed: {
@@ -125,14 +133,15 @@ void LinearLayout::implApplyLayout(Widget &w) {
 
   int freeSpace = getW<hor>(w.size())-(hor ? w.margins().xMargin() : w.margins().yMargin());
   freeSpace -= (fixSize+prefSize+expSize);
-  freeSpace -= (count==0 ? 0 : (int(count)-1)*w.spacing());
+  freeSpace -= (visCount==0 ? 0 : (int(visCount)-1)*w.spacing());
   if(freeSpace<0)
     freeSpace=0;
-  implApplyLayout<hor>(w,count,exp>0,((exp>0) ? expSize : prefSize),freeSpace,(exp>0) ? exp : pref);
+  implApplyLayout<hor>(w,count,visCount,exp>0,((exp>0) ? expSize : prefSize),freeSpace,(exp>0) ? exp : pref);
   }
 
 template<bool hor>
-void LinearLayout::implApplyLayout(Widget &w, size_t count, bool exp, int sum, int free, int expCount) {
+void LinearLayout::implApplyLayout(Widget &w, size_t count, size_t visCount,
+                                   bool exp, int sum, int free, int expCount) {
   auto   client=w.clientRect();
   const SizePolicyType tExp=(exp ? Expanding : Preferred);
 
@@ -145,11 +154,14 @@ void LinearLayout::implApplyLayout(Widget &w, size_t count, bool exp, int sum, i
     free=0;
     }
 
-  for(size_t i=0;i<count;++i){
-    Widget& wx = w.widget(i);
+  for(size_t wi=0,i=0;wi<count;++wi){
+    Widget& wx = w.widget(wi);
+    if(!wx.isVisible())
+      continue;
+
     auto&   sp = wx.sizePolicy();
     Size    sz = wx.sizeHint();
-    const int freeSpace=free/int(count+1-i);
+    const int freeSpace=free/int(visCount+1-i);
     c+=freeSpace;
     free-=freeSpace;
 
@@ -178,5 +190,6 @@ void LinearLayout::implApplyLayout(Widget &w, size_t count, bool exp, int sum, i
       }
 
     c+=spacing;
+    ++i;
     }
   }

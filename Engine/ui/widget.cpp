@@ -117,6 +117,8 @@ void Widget::dispatchPaintEvent(PaintEvent& e) {
   const size_t count=widgetsCount();
   for(size_t i=0;i<count;++i) {
     Widget& wx=widget(i);
+    if(!wx.isVisible())
+      continue;
 
     Rect r = e.viewPort();
     r.x -= wx.x();
@@ -183,7 +185,7 @@ Widget *Widget::takeWidget(Widget *w) {
   return lay->takeWidget(id);
   }
 
-Point Widget::mapToRoot(const Point &p) const {
+Point Widget::mapToRoot(const Point &p) const noexcept {
   const Widget* w=this;
   Point ret=p;
 
@@ -364,6 +366,23 @@ bool Widget::isEnabledTo(const Widget *ancestor) const {
   return true;
   }
 
+void Widget::setVisible(bool v) {
+  if(v==wstate.visible)
+    return;
+  wstate.visible = v;
+  if( !wstate.visible )
+    astate.needToUpdate = false;
+
+  if( auto w = owner() ){
+    w->update();
+    w->applyLayout();
+    }
+  }
+
+bool Widget::isVisible() const {
+  return wstate.visible;
+  }
+
 void Widget::setFocus(bool b) {
   implSetFocus(&Additive::focus,&WidgetState::focus,b,nullptr);
   }
@@ -459,7 +478,7 @@ void Widget::implExcFocus(Event::Type type,Widget *prev,Widget *next,const Mouse
   next->mouseEnterEvent(ex);
   }
 
-void Widget::update() {
+void Widget::update() noexcept {
   Widget* w=this;
   while(w!=nullptr){
     if(w->astate.needToUpdate)
