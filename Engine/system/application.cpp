@@ -11,17 +11,17 @@
 using namespace Tempest;
 
 struct Application::Impl : SystemApi::AppCallBack {
-  static std::vector<Timer*> timer;
-  static size_t              timerI;
+  std::vector<Timer*> timer;
+  size_t              timerI=size_t(-1);
 
-  static const Style*        style;
-  static Font                font;
+  const Style*        style=nullptr;
+  Font                font;
 
-  static void addTimer(Timer& t){
+  void addTimer(Timer& t){
     timer.push_back(&t);
     }
 
-  static void delTimer(Timer& t){
+  void delTimer(Timer& t){
     for(size_t i=0;i<timer.size();++i)
       if(timer[i]==&t){
         timer.erase(timer.begin()+int(i));
@@ -42,7 +42,7 @@ struct Application::Impl : SystemApi::AppCallBack {
     return uint32_t(count);
     }
 
-  static void setStyle(const Style* s) {
+  void setStyle(const Style* s) {
     if(style!=nullptr)
       style->implDecRef();
     style = s;
@@ -51,18 +51,14 @@ struct Application::Impl : SystemApi::AppCallBack {
     }
   };
 
-std::vector<Timer*> Application::Impl::timer;
-size_t              Application::Impl::timerI=size_t(-1);
-const Style*        Application::Impl::style=nullptr;
-Font                Application::Impl::font;
+std::unique_ptr<Application::Impl> Application::impl = {};
 
-Application::Application()
-  :impl(new Impl()){
+Application::Application() {
+  impl.reset(new Impl());
   }
 
 Application::~Application(){
-  setFont(Font());
-  setStyle(nullptr);
+  impl.reset(nullptr);
   }
 
 void Application::sleep(unsigned int msec) {
@@ -79,30 +75,41 @@ int Application::exec(){
   return SystemApi::exec(*impl);
   }
 
+bool Application::isRunning() {
+  return SystemApi::isRunning();
+  }
+
+void Application::processEvents() {
+  SystemApi::processEvent(*impl);
+  }
+
 void Application::setStyle(const Style* stl) {
-  Impl::setStyle(stl);
+  impl->setStyle(stl);
   }
 
 const Style& Application::style() {
-  if(Impl::style!=nullptr) {
-    return *Impl::style;
+  if(impl->style!=nullptr) {
+    return *impl->style;
     }
   static Style def;
   return def;
   }
 
 void Application::setFont(const Font& fnt) {
-  Impl::font = fnt;
+  impl->font = fnt;
   }
 
 const Font& Application::font() {
-  return Impl::font;
+  if(impl!=nullptr)
+    return impl->font;
+  static Font def;
+  return def;
   }
 
 void Application::implAddTimer(Timer &t) {
-  Impl::addTimer(t);
+  impl->addTimer(t);
   }
 
 void Application::implDelTimer(Timer &t) {
-  Impl::delTimer(t);
+  impl->delTimer(t);
   }

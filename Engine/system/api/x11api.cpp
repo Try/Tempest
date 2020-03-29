@@ -100,7 +100,8 @@ static void maximizeWindow(HWND& w) {
 static void alignGeometry(::Window w,Tempest::Window& owner) {
   XWindowAttributes xwa={};
   if(XGetWindowAttributes(dpy, HWND(w), &xwa)){
-    owner.resize(xwa.width, xwa.height);
+    Tempest::SizeEvent e(xwa.width, xwa.height);
+    SystemApi::dispatchResize(owner,e);
     }
   }
 
@@ -221,111 +222,119 @@ void X11Api::implExit() {
   isExit.store(true);
   }
 
+bool X11Api::implIsRunning() {
+  return !isExit.load();
+  }
+
 int X11Api::implExec(SystemApi::AppCallBack &cb) {
   // main message loop
   while (!isExit.load()) {
-    if(XPending(dpy)>0) {
-      XEvent xev={};
-      XNextEvent(dpy, &xev);
+    implProcessEvent(cb);
+    }
+  return 0;
+  }
 
-      HWND hWnd = xev.xclient.window;
-      Tempest::Window* cb = windows.find(hWnd.ptr())->second; //TODO: validation
-      switch( xev.type ) {
-        case ClientMessage: {
-          if( xev.xclient.data.l[0] == long(wmDeleteMessage()) ){
-            SystemApi::exit();
-            }
-          break;
+int X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
+  // main message loop
+  if(XPending(dpy)>0) {
+    XEvent xev={};
+    XNextEvent(dpy, &xev);
+
+    HWND hWnd = xev.xclient.window;
+    Tempest::Window* cb = windows.find(hWnd.ptr())->second; //TODO: validation
+    switch( xev.type ) {
+      case ClientMessage: {
+        if( xev.xclient.data.l[0] == long(wmDeleteMessage()) ){
+          SystemApi::exit();
           }
-        case ButtonPress:
-        case ButtonRelease: {
-          if(cb) {
-            bool isWheel = false;
-            if( xev.type==ButtonPress && XPending(dpy) &&
-                (xev.xbutton.button == Button4 || xev.xbutton.button == Button5) ){
-              XEvent ev;
-              XNextEvent(dpy, &ev);
-              isWheel = (ev.type==ButtonRelease);
-              }
-
-            if( isWheel ){
-              int ticks = 0;
-              if( xev.xbutton.button == Button4 ) {
-                ticks = 100;
-                }
-              else if ( xev.xbutton.button == Button5 ) {
-                ticks = -100;
-                }
-              Tempest::MouseEvent e( xev.xbutton.x,
-                                     xev.xbutton.y,
-                                     Tempest::Event::ButtonNone,
-                                     ticks,
-                                     0,
-                                     Event::MouseWheel );
-              SystemApi::dispatchMouseWheel(*cb, e);
-              } else {
-              MouseEvent e( xev.xbutton.x,
-                            xev.xbutton.y,
-                            toButton( xev.xbutton ),
-                            0,
-                            0,
-                            xev.type==ButtonPress ? Event::MouseDown : Event::MouseUp );
-              if(xev.type==ButtonPress)
-                SystemApi::dispatchMouseDown(*cb, e); else
-                SystemApi::dispatchMouseUp(*cb, e);
-              }
-            }
-          break;
-          }
-        case MotionNotify: {
-          MouseEvent e( xev.xmotion.x,
-                        xev.xmotion.y,
-                        Event::ButtonNone,
-                        0,
-                        0,
-                        Event::MouseMove  );
-          SystemApi::dispatchMouseMove(*cb, e);
-          break;
-          }
-        case KeyPress:
-        case KeyRelease: {
-          if(cb) {
-            int keysyms_per_keycode_return = 0;
-            KeySym *ksym = XGetKeyboardMapping( dpy, KeyCode(xev.xkey.keycode),
-                                                1,
-                                                &keysyms_per_keycode_return );
-
-            char txt[10]={};
-            XLookupString(&xev.xkey, txt, sizeof(txt)-1, ksym, nullptr );
-
-            auto u16 = TextCodec::toUtf16(txt); // TODO: remove dynamic allocation
-            auto key = SystemApi::translateKey(*ksym);
-
-            uint32_t scan = xev.xkey.keycode;
-
-            Tempest::KeyEvent e(Event::KeyType(key),uint32_t(u16.size()>0 ? u16[0] : 0),Event::M_NoModifier,(xev.type==KeyPress) ? Event::KeyDown : Event::KeyUp);
-            if(xev.type==KeyPress)
-              SystemApi::dispatchKeyDown(*cb,e,scan); else
-              SystemApi::dispatchKeyUp  (*cb,e,scan);
-              }
-          break;
-          }
+        break;
         }
+      case ButtonPress:
+      case ButtonRelease: {
+        if(cb) {
+          bool isWheel = false;
+          if( xev.type==ButtonPress && XPending(dpy) &&
+              (xev.xbutton.button == Button4 || xev.xbutton.button == Button5) ){
+            XEvent ev;
+            XNextEvent(dpy, &ev);
+            isWheel = (ev.type==ButtonRelease);
+            }
 
-      std::this_thread::yield();
-      } else {
-      if(cb.onTimer()==0)
-        std::this_thread::yield();
-      for(auto& i:windows) {
-        ::Window hWnd = HWND(i.first);
-        // artificial move/resize event
-        alignGeometry(hWnd,*i.second);
-        SystemApi::dispatchRender(*i.second);
+          if( isWheel ){
+            int ticks = 0;
+            if( xev.xbutton.button == Button4 ) {
+              ticks = 100;
+              }
+            else if ( xev.xbutton.button == Button5 ) {
+              ticks = -100;
+              }
+            Tempest::MouseEvent e( xev.xbutton.x,
+                                   xev.xbutton.y,
+                                   Tempest::Event::ButtonNone,
+                                   ticks,
+                                   0,
+                                   Event::MouseWheel );
+            SystemApi::dispatchMouseWheel(*cb, e);
+            } else {
+            MouseEvent e( xev.xbutton.x,
+                          xev.xbutton.y,
+                          toButton( xev.xbutton ),
+                          0,
+                          0,
+                          xev.type==ButtonPress ? Event::MouseDown : Event::MouseUp );
+            if(xev.type==ButtonPress)
+              SystemApi::dispatchMouseDown(*cb, e); else
+              SystemApi::dispatchMouseUp(*cb, e);
+            }
+          }
+        break;
+        }
+      case MotionNotify: {
+        MouseEvent e( xev.xmotion.x,
+                      xev.xmotion.y,
+                      Event::ButtonNone,
+                      0,
+                      0,
+                      Event::MouseMove  );
+        SystemApi::dispatchMouseMove(*cb, e);
+        break;
+        }
+      case KeyPress:
+      case KeyRelease: {
+        if(cb) {
+          int keysyms_per_keycode_return = 0;
+          KeySym *ksym = XGetKeyboardMapping( dpy, KeyCode(xev.xkey.keycode),
+                                              1,
+                                              &keysyms_per_keycode_return );
+
+          char txt[10]={};
+          XLookupString(&xev.xkey, txt, sizeof(txt)-1, ksym, nullptr );
+
+          auto u16 = TextCodec::toUtf16(txt); // TODO: remove dynamic allocation
+          auto key = SystemApi::translateKey(*ksym);
+
+          uint32_t scan = xev.xkey.keycode;
+
+          Tempest::KeyEvent e(Event::KeyType(key),uint32_t(u16.size()>0 ? u16[0] : 0),Event::M_NoModifier,(xev.type==KeyPress) ? Event::KeyDown : Event::KeyUp);
+          if(xev.type==KeyPress)
+            SystemApi::dispatchKeyDown(*cb,e,scan); else
+            SystemApi::dispatchKeyUp  (*cb,e,scan);
+            }
+        break;
         }
       }
-    }
 
-  return 0;
+    std::this_thread::yield();
+    } else {
+    if(cb.onTimer()==0)
+      std::this_thread::yield();
+    for(auto& i:windows) {
+      ::Window hWnd = HWND(i.first);
+      // artificial move/resize event
+      alignGeometry(hWnd,*i.second);
+      SystemApi::dispatchRender(*i.second);
+      }
+    }
   }
 
 #endif

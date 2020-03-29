@@ -25,6 +25,7 @@ class X11Api : public SystemApi {
     void     implShowCursor(bool show) override;
 
     int      implExec(AppCallBack& cb) override;
+    void     implProcessEvents(AppCallBack& cb) override;
   };
 
 }

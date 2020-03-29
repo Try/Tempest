@@ -31,7 +31,8 @@ class Window : public Widget {
   private:
     SystemApi::Window* id=nullptr;
 
-  friend class SystemApi;
+  friend class UiOverlay;
+  friend class EventDispatcher;
   };
 
 }

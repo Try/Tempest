@@ -21,12 +21,13 @@ class  WidgetState;
 
 class  Application;
 class  Widget;
+class  Panel;
+class  Dialog;
+
 class  Button;
 class  CheckBox;
-class  Panel;
 class  Label;
 class  TextEdit;
-
 class  ScrollBar;
 
 class Style {
@@ -94,6 +95,7 @@ class Style {
     // common
     virtual void draw(Painter& p, Widget*   w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
     virtual void draw(Painter& p, Panel*    w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
+    virtual void draw(Painter& p, Dialog*   w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
     virtual void draw(Painter& p, Button*   w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
     virtual void draw(Painter& p, CheckBox* w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
     virtual void draw(Painter& p, Label*    w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;

@@ -2,6 +2,7 @@
 
 #include <Tempest/Shortcut>
 #include <Tempest/Platform>
+#include <Tempest/UiOverlay>
 
 using namespace Tempest;
 
@@ -13,6 +14,13 @@ EventDispatcher::EventDispatcher(Widget &root)
   }
 
 void EventDispatcher::dispatchMouseDown(Widget &wnd, MouseEvent &e) {
+  for(auto i:overlays) {
+    if(!i->bind(wnd))
+      continue;
+    mouseUp = implDispatch(*i,e);
+    if(!mouseUp.expired())
+      return;
+    }
   mouseUp = implDispatch(wnd,e);
   }
 
@@ -72,11 +80,27 @@ void EventDispatcher::dispatchMouseMove(Widget &wnd, MouseEvent &e) {
                  0,
                  0,
                  Event::MouseMove  );
+  for(auto i:overlays) {
+    if(!i->bind(wnd))
+      continue;
+    auto wptr = implDispatch(*i,e);
+    if(wptr!=nullptr) {
+      implSetMouseOver(wptr,e);
+      return;
+      }
+    }
   auto wptr = implDispatch(wnd,e);
   implSetMouseOver(wptr,e);
   }
 
 void EventDispatcher::dispatchMouseWheel(Widget &wnd, MouseEvent &e){
+  for(auto i:overlays) {
+    if(!i->bind(wnd))
+      continue;
+    implMouseWhell(*i,e);
+    if(e.isAccepted())
+      return;
+    }
   implMouseWhell(wnd,e);
   }
 
@@ -106,8 +130,51 @@ void EventDispatcher::dispatchKeyUp(Widget &/*wnd*/, KeyEvent &e, uint32_t scanc
     }
   }
 
+void EventDispatcher::dispatchResize(Widget& wnd, SizeEvent& e) {
+  wnd.resize(int(e.w),int(e.h));
+  }
+
 void EventDispatcher::dispatchClose(Widget& wnd, CloseEvent& e) {
+  for(auto i:overlays) {
+    if(!i->bind(wnd))
+      continue;
+    i->closeEvent(e);
+    if(e.isAccepted()) {
+      e.ignore();
+      return;
+      }
+    }
   wnd.closeEvent(e);
+  }
+
+void EventDispatcher::dispatchRender(Window& wnd) {
+  if(wnd.w()>0 && wnd.h()>0)
+    wnd.render();
+  }
+
+void EventDispatcher::dispatchOverlayRender(Window& wnd, PaintEvent& e) {
+  for(auto i:overlays) {
+    if(!i->bind(wnd))
+      continue;
+    i->dispatchPaintEvent(e);
+    }
+  }
+
+void EventDispatcher::addOverlay(UiOverlay* ui) {
+  overlays.push_back(ui);
+  }
+
+void EventDispatcher::takeOverlay(UiOverlay* ui) {
+  for(size_t i=0;i<overlays.size();++i)
+    if(overlays[i]==ui) {
+      overlays.erase(overlays.begin()+int(i));
+      return;
+      }
+  }
+
+void EventDispatcher::dispatchDestroyWindow(SystemApi::Window* w) {
+  for(size_t i=0;i<overlays.size();++i)
+    overlays[i]->dispatchDestroyWindow(w);
   }
 
 std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget& w,MouseEvent &event) {

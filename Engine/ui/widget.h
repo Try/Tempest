@@ -205,8 +205,8 @@ class Widget {
     void                    setOwner(Widget* w);
 
   friend class EventDispatcher;
-  friend class Layout;
   friend class Shortcut;
+  friend class Layout;
   friend class Window;
   };
 

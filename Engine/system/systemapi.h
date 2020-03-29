@@ -2,17 +2,22 @@
 
 #include <Tempest/Platform>
 #include <Tempest/Rect>
+
+#include <memory>
 #include <cstdint>
 
 namespace Tempest {
 
+class SizeEvent;
 class MouseEvent;
 class KeyEvent;
 class CloseEvent;
+class PaintEvent;
 
 class Widget;
-class Application;
 class Window;
+class UiOverlay;
+class Application;
 
 class SystemApi {
   public:
@@ -49,6 +54,9 @@ class SystemApi {
     static uint16_t translateKey(uint64_t scancode);
     static void     setupKeyTranslate(const TranslateKeyPair k[], uint16_t funcCount);
 
+    static void     addOverlay(UiOverlay* ui);
+    static void     takeOverlay(UiOverlay* ui);
+
   protected:
     struct AppCallBack {
       virtual ~AppCallBack()=default;
@@ -69,8 +77,11 @@ class SystemApi {
     virtual void     implSetCursorPosition(int x, int y) = 0;
     virtual void     implShowCursor(bool show) = 0;
 
+    virtual bool     implIsRunning() = 0;
     virtual int      implExec(AppCallBack& cb) = 0;
+    virtual void     implProcessEvents(AppCallBack& cb) = 0;
 
+    static void      dispatchOverlayRender(Tempest::Window &w, Tempest::PaintEvent& e);
     static void      dispatchRender    (Tempest::Window& cb);
     static void      dispatchMouseDown (Tempest::Window& cb, MouseEvent& e);
     static void      dispatchMouseUp   (Tempest::Window& cb, MouseEvent& e);
@@ -80,16 +91,20 @@ class SystemApi {
     static void      dispatchKeyDown   (Tempest::Window& cb, KeyEvent& e, uint32_t scancode);
     static void      dispatchKeyUp     (Tempest::Window& cb, KeyEvent& e, uint32_t scancode);
 
+    static void      dispatchResize    (Tempest::Window& cb, SizeEvent& e);
     static void      dispatchClose     (Tempest::Window& cb, CloseEvent& e);
 
   private:
+    static bool       isRunning();
     static int        exec(AppCallBack& cb);
+    static void       processEvent(AppCallBack& cb);
     static SystemApi& inst();
 
-    struct KeyInf;
-    static KeyInf ki;
+    struct Data;
+    static Data m;
 
-  friend class Application;
+  friend class Tempest::Window;
+  friend class Tempest::Application;
   };
 
 }

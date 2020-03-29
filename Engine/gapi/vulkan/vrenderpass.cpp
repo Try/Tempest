@@ -84,7 +84,7 @@ VkRenderPass VRenderPass::createInstance(VkDevice &device, VSwapchain *sw,
   subpass.pColorAttachments       = nullptr;
   subpass.pDepthStencilAttachment = nullptr;
 
-  for(size_t i=0;i<attCount;++i){
+  for(uint8_t i=0;i<attCount;++i){
     VkAttachmentDescription& a = attach[i];
     VkAttachmentReference&   r = ref[i];
     const FboMode&           x = att[i];
@@ -165,7 +165,7 @@ VkRenderPass VRenderPass::createLayoutInstance(VkDevice& device,VSwapchain &sw, 
   subpass.pColorAttachments       = nullptr;
   subpass.pDepthStencilAttachment = nullptr;
 
-  for(size_t i=0;i<attCount;++i){
+  for(uint8_t i=0;i<attCount;++i){
     VkAttachmentDescription& a = attach[i];
     VkAttachmentReference&   r = ref[i];
 

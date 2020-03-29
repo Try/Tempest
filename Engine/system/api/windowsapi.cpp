@@ -194,30 +194,40 @@ void WindowsApi::implExit() {
   PostQuitMessage(0);
   }
 
+bool WindowsApi::implIsRunning() {
+  return !isExit.load();
+  }
+
 int WindowsApi::implExec(AppCallBack& cb) {
   // main message loop
   while (!isExit.load()) {
-    MSG msg={};
-    if(PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
-      if( msg.message==WM_QUIT ) { // check for a quit message
-        isExit.store(true);  // if found, quit app
-        } else {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-        }
-      std::this_thread::yield();
-      } else {
-      if(cb.onTimer()==0)
-        Sleep(1);
-      for(auto& i:windows){
-        HWND h = HWND(i);
-        Tempest::Window* cb=reinterpret_cast<Tempest::Window*>(GetWindowLongPtr(h,GWLP_USERDATA));
-        if(cb)
-          SystemApi::dispatchRender(*cb);
-        }
-      }
+    implProcessEvents(cb);
     }
   return 0;
+  }
+
+void WindowsApi::implProcessEvents(SystemApi::AppCallBack& cb) {
+  if(isExit.load())
+    return;
+  MSG msg={};
+  if(PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+    if( msg.message==WM_QUIT ) { // check for a quit message
+      isExit.store(true);  // if found, quit app
+      } else {
+      TranslateMessage(&msg);
+      DispatchMessage(&msg);
+      }
+    std::this_thread::yield();
+    } else {
+    if(cb.onTimer()==0)
+      Sleep(1);
+    for(auto& i:windows){
+      HWND h = HWND(i);
+      Tempest::Window* cb=reinterpret_cast<Tempest::Window*>(GetWindowLongPtr(h,GWLP_USERDATA));
+      if(cb)
+        SystemApi::dispatchRender(*cb);
+      }
+    }
   }
 
 Rect WindowsApi::implWindowClientRect(SystemApi::Window* w) {
@@ -391,8 +401,10 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
       if(wParam!=SIZE_MINIMIZED) {
         int width  = lParam & 0xffff;
         int height = (uint32_t(lParam) & 0xffff0000) >> 16;
-        if(cb)
-          cb->resize(width,height);
+        if(cb) {
+          Tempest::SizeEvent e(width,height);
+          SystemApi::dispatchResize(*cb,e);
+          }
         }
       break;
     default:

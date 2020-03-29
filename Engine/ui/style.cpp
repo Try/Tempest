@@ -109,6 +109,11 @@ void Style::draw(Painter &p, Panel* w, Element e, const WidgetState &st, const R
   p.translate(-r.x,-r.y);
   }
 
+void Style::draw(Painter& p, Dialog* w, Style::Element e,
+                 const WidgetState& st, const Rect& r, const Style::Extra& extra) const {
+  draw(p,reinterpret_cast<Panel*>(w),e,st,r,extra);
+  }
+
 void Style::draw(Painter& p, Button *w, Element e, const WidgetState &st, const Rect &r, const Extra &extra) const {
   (void)w;
   (void)e;

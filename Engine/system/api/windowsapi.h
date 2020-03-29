@@ -22,7 +22,9 @@ class WindowsApi final : SystemApi {
     void     implSetCursorPosition(int x, int y) override;
     void     implShowCursor(bool show) override;
 
+    bool     implIsRunning() override;
     int      implExec(AppCallBack& cb) override;
+    void     implProcessEvents(AppCallBack& cb) override;
 
     static long long windowProc(void* hWnd, uint32_t msg, const unsigned long long wParam, const long long lParam);
 

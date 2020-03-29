@@ -19,6 +19,8 @@ class Application {
     static uint64_t     tickCount();
 
     int                 exec();
+    static bool         isRunning();
+    static void         processEvents();
 
     static void         setStyle(const Style* stl);
     static const Style& style();
@@ -28,7 +30,7 @@ class Application {
 
   private:
     struct Impl;
-    std::unique_ptr<Impl> impl;
+    static std::unique_ptr<Impl> impl;
 
     static void     implAddTimer(Timer& t);
     static void     implDelTimer(Timer& t);

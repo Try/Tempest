@@ -5,6 +5,7 @@
 #include "eventdispatcher.h"
 
 #include "exceptions/exception.h"
+
 #include <Tempest/Event>
 #include <Tempest/Window>
 
@@ -16,76 +17,77 @@ using namespace Tempest;
 
 static EventDispatcher dispatcher;
 
-struct SystemApi::KeyInf {
+struct SystemApi::Data {
   std::vector<WindowsApi::TranslateKeyPair> keys;
   std::vector<WindowsApi::TranslateKeyPair> a, k0, f1;
   uint16_t                                  fkeysCount=1;
   };
-SystemApi::KeyInf SystemApi::ki;
+SystemApi::Data SystemApi::m;
 
 SystemApi::SystemApi() {
   }
 
 void SystemApi::setupKeyTranslate(const TranslateKeyPair k[], uint16_t funcCount ) {
-  ki.keys.clear();
-  ki.a. clear();
-  ki.k0.clear();
-  ki.f1.clear();
-  ki.fkeysCount = funcCount;
+  m.keys.clear();
+  m.a. clear();
+  m.k0.clear();
+  m.f1.clear();
+  m.fkeysCount = funcCount;
 
   for( size_t i=0; k[i].result!=Event::K_NoKey; ++i ){
     if( k[i].result==Event::K_A )
-      ki.a.push_back(k[i]); else
+      m.a.push_back(k[i]); else
     if( k[i].result==Event::K_0 )
-      ki.k0.push_back(k[i]); else
+      m.k0.push_back(k[i]); else
     if( k[i].result==Event::K_F1 )
-      ki.f1.push_back(k[i]); else
-      ki.keys.push_back( k[i] );
+      m.f1.push_back(k[i]); else
+      m.keys.push_back( k[i] );
     }
 
 #ifndef __ANDROID__
-  ki.keys.shrink_to_fit();
-  ki.a. shrink_to_fit();
-  ki.k0.shrink_to_fit();
-  ki.f1.shrink_to_fit();
+  m.keys.shrink_to_fit();
+  m.a. shrink_to_fit();
+  m.k0.shrink_to_fit();
+  m.f1.shrink_to_fit();
 #endif
   }
 
-uint16_t SystemApi::translateKey(uint64_t scancode) {
-  for(size_t i=0; i<ki.keys.size(); ++i)
-    if( ki.keys[i].src==scancode )
-      return ki.keys[i].result;
+void SystemApi::addOverlay(UiOverlay* ui) {
+  dispatcher.addOverlay(ui);
+  }
 
-  for(size_t i=0; i<ki.k0.size(); ++i)
-    if( ki.k0[i].src<=scancode &&
-                      scancode<=ki.k0[i].src+9 ){
-      auto dx = ( scancode-ki.k0[i].src );
-      return Event::KeyType( ki.k0[i].result + dx );
+void SystemApi::takeOverlay(UiOverlay* ui) {
+  dispatcher.takeOverlay(ui);
+  }
+
+uint16_t SystemApi::translateKey(uint64_t scancode) {
+  for(size_t i=0; i<m.keys.size(); ++i)
+    if( m.keys[i].src==scancode )
+      return m.keys[i].result;
+
+  for(size_t i=0; i<m.k0.size(); ++i)
+    if( m.k0[i].src<=scancode &&
+                     scancode<=m.k0[i].src+9 ){
+      auto dx = (scancode-m.k0[i].src);
+      return Event::KeyType(m.k0[i].result + dx);
       }
 
   uint16_t literalsCount = (Event::K_Z - Event::K_A);
-  for(size_t i=0; i<ki.a.size(); ++i)
-    if(ki.a[i].src<=scancode &&
-                    scancode<=ki.a[i].src+literalsCount ){
-      auto dx = ( scancode-ki.a[i].src );
-      return Event::KeyType( ki.a[i].result + dx );
+  for(size_t i=0; i<m.a.size(); ++i)
+    if(m.a[i].src<=scancode &&
+                   scancode<=m.a[i].src+literalsCount ){
+      auto dx = (scancode-m.a[i].src);
+      return Event::KeyType(m.a[i].result + dx);
       }
 
-  for(size_t i=0; i<ki.f1.size(); ++i)
-    if(ki.f1[i].src<=scancode &&
-                     scancode<=ki.f1[i].src+ki.fkeysCount ){
-      auto dx = (scancode-ki.f1[i].src);
-      return Event::KeyType(ki.f1[i].result+dx);
+  for(size_t i=0; i<m.f1.size(); ++i)
+    if(m.f1[i].src<=scancode &&
+                    scancode<=m.f1[i].src+m.fkeysCount ){
+      auto dx = (scancode-m.f1[i].src);
+      return Event::KeyType(m.f1[i].result+dx);
       }
 
   return Event::K_NoKey;
-  }
-
-void SystemApi::dispatchRender(Tempest::Window &w) {
-  if(w.w()>0 && w.h()>0) {
-    auto* wx = dynamic_cast<Tempest::Window*>(&w);
-    wx->render();
-    }
   }
 
 SystemApi& SystemApi::inst() {
@@ -95,6 +97,14 @@ SystemApi& SystemApi::inst() {
   static X11Api api;
 #endif
   return api;
+  }
+
+void SystemApi::dispatchOverlayRender(Tempest::Window &w, PaintEvent& e) {
+  dispatcher.dispatchOverlayRender(w,e);
+  }
+
+void SystemApi::dispatchRender(Tempest::Window &w) {
+  dispatcher.dispatchRender(w);
   }
 
 void SystemApi::dispatchMouseDown(Tempest::Window &cb, MouseEvent &e) {
@@ -121,8 +131,16 @@ void SystemApi::dispatchKeyUp(Tempest::Window &cb, KeyEvent &e, uint32_t scancod
   dispatcher.dispatchKeyUp(cb,e,scancode);
   }
 
+void SystemApi::dispatchResize(Tempest::Window& cb, SizeEvent& e) {
+  dispatcher.dispatchResize(cb,e);
+  }
+
 void SystemApi::dispatchClose(Tempest::Window& cb, CloseEvent& e) {
   dispatcher.dispatchClose(cb,e);
+  }
+
+bool SystemApi::isRunning() {
+  return inst().implIsRunning();
   }
 
 SystemApi::Window *SystemApi::createWindow(Tempest::Window *owner, uint32_t width, uint32_t height) {
@@ -134,6 +152,7 @@ SystemApi::Window *SystemApi::createWindow(Tempest::Window *owner, ShowMode sm) 
   }
 
 void SystemApi::destroyWindow(SystemApi::Window *w) {
+  dispatcher.dispatchDestroyWindow(w);
   return inst().implDestroyWindow(w);
   }
 
@@ -143,6 +162,10 @@ void SystemApi::exit() {
 
 int SystemApi::exec(AppCallBack& cb) {
   return inst().implExec(cb);
+  }
+
+void SystemApi::processEvent(AppCallBack& cb) {
+  return inst().implProcessEvents(cb);
   }
 
 Rect SystemApi::windowClientRect(SystemApi::Window* w) {

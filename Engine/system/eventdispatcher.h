@@ -19,7 +19,16 @@ class EventDispatcher final {
 
     void dispatchKeyDown   (Widget& wnd, Tempest::KeyEvent&   event, uint32_t scancode);
     void dispatchKeyUp     (Widget& wnd, Tempest::KeyEvent&   event, uint32_t scancode);
+
+    void dispatchResize    (Widget& wnd, Tempest::SizeEvent&  event);
     void dispatchClose     (Widget& wnd, Tempest::CloseEvent& event);
+
+    void dispatchRender    (Window& wnd);
+    void dispatchOverlayRender(Window& wnd,Tempest::PaintEvent& e);
+    void addOverlay        (UiOverlay* ui);
+    void takeOverlay       (UiOverlay* ui);
+
+    void dispatchDestroyWindow(SystemApi::Window* w);
 
   private:
     std::shared_ptr<Widget::Ref> implDispatch(Tempest::Widget &w, Tempest::MouseEvent& event);
@@ -36,6 +45,8 @@ class EventDispatcher final {
     Widget*                      customRoot=nullptr;
     std::weak_ptr<Widget::Ref>   mouseUp;
     std::weak_ptr<Widget::Ref>   mouseOver;
+
+    std::vector<UiOverlay*>      overlays;
 
 
     struct Modify final {
