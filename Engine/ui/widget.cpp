@@ -62,7 +62,7 @@ Widget::~Widget() {
   freeLayout();
   }
 
-void Widget::setLayout(Orienration ori) noexcept {
+void Widget::setLayout(Orientation ori) noexcept {
   static_assert(sizeof(LinearLayout)<=sizeof(layBuf),"layBuf is too small");
   freeLayout();
   new(layBuf) LinearLayout(ori);

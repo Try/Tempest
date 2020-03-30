@@ -1,6 +1,7 @@
 #include "transform.h"
 
 #include <cmath>
+#include <cstring>
 
 #define KD_FLT_EPSILON 1.19209290E-07F
 #define KD_DEG_TO_RAD_F 0.0174532924F

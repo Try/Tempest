@@ -15,7 +15,7 @@ struct BasicSize;
 template<class T>
 struct BasicRect;
 
-enum Orienration:uint8_t {
+enum Orientation:uint8_t {
   Horizontal=0,
   Vertical  =1
   };

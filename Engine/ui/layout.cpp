@@ -81,7 +81,7 @@ void Layout::bind(Widget *wx) {
   applyLayout();
   }
 
-void LinearLayout::applyLayout(Widget &w, Orienration ori) {
+void LinearLayout::applyLayout(Widget &w, Orientation ori) {
   if(ori==Horizontal)
     implApplyLayout<true>(w); else
     implApplyLayout<false>(w);

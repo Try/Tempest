@@ -34,13 +34,13 @@ class Layout {
 
 class LinearLayout : public Layout {
   public:
-    LinearLayout(Orienration ori):ori(ori){}
+    LinearLayout(Orientation ori):ori(ori){}
 
     void applyLayout() override { applyLayout(*owner(),ori); }
-    void applyLayout(Widget& w,Orienration ori);
+    void applyLayout(Widget& w,Orientation ori);
 
   private:
-    Orienration ori;
+    Orientation ori;
 
     template<bool hor>
     void implApplyLayout(Widget& w);

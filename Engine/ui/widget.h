@@ -29,7 +29,7 @@ class Widget {
     Widget(const Widget&)=delete;
     virtual ~Widget();
 
-    void setLayout(Orienration ori) noexcept;
+    void setLayout(Orientation ori) noexcept;
     void setLayout(Layout* lay);
     const Layout& layout() const { return *lay; }
     void  applyLayout();
