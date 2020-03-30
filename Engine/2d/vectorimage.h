@@ -116,7 +116,8 @@ class VectorImage : public Tempest::PaintDevice {
     struct Info {
       uint32_t w=0,h=0;
       };
-    Info info;
+    Info   info;
+    size_t paintScope = 0;
 
     void makeActual(Device& dev, Swapchain& sw);
 

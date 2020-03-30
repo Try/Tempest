@@ -37,7 +37,10 @@ class Painter {
     void translate(const Point& p);
     void translate(int x,int y);
 
-    Rect         scissor() const { return Rect(scRect.x,scRect.y,scRect.x1-scRect.x,scRect.y1-scRect.y); }
+    void rotate   (float angle);
+
+    Rect         scissor() const { return Rect(scRect.x-scRect.ox,scRect.y-scRect.oy,
+                                               scRect.x1-scRect.x,scRect.y1-scRect.y); }
     const Brush& brush()   const { return bru; }
     const Pen&   pen()     const { return pn;  }
     const Font&  font()    const { return fnt; }
@@ -74,16 +77,22 @@ class Painter {
     Tempest::Brush     bru;
     Tempest::Pen       pn;
     Tempest::Font      fnt;
-    Tempest::Point     trans;
 
-    Tempest::Transform tr=Transform();
+    struct Tr {
+      Tempest::Transform mat  = Transform();
+      float              invW = 1.f;
+      float              invH = 1.f;
+      };
+    Tr tr;
 
+    // brush
     float invW    =1.f;
     float invH    =1.f;
     float dU      =0.f;
     float dV      =0.f;
 
     struct ScissorRect {
+      int ox=0,oy=0;
       int x=0,y=0,x1=0,y1=0;
       } scRect;
 
@@ -97,11 +106,15 @@ class Painter {
 
     void implAddPoint   (float x, float y, float u, float v);
     void implAddPointRaw(float x, float y, float u, float v);
+    void implAddPointRaw(int   x, int   y, float u, float v);
     void implSetColor   (float r,float g,float b,float a);
 
-    void drawTriangle( int x0, int y0, int u0, int v0,
-                       int x1, int y1, int u1, int v1,
-                       int x2, int y2, int u2, int v2 );
+    void drawTriangle( int x0, int y0, float u0, float v0,
+                       int x1, int y1, float u1, float v1,
+                       int x2, int y2, float u2, float v2 );
+    void drawTriangle( float x0, float y0, float u0, float v0,
+                       float x1, float y1, float u1, float v1,
+                       float x2, float y2, float u2, float v2 );
     void drawTrigImpl( float x0, float y0, float u0, float v0,
                        float x1, float y1, float u1, float v1,
                        float x2, float y2, float u2, float v2,

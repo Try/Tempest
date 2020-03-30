@@ -14,11 +14,17 @@ using namespace Tempest;
 void VectorImage::beginPaint(bool clr, uint32_t w, uint32_t h) {
   if(clr || blocks.size()==0)
     clear();
-  info.w=w;
-  info.h=h;
+  if(clr) {
+    info.w=w;
+    info.h=h;
+    }
+  paintScope++;
   }
 
 void VectorImage::endPaint() {
+  paintScope--;
+  if(paintScope!=0)
+    return;
   for(size_t i=0;i<frameCount;++i)
     frame[i].outdated=true;
   outdatedCount=frameCount;
