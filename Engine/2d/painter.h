@@ -39,11 +39,14 @@ class Painter {
 
     void rotate   (float angle);
 
-    Rect         scissor() const { return Rect(scRect.x-scRect.ox,scRect.y-scRect.oy,
-                                               scRect.x1-scRect.x,scRect.y1-scRect.y); }
-    const Brush& brush()   const { return bru; }
-    const Pen&   pen()     const { return pn;  }
-    const Font&  font()    const { return fnt; }
+    Rect         scissor() const { return Rect(s.scRect.x -s.scRect.ox,s.scRect.y -s.scRect.oy,
+                                               s.scRect.x1-s.scRect.x, s.scRect.y1-s.scRect.y); }
+    const Brush& brush()   const { return s.br;  }
+    const Pen&   pen()     const { return s.pn;  }
+    const Font&  font()    const { return s.fnt; }
+
+    void pushState();
+    void popState();
 
     void drawRect(int x,int y,int width,int height,
                   float u1,float v1,float u2,float v2);
@@ -76,32 +79,39 @@ class Painter {
       StBrush=1,
       StPen  =2
       };
-    PaintDevice&       dev;
-    TextureAtlas&      ta;
-    PaintDevice::Point pt;
-
-    State              state=StNo;
-    Tempest::Brush     bru;
-    Tempest::Pen       pn;
-    Tempest::Font      fnt;
 
     struct Tr {
       Tempest::Transform mat  = Transform();
       float              invW = 1.f;
       float              invH = 1.f;
       };
-    Tr tr;
-
-    // brush
-    float invW    =1.f;
-    float invH    =1.f;
-    float dU      =0.f;
-    float dV      =0.f;
 
     struct ScissorRect {
       int ox=0,oy=0;
       int x=0,y=0,x1=0,y1=0;
-      } scRect;
+      };
+
+    struct InternalState {
+      Tempest::Brush br;
+      Tempest::Pen   pn;
+      Tempest::Font  fnt;
+      Tr             tr;
+      ScissorRect    scRect;
+
+      // sprite brush
+      float invW    =1.f;
+      float invH    =1.f;
+      float dU      =0.f;
+      float dV      =0.f;
+      };
+
+    PaintDevice&       dev;
+    TextureAtlas&      ta;
+    PaintDevice::Point pt;
+
+    State              state=StNo;
+    InternalState      s;
+    std::vector<InternalState> stStk;
 
     struct FPoint{
       float x,y;
@@ -111,10 +121,9 @@ class Painter {
     void implBrush(const Brush& b);
     void implPen  (const Pen&   p);
 
-    void implAddPoint   (float x, float y, float u, float v);
-    void implAddPointRaw(float x, float y, float u, float v);
-    void implAddPointRaw(int   x, int   y, float u, float v);
-    void implSetColor   (float r,float g,float b,float a);
+    void implAddPoint(float x, float y, float u, float v);
+    void implAddPoint(int   x, int   y, float u, float v);
+    void implSetColor(float r,float g,float b,float a);
 
     void drawTrigImpl( float x0, float y0, float u0, float v0,
                        float x1, float y1, float u1, float v1,
