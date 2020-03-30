@@ -46,9 +46,9 @@ inline void Transform::map(float x, float y, float &outX, float &outY) const {
   }
 
 inline void Transform::map(int x, int y, int &outX, int &outY) const {
-  float ofx = v[0][0]*x + v[1][0]*y + v[2][0];
-  float ofy = v[0][1]*x + v[1][1]*y + v[2][1];
-  float w   = v[0][2]*x + v[1][2]*y + v[2][2];
+  float ofx = v[0][0]*float(x) + v[1][0]*float(y) + v[2][0];
+  float ofy = v[0][1]*float(x) + v[1][1]*float(y) + v[2][1];
+  float w   = v[0][2]*float(x) + v[1][2]*float(y) + v[2][2];
 
   outX = int(ofx/w);
   outY = int(ofy/w);
