@@ -54,6 +54,13 @@ class Painter {
 
     void drawLine(int x1,int y1,int x2,int y2);
 
+    void drawTriangle( int x0, int y0, float u0, float v0,
+                       int x1, int y1, float u1, float v1,
+                       int x2, int y2, float u2, float v2 );
+    void drawTriangle( float x0, float y0, float u0, float v0,
+                       float x1, float y1, float u1, float v1,
+                       float x2, float y2, float u2, float v2 );
+
     void drawText(int x,int y,const char*     txt);
     void drawText(int x,int y,const char16_t* txt);
 
@@ -109,12 +116,6 @@ class Painter {
     void implAddPointRaw(int   x, int   y, float u, float v);
     void implSetColor   (float r,float g,float b,float a);
 
-    void drawTriangle( int x0, int y0, float u0, float v0,
-                       int x1, int y1, float u1, float v1,
-                       int x2, int y2, float u2, float v2 );
-    void drawTriangle( float x0, float y0, float u0, float v0,
-                       float x1, float y1, float u1, float v1,
-                       float x2, float y2, float u2, float v2 );
     void drawTrigImpl( float x0, float y0, float u0, float v0,
                        float x1, float y1, float u1, float v1,
                        float x2, float y2, float u2, float v2,
