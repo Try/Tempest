@@ -83,9 +83,9 @@ void Painter::drawTriangle(int x0, int y0, float u0, float v0,
                            int x1, int y1, float u1, float v1,
                            int x2, int y2, float u2, float v2) {
   FPoint trigBuf[4+4+4+4];
-  drawTrigImpl( float(x0), float(y0), u0, v0,
-                float(x1), float(y1), u1, v1,
-                float(x2), float(y2), u2, v2,
+  implDrawTrig( float(x0), float(y0), s.dU+u0*s.invW,s.dV+v0*s.invH,
+                float(x1), float(y1), s.dU+u1*s.invW,s.dV+v1*s.invH,
+                float(x2), float(y2), s.dU+u2*s.invW,s.dV+v2*s.invH,
                 trigBuf, 0 );
   }
 
@@ -93,13 +93,13 @@ void Painter::drawTriangle(float x0, float y0, float u0, float v0,
                            float x1, float y1, float u1, float v1,
                            float x2, float y2, float u2, float v2) {
   FPoint trigBuf[4+4+4+4];
-  drawTrigImpl( x0, y0, u0, v0,
-                x1, y1, u1, v1,
-                x2, y2, u2, v2,
+  implDrawTrig( x0, y0, s.dU+u0*s.invW,s.dV+v0*s.invH,
+                x1, y1, s.dU+u1*s.invW,s.dV+v1*s.invH,
+                x2, y2, s.dU+u2*s.invW,s.dV+v2*s.invH,
                 trigBuf, 0 );
   }
 
-void Painter::drawTrigImpl( float x0, float y0, float u0, float v0,
+void Painter::implDrawTrig( float x0, float y0, float u0, float v0,
                             float x1, float y1, float u1, float v1,
                             float x2, float y2, float u2, float v2,
                             FPoint* out,
@@ -193,10 +193,10 @@ void Painter::drawTrigImpl( float x0, float y0, float u0, float v0,
 
   if( stage<3 ){
     for(ptrdiff_t i=0;i<=count;++i){
-      drawTrigImpl( r[  0].x, r[  0].y, r[  0].u, r[  0].v,
-          r[i+1].x, r[i+1].y, r[i+1].u, r[i+1].v,
-          r[i+2].x, r[i+2].y, r[i+2].u, r[i+2].v,
-          out, stage+1 );
+      implDrawTrig( r[  0].x, r[  0].y, r[  0].u, r[  0].v,
+                    r[i+1].x, r[i+1].y, r[i+1].u, r[i+1].v,
+                    r[i+2].x, r[i+2].y, r[i+2].u, r[i+2].v,
+                    out, stage+1 );
       }
     } else {
     for(ptrdiff_t i=0;i<=count;++i){
@@ -305,12 +305,15 @@ void Painter::implDrawRect(int x1, int y1, int x2, int y2, float u1, float v1, f
     for(size_t i=0;i<4;++i)
       s.tr.mat.map(x[i],y[i],x[i],y[i]);
 
-    drawTriangle(x[0],y[0], u1,v1,
-                 x[1],y[1], u2,v1,
-                 x[2],y[2], u2,v2);
-    drawTriangle(x[0],y[0], u1,v1,
+    FPoint trigBuf[4+4+4+4];
+    implDrawTrig( x[0], y[0], u1, v1,
+                  x[1], y[1], u2, v1,
+                  x[2], y[2], u2, v2,
+                  trigBuf, 0 );
+    implDrawTrig(x[0],y[0], u1,v1,
                  x[2],y[2], u2,v2,
-                 x[3],y[3], u1,v2);
+                 x[3],y[3], u1,v2,
+                 trigBuf, 0 );
     }
   }
 

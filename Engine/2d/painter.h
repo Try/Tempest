@@ -125,7 +125,7 @@ class Painter {
     void implAddPoint(int   x, int   y, float u, float v);
     void implSetColor(float r,float g,float b,float a);
 
-    void drawTrigImpl( float x0, float y0, float u0, float v0,
+    void implDrawTrig( float x0, float y0, float u0, float v0,
                        float x1, float y1, float u1, float v1,
                        float x2, float y2, float u2, float v2,
                        FPoint *out, int stage);
