@@ -337,7 +337,11 @@ void Painter::drawRect(int x, int y, unsigned w, unsigned h) {
   implDrawRect(x,y,x+int(w),y+int(h), dU,dV,w*invW+dU,h*invH+dV);
   }
 
-void Painter::drawLine(int x1, int y1, int x2, int y2) {
+void Painter::drawLine(int ix1, int iy1, int ix2, int iy2) {
+  if( scRect.x > scRect.x1 || scRect.y > scRect.y1 ) {
+    // scissor algo cannot work with empty rect
+    return;
+    }
   if(state!=StPen){
     dev.setTopology(Lines);
     state=StPen;
@@ -349,8 +353,61 @@ void Painter::drawLine(int x1, int y1, int x2, int y2) {
     return;
     }*/
 
-  implAddPoint(x1+0.5f,y1+0.5f,0,0);
-  implAddPoint(x2+0.5f,y2+0.5f,x2-x1,y2-y1);
+  float x1,y1,x2,y2;
+
+  tr.mat.map(float(ix1),float(iy1),x1,y1);
+  tr.mat.map(float(ix2),float(iy2),x2,y2);
+
+  if( x2<x1 ){
+    std::swap(x2, x1);
+    std::swap(y2, y1);
+    }
+
+  if(x1>scRect.x1 && x2>scRect.x1)
+    return;
+  if(x1<scRect.x  && x2<scRect.x)
+    return;
+  if(y1>scRect.y1 && y2>scRect.y1)
+    return;
+  if(y1<scRect.y  && y2<scRect.y)
+    return;
+
+  if( x1<scRect.x ){
+    if(std::fabs(x1-x2)<0.0001f)
+      return;
+    y1 += (scRect.x-x1)*(y2-y1)/(x2-x1);
+    x1 = float(scRect.x);
+    }
+
+  if( x2 > scRect.x1 ){
+    if(std::fabs(x1-x2)<0.0001f)
+      return;
+    y2 += (scRect.x1-x2)*(y2-y1)/(x2-x1);
+    x2 = float(scRect.x1);
+    }
+
+  if( y2<y1 ){
+    std::swap(x2, x1);
+    std::swap(y2, y1);
+    }
+
+  if( y1<scRect.y ){
+    if(std::fabs(y1-y2)<0.0001f)
+      return;
+    x1 += (scRect.y-y1)*(x2-x1)/(y2-y1);
+    y1 = float(scRect.y);
+    }
+
+  if( y2 > scRect.y1 ){
+    if(std::fabs(y1-y2)<0.0001f)
+      return;
+    x2 += (scRect.y1-y2)*(x2-x1)/(y2-y1);
+    y2 = float(scRect.y1);
+    }
+
+
+  implAddPointRaw(x1+0.5f,y1+0.5f, 0,0);
+  implAddPointRaw(x2+0.5f,y2+0.5f, 0,0);
   }
 
 void Painter::setFont(const Font &f) {
