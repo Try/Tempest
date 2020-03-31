@@ -35,6 +35,21 @@ class Style {
     Style();
     virtual ~Style();
 
+    struct UiMetrics final {
+      UiMetrics();
+      static int scaledSize(int x);
+
+      int   buttonSize       = 27;
+      int   scrollbarSize    = 27;
+      int   scrollButtonSize = 40;
+
+      int   smallTextSize    = 8;
+      int   normalTextSize   = 16;
+      int   largeTextSize    = 24;
+
+      int   margin           = 8;
+      };
+
     struct Extra {
       public:
         Extra(const Widget&   owner);
@@ -113,6 +128,9 @@ class Style {
     virtual Size sizeHint(Panel*    w, Element e, const TextModel* text, const Extra& extra) const;
     virtual Size sizeHint(Button*   w, Element e, const TextModel* text, const Extra& extra) const;
     virtual Size sizeHint(Label*    w, Element e, const TextModel* text, const Extra& extra) const;
+
+    // metric
+    virtual const UiMetrics& metrics() const;
 
   protected:
     virtual void polish  (Widget& w) const;

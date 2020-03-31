@@ -45,14 +45,15 @@ class Button : public Widget {
     Signal<void()> onClick;
 
   protected:
-    void mouseDownEvent (Tempest::MouseEvent& e) override;
-    void mouseUpEvent   (Tempest::MouseEvent& e) override;
-    void mouseMoveEvent (Tempest::MouseEvent& e) override;
+    void mouseDownEvent (Tempest::MouseEvent&  e) override;
+    void mouseUpEvent   (Tempest::MouseEvent&  e) override;
+    void mouseMoveEvent (Tempest::MouseEvent&  e) override;
 
-    void mouseEnterEvent(Tempest::MouseEvent& e) override;
-    void mouseLeaveEvent(Tempest::MouseEvent& e) override;
+    void mouseEnterEvent(Tempest::MouseEvent&  e) override;
+    void mouseLeaveEvent(Tempest::MouseEvent&  e) override;
 
-    void paintEvent     (Tempest::PaintEvent& e) override;
+    void paintEvent     (Tempest::PaintEvent&  e) override;
+    void polishEvent    (Tempest::PolishEvent& e) override;
 
   private:
     TextModel    textM;

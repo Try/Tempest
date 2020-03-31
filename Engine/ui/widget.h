@@ -115,23 +115,24 @@ class Widget {
 
     void setWidgetState(const WidgetState& st);
 
-    virtual void paintEvent       (Tempest::PaintEvent& event);
-    virtual void resizeEvent      (Tempest::SizeEvent&  event);
+    virtual void paintEvent     (Tempest::PaintEvent&  event);
+    virtual void resizeEvent    (Tempest::SizeEvent&   event);
 
-    virtual void mouseDownEvent   (Tempest::MouseEvent& event);
-    virtual void mouseUpEvent     (Tempest::MouseEvent& event);
-    virtual void mouseMoveEvent   (Tempest::MouseEvent& event);
-    virtual void mouseDragEvent   (Tempest::MouseEvent& event);
-    virtual void mouseWheelEvent  (Tempest::MouseEvent& event);
+    virtual void mouseDownEvent (Tempest::MouseEvent&  event);
+    virtual void mouseUpEvent   (Tempest::MouseEvent&  event);
+    virtual void mouseMoveEvent (Tempest::MouseEvent&  event);
+    virtual void mouseDragEvent (Tempest::MouseEvent&  event);
+    virtual void mouseWheelEvent(Tempest::MouseEvent&  event);
 
-    virtual void keyDownEvent     (Tempest::KeyEvent&   event);
-    virtual void keyUpEvent       (Tempest::KeyEvent&   event);
+    virtual void keyDownEvent   (Tempest::KeyEvent&    event);
+    virtual void keyUpEvent     (Tempest::KeyEvent&    event);
 
-    virtual void mouseEnterEvent  (Tempest::MouseEvent& event);
-    virtual void mouseLeaveEvent  (Tempest::MouseEvent& event);
+    virtual void mouseEnterEvent(Tempest::MouseEvent&  event);
+    virtual void mouseLeaveEvent(Tempest::MouseEvent&  event);
 
-    virtual void focusEvent       (Tempest::FocusEvent& event);
-    virtual void closeEvent       (Tempest::CloseEvent& event);
+    virtual void focusEvent     (Tempest::FocusEvent&  event);
+    virtual void closeEvent     (Tempest::CloseEvent&  event);
+    virtual void polishEvent    (Tempest::PolishEvent& event);
 
   private:
     struct Iterator final {
@@ -199,7 +200,8 @@ class Widget {
     bool                    checkFocus() const { return wstate.focus || astate.focus; }
     void                    implAttachFocus();
 
-    void                    dispatchPaintEvent(PaintEvent &e);
+    void                    dispatchPaintEvent (PaintEvent&  e);
+    void                    dispatchPolishEvent(PolishEvent& e);
 
     auto                    selfReference() -> const std::shared_ptr<Ref>&;
     void                    setOwner(Widget* w);

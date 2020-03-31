@@ -37,6 +37,7 @@ class Event {
       Shortcut,
       Paint,
       Close,
+      Polish,
       Gesture,
 
       Custom = 512
@@ -275,5 +276,10 @@ class FocusEvent: public Event {
 class CloseEvent: public Event {
   public:
     CloseEvent() { setType(Close); }
+  };
+
+class PolishEvent: public Event {
+  public:
+    PolishEvent() { setType(Polish); }
   };
 }

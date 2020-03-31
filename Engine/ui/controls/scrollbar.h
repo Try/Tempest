@@ -9,7 +9,7 @@ class ScrollBar : public Tempest::Widget {
   public:
     ScrollBar(Tempest::Orientation ori = Tempest::Vertical);
 
-    void                 setOrientation( Tempest::Orientation ori );
+    void                 setOrientation(Tempest::Orientation ori);
     Tempest::Orientation orientation() const;
     Tempest::Signal<void(Tempest::Orientation)> onOrientationChanged;
 
@@ -44,6 +44,8 @@ class ScrollBar : public Tempest::Widget {
     void    mouseDragEvent (Tempest::MouseEvent& e);
     void    mouseUpEvent   (Tempest::MouseEvent& e);
     void    mouseWheelEvent(Tempest::MouseEvent& e);
+
+    void    polishEvent    (Tempest::PolishEvent&);
 
   private:
     enum Elements : uint8_t {
