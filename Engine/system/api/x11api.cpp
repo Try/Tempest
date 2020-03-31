@@ -97,14 +97,6 @@ static void maximizeWindow(HWND& w) {
   XSync(dpy,False);
   }
 
-static void alignGeometry(::Window w,Tempest::Window& owner) {
-  XWindowAttributes xwa={};
-  if(XGetWindowAttributes(dpy, HWND(w), &xwa)){
-    Tempest::SizeEvent e(xwa.width, xwa.height);
-    SystemApi::dispatchResize(owner,e);
-    }
-  }
-
 X11Api::X11Api() {
   dpy = XOpenDisplay(nullptr);
 
@@ -149,6 +141,14 @@ void *X11Api::display() {
   return dpy;
   }
 
+void X11Api::alignGeometry(SystemApi::Window *w, Tempest::Window& owner) {
+  XWindowAttributes xwa={};
+  if(XGetWindowAttributes(dpy, HWND(w), &xwa)){
+    Tempest::SizeEvent e(xwa.width, xwa.height);
+    SystemApi::dispatchResize(owner,e);
+    }
+  }
+
 SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, uint32_t h) {
   //GLint att[] = { GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None };
   //XVisualInfo * vi = glXChooseVisual(dpy, 0, att);
@@ -182,7 +182,7 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, 
   //maximizeWindow(win);
   XMapWindow(dpy, win);
   XSync(dpy,False);
-  alignGeometry(win,*owner);
+  alignGeometry(win.ptr(),*owner);
   return ret;
   }
 
@@ -229,12 +229,12 @@ bool X11Api::implIsRunning() {
 int X11Api::implExec(SystemApi::AppCallBack &cb) {
   // main message loop
   while (!isExit.load()) {
-    implProcessEvent(cb);
+    implProcessEvents(cb);
     }
   return 0;
   }
 
-int X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
+void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
   // main message loop
   if(XPending(dpy)>0) {
     XEvent xev={};
@@ -329,9 +329,8 @@ int X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
     if(cb.onTimer()==0)
       std::this_thread::yield();
     for(auto& i:windows) {
-      ::Window hWnd = HWND(i.first);
       // artificial move/resize event
-      alignGeometry(hWnd,*i.second);
+      alignGeometry(i.first,*i.second);
       SystemApi::dispatchRender(*i.second);
       }
     }

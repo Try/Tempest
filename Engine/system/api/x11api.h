@@ -26,6 +26,10 @@ class X11Api : public SystemApi {
 
     int      implExec(AppCallBack& cb) override;
     void     implProcessEvents(AppCallBack& cb) override;
-  };
+    bool     implIsRunning() override;
+
+  private:
+    void     alignGeometry(Window *w, Tempest::Window& owner);
+};
 
 }
