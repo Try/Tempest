@@ -182,7 +182,8 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, 
   //maximizeWindow(win);
   XMapWindow(dpy, win);
   XSync(dpy,False);
-  alignGeometry(win.ptr(),*owner);
+  if(owner!=nullptr)
+    alignGeometry(win.ptr(),*owner);
   return ret;
   }
 
