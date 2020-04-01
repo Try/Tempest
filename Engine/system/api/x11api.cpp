@@ -330,6 +330,8 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
     if(cb.onTimer()==0)
       std::this_thread::yield();
     for(auto& i:windows) {
+      if(i.second==nullptr)
+        continue;
       // artificial move/resize event
       alignGeometry(i.first,*i.second);
       SystemApi::dispatchRender(*i.second);
