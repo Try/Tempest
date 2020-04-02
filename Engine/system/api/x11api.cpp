@@ -182,7 +182,8 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, 
   //maximizeWindow(win);
   XMapWindow(dpy, win);
   XSync(dpy,False);
-  alignGeometry(win.ptr(),*owner);
+  if(owner!=nullptr)
+    alignGeometry(win.ptr(),*owner);
   return ret;
   }
 
@@ -328,6 +329,8 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
     if(cb.onTimer()==0)
       std::this_thread::yield();
     for(auto& i:windows) {
+      if(i.second==nullptr)
+        continue;
       // artificial move/resize event
       alignGeometry(i.first,*i.second);
       SystemApi::dispatchRender(*i.second);

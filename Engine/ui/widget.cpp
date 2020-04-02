@@ -114,9 +114,9 @@ void Widget::dispatchPaintEvent(PaintEvent& e) {
   astate.needToUpdate = false;
 
   paintEvent(e);
-  const size_t count=widgetsCount();
-  for(size_t i=0;i<count;++i) {
-    Widget& wx=widget(i);
+  Widget::Iterator it(this);
+  for(;it.hasNext();it.next()) {
+    Widget& wx=*it.get();
     if(!wx.isVisible())
       continue;
 
@@ -127,6 +127,16 @@ void Widget::dispatchPaintEvent(PaintEvent& e) {
 
     PaintEvent ex(e,wx.x(),wx.y(),sc.x,sc.y,sc.w,sc.h);
     wx.dispatchPaintEvent(ex);
+    }
+  }
+
+void Widget::dispatchPolishEvent(PolishEvent& e) {
+  polishEvent(e);
+  Widget::Iterator it(this);
+  for(;it.hasNext();it.next()) {
+    Widget& wx=*it.get();
+    if(wx.stl==nullptr)
+      wx.dispatchPolishEvent(e);
     }
   }
 
@@ -493,13 +503,13 @@ void Widget::setStyle(const Style* s) {
     return;
 
   if(stl!=nullptr) {
-    stl->unpolish(*this);
     stl->implDecRef();
     }
   stl = s;
   if(stl!=nullptr) {
     stl->implAddRef();
-    stl->polish(*this);
+    PolishEvent e;
+    dispatchPolishEvent(e);
     }
   }
 
@@ -513,6 +523,16 @@ const Style& Widget::style() const {
       return Application::style();
       }
     }
+  }
+
+void Widget::implRegisterSCut(Shortcut* s) {
+  std::lock_guard<std::recursive_mutex> guard(syncSCuts);
+  sCuts.push_back(s);
+  }
+
+void Widget::implUnregisterSCut(Shortcut* s) {
+  std::lock_guard<std::recursive_mutex> guard(syncSCuts);
+  sCuts.resize( size_t(std::remove( sCuts.begin(), sCuts.end(), s ) - sCuts.begin()) );
   }
 
 void Widget::paintEvent(PaintEvent&) {
@@ -566,12 +586,5 @@ void Widget::closeEvent(CloseEvent& e) {
   e.ignore();
   }
 
-void Widget::implRegisterSCut(Shortcut* s) {
-  std::lock_guard<std::recursive_mutex> guard(syncSCuts);
-  sCuts.push_back(s);
-  }
-
-void Widget::implUnregisterSCut(Shortcut* s) {
-  std::lock_guard<std::recursive_mutex> guard(syncSCuts);
-  sCuts.resize( size_t(std::remove( sCuts.begin(), sCuts.end(), s ) - sCuts.begin()) );
+void Widget::polishEvent(PolishEvent&) {
   }

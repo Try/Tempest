@@ -72,13 +72,15 @@ uint8_t* PixmapCodecDDS::load(PixmapCodec::Context &c, uint32_t &ow, uint32_t &o
     h = std::max<size_t>(1,h/2);
     }
 
-  std::unique_ptr<uint8_t[]> ddsv(new(std::nothrow) uint8_t[bufferSize]);
-  if(!ddsv || f.read(ddsv.get(),bufferSize)!=bufferSize)
+  uint8_t* ddsv = reinterpret_cast<uint8_t*>(std::malloc(bufferSize));
+  if(!ddsv || f.read(ddsv,bufferSize)!=bufferSize) {
+    std::free(ddsv);
     return nullptr;
+    }
 
   bpp    = 0;
   dataSz = bufferSize;
-  return ddsv.release();
+  return ddsv;
   }
 
 bool PixmapCodecDDS::save(ODevice &, const char* /*ext*/, const uint8_t *data, size_t dataSz,

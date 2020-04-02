@@ -9,9 +9,16 @@ using namespace Tempest;
 ScrollBar::ScrollBar(Tempest::Orientation ori) : orient(ori) {
   mSmallStep = 10;
   mLargeStep = 20;
-  setSizeHint(27,27);
   implSetOrientation(orient);
   timer.timeout.bind(this,&ScrollBar::processPress);
+
+  auto& m = style().metrics();
+  setSizeHint(Size(m.scrollbarSize,m.scrollbarSize));
+  }
+
+void ScrollBar::polishEvent(PolishEvent&) {
+  auto& m = style().metrics();
+  setSizeHint(Size(m.scrollbarSize,m.scrollbarSize));
   }
 
 void ScrollBar::setOrientation(Tempest::Orientation ori) {
@@ -94,8 +101,8 @@ void ScrollBar::setLargeStep(int step) {
   }
 
 void ScrollBar::setCentralButtonSize(int sz) {
-  //const UiMetrics& metric = Application::uiMetrics();
-  //cenBtnSize = std::max<int>(int(metric.scrollButtonSize*metric.uiScale), sz);
+  auto& m = style().metrics();
+  cenBtnSize = std::max<int>(m.scrollButtonSize, sz);
   cenBtnSize = sz;
   }
 

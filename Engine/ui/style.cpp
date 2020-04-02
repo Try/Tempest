@@ -15,6 +15,14 @@
 
 using namespace Tempest;
 
+Style::UiMetrics::UiMetrics() {
+#ifdef __MOBILE_PLATFORM__
+  buttonSize = 48;
+#else
+  buttonSize = 27;
+#endif
+  }
+
 const Margin Style::Extra::emptyMargin;
 const Icon   Style::Extra::emptyIcon;
 const Font   Style::Extra::emptyFont;
@@ -381,6 +389,11 @@ Size Style::sizeHint(Label*, Style::Element e, const TextModel* text, const Styl
   return sz;
   }
 
+const Style::UiMetrics& Style::metrics() const {
+  static UiMetrics m;
+  return m;
+  }
+
 void Style::drawCursor(Painter &p,const WidgetState &st,int x,int h,bool animState) const {
   if( st.editable && animState && st.focus ){
     p.setBrush( Brush(Color(0,0,1,1),Painter::NoBlend) );
@@ -398,3 +411,4 @@ void Style::implDecRef() const {
 Style::UIIntefaceIdiom::UIIntefaceIdiom(Style::UIIntefaceCategory category):category(category){
   touch=(category==UIIntefacePad || category==UIIntefacePhone);
   }
+

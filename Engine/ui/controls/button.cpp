@@ -7,9 +7,15 @@ using namespace Tempest;
 
 Button::Button() {
   setMargins(4);
-  setSizeHint(27,27);
+  auto& m = style().metrics();
+  setSizeHint(Size(m.buttonSize,m.buttonSize));
   setSizePolicy(Preferred,Fixed);
   setFocusPolicy(ClickFocus);
+  }
+
+void Button::polishEvent(PolishEvent&) {
+  auto& m = style().metrics();
+  setSizeHint(Size(m.buttonSize,m.buttonSize));
   }
 
 void Button::setText(const char *text) {
