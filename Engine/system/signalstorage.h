@@ -68,7 +68,7 @@ class SgStorage {
         }
       }
 
-    void erase(const IT* at,size_t sz) {
+    void erase(const IT* at,uint32_t sz) {
       uintptr_t begin=uintptr_t(&data->byte[0]);
       uintptr_t pos  =uintptr_t(at)-begin;
 

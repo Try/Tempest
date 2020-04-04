@@ -41,7 +41,21 @@ class Signal<void(Args...args)> {
       TImpl<T,Base,Ret,TArgs...> ref(obj,fn);
       for(auto i=b;i!=e;i=i->next()){
         if(i->equals(ref)) {
-          storage.erase(i,sizeof(ref));
+          storage.erase(i,uint32_t(sizeof(ref)));
+          return;
+          }
+        }
+      }
+
+    template<class T,class Base,class Ret,class ... TArgs>
+    void ubind(T* obj,Ret (Base::*fn)(TArgs...a) const) {
+      auto b = storage.begin();
+      auto e = storage.end();
+
+      TImplConst<T,Base,Ret,TArgs...> ref(obj,fn);
+      for(auto i=b;i!=e;i=i->next()){
+        if(i->equals(ref)) {
+          storage.erase(i,uint32_t(sizeof(ref)));
           return;
           }
         }
