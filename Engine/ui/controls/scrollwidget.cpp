@@ -70,13 +70,17 @@ struct ScrollWidget::ProxyLayout : public Tempest::Layout {
 
 
 ScrollWidget::ScrollWidget()
-  : sbH(Horizontal), sbV(Vertical), vert(AsNeed), hor(AsNeed) {
+  :ScrollWidget(Vertical) {
+  }
+
+ScrollWidget::ScrollWidget(Orientation ori)
+  : sbH(Horizontal), sbV(Vertical), vert(AsNeed), hor(AsNeed)  {
   const Style::UIIntefaceCategory cat=style().idiom().category;
   if( cat==Style::UIIntefacePhone || cat==Style::UIIntefacePC ){
     vert=AlwaysOff;
     hor =AlwaysOff;
     }
-  setSizePolicy(Expanding);
+  setSizePolicy(Preferred);
 
   sbH.onValueChanged.bind(this, static_cast<void(ScrollWidget::*)(int)>(&ScrollWidget::scrollH));
   sbV.onValueChanged.bind(this, static_cast<void(ScrollWidget::*)(int)>(&ScrollWidget::scrollV));
@@ -89,7 +93,7 @@ ScrollWidget::ScrollWidget()
   addWidget(&sbH);
   addWidget(&sbV);
 
-  cenLay = new BoxLayout(this,orient);
+  cenLay = new BoxLayout(this,ori);
   cen.setLayout(cenLay);
   helper. setLayout(new Tempest::Layout());
   Widget::setLayout(new ProxyLayout (this));
@@ -199,17 +203,19 @@ void ScrollWidget::emplace(Widget &cen, Widget *scH, Widget *scV, const Rect& pl
   }
 
 Widget *ScrollWidget::findFirst() {
-  for(size_t i=0;i<widgetsCount();i++)
-    if(widget(i).isVisible())
-      return &widget(i);
+  size_t sz = cen.widgetsCount();
+  for(size_t i=0;i<sz;++i){
+    if(cen.widget(i).isVisible())
+      return &cen.widget(i);
+    }
   return nullptr;
   }
 
 Widget *ScrollWidget::findLast() {
-  for(size_t i=widgetsCount();i>0;){
+  for(size_t i=cen.widgetsCount();i>0;){
     i--;
-    if(widget(i).isVisible())
-      return &widget(i);
+    if(cen.widget(i).isVisible())
+      return &cen.widget(i);
     }
   return nullptr;
   }
@@ -219,7 +225,6 @@ Tempest::Widget &ScrollWidget::centralWidget() {
   }
 
 void ScrollWidget::setLayout(Orientation ori) {
-  orient = ori;
   cen.setLayout(new BoxLayout(this,ori));
   }
 
@@ -326,7 +331,7 @@ void ScrollWidget::complexLayout() {
 
   layoutBusy=true;
   helper.setGeometry(0,0,w(),h());
-  wrapContent(cen,orient);
+  wrapContent();
   cenLay->commitLayout();
 
   static const int tryCound=3;
@@ -336,15 +341,12 @@ void ScrollWidget::complexLayout() {
   layoutBusy=false;
   }
 
-void ScrollWidget::wrapContent(Widget& ow,Orientation orient) {
-  if(ow.widgetsCount()==0)
-    return;
-
+void ScrollWidget::wrapContent() {
   SizePolicy spolicy;
-  auto wrap = cenLay->wrapContent(ow,orient,true);
+  auto wrap = contentAreaSize();
   spolicy.maxSize=wrap;
   spolicy.minSize=wrap;
-  if(orient==Horizontal) {
+  if(cenLay->orientation()==Horizontal) {
     spolicy.typeH  =Fixed;
     spolicy.typeV  =Preferred;
     } else {
@@ -352,5 +354,9 @@ void ScrollWidget::wrapContent(Widget& ow,Orientation orient) {
     spolicy.typeV  =Fixed;
     }
 
-  ow.resize(wrap);
+  cen.resize(wrap);
+  }
+
+Size ScrollWidget::contentAreaSize() {
+  return cenLay->wrapContent(cen,cenLay->orientation(),true);
   }

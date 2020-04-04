@@ -10,6 +10,7 @@ class ListView;
 class ScrollWidget : public Tempest::Widget {
   public:
     ScrollWidget();
+    ScrollWidget(Tempest::Orientation ori);
     ~ScrollWidget();
 
     enum ScrollViewMode : uint8_t {
@@ -49,6 +50,8 @@ class ScrollWidget : public Tempest::Widget {
     void    mouseWheelEvent(Tempest::MouseEvent &e);
     void    mouseMoveEvent(Tempest::MouseEvent &e);
 
+    virtual Size contentAreaSize();
+
   private:
     struct BoxLayout;
     struct ProxyLayout;
@@ -60,7 +63,7 @@ class ScrollWidget : public Tempest::Widget {
     Widget* findLast();
 
     void    complexLayout();
-    void    wrapContent(Widget& w, Orientation orient);
+    void    wrapContent();
 
     Widget         cen;
     Widget         helper;
@@ -77,8 +80,6 @@ class ScrollWidget : public Tempest::Widget {
     bool           scBeforeBeginV = false;
 
     bool           layoutBusy = false;
-
-    Tempest::Orientation orient = Tempest::Vertical;
 
     using Tempest::Widget::layout;
   };
