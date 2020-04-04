@@ -154,9 +154,12 @@ void Widget::setOwner(Widget *w) {
   ow=w;
   }
 
-Widget& Widget::implAddWidget(Widget *w) {
+Widget& Widget::implAddWidget(Widget *w,size_t at) {
   if(w==nullptr)
     throw std::invalid_argument("null widget");
+  if(at>wx.size())
+    throw std::invalid_argument("invalid widget position");
+
   if(w->checkFocus()) {
     while(true) {
       implClearFocus(this,&Additive::focus,&WidgetState::focus);
@@ -168,7 +171,7 @@ Widget& Widget::implAddWidget(Widget *w) {
       implAttachFocus();
     }
 
-  wx.emplace_back(w);
+  wx.insert(wx.begin()+int(at),w);
   w->setOwner(this);
   if(w->checkFocus())
     astate.focus = w;

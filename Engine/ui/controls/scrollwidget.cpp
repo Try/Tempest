@@ -6,7 +6,7 @@
 using namespace Tempest;
 
 struct ScrollWidget::BoxLayout: public Tempest::LinearLayout {
-  BoxLayout( ScrollWidget* sc,Orientation ori ):LinearLayout(ori), sc(sc){}
+  BoxLayout(ScrollWidget* sc,Orientation ori ):LinearLayout(ori), sc(sc){}
 
   void applyLayout() {
     sc->complexLayout();
@@ -55,7 +55,7 @@ struct ScrollWidget::BoxLayout: public Tempest::LinearLayout {
     return Size(sw,sh);
     }
 
-  ScrollWidget* sc;
+  ScrollWidget* sc = nullptr;
   };
 
 struct ScrollWidget::ProxyLayout : public Tempest::Layout {
@@ -65,7 +65,7 @@ struct ScrollWidget::ProxyLayout : public Tempest::Layout {
     sc->complexLayout();
     }
 
-  ScrollWidget* sc;
+  ScrollWidget* sc = nullptr;
   };
 
 
@@ -75,6 +75,8 @@ ScrollWidget::ScrollWidget()
 
 ScrollWidget::ScrollWidget(Orientation ori)
   : sbH(Horizontal), sbV(Vertical), vert(AsNeed), hor(AsNeed)  {
+  layoutBusy=true;
+
   const Style::UIIntefaceCategory cat=style().idiom().category;
   if( cat==Style::UIIntefacePhone || cat==Style::UIIntefacePC ){
     vert=AlwaysOff;
@@ -97,6 +99,8 @@ ScrollWidget::ScrollWidget(Orientation ori)
   cen.setLayout(cenLay);
   helper. setLayout(new Tempest::Layout());
   Widget::setLayout(new ProxyLayout (this));
+
+  layoutBusy=false;
   }
 
 ScrollWidget::~ScrollWidget() {
@@ -225,7 +229,11 @@ Tempest::Widget &ScrollWidget::centralWidget() {
   }
 
 void ScrollWidget::setLayout(Orientation ori) {
-  cen.setLayout(new BoxLayout(this,ori));
+  layoutBusy=true;
+  cenLay = new BoxLayout(this,ori);
+  cen.setLayout(cenLay);
+  layoutBusy=false;
+  applyLayout();
   }
 
 void ScrollWidget::hideScrollBars() {

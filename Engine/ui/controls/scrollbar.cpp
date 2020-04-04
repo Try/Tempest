@@ -103,7 +103,6 @@ void ScrollBar::setLargeStep(int step) {
 void ScrollBar::setCentralButtonSize(int sz) {
   auto& m = style().metrics();
   cenBtnSize = std::max<int>(m.scrollButtonSize, sz);
-  cenBtnSize = sz;
   }
 
 int ScrollBar::centralAreaSize() const {

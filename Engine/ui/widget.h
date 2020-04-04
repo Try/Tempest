@@ -39,6 +39,8 @@ class Widget {
     void    removeAllWidgets();
     template<class T>
     T&      addWidget(T* w);
+    template<class T>
+    T&      addWidget(T* w,size_t at);
     Widget* takeWidget(Widget* w);
 
           Widget* owner()       { return ow; }
@@ -192,7 +194,7 @@ class Widget {
 
     void                    freeLayout() noexcept;
     void                    implDisableSum(Widget *root,int diff) noexcept;
-    Widget&                 implAddWidget(Widget* w);
+    Widget&                 implAddWidget(Widget* w,size_t at);
     void                    implSetFocus(Widget* Additive::*add, bool WidgetState::*flag, bool value, const MouseEvent* parent);
     static void             implExcFocus(Event::Type type,Widget* prev, Widget* next, const MouseEvent& parent);
     static void             implClearFocus(Widget* w,Widget* Additive::*add, bool WidgetState::*flag);
@@ -214,7 +216,13 @@ class Widget {
 
 template<class T>
 T& Widget::addWidget(T* w){
-  implAddWidget(w);
+  implAddWidget(w,widgetsCount());
+  return *w;
+  }
+
+template<class T>
+T& Widget::addWidget(T* w,size_t at){
+  implAddWidget(w,at);
   return *w;
   }
 }
