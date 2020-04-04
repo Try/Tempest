@@ -129,8 +129,10 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
     ret.page=allocator.dedicatedAlloc(memRq.size,align,memId.headId,memId.typeId); else
     ret.page=allocator.alloc(memRq.size,align,memId.headId,memId.typeId);
 
-  if(!ret.page.page)
+  if(!ret.page.page) {
+    ret.alloc = nullptr;
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
+    }
   if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset,
              mem,count,size,alignedSz))
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
@@ -172,7 +174,11 @@ VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip,VkFormat format) {
     ret.page=allocator.dedicatedAlloc(memRq.size,memRq.alignment,memId.headId,memId.typeId); else
     ret.page=allocator.alloc(memRq.size,memRq.alignment,memId.headId,memId.typeId);
 
-  if(!ret.page.page || !commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset))
+  if(!ret.page.page) {
+    ret.alloc = nullptr;
+    throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
+    }
+  if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset))
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
 
   auto s = samplers.get(mip);
@@ -212,7 +218,11 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mi
     ret.page=allocator.dedicatedAlloc(memRq.size,memRq.alignment,memId.headId,memId.typeId); else
     ret.page=allocator.alloc(memRq.size,memRq.alignment,memId.headId,memId.typeId);
 
-  if(!ret.page.page || !commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset))
+  if(!ret.page.page) {
+    ret.alloc = nullptr;
+    throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
+    }
+  if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset))
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
 
   auto s = samplers.get(mip);
