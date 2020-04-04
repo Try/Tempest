@@ -37,10 +37,12 @@ class LinearLayout : public Layout {
     LinearLayout(Orientation ori):ori(ori){}
 
     void applyLayout() override { applyLayout(*owner(),ori); }
-    void applyLayout(Widget& w,Orientation ori);
+    Orientation orientation() const { return ori; }
 
   private:
     Orientation ori;
+
+    void applyLayout(Widget& w,Orientation ori);
 
     template<bool hor>
     void implApplyLayout(Widget& w);

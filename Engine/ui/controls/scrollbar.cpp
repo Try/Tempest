@@ -107,8 +107,7 @@ void ScrollBar::setCentralButtonSize(int sz) {
   }
 
 int ScrollBar::centralAreaSize() const {
-  auto r = elementRect(Elt_Cen);
-
+  auto r = elementRect(Elt_Space);
   if(orientation()==Vertical)
     return r.h; else
     return r.w;
@@ -259,7 +258,7 @@ Rect ScrollBar::elementRect(ScrollBar::Elements e) const {
       int   x = int(float(space-cen)*k);
 
       if(orient==Orientation::Vertical)
-        return Rect(0,wx+x,cen,w()); else
+        return Rect(0,wx+x,w(),cen); else
         return Rect(wx+x,0,cen,h());
       }
     case Elt_IncL:
