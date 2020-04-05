@@ -26,6 +26,7 @@ class Button : public Widget {
 
     void         setText(const char* text);
     void         setText(const std::string& text);
+    auto         text() -> const TextModel& { return textM; }
 
     void         setFont(const Font& f);
     const Font&  font() const;

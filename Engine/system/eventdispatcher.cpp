@@ -349,7 +349,7 @@ std::shared_ptr<Widget::Ref> EventDispatcher::lock(std::weak_ptr<Widget::Ref> &w
   while(wx->owner()!=nullptr) {
     wx = wx->owner();
     }
-  if(dynamic_cast<Window*>(wx) || wx==customRoot)
+  if(dynamic_cast<Window*>(wx) || dynamic_cast<UiOverlay*>(wx) || wx==customRoot)
     return ptr;
   return nullptr;
   }

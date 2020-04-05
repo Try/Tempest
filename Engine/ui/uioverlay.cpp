@@ -8,7 +8,13 @@ UiOverlay::UiOverlay() {
   }
 
 UiOverlay::~UiOverlay() {
+  updateWindow();
   SystemApi::takeOverlay(this);
+  }
+
+void UiOverlay::updateWindow() {
+  if(owner!=nullptr)
+    owner->update();
   }
 
 bool UiOverlay::bind(Widget& w) {
@@ -25,6 +31,7 @@ bool UiOverlay::bind(Window& w) {
   if(owner!=nullptr)
     return false;
   owner = &w;
+  owner->update();
   setGeometry(w.rect());
   applyLayout();
   return true;

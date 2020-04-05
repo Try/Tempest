@@ -10,6 +10,8 @@ class UiOverlay : public Tempest::Widget {
     UiOverlay();
     virtual ~UiOverlay();
 
+    void updateWindow();
+
   private:
     bool bind(Widget& w);
     bool bind(Window& w);

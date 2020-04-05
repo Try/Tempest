@@ -2,6 +2,7 @@
 
 #include <Tempest/Layout>
 #include <Tempest/Application>
+#include <Tempest/UiOverlay>
 
 using namespace Tempest;
 
@@ -493,11 +494,18 @@ void Widget::implExcFocus(Event::Type type,Widget *prev,Widget *next,const Mouse
 
 void Widget::update() noexcept {
   Widget* w=this;
-  while(w!=nullptr){
+  while(true){
     if(w->astate.needToUpdate)
       return;
     w->astate.needToUpdate=true;
-    w = w->owner();
+    auto ow = w->owner();
+    if(ow==nullptr) {
+      if(auto overlay = dynamic_cast<UiOverlay*>(w)){
+        overlay->updateWindow();
+        }
+      return;
+      }
+    w = ow;
     }
   }
 
