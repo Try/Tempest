@@ -18,6 +18,10 @@ void Button::polishEvent(PolishEvent&) {
   setSizeHint(Size(m.buttonSize,m.buttonSize));
   }
 
+void Button::emitClick() {
+  onClick();
+  }
+
 void Button::setText(const char *text) {
   textM.setText(text);
   invalidateSizeHint();
@@ -79,7 +83,7 @@ void Button::mouseUpEvent(MouseEvent& e) {
       }
 
     if(isPressed())
-      onClick();
+      emitClick();
     else if(e.button==Event::ButtonRight)
       showMenu();
     }

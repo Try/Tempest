@@ -55,6 +55,8 @@ class Button : public Widget {
     void paintEvent     (Tempest::PaintEvent&  e) override;
     void polishEvent    (Tempest::PolishEvent& e) override;
 
+    virtual void emitClick();
+
   private:
     TextModel    textM;
     Icon         icn;

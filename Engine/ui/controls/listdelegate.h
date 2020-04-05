@@ -80,7 +80,7 @@ class AbstractListDelegate : public ListDelegate {
       const size_t id;
       Tempest::Signal<void(size_t,Widget*)> onClick;
 
-      void emitClick() {
+      void emitClick() override {
         onClick(id,this);
         }
       };
