@@ -68,13 +68,13 @@ VkDescriptorPool VDescriptorArray::allocPool(const UniformsLayout& lay, size_t s
     }
 
   for(auto& i:poolSize)
-    i.descriptorCount*=size;
+    i.descriptorCount*=uint32_t(size);
 
   VkDescriptorPoolCreateInfo poolInfo = {};
   poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-  poolInfo.maxSets       = size;
+  poolInfo.maxSets       = uint32_t(size);
   poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-  poolInfo.poolSizeCount = pSize;
+  poolInfo.poolSizeCount = uint32_t(pSize);
   poolInfo.pPoolSizes    = poolSize;
 
   VkDescriptorPool ret = VK_NULL_HANDLE;

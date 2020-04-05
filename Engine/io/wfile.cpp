@@ -82,8 +82,8 @@ WFile &WFile::operator =(WFile &&other) {
 size_t WFile::write(const void *val, size_t size) {
 #ifdef __WINDOWS__
   HANDLE fn           = HANDLE(handle);
-  DWORD dwBytesWriten = size;
-  return WriteFile( fn, val, size, &dwBytesWriten, nullptr) ? dwBytesWriten : 0;
+  DWORD dwBytesWriten = DWORD(size);
+  return WriteFile( fn, val, DWORD(size), &dwBytesWriten, nullptr) ? dwBytesWriten : 0;
 #else
   return fwrite(val,1,size,reinterpret_cast<FILE*>(handle));
 #endif

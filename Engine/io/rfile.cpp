@@ -82,8 +82,8 @@ RFile &RFile::operator =(RFile &&other) {
 size_t RFile::read(void *dest, size_t size) {
 #ifdef __WINDOWS__
   HANDLE fn          = HANDLE(handle);
-  DWORD  dwBytesRead = size;
-  DWORD  cnt         = ReadFile(fn, dest, size, &dwBytesRead, nullptr) ? dwBytesRead : 0;
+  DWORD  dwBytesRead = DWORD(size);
+  DWORD  cnt         = ReadFile(fn, dest, DWORD(size), &dwBytesRead, nullptr) ? dwBytesRead : 0;
 
   return cnt;
 #else
