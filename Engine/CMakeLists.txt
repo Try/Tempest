@@ -41,8 +41,23 @@ if(WIN32)
   endif()
 endif()
 
+### zlib
+add_subdirectory("thirdparty/zlib")
+set(ZLIB_LIBRARY zlibstatic)
+set(ZLIB_INCLUDE_DIR "thirdparty/zlib")
+target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/zlib")
+
 ### squish
 target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/squish")
+
+### libpng16
+set(PNG_SHARED OFF)
+set(SKIP_INSTALL_ALL ON)
+add_subdirectory("thirdparty/libpng")
+target_include_directories(png_static PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(png_static PRIVATE "thirdparty/zlib")
+target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/libpng")
+target_link_libraries(${PROJECT_NAME} PRIVATE png_static)
 
 ### stb
 add_definitions(-DSTB_IMAGE_IMPLEMENTATION)

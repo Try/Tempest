@@ -17,16 +17,16 @@
 
 using namespace Tempest;
 
-static int stbiEof(void */*user*/) {
+static int stbiEof(void* /*user*/) {
   //return reinterpret_cast<IDevice*>(user)->peek();
   return 0;
   }
 
-static int stbiRead(void *user, char *data, int size) {
+static int stbiRead(void* user, char* data, int size) {
   return int(reinterpret_cast<IDevice*>(user)->read(data,size_t(size)));
   }
 
-static void stbiSkip(void *user, int n) {
+static void stbiSkip(void* user, int n) {
   reinterpret_cast<IDevice*>(user)->seek(size_t(n));
   }
 
