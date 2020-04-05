@@ -135,6 +135,7 @@ class Menu {
 
     std::vector<MPanel>  panels;
     Overlay*             overlay = nullptr;
+    bool                 running = false;
     Declarator           decl;
 
     static void assign(std::string& s, const char*     ch);
@@ -142,6 +143,7 @@ class Menu {
 
     static void assign(std::string& s, const std::string& ch);
     static void assign(std::string& s, const std::u16string& ch);
+    void implClose();
   };
 }
 

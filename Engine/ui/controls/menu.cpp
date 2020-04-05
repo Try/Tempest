@@ -69,7 +69,7 @@ Menu::Menu(Declarator&& decl): decl(std::move(decl)){
   }
 
 Menu::~Menu() {
-  close();
+  implClose();
   }
 
 int Menu::exec(Widget &owner) {
@@ -78,8 +78,9 @@ int Menu::exec(Widget &owner) {
 
 int Menu::exec(Widget& owner, const Point &pos, bool alignWidthToOwner) {
   if(overlay!=nullptr)
-    close();
+    implClose();
 
+  running = true;
   overlay = new Overlay(this,&owner);
   SystemApi::addOverlay(overlay);
 
@@ -88,7 +89,7 @@ int Menu::exec(Widget& owner, const Point &pos, bool alignWidthToOwner) {
 
   Widget *box = createDropList(owner,alignWidthToOwner,decl.items);
   if(box==nullptr) {
-    close();
+    implClose();
     return -1;
     }
   panels.resize(1);
@@ -97,13 +98,17 @@ int Menu::exec(Widget& owner, const Point &pos, bool alignWidthToOwner) {
   overlay->addWidget( box );
   box->setFocus(true);
 
-  while(overlay!=nullptr && Application::isRunning()) {
+  while(overlay!=nullptr && running && Application::isRunning()) {
     Application::processEvents();
     }
   return 0;
   }
 
 void Menu::close() {
+  running = false;
+  }
+
+void Menu::implClose() {
   if(overlay!=nullptr){
     delete overlay;
     overlay = nullptr;
