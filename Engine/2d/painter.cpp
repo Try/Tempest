@@ -250,14 +250,21 @@ void Painter::implDrawRect(int x1, int y1, int x2, int y2, float u1, float v1, f
   if(T_LIKELY(s.tr.mat.type()==Transform::T_AxisAligned)) {
     s.tr.mat.map(x1,y1, x1,y1);
     s.tr.mat.map(x2,y2, x2,y2);
-    if(T_UNLIKELY(x1>x2)) {
+    if(T_UNLIKELY(x1>=x2)) {
+      if(T_UNLIKELY(x1==x2))
+        return;
       std::swap(x1,x2);
       std::swap(u1,u2);
       }
-    if(T_UNLIKELY(y1>y2)) {
+    if(T_UNLIKELY(y1>=y2)) {
+      if(T_UNLIKELY(y1==y2))
+        return;
       std::swap(y1,y2);
       std::swap(v1,v2);
       }
+
+    float invW = (u2-u1)/float(x2-x1);
+    float invH = (v2-v1)/float(y2-y1);
 
     ScissorRect& sc = s.scRect;
     if(x1<sc.x){
@@ -265,7 +272,7 @@ void Painter::implDrawRect(int x1, int y1, int x2, int y2, float u1, float v1, f
       x1+=dx;
       if(x1>=x2)
         return;
-      u1+=dx*s.invW;
+      u1+=dx*invW;
       }
 
     if(sc.x1<x2){
@@ -273,7 +280,7 @@ void Painter::implDrawRect(int x1, int y1, int x2, int y2, float u1, float v1, f
       x2+=dx;
       if(x1>=x2)
         return;
-      u2+=dx*s.invW;
+      u2+=dx*invW;
       }
 
     if(y1<sc.y){
@@ -281,7 +288,7 @@ void Painter::implDrawRect(int x1, int y1, int x2, int y2, float u1, float v1, f
       y1+=dy;
       if(y1>=y2)
         return;
-      v1+=dy*s.invH;
+      v1+=dy*invH;
       }
 
     if(sc.y1<y2){
@@ -289,7 +296,7 @@ void Painter::implDrawRect(int x1, int y1, int x2, int y2, float u1, float v1, f
       y2+=dy;
       if(y1>=y2)
         return;
-      v2+=dy*s.invH;
+      v2+=dy*invH;
       }
 
     implAddPoint(x1,y1, u1,v1);
@@ -331,6 +338,10 @@ void Painter::drawRect(int x, int y, int w, int h) {
 
 void Painter::drawRect(int x, int y, unsigned w, unsigned h) {
   implDrawRect(x,y,x+int(w),y+int(h), s.dU,s.dV,w*s.invW+s.dU,h*s.invH+s.dV);
+  }
+
+void Painter::drawRect(const Rect& rect) {
+  drawRect(rect.x,rect.y,rect.w,rect.h);
   }
 
 void Painter::drawLine(int ix1, int iy1, int ix2, int iy2) {
@@ -404,6 +415,10 @@ void Painter::drawLine(int ix1, int iy1, int ix2, int iy2) {
     }
   implAddPoint(x1+0.5f,y1+0.5f, 0,0);
   implAddPoint(x2+0.5f,y2+0.5f, 0,0);
+  }
+
+void Painter::drawLine(const Point& a, const Point& b) {
+  drawLine(a.x,a.y,b.x,b.y);
   }
 
 void Painter::setFont(const Font &f) {

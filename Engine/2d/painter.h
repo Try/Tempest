@@ -54,8 +54,10 @@ class Painter {
                   int u1,int v1,int u2,int v2);
     void drawRect(int x,int y,int width,int height);
     void drawRect(int x,int y,unsigned width,unsigned height);
+    void drawRect(const Rect& rect);
 
     void drawLine(int x1,int y1,int x2,int y2);
+    void drawLine(const Point& a,const Point& b);
 
     void drawTriangle( int x0, int y0, float u0, float v0,
                        int x1, int y1, float u1, float v1,
