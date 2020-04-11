@@ -172,8 +172,20 @@ Widget& Widget::implAddWidget(Widget *w,size_t at) {
       implAttachFocus();
     }
 
-  wx.insert(wx.begin()+int(at),w);
-  w->setOwner(this);
+  if(w->ow!=this) {
+    wx.insert(wx.begin()+int(at),w);
+    w->setOwner(this);
+    } else {
+    size_t curAt=0;
+    for(;;curAt++)
+      if(wx[curAt]==w)
+        break;
+    for(size_t i=curAt;i+1<wx.size();++i)
+      wx[i]=wx[i+1];
+    for(size_t i=wx.size()-1;i>at;--i)
+      wx[i]=wx[i-1];
+    wx[at] = w;
+    }
   if(w->checkFocus())
     astate.focus = w;
   if(astate.disable>0)
