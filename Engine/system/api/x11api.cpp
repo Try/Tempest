@@ -180,6 +180,7 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, 
   auto ret = reinterpret_cast<SystemApi::Window*>(win.ptr());
   windows[ret] = owner;
   //maximizeWindow(win);
+  setAsFullscreen(ret, true); // This had to be added for the setAsFullscreen function to be called for me
   XMapWindow(dpy, win);
   XSync(dpy,False);
   if(owner!=nullptr)
@@ -188,7 +189,21 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, 
   }
 
 SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, SystemApi::ShowMode sm) {
-  return implCreateWindow(owner,800,600); //TODO
+  Screen*  s = DefaultScreenOfDisplay(dpy);
+  int width = s->width;
+	int height = s->height;
+  
+  SystemApi::Window* hwnd = nullptr;
+
+  if(sm==Normal) 
+    hwnd = implCreateWindow(owner,800, 600);
+  else 
+    hwnd = implCreateWindow(owner,width, height);
+  
+  if(sm==FullScreen)
+    setAsFullscreen(hwnd,true);
+  
+  return hwnd;
   }
 
 void X11Api::implDestroyWindow(SystemApi::Window *w) {
@@ -197,19 +212,52 @@ void X11Api::implDestroyWindow(SystemApi::Window *w) {
   }
 
 bool X11Api::implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) {
-  return false;
+  Atom a[1];
+  a[0] = _NET_WM_STATE_FULLSCREEN();
+  
+  // In case this is needed, this can be used to resize a window after it has been created
+  // XResizeWindow(dpy, HWND(w), width, height);
+
+  if(fullScreen) {
+    XChangeProperty ( dpy, HWND(w), _NET_WM_STATE(),
+      XA_ATOM, 32, PropModeReplace, (unsigned char*)a, 1);
+  } else {
+    XChangeProperty ( dpy, HWND(w), _NET_WM_STATE(),
+      XA_ATOM, 32, PropModeReplace, (unsigned char*)a, 0);
+  }
+  
+  XSync(dpy,False);
   }
 
 bool X11Api::implIsFullscreen(SystemApi::Window *w) {
-  return false;
+  return true; // TODO - hardcoded for now
   }
 
 void X11Api::implSetCursorPosition(int x, int y) {
-  // TODO
+  // If I turn this code on, it causes no input to work. I'm guessing it may have to do with either the function itself (need to look further at what the windows version does) or the events coming from this.
+
+  //XWarpPointer(dpy, HWND(windows.begin()->first), HWND(windows.begin()->first), 0, 0, 0, 0, x, y);
+  //XFlush(dpy);
   }
 
 void X11Api::implShowCursor(bool show) {
-  // TODO
+  if(show) {
+    XUndefineCursor(dpy, HWND(windows.begin()->first));
+    } else {
+    Cursor invisibleCursor;
+    Pixmap bitmapNoData;
+    XColor black;
+    static char noData[] = { 0,0,0,0,0,0,0,0 };
+    black.red = black.green = black.blue = 0;
+
+    bitmapNoData = XCreateBitmapFromData(dpy, HWND(windows.begin()->first), noData, 8, 8);
+    invisibleCursor = XCreatePixmapCursor(dpy, bitmapNoData, bitmapNoData, 
+                                      &black, &black, 0, 0);
+    XDefineCursor(dpy, HWND(windows.begin()->first), invisibleCursor);
+    XFreeCursor(dpy, invisibleCursor);
+    XFreePixmap(dpy, bitmapNoData);
+    }
+  XSync(dpy, False);
   }
 
 Rect X11Api::implWindowClientRect(SystemApi::Window *w) {
