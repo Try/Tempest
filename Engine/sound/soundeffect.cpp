@@ -35,7 +35,7 @@ struct SoundEffect::Impl {
     alGenSourcesCt(ctx, 1, &source);
 
     threadFlag.store(true);
-    producerThread = std::thread([this](){
+    producerThread = std::thread([this]() noexcept {
       soundThreadFn();
       });
     }
