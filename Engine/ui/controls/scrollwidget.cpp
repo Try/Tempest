@@ -26,7 +26,11 @@ struct ScrollWidget::BoxLayout: public Tempest::LinearLayout {
       if( !wx.isVisible() )
         continue;
       vcount++;
-      Size s = wx.sizeHint();
+      Size s   = wx.sizeHint();
+      Size min = wx.minSize();
+      s.w = std::max(s.w,min.w);
+      s.h = std::max(s.h,min.h);
+
       if(orient==Horizontal){
         sw += s.w;
         sh = std::max(sh,s.h);
