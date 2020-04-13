@@ -328,12 +328,12 @@ AbstractGraphicsApi::CommandBundle *VulkanApi::createCommandBuffer(AbstractGraph
                                                                    FboLayout *fbo) {
   Detail::VDevice*             dx=reinterpret_cast<Detail::VDevice*>(d);
   Detail::VFramebufferLayout*  fb=reinterpret_cast<Detail::VFramebufferLayout*>(fbo);
-  return new Detail::VCommandBundle(dx->device,dx->cmdMain->impl,fb);
+  return new Detail::VCommandBundle(*dx,fb);
   }
 
 AbstractGraphicsApi::CommandBuffer* VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device* d) {
   Detail::VDevice*             dx=reinterpret_cast<Detail::VDevice*>(d);
-  return new Detail::VCommandBuffer(*dx,*dx->cmdMain);
+  return new Detail::VCommandBuffer(*dx);
   }
 
 void VulkanApi::present(Device *d,Swapchain *sw,uint32_t imageId,const Semaphore *wait) {

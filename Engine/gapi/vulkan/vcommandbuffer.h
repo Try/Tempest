@@ -4,6 +4,7 @@
 #include "vulkan_sdk.h"
 
 #include "vcommandbundle.h"
+#include "vcommandpool.h"
 #include "vframebuffer.h"
 #include "../utility/dptr.h"
 
@@ -37,7 +38,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
       };
 
     VCommandBuffer()=delete;
-    VCommandBuffer(VDevice &device, VCommandPool &pool);
+    VCommandBuffer(VDevice &device, VkCommandPoolCreateFlags flags=VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
     ~VCommandBuffer();
 
     VkCommandBuffer impl=nullptr;
@@ -91,7 +92,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     VCommandBundle& getChunk();
 
     VkDevice                                device=nullptr;
-    VkCommandPool                           pool  =VK_NULL_HANDLE;
+    VCommandPool                            pool;
 
     std::vector<VCommandBundle>             chunks, reserved;
     VCommandBundle*                         lastChunk=nullptr;

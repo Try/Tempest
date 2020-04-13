@@ -10,15 +10,34 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-VCommandBundle::VCommandBundle(VkDevice& device, VkCommandPool& pool, VFramebufferLayout* fbo)
-  :device(device), pool(pool), fboLay(fbo) {
+VCommandBundle::VCommandBundle(VkDevice& device, VCommandPool& pool, VFramebufferLayout* fbo)
+  :device(device), pool(&pool), fboLay(fbo) {
   VkCommandBufferAllocateInfo allocInfo = {};
   allocInfo.sType             =VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  allocInfo.commandPool       =pool;
+  allocInfo.commandPool       =pool.impl;
   allocInfo.level             =VK_COMMAND_BUFFER_LEVEL_SECONDARY;
   allocInfo.commandBufferCount=1;
 
   vkAssert(vkAllocateCommandBuffers(device,&allocInfo,&impl));
+  }
+
+VCommandBundle::VCommandBundle(VDevice& device, VFramebufferLayout* fbo)
+  :device(device.device), fboLay(fbo) {
+  ownPool = true;
+  pool    = new VCommandPool(device);
+  try {
+    VkCommandBufferAllocateInfo allocInfo = {};
+    allocInfo.sType             =VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool       =pool->impl;
+    allocInfo.level             =VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+    allocInfo.commandBufferCount=1;
+
+    vkAssert(vkAllocateCommandBuffers(device.device,&allocInfo,&impl));
+    }
+  catch (...) {
+    delete pool;
+    throw;
+    }
   }
 
 VCommandBundle::VCommandBundle(VCommandBundle&& other)
@@ -30,7 +49,9 @@ VCommandBundle::VCommandBundle(VCommandBundle&& other)
 VCommandBundle::~VCommandBundle() {
   if(device==nullptr || impl==nullptr)
     return;
-  vkFreeCommandBuffers(device,pool,1,&impl);
+  vkFreeCommandBuffers(device,pool->impl,1,&impl);
+  if(ownPool)
+    delete pool;
   }
 
 VCommandBundle& VCommandBundle::operator =(VCommandBundle&& other) {

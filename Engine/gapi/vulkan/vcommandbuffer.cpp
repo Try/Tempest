@@ -22,8 +22,8 @@ struct VCommandBuffer::ImgState {
   bool          outdated;
   };
 
-VCommandBuffer::VCommandBuffer(VDevice& device, VCommandPool& pool)
-  :device(device.device), pool(pool.impl) {
+VCommandBuffer::VCommandBuffer(VDevice& device, VkCommandPoolCreateFlags flags)
+  :device(device.device), pool(device,flags) {
   VkCommandBufferAllocateInfo allocInfo = {};
   allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   allocInfo.commandPool        = pool.impl;
@@ -37,7 +37,7 @@ VCommandBuffer::VCommandBuffer(VDevice& device, VCommandPool& pool)
   }
 
 VCommandBuffer::~VCommandBuffer() {
-  vkFreeCommandBuffers(device,pool,1,&impl);
+  vkFreeCommandBuffers(device,pool.impl,1,&impl);
   }
 
 void VCommandBuffer::reset() {

@@ -183,7 +183,6 @@ class VDevice : public AbstractGraphicsApi::Device {
         void wait();
 
         VDevice&               owner;
-        VCommandPool           cmdPool;
         VCommandBuffer         cmdBuffer;
         std::vector<ResPtr>    hold;
 

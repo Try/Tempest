@@ -22,7 +22,8 @@ class VTexture;
 
 class VCommandBundle : public AbstractGraphicsApi::CommandBundle {
   public:
-    VCommandBundle(VkDevice& device, VkCommandPool& pool, VFramebufferLayout* fbo);
+    VCommandBundle(VkDevice& device, VCommandPool& pool, VFramebufferLayout* fbo);
+    VCommandBundle(VDevice& device, VFramebufferLayout* fbo);
     VCommandBundle(VCommandBundle&& other);
     ~VCommandBundle();
 
@@ -45,11 +46,13 @@ class VCommandBundle : public AbstractGraphicsApi::CommandBundle {
     void drawIndexed(size_t ioffset, size_t isize, size_t voffset);
 
     VkDevice        device=nullptr;
-    VkCommandPool   pool  =VK_NULL_HANDLE;
+    VCommandPool*   pool  =nullptr;
     VkCommandBuffer impl  =nullptr;
-    bool            recording=false;
 
     Detail::DSharedPtr<VFramebufferLayout*> fboLay;
+
+    bool            recording=false;
+    bool            ownPool  =false;
 
   private:
     void            implSetUniforms(VkCommandBuffer cmd, VPipeline& p, VDescriptorArray& u,
