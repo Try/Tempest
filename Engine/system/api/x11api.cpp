@@ -189,9 +189,9 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, 
   }
 
 SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, SystemApi::ShowMode sm) {
-  Screen*  s = DefaultScreenOfDisplay(dpy);
+  Screen* s = DefaultScreenOfDisplay(dpy);
   int width = s->width;
-	int height = s->height;
+  int height = s->height;
   
   SystemApi::Window* hwnd = nullptr;
 
@@ -230,13 +230,37 @@ bool X11Api::implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) {
   }
 
 bool X11Api::implIsFullscreen(SystemApi::Window *w) {
-  return true; // TODO - hardcoded for now
+  Atom actualType;
+  int actualFormat;
+  unsigned long i, numItems, bytesAfter;
+  unsigned char *propertyValue = NULL;
+  long maxLength = 1024;
+  
+  if (XGetWindowProperty(dpy, HWND(w), _NET_WM_STATE(),
+                           0l, maxLength, False, XA_ATOM, &actualType,
+                           &actualFormat, &numItems, &bytesAfter,
+                           &propertyValue) == Success) {
+        int fullscreen = 0;
+        Atom *atoms = (Atom *) propertyValue;
+
+        for (i = 0; i < numItems; ++i) {
+            if (atoms[i] == _NET_WM_STATE_FULLSCREEN()) {
+                fullscreen = 1;
+            }
+        }
+        
+        if(fullscreen) {
+          return true;
+        }
+  }
+  return false;
   }
 
 void X11Api::implSetCursorPosition(int x, int y) {
   // If I turn this code on, it causes no input to work. I'm guessing it may have to do with either the function itself (need to look further at what the windows version does) or the events coming from this.
 
-  //XWarpPointer(dpy, HWND(windows.begin()->first), HWND(windows.begin()->first), 0, 0, 0, 0, x, y);
+  //XSelectInput(dpy, HWND(windows.begin()->first), KeyReleaseMask);
+  //XWarpPointer(dpy, None, HWND(windows.begin()->first), 0, 0, 0, 0, x, y);
   //XFlush(dpy);
   }
 
@@ -257,6 +281,7 @@ void X11Api::implShowCursor(bool show) {
     XFreeCursor(dpy, invisibleCursor);
     XFreePixmap(dpy, bitmapNoData);
     }
+
   XSync(dpy, False);
   }
 
