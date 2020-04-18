@@ -25,9 +25,9 @@ if(WIN32)
     )
 endif()
 if(UNIX)
-  # add_definitions(-DHAVE_DSOUND)
-  # add_definitions(-DHAVE_ALSA)
+  add_definitions(-DHAVE_ALSA)
   file(GLOB AlcBackend
+    "Alc/backends/alsa.c"
     "Alc/backends/null.c"
     "Alc/backends/loopback.c"
     )
@@ -45,4 +45,8 @@ add_library(${PROJECT_NAME} STATIC ${SOURCES} ${AlcBackend})
 
 if(WIN32)
   target_link_libraries(${PROJECT_NAME} PRIVATE dxguid Dsound winmm Kernel32)
+endif()
+
+if(UNIX)
+  target_link_libraries(${PROJECT_NAME} PRIVATE asound)
 endif()
