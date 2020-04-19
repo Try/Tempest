@@ -214,6 +214,10 @@ std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget& w,MouseEvent 
   }
 
 void EventDispatcher::implMouseWhell(Widget& w,MouseEvent &event) {
+  if(!w.isVisible()) {
+    event.ignore();
+    return;
+    }
   Point            pos=event.pos();
   Widget::Iterator it(&w);
   for(;it.hasNext();it.next()) {
@@ -240,6 +244,9 @@ void EventDispatcher::implMouseWhell(Widget& w,MouseEvent &event) {
   }
 
 bool EventDispatcher::implShortcut(Widget& w, KeyEvent& event) {
+  if(!w.isVisible())
+    return false;
+
   Widget::Iterator it(&w);
   for(;it.hasNext();it.next()) {
     Widget* i=it.get();

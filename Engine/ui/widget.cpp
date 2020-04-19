@@ -126,6 +126,9 @@ void Widget::dispatchPaintEvent(PaintEvent& e) {
     r.y -= wx.y();
     Rect sc = r.intersected(Rect(0,0,wx.w(),wx.h()));
 
+    if(sc.isEmpty())
+      continue;
+
     PaintEvent ex(e,wx.x(),wx.y(),sc.x,sc.y,sc.w,sc.h);
     wx.dispatchPaintEvent(ex);
     }
