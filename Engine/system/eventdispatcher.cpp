@@ -178,6 +178,10 @@ void EventDispatcher::dispatchDestroyWindow(SystemApi::Window* w) {
   }
 
 std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget& w,MouseEvent &event) {
+  if(!w.isVisible()) {
+    event.ignore();
+    return nullptr;
+    }
   Point            pos=event.pos();
   Widget::Iterator it(&w);
 
