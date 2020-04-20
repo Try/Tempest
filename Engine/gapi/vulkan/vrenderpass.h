@@ -2,6 +2,7 @@
 
 #include <Tempest/AbstractGraphicsApi>
 #include <Tempest/Color>
+#include <vector>
 #include "vulkan_sdk.h"
 
 #include "utility/spinlock.h"

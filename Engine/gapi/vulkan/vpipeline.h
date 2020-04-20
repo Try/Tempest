@@ -2,6 +2,7 @@
 
 #include <Tempest/AbstractGraphicsApi>
 #include <Tempest/RenderState>
+#include <vector>
 
 #include "../utility/dptr.h"
 #include "../utility/spinlock.h"

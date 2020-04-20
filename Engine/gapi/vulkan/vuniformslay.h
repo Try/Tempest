@@ -4,6 +4,7 @@
 #include "vulkan_sdk.h"
 #include <mutex>
 #include <list>
+#include <vector>
 
 #include "utility/spinlock.h"
 

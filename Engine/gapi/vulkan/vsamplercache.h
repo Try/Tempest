@@ -2,6 +2,7 @@
 
 #include <Tempest/Texture2d>
 #include <mutex>
+#include <vector>
 #include "vulkan_sdk.h"
 
 namespace Tempest {

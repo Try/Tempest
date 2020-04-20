@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
+#include <vector>
 
 #include "vulkan_sdk.h"
 #include "utility/spinlock.h"

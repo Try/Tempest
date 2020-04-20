@@ -8,6 +8,7 @@
 
 #include <set>
 #include <thread>
+#include <cstring>
 
 #define VK_KHR_WIN32_SURFACE_EXTENSION_NAME "VK_KHR_win32_surface"
 #define VK_KHR_XLIB_SURFACE_EXTENSION_NAME  "VK_KHR_xlib_surface"

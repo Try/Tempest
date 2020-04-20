@@ -13,6 +13,8 @@
 #include <Tempest/Platform>
 #include <thread>
 #include <set>
+#include <cstring>
+#include <array>
 
 #if defined(__WINDOWS__)
 #  define VK_USE_PLATFORM_WIN32_KHR
