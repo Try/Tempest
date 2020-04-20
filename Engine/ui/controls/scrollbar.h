@@ -68,6 +68,7 @@ class ScrollBar : public Tempest::Widget {
     Elements tracePoint(const Point& p) const;
     void     implSetOrientation( Tempest::Orientation ori );
     auto     stateOf(WidgetState& out, Elements e) const -> WidgetState&;
+    Elements elements() const;
 
 
     Timer                timer;
@@ -76,9 +77,9 @@ class ScrollBar : public Tempest::Widget {
     int                  mValue=rmin;
     int                  cenBtnSize = 40;
 
-    Tempest::Orientation orient     = Tempest::Vertical;
-    Elements             elements   = Elements(Elt_Inc|Elt_Dec|Elt_Cen);
-    Elements             pressed    = Elt_None;
+    Tempest::Orientation orient  = Tempest::Vertical;
+    Elements             eltMask = Elements(Elt_Inc|Elt_Dec|Elt_Cen);
+    Elements             pressed = Elt_None;
     Tempest::Point       mpos;
   };
 }

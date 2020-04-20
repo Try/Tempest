@@ -394,6 +394,10 @@ const Style::UiMetrics& Style::metrics() const {
   return m;
   }
 
+Style::Element Style::visibleElements() const {
+  return E_All;
+  }
+
 void Style::drawCursor(Painter &p,const WidgetState &st,int x,int h,bool animState) const {
   if( st.editable && animState && st.focus ){
     p.setBrush( Brush(Color(0,0,1,1),Painter::NoBlend) );

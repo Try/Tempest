@@ -73,16 +73,19 @@ class Style {
       cursorFlashTime=500
       };
 
-    enum Element {
-      E_Background,
-      E_MenuBackground,
-      E_MenuItemBackground,
-      E_ArrowUp,
-      E_ArrowDown,
-      E_ArrowLeft,
-      E_ArrowRight,
-      E_CentralButton,
-      E_Last
+    enum Element : uint32_t {
+      E_None               = 0,
+      E_Background         = 0x1,
+      E_MenuBackground     = 0x2,
+      E_MenuItemBackground = 0x4,
+      // scrollbar
+      E_ArrowUp            = 0x8,
+      E_ArrowDown          = 0x10,
+      E_ArrowLeft          = 0x20,
+      E_ArrowRight         = 0x40,
+      E_CentralButton      = 0x80,
+      //
+      E_All                = 0xFFFF,
       };
 
     enum TextElement {
@@ -131,6 +134,7 @@ class Style {
 
     // metric
     virtual const UiMetrics& metrics() const;
+    virtual  Element         visibleElements() const;
 
   protected:
     virtual void polish  (Widget& w) const;

@@ -25,10 +25,10 @@ namespace Tempest {
         };
 
       // all widgets
-      bool disabled       = false;
-      bool focus          = false;
-      bool moveOver       = false;
-      bool visible        = true;
+      bool       disabled = false;
+      bool       focus    = false;
+      bool       moveOver = false;
+      bool       visible  = true;
 
       // click-controls
       ButtonType button   = T_PushButton;

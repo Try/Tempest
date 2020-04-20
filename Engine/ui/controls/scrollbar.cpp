@@ -45,6 +45,25 @@ void ScrollBar::implSetOrientation(Orientation ori) {
   update();
   }
 
+ScrollBar::Elements ScrollBar::elements() const {
+  const auto stl = style().visibleElements();
+  uint8_t smask = 0;
+  if(orientation()==Vertical) {
+    if(stl&Style::E_ArrowUp)
+      smask |= Elt_Dec;
+    if(stl&Style::E_ArrowDown)
+      smask |= Elt_Inc;
+    } else {
+    if(stl&Style::E_ArrowLeft)
+      smask |= Elt_Dec;
+    if(stl&Style::E_ArrowRight)
+      smask |= Elt_Inc;
+    }
+  if(stl&Style::E_CentralButton)
+    smask |= Elt_Cen;
+  return Elements(eltMask & smask);
+  }
+
 WidgetState& ScrollBar::stateOf(WidgetState& out, ScrollBar::Elements e) const {
   out = state();
   if((pressed&e)==e)
@@ -113,12 +132,12 @@ int ScrollBar::centralAreaSize() const {
   }
 
 void ScrollBar::hideArrowButtons() {
-  elements = Elements(elements|Elt_Inc|Elt_Dec);
+  eltMask = Elements(eltMask & ~(Elt_Inc|Elt_Dec));
   update();
   }
 
 void ScrollBar::showArrawButtons() {
-  elements = Elements(elements & ~(Elt_Inc|Elt_Dec));
+  eltMask = Elements(eltMask|Elt_Inc|Elt_Dec);
   update();
   }
 
@@ -209,8 +228,9 @@ void ScrollBar::decL() {
   }
 
 Rect ScrollBar::elementRect(ScrollBar::Elements e) const {
-  const int wx    = (orient==Orientation::Vertical) ? w() : h();
-  const int sz    = std::max((orient==Orientation::Vertical) ? h() : w(), wx*2);
+  const int  wx       = (orient==Orientation::Vertical) ? w() : h();
+  const int  sz       = std::max((orient==Orientation::Vertical) ? h() : w(), wx*2);
+  const auto elements = this->elements();
 
   switch(e) {
     case Elt_None:
@@ -295,6 +315,7 @@ void ScrollBar::paintEvent(PaintEvent &e) {
     Painter p(e);
     style().draw(p,this,Style::E_Background,state(),Rect(0,0,w(),h()),Style::Extra(*this));
   }
+  const auto elements = this->elements();
 
   if((elements&Elt_Inc)!=0) {
     auto& st = stateOf(tmpSt,Elt_Inc);
