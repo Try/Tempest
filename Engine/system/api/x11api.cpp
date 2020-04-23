@@ -12,6 +12,7 @@
 #include <Tempest/Event>
 #include <Tempest/TextCodec>
 #include <Tempest/Window>
+#include <Tempest/Log>
 
 #include <atomic>
 #include <stdexcept>
@@ -46,6 +47,7 @@ static const char*      wndClassName="Tempest.Window";
 static Display*         dpy  = nullptr;
 static ::Window         root = {};
 static std::atomic_bool isExit{0};
+static int              activeCursorChange = 0;
 
 static std::unordered_map<SystemApi::Window*,Tempest::Window*> windows;
 
@@ -195,13 +197,24 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, SystemApi::S
   
   SystemApi::Window* hwnd = nullptr;
 
-  if(sm==Normal) 
-    hwnd = implCreateWindow(owner,800, 600);
-  else 
-    hwnd = implCreateWindow(owner,width, height);
-  
-  if(sm==FullScreen)
-    setAsFullscreen(hwnd,true);
+  switch(sm) {
+    case Hidden:
+      hwnd = implCreateWindow(owner,1, 1);
+      // TODO: make window invisible
+      break;
+    case Normal:
+      hwnd = implCreateWindow(owner,800, 600);
+      break;
+    case Minimized:
+    case Maximized
+      // TODO
+      hwnd = implCreateWindow(owner,width, height);
+      break;
+    case FullScreen:
+      hwnd = implCreateWindow(owner,width, height);
+      implSetAsFullscreen(hwnd,true);
+      break;
+    }
   
   return hwnd;
   }
@@ -214,9 +227,6 @@ void X11Api::implDestroyWindow(SystemApi::Window *w) {
 bool X11Api::implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) {
   Atom a[1];
   a[0] = _NET_WM_STATE_FULLSCREEN();
-  
-  // In case this is needed, this can be used to resize a window after it has been created
-  // XResizeWindow(dpy, HWND(w), width, height);
 
   if(fullScreen) {
     XChangeProperty ( dpy, HWND(w), _NET_WM_STATE(),
@@ -257,11 +267,9 @@ bool X11Api::implIsFullscreen(SystemApi::Window *w) {
   }
 
 void X11Api::implSetCursorPosition(int x, int y) {
-  // If I turn this code on, it causes no input to work. I'm guessing it may have to do with either the function itself (need to look further at what the windows version does) or the events coming from this.
-
-  //XSelectInput(dpy, HWND(windows.begin()->first), KeyReleaseMask);
-  //XWarpPointer(dpy, None, HWND(windows.begin()->first), 0, 0, 0, 0, x, y);
-  //XFlush(dpy);
+  activeCursorChange = 1;
+  XWarpPointer(dpy, None, HWND(windows.begin()->first), 0, 0, 0, 0, x, y);
+  XFlush(dpy);
   }
 
 void X11Api::implShowCursor(bool show) {
@@ -365,6 +373,10 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
         break;
         }
       case MotionNotify: {
+        if(activeCursorChange == 1) {
+          activeCursorChange = 0;
+          break;
+        }
         MouseEvent e( xev.xmotion.x,
                       xev.xmotion.y,
                       Event::ButtonNone,
