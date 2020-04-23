@@ -12,7 +12,6 @@
 #include <Tempest/Event>
 #include <Tempest/TextCodec>
 #include <Tempest/Window>
-#include <Tempest/Log>
 
 #include <atomic>
 #include <stdexcept>
