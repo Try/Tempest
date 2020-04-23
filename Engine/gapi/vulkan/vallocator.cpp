@@ -129,13 +129,12 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
     ret.page=allocator.dedicatedAlloc(memRq.size,align,memId.headId,memId.typeId); else
     ret.page=allocator.alloc(memRq.size,align,memId.headId,memId.typeId);
 
-  if(!ret.page.page) {
-    ret.alloc = nullptr;
+  if(!ret.page.page)
+    throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
+  if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset,
+             mem,count,size,alignedSz)) {
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
     }
-  if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset,
-             mem,count,size,alignedSz))
-    throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
   return ret;
   }
 
@@ -178,8 +177,10 @@ VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip,VkFormat format) {
     ret.alloc = nullptr;
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
     }
-  if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset))
+  if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset)) {
+    ret.alloc = nullptr;
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
+    }
 
   auto s = samplers.get(mip);
   ret.createView(device,imageInfo.format,s,mip);
@@ -222,8 +223,10 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mi
     ret.alloc = nullptr;
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
     }
-  if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset))
+  if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset)) {
+    ret.alloc = nullptr;
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
+    }
 
   auto s = samplers.get(mip);
   ret.createView(device,imageInfo.format,s,mip);
@@ -234,7 +237,8 @@ void VAllocator::free(VBuffer &buf) {
   if(buf.impl!=VK_NULL_HANDLE) {
     vkDestroyBuffer (device,buf.impl,nullptr);
     }
-  allocator.free(buf.page);
+  if(buf.page.page!=nullptr)
+    allocator.free(buf.page);
   }
 
 void VAllocator::free(VTexture &buf) {
