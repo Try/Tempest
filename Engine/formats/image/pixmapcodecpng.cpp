@@ -154,7 +154,7 @@ uint8_t* PixmapCodecPng::load(PixmapCodec::Context& c, uint32_t& w, uint32_t& h,
 
 bool PixmapCodecPng::save(ODevice& f, const char* ext, const uint8_t* data,
                           size_t /*dataSz*/, uint32_t w, uint32_t h, Pixmap::Format frm) const {
-  if(ext==nullptr || std::strcmp("png",ext)==0)
+  if(ext!=nullptr && std::strcmp("png",ext)!=0)
     return false;
 
   uint32_t bpp=0;
