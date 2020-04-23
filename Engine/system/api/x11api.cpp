@@ -205,7 +205,7 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, SystemApi::S
       hwnd = implCreateWindow(owner,800, 600);
       break;
     case Minimized:
-    case Maximized
+    case Maximized:
       // TODO
       hwnd = implCreateWindow(owner,width, height);
       break;
