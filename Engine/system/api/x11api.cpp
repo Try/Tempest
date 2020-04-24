@@ -180,8 +180,6 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, 
 
   auto ret = reinterpret_cast<SystemApi::Window*>(win.ptr());
   windows[ret] = owner;
-  //maximizeWindow(win);
-  setAsFullscreen(ret, true); // This had to be added for the setAsFullscreen function to be called for me
   XMapWindow(dpy, win);
   XSync(dpy,False);
   if(owner!=nullptr)
@@ -224,18 +222,22 @@ void X11Api::implDestroyWindow(SystemApi::Window *w) {
   }
 
 bool X11Api::implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) {
-  Atom a[1];
-  a[0] = _NET_WM_STATE_FULLSCREEN();
-
-  if(fullScreen) {
-    XChangeProperty ( dpy, HWND(w), _NET_WM_STATE(),
-      XA_ATOM, 32, PropModeReplace, (unsigned char*)a, 1);
-  } else {
-    XChangeProperty ( dpy, HWND(w), _NET_WM_STATE(),
-      XA_ATOM, 32, PropModeReplace, (unsigned char*)a, 0);
-  }
+  XEvent e = {};
+  e.xclient.type         = ClientMessage;
+  e.xclient.window       = HWND(w);
+  e.xclient.message_type = _NET_WM_STATE();
+  e.xclient.format       = 32;
+  e.xclient.data.l[0]    = 2;    // _NET_WM_STATE_TOGGLE
+  e.xclient.data.l[1]    = _NET_WM_STATE_FULLSCREEN();
+  e.xclient.data.l[2]    = 0;    // no second property to toggle
   
-  XSync(dpy,False);
+  if(fullScreen)
+    e.xclient.data.l[3]  = 1;
+  else
+    e.xclient.data.l[3]  = 0;
+
+  XSendEvent(dpy, DefaultRootWindow(dpy), False, SubstructureRedirectMask | SubstructureNotifyMask, &e);
+  return true;
   }
 
 bool X11Api::implIsFullscreen(SystemApi::Window *w) {
@@ -267,7 +269,7 @@ bool X11Api::implIsFullscreen(SystemApi::Window *w) {
 
 void X11Api::implSetCursorPosition(int x, int y) {
   activeCursorChange = 1;
-  XWarpPointer(dpy, None, HWND(windows.begin()->first), 0, 0, 0, 0, x, y);
+  XWarpPointer(dpy, None, root, 0, 0, 0, 0, x, y);
   XFlush(dpy);
   }
 
