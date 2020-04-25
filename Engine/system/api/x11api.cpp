@@ -274,6 +274,8 @@ void X11Api::implSetCursorPosition(int x, int y) {
   }
 
 void X11Api::implShowCursor(bool show) {
+  if(windows.size()==0)
+    return;
   if(show) {
     XUndefineCursor(dpy, HWND(windows.begin()->first));
     } else {
@@ -375,6 +377,7 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
         }
       case MotionNotify: {
         if(activeCursorChange == 1) {
+          // FIXME: mouse behave crazy in OpenGothic
           activeCursorChange = 0;
           break;
         }
