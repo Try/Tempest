@@ -75,6 +75,9 @@ class Painter {
     void drawText(int x,int y,int w,int h,const char* txt,AlignFlag flg=NoAlign);
     void drawText(int x,int y,int w,int h,const std::string& txt,AlignFlag flg=NoAlign);
 
+    void drawText(const Rect& rect,const char* txt,AlignFlag flg=NoAlign);
+    void drawText(const Rect& rect,const std::string& txt,AlignFlag flg=NoAlign);
+
   private:
     enum State:uint8_t {
       StNo   =0,
