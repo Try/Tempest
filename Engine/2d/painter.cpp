@@ -501,7 +501,7 @@ void Painter::drawText(int x, int y, const std::u16string &txt) {
   return drawText(x,y,txt.c_str());
   }
 
-static Utf8Iterator advanceByWord(Utf8Iterator i, int& x, int w, Font& fnt, TextureAtlas& ta){
+static Utf8Iterator advanceByWord(Utf8Iterator i, int& x, int w, const Font& fnt, TextureAtlas& ta){
   while(true){
     auto c=i.peek();
     if(c=='\0' || c=='\n' || c=='\r' || c=='\t' || c=='\v' || c=='\f' || c==' ')
@@ -516,7 +516,7 @@ static Utf8Iterator advanceByWord(Utf8Iterator i, int& x, int w, Font& fnt, Text
   return i;
   }
 
-static Utf8Iterator advanceByLine(Utf8Iterator i, int& x, int w, Font& fnt, TextureAtlas& ta){
+static Utf8Iterator advanceByLine(Utf8Iterator i, int& x, int w, const Font& fnt, TextureAtlas& ta){
   size_t wordCount=0;
   while(true){
     Utf8Iterator eow = advanceByWord(i,x,w,fnt,ta);
@@ -538,13 +538,69 @@ static Utf8Iterator advanceByLine(Utf8Iterator i, int& x, int w, Font& fnt, Text
   return i;
   }
 
-void Painter::drawText(int rx, int ry, int w, int /*h*/, const char *txt, AlignFlag flg) {
+static int calcLineWidth(Utf8Iterator i, Utf8Iterator eol, const Font& fnt, TextureAtlas& ta) {
+  int x = 0;
+  while(i!=eol){
+    auto c=i.next();
+    if(c=='\0')
+      return x;
+    if(c=='\n' || c=='\r')
+      continue;
+    auto l=fnt.letter(c,ta);
+    x += l.advance.x;
+    }
+  return x;
+  }
+
+static int calcTextHeight(const char* txt, const int w, int& l0, const Font& fnt, TextureAtlas& ta) {
+  int x = 0,  y=0, cnt = 0;
+
+  Utf8Iterator i(txt);
+  while(i.hasData()) {
+    Utf8Iterator eol = advanceByLine(i,x,w,fnt,ta);
+    if(i==eol)
+      break;
+    cnt++;
+    x = 0;
+    if(cnt>1) {
+      i = eol;
+      continue;
+      }
+    while(i!=eol){
+      auto c=i.next();
+      if(c=='\0'){
+        return y;
+        }
+      if(c=='\n' || c=='\r') {
+        continue;
+        }
+      auto l=fnt.letter(c,ta);
+      y = std::max(l.size.h+l.dpos.y,y);
+      }
+    }
+
+  l0 = y;
+  if(cnt>1)
+    y += (cnt-1)*int(std::ceil(fnt.pixelSize()));
+  return y;
+  }
+
+void Painter::drawText(int rx, int ry, int w, int h, const char *txt, AlignFlag flg) {
   if(txt==nullptr)
     return;
   auto pb=s.br;
-  int  x =0, y=0;
-  Utf8Iterator i(txt);
+  int  x = 0, y = 0, pSz = int(std::ceil(s.fnt.pixelSize()));
 
+  if(flg!=0) {
+    int l0=0;
+    const int th = calcTextHeight(txt,w,l0,s.fnt,ta);
+    if(flg & AlignVCenter)
+      y = l0+(h-th)/2;
+    else if(flg & AlignBottom)
+      y = l0+(h-th);
+    }
+
+  Utf8Iterator i(txt);
   while(i.hasData()) {
     // make next line
     x = 0;
@@ -553,7 +609,16 @@ void Painter::drawText(int rx, int ry, int w, int /*h*/, const char *txt, AlignF
       break;
 
     x = 0;
-    while(i!=eol){
+    if(flg & AlignHCenter) {
+      int wl = calcLineWidth(i,eol,s.fnt,ta);
+      x += (w-wl)/2;
+      }
+    else if(flg & AlignRight) {
+      int wl = calcLineWidth(i,eol,s.fnt,ta);
+      x += (w-wl);
+      }
+
+    while(i!=eol) {
       auto c=i.next();
       if(c=='\0'){
         setBrush(pb);
@@ -572,7 +637,7 @@ void Painter::drawText(int rx, int ry, int w, int /*h*/, const char *txt, AlignF
 
       x += l.advance.x;
       }
-    y+=int(std::ceil(s.fnt.pixelSize()));
+    y+=pSz;
     }
   setBrush(pb);
   }
@@ -580,4 +645,3 @@ void Painter::drawText(int rx, int ry, int w, int /*h*/, const char *txt, AlignF
 void Painter::drawText(int x, int y, int w, int h, const std::string &txt, AlignFlag flg) {
   drawText(x,y,w,h,txt.c_str(),flg);
   }
-
