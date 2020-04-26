@@ -88,6 +88,7 @@ WindowsApi::WindowsApi() {
     { VK_PAUSE,    Event::K_Pause    },
     { VK_RETURN,   Event::K_Return   },
     { VK_SPACE,    Event::K_Space    },
+    { VK_CAPITAL,  Event::K_CapsLock },
 
     { VK_F1,       Event::K_F1       },
     { 0x30,        Event::K_0        },
@@ -382,9 +383,9 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
         BYTE kboard[256]={};
         GetKeyboardState(kboard);
         WCHAR buf[2]={};
-        ToUnicode(vkCode,0,kboard,buf,2,0);
+        ToUnicode(uint32_t(vkCode),0,kboard,buf,2,0);
 
-        uint32_t scan = MapVirtualKeyW(wParam,MAPVK_VK_TO_VSC);
+        uint32_t scan = MapVirtualKeyW(uint32_t(wParam),MAPVK_VK_TO_VSC);
 
         Tempest::KeyEvent e(Event::KeyType(key),
                             uint32_t(buf[0]),
