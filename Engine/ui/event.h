@@ -77,6 +77,7 @@ class Event {
       K_End,
       K_Pause,
       K_Space,
+      K_CapsLock,
 
       K_F1,
       K_F2,

@@ -107,16 +107,16 @@ X11Api::X11Api() {
   root = DefaultRootWindow(dpy);
 
   static const TranslateKeyPair k[] = {
-    { XK_KP_Left,   Event::K_Left     },
-    { XK_KP_Right,  Event::K_Right    },
-    { XK_KP_Up,     Event::K_Up       },
-    { XK_KP_Down,   Event::K_Down     },
+    { XK_Control_L, Event::K_LControl },
+    { XK_Control_R, Event::K_RControl },
 
     { XK_Shift_L,   Event::K_LShift   },
     { XK_Shift_R,   Event::K_RShift   },
 
-    { XK_Control_L, Event::K_LControl },
-    { XK_Control_R, Event::K_RControl },
+    { XK_Left,      Event::K_Left     },
+    { XK_Right,     Event::K_Right    },
+    { XK_Up,        Event::K_Up       },
+    { XK_Down,      Event::K_Down     },
 
     { XK_Escape,    Event::K_ESCAPE   },
     { XK_Tab,       Event::K_Tab      },
@@ -127,6 +127,8 @@ X11Api::X11Api() {
     { XK_End,       Event::K_End      },
     { XK_Pause,     Event::K_Pause    },
     { XK_Return,    Event::K_Return   },
+    { XK_space,     Event::K_Space    },
+    { XK_Caps_Lock, Event::K_CapsLock },
 
     { XK_F1,        Event::K_F1       },
     {   48,         Event::K_0        },
@@ -401,7 +403,7 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
         XLookupString(&xev.xkey, txt, sizeof(txt)-1, ksym, nullptr );
 
         auto u16 = TextCodec::toUtf16(txt); // TODO: remove dynamic allocation
-        auto key = SystemApi::translateKey(*ksym);
+        auto key = SystemApi::translateKey(XLookupKeysym(&xev.xkey,0));
 
         uint32_t scan = xev.xkey.keycode;
 
