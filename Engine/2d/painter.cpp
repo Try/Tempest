@@ -645,3 +645,11 @@ void Painter::drawText(int rx, int ry, int w, int h, const char *txt, AlignFlag 
 void Painter::drawText(int x, int y, int w, int h, const std::string &txt, AlignFlag flg) {
   drawText(x,y,w,h,txt.c_str(),flg);
   }
+
+void Painter::drawText(const Rect& r, const char* txt, AlignFlag flg) {
+  drawText(r.x,r.y,r.w,r.h,txt,flg);
+  }
+
+void Painter::drawText(const Rect& r, const std::string& txt, AlignFlag flg) {
+  drawText(r.x,r.y,r.w,r.h,txt,flg);
+  }
