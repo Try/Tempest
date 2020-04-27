@@ -363,8 +363,9 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
         }
       break;
       }
-
+    case WM_SYSKEYDOWN:
     case WM_KEYDOWN:
+    case WM_SYSKEYUP:
     case WM_KEYUP: {
       if(cb) {
         unsigned long long vkCode;
@@ -392,8 +393,8 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
         Tempest::KeyEvent e(Event::KeyType(key),
                             uint32_t(buf[0]),
                             Event::M_NoModifier,
-                            (msg==WM_KEYDOWN) ? Event::KeyDown : Event::KeyUp);
-        if(msg==WM_KEYDOWN)
+                            (msg==WM_KEYDOWN || msg==WM_SYSKEYDOWN) ? Event::KeyDown : Event::KeyUp);
+        if(msg==WM_KEYDOWN || msg==WM_SYSKEYDOWN)
           SystemApi::dispatchKeyDown(*cb,e,scan); else
           SystemApi::dispatchKeyUp  (*cb,e,scan);
         }
