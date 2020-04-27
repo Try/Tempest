@@ -63,6 +63,8 @@ class Event {
       K_RShift,
       K_LShift,
 
+      K_LAlt,
+
       K_Left,
       K_Up,
       K_Right,

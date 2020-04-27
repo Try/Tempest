@@ -73,6 +73,8 @@ WindowsApi::WindowsApi() {
     { VK_LSHIFT,   Event::K_LShift   },
     { VK_RSHIFT,   Event::K_RShift   },
 
+    { VK_MENU,     Event::K_LAlt     },
+
     { VK_LEFT,     Event::K_Left     },
     { VK_RIGHT,    Event::K_Right    },
     { VK_UP,       Event::K_Up       },

@@ -113,6 +113,8 @@ X11Api::X11Api() {
     { XK_Shift_L,   Event::K_LShift   },
     { XK_Shift_R,   Event::K_RShift   },
 
+    { XK_Alt_L,     Event::K_LAlt     },
+
     { XK_Left,      Event::K_Left     },
     { XK_Right,     Event::K_Right    },
     { XK_Up,        Event::K_Up       },
