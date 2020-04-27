@@ -73,6 +73,8 @@ WindowsApi::WindowsApi() {
     { VK_LSHIFT,   Event::K_LShift   },
     { VK_RSHIFT,   Event::K_RShift   },
 
+    { VK_MENU,     Event::K_LAlt     },
+
     { VK_LEFT,     Event::K_Left     },
     { VK_RIGHT,    Event::K_Right    },
     { VK_UP,       Event::K_Up       },
@@ -361,8 +363,9 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
         }
       break;
       }
-
+    case WM_SYSKEYDOWN:
     case WM_KEYDOWN:
+    case WM_SYSKEYUP:
     case WM_KEYUP: {
       if(cb) {
         unsigned long long vkCode;
@@ -390,8 +393,8 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
         Tempest::KeyEvent e(Event::KeyType(key),
                             uint32_t(buf[0]),
                             Event::M_NoModifier,
-                            (msg==WM_KEYDOWN) ? Event::KeyDown : Event::KeyUp);
-        if(msg==WM_KEYDOWN)
+                            (msg==WM_KEYDOWN || msg==WM_SYSKEYDOWN) ? Event::KeyDown : Event::KeyUp);
+        if(msg==WM_KEYDOWN || msg==WM_SYSKEYDOWN)
           SystemApi::dispatchKeyDown(*cb,e,scan); else
           SystemApi::dispatchKeyUp  (*cb,e,scan);
         }
