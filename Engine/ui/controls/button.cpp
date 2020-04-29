@@ -2,6 +2,7 @@
 
 #include <Tempest/Painter>
 #include <Tempest/Brush>
+#include <Tempest/Menu>
 
 using namespace Tempest;
 
@@ -11,6 +12,9 @@ Button::Button() {
   setSizeHint(Size(m.buttonSize,m.buttonSize));
   setSizePolicy(Preferred,Fixed);
   setFocusPolicy(ClickFocus);
+  }
+
+Button::~Button() {
   }
 
 void Button::polishEvent(PolishEvent&) {
@@ -65,14 +69,9 @@ Button::Type Button::buttonType() const {
   }
 
 void Button::mouseDownEvent(MouseEvent &e) {
-  if(e.button!=Event::ButtonLeft){
-    e.ignore();
-    return;
-    }
   if(!isEnabled())
     return;
   setPressed(e.button==Event::ButtonLeft);
-  update();
   }
 
 void Button::mouseUpEvent(MouseEvent& e) {
@@ -137,14 +136,23 @@ void Button::setChecked(WidgetState::CheckState c) {
   update();
   }
 
-void Button::showMenu() {
-  // TODO
+Button::CheckState Button::isChecked() const {
+  return state().checked;
   }
 
 bool Button::isPressed() const {
   return state().pressed;
   }
 
-Button::CheckState Button::isChecked() const {
-  return state().checked;
+void Button::setMenu(Menu* menu) {
+  btnMenu.reset(menu);
+  }
+
+const Menu* Button::menu() const {
+  return btnMenu.get();
+  }
+
+void Button::showMenu() {
+  if(btnMenu!=nullptr)
+    btnMenu->exec(*this);
   }

@@ -5,6 +5,7 @@ using namespace Tempest;
 ListView::ListView(Orientation ori)
   : sc(ori) {
   sc.scrollAfterEndV(true);
+  sc.setMargins(Margin(0));
   addWidget(&sc);
   setSizePolicy(Preferred);
   Widget::setLayout(Vertical);

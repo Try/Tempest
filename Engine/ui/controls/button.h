@@ -8,10 +8,12 @@
 namespace Tempest {
 
 class Font;
+class Menu;
 
 class Button : public Widget {
   public:
     Button();
+    ~Button();
 
     using Type=Tempest::WidgetState::ButtonType;
     static constexpr Type T_PushButton      = Type::T_PushButton;
@@ -43,6 +45,9 @@ class Button : public Widget {
     bool         isPressed() const;
     CheckState   isChecked() const;
 
+    void         setMenu(Tempest::Menu* menu);
+    auto         menu() const -> const Tempest::Menu*;
+
     Signal<void()> onClick;
 
   protected:
@@ -61,6 +66,7 @@ class Button : public Widget {
   private:
     TextModel    textM;
     Icon         icn;
+    std::unique_ptr<Tempest::Menu> btnMenu;
 
     void         invalidateSizeHint(); //TODO: remove
     void         setPressed(bool p);
