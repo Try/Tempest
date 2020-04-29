@@ -86,8 +86,8 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void            flushLayout();
 
     VCommandBuffer::ImgState&
-                    findImg(VkImage img, VkFormat frm, VkImageLayout last);
-    void            setLayout(VFramebuffer::Attach& a, VkFormat frm, VkImageLayout lay);
+                    findImg(VkImage img, VkFormat frm, VkImageLayout last, bool preserve);
+    void            setLayout(VFramebuffer::Attach& a, VkFormat frm, VkImageLayout lay, bool preserve);
 
     VCommandBundle& getChunk();
 

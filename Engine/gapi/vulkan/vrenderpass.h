@@ -45,6 +45,7 @@ class VRenderPass : public AbstractGraphicsApi::Pass {
     static VkRenderPass             createLayoutInstance(VkDevice &device, VSwapchain& sw, const VkFormat    *attach, uint8_t attCount);
 
     uint8_t                         attCount=0;
+    bool                            isAttachPreserved(size_t att) const;
 
   private:
     VkDevice                        device=nullptr;

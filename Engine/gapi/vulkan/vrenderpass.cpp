@@ -216,6 +216,10 @@ VkRenderPass VRenderPass::createLayoutInstance(VkDevice& device,VSwapchain &sw, 
   return ret;
   }
 
+bool VRenderPass::isAttachPreserved(size_t att) const {
+  return (input[att].mode & FboMode::PreserveIn);
+  }
+
 bool VRenderPass::Impl::isCompatible(VFramebufferLayout &l) const {
   if(!lay.handler->isCompatible(l))
     return false;

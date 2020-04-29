@@ -91,7 +91,8 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
     VkImageLayout lay = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     if(Detail::nativeIsDepthFormat(frm))
       lay = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    setLayout(fbo.attach[i],frm,lay);
+    const bool preserve = pass.isAttachPreserved(i);
+    setLayout(fbo.attach[i],frm,lay,preserve);
     }
 
   flushLayout();
@@ -172,12 +173,12 @@ void VCommandBuffer::exec(const CommandBundle &buf) {
   vkCmdExecuteCommands(impl,1,&ecmd.impl);
   }
 
-void VCommandBuffer::setLayout(VFramebuffer::Attach& a, VkFormat frm, VkImageLayout lay) {
+void VCommandBuffer::setLayout(VFramebuffer::Attach& a, VkFormat frm, VkImageLayout lay, bool preserve) {
   ImgState* img;
   if(a.tex!=nullptr) {
-    img = &findImg(a.tex->impl,frm,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    img = &findImg(a.tex->impl,frm,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,preserve);
     } else {
-    img = &findImg(a.sw->images[a.id],frm,VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    img = &findImg(a.sw->images[a.id],frm,VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,preserve);
     }
   changeLayout(img->img,img->frm,img->lay,lay,VK_REMAINING_MIP_LEVELS,true);
   img->outdated = false;
@@ -210,7 +211,7 @@ VCommandBundle& VCommandBuffer::getChunk() {
   return *lastChunk;
   }
 
-VCommandBuffer::ImgState& VCommandBuffer::findImg(VkImage img, VkFormat frm, VkImageLayout last) {
+VCommandBuffer::ImgState& VCommandBuffer::findImg(VkImage img, VkFormat frm, VkImageLayout last, bool preserve) {
   for(auto& i:imgState) {
     if(i.img==img)
       return i;
@@ -218,7 +219,7 @@ VCommandBuffer::ImgState& VCommandBuffer::findImg(VkImage img, VkFormat frm, VkI
   ImgState s={};
   s.img     = img;
   s.frm     = frm;
-  s.lay     = VK_IMAGE_LAYOUT_UNDEFINED;
+  s.lay     = preserve ? last : VK_IMAGE_LAYOUT_UNDEFINED;
   s.last    = last;
   imgState.push_back(s);
   return imgState.back();
