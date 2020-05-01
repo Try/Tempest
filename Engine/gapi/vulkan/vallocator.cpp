@@ -123,14 +123,11 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
     props|=(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
   VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits(props),VK_IMAGE_TILING_LINEAR);
-
-  const size_t align = LCM(memRq.alignment,provider.device->props.nonCoherentAtomSize);
-  if(memRq.dedicated)
-    ret.page=allocator.dedicatedAlloc(memRq.size,align,memId.headId,memId.typeId); else
-    ret.page=allocator.alloc(memRq.size,align,memId.headId,memId.typeId);
+  ret.page = allocMemory(memRq,memId.heapId,memId.typeId);
 
   if(!ret.page.page)
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
+
   if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset,
              mem,count,size,alignedSz)) {
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
@@ -168,10 +165,7 @@ VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip,VkFormat format) {
   getImgMemoryRequirements(memRq,ret.impl);
 
   VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,VK_IMAGE_TILING_OPTIMAL);
-
-  if(memRq.dedicated)
-    ret.page=allocator.dedicatedAlloc(memRq.size,memRq.alignment,memId.headId,memId.typeId); else
-    ret.page=allocator.alloc(memRq.size,memRq.alignment,memId.headId,memId.typeId);
+  ret.page = allocMemory(memRq,memId.heapId,memId.typeId);
 
   if(!ret.page.page) {
     ret.alloc = nullptr;
@@ -214,10 +208,7 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mi
   getImgMemoryRequirements(memRq,ret.impl);
 
   VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,VK_IMAGE_TILING_OPTIMAL);
-
-  if(memRq.dedicated)
-    ret.page=allocator.dedicatedAlloc(memRq.size,memRq.alignment,memId.headId,memId.typeId); else
-    ret.page=allocator.alloc(memRq.size,memRq.alignment,memId.headId,memId.typeId);
+  ret.page = allocMemory(memRq,memId.heapId,memId.typeId);
 
   if(!ret.page.page) {
     ret.alloc = nullptr;
@@ -283,6 +274,7 @@ void VAllocator::getMemoryRequirements(MemRequirements& out,VkBuffer buf) {
     out.dedicated =
         (memDedicatedRq.requiresDedicatedAllocation != VK_FALSE) ||
         (memDedicatedRq.prefersDedicatedAllocation  != VK_FALSE);
+    out.dedicatedRq = (memDedicatedRq.requiresDedicatedAllocation != VK_FALSE);
     return;
     }
 
@@ -323,6 +315,19 @@ void VAllocator::getImgMemoryRequirements(MemRequirements& out, VkImage img) {
   out.size           = size_t(memRq.size);
   out.alignment      = size_t(memRq.alignment);
   out.memoryTypeBits = memRq.memoryTypeBits;
+  }
+
+VAllocator::Allocation VAllocator::allocMemory(const VAllocator::MemRequirements& memRq, const size_t heapId, const size_t typeId) {
+  const size_t align = LCM(memRq.alignment,provider.device->props.nonCoherentAtomSize);
+  Allocation ret;
+  if(memRq.dedicated) {
+    ret = allocator.dedicatedAlloc(memRq.size,align,heapId,typeId);
+    if(!ret.page && !memRq.dedicatedRq)
+      ret = allocator.alloc(memRq.size,align,heapId,typeId);
+    } else {
+    ret = allocator.alloc(memRq.size,align,heapId,typeId);
+    }
+  return ret;
   }
 
 bool VAllocator::update(VBuffer &dest, const void *mem,

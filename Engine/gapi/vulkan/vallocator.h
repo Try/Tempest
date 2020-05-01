@@ -34,6 +34,7 @@ class VAllocator {
       size_t               alignment;
       uint32_t             memoryTypeBits;
       bool                 dedicated;
+      bool                 dedicatedRq;
       };
 
   public:
@@ -64,6 +65,7 @@ class VAllocator {
 
     void getMemoryRequirements   (MemRequirements& out, VkBuffer buf);
     void getImgMemoryRequirements(MemRequirements& out, VkImage  img);
+    Allocation allocMemory(const MemRequirements& rq, const size_t heapId, const size_t typeId);
 
     bool commit(VkDeviceMemory dev, std::mutex& mmapSync, VkBuffer dest, size_t offset,
                 const void *mem, size_t count, size_t size, size_t alignedSz);

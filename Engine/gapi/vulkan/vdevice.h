@@ -111,7 +111,7 @@ class VDevice : public AbstractGraphicsApi::Device {
       };
 
     struct MemIndex final {
-      uint32_t headId=0;
+      uint32_t heapId=0;
       uint32_t typeId=0;
       };
 
