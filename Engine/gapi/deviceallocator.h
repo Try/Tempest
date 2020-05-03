@@ -56,7 +56,7 @@ class DeviceAllocator {
 
     Allocation dedicatedAlloc(size_t size, size_t align, uint32_t heapId, uint32_t typeId) {
       std::lock_guard<std::mutex> guard(sync);
-      Page pg(size);
+      Page pg(static_cast<uint32_t>(size));
       pg.memory = device.alloc(pg.allSize,typeId);
       pg.type   = heapId;
       if(pg.memory==null)

@@ -317,7 +317,7 @@ void VAllocator::getImgMemoryRequirements(MemRequirements& out, VkImage img) {
   out.memoryTypeBits = memRq.memoryTypeBits;
   }
 
-VAllocator::Allocation VAllocator::allocMemory(const VAllocator::MemRequirements& memRq, const size_t heapId, const size_t typeId) {
+VAllocator::Allocation VAllocator::allocMemory(const VAllocator::MemRequirements& memRq, const uint32_t heapId, const uint32_t typeId) {
   const size_t align = LCM(memRq.alignment,provider.device->props.nonCoherentAtomSize);
   Allocation ret;
   if(memRq.dedicated) {
