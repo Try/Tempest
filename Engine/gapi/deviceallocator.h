@@ -56,7 +56,20 @@ class DeviceAllocator {
 
     Allocation dedicatedAlloc(size_t size, size_t align, uint32_t heapId, uint32_t typeId) {
       std::lock_guard<std::mutex> guard(sync);
-      return rawAlloc(size,align,heapId,typeId);
+      Page pg(size);
+      pg.memory = device.alloc(pg.allSize,typeId);
+      pg.type   = heapId;
+      if(pg.memory==null)
+        return Allocation();
+      try {
+        pages.push_front(Page(0));
+        }
+      catch(...){
+        device.free(pg.memory,pg.size,pg.type);
+        throw;
+        }
+      pages.front() = std::move(pg);
+      return pages.front().alloc(size,align,device);
       }
 
   private:
@@ -65,8 +78,15 @@ class DeviceAllocator {
       pg.memory = device.alloc(pg.allSize,typeId);
       pg.type   = heapId;
       if(pg.memory==null)
-        throw std::bad_alloc();
-      pages.push_front(std::move(pg));
+        return Allocation();
+      try {
+        pages.push_front(Page(0));
+        }
+      catch(...){
+        device.free(pg.memory,pg.size,pg.type);
+        throw;
+        }
+      pages.front() = std::move(pg);
       return pages.front().alloc(size,align,device);
       }
 
@@ -119,6 +139,16 @@ struct DeviceAllocator<MemoryProvider>::Page : Block {
       delete b;
       b=p;
       }
+    }
+
+  Page& operator=(Page&& p) noexcept {
+    std::swap(next,p.next);
+    size  =p.size;
+    offset=p.offset;
+    std::swap(memory,p.memory);
+    type=p.type;
+    allSize=p.allSize;
+    return *this;
     }
 
   bool operator==(const Page& other) const noexcept {
