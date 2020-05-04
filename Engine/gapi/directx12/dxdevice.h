@@ -2,6 +2,7 @@
 
 #include <Tempest/AbstractGraphicsApi>
 #include <stdexcept>
+#include <mutex>
 
 #include <dxgi1_6.h>
 #include <d3d12.h>
@@ -12,6 +13,7 @@
 #include "utility/compiller_hints.h"
 #include "dxallocator.h"
 #include "dxfence.h"
+#include "gapi/uploadengine.h"
 
 namespace Tempest {
 
@@ -42,33 +44,34 @@ inline void dxAssert(HRESULT code){
 
 class DxDevice : public AbstractGraphicsApi::Device {
   public:
-    using ResPtr = Detail::DSharedPtr<AbstractGraphicsApi::Shared*>;
-    //using BufPtr = Detail::DSharedPtr<DxBuffer*>;
-    //using TexPtr = Detail::DSharedPtr<DxTexture*>;
 
     DxDevice(IDXGIFactory4& dxgi);
     ~DxDevice() override;
 
+    using DataMgr = UploadEngine<DxDevice,DxCommandBuffer,DxFence,DxBuffer,DxTexture>;
+    using Data    = DataMgr::Data;
+
+    void         waitData();
+    const char*  renderer() const override;
+    void         waitIdle() override;
+
+    void         submit(DxCommandBuffer& cmd,DxFence& sync);
+
     AbstractGraphicsApi::Props props;
+    ComPtr<ID3D12Device>       device;
+    ComPtr<ID3D12CommandQueue> cmdQueue;
 
-    const char*             renderer() const override;
-    void                    waitIdle() override;
-
-    struct Data {
-
-      };
-
-    ComPtr<ID3D12Device>           device;
-    ComPtr<ID3D12CommandAllocator> cmdMain;
-    ComPtr<ID3D12CommandQueue>     cmdQueue;
-
-    DxAllocator                    allocator;
+    DxAllocator                allocator;
 
   private:
-    char                           description[128] = {};
+    char                       description[128] = {};
 
-    ComPtr<ID3D12Fence>            idleFence;
-    HANDLE                         idleEvent=nullptr;
+    ComPtr<ID3D12Fence>        idleFence;
+    HANDLE                     idleEvent=nullptr;
+
+    std::unique_ptr<DataMgr>   data;
+
+  friend class DataMgr::Data;
   };
 
 }}

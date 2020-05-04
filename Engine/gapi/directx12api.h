@@ -40,7 +40,7 @@ class DirectX12Api : public AbstractGraphicsApi {
 
     Semaphore*     createSemaphore(Device *d) override;
 
-    PBuffer        createBuffer(Device* d, const void *mem, size_t count,size_t sz,size_t alignedSz, MemUsage usage, BufferFlags flg) override;
+    PBuffer        createBuffer(Device* d, const void *mem, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferFlags flg) override;
 
     Desc*          createDescriptors(Device* d, const UniformsLayout &lay, UniformsLay& layP) override;
 

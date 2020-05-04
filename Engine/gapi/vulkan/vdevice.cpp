@@ -54,50 +54,6 @@ class VDevice::FakeWindow final {
     VkSurfaceKHR       surface  = VK_NULL_HANDLE;
   };
 
-VDevice::DataStream::DataStream(VDevice &owner)
-  : owner(owner),
-    cmdBuffer(owner,VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT),
-    fence(owner),
-    gpuQueue(owner.graphicsQueue){
-  hold.reserve(32);
-  }
-
-VDevice::DataStream::~DataStream() {
-  wait();
-  }
-
-void VDevice::DataStream::begin() {
-  cmdBuffer.begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-  }
-
-void VDevice::DataStream::end() {
-  VkSubmitInfo submitInfo = {};
-  submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers    = &cmdBuffer.impl;
-
-  cmdBuffer.end();
-  fence.reset();
-  owner.graphicsQueue->submit(1,&submitInfo,fence.impl);
-
-  state.store(StWait);
-  }
-
-void VDevice::DataStream::wait() {
-  while(true) {
-    auto s = state.load();
-    if(s==StIdle)
-      return;
-    if(s==StWait)  {
-      fence.wait();
-      cmdBuffer.reset();
-      hold.clear();
-      state.store(StIdle);
-      return;
-      }
-    }
-  }
-
 VDevice::VDevice(VulkanApi &api, const char* gpuName)
   :instance(api.instance)  {
 
@@ -399,92 +355,14 @@ void VDevice::waitIdle() {
   vkDeviceWaitIdle(device);
   }
 
+void VDevice::submit(VCommandBuffer& cmd, VFence& sync) {
+  VkSubmitInfo submitInfo = {};
+  submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submitInfo.commandBufferCount = 1;
+  submitInfo.pCommandBuffers    = &cmd.impl;
 
-VDevice::Data::Data(VDevice &dev)
-  :sync(dev.allocSync),stream(dev.data->get()) {
-  physicalDevice = dev.physicalDevice;
-  }
-
-VDevice::Data::~Data() noexcept(false) {
-  try {
-    commit();
-    }
-  catch(...) {
-    std::hash<std::thread::id> h;
-    Tempest::Log::e("data queue commit failed at thread[",h(std::this_thread::get_id()),"]");
-    throw;
-    }
-  }
-
-void VDevice::Data::flush(const VBuffer &src, size_t size) {
-  if(commited){
-    stream.begin();
-    commited=false;
-    }
-  stream.cmdBuffer.flush(src,size);
-  }
-
-void VDevice::Data::copy(VBuffer &dest, const VBuffer &src, size_t size) {
-  if(commited){
-    stream.begin();
-    commited=false;
-    }
-  stream.cmdBuffer.copy(dest,0,src,0,size);
-  }
-
-void VDevice::Data::copy(VTexture &dest, uint32_t w, uint32_t h, uint32_t mip, const VBuffer &src, size_t offset) {
-  if(commited){
-    stream.begin();
-    commited=false;
-    }
-  stream.cmdBuffer.copy(dest,w,h,mip,src,offset);
-  }
-
-void VDevice::Data::copy(VBuffer &dest, uint32_t w, uint32_t h, uint32_t mip, const VTexture &src, size_t offset) {
-  if(commited){
-    stream.begin();
-    commited=false;
-    }
-  stream.cmdBuffer.copy(dest,w,h,mip,src,offset);
-  }
-
-void VDevice::Data::changeLayout(VTexture &dest, VkFormat frm, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount) {
-  if(commited){
-    stream.begin();
-    commited=false;
-    }
-  stream.cmdBuffer.changeLayout(dest.impl,frm,oldLayout,newLayout,mipCount,false);
-  }
-
-void VDevice::Data::generateMipmap(VTexture &image, VkFormat frm, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
-  if(commited){
-    stream.begin();
-    commited=false;
-    }
-  stream.cmdBuffer.generateMipmap(image,physicalDevice,frm,texWidth,texHeight,mipLevels);
-  }
-
-void VDevice::Data::hold(BufPtr &b) {
-  if(commited){
-    stream.begin();
-    commited=false;
-    }
-  stream.hold.emplace_back(ResPtr(b.handler));
-  }
-
-void VDevice::Data::hold(TexPtr &b) {
-  if(commited){
-    stream.begin();
-    commited=false;
-    }
-  stream.hold.emplace_back(ResPtr(b.handler));
-  }
-
-void VDevice::Data::commit() {
-  if(commited)
-    return;
-  commited=true;
-  stream.end();
+  sync.reset();
+  graphicsQueue->submit(1,&submitInfo,sync.impl);
   }
 
 void VDevice::Queue::submit(uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence) {
@@ -495,30 +373,4 @@ void VDevice::Queue::submit(uint32_t submitCount, const VkSubmitInfo* pSubmits, 
 VkResult VDevice::Queue::present(VkPresentInfoKHR& presentInfo) {
   std::lock_guard<std::mutex> guard(sync);
   return vkQueuePresentKHR(impl,&presentInfo);
-  }
-
-VDevice::DataMgr::DataMgr(VDevice& dev) {
-  for(auto& i:streams)
-    i.reset(new DataStream(dev));
-  }
-
-VDevice::DataMgr::~DataMgr() {
-  wait();
-  }
-
-VDevice::DataStream& VDevice::DataMgr::get() {
-  auto id = at.fetch_add(1)%2;
-
-  std::lock_guard<SpinLock> guard(sync[id]);
-  auto& st = *streams[id];
-  st.wait();
-  st.state.store(StRecording);
-  return st;
-  }
-
-void VDevice::DataMgr::wait() {
-  for(size_t i=0;i<size;++i) {
-    std::lock_guard<SpinLock> guard(sync[i]);
-    streams[i]->wait();
-    }
   }

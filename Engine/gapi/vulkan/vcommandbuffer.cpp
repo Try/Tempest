@@ -23,7 +23,7 @@ struct VCommandBuffer::ImgState {
   };
 
 VCommandBuffer::VCommandBuffer(VDevice& device, VkCommandPoolCreateFlags flags)
-  :device(device.device), pool(device,flags) {
+  :device(device), pool(device,flags) {
   VkCommandBufferAllocateInfo allocInfo = {};
   allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   allocInfo.commandPool        = pool.impl;
@@ -37,7 +37,7 @@ VCommandBuffer::VCommandBuffer(VDevice& device, VkCommandPoolCreateFlags flags)
   }
 
 VCommandBuffer::~VCommandBuffer() {
-  vkFreeCommandBuffers(device,pool.impl,1,&impl);
+  vkFreeCommandBuffers(device.device,pool.impl,1,&impl);
   }
 
 void VCommandBuffer::reset() {
@@ -200,7 +200,7 @@ VCommandBundle& VCommandBuffer::getChunk() {
       }
     }
   if(lastChunk==nullptr) {
-    chunks.emplace_back(device,pool,curFbo.handler);
+    chunks.emplace_back(device.device,pool,curFbo.handler);
     lastChunk = &chunks.back();
     }
 
@@ -316,33 +316,25 @@ void VCommandBuffer::copy(VBuffer &dest, size_t width, size_t height, size_t mip
 void VCommandBuffer::changeLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id,
                                   TextureFormat f,
                                   TextureLayout prev, TextureLayout next) {
-  static const VkImageLayout frm[]={
-    VK_IMAGE_LAYOUT_UNDEFINED,
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-    };
-
   auto& vs = reinterpret_cast<VSwapchain&>(s);
   changeLayout(vs.images[id],Detail::nativeFormat(f),
-               frm[uint8_t(prev)],frm[uint8_t(next)],VK_REMAINING_MIP_LEVELS,false);
+               Detail::nativeFormat(prev), Detail::nativeFormat(next),
+               VK_REMAINING_MIP_LEVELS, false);
   }
 
 void VCommandBuffer::changeLayout(Tempest::AbstractGraphicsApi::Texture &t,
                                   Tempest::TextureFormat f,
                                   Tempest::TextureLayout prev, Tempest::TextureLayout next) {
-  static const VkImageLayout frm[]={
-    VK_IMAGE_LAYOUT_UNDEFINED,
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-    };
-
   auto& vt = reinterpret_cast<VTexture&>(t);
   changeLayout(vt.impl,Detail::nativeFormat(f),
-               frm[uint8_t(prev)],frm[uint8_t(next)],VK_REMAINING_MIP_LEVELS,false);
+               Detail::nativeFormat(prev), Detail::nativeFormat(next), VK_REMAINING_MIP_LEVELS,false);
+  }
+
+void VCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t, TextureFormat f,
+                                  TextureLayout prev, TextureLayout next, uint32_t mipCnt) {
+  auto& vt = reinterpret_cast<VTexture&>(t);
+  changeLayout(vt.impl,Detail::nativeFormat(f),
+               Detail::nativeFormat(prev), Detail::nativeFormat(next), mipCnt, false);
   }
 
 void VCommandBuffer::changeLayout(VkImage dest, VkFormat imageFormat,
@@ -478,12 +470,12 @@ void VCommandBuffer::changeLayout(VkImage dest, VkFormat imageFormat,
       );
   }
 
-void VCommandBuffer::generateMipmap(VTexture& image,
-                                    VkPhysicalDevice pdev, VkFormat imageFormat,
+void VCommandBuffer::generateMipmap(VTexture& image, TextureFormat frm,
                                     uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
+  VkFormat imageFormat = Detail::nativeFormat(frm);
   // Check if image format supports linear blitting
   VkFormatProperties formatProperties;
-  vkGetPhysicalDeviceFormatProperties(pdev, imageFormat, &formatProperties);
+  vkGetPhysicalDeviceFormatProperties(device.physicalDevice, imageFormat, &formatProperties);
 
   if(!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
     throw std::runtime_error("texture image format does not support linear blitting!");

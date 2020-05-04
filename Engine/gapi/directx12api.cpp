@@ -138,35 +138,33 @@ AbstractGraphicsApi::Semaphore* DirectX12Api::createSemaphore(AbstractGraphicsAp
   }
 
 AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Device* d, const void* mem,
-                                                        size_t count,size_t sz,size_t alignedSz, MemUsage usage, BufferFlags flg) {
-  Detail::DxDevice* dx = reinterpret_cast<Detail::DxDevice*>(d);
-  (void)sz;
+                                                        size_t count, size_t size, size_t alignedSz,
+                                                        MemUsage usage, BufferFlags flg) {
+  Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
 
-  if(flg==BufferFlags::Dynamic || true) {
-    Detail::DxBuffer stage=dx->allocator.alloc(mem,count*alignedSz,usage,BufferFlags::Dynamic);
+  if(flg==BufferFlags::Dynamic) {
+    Detail::DxBuffer stage=dx.allocator.alloc(mem,count*alignedSz,usage,BufferFlags::Dynamic);
     return PBuffer(new Detail::DxBuffer(std::move(stage)));
     }
   if(flg==BufferFlags::Staging) {
-    Detail::DxBuffer stage=dx->allocator.alloc(mem,count*alignedSz,usage,BufferFlags::Staging);
+    Detail::DxBuffer stage=dx.allocator.alloc(mem,count*alignedSz,usage,BufferFlags::Staging);
     return PBuffer(new Detail::DxBuffer(std::move(stage)));
     }
   else {
-    /*
-    Detail::DxBuffer  stage=dx->allocator.alloc(mem,     size, MemUsage::TransferSrc,      BufferFlags::Staging);
-    Detail::DxBuffer  buf  =dx->allocator.alloc(nullptr, size, usage|MemUsage::TransferDst,BufferFlags::Static );
+    Detail::DxBuffer  stage=dx.allocator.alloc(mem,     size, MemUsage::TransferSrc,      BufferFlags::Staging);
+    Detail::DxBuffer  buf  =dx.allocator.alloc(nullptr, size, usage|MemUsage::TransferDst,BufferFlags::Static );
 
     Detail::DSharedPtr<Detail::DxBuffer*> pstage(new Detail::DxBuffer(std::move(stage)));
     Detail::DSharedPtr<Detail::DxBuffer*> pbuf  (new Detail::DxBuffer(std::move(buf)));
 
-    DxDevice::Data dat(*dx);
+    DxDevice::Data dat(dx);
     dat.flush(*pstage.handler,size);
     dat.hold(pbuf);
     dat.hold(pstage); // preserve stage buffer, until gpu side copy is finished
     dat.copy(*pbuf.handler,*pstage.handler,size);
     dat.commit();
 
-    return PBuffer(pbuf.handler);*/
-    throw std::runtime_error("not implemented");
+    return PBuffer(pbuf.handler);
     }
   return PBuffer();
   }
@@ -216,15 +214,18 @@ void DirectX12Api::present(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::
 void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::CommandBuffer* cmd,
                           AbstractGraphicsApi::Semaphore* wait,
                           AbstractGraphicsApi::Semaphore* done, AbstractGraphicsApi::Fence* doneCpu) {
+  Detail::DxDevice&        dx = *reinterpret_cast<Detail::DxDevice*>(d);
   Detail::DxCommandBuffer& bx = *reinterpret_cast<Detail::DxCommandBuffer*>(cmd);
   ID3D12CommandList* cmdList[] = { bx.impl.get() };
 
+  dx.waitData();
   impl->submit(d,cmdList,1,&wait,1,&done,1,doneCpu);
   }
 
 void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::CommandBuffer** cmd, size_t count,
                           AbstractGraphicsApi::Semaphore** wait, size_t waitCnt, AbstractGraphicsApi::Semaphore** done,
                           size_t doneCnt, AbstractGraphicsApi::Fence* doneCpu) {
+  Detail::DxDevice&                     dx = *reinterpret_cast<Detail::DxDevice*>(d);
   ID3D12CommandList*                    cmdListStk[16]={};
   std::unique_ptr<ID3D12CommandList*[]> cmdListHeap;
   ID3D12CommandList**                   cmdList = cmdListStk;
@@ -236,6 +237,7 @@ void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::C
     Detail::DxCommandBuffer& bx = *reinterpret_cast<Detail::DxCommandBuffer*>(cmd[i]);
     cmdList[i] = bx.impl.get();
     }
+  dx.waitData();
   impl->submit(d,cmdList,count,wait,waitCnt,done,doneCnt,doneCpu);
   }
 

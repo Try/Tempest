@@ -42,5 +42,7 @@ enum class TextureLayout : uint8_t {
   ColorAttach,
   DepthAttach,
   Present,
+  TransferSrc,
+  TransferDest
   };
 }

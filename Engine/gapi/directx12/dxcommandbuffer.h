@@ -13,12 +13,18 @@ class DirectX12Api;
 namespace Detail {
 
 class DxDevice;
+class DxBuffer;
+class DxTexture;
 
 class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
   public:
     DxCommandBuffer(DxDevice& d);
+    ~DxCommandBuffer();
+
     void begin() override;
     void end()   override;
+    void reset();
+
     bool isRecording() const override;
     void beginRenderPass(AbstractGraphicsApi::Fbo* f,
                          AbstractGraphicsApi::Pass*  p,
@@ -36,10 +42,18 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void draw        (size_t offset,size_t vertexCount) override;
     void drawIndexed (size_t ioffset, size_t isize, size_t voffset) override;
 
+    void flush(const Detail::DxBuffer& src, size_t size);
+    void copy(Detail::DxBuffer&  dest, size_t offsetDest, const Detail::DxBuffer& src, size_t offsetSrc, size_t size);
+    void copy(Detail::DxTexture& dest, size_t width, size_t height, size_t mip, const Detail::DxBuffer&  src, size_t offset);
+    void copy(Detail::DxBuffer&  dest, size_t width, size_t height, size_t mip, const Detail::DxTexture& src, size_t offset);
+
+    ID3D12GraphicsCommandList* get() { return impl.get(); }
+
   private:
     struct ImgState;
 
     DxDevice&                         dev;
+    ComPtr<ID3D12CommandAllocator>    pool;
     ComPtr<ID3D12GraphicsCommandList> impl;
     bool                              recording=false;
 

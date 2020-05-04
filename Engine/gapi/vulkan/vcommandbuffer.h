@@ -74,9 +74,11 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void changeLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id, TextureFormat frm, TextureLayout prev, TextureLayout next);
     void changeLayout(AbstractGraphicsApi::Texture& t, TextureFormat frm, TextureLayout prev, TextureLayout next);
-    void changeLayout(VkImage dest, VkFormat imageFormat, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount, bool byRegion);
+    void changeLayout(AbstractGraphicsApi::Texture& t, TextureFormat frm, TextureLayout prev, TextureLayout next, uint32_t mipCnt);
+    void changeLayout(VkImage dest, VkFormat imageFormat,
+                      VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount, bool byRegion);
 
-    void generateMipmap(VTexture& image, VkPhysicalDevice pdev, VkFormat imageFormat,
+    void generateMipmap(VTexture& image, TextureFormat imageFormat,
                         uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
 
   private:
@@ -91,7 +93,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     VCommandBundle& getChunk();
 
-    VkDevice                                device=nullptr;
+    VDevice&                                device;
     VCommandPool                            pool;
 
     std::vector<VCommandBundle>             chunks, reserved;

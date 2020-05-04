@@ -1,7 +1,12 @@
 #if defined(TEMPEST_BUILD_DIRECTX12)
 
+#include <Tempest/Log>
+
 #include "guid.h"
 #include "dxdevice.h"
+
+#include "dxbuffer.h"
+#include "dxtexture.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -42,7 +47,6 @@ DxDevice::DxDevice(IDXGIFactory4& dxgi) {
   queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
   dxAssert(device->CreateCommandQueue(&queueDesc, uuid<ID3D12CommandQueue>(), reinterpret_cast<void**>(&cmdQueue)));
 
-  dxAssert(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, uuid<ID3D12CommandAllocator>(), reinterpret_cast<void**>(&cmdMain)));
 
   allocator.setDevice(*this);
 
@@ -50,10 +54,17 @@ DxDevice::DxDevice(IDXGIFactory4& dxgi) {
                                uuid<ID3D12Fence>(),
                                reinterpret_cast<void**>(&idleFence)));
   idleEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+
+  data.reset(new DataMgr(*this));
   }
 
 DxDevice::~DxDevice() {
+  data.reset();
   CloseHandle(idleEvent);
+  }
+
+void DxDevice::waitData() {
+  data->wait();
   }
 
 const char* Detail::DxDevice::renderer() const {
@@ -67,4 +78,13 @@ void Detail::DxDevice::waitIdle() {
   dxAssert(idleFence->Signal(DxFence::Waiting));
   }
 
+void DxDevice::submit(DxCommandBuffer& cmdBuffer, DxFence& sync) {
+  sync.reset();
+
+  ID3D12CommandList* cmd[] = {cmdBuffer.get()};
+  cmdQueue->ExecuteCommandLists(1, cmd);
+  cmdQueue->Signal(sync.impl.get(),DxFence::Ready);
+  }
+
 #endif
+

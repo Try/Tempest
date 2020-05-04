@@ -23,13 +23,20 @@ struct DxCommandBuffer::ImgState {
 
 DxCommandBuffer::DxCommandBuffer(DxDevice& d)
   : dev(d) {
-  dxAssert(d.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, dev.cmdMain.get(), nullptr,
+  dxAssert(d.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
+                                            uuid<ID3D12CommandAllocator>(),
+                                            reinterpret_cast<void**>(&pool)));
+
+  dxAssert(d.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, pool.get(), nullptr,
                                        uuid<ID3D12GraphicsCommandList>(), reinterpret_cast<void**>(&impl)));
   impl->Close();
   }
 
+DxCommandBuffer::~DxCommandBuffer() {
+  }
+
 void DxCommandBuffer::begin() {
-  dxAssert(impl->Reset(dev.cmdMain.get(),nullptr));
+  dxAssert(impl->Reset(pool.get(),nullptr));
   recording = true;
   }
 
@@ -41,6 +48,10 @@ void DxCommandBuffer::end() {
 
   dxAssert(impl->Close());
   recording = false;
+  }
+
+void DxCommandBuffer::reset() {
+  dxAssert(impl->Reset(pool.get(),nullptr));
   }
 
 bool DxCommandBuffer::isRecording() const {
@@ -168,6 +179,24 @@ void DxCommandBuffer::draw(size_t offset, size_t vertexCount) {
 
 void DxCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset) {
   impl->DrawIndexedInstanced(UINT(isize),1,UINT(ioffset),INT(voffset),0);
+  }
+
+void DxCommandBuffer::flush(const DxBuffer&, size_t /*size*/) {
+  // NOP
+  }
+
+void DxCommandBuffer::copy(DxBuffer& dest, size_t offsetDest, const DxBuffer& src, size_t offsetSrc, size_t size) {
+  impl->CopyBufferRegion(dest.impl.get(),offsetDest,src.impl.get(),offsetSrc, size);
+  }
+
+void DxCommandBuffer::copy(DxTexture& dest, size_t width, size_t height, size_t mip, const DxBuffer& src, size_t offset) {
+  // TODO
+  assert(0);
+  }
+
+void DxCommandBuffer::copy(DxBuffer& dest, size_t width, size_t height, size_t mip, const DxTexture& src, size_t offset) {
+  // TODO
+  assert(0);
   }
 
 void DxCommandBuffer::setLayout(ID3D12Resource* res, D3D12_RESOURCE_STATES lay) {

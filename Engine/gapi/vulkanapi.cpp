@@ -214,7 +214,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   dat.hold(pstage);
   dat.hold(pbuf);
 
-  dat.changeLayout(*pbuf.handler, format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,mipCnt);
+  dat.changeLayout(*pbuf.handler, frm, TextureLayout::Undefined, TextureLayout::TransferDest,mipCnt);
   if(isCompressedFormat(frm)){
     size_t blocksize  = (frm==TextureFormat::DXT1) ? 8 : 16;
     size_t bufferSize = 0;
@@ -229,16 +229,14 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
       h = std::max<uint32_t>(1,h/2);
       }
 
-    dat.changeLayout(*pbuf.handler, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipCnt);
+    dat.changeLayout(*pbuf.handler, frm, TextureLayout::TransferDest, TextureLayout::Sampler, mipCnt);
     } else {
     dat.copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
     if(mipCnt>1)
-      dat.generateMipmap(*pbuf.handler,format,p.w(),p.h(),mipCnt); else
-      dat.changeLayout(*pbuf.handler, format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, mipCnt);
+      dat.generateMipmap(*pbuf.handler,frm,p.w(),p.h(),mipCnt); else
+      dat.changeLayout(*pbuf.handler, frm, TextureLayout::TransferDest, TextureLayout::Sampler,mipCnt);
     }
   dat.commit();
-
-  //dx->waitData();
   return PTexture(pbuf.handler);
   }
 
@@ -254,8 +252,8 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
 void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PTexture t,
                            TextureLayout lay, TextureFormat frm,
                            const uint32_t w, const uint32_t h, uint32_t mip) {
-  Detail::VDevice*  dx = reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VTexture* tx = reinterpret_cast<Detail::VTexture*>(t.handler);
+  Detail::VDevice&  dx = *reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VTexture& tx = *reinterpret_cast<Detail::VTexture*>(t.handler);
 
   size_t         bpp  = 0;
   Pixmap::Format pfrm = Pixmap::Format::RGBA;
@@ -275,35 +273,16 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
     case TextureFormat::DXT5:      bpp=0; break;
     }
 
-  VkImageLayout pLay = VK_IMAGE_LAYOUT_GENERAL;
-  switch(lay) {
-    case TextureLayout::Undefined:
-    case TextureLayout::Sampler:
-      pLay = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-      break;
-    case TextureLayout::ColorAttach:
-      pLay = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-      break;
-    case TextureLayout::DepthAttach:
-      pLay = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-      break;
-    case TextureLayout::Present:
-      pLay = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-      break;
-    }
-
   const size_t    size  = w*h*bpp;
-  Detail::VBuffer stage = dx->allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferFlags::Staging);
+  Detail::VBuffer stage = dx.allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferFlags::Staging);
 
-  Detail::VDevice::Data dat(*dx);
-
-  VkFormat format = Detail::nativeFormat(frm);
-  dat.changeLayout(*tx, format, pLay, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 1);
-  dat.copy(stage,w,h,mip,*tx,0);
-  dat.changeLayout(*tx, format, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, pLay, 1);
+  Detail::VDevice::Data dat(dx);
+  dat.changeLayout(tx, frm, lay, TextureLayout::TransferSrc, 1);
+  dat.copy(stage,w,h,mip,tx,0);
+  dat.changeLayout(tx, frm, TextureLayout::TransferSrc, lay, 1);
   dat.commit();
 
-  dx->waitData();
+  dx.waitData();
 
   out = Pixmap(w,h,pfrm);
   stage.read(out.data(),0,size);

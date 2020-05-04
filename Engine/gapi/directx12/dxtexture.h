@@ -9,7 +9,7 @@ namespace Tempest {
 
 namespace Detail {
 
-class DxTexture : AbstractGraphicsApi::Texture {
+class DxTexture : public AbstractGraphicsApi::Texture {
   public:
     DxTexture();
     DxTexture(ComPtr<ID3D12Resource>&& b);
