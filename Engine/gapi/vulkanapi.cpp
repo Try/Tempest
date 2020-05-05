@@ -116,7 +116,6 @@ AbstractGraphicsApi::PFbo VulkanApi::createFbo(AbstractGraphicsApi::Device *d,
   }
 
 AbstractGraphicsApi::PFboLayout VulkanApi::createFboLayout(AbstractGraphicsApi::Device *d,
-                                                           uint32_t /*w*/, uint32_t /*h*/,
                                                            AbstractGraphicsApi::Swapchain *s,
                                                            Tempest::TextureFormat *att,
                                                            size_t attCount) {
@@ -201,16 +200,16 @@ AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device
   }
 
 AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Device *d, const Pixmap &p, TextureFormat frm, uint32_t mipCnt) {
-  Detail::VDevice* dx     = reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VDevice& dx     = *reinterpret_cast<Detail::VDevice*>(d);
   const uint32_t   size   = uint32_t(p.dataSize());
   VkFormat         format = Detail::nativeFormat(frm);
-  Detail::VBuffer  stage  = dx->allocator.alloc(p.data(),size,1,1,MemUsage::TransferSrc,BufferFlags::Staging);
-  Detail::VTexture buf    = dx->allocator.alloc(p,mipCnt,format);
+  Detail::VBuffer  stage  = dx.allocator.alloc(p.data(),size,1,1,MemUsage::TransferSrc,BufferFlags::Staging);
+  Detail::VTexture buf    = dx.allocator.alloc(p,mipCnt,format);
 
   Detail::DSharedPtr<Detail::VBuffer*>  pstage(new Detail::VBuffer (std::move(stage)));
   Detail::DSharedPtr<Detail::VTexture*> pbuf  (new Detail::VTexture(std::move(buf)));
 
-  Detail::VDevice::Data dat(*dx);
+  Detail::VDevice::Data dat(dx);
   dat.hold(pstage);
   dat.hold(pbuf);
 

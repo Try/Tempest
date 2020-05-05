@@ -306,8 +306,7 @@ namespace Tempest {
       virtual PFbo       createFbo(Device *d,FboLayout* lay,uint32_t w, uint32_t h,Texture* cl,Texture* zbuf)=0;
       virtual PFbo       createFbo(Device *d,FboLayout* lay,uint32_t w, uint32_t h,Texture* cl)=0;
 
-      virtual PFboLayout createFboLayout(Device *d,uint32_t w, uint32_t h,Swapchain *s,
-                                         TextureFormat *att, size_t attCount)=0;
+      virtual PFboLayout createFboLayout(Device *d, Swapchain *s, TextureFormat *att, size_t attCount)=0;
 
       virtual PUniformsLay
                          createUboLayout(Device *d,const UniformsLayout&)=0;
@@ -329,11 +328,9 @@ namespace Tempest {
       virtual CommandBuffer*
                          createCommandBuffer(Device* d)=0;
 
-
-      virtual PBuffer    createBuffer(Device* d,const void *mem,size_t count,size_t sz,size_t alignedSz,MemUsage usage,BufferFlags flg)=0;
-
       virtual Desc*      createDescriptors(Device* d,const Tempest::UniformsLayout& p,AbstractGraphicsApi::UniformsLay& layP)=0;
 
+      virtual PBuffer    createBuffer (Device* d,const void *mem,size_t count,size_t sz,size_t alignedSz,MemUsage usage,BufferFlags flg)=0;
       virtual PTexture   createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips)=0;
       virtual PTexture   createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm)=0;
       virtual void       readPixels   (AbstractGraphicsApi::Device *d, Pixmap &out,const PTexture t,

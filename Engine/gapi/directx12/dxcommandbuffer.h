@@ -37,15 +37,18 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void exec        (const AbstractGraphicsApi::CommandBundle& buf) override;
     void changeLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id, TextureFormat frm, TextureLayout prev, TextureLayout next) override;
     void changeLayout(AbstractGraphicsApi::Texture& t,TextureFormat frm,TextureLayout prev,TextureLayout next) override;
+    void changeLayout(AbstractGraphicsApi::Texture& t,TextureFormat frm,TextureLayout prev,TextureLayout next,uint32_t mipCnt);
     void setVbo      (const AbstractGraphicsApi::Buffer& b) override;
     void setIbo      (const AbstractGraphicsApi::Buffer* b,Detail::IndexClass cls) override;
     void draw        (size_t offset,size_t vertexCount) override;
     void drawIndexed (size_t ioffset, size_t isize, size_t voffset) override;
 
     void flush(const Detail::DxBuffer& src, size_t size);
-    void copy(Detail::DxBuffer&  dest, size_t offsetDest, const Detail::DxBuffer& src, size_t offsetSrc, size_t size);
-    void copy(Detail::DxTexture& dest, size_t width, size_t height, size_t mip, const Detail::DxBuffer&  src, size_t offset);
-    void copy(Detail::DxBuffer&  dest, size_t width, size_t height, size_t mip, const Detail::DxTexture& src, size_t offset);
+    void copy(DxBuffer&  dest, size_t offsetDest, const DxBuffer& src, size_t offsetSrc, size_t size);
+    void copy(DxTexture& dest, size_t width, size_t height, size_t mip, const DxBuffer&  src, size_t offset);
+    void copy(DxBuffer&  dest, size_t width, size_t height, size_t mip, const DxTexture& src, size_t offset);
+    void generateMipmap(DxTexture& image, TextureFormat imageFormat,
+                        uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
 
     ID3D12GraphicsCommandList* get() { return impl.get(); }
 

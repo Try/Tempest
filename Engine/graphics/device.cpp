@@ -232,11 +232,11 @@ FrameBuffer Device::frameBuffer(Attachment& out, Attachment& zbuf) {
     auto swapchain = out.sImpl.swapchain;
     auto sId       = out.sImpl.id;
 
-    FrameBufferLayout lay(api.createFboLayout(dev,w,h,swapchain,att,2));
+    FrameBufferLayout lay(api.createFboLayout(dev,swapchain,att,2));
     FrameBuffer       f(*this,api.createFbo(dev,lay.impl.handler,swapchain,sId,zImpl),std::move(lay),w,h);
     return f;
     } else {
-    FrameBufferLayout lay(api.createFboLayout(dev,w,h,nullptr,att,2));
+    FrameBufferLayout lay(api.createFboLayout(dev,nullptr,att,2));
     FrameBuffer f(*this,api.createFbo(dev,lay.impl.handler,w,h,out.tImpl.impl.handler,zImpl),std::move(lay),w,h);
     return f;
     }
@@ -251,11 +251,11 @@ FrameBuffer Device::frameBuffer(Attachment &out) {
     auto swapchain = out.sImpl.swapchain;
     auto sId       = out.sImpl.id;
 
-    FrameBufferLayout lay(api.createFboLayout(dev,w,h,swapchain,att,1));
+    FrameBufferLayout lay(api.createFboLayout(dev,swapchain,att,1));
     FrameBuffer       f(*this,api.createFbo(dev,lay.impl.handler,swapchain,sId),std::move(lay),w,h);
     return f;
     } else {
-    FrameBufferLayout lay(api.createFboLayout(dev,w,h,nullptr,att,1));
+    FrameBufferLayout lay(api.createFboLayout(dev,nullptr,att,1));
     FrameBuffer f(*this,api.createFbo(dev,lay.impl.handler,w,h,out.tImpl.impl.handler),std::move(lay),w,h);
     return f;
     }

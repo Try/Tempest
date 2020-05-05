@@ -91,3 +91,34 @@ TEST(DirectX12Api,Pso) {
     }
 #endif
   }
+
+TEST(DirectX12Api,Fbo) {
+#if defined(_MSC_VER)
+  try {
+    DirectX12Api api{ApiFlags::Validation};
+    Device       device(api);
+
+    auto tex = device.attachment(TextureFormat::RGBA8,128,128);
+    auto fbo = device.frameBuffer(tex);
+    auto rp  = device.pass(FboMode(FboMode::PreserveOut,Color(0.f,0.f,1.f)));
+
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setPass(fbo,rp);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    auto pm = device.readPixels(tex);
+    pm.save("DirectX12Api_Fbo.png");
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping directx testcase: ", e.what()); else
+      throw;
+    }
+#endif
+  }

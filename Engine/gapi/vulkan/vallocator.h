@@ -44,7 +44,7 @@ class VAllocator {
 
     using Allocation=typename Tempest::Detail::DeviceAllocator<Provider>::Allocation;
 
-    VBuffer  alloc(const void *mem, size_t count,  size_t size, size_t alignedSz, MemUsage usage, BufferFlags bufFlg);
+    VBuffer  alloc(const void *mem, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferFlags bufFlg);
     VTexture alloc(const Pixmap &pm, uint32_t mip, VkFormat format);
     VTexture alloc(const uint32_t w, const uint32_t h, const uint32_t mip, TextureFormat frm);
     void     free(VBuffer&  buf);

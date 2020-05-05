@@ -1,6 +1,7 @@
 #if defined(TEMPEST_BUILD_DIRECTX12)
 
 #include "dxbuffer.h"
+#include "dxtexture.h"
 #include "dxcommandbuffer.h"
 #include "dxdevice.h"
 #include "dxframebuffer.h"
@@ -68,7 +69,7 @@ void DxCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*  f,
 
   for(size_t i=0;i<fbo.viewsCount;++i) {
     D3D12_RESOURCE_STATES lay = D3D12_RESOURCE_STATE_RENDER_TARGET;
-    setLayout(fbo.views[i].get(),lay);
+    setLayout(fbo.views[i],lay);
     }
 
   flushLayout();
@@ -76,7 +77,7 @@ void DxCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*  f,
   auto  desc = fbo.rtvHeap->GetCPUDescriptorHandleForHeapStart();
   impl->OMSetRenderTargets(fbo.viewsCount,&desc,TRUE,
                            nullptr);
-  const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f };
+  const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f }; //TODO: renderpass
   impl->ClearRenderTargetView(desc, clearColor, 0, nullptr);
 
   D3D12_VIEWPORT vp={};
@@ -145,18 +146,28 @@ void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Swapchain& s, uint32_t i
   implChangeLayout(res,layouts[int(prev)],layouts[int(next)]);
   }
 
-void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t, TextureFormat frm, TextureLayout prev, TextureLayout next) {
+void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t, TextureFormat /*frm*/, TextureLayout prev, TextureLayout next) {
   DxTexture& tex = reinterpret_cast<DxTexture&>(t);
-  /*
   D3D12_RESOURCE_BARRIER barrier = {};
   barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
   barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-  barrier.Transition.pResource   = tex.;
-  barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-  barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PRESENT;
+  barrier.Transition.pResource   = tex.impl.get();
+  barrier.Transition.StateBefore = nativeFormat(prev);
+  barrier.Transition.StateAfter  = nativeFormat(next);
   barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-  */
-  assert(0);
+  impl->ResourceBarrier(1, &barrier);
+  }
+
+void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t, TextureFormat /*frm*/, TextureLayout prev, TextureLayout next, uint32_t mipCnt) {
+  DxTexture& tex = reinterpret_cast<DxTexture&>(t);
+  D3D12_RESOURCE_BARRIER barrier = {};
+  barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+  barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+  barrier.Transition.pResource   = tex.impl.get();
+  barrier.Transition.StateBefore = nativeFormat(prev);
+  barrier.Transition.StateAfter  = nativeFormat(next);
+  barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+  impl->ResourceBarrier(1, &barrier);
   }
 
 void DxCommandBuffer::setVbo(const AbstractGraphicsApi::Buffer& b) {
@@ -164,7 +175,7 @@ void DxCommandBuffer::setVbo(const AbstractGraphicsApi::Buffer& b) {
 
   D3D12_VERTEX_BUFFER_VIEW view;
   view.BufferLocation = bx.impl.get()->GetGPUVirtualAddress();
-  view.SizeInBytes    = bx.size;
+  view.SizeInBytes    = bx.sizeInBytes;
   view.StrideInBytes  = vboStride;
   impl->IASetVertexBuffers(0,1,&view);
   }
@@ -189,14 +200,40 @@ void DxCommandBuffer::copy(DxBuffer& dest, size_t offsetDest, const DxBuffer& sr
   impl->CopyBufferRegion(dest.impl.get(),offsetDest,src.impl.get(),offsetSrc, size);
   }
 
-void DxCommandBuffer::copy(DxTexture& dest, size_t width, size_t height, size_t mip, const DxBuffer& src, size_t offset) {
-  // TODO
-  assert(0);
+void DxCommandBuffer::copy(DxTexture& dest, size_t width, size_t height, size_t mip,
+                           const DxBuffer& src, size_t offset) {
+  D3D12_TEXTURE_COPY_LOCATION dstLoc = {};
+  dstLoc.pResource        = dest.impl.get();
+  dstLoc.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+  dstLoc.SubresourceIndex = UINT(mip);
+
+  const UINT bpp = 4;//TODO
+
+  D3D12_PLACED_SUBRESOURCE_FOOTPRINT foot = {};
+  foot.Offset             = offset;
+  foot.Footprint.Format   = DXGI_FORMAT_R8G8B8A8_UNORM; //TODO
+  foot.Footprint.Width    = UINT(width);
+  foot.Footprint.Height   = UINT(height);
+  foot.Footprint.Depth    = 1;
+  foot.Footprint.RowPitch = UINT((width*bpp+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
+
+  D3D12_TEXTURE_COPY_LOCATION srcLoc = {};
+  srcLoc.pResource       = src.impl.get();
+  srcLoc.Type            = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+  srcLoc.PlacedFootprint = foot;
+
+  impl->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, nullptr);
   }
 
 void DxCommandBuffer::copy(DxBuffer& dest, size_t width, size_t height, size_t mip, const DxTexture& src, size_t offset) {
   // TODO
   assert(0);
+  }
+
+void DxCommandBuffer::generateMipmap(DxTexture& image, TextureFormat imageFormat, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
+  // TODO
+  Log::d("TODO: DxCommandBuffer::generateMipmap");
+  changeLayout(image, imageFormat, TextureLayout::TransferDest, TextureLayout::Sampler, mipLevels);
   }
 
 void DxCommandBuffer::setLayout(ID3D12Resource* res, D3D12_RESOURCE_STATES lay) {
@@ -217,7 +254,8 @@ void DxCommandBuffer::setLayout(ID3D12Resource* res, D3D12_RESOURCE_STATES lay) 
 void DxCommandBuffer::implChangeLayout(ID3D12Resource* res, D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES lay) {
   D3D12_RESOURCE_BARRIER barrier = {};
   barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-  barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+  barrier.Flags                  = prev==D3D12_RESOURCE_STATE_COMMON ?
+                                   D3D12_RESOURCE_BARRIER_FLAG_END_ONLY : D3D12_RESOURCE_BARRIER_FLAG_NONE;
   barrier.Transition.pResource   = res;
   barrier.Transition.StateBefore = prev;
   barrier.Transition.StateAfter  = lay;

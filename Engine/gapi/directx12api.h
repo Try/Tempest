@@ -25,7 +25,7 @@ class DirectX12Api : public AbstractGraphicsApi {
     PFbo           createFbo(Device *d, FboLayout* lay, uint32_t w, uint32_t h, Texture* cl, Texture* zbuf) override;
     PFbo           createFbo(Device *d, FboLayout *lay, uint32_t w, uint32_t h, Texture* cl) override;
 
-    PFboLayout     createFboLayout(Device *d, uint32_t w, uint32_t h, Swapchain *s,
+    PFboLayout     createFboLayout(Device *d, Swapchain *s,
                                    TextureFormat *att, size_t attCount) override;
 
     PPipeline      createPipeline(Device* d, const RenderState &st,
@@ -42,16 +42,16 @@ class DirectX12Api : public AbstractGraphicsApi {
 
     PBuffer        createBuffer(Device* d, const void *mem, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferFlags flg) override;
 
-    Desc*          createDescriptors(Device* d, const UniformsLayout &lay, UniformsLay& layP) override;
-
-    PUniformsLay   createUboLayout(Device *d,const UniformsLayout&) override;
-
     PTexture       createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips) override;
     PTexture       createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;
 
     void           readPixels(AbstractGraphicsApi::Device *d, Pixmap &out, const PTexture t,
                               TextureLayout lay, TextureFormat frm,
                               const uint32_t w, const uint32_t h, uint32_t mip) override;
+
+    Desc*          createDescriptors(Device* d, const UniformsLayout &lay, UniformsLay& layP) override;
+
+    PUniformsLay   createUboLayout(Device *d,const UniformsLayout&) override;
 
     CommandBundle* createCommandBuffer(Device* d, FboLayout* fbo) override;
     CommandBuffer* createCommandBuffer(Device* d) override;

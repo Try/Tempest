@@ -9,13 +9,13 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-DxBuffer::DxBuffer(ComPtr<ID3D12Resource>&& b, UINT size)
-  :impl(std::move(b)), size(size) {
+DxBuffer::DxBuffer(ComPtr<ID3D12Resource>&& b, UINT sizeInBytes)
+  :impl(std::move(b)), sizeInBytes(sizeInBytes) {
   }
 
 DxBuffer::DxBuffer(Tempest::Detail::DxBuffer&& other)
-  :impl(std::move(other.impl)),size(other.size) {
-  other.size=0;
+  :impl(std::move(other.impl)),sizeInBytes(other.sizeInBytes) {
+  other.sizeInBytes=0;
   }
 
 void DxBuffer::update(const void* data, size_t off, size_t count, size_t sz, size_t alignedSz) {

@@ -8,6 +8,7 @@
 #include "directx12/comptr.h"
 #include "directx12/dxdevice.h"
 #include "directx12/dxbuffer.h"
+#include "directx12/dxtexture.h"
 #include "directx12/dxshader.h"
 #include "directx12/dxpipeline.h"
 #include "directx12/dxuniformslay.h"
@@ -15,6 +16,8 @@
 #include "directx12/dxswapchain.h"
 #include "directx12/dxfence.h"
 #include "directx12/dxframebuffer.h"
+
+#include <Tempest/Pixmap>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -87,23 +90,32 @@ AbstractGraphicsApi::PFbo DirectX12Api::createFbo(AbstractGraphicsApi::Device* d
   return PFbo(new DxFramebuffer(dx,sx,imageId));
   }
 
-AbstractGraphicsApi::PFbo DirectX12Api::createFbo(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::FboLayout* lay, AbstractGraphicsApi::Swapchain* s,
+AbstractGraphicsApi::PFbo DirectX12Api::createFbo(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::FboLayout*, AbstractGraphicsApi::Swapchain* s,
                                                   uint32_t imageId, AbstractGraphicsApi::Texture* zbuf) {
-  return PFbo();
+  auto& dx = *reinterpret_cast<Detail::DxDevice*>   (d);
+  auto& sx = *reinterpret_cast<Detail::DxSwapchain*>(s);
+  auto& z  = *reinterpret_cast<Detail::DxTexture*>(zbuf);
+  return PFbo(new DxFramebuffer(dx,sx,imageId,z));
   }
 
-AbstractGraphicsApi::PFbo DirectX12Api::createFbo(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::FboLayout* lay, uint32_t w, uint32_t h,
+AbstractGraphicsApi::PFbo DirectX12Api::createFbo(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::FboLayout*,
+                                                  uint32_t /*w*/, uint32_t /*h*/,
                                                   AbstractGraphicsApi::Texture* cl, AbstractGraphicsApi::Texture* zbuf) {
-  return PFbo();
+  auto& dx = *reinterpret_cast<Detail::DxDevice*> (d);
+  auto& t0 = *reinterpret_cast<Detail::DxTexture*>(cl);
+  auto& z  = *reinterpret_cast<Detail::DxTexture*>(zbuf);
+  return PFbo(new DxFramebuffer(dx,t0,z));
   }
 
-AbstractGraphicsApi::PFbo DirectX12Api::createFbo(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::FboLayout* lay,
-                                                  uint32_t w, uint32_t h, AbstractGraphicsApi::Texture* cl) {
-  return PFbo();
+AbstractGraphicsApi::PFbo DirectX12Api::createFbo(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::FboLayout*,
+                                                  uint32_t /*w*/, uint32_t /*h*/, AbstractGraphicsApi::Texture* cl) {
+  auto& dx = *reinterpret_cast<Detail::DxDevice*> (d);
+  auto& t0 = *reinterpret_cast<Detail::DxTexture*>(cl);
+  return PFbo(new DxFramebuffer(dx,t0));
   }
 
-AbstractGraphicsApi::PFboLayout DirectX12Api::createFboLayout(AbstractGraphicsApi::Device* d, uint32_t w, uint32_t h,
-                                                              AbstractGraphicsApi::Swapchain* s, TextureFormat* att, size_t attCount) {
+AbstractGraphicsApi::PFboLayout DirectX12Api::createFboLayout(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Swapchain* s,
+                                                              TextureFormat* att, size_t attCount) {
   return PFboLayout();
   }
 
@@ -143,25 +155,25 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
   Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
 
   if(flg==BufferFlags::Dynamic) {
-    Detail::DxBuffer stage=dx.allocator.alloc(mem,count*alignedSz,usage,BufferFlags::Dynamic);
+    Detail::DxBuffer stage=dx.allocator.alloc(mem,count,size,alignedSz,usage,BufferFlags::Dynamic);
     return PBuffer(new Detail::DxBuffer(std::move(stage)));
     }
   if(flg==BufferFlags::Staging) {
-    Detail::DxBuffer stage=dx.allocator.alloc(mem,count*alignedSz,usage,BufferFlags::Staging);
+    Detail::DxBuffer stage=dx.allocator.alloc(mem,count,size,alignedSz,usage,BufferFlags::Staging);
     return PBuffer(new Detail::DxBuffer(std::move(stage)));
     }
   else {
-    Detail::DxBuffer  stage=dx.allocator.alloc(mem,     size, MemUsage::TransferSrc,      BufferFlags::Staging);
-    Detail::DxBuffer  buf  =dx.allocator.alloc(nullptr, size, usage|MemUsage::TransferDst,BufferFlags::Static );
+    Detail::DxBuffer  stage=dx.allocator.alloc(mem,    count,size,alignedSz,MemUsage::TransferSrc,      BufferFlags::Staging);
+    Detail::DxBuffer  buf  =dx.allocator.alloc(nullptr,count,size,alignedSz,usage|MemUsage::TransferDst,BufferFlags::Static );
 
     Detail::DSharedPtr<Detail::DxBuffer*> pstage(new Detail::DxBuffer(std::move(stage)));
     Detail::DSharedPtr<Detail::DxBuffer*> pbuf  (new Detail::DxBuffer(std::move(buf)));
 
     DxDevice::Data dat(dx);
-    dat.flush(*pstage.handler,size);
+    dat.flush(*pstage.handler,count*alignedSz);
     dat.hold(pbuf);
     dat.hold(pstage); // preserve stage buffer, until gpu side copy is finished
-    dat.copy(*pbuf.handler,*pstage.handler,size);
+    dat.copy(*pbuf.handler,*pstage.handler,count*alignedSz);
     dat.commit();
 
     return PBuffer(pbuf.handler);
@@ -178,12 +190,55 @@ AbstractGraphicsApi::PUniformsLay DirectX12Api::createUboLayout(Device* d, const
   return PUniformsLay(new DxUniformsLay(*dx,lay));
   }
 
-AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mips) {
-  return PTexture();
+AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mipCnt) {
+  Detail::DxDevice& dx     = *reinterpret_cast<Detail::DxDevice*>(d);
+  //const uint32_t    size   = uint32_t(p.dataSize());
+  DXGI_FORMAT       format = Detail::nativeFormat(frm);
+  const uint32_t    row    = p.w()*p.bpp();
+  const uint32_t    pith   = ((row+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
+  Detail::DxBuffer  stage  = dx.allocator.alloc(p.data(),p.h(),row,pith,MemUsage::TransferSrc,BufferFlags::Staging);
+  Detail::DxTexture buf    = dx.allocator.alloc(p,mipCnt,format);
+
+  Detail::DSharedPtr<Detail::DxBuffer*>  pstage(new Detail::DxBuffer (std::move(stage)));
+  Detail::DSharedPtr<Detail::DxTexture*> pbuf  (new Detail::DxTexture(std::move(buf)));
+
+  Detail::DxDevice::Data dat(dx);
+  dat.hold(pstage);
+  dat.hold(pbuf);
+
+  // dat.changeLayout(*pbuf.handler, frm, TextureLayout::Undefined, TextureLayout::TransferDest, mipCnt);
+  if(isCompressedFormat(frm)){
+    size_t blocksize  = (frm==TextureFormat::DXT1) ? 8 : 16;
+    size_t bufferSize = 0;
+
+    uint32_t w = uint32_t(p.w()), h = uint32_t(p.h());
+    for(uint32_t i=0; i<mipCnt; i++){
+      size_t blockcount = ((w+3)/4)*((h+3)/4);
+      dat.copy(*pbuf.handler,w,h,i,*pstage.handler,bufferSize);
+
+      bufferSize += blockcount*blocksize;
+      w = std::max<uint32_t>(1,w/2);
+      h = std::max<uint32_t>(1,h/2);
+      }
+
+    dat.changeLayout(*pbuf.handler, frm, TextureLayout::TransferDest, TextureLayout::Sampler, mipCnt);
+    } else {
+    dat.copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
+    if(mipCnt>1)
+      dat.generateMipmap(*pbuf.handler,frm,p.w(),p.h(),mipCnt); else
+      dat.changeLayout(*pbuf.handler, frm, TextureLayout::TransferDest, TextureLayout::Sampler,mipCnt);
+    }
+  dat.commit();
+  return PTexture(pbuf.handler);
   }
 
-AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) {
-  return PTexture();
+AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const uint32_t w, const uint32_t h, uint32_t mipCnt, TextureFormat frm) {
+  Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
+
+  Detail::DxTexture buf=dx.allocator.alloc(w,h,mipCnt,frm);
+  Detail::DSharedPtr<Detail::DxTexture*> pbuf(new Detail::DxTexture(std::move(buf)));
+
+  return PTexture(pbuf.handler);
   }
 
 void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureLayout lay,
@@ -242,7 +297,9 @@ void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::C
   }
 
 void DirectX12Api::getCaps(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Props& caps) {
-
+  //TODO
+  caps.setSamplerFormats(-1);
+  caps.setAttachFormats(-1);
   }
 
 
