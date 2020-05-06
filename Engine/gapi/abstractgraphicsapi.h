@@ -55,10 +55,14 @@ namespace Tempest {
 
   enum TextureFormat : uint8_t {
     Undefined,
-    Alpha,
+    R8,
+    RG8,
     RGB8,
     RGBA8,
+    R16,
     RG16,
+    RGB16,
+    RGBA16,
     Depth16,
     Depth24x8,
     Depth24S8,

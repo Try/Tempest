@@ -11,12 +11,17 @@ class ODevice;
 class Pixmap final {
   public:
     enum class Format : uint8_t {
-      A    = 0,
-      RGB  = 1,
-      RGBA = 2,
-      DXT1 = 3,
-      DXT3 = 4,
-      DXT5 = 5,
+      R      = 0,
+      RG     = 1,
+      RGB    = 2,
+      RGBA   = 3,
+      R16    = 4,
+      RG16   = 5,
+      RGB16  = 6,
+      RGBA16 = 7,
+      DXT1   = 8,
+      DXT3   = 9,
+      DXT5   = 10,
       };
 
     Pixmap();
@@ -50,6 +55,7 @@ class Pixmap final {
     size_t      dataSize() const;
 
     Format      format() const;
+    static size_t bppForFormat(Format f);
 
   private:
     struct Impl;

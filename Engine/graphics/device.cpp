@@ -22,6 +22,19 @@ static uint32_t mipCount(uint32_t w, uint32_t h) {
   return n;
   }
 
+static TextureFormat toTextureFormat(Pixmap::Format f) {
+  switch(f) {
+    case Pixmap::Format::R:    return TextureFormat::R8;
+    case Pixmap::Format::RG:   return TextureFormat::RG8;
+    case Pixmap::Format::RGB:  return TextureFormat::RGB8;
+    case Pixmap::Format::RGBA: return TextureFormat::RGBA8;
+
+    case Pixmap::Format::DXT1: return TextureFormat::DXT1;
+    case Pixmap::Format::DXT3: return TextureFormat::DXT3;
+    case Pixmap::Format::DXT5: return TextureFormat::DXT5;
+    }
+  }
+
 Device::Impl::Impl(AbstractGraphicsApi &api, const char* name, uint8_t maxFramesInFlight)
   :api(api),maxFramesInFlight(maxFramesInFlight) {
   dev=api.createDevice(name);
@@ -167,15 +180,7 @@ Attachment Device::attachment(TextureFormat frm, const uint32_t w, const uint32_
   }
 
 Texture2d Device::loadTexture(const Pixmap &pm, bool mips) {
-  static const TextureFormat frm[]={
-    TextureFormat::Alpha,
-    TextureFormat::RGB8,
-    TextureFormat::RGBA8,
-    TextureFormat::DXT1,
-    TextureFormat::DXT3,
-    TextureFormat::DXT5,
-    };
-  TextureFormat format = frm[uint8_t(pm.format())];
+  TextureFormat format = toTextureFormat(pm.format());
   uint32_t      mipCnt = mips ? mipCount(pm.w(),pm.h()) : 1;
   const Pixmap* p=&pm;
   Pixmap alt;

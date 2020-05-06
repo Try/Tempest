@@ -14,20 +14,8 @@ using namespace Tempest;
 struct Pixmap::Impl {
   Impl()=default;
 
-  static uint32_t bppFromFrm(Pixmap::Format frm) {
-    switch(frm) {
-      case Pixmap::Format::A:    return 1;
-      case Pixmap::Format::RGB:  return 3;
-      case Pixmap::Format::RGBA: return 4;
-      case Pixmap::Format::DXT1: return 0;
-      case Pixmap::Format::DXT3: return 0;
-      case Pixmap::Format::DXT5: return 0;
-      }
-    return 1;
-    }
-
   Impl(uint32_t w,uint32_t h,Pixmap::Format frm):w(w),h(h),frm(frm) {
-    bpp    = bppFromFrm(frm);
+    bpp    = uint32_t(bppForFormat(frm));
     dataSz = size_t(w)*size_t(h)*size_t(bpp);
     data   = reinterpret_cast<uint8_t*>(std::malloc(dataSz));
     if(!data)
@@ -41,57 +29,67 @@ struct Pixmap::Impl {
     if(!data)
       throw std::bad_alloc();
 
-    memcpy(data,other.data,size);
+    std::memcpy(data,other.data,size);
     }
 
   Impl(const Impl& other,Pixmap::Format conv):w(other.w),h(other.h),bpp(other.bpp),frm(conv) {
-    bpp = bppFromFrm(frm);
+    bpp = uint32_t(bppForFormat(frm));
 
-    size_t size=size_t(w)*size_t(h)*size_t(bpp);
-    data=reinterpret_cast<uint8_t*>(std::malloc(size));
+    size_t size = size_t(w)*size_t(h)*size_t(bpp);
+    data = reinterpret_cast<uint8_t*>(std::malloc(size));
     if(!data)
       throw std::bad_alloc();
-
     dataSz = size;
-    if(bpp==other.bpp) {
-      memcpy(data,other.data,size);
-      return;
-      }
 
-    if(frm==Format::RGBA) {
-      const size_t size=size_t(w)*size_t(h);
-      if(other.frm==Format::RGB){
-        // RGB -> RGBA
-        for(size_t i=0;i<size;++i){
-          uint32_t&       pix=reinterpret_cast<uint32_t*>(data)[i];
-          const uint8_t*  s  =other.data+i*3;
-          pix = uint32_t(s[0])<<0 | uint32_t(s[1])<<8 | uint32_t(s[2])<<16 | uint32_t(255)<<24;
-          }
-        }
-      else if(other.frm==Format::A){
-        // A -> RGBA
-        for(size_t i=0;i<size;++i){
-          uint32_t&       pix=reinterpret_cast<uint32_t*>(data)[i];
-          const uint8_t*  s  =other.data+i;
-          pix = uint32_t(255)<<0 | uint32_t(255)<<8 | uint32_t(255)<<16 | uint32_t(s[0])<<24;
-          }
-        }
-      else if(other.frm==Format::DXT1){
-        // dxt1 -> RGBA
-        ddsToRgba(data,other.data,uint32_t(w),uint32_t(h),squish::kDxt1);
-        }
-      else if(other.frm==Format::DXT3){
-        // dxt3 -> RGBA
-        ddsToRgba(data,other.data,uint32_t(w),uint32_t(h),squish::kDxt3);
-        }
-      else if(other.frm==Format::DXT5){
-        // dxt5 -> RGBA
-        ddsToRgba(data,other.data,uint32_t(w),uint32_t(h),squish::kDxt5);
+    if(frm==Format::RGBA && other.frm==Format::RGB) {
+      // specialize a common case
+      const size_t sz = size_t(w)*size_t(h);
+      for(size_t i=0;i<sz;++i) {
+        uint32_t&       pix=reinterpret_cast<uint32_t*>(data)[i];
+        const uint8_t*  s  =other.data+i*3;
+        pix = uint32_t(s[0])<<0 | uint32_t(s[1])<<8 | uint32_t(s[2])<<16 | uint32_t(255)<<24;
         }
       return;
       }
 
-    //TODO
+    if(isCompressed(other.frm)) {
+      if(frm!=Format::RGB && frm!=Format::RGBA)
+        throw std::runtime_error("assert"); // handle outside of this function
+      static const int kfrm[] = {squish::kDxt1,squish::kDxt3,squish::kDxt5};
+      if(frm==Format::RGB)
+        ddsToRgba(data,other.data,w,h,kfrm[uint8_t(other.frm)-uint8_t(Format::DXT1)],3); else
+        ddsToRgba(data,other.data,w,h,kfrm[uint8_t(other.frm)-uint8_t(Format::DXT1)],4);
+      return;
+      }
+
+    if(isCompressed(frm)) {
+      // TODO: image compression
+      throw std::runtime_error("unimplemented");
+      }
+
+    // noncompressed
+    const uint8_t compDst = componentsCount(frm);
+    const uint8_t compSrc = componentsCount(other.frm);
+
+    const uint8_t byteDst = bytesPerChannel(frm);
+    const uint8_t byteSrc = bytesPerChannel(other.frm);
+
+    switch(byteDst) {
+      case 1:{
+        switch(byteSrc) {
+          case 1: noncompresedConv<uint8_t,uint8_t> (w,h, data,other.data, compDst, compSrc); return;
+          case 2: noncompresedConv<uint8_t,uint16_t>(w,h, data,other.data, compDst, compSrc); return;
+          }
+        }
+      case 2:{
+        switch(byteSrc) {
+          case 1: noncompresedConv<uint16_t,uint8_t> (w,h, data,other.data, compDst, compSrc); return;
+          case 2: noncompresedConv<uint16_t,uint16_t>(w,h, data,other.data, compDst, compSrc); return;
+          }
+        }
+      }
+
+    // unreachable
     throw std::runtime_error("unimplemented");
     }
 
@@ -107,14 +105,104 @@ struct Pixmap::Impl {
     PixmapCodec::freeImg(data);
     }
 
+  static std::unique_ptr<Impl,Deleter> convert(const Impl& other,Format frm) {
+    if(other.frm==frm)
+      return std::unique_ptr<Impl,Deleter>(new Impl(other)); //copy
+
+    if(isCompressed(other.frm)) {
+      if(frm!=Format::RGB && frm!=Format::RGBA) {
+        // cross-conversion: DDS -> RGBA -> frm
+        Impl tmp(other,Format::RGBA);
+        return std::unique_ptr<Impl,Deleter>(new Impl(tmp,frm));
+        }
+      }
+
+    return std::unique_ptr<Impl,Deleter>(new Impl(other,frm));
+    }
+
+  template<class Tout, class Tin>
+  static void noncompresedConv(size_t w, size_t h, void* vdata, const void* vsrc, uint8_t eltOut, uint8_t eltIn){
+    auto* data = reinterpret_cast<Tout*>(vdata);
+    auto* src  = reinterpret_cast<const Tin*>(vsrc);
+
+    const size_t size = w*h;
+    for(size_t i=0;i<size;++i) {
+      Tout*       pix = data+i*eltOut;
+      const Tin*  s   = src +i*eltIn;
+
+      Tout tmp[4] = {0,0,0,Tout(-1)};
+      for(uint8_t i=0;i<eltIn;++i)
+        copy(tmp[i],s[i]);
+
+      for(uint8_t i=0;i<eltOut;++i)
+        copy(pix[i],tmp[i]);
+      }
+    }
+
+  static void copy(uint8_t& r,uint8_t v){
+    r = v;
+    }
+  static void copy(uint16_t& r,uint16_t v){
+    r = v;
+    }
+  static void copy(uint8_t& r,uint16_t v){
+    r = v/256;
+    }
+  static void copy(uint16_t& r,uint8_t v){
+    r = v*256+255*(v%2);
+    }
+
+  static uint8_t componentsCount(Pixmap::Format frm) {
+    switch(frm) {
+      case Pixmap::Format::R:      return 1;
+      case Pixmap::Format::RG:     return 2;
+      case Pixmap::Format::RGB:    return 3;
+      case Pixmap::Format::RGBA:   return 4;
+      //---
+      case Pixmap::Format::R16:    return 1;
+      case Pixmap::Format::RG16:   return 2;
+      case Pixmap::Format::RGB16:  return 3;
+      case Pixmap::Format::RGBA16: return 4;
+      //---
+      case Pixmap::Format::DXT1:   return 0;
+      case Pixmap::Format::DXT3:   return 0;
+      case Pixmap::Format::DXT5:   return 0;
+      }
+    return 0;
+    }
+
+  static uint8_t bytesPerChannel(Pixmap::Format frm) {
+    switch(frm) {
+      case Pixmap::Format::R:      return 1;
+      case Pixmap::Format::RG:     return 1;
+      case Pixmap::Format::RGB:    return 1;
+      case Pixmap::Format::RGBA:   return 1;
+      //---
+      case Pixmap::Format::R16:    return 2;
+      case Pixmap::Format::RG16:   return 2;
+      case Pixmap::Format::RGB16:  return 2;
+      case Pixmap::Format::RGBA16: return 2;
+      //---
+      case Pixmap::Format::DXT1:   return 0;
+      case Pixmap::Format::DXT3:   return 0;
+      case Pixmap::Format::DXT5:   return 0;
+      }
+    return 0;
+    }
+
+  static bool isCompressed(Pixmap::Format frm) {
+    return frm==Pixmap::Format::DXT1 ||
+           frm==Pixmap::Format::DXT3 ||
+           frm==Pixmap::Format::DXT5;
+    }
+
   void save(ODevice& f,const char* ext){
     PixmapCodec::saveImg(f,ext,data,dataSz,w,h,frm);
     }
 
-  static void ddsToRgba(uint8_t* px,const uint8_t* dds,const uint32_t w,const uint32_t h,const int frm) {
+  static void ddsToRgba(uint8_t* px,const uint8_t* dds,const uint32_t w,const uint32_t h,const int frm,uint8_t bpp) {
     squish::u8 pixels[4][4][4];
 
-    const uint32_t bpp       = 4;
     const uint32_t w4        = (w+3)/4;
     const uint32_t blocksize = (frm==squish::kDxt1) ? 8 : 16;
 
@@ -153,7 +241,7 @@ Pixmap::Pixmap():impl(&Impl::zero){
   }
 
 Pixmap::Pixmap(const Pixmap &src, Pixmap::Format conv)
-  :impl(new Impl(*src.impl,conv)){
+  :impl(Impl::convert(*src.impl,conv)){
   }
 
 Pixmap::Pixmap(uint32_t w, uint32_t h, Pixmap::Format frm)
@@ -250,4 +338,23 @@ size_t Pixmap::dataSize() const {
 
 Pixmap::Format Pixmap::format() const {
   return impl->frm;
+  }
+
+size_t Pixmap::bppForFormat(Pixmap::Format frm) {
+  switch(frm) {
+    case Pixmap::Format::R:      return 1;
+    case Pixmap::Format::RG:     return 2;
+    case Pixmap::Format::RGB:    return 3;
+    case Pixmap::Format::RGBA:   return 4;
+    //---
+    case Pixmap::Format::R16:    return 2;
+    case Pixmap::Format::RG16:   return 4;
+    case Pixmap::Format::RGB16:  return 6;
+    case Pixmap::Format::RGBA16: return 8;
+    //---
+    case Pixmap::Format::DXT1:   return 0;
+    case Pixmap::Format::DXT3:   return 0;
+    case Pixmap::Format::DXT5:   return 0;
+    }
+  return 0;
   }

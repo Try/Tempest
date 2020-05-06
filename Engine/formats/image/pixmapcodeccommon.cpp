@@ -107,16 +107,7 @@ bool PixmapCodecCommon::save(ODevice &f, const char *ext, const uint8_t* cdata,
                              size_t dataSz, uint32_t w, uint32_t h, Pixmap::Format frm) const {
   (void)dataSz;
 
-  int bpp=0;
-  switch(frm) {
-    case Pixmap::Format::A:    bpp=1; break;
-    case Pixmap::Format::RGB:  bpp=3; break;
-    case Pixmap::Format::RGBA: bpp=4; break;
-    case Pixmap::Format::DXT1: bpp=0; break;
-    case Pixmap::Format::DXT3: bpp=0; break;
-    case Pixmap::Format::DXT5: bpp=0; break;
-    }
-
+  int bpp = int(Pixmap::bppForFormat(frm));
   if(bpp==0)
     return false;
 

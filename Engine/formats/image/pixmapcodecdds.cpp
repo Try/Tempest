@@ -33,7 +33,7 @@ uint8_t* PixmapCodecDDS::load(PixmapCodec::Context &c, uint32_t &ow, uint32_t &o
   oh = ddsd.dwHeight;
 
   int compressType = squish::kDxt1;
-  switch( ddsd.ddpfPixelFormat.dwFourCC ) {
+  switch(ddsd.ddpfPixelFormat.dwFourCC) {
     case FOURCC_DXT1:
       bpp          = 3;
       compressType = squish::kDxt1;

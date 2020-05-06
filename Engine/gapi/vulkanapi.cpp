@@ -259,11 +259,18 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
   switch(frm) {
     case TextureFormat::Undefined: bpp=0; break;
     case TextureFormat::Last:      bpp=0; break;
-    case TextureFormat::Alpha:     bpp=1; pfrm = Pixmap::Format::A;   break;
-    case TextureFormat::RGB8:      bpp=3; pfrm = Pixmap::Format::RGB; break;
-    case TextureFormat::RGBA8:     bpp=4; break;
-    case TextureFormat::RG16:      bpp=4; break;
-    case TextureFormat::Depth16:   bpp=2; break;
+    //---
+    case TextureFormat::R8:        bpp=1; pfrm = Pixmap::Format::R;      break;
+    case TextureFormat::RG8:       bpp=2; pfrm = Pixmap::Format::RG;     break;
+    case TextureFormat::RGB8:      bpp=3; pfrm = Pixmap::Format::RGB;    break;
+    case TextureFormat::RGBA8:     bpp=4; pfrm = Pixmap::Format::RGBA;   break;
+    //---
+    case TextureFormat::R16:       bpp=2; pfrm = Pixmap::Format::R16;    break;
+    case TextureFormat::RG16:      bpp=4; pfrm = Pixmap::Format::RG16;   break;
+    case TextureFormat::RGB16:     bpp=6; pfrm = Pixmap::Format::RGB16;  break;
+    case TextureFormat::RGBA16:    bpp=8; pfrm = Pixmap::Format::RGBA16; break;
+    //---
+    case TextureFormat::Depth16:   bpp=2; pfrm = Pixmap::Format::R16; break;
     case TextureFormat::Depth24S8: bpp=4; break;
     case TextureFormat::Depth24x8: bpp=4; break;
     // TODO: dxt

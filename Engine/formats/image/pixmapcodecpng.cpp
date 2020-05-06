@@ -35,36 +35,41 @@ struct PixmapCodecPng::Impl {
     outW = png_get_image_width (png_ptr, info_ptr);
     outH = png_get_image_height(png_ptr, info_ptr);
 
-    png_byte color_type = png_get_color_type(png_ptr, info_ptr);
-    png_byte bit_depth  = png_get_bit_depth(png_ptr, info_ptr);
-    if(bit_depth!=8)
+    png_byte colorType = png_get_color_type(png_ptr, info_ptr);
+    png_byte bitDepth  = png_get_bit_depth(png_ptr, info_ptr);
+    if(bitDepth!=8 && bitDepth!=16)
       return false;
 
-    if( color_type == PNG_COLOR_TYPE_PALETTE )
+    if(colorType == PNG_COLOR_TYPE_PALETTE)
       png_set_palette_to_rgb(png_ptr);
 
-    color_type = png_get_color_type(png_ptr, info_ptr);
+    colorType = png_get_color_type(png_ptr, info_ptr);
 
-    if( color_type==PNG_COLOR_TYPE_RGB ){
+    if(colorType==PNG_COLOR_TYPE_GRAY){
+      outBpp = 1;
+      frm    = Pixmap::Format::R;
+      }
+    else if(colorType==PNG_COLOR_TYPE_GRAY_ALPHA){
+      //png_set_gray_to_rgb(png_ptr);
+      outBpp = 2;
+      frm    = Pixmap::Format::RG;
+      }
+    else if(colorType==PNG_COLOR_TYPE_RGB){
       outBpp = 3;
       frm    = Pixmap::Format::RGB;
       }
-    else if( color_type==PNG_COLOR_TYPE_RGB_ALPHA ){
-      outBpp = 4;
-      frm    = Pixmap::Format::RGBA;
-      }
-    else if( color_type==PNG_COLOR_TYPE_GRAY ){
-      png_set_gray_to_rgb(png_ptr);
-      outBpp = 3;
-      frm    = Pixmap::Format::RGB;
-      }
-    else if( color_type==PNG_COLOR_TYPE_GRAY_ALPHA ){
-      png_set_gray_to_rgb(png_ptr);
+    else if(colorType==PNG_COLOR_TYPE_RGB_ALPHA){
       outBpp = 4;
       frm    = Pixmap::Format::RGBA;
       }
     else {
       return false;
+      }
+
+    if(bitDepth==16) {
+      png_set_swap(png_ptr);
+      outBpp*=2;
+      frm = Pixmap::Format(uint8_t(Pixmap::Format::R16)+uint8_t(frm)-uint8_t(Pixmap::Format::R));
       }
 
     out = reinterpret_cast<uint8_t*>(malloc(outW*outH*outBpp));
@@ -157,15 +162,60 @@ bool PixmapCodecPng::save(ODevice& f, const char* ext, const uint8_t* data,
   if(ext!=nullptr && std::strcmp("png",ext)!=0)
     return false;
 
-  uint32_t bpp=0;
-  if(frm==Pixmap::Format::RGB) {
-    bpp = 3;
-    }
-  else if(frm==Pixmap::Format::RGBA) {
-    bpp = 4;
-    }
-  else {
-    return false;
+  uint32_t bpp       = 0;
+  uint32_t bitDepth  = 0;
+  int      colorType = 0;
+  switch(frm) {
+    case Pixmap::Format::R:{
+      bpp       = 1;
+      bitDepth  = 8;
+      colorType = PNG_COLOR_TYPE_GRAY;
+      break;
+      }
+    case Pixmap::Format::RG:{
+      bpp       = 2;
+      bitDepth  = 8;
+      colorType = PNG_COLOR_TYPE_GRAY_ALPHA;
+      break;
+      }
+    case Pixmap::Format::RGB:{
+      bpp       = 3;
+      bitDepth  = 8;
+      colorType = PNG_COLOR_TYPE_RGB;
+      break;
+      }
+    case Pixmap::Format::R16:{
+      bpp       = 2;
+      bitDepth  = 16;
+      colorType = PNG_COLOR_TYPE_GRAY;
+      break;
+      }
+    case Pixmap::Format::RG16:{
+      bpp       = 4;
+      bitDepth  = 16;
+      colorType = PNG_COLOR_TYPE_GRAY_ALPHA;
+      break;
+      }
+    case Pixmap::Format::RGBA:{
+      bpp      = 4;
+      bitDepth = 8;
+      colorType = PNG_COLOR_TYPE_RGBA;
+      break;
+      }
+    case Pixmap::Format::RGB16:{
+      bpp      = 6;
+      bitDepth = 16;
+      colorType = PNG_COLOR_TYPE_RGB;
+      break;
+      }
+    case Pixmap::Format::RGBA16:{
+      bpp      = 8;
+      bitDepth = 16;
+      colorType = PNG_COLOR_TYPE_RGBA;
+      break;
+      }
+    default:
+      return false;
     }
 
   png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
@@ -178,7 +228,7 @@ bool PixmapCodecPng::save(ODevice& f, const char* ext, const uint8_t* data,
     return false;
     }
 
-  if( setjmp(png_jmpbuf(png_ptr)) ) {
+  if(setjmp(png_jmpbuf(png_ptr))) {
     png_destroy_info_struct(png_ptr, &info_ptr);
     png_destroy_write_struct(&png_ptr,nullptr);
     return false;
@@ -188,12 +238,13 @@ bool PixmapCodecPng::save(ODevice& f, const char* ext, const uint8_t* data,
 
   // write header
   png_set_IHDR( png_ptr, info_ptr, w, h,
-                8,//bit_depth,
-                (frm==Pixmap::Format::RGB) ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGB_ALPHA,
+                bitDepth,
+                colorType,
                 PNG_INTERLACE_NONE,
                 PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 
   png_write_info(png_ptr, info_ptr);
+  png_set_swap(png_ptr);
 
   // write bytes
   {

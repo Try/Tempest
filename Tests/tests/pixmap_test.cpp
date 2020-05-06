@@ -39,3 +39,18 @@ TEST(main,PixmapIO_SymetricIO) {
     EXPECT_EQ(realSz,rd.cursorPosition());
     }
   }
+
+TEST(main,PixmapConv) {
+  Pixmap pm("data/img/tst-dxt5.dds");
+  EXPECT_EQ(pm.w(),     512);
+  EXPECT_EQ(pm.h(),     512);
+  EXPECT_EQ(pm.format(),Pixmap::Format::DXT5);
+
+  Pixmap px0(pm,Pixmap::Format::RGB);
+  EXPECT_EQ(px0.format(),Pixmap::Format::RGB);
+  px0.save("tst-dxt5.png");
+
+  Pixmap px1(px0,Pixmap::Format::RGBA16);
+  EXPECT_EQ(px1.format(),Pixmap::Format::RGBA16);
+  px1.save("tst-dxt5.png");
+  }
