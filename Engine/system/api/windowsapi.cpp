@@ -398,6 +398,8 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
           SystemApi::dispatchKeyDown(*cb,e,scan); else
           SystemApi::dispatchKeyUp  (*cb,e,scan);
         }
+      if(msg==WM_SYSKEYDOWN || msg==WM_SYSKEYUP)
+        return DefWindowProc( hWnd, msg, wParam, lParam );
       break;
       }
 
