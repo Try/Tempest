@@ -24,8 +24,9 @@ Encoder<CommandBuffer> CommandBuffer::startEncoding(Device& device, const FrameB
   if(impl.handler!=nullptr && impl.handler->isRecording())
     throw ConcurentRecordingException();
   if(impl.handler==nullptr || dev!=&device || layout.handler!=lay.impl.handler) {
-    *this = device.commandSecondaryBuffer(lay);
-    dev   = &device;
+    *this  = device.commandSecondaryBuffer(lay);
+    dev    = &device;
+    layout = lay.impl;
     }
   return Encoder<CommandBuffer>(this,w,h);
   }
