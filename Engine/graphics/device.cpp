@@ -24,15 +24,21 @@ static uint32_t mipCount(uint32_t w, uint32_t h) {
 
 static TextureFormat toTextureFormat(Pixmap::Format f) {
   switch(f) {
-    case Pixmap::Format::R:    return TextureFormat::R8;
-    case Pixmap::Format::RG:   return TextureFormat::RG8;
-    case Pixmap::Format::RGB:  return TextureFormat::RGB8;
-    case Pixmap::Format::RGBA: return TextureFormat::RGBA8;
+    case Pixmap::Format::R:      return TextureFormat::R8;
+    case Pixmap::Format::RG:     return TextureFormat::RG8;
+    case Pixmap::Format::RGB:    return TextureFormat::RGB8;
+    case Pixmap::Format::RGBA:   return TextureFormat::RGBA8;
+
+    case Pixmap::Format::R16:    return TextureFormat::R16;
+    case Pixmap::Format::RG16:   return TextureFormat::RG16;
+    case Pixmap::Format::RGB16:  return TextureFormat::RGB16;
+    case Pixmap::Format::RGBA16: return TextureFormat::RGBA16;
 
     case Pixmap::Format::DXT1: return TextureFormat::DXT1;
     case Pixmap::Format::DXT3: return TextureFormat::DXT3;
     case Pixmap::Format::DXT5: return TextureFormat::DXT5;
     }
+  return TextureFormat::RGBA8;
   }
 
 Device::Impl::Impl(AbstractGraphicsApi &api, const char* name, uint8_t maxFramesInFlight)
