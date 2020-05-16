@@ -1,8 +1,9 @@
 #pragma once
 
+#include <Tempest/Vec>
 #include <cstring>
 
-namespace Tempest{
+namespace Tempest {
 
 class Matrix4x4 final {
   public:
@@ -17,11 +18,15 @@ class Matrix4x4 final {
 
     void identity();
 
-    void translate( const float v[/*3*/]){
-      translate( v[0], v[1], v[2] );
+    inline void translate(const float v[/*3*/]) {
+      translate(v[0], v[1], v[2]);
       }
 
-    inline void translate(float x, float y, float z){
+    inline void translate(const Vec3& v){
+      translate(v.x, v.y, v.z);
+      }
+
+    inline void translate(float x, float y, float z) {
       m[3][0] = m[0][0] * x + m[1][0] * y + m[2][0] * z + m[3][0];
       m[3][1] = m[0][1] * x + m[1][1] * y + m[2][1] * z + m[3][1];
       m[3][2] = m[0][2] * x + m[1][2] * y + m[2][2] * z + m[3][2];
@@ -29,11 +34,11 @@ class Matrix4x4 final {
       }
 
 
-    inline void scale( float x ){
+    inline void scale( float x ) {
       scale(x,x,x);
       }
 
-    inline void scale(float x, float y, float z){
+    inline void scale(float x, float y, float z) {
       m[0][0] *= x;
       m[0][1] *= x;
       m[0][2] *= x;
@@ -50,14 +55,18 @@ class Matrix4x4 final {
       m[2][3] *= z;
       }
 
-    void rotate(float angle, float x, float y, float z);
-    void rotateOX( float angle );
-    void rotateOY( float angle );
-    void rotateOZ( float angle );
+    inline void scale(const Vec3& sz) {
+      scale(sz.x,sz.y,sz.z);
+      }
 
-    const float *data() const;
-    float at( int x, int y ) const;
-    void  set( int x, int y, float v );
+    void rotate  (float angle, float x, float y, float z);
+    void rotateOX(float angle);
+    void rotateOY(float angle);
+    void rotateOZ(float angle);
+
+    const  float *data() const;
+    inline float at( int x, int y ) const     { return m[x][y]; }
+    inline void  set( int x, int y, float v ) { m[x][y] = v;    }
 
     void setData( const float data[/*16*/]);
     void setData( float a11, float a12, float a13, float a14,
@@ -67,12 +76,14 @@ class Matrix4x4 final {
 
     void transpose();
     void inverse();
-    void mul( const Matrix4x4& other );
+    void mul(const Matrix4x4& other);
 
     void project(float   x, float   y, float   z, float   w,
                  float &ox, float &oy, float &oz, float &ow ) const;
     void project(float & x, float & y, float & z, float & w ) const;
     void project(float & x, float & y, float & z ) const;
+    void project(Vec4& v) const;
+    void project(Vec3& v) const;
 
     void perspective( float angle, float aspect, float zNear, float zFar);
     void ortho(int width, int height, float zNear, float zFar);

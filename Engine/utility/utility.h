@@ -112,6 +112,38 @@ class BasicPoint<T,3> {
   };
 
 template<class T>
+class BasicPoint<T,4> {
+  public:
+    BasicPoint()=default;
+    BasicPoint(T x,T y,T z,T w):x(x),y(y),z(z),w(w){}
+
+    BasicPoint& operator -= ( const BasicPoint & p ){ x-=p.x; y-=p.y; z-=p.z; w-=p.w; return *this; }
+    BasicPoint& operator += ( const BasicPoint & p ){ x+=p.x; y+=p.y; z+=p.z; w+=p.w; return *this; }
+
+    BasicPoint& operator /= ( const T& p ){ x/=p; y/=p; z/=p; w/=p; return *this; }
+    BasicPoint& operator *= ( const T& p ){ x*=p; y*=p; z*=p; w*=p; return *this; }
+
+    friend BasicPoint operator - ( BasicPoint l,const BasicPoint & r ){ l-=r; return l; }
+    friend BasicPoint operator + ( BasicPoint l,const BasicPoint & r ){ l+=r; return l; }
+
+    friend BasicPoint operator / ( BasicPoint l,const T r ){ l/=r; return l; }
+    friend BasicPoint operator * ( BasicPoint l,const T r ){ l*=r; return l; }
+
+    BasicPoint operator - () const { return BasicPoint(-x,-y,-z,-w); }
+
+    T manhattanLength() const { return std::sqrt(x*x+y*y+z*z+w*w); }
+    T quadLength()      const { return x*x+y*y+z*z+w*w; }
+
+    bool operator ==( const BasicPoint & other ) const { return x==other.x && y==other.y && z==other.z && w==other.w; }
+    bool operator !=( const BasicPoint & other ) const { return x!=other.x || y!=other.y || z!=other.z || w!=other.w; }
+
+    T x=T();
+    T y=T();
+    T z=T();
+    T w=T();
+  };
+
+template<class T>
 struct BasicSize {
   explicit BasicSize(T is = T()):w(is), h(is) {}
   BasicSize(T ix, T iy):w(ix), h(iy) {}
@@ -175,18 +207,14 @@ struct BasicRect {
   bool operator !=( const BasicRect& other ) const { return x!=other.x || y!=other.y || w!=other.w || h!=other.h; }
   };
 
-using Point =BasicPoint<int,2>;
-using PointF=BasicPoint<float,2>;
+using Point  = BasicPoint<int,2>;
+using PointF = BasicPoint<float,2>;
 
-using Vec1 =BasicPoint<float,1>;
-using Vec2 =BasicPoint<float,2>;
-using Vec3 =BasicPoint<float,3>;
+using Vec1   = BasicPoint<float,1>;
+using Vec2   = BasicPoint<float,2>;
+using Vec3   = BasicPoint<float,3>;
+using Vec4   = BasicPoint<float,4>;
 
-using Size=BasicSize<int>;
-using Rect=BasicRect<int>;
-/*
-class Rect:public BasicRect<int> {
-  public:
-    using BasicRect<int>::BasicRect;
-  };*/
+using Size   = BasicSize<int>;
+using Rect   = BasicRect<int>;
 };

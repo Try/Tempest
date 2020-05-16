@@ -435,10 +435,6 @@ const float* Matrix4x4::data() const{
   return &m[0][0];
   }
 
-float Matrix4x4::at(int x, int y) const {
-  return m[x][y];
-  }
-
 void Matrix4x4::setData( const float data[/*16*/]){
   memcpy(m, data, 16*sizeof(float) );
   }
@@ -546,10 +542,6 @@ void Matrix4x4::ortho(int width,int height,float zNear, float zFar) {
   m[3][3] = 1.f;
   }
 
-void Tempest::Matrix4x4::set(int x, int y, float v) {
-  m[x][y] = v;
-  }
-
 void Tempest::Matrix4x4::project(float &x, float &y, float &z, float &w) const {
   project( x,y,z,w,
            x,y,z,w );
@@ -561,4 +553,12 @@ void Matrix4x4::project(float &x, float &y, float &z) const {
   x /= w;
   y /= w;
   z /= w;
+  }
+
+void Matrix4x4::project(Vec4& v) const {
+  project(v.x,v.y,v.z,v.w);
+  }
+
+void Matrix4x4::project(Vec3& v) const {
+  project(v.x,v.y,v.z);
   }
