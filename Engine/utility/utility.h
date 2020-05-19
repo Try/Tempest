@@ -20,7 +20,6 @@ enum Orientation:uint8_t {
   Vertical  =1
   };
 
-
 template<class T>
 class BasicPoint<T,1> {
   public:
@@ -47,6 +46,8 @@ class BasicPoint<T,1> {
     bool operator ==( const BasicPoint & other ) const { return x==other.x; }
     bool operator !=( const BasicPoint & other ) const { return x!=other.x; }
 
+    static T dotProduct(const BasicPoint<T,1>& a,const BasicPoint<T,1>& b) { return a.x*b.x; }
+
     T x=T();
   };
 
@@ -70,11 +71,16 @@ class BasicPoint<T,2> {
 
     BasicPoint operator - () const { return BasicPoint(-x,-y); }
 
-    T manhattanLength() const { return std::sqrt(x*x+y*y); }
+    T manhattanLength() const { return T(std::sqrt(x*x+y*y)); }
     T quadLength()      const { return x*x+y*y; }
 
     bool operator ==( const BasicPoint & other ) const { return x==other.x && y==other.y; }
     bool operator !=( const BasicPoint & other ) const { return x!=other.x || y!=other.y; }
+
+    static T dotProduct(const BasicPoint<T,2>& a,const BasicPoint<T,2>& b) { return a.x*b.x+a.y*b.y; }
+    static BasicPoint<T,2> crossProduct(const BasicPoint<T,2>& a) {
+      return { a.y, -a.x };
+      }
 
     T x=T();
     T y=T();
@@ -100,11 +106,20 @@ class BasicPoint<T,3> {
 
     BasicPoint operator - () const { return BasicPoint(-x,-y,-z); }
 
-    T manhattanLength() const { return std::sqrt(x*x+y*y+z*z); }
+    T manhattanLength() const { return T(std::sqrt(x*x+y*y+z*z)); }
     T quadLength()      const { return x*x+y*y+z*z; }
 
     bool operator ==( const BasicPoint & other ) const { return x==other.x && y==other.y && z==other.z; }
     bool operator !=( const BasicPoint & other ) const { return x!=other.x || y!=other.y || z!=other.z; }
+
+    static T dotProduct(const BasicPoint<T,3>& a,const BasicPoint<T,3>& b) { return a.x*b.x+a.y*b.y+a.z*b.z; }
+    static BasicPoint<T,3> crossProduct(const BasicPoint<T,3>& a,const BasicPoint<T,3>& b) {
+      return {
+        a.y*b.z - a.z*b.y,
+        a.z*b.x - a.x*b.z,
+        a.x*b.y - a.y*b.x
+        };
+      }
 
     T x=T();
     T y=T();
@@ -131,11 +146,13 @@ class BasicPoint<T,4> {
 
     BasicPoint operator - () const { return BasicPoint(-x,-y,-z,-w); }
 
-    T manhattanLength() const { return std::sqrt(x*x+y*y+z*z+w*w); }
+    T manhattanLength() const { return T(std::sqrt(x*x+y*y+z*z+w*w)); }
     T quadLength()      const { return x*x+y*y+z*z+w*w; }
 
     bool operator ==( const BasicPoint & other ) const { return x==other.x && y==other.y && z==other.z && w==other.w; }
     bool operator !=( const BasicPoint & other ) const { return x!=other.x || y!=other.y || z!=other.z || w!=other.w; }
+
+    static T dotProduct(const BasicPoint<T,4>& a,const BasicPoint<T,4>& b) { return a.x*b.x+a.y*b.y+a.z*b.z+a.w*b.w; }
 
     T x=T();
     T y=T();
