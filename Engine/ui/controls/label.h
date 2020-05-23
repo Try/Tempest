@@ -24,8 +24,12 @@ class Label : public Widget {
 
   private:
     void          invalidateSizeHint();
+    void          updateFont();
 
+    Font          fnt;
+    bool          fntInUse=false;
     TextModel     textM;
+
     Color         textCl;
   };
 

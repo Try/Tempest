@@ -39,14 +39,13 @@ Style::Extra::Extra(const Button &owner)
 Style::Extra::Extra(const Label &owner)
   : margin(owner.margins()), icon(emptyIcon), fontColor(owner.textColor()), spacing(owner.spacing()) {
   }
-/*
-Style::Extra::Extra(const TextEdit &owner)
-  : margin(owner.margins()), icon(emptyIcon), fontColor(owner.textColor()), spacind(owner.spacing()) {
+
+Style::Extra::Extra(const TextEdit& owner)
+  : margin(owner.margins()), icon(emptyIcon), fontColor(owner.textColor()), spacing(owner.spacing()),
+    selectionStart(owner.selectionStart()), selectionEnd(owner.selectionEnd()){
   }
-*/
 
 Style::Style() {
-  // anim.setRepeatCount(0);
   anim.timeout.bind(this,&Style::processAnimation);
   }
 
@@ -77,13 +76,6 @@ void Style::unpolish(Widget& w) const {
 const Tempest::Sprite &Style::iconSprite(const Icon& icon,const WidgetState &st, const Rect &r) {
   const int sz = std::min(r.w,r.h);
   return icon.sprite(sz,sz,st.disabled ? Icon::ST_Disabled : Icon::ST_Normal);
-  }
-
-const Font& Style::textFont(const TextModel& txt, const WidgetState&) {
-  auto& fnt = txt.font();
-  if(fnt.isEmpty())
-    return Application::font();
-  return fnt;
   }
 
 void Style::processAnimation() {
@@ -320,7 +312,7 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
   const Sprite& icon = iconSprite(extra.icon,st,r);
   int dX=0;
 
-  if( !icon.size().isEmpty() ){
+  if(!icon.size().isEmpty()){
     p.setBrush(icon);
     if( text.isEmpty() ) {
       p.drawRect( (r.w-icon.w())/2, (r.h-icon.h())/2, icon.w(), icon.h() );
@@ -339,16 +331,22 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
   if(dX!=0)
     dX+=extra.spacing;
 
-  auto&     fnt = textFont(text,st);
-  const int h   = text.wrapSize().h;
-  text.paint(p, fnt, m.left+dX, r.h-(r.h-h)/2);
-  //text.paint(p, m.left+dX, (r.h-h)/2, r.w-m.xMargin()-dX, h, text, flag );
+  auto&     fnt   = text.font();
+  const int h     = text.wrapSize().h;
+  const int fntSz = int(fnt.pixelSize());
 
-  /*
-  if( st.focus && text.selectionBegin()==text.selectionEnd() ) {
-    const int x=text.positionForCursor(text.selectionBegin(),st.echo).x;
-    drawCursor(p,st,x,r.h,cursorState);
-    }*/
+  Point at;
+  if(e!=TE_TextEditContent && e!=TE_LineEditContent)
+    at = {m.left+dX, r.h-(r.h-h)/2}; else
+    at = {m.left, fntSz};
+
+  if(extra.selectionStart==extra.selectionEnd) {
+    if((Application::tickCount()/500)%2)
+      text.drawCursor(p,at.x,at.y-fntSz,extra.selectionStart);
+    } else {
+    text.drawCursor(p,at.x,at.y-fntSz,extra.selectionStart,extra.selectionEnd);
+    }
+  text.paint(p, fnt, at.x, at.y);
   p.translate(-m.left,-0);
   p.setScissor(sc);
   }

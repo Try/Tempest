@@ -3,10 +3,12 @@
 #include <Tempest/Painter>
 #include <Tempest/Brush>
 #include <Tempest/Menu>
+#include <Tempest/Application>
 
 using namespace Tempest;
 
 Button::Button() {
+  textM.setFont(Application::font());
   setMargins(4);
   auto& m = style().metrics();
   setSizeHint(Size(m.buttonSize,m.buttonSize));
@@ -18,32 +20,39 @@ Button::~Button() {
   }
 
 void Button::polishEvent(PolishEvent&) {
-  auto& m = style().metrics();
-  setSizeHint(Size(m.buttonSize,m.buttonSize));
+  invalidateSizeHint();
   }
 
 void Button::emitClick() {
   onClick();
   }
 
+void Button::updateFont() {
+  const bool usr = !fnt.isEmpty();
+  if(usr==fntInUse && !usr)
+    return;
+
+  fntInUse = usr;
+  if(fntInUse)
+    textM.setFont(fnt); else
+    textM.setFont(Application::font());
+  }
+
 void Button::setText(const char *text) {
   textM.setText(text);
   invalidateSizeHint();
-
   update();
   }
 
 void Button::setText(const std::string& text) {
   textM.setText(text.c_str());
   invalidateSizeHint();
-
   update();
   }
 
 void Button::setFont(const Font &f) {
   textM.setFont(f);
   invalidateSizeHint();
-
   update();
   }
 
@@ -110,7 +119,11 @@ void Button::paintEvent(PaintEvent &e) {
   }
 
 void Button::invalidateSizeHint() {
-  auto sz = style().sizeHint(this,Style::E_Background,&textM,Style::Extra(*this));
+  updateFont();
+  auto& m  = style().metrics();
+  auto  sz = style().sizeHint(this,Style::E_Background,&textM,Style::Extra(*this));
+  sz.w = std::max(sz.w,m.buttonSize);
+  sz.h = m.buttonSize;
   setSizeHint(sz,margins());
   }
 

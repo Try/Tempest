@@ -41,7 +41,8 @@ void EventDispatcher::dispatchMouseUp(Widget &/*wnd*/, MouseEvent &e) {
   if(!e.isAccepted())
     return;
   if(auto w = ptr.lock()) {
-    // w->widget->setFocus(true);
+    if(w->widget->focusPolicy() & ClickFocus)
+      w->widget->setFocus(true);
     }
   }
 

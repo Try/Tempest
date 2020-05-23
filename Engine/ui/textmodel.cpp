@@ -21,6 +21,17 @@ void TextModel::setText(const char *str) {
   sz.actual=false;
   }
 
+TextModel::Cursor TextModel::insert(const char* t, Cursor where) {
+  size_t at  = cursorCast(where);
+  size_t len = std::strlen(t);
+
+  txt.insert(txt.begin()+at,t,t+len);
+  buildIndex();
+  sz.actual=false;
+  where.offset+=len;
+  return where;
+  }
+
 void TextModel::setFont(const Font &f) {
   fnt      =f;
   sz.actual=false;
@@ -159,7 +170,7 @@ TextModel::Cursor TextModel::charAt(int x, int y) const {
   while(i.hasData()){
     char32_t ch = i.next();
     auto l=fnt.letterGeometry(ch);
-    if(px<x && x<=px+l.advance.x) {
+    if(px<=x && x<=px+l.advance.x) {
       c.offset = i.pos();
       if(x<=px+l.advance.x/2)
         c.offset--;
@@ -191,6 +202,13 @@ bool TextModel::isValid(TextModel::Cursor c) const {
   if(c.line>=line.size())
     return false;
   return c.offset<=line[c.line].size;
+  }
+
+size_t TextModel::cursorCast(Cursor c) const {
+  size_t r=0;
+  for(size_t i=0;i<c.line;++i)
+    r+=line[i].size;
+  return r+c.offset;
   }
 
 void TextModel::drawCursor(Painter& p, int x, int y,TextModel::Cursor c) const {

@@ -33,6 +33,8 @@ class TextModel final {
       };
 
     void        setText(const char* text);
+    Cursor      insert(const char* txt,Cursor where);
+
     void        setFont(const Font& f);
     const Font& font() const;
 
@@ -52,11 +54,9 @@ class TextModel final {
 
     void        drawCursor(Painter& p,int x,int y,Cursor c) const;
     void        drawCursor(Painter& p,int x,int y,Cursor s,Cursor e) const;
-
     bool        isValid(Cursor c) const;
 
   private:
-
     struct Sz {
       Size sizeHint;
       int  wrapHeight=0;
@@ -68,6 +68,7 @@ class TextModel final {
       size_t      size=0;
       };
 
+    size_t      cursorCast(Cursor c) const;
     void        calcSize() const;
     Sz          calcSize(const Font& fnt) const;
     void        buildIndex();

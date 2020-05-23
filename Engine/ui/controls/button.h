@@ -64,10 +64,14 @@ class Button : public Widget {
     virtual void emitClick();
 
   private:
+    Font         fnt;
+    bool         fntInUse=false;
     TextModel    textM;
+
     Icon         icn;
     std::unique_ptr<Tempest::Menu> btnMenu;
 
+    void         updateFont();
     void         invalidateSizeHint(); //TODO: remove
     void         setPressed(bool p);
     void         showMenu();

@@ -2,6 +2,7 @@
 
 #include <Tempest/Timer>
 #include <Tempest/Rect>
+#include <Tempest/TextModel>
 
 #include <string>
 #include <memory>
@@ -55,12 +56,16 @@ class Style {
         Extra(const Widget&   owner);
         Extra(const Button&   owner);
         Extra(const Label&    owner);
+        Extra(const TextEdit& owner);
         // Extra(const LineEdit& owner);
 
         const Margin&         margin;
         const Icon&           icon;
         const Color&          fontColor;
         int                   spacing=0;
+
+        TextModel::Cursor     selectionStart;
+        TextModel::Cursor     selectionEnd;
 
       private:
         static const Tempest::Margin emptyMargin;
@@ -92,6 +97,7 @@ class Style {
       TE_ButtonTitle,
       TE_CheckboxTitle,
       TE_LabelTitle,
+      TE_TextEditContent,
       TE_LineEditContent,
       TE_Last
       };
@@ -141,7 +147,6 @@ class Style {
     virtual void unpolish(Widget& w) const;
 
     static const Tempest::Sprite& iconSprite(const Icon& icon,const WidgetState &st, const Rect &r);
-    static const Tempest::Font&   textFont(const TextModel& txt,const WidgetState &st);
 
   private:
     mutable uint32_t           refCnt   = 0;
