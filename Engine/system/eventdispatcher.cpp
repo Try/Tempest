@@ -107,8 +107,11 @@ void EventDispatcher::dispatchMouseWheel(Widget &wnd, MouseEvent &e){
 
 void EventDispatcher::dispatchKeyDown(Widget &wnd, KeyEvent &e, uint32_t scancode) {
   auto& k = keyUp[scancode];
-  if(!k.expired())
-    return; //TODO: key-repeat
+  if(auto w = lock(k)) {
+    KeyEvent e1(e.key,e.code,mkModifier(),Event::KeyRepeat);
+    w->widget->keyRepeatEvent(e1);
+    return;
+    }
 
   KeyEvent e1(e.key,e.code,mkModifier(),e.type());
   handleModKey(e);

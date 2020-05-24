@@ -2,6 +2,7 @@
 
 #include <Tempest/Application>
 #include <Tempest/Painter>
+#include <Tempest/TextCodec>
 
 #include <cstring>
 #include "utility/utf8_helper.h"
@@ -28,8 +29,60 @@ TextModel::Cursor TextModel::insert(const char* t, Cursor where) {
   txt.insert(txt.begin()+at,t,t+len);
   buildIndex();
   sz.actual=false;
-  where.offset+=len;
-  return where;
+
+  return cursorCast(at+len);
+  }
+
+TextModel::Cursor TextModel::erase(Cursor cs, Cursor ce) {
+  size_t s = cursorCast(cs);
+  size_t e = cursorCast(ce);
+  if(e<s)
+    std::swap(s,e);
+
+  txt.erase(txt.begin()+s,txt.begin()+e);
+  buildIndex();
+  sz.actual=false;
+
+  return cursorCast(s);
+  }
+
+TextModel::Cursor TextModel::replace(const char* t, TextModel::Cursor cs, TextModel::Cursor ce) {
+  size_t s   = cursorCast(cs);
+  size_t e   = cursorCast(ce);
+  size_t len = std::strlen(t);
+  if(e<s)
+    std::swap(s,e);
+
+  txt.erase (txt.begin()+s,txt.begin()+e);
+  txt.insert(txt.begin()+s,t,t+len);
+
+  buildIndex();
+  sz.actual=false;
+
+  return cursorCast(s+len);
+  }
+
+TextModel::Cursor TextModel::advance(TextModel::Cursor src, int32_t offset) const {
+  size_t c = cursorCast(src);
+  if(offset>0) {
+    const char* str = txt.data()+c, *end = txt.data()+txt.size();
+    for(int32_t i=0;i<offset && str<end;++i) {
+      const auto l = Detail::utf8LetterLength(str);
+      str+=l;
+      }
+    return cursorCast(std::distance(txt.data(),str));
+    } else {
+    offset = -offset;
+    const char* str = txt.data()+c, *begin = txt.data();
+    for(int32_t i=0;i<offset;++i) {
+      while(str!=begin) {
+        str--;
+        if((uint8_t(*str) >> 6) == 0x2)
+          break;
+        }
+      }
+    return cursorCast(c+offset);
+    }
   }
 
 void TextModel::setFont(const Font &f) {
@@ -182,15 +235,15 @@ TextModel::Cursor TextModel::charAt(int x, int y) const {
   return c;
   }
 
-Point TextModel::mapToCoords(TextModel::Cursor c) const {
+Point TextModel::mapToCoords(Cursor c) const {
   if(!isValid(c))
     return Point();
   Point p;
   p.y = int(c.line*fnt.pixelSize());
   auto& ln = line[c.line];
-  Utf8Iterator str(ln.txt,ln.size);
 
-  for(size_t i=0;str.hasData() && i<c.offset;++i){
+  Utf8Iterator str(ln.txt,ln.size);
+  while(str.hasData() && str.pos()<c.offset){
     char32_t ch = str.next();
     auto l=fnt.letterGeometry(ch);
     p.x += l.advance.x;
@@ -205,10 +258,22 @@ bool TextModel::isValid(TextModel::Cursor c) const {
   }
 
 size_t TextModel::cursorCast(Cursor c) const {
-  size_t r=0;
-  for(size_t i=0;i<c.line;++i)
-    r+=line[i].size;
+  size_t r=std::distance(txt.data(),line[c.line].txt);
   return r+c.offset;
+  }
+
+TextModel::Cursor TextModel::cursorCast(size_t c) const {
+  Cursor cx;
+  for(size_t i=0;i<line.size();++i) {
+    size_t b = std::distance(txt.data(),line[i].txt);
+
+    if(b<=c && c<=b+line[i].size) {
+      cx.line   = i;
+      cx.offset = c-b;
+      return cx;
+      }
+    }
+  return cx;
   }
 
 void TextModel::drawCursor(Painter& p, int x, int y,TextModel::Cursor c) const {
@@ -223,7 +288,7 @@ void TextModel::drawCursor(Painter& p, int x, int y,TextModel::Cursor c) const {
   p.setBrush(b);
   }
 
-void TextModel::drawCursor(Painter &p, int x, int y, TextModel::Cursor s, TextModel::Cursor e) const {
+void TextModel::drawCursor(Painter &p, int x, int y, Cursor s, Cursor e) const {
   if(!isValid(s) || !isValid(e))
     return;
 
@@ -231,23 +296,30 @@ void TextModel::drawCursor(Painter &p, int x, int y, TextModel::Cursor s, TextMo
   p.setBrush(Color(0,0,1,1));
   if(s.line>e.line)
     std::swap(s,e);
+  Cursor s1 = s;
+  s1.offset = line[s.line].size;
 
+  int lnH = int(fnt.pixelSize());
   if(s.line!=e.line) {
-    auto t = std::min(int(s.line),int(e.line))+1;
-    auto b = std::max(int(s.line),int(e.line))-1;
+    auto posS0 = mapToCoords(s);
+    auto posS1 = mapToCoords(s1);
+    auto posE  = mapToCoords(e);
 
-    if(t<=b)
-      p.drawRect(x,y+int(t*fnt.pixelSize()),w(),int(b*fnt.pixelSize()));
-    auto posS = mapToCoords(s);
-    p.drawRect(x+posS.x,y+posS.y,w()-posS.x,int(fnt.pixelSize()));
-    auto posE = mapToCoords(e);
-    p.drawRect(x,y+posE.y,posE.x,int(fnt.pixelSize()));
+    p.drawRect(x+posS0.x,y+posS0.y,posS1.x-posS0.x,lnH);
+    p.drawRect(x,        y+posE.y,posE.x,          lnH);
+    for(size_t ln=s.line+1;ln<e.line;++ln) {
+      Cursor cx;
+      cx.line   = ln;
+      cx.offset = line[ln].size;
+      auto posLn = mapToCoords(cx);
+      p.drawRect(x,y+posLn.y,posLn.x,lnH);
+      }
     } else {
     auto posS = mapToCoords(s);
     auto posE = mapToCoords(e);
     int is = std::min(posS.x,posE.x);
     int ie = std::max(posS.x,posE.x);
-    p.drawRect(x+is,y+posS.y,x+ie-is,int(fnt.pixelSize()));
+    p.drawRect(x+is,y+posS.y,x+ie-is,lnH);
     }
 
   p.setBrush(b);

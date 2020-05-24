@@ -31,6 +31,7 @@ class Event {
       MouseEnter,
       MouseLeave,
       KeyDown,
+      KeyRepeat,
       KeyUp,
       Focus,
       Resize,

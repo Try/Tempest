@@ -127,6 +127,7 @@ class Widget {
     virtual void mouseWheelEvent(Tempest::MouseEvent&  event);
 
     virtual void keyDownEvent   (Tempest::KeyEvent&    event);
+    virtual void keyRepeatEvent (Tempest::KeyEvent&    event);
     virtual void keyUpEvent     (Tempest::KeyEvent&    event);
 
     virtual void mouseEnterEvent(Tempest::MouseEvent&  event);

@@ -32,6 +32,8 @@ class TextEdit : public Tempest::Widget {
     void mouseUpEvent  (Tempest::MouseEvent& e) override;
 
     void keyDownEvent  (Tempest::KeyEvent &event) override;
+    void keyRepeatEvent(Tempest::KeyEvent &event) override;
+    void keyUpEvent    (Tempest::KeyEvent &event) override;
 
     void paintEvent    (Tempest::PaintEvent& e) override;
 
@@ -45,10 +47,12 @@ class TextEdit : public Tempest::Widget {
     Font              fnt;
     bool              fntInUse=false;
     Color             fntCl;
-    Timer             anim, keyRepeat;
+    Timer             anim;
 
-    void             invalidateSizeHint();
-    void             updateFont();
+    void              keyEventImpl(KeyEvent& k);
+
+    void              invalidateSizeHint();
+    void              updateFont();
   };
 
 }

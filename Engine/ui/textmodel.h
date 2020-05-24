@@ -33,7 +33,11 @@ class TextModel final {
       };
 
     void        setText(const char* text);
-    Cursor      insert(const char* txt,Cursor where);
+    Cursor      insert (const char* txt,Cursor where);
+    Cursor      erase  (Cursor s, Cursor e);
+    Cursor      replace(const char* txt,Cursor s,Cursor e);
+
+    Cursor      advance(Cursor src, int32_t offset) const;
 
     void        setFont(const Font& f);
     const Font& font() const;
@@ -69,6 +73,8 @@ class TextModel final {
       };
 
     size_t      cursorCast(Cursor c) const;
+    Cursor      cursorCast(size_t c) const;
+
     void        calcSize() const;
     Sz          calcSize(const Font& fnt) const;
     void        buildIndex();

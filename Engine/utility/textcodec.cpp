@@ -31,6 +31,11 @@ std::string TextCodec::toUtf8(const char16_t *inS) {
   return u;
   }
 
+void TextCodec::toUtf8(const uint32_t codePoint, char (&ret)[3]) {
+  size_t sz = Detail::codepointToUtf8(codePoint,ret);
+  ret[sz] = '\0';
+  }
+
 std::u16string TextCodec::toUtf16(const std::string &s) {
   return toUtf16(s.c_str());
   }

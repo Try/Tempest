@@ -592,6 +592,10 @@ void Widget::keyDownEvent(KeyEvent &e) {
   e.ignore();
   }
 
+void Widget::keyRepeatEvent(KeyEvent& e) {
+  e.ignore();
+  }
+
 void Widget::keyUpEvent(KeyEvent &e) {
   e.ignore();
   }

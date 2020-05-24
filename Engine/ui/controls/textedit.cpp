@@ -2,6 +2,7 @@
 
 #include <Tempest/Painter>
 #include <Tempest/Application>
+#include <Tempest/TextCodec>
 
 using namespace Tempest;
 
@@ -89,8 +90,36 @@ void TextEdit::mouseUpEvent(MouseEvent& e) {
   }
 
 void TextEdit::keyDownEvent(KeyEvent& e) {
-  char t[2] = {char(e.code),'\0'};
-  selS = textM.insert(t,selS);
+  keyEventImpl(e);
+  }
+
+void TextEdit::keyRepeatEvent(KeyEvent& e) {
+  keyEventImpl(e);
+  }
+
+void TextEdit::keyUpEvent(KeyEvent&) {
+  }
+
+void TextEdit::keyEventImpl(KeyEvent& e) {
+  if(e.key==Event::K_Delete || e.key==Event::K_Back) {
+    TextModel::Cursor end = selE;
+    if(selS==selE) {
+      end = textM.advance(selS, e.key==Event::K_Delete ? 1 : -1);
+      }
+    if(textM.isValid(end))
+      selS = textM.erase(selS,end);
+    }
+  else {
+    char t[3] = {};
+    if(e.key==Event::K_Return) {
+      t[0] = '\n';
+      } else {
+      TextCodec::toUtf8(e.code,t);
+      }
+    if(selS==selE)
+      selS = textM.insert(t,selS); else
+      selS = textM.replace(t,selS,selE);
+    }
   selE = selS;
   update();
   }
