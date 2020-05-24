@@ -101,7 +101,13 @@ void TextEdit::keyUpEvent(KeyEvent&) {
   }
 
 void TextEdit::keyEventImpl(KeyEvent& e) {
-  if(e.key==Event::K_Delete || e.key==Event::K_Back) {
+  if(e.key==Event::K_Left) {
+    selS = textM.advance(selS,-1);
+    }
+  else if(e.key==Event::K_Right) {
+    selS = textM.advance(selS, 1);
+    }
+  else if(e.key==Event::K_Delete || e.key==Event::K_Back) {
     TextModel::Cursor end = selE;
     if(selS==selE) {
       end = textM.advance(selS, e.key==Event::K_Delete ? 1 : -1);

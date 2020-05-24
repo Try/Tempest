@@ -77,11 +77,11 @@ TextModel::Cursor TextModel::advance(TextModel::Cursor src, int32_t offset) cons
     for(int32_t i=0;i<offset;++i) {
       while(str!=begin) {
         str--;
-        if((uint8_t(*str) >> 6) == 0x2)
+        if((uint8_t(*str) >> 6) != 0x2)
           break;
         }
       }
-    return cursorCast(c+offset);
+    return cursorCast(std::distance(txt.data(),str));
     }
   }
 
