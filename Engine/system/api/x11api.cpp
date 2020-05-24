@@ -284,7 +284,7 @@ void X11Api::implShowCursor(bool show) {
     XUndefineCursor(dpy, HWND(windows.begin()->first));
     } else {
     Cursor invisibleCursor;
-    Pixmap bitmapNoData;
+    ::Pixmap bitmapNoData;
     XColor black;
     static char noData[] = { 0,0,0,0,0,0,0,0 };
     black.red = black.green = black.blue = 0;
