@@ -84,20 +84,20 @@ void Button::mouseDownEvent(MouseEvent &e) {
   }
 
 void Button::mouseUpEvent(MouseEvent& e) {
+  const bool wasPresed = isPressed();
+  setPressed(false);
+
   if( e.x<=w() && e.y<=h() &&  e.x>=0 && e.y>=0 && isEnabled() ) {
     if(buttonType()==T_CheckableButton) {
       auto c = isChecked();
       setChecked(c==Checked ? Unchecked : Checked);
       }
 
-    if(isPressed())
+    if(wasPresed)
       emitClick();
     else if(e.button==Event::ButtonRight)
       showMenu();
     }
-
-  setPressed(false);
-  update();
   }
 
 void Button::mouseMoveEvent(MouseEvent &e) {

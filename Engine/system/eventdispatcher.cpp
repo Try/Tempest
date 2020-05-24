@@ -25,21 +25,22 @@ void EventDispatcher::dispatchMouseDown(Widget &wnd, MouseEvent &e) {
   }
 
 void EventDispatcher::dispatchMouseUp(Widget &/*wnd*/, MouseEvent &e) {
-  auto w = lock(mouseUp);
-  if(w==nullptr)
-    return;
   auto ptr = mouseUp;
   mouseUp.reset();
-  auto p = e.pos() - w->widget->mapToRoot(Point());
-  MouseEvent e1( p.x,
-                 p.y,
-                 e.button,
-                 0,
-                 0,
-                 Event::MouseUp );
-  w->widget->mouseUpEvent(e1);
-  if(!e.isAccepted())
-    return;
+
+  if(auto w = ptr.lock()) {
+    auto p = e.pos() - w->widget->mapToRoot(Point());
+    MouseEvent e1( p.x,
+                   p.y,
+                   e.button,
+                   0,
+                   0,
+                   Event::MouseUp );
+    w->widget->mouseUpEvent(e1);
+    if(!e1.isAccepted())
+      return;
+    }
+
   if(auto w = ptr.lock()) {
     if(w->widget->focusPolicy() & ClickFocus)
       w->widget->setFocus(true);
