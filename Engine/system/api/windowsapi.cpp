@@ -126,7 +126,7 @@ WindowsApi::WindowsApi() {
     throw std::system_error(Tempest::SystemErrc::InvalidWindowClass);
   }
 
-SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, uint32_t width, uint32_t height) {
+SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, uint32_t width, uint32_t height, ShowMode sm) {
   RECT wr = {0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
   AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
@@ -135,7 +135,7 @@ SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, uint32_t
                                 wndClassName,          // class name
                                 nullptr,               // app name
                                 WS_OVERLAPPEDWINDOW |  // window style
-                                WS_VISIBLE | WS_SYSMENU,
+                                (sm==Hidden) ? (0) : (WS_VISIBLE | WS_SYSMENU),
                                 0, 0,                  // x/y coords
                                 wr.right  - wr.left,   // width
                                 wr.bottom - wr.top,    // height
@@ -149,8 +149,6 @@ SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, uint32_t
     }
 
   SetWindowLongPtr(window,GWLP_USERDATA,LONG_PTR(owner));
-  //minsize.x = GetSystemMetrics(SM_CXMINTRACK);
-  //minsize.y = GetSystemMetrics(SM_CYMINTRACK) + 1;
   Window* wx = reinterpret_cast<Window*>(window);
   try {
     windows.insert(wx);
@@ -162,24 +160,28 @@ SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, uint32_t
   return wx;
   }
 
+SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, uint32_t width, uint32_t height) {
+  return implCreateWindow(owner,width,height,Normal);
+  }
+
 SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, ShowMode sm) {
   SystemApi::Window* hwnd = nullptr;
   if(sm==Hidden) {
-    hwnd = createWindow(owner,uint32_t(1),uint32_t(1));
+    hwnd = implCreateWindow(owner,uint32_t(1),uint32_t(1));
     ShowWindow(HWND(hwnd),SW_HIDE);
     }
   else if(sm==Minimized) {
-    hwnd =  createWindow(owner,800,600);
+    hwnd =  implCreateWindow(owner,800,600);
     ShowWindow(HWND(hwnd),SW_MINIMIZE);
     }
   else if(sm==Normal) {
-    hwnd =  createWindow(owner,800,600);
+    hwnd =  implCreateWindow(owner,800,600);
     ShowWindow(HWND(hwnd),SW_NORMAL);
     }
   else {
     int w = GetSystemMetrics(SM_CXFULLSCREEN),
         h = GetSystemMetrics(SM_CYFULLSCREEN);
-    hwnd = createWindow(owner,uint32_t(w),uint32_t(h));
+    hwnd = implCreateWindow(owner,uint32_t(w),uint32_t(h));
     ShowWindow(HWND(hwnd),SW_MAXIMIZE);
     }
   if(sm==FullScreen)
