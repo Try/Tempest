@@ -275,10 +275,12 @@ Rect ScrollBar::elementRect(ScrollBar::Elements e) const {
       int cen   = std::min(cenBtnSize,space);
       float k = mValue/float(rmax-rmin);
       int   x = int(float(space-cen)*k);
+      if((elements&Elt_Inc)!=0)
+        x+=wx;
 
       if(orient==Orientation::Vertical)
-        return Rect(0,wx+x,w(),cen); else
-        return Rect(wx+x,0,cen,h());
+        return Rect(0,x,w(),cen); else
+        return Rect(x,0,cen,h());
       }
     case Elt_IncL:
     case Elt_DecL:
