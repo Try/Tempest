@@ -88,12 +88,20 @@ uint8_t *PixmapCodecCommon::load(PixmapCodec::Context &ctx, uint32_t &ow, uint32
       throw std::system_error(Tempest::SystemErrc::UnableToLoadAsset);
     }
 
+  if(bpp==1) {
+    frm    = Pixmap::Format::R;
+    dataSz = size_t(w*h*1);
+    } else
   if(bpp==3) {
     frm    = Pixmap::Format::RGB;
     dataSz = size_t(w*h*3);
-    } else {
+    } else
+  if(bpp==4)  {
     frm    = Pixmap::Format::RGBA;
     dataSz = size_t(w*h*4);
+    } else {
+    std::free(result);
+    return nullptr;
     }
 
   ow     = uint32_t(w);
