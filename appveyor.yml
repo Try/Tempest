@@ -16,7 +16,7 @@ environment:
 install:
 - git submodule -q update --init --recursive
 # Vulkan SDK and thirdparty
-- cmd: |
+- cmd: >-
   curl -L --silent --show-error --output VulkanSDK.exe https://vulkan.lunarg.com/sdk/download/1.2.135.0/windows/VulkanSDK-1.2.135.0-Installer.exe?Human=true
   VulkanSDK.exe /S
   set VK_SDK_PATH=C:/VulkanSDK/1.2.135.0
@@ -30,7 +30,7 @@ install:
 # GLSL compiller
 - mkdir glslang
 - cd glslang
-- cmd: |
+- cmd: >-
   curl -fsSL -o glslang-master-windows-x64-Release.zip https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-windows-x64-Release.zip
   7z x glslang-master-windows-x64-Release.zip
 - sh: |
