@@ -6,20 +6,18 @@ image:
   - Visual Studio 2015 # used as mingw
   - Ubuntu1804
 
-for:
-- matrix:
-    only:
-      - image: Visual Studio 2017
-  environment:
-    - GENERATOR: Visual Studio 15 2017
-
-- matrix:
-    only:
-      - image: Visual Studio 2015
-  environment:
-    - GENERATOR: "MinGW Makefiles"
+environment:
+  matrix:
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+      GENERATOR: "MinGW Makefiles"
       CC:        C:/Qt/Tools/mingw530_32/bin/gcc.exe
       CXX:       C:/Qt/Tools/mingw530_32/bin/g++.exe
+
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      GENERATOR: "Visual Studio 15 2017"
+
+    - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
+      GENERATOR: ""
 
 install:
 - git submodule -q update --init --recursive
