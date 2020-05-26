@@ -7,6 +7,7 @@
 #include <Tempest/RenderPipeline>
 #include <Tempest/Shader>
 #include <Tempest/Attachment>
+#include <Tempest/ZBuffer>
 #include <Tempest/Texture2d>
 #include <Tempest/Uniforms>
 #include <Tempest/VertexBuffer>
@@ -101,12 +102,13 @@ class Device {
     Uniforms             uniforms(const UniformsLayout &owner);
 
     Attachment           attachment (TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips = false);
+    ZBuffer              zbuffer    (TextureFormat frm, const uint32_t w, const uint32_t h);
     Texture2d            loadTexture(const Pixmap& pm,bool mips=true);
     Pixmap               readPixels (const Texture2d&  t);
     Pixmap               readPixels (const Attachment& t);
 
     FrameBuffer          frameBuffer(Attachment& out);
-    FrameBuffer          frameBuffer(Attachment& out, Attachment& zbuf);
+    FrameBuffer          frameBuffer(Attachment& out, ZBuffer& zbuf);
 
     RenderPass           pass(const FboMode& color);
     RenderPass           pass(const FboMode& color,const FboMode& depth);

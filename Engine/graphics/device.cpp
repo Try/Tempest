@@ -178,11 +178,18 @@ const Device::Props& Device::properties() const {
   }
 
 Attachment Device::attachment(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips) {
-  if(!devProps.hasSamplerFormat(frm) && !devProps.hasAttachFormat(frm) && !devProps.hasDepthFormat(frm))
+  if(!devProps.hasSamplerFormat(frm) && !devProps.hasAttachFormat(frm))
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
   uint32_t mipCnt = mips ? mipCount(w,h) : 1;
   Texture2d t(*this,api.createTexture(dev,w,h,mipCnt,frm),w,h,frm);
   return Attachment(std::move(t));
+  }
+
+ZBuffer Device::zbuffer(TextureFormat frm, const uint32_t w, const uint32_t h) {
+  if(!devProps.hasDepthFormat(frm))
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
+  Texture2d t(*this,api.createTexture(dev,w,h,1,frm),w,h,frm);
+  return ZBuffer(std::move(t),devProps.hasSamplerFormat(frm));
   }
 
 Texture2d Device::loadTexture(const Pixmap &pm, bool mips) {
@@ -230,8 +237,8 @@ TextureFormat Device::formatOf(const Attachment& a) {
   return a.tImpl.frm;
   }
 
-FrameBuffer Device::frameBuffer(Attachment& out, Attachment& zbuf) {
-  TextureFormat att[2] = {formatOf(out),formatOf(zbuf)};
+FrameBuffer Device::frameBuffer(Attachment& out, ZBuffer& zbuf) {
+  TextureFormat att[2] = {formatOf(out),zbuf.tImpl.frm};
   uint32_t w = uint32_t(out.w());
   uint32_t h = uint32_t(out.h());
 
