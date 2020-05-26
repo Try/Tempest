@@ -55,9 +55,9 @@ build_script:
   - cmake --build ../../build
 
 test_script:
-  - cmd: dir
   - cmd: set Path=C:/Qt/Tools/mingw530_32/bin;%Path%
   - cmd: cd %APPVEYOR_BUILD_FOLDER%\build\testsuite
+  - cmd: dir
   - cmd: TempestTests.exe
   - sh:  cd $APPVEYOR_BUILD_FOLDER/build/testsuite
   - sh:  ./TempestTests
