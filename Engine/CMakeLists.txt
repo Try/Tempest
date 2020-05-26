@@ -3,7 +3,8 @@ cmake_minimum_required(VERSION 3.4)
 project(MoltenTempest)
 set(CMAKE_CXX_STANDARD 14)
 
-option(BUILD_SHARED_LIBS "Build shared libraries." OFF)
+option(TEMPEST_BUILD_SHARED "Build shared MoltenTempest." ON)
+
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
@@ -20,7 +21,12 @@ if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
 else()
   link_directories("$ENV{VK_SDK_PATH}/Lib32")
 endif()
-add_library(${PROJECT_NAME})
+
+if(TEMPEST_BUILD_SHARED)
+  add_library(${PROJECT_NAME} SHARED)
+else()
+  add_library(${PROJECT_NAME} STATIC)
+endif()
 
 ### Compillers
 if(MSVC)
