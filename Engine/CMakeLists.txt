@@ -24,6 +24,7 @@ endif()
 
 if(TEMPEST_BUILD_SHARED)
   add_library(${PROJECT_NAME} SHARED)
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 else()
   add_library(${PROJECT_NAME} STATIC)
 endif()

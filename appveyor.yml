@@ -50,8 +50,8 @@ build_script:
   - g++   --version
 
   - cd Tests/tests
-  - cmd: cmake -H. -B../../build -G "%GENERATOR%" -DBUILD_SHARED_MOLTEN_TEMPEST:BOOL=ON -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo "-DCMAKE_PREFIX_PATH:STRING=C:\Qt\Tools\mingw530_32\bin" "-DCMAKE_MAKE_PROGRAM:STRING=C:\Qt\Tools\mingw530_32\bin\mingw32-make.exe"
-  - sh:  cmake -H. -B../../build                -DBUILD_SHARED_MOLTEN_TEMPEST:BOOL=ON -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo
+  - cmd: cmake -H. -B../../build -G "%GENERATOR%" -DBUILD_SHARED_MOLTEN_TEMPEST:BOOL=ON -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo
+  - sh:  cmake -H. -B../../build                  -DBUILD_SHARED_MOLTEN_TEMPEST:BOOL=ON -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo
   - cmake --build ../../build --target all
 
 test_script:
