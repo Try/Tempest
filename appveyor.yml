@@ -13,7 +13,6 @@ for:
   environment:
     - GENERATOR: Visual Studio 15 2017
 
-for:
 - matrix:
     only:
       - image: Visual Studio 2015
