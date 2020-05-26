@@ -1,14 +1,9 @@
 configuration:
   - release
 
-image:
-  - Visual Studio 2017
-  - Visual Studio 2015 # used as mingw
-  - Ubuntu1804
-
 environment:
   matrix:
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015  # used as mingw
       GENERATOR: "MinGW Makefiles"
       CC:        C:/Qt/Tools/mingw530_32/bin/gcc.exe
       CXX:       C:/Qt/Tools/mingw530_32/bin/g++.exe
