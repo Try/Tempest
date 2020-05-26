@@ -52,9 +52,10 @@ build_script:
   - cd Tests/tests
   - cmd: cmake -H. -B../../build -G "%GENERATOR%" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_SH=CMAKE_SH-NOTFOUND
   - sh:  cmake -H. -B../../build                  -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo
-  - cmake --build ../../build --target all
+  - cmake --build ../../build
 
 test_script:
+  - cmd: set Path=C:/Qt/Tools/mingw530_32/bin;%Path%
   - cmd: cd %APPVEYOR_BUILD_FOLDER%\build\testsuite
   - cmd: TempestTests.exe
   - sh:  cd $APPVEYOR_BUILD_FOLDER/build/testsuite
