@@ -8,13 +8,15 @@ image:
 
 for:
 - matrix:
-  only: image: Visual Studio 2017
+    only:
+      - image: Visual Studio 2017
   environment:
     - GENERATOR: Visual Studio 15 2017
 
 for:
 - matrix:
-  only: image: Visual Studio 2015
+    only:
+      - image: Visual Studio 2015
   environment:
     - GENERATOR: "MinGW Makefiles"
       CC:        C:/Qt/Tools/mingw530_32/bin/gcc.exe
