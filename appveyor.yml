@@ -3,16 +3,18 @@ configuration:
 
 environment:
   matrix:
-    - image: Visual Studio 2015
+    - image : Visual Studio 2017
+      os:     Visual Studio 2017
       GENERATOR: "Visual Studio 15 2017"
 
-    - image : Visual Studio 2017
+    - image:  Visual Studio 2015
+      os:     Visual Studio 2015
       CC:        C:/Qt/Tools/mingw530_32/bin/gcc.exe
       CXX:       C:/Qt/Tools/mingw530_32/bin/g++.exe
       GENERATOR: "MinGW Makefiles"
 
     - image : Ubuntu1804
-    - os:     Ubuntu1804
+      os:     Ubuntu1804
 
 install:
 - git submodule -q update --init --recursive
