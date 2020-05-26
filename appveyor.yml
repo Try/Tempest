@@ -1,5 +1,3 @@
-install:
-
 configuration:
   - release
 
@@ -43,7 +41,7 @@ install:
 - sh: export PATH="$PATH:$APPVEYOR_BUILD_FOLDER/glslang/bin"
 
 before_build:
-  # Prepare the out-of-source build directory.
+# Prepare the out-of-source build directory.
   - mkdir build
   - cmd: set Path=C:/Qt/Tools/mingw530_32/bin;%Path%
 
