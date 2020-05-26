@@ -3,8 +3,7 @@ configuration:
 
 environment:
   matrix:
-    - image: Visual Studio 2017
-      VSVER: 14.0 # Visual Studio 2015
+    - image: Visual Studio 2015
       GENERATOR: "Visual Studio 15 2017"
 
     - image : Visual Studio 2017
@@ -13,6 +12,7 @@ environment:
       GENERATOR: "MinGW Makefiles"
 
     - image : Ubuntu1804
+    - os:     Ubuntu1804
 
 install:
 - git submodule -q update --init --recursive
@@ -50,7 +50,7 @@ build_script:
   - g++   --version
 
   - cd Tests/tests
-  - cmd: cmake -H. -B../../build -G %GENERATOR% -DBUILD_SHARED_MOLTEN_TEMPEST:BOOL=ON -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo "-DCMAKE_PREFIX_PATH:STRING=C:\Qt\Tools\mingw530_32\bin" "-DCMAKE_MAKE_PROGRAM:STRING=C:\Qt\Tools\mingw530_32\bin\mingw32-make.exe"
+  - cmd: cmake -H. -B../../build -G "%GENERATOR%" -DBUILD_SHARED_MOLTEN_TEMPEST:BOOL=ON -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo "-DCMAKE_PREFIX_PATH:STRING=C:\Qt\Tools\mingw530_32\bin" "-DCMAKE_MAKE_PROGRAM:STRING=C:\Qt\Tools\mingw530_32\bin\mingw32-make.exe"
   - sh:  cmake -H. -B../../build                -DBUILD_SHARED_MOLTEN_TEMPEST:BOOL=ON -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo
   - cmake --build ../../build --target all
 
