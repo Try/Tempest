@@ -9,7 +9,9 @@ environment:
       CXX:       C:/Qt/Tools/mingw530_32/bin/g++.exe
 
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      GENERATOR: "Visual Studio 15 2017"
+      GENERATOR: "NMake Makefiles JOM"
+      VCVARSALL: "%VS140COMNTOOLS%/../../VC/vcvarsall.bat"
+      PLATFORM:  X64
 
     - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
       GENERATOR: ""
@@ -50,6 +52,7 @@ build_script:
   - g++   --version
 
   - cd Tests/tests
+  - cmd: if NOT "%VCVARSALL%" == "" call "%VCVARSALL%" %PLATFORM%
   - cmd: cmake -H. -B../../build -G "%GENERATOR%" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_SH=CMAKE_SH-NOTFOUND
   - sh:  cmake -H. -B../../build                  -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo
   - cmake --build ../../build
@@ -78,5 +81,5 @@ deploy:
   prerelease: true
   on:
     branch: master                # release from master branch only
-    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
     appveyor_repo_tag: true       # deploy on tag push only
