@@ -49,8 +49,8 @@ before_build:
 
 build_script:
   - cmake --version
-  - gcc   --version
-  - g++   --version
+  - if "%GENERATOR%" == "MinGW Makefiles" gcc --version
+  - if "%GENERATOR%" == "MinGW Makefiles" g++ --version
 
   - cd Tests/tests
   - cmd: if NOT "%VCVARSALL%" == "" call "%VCVARSALL%" %PLATFORM%
