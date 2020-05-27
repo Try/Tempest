@@ -44,7 +44,8 @@ install:
 before_build:
 # Prepare the out-of-source build directory.
   - mkdir build
-  - cmd: set Path=C:/Qt/Tools/mingw530_32/bin;%Path%
+  - cmd: if "%GENERATOR%" == "MinGW Makefiles"     set Path=C:/Qt/Tools/mingw530_32/bin;%Path%
+  - cmd: if "%GENERATOR%" == "NMake Makefiles JOM" set PATH=C:\Qt\Tools\QtCreator\bin;%PATH%
 
 build_script:
   - cmake --version
@@ -53,7 +54,6 @@ build_script:
 
   - cd Tests/tests
   - cmd: if NOT "%VCVARSALL%" == "" call "%VCVARSALL%" %PLATFORM%
-  - cmd: if "%CMAKE_GENERATOR%" == "NMake Makefiles JOM" set PATH=C:\Qt\Tools\QtCreator\bin;%PATH%
   - cmd: cmake -H. -B../../build -G "%GENERATOR%" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_SH=CMAKE_SH-NOTFOUND
   - sh:  cmake -H. -B../../build                  -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo
   - cmake --build ../../build
@@ -69,9 +69,6 @@ test_script:
 artifacts:
   - path: build/tempest/tempest.zip
     name: archive
-
-on_finish:
-  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
 deploy:
   release: tempest-win32-v$(appveyor_build_version)
