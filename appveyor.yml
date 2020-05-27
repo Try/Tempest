@@ -10,8 +10,8 @@ environment:
 
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       GENERATOR: "NMake Makefiles JOM"
-      VCVARSALL: "%VS140COMNTOOLS%/../../VC/vcvarsall.bat"
-      PLATFORM:  X64
+      VCVARSALL: "%VS140COMNTOOLS%/../../VC/Auxiliary/Build/vcvarsall.bat"
+      PLATFORM:  x64
 
     - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
       GENERATOR: ""
@@ -60,6 +60,9 @@ build_script:
 test_script:
   - cmd: set Path=C:/Qt/Tools/mingw530_32/bin;%Path%
   - cmd: cd %APPVEYOR_BUILD_FOLDER%\build\testsuite
+  - cmd: copy /b/y "C:\Qt\Tools\mingw530_32\bin\libgcc_s_dw2-1.dll"   "libgcc_s_dw2-1.dll"
+  - cmd: copy /b/y "C:\Qt\Tools\mingw530_32\bin\libstdc++-6.dll"      "libstdc++-6.dll"
+  - cmd: copy /b/y "C:\Qt\Tools\mingw530_32\bin\libwinpthread-1.dll"  "libwinpthread-1.dll"
   - cmd: dir
   - cmd: TempestTests.exe
   - sh:  cd $APPVEYOR_BUILD_FOLDER/build/testsuite
