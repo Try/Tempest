@@ -16,6 +16,8 @@ class VFramebufferLayout;
 class VFramebuffer : public AbstractGraphicsApi::Fbo {
   public:
     struct Attach final {
+      Attach(VTexture* tex, size_t id):tex(tex),id(id){}
+      Attach(VSwapchain* sw,size_t id):sw(sw),  id(id){}
       VTexture*   tex=nullptr;
       VSwapchain* sw =nullptr;
       size_t      id =0;

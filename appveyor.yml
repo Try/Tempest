@@ -53,6 +53,7 @@ build_script:
 
   - cd Tests/tests
   - cmd: if NOT "%VCVARSALL%" == "" call "%VCVARSALL%" %PLATFORM%
+  - cmd: if "%CMAKE_GENERATOR%" == "NMake Makefiles JOM" set PATH=C:\Qt\Tools\QtCreator\bin;%PATH%
   - cmd: cmake -H. -B../../build -G "%GENERATOR%" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_SH=CMAKE_SH-NOTFOUND
   - sh:  cmake -H. -B../../build                  -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo
   - cmake --build ../../build
@@ -61,8 +62,7 @@ test_script:
   - cmd: set Path=C:/Qt/Tools/mingw530_32/bin;%Path%
   - cmd: cd %APPVEYOR_BUILD_FOLDER%\build\testsuite
   - cmd: copy /b/y "C:\Qt\Tools\mingw530_32\bin\libgcc_s_dw2-1.dll"   "libgcc_s_dw2-1.dll"
-  - cmd: dir
-  - cmd: TempestTests.exe
+  # - cmd: TempestTests.exe   disable, since appveyor image doesn't have vulkan drievr anymore
   - sh:  cd $APPVEYOR_BUILD_FOLDER/build/testsuite
   - sh:  ./TempestTests
 

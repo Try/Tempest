@@ -134,6 +134,7 @@ bool PixmapCodecCommon::save(ODevice &f, const char *ext, const uint8_t* cdata,
     }
 
   struct WContext final {
+    WContext(ODevice* dev, bool badbit):dev(dev),badbit(badbit){}
     ODevice* dev    = nullptr;
     bool     badbit = false;
 
@@ -143,7 +144,7 @@ bool PixmapCodecCommon::save(ODevice &f, const char *ext, const uint8_t* cdata,
       }
     };
 
-  WContext ctx = {&f,false};
+  WContext ctx = WContext{&f,false};
   if(std::strcmp("jpg",ext)==0 || std::strcmp("jpeg",ext)==0) {
     stbi_write_jpg_to_func(WContext::write,&ctx,int(w),int(h),int(bpp),cdata,0);
     }

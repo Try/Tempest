@@ -97,15 +97,15 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
   createInfo.queueFamilyIndexCount = 0;
   createInfo.pQueueFamilyIndices   = nullptr;
 
-  if(bool(usage & MemUsage::TransferSrc))
+  if(MemUsage::TransferSrc==(usage & MemUsage::TransferSrc))
     createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-  if(bool(usage & MemUsage::TransferDst))
+  if(MemUsage::TransferDst==(usage & MemUsage::TransferDst))
     createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-  if(bool(usage & MemUsage::UniformBit))
+  if(MemUsage::UniformBit==(usage & MemUsage::UniformBit))
     createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-  if(bool(usage & MemUsage::VertexBuffer))
+  if(MemUsage::VertexBuffer==(usage & MemUsage::VertexBuffer))
     createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-  if(bool(usage & MemUsage::IndexBuffer))
+  if(MemUsage::IndexBuffer==(usage & MemUsage::IndexBuffer))
     createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 
   vkAssert(vkCreateBuffer(device,&createInfo,nullptr,&ret.impl));
