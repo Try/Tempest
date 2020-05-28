@@ -61,7 +61,6 @@ build_script:
 test_script:
   - cmd: set Path=C:/Qt/Tools/mingw530_32/bin;%Path%
   - cmd: cd %APPVEYOR_BUILD_FOLDER%\build\testsuite
-  - cmd: copy /b/y "C:\Qt\Tools\mingw530_32\bin\libgcc_s_dw2-1.dll"   "libgcc_s_dw2-1.dll"
   # - cmd: TempestTests.exe   disable, since appveyor image doesn't have vulkan drievr anymore
   - sh:  cd $APPVEYOR_BUILD_FOLDER/build/testsuite
   - sh:  ./TempestTests

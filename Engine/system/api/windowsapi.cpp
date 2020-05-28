@@ -131,11 +131,13 @@ SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, uint32_t
   AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
   HINSTANCE module = GetModuleHandle(nullptr);
+  DWORD     style  = WS_OVERLAPPEDWINDOW;
+  if(sm!=Hidden)
+    style |= WS_VISIBLE | WS_SYSMENU;
   HWND window = CreateWindowExW(0,
                                 wndClassName,          // class name
                                 nullptr,               // app name
-                                WS_OVERLAPPEDWINDOW |  // window style
-                                (sm==Hidden) ? (0) : (WS_VISIBLE | WS_SYSMENU),
+                                style,                 // window style
                                 0, 0,                  // x/y coords
                                 wr.right  - wr.left,   // width
                                 wr.bottom - wr.top,    // height

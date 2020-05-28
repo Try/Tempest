@@ -245,7 +245,7 @@ FrameBuffer Device::frameBuffer(Attachment& out, ZBuffer& zbuf) {
   if(out.w()!=zbuf.w() || out.h()!=zbuf.h())
     throw IncompleteFboException();
 
-  auto zImpl = textureCast(zbuf).impl.handler;
+  auto zImpl = zbuf.tImpl.impl.handler;
   if(out.sImpl.swapchain!=nullptr) {
     auto swapchain = out.sImpl.swapchain;
     auto sId       = out.sImpl.id;
