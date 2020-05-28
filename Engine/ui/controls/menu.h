@@ -95,6 +95,8 @@ class Menu {
 
     struct MenuPanel:Tempest::Panel {
       void paintEvent(Tempest::PaintEvent& e);
+
+      void setSize(const Size& s);
       };
 
     class ItemButton:public Tempest::Button {

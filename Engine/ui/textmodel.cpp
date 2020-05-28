@@ -144,12 +144,7 @@ void TextModel::paint(Painter &p,const Font& fnt,int fx,int fy) const {
   }
 
 void TextModel::calcSize() const {
-  if(fnt.isEmpty()) {
-    sz = calcSize(Application::font());
-    sz.actual = true;
-    } else {
-    sz = calcSize(fnt);
-    }
+  sz = calcSize(fnt);
   }
 
 TextModel::Sz TextModel::calcSize(const Font& fnt) const {

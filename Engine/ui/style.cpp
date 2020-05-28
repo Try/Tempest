@@ -89,8 +89,8 @@ void Style::draw(Painter& ,Widget*, Element, const WidgetState&, const Rect &, c
 
 void Style::draw(Painter &p, Panel* w, Element e, const WidgetState &st, const Rect &r, const Extra& extra) const {
   (void)w;
-  (void)e;
   (void)st;
+  (void)e;
   (void)extra;
 
   p.translate(r.x,r.y);
@@ -126,7 +126,8 @@ void Style::draw(Painter& p, Button *w, Element e, const WidgetState &st, const 
   const Button::Type buttonType=st.button;
 
   const bool drawBackFrame = (buttonType!=Button::T_ToolButton || st.moveOver) &&
-                             (buttonType!=Button::T_FlatButton || st.pressed);
+                             (buttonType!=Button::T_FlatButton || st.pressed) &&
+                             (e!=E_MenuItemBackground);
   if( drawBackFrame ) {
     if(st.pressed || st.checked!=WidgetState::Unchecked)
       p.setBrush(Color(0.4f,0.4f,0.45f,0.75f)); else
@@ -317,7 +318,7 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
     if( text.isEmpty() ) {
       p.drawRect( (r.w-icon.w())/2, (r.h-icon.h())/2, icon.w(), icon.h() );
       } else {
-      p.drawRect( m.left, (r.h-icon.h())/2, icon.w(), icon.h() );
+      p.drawRect( 0, (r.h-icon.h())/2, icon.w(), icon.h() );
       dX=icon.w();
       }
     }
@@ -337,8 +338,8 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
 
   Point at;
   if(e!=TE_TextEditContent && e!=TE_LineEditContent)
-    at = {m.left+dX, r.h-(r.h-h)/2}; else
-    at = {m.left, fntSz};
+    at = {dX, r.h-(r.h-h)/2}; else
+    at = { 0, fntSz};
 
   if(extra.selectionStart==extra.selectionEnd) {
     if((Application::tickCount()/500)%2)

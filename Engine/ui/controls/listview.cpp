@@ -82,5 +82,6 @@ void ListView::updateView() {
   for(size_t i=wcount;i<cnt;++i){
     w.addWidget(delegate->createView(i,defaultRole));
     }
+  setSizeHint(sc.sizeHint());
   onItemListChanged();
   }

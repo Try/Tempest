@@ -57,8 +57,8 @@ void Menu::Overlay::invalidatePos() {
       continue;
     auto pos = parent->mapToRoot(i.pos);
     i.widget->setPosition(pos);
-    // i.widget->resize(i.widget->sizeHint());
-    i.widget->resize(100,100);
+    i.widget->resize(i.widget->sizeHint());
+    //i.widget->resize(100,100);
     menu->setupMenuPanel(*i.widget);
     parent = i.widget;
     }
@@ -120,15 +120,19 @@ Widget *Menu::createDropList( Widget& owner,
                               const std::vector<Item>& items ) {
   Widget* list = createItems(items);
 
-  Panel *box = new MenuPanel();
+  MenuPanel *box = new MenuPanel();
+  box->setMargins(Margin(0));
   box->addWidget(list);
   box->setLayout(Tempest::Horizontal);
 
-  int wx = list->minSize().w+box->margins().xMargin();
+  Size sz = list->sizeHint();
+  sz.w+=box->margins().xMargin();
+  sz.h+=box->margins().yMargin();
+
   if(alignWidthToOwner) {
-    wx = std::max(owner.w(),wx);
+    sz.w = std::max(owner.w(),sz.w);
     }
-  box->resize(wx, list->h()+box->margins().yMargin());
+  box->setSize(sz);
   return box;
   }
 
@@ -142,9 +146,9 @@ Widget *Menu::createItem(const Menu::Item &decl) {
   ItemButton* b = new ItemButton(decl.items);
 
   b->setText(decl.text);
+  b->setIcon(decl.icon);
   b->onClick.bind(&decl.activated,&Signal<void()>::operator());
   b->onClick.bind(this,&Menu::close);
-  b->setIcon(decl.icon);
   b->onMouseEnter.bind(this,&Menu::openSubMenu);
 
   return b;
@@ -174,7 +178,7 @@ void Menu::openSubMenu(const Declarator &decl, Widget &owner) {
   if(root!=nullptr)
     panels[decl.level].pos = Point(root->w(),owner.y()); else
     panels[decl.level].pos = Point(owner.w(),0);
-  overlay->addWidget( box );
+  overlay->addWidget(box);
   box->setFocus(true);
   overlay->invalidatePos();
   }
@@ -238,4 +242,9 @@ void Menu::ItemButton::paintEvent(PaintEvent &e) {
 void Menu::MenuPanel::paintEvent(PaintEvent &e) {
   Tempest::Painter p(e);
   style().draw(p,this,Style::E_MenuBackground,state(),Rect(0,0,w(),h()),Style::Extra(*this));
+  }
+
+void Menu::MenuPanel::setSize(const Size& s) {
+  setSizeHint(s);
+  resize(s);
   }

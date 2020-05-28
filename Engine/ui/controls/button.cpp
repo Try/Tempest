@@ -166,6 +166,10 @@ const Menu* Button::menu() const {
   }
 
 void Button::showMenu() {
-  if(btnMenu!=nullptr)
+  if(btnMenu!=nullptr) {
+    bool p = isPressed();
+    setPressed(true);
     btnMenu->exec(*this);
+    setPressed(p);
+    }
   }
