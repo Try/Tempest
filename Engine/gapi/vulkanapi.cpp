@@ -341,12 +341,10 @@ void VulkanApi::present(Device *d,Swapchain *sw,uint32_t imageId,const Semaphore
 
   VkResult code = dx->presentQueue->present(presentInfo);
   if(code==VK_ERROR_OUT_OF_DATE_KHR || code==VK_SUBOPTIMAL_KHR) {
-    //todo
+    // TODO: handle better somehow?
     throw DeviceLostException();
-    } else
-  if(code!=VK_SUCCESS) {
-    throw std::runtime_error("failed to present swap chain image!");
     }
+  Detail::vkAssert(code);
   }
 
 void VulkanApi::submit(Device *d,
