@@ -3,6 +3,7 @@
 #include <Tempest/Widget>
 #include <Tempest/ScrollWidget>
 #include <Tempest/ListDelegate>
+#include <Tempest/Layout>
 
 namespace Tempest {
 
@@ -13,6 +14,8 @@ class ListView : public Widget {
 
     Tempest::Signal<void(size_t)> onItemSelected;
     Tempest::Signal<void()>       onItemListChanged;
+
+    Widget& centralWidget();
 
     void setDelegate(ListDelegate* d);
     void removeDelegate();

@@ -11,7 +11,7 @@ TextEdit::TextEdit() {
   setFocusPolicy(StrongFocus);
 
   anim.timeout.bind(this,&Widget::update);
-  anim.start(500);
+  anim.start(Style::cursorFlashTime);
   }
 
 void TextEdit::invalidateSizeHint() {

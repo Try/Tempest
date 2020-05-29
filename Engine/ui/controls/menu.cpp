@@ -57,8 +57,7 @@ void Menu::Overlay::invalidatePos() {
       continue;
     auto pos = parent->mapToRoot(i.pos);
     i.widget->setPosition(pos);
-    i.widget->resize(i.widget->sizeHint());
-    //i.widget->resize(100,100);
+    //i.widget->resize(i.widget->sizeHint());
     menu->setupMenuPanel(*i.widget);
     parent = i.widget;
     }
@@ -119,26 +118,28 @@ Widget *Menu::createDropList( Widget& owner,
                               bool alignWidthToOwner,
                               const std::vector<Item>& items ) {
   Widget* list = createItems(items);
+  Size sz = list->size();
 
   MenuPanel *box = new MenuPanel();
   box->setMargins(Margin(0));
-  box->addWidget(list);
-  box->setLayout(Tempest::Horizontal);
-
-  Size sz = list->sizeHint();
   sz.w+=box->margins().xMargin();
   sz.h+=box->margins().yMargin();
 
   if(alignWidthToOwner) {
     sz.w = std::max(owner.w(),sz.w);
     }
+
   box->setSize(sz);
+  box->addWidget(list);
+  box->setLayout(Tempest::Horizontal);
   return box;
   }
 
 Widget *Menu::createItems(const std::vector<Item>& items) {
   ListView* list = new ListView(Vertical);
   list->setDelegate(new Delegate(*this,items));
+  auto sz = list->centralWidget().sizeHint();
+  list->resize(sz);
   return list;
   }
 

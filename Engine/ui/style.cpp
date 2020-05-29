@@ -46,7 +46,6 @@ Style::Extra::Extra(const TextEdit& owner)
   }
 
 Style::Style() {
-  anim.timeout.bind(this,&Style::processAnimation);
   }
 
 Style::~Style() {
@@ -66,22 +65,12 @@ void Style::polish  (Widget&) const {
   }
 
 void Style::unpolish(Widget& w) const {
-  if(&w==focused) {
-    focused=nullptr;
-    anim.stop();
-    }
   polished--;
   }
 
 const Tempest::Sprite &Style::iconSprite(const Icon& icon,const WidgetState &st, const Rect &r) {
   const int sz = std::min(r.w,r.h);
   return icon.sprite(sz,sz,st.disabled ? Icon::ST_Disabled : Icon::ST_Normal);
-  }
-
-void Style::processAnimation() {
-  cursorState=!cursorState;
-  if(focused)
-    focused->update();
   }
 
 void Style::draw(Painter& ,Widget*, Element, const WidgetState&, const Rect &, const Extra&) const {
@@ -238,18 +227,6 @@ void Style::draw(Painter &p, TextEdit* w, Element e, const WidgetState &st, cons
   (void)e;
   (void)r;
   (void)extra;
-
-  if(!st.focus && focused==w){
-    focused=nullptr;
-    anim.stop();
-    return;
-    }
-
-  if(st.focus && focused!=w) {
-    focused=w;
-    cursorState=true;
-    anim.start(cursorFlashTime);
-    }
   }
 
 void Style::draw(Painter &p, ScrollBar*, Element e, const WidgetState &st, const Rect &r, const Style::Extra &extra) const {

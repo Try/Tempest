@@ -366,7 +366,7 @@ void ScrollWidget::wrapContent() {
     spolicy.typeV  =Fixed;
     }
 
-  setSizeHint(wrap);
+  cen.setSizeHint(wrap);
   cen.resize(wrap);
   }
 

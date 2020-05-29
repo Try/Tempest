@@ -15,6 +15,10 @@ ListView::~ListView() {
   removeDelegate();
   }
 
+Widget& ListView::centralWidget() {
+  return sc.centralWidget();
+  }
+
 void ListView::setDelegate(ListDelegate* d) {
   removeDelegate();
 
@@ -48,7 +52,7 @@ void ListView::setDefaultItemRole(ListDelegate::Role role) {
   }
 
 void ListView::invalidateView(){
-  auto&  w      = sc.centralWidget();
+  auto& w = sc.centralWidget();
   while(w.widgetsCount()>0) {
     size_t i=w.widgetsCount()-1;
     auto wx = w.takeWidget(&w.widget(i));
@@ -82,6 +86,6 @@ void ListView::updateView() {
   for(size_t i=wcount;i<cnt;++i){
     w.addWidget(delegate->createView(i,defaultRole));
     }
-  setSizeHint(sc.sizeHint());
+
   onItemListChanged();
   }

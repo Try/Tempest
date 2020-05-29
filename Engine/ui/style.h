@@ -149,14 +149,9 @@ class Style {
     static const Tempest::Sprite& iconSprite(const Icon& icon,const WidgetState &st, const Rect &r);
 
   private:
-    mutable uint32_t           refCnt   = 0;
+    mutable uint32_t refCnt   = 0;
+    mutable uint32_t polished = 0;
 
-    mutable bool               cursorState = false;
-    mutable Tempest::TextEdit* focused     = nullptr;
-    mutable Tempest::Timer     anim;
-    mutable uint32_t           polished    = 0;
-
-    void processAnimation();
     void drawCursor(Painter &p, const WidgetState &st, int x, int h, bool animState) const;
 
     void implAddRef() const { refCnt++; }

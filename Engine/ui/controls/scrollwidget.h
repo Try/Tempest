@@ -55,6 +55,9 @@ class ScrollWidget : public Tempest::Widget {
   private:
     struct BoxLayout;
     struct ProxyLayout;
+    struct Central:Widget {
+      using Widget::setSizeHint;
+      };
 
     bool    updateScrolls(Orientation orient, bool noRetry);
     void    emplace(Widget& cen, Widget* scH, Widget* scV, const Rect &place);
@@ -65,7 +68,7 @@ class ScrollWidget : public Tempest::Widget {
     void    complexLayout();
     void    wrapContent();
 
-    Widget         cen;
+    Central        cen;
     Widget         helper;
     ScrollBar      sbH;
     ScrollBar      sbV;
