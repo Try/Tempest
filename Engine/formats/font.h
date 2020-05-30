@@ -59,9 +59,17 @@ class Font final {
     Font(const std::string&    file);
     Font(const char16_t*       file);
     Font(const std::u16string& file);
+    Font(const FontElement& regular, const FontElement& bold,
+         const FontElement& italic,  const FontElement& boldItalic);
 
     void  setPixelSize(float size);
     float pixelSize() const { return size; }
+
+    void  setBold(bool b);
+    bool  isBold() const;
+
+    void  setItalic(bool i);
+    bool  isItalic() const;
 
     bool  isEmpty() const;
 
@@ -81,6 +89,8 @@ class Font final {
     Font(const CharT* file,std::true_type);
 
     FontElement fnt[2][2];
-    float       size=18.f;
+    float       size   = 18.f;
+    uint8_t     bold   = 0;
+    uint8_t     italic = 0;
   };
 }

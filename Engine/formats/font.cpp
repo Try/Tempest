@@ -365,8 +365,32 @@ Font::Font(const std::u16string &file)
   : Font(file.c_str(),std::true_type()){
   }
 
+Font::Font(const FontElement& regular, const FontElement& bold,
+           const FontElement& italic, const FontElement& boldItalic) {
+  fnt[0][0] = regular;
+  fnt[1][0] = bold;
+  fnt[1][1] = boldItalic;
+  fnt[0][1] = italic;
+  }
+
 void Font::setPixelSize(float sz) {
   size=sz;
+  }
+
+void Font::setBold(bool b) {
+  bold = b ? 1 : 0;
+  }
+
+bool Font::isBold() const {
+  return bold!=0;
+  }
+
+void Font::setItalic(bool i) {
+  italic = i ? 1: 0;
+  }
+
+bool Font::isItalic() const {
+  return italic;
   }
 
 bool Font::isEmpty() const {
@@ -375,19 +399,19 @@ bool Font::isEmpty() const {
   }
 
 const Font::LetterGeometry &Font::letterGeometry(char16_t ch) const {
-  return fnt[0][0].letterGeometry(ch,size);
+  return fnt[bold][italic].letterGeometry(ch,size);
   }
 
 const Font::LetterGeometry &Font::letterGeometry(char32_t ch) const {
-  return fnt[0][0].letterGeometry(ch,size); //TODO
+  return fnt[bold][italic].letterGeometry(ch,size);
   }
 
 const Font::Letter &Font::letter(char16_t ch, TextureAtlas &tex) const {
-  return fnt[0][0].letter(ch,size,tex);
+  return fnt[bold][italic].letter(ch,size,tex);
   }
 
 const Font::Letter &Font::letter(char32_t ch, TextureAtlas &tex) const {
-  return fnt[0][0].letter(ch,size,tex); //TODO
+  return fnt[bold][italic].letter(ch,size,tex);
   }
 
 const Font::Letter &Font::letter(char16_t ch, Painter &p) const {
@@ -399,7 +423,7 @@ const Font::Letter &Font::letter(char32_t ch, Painter &p) const {
   }
 
 Size Font::textSize(const char *text) const {
-  return fnt[0][0].textSize(text,size);
+  return fnt[bold][italic].textSize(text,size);
   }
 
 Size Font::textSize(const std::string &text) const {
