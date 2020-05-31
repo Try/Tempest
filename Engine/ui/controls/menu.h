@@ -61,6 +61,11 @@ class Menu {
         return *this;
         }
 
+      Declarator& operator [](Declarator& d){
+        items.back().items = std::move(d);
+        return *this;
+        }
+
       private:
         std::vector<Item> items;
         size_t            level = 0;
