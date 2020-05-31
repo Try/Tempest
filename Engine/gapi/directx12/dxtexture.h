@@ -12,12 +12,14 @@ namespace Detail {
 class DxTexture : public AbstractGraphicsApi::Texture {
   public:
     DxTexture();
-    DxTexture(ComPtr<ID3D12Resource>&& b);
+    DxTexture(ComPtr<ID3D12Resource>&& b,DXGI_FORMAT frm,UINT mips);
     DxTexture(DxTexture&& other);
 
     void setSampler(const Sampler2d& s);
 
     ComPtr<ID3D12Resource> impl;
+    DXGI_FORMAT            format = DXGI_FORMAT_UNKNOWN;
+    UINT                   mips   = 1;
   };
 
 }

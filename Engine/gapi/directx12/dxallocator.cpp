@@ -103,7 +103,7 @@ DxTexture DxAllocator::alloc(const Pixmap& pm, uint32_t mip, DXGI_FORMAT format)
              uuid<ID3D12Resource>(),
              reinterpret_cast<void**>(&ret)
              ));
-  return ret;
+  return DxTexture(std::move(ret),resDesc.Format,resDesc.MipLevels);
   }
 
 DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mip, TextureFormat frm) {
@@ -136,7 +136,7 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
              uuid<ID3D12Resource>(),
              reinterpret_cast<void**>(&ret)
              ));
-  return ret;
+  return DxTexture(std::move(ret),resDesc.Format,resDesc.MipLevels);
   }
 
 #endif

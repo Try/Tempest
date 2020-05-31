@@ -7,6 +7,7 @@
 #include "dxframebuffer.h"
 #include "dxpipeline.h"
 #include "dxswapchain.h"
+#include "dxdescriptorarray.h"
 
 #include "guid.h"
 
@@ -106,7 +107,7 @@ void Tempest::Detail::DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi:
   vboStride = px.stride;
 
   impl->SetPipelineState(px.impl.get());
-  impl->SetGraphicsRootSignature(px.emptySign.get());
+  impl->SetGraphicsRootSignature(px.sign.get());
   impl->IASetPrimitiveTopology(px.topology);
   }
 
@@ -122,13 +123,28 @@ void DxCommandBuffer::setViewport(const Rect& r) {
   impl->RSSetViewports(1,&vp);
   }
 
-void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc& u, size_t offc, const uint32_t* offv) {
-  DxUniformsLay& lay = reinterpret_cast<DxUniformsLay&>(p);
-  assert(0);
+void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/, AbstractGraphicsApi::Desc& u,
+                                  size_t offc, const uint32_t* /*offv*/) {
+  assert(offc==0); //TODO: dynamic offsets
+  DxDescriptorArray& ux = reinterpret_cast<DxDescriptorArray&>(u);
+
+  ID3D12DescriptorHeap* src[2] = {ux.heapCb.get(),ux.heapSrv.get()};
+
+  UINT                  heapCount = 0;
+  ID3D12DescriptorHeap* ppHeaps[2] = {};
+  for(auto& i:src) {
+    if(i==nullptr)
+      continue;
+    ppHeaps[heapCount] = i;
+    heapCount++;
+    }
+  impl->SetDescriptorHeaps(heapCount, ppHeaps);
+  impl->SetGraphicsRootDescriptorTable(0, ux.heapSrv->GetGPUDescriptorHandleForHeapStart());
   }
 
 void DxCommandBuffer::exec(const CommandBundle& buf) {
   assert(0);
+  (void)buf;
   //impl->ExecuteBundle(); //BUNDLE!
   }
 

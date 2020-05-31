@@ -61,11 +61,11 @@ void Game::initSwapchain(){
 void Game::paintEvent(PaintEvent& event) {
   Painter p(event);
 
-  //p.setBrush(Brush(texture));
-  //p.drawRect(100,50, 200,100);
+  p.setBrush(Brush(texture));
+  p.drawRect(100,50, 200,100);
 
-  //p.setBrush(Brush(texture,Color(1,0,0,1)));
-  //p.drawRect(300,150,texture.w(),texture.h());
+  p.setBrush(Brush(texture,Color(1,0,0,1)));
+  p.drawRect(300,150,texture.w(),texture.h());
 
   p.setPen(Pen(Color(),4));
   p.drawLine(100,100,200,200);

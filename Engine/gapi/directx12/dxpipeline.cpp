@@ -14,7 +14,9 @@ DxPipeline::DxPipeline(DxDevice& device, const RenderState& st,
                        const Decl::ComponentType* decl, size_t declSize, size_t stride,
                        Topology tp, const DxUniformsLay& ulay,
                        DxShader& vert, DxShader& frag)
-  :stride(UINT(stride)){
+  : sign(ulay.impl.get()), stride(UINT(stride)) {
+  sign.get()->AddRef();
+
   static const DXGI_FORMAT vertFormats[]={
     DXGI_FORMAT_UNKNOWN,
     DXGI_FORMAT_R32_FLOAT,
@@ -112,25 +114,6 @@ DxPipeline::DxPipeline(DxDevice& device, const RenderState& st,
   psoDesc.RTVFormats[0]    = DXGI_FORMAT_B8G8R8A8_UNORM; // TODO: pipeline instances
 
   dxAssert(device.device->CreateGraphicsPipelineState(&psoDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&impl)));
-
-  // Create an empty root signature.
-  D3D12_ROOT_SIGNATURE_DESC desc={};
-  desc.NumParameters     = 0;
-  desc.pParameters       = nullptr;
-  desc.NumStaticSamplers = 0;
-  desc.pStaticSamplers   = nullptr;
-  desc.Flags             = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-
-  ComPtr<ID3DBlob> signature;
-  ComPtr<ID3DBlob> error;
-  dxAssert(D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1,
-                                       &signature.get(),
-                                       &error.get()));
-  dxAssert(device.device->CreateRootSignature(0,
-                                              signature->GetBufferPointer(),
-                                              signature->GetBufferSize(),
-                                              uuid<ID3D12RootSignature>(),
-                                              reinterpret_cast<void**>(&emptySign)));
   }
 
 D3D12_BLEND_DESC DxPipeline::getBlend(const RenderState& st) const {
@@ -176,9 +159,10 @@ D3D12_RASTERIZER_DESC DxPipeline::getRaster(const RenderState& st) const {
     D3D12_CULL_MODE_NONE,
   };
 
-  D3D12_RASTERIZER_DESC rd={};
-  rd.FillMode = D3D12_FILL_MODE_SOLID;
-  rd.CullMode = cull[size_t(st.cullFaceMode())];
+  D3D12_RASTERIZER_DESC rd = {};
+  rd.FillMode              = D3D12_FILL_MODE_SOLID;
+  rd.CullMode              = cull[size_t(st.cullFaceMode())];
+  rd.FrontCounterClockwise = TRUE;
 
   return rd;
   }

@@ -13,23 +13,22 @@ using namespace Tempest;
 using namespace Tempest::Detail;
 
 DxUniformsLay::DxUniformsLay(DxDevice& dev, const UniformsLayout& lay) {
-  auto& device=*dev.device;
-  //assert(lay.size()==0); //TODO
+  auto& device = *dev.device;
 
   D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
   featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 
-  D3D12_DESCRIPTOR_RANGE rgn[20]={};
-
+  D3D12_DESCRIPTOR_RANGE                 rgn[2] = {};
   std::vector<D3D12_STATIC_SAMPLER_DESC> smp;
-  for(size_t i=0;i<lay.size();++i){
+
+  for(size_t i=0;i<lay.size();++i) {
     auto& l = lay[i];
     switch(l.cls) {
       case UniformsLayout::Ubo:
       case UniformsLayout::UboDyn: {
         D3D12_DESCRIPTOR_RANGE& range = rgn[0];
         range.RangeType          = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-        range.NumDescriptors     = 1;
+        range.NumDescriptors++;
         range.BaseShaderRegister = 0; // b0
         range.RegisterSpace      = 0;
         range.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
@@ -38,7 +37,7 @@ DxUniformsLay::DxUniformsLay(DxDevice& dev, const UniformsLayout& lay) {
       case UniformsLayout::Texture:{
         D3D12_DESCRIPTOR_RANGE& range = rgn[1];
         range.RangeType          = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-        range.NumDescriptors     = 1;
+        range.NumDescriptors++;
         range.BaseShaderRegister = 0; // t0
         range.RegisterSpace      = 0;
         range.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
@@ -54,7 +53,7 @@ DxUniformsLay::DxUniformsLay(DxDevice& dev, const UniformsLayout& lay) {
         sampler.BorderColor      = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
         sampler.MinLOD           = 0.0f;
         sampler.MaxLOD           = D3D12_FLOAT32_MAX;
-        sampler.ShaderRegister   = 0;
+        sampler.ShaderRegister   = UINT(smp.size()); //s0
         sampler.RegisterSpace    = 0;
         sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
@@ -64,17 +63,25 @@ DxUniformsLay::DxUniformsLay(DxDevice& dev, const UniformsLayout& lay) {
       }
     }
 
-  D3D12_ROOT_PARAMETER rootParameters[2]={};
-  rootParameters[0].ParameterType    = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-  rootParameters[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+  D3D12_ROOT_PARAMETER rootParameters[2] = {};
+  size_t               numDesc = 0;
+  for(size_t i=0;i<2;++i) {
+    if(rgn[i].NumDescriptors==0)
+      continue;
+    auto& param = rootParameters[numDesc];
+    param.ParameterType    = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    // param.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+    param.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    param.DescriptorTable.pDescriptorRanges   = &rgn[i];
+    param.DescriptorTable.NumDescriptorRanges = 1;
 
-  rootParameters[1].ParameterType    = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-  rootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    numDesc++;
+    }
 
   D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc={};
-  rootSignatureDesc.NumParameters     = 0;//_countof(rootParameters);
+  rootSignatureDesc.NumParameters     = UINT(numDesc);
   rootSignatureDesc.pParameters       = rootParameters;
-  rootSignatureDesc.NumStaticSamplers = 0;//UINT(smp.size());
+  rootSignatureDesc.NumStaticSamplers = UINT(smp.size());
   rootSignatureDesc.pStaticSamplers   = smp.data();
   rootSignatureDesc.Flags             = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 

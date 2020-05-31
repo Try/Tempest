@@ -16,6 +16,7 @@
 #include "directx12/dxswapchain.h"
 #include "directx12/dxfence.h"
 #include "directx12/dxframebuffer.h"
+#include "directx12/dxdescriptorarray.h"
 
 #include <Tempest/Pixmap>
 
@@ -133,9 +134,8 @@ AbstractGraphicsApi::PPipeline DirectX12Api::createPipeline(AbstractGraphicsApi:
   return PPipeline(new Detail::DxPipeline(*dx,st,decl,declSize,stride,tp,ul,*vs,*fs));
   }
 
-AbstractGraphicsApi::PShader DirectX12Api::createShader(AbstractGraphicsApi::Device* d,
+AbstractGraphicsApi::PShader DirectX12Api::createShader(AbstractGraphicsApi::Device*,
                                                         const void* source, size_t src_size) {
-  (void)d;
   return PShader(new Detail::DxShader(source,src_size));
   }
 
@@ -182,12 +182,14 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
   }
 
 AbstractGraphicsApi::Desc* DirectX12Api::createDescriptors(AbstractGraphicsApi::Device* d, const UniformsLayout& lay, UniformsLay& layP) {
-  return nullptr;
+  Detail::DxDevice&      dx = *reinterpret_cast<Detail::DxDevice*>(d);
+  Detail::DxUniformsLay& u  = reinterpret_cast<Detail::DxUniformsLay&>(layP);
+  return new DxDescriptorArray(dx,lay,u);
   }
 
 AbstractGraphicsApi::PUniformsLay DirectX12Api::createUboLayout(Device* d, const UniformsLayout& lay) {
-  Detail::DxDevice* dx = reinterpret_cast<Detail::DxDevice*>(d);
-  return PUniformsLay(new DxUniformsLay(*dx,lay));
+  Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
+  return PUniformsLay(new DxUniformsLay(dx,lay));
   }
 
 AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mipCnt) {
