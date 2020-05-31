@@ -17,6 +17,7 @@
 #include "directx12/dxfence.h"
 #include "directx12/dxframebuffer.h"
 #include "directx12/dxdescriptorarray.h"
+#include "directx12/dxrenderpass.h"
 
 #include <Tempest/Pixmap>
 
@@ -80,8 +81,8 @@ AbstractGraphicsApi::Swapchain* DirectX12Api::createSwapchain(SystemApi::Window*
   return new Detail::DxSwapchain(*dx,*impl->DXGIFactory,w);
   }
 
-AbstractGraphicsApi::PPass DirectX12Api::createPass(AbstractGraphicsApi::Device* d, const FboMode** att, size_t acount) {
-  return PPass();
+AbstractGraphicsApi::PPass DirectX12Api::createPass(AbstractGraphicsApi::Device*, const FboMode** att, size_t acount) {
+  return PPass(new DxRenderPass(att,acount));
   }
 
 AbstractGraphicsApi::PFbo DirectX12Api::createFbo(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::FboLayout*,

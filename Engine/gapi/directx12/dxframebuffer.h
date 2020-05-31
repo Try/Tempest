@@ -22,6 +22,7 @@ class DxFramebuffer : public AbstractGraphicsApi::Fbo {
     ~DxFramebuffer();
 
     ComPtr<ID3D12DescriptorHeap>              rtvHeap;
+    UINT                                      rtvHeapInc = 0;
 
     std::unique_ptr<ID3D12Resource*[]>        views;
     UINT32                                    viewsCount;

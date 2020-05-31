@@ -27,7 +27,7 @@ DxFramebuffer::DxFramebuffer(DxDevice& dev, DxSwapchain& swapchain, size_t image
   views[0] = swapchainImg.get();
 
   D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtvHeap->GetCPUDescriptorHandleForHeapStart();
-  //auto eltSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+  rtvHeapInc = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
   device.CreateRenderTargetView(views[0], nullptr, rtvHandle);
   }
 
@@ -50,10 +50,10 @@ DxFramebuffer::DxFramebuffer(DxDevice& dev, DxSwapchain& swapchain, size_t image
   views[1] = zbuf.impl.get();
 
   D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtvHeap->GetCPUDescriptorHandleForHeapStart();
-  auto eltSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+  rtvHeapInc = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
   for(size_t i=0;i<viewsCount;++i) {
     device.CreateRenderTargetView(views[i], nullptr, rtvHandle);
-    rtvHandle.ptr+=eltSize;
+    rtvHandle.ptr+=rtvHeapInc;
     }
   }
 
@@ -74,10 +74,10 @@ DxFramebuffer::DxFramebuffer(DxDevice& dev, DxTexture& cl, DxTexture& zbuf)
   views[1] = zbuf.impl.get();
 
   D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtvHeap->GetCPUDescriptorHandleForHeapStart();
-  auto eltSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+  rtvHeapInc = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
   for(size_t i=0;i<viewsCount;++i) {
     device.CreateRenderTargetView(views[i], nullptr, rtvHandle);
-    rtvHandle.ptr+=eltSize;
+    rtvHandle.ptr+=rtvHeapInc;
     }
   }
 
@@ -96,6 +96,7 @@ DxFramebuffer::DxFramebuffer(DxDevice& dev, DxTexture& cl)
   views[0] = cl.impl.get();
 
   D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtvHeap->GetCPUDescriptorHandleForHeapStart();
+  rtvHeapInc = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
   device.CreateRenderTargetView(views[0], nullptr, rtvHandle);
   }
 

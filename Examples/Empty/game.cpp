@@ -38,7 +38,7 @@ Game::Game(Device& device)
     fLocal.emplace_back(device);
     }
 
-  pass = device.pass(Tempest::FboMode(Tempest::FboMode::PreserveOut,Color(0.f)));
+  pass = device.pass(Tempest::FboMode(Tempest::FboMode::PreserveOut,Color(0.f,0.f,1.f,1.f)));
   initSwapchain();
   }
 

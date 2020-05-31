@@ -8,6 +8,7 @@
 #include "dxpipeline.h"
 #include "dxswapchain.h"
 #include "dxdescriptorarray.h"
+#include "dxrenderpass.h"
 
 #include "guid.h"
 
@@ -61,14 +62,16 @@ bool DxCommandBuffer::isRecording() const {
   }
 
 void DxCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*  f,
-                                      AbstractGraphicsApi::Pass* /*p*/,
+                                      AbstractGraphicsApi::Pass* p,
                                       uint32_t w, uint32_t h) {
   auto& fbo = *reinterpret_cast<DxFramebuffer*>(f);
+  auto& rp  = *reinterpret_cast<DxRenderPass*>(p);
 
   for(auto& i:imgState)
     i.outdated = true;
 
   for(size_t i=0;i<fbo.viewsCount;++i) {
+    // TODO: LOAD-STORE op for renderpass
     D3D12_RESOURCE_STATES lay = D3D12_RESOURCE_STATE_RENDER_TARGET;
     setLayout(fbo.views[i],lay);
     }
@@ -78,8 +81,14 @@ void DxCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*  f,
   auto  desc = fbo.rtvHeap->GetCPUDescriptorHandleForHeapStart();
   impl->OMSetRenderTargets(fbo.viewsCount,&desc,TRUE,
                            nullptr);
-  const float clearColor[] = { 0.0f, 0.2f, 0.4f, 1.0f }; //TODO: renderpass
-  impl->ClearRenderTargetView(desc, clearColor, 0, nullptr);
+  for(size_t i=0;i<fbo.viewsCount;++i) {
+    auto& att = rp.att[i];
+    if(FboMode::ClearBit!=(att.mode&FboMode::ClearBit))
+      continue;
+    const float clearColor[] = { att.clear.r(), att.clear.g(), att.clear.b(), att.clear.a() };
+    impl->ClearRenderTargetView(desc, clearColor, 0, nullptr);
+    desc.ptr+=fbo.rtvHeapInc;
+    }
 
   D3D12_VIEWPORT vp={};
   vp.TopLeftX = float(0.f);
@@ -123,7 +132,8 @@ void DxCommandBuffer::setViewport(const Rect& r) {
   impl->RSSetViewports(1,&vp);
   }
 
-void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/, AbstractGraphicsApi::Desc& u,
+void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/,
+                                  AbstractGraphicsApi::Desc& u,
                                   size_t offc, const uint32_t* /*offv*/) {
   assert(offc==0); //TODO: dynamic offsets
   DxDescriptorArray& ux = reinterpret_cast<DxDescriptorArray&>(u);
@@ -227,7 +237,7 @@ void DxCommandBuffer::copy(DxTexture& dest, size_t width, size_t height, size_t 
 
   D3D12_PLACED_SUBRESOURCE_FOOTPRINT foot = {};
   foot.Offset             = offset;
-  foot.Footprint.Format   = DXGI_FORMAT_R8G8B8A8_UNORM; //TODO
+  foot.Footprint.Format   = dest.format;
   foot.Footprint.Width    = UINT(width);
   foot.Footprint.Height   = UINT(height);
   foot.Footprint.Depth    = 1;

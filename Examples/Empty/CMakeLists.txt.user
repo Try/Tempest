@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 4.12.0, 2020-05-07T21:29:47. -->
+<!-- Written by QtCreator 4.12.1, 2020-06-01T00:09:29. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -334,7 +334,7 @@
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.DisplayName">Empty</value>
     <value type="QString" key="ProjectExplorer.ProjectConfiguration.Id">CMakeProjectManager.CMakeRunConfiguration.Empty</value>
     <value type="QString" key="ProjectExplorer.RunConfiguration.BuildKey">Empty</value>
-    <value type="QString" key="RunConfiguration.Arguments"></value>
+    <value type="QString" key="RunConfiguration.Arguments">dx12</value>
     <value type="bool" key="RunConfiguration.Arguments.multi">false</value>
     <value type="QString" key="RunConfiguration.OverrideDebuggerStartup"></value>
     <value type="bool" key="RunConfiguration.UseCppDebugger">false</value>
