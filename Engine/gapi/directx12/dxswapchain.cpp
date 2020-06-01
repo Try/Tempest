@@ -7,7 +7,8 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-DxSwapchain::DxSwapchain(DxDevice& dev, IDXGIFactory4& dxgi, SystemApi::Window* hwnd) {
+DxSwapchain::DxSwapchain(DxDevice& dev, IDXGIFactory4& dxgi, SystemApi::Window* hwnd)
+  :dev(dev), fence(dev) {
   auto& device = *dev.device;
 
   auto rect = SystemApi::windowClientRect(hwnd);
@@ -18,7 +19,7 @@ DxSwapchain::DxSwapchain(DxDevice& dev, IDXGIFactory4& dxgi, SystemApi::Window* 
   DXGI_SWAP_CHAIN_DESC1 sd = {};
   sd.Width  = imgW;
   sd.Height = imgH;
-  sd.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+  sd.Format = frm;
   sd.Stereo = false;
 
   sd.SampleDesc.Count = 1;
@@ -31,7 +32,6 @@ DxSwapchain::DxSwapchain(DxDevice& dev, IDXGIFactory4& dxgi, SystemApi::Window* 
   sd.Flags        = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
   */
 
-  ComPtr<IDXGISwapChain1> swapChain;
   dxAssert(dxgi.CreateSwapChainForHwnd(
       dev.cmdQueue.get(),        // Swap chain needs the queue so that it can force a flush on it.
       HWND(hwnd),
@@ -67,11 +67,39 @@ DxSwapchain::~DxSwapchain() {
   }
 
 void DxSwapchain::reset() {
-  // TODO
+  fence.wait(frameCounter); //wait for all pending frame to be finizhed
+
+  for(uint32_t i=0; i<imgCount; ++i) {
+    views[i] = nullptr;
+    }
+
+  HWND hwnd={};
+  dxAssert(impl->GetHwnd(&hwnd));
+  auto rect = SystemApi::windowClientRect(reinterpret_cast<SystemApi::Window*>(hwnd));
+  imgW = uint32_t(rect.w);
+  imgH = uint32_t(rect.h);
+
+  dxAssert(impl->ResizeBuffers(imgCount, imgW, imgH, frm, 0));
+
+  for(uint32_t i=0; i<imgCount; ++i) {
+    dxAssert(swapChain->GetBuffer(i, uuid<ID3D12Resource>(), reinterpret_cast<void**>(&views[i])));
+    }
   }
 
 uint32_t DxSwapchain::nextImage(AbstractGraphicsApi::Semaphore* onReady) {
-  return impl->GetCurrentBackBufferIndex();
+  uint32_t img = impl->GetCurrentBackBufferIndex();
+
+  auto& rdy = *reinterpret_cast<DxSemaphore*>(onReady);
+  rdy.impl->Signal(DxSemaphore::Ready);
+
+  return img;
+  }
+
+void DxSwapchain::queuePresent() {
+  dxAssert(impl->Present(1/*vsync*/, 0));
+
+  ++frameCounter;
+  dev.cmdQueue->Signal(fence.impl.get(),frameCounter);
   }
 
 #endif

@@ -41,10 +41,11 @@ struct DirectX12Api::Impl {
               AbstractGraphicsApi::Semaphore** wait, size_t waitCnt,
               AbstractGraphicsApi::Semaphore** done, size_t doneCnt,
               AbstractGraphicsApi::Fence* doneCpu){
-    Detail::DxDevice& dx    = *reinterpret_cast<Detail::DxDevice*>(d);
-    Detail::DxFence&  fcpu  = *reinterpret_cast<Detail::DxFence*>(doneCpu);
+    Detail::DxDevice& dx   = *reinterpret_cast<Detail::DxDevice*>(d);
+    Detail::DxFence&  fcpu = *reinterpret_cast<Detail::DxFence*>(doneCpu);
 
     fcpu.reset();
+    //dx.cmdQueue->Signal(fcpu.impl.get(),0);
 
     for(size_t i=0;i<waitCnt;++i) {
       Detail::DxSemaphore& swait = *reinterpret_cast<Detail::DxSemaphore*>(wait[i]);
@@ -57,7 +58,7 @@ struct DirectX12Api::Impl {
       Detail::DxSemaphore& sgpu = *reinterpret_cast<Detail::DxSemaphore*>(done[i]);
       dx.cmdQueue->Signal(sgpu.impl.get(),DxFence::Ready);
       }
-    dx.cmdQueue->Signal(fcpu.impl.get(),DxFence::Ready);
+    fcpu.signal(*dx.cmdQueue);
     }
   };
 
@@ -261,12 +262,13 @@ AbstractGraphicsApi::CommandBuffer* DirectX12Api::createCommandBuffer(Device* d)
 
 void DirectX12Api::present(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Swapchain* sw,
                            uint32_t imageId, const AbstractGraphicsApi::Semaphore* wait) {
+  // TODO: handle imageId
   Detail::DxDevice&    dx    = *reinterpret_cast<Detail::DxDevice*>(d);
   auto&                swait = *reinterpret_cast<const Detail::DxSemaphore*>(wait);
   Detail::DxSwapchain* sx    = reinterpret_cast<Detail::DxSwapchain*>(sw);
 
   dx.cmdQueue->Wait(swait.impl.get(),DxFence::Ready);
-  dxAssert(sx->impl->Present(1/*vsync*/, 0));
+  sx->queuePresent();
   }
 
 void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::CommandBuffer* cmd,

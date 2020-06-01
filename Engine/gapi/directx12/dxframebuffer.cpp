@@ -12,8 +12,6 @@ using namespace Tempest::Detail;
 DxFramebuffer::DxFramebuffer(DxDevice& dev, DxSwapchain& swapchain, size_t image)
   :viewsCount(1) {
   auto& device = *dev.device;
-  // image
-  dxAssert(swapchain.impl->GetBuffer(UINT(image), uuid<ID3D12Resource>(), reinterpret_cast<void**>(&swapchainImg)));
 
   // descriptor heap
   D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
@@ -24,7 +22,7 @@ DxFramebuffer::DxFramebuffer(DxDevice& dev, DxSwapchain& swapchain, size_t image
 
   // frame resources.
   views.reset(new ID3D12Resource*[viewsCount]);
-  views[0] = swapchainImg.get();
+  views[0] = swapchain.views[image].get();
 
   D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtvHeap->GetCPUDescriptorHandleForHeapStart();
   rtvHeapInc = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -34,8 +32,6 @@ DxFramebuffer::DxFramebuffer(DxDevice& dev, DxSwapchain& swapchain, size_t image
 DxFramebuffer::DxFramebuffer(DxDevice& dev, DxSwapchain& swapchain, size_t image, DxTexture& zbuf)
   :viewsCount(2) {
   auto& device = *dev.device;
-  // image
-  dxAssert(swapchain.impl->GetBuffer(UINT(image), uuid<ID3D12Resource>(), reinterpret_cast<void**>(&swapchainImg)));
 
   // descriptor heap
   D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
@@ -46,7 +42,7 @@ DxFramebuffer::DxFramebuffer(DxDevice& dev, DxSwapchain& swapchain, size_t image
 
   // frame resources.
   views.reset(new ID3D12Resource*[viewsCount]);
-  views[0] = swapchainImg.get();
+  views[0] = swapchain.views[image].get();
   views[1] = zbuf.impl.get();
 
   D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtvHeap->GetCPUDescriptorHandleForHeapStart();

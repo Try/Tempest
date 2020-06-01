@@ -26,9 +26,6 @@ class DxFramebuffer : public AbstractGraphicsApi::Fbo {
 
     std::unique_ptr<ID3D12Resource*[]>        views;
     UINT32                                    viewsCount;
-
-  private:
-    ComPtr<ID3D12Resource>                    swapchainImg;
   };
 }
 }

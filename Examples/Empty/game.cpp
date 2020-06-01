@@ -80,12 +80,12 @@ void Game::resizeEvent(SizeEvent&) {
 
 void Game::render(){
   try {
-    auto&       context = fLocal[swapchain.frameId()];
+    auto&       context = fLocal  [swapchain.frameId()];
     auto&       cmd     = commands[swapchain.frameId()];
 
     context.gpuLock.wait();
 
-    const  uint32_t imgId=swapchain.nextImage(context.imageAvailable);
+    const uint32_t imgId=swapchain.nextImage(context.imageAvailable);
 
     dispatchPaintEvent(surface,texAtlass);
 

@@ -16,6 +16,7 @@ class ComPtr final {
 
     ComPtr& operator = (const ComPtr&)=delete;
     ComPtr& operator = (ComPtr&& other) { std::swap(other.p,p); return *this; }
+    ComPtr& operator = (std::nullptr_t) { if(p!=nullptr) p->Release(); p = nullptr; return *this; }
 
     T* operator -> () { return  p; }
     T& operator *  () { return *p; }

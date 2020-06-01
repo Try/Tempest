@@ -83,7 +83,7 @@ void DxDevice::submit(DxCommandBuffer& cmdBuffer, DxFence& sync) {
 
   ID3D12CommandList* cmd[] = {cmdBuffer.get()};
   cmdQueue->ExecuteCommandLists(1, cmd);
-  cmdQueue->Signal(sync.impl.get(),DxFence::Ready);
+  sync.signal(*cmdQueue);
   }
 
 #endif

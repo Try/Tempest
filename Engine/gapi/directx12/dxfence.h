@@ -20,7 +20,11 @@ class DxFenceBase : public Interface {
     ~DxFenceBase() override;
 
     void wait();
+    void wait(UINT64 val);
     void reset();
+
+    void signal(ID3D12CommandQueue& queue);
+    void signal(ID3D12CommandQueue& queue,UINT64 val);
 
     ComPtr<ID3D12Fence> impl;
     HANDLE              event=nullptr;

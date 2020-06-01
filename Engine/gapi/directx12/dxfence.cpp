@@ -33,14 +33,32 @@ DxFenceBase<Interface>::~DxFenceBase() {
 
 template<class Interface>
 void DxFenceBase<Interface>::wait() {
-  dxAssert(impl->SetEventOnCompletion(Ready,event));
+  wait(Ready);
+  }
+
+template<class Interface>
+void DxFenceBase<Interface>::wait(UINT64 val) {
+  UINT64 v = impl->GetCompletedValue();
+  if(val==v)
+    return;
+  dxAssert(impl->SetEventOnCompletion(val,event));
   WaitForSingleObjectEx(event, INFINITE, FALSE);
   }
 
 template<class Interface>
 void DxFenceBase<Interface>::reset() {
-  dxAssert(impl->Signal(Waiting));
   ResetEvent(event);
+  dxAssert(impl->Signal(Waiting));
+  }
+
+template<class Interface>
+void DxFenceBase<Interface>::signal(ID3D12CommandQueue& queue) {
+  signal(queue,DxFence::Ready);
+  }
+
+template<class Interface>
+void DxFenceBase<Interface>::signal(ID3D12CommandQueue& queue, UINT64 val) {
+  dxAssert(queue.Signal(impl.get(),val));
   }
 
 #endif

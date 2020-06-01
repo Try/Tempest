@@ -4,6 +4,8 @@
 
 #include <dxgi1_6.h>
 #include <d3d12.h>
+
+#include "dxfence.h"
 #include "gapi/directx12/comptr.h"
 
 namespace Tempest {
@@ -16,7 +18,6 @@ class DxDevice;
 
 class DxSwapchain : public AbstractGraphicsApi::Swapchain {
   public:
-    DxSwapchain()=default;
     DxSwapchain(DxDevice& device, IDXGIFactory4& dxgi, SystemApi::Window* hwnd);
     DxSwapchain(DxSwapchain&& other) = delete;
     ~DxSwapchain() override;
@@ -28,14 +29,24 @@ class DxSwapchain : public AbstractGraphicsApi::Swapchain {
     uint32_t                 imageCount() const override { return imgCount; }
     uint32_t                 nextImage(AbstractGraphicsApi::Semaphore* onReady) override;
 
+    void                     queuePresent();
+
     ComPtr<IDXGISwapChain3>                   impl;
     ComPtr<ID3D12DescriptorHeap>              rtvHeap;
     std::unique_ptr<ComPtr<ID3D12Resource>[]> views;
 
   private:
-    uint32_t                 currImg=0;
-    uint32_t                 imgW=0, imgH=0;
-    uint32_t                 imgCount=3;
+    DxDevice&          dev;
+    DxFence            fence;
+
+    uint32_t           currImg=0;
+    uint32_t           imgW=0, imgH=0;
+    uint32_t           imgCount=3;
+    DXGI_FORMAT        frm = DXGI_FORMAT_B8G8R8A8_UNORM;
+
+    UINT64             frameCounter = 0;
+
+    ComPtr<IDXGISwapChain1> swapChain;
   };
 
 }}
