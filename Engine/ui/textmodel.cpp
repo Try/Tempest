@@ -23,6 +23,10 @@ void TextModel::setText(const char *str) {
   }
 
 TextModel::Cursor TextModel::insert(const char* t, Cursor where) {
+  if(txt.size()==0) {
+    setText(t);
+    return cursorCast(txt.size()-1);
+    }
   size_t at  = cursorCast(where);
   size_t len = std::strlen(t);
 
@@ -47,6 +51,10 @@ TextModel::Cursor TextModel::erase(Cursor cs, Cursor ce) {
   }
 
 TextModel::Cursor TextModel::replace(const char* t, TextModel::Cursor cs, TextModel::Cursor ce) {
+  if(txt.size()==0) {
+    setText(t);
+    return cursorCast(txt.size()-1);
+    }
   size_t s   = cursorCast(cs);
   size_t e   = cursorCast(ce);
   size_t len = std::strlen(t);
@@ -174,6 +182,11 @@ TextModel::Sz TextModel::calcSize(const Font& fnt) const {
   }
 
 void TextModel::buildIndex() {
+  if(txt.size()==0) {
+    line.clear();
+    return;
+    }
+
   size_t count=0;
   for(auto c:txt)
     if(c=='\n')
@@ -195,7 +208,7 @@ void TextModel::buildIndex() {
       }
     }
 
-  line[ln].txt  = &txt[beg];
+  line[ln].txt  = txt.data()+beg;
   line[ln].size = txt.size()-beg-1;
   }
 
@@ -253,6 +266,8 @@ bool TextModel::isValid(TextModel::Cursor c) const {
   }
 
 size_t TextModel::cursorCast(Cursor c) const {
+  if(line.size()==0)
+    return 0;
   size_t r=std::distance(txt.data(),line[c.line].txt);
   return r+c.offset;
   }
