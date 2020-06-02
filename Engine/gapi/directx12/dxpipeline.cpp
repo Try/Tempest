@@ -3,6 +3,7 @@
 #include "dxpipeline.h"
 
 #include "dxdevice.h"
+#include "dxframebuffer.h"
 #include "dxshader.h"
 #include "dxuniformslay.h"
 #include "guid.h"
@@ -10,12 +11,29 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+bool DxPipeline::Inst::isCompatible(const DxFramebuffer& frm) const {
+  if(viewsCount!=frm.viewsCount)
+    return false;
+  for(uint8_t i=0;i<viewsCount;++i)
+    if(RTVFormats[i]!=frm.views[i].format)
+      return false;
+  return true;
+  }
+
 DxPipeline::DxPipeline(DxDevice& device, const RenderState& st,
                        const Decl::ComponentType* decl, size_t declSize, size_t stride,
                        Topology tp, const DxUniformsLay& ulay,
                        DxShader& vert, DxShader& frag)
-  : sign(ulay.impl.get()), stride(UINT(stride)) {
+  : sign(ulay.impl.get()), stride(UINT(stride)),
+    device(device),
+    vsShader(&vert), fsShader(&frag), declSize(UINT(declSize)), rState(st) {
   sign.get()->AddRef();
+  static const D3D_PRIMITIVE_TOPOLOGY dxTopolgy[]= {
+    D3D_PRIMITIVE_TOPOLOGY_UNDEFINED,
+    D3D_PRIMITIVE_TOPOLOGY_LINELIST,
+    D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST
+    };
+  topology = dxTopolgy[int(tp)];
 
   static const DXGI_FORMAT vertFormats[]={
     DXGI_FORMAT_UNKNOWN,
@@ -32,7 +50,6 @@ DxPipeline::DxPipeline(DxDevice& device, const RenderState& st,
     DXGI_FORMAT_R16G16_SNORM,
     DXGI_FORMAT_R16G16B16A16_SNORM,
     };
-
   static const uint32_t vertSize[]={
     0,
     4,
@@ -49,21 +66,8 @@ DxPipeline::DxPipeline(DxDevice& device, const RenderState& st,
     8
   };
 
-  static const D3D_PRIMITIVE_TOPOLOGY dxTopolgy[]={
-    D3D_PRIMITIVE_TOPOLOGY_UNDEFINED,
-    D3D_PRIMITIVE_TOPOLOGY_LINELIST,
-    D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST
-  };
+  vsInput.reset(new D3D12_INPUT_ELEMENT_DESC[declSize]);
 
-  topology = dxTopolgy[int(tp)];
-
-  D3D12_INPUT_ELEMENT_DESC                    vsInputsStk[16]={};
-  std::unique_ptr<D3D12_INPUT_ELEMENT_DESC[]> vsInputHeap;
-  D3D12_INPUT_ELEMENT_DESC*                   vsInput = vsInputsStk;
-  if(declSize>16) {
-    vsInputHeap.reset(new D3D12_INPUT_ELEMENT_DESC[declSize]);
-    vsInput = vsInputHeap.get();
-    }
   uint32_t offset=0;
   for(size_t i=0;i<declSize;++i){
     auto& loc=vsInput[i];
@@ -77,43 +81,23 @@ DxPipeline::DxPipeline(DxDevice& device, const RenderState& st,
 
     offset+=vertSize[decl[i]];
     }
+  }
 
-  static const D3D12_COMPARISON_FUNC depthFn[size_t(RenderState::ZTestMode::Count)]= {
-    D3D12_COMPARISON_FUNC_ALWAYS,
-    D3D12_COMPARISON_FUNC_NEVER,
-    D3D12_COMPARISON_FUNC_GREATER,
-    D3D12_COMPARISON_FUNC_LESS,
-    D3D12_COMPARISON_FUNC_GREATER_EQUAL,
-    D3D12_COMPARISON_FUNC_LESS_EQUAL,
-    D3D12_COMPARISON_FUNC_NOT_EQUAL,
-    D3D12_COMPARISON_FUNC_EQUAL,
-    };
+ID3D12PipelineState& DxPipeline::instance(const DxFramebuffer& frm) {
+  std::lock_guard<SpinLock> guard(sync);
 
-  D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-  psoDesc.InputLayout     = { vsInput, UINT(declSize) };
-  psoDesc.pRootSignature  = ulay.impl.get();
-  psoDesc.VS              = vert.bytecode();
-  psoDesc.PS              = frag.bytecode();
+  for(auto& i:inst) {
+    if(i.isCompatible(frm))
+      return *i.impl.get();
+    }
 
-  psoDesc.RasterizerState = getRaster(st);
-  psoDesc.BlendState      = getBlend(st);
-  psoDesc.DepthStencilState.DepthEnable    = st.zTestMode()!=RenderState::ZTestMode::Always ? TRUE : FALSE;
-  psoDesc.DepthStencilState.DepthWriteMask = st.isZWriteEnabled() ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
-  psoDesc.DepthStencilState.DepthFunc      = depthFn[size_t(st.zTestMode())];
-  psoDesc.DepthStencilState.StencilEnable  = FALSE;
-
-  psoDesc.SampleMask            = UINT_MAX;
-  psoDesc.SampleDesc.Quality    = 0;
-  psoDesc.SampleDesc.Count      = 1;
-  psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-  if(tp==Triangles)
-    psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE; else
-    psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-
-  psoDesc.NumRenderTargets = 1; // TODO: mrt
-  psoDesc.RTVFormats[0]    = DXGI_FORMAT_B8G8R8A8_UNORM; // TODO: pipeline instances
-
-  dxAssert(device.device->CreateGraphicsPipelineState(&psoDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&impl)));
+  Inst pso;
+  pso.impl = initGraphicsPipeline(frm);
+  pso.viewsCount = frm.viewsCount;
+  for(uint8_t i=0;i<frm.viewsCount;++i)
+    pso.RTVFormats[i] = frm.views[i].format;
+  inst.emplace_back(std::move(pso));
+  return *inst.back().impl.get();
   }
 
 D3D12_BLEND_DESC DxPipeline::getBlend(const RenderState& st) const {
@@ -165,6 +149,52 @@ D3D12_RASTERIZER_DESC DxPipeline::getRaster(const RenderState& st) const {
   rd.FrontCounterClockwise = TRUE;
 
   return rd;
+  }
+
+ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFramebuffer& frm) {
+  static const D3D12_COMPARISON_FUNC depthFn[size_t(RenderState::ZTestMode::Count)]= {
+    D3D12_COMPARISON_FUNC_ALWAYS,
+    D3D12_COMPARISON_FUNC_NEVER,
+    D3D12_COMPARISON_FUNC_GREATER,
+    D3D12_COMPARISON_FUNC_LESS,
+    D3D12_COMPARISON_FUNC_GREATER_EQUAL,
+    D3D12_COMPARISON_FUNC_LESS_EQUAL,
+    D3D12_COMPARISON_FUNC_NOT_EQUAL,
+    D3D12_COMPARISON_FUNC_EQUAL,
+    };
+
+  D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+  psoDesc.InputLayout     = { vsInput.get(), UINT(declSize) };
+  psoDesc.pRootSignature  = sign.get();
+  psoDesc.VS              = vsShader.handler->bytecode();
+  psoDesc.PS              = fsShader.handler->bytecode();
+
+  psoDesc.RasterizerState = getRaster(rState);
+  psoDesc.BlendState      = getBlend (rState);
+  psoDesc.DepthStencilState.DepthEnable    = rState.zTestMode()!=RenderState::ZTestMode::Always ? TRUE : FALSE;
+  psoDesc.DepthStencilState.DepthWriteMask = rState.isZWriteEnabled() ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
+  psoDesc.DepthStencilState.DepthFunc      = depthFn[size_t(rState.zTestMode())];
+  psoDesc.DepthStencilState.StencilEnable  = FALSE;
+
+  psoDesc.SampleMask            = UINT_MAX;
+  psoDesc.SampleDesc.Quality    = 0;
+  psoDesc.SampleDesc.Count      = 1;
+  psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+  if(topology==D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST ||
+     topology==D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP ||
+     topology==D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ ||
+     topology==D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ)
+    psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE; else
+    psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+
+  //psoDesc.DSVFormat; // TODO: depth-stencil
+  psoDesc.NumRenderTargets = frm.viewsCount;
+  for(uint8_t i=0;i<frm.viewsCount;++i)
+    psoDesc.RTVFormats[i] = frm.views[i].format;
+
+  ComPtr<ID3D12PipelineState> ret;
+  dxAssert(device.device->CreateGraphicsPipelineState(&psoDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&ret)));
+  return ret;
   }
 
 #endif

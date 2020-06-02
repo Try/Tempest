@@ -91,10 +91,12 @@ void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer& vbo, size_t of
     impl->setVbo(*vbo.impl.handler);
     state.curVbo=&vbo;
     }
+  /*
+   // no need to clear vbo
   if(state.curIbo!=nullptr) {
     impl->setIbo(nullptr,Detail::IndexClass::i16);
     state.curIbo=nullptr;
-    }
+    }*/
   impl->draw(offset,size);
   }
 
@@ -106,7 +108,7 @@ void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer &vbo, const Vid
     state.curVbo=&vbo;
     }
   if(state.curIbo!=&ibo) {
-    impl->setIbo(ibo.impl.handler,index);
+    impl->setIbo(*ibo.impl.handler,index);
     state.curIbo=&ibo;
     }
   impl->drawIndexed(offset,size,0);

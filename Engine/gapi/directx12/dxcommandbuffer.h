@@ -15,6 +15,7 @@ namespace Detail {
 class DxDevice;
 class DxBuffer;
 class DxTexture;
+class DxFramebuffer;
 
 class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
   public:
@@ -39,7 +40,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void changeLayout(AbstractGraphicsApi::Texture& t,TextureFormat frm,TextureLayout prev,TextureLayout next) override;
     void changeLayout(AbstractGraphicsApi::Texture& t,TextureFormat frm,TextureLayout prev,TextureLayout next,uint32_t mipCnt);
     void setVbo      (const AbstractGraphicsApi::Buffer& b) override;
-    void setIbo      (const AbstractGraphicsApi::Buffer* b,Detail::IndexClass cls) override;
+    void setIbo      (const AbstractGraphicsApi::Buffer& b, Detail::IndexClass cls) override;
     void draw        (size_t offset,size_t vertexCount) override;
     void drawIndexed (size_t ioffset, size_t isize, size_t voffset) override;
 
@@ -59,14 +60,16 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     ComPtr<ID3D12CommandAllocator>    pool;
     ComPtr<ID3D12GraphicsCommandList> impl;
     bool                              recording=false;
+    bool                              resetDone=false;
 
+    DxFramebuffer*                    currentFbo = nullptr;
     UINT                              vboStride=0;
 
     std::vector<ImgState>             imgState;
 
-    void                       setLayout(ID3D12Resource* res, D3D12_RESOURCE_STATES lay);
-    void                       implChangeLayout(ID3D12Resource* res, D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES lay);
-    DxCommandBuffer::ImgState& findImg(ID3D12Resource* img, D3D12_RESOURCE_STATES last);
+    void                       setLayout(ID3D12Resource* res, D3D12_RESOURCE_STATES lay, bool isSwImage, bool preserve);
+    void                       implChangeLayout(ID3D12Resource* res, bool preserveIn, D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES lay);
+    DxCommandBuffer::ImgState& findImg(ID3D12Resource* img, D3D12_RESOURCE_STATES last, bool preserve);
     void                       flushLayout();
 
     friend class Tempest::DirectX12Api;

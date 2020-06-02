@@ -40,7 +40,7 @@ class VCommandBundle : public AbstractGraphicsApi::CommandBundle {
     void setViewport(const Rect& r);
 
     void setVbo(const AbstractGraphicsApi::Buffer& b);
-    void setIbo(const AbstractGraphicsApi::Buffer* b,Detail::IndexClass cls);
+    void setIbo(const AbstractGraphicsApi::Buffer& b, Detail::IndexClass cls);
 
     void draw(size_t offset, size_t size);
     void drawIndexed(size_t ioffset, size_t isize, size_t voffset);

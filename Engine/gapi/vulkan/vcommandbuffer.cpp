@@ -149,9 +149,7 @@ void VCommandBuffer::setVbo(const Tempest::AbstractGraphicsApi::Buffer &b) {
   getChunk().setVbo(b);
   }
 
-void VCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer *b,Detail::IndexClass cls) {
-  if(b==nullptr)
-    return;
+void VCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer& b,Detail::IndexClass cls) {
   getChunk().setIbo(b,cls);
   }
 

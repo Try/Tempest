@@ -19,6 +19,8 @@ class DxRenderPass : public AbstractGraphicsApi::Pass {
   public:
     DxRenderPass(const FboMode** att, size_t acount);
 
+    bool isAttachPreserved(size_t i) const;
+
     std::vector<FboMode> att;
   };
 

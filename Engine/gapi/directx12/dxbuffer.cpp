@@ -30,4 +30,16 @@ void DxBuffer::update(const void* data, size_t off, size_t count, size_t sz, siz
   ret.Unmap(0,&rgn);
   }
 
+void DxBuffer::read(void* data, size_t off, size_t sz) {
+  ID3D12Resource& ret = *impl;
+
+  D3D12_RANGE rgn = {off,sz};
+  void*       mapped=nullptr;
+  dxAssert(ret.Map(0,&rgn,&mapped));
+
+  std::memcpy(data,mapped,sz);
+
+  ret.Unmap(0,nullptr);
+  }
+
 #endif

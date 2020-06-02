@@ -16,6 +16,7 @@ class DxTexture : public AbstractGraphicsApi::Texture {
     DxTexture(DxTexture&& other);
 
     void setSampler(const Sampler2d& s);
+    UINT bitCount() const;
 
     ComPtr<ID3D12Resource> impl;
     DXGI_FORMAT            format = DXGI_FORMAT_UNKNOWN;

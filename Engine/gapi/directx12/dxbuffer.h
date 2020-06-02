@@ -14,6 +14,7 @@ class DxBuffer : public AbstractGraphicsApi::Buffer {
     DxBuffer(DxBuffer&& other);
 
     void  update(const void* data,size_t off,size_t count,size_t sz,size_t alignedSz) override;
+    void  read  (void* data,size_t off,size_t sz);
 
     ComPtr<ID3D12Resource> impl;
     UINT                   sizeInBytes=0;

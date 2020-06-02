@@ -51,6 +51,10 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t count, size_t size, size_t a
     heapProp.Type = D3D12_HEAP_TYPE_UPLOAD;
     state         = D3D12_RESOURCE_STATE_GENERIC_READ;
     }
+  if(bufFlg==BufferFlags::Readback) {
+    heapProp.Type = D3D12_HEAP_TYPE_READBACK;
+    state         = D3D12_RESOURCE_STATE_COPY_DEST;
+    }
 
   dxAssert(device->CreateCommittedResource(
              &heapProp,
@@ -131,7 +135,7 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
              &heapProp,
              D3D12_HEAP_FLAG_NONE,
              &resDesc,
-             D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+             D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
              nullptr,
              uuid<ID3D12Resource>(),
              reinterpret_cast<void**>(&ret)

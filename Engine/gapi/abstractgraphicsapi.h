@@ -272,7 +272,7 @@ namespace Tempest {
         virtual void setUniforms(Pipeline& p,Desc& u, size_t offc, const uint32_t* offv)=0;
 
         virtual void setVbo      (const Buffer& b)=0;
-        virtual void setIbo      (const Buffer* b,Detail::IndexClass cls)=0;
+        virtual void setIbo      (const Buffer& b,Detail::IndexClass cls)=0;
         virtual void draw        (size_t offset,size_t vertexCount)=0;
         virtual void drawIndexed (size_t ioffset, size_t isize, size_t voffset)=0;
         };

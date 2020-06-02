@@ -11,4 +11,8 @@ DxRenderPass::DxRenderPass(const FboMode** a, size_t acount)
     att[i] = *a[i];
   }
 
+bool DxRenderPass::isAttachPreserved(size_t i) const {
+  return (att[i].mode & FboMode::PreserveIn);
+  }
+
 #endif

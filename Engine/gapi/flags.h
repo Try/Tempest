@@ -22,14 +22,11 @@ inline MemUsage operator & (MemUsage a,const MemUsage& b) {
 
 
 enum class BufferFlags : uint8_t {
-  Staging = 1<<0,
-  Static  = 1<<1,
-  Dynamic = 1<<2
+  Staging  = 1<<0,
+  Static   = 1<<1,
+  Dynamic  = 1<<2,
+  Readback = 1<<3,
   };
-
-inline BufferFlags operator | (BufferFlags a,const BufferFlags& b) {
-  return BufferFlags(uint8_t(a)|uint8_t(b));
-  }
 
 inline BufferFlags operator & (BufferFlags a,const BufferFlags& b) {
   return BufferFlags(uint8_t(a)&uint8_t(b));

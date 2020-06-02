@@ -29,6 +29,25 @@ DxDevice::DxDevice(IDXGIFactory4& dxgi) {
 
   dxAssert(D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_12_0, uuid<ID3D12Device>(), reinterpret_cast<void**>(&device)));
 
+  ComPtr<ID3D12InfoQueue> pInfoQueue;
+  if(SUCCEEDED(device->QueryInterface(__uuidof(ID3D12InfoQueue),reinterpret_cast<void**>(&pInfoQueue)))) {
+    // Suppress messages based on their severity level
+    D3D12_MESSAGE_SEVERITY severities[] = {
+      D3D12_MESSAGE_SEVERITY_INFO
+      };
+    D3D12_MESSAGE_ID denyIds[] = {
+      // I'm really not sure how to avoid this message.
+      D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
+      };
+    D3D12_INFO_QUEUE_FILTER filter = {};
+    filter.DenyList.NumSeverities = _countof(severities);
+    filter.DenyList.pSeverityList = severities;
+    filter.DenyList.NumIDs        = _countof(denyIds);
+    filter.DenyList.pIDList       = denyIds;
+
+    dxAssert(pInfoQueue->PushStorageFilter(&filter));
+    }
+
   DXGI_ADAPTER_DESC desc={};
   adapter->GetDesc(&desc);
   for(size_t i=0;i<sizeof(description);++i)  {

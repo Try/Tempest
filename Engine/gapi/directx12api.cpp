@@ -196,7 +196,7 @@ AbstractGraphicsApi::PUniformsLay DirectX12Api::createUboLayout(Device* d, const
 
 AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mipCnt) {
   Detail::DxDevice& dx     = *reinterpret_cast<Detail::DxDevice*>(d);
-  //const uint32_t    size   = uint32_t(p.dataSize());
+
   DXGI_FORMAT       format = Detail::nativeFormat(frm);
   const uint32_t    row    = p.w()*p.bpp();
   const uint32_t    pith   = ((row+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
@@ -247,7 +247,48 @@ AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const uint3
 
 void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureLayout lay,
                               TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip) {
+  Detail::DxDevice&  dx = *reinterpret_cast<Detail::DxDevice*>(d);
+  Detail::DxTexture& tx = *reinterpret_cast<Detail::DxTexture*>(t.handler);
 
+  size_t         bpp  = 0;
+  Pixmap::Format pfrm = Pixmap::Format::RGBA;
+  switch(frm) {
+    case TextureFormat::Undefined: bpp=0; break;
+    case TextureFormat::Last:      bpp=0; break;
+    //---
+    case TextureFormat::R8:        bpp=1; pfrm = Pixmap::Format::R;      break;
+    case TextureFormat::RG8:       bpp=2; pfrm = Pixmap::Format::RG;     break;
+    case TextureFormat::RGB8:      bpp=3; pfrm = Pixmap::Format::RGB;    break;
+    case TextureFormat::RGBA8:     bpp=4; pfrm = Pixmap::Format::RGBA;   break;
+    //---
+    case TextureFormat::R16:       bpp=2; pfrm = Pixmap::Format::R16;    break;
+    case TextureFormat::RG16:      bpp=4; pfrm = Pixmap::Format::RG16;   break;
+    case TextureFormat::RGB16:     bpp=6; pfrm = Pixmap::Format::RGB16;  break;
+    case TextureFormat::RGBA16:    bpp=8; pfrm = Pixmap::Format::RGBA16; break;
+    //---
+    case TextureFormat::Depth16:   bpp=2; pfrm = Pixmap::Format::R16; break;
+    case TextureFormat::Depth24S8: bpp=4; break;
+    case TextureFormat::Depth24x8: bpp=4; break;
+    // TODO: dxt
+    case TextureFormat::DXT1:      bpp=0; break;
+    case TextureFormat::DXT3:      bpp=0; break;
+    case TextureFormat::DXT5:      bpp=0; break;
+    }
+
+  const size_t     size  = w*h*bpp;
+  Detail::DxBuffer stage = dx.allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferFlags::Readback);
+
+  //TODO: D3D12_TEXTURE_DATA_PITCH_ALIGNMENT
+  Detail::DxDevice::Data dat(dx);
+  dat.changeLayout(tx, frm, lay, TextureLayout::TransferSrc, 1);
+  dat.copy(stage,w,h,mip,tx,0);
+  dat.changeLayout(tx, frm, TextureLayout::TransferSrc, lay, 1);
+  dat.commit();
+
+  dx.waitData();
+
+  out = Pixmap(w,h,pfrm);
+  stage.read(out.data(),0,size);
   }
 
 AbstractGraphicsApi::CommandBundle* DirectX12Api::createCommandBuffer(Device* d, FboLayout*) {
@@ -263,6 +304,7 @@ AbstractGraphicsApi::CommandBuffer* DirectX12Api::createCommandBuffer(Device* d)
 void DirectX12Api::present(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Swapchain* sw,
                            uint32_t imageId, const AbstractGraphicsApi::Semaphore* wait) {
   // TODO: handle imageId
+  (void)imageId;
   Detail::DxDevice&    dx    = *reinterpret_cast<Detail::DxDevice*>(d);
   auto&                swait = *reinterpret_cast<const Detail::DxSemaphore*>(wait);
   Detail::DxSwapchain* sx    = reinterpret_cast<Detail::DxSwapchain*>(sw);

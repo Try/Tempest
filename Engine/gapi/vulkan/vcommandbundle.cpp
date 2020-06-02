@@ -148,16 +148,13 @@ void VCommandBundle::setVbo(const AbstractGraphicsApi::Buffer& b) {
         offsets.begin() );
   }
 
-void VCommandBundle::setIbo(const AbstractGraphicsApi::Buffer* b, IndexClass cls) {
-  if(b==nullptr)
-    return;
-
+void VCommandBundle::setIbo(const AbstractGraphicsApi::Buffer& b, IndexClass cls) {
   static const VkIndexType type[]={
     VK_INDEX_TYPE_UINT16,
     VK_INDEX_TYPE_UINT32
     };
 
-  const VBuffer& ibo=reinterpret_cast<const VBuffer&>(*b);
+  const VBuffer& ibo=reinterpret_cast<const VBuffer&>(b);
   vkCmdBindIndexBuffer(impl,ibo.impl,0,type[uint32_t(cls)]);
   }
 
