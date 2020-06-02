@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <cstdint>
+#include <vector>
 
 namespace Tempest {
 
@@ -11,6 +12,8 @@ class DirectX12Api : public AbstractGraphicsApi {
   public:
     explicit DirectX12Api(ApiFlags f=ApiFlags::NoFlags);
     virtual ~DirectX12Api();
+
+    std::vector<Props> devices() const override;
 
   protected:
     Device*        createDevice(const char* gpuName) override;

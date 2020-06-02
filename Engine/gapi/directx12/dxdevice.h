@@ -78,8 +78,7 @@ inline D3D12_RESOURCE_STATES nativeFormat(TextureLayout f) {
 
 class DxDevice : public AbstractGraphicsApi::Device {
   public:
-
-    DxDevice(IDXGIFactory4& dxgi);
+    DxDevice(IDXGIAdapter1& adapter);
     ~DxDevice() override;
 
     using DataMgr = UploadEngine<DxDevice,DxCommandBuffer,DxFence,DxBuffer,DxTexture>;
@@ -89,6 +88,8 @@ class DxDevice : public AbstractGraphicsApi::Device {
     const char*  renderer() const override;
     void         waitIdle() override;
 
+    static void  getProp(IDXGIAdapter1& adapter, AbstractGraphicsApi::Props& prop);
+    static void  getProp(DXGI_ADAPTER_DESC1& desc, AbstractGraphicsApi::Props& prop);
     void         submit(DxCommandBuffer& cmd,DxFence& sync);
 
     AbstractGraphicsApi::Props props;
@@ -98,8 +99,6 @@ class DxDevice : public AbstractGraphicsApi::Device {
     DxAllocator                allocator;
 
   private:
-    char                       description[128] = {};
-
     ComPtr<ID3D12Fence>        idleFence;
     HANDLE                     idleEvent=nullptr;
 

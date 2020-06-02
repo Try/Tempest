@@ -118,7 +118,9 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
   resDesc.Format             = Detail::nativeFormat(frm);
   resDesc.Width              = w;
   resDesc.Height             = h;
-  resDesc.Flags              = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET/* | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL*/;
+  if(isDepthFormat(frm))
+    resDesc.Flags            = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL; else
+    resDesc.Flags            = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
   resDesc.DepthOrArraySize   = 1;
   resDesc.SampleDesc.Count   = 1;
   resDesc.SampleDesc.Quality = 0;

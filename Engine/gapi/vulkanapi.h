@@ -13,7 +13,7 @@ class VulkanApi : public AbstractGraphicsApi {
     explicit VulkanApi(ApiFlags f=ApiFlags::NoFlags);
     virtual ~VulkanApi();
 
-    std::vector<Props> devices() const;
+    std::vector<Props> devices() const override;
 
   protected:
     Device*        createDevice(const char* gpuName) override;

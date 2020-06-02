@@ -168,13 +168,6 @@ void VulkanApi::getDevicePropsShort(VkPhysicalDevice physicalDevice, Tempest::Ab
   VkFormatFeatureFlags imageRqFlagsBC = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
   VkFormatFeatureFlags attachRqFlags  = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT|VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
   VkFormatFeatureFlags depthAttflags  = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
-  VkFormatProperties frm={};
-  vkGetPhysicalDeviceFormatProperties(physicalDevice,VK_FORMAT_R8G8B8_UNORM,&frm);
-  c.rgb8  = ((frm.optimalTilingFeatures & imageRqFlags)==imageRqFlags) &&
-            ((frm.linearTilingFeatures  & imageRqFlags)==imageRqFlags) ;
-
-  vkGetPhysicalDeviceFormatProperties(physicalDevice,VK_FORMAT_R8G8B8A8_UNORM,&frm); // must-have
-  c.rgba8 = (frm.optimalTilingFeatures & imageRqFlags)==imageRqFlags;
 
   VkPhysicalDeviceProperties prop={};
   vkGetPhysicalDeviceProperties(physicalDevice,&prop);
@@ -216,6 +209,8 @@ void VulkanApi::getDevicePropsShort(VkPhysicalDevice physicalDevice, Tempest::Ab
   uint64_t smpFormat=0, attFormat=0, dattFormat=0;
   for(uint32_t i=0;i<TextureFormat::Last;++i){
     VkFormat f = Detail::nativeFormat(TextureFormat(i));
+
+    VkFormatProperties frm={};
     vkGetPhysicalDeviceFormatProperties(physicalDevice,f,&frm);
     if(isCompressedFormat(TextureFormat(i))){
       if((frm.optimalTilingFeatures & imageRqFlagsBC)==imageRqFlagsBC){

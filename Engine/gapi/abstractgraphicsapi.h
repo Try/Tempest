@@ -5,6 +5,7 @@
 #include <initializer_list>
 #include <memory>
 #include <atomic>
+#include <vector>
 
 #include "../utility/dptr.h"
 #include "flags.h"
@@ -182,8 +183,6 @@ namespace Tempest {
             size_t maxRange    = 16384;
             } ubo;
 
-          bool     rgb8 =false;
-          bool     rgba8=false;
           bool     anisotropy=false;
           float    maxAnisotropy=1.0f;
 
@@ -296,6 +295,8 @@ namespace Tempest {
       using PFbo         = Detail::DSharedPtr<Fbo*>;
       using PFboLayout   = Detail::DSharedPtr<FboLayout*>;
       using PUniformsLay = Detail::DSharedPtr<UniformsLay*>;
+
+      virtual std::vector<Props> devices() const = 0;
 
     protected:
       virtual Device*    createDevice(const char* gpuName)=0;

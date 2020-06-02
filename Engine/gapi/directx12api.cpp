@@ -33,8 +33,50 @@ struct DirectX12Api::Impl {
     dxAssert(CreateDXGIFactory1(uuid<IDXGIFactory4>(), reinterpret_cast<void**>(&DXGIFactory)));
     }
 
-  ComPtr<ID3D12Debug>    D3D12DebugController;
-  ComPtr<IDXGIFactory4>  DXGIFactory;
+  std::vector<Props> devices() {
+    auto& dxgi = *DXGIFactory;
+    std::vector<Props> d;
+
+    ComPtr<IDXGIAdapter1> adapter;
+    for(UINT i = 0; DXGI_ERROR_NOT_FOUND != dxgi.EnumAdapters1(i, &adapter.get()); ++i) {
+      DXGI_ADAPTER_DESC1 desc={};
+      adapter->GetDesc1(&desc);
+      if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+        continue;
+
+      AbstractGraphicsApi::Props props={};
+      DxDevice::getProp(desc,props);
+      d.push_back(props);
+      }
+
+    return d;
+    }
+
+  AbstractGraphicsApi::Device* createDevice(const char* gpuName) {
+    auto& dxgi = *DXGIFactory;
+
+    ComPtr<IDXGIAdapter1> adapter;
+    for(UINT i = 0; DXGI_ERROR_NOT_FOUND != dxgi.EnumAdapters1(i, &adapter.get()); ++i) {
+      DXGI_ADAPTER_DESC1 desc={};
+      adapter->GetDesc1(&desc);
+      if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+        continue;
+
+      AbstractGraphicsApi::Props props={};
+      DxDevice::getProp(desc,props);
+      if(gpuName!=nullptr && std::strcmp(props.name,gpuName)!=0)
+        continue;
+
+      // Check to see if the adapter supports Direct3D 12, but don't create the
+      // actual device yet.
+      if(SUCCEEDED(D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_12_0, uuid<ID3D12Device>(), nullptr)))
+        break;
+      }
+
+    if(adapter.get()==nullptr)
+      throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+    return new DxDevice(*adapter);
+    }
 
   void submit(AbstractGraphicsApi::Device* d,
               ID3D12CommandList** cmd, size_t count,
@@ -60,6 +102,9 @@ struct DirectX12Api::Impl {
       }
     fcpu.signal(*dx.cmdQueue);
     }
+
+  ComPtr<ID3D12Debug>    D3D12DebugController;
+  ComPtr<IDXGIFactory4>  DXGIFactory;
   };
 
 DirectX12Api::DirectX12Api(ApiFlags f) {
@@ -69,8 +114,12 @@ DirectX12Api::DirectX12Api(ApiFlags f) {
 DirectX12Api::~DirectX12Api(){
   }
 
+std::vector<AbstractGraphicsApi::Props> DirectX12Api::devices() const {
+  return impl->devices();
+  }
+
 AbstractGraphicsApi::Device* DirectX12Api::createDevice(const char* gpuName) {
-  return new DxDevice(*impl->DXGIFactory);
+  return impl->createDevice(gpuName);
   }
 
 void DirectX12Api::destroy(AbstractGraphicsApi::Device* d) {
@@ -344,9 +393,8 @@ void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::C
   }
 
 void DirectX12Api::getCaps(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Props& caps) {
-  //TODO
-  caps.setSamplerFormats(-1);
-  caps.setAttachFormats(-1);
+  Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
+  caps = dx.props;
   }
 
 

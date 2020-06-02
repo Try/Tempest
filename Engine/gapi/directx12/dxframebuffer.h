@@ -23,6 +23,7 @@ class DxFramebuffer : public AbstractGraphicsApi::Fbo {
 
     ComPtr<ID3D12DescriptorHeap>              rtvHeap;
     UINT                                      rtvHeapInc = 0;
+    ComPtr<ID3D12DescriptorHeap>              dsvHeap;
 
     struct View {
       ID3D12Resource* res       = nullptr;
@@ -32,8 +33,10 @@ class DxFramebuffer : public AbstractGraphicsApi::Fbo {
     std::unique_ptr<View[]> views;
     UINT32                  viewsCount;
 
+    View                    depth;
+
   private:
-    void setupViews(ID3D12Device& device, const std::initializer_list<ID3D12Resource*>& res);
+    void setupViews(ID3D12Device& device, const std::initializer_list<ID3D12Resource*>& res, ID3D12Resource* ds);
   };
 }
 }

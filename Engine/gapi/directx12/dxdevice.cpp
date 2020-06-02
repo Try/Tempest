@@ -11,23 +11,8 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-DxDevice::DxDevice(IDXGIFactory4& dxgi) {
-  ComPtr<IDXGIAdapter1> adapter;
-
-  for(UINT i = 0; DXGI_ERROR_NOT_FOUND != dxgi.EnumAdapters1(i, &adapter.get()); ++i) {
-    DXGI_ADAPTER_DESC1 desc={};
-    adapter->GetDesc1(&desc);
-
-    if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-      continue;
-
-    // Check to see if the adapter supports Direct3D 12, but don't create the
-    // actual device yet.
-    if(SUCCEEDED(D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_12_0, uuid<ID3D12Device>(), nullptr)))
-      break;
-    }
-
-  dxAssert(D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_12_0, uuid<ID3D12Device>(), reinterpret_cast<void**>(&device)));
+DxDevice::DxDevice(IDXGIAdapter1& adapter) {
+  dxAssert(D3D12CreateDevice(&adapter, D3D_FEATURE_LEVEL_12_0, uuid<ID3D12Device>(), reinterpret_cast<void**>(&device)));
 
   ComPtr<ID3D12InfoQueue> pInfoQueue;
   if(SUCCEEDED(device->QueryInterface(__uuidof(ID3D12InfoQueue),reinterpret_cast<void**>(&pInfoQueue)))) {
@@ -49,23 +34,13 @@ DxDevice::DxDevice(IDXGIFactory4& dxgi) {
     }
 
   DXGI_ADAPTER_DESC desc={};
-  adapter->GetDesc(&desc);
-  for(size_t i=0;i<sizeof(description);++i)  {
-    WCHAR c = desc.Description[i];
-    if(c==0)
-      break;
-    if(('0'<=c && c<='9') || ('a'<=c && c<='z') || ('A'<=c && c<='Z') ||
-       c=='(' || c==')' || c=='_' || c=='[' || c==']' || c=='{' || c=='}' || c==' ')
-      description[i] = char(c); else
-      description[i] = '?';
-    }
-  description[sizeof(description)-1]='\0';
+  adapter.GetDesc(&desc);
+  getProp(adapter,props);
 
   D3D12_COMMAND_QUEUE_DESC queueDesc = {};
   queueDesc.Type  = D3D12_COMMAND_LIST_TYPE_DIRECT;
   queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
   dxAssert(device->CreateCommandQueue(&queueDesc, uuid<ID3D12CommandQueue>(), reinterpret_cast<void**>(&cmdQueue)));
-
 
   allocator.setDevice(*this);
 
@@ -82,12 +57,53 @@ DxDevice::~DxDevice() {
   CloseHandle(idleEvent);
   }
 
+void DxDevice::getProp(IDXGIAdapter1& adapter, AbstractGraphicsApi::Props& prop) {
+  DXGI_ADAPTER_DESC1 desc={};
+  adapter.GetDesc1(&desc);
+  return getProp(desc,prop);
+  }
+
+void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, AbstractGraphicsApi::Props& prop) {
+  for(size_t i=0;i<sizeof(prop.name);++i)  {
+    WCHAR c = desc.Description[i];
+    if(c==0)
+      break;
+    if(('0'<=c && c<='9') || ('a'<=c && c<='z') || ('A'<=c && c<='Z') ||
+       c=='(' || c==')' || c=='_' || c=='[' || c==']' || c=='{' || c=='}' || c==' ')
+      prop.name[i] = char(c); else
+      prop.name[i] = '?';
+    }
+  prop.name[sizeof(prop.name)-1]='\0';
+
+  // https://docs.microsoft.com/en-us/windows/win32/direct3ddxgi/hardware-support-for-direct3d-12-0-formats
+  static const TextureFormat smp[] = {TextureFormat::R8,   TextureFormat::RG8,  TextureFormat::RGBA8,
+                                      TextureFormat::R16,  TextureFormat::RG16, TextureFormat::RGBA16,
+                                      TextureFormat::DXT1, TextureFormat::DXT3, TextureFormat::DXT5};
+  static const TextureFormat att[] = {TextureFormat::R8,   TextureFormat::RG8,  TextureFormat::RGBA8,
+                                      TextureFormat::R16,  TextureFormat::RG16, TextureFormat::RGBA16};
+  static const TextureFormat ds[]  = {TextureFormat::Depth16, TextureFormat::Depth24x8, TextureFormat::Depth24S8};
+  uint64_t smpBit = 0, attBit = 0, dsBit = 0;
+  for(auto& i:smp)
+    smpBit |= uint64_t(1) << uint64_t(i);
+  for(auto& i:att)
+    attBit |= uint64_t(1) << uint64_t(i);
+  for(auto& i:ds)
+    dsBit  |= uint64_t(1) << uint64_t(i);
+  prop.setSamplerFormats(smpBit);
+  prop.setAttachFormats (attBit);
+  prop.setDepthFormat   (dsBit);
+
+  // TODO: buffer limits
+  prop.ubo;
+  prop.anisotropy = true;
+  }
+
 void DxDevice::waitData() {
   data->wait();
   }
 
 const char* Detail::DxDevice::renderer() const {
-  return description;
+  return props.name;
   }
 
 void Detail::DxDevice::waitIdle() {

@@ -86,7 +86,12 @@ void DxCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*  f,
   flushLayout();
 
   auto  desc = fbo.rtvHeap->GetCPUDescriptorHandleForHeapStart();
-  impl->OMSetRenderTargets(fbo.viewsCount, &desc, TRUE, nullptr);
+  if(fbo.depth.res!=nullptr) {
+    auto ds = fbo.dsvHeap->GetCPUDescriptorHandleForHeapStart();
+    impl->OMSetRenderTargets(fbo.viewsCount, &desc, TRUE, &ds);
+    } else {
+    impl->OMSetRenderTargets(fbo.viewsCount, &desc, TRUE, nullptr);
+    }
 
   D3D12_VIEWPORT vp={};
   vp.TopLeftX = float(0.f);
@@ -165,9 +170,8 @@ void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/,
   }
 
 void DxCommandBuffer::exec(const CommandBundle& buf) {
-  assert(0);
-  (void)buf;
-  //impl->ExecuteBundle(); //BUNDLE!
+  auto& dx = reinterpret_cast<const DxCommandBuffer&>(buf);
+  impl->ExecuteBundle(dx.impl.get()); //BUNDLE!
   }
 
 void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id, TextureFormat /*frm*/,
@@ -320,6 +324,8 @@ void DxCommandBuffer::setLayout(ID3D12Resource* res, D3D12_RESOURCE_STATES lay, 
 
 void DxCommandBuffer::implChangeLayout(ID3D12Resource* res, bool preserveIn,
                                        D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES lay) {
+  if(prev==lay)
+    return;
   D3D12_RESOURCE_BARRIER barrier = {};
   barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
   barrier.Flags                  = preserveIn ?
