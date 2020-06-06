@@ -42,8 +42,9 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const 
   srvDesc.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE2D;
   srvDesc.Texture2D.MipLevels     = t.mips;
 
+  UINT filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
   D3D12_SAMPLER_DESC smpDesc = {};
-  smpDesc.Filter           = D3D12_FILTER_MIN_MAG_MIP_POINT; //TODO
+  smpDesc.Filter           = D3D12_FILTER_MIN_MAG_MIP_POINT;
   smpDesc.AddressU         = nativeFormat(smp.uClamp);
   smpDesc.AddressV         = nativeFormat(smp.vClamp);
   smpDesc.AddressW         = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
@@ -56,9 +57,20 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const 
   smpDesc.BorderColor[3]   = 0;
   smpDesc.MinLOD           = 0.0f;
   smpDesc.MaxLOD           = FLOAT(t.mips);
+
+  if(smp.minFilter==Filter::Linear)
+    filter |= (1u<<D3D12_MIN_FILTER_SHIFT);
+  if(smp.magFilter==Filter::Linear)
+    filter |= (1u<<D3D12_MAG_FILTER_SHIFT);
+  if(smp.mipFilter==Filter::Linear)
+    filter |= (1u<<D3D12_MIP_FILTER_SHIFT);
+
   if(smp.anisotropic) {
     smpDesc.MaxAnisotropy = 16;
+    filter |= D3D12_ANISOTROPIC_FILTERING_BIT;
     }
+
+  smpDesc.Filter = D3D12_FILTER(filter);
 
   auto& prm = layPtr.handler->prm[id];
   auto  gpu = heap[prm.heapId]->GetCPUDescriptorHandleForHeapStart();
