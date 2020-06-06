@@ -2,6 +2,7 @@
 
 #include <Tempest/Font>
 #include <Tempest/Size>
+#include <Tempest/UndoStack>
 
 #include <vector>
 #include <string>
@@ -29,13 +30,80 @@ class TextModel final {
           return line!=c.line || offset!=c.offset;
           }
 
+        bool operator < (const Cursor& c) const {
+          if(line<c.line)
+            return true;
+          if(line>c.line)
+            return false;
+          return offset<c.offset;
+          }
+
+        bool operator <= (const Cursor& c) const {
+          if(line<c.line)
+            return true;
+          if(line>c.line)
+            return false;
+          return offset<=c.offset;
+          }
+
+        bool operator > (const Cursor& c) const {
+          return !(*this<=c);
+          }
+
+        bool operator >= (const Cursor& c) const {
+          return !(*this<c);
+          }
+
       friend class TextModel;
       };
 
+    using Command = UndoStack<TextModel>::Command;
+
+    class CommandInsert : public Command {
+      public:
+        CommandInsert(const char* txt,Cursor where);
+        void redo(TextModel &subj) override;
+        void undo(TextModel &subj) override;
+      private:
+        Cursor      where;
+        std::string txt;
+        char        txtShort[3]={};
+      };
+
+    class CommandReplace : public Command {
+      public:
+        CommandReplace(const char* txt,Cursor beg,Cursor end);
+        void redo(TextModel &subj) override;
+        void undo(TextModel &subj) override;
+      private:
+        Cursor      begin;
+        Cursor      end;
+        std::string txt;
+        char        txtShort[3]={};
+
+        std::string prev;
+      };
+
+    class CommandErase : public Command {
+      public:
+        CommandErase(Cursor beg,Cursor end);
+        void redo(TextModel &subj) override;
+        void undo(TextModel &subj) override;
+      private:
+        Cursor      begin;
+        Cursor      end;
+        std::string prev;
+        char        prevShort[3]={};
+      };
+
     void        setText(const char* text);
-    Cursor      insert (const char* txt,Cursor where);
-    Cursor      erase  (Cursor s, Cursor e);
-    Cursor      replace(const char* txt,Cursor s,Cursor e);
+
+    void        insert(const char* txt,Cursor where);
+    void        erase  (Cursor s, Cursor e);
+    void        erase  (Cursor s, size_t count);
+    void        replace(const char* txt,Cursor s,Cursor e);
+    void        fetch  (Cursor s,Cursor e, std::string& buf);
+    void        fetch  (Cursor s,Cursor e, char* buf);
 
     Cursor      advance(Cursor src, int32_t offset) const;
 

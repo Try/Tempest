@@ -285,7 +285,7 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
   const Rect    sc = p.scissor();
 
   p.setScissor(sc.intersected(Rect(m.left, 0, r.w-m.xMargin(), r.h)));
-  p.translate(m.left,0);
+  p.translate(m.left,m.top);
 
   const Sprite& icon = iconSprite(extra.icon,st,r);
   int dX=0;
@@ -325,7 +325,7 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
     text.drawCursor(p,at.x,at.y-fntSz,extra.selectionStart,extra.selectionEnd);
     }
   text.paint(p, fnt, at.x, at.y);
-  p.translate(-m.left,-0);
+  p.translate(-m.left,-m.top);
   p.setScissor(sc);
   }
 

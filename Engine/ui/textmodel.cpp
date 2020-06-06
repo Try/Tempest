@@ -9,6 +9,88 @@
 
 using namespace Tempest;
 
+
+TextModel::CommandInsert::CommandInsert(const char* txtIn, TextModel::Cursor where)
+  : where(where) {
+  size_t l = std::strlen(txtIn);
+  if(l<=2) {
+    txtShort[0] = txtIn[0];
+    txtShort[1] = txtIn[1];
+    } else {
+    txt.assign(txtIn,txtIn+l);
+    }
+  }
+
+void TextModel::CommandInsert::redo(TextModel& subj) {
+  if(txtShort[0]=='\0')
+    subj.insert(txt.data(),where); else
+    subj.insert(txtShort,where);
+  }
+
+void TextModel::CommandInsert::undo(TextModel& subj) {
+  if(txtShort[0]=='\0') {
+    subj.erase(where,txt.size());
+    } else {
+    subj.erase(where,std::strlen(txtShort));
+    }
+  }
+
+
+TextModel::CommandReplace::CommandReplace(const char* txtIn, TextModel::Cursor beg, TextModel::Cursor e)
+  : begin(beg), end(e) {
+  if(end.line<begin.line || (end.line==begin.line && end.offset<begin.offset))
+    std::swap(begin,end);
+  size_t l = std::strlen(txtIn);
+  if(l<=2) {
+    txtShort[0] = txtIn[0];
+    txtShort[1] = txtIn[1];
+    } else {
+    txt.assign(txtIn,txtIn+l);
+    }
+  }
+
+void TextModel::CommandReplace::redo(TextModel& subj) {
+  subj.fetch(begin,end,prev);
+  if(txtShort[0]=='\0')
+    subj.replace(txt.data(),begin,end); else
+    subj.replace(txtShort,  begin,end);
+  }
+
+void TextModel::CommandReplace::undo(TextModel& subj) {
+  const char* t = txtShort;
+  if(txtShort[0]=='\0')
+    t = txt.data();
+
+  size_t l = std::strlen(t);
+  auto   e = subj.advance(begin,int(l));
+  subj.replace(prev.data(), begin,e);
+  }
+
+
+TextModel::CommandErase::CommandErase(TextModel::Cursor beg, TextModel::Cursor e)
+  : begin(beg), end(e) {
+  if(end.line<begin.line || (end.line==begin.line && end.offset<begin.offset))
+    std::swap(begin,end);
+  }
+
+void TextModel::CommandErase::redo(TextModel& subj) {
+  auto s = subj.cursorCast(begin);
+  auto e = subj.cursorCast(end);
+  if(e-s<3) {
+    subj.fetch(begin,end,prevShort);
+    } else {
+    subj.fetch(begin,end,prev);
+    }
+  subj.erase(begin,end);
+  }
+
+void TextModel::CommandErase::undo(TextModel& subj) {
+  if(prevShort[0]=='\0')
+    subj.insert(prev.data(),begin); else
+    subj.insert(prevShort,begin);
+  }
+
+
 TextModel::TextModel(const char *str)
   :txt(std::strlen(str)+1){
   std::memcpy(txt.data(),str,txt.size());
@@ -22,10 +104,9 @@ void TextModel::setText(const char *str) {
   sz.actual=false;
   }
 
-TextModel::Cursor TextModel::insert(const char* t, Cursor where) {
+void TextModel::insert(const char* t, Cursor where) {
   if(txt.size()==0) {
     setText(t);
-    return cursorCast(txt.size()-1);
     }
   size_t at  = cursorCast(where);
   size_t len = std::strlen(t);
@@ -34,10 +115,10 @@ TextModel::Cursor TextModel::insert(const char* t, Cursor where) {
   buildIndex();
   sz.actual=false;
 
-  return cursorCast(at+len);
+  cursorCast(at+len);
   }
 
-TextModel::Cursor TextModel::erase(Cursor cs, Cursor ce) {
+void TextModel::erase(Cursor cs, Cursor ce) {
   size_t s = cursorCast(cs);
   size_t e = cursorCast(ce);
   if(e<s)
@@ -46,14 +127,17 @@ TextModel::Cursor TextModel::erase(Cursor cs, Cursor ce) {
   txt.erase(txt.begin()+s,txt.begin()+e);
   buildIndex();
   sz.actual=false;
-
-  return cursorCast(s);
   }
 
-TextModel::Cursor TextModel::replace(const char* t, TextModel::Cursor cs, TextModel::Cursor ce) {
+void TextModel::erase(TextModel::Cursor s, size_t count) {
+  auto e = advance(s,int(count));
+  erase(s,e);
+  }
+
+void TextModel::replace(const char* t, TextModel::Cursor cs, TextModel::Cursor ce) {
   if(txt.size()==0) {
     setText(t);
-    return cursorCast(txt.size()-1);
+    return;
     }
   size_t s   = cursorCast(cs);
   size_t e   = cursorCast(ce);
@@ -66,8 +150,27 @@ TextModel::Cursor TextModel::replace(const char* t, TextModel::Cursor cs, TextMo
 
   buildIndex();
   sz.actual=false;
+  }
 
-  return cursorCast(s+len);
+void TextModel::fetch(TextModel::Cursor cs, TextModel::Cursor ce, std::string& buf) {
+  size_t s = cursorCast(cs);
+  size_t e = cursorCast(ce);
+  if(s==e)
+    return;
+  if(e<s)
+    std::swap(s,e);
+  buf.resize(e-s);
+  std::memcpy(&buf[0],&txt[s],buf.size());
+  }
+
+void TextModel::fetch(TextModel::Cursor cs, TextModel::Cursor ce, char* buf) {
+  size_t s = cursorCast(cs);
+  size_t e = cursorCast(ce);
+  if(s==e)
+    return;
+  if(e<s)
+    std::swap(s,e);
+  std::memcpy(&buf[0],&txt[s],e-s);
   }
 
 TextModel::Cursor TextModel::advance(TextModel::Cursor src, int32_t offset) const {
@@ -213,8 +316,12 @@ void TextModel::buildIndex() {
   }
 
 TextModel::Cursor TextModel::charAt(int x, int y) const {
-  if(line.size()==0)
-    return Cursor();
+  if(line.size()==0) {
+    Cursor c;
+    c.line   = 0;
+    c.offset = 0;
+    return c;
+    }
 
   if(y<0)
     y=0;
@@ -227,14 +334,16 @@ TextModel::Cursor TextModel::charAt(int x, int y) const {
 
   auto& ln = line[c.line];
   Utf8Iterator i(ln.txt,ln.size);
-  int px=0;
+  int    px      = 0;
+  size_t prevPos = 0;
   while(i.hasData()){
+    prevPos = i.pos();
     char32_t ch = i.next();
     auto l=fnt.letterGeometry(ch);
     if(px<=x && x<=px+l.advance.x) {
-      c.offset = i.pos();
       if(x<=px+l.advance.x/2)
-        c.offset--;
+        c.offset = prevPos; else
+        c.offset = i.pos();
       return c;
       }
     px += l.advance.x;
