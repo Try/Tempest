@@ -37,7 +37,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const 
 
   // Describe and create a SRV for the texture.
   D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-  srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+  srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING; //TODO: R/RG textures
   srvDesc.Format                  = t.format;
   srvDesc.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE2D;
   srvDesc.Texture2D.MipLevels     = t.mips;

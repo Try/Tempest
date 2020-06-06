@@ -98,6 +98,15 @@ inline VkSamplerAddressMode nativeFormat(ClampMode f){
   return vfrm[int(f)];
   }
 
+inline VkFilter nativeFormat(Filter f){
+  static const VkFilter vfrm[]={
+    VK_FILTER_NEAREST,
+    VK_FILTER_LINEAR,
+    VK_FILTER_LINEAR
+    };
+  return vfrm[int(f)];
+  }
+
 class VDevice : public AbstractGraphicsApi::Device {
   private:
     class DataStream;

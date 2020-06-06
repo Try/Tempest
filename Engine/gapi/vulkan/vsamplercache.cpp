@@ -64,8 +64,11 @@ VkSampler VSamplerCache::alloc(const Sampler2d &s, uint32_t mipCount) {
   VkSamplerCreateInfo samplerInfo = {};
   samplerInfo.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 
-  samplerInfo.magFilter               = VK_FILTER_LINEAR;
-  samplerInfo.minFilter               = VK_FILTER_LINEAR;
+  samplerInfo.magFilter               = nativeFormat(s.magFilter);
+  samplerInfo.minFilter               = nativeFormat(s.minFilter);
+  if(s.mipFilter==Filter::Nearest)
+    samplerInfo.mipmapMode            = VK_SAMPLER_MIPMAP_MODE_NEAREST; else
+    samplerInfo.mipmapMode            = VK_SAMPLER_MIPMAP_MODE_LINEAR;
   samplerInfo.addressModeU            = nativeFormat(s.uClamp);
   samplerInfo.addressModeV            = nativeFormat(s.vClamp);
   samplerInfo.addressModeW            = VK_SAMPLER_ADDRESS_MODE_REPEAT;

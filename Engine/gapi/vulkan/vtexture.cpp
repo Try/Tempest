@@ -25,6 +25,25 @@ void VTexture::createView(VkDevice device,VkFormat format,uint32_t mips) {
   viewInfo.image                           = impl;
   viewInfo.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
   viewInfo.format                          = format;
+
+  if(format==VK_FORMAT_R8_UNORM || format==VK_FORMAT_R16_UNORM) {
+    viewInfo.components.r = VK_COMPONENT_SWIZZLE_R;
+    viewInfo.components.g = VK_COMPONENT_SWIZZLE_R;
+    viewInfo.components.b = VK_COMPONENT_SWIZZLE_R;
+    viewInfo.components.a = VK_COMPONENT_SWIZZLE_ONE;
+    } else
+  if(format==VK_FORMAT_R8G8_UNORM || format==VK_FORMAT_R16G16_UNORM) {
+    viewInfo.components.r = VK_COMPONENT_SWIZZLE_R;
+    viewInfo.components.g = VK_COMPONENT_SWIZZLE_R;
+    viewInfo.components.b = VK_COMPONENT_SWIZZLE_R;
+    viewInfo.components.a = VK_COMPONENT_SWIZZLE_G;
+    } else {
+    viewInfo.components.r = VK_COMPONENT_SWIZZLE_R;
+    viewInfo.components.g = VK_COMPONENT_SWIZZLE_G;
+    viewInfo.components.b = VK_COMPONENT_SWIZZLE_B;
+    viewInfo.components.a = VK_COMPONENT_SWIZZLE_A;
+    }
+
   if(VK_FORMAT_D16_UNORM<=format && format<=VK_FORMAT_D32_SFLOAT_S8_UINT)
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; else
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
