@@ -176,8 +176,7 @@ VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip,VkFormat format) {
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
     }
 
-  auto s = samplers.get(mip);
-  ret.createView(device,imageInfo.format,s,mip);
+  ret.createView(device,imageInfo.format,mip);
   return ret;
   }
 
@@ -219,8 +218,7 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mi
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
     }
 
-  auto s = samplers.get(mip);
-  ret.createView(device,imageInfo.format,s,mip);
+  ret.createView(device,imageInfo.format,mip);
   return ret;
   }
 
@@ -233,13 +231,7 @@ void VAllocator::free(VBuffer &buf) {
   }
 
 void VAllocator::free(VTexture &buf) {
-  if(buf.sampler!=VK_NULL_HANDLE) {
-    vkDeviceWaitIdle  (device);
-    samplers.free(buf.sampler);
-    vkDestroyImageView(device,buf.view,nullptr);
-    vkDestroyImage    (device,buf.impl,nullptr);
-    }
-  else if(buf.view!=VK_NULL_HANDLE) {
+  if(buf.view!=VK_NULL_HANDLE) {
     vkDeviceWaitIdle  (device);
     vkDestroyImageView(device,buf.view,nullptr);
     vkDestroyImage    (device,buf.impl,nullptr);
@@ -390,6 +382,14 @@ bool VAllocator::commit(VkDeviceMemory dev, std::mutex &mmapSync, VkBuffer dest,
     if(vkMapMemory(device,dev,pageOffset,size,0,&data)!=VK_SUCCESS)
       return false;
     copyUpsample(mem,data,count,size,alignedSz);
+
+    VkMappedMemoryRange rgn={};
+    rgn.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+    rgn.memory = dev;
+    rgn.offset = pageOffset;
+    rgn.size   = (size%provider.device->props.nonCoherentAtomSize==0) ? size : VK_WHOLE_SIZE;
+    vkFlushMappedMemoryRanges(device,1,&rgn);
+
     vkUnmapMemory(device,dev);
     }
 

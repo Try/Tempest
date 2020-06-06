@@ -21,18 +21,16 @@ class VTexture : public AbstractGraphicsApi::Texture {
     ~VTexture();
 
     VTexture& operator=(const VTexture& other)=delete;
-    void setSampler(const Sampler2d& s);
 
     VkImage     impl    =VK_NULL_HANDLE;
     VkImageView view    =VK_NULL_HANDLE;
-    VkSampler   sampler =VK_NULL_HANDLE;
     uint32_t    mipCount=1;
 
-  private:
     VAllocator*            alloc =nullptr;
     VAllocator::Allocation page  ={};
 
-    void                   createView(VkDevice device, VkFormat format, VkSampler s, uint32_t mipCount);
+  private:
+    void                   createView(VkDevice device, VkFormat format, uint32_t mipCount);
 
     friend class VAllocator;
   };

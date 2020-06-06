@@ -40,7 +40,7 @@ void DxFramebuffer::setupViews(ID3D12Device& device,
   // descriptor heap
   D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
   rtvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-  rtvHeapDesc.NumDescriptors = res.size() + UINT(ds==nullptr ? 0 : 1);
+  rtvHeapDesc.NumDescriptors = UINT(res.size() + ds==nullptr ? 0 : 1);
   rtvHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
   dxAssert(device.CreateDescriptorHeap(&rtvHeapDesc, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&rtvHeap)));
 
@@ -55,7 +55,7 @@ void DxFramebuffer::setupViews(ID3D12Device& device,
   if(ds!=nullptr) {
     D3D12_DESCRIPTOR_HEAP_DESC dsHeapDesc = {};
     dsHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-    dsHeapDesc.NumDescriptors = res.size() + UINT(ds==nullptr ? 0 : 1);
+    dsHeapDesc.NumDescriptors = UINT(res.size() + ds==nullptr ? 0 : 1);
     dsHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
     dxAssert(device.CreateDescriptorHeap(&dsHeapDesc, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&dsvHeap)));
 

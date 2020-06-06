@@ -24,21 +24,21 @@ Uniforms& Uniforms::operator=(Uniforms &&u) {
   return *this;
   }
 
-void Uniforms::set(size_t layoutBind, const Texture2d &tex) {
+void Uniforms::set(size_t layoutBind, const Texture2d &tex, const Sampler2d& smp) {
   if(tex.impl.handler)
-    desc.handler->set(layoutBind,tex.impl.handler); else
+    desc.handler->set(layoutBind,tex.impl.handler,smp); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
   }
 
-void Uniforms::set(size_t layoutBind, const Attachment& tex) {
+void Uniforms::set(size_t layoutBind, const Attachment& tex, const Sampler2d& smp) {
   if(tex.tImpl.impl.handler)
-    desc.handler->set(layoutBind,tex.tImpl.impl.handler); else
+    desc.handler->set(layoutBind,tex.tImpl.impl.handler,smp); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
   }
 
-void Uniforms::set(size_t layoutBind, const Detail::ResourcePtr<Texture2d> &tex) {
+void Uniforms::set(size_t layoutBind, const Detail::ResourcePtr<Texture2d> &tex, const Sampler2d& smp) {
   if(tex.impl.handler)
-    desc.handler->set(layoutBind,tex.impl.handler); else
+    desc.handler->set(layoutBind,tex.impl.handler,smp); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
   }
 

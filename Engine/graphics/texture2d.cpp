@@ -11,9 +11,3 @@ Texture2d::Texture2d(Device &, AbstractGraphicsApi::PTexture&& impl, uint32_t w,
 
 Texture2d::~Texture2d(){
   }
-
-void Texture2d::setSampler(const Sampler2d &s){
-  smp=s;
-  if(impl.handler)
-    impl.handler->setSampler(s);
-  }

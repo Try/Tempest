@@ -187,7 +187,7 @@ ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFramebuffer
     psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE; else
     psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
 
-  //psoDesc.DSVFormat; // TODO: depth-stencil
+  psoDesc.DSVFormat = frm.depth.format;
   psoDesc.NumRenderTargets = frm.viewsCount;
   for(uint8_t i=0;i<frm.viewsCount;++i)
     psoDesc.RTVFormats[i] = frm.views[i].format;

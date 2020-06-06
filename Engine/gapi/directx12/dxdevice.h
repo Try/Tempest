@@ -76,6 +76,17 @@ inline D3D12_RESOURCE_STATES nativeFormat(TextureLayout f) {
   return lay[uint8_t(f)];
   }
 
+inline D3D12_TEXTURE_ADDRESS_MODE nativeFormat(ClampMode f){
+  static const D3D12_TEXTURE_ADDRESS_MODE vfrm[]={
+    D3D12_TEXTURE_ADDRESS_MODE_BORDER,
+    D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+    D3D12_TEXTURE_ADDRESS_MODE_MIRROR,
+    D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+    D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+    };
+  return vfrm[int(f)];
+  }
+
 class DxDevice : public AbstractGraphicsApi::Device {
   public:
     DxDevice(IDXGIAdapter1& adapter);

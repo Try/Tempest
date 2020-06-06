@@ -109,6 +109,10 @@ namespace Tempest {
 
     bool      anisotropic=true;
 
+    static const Sampler2d& anisotrophy();
+    static const Sampler2d& trillinear();
+    static const Sampler2d& nearest();
+
     void setClamping(ClampMode c){
       uClamp = c;
       vClamp = c;
@@ -235,7 +239,6 @@ namespace Tempest {
         virtual uint32_t      h() const=0;
         };
       struct Texture:Shared  {
-        virtual void setSampler(const Sampler2d& s)=0;
         };
       struct Fbo:Shared      {
         virtual ~Fbo(){}
@@ -259,7 +262,7 @@ namespace Tempest {
         };
       struct Desc:NoCopy   {
         virtual ~Desc()=default;
-        virtual void set(size_t id,AbstractGraphicsApi::Texture *tex)=0;
+        virtual void set(size_t id,AbstractGraphicsApi::Texture *tex, const Sampler2d& smp)=0;
         virtual void set(size_t id,AbstractGraphicsApi::Buffer* buf,size_t offset,size_t size,size_t align)=0;
         };
       struct CommandBundle:NoCopy {

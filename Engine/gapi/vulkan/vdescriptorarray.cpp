@@ -97,13 +97,14 @@ bool VDescriptorArray::allocDescSet(VkDescriptorPool pool, VkDescriptorSetLayout
   return true;
   }
 
-void VDescriptorArray::set(size_t id,Tempest::AbstractGraphicsApi::Texture* t) {
+void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Texture* t, const Sampler2d& smp) {
   VTexture* tex=reinterpret_cast<VTexture*>(t);
 
   VkDescriptorImageInfo imageInfo = {};
   imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
   imageInfo.imageView   = tex->view;
-  imageInfo.sampler     = tex->sampler;
+
+  tex->alloc->updateSampler(imageInfo.sampler,smp,tex->mipCount);
 
   VkWriteDescriptorSet descriptorWrite = {};
   descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

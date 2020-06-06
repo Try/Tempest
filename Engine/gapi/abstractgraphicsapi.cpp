@@ -2,6 +2,36 @@
 
 using namespace Tempest;
 
+static Sampler2d mkTrillinear() {
+  Sampler2d s;
+  s.anisotropic = false;
+  return s;
+  }
+
+static Sampler2d mkNearest() {
+  Sampler2d s;
+  s.minFilter   = Filter::Nearest;
+  s.magFilter   = Filter::Nearest;
+  s.mipFilter   = Filter::Nearest;
+  s.anisotropic = false;
+  return s;
+  }
+
+const Sampler2d& Sampler2d::anisotrophy() {
+  static Sampler2d s = Sampler2d();
+  return s;
+  }
+
+const Sampler2d& Sampler2d::trillinear() {
+  static Sampler2d s = mkTrillinear();
+  return s;
+  }
+
+const Sampler2d& Sampler2d::nearest() {
+  static Sampler2d s = mkNearest();
+  return s;
+  }
+
 bool AbstractGraphicsApi::Props::hasSamplerFormat(TextureFormat f) const {
   uint64_t  m = uint64_t(1) << uint64_t(f);
   return (smpFormat&m)!=0;

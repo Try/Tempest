@@ -13,36 +13,25 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-DxDescriptorArray::DxDescriptorArray(DxDevice& dev, const UniformsLayout& lay, DxUniformsLay& vlay)
+DxDescriptorArray::DxDescriptorArray(DxDevice& dev, const UniformsLayout& /*lay*/, DxUniformsLay& vlay)
   : dev(dev), layPtr(&vlay) {
   auto& device=*dev.device;
 
-  D3D12_DESCRIPTOR_HEAP_DESC desc[2] = {};
-  for(auto& i:desc) {
-    i.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-    i.NumDescriptors = 0;
-    i.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+  D3D12_DESCRIPTOR_HEAP_DESC desc[DxUniformsLay::VisTypeCount*DxUniformsLay::MaxPrmPerStage] = {};
+  size_t                     descCount = vlay.heaps.size();
+  for(size_t i=0;i<descCount;++i) {
+    auto& d          = desc[i];
+    d.Type           = vlay.heaps[i].type;
+    d.NumDescriptors = vlay.heaps[i].numDesc;
+    d.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
     }
 
-  for(size_t i=0; i<lay.size(); ++i){
-    switch(lay[i].stage) {
-      case UniformsLayout::Vertex:
-        desc[0].NumDescriptors++;
-        break;
-      case UniformsLayout::Fragment:
-        desc[1].NumDescriptors++;
-        break;
-      }
-    }
-
-  for(size_t i=0;i<2;++i) {
-    if(desc[i].NumDescriptors==0)
-      continue;
+  for(size_t i=0;i<descCount;++i) {
     dxAssert(device.CreateDescriptorHeap(&desc[i], uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&heap[i])));
     }
   }
 
-void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex) {
+void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const Sampler2d& smp) {
   auto&      device = *dev.device;
   DxTexture& t      = *reinterpret_cast<DxTexture*>(tex);
 
@@ -53,10 +42,32 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex) {
   srvDesc.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE2D;
   srvDesc.Texture2D.MipLevels     = t.mips;
 
+  D3D12_SAMPLER_DESC smpDesc = {};
+  smpDesc.Filter           = D3D12_FILTER_MIN_MAG_MIP_POINT; //TODO
+  smpDesc.AddressU         = nativeFormat(smp.uClamp);
+  smpDesc.AddressV         = nativeFormat(smp.vClamp);
+  smpDesc.AddressW         = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+  smpDesc.MipLODBias       = 0;
+  smpDesc.MaxAnisotropy    = 0;
+  smpDesc.ComparisonFunc   = D3D12_COMPARISON_FUNC_NEVER;
+  smpDesc.BorderColor[0]   = 0;
+  smpDesc.BorderColor[1]   = 0;
+  smpDesc.BorderColor[2]   = 0;
+  smpDesc.BorderColor[3]   = 0;
+  smpDesc.MinLOD           = 0.0f;
+  smpDesc.MaxLOD           = FLOAT(t.mips);
+  if(smp.anisotropic) {
+    smpDesc.MaxAnisotropy = 16;
+    }
+
   auto& prm = layPtr.handler->prm[id];
   auto  gpu = heap[prm.heapId]->GetCPUDescriptorHandleForHeapStart();
   gpu.ptr += prm.heapOffset;
   device.CreateShaderResourceView(t.impl.get(), &srvDesc, gpu);
+
+  gpu = heap[prm.heapIdSmp]->GetCPUDescriptorHandleForHeapStart();
+  gpu.ptr += prm.heapOffset;
+  device.CreateSampler(&smpDesc,gpu);
   }
 
 void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer* b, size_t offset, size_t /*size*/, size_t /*align*/) {

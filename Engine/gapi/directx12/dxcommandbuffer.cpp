@@ -150,8 +150,8 @@ void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/,
   assert(offc==0); //TODO: dynamic offsets
   DxDescriptorArray& ux = reinterpret_cast<DxDescriptorArray&>(u);
 
+  ID3D12DescriptorHeap* ppHeaps[DxUniformsLay::VisTypeCount*DxUniformsLay::MaxPrmPerStage] = {};
   UINT                  heapCount  = 0;
-  ID3D12DescriptorHeap* ppHeaps[2] = {};
   for(auto& i:ux.heap) {
     if(i.get()==nullptr)
       continue;
@@ -160,13 +160,8 @@ void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/,
     }
   impl->SetDescriptorHeaps(heapCount, ppHeaps);
 
-  heapCount = 0;
-  for(auto& i:ux.heap) {
-    if(i.get()==nullptr)
-      continue;
-    impl->SetGraphicsRootDescriptorTable(heapCount, i->GetGPUDescriptorHandleForHeapStart());
-    heapCount++;
-    }
+  for(UINT i=0;i<heapCount;++i)
+    impl->SetGraphicsRootDescriptorTable(i, ux.heap[i]->GetGPUDescriptorHandleForHeapStart());
   }
 
 void DxCommandBuffer::exec(const CommandBundle& buf) {

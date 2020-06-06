@@ -93,9 +93,10 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, AbstractGraphicsApi::Props& pro
   prop.setAttachFormats (attBit);
   prop.setDepthFormat   (dsBit);
 
-  // TODO: buffer limits
+  // TODO: buffer limitsk
   prop.ubo;
-  prop.anisotropy = true;
+  prop.anisotropy    = true;
+  prop.maxAnisotropy = 16;
   }
 
 void DxDevice::waitData() {

@@ -9,7 +9,6 @@ using namespace Tempest::Detail;
 VTexture::VTexture(VTexture &&other) {
   std::swap(impl,    other.impl);
   std::swap(view,    other.view);
-  std::swap(sampler, other.sampler);
   std::swap(mipCount,other.mipCount);
   std::swap(alloc,   other.alloc);
   std::swap(page,    other.page);
@@ -20,11 +19,7 @@ VTexture::~VTexture() {
     alloc->free(*this);
   }
 
-void VTexture::setSampler(const Sampler2d &s) {
-  alloc->updateSampler(sampler,s,mipCount);
-  }
-
-void VTexture::createView(VkDevice device,VkFormat format,VkSampler s,uint32_t mips) {
+void VTexture::createView(VkDevice device,VkFormat format,uint32_t mips) {
   VkImageViewCreateInfo viewInfo = {};
   viewInfo.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   viewInfo.image                           = impl;
@@ -39,6 +34,5 @@ void VTexture::createView(VkDevice device,VkFormat format,VkSampler s,uint32_t m
   viewInfo.subresourceRange.layerCount     = 1;
 
   vkAssert(vkCreateImageView(device, &viewInfo, nullptr, &view));
-  sampler  = s;
   mipCount = mips;
   }

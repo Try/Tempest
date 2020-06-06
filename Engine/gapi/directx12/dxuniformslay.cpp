@@ -14,77 +14,31 @@ using namespace Tempest::Detail;
 
 DxUniformsLay::DxUniformsLay(DxDevice& dev, const UniformsLayout& lay)
   : prm(lay.size()){
-  auto& device   = *dev.device;
-  UINT  descSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+  auto& device = *dev.device;
+
+  descSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
   D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
   featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 
-  D3D12_SHADER_VISIBILITY                vis[2] = {D3D12_SHADER_VISIBILITY_VERTEX,D3D12_SHADER_VISIBILITY_PIXEL};
-  D3D12_DESCRIPTOR_RANGE                 rgn[2] = {};
-  std::vector<D3D12_STATIC_SAMPLER_DESC> smp;
-
-  for(auto& range:rgn) {
-    range.RangeType          = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    range.BaseShaderRegister = 0; // b0 / t0
-    range.RegisterSpace      = 0;
-    range.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-    }
+  D3D12_DESCRIPTOR_RANGE  rgn[VisTypeCount*MaxPrmPerStage] = {};
+  D3D12_ROOT_PARAMETER    rootParameters[VisTypeCount*MaxPrmPerStage] = {};
+  size_t                  numParameters                               = 0;
 
   for(size_t i=0;i<lay.size();++i) {
     auto& l = lay[i];
-    size_t rgnId = 0;
-    switch(l.stage) {
-      case UniformsLayout::Vertex:   rgnId = 0; break;
-      case UniformsLayout::Fragment: rgnId = 1; break;
-      }
+    auto& p = prm[i];
 
-    D3D12_DESCRIPTOR_RANGE& range = rgn[rgnId];
-    prm[i].heapOffset = range.NumDescriptors*descSize;
-    prm[i].heapId     = rgnId;
-    range.NumDescriptors++;
-
-    if(l.cls==UniformsLayout::Texture) {
-      D3D12_STATIC_SAMPLER_DESC sampler = {};
-      sampler.Filter           = D3D12_FILTER_MIN_MAG_MIP_POINT;
-      sampler.AddressU         = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-      sampler.AddressV         = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-      sampler.AddressW         = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-      sampler.MipLODBias       = 0;
-      sampler.MaxAnisotropy    = 0;
-      sampler.ComparisonFunc   = D3D12_COMPARISON_FUNC_NEVER;
-      sampler.BorderColor      = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-      sampler.MinLOD           = 0.0f;
-      sampler.MaxLOD           = D3D12_FLOAT32_MAX;
-      sampler.ShaderRegister   = UINT(smp.size()); // s0 + i
-      sampler.RegisterSpace    = 0;
-      sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-      smp.push_back(sampler); //TODO: combined image-sampler
-      }
-    }
-
-  D3D12_ROOT_PARAMETER rootParameters[2] = {};
-  size_t               numParameters     = 0;
-  for(size_t i=0;i<2;++i) {
-    if(rgn[i].NumDescriptors==0)
-      continue;
-    auto& param = rootParameters[numParameters];
-
-    param.ParameterType    = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-    param.ShaderVisibility = vis[i];
-
-    param.DescriptorTable.pDescriptorRanges   = &rgn[i];
-    param.DescriptorTable.NumDescriptorRanges = 1;
-
-    numParameters++;
+    add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,p,rootParameters,rgn,numParameters);
+    if(l.cls==UniformsLayout::Texture)
+      add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,p,rootParameters,rgn,numParameters);
     }
 
   D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc={};
   rootSignatureDesc.NumParameters     = UINT(numParameters);
   rootSignatureDesc.pParameters       = rootParameters;
-  rootSignatureDesc.NumStaticSamplers = UINT(smp.size());
-  rootSignatureDesc.pStaticSamplers   = smp.data();
+  rootSignatureDesc.NumStaticSamplers = 0;
+  rootSignatureDesc.pStaticSamplers   = nullptr;
   rootSignatureDesc.Flags             = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
   ComPtr<ID3DBlob> signature;
@@ -94,6 +48,66 @@ DxUniformsLay::DxUniformsLay(DxDevice& dev, const UniformsLayout& lay)
                                        &signature.get(), &error.get()));
   dxAssert(device.CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(),
                                       uuid<ID3D12RootSignature>(), reinterpret_cast<void**>(&impl)));
+
+  heaps.resize(numParameters);
+  for(size_t i=0;i<numParameters;++i) {
+    if(rgn[i].RangeType==D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER)
+      heaps[i].type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER; else
+      heaps[i].type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    heaps[i].numDesc = rgn[i].NumDescriptors;
+    }
+  }
+
+void DxUniformsLay::add(const UniformsLayout::Binding& b, D3D12_DESCRIPTOR_RANGE_TYPE type,
+                        Param& prm,
+                        D3D12_ROOT_PARAMETER* root, D3D12_DESCRIPTOR_RANGE* rgn,
+                        size_t& cnt) {
+  D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL;
+  switch(b.stage) {
+    case UniformsLayout::Vertex:   visibility = D3D12_SHADER_VISIBILITY_VERTEX; break;
+    case UniformsLayout::Fragment: visibility = D3D12_SHADER_VISIBILITY_PIXEL;  break;
+    }
+
+  for(size_t i=0;i<cnt;++i) {
+    if(root[i].ShaderVisibility!=visibility)
+      continue;
+    if(rgn[i].RangeType!=type)
+      continue;
+    // found
+    if(type==D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER) {
+      prm.heapOffsetSmp = rgn[i].NumDescriptors*descSize;
+      prm.heapIdSmp     = uint8_t(i);
+      } else {
+      prm.heapOffset    = rgn[i].NumDescriptors*descSize;
+      prm.heapId        = uint8_t(i);
+      }
+    rgn[i].NumDescriptors++;
+    return;
+    }
+
+  auto& r = rgn[cnt];
+  r.RangeType          = type;
+  r.NumDescriptors     = 1;
+  r.BaseShaderRegister = 0;
+  r.RegisterSpace      = 0;
+  r.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+  auto& param = root[cnt];
+  param.ParameterType    = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+  param.ShaderVisibility = visibility;
+
+  param.DescriptorTable.pDescriptorRanges   = &r;
+  param.DescriptorTable.NumDescriptorRanges = 1;
+
+  if(type==D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER) {
+    prm.heapOffsetSmp = 0;
+    prm.heapIdSmp     = uint8_t(cnt);
+    } else {
+    prm.heapOffset    = 0;
+    prm.heapId        = uint8_t(cnt);
+    }
+
+  cnt++;
   }
 
 #endif
