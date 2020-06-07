@@ -413,10 +413,15 @@ bool Widget::isVisible() const {
   }
 
 void Widget::setFocus(bool b) {
-  implSetFocus(&Additive::focus,&WidgetState::focus,b,nullptr);
+  implSetFocus(b,Event::FocusReason::UnknownReason);
   }
 
-void Widget::implSetFocus(Widget* Additive::*add, bool WidgetState::*flag, bool value,const MouseEvent* parent) {
+void Widget::implSetFocus(bool b, Event::FocusReason reason) {
+  FocusEvent ev(false,reason);
+  implSetFocus(&Additive::focus,&WidgetState::focus,b,&ev);
+  }
+
+void Widget::implSetFocus(Widget* Additive::*add, bool WidgetState::*flag, bool value, const FocusEvent* parent) {
   if(wstate.*flag==value)
     return;
 
@@ -445,8 +450,8 @@ void Widget::implSetFocus(Widget* Additive::*add, bool WidgetState::*flag, bool 
       next->wstate.*flag=true;
 
       if(parent!=nullptr)
-        implExcFocus(Event::MouseEnter,previous,next,*parent); else
-        implExcFocus(Event::MouseEnter,previous,next,MouseEvent());
+        implExcFocus(previous,next,*parent); else
+        implExcFocus(previous,next,FocusEvent(false,Event::FocusReason::UnknownReason));
       return;
       }
     w = w->owner();
@@ -486,25 +491,14 @@ void Widget::implAttachFocus() {
     }
   }
 
-void Widget::implExcFocus(Event::Type type,Widget *prev,Widget *next,const MouseEvent& parent) {
-  if(prev!=nullptr){
-    auto mpos = next->mapToRoot(parent.pos()) - prev->mapToRoot(Point());
-    MouseEvent ex(mpos.x,
-                  mpos.y,
-                  parent.button,
-                  parent.delta,
-                  parent.mouseID,
-                  Event::MouseLeave);
-    prev->mouseLeaveEvent(ex);
+void Widget::implExcFocus(Widget *prev,Widget *next,const FocusEvent& parent) {
+  if(prev!=nullptr) {
+    FocusEvent ex(false,parent.reason);
+    prev->focusEvent(ex);
     }
 
-  MouseEvent ex(parent.x,
-                parent.y,
-                parent.button,
-                parent.delta,
-                parent.mouseID,
-                type);
-  next->mouseEnterEvent(ex);
+  FocusEvent ex(true,parent.reason);
+  next->focusEvent(ex);
   }
 
 void Widget::update() noexcept {

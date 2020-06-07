@@ -11,7 +11,7 @@ TextEdit::TextEdit() {
   setFocusPolicy(StrongFocus);
 
   anim.timeout.bind(this,&TextEdit::onRepaintCursor);
-  anim.start(Style::cursorFlashTime);
+  // anim.start(Style::cursorFlashTime);
 
   scUndo = Shortcut(*this,KeyEvent::M_Command,KeyEvent::K_Z);
   scUndo.onActivated.bind(this,&TextEdit::undo);
@@ -166,6 +166,8 @@ void TextEdit::paintEvent(PaintEvent &e) {
   Painter p(e);
   style().draw(p, this,  Style::E_Background,       state(), Rect(0,0,w(),h()), Style::Extra(*this));
   style().draw(p, textM, Style::TE_TextEditContent, state(), Rect(0,0,w(),h()), Style::Extra(*this));
+  if(cursorState)
+    ;//style().draw(p, textM, Style::TE_Cursor,          state(), Rect(0,0,w(),h()), Style::Extra(*this));
   }
 
 void TextEdit::focusEvent(FocusEvent& e) {

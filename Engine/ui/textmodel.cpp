@@ -107,6 +107,7 @@ void TextModel::setText(const char *str) {
 void TextModel::insert(const char* t, Cursor where) {
   if(txt.size()==0) {
     setText(t);
+    return;
     }
   size_t at  = cursorCast(where);
   size_t len = std::strlen(t);
@@ -396,7 +397,8 @@ TextModel::Cursor TextModel::cursorCast(size_t c) const {
   }
 
 void TextModel::drawCursor(Painter& p, int x, int y,TextModel::Cursor c) const {
-  if(!isValid(c))
+  if(!isValid(c) &&
+     !(txt.size()==0 && c.line==0 && c.offset==0))
     return;
 
   auto pos = mapToCoords(c)+Point(x,y);

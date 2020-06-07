@@ -288,7 +288,7 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
   p.translate(m.left,m.top);
 
   const Sprite& icon = iconSprite(extra.icon,st,r);
-  int dX=0;
+  int dX = 0;
 
   if(!icon.size().isEmpty()){
     p.setBrush(icon);
@@ -300,7 +300,7 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
       }
     }
 
-  if(e==TE_CheckboxTitle){
+  if(e==TE_CheckboxTitle) {
     const int s = std::min(r.w,r.h);
     if( dX<s )
       dX=s;
@@ -318,10 +318,12 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
     at = {dX, r.h-(r.h-h)/2}; else
     at = { 0, fntSz};
 
-  if(extra.selectionStart==extra.selectionEnd) {
-    if((Application::tickCount()/500)%2)
+  if(st.focus && extra.selectionStart==extra.selectionEnd) {
+    if((Application::tickCount()/cursorFlashTime)%2)
       text.drawCursor(p,at.x,at.y-fntSz,extra.selectionStart);
-    } else {
+    }
+
+  if(extra.selectionStart!=extra.selectionEnd) {
     text.drawCursor(p,at.x,at.y-fntSz,extra.selectionStart,extra.selectionEnd);
     }
   text.paint(p, fnt, at.x, at.y);

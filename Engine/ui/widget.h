@@ -196,8 +196,9 @@ class Widget {
     void                    freeLayout() noexcept;
     void                    implDisableSum(Widget *root,int diff) noexcept;
     Widget&                 implAddWidget(Widget* w,size_t at);
-    void                    implSetFocus(Widget* Additive::*add, bool WidgetState::*flag, bool value, const MouseEvent* parent);
-    static void             implExcFocus(Event::Type type,Widget* prev, Widget* next, const MouseEvent& parent);
+    void                    implSetFocus(bool b,Event::FocusReason reason);
+    void                    implSetFocus(Widget* Additive::*add, bool WidgetState::*flag, bool value, const FocusEvent* parent);
+    static void             implExcFocus(Widget* prev, Widget* next, const FocusEvent& parent);
     static void             implClearFocus(Widget* w,Widget* Additive::*add, bool WidgetState::*flag);
     static Widget*          implTrieRoot(Widget* w);
     bool                    checkFocus() const { return wstate.focus || astate.focus; }

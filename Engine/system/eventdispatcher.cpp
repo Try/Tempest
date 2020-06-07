@@ -24,7 +24,7 @@ void EventDispatcher::dispatchMouseDown(Widget &wnd, MouseEvent &e) {
   mouseUp = implDispatch(wnd,e);
   }
 
-void EventDispatcher::dispatchMouseUp(Widget &/*wnd*/, MouseEvent &e) {
+void EventDispatcher::dispatchMouseUp(Widget& wnd, MouseEvent &e) {
   auto ptr = mouseUp;
   mouseUp.reset();
 
@@ -42,8 +42,9 @@ void EventDispatcher::dispatchMouseUp(Widget &/*wnd*/, MouseEvent &e) {
     }
 
   if(auto w = ptr.lock()) {
-    if(w->widget->focusPolicy() & ClickFocus)
-      w->widget->setFocus(true);
+    if(w->widget->focusPolicy() & ClickFocus) {
+      w->widget->implSetFocus(true,Event::FocusReason::ClickReason);
+      }
     }
   }
 
