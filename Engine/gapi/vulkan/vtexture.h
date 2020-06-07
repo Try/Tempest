@@ -22,15 +22,18 @@ class VTexture : public AbstractGraphicsApi::Texture {
 
     VTexture& operator=(const VTexture& other)=delete;
 
-    VkImage     impl    =VK_NULL_HANDLE;
-    VkImageView view    =VK_NULL_HANDLE;
-    uint32_t    mipCount=1;
+    VkImage     impl     = VK_NULL_HANDLE;
+    VkImageView view     = VK_NULL_HANDLE;
+    VkImageView fboView  = VK_NULL_HANDLE;
+    uint32_t    mipCount = 1;
+    bool        hasDedicatedFboView = false;
 
     VAllocator*            alloc =nullptr;
     VAllocator::Allocation page  ={};
 
   private:
-    void                   createView(VkDevice device, VkFormat format, uint32_t mipCount);
+    void createViews(VkDevice device, VkFormat format, uint32_t mipCount);
+    void createView (VkImageView& ret, VkDevice device, VkFormat format, uint32_t mipCount, bool identity);
 
     friend class VAllocator;
   };

@@ -24,7 +24,7 @@ void EventDispatcher::dispatchMouseDown(Widget &wnd, MouseEvent &e) {
   mouseUp = implDispatch(wnd,e);
   }
 
-void EventDispatcher::dispatchMouseUp(Widget& wnd, MouseEvent &e) {
+void EventDispatcher::dispatchMouseUp(Widget& /*wnd*/, MouseEvent &e) {
   auto ptr = mouseUp;
   mouseUp.reset();
 
@@ -358,7 +358,7 @@ void EventDispatcher::handleModKey(const KeyEvent& e) {
     }
   }
 
-std::shared_ptr<Widget::Ref> EventDispatcher::lock(std::weak_ptr<Widget::Ref> &w) {
+std::shared_ptr<Widget::Ref> EventDispatcher::lock(std::weak_ptr<Widget::Ref>& w) {
   auto ptr = w.lock();
   if(ptr==nullptr)
     return nullptr;

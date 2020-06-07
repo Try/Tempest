@@ -158,7 +158,9 @@ class Widget {
 
     struct Ref {
       Ref(Widget* w):widget(w){}
-      Widget* widget = nullptr;
+      ~Ref();
+      Widget* widget          = nullptr;
+      bool    deleteLaterHint = false;
       };
 
     struct Additive {

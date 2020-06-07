@@ -49,6 +49,12 @@ Widget* Widget::Iterator::get() {
   }
 
 
+Widget::Ref::~Ref() {
+  if(deleteLaterHint)
+    delete widget;
+  }
+
+
 Widget::Widget() {
   lay = new(layBuf) Layout();
   lay->bind(this);
@@ -90,8 +96,14 @@ void Widget::removeAllWidgets() {
 
   astate.focus = nullptr;
 
-  for(auto& w:rm)
-    delete w;
+  for(auto& w:rm) {
+    if(w->selfRef.use_count()>1) {
+      w->selfRef->deleteLaterHint = true;
+      w->selfRef = nullptr;
+      } else {
+      delete w;
+      }
+    }
   }
 
 void Widget::freeLayout() noexcept {

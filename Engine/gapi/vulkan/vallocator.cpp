@@ -176,7 +176,7 @@ VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip,VkFormat format) {
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
     }
 
-  ret.createView(device,imageInfo.format,mip);
+  ret.createViews(device,imageInfo.format,mip);
   return ret;
   }
 
@@ -218,14 +218,14 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mi
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
     }
 
-  ret.createView(device,imageInfo.format,mip);
+  ret.createViews(device,imageInfo.format,mip);
   return ret;
   }
 
 void VAllocator::free(VBuffer &buf) {
-  if(buf.impl!=VK_NULL_HANDLE) {
+  if(buf.impl!=VK_NULL_HANDLE)
     vkDestroyBuffer (device,buf.impl,nullptr);
-    }
+
   if(buf.page.page!=nullptr)
     allocator.free(buf.page);
   }
@@ -233,6 +233,8 @@ void VAllocator::free(VBuffer &buf) {
 void VAllocator::free(VTexture &buf) {
   if(buf.view!=VK_NULL_HANDLE) {
     vkDeviceWaitIdle  (device);
+    if(buf.hasDedicatedFboView)
+      vkDestroyImageView(device,buf.fboView,nullptr);
     vkDestroyImageView(device,buf.view,nullptr);
     vkDestroyImage    (device,buf.impl,nullptr);
     }
