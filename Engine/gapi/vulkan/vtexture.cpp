@@ -7,12 +7,13 @@ using namespace Tempest;
 using namespace Tempest::Detail;
 
 VTexture::VTexture(VTexture &&other) {
-  std::swap(impl,    other.impl);
-  std::swap(view,    other.view);
-  std::swap(fboView, other.fboView);
-  std::swap(mipCount,other.mipCount);
-  std::swap(alloc,   other.alloc);
-  std::swap(page,    other.page);
+  std::swap(impl,                other.impl);
+  std::swap(view,                other.view);
+  std::swap(fboView,             other.fboView);
+  std::swap(hasDedicatedFboView, other.hasDedicatedFboView);
+  std::swap(mipCount,            other.mipCount);
+  std::swap(alloc,               other.alloc);
+  std::swap(page,                other.page);
   }
 
 VTexture::~VTexture() {
