@@ -146,7 +146,7 @@ D3D12_RASTERIZER_DESC DxPipeline::getRaster(const RenderState& st) const {
   D3D12_RASTERIZER_DESC rd = {};
   rd.FillMode              = D3D12_FILL_MODE_SOLID;
   rd.CullMode              = cull[size_t(st.cullFaceMode())];
-  rd.FrontCounterClockwise = TRUE;
+  rd.FrontCounterClockwise = FALSE;
 
   return rd;
   }

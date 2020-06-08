@@ -15,14 +15,19 @@ DxShader::DxShader(const void *source, size_t src_size) {
   if(src_size%4!=0)
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
 
-  spirv_cross::CompilerHLSL::Options opt;
-  opt.shader_model = 50;
+  spirv_cross::CompilerHLSL::Options optHLSL;
+  optHLSL.shader_model = 50;
+
+  spirv_cross::CompilerGLSL::Options optGLSL;
+  optGLSL.vertex.flip_vert_y = true;
+
   std::string hlsl;
   spv::ExecutionModel exec = spv::ExecutionModelMax;
 
   try {
     spirv_cross::CompilerHLSL comp(reinterpret_cast<const uint32_t*>(source),src_size/4);
-    comp.set_hlsl_options(opt);
+    comp.set_hlsl_options(optHLSL);
+    comp.set_common_options(optGLSL);
     hlsl = comp.compile();
     exec = comp.get_execution_model();
     }
@@ -44,7 +49,7 @@ DxShader::DxShader(const void *source, size_t src_size) {
     default: // unimplemented
       throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
-  // Log::d(hlsl);
+  //Log::d(hlsl);
 
   UINT compileFlags = 0; //D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
   HRESULT hr = D3DCompile(hlsl.c_str(),hlsl.size(),nullptr,nullptr,nullptr,"main",target,compileFlags,0,
