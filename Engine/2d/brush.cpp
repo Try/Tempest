@@ -7,7 +7,7 @@ Brush::Brush()
   }
 
 Brush::Brush(const Texture2d &texture, PaintDevice::Blend b)
-  :tex(texture),color(1.f),blend(b) {
+  :tex(texture),texFrm(texture.format()),color(1.f),blend(b) {
   info.w    = texture.w();
   info.h    = texture.h();
   info.invW = 1.f/info.w;
@@ -23,7 +23,7 @@ Brush::Brush(const Color &color, PaintDevice::Blend b)
   }
 
 Brush::Brush(const Texture2d &texture, const Color &color,PaintDevice::Blend b)
-  :tex(texture),color(color),blend(b) {
+  :tex(texture),texFrm(texture.format()),color(color),blend(b) {
   info.w    = texture.w();
   info.h    = texture.h();
   info.invW = 1.f/info.w;

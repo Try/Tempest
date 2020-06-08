@@ -35,8 +35,8 @@ class VectorImage : public Tempest::PaintDevice {
     size_t pushState() override;
     void   popState(size_t id) override;
 
-    void   setState(const TexPtr& t,const Color& c) override;
-    void   setState(const Sprite& s,const Color& c) override;
+    void   setState(const TexPtr& t, const Color& c, TextureFormat frm) override;
+    void   setState(const Sprite& s, const Color& c) override;
     void   setTopology(Topology t) override;
     void   setBlend(const Blend b) override;
 
@@ -57,8 +57,9 @@ class VectorImage : public Tempest::PaintDevice {
       };
 
     struct Texture {
-      TexPtr   brush;
-      Sprite   sprite; //TODO: dangling sprites
+      TexPtr        brush;
+      TextureFormat frm;
+      Sprite        sprite; //TODO: dangling sprites
 
       bool     operator==(const Texture& t) const {
         return brush==t.brush && sprite.pageId()==t.sprite.pageId();

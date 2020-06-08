@@ -19,6 +19,7 @@ const Texture2d &Sprite::pageRawData(Device& dev) const {
 
   auto& mem=alloc.memory();
   if( mem.changed ){
+    dev.waitIdle(); //FIXME: track usage of mem.gpu
     mem.gpu=dev.loadTexture(mem.cpu,false);
     mem.changed=false;
     }

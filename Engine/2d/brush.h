@@ -22,6 +22,7 @@ class Brush {
   private:
     using TexPtr=Detail::ResourcePtr<Tempest::Texture2d>;
     TexPtr                      tex;
+    TextureFormat               texFrm = TextureFormat::Undefined;
     Sprite                      spr;
     Tempest::Color              color;
     PaintDevice::Blend          blend=PaintDevice::NoBlend;

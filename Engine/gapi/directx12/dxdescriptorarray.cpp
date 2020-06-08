@@ -13,6 +13,21 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+static int swizzle(ComponentSwizzle cs, int def){
+  switch(cs) {
+    case ComponentSwizzle::Identity:
+      return def;
+    case ComponentSwizzle::R:
+      return 0;
+    case ComponentSwizzle::G:
+      return 1;
+    case ComponentSwizzle::B:
+      return 2;
+    case ComponentSwizzle::A:
+      return 3;
+    }
+  }
+
 DxDescriptorArray::DxDescriptorArray(DxDevice& dev, const UniformsLayout& /*lay*/, DxUniformsLay& vlay)
   : dev(dev), layPtr(&vlay) {
   auto& device=*dev.device;
@@ -36,8 +51,13 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const 
   DxTexture& t      = *reinterpret_cast<DxTexture*>(tex);
 
   // Describe and create a SRV for the texture.
+  int mapv[4] = { swizzle(smp.mapping.r,0),
+                  swizzle(smp.mapping.g,1),
+                  swizzle(smp.mapping.b,2),
+                  swizzle(smp.mapping.a,3) };
+
   D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-  srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING; //TODO: R/RG textures
+  srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(mapv[0],mapv[1],mapv[2],mapv[3]);
   srvDesc.Format                  = t.format;
   srvDesc.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE2D;
   srvDesc.Texture2D.MipLevels     = t.mips;
@@ -51,10 +71,10 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const 
   smpDesc.MipLODBias       = 0;
   smpDesc.MaxAnisotropy    = 0;
   smpDesc.ComparisonFunc   = D3D12_COMPARISON_FUNC_NEVER;
-  smpDesc.BorderColor[0]   = 0;
-  smpDesc.BorderColor[1]   = 0;
-  smpDesc.BorderColor[2]   = 0;
-  smpDesc.BorderColor[3]   = 0;
+  smpDesc.BorderColor[0]   = 1;
+  smpDesc.BorderColor[1]   = 1;
+  smpDesc.BorderColor[2]   = 1;
+  smpDesc.BorderColor[3]   = 1;
   smpDesc.MinLOD           = 0.0f;
   smpDesc.MaxLOD           = FLOAT(t.mips);
 

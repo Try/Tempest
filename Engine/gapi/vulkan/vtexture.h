@@ -24,16 +24,25 @@ class VTexture : public AbstractGraphicsApi::Texture {
 
     VkImage     impl     = VK_NULL_HANDLE;
     VkImageView view     = VK_NULL_HANDLE;
-    VkImageView fboView  = VK_NULL_HANDLE;
+    VkFormat    format   = VK_FORMAT_UNDEFINED;
+
+    VkImageView getView(VkDevice dev, const ComponentMapping& m);
+
     uint32_t    mipCount = 1;
-    bool        hasDedicatedFboView = false;
 
     VAllocator*            alloc =nullptr;
     VAllocator::Allocation page  ={};
 
   private:
-    void createViews(VkDevice device, VkFormat format, uint32_t mipCount);
-    void createView (VkImageView& ret, VkDevice device, VkFormat format, uint32_t mipCount, bool identity);
+    void createViews (VkDevice device);
+    void destroyViews(VkDevice device);
+    void createView  (VkImageView& ret, VkDevice device, VkFormat format, const ComponentMapping* cmap);
+
+    struct View {
+      ComponentMapping m;
+      VkImageView      v;
+      };
+    std::vector<View> extViews;
 
     friend class VAllocator;
   };

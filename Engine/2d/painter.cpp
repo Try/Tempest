@@ -226,7 +226,7 @@ void Painter::setPen(const Pen &p) {
 
 void Painter::implBrush(const Brush &b) {
   if(b.tex) {
-    dev.setState(b.tex,b.color);
+    dev.setState(b.tex,b.color,b.texFrm);
     } else {
     dev.setState(b.spr,b.color);
     }
@@ -235,7 +235,7 @@ void Painter::implBrush(const Brush &b) {
   }
 
 void Painter::implPen(const Pen &p) {
-  dev.setState(Brush::TexPtr(),p.color);
+  dev.setState(Brush::TexPtr(),p.color,TextureFormat::Undefined);
   dev.setBlend(Blend::NoBlend);
   implSetColor(p.color.r(),p.color.g(),p.color.b(),p.color.a());
   }

@@ -24,7 +24,7 @@ VFramebuffer::VFramebuffer(VDevice &device, VFramebufferLayout &lay,
   rp     = Detail::DSharedPtr<VFramebufferLayout*>(&lay);
   attach = {{&swapchain,image},{&zbuf,0}};
 
-  VkImageView attach[2] = {swapchain.views[image],zbuf.fboView};
+  VkImageView attach[2] = {swapchain.views[image],zbuf.view};
   impl = allocFbo(swapchain.w(),swapchain.h(),attach,2);
   }
 
@@ -34,7 +34,7 @@ VFramebuffer::VFramebuffer(VDevice &device, VFramebufferLayout &lay, uint32_t w,
   rp     = Detail::DSharedPtr<VFramebufferLayout*>(&lay);
   attach = {{&color,0},{&zbuf,0}};
 
-  VkImageView attach[2] = {color.fboView,zbuf.fboView};
+  VkImageView attach[2] = {color.view,zbuf.view};
   impl = allocFbo(w,h,attach,2);
   }
 
@@ -43,7 +43,7 @@ VFramebuffer::VFramebuffer(VDevice &device, VFramebufferLayout &lay, uint32_t w,
   rp     = Detail::DSharedPtr<VFramebufferLayout*>(&lay);
   attach = {{&color,0}};
 
-  VkImageView attach[1] = {color.fboView};
+  VkImageView attach[1] = {color.view};
   impl = allocFbo(w,h,attach,1);
   }
 

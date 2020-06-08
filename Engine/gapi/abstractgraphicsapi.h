@@ -81,6 +81,28 @@ namespace Tempest {
     return f==TextureFormat::DXT1 || f==TextureFormat::DXT3 || f==TextureFormat::DXT5;
     }
 
+  enum class ComponentSwizzle {
+    Identity = 0,
+    R,
+    G,
+    B,
+    A
+    };
+
+  struct ComponentMapping final {
+    ComponentSwizzle r = ComponentSwizzle::Identity;
+    ComponentSwizzle g = ComponentSwizzle::Identity;
+    ComponentSwizzle b = ComponentSwizzle::Identity;
+    ComponentSwizzle a = ComponentSwizzle::Identity;
+
+    bool operator==(const ComponentMapping& other) const {
+      return r==other.r && g==other.g && b==other.b && a==other.a;
+      }
+    bool operator!=(const ComponentMapping& other) const {
+      return !(*this==other);
+      }
+    };
+
   //! Способы фильтрации текстуры.
   enum class Filter : uint8_t {
     //! ближайшая фильтрация
@@ -100,14 +122,15 @@ namespace Tempest {
     };
 
   struct Sampler2d final {
-    Filter    minFilter=Filter::Linear;
-    Filter    magFilter=Filter::Linear;
-    Filter    mipFilter=Filter::Linear;
+    Filter           minFilter=Filter::Linear;
+    Filter           magFilter=Filter::Linear;
+    Filter           mipFilter=Filter::Linear;
 
-    ClampMode uClamp   =ClampMode::Repeat;
-    ClampMode vClamp   =ClampMode::Repeat;
+    ClampMode        uClamp   =ClampMode::Repeat;
+    ClampMode        vClamp   =ClampMode::Repeat;
 
-    bool      anisotropic=true;
+    bool             anisotropic=true;
+    ComponentMapping mapping;
 
     static const Sampler2d& anisotrophy();
     static const Sampler2d& trillinear();
