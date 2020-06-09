@@ -16,10 +16,6 @@ VUniformsLay::VUniformsLay(VkDevice dev, const Tempest::UniformsLayout &ulay)
     std::unique_ptr<VkDescriptorSetLayoutBinding[]> bind(new VkDescriptorSetLayoutBinding[ulay.size()]);
     implCreate(ulay,bind.get());
     }
-
-  for(auto& i:hint)
-    if(i==VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
-      offsetsCnt++;
   }
 
 VUniformsLay::~VUniformsLay() {
@@ -31,7 +27,6 @@ VUniformsLay::~VUniformsLay() {
 void VUniformsLay::implCreate(const UniformsLayout &ulay,VkDescriptorSetLayoutBinding* bind) {
   static const VkDescriptorType types[] = {
     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
     };
 

@@ -27,7 +27,7 @@ inline AlignFlag operator | (AlignFlag a,const AlignFlag& b) {
   return AlignFlag(uint8_t(a)|uint8_t(b));
   }
 
-inline AlignFlag operator & (MemUsage a,const AlignFlag& b) {
+inline AlignFlag operator & (AlignFlag a,const AlignFlag& b) {
   return AlignFlag(uint8_t(a)&uint8_t(b));
   }
 

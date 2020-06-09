@@ -362,7 +362,7 @@ namespace Tempest {
 
       virtual Desc*      createDescriptors(Device* d,const Tempest::UniformsLayout& p,AbstractGraphicsApi::UniformsLay& layP)=0;
 
-      virtual PBuffer    createBuffer (Device* d,const void *mem,size_t count,size_t sz,size_t alignedSz,MemUsage usage,BufferFlags flg)=0;
+      virtual PBuffer    createBuffer (Device* d,const void *mem,size_t count,size_t sz,size_t alignedSz,MemUsage usage,BufferHeap flg)=0;
       virtual PTexture   createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips)=0;
       virtual PTexture   createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm)=0;
       virtual void       readPixels   (AbstractGraphicsApi::Device *d, Pixmap &out,const PTexture t,

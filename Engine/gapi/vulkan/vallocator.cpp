@@ -84,7 +84,7 @@ static size_t LCM(size_t n1, size_t n2)  {
   }
 
 VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t alignedSz,
-                          MemUsage usage, BufferFlags bufFlg) {
+                          MemUsage usage, BufferHeap bufHeap) {
   VBuffer ret;
   ret.alloc = this;
 
@@ -101,7 +101,7 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
     createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   if(MemUsage::TransferDst==(usage & MemUsage::TransferDst))
     createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-  if(MemUsage::UniformBit==(usage & MemUsage::UniformBit))
+  if(MemUsage::UniformBuffer==(usage & MemUsage::UniformBuffer))
     createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
   if(MemUsage::VertexBuffer==(usage & MemUsage::VertexBuffer))
     createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -114,13 +114,13 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
   getMemoryRequirements(memRq,ret.impl);
 
   uint32_t props=0;
-  if(bool(bufFlg&BufferFlags::Staging))
-    props|=VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+  if(bufHeap == BufferHeap::Upload)
+    props = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     //props|=(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);// to avoid vkFlushMappedMemoryRanges
-  if(bool(bufFlg&BufferFlags::Static))
-    props|=VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-  if(bool(bufFlg&BufferFlags::Dynamic))
-    props|=(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+  if(bufHeap == BufferHeap::Static)
+    props = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+  if(bufHeap == BufferHeap::Readback)
+    props = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
   VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits(props),VK_IMAGE_TILING_LINEAR);
   ret.page = allocMemory(memRq,memId.heapId,memId.typeId);

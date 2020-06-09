@@ -5,11 +5,11 @@
 namespace Tempest {
 
 enum class MemUsage : uint8_t {
-  TransferSrc =1<<0,
-  TransferDst =1<<1,
-  UniformBit  =1<<2,
-  VertexBuffer=1<<3,
-  IndexBuffer =1<<4,
+  TransferSrc  =1<<0,
+  TransferDst  =1<<1,
+  UniformBuffer=1<<2,
+  VertexBuffer =1<<3,
+  IndexBuffer  =1<<4,
   };
 
 inline MemUsage operator | (MemUsage a,const MemUsage& b) {
@@ -21,16 +21,11 @@ inline MemUsage operator & (MemUsage a,const MemUsage& b) {
   }
 
 
-enum class BufferFlags : uint8_t {
-  Staging  = 1<<0,
-  Static   = 1<<1,
-  Dynamic  = 1<<2,
-  Readback = 1<<3,
+enum class BufferHeap : uint8_t {
+  Static   = 0,
+  Upload   = 1,
+  Readback = 3,
   };
-
-inline BufferFlags operator & (BufferFlags a,const BufferFlags& b) {
-  return BufferFlags(uint8_t(a)&uint8_t(b));
-  }
 
 
 enum class TextureLayout : uint8_t {

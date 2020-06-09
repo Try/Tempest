@@ -43,7 +43,7 @@ class DirectX12Api : public AbstractGraphicsApi {
 
     Semaphore*     createSemaphore(Device *d) override;
 
-    PBuffer        createBuffer(Device* d, const void *mem, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferFlags flg) override;
+    PBuffer        createBuffer(Device* d, const void *mem, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap flg) override;
 
     PTexture       createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips) override;
     PTexture       createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;

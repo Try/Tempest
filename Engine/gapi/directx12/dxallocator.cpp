@@ -21,7 +21,7 @@ void DxAllocator::setDevice(DxDevice& d) {
   }
 
 DxBuffer DxAllocator::alloc(const void* mem, size_t count, size_t size, size_t alignedSz,
-                            MemUsage /*usage*/, BufferFlags bufFlg) {
+                            MemUsage /*usage*/, BufferHeap bufFlg) {
   ComPtr<ID3D12Resource> ret;
 
   D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COMMON;
@@ -46,12 +46,11 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t count, size_t size, size_t a
   heapProp.CreationNodeMask     = 1;
   heapProp.VisibleNodeMask      = 1;
 
-  if(bufFlg==BufferFlags::Dynamic || bufFlg==BufferFlags::Staging) {
-    // TODO: it's better to align api-abstraction to directx model
+  if(bufFlg==BufferHeap::Upload) {
     heapProp.Type = D3D12_HEAP_TYPE_UPLOAD;
     state         = D3D12_RESOURCE_STATE_GENERIC_READ;
     }
-  if(bufFlg==BufferFlags::Readback) {
+  if(bufFlg==BufferHeap::Readback) {
     heapProp.Type = D3D12_HEAP_TYPE_READBACK;
     state         = D3D12_RESOURCE_STATE_COPY_DEST;
     }

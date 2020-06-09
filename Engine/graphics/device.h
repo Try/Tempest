@@ -143,7 +143,7 @@ class Device {
     Props                           devProps;
     Tempest::Builtin                builtins;
 
-    VideoBuffer createVideoBuffer(const void* data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferFlags flg);
+    VideoBuffer createVideoBuffer(const void* data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap flg);
     RenderPipeline
                 implPipeline(const RenderState &st, const UniformsLayout& ulay,
                              const Shader &vs, const Shader &fs,
@@ -179,7 +179,7 @@ template<class T>
 inline VertexBuffer<T> Device::vbo(const T* arr, size_t arrSize) {
   if(arrSize==0)
     return VertexBuffer<T>();
-  VideoBuffer     data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::VertexBuffer,BufferFlags::Static);
+  VideoBuffer     data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::VertexBuffer,BufferHeap::Static);
   VertexBuffer<T> vbo(std::move(data),arrSize);
   return vbo;
   }
@@ -188,7 +188,7 @@ template<class T>
 inline VertexBufferDyn<T> Device::vboDyn(const T *arr, size_t arrSize) {
   if(arrSize==0)
     return VertexBufferDyn<T>();
-  VideoBuffer        data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::VertexBuffer,BufferFlags::Dynamic);
+  VideoBuffer        data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::VertexBuffer,BufferHeap::Upload);
   VertexBufferDyn<T> vbo(std::move(data),arrSize);
   return vbo;
   }
@@ -197,7 +197,7 @@ template<class T>
 inline IndexBuffer<T> Device::ibo(const T* arr, size_t arrSize) {
   if(arrSize==0)
     return IndexBuffer<T>();
-  VideoBuffer     data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::IndexBuffer,BufferFlags::Static);
+  VideoBuffer     data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::IndexBuffer,BufferHeap::Static);
   IndexBuffer<T>  ibo(std::move(data),arrSize);
   return ibo;
   }
@@ -211,7 +211,7 @@ inline UniformBuffer<T> Device::ubo(const T *mem, size_t size) {
 
   if(sizeof(T)>devProps.ubo.maxRange)
     throw std::system_error(Tempest::GraphicsErrc::TooLardgeUbo);
-  VideoBuffer      data=createVideoBuffer(mem,size,sizeof(T),eltSize,MemUsage::UniformBit,BufferFlags::Dynamic);
+  VideoBuffer      data=createVideoBuffer(mem,size,sizeof(T),eltSize,MemUsage::UniformBuffer,BufferHeap::Upload);
   UniformBuffer<T> ubo(std::move(data),eltSize);
   return ubo;
   }

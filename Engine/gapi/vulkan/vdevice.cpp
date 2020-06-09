@@ -82,7 +82,6 @@ VDevice::VDevice(VulkanApi &api, const char* gpuName)
 
 VDevice::~VDevice(){
   vkDeviceWaitIdle(device);
-  cmdMain.reset();
   data.reset();
   allocator.freeLast();
   vkDestroyDevice(device,nullptr);
@@ -98,7 +97,6 @@ void VDevice::implInit(VkPhysicalDevice pdev, VkSurfaceKHR surf) {
   physicalDevice = pdev;
   allocator.setDevice(*this);
   data.reset(new DataMgr(*this));
-  cmdMain.reset(new VCommandPool(*this,VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT));
   }
 
 VkSurfaceKHR VDevice::createSurface(void* hwnd) {

@@ -336,7 +336,7 @@ const char* Device::renderer() const {
   return dev->renderer();
   }
 
-VideoBuffer Device::createVideoBuffer(const void *data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferFlags flg) {
+VideoBuffer Device::createVideoBuffer(const void *data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap flg) {
   VideoBuffer buf(*this,api.createBuffer(dev,data,count,size,alignedSz,usage,flg),count*alignedSz);
   return  buf;
   }

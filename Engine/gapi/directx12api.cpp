@@ -202,20 +202,16 @@ AbstractGraphicsApi::Semaphore* DirectX12Api::createSemaphore(AbstractGraphicsAp
 
 AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Device* d, const void* mem,
                                                         size_t count, size_t size, size_t alignedSz,
-                                                        MemUsage usage, BufferFlags flg) {
+                                                        MemUsage usage, BufferHeap flg) {
   Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
 
-  if(flg==BufferFlags::Dynamic) {
-    Detail::DxBuffer stage=dx.allocator.alloc(mem,count,size,alignedSz,usage,BufferFlags::Dynamic);
-    return PBuffer(new Detail::DxBuffer(std::move(stage)));
-    }
-  if(flg==BufferFlags::Staging) {
-    Detail::DxBuffer stage=dx.allocator.alloc(mem,count,size,alignedSz,usage,BufferFlags::Staging);
+  if(flg==BufferHeap::Upload) {
+    Detail::DxBuffer stage=dx.allocator.alloc(mem,count,size,alignedSz,usage,BufferHeap::Upload);
     return PBuffer(new Detail::DxBuffer(std::move(stage)));
     }
   else {
-    Detail::DxBuffer  stage=dx.allocator.alloc(mem,    count,size,alignedSz,MemUsage::TransferSrc,      BufferFlags::Staging);
-    Detail::DxBuffer  buf  =dx.allocator.alloc(nullptr,count,size,alignedSz,usage|MemUsage::TransferDst,BufferFlags::Static );
+    Detail::DxBuffer  stage=dx.allocator.alloc(mem,    count,size,alignedSz,MemUsage::TransferSrc,      BufferHeap::Upload);
+    Detail::DxBuffer  buf  =dx.allocator.alloc(nullptr,count,size,alignedSz,usage|MemUsage::TransferDst,BufferHeap::Static);
 
     Detail::DSharedPtr<Detail::DxBuffer*> pstage(new Detail::DxBuffer(std::move(stage)));
     Detail::DSharedPtr<Detail::DxBuffer*> pbuf  (new Detail::DxBuffer(std::move(buf)));
@@ -249,7 +245,7 @@ AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixma
   DXGI_FORMAT       format = Detail::nativeFormat(frm);
   const uint32_t    row    = p.w()*p.bpp();
   const uint32_t    pith   = ((row+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
-  Detail::DxBuffer  stage  = dx.allocator.alloc(p.data(),p.h(),row,pith,MemUsage::TransferSrc,BufferFlags::Staging);
+  Detail::DxBuffer  stage  = dx.allocator.alloc(p.data(),p.h(),row,pith,MemUsage::TransferSrc,BufferHeap::Upload);
   Detail::DxTexture buf    = dx.allocator.alloc(p,/*mipCnt*/1,format);
 
   Detail::DSharedPtr<Detail::DxBuffer*>  pstage(new Detail::DxBuffer (std::move(stage)));
@@ -325,7 +321,7 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureL
     }
 
   const size_t     size  = w*h*bpp;
-  Detail::DxBuffer stage = dx.allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferFlags::Readback);
+  Detail::DxBuffer stage = dx.allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
 
   //TODO: D3D12_TEXTURE_DATA_PITCH_ALIGNMENT
   Detail::DxDevice::Data dat(dx);

@@ -157,7 +157,6 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     PFN_vkGetBufferMemoryRequirements2KHR vkGetBufferMemoryRequirements2 = nullptr;
     PFN_vkGetImageMemoryRequirements2KHR  vkGetImageMemoryRequirements2  = nullptr;
-    std::unique_ptr<VCommandPool> cmdMain;
 
     VkResult                present(VSwapchain& sw,const VSemaphore *wait,size_t wSize,uint32_t imageId);
 
