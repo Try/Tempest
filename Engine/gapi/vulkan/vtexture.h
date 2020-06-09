@@ -4,6 +4,7 @@
 #include "vulkan_sdk.h"
 
 #include "vallocator.h"
+#include "../utility/spinlock.h"
 
 namespace Tempest {
 
@@ -42,6 +43,7 @@ class VTexture : public AbstractGraphicsApi::Texture {
       ComponentMapping m;
       VkImageView      v;
       };
+    Detail::SpinLock  syncViews;
     std::vector<View> extViews;
 
     friend class VAllocator;

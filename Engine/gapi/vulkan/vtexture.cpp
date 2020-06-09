@@ -29,6 +29,7 @@ VkImageView VTexture::getView(VkDevice dev, const ComponentMapping& m) {
     return view;
     }
 
+  std::lock_guard<Detail::SpinLock> guard(syncViews);
   for(auto& i:extViews) {
     if(i.m==m)
       return i.v;
