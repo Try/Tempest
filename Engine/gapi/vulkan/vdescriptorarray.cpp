@@ -15,14 +15,7 @@ VDescriptorArray::VDescriptorArray(VkDevice device, const UniformsLayout& lay, V
   if(vlay.hint.size()==0)
     return;
 
-  if(vlay.offsetsCnt<=sizeof(multV)/sizeof(multV[0])) {
-    multiplier = multV;
-    } else {
-    multiplier = new size_t[vlay.offsetsCnt];
-    }
-
   std::lock_guard<Detail::SpinLock> guard(vlay.sync);
-
   for(auto& i:vlay.pool){
     if(i.freeCount==0)
       continue;
@@ -45,8 +38,6 @@ VDescriptorArray::VDescriptorArray(VkDevice device, const UniformsLayout& lay, V
 VDescriptorArray::~VDescriptorArray() {
   if(desc==VK_NULL_HANDLE)
     return;
-  if(multiplier!=multV)
-    delete multiplier;
   Detail::VUniformsLay* layImpl = lay.handler;
   std::lock_guard<Detail::SpinLock> guard(layImpl->sync);
 
@@ -62,8 +53,8 @@ VkDescriptorPool VDescriptorArray::allocPool(const UniformsLayout& lay, size_t s
     auto cls = lay[i].cls;
     switch(cls) {
       case UniformsLayout::Ubo:     addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);         break;
-      case UniformsLayout::UboDyn:  addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC); break;
       case UniformsLayout::Texture: addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER); break;
+      case UniformsLayout::Push:    break;
       }
     }
 
@@ -118,7 +109,7 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Texture* t, 
   vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
   }
 
-void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf, size_t offset, size_t size, size_t align) {
+void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf, size_t offset, size_t size, size_t /*align*/) {
   VBuffer* memory=reinterpret_cast<VBuffer*>(buf);
   VkDescriptorBufferInfo bufferInfo = {};
   bufferInfo.buffer = memory->impl;
@@ -137,14 +128,6 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf,
   descriptorWrite.pBufferInfo     = &bufferInfo;
 
   vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
-
-  size_t alignId=size_t(-1);
-  for(size_t i=0;i<=id;++i) {
-    if(layImpl->hint[i]==VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
-      ++alignId;
-    }
-  if(alignId!=size_t(-1))
-    multiplier[alignId] = align;
   }
 
 void VDescriptorArray::addPoolSize(VkDescriptorPoolSize *p, size_t &sz, VkDescriptorType elt) {

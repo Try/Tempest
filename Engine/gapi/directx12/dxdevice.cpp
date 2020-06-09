@@ -94,7 +94,9 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, AbstractGraphicsApi::Props& pro
   prop.setDepthFormat   (dsBit);
 
   // TODO: buffer limitsk
-  prop.ubo;
+  prop.ubo.maxRange;
+  prop.ubo.offsetAlign = 256;
+
   prop.anisotropy    = true;
   prop.maxAnisotropy = 16;
   }

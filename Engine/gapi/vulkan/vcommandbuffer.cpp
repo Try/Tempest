@@ -132,9 +132,12 @@ void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p,uint32_t w,uin
   getChunk().setPipeline(p,w,h);
   }
 
-void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u,
-                                 size_t offc, const uint32_t *offv) {
-  lastChunk->setUniforms(p,u,offc,offv);
+void VCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, void* data, size_t size) {
+  getChunk().setBytes(p,data,size);
+  }
+
+void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u) {
+  lastChunk->setUniforms(p,u);
   }
 
 void VCommandBuffer::draw(size_t offset,size_t size) {

@@ -58,17 +58,12 @@ void Encoder<Tempest::CommandBuffer>::setViewport(const Rect &vp) {
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const Tempest::RenderPipeline& p,const Uniforms &ubo) {
   setUniforms(p);
-  impl->setUniforms(*p.impl.handler,*ubo.desc.handler,0,nullptr);
-  }
-
-void Encoder<Tempest::CommandBuffer>::setUniforms(const Tempest::RenderPipeline& p,const Uniforms &ubo,size_t offc,const uint32_t* offv) {
-  setUniforms(p);
-  impl->setUniforms(*p.impl.handler,*ubo.desc.handler,offc,offv);
+  impl->setUniforms(*p.impl.handler,*ubo.desc.handler);
   }
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const Detail::ResourcePtr<RenderPipeline> &p, const Uniforms &ubo) {
   setUniforms(p);
-  impl->setUniforms(*p.impl.handler,*ubo.desc.handler,0,nullptr);
+  impl->setUniforms(*p.impl.handler,*ubo.desc.handler);
   }
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const Detail::ResourcePtr<RenderPipeline> &p) {

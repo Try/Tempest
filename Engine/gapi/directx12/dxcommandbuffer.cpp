@@ -144,10 +144,11 @@ void DxCommandBuffer::setViewport(const Rect& r) {
   impl->RSSetViewports(1,&vp);
   }
 
-void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/,
-                                  AbstractGraphicsApi::Desc& u,
-                                  size_t offc, const uint32_t* /*offv*/) {
-  assert(offc==0); //TODO: dynamic offsets
+void DxCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, void* data, size_t size) {
+  // TODO
+  }
+
+void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/, AbstractGraphicsApi::Desc& u) {
   DxDescriptorArray& ux = reinterpret_cast<DxDescriptorArray&>(u);
 
   ID3D12DescriptorHeap* ppHeaps[DxUniformsLay::VisTypeCount*DxUniformsLay::MaxPrmPerStage] = {};

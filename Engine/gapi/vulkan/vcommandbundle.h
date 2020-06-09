@@ -36,7 +36,8 @@ class VCommandBundle : public AbstractGraphicsApi::CommandBundle {
     bool isRecording() const;
 
     void setPipeline(AbstractGraphicsApi::Pipeline& p, uint32_t w, uint32_t h);
-    void setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u, size_t offc, const uint32_t* offv);
+    void setBytes   (AbstractGraphicsApi::Pipeline &p, void* data, size_t size);
+    void setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u);
     void setViewport(const Rect& r);
 
     void setVbo(const AbstractGraphicsApi::Buffer& b);
@@ -53,10 +54,6 @@ class VCommandBundle : public AbstractGraphicsApi::CommandBundle {
 
     bool            recording=false;
     bool            ownPool  =false;
-
-  private:
-    void            implSetUniforms(VkCommandBuffer cmd, VPipeline& p, VDescriptorArray& u,
-                                    size_t offc, const uint32_t* offv, uint32_t* buf);
   };
 }
 }

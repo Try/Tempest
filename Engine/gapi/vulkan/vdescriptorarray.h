@@ -22,9 +22,6 @@ class VDescriptorArray : public AbstractGraphicsApi::Desc {
     void                     set   (size_t id, AbstractGraphicsApi::Texture *tex, const Sampler2d& smp) override;
     void                     set   (size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset, size_t size, size_t align) override;
 
-    size_t  multV[64]={};
-    size_t* multiplier=nullptr;
-
   private:
     Detail::VUniformsLay::Pool* pool=nullptr;
 

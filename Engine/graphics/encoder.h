@@ -33,7 +33,6 @@ class Encoder<Tempest::CommandBuffer> {
     virtual ~Encoder() noexcept(false);
 
     void setUniforms(const Tempest::RenderPipeline& p, const Uniforms &ubo);
-    void setUniforms(const Tempest::RenderPipeline& p, const Uniforms &ubo, size_t offc, const uint32_t* offv);
     void setUniforms(const Detail::ResourcePtr<RenderPipeline> &p, const Uniforms &ubo);
     void setUniforms(const Detail::ResourcePtr<RenderPipeline> &p);
     void setUniforms(const RenderPipeline &p);

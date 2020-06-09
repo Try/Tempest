@@ -16,8 +16,8 @@ class UniformsLayout final {
   public:
     enum Class : uint8_t {
       Ubo    =0,
-      UboDyn =1,
-      Texture=2
+      Texture=1,
+      Push   =2,
       };
     enum Stage : uint8_t {
       Vertex  =1<<0,

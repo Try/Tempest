@@ -102,28 +102,18 @@ void VCommandBundle::setPipeline(AbstractGraphicsApi::Pipeline& p, uint32_t w, u
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v.val);
   }
 
-void VCommandBundle::setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc& u,
-                                 size_t offc, const uint32_t* offv) {
+void VCommandBundle::setBytes(AbstractGraphicsApi::Pipeline& p, void* data, size_t size) {
   VPipeline&        px=reinterpret_cast<VPipeline&>(p);
-  VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
-
-  if(offc<=128) {
-    uint32_t buf[128];
-    implSetUniforms(impl,px,ux,offc,offv,buf);
-    } else {
-    std::unique_ptr<uint32_t[]> buf(new uint32_t[offc]);
-    implSetUniforms(impl,px,ux,offc,offv,buf.get());
-    }
+  vkCmdPushConstants(impl, px.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, size, data);
   }
 
-void VCommandBundle::implSetUniforms(VkCommandBuffer cmd, VPipeline& px, VDescriptorArray& ux,
-                                     size_t offc, const uint32_t* offv, uint32_t* buf) {
-  for(size_t i=0;i<offc;++i)
-    buf[i] = uint32_t(ux.multiplier[i]*offv[i]);
-  vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_GRAPHICS,
+void VCommandBundle::setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc& u) {
+  VPipeline&        px=reinterpret_cast<VPipeline&>(p);
+  VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
+  vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,
                           px.pipelineLayout,0,
                           1,&ux.desc,
-                          uint32_t(offc),buf);
+                          0,nullptr);
   }
 
 void VCommandBundle::setViewport(const Rect& r) {
