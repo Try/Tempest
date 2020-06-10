@@ -163,4 +163,8 @@ void Encoder<PrimaryCommandBuffer>::exec(const CommandBuffer &buf) {
   if(buf.impl.handler==nullptr)
     return;
   reinterpret_cast<AbstractGraphicsApi::CommandBuffer*>(impl)->exec(*buf.impl.handler);
+  //FIXME: vulkan backend issue - implementation not preserving state across command-chunks
+  state.curPipeline = nullptr;
+  state.curVbo      = nullptr;
+  state.curIbo      = nullptr;
   }
