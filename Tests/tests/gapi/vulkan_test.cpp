@@ -79,7 +79,7 @@ TEST(VulkanApi,Fbo) {
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setPass(fbo,rp);
+      enc.setFramebuffer(fbo,rp);
     }
 
     auto sync = device.fence();
@@ -115,7 +115,7 @@ TEST(VulkanApi,Draw) {
     auto cmd  = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setPass(fbo,rp);
+      enc.setFramebuffer(fbo,rp);
       enc.setUniforms(pso);
       enc.draw(vbo,ibo);
     }

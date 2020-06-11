@@ -89,9 +89,9 @@ class Encoder<Tempest::PrimaryCommandBuffer> : public Encoder<Tempest::CommandBu
     Encoder& operator = (Encoder&& e);
     virtual ~Encoder() noexcept(false);
 
-    void setPass(const FrameBuffer& fbo, const RenderPass& p);
-    void setPass(const FrameBuffer& fbo, const RenderPass& p, int      width, int      height);
-    void setPass(const FrameBuffer& fbo, const RenderPass& p, uint32_t width, uint32_t height);
+    void setFramebuffer(const FrameBuffer& fbo, const RenderPass& p);
+    //void setPass(const FrameBuffer& fbo, const RenderPass& p, int      width, int      height);
+    //void setPass(const FrameBuffer& fbo, const RenderPass& p, uint32_t width, uint32_t height);
 
     void exec(const CommandBuffer& buf);
 

@@ -132,21 +132,14 @@ Encoder<Tempest::PrimaryCommandBuffer>::~Encoder() noexcept(false) {
   impl=nullptr;
   }
 
-void Encoder<PrimaryCommandBuffer>::setPass(const FrameBuffer &fbo, const RenderPass &p) {
-  setPass(fbo,p,fbo.w(),fbo.h());
-  }
-
-void Encoder<PrimaryCommandBuffer>::setPass(const FrameBuffer &fbo, const RenderPass &p, int width, int height) {
-  setPass(fbo,p,uint32_t(width),uint32_t(height));
-  }
-
-void Encoder<PrimaryCommandBuffer>::setPass(const FrameBuffer &fbo, const RenderPass &p, uint32_t width, uint32_t height) {
+void Encoder<PrimaryCommandBuffer>::setFramebuffer(const FrameBuffer &fbo, const RenderPass &p) {
   implEndRenderPass();
 
-  state.vp.width     = width;
-  state.vp.height    = height;
+  state.vp.width  = fbo.w();
+  state.vp.height = fbo.h();
 
-  reinterpret_cast<AbstractGraphicsApi::CommandBuffer*>(impl)->beginRenderPass(fbo.impl.handler,p.impl.handler,width,height);
+  reinterpret_cast<AbstractGraphicsApi::CommandBuffer*>(impl)->beginRenderPass(fbo.impl.handler,p.impl.handler,
+                                                                               state.vp.width,state.vp.height);
   curPass.fbo  = &fbo;
   curPass.pass = &p;
   }
