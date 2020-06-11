@@ -6,6 +6,7 @@
 #include <Tempest/Log>
 #include <d3dcompiler.h>
 
+#include "gapi/shaderreflection.h"
 #include "thirdparty/spirv_cross/spirv_hlsl.hpp"
 
 using namespace Tempest;
@@ -30,6 +31,7 @@ DxShader::DxShader(const void *source, size_t src_size) {
     comp.set_common_options(optGLSL);
     hlsl = comp.compile();
     exec = comp.get_execution_model();
+    ShaderReflection::getBindings(lay,comp);
     }
   catch(const std::bad_alloc&) {
     throw;

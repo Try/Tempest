@@ -104,7 +104,7 @@ void VCommandBundle::setPipeline(AbstractGraphicsApi::Pipeline& p, uint32_t w, u
 
 void VCommandBundle::setBytes(AbstractGraphicsApi::Pipeline& p, void* data, size_t size) {
   VPipeline&        px=reinterpret_cast<VPipeline&>(p);
-  vkCmdPushConstants(impl, px.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, size, data);
+  vkCmdPushConstants(impl, px.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, uint32_t(size), data);
   }
 
 void VCommandBundle::setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc& u) {

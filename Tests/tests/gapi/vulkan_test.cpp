@@ -106,7 +106,7 @@ TEST(VulkanApi,Draw) {
 
     auto vert = device.loadShader("shader/simple_test.vert.sprv");
     auto frag = device.loadShader("shader/simple_test.frag.sprv");
-    auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),UniformsLayout(),vert,frag);
+    auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
 
     auto tex  = device.attachment(TextureFormat::RGBA8,128,128);
     auto fbo  = device.frameBuffer(tex);

@@ -55,6 +55,9 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t count, size_t size, size_t a
     state         = D3D12_RESOURCE_STATE_COPY_DEST;
     }
 
+  if(resDesc.Width==0 || resDesc.Height==0)
+    Log::d("");
+
   dxAssert(device->CreateCommittedResource(
              &heapProp,
              D3D12_HEAP_FLAG_NONE,

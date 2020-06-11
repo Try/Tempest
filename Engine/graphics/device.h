@@ -114,8 +114,7 @@ class Device {
     RenderPass           pass(const FboMode& color,const FboMode& depth);
 
     template<class Vertex>
-    RenderPipeline       pipeline(Topology tp,const RenderState& st,
-                                  const UniformsLayout& ulay,const Shader &vs,const Shader &fs);
+    RenderPipeline       pipeline(Topology tp,const RenderState& st, const Shader &vs,const Shader &fs);
 
     Fence                fence();
     Semaphore            semaphore();
@@ -145,7 +144,7 @@ class Device {
 
     VideoBuffer createVideoBuffer(const void* data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap flg);
     RenderPipeline
-                implPipeline(const RenderState &st, const UniformsLayout& ulay,
+                implPipeline(const RenderState &st,
                              const Shader &vs, const Shader &fs,
                              const Decl::ComponentType *decl, size_t declSize,
                              size_t stride, Topology tp);
@@ -153,7 +152,6 @@ class Device {
                            const Semaphore* wait[], AbstractGraphicsApi::Semaphore*     hwait[], size_t waitCnt,
                            Semaphore*       done[], AbstractGraphicsApi::Semaphore*     hdone[], size_t doneCnt,
                            AbstractGraphicsApi::Fence*         fdone);
-    void        createInstance(const UniformsLayout &ulay);
 
     static TextureFormat formatOf(const Attachment& a);
 
@@ -222,10 +220,9 @@ inline UniformBuffer<T> Device::ubo(const T& mem) {
   }
 
 template<class Vertex>
-RenderPipeline Device::pipeline(Topology tp, const RenderState &st,
-                                const UniformsLayout& ulay, const Shader &vs, const Shader &fs) {
+RenderPipeline Device::pipeline(Topology tp, const RenderState &st, const Shader &vs, const Shader &fs) {
   static const auto decl=Tempest::vertexBufferDecl<Vertex>();
-  return implPipeline(st,ulay,vs,fs,decl.data.data(),decl.data.size(),sizeof(Vertex),tp);
+  return implPipeline(st,vs,fs,decl.data.data(),decl.data.size(),sizeof(Vertex),tp);
   }
 
 }

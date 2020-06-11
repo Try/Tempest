@@ -341,7 +341,7 @@ namespace Tempest {
       virtual PFboLayout createFboLayout(Device *d, Swapchain *s, TextureFormat *att, size_t attCount)=0;
 
       virtual PUniformsLay
-                         createUboLayout(Device *d,const UniformsLayout&)=0;
+                         createUboLayout(Device *d,const std::initializer_list<Shader*>& sh)=0;
 
       virtual PPipeline  createPipeline(Device* d, const RenderState &st,
                                         const Tempest::Decl::ComponentType *decl, size_t declSize,
@@ -360,7 +360,7 @@ namespace Tempest {
       virtual CommandBuffer*
                          createCommandBuffer(Device* d)=0;
 
-      virtual Desc*      createDescriptors(Device* d,const Tempest::UniformsLayout& p,AbstractGraphicsApi::UniformsLay& layP)=0;
+      virtual Desc*      createDescriptors(Device* d,UniformsLay& layP)=0;
 
       virtual PBuffer    createBuffer (Device* d,const void *mem,size_t count,size_t sz,size_t alignedSz,MemUsage usage,BufferHeap flg)=0;
       virtual PTexture   createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips)=0;

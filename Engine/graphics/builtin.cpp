@@ -22,34 +22,32 @@ Builtin::Builtin(Device& owner)
 
   vsT2 = owner.shader(tex_brush_vert_sprv,sizeof(tex_brush_vert_sprv));
   fsT2 = owner.shader(tex_brush_frag_sprv,sizeof(tex_brush_frag_sprv));
-
-  brushT2.layout.add(0,Tempest::UniformsLayout::Texture,Tempest::UniformsLayout::Fragment);
   }
 
 const Builtin::Item &Builtin::texture2d() const {
   if(brushT2.brush.isEmpty()) {
-    brushT2.pen    = owner.pipeline<PaintDevice::Point>(Lines,    stNormal,brushT2.layout,vsT2,fsT2);
-    brushT2.brush  = owner.pipeline<PaintDevice::Point>(Triangles,stNormal,brushT2.layout,vsT2,fsT2);
+    brushT2.pen    = owner.pipeline<PaintDevice::Point>(Lines,    stNormal,vsT2,fsT2);
+    brushT2.brush  = owner.pipeline<PaintDevice::Point>(Triangles,stNormal,vsT2,fsT2);
 
-    brushT2.penB   = owner.pipeline<PaintDevice::Point>(Lines,    stBlend,brushT2.layout,vsT2,fsT2);
-    brushT2.brushB = owner.pipeline<PaintDevice::Point>(Triangles,stBlend,brushT2.layout,vsT2,fsT2);
+    brushT2.penB   = owner.pipeline<PaintDevice::Point>(Lines,    stBlend,vsT2,fsT2);
+    brushT2.brushB = owner.pipeline<PaintDevice::Point>(Triangles,stBlend,vsT2,fsT2);
 
-    brushT2.penA   = owner.pipeline<PaintDevice::Point>(Lines,    stAlpha,brushT2.layout,vsT2,fsT2);
-    brushT2.brushA = owner.pipeline<PaintDevice::Point>(Triangles,stAlpha,brushT2.layout,vsT2,fsT2);
+    brushT2.penA   = owner.pipeline<PaintDevice::Point>(Lines,    stAlpha,vsT2,fsT2);
+    brushT2.brushA = owner.pipeline<PaintDevice::Point>(Triangles,stAlpha,vsT2,fsT2);
     }
   return brushT2;
   }
 
 const Builtin::Item &Builtin::empty() const {
   if(brushE.brush.isEmpty()) {
-    brushE.pen   = owner.pipeline<PaintDevice::Point>(Lines,    stNormal,brushE.layout,vsE,fsE);
-    brushE.brush = owner.pipeline<PaintDevice::Point>(Triangles,stNormal,brushE.layout,vsE,fsE);
+    brushE.pen   = owner.pipeline<PaintDevice::Point>(Lines,    stNormal,vsE,fsE);
+    brushE.brush = owner.pipeline<PaintDevice::Point>(Triangles,stNormal,vsE,fsE);
 
-    brushE.penB   = owner.pipeline<PaintDevice::Point>(Lines,    stBlend,brushE.layout,vsE,fsE);
-    brushE.brushB = owner.pipeline<PaintDevice::Point>(Triangles,stBlend,brushE.layout,vsE,fsE);
+    brushE.penB   = owner.pipeline<PaintDevice::Point>(Lines,    stBlend,vsE,fsE);
+    brushE.brushB = owner.pipeline<PaintDevice::Point>(Triangles,stBlend,vsE,fsE);
 
-    brushE.penA   = owner.pipeline<PaintDevice::Point>(Lines,    stAlpha,brushE.layout,vsE,fsE);
-    brushE.brushA = owner.pipeline<PaintDevice::Point>(Triangles,stAlpha,brushE.layout,vsE,fsE);
+    brushE.penA   = owner.pipeline<PaintDevice::Point>(Lines,    stAlpha,vsE,fsE);
+    brushE.brushA = owner.pipeline<PaintDevice::Point>(Triangles,stAlpha,vsE,fsE);
     }
   return brushE;
   }

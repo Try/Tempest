@@ -29,18 +29,16 @@ class UniformsLayout final {
       Stage    stage=Fragment;
       };
 
-    UniformsLayout()=default;
-
-    UniformsLayout& add(uint32_t layout,Class c,Stage s);
-    const Binding& operator[](size_t i) const { return elt[i]; }
-    size_t size() const { return elt.size(); }
+    UniformsLayout(UniformsLayout&& other)=default;
+    UniformsLayout& operator = (UniformsLayout&& other)=default;
 
   private:
-    std::vector<Binding> elt;
-    mutable Detail::SpinLock                                      sync;
-    mutable Detail::DSharedPtr<AbstractGraphicsApi::UniformsLay*> impl;
+    UniformsLayout()=default;
+    UniformsLayout(Detail::DSharedPtr<AbstractGraphicsApi::UniformsLay*>&& lay);
+    Detail::DSharedPtr<AbstractGraphicsApi::UniformsLay*> impl;
 
   friend class Device;
+  friend class RenderPipeline;
   };
 
 }

@@ -134,14 +134,6 @@ void Device::implSubmit(const Tempest::PrimaryCommandBuffer* cmd[],  AbstractGra
              fdone);
   }
 
-void Device::createInstance(const UniformsLayout& ulay) {
-  if(ulay.impl.handler==nullptr) {
-    std::lock_guard<Detail::SpinLock> guard(ulay.sync);
-    if(ulay.impl.handler==nullptr)
-      ulay.impl=api.createUboLayout(dev,ulay);
-    }
-  }
-
 Shader Device::loadShader(RFile &file) {
   const size_t fileSize=file.size();
 
@@ -301,7 +293,7 @@ Semaphore Device::semaphore() {
   return f;
   }
 
-RenderPipeline Device::implPipeline(const RenderState &st,const UniformsLayout &ulay,
+RenderPipeline Device::implPipeline(const RenderState &st,
                                     const Shader &vs, const Shader &fs,
                                     const Decl::ComponentType *decl, size_t declSize,
                                     size_t   stride,
@@ -309,8 +301,10 @@ RenderPipeline Device::implPipeline(const RenderState &st,const UniformsLayout &
   if(!vs.impl || !fs.impl)
     return RenderPipeline();
 
-  createInstance(ulay);
-  RenderPipeline f(*this,api.createPipeline(dev,st,decl,declSize,stride,tp,*ulay.impl.handler,{vs.impl.handler,fs.impl.handler}));
+  std::initializer_list<AbstractGraphicsApi::Shader*> sh = {vs.impl.handler,fs.impl.handler};
+  auto ulay = api.createUboLayout(dev,sh);
+  auto pipe = api.createPipeline(dev,st,decl,declSize,stride,tp,*ulay.handler,sh);
+  RenderPipeline f(*this,std::move(pipe),std::move(ulay));
   return f;
   }
 
@@ -342,8 +336,7 @@ VideoBuffer Device::createVideoBuffer(const void *data, size_t count, size_t siz
   }
 
 Uniforms Device::uniforms(const UniformsLayout &ulay) {
-  createInstance(ulay);
-  Uniforms ubo(*this,api.createDescriptors(dev,ulay,*ulay.impl.handler));
+  Uniforms ubo(*this,api.createDescriptors(dev,*ulay.impl.handler));
   return ubo;
   }
 

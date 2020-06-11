@@ -251,7 +251,7 @@ void DxCommandBuffer::copy(DxBuffer& dest, size_t offsetDest, const DxBuffer& sr
 
 void DxCommandBuffer::copy(DxTexture& dest, size_t width, size_t height, size_t mip,
                            const DxBuffer& src, size_t offset) {
-  const UINT bpp = dest.bitCount()/8;
+  const UINT bpp = (dest.bitCount()+7)/8;
 
   D3D12_PLACED_SUBRESOURCE_FOOTPRINT foot = {};
   foot.Offset             = offset;
@@ -276,7 +276,7 @@ void DxCommandBuffer::copy(DxTexture& dest, size_t width, size_t height, size_t 
 
 void DxCommandBuffer::copy(DxBuffer& dest, size_t width, size_t height, size_t mip,
                            const DxTexture& src, size_t offset) {
-  const UINT bpp = src.bitCount()/8;
+  const UINT bpp = (src.bitCount()+7)/8;
 
   D3D12_PLACED_SUBRESOURCE_FOOTPRINT foot = {};
   foot.Offset             = offset;

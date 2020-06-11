@@ -26,9 +26,10 @@ static int swizzle(ComponentSwizzle cs, int def){
     case ComponentSwizzle::A:
       return 3;
     }
+  return def;
   }
 
-DxDescriptorArray::DxDescriptorArray(DxDevice& dev, const UniformsLayout& /*lay*/, DxUniformsLay& vlay)
+DxDescriptorArray::DxDescriptorArray(DxDevice& dev, DxUniformsLay& vlay)
   : dev(dev), layPtr(&vlay) {
   auto& device=*dev.device;
 

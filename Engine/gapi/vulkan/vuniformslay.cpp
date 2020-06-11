@@ -2,19 +2,23 @@
 
 #include <Tempest/UniformsLayout>
 #include "vdevice.h"
+#include "gapi/shaderreflection.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-VUniformsLay::VUniformsLay(VkDevice dev, const Tempest::UniformsLayout &ulay)
-  :dev(dev) {
-  hint.resize(ulay.size());
-  if(ulay.size()<=32) {
+VUniformsLay::VUniformsLay(VkDevice dev,
+                           const std::vector<UniformsLayout::Binding>& vs,
+                           const std::vector<UniformsLayout::Binding>& fs)
+  : dev(dev) {
+  ShaderReflection::merge(lay, vs,fs);
+  hint.resize(lay.size());
+  if(lay.size()<=32) {
     VkDescriptorSetLayoutBinding bind[32]={};
-    implCreate(ulay,bind);
+    implCreate(bind);
     } else {
-    std::unique_ptr<VkDescriptorSetLayoutBinding[]> bind(new VkDescriptorSetLayoutBinding[ulay.size()]);
-    implCreate(ulay,bind.get());
+    std::unique_ptr<VkDescriptorSetLayoutBinding[]> bind(new VkDescriptorSetLayoutBinding[lay.size()]);
+    implCreate(bind.get());
     }
   }
 
@@ -24,20 +28,23 @@ VUniformsLay::~VUniformsLay() {
   vkDestroyDescriptorSetLayout(dev,impl,nullptr);
   }
 
-void VUniformsLay::implCreate(const UniformsLayout &ulay,VkDescriptorSetLayoutBinding* bind) {
+void VUniformsLay::implCreate(VkDescriptorSetLayoutBinding* bind) {
   static const VkDescriptorType types[] = {
     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
     };
 
-  for(size_t i=0;i<ulay.size();++i){
+  for(size_t i=0;i<lay.size();++i){
     auto& b=bind[i];
-    auto& e=ulay[i];
+    auto& e=lay[i];
+
+    if(e.layout>=hint.size())
+      hint.resize(e.layout+1);
 
     b.binding         = e.layout;
     b.descriptorCount = 1;
     b.descriptorType  = types[e.cls];
-    hint[i]           = types[e.cls];
+    hint[e.layout]    = types[e.cls];
 
     b.stageFlags      = 0;
     if(e.stage&UniformsLayout::Vertex)
@@ -48,7 +55,7 @@ void VUniformsLay::implCreate(const UniformsLayout &ulay,VkDescriptorSetLayoutBi
 
   VkDescriptorSetLayoutCreateInfo info={};
   info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  info.bindingCount = uint32_t(ulay.size());
+  info.bindingCount = uint32_t(lay.size());
   info.pBindings    = bind;
 
   vkAssert(vkCreateDescriptorSetLayout(dev,&info,nullptr,&impl));

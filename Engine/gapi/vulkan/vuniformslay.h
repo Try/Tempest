@@ -1,6 +1,8 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
+#include <Tempest/UniformsLayout>
+
 #include "vulkan_sdk.h"
 #include <mutex>
 #include <list>
@@ -15,15 +17,20 @@ class UniformsLayout;
 namespace Detail {
 
 class VDescriptorArray;
+class VShader;
 
 class VUniformsLay : public AbstractGraphicsApi::UniformsLay {
   public:
-    VUniformsLay(VkDevice dev, const UniformsLayout& lay);
+    VUniformsLay(VkDevice dev, const std::vector<UniformsLayout::Binding>& vs, const std::vector<UniformsLayout::Binding>& fs);
     ~VUniformsLay();
+
+    using Binding = UniformsLayout::Binding;
 
     VkDevice                      dev =nullptr;
     VkDescriptorSetLayout         impl=VK_NULL_HANDLE;
+
     std::vector<VkDescriptorType> hint;
+    std::vector<Binding>          lay;
 
   private:
     enum {
@@ -38,7 +45,7 @@ class VUniformsLay : public AbstractGraphicsApi::UniformsLay {
     Detail::SpinLock sync;
     std::list<Pool>  pool;
 
-    void implCreate(const UniformsLayout& lay, VkDescriptorSetLayoutBinding *bind);
+    void implCreate(VkDescriptorSetLayoutBinding *bind);
 
   friend class VDescriptorArray;
   };

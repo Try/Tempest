@@ -290,23 +290,24 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
   stage.read(out.data(),0,size);
   }
 
-AbstractGraphicsApi::Desc *VulkanApi::createDescriptors(AbstractGraphicsApi::Device*      d,
-                                                        const UniformsLayout&             lay,
-                                                        UniformsLay& ulayImpl) {
-  if(lay.size()==0)
-    return nullptr;
+AbstractGraphicsApi::Desc *VulkanApi::createDescriptors(AbstractGraphicsApi::Device* d, UniformsLay& ulayImpl) {
   auto* dx = reinterpret_cast<Detail::VDevice*>(d);
   auto& ul = reinterpret_cast<Detail::VUniformsLay&>(ulayImpl);
-  return new Detail::VDescriptorArray(dx->device,lay,ul);
+  if(ul.lay.size()==0)
+    return nullptr;
+  return new Detail::VDescriptorArray(dx->device,ul);
   }
 
-AbstractGraphicsApi::PUniformsLay VulkanApi::createUboLayout(Device *d, const UniformsLayout &lay) {
-  Detail::VDevice* dx = reinterpret_cast<Detail::VDevice*>(d);
-  return PUniformsLay(new Detail::VUniformsLay(dx->device,lay));
+AbstractGraphicsApi::PUniformsLay VulkanApi::createUboLayout(Device *d, const std::initializer_list<Shader*>& shaders) {
+  Shader*const*         arr= shaders.begin();
+  auto* dx = reinterpret_cast<Detail::VDevice*>(d);
+  auto* vs = reinterpret_cast<Detail::VShader*>(arr[0]);
+  auto* fs = reinterpret_cast<Detail::VShader*>(arr[1]);
+
+  return PUniformsLay(new Detail::VUniformsLay(dx->device,vs->lay,fs->lay));
   }
 
-AbstractGraphicsApi::CommandBundle *VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device *d,
-                                                                   FboLayout *fbo) {
+AbstractGraphicsApi::CommandBundle *VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device *d, FboLayout *fbo) {
   Detail::VDevice*             dx=reinterpret_cast<Detail::VDevice*>(d);
   Detail::VFramebufferLayout*  fb=reinterpret_cast<Detail::VFramebufferLayout*>(fbo);
   return new Detail::VCommandBundle(*dx,fb);

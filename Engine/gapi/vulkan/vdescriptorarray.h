@@ -16,7 +16,7 @@ class VDescriptorArray : public AbstractGraphicsApi::Desc {
     Detail::DSharedPtr<VUniformsLay*> lay;
     VkDescriptorSet       desc=VK_NULL_HANDLE;
 
-    VDescriptorArray(VkDevice device,const UniformsLayout& lay, VUniformsLay& vlay);
+    VDescriptorArray(VkDevice device, VUniformsLay& vlay);
     ~VDescriptorArray() override;
 
     void                     set   (size_t id, AbstractGraphicsApi::Texture *tex, const Sampler2d& smp) override;
@@ -25,7 +25,7 @@ class VDescriptorArray : public AbstractGraphicsApi::Desc {
   private:
     Detail::VUniformsLay::Pool* pool=nullptr;
 
-    VkDescriptorPool         allocPool(const UniformsLayout& lay, size_t size);
+    VkDescriptorPool         allocPool(const VUniformsLay& lay, size_t size);
     bool                     allocDescSet(VkDescriptorPool pool, VkDescriptorSetLayout lay);
     static void              addPoolSize(VkDescriptorPoolSize* p, size_t& sz, VkDescriptorType elt);
   };

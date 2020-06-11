@@ -52,9 +52,9 @@ class DirectX12Api : public AbstractGraphicsApi {
                               TextureLayout lay, TextureFormat frm,
                               const uint32_t w, const uint32_t h, uint32_t mip) override;
 
-    Desc*          createDescriptors(Device* d, const UniformsLayout &lay, UniformsLay& layP) override;
+    Desc*          createDescriptors(Device* d, UniformsLay& layP) override;
 
-    PUniformsLay   createUboLayout(Device *d,const UniformsLayout&) override;
+    PUniformsLay   createUboLayout(Device *d, const std::initializer_list<Shader*>& sh) override;
 
     CommandBundle* createCommandBuffer(Device* d, FboLayout* fbo) override;
     CommandBuffer* createCommandBuffer(Device* d) override;

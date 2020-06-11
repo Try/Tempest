@@ -122,6 +122,8 @@ class VectorImage : public Tempest::PaintDevice {
 
     void makeActual(Device& dev, Swapchain& sw);
 
+    const RenderPipeline& pipelineOf(Device& dev, const Block& b);
+
     template<class T,T State::*param>
     void setState(const T& t);
   };

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
+#include <Tempest/UniformsLayout>
+
 #include "vulkan_sdk.h"
 
 namespace Tempest {
@@ -13,7 +15,10 @@ class VShader:public AbstractGraphicsApi::Shader {
     VShader(VDevice& device, const void* source, size_t src_size);
     ~VShader();
 
-    VkShaderModule impl;
+    using Binding = UniformsLayout::Binding;
+
+    VkShaderModule       impl;
+    std::vector<Binding> lay;
 
   private:
     VkDevice device;

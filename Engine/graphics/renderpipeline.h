@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include <Tempest/Size>
+#include <Tempest/UniformsLayout>
 
 #include "../utility/dptr.h"
 
@@ -21,11 +21,15 @@ class RenderPipeline final {
     RenderPipeline& operator = (RenderPipeline&& other);
 
     bool isEmpty() const { return impl.handler==nullptr; }
+    const UniformsLayout& layout() const { return ulay; }
 
   private:
-    RenderPipeline(Tempest::Device& dev,Detail::DSharedPtr<AbstractGraphicsApi::Pipeline*>&& p);
+    RenderPipeline(Tempest::Device& dev,
+                   Detail::DSharedPtr<AbstractGraphicsApi::Pipeline*>&& p,
+                   Detail::DSharedPtr<AbstractGraphicsApi::UniformsLay*>&& lay);
 
     Tempest::Device*                                   dev=nullptr;
+    UniformsLayout                                     ulay;
     Detail::DSharedPtr<AbstractGraphicsApi::Pipeline*> impl;
 
   friend class Tempest::Device;

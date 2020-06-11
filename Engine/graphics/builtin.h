@@ -24,8 +24,6 @@ class Builtin final {
 
       Tempest::RenderPipeline penA;
       Tempest::RenderPipeline brushA;
-
-      Tempest::UniformsLayout layout;
       };
 
     const Item& texture2d() const;

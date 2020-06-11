@@ -4,6 +4,7 @@
 
 #include <Tempest/UniformsLayout>
 
+#include "gapi/shaderreflection.h"
 #include "dxdevice.h"
 #include "guid.h"
 
@@ -12,9 +13,12 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-DxUniformsLay::DxUniformsLay(DxDevice& dev, const UniformsLayout& lay)
-  : prm(lay.size()){
+DxUniformsLay::DxUniformsLay(DxDevice& dev,
+                             const std::vector<UniformsLayout::Binding>& vs,
+                             const std::vector<UniformsLayout::Binding>& fs) {
   auto& device = *dev.device;
+  ShaderReflection::merge(lay, vs,fs);
+  prm.resize(lay.size());
 
   descSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 

@@ -10,7 +10,7 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-VDescriptorArray::VDescriptorArray(VkDevice device, const UniformsLayout& lay, VUniformsLay& vlay)
+VDescriptorArray::VDescriptorArray(VkDevice device, VUniformsLay& vlay)
   :device(device),lay(&vlay) {
   if(vlay.hint.size()==0)
     return;
@@ -28,7 +28,7 @@ VDescriptorArray::VDescriptorArray(VkDevice device, const UniformsLayout& lay, V
 
   vlay.pool.emplace_back();
   auto& b = vlay.pool.back();
-  b.impl  = allocPool(lay,Detail::VUniformsLay::POOL_SIZE);
+  b.impl  = allocPool(vlay,Detail::VUniformsLay::POOL_SIZE);
   if(!allocDescSet(b.impl,vlay.impl))
     throw std::bad_alloc();
   pool = &b;
@@ -45,12 +45,12 @@ VDescriptorArray::~VDescriptorArray() {
   pool->freeCount++;
   }
 
-VkDescriptorPool VDescriptorArray::allocPool(const UniformsLayout& lay, size_t size) {
+VkDescriptorPool VDescriptorArray::allocPool(const VUniformsLay& lay, size_t size) {
   VkDescriptorPoolSize poolSize[3] = {};
   size_t               pSize=0;
 
-  for(size_t i=0;i<lay.size();++i){
-    auto cls = lay[i].cls;
+  for(size_t i=0;i<lay.lay.size();++i){
+    auto cls = lay.lay[i].cls;
     switch(cls) {
       case UniformsLayout::Ubo:     addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);         break;
       case UniformsLayout::Texture: addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER); break;

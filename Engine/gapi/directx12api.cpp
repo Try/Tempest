@@ -228,22 +228,31 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
   return PBuffer();
   }
 
-AbstractGraphicsApi::Desc* DirectX12Api::createDescriptors(AbstractGraphicsApi::Device* d, const UniformsLayout& lay, UniformsLay& layP) {
+AbstractGraphicsApi::Desc* DirectX12Api::createDescriptors(AbstractGraphicsApi::Device* d, UniformsLay& layP) {
   Detail::DxDevice&      dx = *reinterpret_cast<Detail::DxDevice*>(d);
   Detail::DxUniformsLay& u  = reinterpret_cast<Detail::DxUniformsLay&>(layP);
-  return new DxDescriptorArray(dx,lay,u);
+  return new DxDescriptorArray(dx,u);
   }
 
-AbstractGraphicsApi::PUniformsLay DirectX12Api::createUboLayout(Device* d, const UniformsLayout& lay) {
-  Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
-  return PUniformsLay(new DxUniformsLay(dx,lay));
+AbstractGraphicsApi::PUniformsLay DirectX12Api::createUboLayout(Device* d, const std::initializer_list<Shader*>& shaders) {
+  Shader*const*        arr=shaders.begin();
+  auto* dx = reinterpret_cast<Detail::DxDevice*>(d);
+  auto* vs = reinterpret_cast<Detail::DxShader*>(arr[0]);
+  auto* fs = reinterpret_cast<Detail::DxShader*>(arr[1]);
+
+  return PUniformsLay(new DxUniformsLay(*dx,vs->lay,fs->lay));
   }
 
 AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mipCnt) {
   Detail::DxDevice& dx     = *reinterpret_cast<Detail::DxDevice*>(d);
 
   DXGI_FORMAT       format = Detail::nativeFormat(frm);
-  const uint32_t    row    = p.w()*p.bpp();
+  uint32_t          row    = 0;
+  if(isCompressedFormat(frm)) {
+
+    } else {
+    row = p.w()*p.bpp();
+    }
   const uint32_t    pith   = ((row+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
   Detail::DxBuffer  stage  = dx.allocator.alloc(p.data(),p.h(),row,pith,MemUsage::TransferSrc,BufferHeap::Upload);
   Detail::DxTexture buf    = dx.allocator.alloc(p,/*mipCnt*/1,format);

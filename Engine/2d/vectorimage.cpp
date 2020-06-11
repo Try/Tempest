@@ -135,9 +135,8 @@ void VectorImage::makeActual(Device &dev,Swapchain& sw) {
       UboType   t =(b.hasImg) ? UT_Img : UT_NoImg;
 
       if(ux.isEmpty() || f.blocksType[i]!=t){
-        if(t==UT_Img)
-          ux=dev.uniforms(dev.builtin().texture2d().layout); else
-        ux=dev.uniforms(dev.builtin().empty().layout);
+        auto& p = pipelineOf(dev,b);
+        ux = dev.uniforms(p.layout());
         f.blocksType[i] = t;
         }
       if(t==UT_Img) {
@@ -173,7 +172,41 @@ void VectorImage::makeActual(Device &dev,Swapchain& sw) {
     }
   }
 
-void VectorImage::draw(Device & dev, Swapchain& sw, Encoder<CommandBuffer> &cmd) {
+const RenderPipeline& VectorImage::pipelineOf(Device& dev, const VectorImage::Block& b) {
+  const RenderPipeline* p;
+  if(b.hasImg) {
+    if(b.tp==Triangles){
+      if(b.blend==NoBlend)
+        p=&dev.builtin().texture2d().brush; else
+      if(b.blend==Alpha)
+        p=&dev.builtin().texture2d().brushB; else
+        p=&dev.builtin().texture2d().brushA;
+      } else {
+      if(b.blend==NoBlend)
+        p=&dev.builtin().texture2d().pen; else
+      if(b.blend==Alpha)
+        p=&dev.builtin().texture2d().penB; else
+        p=&dev.builtin().texture2d().penA;
+      }
+    } else {
+    if(b.tp==Triangles) {
+      if(b.blend==NoBlend)
+        p=&dev.builtin().empty().brush; else
+      if(b.blend==Alpha)
+        p=&dev.builtin().empty().brushB; else
+        p=&dev.builtin().empty().brushA;
+      } else {
+      if(b.blend==NoBlend)
+        p=&dev.builtin().empty().pen; else
+      if(b.blend==Alpha)
+        p=&dev.builtin().empty().penB; else
+        p=&dev.builtin().empty().penA;
+      }
+    }
+  return *p;
+  }
+
+void VectorImage::draw(Device& dev, Swapchain& sw, Encoder<CommandBuffer> &cmd) {
   makeActual(dev,sw);
 
   PerFrame& f=frame[sw.frameId()];
@@ -186,37 +219,7 @@ void VectorImage::draw(Device & dev, Swapchain& sw, Encoder<CommandBuffer> &cmd)
       continue;
 
     if(!b.pipeline) {
-      const RenderPipeline* p;
-      if(b.hasImg) {
-        if(b.tp==Triangles){
-          if(b.blend==NoBlend)
-            p=&dev.builtin().texture2d().brush; else
-          if(b.blend==Alpha)
-            p=&dev.builtin().texture2d().brushB; else
-            p=&dev.builtin().texture2d().brushA;
-          } else {
-          if(b.blend==NoBlend)
-            p=&dev.builtin().texture2d().pen; else
-          if(b.blend==Alpha)
-            p=&dev.builtin().texture2d().penB; else
-            p=&dev.builtin().texture2d().penA;
-          }
-        } else {
-        if(b.tp==Triangles) {
-          if(b.blend==NoBlend)
-            p=&dev.builtin().empty().brush; else
-          if(b.blend==Alpha)
-            p=&dev.builtin().empty().brushB; else
-            p=&dev.builtin().empty().brushA;
-          } else {
-          if(b.blend==NoBlend)
-            p=&dev.builtin().empty().pen; else
-          if(b.blend==Alpha)
-            p=&dev.builtin().empty().penB; else
-            p=&dev.builtin().empty().penA;
-          }
-        }
-      b.pipeline=PipePtr(*p);
+      b.pipeline=PipePtr(pipelineOf(dev,b));
       }
 
     if(b.hasImg)

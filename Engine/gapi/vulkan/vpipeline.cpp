@@ -26,9 +26,7 @@ VPipeline::VPipeline(VDevice& device, const RenderState &st,
   try {
     decl.reset(new Decl::ComponentType[declSize]);
     std::memcpy(decl.get(),idecl,declSize*sizeof(Decl::ComponentType));
-
     pipelineLayout = initLayout(device.device,ulay.impl);
-    // instance(pass,width,height);
     }
   catch(...) {
     cleanup();

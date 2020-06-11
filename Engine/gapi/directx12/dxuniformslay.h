@@ -18,7 +18,7 @@ class DxDevice;
 
 class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
   public:
-    DxUniformsLay(DxDevice& device, const UniformsLayout& lay);
+    DxUniformsLay(DxDevice& device, const std::vector<UniformsLayout::Binding>& vs, const std::vector<UniformsLayout::Binding>& fs);
 
     enum VisType {
       Vertex   = 0,
@@ -29,6 +29,8 @@ class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
     enum {
       MaxPrmPerStage = 2,
       };
+
+    using Binding = UniformsLayout::Binding;
 
     struct Param {
       UINT    heapOffset;
@@ -48,6 +50,7 @@ class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
 
     ComPtr<ID3D12RootSignature> impl;
     UINT                        descSize = 0;
+    std::vector<Binding>        lay;
 
   private:
     void add(const UniformsLayout::Binding& b, D3D12_DESCRIPTOR_RANGE_TYPE type, Param& prm,

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
+#include <Tempest/UniformsLayout>
+
 #include <d3d12.h>
 #include "gapi/directx12/comptr.h"
 
@@ -14,8 +16,12 @@ class DxShader:public AbstractGraphicsApi::Shader {
     DxShader(const void* source, size_t src_size);
     ~DxShader();
 
+    using Binding = UniformsLayout::Binding;
+
     D3D12_SHADER_BYTECODE bytecode();
-    ComPtr<ID3DBlob> shader;
+    ComPtr<ID3DBlob>      shader;
+
+    std::vector<Binding>  lay;
   };
 
 }}
