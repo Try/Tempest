@@ -32,14 +32,25 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
 void ShaderReflection::merge(std::vector<ShaderReflection::Binding>& ret,
                              const std::vector<ShaderReflection::Binding>& vs,
                              const std::vector<ShaderReflection::Binding>& fs) {
-  ret.resize(vs.size()+fs.size());
+  ret.reserve(vs.size()+fs.size());
   size_t id=0;
   for(size_t i=0;i<vs.size();++i, ++id) {
-    ret[id]      = vs[i];
-    ret[id].stage = UniformsLayout::Vertex;
+    auto& u = vs[i];
+    ret.push_back(u);
+    ret.back().stage = UniformsLayout::Vertex;
     }
-  for(size_t i=0;i<fs.size();++i, ++id) {
-    ret[id]      = fs[i];
-    ret[id].stage = UniformsLayout::Fragment;
+  for(size_t i=0;i<fs.size();++i) {
+    auto& u   = fs[i];
+    bool  ins = false;
+    for(auto& r:ret)
+      if(r.layout==u.layout) {
+        r.stage = UniformsLayout::Stage(r.stage | UniformsLayout::Fragment);
+        ins = true;
+        break;
+        }
+    if(ins)
+      continue;
+    ret.push_back(u);
+    ret.back().stage = UniformsLayout::Fragment;
     }
   }
