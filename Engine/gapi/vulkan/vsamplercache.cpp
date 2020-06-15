@@ -26,7 +26,7 @@ void VSamplerCache::free(VkSampler ) {
   }
 
 void VSamplerCache::freeLast() {
-  vkDeviceWaitIdle  (device);
+  vkDeviceWaitIdle(device);
   for(auto& c:chunks)
     for(auto& i:c.samp)
       vkDestroySampler(device,i.sampler,nullptr);

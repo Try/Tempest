@@ -28,8 +28,6 @@ class VUniformsLay : public AbstractGraphicsApi::UniformsLay {
 
     VkDevice                      dev =nullptr;
     VkDescriptorSetLayout         impl=VK_NULL_HANDLE;
-
-    std::vector<VkDescriptorType> hint;
     std::vector<Binding>          lay;
 
   private:

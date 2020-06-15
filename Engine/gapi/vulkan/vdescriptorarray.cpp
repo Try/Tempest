@@ -12,7 +12,7 @@ using namespace Tempest::Detail;
 
 VDescriptorArray::VDescriptorArray(VkDevice device, VUniformsLay& vlay)
   :device(device),lay(&vlay) {
-  if(vlay.hint.size()==0)
+  if(vlay.lay.size()==0)
     return;
 
   std::lock_guard<Detail::SpinLock> guard(vlay.sync);
@@ -116,14 +116,12 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf,
   bufferInfo.offset = offset;
   bufferInfo.range  = size;
 
-  Detail::VUniformsLay* layImpl = lay.handler;
-
   VkWriteDescriptorSet descriptorWrite = {};
   descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
   descriptorWrite.dstSet          = desc;
   descriptorWrite.dstBinding      = uint32_t(id);
   descriptorWrite.dstArrayElement = 0;
-  descriptorWrite.descriptorType  = layImpl->hint[id];
+  descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   descriptorWrite.descriptorCount = 1;
   descriptorWrite.pBufferInfo     = &bufferInfo;
 
