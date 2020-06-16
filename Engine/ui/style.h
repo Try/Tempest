@@ -28,8 +28,8 @@ class  Dialog;
 class  Button;
 class  CheckBox;
 class  Label;
-class  TextEdit;
 class  ScrollBar;
+class  AbstractTextInput;
 
 class Style {
   public:
@@ -53,11 +53,10 @@ class Style {
 
     struct Extra {
       public:
-        Extra(const Widget&   owner);
-        Extra(const Button&   owner);
-        Extra(const Label&    owner);
-        Extra(const TextEdit& owner);
-        // Extra(const LineEdit& owner);
+        Extra(const Widget&            owner);
+        Extra(const Button&            owner);
+        Extra(const Label&             owner);
+        Extra(const AbstractTextInput& owner);
 
         const Margin&         margin;
         const Icon&           icon;
@@ -123,10 +122,10 @@ class Style {
     virtual void draw(Painter& p, Button*   w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
     virtual void draw(Painter& p, CheckBox* w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
     virtual void draw(Painter& p, Label*    w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
-    virtual void draw(Painter& p, TextEdit* w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
 
     // complex
-    virtual void draw(Painter& p, ScrollBar* w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
+    virtual void draw(Painter& p, AbstractTextInput* w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
+    virtual void draw(Painter& p, ScrollBar*         w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
 
     // text
     virtual void draw(Painter& p, const std::u16string& text, TextElement e, const WidgetState& st, const Rect& r, const Extra& extra) const;

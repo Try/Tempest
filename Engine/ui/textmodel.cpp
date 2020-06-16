@@ -369,6 +369,12 @@ Point TextModel::mapToCoords(Cursor c) const {
   return p;
   }
 
+const char* TextModel::c_str() const {
+  if(txt.size()==0)
+    return "";
+  return txt.data();
+  }
+
 bool TextModel::isValid(TextModel::Cursor c) const {
   if(c.line>=line.size())
     return false;

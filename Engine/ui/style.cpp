@@ -40,7 +40,7 @@ Style::Extra::Extra(const Label &owner)
   : margin(owner.margins()), icon(emptyIcon), fontColor(owner.textColor()), spacing(owner.spacing()) {
   }
 
-Style::Extra::Extra(const TextEdit& owner)
+Style::Extra::Extra(const AbstractTextInput& owner)
   : margin(owner.margins()), icon(emptyIcon), fontColor(owner.textColor()), spacing(owner.spacing()),
     selectionStart(owner.selectionStart()), selectionEnd(owner.selectionEnd()){
   }
@@ -64,7 +64,7 @@ void Style::polish  (Widget&) const {
   polished++;
   }
 
-void Style::unpolish(Widget& w) const {
+void Style::unpolish(Widget&) const {
   polished--;
   }
 
@@ -221,10 +221,11 @@ void Style::draw(Painter &p, Label *w, Element e, const WidgetState &st, const R
   // nop
   }
 
-void Style::draw(Painter &p, TextEdit* w, Element e, const WidgetState &st, const Rect &r, const Style::Extra &extra) const {
+void Style::draw(Painter &p, AbstractTextInput* w, Element e, const WidgetState &st, const Rect &r, const Style::Extra &extra) const {
   (void)p;
   (void)w;
   (void)e;
+  (void)st;
   (void)r;
   (void)extra;
   }

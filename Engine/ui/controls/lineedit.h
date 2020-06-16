@@ -4,9 +4,9 @@
 
 namespace Tempest {
 
-class TextEdit : public Tempest::AbstractTextInput {
+class LineEdit : public Tempest::AbstractTextInput {
   public:
-    TextEdit();
+    LineEdit();
 
     void  setText(const char* text) override;
     using AbstractTextInput::setText;
@@ -17,6 +17,15 @@ class TextEdit : public Tempest::AbstractTextInput {
 
     using AbstractTextInput::setTextColor;
     using AbstractTextInput::textColor;
+
+    Tempest::Signal<void()> onEnter;
+
+  protected:
+    void keyDownEvent  (Tempest::KeyEvent &event) override;
+    void keyRepeatEvent(Tempest::KeyEvent &event) override;
+
+  private:
+    void filterAndSetText(const char* src);
   };
 
 }

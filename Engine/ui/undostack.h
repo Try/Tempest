@@ -19,12 +19,16 @@ class UndoStack {
         virtual void undo(Subject& subj)=0;
       };
 
-    void push(Subject& subj,Command* cmd);
-    void undo(Subject& subj);
-    void redo(Subject& subj);
+    void   push(Subject& subj,Command* cmd);
+    void   undo(Subject& subj);
+    void   redo(Subject& subj);
+
+    void   setMaxDepth(size_t d);
+    size_t maxDepth() const;
 
   private:
     std::vector<std::unique_ptr<Command>> stk, undoStk;
+    size_t                                depthLim=size_t(-1);
   };
 
 template<class Subject>
@@ -33,6 +37,8 @@ void UndoStack<Subject>::push(Subject& subj, Command* cmd) {
   try {
     stk.back()->redo(subj);
     undoStk.clear();
+    if(stk.size()>depthLim)
+      stk.erase(stk.begin(),stk.begin()+int(stk.size()-depthLim));
     }
   catch(...){
     stk.pop_back();
@@ -76,4 +82,15 @@ void UndoStack<Subject>::redo(Subject& subj) {
   undoStk.pop_back();
   }
 
+template<class Subject>
+void UndoStack<Subject>::setMaxDepth(size_t d) {
+  depthLim = d;
+  if(stk.size()>depthLim)
+    stk.erase(stk.begin(),stk.begin()+int(stk.size()-depthLim));
+  }
+
+template<class Subject>
+size_t UndoStack<Subject>::maxDepth() const {
+  return depthLim;
+  }
 }
