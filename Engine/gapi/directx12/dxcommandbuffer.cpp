@@ -151,15 +151,8 @@ void DxCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, void* data, siz
 void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/, AbstractGraphicsApi::Desc& u) {
   DxDescriptorArray& ux = reinterpret_cast<DxDescriptorArray&>(u);
 
-  ID3D12DescriptorHeap* ppHeaps[DxUniformsLay::VisTypeCount*DxUniformsLay::MaxPrmPerStage] = {};
-  UINT                  heapCount  = 0;
-  for(auto& i:ux.heap) {
-    if(i.get()==nullptr)
-      continue;
-    ppHeaps[heapCount] = i.get();
-    heapCount++;
-    }
-  impl->SetDescriptorHeaps(heapCount, ppHeaps);
+  UINT heapCount = ux.heapCnt;
+  impl->SetDescriptorHeaps(heapCount, ux.heap);
 
   for(UINT i=0;i<heapCount;++i)
     impl->SetGraphicsRootDescriptorTable(i, ux.heap[i]->GetGPUDescriptorHandleForHeapStart());

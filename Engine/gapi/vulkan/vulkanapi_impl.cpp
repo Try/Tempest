@@ -241,6 +241,11 @@ VkBool32 VulkanApi::debugReportCallback(VkDebugReportFlagsEXT      flags,
                                         const char                *pLayerPrefix,
                                         const char                *pMessage,
                                         void                      *pUserData) {
+#if VK_HEADER_VERSION==135
+  // https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/1712
+  if(objectType==VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT)
+    return VK_FALSE;
+#endif
   Log::e(pMessage," object=",object,", type=",objectType," th:",std::this_thread::get_id());
   return VK_FALSE;
   }

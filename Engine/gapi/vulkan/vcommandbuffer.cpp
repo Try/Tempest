@@ -47,7 +47,7 @@ void VCommandBuffer::reset() {
   }
 
 void VCommandBuffer::begin() {
-  begin(VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
+  begin(0);
   }
 
 void VCommandBuffer::begin(VkCommandBufferUsageFlags flg) {

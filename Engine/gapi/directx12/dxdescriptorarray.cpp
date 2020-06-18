@@ -31,20 +31,29 @@ static int swizzle(ComponentSwizzle cs, int def){
 
 DxDescriptorArray::DxDescriptorArray(DxDevice& dev, DxUniformsLay& vlay)
   : dev(dev), layPtr(&vlay) {
-  auto& device=*dev.device;
+  auto& device = *dev.device;
 
-  D3D12_DESCRIPTOR_HEAP_DESC desc[DxUniformsLay::VisTypeCount*DxUniformsLay::MaxPrmPerStage] = {};
-  size_t                     descCount = vlay.heaps.size();
-  for(size_t i=0;i<descCount;++i) {
-    auto& d          = desc[i];
-    d.Type           = vlay.heaps[i].type;
-    d.NumDescriptors = vlay.heaps[i].numDesc;
-    d.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+  try {
+    for(size_t i=0;i<vlay.heaps.size();++i) {
+      D3D12_DESCRIPTOR_HEAP_DESC d = {};
+      d.Type           = vlay.heaps[i].type;
+      d.NumDescriptors = vlay.heaps[i].numDesc;
+      d.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+      dxAssert(device.CreateDescriptorHeap(&d, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&heap[i])));
+      }
+    heapCnt = UINT(vlay.heaps.size());
     }
+  catch(...){
+    for(auto i:heap)
+      if(i!=nullptr)
+        i->Release();
+    }
+  }
 
-  for(size_t i=0;i<descCount;++i) {
-    dxAssert(device.CreateDescriptorHeap(&desc[i], uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&heap[i])));
-    }
+DxDescriptorArray::~DxDescriptorArray() {
+  for(auto i:heap)
+    if(i!=nullptr)
+      i->Release();
   }
 
 void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const Sampler2d& smp) {

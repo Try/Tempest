@@ -69,8 +69,7 @@ void VCommandBundle::reset() {
   }
 
 void VCommandBundle::begin() {
-  VkCommandBufferUsageFlags      usageFlags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT |
-                                              VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+  VkCommandBufferUsageFlags      usageFlags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
   VkCommandBufferInheritanceInfo inheritanceInfo={};
 
   inheritanceInfo.sType       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;

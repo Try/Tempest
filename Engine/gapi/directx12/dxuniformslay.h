@@ -20,16 +20,6 @@ class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
   public:
     DxUniformsLay(DxDevice& device, const std::vector<UniformsLayout::Binding>& vs, const std::vector<UniformsLayout::Binding>& fs);
 
-    enum VisType {
-      Vertex   = 0,
-      Fragment = 1,
-      VisTypeCount,
-      };
-
-    enum {
-      MaxPrmPerStage = 2,
-      };
-
     using Binding = UniformsLayout::Binding;
 
     struct Param {
@@ -53,8 +43,13 @@ class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
     std::vector<Binding>        lay;
 
   private:
-    void add(const UniformsLayout::Binding& b, D3D12_DESCRIPTOR_RANGE_TYPE type, Param& prm,
-             D3D12_ROOT_PARAMETER* root, D3D12_DESCRIPTOR_RANGE* rgn, size_t& cnt);
+    struct Parameter final {
+      D3D12_DESCRIPTOR_RANGE  rgn;
+      uint32_t                id=0;
+      D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL;
+      };
+
+    void add(const UniformsLayout::Binding& b, D3D12_DESCRIPTOR_RANGE_TYPE type, std::vector<Parameter>& root);
   };
 
 }
