@@ -108,7 +108,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const 
   device.CreateShaderResourceView(t.impl.get(), &srvDesc, gpu);
 
   gpu = heap[prm.heapIdSmp]->GetCPUDescriptorHandleForHeapStart();
-  gpu.ptr += prm.heapOffset;
+  gpu.ptr += prm.heapOffsetSmp;
   device.CreateSampler(&smpDesc,gpu);
   }
 

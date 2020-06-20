@@ -23,10 +23,10 @@ class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
     using Binding = UniformsLayout::Binding;
 
     struct Param {
-      UINT    heapOffset;
+      UINT    heapOffset=0;
       uint8_t heapId=0;
 
-      UINT    heapOffsetSmp;
+      UINT    heapOffsetSmp=0;
       uint8_t heapIdSmp=0;
       };
 
@@ -35,8 +35,14 @@ class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
       UINT                       numDesc = 0;
       };
 
+    struct RootPrm {
+      size_t heap = 0;
+      UINT   heapOffset = 0;
+      };
+
     std::vector<Param>          prm;
     std::vector<Heap>           heaps;
+    std::vector<RootPrm>        roots;
 
     ComPtr<ID3D12RootSignature> impl;
     UINT                        descSize = 0;

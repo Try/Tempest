@@ -46,49 +46,80 @@ DxUniformsLay::DxUniformsLay(DxDevice& dev,
     });
 
   std::vector<D3D12_DESCRIPTOR_RANGE> rgn(desc.size());
-  std::vector<D3D12_ROOT_PARAMETER>   prm;
+  std::vector<D3D12_ROOT_PARAMETER>   rootPrm;
 
   uint8_t curVisibility = 255;
   uint8_t curRgnType    = 255;
   for(size_t i=0; i<rgn.size(); ++i) {
     rgn[i] = desc[i].rgn;
-    if(uint8_t(desc[i].visibility)    != curVisibility ||
-       uint8_t(desc[i].rgn.RangeType) != curRgnType) {
+
+    D3D12_DESCRIPTOR_HEAP_TYPE heapType
+        = (rgn[i].RangeType==D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER) ?
+          D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER :
+          D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+
+    Heap* heap = nullptr;
+    for(size_t r=0;r<heaps.size();++r) {
+      if(heaps[r].type==heapType) {
+        heap = &heaps[r];
+        break;
+        }
+      }
+
+    if(heap==nullptr) {
+      heaps.emplace_back();
+      heap = &heaps.back();
+      heap->type    = heapType;
+      heap->numDesc = 0;
+      }
+
+    if(uint8_t(desc[i].visibility)   !=curVisibility ||
+       uint8_t(desc[i].rgn.RangeType)!=curRgnType) {
       D3D12_ROOT_PARAMETER p = {};
       p.ParameterType    = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
       p.ShaderVisibility = desc[i].visibility;
       p.DescriptorTable.pDescriptorRanges   = &rgn[i];
       p.DescriptorTable.NumDescriptorRanges = 0;
-      prm.push_back(p);
+      rootPrm.push_back(p);
+
+      RootPrm r = {};
+      r.heap       = uint8_t(std::distance(&heaps[0],heap));
+      r.heapOffset = heap->numDesc;
+      roots.push_back(r);
 
       curVisibility = uint8_t(desc[i].visibility);
       curRgnType    = uint8_t(desc[i].rgn.RangeType);
       }
 
-    auto& px = prm.back();
+    auto& px = rootPrm.back();
     px.DescriptorTable.NumDescriptorRanges++;
+    heap->numDesc += rgn[i].NumDescriptors;
 
-    auto& p = this->prm[desc[i].id];
+    auto& p = prm[desc[i].id];
     if(curRgnType==D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER) {
-      p.heapOffsetSmp = px.DescriptorTable.NumDescriptorRanges-1;
-      p.heapIdSmp     = uint8_t(prm.size()-1);
+      p.heapOffsetSmp = heap->numDesc-1;
+      p.heapIdSmp     = uint8_t(std::distance(&heaps[0],heap));
       } else {
-      p.heapOffset    = px.DescriptorTable.NumDescriptorRanges-1;
-      p.heapId        = uint8_t(prm.size()-1);
+      p.heapOffset    = heap->numDesc-1;
+      p.heapId        = uint8_t(std::distance(&heaps[0],heap));
       }
     }
 
-  for(auto& i:this->prm) {
+  for(auto& i:prm) {
     i.heapOffset    *= descSize;
     i.heapOffsetSmp *= descSize;
+    }
+
+  for(auto& i:roots) {
+    i.heapOffset *= descSize;
     }
 
   D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
   featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
 
   D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc={};
-  rootSignatureDesc.NumParameters     = UINT(prm.size());
-  rootSignatureDesc.pParameters       = prm.data();
+  rootSignatureDesc.NumParameters     = UINT(rootPrm.size());
+  rootSignatureDesc.pParameters       = rootPrm.data();
   rootSignatureDesc.NumStaticSamplers = 0;
   rootSignatureDesc.pStaticSamplers   = nullptr;
   rootSignatureDesc.Flags             = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
@@ -100,7 +131,7 @@ DxUniformsLay::DxUniformsLay(DxDevice& dev,
                                        &signature.get(), &error.get()));
   dxAssert(device.CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(),
                                       uuid<ID3D12RootSignature>(), reinterpret_cast<void**>(&impl)));
-
+/*
   heaps.resize(prm.size());
   for(size_t i=0; i<prm.size(); ++i) {
     if(prm[i].DescriptorTable.pDescriptorRanges[0].RangeType==D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER)
@@ -109,7 +140,7 @@ DxUniformsLay::DxUniformsLay(DxDevice& dev,
     heaps[i].numDesc = 0;
     for(UINT r=0; r<prm[i].DescriptorTable.NumDescriptorRanges; ++r)
       heaps[i].numDesc+=prm[i].DescriptorTable.pDescriptorRanges[r].NumDescriptors;
-    }
+    }*/
   }
 
 void Tempest::Detail::DxUniformsLay::add(const Tempest::UniformsLayout::Binding& b,

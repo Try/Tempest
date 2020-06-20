@@ -25,13 +25,16 @@ struct DxCommandBuffer::ImgState {
   bool                  outdated;
   };
 
-DxCommandBuffer::DxCommandBuffer(DxDevice& d, DxFboLayout* currentFbo)
-  : dev(d), currentFbo(currentFbo) {
-  dxAssert(d.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
+DxCommandBuffer::DxCommandBuffer(DxDevice& d, DxFboLayout* isSecondary)
+  : dev(d), isSecondary(isSecondary) {
+  D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+  if(isSecondary)
+    type = D3D12_COMMAND_LIST_TYPE_BUNDLE;
+  dxAssert(d.device->CreateCommandAllocator(type,
                                             uuid<ID3D12CommandAllocator>(),
                                             reinterpret_cast<void**>(&pool)));
 
-  dxAssert(d.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, pool.get(), nullptr,
+  dxAssert(d.device->CreateCommandList(0, type, pool.get(), nullptr,
                                        uuid<ID3D12GraphicsCommandList>(), reinterpret_cast<void**>(&impl)));
   impl->Close();
   }
@@ -42,6 +45,9 @@ DxCommandBuffer::~DxCommandBuffer() {
 void DxCommandBuffer::begin() {
   reset();
   recording = true;
+  if(isSecondary!=nullptr) {
+    currentFbo = isSecondary;
+    }
   }
 
 void DxCommandBuffer::end() {
@@ -152,11 +158,15 @@ void DxCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, void* data, siz
 void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/, AbstractGraphicsApi::Desc& u) {
   DxDescriptorArray& ux = reinterpret_cast<DxDescriptorArray&>(u);
 
-  UINT heapCount = ux.heapCnt;
-  impl->SetDescriptorHeaps(heapCount, ux.heap);
+  impl->SetDescriptorHeaps(ux.heapCnt, ux.heap);
 
-  for(UINT i=0;i<heapCount;++i)
-    impl->SetGraphicsRootDescriptorTable(i, ux.heap[i]->GetGPUDescriptorHandleForHeapStart());
+  auto& lx = *ux.layPtr.handler;
+  for(size_t i=0;i<lx.roots.size();++i) {
+    auto& r   = lx.roots[i];
+    auto desc = ux.heap[r.heap]->GetGPUDescriptorHandleForHeapStart();
+    desc.ptr+=r.heapOffset;
+    impl->SetGraphicsRootDescriptorTable(UINT(i), desc);
+    }
   }
 
 void DxCommandBuffer::exec(const CommandBundle& buf) {

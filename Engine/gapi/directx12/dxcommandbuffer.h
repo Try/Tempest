@@ -20,7 +20,7 @@ class DxFboLayout;
 
 class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
   public:
-    DxCommandBuffer(DxDevice& d, DxFboLayout* currentFbo = nullptr);
+    DxCommandBuffer(DxDevice& d, DxFboLayout* isSecondary = nullptr);
     ~DxCommandBuffer();
 
     void begin() override;
@@ -66,6 +66,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     DxFboLayout*                      currentFbo = nullptr;
     UINT                              vboStride=0;
+    DxFboLayout*                      isSecondary = nullptr;
 
     std::vector<ImgState>             imgState;
 
