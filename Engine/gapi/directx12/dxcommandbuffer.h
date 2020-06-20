@@ -16,10 +16,11 @@ class DxDevice;
 class DxBuffer;
 class DxTexture;
 class DxFramebuffer;
+class DxFboLayout;
 
 class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
   public:
-    DxCommandBuffer(DxDevice& d);
+    DxCommandBuffer(DxDevice& d, DxFboLayout* currentFbo = nullptr);
     ~DxCommandBuffer();
 
     void begin() override;
@@ -63,7 +64,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     bool                              recording=false;
     bool                              resetDone=false;
 
-    DxFramebuffer*                    currentFbo = nullptr;
+    DxFboLayout*                      currentFbo = nullptr;
     UINT                              vboStride=0;
 
     std::vector<ImgState>             imgState;

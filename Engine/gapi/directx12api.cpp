@@ -18,6 +18,7 @@
 #include "directx12/dxframebuffer.h"
 #include "directx12/dxdescriptorarray.h"
 #include "directx12/dxrenderpass.h"
+#include "directx12/dxfbolayout.h"
 
 #include <Tempest/Pixmap>
 
@@ -135,40 +136,45 @@ AbstractGraphicsApi::PPass DirectX12Api::createPass(AbstractGraphicsApi::Device*
   return PPass(new DxRenderPass(att,acount));
   }
 
-AbstractGraphicsApi::PFbo DirectX12Api::createFbo(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::FboLayout*,
+AbstractGraphicsApi::PFbo DirectX12Api::createFbo(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::FboLayout* l,
                                                   AbstractGraphicsApi::Swapchain* s, uint32_t imageId) {
-  auto& dx = *reinterpret_cast<Detail::DxDevice*>   (d);
-  auto& sx = *reinterpret_cast<Detail::DxSwapchain*>(s);
-  return PFbo(new DxFramebuffer(dx,sx,imageId));
+  auto& dx  = *reinterpret_cast<Detail::DxDevice*>   (d);
+  auto& lay = *reinterpret_cast<Detail::DxFboLayout*>(l);
+  auto& sx  = *reinterpret_cast<Detail::DxSwapchain*>(s);
+  return PFbo(new DxFramebuffer(dx,lay,sx,imageId));
   }
 
-AbstractGraphicsApi::PFbo DirectX12Api::createFbo(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::FboLayout*, AbstractGraphicsApi::Swapchain* s,
-                                                  uint32_t imageId, AbstractGraphicsApi::Texture* zbuf) {
-  auto& dx = *reinterpret_cast<Detail::DxDevice*>   (d);
-  auto& sx = *reinterpret_cast<Detail::DxSwapchain*>(s);
-  auto& z  = *reinterpret_cast<Detail::DxTexture*>(zbuf);
-  return PFbo(new DxFramebuffer(dx,sx,imageId,z));
+AbstractGraphicsApi::PFbo DirectX12Api::createFbo(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::FboLayout* l,
+                                                  AbstractGraphicsApi::Swapchain* s, uint32_t imageId, AbstractGraphicsApi::Texture* zbuf) {
+  auto& dx  = *reinterpret_cast<Detail::DxDevice*>   (d);
+  auto& lay = *reinterpret_cast<Detail::DxFboLayout*>(l);
+  auto& sx  = *reinterpret_cast<Detail::DxSwapchain*>(s);
+  auto& z   = *reinterpret_cast<Detail::DxTexture*>(zbuf);
+  return PFbo(new DxFramebuffer(dx,lay,sx,imageId,z));
   }
 
-AbstractGraphicsApi::PFbo DirectX12Api::createFbo(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::FboLayout*,
+AbstractGraphicsApi::PFbo DirectX12Api::createFbo(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::FboLayout* l,
                                                   uint32_t /*w*/, uint32_t /*h*/,
                                                   AbstractGraphicsApi::Texture* cl, AbstractGraphicsApi::Texture* zbuf) {
-  auto& dx = *reinterpret_cast<Detail::DxDevice*> (d);
-  auto& t0 = *reinterpret_cast<Detail::DxTexture*>(cl);
-  auto& z  = *reinterpret_cast<Detail::DxTexture*>(zbuf);
-  return PFbo(new DxFramebuffer(dx,t0,z));
+  auto& dx  = *reinterpret_cast<Detail::DxDevice*> (d);
+  auto& lay = *reinterpret_cast<Detail::DxFboLayout*>(l);
+  auto& t0  = *reinterpret_cast<Detail::DxTexture*>(cl);
+  auto& z   = *reinterpret_cast<Detail::DxTexture*>(zbuf);
+  return PFbo(new DxFramebuffer(dx,lay,t0,z));
   }
 
-AbstractGraphicsApi::PFbo DirectX12Api::createFbo(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::FboLayout*,
+AbstractGraphicsApi::PFbo DirectX12Api::createFbo(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::FboLayout* l,
                                                   uint32_t /*w*/, uint32_t /*h*/, AbstractGraphicsApi::Texture* cl) {
-  auto& dx = *reinterpret_cast<Detail::DxDevice*> (d);
-  auto& t0 = *reinterpret_cast<Detail::DxTexture*>(cl);
-  return PFbo(new DxFramebuffer(dx,t0));
+  auto& dx  = *reinterpret_cast<Detail::DxDevice*> (d);
+  auto& lay = *reinterpret_cast<Detail::DxFboLayout*>(l);
+  auto& t0  = *reinterpret_cast<Detail::DxTexture*>(cl);
+  return PFbo(new DxFramebuffer(dx,lay,t0));
   }
 
-AbstractGraphicsApi::PFboLayout DirectX12Api::createFboLayout(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Swapchain* s,
+AbstractGraphicsApi::PFboLayout DirectX12Api::createFboLayout(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Swapchain* s,
                                                               TextureFormat* att, size_t attCount) {
-  return PFboLayout();
+  auto& sx = *reinterpret_cast<Detail::DxSwapchain*>(s);
+  return PFboLayout(new DxFboLayout(sx,att,attCount));
   }
 
 AbstractGraphicsApi::PPipeline DirectX12Api::createPipeline(AbstractGraphicsApi::Device* d, const RenderState& st,
@@ -345,14 +351,15 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureL
   stage.read(out.data(),0,size);
   }
 
-AbstractGraphicsApi::CommandBundle* DirectX12Api::createCommandBuffer(Device* d, FboLayout*) {
-  Detail::DxDevice* dx = reinterpret_cast<Detail::DxDevice*>(d);
-  return new DxCommandBuffer(*dx);
+AbstractGraphicsApi::CommandBundle* DirectX12Api::createCommandBuffer(Device* d, FboLayout* l) {
+  Detail::DxDevice&    dx  = *reinterpret_cast<Detail::DxDevice*>(d);
+  Detail::DxFboLayout& lay = *reinterpret_cast<Detail::DxFboLayout*>(l);
+  return new DxCommandBuffer(dx,&lay);
   }
 
 AbstractGraphicsApi::CommandBuffer* DirectX12Api::createCommandBuffer(Device* d) {
   Detail::DxDevice* dx = reinterpret_cast<Detail::DxDevice*>(d);
-  return new DxCommandBuffer(*dx);
+  return new DxCommandBuffer(*dx,nullptr);
   }
 
 void DirectX12Api::present(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Swapchain* sw,

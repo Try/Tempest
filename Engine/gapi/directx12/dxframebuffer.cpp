@@ -9,25 +9,25 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-DxFramebuffer::DxFramebuffer(DxDevice& dev, DxSwapchain& swapchain, size_t image)
-  :viewsCount(1) {
+DxFramebuffer::DxFramebuffer(DxDevice& dev, DxFboLayout& lay, DxSwapchain& swapchain, size_t image)
+  :viewsCount(1), lay(&lay) {
   setupViews(*dev.device, {swapchain.views[image].get()}, nullptr);
   views[0].isSwImage = true;
   }
 
-DxFramebuffer::DxFramebuffer(DxDevice& dev, DxSwapchain& swapchain, size_t image, DxTexture& zbuf)
-  :viewsCount(1) {
+DxFramebuffer::DxFramebuffer(DxDevice& dev, DxFboLayout& lay, DxSwapchain& swapchain, size_t image, DxTexture& zbuf)
+  :viewsCount(1), lay(&lay) {
   setupViews(*dev.device, {swapchain.views[image].get()}, zbuf.impl.get());
   views[0].isSwImage = true;
   }
 
-DxFramebuffer::DxFramebuffer(DxDevice& dev, DxTexture& cl, DxTexture& zbuf)
-  :viewsCount(1) {
+DxFramebuffer::DxFramebuffer(DxDevice& dev, DxFboLayout& lay, DxTexture& cl, DxTexture& zbuf)
+  :viewsCount(1), lay(&lay) {
   setupViews(*dev.device, {cl.impl.get()}, zbuf.impl.get());
   }
 
-DxFramebuffer::DxFramebuffer(DxDevice& dev, DxTexture& cl)
-  :viewsCount(1) {
+DxFramebuffer::DxFramebuffer(DxDevice& dev, DxFboLayout& lay, DxTexture& cl)
+  :viewsCount(1), lay(&lay) {
   setupViews(*dev.device, {cl.impl.get()}, nullptr);
   views[0].isSwImage = false;
   }

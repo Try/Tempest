@@ -112,16 +112,13 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const 
   device.CreateSampler(&smpDesc,gpu);
   }
 
-void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer* b, size_t offset, size_t /*size*/, size_t /*align*/) {
-  assert(id==0);
-  assert(offset==0);
-
+void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer* b, size_t offset, size_t size, size_t /*align*/) {
   auto&      device = *dev.device;
   DxBuffer&  buf    = *reinterpret_cast<DxBuffer*>(b);
   // Describe and create a constant buffer view.
   D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-  cbvDesc.BufferLocation = buf.impl->GetGPUVirtualAddress();
-  cbvDesc.SizeInBytes    = (sizeof(buf.sizeInBytes) + 255) & ~255;    // CB size is required to be 256-byte aligned.
+  cbvDesc.BufferLocation = buf.impl->GetGPUVirtualAddress()+offset;
+  cbvDesc.SizeInBytes    = (sizeof(size) + 255) & ~255;    // CB size is required to be 256-byte aligned.
 
   auto& prm = layPtr.handler->prm[id];
   auto  gpu = heap[prm.heapId]->GetCPUDescriptorHandleForHeapStart();

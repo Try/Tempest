@@ -5,6 +5,7 @@
 #include "vswapchain.h"
 
 #include <Tempest/RenderPass>
+#include <cassert>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -156,6 +157,8 @@ void VRenderPass::setupAttach(VkAttachmentDescription &a, VkAttachmentReference&
 
 VkRenderPass VRenderPass::createLayoutInstance(VkDevice& device,VSwapchain &sw, const VkFormat *att, uint8_t attCount) {
   VkRenderPass ret=VK_NULL_HANDLE;
+
+  assert(attCount<=2 && "TODO: mrt-rendering");
 
   VkAttachmentDescription attach[2] = {};
   VkAttachmentReference   ref[2]    = {};

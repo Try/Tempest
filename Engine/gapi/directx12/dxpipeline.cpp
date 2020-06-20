@@ -11,15 +11,6 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-bool DxPipeline::Inst::isCompatible(const DxFramebuffer& frm) const {
-  if(viewsCount!=frm.viewsCount)
-    return false;
-  for(uint8_t i=0;i<viewsCount;++i)
-    if(RTVFormats[i]!=frm.views[i].format)
-      return false;
-  return true;
-  }
-
 DxPipeline::DxPipeline(DxDevice& device, const RenderState& st,
                        const Decl::ComponentType* decl, size_t declSize, size_t stride,
                        Topology tp, const DxUniformsLay& ulay,
@@ -83,19 +74,17 @@ DxPipeline::DxPipeline(DxDevice& device, const RenderState& st,
     }
   }
 
-ID3D12PipelineState& DxPipeline::instance(const DxFramebuffer& frm) {
+ID3D12PipelineState& DxPipeline::instance(DxFboLayout& frm) {
   std::lock_guard<SpinLock> guard(sync);
 
   for(auto& i:inst) {
-    if(i.isCompatible(frm))
+    if(i.lay.handler->equals(frm))
       return *i.impl.get();
     }
 
   Inst pso;
+  pso.lay  = DSharedPtr<DxFboLayout*>(&frm);
   pso.impl = initGraphicsPipeline(frm);
-  pso.viewsCount = frm.viewsCount;
-  for(uint8_t i=0;i<frm.viewsCount;++i)
-    pso.RTVFormats[i] = frm.views[i].format;
   inst.emplace_back(std::move(pso));
   return *inst.back().impl.get();
   }
@@ -151,7 +140,7 @@ D3D12_RASTERIZER_DESC DxPipeline::getRaster(const RenderState& st) const {
   return rd;
   }
 
-ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFramebuffer& frm) {
+ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& frm) {
   static const D3D12_COMPARISON_FUNC depthFn[size_t(RenderState::ZTestMode::Count)]= {
     D3D12_COMPARISON_FUNC_ALWAYS,
     D3D12_COMPARISON_FUNC_NEVER,
@@ -187,10 +176,10 @@ ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFramebuffer
     psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE; else
     psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
 
-  psoDesc.DSVFormat = frm.depth.format;
-  psoDesc.NumRenderTargets = frm.viewsCount;
-  for(uint8_t i=0;i<frm.viewsCount;++i)
-    psoDesc.RTVFormats[i] = frm.views[i].format;
+  psoDesc.DSVFormat = frm.DSVFormat;
+  psoDesc.NumRenderTargets = frm.NumRenderTargets;
+  for(uint8_t i=0;i<frm.NumRenderTargets;++i)
+    psoDesc.RTVFormats[i] = frm.RTVFormats[i];
 
   ComPtr<ID3D12PipelineState> ret;
   dxAssert(device.device->CreateGraphicsPipelineState(&psoDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&ret)));

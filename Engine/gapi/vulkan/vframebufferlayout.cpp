@@ -43,6 +43,6 @@ bool VFramebufferLayout::isCompatible(const VFramebufferLayout &other) const {
   return true;
   }
 
-bool VFramebufferLayout::equals(const Tempest::AbstractGraphicsApi::FboLayout &other) {
+bool VFramebufferLayout::equals(const Tempest::AbstractGraphicsApi::FboLayout &other) const {
   return isCompatible(reinterpret_cast<const VFramebufferLayout&>(other));
   }

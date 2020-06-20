@@ -24,7 +24,7 @@ class VFramebufferLayout : public AbstractGraphicsApi::FboLayout {
     VSwapchain*                 swapchain=nullptr;
 
     bool                        isCompatible(const VFramebufferLayout& other) const;
-    bool                        equals(const FboLayout& other) override;
+    bool                        equals(const FboLayout& other) const override;
 
   private:
     VkDevice     device=nullptr;

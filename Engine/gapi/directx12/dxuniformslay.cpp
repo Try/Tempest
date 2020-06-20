@@ -25,9 +25,21 @@ DxUniformsLay::DxUniformsLay(DxDevice& dev,
   std::vector<Parameter> desc;
   for(size_t i=0;i<lay.size();++i) {
     auto& l = lay[i];
-    add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,desc);
-    if(l.cls==UniformsLayout::Texture)
-      add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,desc);
+    switch(l.cls) {
+      case UniformsLayout::Ubo: {
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_CBV,desc);
+        break;
+        }
+      case UniformsLayout::Texture: {
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,    desc);
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,desc);
+        break;
+        }
+      case UniformsLayout::Push: {
+        //TODO
+        break;
+        }
+      }
     }
   std::sort(desc.begin(),desc.end(),[](const Parameter& a, const Parameter& b){
     return std::tie(a.visibility,a.rgn.RangeType)<std::tie(b.visibility,b.rgn.RangeType);

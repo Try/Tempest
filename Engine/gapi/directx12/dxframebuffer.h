@@ -4,6 +4,7 @@
 
 #include <d3d12.h>
 #include "gapi/directx12/comptr.h"
+#include "dxfbolayout.h"
 
 namespace Tempest {
 
@@ -15,10 +16,10 @@ class DxSwapchain;
 
 class DxFramebuffer : public AbstractGraphicsApi::Fbo {
   public:
-    DxFramebuffer(DxDevice& dev, DxSwapchain &swapchain, size_t image);
-    DxFramebuffer(DxDevice& dev, DxSwapchain &swapchain, size_t image, DxTexture &zbuf);
-    DxFramebuffer(DxDevice& dev, DxTexture &cl, DxTexture &zbuf);
-    DxFramebuffer(DxDevice& dev, DxTexture &cl);
+    DxFramebuffer(DxDevice& dev, DxFboLayout& lay, DxSwapchain &swapchain, size_t image);
+    DxFramebuffer(DxDevice& dev, DxFboLayout& lay, DxSwapchain &swapchain, size_t image, DxTexture &zbuf);
+    DxFramebuffer(DxDevice& dev, DxFboLayout& lay, DxTexture &cl, DxTexture &zbuf);
+    DxFramebuffer(DxDevice& dev, DxFboLayout& lay, DxTexture &cl);
     ~DxFramebuffer();
 
     ComPtr<ID3D12DescriptorHeap>              rtvHeap;
@@ -30,10 +31,11 @@ class DxFramebuffer : public AbstractGraphicsApi::Fbo {
       bool            isSwImage = false;
       DXGI_FORMAT     format    = DXGI_FORMAT_UNKNOWN;
       };
-    std::unique_ptr<View[]> views;
-    UINT32                  viewsCount;
+    std::unique_ptr<View[]>  views;
+    UINT32                   viewsCount;
 
-    View                    depth;
+    View                     depth;
+    DSharedPtr<DxFboLayout*> lay;
 
   private:
     void setupViews(ID3D12Device& device, const std::initializer_list<ID3D12Resource*>& res, ID3D12Resource* ds);

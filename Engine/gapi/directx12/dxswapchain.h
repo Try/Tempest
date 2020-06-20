@@ -31,6 +31,8 @@ class DxSwapchain : public AbstractGraphicsApi::Swapchain {
 
     void                     queuePresent();
 
+    DXGI_FORMAT              format() const { return frm; }
+
     ComPtr<IDXGISwapChain3>                   impl;
     ComPtr<ID3D12DescriptorHeap>              rtvHeap;
     std::unique_ptr<ComPtr<ID3D12Resource>[]> views;

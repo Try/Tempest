@@ -7,6 +7,7 @@
 #include "gapi/directx12/comptr.h"
 #include "utility/spinlock.h"
 
+#include "dxfbolayout.h"
 #include "dxuniformslay.h"
 
 namespace Tempest {
@@ -14,7 +15,6 @@ namespace Detail {
 
 class DxDevice;
 class DxShader;
-class DxFramebuffer;
 
 class DxPipeline : public AbstractGraphicsApi::Pipeline {
   public:
@@ -30,10 +30,8 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
       Inst(Inst&&)=default;
       Inst& operator = (Inst&&)=default;
 
-      uint8_t                           viewsCount    = 0;
-      DXGI_FORMAT                       RTVFormats[8] = {};
-      ComPtr<ID3D12PipelineState>       impl;
-      bool                              isCompatible(const DxFramebuffer& frm) const;
+      DSharedPtr<DxFboLayout*>    lay;
+      ComPtr<ID3D12PipelineState> impl;
       };
 
     ComPtr<ID3D12RootSignature> sign;
@@ -41,7 +39,7 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
     UINT                        stride=0;
     D3D_PRIMITIVE_TOPOLOGY      topology=D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 
-    ID3D12PipelineState&        instance(const DxFramebuffer& frm);
+    ID3D12PipelineState&        instance(DxFboLayout& frm);
 
   private:
     DxDevice&                   device;
@@ -56,7 +54,7 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
 
     D3D12_BLEND_DESC            getBlend(const RenderState &st) const;
     D3D12_RASTERIZER_DESC       getRaster(const RenderState &st) const;
-    ComPtr<ID3D12PipelineState> initGraphicsPipeline(const DxFramebuffer& frm);
+    ComPtr<ID3D12PipelineState> initGraphicsPipeline(const DxFboLayout& frm);
   };
 
 }}

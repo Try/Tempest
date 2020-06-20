@@ -9,6 +9,7 @@
 #include "dxswapchain.h"
 #include "dxdescriptorarray.h"
 #include "dxrenderpass.h"
+#include "dxfbolayout.h"
 
 #include "guid.h"
 
@@ -24,8 +25,8 @@ struct DxCommandBuffer::ImgState {
   bool                  outdated;
   };
 
-DxCommandBuffer::DxCommandBuffer(DxDevice& d)
-  : dev(d) {
+DxCommandBuffer::DxCommandBuffer(DxDevice& d, DxFboLayout* currentFbo)
+  : dev(d), currentFbo(currentFbo) {
   dxAssert(d.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
                                             uuid<ID3D12CommandAllocator>(),
                                             reinterpret_cast<void**>(&pool)));
@@ -71,7 +72,7 @@ void DxCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*  f,
   auto& fbo  = *reinterpret_cast<DxFramebuffer*>(f);
   auto& pass = *reinterpret_cast<DxRenderPass*>(p);
 
-  currentFbo = &fbo;
+  currentFbo = fbo.lay.handler;
 
   for(auto& i:imgState)
     i.outdated = true;
