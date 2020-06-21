@@ -16,6 +16,8 @@ class DxBuffer : public AbstractGraphicsApi::Buffer {
     void  update(const void* data,size_t off,size_t count,size_t sz,size_t alignedSz) override;
     void  read  (void* data,size_t off,size_t sz);
 
+    void  uploadS3TC(const uint8_t* d, uint32_t w, uint32_t h, uint32_t mip, UINT blockSize);
+
     ComPtr<ID3D12Resource> impl;
     UINT                   sizeInBytes=0;
   };

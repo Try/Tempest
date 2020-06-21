@@ -88,6 +88,11 @@ inline D3D12_TEXTURE_ADDRESS_MODE nativeFormat(ClampMode f){
   return vfrm[int(f)];
   }
 
+inline UINT alignTo(UINT x, UINT a) {
+  a--;
+  return (x+a) & (~a);
+  }
+
 class DxDevice : public AbstractGraphicsApi::Device {
   public:
     DxDevice(IDXGIAdapter1& adapter);

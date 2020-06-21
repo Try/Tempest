@@ -268,6 +268,8 @@ void DxCommandBuffer::copy(DxBuffer& dest, size_t offsetDest, const DxBuffer& sr
 
 void DxCommandBuffer::copy(DxTexture& dest, size_t width, size_t height, size_t mip,
                            const DxBuffer& src, size_t offset) {
+  //assert(offset%512==0);
+
   D3D12_PLACED_SUBRESOURCE_FOOTPRINT foot = {};
   foot.Offset             = offset;
   foot.Footprint.Format   = dest.format;
@@ -277,9 +279,9 @@ void DxCommandBuffer::copy(DxTexture& dest, size_t width, size_t height, size_t 
   if(dest.format==DXGI_FORMAT_BC1_UNORM ||
      dest.format==DXGI_FORMAT_BC2_UNORM ||
      dest.format==DXGI_FORMAT_BC3_UNORM) {
-    //foot.Footprint.Width /=4;
-    //foot.Footprint.Height/=4;
-    foot.Footprint.RowPitch = UINT(width/4)*(dest.format==DXGI_FORMAT_BC1_UNORM ? 8 : 16);
+    foot.Footprint.RowPitch = UINT((width+3)/4)*(dest.format==DXGI_FORMAT_BC1_UNORM ? 8 : 16);
+    foot.Footprint.RowPitch = ((foot.Footprint.RowPitch+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)
+                               /D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
     } else {
     const UINT bpp = dest.bitCount()/8;
     foot.Footprint.RowPitch = UINT((width*bpp+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)
@@ -301,7 +303,7 @@ void DxCommandBuffer::copy(DxTexture& dest, size_t width, size_t height, size_t 
 
 void DxCommandBuffer::copy(DxBuffer& dest, size_t width, size_t height, size_t mip,
                            const DxTexture& src, size_t offset) {
-  const UINT bpp = (src.bitCount()+7)/8;
+  const UINT bpp = src.bitCount()/8;
 
   D3D12_PLACED_SUBRESOURCE_FOOTPRINT foot = {};
   foot.Offset             = offset;

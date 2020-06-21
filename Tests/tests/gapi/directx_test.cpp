@@ -162,3 +162,20 @@ TEST(DirectX12Api,Draw) {
     }
 #endif
   }
+
+TEST(DirectX12Api,S3TC) {
+#if defined(_MSC_VER)
+  try {
+    DirectX12Api api{ApiFlags::Validation};
+    Device       device(api);
+
+    auto tex = device.loadTexture("data/img/tst-dxt5.dds");
+    EXPECT_EQ(tex.format(),TextureFormat::DXT5);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping directx testcase: ", e.what()); else
+      throw;
+    }
+#endif
+  }
