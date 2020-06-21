@@ -7,7 +7,6 @@ namespace Tempest {
 
 class Device;
 class CommandBuffer;
-class PrimaryCommandBuffer;
 class Frame;
 class FrameBuffer;
 class Texture2d;
@@ -51,6 +50,6 @@ class FrameBuffer final {
     uint32_t                                      mw=0, mh=0;
 
   friend class Tempest::Device;
-  friend class Tempest::Encoder<Tempest::PrimaryCommandBuffer>;
+  friend class Tempest::Encoder<Tempest::CommandBuffer>;
   };
 }

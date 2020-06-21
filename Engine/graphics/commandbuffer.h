@@ -18,7 +18,6 @@ class Encoder;
 
 class FrameBufferLayout;
 class CommandBuffer;
-class PrimaryCommandBuffer;
 
 class CommandBuffer final {
   public:
@@ -27,38 +26,16 @@ class CommandBuffer final {
     ~CommandBuffer();
     CommandBuffer& operator = (CommandBuffer&& other)=default;
 
-    auto startEncoding(Tempest::Device& dev,const FrameBufferLayout &lay, Size wh) -> Encoder<CommandBuffer>;
-    auto startEncoding(Tempest::Device& dev,const FrameBufferLayout &lay, int w, int h) -> Encoder<CommandBuffer>;
+    auto startEncoding(Tempest::Device& dev) -> Encoder<CommandBuffer>;
 
   private:
-    CommandBuffer(Tempest::Device& dev, AbstractGraphicsApi::CommandBundle* impl);
-
-    Tempest::Device*                                    dev=nullptr;
-    Detail::DPtr<AbstractGraphicsApi::CommandBundle*>   impl;
-    Detail::DSharedPtr<AbstractGraphicsApi::FboLayout*> layout;
-
-  friend class PrimaryCommandBuffer;
-  friend class Tempest::Device;
-  friend class Tempest::Encoder<CommandBuffer>;
-  friend class Tempest::Encoder<PrimaryCommandBuffer>;
-  };
-
-class PrimaryCommandBuffer final {
-  public:
-    PrimaryCommandBuffer()=default;
-    PrimaryCommandBuffer(PrimaryCommandBuffer&& f)=default;
-    PrimaryCommandBuffer& operator = (PrimaryCommandBuffer&& other)=default;
-    ~PrimaryCommandBuffer();
-
-    auto startEncoding(Tempest::Device& dev) -> Encoder<PrimaryCommandBuffer>;
-
-  private:
-    PrimaryCommandBuffer(Tempest::Device& dev,AbstractGraphicsApi::CommandBuffer* impl);
+    CommandBuffer(Tempest::Device& dev, AbstractGraphicsApi::CommandBuffer* impl);
 
     Tempest::Device*                                    dev=nullptr;
     Detail::DPtr<AbstractGraphicsApi::CommandBuffer*>   impl;
 
   friend class Tempest::Device;
-  friend class Tempest::Encoder<PrimaryCommandBuffer>;
+  friend class Tempest::Encoder<CommandBuffer>;
   };
+
 }

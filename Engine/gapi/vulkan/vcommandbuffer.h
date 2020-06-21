@@ -3,7 +3,6 @@
 #include <Tempest/AbstractGraphicsApi>
 #include "vulkan_sdk.h"
 
-#include "vcommandbundle.h"
 #include "vcommandpool.h"
 #include "vframebuffer.h"
 #include "../utility/dptr.h"
@@ -55,8 +54,6 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
                          uint32_t width,uint32_t height);
     void endRenderPass();
 
-    void exec(const AbstractGraphicsApi::CommandBundle& buf);
-
     void setPipeline(AbstractGraphicsApi::Pipeline& p, uint32_t w, uint32_t h);
     void setBytes   (AbstractGraphicsApi::Pipeline &p, void* data, size_t size);
     void setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u);
@@ -85,20 +82,14 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
   private:
     struct ImgState;
 
-    void            flushLastCmd();
     void            flushLayout();
 
     VCommandBuffer::ImgState&
                     findImg(VkImage img, VkFormat frm, VkImageLayout last, bool preserve);
     void            setLayout(VFramebuffer::Attach& a, VkFormat frm, VkImageLayout lay, bool preserve);
 
-    VCommandBundle& getChunk();
-
     VDevice&                                device;
     VCommandPool                            pool;
-
-    std::vector<VCommandBundle>             chunks, reserved;
-    VCommandBundle*                         lastChunk=nullptr;
 
     std::vector<ImgState>                   imgState;
 

@@ -7,7 +7,6 @@ namespace Tempest {
 
 class Device;
 class CommandBuffer;
-class PrimaryCommandBuffer;
 class Texture2d;
 
 //! attachment 2d texture class
@@ -35,7 +34,6 @@ class ZBuffer final {
   friend class Tempest::Device;
   friend class Tempest::Uniforms;
   friend class Encoder<Tempest::CommandBuffer>;
-  friend class Encoder<Tempest::PrimaryCommandBuffer>;
 
   template<class T>
   friend class Tempest::Detail::ResourcePtr;

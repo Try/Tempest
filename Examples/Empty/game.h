@@ -56,6 +56,6 @@ class Game : public Tempest::Window {
 
     std::vector<FrameLocal> fLocal;
 
-    std::vector<Tempest::PrimaryCommandBuffer> commands;
-    std::vector<Tempest::FrameBuffer>          fbo;
+    std::vector<Tempest::CommandBuffer> commands;
+    std::vector<Tempest::FrameBuffer>   fbo;
   };

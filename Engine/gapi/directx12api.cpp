@@ -250,15 +250,13 @@ AbstractGraphicsApi::PUniformsLay DirectX12Api::createUboLayout(Device* d, const
   }
 
 AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mipCnt) {
+  if(isCompressedFormat(frm))
+    return createCompressedTexture(d,p,frm,mipCnt);
+
   Detail::DxDevice& dx     = *reinterpret_cast<Detail::DxDevice*>(d);
 
   DXGI_FORMAT       format = Detail::nativeFormat(frm);
-  uint32_t          row    = 0;
-  if(isCompressedFormat(frm)) {
-
-    } else {
-    row = p.w()*p.bpp();
-    }
+  uint32_t          row    = p.w()*p.bpp();
   const uint32_t    pith   = ((row+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
   Detail::DxBuffer  stage  = dx.allocator.alloc(p.data(),p.h(),row,pith,MemUsage::TransferSrc,BufferHeap::Upload);
   Detail::DxTexture buf    = dx.allocator.alloc(p,/*mipCnt*/1,format);
@@ -271,27 +269,46 @@ AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixma
   dat.hold(pbuf);
 
   // dat.changeLayout(*pbuf.handler, frm, TextureLayout::Undefined, TextureLayout::TransferDest, mipCnt);
-  if(isCompressedFormat(frm)){
-    size_t blocksize  = (frm==TextureFormat::DXT1) ? 8 : 16;
-    size_t bufferSize = 0;
+  dat.copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
+  if(mipCnt>1)
+    dat.generateMipmap(*pbuf.handler,frm,p.w(),p.h(),mipCnt); else
+    dat.changeLayout(*pbuf.handler, frm, TextureLayout::TransferDest, TextureLayout::Sampler,mipCnt);
+  dat.commit();
+  return PTexture(pbuf.handler);
+  }
 
-    uint32_t w = uint32_t(p.w()), h = uint32_t(p.h());
-    for(uint32_t i=0; i<mipCnt; i++){
-      size_t blockcount = ((w+3)/4)*((h+3)/4);
-      dat.copy(*pbuf.handler,w,h,i,*pstage.handler,bufferSize);
+AbstractGraphicsApi::PTexture DirectX12Api::createCompressedTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mipCnt) {
+  Detail::DxDevice& dx     = *reinterpret_cast<Detail::DxDevice*>(d);
 
-      bufferSize += blockcount*blocksize;
-      w = std::max<uint32_t>(1,w/2);
-      h = std::max<uint32_t>(1,h/2);
-      }
+  DXGI_FORMAT       format    = Detail::nativeFormat(frm);
+  size_t            blocksize = (frm==TextureFormat::DXT1) ? 8 : 16;
+  uint32_t          row       = ((p.w()+3)/4)*blocksize;
+  uint32_t          hblk      = ((p.h()+3)/4);
+  const uint32_t    size   = uint32_t(p.dataSize());
 
-    dat.changeLayout(*pbuf.handler, frm, TextureLayout::TransferDest, TextureLayout::Sampler, mipCnt);
-    } else {
-    dat.copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
-    if(mipCnt>1)
-      dat.generateMipmap(*pbuf.handler,frm,p.w(),p.h(),mipCnt); else
-      dat.changeLayout(*pbuf.handler, frm, TextureLayout::TransferDest, TextureLayout::Sampler,mipCnt);
+  const uint32_t    pith   = ((row+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
+  Detail::DxBuffer  stage  = dx.allocator.alloc(p.data(),size,1,1,MemUsage::TransferSrc,BufferHeap::Upload);
+  Detail::DxTexture buf    = dx.allocator.alloc(p,mipCnt,format);
+
+  Detail::DSharedPtr<Detail::DxBuffer*>  pstage(new Detail::DxBuffer (std::move(stage)));
+  Detail::DSharedPtr<Detail::DxTexture*> pbuf  (new Detail::DxTexture(std::move(buf)));
+
+  size_t bufferSize = 0;
+
+  Detail::DxDevice::Data dat(dx);
+  dat.hold(pstage);
+  dat.hold(pbuf);
+  uint32_t w = uint32_t(p.w()), h = uint32_t(p.h());
+  for(uint32_t i=0; i<mipCnt; i++){
+    size_t blockcount = ((w+3)/4)*((h+3)/4);
+    dat.copy(*pbuf.handler,w,h,i,*pstage.handler,bufferSize);
+
+    bufferSize += blockcount*blocksize;
+    w = std::max<uint32_t>(1,w/2);
+    h = std::max<uint32_t>(1,h/2);
     }
+
+  dat.changeLayout(*pbuf.handler, frm, TextureLayout::TransferDest, TextureLayout::Sampler, mipCnt);
   dat.commit();
   return PTexture(pbuf.handler);
   }
@@ -349,12 +366,6 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureL
 
   out = Pixmap(w,h,pfrm);
   stage.read(out.data(),0,size);
-  }
-
-AbstractGraphicsApi::CommandBundle* DirectX12Api::createCommandBuffer(Device* d, FboLayout* l) {
-  Detail::DxDevice&    dx  = *reinterpret_cast<Detail::DxDevice*>(d);
-  Detail::DxFboLayout& lay = *reinterpret_cast<Detail::DxFboLayout*>(l);
-  return new DxCommandBuffer(dx,&lay);
   }
 
 AbstractGraphicsApi::CommandBuffer* DirectX12Api::createCommandBuffer(Device* d) {

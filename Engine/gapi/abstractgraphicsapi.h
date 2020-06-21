@@ -288,7 +288,15 @@ namespace Tempest {
         virtual void set(size_t id,AbstractGraphicsApi::Texture *tex, const Sampler2d& smp)=0;
         virtual void set(size_t id,AbstractGraphicsApi::Buffer* buf,size_t offset,size_t size,size_t align)=0;
         };
-      struct CommandBundle:NoCopy {
+      struct CommandBuffer:NoCopy {
+        virtual ~CommandBuffer()=default;
+        virtual void beginRenderPass(AbstractGraphicsApi::Fbo* f,
+                                     AbstractGraphicsApi::Pass*  p,
+                                     uint32_t width,uint32_t height)=0;
+        virtual void endRenderPass()=0;
+
+        virtual void changeLayout(Swapchain& s, uint32_t id, TextureFormat frm, TextureLayout prev, TextureLayout next)=0;
+        virtual void changeLayout(Texture& t,TextureFormat frm,TextureLayout prev,TextureLayout next)=0;
         virtual bool isRecording() const = 0;
         virtual void begin()=0;
         virtual void end()  =0;
@@ -301,17 +309,6 @@ namespace Tempest {
         virtual void setIbo      (const Buffer& b,Detail::IndexClass cls)=0;
         virtual void draw        (size_t offset,size_t vertexCount)=0;
         virtual void drawIndexed (size_t ioffset, size_t isize, size_t voffset)=0;
-        };
-      struct CommandBuffer:CommandBundle {
-        virtual ~CommandBuffer()=default;
-        virtual void beginRenderPass(AbstractGraphicsApi::Fbo* f,
-                                     AbstractGraphicsApi::Pass*  p,
-                                     uint32_t width,uint32_t height)=0;
-        virtual void endRenderPass()=0;
-        virtual void exec        (const AbstractGraphicsApi::CommandBundle& buf)=0;
-
-        virtual void changeLayout(Swapchain& s, uint32_t id, TextureFormat frm, TextureLayout prev, TextureLayout next)=0;
-        virtual void changeLayout(Texture& t,TextureFormat frm,TextureLayout prev,TextureLayout next)=0;
         };
 
       using PBuffer      = Detail::DSharedPtr<Buffer*>;
@@ -355,8 +352,6 @@ namespace Tempest {
 
       virtual Semaphore* createSemaphore(Device *d)=0;
 
-      virtual CommandBundle*
-                         createCommandBuffer(Device* d, FboLayout* fbo)=0;
       virtual CommandBuffer*
                          createCommandBuffer(Device* d)=0;
 

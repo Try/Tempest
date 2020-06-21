@@ -91,7 +91,7 @@ void Game::render(){
 
     {
     auto enc = cmd.startEncoding(device);
-    enc.setPass(fbo[imgId],pass);
+    enc.setFramebuffer(fbo[imgId],pass);
     surface.draw(device,swapchain,enc);
     }
 

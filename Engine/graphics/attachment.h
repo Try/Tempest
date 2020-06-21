@@ -7,7 +7,6 @@ namespace Tempest {
 
 class Device;
 class CommandBuffer;
-class PrimaryCommandBuffer;
 class Texture2d;
 class Swapchain;
 
@@ -42,7 +41,6 @@ class Attachment final {
   friend class Tempest::Swapchain;
   friend class Tempest::Uniforms;
   friend class Encoder<Tempest::CommandBuffer>;
-  friend class Encoder<Tempest::PrimaryCommandBuffer>;
 
   template<class T>
   friend class Tempest::Detail::ResourcePtr;

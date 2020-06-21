@@ -90,6 +90,12 @@ void DxCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*  f,
     setLayout(fbo.views[i].res,lay,fbo.views[i].isSwImage,preserve);
     }
 
+  if(fbo.depth.res!=nullptr) {
+    D3D12_RESOURCE_STATES lay = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+    const bool preserve = pass.isAttachPreserved(pass.att.size()-1);
+    setLayout(fbo.depth.res,lay,fbo.depth.isSwImage,preserve);
+    }
+
   flushLayout();
 
   auto  desc = fbo.rtvHeap->GetCPUDescriptorHandleForHeapStart();
@@ -124,6 +130,14 @@ void DxCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*  f,
     impl->ClearRenderTargetView(desc, clearColor, 0, nullptr);
     desc.ptr+=fbo.rtvHeapInc;
     }
+
+  if(fbo.depth.res!=nullptr) {
+    auto& att = pass.att.back();
+    if(FboMode::ClearBit==(att.mode&FboMode::ClearBit)) {
+      auto ds = fbo.dsvHeap->GetCPUDescriptorHandleForHeapStart();
+      impl->ClearDepthStencilView(ds,D3D12_CLEAR_FLAG_DEPTH,att.clear.r(),0, 0,nullptr);
+      }
+    }
   }
 
 void DxCommandBuffer::endRenderPass() {
@@ -148,7 +162,9 @@ void DxCommandBuffer::setViewport(const Rect& r) {
   vp.MinDepth = 0.f;
   vp.MaxDepth = 1.f;
 
-  impl->RSSetViewports(1,&vp);
+  //FIXME
+  if(isSecondary==nullptr)
+    impl->RSSetViewports(1, &vp);
   }
 
 void DxCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, void* data, size_t size) {
@@ -169,11 +185,6 @@ void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/, Abstract
     }
   }
 
-void DxCommandBuffer::exec(const CommandBundle& buf) {
-  auto& dx = reinterpret_cast<const DxCommandBuffer&>(buf);
-  impl->ExecuteBundle(dx.impl.get()); //BUNDLE!
-  }
-
 void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id, TextureFormat /*frm*/,
                                    TextureLayout prev, TextureLayout next) {
   DxSwapchain&    sw  = reinterpret_cast<DxSwapchain&>(s);
@@ -189,7 +200,8 @@ void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Swapchain& s, uint32_t i
                    layouts[int(prev)],layouts[int(next)]);
   }
 
-void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t, TextureFormat /*frm*/, TextureLayout prev, TextureLayout next) {
+void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t, TextureFormat /*frm*/,
+                                   TextureLayout prev, TextureLayout next) {
   DxTexture& tex = reinterpret_cast<DxTexture&>(t);
   D3D12_RESOURCE_BARRIER barrier = {};
   barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -201,7 +213,8 @@ void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t, TextureForma
   impl->ResourceBarrier(1, &barrier);
   }
 
-void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t, TextureFormat /*frm*/, TextureLayout prev, TextureLayout next, uint32_t mipCnt) {
+void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t, TextureFormat /*frm*/,
+                                   TextureLayout prev, TextureLayout next, uint32_t /*mipCnt*/) {
   DxTexture& tex = reinterpret_cast<DxTexture&>(t);
   D3D12_RESOURCE_BARRIER barrier = {};
   barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -255,15 +268,23 @@ void DxCommandBuffer::copy(DxBuffer& dest, size_t offsetDest, const DxBuffer& sr
 
 void DxCommandBuffer::copy(DxTexture& dest, size_t width, size_t height, size_t mip,
                            const DxBuffer& src, size_t offset) {
-  const UINT bpp = (dest.bitCount()+7)/8;
-
   D3D12_PLACED_SUBRESOURCE_FOOTPRINT foot = {};
   foot.Offset             = offset;
   foot.Footprint.Format   = dest.format;
   foot.Footprint.Width    = UINT(width);
   foot.Footprint.Height   = UINT(height);
   foot.Footprint.Depth    = 1;
-  foot.Footprint.RowPitch = UINT((width*bpp+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
+  if(dest.format==DXGI_FORMAT_BC1_UNORM ||
+     dest.format==DXGI_FORMAT_BC2_UNORM ||
+     dest.format==DXGI_FORMAT_BC3_UNORM) {
+    //foot.Footprint.Width /=4;
+    //foot.Footprint.Height/=4;
+    foot.Footprint.RowPitch = UINT(width/4)*(dest.format==DXGI_FORMAT_BC1_UNORM ? 8 : 16);
+    } else {
+    const UINT bpp = dest.bitCount()/8;
+    foot.Footprint.RowPitch = UINT((width*bpp+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)
+                                   /D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
+    }
 
   D3D12_TEXTURE_COPY_LOCATION dstLoc = {};
   dstLoc.pResource        = dest.impl.get();

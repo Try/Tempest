@@ -31,9 +31,6 @@ VCommandBuffer::VCommandBuffer(VDevice& device, VkCommandPoolCreateFlags flags)
   allocInfo.commandBufferCount = 1;
 
   vkAssert(vkAllocateCommandBuffers(device.device,&allocInfo,&impl));
-
-  chunks  .reserve(8);
-  reserved.reserve(8);
   }
 
 VCommandBuffer::~VCommandBuffer() {
@@ -42,8 +39,6 @@ VCommandBuffer::~VCommandBuffer() {
 
 void VCommandBuffer::reset() {
   vkResetCommandBuffer(impl,VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
-  chunks.clear();
-  reserved.clear();
   }
 
 void VCommandBuffer::begin() {
@@ -52,9 +47,6 @@ void VCommandBuffer::begin() {
 
 void VCommandBuffer::begin(VkCommandBufferUsageFlags flg) {
   state = NoPass;
-  reserved = std::move(chunks);
-  for(auto& i:reserved)
-    i.reset();
 
   VkCommandBufferBeginInfo beginInfo = {};
   beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -65,6 +57,8 @@ void VCommandBuffer::begin(VkCommandBufferUsageFlags flg) {
   }
 
 void VCommandBuffer::end() {
+  if(state==RenderPass)
+    endRenderPass();
   for(auto& i:imgState)
     i.outdated = true;
   flushLayout();
@@ -113,7 +107,7 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
   renderPassInfo.clearValueCount   = pass.attCount;
   renderPassInfo.pClearValues      = rp.clear.get();
 
-  vkCmdBeginRenderPass(impl, &renderPassInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+  vkCmdBeginRenderPass(impl, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
   state = RenderPass;
 
@@ -123,37 +117,58 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
   }
 
 void VCommandBuffer::endRenderPass() {
-  flushLastCmd();
   vkCmdEndRenderPass(impl);
   state = NoPass;
   }
 
 void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p,uint32_t w,uint32_t h) {
-  getChunk().setPipeline(p,w,h);
+  VPipeline&           px = reinterpret_cast<VPipeline&>(p);
+  VFramebufferLayout*  l  = reinterpret_cast<VFramebufferLayout*>(curFbo.handler);
+  auto& v = px.instance(*l,w,h);
+  vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v.val);
   }
 
 void VCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, void* data, size_t size) {
-  getChunk().setBytes(p,data,size);
+  VPipeline&        px=reinterpret_cast<VPipeline&>(p);
+  vkCmdPushConstants(impl, px.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, uint32_t(size), data);
   }
 
 void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u) {
-  lastChunk->setUniforms(p,u);
+  VPipeline&        px=reinterpret_cast<VPipeline&>(p);
+  VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
+  vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,
+                          px.pipelineLayout,0,
+                          1,&ux.desc,
+                          0,nullptr);
   }
 
 void VCommandBuffer::draw(size_t offset,size_t size) {
-  lastChunk->draw(offset,size);
+  vkCmdDraw(impl,uint32_t(size), 1, uint32_t(offset),0);
   }
 
 void VCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset) {
-  lastChunk->drawIndexed(ioffset,isize,voffset);
+  vkCmdDrawIndexed(impl,uint32_t(isize),1, uint32_t(ioffset), int32_t(voffset),0);
   }
 
 void VCommandBuffer::setVbo(const Tempest::AbstractGraphicsApi::Buffer &b) {
-  getChunk().setVbo(b);
+  const VBuffer& vbo=reinterpret_cast<const VBuffer&>(b);
+
+  std::initializer_list<VkBuffer>     buffers = {vbo.impl};
+  std::initializer_list<VkDeviceSize> offsets = {0};
+  vkCmdBindVertexBuffers(
+        impl, 0, uint32_t(buffers.size()),
+        buffers.begin(),
+        offsets.begin() );
   }
 
 void VCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer& b,Detail::IndexClass cls) {
-  getChunk().setIbo(b,cls);
+  static const VkIndexType type[]={
+    VK_INDEX_TYPE_UINT16,
+    VK_INDEX_TYPE_UINT32
+    };
+
+  const VBuffer& ibo=reinterpret_cast<const VBuffer&>(b);
+  vkCmdBindIndexBuffer(impl,ibo.impl,0,type[uint32_t(cls)]);
   }
 
 void VCommandBuffer::setViewport(const Tempest::Rect &r) {
@@ -164,14 +179,7 @@ void VCommandBuffer::setViewport(const Tempest::Rect &r) {
   viewPort.minDepth = 0;
   viewPort.maxDepth = 1;
 
-  if(lastChunk!=nullptr)
-    vkCmdSetViewport(lastChunk->impl,0,1,&viewPort);
-  }
-
-void VCommandBuffer::exec(const CommandBundle &buf) {
-  flushLastCmd();
-  const VCommandBundle& ecmd=reinterpret_cast<const VCommandBundle&>(buf);
-  vkCmdExecuteCommands(impl,1,&ecmd.impl);
+  vkCmdSetViewport(impl,0,1,&viewPort);
   }
 
 void VCommandBuffer::setLayout(VFramebuffer::Attach& a, VkFormat frm, VkImageLayout lay, bool preserve) {
@@ -184,32 +192,6 @@ void VCommandBuffer::setLayout(VFramebuffer::Attach& a, VkFormat frm, VkImageLay
   changeLayout(img->img,img->frm,img->lay,lay,VK_REMAINING_MIP_LEVELS,true);
   img->outdated = false;
   img->lay      = lay;
-  }
-
-VCommandBundle& VCommandBuffer::getChunk() {
-  if(lastChunk!=nullptr)
-    return *lastChunk;
-
-  for(size_t i=0; i<reserved.size(); ++i) {
-    auto& c = reserved[i];
-    if(c.fboLay.handler==curFbo.handler) {
-      chunks.emplace_back(std::move(c));
-      c = std::move(reserved.back());
-      reserved.pop_back();
-      lastChunk = &chunks.back();
-      break;
-      }
-    }
-  if(lastChunk==nullptr) {
-    chunks.emplace_back(device.device,pool,curFbo.handler);
-    lastChunk = &chunks.back();
-    }
-
-  lastChunk = &chunks.back();
-
-  lastChunk->begin();
-  vkCmdSetViewport(lastChunk->impl,0,1,&viewPort);
-  return *lastChunk;
   }
 
 VCommandBuffer::ImgState& VCommandBuffer::findImg(VkImage img, VkFormat frm, VkImageLayout last, bool preserve) {
@@ -235,14 +217,6 @@ void VCommandBuffer::flushLayout() {
     changeLayout(i.img,i.frm,i.lay,i.last,VK_REMAINING_MIP_LEVELS,true);
     i.lay = i.last;
     i.outdated = false;
-    }
-  }
-
-void VCommandBuffer::flushLastCmd() {
-  if(lastChunk!=nullptr) {
-    lastChunk->end();
-    vkCmdExecuteCommands(impl,1,&lastChunk->impl);
-    lastChunk = nullptr;
     }
   }
 

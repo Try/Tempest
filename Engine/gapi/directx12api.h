@@ -56,7 +56,6 @@ class DirectX12Api : public AbstractGraphicsApi {
 
     PUniformsLay   createUboLayout(Device *d, const std::initializer_list<Shader*>& sh) override;
 
-    CommandBundle* createCommandBuffer(Device* d, FboLayout* fbo) override;
     CommandBuffer* createCommandBuffer(Device* d) override;
 
     void           present  (Device *d,Swapchain* sw,uint32_t imageId, const Semaphore *wait) override;
@@ -73,6 +72,8 @@ class DirectX12Api : public AbstractGraphicsApi {
   private:
     struct Impl;
     std::unique_ptr<Impl> impl;
+
+    PTexture       createCompressedTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mipCnt);
   };
 
 }

@@ -11,7 +11,6 @@ template<class T>
 class Encoder;
 
 class CommandBuffer;
-class PrimaryCommandBuffer;
 
 //! simple 2d texture class
 class Texture2d final {
@@ -38,7 +37,6 @@ class Texture2d final {
   friend class Tempest::Device;
   friend class Tempest::Uniforms;
   friend class Encoder<Tempest::CommandBuffer>;
-  friend class Encoder<Tempest::PrimaryCommandBuffer>;
 
   template<class T>
   friend class Tempest::Detail::ResourcePtr;

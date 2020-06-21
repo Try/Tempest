@@ -30,7 +30,7 @@ static int swizzle(ComponentSwizzle cs, int def){
   }
 
 DxDescriptorArray::DxDescriptorArray(DxDevice& dev, DxUniformsLay& vlay)
-  : dev(dev), layPtr(&vlay) {
+  : layPtr(&vlay), dev(dev) {
   auto& device = *dev.device;
 
   try {
@@ -118,7 +118,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer* b, size_t of
   // Describe and create a constant buffer view.
   D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
   cbvDesc.BufferLocation = buf.impl->GetGPUVirtualAddress()+offset;
-  cbvDesc.SizeInBytes    = (sizeof(size) + 255) & ~255;    // CB size is required to be 256-byte aligned.
+  cbvDesc.SizeInBytes    = UINT(size);    // CB size is required to be 256-byte aligned.
 
   auto& prm = layPtr.handler->prm[id];
   auto  gpu = heap[prm.heapId]->GetCPUDescriptorHandleForHeapStart();

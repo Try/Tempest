@@ -23,6 +23,7 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter) {
     D3D12_MESSAGE_ID denyIds[] = {
       // I'm really not sure how to avoid this message.
       D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
+      D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE
       };
     D3D12_INFO_QUEUE_FILTER filter = {};
     filter.DenyList.NumSeverities = _countof(severities);
@@ -78,7 +79,7 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, AbstractGraphicsApi::Props& pro
   // https://docs.microsoft.com/en-us/windows/win32/direct3ddxgi/hardware-support-for-direct3d-12-0-formats
   static const TextureFormat smp[] = {TextureFormat::R8,   TextureFormat::RG8,  TextureFormat::RGBA8,
                                       TextureFormat::R16,  TextureFormat::RG16, TextureFormat::RGBA16,
-                                      /*TextureFormat::DXT1, TextureFormat::DXT3, TextureFormat::DXT5*/};
+                                      TextureFormat::DXT1, TextureFormat::DXT3, TextureFormat::DXT5};
   static const TextureFormat att[] = {TextureFormat::R8,   TextureFormat::RG8,  TextureFormat::RGBA8,
                                       TextureFormat::R16,  TextureFormat::RG16, TextureFormat::RGBA16};
   static const TextureFormat ds[]  = {TextureFormat::Depth16, TextureFormat::Depth24x8, TextureFormat::Depth24S8};

@@ -9,7 +9,6 @@ namespace Tempest {
 
 class Device;
 class CommandBuffer;
-class PrimaryCommandBuffer;
 template<class T>
 class Encoder;
 
@@ -53,8 +52,7 @@ class RenderPass final {
     Detail::DSharedPtr<AbstractGraphicsApi::Pass*> impl;
 
   friend class Tempest::Device;
-  friend class Tempest::CommandBuffer;
-  friend class Tempest::Encoder<Tempest::PrimaryCommandBuffer>;
+  friend class Tempest::Encoder<Tempest::CommandBuffer>;
   };
 
 }

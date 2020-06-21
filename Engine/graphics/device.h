@@ -51,10 +51,10 @@ class Device {
     uint8_t              maxFramesInFlight() const;
     void                 waitIdle();
 
-    void                 submit(const PrimaryCommandBuffer&  cmd,const Semaphore& wait);
-    void                 submit(const PrimaryCommandBuffer&  cmd,Fence& fdone);
-    void                 submit(const PrimaryCommandBuffer&  cmd,const Semaphore& wait,Semaphore& done,Fence& fdone);
-    void                 submit(const PrimaryCommandBuffer *cmd[], size_t count,
+    void                 submit(const CommandBuffer&  cmd,const Semaphore& wait);
+    void                 submit(const CommandBuffer&  cmd,Fence& fdone);
+    void                 submit(const CommandBuffer&  cmd,const Semaphore& wait,Semaphore& done,Fence& fdone);
+    void                 submit(const CommandBuffer *cmd[], size_t count,
                                 const Semaphore* wait[], size_t waitCnt,
                                 Semaphore* done[], size_t doneCnt,
                                 Fence* fdone);
@@ -119,9 +119,7 @@ class Device {
     Fence                fence();
     Semaphore            semaphore();
 
-    PrimaryCommandBuffer commandBuffer();
-    CommandBuffer        commandSecondaryBuffer(const FrameBufferLayout &lay);
-    CommandBuffer        commandSecondaryBuffer(const FrameBuffer &fbo);
+    CommandBuffer        commandBuffer();
 
     const Builtin&       builtin() const;
     const char*          renderer() const;
@@ -148,7 +146,7 @@ class Device {
                              const Shader &vs, const Shader &fs,
                              const Decl::ComponentType *decl, size_t declSize,
                              size_t stride, Topology tp);
-    void        implSubmit(const Tempest::PrimaryCommandBuffer *cmd[], AbstractGraphicsApi::CommandBuffer* hcmd[],  size_t count,
+    void        implSubmit(const Tempest::CommandBuffer *cmd[], AbstractGraphicsApi::CommandBuffer* hcmd[],  size_t count,
                            const Semaphore* wait[], AbstractGraphicsApi::Semaphore*     hwait[], size_t waitCnt,
                            Semaphore*       done[], AbstractGraphicsApi::Semaphore*     hdone[], size_t doneCnt,
                            AbstractGraphicsApi::Fence*         fdone);

@@ -7,18 +7,8 @@
 
 using namespace Tempest;
 
-Encoder<Tempest::CommandBuffer>::Encoder(CommandBuffer* ow,int w,int h)
-  :owner(ow),impl(ow->impl.handler){
-  state.vp.width  = uint32_t(w);
-  state.vp.height = uint32_t(h);
-
-  impl->begin();
-  if(state.vp.width>0 && state.vp.height>0)
-    setViewport(0,0,int(state.vp.width),int(state.vp.height));
-  }
-
-Encoder<Tempest::CommandBuffer>::Encoder(AbstractGraphicsApi::CommandBuffer* impl)
-  :owner(nullptr),impl(impl){
+Encoder<Tempest::CommandBuffer>::Encoder(Tempest::CommandBuffer* ow)
+  :owner(ow),impl(ow->impl.handler) {
   state.vp.width  = 0;
   state.vp.height = 0;
 
@@ -109,30 +99,7 @@ void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer &vbo, const Vid
   impl->drawIndexed(offset,size,0);
   }
 
-
-Encoder<PrimaryCommandBuffer>::Encoder(PrimaryCommandBuffer *ow)
-  :Encoder<CommandBuffer>(ow->impl.handler) {
-  }
-
-Encoder<PrimaryCommandBuffer>::Encoder(Encoder<PrimaryCommandBuffer> &&e)
-  :Encoder<CommandBuffer>(std::move(e)), curPass(std::move(e.curPass)) {
-  }
-
-Encoder<PrimaryCommandBuffer> &Encoder<PrimaryCommandBuffer>::operator =(Encoder<PrimaryCommandBuffer> &&e) {
-  Encoder<CommandBuffer>::operator=(std::move(e));
-  std::swap(curPass, e.curPass);
-  return *this;
-  }
-
-Encoder<Tempest::PrimaryCommandBuffer>::~Encoder() noexcept(false) {
-  if(impl==nullptr)
-    return;
-  implEndRenderPass();
-  impl->end();
-  impl=nullptr;
-  }
-
-void Encoder<PrimaryCommandBuffer>::setFramebuffer(const FrameBuffer &fbo, const RenderPass &p) {
+void Encoder<CommandBuffer>::setFramebuffer(const FrameBuffer &fbo, const RenderPass &p) {
   implEndRenderPass();
 
   state.vp.width  = fbo.w();
@@ -144,20 +111,10 @@ void Encoder<PrimaryCommandBuffer>::setFramebuffer(const FrameBuffer &fbo, const
   curPass.pass = &p;
   }
 
-void Encoder<PrimaryCommandBuffer>::implEndRenderPass() {
+void Encoder<CommandBuffer>::implEndRenderPass() {
   if(curPass.pass!=nullptr) {
     state.curPipeline = nullptr;
     curPass           = Pass();
     reinterpret_cast<AbstractGraphicsApi::CommandBuffer*>(impl)->endRenderPass();
     }
-  }
-
-void Encoder<PrimaryCommandBuffer>::exec(const CommandBuffer &buf) {
-  if(buf.impl.handler==nullptr)
-    return;
-  reinterpret_cast<AbstractGraphicsApi::CommandBuffer*>(impl)->exec(*buf.impl.handler);
-  //FIXME: vulkan backend issue - implementation not preserving state across command-chunks
-  state.curPipeline = nullptr;
-  state.curVbo      = nullptr;
-  state.curIbo      = nullptr;
   }

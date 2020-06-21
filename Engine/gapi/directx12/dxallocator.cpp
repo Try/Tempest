@@ -115,14 +115,24 @@ DxTexture DxAllocator::alloc(const Pixmap& pm, uint32_t mip, DXGI_FORMAT format)
 DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mip, TextureFormat frm) {
   ComPtr<ID3D12Resource> ret;
 
+  D3D12_CLEAR_VALUE clr={};
+
   D3D12_RESOURCE_DESC resDesc = {};
   resDesc.MipLevels          = mip;
   resDesc.Format             = Detail::nativeFormat(frm);
   resDesc.Width              = w;
   resDesc.Height             = h;
-  if(isDepthFormat(frm))
-    resDesc.Flags            = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL; else
+  if(isDepthFormat(frm)) {
+    resDesc.Flags            = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+    clr.DepthStencil.Depth   = 1.f;
+    clr.DepthStencil.Stencil = 0;
+    } else {
     resDesc.Flags            = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+    clr.Color[0] = 0.f;
+    clr.Color[1] = 0.f;
+    clr.Color[2] = 0.f;
+    clr.Color[3] = 0.f;
+    }
   resDesc.DepthOrArraySize   = 1;
   resDesc.SampleDesc.Count   = 1;
   resDesc.SampleDesc.Quality = 0;
@@ -135,12 +145,14 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
   heapProp.CreationNodeMask     = 1;
   heapProp.VisibleNodeMask      = 1;
 
+  clr.Format = resDesc.Format;
+
   dxAssert(device->CreateCommittedResource(
              &heapProp,
              D3D12_HEAP_FLAG_NONE,
              &resDesc,
              D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-             nullptr,
+             &clr,
              uuid<ID3D12Resource>(),
              reinterpret_cast<void**>(&ret)
              ));
