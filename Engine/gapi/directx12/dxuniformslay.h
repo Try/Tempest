@@ -7,6 +7,8 @@
 #include <d3d12.h>
 #include "gapi/directx12/comptr.h"
 
+#include <bitset>
+
 namespace Tempest {
 
 class UniformsLayout;
@@ -22,11 +24,16 @@ class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
 
     using Binding = UniformsLayout::Binding;
 
+    enum {
+      POOL_SIZE = 128,
+      MAX_BINDS = 3
+      };
+
     struct Param {
-      UINT    heapOffset=0;
+      UINT64  heapOffset=0;
       uint8_t heapId=0;
 
-      UINT    heapOffsetSmp=0;
+      UINT64  heapOffsetSmp=0;
       uint8_t heapIdSmp=0;
       };
 
@@ -40,13 +47,32 @@ class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
       UINT   heapOffset = 0;
       };
 
+    struct DescriptorPool {
+      DescriptorPool(DxUniformsLay& lay);
+      DescriptorPool(DescriptorPool&& oth);
+      ~DescriptorPool();
+
+      ID3D12DescriptorHeap*     heap[MAX_BINDS] = {};
+      std::bitset<POOL_SIZE>    allocated;
+      };
+
+    struct PoolAllocation {
+      D3D12_CPU_DESCRIPTOR_HANDLE cpu[MAX_BINDS] = {};
+      D3D12_GPU_DESCRIPTOR_HANDLE gpu[MAX_BINDS] = {};
+      ID3D12DescriptorHeap*       heap[MAX_BINDS] = {};
+      size_t                      pool           = 0;
+      size_t                      offset         = 0;
+      };
+
     std::vector<Param>          prm;
     std::vector<Heap>           heaps;
     std::vector<RootPrm>        roots;
 
     ComPtr<ID3D12RootSignature> impl;
-    UINT                        descSize = 0;
     std::vector<Binding>        lay;
+
+    PoolAllocation              allocDescriptors();
+    void                        freeDescriptors(PoolAllocation& d);
 
   private:
     struct Parameter final {
@@ -54,6 +80,13 @@ class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
       uint32_t                id=0;
       D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL;
       };
+
+    DxDevice&                   dev;
+    SpinLock                    poolsSync;
+    std::vector<DescriptorPool> pools;
+
+    UINT                        descSize = 0;
+    UINT                        smpSize  = 0;
 
     void add(const UniformsLayout::Binding& b, D3D12_DESCRIPTOR_RANGE_TYPE type, std::vector<Parameter>& root);
   };

@@ -31,6 +31,9 @@ struct DirectX12Api::Impl {
       dxAssert(D3D12GetDebugInterface(uuid<ID3D12Debug>(), reinterpret_cast<void**>(&D3D12DebugController)));
       D3D12DebugController->EnableDebugLayer();
       }
+    // Note  Don't mix the use of DXGI 1.0 (IDXGIFactory) and DXGI 1.1 (IDXGIFactory1) in an application.
+    // Use IDXGIFactory or IDXGIFactory1, but not both in an application.
+    // https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-d3d12createdevice
     dxAssert(CreateDXGIFactory1(uuid<IDXGIFactory4>(), reinterpret_cast<void**>(&DXGIFactory)));
     }
 
@@ -47,7 +50,9 @@ struct DirectX12Api::Impl {
 
       AbstractGraphicsApi::Props props={};
       DxDevice::getProp(desc,props);
-      d.push_back(props);
+      auto hr = D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_11_0, uuid<ID3D12Device>(), nullptr);
+      if(SUCCEEDED(hr))
+        d.push_back(props);
       }
 
     return d;
@@ -70,7 +75,8 @@ struct DirectX12Api::Impl {
 
       // Check to see if the adapter supports Direct3D 12, but don't create the
       // actual device yet.
-      if(SUCCEEDED(D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_12_0, uuid<ID3D12Device>(), nullptr)))
+      auto hr = D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_11_0, uuid<ID3D12Device>(), nullptr);
+      if(SUCCEEDED(hr))
         break;
       }
 
@@ -87,8 +93,8 @@ struct DirectX12Api::Impl {
     Detail::DxDevice& dx   = *reinterpret_cast<Detail::DxDevice*>(d);
     Detail::DxFence&  fcpu = *reinterpret_cast<Detail::DxFence*>(doneCpu);
 
+    std::lock_guard<SpinLock> guard(dx.syncCmdQueue);
     fcpu.reset();
-    //dx.cmdQueue->Signal(fcpu.impl.get(),0);
 
     for(size_t i=0;i<waitCnt;++i) {
       Detail::DxSemaphore& swait = *reinterpret_cast<Detail::DxSemaphore*>(wait[i]);
@@ -255,11 +261,13 @@ AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixma
 
   Detail::DxDevice& dx     = *reinterpret_cast<Detail::DxDevice*>(d);
 
+  mipCnt = 1; //TODO
+
   DXGI_FORMAT       format = Detail::nativeFormat(frm);
   uint32_t          row    = p.w()*p.bpp();
   const uint32_t    pith   = ((row+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
   Detail::DxBuffer  stage  = dx.allocator.alloc(p.data(),p.h(),row,pith,MemUsage::TransferSrc,BufferHeap::Upload);
-  Detail::DxTexture buf    = dx.allocator.alloc(p,/*mipCnt*/1,format);
+  Detail::DxTexture buf    = dx.allocator.alloc(p,mipCnt,format);
 
   Detail::DSharedPtr<Detail::DxBuffer*>  pstage(new Detail::DxBuffer (std::move(stage)));
   Detail::DSharedPtr<Detail::DxTexture*> pbuf  (new Detail::DxTexture(std::move(buf)));
@@ -393,7 +401,7 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureL
 
 AbstractGraphicsApi::CommandBuffer* DirectX12Api::createCommandBuffer(Device* d) {
   Detail::DxDevice* dx = reinterpret_cast<Detail::DxDevice*>(d);
-  return new DxCommandBuffer(*dx,nullptr);
+  return new DxCommandBuffer(*dx);
   }
 
 void DirectX12Api::present(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Swapchain* sw,
@@ -404,6 +412,7 @@ void DirectX12Api::present(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::
   auto&                swait = *reinterpret_cast<const Detail::DxSemaphore*>(wait);
   Detail::DxSwapchain* sx    = reinterpret_cast<Detail::DxSwapchain*>(sw);
 
+  std::lock_guard<SpinLock> guard(dx.syncCmdQueue);
   dx.cmdQueue->Wait(swait.impl.get(),DxFence::Ready);
   sx->queuePresent();
   }

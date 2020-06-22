@@ -31,29 +31,12 @@ static int swizzle(ComponentSwizzle cs, int def){
 
 DxDescriptorArray::DxDescriptorArray(DxDevice& dev, DxUniformsLay& vlay)
   : layPtr(&vlay), dev(dev) {
-  auto& device = *dev.device;
-
-  try {
-    for(size_t i=0;i<vlay.heaps.size();++i) {
-      D3D12_DESCRIPTOR_HEAP_DESC d = {};
-      d.Type           = vlay.heaps[i].type;
-      d.NumDescriptors = vlay.heaps[i].numDesc;
-      d.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-      dxAssert(device.CreateDescriptorHeap(&d, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&heap[i])));
-      }
-    heapCnt = UINT(vlay.heaps.size());
-    }
-  catch(...){
-    for(auto i:heap)
-      if(i!=nullptr)
-        i->Release();
-    }
+  val     = layPtr.handler->allocDescriptors();
+  heapCnt = UINT(vlay.heaps.size());
   }
 
 DxDescriptorArray::~DxDescriptorArray() {
-  for(auto i:heap)
-    if(i!=nullptr)
-      i->Release();
+  layPtr.handler->freeDescriptors(val);
   }
 
 void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const Sampler2d& smp) {
@@ -77,16 +60,16 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const 
   smpDesc.Filter           = D3D12_FILTER_MIN_MAG_MIP_POINT;
   smpDesc.AddressU         = nativeFormat(smp.uClamp);
   smpDesc.AddressV         = nativeFormat(smp.vClamp);
-  smpDesc.AddressW         = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+  smpDesc.AddressW         = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
   smpDesc.MipLODBias       = 0;
-  smpDesc.MaxAnisotropy    = 0;
+  smpDesc.MaxAnisotropy    = 1;
   smpDesc.ComparisonFunc   = D3D12_COMPARISON_FUNC_NEVER;
   smpDesc.BorderColor[0]   = 1;
   smpDesc.BorderColor[1]   = 1;
   smpDesc.BorderColor[2]   = 1;
   smpDesc.BorderColor[3]   = 1;
   smpDesc.MinLOD           = 0.0f;
-  smpDesc.MaxLOD           = FLOAT(t.mips);
+  smpDesc.MaxLOD           = D3D12_FLOAT32_MAX;//FLOAT(t.mips);
 
   if(smp.minFilter==Filter::Linear)
     filter |= (1u<<D3D12_MIN_FILTER_SHIFT);
@@ -103,11 +86,11 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const 
   smpDesc.Filter = D3D12_FILTER(filter);
 
   auto& prm = layPtr.handler->prm[id];
-  auto  gpu = heap[prm.heapId]->GetCPUDescriptorHandleForHeapStart();
+  auto  gpu = val.cpu[prm.heapId];
   gpu.ptr += prm.heapOffset;
   device.CreateShaderResourceView(t.impl.get(), &srvDesc, gpu);
 
-  gpu = heap[prm.heapIdSmp]->GetCPUDescriptorHandleForHeapStart();
+  gpu = val.cpu[prm.heapIdSmp];
   gpu.ptr += prm.heapOffsetSmp;
   device.CreateSampler(&smpDesc,gpu);
   }
@@ -115,13 +98,13 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const 
 void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer* b, size_t offset, size_t size, size_t /*align*/) {
   auto&      device = *dev.device;
   DxBuffer&  buf    = *reinterpret_cast<DxBuffer*>(b);
-  // Describe and create a constant buffer view.
+
   D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
   cbvDesc.BufferLocation = buf.impl->GetGPUVirtualAddress()+offset;
   cbvDesc.SizeInBytes    = UINT(size); // CB size is required to be 256-byte aligned.
 
   auto& prm = layPtr.handler->prm[id];
-  auto  gpu = heap[prm.heapId]->GetCPUDescriptorHandleForHeapStart();
+  auto  gpu = val.cpu[prm.heapId];
   gpu.ptr += prm.heapOffset;
   device.CreateConstantBufferView(&cbvDesc, gpu);
   }

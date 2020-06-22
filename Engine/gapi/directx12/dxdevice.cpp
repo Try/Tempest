@@ -12,7 +12,7 @@ using namespace Tempest;
 using namespace Tempest::Detail;
 
 DxDevice::DxDevice(IDXGIAdapter1& adapter) {
-  dxAssert(D3D12CreateDevice(&adapter, D3D_FEATURE_LEVEL_12_0, uuid<ID3D12Device>(), reinterpret_cast<void**>(&device)));
+  dxAssert(D3D12CreateDevice(&adapter, D3D_FEATURE_LEVEL_11_0, uuid<ID3D12Device>(), reinterpret_cast<void**>(&device)));
 
   ComPtr<ID3D12InfoQueue> pInfoQueue;
   if(SUCCEEDED(device->QueryInterface(__uuidof(ID3D12InfoQueue),reinterpret_cast<void**>(&pInfoQueue)))) {
@@ -111,6 +111,7 @@ const char* Detail::DxDevice::renderer() const {
   }
 
 void Detail::DxDevice::waitIdle() {
+  std::lock_guard<SpinLock> guard(syncCmdQueue);
   dxAssert(cmdQueue->Signal(idleFence.get(),DxFence::Ready));
   dxAssert(idleFence->SetEventOnCompletion(DxFence::Ready,idleEvent));
   WaitForSingleObjectEx(idleEvent, INFINITE, FALSE);
@@ -120,6 +121,7 @@ void Detail::DxDevice::waitIdle() {
 void DxDevice::submit(DxCommandBuffer& cmdBuffer, DxFence& sync) {
   sync.reset();
 
+  std::lock_guard<SpinLock> guard(syncCmdQueue);
   ID3D12CommandList* cmd[] = {cmdBuffer.get()};
   cmdQueue->ExecuteCommandLists(1, cmd);
   sync.signal(*cmdQueue);

@@ -13,11 +13,52 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+DxUniformsLay::DescriptorPool::DescriptorPool(DxUniformsLay& vlay) {
+  auto& device = *vlay.dev.device;
+
+  try {
+    for(size_t i=0;i<vlay.heaps.size();++i) {
+      D3D12_DESCRIPTOR_HEAP_DESC d = {};
+      d.Type           = vlay.heaps[i].type;
+      d.NumDescriptors = vlay.heaps[i].numDesc * POOL_SIZE;
+      d.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+      dxAssert(device.CreateDescriptorHeap(&d, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&heap[i])));
+
+      // auto  gpu = heap[i]->GetCPUDescriptorHandleForHeapStart();
+      // Log::d("src_gpu.ptr = ",gpu.ptr);
+      // if(gpu.ptr==0)
+      //   Log::d("src_gpu.ptr = ",gpu.ptr);
+      }
+    }
+  catch(...){
+    for(auto i:heap)
+      if(i!=nullptr)
+        i->Release();
+    throw;
+    }
+  }
+
+DxUniformsLay::DescriptorPool::DescriptorPool(DxUniformsLay::DescriptorPool&& oth)
+  :allocated(oth.allocated) {
+  for(size_t i=0;i<MAX_BINDS;++i) {
+    heap[i] = oth.heap[i];
+    oth.heap[i] = nullptr;
+    }
+  }
+
+DxUniformsLay::DescriptorPool::~DescriptorPool() {
+  for(auto i:heap)
+    if(i!=nullptr)
+      i->Release();
+  }
+
 DxUniformsLay::DxUniformsLay(DxDevice& dev,
                              const std::vector<UniformsLayout::Binding>& vs,
-                             const std::vector<UniformsLayout::Binding>& fs) {
+                             const std::vector<UniformsLayout::Binding>& fs)
+  :dev(dev) {
   auto& device = *dev.device;
   descSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+  smpSize  = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
   ShaderReflection::merge(lay, vs,fs);
   prm.resize(lay.size());
@@ -107,11 +148,13 @@ DxUniformsLay::DxUniformsLay(DxDevice& dev,
 
   for(auto& i:prm) {
     i.heapOffset    *= descSize;
-    i.heapOffsetSmp *= descSize;
+    i.heapOffsetSmp *= smpSize;
     }
 
   for(auto& i:roots) {
-    i.heapOffset *= descSize;
+    if(heaps[i.heap].type==D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+      i.heapOffset *= descSize; else
+      i.heapOffset *= smpSize;
     }
 
   D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
@@ -131,16 +174,6 @@ DxUniformsLay::DxUniformsLay(DxDevice& dev,
                                        &signature.get(), &error.get()));
   dxAssert(device.CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(),
                                       uuid<ID3D12RootSignature>(), reinterpret_cast<void**>(&impl)));
-/*
-  heaps.resize(prm.size());
-  for(size_t i=0; i<prm.size(); ++i) {
-    if(prm[i].DescriptorTable.pDescriptorRanges[0].RangeType==D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER)
-      heaps[i].type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER; else
-      heaps[i].type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-    heaps[i].numDesc = 0;
-    for(UINT r=0; r<prm[i].DescriptorTable.NumDescriptorRanges; ++r)
-      heaps[i].numDesc+=prm[i].DescriptorTable.pDescriptorRanges[r].NumDescriptors;
-    }*/
   }
 
 void Tempest::Detail::DxUniformsLay::add(const Tempest::UniformsLayout::Binding& b,
@@ -166,4 +199,55 @@ void Tempest::Detail::DxUniformsLay::add(const Tempest::UniformsLayout::Binding&
   root.push_back(rp);
   }
 
+DxUniformsLay::PoolAllocation DxUniformsLay::allocDescriptors() {
+  std::lock_guard<SpinLock> guard(poolsSync);
+
+  DescriptorPool* pool = nullptr;
+  for(size_t i=0; i<pools.size(); ++i) {
+    auto& p = pools[i];
+    if(p.allocated.all())
+      continue;
+    pool = &p;
+    break;
+    }
+
+  if(pool==nullptr) {
+    pools.emplace_back(*this);
+    pool = &pools.back();
+    }
+
+  for(size_t i=0; ; ++i)
+    if(!pool->allocated.test(i)) {
+      pool->allocated.set(i);
+
+      PoolAllocation a;
+      a.pool   = std::distance(pools.data(),pool);
+      a.offset = i;
+      for(size_t r=0; r<MAX_BINDS; ++r) {
+        if(pool->heap[r]==nullptr)
+          continue;
+        a.heap[r] = pool->heap[r];
+        a.cpu [r] = pool->heap[r]->GetCPUDescriptorHandleForHeapStart();
+        a.gpu [r] = pool->heap[r]->GetGPUDescriptorHandleForHeapStart();
+
+        UINT64 offset = heaps[r].numDesc*i;
+        if(heaps[r].type==D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) {
+          a.cpu[r].ptr += descSize*offset;
+          a.gpu[r].ptr += descSize*offset;
+          } else {
+          a.cpu[r].ptr += smpSize *offset;
+          a.gpu[r].ptr += smpSize *offset;
+          }
+        }
+      return a;
+      }
+  }
+
+void DxUniformsLay::freeDescriptors(DxUniformsLay::PoolAllocation& d) {
+  std::lock_guard<SpinLock> guard(poolsSync);
+  auto& p = pools[d.pool];
+  p.allocated.set(d.offset,false);
+  }
+
 #endif
+

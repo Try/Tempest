@@ -32,6 +32,7 @@ inline void dxAssert(HRESULT code){
     case E_OUTOFMEMORY:
       throw std::bad_alloc();
     case DXGI_DDI_ERR_WASSTILLDRAWING:
+    case DXGI_ERROR_DEVICE_REMOVED:
       throw DeviceLostException();
 
     case E_NOTIMPL:
@@ -111,6 +112,7 @@ class DxDevice : public AbstractGraphicsApi::Device {
 
     AbstractGraphicsApi::Props props;
     ComPtr<ID3D12Device>       device;
+    SpinLock                   syncCmdQueue;
     ComPtr<ID3D12CommandQueue> cmdQueue;
 
     DxAllocator                allocator;

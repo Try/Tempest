@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "comptr.h"
+#include "dxuniformslay.h"
 
 namespace Tempest {
 
@@ -20,7 +21,7 @@ class DxFboLayout;
 
 class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
   public:
-    DxCommandBuffer(DxDevice& d, DxFboLayout* isSecondary = nullptr);
+    DxCommandBuffer(DxDevice& d);
     ~DxCommandBuffer();
 
     void begin() override;
@@ -64,8 +65,9 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     bool                              resetDone=false;
 
     DxFboLayout*                      currentFbo = nullptr;
+    ID3D12DescriptorHeap*             currentHeaps[DxUniformsLay::MAX_BINDS]={};
+
     UINT                              vboStride=0;
-    DxFboLayout*                      isSecondary = nullptr;
 
     std::vector<ImgState>             imgState;
 

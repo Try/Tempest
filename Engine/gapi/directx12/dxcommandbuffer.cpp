@@ -25,11 +25,9 @@ struct DxCommandBuffer::ImgState {
   bool                  outdated;
   };
 
-DxCommandBuffer::DxCommandBuffer(DxDevice& d, DxFboLayout* isSecondary)
-  : dev(d), isSecondary(isSecondary) {
+DxCommandBuffer::DxCommandBuffer(DxDevice& d)
+  : dev(d) {
   D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-  if(isSecondary)
-    type = D3D12_COMMAND_LIST_TYPE_BUNDLE;
   dxAssert(d.device->CreateCommandAllocator(type,
                                             uuid<ID3D12CommandAllocator>(),
                                             reinterpret_cast<void**>(&pool)));
@@ -45,9 +43,6 @@ DxCommandBuffer::~DxCommandBuffer() {
 void DxCommandBuffer::begin() {
   reset();
   recording = true;
-  if(isSecondary!=nullptr) {
-    currentFbo = isSecondary;
-    }
   }
 
 void DxCommandBuffer::end() {
@@ -59,11 +54,14 @@ void DxCommandBuffer::end() {
   dxAssert(impl->Close());
   recording = false;
   resetDone = false;
+  for(size_t i=0;i<DxUniformsLay::MAX_BINDS;++i)
+    currentHeaps[i] = nullptr;
   }
 
 void DxCommandBuffer::reset() {
   if(resetDone)
     return;
+  dxAssert(pool->Reset());
   dxAssert(impl->Reset(pool.get(),nullptr));
   resetDone = true;
   }
@@ -162,9 +160,7 @@ void DxCommandBuffer::setViewport(const Rect& r) {
   vp.MinDepth = 0.f;
   vp.MaxDepth = 1.f;
 
-  //FIXME
-  if(isSecondary==nullptr)
-    impl->RSSetViewports(1, &vp);
+  impl->RSSetViewports(1, &vp);
   }
 
 void DxCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, void* data, size_t size) {
@@ -174,12 +170,24 @@ void DxCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, void* data, siz
 void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/, AbstractGraphicsApi::Desc& u) {
   DxDescriptorArray& ux = reinterpret_cast<DxDescriptorArray&>(u);
 
-  impl->SetDescriptorHeaps(ux.heapCnt, ux.heap);
+  bool setH = false;
+  for(size_t i=0;i<DxUniformsLay::MAX_BINDS;++i) {
+    if(ux.val.heap[i]!=currentHeaps[i]) {
+      setH = true;
+      break;
+      }
+    }
+
+  if(setH) {
+    for(size_t i=0;i<DxUniformsLay::MAX_BINDS;++i)
+      currentHeaps[i] = ux.val.heap[i];
+    impl->SetDescriptorHeaps(ux.heapCnt, currentHeaps);
+    }
 
   auto& lx = *ux.layPtr.handler;
   for(size_t i=0;i<lx.roots.size();++i) {
     auto& r   = lx.roots[i];
-    auto desc = ux.heap[r.heap]->GetGPUDescriptorHandleForHeapStart();
+    auto desc = ux.val.gpu[r.heap];
     desc.ptr+=r.heapOffset;
     impl->SetGraphicsRootDescriptorTable(UINT(i), desc);
     }
