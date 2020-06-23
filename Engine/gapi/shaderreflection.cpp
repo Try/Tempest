@@ -73,4 +73,7 @@ void ShaderReflection::merge(std::vector<ShaderReflection::Binding>& ret,
     ret.push_back(u);
     ret.back().stage = UniformsLayout::Fragment;
     }
+  std::sort(ret.begin(),ret.end(),[](const Binding& a, const Binding& b){
+    return a.layout<b.layout;
+    });
   }
