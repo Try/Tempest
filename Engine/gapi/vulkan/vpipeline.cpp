@@ -26,7 +26,7 @@ VPipeline::VPipeline(VDevice& device, const RenderState &st,
   try {
     decl.reset(new Decl::ComponentType[declSize]);
     std::memcpy(decl.get(),idecl,declSize*sizeof(Decl::ComponentType));
-    pipelineLayout = initLayout(device.device,ulay.impl);
+    pipelineLayout = initLayout(device.device,ulay,pushStageFlags);
     }
   catch(...) {
     cleanup();
@@ -80,12 +80,27 @@ void VPipeline::cleanup() {
     vkDestroyPipeline(device,i.val,nullptr);
   }
 
-VkPipelineLayout VPipeline::initLayout(VkDevice device,VkDescriptorSetLayout uboLay) {
+VkPipelineLayout VPipeline::initLayout(VkDevice device, const VUniformsLay& uboLay, VkShaderStageFlags& pushStageFlags) {
+  VkPushConstantRange push = {};
+
   VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
   pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-  pipelineLayoutInfo.pSetLayouts            = &uboLay;
+  pipelineLayoutInfo.pSetLayouts            = &uboLay.impl;
   pipelineLayoutInfo.setLayoutCount         = 1;
   pipelineLayoutInfo.pushConstantRangeCount = 0;
+
+  if(uboLay.pb.size>0) {
+    if(uboLay.pb.stage & UniformsLayout::Vertex)
+      pushStageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
+    if(uboLay.pb.stage & UniformsLayout::Fragment)
+      pushStageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+    push.stageFlags = pushStageFlags;
+    push.offset     = 0;
+    push.size       = uboLay.pb.size;
+
+    pipelineLayoutInfo.pPushConstantRanges    = &push;
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    }
 
   VkPipelineLayout ret;
   vkAssert(vkCreatePipelineLayout(device,&pipelineLayoutInfo,nullptr,&ret));

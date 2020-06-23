@@ -36,7 +36,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void setPipeline (AbstractGraphicsApi::Pipeline& p,uint32_t w,uint32_t h) override;
     void setViewport (const Rect& r) override;
-    void setBytes    (AbstractGraphicsApi::Pipeline& p, void* data, size_t size) override;
+    void setBytes    (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;
     void setUniforms (AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc& u) override;
     void changeLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id, TextureFormat frm, TextureLayout prev, TextureLayout next) override;
     void changeLayout(AbstractGraphicsApi::Texture& t,TextureFormat frm,TextureLayout prev,TextureLayout next) override;

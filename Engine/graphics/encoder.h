@@ -33,10 +33,12 @@ class Encoder<Tempest::CommandBuffer> {
 
     void setFramebuffer(const FrameBuffer& fbo, const RenderPass& p);
 
+    void setUniforms(const RenderPipeline &p);
+    void setUniforms(const Tempest::RenderPipeline& p, const void* data, size_t sz);
     void setUniforms(const Tempest::RenderPipeline& p, const Uniforms &ubo);
+
     void setUniforms(const Detail::ResourcePtr<RenderPipeline> &p, const Uniforms &ubo);
     void setUniforms(const Detail::ResourcePtr<RenderPipeline> &p);
-    void setUniforms(const RenderPipeline &p);
 
     void setViewport(int x,int y,int w,int h);
     void setViewport(const Rect& vp);

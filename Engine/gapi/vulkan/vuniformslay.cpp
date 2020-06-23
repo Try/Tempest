@@ -11,7 +11,7 @@ VUniformsLay::VUniformsLay(VkDevice dev,
                            const std::vector<UniformsLayout::Binding>& vs,
                            const std::vector<UniformsLayout::Binding>& fs)
   : dev(dev) {
-  ShaderReflection::merge(lay, vs,fs);
+  ShaderReflection::merge(lay, pb, vs,fs);
   if(lay.size()<=32) {
     VkDescriptorSetLayoutBinding bind[32]={};
     implCreate(bind);

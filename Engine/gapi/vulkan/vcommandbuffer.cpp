@@ -128,9 +128,9 @@ void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p,uint32_t w,uin
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v.val);
   }
 
-void VCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, void* data, size_t size) {
+void VCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) {
   VPipeline&        px=reinterpret_cast<VPipeline&>(p);
-  vkCmdPushConstants(impl, px.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, uint32_t(size), data);
+  vkCmdPushConstants(impl, px.pipelineLayout, px.pushStageFlags, 0, uint32_t(size), data);
   }
 
 void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u) {

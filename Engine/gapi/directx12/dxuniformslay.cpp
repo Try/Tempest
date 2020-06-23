@@ -60,7 +60,8 @@ DxUniformsLay::DxUniformsLay(DxDevice& dev,
   descSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
   smpSize  = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
-  ShaderReflection::merge(lay, vs,fs);
+  UniformsLayout::PushBlock pb;
+  ShaderReflection::merge(lay,pb, vs,fs);
   prm.resize(lay.size());
 
   std::vector<Parameter> desc;
@@ -155,6 +156,17 @@ DxUniformsLay::DxUniformsLay(DxDevice& dev,
     if(heaps[i.heap].type==D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
       i.heapOffset *= descSize; else
       i.heapOffset *= smpSize;
+    }
+
+  D3D12_ROOT_PARAMETER prmPush = {};
+  prmPush.ParameterType    = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+  prmPush.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+  prmPush.Constants.ShaderRegister = 0;
+  prmPush.Constants.RegisterSpace  = 0;
+  prmPush.Constants.Num32BitValues = UINT((pb.size+3)/4);
+  if(pb.size>0) {
+    pushConstantId = rootPrm.size();
+    rootPrm.push_back(prmPush);
     }
 
   D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};

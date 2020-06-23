@@ -26,7 +26,12 @@ class UniformsLayout final {
     struct Binding {
       uint32_t layout=0;
       Class    cls   =Ubo;
-      Stage    stage=Fragment;
+      Stage    stage =Fragment;
+      size_t   size  =0;
+      };
+    struct PushBlock {
+      Stage    stage = Fragment;
+      size_t   size  = 0;
       };
 
     UniformsLayout(UniformsLayout&& other)=default;

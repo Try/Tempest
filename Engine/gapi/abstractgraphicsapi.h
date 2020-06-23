@@ -301,7 +301,7 @@ namespace Tempest {
         virtual void begin()=0;
         virtual void end()  =0;
         virtual void setPipeline(Pipeline& p,uint32_t w,uint32_t h)=0;
-        virtual void setBytes   (Pipeline &p, void* data, size_t size)=0;
+        virtual void setBytes   (Pipeline &p, const void* data, size_t size)=0;
         virtual void setViewport(const Rect& r)=0;
         virtual void setUniforms(Pipeline& p,Desc& u)=0;
 

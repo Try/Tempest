@@ -46,6 +46,11 @@ void Encoder<Tempest::CommandBuffer>::setViewport(const Rect &vp) {
   impl->setViewport(vp);
   }
 
+void Tempest::Encoder<Tempest::CommandBuffer>::setUniforms(const Tempest::RenderPipeline& p, const void* data, size_t sz) {
+  setUniforms(p);
+  impl->setBytes(*p.impl.handler,data,sz);
+  }
+
 void Encoder<Tempest::CommandBuffer>::setUniforms(const Tempest::RenderPipeline& p,const Uniforms &ubo) {
   setUniforms(p);
   impl->setUniforms(*p.impl.handler,*ubo.desc.handler);

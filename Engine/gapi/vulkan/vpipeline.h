@@ -41,7 +41,8 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
       VkPipeline                              val;
       };
 
-    VkPipelineLayout  pipelineLayout  =VK_NULL_HANDLE;
+    VkPipelineLayout   pipelineLayout = VK_NULL_HANDLE;
+    VkShaderStageFlags pushStageFlags = 0;
 
     Inst&             instance(VFramebufferLayout &lay, uint32_t width, uint32_t height);
 
@@ -56,7 +57,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     SpinLock                               sync;
 
     void cleanup();
-    static VkPipelineLayout      initLayout(VkDevice device,VkDescriptorSetLayout uboLay);
+    static VkPipelineLayout      initLayout(VkDevice device, const VUniformsLay& uboLay, VkShaderStageFlags& pushFlg);
     static VkPipeline            initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
                                                       const VFramebufferLayout &lay, const RenderState &st,
                                                       uint32_t width, uint32_t height,

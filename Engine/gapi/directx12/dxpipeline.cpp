@@ -25,6 +25,7 @@ DxPipeline::DxPipeline(DxDevice& device, const RenderState& st,
     D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST
     };
   topology = dxTopolgy[int(tp)];
+  pushConstantId = ulay.pushConstantId;
 
   static const DXGI_FORMAT vertFormats[]={
     DXGI_FORMAT_UNKNOWN,

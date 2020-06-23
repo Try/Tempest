@@ -55,7 +55,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void endRenderPass();
 
     void setPipeline(AbstractGraphicsApi::Pipeline& p, uint32_t w, uint32_t h);
-    void setBytes   (AbstractGraphicsApi::Pipeline &p, void* data, size_t size);
+    void setBytes   (AbstractGraphicsApi::Pipeline &p, const void* data, size_t size);
     void setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u);
     void setViewport(const Rect& r);
 

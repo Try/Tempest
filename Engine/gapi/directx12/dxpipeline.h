@@ -38,6 +38,7 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
 
     UINT                        stride=0;
     D3D_PRIMITIVE_TOPOLOGY      topology=D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+    size_t                      pushConstantId=0;
 
     ID3D12PipelineState&        instance(DxFboLayout& frm);
 

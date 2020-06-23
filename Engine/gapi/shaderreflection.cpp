@@ -27,20 +27,40 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     b.layout = binding;
     lay.push_back(b);
     }
+  for(auto &resource : resources.push_constant_buffers) {
+    auto& t = comp.get_type_from_variable(resource.id);
+    auto sz = comp.get_declared_struct_size(t);
+    Binding b;
+    b.cls    = UniformsLayout::Push;
+    b.layout = uint32_t(-1);
+    b.size   = sz;
+    lay.push_back(b);
+    }
   }
 
 void ShaderReflection::merge(std::vector<ShaderReflection::Binding>& ret,
+                             PushBlock& pb,
                              const std::vector<ShaderReflection::Binding>& vs,
                              const std::vector<ShaderReflection::Binding>& fs) {
   ret.reserve(vs.size()+fs.size());
   size_t id=0;
   for(size_t i=0;i<vs.size();++i, ++id) {
     auto& u = vs[i];
+    if(u.cls==UniformsLayout::Push) {
+      pb.stage = UniformsLayout::Stage(pb.stage | UniformsLayout::Vertex);
+      pb.size = u.size;
+      continue;
+      }
     ret.push_back(u);
     ret.back().stage = UniformsLayout::Vertex;
     }
   for(size_t i=0;i<fs.size();++i) {
     auto& u   = fs[i];
+    if(u.cls==UniformsLayout::Push) {
+      pb.stage = UniformsLayout::Stage(pb.stage | UniformsLayout::Fragment);
+      pb.size = u.size;
+      continue;
+      }
     bool  ins = false;
     for(auto& r:ret)
       if(r.layout==u.layout) {
