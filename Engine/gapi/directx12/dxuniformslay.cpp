@@ -13,6 +13,16 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+static D3D12_SHADER_VISIBILITY nativeFormat(UniformsLayout::Stage stage){
+  switch(stage) {
+    case UniformsLayout::Stage::Vertex:
+      return D3D12_SHADER_VISIBILITY_VERTEX;
+    case UniformsLayout::Stage::Fragment:
+      return D3D12_SHADER_VISIBILITY_PIXEL;
+    }
+  return D3D12_SHADER_VISIBILITY_ALL;
+  }
+
 DxUniformsLay::DescriptorPool::DescriptorPool(DxUniformsLay& vlay) {
   auto& device = *vlay.dev.device;
 
@@ -160,7 +170,7 @@ DxUniformsLay::DxUniformsLay(DxDevice& dev,
 
   D3D12_ROOT_PARAMETER prmPush = {};
   prmPush.ParameterType    = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-  prmPush.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+  prmPush.ShaderVisibility = ::nativeFormat(pb.stage);
   prmPush.Constants.ShaderRegister = 0;
   prmPush.Constants.RegisterSpace  = 0;
   prmPush.Constants.Num32BitValues = UINT((pb.size+3)/4);
@@ -191,11 +201,6 @@ DxUniformsLay::DxUniformsLay(DxDevice& dev,
 void Tempest::Detail::DxUniformsLay::add(const Tempest::UniformsLayout::Binding& b,
                                          D3D12_DESCRIPTOR_RANGE_TYPE type,
                                          std::vector<Parameter>& root) {
-  D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL;
-  switch(b.stage) {
-    case UniformsLayout::Vertex:   visibility = D3D12_SHADER_VISIBILITY_VERTEX; break;
-    case UniformsLayout::Fragment: visibility = D3D12_SHADER_VISIBILITY_PIXEL;  break;
-    }
 
   Parameter rp;
 
@@ -206,7 +211,7 @@ void Tempest::Detail::DxUniformsLay::add(const Tempest::UniformsLayout::Binding&
   rp.rgn.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
   rp.id         = b.layout;
-  rp.visibility = visibility;
+  rp.visibility = ::nativeFormat(b.stage);
 
   root.push_back(rp);
   }

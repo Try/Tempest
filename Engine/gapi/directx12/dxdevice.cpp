@@ -92,11 +92,13 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, AbstractGraphicsApi::Props& pro
     dsBit  |= uint64_t(1) << uint64_t(i);
   prop.setSamplerFormats(smpBit);
   prop.setAttachFormats (attBit);
-  prop.setDepthFormat   (dsBit);
+  prop.setDepthFormats  (dsBit);
 
   // TODO: buffer limitsk
   prop.ubo.maxRange;
   prop.ubo.offsetAlign = 256;
+
+  prop.push.maxRange   = 256;
 
   prop.anisotropy    = true;
   prop.maxAnisotropy = 16;

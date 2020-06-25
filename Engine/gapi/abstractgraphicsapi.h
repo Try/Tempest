@@ -209,6 +209,10 @@ namespace Tempest {
             size_t offsetAlign = 1;
             size_t maxRange    = 16384;
             } ubo;
+          
+          struct {
+            size_t maxRange    = 128;
+            } push;
 
           bool     anisotropy=false;
           float    maxAnisotropy=1.0f;
@@ -219,7 +223,7 @@ namespace Tempest {
 
           void     setSamplerFormats(uint64_t t) { smpFormat  = t; }
           void     setAttachFormats (uint64_t t) { attFormat  = t; }
-          void     setDepthFormat   (uint64_t t) { dattFormat = t;}
+          void     setDepthFormats  (uint64_t t) { dattFormat = t; }
 
         private:
           uint64_t smpFormat =0;

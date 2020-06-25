@@ -181,6 +181,8 @@ void VulkanApi::getDevicePropsShort(VkPhysicalDevice physicalDevice, Tempest::Ab
 
   c.ubo.offsetAlign = size_t(prop.limits.minUniformBufferOffsetAlignment);
   c.ubo.maxRange    = size_t(prop.limits.maxUniformBufferRange);
+  
+  c.push.maxRange   = size_t(prop.limits.maxPushConstantsSize);
 
   VkPhysicalDeviceFeatures supportedFeatures={};
   vkGetPhysicalDeviceFeatures(physicalDevice,&supportedFeatures);
@@ -230,7 +232,7 @@ void VulkanApi::getDevicePropsShort(VkPhysicalDevice physicalDevice, Tempest::Ab
     }
   c.setSamplerFormats(smpFormat);
   c.setAttachFormats (attFormat);
-  c.setDepthFormat   (dattFormat);
+  c.setDepthFormats  (dattFormat);
   }
 
 VkBool32 VulkanApi::debugReportCallback(VkDebugReportFlagsEXT      flags,
