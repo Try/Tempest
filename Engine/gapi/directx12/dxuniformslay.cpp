@@ -71,8 +71,14 @@ DxUniformsLay::DxUniformsLay(DxDevice& dev,
   smpSize  = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
   UniformsLayout::PushBlock pb;
+  std::vector<Binding>      lay;
+
   ShaderReflection::merge(lay,pb, vs,fs);
-  prm.resize(lay.size());
+  uint32_t lastBind=0;
+  for(auto& i:lay)
+    lastBind = std::max(lastBind,i.layout);
+  if(lay.size()>0)
+    prm.resize(lastBind+1);
 
   std::vector<Parameter> desc;
   for(size_t i=0;i<lay.size();++i) {

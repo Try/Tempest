@@ -70,7 +70,6 @@ class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
     size_t                      pushConstantId=0;
 
     ComPtr<ID3D12RootSignature> impl;
-    std::vector<Binding>        lay;
 
     PoolAllocation              allocDescriptors();
     void                        freeDescriptors(PoolAllocation& d);
