@@ -72,7 +72,7 @@ class Button : public Widget {
     std::unique_ptr<Tempest::Menu> btnMenu;
 
     void         updateFont();
-    void         invalidateSizeHint(); //TODO: remove
+    void         invalidateSizeHint();
     void         setPressed(bool p);
     void         showMenu();
   };
