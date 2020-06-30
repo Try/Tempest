@@ -45,7 +45,7 @@ class ComboBox : public Widget {
     void         closeMenu();
 
     void         applyItemSelection(size_t id);
-    void         proxyOnItemSelected(size_t id);
+    void         proxyOnItemSelected(size_t id, Widget*);
     Widget*      createDropList();
   };
 

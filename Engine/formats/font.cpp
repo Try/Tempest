@@ -265,7 +265,7 @@ struct FontElement::Impl {
       }
     }
 
-  Metrics        metrics(float size) const {
+  Metrics       metrics(float size) const {
     const float scale = stbtt_ScaleForPixelHeight(&info,size);
     Metrics m = metrics0;
     m.ascent  = int(m.ascent*scale);

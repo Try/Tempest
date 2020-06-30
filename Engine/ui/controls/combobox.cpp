@@ -91,7 +91,7 @@ void ComboBox::setItems(const std::vector<std::string>& items) {
   setDelegate(new DefaultDelegate<std::string>(std::move(i)));
   }
 
-void ComboBox::proxyOnItemSelected(size_t id) {
+void ComboBox::proxyOnItemSelected(size_t id, Widget*) {
   if(overlay==nullptr) {
     openMenu();
     } else {
@@ -104,9 +104,9 @@ void ComboBox::setDelegate(ListDelegate* d) {
   removeDelegate();
 
   delegate.reset(d);
-  delegate->onItemSelected.bind(this,&ComboBox::proxyOnItemSelected);
-  delegate->invalidateView.bind(this,&ComboBox::invalidateView     );
-  delegate->updateView    .bind(this,&ComboBox::updateView         );
+  delegate->onItemViewSelected.bind(this,&ComboBox::proxyOnItemSelected);
+  delegate->invalidateView    .bind(this,&ComboBox::invalidateView     );
+  delegate->updateView        .bind(this,&ComboBox::updateView         );
 
   updateView();
   }
@@ -116,9 +116,9 @@ void ComboBox::removeDelegate() {
     return;
   this->removeAllWidgets();
 
-  delegate->onItemSelected.ubind(this,&ComboBox::proxyOnItemSelected);
-  delegate->invalidateView.ubind(this,&ComboBox::invalidateView     );
-  delegate->updateView    .ubind(this,&ComboBox::updateView         );
+  delegate->onItemViewSelected.ubind(this,&ComboBox::proxyOnItemSelected);
+  delegate->invalidateView    .ubind(this,&ComboBox::invalidateView     );
+  delegate->updateView        .ubind(this,&ComboBox::updateView         );
   }
 
 void ComboBox::setCurrentIndex(size_t id) {
@@ -168,10 +168,13 @@ void ComboBox::openMenu() {
   auto list = createDropList();
   overlay->addWidget(list);
 
-  list->setPosition(this->mapToRoot(Point(0,h())));
+  list->setPosition(this->mapToRoot(Point(0,0)));
   list->resize(std::max(w(),list->w()),list->h());
 
   SystemApi::addOverlay(overlay);
+  while(overlay!=nullptr && Application::isRunning()) {
+    Application::processEvents();
+    }
   }
 
 void ComboBox::closeMenu() {
