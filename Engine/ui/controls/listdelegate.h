@@ -28,8 +28,8 @@ class ListDelegate {
     virtual size_t  size() const = 0;
 
     virtual Widget* createView(size_t position, Role /*role*/) { return createView(position); }
-    virtual Widget* createView( size_t position              ) = 0;
-    virtual void    removeView( Widget* w, size_t /*position*/ ){ delete w; }
+    virtual Widget* createView(size_t position               ) = 0;
+    virtual void    removeView(Widget* w, size_t /*position*/){ delete w; }
 
     virtual Widget* update    ( Widget* w, size_t position ){
       removeView(w,position);
@@ -50,6 +50,7 @@ class AbstractListDelegate : public ListDelegate {
       return data.size();
       }
 
+    using ListDelegate::createView;
     Widget* createView(size_t position) override {
       ListItem<Ctrl>* b = new ListItem<Ctrl>(position);
       b->onClick.bind(this,&AbstractListDelegate<T,VT,Ctrl>::implItemSelected);

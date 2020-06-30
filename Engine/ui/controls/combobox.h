@@ -16,6 +16,8 @@ class ComboBox : public Widget {
     Tempest::Signal<void(size_t)> onItemSelected;
     Tempest::Signal<void(size_t)> onSelectionChanged;
 
+    void         setItems(const std::vector<std::string>& items);
+
     void         setDelegate(ListDelegate* d);
     void         removeDelegate();
 
@@ -27,7 +29,11 @@ class ComboBox : public Widget {
 
   private:
     struct Overlay;
+    struct DropPanel;
     struct ProxyDelegate;
+
+    template<class T>
+    struct DefaultDelegate;
 
     size_t                        selectedId = 0;
     Overlay*                      overlay    = nullptr;

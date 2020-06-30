@@ -41,6 +41,8 @@ class AbstractTextInput : public Tempest::Widget {
     void              paintEvent    (Tempest::PaintEvent& e) override;
     void              focusEvent    (Tempest::FocusEvent& e) override;
 
+    void              invalidateSizeHint();
+
   private:
     enum {
       StkDepth = 64
@@ -61,7 +63,6 @@ class AbstractTextInput : public Tempest::Widget {
     void              keyEventImpl(KeyEvent& k);
 
     void              onRepaintCursor();
-    void              invalidateSizeHint();
     void              updateFont();
     void              undo();
     void              redo();

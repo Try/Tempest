@@ -311,13 +311,15 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
     dX+=extra.spacing;
 
   auto&     fnt   = text.font();
-  const int h     = text.wrapSize().h;
-  const int fntSz = int(fnt.pixelSize());
+  const int fntSz = int(fnt.metrics().ascent);
 
   Point at;
-  if(e!=TE_TextEditContent && e!=TE_LineEditContent)
-    at = {dX, r.h-(r.h-h)/2}; else
+  if(e!=TE_TextEditContent && e!=TE_LineEditContent && false) {
+    const int h = text.wrapSize().h;
+    at = {dX, r.h-(r.h-h)/2};
+    } else {
     at = { 0, fntSz};
+    }
 
   if(st.focus && extra.selectionStart==extra.selectionEnd) {
     if((Application::tickCount()/cursorFlashTime)%2)

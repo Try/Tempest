@@ -5,7 +5,8 @@
 using namespace Tempest;
 
 LineEdit::LineEdit() {
-  setMargins(Margin(4,4,0,0));
+  setMargins(Margin(4,4,4,4));
+  invalidateSizeHint();
   }
 
 void LineEdit::setText(const char *text) {

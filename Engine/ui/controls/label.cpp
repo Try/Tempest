@@ -7,9 +7,10 @@ using namespace Tempest;
 
 Label::Label() {
   textM.setFont(Application::font());
-  setSizeHint(27,27);
+  setMargins(4);
   setSizePolicy(Preferred,Fixed);
   setFocusPolicy(ClickFocus);
+  invalidateSizeHint();
   }
 
 void Label::updateFont() {
@@ -49,7 +50,7 @@ void Label::setText(const char* t) {
   update();
   }
 
-void Label::setText( const std::string &t ) {
+void Label::setText(const std::string &t) {
   updateFont();
   textM.setText(t.c_str());
   invalidateSizeHint();

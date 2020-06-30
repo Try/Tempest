@@ -26,6 +26,12 @@ class FontElement final {
         Tempest::Point dpos, advance;
       };
 
+    class Metrics final {
+      public:
+        int ascent =0;
+        int descent=0;
+      };
+
     class Letter final {
       public:
         Tempest::Size   size;
@@ -40,6 +46,8 @@ class FontElement final {
     Size                  textSize(const char* text, float fontSize) const;
     bool                  isEmpty() const;
 
+    Metrics               metrics(float size) const;
+
   private:
     template<class CharT>
     FontElement(const CharT* file,std::true_type);
@@ -53,6 +61,7 @@ class Font final {
   public:
     using LetterGeometry = FontElement::LetterGeometry;
     using Letter         = FontElement::Letter;
+    using Metrics        = FontElement::Metrics;
 
     Font()=default;
     Font(const char*           file);
@@ -72,6 +81,8 @@ class Font final {
     bool  isItalic() const;
 
     bool  isEmpty() const;
+
+    Metrics               metrics() const;
 
     const LetterGeometry& letterGeometry(char16_t ch) const;
     const LetterGeometry& letterGeometry(char32_t ch) const;

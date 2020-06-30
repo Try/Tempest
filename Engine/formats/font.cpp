@@ -124,6 +124,11 @@ struct FontElement::Impl {
       delete[] data;
       throw std::system_error(Tempest::SystemErrc::UnableToLoadAsset);
       }
+    if(stbtt_InitFont(&info,data,0)==0) {
+      delete[] data;
+      throw std::system_error(Tempest::SystemErrc::UnableToLoadAsset);
+      }
+    stbtt_GetFontVMetrics(&info,&metrics0.ascent,&metrics0.descent,&lineGap);
     }
 
   ~Impl() {
@@ -260,6 +265,14 @@ struct FontElement::Impl {
       }
     }
 
+  Metrics        metrics(float size) const {
+    const float scale = stbtt_ScaleForPixelHeight(&info,size);
+    Metrics m = metrics0;
+    m.ascent  = int(m.ascent*scale);
+    m.descent = int(m.descent*scale);
+    return m;
+    }
+
   uint8_t*       data=nullptr;
   uint32_t       size=0;
   stbtt_fontinfo info={};
@@ -267,10 +280,8 @@ struct FontElement::Impl {
   std::mutex     syncMem;
   uint8_t*       rasterBuf=nullptr;
   size_t         rasterSz =0;
-
-  int ascent =0;
-  int descent=0;
-  int lineGap=0;
+  Metrics        metrics0;
+  int            lineGap=0;
 
   std::mutex                           syncMap;
   LetterTable                          map;
@@ -289,11 +300,6 @@ FontElement::FontElement(std::nullptr_t)
 template<class CharT>
 FontElement::FontElement(const CharT *file,std::true_type)
   :ptr(std::make_shared<Impl>(file)) {
-  if(file) {
-    if(stbtt_InitFont(&ptr->info,ptr->data,0)==0)
-      throw std::system_error(Tempest::SystemErrc::UnableToLoadAsset);
-    stbtt_GetFontVMetrics(&ptr->info,&ptr->ascent,&ptr->descent,&ptr->lineGap);
-    }
   }
 
 FontElement::FontElement(const char *file)
@@ -339,6 +345,10 @@ Size FontElement::textSize(const char *text,float fontSize) const {
 
 bool FontElement::isEmpty() const {
   return ptr->size==0;
+  }
+
+FontElement::Metrics FontElement::metrics(float size) const {
+  return ptr->metrics(size);
   }
 
 template<class CharT>
@@ -396,6 +406,10 @@ bool Font::isItalic() const {
 bool Font::isEmpty() const {
   return fnt[0][0].isEmpty() || fnt[0][1].isEmpty() ||
          fnt[1][0].isEmpty() || fnt[1][1].isEmpty();
+  }
+
+Font::Metrics Font::metrics() const {
+  return fnt[bold][italic].metrics(size);
   }
 
 const Font::LetterGeometry &Font::letterGeometry(char16_t ch) const {
