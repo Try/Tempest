@@ -15,7 +15,7 @@ VSwapchain::VSwapchain(VDevice &device, SystemApi::Window* hwnd)
 
     auto     support  = device.querySwapChainSupport(surface);
     uint32_t imgCount = getImageCount(support);
-    createSwapchain(device,support,hwnd,imgCount);
+    createSwapchain(device,support,SystemApi::windowClientRect(hwnd),imgCount);
     }
   catch(...) {
     cleanup();
@@ -48,12 +48,15 @@ void VSwapchain::cleanupSurface() noexcept {
   }
 
 void VSwapchain::reset() {
+  const Rect rect = SystemApi::windowClientRect(hwnd);
+  if(rect.isEmpty())
+    return;
   cleanupSwapchain();
 
   try {
     auto     support  = device.querySwapChainSupport(surface);
     uint32_t imgCount = getImageCount(support);
-    createSwapchain(device,support,hwnd,imgCount);
+    createSwapchain(device,support,rect,imgCount);
     }
   catch(...) {
     cleanup();
@@ -68,7 +71,8 @@ void VSwapchain::cleanup() noexcept {
   cleanupSurface();
   }
 
-void VSwapchain::createSwapchain(VDevice& device, const VDevice::SwapChainSupport& swapChainSupport, SystemApi::Window* hwnd, uint32_t imgCount) {
+void VSwapchain::createSwapchain(VDevice& device, const VDevice::SwapChainSupport& swapChainSupport,
+                                 const Rect& rect, uint32_t imgCount) {
   auto& indices          = device.props;
   const uint32_t qidx[]  = {device.props.presentFamily,device.props.graphicsFamily};
 
@@ -77,7 +81,6 @@ void VSwapchain::createSwapchain(VDevice& device, const VDevice::SwapChainSuppor
   if(!support)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
-  const Rect         rect          = SystemApi::windowClientRect(hwnd);
   VkSurfaceFormatKHR surfaceFormat = getSwapSurfaceFormat(swapChainSupport.formats);
   VkPresentModeKHR   presentMode   = getSwapPresentMode  (swapChainSupport.presentModes);
   VkExtent2D         extent        = getSwapExtent       (swapChainSupport.capabilities,uint32_t(rect.w),uint32_t(rect.h));

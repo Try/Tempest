@@ -229,9 +229,10 @@ void WindowsApi::implProcessEvents(SystemApi::AppCallBack& cb) {
     if(cb.onTimer()==0)
       Sleep(1);
     for(auto& i:windows){
-      HWND h = HWND(i);
-      Tempest::Window* cb=reinterpret_cast<Tempest::Window*>(GetWindowLongPtr(h,GWLP_USERDATA));
-      if(cb)
+      HWND             h  = HWND(i);
+      Tempest::Window* cb = reinterpret_cast<Tempest::Window*>(GetWindowLongPtr(h,GWLP_USERDATA));
+      LONG             s  = GetWindowLongA(h,GWL_STYLE);
+      if(cb && 0==(s&WS_MINIMIZE))
         SystemApi::dispatchRender(*cb);
       }
     }
