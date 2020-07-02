@@ -314,7 +314,7 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
   const int fntSz = int(fnt.metrics().ascent);
 
   Point at;
-  if(e!=TE_TextEditContent && e!=TE_LineEditContent && false) {
+  if(e!=TE_TextEditContent && e!=TE_LineEditContent) {
     const int h = text.wrapSize().h;
     at = {dX, r.h-(r.h-h)/2};
     } else {
