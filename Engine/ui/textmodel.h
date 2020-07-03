@@ -128,6 +128,7 @@ class TextModel final {
     void        drawCursor(Painter& p,int x,int y,Cursor c) const;
     void        drawCursor(Painter& p,int x,int y,Cursor s,Cursor e) const;
     bool        isValid(Cursor c) const;
+    Cursor      clamp(const Cursor& c) const;
 
   private:
     struct Sz {

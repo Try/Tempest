@@ -66,6 +66,7 @@ class AbstractTextInput : public Tempest::Widget {
     void              updateFont();
     void              undo();
     void              redo();
+    void              adjustSelection();
   };
 
 }

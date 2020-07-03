@@ -41,16 +41,26 @@ void AbstractTextInput::updateFont() {
 
 void AbstractTextInput::undo() {
   stk.undo(textM);
+  adjustSelection();
   update();
   }
 
 void AbstractTextInput::redo() {
   stk.redo(textM);
+  adjustSelection();
   update();
+  }
+
+void AbstractTextInput::adjustSelection() {
+  if(!textM.isValid(selS))
+    selS = textM.clamp(selS);
+  if(!textM.isValid(selE))
+    selE = textM.clamp(selE);
   }
 
 void AbstractTextInput::setText(const char *text) {
   textM.setText(text);
+  adjustSelection();
   invalidateSizeHint();
   update();
   }

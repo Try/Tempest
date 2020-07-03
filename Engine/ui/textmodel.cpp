@@ -381,6 +381,18 @@ bool TextModel::isValid(TextModel::Cursor c) const {
   return c.offset<=line[c.line].size;
   }
 
+TextModel::Cursor TextModel::clamp(const TextModel::Cursor& c) const {
+  Cursor r;
+  if(line.size()==0) {
+    r.line   = 0;
+    r.offset = 0;
+    return r;
+    }
+  r.line   = std::max<size_t>(0,std::min<size_t>(c.line,line.size()-1));
+  r.offset = std::max<size_t>(0,std::min<size_t>(c.offset,line[r.offset].size));
+  return r;
+  }
+
 size_t TextModel::cursorCast(Cursor c) const {
   if(line.size()==0)
     return 0;
