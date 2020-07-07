@@ -177,7 +177,7 @@ void TextModel::fetch(TextModel::Cursor cs, TextModel::Cursor ce, char* buf) {
 TextModel::Cursor TextModel::advance(TextModel::Cursor src, int32_t offset) const {
   size_t c = cursorCast(src);
   if(offset>0) {
-    const char* str = txt.data()+c, *end = txt.data()+txt.size();
+    const char* str = txt.data()+c, *end = txt.data()+txt.size()-(txt.size() ? 1 : 0);
     for(int32_t i=0;i<offset && str<end;++i) {
       const auto l = Detail::utf8LetterLength(str);
       str+=l;

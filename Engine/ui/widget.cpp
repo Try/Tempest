@@ -374,7 +374,7 @@ void Widget::setMinimumSize(int w, int h) {
   }
 
 Rect Widget::clientRect() const {
-  return Rect(marg.left,marg.right,wrect.w-marg.xMargin(),wrect.h-marg.yMargin());
+  return Rect(marg.left,marg.top,wrect.w-marg.xMargin(),wrect.h-marg.yMargin());
   }
 
 void Widget::setEnabled(bool e) {
