@@ -123,15 +123,17 @@ bool ScrollWidget::updateScrolls(Orientation orient,bool noRetry) {
   const Widget* last  = findLast();
 
   Size content = cenLay->wrapContent(cen,orient,false);
+  Size hint    = cen.sizeHint();
 
-  bool needScH = (hor ==AlwaysOn || content.w>helper.w());
-  bool needScV = (vert==AlwaysOn || content.h>helper.h());
-  bool hasScH  = needScH && (hor !=AlwaysOff);
-  bool hasScV  = needScV && (vert!=AlwaysOff);
+  const bool needScH = (hor ==AlwaysOn || content.w>helper.w());
+  const bool needScV = (vert==AlwaysOn || content.h>helper.h());
+  const bool hasScH  = needScH && (hor !=AlwaysOff);
+  const bool hasScV  = needScV && (vert!=AlwaysOff);
 
-  emplace(helper,
+  emplace(helper,cen,
           hasScH ? &sbH : nullptr,
           hasScV ? &sbV : nullptr,
+          hint,
           Rect(m.left,m.top,w()-m.xMargin(),h()-m.yMargin()));
 
   const Size hsize=helper.size();
@@ -157,7 +159,6 @@ bool ScrollWidget::updateScrolls(Orientation orient,bool noRetry) {
     }
   sbH.setVisible(hasScH);
   sbV.setVisible(hasScV);
-  cen.applyLayout();
 
   if(orient==Vertical) {
     int min=0;
@@ -193,7 +194,7 @@ bool ScrollWidget::updateScrolls(Orientation orient,bool noRetry) {
   return true;
   }
 
-void ScrollWidget::emplace(Widget &cen, Widget *scH, Widget *scV, const Rect& place) {
+void ScrollWidget::emplace(Widget& hlp, Widget& cen, Widget *scH, Widget *scV, Size hint, const Rect& place) {
   int sp = spacing();
   int dx = scV==nullptr ? 0 : (scV->sizeHint().w);
   int dy = scH==nullptr ? 0 : (scH->sizeHint().h);
@@ -207,7 +208,9 @@ void ScrollWidget::emplace(Widget &cen, Widget *scH, Widget *scV, const Rect& pl
     dx+=sp;
   if(dy>0)
     dy+=sp;
-  cen.setGeometry(place.x,place.y,std::max(0,place.w-dx),std::max(0,place.h-dy));
+
+  hlp.setGeometry(place.x,place.y,std::max(0,place.w-dx),std::max(0,place.h-dy));
+  cen.resize(std::max(0,hint.w-dx),std::max(0,hint.h-dy));
   }
 
 Widget *ScrollWidget::findFirst() {
@@ -344,12 +347,12 @@ void ScrollWidget::complexLayout() {
   layoutBusy=true;
   helper.setGeometry(0,0,w(),h());
   wrapContent();
-  cenLay->commitLayout();
 
   static const int tryCound=3;
   for(int i=1;i<=tryCound;++i)
     if(updateScrolls(orient,i==tryCound))
       break;
+  cenLay->commitLayout();
   layoutBusy=false;
   }
 
@@ -367,7 +370,7 @@ void ScrollWidget::wrapContent() {
     }
 
   cen.setSizeHint(wrap);
-  cen.resize(wrap);
+  //cen.resize(wrap);
   }
 
 Size ScrollWidget::contentAreaSize() {

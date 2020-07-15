@@ -60,7 +60,7 @@ class ScrollWidget : public Tempest::Widget {
       };
 
     bool    updateScrolls(Orientation orient, bool noRetry);
-    void    emplace(Widget& cen, Widget* scH, Widget* scV, const Rect &place);
+    void    emplace(Widget& hlp, Widget& cen, Widget* scH, Widget* scV, Size hint, const Rect &place);
 
     Widget* findFirst();
     Widget* findLast();
