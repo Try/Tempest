@@ -118,6 +118,16 @@ void EventDispatcher::dispatchKeyDown(Widget &wnd, KeyEvent &e, uint32_t scancod
   KeyEvent e1(e.key,e.code,mkModifier(),e.type());
   handleModKey(e);
 
+  for(auto i:overlays) {
+    if(!i->bind(wnd))
+      continue;
+    if(implShortcut(wnd,e1))
+      return;
+    k = implDispatch(*i,e1);
+    if(!k.expired())
+      return;
+    }
+
   if(implShortcut(wnd,e1))
     return;
   k = implDispatch(wnd,e1);

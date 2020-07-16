@@ -221,6 +221,18 @@ void Style::draw(Painter &p, Label *w, Element e, const WidgetState &st, const R
   // nop
   }
 
+void Style::draw(Painter& p, Dialog*, UiOverlay*, Style::Element /*e*/,
+                 const WidgetState& /*st*/, const Rect& r, const Style::Extra&, const Rect& overlay) const {
+  p.setBrush(Color(0,0,0,0.5));
+  p.drawRect(overlay);
+
+  p.setBrush(Color(0,0,0,1));
+  p.drawLine(r.x-1, r.y-1,   r.x+r.w+1, r.y-1);
+  p.drawLine(r.x-1, r.y+r.h, r.x+r.w+1, r.y+r.h);
+  p.drawLine(r.x-1, r.y,     r.x-1,     r.y+r.h);
+  p.drawLine(r.x+r.w, r.y, r.x+r.w, r.y+r.h);
+  }
+
 void Style::draw(Painter &p, AbstractTextInput* w, Element e, const WidgetState &st, const Rect &r, const Style::Extra &extra) const {
   (void)p;
   (void)w;
@@ -302,7 +314,7 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
     }
 
   if(e==TE_CheckboxTitle) {
-    const int s = std::min(r.w,r.h);
+    const int s = std::min(r.w-m.xMargin(),r.h-m.yMargin());
     if( dX<s )
       dX=s;
     }

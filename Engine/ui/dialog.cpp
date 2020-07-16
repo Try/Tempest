@@ -77,9 +77,7 @@ struct Dialog::Overlay : public Tempest::UiOverlay {
   };
 
 Dialog::Dialog() {
-  setVisible(false);
   resize(300,200);
-  //setDragable(1);
   }
 
 Dialog::~Dialog() {
@@ -148,8 +146,7 @@ void Dialog::paintEvent(PaintEvent& e) {
 void Dialog::paintShadow(PaintEvent &e) {
   if(owner_ov==nullptr)
     return;
-
   Painter p(e);
-  p.setBrush(Color(0,0,0,0.5));
-  p.drawRect(0,0,owner_ov->w(),owner_ov->h());
+  style().draw(p,this,owner_ov,Style::E_Background,state(),
+               rect(),Style::Extra(*this),Rect(0,0,owner_ov->w(),owner_ov->h()));
   }

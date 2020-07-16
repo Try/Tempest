@@ -123,6 +123,9 @@ class Style {
     virtual void draw(Painter& p, CheckBox* w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
     virtual void draw(Painter& p, Label*    w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
 
+    // dialog shadow
+    virtual void draw(Painter& p, Dialog* w, UiOverlay* o, Element e, const WidgetState& st, const Rect& r, const Extra& extra, const Rect& overlay) const;
+
     // complex
     virtual void draw(Painter& p, AbstractTextInput* w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
     virtual void draw(Painter& p, ScrollBar*         w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;

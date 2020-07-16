@@ -6,6 +6,7 @@ using namespace Tempest;
 
 LineEdit::LineEdit() {
   setMargins(Margin(4,4,4,4));
+  setSizePolicy(Preferred,Fixed);
   invalidateSizeHint();
   }
 
