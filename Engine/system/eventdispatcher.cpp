@@ -169,15 +169,17 @@ void EventDispatcher::dispatchRender(Window& wnd) {
   }
 
 void EventDispatcher::dispatchOverlayRender(Window& wnd, PaintEvent& e) {
-  for(auto i:overlays) {
-    if(!i->bind(wnd))
+  for(size_t i=overlays.size(); i>0;) {
+    --i;
+    auto w = overlays[i];
+    if(!w->bind(wnd))
       continue;
-    i->dispatchPaintEvent(e);
+    w->dispatchPaintEvent(e);
     }
   }
 
 void EventDispatcher::addOverlay(UiOverlay* ui) {
-  overlays.push_back(ui);
+  overlays.insert(overlays.begin(),ui);
   }
 
 void EventDispatcher::takeOverlay(UiOverlay* ui) {
