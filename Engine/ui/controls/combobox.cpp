@@ -163,6 +163,11 @@ void ComboBox::updateView() {
     proxyDelegate->updateView();
   }
 
+void ComboBox::paintEvent(PaintEvent& e) {
+  Tempest::Painter p(e);
+  style().draw(p,this, Style::E_Background,state(),Rect(0,0,w(),h()),Style::Extra(*this));
+  }
+
 void ComboBox::openMenu() {
   overlay = new Overlay(this);
   auto list = createDropList();

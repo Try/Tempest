@@ -114,6 +114,10 @@ void Dialog::close() {
   delete ov;
   }
 
+bool Dialog::isOpen() const {
+  return owner_ov!=nullptr;
+  }
+
 void Dialog::setModal(bool m) {
   if(owner_ov!=nullptr)
     owner_ov->isModal = m;

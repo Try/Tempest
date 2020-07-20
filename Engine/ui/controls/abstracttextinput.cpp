@@ -25,6 +25,7 @@ AbstractTextInput::AbstractTextInput() {
 void AbstractTextInput::invalidateSizeHint() {
   updateFont();
   Size sz=textM.sizeHint();
+  sz.w = 0;
   setSizeHint(sz,margins());
   }
 

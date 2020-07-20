@@ -27,6 +27,9 @@ class ComboBox : public Widget {
     void         invalidateView();
     void         updateView();
 
+  protected:
+    void         paintEvent(Tempest::PaintEvent &event) override;
+
   private:
     struct Overlay;
     struct DropPanel;

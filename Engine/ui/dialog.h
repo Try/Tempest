@@ -14,6 +14,8 @@ class Dialog : public Panel {
     int  exec();
     void close();
 
+    bool isOpen() const;
+
     void setModal(bool m);
     bool isModal() const;
 

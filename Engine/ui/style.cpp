@@ -221,6 +221,16 @@ void Style::draw(Painter &p, Label *w, Element e, const WidgetState &st, const R
   // nop
   }
 
+void Style::draw(Painter& p, ComboBox* w, Style::Element e, const WidgetState& st, const Rect& r, const Style::Extra& extra) const {
+  (void)p;
+  (void)w;
+  (void)e;
+  (void)st;
+  (void)r;
+  (void)extra;
+  // nop
+  }
+
 void Style::draw(Painter& p, Dialog*, UiOverlay*, Style::Element /*e*/,
                  const WidgetState& /*st*/, const Rect& r, const Style::Extra&, const Rect& overlay) const {
   p.setBrush(Color(0,0,0,0.5));
