@@ -271,7 +271,7 @@ bool X11Api::implIsFullscreen(SystemApi::Window *w) {
   return false;
   }
 
-void X11Api::implSetCursorPosition(int x, int y) {
+void X11Api::implSetCursorPosition(SystemApi::Window *w, int x, int y) {
   activeCursorChange = 1;
   XWarpPointer(dpy, None, root, 0, 0, 0, 0, x, y);
   XFlush(dpy);

@@ -48,7 +48,7 @@ class SystemApi {
     static bool     setAsFullscreen(SystemApi::Window *w, bool fullScreen);
     static bool     isFullscreen(SystemApi::Window *w);
 
-    static void     setCursorPosition(int x, int y);
+    static void     setCursorPosition(SystemApi::Window *w, int x, int y);
     static void     showCursor(bool show);
 
     static uint16_t translateKey(uint64_t scancode);
@@ -74,7 +74,7 @@ class SystemApi {
     virtual bool     implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) = 0;
     virtual bool     implIsFullscreen(SystemApi::Window *w) = 0;
 
-    virtual void     implSetCursorPosition(int x, int y) = 0;
+    virtual void     implSetCursorPosition(SystemApi::Window *w, int x, int y) = 0;
     virtual void     implShowCursor(bool show) = 0;
 
     virtual bool     implIsRunning() = 0;

@@ -272,8 +272,11 @@ bool WindowsApi::implIsFullscreen(SystemApi::Window *w) {
   return ULONG(GetWindowLongPtr(hwnd, GWL_STYLE)) & WS_POPUP;
   }
 
-void WindowsApi::implSetCursorPosition(int x, int y) {
-  SetCursorPos(x,y);
+void WindowsApi::implSetCursorPosition(SystemApi::Window *w, int x, int y) {
+  HWND  hwnd = HWND(w);
+  POINT pt   = {x,y};
+  ClientToScreen(hwnd, &pt);
+  SetCursorPos(pt.x, pt.y);
   }
 
 void WindowsApi::implShowCursor(bool show) {

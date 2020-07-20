@@ -180,8 +180,8 @@ bool SystemApi::isFullscreen(SystemApi::Window *w) {
   return inst().implIsFullscreen(w);
   }
 
-void SystemApi::setCursorPosition(int x, int y) {
-  return inst().implSetCursorPosition(x,y);
+void SystemApi::setCursorPosition(SystemApi::Window *w, int x, int y) {
+  return inst().implSetCursorPosition(w,x,y);
   }
 
 void SystemApi::showCursor(bool show) {

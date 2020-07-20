@@ -20,7 +20,7 @@ class WindowsApi final : SystemApi {
     bool     implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) override;
     bool     implIsFullscreen(SystemApi::Window *w) override;
 
-    void     implSetCursorPosition(int x, int y) override;
+    void     implSetCursorPosition(SystemApi::Window *w, int x, int y) override;
     void     implShowCursor(bool show) override;
 
     bool     implIsRunning() override;
