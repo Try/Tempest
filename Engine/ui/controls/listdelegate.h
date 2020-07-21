@@ -29,7 +29,7 @@ class ListDelegate {
 
     virtual Widget* createView(size_t position, Role /*role*/) { return createView(position); }
     virtual Widget* createView(size_t position               ) = 0;
-    virtual void    removeView(Widget* w, size_t /*position*/){ delete w; }
+    virtual void    removeView(Widget* w, size_t /*position*/) { w->deleteLater();            }
 
     virtual Widget* update    ( Widget* w, size_t position ){
       removeView(w,position);

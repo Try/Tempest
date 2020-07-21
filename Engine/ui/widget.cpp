@@ -97,12 +97,7 @@ void Widget::removeAllWidgets() {
   astate.focus = nullptr;
 
   for(auto& w:rm) {
-    if(w->selfRef.use_count()>1) {
-      w->selfRef->deleteLaterHint = true;
-      w->selfRef = nullptr;
-      } else {
-      delete w;
-      }
+    w->deleteLater();
     }
   }
 
@@ -168,6 +163,15 @@ void Widget::setOwner(Widget *w) {
   if(ow)
     ow->takeWidget(this);
   ow=w;
+  }
+
+void Widget::deleteLater() noexcept {
+  if(selfRef.use_count()>1) {
+    selfRef->deleteLaterHint = true;
+    selfRef = nullptr;
+    } else {
+    delete this;
+    }
   }
 
 Widget& Widget::implAddWidget(Widget *w,size_t at) {

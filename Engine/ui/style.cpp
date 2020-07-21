@@ -308,7 +308,6 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
   const Rect    sc = p.scissor();
 
   p.setScissor(sc.intersected(Rect(m.left, 0, r.w-m.xMargin(), r.h)));
-  p.translate(m.left,m.top);
 
   const Sprite& icon = iconSprite(extra.icon,st,r);
   int dX = 0;
@@ -318,7 +317,7 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
     if( text.isEmpty() ) {
       p.drawRect( (r.w-icon.w())/2, (r.h-icon.h())/2, icon.w(), icon.h() );
       } else {
-      p.drawRect( 0, (r.h-icon.h())/2, icon.w(), icon.h() );
+      p.drawRect( m.left, (r.h-icon.h())/2, icon.w(), icon.h() );
       dX=icon.w();
       }
     }
@@ -338,9 +337,9 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
   Point at;
   if(e!=TE_TextEditContent && e!=TE_LineEditContent) {
     const int h = text.wrapSize().h;
-    at = {dX, (r.h+h)/2-m.top};
+    at = { m.left+dX, (r.h+h)/2 };
     } else {
-    at = { 0, fntSz};
+    at = { m.left, fntSz+m.top };
     }
 
   if(st.focus && extra.selectionStart==extra.selectionEnd) {
@@ -352,7 +351,6 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
     text.drawCursor(p,at.x,at.y-fntSz,extra.selectionStart,extra.selectionEnd);
     }
   text.paint(p, fnt, at.x, at.y);
-  p.translate(-m.left,-m.top);
   p.setScissor(sc);
   }
 

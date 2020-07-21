@@ -84,7 +84,7 @@ void Button::mouseDownEvent(MouseEvent &e) {
   }
 
 void Button::mouseUpEvent(MouseEvent& e) {
-  if( e.x<=w() && e.y<=h() &&  e.x>=0 && e.y>=0 && isEnabled() ) {
+  if(e.x<=w() && e.y<=h() &&  e.x>=0 && e.y>=0 && isEnabled()) {
     if(buttonType()==T_CheckableButton) {
       auto c = isChecked();
       setChecked(c==Checked ? Unchecked : Checked);
@@ -120,9 +120,9 @@ void Button::invalidateSizeHint() {
   updateFont();
   auto& m  = style().metrics();
   auto  sz = style().sizeHint(this,Style::E_Background,&textM,Style::Extra(*this));
-  sz.w = std::max(sz.w,m.buttonSize);
+  sz.w = std::max(sz.w+margins().xMargin(),m.buttonSize);
   sz.h = m.buttonSize;
-  setSizeHint(sz,margins());
+  setSizeHint(sz);
   }
 
 void Button::setPressed(bool p) {

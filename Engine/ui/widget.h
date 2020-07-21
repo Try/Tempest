@@ -211,8 +211,10 @@ class Widget {
 
     auto                    selfReference() -> const std::shared_ptr<Ref>&;
     void                    setOwner(Widget* w);
+    void                    deleteLater() noexcept;
 
   friend class EventDispatcher;
+  friend class ListDelegate;
   friend class Shortcut;
   friend class Layout;
   friend class Window;
