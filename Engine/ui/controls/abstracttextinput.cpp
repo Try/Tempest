@@ -106,6 +106,8 @@ void AbstractTextInput::setUndoRedoEnabled(bool enable) {
   if(enable)
     stk.setMaxDepth(0); else
     stk.setMaxDepth(StkDepth);
+  scUndo.setEnable(enable);
+  scRedo.setEnable(enable);
   }
 
 bool AbstractTextInput::isUndoRedoEnabled() const {

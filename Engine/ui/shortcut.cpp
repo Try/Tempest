@@ -52,6 +52,14 @@ void Shortcut::setModifier(Event::Modifier mod) {
   m.modifier = mod;
   }
 
+void Shortcut::setEnable(bool e) {
+  m.disabled = !e;
+  }
+
+bool Shortcut::isEnable() const {
+  return !m.disabled;
+  }
+
 Event::KeyType Shortcut::key() const {
   return m.key;
   }

@@ -25,6 +25,9 @@ class Shortcut final {
     void setKey     (uint32_t          key);
     void setModifier(Event::Modifier   mod);
 
+    void setEnable(bool e);
+    bool isEnable() const;
+
     KeyEvent::KeyType key()      const;
     uint32_t          lkey()     const;
     Event::Modifier   modifier() const;
@@ -37,6 +40,7 @@ class Shortcut final {
       KeyEvent::KeyType key      = Event::K_NoKey;
       uint32_t          lkey     = 0;
       Widget*           owner    = nullptr;
+      bool              disabled = false;
       } m;
 
   friend class Widget;

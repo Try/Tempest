@@ -272,8 +272,13 @@ bool EventDispatcher::implShortcut(Widget& w, KeyEvent& event) {
       return true;
     }
 
+  if(!w.astate.focus)
+    return false;
+
   std::lock_guard<std::recursive_mutex> guard(Widget::syncSCuts);
   for(auto& sc:w.sCuts) {
+    if(!sc->isEnable())
+      continue;
     if(sc->key() !=event.key  && sc->key() !=KeyEvent::K_NoKey)
       continue;
     if(sc->lkey()!=event.code && sc->lkey()!=0)
