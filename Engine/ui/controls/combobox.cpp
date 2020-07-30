@@ -178,7 +178,7 @@ void ComboBox::mouseWheelEvent(MouseEvent& e) {
     return;
   if(ci+d>=size)
     return;
-  setCurrentIndex(ci+d);
+  applyItemSelection(ci+d);
   }
 
 void ComboBox::openMenu() {
