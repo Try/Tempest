@@ -272,7 +272,7 @@ bool EventDispatcher::implShortcut(Widget& w, KeyEvent& event) {
       return true;
     }
 
-  if(!w.astate.focus)
+  if(!w.astate.focus && !w.wstate.focus)
     return false;
 
   std::lock_guard<std::recursive_mutex> guard(Widget::syncSCuts);

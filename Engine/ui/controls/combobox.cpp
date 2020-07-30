@@ -168,6 +168,19 @@ void ComboBox::paintEvent(PaintEvent& e) {
   style().draw(p,this, Style::E_Background,state(),Rect(0,0,w(),h()),Style::Extra(*this));
   }
 
+void ComboBox::mouseWheelEvent(MouseEvent& e) {
+  auto size = delegate->size();
+  if(size==0 || e.delta==0)
+    return;
+  size_t ci = currentIndex();
+  int d  = (e.delta<0 ? 1 : -1);
+  if(d<0 && ci==0)
+    return;
+  if(ci+d>=size)
+    return;
+  setCurrentIndex(ci+d);
+  }
+
 void ComboBox::openMenu() {
   overlay = new Overlay(this);
   auto list = createDropList();

@@ -336,8 +336,10 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
 
   Point at;
   if(e!=TE_TextEditContent && e!=TE_LineEditContent) {
-    const int h = text.wrapSize().h;
-    at = { m.left+dX, (r.h+h)/2 };
+    const Size sz = text.wrapSize();
+    at = { m.left+dX, (r.h+sz.h)/2 };
+    if(e==TE_ButtonTitle && dX==0)
+      at.x = m.left + (r.w-sz.w-m.xMargin())/2;
     } else {
     at = { m.left, fntSz+m.top };
     }

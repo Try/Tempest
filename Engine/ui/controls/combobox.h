@@ -29,6 +29,7 @@ class ComboBox : public Widget {
 
   protected:
     void         paintEvent(Tempest::PaintEvent &event) override;
+    void         mouseWheelEvent(Tempest::MouseEvent &event) override;
 
   private:
     struct Overlay;
