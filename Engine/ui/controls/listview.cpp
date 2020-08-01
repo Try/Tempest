@@ -19,7 +19,7 @@ Widget& ListView::centralWidget() {
   return sc.centralWidget();
   }
 
-void ListView::setDelegate(ListDelegate* d) {
+void ListView::implSetDelegate(ListDelegate* d) {
   removeDelegate();
 
   delegate.reset(d);

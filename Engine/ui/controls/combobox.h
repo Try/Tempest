@@ -18,7 +18,11 @@ class ComboBox : public Widget {
 
     void         setItems(const std::vector<std::string>& items);
 
-    void         setDelegate(ListDelegate* d);
+    template<class T>
+    auto         setDelegate(T* d) -> T* {
+      implSetDelegate(d);
+      return d;
+      }
     void         removeDelegate();
 
     void         setCurrentIndex(size_t i);
@@ -47,6 +51,7 @@ class ComboBox : public Widget {
 
     void         openMenu();
     void         closeMenu();
+    void         implSetDelegate(ListDelegate* d);
 
     void         applyItemSelection(size_t id);
     void         proxyOnItemSelected(size_t id, Widget*);

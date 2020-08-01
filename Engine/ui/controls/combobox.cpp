@@ -100,7 +100,7 @@ void ComboBox::proxyOnItemSelected(size_t id, Widget*) {
     }
   }
 
-void ComboBox::setDelegate(ListDelegate* d) {
+void ComboBox::implSetDelegate(ListDelegate* d) {
   removeDelegate();
 
   delegate.reset(d);

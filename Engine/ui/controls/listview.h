@@ -17,7 +17,11 @@ class ListView : public Widget {
 
     Widget& centralWidget();
 
-    void setDelegate(ListDelegate* d);
+    template<class T>
+    auto setDelegate(T* d) -> T* {
+      implSetDelegate(d);
+      return d;
+      }
     void removeDelegate();
 
     void setLayout(Tempest::Orientation ori);
@@ -29,6 +33,8 @@ class ListView : public Widget {
     void updateView();
 
   private:
+    void implSetDelegate(ListDelegate* d);
+
     ScrollWidget                   sc;
     std::unique_ptr<ListDelegate>  delegate;
     ListDelegate::Role             defaultRole = ListDelegate::R_ListItem;
