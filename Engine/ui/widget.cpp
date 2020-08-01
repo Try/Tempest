@@ -35,8 +35,20 @@ bool Widget::Iterator::hasNext() const {
   return id<nodes->size();
   }
 
+bool Widget::Iterator::hasPrev() const {
+  return id!=size_t(-1);
+  }
+
 void Widget::Iterator::next() {
   ++id;
+  }
+
+void Widget::Iterator::prev() {
+  --id;
+  }
+
+void Widget::Iterator::moveToEnd() {
+  id = nodes->size()-1;
   }
 
 Widget* Widget::Iterator::getLast() {

@@ -145,7 +145,10 @@ class Widget {
       void    onDelete();
       void    onDelete(size_t i,Widget* wx);
       bool    hasNext() const;
+      bool    hasPrev() const;
       void    next();
+      void    prev();
+      void    moveToEnd();
       Widget* get();
       Widget* getLast();
 
