@@ -202,8 +202,9 @@ std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget& w,MouseEvent 
     }
   Point            pos=event.pos();
   Widget::Iterator it(&w);
+  it.moveToEnd();
 
-  for(;it.hasNext();it.next()) {
+  for(;it.hasPrev();it.prev()) {
     Widget* i=it.get();
     if(i->rect().contains(pos)) {
       MouseEvent ex(event.x - i->x(),
