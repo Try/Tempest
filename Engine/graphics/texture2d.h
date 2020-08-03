@@ -16,9 +16,9 @@ class CommandBuffer;
 class Texture2d final {
   public:
     Texture2d()=default;
-    Texture2d(Texture2d&&)=default;
+    Texture2d(Texture2d&&);
     ~Texture2d();
-    Texture2d& operator=(Texture2d&&)=default;
+    Texture2d& operator=(Texture2d&&);
 
     int           w() const { return texW; }
     int           h() const { return texH; }
