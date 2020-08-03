@@ -14,7 +14,7 @@ struct ComboBox::Overlay:UiOverlay {
     }
 
   void mouseDownEvent(MouseEvent&) override {
-    delete this;
+    owner->closeMenu();
     }
 
   ComboBox* owner;
