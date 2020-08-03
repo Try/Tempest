@@ -48,7 +48,8 @@ class Button : public Widget {
     void         setMenu(Tempest::Menu* menu);
     auto         menu() const -> const Tempest::Menu*;
 
-    Signal<void()> onClick;
+    Signal<void()>     onClick;
+    Signal<void(bool)> onChecked;
 
   protected:
     void mouseDownEvent (Tempest::MouseEvent&  e) override;

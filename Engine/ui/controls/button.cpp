@@ -88,6 +88,7 @@ void Button::mouseUpEvent(MouseEvent& e) {
     if(buttonType()==T_CheckableButton) {
       auto c = isChecked();
       setChecked(c==Checked ? Unchecked : Checked);
+      onChecked(c!=Checked);
       }
 
     if(isPressed())
