@@ -27,6 +27,7 @@ class SoundDevice final {
 
     void setListenerPosition(float x,float y,float z);
     void setListenerDirection(float dx, float dy, float dz, float ux, float uy, float uz);
+    void setGlobalVolume(float v);
 
   private:
     struct Data;

@@ -84,6 +84,11 @@ void SoundDevice::setListenerDirection(float dx,float dy,float dz,float ux,float
   alListenerfvCt(data->context,AL_ORIENTATION,ori);
   }
 
+void SoundDevice::setGlobalVolume(float v) {
+  float fv[]={v};
+  alListenerfvCt(data->context,AL_GAIN,fv);
+  }
+
 void* SoundDevice::context() {
   return data->context;
   }

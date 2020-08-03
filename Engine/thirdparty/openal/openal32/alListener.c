@@ -132,7 +132,7 @@ AL_API ALvoid AL_APIENTRY alListenerfvCt(ALCcontext *Context, ALenum param, cons
         {
             case AL_GAIN:
             case AL_METERS_PER_UNIT:
-                alListenerf(param, values[0]);
+                alListenerfCt(Context,param, values[0]);
                 return;
 
             case AL_POSITION:
