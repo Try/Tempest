@@ -350,7 +350,7 @@ const char *VDevice::renderer() const {
   }
 
 void VDevice::waitIdle() {
-  waitIdleSync(queues,_countof(queues));
+  waitIdleSync(queues,sizeof(queues)/sizeof(queues[0]));
   }
 
 void VDevice::waitIdleSync(VDevice::Queue* q, size_t n) {
