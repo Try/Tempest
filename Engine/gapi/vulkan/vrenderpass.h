@@ -2,7 +2,7 @@
 
 #include <Tempest/AbstractGraphicsApi>
 #include <Tempest/Color>
-#include <vector>
+#include <list>
 #include "vulkan_sdk.h"
 
 #include "utility/spinlock.h"
@@ -49,7 +49,7 @@ class VRenderPass : public AbstractGraphicsApi::Pass {
 
   private:
     VkDevice                        device=nullptr;
-    std::vector<Impl>               impl;
+    std::list<Impl>                 impl;
     std::unique_ptr<FboMode[]>      input;
     SpinLock                        sync;
 

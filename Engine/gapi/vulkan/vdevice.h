@@ -176,6 +176,7 @@ class VDevice : public AbstractGraphicsApi::Device {
   private:
     VkPhysicalDeviceMemoryProperties memoryProperties;
     std::unique_ptr<DataMgr>         data;
+    void                    waitIdleSync(Queue* q, size_t n);
 
     void                    implInit(VkPhysicalDevice pdev, VkSurfaceKHR surf);
     void                    pickPhysicalDevice();

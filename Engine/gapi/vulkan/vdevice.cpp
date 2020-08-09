@@ -350,7 +350,20 @@ const char *VDevice::renderer() const {
   }
 
 void VDevice::waitIdle() {
-  vkDeviceWaitIdle(device);
+  waitIdleSync(queues,_countof(queues));
+  }
+
+void VDevice::waitIdleSync(VDevice::Queue* q, size_t n) {
+  if(n==0) {
+    vkDeviceWaitIdle(device);
+    return;
+    }
+  if(q->impl!=nullptr) {
+    std::lock_guard<std::mutex> guard(q->sync);
+    waitIdleSync(q+1,n-1);
+    } else {
+    waitIdleSync(q+1,n-1);
+    }
   }
 
 void VDevice::submit(VCommandBuffer& cmd, VFence& sync) {
