@@ -127,9 +127,8 @@ bool Dialog::isModal() const {
   return owner_ov!=nullptr ? owner_ov->isModal : false;
   }
 
-void Dialog::closeEvent( CloseEvent & e ) {
-  if(owner_ov==nullptr)
-    e.ignore(); else
+void Dialog::closeEvent(CloseEvent&) {
+  if(owner_ov!=nullptr)
     close();
   }
 

@@ -300,7 +300,7 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
     case WM_CLOSE:{
       CloseEvent e;
       SystemApi::dispatchClose(*cb,e);
-      if(e.isAccepted())
+      if(!e.isAccepted())
         exit();
       return 0;
       }

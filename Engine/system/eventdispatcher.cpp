@@ -155,10 +155,8 @@ void EventDispatcher::dispatchClose(Widget& wnd, CloseEvent& e) {
     if(!i->bind(wnd))
       continue;
     i->closeEvent(e);
-    if(e.isAccepted()) {
-      e.ignore();
+    if(e.isAccepted())
       return;
-      }
     }
   wnd.closeEvent(e);
   }
