@@ -40,5 +40,5 @@ void Window::dispatchPaintEvent(VectorImage &surface,TextureAtlas& ta) {
   }
 
 void Window::closeEvent(CloseEvent& e) {
-  e.accept();
+  e.ignore();
   }
