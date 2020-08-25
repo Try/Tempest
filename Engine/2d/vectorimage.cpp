@@ -68,14 +68,14 @@ void VectorImage::setState(const T &t) {
   blocks.back().*param=t;
   }
 
-void VectorImage::setState(const TexPtr &t,const Color&,TextureFormat frm) {
-  Texture tex={t,frm,Sprite()};
+void VectorImage::setState(const TexPtr &t, const Color&, TextureFormat frm, ClampMode clamp) {
+  Texture tex={t,frm,clamp,Sprite()};
   setState<Texture,&State::tex>(tex);
   blocks.back().hasImg=bool(t);
   }
 
 void VectorImage::setState(const Sprite &s, const Color&) {
-  Texture tex={TexPtr(),TextureFormat::Undefined,s};
+  Texture tex={TexPtr(),TextureFormat::Undefined,ClampMode::Repeat,s};
   setState<Texture,&State::tex>(tex);
   blocks.back().hasImg=!s.isEmpty();
 
@@ -139,26 +139,24 @@ void VectorImage::makeActual(Device &dev,Swapchain& sw) {
         ux = dev.uniforms(p.layout());
         f.blocksType[i] = t;
         }
-      if(t==UT_Img) {
+      if(T_LIKELY(t==UT_Img)) {
         if(b.tex.brush) {
-          if(b.tex.frm==TextureFormat::R8 || b.tex.frm==TextureFormat::R16) {
-            Sampler2d s;
+          Sampler2d s;
+          if(T_UNLIKELY(b.tex.frm==TextureFormat::R8 || b.tex.frm==TextureFormat::R16)) {
             s.mapping.r = ComponentSwizzle::R;
             s.mapping.g = ComponentSwizzle::R;
             s.mapping.b = ComponentSwizzle::R;
-            ux.set(0,b.tex.brush,s);
             }
-          else if(b.tex.frm==TextureFormat::RG8 || b.tex.frm==TextureFormat::RG16) {
+          else if(T_UNLIKELY(b.tex.frm==TextureFormat::RG8 || b.tex.frm==TextureFormat::RG16)) {
             Sampler2d s;
             s.mapping.r = ComponentSwizzle::R;
             s.mapping.g = ComponentSwizzle::R;
             s.mapping.b = ComponentSwizzle::R;
             s.mapping.a = ComponentSwizzle::G;
-            ux.set(0,b.tex.brush,s);
             }
-          else {
-            ux.set(0,b.tex.brush);
-            }
+          s.uClamp = b.tex.clamp;
+          s.vClamp = b.tex.clamp;
+          ux.set(0,b.tex.brush,s);
           } else {
           ux.set(0,b.tex.sprite.pageRawData(dev)); //TODO: oom
           }

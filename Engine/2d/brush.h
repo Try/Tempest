@@ -10,9 +10,9 @@ namespace Tempest {
 class Brush {
   public:
     Brush();
-    Brush(const Tempest::Texture2d& texture,PaintDevice::Blend b=PaintDevice::Alpha);
+    Brush(const Tempest::Texture2d& texture,PaintDevice::Blend b=PaintDevice::Alpha, ClampMode clamp=ClampMode::Repeat);
     Brush(const Tempest::Color&     color,  PaintDevice::Blend b=PaintDevice::Alpha);
-    Brush(const Tempest::Texture2d& texture,const Tempest::Color& color,PaintDevice::Blend b=PaintDevice::Alpha);
+    Brush(const Tempest::Texture2d& texture,const Tempest::Color& color,PaintDevice::Blend b=PaintDevice::Alpha, ClampMode clamp=ClampMode::Repeat);
     Brush(const Tempest::Sprite&    texture,PaintDevice::Blend b=PaintDevice::Alpha);
     Brush(const Tempest::Sprite&    texture,const Tempest::Color& color,PaintDevice::Blend b=PaintDevice::Alpha);
 
@@ -25,7 +25,8 @@ class Brush {
     TextureFormat               texFrm = TextureFormat::Undefined;
     Sprite                      spr;
     Tempest::Color              color;
-    PaintDevice::Blend          blend=PaintDevice::NoBlend;
+    PaintDevice::Blend          blend = PaintDevice::NoBlend;
+    ClampMode                   clamp = ClampMode::Repeat;
 
     struct Info {
       int      w=0,h=0;
