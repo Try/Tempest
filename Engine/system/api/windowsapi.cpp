@@ -227,7 +227,7 @@ void WindowsApi::implProcessEvents(SystemApi::AppCallBack& cb) {
     std::this_thread::yield();
     } else {
     if(cb.onTimer()==0)
-      Sleep(1);
+      std::this_thread::yield();
     for(auto& i:windows){
       HWND             h  = HWND(i);
       Tempest::Window* cb = reinterpret_cast<Tempest::Window*>(GetWindowLongPtr(h,GWLP_USERDATA));
