@@ -90,6 +90,8 @@ class Matrix4x4 final {
 
     Matrix4x4& operator = ( const Matrix4x4& other )=default;
 
+    Matrix4x4  operator * (const Matrix4x4& other) const;
+
     bool operator == ( const Matrix4x4& other ) const {
       return std::memcmp(this,&other,sizeof(*this))==0;
       }

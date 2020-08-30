@@ -275,8 +275,8 @@ using namespace Tempest;
 static_assert(std::is_trivially_copyable<Matrix4x4>::value,"must be trivial");
 
 Matrix4x4::Matrix4x4( const float data[/*16*/] ){
-    setData( data );
-    }
+  setData( data );
+  }
 
 Matrix4x4::Matrix4x4( float a11, float a12, float a13, float a14,
                       float a21, float a22, float a23, float a24,
@@ -540,6 +540,43 @@ void Matrix4x4::ortho(int width,int height,float zNear, float zFar) {
   m[3][1] = 0.f;
   m[3][2] = 0.f;
   m[3][3] = 1.f;
+  }
+
+Matrix4x4 Matrix4x4::operator * (const Matrix4x4& other) const {
+  Matrix4x4 r;
+
+  auto& a = m;
+  auto& b = other.m;
+
+  if ((a[0][3]==0.0f) &&
+      (a[1][3]==0.0f) &&
+      (a[2][3]==0.0f) &&
+      (a[2][3]==1.0f) &&
+      (b[0][3]==0.0f) &&
+      (b[1][3]==0.0f) &&
+      (b[2][3]==0.0f) &&
+      (b[2][3]==1.0f))
+  {
+      if ((a[3][0]==0.0f) &&
+          (a[3][1]==0.0f) &&
+          (a[3][2]==0.0f) &&
+          (b[3][0]==0.0f) &&
+          (b[3][1]==0.0f) &&
+          (b[3][2]==0.0f))
+      {
+          NvMultMat3x3f(r.m, a, b);
+      }
+      else
+      {
+          NvMultMat4x3f(r.m, a, b);
+      }
+  }
+  else
+  {
+       NvMultMat4x4f(r.m, a, b);
+  }
+
+  return r;
   }
 
 void Tempest::Matrix4x4::project(float &x, float &y, float &z, float &w) const {
