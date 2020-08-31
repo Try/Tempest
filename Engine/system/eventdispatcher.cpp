@@ -298,7 +298,7 @@ std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget &root, KeyEven
   while(w->astate.focus!=nullptr) {
     w = w->astate.focus;
     }
-  if(w->wstate.focus) {
+  if(w->wstate.focus || &root==w) {
     auto ptr = w->selfReference();
     w->keyDownEvent(event);
     if(event.isAccepted())
