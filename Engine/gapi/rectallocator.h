@@ -175,6 +175,7 @@ class RectAllocator {
           nx=ow;
           if(nx==nullptr || nx->hasLeafs())
             return;
+          ow = nx->owner;
           }
         delete this;
         }
