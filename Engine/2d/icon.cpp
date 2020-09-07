@@ -17,33 +17,33 @@ Icon::Icon(const Pixmap &pm, TextureAtlas &atl) {
 
   switch(pm.format()) {
     case Pixmap::Format::RGB: {
-    for(uint32_t r=0; r<h; ++r)
-      for(uint32_t i=0; i<w; ++i){
-        //0.299, 0.587, 0.114
-        uint8_t cl = uint8_t(p[0]*0.299 + p[1]*0.587 + p[2]*0.114);
-        d[0] = cl;
-        d[1] = cl;
-        d[2] = cl;
+      for(uint32_t r=0; r<h; ++r)
+        for(uint32_t i=0; i<w; ++i){
+          //0.299, 0.587, 0.114
+          uint8_t cl = uint8_t(p[0]*0.299 + p[1]*0.587 + p[2]*0.114);
+          d[0] = cl;
+          d[1] = cl;
+          d[2] = cl;
 
-        p += 3;
-        d += 3;
-        }
+          p += 3;
+          d += 3;
+          }
       set(ST_Disabled,atl.load(dst));
       break;
       }
     case Pixmap::Format::RGBA: {
-    for(uint32_t r=0; r<h; ++r)
-      for(uint32_t i=0; i<w; ++i){
-        //0.299, 0.587, 0.114
-        uint8_t cl = uint8_t(p[0]*0.299 + p[1]*0.587 + p[2]*0.114);
-        d[0] = cl;
-        d[1] = cl;
-        d[2] = cl;
-        d[3] = p[3];
+      for(uint32_t r=0; r<h; ++r)
+        for(uint32_t i=0; i<w; ++i){
+          //0.299, 0.587, 0.114
+          uint8_t cl = uint8_t(p[0]*0.299 + p[1]*0.587 + p[2]*0.114);
+          d[0] = cl;
+          d[1] = cl;
+          d[2] = cl;
+          d[3] = p[3];
 
-        p += 4;
-        d += 4;
-        }
+          p += 4;
+          d += 4;
+          }
       set(ST_Disabled,atl.load(dst));
       break;
       }
