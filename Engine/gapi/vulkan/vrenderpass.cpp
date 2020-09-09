@@ -62,7 +62,7 @@ VRenderPass::Impl &VRenderPass::instance(VFramebufferLayout &lay) {
         }
       }
 
-    val = createInstance(device,lay.swapchain,input.get(),lay.frm.get(),attCount);
+    val = createInstance(device,lay.swapchain.get(),input.get(),lay.frm.get(),attCount);
     impl.emplace_back(lay,val,std::move(clear));
     }
   catch(...) {
@@ -73,7 +73,7 @@ VRenderPass::Impl &VRenderPass::instance(VFramebufferLayout &lay) {
   return impl.back();
   }
 
-VkRenderPass VRenderPass::createInstance(VkDevice &device, VSwapchain *sw,
+VkRenderPass VRenderPass::createInstance(VkDevice &device, VSwapchain** sw,
                                          const FboMode *att, const VkFormat* format, uint8_t attCount) {
   VkRenderPass ret=VK_NULL_HANDLE;
 
@@ -92,7 +92,7 @@ VkRenderPass VRenderPass::createInstance(VkDevice &device, VSwapchain *sw,
     const VkFormat           f = format[i];
 
     if(f==VK_FORMAT_UNDEFINED)
-      a.format = sw->format(); else
+      a.format = sw[i]->format(); else
       a.format = f;
 
     a.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -155,7 +155,7 @@ void VRenderPass::setupAttach(VkAttachmentDescription &a, VkAttachmentReference&
     }
   }
 
-VkRenderPass VRenderPass::createLayoutInstance(VkDevice& device,VSwapchain &sw, const VkFormat *att, uint8_t attCount) {
+VkRenderPass VRenderPass::createLayoutInstance(VkDevice& device,VSwapchain** sw, const VkFormat *att, uint8_t attCount) {
   VkRenderPass ret=VK_NULL_HANDLE;
 
   assert(attCount<=2 && "TODO: mrt-rendering");
@@ -173,7 +173,7 @@ VkRenderPass VRenderPass::createLayoutInstance(VkDevice& device,VSwapchain &sw, 
     VkAttachmentReference&   r = ref[i];
 
     if(att[i]==VK_FORMAT_UNDEFINED)
-      a.format = sw.format(); else
+      a.format = sw[i]->format(); else
       a.format = att[i];
     a.samples        = VK_SAMPLE_COUNT_1_BIT;
 

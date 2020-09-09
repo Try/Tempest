@@ -109,6 +109,7 @@ class Device {
 
     FrameBuffer          frameBuffer(Attachment& out);
     FrameBuffer          frameBuffer(Attachment& out, ZBuffer& zbuf);
+    FrameBuffer          frameBuffer(Attachment& out0, Attachment& out1, ZBuffer& zbuf);
 
     RenderPass           pass(const FboMode& color);
     RenderPass           pass(const FboMode& color,const FboMode& depth);
@@ -141,6 +142,8 @@ class Device {
     Tempest::Builtin                builtins;
 
     VideoBuffer createVideoBuffer(const void* data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap flg);
+    FrameBuffer mkFrameBuffer(Attachment** out, uint8_t sz, ZBuffer& zbuf);
+
     RenderPipeline
                 implPipeline(const RenderState &st,
                              const Shader &vs, const Shader &fs,

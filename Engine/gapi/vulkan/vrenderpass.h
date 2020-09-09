@@ -42,7 +42,7 @@ class VRenderPass : public AbstractGraphicsApi::Pass {
 
     Impl&                           instance(VFramebufferLayout &lay);
 
-    static VkRenderPass             createLayoutInstance(VkDevice &device, VSwapchain& sw, const VkFormat    *attach, uint8_t attCount);
+    static VkRenderPass             createLayoutInstance(VkDevice &device, VSwapchain** sw, const VkFormat* attach, uint8_t attCount);
 
     uint8_t                         attCount=0;
     bool                            isAttachPreserved(size_t att) const;
@@ -53,7 +53,7 @@ class VRenderPass : public AbstractGraphicsApi::Pass {
     std::unique_ptr<FboMode[]>      input;
     SpinLock                        sync;
 
-    static VkRenderPass             createInstance(VkDevice &device, VSwapchain* sw,
+    static VkRenderPass             createInstance(VkDevice &device, VSwapchain** sw,
                                                    const FboMode* attach, const VkFormat *frm,
                                                    uint8_t attCount);
 

@@ -22,14 +22,11 @@ class VulkanApi : public AbstractGraphicsApi {
     Swapchain*     createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d) override;
 
     PPass          createPass(Device *d, const FboMode** att, size_t acount) override;
-
-    PFbo           createFbo(Device *d, FboLayout* lay, Swapchain *s, uint32_t imageId) override;
-    PFbo           createFbo(Device *d, FboLayout* lay, Swapchain *s, uint32_t imageId, Texture* zbuf) override;
-    PFbo           createFbo(Device *d, FboLayout* lay, uint32_t w, uint32_t h, Texture* cl, Texture* zbuf) override;
-    PFbo           createFbo(Device *d, FboLayout *lay, uint32_t w, uint32_t h, Texture* cl) override;
-
-    PFboLayout     createFboLayout(Device *d, Swapchain *s,
-                                   TextureFormat *att, size_t attCount) override;
+    PFbo           createFbo (Device *d, FboLayout* lay,
+                              uint32_t w, uint32_t h, uint8_t clCount,
+                              Swapchain** sw, Texture** cl, const uint32_t* imageId, Texture* zbuf) override;
+    PFboLayout     createFboLayout(Device *d, Swapchain** s,
+                                   TextureFormat *att, uint8_t attCount) override;
 
     PPipeline      createPipeline(Device* d, const RenderState &st,
                                   const Tempest::Decl::ComponentType *decl, size_t declSize,

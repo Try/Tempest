@@ -16,6 +16,7 @@ class VFramebufferLayout;
 class VFramebuffer : public AbstractGraphicsApi::Fbo {
   public:
     struct Attach final {
+      Attach()=default;
       Attach(VTexture* tex, size_t id):tex(tex),id(id){}
       Attach(VSwapchain* sw,size_t id):sw(sw),  id(id){}
       VTexture*   tex=nullptr;
@@ -23,14 +24,9 @@ class VFramebuffer : public AbstractGraphicsApi::Fbo {
       size_t      id =0;
       };
 
-    VFramebuffer(VDevice &device, VFramebufferLayout& lay, VSwapchain &swapchain,  size_t image);
-    VFramebuffer(VDevice &device, VFramebufferLayout& lay, VSwapchain &swapchain,  size_t image, VTexture& zbuf);
-    VFramebuffer(VDevice &device, VFramebufferLayout& lay, uint32_t w, uint32_t h, VTexture& color, VTexture& zbuf);
-    VFramebuffer(VDevice &device, VFramebufferLayout& lay, uint32_t w, uint32_t h, VTexture& color);
-    VFramebuffer(VFramebuffer&& other);
+    VFramebuffer(VDevice &device, VFramebufferLayout& lay,
+                 uint32_t w, uint32_t h, uint32_t outCnt, VSwapchain** swapchain, VTexture** color, const uint32_t* imgId, VTexture* zbuf);
     ~VFramebuffer();
-
-    void operator=(VFramebuffer&& other);
 
     VkFramebuffer                           impl=VK_NULL_HANDLE;
     Detail::DSharedPtr<VFramebufferLayout*> rp;

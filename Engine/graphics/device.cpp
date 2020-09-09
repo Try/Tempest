@@ -229,46 +229,66 @@ TextureFormat Device::formatOf(const Attachment& a) {
   return a.tImpl.frm;
   }
 
+FrameBuffer Device::frameBuffer(Attachment &out) {
+  TextureFormat att[1] = {formatOf(out)};
+  uint32_t      w      = uint32_t(out.w());
+  uint32_t      h      = uint32_t(out.h());
+
+  AbstractGraphicsApi::Texture*   cl[1]    = { out.tImpl.impl.handler };
+  AbstractGraphicsApi::Swapchain* sw[1]    = { out.sImpl.swapchain    };
+  uint32_t                        imgId[1] = { out.sImpl.id           };
+  auto                            lay      = FrameBufferLayout(api.createFboLayout(dev,sw,att,1));
+
+  auto fbo = api.createFbo(dev,lay.impl.handler,w,h,1, sw,cl,imgId,nullptr);
+  return FrameBuffer(*this,std::move(fbo),std::move(lay),w,h);
+  }
+
 FrameBuffer Device::frameBuffer(Attachment& out, ZBuffer& zbuf) {
   TextureFormat att[2] = {formatOf(out),zbuf.tImpl.frm};
-  uint32_t w = uint32_t(out.w());
-  uint32_t h = uint32_t(out.h());
+  uint32_t      w      = uint32_t(out.w());
+  uint32_t      h      = uint32_t(out.h());
+  auto          zImpl  = zbuf.tImpl.impl.handler;
 
   if(out.w()!=zbuf.w() || out.h()!=zbuf.h())
     throw IncompleteFboException();
 
-  auto zImpl = zbuf.tImpl.impl.handler;
-  if(out.sImpl.swapchain!=nullptr) {
-    auto swapchain = out.sImpl.swapchain;
-    auto sId       = out.sImpl.id;
+  AbstractGraphicsApi::Texture*   cl[1]    = { out.tImpl.impl.handler };
+  AbstractGraphicsApi::Swapchain* sw[1]    = { out.sImpl.swapchain    };
+  uint32_t                        imgId[1] = { out.sImpl.id           };
+  auto                            lay      = FrameBufferLayout(api.createFboLayout(dev,sw,att,2));
 
-    FrameBufferLayout lay(api.createFboLayout(dev,swapchain,att,2));
-    FrameBuffer       f(*this,api.createFbo(dev,lay.impl.handler,swapchain,sId,zImpl),std::move(lay),w,h);
-    return f;
-    } else {
-    FrameBufferLayout lay(api.createFboLayout(dev,nullptr,att,2));
-    FrameBuffer f(*this,api.createFbo(dev,lay.impl.handler,w,h,out.tImpl.impl.handler,zImpl),std::move(lay),w,h);
-    return f;
-    }
+  auto fbo = api.createFbo(dev,lay.impl.handler,w,h,1, sw,cl,imgId,zImpl);
+  return FrameBuffer(*this,std::move(fbo),std::move(lay),w,h);
   }
 
-FrameBuffer Device::frameBuffer(Attachment &out) {
-  TextureFormat att[1] = {formatOf(out)};
-  uint32_t w = uint32_t(out.w());
-  uint32_t h = uint32_t(out.h());
+FrameBuffer Device::frameBuffer(Attachment& out0, Attachment& out1, ZBuffer& zbuf) {
+  Attachment* out[2] = {&out0, &out1};
+  return mkFrameBuffer(out,2,zbuf);
+  }
 
-  if(out.sImpl.swapchain!=nullptr) {
-    auto swapchain = out.sImpl.swapchain;
-    auto sId       = out.sImpl.id;
+FrameBuffer Device::mkFrameBuffer(Attachment** out, uint8_t sz, ZBuffer& zbuf) {
+  TextureFormat att[257] = {}; // 256+zbuf
+  uint32_t      w        = uint32_t(zbuf.w());
+  uint32_t      h        = uint32_t(zbuf.h());
+  auto          zImpl    = zbuf.tImpl.impl.handler;
 
-    FrameBufferLayout lay(api.createFboLayout(dev,swapchain,att,1));
-    FrameBuffer       f(*this,api.createFbo(dev,lay.impl.handler,swapchain,sId),std::move(lay),w,h);
-    return f;
-    } else {
-    FrameBufferLayout lay(api.createFboLayout(dev,nullptr,att,1));
-    FrameBuffer f(*this,api.createFbo(dev,lay.impl.handler,w,h,out.tImpl.impl.handler),std::move(lay),w,h);
-    return f;
+  AbstractGraphicsApi::Swapchain* sw[1]      = {};
+  AbstractGraphicsApi::Texture*   cl[256]    = {};
+  uint32_t                        imgId[256] = {};
+
+  for(size_t i=0; i<sz; ++i) {
+    att[i] = formatOf(*out[i]);
+    if(out[i]->w()!=int(w) || out[i]->h()!=int(h))
+      throw IncompleteFboException();
+    sw[i]    = out[i]->sImpl.swapchain;
+    cl[i]    = out[i]->tImpl.impl.handler;
+    imgId[i] = out[i]->sImpl.id;
     }
+  att[sz] = zbuf.tImpl.frm;
+
+  auto lay = FrameBufferLayout(api.createFboLayout(dev,sw,att,sz+1));
+  auto fbo = api.createFbo(dev,lay.impl.handler,w,h,sz, sw,cl,imgId,zImpl);
+  return FrameBuffer(*this,std::move(fbo),std::move(lay),w,h);
   }
 
 RenderPass Device::pass(const FboMode &color) {

@@ -8,60 +8,35 @@
 
 using namespace Tempest::Detail;
 
-VFramebuffer::VFramebuffer(VDevice& device, VFramebufferLayout &lay,
-                           VSwapchain& swapchain, size_t image)
+VFramebuffer::VFramebuffer(VDevice& device, VFramebufferLayout& lay,
+                           uint32_t w, uint32_t h, uint32_t outCnt,
+                           VSwapchain** swapchain, VTexture** color, const uint32_t* imgId,
+                           VTexture* zbuf)
   :device(device.device) {
-  rp     = Detail::DSharedPtr<VFramebufferLayout*>(&lay);
-  attach = {{&swapchain,image}};
+  rp = Detail::DSharedPtr<VFramebufferLayout*>(&lay);
+  attach.resize(outCnt+(zbuf!=nullptr ? 1 : 0));
+  for(uint32_t i=0; i<outCnt; ++i) {
+    if(color[i]==nullptr)
+      attach[i] = Attach(swapchain[i],imgId[i]); else
+      attach[i] = Attach(color[i],0);
+    }
+  if(zbuf!=nullptr)
+    attach.back() = Attach{zbuf,0};
 
-  VkImageView attach[1] = {swapchain.views[image]};
-  impl = allocFbo(swapchain.w(),swapchain.h(),attach,1);
-  }
-
-VFramebuffer::VFramebuffer(VDevice &device, VFramebufferLayout &lay,
-                           VSwapchain &swapchain, size_t image, VTexture &zbuf)
-  :device(device.device) {
-  rp     = Detail::DSharedPtr<VFramebufferLayout*>(&lay);
-  attach = {{&swapchain,image},{&zbuf,0}};
-
-  VkImageView attach[2] = {swapchain.views[image],zbuf.view};
-  impl = allocFbo(swapchain.w(),swapchain.h(),attach,2);
-  }
-
-VFramebuffer::VFramebuffer(VDevice &device, VFramebufferLayout &lay, uint32_t w, uint32_t h,
-                           VTexture &color, VTexture &zbuf)
-  :device(device.device) {
-  rp     = Detail::DSharedPtr<VFramebufferLayout*>(&lay);
-  attach = {{&color,0},{&zbuf,0}};
-
-  VkImageView attach[2] = {color.view,zbuf.view};
-  impl = allocFbo(w,h,attach,2);
-  }
-
-VFramebuffer::VFramebuffer(VDevice &device, VFramebufferLayout &lay, uint32_t w, uint32_t h, VTexture &color)
-  :device(device.device) {
-  rp     = Detail::DSharedPtr<VFramebufferLayout*>(&lay);
-  attach = {{&color,0}};
-
-  VkImageView attach[1] = {color.view};
-  impl = allocFbo(w,h,attach,1);
-  }
-
-VFramebuffer::VFramebuffer(VFramebuffer &&other) {
-  std::swap(impl,  other.impl);
-  std::swap(rp,    other.rp);
-  std::swap(device,other.device);
+  VkImageView att[256] = {};
+  for(uint32_t i=0; i<outCnt; ++i) {
+    if(color[i]==nullptr)
+      att[i] = swapchain[i]->views[imgId[i]]; else
+      att[i] = color[i]->view;
+    }
+  if(zbuf!=nullptr)
+    att[outCnt] = zbuf->view;
+  impl = allocFbo(w,h,att,attach.size());
   }
 
 VFramebuffer::~VFramebuffer() {
   if(impl!=VK_NULL_HANDLE)
     vkDestroyFramebuffer(device,impl,nullptr);
-  }
-
-void VFramebuffer::operator=(VFramebuffer &&other) {
-  std::swap(impl,  other.impl);
-  std::swap(rp,other.rp);
-  std::swap(device,other.device);
   }
 
 VkFramebuffer VFramebuffer::allocFbo(uint32_t w, uint32_t h, const VkImageView *attach, size_t cnt) {

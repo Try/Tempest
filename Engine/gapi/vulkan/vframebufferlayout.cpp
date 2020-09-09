@@ -1,19 +1,23 @@
 #include "vframebufferlayout.h"
 
 #include "vdevice.h"
+#include "vswapchain.h"
 
 using namespace Tempest::Detail;
 
-VFramebufferLayout::VFramebufferLayout(VDevice& dev, VSwapchain &sw, const VkFormat *attach, uint8_t attCount)
-  :attCount(attCount), swapchain(&sw), device(dev.device) {
-  impl = VRenderPass::createLayoutInstance(dev.device,sw,attach,attCount);
+VFramebufferLayout::VFramebufferLayout(VDevice& dev, VSwapchain** sw, const VkFormat *attach, uint8_t attCount)
+  :attCount(attCount), device(dev.device) {
   frm.reset(new VkFormat[attCount]);
-  for(size_t i=0;i<attCount;++i)
-    frm[i] = attach[i];
+  swapchain.reset(new VSwapchain*[attCount]);
+  for(size_t i=0;i<attCount;++i) {
+    frm[i]       = attach[i];
+    swapchain[i] = sw[i];
+    }
+  impl = VRenderPass::createLayoutInstance(dev.device,sw,attach,attCount);
   }
 
 VFramebufferLayout::VFramebufferLayout(VFramebufferLayout &&other)
-  :impl(other.impl), frm(std::move(other.frm)), attCount(other.attCount), swapchain(other.swapchain), device(other.device) {
+  :impl(other.impl), frm(std::move(other.frm)), swapchain(std::move(other.swapchain)), attCount(other.attCount), device(other.device) {
   other.impl = VK_NULL_HANDLE;
   }
 
@@ -37,9 +41,13 @@ bool VFramebufferLayout::isCompatible(const VFramebufferLayout &other) const {
     return true;
   if(attCount!=other.attCount)
     return false;
-  for(size_t i=0;i<attCount;++i)
+  for(size_t i=0;i<attCount;++i) {
     if(frm[i]!=other.frm[i])
       return false;
+    if(frm[i]==VK_FORMAT_UNDEFINED &&
+       swapchain[i]->format()!=other.swapchain[i]->format())
+      return false;
+    }
   return true;
   }
 

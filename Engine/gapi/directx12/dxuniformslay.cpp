@@ -93,10 +93,8 @@ DxUniformsLay::DxUniformsLay(DxDevice& dev,
         add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,desc);
         break;
         }
-      case UniformsLayout::Push: {
-        //TODO
+      case UniformsLayout::Push:
         break;
-        }
       }
     }
   std::sort(desc.begin(),desc.end(),[](const Parameter& a, const Parameter& b){

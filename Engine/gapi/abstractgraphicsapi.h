@@ -333,13 +333,10 @@ namespace Tempest {
       virtual Swapchain* createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d)=0;
 
       virtual PPass      createPass(Device *d, const FboMode** att, size_t acount)=0;
+      virtual PFbo       createFbo(Device *d, FboLayout* lay, uint32_t w, uint32_t h, uint8_t clCount,
+                                   Swapchain** sw, Texture** cl, const uint32_t* imageId, Texture* zbuf)=0;
 
-      virtual PFbo       createFbo(Device *d,FboLayout* lay,Swapchain *s,uint32_t imageId)=0;
-      virtual PFbo       createFbo(Device *d,FboLayout* lay,Swapchain *s,uint32_t imageId,Texture* zbuf)=0;
-      virtual PFbo       createFbo(Device *d,FboLayout* lay,uint32_t w, uint32_t h,Texture* cl,Texture* zbuf)=0;
-      virtual PFbo       createFbo(Device *d,FboLayout* lay,uint32_t w, uint32_t h,Texture* cl)=0;
-
-      virtual PFboLayout createFboLayout(Device *d, Swapchain *s, TextureFormat *att, size_t attCount)=0;
+      virtual PFboLayout createFboLayout(Device *d, Swapchain** s, TextureFormat *att, uint8_t attCount)=0;
 
       virtual PUniformsLay
                          createUboLayout(Device *d,const std::initializer_list<Shader*>& sh)=0;

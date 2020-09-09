@@ -1,8 +1,9 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-
+#include <cstdlib>
 #include <d3d12.h>
+
 #include "gapi/directx12/comptr.h"
 #include "dxfbolayout.h"
 
@@ -16,10 +17,8 @@ class DxSwapchain;
 
 class DxFramebuffer : public AbstractGraphicsApi::Fbo {
   public:
-    DxFramebuffer(DxDevice& dev, DxFboLayout& lay, DxSwapchain &swapchain, size_t image);
-    DxFramebuffer(DxDevice& dev, DxFboLayout& lay, DxSwapchain &swapchain, size_t image, DxTexture &zbuf);
-    DxFramebuffer(DxDevice& dev, DxFboLayout& lay, DxTexture &cl, DxTexture &zbuf);
-    DxFramebuffer(DxDevice& dev, DxFboLayout& lay, DxTexture &cl);
+    DxFramebuffer(DxDevice& dev, DxFboLayout& lay, uint32_t cnt,
+                  DxSwapchain** swapchain, DxTexture** cl, const uint32_t* imgId, DxTexture* zbuf);
     ~DxFramebuffer();
 
     ComPtr<ID3D12DescriptorHeap>              rtvHeap;
@@ -38,7 +37,7 @@ class DxFramebuffer : public AbstractGraphicsApi::Fbo {
     DSharedPtr<DxFboLayout*> lay;
 
   private:
-    void setupViews(ID3D12Device& device, const std::initializer_list<ID3D12Resource*>& res, ID3D12Resource* ds);
+    void setupViews(ID3D12Device& device, ID3D12Resource** res, size_t cnt, ID3D12Resource* ds);
   };
 }
 }

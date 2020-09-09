@@ -7,11 +7,11 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-DxFboLayout::DxFboLayout(DxSwapchain& sw, TextureFormat* att, size_t attCount) {
+DxFboLayout::DxFboLayout(DxSwapchain** sw, TextureFormat* att, size_t attCount) {
   for(uint8_t i=0;i<attCount;++i) {
     DXGI_FORMAT frm = DXGI_FORMAT_UNKNOWN;
     if(att[i]==TextureFormat::Undefined)
-      frm = sw.format(); else
+      frm = sw[i]->format(); else
       frm = Detail::nativeFormat(att[i]);
 
     if(Tempest::isDepthFormat(att[i])) {

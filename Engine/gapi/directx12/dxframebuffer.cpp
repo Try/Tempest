@@ -9,45 +9,36 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-DxFramebuffer::DxFramebuffer(DxDevice& dev, DxFboLayout& lay, DxSwapchain& swapchain, size_t image)
-  :viewsCount(1), lay(&lay) {
-  setupViews(*dev.device, {swapchain.views[image].get()}, nullptr);
-  views[0].isSwImage = true;
-  }
-
-DxFramebuffer::DxFramebuffer(DxDevice& dev, DxFboLayout& lay, DxSwapchain& swapchain, size_t image, DxTexture& zbuf)
-  :viewsCount(1), lay(&lay) {
-  setupViews(*dev.device, {swapchain.views[image].get()}, zbuf.impl.get());
-  views[0].isSwImage = true;
-  }
-
-DxFramebuffer::DxFramebuffer(DxDevice& dev, DxFboLayout& lay, DxTexture& cl, DxTexture& zbuf)
-  :viewsCount(1), lay(&lay) {
-  setupViews(*dev.device, {cl.impl.get()}, zbuf.impl.get());
-  }
-
-DxFramebuffer::DxFramebuffer(DxDevice& dev, DxFboLayout& lay, DxTexture& cl)
-  :viewsCount(1), lay(&lay) {
-  setupViews(*dev.device, {cl.impl.get()}, nullptr);
-  views[0].isSwImage = false;
+Tempest::Detail::DxFramebuffer::DxFramebuffer(DxDevice& dev, DxFboLayout& lay, uint32_t cnt,
+                                              DxSwapchain** swapchain, DxTexture** cl, const uint32_t* imgId, DxTexture* zbuf)
+  :viewsCount(cnt), lay(&lay) {
+  ID3D12Resource* res[256] = {};
+  for(size_t i=0; i<cnt; ++i) {
+    if(cl[i]==nullptr) {
+      res[i] = swapchain[i]->views[imgId[i]].get();
+      } else {
+      res[i] = cl[i]->impl.get();
+      }
+    }
+  setupViews(*dev.device, res, cnt, zbuf==nullptr ? nullptr : zbuf->impl.get());
   }
 
 DxFramebuffer::~DxFramebuffer() {
   }
 
 void DxFramebuffer::setupViews(ID3D12Device& device,
-                               const std::initializer_list<ID3D12Resource*>& res, ID3D12Resource* ds) {
+                               ID3D12Resource** res, size_t cnt, ID3D12Resource* ds) {
   // descriptor heap
   D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
   rtvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-  rtvHeapDesc.NumDescriptors = UINT(res.size() + ds==nullptr ? 0 : 1);
+  rtvHeapDesc.NumDescriptors = UINT(cnt + ds==nullptr ? 0 : 1);
   rtvHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
   dxAssert(device.CreateDescriptorHeap(&rtvHeapDesc, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&rtvHeap)));
 
   // frame resources.
   views.reset(new View[viewsCount]);
   for(size_t i=0;i<viewsCount;++i) {
-    views[i].res = *(res.begin()+i);
+    views[i].res = res[i];
     auto desc = views[i].res->GetDesc();
     views[i].format = desc.Format;
     }
@@ -55,7 +46,7 @@ void DxFramebuffer::setupViews(ID3D12Device& device,
   if(ds!=nullptr) {
     D3D12_DESCRIPTOR_HEAP_DESC dsHeapDesc = {};
     dsHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-    dsHeapDesc.NumDescriptors = UINT(res.size() + ds==nullptr ? 0 : 1);
+    dsHeapDesc.NumDescriptors = UINT(cnt + ds==nullptr ? 0 : 1);
     dsHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
     dxAssert(device.CreateDescriptorHeap(&dsHeapDesc, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&dsvHeap)));
 

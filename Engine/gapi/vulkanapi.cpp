@@ -66,71 +66,39 @@ AbstractGraphicsApi::PPass VulkanApi::createPass(AbstractGraphicsApi::Device *d,
   return PPass(new Detail::VRenderPass(*dx,att,uint8_t(acount)));
   }
 
-AbstractGraphicsApi::PFbo VulkanApi::createFbo(AbstractGraphicsApi::Device *d,
-                                               FboLayout* lay,
-                                               AbstractGraphicsApi::Swapchain *s,
-                                               uint32_t imageId) {
-  Detail::VDevice*            dx=reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VFramebufferLayout* l =reinterpret_cast<Detail::VFramebufferLayout*>(lay);
-  Detail::VSwapchain*         sx=reinterpret_cast<Detail::VSwapchain*>(s);
-
-  return PFbo(new Detail::VFramebuffer(*dx,*l,*sx,imageId));
-  }
-
-AbstractGraphicsApi::PFbo VulkanApi::createFbo(AbstractGraphicsApi::Device *d,
-                                               FboLayout* lay,
-                                               AbstractGraphicsApi::Swapchain *s,
-                                               uint32_t imageId,
+AbstractGraphicsApi::PFbo VulkanApi::createFbo(AbstractGraphicsApi::Device *d, FboLayout* lay,
+                                               uint32_t w, uint32_t h, uint8_t clCount,
+                                               Swapchain** s, Texture** cl, const uint32_t* imgId,
                                                AbstractGraphicsApi::Texture *zbuf) {
   Detail::VDevice*            dx=reinterpret_cast<Detail::VDevice*>(d);
   Detail::VFramebufferLayout* l =reinterpret_cast<Detail::VFramebufferLayout*>(lay);
-  Detail::VSwapchain*         sx=reinterpret_cast<Detail::VSwapchain*>(s);
-  Detail::VTexture*           tx=reinterpret_cast<Detail::VTexture*>(zbuf);
+  Detail::VTexture*           zb=reinterpret_cast<Detail::VTexture*>(zbuf);
 
-  return PFbo(new Detail::VFramebuffer(*dx,*l,*sx,imageId,*tx));
-  }
-
-AbstractGraphicsApi::PFbo VulkanApi::createFbo(AbstractGraphicsApi::Device *d,
-                                               FboLayout* lay,
-                                               uint32_t w,uint32_t h,
-                                               AbstractGraphicsApi::Texture *tcl,
-                                               AbstractGraphicsApi::Texture *zbuf) {
-  Detail::VDevice*            dx=reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VFramebufferLayout* l =reinterpret_cast<Detail::VFramebufferLayout*>(lay);
-  Detail::VTexture*           cl=reinterpret_cast<Detail::VTexture*>(tcl);
-  Detail::VTexture*           tx=reinterpret_cast<Detail::VTexture*>(zbuf);
-
-  return PFbo(new Detail::VFramebuffer(*dx,*l,w,h,*cl,*tx));
-  }
-
-AbstractGraphicsApi::PFbo VulkanApi::createFbo(AbstractGraphicsApi::Device *d,
-                                               AbstractGraphicsApi::FboLayout* lay,
-                                               uint32_t w, uint32_t h,
-                                               AbstractGraphicsApi::Texture *tcl) {
-  Detail::VDevice*            dx=reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VTexture*           cl=reinterpret_cast<Detail::VTexture*>(tcl);
-  Detail::VFramebufferLayout* l =reinterpret_cast<Detail::VFramebufferLayout*>(lay);
-
-  return PFbo(new Detail::VFramebuffer(*dx,*l,w,h,*cl));
+  Detail::VTexture*   att[256] = {};
+  Detail::VSwapchain* sw[256] = {};
+  for(size_t i=0; i<clCount; ++i) {
+    att[i] = reinterpret_cast<Detail::VTexture*>  (cl[i]);
+    sw [i] = reinterpret_cast<Detail::VSwapchain*>(s[i]);
+    }
+  return PFbo(new Detail::VFramebuffer(*dx,*l, w,h,clCount, sw,att,imgId, zb));
   }
 
 AbstractGraphicsApi::PFboLayout VulkanApi::createFboLayout(AbstractGraphicsApi::Device *d,
-                                                           AbstractGraphicsApi::Swapchain *s,
+                                                           Swapchain** s,
                                                            Tempest::TextureFormat *att,
-                                                           size_t attCount) {
+                                                           uint8_t attCount) {
   Detail::VDevice*     dx=reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VSwapchain*  sx=reinterpret_cast<Detail::VSwapchain*>(s);
 
-  VkFormat frm[256] = {};
-  if(attCount>256)
-    throw std::logic_error("more then 256 attachments is not implemented");
+  VkFormat            frm[256] = {};
+  Detail::VSwapchain* sx[256] = {};
 
   for(size_t i=0;i<attCount;++i){
     frm[i] = Detail::nativeFormat(att[i]);
+    sx[i]  = reinterpret_cast<Detail::VSwapchain*>(s[i]);
     }
 
   Detail::DSharedPtr<AbstractGraphicsApi::FboLayout*> impl{
-    new Detail::VFramebufferLayout(*dx,*sx,frm,uint8_t(attCount))
+    new Detail::VFramebufferLayout(*dx,sx,frm,uint8_t(attCount))
     };
 
   return impl;

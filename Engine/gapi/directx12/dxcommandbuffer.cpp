@@ -165,7 +165,7 @@ void DxCommandBuffer::setViewport(const Rect& r) {
 
 void DxCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) {
   auto& px = reinterpret_cast<DxPipeline&>(p);
-  impl->SetGraphicsRoot32BitConstants(px.pushConstantId,size/4,data,0);
+  impl->SetGraphicsRoot32BitConstants(px.pushConstantId,UINT(size/4),data,0);
   }
 
 void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/, AbstractGraphicsApi::Desc& u) {
