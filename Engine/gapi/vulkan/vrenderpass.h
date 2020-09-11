@@ -56,11 +56,6 @@ class VRenderPass : public AbstractGraphicsApi::Pass {
     static VkRenderPass             createInstance(VkDevice &device, VSwapchain** sw,
                                                    const FboMode* attach, const VkFormat *frm,
                                                    uint8_t attCount);
-
-    static void                     setupAttach(VkAttachmentDescription& desc,
-                                                VkAttachmentReference &r,
-                                                const FboMode& x,
-                                                VkSubpassDescription &subpass);
   };
 
 }}

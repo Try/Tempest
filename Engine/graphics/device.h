@@ -110,9 +110,16 @@ class Device {
     FrameBuffer          frameBuffer(Attachment& out);
     FrameBuffer          frameBuffer(Attachment& out, ZBuffer& zbuf);
     FrameBuffer          frameBuffer(Attachment& out0, Attachment& out1, ZBuffer& zbuf);
+    FrameBuffer          frameBuffer(Attachment& out0, Attachment& out1, Attachment& out2, ZBuffer& zbuf);
+    FrameBuffer          frameBuffer(Attachment& out0, Attachment& out1, Attachment& out2, Attachment& out3, ZBuffer& zbuf);
+    FrameBuffer          frameBuffer(Attachment** out, uint8_t count, ZBuffer* zbuf);
 
     RenderPass           pass(const FboMode& color);
-    RenderPass           pass(const FboMode& color,const FboMode& depth);
+    RenderPass           pass(const FboMode& color, const FboMode& depth);
+    RenderPass           pass(const FboMode& c0, const FboMode& c1, const FboMode& depth);
+    RenderPass           pass(const FboMode& c0, const FboMode& c1, const FboMode& c2, const FboMode& depth);
+    RenderPass           pass(const FboMode& c0, const FboMode& c1, const FboMode& c2, const FboMode& c3, const FboMode& depth);
+    RenderPass           pass(const FboMode** color, uint8_t count);
 
     template<class Vertex>
     RenderPipeline       pipeline(Topology tp,const RenderState& st, const Shader &vs,const Shader &fs);
@@ -142,7 +149,6 @@ class Device {
     Tempest::Builtin                builtins;
 
     VideoBuffer createVideoBuffer(const void* data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap flg);
-    FrameBuffer mkFrameBuffer(Attachment** out, uint8_t sz, ZBuffer& zbuf);
 
     RenderPipeline
                 implPipeline(const RenderState &st,

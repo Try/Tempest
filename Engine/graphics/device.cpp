@@ -263,20 +263,30 @@ FrameBuffer Device::frameBuffer(Attachment& out, ZBuffer& zbuf) {
 
 FrameBuffer Device::frameBuffer(Attachment& out0, Attachment& out1, ZBuffer& zbuf) {
   Attachment* out[2] = {&out0, &out1};
-  return mkFrameBuffer(out,2,zbuf);
+  return frameBuffer(out,2,&zbuf);
   }
 
-FrameBuffer Device::mkFrameBuffer(Attachment** out, uint8_t sz, ZBuffer& zbuf) {
-  TextureFormat att[257] = {}; // 256+zbuf
-  uint32_t      w        = uint32_t(zbuf.w());
-  uint32_t      h        = uint32_t(zbuf.h());
-  auto          zImpl    = zbuf.tImpl.impl.handler;
+FrameBuffer Device::frameBuffer(Attachment& out0, Attachment& out1, Attachment& out2, ZBuffer& zbuf) {
+  Attachment* out[3] = {&out0, &out1, &out2};
+  return frameBuffer(out,3,&zbuf);
+  }
 
-  AbstractGraphicsApi::Swapchain* sw[1]      = {};
+FrameBuffer Device::frameBuffer(Attachment& out0, Attachment& out1, Attachment& out2, Attachment& out3, ZBuffer& zbuf) {
+  Attachment* out[4] = {&out0, &out1, &out2, &out3};
+  return frameBuffer(out,4,&zbuf);
+  }
+
+FrameBuffer Device::frameBuffer(Attachment** out, uint8_t count, ZBuffer* zbuf) {
+  TextureFormat att[257] = {}; // 256+zbuf
+  uint32_t      w        = uint32_t(out[0]->w());
+  uint32_t      h        = uint32_t(out[0]->h());
+
+  AbstractGraphicsApi::Texture*   zImpl      = nullptr;
+  AbstractGraphicsApi::Swapchain* sw[256]    = {};
   AbstractGraphicsApi::Texture*   cl[256]    = {};
   uint32_t                        imgId[256] = {};
 
-  for(size_t i=0; i<sz; ++i) {
+  for(size_t i=0; i<count; ++i) {
     att[i] = formatOf(*out[i]);
     if(out[i]->w()!=int(w) || out[i]->h()!=int(h))
       throw IncompleteFboException();
@@ -284,10 +294,15 @@ FrameBuffer Device::mkFrameBuffer(Attachment** out, uint8_t sz, ZBuffer& zbuf) {
     cl[i]    = out[i]->tImpl.impl.handler;
     imgId[i] = out[i]->sImpl.id;
     }
-  att[sz] = zbuf.tImpl.frm;
+  if(zbuf!=nullptr) {
+    zImpl = zbuf->tImpl.impl.handler;
+    if(zbuf->w()!=int(w) || zbuf->h()!=int(h))
+      throw IncompleteFboException();
+    att[count] = zbuf->tImpl.frm;
+    }
 
-  auto lay = FrameBufferLayout(api.createFboLayout(dev,sw,att,sz+1));
-  auto fbo = api.createFbo(dev,lay.impl.handler,w,h,sz, sw,cl,imgId,zImpl);
+  auto lay = FrameBufferLayout(api.createFboLayout(dev,sw,att,count+(zbuf!=nullptr ? 1 : 0)));
+  auto fbo = api.createFbo(dev,lay.impl.handler,w,h,count, sw,cl,imgId,zImpl);
   return FrameBuffer(*this,std::move(fbo),std::move(lay),w,h);
   }
 
@@ -300,6 +315,30 @@ RenderPass Device::pass(const FboMode &color) {
 RenderPass Device::pass(const FboMode& color, const FboMode& depth) {
   const FboMode* att[2]={&color,&depth};
   RenderPass f(api.createPass(dev,att,2));
+  return f;
+  }
+
+RenderPass Device::pass(const FboMode& c0, const FboMode& c1, const FboMode& depth) {
+  const FboMode* att[3]={&c0,&c1,&depth};
+  RenderPass f(api.createPass(dev,att,3));
+  return f;
+  }
+
+RenderPass Device::pass(const FboMode& c0, const FboMode& c1, const FboMode& c2, const FboMode& depth) {
+  const FboMode* att[4]={&c0,&c1,&c2,&depth};
+  RenderPass f(api.createPass(dev,att,4));
+  return f;
+  }
+
+RenderPass Device::pass(const FboMode& c0, const FboMode& c1,
+                        const FboMode& c2, const FboMode& c3, const FboMode& depth) {
+  const FboMode* att[5]={&c0,&c1,&c2,&c3,&depth};
+  RenderPass f(api.createPass(dev,att,5));
+  return f;
+  }
+
+RenderPass Device::pass(const FboMode** color, uint8_t count) {
+  RenderPass f(api.createPass(dev,color,count));
   return f;
   }
 
