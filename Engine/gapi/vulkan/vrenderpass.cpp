@@ -111,8 +111,8 @@ VkRenderPass VRenderPass::createInstance(VkDevice &device, VSwapchain** sw,
       a.initialLayout = init  ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
       a.finalLayout   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
       } else {
-      a.initialLayout  = init  ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
-      a.finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+      a.initialLayout = init  ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
+      a.finalLayout   = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
       }
 
     if(Detail::nativeIsDepthFormat(a.format)) {
@@ -174,6 +174,7 @@ VkRenderPass VRenderPass::createLayoutInstance(VkDevice& device,VSwapchain** sw,
       zs.layout       = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
       } else {
       VkAttachmentReference& r = ref[subpass.colorAttachmentCount];
+      r.attachment = i;
       subpass.colorAttachmentCount++;
       a.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
       a.finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;

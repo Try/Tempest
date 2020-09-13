@@ -12,6 +12,8 @@ VFramebufferLayout::VFramebufferLayout(VDevice& dev, VSwapchain** sw, const VkFo
   for(size_t i=0;i<attCount;++i) {
     frm[i]       = attach[i];
     swapchain[i] = sw[i];
+    if(!Detail::nativeIsDepthFormat(frm[i]))
+      colorCount++;
     }
   impl = VRenderPass::createLayoutInstance(dev.device,sw,attach,attCount);
   }

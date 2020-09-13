@@ -258,20 +258,24 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
     VK_BLEND_FACTOR_SRC_ALPHA_SATURATE,   //GL_SRC_ALPHA_SATURATE,
     VK_BLEND_FACTOR_ZERO
     };
-  VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
-  colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-  colorBlendAttachment.blendEnable    = st.hasBlend() ? VK_TRUE : VK_FALSE;
-  colorBlendAttachment.dstColorBlendFactor = blend[uint8_t(st.blendDest())];
-  colorBlendAttachment.srcColorBlendFactor = blend[uint8_t(st.blendSource())];
-  colorBlendAttachment.dstAlphaBlendFactor = colorBlendAttachment.dstColorBlendFactor;
-  colorBlendAttachment.srcAlphaBlendFactor = colorBlendAttachment.srcColorBlendFactor;
+
+  VkPipelineColorBlendAttachmentState blendAtt[256] = {};
+  for(size_t i=0; i<lay.colorCount; ++i) {
+    auto& a = blendAtt[i];
+    a.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    a.blendEnable    = st.hasBlend() ? VK_TRUE : VK_FALSE;
+    a.dstColorBlendFactor = blend[uint8_t(st.blendDest())];
+    a.srcColorBlendFactor = blend[uint8_t(st.blendSource())];
+    a.dstAlphaBlendFactor = a.dstColorBlendFactor;
+    a.srcAlphaBlendFactor = a.srcColorBlendFactor;
+    }
 
   VkPipelineColorBlendStateCreateInfo colorBlending = {};
   colorBlending.sType             = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
   colorBlending.logicOpEnable     = VK_FALSE;
   colorBlending.logicOp           = VK_LOGIC_OP_COPY;
-  colorBlending.attachmentCount   = 1;
-  colorBlending.pAttachments      = &colorBlendAttachment;
+  colorBlending.attachmentCount   = lay.colorCount;
+  colorBlending.pAttachments      = blendAtt;
   colorBlending.blendConstants[0] = 0.0f;
   colorBlending.blendConstants[1] = 0.0f;
   colorBlending.blendConstants[2] = 0.0f;
