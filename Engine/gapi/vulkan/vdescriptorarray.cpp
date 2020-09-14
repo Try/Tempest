@@ -12,9 +12,6 @@ using namespace Tempest::Detail;
 
 VDescriptorArray::VDescriptorArray(VkDevice device, VUniformsLay& vlay)
   :device(device),lay(&vlay) {
-  if(vlay.lay.size()==0)
-    return;
-
   std::lock_guard<Detail::SpinLock> guard(vlay.sync);
   for(auto& i:vlay.pool){
     if(i.freeCount==0)
