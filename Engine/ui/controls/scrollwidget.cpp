@@ -165,9 +165,9 @@ bool ScrollWidget::updateScrolls(Orientation orient,bool noRetry) {
     int max=std::max(content.h-hsize.h,0);
 
     if(scBeforeBeginV && first)
-      min-=std::max(0,hsize.h-first->h());
+      min-=std::max(0,hsize.h-std::max(first->minSize().h,first->sizeHint().h));
     if(scAfterEndV && last)
-      max+=std::max(0,hsize.h-last->h());
+      max+=std::max(0,hsize.h-std::max(last->minSize().h,last->sizeHint().h));
     sbV.setRange(min,max);
     sbH.setRange(0,cen.w());
     } else {
@@ -175,9 +175,9 @@ bool ScrollWidget::updateScrolls(Orientation orient,bool noRetry) {
     int max=std::max(content.w-hsize.w,0);
 
     if(scBeforeBeginH && first)
-      min-=std::max(0,hsize.w-first->w());
+      min-=std::max(0,hsize.w-std::max(first->minSize().w,first->sizeHint().w));
     if(scAfterEndV && last)
-      max+=std::max(0,hsize.w-last->w());
+      max+=std::max(0,hsize.w-std::max(last->minSize().w,last->sizeHint().w));
     sbH.setRange(min,max);
     sbV.setRange(cen.h(),0);
     }
