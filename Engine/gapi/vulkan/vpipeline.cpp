@@ -96,7 +96,7 @@ VkPipelineLayout VPipeline::initLayout(VkDevice device, const VUniformsLay& uboL
       pushStageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
     push.stageFlags = pushStageFlags;
     push.offset     = 0;
-    push.size       = uboLay.pb.size;
+    push.size       = uint32_t(uboLay.pb.size);
 
     pipelineLayoutInfo.pPushConstantRanges    = &push;
     pipelineLayoutInfo.pushConstantRangeCount = 1;

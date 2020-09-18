@@ -14,6 +14,7 @@ class VFence : public AbstractGraphicsApi::Fence {
     ~VFence() override;
 
     void wait() override;
+    bool wait(uint64_t time) override;
     void reset() override;
 
     VkFence impl=VK_NULL_HANDLE;

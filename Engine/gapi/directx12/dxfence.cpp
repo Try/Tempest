@@ -33,16 +33,31 @@ DxFenceBase<Interface>::~DxFenceBase() {
 
 template<class Interface>
 void DxFenceBase<Interface>::wait() {
-  wait(Ready);
+  waitValue(Ready);
   }
 
 template<class Interface>
-void DxFenceBase<Interface>::wait(UINT64 val) {
+bool DxFenceBase<Interface>::wait(uint64_t timeout) {
+  if(timeout>INFINITE)
+    timeout = INFINITE;
+  return waitValue(Ready,DWORD(timeout));
+  }
+
+template<class Interface>
+bool DxFenceBase<Interface>::waitValue(UINT64 val, DWORD timeout) {
   UINT64 v = impl->GetCompletedValue();
   if(val==v)
-    return;
+    return true;
+  if(timeout==0)
+    return false;
   dxAssert(impl->SetEventOnCompletion(val,event));
-  WaitForSingleObjectEx(event, INFINITE, FALSE);
+  DWORD ret = WaitForSingleObjectEx(event, timeout, FALSE);
+  if(ret==WAIT_OBJECT_0)
+    return true;
+  if(ret==WAIT_TIMEOUT)
+    return false;
+  dxAssert(GetLastError());
+  return false;
   }
 
 template<class Interface>

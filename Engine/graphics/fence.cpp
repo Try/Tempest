@@ -15,6 +15,10 @@ void Fence::wait() {
   impl.handler->wait();
   }
 
+bool Fence::wait(uint64_t time) {
+  return impl.handler->wait(time);
+  }
+
 void Fence::reset() {
   impl.handler->reset();
   }

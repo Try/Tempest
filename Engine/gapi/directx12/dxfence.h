@@ -20,7 +20,8 @@ class DxFenceBase : public Interface {
     ~DxFenceBase() override;
 
     void wait();
-    void wait(UINT64 val);
+    bool wait(uint64_t timeout);
+    bool waitValue(UINT64 val, DWORD timeout = INFINITE);
     void reset();
 
     void signal(ID3D12CommandQueue& queue);

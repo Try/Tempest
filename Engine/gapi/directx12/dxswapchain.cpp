@@ -67,7 +67,7 @@ DxSwapchain::~DxSwapchain() {
   }
 
 void DxSwapchain::reset() {
-  fence.wait(frameCounter); //wait for all pending frame to be finizhed
+  fence.waitValue(frameCounter); //wait for all pending frame to be finizhed
 
   for(uint32_t i=0; i<imgCount; ++i) {
     views[i] = nullptr;

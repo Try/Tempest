@@ -14,6 +14,7 @@ class Fence final {
     Fence& operator = (Fence&& other)=default;
 
     void wait();
+    bool wait(uint64_t time);
     void reset();
 
   private:
