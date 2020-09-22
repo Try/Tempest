@@ -407,7 +407,7 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
           SystemApi::dispatchKeyUp  (*cb,e,scan);
         }
       if(msg==WM_SYSKEYDOWN || msg==WM_SYSKEYUP)
-        return DefWindowProc( hWnd, msg, wParam, lParam );
+        return DefWindowProcW( hWnd, msg, wParam, lParam );
       break;
       }
 
@@ -422,7 +422,7 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
         }
       break;
     default:
-      return DefWindowProc( hWnd, msg, wParam, lParam );
+      return DefWindowProcW( hWnd, msg, wParam, lParam );
     }
   return 0;
   }
