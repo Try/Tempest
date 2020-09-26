@@ -131,9 +131,9 @@ SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, uint32_t
   AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW, FALSE);
 
   HINSTANCE module = GetModuleHandle(nullptr);
-  DWORD     style  = WS_OVERLAPPEDWINDOW;
+  DWORD     style  = 0;
   if(sm!=Hidden)
-    style |= WS_VISIBLE | WS_SYSMENU;
+    style = WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_SYSMENU;
   HWND window = CreateWindowExW(0,
                                 wndClassName,          // class name
                                 nullptr,               // app name
@@ -170,7 +170,7 @@ SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, ShowMode
   SystemApi::Window* hwnd = nullptr;
   if(sm==Hidden) {
     hwnd = implCreateWindow(owner,uint32_t(1),uint32_t(1));
-    ShowWindow(HWND(hwnd),SW_HIDE);
+    // ShowWindow(HWND(hwnd),SW_HIDE);
     }
   else if(sm==Minimized) {
     hwnd =  implCreateWindow(owner,800,600);
