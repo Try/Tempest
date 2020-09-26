@@ -129,7 +129,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     ~VDevice() override;
 
     struct Queue final {
-      std::mutex sync;
+      SpinLock   sync;
       VkQueue    impl=nullptr;
       uint32_t   family=0;
 
