@@ -164,7 +164,8 @@ void VDevice::deviceQueueProps(Detail::VulkanApi::VkProp& prop,VkPhysicalDevice 
     if(queueFamily.queueCount<=0)
       continue;
 
-    if(queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+    static const VkQueueFlags rqFlag = (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
+    if((queueFamily.queueFlags & rqFlag)==rqFlag)
       graphics = i;
 
     VkBool32 presentSupport=false;
