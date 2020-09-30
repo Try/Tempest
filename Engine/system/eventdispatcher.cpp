@@ -237,7 +237,8 @@ void EventDispatcher::implMouseWhell(Widget& w,MouseEvent &event) {
     }
   Point            pos=event.pos();
   Widget::Iterator it(&w);
-  for(;it.hasNext();it.next()) {
+  it.moveToEnd();
+  for(;it.hasPrev();it.prev()) {
     Widget* i=it.get();
     if(i->rect().contains(pos)){
       MouseEvent ex(event.x - i->x(),
