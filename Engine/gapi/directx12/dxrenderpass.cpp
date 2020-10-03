@@ -15,4 +15,8 @@ bool DxRenderPass::isAttachPreserved(size_t i) const {
   return (att[i].mode & FboMode::PreserveIn);
   }
 
+bool DxRenderPass::isResultPreserved(size_t i) const {
+  return (att[i].mode & FboMode::PreserveOut);
+  }
+
 #endif

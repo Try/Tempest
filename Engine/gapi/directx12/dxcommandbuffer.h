@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "comptr.h"
+#include "dxframebuffer.h"
 #include "dxuniformslay.h"
 
 namespace Tempest {
@@ -18,6 +19,7 @@ class DxBuffer;
 class DxTexture;
 class DxFramebuffer;
 class DxFboLayout;
+class DxRenderPass;
 
 class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
   public:
@@ -64,16 +66,18 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     bool                              recording=false;
     bool                              resetDone=false;
 
-    DxFboLayout*                      currentFbo = nullptr;
+    DxFramebuffer*                    currentFbo  = nullptr;
+    DxRenderPass*                     currentPass = nullptr;
     ID3D12DescriptorHeap*             currentHeaps[DxUniformsLay::MAX_BINDS]={};
 
     UINT                              vboStride=0;
 
     std::vector<ImgState>             imgState;
 
-    void                       setLayout(ID3D12Resource* res, D3D12_RESOURCE_STATES lay, bool isSwImage, bool preserve);
+    static D3D12_RESOURCE_STATES defaultLayout(const DxFramebuffer::View& v);
+    void                       setLayout(DxFramebuffer::View& v, D3D12_RESOURCE_STATES lay, bool preserve);
     void                       implChangeLayout(ID3D12Resource* res, bool preserveIn, D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES lay);
-    DxCommandBuffer::ImgState& findImg(ID3D12Resource* img, D3D12_RESOURCE_STATES last, bool preserve);
+    DxCommandBuffer::ImgState& findImg(ID3D12Resource* img, D3D12_RESOURCE_STATES defState);
     void                       flushLayout();
 
     friend class Tempest::DirectX12Api;

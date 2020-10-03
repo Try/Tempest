@@ -17,8 +17,9 @@ using namespace Tempest::Detail;
 struct VCommandBuffer::ImgState {
   VkImage       img;
   VkFormat      frm;
-  VkImageLayout lay;
   VkImageLayout last;
+
+  VkImageLayout next;
   bool          outdated;
   };
 
@@ -59,8 +60,6 @@ void VCommandBuffer::begin(VkCommandBufferUsageFlags flg) {
 void VCommandBuffer::end() {
   if(state==RenderPass)
     endRenderPass();
-  for(auto& i:imgState)
-    i.outdated = true;
   flushLayout();
   imgState.clear();
   vkAssert(vkEndCommandBuffer(impl));
@@ -77,18 +76,13 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
   VFramebuffer& fbo =*reinterpret_cast<VFramebuffer*>(f);
   VRenderPass&  pass=*reinterpret_cast<VRenderPass*>(p);
 
-  for(auto& i:imgState)
-    i.outdated = true;
-
   for(size_t i=0;i<fbo.attach.size();++i) {
-    VkFormat      frm = fbo.rp.handler->frm[i];
-    VkImageLayout lay = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    const bool preserve = pass.isAttachPreserved(i);
+    VkFormat      frm      = fbo.rp.handler->frm[i];
+    const bool    preserve = pass.isAttachPreserved(i);
     if(Detail::nativeIsDepthFormat(frm)) {
-      lay = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-      setLayout(fbo.attach[i],frm,lay,preserve);
+      setLayout(fbo.attach[i],frm,VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,preserve);
       } else {
-      setLayout(fbo.attach[i],frm,lay,preserve);
+      setLayout(fbo.attach[i],frm,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,preserve);
       }
     }
 
@@ -98,7 +92,8 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
     throw IncompleteFboException();
 
   auto& rp = pass.instance(*fbo.rp.handler);
-  curFbo = fbo.rp;
+  curFbo = &fbo;
+  curRp  = &pass;
 
   VkRenderPassBeginInfo renderPassInfo = {};
   renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -120,13 +115,28 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
   }
 
 void VCommandBuffer::endRenderPass() {
+  for(size_t i=0;i<curFbo->attach.size();++i) {
+    VkFormat      frm      = curFbo->rp.handler->frm[i];
+    const bool    preserve = curRp->isResultPreserved(i);
+    if(!preserve)
+      continue;
+    if(Detail::nativeIsDepthFormat(frm)) {
+      setLayout(curFbo->attach[i],frm,VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,preserve);
+      } else {
+      if(curFbo->attach[i].sw!=nullptr)
+        setLayout(curFbo->attach[i],frm,VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,preserve); else
+        setLayout(curFbo->attach[i],frm,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,preserve);
+      }
+    }
   vkCmdEndRenderPass(impl);
-  state = NoPass;
+  state  = NoPass;
+  curFbo = nullptr;
+  curRp  = nullptr;
   }
 
 void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p,uint32_t w,uint32_t h) {
   VPipeline&           px = reinterpret_cast<VPipeline&>(p);
-  VFramebufferLayout*  l  = reinterpret_cast<VFramebufferLayout*>(curFbo.handler);
+  VFramebufferLayout*  l  = reinterpret_cast<VFramebufferLayout*>(curFbo->rp.handler);
   auto& v = px.instance(*l,w,h);
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v.val);
   }
@@ -196,9 +206,8 @@ void VCommandBuffer::setLayout(VFramebuffer::Attach& a, VkFormat frm, VkImageLay
     } else {
     img = &findImg(a.sw->images[a.id],frm,VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,preserve);
     }
-  changeLayout(img->img,img->frm,img->lay,lay,VK_REMAINING_MIP_LEVELS,true);
-  img->outdated = false;
-  img->lay      = lay;
+  img->next     = lay;
+  img->outdated = true;
   }
 
 VCommandBuffer::ImgState& VCommandBuffer::findImg(VkImage img, VkFormat frm, VkImageLayout last, bool preserve) {
@@ -207,10 +216,10 @@ VCommandBuffer::ImgState& VCommandBuffer::findImg(VkImage img, VkFormat frm, VkI
       return i;
     }
   ImgState s={};
-  s.img     = img;
-  s.frm     = frm;
-  s.lay     = preserve ? last : VK_IMAGE_LAYOUT_UNDEFINED;
-  s.last    = last;
+  s.img      = img;
+  s.frm      = frm;
+  s.last     = preserve ? last : VK_IMAGE_LAYOUT_UNDEFINED;
+  s.next     = VK_IMAGE_LAYOUT_UNDEFINED;
   imgState.push_back(s);
   return imgState.back();
   }
@@ -219,10 +228,10 @@ void VCommandBuffer::flushLayout() {
   for(auto& i:imgState) {
     if(!i.outdated)
       continue;
-    if(Detail::nativeIsDepthFormat(i.frm))
-      continue; // no readable depth for now
-    changeLayout(i.img,i.frm,i.lay,i.last,VK_REMAINING_MIP_LEVELS,true);
-    i.lay = i.last;
+    //if(Detail::nativeIsDepthFormat(i.frm))
+    //  continue; // no readable depth for now
+    changeLayout(i.img,i.frm,i.last,i.next,VK_REMAINING_MIP_LEVELS,true);
+    i.last     = i.next;
     i.outdated = false;
     }
   }
@@ -235,9 +244,9 @@ void VCommandBuffer::flush(const VBuffer &src, size_t size) {
   barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
   barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.buffer              =src.impl;
-  barrier.offset              =0;
-  barrier.size                =size;
+  barrier.buffer              = src.impl;
+  barrier.offset              = 0;
+  barrier.size                = size;
 
   vkCmdPipelineBarrier(
       impl,

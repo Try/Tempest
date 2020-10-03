@@ -93,9 +93,10 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     std::vector<ImgState>                   imgState;
 
-    RpState                                 state=NoRecording;
-    Detail::DSharedPtr<VFramebufferLayout*> curFbo;
-    VkViewport                              viewPort={};
+    RpState                                 state    = NoRecording;
+    VFramebuffer*                           curFbo   = nullptr;
+    VRenderPass*                            curRp    = nullptr;
+    VkViewport                              viewPort = {};
   };
 
 }}

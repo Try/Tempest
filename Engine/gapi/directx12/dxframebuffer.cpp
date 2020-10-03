@@ -21,6 +21,9 @@ Tempest::Detail::DxFramebuffer::DxFramebuffer(DxDevice& dev, DxFboLayout& lay, u
       }
     }
   setupViews(*dev.device, res, cnt, zbuf==nullptr ? nullptr : zbuf->impl.get());
+  for(size_t i=0; i<cnt; ++i)
+    if(cl[i]==nullptr)
+      views[i].isSwImage = true;
   }
 
 DxFramebuffer::~DxFramebuffer() {

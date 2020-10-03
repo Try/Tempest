@@ -46,6 +46,7 @@ class VRenderPass : public AbstractGraphicsApi::Pass {
 
     uint8_t                         attCount=0;
     bool                            isAttachPreserved(size_t att) const;
+    bool                            isResultPreserved(size_t att) const;
 
   private:
     VkDevice                        device=nullptr;

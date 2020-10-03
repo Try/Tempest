@@ -20,8 +20,9 @@ using namespace Tempest::Detail;
 
 struct DxCommandBuffer::ImgState {
   ID3D12Resource*       img=nullptr;
-  D3D12_RESOURCE_STATES lay;
   D3D12_RESOURCE_STATES last;
+  D3D12_RESOURCE_STATES next;
+  bool                  discard;
   bool                  outdated;
   };
 
@@ -46,8 +47,8 @@ void DxCommandBuffer::begin() {
   }
 
 void DxCommandBuffer::end() {
-  for(auto& i:imgState)
-    i.outdated = true;
+  if(currentFbo!=nullptr)
+    endRenderPass();
   flushLayout();
   imgState.clear();
 
@@ -76,22 +77,19 @@ void DxCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*  f,
   auto& fbo  = *reinterpret_cast<DxFramebuffer*>(f);
   auto& pass = *reinterpret_cast<DxRenderPass*>(p);
 
-  currentFbo = fbo.lay.handler;
-
-  for(auto& i:imgState)
-    i.outdated = true;
+  currentFbo  = &fbo;
+  currentPass = &pass;
 
   for(size_t i=0;i<fbo.viewsCount;++i) {
-    // TODO: STORE op for renderpass
     D3D12_RESOURCE_STATES lay = D3D12_RESOURCE_STATE_RENDER_TARGET;
     const bool preserve = pass.isAttachPreserved(i);
-    setLayout(fbo.views[i].res,lay,fbo.views[i].isSwImage,preserve);
+    setLayout(fbo.views[i],lay,preserve);
     }
 
   if(fbo.depth.res!=nullptr) {
     D3D12_RESOURCE_STATES lay = D3D12_RESOURCE_STATE_DEPTH_WRITE;
     const bool preserve = pass.isAttachPreserved(pass.att.size()-1);
-    setLayout(fbo.depth.res,lay,fbo.depth.isSwImage,preserve);
+    setLayout(fbo.depth,lay,preserve);
     }
 
   flushLayout();
@@ -139,6 +137,21 @@ void DxCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*  f,
   }
 
 void DxCommandBuffer::endRenderPass() {
+  auto& fbo  = *currentFbo;
+  auto& pass = *currentPass;
+
+  for(size_t i=0;i<fbo.viewsCount;++i) {
+    const bool preserve = pass.isResultPreserved(i);
+    setLayout(fbo.views[i],defaultLayout(fbo.views[i]),preserve);
+    }
+
+  if(fbo.depth.res!=nullptr) {
+    const bool preserve = pass.isResultPreserved(pass.att.size()-1);
+    setLayout(fbo.depth,defaultLayout(fbo.depth),preserve);
+    }
+
+  currentFbo  = nullptr;
+  currentPass = nullptr;
   }
 
 void Tempest::Detail::DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p,
@@ -146,7 +159,7 @@ void Tempest::Detail::DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi:
   DxPipeline& px = reinterpret_cast<DxPipeline&>(p);
   vboStride = px.stride;
 
-  impl->SetPipelineState(&px.instance(*currentFbo));
+  impl->SetPipelineState(&px.instance(*currentFbo->lay.handler));
   impl->SetGraphicsRootSignature(px.sign.get());
   impl->IASetPrimitiveTopology(px.topology);
   }
@@ -165,7 +178,7 @@ void DxCommandBuffer::setViewport(const Rect& r) {
 
 void DxCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) {
   auto& px = reinterpret_cast<DxPipeline&>(p);
-  impl->SetGraphicsRoot32BitConstants(px.pushConstantId,UINT(size/4),data,0);
+  impl->SetGraphicsRoot32BitConstants(UINT(px.pushConstantId),UINT(size/4),data,0);
   }
 
 void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/, AbstractGraphicsApi::Desc& u) {
@@ -335,29 +348,33 @@ void DxCommandBuffer::copy(DxBuffer& dest, size_t width, size_t height, size_t m
   impl->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, nullptr);
   }
 
-void DxCommandBuffer::generateMipmap(DxTexture& image, TextureFormat imageFormat, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
+void DxCommandBuffer::generateMipmap(DxTexture& image, TextureFormat imageFormat,
+                                     uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
   // TODO
   Log::d("TODO: DxCommandBuffer::generateMipmap");
   changeLayout(image, imageFormat, TextureLayout::TransferDest, TextureLayout::Sampler, mipLevels);
   }
 
-void DxCommandBuffer::setLayout(ID3D12Resource* res, D3D12_RESOURCE_STATES lay, bool isSwImage, bool preserve) {
+D3D12_RESOURCE_STATES DxCommandBuffer::defaultLayout(const DxFramebuffer::View& v) {
+  if(v.isSwImage)
+    return D3D12_RESOURCE_STATE_PRESENT;
+  return D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+  }
+
+void DxCommandBuffer::setLayout(DxFramebuffer::View& v, D3D12_RESOURCE_STATES lay, bool preserve) {
   ImgState* img;
-  if(isSwImage) {
-    img = &findImg(res,D3D12_RESOURCE_STATE_PRESENT,preserve);
+  if(v.isSwImage) {
+    img = &findImg(v.res,defaultLayout(v));
     } else {
-    img = &findImg(res,D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,preserve);
+    img = &findImg(v.res,defaultLayout(v));
     }
-  implChangeLayout(img->img,preserve,img->lay,lay);
-  //img->preserveLast = preserve;
-  img->outdated     = false;
-  img->lay          = lay;
+  img->next      = lay;
+  img->discard  |= (!preserve);
+  img->outdated  = true;
   }
 
 void DxCommandBuffer::implChangeLayout(ID3D12Resource* res, bool preserveIn,
                                        D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES lay) {
-  if(prev==lay)
-    return;
   D3D12_RESOURCE_BARRIER barrier = {};
   barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
   barrier.Flags                  = preserveIn ?
@@ -370,15 +387,16 @@ void DxCommandBuffer::implChangeLayout(ID3D12Resource* res, bool preserveIn,
   impl->ResourceBarrier(1,&barrier);
   }
 
-DxCommandBuffer::ImgState& DxCommandBuffer::findImg(ID3D12Resource* img, D3D12_RESOURCE_STATES last, bool /*preserve*/) {
+DxCommandBuffer::ImgState& DxCommandBuffer::findImg(ID3D12Resource* img, D3D12_RESOURCE_STATES defState) {
   for(auto& i:imgState) {
     if(i.img==img)
       return i;
     }
   ImgState s = {};
-  s.img  = img;
-  s.lay  = last;
-  s.last = last;
+  s.img      = img;
+  s.last     = defState;
+  s.next     = defState;
+  s.outdated = false;
   imgState.push_back(s);
   return imgState.back();
   }
@@ -387,10 +405,29 @@ void DxCommandBuffer::flushLayout() {
   for(auto& i:imgState) {
     if(!i.outdated)
       continue;
+    i.outdated = false;
     //if(Detail::nativeIsDepthFormat(i.frm))
     //  continue; // no readable depth for now
-    implChangeLayout(i.img,true,i.lay,i.last);
-    i.lay = i.last;
+    if(i.discard && (i.last==D3D12_RESOURCE_STATE_RENDER_TARGET || i.last==D3D12_RESOURCE_STATE_DEPTH_WRITE)) {
+      impl->DiscardResource(i.img,nullptr);
+      i.discard = false;
+      }
+    if(i.next!=i.last) {
+      D3D12_RESOURCE_BARRIER barrier = {};
+      barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+      barrier.Transition.pResource   = i.img;
+      barrier.Transition.StateBefore = i.last;
+      barrier.Transition.StateAfter  = i.next;
+      barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+      barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+
+      impl->ResourceBarrier(1,&barrier);
+      i.last = i.next;
+      }
+    if(i.discard && (i.last==D3D12_RESOURCE_STATE_RENDER_TARGET || i.last==D3D12_RESOURCE_STATE_DEPTH_WRITE)) {
+      impl->DiscardResource(i.img,nullptr);
+      i.discard = false;
+      }
     }
   }
 
