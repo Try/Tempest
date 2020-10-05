@@ -57,6 +57,11 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void setPipeline(AbstractGraphicsApi::Pipeline& p, uint32_t w, uint32_t h);
     void setBytes   (AbstractGraphicsApi::Pipeline &p, const void* data, size_t size);
     void setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u);
+
+    void setComputePipeline(AbstractGraphicsApi::CompPipeline& p);
+    void setBytes   (AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size);
+    void setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc &u);
+
     void setViewport(const Rect& r);
 
     void setVbo(const AbstractGraphicsApi::Buffer& b);
@@ -64,6 +69,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void draw(size_t offset, size_t size);
     void drawIndexed(size_t ioffset, size_t isize, size_t voffset);
+    void dispatch(size_t x, size_t y, size_t z);
 
     void flush(const Detail::VBuffer& src, size_t size);
     void copy(Detail::VBuffer&  dest, size_t offsetDest, const Detail::VBuffer& src, size_t offsetSrc, size_t size);

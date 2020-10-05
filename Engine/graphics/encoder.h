@@ -2,6 +2,7 @@
 
 #include <Tempest/CommandBuffer>
 #include <Tempest/RenderPipeline>
+#include <Tempest/ComputePipeline>
 #include <Tempest/Uniforms>
 
 #include "videobuffer.h"
@@ -33,12 +34,16 @@ class Encoder<Tempest::CommandBuffer> {
 
     void setFramebuffer(const FrameBuffer& fbo, const RenderPass& p);
 
-    void setUniforms(const RenderPipeline &p);
-    void setUniforms(const Tempest::RenderPipeline& p, const void* data, size_t sz);
-    void setUniforms(const Tempest::RenderPipeline& p, const Uniforms &ubo);
+    void setUniforms(const RenderPipeline& p, const void* data, size_t sz);
+    void setUniforms(const RenderPipeline& p, const Uniforms &ubo);
+    void setUniforms(const RenderPipeline& p);
 
     void setUniforms(const Detail::ResourcePtr<RenderPipeline> &p, const Uniforms &ubo);
     void setUniforms(const Detail::ResourcePtr<RenderPipeline> &p);
+
+    void setUniforms(const ComputePipeline& p, const void* data, size_t sz);
+    void setUniforms(const ComputePipeline& p, const Uniforms &ubo);
+    void setUniforms(const ComputePipeline& p);
 
     void setViewport(int x,int y,int w,int h);
     void setViewport(const Rect& vp);
@@ -57,6 +62,8 @@ class Encoder<Tempest::CommandBuffer> {
     void draw(const VertexBuffer<T>& vbo,const IndexBuffer<I>& ibo,size_t offset,size_t count)
          { implDraw(vbo.impl,ibo.impl,Detail::indexCls<I>(),offset,count); }
 
+    void dispatch(size_t x, size_t y, size_t z);
+
   private:
     Encoder(CommandBuffer* ow);
 
@@ -66,10 +73,11 @@ class Encoder<Tempest::CommandBuffer> {
       };
 
     struct State {
-      const AbstractGraphicsApi::Pipeline* curPipeline=nullptr;
-      const VideoBuffer*                   curVbo     =nullptr;
-      const VideoBuffer*                   curIbo     =nullptr;
-      Viewport                             vp;
+      const AbstractGraphicsApi::Pipeline*     curPipeline=nullptr;
+      const AbstractGraphicsApi::CompPipeline* curCompute =nullptr;
+      const VideoBuffer*                       curVbo     =nullptr;
+      const VideoBuffer*                       curIbo     =nullptr;
+      Viewport                                 vp;
       };
 
     struct Pass {

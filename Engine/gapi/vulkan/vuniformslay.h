@@ -22,6 +22,7 @@ class VShader;
 class VUniformsLay : public AbstractGraphicsApi::UniformsLay {
   public:
     VUniformsLay(VkDevice dev, const std::vector<UniformsLayout::Binding>& vs, const std::vector<UniformsLayout::Binding>& fs);
+    VUniformsLay(VkDevice dev, const std::vector<UniformsLayout::Binding>& comp);
     ~VUniformsLay();
 
     using Binding = UniformsLayout::Binding;

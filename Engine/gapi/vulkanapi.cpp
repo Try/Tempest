@@ -120,6 +120,15 @@ AbstractGraphicsApi::PPipeline VulkanApi::createPipeline(AbstractGraphicsApi::De
   return PPipeline(new Detail::VPipeline(*dx,st,decl,declSize,stride,tp,ul,*vs,*fs));
   }
 
+AbstractGraphicsApi::PCompPipeline VulkanApi::createComputePipeline(AbstractGraphicsApi::Device* d,
+                                                                const AbstractGraphicsApi::UniformsLay& ulayImpl,
+                                                                AbstractGraphicsApi::Shader* shader) {
+  auto*   dx = reinterpret_cast<Detail::VDevice*>(d);
+  auto&   ul = reinterpret_cast<const Detail::VUniformsLay&>(ulayImpl);
+
+  return PCompPipeline(new Detail::VCompPipeline(*dx,ul,*reinterpret_cast<Detail::VShader*>(shader)));
+  }
+
 AbstractGraphicsApi::PShader VulkanApi::createShader(AbstractGraphicsApi::Device *d, const void* source, size_t src_size) {
   Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
   return PShader(new Detail::VShader(*dx,source,src_size));
@@ -145,8 +154,13 @@ AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device
     return PBuffer(new Detail::VBuffer(std::move(stage)));
     }
   else {
-    Detail::VBuffer  stage=dx->allocator.alloc(mem,     count,size,alignedSz, MemUsage::TransferSrc,      BufferHeap::Upload);
     Detail::VBuffer  buf  =dx->allocator.alloc(nullptr, count,size,alignedSz, usage|MemUsage::TransferDst,BufferHeap::Static);
+    if(mem==nullptr) {
+      Detail::DSharedPtr<Detail::VBuffer*> pbuf(new Detail::VBuffer(std::move(buf)));
+      return PBuffer(pbuf.handler);
+      }
+
+    Detail::VBuffer  stage=dx->allocator.alloc(mem,     count,size,alignedSz, MemUsage::TransferSrc,      BufferHeap::Upload);
 
     Detail::DSharedPtr<Detail::VBuffer*> pstage(new Detail::VBuffer(std::move(stage)));
     Detail::DSharedPtr<Detail::VBuffer*> pbuf  (new Detail::VBuffer(std::move(buf)));
@@ -268,10 +282,18 @@ AbstractGraphicsApi::Desc *VulkanApi::createDescriptors(AbstractGraphicsApi::Dev
 AbstractGraphicsApi::PUniformsLay VulkanApi::createUboLayout(Device *d, const std::initializer_list<Shader*>& shaders) {
   Shader*const*         arr= shaders.begin();
   auto* dx = reinterpret_cast<Detail::VDevice*>(d);
-  auto* vs = reinterpret_cast<Detail::VShader*>(arr[0]);
-  auto* fs = reinterpret_cast<Detail::VShader*>(arr[1]);
 
-  return PUniformsLay(new Detail::VUniformsLay(dx->device,vs->lay,fs->lay));
+  if(shaders.size()==1) {
+    auto* comp = reinterpret_cast<Detail::VShader*>(arr[0]);
+    return PUniformsLay(new Detail::VUniformsLay(dx->device,comp->lay));
+    }
+  else if(shaders.size()==2) {
+    auto* vs = reinterpret_cast<Detail::VShader*>(arr[0]);
+    auto* fs = reinterpret_cast<Detail::VShader*>(arr[1]);
+
+    return PUniformsLay(new Detail::VUniformsLay(dx->device,vs->lay,fs->lay));
+    }
+  return PUniformsLay();
   }
 
 AbstractGraphicsApi::CommandBuffer* VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device* d) {

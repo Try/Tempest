@@ -46,12 +46,12 @@ void Encoder<Tempest::CommandBuffer>::setViewport(const Rect &vp) {
   impl->setViewport(vp);
   }
 
-void Tempest::Encoder<Tempest::CommandBuffer>::setUniforms(const Tempest::RenderPipeline& p, const void* data, size_t sz) {
+void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const void* data, size_t sz) {
   setUniforms(p);
   impl->setBytes(*p.impl.handler,data,sz);
   }
 
-void Encoder<Tempest::CommandBuffer>::setUniforms(const Tempest::RenderPipeline& p,const Uniforms &ubo) {
+void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p,const Uniforms &ubo) {
   setUniforms(p);
   impl->setUniforms(*p.impl.handler,*ubo.desc.handler);
   }
@@ -64,13 +64,33 @@ void Encoder<Tempest::CommandBuffer>::setUniforms(const Detail::ResourcePtr<Rend
 void Encoder<Tempest::CommandBuffer>::setUniforms(const Detail::ResourcePtr<RenderPipeline> &p) {
   if(state.curPipeline!=p.impl.handler) {
     impl->setPipeline(*p.impl.handler,state.vp.width,state.vp.height);
-    state.curPipeline=p.impl.handler;
+    state.curCompute  = nullptr;
+    state.curPipeline = p.impl.handler;
     }
   }
+
 void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline &p) {
   if(state.curPipeline!=p.impl.handler) {
     impl->setPipeline(*p.impl.handler,state.vp.width,state.vp.height);
     state.curPipeline=p.impl.handler;
+    }
+  }
+
+void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p, const void* data, size_t sz) {
+  setUniforms(p);
+  impl->setBytes(*p.impl.handler,data,sz);
+  }
+
+void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p,const Uniforms &ubo) {
+  setUniforms(p);
+  impl->setUniforms(*p.impl.handler,*ubo.desc.handler);
+  }
+
+void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p) {
+  if(state.curCompute!=p.impl.handler) {
+    impl->setComputePipeline(*p.impl.handler);
+    state.curCompute  = p.impl.handler;
+    state.curPipeline = nullptr;
     }
   }
 
@@ -122,4 +142,8 @@ void Encoder<CommandBuffer>::implEndRenderPass() {
     curPass           = Pass();
     reinterpret_cast<AbstractGraphicsApi::CommandBuffer*>(impl)->endRenderPass();
     }
+  }
+
+void Encoder<CommandBuffer>::dispatch(size_t x, size_t y, size_t z) {
+  impl->dispatch(x,y,z);
   }

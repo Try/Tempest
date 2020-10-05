@@ -21,7 +21,7 @@ void DxAllocator::setDevice(DxDevice& d) {
   }
 
 DxBuffer DxAllocator::alloc(const void* mem, size_t count, size_t size, size_t alignedSz,
-                            MemUsage /*usage*/, BufferHeap bufFlg) {
+                            MemUsage usage, BufferHeap bufFlg) {
   ComPtr<ID3D12Resource> ret;
 
   D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COMMON;
@@ -38,6 +38,10 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t count, size_t size, size_t a
   resDesc.SampleDesc.Quality = 0;
   resDesc.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
   resDesc.Flags              = D3D12_RESOURCE_FLAG_NONE;
+
+  if(MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer)) {
+    resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+    }
 
   D3D12_HEAP_PROPERTIES heapProp={};
   heapProp.Type                 = D3D12_HEAP_TYPE_DEFAULT;

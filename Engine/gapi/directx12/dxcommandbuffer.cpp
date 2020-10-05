@@ -154,16 +154,6 @@ void DxCommandBuffer::endRenderPass() {
   currentPass = nullptr;
   }
 
-void Tempest::Detail::DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p,
-                                                   uint32_t /*w*/, uint32_t /*h*/) {
-  DxPipeline& px = reinterpret_cast<DxPipeline&>(p);
-  vboStride = px.stride;
-
-  impl->SetPipelineState(&px.instance(*currentFbo->lay.handler));
-  impl->SetGraphicsRootSignature(px.sign.get());
-  impl->IASetPrimitiveTopology(px.topology);
-  }
-
 void DxCommandBuffer::setViewport(const Rect& r) {
   D3D12_VIEWPORT vp={};
   vp.TopLeftX = float(r.x);
@@ -176,12 +166,41 @@ void DxCommandBuffer::setViewport(const Rect& r) {
   impl->RSSetViewports(1, &vp);
   }
 
+void Tempest::Detail::DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p,
+                                                   uint32_t /*w*/, uint32_t /*h*/) {
+  DxPipeline& px = reinterpret_cast<DxPipeline&>(p);
+  vboStride = px.stride;
+
+  impl->SetPipelineState(&px.instance(*currentFbo->lay.handler));
+  impl->SetGraphicsRootSignature(px.sign.get());
+  impl->IASetPrimitiveTopology(px.topology);
+  }
+
 void DxCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) {
   auto& px = reinterpret_cast<DxPipeline&>(p);
   impl->SetGraphicsRoot32BitConstants(UINT(px.pushConstantId),UINT(size/4),data,0);
   }
 
 void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/, AbstractGraphicsApi::Desc& u) {
+  implSetUniforms(u,false);
+  }
+
+void Tempest::Detail::DxCommandBuffer::setComputePipeline(Tempest::AbstractGraphicsApi::CompPipeline& p) {
+  auto& px = reinterpret_cast<DxCompPipeline&>(p);
+  impl->SetPipelineState(px.impl.get());
+  impl->SetComputeRootSignature(px.sign.get());
+  }
+
+void DxCommandBuffer::setBytes(AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) {
+  auto& px = reinterpret_cast<DxCompPipeline&>(p);
+  impl->SetComputeRoot32BitConstants(UINT(px.pushConstantId),UINT(size/4),data,0);
+  }
+
+void DxCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& /*p*/, AbstractGraphicsApi::Desc& u) {
+  implSetUniforms(u,true);
+  }
+
+void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompute) {
   DxDescriptorArray& ux = reinterpret_cast<DxDescriptorArray&>(u);
 
   bool setH = false;
@@ -203,7 +222,9 @@ void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/, Abstract
     auto& r   = lx.roots[i];
     auto desc = ux.val.gpu[r.heap];
     desc.ptr+=r.heapOffset;
-    impl->SetGraphicsRootDescriptorTable(UINT(i), desc);
+    if(isCompute)
+      impl->SetComputeRootDescriptorTable(UINT(i), desc); else
+      impl->SetGraphicsRootDescriptorTable(UINT(i), desc);
     }
   }
 
@@ -278,6 +299,10 @@ void DxCommandBuffer::draw(size_t offset, size_t vertexCount) {
 
 void DxCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset) {
   impl->DrawIndexedInstanced(UINT(isize),1,UINT(ioffset),INT(voffset),0);
+  }
+
+void DxCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
+  impl->Dispatch(UINT(x),UINT(y),UINT(z));
   }
 
 void DxCommandBuffer::flush(const DxBuffer&, size_t /*size*/) {

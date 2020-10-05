@@ -17,11 +17,14 @@ class UniformsLayout final {
     enum Class : uint8_t {
       Ubo    =0,
       Texture=1,
-      Push   =2,
+      SsboR  =2,
+      SsboRW =3,
+      Push   =4,
       };
     enum Stage : uint8_t {
       Vertex  =1<<0,
       Fragment=1<<1,
+      Compute =1<<2,
       };
     struct Binding {
       uint32_t layout=0;
@@ -44,6 +47,7 @@ class UniformsLayout final {
 
   friend class Device;
   friend class RenderPipeline;
+  friend class ComputePipeline;
   };
 
 }

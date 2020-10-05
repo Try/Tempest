@@ -33,6 +33,9 @@ class VulkanApi : public AbstractGraphicsApi {
                                   size_t stride, Topology tp,
                                   const UniformsLay& ulayImpl,
                                   const std::initializer_list<Shader*>& shaders) override;
+    PCompPipeline  createComputePipeline(Device* d,
+                                         const UniformsLay &ulayImpl,
+                                         Shader* sh) override;
 
     PShader        createShader(AbstractGraphicsApi::Device *d, const void* source, size_t src_size) override;
 

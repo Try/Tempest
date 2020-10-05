@@ -172,6 +172,9 @@ void VulkanApi::getDevicePropsShort(VkPhysicalDevice physicalDevice, Tempest::Ab
   VkPhysicalDeviceProperties prop={};
   vkGetPhysicalDeviceProperties(physicalDevice,&prop);
 
+  VkPhysicalDeviceFeatures supportedFeatures={};
+  vkGetPhysicalDeviceFeatures(physicalDevice,&supportedFeatures);
+
   std::memcpy(c.name,prop.deviceName,sizeof(c.name));
 
   c.vbo.maxAttribs  = size_t(prop.limits.maxVertexInputAttributes);
@@ -184,11 +187,10 @@ void VulkanApi::getDevicePropsShort(VkPhysicalDevice physicalDevice, Tempest::Ab
   
   c.push.maxRange   = size_t(prop.limits.maxPushConstantsSize);
 
-  VkPhysicalDeviceFeatures supportedFeatures={};
-  vkGetPhysicalDeviceFeatures(physicalDevice,&supportedFeatures);
+  c.anisotropy      = supportedFeatures.samplerAnisotropy;
+  c.maxAnisotropy   = prop.limits.maxSamplerAnisotropy;
 
-  c.anisotropy    = supportedFeatures.samplerAnisotropy;
-  c.maxAnisotropy = prop.limits.maxSamplerAnisotropy;
+  c.mrt.maxColorAttachments = prop.limits.maxColorAttachments;
 
   switch(prop.deviceType) {
     case VK_PHYSICAL_DEVICE_TYPE_CPU:

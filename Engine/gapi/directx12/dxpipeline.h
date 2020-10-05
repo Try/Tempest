@@ -58,4 +58,15 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
     ComPtr<ID3D12PipelineState> initGraphicsPipeline(const DxFboLayout& frm);
   };
 
+class DxCompPipeline : public AbstractGraphicsApi::CompPipeline {
+  public:
+    DxCompPipeline(DxDevice &device,
+                   const DxUniformsLay& ulay,
+                   DxShader& comp);
+
+    ComPtr<ID3D12RootSignature> sign;
+    ComPtr<ID3D12PipelineState> impl;
+    size_t                      pushConstantId=0;
+  };
+
 }}

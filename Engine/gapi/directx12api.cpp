@@ -45,8 +45,13 @@ struct DirectX12Api::Impl {
     for(UINT i = 0; DXGI_ERROR_NOT_FOUND != dxgi.EnumAdapters1(i, &adapter.get()); ++i) {
       DXGI_ADAPTER_DESC1 desc={};
       adapter->GetDesc1(&desc);
-      if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-        continue;
+
+      ComPtr<IDXGIAdapter3> adapter3;
+      adapter->QueryInterface(__uuidof(IDXGIAdapter3), reinterpret_cast<void**>(&adapter3.get()));
+
+      DXGI_ADAPTER_DESC2 desc2={};
+      if(adapter3.get()!=nullptr)
+        adapter3->GetDesc2(&desc2);
 
       AbstractGraphicsApi::Props props={};
       DxDevice::getProp(desc,props);
@@ -181,6 +186,15 @@ AbstractGraphicsApi::PPipeline DirectX12Api::createPipeline(AbstractGraphicsApi:
   return PPipeline(new Detail::DxPipeline(*dx,st,decl,declSize,stride,tp,ul,*vs,*fs));
   }
 
+AbstractGraphicsApi::PCompPipeline DirectX12Api::createComputePipeline(AbstractGraphicsApi::Device* d,
+                                                                       const AbstractGraphicsApi::UniformsLay& ulayImpl,
+                                                                       AbstractGraphicsApi::Shader* shader) {
+  auto*   dx = reinterpret_cast<Detail::DxDevice*>(d);
+  auto&   ul = reinterpret_cast<const Detail::DxUniformsLay&>(ulayImpl);
+
+  return PCompPipeline(new Detail::DxCompPipeline(*dx,ul,*reinterpret_cast<Detail::DxShader*>(shader)));
+  }
+
 AbstractGraphicsApi::PShader DirectX12Api::createShader(AbstractGraphicsApi::Device*,
                                                         const void* source, size_t src_size) {
   return PShader(new Detail::DxShader(source,src_size));
@@ -233,10 +247,18 @@ AbstractGraphicsApi::Desc* DirectX12Api::createDescriptors(AbstractGraphicsApi::
 AbstractGraphicsApi::PUniformsLay DirectX12Api::createUboLayout(Device* d, const std::initializer_list<Shader*>& shaders) {
   Shader*const*        arr=shaders.begin();
   auto* dx = reinterpret_cast<Detail::DxDevice*>(d);
-  auto* vs = reinterpret_cast<Detail::DxShader*>(arr[0]);
-  auto* fs = reinterpret_cast<Detail::DxShader*>(arr[1]);
 
-  return PUniformsLay(new DxUniformsLay(*dx,vs->lay,fs->lay));
+  if(shaders.size()==1) {
+    auto* comp = reinterpret_cast<Detail::DxShader*>(arr[0]);
+    return PUniformsLay(new Detail::DxUniformsLay(*dx,comp->lay));
+    }
+  else if(shaders.size()==2) {
+    auto* vs = reinterpret_cast<Detail::DxShader*>(arr[0]);
+    auto* fs = reinterpret_cast<Detail::DxShader*>(arr[1]);
+
+    return PUniformsLay(new Detail::DxUniformsLay(*dx,vs->lay,fs->lay));
+    }
+  return PUniformsLay();
   }
 
 AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mipCnt) {

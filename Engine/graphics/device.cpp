@@ -352,6 +352,17 @@ Semaphore Device::semaphore() {
   return f;
   }
 
+ComputePipeline Device::pipeline(const Shader& comp) {
+  if(!comp.impl)
+    return ComputePipeline();
+
+  std::initializer_list<AbstractGraphicsApi::Shader*> sh = {comp.impl.handler};
+  auto ulay = api.createUboLayout(dev,sh);
+  auto pipe = api.createComputePipeline(dev,*ulay.handler,comp.impl.handler);
+  ComputePipeline f(std::move(pipe),std::move(ulay));
+  return f;
+  }
+
 RenderPipeline Device::implPipeline(const RenderState &st,
                                     const Shader &vs, const Shader &fs,
                                     const Decl::ComponentType *decl, size_t declSize,
@@ -363,7 +374,7 @@ RenderPipeline Device::implPipeline(const RenderState &st,
   std::initializer_list<AbstractGraphicsApi::Shader*> sh = {vs.impl.handler,fs.impl.handler};
   auto ulay = api.createUboLayout(dev,sh);
   auto pipe = api.createPipeline(dev,st,decl,declSize,stride,tp,*ulay.handler,sh);
-  RenderPipeline f(*this,std::move(pipe),std::move(ulay));
+  RenderPipeline f(std::move(pipe),std::move(ulay));
   return f;
   }
 

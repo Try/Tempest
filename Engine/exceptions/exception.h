@@ -46,6 +46,7 @@ enum class GraphicsErrc {
   InvalidTexture           = 6,
   InvalidBufferUpdate      = 7,
   TooLardgeUbo             = 8,
+  InvalidStorageBuffer     = 9,
   };
 
 struct GraphicsErrCategory : std::error_category {

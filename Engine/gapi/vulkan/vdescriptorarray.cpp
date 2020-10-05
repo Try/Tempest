@@ -51,6 +51,8 @@ VkDescriptorPool VDescriptorArray::allocPool(const VUniformsLay& lay, size_t siz
     switch(cls) {
       case UniformsLayout::Ubo:     addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);         break;
       case UniformsLayout::Texture: addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER); break;
+      case UniformsLayout::SsboR:   addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);         break;
+      case UniformsLayout::SsboRW:  addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);         break;
       case UniformsLayout::Push:    break;
       }
     }
@@ -106,7 +108,7 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Texture* t, 
   vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
   }
 
-void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf, size_t offset, size_t size, size_t /*align*/) {
+void VDescriptorArray::setUbo(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf, size_t offset, size_t size, size_t /*align*/) {
   VBuffer* memory=reinterpret_cast<VBuffer*>(buf);
   VkDescriptorBufferInfo bufferInfo = {};
   bufferInfo.buffer = memory->impl;
@@ -119,6 +121,25 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf,
   descriptorWrite.dstBinding      = uint32_t(id);
   descriptorWrite.dstArrayElement = 0;
   descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  descriptorWrite.descriptorCount = 1;
+  descriptorWrite.pBufferInfo     = &bufferInfo;
+
+  vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+  }
+
+void VDescriptorArray::setSsbo(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf, size_t offset, size_t size, size_t /*align*/) {
+  VBuffer* memory=reinterpret_cast<VBuffer*>(buf);
+  VkDescriptorBufferInfo bufferInfo = {};
+  bufferInfo.buffer = memory->impl;
+  bufferInfo.offset = offset;
+  bufferInfo.range  = size;
+
+  VkWriteDescriptorSet descriptorWrite = {};
+  descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  descriptorWrite.dstSet          = desc;
+  descriptorWrite.dstBinding      = uint32_t(id);
+  descriptorWrite.dstArrayElement = 0;
+  descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   descriptorWrite.descriptorCount = 1;
   descriptorWrite.pBufferInfo     = &bufferInfo;
 

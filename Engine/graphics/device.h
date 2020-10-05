@@ -5,6 +5,7 @@
 #include <Tempest/RenderPass>
 #include <Tempest/FrameBuffer>
 #include <Tempest/RenderPipeline>
+#include <Tempest/ComputePipeline>
 #include <Tempest/Shader>
 #include <Tempest/Attachment>
 #include <Tempest/ZBuffer>
@@ -12,6 +13,7 @@
 #include <Tempest/Uniforms>
 #include <Tempest/VertexBuffer>
 #include <Tempest/IndexBuffer>
+#include <Tempest/StorageBuffer>
 #include <Tempest/Builtin>
 #include <Tempest/Swapchain>
 #include <Tempest/UniformBuffer>
@@ -99,6 +101,14 @@ class Device {
     template<class T>
     UniformBuffer<T>     ubo(const T& data);
 
+    template<class T>
+    StorageBuffer<T>     ssbo(const T* arr,size_t arrSize);
+
+    template<class T>
+    StorageBuffer<T>     ssbo(const std::vector<T>& arr){
+      return ssbo(arr.data(),arr.size());
+      }
+
     Uniforms             uniforms(const UniformsLayout &owner);
 
     Attachment           attachment (TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips = false);
@@ -123,6 +133,8 @@ class Device {
 
     template<class Vertex>
     RenderPipeline       pipeline(Topology tp,const RenderState& st, const Shader &vs,const Shader &fs);
+
+    ComputePipeline      pipeline(const Shader &comp);
 
     Fence                fence();
     Semaphore            semaphore();
@@ -205,6 +217,18 @@ inline IndexBuffer<T> Device::ibo(const T* arr, size_t arrSize) {
   VideoBuffer     data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::IndexBuffer,BufferHeap::Static);
   IndexBuffer<T>  ibo(std::move(data),arrSize);
   return ibo;
+  }
+
+template<class T>
+inline StorageBuffer<T> Device::ssbo(const T* arr, size_t arrSize) {
+  if(arrSize==0)
+    return StorageBuffer<T>();
+  static const auto usageBits = MemUsage::VertexBuffer  | MemUsage::IndexBuffer   |
+                                MemUsage::UniformBuffer | MemUsage::StorageBuffer |
+                                MemUsage::TransferSrc   | MemUsage::TransferDst;
+  VideoBuffer       data      = createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),usageBits,BufferHeap::Static);
+  StorageBuffer<T>  sbo(std::move(data),arrSize);
+  return sbo;
   }
 
 template<class T>

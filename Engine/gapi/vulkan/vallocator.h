@@ -53,6 +53,7 @@ class VAllocator {
     void     freeLast() { provider.freeLast(); samplers.freeLast(); }
 
     bool     update(VBuffer& dest, const void *mem, size_t offset, size_t count, size_t size, size_t alignedSz);
+    bool     read  (VBuffer& src,        void *mem, size_t offset, size_t count, size_t size, size_t alignedSz);
     bool     read  (VBuffer& src,        void *mem, size_t offset, size_t size);
 
     void     updateSampler(VkSampler& smp, const Sampler2d& s, uint32_t mipCount);

@@ -214,6 +214,10 @@ namespace Tempest {
             size_t maxRange    = 128;
             } push;
 
+          struct {
+            size_t maxColorAttachments = 1;
+            } mrt;
+
           bool     anisotropy=false;
           float    maxAnisotropy=1.0f;
 
@@ -279,6 +283,7 @@ namespace Tempest {
         virtual ~Pass()=default;
         };
       struct Pipeline:Shared {};
+      struct CompPipeline:Shared {};
       struct Shader:Shared   {};
       struct Uniforms        {};
       struct UniformsLay:Shared {
@@ -286,12 +291,13 @@ namespace Tempest {
         };
       struct Buffer:Shared   {
         virtual ~Buffer()=default;
-        virtual void  update(const void* data,size_t off,size_t count,size_t sz,size_t alignedSz)=0;
+        virtual void  update  (const void* data,size_t off,size_t count,size_t sz,size_t alignedSz)=0;
         };
       struct Desc:NoCopy   {
         virtual ~Desc()=default;
-        virtual void set(size_t id,AbstractGraphicsApi::Texture *tex, const Sampler2d& smp)=0;
-        virtual void set(size_t id,AbstractGraphicsApi::Buffer* buf,size_t offset,size_t size,size_t align)=0;
+        virtual void set    (size_t id,AbstractGraphicsApi::Texture *tex, const Sampler2d& smp)=0;
+        virtual void setUbo (size_t id,AbstractGraphicsApi::Buffer* buf,size_t offset,size_t size,size_t align)=0;
+        virtual void setSsbo(size_t id,AbstractGraphicsApi::Buffer* buf,size_t offset,size_t size,size_t align)=0;
         };
       struct CommandBuffer:NoCopy {
         virtual ~CommandBuffer()=default;
@@ -305,25 +311,34 @@ namespace Tempest {
         virtual bool isRecording() const = 0;
         virtual void begin()=0;
         virtual void end()  =0;
+
         virtual void setPipeline(Pipeline& p,uint32_t w,uint32_t h)=0;
+        virtual void setComputePipeline(CompPipeline& p)=0;
+
         virtual void setBytes   (Pipeline &p, const void* data, size_t size)=0;
-        virtual void setViewport(const Rect& r)=0;
         virtual void setUniforms(Pipeline& p,Desc& u)=0;
+
+        virtual void setBytes   (CompPipeline &p, const void* data, size_t size)=0;
+        virtual void setUniforms(CompPipeline& p,Desc& u)=0;
+
+        virtual void setViewport(const Rect& r)=0;
 
         virtual void setVbo      (const Buffer& b)=0;
         virtual void setIbo      (const Buffer& b,Detail::IndexClass cls)=0;
         virtual void draw        (size_t offset,size_t vertexCount)=0;
         virtual void drawIndexed (size_t ioffset, size_t isize, size_t voffset)=0;
+        virtual void dispatch    (size_t x, size_t y, size_t z)=0;
         };
 
-      using PBuffer      = Detail::DSharedPtr<Buffer*>;
-      using PTexture     = Detail::DSharedPtr<Texture*>;
-      using PPipeline    = Detail::DSharedPtr<Pipeline*>;
-      using PPass        = Detail::DSharedPtr<Pass*>;
-      using PShader      = Detail::DSharedPtr<Shader*>;
-      using PFbo         = Detail::DSharedPtr<Fbo*>;
-      using PFboLayout   = Detail::DSharedPtr<FboLayout*>;
-      using PUniformsLay = Detail::DSharedPtr<UniformsLay*>;
+      using PBuffer       = Detail::DSharedPtr<Buffer*>;
+      using PTexture      = Detail::DSharedPtr<Texture*>;
+      using PPipeline     = Detail::DSharedPtr<Pipeline*>;
+      using PCompPipeline = Detail::DSharedPtr<CompPipeline*>;
+      using PPass         = Detail::DSharedPtr<Pass*>;
+      using PShader       = Detail::DSharedPtr<Shader*>;
+      using PFbo          = Detail::DSharedPtr<Fbo*>;
+      using PFboLayout    = Detail::DSharedPtr<FboLayout*>;
+      using PUniformsLay  = Detail::DSharedPtr<UniformsLay*>;
 
       virtual std::vector<Props> devices() const = 0;
 
@@ -347,6 +362,10 @@ namespace Tempest {
                                         size_t stride, Topology tp,
                                         const UniformsLay &ulayImpl,
                                         const std::initializer_list<Shader*>& sh)=0;
+
+      virtual PCompPipeline createComputePipeline(Device* d,
+                                               const UniformsLay &ulayImpl,
+                                               Shader* shader)=0;
 
       virtual PShader    createShader(Device *d,const void* source,size_t src_size)=0;
 

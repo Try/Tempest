@@ -187,4 +187,18 @@ ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& 
   return ret;
   }
 
+DxCompPipeline::DxCompPipeline(DxDevice& device, const DxUniformsLay& ulay, DxShader& comp)
+  : sign(ulay.impl.get()) {
+  sign.get()->AddRef();
+
+  pushConstantId = ulay.pushConstantId;
+
+  D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
+  psoDesc.pRootSignature = sign.get();
+  psoDesc.CS             = comp.bytecode();
+
+  dxAssert(device.device->CreateComputePipelineState(&psoDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&impl)));
+  }
+
 #endif
+

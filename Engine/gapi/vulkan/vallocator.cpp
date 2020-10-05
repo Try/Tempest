@@ -101,12 +101,14 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
     createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   if(MemUsage::TransferDst==(usage & MemUsage::TransferDst))
     createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-  if(MemUsage::UniformBuffer==(usage & MemUsage::UniformBuffer))
-    createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
   if(MemUsage::VertexBuffer==(usage & MemUsage::VertexBuffer))
     createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
   if(MemUsage::IndexBuffer==(usage & MemUsage::IndexBuffer))
     createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+  if(MemUsage::UniformBuffer==(usage & MemUsage::UniformBuffer))
+    createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+  if(MemUsage::StorageBuffer==(usage & MemUsage::StorageBuffer))
+    createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
   vkAssert(vkCreateBuffer(device,&createInfo,nullptr,&ret.impl));
 
@@ -121,6 +123,9 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
     props = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
   if(bufHeap == BufferHeap::Readback)
     props = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+
+  if(MemUsage::StorageBuffer==(usage & MemUsage::StorageBuffer))
+    props = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT; // readback support
 
   VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits(props),VK_IMAGE_TILING_LINEAR);
   ret.page = allocMemory(memRq,memId.heapId,memId.typeId);
@@ -342,6 +347,27 @@ bool VAllocator::update(VBuffer &dest, const void *mem,
   rgn.offset = page.offset+offset;
   rgn.size   = (size%provider.device->props.nonCoherentAtomSize==0) ? size : VK_WHOLE_SIZE;
   vkFlushMappedMemoryRanges(device,1,&rgn);
+
+  vkUnmapMemory(device,page.page->memory);
+  return true;
+  }
+
+bool VAllocator::read(VBuffer& src, void* mem, size_t offset, size_t count, size_t size, size_t alignedSz) {
+  auto& page = src.page;
+  void* data = nullptr;
+
+  std::lock_guard<std::mutex> g(page.page->mmapSync);
+  if(vkMapMemory(device,page.page->memory,page.offset+offset,size,0,&data)!=VkResult::VK_SUCCESS)
+    return false;
+
+  VkMappedMemoryRange rgn={};
+  rgn.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+  rgn.memory = page.page->memory;
+  rgn.offset = page.offset+offset;
+  rgn.size   = (size%provider.device->props.nonCoherentAtomSize==0) ? size : VK_WHOLE_SIZE;
+  vkInvalidateMappedMemoryRanges(device,1,&rgn);
+
+  copyUpsample(data,mem,count,size,alignedSz);
 
   vkUnmapMemory(device,page.page->memory);
   return true;

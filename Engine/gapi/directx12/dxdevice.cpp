@@ -76,6 +76,17 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, AbstractGraphicsApi::Props& pro
     }
   prop.name[sizeof(prop.name)-1]='\0';
 
+  if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) {
+    prop.type = AbstractGraphicsApi::Cpu;
+    }
+  else if(desc.VendorId==0x8086) {
+    // HACK: 0x8086 is common for intel GPU's
+    prop.type = AbstractGraphicsApi::Integrated;
+    }
+  else {
+    prop.type = AbstractGraphicsApi::Discrete;
+    }
+
   // https://docs.microsoft.com/en-us/windows/win32/direct3ddxgi/hardware-support-for-direct3d-12-0-formats
   static const TextureFormat smp[] = {TextureFormat::R8,   TextureFormat::RG8,  TextureFormat::RGBA8,
                                       TextureFormat::R16,  TextureFormat::RG16, TextureFormat::RGBA16,
@@ -95,13 +106,17 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, AbstractGraphicsApi::Props& pro
   prop.setDepthFormats  (dsBit);
 
   // TODO: buffer limitsk
-  prop.ubo.maxRange;
+  //prop.vbo.maxRange    = ;
+
+  prop.ubo.maxRange    = D3D12_REQ_CONSTANT_BUFFER_ELEMENT_COUNT*4;
   prop.ubo.offsetAlign = 256;
 
   prop.push.maxRange   = 256;
 
   prop.anisotropy    = true;
   prop.maxAnisotropy = 16;
+
+  prop.mrt.maxColorAttachments = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT;
   }
 
 void DxDevice::waitData() {

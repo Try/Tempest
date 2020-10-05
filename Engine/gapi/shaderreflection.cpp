@@ -27,6 +27,14 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     b.layout = binding;
     lay.push_back(b);
     }
+  for(auto &resource : resources.storage_buffers) {
+    unsigned binding  = comp.get_decoration(resource.id, spv::DecorationBinding);
+    auto     readonly = comp.get_buffer_block_flags(resource.id);
+    Binding b;
+    b.cls    = (readonly.get(spv::DecorationNonWritable) ? UniformsLayout::SsboR : UniformsLayout::SsboRW);
+    b.layout = binding;
+    lay.push_back(b);
+    }
   for(auto &resource : resources.push_constant_buffers) {
     auto& t = comp.get_type_from_variable(resource.id);
     auto sz = comp.get_declared_struct_size(t);
@@ -36,6 +44,27 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     b.size   = sz;
     lay.push_back(b);
     }
+  }
+
+void ShaderReflection::merge(std::vector<ShaderReflection::Binding>& ret,
+                             ShaderReflection::PushBlock& pb,
+                             const std::vector<ShaderReflection::Binding>& comp) {
+  ret.reserve(comp.size());
+  size_t id=0;
+  for(size_t i=0;i<comp.size();++i, ++id) {
+    auto& u = comp[i];
+    if(u.cls==UniformsLayout::Push) {
+      pb.stage = UniformsLayout::Stage(pb.stage | UniformsLayout::Vertex);
+      pb.size = u.size;
+      continue;
+      }
+    ret.push_back(u);
+    ret.back().stage = UniformsLayout::Compute;
+    }
+
+  std::sort(ret.begin(),ret.end(),[](const Binding& a, const Binding& b){
+    return a.layout<b.layout;
+    });
   }
 
 void ShaderReflection::merge(std::vector<ShaderReflection::Binding>& ret,

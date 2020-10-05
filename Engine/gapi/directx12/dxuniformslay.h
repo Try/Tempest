@@ -20,6 +20,7 @@ class DxDevice;
 
 class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
   public:
+    DxUniformsLay(DxDevice& device, const std::vector<UniformsLayout::Binding>& comp);
     DxUniformsLay(DxDevice& device, const std::vector<UniformsLayout::Binding>& vs, const std::vector<UniformsLayout::Binding>& fs);
 
     using Binding = UniformsLayout::Binding;
@@ -35,6 +36,8 @@ class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
 
       UINT64  heapOffsetSmp=0;
       uint8_t heapIdSmp=0;
+
+      D3D12_DESCRIPTOR_RANGE_TYPE rgnType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
       };
 
     struct Heap {
@@ -88,6 +91,7 @@ class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
     UINT                        descSize = 0;
     UINT                        smpSize  = 0;
 
+    void init(const std::vector<Binding>& lay, const UniformsLayout::PushBlock& pb);
     void add(const UniformsLayout::Binding& b, D3D12_DESCRIPTOR_RANGE_TYPE type, std::vector<Parameter>& root);
   };
 

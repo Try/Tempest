@@ -21,6 +21,18 @@ VUniformsLay::VUniformsLay(VkDevice dev,
     }
   }
 
+VUniformsLay::VUniformsLay(VkDevice dev, const std::vector<UniformsLayout::Binding>& comp)
+  : dev(dev) {
+  ShaderReflection::merge(lay, pb, comp);
+  if(lay.size()<=32) {
+    VkDescriptorSetLayoutBinding bind[32]={};
+    implCreate(bind);
+    } else {
+    std::unique_ptr<VkDescriptorSetLayoutBinding[]> bind(new VkDescriptorSetLayoutBinding[lay.size()]);
+    implCreate(bind.get());
+    }
+  }
+
 VUniformsLay::~VUniformsLay() {
   for(auto& i:pool)
     vkDestroyDescriptorPool(dev,i.impl,nullptr);
@@ -30,7 +42,9 @@ VUniformsLay::~VUniformsLay() {
 void VUniformsLay::implCreate(VkDescriptorSetLayoutBinding* bind) {
   static const VkDescriptorType types[] = {
     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+    VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+    VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
     };
 
   for(size_t i=0;i<lay.size();++i){
@@ -42,6 +56,8 @@ void VUniformsLay::implCreate(VkDescriptorSetLayoutBinding* bind) {
     b.descriptorType  = types[e.cls];
 
     b.stageFlags      = 0;
+    if(e.stage&UniformsLayout::Compute)
+      b.stageFlags |= VK_SHADER_STAGE_COMPUTE_BIT;
     if(e.stage&UniformsLayout::Vertex)
       b.stageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
     if(e.stage&UniformsLayout::Fragment)

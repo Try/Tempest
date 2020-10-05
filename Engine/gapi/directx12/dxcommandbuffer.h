@@ -36,10 +36,18 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
                          uint32_t width,uint32_t height) override;
     void endRenderPass() override;
 
-    void setPipeline (AbstractGraphicsApi::Pipeline& p,uint32_t w,uint32_t h) override;
     void setViewport (const Rect& r) override;
+
+    void setPipeline (AbstractGraphicsApi::Pipeline& p,uint32_t w,uint32_t h) override;
     void setBytes    (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;
     void setUniforms (AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc& u) override;
+
+    void setComputePipeline(AbstractGraphicsApi::CompPipeline& p) override;
+    void setBytes    (AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) override;
+    void setUniforms (AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc& u) override;
+
+    void implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompute);
+
     void changeLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id, TextureFormat frm, TextureLayout prev, TextureLayout next) override;
     void changeLayout(AbstractGraphicsApi::Texture& t,TextureFormat frm,TextureLayout prev,TextureLayout next) override;
     void changeLayout(AbstractGraphicsApi::Texture& t,TextureFormat frm,TextureLayout prev,TextureLayout next,uint32_t mipCnt);
@@ -47,6 +55,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void setIbo      (const AbstractGraphicsApi::Buffer& b, Detail::IndexClass cls) override;
     void draw        (size_t offset,size_t vertexCount) override;
     void drawIndexed (size_t ioffset, size_t isize, size_t voffset) override;
+    void dispatch    (size_t x, size_t y, size_t z) override;
 
     void flush(const Detail::DxBuffer& src, size_t size);
     void copy(DxBuffer&  dest, size_t offsetDest, const DxBuffer& src, size_t offsetSrc, size_t size);

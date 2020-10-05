@@ -42,6 +42,9 @@ DxShader::DxShader(const void *source, size_t src_size) {
 
   static const char* target = nullptr;
   switch(exec) {
+    case spv::ExecutionModelGLCompute:
+      target = "cs_5_0";
+      break;
     case spv::ExecutionModelVertex:
       target = "vs_5_0";
       break;
@@ -51,7 +54,7 @@ DxShader::DxShader(const void *source, size_t src_size) {
     default: // unimplemented
       throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
-  // Log::d(hlsl);
+  //Log::d(hlsl);
 
   UINT compileFlags = 0; //D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
   HRESULT hr = D3DCompile(hlsl.c_str(),hlsl.size(),nullptr,nullptr,nullptr,"main",target,compileFlags,0,

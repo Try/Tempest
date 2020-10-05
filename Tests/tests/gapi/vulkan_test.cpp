@@ -133,3 +133,45 @@ TEST(VulkanApi,Draw) {
       throw;
     }
   }
+
+TEST(VulkanApi,Compute) {
+  try {
+    VulkanApi api{ApiFlags::Validation};
+    Device    device(api);
+
+    Vec4 inputCpu[3] = {Vec4(0,1,2,3),Vec4(4,5,6,7),Vec4(8,9,10,11)};
+
+    auto input  = device.ssbo<Tempest::Vec4>(inputCpu,3);
+    auto output = device.ssbo<Tempest::Vec4>(nullptr, 3);
+
+    auto cs  = device.loadShader("shader/simple_test.comp.sprv");
+    auto pso = device.pipeline(cs);
+
+    auto ubo = device.uniforms(pso.layout());
+    ubo.set(0,input);
+    ubo.set(1,output);
+
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setUniforms(pso,ubo);
+      enc.dispatch(3,1,1);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    /*
+    Vec4 outputCpu[3] = {};
+    output.readback(outputCpu,0,3);
+    for(size_t i=0; i<3; ++i)
+      EXPECT_EQ(outputCpu[i],inputCpu[i]);
+    */
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping vulkan testcase: ", e.what()); else
+      throw;
+    }
+  }

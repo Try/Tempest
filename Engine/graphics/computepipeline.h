@@ -13,22 +13,22 @@ class UniformsLayout;
 template<class T>
 class Encoder;
 
-class RenderPipeline final {
+class ComputePipeline final {
   public:
-    RenderPipeline()=default;
-    RenderPipeline(RenderPipeline&& f)=default;
-    ~RenderPipeline() = default;
-    RenderPipeline& operator = (RenderPipeline&& other);
+    ComputePipeline()=default;
+    ComputePipeline(ComputePipeline&& f)=default;
+    ~ComputePipeline()=default;
+    ComputePipeline& operator = (ComputePipeline&& other);
 
     bool isEmpty() const { return impl.handler==nullptr; }
     const UniformsLayout& layout() const { return ulay; }
 
   private:
-    RenderPipeline(Detail::DSharedPtr<AbstractGraphicsApi::Pipeline*>&&    p,
-                   Detail::DSharedPtr<AbstractGraphicsApi::UniformsLay*>&& lay);
+    ComputePipeline(Detail::DSharedPtr<AbstractGraphicsApi::CompPipeline*>&& p,
+                    Detail::DSharedPtr<AbstractGraphicsApi::UniformsLay*>&&  lay);
 
-    UniformsLayout                                     ulay;
-    Detail::DSharedPtr<AbstractGraphicsApi::Pipeline*> impl;
+    UniformsLayout                                         ulay;
+    Detail::DSharedPtr<AbstractGraphicsApi::CompPipeline*> impl;
 
   friend class Tempest::Device;
   friend class Tempest::CommandBuffer;
@@ -39,3 +39,4 @@ class RenderPipeline final {
   };
 
 }
+

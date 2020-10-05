@@ -18,6 +18,9 @@ class ShaderReflection final {
 
     static void merge(std::vector<Binding>& ret,
                       PushBlock& pb,
+                      const std::vector<Binding>& comp);
+    static void merge(std::vector<Binding>& ret,
+                      PushBlock& pb,
                       const std::vector<Binding>& vs,
                       const std::vector<Binding>& fs);
   };

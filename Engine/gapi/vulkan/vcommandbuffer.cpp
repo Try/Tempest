@@ -163,6 +163,10 @@ void VCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset) {
   vkCmdDrawIndexed(impl,uint32_t(isize),1, uint32_t(ioffset), int32_t(voffset),0);
   }
 
+void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
+  vkCmdDispatch(impl,uint32_t(x),uint32_t(y),uint32_t(z));
+  }
+
 void VCommandBuffer::setVbo(const Tempest::AbstractGraphicsApi::Buffer &b) {
   const VBuffer& vbo=reinterpret_cast<const VBuffer&>(b);
 
@@ -193,6 +197,25 @@ void VCommandBuffer::setViewport(const Tempest::Rect &r) {
   viewPort.maxDepth = 1;
 
   vkCmdSetViewport(impl,0,1,&viewPort);
+  }
+
+void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
+  VCompPipeline& px = reinterpret_cast<VCompPipeline&>(p);
+  vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,px.impl);
+  }
+
+void VCommandBuffer::setBytes(AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) {
+  VCompPipeline& px=reinterpret_cast<VCompPipeline&>(p);
+  vkCmdPushConstants(impl, px.pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, uint32_t(size), data);
+  }
+
+void VCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc& u) {
+  VCompPipeline&    px=reinterpret_cast<VCompPipeline&>(p);
+  VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
+  vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_COMPUTE,
+                          px.pipelineLayout,0,
+                          1,&ux.desc,
+                          0,nullptr);
   }
 
 void VCommandBuffer::setLayout(VFramebuffer::Attach& a, VkFormat frm, VkImageLayout lay, bool preserve) {

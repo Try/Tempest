@@ -44,6 +44,12 @@ void Uniforms::set(size_t layoutBind, const Detail::ResourcePtr<Texture2d> &tex,
 
 void Uniforms::implBindUbo(size_t layoutBind, const VideoBuffer& vbuf, size_t offset, size_t count, size_t size) {
   if(vbuf.impl.handler)
-    desc.handler->set(layoutBind,vbuf.impl.handler,offset*size,count*size,size); else
+    desc.handler->setUbo(layoutBind,vbuf.impl.handler,offset*size,count*size,size); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidUniformBuffer);
+  }
+
+void Uniforms::implBindSsbo(size_t layoutBind, const VideoBuffer& vbuf, size_t offset, size_t count, size_t size) {
+  if(vbuf.impl.handler)
+    desc.handler->setSsbo(layoutBind,vbuf.impl.handler,offset*size,count*size,size); else
+    throw std::system_error(Tempest::GraphicsErrc::InvalidStorageBuffer);
   }

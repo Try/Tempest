@@ -95,7 +95,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const 
   device.CreateSampler(&smpDesc,gpu);
   }
 
-void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer* b, size_t offset, size_t size, size_t /*align*/) {
+void DxDescriptorArray::setUbo(size_t id, AbstractGraphicsApi::Buffer* b, size_t offset, size_t size, size_t /*align*/) {
   auto&      device = *dev.device;
   DxBuffer&  buf    = *reinterpret_cast<DxBuffer*>(b);
 
@@ -107,6 +107,39 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer* b, size_t of
   auto  gpu = val.cpu[prm.heapId];
   gpu.ptr += prm.heapOffset;
   device.CreateConstantBufferView(&cbvDesc, gpu);
+  }
+
+void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi::Buffer* b,
+                                                 size_t offset, size_t size, size_t /*align*/) {
+  auto&      device = *dev.device;
+  DxBuffer&  buf    = *reinterpret_cast<DxBuffer*>(b);
+  auto&      prm    = layPtr.handler->prm[id];
+
+  if(prm.rgnType==D3D12_DESCRIPTOR_RANGE_TYPE_UAV) {
+    D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+    desc.Format              = DXGI_FORMAT_R32_TYPELESS;
+    desc.ViewDimension       = D3D12_UAV_DIMENSION_BUFFER;
+    desc.Buffer.FirstElement = UINT(offset/4);
+    desc.Buffer.NumElements  = UINT((size+3)/4); // UAV size is required to be 256-byte aligned.
+    desc.Buffer.Flags        = D3D12_BUFFER_UAV_FLAG_RAW;
+
+    auto  gpu = val.cpu[prm.heapId];
+    gpu.ptr += prm.heapOffset;
+
+    device.CreateUnorderedAccessView(buf.impl.get(),nullptr,&desc,gpu);
+    } else {
+    D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+    desc.Format                  = DXGI_FORMAT_R32_TYPELESS;
+    desc.ViewDimension           = D3D12_SRV_DIMENSION_BUFFER;
+    desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    desc.Buffer.FirstElement     = UINT(offset/4);
+    desc.Buffer.NumElements      = UINT((size+3)/4); // SRV size is required to be 256-byte aligned.
+    desc.Buffer.Flags            = D3D12_BUFFER_SRV_FLAG_RAW;
+
+    auto  gpu = val.cpu[prm.heapId];
+    gpu.ptr += prm.heapOffset;
+    device.CreateShaderResourceView(buf.impl.get(),&desc,gpu);
+    }
   }
 
 #endif

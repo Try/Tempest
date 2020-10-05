@@ -55,12 +55,14 @@ file(GLOB SOURCES
   "*.cpp"
   "**/*.h"
   "**/*.cpp"
+  "../shader/*.*"
   )
 
 include_directories(${GTestSrc} ${GTestSrc}/include ${GMockSrc} ${GMockSrc}/include)
 
 compile_shader(simple_test.vert)
 compile_shader(simple_test.frag)
+compile_shader(simple_test.comp)
 
 add_executable(${PROJECT_NAME}
   ${SOURCES}

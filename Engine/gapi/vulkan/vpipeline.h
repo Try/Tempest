@@ -28,8 +28,6 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     VPipeline(VPipeline&& other);
     ~VPipeline();
 
-    void operator=(VPipeline&& other);
-
     struct Inst final {
       Inst(uint32_t w,uint32_t h,VFramebufferLayout* lay,VkPipeline val):w(w),h(h),lay(lay),val(val){}
       Inst(Inst&&)=default;
@@ -51,7 +49,8 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     Tempest::RenderState                   st;
     size_t                                 declSize=0, stride=0;
     Topology                               tp=Topology::Triangles;
-    Detail::DSharedPtr<VShader*>           vs,fs;
+    Detail::DSharedPtr<VShader*>           modules[2];
+    uint8_t                                modulesCount = 0;
     std::unique_ptr<Decl::ComponentType[]> decl;
     std::vector<Inst>                      inst;
     SpinLock                               sync;
@@ -64,6 +63,18 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
                                                       const Decl::ComponentType *decl, size_t declSize, size_t stride,
                                                       Topology tp,
                                                       VShader &vert, VShader &frag);
+  friend class VCompPipeline;
   };
 
+class VCompPipeline : public AbstractGraphicsApi::CompPipeline {
+  public:
+    VCompPipeline();
+    VCompPipeline(VDevice &device, const VUniformsLay& ulay, VShader &comp);
+    VCompPipeline(VCompPipeline&& other);
+    ~VCompPipeline();
+
+    VkDevice           device         = nullptr;
+    VkPipelineLayout   pipelineLayout = VK_NULL_HANDLE;
+    VkPipeline         impl           = VK_NULL_HANDLE;
+  };
 }}
