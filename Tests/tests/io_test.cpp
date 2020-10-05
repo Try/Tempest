@@ -52,7 +52,7 @@ void UngetCommon(IDevice& fin){
   char buf[sizeof(bytes)]={};
   EXPECT_EQ(fin.read(buf,sizeof(buf)),sizeof(buf));
 
-  fin.unget(sizeof(buf));
+  EXPECT_EQ(sizeof(buf),fin.unget(sizeof(buf)));
   EXPECT_EQ(fin.read(buf,sizeof(buf)),sizeof(buf));
   EXPECT_EQ(std::memcmp(buf,bytes,sizeof(bytes)),0);
 
@@ -61,7 +61,7 @@ void UngetCommon(IDevice& fin){
   EXPECT_EQ(fin.read(buf,shift),shift);
   EXPECT_EQ(std::memcmp(buf,bytes+sizeof(bytes)-shift,shift),0);
 
-  fin.unget(shift);
+  EXPECT_EQ(shift,fin.unget(shift));
   EXPECT_EQ(fin.unget(sizeof(bytes))+shift,sizeof(bytes));
   }
 
