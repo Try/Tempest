@@ -124,9 +124,6 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
   if(bufHeap == BufferHeap::Readback)
     props = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-  if(MemUsage::StorageBuffer==(usage & MemUsage::StorageBuffer))
-    props = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT; // readback support
-
   VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits(props),VK_IMAGE_TILING_LINEAR);
   ret.page = allocMemory(memRq,memId.heapId,memId.typeId);
 
@@ -329,23 +326,36 @@ VAllocator::Allocation VAllocator::allocMemory(const VAllocator::MemRequirements
   return ret;
   }
 
+void VAllocator::alignRange(VkMappedMemoryRange& rgn, size_t nonCoherentAtomSize, size_t shift) {
+  shift = rgn.offset%nonCoherentAtomSize;
+  rgn.offset -= shift;
+  rgn.size   += shift;
+
+  if(rgn.size%nonCoherentAtomSize!=0)
+    rgn.size += nonCoherentAtomSize-rgn.size%nonCoherentAtomSize;
+  }
+
 bool VAllocator::update(VBuffer &dest, const void *mem,
                         size_t offset, size_t count, size_t size, size_t alignedSz) {
   auto& page = dest.page;
   void* data = nullptr;
 
-  std::lock_guard<std::mutex> g(page.page->mmapSync);
-  if(vkMapMemory(device,page.page->memory,
-                 page.offset+offset*alignedSz,count*alignedSz,0,&data)!=VkResult::VK_SUCCESS)
-    return false;
-
-  copyUpsample(mem,data,count,size,alignedSz);
-
   VkMappedMemoryRange rgn={};
   rgn.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
   rgn.memory = page.page->memory;
-  rgn.offset = page.offset+offset;
-  rgn.size   = (size%provider.device->props.nonCoherentAtomSize==0) ? size : VK_WHOLE_SIZE;
+  rgn.offset = page.offset+offset*alignedSz;
+  rgn.size   = count*alignedSz;
+
+  size_t shift = 0;
+  alignRange(rgn,provider.device->props.nonCoherentAtomSize,shift);
+
+  std::lock_guard<std::mutex> g(page.page->mmapSync);
+  if(vkMapMemory(device,page.page->memory,rgn.offset,rgn.size,0,&data)!=VK_SUCCESS)
+    return false;
+
+  data = reinterpret_cast<uint8_t*>(data)+shift;
+  copyUpsample(mem,data,count,size,alignedSz);
+
   vkFlushMappedMemoryRanges(device,1,&rgn);
 
   vkUnmapMemory(device,page.page->memory);
@@ -356,17 +366,20 @@ bool VAllocator::read(VBuffer& src, void* mem, size_t offset, size_t count, size
   auto& page = src.page;
   void* data = nullptr;
 
-  std::lock_guard<std::mutex> g(page.page->mmapSync);
-  if(vkMapMemory(device,page.page->memory,page.offset+offset,size,0,&data)!=VkResult::VK_SUCCESS)
-    return false;
-
   VkMappedMemoryRange rgn={};
   rgn.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
   rgn.memory = page.page->memory;
   rgn.offset = page.offset+offset;
-  rgn.size   = (size%provider.device->props.nonCoherentAtomSize==0) ? size : VK_WHOLE_SIZE;
+  rgn.size   = size;
+  size_t shift = 0;
+  alignRange(rgn,provider.device->props.nonCoherentAtomSize,shift);
+
+  std::lock_guard<std::mutex> g(page.page->mmapSync);
+  if(vkMapMemory(device,page.page->memory,rgn.offset,rgn.size,0,&data)!=VK_SUCCESS)
+    return false;
   vkInvalidateMappedMemoryRanges(device,1,&rgn);
 
+  data = reinterpret_cast<uint8_t*>(data)+shift;
   copyUpsample(data,mem,count,size,alignedSz);
 
   vkUnmapMemory(device,page.page->memory);
@@ -377,17 +390,20 @@ bool VAllocator::read(VBuffer &src, void *mem, size_t offset, size_t size) {
   auto& page = src.page;
   void* data = nullptr;
 
-  std::lock_guard<std::mutex> g(page.page->mmapSync);
-  if(vkMapMemory(device,page.page->memory,page.offset+offset,size,0,&data)!=VkResult::VK_SUCCESS)
-    return false;
-
   VkMappedMemoryRange rgn={};
   rgn.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
   rgn.memory = page.page->memory;
-  rgn.offset = page.offset+offset; //TODO: nonCoherentAtomSize
+  rgn.offset = page.offset+offset;
   rgn.size   = size;
+  size_t shift = 0;
+  alignRange(rgn,provider.device->props.nonCoherentAtomSize,shift);
+
+  std::lock_guard<std::mutex> g(page.page->mmapSync);
+  if(vkMapMemory(device,page.page->memory,rgn.offset,rgn.size,0,&data)!=VK_SUCCESS)
+    return false;
   vkInvalidateMappedMemoryRanges(device,1,&rgn);
 
+  data = reinterpret_cast<uint8_t*>(data)+shift;
   std::memcpy(mem,data,size);
 
   vkUnmapMemory(device,page.page->memory);
