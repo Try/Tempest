@@ -46,13 +46,14 @@ class VulkanApi : public AbstractGraphicsApi {
 
     Semaphore*     createSemaphore(Device *d) override;
 
-    PBuffer        createBuffer(Device* d, const void *mem, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap flg) override;
+    PBuffer        createBuffer (Device* d, const void *mem, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap flg) override;
     PTexture       createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips) override;
     PTexture       createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;
 
-    void           readPixels(AbstractGraphicsApi::Device *d, Pixmap &out, const PTexture t,
+    void           readPixels(Device *d, Pixmap &out, const PTexture t,
                               TextureLayout lay, TextureFormat frm,
                               const uint32_t w, const uint32_t h, uint32_t mip) override;
+    void           readBytes(Device* d, Buffer* buf, void* out, size_t size) override;
 
     CommandBuffer* createCommandBuffer(Device* d) override;
 

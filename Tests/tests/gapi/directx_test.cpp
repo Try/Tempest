@@ -209,12 +209,11 @@ TEST(DirectX12Api,Compute) {
     device.submit(cmd,sync);
     sync.wait();
 
-    /*
     Vec4 outputCpu[3] = {};
-    output.readback(outputCpu,0,3);
+    device.readBytes(output,outputCpu,3);
+
     for(size_t i=0; i<3; ++i)
       EXPECT_EQ(outputCpu[i],inputCpu[i]);
-    */
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)

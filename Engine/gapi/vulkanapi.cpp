@@ -160,7 +160,7 @@ AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device
       return PBuffer(pbuf.handler);
       }
 
-    Detail::VBuffer  stage=dx->allocator.alloc(mem,     count,size,alignedSz, MemUsage::TransferSrc,      BufferHeap::Upload);
+    Detail::VBuffer  stage=dx->allocator.alloc(mem,count,size,alignedSz, MemUsage::TransferSrc, BufferHeap::Upload);
 
     Detail::DSharedPtr<Detail::VBuffer*> pstage(new Detail::VBuffer(std::move(stage)));
     Detail::DSharedPtr<Detail::VBuffer*> pbuf  (new Detail::VBuffer(std::move(buf)));
@@ -269,6 +269,22 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
 
   out = Pixmap(w,h,pfrm);
   stage.read(out.data(),0,size);
+  }
+
+void VulkanApi::readBytes(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Buffer* buf, void* out, size_t size) {
+  Detail::VDevice&  dx    = *reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VBuffer&  bx    = *reinterpret_cast<Detail::VBuffer*>(buf);
+
+  Detail::VBuffer   stage = dx.allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
+
+  Detail::VDevice::Data dat(dx);
+  //dat.changeLayout(tx, frm, lay, TextureLayout::TransferSrc, 1);
+  dat.copy(stage,bx,size);
+  //dat.changeLayout(tx, frm, TextureLayout::TransferSrc, lay, 1);
+  dat.commit();
+
+  dx.waitData();
+  stage.read(out,0,size);
   }
 
 AbstractGraphicsApi::Desc *VulkanApi::createDescriptors(AbstractGraphicsApi::Device* d, UniformsLay& ulayImpl) {

@@ -405,6 +405,22 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureL
   stage.read(out.data(),0,size);
   }
 
+void DirectX12Api::readBytes(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Buffer* buf, void* out, size_t size) {
+  Detail::DxDevice&  dx = *reinterpret_cast<Detail::DxDevice*>(d);
+  Detail::DxBuffer&  bx = *reinterpret_cast<Detail::DxBuffer*>(buf);
+
+  Detail::DxBuffer   stage = dx.allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
+
+  Detail::DxDevice::Data dat(dx);
+  //dat.changeLayout(tx, frm, lay, TextureLayout::TransferSrc, 1);
+  dat.copy(stage,bx,size);
+  //dat.changeLayout(tx, frm, TextureLayout::TransferSrc, lay, 1);
+  dat.commit();
+
+  dx.waitData();
+  stage.read(out,0,size);
+  }
+
 AbstractGraphicsApi::CommandBuffer* DirectX12Api::createCommandBuffer(Device* d) {
   Detail::DxDevice* dx = reinterpret_cast<Detail::DxDevice*>(d);
   return new DxCommandBuffer(*dx);

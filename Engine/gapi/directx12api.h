@@ -51,6 +51,7 @@ class DirectX12Api : public AbstractGraphicsApi {
     void           readPixels(Device *d, Pixmap &out, const PTexture t,
                               TextureLayout lay, TextureFormat frm,
                               const uint32_t w, const uint32_t h, uint32_t mip) override;
+    void           readBytes(Device* d, Buffer* buf, void* out, size_t size) override;
 
     Desc*          createDescriptors(Device* d, UniformsLay& layP) override;
 

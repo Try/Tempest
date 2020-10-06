@@ -381,9 +381,10 @@ namespace Tempest {
       virtual PBuffer    createBuffer (Device* d,const void *mem,size_t count,size_t sz,size_t alignedSz,MemUsage usage,BufferHeap flg)=0;
       virtual PTexture   createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips)=0;
       virtual PTexture   createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm)=0;
-      virtual void       readPixels   (AbstractGraphicsApi::Device *d, Pixmap &out,const PTexture t,
+      virtual void       readPixels   (Device* d, Pixmap &out,const PTexture t,
                                        TextureLayout lay, TextureFormat frm,
                                        const uint32_t w, const uint32_t h, uint32_t mip) = 0;
+      virtual void       readBytes    (Device* d, Buffer* buf, void* out, size_t size) = 0;
 
       virtual void       present  (Device *d,Swapchain* sw,uint32_t imageId,const Semaphore *wait)=0;
 

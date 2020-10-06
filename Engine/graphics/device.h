@@ -117,6 +117,9 @@ class Device {
     Pixmap               readPixels (const Texture2d&  t);
     Pixmap               readPixels (const Attachment& t);
 
+    template<class T>
+    void                 readBytes  (const StorageBuffer<T>& ssbo, void* out, size_t count);
+
     FrameBuffer          frameBuffer(Attachment& out);
     FrameBuffer          frameBuffer(Attachment& out, ZBuffer& zbuf);
     FrameBuffer          frameBuffer(Attachment& out0, Attachment& out1, ZBuffer& zbuf);
@@ -191,6 +194,11 @@ class Device {
 
   friend class Texture2d;
   };
+
+template<class T>
+void Device::readBytes  (const StorageBuffer<T>& ssbo, void* out, size_t count) {
+  api.readBytes(dev,ssbo.impl.impl.handler,out,count*sizeof(T));
+  }
 
 template<class T>
 inline VertexBuffer<T> Device::vbo(const T* arr, size_t arrSize) {
