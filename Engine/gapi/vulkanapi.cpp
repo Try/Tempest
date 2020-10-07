@@ -166,7 +166,6 @@ AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device
     Detail::DSharedPtr<Detail::VBuffer*> pbuf  (new Detail::VBuffer(std::move(buf)));
 
     Detail::VDevice::Data dat(*dx);
-    dat.flush(*pstage.handler,count*alignedSz);
     dat.hold(pbuf);
     dat.hold(pstage); // preserve stage buffer, until gpu side copy is finished
     dat.copy(*pbuf.handler,*pstage.handler,count*alignedSz);
@@ -190,7 +189,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   dat.hold(pstage);
   dat.hold(pbuf);
 
-  dat.changeLayout(*pbuf.handler, frm, TextureLayout::Undefined, TextureLayout::TransferDest,mipCnt);
+  dat.changeLayout(*pbuf.handler, TextureLayout::Undefined, TextureLayout::TransferDest,mipCnt);
   if(isCompressedFormat(frm)){
     size_t blocksize  = (frm==TextureFormat::DXT1) ? 8 : 16;
     size_t bufferSize = 0;
@@ -205,12 +204,12 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
       h = std::max<uint32_t>(1,h/2);
       }
 
-    dat.changeLayout(*pbuf.handler, frm, TextureLayout::TransferDest, TextureLayout::Sampler, mipCnt);
+    dat.changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler, mipCnt);
     } else {
     dat.copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
     if(mipCnt>1)
-      dat.generateMipmap(*pbuf.handler,frm,p.w(),p.h(),mipCnt); else
-      dat.changeLayout(*pbuf.handler, frm, TextureLayout::TransferDest, TextureLayout::Sampler,mipCnt);
+      dat.generateMipmap(*pbuf.handler, p.w(), p.h(), mipCnt); else
+      dat.changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler,mipCnt);
     }
   dat.commit();
   return PTexture(pbuf.handler);
@@ -260,9 +259,9 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
   Detail::VBuffer stage = dx.allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
 
   Detail::VDevice::Data dat(dx);
-  dat.changeLayout(tx, frm, lay, TextureLayout::TransferSrc, 1);
+  dat.changeLayout(tx, lay, TextureLayout::TransferSrc, 1);
   dat.copy(stage,w,h,mip,tx,0);
-  dat.changeLayout(tx, frm, TextureLayout::TransferSrc, lay, 1);
+  dat.changeLayout(tx, TextureLayout::TransferSrc, lay, 1);
   dat.commit();
 
   dx.waitData();
@@ -278,9 +277,7 @@ void VulkanApi::readBytes(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::B
   Detail::VBuffer   stage = dx.allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
 
   Detail::VDevice::Data dat(dx);
-  //dat.changeLayout(tx, frm, lay, TextureLayout::TransferSrc, 1);
   dat.copy(stage,bx,size);
-  //dat.changeLayout(tx, frm, TextureLayout::TransferSrc, lay, 1);
   dat.commit();
 
   dx.waitData();
@@ -358,7 +355,7 @@ void VulkanApi::submit(Device *d,
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
   VkSemaphore          waitSemaphores[] = {wx->impl};
-  VkPipelineStageFlags waitStages[]     = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+  VkPipelineStageFlags waitStages[]     = {VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT|VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT};
 
   submitInfo.waitSemaphoreCount = 1;
   submitInfo.pWaitSemaphores    = waitSemaphores;
@@ -409,7 +406,7 @@ void VulkanApi::submit(AbstractGraphicsApi::Device *d,
   VkSubmitInfo submitInfo = {};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-  VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT};//VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+  VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT|VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT};
 
   submitInfo.waitSemaphoreCount   = uint32_t(waitCnt);
   submitInfo.pWaitSemaphores      = semBuf.data();

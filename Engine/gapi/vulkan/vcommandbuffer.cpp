@@ -23,6 +23,66 @@ struct VCommandBuffer::ImgState {
   bool          outdated;
   };
 
+TextureLayout defaultLayout(const VFramebuffer::Attach& a) {
+  if(a.sw!=nullptr)
+    return TextureLayout::Present;
+  if(Detail::nativeIsDepthFormat(a.tex->format))
+    return TextureLayout::DepthAttach; // no readable depth for now
+  return TextureLayout::Sampler;
+  }
+
+TextureLayout renderLayout(const VFramebuffer::Attach& a) {
+  if(a.sw!=nullptr)
+    return TextureLayout::ColorAttach;
+  if(Detail::nativeIsDepthFormat(a.tex->format))
+    return TextureLayout::DepthAttach;
+  return TextureLayout::ColorAttach;
+  }
+
+VCommandBuffer::ImgState& VCommandBuffer::StateTracker::findImg(VkImage img, VkFormat frm, TextureLayout last, bool preserve) {
+  for(auto& i:imgState) {
+    if(i.img==img)
+      return i;
+    }
+  ImgState s={};
+  s.img  = img;
+  s.frm  = frm;
+  s.last = preserve ? nativeFormat(last) : VK_IMAGE_LAYOUT_UNDEFINED;
+  s.next = VK_IMAGE_LAYOUT_UNDEFINED;
+  imgState.push_back(s);
+  return imgState.back();
+  }
+
+void VCommandBuffer::StateTracker::setLayout(VFramebuffer::Attach& a, TextureLayout l, bool preserve) {
+  VkImageLayout lay = nativeFormat(l);
+  VkFormat      frm = (a.tex!=nullptr ? a.tex->format : a.sw->format());
+
+  ImgState* img;
+  if(a.tex!=nullptr) {
+    img = &findImg(a.tex->impl,frm,defaultLayout(a),preserve);
+    } else {
+    img = &findImg(a.sw->images[a.id],frm,defaultLayout(a),preserve);
+    }
+  img->next     = lay;
+  img->outdated = true;
+  }
+
+void VCommandBuffer::StateTracker::flushLayout(VCommandBuffer& cmd) {
+  for(auto& i:imgState) {
+    if(!i.outdated)
+      continue;
+    cmd.changeLayout(i.img,i.frm,i.last,i.next,VK_REMAINING_MIP_LEVELS,true);
+    i.last     = i.next;
+    i.outdated = false;
+    }
+  }
+
+void VCommandBuffer::StateTracker::finalize(VCommandBuffer& cmd) {
+  flushLayout(cmd);
+  imgState.clear();
+  }
+
+
 VCommandBuffer::VCommandBuffer(VDevice& device, VkCommandPoolCreateFlags flags)
   :device(device), pool(device,flags) {
   VkCommandBufferAllocateInfo allocInfo = {};
@@ -60,8 +120,7 @@ void VCommandBuffer::begin(VkCommandBufferUsageFlags flg) {
 void VCommandBuffer::end() {
   if(state==RenderPass)
     endRenderPass();
-  flushLayout();
-  imgState.clear();
+  imgState.finalize(*this);
   vkAssert(vkEndCommandBuffer(impl));
   state = NoRecording;
   }
@@ -77,16 +136,11 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
   VRenderPass&  pass=*reinterpret_cast<VRenderPass*>(p);
 
   for(size_t i=0;i<fbo.attach.size();++i) {
-    VkFormat      frm      = fbo.rp.handler->frm[i];
     const bool    preserve = pass.isAttachPreserved(i);
-    if(Detail::nativeIsDepthFormat(frm)) {
-      setLayout(fbo.attach[i],frm,VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,preserve);
-      } else {
-      setLayout(fbo.attach[i],frm,VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,preserve);
-      }
+    imgState.setLayout(fbo.attach[i],renderLayout(fbo.attach[i]),preserve);
     }
 
-  flushLayout();
+  imgState.flushLayout(*this);
 
   if(fbo.rp.handler->attCount!=pass.attCount)
     throw IncompleteFboException();
@@ -116,17 +170,9 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
 
 void VCommandBuffer::endRenderPass() {
   for(size_t i=0;i<curFbo->attach.size();++i) {
-    VkFormat      frm      = curFbo->rp.handler->frm[i];
-    const bool    preserve = curRp->isResultPreserved(i);
-    if(!preserve)
+    if(!curRp->isResultPreserved(i))
       continue;
-    if(Detail::nativeIsDepthFormat(frm)) {
-      setLayout(curFbo->attach[i],frm,VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,preserve);
-      } else {
-      if(curFbo->attach[i].sw!=nullptr)
-        setLayout(curFbo->attach[i],frm,VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,preserve); else
-        setLayout(curFbo->attach[i],frm,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,preserve);
-      }
+    imgState.setLayout(curFbo->attach[i],defaultLayout(curFbo->attach[i]),true);
     }
   vkCmdEndRenderPass(impl);
   state  = NoPass;
@@ -218,69 +264,6 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractG
                           0,nullptr);
   }
 
-void VCommandBuffer::setLayout(VFramebuffer::Attach& a, VkFormat frm, VkImageLayout lay, bool preserve) {
-  ImgState* img;
-  if(a.tex!=nullptr) {
-    if(Detail::nativeIsDepthFormat(frm)) {
-      img = &findImg(a.tex->impl,frm,VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,preserve);
-      } else {
-      img = &findImg(a.tex->impl,frm,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,preserve);
-      }
-    } else {
-    img = &findImg(a.sw->images[a.id],frm,VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,preserve);
-    }
-  img->next     = lay;
-  img->outdated = true;
-  }
-
-VCommandBuffer::ImgState& VCommandBuffer::findImg(VkImage img, VkFormat frm, VkImageLayout last, bool preserve) {
-  for(auto& i:imgState) {
-    if(i.img==img)
-      return i;
-    }
-  ImgState s={};
-  s.img      = img;
-  s.frm      = frm;
-  s.last     = preserve ? last : VK_IMAGE_LAYOUT_UNDEFINED;
-  s.next     = VK_IMAGE_LAYOUT_UNDEFINED;
-  imgState.push_back(s);
-  return imgState.back();
-  }
-
-void VCommandBuffer::flushLayout() {
-  for(auto& i:imgState) {
-    if(!i.outdated)
-      continue;
-    //if(Detail::nativeIsDepthFormat(i.frm))
-    //  continue; // no readable depth for now
-    changeLayout(i.img,i.frm,i.last,i.next,VK_REMAINING_MIP_LEVELS,true);
-    i.last     = i.next;
-    i.outdated = false;
-    }
-  }
-
-void VCommandBuffer::flush(const VBuffer &src, size_t size) {
-  VkBufferMemoryBarrier barrier={};
-  barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-
-  barrier.srcAccessMask = 0;
-  barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  barrier.buffer              = src.impl;
-  barrier.offset              = 0;
-  barrier.size                = size;
-
-  vkCmdPipelineBarrier(
-      impl,
-      VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-      0,
-      0, nullptr,
-      1, &barrier,
-      0, nullptr
-        );
-  }
-
 void VCommandBuffer::copy(VBuffer &dest, size_t offsetDest, const VBuffer &src,size_t offsetSrc,size_t size) {
   VkBufferCopy copyRegion = {};
   copyRegion.dstOffset = offsetDest;
@@ -328,26 +311,22 @@ void VCommandBuffer::copy(VBuffer &dest, size_t width, size_t height, size_t mip
   }
 
 void VCommandBuffer::changeLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id,
-                                  TextureFormat f,
                                   TextureLayout prev, TextureLayout next) {
   auto& vs = reinterpret_cast<VSwapchain&>(s);
-  changeLayout(vs.images[id],Detail::nativeFormat(f),
+  changeLayout(vs.images[id],vs.format(),
                Detail::nativeFormat(prev), Detail::nativeFormat(next),
                VK_REMAINING_MIP_LEVELS, false);
   }
 
-void VCommandBuffer::changeLayout(Tempest::AbstractGraphicsApi::Texture &t,
-                                  Tempest::TextureFormat f,
-                                  Tempest::TextureLayout prev, Tempest::TextureLayout next) {
+void VCommandBuffer::changeLayout(Tempest::AbstractGraphicsApi::Texture &t, Tempest::TextureLayout prev, Tempest::TextureLayout next) {
   auto& vt = reinterpret_cast<VTexture&>(t);
-  changeLayout(vt.impl,Detail::nativeFormat(f),
+  changeLayout(vt.impl,vt.format,
                Detail::nativeFormat(prev), Detail::nativeFormat(next), VK_REMAINING_MIP_LEVELS,false);
   }
 
-void VCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t, TextureFormat f,
-                                  TextureLayout prev, TextureLayout next, uint32_t mipCnt) {
+void VCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t, TextureLayout prev, TextureLayout next, uint32_t mipCnt) {
   auto& vt = reinterpret_cast<VTexture&>(t);
-  changeLayout(vt.impl,Detail::nativeFormat(f),
+  changeLayout(vt.impl,vt.format,
                Detail::nativeFormat(prev), Detail::nativeFormat(next), mipCnt, false);
   }
 
@@ -490,9 +469,8 @@ void VCommandBuffer::changeLayout(VkImage dest, VkFormat imageFormat,
       );
   }
 
-void VCommandBuffer::generateMipmap(VTexture& image, TextureFormat frm,
-                                    uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
-  VkFormat imageFormat = Detail::nativeFormat(frm);
+void VCommandBuffer::generateMipmap(VTexture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
+  VkFormat imageFormat = image.format;
   // Check if image format supports linear blitting
   VkFormatProperties formatProperties;
   vkGetPhysicalDeviceFormatProperties(device.physicalDevice, imageFormat, &formatProperties);

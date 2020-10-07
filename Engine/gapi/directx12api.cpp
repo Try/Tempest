@@ -227,7 +227,6 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
     Detail::DSharedPtr<Detail::DxBuffer*> pbuf  (new Detail::DxBuffer(std::move(buf)));
 
     DxDevice::Data dat(dx);
-    dat.flush(*pstage.handler,count*alignedSz);
     dat.hold(pbuf);
     dat.hold(pstage); // preserve stage buffer, until gpu side copy is finished
     dat.copy(*pbuf.handler,*pstage.handler,count*alignedSz);
@@ -285,8 +284,8 @@ AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixma
   // dat.changeLayout(*pbuf.handler, frm, TextureLayout::Undefined, TextureLayout::TransferDest, mipCnt);
   dat.copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
   if(mipCnt>1)
-    dat.generateMipmap(*pbuf.handler,frm,p.w(),p.h(),mipCnt); else
-    dat.changeLayout(*pbuf.handler, frm, TextureLayout::TransferDest, TextureLayout::Sampler,mipCnt);
+    dat.generateMipmap(*pbuf.handler, p.w(), p.h(), mipCnt); else
+    dat.changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler,mipCnt);
   dat.commit();
   return PTexture(pbuf.handler);
   }
@@ -345,7 +344,7 @@ AbstractGraphicsApi::PTexture DirectX12Api::createCompressedTexture(Device* d, c
     h = std::max<uint32_t>(4,h/2);
     }
 
-  dat.changeLayout(*pbuf.handler, frm, TextureLayout::TransferDest, TextureLayout::Sampler, mipCnt);
+  dat.changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler, mipCnt);
   dat.commit();
   return PTexture(pbuf.handler);
   }
@@ -394,9 +393,9 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureL
 
   //TODO: D3D12_TEXTURE_DATA_PITCH_ALIGNMENT
   Detail::DxDevice::Data dat(dx);
-  dat.changeLayout(tx, frm, lay, TextureLayout::TransferSrc, 1);
+  dat.changeLayout(tx, lay, TextureLayout::TransferSrc, 1);
   dat.copy(stage,w,h,mip,tx,0);
-  dat.changeLayout(tx, frm, TextureLayout::TransferSrc, lay, 1);
+  dat.changeLayout(tx, TextureLayout::TransferSrc, lay, 1);
   dat.commit();
 
   dx.waitData();
@@ -412,9 +411,7 @@ void DirectX12Api::readBytes(AbstractGraphicsApi::Device* d, AbstractGraphicsApi
   Detail::DxBuffer   stage = dx.allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
 
   Detail::DxDevice::Data dat(dx);
-  //dat.changeLayout(tx, frm, lay, TextureLayout::TransferSrc, 1);
   dat.copy(stage,bx,size);
-  //dat.changeLayout(tx, frm, TextureLayout::TransferSrc, lay, 1);
   dat.commit();
 
   dx.waitData();

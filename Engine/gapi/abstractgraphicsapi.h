@@ -306,8 +306,9 @@ namespace Tempest {
                                      uint32_t width,uint32_t height)=0;
         virtual void endRenderPass()=0;
 
-        virtual void changeLayout(Swapchain& s, uint32_t id, TextureFormat frm, TextureLayout prev, TextureLayout next)=0;
-        virtual void changeLayout(Texture& t,TextureFormat frm,TextureLayout prev,TextureLayout next)=0;
+        virtual void changeLayout(Swapchain& s, uint32_t id, TextureLayout prev, TextureLayout next)=0;
+        virtual void changeLayout(Texture& t, TextureLayout prev, TextureLayout next)=0;
+
         virtual bool isRecording() const = 0;
         virtual void begin()=0;
         virtual void end()  =0;

@@ -119,6 +119,7 @@ DxTexture DxAllocator::alloc(const Pixmap& pm, uint32_t mip, DXGI_FORMAT format)
 DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mip, TextureFormat frm) {
   ComPtr<ID3D12Resource> ret;
 
+  D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COMMON;
   D3D12_CLEAR_VALUE clr={};
 
   D3D12_RESOURCE_DESC resDesc = {};
@@ -127,10 +128,12 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
   resDesc.Width              = w;
   resDesc.Height             = h;
   if(isDepthFormat(frm)) {
+    state                    = D3D12_RESOURCE_STATE_DEPTH_WRITE;
     resDesc.Flags            = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
     clr.DepthStencil.Depth   = 1.f;
     clr.DepthStencil.Stencil = 0;
     } else {
+    state                    = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
     resDesc.Flags            = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
     clr.Color[0] = 0.f;
     clr.Color[1] = 0.f;
@@ -155,7 +158,7 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
              &heapProp,
              D3D12_HEAP_FLAG_NONE,
              &resDesc,
-             D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+             state,
              &clr,
              uuid<ID3D12Resource>(),
              reinterpret_cast<void**>(&ret)

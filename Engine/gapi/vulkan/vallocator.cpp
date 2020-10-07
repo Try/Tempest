@@ -166,7 +166,7 @@ VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip,VkFormat format) {
   MemRequirements memRq={};
   getImgMemoryRequirements(memRq,ret.impl);
 
-  VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,VK_IMAGE_TILING_OPTIMAL);
+  VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,VK_IMAGE_TILING_OPTIMAL);
   ret.page = allocMemory(memRq,memId.heapId,memId.typeId);
 
   if(!ret.page.page) {
@@ -210,7 +210,7 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mi
   MemRequirements memRq={};
   getImgMemoryRequirements(memRq,ret.impl);
 
-  VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,VK_IMAGE_TILING_OPTIMAL);
+  VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,VK_IMAGE_TILING_OPTIMAL);
   ret.page = allocMemory(memRq,memId.heapId,memId.typeId);
 
   if(!ret.page.page) {

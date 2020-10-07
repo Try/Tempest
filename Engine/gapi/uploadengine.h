@@ -47,13 +47,6 @@ class UploadEngine final {
             }
           }
 
-        void flush(const Buffer& src, size_t size) {
-          if(commited){
-            stream.begin();
-            commited=false;
-            }
-          stream.cmdBuffer.flush(src,size);
-          }
         void copy(Buffer&  dest, const Buffer& src, size_t size) {
           if(commited){
             stream.begin();
@@ -82,26 +75,22 @@ class UploadEngine final {
             }
           stream.cmdBuffer.changeLayout(dest,frm,oldLayout,newLayout);
           }
-        void changeLayout(Texture& dest, TextureFormat frm, TextureLayout oldLayout, TextureLayout newLayout, uint32_t mipCnt) {
+        void changeLayout(Texture& dest, TextureLayout oldLayout, TextureLayout newLayout, uint32_t mipCnt) {
           if(commited){
             stream.begin();
             commited=false;
             }
-          stream.cmdBuffer.changeLayout(dest,frm,oldLayout,newLayout,mipCnt);
+          stream.cmdBuffer.changeLayout(dest,oldLayout,newLayout,mipCnt);
           }
-        void generateMipmap(Texture& image, TextureFormat frm, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
+        void generateMipmap(Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
           if(commited){
             stream.begin();
             commited=false;
             }
-          stream.cmdBuffer.generateMipmap(image,frm,texWidth,texHeight,mipLevels);
+          stream.cmdBuffer.generateMipmap(image,texWidth,texHeight,mipLevels);
           }
 
         void hold(BufPtr &b) {
-          if(commited){
-            stream.begin();
-            commited=false;
-            }
           stream.hold.emplace_back(ResPtr(b.handler));
           }
 

@@ -26,6 +26,82 @@ struct DxCommandBuffer::ImgState {
   bool                  outdated;
   };
 
+static TextureLayout defaultLayout(const DxFramebuffer::View& v) {
+  if(v.isSwImage)
+    return TextureLayout::Present;
+  if(Detail::nativeIsDepthFormat(v.format))
+    return TextureLayout::DepthAttach; // no readable depth for now
+  return TextureLayout::Sampler;
+  }
+
+static TextureLayout renderLayout(const DxFramebuffer::View& a) {
+  if(a.isSwImage)
+    return TextureLayout::ColorAttach;
+  if(Detail::nativeIsDepthFormat(a.format))
+    return TextureLayout::DepthAttach;
+  return TextureLayout::ColorAttach;
+  }
+
+DxCommandBuffer::ImgState& DxCommandBuffer::StateTracker::findImg(ID3D12Resource* img, TextureLayout last, bool preserve) {
+  for(auto& i:imgState) {
+    if(i.img==img)
+      return i;
+    }
+  ImgState s = {};
+  s.img      = img;
+  s.last     = nativeFormat(last);
+  s.next     = s.last;
+  s.discard |= (!preserve);
+  s.outdated = false;
+  imgState.push_back(s);
+  return imgState.back();
+  }
+
+void DxCommandBuffer::StateTracker::setLayout(DxFramebuffer::View& a, TextureLayout l, bool preserve) {
+  D3D12_RESOURCE_STATES lay = nativeFormat(l);
+
+  ImgState* img = &findImg(a.res,defaultLayout(a),preserve);
+  img->next     = lay;
+  img->discard  |= (!preserve);
+  img->outdated = true;
+  }
+
+void DxCommandBuffer::StateTracker::flushLayout(DxCommandBuffer& cmd) {
+  for(auto& i:imgState) {
+    if(!i.outdated)
+      continue;
+    i.outdated = false;
+    //if(Detail::nativeIsDepthFormat(i.frm))
+    //  continue; // no readable depth for now
+    if(i.discard && (i.last==D3D12_RESOURCE_STATE_RENDER_TARGET || i.last==D3D12_RESOURCE_STATE_DEPTH_WRITE)) {
+      cmd.impl->DiscardResource(i.img,nullptr);
+      i.discard = false;
+      }
+    if(i.next!=i.last) {
+      D3D12_RESOURCE_BARRIER barrier = {};
+      barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+      barrier.Transition.pResource   = i.img;
+      barrier.Transition.StateBefore = i.last;
+      barrier.Transition.StateAfter  = i.next;
+      barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+      barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+
+      cmd.impl->ResourceBarrier(1,&barrier);
+      i.last = i.next;
+      }
+    if(i.discard && (i.last==D3D12_RESOURCE_STATE_RENDER_TARGET || i.last==D3D12_RESOURCE_STATE_DEPTH_WRITE)) {
+      cmd.impl->DiscardResource(i.img,nullptr);
+      i.discard = false;
+      }
+    }
+  }
+
+void DxCommandBuffer::StateTracker::finalize(DxCommandBuffer& cmd) {
+  flushLayout(cmd);
+  imgState.clear();
+  }
+
+
 DxCommandBuffer::DxCommandBuffer(DxDevice& d)
   : dev(d) {
   D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -49,8 +125,7 @@ void DxCommandBuffer::begin() {
 void DxCommandBuffer::end() {
   if(currentFbo!=nullptr)
     endRenderPass();
-  flushLayout();
-  imgState.clear();
+  imgState.finalize(*this);
 
   dxAssert(impl->Close());
   recording = false;
@@ -81,18 +156,15 @@ void DxCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*  f,
   currentPass = &pass;
 
   for(size_t i=0;i<fbo.viewsCount;++i) {
-    D3D12_RESOURCE_STATES lay = D3D12_RESOURCE_STATE_RENDER_TARGET;
     const bool preserve = pass.isAttachPreserved(i);
-    setLayout(fbo.views[i],lay,preserve);
+    imgState.setLayout(fbo.views[i],renderLayout(fbo.views[i]),preserve);
     }
-
   if(fbo.depth.res!=nullptr) {
-    D3D12_RESOURCE_STATES lay = D3D12_RESOURCE_STATE_DEPTH_WRITE;
     const bool preserve = pass.isAttachPreserved(pass.att.size()-1);
-    setLayout(fbo.depth,lay,preserve);
+    imgState.setLayout(fbo.depth,renderLayout(fbo.depth),preserve);
     }
 
-  flushLayout();
+  imgState.flushLayout(*this);
 
   auto  desc = fbo.rtvHeap->GetCPUDescriptorHandleForHeapStart();
   if(fbo.depth.res!=nullptr) {
@@ -142,12 +214,12 @@ void DxCommandBuffer::endRenderPass() {
 
   for(size_t i=0;i<fbo.viewsCount;++i) {
     const bool preserve = pass.isResultPreserved(i);
-    setLayout(fbo.views[i],defaultLayout(fbo.views[i]),preserve);
+    imgState.setLayout(fbo.views[i],defaultLayout(fbo.views[i]),preserve);
     }
 
   if(fbo.depth.res!=nullptr) {
     const bool preserve = pass.isResultPreserved(pass.att.size()-1);
-    setLayout(fbo.depth,defaultLayout(fbo.depth),preserve);
+    imgState.setLayout(fbo.depth,defaultLayout(fbo.depth),preserve);
     }
 
   currentFbo  = nullptr;
@@ -228,7 +300,7 @@ void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompu
     }
   }
 
-void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id, TextureFormat /*frm*/,
+void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id,
                                    TextureLayout prev, TextureLayout next) {
   DxSwapchain&    sw  = reinterpret_cast<DxSwapchain&>(s);
   ID3D12Resource* res = sw.views[id].get();
@@ -243,8 +315,7 @@ void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Swapchain& s, uint32_t i
                    layouts[int(prev)],layouts[int(next)]);
   }
 
-void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t, TextureFormat /*frm*/,
-                                   TextureLayout prev, TextureLayout next) {
+void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t, TextureLayout prev, TextureLayout next) {
   DxTexture& tex = reinterpret_cast<DxTexture&>(t);
   D3D12_RESOURCE_BARRIER barrier = {};
   barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -256,8 +327,7 @@ void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t, TextureForma
   impl->ResourceBarrier(1, &barrier);
   }
 
-void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t, TextureFormat /*frm*/,
-                                   TextureLayout prev, TextureLayout next, uint32_t /*mipCnt*/) {
+void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t, TextureLayout prev, TextureLayout next, uint32_t /*mipCnt*/) {
   DxTexture& tex = reinterpret_cast<DxTexture&>(t);
   D3D12_RESOURCE_BARRIER barrier = {};
   barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -303,10 +373,6 @@ void DxCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset) 
 
 void DxCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
   impl->Dispatch(UINT(x),UINT(y),UINT(z));
-  }
-
-void DxCommandBuffer::flush(const DxBuffer&, size_t /*size*/) {
-  // NOP
   }
 
 void DxCommandBuffer::copy(DxBuffer& dest, size_t offsetDest, const DxBuffer& src, size_t offsetSrc, size_t size) {
@@ -373,29 +439,10 @@ void DxCommandBuffer::copy(DxBuffer& dest, size_t width, size_t height, size_t m
   impl->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, nullptr);
   }
 
-void DxCommandBuffer::generateMipmap(DxTexture& image, TextureFormat imageFormat,
-                                     uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
+void DxCommandBuffer::generateMipmap(DxTexture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
   // TODO
   Log::d("TODO: DxCommandBuffer::generateMipmap");
-  changeLayout(image, imageFormat, TextureLayout::TransferDest, TextureLayout::Sampler, mipLevels);
-  }
-
-D3D12_RESOURCE_STATES DxCommandBuffer::defaultLayout(const DxFramebuffer::View& v) {
-  if(v.isSwImage)
-    return D3D12_RESOURCE_STATE_PRESENT;
-  return D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-  }
-
-void DxCommandBuffer::setLayout(DxFramebuffer::View& v, D3D12_RESOURCE_STATES lay, bool preserve) {
-  ImgState* img;
-  if(v.isSwImage) {
-    img = &findImg(v.res,defaultLayout(v));
-    } else {
-    img = &findImg(v.res,defaultLayout(v));
-    }
-  img->next      = lay;
-  img->discard  |= (!preserve);
-  img->outdated  = true;
+  changeLayout(image, TextureLayout::TransferDest, TextureLayout::Sampler, mipLevels);
   }
 
 void DxCommandBuffer::implChangeLayout(ID3D12Resource* res, bool preserveIn,
@@ -412,48 +459,5 @@ void DxCommandBuffer::implChangeLayout(ID3D12Resource* res, bool preserveIn,
   impl->ResourceBarrier(1,&barrier);
   }
 
-DxCommandBuffer::ImgState& DxCommandBuffer::findImg(ID3D12Resource* img, D3D12_RESOURCE_STATES defState) {
-  for(auto& i:imgState) {
-    if(i.img==img)
-      return i;
-    }
-  ImgState s = {};
-  s.img      = img;
-  s.last     = defState;
-  s.next     = defState;
-  s.outdated = false;
-  imgState.push_back(s);
-  return imgState.back();
-  }
-
-void DxCommandBuffer::flushLayout() {
-  for(auto& i:imgState) {
-    if(!i.outdated)
-      continue;
-    i.outdated = false;
-    //if(Detail::nativeIsDepthFormat(i.frm))
-    //  continue; // no readable depth for now
-    if(i.discard && (i.last==D3D12_RESOURCE_STATE_RENDER_TARGET || i.last==D3D12_RESOURCE_STATE_DEPTH_WRITE)) {
-      impl->DiscardResource(i.img,nullptr);
-      i.discard = false;
-      }
-    if(i.next!=i.last) {
-      D3D12_RESOURCE_BARRIER barrier = {};
-      barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-      barrier.Transition.pResource   = i.img;
-      barrier.Transition.StateBefore = i.last;
-      barrier.Transition.StateAfter  = i.next;
-      barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-      barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-
-      impl->ResourceBarrier(1,&barrier);
-      i.last = i.next;
-      }
-    if(i.discard && (i.last==D3D12_RESOURCE_STATE_RENDER_TARGET || i.last==D3D12_RESOURCE_STATE_DEPTH_WRITE)) {
-      impl->DiscardResource(i.img,nullptr);
-      i.discard = false;
-      }
-    }
-  }
-
 #endif
+

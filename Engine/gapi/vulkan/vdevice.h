@@ -65,16 +65,23 @@ inline VkFormat nativeFormat(TextureFormat f) {
   }
 
 inline VkImageLayout nativeFormat(TextureLayout f) {
-  static const VkImageLayout lay[]={
-    VK_IMAGE_LAYOUT_UNDEFINED,
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-    VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-    };
-  return lay[uint8_t(f)];
+  switch(f) {
+    case TextureLayout::Undefined:
+      return VK_IMAGE_LAYOUT_UNDEFINED;
+    case TextureLayout::Sampler:
+      return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    case TextureLayout::ColorAttach:
+      return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    case TextureLayout::DepthAttach:
+      return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    case TextureLayout::Present:
+      return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    case TextureLayout::TransferSrc:
+      return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    case TextureLayout::TransferDest:
+      return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    }
+  return VK_IMAGE_LAYOUT_UNDEFINED;
   }
 
 inline bool nativeIsDepthFormat(VkFormat f){

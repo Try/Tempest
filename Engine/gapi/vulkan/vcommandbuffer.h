@@ -71,33 +71,34 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void drawIndexed(size_t ioffset, size_t isize, size_t voffset);
     void dispatch(size_t x, size_t y, size_t z);
 
-    void flush(const Detail::VBuffer& src, size_t size);
     void copy(Detail::VBuffer&  dest, size_t offsetDest, const Detail::VBuffer& src, size_t offsetSrc, size_t size);
     void copy(Detail::VTexture& dest, size_t width, size_t height, size_t mip, const Detail::VBuffer&  src, size_t offset);
     void copy(Detail::VBuffer&  dest, size_t width, size_t height, size_t mip, const Detail::VTexture& src, size_t offset);
 
-    void changeLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id, TextureFormat frm, TextureLayout prev, TextureLayout next);
-    void changeLayout(AbstractGraphicsApi::Texture& t, TextureFormat frm, TextureLayout prev, TextureLayout next);
-    void changeLayout(AbstractGraphicsApi::Texture& t, TextureFormat frm, TextureLayout prev, TextureLayout next, uint32_t mipCnt);
+    void changeLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id, TextureLayout prev, TextureLayout next);
+    void changeLayout(AbstractGraphicsApi::Texture&   t, TextureLayout prev, TextureLayout next);
+
+    void changeLayout(AbstractGraphicsApi::Texture& t, TextureLayout prev, TextureLayout next, uint32_t mipCnt);
     void changeLayout(VkImage dest, VkFormat imageFormat,
                       VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount, bool byRegion);
 
-    void generateMipmap(VTexture& image, TextureFormat imageFormat,
-                        uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
+    void generateMipmap(VTexture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
 
   private:
     struct ImgState;
+    struct StateTracker {
+      std::vector<ImgState> imgState;
+      ImgState&     findImg(VkImage img, VkFormat frm, TextureLayout last, bool preserve);
 
-    void            flushLayout();
-
-    VCommandBuffer::ImgState&
-                    findImg(VkImage img, VkFormat frm, VkImageLayout last, bool preserve);
-    void            setLayout(VFramebuffer::Attach& a, VkFormat frm, VkImageLayout lay, bool preserve);
+      void          setLayout  (VFramebuffer::Attach& a, TextureLayout lay, bool preserve);
+      void          flushLayout(VCommandBuffer& cmd);
+      void          finalize   (VCommandBuffer& cmd);
+      };
 
     VDevice&                                device;
     VCommandPool                            pool;
 
-    std::vector<ImgState>                   imgState;
+    StateTracker                            imgState;
 
     RpState                                 state    = NoRecording;
     VFramebuffer*                           curFbo   = nullptr;
