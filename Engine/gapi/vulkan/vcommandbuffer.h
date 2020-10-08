@@ -3,6 +3,7 @@
 #include <Tempest/AbstractGraphicsApi>
 #include "vulkan_sdk.h"
 
+#include "gapi/resourcestate.h"
 #include "vcommandpool.h"
 #include "vframebuffer.h"
 #include "../utility/dptr.h"
@@ -44,61 +45,50 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void reset();
 
-    void begin();
+    void begin() override;
     void begin(VkCommandBufferUsageFlags flg);
-    void end();
-    bool isRecording() const;
+    void end() override;
+    bool isRecording() const override;
 
     void beginRenderPass(AbstractGraphicsApi::Fbo* f,
                          AbstractGraphicsApi::Pass*  p,
-                         uint32_t width,uint32_t height);
-    void endRenderPass();
+                         uint32_t width,uint32_t height) override;
+    void endRenderPass() override;
 
-    void setPipeline(AbstractGraphicsApi::Pipeline& p, uint32_t w, uint32_t h);
-    void setBytes   (AbstractGraphicsApi::Pipeline &p, const void* data, size_t size);
-    void setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u);
+    void setPipeline(AbstractGraphicsApi::Pipeline& p, uint32_t w, uint32_t h) override;
+    void setBytes   (AbstractGraphicsApi::Pipeline &p, const void* data, size_t size) override;
+    void setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u) override;
 
-    void setComputePipeline(AbstractGraphicsApi::CompPipeline& p);
-    void setBytes   (AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size);
-    void setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc &u);
+    void setComputePipeline(AbstractGraphicsApi::CompPipeline& p) override;
+    void setBytes   (AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) override;
+    void setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc &u) override;
 
-    void setViewport(const Rect& r);
+    void setViewport(const Rect& r) override;
 
-    void setVbo(const AbstractGraphicsApi::Buffer& b);
-    void setIbo(const AbstractGraphicsApi::Buffer& b, Detail::IndexClass cls);
+    void setVbo(const AbstractGraphicsApi::Buffer& b) override;
+    void setIbo(const AbstractGraphicsApi::Buffer& b, Detail::IndexClass cls) override;
 
-    void draw(size_t offset, size_t size);
-    void drawIndexed(size_t ioffset, size_t isize, size_t voffset);
-    void dispatch(size_t x, size_t y, size_t z);
+    void draw(size_t offset, size_t size) override;
+    void drawIndexed(size_t ioffset, size_t isize, size_t voffset) override;
+    void dispatch(size_t x, size_t y, size_t z) override;
 
-    void copy(Detail::VBuffer&  dest, size_t offsetDest, const Detail::VBuffer& src, size_t offsetSrc, size_t size);
-    void copy(Detail::VTexture& dest, size_t width, size_t height, size_t mip, const Detail::VBuffer&  src, size_t offset);
-    void copy(Detail::VBuffer&  dest, size_t width, size_t height, size_t mip, const Detail::VTexture& src, size_t offset);
-
-    void changeLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id, TextureLayout prev, TextureLayout next);
-    void changeLayout(AbstractGraphicsApi::Texture&   t, TextureLayout prev, TextureLayout next);
-
+    void changeLayout(AbstractGraphicsApi::Attach&  img, TextureLayout prev, TextureLayout next, bool byRegion) override;
     void changeLayout(AbstractGraphicsApi::Texture& t, TextureLayout prev, TextureLayout next, uint32_t mipCnt);
-    void changeLayout(VkImage dest, VkFormat imageFormat,
-                      VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipCount, bool byRegion);
 
-    void generateMipmap(VTexture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
+    void copy(AbstractGraphicsApi::Buffer&  dest, size_t offsetDest, const AbstractGraphicsApi::Buffer& src, size_t offsetSrc, size_t size);
+    void copy(AbstractGraphicsApi::Texture& dest, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Buffer&  src, size_t offset);
+    void copy(AbstractGraphicsApi::Buffer&  dest, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Texture& src, size_t offset);
+
+    void generateMipmap(AbstractGraphicsApi::Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
 
   private:
-    struct ImgState;
-    struct StateTracker {
-      std::vector<ImgState> imgState;
-      ImgState&     findImg(VkImage img, VkFormat frm, TextureLayout last, bool preserve);
-
-      void          setLayout  (VFramebuffer::Attach& a, TextureLayout lay, bool preserve);
-      void          flushLayout(VCommandBuffer& cmd);
-      void          finalize   (VCommandBuffer& cmd);
-      };
+    void implChangeLayout(VkImage dest, VkFormat imageFormat,
+                      VkImageLayout oldLayout, VkImageLayout newLayout, bool discardOld, uint32_t mipCount, bool byRegion);
 
     VDevice&                                device;
     VCommandPool                            pool;
 
-    StateTracker                            imgState;
+    ResourceState                           resState;
 
     RpState                                 state    = NoRecording;
     VFramebuffer*                           curFbo   = nullptr;

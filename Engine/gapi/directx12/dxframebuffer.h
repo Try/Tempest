@@ -25,15 +25,19 @@ class DxFramebuffer : public AbstractGraphicsApi::Fbo {
     UINT                                      rtvHeapInc = 0;
     ComPtr<ID3D12DescriptorHeap>              dsvHeap;
 
-    struct View {
+    struct Attach final : AbstractGraphicsApi::Attach {
+      TextureLayout   defaultLayout() override;
+      TextureLayout   renderLayout()  override;
+      void*           nativeHandle()  override;
+
       ID3D12Resource* res       = nullptr;
       bool            isSwImage = false;
       DXGI_FORMAT     format    = DXGI_FORMAT_UNKNOWN;
       };
-    std::unique_ptr<View[]>  views;
+    std::unique_ptr<Attach[]>  views;
     UINT32                   viewsCount;
 
-    View                     depth;
+    Attach                     depth;
     DSharedPtr<DxFboLayout*> lay;
 
   private:

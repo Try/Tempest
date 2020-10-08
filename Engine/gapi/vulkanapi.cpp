@@ -162,8 +162,8 @@ AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device
 
     Detail::VBuffer  stage=dx->allocator.alloc(mem,count,size,alignedSz, MemUsage::TransferSrc, BufferHeap::Upload);
 
-    Detail::DSharedPtr<Detail::VBuffer*> pstage(new Detail::VBuffer(std::move(stage)));
-    Detail::DSharedPtr<Detail::VBuffer*> pbuf  (new Detail::VBuffer(std::move(buf)));
+    Detail::DSharedPtr<Buffer*> pstage(new Detail::VBuffer(std::move(stage)));
+    Detail::DSharedPtr<Buffer*> pbuf  (new Detail::VBuffer(std::move(buf)));
 
     Detail::VDevice::Data dat(*dx);
     dat.hold(pbuf);
@@ -182,8 +182,8 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   Detail::VBuffer  stage  = dx.allocator.alloc(p.data(),size,1,1,MemUsage::TransferSrc,BufferHeap::Upload);
   Detail::VTexture buf    = dx.allocator.alloc(p,mipCnt,format);
 
-  Detail::DSharedPtr<Detail::VBuffer*>  pstage(new Detail::VBuffer (std::move(stage)));
-  Detail::DSharedPtr<Detail::VTexture*> pbuf  (new Detail::VTexture(std::move(buf)));
+  Detail::DSharedPtr<Buffer*>  pstage(new Detail::VBuffer (std::move(stage)));
+  Detail::DSharedPtr<Texture*> pbuf  (new Detail::VTexture(std::move(buf)));
 
   Detail::VDevice::Data dat(dx);
   dat.hold(pstage);

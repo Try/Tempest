@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "comptr.h"
+#include "gapi/resourcestate.h"
 #include "dxframebuffer.h"
 #include "dxuniformslay.h"
 
@@ -46,10 +47,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void setBytes    (AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) override;
     void setUniforms (AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc& u) override;
 
-    void implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompute);
-
-    void changeLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id, TextureLayout prev, TextureLayout next) override;
-    void changeLayout(AbstractGraphicsApi::Texture&   t, TextureLayout prev, TextureLayout next) override;
+    void changeLayout(AbstractGraphicsApi::Attach&  img, TextureLayout prev, TextureLayout next, bool byRegion) override;
 
     void changeLayout(AbstractGraphicsApi::Texture& t, TextureLayout prev, TextureLayout next, uint32_t mipCnt);
     void setVbo      (const AbstractGraphicsApi::Buffer& b) override;
@@ -58,24 +56,14 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void drawIndexed (size_t ioffset, size_t isize, size_t voffset) override;
     void dispatch    (size_t x, size_t y, size_t z) override;
 
-    void copy(DxBuffer&  dest, size_t offsetDest, const DxBuffer& src, size_t offsetSrc, size_t size);
-    void copy(DxTexture& dest, size_t width, size_t height, size_t mip, const DxBuffer&  src, size_t offset);
-    void copy(DxBuffer&  dest, size_t width, size_t height, size_t mip, const DxTexture& src, size_t offset);
-    void generateMipmap(DxTexture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
+    void copy(AbstractGraphicsApi::Buffer&  dest, size_t offsetDest, const AbstractGraphicsApi::Buffer& src, size_t offsetSrc, size_t size);
+    void copy(AbstractGraphicsApi::Texture& dest, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Buffer&  src, size_t offset);
+    void copy(AbstractGraphicsApi::Buffer&  dest, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Texture& src, size_t offset);
+    void generateMipmap(AbstractGraphicsApi::Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
 
     ID3D12GraphicsCommandList* get() { return impl.get(); }
 
   private:
-    struct ImgState;
-    struct StateTracker {
-      std::vector<ImgState> imgState;
-      ImgState&     findImg(ID3D12Resource* img, TextureLayout last, bool preserve);
-
-      void          setLayout  (DxFramebuffer::View& a, TextureLayout lay, bool preserve);
-      void          flushLayout(DxCommandBuffer& cmd);
-      void          finalize   (DxCommandBuffer& cmd);
-      };
-
     DxDevice&                         dev;
     ComPtr<ID3D12CommandAllocator>    pool;
     ComPtr<ID3D12GraphicsCommandList> impl;
@@ -88,9 +76,10 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     UINT                              vboStride=0;
 
-    StateTracker                      imgState;
+    ResourceState                     resState;
 
-    void implChangeLayout(ID3D12Resource* res, bool preserveIn, D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES lay);
+    void implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompute);
+    void implChangeLayout(ID3D12Resource* res, D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES lay);
 
     friend class Tempest::DirectX12Api;
   };

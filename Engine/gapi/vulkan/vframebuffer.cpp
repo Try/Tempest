@@ -54,3 +54,25 @@ VkFramebuffer VFramebuffer::allocFbo(uint32_t w, uint32_t h, const VkImageView *
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
   return ret;
   }
+
+Tempest::TextureLayout VFramebuffer::Attach::defaultLayout() {
+  if(sw!=nullptr)
+    return TextureLayout::Present;
+  if(Detail::nativeIsDepthFormat(tex->format))
+    return TextureLayout::DepthAttach; // no readable depth for now
+  return TextureLayout::Sampler;
+  }
+
+Tempest::TextureLayout VFramebuffer::Attach::renderLayout() {
+  if(sw!=nullptr)
+    return TextureLayout::ColorAttach;
+  if(Detail::nativeIsDepthFormat(tex->format))
+    return TextureLayout::DepthAttach;
+  return TextureLayout::ColorAttach;
+  }
+
+void* VFramebuffer::Attach::nativeHandle() {
+  if(sw!=nullptr)
+    return reinterpret_cast<void*>(sw->images[id]);
+  return reinterpret_cast<void*>(tex->impl);
+  }

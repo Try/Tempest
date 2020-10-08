@@ -15,10 +15,15 @@ class VFramebufferLayout;
 
 class VFramebuffer : public AbstractGraphicsApi::Fbo {
   public:
-    struct Attach final {
+    struct Attach final : AbstractGraphicsApi::Attach {
       Attach()=default;
       Attach(VTexture* tex, size_t id):tex(tex),id(id){}
       Attach(VSwapchain* sw,size_t id):sw(sw),  id(id){}
+
+      TextureLayout defaultLayout() override;
+      TextureLayout renderLayout()  override;
+      void*         nativeHandle()  override;
+
       VTexture*   tex=nullptr;
       VSwapchain* sw =nullptr;
       size_t      id =0;

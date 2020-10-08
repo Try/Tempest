@@ -9,8 +9,29 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-Tempest::Detail::DxFramebuffer::DxFramebuffer(DxDevice& dev, DxFboLayout& lay, uint32_t cnt,
-                                              DxSwapchain** swapchain, DxTexture** cl, const uint32_t* imgId, DxTexture* zbuf)
+TextureLayout DxFramebuffer::Attach::defaultLayout() {
+  if(isSwImage)
+    return TextureLayout::Present;
+  if(Detail::nativeIsDepthFormat(format))
+    return TextureLayout::DepthAttach; // no readable depth for now
+  return TextureLayout::Sampler;
+  }
+
+TextureLayout DxFramebuffer::Attach::renderLayout() {
+  if(isSwImage)
+    return TextureLayout::ColorAttach;
+  if(Detail::nativeIsDepthFormat(format))
+    return TextureLayout::DepthAttach;
+  return TextureLayout::ColorAttach;
+  }
+
+void* DxFramebuffer::Attach::nativeHandle() {
+  return res;
+  }
+
+
+DxFramebuffer::DxFramebuffer(DxDevice& dev, DxFboLayout& lay, uint32_t cnt,
+                             DxSwapchain** swapchain, DxTexture** cl, const uint32_t* imgId, DxTexture* zbuf)
   :viewsCount(cnt), lay(&lay) {
   ID3D12Resource* res[256] = {};
   for(size_t i=0; i<cnt; ++i) {
@@ -39,7 +60,7 @@ void DxFramebuffer::setupViews(ID3D12Device& device,
   dxAssert(device.CreateDescriptorHeap(&rtvHeapDesc, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&rtvHeap)));
 
   // frame resources.
-  views.reset(new View[viewsCount]);
+  views.reset(new Attach[viewsCount]);
   for(size_t i=0;i<viewsCount;++i) {
     views[i].res = res[i];
     auto desc = views[i].res->GetDesc();
@@ -72,3 +93,4 @@ void DxFramebuffer::setupViews(ID3D12Device& device,
   }
 
 #endif
+

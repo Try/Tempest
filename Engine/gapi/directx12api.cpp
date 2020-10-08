@@ -223,8 +223,8 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
     Detail::DxBuffer  stage=dx.allocator.alloc(mem,    count,size,alignedSz,MemUsage::TransferSrc,      BufferHeap::Upload);
     Detail::DxBuffer  buf  =dx.allocator.alloc(nullptr,count,size,alignedSz,usage|MemUsage::TransferDst,BufferHeap::Static);
 
-    Detail::DSharedPtr<Detail::DxBuffer*> pstage(new Detail::DxBuffer(std::move(stage)));
-    Detail::DSharedPtr<Detail::DxBuffer*> pbuf  (new Detail::DxBuffer(std::move(buf)));
+    Detail::DSharedPtr<Buffer*> pstage(new Detail::DxBuffer(std::move(stage)));
+    Detail::DSharedPtr<Buffer*> pbuf  (new Detail::DxBuffer(std::move(buf)));
 
     DxDevice::Data dat(dx);
     dat.hold(pbuf);
@@ -274,8 +274,8 @@ AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixma
   Detail::DxBuffer  stage  = dx.allocator.alloc(p.data(),p.h(),row,pith,MemUsage::TransferSrc,BufferHeap::Upload);
   Detail::DxTexture buf    = dx.allocator.alloc(p,mipCnt,format);
 
-  Detail::DSharedPtr<Detail::DxBuffer*>  pstage(new Detail::DxBuffer (std::move(stage)));
-  Detail::DSharedPtr<Detail::DxTexture*> pbuf  (new Detail::DxTexture(std::move(buf)));
+  Detail::DSharedPtr<Buffer*>  pstage(new Detail::DxBuffer (std::move(stage)));
+  Detail::DSharedPtr<Texture*> pbuf  (new Detail::DxTexture(std::move(buf)));
 
   Detail::DxDevice::Data dat(dx);
   dat.hold(pstage);
@@ -316,10 +316,10 @@ AbstractGraphicsApi::PTexture DirectX12Api::createCompressedTexture(Device* d, c
 
   Detail::DxBuffer  stage  = dx.allocator.alloc(nullptr,stageBufferSize,1,1,MemUsage::TransferSrc,BufferHeap::Upload);
   Detail::DxTexture buf    = dx.allocator.alloc(p,mipCnt,format);
-  Detail::DSharedPtr<Detail::DxBuffer*>  pstage(new Detail::DxBuffer (std::move(stage)));
-  Detail::DSharedPtr<Detail::DxTexture*> pbuf  (new Detail::DxTexture(std::move(buf)));
+  Detail::DSharedPtr<Buffer*>  pstage(new Detail::DxBuffer (std::move(stage)));
+  Detail::DSharedPtr<Texture*> pbuf  (new Detail::DxTexture(std::move(buf)));
 
-  pstage.handler->uploadS3TC(reinterpret_cast<const uint8_t*>(p.data()),p.w(),p.h(),mipCnt,blockSize);
+  reinterpret_cast<Detail::DxBuffer*>(pstage.handler)->uploadS3TC(reinterpret_cast<const uint8_t*>(p.data()),p.w(),p.h(),mipCnt,blockSize);
 
   Detail::DxDevice::Data dat(dx);
   dat.hold(pstage);

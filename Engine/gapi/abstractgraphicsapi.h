@@ -272,6 +272,11 @@ namespace Tempest {
         };
       struct Texture:Shared  {
         };
+      struct Attach {
+        virtual TextureLayout defaultLayout() = 0;
+        virtual TextureLayout renderLayout()  = 0;
+        virtual void*         nativeHandle()  = 0;
+        };
       struct Fbo:Shared      {
         virtual ~Fbo(){}
         };
@@ -306,8 +311,9 @@ namespace Tempest {
                                      uint32_t width,uint32_t height)=0;
         virtual void endRenderPass()=0;
 
-        virtual void changeLayout(Swapchain& s, uint32_t id, TextureLayout prev, TextureLayout next)=0;
-        virtual void changeLayout(Texture& t, TextureLayout prev, TextureLayout next)=0;
+        //virtual void changeLayout(Swapchain& s, uint32_t id, TextureLayout prev, TextureLayout next)=0;
+        //virtual void changeLayout(Texture& t,  TextureLayout prev, TextureLayout next)=0;
+        virtual void changeLayout(Attach& img, TextureLayout prev, TextureLayout next, bool byRegion)=0;
 
         virtual bool isRecording() const = 0;
         virtual void begin()=0;

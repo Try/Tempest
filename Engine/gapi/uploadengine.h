@@ -15,7 +15,7 @@ namespace Tempest {
 
 namespace Detail {
 
-template<class Device, class CommandBuffer, class Fence, class Buffer, class Texture>
+template<class Device, class CommandBuffer, class Fence, class oldBuffer, class oldTexture>
 class UploadEngine final {
   private:
     class DataStream;
@@ -27,9 +27,12 @@ class UploadEngine final {
     DataStream& get();
     void        wait();
 
-    using ResPtr = Detail::DSharedPtr<AbstractGraphicsApi::Shared*>;
-    using BufPtr = Detail::DSharedPtr<Buffer*>;
-    using TexPtr = Detail::DSharedPtr<Texture*>;
+    using Texture = AbstractGraphicsApi::Texture;
+    using Buffer  = AbstractGraphicsApi::Buffer;
+
+    using ResPtr  = Detail::DSharedPtr<AbstractGraphicsApi::Shared*>;
+    using BufPtr  = Detail::DSharedPtr<Buffer*>;
+    using TexPtr  = Detail::DSharedPtr<Texture*>;
 
     class Data final {
       public:
