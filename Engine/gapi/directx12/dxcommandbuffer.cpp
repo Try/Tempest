@@ -230,7 +230,8 @@ void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Attach& att, TextureLayo
     impl->DiscardResource(img.res,nullptr);
   }
 
-void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t, TextureLayout prev, TextureLayout next, uint32_t /*mipCnt*/) {
+void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
+                                   TextureLayout prev, TextureLayout next, uint32_t /*mipBase*/, uint32_t /*mipCnt*/) {
   DxTexture& tex = reinterpret_cast<DxTexture&>(t);
   D3D12_RESOURCE_BARRIER barrier = {};
   barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -351,7 +352,8 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t width, si
 void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
   // TODO
   Log::d("TODO: DxCommandBuffer::generateMipmap");
-  changeLayout(image, TextureLayout::TransferDest, TextureLayout::Sampler, mipLevels);
+
+  changeLayout(image, TextureLayout::TransferDest, TextureLayout::Sampler, 0, mipLevels);
   }
 
 void DxCommandBuffer::implChangeLayout(ID3D12Resource* res, D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES lay) {

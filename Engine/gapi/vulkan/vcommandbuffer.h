@@ -73,17 +73,20 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void dispatch(size_t x, size_t y, size_t z) override;
 
     void changeLayout(AbstractGraphicsApi::Attach&  img, TextureLayout prev, TextureLayout next, bool byRegion) override;
-    void changeLayout(AbstractGraphicsApi::Texture& tex, TextureLayout prev, TextureLayout next, uint32_t mipCnt);
+    void changeLayout(AbstractGraphicsApi::Texture& tex, TextureLayout prev, TextureLayout next, uint32_t mipBase, uint32_t mipCnt);
 
     void copy(AbstractGraphicsApi::Buffer&  dest, size_t offsetDest, const AbstractGraphicsApi::Buffer& src, size_t offsetSrc, size_t size);
     void copy(AbstractGraphicsApi::Texture& dest, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Buffer&  src, size_t offset);
     void copy(AbstractGraphicsApi::Buffer&  dest, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Texture& src, size_t offset);
 
-    void generateMipmap(AbstractGraphicsApi::Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
+    void blit(AbstractGraphicsApi::Texture& src, uint32_t srcW, uint32_t srcH, uint32_t srcMip,
+              AbstractGraphicsApi::Texture& dst, uint32_t dstW, uint32_t dstH, uint32_t dstMip);
+    void generateMipmap(AbstractGraphicsApi::Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
 
   private:
     void implChangeLayout(VkImage dest, VkFormat imageFormat,
-                      VkImageLayout oldLayout, VkImageLayout newLayout, bool discardOld, uint32_t mipCount, bool byRegion);
+                          VkImageLayout oldLayout, VkImageLayout newLayout, bool discardOld,
+                          uint32_t mipBase, uint32_t mipCount, bool byRegion);
 
     VDevice&                                device;
     VCommandPool                            pool;

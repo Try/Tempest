@@ -251,6 +251,32 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t width, siz
   vkCmdCopyImageToBuffer(impl, src.impl, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst.impl, 1, &region);
   }
 
+void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, uint32_t srcH, uint32_t srcMip,
+                          AbstractGraphicsApi::Texture& dstTex, uint32_t dstW, uint32_t dstH, uint32_t dstMip) {
+  auto& src = reinterpret_cast<VTexture&>(srcTex);
+  auto& dst = reinterpret_cast<VTexture&>(dstTex);
+
+  VkImageBlit blit = {};
+  blit.srcOffsets[0] = {0, 0, 0};
+  blit.srcOffsets[1] = {int32_t(srcW), int32_t(srcH), 1};
+  blit.srcSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+  blit.srcSubresource.mipLevel       = srcMip;
+  blit.srcSubresource.baseArrayLayer = 0;
+  blit.srcSubresource.layerCount     = 1;
+  blit.dstOffsets[0] = {0, 0, 0};
+  blit.dstOffsets[1] = {int32_t(dstW), int32_t(dstH), 1 };
+  blit.dstSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+  blit.dstSubresource.mipLevel       = dstMip;
+  blit.dstSubresource.baseArrayLayer = 0;
+  blit.dstSubresource.layerCount     = 1;
+
+  vkCmdBlitImage(impl,
+                 src.impl, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                 dst.impl, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                 1, &blit,
+                 VK_FILTER_LINEAR);
+  }
+
 void VCommandBuffer::changeLayout(AbstractGraphicsApi::Attach& att, TextureLayout prev, TextureLayout next, bool byRegion) {
   auto&    img          = reinterpret_cast<VFramebuffer::Attach&>(att);
   VkImage  nativeImg    = VK_NULL_HANDLE;
@@ -266,15 +292,45 @@ void VCommandBuffer::changeLayout(AbstractGraphicsApi::Attach& att, TextureLayou
   auto p = (prev==TextureLayout::Undefined ? att.defaultLayout() : prev);
   implChangeLayout(nativeImg, nativeFormat,
                    Detail::nativeFormat(p), Detail::nativeFormat(next),
-                   prev==TextureLayout::Undefined, VK_REMAINING_MIP_LEVELS, byRegion);
+                   prev==TextureLayout::Undefined, 0, VK_REMAINING_MIP_LEVELS, byRegion);
   }
 
-void VCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t, TextureLayout prev, TextureLayout next, uint32_t mipCnt) {
+void VCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
+                                  TextureLayout prev, TextureLayout next, uint32_t mipBase, uint32_t mipCnt) {
   auto& vt = reinterpret_cast<VTexture&>(t);
   auto p = (prev==TextureLayout::Undefined ? TextureLayout::Sampler : prev);
   implChangeLayout(vt.impl,vt.format,
                    Detail::nativeFormat(p), Detail::nativeFormat(next),
-                   prev==TextureLayout::Undefined, mipCnt, false);
+                   prev==TextureLayout::Undefined, mipBase, mipCnt, false);
+  }
+
+void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
+                                    uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
+  auto& image = reinterpret_cast<VTexture&>(img);
+
+  // Check if image format supports linear blitting
+  VkFormatProperties formatProperties;
+  vkGetPhysicalDeviceFormatProperties(device.physicalDevice, image.format, &formatProperties);
+
+  if(!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
+    throw std::runtime_error("texture image format does not support linear blitting!");
+
+  int32_t w = int32_t(texWidth);
+  int32_t h = int32_t(texHeight);
+
+  for(uint32_t i=1; i<mipLevels; --i) {
+    const int mw = (w==1 ? 1 : w/2);
+    const int mh = (h==1 ? 1 : h/2);
+
+    changeLayout(img,TextureLayout::TransferDest,TextureLayout::TransferSrc,i-1,1);
+    blit(img,  w, h, i-1,
+         img, mw,mh, i);
+    changeLayout(img,TextureLayout::TransferSrc, TextureLayout::Sampler,    i-1,1);
+
+    w = mw;
+    h = mh;
+    }
+  changeLayout(img,TextureLayout::TransferDest, TextureLayout::Sampler, mipLevels-1,1);
   }
 
 static VkPipelineStageFlags accessToStage(const VkAccessFlags a) {
@@ -338,6 +394,7 @@ static VkAccessFlags layoutToAccess(VkImageLayout lay) {
     case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
       return VK_ACCESS_SHADER_READ_BIT;
     case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+      // can be BOTTOM_OF_PIPE for dest-access
       return VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
     case VK_IMAGE_LAYOUT_GENERAL:
       return VK_ACCESS_MEMORY_READ_BIT|VK_ACCESS_MEMORY_WRITE_BIT;
@@ -360,7 +417,7 @@ static VkAccessFlags layoutToAccess(VkImageLayout lay) {
 void VCommandBuffer::implChangeLayout(VkImage dest, VkFormat imageFormat,
                                       VkImageLayout oldLayout, VkImageLayout newLayout,
                                       bool discardOld,
-                                      uint32_t mipCount,
+                                      uint32_t mipBase, uint32_t mipCount,
                                       bool byRegion) {
   VkImageMemoryBarrier barrier = {};
   barrier.sType                = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -370,7 +427,7 @@ void VCommandBuffer::implChangeLayout(VkImage dest, VkFormat imageFormat,
   barrier.dstQueueFamilyIndex  = VK_QUEUE_FAMILY_IGNORED;
   barrier.image                = dest;
 
-  barrier.subresourceRange.baseMipLevel   = 0;
+  barrier.subresourceRange.baseMipLevel   = mipBase;
   barrier.subresourceRange.levelCount     = mipCount;
   barrier.subresourceRange.baseArrayLayer = 0;
   barrier.subresourceRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
@@ -404,88 +461,4 @@ void VCommandBuffer::implChangeLayout(VkImage dest, VkFormat imageFormat,
       0, nullptr,
       1, &barrier
       );
-  }
-
-void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
-  auto& image = reinterpret_cast<VTexture&>(img);
-
-  VkFormat imageFormat = image.format;
-  // Check if image format supports linear blitting
-  VkFormatProperties formatProperties;
-  vkGetPhysicalDeviceFormatProperties(device.physicalDevice, imageFormat, &formatProperties);
-
-  if(!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
-    throw std::runtime_error("texture image format does not support linear blitting!");
-
-  VkImageMemoryBarrier barrier = {};
-  barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-  barrier.image                           = image.impl;
-  barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
-  barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
-  barrier.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-  barrier.subresourceRange.baseArrayLayer = 0;
-  barrier.subresourceRange.layerCount     = 1;
-  barrier.subresourceRange.levelCount     = 1;
-
-  int32_t mipWidth  = int32_t(texWidth);
-  int32_t mipHeight = int32_t(texHeight);
-
-  for(uint32_t i=1; i<mipLevels; i++) {
-    barrier.subresourceRange.baseMipLevel = i - 1;
-    barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    barrier.newLayout     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-
-    vkCmdPipelineBarrier(impl,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
-                         0, nullptr,
-                         0, nullptr,
-                         1, &barrier);
-
-    VkImageBlit blit = {};
-    blit.srcOffsets[0] = {0, 0, 0};
-    blit.srcOffsets[1] = {mipWidth, mipHeight, 1};
-    blit.srcSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
-    blit.srcSubresource.mipLevel       = i-1;
-    blit.srcSubresource.baseArrayLayer = 0;
-    blit.srcSubresource.layerCount     = 1;
-    blit.dstOffsets[0] = {0, 0, 0};
-    blit.dstOffsets[1] = { mipWidth==1 ? 1 : mipWidth/2, mipHeight==1 ? 1 : mipHeight/2, 1 };
-    blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    blit.dstSubresource.mipLevel       = i;
-    blit.dstSubresource.baseArrayLayer = 0;
-    blit.dstSubresource.layerCount     = 1;
-
-    vkCmdBlitImage(impl,
-                   image.impl, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                   image.impl, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                   1, &blit,
-                   VK_FILTER_LINEAR);
-
-    barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-    vkCmdPipelineBarrier(impl,
-                         VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-                         0, nullptr,
-                         0, nullptr,
-                         1, &barrier);
-    mipWidth  = mipWidth ==1 ? 1 : mipWidth /2;
-    mipHeight = mipHeight==1 ? 1 : mipHeight/2;
-    }
-
-  barrier.subresourceRange.baseMipLevel = mipLevels - 1;
-  barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-  barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-  barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-  vkCmdPipelineBarrier(impl,
-                       VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-                       0, nullptr,
-                       0, nullptr,
-                       1, &barrier);
   }

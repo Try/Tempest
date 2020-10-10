@@ -76,7 +76,7 @@ class UploadEngine final {
             stream.begin();
             commited=false;
             }
-          stream.cmdBuffer.changeLayout(dest,oldLayout,newLayout,mipCnt);
+          stream.cmdBuffer.changeLayout(dest,oldLayout,newLayout,0,mipCnt);
           }
         void generateMipmap(Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
           if(commited){

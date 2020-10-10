@@ -22,6 +22,9 @@ Builtin::Builtin(Device& owner)
 
   vsT2 = owner.shader(tex_brush_vert_sprv,sizeof(tex_brush_vert_sprv));
   fsT2 = owner.shader(tex_brush_frag_sprv,sizeof(tex_brush_frag_sprv));
+
+  auto b = owner.shader(blit_comp_sprv,sizeof(blit_comp_sprv));
+  blitPso = owner.pipeline(b);
   }
 
 const Builtin::Item &Builtin::texture2d() const {

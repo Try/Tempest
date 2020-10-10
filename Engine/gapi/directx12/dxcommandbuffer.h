@@ -48,7 +48,8 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void setUniforms (AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc& u) override;
 
     void changeLayout(AbstractGraphicsApi::Attach&  img, TextureLayout prev, TextureLayout next, bool byRegion) override;
-    void changeLayout(AbstractGraphicsApi::Texture& tex, TextureLayout prev, TextureLayout next, uint32_t mipCnt);
+    void changeLayout(AbstractGraphicsApi::Texture& tex, TextureLayout prev, TextureLayout next, uint32_t mipBase, uint32_t mipCnt);
+    void generateMipmap(AbstractGraphicsApi::Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
 
     void setVbo      (const AbstractGraphicsApi::Buffer& b) override;
     void setIbo      (const AbstractGraphicsApi::Buffer& b, Detail::IndexClass cls) override;
@@ -59,7 +60,6 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void copy(AbstractGraphicsApi::Buffer&  dest, size_t offsetDest, const AbstractGraphicsApi::Buffer& src, size_t offsetSrc, size_t size);
     void copy(AbstractGraphicsApi::Texture& dest, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Buffer&  src, size_t offset);
     void copy(AbstractGraphicsApi::Buffer&  dest, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Texture& src, size_t offset);
-    void generateMipmap(AbstractGraphicsApi::Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels);
 
     ID3D12GraphicsCommandList* get() { return impl.get(); }
 

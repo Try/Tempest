@@ -64,6 +64,8 @@ class Encoder<Tempest::CommandBuffer> {
 
     void dispatch(size_t x, size_t y, size_t z);
 
+    void generateMipmaps(Attachment& tex);
+
   private:
     Encoder(CommandBuffer* ow);
 

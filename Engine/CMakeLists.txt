@@ -107,7 +107,8 @@ set(GEN_SHADERS_HEADER "${PROJECT_BINARY_DIR}/sprv/builtin_shader.h")
 
 file(GLOB SHADER_SOURCES
   "${PROJECT_SOURCE_DIR}/shaders/*.vert"
-  "${PROJECT_SOURCE_DIR}/shaders/*.frag")
+  "${PROJECT_SOURCE_DIR}/shaders/*.frag"
+  "${PROJECT_SOURCE_DIR}/shaders/*.comp")
 
 # GLSL to SPIRV compiler
 find_program(GLSLANGVALIDATOR glslangValidator)
@@ -130,6 +131,8 @@ function(add_shader OUTPUT SOURCE)
     COMMAND    ${GLSLANGVALIDATOR} -V ${VARS} "${SOURCE_FILE}" -o ${OUTPUT_FILE}
     )
 endfunction(add_shader)
+
+add_shader(blit.comp.sprv      blit.comp      "")
 
 add_shader(empty.vert.sprv     empty.vert     "")
 add_shader(empty.frag.sprv     empty.frag     "")

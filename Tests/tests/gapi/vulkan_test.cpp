@@ -45,3 +45,29 @@ TEST(VulkanApi,Compute) {
 TEST(VulkanApi,ComputeImage) {
   GapiTestCommon::imageCompute<VulkanApi>("VulkanApi_Compute.png");
   }
+
+TEST(VulkanApi,MipMaps) {
+  using namespace Tempest;
+
+  try {
+    VulkanApi   api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto pm  = device.attachment(TextureFormat::RGBA8,32,32,true);
+
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.generateMipmaps(pm);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }

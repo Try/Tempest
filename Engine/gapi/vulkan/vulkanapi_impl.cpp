@@ -59,7 +59,7 @@ VulkanApi::VulkanApi(bool validation)
   createInfo.enabledExtensionCount   = static_cast<uint32_t>(extensions.size());
   createInfo.ppEnabledExtensionNames = extensions.begin();
 
-  if( validation ){
+  if(validation){
     createInfo.enabledLayerCount   = static_cast<uint32_t>(validationLayers.size());
     createInfo.ppEnabledLayerNames = validationLayers.begin();
     } else {

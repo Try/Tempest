@@ -315,9 +315,8 @@ namespace Tempest {
                                      uint32_t width,uint32_t height)=0;
         virtual void endRenderPass()=0;
 
-        //virtual void changeLayout(Swapchain& s, uint32_t id, TextureLayout prev, TextureLayout next)=0;
-        //virtual void changeLayout(Texture& t,  TextureLayout prev, TextureLayout next)=0;
-        virtual void changeLayout(Attach& img, TextureLayout prev, TextureLayout next, bool byRegion)=0;
+        virtual void changeLayout  (Attach& img, TextureLayout prev, TextureLayout next, bool byRegion)=0;
+        virtual void generateMipmap(Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels)=0;
 
         virtual bool isRecording() const = 0;
         virtual void begin()=0;
