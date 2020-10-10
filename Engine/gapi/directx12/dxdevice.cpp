@@ -94,16 +94,21 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, AbstractGraphicsApi::Props& pro
   static const TextureFormat att[] = {TextureFormat::R8,   TextureFormat::RG8,  TextureFormat::RGBA8,
                                       TextureFormat::R16,  TextureFormat::RG16, TextureFormat::RGBA16};
   static const TextureFormat ds[]  = {TextureFormat::Depth16, TextureFormat::Depth24x8, TextureFormat::Depth24S8};
-  uint64_t smpBit = 0, attBit = 0, dsBit = 0;
+  static const TextureFormat sso[] = {TextureFormat::R8,   TextureFormat::RG8,  TextureFormat::RGBA8,
+                                      TextureFormat::R16,  TextureFormat::RG16, TextureFormat::RGBA16};
+  uint64_t smpBit = 0, attBit = 0, dsBit = 0, storBit = 0;
   for(auto& i:smp)
     smpBit |= uint64_t(1) << uint64_t(i);
   for(auto& i:att)
     attBit |= uint64_t(1) << uint64_t(i);
   for(auto& i:ds)
     dsBit  |= uint64_t(1) << uint64_t(i);
+  for(auto& i:sso)
+    storBit  |= uint64_t(1) << uint64_t(i);
   prop.setSamplerFormats(smpBit);
   prop.setAttachFormats (attBit);
   prop.setDepthFormats  (dsBit);
+  prop.setStorageFormats(storBit);
 
   // TODO: buffer limitsk
   //prop.vbo.maxRange    = ;

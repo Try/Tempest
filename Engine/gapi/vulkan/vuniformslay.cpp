@@ -45,6 +45,8 @@ void VUniformsLay::implCreate(VkDescriptorSetLayoutBinding* bind) {
     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
     VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
     VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE
     };
 
   for(size_t i=0;i<lay.size();++i){

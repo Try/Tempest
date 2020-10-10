@@ -14,6 +14,7 @@
 #include <Tempest/VertexBuffer>
 #include <Tempest/IndexBuffer>
 #include <Tempest/StorageBuffer>
+#include <Tempest/StorageImage>
 #include <Tempest/Builtin>
 #include <Tempest/Swapchain>
 #include <Tempest/UniformBuffer>
@@ -114,9 +115,12 @@ class Device {
     Attachment           attachment (TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips = false);
     ZBuffer              zbuffer    (TextureFormat frm, const uint32_t w, const uint32_t h);
     Texture2d            loadTexture(const Pixmap& pm,bool mips=true);
+
+    StorageImage         image2d    (TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips=false);
+
     Pixmap               readPixels (const Texture2d&  t);
     Pixmap               readPixels (const Attachment& t);
-
+    Pixmap               readPixels (const StorageImage& t);
     template<class T>
     void                 readBytes  (const StorageBuffer<T>& ssbo, void* out, size_t count);
 

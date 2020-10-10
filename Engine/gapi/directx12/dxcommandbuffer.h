@@ -48,8 +48,8 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void setUniforms (AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc& u) override;
 
     void changeLayout(AbstractGraphicsApi::Attach&  img, TextureLayout prev, TextureLayout next, bool byRegion) override;
+    void changeLayout(AbstractGraphicsApi::Texture& tex, TextureLayout prev, TextureLayout next, uint32_t mipCnt);
 
-    void changeLayout(AbstractGraphicsApi::Texture& t, TextureLayout prev, TextureLayout next, uint32_t mipCnt);
     void setVbo      (const AbstractGraphicsApi::Buffer& b) override;
     void setIbo      (const AbstractGraphicsApi::Buffer& b, Detail::IndexClass cls) override;
     void draw        (size_t offset,size_t vertexCount) override;

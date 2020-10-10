@@ -224,15 +224,18 @@ namespace Tempest {
           bool     hasSamplerFormat(TextureFormat f) const;
           bool     hasAttachFormat (TextureFormat f) const;
           bool     hasDepthFormat  (TextureFormat f) const;
+          bool     hasStorageFormat(TextureFormat f) const;
 
           void     setSamplerFormats(uint64_t t) { smpFormat  = t; }
           void     setAttachFormats (uint64_t t) { attFormat  = t; }
           void     setDepthFormats  (uint64_t t) { dattFormat = t; }
+          void     setStorageFormats(uint64_t t) { storFormat = t; }
 
         private:
           uint64_t smpFormat =0;
           uint64_t attFormat =0;
           uint64_t dattFormat=0;
+          uint64_t storFormat=0;
         };
 
       struct NoCopy {
@@ -301,6 +304,7 @@ namespace Tempest {
       struct Desc:NoCopy   {
         virtual ~Desc()=default;
         virtual void set    (size_t id,AbstractGraphicsApi::Texture *tex, const Sampler2d& smp)=0;
+        virtual void setSsbo(size_t id,AbstractGraphicsApi::Texture *tex)=0;
         virtual void setUbo (size_t id,AbstractGraphicsApi::Buffer* buf,size_t offset,size_t size,size_t align)=0;
         virtual void setSsbo(size_t id,AbstractGraphicsApi::Buffer* buf,size_t offset,size_t size,size_t align)=0;
         };
@@ -388,6 +392,7 @@ namespace Tempest {
       virtual PBuffer    createBuffer (Device* d,const void *mem,size_t count,size_t sz,size_t alignedSz,MemUsage usage,BufferHeap flg)=0;
       virtual PTexture   createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips)=0;
       virtual PTexture   createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm)=0;
+      virtual PTexture   createStorage(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm)=0;
       virtual void       readPixels   (Device* d, Pixmap &out,const PTexture t,
                                        TextureLayout lay, TextureFormat frm,
                                        const uint32_t w, const uint32_t h, uint32_t mip) = 0;

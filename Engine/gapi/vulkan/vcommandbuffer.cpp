@@ -290,7 +290,7 @@ static VkPipelineStageFlags accessToStage(const VkAccessFlags a) {
             VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT);
     */
 
-    /* TODO: ray tracing feture
+    /* TODO: ray tracing feature
     ret |= (VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR      |
             VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV |
             VK_PIPELINE_STAGE_TASK_SHADER_BIT_NV);
@@ -306,12 +306,16 @@ static VkPipelineStageFlags accessToStage(const VkAccessFlags a) {
     ret |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
     }
 
-  if(a&(VK_ACCESS_TRANSFER_READ_BIT|VK_ACCESS_TRANSFER_WRITE_BIT)){
+  if(a&(VK_ACCESS_TRANSFER_READ_BIT|VK_ACCESS_TRANSFER_WRITE_BIT)) {
     ret |= VK_PIPELINE_STAGE_TRANSFER_BIT;
     }
 
-  if(a&(VK_ACCESS_HOST_READ_BIT|VK_ACCESS_HOST_WRITE_BIT)){
+  if(a&(VK_ACCESS_HOST_READ_BIT|VK_ACCESS_HOST_WRITE_BIT)) {
     ret |= VK_PIPELINE_STAGE_HOST_BIT;
+    }
+
+  if(a&(VK_ACCESS_MEMORY_READ_BIT|VK_ACCESS_MEMORY_WRITE_BIT)) {
+    ret |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
     }
 
   return ret;
@@ -335,11 +339,11 @@ static VkAccessFlags layoutToAccess(VkImageLayout lay) {
       return VK_ACCESS_SHADER_READ_BIT;
     case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
       return VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
-      break;
+    case VK_IMAGE_LAYOUT_GENERAL:
+      return VK_ACCESS_MEMORY_READ_BIT|VK_ACCESS_MEMORY_WRITE_BIT;
     case VK_IMAGE_LAYOUT_UNDEFINED:
     case VK_IMAGE_LAYOUT_MAX_ENUM:
       throw std::invalid_argument("invalid layout transition!");
-    case VK_IMAGE_LAYOUT_GENERAL:
     case VK_IMAGE_LAYOUT_PREINITIALIZED:
     case VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR:
     case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:

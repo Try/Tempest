@@ -215,11 +215,30 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   return PTexture(pbuf.handler);
   }
 
-AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Device *d, const uint32_t w, const uint32_t h, uint32_t mipCnt, TextureFormat frm) {
+AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Device *d,
+                                                       const uint32_t w, const uint32_t h, uint32_t mipCnt,
+                                                       TextureFormat frm) {
   Detail::VDevice* dx = reinterpret_cast<Detail::VDevice*>(d);
   
-  Detail::VTexture buf=dx->allocator.alloc(w,h,mipCnt,frm);
+  Detail::VTexture buf=dx->allocator.alloc(w,h,mipCnt,frm,false);
   Detail::DSharedPtr<Detail::VTexture*> pbuf(new Detail::VTexture(std::move(buf)));
+
+  return PTexture(pbuf.handler);
+  }
+
+AbstractGraphicsApi::PTexture VulkanApi::createStorage(AbstractGraphicsApi::Device* d,
+                                                       const uint32_t w, const uint32_t h, uint32_t mipCnt,
+                                                       TextureFormat frm) {
+  Detail::VDevice* dx = reinterpret_cast<Detail::VDevice*>(d);
+
+  Detail::VTexture buf=dx->allocator.alloc(w,h,mipCnt,frm,true);
+  Detail::DSharedPtr<Texture*> pbuf(new Detail::VTexture(std::move(buf)));
+
+  Detail::VDevice::Data dat(*dx);
+  dat.hold(pbuf);
+  dat.changeLayout(reinterpret_cast<Detail::VTexture&>(*pbuf.handler),
+                   TextureLayout::Undefined,TextureLayout::Unordered,mipCnt);
+  dat.commit();
 
   return PTexture(pbuf.handler);
   }

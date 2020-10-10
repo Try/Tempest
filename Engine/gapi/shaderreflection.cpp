@@ -35,6 +35,14 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     b.layout = binding;
     lay.push_back(b);
     }
+  for(auto &resource : resources.storage_images) {
+    unsigned binding  = comp.get_decoration(resource.id, spv::DecorationBinding);
+    auto     readonly = comp.get_decoration_bitset(resource.id);
+    Binding b;
+    b.cls    = UniformsLayout::ImgRW; // (readonly.get(spv::DecorationNonWritable) ? UniformsLayout::ImgR : UniformsLayout::ImgRW);
+    b.layout = binding;
+    lay.push_back(b);
+    }
   for(auto &resource : resources.push_constant_buffers) {
     auto& t = comp.get_type_from_variable(resource.id);
     auto sz = comp.get_declared_struct_size(t);

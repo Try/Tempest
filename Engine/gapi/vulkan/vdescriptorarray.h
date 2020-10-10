@@ -19,7 +19,8 @@ class VDescriptorArray : public AbstractGraphicsApi::Desc {
     VDescriptorArray(VkDevice device, VUniformsLay& vlay);
     ~VDescriptorArray() override;
 
-    void                     set    (size_t id, AbstractGraphicsApi::Texture *tex, const Sampler2d& smp) override;
+    void                     set    (size_t id, AbstractGraphicsApi::Texture* tex, const Sampler2d& smp) override;
+    void                     setSsbo(size_t id, AbstractGraphicsApi::Texture* tex) override;
     void                     setUbo (size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset, size_t size, size_t align) override;
     void                     setSsbo(size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset, size_t size, size_t align) override;
 

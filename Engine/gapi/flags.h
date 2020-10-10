@@ -36,6 +36,7 @@ enum class TextureLayout : uint8_t {
   DepthAttach,
   Present,
   TransferSrc,
-  TransferDest
+  TransferDest,
+  Unordered,
   };
 }

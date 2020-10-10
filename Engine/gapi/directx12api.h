@@ -47,6 +47,7 @@ class DirectX12Api : public AbstractGraphicsApi {
 
     PTexture       createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips) override;
     PTexture       createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;
+    PTexture       createStorage(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;
 
     void           readPixels(Device *d, Pixmap &out, const PTexture t,
                               TextureLayout lay, TextureFormat frm,

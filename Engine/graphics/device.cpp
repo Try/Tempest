@@ -210,6 +210,14 @@ Texture2d Device::loadTexture(const Pixmap &pm, bool mips) {
   return t;
   }
 
+StorageImage Device::image2d(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips) {
+  if(!devProps.hasStorageFormat(frm))
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
+  uint32_t mipCnt = mips ? mipCount(w,h) : 1;
+  StorageImage t(*this,api.createStorage(dev,w,h,mipCnt,frm),w,h,frm);
+  return t;
+  }
+
 Pixmap Device::readPixels(const Texture2d &t) {
   Pixmap pm;
   api.readPixels(dev,pm,t.impl,TextureLayout::Sampler,t.format(),uint32_t(t.w()),uint32_t(t.h()),0);
@@ -220,6 +228,12 @@ Pixmap Device::readPixels(const Attachment& t) {
   Pixmap pm;
   auto& tx = textureCast(t);
   api.readPixels(dev,pm,tx.impl,TextureLayout::Sampler,tx.format(),uint32_t(t.w()),uint32_t(t.h()),0);
+  return pm;
+  }
+
+Pixmap Device::readPixels(const StorageImage& t) {
+  Pixmap pm;
+  api.readPixels(dev,pm,t.impl,TextureLayout::Unordered,t.format(),uint32_t(t.w()),uint32_t(t.h()),0);
   return pm;
   }
 

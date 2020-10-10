@@ -352,7 +352,16 @@ AbstractGraphicsApi::PTexture DirectX12Api::createCompressedTexture(Device* d, c
 AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const uint32_t w, const uint32_t h, uint32_t mipCnt, TextureFormat frm) {
   Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
 
-  Detail::DxTexture buf=dx.allocator.alloc(w,h,mipCnt,frm);
+  Detail::DxTexture buf=dx.allocator.alloc(w,h,mipCnt,frm,false);
+  Detail::DSharedPtr<Detail::DxTexture*> pbuf(new Detail::DxTexture(std::move(buf)));
+
+  return PTexture(pbuf.handler);
+  }
+
+AbstractGraphicsApi::PTexture DirectX12Api::createStorage(AbstractGraphicsApi::Device* d, const uint32_t w, const uint32_t h, uint32_t mipCnt, TextureFormat frm) {
+  Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
+
+  Detail::DxTexture buf=dx.allocator.alloc(w,h,mipCnt,frm,true);
   Detail::DSharedPtr<Detail::DxTexture*> pbuf(new Detail::DxTexture(std::move(buf)));
 
   return PTexture(pbuf.handler);

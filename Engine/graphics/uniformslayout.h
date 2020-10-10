@@ -19,7 +19,9 @@ class UniformsLayout final {
       Texture=1,
       SsboR  =2,
       SsboRW =3,
-      Push   =4,
+      ImgR   =4,
+      ImgRW  =5,
+      Push   =6,
       };
     enum Stage : uint8_t {
       Vertex  =1<<0,

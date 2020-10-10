@@ -215,4 +215,40 @@ void ssboDispath() {
     }
   }
 
+template<class GraphicsApi>
+void imageCompute(const char* outImage) {
+  using namespace Tempest;
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto img = device.image2d(TextureFormat::RGBA8,128,128,false);
+
+    auto cs  = device.loadShader("shader/image_store_test.comp.sprv");
+    auto pso = device.pipeline(cs);
+
+    auto ubo = device.uniforms(pso.layout());
+    ubo.set(0,img);
+
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setUniforms(pso,ubo);
+      enc.dispatch(img.w(),img.h(),1);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    auto pm = device.readPixels(img);
+    pm.save(outImage);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
 }

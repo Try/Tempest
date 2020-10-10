@@ -15,7 +15,7 @@ namespace Tempest {
 
 namespace Detail {
 
-template<class Device, class CommandBuffer, class Fence, class oldBuffer, class oldTexture>
+template<class Device, class CommandBuffer, class Fence>
 class UploadEngine final {
   private:
     class DataStream;
@@ -70,13 +70,6 @@ class UploadEngine final {
             commited=false;
             }
           stream.cmdBuffer.copy(dest,w,h,mip,src,offset);
-          }
-        void changeLayout(Texture& dest, TextureFormat frm, TextureLayout oldLayout, TextureLayout newLayout) {
-          if(commited){
-            stream.begin();
-            commited=false;
-            }
-          stream.cmdBuffer.changeLayout(dest,frm,oldLayout,newLayout);
           }
         void changeLayout(Texture& dest, TextureLayout oldLayout, TextureLayout newLayout, uint32_t mipCnt) {
           if(commited){
@@ -173,19 +166,19 @@ class UploadEngine final {
     std::atomic_int             at{0};
   };
 
-template<class Device, class CommandBuffer, class Fence, class Buffer, class Texture>
-UploadEngine<Device,CommandBuffer,Fence,Buffer,Texture>::UploadEngine(Device& dev) {
+template<class Device, class CommandBuffer, class Fence>
+UploadEngine<Device,CommandBuffer,Fence>::UploadEngine(Device& dev) {
   for(auto& i:streams)
     i.reset(new DataStream(dev));
   }
 
-template<class Device, class CommandBuffer, class Fence, class Buffer, class Texture>
-UploadEngine<Device,CommandBuffer,Fence,Buffer,Texture>::~UploadEngine() {
+template<class Device, class CommandBuffer, class Fence>
+UploadEngine<Device,CommandBuffer,Fence>::~UploadEngine() {
   wait();
   }
 
-template<class Device, class CommandBuffer, class Fence, class Buffer, class Texture>
-auto UploadEngine<Device,CommandBuffer,Fence,Buffer,Texture>::get() -> DataStream& {
+template<class Device, class CommandBuffer, class Fence>
+auto UploadEngine<Device,CommandBuffer,Fence>::get() -> DataStream& {
   auto id = at.fetch_add(1)%2;
 
   std::lock_guard<SpinLock> guard(sync[id]);
@@ -195,8 +188,8 @@ auto UploadEngine<Device,CommandBuffer,Fence,Buffer,Texture>::get() -> DataStrea
   return st;
   }
 
-template<class Device, class CommandBuffer, class Fence, class Buffer, class Texture>
-void UploadEngine<Device,CommandBuffer,Fence,Buffer,Texture>::wait() {
+template<class Device, class CommandBuffer, class Fence>
+void UploadEngine<Device,CommandBuffer,Fence>::wait() {
   for(size_t i=0;i<size;++i) {
     std::lock_guard<SpinLock> guard(sync[i]);
     streams[i]->wait();

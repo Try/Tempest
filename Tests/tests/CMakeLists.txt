@@ -63,6 +63,7 @@ include_directories(${GTestSrc} ${GTestSrc}/include ${GMockSrc} ${GMockSrc}/incl
 compile_shader(simple_test.vert)
 compile_shader(simple_test.frag)
 compile_shader(simple_test.comp)
+compile_shader(image_store_test.comp)
 
 add_executable(${PROJECT_NAME}
   ${SOURCES}

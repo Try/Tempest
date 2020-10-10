@@ -112,6 +112,14 @@ void DxUniformsLay::init(const std::vector<Binding>& lay, const UniformsLayout::
         add(l,D3D12_DESCRIPTOR_RANGE_TYPE_UAV,desc);
         break;
         }
+      case UniformsLayout::ImgR: {
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,desc);
+        break;
+        }
+      case UniformsLayout::ImgRW: {
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_UAV,desc);
+        break;
+        }
       case UniformsLayout::Texture: {
         add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,    desc);
         add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,desc);

@@ -80,6 +80,8 @@ inline VkImageLayout nativeFormat(TextureLayout f) {
       return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     case TextureLayout::TransferDest:
       return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    case TextureLayout::Unordered:
+      return VK_IMAGE_LAYOUT_GENERAL;
     }
   return VK_IMAGE_LAYOUT_UNDEFINED;
   }
@@ -177,7 +179,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     SwapChainSupport        querySwapChainSupport(VkSurfaceKHR surface) { return querySwapChainSupport(physicalDevice,surface); }
     MemIndex                memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const;
 
-    using DataMgr = UploadEngine<VDevice,VCommandBuffer,VFence,VBuffer,VTexture>;
+    using DataMgr = UploadEngine<VDevice,VCommandBuffer,VFence>;
     using Data    = DataMgr::Data;
 
   private:

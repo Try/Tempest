@@ -60,13 +60,19 @@ TEST(DirectX12Api,Fbo) {
 
 TEST(DirectX12Api,Draw) {
 #if defined(_MSC_VER)
-  GapiTestCommon::fbo<DirectX12Api>("DirectX12Api_Draw.png");
+  GapiTestCommon::draw<DirectX12Api>("DirectX12Api_Draw.png");
 #endif
   }
 
 TEST(DirectX12Api,Compute) {
 #if defined(_MSC_VER)
   GapiTestCommon::ssboDispath<DirectX12Api>();
+#endif
+  }
+
+TEST(DirectX12Api,ComputeImage) {
+#if defined(_MSC_VER)
+  GapiTestCommon::imageCompute<DirectX12Api>("DirectX12Api_Compute.png");
 #endif
   }
 

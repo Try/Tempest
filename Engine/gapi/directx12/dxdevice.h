@@ -73,7 +73,8 @@ inline D3D12_RESOURCE_STATES nativeFormat(TextureLayout f) {
     D3D12_RESOURCE_STATE_DEPTH_WRITE,
     D3D12_RESOURCE_STATE_PRESENT,
     D3D12_RESOURCE_STATE_COPY_SOURCE,
-    D3D12_RESOURCE_STATE_COPY_DEST
+    D3D12_RESOURCE_STATE_COPY_DEST,
+    D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
     };
   return lay[uint8_t(f)];
   }
@@ -108,7 +109,7 @@ class DxDevice : public AbstractGraphicsApi::Device {
     DxDevice(IDXGIAdapter1& adapter);
     ~DxDevice() override;
 
-    using DataMgr = UploadEngine<DxDevice,DxCommandBuffer,DxFence,DxBuffer,DxTexture>;
+    using DataMgr = UploadEngine<DxDevice,DxCommandBuffer,DxFence>;
     using Data    = DataMgr::Data;
 
     void         waitData();

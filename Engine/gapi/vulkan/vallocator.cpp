@@ -154,11 +154,11 @@ VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip,VkFormat format) {
   imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
   imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
-  imageInfo.usage         = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+  imageInfo.usage         = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
   if(mip>1) {
     // TODO: test VK_FORMAT_FEATURE_BLIT_DST_BIT
-    imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    // imageInfo.usage |= VK_FORMAT_FEATURE_BLIT_DST_BIT;
     }
 
   vkAssert(vkCreateImage(device, &imageInfo, nullptr, &ret.impl));
@@ -184,7 +184,7 @@ VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip,VkFormat format) {
   return ret;
   }
 
-VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mip, TextureFormat frm) {
+VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mip, TextureFormat frm, bool imgStorage) {
   VTexture ret;
   ret.alloc = this;
 
@@ -200,10 +200,13 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mi
   imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   imageInfo.usage         = isDepthFormat(frm) ?
         (VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) :
-        (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT|VK_IMAGE_USAGE_SAMPLED_BIT|VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
+        (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT|VK_IMAGE_USAGE_SAMPLED_BIT|VK_IMAGE_USAGE_TRANSFER_SRC_BIT|VK_IMAGE_USAGE_TRANSFER_DST_BIT);
   imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
   imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
   imageInfo.format        = nativeFormat(frm);
+
+  if(imgStorage)
+    imageInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
 
   vkAssert(vkCreateImage(device, &imageInfo, nullptr, &ret.impl));
 

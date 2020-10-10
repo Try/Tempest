@@ -51,8 +51,10 @@ VkDescriptorPool VDescriptorArray::allocPool(const VUniformsLay& lay, size_t siz
     switch(cls) {
       case UniformsLayout::Ubo:     addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);         break;
       case UniformsLayout::Texture: addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER); break;
-      case UniformsLayout::SsboR:   addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);         break;
+      case UniformsLayout::SsboR:
       case UniformsLayout::SsboRW:  addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);         break;
+      case UniformsLayout::ImgR:
+      case UniformsLayout::ImgRW:   addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);          break;
       case UniformsLayout::Push:    break;
       }
     }
@@ -102,6 +104,25 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Texture* t, 
   descriptorWrite.dstBinding      = uint32_t(id);
   descriptorWrite.dstArrayElement = 0;
   descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  descriptorWrite.descriptorCount = 1;
+  descriptorWrite.pImageInfo      = &imageInfo;
+
+  vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+  }
+
+void VDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi::Texture* t) {
+  VTexture* tex=reinterpret_cast<VTexture*>(t);
+
+  VkDescriptorImageInfo imageInfo = {};
+  imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+  imageInfo.imageView   = tex->getView(device,ComponentMapping());
+
+  VkWriteDescriptorSet descriptorWrite = {};
+  descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  descriptorWrite.dstSet          = desc;
+  descriptorWrite.dstBinding      = uint32_t(id);
+  descriptorWrite.dstArrayElement = 0;
+  descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
   descriptorWrite.descriptorCount = 1;
   descriptorWrite.pImageInfo      = &imageInfo;
 

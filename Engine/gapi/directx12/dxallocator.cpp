@@ -116,7 +116,7 @@ DxTexture DxAllocator::alloc(const Pixmap& pm, uint32_t mip, DXGI_FORMAT format)
   return DxTexture(std::move(ret),resDesc.Format,resDesc.MipLevels);
   }
 
-DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mip, TextureFormat frm) {
+DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mip, TextureFormat frm, bool imageStore) {
   ComPtr<ID3D12Resource> ret;
 
   D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COMMON;
@@ -139,6 +139,10 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
     clr.Color[1] = 0.f;
     clr.Color[2] = 0.f;
     clr.Color[3] = 0.f;
+    }
+  if(imageStore) {
+    state          = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
   resDesc.DepthOrArraySize   = 1;
   resDesc.SampleDesc.Count   = 1;

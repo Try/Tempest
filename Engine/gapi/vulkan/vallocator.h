@@ -46,7 +46,7 @@ class VAllocator {
 
     VBuffer  alloc(const void *mem, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap bufHeap);
     VTexture alloc(const Pixmap &pm, uint32_t mip, VkFormat format);
-    VTexture alloc(const uint32_t w, const uint32_t h, const uint32_t mip, TextureFormat frm);
+    VTexture alloc(const uint32_t w, const uint32_t h, const uint32_t mip, TextureFormat frm, bool imgStorage);
     void     free(VBuffer&  buf);
     void     free(VTexture& buf);
 

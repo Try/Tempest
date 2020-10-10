@@ -41,3 +41,7 @@ TEST(VulkanApi,Draw) {
 TEST(VulkanApi,Compute) {
   GapiTestCommon::ssboDispath<VulkanApi>();
   }
+
+TEST(VulkanApi,ComputeImage) {
+  GapiTestCommon::imageCompute<VulkanApi>("VulkanApi_Compute.png");
+  }
