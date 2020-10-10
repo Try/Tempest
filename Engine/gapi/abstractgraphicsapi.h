@@ -321,6 +321,7 @@ namespace Tempest {
         virtual bool isRecording() const = 0;
         virtual void begin()=0;
         virtual void end()  =0;
+        virtual void reset()=0;
 
         virtual void setPipeline(Pipeline& p,uint32_t w,uint32_t h)=0;
         virtual void setComputePipeline(CompPipeline& p)=0;

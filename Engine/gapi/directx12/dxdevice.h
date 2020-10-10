@@ -8,6 +8,7 @@
 #include <d3d12.h>
 
 #include "gapi/directx12/comptr.h"
+#include "gapi/directx12/dxcommandbuffer.h"
 #include "exceptions/exception.h"
 #include "utility/spinlock.h"
 #include "utility/compiller_hints.h"
@@ -110,7 +111,6 @@ class DxDevice : public AbstractGraphicsApi::Device {
     ~DxDevice() override;
 
     using DataMgr = UploadEngine<DxDevice,DxCommandBuffer,DxFence>;
-    using Data    = DataMgr::Data;
 
     void         waitData();
     const char*  renderer() const override;
@@ -119,6 +119,8 @@ class DxDevice : public AbstractGraphicsApi::Device {
     static void  getProp(IDXGIAdapter1& adapter, AbstractGraphicsApi::Props& prop);
     static void  getProp(DXGI_ADAPTER_DESC1& desc, AbstractGraphicsApi::Props& prop);
     void         submit(DxCommandBuffer& cmd,DxFence& sync);
+
+    DataMgr&     dataMgr() { return *data; }
 
     AbstractGraphicsApi::Props props;
     ComPtr<ID3D12Device>       device;
@@ -132,8 +134,6 @@ class DxDevice : public AbstractGraphicsApi::Device {
     HANDLE                     idleEvent=nullptr;
 
     std::unique_ptr<DataMgr>   data;
-
-  friend class DataMgr::Data;
   };
 
 }}

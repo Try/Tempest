@@ -43,7 +43,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     VkCommandBuffer impl=nullptr;
 
-    void reset();
+    void reset() override;
 
     void begin() override;
     void begin(VkCommandBufferUsageFlags flg);

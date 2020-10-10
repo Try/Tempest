@@ -147,29 +147,31 @@ AbstractGraphicsApi::Semaphore *VulkanApi::createSemaphore(AbstractGraphicsApi::
 AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device *d,
                                                      const void *mem, size_t count, size_t size, size_t alignedSz,
                                                      MemUsage usage, BufferHeap flg) {
-  Detail::VDevice* dx = reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VDevice& dx = *reinterpret_cast<Detail::VDevice*>(d);
 
   if(flg==BufferHeap::Upload) {
-    Detail::VBuffer stage=dx->allocator.alloc(mem,count,size,alignedSz,usage,BufferHeap::Upload);
+    Detail::VBuffer stage=dx.allocator.alloc(mem,count,size,alignedSz,usage,BufferHeap::Upload);
     return PBuffer(new Detail::VBuffer(std::move(stage)));
     }
   else {
-    Detail::VBuffer  buf  =dx->allocator.alloc(nullptr, count,size,alignedSz, usage|MemUsage::TransferDst,BufferHeap::Static);
+    Detail::VBuffer  buf =dx.allocator.alloc(nullptr, count,size,alignedSz, usage|MemUsage::TransferDst,BufferHeap::Static);
     if(mem==nullptr) {
       Detail::DSharedPtr<Detail::VBuffer*> pbuf(new Detail::VBuffer(std::move(buf)));
       return PBuffer(pbuf.handler);
       }
 
-    Detail::VBuffer  stage=dx->allocator.alloc(mem,count,size,alignedSz, MemUsage::TransferSrc, BufferHeap::Upload);
+    Detail::VBuffer  stage=dx.allocator.alloc(mem,count,size,alignedSz, MemUsage::TransferSrc, BufferHeap::Upload);
 
     Detail::DSharedPtr<Buffer*> pstage(new Detail::VBuffer(std::move(stage)));
     Detail::DSharedPtr<Buffer*> pbuf  (new Detail::VBuffer(std::move(buf)));
 
-    Detail::VDevice::Data dat(*dx);
-    dat.hold(pbuf);
-    dat.hold(pstage); // preserve stage buffer, until gpu side copy is finished
-    dat.copy(*pbuf.handler,*pstage.handler,count*alignedSz);
-    dat.commit();
+    auto cmd = dx.dataMgr().get();
+    cmd->begin();
+    cmd->hold(pbuf);
+    cmd->hold(pstage); // preserve stage buffer, until gpu side copy is finished
+    cmd->copy(*pbuf.handler,0, *pstage.handler,0, count*alignedSz);
+    cmd->end();
+    dx.dataMgr().submit(std::move(cmd));
 
     return PBuffer(pbuf.handler);
     }
@@ -185,11 +187,12 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   Detail::DSharedPtr<Buffer*>  pstage(new Detail::VBuffer (std::move(stage)));
   Detail::DSharedPtr<Texture*> pbuf  (new Detail::VTexture(std::move(buf)));
 
-  Detail::VDevice::Data dat(dx);
-  dat.hold(pstage);
-  dat.hold(pbuf);
+  auto cmd = dx.dataMgr().get();
+  cmd->begin();
+  cmd->hold(pstage);
+  cmd->hold(pbuf);
 
-  dat.changeLayout(*pbuf.handler, TextureLayout::Undefined, TextureLayout::TransferDest,mipCnt);
+  cmd->changeLayout(*pbuf.handler, TextureLayout::Undefined, TextureLayout::TransferDest, 0,mipCnt);
   if(isCompressedFormat(frm)){
     size_t blocksize  = (frm==TextureFormat::DXT1) ? 8 : 16;
     size_t bufferSize = 0;
@@ -197,21 +200,23 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
     uint32_t w = uint32_t(p.w()), h = uint32_t(p.h());
     for(uint32_t i=0; i<mipCnt; i++){
       size_t blockcount = ((w+3)/4)*((h+3)/4);
-      dat.copy(*pbuf.handler,w,h,i,*pstage.handler,bufferSize);
+      cmd->copy(*pbuf.handler,w,h,i,*pstage.handler,bufferSize);
 
       bufferSize += blockcount*blocksize;
       w = std::max<uint32_t>(1,w/2);
       h = std::max<uint32_t>(1,h/2);
       }
 
-    dat.changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler, mipCnt);
+    cmd->changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler, 0, mipCnt);
     } else {
-    dat.copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
+    cmd->copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
     if(mipCnt>1)
-      dat.generateMipmap(*pbuf.handler, p.w(), p.h(), mipCnt); else
-      dat.changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler,mipCnt);
+      cmd->generateMipmap(*pbuf.handler, p.w(), p.h(), mipCnt); else
+      cmd->changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler, 0, mipCnt);
     }
-  dat.commit();
+  cmd->end();
+  dx.dataMgr().submit(std::move(cmd));
+
   return PTexture(pbuf.handler);
   }
 
@@ -229,16 +234,16 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
 AbstractGraphicsApi::PTexture VulkanApi::createStorage(AbstractGraphicsApi::Device* d,
                                                        const uint32_t w, const uint32_t h, uint32_t mipCnt,
                                                        TextureFormat frm) {
-  Detail::VDevice* dx = reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VDevice& dx = *reinterpret_cast<Detail::VDevice*>(d);
 
-  Detail::VTexture buf=dx->allocator.alloc(w,h,mipCnt,frm,true);
+  Detail::VTexture buf=dx.allocator.alloc(w,h,mipCnt,frm,true);
   Detail::DSharedPtr<Texture*> pbuf(new Detail::VTexture(std::move(buf)));
 
-  Detail::VDevice::Data dat(*dx);
-  dat.hold(pbuf);
-  dat.changeLayout(reinterpret_cast<Detail::VTexture&>(*pbuf.handler),
-                   TextureLayout::Undefined,TextureLayout::Unordered,mipCnt);
-  dat.commit();
+  auto cmd = dx.dataMgr().get();
+  cmd->begin();
+  cmd->changeLayout(*pbuf.handler,TextureLayout::Undefined,TextureLayout::Unordered,0,mipCnt);
+  cmd->end();
+  dx.dataMgr().submit(std::move(cmd));
 
   return PTexture(pbuf.handler);
   }
@@ -277,13 +282,13 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
   const size_t    size  = w*h*bpp;
   Detail::VBuffer stage = dx.allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
 
-  Detail::VDevice::Data dat(dx);
-  dat.changeLayout(tx, lay, TextureLayout::TransferSrc, 1);
-  dat.copy(stage,w,h,mip,tx,0);
-  dat.changeLayout(tx, TextureLayout::TransferSrc, lay, 1);
-  dat.commit();
-
-  dx.waitData();
+  auto cmd = dx.dataMgr().get();
+  cmd->begin();
+  cmd->changeLayout(tx, lay, TextureLayout::TransferSrc, 0, 1);
+  cmd->copy(stage,w,h,mip,tx,0);
+  cmd->changeLayout(tx, TextureLayout::TransferSrc, lay, 0, 1);
+  cmd->end();
+  dx.dataMgr().submitAndWait(std::move(cmd));
 
   out = Pixmap(w,h,pfrm);
   stage.read(out.data(),0,size);
@@ -295,11 +300,12 @@ void VulkanApi::readBytes(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::B
 
   Detail::VBuffer   stage = dx.allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
 
-  Detail::VDevice::Data dat(dx);
-  dat.copy(stage,bx,size);
-  dat.commit();
+  auto cmd = dx.dataMgr().get();
+  cmd->begin();
+  cmd->copy(stage,0, bx,0, size);
+  cmd->end();
+  dx.dataMgr().submitAndWait(std::move(cmd));
 
-  dx.waitData();
   stage.read(out,0,size);
   }
 

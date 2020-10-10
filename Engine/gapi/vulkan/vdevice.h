@@ -180,7 +180,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     MemIndex                memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const;
 
     using DataMgr = UploadEngine<VDevice,VCommandBuffer,VFence>;
-    using Data    = DataMgr::Data;
+    DataMgr&                dataMgr() const { return *data; }
 
   private:
     VkPhysicalDeviceMemoryProperties memoryProperties;
@@ -197,8 +197,6 @@ class VDevice : public AbstractGraphicsApi::Device {
     SwapChainSupport        querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface);
 
     void                    createLogicalDevice(VkPhysicalDevice pdev);
-
-  friend class DataMgr::Data;
   };
 
 }}

@@ -226,11 +226,13 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
     Detail::DSharedPtr<Buffer*> pstage(new Detail::DxBuffer(std::move(stage)));
     Detail::DSharedPtr<Buffer*> pbuf  (new Detail::DxBuffer(std::move(buf)));
 
-    DxDevice::Data dat(dx);
-    dat.hold(pbuf);
-    dat.hold(pstage); // preserve stage buffer, until gpu side copy is finished
-    dat.copy(*pbuf.handler,*pstage.handler,count*alignedSz);
-    dat.commit();
+    auto cmd = dx.dataMgr().get();
+    cmd->begin();
+    cmd->hold(pbuf);
+    cmd->hold(pstage); // preserve stage buffer, until gpu side copy is finished
+    cmd->copy(*pbuf.handler,0, *pstage.handler,0, count*alignedSz);
+    cmd->end();
+    dx.dataMgr().submit(std::move(cmd));
 
     return PBuffer(pbuf.handler);
     }
@@ -277,16 +279,17 @@ AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixma
   Detail::DSharedPtr<Buffer*>  pstage(new Detail::DxBuffer (std::move(stage)));
   Detail::DSharedPtr<Texture*> pbuf  (new Detail::DxTexture(std::move(buf)));
 
-  Detail::DxDevice::Data dat(dx);
-  dat.hold(pstage);
-  dat.hold(pbuf);
+  auto cmd = dx.dataMgr().get();
+  cmd->begin();
+  cmd->hold(pbuf);
+  cmd->hold(pstage); // preserve stage buffer, until gpu side copy is finished
 
-  // dat.changeLayout(*pbuf.handler, frm, TextureLayout::Undefined, TextureLayout::TransferDest, mipCnt);
-  dat.copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
+  cmd->copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
   if(mipCnt>1)
-    dat.generateMipmap(*pbuf.handler, p.w(), p.h(), mipCnt); else
-    dat.changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler,mipCnt);
-  dat.commit();
+    cmd->generateMipmap(*pbuf.handler, p.w(), p.h(), mipCnt); else
+    cmd->changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler, 0,mipCnt);
+  cmd->end();
+  dx.dataMgr().submit(std::move(cmd));
   return PTexture(pbuf.handler);
   }
 
@@ -321,9 +324,10 @@ AbstractGraphicsApi::PTexture DirectX12Api::createCompressedTexture(Device* d, c
 
   reinterpret_cast<Detail::DxBuffer*>(pstage.handler)->uploadS3TC(reinterpret_cast<const uint8_t*>(p.data()),p.w(),p.h(),mipCnt,blockSize);
 
-  Detail::DxDevice::Data dat(dx);
-  dat.hold(pstage);
-  dat.hold(pbuf);
+  auto cmd = dx.dataMgr().get();
+  cmd->begin();
+  cmd->hold(pbuf);
+  cmd->hold(pstage); // preserve stage buffer, until gpu side copy is finished
 
   stageBufferSize = 0;
   w = p.w();
@@ -332,7 +336,7 @@ AbstractGraphicsApi::PTexture DirectX12Api::createCompressedTexture(Device* d, c
     UINT wBlk = (w+3)/4;
     UINT hBlk = (h+3)/4;
 
-    dat.copy(*pbuf.handler,w,h,i,*pstage.handler,stageBufferSize);
+    cmd->copy(*pbuf.handler,w,h,i,*pstage.handler,stageBufferSize);
 
     UINT pitch = wBlk*blockSize;
     pitch = alignTo(pitch,D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
@@ -344,8 +348,9 @@ AbstractGraphicsApi::PTexture DirectX12Api::createCompressedTexture(Device* d, c
     h = std::max<uint32_t>(4,h/2);
     }
 
-  dat.changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler, mipCnt);
-  dat.commit();
+  cmd->changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler, 0,mipCnt);
+  cmd->end();
+  dx.dataMgr().submit(std::move(cmd));
   return PTexture(pbuf.handler);
   }
 
@@ -401,13 +406,13 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureL
   Detail::DxBuffer stage = dx.allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
 
   //TODO: D3D12_TEXTURE_DATA_PITCH_ALIGNMENT
-  Detail::DxDevice::Data dat(dx);
-  dat.changeLayout(tx, lay, TextureLayout::TransferSrc, 1);
-  dat.copy(stage,w,h,mip,tx,0);
-  dat.changeLayout(tx, TextureLayout::TransferSrc, lay, 1);
-  dat.commit();
-
-  dx.waitData();
+  auto cmd = dx.dataMgr().get();
+  cmd->begin();
+  cmd->changeLayout(tx, lay, TextureLayout::TransferSrc, 0, 1);
+  cmd->copy(stage,w,h,mip,tx,0);
+  cmd->changeLayout(tx, TextureLayout::TransferSrc, lay, 0, 1);
+  cmd->end();
+  dx.dataMgr().submitAndWait(std::move(cmd));
 
   out = Pixmap(w,h,pfrm);
   stage.read(out.data(),0,size);
@@ -419,11 +424,12 @@ void DirectX12Api::readBytes(AbstractGraphicsApi::Device* d, AbstractGraphicsApi
 
   Detail::DxBuffer   stage = dx.allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
 
-  Detail::DxDevice::Data dat(dx);
-  dat.copy(stage,bx,size);
-  dat.commit();
+  auto cmd = dx.dataMgr().get();
+  cmd->begin();
+  cmd->copy(stage,0, bx,0, size);
+  cmd->end();
+  dx.dataMgr().submitAndWait(std::move(cmd));
 
-  dx.waitData();
   stage.read(out,0,size);
   }
 

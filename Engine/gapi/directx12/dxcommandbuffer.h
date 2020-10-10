@@ -29,7 +29,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void begin() override;
     void end()   override;
-    void reset();
+    void reset() override;
 
     bool isRecording() const override;
     void beginRenderPass(AbstractGraphicsApi::Fbo* f,

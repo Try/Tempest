@@ -318,7 +318,7 @@ void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
   int32_t w = int32_t(texWidth);
   int32_t h = int32_t(texHeight);
 
-  for(uint32_t i=1; i<mipLevels; --i) {
+  for(uint32_t i=1; i<mipLevels; ++i) {
     const int mw = (w==1 ? 1 : w/2);
     const int mh = (h==1 ? 1 : h/2);
 
