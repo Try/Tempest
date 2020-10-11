@@ -211,7 +211,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
     } else {
     cmd->copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
     if(mipCnt>1)
-      cmd->generateMipmap(*pbuf.handler, p.w(), p.h(), mipCnt); else
+      cmd->generateMipmap(*pbuf.handler, TextureLayout::TransferDest, p.w(), p.h(), mipCnt); else
       cmd->changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler, 0, mipCnt);
     }
   cmd->end();

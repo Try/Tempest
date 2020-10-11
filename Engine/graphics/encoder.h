@@ -33,6 +33,7 @@ class Encoder<Tempest::CommandBuffer> {
     virtual ~Encoder() noexcept(false);
 
     void setFramebuffer(const FrameBuffer& fbo, const RenderPass& p);
+    void setFramebuffer(std::nullptr_t null);
 
     void setUniforms(const RenderPipeline& p, const void* data, size_t sz);
     void setUniforms(const RenderPipeline& p, const Uniforms &ubo);

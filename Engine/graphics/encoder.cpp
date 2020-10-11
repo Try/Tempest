@@ -134,16 +134,26 @@ void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer &vbo, const Vid
   impl->drawIndexed(offset,size,0);
   }
 
+void Encoder<CommandBuffer>::setFramebuffer(std::nullptr_t) {
+  setFramebuffer(FrameBuffer(),RenderPass());
+  }
+
 void Encoder<CommandBuffer>::setFramebuffer(const FrameBuffer &fbo, const RenderPass &p) {
   implEndRenderPass();
+
+  if(fbo.impl.handler==nullptr && p.impl.handler==nullptr) {
+    state.curPipeline = nullptr;
+    return;
+    }
 
   state.vp.width  = fbo.w();
   state.vp.height = fbo.h();
 
   reinterpret_cast<AbstractGraphicsApi::CommandBuffer*>(impl)->beginRenderPass(fbo.impl.handler,p.impl.handler,
                                                                                state.vp.width,state.vp.height);
-  curPass.fbo  = &fbo;
-  curPass.pass = &p;
+  curPass.fbo      = &fbo;
+  curPass.pass     = &p;
+  state.curCompute = nullptr;
   }
 
 void Encoder<CommandBuffer>::implEndRenderPass() {
@@ -160,5 +170,5 @@ void Encoder<CommandBuffer>::dispatch(size_t x, size_t y, size_t z) {
 
 void Encoder<CommandBuffer>::generateMipmaps(Attachment& tex) {
   uint32_t w = tex.w(), h = tex.h();
-  impl->generateMipmap(*textureCast(tex).impl.handler,w,h,mipCount(w,h));
+  impl->generateMipmap(*textureCast(tex).impl.handler,TextureLayout::Sampler,w,h,mipCount(w,h));
   }

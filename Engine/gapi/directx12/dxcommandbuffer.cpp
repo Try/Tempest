@@ -268,14 +268,21 @@ void DxCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer& b, IndexClass cl
   }
 
 void DxCommandBuffer::draw(size_t offset, size_t vertexCount) {
+  if(currentFbo==nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   impl->DrawInstanced(UINT(vertexCount),1,UINT(offset),0);
   }
 
 void DxCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset) {
+  if(currentFbo==nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   impl->DrawIndexedInstanced(UINT(isize),1,UINT(ioffset),INT(voffset),0);
   }
 
 void DxCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
+  if(currentFbo!=nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
+  resState.flushLayout(*this);
   impl->Dispatch(UINT(x),UINT(y),UINT(z));
   }
 
@@ -349,7 +356,10 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t width, si
   impl->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, nullptr);
   }
 
-void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
+void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& image, TextureLayout defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) { 
+  if(currentFbo!=nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
+  resState.flushLayout(*this);
   // TODO
   Log::d("TODO: DxCommandBuffer::generateMipmap");
 

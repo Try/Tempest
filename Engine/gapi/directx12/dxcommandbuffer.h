@@ -49,7 +49,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void changeLayout(AbstractGraphicsApi::Attach&  img, TextureLayout prev, TextureLayout next, bool byRegion) override;
     void changeLayout(AbstractGraphicsApi::Texture& tex, TextureLayout prev, TextureLayout next, uint32_t mipBase, uint32_t mipCnt);
-    void generateMipmap(AbstractGraphicsApi::Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
+    void generateMipmap(AbstractGraphicsApi::Texture& image, TextureLayout defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
 
     void setVbo      (const AbstractGraphicsApi::Buffer& b) override;
     void setIbo      (const AbstractGraphicsApi::Buffer& b, Detail::IndexClass cls) override;

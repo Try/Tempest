@@ -133,14 +133,21 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraph
   }
 
 void VCommandBuffer::draw(size_t offset,size_t size) {
+  if(curFbo==nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   vkCmdDraw(impl,uint32_t(size), 1, uint32_t(offset),0);
   }
 
 void VCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset) {
+  if(curFbo==nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   vkCmdDrawIndexed(impl,uint32_t(isize),1, uint32_t(ioffset), int32_t(voffset),0);
   }
 
 void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
+  if(curFbo!=nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
+  resState.flushLayout(*this);
   vkCmdDispatch(impl,uint32_t(x),uint32_t(y),uint32_t(z));
   }
 
@@ -305,7 +312,12 @@ void VCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
   }
 
 void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
+                                    TextureLayout defLayout,
                                     uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
+  if(curFbo!=nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
+  resState.flushLayout(*this);
+
   auto& image = reinterpret_cast<VTexture&>(img);
 
   // Check if image format supports linear blitting
@@ -317,6 +329,10 @@ void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
 
   int32_t w = int32_t(texWidth);
   int32_t h = int32_t(texHeight);
+
+  if(defLayout!=TextureLayout::TransferDest) {
+    changeLayout(img,defLayout,TextureLayout::TransferDest,0,mipLevels);
+    }
 
   for(uint32_t i=1; i<mipLevels; ++i) {
     const int mw = (w==1 ? 1 : w/2);

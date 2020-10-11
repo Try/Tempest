@@ -27,7 +27,7 @@ VFramebuffer::VFramebuffer(VDevice& device, VFramebufferLayout& lay,
   for(uint32_t i=0; i<outCnt; ++i) {
     if(color[i]==nullptr)
       att[i] = swapchain[i]->views[imgId[i]]; else
-      att[i] = color[i]->view;
+      att[i] = color[i]->getFboView(device.device,0);
     }
   if(zbuf!=nullptr)
     att[outCnt] = zbuf->view;

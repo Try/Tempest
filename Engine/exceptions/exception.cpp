@@ -52,6 +52,12 @@ std::string GraphicsErrCategory::message(int ev) const {
       return "Invalid buffer update";
     case GraphicsErrc::TooLardgeUbo:
       return "Uniform buffer element is too large";
+    case GraphicsErrc::InvalidStorageBuffer:
+      return "Invalid storage buffer";
+    case GraphicsErrc::DrawCallWithoutFbo:
+      return "Frame buffer is not set, before drawcall";
+    case GraphicsErrc::ComputeCallInRenderPass:
+      return "Dispatch compute is not allowed in render pass";
     }
   return "(unrecognized error)";
   }

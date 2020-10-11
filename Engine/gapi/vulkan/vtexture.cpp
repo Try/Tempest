@@ -14,6 +14,7 @@ VTexture::VTexture(VTexture &&other) {
   std::swap(alloc,    other.alloc);
   std::swap(page,     other.page);
   std::swap(extViews, other.extViews);
+  std::swap(fboViews, other.fboViews);
   }
 
 VTexture::~VTexture() {
@@ -35,7 +36,7 @@ VkImageView VTexture::getView(VkDevice dev, const ComponentMapping& m) {
       return i.v;
     }
   View v;
-  createView(v.v,dev,format,&m);
+  createView(v.v,dev,format,&m,0,mipCount);
   v.m = m;
   try {
     extViews.push_back(v);
@@ -47,18 +48,41 @@ VkImageView VTexture::getView(VkDevice dev, const ComponentMapping& m) {
   return v.v;
   }
 
+VkImageView VTexture::getFboView(VkDevice dev, uint32_t mip) {
+  if(mipCount==1)
+    return view;
+  std::lock_guard<Detail::SpinLock> guard(syncViews);
+  for(auto& i:fboViews) {
+    if(i.mip==mip)
+      return i.v;
+    }
+  View v;
+  createView(v.v,dev,format,nullptr,0,1);
+  v.mip = mip;
+  try {
+    fboViews.push_back(v);
+    }
+  catch (...) {
+    vkDestroyImageView(dev,v.v,nullptr);
+    throw;
+    }
+  return v.v;
+  }
+
 void VTexture::createViews(VkDevice device) {
-  createView(view, device, format, nullptr);
+  createView(view, device, format, nullptr, 0 ,mipCount);
   }
 
 void VTexture::destroyViews(VkDevice device) {
   vkDestroyImageView(device,view,nullptr);
   for(auto& i:extViews)
     vkDestroyImageView(device,i.v,nullptr);
+  for(auto& i:fboViews)
+    vkDestroyImageView(device,i.v,nullptr);
   }
 
 void VTexture::createView(VkImageView& ret, VkDevice device, VkFormat format,
-                          const ComponentMapping* cmap) {
+                          const ComponentMapping* cmap, uint32_t mipBase, uint32_t mipCnt) {
   VkImageViewCreateInfo viewInfo = {};
   viewInfo.sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   viewInfo.image    = impl;
@@ -82,8 +106,8 @@ void VTexture::createView(VkImageView& ret, VkDevice device, VkFormat format,
   if(VK_FORMAT_D16_UNORM<=format && format<=VK_FORMAT_D32_SFLOAT_S8_UINT)
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; else
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  viewInfo.subresourceRange.baseMipLevel   = 0;
-  viewInfo.subresourceRange.levelCount     = mipCount;
+  viewInfo.subresourceRange.baseMipLevel   = mipBase;
+  viewInfo.subresourceRange.levelCount     = mipCnt;
   viewInfo.subresourceRange.baseArrayLayer = 0;
   viewInfo.subresourceRange.layerCount     = 1;
 
