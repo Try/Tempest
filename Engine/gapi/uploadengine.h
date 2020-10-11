@@ -60,22 +60,22 @@ class UploadEngine final {
       wait();
       }
 
-    using TransferCmd = TransferCmd<CommandBuffer,Fence>;
+    using Commands = TransferCmd<CommandBuffer,Fence>;
 
-    std::unique_ptr<TransferCmd> get();
-    void                         submit(std::unique_ptr<TransferCmd>&& cmd);
-    void                         submitAndWait(std::unique_ptr<TransferCmd>&& cmd);
-    void                         wait();
+    std::unique_ptr<Commands> get();
+    void                      submit(std::unique_ptr<Commands>&& cmd);
+    void                      submitAndWait(std::unique_ptr<Commands>&& cmd);
+    void                      wait();
 
   private:
     Device&                  device;
 
     SpinLock                 sync;
-    std::vector<std::unique_ptr<TransferCmd>> cmd;
+    std::vector<std::unique_ptr<Commands>> cmd;
   };
 
 template<class Device, class CommandBuffer, class Fence>
-auto UploadEngine<Device,CommandBuffer,Fence>::get() -> std::unique_ptr<TransferCmd> {
+auto UploadEngine<Device,CommandBuffer,Fence>::get() -> std::unique_ptr<Commands> {
   {
   std::lock_guard<SpinLock> guard(sync);
   for(size_t i=0; i<cmd.size(); ++i) {
@@ -87,7 +87,7 @@ auto UploadEngine<Device,CommandBuffer,Fence>::get() -> std::unique_ptr<Transfer
       }
     }
   }
-  return std::unique_ptr<TransferCmd>{new TransferCmd(device)};
+  return std::unique_ptr<Commands>{new Commands(device)};
   }
 
 template<class Device, class CommandBuffer, class Fence>
@@ -98,7 +98,7 @@ void UploadEngine<Device,CommandBuffer,Fence>::wait() {
   }
 
 template<class Device, class CommandBuffer, class Fence>
-void UploadEngine<Device,CommandBuffer,Fence>::submit(std::unique_ptr<TransferCmd>&& cmd) {
+void UploadEngine<Device,CommandBuffer,Fence>::submit(std::unique_ptr<Commands>&& cmd) {
   device.submit(*cmd,cmd->fence);
 
   std::lock_guard<SpinLock> guard(sync);
@@ -106,7 +106,7 @@ void UploadEngine<Device,CommandBuffer,Fence>::submit(std::unique_ptr<TransferCm
   }
 
 template<class Device, class CommandBuffer, class Fence>
-void UploadEngine<Device,CommandBuffer,Fence>::submitAndWait(std::unique_ptr<TransferCmd>&& cmd) {
+void UploadEngine<Device,CommandBuffer,Fence>::submitAndWait(std::unique_ptr<Commands>&& cmd) {
   device.submit(*cmd,cmd->fence);
   cmd->fence.wait();
   cmd->reset();
