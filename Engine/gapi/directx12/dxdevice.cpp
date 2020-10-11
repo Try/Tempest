@@ -7,6 +7,9 @@
 
 #include "dxbuffer.h"
 #include "dxtexture.h"
+#include "dxshader.h"
+#include "dxpipeline.h"
+#include "builtin_shader.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -50,11 +53,17 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter) {
                                reinterpret_cast<void**>(&idleFence)));
   idleEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 
-  data.reset(new DataMgr(*this));
+  DxShader blitSh(blit_comp_sprv,sizeof(blit_comp_sprv));
+  blitLayout = DSharedPtr<DxUniformsLay*>(new DxUniformsLay (*this,blitSh.lay));
+  blit       = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*blitLayout.handler,blitSh));
+
+  data   .reset(new DataMgr(*this));
   }
 
 DxDevice::~DxDevice() {
   data.reset();
+  blit       = DSharedPtr<DxCompPipeline*>();
+  blitLayout = DSharedPtr<DxUniformsLay*>();
   CloseHandle(idleEvent);
   }
 
@@ -150,4 +159,3 @@ void DxDevice::submit(DxCommandBuffer& cmdBuffer, DxFence& sync) {
   }
 
 #endif
-

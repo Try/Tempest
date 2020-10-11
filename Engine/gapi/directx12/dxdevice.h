@@ -105,6 +105,8 @@ inline UINT alignTo(UINT x, UINT a) {
   return (x+a) & (~a);
   }
 
+class DxCompPipeline;
+
 class DxDevice : public AbstractGraphicsApi::Device {
   public:
     DxDevice(IDXGIAdapter1& adapter);
@@ -122,18 +124,21 @@ class DxDevice : public AbstractGraphicsApi::Device {
 
     DataMgr&     dataMgr() { return *data; }
 
-    AbstractGraphicsApi::Props props;
-    ComPtr<ID3D12Device>       device;
-    SpinLock                   syncCmdQueue;
-    ComPtr<ID3D12CommandQueue> cmdQueue;
+    AbstractGraphicsApi::Props  props;
+    ComPtr<ID3D12Device>        device;
+    SpinLock                    syncCmdQueue;
+    ComPtr<ID3D12CommandQueue>  cmdQueue;
 
-    DxAllocator                allocator;
+    DxAllocator                 allocator;
+
+    DSharedPtr<DxUniformsLay*>  blitLayout;
+    DSharedPtr<DxCompPipeline*> blit;
 
   private:
-    ComPtr<ID3D12Fence>        idleFence;
-    HANDLE                     idleEvent=nullptr;
+    ComPtr<ID3D12Fence>         idleFence;
+    HANDLE                      idleEvent=nullptr;
 
-    std::unique_ptr<DataMgr>   data;
+    std::unique_ptr<DataMgr>    data;
   };
 
 }}

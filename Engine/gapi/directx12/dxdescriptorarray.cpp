@@ -109,7 +109,7 @@ void DxDescriptorArray::setUbo(size_t id, AbstractGraphicsApi::Buffer* b, size_t
   device.CreateConstantBufferView(&cbvDesc, gpu);
   }
 
-void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, Tempest::AbstractGraphicsApi::Texture* tex) {
+void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, Tempest::AbstractGraphicsApi::Texture* tex, uint32_t mipLevel) {
   auto&      device = *dev.device;
   DxTexture& t      = *reinterpret_cast<DxTexture*>(tex);
   auto&      prm    = layPtr.handler->prm[id];
@@ -118,8 +118,13 @@ void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, Tempest::AbstractGra
   desc.Format                    = t.format;
   desc.ViewDimension             = D3D12_SRV_DIMENSION_TEXTURE2D;
   desc.Shader4ComponentMapping   = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-  desc.Texture2D.MostDetailedMip = 0;
-  desc.Texture2D.MipLevels       = t.mips;
+  if(mipLevel==uint32_t(-1)) {
+    desc.Texture2D.MostDetailedMip = 0;
+    desc.Texture2D.MipLevels       = t.mips;
+    } else {
+    desc.Texture2D.MostDetailedMip = mipLevel;
+    desc.Texture2D.MipLevels       = 1;
+    }
 
   auto  gpu = val.cpu[prm.heapId];
   gpu.ptr += prm.heapOffset;

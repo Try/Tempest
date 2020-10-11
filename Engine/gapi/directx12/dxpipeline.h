@@ -60,6 +60,7 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
 
 class DxCompPipeline : public AbstractGraphicsApi::CompPipeline {
   public:
+    DxCompPipeline()=default;
     DxCompPipeline(DxDevice &device,
                    const DxUniformsLay& ulay,
                    DxShader& comp);

@@ -304,7 +304,7 @@ namespace Tempest {
       struct Desc:NoCopy   {
         virtual ~Desc()=default;
         virtual void set    (size_t id,AbstractGraphicsApi::Texture *tex, const Sampler2d& smp)=0;
-        virtual void setSsbo(size_t id,AbstractGraphicsApi::Texture *tex)=0;
+        virtual void setSsbo(size_t id,AbstractGraphicsApi::Texture *tex, uint32_t mipLevel)=0;
         virtual void setUbo (size_t id,AbstractGraphicsApi::Buffer* buf,size_t offset,size_t size,size_t align)=0;
         virtual void setSsbo(size_t id,AbstractGraphicsApi::Buffer* buf,size_t offset,size_t size,size_t align)=0;
         };

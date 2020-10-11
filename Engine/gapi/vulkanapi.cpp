@@ -192,7 +192,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   cmd->hold(pstage);
   cmd->hold(pbuf);
 
-  cmd->changeLayout(*pbuf.handler, TextureLayout::Undefined, TextureLayout::TransferDest, 0,mipCnt);
+  cmd->changeLayout(*pbuf.handler, TextureLayout::Undefined, TextureLayout::TransferDest, uint32_t(-1));
   if(isCompressedFormat(frm)){
     size_t blocksize  = (frm==TextureFormat::DXT1) ? 8 : 16;
     size_t bufferSize = 0;
@@ -207,12 +207,12 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
       h = std::max<uint32_t>(1,h/2);
       }
 
-    cmd->changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler, 0, mipCnt);
+    cmd->changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler, uint32_t(-1));
     } else {
     cmd->copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
     if(mipCnt>1)
       cmd->generateMipmap(*pbuf.handler, TextureLayout::TransferDest, p.w(), p.h(), mipCnt); else
-      cmd->changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler, 0, mipCnt);
+      cmd->changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler, uint32_t(-1));
     }
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
@@ -241,7 +241,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createStorage(AbstractGraphicsApi::Devi
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
-  cmd->changeLayout(*pbuf.handler,TextureLayout::Undefined,TextureLayout::Unordered,0,mipCnt);
+  cmd->changeLayout(*pbuf.handler,TextureLayout::Undefined,TextureLayout::Unordered,uint32_t(-1));
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
 
@@ -284,9 +284,9 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
-  cmd->changeLayout(tx, lay, TextureLayout::TransferSrc, 0, 1);
+  cmd->changeLayout(tx, lay, TextureLayout::TransferSrc, 1);
   cmd->copy(stage,w,h,mip,tx,0);
-  cmd->changeLayout(tx, TextureLayout::TransferSrc, lay, 0, 1);
+  cmd->changeLayout(tx, TextureLayout::TransferSrc, lay, 1);
   cmd->end();
   dx.dataMgr().submitAndWait(std::move(cmd));
 

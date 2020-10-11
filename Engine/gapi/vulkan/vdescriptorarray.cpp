@@ -110,12 +110,12 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Texture* t, 
   vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
   }
 
-void VDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi::Texture* t) {
+void VDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi::Texture* t, uint32_t mipLevel) {
   VTexture* tex=reinterpret_cast<VTexture*>(t);
 
   VkDescriptorImageInfo imageInfo = {};
   imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-  imageInfo.imageView   = tex->getView(device,ComponentMapping());
+  imageInfo.imageView   = tex->getView(device,ComponentMapping()); // TODO: mipLevel
 
   VkWriteDescriptorSet descriptorWrite = {};
   descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

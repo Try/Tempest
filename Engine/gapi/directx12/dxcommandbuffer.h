@@ -48,7 +48,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void setUniforms (AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc& u) override;
 
     void changeLayout(AbstractGraphicsApi::Attach&  img, TextureLayout prev, TextureLayout next, bool byRegion) override;
-    void changeLayout(AbstractGraphicsApi::Texture& tex, TextureLayout prev, TextureLayout next, uint32_t mipBase, uint32_t mipCnt);
+    void changeLayout(AbstractGraphicsApi::Texture& tex, TextureLayout prev, TextureLayout next, uint32_t mipId);
     void generateMipmap(AbstractGraphicsApi::Texture& image, TextureLayout defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
 
     void setVbo      (const AbstractGraphicsApi::Buffer& b) override;
@@ -78,6 +78,16 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     ResourceState                     resState;
 
+    struct Stage {
+      virtual ~Stage() = default;
+      Stage* next = nullptr;
+      };
+    Stage*                            stageResources = nullptr;
+
+    void clearStage();
+
+    void blit(AbstractGraphicsApi::Texture& src, uint32_t srcW, uint32_t srcH, uint32_t srcMip,
+              AbstractGraphicsApi::Texture& dst, uint32_t dstW, uint32_t dstH, uint32_t dstMip);
     void implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompute);
     void implChangeLayout(ID3D12Resource* res, D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES lay);
 

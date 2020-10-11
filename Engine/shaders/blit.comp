@@ -1,11 +1,23 @@
 #version 440
 
-layout (binding=0, rgba8) uniform writeonly image2D dst;
-layout (binding=1, rgba8) uniform readonly  image2D src;
+layout(binding=0, rgba8) uniform writeonly image2D dst;
+layout(binding=1, rgba8) uniform readonly  image2D src;
+/*
+layout(std140,push_constant) uniform UboPush {
+  ivec2 texSize;
+  } push;
+*/
 
 void main() {
   ivec2 index = ivec2(gl_GlobalInvocationID.xy);
 
-  vec4 color = imageLoad(src, index);
-  imageStore(dst, ivec2(index.x/2,index.y/2), color);
+  ivec2 i     = index*2;
+  vec4  color = vec4(0.0);
+
+  color+=imageLoad(src, i);
+  color+=imageLoad(src, i+ivec2(0,1));
+  color+=imageLoad(src, i+ivec2(1,0));
+  color+=imageLoad(src, i+ivec2(1,1));
+
+  imageStore(dst, index, color*0.25);
   }

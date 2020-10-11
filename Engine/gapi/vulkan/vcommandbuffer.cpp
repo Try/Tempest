@@ -303,12 +303,12 @@ void VCommandBuffer::changeLayout(AbstractGraphicsApi::Attach& att, TextureLayou
   }
 
 void VCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
-                                  TextureLayout prev, TextureLayout next, uint32_t mipBase, uint32_t mipCnt) {
+                                  TextureLayout prev, TextureLayout next, uint32_t mipId) {
   auto& vt = reinterpret_cast<VTexture&>(t);
   auto p = (prev==TextureLayout::Undefined ? TextureLayout::Sampler : prev);
   implChangeLayout(vt.impl,vt.format,
                    Detail::nativeFormat(p), Detail::nativeFormat(next),
-                   prev==TextureLayout::Undefined, mipBase, mipCnt, false);
+                   prev==TextureLayout::Undefined, mipId, (mipId==uint32_t(-1) ? vt.mipCount : 1), false);
   }
 
 void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
@@ -331,22 +331,22 @@ void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
   int32_t h = int32_t(texHeight);
 
   if(defLayout!=TextureLayout::TransferDest) {
-    changeLayout(img,defLayout,TextureLayout::TransferDest,0,mipLevels);
+    changeLayout(img,defLayout,TextureLayout::TransferDest,uint32_t(-1));
     }
 
   for(uint32_t i=1; i<mipLevels; ++i) {
     const int mw = (w==1 ? 1 : w/2);
     const int mh = (h==1 ? 1 : h/2);
 
-    changeLayout(img,TextureLayout::TransferDest,TextureLayout::TransferSrc,i-1,1);
+    changeLayout(img,TextureLayout::TransferDest,TextureLayout::TransferSrc,i-1);
     blit(img,  w, h, i-1,
          img, mw,mh, i);
-    changeLayout(img,TextureLayout::TransferSrc, TextureLayout::Sampler,    i-1,1);
+    changeLayout(img,TextureLayout::TransferSrc, TextureLayout::Sampler,    i-1);
 
     w = mw;
     h = mh;
     }
-  changeLayout(img,TextureLayout::TransferDest, TextureLayout::Sampler, mipLevels-1,1);
+  changeLayout(img,TextureLayout::TransferDest, TextureLayout::Sampler, mipLevels-1);
   }
 
 static VkPipelineStageFlags accessToStage(const VkAccessFlags a) {

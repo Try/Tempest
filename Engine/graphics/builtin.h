@@ -30,8 +30,6 @@ class Builtin final {
     const Item& texture2d() const;
     const Item& empty    () const;
 
-    const Tempest::ComputePipeline& blit() const { return blitPso; }
-
   private:
     mutable Item            brushT2;
     mutable Item            brushE;
@@ -39,8 +37,6 @@ class Builtin final {
     RenderState             stNormal, stBlend, stAlpha;
     Device&                 owner;
     Tempest::Shader         vsT2,fsT2,vsE,fsE;
-
-    Tempest::ComputePipeline blitPso;
 
   friend class Device;
   };

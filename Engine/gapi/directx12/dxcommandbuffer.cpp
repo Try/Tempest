@@ -31,6 +31,7 @@ DxCommandBuffer::DxCommandBuffer(DxDevice& d)
   }
 
 DxCommandBuffer::~DxCommandBuffer() {
+  clearStage();
   }
 
 void DxCommandBuffer::begin() {
@@ -53,6 +54,7 @@ void DxCommandBuffer::end() {
 void DxCommandBuffer::reset() {
   if(resetDone)
     return;
+  clearStage();
   dxAssert(pool->Reset());
   dxAssert(impl->Reset(pool.get(),nullptr));
   resetDone = true;
@@ -231,7 +233,7 @@ void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Attach& att, TextureLayo
   }
 
 void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
-                                   TextureLayout prev, TextureLayout next, uint32_t /*mipBase*/, uint32_t /*mipCnt*/) {
+                                   TextureLayout prev, TextureLayout next, uint32_t mipId) {
   DxTexture& tex = reinterpret_cast<DxTexture&>(t);
   D3D12_RESOURCE_BARRIER barrier = {};
   barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -239,7 +241,7 @@ void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
   barrier.Transition.pResource   = tex.impl.get();
   barrier.Transition.StateBefore = nativeFormat(prev);
   barrier.Transition.StateAfter  = nativeFormat(next);
-  barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+  barrier.Transition.Subresource = (mipId==uint32_t(-1) ?  D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES : mipId);
   impl->ResourceBarrier(1, &barrier);
   }
 
@@ -356,14 +358,73 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t width, si
   impl->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, nullptr);
   }
 
-void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& image, TextureLayout defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) { 
+void DxCommandBuffer::clearStage() {
+  while(stageResources!=nullptr) {
+    auto s = stageResources;
+    stageResources = stageResources->next;
+    delete s;
+    }
+  }
+
+void DxCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, uint32_t srcH, uint32_t srcMip,
+                           AbstractGraphicsApi::Texture& dstTex, uint32_t dstW, uint32_t dstH, uint32_t dstMip) {
+  (void)srcW;
+  (void)srcH;
+
+  auto& shader = *dev.blit.handler;
+
+  struct Blit : Stage {
+    Blit(DxDevice& dev,DxUniformsLay& lay):desc(dev,lay) {}
+    DxDescriptorArray desc;
+    };
+
+  std::unique_ptr<Blit> dx(new Blit(dev,*dev.blitLayout.handler));
+  dx->desc.setSsbo(0,&dstTex,dstMip);
+  dx->desc.setSsbo(1,&srcTex,srcMip);
+
+  impl->SetPipelineState(shader.impl.get());
+  impl->SetComputeRootSignature(shader.sign.get());
+  implSetUniforms(dx->desc,true);
+  dx->next       = stageResources;
+  stageResources = dx.release();
+
+  impl->Dispatch(dstW,dstH,1);
+  }
+
+void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img, TextureLayout defLayout,
+                                     uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
   if(currentFbo!=nullptr)
     throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
+  // resState.setLayout(image,defLayout,true);
   resState.flushLayout(*this);
-  // TODO
-  Log::d("TODO: DxCommandBuffer::generateMipmap");
 
-  changeLayout(image, TextureLayout::TransferDest, TextureLayout::Sampler, 0, mipLevels);
+  auto& image = reinterpret_cast<const DxTexture&>(img);
+  if(image.format==DXGI_FORMAT_R8G8B8A8_UNORM) {
+    // TODO: more formats
+    int32_t w = int32_t(texWidth);
+    int32_t h = int32_t(texHeight);
+
+    if(defLayout!=TextureLayout::TransferDest) {
+      changeLayout(img,defLayout,TextureLayout::TransferDest,uint32_t(-1));
+      }
+
+    for(uint32_t i=1; i<mipLevels; ++i) {
+      const int mw = (w==1 ? 1 : w/2);
+      const int mh = (h==1 ? 1 : h/2);
+
+      changeLayout(img,TextureLayout::TransferDest,TextureLayout::TransferSrc,i-1);
+      blit(img,  w, h, i-1,
+           img, mw,mh, i);
+      changeLayout(img,TextureLayout::TransferSrc, TextureLayout::Sampler,    i-1);
+
+      w = mw;
+      h = mh;
+      }
+    changeLayout(img,TextureLayout::TransferDest, TextureLayout::Sampler, mipLevels-1);
+    } else {
+    if(defLayout!=TextureLayout::Sampler)
+      changeLayout(img, defLayout, TextureLayout::Sampler, uint32_t(-1));
+    }
   }
 
 void DxCommandBuffer::implChangeLayout(ID3D12Resource* res, D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES lay) {

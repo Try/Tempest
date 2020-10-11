@@ -32,7 +32,7 @@ Game::Game(Device& device)
     {+0.5f, +0.5f, 0, 1,0},
     {+0.0f, -0.5f, 0, 0,1}
     };
-  vbo = device.vbo(source.begin(),source.size());
+  //vbo = device.vbo(source.begin(),source.size());
 
   for(uint8_t i=0;i<device.maxFramesInFlight();++i){
     fLocal.emplace_back(device);
