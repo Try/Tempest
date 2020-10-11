@@ -304,11 +304,14 @@ void VCommandBuffer::changeLayout(AbstractGraphicsApi::Attach& att, TextureLayou
 
 void VCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
                                   TextureLayout prev, TextureLayout next, uint32_t mipId) {
-  auto& vt = reinterpret_cast<VTexture&>(t);
-  auto p = (prev==TextureLayout::Undefined ? TextureLayout::Sampler : prev);
+  auto&    vt       = reinterpret_cast<VTexture&>(t);
+  auto     p        = (prev==TextureLayout::Undefined ? TextureLayout::Sampler : prev);
+  uint32_t mipBase  = (mipId==uint32_t(-1) ? 0           : mipId);
+  uint32_t mipCount = (mipId==uint32_t(-1) ? vt.mipCount : 1);
+
   implChangeLayout(vt.impl,vt.format,
                    Detail::nativeFormat(p), Detail::nativeFormat(next),
-                   prev==TextureLayout::Undefined, mipId, (mipId==uint32_t(-1) ? vt.mipCount : 1), false);
+                   prev==TextureLayout::Undefined, mipBase, mipCount, false);
   }
 
 void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
