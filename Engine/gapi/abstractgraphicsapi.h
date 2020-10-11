@@ -218,6 +218,11 @@ namespace Tempest {
             size_t maxColorAttachments = 1;
             } mrt;
 
+          struct {
+            BasicPoint<int,3> maxGroups    = {65535,65535,65535};
+            BasicPoint<int,3> maxGroupSize = {128,128,64};
+            } compute;
+
           bool     anisotropy=false;
           float    maxAnisotropy=1.0f;
 

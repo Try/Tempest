@@ -193,6 +193,14 @@ void VulkanApi::getDevicePropsShort(VkPhysicalDevice physicalDevice, Tempest::Ab
 
   c.mrt.maxColorAttachments = prop.limits.maxColorAttachments;
 
+  c.compute.maxGroups.x = prop.limits.maxComputeWorkGroupCount[0];
+  c.compute.maxGroups.y = prop.limits.maxComputeWorkGroupCount[1];
+  c.compute.maxGroups.z = prop.limits.maxComputeWorkGroupCount[2];
+
+  c.compute.maxGroupSize.x = prop.limits.maxComputeWorkGroupSize[0];
+  c.compute.maxGroupSize.y = prop.limits.maxComputeWorkGroupSize[1];
+  c.compute.maxGroupSize.z = prop.limits.maxComputeWorkGroupSize[2];
+
   switch(prop.deviceType) {
     case VK_PHYSICAL_DEVICE_TYPE_CPU:
       c.type = AbstractGraphicsApi::DeviceType::Cpu;
