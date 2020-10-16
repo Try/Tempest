@@ -164,4 +164,7 @@ void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi:
     }
   }
 
+void DxDescriptorArray::ssboBarriers(ResourceState& /*res*/) {
+  }
+
 #endif

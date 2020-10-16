@@ -18,6 +18,7 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
     void setUbo (size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset, size_t size, size_t align) override;
     void setSsbo(size_t id, AbstractGraphicsApi::Texture *tex, uint32_t mipLevel) override;
     void setSsbo(size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset, size_t size, size_t align) override;
+    void ssboBarriers(Detail::ResourceState& res) override;
 
     DSharedPtr<DxUniformsLay*>    layPtr;
     DxUniformsLay::PoolAllocation val;

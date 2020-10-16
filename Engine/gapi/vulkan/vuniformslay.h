@@ -31,6 +31,7 @@ class VUniformsLay : public AbstractGraphicsApi::UniformsLay {
     VkDescriptorSetLayout         impl=VK_NULL_HANDLE;
     std::vector<Binding>          lay;
     UniformsLayout::PushBlock     pb;
+    bool                          hasSSBO = false;
 
   private:
     enum {

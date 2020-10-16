@@ -174,6 +174,8 @@ namespace Tempest {
 
     template<>
     inline IndexClass indexCls<uint32_t>() { return IndexClass::i32; }
+
+    class ResourceState;
     }
 
   class AbstractGraphicsApi {
@@ -312,6 +314,7 @@ namespace Tempest {
         virtual void setSsbo(size_t id,AbstractGraphicsApi::Texture *tex, uint32_t mipLevel)=0;
         virtual void setUbo (size_t id,AbstractGraphicsApi::Buffer* buf,size_t offset,size_t size,size_t align)=0;
         virtual void setSsbo(size_t id,AbstractGraphicsApi::Buffer* buf,size_t offset,size_t size,size_t align)=0;
+        virtual void ssboBarriers(Detail::ResourceState& res) = 0;
         };
       struct CommandBuffer:NoCopy {
         virtual ~CommandBuffer()=default;
@@ -320,6 +323,7 @@ namespace Tempest {
                                      uint32_t width,uint32_t height)=0;
         virtual void endRenderPass()=0;
 
+        virtual void changeLayout  (Buffer& buf, BufferLayout prev, BufferLayout next)=0;
         virtual void changeLayout  (Attach& img, TextureLayout prev, TextureLayout next, bool byRegion)=0;
         virtual void generateMipmap(Texture& image, TextureLayout defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels)=0;
 

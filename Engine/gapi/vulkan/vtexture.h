@@ -27,7 +27,7 @@ class VTexture : public AbstractGraphicsApi::Texture {
     VkImageView view     = VK_NULL_HANDLE;
     VkFormat    format   = VK_FORMAT_UNDEFINED;
 
-    VkImageView getView(VkDevice dev, const ComponentMapping& m);
+    VkImageView getView(VkDevice dev, const ComponentMapping& m, uint32_t mipLevel);
     VkImageView getFboView(VkDevice dev, uint32_t mip);
 
     uint32_t    mipCount = 1;
@@ -39,7 +39,7 @@ class VTexture : public AbstractGraphicsApi::Texture {
     void createViews (VkDevice device);
     void destroyViews(VkDevice device);
     void createView  (VkImageView& ret, VkDevice device, VkFormat format,
-                      const ComponentMapping* cmap, uint32_t mipBase, uint32_t mipCnt);
+                      const ComponentMapping* cmap, uint32_t mipLevel);
 
     struct View {
       ComponentMapping m;
@@ -48,7 +48,6 @@ class VTexture : public AbstractGraphicsApi::Texture {
       };
     Detail::SpinLock  syncViews;
     std::vector<View> extViews;
-    std::vector<View> fboViews;
 
     friend class VAllocator;
   };

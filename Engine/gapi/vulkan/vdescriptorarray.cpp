@@ -12,6 +12,9 @@ using namespace Tempest::Detail;
 
 VDescriptorArray::VDescriptorArray(VkDevice device, VUniformsLay& vlay)
   :device(device),lay(&vlay) {
+  if(lay.handler->hasSSBO)
+    ssbo.reset(new SSBO[vlay.lay.size()]);
+
   std::lock_guard<Detail::SpinLock> guard(vlay.sync);
   for(auto& i:vlay.pool){
     if(i.freeCount==0)
@@ -94,7 +97,7 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Texture* t, 
 
   VkDescriptorImageInfo imageInfo = {};
   imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  imageInfo.imageView   = tex->getView(device,smp.mapping);
+  imageInfo.imageView   = tex->getView(device,smp.mapping,uint32_t(-1));
 
   tex->alloc->updateSampler(imageInfo.sampler,smp,tex->mipCount);
 
@@ -115,7 +118,7 @@ void VDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi::Texture* t, uint3
 
   VkDescriptorImageInfo imageInfo = {};
   imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-  imageInfo.imageView   = tex->getView(device,ComponentMapping()); // TODO: mipLevel
+  imageInfo.imageView   = tex->getView(device,ComponentMapping(),mipLevel);
 
   VkWriteDescriptorSet descriptorWrite = {};
   descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -125,6 +128,9 @@ void VDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi::Texture* t, uint3
   descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
   descriptorWrite.descriptorCount = 1;
   descriptorWrite.pImageInfo      = &imageInfo;
+
+  if(lay.handler->hasSSBO)
+    ssbo[id].tex = t;
 
   vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
   }
@@ -164,7 +170,32 @@ void VDescriptorArray::setSsbo(size_t id, Tempest::AbstractGraphicsApi::Buffer *
   descriptorWrite.descriptorCount = 1;
   descriptorWrite.pBufferInfo     = &bufferInfo;
 
+  if(lay.handler->hasSSBO)
+    ssbo[id].buf = buf;
+
   vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+  }
+
+void VDescriptorArray::ssboBarriers(ResourceState& res) {
+  if(!lay.handler->hasSSBO)
+    return;
+  for(size_t i=0; i<lay.handler->lay.size(); ++i) {
+    switch(lay.handler->lay[i].cls) {
+      case UniformsLayout::Ubo:
+      case UniformsLayout::Texture:
+      case UniformsLayout::Push:
+        break;
+      case UniformsLayout::SsboR:
+        res.setLayout(*ssbo[i].buf,BufferLayout::ComputeRead);
+        break;
+      case UniformsLayout::SsboRW:
+        res.setLayout(*ssbo[i].buf,BufferLayout::ComputeReadWrite);
+        break;
+      case UniformsLayout::ImgR:
+      case UniformsLayout::ImgRW:
+        break;
+      }
+    }
   }
 
 void VDescriptorArray::addPoolSize(VkDescriptorPoolSize *p, size_t &sz, VkDescriptorType elt) {

@@ -39,4 +39,14 @@ enum class TextureLayout : uint8_t {
   TransferDest,
   Unordered,
   };
+
+enum class BufferLayout : uint8_t {
+  Undefined,
+  Vertex,
+  Index,
+  Uniform,
+  ComputeRead,
+  ComputeWrite,
+  ComputeReadWrite,
+  };
 }

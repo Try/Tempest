@@ -124,29 +124,51 @@ void VCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, const void* data
   }
 
 void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u) {
+  if(curFbo==nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   VPipeline&        px=reinterpret_cast<VPipeline&>(p);
   VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
+  curUniforms = &ux;
+
   vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,
                           px.pipelineLayout,0,
                           1,&ux.desc,
                           0,nullptr);
   }
 
+void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
+  VCompPipeline& px = reinterpret_cast<VCompPipeline&>(p);
+  vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,px.impl);
+  }
+
+void VCommandBuffer::setBytes(AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) {
+  VCompPipeline& px=reinterpret_cast<VCompPipeline&>(p);
+  vkCmdPushConstants(impl, px.pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, uint32_t(size), data);
+  }
+
+void VCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc& u) {
+  if(curFbo!=nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
+  VCompPipeline&    px=reinterpret_cast<VCompPipeline&>(p);
+  VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
+  curUniforms = &ux;
+  // compute <-> compute barriers?
+  vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_COMPUTE,
+                          px.pipelineLayout,0,
+                          1,&ux.desc,
+                          0,nullptr);
+  }
+
 void VCommandBuffer::draw(size_t offset,size_t size) {
-  if(curFbo==nullptr)
-    throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   vkCmdDraw(impl,uint32_t(size), 1, uint32_t(offset),0);
   }
 
 void VCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset) {
-  if(curFbo==nullptr)
-    throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   vkCmdDrawIndexed(impl,uint32_t(isize),1, uint32_t(ioffset), int32_t(voffset),0);
   }
 
 void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
-  if(curFbo!=nullptr)
-    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
+  curUniforms->ssboBarriers(resState);
   resState.flushLayout(*this);
   vkCmdDispatch(impl,uint32_t(x),uint32_t(y),uint32_t(z));
   }
@@ -181,26 +203,6 @@ void VCommandBuffer::setViewport(const Tempest::Rect &r) {
   viewPort.maxDepth = 1;
 
   vkCmdSetViewport(impl,0,1,&viewPort);
-  }
-
-void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
-  VCompPipeline& px = reinterpret_cast<VCompPipeline&>(p);
-  vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,px.impl);
-  }
-
-void VCommandBuffer::setBytes(AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) {
-  VCompPipeline& px=reinterpret_cast<VCompPipeline&>(p);
-  vkCmdPushConstants(impl, px.pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, uint32_t(size), data);
-  }
-
-void VCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc& u) {
-  VCompPipeline&    px=reinterpret_cast<VCompPipeline&>(p);
-  VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
-  // compute <-> compute barriers?
-  vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_COMPUTE,
-                          px.pipelineLayout,0,
-                          1,&ux.desc,
-                          0,nullptr);
   }
 
 void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest, const AbstractGraphicsApi::Buffer &srcBuf, size_t offsetSrc, size_t size) {
@@ -282,6 +284,10 @@ void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, u
                  dst.impl, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                  1, &blit,
                  VK_FILTER_LINEAR);
+  }
+
+void VCommandBuffer::changeLayout(AbstractGraphicsApi::Buffer& buf, BufferLayout prev, BufferLayout next) {
+
   }
 
 void VCommandBuffer::changeLayout(AbstractGraphicsApi::Attach& att, TextureLayout prev, TextureLayout next, bool byRegion) {

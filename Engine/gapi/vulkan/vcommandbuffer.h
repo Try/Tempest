@@ -72,6 +72,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void drawIndexed(size_t ioffset, size_t isize, size_t voffset) override;
     void dispatch(size_t x, size_t y, size_t z) override;
 
+    void changeLayout(AbstractGraphicsApi::Buffer&  buf, BufferLayout  prev, BufferLayout  next) override;
     void changeLayout(AbstractGraphicsApi::Attach&  img, TextureLayout prev, TextureLayout next, bool byRegion) override;
     void changeLayout(AbstractGraphicsApi::Texture& tex, TextureLayout prev, TextureLayout next, uint32_t mipId);
 
@@ -93,10 +94,11 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     ResourceState                           resState;
 
-    RpState                                 state    = NoRecording;
-    VFramebuffer*                           curFbo   = nullptr;
-    VRenderPass*                            curRp    = nullptr;
-    VkViewport                              viewPort = {};
+    RpState                                 state       = NoRecording;
+    VFramebuffer*                           curFbo      = nullptr;
+    VRenderPass*                            curRp       = nullptr;
+    VDescriptorArray*                       curUniforms = nullptr;
+    VkViewport                              viewPort    = {};
   };
 
 }}

@@ -11,6 +11,8 @@ class ResourceState {
     ResourceState() = default;
 
     void setLayout  (AbstractGraphicsApi::Attach& a, TextureLayout lay, bool preserve);
+    void setLayout  (AbstractGraphicsApi::Buffer& b, BufferLayout  lay);
+
     void flushLayout(AbstractGraphicsApi::CommandBuffer& cmd);
     void finalize   (AbstractGraphicsApi::CommandBuffer& cmd);
 
@@ -18,14 +20,22 @@ class ResourceState {
     struct State {
       AbstractGraphicsApi::Attach* img = nullptr;
       TextureLayout                last;
-
       TextureLayout                next;
       bool                         outdated;
       };
 
-    State& findImg(AbstractGraphicsApi::Attach* img, bool preserve);
+    struct BufState {
+      AbstractGraphicsApi::Buffer* buf = nullptr;
+      BufferLayout                 last;
+      BufferLayout                 next;
+      bool                         outdated;
+      };
 
-    std::vector<State> imgState;
+    State&    findImg(AbstractGraphicsApi::Attach* img, bool preserve);
+    BufState& findBuf(AbstractGraphicsApi::Buffer* buf);
+
+    std::vector<State>    imgState;
+    std::vector<BufState> bufState;
   };
 
 }

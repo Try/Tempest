@@ -218,6 +218,10 @@ void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompu
     }
   }
 
+void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Buffer& buf, BufferLayout prev, BufferLayout next) {
+  // TODO
+  }
+
 void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Attach& att, TextureLayout prev, TextureLayout next, bool /*byRegion*/) {
   auto& img = reinterpret_cast<DxFramebuffer::Attach&>(att);
   if((prev==TextureLayout::ColorAttach || prev==TextureLayout::DepthAttach) && next==TextureLayout::Undefined)

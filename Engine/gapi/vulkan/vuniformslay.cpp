@@ -31,6 +31,13 @@ VUniformsLay::VUniformsLay(VkDevice dev, const std::vector<UniformsLayout::Bindi
     std::unique_ptr<VkDescriptorSetLayoutBinding[]> bind(new VkDescriptorSetLayoutBinding[lay.size()]);
     implCreate(bind.get());
     }
+  for(auto& i:lay)
+    if(i.cls==UniformsLayout::SsboR  ||
+       i.cls==UniformsLayout::SsboRW ||
+       i.cls==UniformsLayout::ImgR   ||
+       i.cls==UniformsLayout::ImgRW ) {
+      hasSSBO = true;
+      }
   }
 
 VUniformsLay::~VUniformsLay() {

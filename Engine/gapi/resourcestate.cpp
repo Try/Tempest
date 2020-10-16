@@ -4,9 +4,15 @@ using namespace Tempest;
 using namespace Tempest::Detail;
 
 void ResourceState::setLayout(AbstractGraphicsApi::Attach& a, TextureLayout lay, bool preserve) {
-  State* img = &findImg(&a,preserve);
-  img->next     = lay;
-  img->outdated = true;
+  State& img   = findImg(&a,preserve);
+  img.next     = lay;
+  img.outdated = true;
+  }
+
+void ResourceState::setLayout(AbstractGraphicsApi::Buffer& b, BufferLayout lay) {
+  BufState& buf = findBuf(&b);
+  buf.next      = lay;
+  buf.outdated  = true;
   }
 
 void ResourceState::flushLayout(AbstractGraphicsApi::CommandBuffer& cmd) {
@@ -14,6 +20,13 @@ void ResourceState::flushLayout(AbstractGraphicsApi::CommandBuffer& cmd) {
     if(!i.outdated)
       continue;
     cmd.changeLayout(*i.img,i.last,i.next,(i.next==i.last));
+    i.last     = i.next;
+    i.outdated = false;
+    }
+  for(auto& i:bufState) {
+    if(!i.outdated)
+      continue;
+    cmd.changeLayout(*i.buf,i.last,i.next);
     i.last     = i.next;
     i.outdated = false;
     }
@@ -40,4 +53,17 @@ ResourceState::State& ResourceState::findImg(AbstractGraphicsApi::Attach* img, b
   s.outdated = false;
   imgState.push_back(s);
   return imgState.back();
+  }
+
+ResourceState::BufState& ResourceState::findBuf(AbstractGraphicsApi::Buffer* buf) {
+  for(auto& i:bufState)
+    if(i.buf==buf)
+      return i;
+  BufState s={};
+  s.buf  = buf;
+  s.last = BufferLayout::ComputeRead;
+  s.next = BufferLayout::ComputeRead;
+  s.outdated = false;
+  bufState.push_back(s);
+  return bufState.back();
   }
