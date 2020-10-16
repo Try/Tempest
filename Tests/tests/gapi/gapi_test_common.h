@@ -184,8 +184,8 @@ void ssboDispath() {
     auto input  = device.ssbo<Tempest::Vec4>(inputCpu,3);
     auto output = device.ssbo<Tempest::Vec4>(nullptr, 3);
 
-    auto cs  = device.loadShader("shader/simple_test.comp.sprv");
-    auto pso = device.pipeline(cs);
+    auto cs     = device.loadShader("shader/simple_test.comp.sprv");
+    auto pso    = device.pipeline(cs);
 
     auto ubo = device.uniforms(pso.layout());
     ubo.set(0,input);

@@ -232,6 +232,7 @@ Menu::ItemButton::ItemButton(const Declarator &item):item(item){
 
 void Menu::ItemButton::mouseEnterEvent(MouseEvent &) {
   onMouseEnter(item,*this);
+  update();
   }
 
 void Menu::ItemButton::paintEvent(PaintEvent &e) {

@@ -86,14 +86,14 @@ void EventDispatcher::dispatchMouseMove(Widget &wnd, MouseEvent &e) {
   for(auto i:overlays) {
     if(!i->bind(wnd))
       continue;
-    auto wptr = implDispatch(*i,e);
+    auto wptr = implDispatch(*i,e1);
     if(wptr!=nullptr) {
-      implSetMouseOver(wptr,e);
+      implSetMouseOver(wptr,e1);
       return;
       }
     }
-  auto wptr = implDispatch(wnd,e);
-  implSetMouseOver(wptr,e);
+  auto wptr = implDispatch(wnd,e1);
+  implSetMouseOver(wptr,e1);
   }
 
 void EventDispatcher::dispatchMouseWheel(Widget &wnd, MouseEvent &e){
@@ -309,39 +309,41 @@ std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget &root, KeyEven
   }
 
 void EventDispatcher::implSetMouseOver(const std::shared_ptr<Widget::Ref> &wptr,MouseEvent& orig) {
-  auto widget = wptr==nullptr ? nullptr : wptr->widget;
-  if(auto old = mouseOver.lock()) {
-    implExcMouseOver(widget,old->widget);
+  auto    widget = wptr==nullptr ? nullptr : wptr->widget;
+  Widget* oldW   = nullptr;
+  if(auto old = mouseOver.lock())
+    oldW = old->widget;
 
-    auto p = orig.pos() - old->widget->mapToRoot(Point());
+  if(widget==oldW)
+    return;
+
+  implExcMouseOver(widget,oldW);
+
+  if(oldW!=nullptr) {
+    auto p = orig.pos() - oldW->mapToRoot(Point());
     MouseEvent e( p.x,
                   p.y,
                   Event::ButtonNone,
                   0,
                   0,
                   Event::MouseLeave );
-    old->widget->mouseLeaveEvent(e);
-    } else {
-    implExcMouseOver(widget,nullptr);
+    oldW->mouseLeaveEvent(e);
     }
 
   mouseOver = wptr;
-  if(wptr!=nullptr && wptr->widget!=nullptr) {
-    auto p = orig.pos() - wptr->widget->mapToRoot(Point());
+  if(widget!=nullptr) {
+    auto p = orig.pos() - widget->mapToRoot(Point());
     MouseEvent e( p.x,
                   p.y,
                   Event::ButtonNone,
                   0,
                   0,
                   Event::MouseLeave );
-    wptr->widget->mouseEnterEvent(e);
+    widget->mouseEnterEvent(e);
     }
   }
 
 void EventDispatcher::implExcMouseOver(Widget* w, Widget* old) {
-  if(w==old)
-    return;
-
   auto* wx = old;
   while(wx!=nullptr) {
     wx->wstate.moveOver = false;
