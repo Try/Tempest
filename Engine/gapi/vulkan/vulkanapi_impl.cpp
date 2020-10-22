@@ -97,7 +97,7 @@ VulkanApi::~VulkanApi(){
   vkDestroyInstance(instance,nullptr);
   }
 
-const std::initializer_list<const char*> VulkanApi::checkValidationLayerSupport() {
+const std::initializer_list<const char*>& VulkanApi::checkValidationLayerSupport() {
   uint32_t layerCount=0;
   vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
@@ -110,7 +110,8 @@ const std::initializer_list<const char*> VulkanApi::checkValidationLayerSupport(
   if(layerSupport(availableLayers,validationLayersLunarg))
     return validationLayersLunarg;
 
-  return {};
+  static const std::initializer_list<const char*> empty;
+  return empty;
   }
 
 bool VulkanApi::layerSupport(const std::vector<VkLayerProperties>& sup,

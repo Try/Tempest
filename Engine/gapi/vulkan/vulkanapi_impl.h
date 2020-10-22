@@ -33,7 +33,7 @@ class VulkanApi {
     static void      getDevicePropsShort(VkPhysicalDevice physicalDevice, AbstractGraphicsApi::Props& c);
 
   private:
-    const std::initializer_list<const char*> checkValidationLayerSupport();
+    const std::initializer_list<const char*>& checkValidationLayerSupport();
     bool layerSupport(const std::vector<VkLayerProperties>& sup,const std::initializer_list<const char*> dest);
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(
