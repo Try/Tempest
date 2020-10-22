@@ -156,11 +156,6 @@ VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip,VkFormat format) {
   imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
   imageInfo.usage         = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
-  if(mip>1) {
-    // TODO: test VK_FORMAT_FEATURE_BLIT_DST_BIT
-    // imageInfo.usage |= VK_FORMAT_FEATURE_BLIT_DST_BIT;
-    }
-
   vkAssert(vkCreateImage(device, &imageInfo, nullptr, &ret.impl));
 
   MemRequirements memRq={};

@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <thread>
+#include <chrono>
 
 using namespace Tempest;
 

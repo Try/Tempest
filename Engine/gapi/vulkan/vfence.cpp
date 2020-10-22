@@ -18,11 +18,14 @@ VFence::~VFence() {
     return;
   vkDestroyFence(device,impl,nullptr);
   }
+
 void VFence::wait() {
   vkAssert(vkWaitForFences(device,1,&impl,VK_TRUE,std::numeric_limits<uint64_t>::max()));
   }
 
 bool VFence::wait(uint64_t time) {
+  if(time<std::numeric_limits<uint64_t>::max())
+    time/=uint64_t(1000*1000); // nano to millis convertion
   VkResult res = vkWaitForFences(device,1,&impl,VK_TRUE,time);
   if(res==VK_TIMEOUT)
     return false;
