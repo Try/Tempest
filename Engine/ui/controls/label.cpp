@@ -7,7 +7,6 @@ using namespace Tempest;
 
 Label::Label() {
   textM.setFont(Application::font());
-  setMargins(4);
   setSizePolicy(Preferred,Fixed);
   setFocusPolicy(ClickFocus);
   invalidateSizeHint();
