@@ -162,12 +162,12 @@ VkSurfaceFormatKHR VSwapchain::getSwapSurfaceFormat(const std::vector<VkSurfaceF
 
 VkPresentModeKHR VSwapchain::getSwapPresentMode(const std::vector<VkPresentModeKHR> &availablePresentModes) {
   /** intel says mailbox is better option for games
-    * https://www.reddit.com/r/vulkan/comments/7xm0n4/screentearing_with_vk_present_mode_mailbox_khr/
+    * https://software.intel.com/content/www/us/en/develop/articles/api-without-secrets-introduction-to-vulkan-part-2.html
     **/
   std::initializer_list<VkPresentModeKHR> modes={
     VK_PRESENT_MODE_MAILBOX_KHR,      // vsync; wait until vsync
-    VK_PRESENT_MODE_FIFO_KHR,         // vsync; optimal
     VK_PRESENT_MODE_FIFO_RELAXED_KHR, // vsync; optimal, but tearing
+    VK_PRESENT_MODE_FIFO_KHR,         // vsync; optimal
     VK_PRESENT_MODE_IMMEDIATE_KHR,    // no vsync
     };
 
@@ -178,7 +178,7 @@ VkPresentModeKHR VSwapchain::getSwapPresentMode(const std::vector<VkPresentModeK
     }
 
   // no good modes
-  return availablePresentModes[0];
+  return VK_PRESENT_MODE_FIFO_KHR;
   }
 
 VkExtent2D VSwapchain::getSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities,
@@ -218,6 +218,7 @@ uint32_t VSwapchain::nextImage(AbstractGraphicsApi::Semaphore* onReady) {
                                         rx->impl,
                                         VK_NULL_HANDLE,
                                         &id);
+  rx->stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
   if(code==VK_ERROR_OUT_OF_DATE_KHR)
     throw DeviceLostException();
 

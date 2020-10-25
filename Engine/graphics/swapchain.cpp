@@ -8,7 +8,7 @@ using namespace Tempest;
 
 Swapchain::Swapchain(AbstractGraphicsApi::Swapchain* sw)
   : impl(sw) {
-  reset();
+  implReset();
   }
 
 void Swapchain::implReset() {

@@ -14,8 +14,8 @@ class VSemaphore : public AbstractGraphicsApi::Semaphore {
     VSemaphore(VSemaphore&& other);
     ~VSemaphore();
 
-    void operator=(VSemaphore&& other);
-    VkSemaphore impl=VK_NULL_HANDLE;
+    VkSemaphore          impl  = VK_NULL_HANDLE;
+    VkPipelineStageFlags stage = 0;
 
   private:
     VkDevice    device=nullptr;
