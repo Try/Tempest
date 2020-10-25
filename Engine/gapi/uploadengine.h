@@ -72,6 +72,7 @@ class UploadEngine final {
 
     SpinLock                 sync;
     std::vector<std::unique_ptr<Commands>> cmd;
+    bool                     hasWaits {false};
   };
 
 template<class Device, class CommandBuffer, class Fence>
@@ -93,8 +94,11 @@ auto UploadEngine<Device,CommandBuffer,Fence>::get() -> std::unique_ptr<Commands
 template<class Device, class CommandBuffer, class Fence>
 void UploadEngine<Device,CommandBuffer,Fence>::wait() {
   std::lock_guard<SpinLock> guard(sync);
+  if(!hasWaits)
+    return;
   for(auto& i:cmd)
     i->wait();
+  hasWaits = false;
   }
 
 template<class Device, class CommandBuffer, class Fence>
@@ -103,6 +107,7 @@ void UploadEngine<Device,CommandBuffer,Fence>::submit(std::unique_ptr<Commands>&
 
   std::lock_guard<SpinLock> guard(sync);
   this->cmd.push_back(std::move(cmd));
+  hasWaits = true;
   }
 
 template<class Device, class CommandBuffer, class Fence>

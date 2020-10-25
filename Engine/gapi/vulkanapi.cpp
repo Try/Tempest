@@ -24,14 +24,16 @@
 #include <Tempest/Pixmap>
 #include <Tempest/Log>
 #include <Tempest/UniformsLayout>
+#include <Tempest/Application>
 
 using namespace Tempest;
 
 struct VulkanApi::Impl : public Detail::VulkanApi {
   using VulkanApi::VulkanApi;
-  std::mutex                   syncBuf;
-  std::vector<VkCommandBuffer> cmdBuf;
-  std::vector<VkSemaphore>     semBuf;
+  std::mutex                        syncBuf;
+  std::vector<VkCommandBuffer>      cmdBuf;
+  std::vector<VkSemaphore>          semBuf;
+  std::vector<VkPipelineStageFlags> semFlgBuf;
   };
 
 VulkanApi::VulkanApi(ApiFlags f) {
@@ -357,11 +359,13 @@ void VulkanApi::present(Device *d,Swapchain *sw,uint32_t imageId,const Semaphore
 
   dx->waitData();
 
+  //auto t = Application::tickCount();
   VkResult code = dx->presentQueue->present(presentInfo);
   if(code==VK_ERROR_OUT_OF_DATE_KHR || code==VK_SUBOPTIMAL_KHR) {
     // TODO: handle better somehow?
     throw DeviceLostException();
     }
+  //Log::i("vkQueuePresentKHR = ",Application::tickCount()-t);
   Detail::vkAssert(code);
   }
 
@@ -373,14 +377,14 @@ void VulkanApi::submit(Device *d,
   Detail::VDevice*        dx=reinterpret_cast<Detail::VDevice*>(d);
   Detail::VCommandBuffer* cx=reinterpret_cast<Detail::VCommandBuffer*>(cmd);
   auto*                   wx=reinterpret_cast<const Detail::VSemaphore*>(wait);
-  auto*                   rx=reinterpret_cast<const Detail::VSemaphore*>(onReady);
+  auto*                   rx=reinterpret_cast<Detail::VSemaphore*>(onReady);
   auto*                   rc=reinterpret_cast<const Detail::VFence*>(onReadyCpu);
 
   VkSubmitInfo submitInfo = {};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
   VkSemaphore          waitSemaphores[] = {wx->impl};
-  VkPipelineStageFlags waitStages[]     = {VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT|VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT};
+  VkPipelineStageFlags waitStages[]     = {wx->stage};
 
   submitInfo.waitSemaphoreCount = 1;
   submitInfo.pWaitSemaphores    = waitSemaphores;
@@ -392,6 +396,7 @@ void VulkanApi::submit(Device *d,
   if(rx!=nullptr) {
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores    = &rx->impl;
+    rx->stage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT|VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
     }
 
   if(onReadyCpu!=nullptr)
@@ -409,8 +414,9 @@ void VulkanApi::submit(AbstractGraphicsApi::Device *d,
   Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
 
   std::lock_guard<std::mutex> guard(impl->syncBuf);
-  auto& cmdBuf   = impl->cmdBuf;
-  auto& semBuf   = impl->semBuf;
+  auto& cmdBuf    = impl->cmdBuf;
+  auto& semBuf    = impl->semBuf;
+  auto& semFlgBuf = impl->semFlgBuf;
 
   cmdBuf.resize(count);
   for(size_t i=0;i<count;++i) {
@@ -419,23 +425,24 @@ void VulkanApi::submit(AbstractGraphicsApi::Device *d,
     }
 
   semBuf.resize(waitCnt+doneCnt);
+  semFlgBuf.resize(waitCnt);
   for(size_t i=0;i<waitCnt;++i) {
     auto* sx=reinterpret_cast<Detail::VSemaphore*>(wait[i]);
-    semBuf[i] = sx->impl;
+    semBuf[i]    = sx->impl;
+    semFlgBuf[i] = sx->stage;
     }
   for(size_t i=0;i<doneCnt;++i) {
     auto* sx=reinterpret_cast<Detail::VSemaphore*>(done[i]);
     semBuf[i+waitCnt] = sx->impl;
+    sx->stage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT|VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
     }
 
   VkSubmitInfo submitInfo = {};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-  VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT|VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT};
-
   submitInfo.waitSemaphoreCount   = uint32_t(waitCnt);
   submitInfo.pWaitSemaphores      = semBuf.data();
-  submitInfo.pWaitDstStageMask    = waitStages;
+  submitInfo.pWaitDstStageMask    = semFlgBuf.data();
 
   submitInfo.signalSemaphoreCount = uint32_t(doneCnt);
   submitInfo.pSignalSemaphores    = semBuf.data()+waitCnt;
