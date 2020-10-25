@@ -51,7 +51,7 @@ VPipeline::Inst &VPipeline::instance(VFramebufferLayout &lay, uint32_t width, ui
   std::lock_guard<SpinLock> guard(sync);
 
   for(auto& i:inst)
-    if(i.w==width && i.h==height && i.lay.handler==&lay)
+    if(i.w==width && i.h==height && i.lay.handler->isCompatible(lay))
       return i;
   VkPipeline val=VK_NULL_HANDLE;
   try {
