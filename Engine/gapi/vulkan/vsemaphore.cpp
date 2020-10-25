@@ -8,7 +8,7 @@ VSemaphore::VSemaphore(VDevice &device)
   :device(device.device){
   VkSemaphoreCreateInfo semaphoreInfo = {};
   semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-  semaphoreInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+  semaphoreInfo.flags = 0;
 
   vkAssert(vkCreateSemaphore(device.device,&semaphoreInfo,nullptr,&impl));
   }
