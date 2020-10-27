@@ -11,6 +11,7 @@ AbstractTextInput::AbstractTextInput() {
 
   textM.setFont(Application::font());
   setFocusPolicy(StrongFocus);
+  adjustSelection();
 
   anim.timeout.bind(this,&AbstractTextInput::onRepaintCursor);
   // anim.start(Style::cursorFlashTime);
@@ -64,6 +65,7 @@ void AbstractTextInput::setText(const char *text) {
   adjustSelection();
   invalidateSizeHint();
   update();
+  onTextChanged(textM);
   }
 
 void AbstractTextInput::setText(const std::string& text) {
@@ -152,19 +154,26 @@ void AbstractTextInput::keyEventImpl(KeyEvent& e) {
 
   if(e.key==Event::K_Left) {
     selS = textM.advance(selS,-1);
+    selE = selS;
+    update();
     }
   else if(e.key==Event::K_Right) {
     selS = textM.advance(selE, 1);
+    selE = selS;
+    update();
     }
-
-  if(e.key==Event::K_Delete || e.key==Event::K_Back) {
+  else if(e.key==Event::K_Delete || e.key==Event::K_Back) {
     TextModel::Cursor end = selE;
     if(selS==selE)
       end = textM.advance(selS, e.key==Event::K_Delete ? 1 : -1);
     if(textM.isValid(end)) {
       stk.push(textM, new TextModel::CommandErase(selS,end));
       selS = end;
+      selE = selS;
+      onTextChanged(textM);
+      onTextEdited(textM);
       }
+    update();
     }
   else if(e.code!=0) {
     char t[3] = {};
@@ -182,9 +191,11 @@ void AbstractTextInput::keyEventImpl(KeyEvent& e) {
       stk.push(textM, new TextModel::CommandReplace(t,selS,selE));
       selS = textM.advance(selS,1);
       }
+    selE = selS;
+    onTextChanged(textM);
+    onTextEdited(textM);
+    update();
     }
-  selE = selS;
-  update();
   }
 
 void AbstractTextInput::paintEvent(PaintEvent &e) {
@@ -196,8 +207,10 @@ void AbstractTextInput::paintEvent(PaintEvent &e) {
   }
 
 void AbstractTextInput::focusEvent(FocusEvent& e) {
-  if(e.in)
+  if(e.in) {
+    adjustSelection();
     anim.start(Style::cursorFlashTime);
+    }
   }
 
 void AbstractTextInput::onRepaintCursor() {

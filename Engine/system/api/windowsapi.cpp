@@ -394,7 +394,8 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
         BYTE kboard[256]={};
         GetKeyboardState(kboard);
         WCHAR buf[2]={};
-        ToUnicode(uint32_t(vkCode),0,kboard,buf,2,0);
+        if(vkCode!=VK_ESCAPE)
+          ToUnicode(uint32_t(vkCode),0,kboard,buf,2,0);
 
         uint32_t scan = MapVirtualKeyW(uint32_t(wParam),MAPVK_VK_TO_VSC);
 

@@ -305,7 +305,7 @@ void ScrollWidget::mouseWheelEvent(Tempest::MouseEvent &e) {
   if(!isEnabled())
     return;
 
-  if( !rect().contains(e.x+x(), e.y+y()) || !sbV.isVisible() ) {
+  if(!rect().contains(e.x+x(), e.y+y()) || !sbV.isVisible()) {
     e.ignore();
     return;
     }

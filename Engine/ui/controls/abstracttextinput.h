@@ -20,6 +20,9 @@ class AbstractTextInput : public Tempest::Widget {
     void              setTextColor(const Color& c);
     const Color&      textColor() const;
 
+    Signal<void(const TextModel&)> onTextChanged;
+    Signal<void(const TextModel&)> onTextEdited;
+
   protected:
     AbstractTextInput();
 
