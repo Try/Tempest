@@ -37,7 +37,8 @@ VkImageView VTexture::getView(VkDevice dev, const ComponentMapping& m, uint32_t 
     }
   View v;
   createView(v.v,dev,format,&m,mipLevel);
-  v.m = m;
+  v.m   = m;
+  v.mip = mipLevel;
   try {
     extViews.push_back(v);
     }
