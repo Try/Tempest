@@ -68,8 +68,8 @@ struct Pixmap::Impl {
       }
 
     // noncompressed
-    const uint8_t compDst = componentsCount(frm);
-    const uint8_t compSrc = componentsCount(other.frm);
+    const uint8_t compDst = Pixmap::componentCount(frm);
+    const uint8_t compSrc = Pixmap::componentCount(other.frm);
 
     const uint8_t byteDst = bytesPerChannel(frm);
     const uint8_t byteSrc = bytesPerChannel(other.frm);
@@ -79,12 +79,21 @@ struct Pixmap::Impl {
         switch(byteSrc) {
           case 1: noncompresedConv<uint8_t,uint8_t> (w,h, data,other.data, compDst, compSrc); return;
           case 2: noncompresedConv<uint8_t,uint16_t>(w,h, data,other.data, compDst, compSrc); return;
+          case 4: noncompresedConv<uint8_t,float>   (w,h, data,other.data, compDst, compSrc); return;
           }
         }
       case 2:{
         switch(byteSrc) {
           case 1: noncompresedConv<uint16_t,uint8_t> (w,h, data,other.data, compDst, compSrc); return;
           case 2: noncompresedConv<uint16_t,uint16_t>(w,h, data,other.data, compDst, compSrc); return;
+          case 4: noncompresedConv<uint16_t,float>   (w,h, data,other.data, compDst, compSrc); return;
+          }
+        }
+      case 4:{
+        switch(byteSrc) {
+          case 1: noncompresedConv<float,uint8_t> (w,h, data,other.data, compDst, compSrc); return;
+          case 2: noncompresedConv<float,uint16_t>(w,h, data,other.data, compDst, compSrc); return;
+          case 4: noncompresedConv<float,float>   (w,h, data,other.data, compDst, compSrc); return;
           }
         }
       }
@@ -142,52 +151,40 @@ struct Pixmap::Impl {
   static void copy(uint8_t& r,uint8_t v){
     r = v;
     }
-  static void copy(uint16_t& r,uint16_t v){
-    r = v;
-    }
   static void copy(uint8_t& r,uint16_t v){
     r = v/256;
+    }
+  static void copy(uint8_t& r,float v){
+    r = uint8_t(std::fmax(0.f,std::fmin(v,1.f))*255.f);
+    }
+  static void copy(uint16_t& r,uint16_t v){
+    r = v;
     }
   static void copy(uint16_t& r,uint8_t v){
     r = v*256+255*(v%2);
     }
-
-  static uint8_t componentsCount(Pixmap::Format frm) {
-    switch(frm) {
-      case Pixmap::Format::R:      return 1;
-      case Pixmap::Format::RG:     return 2;
-      case Pixmap::Format::RGB:    return 3;
-      case Pixmap::Format::RGBA:   return 4;
-      //---
-      case Pixmap::Format::R16:    return 1;
-      case Pixmap::Format::RG16:   return 2;
-      case Pixmap::Format::RGB16:  return 3;
-      case Pixmap::Format::RGBA16: return 4;
-      //---
-      case Pixmap::Format::DXT1:   return 0;
-      case Pixmap::Format::DXT3:   return 0;
-      case Pixmap::Format::DXT5:   return 0;
-      }
-    return 0;
+  static void copy(uint16_t& r,float v){
+    r = uint16_t(std::fmax(0.f,std::fmin(v,1.f))*65535);
+    }
+  static void copy(float& r,uint8_t v){
+    r = v/255.f;
+    }
+  static void copy(float& r,uint16_t v){
+    r = v/65535.f;
+    }
+  static void copy(float& r,float v){
+    r = v;
     }
 
   static uint8_t bytesPerChannel(Pixmap::Format frm) {
     switch(frm) {
-      case Pixmap::Format::R:      return 1;
-      case Pixmap::Format::RG:     return 1;
-      case Pixmap::Format::RGB:    return 1;
-      case Pixmap::Format::RGBA:   return 1;
+      case Pixmap::Format::DXT1:    return 0;
+      case Pixmap::Format::DXT3:    return 0;
+      case Pixmap::Format::DXT5:    return 0;
       //---
-      case Pixmap::Format::R16:    return 2;
-      case Pixmap::Format::RG16:   return 2;
-      case Pixmap::Format::RGB16:  return 2;
-      case Pixmap::Format::RGBA16: return 2;
-      //---
-      case Pixmap::Format::DXT1:   return 0;
-      case Pixmap::Format::DXT3:   return 0;
-      case Pixmap::Format::DXT5:   return 0;
+      default:
+        return uint8_t(Pixmap::bppForFormat(frm)/Pixmap::componentCount(frm));
       }
-    return 0;
     }
 
   static bool isCompressed(Pixmap::Format frm) {
@@ -342,19 +339,104 @@ Pixmap::Format Pixmap::format() const {
 
 size_t Pixmap::bppForFormat(Pixmap::Format frm) {
   switch(frm) {
-    case Pixmap::Format::R:      return 1;
-    case Pixmap::Format::RG:     return 2;
-    case Pixmap::Format::RGB:    return 3;
-    case Pixmap::Format::RGBA:   return 4;
+    case Pixmap::Format::R:       return 1;
+    case Pixmap::Format::RG:      return 2;
+    case Pixmap::Format::RGB:     return 3;
+    case Pixmap::Format::RGBA:    return 4;
     //---
-    case Pixmap::Format::R16:    return 2;
-    case Pixmap::Format::RG16:   return 4;
-    case Pixmap::Format::RGB16:  return 6;
-    case Pixmap::Format::RGBA16: return 8;
+    case Pixmap::Format::R16:     return 2;
+    case Pixmap::Format::RG16:    return 4;
+    case Pixmap::Format::RGB16:   return 6;
+    case Pixmap::Format::RGBA16:  return 8;
     //---
-    case Pixmap::Format::DXT1:   return 0;
-    case Pixmap::Format::DXT3:   return 0;
-    case Pixmap::Format::DXT5:   return 0;
+    case Pixmap::Format::R32F:    return 4;
+    case Pixmap::Format::RG32F:   return 8;
+    case Pixmap::Format::RGB32F:  return 12;
+    case Pixmap::Format::RGBA32F: return 16;
+    //---
+    case Pixmap::Format::DXT1:    return 0;
+    case Pixmap::Format::DXT3:    return 0;
+    case Pixmap::Format::DXT5:    return 0;
     }
   return 0;
+  }
+
+uint8_t Pixmap::componentCount(Pixmap::Format frm) {
+  switch(frm) {
+    case Pixmap::Format::R:       return 1;
+    case Pixmap::Format::RG:      return 2;
+    case Pixmap::Format::RGB:     return 3;
+    case Pixmap::Format::RGBA:    return 4;
+    //---
+    case Pixmap::Format::R16:     return 1;
+    case Pixmap::Format::RG16:    return 2;
+    case Pixmap::Format::RGB16:   return 3;
+    case Pixmap::Format::RGBA16:  return 4;
+    //---
+    case Pixmap::Format::R32F:    return 1;
+    case Pixmap::Format::RG32F:   return 2;
+    case Pixmap::Format::RGB32F:  return 3;
+    case Pixmap::Format::RGBA32F: return 4;
+    //---
+    case Pixmap::Format::DXT1:    return 0;
+    case Pixmap::Format::DXT3:    return 0;
+    case Pixmap::Format::DXT5:    return 0;
+    }
+  return 0;
+  }
+
+TextureFormat Pixmap::toTextureFormat(Pixmap::Format f) {
+  switch(f) {
+    case Pixmap::Format::R:       return TextureFormat::R8;
+    case Pixmap::Format::RG:      return TextureFormat::RG8;
+    case Pixmap::Format::RGB:     return TextureFormat::RGB8;
+    case Pixmap::Format::RGBA:    return TextureFormat::RGBA8;
+
+    case Pixmap::Format::R16:     return TextureFormat::R16;
+    case Pixmap::Format::RG16:    return TextureFormat::RG16;
+    case Pixmap::Format::RGB16:   return TextureFormat::RGB16;
+    case Pixmap::Format::RGBA16:  return TextureFormat::RGBA16;
+
+    case Pixmap::Format::R32F:    return TextureFormat::R32F;
+    case Pixmap::Format::RG32F:   return TextureFormat::RG32F;
+    case Pixmap::Format::RGB32F:  return TextureFormat::RGB32F;
+    case Pixmap::Format::RGBA32F: return TextureFormat::RGBA32F;
+
+    case Pixmap::Format::DXT1:    return TextureFormat::DXT1;
+    case Pixmap::Format::DXT3:    return TextureFormat::DXT3;
+    case Pixmap::Format::DXT5:    return TextureFormat::DXT5;
+    }
+  return TextureFormat::RGBA8;
+  }
+
+Pixmap::Format Pixmap::toPixmapFormat(TextureFormat f) {
+  switch(f) {
+    //---
+    case TextureFormat::R8:        return Pixmap::Format::R;
+    case TextureFormat::RG8:       return Pixmap::Format::RG;
+    case TextureFormat::RGB8:      return Pixmap::Format::RGB;
+    case TextureFormat::RGBA8:     return Pixmap::Format::RGBA;
+    //---
+    case TextureFormat::R16:       return Pixmap::Format::R16;
+    case TextureFormat::RG16:      return Pixmap::Format::RG16;
+    case TextureFormat::RGB16:     return Pixmap::Format::RGB16;
+    case TextureFormat::RGBA16:    return Pixmap::Format::RGBA16;
+    //---
+    case TextureFormat::R32F:      return Pixmap::Format::R32F;
+    case TextureFormat::RG32F:     return Pixmap::Format::RG32F;
+    case TextureFormat::RGB32F:    return Pixmap::Format::RGB32F;
+    case TextureFormat::RGBA32F:   return Pixmap::Format::RGBA32F;
+    //---
+    case TextureFormat::DXT1:      return Pixmap::Format::DXT1;
+    case TextureFormat::DXT3:      return Pixmap::Format::DXT3;
+    case TextureFormat::DXT5:      return Pixmap::Format::DXT5;
+    //---
+    case TextureFormat::Depth16:   return Pixmap::Format::R16;
+    case TextureFormat::Depth24S8:
+    case TextureFormat::Depth24x8:
+    case TextureFormat::Undefined:
+    case TextureFormat::Last:
+      break; //fallthrough to exception
+    }
+  throw std::runtime_error("cannot convert depth format to pixmap format");
   }

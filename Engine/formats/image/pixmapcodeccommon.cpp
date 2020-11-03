@@ -40,6 +40,57 @@ static void stbi__start_file(stbi__context *s, IDevice *f) {
   stbi__start_callbacks(s,&stbi__stdio_callbacks,reinterpret_cast<void*>(f));
   }
 
+static uint8_t* loadUnorm(stbi__context& s, uint32_t &ow, uint32_t &oh, Pixmap::Format &frm) {
+  int w=0,h=0,compCnt=0;
+  stbi__result_info ri;
+
+  uint8_t *result = reinterpret_cast<uint8_t*>(stbi__load_main(&s, &w, &h, &compCnt, STBI_default, &ri, 8));
+  if(result==nullptr)
+    return nullptr;
+
+  if(ri.bits_per_channel==8) {
+    frm = Pixmap::Format(int(Pixmap::Format::R)+compCnt-1);
+    }
+  else if(ri.bits_per_channel==16) {
+    frm = Pixmap::Format(int(Pixmap::Format::R16)+compCnt-1);
+    }
+  else {
+    std::free(result);
+    return nullptr;
+    }
+
+  ow = uint32_t(w);
+  oh = uint32_t(h);
+  return result;
+  }
+
+static uint8_t* loadFloat(stbi__context& s, uint32_t &ow, uint32_t &oh, Pixmap::Format &frm) {
+  int w=0, h=0, compCnt=0;
+  float* result = stbi__loadf_main(&s, &w, &h, &compCnt, STBI_default);
+  if(result==nullptr)
+    return nullptr;
+  ow  = uint32_t(w);
+  oh  = uint32_t(h);
+  switch(compCnt) {
+    case 1:
+      frm = Pixmap::Format::R32F;
+      break;
+    case 2:
+      frm = Pixmap::Format::RG32F;
+      break;
+    case 3:
+      frm = Pixmap::Format::RGB32F;
+      break;
+    case 4:
+      frm = Pixmap::Format::RGBA32F;
+      break;
+    default:
+      std::free(result);
+      return nullptr;
+    }
+  return reinterpret_cast<uint8_t*>(result);
+  }
+
 PixmapCodecCommon::PixmapCodecCommon() {
   }
 
@@ -74,39 +125,69 @@ bool PixmapCodecCommon::testFormat(const Tempest::PixmapCodec::Context &ctx) con
   }
 
 uint8_t *PixmapCodecCommon::load(PixmapCodec::Context &ctx, uint32_t &ow, uint32_t &oh,
-                                 Pixmap::Format &frm, uint32_t &mipCnt, size_t &dataSz, uint32_t &obpp) const {
+                                 Pixmap::Format &frm, uint32_t &mipCnt, size_t &dataSz, uint32_t &bpp) const {
   auto& f = ctx.device;
   stbi__context s;
   stbi__start_file(&s,&f);
 
-  int w=0,h=0,bpp=0;
-  uint8_t *result = stbi__load_and_postprocess_8bit(&s,&w,&h,&bpp,STBI_default);
-  if( result ) {
-    // need to 'unget' all the characters in the IO buffer
-    size_t extra = size_t(s.img_buffer_end-s.img_buffer);
-    if(f.unget(extra)!=extra)
+  uint8_t* result = nullptr;
+  if(stbi__hdr_test(&s)) {
+    result = loadFloat(s,ow,oh,frm);
+    } else {
+    result = loadUnorm(s,ow,oh,frm);
+    }
+  if(result==nullptr)
+    return nullptr;
+  // need to 'unget' all the characters in the IO buffer
+  size_t extra = size_t(s.img_buffer_end-s.img_buffer);
+  if(f.unget(extra)!=extra)
+    throw std::system_error(Tempest::SystemErrc::UnableToLoadAsset);
+
+  bpp = 0;
+  switch(frm) {
+    case Pixmap::Format::R:
+      bpp = 1;
+      break;
+    case Pixmap::Format::RG:
+      bpp = 2;
+      break;
+    case Pixmap::Format::RGB:
+      bpp = 3;
+      break;
+    case Pixmap::Format::RGBA:
+      bpp = 4;
+      break;
+    case Pixmap::Format::R16:
+      bpp = 2;
+      break;
+    case Pixmap::Format::RG16:
+      bpp = 4;
+      break;
+    case Pixmap::Format::RGB16:
+      bpp = 6;
+      break;
+    case Pixmap::Format::RGBA16:
+      bpp = 8;
+      break;
+    case Pixmap::Format::R32F:
+      bpp = sizeof(float);
+      break;
+    case Pixmap::Format::RG32F:
+      bpp = 2*sizeof(float);
+      break;
+    case Pixmap::Format::RGB32F:
+      bpp = 3*sizeof(float);
+      break;
+    case Pixmap::Format::RGBA32F:
+      bpp = 4*sizeof(float);
+      break;
+    case Pixmap::Format::DXT1:
+    case Pixmap::Format::DXT3:
+    case Pixmap::Format::DXT5:
+      // not supported by common codec
       throw std::system_error(Tempest::SystemErrc::UnableToLoadAsset);
     }
-
-  if(bpp==1) {
-    frm    = Pixmap::Format::R;
-    dataSz = size_t(w*h*1);
-    } else
-  if(bpp==3) {
-    frm    = Pixmap::Format::RGB;
-    dataSz = size_t(w*h*3);
-    } else
-  if(bpp==4)  {
-    frm    = Pixmap::Format::RGBA;
-    dataSz = size_t(w*h*4);
-    } else {
-    std::free(result);
-    return nullptr;
-    }
-
-  ow     = uint32_t(w);
-  oh     = uint32_t(h);
-  obpp   = uint32_t(bpp);
+  dataSz = size_t(ow*oh*bpp);
   mipCnt = 1;
   return result;
   }

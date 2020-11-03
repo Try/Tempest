@@ -118,9 +118,9 @@ class Device {
 
     StorageImage         image2d    (TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips=false);
 
-    Pixmap               readPixels (const Texture2d&  t);
-    Pixmap               readPixels (const Attachment& t);
-    Pixmap               readPixels (const StorageImage& t);
+    Pixmap               readPixels (const Texture2d&    t, uint32_t mip=0);
+    Pixmap               readPixels (const Attachment&   t, uint32_t mip=0);
+    Pixmap               readPixels (const StorageImage& t, uint32_t mip=0);
     template<class T>
     void                 readBytes  (const StorageBuffer<T>& ssbo, void* out, size_t count);
 

@@ -97,14 +97,24 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, AbstractGraphicsApi::Props& pro
     }
 
   // https://docs.microsoft.com/en-us/windows/win32/direct3ddxgi/hardware-support-for-direct3d-12-0-formats
-  static const TextureFormat smp[] = {TextureFormat::R8,   TextureFormat::RG8,  TextureFormat::RGBA8,
-                                      TextureFormat::R16,  TextureFormat::RG16, TextureFormat::RGBA16,
-                                      TextureFormat::DXT1, TextureFormat::DXT3, TextureFormat::DXT5};
-  static const TextureFormat att[] = {TextureFormat::R8,   TextureFormat::RG8,  TextureFormat::RGBA8,
-                                      TextureFormat::R16,  TextureFormat::RG16, TextureFormat::RGBA16};
+  static const TextureFormat smp[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
+                                      TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
+                                      TextureFormat::R32F, TextureFormat::RG32F, TextureFormat::RGB32F, TextureFormat::RGBA32F,
+                                      TextureFormat::DXT1, TextureFormat::DXT3,  TextureFormat::DXT5
+                                     };
+
+  static const TextureFormat att[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
+                                      TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
+                                      TextureFormat::R32F, TextureFormat::RG32F, TextureFormat::RGB32F, TextureFormat::RGBA32F
+                                     };
+
+  static const TextureFormat sso[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
+                                      TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
+                                      TextureFormat::R32F, TextureFormat::RGBA32F
+                                     };
+
   static const TextureFormat ds[]  = {TextureFormat::Depth16, TextureFormat::Depth24x8, TextureFormat::Depth24S8};
-  static const TextureFormat sso[] = {TextureFormat::R8,   TextureFormat::RG8,  TextureFormat::RGBA8,
-                                      TextureFormat::R16,  TextureFormat::RG16, TextureFormat::RGBA16};
+
   uint64_t smpBit = 0, attBit = 0, dsBit = 0, storBit = 0;
   for(auto& i:smp)
     smpBit |= uint64_t(1) << uint64_t(i);

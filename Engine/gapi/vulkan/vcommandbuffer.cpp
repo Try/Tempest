@@ -265,6 +265,15 @@ void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, u
   auto& src = reinterpret_cast<VTexture&>(srcTex);
   auto& dst = reinterpret_cast<VTexture&>(dstTex);
 
+  // Check if image format supports linear blitting
+  VkFormatProperties formatProperties;
+  vkGetPhysicalDeviceFormatProperties(device.physicalDevice, src.format, &formatProperties);
+
+  VkFilter filter = VK_FILTER_LINEAR;
+  if(0==(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
+    filter = VK_FILTER_NEAREST;
+    }
+
   VkImageBlit blit = {};
   blit.srcOffsets[0] = {0, 0, 0};
   blit.srcOffsets[1] = {int32_t(srcW), int32_t(srcH), 1};
@@ -283,11 +292,11 @@ void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, u
                  src.impl, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                  dst.impl, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                  1, &blit,
-                 VK_FILTER_LINEAR);
+                 filter);
   }
 
 void VCommandBuffer::changeLayout(AbstractGraphicsApi::Buffer& buf, BufferLayout prev, BufferLayout next) {
-
+  // TODO
   }
 
 void VCommandBuffer::changeLayout(AbstractGraphicsApi::Attach& att, TextureLayout prev, TextureLayout next, bool byRegion) {

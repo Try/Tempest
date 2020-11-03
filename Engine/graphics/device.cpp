@@ -22,25 +22,6 @@ static uint32_t mipCount(uint32_t w, uint32_t h) {
   return n;
   }
 
-static TextureFormat toTextureFormat(Pixmap::Format f) {
-  switch(f) {
-    case Pixmap::Format::R:      return TextureFormat::R8;
-    case Pixmap::Format::RG:     return TextureFormat::RG8;
-    case Pixmap::Format::RGB:    return TextureFormat::RGB8;
-    case Pixmap::Format::RGBA:   return TextureFormat::RGBA8;
-
-    case Pixmap::Format::R16:    return TextureFormat::R16;
-    case Pixmap::Format::RG16:   return TextureFormat::RG16;
-    case Pixmap::Format::RGB16:  return TextureFormat::RGB16;
-    case Pixmap::Format::RGBA16: return TextureFormat::RGBA16;
-
-    case Pixmap::Format::DXT1: return TextureFormat::DXT1;
-    case Pixmap::Format::DXT3: return TextureFormat::DXT3;
-    case Pixmap::Format::DXT5: return TextureFormat::DXT5;
-    }
-  return TextureFormat::RGBA8;
-  }
-
 Device::Impl::Impl(AbstractGraphicsApi &api, const char* name, uint8_t maxFramesInFlight)
   :api(api),maxFramesInFlight(maxFramesInFlight) {
   dev=api.createDevice(name);
@@ -185,10 +166,10 @@ ZBuffer Device::zbuffer(TextureFormat frm, const uint32_t w, const uint32_t h) {
   }
 
 Texture2d Device::loadTexture(const Pixmap &pm, bool mips) {
-  TextureFormat format = toTextureFormat(pm.format());
+  TextureFormat format = Pixmap::toTextureFormat(pm.format());
   uint32_t      mipCnt = mips ? mipCount(pm.w(),pm.h()) : 1;
   const Pixmap* p=&pm;
-  Pixmap alt;
+  Pixmap        alt;
 
   if(isCompressedFormat(format)){
     if(devProps.hasSamplerFormat(format) && (!mips || pm.mipCount()>1)){
@@ -200,10 +181,25 @@ Texture2d Device::loadTexture(const Pixmap &pm, bool mips) {
       }
     }
 
-  if(format==TextureFormat::RGB8 && !devProps.hasSamplerFormat(format)){
-    alt    = Pixmap(pm,Pixmap::Format::RGBA);
-    p      = &alt;
-    format = TextureFormat::RGBA8;
+  if(!devProps.hasSamplerFormat(format)) {
+    if(format==TextureFormat::RGB8){
+      alt    = Pixmap(pm,Pixmap::Format::RGBA);
+      p      = &alt;
+      format = TextureFormat::RGBA8;
+      }
+    else if(format==TextureFormat::RGB16){
+      alt    = Pixmap(pm,Pixmap::Format::RGBA16);
+      p      = &alt;
+      format = TextureFormat::RGBA16;
+      }
+    else if(format==TextureFormat::RGB32F){
+      alt    = Pixmap(pm,Pixmap::Format::RGBA32F);
+      p      = &alt;
+      format = TextureFormat::RGBA32F;
+      }
+    else {
+      throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
+      }
     }
 
   Texture2d t(*this,api.createTexture(dev,*p,format,mipCnt),p->w(),p->h(),format);
@@ -218,22 +214,22 @@ StorageImage Device::image2d(TextureFormat frm, const uint32_t w, const uint32_t
   return t;
   }
 
-Pixmap Device::readPixels(const Texture2d &t) {
+Pixmap Device::readPixels(const Texture2d &t, uint32_t mip) {
   Pixmap pm;
-  api.readPixels(dev,pm,t.impl,TextureLayout::Sampler,t.format(),uint32_t(t.w()),uint32_t(t.h()),0);
+  api.readPixels(dev,pm,t.impl,TextureLayout::Sampler,t.format(),uint32_t(t.w()),uint32_t(t.h()),mip);
   return pm;
   }
 
-Pixmap Device::readPixels(const Attachment& t) {
+Pixmap Device::readPixels(const Attachment& t, uint32_t mip) {
   Pixmap pm;
   auto& tx = textureCast(t);
-  api.readPixels(dev,pm,tx.impl,TextureLayout::Sampler,tx.format(),uint32_t(t.w()),uint32_t(t.h()),0);
+  api.readPixels(dev,pm,tx.impl,TextureLayout::Sampler,tx.format(),uint32_t(t.w()),uint32_t(t.h()),mip);
   return pm;
   }
 
-Pixmap Device::readPixels(const StorageImage& t) {
+Pixmap Device::readPixels(const StorageImage& t, uint32_t mip) {
   Pixmap pm;
-  api.readPixels(dev,pm,t.impl,TextureLayout::Unordered,t.format(),uint32_t(t.w()),uint32_t(t.h()),0);
+  api.readPixels(dev,pm,t.impl,TextureLayout::Unordered,t.format(),uint32_t(t.w()),uint32_t(t.h()),mip);
   return pm;
   }
 

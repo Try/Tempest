@@ -377,30 +377,10 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureL
   Detail::DxDevice&  dx = *reinterpret_cast<Detail::DxDevice*>(d);
   Detail::DxTexture& tx = *reinterpret_cast<Detail::DxTexture*>(t.handler);
 
-  size_t         bpp  = 0;
-  Pixmap::Format pfrm = Pixmap::Format::RGBA;
-  switch(frm) {
-    case TextureFormat::Undefined: bpp=0; break;
-    case TextureFormat::Last:      bpp=0; break;
-    //---
-    case TextureFormat::R8:        bpp=1; pfrm = Pixmap::Format::R;      break;
-    case TextureFormat::RG8:       bpp=2; pfrm = Pixmap::Format::RG;     break;
-    case TextureFormat::RGB8:      bpp=3; pfrm = Pixmap::Format::RGB;    break;
-    case TextureFormat::RGBA8:     bpp=4; pfrm = Pixmap::Format::RGBA;   break;
-    //---
-    case TextureFormat::R16:       bpp=2; pfrm = Pixmap::Format::R16;    break;
-    case TextureFormat::RG16:      bpp=4; pfrm = Pixmap::Format::RG16;   break;
-    case TextureFormat::RGB16:     bpp=6; pfrm = Pixmap::Format::RGB16;  break;
-    case TextureFormat::RGBA16:    bpp=8; pfrm = Pixmap::Format::RGBA16; break;
-    //---
-    case TextureFormat::Depth16:   bpp=2; pfrm = Pixmap::Format::R16; break;
-    case TextureFormat::Depth24S8: bpp=4; break;
-    case TextureFormat::Depth24x8: bpp=4; break;
-    // TODO: dxt
-    case TextureFormat::DXT1:      bpp=0; break;
-    case TextureFormat::DXT3:      bpp=0; break;
-    case TextureFormat::DXT5:      bpp=0; break;
-    }
+  Pixmap::Format  pfrm  = Pixmap::toPixmapFormat(frm);
+  size_t          bpp   = Pixmap::bppForFormat(pfrm);
+  if(bpp==0)
+    throw std::runtime_error("not implemented");
 
   const size_t     size  = w*h*bpp;
   Detail::DxBuffer stage = dx.allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
