@@ -15,7 +15,17 @@
 #include "thirdparty/stb_image.h"
 #include "thirdparty/stb_image_write.h"
 
+namespace Tempest {
+namespace Detail {
+struct StbContext final {
+  IDevice& device;
+  bool     err = false;
+  };
+}
+};
+
 using namespace Tempest;
+using namespace Tempest::Detail;
 
 static int stbiEof(void* /*user*/) {
   //return reinterpret_cast<IDevice*>(user)->peek();
@@ -23,14 +33,18 @@ static int stbiEof(void* /*user*/) {
   }
 
 static int stbiRead(void* user, char* data, int size) {
-  return int(reinterpret_cast<IDevice*>(user)->read(data,size_t(size)));
+  auto& ctx = *reinterpret_cast<StbContext*>(user);
+  return ctx.err ? 0 : int(ctx.device.read(data,size_t(size)));
   }
 
 static void stbiSkip(void* user, int n) {
-  reinterpret_cast<IDevice*>(user)->seek(size_t(n));
+  auto& ctx = *reinterpret_cast<StbContext*>(user);
+  if(ctx.err)
+    return;
+  ctx.err |= (size_t(n)!=ctx.device.seek(size_t(n)));
   }
 
-static void stbi__start_file(stbi__context *s, IDevice *f) {
+static void stbi__start_file(stbi__context *s, StbContext *f) {
   static stbi_io_callbacks stbi__stdio_callbacks = {
     stbiRead,
     stbiSkip,
@@ -99,9 +113,10 @@ bool PixmapCodecCommon::testFormat(const Tempest::PixmapCodec::Context &ctx) con
   size_t bufSiz = std::min(sizeof(buf),ctx.bufferSize());
   ctx.peek(buf,bufSiz);
   Tempest::MemReader dev(buf,bufSiz);
+  StbContext f = {dev,false};
 
   stbi__context s;
-  stbi__start_file(&s,&dev);
+  stbi__start_file(&s,&f);
   if(stbi__png_test(&s))
     return true;
   if(stbi__jpeg_test(&s))
@@ -126,7 +141,7 @@ bool PixmapCodecCommon::testFormat(const Tempest::PixmapCodec::Context &ctx) con
 
 uint8_t *PixmapCodecCommon::load(PixmapCodec::Context &ctx, uint32_t &ow, uint32_t &oh,
                                  Pixmap::Format &frm, uint32_t &mipCnt, size_t &dataSz, uint32_t &bpp) const {
-  auto& f = ctx.device;
+  StbContext f = {ctx.device,false};
   stbi__context s;
   stbi__start_file(&s,&f);
 
@@ -140,7 +155,7 @@ uint8_t *PixmapCodecCommon::load(PixmapCodec::Context &ctx, uint32_t &ow, uint32
     return nullptr;
   // need to 'unget' all the characters in the IO buffer
   size_t extra = size_t(s.img_buffer_end-s.img_buffer);
-  if(f.unget(extra)!=extra)
+  if(f.err || f.device.unget(extra)!=extra)
     throw std::system_error(Tempest::SystemErrc::UnableToLoadAsset);
 
   bpp = 0;
