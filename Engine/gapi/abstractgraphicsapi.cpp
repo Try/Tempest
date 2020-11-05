@@ -17,8 +17,22 @@ static Sampler2d mkNearest() {
   return s;
   }
 
+static Sampler2d mkBilinear() {
+  Sampler2d s;
+  s.minFilter   = Filter::Linear;
+  s.magFilter   = Filter::Linear;
+  s.mipFilter   = Filter::Nearest;
+  s.anisotropic = false;
+  return s;
+  }
+
 const Sampler2d& Sampler2d::anisotrophy() {
   static Sampler2d s = Sampler2d();
+  return s;
+  }
+
+const Sampler2d& Sampler2d::bilinear() {
+  static Sampler2d s = mkBilinear();
   return s;
   }
 

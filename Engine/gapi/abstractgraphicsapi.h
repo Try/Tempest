@@ -137,6 +137,7 @@ namespace Tempest {
     ComponentMapping mapping;
 
     static const Sampler2d& anisotrophy();
+    static const Sampler2d& bilinear();
     static const Sampler2d& trillinear();
     static const Sampler2d& nearest();
 
