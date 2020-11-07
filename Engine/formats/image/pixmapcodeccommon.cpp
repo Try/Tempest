@@ -18,6 +18,7 @@
 namespace Tempest {
 namespace Detail {
 struct StbContext final {
+  StbContext(IDevice& device, bool err):device(device),err(err){}
   IDevice& device;
   bool     err = false;
   };
