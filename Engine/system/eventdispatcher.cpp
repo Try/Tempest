@@ -121,7 +121,7 @@ void EventDispatcher::dispatchKeyDown(Widget &wnd, KeyEvent &e, uint32_t scancod
   for(auto i:overlays) {
     if(!i->bind(wnd))
       continue;
-    if(implShortcut(wnd,e1))
+    if(implShortcut(*i,e1))
       return;
     k = implDispatch(*i,e1);
     if(!k.expired())

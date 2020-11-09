@@ -50,5 +50,5 @@ void LineEdit::keyRepeatEvent(KeyEvent& e) {
     onEnter();
     return;
     }
-  AbstractTextInput::keyDownEvent(e);
+  AbstractTextInput::keyRepeatEvent(e);
   }
