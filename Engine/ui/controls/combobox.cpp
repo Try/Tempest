@@ -186,8 +186,16 @@ void ComboBox::openMenu() {
   auto list = createDropList();
   overlay->addWidget(list);
 
+  Widget* root = this;
+  while(true) {
+    auto ow = root->owner();
+    if(ow==nullptr)
+      break;
+    root = ow;
+    }
+
   auto at = this->mapToRoot(Point(0,0));
-  if(at.y+this->h()+list->h() < overlay->h()) {
+  if(at.y+this->h()+list->h() < root->h()) {
     list->setPosition(at+Point(0,this->h()));
     } else {
     list->setPosition(at+Point(0,-list->h()));
