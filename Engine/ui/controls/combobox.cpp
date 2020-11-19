@@ -186,7 +186,12 @@ void ComboBox::openMenu() {
   auto list = createDropList();
   overlay->addWidget(list);
 
-  list->setPosition(this->mapToRoot(Point(0,0)));
+  auto at = this->mapToRoot(Point(0,0));
+  if(at.y+this->h()+list->h() < overlay->h()) {
+    list->setPosition(at+Point(0,this->h()));
+    } else {
+    list->setPosition(at+Point(0,-list->h()));
+    }
   list->resize(std::max(w(),list->w()),list->h());
 
   SystemApi::addOverlay(overlay);
