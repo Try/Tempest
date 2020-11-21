@@ -248,9 +248,9 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
     rqExt.push_back(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
     }
 
-  std::array<uint32_t,2> uniqueQueueFamilies = {props.graphicsFamily, props.presentFamily};
-  float  queuePriority = 1.0f;
-  size_t queueCnt      = 0;
+  std::array<uint32_t,2>  uniqueQueueFamilies = {props.graphicsFamily, props.presentFamily};
+  float                   queuePriority       = 1.0f;
+  size_t                  queueCnt            = 0;
   VkDeviceQueueCreateInfo qinfo[3]={};
   for(size_t i=0;i<uniqueQueueFamilies.size();++i) {
     auto&    q      = queues[queueCnt];
@@ -295,7 +295,7 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
   if(vkCreateDevice(pdev, &createInfo, nullptr, &device)!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
-  for(size_t i=0;i<queueCnt;++i) {
+  for(size_t i=0; i<queueCnt; ++i) {
     vkGetDeviceQueue(device, queues[i].family, 0, &queues[i].impl);
     if(queues[i].family==props.graphicsFamily)
       graphicsQueue = &queues[i];

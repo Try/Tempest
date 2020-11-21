@@ -73,11 +73,8 @@ void VSwapchain::cleanup() noexcept {
 
 void VSwapchain::createSwapchain(VDevice& device, const VDevice::SwapChainSupport& swapChainSupport,
                                  const Rect& rect, uint32_t imgCount) {
-  auto& indices          = device.props;
-  const uint32_t qidx[]  = {device.props.presentFamily,device.props.graphicsFamily};
-
   VkBool32 support=false;
-  vkGetPhysicalDeviceSurfaceSupportKHR(device.physicalDevice,indices.presentFamily,surface,&support);
+  vkGetPhysicalDeviceSurfaceSupportKHR(device.physicalDevice,device.presentQueue->family,surface,&support);
   if(!support)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
@@ -95,7 +92,8 @@ void VSwapchain::createSwapchain(VDevice& device, const VDevice::SwapChainSuppor
   createInfo.imageArrayLayers = 1;
   createInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-  if( indices.graphicsFamily!=indices.presentFamily ) {
+  if(device.graphicsQueue!=device.presentQueue) {
+    const uint32_t qidx[]  = {device.graphicsQueue->family,device.presentQueue->family};
     createInfo.imageSharingMode      = VK_SHARING_MODE_CONCURRENT;
     createInfo.queueFamilyIndexCount = 2;
     createInfo.pQueueFamilyIndices   = qidx;

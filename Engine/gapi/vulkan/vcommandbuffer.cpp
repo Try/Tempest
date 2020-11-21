@@ -461,6 +461,17 @@ void VCommandBuffer::implChangeLayout(VkImage dest, VkFormat imageFormat,
   barrier.dstQueueFamilyIndex  = VK_QUEUE_FAMILY_IGNORED;
   barrier.image                = dest;
 
+  if(device.graphicsQueue->family!=device.presentQueue->family) {
+    if(newLayout==VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+      barrier.srcQueueFamilyIndex  = device.graphicsQueue->family;
+      barrier.dstQueueFamilyIndex  = device.presentQueue->family;
+      }
+    else if(oldLayout==VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+      barrier.srcQueueFamilyIndex  = device.presentQueue->family;
+      barrier.dstQueueFamilyIndex  = device.graphicsQueue->family;
+      }
+    }
+
   barrier.subresourceRange.baseMipLevel   = mipBase;
   barrier.subresourceRange.levelCount     = mipCount;
   barrier.subresourceRange.baseArrayLayer = 0;
