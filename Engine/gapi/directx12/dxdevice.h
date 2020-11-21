@@ -136,7 +136,8 @@ class DxDevice : public AbstractGraphicsApi::Device {
     DxAllocator                 allocator;
 
     DSharedPtr<DxUniformsLay*>  blitLayout;
-    DSharedPtr<DxCompPipeline*> blit;
+    DSharedPtr<DxCompPipeline*> blitRgba8;
+    DSharedPtr<DxCompPipeline*> blitRgba32;
 
   private:
     ComPtr<ID3D12Fence>         idleFence;

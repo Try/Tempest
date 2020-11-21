@@ -375,7 +375,20 @@ void DxCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, 
   (void)srcW;
   (void)srcH;
 
-  auto& shader = *dev.blit.handler;
+  const DXGI_FORMAT frm = reinterpret_cast<DxTexture&>(srcTex).format;
+
+  DxCompPipeline* pshader = nullptr;
+  switch(frm) {
+    case DXGI_FORMAT_R8G8B8A8_UNORM:
+      pshader = dev.blitRgba8.handler;
+      break;
+    case DXGI_FORMAT_R32G32B32A32_FLOAT:
+      pshader = dev.blitRgba8.handler;
+      break;
+    default:
+      throw std::runtime_error("not implemented");
+    }
+  auto& shader = *pshader;
 
   struct Blit : Stage {
     Blit(DxDevice& dev,DxUniformsLay& lay):desc(dev,lay) {}
@@ -403,7 +416,8 @@ void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img, TextureL
   resState.flushLayout(*this);
 
   auto& image = reinterpret_cast<const DxTexture&>(img);
-  if(image.format==DXGI_FORMAT_R8G8B8A8_UNORM) {
+  if(image.format==DXGI_FORMAT_R8G8B8A8_UNORM ||
+     image.format==DXGI_FORMAT_R32G32B32A32_FLOAT) {
     // TODO: more formats
     int32_t w = int32_t(texWidth);
     int32_t h = int32_t(texHeight);

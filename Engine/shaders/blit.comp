@@ -1,7 +1,12 @@
 #version 440
 
-layout(binding=0, rgba8) uniform writeonly image2D dst;
-layout(binding=1, rgba8) uniform readonly  image2D src;
+#if defined(RGBA8)
+layout(binding=0, rgba8) uniform writeonly  image2D dst;
+layout(binding=1, rgba8) uniform readonly   image2D src;
+#elif defined(RGBA32F)
+layout(binding=0, rgba32f) uniform writeonly image2D dst;
+layout(binding=1, rgba32f) uniform readonly  image2D src;
+#endif
 /*
 layout(std140,push_constant) uniform UboPush {
   ivec2 texSize;

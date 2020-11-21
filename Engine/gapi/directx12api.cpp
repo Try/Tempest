@@ -267,9 +267,6 @@ AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixma
     return createCompressedTexture(d,p,frm,mipCnt);
 
   Detail::DxDevice& dx     = *reinterpret_cast<Detail::DxDevice*>(d);
-
-  // mipCnt = 1; //TODO
-
   DXGI_FORMAT       format = Detail::nativeFormat(frm);
   uint32_t          row    = p.w()*p.bpp();
   const uint32_t    pith   = ((row+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
@@ -382,10 +379,10 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureL
   if(bpp==0)
     throw std::runtime_error("not implemented");
 
-  const size_t     size  = w*h*bpp;
-  Detail::DxBuffer stage = dx.allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
+  uint32_t         row   = w*uint32_t(bpp);
+  const uint32_t   pith  = ((row+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
+  Detail::DxBuffer stage = dx.allocator.alloc(nullptr,h,w*bpp,pith,MemUsage::TransferDst,BufferHeap::Readback);
 
-  //TODO: D3D12_TEXTURE_DATA_PITCH_ALIGNMENT
   auto cmd = dx.dataMgr().get();
   cmd->begin();
   cmd->changeLayout(tx, lay, TextureLayout::TransferSrc, 0);
@@ -395,7 +392,9 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureL
   dx.dataMgr().submitAndWait(std::move(cmd));
 
   out = Pixmap(w,h,pfrm);
-  stage.read(out.data(),0,size);
+  for(size_t i=0; i<h; ++i) {
+    stage.read(reinterpret_cast<uint8_t*>(out.data())+i*w*bpp, i*pith, w*bpp);
+    }
   }
 
 void DirectX12Api::readBytes(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Buffer* buf, void* out, size_t size) {
@@ -410,7 +409,7 @@ void DirectX12Api::readBytes(AbstractGraphicsApi::Device* d, AbstractGraphicsApi
   cmd->end();
   dx.dataMgr().submitAndWait(std::move(cmd));
 
-  stage.read(out,0,size);
+  stage.read(out,0,1,size,size);
   }
 
 AbstractGraphicsApi::CommandBuffer* DirectX12Api::createCommandBuffer(Device* d) {

@@ -53,16 +53,20 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter) {
                                reinterpret_cast<void**>(&idleFence)));
   idleEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 
-  DxShader blitSh(blit_comp_sprv,sizeof(blit_comp_sprv));
+  DxShader blitSh(blit_rgba8_comp_sprv,sizeof(blit_rgba8_comp_sprv));
   blitLayout = DSharedPtr<DxUniformsLay*>(new DxUniformsLay (*this,blitSh.lay));
-  blit       = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*blitLayout.handler,blitSh));
+  blitRgba8  = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*blitLayout.handler,blitSh));
+
+  DxShader blitSh32(blit_rgba32F_comp_sprv,sizeof(blit_rgba32F_comp_sprv));
+  blitRgba32 = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*blitLayout.handler,blitSh));
 
   data   .reset(new DataMgr(*this));
   }
 
 DxDevice::~DxDevice() {
   data.reset();
-  blit       = DSharedPtr<DxCompPipeline*>();
+  blitRgba32 = DSharedPtr<DxCompPipeline*>();
+  blitRgba8  = DSharedPtr<DxCompPipeline*>();
   blitLayout = DSharedPtr<DxUniformsLay*>();
   CloseHandle(idleEvent);
   }

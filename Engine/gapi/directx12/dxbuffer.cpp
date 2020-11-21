@@ -21,13 +21,27 @@ DxBuffer::DxBuffer(Tempest::Detail::DxBuffer&& other)
 void DxBuffer::update(const void* data, size_t off, size_t count, size_t sz, size_t alignedSz) {
   ID3D12Resource& ret = *impl;
 
-  D3D12_RANGE rgn = {off*alignedSz,count*alignedSz};
-  void*       mapped=nullptr;
+  D3D12_RANGE rgn    = {off*alignedSz,count*alignedSz};
+  void*       mapped = nullptr;
   dxAssert(ret.Map(0,&rgn,&mapped));
+  mapped = reinterpret_cast<uint8_t*>(mapped)+off;
 
   copyUpsample(data,mapped,count,sz,alignedSz);
 
   ret.Unmap(0,&rgn);
+  }
+
+void DxBuffer::read(void* data, size_t off, size_t count, size_t sz, size_t alignedSz) {
+  ID3D12Resource& ret = *impl;
+
+  D3D12_RANGE rgn = {off,sz};
+  void*       mapped=nullptr;
+  dxAssert(ret.Map(0,&rgn,&mapped));
+  mapped = reinterpret_cast<uint8_t*>(mapped)+off;
+
+  copyUpsample(mapped,data,count,sz,alignedSz);
+
+  ret.Unmap(0,nullptr);
   }
 
 void DxBuffer::read(void* data, size_t off, size_t sz) {
@@ -36,6 +50,7 @@ void DxBuffer::read(void* data, size_t off, size_t sz) {
   D3D12_RANGE rgn = {off,sz};
   void*       mapped=nullptr;
   dxAssert(ret.Map(0,&rgn,&mapped));
+  mapped = reinterpret_cast<uint8_t*>(mapped)+off;
 
   std::memcpy(data,mapped,sz);
 
@@ -60,7 +75,7 @@ void DxBuffer::uploadS3TC(const uint8_t* d, uint32_t w, uint32_t h, uint32_t mip
     UINT pitchA = alignTo(pitchS,D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
 
     for(uint32_t r=0;r<hBlk;++r) {
-      std::memcpy(b+stageSize,d+bufferSize,pitchA);
+      std::memcpy(b+stageSize,d+bufferSize,pitchS);
       bufferSize += pitchS;
       stageSize  += pitchA;
       }
