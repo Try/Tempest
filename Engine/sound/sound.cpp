@@ -124,7 +124,7 @@ void Sound::implLoad(IDevice &f) {
   if(data) {
     switch(fmt.bitsPerSample) {
       case 4:
-        decodeAdPcm(fmt,reinterpret_cast<uint8_t*>(data.get()),dataSize,uint32_t(-1));
+        decodeAdPcm(fmt,reinterpret_cast<uint8_t*>(data.get()),uint32_t(dataSize),uint32_t(-1));
         return;
       case 8:
         format = (fmt.channels==1) ? AL_FORMAT_MONO8  : AL_FORMAT_STEREO8;
