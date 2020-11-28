@@ -281,6 +281,9 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
   VkPhysicalDeviceFeatures deviceFeatures = {};
   deviceFeatures.samplerAnisotropy    = supportedFeatures.samplerAnisotropy;
   deviceFeatures.textureCompressionBC = supportedFeatures.textureCompressionBC;
+  deviceFeatures.tessellationShader   = supportedFeatures.tessellationShader;
+  deviceFeatures.geometryShader       = supportedFeatures.geometryShader;
+  deviceFeatures.fillModeNonSolid     = supportedFeatures.fillModeNonSolid;
 
   VkDeviceCreateInfo createInfo = {};
   createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

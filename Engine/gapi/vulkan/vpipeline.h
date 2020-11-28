@@ -24,7 +24,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
               const Decl::ComponentType *decl, size_t declSize,
               size_t stride, Topology tp,
               const VUniformsLay& ulayImpl,
-              VShader &vert, VShader &frag);
+              const VShader* vert, const VShader* ctrl, const VShader* tess, const VShader* geom,  const VShader* frag);
     VPipeline(VPipeline&& other);
     ~VPipeline();
 
@@ -49,8 +49,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     Tempest::RenderState                   st;
     size_t                                 declSize=0, stride=0;
     Topology                               tp=Topology::Triangles;
-    Detail::DSharedPtr<VShader*>           modules[2];
-    uint8_t                                modulesCount = 0;
+    DSharedPtr<const VShader*>             modules[5];
     std::unique_ptr<Decl::ComponentType[]> decl;
     std::vector<Inst>                      inst;
     SpinLock                               sync;
@@ -62,7 +61,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
                                                       uint32_t width, uint32_t height,
                                                       const Decl::ComponentType *decl, size_t declSize, size_t stride,
                                                       Topology tp,
-                                                      VShader &vert, VShader &frag);
+                                                      const DSharedPtr<const VShader*>* shaders);
   friend class VCompPipeline;
   };
 

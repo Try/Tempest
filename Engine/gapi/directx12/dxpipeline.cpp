@@ -14,10 +14,11 @@ using namespace Tempest::Detail;
 DxPipeline::DxPipeline(DxDevice& device, const RenderState& st,
                        const Decl::ComponentType* decl, size_t declSize, size_t stride,
                        Topology tp, const DxUniformsLay& ulay,
-                       DxShader& vert, DxShader& frag)
+                       const DxShader* vert, const DxShader* ctrl, const DxShader* tess, const DxShader* geom, const DxShader* frag)
   : sign(ulay.impl.get()), stride(UINT(stride)),
     device(device),
-    vsShader(&vert), fsShader(&frag), declSize(UINT(declSize)), rState(st) {
+    vsShader(vert), tcShader(ctrl), teShader(tess), gsShader(geom), fsShader(frag),
+    declSize(UINT(declSize)), rState(st) {
   sign.get()->AddRef();
   static const D3D_PRIMITIVE_TOPOLOGY dxTopolgy[]= {
     D3D_PRIMITIVE_TOPOLOGY_UNDEFINED,
@@ -156,8 +157,16 @@ ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& 
   D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
   psoDesc.InputLayout     = { vsInput.get(), UINT(declSize) };
   psoDesc.pRootSignature  = sign.get();
-  psoDesc.VS              = vsShader.handler->bytecode();
-  psoDesc.PS              = fsShader.handler->bytecode();
+  if(vsShader.handler)
+    psoDesc.VS = vsShader.handler->bytecode();
+  if(tcShader.handler)
+    psoDesc.HS = tcShader.handler->bytecode();
+  if(teShader.handler)
+    psoDesc.DS = teShader.handler->bytecode();
+  if(gsShader.handler)
+    psoDesc.GS = gsShader.handler->bytecode();
+  if(fsShader.handler)
+    psoDesc.PS = fsShader.handler->bytecode();
 
   psoDesc.RasterizerState = getRaster(rState);
   psoDesc.BlendState      = getBlend (rState);

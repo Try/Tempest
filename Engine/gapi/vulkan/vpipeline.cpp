@@ -21,11 +21,14 @@ VPipeline::VPipeline(){
 VPipeline::VPipeline(VDevice& device, const RenderState &st,
                      const Decl::ComponentType *idecl, size_t declSize, size_t stride,
                      Topology tp, const VUniformsLay& ulay,
-                     VShader& vert, VShader& frag)
-  : device(device.device), st(st), declSize(declSize), stride(stride), tp(tp), modulesCount(2) {
+                     const VShader* vert, const VShader* ctrl, const VShader* tess, const VShader* geom, const VShader* frag)
+  : device(device.device), st(st), declSize(declSize), stride(stride), tp(tp) {
   try {
-    modules[0] = Detail::DSharedPtr<VShader*>{&vert};
-    modules[1] = Detail::DSharedPtr<VShader*>{&frag};
+    modules[0] = Detail::DSharedPtr<const VShader*>{vert};
+    modules[1] = Detail::DSharedPtr<const VShader*>{ctrl};
+    modules[2] = Detail::DSharedPtr<const VShader*>{tess};
+    modules[3] = Detail::DSharedPtr<const VShader*>{geom};
+    modules[4] = Detail::DSharedPtr<const VShader*>{frag};
 
     decl.reset(new Decl::ComponentType[declSize]);
     std::memcpy(decl.get(),idecl,declSize*sizeof(Decl::ComponentType));
@@ -57,7 +60,7 @@ VPipeline::Inst &VPipeline::instance(VFramebufferLayout &lay, uint32_t width, ui
   try {
     val = initGraphicsPipeline(device,pipelineLayout,lay,st,
                                width,height,decl.get(),declSize,stride,
-                               tp,*modules[0].handler,*modules[1].handler);
+                               tp,modules);
     inst.emplace_back(width,height,&lay,val);
     }
   catch(...) {
@@ -111,25 +114,33 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
                                            uint32_t width, uint32_t height,
                                            const Decl::ComponentType *decl, size_t declSize,
                                            size_t stride, Topology tp,
-                                           VShader &vert, VShader &frag) {
-  VkPipelineShaderStageCreateInfo vertShaderStageInfo = {};
-  vertShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-  vertShaderStageInfo.stage  = VK_SHADER_STAGE_VERTEX_BIT;
-  vertShaderStageInfo.module = vert.impl;
-  vertShaderStageInfo.pName  = "main";
+                                           const DSharedPtr<const VShader*>* shaders) {
+  static const VkShaderStageFlagBits stageBits[] = {
+    VK_SHADER_STAGE_VERTEX_BIT,
+    VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT,
+    VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
+    VK_SHADER_STAGE_GEOMETRY_BIT,
+    VK_SHADER_STAGE_FRAGMENT_BIT
+    };
+  VkPipelineShaderStageCreateInfo shaderStages[5] = {};
+  size_t                          stagesCnt       = 0;
+  for(size_t i=0; i<5; ++i) {
+    if(shaders[i].handler!=nullptr) {
+      VkPipelineShaderStageCreateInfo& sh = shaderStages[stagesCnt];
+      sh.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+      sh.stage  = stageBits[i];
+      sh.module = shaders[i].handler->impl;
+      sh.pName  = "main";
+      stagesCnt++;
+      }
+    }
 
-  VkPipelineShaderStageCreateInfo fragShaderStageInfo = {};
-  fragShaderStageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-  fragShaderStageInfo.stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
-  fragShaderStageInfo.module = frag.impl;
-  fragShaderStageInfo.pName  = "main";
+  const bool useTesselation = (shaders[1] || shaders[2]);
 
-  VkPipelineShaderStageCreateInfo shaderStages[] = {vertShaderStageInfo, fragShaderStageInfo};
-
-  VkVertexInputBindingDescription vk_vertexInputBindingDescription;
-  vk_vertexInputBindingDescription.binding   = 0;
-  vk_vertexInputBindingDescription.stride    = uint32_t(stride);
-  vk_vertexInputBindingDescription.inputRate = VkVertexInputRate::VK_VERTEX_INPUT_RATE_VERTEX;
+  VkVertexInputBindingDescription vertexInputBindingDescription;
+  vertexInputBindingDescription.binding   = 0;
+  vertexInputBindingDescription.stride    = uint32_t(stride);
+  vertexInputBindingDescription.inputRate = VkVertexInputRate::VK_VERTEX_INPUT_RATE_VERTEX;
 
   static const VkFormat vertFormats[]={
     VkFormat::VK_FORMAT_UNDEFINED,
@@ -186,7 +197,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   vertexInputInfo.pNext = nullptr;
   vertexInputInfo.flags = 0;
   vertexInputInfo.vertexBindingDescriptionCount   = 1;
-  vertexInputInfo.pVertexBindingDescriptions      = &vk_vertexInputBindingDescription;
+  vertexInputInfo.pVertexBindingDescriptions      = &vertexInputBindingDescription;
   vertexInputInfo.vertexAttributeDescriptionCount = uint32_t(declSize);
   vertexInputInfo.pVertexAttributeDescriptions    = vsInput;
 
@@ -196,6 +207,8 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   if(tp==Triangles)
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; else
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+  if(useTesselation)
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
 
   VkViewport viewport = {};
   viewport.x        = 0.0f;
@@ -303,6 +316,13 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   depthStencil.depthBoundsTestEnable = VK_FALSE;
   depthStencil.stencilTestEnable     = VK_FALSE;
 
+  VkPipelineTessellationStateCreateInfo tesselation = {};
+  tesselation.sType                 = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+  tesselation.flags                 = 0;
+  if(tp==Triangles)
+    tesselation.patchControlPoints = 3; else
+    tesselation.patchControlPoints = 2;
+
   VkPipelineDynamicStateCreateInfo dynamic = {};
   dynamic.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
   const VkDynamicState dySt[1]={VK_DYNAMIC_STATE_VIEWPORT};
@@ -311,7 +331,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
 
   VkGraphicsPipelineCreateInfo pipelineInfo = {};
   pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-  pipelineInfo.stageCount          = 2;
+  pipelineInfo.stageCount          = uint32_t(stagesCnt);
   pipelineInfo.pStages             = shaderStages;
   pipelineInfo.pVertexInputState   = &vertexInputInfo;
   pipelineInfo.pInputAssemblyState = &inputAssembly;
@@ -325,6 +345,11 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   pipelineInfo.renderPass          = lay.impl;
   pipelineInfo.subpass             = 0;
   pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
+
+  if(useTesselation) {
+    pipelineInfo.pTessellationState = &tesselation;
+    // rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
+    }
 
   VkPipeline graphicsPipeline=VK_NULL_HANDLE;
   vkAssert(vkCreateGraphicsPipelines(device,VK_NULL_HANDLE,1,&pipelineInfo,nullptr,&graphicsPipeline));

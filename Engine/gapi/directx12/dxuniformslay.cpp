@@ -74,16 +74,14 @@ DxUniformsLay::DxUniformsLay(DxDevice& dev, const std::vector<UniformsLayout::Bi
   init(lay,pb);
   }
 
-DxUniformsLay::DxUniformsLay(DxDevice& dev,
-                             const std::vector<UniformsLayout::Binding>& vs,
-                             const std::vector<UniformsLayout::Binding>& fs)
-  :dev(dev) {
+DxUniformsLay::DxUniformsLay(DxDevice& dev, const std::vector<UniformsLayout::Binding>* sh[], size_t cnt)
+  : dev(dev) {
   UniformsLayout::PushBlock pb;
   std::vector<Binding>      lay;
-
-  ShaderReflection::merge(lay,pb, vs,fs);
+  ShaderReflection::merge(lay, pb, sh, cnt);
   init(lay,pb);
   }
+
 
 void DxUniformsLay::init(const std::vector<Binding>& lay, const UniformsLayout::PushBlock& pb) {
   auto& device = *dev.device;

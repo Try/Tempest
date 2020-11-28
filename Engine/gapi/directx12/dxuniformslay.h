@@ -21,7 +21,7 @@ class DxDevice;
 class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
   public:
     DxUniformsLay(DxDevice& device, const std::vector<UniformsLayout::Binding>& comp);
-    DxUniformsLay(DxDevice& device, const std::vector<UniformsLayout::Binding>& vs, const std::vector<UniformsLayout::Binding>& fs);
+    DxUniformsLay(DxDevice& device, const std::vector<UniformsLayout::Binding>* sh[], size_t cnt);
 
     using Binding = UniformsLayout::Binding;
 

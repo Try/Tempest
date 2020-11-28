@@ -18,10 +18,12 @@ class DxShader:public AbstractGraphicsApi::Shader {
 
     using Binding = UniformsLayout::Binding;
 
-    D3D12_SHADER_BYTECODE bytecode();
-    ComPtr<ID3DBlob>      shader;
+    D3D12_SHADER_BYTECODE    bytecode() const;
 
-    std::vector<Binding>  lay;
+    std::vector<Binding>     lay;
+
+  private:
+    mutable ComPtr<ID3DBlob> shader;
   };
 
 }}

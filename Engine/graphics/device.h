@@ -139,7 +139,10 @@ class Device {
     RenderPass           pass(const FboMode** color, uint8_t count);
 
     template<class Vertex>
-    RenderPipeline       pipeline(Topology tp,const RenderState& st, const Shader &vs,const Shader &fs);
+    RenderPipeline       pipeline(Topology tp,const RenderState& st, const Shader &vs, const Shader &fs);
+
+    template<class Vertex>
+    RenderPipeline       pipeline(Topology tp,const RenderState& st, const Shader &vs, const Shader &tc, const Shader &te, const Shader &fs);
 
     ComputePipeline      pipeline(const Shader &comp);
 
@@ -171,7 +174,7 @@ class Device {
 
     RenderPipeline
                 implPipeline(const RenderState &st,
-                             const Shader &vs, const Shader &fs,
+                             const Shader* shaders[],
                              const Decl::ComponentType *decl, size_t declSize,
                              size_t stride, Topology tp);
     void        implSubmit(const Tempest::CommandBuffer *cmd[], AbstractGraphicsApi::CommandBuffer* hcmd[],  size_t count,
@@ -265,7 +268,15 @@ inline UniformBuffer<T> Device::ubo(const T& mem) {
 template<class Vertex>
 RenderPipeline Device::pipeline(Topology tp, const RenderState &st, const Shader &vs, const Shader &fs) {
   static const auto decl=Tempest::vertexBufferDecl<Vertex>();
-  return implPipeline(st,vs,fs,decl.data.data(),decl.data.size(),sizeof(Vertex),tp);
+  const Shader* sh[] = {&vs,nullptr,nullptr,nullptr,&fs};
+  return implPipeline(st,sh,decl.data.data(),decl.data.size(),sizeof(Vertex),tp);
+  }
+
+template<class Vertex>
+RenderPipeline Device::pipeline(Topology tp, const RenderState &st, const Shader &vs, const Shader &tc, const Shader &te, const Shader &fs) {
+  static const auto decl=Tempest::vertexBufferDecl<Vertex>();
+  const Shader* sh[] = {&vs,&tc,&te,nullptr,&fs};
+  return implPipeline(st,sh,decl.data.data(),decl.data.size(),sizeof(Vertex),tp);
   }
 
 }

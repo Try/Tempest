@@ -77,39 +77,52 @@ void ShaderReflection::merge(std::vector<ShaderReflection::Binding>& ret,
 
 void ShaderReflection::merge(std::vector<ShaderReflection::Binding>& ret,
                              PushBlock& pb,
-                             const std::vector<ShaderReflection::Binding>& vs,
-                             const std::vector<ShaderReflection::Binding>& fs) {
-  ret.reserve(vs.size()+fs.size());
-  size_t id=0;
-  for(size_t i=0;i<vs.size();++i, ++id) {
-    auto& u = vs[i];
-    if(u.cls==UniformsLayout::Push) {
-      pb.stage = UniformsLayout::Stage(pb.stage | UniformsLayout::Vertex);
-      pb.size = u.size;
+                             const std::vector<ShaderReflection::Binding>* sh[],
+                             size_t count) {
+  size_t expectedSz = 0;
+  for(size_t i=0; i<count; ++i)
+    if(sh[i]!=nullptr)
+      expectedSz+=sh[i]->size();
+  ret.reserve(expectedSz);
+
+  static const UniformsLayout::Stage stages[] = {
+    UniformsLayout::Vertex,
+    UniformsLayout::Control,
+    UniformsLayout::Evaluate,
+    UniformsLayout::Geometry,
+    UniformsLayout::Fragment
+    };
+
+  for(size_t shId=0; shId<count; ++shId) {
+    if(sh[shId]==nullptr)
       continue;
-      }
-    ret.push_back(u);
-    ret.back().stage = UniformsLayout::Vertex;
-    }
-  for(size_t i=0;i<fs.size();++i) {
-    auto& u   = fs[i];
-    if(u.cls==UniformsLayout::Push) {
-      pb.stage = UniformsLayout::Stage(pb.stage | UniformsLayout::Fragment);
-      pb.size = u.size;
-      continue;
-      }
-    bool  ins = false;
-    for(auto& r:ret)
-      if(r.layout==u.layout) {
-        r.stage = UniformsLayout::Stage(r.stage | UniformsLayout::Fragment);
-        ins = true;
-        break;
+
+    UniformsLayout::Stage stage = stages[shId];
+    auto&                 vs    = *sh[shId];
+
+    for(size_t i=0;i<vs.size();++i) {
+      auto& u   = vs[i];
+      if(u.cls==UniformsLayout::Push) {
+        pb.stage = UniformsLayout::Stage(pb.stage | stage);
+        pb.size  = u.size;
+        continue;
         }
-    if(ins)
-      continue;
-    ret.push_back(u);
-    ret.back().stage = UniformsLayout::Fragment;
+      if(shId>0) {
+        bool  ins = false;
+        for(auto& r:ret)
+          if(r.layout==u.layout) {
+            r.stage = UniformsLayout::Stage(r.stage | stage);
+            ins = true;
+            break;
+            }
+        if(ins)
+          continue;
+        }
+      ret.push_back(u);
+      ret.back().stage = stage;
+      }
     }
+
   std::sort(ret.begin(),ret.end(),[](const Binding& a, const Binding& b){
     return a.layout<b.layout;
     });

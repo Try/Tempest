@@ -25,8 +25,11 @@ class UniformsLayout final {
       };
     enum Stage : uint8_t {
       Vertex  =1<<0,
-      Fragment=1<<1,
-      Compute =1<<2,
+      Control =1<<1,
+      Evaluate=1<<2,
+      Geometry=1<<3,
+      Fragment=1<<4,
+      Compute =1<<5,
       };
     struct Binding {
       uint32_t layout=0;

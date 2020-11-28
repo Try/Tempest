@@ -366,24 +366,28 @@ ComputePipeline Device::pipeline(const Shader& comp) {
   if(!comp.impl)
     return ComputePipeline();
 
-  std::initializer_list<AbstractGraphicsApi::Shader*> sh = {comp.impl.handler};
-  auto ulay = api.createUboLayout(dev,sh);
+  auto ulay = api.createUboLayout(dev,nullptr,nullptr,nullptr,nullptr,nullptr,comp.impl.handler);
   auto pipe = api.createComputePipeline(dev,*ulay.handler,comp.impl.handler);
   ComputePipeline f(std::move(pipe),std::move(ulay));
   return f;
   }
 
 RenderPipeline Device::implPipeline(const RenderState &st,
-                                    const Shader &vs, const Shader &fs,
+                                    const Shader* sh[],
                                     const Decl::ComponentType *decl, size_t declSize,
                                     size_t   stride,
                                     Topology tp) {
-  if(!vs.impl || !fs.impl)
+  if(sh[0]==nullptr || sh[4]==nullptr)
+    return RenderPipeline();
+  if(!sh[0]->impl || !sh[4]->impl)
     return RenderPipeline();
 
-  std::initializer_list<AbstractGraphicsApi::Shader*> sh = {vs.impl.handler,fs.impl.handler};
-  auto ulay = api.createUboLayout(dev,sh);
-  auto pipe = api.createPipeline(dev,st,decl,declSize,stride,tp,*ulay.handler,sh);
+  AbstractGraphicsApi::Shader* shv[5] = {};
+  for(size_t i=0; i<5; ++i)
+    shv[i] = sh[i]!=nullptr ? sh[i]->impl.handler : nullptr;
+
+  auto ulay = api.createUboLayout(dev,shv[0],shv[1],shv[2],shv[3],shv[4],nullptr);
+  auto pipe = api.createPipeline(dev,st,decl,declSize,stride,tp,*ulay.handler,shv[0],shv[1],shv[2],shv[3],shv[4]);
   RenderPipeline f(std::move(pipe),std::move(ulay));
   return f;
   }

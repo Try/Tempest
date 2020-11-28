@@ -49,6 +49,15 @@ DxShader::DxShader(const void *source, size_t src_size) {
     case spv::ExecutionModelVertex:
       target = "vs_5_0";
       break;
+    case spv::ExecutionModelTessellationControl:
+      target = "hs_5_0";
+      break;
+    case spv::ExecutionModelTessellationEvaluation:
+      target = "ds_5_0";
+      break;
+    case spv::ExecutionModelGeometry:
+      target = "gs_5_0";
+      break;
     case spv::ExecutionModelFragment:
       target = "ps_5_0";
       break;
@@ -71,7 +80,7 @@ DxShader::DxShader(const void *source, size_t src_size) {
 DxShader::~DxShader() {
   }
 
-D3D12_SHADER_BYTECODE DxShader::bytecode() {
+D3D12_SHADER_BYTECODE DxShader::bytecode() const {
   return D3D12_SHADER_BYTECODE{shader->GetBufferPointer(),shader->GetBufferSize()};
   }
 

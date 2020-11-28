@@ -247,10 +247,10 @@ int Sound::decodeAdPcmBlock(int16_t *outbuf, const uint8_t *inbuf, size_t inbufs
     inbuf     += 4;
     }
 
-  size_t chunks = inbufsize/(channels*4);
+  int32_t chunks = int32_t(inbufsize/(channels*4));
   samples += chunks*8;
 
-  while(chunks--){
+  while(chunks--) {
     for(int ch=0; ch<channels; ++ch) {
       for(int i=0; i<4; ++i) {
         int step = stepTable[index [ch]], delta = step >> 3;

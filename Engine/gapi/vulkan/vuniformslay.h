@@ -17,12 +17,13 @@ class UniformsLayout;
 namespace Detail {
 
 class VDescriptorArray;
+class VDevice;
 class VShader;
 
 class VUniformsLay : public AbstractGraphicsApi::UniformsLay {
   public:
-    VUniformsLay(VkDevice dev, const std::vector<UniformsLayout::Binding>& vs, const std::vector<UniformsLayout::Binding>& fs);
-    VUniformsLay(VkDevice dev, const std::vector<UniformsLayout::Binding>& comp);
+    VUniformsLay(VDevice& dev, const std::vector<UniformsLayout::Binding>& comp);
+    VUniformsLay(VDevice& dev, const std::vector<UniformsLayout::Binding>* sh[], size_t cnt);
     ~VUniformsLay();
 
     using Binding = UniformsLayout::Binding;

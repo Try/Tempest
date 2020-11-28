@@ -176,14 +176,16 @@ AbstractGraphicsApi::PPipeline DirectX12Api::createPipeline(AbstractGraphicsApi:
                                                             const Decl::ComponentType* decl, size_t declSize, size_t stride,
                                                             Topology tp,
                                                             const UniformsLay& ulayImpl,
-                                                            const std::initializer_list<AbstractGraphicsApi::Shader*>& shaders) {
-  Shader*const*        arr=shaders.begin();
-  auto* dx = reinterpret_cast<Detail::DxDevice*>(d);
-  auto* vs = reinterpret_cast<Detail::DxShader*>(arr[0]);
-  auto* fs = reinterpret_cast<Detail::DxShader*>(arr[1]);
-  auto& ul = reinterpret_cast<const Detail::DxUniformsLay&>(ulayImpl);
+                                                            const Shader* vs, const Shader* tc, const Shader* te, const Shader* gs, const Shader* fs) {
+  auto* dx   = reinterpret_cast<Detail::DxDevice*>(d);
+  auto* vert = reinterpret_cast<const Detail::DxShader*>(vs);
+  auto* ctrl = reinterpret_cast<const Detail::DxShader*>(tc);
+  auto* tess = reinterpret_cast<const Detail::DxShader*>(te);
+  auto* geom = reinterpret_cast<const Detail::DxShader*>(gs);
+  auto* frag = reinterpret_cast<const Detail::DxShader*>(fs);
+  auto& ul   = reinterpret_cast<const Detail::DxUniformsLay&>(ulayImpl);
 
-  return PPipeline(new Detail::DxPipeline(*dx,st,decl,declSize,stride,tp,ul,*vs,*fs));
+  return PPipeline(new Detail::DxPipeline(*dx,st,decl,declSize,stride,tp,ul,vert,ctrl,tess,geom,frag));
   }
 
 AbstractGraphicsApi::PCompPipeline DirectX12Api::createComputePipeline(AbstractGraphicsApi::Device* d,
@@ -245,21 +247,24 @@ AbstractGraphicsApi::Desc* DirectX12Api::createDescriptors(AbstractGraphicsApi::
   return new DxDescriptorArray(dx,u);
   }
 
-AbstractGraphicsApi::PUniformsLay DirectX12Api::createUboLayout(Device* d, const std::initializer_list<Shader*>& shaders) {
-  Shader*const*        arr=shaders.begin();
+AbstractGraphicsApi::PUniformsLay DirectX12Api::createUboLayout(Device* d,
+                                                                const Shader* vs, const Shader* tc, const Shader* te,
+                                                                const Shader* gs, const Shader* fs, const Shader* cs) {
   auto* dx = reinterpret_cast<Detail::DxDevice*>(d);
-
-  if(shaders.size()==1) {
-    auto* comp = reinterpret_cast<Detail::DxShader*>(arr[0]);
+  if(cs!=nullptr) {
+    auto* comp = reinterpret_cast<const Detail::DxShader*>(cs);
     return PUniformsLay(new Detail::DxUniformsLay(*dx,comp->lay));
     }
-  else if(shaders.size()==2) {
-    auto* vs = reinterpret_cast<Detail::DxShader*>(arr[0]);
-    auto* fs = reinterpret_cast<Detail::DxShader*>(arr[1]);
 
-    return PUniformsLay(new Detail::DxUniformsLay(*dx,vs->lay,fs->lay));
+  const Shader* sh[] = {vs,tc,te,gs,fs};
+  const std::vector<UniformsLayout::Binding>* lay[5] = {};
+  for(size_t i=0; i<5; ++i) {
+    if(sh[i]==nullptr)
+      continue;
+    auto* s = reinterpret_cast<const Detail::DxShader*>(sh[i]);
+    lay[i] = &s->lay;
     }
-  return PUniformsLay();
+  return PUniformsLay(new Detail::DxUniformsLay(*dx,lay,5));
   }
 
 AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mipCnt) {

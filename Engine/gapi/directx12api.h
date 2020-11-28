@@ -32,7 +32,7 @@ class DirectX12Api : public AbstractGraphicsApi {
                                   const Tempest::Decl::ComponentType *decl, size_t declSize,
                                   size_t stride,
                                   Topology tp, const UniformsLay& ulayImpl,
-                                  const std::initializer_list<Shader*>& shaders) override;
+                                  const Shader* vs, const Shader* tc, const Shader* te, const Shader* gs, const Shader* fs) override;
     PCompPipeline  createComputePipeline(Device* d,
                                          const UniformsLay &ulayImpl,
                                          Shader* sh) override;
@@ -56,7 +56,7 @@ class DirectX12Api : public AbstractGraphicsApi {
 
     Desc*          createDescriptors(Device* d, UniformsLay& layP) override;
 
-    PUniformsLay   createUboLayout(Device *d, const std::initializer_list<Shader*>& sh) override;
+    PUniformsLay   createUboLayout(Device *d, const Shader* vs, const Shader* tc,const Shader* te,const Shader* gs,const Shader* fs, const Shader* cs) override;
 
     CommandBuffer* createCommandBuffer(Device* d) override;
 

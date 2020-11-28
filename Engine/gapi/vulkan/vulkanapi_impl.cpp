@@ -179,18 +179,20 @@ void VulkanApi::getDevicePropsShort(VkPhysicalDevice physicalDevice, Tempest::Ab
 
   std::memcpy(c.name,prop.deviceName,sizeof(c.name));
 
-  c.vbo.maxAttribs  = size_t(prop.limits.maxVertexInputAttributes);
-  c.vbo.maxRange    = size_t(prop.limits.maxVertexInputBindingStride);
+  c.vbo.maxAttribs    = size_t(prop.limits.maxVertexInputAttributes);
+  c.vbo.maxRange      = size_t(prop.limits.maxVertexInputBindingStride);
 
-  c.ibo.maxValue    = size_t(prop.limits.maxDrawIndexedIndexValue);
+  c.ibo.maxValue      = size_t(prop.limits.maxDrawIndexedIndexValue);
 
-  c.ubo.offsetAlign = size_t(prop.limits.minUniformBufferOffsetAlignment);
-  c.ubo.maxRange    = size_t(prop.limits.maxUniformBufferRange);
+  c.ubo.offsetAlign   = size_t(prop.limits.minUniformBufferOffsetAlignment);
+  c.ubo.maxRange      = size_t(prop.limits.maxUniformBufferRange);
   
-  c.push.maxRange   = size_t(prop.limits.maxPushConstantsSize);
+  c.push.maxRange     = size_t(prop.limits.maxPushConstantsSize);
 
-  c.anisotropy      = supportedFeatures.samplerAnisotropy;
-  c.maxAnisotropy   = prop.limits.maxSamplerAnisotropy;
+  c.anisotropy        = supportedFeatures.samplerAnisotropy;
+  c.maxAnisotropy     = prop.limits.maxSamplerAnisotropy;
+  c.tesselationShader = supportedFeatures.tessellationShader;
+  c.geometryShader    = supportedFeatures.geometryShader;
 
   c.mrt.maxColorAttachments = prop.limits.maxColorAttachments;
 

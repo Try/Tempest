@@ -230,8 +230,10 @@ namespace Tempest {
             BasicPoint<int,3> maxGroupSize = {128,128,64};
             } compute;
 
-          bool     anisotropy=false;
-          float    maxAnisotropy=1.0f;
+          bool     anisotropy        = false;
+          float    maxAnisotropy     = 1.0f;
+          bool     tesselationShader = false;
+          bool     geometryShader    = false;
 
           bool     hasSamplerFormat(TextureFormat f) const;
           bool     hasAttachFormat (TextureFormat f) const;
@@ -260,7 +262,7 @@ namespace Tempest {
         };
 
       struct Shared:NoCopy {
-        std::atomic_uint_fast32_t counter{0};
+        mutable std::atomic_uint_fast32_t counter{0};
         };
 
       struct Device:NoCopy {
@@ -380,13 +382,15 @@ namespace Tempest {
       virtual PFboLayout createFboLayout(Device *d, Swapchain** s, TextureFormat *att, uint8_t attCount)=0;
 
       virtual PUniformsLay
-                         createUboLayout(Device *d,const std::initializer_list<Shader*>& sh)=0;
+                         createUboLayout(Device *d,
+                                         const Shader* vs, const Shader* tc, const Shader* te,
+                                         const Shader* gs, const Shader* fs, const Shader* cs)=0;
 
       virtual PPipeline  createPipeline(Device* d, const RenderState &st,
                                         const Tempest::Decl::ComponentType *decl, size_t declSize,
                                         size_t stride, Topology tp,
                                         const UniformsLay &ulayImpl,
-                                        const std::initializer_list<Shader*>& sh)=0;
+                                        const Shader* vs, const Shader* tc, const Shader* te, const Shader* gs, const Shader* fs)=0;
 
       virtual PCompPipeline createComputePipeline(Device* d,
                                                const UniformsLay &ulayImpl,

@@ -23,7 +23,7 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
                const Decl::ComponentType *decl, size_t declSize,
                size_t stride, Topology tp,
                const DxUniformsLay& ulay,
-               DxShader &vert, DxShader &frag);
+               const DxShader* vert, const DxShader* ctrl, const DxShader* tess, const DxShader* geom,  const DxShader* frag);
 
     struct Inst final {
       Inst() = default;
@@ -44,8 +44,11 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
 
   private:
     DxDevice&                   device;
-    DSharedPtr<DxShader*>       vsShader;
-    DSharedPtr<DxShader*>       fsShader;
+    DSharedPtr<const DxShader*> vsShader;
+    DSharedPtr<const DxShader*> tcShader;
+    DSharedPtr<const DxShader*> teShader;
+    DSharedPtr<const DxShader*> gsShader;
+    DSharedPtr<const DxShader*> fsShader;
     UINT                        declSize=0;
     RenderState                 rState;
     std::unique_ptr<D3D12_INPUT_ELEMENT_DESC[]> vsInput;

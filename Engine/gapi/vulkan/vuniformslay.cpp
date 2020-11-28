@@ -7,22 +7,8 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-VUniformsLay::VUniformsLay(VkDevice dev,
-                           const std::vector<UniformsLayout::Binding>& vs,
-                           const std::vector<UniformsLayout::Binding>& fs)
-  : dev(dev) {
-  ShaderReflection::merge(lay, pb, vs,fs);
-  if(lay.size()<=32) {
-    VkDescriptorSetLayoutBinding bind[32]={};
-    implCreate(bind);
-    } else {
-    std::unique_ptr<VkDescriptorSetLayoutBinding[]> bind(new VkDescriptorSetLayoutBinding[lay.size()]);
-    implCreate(bind.get());
-    }
-  }
-
-VUniformsLay::VUniformsLay(VkDevice dev, const std::vector<UniformsLayout::Binding>& comp)
-  : dev(dev) {
+VUniformsLay::VUniformsLay(VDevice& dev, const std::vector<UniformsLayout::Binding>& comp)
+  : dev(dev.device) {
   ShaderReflection::merge(lay, pb, comp);
   if(lay.size()<=32) {
     VkDescriptorSetLayoutBinding bind[32]={};
@@ -38,6 +24,18 @@ VUniformsLay::VUniformsLay(VkDevice dev, const std::vector<UniformsLayout::Bindi
        i.cls==UniformsLayout::ImgRW ) {
       hasSSBO = true;
       }
+  }
+
+VUniformsLay::VUniformsLay(VDevice& dev, const std::vector<UniformsLayout::Binding>* sh[], size_t cnt)
+  : dev(dev.device) {
+  ShaderReflection::merge(lay, pb, sh, cnt);
+  if(lay.size()<=32) {
+    VkDescriptorSetLayoutBinding bind[32]={};
+    implCreate(bind);
+    } else {
+    std::unique_ptr<VkDescriptorSetLayoutBinding[]> bind(new VkDescriptorSetLayoutBinding[lay.size()]);
+    implCreate(bind.get());
+    }
   }
 
 VUniformsLay::~VUniformsLay() {
@@ -69,6 +67,12 @@ void VUniformsLay::implCreate(VkDescriptorSetLayoutBinding* bind) {
       b.stageFlags |= VK_SHADER_STAGE_COMPUTE_BIT;
     if(e.stage&UniformsLayout::Vertex)
       b.stageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
+    if(e.stage&UniformsLayout::Control)
+      b.stageFlags |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+    if(e.stage&UniformsLayout::Evaluate)
+      b.stageFlags |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+    if(e.stage&UniformsLayout::Geometry)
+      b.stageFlags |= VK_SHADER_STAGE_GEOMETRY_BIT;
     if(e.stage&UniformsLayout::Fragment)
       b.stageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
     }
