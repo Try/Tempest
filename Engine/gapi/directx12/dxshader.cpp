@@ -37,6 +37,12 @@ DxShader::DxShader(const void *source, size_t src_size) {
   catch(const std::bad_alloc&) {
     throw;
     }
+  catch(const spirv_cross::CompilerError& err) {
+#if !defined(NDEBUG)
+    Log::d("cross-compile error: \"",err.what(),"\"");
+#endif
+    throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
+    }
   catch(...) {
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }

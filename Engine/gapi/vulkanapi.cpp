@@ -89,7 +89,7 @@ AbstractGraphicsApi::PFboLayout VulkanApi::createFboLayout(AbstractGraphicsApi::
                                                            Swapchain** s,
                                                            Tempest::TextureFormat *att,
                                                            uint8_t attCount) {
-  Detail::VDevice&    dx=reinterpret_cast<Detail::VDevice&>(d);
+  Detail::VDevice&    dx=*reinterpret_cast<Detail::VDevice*>(d);
   VkFormat            frm[256] = {};
   Detail::VSwapchain* sx[256] = {};
 
