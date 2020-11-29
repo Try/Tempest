@@ -84,7 +84,7 @@ void DxCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*  f,
 
   resState.flushLayout(*this);
 
-  auto  desc = fbo.rtvHeap->GetCPUDescriptorHandleForHeapStart();
+  auto desc = fbo.rtvHeap->GetCPUDescriptorHandleForHeapStart();
   if(fbo.depth.res!=nullptr) {
     auto ds = fbo.dsvHeap->GetCPUDescriptorHandleForHeapStart();
     impl->OMSetRenderTargets(fbo.viewsCount, &desc, TRUE, &ds);
@@ -370,20 +370,95 @@ void DxCommandBuffer::clearStage() {
     }
   }
 
-void DxCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, uint32_t srcH, uint32_t srcMip,
-                           AbstractGraphicsApi::Texture& dstTex, uint32_t dstW, uint32_t dstH, uint32_t dstMip) {
+void DxCommandBuffer::blitFS(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, uint32_t srcH, uint32_t srcMip,
+                             AbstractGraphicsApi::Texture& dstTex, uint32_t dstW, uint32_t dstH, uint32_t dstMip) {
   (void)srcW;
   (void)srcH;
 
-  const DXGI_FORMAT frm = reinterpret_cast<DxTexture&>(srcTex).format;
+  struct Blit : Stage {
+    Blit(DxDevice& dev,DxUniformsLay& lay, DxTexture& dest, size_t dstMip):desc(dev,lay) {
+      // descriptor heap
+      D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
+      rtvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+      rtvHeapDesc.NumDescriptors = UINT(1);
+      rtvHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+      dxAssert(dev.device->CreateDescriptorHeap(&rtvHeapDesc, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&rtvHeap)));
 
-  DxCompPipeline* pshader = nullptr;
+      rtvHandle = rtvHeap->GetCPUDescriptorHandleForHeapStart();
+
+      D3D12_RENDER_TARGET_VIEW_DESC view = {};
+      view.Format             = dest.format;
+      view.ViewDimension      = D3D12_RTV_DIMENSION_TEXTURE2D;
+      view.Texture2D.MipSlice = UINT(dstMip);
+
+      dev.device->CreateRenderTargetView(dest.impl.get(), &view, rtvHandle);
+      }
+
+    ComPtr<ID3D12DescriptorHeap> rtvHeap;
+    D3D12_CPU_DESCRIPTOR_HANDLE  rtvHandle;
+    DxDescriptorArray            desc;
+    };
+
+  const DXGI_FORMAT frm = reinterpret_cast<DxTexture&>(srcTex).format;
+  std::unique_ptr<Blit> dx(new Blit(dev,*dev.blitLayout.handler,reinterpret_cast<DxTexture&>(dstTex),dstMip));
+  impl->OMSetRenderTargets(1, &dx->rtvHandle, TRUE, nullptr);
+
+  D3D12_VIEWPORT vp={};
+  vp.TopLeftX = float(0.f);
+  vp.TopLeftY = float(0.f);
+  vp.Width    = float(dstW);
+  vp.Height   = float(dstH);
+  vp.MinDepth = 0.f;
+  vp.MaxDepth = 1.f;
+  impl->RSSetViewports(1, &vp);
+
+  D3D12_RECT sr={};
+  sr.left   = 0;
+  sr.top    = 0;
+  sr.right  = LONG(dstW);
+  sr.bottom = LONG(dstH);
+  impl->RSSetScissorRects(1, &sr);
+
+  dx->desc.set(0,&srcTex,srcMip,Sampler2d::bilinear());
+
+  auto& shader = *dev.blit.handler;
+  impl->SetPipelineState(&shader.instance(frm));
+  impl->SetGraphicsRootSignature(shader.sign.get());
+  impl->IASetPrimitiveTopology(shader.topology);
+  implSetUniforms(dx->desc,false);
+
+  D3D12_VERTEX_BUFFER_VIEW view;
+  view.BufferLocation = dev.vboFsq.handler->impl.get()->GetGPUVirtualAddress();
+  view.SizeInBytes    = dev.vboFsq.handler->sizeInBytes;
+  view.StrideInBytes  = shader.stride;
+  impl->IASetVertexBuffers(0,1,&view);
+
+  impl->DrawInstanced(6,1,0,0);
+
+  dx->next       = stageResources;
+  stageResources = dx.release();
+  }
+
+void DxCommandBuffer::blitCS(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, uint32_t srcH, uint32_t srcMip,
+                             AbstractGraphicsApi::Texture& dstTex, uint32_t dstW, uint32_t dstH, uint32_t dstMip) {
+  (void)srcW;
+  (void)srcH;
+
+  const DXGI_FORMAT frm     = reinterpret_cast<DxTexture&>(srcTex).format;
+  DxCompPipeline*   pshader = nullptr;
   switch(frm) {
+    case DXGI_FORMAT_R8_UNORM:
+    case DXGI_FORMAT_R8G8_UNORM:
     case DXGI_FORMAT_R8G8B8A8_UNORM:
       pshader = dev.blitRgba8.handler;
       break;
+    case DXGI_FORMAT_R32_FLOAT:
+      pshader = dev.blitR32f.handler;
+      break;
+    case DXGI_FORMAT_R32G32_FLOAT:
+    case DXGI_FORMAT_R32G32B32_FLOAT:
     case DXGI_FORMAT_R32G32B32A32_FLOAT:
-      pshader = dev.blitRgba8.handler;
+      pshader = dev.blitRgba32f.handler;
       break;
     default:
       throw std::runtime_error("not implemented");
@@ -395,17 +470,19 @@ void DxCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, 
     DxDescriptorArray desc;
     };
 
-  std::unique_ptr<Blit> dx(new Blit(dev,*dev.blitLayout.handler));
+  std::unique_ptr<Blit> dx(new Blit(dev,*dev.blitLayoutCs.handler));
   dx->desc.setSsbo(0,&dstTex,dstMip);
   dx->desc.setSsbo(1,&srcTex,srcMip);
 
   impl->SetPipelineState(shader.impl.get());
   impl->SetComputeRootSignature(shader.sign.get());
   implSetUniforms(dx->desc,true);
+  impl->Dispatch(dstW,dstH,1);
+
+  // impl->CopyTextureRegion();
+
   dx->next       = stageResources;
   stageResources = dx.release();
-
-  impl->Dispatch(dstW,dstH,1);
   }
 
 void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img, TextureLayout defLayout,
@@ -416,33 +493,48 @@ void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img, TextureL
   resState.flushLayout(*this);
 
   auto& image = reinterpret_cast<const DxTexture&>(img);
-  if(image.format==DXGI_FORMAT_R8G8B8A8_UNORM ||
-     image.format==DXGI_FORMAT_R32G32B32A32_FLOAT) {
-    // TODO: more formats
-    int32_t w = int32_t(texWidth);
-    int32_t h = int32_t(texHeight);
-
-    if(defLayout!=TextureLayout::TransferDest) {
-      changeLayout(img,defLayout,TextureLayout::TransferDest,uint32_t(-1));
-      }
-
-    for(uint32_t i=1; i<mipLevels; ++i) {
-      const int mw = (w==1 ? 1 : w/2);
-      const int mh = (h==1 ? 1 : h/2);
-
-      changeLayout(img,TextureLayout::TransferDest,TextureLayout::TransferSrc,i-1);
-      blit(img,  w, h, i-1,
-           img, mw,mh, i);
-      changeLayout(img,TextureLayout::TransferSrc, TextureLayout::Sampler,    i-1);
-
-      w = mw;
-      h = mh;
-      }
-    changeLayout(img,TextureLayout::TransferDest, TextureLayout::Sampler, mipLevels-1);
-    } else {
-    if(defLayout!=TextureLayout::Sampler)
-      changeLayout(img, defLayout, TextureLayout::Sampler, uint32_t(-1));
+  TextureLayout dFrm  = TextureLayout::ColorAttach;
+  TextureLayout sFrm  = TextureLayout::Sampler;
+  bool          useFS = true;
+  if(image.format==DXGI_FORMAT_R8G8B8A8_UNORM     ||
+     image.format==DXGI_FORMAT_R32_FLOAT          ||
+     image.format==DXGI_FORMAT_R32G32_FLOAT       ||
+     image.format==DXGI_FORMAT_R32G32B32_FLOAT    ||
+     image.format==DXGI_FORMAT_R32G32B32A32_FLOAT ||
+     true) {
+    dFrm  = TextureLayout::TransferDest;
+    sFrm  = TextureLayout::TransferSrc;
+    useFS = false;
     }
+
+  int32_t w = int32_t(texWidth);
+  int32_t h = int32_t(texHeight);
+
+  if(defLayout!=dFrm)
+    changeLayout(img,defLayout,dFrm,uint32_t(-1));
+
+  for(uint32_t i=1; i<mipLevels; ++i) {
+    const int mw = (w==1 ? 1 : w/2);
+    const int mh = (h==1 ? 1 : h/2);
+
+    changeLayout(img,dFrm,sFrm,i-1);
+
+    if(useFS) {
+      blitFS(img,  w, h, i-1,
+             img, mw,mh, i);
+      } else {
+      blitCS(img,  w, h, i-1,
+             img, mw,mh, i);
+      }
+
+    if(sFrm!=TextureLayout::Sampler)
+      changeLayout(img,sFrm, TextureLayout::Sampler, i-1);
+
+    w = mw;
+    h = mh;
+    }
+  if(dFrm!=TextureLayout::Sampler)
+    changeLayout(img,dFrm, TextureLayout::Sampler, mipLevels-1);
   }
 
 void DxCommandBuffer::implChangeLayout(ID3D12Resource* res, D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES lay) {

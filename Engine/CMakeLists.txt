@@ -132,7 +132,10 @@ function(add_shader OUTPUT SOURCE)
 endfunction(add_shader)
 
 add_shader(blit_rgba8.comp.sprv   blit.comp    "-DRGBA8")
-add_shader(blit_rgba32F.comp.sprv blit.comp    "-DRGBA32F")
+add_shader(blit_r32f.comp.sprv    blit.comp    "-DR32F")
+add_shader(blit_rgba32f.comp.sprv blit.comp    "-DRGBA32F")
+add_shader(blit.vert.sprv         blit.vert    "")
+add_shader(blit.frag.sprv         blit.frag    "")
 
 add_shader(empty.vert.sprv     empty.vert     "")
 add_shader(empty.frag.sprv     empty.frag     "")

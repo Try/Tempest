@@ -40,6 +40,10 @@ DxDescriptorArray::~DxDescriptorArray() {
   }
 
 void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const Sampler2d& smp) {
+  set(id,tex,uint32_t(-1),smp);
+  }
+
+void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, uint32_t mipLevel, const Sampler2d& smp) {
   auto&      device = *dev.device;
   DxTexture& t      = *reinterpret_cast<DxTexture*>(tex);
 
@@ -85,6 +89,11 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const 
 
   smpDesc.Filter = D3D12_FILTER(filter);
 
+  if(mipLevel!=uint32_t(-1)) {
+    srvDesc.Texture2D.MostDetailedMip = mipLevel;
+    srvDesc.Texture2D.MipLevels       = 1;
+    }
+
   auto& prm = layPtr.handler->prm[id];
   auto  gpu = val.cpu[prm.heapId];
   gpu.ptr += prm.heapOffset;
@@ -114,21 +123,32 @@ void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, Tempest::AbstractGra
   DxTexture& t      = *reinterpret_cast<DxTexture*>(tex);
   auto&      prm    = layPtr.handler->prm[id];
 
-  D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
-  desc.Format                    = t.format;
-  desc.ViewDimension             = D3D12_SRV_DIMENSION_TEXTURE2D;
-  desc.Shader4ComponentMapping   = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-  if(mipLevel==uint32_t(-1)) {
-    desc.Texture2D.MostDetailedMip = 0;
-    desc.Texture2D.MipLevels       = t.mips;
-    } else {
-    desc.Texture2D.MostDetailedMip = mipLevel;
-    desc.Texture2D.MipLevels       = 1;
-    }
+  if(prm.rgnType==D3D12_DESCRIPTOR_RANGE_TYPE_UAV) {
+    D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+    desc.Format             = t.format;
+    desc.ViewDimension      = D3D12_UAV_DIMENSION_TEXTURE2D;
+    desc.Texture2D.MipSlice = mipLevel;
 
-  auto  gpu = val.cpu[prm.heapId];
-  gpu.ptr += prm.heapOffset;
-  device.CreateShaderResourceView(t.impl.get(),&desc,gpu);
+    auto  gpu = val.cpu[prm.heapId];
+    gpu.ptr += prm.heapOffset;
+    device.CreateUnorderedAccessView(t.impl.get(),nullptr,&desc,gpu);
+    } else {
+    D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+    desc.Format                    = t.format;
+    desc.ViewDimension             = D3D12_SRV_DIMENSION_TEXTURE2D;
+    desc.Shader4ComponentMapping   = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    if(mipLevel==uint32_t(-1)) {
+      desc.Texture2D.MostDetailedMip = 0;
+      desc.Texture2D.MipLevels       = t.mips;
+      } else {
+      desc.Texture2D.MostDetailedMip = mipLevel;
+      desc.Texture2D.MipLevels       = 1;
+      }
+
+    auto  gpu = val.cpu[prm.heapId];
+    gpu.ptr += prm.heapOffset;
+    device.CreateShaderResourceView(t.impl.get(),&desc,gpu);
+    }
   }
 
 void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi::Buffer* b,

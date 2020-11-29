@@ -11,7 +11,11 @@ class DxSwapchain;
 
 class DxFboLayout : public AbstractGraphicsApi::FboLayout {
   public:
+    DxFboLayout() = default;
+    DxFboLayout(const DxFboLayout& other);
     DxFboLayout(Detail::DxSwapchain** sw, TextureFormat* att, size_t attCount);
+
+    DxFboLayout& operator = (const DxFboLayout& other);
 
     bool equals(const FboLayout&) const override;
 

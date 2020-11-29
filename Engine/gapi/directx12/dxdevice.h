@@ -22,6 +22,8 @@ class DirectX12Api;
 
 namespace Detail {
 
+class DxCompPipeline;
+
 inline void dxAssert(HRESULT code){
   if(T_LIKELY(code==S_OK))
     return;
@@ -109,7 +111,7 @@ inline UINT alignTo(UINT x, UINT a) {
   return (x+a) & (~a);
   }
 
-class DxCompPipeline;
+class DxPipeline;
 
 class DxDevice : public AbstractGraphicsApi::Device {
   public:
@@ -135,9 +137,14 @@ class DxDevice : public AbstractGraphicsApi::Device {
 
     DxAllocator                 allocator;
 
+    DSharedPtr<Detail::DxBuffer*> vboFsq;
     DSharedPtr<DxUniformsLay*>  blitLayout;
+    DSharedPtr<DxPipeline*>     blit;
+
+    DSharedPtr<DxUniformsLay*>  blitLayoutCs;
     DSharedPtr<DxCompPipeline*> blitRgba8;
-    DSharedPtr<DxCompPipeline*> blitRgba32;
+    DSharedPtr<DxCompPipeline*> blitR32f;
+    DSharedPtr<DxCompPipeline*> blitRgba32f;
 
   private:
     ComPtr<ID3D12Fence>         idleFence;

@@ -24,7 +24,8 @@ Game::Game(Device& device)
   //VectorImage image;
   //image.load("img/test.svg");
 
-  Tempest::Pixmap pm("img/texture.png");
+  //Tempest::Pixmap pm("img/texture.png");
+  Tempest::Pixmap pm("img/texture.hdr");
   texture = device.loadTexture(pm);
 
   std::initializer_list<Point> source = {

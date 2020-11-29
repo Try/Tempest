@@ -53,21 +53,52 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter) {
                                reinterpret_cast<void**>(&idleFence)));
   idleEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 
+  {
+    float vbo[] = {
+      -1,-1,
+       1,-1,
+       1, 1,
+      -1,-1,
+       1, 1,
+      -1, 1
+      };
+    auto v=allocator.alloc(vbo,6*2,sizeof(float),sizeof(float),MemUsage::VertexBuffer,BufferHeap::Upload);
+    vboFsq = DSharedPtr<DxBuffer*>(new DxBuffer(std::move(v)));
+  }
+
+  {
+  RenderState st;
+  st.setZTestMode   (RenderState::ZTestMode::Always);
+  st.setCullFaceMode(RenderState::CullMode::NoCull);
+
+  auto    blitVs = DSharedPtr<DxShader*>(new DxShader(blit_vert_sprv,sizeof(blit_vert_sprv)));
+  auto    blitFs = DSharedPtr<DxShader*>(new DxShader(blit_frag_sprv,sizeof(blit_frag_sprv)));
+  Decl::ComponentType decl[1] = {Decl::ComponentType::float2};
+
+  blitLayout = DSharedPtr<DxUniformsLay*>(new DxUniformsLay(*this,blitFs.handler->lay));
+  blit   = DSharedPtr<DxPipeline*>(new DxPipeline(*this,st,decl,1,2*sizeof(float),Triangles,*blitLayout.handler,
+                                                  blitVs.handler,nullptr,nullptr,nullptr,blitFs.handler));
+  }
+
+  {
   DxShader blitSh(blit_rgba8_comp_sprv,sizeof(blit_rgba8_comp_sprv));
-  blitLayout = DSharedPtr<DxUniformsLay*>(new DxUniformsLay (*this,blitSh.lay));
-  blitRgba8  = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*blitLayout.handler,blitSh));
+  blitLayoutCs = DSharedPtr<DxUniformsLay*> (new DxUniformsLay (*this,blitSh.lay));
+  blitRgba8    = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*blitLayoutCs.handler,blitSh));
 
-  DxShader blitSh32(blit_rgba32F_comp_sprv,sizeof(blit_rgba32F_comp_sprv));
-  blitRgba32 = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*blitLayout.handler,blitSh));
+  DxShader blitShR32(blit_r32f_comp_sprv,sizeof(blit_r32f_comp_sprv));
+  blitR32f     = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*blitLayoutCs.handler,blitShR32));
 
-  data   .reset(new DataMgr(*this));
+  DxShader blitSh32(blit_rgba32f_comp_sprv,sizeof(blit_rgba32f_comp_sprv));
+  blitRgba32f  = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*blitLayoutCs.handler,blitSh32));
+  }
+
+  data.reset(new DataMgr(*this));
   }
 
 DxDevice::~DxDevice() {
-  data.reset();
-  blitRgba32 = DSharedPtr<DxCompPipeline*>();
-  blitRgba8  = DSharedPtr<DxCompPipeline*>();
+  blit       = DSharedPtr<DxPipeline*>();
   blitLayout = DSharedPtr<DxUniformsLay*>();
+  data.reset();
   CloseHandle(idleEvent);
   }
 

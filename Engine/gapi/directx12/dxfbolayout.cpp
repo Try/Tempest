@@ -38,3 +38,14 @@ bool DxFboLayout::equals(const Tempest::AbstractGraphicsApi::FboLayout& l) const
   }
 
 #endif
+
+Tempest::Detail::DxFboLayout& Tempest::Detail::DxFboLayout::operator =(const Tempest::Detail::DxFboLayout& other) {
+  NumRenderTargets = other.NumRenderTargets;
+  std::memcpy(RTVFormats,other.RTVFormats,sizeof(RTVFormats));
+  DSVFormat = other.DSVFormat;
+  return *this;
+  }
+
+Tempest::Detail::DxFboLayout::DxFboLayout(const Tempest::Detail::DxFboLayout& other) {
+  *this = other;
+  }

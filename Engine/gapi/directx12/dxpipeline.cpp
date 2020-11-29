@@ -76,16 +76,23 @@ DxPipeline::DxPipeline(DxDevice& device, const RenderState& st,
     }
   }
 
+ID3D12PipelineState& DxPipeline::instance(DXGI_FORMAT frm) {
+  DxFboLayout lay;
+  lay.RTVFormats[0]    = frm;
+  lay.NumRenderTargets = 1;
+  return instance(lay);
+  }
+
 ID3D12PipelineState& DxPipeline::instance(DxFboLayout& frm) {
   std::lock_guard<SpinLock> guard(sync);
 
   for(auto& i:inst) {
-    if(i.lay.handler->equals(frm))
+    if(i.lay.equals(frm))
       return *i.impl.get();
     }
 
   Inst pso;
-  pso.lay  = DSharedPtr<DxFboLayout*>(&frm);
+  pso.lay  = frm;
   pso.impl = initGraphicsPipeline(frm);
   inst.emplace_back(std::move(pso));
   return *inst.back().impl.get();

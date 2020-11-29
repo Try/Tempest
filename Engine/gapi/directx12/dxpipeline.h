@@ -30,7 +30,7 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
       Inst(Inst&&)=default;
       Inst& operator = (Inst&&)=default;
 
-      DSharedPtr<DxFboLayout*>    lay;
+      DxFboLayout                 lay;
       ComPtr<ID3D12PipelineState> impl;
       };
 
@@ -40,6 +40,7 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
     D3D_PRIMITIVE_TOPOLOGY      topology=D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
     size_t                      pushConstantId=0;
 
+    ID3D12PipelineState&        instance(DXGI_FORMAT  frm);
     ID3D12PipelineState&        instance(DxFboLayout& frm);
 
   private:

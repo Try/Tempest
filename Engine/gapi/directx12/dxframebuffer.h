@@ -35,10 +35,10 @@ class DxFramebuffer : public AbstractGraphicsApi::Fbo {
       DXGI_FORMAT     format    = DXGI_FORMAT_UNKNOWN;
       };
     std::unique_ptr<Attach[]>  views;
-    UINT32                   viewsCount;
+    UINT32                     viewsCount;
 
     Attach                     depth;
-    DSharedPtr<DxFboLayout*> lay;
+    DSharedPtr<DxFboLayout*>   lay;
 
   private:
     void setupViews(ID3D12Device& device, ID3D12Resource** res, size_t cnt, ID3D12Resource* ds);
