@@ -37,8 +37,6 @@ bool DxFboLayout::equals(const Tempest::AbstractGraphicsApi::FboLayout& l) const
   return DSVFormat==oth.DSVFormat;
   }
 
-#endif
-
 Tempest::Detail::DxFboLayout& Tempest::Detail::DxFboLayout::operator =(const Tempest::Detail::DxFboLayout& other) {
   NumRenderTargets = other.NumRenderTargets;
   std::memcpy(RTVFormats,other.RTVFormats,sizeof(RTVFormats));
@@ -49,3 +47,5 @@ Tempest::Detail::DxFboLayout& Tempest::Detail::DxFboLayout::operator =(const Tem
 Tempest::Detail::DxFboLayout::DxFboLayout(const Tempest::Detail::DxFboLayout& other) {
   *this = other;
   }
+
+#endif

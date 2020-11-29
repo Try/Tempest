@@ -489,15 +489,14 @@ void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img, TextureL
                                      uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
   if(currentFbo!=nullptr)
     throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
-  // resState.setLayout(image,defLayout,true);
+
   resState.flushLayout(*this);
 
   auto& image = reinterpret_cast<const DxTexture&>(img);
   TextureLayout dFrm  = TextureLayout::ColorAttach;
   TextureLayout sFrm  = TextureLayout::Sampler;
   bool          useFS = true;
-  if(image.format==DXGI_FORMAT_R8G8B8A8_UNORM     ||
-     image.format==DXGI_FORMAT_R32_FLOAT          ||
+  if(image.format==DXGI_FORMAT_R32_FLOAT          ||
      image.format==DXGI_FORMAT_R32G32_FLOAT       ||
      image.format==DXGI_FORMAT_R32G32B32_FLOAT    ||
      image.format==DXGI_FORMAT_R32G32B32A32_FLOAT ||
