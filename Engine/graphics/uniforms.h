@@ -35,10 +35,10 @@ class Uniforms final {
     template<class T>
     void set(size_t layoutBind,const StorageBuffer<T>& vbuf,size_t offset,size_t size);
 
-    void set(size_t layoutBind,const Texture2d&    tex, const Sampler2d& smp = Sampler2d::anisotrophy());
-    void set(size_t layoutBind,const Attachment&   tex, const Sampler2d& smp = Sampler2d::anisotrophy());
-    void set(size_t layoutBind,const StorageImage& tex);
-    void set(size_t layoutBind,const Detail::ResourcePtr<Texture2d>& tex, const Sampler2d& smp = Sampler2d::anisotrophy());
+    void set(size_t layoutBind, const Texture2d&    tex, const Sampler2d& smp = Sampler2d::anisotrophy());
+    void set(size_t layoutBind, const Attachment&   tex, const Sampler2d& smp = Sampler2d::anisotrophy());
+    void set(size_t layoutBind, const StorageImage& tex, uint32_t mipLevel=0);
+    void set(size_t layoutBind, const Detail::ResourcePtr<Texture2d>& tex, const Sampler2d& smp = Sampler2d::anisotrophy());
 
   private:
     Uniforms(Tempest::Device& dev,AbstractGraphicsApi::Desc* desc);

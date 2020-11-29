@@ -160,7 +160,7 @@ AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device
   else {
     Detail::VBuffer  buf =dx.allocator.alloc(nullptr, count,size,alignedSz, usage|MemUsage::TransferDst,BufferHeap::Static);
     if(mem==nullptr) {
-      Detail::DSharedPtr<Detail::VBuffer*> pbuf(new Detail::VBuffer(std::move(buf)));
+      Detail::DSharedPtr<Buffer*> pbuf(new Detail::VBuffer(std::move(buf)));
       return PBuffer(pbuf.handler);
       }
 

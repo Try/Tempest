@@ -58,9 +58,6 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t count, size_t size, size_t a
     heapProp.Type = D3D12_HEAP_TYPE_READBACK;
     state         = D3D12_RESOURCE_STATE_COPY_DEST;
     }
-  else {
-    resDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-    }
 
   dxAssert(device->CreateCommittedResource(
              &heapProp,

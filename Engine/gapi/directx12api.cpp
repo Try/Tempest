@@ -222,8 +222,12 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
     return PBuffer(new Detail::DxBuffer(std::move(stage)));
     }
   else {
+    Detail::DxBuffer  buf = dx.allocator.alloc(nullptr,count,size,alignedSz,usage|MemUsage::TransferDst,BufferHeap::Static);
+    if(mem==nullptr) {
+      Detail::DSharedPtr<Buffer*> pbuf(new Detail::DxBuffer(std::move(buf)));
+      return PBuffer(pbuf.handler);
+      }
     Detail::DxBuffer  stage=dx.allocator.alloc(mem,    count,size,alignedSz,MemUsage::TransferSrc,      BufferHeap::Upload);
-    Detail::DxBuffer  buf  =dx.allocator.alloc(nullptr,count,size,alignedSz,usage|MemUsage::TransferDst,BufferHeap::Static);
 
     Detail::DSharedPtr<Buffer*> pstage(new Detail::DxBuffer(std::move(stage)));
     Detail::DSharedPtr<Buffer*> pbuf  (new Detail::DxBuffer(std::move(buf)));

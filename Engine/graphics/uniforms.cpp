@@ -36,9 +36,9 @@ void Uniforms::set(size_t layoutBind, const Attachment& tex, const Sampler2d& sm
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
   }
 
-void Uniforms::set(size_t layoutBind, const StorageImage& tex) {
+void Uniforms::set(size_t layoutBind, const StorageImage& tex, uint32_t mipLevel) {
   if(tex.impl.handler)
-    desc.handler->setSsbo(layoutBind,tex.impl.handler,uint32_t(-1)); else
+    desc.handler->setSsbo(layoutBind,tex.impl.handler,mipLevel); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
   }
 
