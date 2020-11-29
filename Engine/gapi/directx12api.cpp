@@ -245,10 +245,9 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
   return PBuffer();
   }
 
-AbstractGraphicsApi::Desc* DirectX12Api::createDescriptors(AbstractGraphicsApi::Device* d, UniformsLay& layP) {
-  Detail::DxDevice&      dx = *reinterpret_cast<Detail::DxDevice*>(d);
-  Detail::DxUniformsLay& u  = reinterpret_cast<Detail::DxUniformsLay&>(layP);
-  return new DxDescriptorArray(dx,u);
+AbstractGraphicsApi::Desc* DirectX12Api::createDescriptors(AbstractGraphicsApi::Device*, UniformsLay& layP) {
+  Detail::DxUniformsLay& u = reinterpret_cast<Detail::DxUniformsLay&>(layP);
+  return new DxDescriptorArray(u);
   }
 
 AbstractGraphicsApi::PUniformsLay DirectX12Api::createUboLayout(Device* d,

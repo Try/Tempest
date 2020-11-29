@@ -73,6 +73,7 @@ class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
     size_t                      pushConstantId=0;
 
     ComPtr<ID3D12RootSignature> impl;
+    DxDevice&                   dev;
 
     PoolAllocation              allocDescriptors();
     void                        freeDescriptors(PoolAllocation& d);
@@ -84,7 +85,6 @@ class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
       D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL;
       };
 
-    DxDevice&                   dev;
     SpinLock                    poolsSync;
     std::vector<DescriptorPool> pools;
 

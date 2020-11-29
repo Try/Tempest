@@ -29,14 +29,22 @@ static int swizzle(ComponentSwizzle cs, int def){
   return def;
   }
 
-DxDescriptorArray::DxDescriptorArray(DxDevice& dev, DxUniformsLay& vlay)
-  : layPtr(&vlay), dev(dev) {
+DxDescriptorArray::DxDescriptorArray(DxUniformsLay& vlay)
+  : layPtr(&vlay) {
   val     = layPtr.handler->allocDescriptors();
   heapCnt = UINT(vlay.heaps.size());
   }
 
+DxDescriptorArray::DxDescriptorArray(DxDescriptorArray&& other)
+  : layPtr(other.layPtr) {
+  val          = other.val;
+  heapCnt      = other.heapCnt;
+  other.layPtr = DSharedPtr<DxUniformsLay*>{};
+  }
+
 DxDescriptorArray::~DxDescriptorArray() {
-  layPtr.handler->freeDescriptors(val);
+  if(layPtr)
+    layPtr.handler->freeDescriptors(val);
   }
 
 void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const Sampler2d& smp) {
@@ -44,7 +52,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const 
   }
 
 void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, uint32_t mipLevel, const Sampler2d& smp) {
-  auto&      device = *dev.device;
+  auto&      device = *layPtr.handler->dev.device;
   DxTexture& t      = *reinterpret_cast<DxTexture*>(tex);
 
   // Describe and create a SRV for the texture.
@@ -105,7 +113,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, uint32
   }
 
 void DxDescriptorArray::setUbo(size_t id, AbstractGraphicsApi::Buffer* b, size_t offset, size_t size, size_t /*align*/) {
-  auto&      device = *dev.device;
+  auto&      device = *layPtr.handler->dev.device;
   DxBuffer&  buf    = *reinterpret_cast<DxBuffer*>(b);
 
   D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
@@ -119,7 +127,7 @@ void DxDescriptorArray::setUbo(size_t id, AbstractGraphicsApi::Buffer* b, size_t
   }
 
 void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, Tempest::AbstractGraphicsApi::Texture* tex, uint32_t mipLevel) {
-  auto&      device = *dev.device;
+  auto&      device = *layPtr.handler->dev.device;
   DxTexture& t      = *reinterpret_cast<DxTexture*>(tex);
   auto&      prm    = layPtr.handler->prm[id];
 
@@ -153,7 +161,7 @@ void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, Tempest::AbstractGra
 
 void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi::Buffer* b,
                                                  size_t offset, size_t size, size_t /*align*/) {
-  auto&      device = *dev.device;
+  auto&      device = *layPtr.handler->dev.device;
   DxBuffer&  buf    = *reinterpret_cast<DxBuffer*>(b);
   auto&      prm    = layPtr.handler->prm[id];
 

@@ -11,7 +11,8 @@ class VUniformsLay;
 
 class DxDescriptorArray : public AbstractGraphicsApi::Desc {
   public:
-    DxDescriptorArray(DxDevice& dev, DxUniformsLay& vlay);
+    DxDescriptorArray(DxUniformsLay& vlay);
+    DxDescriptorArray(DxDescriptorArray&& other);
     ~DxDescriptorArray();
 
     void set    (size_t id, AbstractGraphicsApi::Texture *tex, uint32_t mipLevel, const Sampler2d& smp);
@@ -25,9 +26,6 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
     DSharedPtr<DxUniformsLay*>    layPtr;
     DxUniformsLay::PoolAllocation val;
     UINT                          heapCnt = 0;
-
-  private:
-    DxDevice&                     dev;
   };
 
 }}

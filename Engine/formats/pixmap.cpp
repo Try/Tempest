@@ -129,17 +129,27 @@ struct Pixmap::Impl {
     return std::unique_ptr<Impl,Deleter>(new Impl(other,frm));
     }
 
+  template<class T>
+  static T maxColor(T*) {
+    return T(-1);
+    }
+
+  static float maxColor(float*) {
+    return float(1.0);
+    }
+
   template<class Tout, class Tin>
   static void noncompresedConv(size_t w, size_t h, void* vdata, const void* vsrc, uint8_t eltOut, uint8_t eltIn){
-    auto* data = reinterpret_cast<Tout*>(vdata);
-    auto* src  = reinterpret_cast<const Tin*>(vsrc);
+    auto*             data = reinterpret_cast<Tout*>(vdata);
+    auto*             src  = reinterpret_cast<const Tin*>(vsrc);
+    static const auto one  = maxColor(reinterpret_cast<Tout*>(0));
 
     const size_t size = w*h;
     for(size_t i=0;i<size;++i) {
       Tout*       pix = data+i*eltOut;
       const Tin*  s   = src +i*eltIn;
 
-      Tout tmp[4] = {0,0,0,Tout(-1)};
+      Tout tmp[4] = {0,0,0,one};
       for(uint8_t i=0;i<eltIn;++i)
         copy(tmp[i],s[i]);
 

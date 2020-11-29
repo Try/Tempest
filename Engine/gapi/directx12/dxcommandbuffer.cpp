@@ -22,7 +22,7 @@ struct DxCommandBuffer::Blit : Stage {
   Blit(DxDevice& dev,
        DxTexture& src, uint32_t /*srcW*/, uint32_t /*srcH*/, uint32_t srcMip,
        DxTexture& dst, uint32_t dstW, uint32_t dstH, uint32_t dstMip)
-    :src(src), srcMip(srcMip), dstW(dstW), dstH(dstH), desc(dev,*dev.blitLayout.handler) {
+    :src(src), srcMip(srcMip), dstW(dstW), dstH(dstH), desc(*dev.blitLayout.handler) {
     // descriptor heap
     D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
     rtvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
@@ -88,6 +88,106 @@ struct DxCommandBuffer::Blit : Stage {
   ComPtr<ID3D12DescriptorHeap> rtvHeap;
   D3D12_CPU_DESCRIPTOR_HANDLE  rtvHandle;
   DxDescriptorArray            desc;
+  };
+
+struct DxCommandBuffer::MipMaps : Stage {
+  MipMaps(DxDevice& dev, DxTexture& image, TextureLayout defLayout, uint32_t texW, uint32_t texH, uint32_t mipLevels)
+    :img(image),defLayout(defLayout),texW(texW),texH(texH),mipLevels(mipLevels) {
+    // descriptor heap
+    D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
+    rtvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+    rtvHeapDesc.NumDescriptors = UINT(mipLevels-1);
+    rtvHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+    dxAssert(dev.device->CreateDescriptorHeap(&rtvHeapDesc, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&rtvHeap)));
+
+    auto                        rtvHeapInc = dev.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle  = rtvHeap->GetCPUDescriptorHandleForHeapStart();
+
+    D3D12_RENDER_TARGET_VIEW_DESC view = {};
+    view.Format             = image.format;
+    view.ViewDimension      = D3D12_RTV_DIMENSION_TEXTURE2D;
+    for(uint32_t i=1; i<mipLevels; ++i) {
+      view.Texture2D.MipSlice = UINT(i); //destMip
+      dev.device->CreateRenderTargetView(image.impl.get(), &view, rtvHandle);
+      rtvHandle.ptr+=rtvHeapInc;
+      }
+    desc.reserve(mipLevels);
+    }
+
+  void blit(DxCommandBuffer& cmd, uint32_t srcMip, uint32_t dstW, uint32_t dstH) {
+    auto& impl = *cmd.impl;
+    auto& dev  = cmd.dev;
+
+    D3D12_VIEWPORT vp={};
+    vp.TopLeftX = float(0.f);
+    vp.TopLeftY = float(0.f);
+    vp.Width    = float(dstW);
+    vp.Height   = float(dstH);
+    vp.MinDepth = 0.f;
+    vp.MaxDepth = 1.f;
+    impl.RSSetViewports(1, &vp);
+
+    D3D12_RECT sr={};
+    sr.left   = 0;
+    sr.top    = 0;
+    sr.right  = LONG(dstW);
+    sr.bottom = LONG(dstH);
+    impl.RSSetScissorRects(1, &sr);
+
+    desc.emplace_back(*dev.blitLayout.handler);
+    DxDescriptorArray& ubo = this->desc.back();
+    ubo.set(0,&img,srcMip,Sampler2d::bilinear());
+    cmd.implSetUniforms(ubo,false);
+
+    impl.DrawInstanced(6,1,0,0);
+    }
+
+  void exec(DxCommandBuffer& cmd) override {
+    auto& impl = *cmd.impl;
+    auto& dev  = cmd.dev;
+
+    int32_t w = int32_t(texW);
+    int32_t h = int32_t(texH);
+
+    auto& shader = *dev.blit.handler;
+    impl.SetPipelineState(&shader.instance(img.format));
+    impl.SetGraphicsRootSignature(shader.sign.get());
+    impl.IASetPrimitiveTopology(shader.topology);
+
+    D3D12_VERTEX_BUFFER_VIEW view;
+    view.BufferLocation = dev.vboFsq.handler->impl.get()->GetGPUVirtualAddress();
+    view.SizeInBytes    = dev.vboFsq.handler->sizeInBytes;
+    view.StrideInBytes  = shader.stride;
+    impl.IASetVertexBuffers(0,1,&view);
+
+    if(defLayout!=TextureLayout::ColorAttach)
+      cmd.changeLayout(img,defLayout,TextureLayout::ColorAttach,uint32_t(-1));
+
+    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle  = rtvHeap->GetCPUDescriptorHandleForHeapStart();
+    auto                        rtvHeapInc = dev.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+    for(uint32_t i=1; i<mipLevels; ++i) {
+      const int mw = (w==1 ? 1 : w/2);
+      const int mh = (h==1 ? 1 : h/2);
+
+      cmd.changeLayout(img,TextureLayout::ColorAttach,TextureLayout::Sampler,i-1);
+      impl.OMSetRenderTargets(1, &rtvHandle, TRUE, nullptr);
+      blit(cmd,i-1,mw,mh);
+
+      w             = mw;
+      h             = mh;
+      rtvHandle.ptr+= rtvHeapInc;
+      }
+    cmd.changeLayout(img, TextureLayout::ColorAttach, TextureLayout::Sampler, mipLevels-1);
+    }
+
+  DxTexture&                     img;
+  TextureLayout                  defLayout;
+  uint32_t                       texW;
+  uint32_t                       texH;
+  uint32_t                       mipLevels;
+
+  ComPtr<ID3D12DescriptorHeap>   rtvHeap;
+  std::vector<DxDescriptorArray> desc;
   };
 
 DxCommandBuffer::DxCommandBuffer(DxDevice& d)
@@ -463,6 +563,9 @@ void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img, TextureL
 
   resState.flushLayout(*this);
 
+  std::unique_ptr<MipMaps> dx(new MipMaps(dev,reinterpret_cast<DxTexture&>(img),defLayout,texWidth,texHeight,mipLevels));
+  pushStage(dx.release());
+/*
   int32_t w = int32_t(texWidth);
   int32_t h = int32_t(texHeight);
 
@@ -481,6 +584,7 @@ void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img, TextureL
     h = mh;
     }
   changeLayout(img, TextureLayout::ColorAttach, TextureLayout::Sampler, mipLevels-1);
+  */
   }
 
 void DxCommandBuffer::implChangeLayout(ID3D12Resource* res, D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES lay) {

@@ -85,6 +85,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
       Stage* next = nullptr;
       };
     struct Blit;
+    struct MipMaps;
     Stage*                            stageResources = nullptr;
 
     void clearStage();
