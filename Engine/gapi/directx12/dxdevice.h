@@ -141,11 +141,6 @@ class DxDevice : public AbstractGraphicsApi::Device {
     DSharedPtr<DxUniformsLay*>  blitLayout;
     DSharedPtr<DxPipeline*>     blit;
 
-    DSharedPtr<DxUniformsLay*>  blitLayoutCs;
-    DSharedPtr<DxCompPipeline*> blitRgba8;
-    DSharedPtr<DxCompPipeline*> blitR32f;
-    DSharedPtr<DxCompPipeline*> blitRgba32f;
-
   private:
     ComPtr<ID3D12Fence>         idleFence;
     HANDLE                      idleEvent=nullptr;

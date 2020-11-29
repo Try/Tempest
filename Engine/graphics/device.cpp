@@ -223,13 +223,25 @@ Pixmap Device::readPixels(const Texture2d &t, uint32_t mip) {
 Pixmap Device::readPixels(const Attachment& t, uint32_t mip) {
   Pixmap pm;
   auto& tx = textureCast(t);
-  api.readPixels(dev,pm,tx.impl,TextureLayout::Sampler,tx.format(),uint32_t(t.w()),uint32_t(t.h()),mip);
+  uint32_t w = t.w();
+  uint32_t h = t.h();
+  for(uint32_t i=0; i<mip; ++i) {
+    w = (w==1 ? 1 : w/2);
+    h = (h==1 ? 1 : h/2);
+    }
+  api.readPixels(dev,pm,tx.impl,TextureLayout::Sampler,tx.format(),w,h,mip);
   return pm;
   }
 
 Pixmap Device::readPixels(const StorageImage& t, uint32_t mip) {
   Pixmap pm;
-  api.readPixels(dev,pm,t.impl,TextureLayout::Unordered,t.format(),uint32_t(t.w()),uint32_t(t.h()),mip);
+  uint32_t w = t.w();
+  uint32_t h = t.h();
+  for(uint32_t i=0; i<mip; ++i) {
+    w = (w==1 ? 1 : w/2);
+    h = (h==1 ? 1 : h/2);
+    }
+  api.readPixels(dev,pm,t.impl,TextureLayout::Unordered,t.format(),w,h,mip);
   return pm;
   }
 

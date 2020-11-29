@@ -93,6 +93,11 @@ DxTexture DxAllocator::alloc(const Pixmap& pm, uint32_t mip, DXGI_FORMAT format)
   resDesc.SampleDesc.Count   = 1;
   resDesc.SampleDesc.Quality = 0;
   resDesc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+  if(mip>1 &&
+     format!=DXGI_FORMAT_BC1_UNORM && format!=DXGI_FORMAT_BC2_UNORM && format!=DXGI_FORMAT_BC3_UNORM) {
+    // for mip-maps generator
+    resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+    }
 
   D3D12_HEAP_PROPERTIES heapProp={};
   heapProp.Type                 = D3D12_HEAP_TYPE_DEFAULT;

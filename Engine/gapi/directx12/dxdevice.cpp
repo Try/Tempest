@@ -80,18 +80,6 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter) {
                                                   blitVs.handler,nullptr,nullptr,nullptr,blitFs.handler));
   }
 
-  {
-  DxShader blitSh(blit_rgba8_comp_sprv,sizeof(blit_rgba8_comp_sprv));
-  blitLayoutCs = DSharedPtr<DxUniformsLay*> (new DxUniformsLay (*this,blitSh.lay));
-  blitRgba8    = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*blitLayoutCs.handler,blitSh));
-
-  DxShader blitShR32(blit_r32f_comp_sprv,sizeof(blit_r32f_comp_sprv));
-  blitR32f     = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*blitLayoutCs.handler,blitShR32));
-
-  DxShader blitSh32(blit_rgba32f_comp_sprv,sizeof(blit_rgba32f_comp_sprv));
-  blitRgba32f  = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*blitLayoutCs.handler,blitSh32));
-  }
-
   data.reset(new DataMgr(*this));
   }
 
@@ -132,15 +120,16 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, AbstractGraphicsApi::Props& pro
     }
 
   // https://docs.microsoft.com/en-us/windows/win32/direct3ddxgi/hardware-support-for-direct3d-12-0-formats
+  // NOTE: TextureFormat::RGB32F is not supported, because of mip-maps
   static const TextureFormat smp[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
                                       TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
-                                      TextureFormat::R32F, TextureFormat::RG32F, TextureFormat::RGB32F, TextureFormat::RGBA32F,
+                                      TextureFormat::R32F, TextureFormat::RG32F, /*TextureFormat::RGB32F,*/ TextureFormat::RGBA32F,
                                       TextureFormat::DXT1, TextureFormat::DXT3,  TextureFormat::DXT5
                                      };
 
   static const TextureFormat att[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
                                       TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
-                                      TextureFormat::R32F, TextureFormat::RG32F, TextureFormat::RGB32F, TextureFormat::RGBA32F
+                                      TextureFormat::R32F, TextureFormat::RG32F, TextureFormat::RGBA32F
                                      };
 
   static const TextureFormat sso[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,

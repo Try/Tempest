@@ -394,9 +394,9 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureL
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
-  cmd->changeLayout(tx, lay, TextureLayout::TransferSrc, 0);
+  cmd->changeLayout(tx, lay, TextureLayout::TransferSrc, mip);
   cmd->copy(stage,w,h,mip,tx,0);
-  cmd->changeLayout(tx, TextureLayout::TransferSrc, lay, 0);
+  cmd->changeLayout(tx, TextureLayout::TransferSrc, lay, mip);
   cmd->end();
   dx.dataMgr().submitAndWait(std::move(cmd));
 
