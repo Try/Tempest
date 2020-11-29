@@ -324,6 +324,38 @@ void Painter::implDrawRect(int x1, int y1, int x2, int y2, float u1, float v1, f
     }
   }
 
+void Painter::implDrawRectF(float x1, float y1, float x2, float y2, float u1, float v1, float u2, float v2) {
+  if(state!=StBrush) {
+    dev.setTopology(Triangles);
+    state=StBrush;
+    implBrush(s.br);
+    }
+  float x[4] = {float(x1), float(x2), float(x2), float(x1)};
+  float y[4] = {float(y1), float(y1), float(y2), float(y2)};
+  for(size_t i=0;i<4;++i)
+    s.tr.mat.map(x[i],y[i],x[i],y[i]);
+
+  FPoint trigBuf[4+4+4+4];
+  implDrawTrig( x[0], y[0], u1, v1,
+                x[1], y[1], u2, v1,
+                x[2], y[2], u2, v2,
+                trigBuf, 0 );
+  implDrawTrig(x[0],y[0], u1,v1,
+               x[2],y[2], u2,v2,
+               x[3],y[3], u1,v2,
+               trigBuf, 0 );
+  }
+
+void Painter::drawRect(float x, float y, float w, float h, float u1, float v1, float u2, float v2) {
+  if(x==std::floor(x) && w==std::floor(w) &&
+     y==std::floor(y) && h==std::floor(h)) { //fast-path
+    implDrawRect(int(x),int(y),int(x)+int(w),int(y)+int(h),
+                 s.dU+u1*s.invW,s.dV+v1*s.invH,u2*s.invW+s.dU,v2*s.invH+s.dV);
+    } else {
+    implDrawRectF(x,y,x+w,y+h, s.dU+u1*s.invW,s.dV+v1*s.invH,u2*s.invW+s.dU,v2*s.invH+s.dV);
+    }
+  }
+
 void Painter::drawRect(int x, int y, int w, int h, float u1, float v1, float u2, float v2) {
   implDrawRect(x,y,x+w,y+h, s.dU+u1*s.invW,s.dV+v1*s.invH,u2*s.invW+s.dU,v2*s.invH+s.dV);
   }
@@ -437,6 +469,10 @@ void Painter::rotate(float angle) {
   s.tr.mat.rotate(angle);
   }
 
+void Painter::scale(float x, float y) {
+  s.tr.mat.scale(x,y);
+  }
+
 void Painter::pushState() {
   stStk.push_back(s);
   }
@@ -454,19 +490,28 @@ void Painter::popState() {
 void Painter::drawText(int x, int y, const char *txt) {
   if(txt==nullptr)
     return;
-  auto pb=s.br;
+  auto pb = s.br;
+  auto fx = s.fnt;
+  const float kH = 1.f/s.tr.mat.scaleHintH();
+  const float kV = 1.f/s.tr.mat.scaleHintV();
+  fx.setPixelSize(std::ceil(fx.pixelSize()*s.tr.mat.scaleHint()));
   Utf8Iterator i(txt);
   while(i.hasData()) {
-    auto c=i.next();
+    auto c = i.next();
     if(c=='\0'){
       setBrush(pb);
       return;
       }
-    auto l=s.fnt.letter(c,ta);
 
-    if(!l.view.isEmpty()) {
-      setBrush(Brush(l.view,pb.color,PaintDevice::Alpha));
-      drawRect(x+l.dpos.x,y+l.dpos.y,l.view.w(),l.view.h());
+    auto l = s.fnt.letterGeometry(c);
+    if(!l.size.isEmpty()) {
+      auto& v     = fx.letter(c,ta);
+      float dposX = float(v.dpos.x*kH), dposY = float(v.dpos.y*kV);
+      float szX   = float(v.size.w*kH), szY   = float(v.size.h*kV);
+
+      setBrush(Brush(v.view,pb.color,PaintDevice::Alpha));
+      drawRect(float(x)+dposX,float(y)+dposY,szX,szY,
+               0.f,0.f,float(v.view.w()),float(v.view.h()));
       }
 
     x += l.advance.x;
@@ -477,14 +522,22 @@ void Painter::drawText(int x, int y, const char *txt) {
 void Painter::drawText(int x, int y, const char16_t *txt) {
   if(txt==nullptr)
     return;
-  auto pb=s.br;
+  auto pb = s.br;
+  auto fx = s.fnt;
+  const float kH = 1.f/s.tr.mat.scaleHintH();
+  const float kV = 1.f/s.tr.mat.scaleHintV();
+  fx.setPixelSize(fx.pixelSize()*s.tr.mat.scaleHint());
 
   for(;*txt;++txt) {
-    auto& l=s.fnt.letter(*txt,ta);
+    auto l = s.fnt.letterGeometry(*txt);
+    if(!l.size.isEmpty()) {
+      auto& v     = fx.letter(*txt,ta);
+      float dposX = float(v.dpos.x*kH), dposY = float(v.dpos.y*kV);
+      float szX   = float(v.size.w*kH), szY   = float(v.size.h*kV);
 
-    if(!l.view.isEmpty()) {
-      setBrush(Brush(l.view,pb.color,pb.blend));
-      drawRect(x+l.dpos.x,y+l.dpos.y,l.view.w(),l.view.h());
+      setBrush(Brush(v.view,pb.color,PaintDevice::Alpha));
+      drawRect(float(x)+dposX,float(y)+dposY,szX,szY,
+               0.f,0.f,float(v.view.w()),float(v.view.h()));
       }
 
     x += l.advance.x;
@@ -501,14 +554,14 @@ void Painter::drawText(int x, int y, const std::u16string &txt) {
   return drawText(x,y,txt.c_str());
   }
 
-static Utf8Iterator advanceByWord(Utf8Iterator i, int& x, int w, const Font& fnt, TextureAtlas& ta){
+static Utf8Iterator advanceByWord(Utf8Iterator i, int& x, int w, const Font& fnt){
   while(true){
     auto c=i.peek();
     if(c=='\0' || c=='\n' || c=='\r' || c=='\t' || c=='\v' || c=='\f' || c==' ')
       break;
 
     i.next();
-    auto l=fnt.letter(c,ta);
+    auto l=fnt.letterGeometry(c);
     x += l.advance.x;
     if(x>=w)
       break;
@@ -516,10 +569,10 @@ static Utf8Iterator advanceByWord(Utf8Iterator i, int& x, int w, const Font& fnt
   return i;
   }
 
-static Utf8Iterator advanceByLine(Utf8Iterator i, int& x, int w, const Font& fnt, TextureAtlas& ta){
+static Utf8Iterator advanceByLine(Utf8Iterator i, int& x, int w, const Font& fnt){
   size_t wordCount=0;
   while(true){
-    Utf8Iterator eow = advanceByWord(i,x,w,fnt,ta);
+    Utf8Iterator eow = advanceByWord(i,x,w,fnt);
     ++wordCount;
 
     if(x>=w && wordCount>1)
@@ -529,8 +582,8 @@ static Utf8Iterator advanceByLine(Utf8Iterator i, int& x, int w, const Font& fnt
       i = eow;
       break;
       }
-    auto l=fnt.letter(c,ta);
-    if(x+l.dpos.x+l.view.w()>=w && wordCount>1)
+    auto l=fnt.letterGeometry(c);
+    if(x+l.dpos.x+l.size.w>=w && wordCount>1)
       break;
     x += l.advance.x;
     i = eow;
@@ -552,12 +605,12 @@ static int calcLineWidth(Utf8Iterator i, Utf8Iterator eol, const Font& fnt, Text
   return x;
   }
 
-static int calcTextHeight(const char* txt, const int w, int& l0, const Font& fnt, TextureAtlas& ta) {
+static int calcTextHeight(const char* txt, const int w, int& l0, const Font& fnt) {
   int x = 0,  y=0, cnt = 0;
 
   Utf8Iterator i(txt);
   while(i.hasData()) {
-    Utf8Iterator eol = advanceByLine(i,x,w,fnt,ta);
+    Utf8Iterator eol = advanceByLine(i,x,w,fnt);
     if(i==eol)
       break;
     cnt++;
@@ -574,7 +627,7 @@ static int calcTextHeight(const char* txt, const int w, int& l0, const Font& fnt
       if(c=='\n' || c=='\r') {
         continue;
         }
-      auto l=fnt.letter(c,ta);
+      auto l=fnt.letterGeometry(c);
       y = std::max(l.size.h+l.dpos.y,y);
       }
     }
@@ -588,12 +641,17 @@ static int calcTextHeight(const char* txt, const int w, int& l0, const Font& fnt
 void Painter::drawText(int rx, int ry, int w, int h, const char *txt, AlignFlag flg) {
   if(txt==nullptr)
     return;
-  auto pb=s.br;
+  auto pb = s.br;
+  auto fx = s.fnt;
+  const float kH = 1.f/s.tr.mat.scaleHintH();
+  const float kV = 1.f/s.tr.mat.scaleHintV();
+  fx.setPixelSize(std::ceil(fx.pixelSize()*s.tr.mat.scaleHint()));
+
   int  x = 0, y = 0, pSz = int(std::ceil(s.fnt.pixelSize()));
 
   if(flg!=0) {
     int l0=0;
-    const int th = calcTextHeight(txt,w,l0,s.fnt,ta);
+    const int th = calcTextHeight(txt,w,l0,s.fnt);
     if(flg & AlignVCenter)
       y = l0+(h-th)/2;
     else if(flg & AlignBottom)
@@ -604,7 +662,7 @@ void Painter::drawText(int rx, int ry, int w, int h, const char *txt, AlignFlag 
   while(i.hasData()) {
     // make next line
     x = 0;
-    Utf8Iterator eol = advanceByLine(i,x,w,s.fnt,ta);
+    Utf8Iterator eol = advanceByLine(i,x,w,s.fnt);
     if(i==eol)
       break;
 
@@ -626,13 +684,16 @@ void Painter::drawText(int rx, int ry, int w, int h, const char *txt, AlignFlag 
         }
       if(c=='\n' || c=='\r')
         continue;
-      auto l=s.fnt.letter(c,ta);
+      auto l=s.fnt.letterGeometry(c);
 
-      if(!l.view.isEmpty()) {
-        setBrush(Brush(l.view,pb.color,PaintDevice::Alpha));
-        drawRect(rx+x+l.dpos.x,
-                 ry+y+l.dpos.y,
-                 l.view.w(),l.view.h());
+      if(!l.size.isEmpty()) {
+        auto& v     = fx.letter(c,ta);
+        float dposX = float(v.dpos.x*kH), dposY = float(v.dpos.y*kV);
+        float szX   = float(v.size.w*kH), szY   = float(v.size.h*kV);
+
+        setBrush(Brush(v.view,pb.color,PaintDevice::Alpha));
+        drawRect(float(rx)+float(x)+dposX,float(ry)+float(y)+dposY,szX,szY,
+                 0.f,0.f,float(v.view.w()),float(v.view.h()));
         }
 
       x += l.advance.x;

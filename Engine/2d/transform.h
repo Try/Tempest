@@ -4,7 +4,7 @@
 
 namespace Tempest {
 
-class Transform {
+class Transform final {
   public:
     Transform()=default;
     Transform(float m11,float m12,float m13,
@@ -24,14 +24,19 @@ class Transform {
     void   translate(const Point& p);
 
     void   rotate   (float angle);
+    void   scale    (float x, float y);
 
     Type   type() const { return tp; }
+    float  scaleHint()  const { return scaleH;  }
+    float  scaleHintH() const { return scaleHH; }
+    float  scaleHintV() const { return scaleHV; }
 
     static const Transform& identity();
 
   private:
     float v[3][3]={};
-    Type  tp = T_AxisAligned;
+    float scaleHH=1.f, scaleHV=1.f, scaleH = 1.f;
+    Type  tp     = T_AxisAligned;
 
     void invalidateType();
   };
@@ -53,5 +58,4 @@ inline void Transform::map(int x, int y, int &outX, int &outY) const {
   outX = int(ofx/w);
   outY = int(ofy/w);
   }
-
 }

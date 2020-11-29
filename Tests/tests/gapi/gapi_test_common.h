@@ -125,7 +125,7 @@ void fbo(const char* outImg) {
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
-      Log::d("Skipping vulkan testcase: ", e.what()); else
+      Log::d("Skipping graphics testcase: ", e.what()); else
       throw;
     }
   }
@@ -166,7 +166,7 @@ void draw(const char* outImage) {
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
-      Log::d("Skipping vulkan testcase: ", e.what()); else
+      Log::d("Skipping graphics testcase: ", e.what()); else
       throw;
     }
   }

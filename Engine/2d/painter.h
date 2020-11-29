@@ -38,6 +38,7 @@ class Painter {
     void translate(int x,int y);
 
     void rotate   (float angle);
+    void scale    (float x, float y);
 
     Rect         scissor() const { return Rect(s.scRect.x -s.scRect.ox,s.scRect.y -s.scRect.oy,
                                                s.scRect.x1-s.scRect.x, s.scRect.y1-s.scRect.y); }
@@ -48,6 +49,8 @@ class Painter {
     void pushState();
     void popState();
 
+    void drawRect(float x, float y, float width, float height,
+                  float u1,float v1,float u2,float v2);
     void drawRect(int x,int y,int width,int height,
                   float u1,float v1,float u2,float v2);
     void drawRect(int x,int y,int width,int height,
@@ -136,8 +139,10 @@ class Painter {
                        FPoint *out, int stage);
     void implDrawRect(int x1, int y1, int x2, int y2,
                       float u1, float v1, float u2, float v2);
+    void implDrawRectF(float x1, float y1, float x2, float y2,
+                       float u1, float v1, float u2, float v2);
 
-  friend class Font;
+    friend class Font;
   };
 
 }

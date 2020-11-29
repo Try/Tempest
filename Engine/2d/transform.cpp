@@ -59,6 +59,18 @@ void Transform::rotate(float angle) {
   invalidateType();
   }
 
+void Transform::scale(const float x, const float y) {
+  v[0][0] *= x;
+  v[0][1] *= x;
+  v[0][2] *= x;
+
+  v[1][0] *= y;
+  v[1][1] *= y;
+  v[1][2] *= y;
+
+  invalidateType();
+  }
+
 const Transform &Transform::identity() {
   static Transform tr(1,0,0,
                       0,1,0,
@@ -71,4 +83,9 @@ void Transform::invalidateType() {
      (v[0][0]==0.f && v[0][2]==0.f && v[1][1]==0.f && v[1][2]==0.f))
     tp = T_AxisAligned; else
     tp = T_None;
+
+  scaleHH = std::sqrt(v[0][0]*v[0][0] + v[0][1]*v[0][1]);
+  scaleHV = std::sqrt(v[1][0]*v[1][0] + v[1][1]*v[1][1]);
+
+  scaleH  = (scaleHH+scaleHV)*0.5f;
   }
