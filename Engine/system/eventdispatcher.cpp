@@ -21,7 +21,13 @@ void EventDispatcher::dispatchMouseDown(Widget &wnd, MouseEvent &e) {
     if(!mouseUp.expired())
       return;
     }
+
   mouseUp = implDispatch(wnd,e);
+  if(auto w = mouseUp.lock()) {
+    if(w->widget->focusPolicy() & ClickFocus) {
+      w->widget->implSetFocus(true,Event::FocusReason::ClickReason);
+      }
+    }
   }
 
 void EventDispatcher::dispatchMouseUp(Widget& /*wnd*/, MouseEvent &e) {
@@ -39,12 +45,6 @@ void EventDispatcher::dispatchMouseUp(Widget& /*wnd*/, MouseEvent &e) {
     w->widget->mouseUpEvent(e1);
     if(!e1.isAccepted())
       return;
-    }
-
-  if(auto w = ptr.lock()) {
-    if(w->widget->focusPolicy() & ClickFocus) {
-      w->widget->implSetFocus(true,Event::FocusReason::ClickReason);
-      }
     }
   }
 
