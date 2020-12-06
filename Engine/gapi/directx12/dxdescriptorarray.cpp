@@ -18,13 +18,15 @@ static int swizzle(ComponentSwizzle cs, int def){
     case ComponentSwizzle::Identity:
       return def;
     case ComponentSwizzle::R:
-      return 0;
+      return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0;
     case ComponentSwizzle::G:
-      return 1;
+      return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1;
     case ComponentSwizzle::B:
-      return 2;
+      return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2;
     case ComponentSwizzle::A:
-      return 3;
+      return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3;
+    //case ComponentSwizzle::One:
+    //  return D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1;
     }
   return def;
   }

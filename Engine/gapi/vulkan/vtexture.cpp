@@ -77,7 +77,8 @@ void VTexture::createView(VkImageView& ret, VkDevice device, VkFormat format,
       VK_COMPONENT_SWIZZLE_R,
       VK_COMPONENT_SWIZZLE_G,
       VK_COMPONENT_SWIZZLE_B,
-      VK_COMPONENT_SWIZZLE_A
+      VK_COMPONENT_SWIZZLE_A,
+      VK_COMPONENT_SWIZZLE_ONE,
       };
     viewInfo.components.r = sw[uint8_t(cmap->r)];
     viewInfo.components.g = sw[uint8_t(cmap->g)];
