@@ -19,10 +19,12 @@ void EventDispatcher::dispatchMouseDown(Widget &wnd, MouseEvent &e) {
       continue;
     mouseUp = implDispatch(*i,e);
     if(!mouseUp.expired())
-      return;
+      break;
     }
 
-  mouseUp = implDispatch(wnd,e);
+  if(mouseUp.expired())
+    mouseUp = implDispatch(wnd,e);
+
   if(auto w = mouseUp.lock()) {
     if(w->widget->focusPolicy() & ClickFocus) {
       w->widget->implSetFocus(true,Event::FocusReason::ClickReason);
