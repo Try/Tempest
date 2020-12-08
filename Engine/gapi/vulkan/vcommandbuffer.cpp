@@ -336,6 +336,9 @@ void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
     throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
   resState.flushLayout(*this);
 
+  if(mipLevels==1)
+    return;
+
   auto& image = reinterpret_cast<VTexture&>(img);
 
   // Check if image format supports linear blitting

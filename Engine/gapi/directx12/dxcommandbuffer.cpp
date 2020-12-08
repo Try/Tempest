@@ -561,30 +561,13 @@ void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img, TextureL
   if(currentFbo!=nullptr)
     throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
 
+  if(mipLevels==1)
+    return;
+
   resState.flushLayout(*this);
 
   std::unique_ptr<MipMaps> dx(new MipMaps(dev,reinterpret_cast<DxTexture&>(img),defLayout,texWidth,texHeight,mipLevels));
   pushStage(dx.release());
-/*
-  int32_t w = int32_t(texWidth);
-  int32_t h = int32_t(texHeight);
-
-  if(defLayout!=TextureLayout::ColorAttach)
-    changeLayout(img,defLayout,TextureLayout::ColorAttach,uint32_t(-1));
-
-  for(uint32_t i=1; i<mipLevels; ++i) {
-    const int mw = (w==1 ? 1 : w/2);
-    const int mh = (h==1 ? 1 : h/2);
-
-    changeLayout(img,TextureLayout::ColorAttach,TextureLayout::Sampler,i-1);
-    blitFS(img,  w, h, i-1,
-           img, mw,mh, i);
-    //changeLayout(img,TextureLayout::Sampler, TextureLayout::Sampler, i-1);
-    w = mw;
-    h = mh;
-    }
-  changeLayout(img, TextureLayout::ColorAttach, TextureLayout::Sampler, mipLevels-1);
-  */
   }
 
 void DxCommandBuffer::implChangeLayout(ID3D12Resource* res, D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES lay) {
