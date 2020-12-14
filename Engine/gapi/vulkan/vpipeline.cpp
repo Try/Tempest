@@ -271,15 +271,25 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
     VK_BLEND_FACTOR_ZERO
     };
 
+  static const VkBlendOp blendOp[] = {
+    VK_BLEND_OP_ADD,
+    VK_BLEND_OP_SUBTRACT,
+    VK_BLEND_OP_REVERSE_SUBTRACT,
+    VK_BLEND_OP_MIN,
+    VK_BLEND_OP_MAX,
+    };
+
   VkPipelineColorBlendAttachmentState blendAtt[256] = {};
   for(size_t i=0; i<lay.colorCount; ++i) {
     auto& a = blendAtt[i];
-    a.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    a.blendEnable    = st.hasBlend() ? VK_TRUE : VK_FALSE;
+    a.colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    a.blendEnable         = st.hasBlend() ? VK_TRUE : VK_FALSE;
     a.dstColorBlendFactor = blend[uint8_t(st.blendDest())];
     a.srcColorBlendFactor = blend[uint8_t(st.blendSource())];
+    a.colorBlendOp        = blendOp[uint8_t(st.blendOperation())];
     a.dstAlphaBlendFactor = a.dstColorBlendFactor;
     a.srcAlphaBlendFactor = a.srcColorBlendFactor;
+    a.alphaBlendOp        = a.colorBlendOp;
     }
 
   VkPipelineColorBlendStateCreateInfo colorBlending = {};

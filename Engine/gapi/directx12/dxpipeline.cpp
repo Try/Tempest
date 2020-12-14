@@ -1,3 +1,4 @@
+
 #if defined(TEMPEST_BUILD_DIRECTX12)
 
 #include "dxpipeline.h"
@@ -113,14 +114,22 @@ D3D12_BLEND_DESC DxPipeline::getBlend(const RenderState& st) const {
     D3D12_BLEND_SRC_ALPHA_SAT,
     };
 
+  static const D3D12_BLEND_OP blendOp[] = {
+    D3D12_BLEND_OP_ADD,
+    D3D12_BLEND_OP_SUBTRACT,
+    D3D12_BLEND_OP_REV_SUBTRACT,
+    D3D12_BLEND_OP_MIN,
+    D3D12_BLEND_OP_MAX,
+    };
+
   D3D12_RENDER_TARGET_BLEND_DESC b;
   b.BlendEnable           = st.hasBlend() ? TRUE : FALSE;
-  b.SrcBlend              = blendMode[size_t(st.blendSource())];
-  b.DestBlend             = blendMode[size_t(st.blendDest())];
-  b.BlendOp               = D3D12_BLEND_OP_ADD;
+  b.SrcBlend              = blendMode[uint8_t(st.blendSource())];
+  b.DestBlend             = blendMode[uint8_t(st.blendDest())];
+  b.BlendOp               = blendOp[uint8_t(st.blendOperation())];
   b.SrcBlendAlpha         = b.SrcBlend;
   b.DestBlendAlpha        = b.DestBlend;
-  b.BlendOpAlpha          = D3D12_BLEND_OP_ADD;
+  b.BlendOpAlpha          = b.BlendOp;
   b.LogicOpEnable         = FALSE;
   b.LogicOp               = D3D12_LOGIC_OP_CLEAR;
   b.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;

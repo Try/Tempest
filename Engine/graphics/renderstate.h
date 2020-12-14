@@ -8,7 +8,6 @@ class RenderState final {
   public:
     RenderState()=default;
 
-    //! Режим альфа смешивания.
     enum class BlendMode : uint8_t {
       zero,                 //GL_ZERO,
       one,                  //GL_ONE,
@@ -22,6 +21,14 @@ class RenderState final {
       one_minus_dst_color,  //GL_ONE_MINUS_DST_COLOR,
       src_alpha_saturate,   //GL_SRC_ALPHA_SATURATE,
       Count
+      };
+
+    enum class BlendOp : uint8_t {
+      Add,
+      Substract,
+      ReverseSubstract,
+      Min,
+      Max
       };
 
     enum class ZTestMode : uint8_t {
@@ -48,11 +55,13 @@ class RenderState final {
 
     void      setBlendSource(BlendMode s) { blendS=s; }
     void      setBlendDest  (BlendMode d) { blendD=d; }
+    void      setBlendOp    (BlendOp   o) { blendO=o; }
 
-    BlendMode blendSource() const { return blendS; }
-    BlendMode blendDest()   const { return blendD; }
+    BlendMode blendSource()    const { return blendS; }
+    BlendMode blendDest()      const { return blendD; }
+    BlendOp   blendOperation() const { return blendO; }
 
-    bool      hasBlend() const { return blendS!=BlendMode::one || blendD!=BlendMode::zero; }
+    bool      hasBlend() const { return blendS!=BlendMode::one || blendD!=BlendMode::zero || !(blendO==BlendOp::Add || blendO==BlendOp::Substract); }
 
     void      setZTestMode(ZTestMode z){ zmode=z; }
     ZTestMode zTestMode() const { return zmode; }
@@ -67,12 +76,13 @@ class RenderState final {
     void      setCullFaceMode(CullMode use) { cull=use; }
 
   private:
-    BlendMode blendS=BlendMode::one;
-    BlendMode blendD=BlendMode::zero;
-    ZTestMode zmode =ZTestMode::Always;
-    CullMode  cull  =CullMode::Back;
-    bool      discard=false;
-    bool      zdiscard=false;
+    BlendMode blendS   = BlendMode::one;
+    BlendMode blendD   = BlendMode::zero;
+    BlendOp   blendO   = BlendOp::Add;
+    ZTestMode zmode    = ZTestMode::Always;
+    CullMode  cull     = CullMode::Back;
+    bool      discard  = false;
+    bool      zdiscard = false;
   };
 
 }
