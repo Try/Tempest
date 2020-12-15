@@ -54,7 +54,8 @@ class AbstractListDelegate : public ListDelegate {
     Widget* createView(size_t position) override {
       ListItem<Ctrl>* b = new ListItem<Ctrl>(position);
       b->onClick.bind(this,&AbstractListDelegate<T,VT,Ctrl>::implItemSelected);
-      initializeItem(b,data[position]);
+      if(position<data.size())
+        initializeItem(b,data[position]);
       return b;
       }
 
