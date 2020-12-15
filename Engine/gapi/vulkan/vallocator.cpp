@@ -368,7 +368,7 @@ bool VAllocator::read(VBuffer& src, void* mem, size_t offset, size_t count, size
   rgn.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
   rgn.memory = page.page->memory;
   rgn.offset = page.offset+offset;
-  rgn.size   = size;
+  rgn.size   = count*alignedSz;
   size_t shift = 0;
   alignRange(rgn,provider.device->props.nonCoherentAtomSize,shift);
 
@@ -416,22 +416,24 @@ void VAllocator::updateSampler(VkSampler &smp, const Tempest::Sampler2d &s, uint
 
 bool VAllocator::commit(VkDeviceMemory dev, std::mutex &mmapSync, VkBuffer dest,
                         size_t pageOffset, const void* mem,  size_t count, size_t size, size_t alignedSz) {
+  VkMappedMemoryRange rgn={};
+  rgn.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+  rgn.memory = dev;
+  rgn.offset = pageOffset;
+  rgn.size   = count*alignedSz;
+  size_t shift = 0;
+  alignRange(rgn,provider.device->props.nonCoherentAtomSize,shift);
+
   std::lock_guard<std::mutex> g(mmapSync); // on practice bind requires external sync
   if(vkBindBufferMemory(device,dest,dev,pageOffset)!=VK_SUCCESS)
     return false;
   if(mem!=nullptr) {
     void* data=nullptr;
-    if(vkMapMemory(device,dev,pageOffset,size,0,&data)!=VK_SUCCESS)
+    if(vkMapMemory(device,dev,pageOffset,rgn.size,0,&data)!=VK_SUCCESS)
       return false;
+    data = reinterpret_cast<uint8_t*>(data)+shift;
     copyUpsample(mem,data,count,size,alignedSz);
-
-    VkMappedMemoryRange rgn={};
-    rgn.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-    rgn.memory = dev;
-    rgn.offset = pageOffset;
-    rgn.size   = (size%provider.device->props.nonCoherentAtomSize==0) ? size : VK_WHOLE_SIZE;
     vkFlushMappedMemoryRanges(device,1,&rgn);
-
     vkUnmapMemory(device,dev);
     }
 
