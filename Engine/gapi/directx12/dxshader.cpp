@@ -40,6 +40,8 @@ DxShader::DxShader(const void *source, size_t src_size) {
   catch(const spirv_cross::CompilerError& err) {
 #if !defined(NDEBUG)
     Log::d("cross-compile error: \"",err.what(),"\"");
+#else
+    (void)err;
 #endif
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
