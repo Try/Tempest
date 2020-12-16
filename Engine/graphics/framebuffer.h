@@ -30,9 +30,9 @@ class FrameBufferLayout final {
 class FrameBuffer final {
   public:
     FrameBuffer()=default;
-    FrameBuffer(FrameBuffer&& f)=default;
+    FrameBuffer(FrameBuffer&& f);
     ~FrameBuffer();
-    FrameBuffer& operator = (FrameBuffer&& other)=default;
+    FrameBuffer& operator = (FrameBuffer&& other);
 
     uint32_t w() const { return mw; }
     uint32_t h() const { return mh; }
