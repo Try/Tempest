@@ -38,6 +38,9 @@ inline void dxAssert(HRESULT code){
     case DXGI_ERROR_DEVICE_REMOVED:
       throw DeviceLostException();
 
+    case DXGI_ERROR_DEVICE_HUNG:
+      throw DeviceHangException();
+
     case E_NOTIMPL:
     case E_INVALIDARG:
       throw std::runtime_error("engine internal error");

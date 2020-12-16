@@ -8,6 +8,10 @@ class DeviceLostException : std::exception {
   const char* what() const noexcept override { return "device is lost"; }
   };
 
+class DeviceHangException : DeviceLostException {
+  const char* what() const noexcept override { return "hit gpu timeout"; }
+  };
+
 class IncompleteFboException : std::exception {
   const char* what() const noexcept override { return "inconsistent framebuffer dimensions"; }
   };
