@@ -99,6 +99,7 @@ static void maximizeWindow(HWND& w) {
   }
 
 X11Api::X11Api() {
+  XInitThreads();
   dpy = XOpenDisplay(nullptr);
 
   if(dpy == nullptr)
