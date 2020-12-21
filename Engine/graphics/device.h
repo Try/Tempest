@@ -254,7 +254,7 @@ inline UniformBuffer<T> Device::ubo(const T *mem, size_t size) {
   const size_t eltSize = ((sizeof(T)+align-1)/align)*align;
 
   if(sizeof(T)>devProps.ubo.maxRange)
-    throw std::system_error(Tempest::GraphicsErrc::TooLardgeUbo);
+    throw std::system_error(Tempest::GraphicsErrc::TooLargeUbo);
   VideoBuffer      data=createVideoBuffer(mem,size,sizeof(T),eltSize,MemUsage::UniformBuffer,BufferHeap::Upload);
   UniformBuffer<T> ubo(std::move(data),eltSize);
   return ubo;

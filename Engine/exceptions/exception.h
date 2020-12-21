@@ -49,7 +49,7 @@ enum class GraphicsErrc {
   InvalidUniformBuffer      = 5,
   InvalidTexture            = 6,
   InvalidBufferUpdate       = 7,
-  TooLardgeUbo              = 8,
+  TooLargeUbo               = 8,
   InvalidStorageBuffer      = 9,
   DrawCallWithoutFbo        = 10,
   ComputeCallInRenderPass   = 11,
