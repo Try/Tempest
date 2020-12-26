@@ -54,9 +54,13 @@ void VUniformsLay::implCreate(VkDescriptorSetLayoutBinding* bind) {
     VK_DESCRIPTOR_TYPE_STORAGE_IMAGE
     };
 
+  uint32_t count = 0;
   for(size_t i=0;i<lay.size();++i){
     auto& b=bind[i];
     auto& e=lay[i];
+
+    if(e.stage==UniformsLayout::Stage(0))
+      continue;
 
     b.binding         = e.layout;
     b.descriptorCount = 1;
@@ -75,11 +79,12 @@ void VUniformsLay::implCreate(VkDescriptorSetLayoutBinding* bind) {
       b.stageFlags |= VK_SHADER_STAGE_GEOMETRY_BIT;
     if(e.stage&UniformsLayout::Fragment)
       b.stageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+    ++count;
     }
 
   VkDescriptorSetLayoutCreateInfo info={};
   info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  info.bindingCount = uint32_t(lay.size());
+  info.bindingCount = count;
   info.pBindings    = bind;
 
   vkAssert(vkCreateDescriptorSetLayout(dev,&info,nullptr,&impl));

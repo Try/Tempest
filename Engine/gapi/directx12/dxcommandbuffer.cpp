@@ -379,7 +379,7 @@ void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompu
     impl->SetDescriptorHeaps(ux.heapCnt, currentHeaps);
     }
 
-  auto& lx = *ux.layPtr.handler;
+  auto& lx = *ux.lay.handler;
   for(size_t i=0;i<lx.roots.size();++i) {
     auto& r   = lx.roots[i];
     auto desc = ux.val.gpu[r.heap];

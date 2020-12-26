@@ -32,21 +32,21 @@ static int swizzle(ComponentSwizzle cs, int def){
   }
 
 DxDescriptorArray::DxDescriptorArray(DxUniformsLay& vlay)
-  : layPtr(&vlay) {
-  val     = layPtr.handler->allocDescriptors();
+  : lay(&vlay) {
+  val     = lay.handler->allocDescriptors();
   heapCnt = UINT(vlay.heaps.size());
   }
 
 DxDescriptorArray::DxDescriptorArray(DxDescriptorArray&& other)
-  : layPtr(other.layPtr) {
+  : lay(other.lay) {
   val          = other.val;
   heapCnt      = other.heapCnt;
-  other.layPtr = DSharedPtr<DxUniformsLay*>{};
+  other.lay = DSharedPtr<DxUniformsLay*>{};
   }
 
 DxDescriptorArray::~DxDescriptorArray() {
-  if(layPtr)
-    layPtr.handler->freeDescriptors(val);
+  if(lay)
+    lay.handler->freeDescriptors(val);
   }
 
 void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const Sampler2d& smp) {
@@ -54,7 +54,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const 
   }
 
 void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, uint32_t mipLevel, const Sampler2d& smp) {
-  auto&      device = *layPtr.handler->dev.device;
+  auto&      device = *lay.handler->dev.device;
   DxTexture& t      = *reinterpret_cast<DxTexture*>(tex);
 
   // Describe and create a SRV for the texture.
@@ -104,7 +104,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, uint32
     srvDesc.Texture2D.MipLevels       = 1;
     }
 
-  auto& prm = layPtr.handler->prm[id];
+  auto& prm = lay.handler->prm[id];
   auto  gpu = val.cpu[prm.heapId];
   gpu.ptr += prm.heapOffset;
   device.CreateShaderResourceView(t.impl.get(), &srvDesc, gpu);
@@ -114,24 +114,25 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, uint32
   device.CreateSampler(&smpDesc,gpu);
   }
 
-void DxDescriptorArray::setUbo(size_t id, AbstractGraphicsApi::Buffer* b, size_t offset, size_t size, size_t /*align*/) {
-  auto&      device = *layPtr.handler->dev.device;
+void DxDescriptorArray::setUbo(size_t id, AbstractGraphicsApi::Buffer* b, size_t offset) {
+  auto&      device = *lay.handler->dev.device;
   DxBuffer&  buf    = *reinterpret_cast<DxBuffer*>(b);
 
   D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
   cbvDesc.BufferLocation = buf.impl->GetGPUVirtualAddress()+offset;
-  cbvDesc.SizeInBytes    = UINT(size); // CB size is required to be 256-byte aligned.
+  cbvDesc.SizeInBytes    = UINT(lay.handler->lay[id].size);
+  cbvDesc.SizeInBytes    = ((cbvDesc.SizeInBytes+255)/256)*256; // CB size is required to be 256-byte aligned.
 
-  auto& prm = layPtr.handler->prm[id];
+  auto& prm = lay.handler->prm[id];
   auto  gpu = val.cpu[prm.heapId];
   gpu.ptr += prm.heapOffset;
   device.CreateConstantBufferView(&cbvDesc, gpu);
   }
 
 void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, Tempest::AbstractGraphicsApi::Texture* tex, uint32_t mipLevel) {
-  auto&      device = *layPtr.handler->dev.device;
+  auto&      device = *lay.handler->dev.device;
   DxTexture& t      = *reinterpret_cast<DxTexture*>(tex);
-  auto&      prm    = layPtr.handler->prm[id];
+  auto&      prm    = lay.handler->prm[id];
 
   if(prm.rgnType==D3D12_DESCRIPTOR_RANGE_TYPE_UAV) {
     D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
@@ -162,17 +163,17 @@ void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, Tempest::AbstractGra
   }
 
 void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi::Buffer* b,
-                                                 size_t offset, size_t size, size_t /*align*/) {
-  auto&      device = *layPtr.handler->dev.device;
+                                                 size_t offsetn) {
+  auto&      device = *lay.handler->dev.device;
   DxBuffer&  buf    = *reinterpret_cast<DxBuffer*>(b);
-  auto&      prm    = layPtr.handler->prm[id];
+  auto&      prm    = lay.handler->prm[id];
 
   if(prm.rgnType==D3D12_DESCRIPTOR_RANGE_TYPE_UAV) {
     D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
     desc.Format              = DXGI_FORMAT_R32_TYPELESS;
     desc.ViewDimension       = D3D12_UAV_DIMENSION_BUFFER;
-    desc.Buffer.FirstElement = UINT(offset/4);
-    desc.Buffer.NumElements  = UINT((size+3)/4); // UAV size is required to be 256-byte aligned.
+    desc.Buffer.FirstElement = UINT(offsetn/4);
+    desc.Buffer.NumElements  = UINT((lay.handler->lay[id].size+3)/4); // UAV size is required to be 256-byte aligned.
     desc.Buffer.Flags        = D3D12_BUFFER_UAV_FLAG_RAW;
 
     auto  gpu = val.cpu[prm.heapId];
@@ -184,8 +185,8 @@ void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi:
     desc.Format                  = DXGI_FORMAT_R32_TYPELESS;
     desc.ViewDimension           = D3D12_SRV_DIMENSION_BUFFER;
     desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-    desc.Buffer.FirstElement     = UINT(offset/4);
-    desc.Buffer.NumElements      = UINT((size+3)/4); // SRV size is required to be 256-byte aligned.
+    desc.Buffer.FirstElement     = UINT(offsetn/4);
+    desc.Buffer.NumElements      = UINT((lay.handler->lay[id].size+3)/4); // SRV size is required to be 256-byte aligned.
     desc.Buffer.Flags            = D3D12_BUFFER_SRV_FLAG_RAW;
 
     auto  gpu = val.cpu[prm.heapId];

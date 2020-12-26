@@ -71,6 +71,7 @@ class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
     std::vector<Heap>           heaps;
     std::vector<RootPrm>        roots;
     size_t                      pushConstantId=0;
+    std::vector<Binding>        lay;
 
     ComPtr<ID3D12RootSignature> impl;
     DxDevice&                   dev;

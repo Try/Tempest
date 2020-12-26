@@ -23,6 +23,10 @@ class ShaderReflection final {
                       PushBlock& pb,
                       const std::vector<Binding>* sh[],
                       size_t count);
+
+
+  private:
+    static void finalize(std::vector<Binding>& p);
   };
 
 }

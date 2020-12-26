@@ -135,12 +135,12 @@ void VDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi::Texture* t, uint3
   vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
   }
 
-void VDescriptorArray::setUbo(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf, size_t offset, size_t size, size_t /*align*/) {
+void VDescriptorArray::setUbo(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf, size_t offset) {
   VBuffer* memory=reinterpret_cast<VBuffer*>(buf);
   VkDescriptorBufferInfo bufferInfo = {};
   bufferInfo.buffer = memory->impl;
   bufferInfo.offset = offset;
-  bufferInfo.range  = size;
+  bufferInfo.range  = lay.handler->lay[id].size;
 
   VkWriteDescriptorSet descriptorWrite = {};
   descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -154,12 +154,12 @@ void VDescriptorArray::setUbo(size_t id, Tempest::AbstractGraphicsApi::Buffer *b
   vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
   }
 
-void VDescriptorArray::setSsbo(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf, size_t offset, size_t size, size_t /*align*/) {
+void VDescriptorArray::setSsbo(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf, size_t offset) {
   VBuffer* memory=reinterpret_cast<VBuffer*>(buf);
   VkDescriptorBufferInfo bufferInfo = {};
   bufferInfo.buffer = memory->impl;
   bufferInfo.offset = offset;
-  bufferInfo.range  = size;
+  bufferInfo.range  = lay.handler->lay[id].size;
 
   VkWriteDescriptorSet descriptorWrite = {};
   descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

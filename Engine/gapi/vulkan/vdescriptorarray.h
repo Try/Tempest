@@ -17,8 +17,8 @@ class VDescriptorArray : public AbstractGraphicsApi::Desc {
 
     void                     set    (size_t id, AbstractGraphicsApi::Texture* tex, const Sampler2d& smp) override;
     void                     setSsbo(size_t id, AbstractGraphicsApi::Texture* tex, uint32_t mipLevel) override;
-    void                     setUbo (size_t id, AbstractGraphicsApi::Buffer*  buf, size_t offset, size_t size, size_t align) override;
-    void                     setSsbo(size_t id, AbstractGraphicsApi::Buffer*  buf, size_t offset, size_t size, size_t align) override;
+    void                     setUbo (size_t id, AbstractGraphicsApi::Buffer*  buf, size_t offset) override;
+    void                     setSsbo(size_t id, AbstractGraphicsApi::Buffer*  buf, size_t offset) override;
     void                     ssboBarriers(Detail::ResourceState& res) override;
 
     VkDescriptorSet           desc=VK_NULL_HANDLE;

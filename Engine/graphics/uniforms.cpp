@@ -2,7 +2,6 @@
 
 #include <Tempest/Device>
 #include <Tempest/UniformBuffer>
-#include <Tempest/Except>
 
 using namespace Tempest;
 
@@ -48,14 +47,14 @@ void Uniforms::set(size_t layoutBind, const Detail::ResourcePtr<Texture2d> &tex,
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
   }
 
-void Uniforms::implBindUbo(size_t layoutBind, const VideoBuffer& vbuf, size_t offset, size_t count, size_t size) {
+void Uniforms::implBindUbo(size_t layoutBind, const VideoBuffer& vbuf, size_t offsetBytes) {
   if(vbuf.impl.handler)
-    desc.handler->setUbo(layoutBind,vbuf.impl.handler,offset*size,count*size,size); else
+    desc.handler->setUbo(layoutBind,vbuf.impl.handler,offsetBytes); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidUniformBuffer);
   }
 
-void Uniforms::implBindSsbo(size_t layoutBind, const VideoBuffer& vbuf, size_t offset, size_t count, size_t size) {
+void Uniforms::implBindSsbo(size_t layoutBind, const VideoBuffer& vbuf, size_t offsetBytes) {
   if(vbuf.impl.handler)
-    desc.handler->setSsbo(layoutBind,vbuf.impl.handler,offset*size,count*size,size); else
+    desc.handler->setSsbo(layoutBind,vbuf.impl.handler,offsetBytes); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidStorageBuffer);
   }

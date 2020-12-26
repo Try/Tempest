@@ -68,8 +68,6 @@ DxUniformsLay::DescriptorPool::~DescriptorPool() {
 DxUniformsLay::DxUniformsLay(DxDevice& dev, const std::vector<UniformsLayout::Binding>& comp)
   :dev(dev) {
   UniformsLayout::PushBlock pb;
-  std::vector<Binding>      lay;
-
   ShaderReflection::merge(lay,pb, comp);
   init(lay,pb);
   }
@@ -77,11 +75,9 @@ DxUniformsLay::DxUniformsLay(DxDevice& dev, const std::vector<UniformsLayout::Bi
 DxUniformsLay::DxUniformsLay(DxDevice& dev, const std::vector<UniformsLayout::Binding>* sh[], size_t cnt)
   : dev(dev) {
   UniformsLayout::PushBlock pb;
-  std::vector<Binding>      lay;
   ShaderReflection::merge(lay, pb, sh, cnt);
   init(lay,pb);
   }
-
 
 void DxUniformsLay::init(const std::vector<Binding>& lay, const UniformsLayout::PushBlock& pb) {
   auto& device = *dev.device;
@@ -97,6 +93,8 @@ void DxUniformsLay::init(const std::vector<Binding>& lay, const UniformsLayout::
   std::vector<Parameter> desc;
   for(size_t i=0;i<lay.size();++i) {
     auto& l = lay[i];
+    if(l.stage==UniformsLayout::Stage(0))
+      continue;
     switch(l.cls) {
       case UniformsLayout::Ubo: {
         add(l,D3D12_DESCRIPTOR_RANGE_TYPE_CBV,desc);
