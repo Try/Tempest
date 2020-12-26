@@ -56,7 +56,7 @@ void VUniformsLay::implCreate(VkDescriptorSetLayoutBinding* bind) {
 
   uint32_t count = 0;
   for(size_t i=0;i<lay.size();++i){
-    auto& b=bind[i];
+    auto& b=bind[count];
     auto& e=lay[i];
 
     if(e.stage==UniformsLayout::Stage(0))
