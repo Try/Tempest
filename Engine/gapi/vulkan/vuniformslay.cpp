@@ -10,6 +10,10 @@ using namespace Tempest::Detail;
 VUniformsLay::VUniformsLay(VDevice& dev, const std::vector<UniformsLayout::Binding>& comp)
   : dev(dev.device) {
   ShaderReflection::merge(lay, pb, comp);
+  for(auto& i:lay)
+    if(i.size==0)
+      i.size = VK_WHOLE_SIZE;
+
   if(lay.size()<=32) {
     VkDescriptorSetLayoutBinding bind[32]={};
     implCreate(bind);

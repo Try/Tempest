@@ -175,6 +175,8 @@ void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi:
     desc.Buffer.FirstElement = UINT(offsetn/4);
     desc.Buffer.NumElements  = UINT((lay.handler->lay[id].size+3)/4); // UAV size is required to be 256-byte aligned.
     desc.Buffer.Flags        = D3D12_BUFFER_UAV_FLAG_RAW;
+    if(desc.Buffer.NumElements==0)
+      desc.Buffer.NumElements = buf.sizeInBytes/4;
 
     auto  gpu = val.cpu[prm.heapId];
     gpu.ptr += prm.heapOffset;
@@ -188,6 +190,8 @@ void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi:
     desc.Buffer.FirstElement     = UINT(offsetn/4);
     desc.Buffer.NumElements      = UINT((lay.handler->lay[id].size+3)/4); // SRV size is required to be 256-byte aligned.
     desc.Buffer.Flags            = D3D12_BUFFER_SRV_FLAG_RAW;
+    if(desc.Buffer.NumElements==0)
+      desc.Buffer.NumElements = buf.sizeInBytes/4;
 
     auto  gpu = val.cpu[prm.heapId];
     gpu.ptr += prm.heapOffset;
