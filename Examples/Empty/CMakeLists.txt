@@ -8,13 +8,12 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/empty)
 
 include_directories("${CMAKE_SOURCE_DIR}/../../Engine/include")
 link_directories   ("${CMAKE_SOURCE_DIR}/../../lib")
-option(BUILD_SHARED_MOLTEN_TEMPEST "Build shared MoltenTempest." ON)
 
 set(BUILD_SHARED_LIBS ${BUILD_SHARED_MOLTEN_TEMPEST})
 add_subdirectory("${CMAKE_SOURCE_DIR}/../../Engine" build)
 
 add_executable(${PROJECT_NAME} "main.cpp" "game.cpp")
-target_link_libraries(${PROJECT_NAME} MoltenTempest)
+target_link_libraries(${PROJECT_NAME} Tempest)
 
 # copy data to binary directory
 add_custom_command(

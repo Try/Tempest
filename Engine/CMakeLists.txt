@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.4)
 
-project(MoltenTempest)
+project(Tempest)
 set(CMAKE_CXX_STANDARD 14)
 
-option(TEMPEST_BUILD_SHARED "Build shared MoltenTempest." ON)
+option(TEMPEST_BUILD_SHARED "Build shared Tempest." ON)
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")

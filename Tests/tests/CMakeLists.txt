@@ -80,7 +80,7 @@ endif()
 
 add_test(${PROJECT_NAME} COMMAND ${PROJECT_NAME})
 
-target_link_libraries(${PROJECT_NAME} MoltenTempest)
+target_link_libraries(${PROJECT_NAME} Tempest)
 
 # copy data to binary directory
 add_custom_command(
