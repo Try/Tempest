@@ -24,9 +24,6 @@ inline VertexBufferDecl vertexBufferDecl<::Vertex>() {
   }
 }
 
-static const Vertex   vboData[3] = {{-1,-1},{1,-1},{1,1}};
-static const uint16_t iboData[3] = {0,1,2};
-
 TEST(DirectX12Api,DirectX12Api) {
 #if defined(_MSC_VER)
   GapiTestCommon::init<DirectX12Api>();
