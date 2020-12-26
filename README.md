@@ -20,15 +20,15 @@ Main idea behind this engine is to provide a low-level GPU-programming concepts,
 |-------------------|--------------------------------------------------------|-----------
 | Device            | VkDevice                                               | ID3D12Device
 | Swapchain         | VkSwapchain                                            | IDXGISwapChain3 
-| Shader            |                                                        | ID3D12Resource
-| VertexBuffer<T>   | VkBuffer + VK_BUFFER_USAGE_VERTEX_BUFFER_BIT           | ID3D12Resource 
-| IndexBuffer<T>    | VkBuffer + VK_BUFFER_USAGE_INDEX_BUFFER_BIT            | ID3D12Resource 
-| UniformBuffer<T>  | VkBuffer + VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT          | ID3D12Resource 
-| StorageBuffer<T>  | VkBuffer + VK_BUFFER_USAGE_STORAGE_BUFFER_BIT          | ID3D12Resource + D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS 
+| Shader            | VkShaderModule                                         | ID3DBlob
+| VertexBuffer<T>   | VkBuffer                                               | ID3D12Resource 
+| IndexBuffer<T>    | VkBuffer                                               | ID3D12Resource 
+| UniformBuffer<T>  | VkBuffer                                               | ID3D12Resource 
+| StorageBuffer<T>  | VkBuffer                                               | ID3D12Resource 
 | Uniforms          | VkDescriptorSet                                        | ID3D12DescriptorHeap[]
-| Attachment        | VkImage  + VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT         | ID3D12Resource + D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
-| ZBuffer           | VkImage  + VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | ID3D12Resource + D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
-| StorageImage      | VkImage  +VK_IMAGE_USAGE_STORAGE_BIT                   | ID3D12Resource + D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS
+| Attachment        | VkImage                                                | ID3D12Resource 
+| ZBuffer           | VkImage                                                | ID3D12Resource 
+| StorageImage      | VkImage                                                | ID3D12Resource 
 | FrameBuffer       | VkFramebuffer                                          | ID3D12DescriptorHeap + D3D12_DESCRIPTOR_HEAP_TYPE_RTV
 | RenderPass        | VkRenderPass                                           | ClearRenderTargetView/ClearDepthStencilView/DiscardResource
 | RenderPipeline<V> | VkPipeline[]                                           | ID3D12PipelineState
