@@ -7,7 +7,6 @@ namespace Tempest {
 
 class Device;
 class CommandBuffer;
-class Frame;
 class FrameBuffer;
 class Texture2d;
 
