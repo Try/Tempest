@@ -25,6 +25,7 @@ class Texture2d final {
     Size          size() const { return Size(texW,texH); }
     bool          isEmpty() const { return texW<=0 || texH<=0; }
     TextureFormat format() const { return frm; }
+    uint32_t      mipCount() const;
 
   private:
     Texture2d(Tempest::Device& dev,AbstractGraphicsApi::PTexture&& impl,uint32_t w,uint32_t h,TextureFormat frm);

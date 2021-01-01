@@ -288,6 +288,7 @@ namespace Tempest {
         virtual uint32_t      h() const=0;
         };
       struct Texture:Shared  {
+        virtual uint32_t      mipCount() const = 0;
         };
       struct Attach {
         virtual TextureLayout defaultLayout() = 0;

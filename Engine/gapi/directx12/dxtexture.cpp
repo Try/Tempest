@@ -17,9 +17,6 @@ DxTexture::DxTexture(DxTexture&& other)
   :impl(std::move(other.impl)), format(other.format), mips(other.mips) {
   }
 
-void DxTexture::setSampler(const Sampler2d& ) {
-  }
-
 UINT DxTexture::bitCount() const {
   switch(format) {
     case DXGI_FORMAT_UNKNOWN:

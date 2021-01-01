@@ -10,7 +10,7 @@ VTexture::VTexture(VTexture &&other) {
   std::swap(impl,     other.impl);
   std::swap(view,     other.view);
   std::swap(format,   other.format);
-  std::swap(mipCount, other.mipCount);
+  std::swap(mipCnt,   other.mipCnt);
   std::swap(alloc,    other.alloc);
   std::swap(page,     other.page);
   std::swap(extViews, other.extViews);
@@ -89,8 +89,8 @@ void VTexture::createView(VkImageView& ret, VkDevice device, VkFormat format,
   if(VK_FORMAT_D16_UNORM<=format && format<=VK_FORMAT_D32_SFLOAT_S8_UINT)
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; else
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  viewInfo.subresourceRange.baseMipLevel   = (mipLevel==uint32_t(-1) ? 0        : mipLevel);
-  viewInfo.subresourceRange.levelCount     = (mipLevel==uint32_t(-1) ? mipCount :        1);
+  viewInfo.subresourceRange.baseMipLevel   = (mipLevel==uint32_t(-1) ? 0      : mipLevel);
+  viewInfo.subresourceRange.levelCount     = (mipLevel==uint32_t(-1) ? mipCnt :        1);
   viewInfo.subresourceRange.baseArrayLayer = 0;
   viewInfo.subresourceRange.layerCount     = 1;
 

@@ -25,3 +25,7 @@ Texture2d& Texture2d::operator=(Texture2d&& other) {
   std::swap(frm,  other.frm);
   return *this;
   }
+
+uint32_t Texture2d::mipCount() const {
+  return impl.handler ? impl.handler->mipCount() : 0;
+  }

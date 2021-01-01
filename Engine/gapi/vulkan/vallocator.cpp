@@ -173,8 +173,8 @@ VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip,VkFormat format) {
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
     }
 
-  ret.format   = imageInfo.format;
-  ret.mipCount = mip;
+  ret.format = imageInfo.format;
+  ret.mipCnt = mip;
   ret.createViews(device);
   return ret;
   }
@@ -220,8 +220,8 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mi
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
     }
 
-  ret.format   = imageInfo.format;
-  ret.mipCount = mip;
+  ret.format = imageInfo.format;
+  ret.mipCnt = mip;
   ret.createViews(device);
   return ret;
   }
