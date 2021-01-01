@@ -35,7 +35,7 @@ class UniformsLayout final {
       uint32_t layout=0;
       Class    cls   =Ubo;
       Stage    stage =Fragment;
-      size_t   size  =0;
+      uint64_t size  =0;
       };
     struct PushBlock {
       Stage    stage = Fragment;
