@@ -318,6 +318,7 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
         MouseEvent e( getX_LPARAM(lParam),
                       getY_LPARAM(lParam),
                       toButton(msg,wParam),
+                      Event::M_NoModifier,
                       0,
                       0,
                       Event::MouseDown );
@@ -335,6 +336,7 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
         MouseEvent e( getX_LPARAM(lParam),
                       getY_LPARAM(lParam),
                       toButton(msg,wParam),
+                      Event::M_NoModifier,
                       0,
                       0,
                       Event::MouseUp  );
@@ -348,6 +350,7 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
         MouseEvent e0( getX_LPARAM(lParam),
                        getY_LPARAM(lParam),
                        Event::ButtonNone,
+                       Event::M_NoModifier,
                        0,
                        0,
                        Event::MouseDrag  );
@@ -364,6 +367,7 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
         ScreenToClient(hWnd, &p);
         Tempest::MouseEvent e( p.x, p.y,
                                Tempest::Event::ButtonNone,
+                               Event::M_NoModifier,
                                GET_WHEEL_DELTA_WPARAM(wParam),
                                0,
                                Event::MouseWheel );

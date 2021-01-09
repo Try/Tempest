@@ -14,16 +14,24 @@ EventDispatcher::EventDispatcher(Widget &root)
   }
 
 void EventDispatcher::dispatchMouseDown(Widget &wnd, MouseEvent &e) {
+  MouseEvent e1( e.x,
+                 e.y,
+                 e.button,
+                 mkModifier(),
+                 e.delta,
+                 e.mouseID,
+                 Event::MouseDown );
+
   for(auto i:overlays) {
     if(!i->bind(wnd))
       continue;
-    mouseUp = implDispatch(*i,e);
+    mouseUp = implDispatch(*i,e1);
     if(!mouseUp.expired())
       break;
     }
 
   if(mouseUp.expired())
-    mouseUp = implDispatch(wnd,e);
+    mouseUp = implDispatch(wnd,e1);
 
   if(auto w = mouseUp.lock()) {
     if(w->widget->focusPolicy() & ClickFocus) {
@@ -41,8 +49,9 @@ void EventDispatcher::dispatchMouseUp(Widget& /*wnd*/, MouseEvent &e) {
     MouseEvent e1( p.x,
                    p.y,
                    e.button,
-                   0,
-                   0,
+                   mkModifier(),
+                   e.delta,
+                   e.mouseID,
                    Event::MouseUp );
     w->widget->mouseUpEvent(e1);
     if(!e1.isAccepted())
@@ -56,8 +65,9 @@ void EventDispatcher::dispatchMouseMove(Widget &wnd, MouseEvent &e) {
     MouseEvent e0( p.x,
                    p.y,
                    Event::ButtonNone,
-                   0,
-                   0,
+                   mkModifier(),
+                   e.delta,
+                   e.mouseID,
                    Event::MouseDrag  );
     w->widget->mouseDragEvent(e0);
     if(e0.isAccepted())
@@ -69,8 +79,9 @@ void EventDispatcher::dispatchMouseMove(Widget &wnd, MouseEvent &e) {
     MouseEvent e1( p.x,
                    p.y,
                    Event::ButtonNone,
-                   0,
-                   0,
+                   e.modifier,
+                   e.delta,
+                   e.mouseID,
                    Event::MouseMove  );
     w->widget->mouseMoveEvent(e1);
     if(e.isAccepted()) {
@@ -82,8 +93,9 @@ void EventDispatcher::dispatchMouseMove(Widget &wnd, MouseEvent &e) {
   MouseEvent e1( e.x,
                  e.y,
                  Event::ButtonNone,
-                 0,
-                 0,
+                 mkModifier(),
+                 e.delta,
+                 e.mouseID,
                  Event::MouseMove  );
   for(auto i:overlays) {
     if(!i->bind(wnd))
@@ -98,15 +110,22 @@ void EventDispatcher::dispatchMouseMove(Widget &wnd, MouseEvent &e) {
   implSetMouseOver(wptr,e1);
   }
 
-void EventDispatcher::dispatchMouseWheel(Widget &wnd, MouseEvent &e){
+void EventDispatcher::dispatchMouseWheel(Widget &wnd, MouseEvent &e) {
+  MouseEvent e1( e.x,
+                 e.y,
+                 e.button,
+                 mkModifier(),
+                 e.delta,
+                 e.mouseID,
+                 Event::MouseWheel );
   for(auto i:overlays) {
     if(!i->bind(wnd))
       continue;
-    implMouseWhell(*i,e);
+    implMouseWhell(*i,e1);
     if(e.isAccepted())
       return;
     }
-  implMouseWhell(wnd,e);
+  implMouseWhell(wnd,e1);
   }
 
 void EventDispatcher::dispatchKeyDown(Widget &wnd, KeyEvent &e, uint32_t scancode) {
@@ -210,6 +229,7 @@ std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget& w,MouseEvent 
       MouseEvent ex(event.x - i->x(),
                     event.y - i->y(),
                     event.button,
+                    event.modifier,
                     event.delta,
                     event.mouseID,
                     event.type());
@@ -246,6 +266,7 @@ void EventDispatcher::implMouseWhell(Widget& w,MouseEvent &event) {
       MouseEvent ex(event.x - i->x(),
                     event.y - i->y(),
                     event.button,
+                    event.modifier,
                     event.delta,
                     event.mouseID,
                     event.type());
@@ -326,6 +347,7 @@ void EventDispatcher::implSetMouseOver(const std::shared_ptr<Widget::Ref> &wptr,
     MouseEvent e( p.x,
                   p.y,
                   Event::ButtonNone,
+                  orig.modifier,
                   0,
                   0,
                   Event::MouseLeave );
@@ -338,6 +360,7 @@ void EventDispatcher::implSetMouseOver(const std::shared_ptr<Widget::Ref> &wptr,
     MouseEvent e( p.x,
                   p.y,
                   Event::ButtonNone,
+                  orig.modifier,
                   0,
                   0,
                   Event::MouseLeave );

@@ -363,6 +363,7 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
           Tempest::MouseEvent e( xev.xbutton.x,
                                  xev.xbutton.y,
                                  Tempest::Event::ButtonNone,
+                                 Event::M_NoModifier,
                                  ticks,
                                  0,
                                  Event::MouseWheel );
@@ -371,6 +372,7 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
           MouseEvent e( xev.xbutton.x,
                         xev.xbutton.y,
                         toButton( xev.xbutton ),
+                        Event::M_NoModifier,
                         0,
                         0,
                         xev.type==ButtonPress ? Event::MouseDown : Event::MouseUp );
@@ -389,6 +391,7 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
         MouseEvent e( xev.xmotion.x,
                       xev.xmotion.y,
                       Event::ButtonNone,
+                      Event::M_NoModifier,
                       0,
                       0,
                       Event::MouseMove  );

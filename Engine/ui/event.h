@@ -235,15 +235,17 @@ class MouseEvent : public Event {
   public:
     MouseEvent( int mx = -1, int my = -1,
                 MouseButton b = ButtonNone,
+                Modifier m = M_NoModifier,
                 int mdelta = 0,
                 int mouseID = 0,
                 Type t = MouseMove )
-      :x(mx), y(my), delta(mdelta), button(b), mouseID(mouseID){
+      :x(mx), y(my), delta(mdelta), button(b), modifier(m), mouseID(mouseID){
       setType( t );
       }
 
     const int x, y, delta;
     const MouseButton button;
+    const Modifier    modifier = M_NoModifier;
 
     const int mouseID;
 
