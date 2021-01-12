@@ -222,11 +222,11 @@ bool TextModel::isEmpty() const {
   return txt.size()<=1;
   }
 
-void TextModel::paint(Painter& p, int x, int y) const {
-  paint(p,fnt,x,y);
+void TextModel::paint(Painter& p, const Color& color, int x, int y) const {
+  paint(p,fnt,color,x,y);
   }
 
-void TextModel::paint(Painter &p,const Font& fnt,int fx,int fy) const {
+void TextModel::paint(Painter &p, const Font& fnt, const Color& color, int fx, int fy) const {
   float x = float(fx);
   float y = float(fy);
 
@@ -246,7 +246,7 @@ void TextModel::paint(Painter &p,const Font& fnt,int fx,int fy) const {
 
     auto l=fnt.letter(ch,p);
     if(!l.view.isEmpty()) {
-      p.setBrush(Brush(l.view,Color(1.0),PaintDevice::Alpha));
+      p.setBrush(Brush(l.view,color,PaintDevice::Alpha));
       p.drawRect(int(x+l.dpos.x),int(y+l.dpos.y),l.view.w(),l.view.h());
       }
 

@@ -71,6 +71,10 @@ Menu::~Menu() {
   implClose();
   }
 
+void Menu::setMinimumWidth(int w) {
+  minW = w;
+  }
+
 int Menu::exec(Widget &owner) {
   return exec(owner,Tempest::Point(0,owner.h()));
   }
@@ -81,6 +85,7 @@ int Menu::exec(Widget& owner, const Point &pos, bool alignWidthToOwner) {
 
   running = true;
   overlay = new Overlay(this,&owner);
+  overlay->setStyle(&owner.style());
   SystemApi::addOverlay(overlay);
 
   decl.level = 0;
@@ -120,6 +125,8 @@ Widget *Menu::createDropList( Widget& owner,
   Widget* list = createItems(items);
   Size sz = list->size();
 
+  sz.w = std::max(minW,sz.w);
+
   MenuPanel *box = new MenuPanel();
   box->setMargins(Margin(0));
   sz.w+=box->margins().xMargin();
@@ -147,6 +154,7 @@ Widget *Menu::createItem(const Menu::Item &decl) {
   ItemButton* b = new ItemButton(decl.items);
 
   b->setText(decl.text);
+  b->setExtraText(decl.text2);
   b->setIcon(decl.icon);
   b->onClick.bind(&decl.activated,&Signal<void()>::operator());
   b->onClick.bind(this,&Menu::close);
@@ -228,17 +236,34 @@ void Menu::assign(std::string &s, const std::u16string &ch) {
 
 
 Menu::ItemButton::ItemButton(const Declarator &item):item(item){
+  text2.setFont(Application::font());
+  setSizePolicy(Preferred,Fixed);
   }
 
-void Menu::ItemButton::mouseEnterEvent(MouseEvent &) {
+void Menu::ItemButton::mouseEnterEvent(MouseEvent& e) {
+  Button::mouseEnterEvent(e);
   onMouseEnter(item,*this);
   update();
   }
 
 void Menu::ItemButton::paintEvent(PaintEvent &e) {
   Tempest::Painter p(e);
-  style().draw(p,this,  Style::E_MenuItemBackground,state(),Rect(0,0,w(),h()),Style::Extra(*this));
-  style().draw(p,text(),Style::TE_ButtonTitle,      state(),Rect(0,0,w(),h()),Style::Extra(*this));
+  Style::Extra ex(*this);
+  style().draw(p,this,  Style::E_MenuItemBackground,state(),Rect(0,0,w(),h()),ex);
+  style().draw(p,text(),Style::TE_MenuText1,        state(),Rect(0,0,w(),h()),ex);
+  style().draw(p,text2, Style::TE_MenuText2,        state(),Rect(0,0,w(),h()),ex);
+  }
+
+void Menu::ItemButton::setExtraText(const char* t) {
+  text2.setText(t);
+  }
+
+void Menu::ItemButton::setExtraText(const std::string& t) {
+  setExtraText(t.c_str());
+  }
+
+void Menu::ItemButton::setExtraFont(const Font& f) {
+  text2.setFont(f);
   }
 
 void Menu::MenuPanel::paintEvent(PaintEvent &e) {

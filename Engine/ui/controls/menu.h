@@ -24,6 +24,8 @@ class Menu {
     Menu(Declarator&& decl);
     virtual ~Menu();
 
+    void setMinimumWidth(int w);
+
     int  exec(Widget& owner);
     int  exec(Widget& owner, const Point &pos, bool alignWidthToOwner = true);
     void close();
@@ -50,6 +52,19 @@ class Menu {
 
         Item& it = items.back();
         assign(it.text,text);
+        it.icon = icon;
+        bind(it,a...);
+
+        return *this;
+        }
+
+      template<class Str, class Str2, class ... Args>
+      Declarator& item(const Tempest::Icon& icon, const Str& text, const Str2& text2, Args... a){
+        items.emplace_back();
+
+        Item& it = items.back();
+        assign(it.text, text);
+        assign(it.text2,text2);
         it.icon = icon;
         bind(it,a...);
 
@@ -86,7 +101,7 @@ class Menu {
       Item(Item&&) = default;
       Item& operator = (Item&&)=default;
 
-      std::string             text;
+      std::string             text, text2;
       Tempest::Icon           icon;
       Tempest::Signal<void()> activated;
       Declarator              items;
@@ -111,9 +126,16 @@ class Menu {
         void mouseEnterEvent(MouseEvent& e);
         void paintEvent(Tempest::PaintEvent& e);
 
+        void setExtraText(const char*        text);
+        void setExtraText(const std::string& text);
+
+        void setExtraFont(const Font& f);
+
         Tempest::Signal<void(const Declarator&,Widget&)> onMouseEnter;
+
       private:
         const Declarator& item;
+        TextModel         text2;
       };
 
     void openSubMenu(const Declarator &items, Widget& root);
@@ -144,6 +166,7 @@ class Menu {
     Overlay*             overlay = nullptr;
     bool                 running = false;
     Declarator           decl;
+    int                  minW = 0;
 
     static void assign(std::string& s, const char*     ch);
     static void assign(std::string& s, const char16_t* ch);

@@ -3,6 +3,7 @@
 #include <Tempest/Timer>
 #include <Tempest/Rect>
 #include <Tempest/TextModel>
+#include <Tempest/Color>
 
 #include <string>
 #include <memory>
@@ -52,6 +53,10 @@ class Style {
       int   margin           = 8;
       };
 
+    struct UiColors final {
+      Color text = Color(1.f);
+      };
+
     struct Extra {
       public:
         Extra(const Widget&            owner);
@@ -66,12 +71,6 @@ class Style {
 
         TextModel::Cursor     selectionStart;
         TextModel::Cursor     selectionEnd;
-
-      private:
-        static const Tempest::Margin emptyMargin;
-        static const Tempest::Icon   emptyIcon;
-        static const Tempest::Font   emptyFont;
-        static const Tempest::Color  emptyColor;
       };
 
     enum {
@@ -99,6 +98,8 @@ class Style {
       TE_LabelTitle,
       TE_TextEditContent,
       TE_LineEditContent,
+      TE_MenuText1,
+      TE_MenuText2,
       TE_Last
       };
 
@@ -133,8 +134,7 @@ class Style {
     virtual void draw(Painter& p, ScrollBar*         w, Element e, const WidgetState& st, const Rect& r, const Extra& extra) const;
 
     // text
-    virtual void draw(Painter& p, const std::u16string& text, TextElement e, const WidgetState& st, const Rect& r, const Extra& extra) const;
-    virtual void draw(Painter& p, const TextModel&      text, TextElement e, const WidgetState& st, const Rect& r, const Extra& extra) const;
+    virtual void draw(Painter& p, const TextModel& text, TextElement e, const WidgetState& st, const Rect& r, const Extra& extra) const;
 
     // size hint
     virtual Size sizeHint(Widget*   w, Element e, const TextModel* text, const Extra& extra) const;
@@ -144,7 +144,8 @@ class Style {
 
     // metric
     virtual const UiMetrics& metrics() const;
-    virtual  Element         visibleElements() const;
+    virtual const UiColors&  colors() const;
+    virtual Element          visibleElements() const;
 
   protected:
     virtual void polish  (Widget& w) const;
@@ -155,6 +156,11 @@ class Style {
   private:
     mutable uint32_t refCnt   = 0;
     mutable uint32_t polished = 0;
+
+    static const Tempest::Margin emptyMargin;
+    static const Tempest::Icon   emptyIcon;
+    static const Tempest::Font   emptyFont;
+    static const Tempest::Color  emptyColor;
 
     void drawCursor(Painter &p, const WidgetState &st, int x, int h, bool animState) const;
 

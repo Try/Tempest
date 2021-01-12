@@ -45,9 +45,7 @@ void Button::setText(const char *text) {
   }
 
 void Button::setText(const std::string& text) {
-  textM.setText(text.c_str());
-  invalidateSizeHint();
-  update();
+  setText(text.c_str());
   }
 
 void Button::setFont(const Font &f) {
@@ -65,6 +63,15 @@ void Button::setIcon(const Icon& s) {
   invalidateSizeHint();
 
   update();
+  }
+
+void Button::setTextColor(const Color& c) {
+  textCl = c;
+  update();
+  }
+
+const Color& Button::textColor() const {
+  return textCl;
   }
 
 void Button::setButtonType(Button::Type t) {

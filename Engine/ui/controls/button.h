@@ -4,6 +4,7 @@
 #include <Tempest/TextModel>
 #include <Tempest/Icon>
 #include <Tempest/Signal>
+#include <Tempest/Color>
 
 namespace Tempest {
 
@@ -35,6 +36,9 @@ class Button : public Widget {
 
     void         setIcon(const Icon& s);
     const Icon&  icon() const { return icn; }
+
+    void         setTextColor(const Color& c);
+    const Color& textColor() const;
 
     void         setButtonType(Type t);
     Type         buttonType() const;
@@ -68,6 +72,7 @@ class Button : public Widget {
     Font         fnt;
     bool         fntInUse=false;
     TextModel    textM;
+    Color        textCl;
 
     Icon         icn;
     std::unique_ptr<Tempest::Menu> btnMenu;

@@ -23,17 +23,17 @@ Style::UiMetrics::UiMetrics() {
 #endif
   }
 
-const Margin Style::Extra::emptyMargin;
-const Icon   Style::Extra::emptyIcon;
-const Font   Style::Extra::emptyFont;
-const Color  Style::Extra::emptyColor;
+const Margin Style::emptyMargin;
+const Icon   Style::emptyIcon;
+const Font   Style::emptyFont;
+const Color  Style::emptyColor;
 
 Style::Extra::Extra(const Widget &owner)
   : margin(owner.margins()), icon(emptyIcon), fontColor(emptyColor), spacing(owner.spacing()) {
   }
 
 Style::Extra::Extra(const Button &owner)
-  : margin(owner.margins()), icon(owner.icon()), fontColor(emptyColor), spacing(owner.spacing()) {
+  : margin(owner.margins()), icon(owner.icon()), fontColor(owner.textColor()), spacing(owner.spacing()) {
   }
 
 Style::Extra::Extra(const Label &owner)
@@ -258,54 +258,11 @@ void Style::draw(Painter &p, ScrollBar*, Element e, const WidgetState &st, const
   draw(p,static_cast<Button*>(nullptr),e,st,r,extra);
   }
 
-void Style::draw(Painter &p, const std::u16string &text, Style::TextElement e,
-                 const WidgetState &st, const Rect &r, const Style::Extra &extra) const {
-  /*
-  const Margin& m = extra.margin;
-
-  p.translate(r.x,r.y);
-
-  const Sprite& icon = iconSprite(extra.icon,st,r);
-  int dX=0;
-
-  if( !icon.size().isEmpty() ){
-    p.setBrush(icon);
-    if( text.empty() ) {
-      p.drawRect( (r.w-icon.w())/2, (r.h-icon.h())/2, icon.w(), icon.h() );
-      } else {
-      p.drawRect( m.left, (r.h-icon.h())/2, icon.w(), icon.h() );
-      dX=icon.w();
-      }
-    }
-
-  if(e==TE_CheckboxTitle){
-    const int s = std::min(r.w,r.h);
-    if( dX<s )
-      dX=s;
-    }
-
-  if(dX!=0)
-    dX+=8; // padding
-
-  auto& fnt = textFont(text,st);
-  p.setFont (extra.font);
-  p.setBrush(extra.fontColor);
-  const int h=extra.font.textSize(text).h;
-  int flag=AlignBottom;
-  if(e==TE_ButtonTitle)
-    flag |= AlignHCenter;
-
-  p.drawText( m.left+dX, (r.h-h)/2, r.w-m.xMargin()-dX, h, text, flag );
-
-  p.translate(-r.x,-r.y);*/
-  }
-
 void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
                  const WidgetState &st, const Rect &r, const Style::Extra &extra) const {
-  (void)e;
-
-  const Margin& m  = extra.margin;
-  const Rect    sc = p.scissor();
+  const Margin& m   = extra.margin;
+  const Rect    sc  = p.scissor();
+  const Font&   fnt = text.font();
 
   p.setScissor(sc.intersected(Rect(m.left, 0, r.w-m.xMargin(), r.h)));
 
@@ -331,11 +288,15 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
   if(dX!=0)
     dX+=extra.spacing;
 
-  auto&     fnt   = text.font();
   const int fntSz = int(fnt.metrics().ascent);
 
   Point at;
-  if(e!=TE_TextEditContent && e!=TE_LineEditContent) {
+  if(e==TE_MenuText2) {
+    const Size sz = text.wrapSize();
+    at.x = m.left+r.w-m.xMargin()-sz.w;
+    at.y = fntSz+m.top;
+    }
+  else if(e!=TE_TextEditContent && e!=TE_LineEditContent && e!=TE_MenuText1) {
     const Size sz = text.wrapSize();
     at = { m.left+dX, (r.h+sz.h)/2 };
     if(e==TE_ButtonTitle && dX==0)
@@ -352,7 +313,11 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
   if(extra.selectionStart!=extra.selectionEnd) {
     text.drawCursor(p,at.x,at.y-fntSz,extra.selectionStart,extra.selectionEnd);
     }
-  text.paint(p, fnt, at.x, at.y);
+
+  Color cl = extra.fontColor;
+  if(cl==Style::emptyColor)
+    cl = colors().text;
+  text.paint(p, fnt, cl, at.x, at.y);
   p.setScissor(sc);
   }
 
@@ -397,6 +362,11 @@ const Style::UiMetrics& Style::metrics() const {
   return m;
   }
 
+const Style::UiColors& Style::colors() const {
+  static UiColors c;
+  return c;
+  }
+
 Style::Element Style::visibleElements() const {
   return E_All;
   }
@@ -418,4 +388,3 @@ void Style::implDecRef() const {
 Style::UIIntefaceIdiom::UIIntefaceIdiom(Style::UIIntefaceCategory category):category(category){
   touch=(category==UIIntefacePad || category==UIIntefacePhone);
   }
-

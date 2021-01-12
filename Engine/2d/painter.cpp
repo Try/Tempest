@@ -236,7 +236,7 @@ void Painter::implBrush(const Brush &b) {
 
 void Painter::implPen(const Pen &p) {
   dev.setState(Brush::TexPtr(),p.color,TextureFormat::Undefined,ClampMode::Repeat);
-  dev.setBlend(Blend::NoBlend);
+  dev.setBlend(p.blend);
   implSetColor(p.color.r(),p.color.g(),p.color.b(),p.color.a());
   }
 
