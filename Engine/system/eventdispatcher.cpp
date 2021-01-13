@@ -397,6 +397,12 @@ void EventDispatcher::handleModKey(const KeyEvent& e) {
     case Event::K_RShift:
       keyMod.shiftR = v;
       break;
+    case Event::K_LAlt:
+      keyMod.altL = v;
+      break;
+    case Event::K_RAlt:
+      keyMod.altR = v;
+      break;
     default:
       break;
     }

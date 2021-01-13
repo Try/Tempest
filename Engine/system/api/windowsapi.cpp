@@ -73,7 +73,8 @@ WindowsApi::WindowsApi() {
     { VK_LSHIFT,   Event::K_LShift   },
     { VK_RSHIFT,   Event::K_RShift   },
 
-    { VK_MENU,     Event::K_LAlt     },
+    { VK_LMENU,    Event::K_LAlt     },
+    { VK_RMENU,    Event::K_LAlt     },
 
     { VK_LEFT,     Event::K_Left     },
     { VK_RIGHT,    Event::K_Right    },
@@ -388,6 +389,10 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
         else if(wParam == VK_CONTROL) {
           bool extended = (lParam & 0x01000000) != 0;
           vkCode = extended ? VK_RCONTROL : VK_LCONTROL;
+          }
+        else if(wParam == VK_MENU) {
+          bool extended = (lParam & 0x01000000) != 0;
+          vkCode = extended ? VK_RMENU : VK_LMENU;
           }
         else {
           vkCode = wParam;
