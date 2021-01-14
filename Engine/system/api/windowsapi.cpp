@@ -291,10 +291,21 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
   if(cb==nullptr)
     return DefWindowProcW( hWnd, msg, wParam, lParam );
 
+  static bool altL = false;
+  static bool altR = false;
+
+  if((GetKeyState(VK_LMENU) < 0)!=altL) {
+    altL = !altL;
+    handleKeyEvent(cb,altL ? WM_SYSKEYDOWN : WM_SYSKEYUP,VK_MENU,0);
+    }
+  if((GetKeyState(VK_RMENU) < 0)!=altR) {
+    altR = !altR;
+    handleKeyEvent(cb,altR ? WM_SYSKEYDOWN : WM_SYSKEYUP,VK_MENU,0x01000000);
+    }
+
   switch( msg ) {
     case WM_PAINT:{
-      if(cb)
-        SystemApi::dispatchRender(*cb);
+      SystemApi::dispatchRender(*cb);
       return DefWindowProc( hWnd, msg, wParam, lParam );
       }
 
@@ -315,16 +326,14 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
     case WM_MBUTTONDOWN:
     case WM_RBUTTONDOWN: {
       SetCapture(hWnd);
-      if(cb) {
-        MouseEvent e( getX_LPARAM(lParam),
-                      getY_LPARAM(lParam),
-                      toButton(msg,wParam),
-                      Event::M_NoModifier,
-                      0,
-                      0,
-                      Event::MouseDown );
-        SystemApi::dispatchMouseDown(*cb,e);
-        }
+      MouseEvent e( getX_LPARAM(lParam),
+                    getY_LPARAM(lParam),
+                    toButton(msg,wParam),
+                    Event::M_NoModifier,
+                    0,
+                    0,
+                    Event::MouseDown );
+      SystemApi::dispatchMouseDown(*cb,e);
       break;
       }
 
@@ -333,89 +342,49 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
     case WM_RBUTTONUP:
     case WM_MBUTTONUP: {
       ReleaseCapture();
-      if(cb) {
-        MouseEvent e( getX_LPARAM(lParam),
-                      getY_LPARAM(lParam),
-                      toButton(msg,wParam),
-                      Event::M_NoModifier,
-                      0,
-                      0,
-                      Event::MouseUp  );
-        SystemApi::dispatchMouseUp(*cb,e);
-        }
+      MouseEvent e( getX_LPARAM(lParam),
+                    getY_LPARAM(lParam),
+                    toButton(msg,wParam),
+                    Event::M_NoModifier,
+                    0,
+                    0,
+                    Event::MouseUp  );
+      SystemApi::dispatchMouseUp(*cb,e);
       break;
       }
 
     case WM_MOUSEMOVE: {
-      if(cb) {
-        MouseEvent e0( getX_LPARAM(lParam),
-                       getY_LPARAM(lParam),
-                       Event::ButtonNone,
-                       Event::M_NoModifier,
-                       0,
-                       0,
-                       Event::MouseDrag  );
-        SystemApi::dispatchMouseMove(*cb,e0);
-        }
+      MouseEvent e0( getX_LPARAM(lParam),
+                     getY_LPARAM(lParam),
+                     Event::ButtonNone,
+                     Event::M_NoModifier,
+                     0,
+                     0,
+                     Event::MouseDrag  );
+      SystemApi::dispatchMouseMove(*cb,e0);
       break;
       }
     case WM_MOUSEWHEEL:{
-      if(cb) {
-        POINT p;
-        p.x = getX_LPARAM(lParam);
-        p.y = getY_LPARAM(lParam);
+      POINT p;
+      p.x = getX_LPARAM(lParam);
+      p.y = getY_LPARAM(lParam);
 
-        ScreenToClient(hWnd, &p);
-        Tempest::MouseEvent e( p.x, p.y,
-                               Tempest::Event::ButtonNone,
-                               Event::M_NoModifier,
-                               GET_WHEEL_DELTA_WPARAM(wParam),
-                               0,
-                               Event::MouseWheel );
-        SystemApi::dispatchMouseWheel(*cb,e);
-        }
+      ScreenToClient(hWnd, &p);
+      Tempest::MouseEvent e( p.x, p.y,
+                             Tempest::Event::ButtonNone,
+                             Event::M_NoModifier,
+                             GET_WHEEL_DELTA_WPARAM(wParam),
+                             0,
+                             Event::MouseWheel );
+      SystemApi::dispatchMouseWheel(*cb,e);
       break;
       }
     case WM_SYSKEYDOWN:
     case WM_KEYDOWN:
     case WM_SYSKEYUP:
     case WM_KEYUP: {
-      if(cb) {
-        unsigned long long vkCode;
-        if(wParam == VK_SHIFT) {
-          uint32_t scancode = (lParam & 0x00ff0000) >> 16;
-          vkCode = MapVirtualKey(scancode, MAPVK_VSC_TO_VK_EX);
-          }
-        else if(wParam == VK_CONTROL) {
-          bool extended = (lParam & 0x01000000) != 0;
-          vkCode = extended ? VK_RCONTROL : VK_LCONTROL;
-          }
-        else if(wParam == VK_MENU) {
-          bool extended = (lParam & 0x01000000) != 0;
-          vkCode = extended ? VK_RMENU : VK_LMENU;
-          }
-        else {
-          vkCode = wParam;
-          }
-
-        auto key = WindowsApi::translateKey(vkCode);
-
-        BYTE kboard[256]={};
-        GetKeyboardState(kboard);
-        WCHAR buf[2]={};
-        if(vkCode!=VK_ESCAPE)
-          ToUnicode(uint32_t(vkCode),0,kboard,buf,2,0);
-
-        uint32_t scan = MapVirtualKeyW(uint32_t(wParam),MAPVK_VK_TO_VSC);
-
-        Tempest::KeyEvent e(Event::KeyType(key),
-                            uint32_t(buf[0]),
-                            Event::M_NoModifier,
-                            (msg==WM_KEYDOWN || msg==WM_SYSKEYDOWN) ? Event::KeyDown : Event::KeyUp);
-        if(msg==WM_KEYDOWN || msg==WM_SYSKEYDOWN)
-          SystemApi::dispatchKeyDown(*cb,e,scan); else
-          SystemApi::dispatchKeyUp  (*cb,e,scan);
-        }
+      if(wParam != VK_MENU)
+        handleKeyEvent(cb,msg,wParam,lParam);
       if(msg==WM_SYSKEYDOWN || msg==WM_SYSKEYUP)
         return DefWindowProcW( hWnd, msg, wParam, lParam );
       break;
@@ -425,16 +394,51 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
       if(wParam!=SIZE_MINIMIZED) {
         int width  = lParam & 0xffff;
         int height = (uint32_t(lParam) & 0xffff0000) >> 16;
-        if(cb) {
-          Tempest::SizeEvent e(width,height);
-          SystemApi::dispatchResize(*cb,e);
-          }
+        Tempest::SizeEvent e(width,height);
+        SystemApi::dispatchResize(*cb,e);
         }
       break;
     default:
       return DefWindowProcW( hWnd, msg, wParam, lParam );
     }
   return 0;
+  }
+
+void WindowsApi::handleKeyEvent(Tempest::Window* cb, uint32_t msg, const unsigned long long wParam, const long long lParam) {
+  unsigned long long vkCode;
+  if(wParam == VK_SHIFT) {
+    uint32_t scancode = (lParam & 0x00ff0000) >> 16;
+    vkCode = MapVirtualKey(scancode, MAPVK_VSC_TO_VK_EX);
+    }
+  else if(wParam == VK_CONTROL) {
+    bool extended = (lParam & 0x01000000) != 0;
+    vkCode = extended ? VK_RCONTROL : VK_LCONTROL;
+    }
+  else if(wParam == VK_MENU) {
+    bool extended = (lParam & 0x01000000) != 0;
+    vkCode = extended ? VK_RMENU : VK_LMENU;
+    }
+  else {
+    vkCode = wParam;
+    }
+
+  auto key = WindowsApi::translateKey(vkCode);
+
+  BYTE kboard[256]={};
+  GetKeyboardState(kboard);
+  WCHAR buf[2]={};
+  if(vkCode!=VK_ESCAPE)
+    ToUnicode(uint32_t(vkCode),0,kboard,buf,2,0);
+
+  uint32_t scan = MapVirtualKeyW(uint32_t(wParam),MAPVK_VK_TO_VSC);
+
+  Tempest::KeyEvent e(Event::KeyType(key),
+                      uint32_t(buf[0]),
+                      Event::M_NoModifier,
+                      (msg==WM_KEYDOWN || msg==WM_SYSKEYDOWN) ? Event::KeyDown : Event::KeyUp);
+  if(msg==WM_KEYDOWN || msg==WM_SYSKEYDOWN)
+    SystemApi::dispatchKeyDown(*cb,e,scan); else
+    SystemApi::dispatchKeyUp  (*cb,e,scan);
   }
 
 #endif

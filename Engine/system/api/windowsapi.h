@@ -28,6 +28,7 @@ class WindowsApi final : SystemApi {
     void     implProcessEvents(AppCallBack& cb) override;
 
     static long long windowProc(void* hWnd, uint32_t msg, const unsigned long long wParam, const long long lParam);
+    static void handleKeyEvent(Tempest::Window* cb, uint32_t msg, const unsigned long long wParam, const long long lParam);
 
   friend class SystemApi;
   };
