@@ -11,7 +11,7 @@ using namespace testing;
 using namespace Tempest;
 
 MouseEvent mkMEvent(Event::Type t, int x,int y){
-  return MouseEvent(x,y,Event::ButtonLeft,0,0,t);
+  return MouseEvent(x,y,Event::ButtonLeft,Event::M_NoModifier,0,0,t);
   }
 
 KeyEvent mkKEvent(Event::KeyType kt, Event::Type t){
