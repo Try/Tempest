@@ -109,6 +109,38 @@ inline bool nativeIsDepthFormat(DXGI_FORMAT frm) {
   return false;
   }
 
+inline DXGI_FORMAT nativeFormat(Decl::ComponentType t) {
+  switch(t) {
+    case Decl::float0:
+    case Decl::count:
+      return DXGI_FORMAT_UNKNOWN;
+    case Decl::float1:
+      return DXGI_FORMAT_R32_FLOAT;
+    case Decl::float2:
+      return DXGI_FORMAT_R32G32_FLOAT;
+    case Decl::float3:
+      return DXGI_FORMAT_R32G32B32_FLOAT;
+    case Decl::float4:
+      return DXGI_FORMAT_R32G32B32A32_FLOAT;
+    case Decl::int1:
+      return DXGI_FORMAT_R32_SINT;
+    case Decl::int2:
+      return DXGI_FORMAT_R32G32_SINT;
+    case Decl::int3:
+      return DXGI_FORMAT_R32G32B32_SINT;
+    case Decl::int4:
+      return DXGI_FORMAT_R32G32B32A32_SINT;
+    case Decl::uint1:
+      return DXGI_FORMAT_R32_UINT;
+    case Decl::uint2:
+      return DXGI_FORMAT_R32G32_UINT;
+    case Decl::uint3:
+      return DXGI_FORMAT_R32G32B32_UINT;
+    case Decl::uint4:
+      return DXGI_FORMAT_R32G32B32A32_UINT;
+    }
+  }
+
 inline UINT alignTo(UINT x, UINT a) {
   a--;
   return (x+a) & (~a);

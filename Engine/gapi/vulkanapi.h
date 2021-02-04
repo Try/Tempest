@@ -29,7 +29,6 @@ class VulkanApi : public AbstractGraphicsApi {
                                    TextureFormat *att, uint8_t attCount) override;
 
     PPipeline      createPipeline(Device* d, const RenderState &st,
-                                  const Tempest::Decl::ComponentType *decl, size_t declSize,
                                   size_t stride, Topology tp,
                                   const UniformsLay& ulayImpl,
                                   const Shader* vs, const Shader* tc, const Shader* te, const Shader* gs, const Shader* fs) override;

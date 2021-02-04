@@ -20,10 +20,8 @@ class VUniformsLay;
 class VPipeline : public AbstractGraphicsApi::Pipeline {
   public:
     VPipeline();
-    VPipeline(VDevice &device, const RenderState &st,
-              const Decl::ComponentType *decl, size_t declSize,
-              size_t stride, Topology tp,
-              const VUniformsLay& ulayImpl,
+    VPipeline(VDevice &device,
+              const RenderState &st, size_t stride, Topology tp, const VUniformsLay& ulayImpl,
               const VShader* vert, const VShader* ctrl, const VShader* tess, const VShader* geom,  const VShader* frag);
     VPipeline(VPipeline&& other);
     ~VPipeline();

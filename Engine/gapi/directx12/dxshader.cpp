@@ -32,6 +32,8 @@ DxShader::DxShader(const void *source, size_t src_size) {
     // comp.remap_num_workgroups_builtin();
     hlsl = comp.compile();
     exec = comp.get_execution_model();
+
+    ShaderReflection::getVertexDecl(vdecl,comp);
     ShaderReflection::getBindings(lay,comp);
     }
   catch(const std::bad_alloc&) {

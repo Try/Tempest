@@ -13,7 +13,7 @@ class ShaderReflection final {
     using Binding   = UniformsLayout::Binding;
     using PushBlock = UniformsLayout::PushBlock;
 
-    static void getBindings(std::vector<Binding>& b, const uint32_t* sprv, uint32_t size);
+    static void getVertexDecl(std::vector<Decl::ComponentType>& data, spirv_cross::Compiler& comp);
     static void getBindings(std::vector<Binding>& b, spirv_cross::Compiler& comp);
 
     static void merge(std::vector<Binding>& ret,

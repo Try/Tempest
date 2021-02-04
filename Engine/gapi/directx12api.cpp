@@ -172,8 +172,7 @@ AbstractGraphicsApi::PFboLayout DirectX12Api::createFboLayout(AbstractGraphicsAp
   return PFboLayout(new DxFboLayout(sx,att,attCount));
   }
 
-AbstractGraphicsApi::PPipeline DirectX12Api::createPipeline(AbstractGraphicsApi::Device* d, const RenderState& st,
-                                                            const Decl::ComponentType* decl, size_t declSize, size_t stride,
+AbstractGraphicsApi::PPipeline DirectX12Api::createPipeline(AbstractGraphicsApi::Device* d, const RenderState& st, size_t stride,
                                                             Topology tp,
                                                             const UniformsLay& ulayImpl,
                                                             const Shader* vs, const Shader* tc, const Shader* te, const Shader* gs, const Shader* fs) {
@@ -185,7 +184,7 @@ AbstractGraphicsApi::PPipeline DirectX12Api::createPipeline(AbstractGraphicsApi:
   auto* frag = reinterpret_cast<const Detail::DxShader*>(fs);
   auto& ul   = reinterpret_cast<const Detail::DxUniformsLay&>(ulayImpl);
 
-  return PPipeline(new Detail::DxPipeline(*dx,st,decl,declSize,stride,tp,ul,vert,ctrl,tess,geom,frag));
+  return PPipeline(new Detail::DxPipeline(*dx,st,stride,tp,ul,vert,ctrl,tess,geom,frag));
   }
 
 AbstractGraphicsApi::PCompPipeline DirectX12Api::createComputePipeline(AbstractGraphicsApi::Device* d,

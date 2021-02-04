@@ -20,10 +20,11 @@ class DxShader:public AbstractGraphicsApi::Shader {
 
     D3D12_SHADER_BYTECODE    bytecode() const;
 
-    std::vector<Binding>     lay;
+    std::vector<Decl::ComponentType> vdecl;
+    std::vector<Binding>             lay;
 
   private:
-    mutable ComPtr<ID3DBlob> shader;
+    mutable ComPtr<ID3DBlob>         shader;
   };
 
 }}

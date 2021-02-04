@@ -1,13 +1,41 @@
 #include "shaderreflection.h"
 
+#include <Tempest/Except>
+
 #include "thirdparty/spirv_cross/spirv_common.hpp"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-void ShaderReflection::getBindings(std::vector<ShaderReflection::Binding>& b, const uint32_t* sprv, uint32_t size) {
-  spirv_cross::Compiler comp(sprv,size);
-  getBindings(b,comp);
+void ShaderReflection::getVertexDecl(std::vector<Decl::ComponentType>& data, spirv_cross::Compiler& comp) {
+  if(comp.get_execution_model()!=spv::ExecutionModelVertex)
+    return;
+
+  spirv_cross::ShaderResources resources = comp.get_shader_resources();
+  for(auto &resource : resources.stage_inputs) {
+    auto&    t   = comp.get_type_from_variable(resource.id);
+    unsigned loc = comp.get_decoration(resource.id, spv::DecorationLocation);
+    data.resize(std::max<size_t>(loc+1,data.size()));
+
+    switch(t.basetype) {
+      case spirv_cross::SPIRType::Float: {
+        data[loc] = Decl::ComponentType(Decl::float1+t.vecsize-1);
+        break;
+        }
+      case spirv_cross::SPIRType::Int: {
+        data[loc] = Decl::ComponentType(Decl::int1+t.vecsize-1);
+        break;
+        }
+      case spirv_cross::SPIRType::UInt: {
+        data[loc] = Decl::ComponentType(Decl::uint1+t.vecsize-1);
+        break;
+        }
+      // TODO: add support for uint32_t packed color
+      default:
+        // not supported
+        throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
+      }
+    }
   }
 
 void ShaderReflection::getBindings(std::vector<Binding>&  lay,
@@ -43,7 +71,6 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     }
   for(auto &resource : resources.storage_images) {
     unsigned binding  = comp.get_decoration(resource.id, spv::DecorationBinding);
-    auto     readonly = comp.get_decoration_bitset(resource.id);
     Binding b;
     b.cls    = UniformsLayout::ImgRW; // (readonly.get(spv::DecorationNonWritable) ? UniformsLayout::ImgR : UniformsLayout::ImgRW);
     b.layout = binding;
@@ -138,7 +165,7 @@ void ShaderReflection::finalize(std::vector<ShaderReflection::Binding>& ret) {
   for(size_t i=0; i<ret.size(); ++i)
     if(ret[i].layout!=i) {
       ShaderReflection::Binding fill;
-      fill.layout = i;
+      fill.layout = uint32_t(i);
       fill.stage  = UniformsLayout::Stage(0);
       ret.insert(ret.begin()+int(i),fill);
       }

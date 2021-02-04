@@ -73,10 +73,9 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter) {
 
   auto    blitVs = DSharedPtr<DxShader*>(new DxShader(blit_vert_sprv,sizeof(blit_vert_sprv)));
   auto    blitFs = DSharedPtr<DxShader*>(new DxShader(blit_frag_sprv,sizeof(blit_frag_sprv)));
-  Decl::ComponentType decl[1] = {Decl::ComponentType::float2};
 
   blitLayout = DSharedPtr<DxUniformsLay*>(new DxUniformsLay(*this,blitFs.handler->lay));
-  blit   = DSharedPtr<DxPipeline*>(new DxPipeline(*this,st,decl,1,2*sizeof(float),Triangles,*blitLayout.handler,
+  blit   = DSharedPtr<DxPipeline*>(new DxPipeline(*this,st,2*sizeof(float),Triangles,*blitLayout.handler,
                                                   blitVs.handler,nullptr,nullptr,nullptr,blitFs.handler));
   }
 

@@ -106,10 +106,7 @@ AbstractGraphicsApi::PFboLayout VulkanApi::createFboLayout(AbstractGraphicsApi::
   }
 
 AbstractGraphicsApi::PPipeline VulkanApi::createPipeline(AbstractGraphicsApi::Device *d,
-                                                         const RenderState &st,
-                                                         const Decl::ComponentType *decl, size_t declSize,
-                                                         size_t stride,
-                                                         Topology tp,
+                                                         const RenderState &st, size_t stride, Topology tp,
                                                          const UniformsLay& ulayImpl,
                                                          const Shader* vs, const Shader* tc, const Shader* te,
                                                          const Shader* gs, const Shader* fs) {
@@ -121,7 +118,7 @@ AbstractGraphicsApi::PPipeline VulkanApi::createPipeline(AbstractGraphicsApi::De
   auto* frag = reinterpret_cast<const Detail::VShader*>(fs);
   auto& ul   = reinterpret_cast<const Detail::VUniformsLay&>(ulayImpl);
 
-  return PPipeline(new Detail::VPipeline(*dx,st,decl,declSize,stride,tp,ul,vert,ctrl,tess,geom,frag));
+  return PPipeline(new Detail::VPipeline(*dx,st,stride,tp,ul,vert,ctrl,tess,geom,frag));
   }
 
 AbstractGraphicsApi::PCompPipeline VulkanApi::createComputePipeline(AbstractGraphicsApi::Device* d,

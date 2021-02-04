@@ -120,6 +120,39 @@ inline VkFilter nativeFormat(Filter f){
   return vfrm[int(f)];
   }
 
+inline VkFormat nativeFormat(Decl::ComponentType t) {
+  switch(t) {
+    case Decl::float0:
+    case Decl::count:
+      return VK_FORMAT_UNDEFINED;
+    case Decl::float1:
+      return VK_FORMAT_R32_SFLOAT;
+    case Decl::float2:
+      return VK_FORMAT_R32G32_SFLOAT;
+    case Decl::float3:
+      return VK_FORMAT_R32G32B32_SFLOAT;
+    case Decl::float4:
+      return VK_FORMAT_R32G32B32A32_SFLOAT;
+    case Decl::int1:
+      return VK_FORMAT_R32_SINT;
+    case Decl::int2:
+      return VK_FORMAT_R32G32_SINT;
+    case Decl::int3:
+      return VK_FORMAT_R32G32B32_SINT;
+    case Decl::int4:
+      return VK_FORMAT_R32G32B32A32_SINT;
+    case Decl::uint1:
+      return VK_FORMAT_R32_UINT;
+    case Decl::uint2:
+      return VK_FORMAT_R32G32_UINT;
+    case Decl::uint3:
+      return VK_FORMAT_R32G32B32_UINT;
+    case Decl::uint4:
+      return VK_FORMAT_R32G32B32A32_UINT;
+    }
+  return VK_FORMAT_UNDEFINED;
+  }
+
 class VDevice : public AbstractGraphicsApi::Device {
   private:
     class DataStream;

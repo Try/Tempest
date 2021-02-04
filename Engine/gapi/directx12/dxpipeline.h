@@ -19,10 +19,7 @@ class DxShader;
 class DxPipeline : public AbstractGraphicsApi::Pipeline {
   public:
     DxPipeline(DxDevice &device,
-               const RenderState &st,
-               const Decl::ComponentType *decl, size_t declSize,
-               size_t stride, Topology tp,
-               const DxUniformsLay& ulay,
+               const RenderState &st, size_t stride, Topology tp, const DxUniformsLay& ulay,
                const DxShader* vert, const DxShader* ctrl, const DxShader* tess, const DxShader* geom,  const DxShader* frag);
 
     struct Inst final {

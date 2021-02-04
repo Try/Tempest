@@ -20,20 +20,49 @@ namespace Tempest {
 
   namespace Decl {
   enum ComponentType:uint8_t {
-    float0 = 0, // just trick
-    float1 = 1,
-    float2 = 2,
-    float3 = 3,
-    float4 = 4,
+    float0, // just trick
+    float1,
+    float2,
+    float3,
+    float4,
 
-    color  = 5,
-    short2 = 6,
-    short4 = 7,
+    int1,
+    int2,
+    int3,
+    int4,
 
-    half2  = 8,
-    half4  = 9,
+    uint1,
+    uint2,
+    uint3,
+    uint4,
+
     count
     };
+
+  inline size_t size(Decl::ComponentType t) {
+    switch(t) {
+      case Decl::float0:
+      case Decl::count:
+        return 0;
+      case Decl::float1:
+      case Decl::int1:
+      case Decl::uint1:
+        return 4;
+      case Decl::float2:
+      case Decl::int2:
+      case Decl::uint2:
+        return 8;
+      case Decl::float3:
+      case Decl::int3:
+      case Decl::uint3:
+        return 12;
+      case Decl::float4:
+      case Decl::int4:
+      case Decl::uint4:
+        return 16;
+      }
+    return 0;
+    }
   }
 
   enum class ApiFlags : uint16_t{
@@ -387,15 +416,13 @@ namespace Tempest {
                                          const Shader* vs, const Shader* tc, const Shader* te,
                                          const Shader* gs, const Shader* fs, const Shader* cs)=0;
 
-      virtual PPipeline  createPipeline(Device* d, const RenderState &st,
-                                        const Tempest::Decl::ComponentType *decl, size_t declSize,
-                                        size_t stride, Topology tp,
+      virtual PPipeline  createPipeline(Device* d, const RenderState &st, size_t stride, Topology tp,
                                         const UniformsLay &ulayImpl,
                                         const Shader* vs, const Shader* tc, const Shader* te, const Shader* gs, const Shader* fs)=0;
 
       virtual PCompPipeline createComputePipeline(Device* d,
-                                               const UniformsLay &ulayImpl,
-                                               Shader* shader)=0;
+                                                  const UniformsLay &ulayImpl,
+                                                  Shader* shader)=0;
 
       virtual PShader    createShader(Device *d,const void* source,size_t src_size)=0;
 

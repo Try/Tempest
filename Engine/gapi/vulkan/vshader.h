@@ -17,11 +17,12 @@ class VShader:public AbstractGraphicsApi::Shader {
 
     using Binding = UniformsLayout::Binding;
 
-    VkShaderModule       impl;
-    std::vector<Binding> lay;
+    VkShaderModule                   impl;
+    std::vector<Decl::ComponentType> vdecl;
+    std::vector<Binding>             lay;
 
   private:
-    VkDevice device;
+    VkDevice                         device;
   };
 
 }}

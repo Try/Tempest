@@ -386,7 +386,6 @@ ComputePipeline Device::pipeline(const Shader& comp) {
 
 RenderPipeline Device::implPipeline(const RenderState &st,
                                     const Shader* sh[],
-                                    const Decl::ComponentType *decl, size_t declSize,
                                     size_t   stride,
                                     Topology tp) {
   if(sh[0]==nullptr || sh[4]==nullptr)
@@ -399,7 +398,7 @@ RenderPipeline Device::implPipeline(const RenderState &st,
     shv[i] = sh[i]!=nullptr ? sh[i]->impl.handler : nullptr;
 
   auto ulay = api.createUboLayout(dev,shv[0],shv[1],shv[2],shv[3],shv[4],nullptr);
-  auto pipe = api.createPipeline(dev,st,decl,declSize,stride,tp,*ulay.handler,shv[0],shv[1],shv[2],shv[3],shv[4]);
+  auto pipe = api.createPipeline(dev,st,stride,tp,*ulay.handler,shv[0],shv[1],shv[2],shv[3],shv[4]);
   RenderPipeline f(std::move(pipe),std::move(ulay));
   return f;
   }

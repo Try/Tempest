@@ -13,17 +13,6 @@
 using namespace testing;
 using namespace Tempest;
 
-struct Vertex {
-  float x,y;
-  };
-
-namespace Tempest {
-template<>
-inline VertexBufferDecl vertexBufferDecl<::Vertex>() {
-  return {Decl::float2};
-  }
-}
-
 TEST(DirectX12Api,DirectX12Api) {
 #if defined(_MSC_VER)
   GapiTestCommon::init<DirectX12Api>();

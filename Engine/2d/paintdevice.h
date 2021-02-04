@@ -67,9 +67,4 @@ class PaintDevice {
 
   friend class Painter;
   };
-
-template<>
-inline VertexBufferDecl vertexBufferDecl<PaintDevice::Point>() {
-  return {Decl::float3,Decl::float2,Decl::float4};
-  }
 }

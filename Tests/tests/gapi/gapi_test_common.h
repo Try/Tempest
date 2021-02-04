@@ -11,19 +11,10 @@
 #include <gmock/gmock-matchers.h>
 
 namespace GapiTestCommon {
+
 struct Vertex {
   float x,y;
   };
-}
-
-namespace Tempest {
-template<>
-inline VertexBufferDecl vertexBufferDecl<GapiTestCommon::Vertex>() {
-  return {Decl::float2};
-  }
-}
-
-namespace GapiTestCommon {
 
 static const Vertex   vboData[3] = {{-1,-1},{1,-1},{1,1}};
 static const uint16_t iboData[3] = {0,1,2};

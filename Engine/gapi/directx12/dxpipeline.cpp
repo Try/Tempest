@@ -1,4 +1,3 @@
-
 #if defined(TEMPEST_BUILD_DIRECTX12)
 
 #include "dxpipeline.h"
@@ -12,14 +11,12 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-DxPipeline::DxPipeline(DxDevice& device, const RenderState& st,
-                       const Decl::ComponentType* decl, size_t declSize, size_t stride,
-                       Topology tp, const DxUniformsLay& ulay,
+DxPipeline::DxPipeline(DxDevice& device,
+                       const RenderState& st, size_t stride, Topology tp, const DxUniformsLay& ulay,
                        const DxShader* vert, const DxShader* ctrl, const DxShader* tess, const DxShader* geom, const DxShader* frag)
   : sign(ulay.impl.get()), stride(UINT(stride)),
     device(device),
-    vsShader(vert), tcShader(ctrl), teShader(tess), gsShader(geom), fsShader(frag),
-    declSize(UINT(declSize)), rState(st) {
+    vsShader(vert), tcShader(ctrl), teShader(tess), gsShader(geom), fsShader(frag), rState(st) {
   sign.get()->AddRef();
   static const D3D_PRIMITIVE_TOPOLOGY dxTopolgy[]= {
     D3D_PRIMITIVE_TOPOLOGY_UNDEFINED,
@@ -44,36 +41,23 @@ DxPipeline::DxPipeline(DxDevice& device, const RenderState& st,
     DXGI_FORMAT_R16G16_SNORM,
     DXGI_FORMAT_R16G16B16A16_SNORM,
     };
-  static const uint32_t vertSize[]={
-    0,
-    4,
-    8,
-    12,
-    16,
 
-    4,
+  if(vert!=nullptr) {
+    declSize = UINT(vert->vdecl.size());
+    vsInput.reset(new D3D12_INPUT_ELEMENT_DESC[declSize]);
+    uint32_t offset=0;
+    for(size_t i=0;i<declSize;++i){
+      auto& loc=vsInput[i];
+      loc.SemanticName         = "TEXCOORD"; // spirv cross compiles everything as TEXCOORD
+      loc.SemanticIndex        = UINT(i);
+      loc.Format               = nativeFormat(vert->vdecl[i]);
+      loc.InputSlot            = 0;
+      loc.AlignedByteOffset    = offset;
+      loc.InputSlotClass       = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+      loc.InstanceDataStepRate = 0;
 
-    4,
-    8,
-
-    4,
-    8
-  };
-
-  vsInput.reset(new D3D12_INPUT_ELEMENT_DESC[declSize]);
-
-  uint32_t offset=0;
-  for(size_t i=0;i<declSize;++i){
-    auto& loc=vsInput[i];
-    loc.SemanticName         = "TEXCOORD"; // spirv cross compiles everything as TEXCOORD
-    loc.SemanticIndex        = UINT(i);
-    loc.Format               = vertFormats[decl[i]];
-    loc.InputSlot            = 0;
-    loc.AlignedByteOffset    = offset;
-    loc.InputSlotClass       = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-    loc.InstanceDataStepRate = 0;
-
-    offset+=vertSize[decl[i]];
+      offset += Decl::size(vert->vdecl[i]);
+      }
     }
   }
 

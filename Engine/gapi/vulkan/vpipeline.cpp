@@ -18,11 +18,10 @@ using namespace Tempest::Detail;
 VPipeline::VPipeline(){
   }
 
-VPipeline::VPipeline(VDevice& device, const RenderState &st,
-                     const Decl::ComponentType *idecl, size_t declSize, size_t stride,
-                     Topology tp, const VUniformsLay& ulay,
+VPipeline::VPipeline(VDevice& device,
+                     const RenderState &st, size_t stride, Topology tp, const VUniformsLay& ulay,
                      const VShader* vert, const VShader* ctrl, const VShader* tess, const VShader* geom, const VShader* frag)
-  : device(device.device), st(st), declSize(declSize), stride(stride), tp(tp) {
+  : device(device.device), st(st), stride(stride), tp(tp) {
   try {
     modules[0] = Detail::DSharedPtr<const VShader*>{vert};
     modules[1] = Detail::DSharedPtr<const VShader*>{ctrl};
@@ -30,8 +29,11 @@ VPipeline::VPipeline(VDevice& device, const RenderState &st,
     modules[3] = Detail::DSharedPtr<const VShader*>{geom};
     modules[4] = Detail::DSharedPtr<const VShader*>{frag};
 
-    decl.reset(new Decl::ComponentType[declSize]);
-    std::memcpy(decl.get(),idecl,declSize*sizeof(Decl::ComponentType));
+    if(vert!=nullptr) {
+      declSize = vert->vdecl.size();
+      decl.reset(new Decl::ComponentType[declSize]);
+      std::memcpy(decl.get(),vert->vdecl.data(),declSize*sizeof(Decl::ComponentType));
+      }
     pipelineLayout = initLayout(device.device,ulay,pushStageFlags);
     }
   catch(...) {
@@ -142,38 +144,6 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   vertexInputBindingDescription.stride    = uint32_t(stride);
   vertexInputBindingDescription.inputRate = VkVertexInputRate::VK_VERTEX_INPUT_RATE_VERTEX;
 
-  static const VkFormat vertFormats[]={
-    VkFormat::VK_FORMAT_UNDEFINED,
-    VkFormat::VK_FORMAT_R32_SFLOAT,
-    VkFormat::VK_FORMAT_R32G32_SFLOAT,
-    VkFormat::VK_FORMAT_R32G32B32_SFLOAT,
-    VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT,
-
-    VK_FORMAT_A8B8G8R8_UNORM_PACK32,
-
-    VK_FORMAT_R16G16_SNORM,
-    VK_FORMAT_R16G16B16A16_SNORM,
-
-    VK_FORMAT_R16G16_SNORM,
-    VK_FORMAT_R16G16B16A16_SNORM,
-    };
-
-  static const uint32_t vertSize[]={
-    0,
-    4,
-    8,
-    12,
-    16,
-
-    4,
-
-    4,
-    8,
-
-    4,
-    8
-  };
-
   VkVertexInputAttributeDescription                  vsInputsStk[16]={};
   std::unique_ptr<VkVertexInputAttributeDescription> vsInputHeap;
   VkVertexInputAttributeDescription*                 vsInput = vsInputsStk;
@@ -186,10 +156,10 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
     auto& loc=vsInput[i];
     loc.location = uint32_t(i);
     loc.binding  = 0;
-    loc.format   = vertFormats[decl[i]];
+    loc.format   = nativeFormat(decl[i]);
     loc.offset   = offset;
 
-    offset+=vertSize[decl[i]];
+    offset += uint32_t(Decl::size(decl[i]));
     }
 
   VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};

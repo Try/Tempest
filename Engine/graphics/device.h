@@ -173,9 +173,7 @@ class Device {
     VideoBuffer createVideoBuffer(const void* data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap flg);
 
     RenderPipeline
-                implPipeline(const RenderState &st,
-                             const Shader* shaders[],
-                             const Decl::ComponentType *decl, size_t declSize,
+                implPipeline(const RenderState &st, const Shader* shaders[],
                              size_t stride, Topology tp);
     void        implSubmit(const Tempest::CommandBuffer *cmd[], AbstractGraphicsApi::CommandBuffer* hcmd[],  size_t count,
                            const Semaphore* wait[], AbstractGraphicsApi::Semaphore*     hwait[], size_t waitCnt,
@@ -267,16 +265,14 @@ inline UniformBuffer<T> Device::ubo(const T& mem) {
 
 template<class Vertex>
 RenderPipeline Device::pipeline(Topology tp, const RenderState &st, const Shader &vs, const Shader &fs) {
-  static const auto decl=Tempest::vertexBufferDecl<Vertex>();
   const Shader* sh[] = {&vs,nullptr,nullptr,nullptr,&fs};
-  return implPipeline(st,sh,decl.data.data(),decl.data.size(),sizeof(Vertex),tp);
+  return implPipeline(st,sh,sizeof(Vertex),tp);
   }
 
 template<class Vertex>
 RenderPipeline Device::pipeline(Topology tp, const RenderState &st, const Shader &vs, const Shader &tc, const Shader &te, const Shader &fs) {
-  static const auto decl=Tempest::vertexBufferDecl<Vertex>();
   const Shader* sh[] = {&vs,&tc,&te,nullptr,&fs};
-  return implPipeline(st,sh,decl.data.data(),decl.data.size(),sizeof(Vertex),tp);
+  return implPipeline(st,sh,sizeof(Vertex),tp);
   }
 
 }
