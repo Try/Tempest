@@ -327,7 +327,9 @@ VDevice::MemIndex VDevice::memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFl
         }
       }
     }
-  throw std::runtime_error("failed to get correct memory type");
+  MemIndex ret;
+  ret.typeId = uint32_t(-1);
+  return ret;
   }
 
 VkResult VDevice::present(VSwapchain &sw, const VSemaphore *wait, size_t wSize, uint32_t imageId) {

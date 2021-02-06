@@ -115,26 +115,38 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
   MemRequirements memRq={};
   getMemoryRequirements(memRq,ret.impl);
 
-  uint32_t props=0;
-  if(bufHeap == BufferHeap::Upload)
-    props = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-    //props|=(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);// to avoid vkFlushMappedMemoryRanges
-  if(bufHeap == BufferHeap::Static)
-    props = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-  if(bufHeap == BufferHeap::Readback)
-    props = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-
-  VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits(props),VK_IMAGE_TILING_LINEAR);
-  ret.page = allocMemory(memRq,memId.heapId,memId.typeId);
-
-  if(!ret.page.page)
-    throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
-
-  if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset,
-             mem,count,size,alignedSz)) {
-    throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
+  uint32_t props[2] = {};
+  uint8_t  propsCnt = 1;
+  if(bufHeap==BufferHeap::Upload && usage==MemUsage::UniformBuffer) {
+    propsCnt = 2;
+    props[0] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    props[1] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    //props[1]|=(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);// to avoid vkFlushMappedMemoryRanges
     }
-  return ret;
+  else if(bufHeap==BufferHeap::Upload)
+    props[0] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+  else if(bufHeap==BufferHeap::Static)
+    props[0] = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+  else if(bufHeap==BufferHeap::Readback)
+    props[0] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+
+  for(uint8_t i=0; i<propsCnt; ++i) {
+    VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits(props[i]),VK_IMAGE_TILING_LINEAR);
+    if(memId.typeId==uint32_t(-1))
+      continue;
+
+    ret.page = allocMemory(memRq,memId.heapId,memId.typeId);
+    if(!ret.page.page)
+      continue;
+
+    if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset,
+               mem,count,size,alignedSz)) {
+      throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
+      }
+    return ret;
+    }
+
+  throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
   }
 
 VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip,VkFormat format) {
