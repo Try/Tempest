@@ -176,12 +176,9 @@ void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
 void VCommandBuffer::setVbo(const Tempest::AbstractGraphicsApi::Buffer &b) {
   const VBuffer& vbo=reinterpret_cast<const VBuffer&>(b);
 
-  std::initializer_list<VkBuffer>     buffers = {vbo.impl};
-  std::initializer_list<VkDeviceSize> offsets = {0};
-  vkCmdBindVertexBuffers(
-        impl, 0, uint32_t(buffers.size()),
-        buffers.begin(),
-        offsets.begin() );
+  VkBuffer     buffers[1] = {vbo.impl};
+  VkDeviceSize offsets[1] = {0};
+  vkCmdBindVertexBuffers(impl, 0, 1, buffers, offsets );
   }
 
 void VCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer& b,Detail::IndexClass cls) {
