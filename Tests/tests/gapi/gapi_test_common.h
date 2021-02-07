@@ -90,6 +90,27 @@ void pso() {
   }
 
 template<class GraphicsApi>
+void psoTess() {
+  using namespace Tempest;
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto vert = device.loadShader("shader/tess.vert.sprv");
+    auto frag = device.loadShader("shader/tess.frag.sprv");
+    auto tese = device.loadShader("shader/tess.tese.sprv");
+    auto tesc = device.loadShader("shader/tess.tesc.sprv");
+    auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,tesc,tese,frag);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void fbo(const char* outImg) {
   using namespace Tempest;
 

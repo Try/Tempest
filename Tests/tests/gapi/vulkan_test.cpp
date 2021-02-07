@@ -59,3 +59,7 @@ TEST(VulkanApi,MipMaps) {
   GapiTestCommon::mipMaps<VulkanApi,TextureFormat::RGBA16> ("VulkanApi_MipMaps_RGBA16.png");
   GapiTestCommon::mipMaps<VulkanApi,TextureFormat::RGBA32F>("VulkanApi_MipMaps_RGBA32.png");
   }
+
+TEST(VulkanApi,TesselationBasic) {
+  GapiTestCommon::psoTess<VulkanApi>();
+  }

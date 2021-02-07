@@ -65,6 +65,11 @@ compile_shader(simple_test.frag)
 compile_shader(simple_test.comp)
 compile_shader(image_store_test.comp)
 
+compile_shader(tess.vert)
+compile_shader(tess.frag)
+compile_shader(tess.tesc)
+compile_shader(tess.tese)
+
 add_executable(${PROJECT_NAME}
   ${SOURCES}
   ${SHADERS}
