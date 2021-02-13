@@ -139,6 +139,7 @@ inline DXGI_FORMAT nativeFormat(Decl::ComponentType t) {
     case Decl::uint4:
       return DXGI_FORMAT_R32G32B32A32_UINT;
     }
+  return DXGI_FORMAT_UNKNOWN;
   }
 
 inline UINT alignTo(UINT x, UINT a) {

@@ -97,10 +97,11 @@ void psoTess() {
     GraphicsApi api{ApiFlags::Validation};
     Device      device(api);
 
-    auto vert = device.loadShader("shader/tess.vert.sprv");
-    auto frag = device.loadShader("shader/tess.frag.sprv");
     auto tese = device.loadShader("shader/tess.tese.sprv");
     auto tesc = device.loadShader("shader/tess.tesc.sprv");
+
+    auto vert = device.loadShader("shader/tess.vert.sprv");
+    auto frag = device.loadShader("shader/tess.frag.sprv");
     auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,tesc,tese,frag);
     }
   catch(std::system_error& e) {

@@ -3,9 +3,6 @@
 
 layout(vertices = 3) out;
 
-layout(location = 0) in  vec3 inPosition[];
-layout(location = 0) out vec3 outPosition[];
-
 void main(void) {
   const int inner = 3;
   const int outer = 2;
@@ -21,6 +18,4 @@ void main(void) {
     }
 
   gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
-
-  outPosition[gl_InvocationID] = inPosition[gl_InvocationID];
   }
