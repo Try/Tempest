@@ -85,6 +85,12 @@ static Event::MouseButton toButton( XButtonEvent& msg ){
   if( msg.button==Button2 )
     return Event::ButtonMid;
 
+  if( msg.button==8 )
+    return Event::ButtonBack;
+
+  if( msg.button==9 )
+    return Event::ButtonForward;
+
   return Event::ButtonNone;
   }
 
