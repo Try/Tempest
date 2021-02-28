@@ -148,7 +148,6 @@ void VectorImage::makeActual(Device &dev,Swapchain& sw) {
             s.mapping.b = ComponentSwizzle::R;
             }
           else if(T_UNLIKELY(b.tex.frm==TextureFormat::RG8 || b.tex.frm==TextureFormat::RG16)) {
-            Sampler2d s;
             s.mapping.r = ComponentSwizzle::R;
             s.mapping.g = ComponentSwizzle::R;
             s.mapping.b = ComponentSwizzle::R;
