@@ -416,7 +416,7 @@ TextureFormat Pixmap::toTextureFormat(Pixmap::Format f) {
     case Pixmap::Format::DXT3:    return TextureFormat::DXT3;
     case Pixmap::Format::DXT5:    return TextureFormat::DXT5;
     }
-  return TextureFormat::RGBA8;
+  return TextureFormat::Undefined;
   }
 
 Pixmap::Format Pixmap::toPixmapFormat(TextureFormat f) {
