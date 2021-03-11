@@ -12,6 +12,10 @@ class DeviceHangException : DeviceLostException {
   const char* what() const noexcept override { return "hit gpu timeout"; }
   };
 
+class SwapchainSuboptimal : std::exception {
+  const char* what() const noexcept override { return "swapchain si subotimal"; }
+  };
+
 class IncompleteFboException : std::exception {
   const char* what() const noexcept override { return "inconsistent framebuffer dimensions"; }
   };

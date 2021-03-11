@@ -343,10 +343,10 @@ void VulkanApi::present(Device *d,Swapchain *sw,uint32_t imageId,const Semaphore
 
   //auto t = Application::tickCount();
   VkResult code = dx->presentQueue->present(presentInfo);
-  if(code==VK_ERROR_OUT_OF_DATE_KHR || code==VK_SUBOPTIMAL_KHR) {
-    // TODO: handle better somehow?
+  if(code==VK_ERROR_OUT_OF_DATE_KHR)
     throw DeviceLostException();
-    }
+  if(code==VK_SUBOPTIMAL_KHR)
+    throw SwapchainSuboptimal();
   //Log::i("vkQueuePresentKHR = ",Application::tickCount()-t);
   Detail::vkAssert(code);
   }
