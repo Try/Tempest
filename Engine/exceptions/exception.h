@@ -13,7 +13,7 @@ class DeviceHangException : DeviceLostException {
   };
 
 class SwapchainSuboptimal : std::exception {
-  const char* what() const noexcept override { return "swapchain si subotimal"; }
+  const char* what() const noexcept override { return "swapchain no longer matches the surface properties"; }
   };
 
 class IncompleteFboException : std::exception {
