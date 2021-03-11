@@ -26,22 +26,6 @@ DxPipeline::DxPipeline(DxDevice& device,
   topology = dxTopolgy[int(tp)];
   pushConstantId = ulay.pushConstantId;
 
-  static const DXGI_FORMAT vertFormats[]={
-    DXGI_FORMAT_UNKNOWN,
-    DXGI_FORMAT_R32_FLOAT,
-    DXGI_FORMAT_R32G32_FLOAT,
-    DXGI_FORMAT_R32G32B32_FLOAT,
-    DXGI_FORMAT_R32G32B32A32_FLOAT,
-
-    DXGI_FORMAT_R8G8B8A8_UNORM, //TODO: test byteorder
-
-    DXGI_FORMAT_R16G16_SNORM,
-    DXGI_FORMAT_R16G16B16A16_SNORM,
-
-    DXGI_FORMAT_R16G16_SNORM,
-    DXGI_FORMAT_R16G16B16A16_SNORM,
-    };
-
   if(vert!=nullptr) {
     declSize = UINT(vert->vdecl.size());
     vsInput.reset(new D3D12_INPUT_ELEMENT_DESC[declSize]);
@@ -56,7 +40,7 @@ DxPipeline::DxPipeline(DxDevice& device,
       loc.InputSlotClass       = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
       loc.InstanceDataStepRate = 0;
 
-      offset += Decl::size(vert->vdecl[i]);
+      offset += uint32_t(Decl::size(vert->vdecl[i]));
       }
     }
   }

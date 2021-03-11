@@ -156,8 +156,9 @@ void VDevice::deviceQueueProps(Detail::VulkanApi::VkProp& prop,VkPhysicalDevice 
   std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
   vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 
-  uint32_t graphics = uint32_t(-1);
-  uint32_t present  = uint32_t(-1);
+  uint32_t graphics  = uint32_t(-1);
+  uint32_t present   = uint32_t(-1);
+  uint32_t universal = uint32_t(-1);
 
   for(uint32_t i=0;i<queueFamilyCount;++i) {
     const auto& queueFamily = queueFamilies[i];
@@ -165,19 +166,25 @@ void VDevice::deviceQueueProps(Detail::VulkanApi::VkProp& prop,VkPhysicalDevice 
       continue;
 
     static const VkQueueFlags rqFlag = (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
-    if((queueFamily.queueFlags & rqFlag)==rqFlag)
-      graphics = i;
+
+    const bool graphicsSupport = ((queueFamily.queueFlags & rqFlag)==rqFlag);
 
     VkBool32 presentSupport=false;
     if(surf!=VK_NULL_HANDLE)
       vkGetPhysicalDeviceSurfaceSupportKHR(device,i,surf,&presentSupport);
 
+    if(graphicsSupport)
+      graphics = i;
     if(presentSupport)
       present = i;
+    if(presentSupport && graphicsSupport)
+      universal = i;
     }
 
-  VkPhysicalDeviceProperties p={};
-  vkGetPhysicalDeviceProperties(device,&p);
+  if(universal!=uint32_t(-1)) {
+    graphics = universal;
+    present  = universal;
+    }
 
   prop.graphicsFamily = graphics;
   prop.presentFamily  = present;
