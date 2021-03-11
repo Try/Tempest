@@ -40,13 +40,18 @@ class BasicPoint<T,1> {
 
     BasicPoint operator - () const { return BasicPoint(-x); }
 
-    T manhattanLength() const { return x; }
-    T quadLength()      const { return x; }
+    T manhattanLength() const { return x<T() ? -x : x; }
+    T quadLength()      const { return x*x; }
 
     bool operator ==( const BasicPoint & other ) const { return x==other.x; }
     bool operator !=( const BasicPoint & other ) const { return x!=other.x; }
 
     static T dotProduct(const BasicPoint<T,1>& a,const BasicPoint<T,1>& b) { return a.x*b.x; }
+    static BasicPoint<T,3> normalize(const BasicPoint<T,3>& t) {
+      if(t.x==T())
+        return t;
+      return T(1);
+      }
 
     T x=T();
   };
@@ -80,6 +85,12 @@ class BasicPoint<T,2> {
     static T dotProduct(const BasicPoint<T,2>& a,const BasicPoint<T,2>& b) { return a.x*b.x+a.y*b.y; }
     static BasicPoint<T,2> crossProduct(const BasicPoint<T,2>& a) {
       return { a.y, -a.x };
+      }
+    static BasicPoint<T,2> normalize(const BasicPoint<T,2>& t) {
+      const T len = t.manhattanLength();
+      if(len==T())
+        return t;
+      return t/len;
       }
 
     T x=T();
@@ -120,6 +131,12 @@ class BasicPoint<T,3> {
         a.x*b.y - a.y*b.x
         };
       }
+    static BasicPoint<T,3> normalize(const BasicPoint<T,3>& t) {
+      const T len = t.manhattanLength();
+      if(len==T())
+        return t;
+      return t/len;
+      }
 
     T x=T();
     T y=T();
@@ -153,6 +170,12 @@ class BasicPoint<T,4> {
     bool operator !=( const BasicPoint & other ) const { return x!=other.x || y!=other.y || z!=other.z || w!=other.w; }
 
     static T dotProduct(const BasicPoint<T,4>& a,const BasicPoint<T,4>& b) { return a.x*b.x+a.y*b.y+a.z*b.z+a.w*b.w; }
+    static BasicPoint<T,4> normalize(const BasicPoint<T,4>& t) {
+      const T len = t.manhattanLength();
+      if(len==T())
+        return t;
+      return t/len;
+      }
 
     T x=T();
     T y=T();
