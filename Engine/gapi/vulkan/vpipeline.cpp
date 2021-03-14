@@ -35,6 +35,7 @@ VPipeline::VPipeline(VDevice& device,
       std::memcpy(decl.get(),vert->vdecl.data(),declSize*sizeof(Decl::ComponentType));
       }
     pipelineLayout = initLayout(device.device,ulay,pushStageFlags);
+    ssboBarriers   = ulay.hasSSBO;
     }
   catch(...) {
     cleanup();
@@ -46,6 +47,7 @@ VPipeline::VPipeline(VPipeline &&other) {
   std::swap(device,         other.device);
   std::swap(inst,           other.inst);
   std::swap(pipelineLayout, other.pipelineLayout);
+  std::swap(ssboBarriers,   other.ssboBarriers);
   }
 
 VPipeline::~VPipeline() {
@@ -344,6 +346,7 @@ VCompPipeline::VCompPipeline(VDevice& dev, const VUniformsLay& ulay, VShader& co
   :device(dev.device) {
   VkShaderStageFlags pushStageFlags = 0;
   pipelineLayout = VPipeline::initLayout(device,ulay,pushStageFlags);
+  ssboBarriers   = ulay.hasSSBO;
 
   try {
     VkComputePipelineCreateInfo info = {};
@@ -365,6 +368,7 @@ VCompPipeline::VCompPipeline(VCompPipeline&& other) {
   std::swap(device,         other.device);
   std::swap(impl,           other.impl);
   std::swap(pipelineLayout, other.pipelineLayout);
+  std::swap(ssboBarriers,   other.ssboBarriers);
   }
 
 VCompPipeline::~VCompPipeline() {

@@ -306,4 +306,75 @@ void mipMaps(const char* outImage) {
       throw;
     }
   }
+
+template<class GraphicsApi>
+void ssboWriteVs() {
+  using namespace Tempest;
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    if(!device.properties().storeAndAtomicVs) {
+      Log::d("Skipping graphics testcase: storeAndAtomicVs is not supported");
+      return;
+      }
+
+    // setup draw-pipeline
+    auto vbo    = device.vbo(vboData,3);
+    auto ibo    = device.ibo(iboData,3);
+
+    auto vert   = device.loadShader("shader/ssbo_write.vert.sprv");
+    auto frag   = device.loadShader("shader/simple_test.frag.sprv");
+    auto pso    = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
+
+    auto tex    = device.attachment(TextureFormat::RGBA8,32,32);
+    auto fbo    = device.frameBuffer(tex);
+    auto rp     = device.pass(FboMode(FboMode::PreserveOut,Color(0.f,0.f,1.f)));
+
+    auto vsOut  = device.ssbo<Tempest::Vec4>(nullptr,3);
+    auto ubo    = device.uniforms(pso.layout());
+    ubo.set(0,vsOut);
+
+    // setup computer pipeline
+    auto cs     = device.loadShader("shader/ssbo_write_verify.comp.sprv");
+    auto pso2   = device.pipeline(cs);
+    auto csOut  = device.ssbo<Tempest::Vec4>(nullptr,3);
+
+    auto ubo2   = device.uniforms(pso2.layout());
+    ubo2.set(0,vsOut);
+    ubo2.set(1,csOut);
+
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setFramebuffer(fbo,rp);
+      enc.setUniforms(pso,ubo);
+      enc.draw(vbo,ibo);
+
+      enc.setFramebuffer(nullptr);
+      enc.setUniforms(pso2,ubo2);
+      enc.dispatch(3,1,1);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    Vec4 outputCpu[3] = {};
+    device.readBytes(csOut,outputCpu,3);
+
+    for(size_t i=0; i<3; ++i) {
+      EXPECT_EQ(outputCpu[i].x,vboData[i].x);
+      EXPECT_EQ(outputCpu[i].y,vboData[i].y);
+      EXPECT_EQ(size_t(outputCpu[i].z),i);
+      }
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
 }

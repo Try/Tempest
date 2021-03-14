@@ -10,9 +10,7 @@ using namespace Tempest::Detail;
 VUniformsLay::VUniformsLay(VDevice& dev, const std::vector<UniformsLayout::Binding>& comp)
   : dev(dev.device) {
   ShaderReflection::merge(lay, pb, comp);
-  for(auto& i:lay)
-    if(i.size==0)
-      i.size = VK_WHOLE_SIZE;
+  adjustSsboBindings();
 
   if(lay.size()<=32) {
     VkDescriptorSetLayoutBinding bind[32]={};
@@ -21,18 +19,13 @@ VUniformsLay::VUniformsLay(VDevice& dev, const std::vector<UniformsLayout::Bindi
     std::unique_ptr<VkDescriptorSetLayoutBinding[]> bind(new VkDescriptorSetLayoutBinding[lay.size()]);
     implCreate(bind.get());
     }
-  for(auto& i:lay)
-    if(i.cls==UniformsLayout::SsboR  ||
-       i.cls==UniformsLayout::SsboRW ||
-       i.cls==UniformsLayout::ImgR   ||
-       i.cls==UniformsLayout::ImgRW ) {
-      hasSSBO = true;
-      }
   }
 
 VUniformsLay::VUniformsLay(VDevice& dev, const std::vector<UniformsLayout::Binding>* sh[], size_t cnt)
   : dev(dev.device) {
   ShaderReflection::merge(lay, pb, sh, cnt);
+  adjustSsboBindings();
+
   if(lay.size()<=32) {
     VkDescriptorSetLayoutBinding bind[32]={};
     implCreate(bind);
@@ -92,5 +85,18 @@ void VUniformsLay::implCreate(VkDescriptorSetLayoutBinding* bind) {
   info.pBindings    = bind;
 
   vkAssert(vkCreateDescriptorSetLayout(dev,&info,nullptr,&impl));
+  }
+
+void VUniformsLay::adjustSsboBindings() {
+  for(auto& i:lay)
+    if(i.size==0)
+      i.size = VK_WHOLE_SIZE;
+  for(auto& i:lay)
+    if(i.cls==UniformsLayout::SsboR  ||
+       i.cls==UniformsLayout::SsboRW ||
+       i.cls==UniformsLayout::ImgR   ||
+       i.cls==UniformsLayout::ImgRW ) {
+      hasSSBO = true;
+      }
   }
 

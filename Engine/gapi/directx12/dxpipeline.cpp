@@ -23,8 +23,9 @@ DxPipeline::DxPipeline(DxDevice& device,
     D3D_PRIMITIVE_TOPOLOGY_LINELIST,
     D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST
     };
-  topology = dxTopolgy[int(tp)];
+  topology       = dxTopolgy[int(tp)];
   pushConstantId = ulay.pushConstantId;
+  ssboBarriers   = ulay.hasSsbo;
 
   if(vert!=nullptr) {
     declSize = UINT(vert->vdecl.size());
@@ -185,6 +186,7 @@ DxCompPipeline::DxCompPipeline(DxDevice& device, const DxUniformsLay& ulay, DxSh
   sign.get()->AddRef();
 
   pushConstantId = ulay.pushConstantId;
+  ssboBarriers   = ulay.hasSsbo;
 
   D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
   psoDesc.pRootSignature = sign.get();

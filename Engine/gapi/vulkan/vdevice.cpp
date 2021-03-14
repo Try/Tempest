@@ -292,6 +292,9 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
   deviceFeatures.geometryShader       = supportedFeatures.geometryShader;
   deviceFeatures.fillModeNonSolid     = supportedFeatures.fillModeNonSolid;
 
+  deviceFeatures.vertexPipelineStoresAndAtomics = supportedFeatures.vertexPipelineStoresAndAtomics;
+  deviceFeatures.fragmentStoresAndAtomics       = supportedFeatures.fragmentStoresAndAtomics;
+
   VkDeviceCreateInfo createInfo = {};
   createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 

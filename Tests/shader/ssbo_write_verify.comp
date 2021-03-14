@@ -1,0 +1,13 @@
+#version 440
+
+layout(binding = 0, std140) readonly buffer Input {
+  vec4 val[];
+  } source;
+
+layout(binding = 1, std140) buffer Output {
+  vec4 val[];
+  } result;
+
+void main() {
+  result.val[gl_GlobalInvocationID.x] = source.val[gl_GlobalInvocationID.x];
+  }

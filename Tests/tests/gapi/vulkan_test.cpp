@@ -63,3 +63,7 @@ TEST(VulkanApi,MipMaps) {
 TEST(VulkanApi,TesselationBasic) {
   GapiTestCommon::psoTess<VulkanApi>();
   }
+
+TEST(VulkanApi,SsboWrite) {
+  GapiTestCommon::ssboWriteVs<VulkanApi>();
+  }

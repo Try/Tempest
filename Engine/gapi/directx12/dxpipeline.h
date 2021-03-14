@@ -33,9 +33,10 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
 
     ComPtr<ID3D12RootSignature> sign;
 
-    UINT                        stride=0;
-    D3D_PRIMITIVE_TOPOLOGY      topology=D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
-    size_t                      pushConstantId=0;
+    UINT                        stride         = 0;
+    D3D_PRIMITIVE_TOPOLOGY      topology       = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+    size_t                      pushConstantId = 0;
+    bool                        ssboBarriers   = false;
 
     ID3D12PipelineState&        instance(DXGI_FORMAT  frm);
     ID3D12PipelineState&        instance(DxFboLayout& frm);
@@ -68,7 +69,8 @@ class DxCompPipeline : public AbstractGraphicsApi::CompPipeline {
 
     ComPtr<ID3D12RootSignature> sign;
     ComPtr<ID3D12PipelineState> impl;
-    size_t                      pushConstantId=0;
+    size_t                      pushConstantId = 0;
+    bool                        ssboBarriers = false;
   };
 
 }}

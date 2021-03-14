@@ -74,10 +74,12 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     DxFramebuffer*                    currentFbo  = nullptr;
     DxRenderPass*                     currentPass = nullptr;
     ID3D12DescriptorHeap*             currentHeaps[DxUniformsLay::MAX_BINDS]={};
+    DxDescriptorArray*                curUniforms = nullptr;
 
     UINT                              vboStride=0;
 
     ResourceState                     resState;
+    bool                              ssboBarriers = false;
 
     struct Stage {
       virtual ~Stage() = default;

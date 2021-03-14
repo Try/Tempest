@@ -194,6 +194,9 @@ void VulkanApi::getDevicePropsShort(VkPhysicalDevice physicalDevice, Tempest::Ab
   c.tesselationShader = supportedFeatures.tessellationShader;
   c.geometryShader    = supportedFeatures.geometryShader;
 
+  c.storeAndAtomicVs  = supportedFeatures.vertexPipelineStoresAndAtomics;
+  c.storeAndAtomicFs  = supportedFeatures.fragmentStoresAndAtomics;
+
   c.mrt.maxColorAttachments = prop.limits.maxColorAttachments;
 
   c.compute.maxGroups.x = prop.limits.maxComputeWorkGroupCount[0];

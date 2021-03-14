@@ -116,6 +116,7 @@ void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p,uint32_t w,uin
   VFramebufferLayout*  l  = reinterpret_cast<VFramebufferLayout*>(curFbo->rp.handler);
   auto& v = px.instance(*l,w,h);
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v.val);
+  ssboBarriers = px.ssboBarriers;
   }
 
 void VCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) {
@@ -139,6 +140,7 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraph
 void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
   VCompPipeline& px = reinterpret_cast<VCompPipeline&>(p);
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,px.impl);
+  ssboBarriers = px.ssboBarriers;
   }
 
 void VCommandBuffer::setBytes(AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) {
@@ -160,16 +162,26 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractG
   }
 
 void VCommandBuffer::draw(size_t offset,size_t size) {
+  if(T_UNLIKELY(ssboBarriers)) {
+    curUniforms->ssboBarriers(resState);
+    resState.flushSSBO(*this);
+    }
   vkCmdDraw(impl,uint32_t(size), 1, uint32_t(offset),0);
   }
 
 void VCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset) {
+  if(T_UNLIKELY(ssboBarriers)) {
+    curUniforms->ssboBarriers(resState);
+    resState.flushSSBO(*this);
+    }
   vkCmdDrawIndexed(impl,uint32_t(isize),1, uint32_t(ioffset), int32_t(voffset),0);
   }
 
 void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
-  curUniforms->ssboBarriers(resState);
-  resState.flushLayout(*this);
+  if(T_UNLIKELY(ssboBarriers)) {
+    curUniforms->ssboBarriers(resState);
+    resState.flushSSBO(*this);
+    }
   vkCmdDispatch(impl,uint32_t(x),uint32_t(y),uint32_t(z));
   }
 
@@ -293,7 +305,55 @@ void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, u
   }
 
 void VCommandBuffer::changeLayout(AbstractGraphicsApi::Buffer& buf, BufferLayout prev, BufferLayout next) {
-  // TODO
+  VkBufferMemoryBarrier barrier = {};
+  barrier.sType                 = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+
+  barrier.srcQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
+  barrier.buffer                = reinterpret_cast<VBuffer&>(buf).impl;
+  barrier.offset                = 0;
+  barrier.size                  = VK_WHOLE_SIZE;
+
+  VkPipelineStageFlags srcStage = 0;
+  VkPipelineStageFlags dstStage = 0;
+
+  bool hadWrite = false;
+  if(prev==BufferLayout::ComputeWrite || prev==BufferLayout::ComputeReadWrite) {
+    hadWrite = true;
+    }
+
+  switch(next) {
+    case BufferLayout::Undefined:
+      break;
+    case BufferLayout::ComputeRead:
+      if(hadWrite) {
+        // Read-after-Write
+        barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        srcStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        dstStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        } else {
+        // Write-after-Read
+        barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+
+        srcStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        dstStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        }
+      break;
+    default:
+      // unused for now
+      throw DeviceLostException();
+    }
+
+  vkCmdPipelineBarrier(
+        impl,
+        srcStage, dstStage,
+        0,
+        0, nullptr,
+        1, &barrier,
+        0, nullptr);
   }
 
 void VCommandBuffer::changeLayout(AbstractGraphicsApi::Attach& att, TextureLayout prev, TextureLayout next, bool byRegion) {

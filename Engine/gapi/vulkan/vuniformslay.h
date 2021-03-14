@@ -48,6 +48,7 @@ class VUniformsLay : public AbstractGraphicsApi::UniformsLay {
     std::list<Pool>  pool;
 
     void implCreate(VkDescriptorSetLayoutBinding *bind);
+    void adjustSsboBindings();
 
   friend class VDescriptorArray;
   };

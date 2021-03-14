@@ -14,6 +14,7 @@ class ResourceState {
     void setLayout  (AbstractGraphicsApi::Buffer& b, BufferLayout  lay);
 
     void flushLayout(AbstractGraphicsApi::CommandBuffer& cmd);
+    void flushSSBO  (AbstractGraphicsApi::CommandBuffer& cmd);
     void finalize   (AbstractGraphicsApi::CommandBuffer& cmd);
 
   private:

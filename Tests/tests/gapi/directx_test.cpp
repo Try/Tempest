@@ -95,8 +95,14 @@ TEST(DirectX12Api,S3TC) {
 #endif
   }
 
-TEST(DirectX12Api,TesselationBasic) {
+TEST(DirectX12Api,DISABLED_TesselationBasic) {
 #if defined(_MSC_VER)
   GapiTestCommon::psoTess<DirectX12Api>();
+#endif
+  }
+
+TEST(DirectX12Api,SsboWrite) {
+#if defined(_MSC_VER)
+  GapiTestCommon::ssboWriteVs<DirectX12Api>();
 #endif
   }

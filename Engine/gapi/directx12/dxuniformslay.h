@@ -73,6 +73,8 @@ class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
     size_t                      pushConstantId=0;
     std::vector<Binding>        lay;
 
+    bool                        hasSsbo = false;
+
     ComPtr<ID3D12RootSignature> impl;
     DxDevice&                   dev;
 

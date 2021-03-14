@@ -177,8 +177,6 @@ void VDescriptorArray::setSsbo(size_t id, Tempest::AbstractGraphicsApi::Buffer *
   }
 
 void VDescriptorArray::ssboBarriers(ResourceState& res) {
-  if(!lay.handler->hasSSBO)
-    return;
   for(size_t i=0; i<lay.handler->lay.size(); ++i) {
     switch(lay.handler->lay[i].cls) {
       case UniformsLayout::Ubo:

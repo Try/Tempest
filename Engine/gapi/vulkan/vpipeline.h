@@ -39,6 +39,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
 
     VkPipelineLayout   pipelineLayout = VK_NULL_HANDLE;
     VkShaderStageFlags pushStageFlags = 0;
+    bool               ssboBarriers   = false;
 
     Inst&             instance(VFramebufferLayout &lay, uint32_t width, uint32_t height);
 
@@ -73,5 +74,6 @@ class VCompPipeline : public AbstractGraphicsApi::CompPipeline {
     VkDevice           device         = nullptr;
     VkPipelineLayout   pipelineLayout = VK_NULL_HANDLE;
     VkPipeline         impl           = VK_NULL_HANDLE;
+    bool               ssboBarriers   = false;
   };
 }}

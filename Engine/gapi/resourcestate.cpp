@@ -11,8 +11,8 @@ void ResourceState::setLayout(AbstractGraphicsApi::Attach& a, TextureLayout lay,
 
 void ResourceState::setLayout(AbstractGraphicsApi::Buffer& b, BufferLayout lay) {
   BufState& buf = findBuf(&b);
-  buf.next      = lay;
-  buf.outdated  = true;
+  buf.next     = lay;
+  buf.outdated = true;
   }
 
 void ResourceState::flushLayout(AbstractGraphicsApi::CommandBuffer& cmd) {
@@ -23,19 +23,24 @@ void ResourceState::flushLayout(AbstractGraphicsApi::CommandBuffer& cmd) {
     i.last     = i.next;
     i.outdated = false;
     }
-  for(auto& i:bufState) {
-    if(!i.outdated)
+  }
+
+void ResourceState::flushSSBO(AbstractGraphicsApi::CommandBuffer& cmd) {
+  for(auto& buf:bufState) {
+    if(!buf.outdated)
       continue;
-    cmd.changeLayout(*i.buf,i.last,i.next);
-    i.last     = i.next;
-    i.outdated = false;
+    if(buf.last!=BufferLayout::Undefined)
+      cmd.changeLayout(*buf.buf,buf.last,buf.next);
+    buf.last     = buf.next;
+    buf.outdated = false;
     }
   }
 
 void ResourceState::finalize(AbstractGraphicsApi::CommandBuffer& cmd) {
-  if(imgState.size()==0)
+  if(imgState.size()==0 && bufState.size()==0)
     return; //early-out
   flushLayout(cmd);
+  flushSSBO(cmd);
   imgState.reserve(imgState.size());
   imgState.clear();
   }
@@ -60,9 +65,8 @@ ResourceState::BufState& ResourceState::findBuf(AbstractGraphicsApi::Buffer* buf
     if(i.buf==buf)
       return i;
   BufState s={};
-  s.buf  = buf;
-  s.last = BufferLayout::ComputeRead;
-  s.next = BufferLayout::ComputeRead;
+  s.buf      = buf;
+  s.last     = BufferLayout::Undefined;
   s.outdated = false;
   bufState.push_back(s);
   return bufState.back();

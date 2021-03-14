@@ -264,6 +264,9 @@ namespace Tempest {
           bool     tesselationShader = false;
           bool     geometryShader    = false;
 
+          bool     storeAndAtomicVs  = false;
+          bool     storeAndAtomicFs  = false;
+
           bool     hasSamplerFormat(TextureFormat f) const;
           bool     hasAttachFormat (TextureFormat f) const;
           bool     hasDepthFormat  (TextureFormat f) const;

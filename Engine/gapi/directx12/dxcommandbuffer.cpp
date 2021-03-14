@@ -331,7 +331,8 @@ void DxCommandBuffer::setViewport(const Rect& r) {
 void Tempest::Detail::DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p,
                                                    uint32_t /*w*/, uint32_t /*h*/) {
   DxPipeline& px = reinterpret_cast<DxPipeline&>(p);
-  vboStride = px.stride;
+  vboStride    = px.stride;
+  ssboBarriers = px.ssboBarriers;
 
   impl->SetPipelineState(&px.instance(*currentFbo->lay.handler));
   impl->SetGraphicsRootSignature(px.sign.get());
@@ -349,6 +350,8 @@ void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/, Abstract
 
 void Tempest::Detail::DxCommandBuffer::setComputePipeline(Tempest::AbstractGraphicsApi::CompPipeline& p) {
   auto& px = reinterpret_cast<DxCompPipeline&>(p);
+  ssboBarriers = px.ssboBarriers;
+
   impl->SetPipelineState(px.impl.get());
   impl->SetComputeRootSignature(px.sign.get());
   }
@@ -364,6 +367,7 @@ void DxCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& /*p*/, Abst
 
 void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompute) {
   DxDescriptorArray& ux = reinterpret_cast<DxDescriptorArray&>(u);
+  curUniforms = &ux;
 
   bool setH = false;
   for(size_t i=0;i<DxUniformsLay::MAX_BINDS;++i) {
@@ -390,8 +394,15 @@ void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompu
     }
   }
 
-void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Buffer& buf, BufferLayout prev, BufferLayout next) {
-  // TODO
+void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Buffer& b, BufferLayout /*prev*/, BufferLayout /*next*/) {
+  DxBuffer& buf = reinterpret_cast<DxBuffer&>(b);
+
+  D3D12_RESOURCE_BARRIER barrier = {};
+  barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+  barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+  barrier.UAV.pResource          = buf.impl.get();
+
+  impl->ResourceBarrier(1, &barrier);
   }
 
 void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Attach& att, TextureLayout prev, TextureLayout next, bool /*byRegion*/) {
@@ -448,19 +459,30 @@ void DxCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer& b, IndexClass cl
 void DxCommandBuffer::draw(size_t offset, size_t vertexCount) {
   if(currentFbo==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
+  if(T_UNLIKELY(ssboBarriers)) {
+    curUniforms->ssboBarriers(resState);
+    resState.flushSSBO(*this);
+    }
   impl->DrawInstanced(UINT(vertexCount),1,UINT(offset),0);
   }
 
 void DxCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset) {
   if(currentFbo==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
+  if(T_UNLIKELY(ssboBarriers)) {
+    curUniforms->ssboBarriers(resState);
+    resState.flushSSBO(*this);
+    }
   impl->DrawIndexedInstanced(UINT(isize),1,UINT(ioffset),INT(voffset),0);
   }
 
 void DxCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
   if(currentFbo!=nullptr)
     throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
-  resState.flushLayout(*this);
+  if(T_UNLIKELY(ssboBarriers)) {
+    curUniforms->ssboBarriers(resState);
+    resState.flushSSBO(*this);
+    }
   impl->Dispatch(UINT(x),UINT(y),UINT(z));
   }
 
