@@ -242,6 +242,11 @@ namespace Tempest {
             } ibo;
 
           struct {
+            size_t offsetAlign = 256;
+            size_t maxRange    = 0x10000000;
+            } ssbo;
+
+          struct {
             size_t offsetAlign = 1;
             size_t maxRange    = 16384;
             } ubo;
