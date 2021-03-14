@@ -1,0 +1,19 @@
+#version 440
+
+layout(std140, push_constant) uniform Push {
+  vec4  vPush;
+  } push;
+
+layout(std140, binding = 0) uniform Ubo {
+  vec4 vUbo;
+  } ubo;
+
+layout(std140, binding = 1) buffer Ssbo {
+  vec4 val[];
+  } result;
+
+void main() {
+  if(ubo.vUbo==push.vPush)
+    result.val[gl_GlobalInvocationID.x] = vec4(1); else
+    result.val[gl_GlobalInvocationID.x] = vec4(0);
+  }

@@ -73,6 +73,8 @@ compile_shader(tess.tese)
 compile_shader(ssbo_write_verify.comp)
 compile_shader(ssbo_write.vert)
 
+compile_shader(push_constant.comp)
+
 add_executable(${PROJECT_NAME}
   ${SOURCES}
   ${SHADERS}

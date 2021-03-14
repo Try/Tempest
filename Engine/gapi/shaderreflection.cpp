@@ -77,11 +77,12 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     lay.push_back(b);
     }
   for(auto &resource : resources.push_constant_buffers) {
-    auto& t = comp.get_type_from_variable(resource.id);
-    auto sz = comp.get_declared_struct_size(t);
+    unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);
+    auto&    t       = comp.get_type_from_variable(resource.id);
+    auto     sz      = comp.get_declared_struct_size(t);
     Binding b;
     b.cls    = UniformsLayout::Push;
-    b.layout = uint32_t(-1);
+    b.layout = binding;
     b.size   = sz;
     lay.push_back(b);
     }

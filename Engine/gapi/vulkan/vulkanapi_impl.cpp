@@ -184,6 +184,9 @@ void VulkanApi::getDevicePropsShort(VkPhysicalDevice physicalDevice, Tempest::Ab
 
   c.ibo.maxValue      = size_t(prop.limits.maxDrawIndexedIndexValue);
 
+  c.ssbo.offsetAlign  = size_t(prop.limits.minUniformBufferOffsetAlignment);
+  c.ssbo.maxRange     = size_t(prop.limits.maxStorageBufferRange);
+
   c.ubo.offsetAlign   = size_t(prop.limits.minUniformBufferOffsetAlignment);
   c.ubo.maxRange      = size_t(prop.limits.maxUniformBufferRange);
   

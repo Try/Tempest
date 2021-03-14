@@ -27,7 +27,7 @@ DxShader::DxShader(const void *source, size_t src_size) {
 
   try {
     spirv_cross::CompilerHLSL comp(reinterpret_cast<const uint32_t*>(source),src_size/4);
-    comp.set_hlsl_options(optHLSL);
+    comp.set_hlsl_options  (optHLSL);
     comp.set_common_options(optGLSL);
     // comp.remap_num_workgroups_builtin();
     hlsl = comp.compile();
@@ -74,15 +74,17 @@ DxShader::DxShader(const void *source, size_t src_size) {
     default: // unimplemented
       throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
-  //Log::d(hlsl);
+  // Log::d(hlsl);
 
   ComPtr<ID3DBlob> err;
   UINT compileFlags = 0; //D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
   HRESULT hr = D3DCompile(hlsl.c_str(),hlsl.size(),nullptr,nullptr,nullptr,"main",target,compileFlags,0,
                           reinterpret_cast<ID3DBlob**>(&shader),reinterpret_cast<ID3DBlob**>(&err));
   if(hr!=S_OK) {
+#if !defined(NDEBUG)
     Log::d(hlsl.c_str());
     Log::d(reinterpret_cast<const char*>(err->GetBufferPointer()));
+#endif
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
   }

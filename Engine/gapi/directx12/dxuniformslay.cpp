@@ -19,6 +19,8 @@ static D3D12_SHADER_VISIBILITY nativeFormat(UniformsLayout::Stage stage){
       return D3D12_SHADER_VISIBILITY_VERTEX;
     case UniformsLayout::Stage::Fragment:
       return D3D12_SHADER_VISIBILITY_PIXEL;
+    case UniformsLayout::Stage::Geometry:
+      return D3D12_SHADER_VISIBILITY_GEOMETRY;
     case UniformsLayout::Stage::Compute:
       return D3D12_SHADER_VISIBILITY_ALL;
     }
@@ -160,8 +162,8 @@ void DxUniformsLay::init(const std::vector<Binding>& lay, const UniformsLayout::
     if(uint8_t(desc[i].visibility)   !=curVisibility ||
        uint8_t(desc[i].rgn.RangeType)!=curRgnType) {
       D3D12_ROOT_PARAMETER p = {};
-      p.ParameterType    = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-      p.ShaderVisibility = desc[i].visibility;
+      p.ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+      p.ShaderVisibility                    = desc[i].visibility;
       p.DescriptorTable.pDescriptorRanges   = &rgn[i];
       p.DescriptorTable.NumDescriptorRanges = 0;
       rootPrm.push_back(p);
@@ -202,12 +204,18 @@ void DxUniformsLay::init(const std::vector<Binding>& lay, const UniformsLayout::
     }
 
   D3D12_ROOT_PARAMETER prmPush = {};
-  prmPush.ParameterType    = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-  prmPush.ShaderVisibility = ::nativeFormat(pb.stage);
+  prmPush.ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+  prmPush.ShaderVisibility         = ::nativeFormat(pb.stage);
   prmPush.Constants.ShaderRegister = 0;
   prmPush.Constants.RegisterSpace  = 0;
   prmPush.Constants.Num32BitValues = UINT((pb.size+3)/4);
   if(pb.size>0) {
+    // remap register to match spiv-cross codegen
+    uint32_t layout = 0;
+    for(auto& i:lay)
+      if(i.cls==UniformsLayout::Ubo)
+        layout = std::max(i.layout+1,layout);
+    prmPush.Constants.ShaderRegister = layout;
     pushConstantId = rootPrm.size();
     rootPrm.push_back(prmPush);
     }
@@ -225,8 +233,15 @@ void DxUniformsLay::init(const std::vector<Binding>& lay, const UniformsLayout::
   ComPtr<ID3DBlob> signature;
   ComPtr<ID3DBlob> error;
 
-  dxAssert(D3D12SerializeRootSignature(&rootSignatureDesc, featureData.HighestVersion,
-                                       &signature.get(), &error.get()));
+  auto hr = D3D12SerializeRootSignature(&rootSignatureDesc, featureData.HighestVersion,
+                                        &signature.get(), &error.get());
+  if(FAILED(hr)) {
+#if !defined(NDEBUG)
+    const char* msg = reinterpret_cast<const char*>(error->GetBufferPointer());
+    Log::e(msg);
+#endif
+    dxAssert(hr);
+    }
   dxAssert(device.CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(),
                                       uuid<ID3D12RootSignature>(), reinterpret_cast<void**>(&impl)));
   }
