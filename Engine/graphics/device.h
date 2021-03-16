@@ -102,12 +102,10 @@ class Device {
     template<class T>
     UniformBuffer<T>     ubo(const T& data);
 
+    StorageBuffer        ssbo(const void* data, size_t size);
     template<class T>
-    StorageBuffer<T>     ssbo(const T* arr,size_t arrSize);
-
-    template<class T>
-    StorageBuffer<T>     ssbo(const std::vector<T>& arr){
-      return ssbo(arr.data(),arr.size());
+    StorageBuffer        ssbo(const std::vector<T>& arr){
+      return ssbo(arr.data(),arr.size()*sizeof(T));
       }
 
     Uniforms             uniforms(const UniformsLayout &owner);
@@ -121,8 +119,7 @@ class Device {
     Pixmap               readPixels (const Texture2d&    t, uint32_t mip=0);
     Pixmap               readPixels (const Attachment&   t, uint32_t mip=0);
     Pixmap               readPixels (const StorageImage& t, uint32_t mip=0);
-    template<class T>
-    void                 readBytes  (const StorageBuffer<T>& ssbo, void* out, size_t count);
+    void                 readBytes  (const StorageBuffer& ssbo, void* out, size_t size);
 
     FrameBuffer          frameBuffer(Attachment& out);
     FrameBuffer          frameBuffer(Attachment& out, ZBuffer& zbuf);
@@ -201,11 +198,6 @@ class Device {
   };
 
 template<class T>
-void Device::readBytes  (const StorageBuffer<T>& ssbo, void* out, size_t count) {
-  api.readBytes(dev,ssbo.impl.impl.handler,out,count*sizeof(T));
-  }
-
-template<class T>
 inline VertexBuffer<T> Device::vbo(const T* arr, size_t arrSize) {
   if(arrSize==0)
     return VertexBuffer<T>();
@@ -232,16 +224,14 @@ inline IndexBuffer<T> Device::ibo(const T* arr, size_t arrSize) {
   return ibo;
   }
 
-template<class T>
-inline StorageBuffer<T> Device::ssbo(const T* arr, size_t arrSize) {
-  if(arrSize==0)
-    return StorageBuffer<T>();
+inline StorageBuffer Device::ssbo(const void* data, size_t size) {
+  if(size==0)
+    return StorageBuffer();
   static const auto usageBits = MemUsage::VertexBuffer  | MemUsage::IndexBuffer   |
                                 MemUsage::UniformBuffer | MemUsage::StorageBuffer |
                                 MemUsage::TransferSrc   | MemUsage::TransferDst;
-  VideoBuffer       data      = createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),usageBits,BufferHeap::Static);
-  StorageBuffer<T>  sbo(std::move(data),arrSize);
-  return sbo;
+  VideoBuffer v = createVideoBuffer(data,size,1,1,usageBits,BufferHeap::Static);
+  return StorageBuffer(std::move(v));
   }
 
 template<class T>

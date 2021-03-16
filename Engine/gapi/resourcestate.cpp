@@ -29,8 +29,10 @@ void ResourceState::flushSSBO(AbstractGraphicsApi::CommandBuffer& cmd) {
   for(auto& buf:bufState) {
     if(!buf.outdated)
       continue;
-    if(buf.last!=BufferLayout::Undefined)
+    if(buf.last!=BufferLayout::Undefined &&
+       !(buf.last==BufferLayout::ComputeRead && buf.next==buf.last)) {
       cmd.changeLayout(*buf.buf,buf.last,buf.next);
+      }
     buf.last     = buf.next;
     buf.outdated = false;
     }

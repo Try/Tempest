@@ -319,7 +319,7 @@ AbstractGraphicsApi::PUniformsLay VulkanApi::createUboLayout(Device *d,
   }
 
 AbstractGraphicsApi::CommandBuffer* VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device* d) {
-  Detail::VDevice*             dx=reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
   return new Detail::VCommandBuffer(*dx);
   }
 

@@ -27,14 +27,12 @@ class Uniforms final {
     bool isEmpty() const { return dev==nullptr; }
 
     template<class T>
-    void set(size_t layoutBind,const UniformBuffer<T>& vbuf);
+    void set(size_t layoutBind, const UniformBuffer<T>& vbuf);
     template<class T>
-    void set(size_t layoutBind,const UniformBuffer<T>& vbuf, size_t  offset);
+    void set(size_t layoutBind, const UniformBuffer<T>& vbuf, size_t  offset);
 
-    template<class T>
-    void set(size_t layoutBind,const StorageBuffer<T>& vbuf);
-    template<class T>
-    void set(size_t layoutBind,const StorageBuffer<T>& vbuf, size_t  offset);
+    void set(size_t layoutBind, const StorageBuffer& vbuf);
+    void set(size_t layoutBind, const StorageBuffer& vbuf, size_t  offset);
 
     void set(size_t layoutBind, const Texture2d&    tex, const Sampler2d& smp = Sampler2d::anisotrophy());
     void set(size_t layoutBind, const Attachment&   tex, const Sampler2d& smp = Sampler2d::anisotrophy());
@@ -63,18 +61,6 @@ inline void Uniforms::set(size_t layoutBind,const UniformBuffer<T>& vbuf, size_t
   if(offset!=0 && vbuf.alignedTSZ!=sizeof(T))
     throw std::system_error(Tempest::GraphicsErrc::InvalidUniformBuffer);
   implBindUbo(layoutBind,vbuf.impl,offset*vbuf.alignedTSZ);
-  }
-
-template<class T>
-inline void Uniforms::set(size_t layoutBind, const StorageBuffer<T>& vbuf) {
-  implBindSsbo(layoutBind,vbuf.impl,0);
-  }
-
-template<class T>
-inline void Uniforms::set(size_t layoutBind, const StorageBuffer<T>& vbuf, size_t offset) {
-  if(offset!=0 && vbuf.alignedTSZ!=sizeof(T))
-    throw std::system_error(Tempest::GraphicsErrc::InvalidStorageBuffer);
-  implBindSsbo(layoutBind,vbuf.impl,offset*vbuf.alignedTSZ);
   }
 
 }

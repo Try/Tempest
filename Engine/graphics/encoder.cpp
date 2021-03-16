@@ -56,12 +56,18 @@ void Encoder<Tempest::CommandBuffer>::setViewport(const Rect &vp) {
   impl->setViewport(vp);
   }
 
+void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const Uniforms &ubo, const void* data, size_t sz) {
+  setUniforms(p);
+  impl->setUniforms(*p.impl.handler,*ubo.desc.handler);
+  impl->setBytes(*p.impl.handler,data,sz);
+  }
+
 void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const void* data, size_t sz) {
   setUniforms(p);
   impl->setBytes(*p.impl.handler,data,sz);
   }
 
-void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p,const Uniforms &ubo) {
+void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const Uniforms &ubo) {
   setUniforms(p);
   impl->setUniforms(*p.impl.handler,*ubo.desc.handler);
   }
@@ -84,6 +90,12 @@ void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline &p) {
     impl->setPipeline(*p.impl.handler,state.vp.width,state.vp.height);
     state.curPipeline=p.impl.handler;
     }
+  }
+
+void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p, const Uniforms &ubo, const void* data, size_t sz) {
+  setUniforms(p);
+  impl->setUniforms(*p.impl.handler,*ubo.desc.handler);
+  impl->setBytes(*p.impl.handler,data,sz);
   }
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p, const void* data, size_t sz) {

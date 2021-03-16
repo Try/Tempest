@@ -117,8 +117,8 @@ TEST(DirectX12Api,PushRemapping) {
 
     Vec4 inputCpu = Vec4(0,1,2,3);
 
-    auto input  = device.ssbo<Tempest::Vec4>(&inputCpu,1);
-    auto output = device.ssbo<Tempest::Vec4>(nullptr,  1);
+    auto input  = device.ssbo(&inputCpu,sizeof(Tempest::Vec4));
+    auto output = device.ssbo(nullptr,  sizeof(Tempest::Vec4));
 
     auto cs     = device.loadShader("shader/push_constant.comp.sprv");
     auto pso    = device.pipeline(cs);
@@ -130,8 +130,7 @@ TEST(DirectX12Api,PushRemapping) {
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setUniforms(pso,ubo);
-      enc.setUniforms(pso,&inputCpu,sizeof(inputCpu));
+      enc.setUniforms(pso,ubo,&inputCpu,sizeof(inputCpu));
       enc.dispatch(1,1,1);
     }
 
@@ -140,7 +139,7 @@ TEST(DirectX12Api,PushRemapping) {
     sync.wait();
 
     Vec4 outputCpu = {};
-    device.readBytes(output,&outputCpu,1);
+    device.readBytes(output,&outputCpu,sizeof(outputCpu));
 
     EXPECT_EQ(outputCpu,Vec4(1,1,1,1));
     }

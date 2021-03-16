@@ -245,6 +245,10 @@ Pixmap Device::readPixels(const StorageImage& t, uint32_t mip) {
   return pm;
   }
 
+void Device::readBytes(const StorageBuffer& ssbo, void* out, size_t size) {
+  api.readBytes(dev,ssbo.impl.impl.handler,out,size);
+  }
+
 TextureFormat Device::formatOf(const Attachment& a) {
   if(a.sImpl.swapchain!=nullptr)
     return TextureFormat::Undefined;

@@ -194,8 +194,8 @@ void ssboDispath() {
 
     Vec4 inputCpu[3] = {Vec4(0,1,2,3),Vec4(4,5,6,7),Vec4(8,9,10,11)};
 
-    auto input  = device.ssbo<Tempest::Vec4>(inputCpu,3);
-    auto output = device.ssbo<Tempest::Vec4>(nullptr, 3);
+    auto input  = device.ssbo(inputCpu,sizeof(inputCpu));
+    auto output = device.ssbo(nullptr, sizeof(inputCpu));
 
     auto cs     = device.loadShader("shader/simple_test.comp.sprv");
     auto pso    = device.pipeline(cs);
@@ -216,7 +216,7 @@ void ssboDispath() {
     sync.wait();
 
     Vec4 outputCpu[3] = {};
-    device.readBytes(output,outputCpu,3);
+    device.readBytes(output,outputCpu,sizeof(outputCpu));
 
     for(size_t i=0; i<3; ++i)
       EXPECT_EQ(outputCpu[i],inputCpu[i]);
@@ -332,14 +332,14 @@ void ssboWriteVs() {
     auto fbo    = device.frameBuffer(tex);
     auto rp     = device.pass(FboMode(FboMode::PreserveOut,Color(0.f,0.f,1.f)));
 
-    auto vsOut  = device.ssbo<Tempest::Vec4>(nullptr,3);
+    auto vsOut  = device.ssbo(nullptr, sizeof(Vec4)*3);
     auto ubo    = device.uniforms(pso.layout());
     ubo.set(0,vsOut);
 
     // setup computer pipeline
     auto cs     = device.loadShader("shader/ssbo_write_verify.comp.sprv");
     auto pso2   = device.pipeline(cs);
-    auto csOut  = device.ssbo<Tempest::Vec4>(nullptr,3);
+    auto csOut  = device.ssbo(nullptr, sizeof(Vec4)*3);
 
     auto ubo2   = device.uniforms(pso2.layout());
     ubo2.set(0,vsOut);
@@ -362,7 +362,7 @@ void ssboWriteVs() {
     sync.wait();
 
     Vec4 outputCpu[3] = {};
-    device.readBytes(csOut,outputCpu,3);
+    device.readBytes(csOut,outputCpu,sizeof(outputCpu));
 
     for(size_t i=0; i<3; ++i) {
       EXPECT_EQ(outputCpu[i].x,vboData[i].x);
