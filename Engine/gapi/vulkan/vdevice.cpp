@@ -327,14 +327,26 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
 VDevice::MemIndex VDevice::memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const {
   for(size_t i=0; i<memoryProperties.memoryTypeCount; ++i) {
     auto bit = (uint32_t(1) << i);
-    if((typeBits & bit)!=0) {
-      if((memoryProperties.memoryTypes[i].propertyFlags & props)==props) {
-        MemIndex ret;
-        ret.typeId = uint32_t(i);
-        // avoid bufferImageGranularity shenanigans
-        ret.heapId = (tiling==VK_IMAGE_TILING_OPTIMAL && this->props.bufferImageGranularity>1) ? ret.typeId*2+1 : ret.typeId*2+0;
-        return ret;
-        }
+    if((typeBits & bit)==0)
+      continue;
+    if(memoryProperties.memoryTypes[i].propertyFlags==props) {
+      MemIndex ret;
+      ret.typeId = uint32_t(i);
+      // avoid bufferImageGranularity shenanigans
+      ret.heapId = (tiling==VK_IMAGE_TILING_OPTIMAL && this->props.bufferImageGranularity>1) ? ret.typeId*2+1 : ret.typeId*2+0;
+      return ret;
+      }
+    }
+  for(size_t i=0; i<memoryProperties.memoryTypeCount; ++i) {
+    auto bit = (uint32_t(1) << i);
+    if((typeBits & bit)==0)
+      continue;
+    if((memoryProperties.memoryTypes[i].propertyFlags & props)==props) {
+      MemIndex ret;
+      ret.typeId = uint32_t(i);
+      // avoid bufferImageGranularity shenanigans
+      ret.heapId = (tiling==VK_IMAGE_TILING_OPTIMAL && this->props.bufferImageGranularity>1) ? ret.typeId*2+1 : ret.typeId*2+0;
+      return ret;
       }
     }
   MemIndex ret;

@@ -30,12 +30,12 @@ inline void vkAssert(VkResult code){
     return;
 
   switch( code ) {
-    case VkResult::VK_ERROR_OUT_OF_DEVICE_MEMORY:
+    case VK_ERROR_OUT_OF_DEVICE_MEMORY:
       throw std::system_error(Tempest::GraphicsErrc::OutOfVideoMemory);
-    case VkResult::VK_ERROR_OUT_OF_HOST_MEMORY:
+    case VK_ERROR_OUT_OF_HOST_MEMORY:
       //throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
       throw std::bad_alloc();
-    case VkResult::VK_ERROR_DEVICE_LOST:
+    case VK_ERROR_DEVICE_LOST:
       throw DeviceLostException();
 
     default:

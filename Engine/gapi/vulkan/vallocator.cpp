@@ -47,7 +47,9 @@ VAllocator::Provider::DeviceMemory VAllocator::Provider::alloc(size_t size,uint3
   vk_memoryAllocateInfo.allocationSize  = size;
   vk_memoryAllocateInfo.memoryTypeIndex = typeId;
 
-  vkAssert(vkAllocateMemory(device->device,&vk_memoryAllocateInfo,nullptr,&memory));
+  auto code = vkAllocateMemory(device->device,&vk_memoryAllocateInfo,nullptr,&memory);
+  if(code!=VK_SUCCESS)
+    return VK_NULL_HANDLE;
   return memory;
   }
 
@@ -146,7 +148,7 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
     return ret;
     }
 
-  throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
+  throw std::system_error(Tempest::GraphicsErrc::OutOfVideoMemory);
   }
 
 VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip,VkFormat format) {
