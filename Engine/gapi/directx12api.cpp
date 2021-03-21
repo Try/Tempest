@@ -27,8 +27,11 @@ using namespace Tempest::Detail;
 
 struct DirectX12Api::Impl {
   Impl(bool validation) {
-    if(validation) {
-      dxAssert(D3D12GetDebugInterface(uuid<ID3D12Debug>(), reinterpret_cast<void**>(&D3D12DebugController)));
+    d3d12_dll = LoadLibraryA("d3d12.dll");
+    initApi(dllApi);
+
+    if(validation && dllApi.D3D12GetDebugInterface!=nullptr) {
+      dxAssert(dllApi.D3D12GetDebugInterface(uuid<ID3D12Debug>(), reinterpret_cast<void**>(&D3D12DebugController)));
       D3D12DebugController->EnableDebugLayer();
       }
     // Note  Don't mix the use of DXGI 1.0 (IDXGIFactory) and DXGI 1.1 (IDXGIFactory1) in an application.
@@ -37,10 +40,15 @@ struct DirectX12Api::Impl {
     dxAssert(CreateDXGIFactory1(uuid<IDXGIFactory4>(), reinterpret_cast<void**>(&DXGIFactory)));
     }
 
-  std::vector<Props> devices() {
-    auto& dxgi = *DXGIFactory;
-    std::vector<Props> d;
+  ~Impl(){
+    }
 
+  std::vector<Props> devices() {
+    std::vector<Props> d;
+    if(dllApi.D3D12CreateDevice==nullptr)
+      return d;
+
+    auto& dxgi = *DXGIFactory;
     ComPtr<IDXGIAdapter1> adapter;
     for(UINT i = 0; DXGI_ERROR_NOT_FOUND != dxgi.EnumAdapters1(i, &adapter.get()); ++i) {
       DXGI_ADAPTER_DESC1 desc={};
@@ -55,7 +63,7 @@ struct DirectX12Api::Impl {
 
       AbstractGraphicsApi::Props props={};
       DxDevice::getProp(desc,props);
-      auto hr = D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_11_0, uuid<ID3D12Device>(), nullptr);
+      auto hr = dllApi.D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_11_0, uuid<ID3D12Device>(), nullptr);
       if(SUCCEEDED(hr))
         d.push_back(props);
       }
@@ -64,6 +72,9 @@ struct DirectX12Api::Impl {
     }
 
   AbstractGraphicsApi::Device* createDevice(const char* gpuName) {
+    if(dllApi.D3D12CreateDevice==nullptr)
+      throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+
     auto& dxgi = *DXGIFactory;
 
     ComPtr<IDXGIAdapter1> adapter;
@@ -80,14 +91,14 @@ struct DirectX12Api::Impl {
 
       // Check to see if the adapter supports Direct3D 12, but don't create the
       // actual device yet.
-      auto hr = D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_11_0, uuid<ID3D12Device>(), nullptr);
+      auto hr = dllApi.D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_11_0, uuid<ID3D12Device>(), nullptr);
       if(SUCCEEDED(hr))
         break;
       }
 
     if(adapter.get()==nullptr)
       throw std::system_error(Tempest::GraphicsErrc::NoDevice);
-    return new DxDevice(*adapter);
+    return new DxDevice(*adapter,dllApi);
     }
 
   void submit(AbstractGraphicsApi::Device* d,
@@ -114,6 +125,22 @@ struct DirectX12Api::Impl {
       }
     fcpu.signal(*dx.cmdQueue);
     }
+
+  void initApi(DxDevice::ApiEntry& a) {
+    if(d3d12_dll==nullptr)
+      return;
+    getProcAddress(a.D3D12CreateDevice,          "D3D12CreateDevice");
+    getProcAddress(a.D3D12GetDebugInterface,     "D3D12GetDebugInterface");
+    getProcAddress(a.D3D12SerializeRootSignature,"D3D12SerializeRootSignature");
+    }
+
+  template<class T>
+  void getProcAddress(T& t, const char* name) {
+    t = reinterpret_cast<T>(GetProcAddress(d3d12_dll,name));
+    }
+
+  HMODULE                d3d12_dll;
+  DxDevice::ApiEntry     dllApi;
 
   ComPtr<ID3D12Debug>    D3D12DebugController;
   ComPtr<IDXGIFactory4>  DXGIFactory;

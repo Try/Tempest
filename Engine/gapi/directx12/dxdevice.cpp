@@ -14,8 +14,9 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-DxDevice::DxDevice(IDXGIAdapter1& adapter) {
-  dxAssert(D3D12CreateDevice(&adapter, D3D_FEATURE_LEVEL_11_0, uuid<ID3D12Device>(), reinterpret_cast<void**>(&device)));
+DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
+  :dllApi(dllApi) {
+  dxAssert(dllApi.D3D12CreateDevice(&adapter, D3D_FEATURE_LEVEL_11_0, uuid<ID3D12Device>(), reinterpret_cast<void**>(&device)));
 
   ComPtr<ID3D12InfoQueue> pInfoQueue;
   if(SUCCEEDED(device->QueryInterface(__uuidof(ID3D12InfoQueue),reinterpret_cast<void**>(&pInfoQueue)))) {

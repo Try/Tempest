@@ -151,7 +151,19 @@ class DxPipeline;
 
 class DxDevice : public AbstractGraphicsApi::Device {
   public:
-    DxDevice(IDXGIAdapter1& adapter);
+    struct ApiEntry {
+      HRESULT (WINAPI *D3D12CreateDevice)(IUnknown* pAdapter,
+                                          D3D_FEATURE_LEVEL MinimumFeatureLevel,
+                                          REFIID riid, // Expected: ID3D12Device
+                                          void** ppDevice ) = nullptr;
+      HRESULT (WINAPI *D3D12GetDebugInterface)(REFIID riid, void** ppvDebug ) = nullptr;
+      HRESULT (WINAPI *D3D12SerializeRootSignature)(const D3D12_ROOT_SIGNATURE_DESC* pRootSignature,
+                                                    D3D_ROOT_SIGNATURE_VERSION Version,
+                                                    ID3DBlob** ppBlob,
+                                                    ID3DBlob** ppErrorBlob) = nullptr;
+      };
+
+    DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi);
     ~DxDevice() override;
 
     using DataMgr = UploadEngine<DxDevice,DxCommandBuffer,DxFence>;
@@ -165,6 +177,8 @@ class DxDevice : public AbstractGraphicsApi::Device {
     void         submit(DxCommandBuffer& cmd,DxFence& sync);
 
     DataMgr&     dataMgr() { return *data; }
+
+    ApiEntry                    dllApi;
 
     AbstractGraphicsApi::Props  props;
     ComPtr<ID3D12Device>        device;

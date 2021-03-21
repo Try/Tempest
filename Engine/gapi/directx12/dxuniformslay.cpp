@@ -233,8 +233,8 @@ void DxUniformsLay::init(const std::vector<Binding>& lay, const UniformsLayout::
   ComPtr<ID3DBlob> signature;
   ComPtr<ID3DBlob> error;
 
-  auto hr = D3D12SerializeRootSignature(&rootSignatureDesc, featureData.HighestVersion,
-                                        &signature.get(), &error.get());
+  auto hr = dev.dllApi.D3D12SerializeRootSignature(&rootSignatureDesc, featureData.HighestVersion,
+                                                   &signature.get(), &error.get());
   if(FAILED(hr)) {
 #if !defined(NDEBUG)
     const char* msg = reinterpret_cast<const char*>(error->GetBufferPointer());
