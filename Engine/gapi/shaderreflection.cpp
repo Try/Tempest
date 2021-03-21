@@ -96,7 +96,7 @@ void ShaderReflection::merge(std::vector<ShaderReflection::Binding>& ret,
   for(size_t i=0;i<comp.size();++i, ++id) {
     auto& u = comp[i];
     if(u.cls==UniformsLayout::Push) {
-      pb.stage = UniformsLayout::Stage(pb.stage | UniformsLayout::Vertex);
+      pb.stage = UniformsLayout::Compute;
       pb.size = u.size;
       continue;
       }

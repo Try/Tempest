@@ -45,6 +45,8 @@ void ResourceState::finalize(AbstractGraphicsApi::CommandBuffer& cmd) {
   flushSSBO(cmd);
   imgState.reserve(imgState.size());
   imgState.clear();
+  bufState.reserve(bufState.size());
+  bufState.clear();
   }
 
 ResourceState::State& ResourceState::findImg(AbstractGraphicsApi::Attach* img, bool preserve) {

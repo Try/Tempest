@@ -91,26 +91,26 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
   ret.alloc = this;
 
   VkBufferCreateInfo createInfo={};
-  createInfo.sType                 = VkStructureType::VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  createInfo.sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
   createInfo.pNext                 = nullptr;
   createInfo.flags                 = 0;
   createInfo.size                  = count*alignedSz;
-  createInfo.sharingMode           = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
+  createInfo.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
   createInfo.queueFamilyIndexCount = 0;
   createInfo.pQueueFamilyIndices   = nullptr;
 
   if(MemUsage::TransferSrc==(usage & MemUsage::TransferSrc))
-    createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    createInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   if(MemUsage::TransferDst==(usage & MemUsage::TransferDst))
-    createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    createInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
   if(MemUsage::VertexBuffer==(usage & MemUsage::VertexBuffer))
-    createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    createInfo.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
   if(MemUsage::IndexBuffer==(usage & MemUsage::IndexBuffer))
-    createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+    createInfo.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
   if(MemUsage::UniformBuffer==(usage & MemUsage::UniformBuffer))
-    createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    createInfo.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
   if(MemUsage::StorageBuffer==(usage & MemUsage::StorageBuffer))
-    createInfo.usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    createInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
   vkAssert(vkCreateBuffer(device,&createInfo,nullptr,&ret.impl));
 

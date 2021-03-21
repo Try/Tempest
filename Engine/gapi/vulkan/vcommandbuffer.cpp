@@ -334,6 +334,19 @@ void VCommandBuffer::changeLayout(AbstractGraphicsApi::Buffer& buf, BufferLayout
         srcStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
         dstStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
         } else {
+        // Read-after-Read
+        return;
+        }
+      break;
+    case BufferLayout::ComputeReadWrite:
+      if(hadWrite) {
+        // Read-after-Write
+        barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        srcStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        dstStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        } else {
         // Write-after-Read
         barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
