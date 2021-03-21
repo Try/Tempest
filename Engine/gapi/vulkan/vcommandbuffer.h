@@ -49,6 +49,9 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
                          uint32_t width,uint32_t height) override;
     void endRenderPass() override;
 
+    void beginCompute() override;
+    void endCompute() override;
+
     void setPipeline(AbstractGraphicsApi::Pipeline& p, uint32_t w, uint32_t h) override;
     void setBytes   (AbstractGraphicsApi::Pipeline &p, const void* data, size_t size) override;
     void setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u) override;

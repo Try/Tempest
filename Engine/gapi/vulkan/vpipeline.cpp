@@ -1,3 +1,4 @@
+
 #include "vpipeline.h"
 
 #include "vdevice.h"
@@ -96,6 +97,12 @@ VkPipelineLayout VPipeline::initLayout(VkDevice device, const VUniformsLay& uboL
   if(uboLay.pb.size>0) {
     if(uboLay.pb.stage & UniformsLayout::Vertex)
       pushStageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
+    if(uboLay.pb.stage & UniformsLayout::Geometry)
+      pushStageFlags |= VK_SHADER_STAGE_GEOMETRY_BIT;
+    if(uboLay.pb.stage & UniformsLayout::Control)
+      pushStageFlags |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+    if(uboLay.pb.stage & UniformsLayout::Evaluate)
+      pushStageFlags |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
     if(uboLay.pb.stage & UniformsLayout::Fragment)
       pushStageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
     if(uboLay.pb.stage & UniformsLayout::Compute)

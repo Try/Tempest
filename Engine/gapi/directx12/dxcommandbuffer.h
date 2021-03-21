@@ -37,6 +37,9 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
                          uint32_t width,uint32_t height) override;
     void endRenderPass() override;
 
+    void beginCompute() override;
+    void endCompute() override;
+
     void setViewport (const Rect& r) override;
 
     void setPipeline (AbstractGraphicsApi::Pipeline& p,uint32_t w,uint32_t h) override;

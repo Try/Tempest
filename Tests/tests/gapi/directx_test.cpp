@@ -109,44 +109,6 @@ TEST(DirectX12Api,SsboWrite) {
 
 TEST(DirectX12Api,PushRemapping) {
 #if defined(_MSC_VER)
-  using namespace Tempest;
-
-  try {
-    DirectX12Api api{ApiFlags::Validation};
-    Device       device(api);
-
-    Vec4 inputCpu = Vec4(0,1,2,3);
-
-    auto input  = device.ssbo(&inputCpu,sizeof(Tempest::Vec4));
-    auto output = device.ssbo(nullptr,  sizeof(Tempest::Vec4));
-
-    auto cs     = device.loadShader("shader/push_constant.comp.sprv");
-    auto pso    = device.pipeline(cs);
-
-    auto ubo = device.uniforms(pso.layout());
-    ubo.set(0,input);
-    ubo.set(1,output);
-
-    auto cmd = device.commandBuffer();
-    {
-      auto enc = cmd.startEncoding(device);
-      enc.setUniforms(pso,ubo,&inputCpu,sizeof(inputCpu));
-      enc.dispatch(1,1,1);
-    }
-
-    auto sync = device.fence();
-    device.submit(cmd,sync);
-    sync.wait();
-
-    Vec4 outputCpu = {};
-    device.readBytes(output,&outputCpu,sizeof(outputCpu));
-
-    EXPECT_EQ(outputCpu,Vec4(1,1,1,1));
-    }
-  catch(std::system_error& e) {
-    if(e.code()==Tempest::GraphicsErrc::NoDevice)
-      Log::d("Skipping graphics testcase: ", e.what()); else
-      throw;
-    }
+  GapiTestCommon::pushConstant<DirectX12Api>();
 #endif
   }

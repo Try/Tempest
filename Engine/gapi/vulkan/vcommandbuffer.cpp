@@ -111,7 +111,16 @@ void VCommandBuffer::endRenderPass() {
   curRp  = nullptr;
   }
 
+void VCommandBuffer::beginCompute() {
+  resState.flushLayout(*this);
+  }
+
+void VCommandBuffer::endCompute() {
+  }
+
 void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p,uint32_t w,uint32_t h) {
+  if(curFbo==nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   VPipeline&           px = reinterpret_cast<VPipeline&>(p);
   VFramebufferLayout*  l  = reinterpret_cast<VFramebufferLayout*>(curFbo->rp.handler);
   auto& v = px.instance(*l,w,h);
@@ -125,8 +134,6 @@ void VCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, const void* data
   }
 
 void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u) {
-  if(curFbo==nullptr)
-    throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   VPipeline&        px=reinterpret_cast<VPipeline&>(p);
   VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
   curUniforms = &ux;
@@ -138,6 +145,8 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraph
   }
 
 void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
+  if(curFbo!=nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
   VCompPipeline& px = reinterpret_cast<VCompPipeline&>(p);
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,px.impl);
   ssboBarriers = px.ssboBarriers;
@@ -149,12 +158,9 @@ void VCommandBuffer::setBytes(AbstractGraphicsApi::CompPipeline& p, const void* 
   }
 
 void VCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc& u) {
-  if(curFbo!=nullptr)
-    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
   VCompPipeline&    px=reinterpret_cast<VCompPipeline&>(p);
   VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
   curUniforms = &ux;
-  // compute <-> compute barriers?
   vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_COMPUTE,
                           px.pipelineLayout,0,
                           1,&ux.desc,

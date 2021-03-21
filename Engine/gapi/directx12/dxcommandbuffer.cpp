@@ -316,6 +316,13 @@ void DxCommandBuffer::endRenderPass() {
   currentPass = nullptr;
   }
 
+void Tempest::Detail::DxCommandBuffer::beginCompute() {
+  resState.flushLayout(*this);
+  }
+
+void Tempest::Detail::DxCommandBuffer::endCompute() {
+  }
+
 void DxCommandBuffer::setViewport(const Rect& r) {
   D3D12_VIEWPORT vp={};
   vp.TopLeftX = float(r.x);
@@ -605,4 +612,5 @@ void DxCommandBuffer::implChangeLayout(ID3D12Resource* res, D3D12_RESOURCE_STATE
   }
 
 #endif
+
 

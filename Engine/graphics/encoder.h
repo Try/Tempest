@@ -83,6 +83,7 @@ class Encoder<Tempest::CommandBuffer> {
       const VideoBuffer*                       curVbo     =nullptr;
       const VideoBuffer*                       curIbo     =nullptr;
       Viewport                                 vp;
+      bool                                     isInComputePass = false;
       };
 
     struct Pass {

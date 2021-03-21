@@ -365,8 +365,10 @@ namespace Tempest {
         virtual ~CommandBuffer()=default;
         virtual void beginRenderPass(AbstractGraphicsApi::Fbo* f,
                                      AbstractGraphicsApi::Pass*  p,
-                                     uint32_t width,uint32_t height)=0;
-        virtual void endRenderPass()=0;
+                                     uint32_t width,uint32_t height) = 0;
+        virtual void endRenderPass() = 0;
+        virtual void beginCompute() = 0;
+        virtual void endCompute() = 0;
 
         virtual void changeLayout  (Buffer& buf, BufferLayout prev, BufferLayout next)=0;
         virtual void changeLayout  (Attach& img, TextureLayout prev, TextureLayout next, bool byRegion)=0;

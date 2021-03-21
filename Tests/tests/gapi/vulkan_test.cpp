@@ -67,3 +67,7 @@ TEST(VulkanApi,TesselationBasic) {
 TEST(VulkanApi,SsboWrite) {
   GapiTestCommon::ssboWriteVs<VulkanApi>();
   }
+
+TEST(VulkanApi,PushRemapping) {
+  GapiTestCommon::pushConstant<VulkanApi>();
+  }
