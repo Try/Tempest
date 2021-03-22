@@ -52,18 +52,25 @@ class Encoder<Tempest::CommandBuffer> {
     void setViewport(const Rect& vp);
 
     template<class T>
-    void draw(const VertexBuffer<T>& vbo){ implDraw(vbo.impl,0,vbo.size()); }
+    void draw(const VertexBuffer<T>& vbo) { implDraw(vbo.impl,0,vbo.size(),0,1); }
 
     template<class T>
-    void draw(const VertexBuffer<T>& vbo,size_t offset,size_t count){ implDraw(vbo.impl,offset,count); }
+    void draw(const VertexBuffer<T>& vbo,size_t offset,size_t count) { implDraw(vbo.impl,offset,count,0,1); }
+
+    template<class T>
+    void draw(const VertexBuffer<T>& vbo,size_t offset,size_t count,size_t firstInstance,size_t instanceCount) { implDraw(vbo.impl,offset,count,firstInstance,instanceCount); }
 
     template<class T,class I>
     void draw(const VertexBuffer<T>& vbo,const IndexBuffer<I>& ibo)
-         { implDraw(vbo.impl,ibo.impl,Detail::indexCls<I>(),0,ibo.size()); }
+         { implDraw(vbo.impl,ibo.impl,Detail::indexCls<I>(),0,ibo.size(),0,1); }
 
     template<class T,class I>
     void draw(const VertexBuffer<T>& vbo,const IndexBuffer<I>& ibo,size_t offset,size_t count)
-         { implDraw(vbo.impl,ibo.impl,Detail::indexCls<I>(),offset,count); }
+         { implDraw(vbo.impl,ibo.impl,Detail::indexCls<I>(),offset,count,0,1); }
+
+    template<class T,class I>
+    void draw(const VertexBuffer<T>& vbo,const IndexBuffer<I>& ibo,size_t offset,size_t count,size_t firstInstance,size_t instanceCount)
+         { implDraw(vbo.impl,ibo.impl,Detail::indexCls<I>(),offset,count,firstInstance,instanceCount); }
 
     void dispatch(size_t x, size_t y, size_t z);
 
@@ -97,9 +104,9 @@ class Encoder<Tempest::CommandBuffer> {
     Pass                                curPass;
 
     void         implEndRenderPass();
-    void         implDraw(const VideoBuffer& vbo, size_t offset, size_t size);
+    void         implDraw(const VideoBuffer& vbo, size_t offset, size_t size, size_t firstInstance, size_t instanceCount);
     void         implDraw(const VideoBuffer &vbo, const VideoBuffer &ibo, Detail::IndexClass index,
-                          size_t offset, size_t size);
+                          size_t offset, size_t size, size_t firstInstance, size_t instanceCount);
 
   friend class CommandBuffer;
   };

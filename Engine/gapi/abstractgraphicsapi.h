@@ -392,8 +392,8 @@ namespace Tempest {
 
         virtual void setVbo      (const Buffer& b)=0;
         virtual void setIbo      (const Buffer& b,Detail::IndexClass cls)=0;
-        virtual void draw        (size_t offset,size_t vertexCount)=0;
-        virtual void drawIndexed (size_t ioffset, size_t isize, size_t voffset)=0;
+        virtual void draw        (size_t offset,size_t vertexCount, size_t firstInstance, size_t instanceCount)=0;
+        virtual void drawIndexed (size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount)=0;
         virtual void dispatch    (size_t x, size_t y, size_t z)=0;
         };
 

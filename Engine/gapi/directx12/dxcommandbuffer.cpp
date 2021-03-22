@@ -463,24 +463,24 @@ void DxCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer& b, IndexClass cl
   impl->IASetIndexBuffer(&view);
   }
 
-void DxCommandBuffer::draw(size_t offset, size_t vertexCount) {
+void DxCommandBuffer::draw(size_t offset, size_t vertexCount, size_t firstInstance, size_t instanceCount) {
   if(currentFbo==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   if(T_UNLIKELY(ssboBarriers)) {
     curUniforms->ssboBarriers(resState);
     resState.flushSSBO(*this);
     }
-  impl->DrawInstanced(UINT(vertexCount),1,UINT(offset),0);
+  impl->DrawInstanced(UINT(vertexCount),UINT(instanceCount),UINT(offset),UINT(firstInstance));
   }
 
-void DxCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset) {
+void DxCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) {
   if(currentFbo==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   if(T_UNLIKELY(ssboBarriers)) {
     curUniforms->ssboBarriers(resState);
     resState.flushSSBO(*this);
     }
-  impl->DrawIndexedInstanced(UINT(isize),1,UINT(ioffset),INT(voffset),0);
+  impl->DrawIndexedInstanced(UINT(isize),UINT(instanceCount),UINT(ioffset),INT(voffset),UINT(firstInstance));
   }
 
 void DxCommandBuffer::dispatch(size_t x, size_t y, size_t z) {

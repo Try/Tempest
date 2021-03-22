@@ -116,7 +116,7 @@ void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p) {
     }
   }
 
-void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer& vbo, size_t offset, size_t size) {
+void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer& vbo, size_t offset, size_t size, size_t firstInstance, size_t instanceCount) {
   if(!vbo.impl)
     return;
   if(state.curVbo!=&vbo) {
@@ -129,10 +129,11 @@ void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer& vbo, size_t of
     impl->setIbo(nullptr,Detail::IndexClass::i16);
     state.curIbo=nullptr;
     }*/
-  impl->draw(offset,size);
+  impl->draw(offset,size,firstInstance,instanceCount);
   }
 
-void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer &vbo, const VideoBuffer &ibo, Detail::IndexClass index, size_t offset, size_t size) {
+void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer &vbo, const VideoBuffer &ibo, Detail::IndexClass index, size_t offset, size_t size,
+                                               size_t firstInstance, size_t instanceCount) {
   if(!vbo.impl || !ibo.impl)
     return;
   if(state.curVbo!=&vbo) {
@@ -143,7 +144,7 @@ void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer &vbo, const Vid
     impl->setIbo(*ibo.impl.handler,index);
     state.curIbo=&ibo;
     }
-  impl->drawIndexed(offset,size,0);
+  impl->drawIndexed(offset,size,0,firstInstance,instanceCount);
   }
 
 void Encoder<CommandBuffer>::setFramebuffer(std::nullptr_t) {

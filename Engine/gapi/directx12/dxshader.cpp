@@ -74,7 +74,7 @@ DxShader::DxShader(const void *source, size_t src_size) {
     default: // unimplemented
       throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
-  // Log::d(hlsl);
+  //Log::d(hlsl);
 
   ComPtr<ID3DBlob> err;
   UINT compileFlags = 0; //D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;

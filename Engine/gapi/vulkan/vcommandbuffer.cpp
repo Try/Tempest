@@ -167,20 +167,20 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractG
                           0,nullptr);
   }
 
-void VCommandBuffer::draw(size_t offset,size_t size) {
+void VCommandBuffer::draw(size_t offset, size_t size, size_t firstInstance, size_t instanceCount) {
   if(T_UNLIKELY(ssboBarriers)) {
     curUniforms->ssboBarriers(resState);
     resState.flushSSBO(*this);
     }
-  vkCmdDraw(impl,uint32_t(size), 1, uint32_t(offset),0);
+  vkCmdDraw(impl,uint32_t(size), uint32_t(instanceCount), uint32_t(offset), uint32_t(firstInstance));
   }
 
-void VCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset) {
+void VCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) {
   if(T_UNLIKELY(ssboBarriers)) {
     curUniforms->ssboBarriers(resState);
     resState.flushSSBO(*this);
     }
-  vkCmdDrawIndexed(impl,uint32_t(isize),1, uint32_t(ioffset), int32_t(voffset),0);
+  vkCmdDrawIndexed(impl, uint32_t(isize), uint32_t(instanceCount), uint32_t(ioffset), int32_t(voffset), uint32_t(firstInstance));
   }
 
 void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {

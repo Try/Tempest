@@ -203,18 +203,25 @@ void DxUniformsLay::init(const std::vector<Binding>& lay, const UniformsLayout::
       i.heapOffset *= smpSize;
     }
 
-  D3D12_ROOT_PARAMETER prmPush = {};
-  prmPush.ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-  prmPush.ShaderVisibility         = ::nativeFormat(pb.stage);
-  prmPush.Constants.ShaderRegister = 0;
-  prmPush.Constants.RegisterSpace  = 0;
-  prmPush.Constants.Num32BitValues = UINT((pb.size+3)/4);
   if(pb.size>0) {
+    D3D12_ROOT_PARAMETER prmPush = {};
+    prmPush.ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    prmPush.ShaderVisibility         = ::nativeFormat(pb.stage);
+    prmPush.Constants.ShaderRegister = 0;
+    prmPush.Constants.RegisterSpace  = 0;
+    prmPush.Constants.Num32BitValues = UINT((pb.size+3)/4);
     // remap register to match spiv-cross codegen
     uint32_t layout = 0;
-    for(auto& i:lay)
-      if(i.cls==UniformsLayout::Ubo)
-        layout = std::max(i.layout+1,layout);
+    for(layout=0; ; ++layout) {
+      bool done = true;
+      for(auto& i:lay)
+        if(i.stage!=UniformsLayout::Stage(0) && i.cls==UniformsLayout::Ubo && i.layout==layout) {
+          done = false;
+          break;
+          }
+      if(done)
+        break;
+      }
     prmPush.Constants.ShaderRegister = layout;
     pushConstantId = rootPrm.size();
     rootPrm.push_back(prmPush);
