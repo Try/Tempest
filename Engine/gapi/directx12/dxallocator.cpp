@@ -17,6 +17,7 @@ DxAllocator::DxAllocator() {
   }
 
 void DxAllocator::setDevice(DxDevice& d) {
+  owner  = &d;
   device = d.device.get();
   }
 
@@ -77,7 +78,7 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t count, size_t size, size_t a
     ret->Unmap(0,&rgn);
     }
 
-  return DxBuffer(std::move(ret),UINT(resDesc.Width));
+  return DxBuffer(owner,std::move(ret),UINT(resDesc.Width));
   }
 
 DxTexture DxAllocator::alloc(const Pixmap& pm, uint32_t mip, DXGI_FORMAT format) {

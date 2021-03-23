@@ -74,23 +74,20 @@ class Device {
 
     template<class T>
     VertexBuffer<T>      vbo(const T* arr,size_t arrSize);
-
     template<class T>
     VertexBuffer<T>      vbo(const std::vector<T>& arr){
       return vbo(arr.data(),arr.size());
       }
 
     template<class T>
-    VertexBufferDyn<T>   vboDyn(const T* arr,size_t arrSize);
-
+    VertexBuffer<T>      vboDyn(const T* arr,size_t arrSize);
     template<class T>
-    VertexBufferDyn<T>   vboDyn(const std::vector<T>& arr){
+    VertexBuffer<T>      vboDyn(const std::vector<T>& arr){
       return vboDyn(arr.data(),arr.size());
       }
 
     template<class T>
     IndexBuffer<T>       ibo(const T* arr,size_t arrSize);
-
     template<class T>
     IndexBuffer<T>       ibo(const std::vector<T>& arr){
       return ibo(arr.data(),arr.size());
@@ -98,14 +95,20 @@ class Device {
 
     template<class T>
     UniformBuffer<T>     ubo(const T* data, size_t size);
-
     template<class T>
     UniformBuffer<T>     ubo(const T& data);
 
-    StorageBuffer        ssbo(const void* data, size_t size);
+    StorageBuffer        ssbo(BufferHeap ht, const void* data, size_t size);
     template<class T>
-    StorageBuffer        ssbo(const std::vector<T>& arr){
-      return ssbo(arr.data(),arr.size()*sizeof(T));
+    StorageBuffer        ssbo(BufferHeap ht, const std::vector<T>& arr) {
+      return ssbo(ht,arr.data(),arr.size()*sizeof(T));
+      }
+    StorageBuffer        ssbo(const void* data, size_t size) {
+      return ssbo(BufferHeap::Static,data,size);
+      }
+    template<class T>
+    StorageBuffer        ssbo(const std::vector<T>& arr) {
+      return ssbo(BufferHeap::Static,arr.data(),arr.size()*sizeof(T));
       }
 
     Uniforms             uniforms(const UniformsLayout &owner);
@@ -207,11 +210,11 @@ inline VertexBuffer<T> Device::vbo(const T* arr, size_t arrSize) {
   }
 
 template<class T>
-inline VertexBufferDyn<T> Device::vboDyn(const T *arr, size_t arrSize) {
+inline VertexBuffer<T> Device::vboDyn(const T *arr, size_t arrSize) {
   if(arrSize==0)
-    return VertexBufferDyn<T>();
-  VideoBuffer        data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::VertexBuffer,BufferHeap::Upload);
-  VertexBufferDyn<T> vbo(std::move(data),arrSize);
+    return VertexBuffer<T>();
+  VideoBuffer     data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::VertexBuffer,BufferHeap::Upload);
+  VertexBuffer<T> vbo(std::move(data),arrSize);
   return vbo;
   }
 
@@ -224,13 +227,13 @@ inline IndexBuffer<T> Device::ibo(const T* arr, size_t arrSize) {
   return ibo;
   }
 
-inline StorageBuffer Device::ssbo(const void* data, size_t size) {
+inline StorageBuffer Device::ssbo(BufferHeap ht, const void* data, size_t size) {
   if(size==0)
     return StorageBuffer();
   static const auto usageBits = MemUsage::VertexBuffer  | MemUsage::IndexBuffer   |
                                 MemUsage::UniformBuffer | MemUsage::StorageBuffer |
                                 MemUsage::TransferSrc   | MemUsage::TransferDst;
-  VideoBuffer v = createVideoBuffer(data,size,1,1,usageBits,BufferHeap::Static);
+  VideoBuffer v = createVideoBuffer(data,size,1,1,usageBits,ht);
   return StorageBuffer(std::move(v));
   }
 

@@ -9,26 +9,45 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-DxBuffer::DxBuffer(ComPtr<ID3D12Resource>&& b, UINT sizeInBytes)
-  :impl(std::move(b)), sizeInBytes(sizeInBytes) {
+DxBuffer::DxBuffer(DxDevice* dev, ComPtr<ID3D12Resource>&& b, UINT sizeInBytes)
+  :dev(dev), impl(std::move(b)), sizeInBytes(sizeInBytes) {
   }
 
 DxBuffer::DxBuffer(Tempest::Detail::DxBuffer&& other)
-  :impl(std::move(other.impl)),sizeInBytes(other.sizeInBytes) {
+  :dev(other.dev), impl(std::move(other.impl)),sizeInBytes(other.sizeInBytes) {
   other.sizeInBytes=0;
   }
 
-void DxBuffer::update(const void* data, size_t off, size_t count, size_t sz, size_t alignedSz) {
-  ID3D12Resource& ret = *impl;
+void DxBuffer::update(const void* data, size_t off, size_t count, size_t size, size_t alignedSz) {
+  D3D12_HEAP_PROPERTIES prop = {};
+  ID3D12Resource&       ret  = *impl;
+  ret.GetHeapProperties(&prop,nullptr);
 
-  D3D12_RANGE rgn    = {off*alignedSz,count*alignedSz};
-  void*       mapped = nullptr;
-  dxAssert(ret.Map(0,&rgn,&mapped));
-  mapped = reinterpret_cast<uint8_t*>(mapped)+off;
+  if(prop.Type==D3D12_HEAP_TYPE_UPLOAD) {
+    D3D12_RANGE rgn    = {off*alignedSz,count*alignedSz};
+    void*       mapped = nullptr;
+    dxAssert(ret.Map(0,&rgn,&mapped));
+    mapped = reinterpret_cast<uint8_t*>(mapped)+off;
+    copyUpsample(data,mapped,count,size,alignedSz);
+    ret.Unmap(0,&rgn);
+    return;
+    }
 
-  copyUpsample(data,mapped,count,sz,alignedSz);
+  auto&            dx    = *dev;
+  Detail::DxBuffer stage = dx.allocator.alloc(data,count,size,alignedSz, MemUsage::TransferSrc, BufferHeap::Upload);
 
-  ret.Unmap(0,&rgn);
+  Detail::DSharedPtr<Buffer*> pstage(new Detail::DxBuffer(std::move(stage)));
+  Detail::DSharedPtr<Buffer*> pbuf  (this);
+
+  auto cmd = dx.dataMgr().get();
+  cmd->begin();
+  cmd->hold(pbuf); // NOTE: DxBuffer may be deleted, before copy is finished
+  cmd->hold(pstage);
+  cmd->copy(*this, off*alignedSz, *pstage.handler,0, count*alignedSz);
+  cmd->end();
+
+  dx.dataMgr().wait(); // write-after-write case
+  dx.dataMgr().submit(std::move(cmd));
   }
 
 void DxBuffer::read(void* data, size_t off, size_t count, size_t sz, size_t alignedSz) {

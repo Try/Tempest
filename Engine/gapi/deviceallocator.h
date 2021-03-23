@@ -33,7 +33,7 @@ class DeviceAllocator {
       size_t offset=0,size=0;
       };
 
-    Allocation alloc(size_t size, size_t align, uint32_t heapId, uint32_t typeId) {
+    Allocation alloc(size_t size, size_t align, uint32_t heapId, uint32_t typeId, bool hostVisible) {
       std::lock_guard<std::mutex> guard(sync);
       for(auto& i:pages){
         if(i.type==heapId && i.allocated+size<=i.allSize){
@@ -42,7 +42,7 @@ class DeviceAllocator {
             return ret;
           }
         }
-      return rawAlloc(size,align,heapId,typeId);
+      return rawAlloc(size,align,heapId,typeId,hostVisible,false);
       }
 
     void free(const Allocation& a){
@@ -54,29 +54,18 @@ class DeviceAllocator {
         }
       }
 
-    Allocation dedicatedAlloc(size_t size, size_t align, uint32_t heapId, uint32_t typeId) {
+    Allocation dedicatedAlloc(size_t size, size_t align, uint32_t heapId, uint32_t typeId, bool hostVisible) {
       std::lock_guard<std::mutex> guard(sync);
-      Page pg(static_cast<uint32_t>(size));
-      pg.memory = device.alloc(pg.allSize,typeId);
-      pg.type   = heapId;
-      if(pg.memory==null)
-        return Allocation();
-      try {
-        pages.push_front(Page(0));
-        }
-      catch(...){
-        device.free(pg.memory,pg.size,pg.type);
-        throw;
-        }
-      pages.front() = std::move(pg);
-      return pages.front().alloc(size,align,device);
+      return rawAlloc(size,align,heapId,typeId,hostVisible,true);
       }
 
   private:
-    Allocation rawAlloc(size_t size, size_t align, uint32_t heapId, uint32_t typeId){
-      Page pg(std::max<uint32_t>(DEFAULT_PAGE_SIZE,uint32_t(size)));
-      pg.memory = device.alloc(pg.allSize,typeId);
-      pg.type   = heapId;
+    Allocation rawAlloc(size_t size, size_t align, uint32_t heapId, uint32_t typeId, bool hostVisible, bool dedicated){
+      const uint32_t pgSize = (dedicated ? uint32_t(size) : std::max<uint32_t>(DEFAULT_PAGE_SIZE,uint32_t(size)));
+      Page pg(pgSize);
+      pg.memory      = device.alloc(pg.allSize,typeId);
+      pg.type        = heapId;
+      pg.hostVisible = hostVisible;
       if(pg.memory==null)
         return Allocation();
       try {
@@ -112,11 +101,12 @@ struct DeviceAllocator<MemoryProvider>::Page : Block {
   using    Block::size;
   using    Block::offset;
 
-  Memory     memory =null;
+  Memory     memory = null;
   std::mutex mmapSync;
-  uint32_t   type   =0;
-  uint32_t   allSize=0;
-  uint32_t   allocated=0;
+  uint32_t   type        = 0;
+  uint32_t   allSize     = 0;
+  uint32_t   allocated   = 0;
+  bool       hostVisible = false;
 
   Page(uint32_t sz) noexcept {
     size   =sz;
@@ -128,8 +118,9 @@ struct DeviceAllocator<MemoryProvider>::Page : Block {
     size  =p.size;
     offset=p.offset;
     std::swap(memory,p.memory);
-    type=p.type;
-    allSize=p.allSize;
+    type        = p.type;
+    allSize     = p.allSize;
+    hostVisible = p.hostVisible;
     }
 
   ~Page(){
@@ -146,8 +137,9 @@ struct DeviceAllocator<MemoryProvider>::Page : Block {
     size  =p.size;
     offset=p.offset;
     std::swap(memory,p.memory);
-    type=p.type;
-    allSize=p.allSize;
+    type        = p.type;
+    allSize     = p.allSize;
+    hostVisible = p.hostVisible;
     return *this;
     }
 

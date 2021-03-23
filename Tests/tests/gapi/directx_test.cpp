@@ -25,6 +25,11 @@ TEST(DirectX12Api,Vbo) {
 #endif
   }
 
+TEST(DirectX12Api,VboDyn) {
+#if defined(_MSC_VER)
+  GapiTestCommon::vboDyn<DirectX12Api>();
+#endif
+  }
 
 TEST(DirectX12Api,Shader) {
 #if defined(_MSC_VER)

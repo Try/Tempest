@@ -23,7 +23,8 @@ class DxAllocator {
     DxTexture alloc(const uint32_t w, const uint32_t h, const uint32_t mip, TextureFormat frm, bool imageStore);
 
   private:
-    ID3D12Device*   device=nullptr;
+    DxDevice*       owner  = nullptr;
+    ID3D12Device*   device = nullptr;
   };
 
 }

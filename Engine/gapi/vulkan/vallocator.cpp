@@ -18,10 +18,14 @@ using namespace Tempest::Detail;
 VAllocator::VAllocator() {
   }
 
-void VAllocator::setDevice(VDevice &dev) {
-  device          = dev.device;
-  provider.device = &dev;
-  samplers.setDevice(dev);
+void VAllocator::setDevice(VDevice &d) {
+  dev             = d.device;
+  provider.device = &d;
+  samplers.setDevice(d);
+  }
+
+VDevice* VAllocator::device() {
+  return provider.device;
   }
 
 VAllocator::Provider::~Provider() {
@@ -112,7 +116,7 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
   if(MemUsage::StorageBuffer==(usage & MemUsage::StorageBuffer))
     createInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
-  vkAssert(vkCreateBuffer(device,&createInfo,nullptr,&ret.impl));
+  vkAssert(vkCreateBuffer(dev,&createInfo,nullptr,&ret.impl));
 
   MemRequirements memRq={};
   getMemoryRequirements(memRq,ret.impl);
@@ -137,7 +141,7 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
     if(memId.typeId==uint32_t(-1))
       continue;
 
-    ret.page = allocMemory(memRq,memId.heapId,memId.typeId);
+    ret.page = allocMemory(memRq,memId.heapId,memId.typeId,(props[i]&VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT));
     if(!ret.page.page)
       continue;
 
@@ -170,13 +174,13 @@ VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip,VkFormat format) {
   imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
   imageInfo.usage         = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
-  vkAssert(vkCreateImage(device, &imageInfo, nullptr, &ret.impl));
+  vkAssert(vkCreateImage(dev, &imageInfo, nullptr, &ret.impl));
 
   MemRequirements memRq={};
   getImgMemoryRequirements(memRq,ret.impl);
 
   VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,VK_IMAGE_TILING_OPTIMAL);
-  ret.page = allocMemory(memRq,memId.heapId,memId.typeId);
+  ret.page = allocMemory(memRq,memId.heapId,memId.typeId,false);
 
   if(!ret.page.page) {
     ret.alloc = nullptr;
@@ -189,7 +193,7 @@ VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip,VkFormat format) {
 
   ret.format = imageInfo.format;
   ret.mipCnt = mip;
-  ret.createViews(device);
+  ret.createViews(dev);
   return ret;
   }
 
@@ -217,13 +221,13 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mi
   if(imgStorage)
     imageInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
 
-  vkAssert(vkCreateImage(device, &imageInfo, nullptr, &ret.impl));
+  vkAssert(vkCreateImage(dev, &imageInfo, nullptr, &ret.impl));
 
   MemRequirements memRq={};
   getImgMemoryRequirements(memRq,ret.impl);
 
   VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,VK_IMAGE_TILING_OPTIMAL);
-  ret.page = allocMemory(memRq,memId.heapId,memId.typeId);
+  ret.page = allocMemory(memRq,memId.heapId,memId.typeId,false);
 
   if(!ret.page.page) {
     ret.alloc = nullptr;
@@ -236,13 +240,13 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mi
 
   ret.format = imageInfo.format;
   ret.mipCnt = mip;
-  ret.createViews(device);
+  ret.createViews(dev);
   return ret;
   }
 
 void VAllocator::free(VBuffer &buf) {
   if(buf.impl!=VK_NULL_HANDLE)
-    vkDestroyBuffer (device,buf.impl,nullptr);
+    vkDestroyBuffer (dev,buf.impl,nullptr);
 
   if(buf.page.page!=nullptr)
     allocator.free(buf.page);
@@ -250,11 +254,11 @@ void VAllocator::free(VBuffer &buf) {
 
 void VAllocator::free(VTexture &buf) {
   if(buf.view!=VK_NULL_HANDLE) {
-    buf.destroyViews(device);
-    vkDestroyImage  (device,buf.impl,nullptr);
+    buf.destroyViews(dev);
+    vkDestroyImage  (dev,buf.impl,nullptr);
     }
   else if(buf.impl!=VK_NULL_HANDLE) {
-    vkDestroyImage  (device,buf.impl,nullptr);
+    vkDestroyImage  (dev,buf.impl,nullptr);
     }
   if(buf.page.page!=nullptr)
     allocator.free(buf.page);
@@ -274,7 +278,7 @@ void VAllocator::getMemoryRequirements(MemRequirements& out,VkBuffer buf) {
     if(provider.device->props.hasDedicatedAlloc)
       memReq2.pNext = &memDedicatedRq;
 
-    provider.device->vkGetBufferMemoryRequirements2(device,&bufInfo,&memReq2);
+    provider.device->vkGetBufferMemoryRequirements2(dev,&bufInfo,&memReq2);
 
     out.size           = size_t(memReq2.memoryRequirements.size);
     out.alignment      = size_t(memReq2.memoryRequirements.alignment);
@@ -287,7 +291,7 @@ void VAllocator::getMemoryRequirements(MemRequirements& out,VkBuffer buf) {
     }
 
   VkMemoryRequirements memRq={};
-  vkGetBufferMemoryRequirements(device,buf,&memRq);
+  vkGetBufferMemoryRequirements(dev,buf,&memRq);
   out.size           = size_t(memRq.size);
   out.alignment      = size_t(memRq.alignment);
   out.memoryTypeBits = memRq.memoryTypeBits;
@@ -307,7 +311,7 @@ void VAllocator::getImgMemoryRequirements(MemRequirements& out, VkImage img) {
     if(provider.device->props.hasDedicatedAlloc)
       memReq2.pNext = &memDedicatedRq;
 
-    provider.device->vkGetImageMemoryRequirements2(device,&bufInfo,&memReq2);
+    provider.device->vkGetImageMemoryRequirements2(dev,&bufInfo,&memReq2);
 
     out.size           = size_t(memReq2.memoryRequirements.size);
     out.alignment      = size_t(memReq2.memoryRequirements.alignment);
@@ -319,21 +323,22 @@ void VAllocator::getImgMemoryRequirements(MemRequirements& out, VkImage img) {
     }
 
   VkMemoryRequirements memRq={};
-  vkGetImageMemoryRequirements(device,img,&memRq);
+  vkGetImageMemoryRequirements(dev,img,&memRq);
   out.size           = size_t(memRq.size);
   out.alignment      = size_t(memRq.alignment);
   out.memoryTypeBits = memRq.memoryTypeBits;
   }
 
-VAllocator::Allocation VAllocator::allocMemory(const VAllocator::MemRequirements& memRq, const uint32_t heapId, const uint32_t typeId) {
+VAllocator::Allocation VAllocator::allocMemory(const VAllocator::MemRequirements& memRq,
+                                               const uint32_t heapId, const uint32_t typeId, bool hostVisible) {
   const size_t align = LCM(memRq.alignment,provider.device->props.nonCoherentAtomSize);
   Allocation ret;
   if(memRq.dedicated) {
-    ret = allocator.dedicatedAlloc(memRq.size,align,heapId,typeId);
+    ret = allocator.dedicatedAlloc(memRq.size,align,heapId,typeId,hostVisible);
     if(!ret.page && !memRq.dedicatedRq)
-      ret = allocator.alloc(memRq.size,align,heapId,typeId);
+      ret = allocator.alloc(memRq.size,align,heapId,typeId,hostVisible);
     } else {
-    ret = allocator.alloc(memRq.size,align,heapId,typeId);
+    ret = allocator.alloc(memRq.size,align,heapId,typeId,hostVisible);
     }
   return ret;
   }
@@ -362,15 +367,15 @@ bool VAllocator::update(VBuffer &dest, const void *mem,
   alignRange(rgn,provider.device->props.nonCoherentAtomSize,shift);
 
   std::lock_guard<std::mutex> g(page.page->mmapSync);
-  if(vkMapMemory(device,page.page->memory,rgn.offset,rgn.size,0,&data)!=VK_SUCCESS)
+  if(vkMapMemory(dev,page.page->memory,rgn.offset,rgn.size,0,&data)!=VK_SUCCESS)
     return false;
 
   data = reinterpret_cast<uint8_t*>(data)+shift;
   copyUpsample(mem,data,count,size,alignedSz);
 
-  vkFlushMappedMemoryRanges(device,1,&rgn);
+  vkFlushMappedMemoryRanges(dev,1,&rgn);
 
-  vkUnmapMemory(device,page.page->memory);
+  vkUnmapMemory(dev,page.page->memory);
   return true;
   }
 
@@ -387,14 +392,14 @@ bool VAllocator::read(VBuffer& src, void* mem, size_t offset, size_t count, size
   alignRange(rgn,provider.device->props.nonCoherentAtomSize,shift);
 
   std::lock_guard<std::mutex> g(page.page->mmapSync);
-  if(vkMapMemory(device,page.page->memory,rgn.offset,rgn.size,0,&data)!=VK_SUCCESS)
+  if(vkMapMemory(dev,page.page->memory,rgn.offset,rgn.size,0,&data)!=VK_SUCCESS)
     return false;
-  vkInvalidateMappedMemoryRanges(device,1,&rgn);
+  vkInvalidateMappedMemoryRanges(dev,1,&rgn);
 
   data = reinterpret_cast<uint8_t*>(data)+shift;
   copyUpsample(data,mem,count,size,alignedSz);
 
-  vkUnmapMemory(device,page.page->memory);
+  vkUnmapMemory(dev,page.page->memory);
   return true;
   }
 
@@ -411,14 +416,14 @@ bool VAllocator::read(VBuffer &src, void *mem, size_t offset, size_t size) {
   alignRange(rgn,provider.device->props.nonCoherentAtomSize,shift);
 
   std::lock_guard<std::mutex> g(page.page->mmapSync);
-  if(vkMapMemory(device,page.page->memory,rgn.offset,rgn.size,0,&data)!=VK_SUCCESS)
+  if(vkMapMemory(dev,page.page->memory,rgn.offset,rgn.size,0,&data)!=VK_SUCCESS)
     return false;
-  vkInvalidateMappedMemoryRanges(device,1,&rgn);
+  vkInvalidateMappedMemoryRanges(dev,1,&rgn);
 
   data = reinterpret_cast<uint8_t*>(data)+shift;
   std::memcpy(mem,data,size);
 
-  vkUnmapMemory(device,page.page->memory);
+  vkUnmapMemory(dev,page.page->memory);
   return true;
   }
 
@@ -428,33 +433,33 @@ void VAllocator::updateSampler(VkSampler &smp, const Tempest::Sampler2d &s, uint
   smp = ns;
   }
 
-bool VAllocator::commit(VkDeviceMemory dev, std::mutex &mmapSync, VkBuffer dest,
+bool VAllocator::commit(VkDeviceMemory dmem, std::mutex &mmapSync, VkBuffer dest,
                         size_t pageOffset, const void* mem,  size_t count, size_t size, size_t alignedSz) {
   VkMappedMemoryRange rgn={};
   rgn.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-  rgn.memory = dev;
+  rgn.memory = dmem;
   rgn.offset = pageOffset;
   rgn.size   = count*alignedSz;
   size_t shift = 0;
   alignRange(rgn,provider.device->props.nonCoherentAtomSize,shift);
 
   std::lock_guard<std::mutex> g(mmapSync); // on practice bind requires external sync
-  if(vkBindBufferMemory(device,dest,dev,pageOffset)!=VK_SUCCESS)
+  if(vkBindBufferMemory(dev,dest,dmem,pageOffset)!=VK_SUCCESS)
     return false;
   if(mem!=nullptr) {
     void* data=nullptr;
-    if(vkMapMemory(device,dev,pageOffset,rgn.size,0,&data)!=VK_SUCCESS)
+    if(vkMapMemory(dev,dmem,pageOffset,rgn.size,0,&data)!=VK_SUCCESS)
       return false;
     data = reinterpret_cast<uint8_t*>(data)+shift;
     copyUpsample(mem,data,count,size,alignedSz);
-    vkFlushMappedMemoryRanges(device,1,&rgn);
-    vkUnmapMemory(device,dev);
+    vkFlushMappedMemoryRanges(dev,1,&rgn);
+    vkUnmapMemory(dev,dmem);
     }
 
   return true;
   }
 
-bool VAllocator::commit(VkDeviceMemory dev, std::mutex& mmapSync, VkImage dest, size_t offset) {
+bool VAllocator::commit(VkDeviceMemory dmem, std::mutex& mmapSync, VkImage dest, size_t offset) {
   std::lock_guard<std::mutex> g(mmapSync); // on practice bind requires external sync
-  return vkBindImageMemory(device, dest, dev, offset)==VkResult::VK_SUCCESS;
+  return vkBindImageMemory(dev, dest, dmem, offset)==VkResult::VK_SUCCESS;
   }

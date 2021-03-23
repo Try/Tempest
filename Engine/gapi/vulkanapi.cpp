@@ -285,6 +285,8 @@ void VulkanApi::readBytes(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::B
   cmd->begin();
   cmd->copy(stage,0, bx,0, size);
   cmd->end();
+
+  dx.dataMgr().wait(); // Buffer::update canbe in flight
   dx.dataMgr().submitAndWait(std::move(cmd));
 
   stage.read(out,0,size);

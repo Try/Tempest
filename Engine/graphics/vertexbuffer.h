@@ -15,14 +15,16 @@ template<class T>
 class Encoder;
 
 template<class T>
-class VertexBuffer {
+class VertexBuffer final {
   public:
     VertexBuffer()=default;
     VertexBuffer(VertexBuffer&&)=default;
     VertexBuffer& operator=(VertexBuffer&&)=default;
-    virtual ~VertexBuffer()=default;
 
     size_t size() const { return sz; }
+
+    void   update(const std::vector<T>& v)                 { return this->impl.update(v.data(),0,v.size(),sizeof(T),sizeof(T)); }
+    void   update(const T* data,size_t offset,size_t size) { return this->impl.update(data,offset,size,sizeof(T),sizeof(T)); }
 
   private:
     VertexBuffer(Tempest::VideoBuffer&& impl,size_t size)
@@ -37,20 +39,4 @@ class VertexBuffer {
   friend class Tempest::VertexBufferDyn<T>;
   };
 
-template<class T>
-class VertexBufferDyn:public VertexBuffer<T> {
-  public:
-    VertexBufferDyn()=default;
-    VertexBufferDyn(VertexBufferDyn&&)=default;
-    VertexBufferDyn& operator=(VertexBufferDyn&&)=default;
-
-    void   update(const std::vector<T>& v)                 { return this->impl.update(v.data(),0,v.size(),sizeof(T),sizeof(T)); }
-    void   update(const T* data,size_t offset,size_t size) { return this->impl.update(data,offset,size,sizeof(T),sizeof(T)); }
-
-  private:
-    VertexBufferDyn(Tempest::VideoBuffer&& impl,size_t size)
-      :VertexBuffer<T>(std::move(impl),size) {
-      }
-  friend class Tempest::Device;
-  };
 }

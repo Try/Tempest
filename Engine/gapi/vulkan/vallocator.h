@@ -41,6 +41,7 @@ class VAllocator {
     VAllocator();
 
     void setDevice(VDevice& device);
+    VDevice* device();
 
     using Allocation=typename Tempest::Detail::DeviceAllocator<Provider>::Allocation;
 
@@ -59,7 +60,7 @@ class VAllocator {
     void     updateSampler(VkSampler& smp, const Sampler2d& s, uint32_t mipCount);
 
   private:
-    VkDevice                          device=nullptr;
+    VkDevice                          dev=nullptr;
     Provider                          provider;
     VSamplerCache                     samplers;
     Detail::DeviceAllocator<Provider> allocator{provider};
@@ -68,7 +69,7 @@ class VAllocator {
     void getImgMemoryRequirements(MemRequirements& out, VkImage  img);
     void alignRange(VkMappedMemoryRange& rgn, size_t nonCoherentAtomSize, size_t shift);
 
-    Allocation allocMemory(const MemRequirements& rq, const uint32_t heapId, const uint32_t typeId);
+    Allocation allocMemory(const MemRequirements& rq, const uint32_t heapId, const uint32_t typeId, bool hostVisible);
 
     bool commit(VkDeviceMemory dev, std::mutex& mmapSync, VkBuffer dest, size_t offset,
                 const void *mem, size_t count, size_t size, size_t alignedSz);

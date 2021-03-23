@@ -53,6 +53,26 @@ void vbo() {
   }
 
 template<class GraphicsApi>
+void vboDyn() {
+  using namespace Tempest;
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto vbo = device.vbo(vboData,3);
+
+    Vertex   vboData2[3] = {{3,4},{5,6}};
+    vbo.update(vboData2,1,2);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void shader() {
   using namespace Tempest;
 

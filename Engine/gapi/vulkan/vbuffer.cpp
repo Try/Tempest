@@ -25,17 +25,33 @@ VBuffer& VBuffer::operator=(VBuffer&& other) {
   return *this;
   }
 
-void VBuffer::update(const void *data, size_t off, size_t count, size_t sz, size_t alignedSz) {
-  if(alloc!=nullptr)
-    alloc->update(*this,data,off,count,sz,alignedSz);
+void VBuffer::update(const void *data, size_t off, size_t count, size_t size, size_t alignedSz) {
+  if(T_LIKELY(page.page->hostVisible)) {
+    alloc->update(*this,data,off,count,size,alignedSz);
+    return;
+    }
+
+  auto&           dx    = *alloc->device();
+  Detail::VBuffer stage = dx.allocator.alloc(data,count,size,alignedSz, MemUsage::TransferSrc, BufferHeap::Upload);
+
+  Detail::DSharedPtr<Buffer*> pstage(new Detail::VBuffer(std::move(stage)));
+  Detail::DSharedPtr<Buffer*> pbuf  (this);
+
+  auto cmd = dx.dataMgr().get();
+  cmd->begin();
+  cmd->hold(pbuf); // NOTE: VBuffer may be deleted, before copy is finished
+  cmd->hold(pstage);
+  cmd->copy(*this, off*alignedSz, *pstage.handler,0, count*alignedSz);
+  cmd->end();
+
+  dx.dataMgr().wait(); // write-after-write case
+  dx.dataMgr().submit(std::move(cmd));
   }
 
 void VBuffer::read(void *data, size_t off, size_t count, size_t sz, size_t alignedSz) {
-  if(alloc!=nullptr)
-    alloc->read(*this,data,off,count,sz,alignedSz);
+  alloc->read(*this,data,off,count,sz,alignedSz);
   }
 
 void VBuffer::read(void* data, size_t off, size_t sz) {
-  if(alloc!=nullptr)
-    alloc->read(*this,data,off,sz);
+  alloc->read(*this,data,off,sz);
   }

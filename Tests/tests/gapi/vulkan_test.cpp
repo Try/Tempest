@@ -22,6 +22,10 @@ TEST(VulkanApi,Vbo) {
   GapiTestCommon::vbo<VulkanApi>();
   }
 
+TEST(VulkanApi,VboDyn) {
+  GapiTestCommon::vboDyn<VulkanApi>();
+  }
+
 TEST(VulkanApi,Shader) {
   GapiTestCommon::shader<VulkanApi>();
   }
