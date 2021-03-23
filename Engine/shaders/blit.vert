@@ -5,10 +5,28 @@ out gl_PerVertex {
   vec4 gl_Position;
   };
 
-layout(location = 0) in  vec2 inPos;
 layout(location = 1) out vec2 texcoord;
 
+vec2 vbo[] = {
+  {-1,-1},
+  { 1,-1},
+  { 1, 1},
+  {-1,-1},
+  { 1, 1},
+  {-1, 1}
+  };
+
+vec2 texc[] = {
+  { 0, 0},
+  { 1, 0},
+  { 1, 1},
+  { 0, 0},
+  { 1, 1},
+  { 0, 1},
+  };
+
 void main() {
-  texcoord    = (inPos.xy+vec2(1.0))*0.5;
-  gl_Position = vec4(inPos, 0.0, 1.0);
+  vec2 pos    = vbo [gl_VertexIndex];
+  texcoord    = texc[gl_VertexIndex];
+  gl_Position = vec4(pos, 0.0, 1.0);
   }

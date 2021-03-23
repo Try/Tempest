@@ -27,7 +27,9 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
     D3D12_MESSAGE_ID denyIds[] = {
       // I'm really not sure how to avoid this message.
       D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
-      D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE
+      D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE,
+      // blit shader uses no vbo
+      D3D12_MESSAGE_ID_CREATEINPUTLAYOUT_EMPTY_LAYOUT,
       };
     D3D12_INFO_QUEUE_FILTER filter = {};
     filter.DenyList.NumSeverities = _countof(severities);
@@ -55,29 +57,16 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
   idleEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 
   {
-    float vbo[] = {
-      -1,-1,
-       1,-1,
-       1, 1,
-      -1,-1,
-       1, 1,
-      -1, 1
-      };
-    auto v=allocator.alloc(vbo,6*2,sizeof(float),sizeof(float),MemUsage::VertexBuffer,BufferHeap::Upload);
-    vboFsq = DSharedPtr<DxBuffer*>(new DxBuffer(std::move(v)));
-  }
-
-  {
   RenderState st;
   st.setZTestMode   (RenderState::ZTestMode::Always);
   st.setCullFaceMode(RenderState::CullMode::NoCull);
 
-  auto    blitVs = DSharedPtr<DxShader*>(new DxShader(blit_vert_sprv,sizeof(blit_vert_sprv)));
-  auto    blitFs = DSharedPtr<DxShader*>(new DxShader(blit_frag_sprv,sizeof(blit_frag_sprv)));
+  auto blitVs = DSharedPtr<DxShader*>(new DxShader(blit_vert_sprv,sizeof(blit_vert_sprv)));
+  auto blitFs = DSharedPtr<DxShader*>(new DxShader(blit_frag_sprv,sizeof(blit_frag_sprv)));
 
-  blitLayout = DSharedPtr<DxUniformsLay*>(new DxUniformsLay(*this,blitFs.handler->lay));
-  blit   = DSharedPtr<DxPipeline*>(new DxPipeline(*this,st,2*sizeof(float),Triangles,*blitLayout.handler,
-                                                  blitVs.handler,nullptr,nullptr,nullptr,blitFs.handler));
+  blitLayout  = DSharedPtr<DxUniformsLay*>(new DxUniformsLay(*this,blitFs.handler->lay));
+  blit        = DSharedPtr<DxPipeline*>   (new DxPipeline   (*this,st,0,Triangles,*blitLayout.handler,
+                                                             blitVs.handler,nullptr,nullptr,nullptr,blitFs.handler));
   }
 
   data.reset(new DataMgr(*this));

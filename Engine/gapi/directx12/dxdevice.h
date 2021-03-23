@@ -187,7 +187,6 @@ class DxDevice : public AbstractGraphicsApi::Device {
 
     DxAllocator                 allocator;
 
-    DSharedPtr<Detail::DxBuffer*> vboFsq;
     DSharedPtr<DxUniformsLay*>  blitLayout;
     DSharedPtr<DxPipeline*>     blit;
 

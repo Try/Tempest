@@ -71,12 +71,7 @@ struct DxCommandBuffer::Blit : Stage {
     impl.IASetPrimitiveTopology(shader.topology);
     cmd.implSetUniforms(desc,false);
 
-    D3D12_VERTEX_BUFFER_VIEW view;
-    view.BufferLocation = dev.vboFsq.handler->impl.get()->GetGPUVirtualAddress();
-    view.SizeInBytes    = dev.vboFsq.handler->sizeInBytes;
-    view.StrideInBytes  = shader.stride;
-    impl.IASetVertexBuffers(0,1,&view);
-
+    impl.IASetVertexBuffers(0,0,nullptr);
     impl.DrawInstanced(6,1,0,0);
     };
 
@@ -154,11 +149,7 @@ struct DxCommandBuffer::MipMaps : Stage {
     impl.SetGraphicsRootSignature(shader.sign.get());
     impl.IASetPrimitiveTopology(shader.topology);
 
-    D3D12_VERTEX_BUFFER_VIEW view;
-    view.BufferLocation = dev.vboFsq.handler->impl.get()->GetGPUVirtualAddress();
-    view.SizeInBytes    = dev.vboFsq.handler->sizeInBytes;
-    view.StrideInBytes  = shader.stride;
-    impl.IASetVertexBuffers(0,1,&view);
+    impl.IASetVertexBuffers(0,0,nullptr);
 
     if(defLayout!=TextureLayout::ColorAttach)
       cmd.changeLayout(img,defLayout,TextureLayout::ColorAttach,uint32_t(-1));
