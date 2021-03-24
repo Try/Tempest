@@ -131,7 +131,7 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
     }
   else if(bufHeap==BufferHeap::Upload)
     props[0] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-  else if(bufHeap==BufferHeap::Static)
+  else if(bufHeap==BufferHeap::Device)
     props[0] = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
   else if(bufHeap==BufferHeap::Readback)
     props[0] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;

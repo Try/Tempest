@@ -248,7 +248,7 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
     return PBuffer(new Detail::DxBuffer(std::move(stage)));
     }
   else {
-    Detail::DxBuffer  buf = dx.allocator.alloc(nullptr,count,size,alignedSz,usage|MemUsage::TransferDst,BufferHeap::Static);
+    Detail::DxBuffer  buf = dx.allocator.alloc(nullptr,count,size,alignedSz,usage|MemUsage::TransferDst,BufferHeap::Device);
     if(mem==nullptr) {
       Detail::DSharedPtr<Buffer*> pbuf(new Detail::DxBuffer(std::move(buf)));
       return PBuffer(pbuf.handler);

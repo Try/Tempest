@@ -22,7 +22,7 @@ class VideoBuffer {
     size_t size() const { return sz; }
 
   private:
-    VideoBuffer(Tempest::Device& dev, AbstractGraphicsApi::PBuffer &&impl, size_t size);
+    VideoBuffer(AbstractGraphicsApi::PBuffer &&impl, size_t size);
 
     Detail::DSharedPtr<AbstractGraphicsApi::Buffer*> impl;
     size_t                                           sz=0;

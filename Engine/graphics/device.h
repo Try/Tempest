@@ -73,30 +73,49 @@ class Device {
     const Props&         properties() const;
 
     template<class T>
-    VertexBuffer<T>      vbo(const T* arr,size_t arrSize);
+    VertexBuffer<T>      vbo(const T* arr, size_t arrSize) {
+      return vbo(BufferHeap::Device,arr,arrSize);
+      }
     template<class T>
     VertexBuffer<T>      vbo(const std::vector<T>& arr){
-      return vbo(arr.data(),arr.size());
+      return vbo(BufferHeap::Device,arr.data(),arr.size());
+      }
+    template<class T>
+    VertexBuffer<T>      vbo(BufferHeap ht, const T* arr,size_t arrSize);
+    template<class T>
+    VertexBuffer<T>      vbo(BufferHeap ht, const std::vector<T>& arr) {
+      return vbo(ht,arr.data(),arr.size());
       }
 
     template<class T>
-    VertexBuffer<T>      vboDyn(const T* arr,size_t arrSize);
+    IndexBuffer<T>       ibo(const T* arr, size_t arrSize) {
+      return ibo(BufferHeap::Device,arr,arrSize);
+      }
     template<class T>
-    VertexBuffer<T>      vboDyn(const std::vector<T>& arr){
-      return vboDyn(arr.data(),arr.size());
+    IndexBuffer<T>       ibo(const std::vector<T>& arr) {
+      return ibo(BufferHeap::Device,arr.data(),arr.size());
+      }
+    template<class T>
+    IndexBuffer<T>       ibo(BufferHeap ht, const T* arr, size_t arrSize);
+    template<class T>
+    IndexBuffer<T>       ibo(BufferHeap ht, const std::vector<T>& arr) {
+      return ibo(ht,arr.data(),arr.size());
       }
 
     template<class T>
-    IndexBuffer<T>       ibo(const T* arr,size_t arrSize);
-    template<class T>
-    IndexBuffer<T>       ibo(const std::vector<T>& arr){
-      return ibo(arr.data(),arr.size());
+    UniformBuffer<T>     ubo(const T* data, size_t size) {
+      return ubo(BufferHeap::Upload,data,size);
       }
-
     template<class T>
-    UniformBuffer<T>     ubo(const T* data, size_t size);
+    UniformBuffer<T>     ubo(const T& data)  {
+      return ubo(BufferHeap::Upload,&data,1);
+      }
     template<class T>
-    UniformBuffer<T>     ubo(const T& data);
+    UniformBuffer<T>     ubo(BufferHeap ht, const T* data, size_t size);
+    template<class T>
+    UniformBuffer<T>     ubo(BufferHeap ht, const T& data)  {
+      return ubo(ht,&data,1);
+      }
 
     StorageBuffer        ssbo(BufferHeap ht, const void* data, size_t size);
     template<class T>
@@ -104,11 +123,11 @@ class Device {
       return ssbo(ht,arr.data(),arr.size()*sizeof(T));
       }
     StorageBuffer        ssbo(const void* data, size_t size) {
-      return ssbo(BufferHeap::Static,data,size);
+      return ssbo(BufferHeap::Device,data,size);
       }
     template<class T>
     StorageBuffer        ssbo(const std::vector<T>& arr) {
-      return ssbo(BufferHeap::Static,arr.data(),arr.size()*sizeof(T));
+      return ssbo(BufferHeap::Device,arr.data(),arr.size()*sizeof(T));
       }
 
     Uniforms             uniforms(const UniformsLayout &owner);
@@ -192,37 +211,23 @@ class Device {
   friend class VideoBuffer;
   friend class Uniforms;
 
-  template<class T>
-  friend class VertexBuffer;
-  template<class T>
-  friend class VertexBufferDyn;
-
   friend class Texture2d;
   };
 
 template<class T>
-inline VertexBuffer<T> Device::vbo(const T* arr, size_t arrSize) {
+inline VertexBuffer<T> Device::vbo(BufferHeap ht, const T* arr, size_t arrSize) {
   if(arrSize==0)
     return VertexBuffer<T>();
-  VideoBuffer     data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::VertexBuffer,BufferHeap::Static);
+  VideoBuffer     data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::VertexBuffer,ht);
   VertexBuffer<T> vbo(std::move(data),arrSize);
   return vbo;
   }
 
 template<class T>
-inline VertexBuffer<T> Device::vboDyn(const T *arr, size_t arrSize) {
-  if(arrSize==0)
-    return VertexBuffer<T>();
-  VideoBuffer     data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::VertexBuffer,BufferHeap::Upload);
-  VertexBuffer<T> vbo(std::move(data),arrSize);
-  return vbo;
-  }
-
-template<class T>
-inline IndexBuffer<T> Device::ibo(const T* arr, size_t arrSize) {
+inline IndexBuffer<T> Device::ibo(BufferHeap ht, const T* arr, size_t arrSize) {
   if(arrSize==0)
     return IndexBuffer<T>();
-  VideoBuffer     data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::IndexBuffer,BufferHeap::Static);
+  VideoBuffer     data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::IndexBuffer,ht);
   IndexBuffer<T>  ibo(std::move(data),arrSize);
   return ibo;
   }
@@ -238,7 +243,7 @@ inline StorageBuffer Device::ssbo(BufferHeap ht, const void* data, size_t size) 
   }
 
 template<class T>
-inline UniformBuffer<T> Device::ubo(const T *mem, size_t size) {
+inline UniformBuffer<T> Device::ubo(BufferHeap ht, const T *mem, size_t size) {
   if(size==0)
     return UniformBuffer<T>();
   const size_t align   = devProps.ubo.offsetAlign;
@@ -246,14 +251,9 @@ inline UniformBuffer<T> Device::ubo(const T *mem, size_t size) {
 
   if(sizeof(T)>devProps.ubo.maxRange)
     throw std::system_error(Tempest::GraphicsErrc::TooLargeUbo);
-  VideoBuffer      data=createVideoBuffer(mem,size,sizeof(T),eltSize,MemUsage::UniformBuffer,BufferHeap::Upload);
+  VideoBuffer      data=createVideoBuffer(mem,size,sizeof(T),eltSize,MemUsage::UniformBuffer,ht);
   UniformBuffer<T> ubo(std::move(data),eltSize);
   return ubo;
-  }
-
-template<class T>
-inline UniformBuffer<T> Device::ubo(const T& mem) {
-  return ubo(&mem,1);
   }
 
 template<class Vertex>

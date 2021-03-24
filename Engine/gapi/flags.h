@@ -23,7 +23,7 @@ inline MemUsage operator & (MemUsage a,const MemUsage& b) {
 
 
 enum class BufferHeap : uint8_t {
-  Static   = 0,
+  Device   = 0,
   Upload   = 1,
   Readback = 3,
   };

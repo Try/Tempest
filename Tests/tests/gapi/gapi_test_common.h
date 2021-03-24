@@ -64,6 +64,9 @@ void vboDyn() {
 
     Vertex   vboData2[3] = {{3,4},{5,6}};
     vbo.update(vboData2,1,2);
+
+    auto ssbo = device.ssbo(BufferHeap::Upload,vboData,sizeof(vboData));
+    ssbo.update(vboData2,1*sizeof(vboData2[0]),2*sizeof(vboData2[0]));
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
