@@ -243,6 +243,9 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
                                                         MemUsage usage, BufferHeap flg) {
   Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
 
+  if(MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer))
+    flg = BufferHeap::Device;
+
   if(flg==BufferHeap::Upload) {
     Detail::DxBuffer stage=dx.allocator.alloc(mem,count,size,alignedSz,usage,BufferHeap::Upload);
     return PBuffer(new Detail::DxBuffer(std::move(stage)));
