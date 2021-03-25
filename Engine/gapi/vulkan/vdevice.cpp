@@ -369,14 +369,6 @@ VkResult VDevice::present(VSwapchain &sw, const VSemaphore *wait, size_t wSize, 
   return presentQueue->present(presentInfo);
   }
 
-void VDevice::waitData() {
-  data->wait();
-  }
-
-const char *VDevice::renderer() const {
-  return props.name;
-  }
-
 void VDevice::waitIdle() {
   waitIdleSync(queues,sizeof(queues)/sizeof(queues[0]));
   }

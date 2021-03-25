@@ -205,9 +205,6 @@ class VDevice : public AbstractGraphicsApi::Device {
     PFN_vkGetImageMemoryRequirements2KHR  vkGetImageMemoryRequirements2  = nullptr;
 
     VkResult                present(VSwapchain& sw,const VSemaphore *wait,size_t wSize,uint32_t imageId);
-
-    void                    waitData();
-    const char*             renderer() const override;
     void                    waitIdle() override;
 
     void                    submit(VCommandBuffer& cmd,VFence& sync);
@@ -216,7 +213,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     SwapChainSupport        querySwapChainSupport(VkSurfaceKHR surface) { return querySwapChainSupport(physicalDevice,surface); }
     MemIndex                memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const;
 
-    using DataMgr = UploadEngine<VDevice,VCommandBuffer,VFence>;
+    using DataMgr = UploadEngine<VDevice,VCommandBuffer,VFence,VBuffer>;
     DataMgr&                dataMgr() const { return *data; }
 
   private:

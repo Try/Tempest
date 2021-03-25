@@ -19,11 +19,15 @@ DxBuffer::DxBuffer(Tempest::Detail::DxBuffer&& other)
   }
 
 void DxBuffer::update(const void* data, size_t off, size_t count, size_t size, size_t alignedSz) {
+  auto& dx = *dev;
+
   D3D12_HEAP_PROPERTIES prop = {};
   ID3D12Resource&       ret  = *impl;
   ret.GetHeapProperties(&prop,nullptr);
 
   if(prop.Type==D3D12_HEAP_TYPE_UPLOAD) {
+    dx.dataMgr().waitFor(this); // write-after-write case
+
     D3D12_RANGE rgn    = {off*alignedSz,count*alignedSz};
     void*       mapped = nullptr;
     dxAssert(ret.Map(0,&rgn,&mapped));
@@ -33,8 +37,7 @@ void DxBuffer::update(const void* data, size_t off, size_t count, size_t size, s
     return;
     }
 
-  auto&            dx    = *dev;
-  Detail::DxBuffer stage = dx.allocator.alloc(data,count,size,alignedSz, MemUsage::TransferSrc, BufferHeap::Upload);
+  auto  stage = dx.dataMgr().allocStagingMemory(data,count,size,alignedSz,MemUsage::TransferSrc,BufferHeap::Upload);
 
   Detail::DSharedPtr<Buffer*> pstage(new Detail::DxBuffer(std::move(stage)));
   Detail::DSharedPtr<Buffer*> pbuf  (this);
@@ -46,34 +49,44 @@ void DxBuffer::update(const void* data, size_t off, size_t count, size_t size, s
   cmd->copy(*this, off*alignedSz, *pstage.handler,0, count*alignedSz);
   cmd->end();
 
-  dx.dataMgr().wait(); // write-after-write case
+  dx.dataMgr().waitFor(this); // write-after-write case
   dx.dataMgr().submit(std::move(cmd));
   }
 
-void DxBuffer::read(void* data, size_t off, size_t count, size_t sz, size_t alignedSz) {
-  ID3D12Resource& ret = *impl;
+void DxBuffer::read(void* data, size_t off, size_t size) {
+  auto& dx = *dev;
 
-  D3D12_RANGE rgn = {off,sz};
+  D3D12_HEAP_PROPERTIES prop = {};
+  ID3D12Resource&       ret  = *impl;
+  ret.GetHeapProperties(&prop,nullptr);
+
+  if(prop.Type==D3D12_HEAP_TYPE_READBACK) {
+    dx.dataMgr().waitFor(this); // write-after-write case
+
+    D3D12_RANGE rgn = {off,size};
+    void*       mapped=nullptr;
+    dxAssert(ret.Map(0,&rgn,&mapped));
+    mapped = reinterpret_cast<uint8_t*>(mapped)+off;
+    std::memcpy(data,mapped,size);
+    ret.Unmap(0,nullptr);
+    return;
+    }
+
+  auto  stage = dx.dataMgr().allocStagingMemory(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
+
+  auto cmd = dx.dataMgr().get();
+  cmd->begin();
+  cmd->copy(stage,0, *this,off,size);
+  cmd->end();
+  dx.dataMgr().waitFor(this);
+  dx.dataMgr().submitAndWait(std::move(cmd));
+
+  D3D12_RANGE rgn = {0,size};
   void*       mapped=nullptr;
-  dxAssert(ret.Map(0,&rgn,&mapped));
-  mapped = reinterpret_cast<uint8_t*>(mapped)+off;
-
-  copyUpsample(mapped,data,count,sz,alignedSz);
-
-  ret.Unmap(0,nullptr);
-  }
-
-void DxBuffer::read(void* data, size_t off, size_t sz) {
-  ID3D12Resource& ret = *impl;
-
-  D3D12_RANGE rgn = {off,sz};
-  void*       mapped=nullptr;
-  dxAssert(ret.Map(0,&rgn,&mapped));
-  mapped = reinterpret_cast<uint8_t*>(mapped)+off;
-
-  std::memcpy(data,mapped,sz);
-
-  ret.Unmap(0,nullptr);
+  dxAssert(stage.impl->Map(0,&rgn,&mapped));
+  mapped = reinterpret_cast<uint8_t*>(mapped);
+  std::memcpy(data,mapped,size);
+  stage.impl->Unmap(0,nullptr);
   }
 
 void DxBuffer::uploadS3TC(const uint8_t* d, uint32_t w, uint32_t h, uint32_t mipCnt, UINT blockSize) {

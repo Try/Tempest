@@ -171,10 +171,6 @@ void DxDevice::waitData() {
   data->wait();
   }
 
-const char* Detail::DxDevice::renderer() const {
-  return props.name;
-  }
-
 void Detail::DxDevice::waitIdle() {
   std::lock_guard<SpinLock> guard(syncCmdQueue);
   dxAssert(cmdQueue->Signal(idleFence.get(),DxFence::Ready));

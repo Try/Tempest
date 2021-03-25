@@ -250,28 +250,15 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
     Detail::DxBuffer stage=dx.allocator.alloc(mem,count,size,alignedSz,usage,BufferHeap::Upload);
     return PBuffer(new Detail::DxBuffer(std::move(stage)));
     }
-  else {
-    Detail::DxBuffer  buf = dx.allocator.alloc(nullptr,count,size,alignedSz,usage|MemUsage::TransferDst,BufferHeap::Device);
-    if(mem==nullptr) {
-      Detail::DSharedPtr<Buffer*> pbuf(new Detail::DxBuffer(std::move(buf)));
-      return PBuffer(pbuf.handler);
-      }
-    Detail::DxBuffer  stage=dx.allocator.alloc(mem,    count,size,alignedSz,MemUsage::TransferSrc,      BufferHeap::Upload);
 
-    Detail::DSharedPtr<Buffer*> pstage(new Detail::DxBuffer(std::move(stage)));
-    Detail::DSharedPtr<Buffer*> pbuf  (new Detail::DxBuffer(std::move(buf)));
-
-    auto cmd = dx.dataMgr().get();
-    cmd->begin();
-    cmd->hold(pbuf);
-    cmd->hold(pstage); // preserve stage buffer, until gpu side copy is finished
-    cmd->copy(*pbuf.handler,0, *pstage.handler,0, count*alignedSz);
-    cmd->end();
-    dx.dataMgr().submit(std::move(cmd));
-
+  Detail::DxBuffer  buf = dx.allocator.alloc(nullptr,count,size,alignedSz,usage|MemUsage::TransferDst,BufferHeap::Device);
+  if(mem==nullptr) {
+    Detail::DSharedPtr<Buffer*> pbuf(new Detail::DxBuffer(std::move(buf)));
     return PBuffer(pbuf.handler);
     }
-  return PBuffer();
+  Detail::DSharedPtr<Buffer*> pbuf  (new Detail::DxBuffer(std::move(buf)));
+  pbuf.handler->update(mem,0,count,size,alignedSz);
+  return PBuffer(pbuf.handler);
   }
 
 AbstractGraphicsApi::Desc* DirectX12Api::createDescriptors(AbstractGraphicsApi::Device*, UniformsLay& layP) {
@@ -434,19 +421,8 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureL
     }
   }
 
-void DirectX12Api::readBytes(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Buffer* buf, void* out, size_t size) {
-  Detail::DxDevice&  dx = *reinterpret_cast<Detail::DxDevice*>(d);
-  Detail::DxBuffer&  bx = *reinterpret_cast<Detail::DxBuffer*>(buf);
-
-  Detail::DxBuffer   stage = dx.allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
-
-  auto cmd = dx.dataMgr().get();
-  cmd->begin();
-  cmd->copy(stage,0, bx,0, size);
-  cmd->end();
-  dx.dataMgr().submitAndWait(std::move(cmd));
-
-  stage.read(out,0,1,size,size);
+void DirectX12Api::readBytes(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Buffer* buf, void* out, size_t size) {
+  buf->read(out,0,size);
   }
 
 AbstractGraphicsApi::CommandBuffer* DirectX12Api::createCommandBuffer(Device* d) {

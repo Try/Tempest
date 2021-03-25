@@ -417,7 +417,7 @@ const Builtin& Device::builtin() const {
   }
 
 const char* Device::renderer() const {
-  return dev->renderer();
+  return properties().name;
   }
 
 VideoBuffer Device::createVideoBuffer(const void *data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap flg) {

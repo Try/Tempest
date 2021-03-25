@@ -166,10 +166,9 @@ class DxDevice : public AbstractGraphicsApi::Device {
     DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi);
     ~DxDevice() override;
 
-    using DataMgr = UploadEngine<DxDevice,DxCommandBuffer,DxFence>;
+    using DataMgr = UploadEngine<DxDevice,DxCommandBuffer,DxFence,DxBuffer>;
 
     void         waitData();
-    const char*  renderer() const override;
     void         waitIdle() override;
 
     static void  getProp(IDXGIAdapter1& adapter, AbstractGraphicsApi::Props& prop);

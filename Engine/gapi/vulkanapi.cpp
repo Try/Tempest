@@ -154,28 +154,16 @@ AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device
     Detail::VBuffer stage=dx.allocator.alloc(mem,count,size,alignedSz,usage|MemUsage::TransferSrc,BufferHeap::Upload);
     return PBuffer(new Detail::VBuffer(std::move(stage)));
     }
-  else {
-    Detail::VBuffer  buf =dx.allocator.alloc(nullptr, count,size,alignedSz, usage|MemUsage::TransferDst|MemUsage::TransferSrc,BufferHeap::Device);
-    if(mem==nullptr) {
-      Detail::DSharedPtr<Buffer*> pbuf(new Detail::VBuffer(std::move(buf)));
-      return PBuffer(pbuf.handler);
-      }
 
-    Detail::VBuffer  stage=dx.allocator.alloc(mem,count,size,alignedSz, MemUsage::TransferSrc, BufferHeap::Upload);
-
-    Detail::DSharedPtr<Buffer*> pstage(new Detail::VBuffer(std::move(stage)));
-    Detail::DSharedPtr<Buffer*> pbuf  (new Detail::VBuffer(std::move(buf)));
-
-    auto cmd = dx.dataMgr().get();
-    cmd->begin();
-    cmd->hold(pbuf);
-    cmd->hold(pstage); // preserve stage buffer, until gpu side copy is finished
-    cmd->copy(*pbuf.handler,0, *pstage.handler,0, count*alignedSz);
-    cmd->end();
-    dx.dataMgr().submit(std::move(cmd));
-
+  Detail::VBuffer buf = dx.allocator.alloc(nullptr, count,size,alignedSz, usage|MemUsage::TransferDst|MemUsage::TransferSrc,BufferHeap::Device);
+  if(mem==nullptr) {
+    Detail::DSharedPtr<Buffer*> pbuf(new Detail::VBuffer(std::move(buf)));
     return PBuffer(pbuf.handler);
     }
+
+  Detail::DSharedPtr<Buffer*> pbuf(new Detail::VBuffer(std::move(buf)));
+  pbuf.handler->update(mem,0,count,size,alignedSz);
+  return PBuffer(pbuf.handler);
   }
 
 AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Device *d, const Pixmap &p, TextureFormat frm, uint32_t mipCnt) {
@@ -269,27 +257,17 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
   cmd->copy(stage,w,h,mip,tx,0);
   cmd->changeLayout(tx, TextureLayout::TransferSrc, lay, mip);
   cmd->end();
+
+  dx.dataMgr().waitFor(&tx);
   dx.dataMgr().submitAndWait(std::move(cmd));
 
   out = Pixmap(w,h,pfrm);
   stage.read(out.data(),0,size);
   }
 
-void VulkanApi::readBytes(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Buffer* buf, void* out, size_t size) {
-  Detail::VDevice&  dx    = *reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VBuffer&  bx    = *reinterpret_cast<Detail::VBuffer*>(buf);
-
-  Detail::VBuffer   stage = dx.allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
-
-  auto cmd = dx.dataMgr().get();
-  cmd->begin();
-  cmd->copy(stage,0, bx,0, size);
-  cmd->end();
-
-  dx.dataMgr().wait(); // Buffer::update canbe in flight
-  dx.dataMgr().submitAndWait(std::move(cmd));
-
-  stage.read(out,0,size);
+void VulkanApi::readBytes(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Buffer* buf, void* out, size_t size) {
+  Detail::VBuffer&  bx = *reinterpret_cast<Detail::VBuffer*>(buf);
+  bx.read(out,0,size);
   }
 
 AbstractGraphicsApi::Desc *VulkanApi::createDescriptors(AbstractGraphicsApi::Device* d, UniformsLay& ulayImpl) {
@@ -341,7 +319,7 @@ void VulkanApi::present(Device *d,Swapchain *sw,uint32_t imageId,const Semaphore
   presentInfo.pSwapchains     = swapChains;
   presentInfo.pImageIndices   = &imageId;
 
-  dx->waitData();
+  dx->dataMgr().wait();
 
   //auto t = Application::tickCount();
   VkResult code = dx->presentQueue->present(presentInfo);
@@ -384,7 +362,7 @@ void VulkanApi::submit(Device *d,
   if(onReadyCpu!=nullptr)
     onReadyCpu->reset();
 
-  dx->waitData();
+  dx->dataMgr().wait();
   dx->graphicsQueue->submit(1,&submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl);
   }
 
@@ -436,7 +414,7 @@ void VulkanApi::submit(AbstractGraphicsApi::Device *d,
     doneCpu->reset();
   auto* rc=reinterpret_cast<Detail::VFence*>(doneCpu);
 
-  dx->waitData();
+  dx->dataMgr().wait();
   dx->graphicsQueue->submit(1,&submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl);
   }
 

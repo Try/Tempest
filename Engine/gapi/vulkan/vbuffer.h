@@ -17,8 +17,7 @@ class VBuffer : public AbstractGraphicsApi::Buffer {
     VBuffer& operator=(VBuffer&& other);
 
     void update  (const void* data, size_t off, size_t count, size_t sz, size_t alignedSz) override;
-    void read    (void* data, size_t off, size_t count, size_t sz, size_t alignedSz);
-    void read    (void* data, size_t off, size_t sz);
+    void read    (void* data, size_t off, size_t sz) override;
 
     VkBuffer               impl=VK_NULL_HANDLE;
 

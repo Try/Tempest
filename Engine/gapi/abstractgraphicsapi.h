@@ -304,7 +304,6 @@ namespace Tempest {
 
       struct Device:NoCopy {
         virtual ~Device()=default;
-        virtual const char* renderer() const=0;
         virtual void        waitIdle() = 0;
         };
       struct Fence:NoCopy {
@@ -352,6 +351,7 @@ namespace Tempest {
       struct Buffer:Shared   {
         virtual ~Buffer()=default;
         virtual void  update  (const void* data,size_t off,size_t count,size_t sz,size_t alignedSz)=0;
+        virtual void  read    (      void* data,size_t off,size_t size)=0;
         };
       struct Desc:NoCopy   {
         virtual ~Desc()=default;
