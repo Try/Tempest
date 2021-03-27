@@ -446,18 +446,18 @@ void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
   changeLayout(img,TextureLayout::TransferDest, TextureLayout::Sampler, mipLevels-1);
   }
 
-static VkPipelineStageFlags accessToStage(const VkAccessFlags a) {
+static VkPipelineStageFlags accessToStage(const VkAccessFlags a, const VulkanApi::VkProp& prop) {
   VkPipelineStageFlags ret = 0;
 
   if(a&(VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_UNIFORM_READ_BIT)) {
     ret |= (VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT  |
             VK_PIPELINE_STAGE_VERTEX_SHADER_BIT   |
             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-    /* TODO: tesselation feature
-    ret |= (VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT |
-            VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT |
-            VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT);
-    */
+    if(prop.geometryShader)
+      ret |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
+    if(prop.tesselationShader)
+      ret |= VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT |
+             VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT;
 
     /* TODO: ray tracing feature
     ret |= (VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR      |
@@ -565,8 +565,8 @@ void VCommandBuffer::implChangeLayout(VkImage dest, VkFormat imageFormat,
   VkAccessFlags srcAccessMask = layoutToAccess(oldLayout);
   VkAccessFlags dstAccessMask = layoutToAccess(newLayout);
 
-  VkPipelineStageFlags srcStage = accessToStage(srcAccessMask);
-  VkPipelineStageFlags dstStage = accessToStage(dstAccessMask);
+  VkPipelineStageFlags srcStage = accessToStage(srcAccessMask,device.props);
+  VkPipelineStageFlags dstStage = accessToStage(dstAccessMask,device.props);
 
   barrier.srcAccessMask = srcAccessMask;
   barrier.dstAccessMask = dstAccessMask;
