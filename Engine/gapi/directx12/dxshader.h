@@ -19,6 +19,7 @@ class DxShader:public AbstractGraphicsApi::Shader {
     using Binding = UniformsLayout::Binding;
 
     D3D12_SHADER_BYTECODE    bytecode() const;
+    void                     disasm() const;
 
     std::vector<Decl::ComponentType> vdecl;
     std::vector<Binding>             lay;

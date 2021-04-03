@@ -96,4 +96,15 @@ D3D12_SHADER_BYTECODE DxShader::bytecode() const {
   return D3D12_SHADER_BYTECODE{shader->GetBufferPointer(),shader->GetBufferSize()};
   }
 
+void DxShader::disasm() const {
+  ID3D10Blob *asm_blob = nullptr;
+  D3DDisassemble(shader->GetBufferPointer(),shader->GetBufferSize(),
+                 D3D_DISASM_ENABLE_INSTRUCTION_NUMBERING,"",&asm_blob);
+  if(!asm_blob)
+    return;
+
+  Log::d(reinterpret_cast<const char*>(asm_blob->GetBufferPointer()));
+  asm_blob->Release();
+  }
+
 #endif

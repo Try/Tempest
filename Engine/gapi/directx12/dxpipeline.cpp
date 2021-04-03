@@ -177,7 +177,14 @@ ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& 
     psoDesc.RTVFormats[i] = frm.RTVFormats[i];
 
   ComPtr<ID3D12PipelineState> ret;
-  dxAssert(device.device->CreateGraphicsPipelineState(&psoDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&ret)));
+  auto err = device.device->CreateGraphicsPipelineState(&psoDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&ret));
+  if(FAILED(err)) {
+    if(vsShader.handler)
+      vsShader.handler->disasm();
+    if(fsShader.handler)
+      fsShader.handler->disasm();
+    dxAssert(err);
+    }
   return ret;
   }
 

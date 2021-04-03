@@ -75,6 +75,9 @@ compile_shader(ssbo_write.vert)
 
 compile_shader(push_constant.comp)
 
+compile_shader(link_defect.vert)
+compile_shader(link_defect.frag)
+
 add_executable(${PROJECT_NAME}
   ${SOURCES}
   ${SHADERS}
