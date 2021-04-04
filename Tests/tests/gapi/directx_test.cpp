@@ -118,7 +118,7 @@ TEST(DirectX12Api,PushRemapping) {
 #endif
   }
 
-TEST(DirectX12Api,DISABLED_SpirvDefect) {
+TEST(DirectX12Api,SpirvDefect) {
 #if defined(_MSC_VER)
   using namespace Tempest;
 
