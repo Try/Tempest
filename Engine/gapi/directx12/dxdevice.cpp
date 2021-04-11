@@ -156,6 +156,9 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, AbstractGraphicsApi::Props& pro
   prop.anisotropy       = true;
   prop.maxAnisotropy    = 16;
 
+  prop.storeAndAtomicVs = true;
+  prop.storeAndAtomicFs = true;
+
   prop.mrt.maxColorAttachments = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT;
 
   prop.compute.maxGroups.x    = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
