@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_VULKAN)
+
 #include "vframebufferlayout.h"
 
 #include "vdevice.h"
@@ -56,3 +58,5 @@ bool VFramebufferLayout::isCompatible(const VFramebufferLayout &other) const {
 bool VFramebufferLayout::equals(const Tempest::AbstractGraphicsApi::FboLayout &other) const {
   return isCompatible(reinterpret_cast<const VFramebufferLayout&>(other));
   }
+
+#endif

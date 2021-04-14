@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_VULKAN)
+
 #include "vswapchain.h"
 
 #include <Tempest/SystemApi>
@@ -224,3 +226,5 @@ uint32_t VSwapchain::nextImage(AbstractGraphicsApi::Semaphore* onReady) {
     throw std::runtime_error("failed to acquire swap chain image!");
   return id;
   }
+
+#endif

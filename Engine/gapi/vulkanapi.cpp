@@ -1,5 +1,7 @@
 #include "vulkanapi.h"
 
+#if defined(TEMPEST_BUILD_VULKAN)
+
 #include "vulkan/vdevice.h"
 #include "vulkan/vswapchain.h"
 #include "vulkan/vrenderpass.h"
@@ -423,3 +425,4 @@ void VulkanApi::getCaps(Device *d, Props& props) {
   props=dx->props;
   }
 
+#endif

@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_VULKAN)
+
 #include "vframebuffer.h"
 
 #include "vdevice.h"
@@ -76,3 +78,5 @@ void* VFramebuffer::Attach::nativeHandle() {
     return reinterpret_cast<void*>(sw->images[id]);
   return reinterpret_cast<void*>(tex->impl);
   }
+
+#endif

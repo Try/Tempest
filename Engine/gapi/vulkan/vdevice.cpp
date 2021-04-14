@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_VULKAN)
+
 #include "vdevice.h"
 
 #include "vcommandbuffer.h"
@@ -405,3 +407,5 @@ VkResult VDevice::Queue::present(VkPresentInfoKHR& presentInfo) {
   std::lock_guard<SpinLock> guard(sync);
   return vkQueuePresentKHR(impl,&presentInfo);
   }
+
+#endif

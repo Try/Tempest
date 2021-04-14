@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_VULKAN)
+
 #include "vsemaphore.h"
 
 #include "vdevice.h"
@@ -24,3 +26,5 @@ VSemaphore::~VSemaphore() {
     return;
   vkDestroySemaphore(device,impl,nullptr);
   }
+
+#endif

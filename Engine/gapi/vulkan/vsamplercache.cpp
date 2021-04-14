@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_VULKAN)
+
 #include "vsamplercache.h"
 
 #include "vdevice.h"
@@ -90,3 +92,5 @@ VkSampler VSamplerCache::alloc(const Sampler2d &s, uint32_t mipCount) {
   vkAssert(vkCreateSampler(device, &samplerInfo, nullptr, &sampler));
   return sampler;
   }
+
+#endif

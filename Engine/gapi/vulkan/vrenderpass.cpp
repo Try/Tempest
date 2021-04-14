@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_VULKAN)
+
 #include "vrenderpass.h"
 
 #include "vdevice.h"
@@ -217,3 +219,5 @@ bool VRenderPass::Impl::isCompatible(VFramebufferLayout &l) const {
     return false;
   return true;
   }
+
+#endif

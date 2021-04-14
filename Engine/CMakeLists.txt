@@ -14,6 +14,14 @@ else()
   option(TEMPEST_BUILD_DIRECTX12   "Build directx12 support" OFF)
 endif()
 
+if(APPLE)
+  option(TEMPEST_BUILD_VULKAN      "Build vulkan support"    OFF)
+  option(TEMPEST_BUILD_METAL       "Build metal support"     ON )
+else()
+  option(TEMPEST_BUILD_VULKAN      "Build vulkan support"    ON )
+  option(TEMPEST_BUILD_METAL       "Build metal support"     OFF)
+endif()
+
 ### The Library
 # avoid cmake link_directories issue
 if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
@@ -39,14 +47,7 @@ endif()
 
 ### Platforms
 if(WIN32)
-  find_package(WindowsSDK)
-  if(WINDOWSSDK_FOUND)
-      get_windowssdk_library_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_LIB_DIRS)
-      get_windowssdk_include_dirs(${WINDOWSSDK_PREFERRED_DIR} WINSDK_INCLUDE_DIRS)
-
-      include_directories("${WINSDK_INCLUDE_DIRS}")
-      link_directories(${PROJECT_NAME} "${WINSDK_LIB_DIRS}")
-  endif()
+  find_package(D3D12)
 endif()
 
 ### zlib
@@ -84,13 +85,16 @@ if(WIN32)
 endif()
 
 ### Vulkan
-add_definitions(-DVULKAN_HPP_NO_EXCEPTIONS)
-add_definitions(-DVULKAN_HPP_NO_SMART_HANDLE)
-target_include_directories(${PROJECT_NAME} PRIVATE "$ENV{VK_SDK_PATH}/include")
-if(WIN32)
-  target_link_libraries(${PROJECT_NAME} PRIVATE vulkan-1)
-else()
-  target_link_libraries(${PROJECT_NAME} PRIVATE vulkan)
+if(TEMPEST_BUILD_VULKAN)
+  add_definitions(-DTEMPEST_BUILD_VULKAN)
+  add_definitions(-DVULKAN_HPP_NO_EXCEPTIONS)
+  add_definitions(-DVULKAN_HPP_NO_SMART_HANDLE)
+  target_include_directories(${PROJECT_NAME} PRIVATE "$ENV{VK_SDK_PATH}/include")
+  if(WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE vulkan-1)
+  else()
+    target_link_libraries(${PROJECT_NAME} PRIVATE vulkan)
+  endif()
 endif()
 
 ### Directx12
@@ -111,7 +115,7 @@ file(GLOB SHADER_SOURCES
   "${PROJECT_SOURCE_DIR}/shaders/*.comp")
 
 # GLSL to SPIRV compiler
-find_program(GLSLANGVALIDATOR glslangValidator)
+find_program(GLSLANGVALIDATOR glslangValidator "/opt/homebrew/bin")
 if(NOT GLSLANGVALIDATOR)
   message(FATAL_ERROR "glslangValidator required")
 endif()

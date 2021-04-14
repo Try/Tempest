@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_VULKAN)
+
 #include "vtexture.h"
 
 #include <Tempest/Pixmap>
@@ -96,3 +98,5 @@ void VTexture::createView(VkImageView& ret, VkDevice device, VkFormat format,
 
   vkAssert(vkCreateImageView(device, &viewInfo, nullptr, &ret));
   }
+
+#endif

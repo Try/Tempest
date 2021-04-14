@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_VULKAN)
+
 #include "vuniformslay.h"
 
 #include <Tempest/UniformsLayout>
@@ -100,3 +102,5 @@ void VUniformsLay::adjustSsboBindings() {
       }
   }
 
+
+#endif

@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_VULKAN)
+
 #include "vshader.h"
 
 #include <Tempest/File>
@@ -30,3 +32,5 @@ VShader::VShader(VDevice& device, const void *source, size_t src_size)
 VShader::~VShader() {
   vkDestroyShaderModule(device,impl,nullptr);
   }
+
+#endif

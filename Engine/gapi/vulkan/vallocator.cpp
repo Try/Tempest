@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_VULKAN)
+
 #include "vallocator.h"
 
 #include "vdevice.h"
@@ -463,3 +465,5 @@ bool VAllocator::commit(VkDeviceMemory dmem, std::mutex& mmapSync, VkImage dest,
   std::lock_guard<std::mutex> g(mmapSync); // on practice bind requires external sync
   return vkBindImageMemory(dev, dest, dmem, offset)==VkResult::VK_SUCCESS;
   }
+
+#endif

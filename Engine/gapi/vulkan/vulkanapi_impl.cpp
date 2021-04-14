@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_VULKAN)
+
 #include "vulkanapi_impl.h"
 
 #include <Tempest/Log>
@@ -275,3 +277,5 @@ VkBool32 VulkanApi::debugReportCallback(VkDebugReportFlagsEXT      flags,
   Log::e(pMessage," object=",object,", type=",objectType," th:",std::this_thread::get_id());
   return VK_FALSE;
   }
+
+#endif

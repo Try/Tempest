@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_VULKAN)
+
 #include "vcommandpool.h"
 
 #include "vdevice.h"
@@ -26,3 +28,5 @@ VCommandPool::~VCommandPool() {
     return;
   vkDestroyCommandPool(device,impl,nullptr);
   }
+
+#endif

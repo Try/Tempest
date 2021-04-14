@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_VULKAN)
+
 #include "vbuffer.h"
 
 #include "vdevice.h"
@@ -71,3 +73,5 @@ void VBuffer::read(void* out, size_t off, size_t size) {
 
   stage.read(out,0,size);
   }
+
+#endif

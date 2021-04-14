@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_VULKAN)
+
 #include "vcommandbuffer.h"
 
 #include "vdevice.h"
@@ -586,3 +588,5 @@ void VCommandBuffer::implChangeLayout(VkImage dest, VkFormat imageFormat,
       1, &barrier
       );
   }
+
+#endif

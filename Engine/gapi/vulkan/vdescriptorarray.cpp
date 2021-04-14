@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_VULKAN)
+
 #include "vbuffer.h"
 
 #include <Tempest/UniformsLayout>
@@ -207,3 +209,5 @@ void VDescriptorArray::addPoolSize(VkDescriptorPoolSize *p, size_t &sz, VkDescri
   p[sz].descriptorCount=1;
   sz++;
   }
+
+#endif

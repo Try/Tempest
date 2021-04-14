@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_VULKAN)
+
 #include "vfence.h"
 
 #include "vdevice.h"
@@ -36,3 +38,5 @@ bool VFence::wait(uint64_t time) {
 void VFence::reset() {  
   vkAssert(vkResetFences(device,1,&impl));
   }
+
+#endif

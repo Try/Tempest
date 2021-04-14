@@ -1,3 +1,4 @@
+#if defined(TEMPEST_BUILD_VULKAN)
 
 #include "vpipeline.h"
 
@@ -384,3 +385,5 @@ VCompPipeline::~VCompPipeline() {
   vkDestroyPipelineLayout(device,pipelineLayout,nullptr);
   vkDestroyPipeline(device,impl,nullptr);
   }
+
+#endif
