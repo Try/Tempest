@@ -391,6 +391,14 @@ void EventDispatcher::handleModKey(const KeyEvent& e) {
     case Event::K_RControl:
       keyMod.ctrlR = v;
       break;
+#ifdef __OSX__
+    case Event::K_LCommand:
+      keyMod.cmdL = v;
+      break;
+    case Event::K_RCommand:
+      keyMod.cmdR = v;
+      break;
+#endif
     case Event::K_LShift:
       keyMod.shiftL = v;
       break;
@@ -433,7 +441,8 @@ Event::Modifier EventDispatcher::mkModifier() const {
   if(keyMod.ctrlL || keyMod.ctrlR)
     ret |= Event::Modifier::M_Command;
 #else
-#error "TODO: implement apple-command key"
+  if(keyMod.cmdL || keyMod.cmdR)
+    ret |= Event::Modifier::M_Command;
 #endif
   return Event::Modifier(ret);
   }

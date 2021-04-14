@@ -53,6 +53,11 @@ class EventDispatcher final {
       bool ctrlL   = false;
       bool ctrlR   = false;
 
+#ifdef __OSX__
+      bool cmdL    = false;
+      bool cmdR    = false;
+#endif
+
       bool altL    = false;
       bool altR    = false;
 

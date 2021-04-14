@@ -103,7 +103,7 @@ void Log::write(Log::Mode m, char *&out, size_t &count, const void *msg) {
 
 void Log::write(Log::Mode m, char *&out, size_t &count, std::thread::id msg) {
   std::hash<std::thread::id> h;
-  write(m,out,count,h(msg));
+  write(m,out,count,uint64_t(h(msg)));
   }
 
 void Log::write(Mode m, char*& out, size_t& count, int16_t msg){

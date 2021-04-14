@@ -2,6 +2,7 @@
 
 #include "api/windowsapi.h"
 #include "api/x11api.h"
+#include "api/macosapi.h"
 #include "eventdispatcher.h"
 
 #include "exceptions/exception.h"
@@ -95,6 +96,8 @@ SystemApi& SystemApi::inst() {
   static WindowsApi api;
 #elif defined(__LINUX__)
   static X11Api api;
+#elif defined(__OSX__)
+  static MacOSApi api;
 #endif
   return api;
   }

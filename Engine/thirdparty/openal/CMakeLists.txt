@@ -23,8 +23,12 @@ if(WIN32)
     "Alc/backends/null.c"
     "Alc/backends/loopback.c"
     )
-endif()
-if(UNIX)
+elseif(APPLE)
+  file(GLOB AlcBackend
+    "Alc/backends/null.c"
+    "Alc/backends/loopback.c"
+    )
+elseif(UNIX)
   add_definitions(-DHAVE_ALSA)
   file(GLOB AlcBackend
     "Alc/backends/alsa.c"
@@ -32,7 +36,6 @@ if(UNIX)
     "Alc/backends/loopback.c"
     )
 endif()
-
 
 file(GLOB SOURCES
     "*.h"
@@ -47,6 +50,8 @@ if(WIN32)
   target_link_libraries(${PROJECT_NAME} PRIVATE dxguid Dsound winmm Kernel32)
 endif()
 
-if(UNIX)
+if(APPLE)
+  #TODO
+elseif(UNIX)
   target_link_libraries(${PROJECT_NAME} PRIVATE asound)
 endif()

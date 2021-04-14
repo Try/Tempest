@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.4)
+cmake_minimum_required(VERSION 3.16)
 
 project(Tempest)
 set(CMAKE_CXX_STANDARD 14)
@@ -43,6 +43,10 @@ if(MSVC)
   add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
   add_definitions(-DNOMINMAX)
   add_compile_options(/FS)
+endif()
+
+if(APPLE)
+  add_definitions(-D_LARGEFILE64_SOURCE)
 endif()
 
 ### Platforms
@@ -170,12 +174,22 @@ file(GLOB SOURCES
     "**/**/**/**/*.cpp"
   )
 
+if(APPLE)
+  enable_language(OBJCXX)
+  file(GLOB ObjCSOURCES
+    "*.mm"
+    "**/*.mm"
+    "**/**/*.mm"
+    "**/**/**/*.mm"
+    "**/**/**/**/*.mm")
+endif()
+
 # FIXME: the headers include some SOURCES files so installing them is useless
 # the files in include should be the headers themselves!
 file(GLOB_RECURSE PUB_HEADERS "include/Tempest/**")
 
 ### Sources
-target_sources(${PROJECT_NAME} PRIVATE ${GEN_SHADERS_HEADER} ${SOURCES})
+target_sources(${PROJECT_NAME} PRIVATE ${GEN_SHADERS_HEADER} ${SOURCES} ${ObjCSOURCES})
 include_directories("." "include")
 
 set_target_properties(
@@ -185,7 +199,9 @@ set_target_properties(
 
 if(WIN32)
   target_link_libraries(${PROJECT_NAME} PRIVATE shlwapi Kernel32)
-else()
+elseif(APPLE)
+  target_link_libraries(${PROJECT_NAME} PRIVATE "-framework AppKit")
+elseif(LINUX)
   target_link_libraries(${PROJECT_NAME} PRIVATE X11)
 endif()
 

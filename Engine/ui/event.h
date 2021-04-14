@@ -59,7 +59,9 @@ class Event {
 
       K_RControl,
       K_LControl,
-      K_Command, // APPLE command key
+
+      K_RCommand, // APPLE command key
+      K_LCommand,
 
       K_RShift,
       K_LShift,
