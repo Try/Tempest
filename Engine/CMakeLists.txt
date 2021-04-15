@@ -201,7 +201,7 @@ if(WIN32)
   target_link_libraries(${PROJECT_NAME} PRIVATE shlwapi Kernel32)
 elseif(APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE "-framework AppKit")
-elseif(LINUX)
+elseif(UNIX)
   target_link_libraries(${PROJECT_NAME} PRIVATE X11)
 endif()
 
