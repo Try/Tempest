@@ -14,43 +14,43 @@ using namespace testing;
 using namespace Tempest;
 
 TEST(MetalApi,MetalApi) {
-#if defined(_MSC_VER)
+#if defined(__OSX__)
   GapiTestCommon::init<MetalApi>();
 #endif
   }
 
 TEST(MetalApi,Vbo) {
-#if defined(_MSC_VER)
+#if defined(__OSX__)
   GapiTestCommon::vbo<MetalApi>();
 #endif
   }
 
 TEST(MetalApi,VboDyn) {
-#if defined(_MSC_VER)
+#if defined(__)
   GapiTestCommon::vboDyn<MetalApi>();
 #endif
   }
 
 TEST(MetalApi,Shader) {
-#if defined(_MSC_VER)
+#if defined(__)
   GapiTestCommon::shader<MetalApi>();
 #endif
   }
 
 TEST(MetalApi,Pso) {
-#if defined(_MSC_VER)
+#if defined(__)
   GapiTestCommon::pso<MetalApi>();
 #endif
   }
 
 TEST(MetalApi,Fbo) {
-#if defined(_MSC_VER)
+#if defined(__)
   GapiTestCommon::fbo<MetalApi>("MetalApi_Fbo.png");
 #endif
   }
 
 TEST(MetalApi,Draw) {
-#if defined(_MSC_VER)
+#if defined(__)
   GapiTestCommon::draw<MetalApi,TextureFormat::RGBA8>  ("MetalApi_Draw_RGBA8.png");
   GapiTestCommon::draw<MetalApi,TextureFormat::RG8>    ("MetalApi_Draw_RG8.png");
   GapiTestCommon::draw<MetalApi,TextureFormat::R8>     ("MetalApi_Draw_R8.png");
@@ -64,19 +64,19 @@ TEST(MetalApi,Draw) {
   }
 
 TEST(MetalApi,Compute) {
-#if defined(_MSC_VER)
+#if defined(__)
   GapiTestCommon::ssboDispath<MetalApi>();
 #endif
   }
 
 TEST(MetalApi,ComputeImage) {
-#if defined(_MSC_VER)
+#if defined(__)
   GapiTestCommon::imageCompute<MetalApi>("MetalApi_Compute.png");
 #endif
   }
 
 TEST(MetalApi,MipMaps) {
-#if defined(_MSC_VER)
+#if defined(__)
   GapiTestCommon::mipMaps<MetalApi,TextureFormat::RGBA8>  ("MetalApi_MipMaps_RGBA8.png");
   GapiTestCommon::mipMaps<MetalApi,TextureFormat::RGBA16> ("MetalApi_MipMaps_RGBA16.png");
   GapiTestCommon::mipMaps<MetalApi,TextureFormat::RGBA32F>("MetalApi_MipMaps_RGBA32.png");
@@ -84,7 +84,7 @@ TEST(MetalApi,MipMaps) {
   }
 
 TEST(MetalApi,S3TC) {
-#if defined(_MSC_VER)
+#if defined(__)
   try {
     MetalApi api{ApiFlags::Validation};
     Device       device(api);
@@ -100,26 +100,26 @@ TEST(MetalApi,S3TC) {
 #endif
   }
 
-TEST(MetalApi,DISABLED_TesselationBasic) {
-#if defined(_MSC_VER)
+TEST(MetalApi,TesselationBasic) {
+#if defined(__)
   GapiTestCommon::psoTess<MetalApi>();
 #endif
   }
 
 TEST(MetalApi,SsboWrite) {
-#if defined(_MSC_VER)
+#if defined(__)
   GapiTestCommon::ssboWriteVs<MetalApi>();
 #endif
   }
 
 TEST(MetalApi,PushRemapping) {
-#if defined(_MSC_VER)
+#if defined(__)
   GapiTestCommon::pushConstant<MetalApi>();
 #endif
   }
 
 TEST(MetalApi,SpirvDefect) {
-#if defined(_MSC_VER)
+#if defined(__)
   using namespace Tempest;
 
   try {

@@ -11,7 +11,7 @@ struct MetalApi::Impl {
 
   };
 
-MetalApi::MetalApi() {
+MetalApi::MetalApi(ApiFlags f) {
   impl.reset(new Impl());
   }
 
