@@ -14,6 +14,7 @@ using namespace testing;
 using namespace Tempest;
 
 TEST(main,Draw2d) {
+#if !defined(__OSX__)
   try {
     VulkanApi    api;
     Device       device(api);
@@ -31,4 +32,5 @@ TEST(main,Draw2d) {
       Log::d("Skipping vulkan testcase: ", e.what()); else
       throw;
     }
+#endif
   }

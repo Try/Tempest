@@ -32,7 +32,7 @@ else()
 endif()
 
 # GLSL to SPIRV compiler
-find_program(GLSLANGVALIDATOR glslangValidator)
+find_program(GLSLANGVALIDATOR glslangValidator "/opt/homebrew/bin")
 if(NOT GLSLANGVALIDATOR)
   message(FATAL_ERROR "glslangValidator required")
 endif()
