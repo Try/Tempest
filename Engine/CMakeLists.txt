@@ -65,6 +65,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/squish")
 
 ### libpng16
 set(PNG_SHARED OFF)
+set(PNG_STATIC ON)
+set(PNG_TESTS  OFF)
 set(SKIP_INSTALL_ALL ON)
 add_subdirectory("thirdparty/libpng")
 target_include_directories(png_static PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
