@@ -19,8 +19,8 @@ class NsPtr {
   };
 
 template<class T, class U>
-static inline id get(U* ptr) {
-  return reinterpret_cast<T*>(ptr)->impl.get();
+static inline id get(const U* ptr) {
+  return reinterpret_cast<const T*>(ptr)->impl.get();
   }
 
 }

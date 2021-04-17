@@ -16,6 +16,7 @@ class MtDevice : public AbstractGraphicsApi::Device {
     void waitIdle() override;
 
     NsPtr impl;
+    NsPtr queue;
   };
 
 }

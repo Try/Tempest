@@ -3,6 +3,7 @@
 #include "gapi/metal/mtdevice.h"
 #include "gapi/metal/mtbuffer.h"
 #include "gapi/metal/mtshader.h"
+#include "gapi/metal/mtpipeline.h"
 
 #import  <Metal/MTLDevice.h>
 
@@ -13,7 +14,7 @@ struct MetalApi::Impl {
 
   };
 
-MetalApi::MetalApi(ApiFlags f) {
+MetalApi::MetalApi(ApiFlags) {
   impl.reset(new Impl());
   }
 
@@ -53,14 +54,20 @@ AbstractGraphicsApi::PFboLayout MetalApi::createFboLayout(AbstractGraphicsApi::D
   return PFboLayout();
   }
 
-AbstractGraphicsApi::PPipeline MetalApi::createPipeline(AbstractGraphicsApi::Device *d, const RenderState &st, size_t stride, Topology tp,
+AbstractGraphicsApi::PPipeline MetalApi::createPipeline(AbstractGraphicsApi::Device *d,
+                                                        const RenderState &st, size_t stride,
+                                                        Topology tp,
                                                         const AbstractGraphicsApi::UniformsLay &ulayImpl,
                                                         const AbstractGraphicsApi::Shader *vs,
                                                         const AbstractGraphicsApi::Shader *tc,
                                                         const AbstractGraphicsApi::Shader *te,
                                                         const AbstractGraphicsApi::Shader *gs,
                                                         const AbstractGraphicsApi::Shader *fs) {
-  return PPipeline();
+  id<MTLDevice> dx = Detail::get<MtDevice,AbstractGraphicsApi::Device>(d);
+  auto&         vx = *reinterpret_cast<const MtShader*>(vs);
+  auto&         fx = *reinterpret_cast<const MtShader*>(fs);
+
+  return PPipeline(new MtPipeline(st,stride,vx.impl,fx.impl));
   }
 
 AbstractGraphicsApi::PCompPipeline MetalApi::createComputePipeline(AbstractGraphicsApi::Device *d, const AbstractGraphicsApi::UniformsLay &ulayImpl,
@@ -84,9 +91,34 @@ AbstractGraphicsApi::Semaphore *MetalApi::createSemaphore(AbstractGraphicsApi::D
 AbstractGraphicsApi::PBuffer MetalApi::createBuffer(AbstractGraphicsApi::Device *d,
                                                     const void *mem, size_t count, size_t size, size_t alignedSz,
                                                     MemUsage usage, BufferHeap flg) {
-  id<MTLDevice> dx  = Detail::get<MtDevice,AbstractGraphicsApi::Device>(d);
-  id<MTLBuffer> ret = [dx newBufferWithLength:count*alignedSz options:MTLCPUCacheModeDefaultCache];
-  return PBuffer(new MtBuffer(ret));
+  auto& dx = *reinterpret_cast<MtDevice*>(d);
+
+  MTLResourceOptions opt = 0;
+  // https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/MTLBestPracticesGuide/ResourceOptions.html#//apple_ref/doc/uid/TP40016642-CH17-SW1
+  switch(flg) {
+    case BufferHeap::Device:
+      opt |= MTLResourceStorageModePrivate;
+      break;
+    case BufferHeap::Upload:
+#ifndef __IOS__
+      if(count*alignedSz>PAGE_SIZE)
+        opt |= MTLResourceStorageModeManaged; else
+        opt |= MTLResourceStorageModeShared;
+#else
+      opt |= MTLResourceStorageModeShared;
+#endif
+      opt |= MTLResourceCPUCacheModeWriteCombined;
+      break;
+    case BufferHeap::Readback:
+      opt |= MTLResourceStorageModeManaged;
+      opt |= MTLResourceCPUCacheModeDefaultCache;
+      break;
+    }
+
+  opt |= MTLResourceHazardTrackingModeDefault;
+
+  id<MTLBuffer> ret = [dx.impl.get() newBufferWithLength:count*alignedSz options:opt];
+  return PBuffer(new MtBuffer(dx,ret,opt));
   }
 
 AbstractGraphicsApi::PTexture MetalApi::createTexture(AbstractGraphicsApi::Device *d,

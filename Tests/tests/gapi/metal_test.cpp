@@ -26,7 +26,7 @@ TEST(MetalApi,Vbo) {
   }
 
 TEST(MetalApi,VboDyn) {
-#if defined(__)
+#if defined(__OSX__)
   GapiTestCommon::vboDyn<MetalApi>();
 #endif
   }
@@ -38,7 +38,7 @@ TEST(MetalApi,Shader) {
   }
 
 TEST(MetalApi,Pso) {
-#if defined(__)
+#if defined(__OSX__)
   GapiTestCommon::pso<MetalApi>();
 #endif
   }
