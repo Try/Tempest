@@ -4,12 +4,25 @@
 
 using namespace Tempest::Detail;
 
-NsIdPtr::NsIdPtr(void *ptr):ptr(ptr) {
-  if(ptr!=nullptr)
-    CFRetain(ptr);
+NsPtr::NsPtr(void *ptr):ptr(ptr) {
   }
 
-NsIdPtr::~NsIdPtr() {
-  if(ptr!=nullptr)
-    CFRelease(ptr);
+NsPtr::NsPtr(NsPtr &&other)
+  :ptr(other.ptr) {
+  other.ptr = nullptr;
+  }
+
+NsPtr &NsPtr::operator =(NsPtr &&other) {
+  std::swap(ptr,other.ptr);
+  return *this;
+  }
+
+NsPtr::~NsPtr() {
+  if(ptr==nullptr)
+    return;
+#ifndef NDEBUG
+  //int cnt = CFGetRetainCount(ptr);
+  //assert(cnt==1);
+#endif
+  CFRelease(ptr);
   }

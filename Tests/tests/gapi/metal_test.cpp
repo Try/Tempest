@@ -32,7 +32,7 @@ TEST(MetalApi,VboDyn) {
   }
 
 TEST(MetalApi,Shader) {
-#if defined(__)
+#if defined(__OSX__)
   GapiTestCommon::shader<MetalApi>();
 #endif
   }

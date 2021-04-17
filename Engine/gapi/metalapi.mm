@@ -1,8 +1,10 @@
 #include "metalapi.h"
 
 #include "gapi/metal/mtdevice.h"
+#include "gapi/metal/mtbuffer.h"
+#include "gapi/metal/mtshader.h"
 
-#include <Metal/MTLDevice.h>
+#import  <Metal/MTLDevice.h>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -67,7 +69,8 @@ AbstractGraphicsApi::PCompPipeline MetalApi::createComputePipeline(AbstractGraph
   }
 
 AbstractGraphicsApi::PShader MetalApi::createShader(AbstractGraphicsApi::Device *d, const void *source, size_t src_size) {
-  return PShader();
+  id<MTLDevice> dx  = Detail::get<MtDevice,AbstractGraphicsApi::Device>(d);
+  return PShader(new MtShader(dx,source,src_size));
   }
 
 AbstractGraphicsApi::Fence *MetalApi::createFence(AbstractGraphicsApi::Device *d) {
@@ -80,8 +83,10 @@ AbstractGraphicsApi::Semaphore *MetalApi::createSemaphore(AbstractGraphicsApi::D
 
 AbstractGraphicsApi::PBuffer MetalApi::createBuffer(AbstractGraphicsApi::Device *d,
                                                     const void *mem, size_t count, size_t size, size_t alignedSz,
-                                                    MemUsage usage, BufferHeap flg){
-  return PBuffer();
+                                                    MemUsage usage, BufferHeap flg) {
+  id<MTLDevice> dx  = Detail::get<MtDevice,AbstractGraphicsApi::Device>(d);
+  id<MTLBuffer> ret = [dx newBufferWithLength:count*alignedSz options:MTLCPUCacheModeDefaultCache];
+  return PBuffer(new MtBuffer(ret));
   }
 
 AbstractGraphicsApi::PTexture MetalApi::createTexture(AbstractGraphicsApi::Device *d,
