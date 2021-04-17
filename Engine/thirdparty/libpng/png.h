@@ -1,9 +1,9 @@
 
 /* png.h - header file for PNG reference library
  *
- * libpng version 1.6.38.git
+ * libpng version 1.6.37 - April 14, 2019
  *
- * Copyright (c) 2018-2020 Cosmin Truta
+ * Copyright (c) 2018-2019 Cosmin Truta
  * Copyright (c) 1998-2002,2004,2006-2018 Glenn Randers-Pehrson
  * Copyright (c) 1996-1997 Andreas Dilger
  * Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.
@@ -27,8 +27,8 @@
  * PNG Reference Library License version 2
  * ---------------------------------------
  *
- *  * Copyright (c) 1995-2020 The PNG Reference Library Authors.
- *  * Copyright (c) 2018-2020 Cosmin Truta.
+ *  * Copyright (c) 1995-2019 The PNG Reference Library Authors.
+ *  * Copyright (c) 2018-2019 Cosmin Truta.
  *  * Copyright (c) 2000-2002, 2004, 2006-2018 Glenn Randers-Pehrson.
  *  * Copyright (c) 1996-1997 Andreas Dilger.
  *  * Copyright (c) 1995-1996 Guy Eric Schalnat, Group 42, Inc.
@@ -278,8 +278,8 @@
  */
 
 /* Version information for png.h - this should match the version in png.c */
-#define PNG_LIBPNG_VER_STRING "1.6.38.git"
-#define PNG_HEADER_VERSION_STRING " libpng version 1.6.38.git\n"
+#define PNG_LIBPNG_VER_STRING "1.6.37"
+#define PNG_HEADER_VERSION_STRING " libpng version 1.6.37 - April 14, 2019\n"
 
 #define PNG_LIBPNG_VER_SONUM   16
 #define PNG_LIBPNG_VER_DLLNUM  16
@@ -287,12 +287,12 @@
 /* These should match the first 3 components of PNG_LIBPNG_VER_STRING: */
 #define PNG_LIBPNG_VER_MAJOR   1
 #define PNG_LIBPNG_VER_MINOR   6
-#define PNG_LIBPNG_VER_RELEASE 38
+#define PNG_LIBPNG_VER_RELEASE 37
 
 /* This should be zero for a public release, or non-zero for a
  * development version.  [Deprecated]
  */
-#define PNG_LIBPNG_VER_BUILD  1
+#define PNG_LIBPNG_VER_BUILD  0
 
 /* Release Status */
 #define PNG_LIBPNG_BUILD_ALPHA    1
@@ -309,7 +309,7 @@
 #define PNG_LIBPNG_BUILD_SPECIAL 32 /* Cannot be OR'ed with
                                        PNG_LIBPNG_BUILD_PRIVATE */
 
-#define PNG_LIBPNG_BUILD_BASE_TYPE PNG_LIBPNG_BUILD_BETA
+#define PNG_LIBPNG_BUILD_BASE_TYPE PNG_LIBPNG_BUILD_STABLE
 
 /* Careful here.  At one time, Guy wanted to use 082, but that
  * would be octal.  We must not include leading zeros.
@@ -318,7 +318,7 @@
  * From version 1.0.1 it is:
  * XXYYZZ, where XX=major, YY=minor, ZZ=release
  */
-#define PNG_LIBPNG_VER 10638 /* 1.6.38.git */
+#define PNG_LIBPNG_VER 10637 /* 1.6.37 */
 
 /* Library configuration: these options cannot be changed after
  * the library has been built.
@@ -428,7 +428,7 @@ extern "C" {
 /* This triggers a compiler error in png.c, if png.c and png.h
  * do not agree upon the version number.
  */
-typedef char* png_libpng_version_1_6_38_git;
+typedef char* png_libpng_version_1_6_37;
 
 /* Basic control structions.  Read libpng-manual.txt or libpng.3 for more info.
  *

@@ -14,7 +14,7 @@
 
 #if PNG_ARM_NEON_IMPLEMENTATION == 1
 
-#if defined(_MSC_VER) && !defined(__clang__) && defined(_M_ARM64)
+#if defined(_MSC_VER) && defined(_M_ARM64)
 #  include <arm64_neon.h>
 #else
 #  include <arm_neon.h>
@@ -30,6 +30,8 @@ png_riffle_palette_neon(png_structrp png_ptr)
    int num_trans = png_ptr->num_trans;
    int i;
 
+   png_debug(1, "in png_riffle_palette_neon");
+
    /* Initially black, opaque. */
    uint8x16x4_t w = {{
       vdupq_n_u8(0x00),
@@ -37,8 +39,6 @@ png_riffle_palette_neon(png_structrp png_ptr)
       vdupq_n_u8(0x00),
       vdupq_n_u8(0xff),
    }};
-
-   png_debug(1, "in png_riffle_palette_neon");
 
    /* First, riffle the RGB colours into an RGBA8 palette.
     * The alpha component is set to opaque for now.
