@@ -147,9 +147,8 @@ SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, uint32_t
                                 module,                // hInstance
                                 nullptr);              // no extra parameters
 
-  if( !window ) {
+  if(!window)
     return nullptr;
-    }
 
   SetWindowLongPtr(window,GWLP_USERDATA,LONG_PTR(owner));
   Window* wx = reinterpret_cast<Window*>(window);
@@ -170,8 +169,7 @@ SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, uint32_t
 SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, ShowMode sm) {
   SystemApi::Window* hwnd = nullptr;
   if(sm==Hidden) {
-    hwnd = implCreateWindow(owner,uint32_t(1),uint32_t(1));
-    // ShowWindow(HWND(hwnd),SW_HIDE);
+    hwnd = implCreateWindow(owner,uint32_t(1),uint32_t(1),Hidden);
     }
   else if(sm==Minimized) {
     hwnd =  implCreateWindow(owner,800,600);
