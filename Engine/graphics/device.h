@@ -130,7 +130,9 @@ class Device {
       return ssbo(BufferHeap::Device,arr.data(),arr.size()*sizeof(T));
       }
 
-    DescriptorSet        descriptors(const UniformsLayout &owner);
+    DescriptorSet        descriptors(const RenderPipeline&  pso) { return descriptors(pso.layout()); }
+    DescriptorSet        descriptors(const ComputePipeline& pso) { return descriptors(pso.layout()); }
+    DescriptorSet        descriptors(const UniformsLayout&  lay);
 
     Attachment           attachment (TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips = false);
     ZBuffer              zbuffer    (TextureFormat frm, const uint32_t w, const uint32_t h);
@@ -171,7 +173,6 @@ class Device {
     CommandBuffer        commandBuffer();
 
     const Builtin&       builtin() const;
-    const char*          renderer() const;
 
   private:
     struct Impl {

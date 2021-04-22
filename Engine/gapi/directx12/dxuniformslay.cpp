@@ -4,7 +4,6 @@
 
 #include <Tempest/UniformsLayout>
 
-#include "gapi/shaderreflection.h"
 #include "dxdevice.h"
 #include "guid.h"
 
@@ -13,15 +12,15 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-static D3D12_SHADER_VISIBILITY nativeFormat(UniformsLayout::Stage stage){
+static D3D12_SHADER_VISIBILITY nativeFormat(ShaderReflection::Stage stage){
   switch(stage) {
-    case UniformsLayout::Stage::Vertex:
+    case ShaderReflection::Stage::Vertex:
       return D3D12_SHADER_VISIBILITY_VERTEX;
-    case UniformsLayout::Stage::Fragment:
+    case ShaderReflection::Stage::Fragment:
       return D3D12_SHADER_VISIBILITY_PIXEL;
-    case UniformsLayout::Stage::Geometry:
+    case ShaderReflection::Stage::Geometry:
       return D3D12_SHADER_VISIBILITY_GEOMETRY;
-    case UniformsLayout::Stage::Compute:
+    case ShaderReflection::Stage::Compute:
       return D3D12_SHADER_VISIBILITY_ALL;
     }
   return D3D12_SHADER_VISIBILITY_ALL;
@@ -67,16 +66,16 @@ DxUniformsLay::DescriptorPool::~DescriptorPool() {
   }
 
 
-DxUniformsLay::DxUniformsLay(DxDevice& dev, const std::vector<UniformsLayout::Binding>& comp)
+DxUniformsLay::DxUniformsLay(DxDevice& dev, const std::vector<ShaderReflection::Binding>& comp)
   :dev(dev) {
-  UniformsLayout::PushBlock pb;
+  ShaderReflection::PushBlock pb;
   ShaderReflection::merge(lay,pb, comp);
   init(lay,pb);
   }
 
-DxUniformsLay::DxUniformsLay(DxDevice& dev, const std::vector<UniformsLayout::Binding>* sh[], size_t cnt)
+DxUniformsLay::DxUniformsLay(DxDevice& dev, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt)
   : dev(dev) {
-  UniformsLayout::PushBlock pb;
+  ShaderReflection::PushBlock pb;
   ShaderReflection::merge(lay, pb, sh, cnt);
   init(lay,pb);
   }
@@ -85,7 +84,7 @@ size_t DxUniformsLay::descriptorsCount() {
   return lay.size();
   }
 
-void DxUniformsLay::init(const std::vector<Binding>& lay, const UniformsLayout::PushBlock& pb) {
+void DxUniformsLay::init(const std::vector<Binding>& lay, const ShaderReflection::PushBlock& pb) {
   auto& device = *dev.device;
   descSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
   smpSize  = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
@@ -99,35 +98,35 @@ void DxUniformsLay::init(const std::vector<Binding>& lay, const UniformsLayout::
   std::vector<Parameter> desc;
   for(size_t i=0;i<lay.size();++i) {
     auto& l = lay[i];
-    if(l.stage==UniformsLayout::Stage(0))
+    if(l.stage==ShaderReflection::Stage(0))
       continue;
     switch(l.cls) {
-      case UniformsLayout::Ubo: {
+      case ShaderReflection::Ubo: {
         add(l,D3D12_DESCRIPTOR_RANGE_TYPE_CBV,desc);
         break;
         }
-      case UniformsLayout::SsboR: {
+      case ShaderReflection::SsboR: {
         add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,desc);
         break;
         }
-      case UniformsLayout::SsboRW: {
+      case ShaderReflection::SsboRW: {
         add(l,D3D12_DESCRIPTOR_RANGE_TYPE_UAV,desc);
         break;
         }
-      case UniformsLayout::ImgR: {
+      case ShaderReflection::ImgR: {
         add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,desc);
         break;
         }
-      case UniformsLayout::ImgRW: {
+      case ShaderReflection::ImgRW: {
         add(l,D3D12_DESCRIPTOR_RANGE_TYPE_UAV,desc);
         break;
         }
-      case UniformsLayout::Texture: {
+      case ShaderReflection::Texture: {
         add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,    desc);
         add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,desc);
         break;
         }
-      case UniformsLayout::Push:
+      case ShaderReflection::Push:
         break;
       }
     }
@@ -219,7 +218,7 @@ void DxUniformsLay::init(const std::vector<Binding>& lay, const UniformsLayout::
     for(layout=0; ; ++layout) {
       bool done = true;
       for(auto& i:lay)
-        if(i.stage!=UniformsLayout::Stage(0) && i.cls==UniformsLayout::Ubo && i.layout==layout) {
+        if(i.stage!=ShaderReflection::Stage(0) && i.cls==ShaderReflection::Ubo && i.layout==layout) {
           done = false;
           break;
           }
@@ -257,10 +256,9 @@ void DxUniformsLay::init(const std::vector<Binding>& lay, const UniformsLayout::
                                       uuid<ID3D12RootSignature>(), reinterpret_cast<void**>(&impl)));
   }
 
-void DxUniformsLay::add(const Tempest::UniformsLayout::Binding& b,
+void DxUniformsLay::add(const ShaderReflection::Binding& b,
                         D3D12_DESCRIPTOR_RANGE_TYPE type,
                         std::vector<Parameter>& root) {
-
   Parameter rp;
 
   rp.rgn.RangeType          = type;

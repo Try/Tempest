@@ -9,7 +9,7 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-VUniformsLay::VUniformsLay(VDevice& dev, const std::vector<UniformsLayout::Binding>& comp)
+VUniformsLay::VUniformsLay(VDevice& dev, const std::vector<ShaderReflection::Binding>& comp)
   : dev(dev.device) {
   ShaderReflection::merge(lay, pb, comp);
   adjustSsboBindings();
@@ -23,7 +23,7 @@ VUniformsLay::VUniformsLay(VDevice& dev, const std::vector<UniformsLayout::Bindi
     }
   }
 
-VUniformsLay::VUniformsLay(VDevice& dev, const std::vector<UniformsLayout::Binding>* sh[], size_t cnt)
+VUniformsLay::VUniformsLay(VDevice& dev, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt)
   : dev(dev.device) {
   ShaderReflection::merge(lay, pb, sh, cnt);
   adjustSsboBindings();
@@ -62,7 +62,7 @@ void VUniformsLay::implCreate(VkDescriptorSetLayoutBinding* bind) {
     auto& b=bind[count];
     auto& e=lay[i];
 
-    if(e.stage==UniformsLayout::Stage(0))
+    if(e.stage==ShaderReflection::Stage(0))
       continue;
 
     b.binding         = e.layout;
@@ -70,17 +70,17 @@ void VUniformsLay::implCreate(VkDescriptorSetLayoutBinding* bind) {
     b.descriptorType  = types[e.cls];
 
     b.stageFlags      = 0;
-    if(e.stage&UniformsLayout::Compute)
+    if(e.stage&ShaderReflection::Compute)
       b.stageFlags |= VK_SHADER_STAGE_COMPUTE_BIT;
-    if(e.stage&UniformsLayout::Vertex)
+    if(e.stage&ShaderReflection::Vertex)
       b.stageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
-    if(e.stage&UniformsLayout::Control)
+    if(e.stage&ShaderReflection::Control)
       b.stageFlags |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-    if(e.stage&UniformsLayout::Evaluate)
+    if(e.stage&ShaderReflection::Evaluate)
       b.stageFlags |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-    if(e.stage&UniformsLayout::Geometry)
+    if(e.stage&ShaderReflection::Geometry)
       b.stageFlags |= VK_SHADER_STAGE_GEOMETRY_BIT;
-    if(e.stage&UniformsLayout::Fragment)
+    if(e.stage&ShaderReflection::Fragment)
       b.stageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
     ++count;
     }
@@ -98,13 +98,12 @@ void VUniformsLay::adjustSsboBindings() {
     if(i.size==0)
       i.size = VK_WHOLE_SIZE;
   for(auto& i:lay)
-    if(i.cls==UniformsLayout::SsboR  ||
-       i.cls==UniformsLayout::SsboRW ||
-       i.cls==UniformsLayout::ImgR   ||
-       i.cls==UniformsLayout::ImgRW ) {
+    if(i.cls==ShaderReflection::SsboR  ||
+       i.cls==ShaderReflection::SsboRW ||
+       i.cls==ShaderReflection::ImgR   ||
+       i.cls==ShaderReflection::ImgRW ) {
       hasSSBO = true;
       }
   }
-
 
 #endif

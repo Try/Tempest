@@ -54,13 +54,13 @@ VkDescriptorPool VDescriptorArray::allocPool(const VUniformsLay& lay, size_t siz
   for(size_t i=0;i<lay.lay.size();++i){
     auto cls = lay.lay[i].cls;
     switch(cls) {
-      case UniformsLayout::Ubo:     addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);         break;
-      case UniformsLayout::Texture: addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER); break;
-      case UniformsLayout::SsboR:
-      case UniformsLayout::SsboRW:  addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);         break;
-      case UniformsLayout::ImgR:
-      case UniformsLayout::ImgRW:   addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);          break;
-      case UniformsLayout::Push:    break;
+      case ShaderReflection::Ubo:     addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);         break;
+      case ShaderReflection::Texture: addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER); break;
+      case ShaderReflection::SsboR:
+      case ShaderReflection::SsboRW:  addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);         break;
+      case ShaderReflection::ImgR:
+      case ShaderReflection::ImgRW:   addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);          break;
+      case ShaderReflection::Push:    break;
       }
     }
 
@@ -181,18 +181,18 @@ void VDescriptorArray::setSsbo(size_t id, Tempest::AbstractGraphicsApi::Buffer *
 void VDescriptorArray::ssboBarriers(ResourceState& res) {
   for(size_t i=0; i<lay.handler->lay.size(); ++i) {
     switch(lay.handler->lay[i].cls) {
-      case UniformsLayout::Ubo:
-      case UniformsLayout::Texture:
-      case UniformsLayout::Push:
+      case ShaderReflection::Ubo:
+      case ShaderReflection::Texture:
+      case ShaderReflection::Push:
         break;
-      case UniformsLayout::SsboR:
+      case ShaderReflection::SsboR:
         res.setLayout(*ssbo[i].buf,BufferLayout::ComputeRead);
         break;
-      case UniformsLayout::SsboRW:
+      case ShaderReflection::SsboRW:
         res.setLayout(*ssbo[i].buf,BufferLayout::ComputeReadWrite);
         break;
-      case UniformsLayout::ImgR:
-      case UniformsLayout::ImgRW:
+      case ShaderReflection::ImgR:
+      case ShaderReflection::ImgRW:
         break;
       }
     }

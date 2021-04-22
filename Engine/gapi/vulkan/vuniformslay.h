@@ -8,6 +8,7 @@
 #include <list>
 #include <vector>
 
+#include "gapi/shaderreflection.h"
 #include "utility/spinlock.h"
 
 namespace Tempest {
@@ -22,18 +23,18 @@ class VShader;
 
 class VUniformsLay : public AbstractGraphicsApi::UniformsLay {
   public:
-    VUniformsLay(VDevice& dev, const std::vector<UniformsLayout::Binding>& comp);
-    VUniformsLay(VDevice& dev, const std::vector<UniformsLayout::Binding>* sh[], size_t cnt);
+    VUniformsLay(VDevice& dev, const std::vector<ShaderReflection::Binding>& comp);
+    VUniformsLay(VDevice& dev, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt);
     ~VUniformsLay();
 
     size_t descriptorsCount() override;
 
-    using Binding = UniformsLayout::Binding;
+    using Binding = ShaderReflection::Binding;
 
     VkDevice                      dev =nullptr;
     VkDescriptorSetLayout         impl=VK_NULL_HANDLE;
     std::vector<Binding>          lay;
-    UniformsLayout::PushBlock     pb;
+    ShaderReflection::PushBlock   pb;
     bool                          hasSSBO = false;
 
   private:

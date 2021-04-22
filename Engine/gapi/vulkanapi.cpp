@@ -20,6 +20,7 @@
 #include "vulkan/vuniformslay.h"
 
 #include "deviceallocator.h"
+#include "shaderreflection.h"
 
 #include "vulkan/vulkan_sdk.h"
 
@@ -288,7 +289,7 @@ AbstractGraphicsApi::PUniformsLay VulkanApi::createUboLayout(Device *d,
     }
 
   const Shader* sh[] = {vs,tc,te,gs,fs};
-  const std::vector<UniformsLayout::Binding>* lay[5] = {};
+  const std::vector<Detail::ShaderReflection::Binding>* lay[5] = {};
   for(size_t i=0; i<5; ++i) {
     if(sh[i]==nullptr)
       continue;

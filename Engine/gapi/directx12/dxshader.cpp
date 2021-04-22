@@ -81,7 +81,7 @@ DxShader::DxShader(const void *source, size_t src_size) {
   HRESULT hr = D3DCompile(hlsl.c_str(),hlsl.size(),nullptr,nullptr,nullptr,"main",target,compileFlags,0,
                           reinterpret_cast<ID3DBlob**>(&shader),reinterpret_cast<ID3DBlob**>(&err));
   if(hr!=S_OK) {
-#if !defined(NDEBUG)
+#if 1 || !defined(NDEBUG)
     Log::d(hlsl.c_str());
     Log::d(reinterpret_cast<const char*>(err->GetBufferPointer()));
 #endif

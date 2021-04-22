@@ -6,6 +6,7 @@
 
 #include <d3d12.h>
 #include "gapi/directx12/comptr.h"
+#include "gapi/shaderreflection.h"
 
 #include <bitset>
 
@@ -20,12 +21,12 @@ class DxDevice;
 
 class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
   public:
-    DxUniformsLay(DxDevice& device, const std::vector<UniformsLayout::Binding>& comp);
-    DxUniformsLay(DxDevice& device, const std::vector<UniformsLayout::Binding>* sh[], size_t cnt);
+    DxUniformsLay(DxDevice& device, const std::vector<ShaderReflection::Binding>& comp);
+    DxUniformsLay(DxDevice& device, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt);
 
     size_t descriptorsCount() override;
 
-    using Binding = UniformsLayout::Binding;
+    using Binding = ShaderReflection::Binding;
 
     enum {
       POOL_SIZE = 128,
@@ -96,8 +97,8 @@ class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
     UINT                        descSize = 0;
     UINT                        smpSize  = 0;
 
-    void init(const std::vector<Binding>& lay, const UniformsLayout::PushBlock& pb);
-    void add(const UniformsLayout::Binding& b, D3D12_DESCRIPTOR_RANGE_TYPE type, std::vector<Parameter>& root);
+    void init(const std::vector<Binding>& lay, const ShaderReflection::PushBlock& pb);
+    void add (const ShaderReflection::Binding& b, D3D12_DESCRIPTOR_RANGE_TYPE type, std::vector<Parameter>& root);
   };
 
 }
