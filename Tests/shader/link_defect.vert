@@ -8,7 +8,7 @@ out gl_PerVertex {
 layout(location = 0) in vec2 inPos;
 
 layout(location = 0) out VsData {
-  vec4 array[2]; // spirv-cross bug: arrays are not mapped properly
+  vec4 array[2];
   vec2 pos;
   } shOut;
 
