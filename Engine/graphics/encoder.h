@@ -3,7 +3,7 @@
 #include <Tempest/CommandBuffer>
 #include <Tempest/RenderPipeline>
 #include <Tempest/ComputePipeline>
-#include <Tempest/Uniforms>
+#include <Tempest/DescriptorSet>
 
 #include "videobuffer.h"
 
@@ -35,17 +35,17 @@ class Encoder<Tempest::CommandBuffer> {
     void setFramebuffer(const FrameBuffer& fbo, const RenderPass& p);
     void setFramebuffer(std::nullptr_t null);
 
-    void setUniforms(const RenderPipeline& p, const Uniforms &ubo, const void* data, size_t sz);
+    void setUniforms(const RenderPipeline& p, const DescriptorSet &ubo, const void* data, size_t sz);
     void setUniforms(const RenderPipeline& p, const void* data, size_t sz);
-    void setUniforms(const RenderPipeline& p, const Uniforms &ubo);
+    void setUniforms(const RenderPipeline& p, const DescriptorSet &ubo);
     void setUniforms(const RenderPipeline& p);
 
-    void setUniforms(const Detail::ResourcePtr<RenderPipeline> &p, const Uniforms &ubo);
+    void setUniforms(const Detail::ResourcePtr<RenderPipeline> &p, const DescriptorSet &ubo);
     void setUniforms(const Detail::ResourcePtr<RenderPipeline> &p);
 
-    void setUniforms(const ComputePipeline& p, const Uniforms &ubo, const void* data, size_t sz);
+    void setUniforms(const ComputePipeline& p, const DescriptorSet &ubo, const void* data, size_t sz);
     void setUniforms(const ComputePipeline& p, const void* data, size_t sz);
-    void setUniforms(const ComputePipeline& p, const Uniforms &ubo);
+    void setUniforms(const ComputePipeline& p, const DescriptorSet &ubo);
     void setUniforms(const ComputePipeline& p);
 
     void setViewport(int x,int y,int w,int h);

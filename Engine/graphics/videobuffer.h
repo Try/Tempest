@@ -7,7 +7,7 @@ namespace Tempest {
 
 class Device;
 class CommandBuffer;
-class Uniforms;
+class DescriptorSet;
 template<class T>
 class Encoder;
 
@@ -29,7 +29,7 @@ class VideoBuffer {
 
   friend class Tempest::Device;
   friend class Tempest::CommandBuffer;
-  friend class Tempest::Uniforms;
+  friend class Tempest::DescriptorSet;
   friend class Tempest::Encoder<Tempest::CommandBuffer>;
   };
 

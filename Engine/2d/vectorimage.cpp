@@ -131,12 +131,12 @@ void VectorImage::makeActual(Device &dev,Swapchain& sw) {
 
     for(size_t i=0;i<blocks.size();++i){
       auto&     b =blocks[i];
-      Uniforms& ux=f.blocks[i];
+      auto&     ux=f.blocks[i];
       UboType   t =(b.hasImg) ? UT_Img : UT_NoImg;
 
       if(ux.isEmpty() || f.blocksType[i]!=t){
         auto& p = pipelineOf(dev,b);
-        ux = dev.uniforms(p.layout());
+        ux = dev.descriptors(p.layout());
         f.blocksType[i] = t;
         }
       if(T_LIKELY(t==UT_Img)) {

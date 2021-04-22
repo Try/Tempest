@@ -39,7 +39,7 @@ class Attachment final {
 
   friend class Tempest::Device;
   friend class Tempest::Swapchain;
-  friend class Tempest::Uniforms;
+  friend class Tempest::DescriptorSet;
   friend class Encoder<Tempest::CommandBuffer>;
 
   template<class T>

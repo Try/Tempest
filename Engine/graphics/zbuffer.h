@@ -32,7 +32,7 @@ class ZBuffer final {
     bool      sampleFormat=false;
 
   friend class Tempest::Device;
-  friend class Tempest::Uniforms;
+  friend class Tempest::DescriptorSet;
   friend class Encoder<Tempest::CommandBuffer>;
 
   template<class T>

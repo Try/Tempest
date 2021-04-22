@@ -347,6 +347,7 @@ namespace Tempest {
       struct Uniforms        {};
       struct UniformsLay:Shared {
         virtual ~UniformsLay()=default;
+        virtual size_t descriptorsCount() = 0;
         };
       struct Buffer:Shared   {
         virtual ~Buffer()=default;

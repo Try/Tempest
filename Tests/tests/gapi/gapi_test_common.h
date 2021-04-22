@@ -223,7 +223,7 @@ void ssboDispath() {
     auto cs     = device.loadShader("shader/simple_test.comp.sprv");
     auto pso    = device.pipeline(cs);
 
-    auto ubo = device.uniforms(pso.layout());
+    auto ubo = device.descriptors(pso.layout());
     ubo.set(0,input);
     ubo.set(1,output);
 
@@ -264,7 +264,7 @@ void imageCompute(const char* outImage) {
     auto cs  = device.loadShader("shader/image_store_test.comp.sprv");
     auto pso = device.pipeline(cs);
 
-    auto ubo = device.uniforms(pso.layout());
+    auto ubo = device.descriptors(pso.layout());
     ubo.set(0,img);
 
     auto cmd = device.commandBuffer();
@@ -356,7 +356,7 @@ void ssboWriteVs() {
     auto rp     = device.pass(FboMode(FboMode::PreserveOut,Color(0.f,0.f,1.f)));
 
     auto vsOut  = device.ssbo(nullptr, sizeof(Vec4)*3);
-    auto ubo    = device.uniforms(pso.layout());
+    auto ubo    = device.descriptors(pso.layout());
     ubo.set(0,vsOut);
 
     // setup computer pipeline
@@ -364,7 +364,7 @@ void ssboWriteVs() {
     auto pso2   = device.pipeline(cs);
     auto csOut  = device.ssbo(nullptr, sizeof(Vec4)*3);
 
-    auto ubo2   = device.uniforms(pso2.layout());
+    auto ubo2   = device.descriptors(pso2.layout());
     ubo2.set(0,vsOut);
     ubo2.set(1,csOut);
 
@@ -416,7 +416,7 @@ void pushConstant() {
     auto cs     = device.loadShader("shader/push_constant.comp.sprv");
     auto pso    = device.pipeline(cs);
 
-    auto ubo = device.uniforms(pso.layout());
+    auto ubo = device.descriptors(pso.layout());
     ubo.set(0,input);
     ubo.set(1,output);
 

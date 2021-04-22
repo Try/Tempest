@@ -5,7 +5,7 @@
 
 namespace Tempest {
 
-class Uniforms;
+class DescriptorSet;
 class CommandBuffer;
 template<class T>
 class Encoder;
@@ -105,7 +105,7 @@ class ResourcePtr {
   private:
     decltype(T::impl) impl;
 
-  friend class Tempest::Uniforms;
+  friend class Tempest::DescriptorSet;
   friend class Tempest::CommandBuffer;
   template<class TT>
   friend class Tempest::Encoder;

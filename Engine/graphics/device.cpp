@@ -425,8 +425,10 @@ VideoBuffer Device::createVideoBuffer(const void *data, size_t count, size_t siz
   return  buf;
   }
 
-Uniforms Device::uniforms(const UniformsLayout &ulay) {
-  Uniforms ubo(*this,api.createDescriptors(dev,*ulay.impl.handler));
+DescriptorSet Device::descriptors(const UniformsLayout &ulay) {
+  if(ulay.impl.handler==nullptr || ulay.impl.handler->descriptorsCount()==0)
+    return DescriptorSet(nullptr);
+  DescriptorSet ubo(api.createDescriptors(dev,*ulay.impl.handler));
   return ubo;
   }
 

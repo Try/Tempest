@@ -10,7 +10,7 @@
 #include <Tempest/Attachment>
 #include <Tempest/ZBuffer>
 #include <Tempest/Texture2d>
-#include <Tempest/Uniforms>
+#include <Tempest/DescriptorSet>
 #include <Tempest/VertexBuffer>
 #include <Tempest/IndexBuffer>
 #include <Tempest/StorageBuffer>
@@ -36,7 +36,7 @@ class RFile;
 class VideoBuffer;
 class Pixmap;
 
-class Uniforms;
+class DescriptorSet;
 class UniformsLayout;
 
 class Color;
@@ -130,7 +130,7 @@ class Device {
       return ssbo(BufferHeap::Device,arr.data(),arr.size()*sizeof(T));
       }
 
-    Uniforms             uniforms(const UniformsLayout &owner);
+    DescriptorSet        descriptors(const UniformsLayout &owner);
 
     Attachment           attachment (TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips = false);
     ZBuffer              zbuffer    (TextureFormat frm, const uint32_t w, const uint32_t h);
@@ -209,7 +209,7 @@ class Device {
   friend class CommandPool;
   friend class CommandBuffer;
   friend class VideoBuffer;
-  friend class Uniforms;
+  friend class DescriptorSet;
 
   friend class Texture2d;
   };

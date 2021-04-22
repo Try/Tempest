@@ -10,7 +10,7 @@ class Device;
 class Frame;
 class RenderPipeline;
 class VideoBuffer;
-class Uniforms;
+class DescriptorSet;
 class Texture2d;
 
 template<class T>

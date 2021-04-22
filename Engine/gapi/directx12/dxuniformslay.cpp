@@ -81,6 +81,10 @@ DxUniformsLay::DxUniformsLay(DxDevice& dev, const std::vector<UniformsLayout::Bi
   init(lay,pb);
   }
 
+size_t DxUniformsLay::descriptorsCount() {
+  return lay.size();
+  }
+
 void DxUniformsLay::init(const std::vector<Binding>& lay, const UniformsLayout::PushBlock& pb) {
   auto& device = *dev.device;
   descSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);

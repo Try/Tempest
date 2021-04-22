@@ -275,8 +275,6 @@ void VulkanApi::readBytes(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Buf
 AbstractGraphicsApi::Desc *VulkanApi::createDescriptors(AbstractGraphicsApi::Device* d, UniformsLay& ulayImpl) {
   auto* dx = reinterpret_cast<Detail::VDevice*>(d);
   auto& ul = reinterpret_cast<Detail::VUniformsLay&>(ulayImpl);
-  if(ul.lay.size()==0)
-    return nullptr;
   return new Detail::VDescriptorArray(dx->device,ul);
   }
 

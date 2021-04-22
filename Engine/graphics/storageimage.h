@@ -27,7 +27,7 @@ class StorageImage final {
     TextureFormat                                     frm=Undefined;
 
   friend class Tempest::Device;
-  friend class Tempest::Uniforms;
+  friend class Tempest::DescriptorSet;
   friend class Encoder<Tempest::CommandBuffer>;
 
   template<class T>

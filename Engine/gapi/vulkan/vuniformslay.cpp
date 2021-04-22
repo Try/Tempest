@@ -43,6 +43,10 @@ VUniformsLay::~VUniformsLay() {
   vkDestroyDescriptorSetLayout(dev,impl,nullptr);
   }
 
+size_t VUniformsLay::descriptorsCount() {
+  return lay.size();
+  }
+
 void VUniformsLay::implCreate(VkDescriptorSetLayoutBinding* bind) {
   static const VkDescriptorType types[] = {
     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,

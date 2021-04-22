@@ -23,6 +23,8 @@ class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
     DxUniformsLay(DxDevice& device, const std::vector<UniformsLayout::Binding>& comp);
     DxUniformsLay(DxDevice& device, const std::vector<UniformsLayout::Binding>* sh[], size_t cnt);
 
+    size_t descriptorsCount() override;
+
     using Binding = UniformsLayout::Binding;
 
     enum {

@@ -25,7 +25,7 @@ class StorageBuffer final {
 
   friend class Tempest::Device;
   friend class Tempest::CommandBuffer;
-  friend class Tempest::Uniforms;
+  friend class Tempest::DescriptorSet;
   };
 
 }

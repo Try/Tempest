@@ -6,7 +6,7 @@
 namespace Tempest {
 
 class Device;
-class Uniforms;
+class DescriptorSet;
 template<class T>
 class Encoder;
 
@@ -36,7 +36,7 @@ class Texture2d final {
     TextureFormat                                     frm=Undefined;
 
   friend class Tempest::Device;
-  friend class Tempest::Uniforms;
+  friend class Tempest::DescriptorSet;
   friend class Encoder<Tempest::CommandBuffer>;
 
   template<class T>

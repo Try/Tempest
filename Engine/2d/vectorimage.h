@@ -2,8 +2,8 @@
 
 #include <Tempest/PaintDevice>
 #include <Tempest/VertexBuffer>
+#include <Tempest/DescriptorSet>
 #include <Tempest/Rect>
-#include <Tempest/Uniforms>
 #include <Tempest/Sprite>
 
 #include <vector>
@@ -99,7 +99,7 @@ class VectorImage : public Tempest::PaintDevice {
 
     struct PerFrame {
       Tempest::VertexBuffer<Point> vbo;
-      std::vector<Uniforms>        blocks;
+      std::vector<DescriptorSet>   blocks;
       std::vector<UboType>         blocksType;
       bool                         outdated=true;
       };

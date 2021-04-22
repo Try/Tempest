@@ -26,6 +26,8 @@ class VUniformsLay : public AbstractGraphicsApi::UniformsLay {
     VUniformsLay(VDevice& dev, const std::vector<UniformsLayout::Binding>* sh[], size_t cnt);
     ~VUniformsLay();
 
+    size_t descriptorsCount() override;
+
     using Binding = UniformsLayout::Binding;
 
     VkDevice                      dev =nullptr;

@@ -56,9 +56,9 @@ void Encoder<Tempest::CommandBuffer>::setViewport(const Rect &vp) {
   impl->setViewport(vp);
   }
 
-void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const Uniforms &ubo, const void* data, size_t sz) {
+void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const DescriptorSet &ubo, const void* data, size_t sz) {
   setUniforms(p);
-  impl->setUniforms(*p.impl.handler,*ubo.desc.handler);
+  impl->setUniforms(*p.impl.handler,*ubo.impl.handler);
   impl->setBytes(*p.impl.handler,data,sz);
   }
 
@@ -67,14 +67,14 @@ void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const
   impl->setBytes(*p.impl.handler,data,sz);
   }
 
-void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const Uniforms &ubo) {
+void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const DescriptorSet &ubo) {
   setUniforms(p);
-  impl->setUniforms(*p.impl.handler,*ubo.desc.handler);
+  impl->setUniforms(*p.impl.handler,*ubo.impl.handler);
   }
 
-void Encoder<Tempest::CommandBuffer>::setUniforms(const Detail::ResourcePtr<RenderPipeline> &p, const Uniforms &ubo) {
+void Encoder<Tempest::CommandBuffer>::setUniforms(const Detail::ResourcePtr<RenderPipeline> &p, const DescriptorSet &ubo) {
   setUniforms(p);
-  impl->setUniforms(*p.impl.handler,*ubo.desc.handler);
+  impl->setUniforms(*p.impl.handler,*ubo.impl.handler);
   }
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const Detail::ResourcePtr<RenderPipeline> &p) {
@@ -92,9 +92,9 @@ void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline &p) {
     }
   }
 
-void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p, const Uniforms &ubo, const void* data, size_t sz) {
+void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p, const DescriptorSet &ubo, const void* data, size_t sz) {
   setUniforms(p);
-  impl->setUniforms(*p.impl.handler,*ubo.desc.handler);
+  impl->setUniforms(*p.impl.handler,*ubo.impl.handler);
   impl->setBytes(*p.impl.handler,data,sz);
   }
 
@@ -103,9 +103,9 @@ void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p, cons
   impl->setBytes(*p.impl.handler,data,sz);
   }
 
-void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p, const Uniforms &ubo) {
+void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p, const DescriptorSet &ubo) {
   setUniforms(p);
-  impl->setUniforms(*p.impl.handler,*ubo.desc.handler);
+  impl->setUniforms(*p.impl.handler,*ubo.impl.handler);
   }
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p) {
