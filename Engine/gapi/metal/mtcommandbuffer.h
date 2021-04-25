@@ -47,7 +47,9 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     void dispatch    (size_t x, size_t y, size_t z) override;
 
   private:
-    NsPtr impl;
+    MtDevice& device;
+    NsPtr     impl;
+    NsPtr     enc;
   };
 
 }

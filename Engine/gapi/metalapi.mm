@@ -6,9 +6,10 @@
 #include "gapi/metal/mtpipeline.h"
 #include "gapi/metal/mtcommandbuffer.h"
 #include "gapi/metal/mttexture.h"
+#include "gapi/metal/mtframebuffer.h"
+#include "gapi/metal/mtrenderpass.h"
 
 #import  <Metal/MTLDevice.h>
-
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -40,17 +41,28 @@ AbstractGraphicsApi::Swapchain *MetalApi::createSwapchain(SystemApi::Window *w, 
   return nullptr;
   }
 
-AbstractGraphicsApi::PPass MetalApi::createPass(AbstractGraphicsApi::Device *d, const FboMode **att, size_t acount) {
-  return PPass();
+AbstractGraphicsApi::PPass MetalApi::createPass(AbstractGraphicsApi::Device*, const FboMode **att, size_t acount) {
+  return PPass(new MtRenderPass(att,acount));
   }
 
 AbstractGraphicsApi::PFbo MetalApi::createFbo(AbstractGraphicsApi::Device *d,
-                                              AbstractGraphicsApi::FboLayout *lay, uint32_t w, uint32_t h, uint8_t clCount,
+                                              AbstractGraphicsApi::FboLayout *lay,
+                                              uint32_t w, uint32_t h, uint8_t clCount,
                                               AbstractGraphicsApi::Swapchain **sx,
-                                              AbstractGraphicsApi::Texture **tcl,
+                                              AbstractGraphicsApi::Texture **cl,
                                               const uint32_t *imgId,
                                               AbstractGraphicsApi::Texture *zbuf) {
-  return PFbo();
+  auto&           dx = *reinterpret_cast<MtDevice*>(d);
+  //Detail::VFramebufferLayout* l =reinterpret_cast<Detail::VFramebufferLayout*>(lay);
+  auto            zb = reinterpret_cast<MtTexture*>(zbuf);
+
+  MtTexture*   att[256] = {};
+  //MtSwapchain* sw[256] = {};
+  for(size_t i=0; i<clCount; ++i) {
+    att[i] = reinterpret_cast<MtTexture*>(cl[i]);
+    //sw [i] = reinterpret_cast<Detail::VSwapchain*>(s[i]);
+    }
+  return PFbo(new MtFramebuffer(att,clCount,zb));
   }
 
 AbstractGraphicsApi::PFboLayout MetalApi::createFboLayout(AbstractGraphicsApi::Device *d, AbstractGraphicsApi::Swapchain **s, TextureFormat *att, uint8_t attCount) {

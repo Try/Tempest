@@ -1,21 +1,52 @@
 #include "mtcommandbuffer.h"
+
 #include "mtdevice.h"
+#include "mtframebuffer.h"
+#include "mtrenderpass.h"
 
 #include <Metal/MTLCommandBuffer.h>
+#include <Metal/MTLRenderCommandEncoder.h>
+#include <Metal/MTLCommandQueue.h>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-MtCommandBuffer::MtCommandBuffer(MtDevice& dev) {
-  id<MTLCommandQueue> queue = dev.queue.get();
+MtCommandBuffer::MtCommandBuffer(MtDevice& dev)
+  : device(dev) {
+  reset();
+  }
+
+bool MtCommandBuffer::isRecording() const {
+  return enc.ptr!=nullptr;
+  }
+
+void MtCommandBuffer::begin() {}
+
+void MtCommandBuffer::end() {
+  if(enc.ptr==nullptr)
+    return;
+  [enc.get() endEncoding];
+  enc = NsPtr();
+  }
+
+void MtCommandBuffer::reset() {
+  id<MTLCommandQueue> queue = device.queue.get();
   impl = NsPtr((__bridge void*)([queue commandBuffer]));
   }
 
-void MtCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo *f, AbstractGraphicsApi::Pass *p, uint32_t width, uint32_t height) {
+void MtCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo *f,
+                                      AbstractGraphicsApi::Pass *p,
+                                      uint32_t /*width*/, uint32_t /*height*/) {
+  auto& fbo  = *reinterpret_cast<MtFramebuffer*>(f);
+  auto& pass = *reinterpret_cast<MtRenderPass*> (p);
 
+  MTLRenderPassDescriptor* desc = fbo.instance(pass);
+  enc = NsPtr((__bridge void*)([impl.get() renderCommandEncoderWithDescriptor: desc]));
   }
 
 void MtCommandBuffer::endRenderPass() {
+  [enc.get() endEncoding];
+  enc = NsPtr();
   }
 
 void MtCommandBuffer::beginCompute() {
@@ -25,29 +56,12 @@ void MtCommandBuffer::endCompute() {
   }
 
 void MtCommandBuffer::changeLayout(AbstractGraphicsApi::Buffer &buf, BufferLayout prev, BufferLayout next) {
-
   }
 
 void MtCommandBuffer::changeLayout(AbstractGraphicsApi::Attach &img, TextureLayout prev, TextureLayout next, bool byRegion) {
-
   }
 
 void MtCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture &image, TextureLayout defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
-
-  }
-
-bool MtCommandBuffer::isRecording() const {
-  return false;
-  }
-
-void MtCommandBuffer::begin() {
-  }
-
-void MtCommandBuffer::end() {
-  }
-
-void MtCommandBuffer::reset() {
-
   }
 
 void MtCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p, uint32_t w, uint32_t h) {
