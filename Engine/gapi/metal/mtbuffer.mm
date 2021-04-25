@@ -44,7 +44,23 @@ void MtBuffer::update(const void *data, size_t off, size_t count, size_t sz, siz
   }
 
 void MtBuffer::read(void *data, size_t off, size_t size) {
-  // TODO
+  MTLResourceOptions opt   = MTLResourceStorageModeShared | MTLResourceCPUCacheModeWriteCombined;
+  id<MTLDevice>      dx    = dev.impl.get();
+  id<MTLBuffer>      stage = [dx newBufferWithLength:size options:opt];
+
+  id<MTLCommandQueue>       queue = dev.queue.get();
+  id<MTLCommandBuffer>      cmd   = [queue commandBuffer];
+  id<MTLBlitCommandEncoder> enc   = [cmd blitCommandEncoder];
+  [enc copyFromBuffer:impl.get()
+                      sourceOffset:off
+                      toBuffer:stage
+                      destinationOffset:0
+                      size:size];
+  [enc endEncoding];
+  [cmd commit];
+  [cmd waitUntilCompleted];
+
+  std::memcpy(data,stage.contents,size);
   }
 
 void MtBuffer::implUpdate(const void *data, size_t off, size_t count, size_t sz, size_t alignedSz) {

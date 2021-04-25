@@ -93,7 +93,7 @@ AbstractGraphicsApi::Semaphore *MetalApi::createSemaphore(AbstractGraphicsApi::D
 
 AbstractGraphicsApi::PBuffer MetalApi::createBuffer(AbstractGraphicsApi::Device *d,
                                                     const void *mem, size_t count, size_t size, size_t alignedSz,
-                                                    MemUsage usage, BufferHeap flg) {
+                                                    MemUsage /*usage*/, BufferHeap flg) {
   auto& dx = *reinterpret_cast<MtDevice*>(d);
 
   MTLResourceOptions opt = 0;
@@ -120,8 +120,16 @@ AbstractGraphicsApi::PBuffer MetalApi::createBuffer(AbstractGraphicsApi::Device 
 
   opt |= MTLResourceHazardTrackingModeDefault;
 
-  id<MTLBuffer> ret = [dx.impl.get() newBufferWithLength:count*alignedSz options:opt];
-  return PBuffer(new MtBuffer(dx,ret,opt));
+  id<MTLBuffer> buf;
+  if(alignedSz==size && 0==(opt & MTLResourceStorageModePrivate)) {
+    buf = [dx.impl.get() newBufferWithBytes:mem length:count*alignedSz options:opt];
+    return PBuffer(new MtBuffer(dx,buf,opt));
+    }
+
+  buf = [dx.impl.get() newBufferWithLength:count*alignedSz options:opt];
+  auto ret = PBuffer(new MtBuffer(dx,buf,opt));
+  ret.handler->update(mem,0,count,size,alignedSz);
+  return ret;
   }
 
 AbstractGraphicsApi::PTexture MetalApi::createTexture(AbstractGraphicsApi::Device *d,
@@ -146,8 +154,10 @@ void MetalApi::readPixels(AbstractGraphicsApi::Device *d,
 
   }
 
-void MetalApi::readBytes(AbstractGraphicsApi::Device *d, AbstractGraphicsApi::Buffer *buf, void *out, size_t size) {
-
+void MetalApi::readBytes(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Buffer *buf,
+                         void *out, size_t size) {
+  auto& b = *reinterpret_cast<MtBuffer*>(buf);
+  b.read(out,0,size);
   }
 
 AbstractGraphicsApi::Desc *MetalApi::createDescriptors(AbstractGraphicsApi::Device *d, AbstractGraphicsApi::UniformsLay &layP) {
