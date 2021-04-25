@@ -39,7 +39,7 @@ void MtBuffer::update(const void *data, size_t off, size_t count, size_t sz, siz
   [enc endEncoding];
   [cmd commit];
 
-  // TODO: ijmplement proper upload engine
+  // TODO: implement proper upload engine
   [cmd waitUntilCompleted];
   }
 

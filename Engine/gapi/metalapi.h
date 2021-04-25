@@ -34,7 +34,6 @@ class MetalApi : public AbstractGraphicsApi {
     PShader        createShader(Device *d, const void* source, size_t src_size) override;
 
     Fence*         createFence(Device *d) override;
-
     Semaphore*     createSemaphore(Device *d) override;
 
     PBuffer        createBuffer(Device* d, const void *mem, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap flg) override;

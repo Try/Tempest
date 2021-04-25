@@ -4,8 +4,11 @@
 #include "gapi/metal/mtbuffer.h"
 #include "gapi/metal/mtshader.h"
 #include "gapi/metal/mtpipeline.h"
+#include "gapi/metal/mtcommandbuffer.h"
+#include "gapi/metal/mttexture.h"
 
 #import  <Metal/MTLDevice.h>
+
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -128,7 +131,8 @@ AbstractGraphicsApi::PTexture MetalApi::createTexture(AbstractGraphicsApi::Devic
 
 AbstractGraphicsApi::PTexture MetalApi::createTexture(AbstractGraphicsApi::Device *d,
                                                       const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) {
-  return PTexture();
+  auto& dev = *reinterpret_cast<MtDevice*>(d);
+  return PTexture(new MtTexture(dev,w,h,mips,frm));
   }
 
 AbstractGraphicsApi::PTexture MetalApi::createStorage(AbstractGraphicsApi::Device *d,
@@ -150,12 +154,19 @@ AbstractGraphicsApi::Desc *MetalApi::createDescriptors(AbstractGraphicsApi::Devi
   return nullptr;
   }
 
-AbstractGraphicsApi::PUniformsLay MetalApi::createUboLayout(AbstractGraphicsApi::Device *d, const AbstractGraphicsApi::Shader *vs, const AbstractGraphicsApi::Shader *tc, const AbstractGraphicsApi::Shader *te, const AbstractGraphicsApi::Shader *gs, const AbstractGraphicsApi::Shader *fs, const AbstractGraphicsApi::Shader *cs) {
+AbstractGraphicsApi::PUniformsLay MetalApi::createUboLayout(AbstractGraphicsApi::Device *d,
+                                                            const AbstractGraphicsApi::Shader *vs,
+                                                            const AbstractGraphicsApi::Shader *tc,
+                                                            const AbstractGraphicsApi::Shader *te,
+                                                            const AbstractGraphicsApi::Shader *gs,
+                                                            const AbstractGraphicsApi::Shader *fs,
+                                                            const AbstractGraphicsApi::Shader *cs) {
   return PUniformsLay();
   }
 
 AbstractGraphicsApi::CommandBuffer *MetalApi::createCommandBuffer(AbstractGraphicsApi::Device *d) {
-  return nullptr;
+  auto& dx = *reinterpret_cast<MtDevice*>(d);
+  return new MtCommandBuffer(dx);
   }
 
 void MetalApi::present(AbstractGraphicsApi::Device *d, AbstractGraphicsApi::Swapchain *sw,
@@ -177,5 +188,6 @@ void MetalApi::submit(AbstractGraphicsApi::Device *d,
   }
 
 void MetalApi::getCaps(AbstractGraphicsApi::Device *d, AbstractGraphicsApi::Props &caps) {
-
+  auto& dx = *reinterpret_cast<MtDevice*>(d);
+  caps = dx.prop;
   }
