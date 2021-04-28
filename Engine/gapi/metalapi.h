@@ -55,7 +55,7 @@ class MetalApi : public AbstractGraphicsApi {
 
     void           present  (Device *d,Swapchain* sw,uint32_t imageId, const Semaphore *wait) override;
 
-    void           submit   (Device *d, CommandBuffer* cmd, Semaphore* wait, Semaphore* onReady, Fence* doneCpu) override;
+    void           submit   (Device *d, CommandBuffer* cmd, Semaphore* wait, Semaphore* done, Fence* doneCpu) override;
     void           submit   (Device *d,
                              CommandBuffer** cmd, size_t count,
                              Semaphore** wait, size_t waitCnt,

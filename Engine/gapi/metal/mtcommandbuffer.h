@@ -5,8 +5,9 @@
 #include <Tempest/AbstractGraphicsApi>
 
 namespace Tempest {
-namespace Detail {
+class MetalApi;
 
+namespace Detail {
 class MtDevice;
 
 class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
@@ -50,6 +51,8 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     MtDevice& device;
     NsPtr     impl;
     NsPtr     enc;
+
+  friend class Tempest::MetalApi;
   };
 
 }

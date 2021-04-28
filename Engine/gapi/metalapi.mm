@@ -1,5 +1,8 @@
 #include "metalapi.h"
 
+#include <Tempest/Log>
+#include <Tempest/Pixmap>
+
 #include "gapi/metal/mtdevice.h"
 #include "gapi/metal/mtbuffer.h"
 #include "gapi/metal/mtshader.h"
@@ -8,6 +11,7 @@
 #include "gapi/metal/mttexture.h"
 #include "gapi/metal/mtframebuffer.h"
 #include "gapi/metal/mtrenderpass.h"
+#include "gapi/metal/mtsync.h"
 
 #import  <Metal/MTLDevice.h>
 
@@ -52,9 +56,8 @@ AbstractGraphicsApi::PFbo MetalApi::createFbo(AbstractGraphicsApi::Device *d,
                                               AbstractGraphicsApi::Texture **cl,
                                               const uint32_t *imgId,
                                               AbstractGraphicsApi::Texture *zbuf) {
-  auto&           dx = *reinterpret_cast<MtDevice*>(d);
-  //Detail::VFramebufferLayout* l =reinterpret_cast<Detail::VFramebufferLayout*>(lay);
-  auto            zb = reinterpret_cast<MtTexture*>(zbuf);
+  auto& dx = *reinterpret_cast<MtDevice*>(d);
+  auto  zb = reinterpret_cast<MtTexture*>(zbuf);
 
   MtTexture*   att[256] = {};
   //MtSwapchain* sw[256] = {};
@@ -79,6 +82,8 @@ AbstractGraphicsApi::PPipeline MetalApi::createPipeline(AbstractGraphicsApi::Dev
                                                         const AbstractGraphicsApi::Shader *gs,
                                                         const AbstractGraphicsApi::Shader *fs) {
   id<MTLDevice> dx = Detail::get<MtDevice,AbstractGraphicsApi::Device>(d);
+  (void)dx;
+
   auto&         vx = *reinterpret_cast<const MtShader*>(vs);
   auto&         fx = *reinterpret_cast<const MtShader*>(fs);
 
@@ -95,8 +100,8 @@ AbstractGraphicsApi::PShader MetalApi::createShader(AbstractGraphicsApi::Device 
   return PShader(new MtShader(dx,source,src_size));
   }
 
-AbstractGraphicsApi::Fence *MetalApi::createFence(AbstractGraphicsApi::Device *d) {
-  return nullptr;
+AbstractGraphicsApi::Fence *MetalApi::createFence(AbstractGraphicsApi::Device*) {
+  return new MtSync();
   }
 
 AbstractGraphicsApi::Semaphore *MetalApi::createSemaphore(AbstractGraphicsApi::Device *d) {
@@ -161,9 +166,24 @@ AbstractGraphicsApi::PTexture MetalApi::createStorage(AbstractGraphicsApi::Devic
   }
 
 void MetalApi::readPixels(AbstractGraphicsApi::Device *d,
-                          Pixmap &out, const AbstractGraphicsApi::PTexture t, TextureLayout lay, TextureFormat frm,
+                          Pixmap &out, const AbstractGraphicsApi::PTexture t,
+                          TextureLayout /*lay*/, TextureFormat frm,
                           const uint32_t w, const uint32_t h, uint32_t mip) {
+  auto&          tx  = *reinterpret_cast<MtTexture*>(t.handler);
+  id<MTLTexture> tex = tx.impl.get();
 
+  Pixmap::Format  pfrm  = Pixmap::toPixmapFormat(frm);
+  size_t          bpp   = Pixmap::bppForFormat(pfrm);
+  if(bpp==0)
+    throw std::runtime_error("not implemented");
+
+  out = Pixmap(w,h,pfrm);
+  [tex getBytes:
+    out.data()
+    bytesPerRow: w*4
+    fromRegion: MTLRegionMake2D(0,0,w,h)
+    mipmapLevel: mip
+    ];
   }
 
 void MetalApi::readBytes(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Buffer *buf,
@@ -196,17 +216,32 @@ void MetalApi::present(AbstractGraphicsApi::Device *d, AbstractGraphicsApi::Swap
 
   }
 
-void MetalApi::submit(AbstractGraphicsApi::Device *d, AbstractGraphicsApi::CommandBuffer *cmd,
-                      AbstractGraphicsApi::Semaphore *wait, AbstractGraphicsApi::Semaphore *onReady, AbstractGraphicsApi::Fence *doneCpu) {
-
+void MetalApi::submit(AbstractGraphicsApi::Device *d,
+                      AbstractGraphicsApi::CommandBuffer *cmd,
+                      AbstractGraphicsApi::Semaphore *wait,
+                      AbstractGraphicsApi::Semaphore *done,
+                      AbstractGraphicsApi::Fence *doneCpu) {
+  this->submit(d,&cmd,1,&wait,1,&done,1,doneCpu);
   }
 
-void MetalApi::submit(AbstractGraphicsApi::Device *d,
-                      AbstractGraphicsApi::CommandBuffer **cmd, size_t count,
+void MetalApi::submit(AbstractGraphicsApi::Device*,
+                      AbstractGraphicsApi::CommandBuffer **pcmd, size_t count,
                       AbstractGraphicsApi::Semaphore **wait, size_t waitCnt,
                       AbstractGraphicsApi::Semaphore **done, size_t doneCnt,
                       AbstractGraphicsApi::Fence *doneCpu) {
+  auto& fence = *reinterpret_cast<MtSync*>(doneCpu);
+  fence.signal();
+  for(size_t i=0; i<count; ++i) {
+    auto& cx = *reinterpret_cast<MtCommandBuffer*>(pcmd[i]);
+    id<MTLCommandBuffer> cmd = cx.impl.get();
 
+    [cmd addCompletedHandler:^(id<MTLCommandBuffer> c) {
+      (void)c;
+      fence.reset();
+      }];
+    [cmd commit];
+    [cmd waitUntilCompleted];
+    }
   }
 
 void MetalApi::getCaps(AbstractGraphicsApi::Device *d, AbstractGraphicsApi::Props &caps) {

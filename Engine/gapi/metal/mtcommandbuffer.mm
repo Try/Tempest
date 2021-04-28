@@ -30,8 +30,13 @@ void MtCommandBuffer::end() {
   }
 
 void MtCommandBuffer::reset() {
+  MTLCommandBufferDescriptor* desc = [[MTLCommandBufferDescriptor alloc] init];
+  desc.retainedReferences = NO;
+
   id<MTLCommandQueue> queue = device.queue.get();
-  impl = NsPtr((__bridge void*)([queue commandBuffer]));
+  impl = NsPtr((__bridge void*)([queue commandBufferWithDescriptor:desc]));
+
+  [desc release];
   }
 
 void MtCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo *f,
