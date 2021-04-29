@@ -64,7 +64,7 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
   auto blitVs = DSharedPtr<DxShader*>(new DxShader(blit_vert_sprv,sizeof(blit_vert_sprv)));
   auto blitFs = DSharedPtr<DxShader*>(new DxShader(blit_frag_sprv,sizeof(blit_frag_sprv)));
 
-  blitLayout  = DSharedPtr<DxUniformsLay*>(new DxUniformsLay(*this,blitFs.handler->lay));
+  blitLayout  = DSharedPtr<DxPipelineLay*>(new DxPipelineLay(*this,blitFs.handler->lay));
   blit        = DSharedPtr<DxPipeline*>   (new DxPipeline   (*this,st,0,Triangles,*blitLayout.handler,
                                                              blitVs.handler,nullptr,nullptr,nullptr,blitFs.handler));
   }
@@ -74,7 +74,7 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
 
 DxDevice::~DxDevice() {
   blit       = DSharedPtr<DxPipeline*>();
-  blitLayout = DSharedPtr<DxUniformsLay*>();
+  blitLayout = DSharedPtr<DxPipelineLay*>();
   data.reset();
   CloseHandle(idleEvent);
   }

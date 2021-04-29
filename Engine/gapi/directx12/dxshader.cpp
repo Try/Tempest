@@ -77,6 +77,7 @@ DxShader::DxShader(const void *source, size_t src_size) {
   //Log::d(hlsl);
 
   ComPtr<ID3DBlob> err;
+  // TODO: D3DCOMPILE_ALL_RESOURCES_BOUND
   UINT compileFlags = 0; //D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
   HRESULT hr = D3DCompile(hlsl.c_str(),hlsl.size(),nullptr,nullptr,nullptr,"main",target,compileFlags,0,
                           reinterpret_cast<ID3DBlob**>(&shader),reinterpret_cast<ID3DBlob**>(&err));

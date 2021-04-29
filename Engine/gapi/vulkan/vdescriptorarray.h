@@ -3,16 +3,16 @@
 #include <Tempest/AbstractGraphicsApi>
 #include "vulkan_sdk.h"
 
-#include "vuniformslay.h"
+#include "vpipelinelay.h"
 
 namespace Tempest {
 namespace Detail {
 
-class VUniformsLay;
+class VPipelineLay;
 
 class VDescriptorArray : public AbstractGraphicsApi::Desc {
   public:
-    VDescriptorArray(VkDevice device, VUniformsLay& vlay);
+    VDescriptorArray(VkDevice device, VPipelineLay& vlay);
     ~VDescriptorArray() override;
 
     void                     set    (size_t id, AbstractGraphicsApi::Texture* tex, const Sampler2d& smp) override;
@@ -25,8 +25,8 @@ class VDescriptorArray : public AbstractGraphicsApi::Desc {
 
   private:
     VkDevice                  device=nullptr;
-    DSharedPtr<VUniformsLay*> lay;
-    VUniformsLay::Pool*       pool=nullptr;
+    DSharedPtr<VPipelineLay*> lay;
+    VPipelineLay::Pool*       pool=nullptr;
 
     struct SSBO {
       AbstractGraphicsApi::Texture* tex = nullptr;
@@ -34,7 +34,7 @@ class VDescriptorArray : public AbstractGraphicsApi::Desc {
       };
     std::unique_ptr<SSBO[]>  ssbo;
 
-    VkDescriptorPool         allocPool(const VUniformsLay& lay, size_t size);
+    VkDescriptorPool         allocPool(const VPipelineLay& lay, size_t size);
     bool                     allocDescSet(VkDescriptorPool pool, VkDescriptorSetLayout lay);
     static void              addPoolSize(VkDescriptorPoolSize* p, size_t& sz, VkDescriptorType elt);
   };

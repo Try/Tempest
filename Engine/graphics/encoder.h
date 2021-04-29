@@ -85,11 +85,10 @@ class Encoder<Tempest::CommandBuffer> {
       };
 
     struct State {
-      const AbstractGraphicsApi::Pipeline*     curPipeline=nullptr;
-      const AbstractGraphicsApi::CompPipeline* curCompute =nullptr;
-      const VideoBuffer*                       curVbo     =nullptr;
-      const VideoBuffer*                       curIbo     =nullptr;
-      Viewport                                 vp;
+      const AbstractGraphicsApi::Pipeline*     curPipeline     = nullptr;
+      const AbstractGraphicsApi::CompPipeline* curCompute      = nullptr;
+      const VideoBuffer*                       curVbo          = nullptr;
+      const VideoBuffer*                       curIbo          = nullptr;
       bool                                     isInComputePass = false;
       };
 

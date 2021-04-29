@@ -29,10 +29,10 @@ class DirectX12Api : public AbstractGraphicsApi {
     PFboLayout     createFboLayout(Device *d, Swapchain** s, TextureFormat *att, uint8_t attCount) override;
 
     PPipeline      createPipeline(Device* d, const RenderState &st, size_t stride,
-                                  Topology tp, const UniformsLay& ulayImpl,
+                                  Topology tp, const PipelineLay& ulayImpl,
                                   const Shader* vs, const Shader* tc, const Shader* te, const Shader* gs, const Shader* fs) override;
     PCompPipeline  createComputePipeline(Device* d,
-                                         const UniformsLay &ulayImpl,
+                                         const PipelineLay &ulayImpl,
                                          Shader* sh) override;
 
     PShader        createShader(Device *d, const void* source, size_t src_size) override;
@@ -52,9 +52,9 @@ class DirectX12Api : public AbstractGraphicsApi {
                               const uint32_t w, const uint32_t h, uint32_t mip) override;
     void           readBytes(Device* d, Buffer* buf, void* out, size_t size) override;
 
-    Desc*          createDescriptors(Device* d, UniformsLay& layP) override;
+    Desc*          createDescriptors(Device* d, PipelineLay& layP) override;
 
-    PUniformsLay   createUboLayout(Device *d, const Shader* vs, const Shader* tc,const Shader* te,const Shader* gs,const Shader* fs, const Shader* cs) override;
+    PPipelineLay   createPipelineLayout(Device *d, const Shader* vs, const Shader* tc,const Shader* te,const Shader* gs,const Shader* fs, const Shader* cs) override;
 
     CommandBuffer* createCommandBuffer(Device* d) override;
 

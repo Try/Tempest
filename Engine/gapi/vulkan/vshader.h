@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include <Tempest/UniformsLayout>
+#include <Tempest/PipelineLayout>
 
 #include "gapi/shaderreflection.h"
 #include "vulkan_sdk.h"

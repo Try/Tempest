@@ -30,16 +30,16 @@ class VulkanApi : public AbstractGraphicsApi {
 
     PPipeline      createPipeline(Device* d, const RenderState &st,
                                   size_t stride, Topology tp,
-                                  const UniformsLay& ulayImpl,
+                                  const PipelineLay& ulayImpl,
                                   const Shader* vs, const Shader* tc, const Shader* te, const Shader* gs, const Shader* fs) override;
     PCompPipeline  createComputePipeline(Device* d,
-                                         const UniformsLay &ulayImpl,
+                                         const PipelineLay &ulayImpl,
                                          Shader* sh) override;
 
     PShader        createShader(AbstractGraphicsApi::Device *d, const void* source, size_t src_size) override;
 
-    Desc*          createDescriptors(Device* d, UniformsLay& layP) override;
-    PUniformsLay   createUboLayout(Device *d, const Shader* vs, const Shader* tc,const Shader* te,const Shader* gs,const Shader* fs, const Shader* cs) override;
+    Desc*          createDescriptors(Device* d, PipelineLay& layP) override;
+    PPipelineLay   createPipelineLayout(Device *d, const Shader* vs, const Shader* tc,const Shader* te,const Shader* gs,const Shader* fs, const Shader* cs) override;
 
     Fence*         createFence(Device *d) override;
 

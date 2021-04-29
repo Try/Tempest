@@ -372,7 +372,7 @@ bool VAllocator::update(VBuffer &dest, const void *mem,
   if(vkMapMemory(dev,page.page->memory,rgn.offset,rgn.size,0,&data)!=VK_SUCCESS)
     return false;
 
-  data = reinterpret_cast<uint8_t*>(data)+shift;
+  data = reinterpret_cast<uint8_t*>(data) + shift + offset*alignedSz;
   copyUpsample(mem,data,count,size,alignedSz);
 
   vkFlushMappedMemoryRanges(dev,1,&rgn);

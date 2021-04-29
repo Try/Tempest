@@ -8,7 +8,7 @@
 #include "utility/spinlock.h"
 
 #include "dxfbolayout.h"
-#include "dxuniformslay.h"
+#include "dxpipelinelay.h"
 
 namespace Tempest {
 namespace Detail {
@@ -19,7 +19,7 @@ class DxShader;
 class DxPipeline : public AbstractGraphicsApi::Pipeline {
   public:
     DxPipeline(DxDevice &device,
-               const RenderState &st, size_t stride, Topology tp, const DxUniformsLay& ulay,
+               const RenderState &st, size_t stride, Topology tp, const DxPipelineLay& ulay,
                const DxShader* vert, const DxShader* ctrl, const DxShader* tess, const DxShader* geom,  const DxShader* frag);
 
     struct Inst final {
@@ -64,7 +64,7 @@ class DxCompPipeline : public AbstractGraphicsApi::CompPipeline {
   public:
     DxCompPipeline()=default;
     DxCompPipeline(DxDevice &device,
-                   const DxUniformsLay& ulay,
+                   const DxPipelineLay& ulay,
                    DxShader& comp);
 
     ComPtr<ID3D12RootSignature> sign;

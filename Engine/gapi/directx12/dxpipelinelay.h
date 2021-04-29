@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include <Tempest/UniformsLayout>
+#include <Tempest/PipelineLayout>
 #include <vector>
 
 #include <d3d12.h>
@@ -12,17 +12,17 @@
 
 namespace Tempest {
 
-class UniformsLayout;
+class PipelineLayout;
 
 namespace Detail {
 
 class DxDescriptorArray;
 class DxDevice;
 
-class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
+class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
   public:
-    DxUniformsLay(DxDevice& device, const std::vector<ShaderReflection::Binding>& comp);
-    DxUniformsLay(DxDevice& device, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt);
+    DxPipelineLay(DxDevice& device, const std::vector<ShaderReflection::Binding>& comp);
+    DxPipelineLay(DxDevice& device, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt);
 
     size_t descriptorsCount() override;
 
@@ -54,7 +54,7 @@ class DxUniformsLay : public AbstractGraphicsApi::UniformsLay {
       };
 
     struct DescriptorPool {
-      DescriptorPool(DxUniformsLay& lay);
+      DescriptorPool(DxPipelineLay& lay);
       DescriptorPool(DescriptorPool&& oth);
       ~DescriptorPool();
 

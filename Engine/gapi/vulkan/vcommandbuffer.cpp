@@ -99,6 +99,11 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
   // setup dynamic state
   // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#pipelines-dynamic-state
   setViewport(Rect(0,0,int32_t(width),int32_t(height)));
+
+  VkRect2D scissor = {};
+  scissor.offset = {0, 0};
+  scissor.extent = {width,height};
+  vkCmdSetScissor (impl,0,1,&scissor);
   }
 
 void VCommandBuffer::endRenderPass() {
@@ -120,12 +125,12 @@ void VCommandBuffer::beginCompute() {
 void VCommandBuffer::endCompute() {
   }
 
-void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p,uint32_t w,uint32_t h) {
+void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
   if(curFbo==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   VPipeline&           px = reinterpret_cast<VPipeline&>(p);
   VFramebufferLayout*  l  = reinterpret_cast<VFramebufferLayout*>(curFbo->rp.handler);
-  auto& v = px.instance(*l,w,h);
+  auto& v = px.instance(*l);
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v.val);
   ssboBarriers = px.ssboBarriers;
   }
@@ -212,6 +217,7 @@ void VCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer& b,Detail::IndexCl
   }
 
 void VCommandBuffer::setViewport(const Tempest::Rect &r) {
+  VkViewport                              viewPort    = {};
   viewPort.x        = float(r.x);
   viewPort.y        = float(r.y);
   viewPort.width    = float(r.w);

@@ -210,7 +210,7 @@ void DxCommandBuffer::end() {
   dxAssert(impl->Close());
   recording = false;
   resetDone = false;
-  for(size_t i=0;i<DxUniformsLay::MAX_BINDS;++i)
+  for(size_t i=0;i<DxPipelineLay::MAX_BINDS;++i)
     currentHeaps[i] = nullptr;
   }
 
@@ -326,8 +326,7 @@ void DxCommandBuffer::setViewport(const Rect& r) {
   impl->RSSetViewports(1, &vp);
   }
 
-void Tempest::Detail::DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p,
-                                                   uint32_t /*w*/, uint32_t /*h*/) {
+void Tempest::Detail::DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p) {
   DxPipeline& px = reinterpret_cast<DxPipeline&>(p);
   vboStride    = px.stride;
   ssboBarriers = px.ssboBarriers;
@@ -368,7 +367,7 @@ void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompu
   curUniforms = &ux;
 
   bool setH = false;
-  for(size_t i=0;i<DxUniformsLay::MAX_BINDS;++i) {
+  for(size_t i=0;i<DxPipelineLay::MAX_BINDS;++i) {
     if(ux.val.heap[i]!=currentHeaps[i]) {
       setH = true;
       break;
@@ -376,7 +375,7 @@ void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompu
     }
 
   if(setH) {
-    for(size_t i=0;i<DxUniformsLay::MAX_BINDS;++i)
+    for(size_t i=0;i<DxPipelineLay::MAX_BINDS;++i)
       currentHeaps[i] = ux.val.heap[i];
     impl->SetDescriptorHeaps(ux.heapCnt, currentHeaps);
     }

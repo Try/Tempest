@@ -2,16 +2,16 @@
 
 #include <Tempest/AbstractGraphicsApi>
 
-#include "dxuniformslay.h"
+#include "dxpipelinelay.h"
 
 namespace Tempest {
 namespace Detail {
 
-class VUniformsLay;
+class VPipelineLay;
 
 class DxDescriptorArray : public AbstractGraphicsApi::Desc {
   public:
-    DxDescriptorArray(DxUniformsLay& vlay);
+    DxDescriptorArray(DxPipelineLay& vlay);
     DxDescriptorArray(DxDescriptorArray&& other);
     ~DxDescriptorArray();
 
@@ -23,8 +23,8 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
     void setSsbo(size_t id, AbstractGraphicsApi::Buffer* buf, size_t offsetn) override;
     void ssboBarriers(Detail::ResourceState& res) override;
 
-    DSharedPtr<DxUniformsLay*>    lay;
-    DxUniformsLay::PoolAllocation val;
+    DSharedPtr<DxPipelineLay*>    lay;
+    DxPipelineLay::PoolAllocation val;
     UINT                          heapCnt = 0;
   };
 

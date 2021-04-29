@@ -15,9 +15,8 @@
 #include "vulkan/vcommandpool.h"
 #include "vulkan/vcommandbuffer.h"
 #include "vulkan/vdescriptorarray.h"
-#include "vulkan/vuniformslay.h"
+#include "vulkan/vpipelinelay.h"
 #include "vulkan/vtexture.h"
-#include "vulkan/vuniformslay.h"
 
 #include "deviceallocator.h"
 #include "shaderreflection.h"
@@ -26,7 +25,7 @@
 
 #include <Tempest/Pixmap>
 #include <Tempest/Log>
-#include <Tempest/UniformsLayout>
+#include <Tempest/PipelineLayout>
 #include <Tempest/Application>
 
 using namespace Tempest;
@@ -110,7 +109,7 @@ AbstractGraphicsApi::PFboLayout VulkanApi::createFboLayout(AbstractGraphicsApi::
 
 AbstractGraphicsApi::PPipeline VulkanApi::createPipeline(AbstractGraphicsApi::Device *d,
                                                          const RenderState &st, size_t stride, Topology tp,
-                                                         const UniformsLay& ulayImpl,
+                                                         const PipelineLay& ulayImpl,
                                                          const Shader* vs, const Shader* tc, const Shader* te,
                                                          const Shader* gs, const Shader* fs) {
   auto* dx   = reinterpret_cast<Detail::VDevice*>(d);
@@ -119,16 +118,16 @@ AbstractGraphicsApi::PPipeline VulkanApi::createPipeline(AbstractGraphicsApi::De
   auto* tess = reinterpret_cast<const Detail::VShader*>(te);
   auto* geom = reinterpret_cast<const Detail::VShader*>(gs);
   auto* frag = reinterpret_cast<const Detail::VShader*>(fs);
-  auto& ul   = reinterpret_cast<const Detail::VUniformsLay&>(ulayImpl);
+  auto& ul   = reinterpret_cast<const Detail::VPipelineLay&>(ulayImpl);
 
   return PPipeline(new Detail::VPipeline(*dx,st,stride,tp,ul,vert,ctrl,tess,geom,frag));
   }
 
 AbstractGraphicsApi::PCompPipeline VulkanApi::createComputePipeline(AbstractGraphicsApi::Device* d,
-                                                                const AbstractGraphicsApi::UniformsLay& ulayImpl,
+                                                                const AbstractGraphicsApi::PipelineLay& ulayImpl,
                                                                 AbstractGraphicsApi::Shader* shader) {
   auto*   dx = reinterpret_cast<Detail::VDevice*>(d);
-  auto&   ul = reinterpret_cast<const Detail::VUniformsLay&>(ulayImpl);
+  auto&   ul = reinterpret_cast<const Detail::VPipelineLay&>(ulayImpl);
 
   return PCompPipeline(new Detail::VCompPipeline(*dx,ul,*reinterpret_cast<Detail::VShader*>(shader)));
   }
@@ -273,19 +272,19 @@ void VulkanApi::readBytes(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Buf
   bx.read(out,0,size);
   }
 
-AbstractGraphicsApi::Desc *VulkanApi::createDescriptors(AbstractGraphicsApi::Device* d, UniformsLay& ulayImpl) {
+AbstractGraphicsApi::Desc *VulkanApi::createDescriptors(AbstractGraphicsApi::Device* d, PipelineLay& ulayImpl) {
   auto* dx = reinterpret_cast<Detail::VDevice*>(d);
-  auto& ul = reinterpret_cast<Detail::VUniformsLay&>(ulayImpl);
+  auto& ul = reinterpret_cast<Detail::VPipelineLay&>(ulayImpl);
   return new Detail::VDescriptorArray(dx->device,ul);
   }
 
-AbstractGraphicsApi::PUniformsLay VulkanApi::createUboLayout(Device *d,
-                                                             const Shader* vs, const Shader* tc, const Shader* te,
-                                                             const Shader* gs, const Shader* fs, const Shader* cs) {
+AbstractGraphicsApi::PPipelineLay VulkanApi::createPipelineLayout(Device *d,
+                                                                  const Shader* vs, const Shader* tc, const Shader* te,
+                                                                  const Shader* gs, const Shader* fs, const Shader* cs) {
   auto* dx = reinterpret_cast<Detail::VDevice*>(d);
   if(cs!=nullptr) {
     auto* comp = reinterpret_cast<const Detail::VShader*>(cs);
-    return PUniformsLay(new Detail::VUniformsLay(*dx,comp->lay));
+    return PPipelineLay(new Detail::VPipelineLay(*dx,comp->lay));
     }
 
   const Shader* sh[] = {vs,tc,te,gs,fs};
@@ -296,7 +295,7 @@ AbstractGraphicsApi::PUniformsLay VulkanApi::createUboLayout(Device *d,
     auto* s = reinterpret_cast<const Detail::VShader*>(sh[i]);
     lay[i] = &s->lay;
     }
-  return PUniformsLay(new Detail::VUniformsLay(*dx,lay,5));
+  return PPipelineLay(new Detail::VPipelineLay(*dx,lay,5));
   }
 
 AbstractGraphicsApi::CommandBuffer* VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device* d) {

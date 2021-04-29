@@ -1,7 +1,7 @@
 #if defined(TEMPEST_BUILD_DIRECTX12)
 #include "dxdescriptorarray.h"
 
-#include <Tempest/UniformsLayout>
+#include <Tempest/PipelineLayout>
 
 #include "dxbuffer.h"
 #include "dxdevice.h"
@@ -31,7 +31,7 @@ static int swizzle(ComponentSwizzle cs, int def){
   return def;
   }
 
-DxDescriptorArray::DxDescriptorArray(DxUniformsLay& vlay)
+DxDescriptorArray::DxDescriptorArray(DxPipelineLay& vlay)
   : lay(&vlay) {
   val     = lay.handler->allocDescriptors();
   heapCnt = UINT(vlay.heaps.size());
@@ -41,7 +41,7 @@ DxDescriptorArray::DxDescriptorArray(DxDescriptorArray&& other)
   : lay(other.lay) {
   val          = other.val;
   heapCnt      = other.heapCnt;
-  other.lay = DSharedPtr<DxUniformsLay*>{};
+  other.lay = DSharedPtr<DxPipelineLay*>{};
   }
 
 DxDescriptorArray::~DxDescriptorArray() {

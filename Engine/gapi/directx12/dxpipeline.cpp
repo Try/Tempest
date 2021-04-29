@@ -5,14 +5,14 @@
 #include "dxdevice.h"
 #include "dxframebuffer.h"
 #include "dxshader.h"
-#include "dxuniformslay.h"
+#include "dxpipelinelay.h"
 #include "guid.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
 
 DxPipeline::DxPipeline(DxDevice& device,
-                       const RenderState& st, size_t stride, Topology tp, const DxUniformsLay& ulay,
+                       const RenderState& st, size_t stride, Topology tp, const DxPipelineLay& ulay,
                        const DxShader* vert, const DxShader* ctrl, const DxShader* tess, const DxShader* geom, const DxShader* frag)
   : sign(ulay.impl.get()), stride(UINT(stride)),
     device(device),
@@ -188,7 +188,7 @@ ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& 
   return ret;
   }
 
-DxCompPipeline::DxCompPipeline(DxDevice& device, const DxUniformsLay& ulay, DxShader& comp)
+DxCompPipeline::DxCompPipeline(DxDevice& device, const DxPipelineLay& ulay, DxShader& comp)
   : sign(ulay.impl.get()) {
   sign.get()->AddRef();
 

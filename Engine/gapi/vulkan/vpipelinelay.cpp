@@ -1,15 +1,15 @@
 #if defined(TEMPEST_BUILD_VULKAN)
 
-#include "vuniformslay.h"
+#include "vpipelinelay.h"
 
-#include <Tempest/UniformsLayout>
+#include <Tempest/PipelineLayout>
 #include "vdevice.h"
 #include "gapi/shaderreflection.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-VUniformsLay::VUniformsLay(VDevice& dev, const std::vector<ShaderReflection::Binding>& comp)
+VPipelineLay::VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Binding>& comp)
   : dev(dev.device) {
   ShaderReflection::merge(lay, pb, comp);
   adjustSsboBindings();
@@ -23,7 +23,7 @@ VUniformsLay::VUniformsLay(VDevice& dev, const std::vector<ShaderReflection::Bin
     }
   }
 
-VUniformsLay::VUniformsLay(VDevice& dev, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt)
+VPipelineLay::VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt)
   : dev(dev.device) {
   ShaderReflection::merge(lay, pb, sh, cnt);
   adjustSsboBindings();
@@ -37,17 +37,17 @@ VUniformsLay::VUniformsLay(VDevice& dev, const std::vector<ShaderReflection::Bin
     }
   }
 
-VUniformsLay::~VUniformsLay() {
+VPipelineLay::~VPipelineLay() {
   for(auto& i:pool)
     vkDestroyDescriptorPool(dev,i.impl,nullptr);
   vkDestroyDescriptorSetLayout(dev,impl,nullptr);
   }
 
-size_t VUniformsLay::descriptorsCount() {
+size_t VPipelineLay::descriptorsCount() {
   return lay.size();
   }
 
-void VUniformsLay::implCreate(VkDescriptorSetLayoutBinding* bind) {
+void VPipelineLay::implCreate(VkDescriptorSetLayoutBinding* bind) {
   static const VkDescriptorType types[] = {
     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
     VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -93,7 +93,7 @@ void VUniformsLay::implCreate(VkDescriptorSetLayoutBinding* bind) {
   vkAssert(vkCreateDescriptorSetLayout(dev,&info,nullptr,&impl));
   }
 
-void VUniformsLay::adjustSsboBindings() {
+void VPipelineLay::adjustSsboBindings() {
   for(auto& i:lay)
     if(i.size==0)
       i.size = VK_WHOLE_SIZE;

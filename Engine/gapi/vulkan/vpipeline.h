@@ -15,24 +15,22 @@ class VShader;
 class VDevice;
 class VFramebuffer;
 class VFramebufferLayout;
-class VUniformsLay;
+class VPipelineLay;
 
 class VPipeline : public AbstractGraphicsApi::Pipeline {
   public:
     VPipeline();
     VPipeline(VDevice &device,
-              const RenderState &st, size_t stride, Topology tp, const VUniformsLay& ulayImpl,
+              const RenderState &st, size_t stride, Topology tp, const VPipelineLay& ulayImpl,
               const VShader* vert, const VShader* ctrl, const VShader* tess, const VShader* geom,  const VShader* frag);
     VPipeline(VPipeline&& other);
     ~VPipeline();
 
     struct Inst final {
-      Inst(uint32_t w,uint32_t h,VFramebufferLayout* lay,VkPipeline val):w(w),h(h),lay(lay),val(val){}
+      Inst(VFramebufferLayout* lay,VkPipeline val):lay(lay),val(val){}
       Inst(Inst&&)=default;
       Inst& operator = (Inst&&)=default;
 
-      uint32_t                                w=0;
-      uint32_t                                h=0;
       Detail::DSharedPtr<VFramebufferLayout*> lay;
       VkPipeline                              val;
       };
@@ -41,7 +39,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     VkShaderStageFlags pushStageFlags = 0;
     bool               ssboBarriers   = false;
 
-    Inst&             instance(VFramebufferLayout &lay, uint32_t width, uint32_t height);
+    Inst&             instance(VFramebufferLayout &lay);
 
   private:
     VkDevice                               device=nullptr;
@@ -54,10 +52,9 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     SpinLock                               sync;
 
     void cleanup();
-    static VkPipelineLayout      initLayout(VkDevice device, const VUniformsLay& uboLay, VkShaderStageFlags& pushFlg);
+    static VkPipelineLayout      initLayout(VkDevice device, const VPipelineLay& uboLay, VkShaderStageFlags& pushFlg);
     static VkPipeline            initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
                                                       const VFramebufferLayout &lay, const RenderState &st,
-                                                      uint32_t width, uint32_t height,
                                                       const Decl::ComponentType *decl, size_t declSize, size_t stride,
                                                       Topology tp,
                                                       const DSharedPtr<const VShader*>* shaders);
@@ -67,7 +64,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
 class VCompPipeline : public AbstractGraphicsApi::CompPipeline {
   public:
     VCompPipeline();
-    VCompPipeline(VDevice &device, const VUniformsLay& ulay, VShader &comp);
+    VCompPipeline(VDevice &device, const VPipelineLay& ulay, VShader &comp);
     VCompPipeline(VCompPipeline&& other);
     ~VCompPipeline();
 

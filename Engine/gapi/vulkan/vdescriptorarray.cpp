@@ -2,17 +2,16 @@
 
 #include "vbuffer.h"
 
-#include <Tempest/UniformsLayout>
+#include <Tempest/PipelineLayout>
 
 #include "vdevice.h"
 #include "vdescriptorarray.h"
 #include "vtexture.h"
-#include "vuniformslay.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-VDescriptorArray::VDescriptorArray(VkDevice device, VUniformsLay& vlay)
+VDescriptorArray::VDescriptorArray(VkDevice device, VPipelineLay& vlay)
   :device(device),lay(&vlay) {
   if(lay.handler->hasSSBO)
     ssbo.reset(new SSBO[vlay.lay.size()]);
@@ -30,7 +29,7 @@ VDescriptorArray::VDescriptorArray(VkDevice device, VUniformsLay& vlay)
 
   vlay.pool.emplace_back();
   auto& b = vlay.pool.back();
-  b.impl  = allocPool(vlay,Detail::VUniformsLay::POOL_SIZE);
+  b.impl  = allocPool(vlay,Detail::VPipelineLay::POOL_SIZE);
   if(!allocDescSet(b.impl,vlay.impl))
     throw std::bad_alloc();
   pool = &b;
@@ -40,14 +39,14 @@ VDescriptorArray::VDescriptorArray(VkDevice device, VUniformsLay& vlay)
 VDescriptorArray::~VDescriptorArray() {
   if(desc==VK_NULL_HANDLE)
     return;
-  Detail::VUniformsLay* layImpl = lay.handler;
+  Detail::VPipelineLay* layImpl = lay.handler;
   std::lock_guard<Detail::SpinLock> guard(layImpl->sync);
 
   vkFreeDescriptorSets(device,pool->impl,1,&desc);
   pool->freeCount++;
   }
 
-VkDescriptorPool VDescriptorArray::allocPool(const VUniformsLay& lay, size_t size) {
+VkDescriptorPool VDescriptorArray::allocPool(const VPipelineLay& lay, size_t size) {
   VkDescriptorPoolSize poolSize[3] = {};
   size_t               pSize=0;
 

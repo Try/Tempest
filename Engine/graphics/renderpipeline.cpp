@@ -5,7 +5,7 @@
 using namespace Tempest;
 
 RenderPipeline::RenderPipeline(Detail::DSharedPtr<AbstractGraphicsApi::Pipeline *> &&p,
-                               Detail::DSharedPtr<AbstractGraphicsApi::UniformsLay*>&& ulay)
+                               Detail::DSharedPtr<AbstractGraphicsApi::PipelineLay*>&& ulay)
   : ulay(std::move(ulay)),impl(std::move(p)) {
   }
 

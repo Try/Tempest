@@ -2,7 +2,7 @@
 
 #include <Tempest/Semaphore>
 #include <Tempest/Fence>
-#include <Tempest/UniformsLayout>
+#include <Tempest/PipelineLayout>
 #include <Tempest/UniformBuffer>
 #include <Tempest/File>
 #include <Tempest/Pixmap>
@@ -382,7 +382,7 @@ ComputePipeline Device::pipeline(const Shader& comp) {
   if(!comp.impl)
     return ComputePipeline();
 
-  auto ulay = api.createUboLayout(dev,nullptr,nullptr,nullptr,nullptr,nullptr,comp.impl.handler);
+  auto ulay = api.createPipelineLayout(dev,nullptr,nullptr,nullptr,nullptr,nullptr,comp.impl.handler);
   auto pipe = api.createComputePipeline(dev,*ulay.handler,comp.impl.handler);
   ComputePipeline f(std::move(pipe),std::move(ulay));
   return f;
@@ -401,7 +401,7 @@ RenderPipeline Device::implPipeline(const RenderState &st,
   for(size_t i=0; i<5; ++i)
     shv[i] = sh[i]!=nullptr ? sh[i]->impl.handler : nullptr;
 
-  auto ulay = api.createUboLayout(dev,shv[0],shv[1],shv[2],shv[3],shv[4],nullptr);
+  auto ulay = api.createPipelineLayout(dev,shv[0],shv[1],shv[2],shv[3],shv[4],nullptr);
   auto pipe = api.createPipeline(dev,st,stride,tp,*ulay.handler,shv[0],shv[1],shv[2],shv[3],shv[4]);
   RenderPipeline f(std::move(pipe),std::move(ulay));
   return f;
@@ -421,7 +421,7 @@ VideoBuffer Device::createVideoBuffer(const void *data, size_t count, size_t siz
   return  buf;
   }
 
-DescriptorSet Device::descriptors(const UniformsLayout &ulay) {
+DescriptorSet Device::descriptors(const PipelineLayout &ulay) {
   if(ulay.impl.handler==nullptr || ulay.impl.handler->descriptorsCount()==0)
     return DescriptorSet(nullptr);
   DescriptorSet ubo(api.createDescriptors(dev,*ulay.impl.handler));

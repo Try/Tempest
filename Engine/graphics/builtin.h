@@ -4,7 +4,7 @@
 #include <Tempest/ComputePipeline>
 #include <Tempest/RenderState>
 #include <Tempest/Shader>
-#include <Tempest/UniformsLayout>
+#include <Tempest/PipelineLayout>
 
 namespace Tempest {
 

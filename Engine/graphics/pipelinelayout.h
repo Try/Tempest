@@ -12,15 +12,15 @@ namespace Tempest {
 
 class Device;
 
-class UniformsLayout final {
+class PipelineLayout final {
   public:
-    UniformsLayout(UniformsLayout&& other)=default;
-    UniformsLayout& operator = (UniformsLayout&& other)=default;
+    PipelineLayout(PipelineLayout&& other)=default;
+    PipelineLayout& operator = (PipelineLayout&& other)=default;
 
   private:
-    UniformsLayout()=default;
-    UniformsLayout(Detail::DSharedPtr<AbstractGraphicsApi::UniformsLay*>&& lay);
-    Detail::DSharedPtr<AbstractGraphicsApi::UniformsLay*> impl;
+    PipelineLayout()=default;
+    PipelineLayout(Detail::DSharedPtr<AbstractGraphicsApi::PipelineLay*>&& lay);
+    Detail::DSharedPtr<AbstractGraphicsApi::PipelineLay*> impl;
 
   friend class Device;
   friend class RenderPipeline;

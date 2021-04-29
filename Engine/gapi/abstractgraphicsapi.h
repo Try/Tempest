@@ -11,7 +11,7 @@
 #include "flags.h"
 
 namespace Tempest {
-  class UniformsLayout;
+  class PipelineLayout;
   class Pixmap;
   class Color;
   class RenderState;
@@ -345,8 +345,8 @@ namespace Tempest {
       struct CompPipeline:Shared {};
       struct Shader:Shared   {};
       struct Uniforms        {};
-      struct UniformsLay:Shared {
-        virtual ~UniformsLay()=default;
+      struct PipelineLay:Shared {
+        virtual ~PipelineLay()=default;
         virtual size_t descriptorsCount() = 0;
         };
       struct Buffer:Shared   {
@@ -380,7 +380,7 @@ namespace Tempest {
         virtual void end()  =0;
         virtual void reset()=0;
 
-        virtual void setPipeline(Pipeline& p,uint32_t w,uint32_t h)=0;
+        virtual void setPipeline(Pipeline& p)=0;
         virtual void setComputePipeline(CompPipeline& p)=0;
 
         virtual void setBytes   (Pipeline &p, const void* data, size_t size)=0;
@@ -406,7 +406,7 @@ namespace Tempest {
       using PShader       = Detail::DSharedPtr<Shader*>;
       using PFbo          = Detail::DSharedPtr<Fbo*>;
       using PFboLayout    = Detail::DSharedPtr<FboLayout*>;
-      using PUniformsLay  = Detail::DSharedPtr<UniformsLay*>;
+      using PPipelineLay  = Detail::DSharedPtr<PipelineLay*>;
 
       virtual std::vector<Props> devices() const = 0;
 
@@ -422,17 +422,17 @@ namespace Tempest {
 
       virtual PFboLayout createFboLayout(Device *d, Swapchain** s, TextureFormat *att, uint8_t attCount)=0;
 
-      virtual PUniformsLay
-                         createUboLayout(Device *d,
-                                         const Shader* vs, const Shader* tc, const Shader* te,
-                                         const Shader* gs, const Shader* fs, const Shader* cs)=0;
+      virtual PPipelineLay
+                         createPipelineLayout(Device *d,
+                                              const Shader* vs, const Shader* tc, const Shader* te,
+                                              const Shader* gs, const Shader* fs, const Shader* cs)=0;
 
       virtual PPipeline  createPipeline(Device* d, const RenderState &st, size_t stride, Topology tp,
-                                        const UniformsLay &ulayImpl,
+                                        const PipelineLay &ulayImpl,
                                         const Shader* vs, const Shader* tc, const Shader* te, const Shader* gs, const Shader* fs)=0;
 
       virtual PCompPipeline createComputePipeline(Device* d,
-                                                  const UniformsLay &ulayImpl,
+                                                  const PipelineLay &ulayImpl,
                                                   Shader* shader)=0;
 
       virtual PShader    createShader(Device *d,const void* source,size_t src_size)=0;
@@ -444,7 +444,7 @@ namespace Tempest {
       virtual CommandBuffer*
                          createCommandBuffer(Device* d)=0;
 
-      virtual Desc*      createDescriptors(Device* d,UniformsLay& layP)=0;
+      virtual Desc*      createDescriptors(Device* d,PipelineLay& layP)=0;
 
       virtual PBuffer    createBuffer (Device* d,const void *mem,size_t count,size_t sz,size_t alignedSz,MemUsage usage,BufferHeap flg)=0;
       virtual PTexture   createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips)=0;

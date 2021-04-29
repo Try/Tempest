@@ -11,7 +11,7 @@
 #include "directx12/dxtexture.h"
 #include "directx12/dxshader.h"
 #include "directx12/dxpipeline.h"
-#include "directx12/dxuniformslay.h"
+#include "directx12/dxpipelinelay.h"
 #include "directx12/dxcommandbuffer.h"
 #include "directx12/dxswapchain.h"
 #include "directx12/dxfence.h"
@@ -201,7 +201,7 @@ AbstractGraphicsApi::PFboLayout DirectX12Api::createFboLayout(AbstractGraphicsAp
 
 AbstractGraphicsApi::PPipeline DirectX12Api::createPipeline(AbstractGraphicsApi::Device* d, const RenderState& st, size_t stride,
                                                             Topology tp,
-                                                            const UniformsLay& ulayImpl,
+                                                            const PipelineLay& ulayImpl,
                                                             const Shader* vs, const Shader* tc, const Shader* te, const Shader* gs, const Shader* fs) {
   auto* dx   = reinterpret_cast<Detail::DxDevice*>(d);
   auto* vert = reinterpret_cast<const Detail::DxShader*>(vs);
@@ -209,16 +209,16 @@ AbstractGraphicsApi::PPipeline DirectX12Api::createPipeline(AbstractGraphicsApi:
   auto* tess = reinterpret_cast<const Detail::DxShader*>(te);
   auto* geom = reinterpret_cast<const Detail::DxShader*>(gs);
   auto* frag = reinterpret_cast<const Detail::DxShader*>(fs);
-  auto& ul   = reinterpret_cast<const Detail::DxUniformsLay&>(ulayImpl);
+  auto& ul   = reinterpret_cast<const Detail::DxPipelineLay&>(ulayImpl);
 
   return PPipeline(new Detail::DxPipeline(*dx,st,stride,tp,ul,vert,ctrl,tess,geom,frag));
   }
 
 AbstractGraphicsApi::PCompPipeline DirectX12Api::createComputePipeline(AbstractGraphicsApi::Device* d,
-                                                                       const AbstractGraphicsApi::UniformsLay& ulayImpl,
+                                                                       const AbstractGraphicsApi::PipelineLay& ulayImpl,
                                                                        AbstractGraphicsApi::Shader* shader) {
   auto*   dx = reinterpret_cast<Detail::DxDevice*>(d);
-  auto&   ul = reinterpret_cast<const Detail::DxUniformsLay&>(ulayImpl);
+  auto&   ul = reinterpret_cast<const Detail::DxPipelineLay&>(ulayImpl);
 
   return PCompPipeline(new Detail::DxCompPipeline(*dx,ul,*reinterpret_cast<Detail::DxShader*>(shader)));
   }
@@ -261,18 +261,18 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
   return PBuffer(pbuf.handler);
   }
 
-AbstractGraphicsApi::Desc* DirectX12Api::createDescriptors(AbstractGraphicsApi::Device*, UniformsLay& layP) {
-  Detail::DxUniformsLay& u = reinterpret_cast<Detail::DxUniformsLay&>(layP);
+AbstractGraphicsApi::Desc* DirectX12Api::createDescriptors(AbstractGraphicsApi::Device*, PipelineLay& layP) {
+  Detail::DxPipelineLay& u = reinterpret_cast<Detail::DxPipelineLay&>(layP);
   return new DxDescriptorArray(u);
   }
 
-AbstractGraphicsApi::PUniformsLay DirectX12Api::createUboLayout(Device* d,
-                                                                const Shader* vs, const Shader* tc, const Shader* te,
-                                                                const Shader* gs, const Shader* fs, const Shader* cs) {
+AbstractGraphicsApi::PPipelineLay DirectX12Api::createPipelineLayout(Device * d,
+                                                                     const Shader* vs, const Shader* tc, const Shader* te,
+                                                                     const Shader* gs, const Shader* fs, const Shader* cs) {
   auto* dx = reinterpret_cast<Detail::DxDevice*>(d);
   if(cs!=nullptr) {
     auto* comp = reinterpret_cast<const Detail::DxShader*>(cs);
-    return PUniformsLay(new Detail::DxUniformsLay(*dx,comp->lay));
+    return PPipelineLay(new Detail::DxPipelineLay(*dx,comp->lay));
     }
 
   const Shader* sh[] = {vs,tc,te,gs,fs};
@@ -283,7 +283,7 @@ AbstractGraphicsApi::PUniformsLay DirectX12Api::createUboLayout(Device* d,
     auto* s = reinterpret_cast<const Detail::DxShader*>(sh[i]);
     lay[i] = &s->lay;
     }
-  return PUniformsLay(new Detail::DxUniformsLay(*dx,lay,5));
+  return PPipelineLay(new Detail::DxPipelineLay(*dx,lay,5));
   }
 
 AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mipCnt) {

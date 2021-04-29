@@ -37,7 +37,7 @@ class VideoBuffer;
 class Pixmap;
 
 class DescriptorSet;
-class UniformsLayout;
+class PipelineLayout;
 
 class Color;
 class RenderState;
@@ -132,7 +132,7 @@ class Device {
 
     DescriptorSet        descriptors(const RenderPipeline&  pso) { return descriptors(pso.layout()); }
     DescriptorSet        descriptors(const ComputePipeline& pso) { return descriptors(pso.layout()); }
-    DescriptorSet        descriptors(const UniformsLayout&  lay);
+    DescriptorSet        descriptors(const PipelineLayout&  lay);
 
     Attachment           attachment (TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips = false);
     ZBuffer              zbuffer    (TextureFormat frm, const uint32_t w, const uint32_t h);

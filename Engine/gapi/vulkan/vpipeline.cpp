@@ -7,11 +7,11 @@
 #include "vframebufferlayout.h"
 #include "vrenderpass.h"
 #include "vshader.h"
-#include "vuniformslay.h"
+#include "vpipelinelay.h"
 
 #include <algorithm>
 
-#include <Tempest/UniformsLayout>
+#include <Tempest/PipelineLayout>
 #include <Tempest/RenderState>
 
 using namespace Tempest;
@@ -21,7 +21,7 @@ VPipeline::VPipeline(){
   }
 
 VPipeline::VPipeline(VDevice& device,
-                     const RenderState &st, size_t stride, Topology tp, const VUniformsLay& ulay,
+                     const RenderState &st, size_t stride, Topology tp, const VPipelineLay& ulay,
                      const VShader* vert, const VShader* ctrl, const VShader* tess, const VShader* geom, const VShader* frag)
   : device(device.device), st(st), stride(stride), tp(tp) {
   try {
@@ -56,18 +56,18 @@ VPipeline::~VPipeline() {
   cleanup();
   }
 
-VPipeline::Inst &VPipeline::instance(VFramebufferLayout &lay, uint32_t width, uint32_t height) {
+VPipeline::Inst &VPipeline::instance(VFramebufferLayout &lay) {
   std::lock_guard<SpinLock> guard(sync);
 
   for(auto& i:inst)
-    if(i.w==width && i.h==height && i.lay.handler->isCompatible(lay))
+    if(i.lay.handler->isCompatible(lay))
       return i;
   VkPipeline val=VK_NULL_HANDLE;
   try {
     val = initGraphicsPipeline(device,pipelineLayout,lay,st,
-                               width,height,decl.get(),declSize,stride,
+                               decl.get(),declSize,stride,
                                tp,modules);
-    inst.emplace_back(width,height,&lay,val);
+    inst.emplace_back(&lay,val);
     }
   catch(...) {
     if(val!=VK_NULL_HANDLE)
@@ -86,7 +86,7 @@ void VPipeline::cleanup() {
     vkDestroyPipeline(device,i.val,nullptr);
   }
 
-VkPipelineLayout VPipeline::initLayout(VkDevice device, const VUniformsLay& uboLay, VkShaderStageFlags& pushStageFlags) {
+VkPipelineLayout VPipeline::initLayout(VkDevice device, const VPipelineLay& uboLay, VkShaderStageFlags& pushStageFlags) {
   VkPushConstantRange push = {};
 
   VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
@@ -123,7 +123,6 @@ VkPipelineLayout VPipeline::initLayout(VkDevice device, const VUniformsLay& uboL
 
 VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
                                            const VFramebufferLayout &lay, const RenderState &st,
-                                           uint32_t width, uint32_t height,
                                            const Decl::ComponentType *decl, size_t declSize,
                                            size_t stride, Topology tp,
                                            const DSharedPtr<const VShader*>* shaders) {
@@ -190,24 +189,12 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   if(useTesselation)
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
 
-  VkViewport viewport = {};
-  viewport.x        = 0.0f;
-  viewport.y        = 0.0f;
-  viewport.width    = float(width);
-  viewport.height   = float(height);
-  viewport.minDepth = 0.0f;
-  viewport.maxDepth = 1.0f;
-
-  VkRect2D scissor = {};
-  scissor.offset = {0, 0};
-  scissor.extent = {width,height};
-
   VkPipelineViewportStateCreateInfo viewportState = {};
   viewportState.sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
   viewportState.viewportCount = 1;
-  viewportState.pViewports    = &viewport;
+  viewportState.pViewports    = nullptr;
   viewportState.scissorCount  = 1;
-  viewportState.pScissors     = &scissor;
+  viewportState.pScissors     = nullptr;
 
   static const VkCullModeFlags cullMode[]={
     VK_CULL_MODE_BACK_BIT,
@@ -315,9 +302,9 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
 
   VkPipelineDynamicStateCreateInfo dynamic = {};
   dynamic.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-  const VkDynamicState dySt[1]={VK_DYNAMIC_STATE_VIEWPORT};
+  const VkDynamicState dySt[2] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
   dynamic.pDynamicStates    = dySt;
-  dynamic.dynamicStateCount = 1;
+  dynamic.dynamicStateCount = 2;
 
   VkGraphicsPipelineCreateInfo pipelineInfo = {};
   pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -350,7 +337,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
 VCompPipeline::VCompPipeline() {
   }
 
-VCompPipeline::VCompPipeline(VDevice& dev, const VUniformsLay& ulay, VShader& comp)
+VCompPipeline::VCompPipeline(VDevice& dev, const VPipelineLay& ulay, VShader& comp)
   :device(dev.device) {
   VkShaderStageFlags pushStageFlags = 0;
   pipelineLayout = VPipeline::initLayout(device,ulay,pushStageFlags);

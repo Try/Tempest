@@ -7,7 +7,7 @@
 #include "comptr.h"
 #include "gapi/resourcestate.h"
 #include "dxframebuffer.h"
-#include "dxuniformslay.h"
+#include "dxpipelinelay.h"
 
 namespace Tempest {
 
@@ -42,7 +42,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void setViewport (const Rect& r) override;
 
-    void setPipeline (AbstractGraphicsApi::Pipeline& p,uint32_t w,uint32_t h) override;
+    void setPipeline (AbstractGraphicsApi::Pipeline& p) override;
     void setBytes    (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;
     void setUniforms (AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc& u) override;
 
@@ -76,7 +76,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     DxFramebuffer*                    currentFbo  = nullptr;
     DxRenderPass*                     currentPass = nullptr;
-    ID3D12DescriptorHeap*             currentHeaps[DxUniformsLay::MAX_BINDS]={};
+    ID3D12DescriptorHeap*             currentHeaps[DxPipelineLay::MAX_BINDS]={};
     DxDescriptorArray*                curUniforms = nullptr;
 
     UINT                              vboStride=0;

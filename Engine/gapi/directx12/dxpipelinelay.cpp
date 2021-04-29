@@ -1,8 +1,8 @@
 #if defined(TEMPEST_BUILD_DIRECTX12)
 
-#include "dxuniformslay.h"
+#include "dxpipelinelay.h"
 
-#include <Tempest/UniformsLayout>
+#include <Tempest/PipelineLayout>
 
 #include "dxdevice.h"
 #include "guid.h"
@@ -26,7 +26,7 @@ static D3D12_SHADER_VISIBILITY nativeFormat(ShaderReflection::Stage stage){
   return D3D12_SHADER_VISIBILITY_ALL;
   }
 
-DxUniformsLay::DescriptorPool::DescriptorPool(DxUniformsLay& vlay) {
+DxPipelineLay::DescriptorPool::DescriptorPool(DxPipelineLay& vlay) {
   auto& device = *vlay.dev.device;
 
   try {
@@ -51,7 +51,7 @@ DxUniformsLay::DescriptorPool::DescriptorPool(DxUniformsLay& vlay) {
     }
   }
 
-DxUniformsLay::DescriptorPool::DescriptorPool(DxUniformsLay::DescriptorPool&& oth)
+DxPipelineLay::DescriptorPool::DescriptorPool(DxPipelineLay::DescriptorPool&& oth)
   :allocated(oth.allocated) {
   for(size_t i=0;i<MAX_BINDS;++i) {
     heap[i] = oth.heap[i];
@@ -59,32 +59,32 @@ DxUniformsLay::DescriptorPool::DescriptorPool(DxUniformsLay::DescriptorPool&& ot
     }
   }
 
-DxUniformsLay::DescriptorPool::~DescriptorPool() {
+DxPipelineLay::DescriptorPool::~DescriptorPool() {
   for(auto i:heap)
     if(i!=nullptr)
       i->Release();
   }
 
 
-DxUniformsLay::DxUniformsLay(DxDevice& dev, const std::vector<ShaderReflection::Binding>& comp)
+DxPipelineLay::DxPipelineLay(DxDevice& dev, const std::vector<ShaderReflection::Binding>& comp)
   :dev(dev) {
   ShaderReflection::PushBlock pb;
   ShaderReflection::merge(lay,pb, comp);
   init(lay,pb);
   }
 
-DxUniformsLay::DxUniformsLay(DxDevice& dev, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt)
+DxPipelineLay::DxPipelineLay(DxDevice& dev, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt)
   : dev(dev) {
   ShaderReflection::PushBlock pb;
   ShaderReflection::merge(lay, pb, sh, cnt);
   init(lay,pb);
   }
 
-size_t DxUniformsLay::descriptorsCount() {
+size_t DxPipelineLay::descriptorsCount() {
   return lay.size();
   }
 
-void DxUniformsLay::init(const std::vector<Binding>& lay, const ShaderReflection::PushBlock& pb) {
+void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection::PushBlock& pb) {
   auto& device = *dev.device;
   descSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
   smpSize  = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
@@ -256,7 +256,7 @@ void DxUniformsLay::init(const std::vector<Binding>& lay, const ShaderReflection
                                       uuid<ID3D12RootSignature>(), reinterpret_cast<void**>(&impl)));
   }
 
-void DxUniformsLay::add(const ShaderReflection::Binding& b,
+void DxPipelineLay::add(const ShaderReflection::Binding& b,
                         D3D12_DESCRIPTOR_RANGE_TYPE type,
                         std::vector<Parameter>& root) {
   Parameter rp;
@@ -273,7 +273,7 @@ void DxUniformsLay::add(const ShaderReflection::Binding& b,
   root.push_back(rp);
   }
 
-DxUniformsLay::PoolAllocation DxUniformsLay::allocDescriptors() {
+DxPipelineLay::PoolAllocation DxPipelineLay::allocDescriptors() {
   std::lock_guard<SpinLock> guard(poolsSync);
 
   DescriptorPool* pool = nullptr;
@@ -317,7 +317,7 @@ DxUniformsLay::PoolAllocation DxUniformsLay::allocDescriptors() {
       }
   }
 
-void DxUniformsLay::freeDescriptors(DxUniformsLay::PoolAllocation& d) {
+void DxPipelineLay::freeDescriptors(DxPipelineLay::PoolAllocation& d) {
   std::lock_guard<SpinLock> guard(poolsSync);
   auto& p = pools[d.pool];
   p.allocated.set(d.offset,false);

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include <Tempest/UniformsLayout>
+#include <Tempest/PipelineLayout>
 
 #include "../utility/dptr.h"
 
@@ -9,7 +9,7 @@ namespace Tempest {
 
 class Device;
 class CommandBuffer;
-class UniformsLayout;
+class PipelineLayout;
 template<class T>
 class Encoder;
 
@@ -21,13 +21,13 @@ class RenderPipeline final {
     RenderPipeline& operator = (RenderPipeline&& other);
 
     bool isEmpty() const { return impl.handler==nullptr; }
-    const UniformsLayout& layout() const { return ulay; }
+    const PipelineLayout& layout() const { return ulay; }
 
   private:
     RenderPipeline(Detail::DSharedPtr<AbstractGraphicsApi::Pipeline*>&&    p,
-                   Detail::DSharedPtr<AbstractGraphicsApi::UniformsLay*>&& lay);
+                   Detail::DSharedPtr<AbstractGraphicsApi::PipelineLay*>&& lay);
 
-    UniformsLayout                                     ulay;
+    PipelineLayout                                     ulay;
     Detail::DSharedPtr<AbstractGraphicsApi::Pipeline*> impl;
 
   friend class Tempest::Device;

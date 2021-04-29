@@ -52,9 +52,9 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void beginCompute() override;
     void endCompute() override;
 
-    void setPipeline(AbstractGraphicsApi::Pipeline& p, uint32_t w, uint32_t h) override;
-    void setBytes   (AbstractGraphicsApi::Pipeline &p, const void* data, size_t size) override;
-    void setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u) override;
+    void setPipeline(AbstractGraphicsApi::Pipeline& p) override;
+    void setBytes   (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;
+    void setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc &u) override;
 
     void setComputePipeline(AbstractGraphicsApi::CompPipeline& p) override;
     void setBytes   (AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) override;
@@ -95,7 +95,6 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     VFramebuffer*                           curFbo      = nullptr;
     VRenderPass*                            curRp       = nullptr;
     VDescriptorArray*                       curUniforms = nullptr;
-    VkViewport                              viewPort    = {};
     bool                                    ssboBarriers = false;
   };
 

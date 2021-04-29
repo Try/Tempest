@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include <Tempest/UniformsLayout>
+#include <Tempest/PipelineLayout>
 
 #include "vulkan_sdk.h"
 #include <mutex>
@@ -13,7 +13,7 @@
 
 namespace Tempest {
 
-class UniformsLayout;
+class PipelineLayout;
 
 namespace Detail {
 
@@ -21,11 +21,11 @@ class VDescriptorArray;
 class VDevice;
 class VShader;
 
-class VUniformsLay : public AbstractGraphicsApi::UniformsLay {
+class VPipelineLay : public AbstractGraphicsApi::PipelineLay {
   public:
-    VUniformsLay(VDevice& dev, const std::vector<ShaderReflection::Binding>& comp);
-    VUniformsLay(VDevice& dev, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt);
-    ~VUniformsLay();
+    VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Binding>& comp);
+    VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt);
+    ~VPipelineLay();
 
     size_t descriptorsCount() override;
 

@@ -19,9 +19,6 @@ static uint32_t mipCount(uint32_t w, uint32_t h) {
 
 Encoder<Tempest::CommandBuffer>::Encoder(Tempest::CommandBuffer* ow)
   :owner(ow),impl(ow->impl.handler) {
-  state.vp.width  = 0;
-  state.vp.height = 0;
-
   impl->begin();
   }
 
@@ -79,7 +76,7 @@ void Encoder<Tempest::CommandBuffer>::setUniforms(const Detail::ResourcePtr<Rend
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const Detail::ResourcePtr<RenderPipeline> &p) {
   if(state.curPipeline!=p.impl.handler) {
-    impl->setPipeline(*p.impl.handler,state.vp.width,state.vp.height);
+    impl->setPipeline(*p.impl.handler);
     state.curCompute  = nullptr;
     state.curPipeline = p.impl.handler;
     }
@@ -87,7 +84,7 @@ void Encoder<Tempest::CommandBuffer>::setUniforms(const Detail::ResourcePtr<Rend
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline &p) {
   if(state.curPipeline!=p.impl.handler) {
-    impl->setPipeline(*p.impl.handler,state.vp.width,state.vp.height);
+    impl->setPipeline(*p.impl.handler);
     state.curPipeline=p.impl.handler;
     }
   }
@@ -161,11 +158,7 @@ void Encoder<CommandBuffer>::setFramebuffer(const FrameBuffer &fbo, const Render
     return;
     }
 
-  state.vp.width  = fbo.w();
-  state.vp.height = fbo.h();
-
-  impl->beginRenderPass(fbo.impl.handler,p.impl.handler,
-                        state.vp.width,state.vp.height);
+  impl->beginRenderPass(fbo.impl.handler,p.impl.handler, fbo.w(),fbo.h());
   curPass.fbo      = &fbo;
   curPass.pass     = &p;
   state.curCompute = nullptr;
