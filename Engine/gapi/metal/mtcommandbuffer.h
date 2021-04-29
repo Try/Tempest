@@ -3,12 +3,17 @@
 #include "nsptr.h"
 
 #include <Tempest/AbstractGraphicsApi>
+#import  <Metal/MTLStageInputOutputDescriptor.h>
 
 namespace Tempest {
+
 class MetalApi;
 
 namespace Detail {
+
 class MtDevice;
+class MtBuffer;
+class MtFramebuffer;
 
 class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
   public:
@@ -51,6 +56,10 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     MtDevice& device;
     NsPtr     impl;
     NsPtr     enc;
+
+    MtFramebuffer*  curFbo = nullptr;
+    const MtBuffer* curIbo = nullptr;
+    MTLIndexType    iboType;
 
   friend class Tempest::MetalApi;
   };

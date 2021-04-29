@@ -50,16 +50,16 @@ TEST(MetalApi,Fbo) {
   }
 
 TEST(MetalApi,Draw) {
-#if defined(__)
+#if defined(__OSX__)
   GapiTestCommon::draw<MetalApi,TextureFormat::RGBA8>  ("MetalApi_Draw_RGBA8.png");
   GapiTestCommon::draw<MetalApi,TextureFormat::RG8>    ("MetalApi_Draw_RG8.png");
   GapiTestCommon::draw<MetalApi,TextureFormat::R8>     ("MetalApi_Draw_R8.png");
   GapiTestCommon::draw<MetalApi,TextureFormat::RGBA16> ("MetalApi_Draw_RGBA16.png");
   GapiTestCommon::draw<MetalApi,TextureFormat::RG16>   ("MetalApi_Draw_RG16.png");
   GapiTestCommon::draw<MetalApi,TextureFormat::R16>    ("MetalApi_Draw_R16.png");
-  GapiTestCommon::draw<MetalApi,TextureFormat::RGBA32F>("MetalApi_Draw_RGBA32F.png");
-  GapiTestCommon::draw<MetalApi,TextureFormat::RG32F>  ("MetalApi_Draw_RG32F.png");
-  GapiTestCommon::draw<MetalApi,TextureFormat::R32F>   ("MetalApi_Draw_R32F.png");
+  // GapiTestCommon::draw<MetalApi,TextureFormat::RGBA32F>("MetalApi_Draw_RGBA32F.png");
+  // GapiTestCommon::draw<MetalApi,TextureFormat::RG32F>  ("MetalApi_Draw_RG32F.png");
+  // GapiTestCommon::draw<MetalApi,TextureFormat::R32F>   ("MetalApi_Draw_R32F.png");
 #endif
   }
 

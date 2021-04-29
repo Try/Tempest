@@ -1,7 +1,11 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
+#include <Tempest/RenderState>
 #import  <Metal/MTLPixelFormat.h>
+#import  <Metal/MTLVertexDescriptor.h>
+#import  <Metal/MTLDepthStencil.h>
+#import  <Metal/MTLRenderPipeline.h>
 
 #include "nsptr.h"
 
@@ -53,6 +57,120 @@ inline MTLPixelFormat nativeFormat(TextureFormat frm) {
       return MTLPixelFormatBC3_RGBA;
     }
   return MTLPixelFormatInvalid;
+  }
+
+inline MTLVertexFormat nativeFormat(Decl::ComponentType t) {
+  switch(t) {
+    case Decl::ComponentType::count:
+    case Decl::ComponentType::float0:
+      return MTLVertexFormatInvalid;
+    case Decl::ComponentType::float1:
+      return MTLVertexFormatFloat;
+    case Decl::ComponentType::float2:
+      return MTLVertexFormatFloat2;
+    case Decl::ComponentType::float3:
+      return MTLVertexFormatFloat3;
+    case Decl::ComponentType::float4:
+      return MTLVertexFormatFloat4;
+
+    case Decl::ComponentType::int1:
+      return MTLVertexFormatInt;
+    case Decl::ComponentType::int2:
+      return MTLVertexFormatInt2;
+    case Decl::ComponentType::int3:
+      return MTLVertexFormatInt3;
+    case Decl::ComponentType::int4:
+      return MTLVertexFormatInt4;
+
+    case Decl::ComponentType::uint1:
+      return MTLVertexFormatUInt;
+    case Decl::ComponentType::uint2:
+      return MTLVertexFormatUInt2;
+    case Decl::ComponentType::uint3:
+      return MTLVertexFormatUInt3;
+    case Decl::ComponentType::uint4:
+      return MTLVertexFormatUInt4;
+    }
+  return MTLVertexFormatInvalid;
+  }
+
+inline MTLCompareFunction nativeFormat(RenderState::ZTestMode m) {
+  switch(m) {
+    case RenderState::ZTestMode::Always:
+      return MTLCompareFunctionAlways;
+    case RenderState::ZTestMode::Never:
+      return MTLCompareFunctionNever;
+    case RenderState::ZTestMode::Greater:
+      return MTLCompareFunctionGreater;
+    case RenderState::ZTestMode::Less:
+      return MTLCompareFunctionLess;
+    case RenderState::ZTestMode::GEqual:
+      return MTLCompareFunctionGreaterEqual;
+    case RenderState::ZTestMode::LEqual:
+      return MTLCompareFunctionLessEqual;
+    case RenderState::ZTestMode::NOEqual:
+      return MTLCompareFunctionNotEqual;
+    case RenderState::ZTestMode::Equal:
+      return MTLCompareFunctionEqual;
+    case RenderState::ZTestMode::Count:
+      return MTLCompareFunctionAlways;
+    }
+  return MTLCompareFunctionAlways;
+  }
+
+inline MTLBlendFactor nativeFormat(RenderState::BlendMode m) {
+  switch(m) {
+    case RenderState::BlendMode::zero:
+    case RenderState::BlendMode::Count:
+      return MTLBlendFactorZero;
+    case RenderState::BlendMode::one:
+      return MTLBlendFactorOne;
+    case RenderState::BlendMode::src_color:
+      return MTLBlendFactorSource1Color;
+    case RenderState::BlendMode::one_minus_src_color:
+      return MTLBlendFactorOneMinusSource1Color;
+    case RenderState::BlendMode::src_alpha:
+      return MTLBlendFactorSource1Alpha;
+    case RenderState::BlendMode::src_alpha_saturate:
+      return MTLBlendFactorSourceAlphaSaturated;
+    case RenderState::BlendMode::one_minus_src_alpha:
+      return MTLBlendFactorOneMinusSourceAlpha;
+    case RenderState::BlendMode::dst_color:
+      return MTLBlendFactorDestinationColor;
+    case RenderState::BlendMode::one_minus_dst_color:
+      return MTLBlendFactorOneMinusDestinationColor;
+    case RenderState::BlendMode::dst_alpha:
+      return MTLBlendFactorDestinationAlpha;
+    case RenderState::BlendMode::one_minus_dst_alpha:
+      return MTLBlendFactorOneMinusDestinationAlpha;
+    }
+  }
+
+inline MTLBlendOperation nativeFormat(RenderState::BlendOp op) {
+  switch(op) {
+    case RenderState::BlendOp::Add:
+      return MTLBlendOperationAdd;
+    case RenderState::BlendOp::Max:
+      return MTLBlendOperationMax;
+    case RenderState::BlendOp::Min:
+      return MTLBlendOperationMin;
+    case RenderState::BlendOp::ReverseSubstract:
+      return MTLBlendOperationReverseSubtract;
+    case RenderState::BlendOp::Substract:
+      return MTLBlendOperationSubtract;
+    }
+  }
+
+inline MTLCullMode nativeFormat(RenderState::CullMode m) {
+  switch(m) {
+    case RenderState::CullMode::NoCull:
+    case RenderState::CullMode::Count:
+      return MTLCullModeNone;
+    case RenderState::CullMode::Back:
+      return MTLCullModeBack;
+    case RenderState::CullMode::Front:
+      return MTLCullModeFront;
+    }
   }
 
 class MtDevice : public AbstractGraphicsApi::Device {

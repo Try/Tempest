@@ -9,6 +9,7 @@
 #include "gapi/metal/mtpipeline.h"
 #include "gapi/metal/mtcommandbuffer.h"
 #include "gapi/metal/mttexture.h"
+#include "gapi/metal/mtfbolayout.h"
 #include "gapi/metal/mtframebuffer.h"
 #include "gapi/metal/mtrenderpass.h"
 #include "gapi/metal/mtsync.h"
@@ -57,19 +58,22 @@ AbstractGraphicsApi::PFbo MetalApi::createFbo(AbstractGraphicsApi::Device *d,
                                               const uint32_t *imgId,
                                               AbstractGraphicsApi::Texture *zbuf) {
   auto& dx = *reinterpret_cast<MtDevice*>(d);
+  auto& lx = *reinterpret_cast<MtFboLayout*>(lay);
   auto  zb = reinterpret_cast<MtTexture*>(zbuf);
 
   MtTexture*   att[256] = {};
-  //MtSwapchain* sw[256] = {};
+  MtSwapchain* sw [256] = {};
   for(size_t i=0; i<clCount; ++i) {
     att[i] = reinterpret_cast<MtTexture*>(cl[i]);
-    //sw [i] = reinterpret_cast<Detail::VSwapchain*>(s[i]);
+    sw [i] = reinterpret_cast<MtSwapchain*>(sx[i]);
     }
-  return PFbo(new MtFramebuffer(att,clCount,zb));
+  return PFbo(new MtFramebuffer(lx,att,clCount,zb));
   }
 
-AbstractGraphicsApi::PFboLayout MetalApi::createFboLayout(AbstractGraphicsApi::Device *d, AbstractGraphicsApi::Swapchain **s, TextureFormat *att, uint8_t attCount) {
-  return PFboLayout();
+AbstractGraphicsApi::PFboLayout MetalApi::createFboLayout(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Swapchain **s,
+                                                          TextureFormat *att, uint8_t attCount) {
+  auto sw = reinterpret_cast<MtSwapchain**>(s);
+  return PFboLayout(new MtFboLayout(sw,att,attCount));
   }
 
 AbstractGraphicsApi::PPipeline MetalApi::createPipeline(AbstractGraphicsApi::Device *d,
@@ -81,13 +85,12 @@ AbstractGraphicsApi::PPipeline MetalApi::createPipeline(AbstractGraphicsApi::Dev
                                                         const AbstractGraphicsApi::Shader *te,
                                                         const AbstractGraphicsApi::Shader *gs,
                                                         const AbstractGraphicsApi::Shader *fs) {
-  id<MTLDevice> dx = Detail::get<MtDevice,AbstractGraphicsApi::Device>(d);
-  (void)dx;
+  auto& dx = *reinterpret_cast<MtDevice*>(d);
 
-  auto&         vx = *reinterpret_cast<const MtShader*>(vs);
-  auto&         fx = *reinterpret_cast<const MtShader*>(fs);
+  auto& vx = *reinterpret_cast<const MtShader*>(vs);
+  auto& fx = *reinterpret_cast<const MtShader*>(fs);
 
-  return PPipeline(new MtPipeline(st,stride,vx.impl,fx.impl));
+  return PPipeline(new MtPipeline(dx,st,stride,vx,fx));
   }
 
 AbstractGraphicsApi::PCompPipeline MetalApi::createComputePipeline(AbstractGraphicsApi::Device *d, const AbstractGraphicsApi::UniformsLay &ulayImpl,
@@ -96,7 +99,7 @@ AbstractGraphicsApi::PCompPipeline MetalApi::createComputePipeline(AbstractGraph
   }
 
 AbstractGraphicsApi::PShader MetalApi::createShader(AbstractGraphicsApi::Device *d, const void *source, size_t src_size) {
-  id<MTLDevice> dx  = Detail::get<MtDevice,AbstractGraphicsApi::Device>(d);
+  id<MTLDevice> dx = Detail::get<MtDevice,AbstractGraphicsApi::Device>(d);
   return PShader(new MtShader(dx,source,src_size));
   }
 
@@ -104,7 +107,7 @@ AbstractGraphicsApi::Fence *MetalApi::createFence(AbstractGraphicsApi::Device*) 
   return new MtSync();
   }
 
-AbstractGraphicsApi::Semaphore *MetalApi::createSemaphore(AbstractGraphicsApi::Device *d) {
+AbstractGraphicsApi::Semaphore *MetalApi::createSemaphore(AbstractGraphicsApi::Device*) {
   return nullptr;
   }
 
@@ -180,7 +183,7 @@ void MetalApi::readPixels(AbstractGraphicsApi::Device *d,
   out = Pixmap(w,h,pfrm);
   [tex getBytes:
     out.data()
-    bytesPerRow: w*4
+    bytesPerRow: w*bpp
     fromRegion: MTLRegionMake2D(0,0,w,h)
     mipmapLevel: mip
     ];

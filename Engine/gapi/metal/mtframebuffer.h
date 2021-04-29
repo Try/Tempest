@@ -2,7 +2,9 @@
 
 #include <Tempest/AbstractGraphicsApi>
 
+#include "mtfbolayout.h"
 #include "mtrenderpass.h"
+
 #include "utility/spinlock.h"
 
 @class MTLRenderPassDescriptor;
@@ -14,7 +16,7 @@ class MtTexture;
 
 class MtFramebuffer : public AbstractGraphicsApi::Fbo {
   public:
-    MtFramebuffer(MtTexture **clr, size_t clrSize, MtTexture* depth);
+    MtFramebuffer(MtFboLayout& lay, MtTexture **clr, size_t clrSize, MtTexture* depth);
     ~MtFramebuffer();
 
     struct Inst {
@@ -24,8 +26,9 @@ class MtFramebuffer : public AbstractGraphicsApi::Fbo {
 
     MTLRenderPassDescriptor* instance(MtRenderPass &rp);
 
-    std::vector<MtTexture*> color;
-    MtTexture*              depth = nullptr;
+    DSharedPtr<MtFboLayout*> layout;
+    std::vector<MtTexture*>  color;
+    MtTexture*               depth = nullptr;
 
   private:
     SpinLock          sync;

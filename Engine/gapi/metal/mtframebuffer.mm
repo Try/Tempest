@@ -33,8 +33,9 @@ static MTLStoreAction mkStoreOp(const FboMode& m) {
   return MTLStoreActionDontCare;
   }
 
-MtFramebuffer::MtFramebuffer(MtTexture** clr, size_t clrSize, MtTexture *depth)
-  :color(clrSize), depth(depth) {
+MtFramebuffer::MtFramebuffer(MtFboLayout &lay,
+                             MtTexture** clr, size_t clrSize, MtTexture *depth)
+  :layout(&lay), color(clrSize), depth(depth) {
   for(size_t i=0; i<clrSize; ++i)
     color[i] = clr[i];
   }
