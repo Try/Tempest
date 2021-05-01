@@ -128,11 +128,11 @@ inline MTLBlendFactor nativeFormat(RenderState::BlendMode m) {
     case RenderState::BlendMode::one:
       return MTLBlendFactorOne;
     case RenderState::BlendMode::src_color:
-      return MTLBlendFactorSource1Color;
+      return MTLBlendFactorSourceColor;
     case RenderState::BlendMode::one_minus_src_color:
-      return MTLBlendFactorOneMinusSource1Color;
+      return MTLBlendFactorOneMinusSourceColor;
     case RenderState::BlendMode::src_alpha:
-      return MTLBlendFactorSource1Alpha;
+      return MTLBlendFactorSourceAlpha;
     case RenderState::BlendMode::src_alpha_saturate:
       return MTLBlendFactorSourceAlphaSaturated;
     case RenderState::BlendMode::one_minus_src_alpha:
