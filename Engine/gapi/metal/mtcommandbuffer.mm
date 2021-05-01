@@ -19,6 +19,10 @@ MtCommandBuffer::MtCommandBuffer(MtDevice& dev)
   reset();
   }
 
+MtCommandBuffer::~MtCommandBuffer() {
+  [impl release];
+  }
+
 bool MtCommandBuffer::isRecording() const {
   return enc!=nil;
   }

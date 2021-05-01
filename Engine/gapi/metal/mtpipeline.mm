@@ -48,6 +48,9 @@ MtPipeline::MtPipeline(MtDevice &d,
   }
 
 MtPipeline::~MtPipeline() {
+  for(auto& i:instance)
+    if(i.pso!=nil)
+      [i.pso release];
   [vdesc release];
   [pdesc release];
   }
@@ -78,8 +81,7 @@ MtPipeline::Inst& MtPipeline::inst(const MtFboLayout& lay) {
 
   NSError* error = nil;
   ix.pso = [dev newRenderPipelineStateWithDescriptor:pdesc error:&error];
-  if(ix.pso==nil)
-    ; // TODO: exceptions
+  mtAssert(ix.pso,error);
   return ix;
   }
 
@@ -99,7 +101,6 @@ MtCompPipeline::MtCompPipeline(MtDevice &device, const MtShader &sh) {
               options:MTLPipelineOptionNone
               reflection:nil
               error:&error];
-  if(impl==nil)
-    ; // TODO: exceptions
+  mtAssert(impl,error);
   [desc release];
   }

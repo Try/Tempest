@@ -47,9 +47,10 @@ void Game::initSwapchain(){
 void Game::paintEvent(PaintEvent& event) {
   Painter p(event);
 
-  p.setBrush(Brush(texture));
+  //p.setBrush(Brush(texture));
   p.drawRect(100,50, 200,100);
 
+  return;
   p.setBrush(Brush(texture,Color(1,0,0,1)));
   p.drawRect(300,150,texture.w(),texture.h());
 
@@ -78,13 +79,13 @@ void Game::render(){
     {
     auto enc = cmd.startEncoding(device);
     enc.setFramebuffer(fbo[imgId],pass);
-    //surface.draw(device,swapchain,enc);
+    surface.draw(device,swapchain,enc);
     }
 
     device.submit(cmd,context.imageAvailable,context.renderDone,context.gpuLock);
     device.present(swapchain,imgId,context.renderDone);
     }
-  catch(const Tempest::DeviceLostException&) {
+  catch(const Tempest::SwapchainSuboptimal&) {
     swapchain.reset();
     initSwapchain();
     }

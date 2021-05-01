@@ -111,7 +111,7 @@ AbstractGraphicsApi::PCompPipeline MetalApi::createComputePipeline(AbstractGraph
   }
 
 AbstractGraphicsApi::PShader MetalApi::createShader(AbstractGraphicsApi::Device *d, const void *source, size_t src_size) {
-  id<MTLDevice> dx = reinterpret_cast<MtDevice*>(d)->impl;
+  auto& dx = *reinterpret_cast<MtDevice*>(d);
   return PShader(new MtShader(dx,source,src_size));
   }
 

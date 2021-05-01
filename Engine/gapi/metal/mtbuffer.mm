@@ -10,11 +10,12 @@
 
 using namespace Tempest::Detail;
 
-MtBuffer::MtBuffer(const MtDevice& dev, id buf, MTLResourceOptions flg)
+MtBuffer::MtBuffer(const MtDevice& dev, id<MTLBuffer> buf, MTLResourceOptions flg)
   :dev(dev), impl(buf), flg(flg) {
   }
 
 MtBuffer::~MtBuffer() {
+  [impl release];
   }
 
 void MtBuffer::update(const void *data, size_t off, size_t count, size_t sz, size_t alignedSz) {
@@ -39,6 +40,9 @@ void MtBuffer::update(const void *data, size_t off, size_t count, size_t sz, siz
 
   // TODO: implement proper upload engine
   [cmd waitUntilCompleted];
+
+  [enc release];
+  [cmd release];
   }
 
 void MtBuffer::read(void *data, size_t off, size_t size) {
@@ -56,6 +60,9 @@ void MtBuffer::read(void *data, size_t off, size_t size) {
   [enc endEncoding];
   [cmd commit];
   [cmd waitUntilCompleted];
+
+  [enc release];
+  [cmd release];
 
   std::memcpy(data,stage.contents,size);
   }

@@ -32,3 +32,7 @@ MtTexture::MtTexture(MtDevice& d, const uint32_t w, const uint32_t h, uint32_t m
 uint32_t MtTexture::mipCount() const {
   return mips;
   }
+
+Tempest::Detail::MtTexture::~MtTexture() {
+  [impl release];
+  }

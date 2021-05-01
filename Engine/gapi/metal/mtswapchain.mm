@@ -1,6 +1,8 @@
 #include "mtswapchain.h"
 
 #include <Tempest/Except>
+#include <Tempest/Log>
+
 #include "mtdevice.h"
 
 #import <QuartzCore/CAMetalLayer.h>
@@ -25,7 +27,7 @@ MtSwapchain::MtSwapchain(MtDevice& dev, NSWindow *w):wnd(w) {
   NSRect rect = [wnd frame];
   sz = {int(rect.size.width), int(rect.size.height)};
 
-  MetalView* view = [[MetalView alloc] initWithFrame:rect];
+  view = [[MetalView alloc] initWithFrame:rect];
   view.wantsLayer = YES;
   wnd.contentView = view;
 
@@ -36,11 +38,14 @@ MtSwapchain::MtSwapchain(MtDevice& dev, NSWindow *w):wnd(w) {
   }
 
 MtSwapchain::~MtSwapchain() {
-  current = nil;
+  releaseImg();
+  if(view!=nil)
+    [view release];
   }
 
 void MtSwapchain::reset() {
-  current = nil;
+  // https://developer.apple.com/documentation/quartzcore/cametallayer?language=objc
+  releaseImg();
 
   CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);
   imgCount = lay.maximumDrawableCount;
@@ -52,20 +57,21 @@ void MtSwapchain::reset() {
     vec[i] = dr;
     img[i] = dr.texture;
     }
-  for(size_t i=0; i<vec.size(); ++i) {
+  for(size_t i=0; i<vec.size(); ++i)
     [vec[i] release];
-    vec[i] = nil;
-    }
   }
 
 uint32_t MtSwapchain::nextImage(AbstractGraphicsApi::Semaphore*) {
+  releaseImg();
+
   CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);
   current = [lay nextDrawable];
   // HACK: assume that metal reusing same textures over and over unitil window-resize
   for(size_t i=0; i<imgCount; ++i)
     if(img[i]==current.texture)
       return i;
-  throw DeviceLostException();
+  Log::d("failed to recycle CAMetalLayer textures - force reset");
+  throw SwapchainSuboptimal();
   }
 
 uint32_t MtSwapchain::imageCount() const {
@@ -83,4 +89,11 @@ uint32_t MtSwapchain::h() const {
 MTLPixelFormat MtSwapchain::format() const {
   CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);
   return lay.pixelFormat;
+  }
+
+void MtSwapchain::releaseImg() {
+  if(current!=nil) {
+    [current release];
+    current = nil;
+    }
   }

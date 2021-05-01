@@ -3,6 +3,9 @@
 #include <Tempest/AbstractGraphicsApi>
 #import  <AppKit/AppKit.h>
 #import  <QuartzCore/QuartzCore.h>
+#import  <Metal/MTLTexture.h>
+
+@class MetalView;
 
 namespace Tempest {
 namespace Detail {
@@ -22,14 +25,16 @@ class MtSwapchain : public AbstractGraphicsApi::Swapchain {
 
     MTLPixelFormat format() const;
 
-    id<CAMetalDrawable> current = nil;
-    std::unique_ptr<id<MTLTexture>[]> img = {};
+    id<CAMetalDrawable>               current = nil;
+    std::unique_ptr<id<MTLTexture>[]> img     = {};
 
   private:
-    NSWindow*           wnd = nil;
-    Tempest::Size       sz;
+    void           releaseImg();
+    NSWindow*      wnd  = nil;
+    MetalView*     view = nil;
+    Tempest::Size  sz;
 
-    uint32_t            imgCount = 0;
+    uint32_t       imgCount = 0;
   };
 
 }

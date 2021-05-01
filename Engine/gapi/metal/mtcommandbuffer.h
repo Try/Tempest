@@ -17,6 +17,7 @@ class MtFramebuffer;
 class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
   public:
     MtCommandBuffer(MtDevice &dev);
+    ~MtCommandBuffer();
 
     void beginRenderPass(AbstractGraphicsApi::Fbo* f,
                          AbstractGraphicsApi::Pass*  p,

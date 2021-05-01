@@ -56,6 +56,8 @@ static SystemApi::Window* createWindow(Tempest::Window *owner,
   }
 
 MacOSApi::MacOSApi() {
+  [NSApplication sharedApplication];
+
   NSMenu*      bar     = [NSMenu new];
   NSMenuItem * barItem = [NSMenuItem new];
   NSMenu*      menu    = [NSMenu new];
@@ -67,6 +69,9 @@ MacOSApi::MacOSApi() {
   [barItem setSubmenu:menu];
   [menu    addItem:quit];
   NSApp.mainMenu = bar;
+
+  [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+  [NSApp activateIgnoringOtherApps:YES];
   }
 
 SystemApi::Window *MacOSApi::implCreateWindow(Tempest::Window *owner, uint32_t width, uint32_t height,

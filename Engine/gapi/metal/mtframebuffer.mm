@@ -63,10 +63,10 @@ MTLRenderPassDescriptor *MtFramebuffer::instance(MtRenderPass &rp) {
   MTLRenderPassDescriptor* desc = [MTLRenderPassDescriptor renderPassDescriptor];
 
   for(size_t i=0; i<color.size(); ++i) {
-    desc.colorAttachments[i].texture        = color[i].id;
-    desc.colorAttachments[i].loadAction     = mkLoadOp    (rp.mode[i]);
-    desc.colorAttachments[i].storeAction    = mkStoreOp   (rp.mode[i]);
-    desc.colorAttachments[i].clearColor     = mkClearColor(rp.mode[i]);
+    desc.colorAttachments[i].texture     = color[i].id;
+    desc.colorAttachments[i].loadAction  = mkLoadOp    (rp.mode[i]);
+    desc.colorAttachments[i].storeAction = mkStoreOp   (rp.mode[i]);
+    desc.colorAttachments[i].clearColor  = mkClearColor(rp.mode[i]);
     }
 
   if(depth!=nullptr) {

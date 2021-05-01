@@ -10,7 +10,7 @@ class MtDevice;
 
 class MtBuffer : public Tempest::AbstractGraphicsApi::Buffer {
   public:
-    MtBuffer(const MtDevice& dev, id buf, MTLResourceOptions flg);
+    MtBuffer(const MtDevice& dev, id<MTLBuffer> buf, MTLResourceOptions flg);
     ~MtBuffer();
 
     void  update  (const void* data, size_t off, size_t count, size_t sz, size_t alignedSz) override;

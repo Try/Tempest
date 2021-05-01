@@ -2,10 +2,14 @@
 
 #include <Tempest/AbstractGraphicsApi>
 #include <Tempest/RenderState>
+#include <Tempest/Except>
+
+#include "../utility/compiller_hints.h"
 #import  <Metal/MTLPixelFormat.h>
 #import  <Metal/MTLVertexDescriptor.h>
 #import  <Metal/MTLDepthStencil.h>
 #import  <Metal/MTLRenderPipeline.h>
+#import  <Foundation/NSError.h>
 
 class MTLDevice;
 
@@ -175,13 +179,22 @@ class MtDevice : public AbstractGraphicsApi::Device {
   public:
     MtDevice();
     ~MtDevice();
+
     void waitIdle() override;
+
+    static void handleError(NSError* err);
 
     id<MTLDevice>       impl;
     id<MTLCommandQueue> queue;
 
     AbstractGraphicsApi::Props prop;
   };
+
+inline void mtAssert(id obj, NSError* err) {
+  if(T_LIKELY(obj!=nil))
+    return;
+  MtDevice::handleError(err);
+  }
 
 }
 }

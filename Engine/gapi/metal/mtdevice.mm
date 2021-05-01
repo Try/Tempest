@@ -1,7 +1,13 @@
 #include "mtdevice.h"
 
+#include <Tempest/Log>
+
 #include <Metal/MTLDevice.h>
 #include <Metal/MTLCommandQueue.h>
+
+#if __has_feature(objc_arc)
+#error "Objective C++ ARC is not supported"
+#endif
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -68,8 +74,23 @@ MtDevice::MtDevice() {
   }
 
 MtDevice::~MtDevice() {
+  [queue release];
+  [impl  release];
   }
 
 void MtDevice::waitIdle() {
-  // TODO
+  // TODO: verify, if this correct at all
+  id<MTLCommandBuffer> cmd = [queue commandBuffer];
+  [cmd commit];
+  [cmd waitUntilCompleted];
+  }
+
+void Tempest::Detail::MtDevice::handleError(NSError *err) {
+  if(err==nil)
+    return;
+#if !defined(NDEBUG)
+  const char* e = [[err domain] UTF8String];
+  Log::d("NSError: \"",e,"\"");
+#endif
+  throw DeviceLostException();
   }

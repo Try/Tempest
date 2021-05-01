@@ -1,5 +1,7 @@
 #include "mtshader.h"
 
+#include "mtdevice.h"
+
 #include <Tempest/Log>
 #include <Tempest/Except>
 
@@ -11,7 +13,7 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-MtShader::MtShader(id dev, const void* source, size_t srcSize) {
+MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
   if(srcSize%4!=0)
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
 
@@ -51,14 +53,15 @@ MtShader::MtShader(id dev, const void* source, size_t srcSize) {
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
 
-  // Log::d(msl);
+  Log::d(msl);
 
   auto     opt = [[MTLCompileOptions alloc] init];
   NSError* err = nil;
   auto     str = [NSString stringWithCString:msl.c_str() encoding:[NSString defaultCStringEncoding]];
 
-  library = [dev newLibraryWithSource:str options:opt error:&err];
+  library = [dev.impl newLibraryWithSource:str options:opt error:&err];
   [opt release];
+  [str release];
 
   if(err!=nil) {
 #if !defined(NDEBUG)
@@ -68,4 +71,9 @@ MtShader::MtShader(id dev, const void* source, size_t srcSize) {
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
   impl = [library newFunctionWithName: @"main0"];
+  }
+
+MtShader::~MtShader() {
+  [impl    release];
+  [library release];
   }

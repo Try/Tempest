@@ -10,9 +10,13 @@
 namespace Tempest {
 namespace Detail {
 
+class MtDevice;
+
 class MtShader : public AbstractGraphicsApi::Shader {
   public:
-    MtShader(id dev, const void* source, size_t srcSize);
+    MtShader(MtDevice& dev, const void* source, size_t srcSize);
+    ~MtShader();
+
     using Binding = ShaderReflection::Binding;
 
     id<MTLLibrary>  library;
