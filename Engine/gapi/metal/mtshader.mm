@@ -25,7 +25,7 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
 #endif
 
   spirv_cross::CompilerGLSL::Options optGLSL;
-  // optGLSL.vertex.flip_vert_y = true;
+  optGLSL.vertex.flip_vert_y = true;
 
   std::string msl;
   try {
@@ -53,7 +53,7 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
 
-  Log::d(msl);
+  // Log::d(msl);
 
   auto     opt = [[MTLCompileOptions alloc] init];
   NSError* err = nil;

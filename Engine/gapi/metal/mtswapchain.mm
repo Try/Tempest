@@ -62,6 +62,7 @@ void MtSwapchain::reset() {
   }
 
 uint32_t MtSwapchain::nextImage(AbstractGraphicsApi::Semaphore*) {
+  // Log::d(__func__);
   releaseImg();
 
   CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);

@@ -3,6 +3,7 @@
 #include <Tempest/AbstractGraphicsApi>
 #import  <Metal/MTLStageInputOutputDescriptor.h>
 #import  <Metal/MTLCommandBuffer.h>
+#import  <Metal/MTLRenderCommandEncoder.h>
 
 namespace Tempest {
 
@@ -57,9 +58,10 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     id<MTLCommandBuffer> impl = nil;
     id                   enc  = nil;
 
-    MtFramebuffer*  curFbo = nullptr;
-    const MtBuffer* curIbo = nullptr;
-    MTLIndexType    iboType;
+    MtFramebuffer*   curFbo   = nullptr;
+    const MtBuffer*  curIbo   = nullptr;
+    MTLIndexType     iboType  = MTLIndexTypeUInt16;
+    MTLPrimitiveType topology = MTLPrimitiveTypePoint;
 
   friend class Tempest::MetalApi;
   };

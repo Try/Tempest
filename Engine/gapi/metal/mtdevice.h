@@ -175,6 +175,14 @@ inline MTLCullMode nativeFormat(RenderState::CullMode m) {
     }
   }
 
+inline MTLPrimitiveType nativeFormat(Topology t) {
+  switch(t) {
+    case Topology::Lines:     return MTLPrimitiveTypeLine;
+    case Topology::Triangles: return MTLPrimitiveTypeTriangle;
+    }
+  return MTLPrimitiveTypePoint;
+  }
+
 class MtDevice : public AbstractGraphicsApi::Device {
   public:
     MtDevice();

@@ -23,7 +23,7 @@ class MtFboLayout;
 
 class MtPipeline : public AbstractGraphicsApi::Pipeline {
   public:
-    MtPipeline(MtDevice &d, const Tempest::RenderState& rs,
+    MtPipeline(MtDevice &d, Topology tp, const Tempest::RenderState& rs,
                size_t stride,
                const MtShader &vert,
                const MtShader &frag);
@@ -39,9 +39,9 @@ class MtPipeline : public AbstractGraphicsApi::Pipeline {
     id<MTLDepthStencilState> depthStNoZ;
 
     MTLCullMode              cullMode = MTLCullModeNone;
+    MTLPrimitiveType         topology = MTLPrimitiveTypeTriangle;
 
   private:
-    MTLPrimitiveType     topology = MTLPrimitiveTypeTriangle;
     MtDevice&            device;
     Tempest::RenderState rs;
 

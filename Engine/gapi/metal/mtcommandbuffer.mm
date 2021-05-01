@@ -8,7 +8,6 @@
 #include "mtpipelinelay.h"
 #include "mtdescriptorarray.h"
 
-#include <Metal/MTLRenderCommandEncoder.h>
 #include <Metal/MTLCommandQueue.h>
 
 using namespace Tempest;
@@ -57,7 +56,7 @@ void MtCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo *f,
   enc = [impl renderCommandEncoderWithDescriptor:desc];
   curFbo = &fbo;
 
-  [enc setFrontFacingWinding:MTLWindingCounterClockwise];
+  // [enc setFrontFacingWinding:MTLWindingCounterClockwise];
   setViewport(Rect(0,0,width,height));
   }
 
@@ -94,6 +93,7 @@ void MtCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
     [enc setDepthStencilState:px.depthStNoZ];
   [enc setRenderPipelineState:inst.pso];
   [enc setCullMode:px.cullMode];
+  topology = px.topology;
   }
 
 void MtCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline &p) {
@@ -172,7 +172,7 @@ void MtCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer &b, IndexClass cl
   }
 
 void MtCommandBuffer::draw(size_t offset, size_t vertexCount, size_t firstInstance, size_t instanceCount) {
-  [enc drawPrimitives:MTLPrimitiveTypeTriangle
+  [enc drawPrimitives:topology
                       vertexStart:offset
                       vertexCount:vertexCount
                       instanceCount:instanceCount
@@ -180,7 +180,7 @@ void MtCommandBuffer::draw(size_t offset, size_t vertexCount, size_t firstInstan
   }
 
 void MtCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) {
-  [enc drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+  [enc drawIndexedPrimitives:topology
                              indexCount:isize
                              indexType:iboType
                              indexBuffer:curIbo->impl

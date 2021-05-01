@@ -1,5 +1,9 @@
 #include "metalapi.h"
 
+#if __has_feature(objc_arc)
+#error "Objective C++ ARC is not supported"
+#endif
+
 #include <Tempest/Log>
 #include <Tempest/Pixmap>
 
@@ -100,7 +104,7 @@ AbstractGraphicsApi::PPipeline MetalApi::createPipeline(AbstractGraphicsApi::Dev
   auto& vx = *reinterpret_cast<const MtShader*>(vs);
   auto& fx = *reinterpret_cast<const MtShader*>(fs);
 
-  return PPipeline(new MtPipeline(dx,st,stride,vx,fx));
+  return PPipeline(new MtPipeline(dx,tp,st,stride,vx,fx));
   }
 
 AbstractGraphicsApi::PCompPipeline MetalApi::createComputePipeline(AbstractGraphicsApi::Device *d, const AbstractGraphicsApi::PipelineLay &ulayImpl,
@@ -250,7 +254,11 @@ void MetalApi::present(AbstractGraphicsApi::Device *d,
 
   id<MTLCommandBuffer> cmd = [dev.queue commandBuffer];
   [cmd presentDrawable:s.current];
+  [cmd addCompletedHandler:^(id<MTLCommandBuffer> c)  {
+    [c release];
+    }];
   [cmd commit];
+  s.releaseImg();
   }
 
 void MetalApi::submit(AbstractGraphicsApi::Device *d,

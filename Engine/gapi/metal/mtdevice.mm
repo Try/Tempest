@@ -5,10 +5,6 @@
 #include <Metal/MTLDevice.h>
 #include <Metal/MTLCommandQueue.h>
 
-#if __has_feature(objc_arc)
-#error "Objective C++ ARC is not supported"
-#endif
-
 using namespace Tempest;
 using namespace Tempest::Detail;
 
@@ -83,6 +79,7 @@ void MtDevice::waitIdle() {
   id<MTLCommandBuffer> cmd = [queue commandBuffer];
   [cmd commit];
   [cmd waitUntilCompleted];
+  [cmd release];
   }
 
 void Tempest::Detail::MtDevice::handleError(NSError *err) {

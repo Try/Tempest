@@ -24,12 +24,12 @@ class MtSwapchain : public AbstractGraphicsApi::Swapchain {
     uint32_t      h() const override;
 
     MTLPixelFormat format() const;
+    void           releaseImg();
 
     id<CAMetalDrawable>               current = nil;
     std::unique_ptr<id<MTLTexture>[]> img     = {};
 
   private:
-    void           releaseImg();
     NSWindow*      wnd  = nil;
     MetalView*     view = nil;
     Tempest::Size  sz;

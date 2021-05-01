@@ -8,21 +8,20 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-MtPipeline::MtPipeline(MtDevice &d,
+MtPipeline::MtPipeline(MtDevice &d, Topology tp,
                        const RenderState &rs, size_t stride,
                        const MtShader &vert, const MtShader &frag)
   :device(d), rs(rs), vert(&vert), frag(&frag) {
   cullMode = nativeFormat(rs.cullFaceMode());
-
-  id dev = d.impl;
+  topology = nativeFormat(tp);
 
   MTLDepthStencilDescriptor *ddesc = [[MTLDepthStencilDescriptor alloc] init];
   ddesc.depthCompareFunction = nativeFormat(rs.zTestMode());
   ddesc.depthWriteEnabled    = rs.isZWriteEnabled() ? YES : NO;
-  depthStZ = [dev newDepthStencilStateWithDescriptor:ddesc];
+  depthStZ = [d.impl newDepthStencilStateWithDescriptor:ddesc];
 
   ddesc.depthWriteEnabled = NO;
-  depthStNoZ = [dev newDepthStencilStateWithDescriptor:ddesc];
+  depthStNoZ = [d.impl newDepthStencilStateWithDescriptor:ddesc];
 
   vdesc = [[MTLVertexDescriptor alloc] init];
   size_t offset = 0;
