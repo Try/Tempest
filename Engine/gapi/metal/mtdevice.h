@@ -7,8 +7,6 @@
 #import  <Metal/MTLDepthStencil.h>
 #import  <Metal/MTLRenderPipeline.h>
 
-#include "nsptr.h"
-
 class MTLDevice;
 
 namespace Tempest {
@@ -179,8 +177,8 @@ class MtDevice : public AbstractGraphicsApi::Device {
     ~MtDevice();
     void waitIdle() override;
 
-    NsPtr impl;
-    NsPtr queue;
+    id<MTLDevice>       impl;
+    id<MTLCommandQueue> queue;
 
     AbstractGraphicsApi::Props prop;
   };

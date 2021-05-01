@@ -230,7 +230,7 @@ void ssboDispath() {
     auto cs     = device.loadShader("shader/simple_test.comp.sprv");
     auto pso    = device.pipeline(cs);
 
-    auto ubo = device.descriptors(pso.layout());
+    auto ubo    = device.descriptors(pso.layout());
     ubo.set(0,input);
     ubo.set(1,output);
 

@@ -2,7 +2,6 @@
 
 #include "mtdevice.h"
 
-#include <Metal/MTLTexture.h>
 #include <Metal/MTLDevice.h>
 
 using namespace Tempest;
@@ -27,8 +26,7 @@ MtTexture::MtTexture(MtDevice& d, const uint32_t w, const uint32_t h, uint32_t m
 
   desc.allowGPUOptimizedContents = NO;
 
-  id<MTLTexture> texture = [d.impl.get() newTextureWithDescriptor:desc];
-  impl = NsPtr((__bridge void*)(texture));
+  impl = [d.impl newTextureWithDescriptor:desc];
   }
 
 uint32_t MtTexture::mipCount() const {

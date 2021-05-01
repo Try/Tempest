@@ -1,13 +1,11 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include <Tempest/UniformsLayout>
+#include <Tempest/PipelineLayout>
 
 #include "gapi/shaderreflection.h"
 
 #import <Metal/MTLDevice.h>
-
-#include "nsptr.h"
 
 namespace Tempest {
 namespace Detail {
@@ -17,8 +15,8 @@ class MtShader : public AbstractGraphicsApi::Shader {
     MtShader(id dev, const void* source, size_t srcSize);
     using Binding = ShaderReflection::Binding;
 
-    NsPtr library;
-    NsPtr impl;
+    id<MTLLibrary>  library;
+    id<MTLFunction> impl;
 
     std::vector<Decl::ComponentType> vdecl;
     std::vector<Binding>             lay;

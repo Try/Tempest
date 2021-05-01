@@ -64,7 +64,7 @@ TEST(MetalApi,Draw) {
   }
 
 TEST(MetalApi,Compute) {
-#if defined(__)
+#if defined(__OSX__)
   GapiTestCommon::ssboDispath<MetalApi>();
 #endif
   }

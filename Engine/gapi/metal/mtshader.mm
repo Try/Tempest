@@ -51,13 +51,15 @@ MtShader::MtShader(id dev, const void* source, size_t srcSize) {
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
 
-  //Log::d(msl);
+  // Log::d(msl);
 
-  auto     opt = NsPtr{[[MTLCompileOptions alloc] init]};
+  auto     opt = [[MTLCompileOptions alloc] init];
   NSError* err = nil;
-  auto     str = NsPtr{[NSString stringWithCString:msl.c_str() encoding:[NSString defaultCStringEncoding]]};
+  auto     str = [NSString stringWithCString:msl.c_str() encoding:[NSString defaultCStringEncoding]];
 
-  library = NsPtr{[dev newLibraryWithSource:str.get() options:opt.get() error:&err]};
+  library = [dev newLibraryWithSource:str options:opt error:&err];
+  [opt release];
+
   if(err!=nil) {
 #if !defined(NDEBUG)
     const char* e = [[err domain] UTF8String];
@@ -65,5 +67,5 @@ MtShader::MtShader(id dev, const void* source, size_t srcSize) {
 #endif
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
-  impl = NsPtr{[library.get() newFunctionWithName: @"main0"]};
+  impl = [library newFunctionWithName: @"main0"];
   }

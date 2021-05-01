@@ -5,8 +5,9 @@
 #include "mtframebuffer.h"
 #include "mtpipeline.h"
 #include "mtrenderpass.h"
+#include "mtpipelinelay.h"
+#include "mtdescriptorarray.h"
 
-#include <Metal/MTLCommandBuffer.h>
 #include <Metal/MTLRenderCommandEncoder.h>
 #include <Metal/MTLCommandQueue.h>
 
@@ -19,24 +20,23 @@ MtCommandBuffer::MtCommandBuffer(MtDevice& dev)
   }
 
 bool MtCommandBuffer::isRecording() const {
-  return enc.ptr!=nullptr;
+  return enc!=nil;
   }
 
 void MtCommandBuffer::begin() {}
 
 void MtCommandBuffer::end() {
-  if(enc.ptr==nullptr)
+  if(enc==nil)
     return;
-  [enc.get() endEncoding];
-  enc = NsPtr();
+  [enc endEncoding];
+  enc = nil;
   }
 
 void MtCommandBuffer::reset() {
   MTLCommandBufferDescriptor* desc = [[MTLCommandBufferDescriptor alloc] init];
   desc.retainedReferences = NO;
 
-  id<MTLCommandQueue> queue = device.queue.get();
-  impl = NsPtr((__bridge void*)([queue commandBufferWithDescriptor:desc]));
+  impl = [device.queue commandBufferWithDescriptor:desc];
 
   [desc release];
   }
@@ -48,23 +48,26 @@ void MtCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo *f,
   auto& pass = *reinterpret_cast<MtRenderPass*> (p);
 
   MTLRenderPassDescriptor* desc = fbo.instance(pass);
-  enc = NsPtr((__bridge void*)([impl.get() renderCommandEncoderWithDescriptor: desc]));
+  enc = [impl renderCommandEncoderWithDescriptor:desc];
   curFbo = &fbo;
 
-  [enc.get() setFrontFacingWinding:MTLWindingCounterClockwise];
+  [enc setFrontFacingWinding:MTLWindingCounterClockwise];
   setViewport(Rect(0,0,width,height));
   }
 
 void MtCommandBuffer::endRenderPass() {
-  [enc.get() endEncoding];
-  enc = NsPtr();
+  [enc endEncoding];
+  enc    = nil;
   curFbo = nullptr;
   }
 
 void MtCommandBuffer::beginCompute() {
+  enc = [impl computeCommandEncoder];
   }
 
 void MtCommandBuffer::endCompute() {
+  [enc endEncoding];
+  enc = nil;
   }
 
 void MtCommandBuffer::changeLayout(AbstractGraphicsApi::Buffer &buf, BufferLayout prev, BufferLayout next) {
@@ -76,20 +79,20 @@ void MtCommandBuffer::changeLayout(AbstractGraphicsApi::Attach &img, TextureLayo
 void MtCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture &image, TextureLayout defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
   }
 
-void MtCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p, uint32_t /*w*/, uint32_t /*h*/) {
+void MtCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
   auto& px   = reinterpret_cast<MtPipeline&>(p);
   auto& inst = px.inst(*curFbo->layout.handler);
 
   if(curFbo->depth!=nullptr)
-    [enc.get() setDepthStencilState:px.depthStZ]; else
-    [enc.get() setDepthStencilState:px.depthStNoZ];
-  [enc.get() setRenderPipelineState:inst.pso.get()];
-  // [enc.get() setFrontFacingWinding:MTLWindingClockwise];
-  [enc.get() setCullMode:px.cullMode];
+    [enc setDepthStencilState:px.depthStZ]; else
+    [enc setDepthStencilState:px.depthStNoZ];
+  [enc setRenderPipelineState:inst.pso];
+  [enc setCullMode:px.cullMode];
   }
 
 void MtCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline &p) {
-
+  auto& px = reinterpret_cast<MtCompPipeline&>(p);
+  [enc setComputePipelineState:px.impl];
   }
 
 void MtCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline &p, const void *data, size_t size) {
@@ -103,11 +106,32 @@ void MtCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p,
 void MtCommandBuffer::setBytes(AbstractGraphicsApi::CompPipeline &p,
                                const void *data, size_t size) {
 
+
   }
 
 void MtCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline &p,
                                   AbstractGraphicsApi::Desc &u) {
-
+  auto& d   = reinterpret_cast<MtDescriptorArray&>(u);
+  auto& lay = d.lay.handler->lay;
+  for(size_t i=0; i<lay.size(); ++i) {
+    auto& l = lay[i];
+    switch(l.cls) {
+      case ShaderReflection::Push:
+        break;
+      case ShaderReflection::Ubo:
+      case ShaderReflection::SsboR:
+      case ShaderReflection::SsboRW:
+        [enc setBuffer:d.desc[i].val
+                offset:0
+               atIndex:i];
+        break;
+      case ShaderReflection::Texture:
+      case ShaderReflection::ImgR:
+      case ShaderReflection::ImgRW:
+        [enc setTexture:d.desc[i].val];
+        break;
+      }
+    }
   }
 
 void MtCommandBuffer::setViewport(const Rect &r) {
@@ -119,14 +143,14 @@ void MtCommandBuffer::setViewport(const Rect &r) {
   v.znear   = 0;
   v.zfar    = 1;
 
-  [enc.get() setViewport:v];
+  [enc setViewport:v];
   }
 
 void MtCommandBuffer::setVbo(const AbstractGraphicsApi::Buffer &b) {
   auto& bx = reinterpret_cast<const MtBuffer&>(b);
-  [enc.get() setVertexBuffer:bx.impl.get()
-             offset:0
-             atIndex:0];
+  [enc setVertexBuffer:bx.impl
+                offset:0
+               atIndex:0];
   }
 
 void MtCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer &b, IndexClass cls) {
@@ -142,21 +166,35 @@ void MtCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer &b, IndexClass cl
   }
 
 void MtCommandBuffer::draw(size_t offset, size_t vertexCount, size_t firstInstance, size_t instanceCount) {
-
+  [enc drawPrimitives:MTLPrimitiveTypeTriangle
+                      vertexStart:offset
+                      vertexCount:vertexCount
+                      instanceCount:instanceCount
+                      baseInstance:firstInstance];
   }
 
 void MtCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) {
-  [enc.get() drawIndexedPrimitives:MTLPrimitiveTypeTriangle
-                                   indexCount:isize
-                                   indexType:iboType
-                                   indexBuffer:curIbo->impl.get()
-                                   indexBufferOffset:ioffset
-                                   instanceCount:instanceCount
-                                   baseVertex:voffset
-                                   baseInstance:firstInstance
-                                  ];
+  [enc drawIndexedPrimitives:MTLPrimitiveTypeTriangle
+                             indexCount:isize
+                             indexType:iboType
+                             indexBuffer:curIbo->impl
+                             indexBufferOffset:ioffset
+                             instanceCount:instanceCount
+                             baseVertex:voffset
+                             baseInstance:firstInstance
+                             ];
   }
 
 void MtCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
+  MTLSize sz;
+  sz.width  = x;
+  sz.height = y;
+  sz.depth  = z;
 
+  MTLSize th;
+  th.width  = 1;
+  th.height = 1;
+  th.depth  = 1;
+
+  [enc dispatchThreadgroups:sz threadsPerThreadgroup:th];
   }

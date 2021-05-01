@@ -1,15 +1,14 @@
 #include "mtdevice.h"
 
 #include <Metal/MTLDevice.h>
+#include <Metal/MTLCommandQueue.h>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
 
 MtDevice::MtDevice() {
-  impl  = NsPtr((__bridge void*)MTLCreateSystemDefaultDevice());
-
-  id<MTLDevice> dx = impl.get();
-  queue = NsPtr((__bridge void*)([dx newCommandQueue]));
+  impl  = MTLCreateSystemDefaultDevice();
+  queue = [impl newCommandQueue];
 
   SInt32 majorVersion = 0, minorVersion = 0;
   if([[NSProcessInfo processInfo] respondsToSelector:@selector(operatingSystemVersion)]) {
@@ -72,5 +71,5 @@ MtDevice::~MtDevice() {
   }
 
 void MtDevice::waitIdle() {
-
+  // TODO
   }

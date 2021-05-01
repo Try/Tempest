@@ -1,9 +1,8 @@
 #pragma once
 
-#include "nsptr.h"
-
 #include <Tempest/AbstractGraphicsApi>
 #import  <Metal/MTLStageInputOutputDescriptor.h>
+#import  <Metal/MTLCommandBuffer.h>
 
 namespace Tempest {
 
@@ -35,7 +34,7 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     void end() override;
     void reset() override;
 
-    void setPipeline(AbstractGraphicsApi::Pipeline& p,uint32_t w,uint32_t h) override;
+    void setPipeline(AbstractGraphicsApi::Pipeline& p) override;
     void setComputePipeline(AbstractGraphicsApi::CompPipeline& p) override;
 
     void setBytes   (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;
@@ -53,9 +52,9 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     void dispatch    (size_t x, size_t y, size_t z) override;
 
   private:
-    MtDevice& device;
-    NsPtr     impl;
-    NsPtr     enc;
+    MtDevice&            device;
+    id<MTLCommandBuffer> impl = nil;
+    id                   enc  = nil;
 
     MtFramebuffer*  curFbo = nullptr;
     const MtBuffer* curIbo = nullptr;

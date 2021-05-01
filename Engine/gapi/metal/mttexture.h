@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include "nsptr.h"
+#include <Metal/MTLTexture.h>
 
 namespace Tempest {
 namespace Detail {
@@ -15,8 +15,8 @@ class MtTexture : public Tempest::AbstractGraphicsApi::Texture {
 
     uint32_t mipCount() const override;
 
-    NsPtr impl;
-    const  uint32_t mips = 0;
+    id<MTLTexture> impl;
+    const uint32_t mips = 0;
   };
 
 }

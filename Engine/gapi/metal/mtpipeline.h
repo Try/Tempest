@@ -5,12 +5,13 @@
 
 #include "utility/spinlock.h"
 #include "mtfbolayout.h"
-#include "nsptr.h"
 
 #import  <Metal/MTLRenderCommandEncoder.h>
 #import  <Metal/MTLVertexDescriptor.h>
 #import  <Metal/MTLDepthStencil.h>
 #import  <Metal/MTLRenderPipeline.h>
+#import  <Metal/MTLComputePipeline.h>
+
 #include <list>
 
 namespace Tempest {
@@ -29,7 +30,7 @@ class MtPipeline : public AbstractGraphicsApi::Pipeline {
     ~MtPipeline();
 
     struct Inst {
-      NsPtr                          pso;
+      id<MTLRenderPipelineState>     pso;
       DSharedPtr<const MtFboLayout*> fbo;
       };
     Inst& inst(const MtFboLayout &lay);
@@ -52,6 +53,13 @@ class MtPipeline : public AbstractGraphicsApi::Pipeline {
 
     SpinLock        sync;
     std::list<Inst> instance;
+  };
+
+class MtCompPipeline : public AbstractGraphicsApi::CompPipeline {
+  public:
+    MtCompPipeline(MtDevice &d, const MtShader& sh);
+
+    id<MTLComputePipelineState> impl;
   };
 
 }

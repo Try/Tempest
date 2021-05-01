@@ -1,8 +1,6 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include "nsptr.h"
-
 #include <Metal/MTLBuffer.h>
 
 namespace Tempest {
@@ -19,7 +17,7 @@ class MtBuffer : public Tempest::AbstractGraphicsApi::Buffer {
     void  read    (      void* data, size_t off, size_t size) override;
 
     const MtDevice&          dev;
-    NsPtr                    impl;
+    id<MTLBuffer>            impl;
     const MTLResourceOptions flg = 0;
 
   private:
