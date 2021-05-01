@@ -15,8 +15,11 @@
 #include "gapi/metal/mtpipelinelay.h"
 #include "gapi/metal/mtdescriptorarray.h"
 #include "gapi/metal/mtsync.h"
+#include "gapi/metal/mtswapchain.h"
 
 #import  <Metal/MTLDevice.h>
+#import  <Metal/MTLCommandQueue.h>
+#import  <AppKit/AppKit.h>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -44,7 +47,13 @@ void MetalApi::destroy(AbstractGraphicsApi::Device *d) {
   delete d;
   }
 
-AbstractGraphicsApi::Swapchain *MetalApi::createSwapchain(SystemApi::Window *w, AbstractGraphicsApi::Device *d) {
+AbstractGraphicsApi::Swapchain *MetalApi::createSwapchain(SystemApi::Window *w,
+                                                          AbstractGraphicsApi::Device* d) {
+  auto& dev = *reinterpret_cast<MtDevice*>(d);
+
+  NSObject* obj = reinterpret_cast<NSObject*>(w);
+  if([obj isKindOfClass : [NSWindow class]])
+    return new MtSwapchain(dev,reinterpret_cast<NSWindow*>(w));
   return nullptr;
   }
 
@@ -52,14 +61,13 @@ AbstractGraphicsApi::PPass MetalApi::createPass(AbstractGraphicsApi::Device*, co
   return PPass(new MtRenderPass(att,acount));
   }
 
-AbstractGraphicsApi::PFbo MetalApi::createFbo(AbstractGraphicsApi::Device *d,
+AbstractGraphicsApi::PFbo MetalApi::createFbo(AbstractGraphicsApi::Device*,
                                               AbstractGraphicsApi::FboLayout *lay,
                                               uint32_t w, uint32_t h, uint8_t clCount,
                                               AbstractGraphicsApi::Swapchain **sx,
                                               AbstractGraphicsApi::Texture **cl,
                                               const uint32_t *imgId,
                                               AbstractGraphicsApi::Texture *zbuf) {
-  auto& dx = *reinterpret_cast<MtDevice*>(d);
   auto& lx = *reinterpret_cast<MtFboLayout*>(lay);
   auto  zb = reinterpret_cast<MtTexture*>(zbuf);
 
@@ -69,7 +77,7 @@ AbstractGraphicsApi::PFbo MetalApi::createFbo(AbstractGraphicsApi::Device *d,
     att[i] = reinterpret_cast<MtTexture*>(cl[i]);
     sw [i] = reinterpret_cast<MtSwapchain*>(sx[i]);
     }
-  return PFbo(new MtFramebuffer(lx,att,clCount,zb));
+  return PFbo(new MtFramebuffer(lx,sw,imgId,att,clCount,zb));
   }
 
 AbstractGraphicsApi::PFboLayout MetalApi::createFboLayout(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Swapchain **s,
@@ -233,9 +241,16 @@ AbstractGraphicsApi::CommandBuffer *MetalApi::createCommandBuffer(AbstractGraphi
   return new MtCommandBuffer(dx);
   }
 
-void MetalApi::present(AbstractGraphicsApi::Device *d, AbstractGraphicsApi::Swapchain *sw,
-                       uint32_t imageId, const AbstractGraphicsApi::Semaphore *wait) {
+void MetalApi::present(AbstractGraphicsApi::Device *d,
+                       AbstractGraphicsApi::Swapchain *sw,
+                       uint32_t /*imageId*/,
+                       const AbstractGraphicsApi::Semaphore*) {
+  auto& dev = *reinterpret_cast<MtDevice*>(d);
+  auto& s   = *reinterpret_cast<MtSwapchain*>(sw);
 
+  id<MTLCommandBuffer> cmd = [dev.queue commandBuffer];
+  [cmd presentDrawable:s.current];
+  [cmd commit];
   }
 
 void MetalApi::submit(AbstractGraphicsApi::Device *d,

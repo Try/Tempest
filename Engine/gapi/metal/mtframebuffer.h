@@ -7,6 +7,8 @@
 
 #include "utility/spinlock.h"
 
+#import  <Metal/MTLTexture.h>
+
 @class MTLRenderPassDescriptor;
 
 namespace Tempest {
@@ -16,7 +18,9 @@ class MtTexture;
 
 class MtFramebuffer : public AbstractGraphicsApi::Fbo {
   public:
-    MtFramebuffer(MtFboLayout& lay, MtTexture **clr, size_t clrSize, MtTexture* depth);
+    MtFramebuffer(MtFboLayout& lay, MtSwapchain **sw, const uint32_t *imgId,
+                  MtTexture **clr, size_t clrSize,
+                  MtTexture* depth);
     ~MtFramebuffer();
 
     struct Inst {
@@ -24,10 +28,14 @@ class MtFramebuffer : public AbstractGraphicsApi::Fbo {
       MTLRenderPassDescriptor*  desc = nullptr;
       };
 
+    struct Attach {
+      id<MTLTexture> id;
+      };
+
     MTLRenderPassDescriptor* instance(MtRenderPass &rp);
 
     DSharedPtr<MtFboLayout*> layout;
-    std::vector<MtTexture*>  color;
+    std::vector<Attach>      color;
     MtTexture*               depth = nullptr;
 
   private:

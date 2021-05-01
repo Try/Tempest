@@ -1,17 +1,9 @@
 #include "game.h"
 
-#include <Tempest/Assets>
 #include <Tempest/Pixmap>
 #include <Tempest/Except>
 #include <Tempest/Painter>
 #include <Tempest/Rect>
-
-namespace Tempest {
-template<>
-inline VertexBufferDecl vertexBufferDecl<Game::Point>() {
-  return {Decl::float3,Decl::float2};
-  }
-}
 
 using namespace Tempest;
 
@@ -27,13 +19,6 @@ Game::Game(Device& device)
   //Tempest::Pixmap pm("img/texture.png");
   Tempest::Pixmap pm("img/texture.hdr");
   texture = device.loadTexture(pm);
-
-  std::initializer_list<Point> source = {
-    {-0.5f, +0.5f, 0, 0,0},
-    {+0.5f, +0.5f, 0, 1,0},
-    {+0.0f, -0.5f, 0, 0,1}
-    };
-  //vbo = device.vbo(source.begin(),source.size());
 
   for(uint8_t i=0;i<device.maxFramesInFlight();++i){
     fLocal.emplace_back(device);
@@ -68,7 +53,7 @@ void Game::paintEvent(PaintEvent& event) {
   p.setBrush(Brush(texture,Color(1,0,0,1)));
   p.drawRect(300,150,texture.w(),texture.h());
 
-  p.setPen(Pen(Color(),4));
+  p.setPen(Pen(Color(),Painter::Alpha,4));
   p.drawLine(100,100,200,200);
   }
 
@@ -93,7 +78,7 @@ void Game::render(){
     {
     auto enc = cmd.startEncoding(device);
     enc.setFramebuffer(fbo[imgId],pass);
-    surface.draw(device,swapchain,enc);
+    //surface.draw(device,swapchain,enc);
     }
 
     device.submit(cmd,context.imageAvailable,context.renderDone,context.gpuLock);

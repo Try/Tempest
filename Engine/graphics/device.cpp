@@ -266,7 +266,7 @@ FrameBuffer Device::frameBuffer(Attachment &out) {
   auto                            lay      = FrameBufferLayout(api.createFboLayout(dev,sw,att,1));
 
   auto fbo = api.createFbo(dev,lay.impl.handler,w,h,1, sw,cl,imgId,nullptr);
-  return FrameBuffer(*this,std::move(fbo),std::move(lay),w,h);
+  return FrameBuffer(std::move(fbo),std::move(lay),w,h);
   }
 
 FrameBuffer Device::frameBuffer(Attachment& out, ZBuffer& zbuf) {
@@ -284,7 +284,7 @@ FrameBuffer Device::frameBuffer(Attachment& out, ZBuffer& zbuf) {
   auto                            lay      = FrameBufferLayout(api.createFboLayout(dev,sw,att,2));
 
   auto fbo = api.createFbo(dev,lay.impl.handler,w,h,1, sw,cl,imgId,zImpl);
-  return FrameBuffer(*this,std::move(fbo),std::move(lay),w,h);
+  return FrameBuffer(std::move(fbo),std::move(lay),w,h);
   }
 
 FrameBuffer Device::frameBuffer(Attachment& out0, Attachment& out1, ZBuffer& zbuf) {
@@ -329,7 +329,7 @@ FrameBuffer Device::frameBuffer(Attachment** out, uint8_t count, ZBuffer* zbuf) 
 
   auto lay = FrameBufferLayout(api.createFboLayout(dev,sw,att,count+(zbuf!=nullptr ? 1 : 0)));
   auto fbo = api.createFbo(dev,lay.impl.handler,w,h,count, sw,cl,imgId,zImpl);
-  return FrameBuffer(*this,std::move(fbo),std::move(lay),w,h);
+  return FrameBuffer(std::move(fbo),std::move(lay),w,h);
   }
 
 RenderPass Device::pass(const FboMode &color) {

@@ -39,11 +39,9 @@ class FrameBuffer final {
     auto     layout() const -> const FrameBufferLayout&;
 
   private:
-    FrameBuffer(Tempest::Device& dev,
-                Detail::DSharedPtr<AbstractGraphicsApi::Fbo*>&& f,
+    FrameBuffer(Detail::DSharedPtr<AbstractGraphicsApi::Fbo*>&& f,
                 FrameBufferLayout&& lay,uint32_t w,uint32_t h);
 
-    Tempest::Device*                              dev=nullptr;
     Detail::DSharedPtr<AbstractGraphicsApi::Fbo*> impl;
     FrameBufferLayout                             lay;
     uint32_t                                      mw=0, mh=0;

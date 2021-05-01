@@ -23,7 +23,9 @@ bool MtCommandBuffer::isRecording() const {
   return enc!=nil;
   }
 
-void MtCommandBuffer::begin() {}
+void MtCommandBuffer::begin() {
+  reset();
+  }
 
 void MtCommandBuffer::end() {
   if(enc==nil)

@@ -3,6 +3,7 @@
 #include <Tempest/RenderPass>
 
 #include "mttexture.h"
+#include "mtswapchain.h"
 
 #include <Metal/MTLRenderCommandEncoder.h>
 #include <mutex>
@@ -34,10 +35,18 @@ static MTLStoreAction mkStoreOp(const FboMode& m) {
   }
 
 MtFramebuffer::MtFramebuffer(MtFboLayout &lay,
+                             MtSwapchain** sw, const uint32_t *imgId,
                              MtTexture** clr, size_t clrSize, MtTexture *depth)
   :layout(&lay), color(clrSize), depth(depth) {
-  for(size_t i=0; i<clrSize; ++i)
-    color[i] = clr[i];
+  for(size_t i=0; i<clrSize; ++i) {
+    if(clr[i]!=nullptr) {
+      color[i].id = clr[i]->impl;
+      continue;
+      }
+
+    auto drawable = sw[i]->img[imgId[i]];
+    color[i].id = drawable;
+    }
   }
 
 MtFramebuffer::~MtFramebuffer() {
@@ -54,7 +63,7 @@ MTLRenderPassDescriptor *MtFramebuffer::instance(MtRenderPass &rp) {
   MTLRenderPassDescriptor* desc = [MTLRenderPassDescriptor renderPassDescriptor];
 
   for(size_t i=0; i<color.size(); ++i) {
-    desc.colorAttachments[i].texture        = color[i]->impl;
+    desc.colorAttachments[i].texture        = color[i].id;
     desc.colorAttachments[i].loadAction     = mkLoadOp    (rp.mode[i]);
     desc.colorAttachments[i].storeAction    = mkStoreOp   (rp.mode[i]);
     desc.colorAttachments[i].clearColor     = mkClearColor(rp.mode[i]);
