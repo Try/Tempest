@@ -48,6 +48,13 @@ void MtSwapchain::reset() {
   releaseImg();
 
   CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);
+
+  NSRect rect = [wnd frame];
+  if(rect.size.width!=sz.w || rect.size.height!=sz.h) {
+    lay.drawableSize = rect.size;
+    sz = {int(rect.size.width), int(rect.size.height)};
+    }
+
   imgCount = lay.maximumDrawableCount;
 
   std::vector<id<CAMetalDrawable>> vec(imgCount);

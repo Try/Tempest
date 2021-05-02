@@ -166,7 +166,7 @@ class RectAllocator {
 
       void decref() {
         Node* nx=this;
-        if(nx->refcount.fetch_add(-1,std::memory_order_acq_rel)!=1)
+        if(nx->refcount.fetch_sub(1,std::memory_order_acq_rel)!=1)
           return;
 
         Node* ow=nx->owner;

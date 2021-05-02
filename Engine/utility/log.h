@@ -66,6 +66,10 @@ class Log final {
     static void write(Mode m, char*& out, size_t& count, const void*     msg);
     static void write(Mode m, char*& out, size_t& count, std::thread::id msg);
 
+#if defined(__SIZE_TYPE__)
+    static void write(Mode m, char*& out, size_t& count, size_t          msg);
+#endif
+
     static void printImpl(Mode m,char* out, size_t count);
     template<class T, class ... Args>
     static void printImpl(Mode m, char* out, size_t count,

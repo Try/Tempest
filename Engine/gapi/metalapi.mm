@@ -40,7 +40,9 @@ MetalApi::~MetalApi() {
   }
 
 std::vector<AbstractGraphicsApi::Props> MetalApi::devices() const {
-  return {};
+  // TODO
+  std::vector<AbstractGraphicsApi::Props> p(1);
+  return p;
   }
 
 AbstractGraphicsApi::Device *MetalApi::createDevice(const char *gpuName) {
@@ -157,6 +159,11 @@ AbstractGraphicsApi::PBuffer MetalApi::createBuffer(AbstractGraphicsApi::Device 
   opt |= MTLResourceHazardTrackingModeDefault;
 
   id<MTLBuffer> buf;
+  if(mem==nullptr) {
+    buf = [dx.impl newBufferWithLength:count*alignedSz options:opt];
+    return PBuffer(new MtBuffer(dx,buf,opt));
+    }
+
   if(alignedSz==size && 0==(opt & MTLResourceStorageModePrivate)) {
     buf = [dx.impl newBufferWithBytes:mem length:count*alignedSz options:opt];
     return PBuffer(new MtBuffer(dx,buf,opt));

@@ -2,7 +2,9 @@
 
 #include <Carbon/Carbon.h>
 #include <AppKit/AppKit.h>
+
 #include <Tempest/Window>
+#include <Tempest/Log>
 
 using namespace Tempest;
 
@@ -202,7 +204,7 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
   TempestWindowDelegate* dx = d;
   Tempest::Window&       cb = *dx->owner;
 
-  uint type = [evt type];
+  NSEventType type = [evt type];
   switch(type) {
     case NSEventTypeLeftMouseDown:
     case NSEventTypeRightMouseDown:
@@ -307,6 +309,15 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
       }
     case NSEventTypeFlagsChanged:{
       // TODO
+      break;
+      }
+    case NSEventTypeAppKitDefined:{
+      NSEventSubtype stype = evt.subtype;
+      if(stype==NSEventSubtypeScreenChanged || stype==NSEventSubtypeWindowMoved) {
+        NSRect r = [wnd frame];
+        SizeEvent sz{int32_t(r.size.width),int32_t(r.size.height)};
+        SystemApi::dispatchResize(cb,sz);
+        }
       break;
       }
 
