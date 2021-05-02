@@ -106,14 +106,6 @@ void Log::write(Log::Mode m, char *&out, size_t &count, std::thread::id msg) {
   write(m,out,count,uint64_t(h(msg)));
   }
 
-#if defined(__SIZE_TYPE__)
-void Log::write(Log::Mode m, char*& out, size_t& count, size_t msg) {
-  char sym[16];
-  snprintf(sym,sizeof(sym),"%zu",msg);
-  write(m,out,count,sym);
-  }
-#endif
-
 void Log::write(Mode m, char*& out, size_t& count, int16_t msg){
   writeInt(m,out,count,msg);
   }
@@ -135,7 +127,7 @@ void Log::write(Log::Mode m, char *&out, size_t &count, int64_t msg) {
   }
 
 void Log::write(Log::Mode m, char *&out, size_t &count, uint64_t msg) {
-  writeUInt(m,out,count,msg);
+  writeInt(m,out,count,msg);
   }
 
 void Log::write(Mode m, char*& out, size_t& count, const char* msg){

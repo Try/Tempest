@@ -4,6 +4,7 @@
 #include <mutex>
 #include <cstdint>
 #include <thread>
+#include <type_traits>
 
 namespace Tempest{
 
@@ -59,16 +60,17 @@ class Log final {
     static void write(Mode m, char*& out, size_t& count, uint16_t        msg);
     static void write(Mode m, char*& out, size_t& count, int32_t         msg);
     static void write(Mode m, char*& out, size_t& count, uint32_t        msg);
-    static void write(Mode m, char*& out, size_t& count, uint64_t        msg);
     static void write(Mode m, char*& out, size_t& count, int64_t         msg);
+    static void write(Mode m, char*& out, size_t& count, uint64_t        msg);
     static void write(Mode m, char*& out, size_t& count, float           msg);
     static void write(Mode m, char*& out, size_t& count, double          msg);
     static void write(Mode m, char*& out, size_t& count, const void*     msg);
     static void write(Mode m, char*& out, size_t& count, std::thread::id msg);
 
-#if defined(__SIZE_TYPE__)
-    static void write(Mode m, char*& out, size_t& count, size_t          msg);
-#endif
+    template<class T, std::enable_if_t<!std::is_same<T,uint32_t>::value && !std::is_same<T,uint64_t>::value && std::is_same<T,size_t>::value,bool> = true>
+    static void write(Mode m, char*& out, size_t& count, T               msg) {
+      writeUInt(m,out,count,msg);
+      }
 
     static void printImpl(Mode m,char* out, size_t count);
     template<class T, class ... Args>
