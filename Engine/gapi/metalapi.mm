@@ -170,7 +170,8 @@ AbstractGraphicsApi::PBuffer MetalApi::createBuffer(AbstractGraphicsApi::Device 
 
 AbstractGraphicsApi::PTexture MetalApi::createTexture(AbstractGraphicsApi::Device *d,
                                                       const Pixmap &p, TextureFormat frm, uint32_t mips) {
-  return PTexture();
+  auto& dev = *reinterpret_cast<MtDevice*>(d);
+  return PTexture(new MtTexture(dev,p,mips,frm));
   }
 
 AbstractGraphicsApi::PTexture MetalApi::createTexture(AbstractGraphicsApi::Device *d,
@@ -210,10 +211,11 @@ void MetalApi::readBytes(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Buff
   b.read(out,0,size);
   }
 
-AbstractGraphicsApi::Desc *MetalApi::createDescriptors(AbstractGraphicsApi::Device*,
+AbstractGraphicsApi::Desc *MetalApi::createDescriptors(AbstractGraphicsApi::Device* d,
                                                        AbstractGraphicsApi::PipelineLay& layP) {
+  auto& dev = *reinterpret_cast<MtDevice*>(d);
   auto& lay = reinterpret_cast<MtPipelineLay&>(layP);
-  return new MtDescriptorArray(lay);
+  return new MtDescriptorArray(dev,lay);
   }
 
 AbstractGraphicsApi::PPipelineLay MetalApi::createPipelineLayout(AbstractGraphicsApi::Device*,
@@ -223,7 +225,6 @@ AbstractGraphicsApi::PPipelineLay MetalApi::createPipelineLayout(AbstractGraphic
                                                                  const AbstractGraphicsApi::Shader *gs,
                                                                  const AbstractGraphicsApi::Shader *fs,
                                                                  const AbstractGraphicsApi::Shader *cs) {
-  //auto& dx = *reinterpret_cast<MtDevice*>(d);
   if(cs!=nullptr) {
     auto* comp = reinterpret_cast<const Detail::MtShader*>(cs);
     return PPipelineLay(new MtPipelineLay(comp->lay));
@@ -274,6 +275,9 @@ void MetalApi::submit(AbstractGraphicsApi::Device*,
                       AbstractGraphicsApi::Semaphore **wait, size_t waitCnt,
                       AbstractGraphicsApi::Semaphore **done, size_t doneCnt,
                       AbstractGraphicsApi::Fence *doneCpu) {
+  (void)wait; (void)waitCnt;
+  (void)done; (void)doneCnt;
+
   auto& fence = *reinterpret_cast<MtSync*>(doneCpu);
   fence.signal();
   for(size_t i=0; i<count; ++i) {

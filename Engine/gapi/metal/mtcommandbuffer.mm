@@ -107,37 +107,17 @@ void MtCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline &p, const void *dat
 
 void MtCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p,
                                   AbstractGraphicsApi::Desc &u) {
+  implSetUniforms(u);
   }
 
 void MtCommandBuffer::setBytes(AbstractGraphicsApi::CompPipeline &p,
                                const void *data, size_t size) {
-
-
+  // [enc setVertexBytes:];
   }
 
 void MtCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline &p,
                                   AbstractGraphicsApi::Desc &u) {
-  auto& d   = reinterpret_cast<MtDescriptorArray&>(u);
-  auto& lay = d.lay.handler->lay;
-  for(size_t i=0; i<lay.size(); ++i) {
-    auto& l = lay[i];
-    switch(l.cls) {
-      case ShaderReflection::Push:
-        break;
-      case ShaderReflection::Ubo:
-      case ShaderReflection::SsboR:
-      case ShaderReflection::SsboRW:
-        [enc setBuffer:d.desc[i].val
-                offset:0
-               atIndex:i];
-        break;
-      case ShaderReflection::Texture:
-      case ShaderReflection::ImgR:
-      case ShaderReflection::ImgRW:
-        [enc setTexture:d.desc[i].val];
-        break;
-      }
-    }
+  implSetUniforms(u);
   }
 
 void MtCommandBuffer::setViewport(const Rect &r) {
@@ -203,4 +183,53 @@ void MtCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
   th.depth  = 1;
 
   [enc dispatchThreadgroups:sz threadsPerThreadgroup:th];
+  }
+
+void MtCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u) {
+  auto& d   = reinterpret_cast<MtDescriptorArray&>(u);
+  auto& lay = d.lay.handler->lay;
+  for(size_t i=0; i<lay.size(); ++i) {
+    auto& l = lay[i];
+    switch(l.cls) {
+      case ShaderReflection::Push:
+        break;
+      case ShaderReflection::Ubo:
+      case ShaderReflection::SsboR:
+      case ShaderReflection::SsboRW:
+        setBuffer(l,d.desc[i].val,d.desc[i].offset,i);
+        break;
+      case ShaderReflection::Texture:
+      case ShaderReflection::ImgR:
+      case ShaderReflection::ImgRW:
+        setTexture(l,d.desc[i].val,d.desc[i].sampler,i);
+        break;
+      }
+    }
+  }
+
+void MtCommandBuffer::setBuffer(const ShaderReflection::Binding& sh, id<MTLBuffer> buf, size_t offset, size_t index) {
+  if(sh.stage&(ShaderReflection::Vertex|ShaderReflection::Control|ShaderReflection::Evaluate|ShaderReflection::Geometry)) {
+    [enc setVertexBuffer:buf offset:offset atIndex:index];
+    }
+  if(sh.stage&ShaderReflection::Fragment) {
+    [enc setFragmentBuffer:buf offset:offset atIndex:index];
+    }
+  if(sh.stage&ShaderReflection::Compute) {
+    [enc setBuffer:buf offset:offset atIndex:index];
+    }
+  }
+
+void MtCommandBuffer::setTexture(const ShaderReflection::Binding& sh, id<MTLTexture> tex, id<MTLSamplerState> ss, size_t index) {
+  if(sh.stage&(ShaderReflection::Vertex|ShaderReflection::Control|ShaderReflection::Evaluate|ShaderReflection::Geometry)) {
+    [enc setVertexTexture:tex atIndex:index];
+    [enc setVertexSamplerState:ss atIndex:index];
+    }
+  if(sh.stage&ShaderReflection::Fragment) {
+    [enc setFragmentTexture:tex atIndex:index];
+    [enc setFragmentSamplerState:ss atIndex:index];
+    }
+  if(sh.stage&ShaderReflection::Compute) {
+    [enc setTexture:tex atIndex:index];
+    [enc setSamplerState:ss atIndex:index];
+    }
   }

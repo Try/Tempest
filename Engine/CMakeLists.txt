@@ -178,6 +178,7 @@ file(GLOB SOURCES
   )
 
 if(APPLE)
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "11.2")
   enable_language(OBJCXX)
   file(GLOB ObjCSOURCES
     "*.mm"

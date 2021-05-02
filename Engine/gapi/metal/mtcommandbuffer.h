@@ -5,6 +5,8 @@
 #import  <Metal/MTLCommandBuffer.h>
 #import  <Metal/MTLRenderCommandEncoder.h>
 
+#include "gapi/shaderreflection.h"
+
 namespace Tempest {
 
 class MetalApi;
@@ -54,6 +56,10 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     void dispatch    (size_t x, size_t y, size_t z) override;
 
   private:
+    void implSetUniforms(AbstractGraphicsApi::Desc& u);
+    void setBuffer (const ShaderReflection::Binding& sh, id<MTLBuffer>  b, size_t offset, size_t index);
+    void setTexture(const ShaderReflection::Binding& sh, id<MTLTexture> b, id<MTLSamplerState> ss, size_t index);
+
     MtDevice&            device;
     id<MTLCommandBuffer> impl = nil;
     id                   enc  = nil;

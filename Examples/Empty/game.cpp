@@ -16,8 +16,8 @@ Game::Game(Device& device)
   //VectorImage image;
   //image.load("img/test.svg");
 
-  //Tempest::Pixmap pm("img/texture.png");
-  Tempest::Pixmap pm("img/texture.hdr");
+  Tempest::Pixmap pm("img/texture.png");
+  //Tempest::Pixmap pm("img/texture.hdr");
   texture = device.loadTexture(pm);
 
   for(uint8_t i=0;i<device.maxFramesInFlight();++i){

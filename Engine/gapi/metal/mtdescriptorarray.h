@@ -6,10 +6,11 @@ namespace Tempest {
 namespace Detail {
 
 class MtPipelineLay;
+class MtDevice;
 
 class MtDescriptorArray : public AbstractGraphicsApi::Desc {
   public:
-    MtDescriptorArray(const MtPipelineLay &lay);
+    MtDescriptorArray(MtDevice& dev, const MtPipelineLay &lay);
 
     void set    (size_t id, AbstractGraphicsApi::Texture* tex, const Sampler2d& smp) override;
     void setSsbo(size_t id, AbstractGraphicsApi::Texture* tex, uint32_t mipLevel) override;
@@ -19,8 +20,15 @@ class MtDescriptorArray : public AbstractGraphicsApi::Desc {
 
     struct Desc {
       id val;
+      id sampler;
+      union {
+        size_t offset = 0;
+        size_t mipLevel;
+        };
       };
-    std::unique_ptr<Desc[]> desc;
+
+    MtDevice&                        dev;
+    std::unique_ptr<Desc[]>          desc;
     DSharedPtr<const MtPipelineLay*> lay;
   };
 
