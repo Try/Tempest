@@ -183,7 +183,7 @@ int MacOSApi::implExec(SystemApi::AppCallBack &cb) {
   return 0;
   }
 
-void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
+void MacOSApi::implProcessEvents(SystemApi::AppCallBack& app) {
   NSEvent* evt = [NSApp nextEventMatchingMask: NSEventMaskAny
                  untilDate: nil
                  inMode: NSDefaultRunLoopMode
@@ -192,6 +192,8 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
   NSWindow* wnd = evt.window;
   if(wnd==nil) {
     [NSApp sendEvent: evt];
+    if(app.onTimer()==0)
+      std::this_thread::yield();
     return;
     }
 
@@ -251,12 +253,13 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
       break;
       }
     case NSEventTypeScrollWheel:{
-      float ticks = [evt scrollingDeltaY];
+      float ticks  = [evt deltaY];
+      int   ticksI = (ticks>0 ? 120 : (ticks<0 ? -120 : 0));
       MouseEvent e(evt.locationInWindow.x,
                    evt.locationInWindow.y,
                    toButton(type),
                    Event::M_NoModifier,
-                   int32_t(ticks),
+                   ticksI,
                    0,
                    Event::MouseWheel
                    );
@@ -322,8 +325,10 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
       }
 
     default:
-      SystemApi::dispatchRender(cb);
+      break;
+      // SystemApi::dispatchRender(cb);
     }
 
+  SystemApi::dispatchRender(cb);
   [NSApp sendEvent: evt];
   }
