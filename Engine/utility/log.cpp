@@ -114,19 +114,19 @@ void Log::write(Log::Mode m, char *&out, size_t &count, uint16_t msg) {
   writeUInt(m,out,count,msg);
   }
 
-void Log::write(Mode m, char*& out, size_t& count, int32_t msg){
+void Log::write(Mode m, char*& out, size_t& count, const int32_t& msg){
   writeInt(m,out,count,msg);
   }
 
-void Log::write(Log::Mode m, char *&out, size_t &count, uint32_t msg) {
+void Log::write(Log::Mode m, char *&out, size_t &count, const uint32_t& msg) {
   writeUInt(m,out,count,msg);
   }
 
-void Log::write(Log::Mode m, char *&out, size_t &count, int64_t msg) {
+void Log::write(Log::Mode m, char *&out, size_t &count, const int64_t& msg) {
   writeInt(m,out,count,msg);
   }
 
-void Log::write(Log::Mode m, char *&out, size_t &count, uint64_t msg) {
+void Log::write(Log::Mode m, char *&out, size_t &count, const uint64_t& msg) {
   writeInt(m,out,count,msg);
   }
 
@@ -173,22 +173,6 @@ void Log::writeInt(Mode m, char*& out, size_t& count, T msg){
     write(m,out,count,'-');
     msg = -msg;
     }
-
-  while(pos>=0){
-    sym[pos] = msg%10+'0';
-    msg/=10;
-    if(msg==0)
-      break;
-    --pos;
-    }
-  write(m,out,count,sym+pos);
-  }
-
-template< class T >
-void Log::writeUInt(Mode m, char*& out, size_t& count, T msg){
-  char sym[32];
-  sym[sizeof(sym)-1] = '\0';
-  int pos = sizeof(sym)-2;
 
   while(pos>=0){
     sym[pos] = msg%10+'0';
