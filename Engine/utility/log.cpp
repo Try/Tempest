@@ -127,7 +127,7 @@ void Log::write(Log::Mode m, char *&out, size_t &count, const int64_t& msg) {
   }
 
 void Log::write(Log::Mode m, char *&out, size_t &count, const uint64_t& msg) {
-  writeInt(m,out,count,msg);
+  writeUInt(m,out,count,msg);
   }
 
 void Log::write(Mode m, char*& out, size_t& count, const char* msg){
