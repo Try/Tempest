@@ -4,6 +4,13 @@
 
 namespace Tempest {
 
+namespace Detail {
+class ImplMacOSApi {
+  public:
+    static void onDisplayLink(void* hwnd);
+  };
+}
+
 class MacOSApi final: public SystemApi {
   private:
     MacOSApi();
@@ -29,6 +36,7 @@ class MacOSApi final: public SystemApi {
     static void handleKeyEvent(Tempest::Window* cb, uint32_t msg, const unsigned long long wParam, const long long lParam);
 
   friend class SystemApi;
+  friend class Detail::ImplMacOSApi;
   };
 
 }

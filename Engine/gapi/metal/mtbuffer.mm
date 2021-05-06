@@ -24,47 +24,47 @@ void MtBuffer::update(const void *data, size_t off, size_t count, size_t sz, siz
     return;
     }
 
-  MTLResourceOptions opt   = MTLResourceStorageModeShared | MTLResourceCPUCacheModeWriteCombined;
-  id<MTLDevice>      dx    = dev.impl;
-  id<MTLBuffer>      stage = [dx newBufferWithLength:count*alignedSz options:opt];
-  copyUpsample(data, stage.contents, count, sz, alignedSz);
+  @autoreleasepool {
+    MTLResourceOptions opt   = MTLResourceStorageModeShared | MTLResourceCPUCacheModeWriteCombined;
+    id<MTLDevice>      dx    = dev.impl;
+    id<MTLBuffer>      stage = [dx newBufferWithLength:count*alignedSz options:opt];
+    copyUpsample(data, stage.contents, count, sz, alignedSz);
 
-  id<MTLCommandBuffer>      cmd   = [dev.queue commandBuffer];
-  id<MTLBlitCommandEncoder> enc   = [cmd blitCommandEncoder];
-  [enc copyFromBuffer:stage
-                      sourceOffset:0
-                      toBuffer:impl
-                      destinationOffset:0 size:count*alignedSz];
-  [enc endEncoding];
-  [cmd commit];
+    id<MTLCommandBuffer>      cmd   = [dev.queue commandBuffer];
+    id<MTLBlitCommandEncoder> enc   = [cmd blitCommandEncoder];
+    [enc copyFromBuffer:stage
+                        sourceOffset:0
+                        toBuffer:impl
+                        destinationOffset:0 size:count*alignedSz];
+    [enc endEncoding];
+    [cmd commit];
 
-  // TODO: implement proper upload engine
-  [cmd waitUntilCompleted];
-
-  [enc release];
-  [cmd release];
+    // TODO: implement proper upload engine
+    [cmd waitUntilCompleted];
+    }
   }
 
 void MtBuffer::read(void *data, size_t off, size_t size) {
-  MTLResourceOptions opt   = MTLResourceStorageModeShared | MTLResourceCPUCacheModeWriteCombined;
-  id<MTLDevice>      dx    = dev.impl;
-  id<MTLBuffer>      stage = [dx newBufferWithLength:size options:opt];
+  @autoreleasepool {
+    MTLResourceOptions opt   = MTLResourceStorageModeShared | MTLResourceCPUCacheModeWriteCombined;
+    id<MTLDevice>      dx    = dev.impl;
+    id<MTLBuffer>      stage = [dx newBufferWithLength:size options:opt];
 
-  id<MTLCommandBuffer>      cmd   = [dev.queue commandBuffer];
-  id<MTLBlitCommandEncoder> enc   = [cmd blitCommandEncoder];
-  [enc copyFromBuffer:impl
-                      sourceOffset:off
-                      toBuffer:stage
-                      destinationOffset:0
-                      size:size];
-  [enc endEncoding];
-  [cmd commit];
-  [cmd waitUntilCompleted];
+    id<MTLCommandBuffer>      cmd = [dev.queue commandBuffer];
+    id<MTLBlitCommandEncoder> enc = [cmd blitCommandEncoder];
+    [enc copyFromBuffer:impl
+                        sourceOffset:off
+                        toBuffer:stage
+                        destinationOffset:0
+                        size:size];
+    [enc endEncoding];
+    [cmd commit];
+    [cmd waitUntilCompleted];
 
-  [enc release];
-  [cmd release];
+    std::memcpy(data,stage.contents,size);
 
-  std::memcpy(data,stage.contents,size);
+    [stage release];
+    }
   }
 
 void MtBuffer::implUpdate(const void *data, size_t off, size_t count, size_t sz, size_t alignedSz) {

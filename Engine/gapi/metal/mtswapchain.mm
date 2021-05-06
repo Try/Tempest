@@ -1,17 +1,21 @@
 #include "mtswapchain.h"
 
+#include <Tempest/Application>
 #include <Tempest/Except>
 #include <Tempest/Log>
 
 #include "mtdevice.h"
 
 #import <QuartzCore/CAMetalLayer.h>
+#import <Metal/MTLTexture.h>
+#import <Metal/MTLCommandQueue.h>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
 
 @interface MetalView : NSView
 @end
+
 @implementation MetalView
 + (id)layerClass {
   return [CAMetalLayer class];
@@ -23,7 +27,8 @@ using namespace Tempest::Detail;
 @end
 
 // note : MoltenVK supports NSView, UIView, CAMetalLayer, so we should align to it
-MtSwapchain::MtSwapchain(MtDevice& dev, NSWindow *w):wnd(w) {
+MtSwapchain::MtSwapchain(MtDevice& dev, NSWindow *w)
+  :dev(dev), wnd(w) {
   NSRect rect = [wnd frame];
   sz = {int(rect.size.width), int(rect.size.height)};
 
@@ -34,52 +39,113 @@ MtSwapchain::MtSwapchain(MtDevice& dev, NSWindow *w):wnd(w) {
   CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);
   lay.device = dev.impl;
 
+  //lay.maximumDrawableCount      = 2;
+  lay.pixelFormat               = MTLPixelFormatBGRA8Unorm;
+  lay.allowsNextDrawableTimeout = NO;
+  lay.framebufferOnly           = NO;
+
   reset();
   }
 
 MtSwapchain::~MtSwapchain() {
-  releaseImg();
+  releaseTex();
   if(view!=nil)
     [view release];
   }
 
 void MtSwapchain::reset() {
+  std::lock_guard<SpinLock> guard(sync);
   // https://developer.apple.com/documentation/quartzcore/cametallayer?language=objc
-  releaseImg();
+  releaseTex();
 
   CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);
 
-  NSRect rect = [wnd frame];
-  if(rect.size.width!=sz.w || rect.size.height!=sz.h) {
-    lay.drawableSize = rect.size;
-    sz = {int(rect.size.width), int(rect.size.height)};
+  NSRect wrect = [wnd frame];
+  NSRect lrect = lay.frame;
+  if(wrect.size.width!=lrect.size.width || wrect.size.height!=lrect.size.height) {
+    // TODO:screen.backingScaleFactor
+    lay.drawableSize = wrect.size;
+    sz = {int(wrect.size.width), int(wrect.size.height)};
     }
+  imgCount = 2; //lay.maximumDrawableCount;
 
-  imgCount = lay.maximumDrawableCount;
-
-  std::vector<id<CAMetalDrawable>> vec(imgCount);
-  img.reset(new id<MTLTexture>[imgCount]);
-  for(size_t i=0; i<imgCount; ++i) {
-    id<CAMetalDrawable> dr = [lay nextDrawable];
-    vec[i] = dr;
-    img[i] = dr.texture;
+  @autoreleasepool {
+    img.resize(imgCount);
+    for(size_t i=0; i<imgCount; ++i)
+      img[i].tex = mkTexture();
     }
-  for(size_t i=0; i<vec.size(); ++i)
-    [vec[i] release];
   }
 
 uint32_t MtSwapchain::nextImage(AbstractGraphicsApi::Semaphore*) {
-  // Log::d(__func__);
-  releaseImg();
-
-  CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);
-  current = [lay nextDrawable];
-  // HACK: assume that metal reusing same textures over and over unitil window-resize
-  for(size_t i=0; i<imgCount; ++i)
-    if(img[i]==current.texture)
+  for(;;) {
+    std::lock_guard<SpinLock> guard(sync);
+    for(size_t i=0; i<img.size(); ++i) {
+      if(img[i].inUse)
+        continue;
+      img[i].inUse = true;
       return i;
-  Log::d("failed to recycle CAMetalLayer textures - force reset");
+      }
+    }
   throw SwapchainSuboptimal();
+  }
+
+void MtSwapchain::present(uint32_t i) {
+  CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);
+
+  @autoreleasepool {
+    id<CAMetalDrawable>       drawable = [lay nextDrawable];
+    id<MTLCommandBuffer>      cmd      = [dev.queue commandBuffer];
+    id<MTLBlitCommandEncoder> blit     = [cmd blitCommandEncoder];
+
+    id<MTLTexture> dr = drawable.texture;
+
+    std::lock_guard<SpinLock> guard(sync);
+    [blit copyFromTexture:img[i].tex
+                          sourceSlice:0
+                          sourceLevel:0
+                          toTexture:dr
+                          destinationSlice:0
+                          destinationLevel:0
+                          sliceCount:1
+                          levelCount:1];
+    [blit endEncoding];
+
+    [cmd presentDrawable:drawable];
+    [cmd addCompletedHandler:^(id<MTLCommandBuffer>)  {
+      std::lock_guard<SpinLock> guard(sync);
+      img[i].inUse = false;
+      }];
+    [cmd commit];
+    }
+  }
+
+void MtSwapchain::releaseTex() {
+  for(size_t i=0; i<img.size(); ++i) {
+    [img[i].tex release];
+    }
+  }
+
+id<MTLTexture> MtSwapchain::mkTexture() {
+  MTLTextureDescriptor* desc = [MTLTextureDescriptor new];
+  if(desc==nil)
+    throw std::system_error(GraphicsErrc::OutOfVideoMemory);
+
+  desc.textureType      = MTLTextureType2D;
+  desc.pixelFormat      = MTLPixelFormatBGRA8Unorm;
+  desc.width            = sz.w;
+  desc.height           = sz.h;
+  desc.mipmapLevelCount = 1;
+
+  desc.cpuCacheMode = MTLCPUCacheModeDefaultCache;
+  desc.storageMode  = MTLStorageModePrivate;
+  desc.usage        = MTLTextureUsageRenderTarget;
+
+  desc.allowGPUOptimizedContents = YES;
+
+  auto impl = [dev.impl newTextureWithDescriptor:desc];
+  if(impl==nil)
+    throw std::system_error(GraphicsErrc::OutOfVideoMemory);
+  return impl;
   }
 
 uint32_t MtSwapchain::imageCount() const {
@@ -97,11 +163,4 @@ uint32_t MtSwapchain::h() const {
 MTLPixelFormat MtSwapchain::format() const {
   CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);
   return lay.pixelFormat;
-  }
-
-void MtSwapchain::releaseImg() {
-  if(current!=nil) {
-    [current release];
-    current = nil;
-    }
   }

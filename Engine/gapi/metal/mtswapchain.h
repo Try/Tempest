@@ -4,6 +4,7 @@
 #import  <AppKit/AppKit.h>
 #import  <QuartzCore/QuartzCore.h>
 #import  <Metal/MTLTexture.h>
+#include "utility/spinlock.h"
 
 @class MetalView;
 
@@ -22,19 +23,27 @@ class MtSwapchain : public AbstractGraphicsApi::Swapchain {
     uint32_t      imageCount() const override;
     uint32_t      w() const override;
     uint32_t      h() const override;
+    void          present(uint32_t index);
 
     MTLPixelFormat format() const;
-    void           releaseImg();
 
-    id<CAMetalDrawable>               current = nil;
-    std::unique_ptr<id<MTLTexture>[]> img     = {};
+    struct Image {
+      id<MTLTexture>      tex      = nil;
+      bool                inUse    = false;
+      };
+    std::vector<Image> img;
 
   private:
+    SpinLock       sync;
+
+    MtDevice&      dev;
     NSWindow*      wnd  = nil;
     MetalView*     view = nil;
     Tempest::Size  sz;
 
     uint32_t       imgCount = 0;
+    void           releaseTex();
+    id<MTLTexture> mkTexture();
   };
 
 }

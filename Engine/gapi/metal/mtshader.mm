@@ -53,7 +53,7 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
 
-  // Log::d(msl);
+  Log::d(msl);
 
   auto     opt = [[MTLCompileOptions alloc] init];
   NSError* err = nil;

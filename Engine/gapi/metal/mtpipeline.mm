@@ -15,7 +15,7 @@ MtPipeline::MtPipeline(MtDevice &d, Topology tp,
   cullMode = nativeFormat(rs.cullFaceMode());
   topology = nativeFormat(tp);
 
-  MTLDepthStencilDescriptor *ddesc = [[MTLDepthStencilDescriptor alloc] init];
+  MTLDepthStencilDescriptor *ddesc = [MTLDepthStencilDescriptor new];
   ddesc.depthCompareFunction = nativeFormat(rs.zTestMode());
   ddesc.depthWriteEnabled    = rs.isZWriteEnabled() ? YES : NO;
   depthStZ = [d.impl newDepthStencilStateWithDescriptor:ddesc];
@@ -23,7 +23,7 @@ MtPipeline::MtPipeline(MtDevice &d, Topology tp,
   ddesc.depthWriteEnabled = NO;
   depthStNoZ = [d.impl newDepthStencilStateWithDescriptor:ddesc];
 
-  vdesc = [[MTLVertexDescriptor alloc] init];
+  vdesc = [MTLVertexDescriptor new];
   size_t offset = 0;
   for(size_t i=0; i<vert.vdecl.size(); ++i) {
     const auto& v = vert.vdecl[i];
@@ -38,7 +38,7 @@ MtPipeline::MtPipeline(MtDevice &d, Topology tp,
   vdesc.layouts[0].stepRate     = 1;
   vdesc.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
 
-  pdesc = [[MTLRenderPipelineDescriptor alloc] init];
+  pdesc = [MTLRenderPipelineDescriptor new];
   pdesc.sampleCount          = 1;
   pdesc.vertexFunction       = vert.impl;
   pdesc.fragmentFunction     = frag.impl;

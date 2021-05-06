@@ -62,7 +62,9 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
 
     MtDevice&            device;
     id<MTLCommandBuffer> impl = nil;
-    id                   enc  = nil;
+
+    id<MTLRenderCommandEncoder>  encDraw = nil;
+    id<MTLComputeCommandEncoder> encComp = nil;
 
     MtFramebuffer*   curFbo   = nullptr;
     const MtBuffer*  curIbo   = nullptr;

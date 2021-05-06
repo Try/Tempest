@@ -19,6 +19,9 @@ class MtTexture : public Tempest::AbstractGraphicsApi::Texture {
 
     id<MTLTexture> impl;
     const uint32_t mips = 0;
+
+  private:
+    void createCompressedTexture(const Pixmap& p, TextureFormat frm, uint32_t mipCnt);
   };
 
 }

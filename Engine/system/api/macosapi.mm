@@ -20,14 +20,61 @@ static Event::MouseButton toButton(uint type) {
   return Event::ButtonNone;
   }
 
+static Tempest::Point mousePos(NSEvent* e) {
+  Tempest::Point p = {int(e.locationInWindow.x), int(e.locationInWindow.y)};
+  NSRect fr = e.window.frame;
+
+  p.y = int(fr.size.height)-(p.y+int(fr.origin.y));
+  return p;
+  }
+
+void Detail::ImplMacOSApi::onDisplayLink(void* hwnd) {
+  @autoreleasepool {
+    auto cb = reinterpret_cast<Tempest::Window*>(hwnd);
+    MacOSApi::dispatchRender(*cb);
+    }
+  }
+
 @interface TempestWindowDelegate : NSObject<NSWindowDelegate> {
   @public Tempest::Window* owner;
+  @public CVDisplayLinkRef displayLink;
   }
+- (void)dispatchRenderer;
 @end
 
+static CVReturn displayLinkCallback(CVDisplayLinkRef /*displayLink*/,
+                                    const CVTimeStamp* /*now*/, const CVTimeStamp* /*outputTime*/,
+                                    CVOptionFlags /*flagsIn*/, CVOptionFlags* /*flagsOut*/,
+                                    void* displayLinkContext) {
+  TempestWindowDelegate* self = (__bridge TempestWindowDelegate*)displayLinkContext;
+  // Need to dispatch to main thread as CVDisplayLink uses it's own thread.
+  dispatch_async(dispatch_get_main_queue(), ^{
+                 [self dispatchRenderer];
+                 });
+  return kCVReturnSuccess;
+ }
+
 @implementation TempestWindowDelegate
+- (id)init {
+  self = [super init];
+  // Setup display link.
+  CVDisplayLinkCreateWithActiveCGDisplays(&displayLink);
+  CVDisplayLinkSetOutputCallback(displayLink, &displayLinkCallback, (__bridge void*)self);
+  CVDisplayLinkStart(displayLink);
+  return self;
+  }
+
+- (void)dealloc {
+  CVDisplayLinkStop(displayLink);
+  [super dealloc];
+  }
+
 - (void)windowWillClose:(id)sender {
   isRunning.store(false);
+  }
+
+- (void)dispatchRenderer{
+  Detail::ImplMacOSApi::onDisplayLink(owner);
   }
 @end
 
@@ -59,10 +106,10 @@ static SystemApi::Window* createWindow(Tempest::Window *owner,
       break;
     }
 
-  TempestWindowDelegate* delegate = [[TempestWindowDelegate alloc] init];
+  TempestWindowDelegate* delegate = [TempestWindowDelegate new];
   delegate->owner = owner;
-  [wnd setDelegate: delegate];
 
+  [wnd setDelegate: delegate];
   [wnd orderFrontRegardless];
 
   return reinterpret_cast<SystemApi::Window*>(wnd);
@@ -141,8 +188,10 @@ SystemApi::Window *MacOSApi::implCreateWindow(Tempest::Window *owner, SystemApi:
   }
 
 void MacOSApi::implDestroyWindow(SystemApi::Window *w) {
-  NSWindow* wnd = reinterpret_cast<NSWindow*>(w);
-  [wnd release];
+  NSWindow*              wnd   = reinterpret_cast<NSWindow*>(w);
+  TempestWindowDelegate* deleg = wnd.delegate;
+  [wnd   release];
+  [deleg release];
   }
 
 void MacOSApi::implExit() {
@@ -179,40 +228,46 @@ bool MacOSApi::implIsRunning() {
 int MacOSApi::implExec(SystemApi::AppCallBack &cb) {
   while(::isRunning.load()) {
     implProcessEvents(cb);
+    if(!cb.onTimer())
+      std::this_thread::yield();
     }
   return 0;
   }
 
-void MacOSApi::implProcessEvents(SystemApi::AppCallBack& app) {
+void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
   NSEvent* evt = [NSApp nextEventMatchingMask: NSEventMaskAny
                  untilDate: nil
                  inMode: NSDefaultRunLoopMode
                  dequeue: YES];
+  if(evt==nil)
+    return;
+  NSEventType type = [evt type];
+  NSWindow*   wnd  = evt.window;
 
-  NSWindow* wnd = evt.window;
   if(wnd==nil) {
     [NSApp sendEvent: evt];
-    if(app.onTimer()==0)
-      std::this_thread::yield();
+    std::this_thread::yield();
     return;
     }
 
   id<NSWindowDelegate> d = wnd.delegate;
   if(![d isKindOfClass:[TempestWindowDelegate class]]) {
     [NSApp sendEvent: evt];
+    std::this_thread::yield();
     return;
     }
 
   TempestWindowDelegate* dx = d;
   Tempest::Window&       cb = *dx->owner;
 
-  NSEventType type = [evt type];
   switch(type) {
     case NSEventTypeLeftMouseDown:
     case NSEventTypeRightMouseDown:
     case NSEventTypeOtherMouseDown:{
-      MouseEvent e(evt.locationInWindow.x,
-                   evt.locationInWindow.y,
+      auto p = mousePos(evt);
+      if(p.y<0)
+        break;
+      MouseEvent e(p.x,p.y,
                    toButton(type),
                    Event::M_NoModifier,
                    0,
@@ -226,8 +281,10 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack& app) {
     case NSEventTypeLeftMouseUp:
     case NSEventTypeRightMouseUp:
     case NSEventTypeOtherMouseUp:{
-      MouseEvent e(evt.locationInWindow.x,
-                   evt.locationInWindow.y,
+      auto p = mousePos(evt);
+      if(p.y<0)
+        break;
+      MouseEvent e(p.x,p.y,
                    toButton(type),
                    Event::M_NoModifier,
                    0,
@@ -241,8 +298,10 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack& app) {
     case NSEventTypeRightMouseDragged:
     case NSEventTypeOtherMouseDragged:
     case NSEventTypeMouseMoved: {
-      MouseEvent e(evt.locationInWindow.x,
-                   evt.locationInWindow.y,
+      auto p = mousePos(evt);
+      if(p.y<0)
+        break;
+      MouseEvent e(p.x,p.y,
                    toButton(type),
                    Event::M_NoModifier,
                    0,
@@ -255,8 +314,10 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack& app) {
     case NSEventTypeScrollWheel:{
       float ticks  = [evt deltaY];
       int   ticksI = (ticks>0 ? 120 : (ticks<0 ? -120 : 0));
-      MouseEvent e(evt.locationInWindow.x,
-                   evt.locationInWindow.y,
+      auto p = mousePos(evt);
+      if(p.y<0)
+        break;
+      MouseEvent e(p.x,p.y,
                    toButton(type),
                    Event::M_NoModifier,
                    ticksI,
@@ -326,9 +387,6 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack& app) {
 
     default:
       break;
-      // SystemApi::dispatchRender(cb);
     }
-
-  SystemApi::dispatchRender(cb);
   [NSApp sendEvent: evt];
   }

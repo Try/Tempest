@@ -177,14 +177,18 @@ AbstractGraphicsApi::PBuffer MetalApi::createBuffer(AbstractGraphicsApi::Device 
 
 AbstractGraphicsApi::PTexture MetalApi::createTexture(AbstractGraphicsApi::Device *d,
                                                       const Pixmap &p, TextureFormat frm, uint32_t mips) {
-  auto& dev = *reinterpret_cast<MtDevice*>(d);
-  return PTexture(new MtTexture(dev,p,mips,frm));
+  @autoreleasepool {
+    auto& dev = *reinterpret_cast<MtDevice*>(d);
+    return PTexture(new MtTexture(dev,p,mips,frm));
+    }
   }
 
 AbstractGraphicsApi::PTexture MetalApi::createTexture(AbstractGraphicsApi::Device *d,
                                                       const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) {
-  auto& dev = *reinterpret_cast<MtDevice*>(d);
-  return PTexture(new MtTexture(dev,w,h,mips,frm));
+  @autoreleasepool {
+    auto& dev = *reinterpret_cast<MtDevice*>(d);
+    return PTexture(new MtTexture(dev,w,h,mips,frm));
+    }
   }
 
 AbstractGraphicsApi::PTexture MetalApi::createStorage(AbstractGraphicsApi::Device *d,
@@ -253,20 +257,12 @@ AbstractGraphicsApi::CommandBuffer *MetalApi::createCommandBuffer(AbstractGraphi
   return new MtCommandBuffer(dx);
   }
 
-void MetalApi::present(AbstractGraphicsApi::Device *d,
+void MetalApi::present(AbstractGraphicsApi::Device*,
                        AbstractGraphicsApi::Swapchain *sw,
-                       uint32_t /*imageId*/,
+                       uint32_t imageId,
                        const AbstractGraphicsApi::Semaphore*) {
-  auto& dev = *reinterpret_cast<MtDevice*>(d);
   auto& s   = *reinterpret_cast<MtSwapchain*>(sw);
-
-  id<MTLCommandBuffer> cmd = [dev.queue commandBuffer];
-  [cmd presentDrawable:s.current];
-  [cmd addCompletedHandler:^(id<MTLCommandBuffer> c)  {
-    [c release];
-    }];
-  [cmd commit];
-  s.releaseImg();
+  s.present(imageId);
   }
 
 void MetalApi::submit(AbstractGraphicsApi::Device *d,
@@ -296,7 +292,6 @@ void MetalApi::submit(AbstractGraphicsApi::Device*,
       fence.reset();
       }];
     [cmd commit];
-    [cmd waitUntilCompleted];
     }
   }
 

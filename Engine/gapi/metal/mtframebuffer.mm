@@ -44,7 +44,7 @@ MtFramebuffer::MtFramebuffer(MtFboLayout &lay,
       continue;
       }
 
-    auto drawable = sw[i]->img[imgId[i]];
+    auto drawable = sw[i]->img[imgId[i]].tex;
     color[i].id = drawable;
     }
   }

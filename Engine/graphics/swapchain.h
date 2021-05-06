@@ -36,10 +36,8 @@ class Swapchain final {
 
     Detail::DPtr<AbstractGraphicsApi::Swapchain*> impl;
 
-    uint32_t                                      imgId=0;
     uint64_t                                      framesCounter=0;
     uint8_t                                       framesIdMod=0;
-
     std::unique_ptr<Attachment[]>                 img;
 
   friend class Device;

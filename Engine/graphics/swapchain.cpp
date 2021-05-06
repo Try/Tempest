@@ -30,10 +30,9 @@ Swapchain::~Swapchain() {
 Swapchain& Swapchain::operator = (Swapchain&& s) {
   impl = std::move(s.impl);
 
-  std::swap(framesCounter,        s.framesCounter);
-  std::swap(imgId,                s.imgId);
-  std::swap(framesIdMod,          s.framesIdMod);
-  std::swap(img,                  s.img);
+  std::swap(framesCounter, s.framesCounter);
+  std::swap(framesIdMod,   s.framesIdMod);
+  std::swap(img,           s.img);
 
   return *this;
   }
@@ -64,6 +63,5 @@ Attachment& Swapchain::frame(size_t id) {
   }
 
 uint32_t Swapchain::nextImage(Semaphore& onReady) {
-  imgId = impl.handler->nextImage(onReady.impl.handler);
-  return imgId;
+  return impl.handler->nextImage(onReady.impl.handler);
   }

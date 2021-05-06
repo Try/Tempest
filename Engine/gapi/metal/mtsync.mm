@@ -12,14 +12,14 @@ MtSync::~MtSync() {
 void MtSync::wait() {
   if(!hasWait.load())
     return;
-  std::unique_lock<std::mutex> guard;
+  std::unique_lock<std::mutex> guard(sync);
   cv.wait(guard,[this](){ return !hasWait.load(); });
   }
 
 bool MtSync::wait(uint64_t time) {
   if(!hasWait.load())
     return true;
-  std::unique_lock<std::mutex> guard;
+  std::unique_lock<std::mutex> guard(sync);
   return cv.wait_for(guard,std::chrono::milliseconds(time),[this](){ return !hasWait.load(); });
   }
 

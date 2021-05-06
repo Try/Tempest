@@ -79,7 +79,6 @@ void MtDevice::waitIdle() {
   id<MTLCommandBuffer> cmd = [queue commandBuffer];
   [cmd commit];
   [cmd waitUntilCompleted];
-  [cmd release];
   }
 
 void Tempest::Detail::MtDevice::handleError(NSError *err) {

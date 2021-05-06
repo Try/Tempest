@@ -23,7 +23,8 @@ MtCommandBuffer::~MtCommandBuffer() {
   }
 
 bool MtCommandBuffer::isRecording() const {
-  return enc!=nil;
+  // FIXME
+  return encDraw!=nil && encComp!=nil;
   }
 
 void MtCommandBuffer::begin() {
@@ -31,18 +32,24 @@ void MtCommandBuffer::begin() {
   }
 
 void MtCommandBuffer::end() {
-  if(enc==nil)
-    return;
-  [enc endEncoding];
-  enc = nil;
+  if(encComp==nil) {
+    [encComp endEncoding];
+    [encComp release];
+    encComp = nil;
+    }
+  if(encDraw!=nil) {
+    [encDraw endEncoding];
+    [encDraw release];
+    encDraw = nil;
+    }
   }
 
 void MtCommandBuffer::reset() {
-  MTLCommandBufferDescriptor* desc = [[MTLCommandBufferDescriptor alloc] init];
+  MTLCommandBufferDescriptor* desc = [MTLCommandBufferDescriptor new];
   desc.retainedReferences = NO;
 
   impl = [device.queue commandBufferWithDescriptor:desc];
-
+  [impl retain];
   [desc release];
   }
 
@@ -53,26 +60,34 @@ void MtCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo *f,
   auto& pass = *reinterpret_cast<MtRenderPass*> (p);
 
   MTLRenderPassDescriptor* desc = fbo.instance(pass);
-  enc = [impl renderCommandEncoderWithDescriptor:desc];
-  curFbo = &fbo;
+  encDraw = [impl renderCommandEncoderWithDescriptor:desc];
+  [encDraw retain];
+  curFbo  = &fbo;
 
   // [enc setFrontFacingWinding:MTLWindingCounterClockwise];
   setViewport(Rect(0,0,width,height));
   }
 
 void MtCommandBuffer::endRenderPass() {
-  [enc endEncoding];
-  enc    = nil;
+  if(encDraw!=nil) {
+    [encDraw endEncoding];
+    [encDraw release];
+    encDraw = nil;
+    }
   curFbo = nullptr;
   }
 
 void MtCommandBuffer::beginCompute() {
-  enc = [impl computeCommandEncoder];
+  encComp = [impl computeCommandEncoder];
+  [encComp retain];
   }
 
 void MtCommandBuffer::endCompute() {
-  [enc endEncoding];
-  enc = nil;
+  if(encComp!=nil) {
+    [encComp endEncoding];
+    [encComp release];
+    encComp = nil;
+    }
   }
 
 void MtCommandBuffer::changeLayout(AbstractGraphicsApi::Buffer &buf, BufferLayout prev, BufferLayout next) {
@@ -89,16 +104,16 @@ void MtCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
   auto& inst = px.inst(*curFbo->layout.handler);
 
   if(curFbo->depth!=nullptr)
-    [enc setDepthStencilState:px.depthStZ]; else
-    [enc setDepthStencilState:px.depthStNoZ];
-  [enc setRenderPipelineState:inst.pso];
-  [enc setCullMode:px.cullMode];
+    [encDraw setDepthStencilState:px.depthStZ]; else
+    [encDraw setDepthStencilState:px.depthStNoZ];
+  [encDraw setRenderPipelineState:inst.pso];
+  [encDraw setCullMode:px.cullMode];
   topology = px.topology;
   }
 
 void MtCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline &p) {
   auto& px = reinterpret_cast<MtCompPipeline&>(p);
-  [enc setComputePipelineState:px.impl];
+  [encComp setComputePipelineState:px.impl];
   }
 
 void MtCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline &p, const void *data, size_t size) {
@@ -129,14 +144,14 @@ void MtCommandBuffer::setViewport(const Rect &r) {
   v.znear   = 0;
   v.zfar    = 1;
 
-  [enc setViewport:v];
+  [encDraw setViewport:v];
   }
 
 void MtCommandBuffer::setVbo(const AbstractGraphicsApi::Buffer &b) {
   auto& bx = reinterpret_cast<const MtBuffer&>(b);
-  [enc setVertexBuffer:bx.impl
-                offset:0
-               atIndex:0];
+  [encDraw setVertexBuffer:bx.impl
+                    offset:0
+                   atIndex:0];
   }
 
 void MtCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer &b, IndexClass cls) {
@@ -152,7 +167,7 @@ void MtCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer &b, IndexClass cl
   }
 
 void MtCommandBuffer::draw(size_t offset, size_t vertexCount, size_t firstInstance, size_t instanceCount) {
-  [enc drawPrimitives:topology
+  [encDraw drawPrimitives:topology
                       vertexStart:offset
                       vertexCount:vertexCount
                       instanceCount:instanceCount
@@ -160,7 +175,7 @@ void MtCommandBuffer::draw(size_t offset, size_t vertexCount, size_t firstInstan
   }
 
 void MtCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) {
-  [enc drawIndexedPrimitives:topology
+  [encDraw drawIndexedPrimitives:topology
                              indexCount:isize
                              indexType:iboType
                              indexBuffer:curIbo->impl
@@ -182,7 +197,7 @@ void MtCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
   th.height = 1;
   th.depth  = 1;
 
-  [enc dispatchThreadgroups:sz threadsPerThreadgroup:th];
+  [encComp dispatchThreadgroups:sz threadsPerThreadgroup:th];
   }
 
 void MtCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u) {
@@ -209,27 +224,27 @@ void MtCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u) {
 
 void MtCommandBuffer::setBuffer(const ShaderReflection::Binding& sh, id<MTLBuffer> buf, size_t offset, size_t index) {
   if(sh.stage&(ShaderReflection::Vertex|ShaderReflection::Control|ShaderReflection::Evaluate|ShaderReflection::Geometry)) {
-    [enc setVertexBuffer:buf offset:offset atIndex:index];
+    [encDraw setVertexBuffer:buf offset:offset atIndex:index];
     }
   if(sh.stage&ShaderReflection::Fragment) {
-    [enc setFragmentBuffer:buf offset:offset atIndex:index];
+    [encDraw setFragmentBuffer:buf offset:offset atIndex:index];
     }
   if(sh.stage&ShaderReflection::Compute) {
-    [enc setBuffer:buf offset:offset atIndex:index];
+    [encComp setBuffer:buf offset:offset atIndex:index];
     }
   }
 
 void MtCommandBuffer::setTexture(const ShaderReflection::Binding& sh, id<MTLTexture> tex, id<MTLSamplerState> ss, size_t index) {
   if(sh.stage&(ShaderReflection::Vertex|ShaderReflection::Control|ShaderReflection::Evaluate|ShaderReflection::Geometry)) {
-    [enc setVertexTexture:tex atIndex:index];
-    [enc setVertexSamplerState:ss atIndex:index];
+    [encDraw setVertexTexture:tex atIndex:index];
+    [encDraw setVertexSamplerState:ss atIndex:index];
     }
   if(sh.stage&ShaderReflection::Fragment) {
-    [enc setFragmentTexture:tex atIndex:index];
-    [enc setFragmentSamplerState:ss atIndex:index];
+    [encDraw setFragmentTexture:tex atIndex:index];
+    [encDraw setFragmentSamplerState:ss atIndex:index];
     }
   if(sh.stage&ShaderReflection::Compute) {
-    [enc setTexture:tex atIndex:index];
-    [enc setSamplerState:ss atIndex:index];
+    [encComp setTexture:tex atIndex:index];
+    [encComp setSamplerState:ss atIndex:index];
     }
   }
