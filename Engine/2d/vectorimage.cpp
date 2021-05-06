@@ -142,12 +142,12 @@ void VectorImage::makeActual(Device &dev,Swapchain& sw) {
       if(T_LIKELY(t==UT_Img)) {
         if(b.tex.brush) {
           Sampler2d s;
-          if(T_UNLIKELY(b.tex.frm==TextureFormat::R8 || b.tex.frm==TextureFormat::R16)) {
+          if(T_UNLIKELY(b.tex.frm==TextureFormat::R8 || b.tex.frm==TextureFormat::R16 || b.tex.frm==TextureFormat::R32F)) {
             s.mapping.r = ComponentSwizzle::R;
             s.mapping.g = ComponentSwizzle::R;
             s.mapping.b = ComponentSwizzle::R;
             }
-          else if(T_UNLIKELY(b.tex.frm==TextureFormat::RG8 || b.tex.frm==TextureFormat::RG16)) {
+          else if(T_UNLIKELY(b.tex.frm==TextureFormat::RG8 || b.tex.frm==TextureFormat::RG16 || b.tex.frm==TextureFormat::RG32F)) {
             s.mapping.r = ComponentSwizzle::R;
             s.mapping.g = ComponentSwizzle::R;
             s.mapping.b = ComponentSwizzle::R;
