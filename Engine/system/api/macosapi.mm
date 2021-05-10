@@ -5,8 +5,38 @@
 
 #include <Tempest/Window>
 #include <Tempest/Log>
+#include <Tempest/TextCodec>
 
 using namespace Tempest;
+
+static const uint keyTable[26]={
+  kVK_ANSI_A,
+  kVK_ANSI_B,
+  kVK_ANSI_C,
+  kVK_ANSI_D,
+  kVK_ANSI_E,
+  kVK_ANSI_F,
+  kVK_ANSI_G,
+  kVK_ANSI_H,
+  kVK_ANSI_I,
+  kVK_ANSI_J,
+  kVK_ANSI_K,
+  kVK_ANSI_L,
+  kVK_ANSI_M,
+  kVK_ANSI_N,
+  kVK_ANSI_O,
+  kVK_ANSI_P,
+  kVK_ANSI_Q,
+  kVK_ANSI_R,
+  kVK_ANSI_S,
+  kVK_ANSI_T,
+  kVK_ANSI_U,
+  kVK_ANSI_V,
+  kVK_ANSI_W,
+  kVK_ANSI_X,
+  kVK_ANSI_Y,
+  kVK_ANSI_Z
+  };
 
 static std::atomic_bool isRunning{true};
 
@@ -38,6 +68,7 @@ void Detail::ImplMacOSApi::onDisplayLink(void* hwnd) {
 @interface TempestWindowDelegate : NSObject<NSWindowDelegate> {
   @public Tempest::Window* owner;
   @public CVDisplayLinkRef displayLink;
+  @public std::atomic_bool hasPendingFrame;
   }
 - (void)dispatchRenderer;
 @end
@@ -47,6 +78,9 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef /*displayLink*/,
                                     CVOptionFlags /*flagsIn*/, CVOptionFlags* /*flagsOut*/,
                                     void* displayLinkContext) {
   TempestWindowDelegate* self = (__bridge TempestWindowDelegate*)displayLinkContext;
+  bool f = false;
+  if(!self->hasPendingFrame.compare_exchange_strong(f,true))
+    return kCVReturnSuccess;
   // Need to dispatch to main thread as CVDisplayLink uses it's own thread.
   dispatch_async(dispatch_get_main_queue(), ^{
                  [self dispatchRenderer];
@@ -57,6 +91,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef /*displayLink*/,
 @implementation TempestWindowDelegate
 - (id)init {
   self = [super init];
+  hasPendingFrame.store(0);
   // Setup display link.
   CVDisplayLinkCreateWithActiveCGDisplays(&displayLink);
   CVDisplayLinkSetOutputCallback(displayLink, &displayLinkCallback, (__bridge void*)self);
@@ -75,6 +110,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef /*displayLink*/,
 
 - (void)dispatchRenderer{
   Detail::ImplMacOSApi::onDisplayLink(owner);
+  hasPendingFrame.store(false);
   }
 @end
 
@@ -282,8 +318,6 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
     case NSEventTypeRightMouseUp:
     case NSEventTypeOtherMouseUp:{
       auto p = mousePos(evt);
-      if(p.y<0)
-        break;
       MouseEvent e(p.x,p.y,
                    toButton(type),
                    Event::M_NoModifier,
@@ -299,8 +333,6 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
     case NSEventTypeOtherMouseDragged:
     case NSEventTypeMouseMoved: {
       auto p = mousePos(evt);
-      if(p.y<0)
-        break;
       MouseEvent e(p.x,p.y,
                    toButton(type),
                    Event::M_NoModifier,
@@ -329,8 +361,9 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
       }
     case NSEventTypeKeyDown:
     case NSEventTypeKeyUp: {
+      uint16_t       type  = [evt type];
       Event::Type    eType = (type==NSEventTypeKeyDown ? Event::KeyDown : Event::KeyUp);
-      unsigned short key   = [evt  keyCode];
+      const uint16   key   = [evt  keyCode];
       NSString*      text  = [evt  characters];
       const char*    utf8  = [text UTF8String];
 
@@ -368,8 +401,17 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
         case kVK_F20:    kt = KeyEvent::K_F20; break;
         default: kt = Event::KeyType(SystemApi::translateKey(key));
         }
-      // TODO
-      break;
+
+      for(const uint& k:keyTable)
+        if(k==key)
+          kt = Event::KeyType(Event::K_A+(&k-keyTable));
+
+      auto u16 = TextCodec::toUtf16(utf8); // TODO: remove dynamic allocation
+      auto k   = KeyEvent(kt,uint32_t(u16.size()>0 ? u16[0] : 0),Event::M_NoModifier,eType);
+      if(k.type()==Event::KeyDown)
+        SystemApi::dispatchKeyDown(cb,k,key); else
+        SystemApi::dispatchKeyUp(cb,k,key);
+      return;
       }
     case NSEventTypeFlagsChanged:{
       // TODO
