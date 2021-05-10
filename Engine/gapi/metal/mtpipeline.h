@@ -20,11 +20,13 @@ namespace Detail {
 class MtDevice;
 class MtShader;
 class MtFboLayout;
+class MtPipelineLay;
 
 class MtPipeline : public AbstractGraphicsApi::Pipeline {
   public:
     MtPipeline(MtDevice &d, Topology tp, const Tempest::RenderState& rs,
                size_t stride,
+               const MtPipelineLay& lay,
                const MtShader &vert,
                const MtShader &frag);
     ~MtPipeline();
@@ -34,6 +36,8 @@ class MtPipeline : public AbstractGraphicsApi::Pipeline {
       DSharedPtr<const MtFboLayout*> fbo;
       };
     Inst& inst(const MtFboLayout &lay);
+
+    DSharedPtr<const MtPipelineLay*> lay;
 
     id<MTLDepthStencilState> depthStZ;
     id<MTLDepthStencilState> depthStNoZ;

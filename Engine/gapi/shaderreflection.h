@@ -34,6 +34,9 @@ class ShaderReflection final {
       Class    cls   =Ubo;
       Stage    stage =Fragment;
       uint64_t size  =0;
+
+      spirv_cross::ID spvId;
+      uint32_t        mslBinding = 0;
       };
 
     struct PushBlock {
@@ -51,7 +54,6 @@ class ShaderReflection final {
                       PushBlock& pb,
                       const std::vector<Binding>* sh[],
                       size_t count);
-
 
   private:
     static void finalize(std::vector<Binding>& p);

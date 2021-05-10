@@ -67,6 +67,9 @@ MtDevice::MtDevice() {
   prop.setAttachFormats (attBit);
   prop.setDepthFormats  (dsBit);
   prop.setStorageFormats(storBit);
+
+  prop.ubo.offsetAlign = 4;
+  prop.push.maxRange   = 256;
   }
 
 MtDevice::~MtDevice() {

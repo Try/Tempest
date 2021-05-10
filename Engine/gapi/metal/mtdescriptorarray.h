@@ -19,8 +19,8 @@ class MtDescriptorArray : public AbstractGraphicsApi::Desc {
     void ssboBarriers(Detail::ResourceState& res) override;
 
     struct Desc {
-      id val;
-      id sampler;
+      id       val;
+      id       sampler;
       union {
         size_t offset = 0;
         size_t mipLevel;

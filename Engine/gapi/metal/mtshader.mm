@@ -37,6 +37,10 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
 
     ShaderReflection::getVertexDecl(vdecl,comp);
     ShaderReflection::getBindings(lay,comp);
+    for(auto& i:lay) {
+      uint32_t idx = comp.get_automatic_msl_resource_binding(i.spvId);
+      i.mslBinding = idx;
+      }
     }
   catch(const std::bad_alloc&) {
     throw;
@@ -53,7 +57,7 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
 
-  Log::d(msl);
+  // Log::d(msl);
 
   auto     opt = [[MTLCompileOptions alloc] init];
   NSError* err = nil;

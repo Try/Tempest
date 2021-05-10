@@ -63,6 +63,12 @@ TEST(MetalApi,Draw) {
 #endif
   }
 
+TEST(MetalApi,Ubo) {
+#if defined(__OSX__)
+  GapiTestCommon::uniforms<MetalApi,TextureFormat::RGBA8>("MetalApi_Uniforms.png");
+#endif
+  }
+
 TEST(MetalApi,Compute) {
 #if defined(__OSX__)
   GapiTestCommon::ssboDispath<MetalApi>();

@@ -7,6 +7,8 @@
 
 #include "gapi/shaderreflection.h"
 
+#include "mtpipelinelay.h"
+
 namespace Tempest {
 
 class MetalApi;
@@ -56,9 +58,12 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     void dispatch    (size_t x, size_t y, size_t z) override;
 
   private:
+    void implSetBytes   (const void* bytes, size_t sz);
     void implSetUniforms(AbstractGraphicsApi::Desc& u);
-    void setBuffer (const ShaderReflection::Binding& sh, id<MTLBuffer>  b, size_t offset, size_t index);
-    void setTexture(const ShaderReflection::Binding& sh, id<MTLTexture> b, id<MTLSamplerState> ss, size_t index);
+    void setBuffer (const MtPipelineLay::MTLBind& mtl,
+                    id<MTLBuffer>  b, size_t offset);
+    void setTexture(const MtPipelineLay::MTLBind& mtl,
+                    id<MTLTexture> b, id<MTLSamplerState> ss);
 
     MtDevice&            device;
     id<MTLCommandBuffer> impl = nil;
@@ -66,10 +71,12 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     id<MTLRenderCommandEncoder>  encDraw = nil;
     id<MTLComputeCommandEncoder> encComp = nil;
 
-    MtFramebuffer*   curFbo   = nullptr;
-    const MtBuffer*  curIbo   = nullptr;
-    MTLIndexType     iboType  = MTLIndexTypeUInt16;
-    MTLPrimitiveType topology = MTLPrimitiveTypePoint;
+    uint32_t             curVboId = 0;
+    MtFramebuffer*       curFbo   = nullptr;
+    const MtPipelineLay* curLay   = nullptr;
+    const MtBuffer*      curIbo   = nullptr;
+    MTLIndexType         iboType  = MTLIndexTypeUInt16;
+    MTLPrimitiveType     topology = MTLPrimitiveTypePoint;
 
   friend class Tempest::MetalApi;
   };

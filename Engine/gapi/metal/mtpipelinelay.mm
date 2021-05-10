@@ -5,21 +5,34 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-MtPipelineLay::MtPipelineLay(const std::vector<Binding> &cs) {
-  ShaderReflection::merge(lay,pb,cs);
-  adjustSsboBindings();
-  }
-
 MtPipelineLay::MtPipelineLay(const std::vector<Binding>** sh, size_t cnt) {
   ShaderReflection::merge(lay,pb,sh,cnt);
-  adjustSsboBindings();
-  }
+  bind.resize(lay.size());
 
-size_t MtPipelineLay::descriptorsCount() {
-  return lay.size();
-  }
+  for(size_t i=0; i<cnt; ++i) {
+    if(sh[i]==nullptr)
+      continue;
+    for(auto& b:*sh[i]) {
+      auto& bx = (b.cls==ShaderReflection::Push) ? bindPush : bind[b.layout];
+      if((b.stage & vertMask)!=0)
+        bx.bindVs = b.mslBinding;
+      if((b.stage & ShaderReflection::Fragment)!=0)
+        bx.bindFs = b.mslBinding;
+      if((b.stage & ShaderReflection::Compute)!=0)
+        bx.bindCs = b.mslBinding;
+      }
+    }
 
-void MtPipelineLay::adjustSsboBindings() {
+  while(true) {
+    bool done = (vboIndex!=bindPush.bindVs);
+    for(auto& b:bind)
+      if(b.bindVs==vboIndex)
+        done = false;
+    if(done)
+      break;
+    vboIndex++;
+    }
+
   for(auto& i:lay)
     if(i.size==0)
       i.size = 0; // TODO: ???
@@ -31,3 +44,8 @@ void MtPipelineLay::adjustSsboBindings() {
       hasSSBO = true;
       }
   }
+
+size_t MtPipelineLay::descriptorsCount() {
+  return lay.size();
+  }
+

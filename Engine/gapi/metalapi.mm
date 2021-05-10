@@ -101,12 +101,14 @@ AbstractGraphicsApi::PPipeline MetalApi::createPipeline(AbstractGraphicsApi::Dev
                                                         const AbstractGraphicsApi::Shader *te,
                                                         const AbstractGraphicsApi::Shader *gs,
                                                         const AbstractGraphicsApi::Shader *fs) {
-  auto& dx = *reinterpret_cast<MtDevice*>(d);
+  auto& dx  = *reinterpret_cast<MtDevice*>(d);
 
-  auto& vx = *reinterpret_cast<const MtShader*>(vs);
-  auto& fx = *reinterpret_cast<const MtShader*>(fs);
+  auto& lay = reinterpret_cast<const MtPipelineLay&>(ulayImpl);
 
-  return PPipeline(new MtPipeline(dx,tp,st,stride,vx,fx));
+  auto& vx  = *reinterpret_cast<const MtShader*>(vs);
+  auto& fx  = *reinterpret_cast<const MtShader*>(fs);
+
+  return PPipeline(new MtPipeline(dx,tp,st,stride,lay,vx,fx));
   }
 
 AbstractGraphicsApi::PCompPipeline MetalApi::createComputePipeline(AbstractGraphicsApi::Device *d, const AbstractGraphicsApi::PipelineLay &ulayImpl,
@@ -238,7 +240,8 @@ AbstractGraphicsApi::PPipelineLay MetalApi::createPipelineLayout(AbstractGraphic
                                                                  const AbstractGraphicsApi::Shader *cs) {
   if(cs!=nullptr) {
     auto* comp = reinterpret_cast<const Detail::MtShader*>(cs);
-    return PPipelineLay(new MtPipelineLay(comp->lay));
+    const std::vector<Detail::ShaderReflection::Binding>* lay[1] = {&comp->lay};
+    return PPipelineLay(new MtPipelineLay(lay,1));
     }
 
   const Shader* sh[] = {vs,tc,te,gs,fs};
@@ -288,8 +291,10 @@ void MetalApi::submit(AbstractGraphicsApi::Device*,
     id<MTLCommandBuffer> cmd = cx.impl;
 
     [cmd addCompletedHandler:^(id<MTLCommandBuffer> c) {
-      (void)c;
-      fence.reset();
+      MTLCommandBufferStatus s = c.status;
+      if(s==MTLCommandBufferStatusCommitted)
+        fence.reset(); else
+        fence.reset(s);
       }];
     [cmd commit];
     }

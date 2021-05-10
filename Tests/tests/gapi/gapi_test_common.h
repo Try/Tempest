@@ -214,6 +214,58 @@ void draw(const char* outImage) {
     }
   }
 
+template<class GraphicsApi, Tempest::TextureFormat format>
+void uniforms(const char* outImage) {
+  using namespace Tempest;
+
+  struct Ubo {
+    Vec4 color[3];
+    } data;
+  data.color[0] = Vec4(1,0,0,1);
+  data.color[1] = Vec4(0,1,0,1);
+  data.color[2] = Vec4(0,0,1,1);
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto vbo  = device.vbo(vboData,3);
+    auto ibo  = device.ibo(iboData,3);
+
+    auto vert = device.loadShader("shader/ubo_input.vert.sprv");
+    auto frag = device.loadShader("shader/simple_test.frag.sprv");
+    auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
+
+    auto tex  = device.attachment(format,128,128);
+    auto fbo  = device.frameBuffer(tex);
+    auto rp   = device.pass(FboMode(FboMode::PreserveOut,Color(0.f,0.f,1.f)));
+
+    auto ubo  = device.ubo(data);
+    auto desc = device.descriptors(pso);
+    desc.set(2,ubo);
+
+    auto cmd  = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setFramebuffer(fbo,rp);
+      enc.setUniforms(pso,desc);
+      enc.draw(vbo,ibo);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    auto pm = device.readPixels(tex);
+    pm.save(outImage);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
 template<class GraphicsApi>
 void ssboDispath() {
   using namespace Tempest;

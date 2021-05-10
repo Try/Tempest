@@ -40,12 +40,38 @@ void ShaderReflection::getVertexDecl(std::vector<Decl::ComponentType>& data, spi
 
 void ShaderReflection::getBindings(std::vector<Binding>&  lay,
                                    spirv_cross::Compiler& comp) {
+  Stage s = Stage::Compute;
+  switch(comp.get_execution_model()) {
+    case spv::ExecutionModelGLCompute:
+      s = Stage::Compute;
+      break;
+    case spv::ExecutionModelVertex:
+      s = Stage::Vertex;
+      break;
+    case spv::ExecutionModelTessellationControl:
+      s = Stage::Control;
+      break;
+    case spv::ExecutionModelTessellationEvaluation:
+      s = Stage::Evaluate;
+      break;
+    case spv::ExecutionModelGeometry:
+      s = Stage::Geometry;
+      break;
+    case spv::ExecutionModelFragment:
+      s = Stage::Fragment;
+      break;
+    default: // unimplemented
+      throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
+    }
+
   spirv_cross::ShaderResources resources = comp.get_shader_resources();
   for(auto &resource : resources.sampled_images) {
     unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);
     Binding b;
-    b.cls    = Texture;
     b.layout = binding;
+    b.cls    = Texture;
+    b.stage  = s;
+    b.spvId  = resource.id;
     lay.push_back(b);
     }
   for(auto &resource : resources.uniform_buffers) {
@@ -53,9 +79,11 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);
     auto     sz      = comp.get_declared_struct_size(t);
     Binding b;
-    b.cls    = Ubo;
     b.layout = binding;
+    b.cls    = Ubo;
+    b.stage  = s;
     b.size   = sz;
+    b.spvId  = resource.id;
     lay.push_back(b);
     }
   for(auto &resource : resources.storage_buffers) {
@@ -64,16 +92,20 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     auto     readonly = comp.get_buffer_block_flags(resource.id);
     auto     sz       = comp.get_declared_struct_size(t);
     Binding b;
-    b.cls    = (readonly.get(spv::DecorationNonWritable) ? SsboR : SsboRW);
     b.layout = binding;
+    b.cls    = (readonly.get(spv::DecorationNonWritable) ? SsboR : SsboRW);
+    b.stage  = s;
     b.size   = sz;
+    b.spvId  = resource.id;
     lay.push_back(b);
     }
   for(auto &resource : resources.storage_images) {
     unsigned binding  = comp.get_decoration(resource.id, spv::DecorationBinding);
     Binding b;
-    b.cls    = ImgRW; // (readonly.get(spv::DecorationNonWritable) ? UniformsLayout::ImgR : UniformsLayout::ImgRW);
     b.layout = binding;
+    b.cls    = ImgRW; // (readonly.get(spv::DecorationNonWritable) ? UniformsLayout::ImgR : UniformsLayout::ImgRW);
+    b.stage  = s;
+    b.spvId  = resource.id;
     lay.push_back(b);
     }
   for(auto &resource : resources.push_constant_buffers) {
@@ -81,9 +113,11 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     auto&    t       = comp.get_type_from_variable(resource.id);
     auto     sz      = comp.get_declared_struct_size(t);
     Binding b;
-    b.cls    = Push;
     b.layout = binding;
+    b.cls    = Push;
+    b.stage  = s;
     b.size   = sz;
+    b.spvId  = resource.id;
     lay.push_back(b);
     }
   }
@@ -93,7 +127,7 @@ void ShaderReflection::merge(std::vector<ShaderReflection::Binding>& ret,
                              const std::vector<ShaderReflection::Binding>& comp) {
   ret.reserve(comp.size());
   size_t id=0;
-  for(size_t i=0;i<comp.size();++i, ++id) {
+  for(size_t i=0; i<comp.size(); ++i, ++id) {
     auto& u = comp[i];
     if(u.cls==ShaderReflection::Push) {
       pb.stage = ShaderReflection::Compute;
@@ -117,25 +151,15 @@ void ShaderReflection::merge(std::vector<Binding>& ret,
       expectedSz+=sh[i]->size();
   ret.reserve(expectedSz);
 
-  static const Stage stages[] = {
-    Vertex,
-    Control,
-    Evaluate,
-    Geometry,
-    Fragment
-    };
-
   for(size_t shId=0; shId<count; ++shId) {
     if(sh[shId]==nullptr)
       continue;
 
-    Stage stage = stages[shId];
-    auto& vs    = *sh[shId];
-
-    for(size_t i=0;i<vs.size();++i) {
+    auto& vs = *sh[shId];
+    for(size_t i=0; i<vs.size(); ++i) {
       auto& u   = vs[i];
       if(u.cls==Push) {
-        pb.stage = Stage(pb.stage | stage);
+        pb.stage = Stage(pb.stage | u.stage);
         pb.size  = u.size;
         continue;
         }
@@ -143,7 +167,7 @@ void ShaderReflection::merge(std::vector<Binding>& ret,
         bool  ins = false;
         for(auto& r:ret)
           if(r.layout==u.layout) {
-            r.stage = Stage(r.stage | stage);
+            r.stage = Stage(r.stage | u.stage);
             ins     = true;
             break;
             }
@@ -151,7 +175,6 @@ void ShaderReflection::merge(std::vector<Binding>& ret,
           continue;
         }
       ret.push_back(u);
-      ret.back().stage = stage;
       }
     }
 

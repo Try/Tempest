@@ -4,23 +4,26 @@
 #include "mtshader.h"
 #include "mtframebuffer.h"
 #include "mtfbolayout.h"
+#include "mtpipelinelay.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
 
 MtPipeline::MtPipeline(MtDevice &d, Topology tp,
                        const RenderState &rs, size_t stride,
+                       const MtPipelineLay& lay,
                        const MtShader &vert, const MtShader &frag)
-  :device(d), rs(rs), vert(&vert), frag(&frag) {
+  :lay(&lay), device(d), rs(rs), vert(&vert), frag(&frag) {
   cullMode = nativeFormat(rs.cullFaceMode());
   topology = nativeFormat(tp);
 
   MTLDepthStencilDescriptor *ddesc = [MTLDepthStencilDescriptor new];
   ddesc.depthCompareFunction = nativeFormat(rs.zTestMode());
   ddesc.depthWriteEnabled    = rs.isZWriteEnabled() ? YES : NO;
-  depthStZ = [d.impl newDepthStencilStateWithDescriptor:ddesc];
+  depthStZ   = [d.impl newDepthStencilStateWithDescriptor:ddesc];
 
-  ddesc.depthWriteEnabled = NO;
+  ddesc.depthCompareFunction = MTLCompareFunctionAlways;
+  ddesc.depthWriteEnabled    = NO;
   depthStNoZ = [d.impl newDepthStencilStateWithDescriptor:ddesc];
 
   vdesc = [MTLVertexDescriptor new];
@@ -28,15 +31,15 @@ MtPipeline::MtPipeline(MtDevice &d, Topology tp,
   for(size_t i=0; i<vert.vdecl.size(); ++i) {
     const auto& v = vert.vdecl[i];
 
-    vdesc.attributes[i].bufferIndex = 0;
+    vdesc.attributes[i].bufferIndex = lay.vboIndex;
     vdesc.attributes[i].offset      = offset;
     vdesc.attributes[i].format      = nativeFormat(v);
 
     offset += Decl::size(v);
     }
-  vdesc.layouts[0].stride       = stride;
-  vdesc.layouts[0].stepRate     = 1;
-  vdesc.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
+  vdesc.layouts[lay.vboIndex].stride       = stride;
+  vdesc.layouts[lay.vboIndex].stepRate     = 1;
+  vdesc.layouts[lay.vboIndex].stepFunction = MTLVertexStepFunctionPerVertex;
 
   pdesc = [MTLRenderPipelineDescriptor new];
   pdesc.sampleCount          = 1;
