@@ -18,20 +18,8 @@ MtDescriptorArray::MtDescriptorArray(MtDevice& dev, const MtPipelineLay &lay)
 
 void MtDescriptorArray::set(size_t i, AbstractGraphicsApi::Texture *tex, const Sampler2d &smp) {
   auto& t = *reinterpret_cast<MtTexture*>(tex);
-  desc[i].val = t.impl;
-
-  MTLSamplerDescriptor* sdesc = [MTLSamplerDescriptor new];
-  sdesc.rAddressMode = MTLSamplerAddressModeRepeat;
-  sdesc.sAddressMode = MTLSamplerAddressModeRepeat;
-  sdesc.tAddressMode = MTLSamplerAddressModeRepeat;
-  sdesc.minFilter    = MTLSamplerMinMagFilterLinear;
-  sdesc.magFilter    = MTLSamplerMinMagFilterLinear;
-  sdesc.mipFilter    = MTLSamplerMipFilterNotMipmapped;
-  id<MTLSamplerState> sampler = [dev.impl newSamplerStateWithDescriptor:sdesc];
-  [sdesc release];
-
-  // TODO: free samplers
-  desc[i].sampler = sampler;
+  desc[i].val     = t.impl;
+  desc[i].sampler = dev.samplers.get(smp);
   }
 
 void MtDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi::Texture *tex, uint32_t mipLevel) {

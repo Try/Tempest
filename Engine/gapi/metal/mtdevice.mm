@@ -8,8 +8,8 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-MtDevice::MtDevice() {
-  impl  = MTLCreateSystemDefaultDevice();
+MtDevice::MtDevice()
+  :impl(MTLCreateSystemDefaultDevice()), samplers(*this) {
   queue = [impl newCommandQueue];
 
   SInt32 majorVersion = 0, minorVersion = 0;
@@ -68,8 +68,21 @@ MtDevice::MtDevice() {
   prop.setDepthFormats  (dsBit);
   prop.setStorageFormats(storBit);
 
-  prop.ubo.offsetAlign = 4;
+  // https://developer.apple.com/documentation/metal/mtlrendercommandencoder/1515829-setvertexbuffer?language=objc
+#ifdef __IOS__
+  prop.ubo .offsetAlign = 16;
+  prop.ssbo.offsetAlign = 16;
+#else
+  prop.ubo .offsetAlign = 256;
+  prop.ssbo.offsetAlign = 16;
+#endif
   prop.push.maxRange   = 256;
+  /*
+  if( MTLGPUFamilyApple1)
+    prop.mrt.maxColorAttachments = 4; else
+    prop.mrt.maxColorAttachments = 8;
+  */
+  prop.mrt.maxColorAttachments = 4;
   }
 
 MtDevice::~MtDevice() {

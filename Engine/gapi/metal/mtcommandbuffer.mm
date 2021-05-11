@@ -261,6 +261,7 @@ void MtCommandBuffer::setBuffer(const MtPipelineLay::MTLBind& mtl,
 
 void MtCommandBuffer::setTexture(const MtPipelineLay::MTLBind& mtl,
                                  id<MTLTexture> tex, id<MTLSamplerState> ss) {
+  //TODO: separate bind slot for sampler
   if(mtl.bindVs!=uint32_t(-1)) {
     [encDraw setVertexTexture:tex atIndex:mtl.bindVs];
     [encDraw setVertexSamplerState:ss atIndex:mtl.bindVs];

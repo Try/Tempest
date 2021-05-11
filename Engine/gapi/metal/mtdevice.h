@@ -5,6 +5,7 @@
 #include <Tempest/Except>
 
 #include "../utility/compiller_hints.h"
+#include "mtsamplercache.h"
 #import  <Metal/MTLPixelFormat.h>
 #import  <Metal/MTLVertexDescriptor.h>
 #import  <Metal/MTLDepthStencil.h>
@@ -196,6 +197,8 @@ class MtDevice : public AbstractGraphicsApi::Device {
     id<MTLCommandQueue> queue;
 
     AbstractGraphicsApi::Props prop;
+
+    MtSamplerCache samplers;
   };
 
 inline void mtAssert(id obj, NSError* err) {
