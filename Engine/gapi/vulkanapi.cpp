@@ -272,10 +272,10 @@ void VulkanApi::readBytes(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Buf
   bx.read(out,0,size);
   }
 
-AbstractGraphicsApi::Desc *VulkanApi::createDescriptors(AbstractGraphicsApi::Device* d, PipelineLay& ulayImpl) {
+AbstractGraphicsApi::Desc* VulkanApi::createDescriptors(AbstractGraphicsApi::Device* d, PipelineLay& ulayImpl) {
   auto* dx = reinterpret_cast<Detail::VDevice*>(d);
   auto& ul = reinterpret_cast<Detail::VPipelineLay&>(ulayImpl);
-  return new Detail::VDescriptorArray(dx->device,ul);
+  return new Detail::VDescriptorArray(dx->device.impl,ul);
   }
 
 AbstractGraphicsApi::PPipelineLay VulkanApi::createPipelineLayout(Device *d,

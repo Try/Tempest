@@ -99,8 +99,7 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Texture* t, 
   VkDescriptorImageInfo imageInfo = {};
   imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
   imageInfo.imageView   = tex->getView(device,smp.mapping,uint32_t(-1));
-
-  tex->alloc->updateSampler(imageInfo.sampler,smp,tex->mipCnt);
+  imageInfo.sampler     = tex->alloc->updateSampler(smp);
 
   VkWriteDescriptorSet descriptorWrite = {};
   descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

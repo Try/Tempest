@@ -56,9 +56,12 @@ class VDevice::FakeWindow final {
     VkSurfaceKHR       surface  = VK_NULL_HANDLE;
   };
 
+VDevice::autoDevice::~autoDevice() {
+  vkDestroyDevice(impl,nullptr);
+  }
+
 VDevice::VDevice(VulkanApi &api, const char* gpuName)
   :instance(api.instance)  {
-
   uint32_t deviceCount = 0;
   vkEnumeratePhysicalDevices(api.instance, &deviceCount, nullptr);
 
@@ -83,10 +86,8 @@ VDevice::VDevice(VulkanApi &api, const char* gpuName)
   }
 
 VDevice::~VDevice(){
-  vkDeviceWaitIdle(device);
+  vkDeviceWaitIdle(device.impl);
   data.reset();
-  allocator.freeLast();
-  vkDestroyDevice(device,nullptr);
   }
 
 void VDevice::implInit(VkPhysicalDevice pdev, VkSurfaceKHR surf) {
@@ -307,11 +308,11 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
   createInfo.enabledExtensionCount   = static_cast<uint32_t>(rqExt.size());
   createInfo.ppEnabledExtensionNames = rqExt.data();
 
-  if(vkCreateDevice(pdev, &createInfo, nullptr, &device)!=VK_SUCCESS)
+  if(vkCreateDevice(pdev, &createInfo, nullptr, &device.impl)!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
   for(size_t i=0; i<queueCnt; ++i) {
-    vkGetDeviceQueue(device, queues[i].family, 0, &queues[i].impl);
+    vkGetDeviceQueue(device.impl, queues[i].family, 0, &queues[i].impl);
     if(queues[i].family==props.graphicsFamily)
       graphicsQueue = &queues[i];
     if(queues[i].family==props.presentFamily)
@@ -320,9 +321,9 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
 
   if(props.hasMemRq2) {
     vkGetBufferMemoryRequirements2 = reinterpret_cast<PFN_vkGetBufferMemoryRequirements2KHR>
-        (vkGetDeviceProcAddr(device,"vkGetBufferMemoryRequirements2KHR"));
+        (vkGetDeviceProcAddr(device.impl,"vkGetBufferMemoryRequirements2KHR"));
     vkGetImageMemoryRequirements2 = reinterpret_cast<PFN_vkGetImageMemoryRequirements2KHR>
-        (vkGetDeviceProcAddr(device,"vkGetImageMemoryRequirements2KHR"));
+        (vkGetDeviceProcAddr(device.impl,"vkGetImageMemoryRequirements2KHR"));
     }
   }
 
@@ -377,7 +378,7 @@ void VDevice::waitIdle() {
 
 void VDevice::waitIdleSync(VDevice::Queue* q, size_t n) {
   if(n==0) {
-    vkDeviceWaitIdle(device);
+    vkDeviceWaitIdle(device.impl);
     return;
     }
   if(q->impl!=nullptr) {

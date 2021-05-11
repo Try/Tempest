@@ -7,12 +7,12 @@
 using namespace Tempest::Detail;
 
 VSemaphore::VSemaphore(VDevice &device)
-  :device(device.device){
+  :device(device.device.impl){
   VkSemaphoreCreateInfo semaphoreInfo = {};
   semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
   semaphoreInfo.flags = 0;
 
-  vkAssert(vkCreateSemaphore(device.device,&semaphoreInfo,nullptr,&impl));
+  vkAssert(vkCreateSemaphore(device.device.impl,&semaphoreInfo,nullptr,&impl));
   }
 
 VSemaphore::VSemaphore(VSemaphore &&other) {

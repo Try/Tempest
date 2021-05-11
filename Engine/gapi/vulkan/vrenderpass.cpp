@@ -13,7 +13,7 @@ using namespace Tempest;
 using namespace Tempest::Detail;
 
 VRenderPass::VRenderPass(VDevice& device, const FboMode **attach, uint8_t attCount)
-  : attCount(attCount), device(device.device) {
+  : attCount(attCount), device(device.device.impl) {
   input.reset(new FboMode[attCount]);
   for(size_t i=0;i<attCount;++i)
     input[i] = *attach[i];

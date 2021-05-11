@@ -10,7 +10,7 @@ using namespace Tempest;
 using namespace Tempest::Detail;
 
 VPipelineLay::VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Binding>& comp)
-  : dev(dev.device) {
+  : dev(dev.device.impl) {
   ShaderReflection::merge(lay, pb, comp);
   adjustSsboBindings();
 
@@ -24,7 +24,7 @@ VPipelineLay::VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Bin
   }
 
 VPipelineLay::VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt)
-  : dev(dev.device) {
+  : dev(dev.device.impl) {
   ShaderReflection::merge(lay, pb, sh, cnt);
   adjustSsboBindings();
 

@@ -8,7 +8,7 @@
 using namespace Tempest::Detail;
 
 VFramebufferLayout::VFramebufferLayout(VDevice& dev, VSwapchain** sw, const VkFormat *attach, uint8_t attCount)
-  :attCount(attCount), device(dev.device) {
+  :attCount(attCount), device(dev.device.impl) {
   frm.reset(new VkFormat[attCount]);
   swapchain.reset(new VSwapchain*[attCount]);
   for(size_t i=0;i<attCount;++i) {
@@ -17,7 +17,7 @@ VFramebufferLayout::VFramebufferLayout(VDevice& dev, VSwapchain** sw, const VkFo
     if(!Detail::nativeIsDepthFormat(frm[i]))
       colorCount++;
     }
-  impl = VRenderPass::createLayoutInstance(dev.device,sw,attach,attCount);
+  impl = VRenderPass::createLayoutInstance(dev.device.impl,sw,attach,attCount);
   }
 
 VFramebufferLayout::VFramebufferLayout(VFramebufferLayout &&other)

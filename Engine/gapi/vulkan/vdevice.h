@@ -174,6 +174,11 @@ class VDevice : public AbstractGraphicsApi::Device {
     VDevice(VulkanApi& api,const char* gpuName);
     ~VDevice() override;
 
+    struct autoDevice {
+      VkDevice impl = nullptr;
+      ~autoDevice();
+      };
+
     struct Queue final {
       SpinLock   sync;
       VkQueue    impl=nullptr;
@@ -190,7 +195,7 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     VkInstance              instance           =nullptr;
     VkPhysicalDevice        physicalDevice     =nullptr;
-    VkDevice                device             =nullptr;
+    autoDevice              device;
 
     Queue                   queues[3];
     Queue*                  graphicsQueue=nullptr;

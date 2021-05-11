@@ -26,7 +26,6 @@ class VAllocator {
 
       DeviceMemory alloc(size_t size, uint32_t typeId);
       void         free(DeviceMemory m, size_t size, uint32_t typeId);
-      void         freeLast();
       };
 
     struct MemRequirements {
@@ -39,6 +38,7 @@ class VAllocator {
 
   public:
     VAllocator();
+    ~VAllocator();
 
     void setDevice(VDevice& device);
     VDevice* device();
@@ -51,13 +51,11 @@ class VAllocator {
     void     free(VBuffer&  buf);
     void     free(VTexture& buf);
 
-    void     freeLast() { provider.freeLast(); samplers.freeLast(); }
-
     bool     update(VBuffer& dest, const void *mem, size_t offset, size_t count, size_t size, size_t alignedSz);
     bool     read  (VBuffer& src,        void *mem, size_t offset, size_t count, size_t size, size_t alignedSz);
     bool     read  (VBuffer& src,        void *mem, size_t offset, size_t size);
 
-    void     updateSampler(VkSampler& smp, const Sampler2d& s, uint32_t mipCount);
+    VkSampler updateSampler(const Sampler2d& s);
 
   private:
     VkDevice                          dev=nullptr;

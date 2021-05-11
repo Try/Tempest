@@ -10,7 +10,7 @@
 using namespace Tempest::Detail;
 
 VShader::VShader(VDevice& device, const void *source, size_t src_size)
-  :device(device.device) {
+  :device(device.device.impl) {
   if(src_size%4!=0)
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
 
@@ -25,7 +25,7 @@ VShader::VShader(VDevice& device, const void *source, size_t src_size)
   ShaderReflection::getBindings(lay,comp);
   }
 
-  if(vkCreateShaderModule(device.device,&createInfo,nullptr,&impl)!=VK_SUCCESS)
+  if(vkCreateShaderModule(device.device.impl,&createInfo,nullptr,&impl)!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
   }
 

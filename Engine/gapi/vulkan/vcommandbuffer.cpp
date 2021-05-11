@@ -24,11 +24,11 @@ VCommandBuffer::VCommandBuffer(VDevice& device, VkCommandPoolCreateFlags flags)
   allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
   allocInfo.commandBufferCount = 1;
 
-  vkAssert(vkAllocateCommandBuffers(device.device,&allocInfo,&impl));
+  vkAssert(vkAllocateCommandBuffers(device.device.impl,&allocInfo,&impl));
   }
 
 VCommandBuffer::~VCommandBuffer() {
-  vkFreeCommandBuffers(device.device,pool.impl,1,&impl);
+  vkFreeCommandBuffers(device.device.impl,pool.impl,1,&impl);
   }
 
 void VCommandBuffer::reset() {

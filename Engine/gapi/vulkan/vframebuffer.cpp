@@ -14,7 +14,7 @@ VFramebuffer::VFramebuffer(VDevice& device, VFramebufferLayout& lay,
                            uint32_t w, uint32_t h, uint32_t outCnt,
                            VSwapchain** swapchain, VTexture** color, const uint32_t* imgId,
                            VTexture* zbuf)
-  :device(device.device) {
+  :device(device.device.impl) {
   rp = Detail::DSharedPtr<VFramebufferLayout*>(&lay);
   attach.resize(outCnt+(zbuf!=nullptr ? 1 : 0));
   for(uint32_t i=0; i<outCnt; ++i) {
@@ -29,7 +29,7 @@ VFramebuffer::VFramebuffer(VDevice& device, VFramebufferLayout& lay,
   for(uint32_t i=0; i<outCnt; ++i) {
     if(color[i]==nullptr)
       att[i] = swapchain[i]->views[imgId[i]]; else
-      att[i] = color[i]->getFboView(device.device,0);
+      att[i] = color[i]->getFboView(device.device.impl,0);
     }
   if(zbuf!=nullptr)
     att[outCnt] = zbuf->view;

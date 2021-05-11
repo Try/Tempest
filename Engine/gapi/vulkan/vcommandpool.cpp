@@ -9,13 +9,13 @@
 using namespace Tempest::Detail;
 
 VCommandPool::VCommandPool(VDevice& device,VkCommandPoolCreateFlags flags)
-  :device(device.device) {
+  :device(device.device.impl) {
   VkCommandPoolCreateInfo poolInfo = {};
   poolInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
   poolInfo.queueFamilyIndex = device.props.graphicsFamily;
   poolInfo.flags            = flags;
 
-  vkAssert(vkCreateCommandPool(device.device,&poolInfo,nullptr,&impl));
+  vkAssert(vkCreateCommandPool(device.device.impl,&poolInfo,nullptr,&impl));
   }
 
 VCommandPool::VCommandPool(VCommandPool &&other) {

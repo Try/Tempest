@@ -23,7 +23,7 @@ VPipeline::VPipeline(){
 VPipeline::VPipeline(VDevice& device,
                      const RenderState &st, size_t stride, Topology tp, const VPipelineLay& ulay,
                      const VShader* vert, const VShader* ctrl, const VShader* tess, const VShader* geom, const VShader* frag)
-  : device(device.device), st(st), stride(stride), tp(tp) {
+  : device(device.device.impl), st(st), stride(stride), tp(tp) {
   try {
     modules[0] = Detail::DSharedPtr<const VShader*>{vert};
     modules[1] = Detail::DSharedPtr<const VShader*>{ctrl};
@@ -36,7 +36,7 @@ VPipeline::VPipeline(VDevice& device,
       decl.reset(new Decl::ComponentType[declSize]);
       std::memcpy(decl.get(),vert->vdecl.data(),declSize*sizeof(Decl::ComponentType));
       }
-    pipelineLayout = initLayout(device.device,ulay,pushStageFlags);
+    pipelineLayout = initLayout(device.device.impl,ulay,pushStageFlags);
     ssboBarriers   = ulay.hasSSBO;
     }
   catch(...) {
@@ -338,7 +338,7 @@ VCompPipeline::VCompPipeline() {
   }
 
 VCompPipeline::VCompPipeline(VDevice& dev, const VPipelineLay& ulay, VShader& comp)
-  :device(dev.device) {
+  :device(dev.device.impl) {
   VkShaderStageFlags pushStageFlags = 0;
   pipelineLayout = VPipeline::initLayout(device,ulay,pushStageFlags);
   ssboBarriers   = ulay.hasSSBO;

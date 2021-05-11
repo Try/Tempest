@@ -11,57 +11,46 @@ VSamplerCache::VSamplerCache(){
   }
 
 VSamplerCache::~VSamplerCache() {
-  }
-
-VkSampler VSamplerCache::get(uint32_t mipCount) {
-  return get(Tempest::Sampler2d(),mipCount);
-  }
-
-VkSampler VSamplerCache::get(const Sampler2d &s, uint32_t mipCount) {
-  std::lock_guard<std::mutex> guard(sync);
-
-  auto& c = chunk(mipCount);
-  return alloc(c,s).sampler;
-  }
-
-void VSamplerCache::free(VkSampler ) {
-  }
-
-void VSamplerCache::freeLast() {
-  vkDeviceWaitIdle(device);
-  for(auto& c:chunks)
-    for(auto& i:c.samp)
-      vkDestroySampler(device,i.sampler,nullptr);
-  chunks.clear();
+  if(smpDefault!=VK_NULL_HANDLE)
+    vkDestroySampler(device,smpDefault,nullptr);
+  for(auto& i:chunks)
+    vkDestroySampler(device,i.sampler,nullptr);
   }
 
 void VSamplerCache::setDevice(VDevice &dev) {
-  device        = dev.device;
+  device        = dev.device.impl;
   anisotropy    = dev.props.anisotropy;
   maxAnisotropy = dev.props.maxAnisotropy;
+
+  smpDefault    = alloc(Sampler2d());
   }
 
-VSamplerCache::Chunk &VSamplerCache::chunk(uint32_t mipCount) {
-  for(auto& i:chunks)
-    if(i.mipCount==mipCount)
-      return i;
-  chunks.emplace_back(mipCount);
-  return chunks.back();
-  }
+VkSampler VSamplerCache::get(Sampler2d s) {
+  s.mapping = ComponentMapping();
 
-VSamplerCache::Id VSamplerCache::alloc(VSamplerCache::Chunk &c, const Sampler2d &s) {
-  for(auto& i:c.samp)
+  static const Sampler2d def;
+  if(def==s)
+    return smpDefault;
+
+  std::lock_guard<SpinLock> guard(sync);
+  for(auto& i:chunks) {
     if(i.smp==s)
-      return i;
-  Id id;
-  id.smp     = s;
-  id.sampler = alloc(s,c.mipCount);
+      return i.sampler;
+    }
 
-  c.samp.emplace_back(id);
-  return c.samp.back();
+  chunks.emplace_back();
+  auto& b = chunks.back();
+  b.smp = s;
+  try {
+    b.sampler = alloc(s);
+    }
+  catch(...) {
+    chunks.pop_back();
+    }
+  return b.sampler;
   }
 
-VkSampler VSamplerCache::alloc(const Sampler2d &s, uint32_t mipCount) {
+VkSampler VSamplerCache::alloc(const Sampler2d &s) {
   VkSampler           sampler=VK_NULL_HANDLE;
   VkSamplerCreateInfo samplerInfo = {};
   samplerInfo.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -74,12 +63,12 @@ VkSampler VSamplerCache::alloc(const Sampler2d &s, uint32_t mipCount) {
   samplerInfo.addressModeU            = nativeFormat(s.uClamp);
   samplerInfo.addressModeV            = nativeFormat(s.vClamp);
   samplerInfo.addressModeW            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-  if(s.anisotropic && anisotropy){
-    samplerInfo.anisotropyEnable        = VK_TRUE;
-    samplerInfo.maxAnisotropy           = maxAnisotropy;
+  if(s.anisotropic && anisotropy) {
+    samplerInfo.anisotropyEnable      = VK_TRUE;
+    samplerInfo.maxAnisotropy         = maxAnisotropy;
     } else {
-    samplerInfo.anisotropyEnable        = VK_FALSE;
-    samplerInfo.maxAnisotropy           = 1.f;
+    samplerInfo.anisotropyEnable      = VK_FALSE;
+    samplerInfo.maxAnisotropy         = 1.f;
     }
   samplerInfo.borderColor             = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
   samplerInfo.unnormalizedCoordinates = VK_FALSE;
@@ -87,7 +76,7 @@ VkSampler VSamplerCache::alloc(const Sampler2d &s, uint32_t mipCount) {
   samplerInfo.compareOp               = VK_COMPARE_OP_ALWAYS;
 
   samplerInfo.minLod                  = 0;
-  samplerInfo.maxLod                  = static_cast<float>(mipCount);
+  samplerInfo.maxLod                  = VK_LOD_CLAMP_NONE;
 
   vkAssert(vkCreateSampler(device, &samplerInfo, nullptr, &sampler));
   return sampler;

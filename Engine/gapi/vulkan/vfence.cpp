@@ -7,12 +7,12 @@
 using namespace Tempest::Detail;
 
 VFence::VFence(VDevice &device)
-  :device(device.device) {
+  :device(device.device.impl) {
   VkFenceCreateInfo fenceInfo = {};
   fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
   fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-  vkAssert(vkCreateFence(device.device,&fenceInfo,nullptr,&impl));
+  vkAssert(vkCreateFence(device.device.impl,&fenceInfo,nullptr,&impl));
   }
 
 VFence::~VFence() {

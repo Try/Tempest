@@ -32,12 +32,12 @@ VSwapchain::~VSwapchain() {
 void VSwapchain::cleanupSwapchain() noexcept {
   for(auto imageView : views)
     if(imageView!=VK_NULL_HANDLE)
-      vkDestroyImageView(device.device,imageView,nullptr);
+      vkDestroyImageView(device.device.impl,imageView,nullptr);
   views.clear();
   images.clear();
 
   if(swapChain!=VK_NULL_HANDLE)
-    vkDestroySwapchainKHR(device.device,swapChain,nullptr);
+    vkDestroySwapchainKHR(device.device.impl,swapChain,nullptr);
 
   swapChain            = VK_NULL_HANDLE;
   swapChainImageFormat = VK_FORMAT_UNDEFINED;
@@ -67,8 +67,6 @@ void VSwapchain::reset() {
   }
 
 void VSwapchain::cleanup() noexcept {
-  vkDeviceWaitIdle(device.device);
-
   cleanupSwapchain();
   cleanupSurface();
   }
@@ -108,7 +106,7 @@ void VSwapchain::createSwapchain(VDevice& device, const VDevice::SwapChainSuppor
   createInfo.presentMode    = presentMode;
   createInfo.clipped        = VK_TRUE;
 
-  if(vkCreateSwapchainKHR(device.device, &createInfo, nullptr, &swapChain) != VK_SUCCESS)
+  if(vkCreateSwapchainKHR(device.device.impl, &createInfo, nullptr, &swapChain) != VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
   swapChainImageFormat = surfaceFormat.format;
@@ -119,9 +117,9 @@ void VSwapchain::createSwapchain(VDevice& device, const VDevice::SwapChainSuppor
 
 void VSwapchain::createImageViews(VDevice &device) {
   uint32_t imgCount=0;
-  vkGetSwapchainImagesKHR(device.device, swapChain, &imgCount, nullptr);
+  vkGetSwapchainImagesKHR(device.device.impl, swapChain, &imgCount, nullptr);
   images.resize(imgCount);
-  vkGetSwapchainImagesKHR(device.device, swapChain, &imgCount, images.data());
+  vkGetSwapchainImagesKHR(device.device.impl, swapChain, &imgCount, images.data());
 
   views.resize(images.size());
 
@@ -141,7 +139,7 @@ void VSwapchain::createImageViews(VDevice &device) {
     createInfo.subresourceRange.baseArrayLayer = 0;
     createInfo.subresourceRange.layerCount     = 1;
 
-    if(vkCreateImageView(device.device,&createInfo,nullptr,&views[i])!=VK_SUCCESS)
+    if(vkCreateImageView(device.device.impl,&createInfo,nullptr,&views[i])!=VK_SUCCESS)
       throw std::system_error(Tempest::GraphicsErrc::NoDevice);
     }
   }
@@ -212,7 +210,7 @@ uint32_t VSwapchain::nextImage(AbstractGraphicsApi::Semaphore* onReady) {
   Detail::VSemaphore* rx=reinterpret_cast<Detail::VSemaphore*>(onReady);
 
   uint32_t id   = uint32_t(-1);
-  VkResult code = vkAcquireNextImageKHR(device.device,
+  VkResult code = vkAcquireNextImageKHR(device.device.impl,
                                         swapChain,
                                         std::numeric_limits<uint64_t>::max(),
                                         rx->impl,

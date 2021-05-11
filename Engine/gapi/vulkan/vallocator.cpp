@@ -20,8 +20,11 @@ using namespace Tempest::Detail;
 VAllocator::VAllocator() {
   }
 
+VAllocator::~VAllocator() {
+  }
+
 void VAllocator::setDevice(VDevice &d) {
-  dev             = d.device;
+  dev             = d.device.impl;
   provider.device = &d;
   samplers.setDevice(d);
   }
@@ -32,7 +35,7 @@ VDevice* VAllocator::device() {
 
 VAllocator::Provider::~Provider() {
   if(lastFree!=VK_NULL_HANDLE)
-    vkFreeMemory(device->device,lastFree,nullptr);
+    vkFreeMemory(device->device.impl,lastFree,nullptr);
   }
 
 VAllocator::Provider::DeviceMemory VAllocator::Provider::alloc(size_t size,uint32_t typeId) {
@@ -42,7 +45,7 @@ VAllocator::Provider::DeviceMemory VAllocator::Provider::alloc(size_t size,uint3
       lastFree=VK_NULL_HANDLE;
       return memory;
       }
-    vkFreeMemory(device->device,lastFree,nullptr);
+    vkFreeMemory(device->device.impl,lastFree,nullptr);
     lastFree=VK_NULL_HANDLE;
     }
   VkDeviceMemory memory=VK_NULL_HANDLE;
@@ -53,7 +56,7 @@ VAllocator::Provider::DeviceMemory VAllocator::Provider::alloc(size_t size,uint3
   vk_memoryAllocateInfo.allocationSize  = size;
   vk_memoryAllocateInfo.memoryTypeIndex = typeId;
 
-  auto code = vkAllocateMemory(device->device,&vk_memoryAllocateInfo,nullptr,&memory);
+  auto code = vkAllocateMemory(device->device.impl,&vk_memoryAllocateInfo,nullptr,&memory);
   if(code!=VK_SUCCESS)
     return VK_NULL_HANDLE;
   return memory;
@@ -61,17 +64,11 @@ VAllocator::Provider::DeviceMemory VAllocator::Provider::alloc(size_t size,uint3
 
 void VAllocator::Provider::free(VAllocator::Provider::DeviceMemory m, size_t size, uint32_t typeId) {
   if(lastFree!=VK_NULL_HANDLE)
-    vkFreeMemory(device->device,lastFree,nullptr);
+    vkFreeMemory(device->device.impl,lastFree,nullptr);
 
   lastFree=m;
   lastSize=size;
   lastType=typeId;
-  }
-
-void VAllocator::Provider::freeLast() {
-  if(lastFree!=VK_NULL_HANDLE)
-    vkFreeMemory(device->device,lastFree,nullptr);
-  lastFree=VK_NULL_HANDLE;
   }
 
 static size_t GCD(size_t n1, size_t n2) {
@@ -429,10 +426,8 @@ bool VAllocator::read(VBuffer &src, void *mem, size_t offset, size_t size) {
   return true;
   }
 
-void VAllocator::updateSampler(VkSampler &smp, const Tempest::Sampler2d &s, uint32_t mipCount) {
-  auto ns = samplers.get(s,mipCount);
-  samplers.free(smp);
-  smp = ns;
+VkSampler VAllocator::updateSampler(const Tempest::Sampler2d &s) {
+  return samplers.get(s);
   }
 
 bool VAllocator::commit(VkDeviceMemory dmem, std::mutex &mmapSync, VkBuffer dest,
