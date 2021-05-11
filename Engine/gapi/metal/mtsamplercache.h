@@ -3,6 +3,7 @@
 #include <Tempest/AbstractGraphicsApi>
 
 #include <Metal/MTLSampler.h>
+#include <Metal/MTLDevice.h>
 
 #include "utility/spinlock.h"
 
@@ -13,7 +14,7 @@ class MtDevice;
 
 class MtSamplerCache {
   public:
-    MtSamplerCache(MtDevice& dev);
+    MtSamplerCache(id<MTLDevice> dev);
     ~MtSamplerCache();
 
     id<MTLSamplerState> get(Sampler2d src);
@@ -26,7 +27,7 @@ class MtSamplerCache {
       id<MTLSamplerState> val;
       };
 
-    MtDevice&           dev;
+    id<MTLDevice>       dev;
     id<MTLSamplerState> def;
 
     SpinLock            sync;

@@ -193,11 +193,19 @@ class MtDevice : public AbstractGraphicsApi::Device {
 
     static void handleError(NSError* err);
 
+    struct autoDevice {
+      autoDevice();
+      ~autoDevice();
+      id<MTLDevice>       impl;
+      id<MTLCommandQueue> queue;
+      };
+
     id<MTLDevice>       impl;
     id<MTLCommandQueue> queue;
 
     AbstractGraphicsApi::Props prop;
 
+    autoDevice     dev;
     MtSamplerCache samplers;
   };
 

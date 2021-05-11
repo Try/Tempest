@@ -30,7 +30,7 @@ static MTLSamplerMinMagFilter nativeFormat(Tempest::Filter f) {
 }
 }
 
-MtSamplerCache::MtSamplerCache(MtDevice& dev)
+MtSamplerCache::MtSamplerCache(id<MTLDevice> dev)
   :dev(dev) {
   def = mkSampler(Sampler2d());
   if(def==nil)
@@ -79,7 +79,7 @@ id<MTLSamplerState> MtSamplerCache::mkSampler(const Tempest::Sampler2d& src) {
 
   sdesc.supportArgumentBuffers = NO;
 
-  id<MTLSamplerState> sampler = [dev.impl newSamplerStateWithDescriptor:sdesc];
+  id<MTLSamplerState> sampler = [dev newSamplerStateWithDescriptor:sdesc];
   [sdesc release];
   return sampler;
   }

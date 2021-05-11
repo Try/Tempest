@@ -8,9 +8,25 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-MtDevice::MtDevice()
-  :impl(MTLCreateSystemDefaultDevice()), samplers(*this) {
-  queue = [impl newCommandQueue];
+MtDevice::autoDevice::autoDevice() {
+  impl  = MTLCreateSystemDefaultDevice();
+  if(impl!=nil)
+    queue = [impl newCommandQueue];
+  }
+
+MtDevice::autoDevice::~autoDevice() {
+  if(queue!=nil)
+    [queue release];
+  if(impl!=nil)
+    [impl release];
+  }
+
+MtDevice::MtDevice() : samplers(dev.impl) {
+  impl  = dev.impl;
+  queue = dev.queue;
+
+  if(queue==nil)
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
   SInt32 majorVersion = 0, minorVersion = 0;
   if([[NSProcessInfo processInfo] respondsToSelector:@selector(operatingSystemVersion)]) {
@@ -87,7 +103,6 @@ MtDevice::MtDevice()
 
 MtDevice::~MtDevice() {
   [queue release];
-  [impl  release];
   }
 
 void MtDevice::waitIdle() {
@@ -106,3 +121,4 @@ void Tempest::Detail::MtDevice::handleError(NSError *err) {
 #endif
   throw DeviceLostException();
   }
+
