@@ -186,7 +186,7 @@ inline MTLPrimitiveType nativeFormat(Topology t) {
 
 class MtDevice : public AbstractGraphicsApi::Device {
   public:
-    MtDevice();
+    MtDevice(const char* name);
     ~MtDevice();
 
     void waitIdle() override;
@@ -194,7 +194,7 @@ class MtDevice : public AbstractGraphicsApi::Device {
     static void handleError(NSError* err);
 
     struct autoDevice {
-      autoDevice();
+      autoDevice(const char* name);
       ~autoDevice();
       id<MTLDevice>       impl;
       id<MTLCommandQueue> queue;
@@ -207,6 +207,8 @@ class MtDevice : public AbstractGraphicsApi::Device {
 
     autoDevice     dev;
     MtSamplerCache samplers;
+
+    static void deductProps(AbstractGraphicsApi::Props& prop, id<MTLDevice> dev);
   };
 
 inline void mtAssert(id obj, NSError* err) {

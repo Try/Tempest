@@ -8,8 +8,20 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-MtDevice::autoDevice::autoDevice() {
-  impl  = MTLCreateSystemDefaultDevice();
+MtDevice::autoDevice::autoDevice(const char* name) {
+  if(name==nullptr) {
+    impl = MTLCreateSystemDefaultDevice();
+    } else {
+    NSArray<id<MTLDevice>>* dev = MTLCopyAllDevices();
+    for(size_t i=0; i<dev.count; ++i) {
+      if(std::strcmp(name,dev[i].name.UTF8String)==0) {
+        impl = dev[i];
+        break;
+        }
+      }
+    [dev release];
+    }
+
   if(impl!=nil)
     queue = [impl newCommandQueue];
   }
@@ -21,19 +33,48 @@ MtDevice::autoDevice::~autoDevice() {
     [impl release];
   }
 
-MtDevice::MtDevice() : samplers(dev.impl) {
+MtDevice::MtDevice(const char* name) : dev(name), samplers(dev.impl) {
   impl  = dev.impl;
   queue = dev.queue;
 
   if(queue==nil)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
+  deductProps(prop,impl);
+  }
+
+MtDevice::~MtDevice() {
+  }
+
+void MtDevice::waitIdle() {
+  // TODO: verify, if this correct at all
+  id<MTLCommandBuffer> cmd = [queue commandBuffer];
+  [cmd commit];
+  [cmd waitUntilCompleted];
+  }
+
+void Tempest::Detail::MtDevice::handleError(NSError *err) {
+  if(err==nil)
+    return;
+#if !defined(NDEBUG)
+  const char* e = [[err domain] UTF8String];
+  Log::d("NSError: \"",e,"\"");
+#endif
+  throw DeviceLostException();
+  }
+
+void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, id<MTLDevice> dev) {
   SInt32 majorVersion = 0, minorVersion = 0;
   if([[NSProcessInfo processInfo] respondsToSelector:@selector(operatingSystemVersion)]) {
     NSOperatingSystemVersion ver = [[NSProcessInfo processInfo] operatingSystemVersion];
     majorVersion = ver.majorVersion;
     minorVersion = ver.minorVersion;
     }
+
+  std::strncpy(prop.name,dev.name.UTF8String,sizeof(prop.name));
+  if(dev.hasUnifiedMemory)
+    prop.type = AbstractGraphicsApi::DeviceType::Integrated; else
+    prop.type = AbstractGraphicsApi::DeviceType::Discrete;
 
   // https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
   static const TextureFormat smp[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
@@ -84,41 +125,38 @@ MtDevice::MtDevice() : samplers(dev.impl) {
   prop.setDepthFormats  (dsBit);
   prop.setStorageFormats(storBit);
 
+  prop.mrt.maxColorAttachments = 4;
+  if([dev supportsFamily:MTLGPUFamilyApple2])
+    prop.mrt.maxColorAttachments = 8;
+
   // https://developer.apple.com/documentation/metal/mtlrendercommandencoder/1515829-setvertexbuffer?language=objc
+  prop.vbo.maxAttribs = 31;
+
 #ifdef __IOS__
   prop.ubo .offsetAlign = 16;
   prop.ssbo.offsetAlign = 16;
 #else
-  prop.ubo .offsetAlign = 256;
+  prop.ubo .offsetAlign = 256; //assuming device-local memory
   prop.ssbo.offsetAlign = 16;
 #endif
-  prop.push.maxRange   = 256;
-  /*
-  if( MTLGPUFamilyApple1)
-    prop.mrt.maxColorAttachments = 4; else
-    prop.mrt.maxColorAttachments = 8;
-  */
-  prop.mrt.maxColorAttachments = 4;
-  }
 
-MtDevice::~MtDevice() {
-  [queue release];
-  }
+  // in fact there is no limit, just recomendation to submit less than 4kb of data
+  prop.push.maxRange = 256;
 
-void MtDevice::waitIdle() {
-  // TODO: verify, if this correct at all
-  id<MTLCommandBuffer> cmd = [queue commandBuffer];
-  [cmd commit];
-  [cmd waitUntilCompleted];
-  }
+  prop.compute.maxGroupSize.x = 512;
+  prop.compute.maxGroupSize.y = 512;
+  prop.compute.maxGroupSize.z = 512;
+  if([dev supportsFamily:MTLGPUFamilyApple4]) {
+    prop.compute.maxGroupSize.x = 1024;
+    prop.compute.maxGroupSize.y = 1024;
+    prop.compute.maxGroupSize.z = 1024;
+    }
 
-void Tempest::Detail::MtDevice::handleError(NSError *err) {
-  if(err==nil)
-    return;
-#if !defined(NDEBUG)
-  const char* e = [[err domain] UTF8String];
-  Log::d("NSError: \"",e,"\"");
-#endif
-  throw DeviceLostException();
+  prop.anisotropy    = true;
+  prop.maxAnisotropy = 16;
+
+  // TODO: verify
+  //prop.storeAndAtomicVs = true;
+  //prop.storeAndAtomicFs = true;
   }
 

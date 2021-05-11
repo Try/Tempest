@@ -28,25 +28,33 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-struct MetalApi::Impl {
-
-  };
-
-MetalApi::MetalApi(ApiFlags) {
-  impl.reset(new Impl());
+MetalApi::MetalApi(ApiFlags f) {
+  if((f & ApiFlags::Validation)==ApiFlags::Validation) {
+    setenv("METAL_DEVICE_WRAPPER_TYPE","1",1);
+    setenv("METAL_DEBUG_ERROR_MODE",   "5",0);
+    setenv("METAL_ERROR_MODE",         "5",0);
+    }
   }
 
 MetalApi::~MetalApi() {
   }
 
 std::vector<AbstractGraphicsApi::Props> MetalApi::devices() const {
-  // TODO
-  std::vector<AbstractGraphicsApi::Props> p(1);
-  return p;
+  NSArray<id<MTLDevice>>* dev = MTLCopyAllDevices();
+  try {
+    std::vector<AbstractGraphicsApi::Props> p(dev.count);
+    for(size_t i=0; i<p.size(); ++i)
+      MtDevice::deductProps(p[i],dev[i]);
+    return p;
+    }
+  catch(...) {
+    [dev release];
+    throw;
+    }
   }
 
-AbstractGraphicsApi::Device *MetalApi::createDevice(const char *gpuName) {
-  return new MtDevice();
+AbstractGraphicsApi::Device* MetalApi::createDevice(const char *gpuName) {
+  return new MtDevice(gpuName);
   }
 
 void MetalApi::destroy(AbstractGraphicsApi::Device *d) {
@@ -69,7 +77,7 @@ AbstractGraphicsApi::PPass MetalApi::createPass(AbstractGraphicsApi::Device*, co
 
 AbstractGraphicsApi::PFbo MetalApi::createFbo(AbstractGraphicsApi::Device*,
                                               AbstractGraphicsApi::FboLayout *lay,
-                                              uint32_t w, uint32_t h, uint8_t clCount,
+                                              uint32_t /*w*/, uint32_t /*h*/, uint8_t clCount,
                                               AbstractGraphicsApi::Swapchain **sx,
                                               AbstractGraphicsApi::Texture **cl,
                                               const uint32_t *imgId,
@@ -111,7 +119,8 @@ AbstractGraphicsApi::PPipeline MetalApi::createPipeline(AbstractGraphicsApi::Dev
   return PPipeline(new MtPipeline(dx,tp,st,stride,lay,vx,fx));
   }
 
-AbstractGraphicsApi::PCompPipeline MetalApi::createComputePipeline(AbstractGraphicsApi::Device *d, const AbstractGraphicsApi::PipelineLay &ulayImpl,
+AbstractGraphicsApi::PCompPipeline MetalApi::createComputePipeline(AbstractGraphicsApi::Device *d,
+                                                                   const AbstractGraphicsApi::PipelineLay&,
                                                                    AbstractGraphicsApi::Shader *cs) {
   auto& dx = *reinterpret_cast<MtDevice*>(d);
   auto& cx = *reinterpret_cast<const MtShader*>(cs);

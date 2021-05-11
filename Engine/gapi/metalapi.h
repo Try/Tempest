@@ -63,10 +63,6 @@ class MetalApi : public AbstractGraphicsApi {
                              Fence *doneCpu) override;
 
     void           getCaps  (Device *d,Props& caps) override;
-
-  private:
-    struct Impl;
-    std::unique_ptr<Impl> impl;
   };
 
 }
