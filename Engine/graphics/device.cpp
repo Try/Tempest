@@ -153,6 +153,8 @@ const Device::Props& Device::properties() const {
 Attachment Device::attachment(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips) {
   if(!devProps.hasSamplerFormat(frm) && !devProps.hasAttachFormat(frm))
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
+  if(w>devProps.tex2d.maxSize || h>devProps.tex2d.maxSize)
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
   uint32_t mipCnt = mips ? mipCount(w,h) : 1;
   Texture2d t(*this,api.createTexture(dev,w,h,mipCnt,frm),w,h,frm);
   return Attachment(std::move(t));
@@ -160,6 +162,8 @@ Attachment Device::attachment(TextureFormat frm, const uint32_t w, const uint32_
 
 ZBuffer Device::zbuffer(TextureFormat frm, const uint32_t w, const uint32_t h) {
   if(!devProps.hasDepthFormat(frm))
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
+  if(w>devProps.tex2d.maxSize || h>devProps.tex2d.maxSize)
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
   Texture2d t(*this,api.createTexture(dev,w,h,1,frm),w,h,frm);
   return ZBuffer(std::move(t),devProps.hasSamplerFormat(frm));
@@ -170,6 +174,9 @@ Texture2d Device::loadTexture(const Pixmap &pm, bool mips) {
   uint32_t      mipCnt = mips ? mipCount(pm.w(),pm.h()) : 1;
   const Pixmap* p=&pm;
   Pixmap        alt;
+
+  if(pm.w()>devProps.tex2d.maxSize || pm.h()>devProps.tex2d.maxSize)
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
 
   if(isCompressedFormat(format)){
     if(devProps.hasSamplerFormat(format) && (!mips || pm.mipCount()>1)){
@@ -208,6 +215,8 @@ Texture2d Device::loadTexture(const Pixmap &pm, bool mips) {
 
 StorageImage Device::image2d(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips) {
   if(!devProps.hasStorageFormat(frm))
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
+  if(w>devProps.tex2d.maxSize || h>devProps.tex2d.maxSize)
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
   uint32_t mipCnt = mips ? mipCount(w,h) : 1;
   StorageImage t(*this,api.createStorage(dev,w,h,mipCnt,frm),w,h,frm);

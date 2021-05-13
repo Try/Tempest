@@ -212,6 +212,8 @@ void VulkanApi::getDevicePropsShort(VkPhysicalDevice physicalDevice, Tempest::Ab
   c.compute.maxGroupSize.y = prop.limits.maxComputeWorkGroupSize[1];
   c.compute.maxGroupSize.z = prop.limits.maxComputeWorkGroupSize[2];
 
+  c.tex2d.maxSize = prop.limits.maxImageDimension2D;
+
   switch(prop.deviceType) {
     case VK_PHYSICAL_DEVICE_TYPE_CPU:
       c.type = AbstractGraphicsApi::DeviceType::Cpu;

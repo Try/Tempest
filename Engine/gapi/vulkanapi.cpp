@@ -245,8 +245,8 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
   Detail::VDevice&  dx = *reinterpret_cast<Detail::VDevice*>(d);
   Detail::VTexture& tx = *reinterpret_cast<Detail::VTexture*>(t.handler);
 
-  Pixmap::Format  pfrm  = Pixmap::toPixmapFormat(frm);
-  size_t          bpp   = Pixmap::bppForFormat(pfrm);
+  Pixmap::Format  pfrm = Pixmap::toPixmapFormat(frm);
+  size_t          bpp  = Pixmap::bppForFormat(pfrm);
   if(bpp==0)
     throw std::runtime_error("not implemented");
 

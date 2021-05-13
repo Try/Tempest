@@ -264,6 +264,11 @@ namespace Tempest {
             BasicPoint<int,3> maxGroupSize = {128,128,64};
             } compute;
 
+
+          struct {
+            uint32_t maxSize = 4096;
+            } tex2d;
+
           bool     anisotropy        = false;
           float    maxAnisotropy     = 1.0f;
           bool     tesselationShader = false;
