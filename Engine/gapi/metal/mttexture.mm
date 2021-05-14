@@ -13,7 +13,7 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-MtTexture::MtTexture(MtDevice& d, const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm)
+MtTexture::MtTexture(MtDevice& d, const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm, bool storageTex)
   :mips(mips) {
   MTLTextureDescriptor* desc = [MTLTextureDescriptor new];
   if(desc==nil)
@@ -28,7 +28,9 @@ MtTexture::MtTexture(MtDevice& d, const uint32_t w, const uint32_t h, uint32_t m
   desc.cpuCacheMode = MTLCPUCacheModeDefaultCache;
   desc.storageMode  = MTLStorageModeShared; //TODO: MTLStorageModePrivate
   desc.usage        = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
-  // desc.usage |= MTLTextureUsageShaderWrite; // TODO: imageStorage
+
+  if(storageTex)
+    desc.usage |= MTLTextureUsageShaderWrite;
 
   desc.swizzle = MTLTextureSwizzleChannelsDefault; // TODO: swizzling?!
 
@@ -52,10 +54,9 @@ MtTexture::MtTexture(MtDevice& dev, const Pixmap& pm, uint32_t mips, TextureForm
   desc.height           = pm.h();
   desc.mipmapLevelCount = mips;
 
-  desc.cpuCacheMode = MTLCPUCacheModeDefaultCache;
+  desc.cpuCacheMode = MTLCPUCacheModeWriteCombined;
   desc.storageMode  = MTLStorageModeShared; //TODO: MTLStorageModePrivate
   desc.usage        = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
-  // desc.usage |= MTLTextureUsageShaderWrite; // TODO: imageStorage
 
   desc.swizzle = MTLTextureSwizzleChannelsDefault; // TODO: swizzling?!
 

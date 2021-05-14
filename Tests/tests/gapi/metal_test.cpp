@@ -76,13 +76,13 @@ TEST(MetalApi,Compute) {
   }
 
 TEST(MetalApi,ComputeImage) {
-#if defined(__)
+#if defined(__OSX__)
   GapiTestCommon::imageCompute<MetalApi>("MetalApi_Compute.png");
 #endif
   }
 
 TEST(MetalApi,MipMaps) {
-#if defined(__)
+#if defined(__OSX__)
   GapiTestCommon::mipMaps<MetalApi,TextureFormat::RGBA8>  ("MetalApi_MipMaps_RGBA8.png");
   GapiTestCommon::mipMaps<MetalApi,TextureFormat::RGBA16> ("MetalApi_MipMaps_RGBA16.png");
   GapiTestCommon::mipMaps<MetalApi,TextureFormat::RGBA32F>("MetalApi_MipMaps_RGBA32.png");
@@ -90,7 +90,7 @@ TEST(MetalApi,MipMaps) {
   }
 
 TEST(MetalApi,S3TC) {
-#if defined(__)
+#if defined(__OSX__)
   try {
     MetalApi api{ApiFlags::Validation};
     Device       device(api);
@@ -113,13 +113,13 @@ TEST(MetalApi,TesselationBasic) {
   }
 
 TEST(MetalApi,SsboWrite) {
-#if defined(__)
+#if defined(__OSX__)
   GapiTestCommon::ssboWriteVs<MetalApi>();
 #endif
   }
 
 TEST(MetalApi,PushRemapping) {
-#if defined(__)
+#if defined(__OSX__)
   GapiTestCommon::pushConstant<MetalApi>();
 #endif
   }

@@ -39,6 +39,9 @@ MtSwapchain::MtSwapchain(MtDevice& dev, NSWindow *w)
   CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);
   lay.device = dev.impl;
 
+  const float dpi = [NSScreen mainScreen].backingScaleFactor;
+  [lay setContentsScale:dpi];
+
   //lay.maximumDrawableCount      = 2;
   lay.pixelFormat               = MTLPixelFormatBGRA8Unorm;
   lay.allowsNextDrawableTimeout = NO;

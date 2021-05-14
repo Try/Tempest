@@ -88,7 +88,8 @@ MtPipeline::Inst& MtPipeline::inst(const MtFboLayout& lay) {
   }
 
 
-MtCompPipeline::MtCompPipeline(MtDevice &device, const MtShader &sh) {
+MtCompPipeline::MtCompPipeline(MtDevice &device, const MtPipelineLay& lay, const MtShader &sh)
+  :lay(&lay) {
   id dev = device.impl;
 
   MTLComputePipelineDescriptor *desc = [[MTLComputePipelineDescriptor alloc] init];

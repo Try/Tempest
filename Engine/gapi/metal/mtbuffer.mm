@@ -10,8 +10,26 @@
 
 using namespace Tempest::Detail;
 
-MtBuffer::MtBuffer(const MtDevice& dev, id<MTLBuffer> buf, MTLResourceOptions flg)
-  :dev(dev), impl(buf), flg(flg) {
+MtBuffer::MtBuffer(const MtDevice& dev, const void* data, size_t count, size_t sz, size_t alignedSz, MTLResourceOptions f)
+  :dev(dev), flg(f | MTLResourceHazardTrackingModeDefault) {
+  if(data==nullptr) {
+    impl = [dev.impl newBufferWithLength:count*alignedSz options:flg];
+    if(impl==nil)
+      throw std::system_error(GraphicsErrc::OutOfVideoMemory);
+    return;
+    }
+
+  if(alignedSz==sz && 0==(flg & MTLResourceStorageModePrivate)) {
+    impl = [dev.impl newBufferWithBytes:data length:count*alignedSz options:flg];
+    if(impl==nil)
+      throw std::system_error(GraphicsErrc::OutOfVideoMemory);
+    return;
+    }
+
+  impl = [dev.impl newBufferWithLength:count*alignedSz options:flg];
+  if(impl==nil)
+    throw std::system_error(GraphicsErrc::OutOfVideoMemory);
+  update(data,0,count,sz,alignedSz);
   }
 
 MtBuffer::~MtBuffer() {
@@ -46,7 +64,7 @@ void MtBuffer::update(const void *data, size_t off, size_t count, size_t sz, siz
 
 void MtBuffer::read(void *data, size_t off, size_t size) {
   @autoreleasepool {
-    MTLResourceOptions opt   = MTLResourceStorageModeShared | MTLResourceCPUCacheModeWriteCombined;
+    MTLResourceOptions opt   = MTLResourceStorageModeShared | MTLResourceCPUCacheModeDefaultCache | MTLResourceHazardTrackingModeTracked;
     id<MTLDevice>      dx    = dev.impl;
     id<MTLBuffer>      stage = [dx newBufferWithLength:size options:opt];
 

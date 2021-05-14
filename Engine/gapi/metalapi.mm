@@ -120,11 +120,12 @@ AbstractGraphicsApi::PPipeline MetalApi::createPipeline(AbstractGraphicsApi::Dev
   }
 
 AbstractGraphicsApi::PCompPipeline MetalApi::createComputePipeline(AbstractGraphicsApi::Device *d,
-                                                                   const AbstractGraphicsApi::PipelineLay&,
+                                                                   const AbstractGraphicsApi::PipelineLay& ulayImpl,
                                                                    AbstractGraphicsApi::Shader *cs) {
   auto& dx = *reinterpret_cast<MtDevice*>(d);
   auto& cx = *reinterpret_cast<const MtShader*>(cs);
-  return PCompPipeline(new MtCompPipeline(dx,cx));
+  auto& lay = reinterpret_cast<const MtPipelineLay&>(ulayImpl);
+  return PCompPipeline(new MtCompPipeline(dx,lay,cx));
   }
 
 AbstractGraphicsApi::PShader MetalApi::createShader(AbstractGraphicsApi::Device *d, const void *source, size_t src_size) {
@@ -141,7 +142,7 @@ AbstractGraphicsApi::Semaphore *MetalApi::createSemaphore(AbstractGraphicsApi::D
   }
 
 AbstractGraphicsApi::PBuffer MetalApi::createBuffer(AbstractGraphicsApi::Device *d,
-                                                    const void *mem, size_t count, size_t size, size_t alignedSz,
+                                                    const void *mem, size_t count, size_t sz, size_t alignedSz,
                                                     MemUsage /*usage*/, BufferHeap flg) {
   auto& dx = *reinterpret_cast<MtDevice*>(d);
 
@@ -167,23 +168,7 @@ AbstractGraphicsApi::PBuffer MetalApi::createBuffer(AbstractGraphicsApi::Device 
       break;
     }
 
-  opt |= MTLResourceHazardTrackingModeDefault;
-
-  id<MTLBuffer> buf;
-  if(mem==nullptr) {
-    buf = [dx.impl newBufferWithLength:count*alignedSz options:opt];
-    return PBuffer(new MtBuffer(dx,buf,opt));
-    }
-
-  if(alignedSz==size && 0==(opt & MTLResourceStorageModePrivate)) {
-    buf = [dx.impl newBufferWithBytes:mem length:count*alignedSz options:opt];
-    return PBuffer(new MtBuffer(dx,buf,opt));
-    }
-
-  buf = [dx.impl newBufferWithLength:count*alignedSz options:opt];
-  auto ret = PBuffer(new MtBuffer(dx,buf,opt));
-  ret.handler->update(mem,0,count,size,alignedSz);
-  return ret;
+  return PBuffer(new MtBuffer(dx,mem,count,sz,alignedSz,opt));
   }
 
 AbstractGraphicsApi::PTexture MetalApi::createTexture(AbstractGraphicsApi::Device *d,
@@ -198,16 +183,19 @@ AbstractGraphicsApi::PTexture MetalApi::createTexture(AbstractGraphicsApi::Devic
                                                       const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) {
   @autoreleasepool {
     auto& dev = *reinterpret_cast<MtDevice*>(d);
-    return PTexture(new MtTexture(dev,w,h,mips,frm));
+    return PTexture(new MtTexture(dev,w,h,mips,frm,false));
     }
   }
 
 AbstractGraphicsApi::PTexture MetalApi::createStorage(AbstractGraphicsApi::Device *d,
                                                       const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) {
-  return PTexture();
+  @autoreleasepool {
+    auto& dev = *reinterpret_cast<MtDevice*>(d);
+    return PTexture(new MtTexture(dev,w,h,mips,frm,true));
+    }
   }
 
-void MetalApi::readPixels(AbstractGraphicsApi::Device *d,
+void MetalApi::readPixels(AbstractGraphicsApi::Device*,
                           Pixmap &out, const AbstractGraphicsApi::PTexture t,
                           TextureLayout /*lay*/, TextureFormat frm,
                           const uint32_t w, const uint32_t h, uint32_t mip) {
@@ -229,8 +217,7 @@ void MetalApi::readPixels(AbstractGraphicsApi::Device *d,
 
 void MetalApi::readBytes(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Buffer *buf,
                          void *out, size_t size) {
-  auto& b = *reinterpret_cast<MtBuffer*>(buf);
-  b.read(out,0,size);
+  buf->read(out,0,size);
   }
 
 AbstractGraphicsApi::Desc *MetalApi::createDescriptors(AbstractGraphicsApi::Device* d,

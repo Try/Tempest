@@ -7,6 +7,7 @@
 #include "mtrenderpass.h"
 #include "mtpipelinelay.h"
 #include "mtdescriptorarray.h"
+#include "mttexture.h"
 
 #include <Metal/MTLCommandQueue.h>
 
@@ -90,13 +91,36 @@ void MtCommandBuffer::endCompute() {
     }
   }
 
-void MtCommandBuffer::changeLayout(AbstractGraphicsApi::Buffer &buf, BufferLayout prev, BufferLayout next) {
+void MtCommandBuffer::changeLayout(AbstractGraphicsApi::Buffer&,
+                                   BufferLayout /*prev*/, BufferLayout /*next*/) {
   }
 
-void MtCommandBuffer::changeLayout(AbstractGraphicsApi::Attach &img, TextureLayout prev, TextureLayout next, bool byRegion) {
+void MtCommandBuffer::changeLayout(AbstractGraphicsApi::Attach &,
+                                   TextureLayout /*prev*/, TextureLayout /*next*/, bool /*byRegion*/) {
   }
 
-void MtCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture &image, TextureLayout defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
+void MtCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture &image,
+                                     TextureLayout /*defLayout*/,
+                                     uint32_t /*texWidth*/, uint32_t /*texHeight*/,
+                                     uint32_t /*mipLevels*/) {
+  bool restartComp = false;
+  if(encComp!=nil) {
+    restartComp = true;
+    [encComp endEncoding];
+    [encComp release];
+    }
+
+  @autoreleasepool {
+    auto& t = reinterpret_cast<MtTexture&>(image);
+    id<MTLBlitCommandEncoder> enc = [impl blitCommandEncoder];
+    [enc generateMipmapsForTexture:t.impl];
+    [enc endEncoding];
+    }
+
+  if(restartComp) {
+    encComp = [impl computeCommandEncoder];
+    [encComp retain];
+    }
   }
 
 void MtCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
@@ -116,6 +140,7 @@ void MtCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
 void MtCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline &p) {
   auto& px = reinterpret_cast<MtCompPipeline&>(p);
   [encComp setComputePipelineState:px.impl];
+  curLay   = px.lay.handler;
   }
 
 void MtCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline&,

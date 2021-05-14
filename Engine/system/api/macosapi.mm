@@ -127,6 +127,7 @@ static SystemApi::Window* createWindow(Tempest::Window *owner,
   [wnd makeKeyAndOrderFront:nil];
   [wnd setStyleMask:[wnd styleMask] | flags];
   [wnd setAcceptsMouseMovedEvents: YES];
+  [wnd setCollectionBehavior:NSWindowCollectionBehaviorFullScreenPrimary];
 
   switch (mode) {
     case SystemApi::Hidden: break;
@@ -242,15 +243,28 @@ Tempest::Rect MacOSApi::implWindowClientRect(SystemApi::Window *w) {
   }
 
 bool MacOSApi::implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) {
-  return false;
+  NSWindow* wnd = reinterpret_cast<NSWindow*>(w);
+  const bool isFs = implIsFullscreen(w);
+  if(isFs==fullScreen)
+    return true;
+  //[wnd toggleFullScreen:nil];
+  return ([wnd styleMask] & NSWindowStyleMaskFullScreen)==fullScreen;
   }
 
 bool MacOSApi::implIsFullscreen(SystemApi::Window *w) {
-  return false;
+  NSWindow* wnd = reinterpret_cast<NSWindow*>(w);
+  return ([wnd styleMask] & NSWindowStyleMaskFullScreen);
   }
 
 void MacOSApi::implSetCursorPosition(SystemApi::Window *w, int x, int y) {
+  NSWindow* wnd = reinterpret_cast<NSWindow*>(w);
+  CGPoint p = {};
+  p.x = CGFloat(x) + wnd.frame.origin.x;
+  p.y = CGFloat(y) + wnd.frame.origin.y;
 
+  //wnd.screen;
+
+  CGDisplayMoveCursorToPoint(CGMainDisplayID(), p);
   }
 
 void MacOSApi::implShowCursor(bool show) {
@@ -414,7 +428,9 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
       return;
       }
     case NSEventTypeFlagsChanged:{
-      // TODO
+      //NSRect r = [wnd frame];
+      //SizeEvent sz{int32_t(r.size.width),int32_t(r.size.height)};
+      //SystemApi::dispatchResize(cb,sz);
       break;
       }
     case NSEventTypeAppKitDefined:{

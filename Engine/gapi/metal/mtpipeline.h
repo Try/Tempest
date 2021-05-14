@@ -61,9 +61,10 @@ class MtPipeline : public AbstractGraphicsApi::Pipeline {
 
 class MtCompPipeline : public AbstractGraphicsApi::CompPipeline {
   public:
-    MtCompPipeline(MtDevice &d, const MtShader& sh);
+    MtCompPipeline(MtDevice &d, const MtPipelineLay& lay, const MtShader& sh);
 
-    id<MTLComputePipelineState> impl;
+    id<MTLComputePipelineState>      impl;
+    DSharedPtr<const MtPipelineLay*> lay;
   };
 
 }

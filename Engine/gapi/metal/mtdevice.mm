@@ -92,8 +92,8 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, id<MTLDevice> dev) 
                                       TextureFormat::R32F, TextureFormat::RGBA32F
                                      };
 
-  // TODO: expose MTLPixelFormatDepth32Float - only portable depth format
-  static const TextureFormat ds[]  = {};
+  // TODO: expose MTLPixelFormatDepth32Float
+  static const TextureFormat ds[]  = {TextureFormat::Depth16};
 
   uint64_t smpBit = 0, attBit = 0, dsBit = 0, storBit = 0;
   for(auto& i:smp)
@@ -105,17 +105,14 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, id<MTLDevice> dev) 
   for(auto& i:ds)
     dsBit  |= uint64_t(1) << uint64_t(i);
 
-  if(majorVersion>10 || (majorVersion==10 && minorVersion>=11)) {
+  if(dev.supportsBCTextureCompression) {
     static const TextureFormat bc[] = {TextureFormat::DXT1, TextureFormat::DXT3, TextureFormat::DXT5};
-    static const TextureFormat ds[] = {TextureFormat::Depth24S8};
     for(auto& i:bc)
       smpBit |= uint64_t(1) << uint64_t(i);
-    for(auto& i:ds)
-      dsBit  |= uint64_t(1) << uint64_t(i);
     }
 
-  if(majorVersion>10 || (majorVersion==10 && minorVersion>=12)) {
-    static const TextureFormat ds[] = {TextureFormat::Depth16};
+  if(dev.depth24Stencil8PixelFormatSupported) {
+    static const TextureFormat ds[] = {TextureFormat::Depth24S8};
     for(auto& i:ds)
       dsBit  |= uint64_t(1) << uint64_t(i);
     }
