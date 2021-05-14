@@ -38,8 +38,9 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
     ShaderReflection::getVertexDecl(vdecl,comp);
     ShaderReflection::getBindings(lay,comp);
     for(auto& i:lay) {
-      uint32_t idx = comp.get_automatic_msl_resource_binding(i.spvId);
-      i.mslBinding = idx;
+      i.mslBinding = comp.get_automatic_msl_resource_binding(i.spvId);
+      if(i.cls==ShaderReflection::Texture)
+        i.mslBinding2 = comp.get_automatic_msl_resource_binding_secondary(i.spvId);
       }
     }
   catch(const std::bad_alloc&) {

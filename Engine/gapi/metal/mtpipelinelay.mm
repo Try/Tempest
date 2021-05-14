@@ -14,12 +14,18 @@ MtPipelineLay::MtPipelineLay(const std::vector<Binding>** sh, size_t cnt) {
       continue;
     for(auto& b:*sh[i]) {
       auto& bx = (b.cls==ShaderReflection::Push) ? bindPush : bind[b.layout];
-      if((b.stage & vertMask)!=0)
-        bx.bindVs = b.mslBinding;
-      if((b.stage & ShaderReflection::Fragment)!=0)
-        bx.bindFs = b.mslBinding;
-      if((b.stage & ShaderReflection::Compute)!=0)
-        bx.bindCs = b.mslBinding;
+      if((b.stage & vertMask)!=0) {
+        bx.bindVs    = b.mslBinding;
+        bx.bindVsSmp = b.mslBinding2;
+        }
+      if((b.stage & ShaderReflection::Fragment)!=0) {
+        bx.bindFs    = b.mslBinding;
+        bx.bindFsSmp = b.mslBinding2;
+        }
+      if((b.stage & ShaderReflection::Compute)!=0) {
+        bx.bindCs    = b.mslBinding;
+        bx.bindCsSmp = b.mslBinding2;
+        }
       }
     }
 

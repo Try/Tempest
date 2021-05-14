@@ -36,7 +36,8 @@ class ShaderReflection final {
       uint64_t size  =0;
 
       spirv_cross::ID spvId;
-      uint32_t        mslBinding = 0;
+      uint32_t        mslBinding  = uint32_t(-1);
+      uint32_t        mslBinding2 = uint32_t(-1);
       };
 
     struct PushBlock {

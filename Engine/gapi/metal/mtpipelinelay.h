@@ -23,9 +23,12 @@ class MtPipelineLay : public AbstractGraphicsApi::PipelineLay {
       };
 
     struct MTLBind {
-      uint32_t bindVs = uint32_t(-1);
-      uint32_t bindFs = uint32_t(-1);
-      uint32_t bindCs = uint32_t(-1);
+      uint32_t bindVs    = uint32_t(-1);
+      uint32_t bindVsSmp = uint32_t(-1);
+      uint32_t bindFs    = uint32_t(-1);
+      uint32_t bindFsSmp = uint32_t(-1);
+      uint32_t bindCs    = uint32_t(-1);
+      uint32_t bindCsSmp = uint32_t(-1);
       };
 
     MtPipelineLay(const std::vector<Binding> **sh, size_t cnt);

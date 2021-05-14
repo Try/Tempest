@@ -28,8 +28,6 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
                          AbstractGraphicsApi::Pass*  p,
                          uint32_t width,uint32_t height) override;
     void endRenderPass() override;
-    void beginCompute() override;
-    void endCompute() override;
 
     void changeLayout  (AbstractGraphicsApi::Buffer& buf, BufferLayout prev, BufferLayout next) override;
     void changeLayout  (AbstractGraphicsApi::Attach& img, TextureLayout prev, TextureLayout next, bool byRegion) override;
@@ -58,6 +56,7 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     void dispatch    (size_t x, size_t y, size_t z) override;
 
   private:
+    void setupCompute();
     void implSetBytes   (const void* bytes, size_t sz);
     void implSetUniforms(AbstractGraphicsApi::Desc& u);
     void setBuffer (const MtPipelineLay::MTLBind& mtl,

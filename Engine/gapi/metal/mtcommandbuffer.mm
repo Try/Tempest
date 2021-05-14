@@ -33,7 +33,7 @@ void MtCommandBuffer::begin() {
   }
 
 void MtCommandBuffer::end() {
-  if(encComp==nil) {
+  if(encComp!=nil) {
     [encComp endEncoding];
     [encComp release];
     encComp = nil;
@@ -60,6 +60,12 @@ void MtCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo *f,
   auto& fbo  = *reinterpret_cast<MtFramebuffer*>(f);
   auto& pass = *reinterpret_cast<MtRenderPass*> (p);
 
+  if(encComp!=nil) {
+    [encComp endEncoding];
+    [encComp release];
+    encComp = nil;
+    }
+
   MTLRenderPassDescriptor* desc = fbo.instance(pass);
   encDraw = [impl renderCommandEncoderWithDescriptor:desc];
   [encDraw retain];
@@ -78,17 +84,11 @@ void MtCommandBuffer::endRenderPass() {
   curFbo = nullptr;
   }
 
-void MtCommandBuffer::beginCompute() {
+void MtCommandBuffer::setupCompute() {
+  if(encComp!=nil)
+    return;
   encComp = [impl computeCommandEncoder];
   [encComp retain];
-  }
-
-void MtCommandBuffer::endCompute() {
-  if(encComp!=nil) {
-    [encComp endEncoding];
-    [encComp release];
-    encComp = nil;
-    }
   }
 
 void MtCommandBuffer::changeLayout(AbstractGraphicsApi::Buffer&,
@@ -138,6 +138,7 @@ void MtCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
   }
 
 void MtCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline &p) {
+  setupCompute();
   auto& px = reinterpret_cast<MtCompPipeline&>(p);
   [encComp setComputePipelineState:px.impl];
   curLay   = px.lay.handler;
@@ -287,17 +288,18 @@ void MtCommandBuffer::setBuffer(const MtPipelineLay::MTLBind& mtl,
 
 void MtCommandBuffer::setTexture(const MtPipelineLay::MTLBind& mtl,
                                  id<MTLTexture> tex, id<MTLSamplerState> ss) {
-  //TODO: separate bind slot for sampler
-  if(mtl.bindVs!=uint32_t(-1)) {
+  if(mtl.bindVs!=uint32_t(-1))
     [encDraw setVertexTexture:tex atIndex:mtl.bindVs];
-    [encDraw setVertexSamplerState:ss atIndex:mtl.bindVs];
-    }
-  if(mtl.bindFs!=uint32_t(-1)) {
+  if(mtl.bindVsSmp!=uint32_t(-1))
+    [encDraw setVertexSamplerState:ss atIndex:mtl.bindVsSmp];
+
+  if(mtl.bindFs!=uint32_t(-1))
     [encDraw setFragmentTexture:tex atIndex:mtl.bindFs];
-    [encDraw setFragmentSamplerState:ss atIndex:mtl.bindFs];
-    }
-  if(mtl.bindCs!=uint32_t(-1)) {
+  if(mtl.bindFsSmp!=uint32_t(-1))
+    [encDraw setFragmentSamplerState:ss atIndex:mtl.bindFsSmp];
+
+  if(mtl.bindCs!=uint32_t(-1))
     [encComp setTexture:tex atIndex:mtl.bindCs];
-    [encComp setSamplerState:ss atIndex:mtl.bindCs];
-    }
+  if(mtl.bindCsSmp!=uint32_t(-1))
+    [encComp setSamplerState:ss atIndex:mtl.bindCsSmp];
   }
