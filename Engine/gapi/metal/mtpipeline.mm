@@ -47,6 +47,21 @@ MtPipeline::MtPipeline(MtDevice &d, Topology tp,
   pdesc.fragmentFunction     = frag.impl;
   pdesc.vertexDescriptor     = vdesc;
   pdesc.rasterizationEnabled = rs.isRasterDiscardEnabled() ? NO : YES; // TODO: test it
+
+  for(size_t i=0; i<lay.lay.size(); ++i) {
+    auto& l = lay.lay[i];
+    auto& m = lay.bind[i];
+    if(l.stage==0)
+      continue;
+    if(l.cls!=ShaderReflection::Ubo && l.cls!=ShaderReflection::SsboR && l.cls!=ShaderReflection::SsboRW)
+      continue;
+    MTLMutability mu = (l.cls==ShaderReflection::SsboRW) ? MTLMutabilityMutable: MTLMutabilityImmutable;
+
+    if(m.bindVs!=uint32_t(-1))
+      pdesc.vertexBuffers[m.bindVs].mutability = mu;
+    if(m.bindFs!=uint32_t(-1))
+      pdesc.fragmentBuffers[m.bindFs].mutability = mu;
+    }
   }
 
 MtPipeline::~MtPipeline() {
@@ -92,18 +107,28 @@ MtCompPipeline::MtCompPipeline(MtDevice &device, const MtPipelineLay& lay, const
   :lay(&lay) {
   id dev = device.impl;
 
-  MTLComputePipelineDescriptor *desc = [[MTLComputePipelineDescriptor alloc] init];
-  desc.computeFunction                                 = sh.impl;
-  desc.threadGroupSizeIsMultipleOfThreadExecutionWidth = YES;
+  MTLComputePipelineDescriptor* pdesc = [MTLComputePipelineDescriptor new];
+  pdesc.computeFunction                                 = sh.impl;
+  // pdesc.threadGroupSizeIsMultipleOfThreadExecutionWidth = YES;
 
-  // TODO:
-  //desc.buffers[0].mutability = MTLMutabilityImmutable;
+  for(size_t i=0; i<lay.lay.size(); ++i) {
+    auto& l = lay.lay[i];
+    auto& m = lay.bind[i];
+    if(l.stage==0)
+      continue;
+    if(l.cls!=ShaderReflection::Ubo && l.cls!=ShaderReflection::SsboR && l.cls!=ShaderReflection::SsboRW)
+      continue;
+    MTLMutability mu = (l.cls==ShaderReflection::SsboRW) ? MTLMutabilityMutable: MTLMutabilityImmutable;
+    if(m.bindCs!=uint32_t(-1))
+      pdesc.buffers[m.bindCs].mutability = mu;
+    }
 
   NSError* error = nil;
-  impl = [dev newComputePipelineStateWithDescriptor:desc
+  impl = [dev newComputePipelineStateWithDescriptor:pdesc
               options:MTLPipelineOptionNone
               reflection:nil
               error:&error];
+  [pdesc release];
+
   mtAssert(impl,error);
-  [desc release];
   }

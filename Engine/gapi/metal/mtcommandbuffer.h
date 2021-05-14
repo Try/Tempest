@@ -78,6 +78,8 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     MTLIndexType         iboType  = MTLIndexTypeUInt16;
     MTLPrimitiveType     topology = MTLPrimitiveTypePoint;
 
+    uint32               maxTotalThreadsPerThreadgroup = 0;
+
   friend class Tempest::MetalApi;
   };
 

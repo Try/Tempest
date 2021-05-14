@@ -141,6 +141,7 @@ void MtCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline &p) {
   auto& px = reinterpret_cast<MtCompPipeline&>(p);
   [encComp setComputePipelineState:px.impl];
   curLay   = px.lay.handler;
+  maxTotalThreadsPerThreadgroup = px.impl.maxTotalThreadsPerThreadgroup;
   }
 
 void MtCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline&,
