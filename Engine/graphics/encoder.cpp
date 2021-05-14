@@ -152,9 +152,7 @@ void Encoder<CommandBuffer>::setFramebuffer(const FrameBuffer &fbo, const Render
   implEndRenderPass();
 
   if(fbo.impl.handler==nullptr && p.impl.handler==nullptr) {
-    state.curPipeline     = nullptr;
-    state.isInComputePass = true;
-    impl->beginCompute();
+    state.curPipeline = nullptr;
     return;
     }
 
@@ -169,10 +167,6 @@ void Encoder<CommandBuffer>::implEndRenderPass() {
     state.curPipeline = nullptr;
     curPass           = Pass();
     impl->endRenderPass();
-    }
-  if(state.isInComputePass) {
-    state.curCompute = nullptr;
-    impl->endCompute();
     }
   }
 

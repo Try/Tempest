@@ -49,9 +49,6 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
                          uint32_t width,uint32_t height) override;
     void endRenderPass() override;
 
-    void beginCompute() override;
-    void endCompute() override;
-
     void setPipeline(AbstractGraphicsApi::Pipeline& p) override;
     void setBytes   (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;
     void setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc &u) override;
@@ -91,11 +88,12 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     ResourceState                           resState;
 
-    RpState                                 state       = NoRecording;
-    VFramebuffer*                           curFbo      = nullptr;
-    VRenderPass*                            curRp       = nullptr;
-    VDescriptorArray*                       curUniforms = nullptr;
+    RpState                                 state        = NoRecording;
+    VFramebuffer*                           curFbo       = nullptr;
+    VRenderPass*                            curRp        = nullptr;
+    VDescriptorArray*                       curUniforms  = nullptr;
     bool                                    ssboBarriers = false;
+    bool                                    isInCompute  = false;
   };
 
 }}

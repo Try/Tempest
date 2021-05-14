@@ -37,9 +37,6 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
                          uint32_t width,uint32_t height) override;
     void endRenderPass() override;
 
-    void beginCompute() override;
-    void endCompute() override;
-
     void setViewport (const Rect& r) override;
 
     void setPipeline (AbstractGraphicsApi::Pipeline& p) override;
@@ -83,6 +80,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     ResourceState                     resState;
     bool                              ssboBarriers = false;
+    bool                              isInCompute  = false;
 
     struct Stage {
       virtual ~Stage() = default;

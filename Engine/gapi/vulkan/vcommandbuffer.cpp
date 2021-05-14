@@ -73,6 +73,7 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
     resState.setLayout(fbo.attach[i],fbo.attach[i].renderLayout(),preserve);
     }
 
+  isInCompute = false;
   resState.flushLayout(*this);
 
   if(fbo.rp.handler->attCount!=pass.attCount)
@@ -118,13 +119,6 @@ void VCommandBuffer::endRenderPass() {
   curRp  = nullptr;
   }
 
-void VCommandBuffer::beginCompute() {
-  resState.flushLayout(*this);
-  }
-
-void VCommandBuffer::endCompute() {
-  }
-
 void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
   if(curFbo==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
@@ -154,6 +148,10 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraph
 void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
   if(curFbo!=nullptr)
     throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
+  if(!isInCompute) {
+    resState.flushLayout(*this);
+    isInCompute = true;
+    }
   VCompPipeline& px = reinterpret_cast<VCompPipeline&>(p);
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,px.impl);
   ssboBarriers = px.ssboBarriers;

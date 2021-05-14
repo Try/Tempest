@@ -245,6 +245,7 @@ void DxCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*  f,
     resState.setLayout(fbo.depth,fbo.depth.renderLayout(),preserve);
     }
 
+  isInCompute = false;
   resState.flushLayout(*this);
 
   auto desc = fbo.rtvHeap->GetCPUDescriptorHandleForHeapStart();
@@ -307,13 +308,6 @@ void DxCommandBuffer::endRenderPass() {
   currentPass = nullptr;
   }
 
-void Tempest::Detail::DxCommandBuffer::beginCompute() {
-  resState.flushLayout(*this);
-  }
-
-void Tempest::Detail::DxCommandBuffer::endCompute() {
-  }
-
 void DxCommandBuffer::setViewport(const Rect& r) {
   D3D12_VIEWPORT vp={};
   vp.TopLeftX = float(r.x);
@@ -348,6 +342,10 @@ void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/, Abstract
 void Tempest::Detail::DxCommandBuffer::setComputePipeline(Tempest::AbstractGraphicsApi::CompPipeline& p) {
   auto& px = reinterpret_cast<DxCompPipeline&>(p);
   ssboBarriers = px.ssboBarriers;
+  if(!isInCompute) {
+    resState.flushLayout(*this);
+    isInCompute = true;
+    }
 
   impl->SetPipelineState(px.impl.get());
   impl->SetComputeRootSignature(px.sign.get());

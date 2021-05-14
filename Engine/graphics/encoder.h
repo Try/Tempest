@@ -89,7 +89,6 @@ class Encoder<Tempest::CommandBuffer> {
       const AbstractGraphicsApi::CompPipeline* curCompute      = nullptr;
       const VideoBuffer*                       curVbo          = nullptr;
       const VideoBuffer*                       curIbo          = nullptr;
-      bool                                     isInComputePass = false;
       };
 
     struct Pass {
