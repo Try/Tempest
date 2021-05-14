@@ -94,6 +94,6 @@ bool WFile::flush() {
   HANDLE fn = HANDLE(handle);
   return FlushFileBuffers(fn)==TRUE;
 #else
-  return fflush(reinterpret_cast<FILE*>(handle));
+  return fflush(reinterpret_cast<FILE*>(handle))==0;
 #endif
   }
