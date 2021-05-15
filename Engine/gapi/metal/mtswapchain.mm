@@ -63,7 +63,7 @@ void MtSwapchain::reset() {
 
   CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);
 
-  NSRect wrect = [wnd frame];
+  NSRect wrect = [wnd convertRectToBacking:[wnd frame]];
   NSRect lrect = lay.frame;
   if(wrect.size.width!=lrect.size.width || wrect.size.height!=lrect.size.height) {
     // TODO:screen.backingScaleFactor
@@ -101,6 +101,8 @@ void MtSwapchain::present(uint32_t i) {
     id<MTLBlitCommandEncoder> blit     = [cmd blitCommandEncoder];
 
     id<MTLTexture> dr = drawable.texture;
+    if(dr.width!=img[i].tex.width || dr.height!=img[i].tex.height)
+      throw SwapchainSuboptimal();
 
     std::lock_guard<SpinLock> guard(sync);
     [blit copyFromTexture:img[i].tex

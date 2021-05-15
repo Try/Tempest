@@ -8,6 +8,7 @@ namespace Detail {
 class ImplMacOSApi {
   public:
     static void onDisplayLink(void* hwnd);
+    static void onDidResize(void* hwnd, void* w);
   };
 }
 
@@ -31,9 +32,6 @@ class MacOSApi final: public SystemApi {
     bool     implIsRunning() override;
     int      implExec(AppCallBack& cb) override;
     void     implProcessEvents(AppCallBack& cb) override;
-
-    static long long windowProc(void* hWnd, uint32_t msg, const unsigned long long wParam, const long long lParam);
-    static void handleKeyEvent(Tempest::Window* cb, uint32_t msg, const unsigned long long wParam, const long long lParam);
 
   friend class SystemApi;
   friend class Detail::ImplMacOSApi;

@@ -50,12 +50,31 @@ static Event::MouseButton toButton(uint type) {
   return Event::ButtonNone;
   }
 
-static Tempest::Point mousePos(NSEvent* e) {
-  Tempest::Point p = {int(e.locationInWindow.x), int(e.locationInWindow.y)};
-  NSRect fr = e.window.frame;
+static Tempest::Point mousePos(NSEvent* e, bool& inWindow) {
+  NSPoint px = e.locationInWindow;
+  NSRect  fr = e.window.contentView.frame;
+  fr = [e.window contentRectForFrameRect:fr];
 
-  p.y = int(fr.size.height)-(p.y+int(fr.origin.y));
+  px = [e.window convertPointToBacking:px];
+  fr = [e.window convertRectToBacking: fr];
+
+  px.y = fr.size.height - px.y;
+
+  px.x -= fr.origin.x;
+  px.y -= fr.origin.y;
+
+  if(0<=px.x && px.x<fr.size.width &&
+     0<=px.y && px.y<fr.size.height)
+    inWindow = true; else
+    inWindow = false;
+
+  Tempest::Point p = {int(px.x), int(px.y)};
   return p;
+  }
+
+static Tempest::Point mousePos(NSEvent* e) {
+  bool dummy = false;
+  return mousePos(e,dummy);
   }
 
 void Detail::ImplMacOSApi::onDisplayLink(void* hwnd) {
@@ -63,6 +82,15 @@ void Detail::ImplMacOSApi::onDisplayLink(void* hwnd) {
     auto cb = reinterpret_cast<Tempest::Window*>(hwnd);
     MacOSApi::dispatchRender(*cb);
     }
+  }
+
+void Detail::ImplMacOSApi::onDidResize(void* hwnd, void* w) {
+  auto      cb  = reinterpret_cast<Tempest::Window*>(hwnd);
+  NSWindow* wnd = reinterpret_cast<NSWindow*>(w);
+
+  NSRect r = [wnd convertRectToBacking: [wnd frame]];
+  SizeEvent sz{int32_t(r.size.width),int32_t(r.size.height)};
+  MacOSApi::dispatchResize(*cb,sz);
   }
 
 @interface TempestWindowDelegate : NSObject<NSWindowDelegate> {
@@ -108,6 +136,11 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef /*displayLink*/,
   isRunning.store(false);
   }
 
+- (void)windowDidResize:(NSNotification*)notification {
+  NSWindow* wnd  = [notification object];
+  Detail::ImplMacOSApi::onDidResize(owner,wnd);
+  }
+
 - (void)dispatchRenderer{
   Detail::ImplMacOSApi::onDisplayLink(owner);
   hasPendingFrame.store(false);
@@ -116,6 +149,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef /*displayLink*/,
 
 static SystemApi::Window* createWindow(Tempest::Window *owner,
                                        uint32_t w, uint32_t h, uint flags, SystemApi::ShowMode mode) {
+  // TODO: hDPI
   NSWindow* wnd = [[NSWindow alloc] initWithContentRect:
       NSMakeRect(0, 0, w, h)
     styleMask:NSWindowStyleMaskTitled
@@ -239,6 +273,7 @@ Tempest::Rect MacOSApi::implWindowClientRect(SystemApi::Window *w) {
   NSWindow* wnd = reinterpret_cast<NSWindow*>(w);
   NSRect frame = [wnd frame];
   frame = [wnd contentRectForFrameRect:frame];
+  frame = [wnd convertRectToBacking:frame];
   return Rect(frame.origin.x,frame.origin.y,frame.size.width,frame.size.height);
   }
 
@@ -247,7 +282,7 @@ bool MacOSApi::implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) {
   const bool isFs = implIsFullscreen(w);
   if(isFs==fullScreen)
     return true;
-  //[wnd toggleFullScreen:nil];
+  [wnd toggleFullScreen:nil];
   return ([wnd styleMask] & NSWindowStyleMaskFullScreen)==fullScreen;
   }
 
@@ -258,11 +293,16 @@ bool MacOSApi::implIsFullscreen(SystemApi::Window *w) {
 
 void MacOSApi::implSetCursorPosition(SystemApi::Window *w, int x, int y) {
   NSWindow* wnd = reinterpret_cast<NSWindow*>(w);
-  CGPoint p = {};
-  p.x = CGFloat(x) + wnd.frame.origin.x;
-  p.y = CGFloat(y) + wnd.frame.origin.y;
+  NSRect frame = [wnd frame];
+  frame = [wnd convertRectToBacking:frame];
 
-  //wnd.screen;
+  CGPoint p = {};
+  p.x = CGFloat(x);
+  p.y = CGFloat(y);
+  p = [wnd convertPointFromBacking:p];
+
+  p.x += frame.origin.x;
+  p.y += frame.origin.y;
 
   CGDisplayMoveCursorToPoint(CGMainDisplayID(), p);
   }
@@ -314,8 +354,9 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
     case NSEventTypeLeftMouseDown:
     case NSEventTypeRightMouseDown:
     case NSEventTypeOtherMouseDown:{
-      auto p = mousePos(evt);
-      if(p.y<0)
+      bool inWindow = false;
+      auto p = mousePos(evt,inWindow);
+      if(!inWindow)
         break;
       MouseEvent e(p.x,p.y,
                    toButton(type),
@@ -358,10 +399,11 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
       break;
       }
     case NSEventTypeScrollWheel:{
-      float ticks  = [evt deltaY];
-      int   ticksI = (ticks>0 ? 120 : (ticks<0 ? -120 : 0));
-      auto p = mousePos(evt);
-      if(p.y<0)
+      float ticks    = [evt deltaY];
+      int   ticksI   = (ticks>0 ? 120 : (ticks<0 ? -120 : 0));
+      bool  inWindow = false;
+      auto  p        = mousePos(evt,inWindow);
+      if(!inWindow)
         break;
       MouseEvent e(p.x,p.y,
                    toButton(type),
@@ -427,21 +469,12 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
         SystemApi::dispatchKeyUp(cb,k,key);
       return;
       }
-    case NSEventTypeFlagsChanged:{
-      //NSRect r = [wnd frame];
-      //SizeEvent sz{int32_t(r.size.width),int32_t(r.size.height)};
-      //SystemApi::dispatchResize(cb,sz);
+    case NSEventTypeFlagsChanged:
+    case NSEventTypeAppKitDefined:
       break;
-      }
-    case NSEventTypeAppKitDefined:{
-      NSEventSubtype stype = evt.subtype;
-      if(stype==NSEventSubtypeScreenChanged || stype==NSEventSubtypeWindowMoved) {
-        NSRect r = [wnd frame];
-        SizeEvent sz{int32_t(r.size.width),int32_t(r.size.height)};
-        SystemApi::dispatchResize(cb,sz);
-        }
+    case NSEventTypeMouseEntered:
+    case NSEventTypeMouseExited:
       break;
-      }
 
     default:
       break;
