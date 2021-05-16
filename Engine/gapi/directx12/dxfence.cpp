@@ -5,18 +5,10 @@
 #include "dxdevice.h"
 #include "guid.h"
 
-namespace Tempest {
-namespace Detail {
-  template class DxFenceBase<AbstractGraphicsApi::Fence>;
-  template class DxFenceBase<AbstractGraphicsApi::Semaphore>;
-}
-}
-
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-template<class Interface>
-DxFenceBase<Interface>::DxFenceBase(DxDevice& dev) {
+DxFence::DxFence(DxDevice& dev) {
   dxAssert(dev.device->CreateFence(Ready, D3D12_FENCE_FLAG_NONE,
                                    uuid<ID3D12Fence>(),
                                    reinterpret_cast<void**>(&impl)));
@@ -25,26 +17,22 @@ DxFenceBase<Interface>::DxFenceBase(DxDevice& dev) {
     throw std::bad_alloc();
   }
 
-template<class Interface>
-DxFenceBase<Interface>::~DxFenceBase() {
+DxFence::~DxFence() {
   if(event!=nullptr)
     CloseHandle(event);
   }
 
-template<class Interface>
-void DxFenceBase<Interface>::wait() {
+void DxFence::wait() {
   waitValue(Ready);
   }
 
-template<class Interface>
-bool DxFenceBase<Interface>::wait(uint64_t timeout) {
+bool DxFence::wait(uint64_t timeout) {
   if(timeout>INFINITE)
     timeout = INFINITE;
   return waitValue(Ready,DWORD(timeout));
   }
 
-template<class Interface>
-bool DxFenceBase<Interface>::waitValue(UINT64 val, DWORD timeout) {
+bool DxFence::waitValue(UINT64 val, DWORD timeout) {
   UINT64 v = impl->GetCompletedValue();
   if(val==v)
     return true;
@@ -60,19 +48,16 @@ bool DxFenceBase<Interface>::waitValue(UINT64 val, DWORD timeout) {
   return false;
   }
 
-template<class Interface>
-void DxFenceBase<Interface>::reset() {
+void DxFence::reset() {
   ResetEvent(event);
   dxAssert(impl->Signal(Waiting));
   }
 
-template<class Interface>
-void DxFenceBase<Interface>::signal(ID3D12CommandQueue& queue) {
+void DxFence::signal(ID3D12CommandQueue& queue) {
   signal(queue,DxFence::Ready);
   }
 
-template<class Interface>
-void DxFenceBase<Interface>::signal(ID3D12CommandQueue& queue, UINT64 val) {
+void DxFence::signal(ID3D12CommandQueue& queue, UINT64 val) {
   dxAssert(queue.Signal(impl.get(),val));
   }
 
