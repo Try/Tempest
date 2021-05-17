@@ -28,7 +28,6 @@
 namespace Tempest {
 
 class Fence;
-class Semaphore;
 
 class CommandPool;
 class RFile;
@@ -54,14 +53,10 @@ class Device {
     uint8_t              maxFramesInFlight() const;
     void                 waitIdle();
 
-    void                 submit(const CommandBuffer&  cmd,const Semaphore& wait);
-    void                 submit(const CommandBuffer&  cmd,Fence& fdone);
-    void                 submit(const CommandBuffer&  cmd,const Semaphore& wait,Semaphore& done,Fence& fdone);
-    void                 submit(const CommandBuffer *cmd[], size_t count,
-                                const Semaphore* wait[], size_t waitCnt,
-                                Semaphore* done[], size_t doneCnt,
-                                Fence* fdone);
-    void                 present(Swapchain& sw, uint32_t img, const Semaphore& wait);
+    void                 submit(const CommandBuffer&  cmd);
+    void                 submit(const CommandBuffer&  cmd, Fence& fdone);
+    void                 submit(const CommandBuffer *cmd[], size_t count, Fence* fdone);
+    void                 present(Swapchain& sw, uint32_t img);
 
     Swapchain            swapchain(SystemApi::Window* w) const;
 
@@ -168,8 +163,6 @@ class Device {
     ComputePipeline      pipeline(const Shader &comp);
 
     Fence                fence();
-    Semaphore            semaphore();
-
     CommandBuffer        commandBuffer();
 
     const Builtin&       builtin() const;
@@ -196,9 +189,7 @@ class Device {
                 implPipeline(const RenderState &st, const Shader* shaders[],
                              size_t stride, Topology tp);
     void        implSubmit(const Tempest::CommandBuffer *cmd[], AbstractGraphicsApi::CommandBuffer* hcmd[],  size_t count,
-                           const Semaphore* wait[], AbstractGraphicsApi::Semaphore*     hwait[], size_t waitCnt,
-                           Semaphore*       done[], AbstractGraphicsApi::Semaphore*     hdone[], size_t doneCnt,
-                           AbstractGraphicsApi::Fence*         fdone);
+                           AbstractGraphicsApi::Fence*  fdone);
 
     static TextureFormat formatOf(const Attachment& a);
 

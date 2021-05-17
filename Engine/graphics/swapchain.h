@@ -5,7 +5,6 @@
 namespace Tempest {
 
 class Device;
-class Semaphore;
 class Frame;
 class Attachment;
 
@@ -27,7 +26,7 @@ class Swapchain final {
     uint64_t             frameCounter() const;
 
     Attachment&          frame(size_t id);
-    uint32_t             nextImage(Semaphore& onReady);
+    uint32_t             nextImage();
 
   private:
     Swapchain(AbstractGraphicsApi::Swapchain* sw);

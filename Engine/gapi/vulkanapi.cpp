@@ -11,7 +11,6 @@
 #include "vulkan/vbuffer.h"
 #include "vulkan/vshader.h"
 #include "vulkan/vfence.h"
-#include "vulkan/vsemaphore.h"
 #include "vulkan/vcommandpool.h"
 #include "vulkan/vcommandbuffer.h"
 #include "vulkan/vdescriptorarray.h"
@@ -137,10 +136,6 @@ AbstractGraphicsApi::PShader VulkanApi::createShader(AbstractGraphicsApi::Device
 AbstractGraphicsApi::Fence *VulkanApi::createFence(AbstractGraphicsApi::Device *d) {
   Detail::VDevice* dx =reinterpret_cast<Detail::VDevice*>(d);
   return new Detail::VFence(*dx);
-  }
-
-AbstractGraphicsApi::Semaphore *VulkanApi::createSemaphore(AbstractGraphicsApi::Device*) {
-  return nullptr;
   }
 
 AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device *d,
@@ -299,7 +294,7 @@ AbstractGraphicsApi::CommandBuffer* VulkanApi::createCommandBuffer(AbstractGraph
   return new Detail::VCommandBuffer(*dx);
   }
 
-void VulkanApi::present(Device *d, Swapchain *sw, uint32_t imageId, const Semaphore*) {
+void VulkanApi::present(Device *d, Swapchain *sw, uint32_t imageId) {
   Detail::VDevice*    dx=reinterpret_cast<Detail::VDevice*>(d);
   Detail::VSwapchain* sx=reinterpret_cast<Detail::VSwapchain*>(sw);
 
@@ -333,23 +328,15 @@ void VulkanApi::present(Device *d, Swapchain *sw, uint32_t imageId, const Semaph
   Detail::vkAssert(code);
   }
 
-void VulkanApi::submit(Device *d,
-                       CommandBuffer* cmd,
-                       Semaphore* wait,
-                       Semaphore* onReady,
-                       Fence *onReadyCpu) {
+void VulkanApi::submit(Device *d, CommandBuffer* cmd, Fence *doneCpu) {
   Detail::VDevice*        dx=reinterpret_cast<Detail::VDevice*>(d);
   Detail::VCommandBuffer* cx=reinterpret_cast<Detail::VCommandBuffer*>(cmd);
-  auto*                   rc=reinterpret_cast<Detail::VFence*>(onReadyCpu);
+  auto*                   rc=reinterpret_cast<Detail::VFence*>(doneCpu);
 
   impl->submit(dx,&cx,1,rc);
   }
 
-void VulkanApi::submit(AbstractGraphicsApi::Device *d,
-                       AbstractGraphicsApi::CommandBuffer **cmd, size_t count,
-                       Semaphore **wait, size_t waitCnt,
-                       Semaphore **done, size_t doneCnt,
-                       Fence     *doneCpu) {
+void VulkanApi::submit(AbstractGraphicsApi::Device *d, AbstractGraphicsApi::CommandBuffer **cmd, size_t count, Fence* doneCpu) {
   auto* dx = reinterpret_cast<VDevice*>(d);
   auto* rc = reinterpret_cast<VFence*>(doneCpu);
   impl->submit(dx,reinterpret_cast<VCommandBuffer**>(cmd),count,rc);

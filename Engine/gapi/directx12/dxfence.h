@@ -31,7 +31,4 @@ class DxFence : public AbstractGraphicsApi::Fence {
     HANDLE              event=nullptr;
   };
 
-class DxSemaphore : public AbstractGraphicsApi::Semaphore {
-  };
-
 }}

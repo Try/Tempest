@@ -1,6 +1,5 @@
 #if defined(TEMPEST_BUILD_VULKAN)
 
-#include "vsemaphore.h"
 #include "vulkanapi_impl.h"
 
 #include <Tempest/Log>

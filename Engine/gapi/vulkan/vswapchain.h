@@ -5,8 +5,6 @@
 
 namespace Tempest {
 
-class Semaphore;
-
 namespace Detail {
 
 class VDevice;
@@ -30,7 +28,7 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
 
     void                     reset() override;
     uint32_t                 imageCount() const override { return uint32_t(views.size()); }
-    uint32_t                 nextImage(AbstractGraphicsApi::Semaphore* onReady) override;
+    uint32_t                 nextImage() override;
 
     VkSwapchainKHR           swapChain=VK_NULL_HANDLE;
     std::vector<VkImageView> views;

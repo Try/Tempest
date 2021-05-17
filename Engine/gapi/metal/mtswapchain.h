@@ -19,7 +19,7 @@ class MtSwapchain : public AbstractGraphicsApi::Swapchain {
     ~MtSwapchain();
 
     void          reset() override;
-    uint32_t      nextImage(AbstractGraphicsApi::Semaphore* onReady) override;
+    uint32_t      nextImage() override;
     uint32_t      imageCount() const override;
     uint32_t      w() const override;
     uint32_t      h() const override;

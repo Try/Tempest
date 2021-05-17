@@ -19,7 +19,6 @@ namespace Tempest {
 namespace Detail {
 
 class VFence;
-class VSemaphore;
 
 class VTexture;
 
@@ -203,7 +202,6 @@ class VDevice : public AbstractGraphicsApi::Device {
     PFN_vkGetBufferMemoryRequirements2KHR vkGetBufferMemoryRequirements2 = nullptr;
     PFN_vkGetImageMemoryRequirements2KHR  vkGetImageMemoryRequirements2  = nullptr;
 
-    VkResult                present(VSwapchain& sw,const VSemaphore *wait,size_t wSize,uint32_t imageId);
     void                    waitIdle() override;
 
     void                    submit(VCommandBuffer& cmd,VFence& sync);

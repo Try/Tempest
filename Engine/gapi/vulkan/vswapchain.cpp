@@ -5,7 +5,6 @@
 #include <Tempest/SystemApi>
 
 #include "vdevice.h"
-#include "vsemaphore.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -223,7 +222,7 @@ uint32_t VSwapchain::getImageCount(const SwapChainSupport& support) const {
   return imageCount;
   }
 
-uint32_t VSwapchain::nextImage(AbstractGraphicsApi::Semaphore*) {
+uint32_t VSwapchain::nextImage() {
   auto&    slot = sync[syncIndex];
   uint32_t id   = uint32_t(-1);
   VkResult code = vkAcquireNextImageKHR(device.device.impl,

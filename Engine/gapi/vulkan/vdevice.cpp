@@ -5,7 +5,6 @@
 #include "vcommandbuffer.h"
 #include "vcommandpool.h"
 #include "vfence.h"
-#include "vsemaphore.h"
 #include "vswapchain.h"
 #include "vbuffer.h"
 #include "vtexture.h"
@@ -355,21 +354,6 @@ VDevice::MemIndex VDevice::memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFl
   MemIndex ret;
   ret.typeId = uint32_t(-1);
   return ret;
-  }
-
-VkResult VDevice::present(VSwapchain &sw, const VSemaphore *wait, size_t wSize, uint32_t imageId) {
-  VkPresentInfoKHR presentInfo = {};
-  presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
-  presentInfo.waitSemaphoreCount = uint32_t(wSize);
-  presentInfo.pWaitSemaphores    = &wait->impl;
-
-  VkSwapchainKHR swapChains[] = {sw.swapChain};
-  presentInfo.swapchainCount  = 1;
-  presentInfo.pSwapchains     = swapChains;
-  presentInfo.pImageIndices   = &imageId;
-
-  return presentQueue->present(presentInfo);
   }
 
 void VDevice::waitIdle() {

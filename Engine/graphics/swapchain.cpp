@@ -2,7 +2,6 @@
 
 #include <Tempest/Attachment>
 #include <Tempest/Device>
-#include <Tempest/Semaphore>
 
 using namespace Tempest;
 
@@ -62,6 +61,6 @@ Attachment& Swapchain::frame(size_t id) {
   return img[id];
   }
 
-uint32_t Swapchain::nextImage(Semaphore& onReady) {
-  return impl.handler->nextImage(onReady.impl.handler);
+uint32_t Swapchain::nextImage() {
+  return impl.handler->nextImage();
   }
