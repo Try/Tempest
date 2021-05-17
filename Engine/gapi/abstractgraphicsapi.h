@@ -320,7 +320,7 @@ namespace Tempest {
       struct Swapchain:NoCopy {
         virtual ~Swapchain()=default;
         virtual void          reset()=0;
-        virtual uint32_t      nextImage()=0;
+        virtual uint32_t      currentBackBufferIndex()=0;
         virtual uint32_t      imageCount() const=0;
         virtual uint32_t      w() const=0;
         virtual uint32_t      h() const=0;
@@ -453,7 +453,7 @@ namespace Tempest {
                                        const uint32_t w, const uint32_t h, uint32_t mip) = 0;
       virtual void       readBytes    (Device* d, Buffer* buf, void* out, size_t size) = 0;
 
-      virtual void       present  (Device *d, Swapchain* sw, uint32_t imageId)=0;
+      virtual void       present  (Device *d, Swapchain* sw)=0;
 
       virtual void       submit   (Device *d, CommandBuffer*  cmd, Fence* fence)=0;
       virtual void       submit   (Device *d, CommandBuffer** cmd, size_t count, Fence* fence)=0;

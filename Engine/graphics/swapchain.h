@@ -22,11 +22,8 @@ class Swapchain final {
     void                 reset();
 
     uint32_t             imageCount() const;
-    uint8_t              frameId() const;
-    uint64_t             frameCounter() const;
-
-    Attachment&          frame(size_t id);
-    uint32_t             nextImage();
+    Attachment&          image(size_t id);
+    uint32_t             currentImage() const;
 
   private:
     Swapchain(AbstractGraphicsApi::Swapchain* sw);
@@ -34,9 +31,6 @@ class Swapchain final {
     void implReset();
 
     Detail::DPtr<AbstractGraphicsApi::Swapchain*> impl;
-
-    uint64_t                                      framesCounter=0;
-    uint8_t                                       framesIdMod=0;
     std::unique_ptr<Attachment[]>                 img;
 
   friend class Device;

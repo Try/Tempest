@@ -113,14 +113,14 @@ void VectorImage::commitPoints() {
     }
   }
 
-void VectorImage::makeActual(Device &dev,Swapchain& sw) {
+void VectorImage::makeActual(Device &dev, uint32_t cmdId) {
   if(!frame || frameCount!=dev.maxFramesInFlight()) {
     uint8_t count=dev.maxFramesInFlight();
     frame.reset(new PerFrame[count]);
     frameCount=count;
     }
 
-  PerFrame& f=frame[sw.frameId()];
+  PerFrame& f=frame[cmdId];
   if(f.outdated) {
     if(f.vbo.size()==buf.size())
       f.vbo.update(buf); else
@@ -203,10 +203,10 @@ const RenderPipeline& VectorImage::pipelineOf(Device& dev, const VectorImage::Bl
   return *p;
   }
 
-void VectorImage::draw(Device& dev, Swapchain& sw, Encoder<CommandBuffer> &cmd) {
-  makeActual(dev,sw);
+void VectorImage::draw(Device& dev, uint32_t cmdId, Encoder<CommandBuffer> &cmd) {
+  makeActual(dev,cmdId);
 
-  PerFrame& f=frame[sw.frameId()];
+  PerFrame& f=frame[cmdId];
 
   for(size_t i=0;i<blocks.size();++i){
     auto& b=blocks[i];

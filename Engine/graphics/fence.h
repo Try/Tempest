@@ -9,6 +9,7 @@ class Device;
 
 class Fence final {
   public:
+    Fence() = default;
     Fence(Fence&& f)=default;
     ~Fence();
     Fence& operator = (Fence&& other)=default;

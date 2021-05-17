@@ -9,6 +9,37 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+VSwapchain::FenceList::FenceList(VkDevice dev, uint32_t cnt)
+  :dev(dev), size(0) {
+  sync.reset(new VkFence[cnt]);
+
+  VkFenceCreateInfo fenceInfo = {};
+  fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+  fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+  for(uint32_t i=0; i<cnt; ++i) {
+    vkAssert(vkCreateFence(dev,&fenceInfo,nullptr,&sync[i]));
+    ++size;
+    }
+  }
+
+VSwapchain::FenceList::FenceList(VSwapchain::FenceList&& oth)
+  :dev(oth.dev), size(oth.size) {
+  sync     = std::move(oth.sync);
+  oth.size = 0;
+  }
+
+VSwapchain::FenceList& VSwapchain::FenceList::operator =(VSwapchain::FenceList&& oth) {
+  std::swap(dev,  oth.dev);
+  std::swap(sync, oth.sync);
+  std::swap(size, oth.size);
+  return *this;
+  }
+
+VSwapchain::FenceList::~FenceList() {
+  for(uint32_t i=0; i<size; ++i)
+    vkDestroyFence(dev,sync[i],nullptr);
+  }
+
 VSwapchain::VSwapchain(VDevice &device, SystemApi::Window* hwnd)
   :device(device), hwnd(hwnd) {
   try {
@@ -29,6 +60,9 @@ VSwapchain::~VSwapchain() {
   }
 
 void VSwapchain::cleanupSwapchain() noexcept {
+  vkWaitForFences(device.device.impl,fence.size,fence.sync.get(),VK_TRUE,std::numeric_limits<uint64_t>::max());
+  fence = FenceList();
+
   for(auto imageView : views)
     if(imageView!=VK_NULL_HANDLE)
       vkDestroyImageView(device.device.impl,imageView,nullptr);
@@ -129,6 +163,8 @@ void VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& swapCh
     vkAssert(vkCreateSemaphore(device.device.impl,&info,nullptr,&i.aquire));
     vkAssert(vkCreateSemaphore(device.device.impl,&info,nullptr,&i.present));
     }
+  fence = FenceList(device.device.impl,imgCount);
+  aquireNextImage();
   }
 
 void VSwapchain::createImageViews(VDevice &device) {
@@ -222,27 +258,61 @@ uint32_t VSwapchain::getImageCount(const SwapChainSupport& support) const {
   return imageCount;
   }
 
-uint32_t VSwapchain::nextImage() {
+void VSwapchain::aquireNextImage() {
   auto&    slot = sync[syncIndex];
+  auto&    f    = fence.sync[syncIndex];
+
+  vkWaitForFences(device.device.impl,1,&f,VK_TRUE,std::numeric_limits<uint64_t>::max());
+  vkResetFences(device.device.impl,1,&f);
+
   uint32_t id   = uint32_t(-1);
   VkResult code = vkAcquireNextImageKHR(device.device.impl,
                                         swapChain,
                                         std::numeric_limits<uint64_t>::max(),
                                         slot.aquire,
-                                        VK_NULL_HANDLE,
+                                        f,
                                         &id);
   if(code==VK_ERROR_OUT_OF_DATE_KHR)
     throw DeviceLostException();
   if(code==VK_SUBOPTIMAL_KHR)
     throw SwapchainSuboptimal();
-
   if(code!=VK_SUCCESS)
     vkAssert(code);
 
+  imgIndex              = id;
   sync[syncIndex].imgId = id;
   sync[syncIndex].state = S_Pending;
-  syncIndex = (syncIndex+1)%imageCount();
-  return id;
+  syncIndex = (syncIndex+1)%uint32_t(sync.size());
+  }
+
+uint32_t VSwapchain::currentBackBufferIndex() {
+  return imgIndex;
+  }
+
+void VSwapchain::present(VDevice& dev) {
+  VkSubmitInfo submitInfo = {};
+  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submitInfo.signalSemaphoreCount = 1;
+  submitInfo.pSignalSemaphores    = &sync[imgIndex].present;
+  dev.graphicsQueue->submit(1, &submitInfo, VK_NULL_HANDLE);
+
+  VkPresentInfoKHR presentInfo = {};
+  presentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+  presentInfo.waitSemaphoreCount = 1;
+  presentInfo.pWaitSemaphores    = &sync[imgIndex].present;
+  presentInfo.swapchainCount     = 1;
+  presentInfo.pSwapchains        = &swapChain;
+  presentInfo.pImageIndices      = &imgIndex;
+
+  //auto t = Application::tickCount();
+  VkResult code = dev.presentQueue->present(presentInfo);
+  if(code==VK_ERROR_OUT_OF_DATE_KHR || code==VK_SUBOPTIMAL_KHR)
+    throw SwapchainSuboptimal();
+  //Log::i("vkQueuePresentKHR = ",Application::tickCount()-t);
+  Detail::vkAssert(code);
+
+  aquireNextImage();
   }
 
 #endif
+

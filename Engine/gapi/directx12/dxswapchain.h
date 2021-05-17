@@ -27,7 +27,7 @@ class DxSwapchain : public AbstractGraphicsApi::Swapchain {
 
     void                     reset() override;
     uint32_t                 imageCount() const override { return imgCount; }
-    uint32_t                 nextImage() override;
+    uint32_t                 currentBackBufferIndex() override;
 
     void                     queuePresent();
 

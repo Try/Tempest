@@ -294,38 +294,10 @@ AbstractGraphicsApi::CommandBuffer* VulkanApi::createCommandBuffer(AbstractGraph
   return new Detail::VCommandBuffer(*dx);
   }
 
-void VulkanApi::present(Device *d, Swapchain *sw, uint32_t imageId) {
+void VulkanApi::present(Device *d, Swapchain *sw) {
   Detail::VDevice*    dx=reinterpret_cast<Detail::VDevice*>(d);
   Detail::VSwapchain* sx=reinterpret_cast<Detail::VSwapchain*>(sw);
-
-  VkSemaphore* present = nullptr;
-  for(auto& s:sx->sync)
-    if(s.imgId==imageId) {
-      present = &s.present;
-      s.state = Detail::VSwapchain::S_Idle;
-      break;
-      }
-
-  VkSubmitInfo submitInfo = {};
-  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submitInfo.signalSemaphoreCount = 1;
-  submitInfo.pSignalSemaphores    = present;
-  dx->graphicsQueue->submit(1, &submitInfo, VK_NULL_HANDLE);
-
-  VkPresentInfoKHR presentInfo = {};
-  presentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-  presentInfo.waitSemaphoreCount = 1;
-  presentInfo.pWaitSemaphores    = present;
-  presentInfo.swapchainCount     = 1;
-  presentInfo.pSwapchains        = &sx->swapChain;
-  presentInfo.pImageIndices      = &imageId;
-
-  //auto t = Application::tickCount();
-  VkResult code = dx->presentQueue->present(presentInfo);
-  if(code==VK_ERROR_OUT_OF_DATE_KHR || code==VK_SUBOPTIMAL_KHR)
-    throw SwapchainSuboptimal();
-  //Log::i("vkQueuePresentKHR = ",Application::tickCount()-t);
-  Detail::vkAssert(code);
+  sx->present(*dx);
   }
 
 void VulkanApi::submit(Device *d, CommandBuffer* cmd, Fence *doneCpu) {

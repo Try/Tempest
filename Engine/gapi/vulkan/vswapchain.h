@@ -28,7 +28,9 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
 
     void                     reset() override;
     uint32_t                 imageCount() const override { return uint32_t(views.size()); }
-    uint32_t                 nextImage() override;
+
+    uint32_t                 currentBackBufferIndex() override;
+    void                     present(VDevice& dev);
 
     VkSwapchainKHR           swapChain=VK_NULL_HANDLE;
     std::vector<VkImageView> views;
@@ -47,13 +49,28 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
       VkSemaphore aquire  = VK_NULL_HANDLE;
       VkSemaphore present = VK_NULL_HANDLE;
       };
-    std::vector<Sync> sync;
+    std::vector<Sync>        sync;
 
   private:
+    struct FenceList {
+      FenceList() = default;
+      FenceList(VkDevice dev, uint32_t cnt);
+      FenceList(FenceList&& oth);
+      FenceList& operator = (FenceList&& oth);
+      ~FenceList();
+
+      VkDevice                   dev = VK_NULL_HANDLE;
+      std::unique_ptr<VkFence[]> sync;
+      uint32_t                   size = 0;
+      };
+    FenceList                fence;
+
     VDevice&                 device;
-    SystemApi::Window*       hwnd = nullptr;
-    VkSurfaceKHR             surface = VK_NULL_HANDLE;
+    SystemApi::Window*       hwnd      = nullptr;
+    VkSurfaceKHR             surface   = VK_NULL_HANDLE;
+
     uint32_t                 syncIndex = 0;
+    uint32_t                 imgIndex  = 0;
 
     VkFormat                 swapChainImageFormat = VK_FORMAT_UNDEFINED;
     VkExtent2D               swapChainExtent={};
@@ -69,6 +86,8 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     VkPresentModeKHR         getSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
     VkExtent2D               getSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities, uint32_t w, uint32_t h);
     uint32_t                 getImageCount(const SwapChainSupport& support) const;
+
+    void                     aquireNextImage();
 
   };
 

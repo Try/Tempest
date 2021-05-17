@@ -412,9 +412,7 @@ AbstractGraphicsApi::CommandBuffer* DirectX12Api::createCommandBuffer(Device* d)
   return new DxCommandBuffer(*dx);
   }
 
-void DirectX12Api::present(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Swapchain* sw, uint32_t imageId) {
-  // TODO: handle imageId
-  (void)imageId;
+void DirectX12Api::present(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Swapchain* sw) {
   Detail::DxDevice&    dx = *reinterpret_cast<Detail::DxDevice*>(d);
   Detail::DxSwapchain* sx = reinterpret_cast<Detail::DxSwapchain*>(sw);
 

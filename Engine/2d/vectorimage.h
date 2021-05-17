@@ -21,7 +21,7 @@ class VectorImage : public Tempest::PaintDevice {
     uint32_t w() const { return info.w; }
     uint32_t h() const { return info.h; }
 
-    void     draw(Device& dev, Swapchain& sw, Encoder<CommandBuffer> &cmd);
+    void     draw(Device& dev, uint32_t cmdId, Encoder<CommandBuffer> &cmd);
     bool     load(const char* path);
     void     clear() override;
 
@@ -121,7 +121,7 @@ class VectorImage : public Tempest::PaintDevice {
     Info   info;
     size_t paintScope = 0;
 
-    void makeActual(Device& dev, Swapchain& sw);
+    void makeActual(Device& dev, uint32_t cmdId);
 
     const RenderPipeline& pipelineOf(Device& dev, const Block& b);
 

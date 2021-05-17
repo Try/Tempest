@@ -72,10 +72,8 @@ void Device::submit(const Tempest::CommandBuffer *cmd[], size_t count, Fence *fd
     }
   }
 
-void Device::present(Swapchain& sw, uint32_t img) {
-  api.present(dev,sw.impl.handler,img);
-  sw.framesCounter++;
-  sw.framesIdMod=(sw.framesIdMod+1)%maxFramesInFlight();
+void Device::present(Swapchain& sw) {
+  api.present(dev,sw.impl.handler);
   }
 
 void Device::implSubmit(const CommandBuffer* cmd[], AbstractGraphicsApi::CommandBuffer*  hcmd[], size_t count, AbstractGraphicsApi::Fence* fdone) {

@@ -86,7 +86,7 @@ void DxSwapchain::reset() {
     }
   }
 
-uint32_t DxSwapchain::nextImage() {
+uint32_t DxSwapchain::currentBackBufferIndex() {
   return impl->GetCurrentBackBufferIndex();
   }
 
