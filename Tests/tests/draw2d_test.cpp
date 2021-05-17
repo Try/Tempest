@@ -1,4 +1,6 @@
 #include <Tempest/VulkanApi>
+#include <Tempest/MetalApi>
+
 #include <Tempest/Device>
 #include <Tempest/Painter>
 #include <Tempest/TextureAtlas>
@@ -14,9 +16,12 @@ using namespace testing;
 using namespace Tempest;
 
 TEST(main,Draw2d) {
-#if !defined(__OSX__)
   try {
+#if defined(__OSX__)
+    MetalApi     api;
+#else
     VulkanApi    api;
+#endif
     Device       device(api);
     TextureAtlas atlas(device);
 
@@ -29,8 +34,7 @@ TEST(main,Draw2d) {
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
-      Log::d("Skipping vulkan testcase: ", e.what()); else
+      Log::d("Skipping graphics testcase: ", e.what()); else
       throw;
     }
-#endif
   }
