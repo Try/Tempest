@@ -50,7 +50,6 @@ class Device {
     Device(const Device&)=delete;
     virtual ~Device();
 
-    uint8_t              maxFramesInFlight() const;
     void                 waitIdle();
 
     void                 submit(const CommandBuffer&  cmd);

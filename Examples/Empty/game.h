@@ -3,7 +3,6 @@
 #include <Tempest/Window>
 #include <Tempest/CommandBuffer>
 #include <Tempest/Fence>
-#include <Tempest/Semaphore>
 #include <Tempest/VulkanApi>
 #include <Tempest/Device>
 #include <Tempest/VertexBuffer>
@@ -18,6 +17,10 @@ class Game : public Tempest::Window {
   public:
     Game(Tempest::Device& device);
     ~Game();
+
+    enum {
+      MaxFramesInFlight = 2
+      };
 
     struct Point {
       float x,y,z;
@@ -43,19 +46,14 @@ class Game : public Tempest::Window {
     Tempest::RenderPass                 pass;
 
     Tempest::VectorImage                surface;
+    Tempest::VectorImage::Mesh          surfaceMesh[MaxFramesInFlight];
 
     Tempest::VertexBuffer<Point>        vbo;
     Tempest::Texture2d                  texture;
 
-    struct FrameLocal {
-      FrameLocal(Tempest::Device& dev);
-      Tempest::Semaphore imageAvailable;
-      Tempest::Semaphore renderDone;
-      Tempest::Fence     gpuLock;
-      };
+    Tempest::CommandBuffer              commands[MaxFramesInFlight];
+    std::vector<Tempest::Fence>         fence;
+    uint8_t                             cmdId = 0;
 
-    std::vector<FrameLocal> fLocal;
-
-    std::vector<Tempest::CommandBuffer> commands;
     std::vector<Tempest::FrameBuffer>   fbo;
   };

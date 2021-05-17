@@ -7,10 +7,6 @@
 
 using namespace Tempest;
 
-Game::FrameLocal::FrameLocal(Device &device)
-  :imageAvailable(device.semaphore()),renderDone(device.semaphore()),gpuLock(device.fence()) {
-  }
-
 Game::Game(Device& device)
   :device(device), swapchain(device,hwnd()), texAtlass(device) {
   //VectorImage image;
@@ -20,9 +16,8 @@ Game::Game(Device& device)
   //Tempest::Pixmap pm("img/texture.hdr");
   texture = device.loadTexture(pm);
 
-  for(uint8_t i=0;i<device.maxFramesInFlight();++i){
-    fLocal.emplace_back(device);
-    }
+  for(uint8_t i=0;i<MaxFramesInFlight;++i)
+    fence.emplace_back(device.fence());
 
   pass = device.pass(Tempest::FboMode(Tempest::FboMode::PreserveOut,Color(0.f,0.f,1.f,1.f)));
   initSwapchain();
@@ -36,10 +31,8 @@ void Game::initSwapchain(){
   const size_t imgC=swapchain.imageCount();
 
   fbo.clear();
-  commands.resize(imgC);
-
   for(size_t i=0;i<imgC;++i) {
-    Tempest::Attachment& frame=swapchain.frame(i);
+    Tempest::Attachment& frame=swapchain.image(i);
     fbo.emplace_back(device.frameBuffer(frame));
     }
   }
@@ -58,31 +51,30 @@ void Game::paintEvent(PaintEvent& event) {
   }
 
 void Game::resizeEvent(SizeEvent&) {
-  for(auto& i:fLocal)
-    i.gpuLock.wait();
+  for(auto& i:fence)
+    i.wait();
   swapchain.reset();
   initSwapchain();
   }
 
 void Game::render(){
   try {
-    auto&       context = fLocal  [swapchain.frameId()];
-    auto&       cmd     = commands[swapchain.frameId()];
+    auto&       sync = fence   [cmdId];
+    auto&       cmd  = commands[cmdId];
 
-    context.gpuLock.wait();
-
-    const uint32_t imgId=swapchain.nextImage(context.imageAvailable);
+    sync.wait();
 
     dispatchPaintEvent(surface,texAtlass);
 
     {
     auto enc = cmd.startEncoding(device);
-    enc.setFramebuffer(fbo[imgId],pass);
-    surface.draw(device,swapchain,enc);
+    enc.setFramebuffer(fbo[swapchain.currentImage()],pass);
+    surfaceMesh[cmdId].update(device,surface);
+    surfaceMesh[cmdId].draw(enc);
     }
 
-    device.submit(cmd,context.imageAvailable,context.renderDone,context.gpuLock);
-    device.present(swapchain,imgId,context.renderDone);
+    device.submit(cmd,sync);
+    device.present(swapchain);
     }
   catch(const Tempest::SwapchainSuboptimal&) {
     swapchain.reset();
