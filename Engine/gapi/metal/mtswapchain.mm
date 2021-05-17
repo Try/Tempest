@@ -79,21 +79,23 @@ void MtSwapchain::reset() {
     }
   }
 
-uint32_t MtSwapchain::nextImage(AbstractGraphicsApi::Semaphore*) {
+uint32_t MtSwapchain::currentBackBufferIndex() {
   for(;;) {
     std::lock_guard<SpinLock> guard(sync);
     for(size_t i=0; i<img.size(); ++i) {
       if(img[i].inUse)
         continue;
       img[i].inUse = true;
+      currentImg = i;
       return i;
       }
     }
   throw SwapchainSuboptimal();
   }
 
-void MtSwapchain::present(uint32_t i) {
+void MtSwapchain::present() {
   CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);
+  uint32_t      i   = currentImg;
 
   @autoreleasepool {
     id<CAMetalDrawable>       drawable = [lay nextDrawable];

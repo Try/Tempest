@@ -137,10 +137,6 @@ AbstractGraphicsApi::Fence *MetalApi::createFence(AbstractGraphicsApi::Device*) 
   return new MtSync();
   }
 
-AbstractGraphicsApi::Semaphore *MetalApi::createSemaphore(AbstractGraphicsApi::Device*) {
-  return nullptr;
-  }
-
 AbstractGraphicsApi::PBuffer MetalApi::createBuffer(AbstractGraphicsApi::Device *d,
                                                     const void *mem, size_t count, size_t sz, size_t alignedSz,
                                                     MemUsage /*usage*/, BufferHeap flg) {
@@ -256,30 +252,20 @@ AbstractGraphicsApi::CommandBuffer *MetalApi::createCommandBuffer(AbstractGraphi
   return new MtCommandBuffer(dx);
   }
 
-void MetalApi::present(AbstractGraphicsApi::Device*,
-                       AbstractGraphicsApi::Swapchain *sw,
-                       uint32_t imageId,
-                       const AbstractGraphicsApi::Semaphore*) {
+void MetalApi::present(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Swapchain *sw) {
   auto& s   = *reinterpret_cast<MtSwapchain*>(sw);
-  s.present(imageId);
+  s.present();
   }
 
 void MetalApi::submit(AbstractGraphicsApi::Device *d,
                       AbstractGraphicsApi::CommandBuffer *cmd,
-                      AbstractGraphicsApi::Semaphore *wait,
-                      AbstractGraphicsApi::Semaphore *done,
                       AbstractGraphicsApi::Fence *doneCpu) {
-  this->submit(d,&cmd,1,&wait,1,&done,1,doneCpu);
+  this->submit(d,&cmd,1,doneCpu);
   }
 
 void MetalApi::submit(AbstractGraphicsApi::Device*,
                       AbstractGraphicsApi::CommandBuffer **pcmd, size_t count,
-                      AbstractGraphicsApi::Semaphore **wait, size_t waitCnt,
-                      AbstractGraphicsApi::Semaphore **done, size_t doneCnt,
                       AbstractGraphicsApi::Fence *doneCpu) {
-  (void)wait; (void)waitCnt;
-  (void)done; (void)doneCnt;
-
   auto& fence = *reinterpret_cast<MtSync*>(doneCpu);
   fence.signal();
   for(size_t i=0; i<count; ++i) {

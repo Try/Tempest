@@ -19,11 +19,11 @@ class MtSwapchain : public AbstractGraphicsApi::Swapchain {
     ~MtSwapchain();
 
     void          reset() override;
-    uint32_t      nextImage() override;
+    uint32_t      currentBackBufferIndex() override;
     uint32_t      imageCount() const override;
     uint32_t      w() const override;
     uint32_t      h() const override;
-    void          present(uint32_t index);
+    void          present();
 
     MTLPixelFormat format() const;
 
@@ -41,7 +41,8 @@ class MtSwapchain : public AbstractGraphicsApi::Swapchain {
     MetalView*     view = nil;
     Tempest::Size  sz;
 
-    uint32_t       imgCount = 0;
+    uint32_t       imgCount   = 0;
+    uint32         currentImg = 0;
     void           releaseTex();
     id<MTLTexture> mkTexture();
   };
