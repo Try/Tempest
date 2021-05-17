@@ -264,11 +264,17 @@ void VulkanInstance::getDevicePropsShort(VkPhysicalDevice physicalDevice, Tempes
   c.setStorageFormats(storFormat);
   }
 
-void VulkanInstance::submit(VDevice* dev,
-                            VCommandBuffer** cmd, size_t count,
-                            VSemaphore** wait, size_t waitCnt,
-                            VSemaphore** done, size_t doneCnt,
-                            VFence* doneCpu) {
+void VulkanInstance::submit(VDevice* dev, VCommandBuffer** cmd, size_t count, VFence* doneCpu) {
+  size_t waitCnt = 0;
+  for(size_t i=0; i<count; ++i) {
+    for(auto& s:cmd[i]->swapchainSync) {
+      if(s->state!=Detail::VSwapchain::S_Pending)
+        continue;
+      s->state = Detail::VSwapchain::S_Draw0;
+      ++waitCnt;
+      }
+    }
+
   VkCommandBuffer                    cxStk[32] = {};
   std::unique_ptr<VkCommandBuffer[]> cxHeap;
   VkCommandBuffer*                   cx = cxStk;
@@ -277,65 +283,58 @@ void VulkanInstance::submit(VDevice* dev,
     cx = cxHeap.get();
     }
 
-  VkSemaphore                    ptrStk[64] = {};
-  std::unique_ptr<VkSemaphore[]> ptrHeap;
-  auto wx  = ptrStk;
-  auto dx  = ptrStk+waitCnt;
-
-  if(waitCnt+doneCnt>64) {
-    ptrHeap.reset(new VkSemaphore[waitCnt+doneCnt]);
-    wx = ptrHeap.get();
-    dx = ptrHeap.get()+waitCnt;
-    }
-
+  VkSemaphore                             wxStk [32] = {};
   VkPipelineStageFlags                    flgStk[32] = {};
+  std::unique_ptr<VkSemaphore[]>          wxHeap;
   std::unique_ptr<VkPipelineStageFlags[]> flgHeap;
-  auto flg = flgStk;
+  auto                                    wx  = wxStk;
+  auto                                    flg = flgStk;
+
   if(waitCnt>32) {
     flgHeap.reset(new VkPipelineStageFlags[waitCnt]);
+    wxHeap .reset(new VkSemaphore[waitCnt]);
+    wx  = wxHeap.get();
     flg = flgHeap.get();
     }
 
   implSubmit(dev, cx, cmd, count,
-             wx, flg, wait, waitCnt,
-             dx, done, doneCnt,
+             wx, flg, waitCnt,
              doneCpu);
   }
 
 void VulkanInstance::implSubmit(VDevice* dx,
                                 VkCommandBuffer* command, VCommandBuffer** cmd, size_t count,
-                                VkSemaphore* waitSem, VkPipelineStageFlags* waitStages, VSemaphore** wait, size_t waitCnt,
-                                VkSemaphore* doneSem, VSemaphore** done, size_t doneCnt,
+                                VkSemaphore* wait, VkPipelineStageFlags* waitStages, size_t waitCnt,
                                 VFence* fence) {
+  size_t waitId = 0;
   for(size_t i=0; i<count; ++i) {
     command[i] = cmd[i]->impl;
-    for(auto& c:cmd[i]->swapchainSync) {
-      c->state = Detail::VSwapchain::S_Pending;
+    for(auto& s:cmd[i]->swapchainSync) {
+      if(s->state!=Detail::VSwapchain::S_Draw0)
+        continue;
+      s->state = Detail::VSwapchain::S_Draw1;
+      wait[waitId] = s->aquire;
+      ++waitId;
       }
     }
 
   for(size_t i=0; i<waitCnt; ++i) {
     // NOTE: our sw images are draw-only
     waitStages[i] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    waitSem[i]    = wait[i]->impl;
-    }
-
-  for(size_t i=0; i<doneCnt; ++i) {
-    doneSem[i] = done[i]->impl;
     }
 
   VkSubmitInfo submitInfo = {};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
   submitInfo.waitSemaphoreCount   = uint32_t(waitCnt);
-  submitInfo.pWaitSemaphores      = waitSem;
+  submitInfo.pWaitSemaphores      = wait;
   submitInfo.pWaitDstStageMask    = waitStages;
 
   submitInfo.commandBufferCount   = uint32_t(count);
   submitInfo.pCommandBuffers      = command;
 
-  submitInfo.signalSemaphoreCount = uint32_t(doneCnt);
-  submitInfo.pSignalSemaphores    = doneSem;
+  submitInfo.signalSemaphoreCount = 0;
+  submitInfo.pSignalSemaphores    = nullptr;
 
   if(fence!=nullptr)
     fence->reset();

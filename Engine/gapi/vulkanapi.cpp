@@ -139,9 +139,8 @@ AbstractGraphicsApi::Fence *VulkanApi::createFence(AbstractGraphicsApi::Device *
   return new Detail::VFence(*dx);
   }
 
-AbstractGraphicsApi::Semaphore *VulkanApi::createSemaphore(AbstractGraphicsApi::Device *d) {
-  Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
-  return new Detail::VSemaphore(*dx);
+AbstractGraphicsApi::Semaphore *VulkanApi::createSemaphore(AbstractGraphicsApi::Device*) {
+  return nullptr;
   }
 
 AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device *d,
@@ -300,23 +299,31 @@ AbstractGraphicsApi::CommandBuffer* VulkanApi::createCommandBuffer(AbstractGraph
   return new Detail::VCommandBuffer(*dx);
   }
 
-void VulkanApi::present(Device *d,Swapchain *sw,uint32_t imageId,const Semaphore *wait) {
+void VulkanApi::present(Device *d, Swapchain *sw, uint32_t imageId, const Semaphore*) {
   Detail::VDevice*    dx=reinterpret_cast<Detail::VDevice*>(d);
   Detail::VSwapchain* sx=reinterpret_cast<Detail::VSwapchain*>(sw);
-  auto*               wx=reinterpret_cast<const Detail::VSemaphore*>(wait);
+
+  VkSemaphore* present = nullptr;
+  for(auto& s:sx->sync)
+    if(s.imgId==imageId) {
+      present = &s.present;
+      s.state = Detail::VSwapchain::S_Idle;
+      break;
+      }
+
+  VkSubmitInfo submitInfo = {};
+  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submitInfo.signalSemaphoreCount = 1;
+  submitInfo.pSignalSemaphores    = present;
+  dx->graphicsQueue->submit(1, &submitInfo, VK_NULL_HANDLE);
 
   VkPresentInfoKHR presentInfo = {};
-  presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
+  presentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
   presentInfo.waitSemaphoreCount = 1;
-  presentInfo.pWaitSemaphores    = &wx->impl;
-
-  VkSwapchainKHR swapChains[] = {sx->swapChain};
-  presentInfo.swapchainCount  = 1;
-  presentInfo.pSwapchains     = swapChains;
-  presentInfo.pImageIndices   = &imageId;
-
-  dx->dataMgr().wait();
+  presentInfo.pWaitSemaphores    = present;
+  presentInfo.swapchainCount     = 1;
+  presentInfo.pSwapchains        = &sx->swapChain;
+  presentInfo.pImageIndices      = &imageId;
 
   //auto t = Application::tickCount();
   VkResult code = dx->presentQueue->present(presentInfo);
@@ -333,11 +340,9 @@ void VulkanApi::submit(Device *d,
                        Fence *onReadyCpu) {
   Detail::VDevice*        dx=reinterpret_cast<Detail::VDevice*>(d);
   Detail::VCommandBuffer* cx=reinterpret_cast<Detail::VCommandBuffer*>(cmd);
-  auto*                   rx=reinterpret_cast<Detail::VSemaphore*>(onReady);
   auto*                   rc=reinterpret_cast<Detail::VFence*>(onReadyCpu);
-  auto*                   wx=reinterpret_cast<Detail::VSemaphore*>(wait);
 
-  impl->submit(dx,&cx,1,&wx,1,&rx,1,rc);
+  impl->submit(dx,&cx,1,rc);
   }
 
 void VulkanApi::submit(AbstractGraphicsApi::Device *d,
@@ -347,10 +352,7 @@ void VulkanApi::submit(AbstractGraphicsApi::Device *d,
                        Fence     *doneCpu) {
   auto* dx = reinterpret_cast<VDevice*>(d);
   auto* rc = reinterpret_cast<VFence*>(doneCpu);
-  impl->submit(dx,reinterpret_cast<VCommandBuffer**>(cmd),count,
-               reinterpret_cast<VSemaphore**>(wait),waitCnt,
-               reinterpret_cast<VSemaphore**>(done),doneCnt,
-               rc);
+  impl->submit(dx,reinterpret_cast<VCommandBuffer**>(cmd),count,rc);
   }
 
 void VulkanApi::getCaps(Device *d, Props& props) {

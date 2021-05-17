@@ -38,17 +38,12 @@ class VulkanInstance {
     static void      getDevicePropsShort(VkPhysicalDevice physicalDevice, AbstractGraphicsApi::Props& c);
 
 
-    void submit(VDevice *d,
-                VCommandBuffer** cmd, size_t count,
-                VSemaphore** wait, size_t waitCnt,
-                VSemaphore** done, size_t doneCnt,
-                VFence *doneCpu);
+    void submit(VDevice *d, VCommandBuffer** cmd, size_t count, VFence *doneCpu);
 
   private:
     void implSubmit(VDevice *d,
                     VkCommandBuffer* command, VCommandBuffer** cmd, size_t count,
-                    VkSemaphore* ws, VkPipelineStageFlags* wflg, VSemaphore** wait, size_t waitCnt,
-                    VkSemaphore* ds, VSemaphore** done, size_t doneCnt,
+                    VkSemaphore* ws, VkPipelineStageFlags* wflg, size_t waitCnt,
                     VFence *fence);
 
     const std::initializer_list<const char*>& checkValidationLayerSupport();

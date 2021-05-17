@@ -18,15 +18,6 @@ VSwapchain::VSwapchain(VDevice &device, SystemApi::Window* hwnd)
     auto     support  = device.querySwapChainSupport(surface);
     uint32_t imgCount = getImageCount(support);
     createSwapchain(device,support,SystemApi::windowClientRect(hwnd),imgCount);
-
-    VkSemaphoreCreateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    info.flags = 0;
-    sync.resize(imgCount);
-    for(auto& i:sync) {
-      vkAssert(vkCreateSemaphore(device.device.impl,&info,nullptr,&i.aquire));
-      vkAssert(vkCreateSemaphore(device.device.impl,&info,nullptr,&i.present));
-      }
     }
   catch(...) {
     cleanup();
@@ -130,6 +121,15 @@ void VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& swapCh
   swapChainExtent      = extent;
 
   createImageViews(device);
+
+  VkSemaphoreCreateInfo info = {};
+  info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+  info.flags = 0;
+  sync.resize(imgCount);
+  for(auto& i:sync) {
+    vkAssert(vkCreateSemaphore(device.device.impl,&info,nullptr,&i.aquire));
+    vkAssert(vkCreateSemaphore(device.device.impl,&info,nullptr,&i.present));
+    }
   }
 
 void VSwapchain::createImageViews(VDevice &device) {
@@ -223,14 +223,13 @@ uint32_t VSwapchain::getImageCount(const SwapChainSupport& support) const {
   return imageCount;
   }
 
-uint32_t VSwapchain::nextImage(AbstractGraphicsApi::Semaphore* onReady) {
-  Detail::VSemaphore* rx=reinterpret_cast<Detail::VSemaphore*>(onReady);
-
+uint32_t VSwapchain::nextImage(AbstractGraphicsApi::Semaphore*) {
+  auto&    slot = sync[syncIndex];
   uint32_t id   = uint32_t(-1);
   VkResult code = vkAcquireNextImageKHR(device.device.impl,
                                         swapChain,
                                         std::numeric_limits<uint64_t>::max(),
-                                        rx->impl,
+                                        slot.aquire,
                                         VK_NULL_HANDLE,
                                         &id);
   if(code==VK_ERROR_OUT_OF_DATE_KHR)
@@ -241,10 +240,9 @@ uint32_t VSwapchain::nextImage(AbstractGraphicsApi::Semaphore* onReady) {
   if(code!=VK_SUCCESS)
     vkAssert(code);
 
-  syncIndex = (syncIndex+1)%imageCount();
   sync[syncIndex].imgId = id;
   sync[syncIndex].state = S_Pending;
-
+  syncIndex = (syncIndex+1)%imageCount();
   return id;
   }
 

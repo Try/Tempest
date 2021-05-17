@@ -39,6 +39,8 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     enum SyncState : uint8_t {
       S_Idle,
       S_Pending,
+      S_Draw0,
+      S_Draw1,
       };
 
     struct Sync {
