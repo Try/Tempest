@@ -45,8 +45,8 @@ class Device {
   public:
     using Props=AbstractGraphicsApi::Props;
 
-    Device(AbstractGraphicsApi& api, uint8_t maxFramesInFlight=2);
-    Device(AbstractGraphicsApi& api, const char* name, uint8_t maxFramesInFlight=2);
+    Device(AbstractGraphicsApi& api);
+    Device(AbstractGraphicsApi& api, const char* name);
     Device(const Device&)=delete;
     virtual ~Device();
 
@@ -169,7 +169,7 @@ class Device {
 
   private:
     struct Impl {
-      Impl(AbstractGraphicsApi& api, const char* name, uint8_t maxFramesInFlight);
+      Impl(AbstractGraphicsApi& api, const char* name);
       ~Impl();
 
       AbstractGraphicsApi&            api;

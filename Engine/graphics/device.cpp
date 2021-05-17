@@ -21,8 +21,8 @@ static uint32_t mipCount(uint32_t w, uint32_t h) {
   return n;
   }
 
-Device::Impl::Impl(AbstractGraphicsApi &api, const char* name, uint8_t maxFramesInFlight)
-  :api(api),maxFramesInFlight(maxFramesInFlight) {
+Device::Impl::Impl(AbstractGraphicsApi &api, const char* name)
+  :api(api) {
   dev=api.createDevice(name);
   }
 
@@ -30,20 +30,16 @@ Device::Impl::~Impl() {
   api.destroy(dev);
   }
 
-Device::Device(AbstractGraphicsApi& api, uint8_t maxFramesInFlight)
-  :Device(api,nullptr,maxFramesInFlight){
+Device::Device(AbstractGraphicsApi& api)
+  :Device(api,nullptr){
   }
 
-Device::Device(AbstractGraphicsApi &api, const char* name, uint8_t maxFramesInFlight)
-  :api(api), impl(api,name,maxFramesInFlight), dev(impl.dev), builtins(*this) {
+Device::Device(AbstractGraphicsApi &api, const char* name)
+  :api(api), impl(api,name), dev(impl.dev), builtins(*this) {
   api.getCaps(dev,devProps);
   }
 
 Device::~Device() {
-  }
-
-uint8_t Device::maxFramesInFlight() const {
-  return impl.maxFramesInFlight;
   }
 
 void Device::waitIdle() {
