@@ -7,6 +7,7 @@
 #include "vallocator.h"
 #include "vcommandbuffer.h"
 #include "vcommandpool.h"
+#include "vswapchain.h"
 #include "vfence.h"
 #include "vulkanapi_impl.h"
 #include "exceptions/exception.h"
@@ -17,11 +18,7 @@
 namespace Tempest {
 namespace Detail {
 
-class VSwapchain;
-class VCommandBuffer;
-
 class VFence;
-class VSemaphore;
 
 class VTexture;
 
@@ -163,15 +160,11 @@ class VDevice : public AbstractGraphicsApi::Device {
     using BufPtr = Detail::DSharedPtr<VBuffer*>;
     using TexPtr = Detail::DSharedPtr<VTexture*>;
 
-    using VkProps = Detail::VulkanApi::VkProp;
+    using VkProps = Detail::VulkanInstance::VkProp;
 
-    struct SwapChainSupport final {
-      VkSurfaceCapabilitiesKHR        capabilities={};
-      std::vector<VkSurfaceFormatKHR> formats;
-      std::vector<VkPresentModeKHR>   presentModes;
-      };
+    using SwapChainSupport = VSwapchain::SwapChainSupport;
 
-    VDevice(VulkanApi& api,const char* gpuName);
+    VDevice(VulkanInstance& api,const char* gpuName);
     ~VDevice() override;
 
     struct autoDevice {
@@ -209,7 +202,6 @@ class VDevice : public AbstractGraphicsApi::Device {
     PFN_vkGetBufferMemoryRequirements2KHR vkGetBufferMemoryRequirements2 = nullptr;
     PFN_vkGetImageMemoryRequirements2KHR  vkGetImageMemoryRequirements2  = nullptr;
 
-    VkResult                present(VSwapchain& sw,const VSemaphore *wait,size_t wSize,uint32_t imageId);
     void                    waitIdle() override;
 
     void                    submit(VCommandBuffer& cmd,VFence& sync);
@@ -229,7 +221,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     void                    implInit(VkPhysicalDevice pdev, VkSurfaceKHR surf);
     void                    pickPhysicalDevice();
     bool                    isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surf, const char* gpuName);
-    void                    deviceQueueProps(VulkanApi::VkProp& prop, VkPhysicalDevice device, VkSurfaceKHR surf);
+    void                    deviceQueueProps(VulkanInstance::VkProp& prop, VkPhysicalDevice device, VkSurfaceKHR surf);
     bool                    checkDeviceExtensionSupport(VkPhysicalDevice device);
     auto                    extensionsList(VkPhysicalDevice device) -> std::vector<VkExtensionProperties>;
     bool                    checkForExt(const std::vector<VkExtensionProperties>& list,const char* name);

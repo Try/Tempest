@@ -39,8 +39,6 @@ class DirectX12Api : public AbstractGraphicsApi {
 
     Fence*         createFence(Device *d) override;
 
-    Semaphore*     createSemaphore(Device *d) override;
-
     PBuffer        createBuffer(Device* d, const void *mem, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap flg) override;
 
     PTexture       createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips) override;
@@ -58,14 +56,10 @@ class DirectX12Api : public AbstractGraphicsApi {
 
     CommandBuffer* createCommandBuffer(Device* d) override;
 
-    void           present  (Device *d,Swapchain* sw,uint32_t imageId, const Semaphore *wait) override;
+    void           present  (Device *d, Swapchain* sw) override;
 
-    void           submit   (Device *d, CommandBuffer* cmd, Semaphore* wait, Semaphore* onReady, Fence* doneCpu) override;
-    void           submit   (Device *d,
-                             CommandBuffer** cmd, size_t count,
-                             Semaphore** wait, size_t waitCnt,
-                             Semaphore** done, size_t doneCnt,
-                             Fence *doneCpu) override;
+    void           submit   (Device *d, CommandBuffer* cmd,  Fence* doneCpu) override;
+    void           submit   (Device *d, CommandBuffer** cmd, size_t count, Fence *doneCpu) override;
 
     void           getCaps  (Device *d,Props& caps) override;
 

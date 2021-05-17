@@ -11,7 +11,6 @@
 #include "vulkan/vbuffer.h"
 #include "vulkan/vshader.h"
 #include "vulkan/vfence.h"
-#include "vulkan/vsemaphore.h"
 #include "vulkan/vcommandpool.h"
 #include "vulkan/vcommandbuffer.h"
 #include "vulkan/vdescriptorarray.h"
@@ -29,13 +28,10 @@
 #include <Tempest/Application>
 
 using namespace Tempest;
+using namespace Tempest::Detail;
 
-struct VulkanApi::Impl : public Detail::VulkanApi {
-  using VulkanApi::VulkanApi;
-  std::mutex                        syncBuf;
-  std::vector<VkCommandBuffer>      cmdBuf;
-  std::vector<VkSemaphore>          semBuf;
-  std::vector<VkPipelineStageFlags> semFlgBuf;
+struct Tempest::VulkanApi::Impl : public VulkanInstance {
+  using VulkanInstance::VulkanInstance;
   };
 
 VulkanApi::VulkanApi(ApiFlags f) {
@@ -50,7 +46,7 @@ std::vector<AbstractGraphicsApi::Props> VulkanApi::devices() const {
   }
 
 AbstractGraphicsApi::Device *VulkanApi::createDevice(const char* gpuName) {
-  return new Detail::VDevice(*impl,gpuName);
+  return new VDevice(*impl,gpuName);
   }
 
 void VulkanApi::destroy(AbstractGraphicsApi::Device *d) {
@@ -140,11 +136,6 @@ AbstractGraphicsApi::PShader VulkanApi::createShader(AbstractGraphicsApi::Device
 AbstractGraphicsApi::Fence *VulkanApi::createFence(AbstractGraphicsApi::Device *d) {
   Detail::VDevice* dx =reinterpret_cast<Detail::VDevice*>(d);
   return new Detail::VFence(*dx);
-  }
-
-AbstractGraphicsApi::Semaphore *VulkanApi::createSemaphore(AbstractGraphicsApi::Device *d) {
-  Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
-  return new Detail::VSemaphore(*dx);
   }
 
 AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device *d,
@@ -303,119 +294,24 @@ AbstractGraphicsApi::CommandBuffer* VulkanApi::createCommandBuffer(AbstractGraph
   return new Detail::VCommandBuffer(*dx);
   }
 
-void VulkanApi::present(Device *d,Swapchain *sw,uint32_t imageId,const Semaphore *wait) {
+void VulkanApi::present(Device *d, Swapchain *sw) {
   Detail::VDevice*    dx=reinterpret_cast<Detail::VDevice*>(d);
   Detail::VSwapchain* sx=reinterpret_cast<Detail::VSwapchain*>(sw);
-  auto*               wx=reinterpret_cast<const Detail::VSemaphore*>(wait);
-
-  VkPresentInfoKHR presentInfo = {};
-  presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
-  presentInfo.waitSemaphoreCount = 1;
-  presentInfo.pWaitSemaphores    = &wx->impl;
-
-  VkSwapchainKHR swapChains[] = {sx->swapChain};
-  presentInfo.swapchainCount  = 1;
-  presentInfo.pSwapchains     = swapChains;
-  presentInfo.pImageIndices   = &imageId;
-
-  dx->dataMgr().wait();
-
-  //auto t = Application::tickCount();
-  VkResult code = dx->presentQueue->present(presentInfo);
-  if(code==VK_ERROR_OUT_OF_DATE_KHR || code==VK_SUBOPTIMAL_KHR)
-    throw SwapchainSuboptimal();
-  //Log::i("vkQueuePresentKHR = ",Application::tickCount()-t);
-  Detail::vkAssert(code);
+  sx->present(*dx);
   }
 
-void VulkanApi::submit(Device *d,
-                       CommandBuffer *cmd,
-                       Semaphore *wait,
-                       Semaphore *onReady,
-                       Fence *onReadyCpu) {
+void VulkanApi::submit(Device *d, CommandBuffer* cmd, Fence *doneCpu) {
   Detail::VDevice*        dx=reinterpret_cast<Detail::VDevice*>(d);
   Detail::VCommandBuffer* cx=reinterpret_cast<Detail::VCommandBuffer*>(cmd);
-  auto*                   wx=reinterpret_cast<const Detail::VSemaphore*>(wait);
-  auto*                   rx=reinterpret_cast<Detail::VSemaphore*>(onReady);
-  auto*                   rc=reinterpret_cast<const Detail::VFence*>(onReadyCpu);
+  auto*                   rc=reinterpret_cast<Detail::VFence*>(doneCpu);
 
-  VkSubmitInfo submitInfo = {};
-  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-  VkSemaphore          waitSemaphores[] = {wx->impl};
-  VkPipelineStageFlags waitStages[]     = {wx->stage};
-
-  submitInfo.waitSemaphoreCount = 1;
-  submitInfo.pWaitSemaphores    = waitSemaphores;
-  submitInfo.pWaitDstStageMask  = waitStages;
-
-  submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers    = &cx->impl;
-
-  if(rx!=nullptr) {
-    submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores    = &rx->impl;
-    rx->stage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT|VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-    }
-
-  if(onReadyCpu!=nullptr)
-    onReadyCpu->reset();
-
-  dx->dataMgr().wait();
-  dx->graphicsQueue->submit(1,&submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl);
+  impl->submit(dx,&cx,1,rc);
   }
 
-void VulkanApi::submit(AbstractGraphicsApi::Device *d,
-                       AbstractGraphicsApi::CommandBuffer **cmd, size_t count,
-                       Semaphore **wait, size_t waitCnt,
-                       Semaphore **done, size_t doneCnt,
-                       Fence     *doneCpu) {
-  Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
-
-  std::lock_guard<std::mutex> guard(impl->syncBuf);
-  auto& cmdBuf    = impl->cmdBuf;
-  auto& semBuf    = impl->semBuf;
-  auto& semFlgBuf = impl->semFlgBuf;
-
-  cmdBuf.resize(count);
-  for(size_t i=0;i<count;++i) {
-    auto* cx=reinterpret_cast<Detail::VCommandBuffer*>(cmd[i]);
-    cmdBuf[i] = cx->impl;
-    }
-
-  semBuf.resize(waitCnt+doneCnt);
-  semFlgBuf.resize(waitCnt);
-  for(size_t i=0;i<waitCnt;++i) {
-    auto* sx=reinterpret_cast<Detail::VSemaphore*>(wait[i]);
-    semBuf[i]    = sx->impl;
-    semFlgBuf[i] = sx->stage;
-    }
-  for(size_t i=0;i<doneCnt;++i) {
-    auto* sx=reinterpret_cast<Detail::VSemaphore*>(done[i]);
-    semBuf[i+waitCnt] = sx->impl;
-    sx->stage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT|VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-    }
-
-  VkSubmitInfo submitInfo = {};
-  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-  submitInfo.waitSemaphoreCount   = uint32_t(waitCnt);
-  submitInfo.pWaitSemaphores      = semBuf.data();
-  submitInfo.pWaitDstStageMask    = semFlgBuf.data();
-
-  submitInfo.signalSemaphoreCount = uint32_t(doneCnt);
-  submitInfo.pSignalSemaphores    = semBuf.data()+waitCnt;
-
-  submitInfo.commandBufferCount   = uint32_t(count);
-  submitInfo.pCommandBuffers      = cmdBuf.data();
-
-  if(doneCpu!=nullptr)
-    doneCpu->reset();
-  auto* rc=reinterpret_cast<Detail::VFence*>(doneCpu);
-
-  dx->dataMgr().wait();
-  dx->graphicsQueue->submit(1,&submitInfo,rc==nullptr ? VK_NULL_HANDLE : rc->impl);
+void VulkanApi::submit(AbstractGraphicsApi::Device *d, AbstractGraphicsApi::CommandBuffer **cmd, size_t count, Fence* doneCpu) {
+  auto* dx = reinterpret_cast<VDevice*>(d);
+  auto* rc = reinterpret_cast<VFence*>(doneCpu);
+  impl->submit(dx,reinterpret_cast<VCommandBuffer**>(cmd),count,rc);
   }
 
 void VulkanApi::getCaps(Device *d, Props& props) {

@@ -34,7 +34,6 @@ class MetalApi : public AbstractGraphicsApi {
     PShader        createShader(Device *d, const void* source, size_t src_size) override;
 
     Fence*         createFence(Device *d) override;
-    Semaphore*     createSemaphore(Device *d) override;
 
     PBuffer        createBuffer(Device* d, const void *mem, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap flg) override;
 
@@ -53,14 +52,10 @@ class MetalApi : public AbstractGraphicsApi {
 
     CommandBuffer* createCommandBuffer(Device* d) override;
 
-    void           present  (Device *d,Swapchain* sw,uint32_t imageId, const Semaphore *wait) override;
+    void           present  (Device *d, Swapchain* sw, uint32_t imageId) override;
 
-    void           submit   (Device *d, CommandBuffer* cmd, Semaphore* wait, Semaphore* done, Fence* doneCpu) override;
-    void           submit   (Device *d,
-                             CommandBuffer** cmd, size_t count,
-                             Semaphore** wait, size_t waitCnt,
-                             Semaphore** done, size_t doneCnt,
-                             Fence *doneCpu) override;
+    void           submit   (Device *d, CommandBuffer*  cmd, Fence* doneCpu) override;
+    void           submit   (Device *d, CommandBuffer** cmd, size_t count, Fence *doneCpu) override;
 
     void           getCaps  (Device *d,Props& caps) override;
   };

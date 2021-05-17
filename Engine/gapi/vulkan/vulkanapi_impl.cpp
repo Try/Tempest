@@ -31,7 +31,7 @@ static const std::initializer_list<const char*> validationLayersLunarg = {
   "VK_LAYER_LUNARG_core_validation"
   };
 
-VulkanApi::VulkanApi(bool validation)
+VulkanInstance::VulkanInstance(bool validation)
   :validation(validation) {
   std::initializer_list<const char*> validationLayers={};
   if(validation) {
@@ -93,13 +93,13 @@ VulkanApi::VulkanApi(bool validation)
     }
   }
 
-VulkanApi::~VulkanApi(){
-  if( vkDestroyDebugReportCallbackEXT )
+VulkanInstance::~VulkanInstance(){
+  if(vkDestroyDebugReportCallbackEXT)
     vkDestroyDebugReportCallbackEXT(instance,callback,nullptr);
   vkDestroyInstance(instance,nullptr);
   }
 
-const std::initializer_list<const char*>& VulkanApi::checkValidationLayerSupport() {
+const std::initializer_list<const char*>& VulkanInstance::checkValidationLayerSupport() {
   uint32_t layerCount=0;
   vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
@@ -116,8 +116,8 @@ const std::initializer_list<const char*>& VulkanApi::checkValidationLayerSupport
   return empty;
   }
 
-bool VulkanApi::layerSupport(const std::vector<VkLayerProperties>& sup,
-                             const std::initializer_list<const char*> dest) {
+bool VulkanInstance::layerSupport(const std::vector<VkLayerProperties>& sup,
+                                 const std::initializer_list<const char*> dest) {
   for(auto& i:dest) {
     bool found=false;
     for(auto& r:sup)
@@ -131,7 +131,7 @@ bool VulkanApi::layerSupport(const std::vector<VkLayerProperties>& sup,
   return true;
   }
 
-std::vector<Tempest::AbstractGraphicsApi::Props> VulkanApi::devices() const {
+std::vector<Tempest::AbstractGraphicsApi::Props> VulkanInstance::devices() const {
   std::vector<Tempest::AbstractGraphicsApi::Props> devList;
   uint32_t deviceCount = 0;
   vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
@@ -149,7 +149,7 @@ std::vector<Tempest::AbstractGraphicsApi::Props> VulkanApi::devices() const {
   return devList;
   }
 
-void VulkanApi::getDeviceProps(VkPhysicalDevice physicalDevice, VkProp& c) {
+void VulkanInstance::getDeviceProps(VkPhysicalDevice physicalDevice, VkProp& c) {
   getDevicePropsShort(physicalDevice,c);
 
   VkPhysicalDeviceProperties prop={};
@@ -163,7 +163,7 @@ void VulkanApi::getDeviceProps(VkPhysicalDevice physicalDevice, VkProp& c) {
     c.bufferImageGranularity=1;
   }
 
-void VulkanApi::getDevicePropsShort(VkPhysicalDevice physicalDevice, Tempest::AbstractGraphicsApi::Props& c) {
+void VulkanInstance::getDevicePropsShort(VkPhysicalDevice physicalDevice, Tempest::AbstractGraphicsApi::Props& c) {
   /*
    * formats support table: https://vulkan.lunarg.com/doc/view/1.0.30.0/linux/vkspec.chunked/ch31s03.html
    */
@@ -263,14 +263,93 @@ void VulkanApi::getDevicePropsShort(VkPhysicalDevice physicalDevice, Tempest::Ab
   c.setStorageFormats(storFormat);
   }
 
-VkBool32 VulkanApi::debugReportCallback(VkDebugReportFlagsEXT      flags,
-                                        VkDebugReportObjectTypeEXT objectType,
-                                        uint64_t                   object,
-                                        size_t                     location,
-                                        int32_t                    messageCode,
-                                        const char                *pLayerPrefix,
-                                        const char                *pMessage,
-                                        void                      *pUserData) {
+void VulkanInstance::submit(VDevice* dev, VCommandBuffer** cmd, size_t count, VFence* doneCpu) {
+  size_t waitCnt = 0;
+  for(size_t i=0; i<count; ++i) {
+    for(auto& s:cmd[i]->swapchainSync) {
+      if(s->state!=Detail::VSwapchain::S_Pending)
+        continue;
+      s->state = Detail::VSwapchain::S_Draw0;
+      ++waitCnt;
+      }
+    }
+
+  VkCommandBuffer                    cxStk[32] = {};
+  std::unique_ptr<VkCommandBuffer[]> cxHeap;
+  VkCommandBuffer*                   cx = cxStk;
+  if(count>32) {
+    cxHeap.reset(new VkCommandBuffer[count]);
+    cx = cxHeap.get();
+    }
+
+  VkSemaphore                             wxStk [32] = {};
+  VkPipelineStageFlags                    flgStk[32] = {};
+  std::unique_ptr<VkSemaphore[]>          wxHeap;
+  std::unique_ptr<VkPipelineStageFlags[]> flgHeap;
+  auto                                    wx  = wxStk;
+  auto                                    flg = flgStk;
+
+  if(waitCnt>32) {
+    flgHeap.reset(new VkPipelineStageFlags[waitCnt]);
+    wxHeap .reset(new VkSemaphore[waitCnt]);
+    wx  = wxHeap.get();
+    flg = flgHeap.get();
+    }
+
+  implSubmit(dev, cx, cmd, count,
+             wx, flg, waitCnt,
+             doneCpu);
+  }
+
+void VulkanInstance::implSubmit(VDevice* dx,
+                                VkCommandBuffer* command, VCommandBuffer** cmd, size_t count,
+                                VkSemaphore* wait, VkPipelineStageFlags* waitStages, size_t waitCnt,
+                                VFence* fence) {
+  size_t waitId = 0;
+  for(size_t i=0; i<count; ++i) {
+    command[i] = cmd[i]->impl;
+    for(auto& s:cmd[i]->swapchainSync) {
+      if(s->state!=Detail::VSwapchain::S_Draw0)
+        continue;
+      s->state = Detail::VSwapchain::S_Draw1;
+      wait[waitId] = s->aquire;
+      ++waitId;
+      }
+    }
+
+  for(size_t i=0; i<waitCnt; ++i) {
+    // NOTE: our sw images are draw-only
+    waitStages[i] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    }
+
+  VkSubmitInfo submitInfo = {};
+  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+  submitInfo.waitSemaphoreCount   = uint32_t(waitCnt);
+  submitInfo.pWaitSemaphores      = wait;
+  submitInfo.pWaitDstStageMask    = waitStages;
+
+  submitInfo.commandBufferCount   = uint32_t(count);
+  submitInfo.pCommandBuffers      = command;
+
+  submitInfo.signalSemaphoreCount = 0;
+  submitInfo.pSignalSemaphores    = nullptr;
+
+  if(fence!=nullptr)
+    fence->reset();
+
+  dx->dataMgr().wait();
+  dx->graphicsQueue->submit(1, &submitInfo, fence==nullptr ? VK_NULL_HANDLE : fence->impl);
+  }
+
+VkBool32 VulkanInstance::debugReportCallback(VkDebugReportFlagsEXT      flags,
+                                            VkDebugReportObjectTypeEXT objectType,
+                                            uint64_t                   object,
+                                            size_t                     location,
+                                            int32_t                    messageCode,
+                                            const char                *pLayerPrefix,
+                                            const char                *pMessage,
+                                            void                      *pUserData) {
 #if VK_HEADER_VERSION==135
   // https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/1712
   if(objectType==VK_DEBUG_REPORT_OBJECT_TYPE_QUEUE_EXT)

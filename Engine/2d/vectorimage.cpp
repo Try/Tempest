@@ -25,9 +25,6 @@ void VectorImage::endPaint() {
   paintScope--;
   if(paintScope!=0)
     return;
-  for(size_t i=0;i<frameCount;++i)
-    frame[i].outdated=true;
-  outdatedCount=frameCount;
   }
 
 size_t VectorImage::pushState() {
@@ -113,63 +110,7 @@ void VectorImage::commitPoints() {
     }
   }
 
-void VectorImage::makeActual(Device &dev,Swapchain& sw) {
-  if(!frame || frameCount!=dev.maxFramesInFlight()) {
-    uint8_t count=dev.maxFramesInFlight();
-    frame.reset(new PerFrame[count]);
-    frameCount=count;
-    }
-
-  PerFrame& f=frame[sw.frameId()];
-  if(f.outdated) {
-    if(f.vbo.size()==buf.size())
-      f.vbo.update(buf); else
-      f.vbo=dev.vbo(BufferHeap::Upload,buf);
-
-    f.blocksType.resize(blocks.size());
-    f.blocks    .resize(blocks.size());
-
-    for(size_t i=0;i<blocks.size();++i){
-      auto&     b =blocks[i];
-      auto&     ux=f.blocks[i];
-      UboType   t =(b.hasImg) ? UT_Img : UT_NoImg;
-
-      if(ux.isEmpty() || f.blocksType[i]!=t){
-        auto& p = pipelineOf(dev,b);
-        ux = dev.descriptors(p.layout());
-        f.blocksType[i] = t;
-        }
-      if(T_LIKELY(t==UT_Img)) {
-        if(b.tex.brush) {
-          Sampler2d s;
-          if(T_UNLIKELY(b.tex.frm==TextureFormat::R8 || b.tex.frm==TextureFormat::R16 || b.tex.frm==TextureFormat::R32F)) {
-            s.mapping.r = ComponentSwizzle::R;
-            s.mapping.g = ComponentSwizzle::R;
-            s.mapping.b = ComponentSwizzle::R;
-            }
-          else if(T_UNLIKELY(b.tex.frm==TextureFormat::RG8 || b.tex.frm==TextureFormat::RG16 || b.tex.frm==TextureFormat::RG32F)) {
-            s.mapping.r = ComponentSwizzle::R;
-            s.mapping.g = ComponentSwizzle::R;
-            s.mapping.b = ComponentSwizzle::R;
-            s.mapping.a = ComponentSwizzle::G;
-            }
-          s.uClamp = b.tex.clamp;
-          s.vClamp = b.tex.clamp;
-          ux.set(0,b.tex.brush,s);
-          } else {
-          ux.set(0,b.tex.sprite.pageRawData(dev)); //TODO: oom
-          }
-        }
-      }
-
-    f.outdated=false;
-    outdatedCount--;
-    if(outdatedCount==0)
-      buf.clear();
-    }
-  }
-
-const RenderPipeline& VectorImage::pipelineOf(Device& dev, const VectorImage::Block& b) {
+const RenderPipeline& VectorImage::pipelineOf(Device& dev, const VectorImage::Block& b) const {
   const RenderPipeline* p;
   if(b.hasImg) {
     if(b.tp==Triangles){
@@ -203,29 +144,6 @@ const RenderPipeline& VectorImage::pipelineOf(Device& dev, const VectorImage::Bl
   return *p;
   }
 
-void VectorImage::draw(Device& dev, Swapchain& sw, Encoder<CommandBuffer> &cmd) {
-  makeActual(dev,sw);
-
-  PerFrame& f=frame[sw.frameId()];
-
-  for(size_t i=0;i<blocks.size();++i){
-    auto& b=blocks[i];
-    auto& u=f.blocks[i];
-
-    if(b.size==0)
-      continue;
-
-    if(!b.pipeline) {
-      b.pipeline=PipePtr(pipelineOf(dev,b));
-      }
-
-    if(b.hasImg)
-      cmd.setUniforms(b.pipeline,u); else
-      cmd.setUniforms(b.pipeline);
-    cmd.draw(f.vbo,b.begin,b.size);
-    }
-  }
-
 bool VectorImage::load(const char *file) {
   NSVGimage* image = nsvgParseFromFile(file,"px",96);
   if(image==nullptr)
@@ -255,3 +173,58 @@ bool VectorImage::load(const char *file) {
   return true;
   }
 
+
+void VectorImage::Mesh::update(Device& dev, const VectorImage& src, BufferHeap heap) {
+  if(vbo.size()==src.buf.size())
+    vbo.update(src.buf); else
+    vbo=dev.vbo(heap,src.buf);
+
+  blocks.resize(src.blocks.size());
+
+  for(size_t i=0;i<blocks.size();++i){
+    auto& b  = src.blocks[i];
+    auto& ux = blocks[i];
+
+    ux.begin = b.begin;
+    ux.size  = b.size;
+
+    auto& p = src.pipelineOf(dev,b);
+    if(ux.desc.isEmpty() || ux.pipeline!=&p){
+      ux.desc     = dev.descriptors(p.layout());
+      ux.pipeline = &p;
+      }
+
+    if(T_LIKELY(b.hasImg)) {
+      if(b.tex.brush) {
+        Sampler2d s;
+        if(T_UNLIKELY(b.tex.frm==TextureFormat::R8 || b.tex.frm==TextureFormat::R16 || b.tex.frm==TextureFormat::R32F)) {
+          s.mapping.r = ComponentSwizzle::R;
+          s.mapping.g = ComponentSwizzle::R;
+          s.mapping.b = ComponentSwizzle::R;
+          }
+        else if(T_UNLIKELY(b.tex.frm==TextureFormat::RG8 || b.tex.frm==TextureFormat::RG16 || b.tex.frm==TextureFormat::RG32F)) {
+          s.mapping.r = ComponentSwizzle::R;
+          s.mapping.g = ComponentSwizzle::R;
+          s.mapping.b = ComponentSwizzle::R;
+          s.mapping.a = ComponentSwizzle::G;
+          }
+        s.uClamp = b.tex.clamp;
+        s.vClamp = b.tex.clamp;
+        ux.desc.set(0,b.tex.brush,s);
+        } else {
+        ux.desc.set(0,b.tex.sprite.pageRawData(dev)); //TODO: oom
+        ux.sprite = b.tex.sprite;
+        }
+      }
+    }
+  }
+
+void VectorImage::Mesh::draw(Encoder<CommandBuffer>& cmd) {
+  for(size_t i=0;i<blocks.size();++i){
+    auto& b = blocks[i];
+    if(b.size==0)
+      continue;
+    cmd.setUniforms(*b.pipeline,b.desc);
+    cmd.draw(vbo,b.begin,b.size);
+    }
+  }

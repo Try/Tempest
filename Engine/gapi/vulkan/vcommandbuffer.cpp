@@ -33,6 +33,7 @@ VCommandBuffer::~VCommandBuffer() {
 
 void VCommandBuffer::reset() {
   vkResetCommandBuffer(impl,VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+  swapchainSync.clear();
   }
 
 void VCommandBuffer::begin() {
@@ -53,6 +54,7 @@ void VCommandBuffer::begin(VkCommandBufferUsageFlags flg) {
 void VCommandBuffer::end() {
   if(state==RenderPass)
     endRenderPass();
+  swapchainSync.reserve(swapchainSync.size());
   resState.finalize(*this);
   vkAssert(vkEndCommandBuffer(impl));
   state = NoRecording;
@@ -71,6 +73,8 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
   for(size_t i=0;i<fbo.attach.size();++i) {
     const bool preserve = pass.isAttachPreserved(i);
     resState.setLayout(fbo.attach[i],fbo.attach[i].renderLayout(),preserve);
+    if(fbo.attach[i].sw!=nullptr)
+      addDependency(*fbo.attach[i].sw,fbo.attach[i].id);
     }
 
   isInCompute = false;
@@ -138,6 +142,8 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraph
   VPipeline&        px=reinterpret_cast<VPipeline&>(p);
   VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
   curUniforms = &ux;
+  if(ux.desc==VK_NULL_HANDLE)
+    return;
 
   vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,
                           px.pipelineLayout,0,
@@ -452,7 +458,7 @@ void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
   changeLayout(img,TextureLayout::TransferDest, TextureLayout::Sampler, mipLevels-1);
   }
 
-static VkPipelineStageFlags accessToStage(const VkAccessFlags a, const VulkanApi::VkProp& prop) {
+static VkPipelineStageFlags accessToStage(const VkAccessFlags a, const VulkanInstance::VkProp& prop) {
   VkPipelineStageFlags ret = 0;
 
   if(a&(VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_UNIFORM_READ_BIT)) {
@@ -590,7 +596,21 @@ void VCommandBuffer::implChangeLayout(VkImage dest, VkFormat imageFormat,
       0, nullptr,
       0, nullptr,
       1, &barrier
-      );
+        );
+  }
+
+void VCommandBuffer::addDependency(VSwapchain& s, size_t imgId) {
+  VSwapchain::Sync* sc = nullptr;
+  for(auto& i:s.sync)
+    if(i.imgId==imgId) {
+      sc = &i;
+      break;
+      }
+
+  for(auto i:swapchainSync)
+    if(i==sc)
+      return;
+  swapchainSync.push_back(sc);
   }
 
 #endif

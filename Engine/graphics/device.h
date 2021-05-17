@@ -28,7 +28,6 @@
 namespace Tempest {
 
 class Fence;
-class Semaphore;
 
 class CommandPool;
 class RFile;
@@ -46,22 +45,18 @@ class Device {
   public:
     using Props=AbstractGraphicsApi::Props;
 
-    Device(AbstractGraphicsApi& api, uint8_t maxFramesInFlight=2);
-    Device(AbstractGraphicsApi& api, const char* name, uint8_t maxFramesInFlight=2);
+    Device(AbstractGraphicsApi& api);
+    Device(AbstractGraphicsApi& api, const char* name);
     Device(const Device&)=delete;
     virtual ~Device();
 
     uint8_t              maxFramesInFlight() const;
     void                 waitIdle();
 
-    void                 submit(const CommandBuffer&  cmd,const Semaphore& wait);
-    void                 submit(const CommandBuffer&  cmd,Fence& fdone);
-    void                 submit(const CommandBuffer&  cmd,const Semaphore& wait,Semaphore& done,Fence& fdone);
-    void                 submit(const CommandBuffer *cmd[], size_t count,
-                                const Semaphore* wait[], size_t waitCnt,
-                                Semaphore* done[], size_t doneCnt,
-                                Fence* fdone);
-    void                 present(Swapchain& sw, uint32_t img, const Semaphore& wait);
+    void                 submit(const CommandBuffer&  cmd);
+    void                 submit(const CommandBuffer&  cmd, Fence& fdone);
+    void                 submit(const CommandBuffer *cmd[], size_t count, Fence* fdone);
+    void                 present(Swapchain& sw);
 
     Swapchain            swapchain(SystemApi::Window* w) const;
 
@@ -168,15 +163,13 @@ class Device {
     ComputePipeline      pipeline(const Shader &comp);
 
     Fence                fence();
-    Semaphore            semaphore();
-
     CommandBuffer        commandBuffer();
 
     const Builtin&       builtin() const;
 
   private:
     struct Impl {
-      Impl(AbstractGraphicsApi& api, const char* name, uint8_t maxFramesInFlight);
+      Impl(AbstractGraphicsApi& api, const char* name);
       ~Impl();
 
       AbstractGraphicsApi&            api;
@@ -196,9 +189,7 @@ class Device {
                 implPipeline(const RenderState &st, const Shader* shaders[],
                              size_t stride, Topology tp);
     void        implSubmit(const Tempest::CommandBuffer *cmd[], AbstractGraphicsApi::CommandBuffer* hcmd[],  size_t count,
-                           const Semaphore* wait[], AbstractGraphicsApi::Semaphore*     hwait[], size_t waitCnt,
-                           Semaphore*       done[], AbstractGraphicsApi::Semaphore*     hdone[], size_t doneCnt,
-                           AbstractGraphicsApi::Fence*         fdone);
+                           AbstractGraphicsApi::Fence*  fdone);
 
     static TextureFormat formatOf(const Attachment& a);
 

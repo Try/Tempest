@@ -103,26 +103,13 @@ struct DirectX12Api::Impl {
 
   void submit(AbstractGraphicsApi::Device* d,
               ID3D12CommandList** cmd, size_t count,
-              AbstractGraphicsApi::Semaphore** wait, size_t waitCnt,
-              AbstractGraphicsApi::Semaphore** done, size_t doneCnt,
               AbstractGraphicsApi::Fence* doneCpu){
     Detail::DxDevice& dx   = *reinterpret_cast<Detail::DxDevice*>(d);
     Detail::DxFence&  fcpu = *reinterpret_cast<Detail::DxFence*>(doneCpu);
 
     std::lock_guard<SpinLock> guard(dx.syncCmdQueue);
     fcpu.reset();
-
-    for(size_t i=0;i<waitCnt;++i) {
-      Detail::DxSemaphore& swait = *reinterpret_cast<Detail::DxSemaphore*>(wait[i]);
-      dx.cmdQueue->Wait(swait.impl.get(),DxFence::Ready);
-      }
-
     dx.cmdQueue->ExecuteCommandLists(UINT(count), cmd);
-
-    for(size_t i=0;i<doneCnt;++i) {
-      Detail::DxSemaphore& sgpu = *reinterpret_cast<Detail::DxSemaphore*>(done[i]);
-      dx.cmdQueue->Signal(sgpu.impl.get(),DxFence::Ready);
-      }
     fcpu.signal(*dx.cmdQueue);
     }
 
@@ -231,11 +218,6 @@ AbstractGraphicsApi::PShader DirectX12Api::createShader(AbstractGraphicsApi::Dev
 AbstractGraphicsApi::Fence* DirectX12Api::createFence(AbstractGraphicsApi::Device* d) {
   Detail::DxDevice* dx = reinterpret_cast<Detail::DxDevice*>(d);
   return new DxFence(*dx);
-  }
-
-AbstractGraphicsApi::Semaphore* DirectX12Api::createSemaphore(AbstractGraphicsApi::Device* d) {
-  Detail::DxDevice* dx = reinterpret_cast<Detail::DxDevice*>(d);
-  return new DxSemaphore(*dx);
   }
 
 AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Device* d, const void* mem,
@@ -430,33 +412,24 @@ AbstractGraphicsApi::CommandBuffer* DirectX12Api::createCommandBuffer(Device* d)
   return new DxCommandBuffer(*dx);
   }
 
-void DirectX12Api::present(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Swapchain* sw,
-                           uint32_t imageId, const AbstractGraphicsApi::Semaphore* wait) {
-  // TODO: handle imageId
-  (void)imageId;
-  Detail::DxDevice&    dx    = *reinterpret_cast<Detail::DxDevice*>(d);
-  auto&                swait = *reinterpret_cast<const Detail::DxSemaphore*>(wait);
-  Detail::DxSwapchain* sx    = reinterpret_cast<Detail::DxSwapchain*>(sw);
+void DirectX12Api::present(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Swapchain* sw) {
+  Detail::DxDevice&    dx = *reinterpret_cast<Detail::DxDevice*>(d);
+  Detail::DxSwapchain* sx = reinterpret_cast<Detail::DxSwapchain*>(sw);
 
   std::lock_guard<SpinLock> guard(dx.syncCmdQueue);
-  dx.cmdQueue->Wait(swait.impl.get(),DxFence::Ready);
   sx->queuePresent();
   }
 
-void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::CommandBuffer* cmd,
-                          AbstractGraphicsApi::Semaphore* wait,
-                          AbstractGraphicsApi::Semaphore* done, AbstractGraphicsApi::Fence* doneCpu) {
+void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::CommandBuffer* cmd, AbstractGraphicsApi::Fence* doneCpu) {
   Detail::DxDevice&        dx = *reinterpret_cast<Detail::DxDevice*>(d);
   Detail::DxCommandBuffer& bx = *reinterpret_cast<Detail::DxCommandBuffer*>(cmd);
   ID3D12CommandList* cmdList[] = { bx.impl.get() };
 
   dx.waitData();
-  impl->submit(d,cmdList,1,&wait,1,&done,1,doneCpu);
+  impl->submit(d,cmdList,1,doneCpu);
   }
 
-void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::CommandBuffer** cmd, size_t count,
-                          AbstractGraphicsApi::Semaphore** wait, size_t waitCnt, AbstractGraphicsApi::Semaphore** done,
-                          size_t doneCnt, AbstractGraphicsApi::Fence* doneCpu) {
+void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::CommandBuffer** cmd, size_t count, AbstractGraphicsApi::Fence* doneCpu) {
   Detail::DxDevice&                     dx = *reinterpret_cast<Detail::DxDevice*>(d);
   ID3D12CommandList*                    cmdListStk[16]={};
   std::unique_ptr<ID3D12CommandList*[]> cmdListHeap;
@@ -470,7 +443,7 @@ void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::C
     cmdList[i] = bx.impl.get();
     }
   dx.waitData();
-  impl->submit(d,cmdList,count,wait,waitCnt,done,doneCnt,doneCpu);
+  impl->submit(d,cmdList,count,doneCpu);
   }
 
 void DirectX12Api::getCaps(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Props& caps) {

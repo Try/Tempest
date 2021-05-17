@@ -9,10 +9,15 @@
 namespace Tempest {
 namespace Detail {
 
-class VulkanApi {
+class VDevice;
+class VCommandBuffer;
+class VSemaphore;
+class VFence;
+
+class VulkanInstance {
   public:
-    VulkanApi(bool enableValidationLayers=true);
-    ~VulkanApi();
+    VulkanInstance(bool enableValidationLayers=true);
+    ~VulkanInstance();
 
     std::vector<AbstractGraphicsApi::Props> devices() const;
 
@@ -32,7 +37,15 @@ class VulkanApi {
     static void      getDeviceProps(VkPhysicalDevice physicalDevice, VkProp& c);
     static void      getDevicePropsShort(VkPhysicalDevice physicalDevice, AbstractGraphicsApi::Props& c);
 
+
+    void submit(VDevice *d, VCommandBuffer** cmd, size_t count, VFence *doneCpu);
+
   private:
+    void implSubmit(VDevice *d,
+                    VkCommandBuffer* command, VCommandBuffer** cmd, size_t count,
+                    VkSemaphore* ws, VkPipelineStageFlags* wflg, size_t waitCnt,
+                    VFence *fence);
+
     const std::initializer_list<const char*>& checkValidationLayerSupport();
     bool layerSupport(const std::vector<VkLayerProperties>& sup,const std::initializer_list<const char*> dest);
 

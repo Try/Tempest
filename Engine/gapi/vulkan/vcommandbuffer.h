@@ -6,6 +6,7 @@
 #include "gapi/resourcestate.h"
 #include "vcommandpool.h"
 #include "vframebuffer.h"
+#include "vswapchain.h"
 #include "../utility/dptr.h"
 
 namespace Tempest {
@@ -35,7 +36,8 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     VCommandBuffer(VDevice &device, VkCommandPoolCreateFlags flags=VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
     ~VCommandBuffer();
 
-    VkCommandBuffer impl=nullptr;
+    VkCommandBuffer                impl=nullptr;
+    std::vector<VSwapchain::Sync*> swapchainSync;
 
     void reset() override;
 
@@ -82,6 +84,8 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void implChangeLayout(VkImage dest, VkFormat imageFormat,
                           VkImageLayout oldLayout, VkImageLayout newLayout, bool discardOld,
                           uint32_t mipBase, uint32_t mipCount, bool byRegion);
+
+    void addDependency(VSwapchain& s, size_t imgId);
 
     VDevice&                                device;
     VCommandPool                            pool;

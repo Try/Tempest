@@ -1,6 +1,5 @@
 #include "device.h"
 
-#include <Tempest/Semaphore>
 #include <Tempest/Fence>
 #include <Tempest/PipelineLayout>
 #include <Tempest/UniformBuffer>
@@ -22,8 +21,8 @@ static uint32_t mipCount(uint32_t w, uint32_t h) {
   return n;
   }
 
-Device::Impl::Impl(AbstractGraphicsApi &api, const char* name, uint8_t maxFramesInFlight)
-  :api(api),maxFramesInFlight(maxFramesInFlight) {
+Device::Impl::Impl(AbstractGraphicsApi &api, const char* name)
+  :api(api) {
   dev=api.createDevice(name);
   }
 
@@ -31,88 +30,53 @@ Device::Impl::~Impl() {
   api.destroy(dev);
   }
 
-Device::Device(AbstractGraphicsApi& api, uint8_t maxFramesInFlight)
-  :Device(api,nullptr,maxFramesInFlight){
+Device::Device(AbstractGraphicsApi& api)
+  :Device(api,nullptr){
   }
 
-Device::Device(AbstractGraphicsApi &api, const char* name, uint8_t maxFramesInFlight)
-  :api(api), impl(api,name,maxFramesInFlight), dev(impl.dev), builtins(*this) {
+Device::Device(AbstractGraphicsApi &api, const char* name)
+  :api(api), impl(api,name), dev(impl.dev), builtins(*this) {
   api.getCaps(dev,devProps);
   }
 
 Device::~Device() {
   }
 
-uint8_t Device::maxFramesInFlight() const {
-  return impl.maxFramesInFlight;
-  }
-
 void Device::waitIdle() {
   impl.dev->waitIdle();
   }
 
-void Device::submit(const CommandBuffer &cmd, const Semaphore &wait) {
-  api.submit(dev,cmd.impl.handler,wait.impl.handler,nullptr,nullptr);
+void Device::submit(const CommandBuffer &cmd) {
+  api.submit(dev,cmd.impl.handler,nullptr);
   }
 
 void Device::submit(const CommandBuffer &cmd, Fence &fdone) {
-  const Tempest::CommandBuffer *c[] = {&cmd};
-  submit(c,1,nullptr,0,nullptr,0,&fdone);
+  api.submit(dev,cmd.impl.handler,fdone.impl.handler);
   }
 
-void Device::submit(const CommandBuffer &cmd, const Semaphore &wait, Semaphore &done, Fence &fdone) {
-  api.submit(dev,cmd.impl.handler,wait.impl.handler,done.impl.handler,fdone.impl.handler);
-  }
-
-void Device::submit(const Tempest::CommandBuffer *cmd[], size_t count,
-                    const Semaphore *wait[], size_t waitCnt,
-                    Semaphore *done[], size_t doneCnt,
-                    Fence *fdone) {
-  if(count+waitCnt+doneCnt<64){
+void Device::submit(const Tempest::CommandBuffer *cmd[], size_t count, Fence *fdone) {
+  if(count<=64) {
     void* ptr[64];
     auto cx = reinterpret_cast<AbstractGraphicsApi::CommandBuffer**>(ptr);
-    auto wx = reinterpret_cast<AbstractGraphicsApi::Semaphore**>(ptr+count);
-    auto dx = reinterpret_cast<AbstractGraphicsApi::Semaphore**>(ptr+count+waitCnt);
 
-    implSubmit(cmd,  cx, count,
-               wait, wx, waitCnt,
-               done, dx, doneCnt,
-               fdone->impl.handler);
+    implSubmit(cmd,  cx, count, fdone->impl.handler);
     } else {
-    std::unique_ptr<void*[]> ptr(new void*[count+waitCnt+doneCnt]);
+    std::unique_ptr<void*[]> ptr(new void*[count]);
     auto cx = reinterpret_cast<AbstractGraphicsApi::CommandBuffer**>(ptr.get());
-    auto wx = reinterpret_cast<AbstractGraphicsApi::Semaphore**>(ptr.get()+count);
-    auto dx = reinterpret_cast<AbstractGraphicsApi::Semaphore**>(ptr.get()+count+waitCnt);
 
-    implSubmit(cmd,  cx, count,
-               wait, wx, waitCnt,
-               done, dx, doneCnt,
-               fdone->impl.handler);
+    implSubmit(cmd, cx, count, fdone->impl.handler);
     }
   }
 
-void Device::present(Swapchain& sw, uint32_t img, const Semaphore& wait) {
-  api.present(dev,sw.impl.handler,img,wait.impl.handler);
-  sw.framesCounter++;
-  sw.framesIdMod=(sw.framesIdMod+1)%maxFramesInFlight();
+void Device::present(Swapchain& sw) {
+  api.present(dev,sw.impl.handler);
   }
 
-void Device::implSubmit(const CommandBuffer*        cmd[],  AbstractGraphicsApi::CommandBuffer*  hcmd[],  size_t count,
-                        const Semaphore*            wait[], AbstractGraphicsApi::Semaphore*      hwait[], size_t waitCnt,
-                        Semaphore*                  done[], AbstractGraphicsApi::Semaphore*      hdone[], size_t doneCnt,
-                        AbstractGraphicsApi::Fence* fdone) {
+void Device::implSubmit(const CommandBuffer* cmd[], AbstractGraphicsApi::CommandBuffer*  hcmd[], size_t count, AbstractGraphicsApi::Fence* fdone) {
   for(size_t i=0;i<count;++i)
     hcmd[i] = cmd[i]->impl.handler;
-  for(size_t i=0;i<waitCnt;++i)
-    hwait[i] = wait[i]->impl.handler;
-  for(size_t i=0;i<doneCnt;++i)
-    hdone[i] = done[i]->impl.handler;
 
-  api.submit(dev,
-             hcmd, count,
-             hwait, waitCnt,
-             hdone, doneCnt,
-             fdone);
+  api.submit(dev, hcmd, count, fdone);
   }
 
 Shader Device::loadShader(RFile &file) {
@@ -379,11 +343,6 @@ RenderPass Device::pass(const FboMode** color, uint8_t count) {
 
 Fence Device::fence() {
   Fence f(*this,api.createFence(dev));
-  return f;
-  }
-
-Semaphore Device::semaphore() {
-  Semaphore f(*this,api.createSemaphore(dev));
   return f;
   }
 

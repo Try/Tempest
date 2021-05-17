@@ -86,13 +86,8 @@ void DxSwapchain::reset() {
     }
   }
 
-uint32_t DxSwapchain::nextImage(AbstractGraphicsApi::Semaphore* onReady) {
-  uint32_t img = impl->GetCurrentBackBufferIndex();
-
-  auto& rdy = *reinterpret_cast<DxSemaphore*>(onReady);
-  rdy.impl->Signal(DxSemaphore::Ready);
-
-  return img;
+uint32_t DxSwapchain::currentBackBufferIndex() {
+  return impl->GetCurrentBackBufferIndex();
   }
 
 void DxSwapchain::queuePresent() {

@@ -10,7 +10,6 @@
 
 namespace Tempest {
 
-class Swapchain;
 template<class T>
 class Encoder;
 
@@ -18,10 +17,28 @@ class VectorImage : public Tempest::PaintDevice {
   public:
     VectorImage()=default;
 
+    class Mesh {
+      public:
+        void update(Device& dev, const VectorImage& src, BufferHeap heap = BufferHeap::Upload);
+        void draw  (Encoder<CommandBuffer>& cmd);
+
+      private:
+        struct Block {
+          size_t                begin = 0;
+          size_t                size  = 0;
+
+          DescriptorSet         desc;
+          const RenderPipeline* pipeline = nullptr;
+          // strong reference to sprite
+          Sprite                sprite;
+          };
+        Tempest::VertexBuffer<Point> vbo;
+        std::vector<Block>           blocks;
+      };
+
     uint32_t w() const { return info.w; }
     uint32_t h() const { return info.h; }
 
-    void     draw(Device& dev, Swapchain& sw, Encoder<CommandBuffer> &cmd);
     bool     load(const char* path);
     void     clear() override;
 
@@ -68,18 +85,13 @@ class VectorImage : public Tempest::PaintDevice {
       };
 
     struct State {
-      Topology       tp    =Triangles;
-      Blend          blend =NoBlend;
+      Topology       tp    = Triangles;
+      Blend          blend = NoBlend;
       Texture        tex;
 
       bool operator == (const State& s) const {
         return tp==s.tp && blend==s.blend && tex==s.tex;
         }
-      };
-
-    enum UboType : uint8_t {
-      UT_NoImg,
-      UT_Img,
       };
 
     struct Block : State {
@@ -90,23 +102,10 @@ class VectorImage : public Tempest::PaintDevice {
 
       Block& operator=(const Block&)=default;
 
-      size_t         begin=0;
-      size_t         size =0;
-      PipePtr        pipeline;
-
-      bool           hasImg=false;
+      size_t         begin  = 0;
+      size_t         size   = 0;
+      bool           hasImg = false;
       };
-
-    struct PerFrame {
-      Tempest::VertexBuffer<Point> vbo;
-      std::vector<DescriptorSet>   blocks;
-      std::vector<UboType>         blocksType;
-      bool                         outdated=true;
-      };
-
-    std::unique_ptr<PerFrame[]> frame;
-    size_t                      frameCount=0;
-    size_t                      outdatedCount=0;
 
     Topology                    topology=Triangles;
 
@@ -121,9 +120,7 @@ class VectorImage : public Tempest::PaintDevice {
     Info   info;
     size_t paintScope = 0;
 
-    void makeActual(Device& dev, Swapchain& sw);
-
-    const RenderPipeline& pipelineOf(Device& dev, const Block& b);
+    const RenderPipeline& pipelineOf(Device& dev, const Block& b) const;
 
     template<class T,T State::*param>
     void setState(const T& t);
