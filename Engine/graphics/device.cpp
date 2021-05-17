@@ -68,7 +68,7 @@ void Device::submit(const Tempest::CommandBuffer *cmd[], size_t count,
                     const Semaphore *wait[], size_t waitCnt,
                     Semaphore *done[], size_t doneCnt,
                     Fence *fdone) {
-  if(count+waitCnt+doneCnt<64){
+  if(count+waitCnt+doneCnt<64) {
     void* ptr[64];
     auto cx = reinterpret_cast<AbstractGraphicsApi::CommandBuffer**>(ptr);
     auto wx = reinterpret_cast<AbstractGraphicsApi::Semaphore**>(ptr+count);

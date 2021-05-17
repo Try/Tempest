@@ -18,6 +18,15 @@ VSwapchain::VSwapchain(VDevice &device, SystemApi::Window* hwnd)
     auto     support  = device.querySwapChainSupport(surface);
     uint32_t imgCount = getImageCount(support);
     createSwapchain(device,support,SystemApi::windowClientRect(hwnd),imgCount);
+
+    VkSemaphoreCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    info.flags = 0;
+    sync.resize(imgCount);
+    for(auto& i:sync) {
+      vkAssert(vkCreateSemaphore(device.device.impl,&info,nullptr,&i.aquire));
+      vkAssert(vkCreateSemaphore(device.device.impl,&info,nullptr,&i.present));
+      }
     }
   catch(...) {
     cleanup();
@@ -33,8 +42,16 @@ void VSwapchain::cleanupSwapchain() noexcept {
   for(auto imageView : views)
     if(imageView!=VK_NULL_HANDLE)
       vkDestroyImageView(device.device.impl,imageView,nullptr);
+  for(auto s : sync) {
+    if(s.aquire!=VK_NULL_HANDLE)
+      vkDestroySemaphore(device.device.impl,s.aquire,nullptr);
+    if(s.present!=VK_NULL_HANDLE)
+      vkDestroySemaphore(device.device.impl,s.present,nullptr);
+    }
+
   views.clear();
   images.clear();
+  sync.clear();
 
   if(swapChain!=VK_NULL_HANDLE)
     vkDestroySwapchainKHR(device.device.impl,swapChain,nullptr);
@@ -71,7 +88,7 @@ void VSwapchain::cleanup() noexcept {
   cleanupSurface();
   }
 
-void VSwapchain::createSwapchain(VDevice& device, const VDevice::SwapChainSupport& swapChainSupport,
+void VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& swapChainSupport,
                                  const Rect& rect, uint32_t imgCount) {
   VkBool32 support=false;
   vkGetPhysicalDeviceSurfaceSupportKHR(device.physicalDevice,device.presentQueue->family,surface,&support);
@@ -198,7 +215,7 @@ VkExtent2D VSwapchain::getSwapExtent(const VkSurfaceCapabilitiesKHR& capabilitie
   return actualExtent;
   }
 
-uint32_t VSwapchain::getImageCount(const VDevice::SwapChainSupport& support) const {
+uint32_t VSwapchain::getImageCount(const SwapChainSupport& support) const {
   const uint32_t maxImages=support.capabilities.maxImageCount==0 ? uint32_t(-1) : support.capabilities.maxImageCount;
   uint32_t imageCount=support.capabilities.minImageCount+1;
   if(support.capabilities.maxImageCount>0 && imageCount>maxImages)
@@ -216,12 +233,18 @@ uint32_t VSwapchain::nextImage(AbstractGraphicsApi::Semaphore* onReady) {
                                         rx->impl,
                                         VK_NULL_HANDLE,
                                         &id);
-  rx->stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
   if(code==VK_ERROR_OUT_OF_DATE_KHR)
     throw DeviceLostException();
+  if(code==VK_SUBOPTIMAL_KHR)
+    throw SwapchainSuboptimal();
 
-  if(code!=VK_SUCCESS && code!=VK_SUBOPTIMAL_KHR)
-    throw std::runtime_error("failed to acquire swap chain image!");
+  if(code!=VK_SUCCESS)
+    vkAssert(code);
+
+  syncIndex = (syncIndex+1)%imageCount();
+  sync[syncIndex].imgId = id;
+  sync[syncIndex].state = S_Pending;
+
   return id;
   }
 

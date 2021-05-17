@@ -18,7 +18,6 @@ VSemaphore::VSemaphore(VDevice &device)
 VSemaphore::VSemaphore(VSemaphore &&other) {
   std::swap(device,other.device);
   std::swap(impl,other.impl);
-  std::swap(stage,other.stage);
   }
 
 VSemaphore::~VSemaphore() {

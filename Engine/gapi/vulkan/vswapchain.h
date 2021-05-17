@@ -3,8 +3,6 @@
 #include <Tempest/AbstractGraphicsApi>
 #include "vulkan_sdk.h"
 
-#include "vdevice.h"
-
 namespace Tempest {
 
 class Semaphore;
@@ -18,8 +16,13 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     VSwapchain(VDevice& device, SystemApi::Window* hwnd);
     VSwapchain(VSwapchain&& other) = delete;
     ~VSwapchain() override;
-
     VSwapchain& operator=(VSwapchain&& other) = delete;
+
+    struct SwapChainSupport final {
+      VkSurfaceCapabilitiesKHR        capabilities={};
+      std::vector<VkSurfaceFormatKHR> formats;
+      std::vector<VkPresentModeKHR>   presentModes;
+      };
 
     VkFormat                 format() const          { return swapChainImageFormat;   }
     uint32_t                 w()      const override { return swapChainExtent.width;  }
@@ -33,10 +36,24 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     std::vector<VkImageView> views;
     std::vector<VkImage>     images;
 
+    enum SyncState : uint8_t {
+      S_Idle,
+      S_Pending,
+      };
+
+    struct Sync {
+      SyncState   state   = S_Idle;
+      uint32_t    imgId   = uint32_t(-1);
+      VkSemaphore aquire  = VK_NULL_HANDLE;
+      VkSemaphore present = VK_NULL_HANDLE;
+      };
+    std::vector<Sync> sync;
+
   private:
     VDevice&                 device;
     SystemApi::Window*       hwnd = nullptr;
     VkSurfaceKHR             surface = VK_NULL_HANDLE;
+    uint32_t                 syncIndex = 0;
 
     VkFormat                 swapChainImageFormat = VK_FORMAT_UNDEFINED;
     VkExtent2D               swapChainExtent={};
@@ -45,13 +62,13 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     void                     cleanupSurface() noexcept;
     void                     cleanup() noexcept;
 
-    void                     createSwapchain(VDevice& device, const VDevice::SwapChainSupport& support, const Rect& rect, uint32_t imgCount);
+    void                     createSwapchain(VDevice& device, const SwapChainSupport& support, const Rect& rect, uint32_t imgCount);
     void                     createImageViews(VDevice &device);
 
     VkSurfaceFormatKHR       getSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
     VkPresentModeKHR         getSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
     VkExtent2D               getSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities, uint32_t w, uint32_t h);
-    uint32_t                 getImageCount(const VDevice::SwapChainSupport& support) const;
+    uint32_t                 getImageCount(const SwapChainSupport& support) const;
 
   };
 

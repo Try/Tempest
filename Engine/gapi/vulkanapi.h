@@ -19,7 +19,7 @@ class VulkanApi : public AbstractGraphicsApi {
     Device*        createDevice(const char* gpuName) override;
     void           destroy(Device* d) override;
 
-    Swapchain*     createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d) override;
+    Swapchain*     createSwapchain(SystemApi::Window* w, Device *d) override;
 
     PPass          createPass(Device *d, const FboMode** att, size_t acount) override;
     PFbo           createFbo (Device *d, FboLayout* lay,

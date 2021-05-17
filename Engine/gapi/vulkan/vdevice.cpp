@@ -60,7 +60,7 @@ VDevice::autoDevice::~autoDevice() {
   vkDestroyDevice(impl,nullptr);
   }
 
-VDevice::VDevice(VulkanApi &api, const char* gpuName)
+VDevice::VDevice(VulkanInstance &api, const char* gpuName)
   :instance(api.instance)  {
   uint32_t deviceCount = 0;
   vkEnumeratePhysicalDevices(api.instance, &deviceCount, nullptr);
@@ -91,7 +91,7 @@ VDevice::~VDevice(){
   }
 
 void VDevice::implInit(VkPhysicalDevice pdev, VkSurfaceKHR surf) {
-  Detail::VulkanApi::getDeviceProps(pdev,props);
+  Detail::VulkanInstance::getDeviceProps(pdev,props);
   deviceQueueProps(props,pdev,surf);
 
   createLogicalDevice(pdev);
@@ -132,7 +132,7 @@ VkSurfaceKHR VDevice::createSurface(void* hwnd) {
 bool VDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surf, const char* gpuName) {
   VkProps prop = {};
   if(gpuName!=nullptr) {
-    Detail::VulkanApi::getDeviceProps(device,props);
+    Detail::VulkanInstance::getDeviceProps(device,props);
     if(std::strcmp(gpuName,props.name)!=0)
       return false;
     }
@@ -152,7 +152,7 @@ bool VDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surf, const
          (swapChainAdequate || surf==VK_NULL_HANDLE);
   }
 
-void VDevice::deviceQueueProps(Detail::VulkanApi::VkProp& prop,VkPhysicalDevice device, VkSurfaceKHR surf) {
+void VDevice::deviceQueueProps(VulkanInstance::VkProp& prop,VkPhysicalDevice device, VkSurfaceKHR surf) {
   uint32_t queueFamilyCount = 0;
   vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
