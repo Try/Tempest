@@ -56,7 +56,8 @@ void Encoder<Tempest::CommandBuffer>::setViewport(const Rect &vp) {
 void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const DescriptorSet &ubo, const void* data, size_t sz) {
   setUniforms(p);
   impl->setBytes(*p.impl.handler,data,sz);
-  impl->setUniforms(*p.impl.handler,*ubo.impl.handler);
+  if(ubo.impl.handler!=&DescriptorSet::emptyDesc)
+    impl->setUniforms(*p.impl.handler,*ubo.impl.handler);
   }
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const void* data, size_t sz) {
@@ -66,7 +67,8 @@ void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const DescriptorSet &ubo) {
   setUniforms(p);
-  impl->setUniforms(*p.impl.handler,*ubo.impl.handler);
+  if(ubo.impl.handler!=&DescriptorSet::emptyDesc)
+    impl->setUniforms(*p.impl.handler,*ubo.impl.handler);
   }
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline &p) {
@@ -79,7 +81,8 @@ void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline &p) {
 void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p, const DescriptorSet &ubo, const void* data, size_t sz) {
   setUniforms(p);
   impl->setBytes(*p.impl.handler,data,sz);
-  impl->setUniforms(*p.impl.handler,*ubo.impl.handler);
+  if(ubo.impl.handler!=&DescriptorSet::emptyDesc)
+    impl->setUniforms(*p.impl.handler,*ubo.impl.handler);
   }
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p, const void* data, size_t sz) {
@@ -89,7 +92,8 @@ void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p, cons
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p, const DescriptorSet &ubo) {
   setUniforms(p);
-  impl->setUniforms(*p.impl.handler,*ubo.impl.handler);
+  if(ubo.impl.handler!=&DescriptorSet::emptyDesc)
+    impl->setUniforms(*p.impl.handler,*ubo.impl.handler);
   }
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p) {

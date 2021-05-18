@@ -5,14 +5,6 @@
 
 using namespace Tempest;
 
-struct DescriptorSet::EmptyDesc : AbstractGraphicsApi::Desc {
-  void set    (size_t,AbstractGraphicsApi::Texture*, const Sampler2d&){}
-  void setSsbo(size_t,AbstractGraphicsApi::Texture*, uint32_t){}
-  void setUbo (size_t,AbstractGraphicsApi::Buffer*,  size_t){}
-  void setSsbo(size_t,AbstractGraphicsApi::Buffer*,  size_t){}
-  void ssboBarriers(Detail::ResourceState&){}
-  };
-
 DescriptorSet::EmptyDesc DescriptorSet::emptyDesc;
 
 DescriptorSet::DescriptorSet(AbstractGraphicsApi::Desc *desc)

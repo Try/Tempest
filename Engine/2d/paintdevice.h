@@ -48,8 +48,7 @@ class PaintDevice {
       };
 
   protected:
-    using TexPtr =Detail::ResourcePtr<Tempest::Texture2d>;
-    using PipePtr=Detail::ResourcePtr<Tempest::RenderPipeline>;
+    using TexPtr = Detail::ResourcePtr<Tempest::Texture2d>;
 
     virtual void   clear()=0;
     virtual void   addPoint(const Point& p)=0;

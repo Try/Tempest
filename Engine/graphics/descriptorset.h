@@ -40,7 +40,13 @@ class DescriptorSet final {
     void set(size_t layoutBind, const Detail::ResourcePtr<Texture2d>& tex, const Sampler2d& smp = Sampler2d::anisotrophy());
 
   private:
-    struct EmptyDesc;
+    struct EmptyDesc : AbstractGraphicsApi::Desc {
+      void set    (size_t,AbstractGraphicsApi::Texture*, const Sampler2d&){}
+      void setSsbo(size_t,AbstractGraphicsApi::Texture*, uint32_t){}
+      void setUbo (size_t,AbstractGraphicsApi::Buffer*,  size_t){}
+      void setSsbo(size_t,AbstractGraphicsApi::Buffer*,  size_t){}
+      void ssboBarriers(Detail::ResourceState&){}
+      };
     DescriptorSet(AbstractGraphicsApi::Desc* desc);
     void implBindUbo (size_t layoutBind, const VideoBuffer& vbuf, size_t offsetBytes);
     void implBindSsbo(size_t layoutBind, const VideoBuffer& vbuf, size_t offsetBytes);

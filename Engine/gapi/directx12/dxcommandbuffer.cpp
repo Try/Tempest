@@ -364,9 +364,6 @@ void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompu
   DxDescriptorArray& ux = reinterpret_cast<DxDescriptorArray&>(u);
   curUniforms = &ux;
 
-  if(ux.lay.handler==nullptr)
-    return;
-
   bool setH = false;
   for(size_t i=0;i<DxPipelineLay::MAX_BINDS;++i) {
     if(ux.val.heap[i]!=currentHeaps[i]) {
