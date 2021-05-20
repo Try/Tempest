@@ -192,23 +192,11 @@ AbstractGraphicsApi::PTexture MetalApi::createStorage(AbstractGraphicsApi::Devic
   }
 
 void MetalApi::readPixels(AbstractGraphicsApi::Device*,
-                          Pixmap &out, const AbstractGraphicsApi::PTexture t,
+                          Pixmap& out, const AbstractGraphicsApi::PTexture t,
                           TextureLayout /*lay*/, TextureFormat frm,
                           const uint32_t w, const uint32_t h, uint32_t mip) {
-  auto&          tx  = *reinterpret_cast<MtTexture*>(t.handler);
-  id<MTLTexture> tex = tx.impl;
-
-  Pixmap::Format  pfrm  = Pixmap::toPixmapFormat(frm);
-  size_t          bpp   = Pixmap::bppForFormat(pfrm);
-  if(bpp==0)
-    throw std::runtime_error("not implemented");
-
-  out = Pixmap(w,h,pfrm);
-  [tex getBytes: out.data()
-    bytesPerRow: w*bpp
-    fromRegion : MTLRegionMake2D(0,0,w,h)
-    mipmapLevel: mip
-    ];
+  auto& tx = *reinterpret_cast<MtTexture*>(t.handler);
+  tx.readPixels(out,frm,w,h,mip);
   }
 
 void MetalApi::readBytes(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Buffer *buf,

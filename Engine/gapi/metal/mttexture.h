@@ -16,12 +16,19 @@ class MtTexture : public Tempest::AbstractGraphicsApi::Texture {
     ~MtTexture();
 
     uint32_t mipCount() const override;
+    void     readPixels(Pixmap& out, TextureFormat frm,
+                        const uint32_t w, const uint32_t h, uint32_t mip);
 
-    id<MTLTexture> impl;
-    const uint32_t mips = 0;
+    MtDevice&       dev;
+    id<MTLTexture>  impl;
+    const uint32_t  mips = 0;
 
   private:
-    void createCompressedTexture(const Pixmap& p, TextureFormat frm, uint32_t mipCnt);
+    void createCompressedTexture(id<MTLTexture> val, const Pixmap& p, TextureFormat frm, uint32_t mipCnt);
+    void createRegularTexture(id<MTLTexture> val, const Pixmap& p);
+
+    id<MTLTexture> alloc(TextureFormat frm, const uint32_t w, const uint32_t h, const uint32 mips,
+                         MTLStorageMode smode, MTLTextureUsage umode);
   };
 
 }

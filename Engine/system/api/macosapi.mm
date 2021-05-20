@@ -39,6 +39,7 @@ static const uint keyTable[26]={
   };
 
 static std::atomic_bool isRunning{true};
+static NSPoint          lastMouse = {};
 
 static Event::MouseButton toButton(uint type) {
   if(type==NSEventTypeLeftMouseDown || type==NSEventTypeLeftMouseUp)
@@ -50,13 +51,12 @@ static Event::MouseButton toButton(uint type) {
   return Event::ButtonNone;
   }
 
-static Tempest::Point mousePos(NSEvent* e, bool& inWindow) {
-  NSPoint px = e.locationInWindow;
-  NSRect  fr = e.window.contentView.frame;
-  fr = [e.window contentRectForFrameRect:fr];
+static NSPoint mousePos(NSPoint px, NSWindow* wnd, bool& inWindow) {
+  NSRect fr = wnd.contentView.frame;
+  fr = [wnd contentRectForFrameRect:fr];
 
-  px = [e.window convertPointToBacking:px];
-  fr = [e.window convertRectToBacking: fr];
+  px = [wnd convertPointToBacking:px];
+  fr = [wnd convertRectToBacking: fr];
 
   px.y = fr.size.height - px.y;
 
@@ -68,8 +68,14 @@ static Tempest::Point mousePos(NSEvent* e, bool& inWindow) {
     inWindow = true; else
     inWindow = false;
 
-  Tempest::Point p = {int(px.x), int(px.y)};
-  return p;
+  return px;
+  }
+
+static Tempest::Point mousePos(NSEvent* e, bool& inWindow) {
+  NSPoint p  = e.locationInWindow;
+  NSPoint px = mousePos(p, e.window, inWindow);
+
+  return Tempest::Point{int(px.x), int(px.y)};
   }
 
 static Tempest::Point mousePos(NSEvent* e) {
@@ -292,19 +298,23 @@ bool MacOSApi::implIsFullscreen(SystemApi::Window *w) {
   }
 
 void MacOSApi::implSetCursorPosition(SystemApi::Window *w, int x, int y) {
-  NSWindow* wnd = reinterpret_cast<NSWindow*>(w);
-  NSRect frame = [wnd frame];
+  NSWindow* wnd      = reinterpret_cast<NSWindow*>(w);
+  NSRect    frame    = [wnd frame];
   frame = [wnd convertRectToBacking:frame];
 
-  CGPoint p = {};
-  p.x = CGFloat(x);
-  p.y = CGFloat(y);
-  p = [wnd convertPointFromBacking:p];
+  NSPoint to = {CGFloat(x),CGFloat(y)};
+  to.x += frame.origin.x;
+  to.y += frame.origin.y;
+  to.y =  frame.size.height-to.y;
 
-  p.x += frame.origin.x;
-  p.y += frame.origin.y;
+  to.x += std::fmod(lastMouse.x,1.0);
+  to.y += std::fmod(lastMouse.y,1.0);
 
-  CGDisplayMoveCursorToPoint(CGMainDisplayID(), p);
+  NSPoint p = [wnd convertPointFromBacking:to];
+  p = [wnd convertPointToScreen:p];
+
+  //Log::d("mset:  ",at.x," ",at.y," -> ",p.x," ",p.y);
+  CGWarpMouseCursorPosition(p);
   }
 
 void MacOSApi::implShowCursor(bool show) {
@@ -388,6 +398,7 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
     case NSEventTypeOtherMouseDragged:
     case NSEventTypeMouseMoved: {
       auto p = mousePos(evt);
+      lastMouse = [evt.window convertPointToBacking: evt.locationInWindow];
       MouseEvent e(p.x,p.y,
                    toButton(type),
                    Event::M_NoModifier,

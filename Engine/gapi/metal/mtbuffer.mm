@@ -10,7 +10,7 @@
 
 using namespace Tempest::Detail;
 
-MtBuffer::MtBuffer(const MtDevice& dev, const void* data, size_t count, size_t sz, size_t alignedSz, MTLResourceOptions f)
+MtBuffer::MtBuffer(MtDevice& dev, const void* data, size_t count, size_t sz, size_t alignedSz, MTLResourceOptions f)
   :dev(dev) {
   const MTLResourceOptions flg = f | MTLHazardTrackingModeDefault;
   if(data==nullptr) {
