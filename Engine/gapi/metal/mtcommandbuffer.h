@@ -49,10 +49,9 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
 
     void setViewport(const Rect& r) override;
 
-    void setVbo      (const AbstractGraphicsApi::Buffer &b) override;
-    void setIbo      (const AbstractGraphicsApi::Buffer& b,Detail::IndexClass cls) override;
-    void draw        (size_t offset,size_t vertexCount, size_t firstInstance, size_t instanceCount) override;
-    void drawIndexed (size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) override;
+    void draw        (const AbstractGraphicsApi::Buffer& vbo, size_t offset,size_t vertexCount, size_t firstInstance, size_t instanceCount) override;
+    void drawIndexed (const AbstractGraphicsApi::Buffer& vbo, const AbstractGraphicsApi::Buffer &ibo, Detail::IndexClass cls,
+                      size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) override;
     void dispatch    (size_t x, size_t y, size_t z) override;
 
   private:
@@ -73,8 +72,6 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     uint32_t             curVboId = 0;
     MtFramebuffer*       curFbo   = nullptr;
     const MtPipelineLay* curLay   = nullptr;
-    const MtBuffer*      curIbo   = nullptr;
-    MTLIndexType         iboType  = MTLIndexTypeUInt16;
     MTLPrimitiveType     topology = MTLPrimitiveTypePoint;
 
     uint32               maxTotalThreadsPerThreadgroup = 0;

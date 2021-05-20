@@ -11,7 +11,8 @@
 using namespace Tempest::Detail;
 
 MtBuffer::MtBuffer(const MtDevice& dev, const void* data, size_t count, size_t sz, size_t alignedSz, MTLResourceOptions f)
-  :dev(dev), flg(f | MTLResourceHazardTrackingModeDefault) {
+  :dev(dev) {
+  const MTLResourceOptions flg = f | MTLHazardTrackingModeDefault;
   if(data==nullptr) {
     impl = [dev.impl newBufferWithLength:count*alignedSz options:flg];
     if(impl==nil)
@@ -37,7 +38,7 @@ MtBuffer::~MtBuffer() {
   }
 
 void MtBuffer::update(const void *data, size_t off, size_t count, size_t sz, size_t alignedSz) {
-  if(T_LIKELY((flg&MTLResourceStorageModePrivate)==0)) {
+  if(T_LIKELY(impl.storageMode!=MTLStorageModePrivate)) {
     implUpdate(data,off,count,sz,alignedSz);
     return;
     }
@@ -90,7 +91,7 @@ void MtBuffer::implUpdate(const void *data, size_t off, size_t count, size_t sz,
   auto ptr = reinterpret_cast<uint8_t*>([buf contents]);
 
   copyUpsample(data, ptr+off, count, sz, alignedSz);
-  if((flg&MTLResourceStorageModeManaged)==0)
+  if(impl.storageMode!=MTLStorageModeManaged)
     return;
 
   NSRange rgn;

@@ -177,26 +177,11 @@ void MtCommandBuffer::setViewport(const Rect &r) {
   [encDraw setViewport:v];
   }
 
-void MtCommandBuffer::setVbo(const AbstractGraphicsApi::Buffer &b) {
-  auto& bx = reinterpret_cast<const MtBuffer&>(b);
-  [encDraw setVertexBuffer:bx.impl
+void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t offset, size_t vertexCount, size_t firstInstance, size_t instanceCount) {
+  auto& vbo = reinterpret_cast<const MtBuffer&>(ivbo);
+  [encDraw setVertexBuffer:vbo.impl
                     offset:0
                    atIndex:curVboId];
-  }
-
-void MtCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer &b, IndexClass cls) {
-  curIbo = &reinterpret_cast<const MtBuffer&>(b);
-  switch(cls) {
-    case IndexClass::i16:
-      iboType = MTLIndexTypeUInt16;
-      break;
-    case IndexClass::i32:
-      iboType = MTLIndexTypeUInt32;
-      break;
-    }
-  }
-
-void MtCommandBuffer::draw(size_t offset, size_t vertexCount, size_t firstInstance, size_t instanceCount) {
   [encDraw drawPrimitives:topology
                       vertexStart:offset
                       vertexCount:vertexCount
@@ -204,12 +189,24 @@ void MtCommandBuffer::draw(size_t offset, size_t vertexCount, size_t firstInstan
                       baseInstance:firstInstance];
   }
 
-void MtCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) {
-  uint32_t mul = (iboType==MTLIndexTypeUInt16 ? 2 : 4);
+void MtCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, const AbstractGraphicsApi::Buffer& iibo, Detail::IndexClass cls,
+                                  size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) {
+  static const MTLIndexType type[2] = {
+    MTLIndexTypeUInt16,
+    MTLIndexTypeUInt32,
+  };
+  auto&    vbo     = reinterpret_cast<const MtBuffer&>(ivbo);
+  auto&    ibo     = reinterpret_cast<const MtBuffer&>(iibo);
+  auto     iboType = type[uint32_t(cls)];
+  uint32_t mul     = (iboType==MTLIndexTypeUInt16 ? 2 : 4);
+
+  [encDraw setVertexBuffer:vbo.impl
+                    offset:0
+                   atIndex:curVboId];
   [encDraw drawIndexedPrimitives:topology
                              indexCount:isize
                              indexType:iboType
-                             indexBuffer:curIbo->impl
+                             indexBuffer:ibo.impl
                              indexBufferOffset:ioffset*mul
                              instanceCount:instanceCount
                              baseVertex:voffset

@@ -18,7 +18,6 @@ class MtBuffer : public Tempest::AbstractGraphicsApi::Buffer {
 
     const MtDevice&          dev;
     id<MTLBuffer>            impl;
-    const MTLResourceOptions flg = 0;
 
   private:
     void implUpdate(const void *data, size_t off, size_t count, size_t sz, size_t alignedSz);
