@@ -427,53 +427,49 @@ void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
   impl->ResourceBarrier(1, &barrier);
   }
 
-void DxCommandBuffer::setVbo(const AbstractGraphicsApi::Buffer& b) {
-  const DxBuffer& bx = reinterpret_cast<const DxBuffer&>(b);
-
+void DxCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t offset, size_t vertexCount, size_t firstInstance, size_t instanceCount) {
+  if(T_UNLIKELY(ssboBarriers)) {
+    curUniforms->ssboBarriers(resState);
+    resState.flushSSBO(*this);
+    }
+  const DxBuffer& vbo = reinterpret_cast<const DxBuffer&>(ivbo);
   D3D12_VERTEX_BUFFER_VIEW view;
-  view.BufferLocation = bx.impl.get()->GetGPUVirtualAddress();
-  view.SizeInBytes    = bx.sizeInBytes;
+  view.BufferLocation = vbo.impl.get()->GetGPUVirtualAddress();
+  view.SizeInBytes    = vbo.sizeInBytes;
   view.StrideInBytes  = vboStride;
   impl->IASetVertexBuffers(0,1,&view);
+  impl->DrawInstanced(UINT(vertexCount),UINT(instanceCount),UINT(offset),UINT(firstInstance));
   }
 
-void DxCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer& b, IndexClass cls) {
-  const DxBuffer& bx = reinterpret_cast<const DxBuffer&>(b);
+void DxCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, const AbstractGraphicsApi::Buffer& iibo, Detail::IndexClass cls,
+                                  size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) {
+  if(T_UNLIKELY(ssboBarriers)) {
+    curUniforms->ssboBarriers(resState);
+    resState.flushSSBO(*this);
+    }
   static const DXGI_FORMAT type[]={
     DXGI_FORMAT_R16_UINT,
     DXGI_FORMAT_R32_UINT
     };
+  const DxBuffer& vbo = reinterpret_cast<const DxBuffer&>(ivbo);
+  const DxBuffer& ibo = reinterpret_cast<const DxBuffer&>(iibo);
 
-  D3D12_INDEX_BUFFER_VIEW view;
-  view.BufferLocation = bx.impl.get()->GetGPUVirtualAddress();
-  view.SizeInBytes    = bx.sizeInBytes;
-  view.Format         = type[uint32_t(cls)];
-  impl->IASetIndexBuffer(&view);
-  }
+  D3D12_VERTEX_BUFFER_VIEW view;
+  view.BufferLocation = vbo.impl.get()->GetGPUVirtualAddress();
+  view.SizeInBytes    = vbo.sizeInBytes;
+  view.StrideInBytes  = vboStride;
+  impl->IASetVertexBuffers(0,1,&view);
 
-void DxCommandBuffer::draw(size_t offset, size_t vertexCount, size_t firstInstance, size_t instanceCount) {
-  if(currentFbo==nullptr)
-    throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
-  if(T_UNLIKELY(ssboBarriers)) {
-    curUniforms->ssboBarriers(resState);
-    resState.flushSSBO(*this);
-    }
-  impl->DrawInstanced(UINT(vertexCount),UINT(instanceCount),UINT(offset),UINT(firstInstance));
-  }
+  D3D12_INDEX_BUFFER_VIEW iview;
+  iview.BufferLocation = ibo.impl.get()->GetGPUVirtualAddress();
+  iview.SizeInBytes    = ibo.sizeInBytes;
+  iview.Format         = type[uint32_t(cls)];
+  impl->IASetIndexBuffer(&iview);
 
-void DxCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) {
-  if(currentFbo==nullptr)
-    throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
-  if(T_UNLIKELY(ssboBarriers)) {
-    curUniforms->ssboBarriers(resState);
-    resState.flushSSBO(*this);
-    }
   impl->DrawIndexedInstanced(UINT(isize),UINT(instanceCount),UINT(ioffset),INT(voffset),UINT(firstInstance));
   }
 
 void DxCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
-  if(currentFbo!=nullptr)
-    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
   if(T_UNLIKELY(ssboBarriers)) {
     curUniforms->ssboBarriers(resState);
     resState.flushSSBO(*this);

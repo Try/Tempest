@@ -175,20 +175,37 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractG
                           0,nullptr);
   }
 
-void VCommandBuffer::draw(size_t offset, size_t size, size_t firstInstance, size_t instanceCount) {
+void VCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t offset, size_t size, size_t firstInstance, size_t instanceCount) {
   if(T_UNLIKELY(ssboBarriers)) {
     curUniforms->ssboBarriers(resState);
     resState.flushSSBO(*this);
     }
-  vkCmdDraw(impl,uint32_t(size), uint32_t(instanceCount), uint32_t(offset), uint32_t(firstInstance));
+  const VBuffer& vbo=reinterpret_cast<const VBuffer&>(ivbo);
+  VkBuffer     buffers[1] = {vbo.impl};
+  VkDeviceSize offsets[1] = {0};
+  vkCmdBindVertexBuffers(impl, 0, 1, buffers, offsets );
+  vkCmdDraw(impl, uint32_t(size), uint32_t(instanceCount), uint32_t(offset), uint32_t(firstInstance));
   }
 
-void VCommandBuffer::drawIndexed(size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) {
+void VCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, const AbstractGraphicsApi::Buffer& iibo, Detail::IndexClass cls,
+                                 size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) {
   if(T_UNLIKELY(ssboBarriers)) {
     curUniforms->ssboBarriers(resState);
     resState.flushSSBO(*this);
     }
-  vkCmdDrawIndexed(impl, uint32_t(isize), uint32_t(instanceCount), uint32_t(ioffset), int32_t(voffset), uint32_t(firstInstance));
+  static const VkIndexType type[]={
+    VK_INDEX_TYPE_UINT16,
+    VK_INDEX_TYPE_UINT32
+    };
+
+  const VBuffer& vbo = reinterpret_cast<const VBuffer&>(ivbo);
+  const VBuffer& ibo = reinterpret_cast<const VBuffer&>(iibo);
+  VkBuffer     buffers[1] = {vbo.impl};
+  VkDeviceSize offsets[1] = {0};
+
+  vkCmdBindVertexBuffers(impl, 0, 1, buffers, offsets );
+  vkCmdBindIndexBuffer  (impl, ibo.impl, 0, type[uint32_t(cls)]);
+  vkCmdDrawIndexed      (impl, uint32_t(isize), uint32_t(instanceCount), uint32_t(ioffset), int32_t(voffset), uint32_t(firstInstance));
   }
 
 void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
@@ -199,26 +216,8 @@ void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
   vkCmdDispatch(impl,uint32_t(x),uint32_t(y),uint32_t(z));
   }
 
-void VCommandBuffer::setVbo(const Tempest::AbstractGraphicsApi::Buffer &b) {
-  const VBuffer& vbo=reinterpret_cast<const VBuffer&>(b);
-
-  VkBuffer     buffers[1] = {vbo.impl};
-  VkDeviceSize offsets[1] = {0};
-  vkCmdBindVertexBuffers(impl, 0, 1, buffers, offsets );
-  }
-
-void VCommandBuffer::setIbo(const AbstractGraphicsApi::Buffer& b,Detail::IndexClass cls) {
-  static const VkIndexType type[]={
-    VK_INDEX_TYPE_UINT16,
-    VK_INDEX_TYPE_UINT32
-    };
-
-  const VBuffer& ibo=reinterpret_cast<const VBuffer&>(b);
-  vkCmdBindIndexBuffer(impl,ibo.impl,0,type[uint32_t(cls)]);
-  }
-
 void VCommandBuffer::setViewport(const Tempest::Rect &r) {
-  VkViewport                              viewPort    = {};
+  VkViewport viewPort = {};
   viewPort.x        = float(r.x);
   viewPort.y        = float(r.y);
   viewPort.width    = float(r.w);

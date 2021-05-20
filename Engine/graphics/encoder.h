@@ -76,16 +76,9 @@ class Encoder<Tempest::CommandBuffer> {
   private:
     Encoder(CommandBuffer* ow);
 
-    struct Viewport {
-      uint32_t width =0;
-      uint32_t height=0;
-      };
-
     struct State {
-      const AbstractGraphicsApi::Pipeline*     curPipeline     = nullptr;
-      const AbstractGraphicsApi::CompPipeline* curCompute      = nullptr;
-      const VideoBuffer*                       curVbo          = nullptr;
-      const VideoBuffer*                       curIbo          = nullptr;
+      const AbstractGraphicsApi::Pipeline*     curPipeline = nullptr;
+      const AbstractGraphicsApi::CompPipeline* curCompute  = nullptr;
       };
 
     struct Pass {

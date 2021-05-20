@@ -72,6 +72,8 @@ void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const
   }
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline &p) {
+  if(curPass.fbo==nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   if(state.curPipeline!=p.impl.handler) {
     impl->setPipeline(*p.impl.handler);
     state.curPipeline=p.impl.handler;
@@ -97,6 +99,8 @@ void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p, cons
   }
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p) {
+  if(curPass.fbo!=nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
   if(state.curCompute!=p.impl.handler) {
     impl->setComputePipeline(*p.impl.handler);
     state.curCompute  = p.impl.handler;
@@ -105,34 +109,26 @@ void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p) {
   }
 
 void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer& vbo, size_t offset, size_t size, size_t firstInstance, size_t instanceCount) {
+  if(curPass.fbo==nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   if(!vbo.impl)
     return;
-  if(state.curVbo!=&vbo) {
-    impl->setVbo(*vbo.impl.handler);
-    state.curVbo=&vbo;
-    }
-  /*
-   // no need to clear vbo
-  if(state.curIbo!=nullptr) {
-    impl->setIbo(nullptr,Detail::IndexClass::i16);
-    state.curIbo=nullptr;
-    }*/
-  impl->draw(offset,size,firstInstance,instanceCount);
+  impl->draw(*vbo.impl.handler,offset,size,firstInstance,instanceCount);
   }
 
 void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer &vbo, const VideoBuffer &ibo, Detail::IndexClass index, size_t offset, size_t size,
                                                size_t firstInstance, size_t instanceCount) {
+  if(curPass.fbo==nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   if(!vbo.impl || !ibo.impl)
     return;
-  if(state.curVbo!=&vbo) {
-    impl->setVbo(*vbo.impl.handler);
-    state.curVbo=&vbo;
-    }
-  if(state.curIbo!=&ibo) {
-    impl->setIbo(*ibo.impl.handler,index);
-    state.curIbo=&ibo;
-    }
-  impl->drawIndexed(offset,size,0,firstInstance,instanceCount);
+  impl->drawIndexed(*vbo.impl.handler,*ibo.impl.handler,index,offset,size,0,firstInstance,instanceCount);
+  }
+
+void Encoder<CommandBuffer>::dispatch(size_t x, size_t y, size_t z) {
+  if(curPass.fbo!=nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
+  impl->dispatch(x,y,z);
   }
 
 void Encoder<CommandBuffer>::setFramebuffer(std::nullptr_t) {
@@ -159,10 +155,6 @@ void Encoder<CommandBuffer>::implEndRenderPass() {
     curPass           = Pass();
     impl->endRenderPass();
     }
-  }
-
-void Encoder<CommandBuffer>::dispatch(size_t x, size_t y, size_t z) {
-  impl->dispatch(x,y,z);
   }
 
 void Encoder<CommandBuffer>::generateMipmaps(Attachment& tex) {
