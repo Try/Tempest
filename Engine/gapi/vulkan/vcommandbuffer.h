@@ -94,6 +94,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     VFramebuffer*                           curFbo       = nullptr;
     VRenderPass*                            curRp        = nullptr;
     VDescriptorArray*                       curUniforms  = nullptr;
+    VkBuffer                                curVbo       = VK_NULL_HANDLE;
     bool                                    ssboBarriers = false;
     bool                                    isInCompute  = false;
   };

@@ -33,6 +33,7 @@ VCommandBuffer::~VCommandBuffer() {
 
 void VCommandBuffer::reset() {
   vkResetCommandBuffer(impl,VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+  swapchainSync.reserve(swapchainSync.size());
   swapchainSync.clear();
   }
 
@@ -42,6 +43,9 @@ void VCommandBuffer::begin() {
 
 void VCommandBuffer::begin(VkCommandBufferUsageFlags flg) {
   state = NoPass;
+  swapchainSync.reserve(swapchainSync.size());
+  swapchainSync.clear();
+  curVbo = VK_NULL_HANDLE;
 
   VkCommandBufferBeginInfo beginInfo = {};
   beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -181,9 +185,12 @@ void VCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t offset
     resState.flushSSBO(*this);
     }
   const VBuffer& vbo=reinterpret_cast<const VBuffer&>(ivbo);
-  VkBuffer     buffers[1] = {vbo.impl};
-  VkDeviceSize offsets[1] = {0};
-  vkCmdBindVertexBuffers(impl, 0, 1, buffers, offsets );
+  if(curVbo!=vbo.impl) {
+    VkBuffer     buffers[1] = {vbo.impl};
+    VkDeviceSize offsets[1] = {0};
+    vkCmdBindVertexBuffers(impl, 0, 1, buffers, offsets );
+    curVbo = vbo.impl;
+    }
   vkCmdDraw(impl, uint32_t(size), uint32_t(instanceCount), uint32_t(offset), uint32_t(firstInstance));
   }
 
@@ -200,12 +207,14 @@ void VCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, const 
 
   const VBuffer& vbo = reinterpret_cast<const VBuffer&>(ivbo);
   const VBuffer& ibo = reinterpret_cast<const VBuffer&>(iibo);
-  VkBuffer     buffers[1] = {vbo.impl};
-  VkDeviceSize offsets[1] = {0};
-
-  vkCmdBindVertexBuffers(impl, 0, 1, buffers, offsets );
-  vkCmdBindIndexBuffer  (impl, ibo.impl, 0, type[uint32_t(cls)]);
-  vkCmdDrawIndexed      (impl, uint32_t(isize), uint32_t(instanceCount), uint32_t(ioffset), int32_t(voffset), uint32_t(firstInstance));
+  if(curVbo!=vbo.impl) {
+    VkBuffer     buffers[1] = {vbo.impl};
+    VkDeviceSize offsets[1] = {0};
+    vkCmdBindVertexBuffers(impl, 0, 1, buffers, offsets );
+    curVbo = vbo.impl;
+    }
+  vkCmdBindIndexBuffer(impl, ibo.impl, 0, type[uint32_t(cls)]);
+  vkCmdDrawIndexed    (impl, uint32_t(isize), uint32_t(instanceCount), uint32_t(ioffset), int32_t(voffset), uint32_t(firstInstance));
   }
 
 void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
