@@ -3,6 +3,7 @@
 #include "image/pixmapcodeccommon.h"
 #include "image/pixmapcodecpng.h"
 #include "image/pixmapcodecdds.h"
+#include "image/pixmapcodechdr.h"
 
 #include <Tempest/IDevice>
 #include <Tempest/Except>
@@ -33,6 +34,7 @@ struct PixmapCodec::Impl {
     // thread-safe init, because PixmapCodec::instance
     codec.emplace_back(std::make_unique<PixmapCodecDDS>());
     codec.emplace_back(std::make_unique<PixmapCodecPng>());
+    codec.emplace_back(std::make_unique<PixmapCodecHDR>());
     codec.emplace_back(std::make_unique<PixmapCodecCommon>());
     }
 

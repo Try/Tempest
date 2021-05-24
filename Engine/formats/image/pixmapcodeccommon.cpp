@@ -140,7 +140,7 @@ bool PixmapCodecCommon::testFormat(const Tempest::PixmapCodec::Context &ctx) con
   return false;
   }
 
-uint8_t *PixmapCodecCommon::load(PixmapCodec::Context &ctx, uint32_t &ow, uint32_t &oh,
+uint8_t* PixmapCodecCommon::load(PixmapCodec::Context &ctx, uint32_t &ow, uint32_t &oh,
                                  Pixmap::Format &frm, uint32_t &mipCnt, size_t &dataSz, uint32_t &bpp) const {
   StbContext f = {ctx.device,false};
   stbi__context s;
