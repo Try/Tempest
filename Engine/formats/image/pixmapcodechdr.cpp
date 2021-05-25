@@ -82,7 +82,9 @@ bool PixmapCodecHDR::readToken(IDevice& d, char* out, size_t maxSz) {
   size_t sz = d.read(out,maxSz);
   for(size_t i=0; i<sz; ++i) {
     if(out[i]=='\0' || out[i]=='\n') {
-      d.unget(sz-i-1);
+      const size_t extra = sz-i-1;
+      if(d.unget(extra)!=extra)
+        return false;
       for(; i<sz; ++i)
         out[i] = '\0';
       return true;
