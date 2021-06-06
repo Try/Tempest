@@ -55,14 +55,16 @@ void Encoder<Tempest::CommandBuffer>::setViewport(const Rect &vp) {
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const DescriptorSet &ubo, const void* data, size_t sz) {
   setUniforms(p);
-  impl->setBytes(*p.impl.handler,data,sz);
+  if(sz>0)
+    impl->setBytes(*p.impl.handler,data,sz);
   if(ubo.impl.handler!=&DescriptorSet::emptyDesc)
     impl->setUniforms(*p.impl.handler,*ubo.impl.handler);
   }
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const void* data, size_t sz) {
   setUniforms(p);
-  impl->setBytes(*p.impl.handler,data,sz);
+  if(sz>0)
+    impl->setBytes(*p.impl.handler,data,sz);
   }
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const DescriptorSet &ubo) {
