@@ -11,33 +11,54 @@ using namespace Tempest::Detail;
 
 VSwapchain::FenceList::FenceList(VkDevice dev, uint32_t cnt)
   :dev(dev), size(0) {
-  sync.reset(new VkFence[cnt]);
-
-  VkFenceCreateInfo fenceInfo = {};
-  fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-  fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+  aquire .reset(new VkFence[cnt]);
+  present.reset(new VkFence[cnt]);
   for(uint32_t i=0; i<cnt; ++i) {
-    vkAssert(vkCreateFence(dev,&fenceInfo,nullptr,&sync[i]));
-    ++size;
+    aquire [i] = VK_NULL_HANDLE;
+    present[i] = VK_NULL_HANDLE;
+    }
+
+  try {
+    VkFenceCreateInfo fenceInfo = {};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    for(uint32_t i=0; i<cnt; ++i) {
+      vkAssert(vkCreateFence(dev,&fenceInfo,nullptr,&aquire [i]));
+      vkAssert(vkCreateFence(dev,&fenceInfo,nullptr,&present[i]));
+      ++size;
+      }
+    }
+  catch(...) {
+    for(uint32_t i=0; i<cnt; ++i) {
+      if(aquire[i]!=VK_NULL_HANDLE)
+        vkDestroyFence(dev,aquire [i],nullptr);
+      if(present[i]!=VK_NULL_HANDLE)
+        vkDestroyFence(dev,present[i],nullptr);
+      }
+    throw;
     }
   }
 
 VSwapchain::FenceList::FenceList(VSwapchain::FenceList&& oth)
   :dev(oth.dev), size(oth.size) {
-  sync     = std::move(oth.sync);
+  aquire   = std::move(oth.aquire);
+  present  = std::move(oth.present);
   oth.size = 0;
   }
 
 VSwapchain::FenceList& VSwapchain::FenceList::operator =(VSwapchain::FenceList&& oth) {
-  std::swap(dev,  oth.dev);
-  std::swap(sync, oth.sync);
-  std::swap(size, oth.size);
+  std::swap(dev,     oth.dev);
+  std::swap(aquire,  oth.aquire);
+  std::swap(present, oth.present);
+  std::swap(size,    oth.size);
   return *this;
   }
 
 VSwapchain::FenceList::~FenceList() {
-  for(uint32_t i=0; i<size; ++i)
-    vkDestroyFence(dev,sync[i],nullptr);
+  for(uint32_t i=0; i<size; ++i) {
+    vkDestroyFence(dev,aquire [i],nullptr);
+    vkDestroyFence(dev,present[i],nullptr);
+    }
   }
 
 VSwapchain::VSwapchain(VDevice &device, SystemApi::Window* hwnd)
@@ -60,7 +81,8 @@ VSwapchain::~VSwapchain() {
   }
 
 void VSwapchain::cleanupSwapchain() noexcept {
-  vkWaitForFences(device.device.impl,fence.size,fence.sync.get(),VK_TRUE,std::numeric_limits<uint64_t>::max());
+  vkWaitForFences(device.device.impl,fence.size,fence.aquire.get(), VK_TRUE,std::numeric_limits<uint64_t>::max());
+  vkWaitForFences(device.device.impl,fence.size,fence.present.get(),VK_TRUE,std::numeric_limits<uint64_t>::max());
   fence = FenceList();
 
   for(auto imageView : views)
@@ -260,7 +282,7 @@ uint32_t VSwapchain::getImageCount(const SwapChainSupport& support) const {
 
 void VSwapchain::aquireNextImage() {
   auto&    slot = sync[syncIndex];
-  auto&    f    = fence.sync[syncIndex];
+  auto&    f    = fence.aquire[syncIndex];
 
   vkWaitForFences(device.device.impl,1,&f,VK_TRUE,std::numeric_limits<uint64_t>::max());
   vkResetFences(device.device.impl,1,&f);
@@ -279,9 +301,9 @@ void VSwapchain::aquireNextImage() {
   if(code!=VK_SUCCESS)
     vkAssert(code);
 
-  imgIndex              = id;
-  sync[syncIndex].imgId = id;
-  sync[syncIndex].state = S_Pending;
+  imgIndex   = id;
+  slot.imgId = id;
+  slot.state = S_Pending;
   syncIndex = (syncIndex+1)%uint32_t(sync.size());
   }
 
@@ -290,16 +312,20 @@ uint32_t VSwapchain::currentBackBufferIndex() {
   }
 
 void VSwapchain::present(VDevice& dev) {
+  auto&    slot = sync[imgIndex];
+  auto&    f    = fence.present[imgIndex];
+  vkResetFences(device.device.impl,1,&f);
+
   VkSubmitInfo submitInfo = {};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
   submitInfo.signalSemaphoreCount = 1;
-  submitInfo.pSignalSemaphores    = &sync[imgIndex].present;
-  dev.graphicsQueue->submit(1, &submitInfo, VK_NULL_HANDLE);
+  submitInfo.pSignalSemaphores    = &slot.present;
+  dev.graphicsQueue->submit(1, &submitInfo, f);
 
   VkPresentInfoKHR presentInfo = {};
   presentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
   presentInfo.waitSemaphoreCount = 1;
-  presentInfo.pWaitSemaphores    = &sync[imgIndex].present;
+  presentInfo.pWaitSemaphores    = &slot.present;
   presentInfo.swapchainCount     = 1;
   presentInfo.pSwapchains        = &swapChain;
   presentInfo.pImageIndices      = &imgIndex;
