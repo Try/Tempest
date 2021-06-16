@@ -60,6 +60,7 @@ void MtBuffer::update(const void *data, size_t off, size_t count, size_t sz, siz
 
     // TODO: implement proper upload engine
     [cmd waitUntilCompleted];
+    [stage release];
     }
   }
 

@@ -40,6 +40,5 @@ void MtDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi::Buffer *buf, siz
   desc[id].offset = offset;
   }
 
-void MtDescriptorArray::ssboBarriers(ResourceState &res) {
-
+void MtDescriptorArray::ssboBarriers(ResourceState&) {
   }
