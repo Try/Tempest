@@ -5,8 +5,8 @@ environment:
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015  # used as mingw
       GENERATOR: "Ninja"
-      CC:        C:/Qt/Tools/mingw810_64/bin/gcc.exe
-      CXX:       C:/Qt/Tools/mingw810_64/bin/g++.exe
+      CC:        C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/bin/gcc.exe
+      CXX:       C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/bin/g++.exe
 
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       GENERATOR: "NMake Makefiles JOM"
@@ -44,7 +44,7 @@ install:
 before_build:
 # Prepare the out-of-source build directory.
   - mkdir build
-  - cmd: set PATH=C:/Qt/Tools/mingw810_64/bin;C:/Qt/Tools/QtCreator/bin;%Path%
+  - cmd: set PATH=C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/bin;C:/Qt/Tools/QtCreator/bin;%Path%
 
 build_script:
   - cmake --version
