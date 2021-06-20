@@ -5,8 +5,8 @@ environment:
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015  # used as mingw
       GENERATOR: "Ninja"
-      CC:        C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/gcc.exe
-      CXX:       C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/g++.exe
+      CC:        C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin/gcc.exe
+      CXX:       C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin/g++.exe
 
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       GENERATOR: "NMake Makefiles JOM"
@@ -44,8 +44,7 @@ install:
 before_build:
 # Prepare the out-of-source build directory.
   - mkdir build
-  - cmd: set PATH=C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0;C:/Qt/Tools/QtCreator/bin;%Path%
-  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+  - cmd: set PATH=C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin;C:/Qt/Tools/QtCreator/bin;%Path%
 
 build_script:
   - cmake --version
@@ -59,7 +58,7 @@ build_script:
   - cmake --build ../../build --target TempestTests
 
 test_script:
-  - cmd: set Path=C:/Qt/Tools/mingw530_32/bin;%Path%
+  - cmd: set Path=C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin;%Path%
   - cmd: cd %APPVEYOR_BUILD_FOLDER%\build\testsuite
   # - cmd: TempestTests.exe   disable, since appveyor image doesn't have vulkan drievr anymore
   - sh:  cd $APPVEYOR_BUILD_FOLDER/build/testsuite
