@@ -16,7 +16,7 @@ include_directories("."
 ### Platforms
 if(WIN32)
   add_definitions(-DHAVE_WINMM)
-  add_definitions(-DHAVE_DSOUND)
+  #add_definitions(-DHAVE_DSOUND)
   file(GLOB AlcBackend
     "Alc/backends/winmm.c"
     "Alc/backends/dsound.c"
