@@ -11,15 +11,16 @@ VideoBuffer::VideoBuffer(AbstractGraphicsApi::PBuffer&& impl, size_t size)
   }
 
 VideoBuffer::VideoBuffer(VideoBuffer &&other)
-  :impl(std::move(other.impl)),sz(other.sz){
+  :impl(std::move(other.impl)),sz(other.sz) {
+  other.sz = 0;
   }
 
 VideoBuffer::~VideoBuffer(){
   }
 
 VideoBuffer &VideoBuffer::operator=(VideoBuffer &&other) {
-  impl = std::move(other.impl);
-  sz   = other.sz;
+  std::swap(impl,other.impl);
+  std::swap(sz,  other.sz);
   return *this;
   }
 
