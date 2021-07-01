@@ -103,6 +103,19 @@ TextModel::Cursor AbstractTextInput::selectionEnd() const {
   return selE;
   }
 
+void AbstractTextInput::setSelection(TextModel::Cursor begin, TextModel::Cursor end) {
+  selS = textM.clamp(begin);
+  selE = textM.clamp(end);
+  if(selE<selS)
+    std::swap(selS,selE);
+  }
+
+void AbstractTextInput::setSelection(size_t begin, size_t end) {
+  auto b = textM.charAt(begin);
+  auto e = textM.charAt(end);
+  setSelection(b,e);
+  }
+
 void AbstractTextInput::setUndoRedoEnabled(bool enable) {
   undoEnable = enable;
   if(enable)

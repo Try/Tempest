@@ -353,6 +353,21 @@ TextModel::Cursor TextModel::charAt(int x, int y) const {
   return c;
   }
 
+TextModel::Cursor TextModel::charAt(size_t symbol) const {
+  Cursor c;
+  c.line = 0;
+  for(auto& l:line) {
+    if(symbol<=l.size) {
+      c.offset = symbol;
+      return c;
+      }
+    symbol -= l.size;
+    c.line++;
+    }
+  c.offset = symbol;
+  return c;
+  }
+
 Point TextModel::mapToCoords(Cursor c) const {
   if(!isValid(c))
     return Point();
@@ -373,6 +388,12 @@ const char* TextModel::c_str() const {
   if(txt.size()==0)
     return "";
   return txt.data();
+  }
+
+size_t TextModel::size() const {
+  if(txt.size()==0)
+    return 0;
+  return txt.size()-1;
   }
 
 bool TextModel::isValid(TextModel::Cursor c) const {

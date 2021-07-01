@@ -122,8 +122,10 @@ class TextModel final {
 
     Cursor      charAt(const Point& p) const { return charAt(p.x,p.y); }
     Cursor      charAt(int x,int y) const;
+    Cursor      charAt(size_t symbol) const;
     Point       mapToCoords(Cursor c) const;
     const char* c_str() const;
+    size_t      size() const;
 
     void        drawCursor(Painter& p,int x,int y,Cursor c) const;
     void        drawCursor(Painter& p,int x,int y,Cursor s,Cursor e) const;

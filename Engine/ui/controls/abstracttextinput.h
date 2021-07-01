@@ -14,6 +14,9 @@ class AbstractTextInput : public Tempest::Widget {
     TextModel::Cursor selectionStart() const;
     TextModel::Cursor selectionEnd()   const;
 
+    void              setSelection(TextModel::Cursor begin, TextModel::Cursor end);
+    void              setSelection(size_t begin, size_t end);
+
     void 	            setUndoRedoEnabled(bool enable);
     bool              isUndoRedoEnabled() const;
 
