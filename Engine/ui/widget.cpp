@@ -470,12 +470,16 @@ void Widget::implSetFocus(Widget* Additive::*add, bool WidgetState::*flag, bool 
         w=mv;
         }
 
-      w=this;
-      while(w->owner()) {
-        w->owner()->astate.*add=w;
-        w = w->owner();
+      if(value) {
+        Widget* w = this;
+        while(w->owner()) {
+          w->owner()->astate.*add=w;
+          w = w->owner();
+          }
+        next->wstate.*flag=true;
+        } else {
+        next = nullptr;
         }
-      next->wstate.*flag=true;
 
       if(parent!=nullptr)
         implExcFocus(previous,next,*parent); else
@@ -519,14 +523,17 @@ void Widget::implAttachFocus() {
     }
   }
 
-void Widget::implExcFocus(Widget *prev,Widget *next,const FocusEvent& parent) {
+void Widget::implExcFocus(Widget* prev, Widget *next, const FocusEvent& parent) {
   if(prev!=nullptr) {
+    prev->update();
     FocusEvent ex(false,parent.reason);
     prev->focusEvent(ex);
     }
-
-  FocusEvent ex(true,parent.reason);
-  next->focusEvent(ex);
+  if(next!=nullptr) {
+    next->update();
+    FocusEvent ex(true,parent.reason);
+    next->focusEvent(ex);
+    }
   }
 
 void Widget::update() noexcept {

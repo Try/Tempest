@@ -25,6 +25,7 @@ class Dialog : public Panel {
     void         keyUpEvent  (KeyEvent&   e) override;
     void         paintEvent  (PaintEvent& e) override;
     virtual void paintShadow (PaintEvent& e);
+    virtual void showEvent();
 
   private:
     struct Overlay;

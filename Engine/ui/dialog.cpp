@@ -14,15 +14,21 @@ struct Dialog::LayShadow : Tempest::Layout {
     Widget& ow    = *owner();
     size_t  count = ow.widgetsCount();
 
+    if(hasLay || ow.size().isEmpty())
+      return;
+
+    const bool sendShowEvent = !hasLay;
+    hasLay = true;
+
     for(size_t i=0;i<count;++i){
       Widget& w = ow.widget(i);
-      Point pos = w.pos();
 
-      if(!hasLay) {
-        pos.x = (ow.w()-w.w())/2;
-        pos.y = (ow.h()-w.h())/2;
+      if(sendShowEvent) {
+        if(auto d = dynamic_cast<Dialog*>(&w))
+          d->showEvent();
         }
 
+      Point pos = w.pos();
       if(w.x()+w.w()>ow.w())
         pos.x = ow.w()-w.w();
       if(w.y()+w.h()>ow.h())
@@ -34,8 +40,6 @@ struct Dialog::LayShadow : Tempest::Layout {
 
       w.setPosition(pos);
       }
-
-    hasLay = !ow.size().isEmpty();
     }
   };
 
@@ -46,7 +50,9 @@ struct Dialog::Overlay : public Tempest::UiOverlay {
   Overlay(Dialog& dlg):dlg(dlg){}
 
   void mouseDownEvent(MouseEvent& e) override {
-    e.accept();
+    if(isModal)
+      e.accept(); else
+      e.ignore();
     }
 
   void mouseMoveEvent(MouseEvent& e) override {
@@ -54,7 +60,9 @@ struct Dialog::Overlay : public Tempest::UiOverlay {
     }
 
   void mouseWheelEvent(MouseEvent& e) override {
-    e.accept();
+    if(isModal)
+      e.accept(); else
+      e.ignore();
     }
 
   void paintEvent(PaintEvent& e) override {
@@ -89,12 +97,13 @@ int Dialog::exec() {
     owner_ov = new Overlay(*this);
 
     SystemApi::addOverlay(std::move(owner_ov));
-    owner_ov->setLayout( new LayShadow() );
-    owner_ov->addWidget( this );
+    owner_ov->setLayout(new LayShadow());
+    owner_ov->addWidget(this);
     }
 
   setVisible(true);
-  while( owner_ov && Application::isRunning() ) {
+  showEvent();
+  while(owner_ov && Application::isRunning()) {
     Application::processEvents();
     }
   return 0;
@@ -152,4 +161,12 @@ void Dialog::paintShadow(PaintEvent &e) {
   Painter p(e);
   style().draw(p,this,owner_ov,Style::E_Background,state(),
                rect(),Style::Extra(*this),Rect(0,0,owner_ov->w(),owner_ov->h()));
+  }
+
+void Dialog::showEvent() {
+  auto& ow = *owner();
+  Point pos;
+  pos.x = (ow.w()-this->w())/2;
+  pos.y = (ow.h()-this->h())/2;
+  setPosition(pos);
   }
