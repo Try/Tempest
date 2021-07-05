@@ -16,7 +16,7 @@ class UniformBuffer final {
 
   private:
     UniformBuffer(Tempest::VideoBuffer&& impl, size_t alignedTSZ)
-      :impl(std::move(impl)), alignedTSZ(alignedTSZ), arrTSZ(impl.size()/alignedTSZ) {
+      :impl(std::move(impl)), alignedTSZ(alignedTSZ), arrTSZ(this->impl.size()/alignedTSZ) {
       }
 
     Tempest::VideoBuffer impl;
