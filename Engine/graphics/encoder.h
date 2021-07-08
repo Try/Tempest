@@ -71,6 +71,9 @@ class Encoder<Tempest::CommandBuffer> {
 
     void dispatch(size_t x, size_t y, size_t z);
 
+    void copy(const Attachment& src, size_t mip, StorageBuffer& dest, size_t offset);
+    void copy(const Texture2d&  src, size_t mip, StorageBuffer& dest, size_t offset);
+
     void generateMipmaps(Attachment& tex);
 
   private:
@@ -86,8 +89,7 @@ class Encoder<Tempest::CommandBuffer> {
       const RenderPass*  pass = nullptr;
       };
 
-    Tempest::CommandBuffer*             owner=nullptr;
-    AbstractGraphicsApi::CommandBuffer* impl =nullptr;
+    AbstractGraphicsApi::CommandBuffer* impl = nullptr;
     State                               state;
     Pass                                curPass;
 

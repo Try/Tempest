@@ -51,6 +51,8 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
                          uint32_t width,uint32_t height) override;
     void endRenderPass() override;
 
+    void setViewport(const Rect& r) override;
+
     void setPipeline(AbstractGraphicsApi::Pipeline& p) override;
     void setBytes   (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;
     void setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc &u) override;
@@ -58,8 +60,6 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void setComputePipeline(AbstractGraphicsApi::CompPipeline& p) override;
     void setBytes   (AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) override;
     void setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc &u) override;
-
-    void setViewport(const Rect& r) override;
 
     void draw       (const AbstractGraphicsApi::Buffer& vbo, size_t  offset, size_t size, size_t firstInstance, size_t instanceCount) override;
     void drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, const AbstractGraphicsApi::Buffer& iibo, Detail::IndexClass cls,
@@ -70,15 +70,18 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void changeLayout(AbstractGraphicsApi::Attach&  img, TextureLayout prev, TextureLayout next, bool byRegion) override;
     void changeLayout(AbstractGraphicsApi::Texture& tex, TextureLayout prev, TextureLayout next, uint32_t mipId);
 
-    void copy(AbstractGraphicsApi::Buffer&  dest, size_t offsetDest, const AbstractGraphicsApi::Buffer& src, size_t offsetSrc, size_t size);
+    void copy(AbstractGraphicsApi::Buffer& dest, TextureLayout defLayout, uint32_t width, uint32_t height, uint32_t mip, AbstractGraphicsApi::Texture& src, size_t offset) override;
+    void generateMipmap(AbstractGraphicsApi::Texture& image, TextureLayout defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
+
     void copy(AbstractGraphicsApi::Texture& dest, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Buffer&  src, size_t offset);
-    void copy(AbstractGraphicsApi::Buffer&  dest, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Texture& src, size_t offset);
+    void copy(AbstractGraphicsApi::Buffer&  dest, size_t offsetDest, const AbstractGraphicsApi::Buffer& src, size_t offsetSrc, size_t size);
 
     void blit(AbstractGraphicsApi::Texture& src, uint32_t srcW, uint32_t srcH, uint32_t srcMip,
               AbstractGraphicsApi::Texture& dst, uint32_t dstW, uint32_t dstH, uint32_t dstMip);
-    void generateMipmap(AbstractGraphicsApi::Texture& image, TextureLayout defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
 
   private:
+    void implCopy(AbstractGraphicsApi::Buffer&  dest, size_t width, size_t height, size_t mip,
+                  const AbstractGraphicsApi::Texture& src, size_t offset);
     void implChangeLayout(VkImage dest, VkFormat imageFormat,
                           VkImageLayout oldLayout, VkImageLayout newLayout, bool discardOld,
                           uint32_t mipBase, uint32_t mipCount, bool byRegion);

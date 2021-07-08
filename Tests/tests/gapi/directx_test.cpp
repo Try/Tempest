@@ -31,6 +31,12 @@ TEST(DirectX12Api,VboDyn) {
 #endif
   }
 
+TEST(DirectX12Api,DISABLED_SsboCopy) {
+#if defined(_MSC_VER)
+  GapiTestCommon::bufCopy<DirectX12Api>();
+#endif
+  }
+
 TEST(DirectX12Api,Shader) {
 #if defined(_MSC_VER)
   GapiTestCommon::shader<DirectX12Api>();

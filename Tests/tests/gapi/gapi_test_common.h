@@ -83,6 +83,48 @@ void vboDyn() {
   }
 
 template<class GraphicsApi>
+void bufCopy() {
+  using namespace Tempest;
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto src = device.attachment(TextureFormat::RGBA8,4,4);
+    auto fbo = device.frameBuffer(src);
+    auto rp  = device.pass(FboMode(FboMode::PreserveOut,Color(0.f,0.f,1.f)));
+
+    auto dst = device.ssbo(nullptr, src.w()*src.h()*4);
+
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setFramebuffer(fbo,rp);
+      enc.setFramebuffer(nullptr);
+      enc.copy(src,0,dst,0);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    std::vector<uint8_t> dstCpu(dst.size());
+    device.readBytes(dst,dstCpu.data(),dstCpu.size());
+    for(size_t i=0; i<dstCpu.size(); i+=4) {
+      EXPECT_EQ(dstCpu[i+0],0);
+      EXPECT_EQ(dstCpu[i+1],0);
+      EXPECT_EQ(dstCpu[i+2],255);
+      EXPECT_EQ(dstCpu[i+3],255);
+      }
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void shader() {
   using namespace Tempest;
 

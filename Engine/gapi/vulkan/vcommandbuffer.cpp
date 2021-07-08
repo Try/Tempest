@@ -270,7 +270,8 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, si
   vkCmdCopyBufferToImage(impl, src.impl, dst.impl, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
   }
 
-void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Texture& srcTex, size_t offset) {
+void VCommandBuffer::implCopy(AbstractGraphicsApi::Buffer& dstBuf, size_t width, size_t height, size_t mip,
+                              const AbstractGraphicsApi::Texture& srcTex, size_t offset) {
   auto& src = reinterpret_cast<const VTexture&>(srcTex);
   auto& dst = reinterpret_cast<VBuffer&>(dstBuf);
 
@@ -325,6 +326,19 @@ void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, u
                  dst.impl, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                  1, &blit,
                  filter);
+  }
+
+void Tempest::Detail::VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dest, TextureLayout defLayout,
+                                           uint32_t width, uint32_t height, uint32_t mip,
+                                           AbstractGraphicsApi::Texture& src, size_t offset) {
+  if(curFbo!=nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
+  //resState.setLayout(src,TextureLayout::TransferSrc,true); // TODO: more advanced layout tracker
+  resState.flushLayout(*this);
+
+  changeLayout(src,defLayout,TextureLayout::TransferSrc,mip);
+  implCopy(dest,width,height,mip,src,offset);
+  changeLayout(src,TextureLayout::TransferSrc,defLayout,mip);
   }
 
 void VCommandBuffer::changeLayout(AbstractGraphicsApi::Buffer& buf, BufferLayout prev, BufferLayout next) {

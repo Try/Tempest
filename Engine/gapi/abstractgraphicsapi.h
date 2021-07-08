@@ -373,7 +373,9 @@ namespace Tempest {
 
         virtual void changeLayout  (Buffer& buf, BufferLayout prev, BufferLayout next)=0;
         virtual void changeLayout  (Attach& img, TextureLayout prev, TextureLayout next, bool byRegion)=0;
+
         virtual void generateMipmap(Texture& image, TextureLayout defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels)=0;
+        virtual void copy(Buffer& dest, TextureLayout defLayout, uint32_t width, uint32_t height, uint32_t mip, Texture& src, size_t offset)=0;
 
         virtual bool isRecording() const = 0;
         virtual void begin()=0;

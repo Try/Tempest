@@ -427,6 +427,18 @@ void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
   impl->ResourceBarrier(1, &barrier);
   }
 
+void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer& dest, TextureLayout defLayout,
+                           uint32_t width, uint32_t height, uint32_t mip,
+                           AbstractGraphicsApi::Texture& src, size_t offset) {
+  if(currentFbo!=nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
+  resState.flushLayout(*this);
+
+  changeLayout(src,defLayout,TextureLayout::TransferSrc,mip);
+  implCopy(dest,width,height,mip,src,offset);
+  changeLayout(src,TextureLayout::TransferSrc,defLayout,mip);
+  }
+
 void DxCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t offset, size_t vertexCount, size_t firstInstance, size_t instanceCount) {
   if(T_UNLIKELY(ssboBarriers)) {
     curUniforms->ssboBarriers(resState);
@@ -519,8 +531,8 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, s
   impl->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, nullptr);
   }
 
-void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t width, size_t height, size_t mip,
-                           const AbstractGraphicsApi::Texture& srcTex, size_t offset) {
+void DxCommandBuffer::implCopy(AbstractGraphicsApi::Buffer& dstBuf, size_t width, size_t height, size_t mip,
+                               const AbstractGraphicsApi::Texture& srcTex, size_t offset) {
   auto& dst = reinterpret_cast<DxBuffer&>(dstBuf);
   auto& src = reinterpret_cast<const DxTexture&>(srcTex);
 

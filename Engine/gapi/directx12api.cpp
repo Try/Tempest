@@ -233,6 +233,11 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
     return PBuffer(new Detail::DxBuffer(std::move(stage)));
     }
 
+  if(flg==BufferHeap::Readback) {
+    Detail::DxBuffer stage=dx.allocator.alloc(mem,count,size,alignedSz,usage|MemUsage::TransferDst,BufferHeap::Readback);
+    return PBuffer(new Detail::DxBuffer(std::move(stage)));
+    }
+
   Detail::DxBuffer  buf = dx.allocator.alloc(nullptr,count,size,alignedSz,usage|MemUsage::TransferDst,BufferHeap::Device);
   if(mem==nullptr) {
     Detail::DSharedPtr<Buffer*> pbuf(new Detail::DxBuffer(std::move(buf)));
@@ -391,9 +396,7 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureL
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
-  cmd->changeLayout(tx, lay, TextureLayout::TransferSrc, mip);
-  cmd->copy(stage,w,h,mip,tx,0);
-  cmd->changeLayout(tx, TextureLayout::TransferSrc, lay, mip);
+  cmd->copy(stage,lay,w,h,mip,tx,0);
   cmd->end();
   dx.dataMgr().submitAndWait(std::move(cmd));
 

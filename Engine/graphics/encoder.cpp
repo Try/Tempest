@@ -18,24 +18,20 @@ static uint32_t mipCount(uint32_t w, uint32_t h) {
   }
 
 Encoder<Tempest::CommandBuffer>::Encoder(Tempest::CommandBuffer* ow)
-  :owner(ow),impl(ow->impl.handler) {
+  :impl(ow->impl.handler) {
   impl->begin();
   }
 
 Encoder<CommandBuffer>::Encoder(Encoder<CommandBuffer> &&e)
-  :owner(e.owner),impl(e.impl),state(std::move(e.state)) {
-  e.owner = nullptr;
+  :impl(e.impl),state(std::move(e.state)) {
   e.impl  = nullptr;
   }
 
 Encoder<CommandBuffer> &Encoder<CommandBuffer>::operator =(Encoder<CommandBuffer> &&e) {
-  owner = e.owner;
-  impl  = e.impl;
-  state = std::move(e.state);
+  impl   = e.impl;
+  state  = std::move(e.state);
 
-  e.owner = nullptr;
-  e.impl  = nullptr;
-
+  e.impl = nullptr;
   return *this;
   }
 
@@ -157,6 +153,16 @@ void Encoder<CommandBuffer>::implEndRenderPass() {
     curPass           = Pass();
     impl->endRenderPass();
     }
+  }
+
+void Encoder<CommandBuffer>::copy(const Attachment& src, size_t mip, StorageBuffer& dest, size_t offset) {
+  uint32_t w = src.w(), h = src.h();
+  impl->copy(*dest.impl.impl.handler,TextureLayout::Sampler,w,h,mip,*textureCast(src).impl.handler,offset);
+  }
+
+void Encoder<CommandBuffer>::copy(const Texture2d& src, size_t mip, StorageBuffer& dest, size_t offset) {
+  uint32_t w = src.w(), h = src.h();
+  impl->copy(*dest.impl.impl.handler,TextureLayout::Sampler,w,h,mip,*src.impl.handler,offset);
   }
 
 void Encoder<CommandBuffer>::generateMipmaps(Attachment& tex) {

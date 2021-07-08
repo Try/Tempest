@@ -32,6 +32,12 @@ TEST(VulkanApi,VboDyn) {
 #endif
   }
 
+TEST(VulkanApi,SsboCopy) {
+#if !defined(__OSX__)
+  GapiTestCommon::bufCopy<VulkanApi>();
+#endif
+  }
+
 TEST(VulkanApi,Shader) {
 #if !defined(__OSX__)
   GapiTestCommon::shader<VulkanApi>();

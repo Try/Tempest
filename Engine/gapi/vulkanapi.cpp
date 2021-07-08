@@ -148,6 +148,11 @@ AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device
     return PBuffer(new Detail::VBuffer(std::move(stage)));
     }
 
+  if(flg==BufferHeap::Readback) {
+    Detail::VBuffer stage=dx.allocator.alloc(mem,count,size,alignedSz,usage|MemUsage::TransferDst,BufferHeap::Readback);
+    return PBuffer(new Detail::VBuffer(std::move(stage)));
+    }
+
   Detail::VBuffer buf = dx.allocator.alloc(nullptr, count,size,alignedSz, usage|MemUsage::TransferDst|MemUsage::TransferSrc,BufferHeap::Device);
   if(mem==nullptr) {
     Detail::DSharedPtr<Buffer*> pbuf(new Detail::VBuffer(std::move(buf)));
@@ -246,9 +251,7 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
-  cmd->changeLayout(tx, lay, TextureLayout::TransferSrc, mip);
-  cmd->copy(stage,w,h,mip,tx,0);
-  cmd->changeLayout(tx, TextureLayout::TransferSrc, lay, mip);
+  cmd->copy(stage,lay, w,h,mip,tx,0);
   cmd->end();
 
   dx.dataMgr().waitFor(&tx);
