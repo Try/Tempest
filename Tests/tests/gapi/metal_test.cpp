@@ -31,6 +31,12 @@ TEST(MetalApi,VboDyn) {
 #endif
   }
 
+TEST(MetalApi,SsboCopy) {
+#if defined(__OSX__)
+  GapiTestCommon::bufCopy<MetalApi>();
+#endif
+  }
+
 TEST(MetalApi,Shader) {
 #if defined(__OSX__)
   GapiTestCommon::shader<MetalApi>();

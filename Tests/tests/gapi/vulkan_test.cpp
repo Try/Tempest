@@ -13,7 +13,6 @@
 using namespace testing;
 using namespace Tempest;
 
-
 TEST(VulkanApi,VulkanApi) {
 #if !defined(__OSX__)
   GapiTestCommon::init<VulkanApi>();

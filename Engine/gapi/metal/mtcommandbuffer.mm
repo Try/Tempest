@@ -25,7 +25,7 @@ MtCommandBuffer::~MtCommandBuffer() {
 
 bool MtCommandBuffer::isRecording() const {
   // FIXME
-  return encDraw!=nil && encComp!=nil;
+  return encDraw!=nil && encComp!=nil && encBlit!=nullptr;
   }
 
 void MtCommandBuffer::begin() {
@@ -33,16 +33,7 @@ void MtCommandBuffer::begin() {
   }
 
 void MtCommandBuffer::end() {
-  if(encComp!=nil) {
-    [encComp endEncoding];
-    [encComp release];
-    encComp = nil;
-    }
-  if(encDraw!=nil) {
-    [encDraw endEncoding];
-    [encDraw release];
-    encDraw = nil;
-    }
+  setEncoder(E_None,nullptr,nullptr);
   }
 
 void MtCommandBuffer::reset() {
@@ -60,15 +51,7 @@ void MtCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo *f,
   auto& fbo  = *reinterpret_cast<MtFramebuffer*>(f);
   auto& pass = *reinterpret_cast<MtRenderPass*> (p);
 
-  if(encComp!=nil) {
-    [encComp endEncoding];
-    [encComp release];
-    encComp = nil;
-    }
-
-  MTLRenderPassDescriptor* desc = fbo.instance(pass);
-  encDraw = [impl renderCommandEncoderWithDescriptor:desc];
-  [encDraw retain];
+  setEncoder(E_Draw,&fbo,&pass);
   curFbo  = &fbo;
 
   // [enc setFrontFacingWinding:MTLWindingCounterClockwise];
@@ -76,19 +59,56 @@ void MtCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo *f,
   }
 
 void MtCommandBuffer::endRenderPass() {
-  if(encDraw!=nil) {
+  setEncoder(E_None,nullptr,nullptr);
+  curFbo = nullptr;
+  }
+
+void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MtFramebuffer* fbo, MtRenderPass* pass) {
+  if(encDraw!=nil && e!=E_Draw) {
     [encDraw endEncoding];
     [encDraw release];
     encDraw = nil;
     }
-  curFbo = nullptr;
-  }
+  if(encComp!=nil && e!=E_Comp) {
+    [encComp endEncoding];
+    [encComp release];
+    encComp = nil;
+    }
+  if(encBlit!=nil && e!=E_Blit) {
+    [encBlit endEncoding];
+    [encBlit release];
+    encBlit = nil;
+    }
 
-void MtCommandBuffer::setupCompute() {
-  if(encComp!=nil)
-    return;
-  encComp = [impl computeCommandEncoder];
-  [encComp retain];
+  switch(e) {
+    case E_None: {
+      break;
+      }
+    case E_Draw: {
+      if(encDraw!=nil) {
+        [encDraw endEncoding];
+        [encDraw release];
+        }
+      MTLRenderPassDescriptor* desc = fbo->instance(*pass);
+      encDraw = [impl renderCommandEncoderWithDescriptor:desc];
+      [encDraw retain];
+      break;
+      }
+    case E_Comp: {
+      if(encComp!=nil)
+        return;
+      encComp = [impl computeCommandEncoder];
+      [encComp retain];
+      break;
+      }
+    case E_Blit: {
+      if(encBlit!=nil)
+        return;
+      encBlit = [impl blitCommandEncoder];
+      [encBlit retain];
+      break;
+      }
+    }
   }
 
 void MtCommandBuffer::changeLayout(AbstractGraphicsApi::Buffer&,
@@ -99,46 +119,8 @@ void MtCommandBuffer::changeLayout(AbstractGraphicsApi::Attach &,
                                    TextureLayout /*prev*/, TextureLayout /*next*/, bool /*byRegion*/) {
   }
 
-void MtCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture &image,
-                                     TextureLayout /*defLayout*/,
-                                     uint32_t /*texWidth*/, uint32_t /*texHeight*/,
-                                     uint32_t /*mipLevels*/) {
-  bool restartComp = false;
-  if(encComp!=nil) {
-    restartComp = true;
-    [encComp endEncoding];
-    [encComp release];
-    }
-
-  @autoreleasepool {
-    auto& t = reinterpret_cast<MtTexture&>(image);
-    id<MTLBlitCommandEncoder> enc = [impl blitCommandEncoder];
-    [enc generateMipmapsForTexture:t.impl];
-    [enc endEncoding];
-    }
-
-  if(restartComp) {
-    encComp = [impl computeCommandEncoder];
-    [encComp retain];
-    }
-  }
-
-void MtCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
-  auto& px   = reinterpret_cast<MtPipeline&>(p);
-  auto& inst = px.inst(*curFbo->layout.handler);
-
-  if(curFbo->depth!=nullptr)
-    [encDraw setDepthStencilState:px.depthStZ]; else
-    [encDraw setDepthStencilState:px.depthStNoZ];
-  [encDraw setRenderPipelineState:inst.pso];
-  [encDraw setCullMode:px.cullMode];
-  topology = px.topology;
-  curVboId = px.lay.handler->vboIndex;
-  curLay   = px.lay.handler;
-  }
-
 void MtCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline &p) {
-  setupCompute();
+  setEncoder(E_Comp,nullptr,nullptr);
   auto& px = reinterpret_cast<MtCompPipeline&>(p);
   [encComp setComputePipelineState:px.impl];
   curLay   = px.lay.handler;
@@ -299,4 +281,48 @@ void MtCommandBuffer::setTexture(const MtPipelineLay::MTLBind& mtl,
     [encComp setTexture:tex atIndex:mtl.bindCs];
   if(mtl.bindCsSmp!=uint32_t(-1))
     [encComp setSamplerState:ss atIndex:mtl.bindCsSmp];
+  }
+
+void MtCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture &image,
+                                     TextureLayout /*defLayout*/,
+                                     uint32_t /*texWidth*/, uint32_t /*texHeight*/,
+                                     uint32_t /*mipLevels*/) {
+  setEncoder(E_Blit,nullptr,nullptr);
+
+  auto& t = reinterpret_cast<MtTexture&>(image);
+  [encBlit generateMipmapsForTexture:t.impl];
+  }
+
+void MtCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
+  auto& px   = reinterpret_cast<MtPipeline&>(p);
+  auto& inst = px.inst(*curFbo->layout.handler);
+
+  if(curFbo->depth!=nullptr)
+    [encDraw setDepthStencilState:px.depthStZ]; else
+    [encDraw setDepthStencilState:px.depthStNoZ];
+  [encDraw setRenderPipelineState:inst.pso];
+  [encDraw setCullMode:px.cullMode];
+  topology = px.topology;
+  curVboId = px.lay.handler->vboIndex;
+  curLay   = px.lay.handler;
+  }
+
+void Tempest::Detail::MtCommandBuffer::copy(Tempest::AbstractGraphicsApi::Buffer& dest, Tempest::TextureLayout defLayout,
+                                            uint32_t width, uint32_t height, uint32_t mip,
+                                            Tempest::AbstractGraphicsApi::Texture& src, size_t offset) {
+  setEncoder(E_Blit,nullptr,nullptr);
+
+  auto& s = reinterpret_cast<MtTexture&>(src);
+  auto& d = reinterpret_cast<MtBuffer&> (dest);
+  const uint32_t bpp = s.bitCount()/8;
+
+  [encBlit copyFromTexture:s.impl
+                           sourceSlice:0
+                           sourceLevel:mip
+                           sourceOrigin:MTLOriginMake(0,0,0)
+                           sourceSize:MTLSizeMake(width,height,1)
+                           toBuffer:d.impl
+                           destinationOffset:offset
+                           destinationBytesPerRow:bpp*width
+                           destinationBytesPerImage:bpp*width*height];
   }

@@ -19,6 +19,8 @@ class MtTexture : public Tempest::AbstractGraphicsApi::Texture {
     void     readPixels(Pixmap& out, TextureFormat frm,
                         const uint32_t w, const uint32_t h, uint32_t mip);
 
+    uint32_t bitCount() const;
+
     MtDevice&       dev;
     id<MTLTexture>  impl;
     const uint32_t  mips = 0;

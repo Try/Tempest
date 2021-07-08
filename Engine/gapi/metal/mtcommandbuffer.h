@@ -18,6 +18,7 @@ namespace Detail {
 class MtDevice;
 class MtBuffer;
 class MtFramebuffer;
+class MtRenderPass;
 
 class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
   public:
@@ -54,10 +55,19 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
                       size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) override;
     void dispatch    (size_t x, size_t y, size_t z) override;
 
+    void copy        (AbstractGraphicsApi::Buffer& dest, TextureLayout defLayout, uint32_t width, uint32_t height, uint32_t mip, AbstractGraphicsApi::Texture& src, size_t offset) override;
+
   private:
-    void setupCompute();
+    enum EncType:uint8_t {
+      E_None = 0,
+      E_Draw,
+      E_Comp,
+      E_Blit,
+      };
+    void setEncoder(EncType e, MtFramebuffer* fbo, MtRenderPass* pass);
     void implSetBytes   (const void* bytes, size_t sz);
     void implSetUniforms(AbstractGraphicsApi::Desc& u);
+
     void setBuffer (const MtPipelineLay::MTLBind& mtl,
                     id<MTLBuffer>  b, size_t offset);
     void setTexture(const MtPipelineLay::MTLBind& mtl,
@@ -68,6 +78,7 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
 
     id<MTLRenderCommandEncoder>  encDraw = nil;
     id<MTLComputeCommandEncoder> encComp = nil;
+    id<MTLBlitCommandEncoder>    encBlit = nil;
 
     uint32_t             curVboId = 0;
     MtFramebuffer*       curFbo   = nullptr;

@@ -166,7 +166,7 @@ void MtTexture::readPixels(Pixmap& out, TextureFormat frm, const uint32_t w, con
     [enc endEncoding];
     [cmd commit];
     [cmd waitUntilCompleted];
-    }
+  }
 
   [stage getBytes: out.data()
     bytesPerRow: w*bpp
@@ -174,4 +174,197 @@ void MtTexture::readPixels(Pixmap& out, TextureFormat frm, const uint32_t w, con
     mipmapLevel: 0
     ];
   [stage release];
+  }
+
+uint32_t MtTexture::bitCount() const {
+  MTLPixelFormat frm = impl.pixelFormat;
+  switch(frm) {
+    case MTLPixelFormatInvalid:
+      return 0;
+    /* Normal 8 bit formats */
+    case MTLPixelFormatA8Unorm:
+    case MTLPixelFormatR8Unorm:
+    case MTLPixelFormatR8Unorm_sRGB:
+    case MTLPixelFormatR8Snorm:
+    case MTLPixelFormatR8Uint:
+    case MTLPixelFormatR8Sint:
+      return 8;
+    /* Normal 16 bit formats */
+    case MTLPixelFormatR16Unorm:
+    case MTLPixelFormatR16Snorm:
+    case MTLPixelFormatR16Uint:
+    case MTLPixelFormatR16Sint:
+    case MTLPixelFormatR16Float:
+    case MTLPixelFormatRG8Unorm:
+    case MTLPixelFormatRG8Unorm_sRGB:
+    case MTLPixelFormatRG8Snorm:
+    case MTLPixelFormatRG8Uint:
+    case MTLPixelFormatRG8Sint:
+      return 16;
+    /* Packed 16 bit formats */
+    case MTLPixelFormatB5G6R5Unorm:
+    case MTLPixelFormatA1BGR5Unorm:
+    case MTLPixelFormatABGR4Unorm:
+    case MTLPixelFormatBGR5A1Unorm:
+      return 16;
+    /* Normal 32 bit formats */
+    case MTLPixelFormatR32Uint:
+    case MTLPixelFormatR32Sint:
+    case MTLPixelFormatR32Float:
+    case MTLPixelFormatRG16Unorm:
+    case MTLPixelFormatRG16Snorm:
+    case MTLPixelFormatRG16Uint:
+    case MTLPixelFormatRG16Sint:
+    case MTLPixelFormatRG16Float:
+    case MTLPixelFormatRGBA8Unorm:
+    case MTLPixelFormatRGBA8Unorm_sRGB:
+    case MTLPixelFormatRGBA8Snorm:
+    case MTLPixelFormatRGBA8Uint:
+    case MTLPixelFormatRGBA8Sint:
+    case MTLPixelFormatBGRA8Unorm:
+    case MTLPixelFormatBGRA8Unorm_sRGB:
+      return 32;
+    /* Packed 32 bit formats */
+    case MTLPixelFormatRGB10A2Unorm:
+    case MTLPixelFormatRGB10A2Uint:
+    case MTLPixelFormatRG11B10Float:
+    case MTLPixelFormatRGB9E5Float:
+    case MTLPixelFormatBGR10A2Unorm:
+    case MTLPixelFormatBGR10_XR:
+    case MTLPixelFormatBGR10_XR_sRGB:
+      return 32;
+    /* Normal 64 bit formats */
+    case MTLPixelFormatRG32Uint:
+    case MTLPixelFormatRG32Sint:
+    case MTLPixelFormatRG32Float:
+    case MTLPixelFormatRGBA16Unorm:
+    case MTLPixelFormatRGBA16Snorm:
+    case MTLPixelFormatRGBA16Uint:
+    case MTLPixelFormatRGBA16Sint:
+    case MTLPixelFormatRGBA16Float:
+      return 64;
+    case MTLPixelFormatBGRA10_XR:
+    case MTLPixelFormatBGRA10_XR_sRGB:
+      return 64;
+    /* Normal 128 bit formats */
+    case MTLPixelFormatRGBA32Uint:
+    case MTLPixelFormatRGBA32Sint:
+    case MTLPixelFormatRGBA32Float:
+      return 128;
+
+    /* Compressed formats. */
+    /* S3TC/DXT */
+    case MTLPixelFormatBC1_RGBA:
+    case MTLPixelFormatBC1_RGBA_sRGB:
+      return 4;
+    case MTLPixelFormatBC2_RGBA:
+    case MTLPixelFormatBC2_RGBA_sRGB:
+    case MTLPixelFormatBC3_RGBA:
+    case MTLPixelFormatBC3_RGBA_sRGB:
+      return 8;
+    /* RGTC */
+    case MTLPixelFormatBC4_RUnorm:
+    case MTLPixelFormatBC4_RSnorm:
+    case MTLPixelFormatBC5_RGUnorm:
+    case MTLPixelFormatBC5_RGSnorm:
+      return 8;
+
+    /* BPTC */
+    case MTLPixelFormatBC6H_RGBFloat:
+    case MTLPixelFormatBC6H_RGBUfloat:
+    case MTLPixelFormatBC7_RGBAUnorm:
+    case MTLPixelFormatBC7_RGBAUnorm_sRGB:
+      return 8;
+
+    /* PVRTC */
+    case MTLPixelFormatPVRTC_RGB_2BPP:
+    case MTLPixelFormatPVRTC_RGB_2BPP_sRGB:
+    case MTLPixelFormatPVRTC_RGB_4BPP:
+    case MTLPixelFormatPVRTC_RGB_4BPP_sRGB:
+    case MTLPixelFormatPVRTC_RGBA_2BPP:
+    case MTLPixelFormatPVRTC_RGBA_2BPP_sRGB:
+    case MTLPixelFormatPVRTC_RGBA_4BPP:
+    case MTLPixelFormatPVRTC_RGBA_4BPP_sRGB:
+      return 0;
+    /* ETC2 */
+    case MTLPixelFormatEAC_R11Unorm:
+    case MTLPixelFormatEAC_R11Snorm:
+    case MTLPixelFormatEAC_RG11Unorm:
+    case MTLPixelFormatEAC_RG11Snorm:
+    case MTLPixelFormatEAC_RGBA8:
+    case MTLPixelFormatEAC_RGBA8_sRGB:
+      return 0;
+    case MTLPixelFormatETC2_RGB8:
+    case MTLPixelFormatETC2_RGB8_sRGB:
+    case MTLPixelFormatETC2_RGB8A1:
+    case MTLPixelFormatETC2_RGB8A1_sRGB:
+      return 0;
+    /* ASTC */
+    case MTLPixelFormatASTC_4x4_sRGB:
+    case MTLPixelFormatASTC_5x4_sRGB:
+    case MTLPixelFormatASTC_5x5_sRGB:
+    case MTLPixelFormatASTC_6x5_sRGB:
+    case MTLPixelFormatASTC_6x6_sRGB:
+    case MTLPixelFormatASTC_8x5_sRGB:
+    case MTLPixelFormatASTC_8x6_sRGB:
+    case MTLPixelFormatASTC_8x8_sRGB:
+    case MTLPixelFormatASTC_10x5_sRGB:
+    case MTLPixelFormatASTC_10x6_sRGB:
+    case MTLPixelFormatASTC_10x8_sRGB:
+    case MTLPixelFormatASTC_10x10_sRGB:
+    case MTLPixelFormatASTC_12x10_sRGB:
+    case MTLPixelFormatASTC_12x12_sRGB:
+      return 0;
+    case MTLPixelFormatASTC_4x4_LDR:
+    case MTLPixelFormatASTC_5x4_LDR:
+    case MTLPixelFormatASTC_5x5_LDR:
+    case MTLPixelFormatASTC_6x5_LDR:
+    case MTLPixelFormatASTC_6x6_LDR:
+    case MTLPixelFormatASTC_8x5_LDR:
+    case MTLPixelFormatASTC_8x6_LDR:
+    case MTLPixelFormatASTC_8x8_LDR:
+    case MTLPixelFormatASTC_10x5_LDR:
+    case MTLPixelFormatASTC_10x6_LDR:
+    case MTLPixelFormatASTC_10x8_LDR:
+    case MTLPixelFormatASTC_10x10_LDR:
+    case MTLPixelFormatASTC_12x10_LDR:
+    case MTLPixelFormatASTC_12x12_LDR:
+      return 0;
+    // ASTC HDR (High Dynamic Range) Formats
+    case MTLPixelFormatASTC_4x4_HDR:
+    case MTLPixelFormatASTC_5x4_HDR:
+    case MTLPixelFormatASTC_5x5_HDR:
+    case MTLPixelFormatASTC_6x5_HDR:
+    case MTLPixelFormatASTC_6x6_HDR:
+    case MTLPixelFormatASTC_8x5_HDR:
+    case MTLPixelFormatASTC_8x6_HDR:
+    case MTLPixelFormatASTC_8x8_HDR:
+    case MTLPixelFormatASTC_10x5_HDR:
+    case MTLPixelFormatASTC_10x6_HDR:
+    case MTLPixelFormatASTC_10x8_HDR:
+    case MTLPixelFormatASTC_10x10_HDR:
+    case MTLPixelFormatASTC_12x10_HDR:
+    case MTLPixelFormatASTC_12x12_HDR:
+    case MTLPixelFormatGBGR422:
+    case MTLPixelFormatBGRG422:
+      return 0;
+    /* Depth */
+    case MTLPixelFormatDepth16Unorm:
+      return 16;
+    case MTLPixelFormatDepth32Float:
+      return 32;
+    /* Stencil */
+    case MTLPixelFormatStencil8:
+      return 8;
+    /* Depth Stencil */
+    case MTLPixelFormatDepth24Unorm_Stencil8:
+      return 32;
+    case MTLPixelFormatDepth32Float_Stencil8:
+      return 40;
+    case MTLPixelFormatX32_Stencil8:
+      return 40;
+    case MTLPixelFormatX24_Stencil8:
+      return 32;
+    }
+  return 0;
   }
