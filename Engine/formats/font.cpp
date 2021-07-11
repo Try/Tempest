@@ -332,16 +332,19 @@ Size FontElement::textSize(const char *text,float fontSize) const {
   Utf8Iterator i(text,std::strlen(text));
 
   Size ret;
+  int  minY = 0;
   while(i.hasData()){
     char32_t c = i.next();
     if(c=='\0')
       return ret;
     auto& g = letterGeometry(c,fontSize);
 
-    ret.h = std::max(ret.h,g.size.h);
+    ret.h = std::max(ret.h,-g.dpos.y);
+    minY  = std::min(minY, -g.dpos.y-g.size.h);
     ret.w += g.advance.x;
     }
 
+  ret.h+=minY;
   return ret;
   }
 
