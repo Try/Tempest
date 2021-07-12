@@ -223,29 +223,32 @@ AbstractGraphicsApi::Fence* DirectX12Api::createFence(AbstractGraphicsApi::Devic
 AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Device* d, const void* mem,
                                                         size_t count, size_t size, size_t alignedSz,
                                                         MemUsage usage, BufferHeap flg) {
-  Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
+  DxDevice& dx = *reinterpret_cast<DxDevice*>(d);
 
+  const BufferHeap flgOrig = flg;
   if(MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer))
-    flg = BufferHeap::Device;
+   flg = BufferHeap::Device;
+
+  usage = usage|MemUsage::TransferSrc|MemUsage::TransferDst;
 
   if(flg==BufferHeap::Upload) {
-    Detail::DxBuffer stage=dx.allocator.alloc(mem,count,size,alignedSz,usage,BufferHeap::Upload);
-    return PBuffer(new Detail::DxBuffer(std::move(stage)));
+    DxBuffer buf=dx.allocator.alloc(mem,count,size,alignedSz,usage,BufferHeap::Upload);
+    return PBuffer(new DxBuffer(std::move(buf)));
     }
 
-  if(flg==BufferHeap::Readback) {
-    Detail::DxBuffer stage=dx.allocator.alloc(mem,count,size,alignedSz,usage|MemUsage::TransferDst,BufferHeap::Readback);
-    return PBuffer(new Detail::DxBuffer(std::move(stage)));
+  if(flg!=flgOrig && flgOrig!=BufferHeap::Device) {
+    DxBuffer                    base = dx.allocator.alloc(nullptr,count,size,alignedSz,usage,flg);
+    Detail::DSharedPtr<Buffer*> buf(new DxBufferWithStaging(std::move(base),flgOrig));
+    if(mem!=nullptr)
+      buf.handler->update(mem,0,count,size,alignedSz);
+    return buf;
     }
 
-  Detail::DxBuffer  buf = dx.allocator.alloc(nullptr,count,size,alignedSz,usage|MemUsage::TransferDst,BufferHeap::Device);
-  if(mem==nullptr) {
-    Detail::DSharedPtr<Buffer*> pbuf(new Detail::DxBuffer(std::move(buf)));
-    return PBuffer(pbuf.handler);
-    }
-  Detail::DSharedPtr<Buffer*> pbuf  (new Detail::DxBuffer(std::move(buf)));
-  pbuf.handler->update(mem,0,count,size,alignedSz);
-  return PBuffer(pbuf.handler);
+  DxBuffer base = dx.allocator.alloc(nullptr,count,size,alignedSz,usage,flg);
+  Detail::DSharedPtr<Buffer*> buf(new Detail::DxBuffer(std::move(base)));
+  if(mem!=nullptr)
+    buf.handler->update(mem,0,count,size,alignedSz);
+  return buf;
   }
 
 AbstractGraphicsApi::Desc* DirectX12Api::createDescriptors(AbstractGraphicsApi::Device*, PipelineLay& layP) {

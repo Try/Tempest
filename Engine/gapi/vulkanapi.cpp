@@ -144,22 +144,20 @@ AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device
   Detail::VDevice& dx = *reinterpret_cast<Detail::VDevice*>(d);
 
   if(flg==BufferHeap::Upload) {
-    Detail::VBuffer stage=dx.allocator.alloc(mem,count,size,alignedSz,usage|MemUsage::TransferSrc,BufferHeap::Upload);
-    return PBuffer(new Detail::VBuffer(std::move(stage)));
+    VBuffer buf = dx.allocator.alloc(mem,count,size,alignedSz,usage|MemUsage::TransferSrc,BufferHeap::Upload);
+    return PBuffer(new VBuffer(std::move(buf)));
     }
 
   if(flg==BufferHeap::Readback) {
-    Detail::VBuffer stage=dx.allocator.alloc(mem,count,size,alignedSz,usage|MemUsage::TransferDst,BufferHeap::Readback);
-    return PBuffer(new Detail::VBuffer(std::move(stage)));
+    VBuffer buf = dx.allocator.alloc(mem,count,size,alignedSz,usage|MemUsage::TransferDst,BufferHeap::Readback);
+    return PBuffer(new VBuffer(std::move(buf)));
     }
 
-  Detail::VBuffer buf = dx.allocator.alloc(nullptr, count,size,alignedSz, usage|MemUsage::TransferDst|MemUsage::TransferSrc,BufferHeap::Device);
-  if(mem==nullptr) {
-    Detail::DSharedPtr<Buffer*> pbuf(new Detail::VBuffer(std::move(buf)));
-    return PBuffer(pbuf.handler);
-    }
+  VBuffer buf = dx.allocator.alloc(nullptr,count,size,alignedSz, usage|MemUsage::TransferDst|MemUsage::TransferSrc,BufferHeap::Device);
+  if(mem==nullptr)
+    return PBuffer(new VBuffer(std::move(buf)));
 
-  Detail::DSharedPtr<Buffer*> pbuf(new Detail::VBuffer(std::move(buf)));
+  DSharedPtr<Buffer*> pbuf(new VBuffer(std::move(buf)));
   pbuf.handler->update(mem,0,count,size,alignedSz);
   return PBuffer(pbuf.handler);
   }

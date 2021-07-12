@@ -27,30 +27,13 @@ void DxBuffer::update(const void* data, size_t off, size_t count, size_t size, s
 
   if(prop.Type==D3D12_HEAP_TYPE_UPLOAD) {
     dx.dataMgr().waitFor(this); // write-after-write case
-
-    D3D12_RANGE rgn    = {off*alignedSz,count*alignedSz};
-    void*       mapped = nullptr;
-    dxAssert(ret.Map(0,&rgn,&mapped));
-    mapped = reinterpret_cast<uint8_t*>(mapped)+off;
-    copyUpsample(data,mapped,count,size,alignedSz);
-    ret.Unmap(0,&rgn);
+    updateByMapped(*this,data,off,count,size,alignedSz);
     return;
     }
 
-  auto  stage = dx.dataMgr().allocStagingMemory(data,count,size,alignedSz,MemUsage::TransferSrc,BufferHeap::Upload);
-
-  Detail::DSharedPtr<Buffer*> pstage(new Detail::DxBuffer(std::move(stage)));
-  Detail::DSharedPtr<Buffer*> pbuf  (this);
-
-  auto cmd = dx.dataMgr().get();
-  cmd->begin();
-  cmd->hold(pbuf); // NOTE: DxBuffer may be deleted, before copy is finished
-  cmd->hold(pstage);
-  cmd->copy(*this, off*alignedSz, *pstage.handler,0, count*alignedSz);
-  cmd->end();
-
-  dx.dataMgr().waitFor(this); // write-after-write case
-  dx.dataMgr().submit(std::move(cmd));
+  auto stage = dx.dataMgr().allocStagingMemory(nullptr,count,size,alignedSz,MemUsage::TransferSrc,BufferHeap::Upload);
+  Detail::DSharedPtr<DxBuffer*> pstage(new Detail::DxBuffer(std::move(stage)));
+  updateByStaging(pstage.handler,data,off,0,count,size,alignedSz);
   }
 
 void DxBuffer::read(void* data, size_t off, size_t size) {
@@ -62,31 +45,18 @@ void DxBuffer::read(void* data, size_t off, size_t size) {
 
   if(prop.Type==D3D12_HEAP_TYPE_READBACK) {
     dx.dataMgr().waitFor(this); // write-after-write case
-
-    D3D12_RANGE rgn = {off,size};
-    void*       mapped=nullptr;
-    dxAssert(ret.Map(0,&rgn,&mapped));
-    mapped = reinterpret_cast<uint8_t*>(mapped)+off;
-    std::memcpy(data,mapped,size);
-    ret.Unmap(0,nullptr);
+    readFromMapped(*this,data,off,size);
     return;
     }
 
-  auto  stage = dx.dataMgr().allocStagingMemory(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
-
+  auto stage = dx.dataMgr().allocStagingMemory(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
   auto cmd = dx.dataMgr().get();
   cmd->begin();
   cmd->copy(stage,0, *this,off,size);
   cmd->end();
   dx.dataMgr().waitFor(this);
   dx.dataMgr().submitAndWait(std::move(cmd));
-
-  D3D12_RANGE rgn = {0,size};
-  void*       mapped=nullptr;
-  dxAssert(stage.impl->Map(0,&rgn,&mapped));
-  mapped = reinterpret_cast<uint8_t*>(mapped);
-  std::memcpy(data,mapped,size);
-  stage.impl->Unmap(0,nullptr);
+  readFromMapped(stage,data,0,size);
   }
 
 void DxBuffer::uploadS3TC(const uint8_t* d, uint32_t w, uint32_t h, uint32_t mipCnt, UINT blockSize) {
@@ -118,6 +88,81 @@ void DxBuffer::uploadS3TC(const uint8_t* d, uint32_t w, uint32_t h, uint32_t mip
     }
 
   ret.Unmap(0,nullptr);
+  }
+
+void DxBuffer::updateByStaging(DxBuffer* stage, const void* data, size_t offDst, size_t offSrc,
+                               size_t count, size_t size, size_t alignedSz) {
+  auto& dx = *dev;
+
+  Detail::DSharedPtr<Buffer*> pbuf(this);
+  Detail::DSharedPtr<Buffer*> pstage(stage);
+
+  auto cmd = dx.dataMgr().get();
+  cmd->begin();
+  cmd->hold(pbuf); // NOTE: DxBuffer may be deleted, before copy is finished
+  cmd->hold(pstage);
+  cmd->copy(*this, offDst*alignedSz, *stage, offSrc*alignedSz, count*alignedSz);
+  cmd->end();
+
+  dx.dataMgr().waitFor(this); // write-after-write case
+  updateByMapped(*stage,data,offSrc,count,size,alignedSz);
+  dx.dataMgr().submit(std::move(cmd));
+  }
+
+void DxBuffer::updateByMapped(DxBuffer& stage, const void* data, size_t off, size_t count, size_t size, size_t alignedSz) {
+  D3D12_RANGE rgn    = {off*alignedSz,count*alignedSz};
+  void*       mapped = nullptr;
+  dxAssert(stage.impl->Map(0,&rgn,&mapped));
+  mapped = reinterpret_cast<uint8_t*>(mapped)+off;
+  copyUpsample(data,mapped,count,size,alignedSz);
+  stage.impl->Unmap(0,&rgn);
+  }
+
+void DxBuffer::readFromStaging(DxBuffer& stage, void* data, size_t off, size_t size) {
+  auto& dx = *dev;
+
+  auto cmd = dx.dataMgr().get();
+  cmd->begin();
+  cmd->copy(stage,off, *this,off,size);
+  cmd->end();
+  dx.dataMgr().waitFor(this);
+  dx.dataMgr().submitAndWait(std::move(cmd));
+
+  readFromMapped(stage,data,off,size);
+  }
+
+void DxBuffer::readFromMapped(DxBuffer& stage, void* data, size_t off, size_t size) {
+  D3D12_RANGE rgn = {off,size};
+  void*       mapped=nullptr;
+  dxAssert(stage.impl->Map(0,&rgn,&mapped));
+  mapped = reinterpret_cast<uint8_t*>(mapped)+off;
+  std::memcpy(data,mapped,size);
+  stage.impl->Unmap(0,nullptr);
+  }
+
+
+DxBufferWithStaging::DxBufferWithStaging(DxBuffer&& base, BufferHeap stagingHeap)
+  :DxBuffer(std::move(base)) {
+  if(stagingHeap==BufferHeap::Readback) {
+    auto  stage = dev->dataMgr().allocStagingMemory(nullptr,sizeInBytes,1,1,MemUsage::TransferDst,BufferHeap::Readback);
+    stagingR = Detail::DSharedPtr<DxBuffer*>(new Detail::DxBuffer(std::move(stage)));
+    }
+  if(stagingHeap==BufferHeap::Upload) {
+    auto  stage = dev->dataMgr().allocStagingMemory(nullptr,sizeInBytes,1,1,MemUsage::TransferSrc,BufferHeap::Upload);
+    stagingU = Detail::DSharedPtr<DxBuffer*>(new Detail::DxBuffer(std::move(stage)));
+    }
+  }
+
+void DxBufferWithStaging::update(const void* data, size_t off, size_t count, size_t sz, size_t alignedSz) {
+  if(stagingU.handler==nullptr)
+    return DxBuffer::update(data,off,count,sz,alignedSz);
+  updateByStaging(stagingU.handler,data,off,off,count,sz,alignedSz);
+  }
+
+void DxBufferWithStaging::read(void* data, size_t off, size_t size) {
+  if(stagingR.handler==nullptr)
+    return DxBuffer::read(data,off,size);
+  readFromStaging(*stagingR.handler,data,off,size);
   }
 
 #endif

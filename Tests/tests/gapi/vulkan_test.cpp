@@ -25,6 +25,12 @@ TEST(VulkanApi,Vbo) {
 #endif
   }
 
+TEST(VulkanApi,VboInit) {
+#if !defined(__OSX__)
+  GapiTestCommon::vboInit<VulkanApi>();
+#endif
+  }
+
 TEST(VulkanApi,VboDyn) {
 #if !defined(__OSX__)
   GapiTestCommon::vboDyn<VulkanApi>();

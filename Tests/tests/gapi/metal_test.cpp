@@ -25,6 +25,12 @@ TEST(MetalApi,Vbo) {
 #endif
   }
 
+TEST(MetalApi,VboInit) {
+#if defined(__OSX__)
+  GapiTestCommon::vboInit<MetalApi>();
+#endif
+  }
+
 TEST(MetalApi,VboDyn) {
 #if defined(__OSX__)
   GapiTestCommon::vboDyn<MetalApi>();

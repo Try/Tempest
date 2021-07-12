@@ -53,6 +53,49 @@ void vbo() {
   }
 
 template<class GraphicsApi>
+void vboInit() {
+  using namespace Tempest;
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto vboD = device.vbo(BufferHeap::Device,  vboData,3);
+    auto vboR = device.vbo(BufferHeap::Readback,vboData,3);
+    auto vboU = device.vbo(BufferHeap::Upload,  vboData,3);
+    EXPECT_EQ(vboD.size(),3);
+    EXPECT_EQ(vboR.size(),3);
+    EXPECT_EQ(vboU.size(),3);
+
+    auto iboD = device.ibo(BufferHeap::Device,  iboData,3);
+    auto iboR = device.ibo(BufferHeap::Readback,iboData,3);
+    auto iboU = device.ibo(BufferHeap::Upload,  iboData,3);
+    EXPECT_EQ(iboD.size(),3);
+    EXPECT_EQ(iboR.size(),3);
+    EXPECT_EQ(iboU.size(),3);
+
+    auto uboD = device.ubo(BufferHeap::Device,  vboData,3);
+    auto uboR = device.ubo(BufferHeap::Readback,vboData,3);
+    auto uboU = device.ubo(BufferHeap::Upload,  vboData,3);
+    EXPECT_EQ(uboD.size(),3);
+    EXPECT_EQ(uboR.size(),3);
+    EXPECT_EQ(uboU.size(),3);
+
+    auto ssboD = device.ssbo(BufferHeap::Device,  vboData,sizeof(vboData));
+    auto ssboR = device.ssbo(BufferHeap::Readback,vboData,sizeof(vboData));
+    auto ssboU = device.ssbo(BufferHeap::Upload,  vboData,sizeof(vboData));
+    EXPECT_EQ(ssboD.size(),sizeof(vboData));
+    EXPECT_EQ(ssboR.size(),sizeof(vboData));
+    EXPECT_EQ(ssboU.size(),sizeof(vboData));
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void vboDyn() {
   using namespace Tempest;
 
