@@ -16,18 +16,23 @@
 
 using namespace Tempest;
 
-Log::Context& Log::getCtx() {
-  static Context ctx;
-  return ctx;
+void Log::setOutputCallback(std::function<void (Mode, const char*)> f) {
+  std::lock_guard<std::recursive_mutex> g(globals().sync);
+  globals().outFn = f;
   }
 
-void Log::flush(Mode m, char *&out, size_t &count) {
-  Context& c = getCtx();
-  if(count!=sizeof(c.buffer)){
-    *out = '\0';
+Log::Globals& Log::globals() {
+  static Globals g;
+  return g;
+  }
 
+void Log::flush(Context& ctx, char *&out, size_t &count) {
+  std::lock_guard<std::recursive_mutex> g(globals().sync);
+
+  if(count!=sizeof(ctx.buffer)) {
+    *out = '\0';
 #ifdef __ANDROID__
-    switch (m) {
+    switch(ctx.mode) {
       case Error:
         __android_log_print(ANDROID_LOG_ERROR, "app", "%s", c.buffer);
         break;
@@ -41,49 +46,58 @@ void Log::flush(Mode m, char *&out, size_t &count) {
       }
 #elif defined(__WINDOWS_PHONE__)
 #if !defined(_DEBUG)
-  OutputDebugStringA(c.buffer);
+  OutputDebugStringA(ctx.buffer);
   OutputDebugStringA("\r\n");
 #endif
 #else
 #if defined(_MSC_VER) && !defined(_NDEBUG)
-  (void)m;
-  OutputDebugStringA(c.buffer);
+  (void)ctx;
+  OutputDebugStringA(ctx.buffer);
   OutputDebugStringA("\r\n");
 #else
-  if( m==Error ){
-    std::cerr << c.buffer << std::endl;
+  if(ctx.mode==Error){
+    std::cerr << ctx.buffer << std::endl;
     std::cerr.flush();
     }
     else
-    std::cout << c.buffer << std::endl;
+    std::cout << ctx.buffer << std::endl;
 #endif
 #endif
     }
-  out   = c.buffer;
-  count = sizeof(c.buffer);
+
+  if(globals().outFn) {
+    char cpy[sizeof(ctx.buffer)] = {};
+    std::memcpy(cpy,ctx.buffer,count);
+    out   = ctx.buffer;
+    count = sizeof(ctx.buffer);
+    globals().outFn(ctx.mode,ctx.buffer);
+    } else {
+    out   = ctx.buffer;
+    count = sizeof(ctx.buffer);
+    }
   }
 
-void Log::printImpl(Mode m,char* out, size_t count){
-  flush(m,out,count);
+void Log::printImpl(Context& ctx, char* out, size_t count) {
+  flush(ctx,out,count);
   }
 
-void Log::write(Log::Mode m, char *&out, size_t &count, const std::string &msg) {
-  write(m,out,count,msg.c_str());
+void Log::write(Context& ctx, char *&out, size_t &count, const std::string &msg) {
+  write(ctx,out,count,msg.c_str());
   }
 
-void Log::write(Mode m, char *&out, size_t &count, float msg) {
+void Log::write(Context& ctx, char *&out, size_t &count, float msg) {
   char sym[16];
   snprintf(sym,sizeof(sym),"%f",double(msg));
-  write(m,out,count,sym);
+  write(ctx,out,count,sym);
   }
 
-void Log::write(Mode m, char *&out, size_t &count, double msg) {
+void Log::write(Context& ctx, char *&out, size_t &count, double msg) {
   char sym[16];
   snprintf(sym,sizeof(sym),"%f",msg);
-  write(m,out,count,sym);
+  write(ctx,out,count,sym);
   }
 
-void Log::write(Log::Mode m, char *&out, size_t &count, const void *msg) {
+void Log::write(Context& ctx, char *&out, size_t &count, const void *msg) {
   char sym[sizeof(void*)*2+3];
   sym[sizeof(sym)-1] = '\0';
   int pos = sizeof(sym)-2;
@@ -98,44 +112,44 @@ void Log::write(Log::Mode m, char *&out, size_t &count, const void *msg) {
   sym[pos] = 'x';
   --pos;
   sym[pos] = '0';
-  write(m,out,count,sym+pos);
+  write(ctx,out,count,sym+pos);
   }
 
-void Log::write(Log::Mode m, char *&out, size_t &count, std::thread::id msg) {
+void Log::write(Context& ctx, char*& out, size_t& count, std::thread::id msg) {
   std::hash<std::thread::id> h;
-  write(m,out,count,uint64_t(h(msg)));
+  write(ctx,out,count,uint64_t(h(msg)));
   }
 
-void Log::write(Mode m, char*& out, size_t& count, int16_t msg){
-  writeInt(m,out,count,msg);
+void Log::write(Context& ctx, char*& out, size_t& count, int16_t msg){
+  writeInt(ctx,out,count,msg);
   }
 
-void Log::write(Log::Mode m, char *&out, size_t &count, uint16_t msg) {
-  writeUInt(m,out,count,msg);
+void Log::write(Context& ctx, char *&out, size_t& count, uint16_t msg) {
+  writeUInt(ctx,out,count,msg);
   }
 
-void Log::write(Mode m, char*& out, size_t& count, const int32_t& msg){
-  writeInt(m,out,count,msg);
+void Log::write(Context& ctx, char*& out, size_t& count, const int32_t& msg){
+  writeInt(ctx,out,count,msg);
   }
 
-void Log::write(Log::Mode m, char *&out, size_t &count, const uint32_t& msg) {
-  writeUInt(m,out,count,msg);
+void Log::write(Context& ctx, char*& out, size_t& count, const uint32_t& msg) {
+  writeUInt(ctx,out,count,msg);
   }
 
-void Log::write(Log::Mode m, char *&out, size_t &count, const int64_t& msg) {
-  writeInt(m,out,count,msg);
+void Log::write(Context& ctx, char*& out, size_t& count, const int64_t& msg) {
+  writeInt(ctx,out,count,msg);
   }
 
-void Log::write(Log::Mode m, char *&out, size_t &count, const uint64_t& msg) {
-  writeUInt(m,out,count,msg);
+void Log::write(Context& ctx, char*& out, size_t& count, const uint64_t& msg) {
+  writeUInt(ctx,out,count,msg);
   }
 
-void Log::write(Mode m, char*& out, size_t& count, const char* msg){
-  while(*msg){
+void Log::write(Context& ctx, char*& out, size_t& count, const char* msg){
+  while(*msg) {
     if(count<=1)
-      flush(m,out,count);
+      flush(ctx,out,count);
     if(*msg=='\n'){
-      flush(m,out,count);
+      flush(ctx,out,count);
       ++msg;
       } else {
       *out = *msg;
@@ -146,31 +160,31 @@ void Log::write(Mode m, char*& out, size_t& count, const char* msg){
     }
   }
 
-void Log::write(Log::Mode m, char *&out, size_t &count, char msg) {
+void Log::write(Context& ctx, char *&out, size_t &count, char msg) {
   if(count<=1)
-    flush(m,out,count);
+    flush(ctx,out,count);
   *out = msg;
   ++out;
   ++msg;
   --count;
   }
 
-void Log::write(Log::Mode m, char *&out, size_t &count, int8_t msg) {
-  writeInt(m,out,count,msg);
+void Log::write(Context& ctx, char *&out, size_t &count, int8_t msg) {
+  writeInt(ctx,out,count,msg);
   }
 
-void Log::write(Log::Mode m, char *&out, size_t &count, uint8_t msg) {
-  writeUInt(m,out,count,msg);
+void Log::write(Context& ctx, char *&out, size_t &count, uint8_t msg) {
+  writeUInt(ctx,out,count,msg);
   }
 
 template< class T >
-void Log::writeInt(Mode m, char*& out, size_t& count, T msg){
+void Log::writeInt(Context& ctx, char*& out, size_t& count, T msg){
   char sym[32];
   sym[sizeof(sym)-1] = '\0';
   int pos = sizeof(sym)-2;
 
   if(msg<0){
-    write(m,out,count,'-');
+    write(ctx,out,count,'-');
     msg = -msg;
     }
 
@@ -181,5 +195,5 @@ void Log::writeInt(Mode m, char*& out, size_t& count, T msg){
       break;
     --pos;
     }
-  write(m,out,count,sym+pos);
+  write(ctx,out,count,sym+pos);
   }
