@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <thread>
 #include <type_traits>
+#include <functional>
 
 namespace Tempest{
 

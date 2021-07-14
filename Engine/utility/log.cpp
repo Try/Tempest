@@ -13,6 +13,7 @@
 
 #include <iostream>
 #include <cstdio>
+#include <cstring>
 
 using namespace Tempest;
 
@@ -34,14 +35,14 @@ void Log::flush(Context& ctx, char *&out, size_t &count) {
 #ifdef __ANDROID__
     switch(ctx.mode) {
       case Error:
-        __android_log_print(ANDROID_LOG_ERROR, "app", "%s", c.buffer);
+        __android_log_print(ANDROID_LOG_ERROR, "app", "%s", ctx.buffer);
         break;
       case Debug:
-        __android_log_print(ANDROID_LOG_DEBUG, "app", "%s", c.buffer);
+        __android_log_print(ANDROID_LOG_DEBUG, "app", "%s", ctx.buffer);
         break;
       case Info:
       default:
-        __android_log_print(ANDROID_LOG_INFO,  "app", "%s", c.buffer);
+        __android_log_print(ANDROID_LOG_INFO,  "app", "%s", ctx.buffer);
         break;
       }
 #elif defined(__WINDOWS_PHONE__)
