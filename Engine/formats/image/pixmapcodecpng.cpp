@@ -36,31 +36,37 @@ struct PixmapCodecPng::Impl {
     outH = png_get_image_height(png_ptr, info_ptr);
 
     png_byte colorType = png_get_color_type(png_ptr, info_ptr);
-    png_byte bitDepth  = png_get_bit_depth(png_ptr, info_ptr);
-    if(bitDepth!=8 && bitDepth!=16)
-      return false;
+    png_byte bitDepth  = png_get_bit_depth(png_ptr,  info_ptr);
 
-    if(colorType == PNG_COLOR_TYPE_PALETTE)
-      png_set_palette_to_rgb(png_ptr);
-
-    colorType = png_get_color_type(png_ptr, info_ptr);
-
-    if(colorType==PNG_COLOR_TYPE_GRAY){
+    if(colorType==PNG_COLOR_TYPE_GRAY) {
+      if(bitDepth<8)
+        png_set_expand_gray_1_2_4_to_8(png_ptr);
       outBpp = 1;
       frm    = Pixmap::Format::R;
       }
-    else if(colorType==PNG_COLOR_TYPE_GRAY_ALPHA){
+    else if(colorType==PNG_COLOR_TYPE_GRAY_ALPHA) {
       //png_set_gray_to_rgb(png_ptr);
+      if(bitDepth!=8 && bitDepth!=16)
+        return false;
       outBpp = 2;
       frm    = Pixmap::Format::RG;
       }
-    else if(colorType==PNG_COLOR_TYPE_RGB){
+    else if(colorType==PNG_COLOR_TYPE_RGB) {
+      if(bitDepth!=8 && bitDepth!=16)
+        return false;
       outBpp = 3;
       frm    = Pixmap::Format::RGB;
       }
-    else if(colorType==PNG_COLOR_TYPE_RGB_ALPHA){
+    else if(colorType==PNG_COLOR_TYPE_RGB_ALPHA) {
+      if(bitDepth!=8 && bitDepth!=16)
+        return false;
       outBpp = 4;
       frm    = Pixmap::Format::RGBA;
+      }
+    else if(colorType==PNG_COLOR_TYPE_PALETTE) {
+      png_set_palette_to_rgb(png_ptr);
+      outBpp = 3;
+      frm    = Pixmap::Format::RGB;
       }
     else {
       return false;
