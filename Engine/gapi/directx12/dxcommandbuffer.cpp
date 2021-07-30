@@ -181,6 +181,12 @@ struct DxCommandBuffer::MipMaps : Stage {
   std::vector<DxDescriptorArray> desc;
   };
 
+struct DxCommandBuffer::CopyBuf : Stage {
+  void exec(DxCommandBuffer& cmd) override {
+
+    }
+  };
+
 DxCommandBuffer::DxCommandBuffer(DxDevice& d)
   : dev(d) {
   D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -536,7 +542,14 @@ void DxCommandBuffer::implCopy(AbstractGraphicsApi::Buffer& dstBuf, size_t width
   auto& dst = reinterpret_cast<DxBuffer&>(dstBuf);
   auto& src = reinterpret_cast<const DxTexture&>(srcTex);
 
-  const UINT bpp = src.bitCount()/8;
+  const UINT bpp       = src.bitCount()/8;
+
+  const UINT pitchBase = UINT(width)*bpp;
+  const UINT pitch     = ((pitchBase+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
+  if(pitch==pitchBase && (offset%D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)==0) {
+    copyRaw(dstBuf,width,height,mip,srcTex,offset);
+    return;
+    }
 
   D3D12_PLACED_SUBRESOURCE_FOOTPRINT foot = {};
   foot.Offset             = offset;
@@ -544,7 +557,7 @@ void DxCommandBuffer::implCopy(AbstractGraphicsApi::Buffer& dstBuf, size_t width
   foot.Footprint.Width    = UINT(width);
   foot.Footprint.Height   = UINT(height);
   foot.Footprint.Depth    = 1;
-  foot.Footprint.RowPitch = UINT((width*bpp+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
+  foot.Footprint.RowPitch = pitch;
 
   D3D12_TEXTURE_COPY_LOCATION srcLoc = {};
   srcLoc.pResource        = src.impl.get();
@@ -556,7 +569,17 @@ void DxCommandBuffer::implCopy(AbstractGraphicsApi::Buffer& dstBuf, size_t width
   dstLoc.Type             = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
   dstLoc.PlacedFootprint  = foot;
 
-  impl->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, nullptr);
+  dstLoc.PlacedFootprint.Footprint.Height = 1;
+  for(UINT y=0; y<height; ++y) {
+    D3D12_BOX from = {};
+    from.right  = UINT(width);
+    from.top    = y;
+    from.bottom = y+1;
+    from.back   = 1;
+
+    dstLoc.PlacedFootprint.Offset = offset+pitchBase*y;
+    impl->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, &from);
+    }
   }
 
 void DxCommandBuffer::clearStage() {
@@ -593,6 +616,37 @@ void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img, TextureL
 
   std::unique_ptr<MipMaps> dx(new MipMaps(dev,reinterpret_cast<DxTexture&>(img),defLayout,texWidth,texHeight,mipLevels));
   pushStage(dx.release());
+  }
+
+void DxCommandBuffer::copyRaw(AbstractGraphicsApi::Buffer& dstBuf, uint32_t width, uint32_t height, uint32_t mip,
+                              const AbstractGraphicsApi::Texture& srcTex, size_t offset) {
+  auto& dst = reinterpret_cast<DxBuffer&>(dstBuf);
+  auto& src = reinterpret_cast<const DxTexture&>(srcTex);
+
+  const UINT bpp       = src.bitCount()/8;
+
+  const UINT pitchBase = UINT(width)*bpp;
+  const UINT pitch     = ((pitchBase+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
+
+  D3D12_PLACED_SUBRESOURCE_FOOTPRINT foot = {};
+  foot.Offset             = offset;
+  foot.Footprint.Format   = src.format;
+  foot.Footprint.Width    = UINT(width);
+  foot.Footprint.Height   = UINT(height);
+  foot.Footprint.Depth    = 1;
+  foot.Footprint.RowPitch = pitch;
+
+  D3D12_TEXTURE_COPY_LOCATION srcLoc = {};
+  srcLoc.pResource        = src.impl.get();
+  srcLoc.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+  srcLoc.SubresourceIndex = UINT(mip);
+
+  D3D12_TEXTURE_COPY_LOCATION dstLoc = {};
+  dstLoc.pResource        = dst.impl.get();
+  dstLoc.Type             = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+  dstLoc.PlacedFootprint  = foot;
+
+  impl->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, nullptr);
   }
 
 void DxCommandBuffer::implChangeLayout(ID3D12Resource* res, D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES lay) {

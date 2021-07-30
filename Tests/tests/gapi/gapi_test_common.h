@@ -125,6 +125,36 @@ void vboDyn() {
     }
   }
 
+template<class GraphicsApi, class T>
+void ssboDyn() {
+  using namespace Tempest;
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    const size_t eltCount = 4096+100;
+
+    auto ssbo = device.ssbo(nullptr,eltCount*sizeof(T));
+    for(size_t i=0; i<eltCount; ++i) {
+      T val = T(i*i);
+      ssbo.update(&val,i*sizeof(T),sizeof(T));
+      }
+
+    std::vector<T> data(eltCount);
+    device.readBytes(ssbo,data.data(),data.size()*sizeof(T));
+
+    for(size_t i=0; i<eltCount; ++i) {
+      T val = data[i];
+      EXPECT_EQ(val,T(i*i));
+      }
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
 template<class GraphicsApi>
 void bufCopy() {
   using namespace Tempest;

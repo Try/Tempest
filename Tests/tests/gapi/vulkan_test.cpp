@@ -37,6 +37,12 @@ TEST(VulkanApi,VboDyn) {
 #endif
   }
 
+TEST(VulkanApi,SsboDyn) {
+#if !defined(__OSX__)
+  GapiTestCommon::ssboDyn<VulkanApi,float>();
+#endif
+  }
+
 TEST(VulkanApi,SsboCopy) {
 #if !defined(__OSX__)
   GapiTestCommon::bufCopy<VulkanApi>();
@@ -69,9 +75,9 @@ TEST(VulkanApi,Draw) {
   GapiTestCommon::draw<VulkanApi,TextureFormat::RGBA16> ("VulkanApi_Draw_RGBA16.png");
   GapiTestCommon::draw<VulkanApi,TextureFormat::RG16>   ("VulkanApi_Draw_RG16.png");
   GapiTestCommon::draw<VulkanApi,TextureFormat::R16>    ("VulkanApi_Draw_R16.png");
-  GapiTestCommon::draw<VulkanApi,TextureFormat::RGBA32F>("VulkanApi_Draw_RGBA32F.png");
-  GapiTestCommon::draw<VulkanApi,TextureFormat::RG32F>  ("VulkanApi_Draw_RG32F.png");
-  GapiTestCommon::draw<VulkanApi,TextureFormat::R32F>   ("VulkanApi_Draw_R32F.png");
+  GapiTestCommon::draw<VulkanApi,TextureFormat::RGBA32F>("VulkanApi_Draw_RGBA32F.hdr");
+  GapiTestCommon::draw<VulkanApi,TextureFormat::RG32F>  ("VulkanApi_Draw_RG32F.hdr");
+  GapiTestCommon::draw<VulkanApi,TextureFormat::R32F>   ("VulkanApi_Draw_R32F.hdr");
 #endif
   }
 

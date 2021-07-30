@@ -37,7 +37,13 @@ TEST(DirectX12Api,VboDyn) {
 #endif
   }
 
-TEST(DirectX12Api,DISABLED_SsboCopy) {
+TEST(DirectX12Api,SsboDyn) {
+#if !defined(__OSX__)
+  GapiTestCommon::ssboDyn<DirectX12Api,float>();
+#endif
+  }
+
+TEST(DirectX12Api,SsboCopy) {
 #if defined(_MSC_VER)
   GapiTestCommon::bufCopy<DirectX12Api>();
 #endif
@@ -69,9 +75,9 @@ TEST(DirectX12Api,Draw) {
   GapiTestCommon::draw<DirectX12Api,TextureFormat::RGBA16> ("DirectX12Api_Draw_RGBA16.png");
   GapiTestCommon::draw<DirectX12Api,TextureFormat::RG16>   ("DirectX12Api_Draw_RG16.png");
   GapiTestCommon::draw<DirectX12Api,TextureFormat::R16>    ("DirectX12Api_Draw_R16.png");
-  GapiTestCommon::draw<DirectX12Api,TextureFormat::RGBA32F>("DirectX12Api_Draw_RGBA32F.png");
-  GapiTestCommon::draw<DirectX12Api,TextureFormat::RG32F>  ("DirectX12Api_Draw_RG32F.png");
-  GapiTestCommon::draw<DirectX12Api,TextureFormat::R32F>   ("DirectX12Api_Draw_R32F.png");
+  GapiTestCommon::draw<DirectX12Api,TextureFormat::RGBA32F>("DirectX12Api_Draw_RGBA32F.hdr");
+  GapiTestCommon::draw<DirectX12Api,TextureFormat::RG32F>  ("DirectX12Api_Draw_RG32F.hdr");
+  GapiTestCommon::draw<DirectX12Api,TextureFormat::R32F>   ("DirectX12Api_Draw_R32F.hdr");
 #endif
   }
 
