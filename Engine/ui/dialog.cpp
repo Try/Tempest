@@ -45,14 +45,15 @@ struct Dialog::LayShadow : Tempest::Layout {
 
 struct Dialog::Overlay : public Tempest::UiOverlay {
   Dialog& dlg;
-  bool    isModal = true;
 
   Overlay(Dialog& dlg):dlg(dlg){}
 
   void mouseDownEvent(MouseEvent& e) override {
-    if(isModal)
+    if(dlg.modal)
       e.accept(); else
       e.ignore();
+    if(dlg.popup)
+      dlg.close();
     }
 
   void mouseMoveEvent(MouseEvent& e) override {
@@ -60,7 +61,7 @@ struct Dialog::Overlay : public Tempest::UiOverlay {
     }
 
   void mouseWheelEvent(MouseEvent& e) override {
-    if(isModal)
+    if(dlg.modal)
       e.accept(); else
       e.ignore();
     }
@@ -128,12 +129,19 @@ bool Dialog::isOpen() const {
   }
 
 void Dialog::setModal(bool m) {
-  if(owner_ov!=nullptr)
-    owner_ov->isModal = m;
+  modal = m;
   }
 
 bool Dialog::isModal() const {
-  return owner_ov!=nullptr ? owner_ov->isModal : false;
+  return modal;
+  }
+
+void Dialog::setPopup(bool p) {
+  popup = p;
+  }
+
+bool Dialog::isPopup() const {
+  return popup;
   }
 
 void Dialog::closeEvent(CloseEvent&) {

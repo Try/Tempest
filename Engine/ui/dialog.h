@@ -19,6 +19,9 @@ class Dialog : public Panel {
     void setModal(bool m);
     bool isModal() const;
 
+    void setPopup(bool p);
+    bool isPopup() const;
+
   protected:
     void         closeEvent  (CloseEvent& e) override;
     void         keyDownEvent(KeyEvent&   e) override;
@@ -32,6 +35,8 @@ class Dialog : public Panel {
     struct LayShadow;
 
     Overlay* owner_ov = nullptr;
+    bool     modal    = true;
+    bool     popup    = false;
   };
 
 }
