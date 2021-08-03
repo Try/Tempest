@@ -52,12 +52,22 @@ struct Dialog::Overlay : public Tempest::UiOverlay {
     if(dlg.modal)
       e.accept(); else
       e.ignore();
-    if(dlg.popup)
-      dlg.close();
+    if(dlg.popup) {
+      CloseEvent e;
+      e.accept();
+      dlg.closeEvent(e);
+      if(e.isAccepted()) {
+        dlg.close();
+        } else {
+        e.accept();
+        }
+      }
     }
 
   void mouseMoveEvent(MouseEvent& e) override {
-    e.accept();
+    if(dlg.modal)
+      e.accept(); else
+      e.ignore();
     }
 
   void mouseWheelEvent(MouseEvent& e) override {
