@@ -44,6 +44,7 @@ class FontElement final {
     const Letter&         letter(char32_t ch,float size,TextureAtlas& tex) const;
 
     Size                  textSize(const char* text, float fontSize) const;
+    Size                  textSize(const char* text, int maxW, float fontSize) const;
     bool                  isEmpty() const;
 
     Metrics               metrics(float size) const;
@@ -94,6 +95,9 @@ class Font final {
 
     Size                  textSize(const char* text) const;
     Size                  textSize(const std::string& text) const;
+
+    Size                  textSize(int maxW, const char* text) const;
+    Size                  textSize(int maxW, const std::string& text) const;
 
   private:
     template<class CharT>

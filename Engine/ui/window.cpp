@@ -34,6 +34,7 @@ void Window::dispatchPaintEvent(VectorImage &surface,TextureAtlas& ta) {
   surface.clear();
 
   PaintEvent p(surface,ta,this->w(),this->h());
+  this->astate.needToUpdate = false;
   Widget::dispatchPaintEvent(p);
 
   SystemApi::dispatchOverlayRender(*this,p);

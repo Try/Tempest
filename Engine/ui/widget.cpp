@@ -131,9 +131,11 @@ void Widget::implDisableSum(Widget *root,int diff) noexcept {
   }
 
 void Widget::dispatchPaintEvent(PaintEvent& e) {
-  astate.needToUpdate = false;
-
   paintEvent(e);
+  paintNested(e);
+  }
+
+void Widget::paintNested(PaintEvent& e) {
   Widget::Iterator it(this);
   for(;it.hasNext();it.next()) {
     Widget& wx=*it.get();
@@ -149,6 +151,7 @@ void Widget::dispatchPaintEvent(PaintEvent& e) {
       continue;
 
     PaintEvent ex(e,wx.x(),wx.y(),sc.x,sc.y,sc.w,sc.h);
+    wx.astate.needToUpdate = false;
     wx.dispatchPaintEvent(ex);
     }
   }

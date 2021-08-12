@@ -554,43 +554,6 @@ void Painter::drawText(int x, int y, const std::u16string &txt) {
   return drawText(x,y,txt.c_str());
   }
 
-static Utf8Iterator advanceByWord(Utf8Iterator i, int& x, int w, const Font& fnt){
-  while(true){
-    auto c=i.peek();
-    if(c=='\0' || c=='\n' || c=='\r' || c=='\t' || c=='\v' || c=='\f' || c==' ')
-      break;
-
-    i.next();
-    auto l=fnt.letterGeometry(c);
-    x += l.advance.x;
-    if(x>=w)
-      break;
-    }
-  return i;
-  }
-
-static Utf8Iterator advanceByLine(Utf8Iterator i, int& x, int w, const Font& fnt){
-  size_t wordCount=0;
-  while(true){
-    Utf8Iterator eow = advanceByWord(i,x,w,fnt);
-    ++wordCount;
-
-    if(x>=w && wordCount>1)
-      break;
-    auto c=eow.next();
-    if(c=='\0' || c=='\n'){
-      i = eow;
-      break;
-      }
-    auto l=fnt.letterGeometry(c);
-    if(x+l.dpos.x+l.size.w>=w && wordCount>1)
-      break;
-    x += l.advance.x;
-    i = eow;
-    }
-  return i;
-  }
-
 static int calcLineWidth(Utf8Iterator i, Utf8Iterator eol, const Font& fnt, TextureAtlas& ta) {
   int x = 0;
   while(i!=eol){
@@ -610,7 +573,7 @@ static int calcTextHeight(const char* txt, const int w, int& l0, const Font& fnt
 
   Utf8Iterator i(txt);
   while(i.hasData()) {
-    Utf8Iterator eol = advanceByLine(i,x,w,fnt);
+    Utf8Iterator eol = i.advanceByLine(x,w,fnt);
     if(i==eol)
       break;
     cnt++;
@@ -662,7 +625,7 @@ void Painter::drawText(int rx, int ry, int w, int h, const char *txt, AlignFlag 
   while(i.hasData()) {
     // make next line
     x = 0;
-    Utf8Iterator eol = advanceByLine(i,x,w,s.fnt);
+    Utf8Iterator eol = i.advanceByLine(x,w,s.fnt);
     if(i==eol)
       break;
 

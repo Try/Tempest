@@ -34,14 +34,15 @@ class Widget {
     const Layout& layout() const { return *lay; }
     void  applyLayout();
 
-    size_t  widgetsCount() const { return wx.size(); }
-    Widget& widget(size_t i) { return *wx[i]; }
-    void    removeAllWidgets();
+    size_t        widgetsCount() const   { return wx.size(); }
+    Widget&       widget(size_t i)       { return *wx[i]; }
+    const Widget& widget(size_t i) const { return *wx[i]; }
+    void          removeAllWidgets();
     template<class T>
-    T&      addWidget(T* w);
+    T&            addWidget(T* w);
     template<class T>
-    T&      addWidget(T* w,size_t at);
-    Widget* takeWidget(Widget* w);
+    T&            addWidget(T* w,size_t at);
+    Widget*       takeWidget(Widget* w);
 
           Widget* owner()       { return ow; }
     const Widget* owner() const { return ow; }
@@ -118,6 +119,8 @@ class Widget {
     void setWidgetState(const WidgetState& st);
 
     virtual void paintEvent     (Tempest::PaintEvent&  event);
+    virtual void dispatchPaintEvent(Tempest::PaintEvent& event);
+    void         paintNested    (Tempest::PaintEvent&  event);
     virtual void resizeEvent    (Tempest::SizeEvent&   event);
 
     virtual void mouseDownEvent (Tempest::MouseEvent&  event);
@@ -209,7 +212,6 @@ class Widget {
     bool                    checkFocus() const { return wstate.focus || astate.focus; }
     void                    implAttachFocus();
 
-    void                    dispatchPaintEvent (PaintEvent&  e);
     void                    dispatchPolishEvent(PolishEvent& e);
 
     auto                    selfReference() -> const std::shared_ptr<Ref>&;

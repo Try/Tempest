@@ -328,8 +328,8 @@ const FontElement::Letter& FontElement::letter(char32_t ch, float size, TextureA
   return ptr->letter(ch,size,&tex);
   }
 
-Size FontElement::textSize(const char *text,float fontSize) const {
-  Utf8Iterator i(text,std::strlen(text));
+Size FontElement::textSize(const char *text, float fontSize) const {
+  Utf8Iterator i(text);
 
   Size ret;
   int  minY = 0;
@@ -447,4 +447,39 @@ Size Font::textSize(const char *text) const {
 
 Size Font::textSize(const std::string &text) const {
   return textSize(text.c_str());
+  }
+
+Size Font::textSize(int maxW, const char* txt) const {
+  Size ret;
+  if(txt==nullptr)
+    return ret;
+
+  const int pSz = int(std::ceil(pixelSize()));
+
+  Utf8Iterator i(txt);
+  while(i.hasData()) {
+    // make next line
+    int x = 0;
+    Utf8Iterator eol = i.advanceByLine(x,maxW,*this);
+    if(i==eol)
+      break;
+
+    x = 0;
+    while(i!=eol) {
+      auto c = i.next();
+      if(c=='\0')
+        return ret;
+      if(c=='\n' || c=='\r')
+        continue;
+      auto l = letterGeometry(c);
+      x += l.advance.x;
+      }
+    ret.w = std::max(ret.w,x);
+    ret.h += pSz;
+    }
+  return ret;
+  }
+
+Size Font::textSize(int maxW, const std::string& text) const {
+  return textSize(maxW,text.c_str());
   }

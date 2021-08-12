@@ -193,6 +193,7 @@ void EventDispatcher::dispatchOverlayRender(Window& wnd, PaintEvent& e) {
     auto w = overlays[i];
     if(!w->bind(wnd))
       continue;
+    w->astate.needToUpdate = false;
     w->dispatchPaintEvent(e);
     }
   }

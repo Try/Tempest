@@ -7,6 +7,8 @@
 #include <codecvt>
 #include <locale>
 
+#include "../formats/font.h"
+
 namespace Tempest {
 namespace Detail {
 
@@ -241,6 +243,46 @@ class Utf8Iterator {
       return str!=other.str ||
              beg!=other.beg ||
              end!=other.end;
+      }
+
+    Utf8Iterator advanceByWord(int& x, int w, const Font& fnt) {
+      Utf8Iterator i = *this;
+      while(true) {
+        auto c=i.peek();
+        if(c=='\0' || c=='\n' || c=='\r' || c=='\t' || c=='\v' || c=='\f' || c==' ')
+          break;
+
+        auto l=fnt.letterGeometry(c);
+        if(x+l.dpos.x+l.size.w>=w)
+          break;
+        x += l.advance.x;
+        i.next();
+        }
+      return i;
+      }
+
+    Utf8Iterator advanceByLine(int& x, int w, const Font& fnt) {
+      Utf8Iterator i = *this;
+      size_t wordCount=0;
+      while(true) {
+        Utf8Iterator eow = i.advanceByWord(x,w,fnt);
+        ++wordCount;
+
+        if(x>=w && wordCount>1)
+          break;
+        auto c = eow.peek();
+        if(c=='\0' || c=='\n') {
+          eow.next();
+          return eow;
+          }
+        auto l=fnt.letterGeometry(c);
+        if(x+l.dpos.x+l.size.w>=w && (i!=eow || wordCount>1))
+          return eow;
+        x += l.advance.x;
+        eow.next();
+        i = eow;
+        }
+      return i;
       }
 
   private:
