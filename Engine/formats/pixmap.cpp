@@ -15,27 +15,22 @@ struct Pixmap::Impl {
   Impl()=default;
 
   Impl(uint32_t w,uint32_t h,Pixmap::Format frm):w(w),h(h),frm(frm) {
-    bpp    = uint32_t(bppForFormat(frm));
-    dataSz = size_t(w)*size_t(h)*size_t(bpp);
+    dataSz = calcDataSize(w,h,frm);
     data   = reinterpret_cast<uint8_t*>(std::malloc(dataSz));
     if(!data)
       throw std::bad_alloc();
     std::memset(data,0,dataSz);
     }
 
-  Impl(const Impl& other):w(other.w),h(other.h),bpp(other.bpp),dataSz(other.dataSz),frm(other.frm),mipCnt(other.mipCnt){
-    size_t size=size_t(w)*size_t(h)*size_t(bpp);
-    data=reinterpret_cast<uint8_t*>(std::malloc(size));
+  Impl(const Impl& other):w(other.w),h(other.h),dataSz(other.dataSz),frm(other.frm),mipCnt(other.mipCnt){
+    data   = reinterpret_cast<uint8_t*>(std::malloc(dataSz));
     if(!data)
       throw std::bad_alloc();
-
-    std::memcpy(data,other.data,size);
+    std::memcpy(data,other.data,dataSz);
     }
 
-  Impl(const Impl& other,Pixmap::Format conv):w(other.w),h(other.h),bpp(other.bpp),frm(conv) {
-    bpp = uint32_t(bppForFormat(frm));
-
-    size_t size = size_t(w)*size_t(h)*size_t(bpp);
+  Impl(const Impl& other,Pixmap::Format conv):w(other.w),h(other.h),frm(conv) {
+    size_t size = calcDataSize(w,h,frm);
     data = reinterpret_cast<uint8_t*>(std::malloc(size));
     if(!data)
       throw std::bad_alloc();
@@ -103,6 +98,7 @@ struct Pixmap::Impl {
     }
 
   Impl(IDevice& f){
+    uint32_t bpp = 0;
     frm  = Pixmap::Format::RGBA;
     data = PixmapCodec::loadImg(f,w,h,frm,mipCnt,bpp,dataSz);
 
@@ -112,6 +108,12 @@ struct Pixmap::Impl {
 
   ~Impl(){
     PixmapCodec::freeImg(data);
+    }
+
+  static size_t calcDataSize(uint32_t w, uint32_t h, Format frm) {
+    auto bsz = blockCount(frm,w,h);
+    auto bpb = blockSizeForFormat(frm);
+    return size_t(bsz.w)*size_t(bsz.h)*size_t(bpb);
     }
 
   static std::unique_ptr<Impl,Deleter> convert(const Impl& other,Format frm) {
@@ -229,12 +231,11 @@ struct Pixmap::Impl {
   uint8_t*       data   = nullptr;
   uint32_t       w      = 0;
   uint32_t       h      = 0;
-  uint32_t       bpp    = 0;
   size_t         dataSz = 0;
   Pixmap::Format frm    = Pixmap::Format::RGB;
   uint32_t       mipCnt = 1;
 
-  static Impl zero;
+  static Impl    zero;
   };
 
 Pixmap::Impl Pixmap::Impl::zero;
@@ -320,7 +321,7 @@ uint32_t Pixmap::h() const {
   }
 
 uint32_t Pixmap::bpp() const {
-  return uint32_t(impl->bpp);
+  return uint32_t(bppForFormat(impl->frm));
   }
 
 uint32_t Pixmap::mipCount() const {
@@ -347,7 +348,13 @@ Pixmap::Format Pixmap::format() const {
   return impl->frm;
   }
 
-size_t Pixmap::bppForFormat(Pixmap::Format frm) {
+size_t Pixmap::bppForFormat(Format f) {
+  if(Impl::isCompressed(f))
+    return 0;
+  return blockSizeForFormat(f);
+  }
+
+size_t Pixmap::blockSizeForFormat(Pixmap::Format frm) {
   switch(frm) {
     case Pixmap::Format::R:       return 1;
     case Pixmap::Format::RG:      return 2;
@@ -364,9 +371,9 @@ size_t Pixmap::bppForFormat(Pixmap::Format frm) {
     case Pixmap::Format::RGB32F:  return 12;
     case Pixmap::Format::RGBA32F: return 16;
     //---
-    case Pixmap::Format::DXT1:    return 0;
-    case Pixmap::Format::DXT3:    return 0;
-    case Pixmap::Format::DXT5:    return 0;
+    case Pixmap::Format::DXT1:    return 8;
+    case Pixmap::Format::DXT3:    return 16;
+    case Pixmap::Format::DXT5:    return 16;
     }
   return 0;
   }
@@ -388,11 +395,34 @@ uint8_t Pixmap::componentCount(Pixmap::Format frm) {
     case Pixmap::Format::RGB32F:  return 3;
     case Pixmap::Format::RGBA32F: return 4;
     //---
-    case Pixmap::Format::DXT1:    return 0;
-    case Pixmap::Format::DXT3:    return 0;
-    case Pixmap::Format::DXT5:    return 0;
+    case Pixmap::Format::DXT1:    return 3;
+    case Pixmap::Format::DXT3:    return 4;
+    case Pixmap::Format::DXT5:    return 4;
     }
   return 0;
+  }
+
+Size Pixmap::blockCount(Format frm, uint32_t w, uint32_t h) {
+  switch(frm) {
+    case Pixmap::Format::R:
+    case Pixmap::Format::RG:
+    case Pixmap::Format::RGB:
+    case Pixmap::Format::RGBA:
+    case Pixmap::Format::R16:
+    case Pixmap::Format::RG16:
+    case Pixmap::Format::RGB16:
+    case Pixmap::Format::RGBA16:
+    case Pixmap::Format::R32F:
+    case Pixmap::Format::RG32F:
+    case Pixmap::Format::RGB32F:
+    case Pixmap::Format::RGBA32F:
+      return Size(w,h);
+    case Pixmap::Format::DXT1:
+    case Pixmap::Format::DXT3:
+    case Pixmap::Format::DXT5:
+      return Size((w+3)/4,(h+3)/4);
+    }
+  return Size(0,0);
   }
 
 TextureFormat Pixmap::toTextureFormat(Pixmap::Format f) {

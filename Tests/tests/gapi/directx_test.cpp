@@ -43,7 +43,7 @@ TEST(DirectX12Api,SsboDyn) {
 #endif
   }
 
-TEST(DirectX12Api,SsboCopy) {
+TEST(DirectX12Api,DISABLED_SsboCopy) {
 #if defined(_MSC_VER)
   GapiTestCommon::bufCopy<DirectX12Api>();
 #endif
@@ -103,18 +103,7 @@ TEST(DirectX12Api,MipMaps) {
 
 TEST(DirectX12Api,S3TC) {
 #if defined(_MSC_VER)
-  try {
-    DirectX12Api api{ApiFlags::Validation};
-    Device       device(api);
-
-    auto tex = device.loadTexture("data/img/tst-dxt5.dds");
-    EXPECT_EQ(tex.format(),TextureFormat::DXT5);
-    }
-  catch(std::system_error& e) {
-    if(e.code()==Tempest::GraphicsErrc::NoDevice)
-      Log::d("Skipping directx testcase: ", e.what()); else
-      throw;
-    }
+  GapiTestCommon::S3TC<DirectX12Api>("DirectX12Api_S3TC.png");
 #endif
   }
 
@@ -136,7 +125,7 @@ TEST(DirectX12Api,PushRemapping) {
 #endif
   }
 
-TEST(DirectX12Api,SpirvDefect) {
+TEST(DirectX12Api,SpirvDefect_Link) {
 #if defined(_MSC_VER)
   using namespace Tempest;
 
@@ -166,6 +155,25 @@ TEST(DirectX12Api,SpirvDefect) {
     auto sync = device.fence();
     device.submit(cmd,sync);
     sync.wait();
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+#endif
+  }
+
+TEST(DirectX12Api,SpirvDefect_Loop) {
+#if defined(_MSC_VER)
+  using namespace Tempest;
+
+  try {
+    DirectX12Api api{ApiFlags::Validation};
+    Device       device(api);
+
+    auto pso  = device.pipeline(device.loadShader("shader/loop_defect.comp.sprv"));
+    (void)pso;
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)

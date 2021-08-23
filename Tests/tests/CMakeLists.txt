@@ -2,17 +2,19 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.1)
 
 PROJECT(TempestTests LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 include_directories("${CMAKE_SOURCE_DIR}/../../Engine/include")
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/testsuite)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/testsuite)
 
-add_definitions(-DGTEST_LANGUAGE_CXX11)
+add_definitions(-DGTEST_LANG_CXX11=1)
 if(MSVC)
+  add_definitions(-D_USE_MATH_DEFINES)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   add_definitions(-DNOMINMAX)
+  #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4996")
 endif()
 
 if($ENV{GOOGLETEST_DIR})
@@ -78,6 +80,8 @@ compile_shader(push_constant.comp)
 
 compile_shader(link_defect.vert)
 compile_shader(link_defect.frag)
+
+compile_shader(loop_defect.comp)
 
 add_executable(${PROJECT_NAME}
   ${SOURCES}

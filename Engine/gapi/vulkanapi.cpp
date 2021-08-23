@@ -164,8 +164,11 @@ AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device
 
 AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Device *d, const Pixmap &p, TextureFormat frm, uint32_t mipCnt) {
   Detail::VDevice& dx     = *reinterpret_cast<Detail::VDevice*>(d);
+
   const uint32_t   size   = uint32_t(p.dataSize());
   VkFormat         format = Detail::nativeFormat(frm);
+  Pixmap::Format   pfrm   = Pixmap::toPixmapFormat(frm);
+
   Detail::VBuffer  stage  = dx.allocator.alloc(p.data(),size,1,1,MemUsage::TransferSrc,BufferHeap::Upload);
   Detail::VTexture buf    = dx.allocator.alloc(p,mipCnt,format);
 
@@ -179,15 +182,15 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
 
   cmd->changeLayout(*pbuf.handler, TextureLayout::Undefined, TextureLayout::TransferDest, uint32_t(-1));
   if(isCompressedFormat(frm)){
-    size_t blocksize  = (frm==TextureFormat::DXT1) ? 8 : 16;
+    size_t blockSize  = Pixmap::blockSizeForFormat(pfrm);
     size_t bufferSize = 0;
 
     uint32_t w = uint32_t(p.w()), h = uint32_t(p.h());
     for(uint32_t i=0; i<mipCnt; i++){
-      size_t blockcount = ((w+3)/4)*((h+3)/4);
       cmd->copy(*pbuf.handler,w,h,i,*pstage.handler,bufferSize);
 
-      bufferSize += blockcount*blocksize;
+      Size bsz   = Pixmap::blockCount(pfrm,w,h);
+      bufferSize += bsz.w*bsz.h*blockSize;
       w = std::max<uint32_t>(1,w/2);
       h = std::max<uint32_t>(1,h/2);
       }
@@ -240,11 +243,10 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
   Detail::VTexture& tx = *reinterpret_cast<Detail::VTexture*>(t.handler);
 
   Pixmap::Format  pfrm = Pixmap::toPixmapFormat(frm);
-  size_t          bpp  = Pixmap::bppForFormat(pfrm);
-  if(bpp==0)
-    throw std::runtime_error("not implemented");
+  size_t          bpb  = Pixmap::blockSizeForFormat(pfrm);
+  Size            bsz  = Pixmap::blockCount(pfrm,w,h);
 
-  const size_t    size  = w*h*bpp;
+  const size_t    size  = bsz.w*bsz.h*bpb;
   Detail::VBuffer stage = dx.allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
 
   auto cmd = dx.dataMgr().get();

@@ -505,6 +505,30 @@ void mipMaps(const char* outImage) {
   }
 
 template<class GraphicsApi>
+void S3TC(const char* /*outImage*/) {
+  using namespace Tempest;
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto src = Pixmap("data/img/tst-dxt5.dds");
+    auto tex = device.loadTexture(src);
+    EXPECT_EQ(tex.format(),TextureFormat::DXT5);
+
+    auto dst = device.readPixels(tex);
+    EXPECT_EQ(dst.format(),Pixmap::Format::DXT5);
+
+    // EXPECT_EQ(dst.dataSize(),src.dataSize());
+    EXPECT_TRUE(std::memcmp(dst.data(),src.data(),dst.dataSize())==0);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping directx testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void ssboWriteVs() {
   using namespace Tempest;
 

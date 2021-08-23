@@ -62,8 +62,11 @@ class Pixmap final {
 
     Format      format() const;
 
-    static size_t        bppForFormat   (Format f);
-    static uint8_t       componentCount (Format f);
+    static size_t        bppForFormat      (Format f);
+    static size_t        blockSizeForFormat(Format f);
+    static uint8_t       componentCount    (Format f);
+    static Size          blockCount        (Format f, uint32_t w, uint32_t h);
+
     static TextureFormat toTextureFormat(Format f);
     static Format        toPixmapFormat (TextureFormat f);
 

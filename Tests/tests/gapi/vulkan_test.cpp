@@ -101,6 +101,12 @@ TEST(VulkanApi,MipMaps) {
 #endif
   }
 
+TEST(VulkanApi,S3TC) {
+#if !defined(__OSX__)
+  GapiTestCommon::S3TC<VulkanApi>("VulkanApi_S3TC.png");
+#endif
+  }
+
 TEST(VulkanApi,TesselationBasic) {
 #if !defined(__OSX__)
   GapiTestCommon::psoTess<VulkanApi>();

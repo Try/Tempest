@@ -18,6 +18,7 @@ class DxTexture : public AbstractGraphicsApi::Texture {
     uint32_t mipCount() const override { return mips; }
 
     UINT     bitCount() const;
+    UINT     bytePerBlockCount() const;
 
     ComPtr<ID3D12Resource> impl;
     DXGI_FORMAT            format = DXGI_FORMAT_UNKNOWN;

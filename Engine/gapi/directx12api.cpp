@@ -307,21 +307,20 @@ AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixma
 AbstractGraphicsApi::PTexture DirectX12Api::createCompressedTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mipCnt) {
   Detail::DxDevice& dx     = *reinterpret_cast<Detail::DxDevice*>(d);
 
-  DXGI_FORMAT format    = Detail::nativeFormat(frm);
-  UINT        blockSize = (frm==TextureFormat::DXT1) ? 8 : 16;
+  DXGI_FORMAT    format    = Detail::nativeFormat(frm);
+  Pixmap::Format pfrm      = Pixmap::toPixmapFormat(frm);
+  UINT           blockSize = UINT(Pixmap::blockSizeForFormat(pfrm));
 
   size_t bufferSize      = 0;
   UINT   stageBufferSize = 0;
   uint32_t w = p.w(), h = p.h();
 
-  for(uint32_t i=0; i<mipCnt; i++){
-    UINT wBlk = (w+3)/4;
-    UINT hBlk = (h+3)/4;
-    UINT pitch = wBlk*blockSize;
-    pitch = alignTo(pitch,D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
-    bufferSize += wBlk*hBlk*blockSize;
+  for(uint32_t i=0; i<mipCnt; i++) {
+    Size bsz   = Pixmap::blockCount(pfrm,w,h);
+    UINT pitch = alignTo(bsz.w*blockSize,D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
 
-    stageBufferSize += pitch*hBlk;
+    bufferSize      += bsz.w*bsz.h*blockSize;
+    stageBufferSize += pitch*bsz.h;
     stageBufferSize = alignTo(stageBufferSize,D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 
     w = std::max<uint32_t>(1,w/2);
@@ -388,14 +387,13 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureL
   Detail::DxDevice&  dx = *reinterpret_cast<Detail::DxDevice*>(d);
   Detail::DxTexture& tx = *reinterpret_cast<Detail::DxTexture*>(t.handler);
 
-  Pixmap::Format  pfrm  = Pixmap::toPixmapFormat(frm);
-  size_t          bpp   = Pixmap::bppForFormat(pfrm);
-  if(bpp==0)
-    throw std::runtime_error("not implemented");
+  Pixmap::Format   pfrm  = Pixmap::toPixmapFormat(frm);
+  size_t           bpb   = Pixmap::blockSizeForFormat(pfrm);
+  Size             bsz   = Pixmap::blockCount(pfrm,w,h);
 
-  uint32_t         row   = w*uint32_t(bpp);
+  uint32_t         row   = bsz.w*uint32_t(bpb);
   const uint32_t   pith  = ((row+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
-  Detail::DxBuffer stage = dx.allocator.alloc(nullptr,h,w*bpp,pith,MemUsage::TransferDst,BufferHeap::Readback);
+  Detail::DxBuffer stage = dx.allocator.alloc(nullptr,bsz.h,bsz.w*bpb,pith,MemUsage::TransferDst,BufferHeap::Readback);
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
@@ -406,9 +404,8 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureL
   dx.dataMgr().submitAndWait(std::move(cmd));
 
   out = Pixmap(w,h,pfrm);
-  for(size_t i=0; i<h; ++i) {
-    stage.read(reinterpret_cast<uint8_t*>(out.data())+i*w*bpp, i*pith, w*bpp);
-    }
+  for(int32_t i=0; i<bsz.h; ++i)
+    stage.read(reinterpret_cast<uint8_t*>(out.data())+i*bsz.w*bpb, i*pith, bsz.w*bpb);
   }
 
 void DirectX12Api::readBytes(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Buffer* buf, void* out, size_t size) {

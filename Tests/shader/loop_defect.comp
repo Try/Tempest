@@ -1,0 +1,28 @@
+#version 440
+
+layout(binding = 0, std140) readonly buffer Input {
+  ivec4 val[];
+  } source;
+
+layout(binding = 1, std140) buffer Output {
+  ivec4 val[];
+  } result;
+
+
+int func(ivec4 flow) {
+  int ret = 0;
+  for(int i=0; i<flow.x; ++i) {
+    ret += flow.y;
+    }
+  return ret;
+  }
+
+void main() {
+  for(int i=0; ; ++i) {
+    ivec4 v = source.val[i];
+    result.val[gl_GlobalInvocationID.x] += v;
+    result.val[gl_GlobalInvocationID.x] += func(v);
+    if(v==ivec4(0))
+      break;
+    }
+  }

@@ -39,8 +39,8 @@ DxDescriptorArray::DxDescriptorArray(DxPipelineLay& vlay)
 
 DxDescriptorArray::DxDescriptorArray(DxDescriptorArray&& other)
   : lay(other.lay) {
-  val          = other.val;
-  heapCnt      = other.heapCnt;
+  val       = other.val;
+  heapCnt   = other.heapCnt;
   other.lay = DSharedPtr<DxPipelineLay*>{};
   }
 
