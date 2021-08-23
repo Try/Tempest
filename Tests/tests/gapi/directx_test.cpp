@@ -38,7 +38,7 @@ TEST(DirectX12Api,VboDyn) {
   }
 
 TEST(DirectX12Api,SsboDyn) {
-#if !defined(__OSX__)
+#if defined(_MSC_VER)
   GapiTestCommon::ssboDyn<DirectX12Api,float>();
 #endif
   }

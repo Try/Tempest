@@ -16,9 +16,6 @@ environment:
     - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
       GENERATOR: ""
 
-    - APPVEYOR_BUILD_WORKER_IMAGE: macos
-      GENERATOR: ""
-
 install:
 - git submodule -q update --init --recursive
 # Vulkan SDK and thirdparty
