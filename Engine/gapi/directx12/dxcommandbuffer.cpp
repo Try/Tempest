@@ -182,9 +182,35 @@ struct DxCommandBuffer::MipMaps : Stage {
   };
 
 struct DxCommandBuffer::CopyBuf : Stage {
-  void exec(DxCommandBuffer& cmd) override {
-
+  CopyBuf(DxDevice& dev,
+          DxBuffer& dst, size_t offset,
+          const DxTexture& src, size_t width, size_t height, size_t mip)
+    :dst(dst), offset(offset), src(src), width(width), height(height), mip(mip), desc(*dev.copyLayout.handler) {
     }
+
+  void exec(DxCommandBuffer& cmd) override {
+    auto& impl = *cmd.impl;
+    auto& dev  = cmd.dev;
+
+    desc.set    (0,&src,0,Sampler2d::nearest());
+    desc.setSsbo(1,&dst,0);
+
+    auto& shader = *dev.copy.handler;
+    impl.SetPipelineState(shader.impl.get());
+    impl.SetComputeRootSignature(shader.sign.get());
+    cmd.implSetUniforms(desc,true);
+
+    impl.Dispatch(UINT(width),UINT(height),1u);
+    }
+
+  DxBuffer&         dst;
+  const size_t      offset = 0;
+  const DxTexture&  src;
+  const size_t      width  = 0;
+  const size_t      height = 0;
+  const size_t      mip    = 0;
+
+  DxDescriptorArray desc;
   };
 
 DxCommandBuffer::DxCommandBuffer(DxDevice& d)
@@ -390,7 +416,7 @@ void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompu
     auto desc = ux.val.gpu[r.heap];
     desc.ptr+=r.heapOffset;
     if(isCompute)
-      impl->SetComputeRootDescriptorTable(UINT(i), desc); else
+      impl->SetComputeRootDescriptorTable (UINT(i), desc); else
       impl->SetGraphicsRootDescriptorTable(UINT(i), desc);
     }
   }
@@ -551,35 +577,8 @@ void DxCommandBuffer::implCopy(AbstractGraphicsApi::Buffer& dstBuf, size_t width
     return;
     }
 
-  D3D12_PLACED_SUBRESOURCE_FOOTPRINT foot = {};
-  foot.Offset             = offset;
-  foot.Footprint.Format   = src.format;
-  foot.Footprint.Width    = UINT(width);
-  foot.Footprint.Height   = UINT(height);
-  foot.Footprint.Depth    = 1;
-  foot.Footprint.RowPitch = pitch;
-
-  D3D12_TEXTURE_COPY_LOCATION srcLoc = {};
-  srcLoc.pResource        = src.impl.get();
-  srcLoc.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-  srcLoc.SubresourceIndex = UINT(mip);
-
-  D3D12_TEXTURE_COPY_LOCATION dstLoc = {};
-  dstLoc.pResource        = dst.impl.get();
-  dstLoc.Type             = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-  dstLoc.PlacedFootprint  = foot;
-
-  dstLoc.PlacedFootprint.Footprint.Height = 1;
-  for(UINT y=0; y<height; ++y) {
-    D3D12_BOX from = {};
-    from.right  = UINT(width);
-    from.top    = y;
-    from.bottom = y+1;
-    from.back   = 1;
-
-    dstLoc.PlacedFootprint.Offset = offset+pitchBase*y;
-    impl->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, &from);
-    }
+  std::unique_ptr<CopyBuf> dx(new CopyBuf(dev,dst,offset,src,width,height,mip));
+  pushStage(dx.release());
   }
 
 void DxCommandBuffer::clearStage() {

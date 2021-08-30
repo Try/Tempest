@@ -1,0 +1,13 @@
+#version 440
+
+layout(binding = 0) uniform usampler2D source;
+
+layout(binding = 1, std140) writeonly buffer Output {
+  uvec4 val[];
+  } result;
+
+void main() {
+  ivec2 texSz = textureSize(source,0);
+  uvec4 pixel = texelFetch(source,ivec2(gl_GlobalInvocationID.xy),0);
+  result.val[gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*texSz.x] = pixel;
+  }

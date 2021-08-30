@@ -53,9 +53,9 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const 
   set(id,tex,uint32_t(-1),smp);
   }
 
-void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, uint32_t mipLevel, const Sampler2d& smp) {
-  auto&      device = *lay.handler->dev.device;
-  DxTexture& t      = *reinterpret_cast<DxTexture*>(tex);
+void DxDescriptorArray::set(size_t id, const AbstractGraphicsApi::Texture* tex, uint32_t mipLevel, const Sampler2d& smp) {
+  auto&           device = *lay.handler->dev.device;
+  const DxTexture& t      = *reinterpret_cast<const DxTexture*>(tex);
 
   // Describe and create a SRV for the texture.
   int mapv[4] = { swizzle(smp.mapping.r,0),

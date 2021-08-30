@@ -189,6 +189,9 @@ class DxDevice : public AbstractGraphicsApi::Device {
     DSharedPtr<DxPipelineLay*>  blitLayout;
     DSharedPtr<DxPipeline*>     blit;
 
+    DSharedPtr<DxPipelineLay*>  copyLayout;
+    DSharedPtr<DxCompPipeline*> copy;
+
   private:
     ComPtr<ID3D12Fence>         idleFence;
     HANDLE                      idleEvent=nullptr;

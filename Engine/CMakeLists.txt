@@ -150,6 +150,8 @@ add_shader(empty.frag.sprv     empty.frag     "")
 add_shader(tex_brush.vert.sprv tex_brush.vert "")
 add_shader(tex_brush.frag.sprv tex_brush.frag "")
 
+add_shader(copy.comp.sprv      copy.comp      "")
+
 add_custom_command(
   OUTPUT     ${GEN_SHADERS_HEADER}
   DEPENDS    ${SHADERS_SPRV}

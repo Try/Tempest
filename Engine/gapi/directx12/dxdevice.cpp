@@ -69,6 +69,13 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
                                                              blitVs.handler,nullptr,nullptr,nullptr,blitFs.handler));
   }
 
+  {
+  auto copyCs = DSharedPtr<DxShader*>(new DxShader(copy_comp_sprv,sizeof(copy_comp_sprv)));
+
+  copyLayout = DSharedPtr<DxPipelineLay*> (new DxPipelineLay(*this,copyCs.handler->lay));
+  copy       = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*copyLayout.handler,*copyCs.handler));
+  }
+
   data.reset(new DataMgr(*this));
   }
 
