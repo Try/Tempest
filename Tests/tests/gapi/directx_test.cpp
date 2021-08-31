@@ -9,6 +9,7 @@
 #include <gmock/gmock-matchers.h>
 
 #include "gapi_test_common.h"
+#include "../utils/renderdoc.h"
 
 using namespace testing;
 using namespace Tempest;
@@ -43,9 +44,11 @@ TEST(DirectX12Api,SsboDyn) {
 #endif
   }
 
-TEST(DirectX12Api,DISABLED_SsboCopy) {
+TEST(DirectX12Api,SsboCopy) {
 #if defined(_MSC_VER)
+  RenderDoc::start();
   GapiTestCommon::bufCopy<DirectX12Api>();
+  RenderDoc::stop();
 #endif
   }
 

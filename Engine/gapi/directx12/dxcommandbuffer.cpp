@@ -63,7 +63,7 @@ struct DxCommandBuffer::Blit : Stage {
     sr.bottom = LONG(dstH);
     impl.RSSetScissorRects(1, &sr);
 
-    desc.set(0,&src,srcMip,Sampler2d::bilinear());
+    desc.set(0,&src,srcMip,Sampler2d::bilinear(),src.format);
 
     auto& shader = *dev.blit.handler;
     impl.SetPipelineState(&shader.instance(frm));
@@ -131,7 +131,7 @@ struct DxCommandBuffer::MipMaps : Stage {
 
     desc.emplace_back(*dev.blitLayout.handler);
     DxDescriptorArray& ubo = this->desc.back();
-    ubo.set(0,&img,srcMip,Sampler2d::bilinear());
+    ubo.set(0,&img,srcMip,Sampler2d::bilinear(),img.format);
     cmd.implSetUniforms(ubo,false);
 
     impl.DrawInstanced(6,1,0,0);
@@ -192,7 +192,8 @@ struct DxCommandBuffer::CopyBuf : Stage {
     auto& impl = *cmd.impl;
     auto& dev  = cmd.dev;
 
-    desc.set    (0,&src,0,Sampler2d::nearest());
+    desc.set    (0,&src,0,Sampler2d::nearest(),src.format);
+    //desc.set    (0,&src,0,Sampler2d::nearest(),DXGI_FORMAT_R8G8B8A8_UINT);
     desc.setSsbo(1,&dst,0);
 
     auto& shader = *dev.copy.handler;
@@ -459,16 +460,29 @@ void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
   impl->ResourceBarrier(1, &barrier);
   }
 
-void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer& dest, TextureLayout defLayout,
+void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, TextureLayout defLayout,
                            uint32_t width, uint32_t height, uint32_t mip,
-                           AbstractGraphicsApi::Texture& src, size_t offset) {
+                           AbstractGraphicsApi::Texture& srcTex, size_t offset) {
   if(currentFbo!=nullptr)
     throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
   resState.flushLayout(*this);
 
-  changeLayout(src,defLayout,TextureLayout::TransferSrc,mip);
-  implCopy(dest,width,height,mip,src,offset);
-  changeLayout(src,TextureLayout::TransferSrc,defLayout,mip);
+  auto& dst = reinterpret_cast<DxBuffer&>(dstBuf);
+  auto& src = reinterpret_cast<const DxTexture&>(srcTex);
+
+  const UINT bpp       = src.bitCount()/8;
+  const UINT pitchBase = UINT(width)*bpp;
+  const UINT pitch     = ((pitchBase+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
+
+  if(pitch==pitchBase && (offset%D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)==0) {
+    changeLayout(srcTex,defLayout,TextureLayout::TransferSrc,mip);
+    copyRaw(dstBuf,width,height,mip,srcTex,offset);
+    changeLayout(srcTex,TextureLayout::TransferSrc,defLayout,mip);
+    return;
+    }
+
+  std::unique_ptr<CopyBuf> dx(new CopyBuf(dev,dst,offset,src,width,height,mip));
+  pushStage(dx.release());
   }
 
 void DxCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t offset, size_t vertexCount, size_t firstInstance, size_t instanceCount) {
@@ -561,24 +575,6 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, s
   srcLoc.PlacedFootprint  = foot;
 
   impl->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, nullptr);
-  }
-
-void DxCommandBuffer::implCopy(AbstractGraphicsApi::Buffer& dstBuf, size_t width, size_t height, size_t mip,
-                               const AbstractGraphicsApi::Texture& srcTex, size_t offset) {
-  auto& dst = reinterpret_cast<DxBuffer&>(dstBuf);
-  auto& src = reinterpret_cast<const DxTexture&>(srcTex);
-
-  const UINT bpp       = src.bitCount()/8;
-
-  const UINT pitchBase = UINT(width)*bpp;
-  const UINT pitch     = ((pitchBase+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
-  if(pitch==pitchBase && (offset%D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)==0) {
-    copyRaw(dstBuf,width,height,mip,srcTex,offset);
-    return;
-    }
-
-  std::unique_ptr<CopyBuf> dx(new CopyBuf(dev,dst,offset,src,width,height,mip));
-  pushStage(dx.release());
   }
 
 void DxCommandBuffer::clearStage() {

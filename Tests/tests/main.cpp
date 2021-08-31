@@ -1,6 +1,9 @@
 #include <gtest/gtest.h>
 
+#include "utils/renderdoc.h"
+
 int main(int argc, char *argv[]) {
+  RenderDoc rdoc;
   ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+  RUN_ALL_TESTS();
   }

@@ -50,10 +50,11 @@ DxDescriptorArray::~DxDescriptorArray() {
   }
 
 void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const Sampler2d& smp) {
-  set(id,tex,uint32_t(-1),smp);
+  const DxTexture& t = *reinterpret_cast<const DxTexture*>(tex);
+  set(id,tex,uint32_t(-1),smp,t.format);
   }
 
-void DxDescriptorArray::set(size_t id, const AbstractGraphicsApi::Texture* tex, uint32_t mipLevel, const Sampler2d& smp) {
+void DxDescriptorArray::set(size_t id, const AbstractGraphicsApi::Texture* tex, uint32_t mipLevel, const Sampler2d& smp, DXGI_FORMAT vfrm) {
   auto&           device = *lay.handler->dev.device;
   const DxTexture& t      = *reinterpret_cast<const DxTexture*>(tex);
 
@@ -65,7 +66,7 @@ void DxDescriptorArray::set(size_t id, const AbstractGraphicsApi::Texture* tex, 
 
   D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
   srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(mapv[0],mapv[1],mapv[2],mapv[3]);
-  srvDesc.Format                  = t.format;
+  srvDesc.Format                  = vfrm;
   srvDesc.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE2D;
   srvDesc.Texture2D.MipLevels     = t.mips;
 

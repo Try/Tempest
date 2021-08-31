@@ -1,13 +1,17 @@
 #version 440
 
-layout(binding = 0) uniform usampler2D source;
+layout(binding = 0) uniform sampler2D source8bit;
 
-layout(binding = 1, std140) writeonly buffer Output {
-  uvec4 val[];
+layout(binding = 1, std430) writeonly buffer Output {
+  uint val[];
   } result;
 
 void main() {
-  ivec2 texSz = textureSize(source,0);
-  uvec4 pixel = texelFetch(source,ivec2(gl_GlobalInvocationID.xy),0);
-  result.val[gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*texSz.x] = pixel;
+  ivec2 texSz = textureSize(source8bit,0);
+  vec4  pixel = texelFetch (source8bit,ivec2(gl_GlobalInvocationID.xy),0);
+
+  //uint  pack  = packUnorm4x8(pixel);
+  uvec4 upx   = uvec4(pixel*255.0);
+  uint  pack  = upx.x | (upx.y << 8) | (upx.z << 16) | (upx.w << 24);
+  result.val[gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*texSz.x] = pack;
   }
