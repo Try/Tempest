@@ -3,11 +3,12 @@
 #ifdef __LINUX__
 #include <X11/X.h>
 #include <X11/Xlib.h>
+#include <X11/Xcursor/Xcursor.h>
 #include <X11/Xatom.h>
 #include <X11/Xos.h>
 #include <X11/keysymdef.h>
 #include <X11/Xutil.h>
-//#include <GL/glx.h> //FIXME
+#undef CursorShape
 
 #include <Tempest/Event>
 #include <Tempest/TextCodec>
@@ -18,6 +19,7 @@
 #include <cstring>
 #include <thread>
 #include <unordered_map>
+
 
 struct HWND final {
   ::Window wnd;
@@ -255,27 +257,26 @@ bool X11Api::implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) {
 bool X11Api::implIsFullscreen(SystemApi::Window *w) {
   Atom actualType;
   int actualFormat;
-  unsigned long i, numItems, bytesAfter;
+  unsigned long numItems, bytesAfter;
   unsigned char *propertyValue = NULL;
   long maxLength = 1024;
-  
-  if (XGetWindowProperty(dpy, HWND(w), _NET_WM_STATE(),
-                           0l, maxLength, False, XA_ATOM, &actualType,
-                           &actualFormat, &numItems, &bytesAfter,
-                           &propertyValue) == Success) {
-        int fullscreen = 0;
-        Atom *atoms = (Atom *) propertyValue;
 
-        for (i = 0; i < numItems; ++i) {
-            if (atoms[i] == _NET_WM_STATE_FULLSCREEN()) {
-                fullscreen = 1;
-            }
+  if(XGetWindowProperty(dpy, HWND(w), _NET_WM_STATE(),
+                        0l, maxLength, False, XA_ATOM, &actualType,
+                        &actualFormat, &numItems, &bytesAfter,
+                        &propertyValue) == Success) {
+    int fullscreen = 0;
+    Atom *atoms = reinterpret_cast<Atom*>(propertyValue);
+
+    for(uint32_t i = 0; i < numItems; ++i) {
+      if(atoms[i] == _NET_WM_STATE_FULLSCREEN()) {
+        fullscreen = 1;
         }
-        
-        if(fullscreen) {
-          return true;
-        }
-  }
+      }
+
+    if(fullscreen)
+      return true;
+    }
   return false;
   }
 
@@ -287,21 +288,43 @@ void X11Api::implSetCursorPosition(SystemApi::Window *w, int x, int y) {
 
 void X11Api::implShowCursor(SystemApi::Window *w, CursorShape show) {
   HWND hwnd(w);
-  if(show!=CursorShape::Hidden) {
-    XUndefineCursor(dpy, hwnd);
-    } else {
+
+  if(show==CursorShape::Hidden) {
     Cursor invisibleCursor;
     ::Pixmap bitmapNoData;
     XColor black;
     static char noData[] = { 0,0,0,0,0,0,0,0 };
     black.red = black.green = black.blue = 0;
 
-    bitmapNoData = XCreateBitmapFromData(dpy, hwnd, noData, 8, 8);
-    invisibleCursor = XCreatePixmapCursor(dpy, bitmapNoData, bitmapNoData, 
-                                      &black, &black, 0, 0);
+    bitmapNoData    = XCreateBitmapFromData(dpy, hwnd, noData, 8, 8);
+    invisibleCursor = XCreatePixmapCursor(dpy, bitmapNoData, bitmapNoData,
+                                          &black, &black, 0, 0);
     XDefineCursor(dpy, hwnd, invisibleCursor);
     XFreeCursor(dpy, invisibleCursor);
     XFreePixmap(dpy, bitmapNoData);
+    } else {
+    const char* name = nullptr;
+    switch(show) {
+      case CursorShape::Arrow:
+      case CursorShape::Hidden:
+        break;
+      case CursorShape::IBeam:
+        name = "xterm";
+        break;
+      case CursorShape::SizeHor:
+        name = "sb_h_double_arrow";
+        break;
+      case CursorShape::SizeVer:
+        name = "sb_v_double_arrow";
+        break;
+      }
+    Cursor c = name==nullptr ? 0 : XcursorLibraryLoadCursor(dpy,name);
+    if(c==0) {
+      XUndefineCursor(dpy, hwnd);
+      } else {
+      XDefineCursor(dpy, hwnd, c);
+      XFreeCursor(dpy, c);
+      }
     }
 
   XSync(dpy, False);
