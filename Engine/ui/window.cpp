@@ -43,3 +43,15 @@ void Window::dispatchPaintEvent(VectorImage &surface,TextureAtlas& ta) {
 void Window::closeEvent(CloseEvent& e) {
   e.ignore();
   }
+
+void Window::setCursorPosition(int x, int y) {
+  SystemApi::setCursorPosition(hwnd(),x,y);
+  }
+
+void Window::setCursorPosition(const Point& p) {
+  SystemApi::setCursorPosition(hwnd(),p.x,p.y);
+  }
+
+void Window::implShowCursor(CursorShape s) {
+  SystemApi::showCursor(hwnd(),s);
+  }

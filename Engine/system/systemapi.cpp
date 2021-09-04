@@ -187,7 +187,7 @@ void SystemApi::setCursorPosition(SystemApi::Window *w, int x, int y) {
   return inst().implSetCursorPosition(w,x,y);
   }
 
-void SystemApi::showCursor(bool show) {
-  return inst().implShowCursor(show);
+void SystemApi::showCursor(SystemApi::Window *w, CursorShape show) {
+  return inst().implShowCursor(w,show);
   }
 

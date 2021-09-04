@@ -2,6 +2,7 @@
 
 #include <Tempest/Platform>
 #include <Tempest/Rect>
+#include <Tempest/WidgetState>
 
 #include <memory>
 #include <cstdint>
@@ -48,13 +49,10 @@ class SystemApi {
     static bool     setAsFullscreen(SystemApi::Window *w, bool fullScreen);
     static bool     isFullscreen(SystemApi::Window *w);
 
-    static void     setCursorPosition(SystemApi::Window *w, int x, int y);
-    static void     showCursor(bool show);
-
     static uint16_t translateKey(uint64_t scancode);
     static void     setupKeyTranslate(const TranslateKeyPair k[], uint16_t funcCount);
 
-    static void     addOverlay(UiOverlay* ui);
+    static void     addOverlay (UiOverlay* ui);
     static void     takeOverlay(UiOverlay* ui);
 
   protected:
@@ -75,11 +73,14 @@ class SystemApi {
     virtual bool     implIsFullscreen(SystemApi::Window *w) = 0;
 
     virtual void     implSetCursorPosition(SystemApi::Window *w, int x, int y) = 0;
-    virtual void     implShowCursor(bool show) = 0;
+    virtual void     implShowCursor(SystemApi::Window *w, CursorShape show) = 0;
 
     virtual bool     implIsRunning() = 0;
     virtual int      implExec(AppCallBack& cb) = 0;
     virtual void     implProcessEvents(AppCallBack& cb) = 0;
+
+    static void      setCursorPosition(SystemApi::Window *w, int x, int y);
+    static void      showCursor(SystemApi::Window *w, CursorShape c);
 
     static void      dispatchOverlayRender(Tempest::Window &w, Tempest::PaintEvent& e);
     static void      dispatchRender    (Tempest::Window& cb);

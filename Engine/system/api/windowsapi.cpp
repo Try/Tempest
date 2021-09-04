@@ -117,8 +117,8 @@ WindowsApi::WindowsApi() {
   winClass.hInstance     = GetModuleHandle(nullptr);
   winClass.hIcon         = LoadIcon( GetModuleHandle(nullptr), LPCTSTR(MAKEINTRESOURCE(32512)) );
   winClass.hIconSm       = LoadIcon( GetModuleHandle(nullptr), LPCTSTR(MAKEINTRESOURCE(32512)) );
-  winClass.hCursor       = LoadCursor(nullptr, IDC_ARROW);
-  winClass.hbrBackground = nullptr;// (HBRUSH)GetStockObject(BLACK_BRUSH);
+  winClass.hCursor       = nullptr; // LoadCursor(nullptr, IDC_ARROW);
+  winClass.hbrBackground = nullptr; // (HBRUSH)GetStockObject(BLACK_BRUSH);
   winClass.lpszMenuName  = nullptr;
   winClass.cbClsExtra    = 0;
   winClass.cbWndExtra    = 0;
@@ -278,8 +278,30 @@ void WindowsApi::implSetCursorPosition(SystemApi::Window *w, int x, int y) {
   SetCursorPos(pt.x, pt.y);
   }
 
-void WindowsApi::implShowCursor(bool show) {
-  ShowCursor(show ? TRUE : FALSE);
+void WindowsApi::implShowCursor(SystemApi::Window *w, CursorShape show) {
+  HWND hwnd = HWND(w);
+
+  LPSTR idc = IDC_ARROW;
+  switch(show) {
+    case Tempest::CursorShape::Arrow:
+      idc = IDC_ARROW;
+      break;
+    case Tempest::CursorShape::Hidden:
+      idc = nullptr;
+      break;
+    case Tempest::CursorShape::IBeam:
+      idc = IDC_IBEAM;
+      break;
+    case Tempest::CursorShape::SizeVer:
+      idc = IDC_SIZENS;
+      break;
+    case Tempest::CursorShape::SizeHor:
+      idc = IDC_SIZEWE;
+      break;
+    }
+  HCURSOR hcur = idc==nullptr ? nullptr : LoadCursorA(nullptr, idc);
+  //SetCursor(hcur);
+  SetClassLongPtrA(hwnd, GCLP_HCURSOR, LONG_PTR(hcur));
   }
 
 long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long long wParam, const long long lParam) {

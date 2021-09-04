@@ -215,7 +215,7 @@ void EventDispatcher::dispatchDestroyWindow(SystemApi::Window* w) {
     overlays[i]->dispatchDestroyWindow(w);
   }
 
-std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget& w,MouseEvent &event) {
+std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget& w, MouseEvent &event) {
   if(!w.isVisible()) {
     event.ignore();
     return nullptr;
@@ -377,6 +377,13 @@ void EventDispatcher::implExcMouseOver(Widget* w, Widget* old) {
     }
 
   wx = w;
+  if(w!=nullptr) {
+    auto root = w;
+    while(root->owner()!=nullptr)
+      root = root->owner();
+    if(auto r = dynamic_cast<Window*>(root))
+      r->implShowCursor(w->wstate.cursor);
+    }
   while(wx!=nullptr) {
     wx->wstate.moveOver = true;
     wx = wx->owner();

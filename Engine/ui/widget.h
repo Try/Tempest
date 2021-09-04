@@ -101,6 +101,9 @@ class Widget {
     void setFocus(bool b);
     bool hasFocus() const { return wstate.focus; }
 
+    void setCursorShape(CursorShape cs);
+    auto cursorShape() const -> CursorShape { return wstate.cursor; }
+
     void update() noexcept;
     bool needToUpdate() const { return astate.needToUpdate; }
 

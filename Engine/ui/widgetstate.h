@@ -3,6 +3,14 @@
 #include <cstdint>
 
 namespace Tempest {
+  enum class CursorShape:uint8_t {
+    Arrow,
+    Hidden,
+    IBeam,
+    SizeVer,
+    SizeHor,
+    };
+
   class WidgetState final {
     public:
       enum ButtonType : uint8_t {
@@ -25,18 +33,19 @@ namespace Tempest {
         };
 
       // all widgets
-      bool       disabled = false;
-      bool       focus    = false;
-      bool       moveOver = false;
-      bool       visible  = true;
+      bool        disabled = false;
+      bool        focus    = false;
+      bool        moveOver = false;
+      bool        visible  = true;
+      CursorShape cursor   = CursorShape::Arrow;
 
       // click-controls
-      ButtonType button   = T_PushButton;
-      bool       pressed  = false;
-      CheckState checked  = Unchecked;
+      ButtonType  button   = T_PushButton;
+      bool        pressed  = false;
+      CheckState  checked  = Unchecked;
 
       // editable
-      bool       editable = true;
-      EchoMode   echo     = Normal;
+      bool        editable = true;
+      EchoMode    echo     = Normal;
     };
   }

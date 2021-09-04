@@ -317,7 +317,7 @@ void MacOSApi::implSetCursorPosition(SystemApi::Window *w, int x, int y) {
   CGWarpMouseCursorPosition(p);
   }
 
-void MacOSApi::implShowCursor(bool show) {
+void MacOSApi::implShowCursor(SystemApi::Window *w, CursorShape show) {
 
   }
 

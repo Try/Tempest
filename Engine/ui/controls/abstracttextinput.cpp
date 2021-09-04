@@ -21,6 +21,8 @@ AbstractTextInput::AbstractTextInput() {
 
   scRedo = Shortcut(*this,KeyEvent::M_Command,KeyEvent::K_Y);
   scRedo.onActivated.bind(this,&AbstractTextInput::redo);
+
+  setCursorShape(CursorShape::IBeam);
   }
 
 void AbstractTextInput::invalidateSizeHint() {
@@ -145,6 +147,10 @@ void AbstractTextInput::mouseDragEvent(MouseEvent &e) {
   }
 
 void AbstractTextInput::mouseUpEvent(MouseEvent& e) {
+  e.accept();
+  }
+
+void AbstractTextInput::mouseMoveEvent(MouseEvent& e) {
   e.accept();
   }
 

@@ -285,11 +285,10 @@ void X11Api::implSetCursorPosition(SystemApi::Window *w, int x, int y) {
   XFlush(dpy);
   }
 
-void X11Api::implShowCursor(bool show) {
-  if(windows.size()==0)
-    return;
-  if(show) {
-    XUndefineCursor(dpy, HWND(windows.begin()->first));
+void X11Api::implShowCursor(SystemApi::Window *w, CursorShape show) {
+  HWND hwnd(w);
+  if(show!=CursorShape::Hidden) {
+    XUndefineCursor(dpy, hwnd);
     } else {
     Cursor invisibleCursor;
     ::Pixmap bitmapNoData;
@@ -297,10 +296,10 @@ void X11Api::implShowCursor(bool show) {
     static char noData[] = { 0,0,0,0,0,0,0,0 };
     black.red = black.green = black.blue = 0;
 
-    bitmapNoData = XCreateBitmapFromData(dpy, HWND(windows.begin()->first), noData, 8, 8);
+    bitmapNoData = XCreateBitmapFromData(dpy, hwnd, noData, 8, 8);
     invisibleCursor = XCreatePixmapCursor(dpy, bitmapNoData, bitmapNoData, 
                                       &black, &black, 0, 0);
-    XDefineCursor(dpy, HWND(windows.begin()->first), invisibleCursor);
+    XDefineCursor(dpy, hwnd, invisibleCursor);
     XFreeCursor(dpy, invisibleCursor);
     XFreePixmap(dpy, bitmapNoData);
     }

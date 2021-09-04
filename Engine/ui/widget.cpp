@@ -3,6 +3,7 @@
 #include <Tempest/Layout>
 #include <Tempest/Application>
 #include <Tempest/UiOverlay>
+#include <Tempest/Window>
 
 using namespace Tempest;
 
@@ -445,6 +446,15 @@ bool Widget::isVisible() const {
 
 void Widget::setFocus(bool b) {
   implSetFocus(b,Event::FocusReason::UnknownReason);
+  }
+
+void Widget::setCursorShape(CursorShape cs) {
+  wstate.cursor = cs;
+  if(wstate.moveOver) {
+    Widget* root=implTrieRoot(this);
+    if(auto w = dynamic_cast<Window*>(root))
+      w->implShowCursor(cs);
+    }
   }
 
 void Widget::implSetFocus(bool b, Event::FocusReason reason) {

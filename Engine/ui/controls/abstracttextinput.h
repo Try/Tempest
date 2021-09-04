@@ -39,6 +39,7 @@ class AbstractTextInput : public Tempest::Widget {
     void              mouseDownEvent(Tempest::MouseEvent& e) override;
     void              mouseDragEvent(Tempest::MouseEvent& e) override;
     void              mouseUpEvent  (Tempest::MouseEvent& e) override;
+    void              mouseMoveEvent(Tempest::MouseEvent& e) override;
 
     void              keyDownEvent  (Tempest::KeyEvent &event) override;
     void              keyRepeatEvent(Tempest::KeyEvent &event) override;
