@@ -156,11 +156,15 @@ void Encoder<CommandBuffer>::implEndRenderPass() {
   }
 
 void Encoder<CommandBuffer>::copy(const Attachment& src, uint32_t mip, StorageBuffer& dest, size_t offset) {
+  if(offset%4!=0)
+    throw std::system_error(Tempest::GraphicsErrc::InvalidStorageBuffer);
   uint32_t w = src.w(), h = src.h();
   impl->copy(*dest.impl.impl.handler,TextureLayout::Sampler,w,h,mip,*textureCast(src).impl.handler,offset);
   }
 
 void Encoder<CommandBuffer>::copy(const Texture2d& src, uint32_t mip, StorageBuffer& dest, size_t offset) {
+  if(offset%4!=0)
+    throw std::system_error(Tempest::GraphicsErrc::InvalidStorageBuffer);
   uint32_t w = src.w(), h = src.h();
   impl->copy(*dest.impl.impl.handler,TextureLayout::Sampler,w,h,mip,*src.impl.handler,offset);
   }

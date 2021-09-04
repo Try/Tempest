@@ -155,7 +155,7 @@ void ssboDyn() {
     }
   }
 
-template<class GraphicsApi>
+template<class GraphicsApi, Tempest::TextureFormat frm>
 void bufCopy() {
   using namespace Tempest;
 
@@ -163,7 +163,7 @@ void bufCopy() {
     GraphicsApi api{ApiFlags::Validation};
     Device      device(api);
 
-    auto src = device.attachment(TextureFormat::RGBA8,4,4);
+    auto src = device.attachment(frm,4,4);
     auto fbo = device.frameBuffer(src);
     auto rp  = device.pass(FboMode(FboMode::PreserveOut,Color(0.f,0.f,1.f)));
 

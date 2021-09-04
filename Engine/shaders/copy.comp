@@ -6,9 +6,13 @@ layout(binding = 1, std430) writeonly buffer Output {
   uint val[];
   } result;
 
+layout(push_constant, std430) uniform UboPush {
+  int mip;
+  } push;
+
 void main() {
-  ivec2 texSz = textureSize(source8bit,0);
-  vec4  pixel = texelFetch (source8bit,ivec2(gl_GlobalInvocationID.xy),0);
+  ivec2 texSz = textureSize(source8bit,push.mip);
+  vec4  pixel = texelFetch (source8bit,ivec2(gl_GlobalInvocationID.xy),push.mip);
 
   //uint  pack  = packUnorm4x8(pixel);
   uvec4 upx   = uvec4(pixel*255.0);

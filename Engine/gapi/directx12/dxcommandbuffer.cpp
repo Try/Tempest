@@ -185,12 +185,17 @@ struct DxCommandBuffer::CopyBuf : Stage {
   CopyBuf(DxDevice& dev,
           DxBuffer& dst, size_t offset,
           const DxTexture& src, size_t width, size_t height, size_t mip)
-    :dst(dst), offset(offset), src(src), width(width), height(height), mip(mip), desc(*dev.copyLayout.handler) {
+    :dst(dst), offset(offset), src(src), width(width), height(height), mip(int32_t(mip)), desc(*dev.copyLayout.handler) {
     }
 
   void exec(DxCommandBuffer& cmd) override {
     auto& impl = *cmd.impl;
     auto& dev  = cmd.dev;
+
+    struct PushUbo {
+      int32_t mip = 0;
+      } push;
+    push.mip = mip;
 
     desc.set    (0,&src,0,Sampler2d::nearest(),src.format);
     //desc.set    (0,&src,0,Sampler2d::nearest(),DXGI_FORMAT_R8G8B8A8_UINT);
@@ -201,6 +206,8 @@ struct DxCommandBuffer::CopyBuf : Stage {
     impl.SetComputeRootSignature(shader.sign.get());
     cmd.implSetUniforms(desc,true);
 
+    impl.SetComputeRoot32BitConstants(UINT(shader.pushConstantId),UINT(sizeof(push)/4),&push,0);
+
     impl.Dispatch(UINT(width),UINT(height),1u);
     }
 
@@ -209,7 +216,7 @@ struct DxCommandBuffer::CopyBuf : Stage {
   const DxTexture&  src;
   const size_t      width  = 0;
   const size_t      height = 0;
-  const size_t      mip    = 0;
+  const int32_t     mip    = 0;
 
   DxDescriptorArray desc;
   };
