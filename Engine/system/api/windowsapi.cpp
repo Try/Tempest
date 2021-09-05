@@ -159,6 +159,7 @@ SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, uint32_t
     destroyWindow(wx);
     throw;
     }
+  implShowCursor(wx,CursorShape::Arrow);
   return wx;
   }
 
