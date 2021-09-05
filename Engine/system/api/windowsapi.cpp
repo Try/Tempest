@@ -279,9 +279,8 @@ void WindowsApi::implSetCursorPosition(SystemApi::Window *w, int x, int y) {
   SetCursorPos(pt.x, pt.y);
   }
 
-void WindowsApi::implShowCursor(SystemApi::Window *w, CursorShape show) {
-  HWND hwnd = HWND(w);
-
+void WindowsApi::implShowCursor(SystemApi::Window*, CursorShape show) {
+  // HWND hwnd = HWND(w);
   LPSTR idc = IDC_ARROW;
   switch(show) {
     case Tempest::CursorShape::Arrow:
@@ -301,8 +300,7 @@ void WindowsApi::implShowCursor(SystemApi::Window *w, CursorShape show) {
       break;
     }
   HCURSOR hcur = idc==nullptr ? nullptr : LoadCursorA(nullptr, idc);
-  //SetCursor(hcur);
-  SetClassLongPtrA(hwnd, GCLP_HCURSOR, LONG_PTR(hcur));
+  SetCursor(hcur);
   }
 
 long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long long wParam, const long long lParam) {
