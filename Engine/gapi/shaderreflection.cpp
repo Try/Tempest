@@ -160,7 +160,7 @@ void ShaderReflection::merge(std::vector<Binding>& ret,
       auto& u   = vs[i];
       if(u.cls==Push) {
         pb.stage = Stage(pb.stage | u.stage);
-        pb.size  = u.size;
+        pb.size  = std::max(pb.size, u.size);
         continue;
         }
       if(shId>0) {
@@ -168,6 +168,7 @@ void ShaderReflection::merge(std::vector<Binding>& ret,
         for(auto& r:ret)
           if(r.layout==u.layout) {
             r.stage = Stage(r.stage | u.stage);
+            r.size  = std::max(pb.size, u.size);
             ins     = true;
             break;
             }
