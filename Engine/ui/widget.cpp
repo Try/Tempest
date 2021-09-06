@@ -258,6 +258,18 @@ Point Widget::mapToRoot(const Point &p) const noexcept {
   return ret;
   }
 
+Point Widget::mapToGlobal(const Point& p) const noexcept {
+  const Widget* w = this;
+  Point ret=p;
+
+  while(w!=nullptr){
+    ret += w->pos();
+    w   =  w->owner();
+    }
+
+  return ret;
+  }
+
 void Widget::setPosition(int x, int y) {
   if(wrect.x==x && wrect.y==y)
     return;

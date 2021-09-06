@@ -158,7 +158,8 @@ void *X11Api::display() {
 
 void X11Api::alignGeometry(SystemApi::Window *w, Tempest::Window& owner) {
   XWindowAttributes xwa={};
-  if(XGetWindowAttributes(dpy, HWND(w), &xwa)){
+  if(XGetWindowAttributes(dpy, HWND(w), &xwa)) {
+    owner.setPosition(xwa.x,xwa.y);
     Tempest::SizeEvent e(xwa.width, xwa.height);
     SystemApi::dispatchResize(owner,e);
     }

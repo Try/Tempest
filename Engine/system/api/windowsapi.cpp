@@ -402,13 +402,20 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
     case WM_KEYDOWN:
     case WM_SYSKEYUP:
     case WM_KEYUP: {
-      if(wParam != VK_MENU)
+      if(wParam!=VK_MENU)
         handleKeyEvent(cb,msg,wParam,lParam);
       if(msg==WM_SYSKEYDOWN || msg==WM_SYSKEYUP)
-        return DefWindowProcW( hWnd, msg, wParam, lParam );
+        return DefWindowProcW(hWnd, msg, wParam, lParam);
       break;
       }
 
+    case WM_MOVE:
+      if(wParam!=SIZE_MINIMIZED) {
+        int x = lParam & 0xffff;
+        int y = (uint32_t(lParam) & 0xffff0000) >> 16;
+        cb->setPosition(x,y);
+        }
+      break;
     case WM_SIZE:
       if(wParam!=SIZE_MINIMIZED) {
         int width  = lParam & 0xffff;
@@ -418,7 +425,7 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
         }
       break;
     default:
-      return DefWindowProcW( hWnd, msg, wParam, lParam );
+      return DefWindowProcW(hWnd, msg, wParam, lParam);
     }
   return 0;
   }
