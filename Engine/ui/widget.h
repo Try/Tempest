@@ -47,7 +47,8 @@ class Widget {
           Widget* owner()       { return ow; }
     const Widget* owner() const { return ow; }
 
-    Point   mapToRoot( const Point & p ) const noexcept;
+    Point   mapToRoot  ( const Point & p ) const noexcept;
+    Point   mapToGlobal( const Point & p ) const noexcept;
 
     Point                pos()      const { return Point(wrect.x,wrect.y);}
     const Tempest::Rect& rect()     const { return wrect; }
