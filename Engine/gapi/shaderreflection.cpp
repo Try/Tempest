@@ -1,6 +1,7 @@
 #include "shaderreflection.h"
 
 #include <Tempest/Except>
+#include <algorithm>
 
 #include "thirdparty/spirv_cross/spirv_common.hpp"
 

@@ -72,8 +72,15 @@ static NSPoint mousePos(NSPoint px, NSWindow* wnd, bool& inWindow) {
   }
 
 static Tempest::Point mousePos(NSEvent* e, bool& inWindow) {
+  static NSPoint err = {};
   NSPoint p  = e.locationInWindow;
   NSPoint px = mousePos(p, e.window, inWindow);
+
+  px.x += err.x;
+  px.y += err.y;
+
+  err.x = std::fmod(px.x,1.0);
+  err.y = std::fmod(px.y,1.0);
 
   return Tempest::Point{int(px.x), int(px.y)};
   }
@@ -307,18 +314,20 @@ void MacOSApi::implSetCursorPosition(SystemApi::Window *w, int x, int y) {
   to.y += frame.origin.y;
   to.y =  frame.size.height-to.y;
 
-  to.x += std::fmod(lastMouse.x,1.0);
-  to.y += std::fmod(lastMouse.y,1.0);
-
   NSPoint p = [wnd convertPointFromBacking:to];
   p = [wnd convertPointToScreen:p];
 
-  //Log::d("mset:  ",at.x," ",at.y," -> ",p.x," ",p.y);
   CGWarpMouseCursorPosition(p);
+  // see: https://www.winehq.org/pipermail/wine-patches/2015-October/143826.html
+  CGAssociateMouseAndMouseCursorPosition(true);
   }
 
 void MacOSApi::implShowCursor(SystemApi::Window *w, CursorShape show) {
-
+  if(show==CursorShape::Hidden) {
+    CGDisplayHideCursor(kCGNullDirectDisplay);
+    return;
+    }
+  CGDisplayShowCursor(kCGNullDirectDisplay);
   }
 
 bool MacOSApi::implIsRunning() {
