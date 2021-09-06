@@ -39,7 +39,6 @@ static const uint keyTable[26]={
   };
 
 static std::atomic_bool isRunning{true};
-static NSPoint          lastMouse = {};
 
 static Event::MouseButton toButton(uint type) {
   if(type==NSEventTypeLeftMouseDown || type==NSEventTypeLeftMouseUp)
@@ -407,7 +406,6 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
     case NSEventTypeOtherMouseDragged:
     case NSEventTypeMouseMoved: {
       auto p = mousePos(evt);
-      lastMouse = [evt.window convertPointToBacking: evt.locationInWindow];
       MouseEvent e(p.x,p.y,
                    toButton(type),
                    Event::M_NoModifier,

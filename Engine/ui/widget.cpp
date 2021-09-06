@@ -247,10 +247,10 @@ Widget *Widget::takeWidget(Widget *w) {
   }
 
 Point Widget::mapToRoot(const Point &p) const noexcept {
-  const Widget* w=this;
+  const Widget* w = this;
   Point ret=p;
 
-  while(w!=nullptr){
+  while(w->owner()!=nullptr){
     ret += w->pos();
     w   =  w->owner();
     }
