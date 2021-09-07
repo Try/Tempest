@@ -159,7 +159,6 @@ SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, uint32_t
     destroyWindow(wx);
     throw;
     }
-  implShowCursor(wx,CursorShape::Arrow);
   return wx;
   }
 
@@ -228,7 +227,7 @@ void WindowsApi::implProcessEvents(SystemApi::AppCallBack& cb) {
     } else {
     if(cb.onTimer()==0)
       std::this_thread::yield();
-    for(auto& i:windows){
+    for(auto& i:windows) {
       HWND             h  = HWND(i);
       Tempest::Window* cb = reinterpret_cast<Tempest::Window*>(GetWindowLongPtr(h,GWLP_USERDATA));
       LONG             s  = GetWindowLongA(h,GWL_STYLE);
@@ -279,8 +278,7 @@ void WindowsApi::implSetCursorPosition(SystemApi::Window *w, int x, int y) {
   SetCursorPos(pt.x, pt.y);
   }
 
-void WindowsApi::implShowCursor(SystemApi::Window*, CursorShape show) {
-  // HWND hwnd = HWND(w);
+static void SetCursor(CursorShape show) {
   LPSTR idc = IDC_ARROW;
   switch(show) {
     case Tempest::CursorShape::Arrow:
@@ -301,6 +299,10 @@ void WindowsApi::implShowCursor(SystemApi::Window*, CursorShape show) {
     }
   HCURSOR hcur = idc==nullptr ? nullptr : LoadCursorA(nullptr, idc);
   SetCursor(hcur);
+  }
+
+void WindowsApi::implShowCursor(SystemApi::Window*, CursorShape show) {
+  SetCursor(show);
   }
 
 long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long long wParam, const long long lParam) {
@@ -424,6 +426,12 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
         SystemApi::dispatchResize(*cb,e);
         }
       break;
+
+    case WM_SETCURSOR:
+      if(IsIconic(hWnd)) {
+        SetCursor(cb->cursorShape());
+        break;
+        }
     default:
       return DefWindowProcW(hWnd, msg, wParam, lParam);
     }
