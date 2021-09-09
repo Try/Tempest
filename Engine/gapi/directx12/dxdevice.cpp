@@ -56,25 +56,29 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
                                reinterpret_cast<void**>(&idleFence)));
   idleEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 
-  {
-  RenderState st;
-  st.setZTestMode   (RenderState::ZTestMode::Always);
-  st.setCullFaceMode(RenderState::CullMode::NoCull);
+  static bool internalShaders = true;
 
-  auto blitVs = DSharedPtr<DxShader*>(new DxShader(blit_vert_sprv,sizeof(blit_vert_sprv)));
-  auto blitFs = DSharedPtr<DxShader*>(new DxShader(blit_frag_sprv,sizeof(blit_frag_sprv)));
+  if(internalShaders) {
+    {
+    RenderState st;
+    st.setZTestMode   (RenderState::ZTestMode::Always);
+    st.setCullFaceMode(RenderState::CullMode::NoCull);
 
-  blitLayout  = DSharedPtr<DxPipelineLay*>(new DxPipelineLay(*this,blitFs.handler->lay));
-  blit        = DSharedPtr<DxPipeline*>   (new DxPipeline   (*this,st,0,Triangles,*blitLayout.handler,
-                                                             blitVs.handler,nullptr,nullptr,nullptr,blitFs.handler));
-  }
+    auto blitVs = DSharedPtr<DxShader*>(new DxShader(blit_vert_sprv,sizeof(blit_vert_sprv)));
+    auto blitFs = DSharedPtr<DxShader*>(new DxShader(blit_frag_sprv,sizeof(blit_frag_sprv)));
 
-  {
-  auto copyCs = DSharedPtr<DxShader*>(new DxShader(copy_comp_sprv,sizeof(copy_comp_sprv)));
+    blitLayout  = DSharedPtr<DxPipelineLay*>(new DxPipelineLay(*this,blitFs.handler->lay));
+    blit        = DSharedPtr<DxPipeline*>   (new DxPipeline   (*this,st,0,Triangles,*blitLayout.handler,
+                                                               blitVs.handler,nullptr,nullptr,nullptr,blitFs.handler));
+    }
 
-  copyLayout = DSharedPtr<DxPipelineLay*> (new DxPipelineLay(*this,copyCs.handler->lay));
-  copy       = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*copyLayout.handler,*copyCs.handler));
-  }
+    {
+    auto copyCs = DSharedPtr<DxShader*>(new DxShader(copy_comp_sprv,sizeof(copy_comp_sprv)));
+
+    copyLayout = DSharedPtr<DxPipelineLay*> (new DxPipelineLay(*this,copyCs.handler->lay));
+    copy       = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*copyLayout.handler,*copyCs.handler));
+    }
+    }
 
   data.reset(new DataMgr(*this));
   }

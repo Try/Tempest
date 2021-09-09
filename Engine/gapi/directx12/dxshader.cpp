@@ -74,7 +74,7 @@ DxShader::DxShader(const void *source, size_t src_size) {
     default: // unimplemented
       throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
-  //Log::d(hlsl);
+  // Log::d(hlsl);
 
   ComPtr<ID3DBlob> err;
   // TODO: D3DCOMPILE_ALL_RESOURCES_BOUND
@@ -82,7 +82,7 @@ DxShader::DxShader(const void *source, size_t src_size) {
   HRESULT hr = D3DCompile(hlsl.c_str(),hlsl.size(),nullptr,nullptr,nullptr,"main",target,compileFlags,0,
                           reinterpret_cast<ID3DBlob**>(&shader),reinterpret_cast<ID3DBlob**>(&err));
   if(hr!=S_OK) {
-#if 1 || !defined(NDEBUG)
+#if !defined(NDEBUG)
     Log::d(hlsl.c_str());
     Log::d(reinterpret_cast<const char*>(err->GetBufferPointer()));
 #endif
