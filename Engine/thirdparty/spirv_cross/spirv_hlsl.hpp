@@ -194,6 +194,8 @@ public:
 	// so the calling application should declare explicit bindings on this ID before calling compile().
 	VariableID remap_num_workgroups_builtin();
 
+	void emit_per_vertex_inputs();
+
 	// Controls how resource bindings are declared in the output HLSL.
 	void set_resource_binding_flags(HLSLBindingFlags flags);
 
@@ -214,6 +216,8 @@ private:
 	std::string image_type_hlsl_modern(const SPIRType &type, uint32_t id);
 	std::string image_type_hlsl_legacy(const SPIRType &type, uint32_t id);
 	void emit_function_prototype(SPIRFunction &func, const Bitset &return_flags) override;
+	void extract_global_variables_from_functions(VariableID gl_in);
+	void extract_global_variables_from_function(VariableID gl_in, uint32_t func_id, std::unordered_set<uint32_t>& processed_func_ids);
 	void emit_hlsl_entry_point();
 	void emit_header() override;
 	void emit_resources();
@@ -224,6 +228,7 @@ private:
 	                                           uint32_t location,
 	                                           std::unordered_set<uint32_t> &active_locations);
 	void emit_builtin_inputs_in_struct();
+	void emit_tess_builtin_inputs_in_struct();
 	void emit_builtin_outputs_in_struct();
 	void emit_texture_op(const Instruction &i, bool sparse) override;
 	void emit_instruction(const Instruction &instruction) override;
