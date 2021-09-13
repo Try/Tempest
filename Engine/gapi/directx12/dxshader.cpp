@@ -8,6 +8,7 @@
 
 #include "gapi/shaderreflection.h"
 #include "thirdparty/spirv_cross/spirv_hlsl.hpp"
+#include "thirdparty/spirv_cross/spirv_msl.hpp"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -20,18 +21,20 @@ DxShader::DxShader(const void *source, size_t src_size) {
   optHLSL.shader_model = 50;
 
   spirv_cross::CompilerGLSL::Options optGLSL;
-  optGLSL.vertex.flip_vert_y = true;
+  optGLSL.vertex.flip_vert_y = false;
 
   std::string hlsl;
   spv::ExecutionModel exec = spv::ExecutionModelMax;
 
   try {
     spirv_cross::CompilerHLSL comp(reinterpret_cast<const uint32_t*>(source),src_size/4);
+    exec = comp.get_execution_model();
+    if(exec==spv::ExecutionModelVertex)
+      optGLSL.vertex.flip_vert_y = true;
     comp.set_hlsl_options  (optHLSL);
     comp.set_common_options(optGLSL);
     // comp.remap_num_workgroups_builtin();
     hlsl = comp.compile();
-    exec = comp.get_execution_model();
 
     ShaderReflection::getVertexDecl(vdecl,comp);
     ShaderReflection::getBindings(lay,comp);
@@ -74,7 +77,13 @@ DxShader::DxShader(const void *source, size_t src_size) {
     default: // unimplemented
       throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
-  // Log::d(hlsl);
+
+  if(false) {
+    spirv_cross::CompilerMSL comp(reinterpret_cast<const uint32_t*>(source),src_size/4);
+    comp.set_common_options(optGLSL);
+    auto glsl = comp.compile();
+    Log::d(glsl);
+    }
 
   ComPtr<ID3DBlob> err;
   // TODO: D3DCOMPILE_ALL_RESOURCES_BOUND
@@ -88,6 +97,8 @@ DxShader::DxShader(const void *source, size_t src_size) {
 #endif
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
+
+  // Log::d(hlsl);
   }
 
 DxShader::~DxShader() {
