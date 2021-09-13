@@ -74,6 +74,9 @@ compile_shader(tess.tesc)
 compile_shader(tess.tese)
 
 compile_shader(spirv_ds_01.tese)
+compile_shader(spirv_ds_02.tese)
+compile_shader(spirv_ds_03.tese)
+compile_shader(spirv_ds_quad.tese)
 
 compile_shader(ssbo_write_verify.comp)
 compile_shader(ssbo_write.vert)

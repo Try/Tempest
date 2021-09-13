@@ -129,7 +129,7 @@ TEST(DirectX12Api,PushRemapping) {
 #endif
   }
 
-TEST(DirectX12Api,Spirv_DS_01) {
+TEST(DirectX12Api,Spirv_DS) {
 #if defined(_MSC_VER)
   using namespace Tempest;
 
@@ -139,6 +139,9 @@ TEST(DirectX12Api,Spirv_DS_01) {
 
     auto tese0 = device.loadShader("shader/tess.tese.sprv");
     auto tese1 = device.loadShader("shader/spirv_ds_01.tese.sprv");
+    auto tese2 = device.loadShader("shader/spirv_ds_02.tese.sprv");
+    auto tese3 = device.loadShader("shader/spirv_ds_03.tese.sprv");
+    auto tese4 = device.loadShader("shader/spirv_ds_quad.tese.sprv");
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
