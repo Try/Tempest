@@ -40,7 +40,7 @@ class BasicPoint<T,1> {
 
     BasicPoint operator - () const { return BasicPoint(-x); }
 
-    T manhattanLength() const { return x<T() ? -x : x; }
+    T length() const { return x<T() ? -x : x; }
     T quadLength()      const { return x*x; }
 
     bool operator ==( const BasicPoint & other ) const { return x==other.x; }
@@ -76,7 +76,7 @@ class BasicPoint<T,2> {
 
     BasicPoint operator - () const { return BasicPoint(-x,-y); }
 
-    T manhattanLength() const { return T(std::sqrt(x*x+y*y)); }
+    T length() const { return T(std::sqrt(x*x+y*y)); }
     T quadLength()      const { return x*x+y*y; }
 
     bool operator ==( const BasicPoint & other ) const { return x==other.x && y==other.y; }
@@ -117,7 +117,7 @@ class BasicPoint<T,3> {
 
     BasicPoint operator - () const { return BasicPoint(-x,-y,-z); }
 
-    T manhattanLength() const { return T(std::sqrt(x*x+y*y+z*z)); }
+    T length() const { return T(std::sqrt(x*x+y*y+z*z)); }
     T quadLength()      const { return x*x+y*y+z*z; }
 
     bool operator ==( const BasicPoint & other ) const { return x==other.x && y==other.y && z==other.z; }
@@ -132,7 +132,7 @@ class BasicPoint<T,3> {
         };
       }
     static BasicPoint<T,3> normalize(const BasicPoint<T,3>& t) {
-      const T len = t.manhattanLength();
+      const T len = t.length();
       if(len==T())
         return t;
       return t/len;
@@ -163,7 +163,7 @@ class BasicPoint<T,4> {
 
     BasicPoint operator - () const { return BasicPoint(-x,-y,-z,-w); }
 
-    T manhattanLength() const { return T(std::sqrt(x*x+y*y+z*z+w*w)); }
+    T length() const { return T(std::sqrt(x*x+y*y+z*z+w*w)); }
     T quadLength()      const { return x*x+y*y+z*z+w*w; }
 
     bool operator ==( const BasicPoint & other ) const { return x==other.x && y==other.y && z==other.z && w==other.w; }
