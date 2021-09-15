@@ -269,12 +269,12 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
   const Sprite& icon = iconSprite(extra.icon,st,r);
   int dX = 0;
 
-  if(!icon.size().isEmpty()){
+  if(!icon.size().isEmpty() && e!=Style::TE_MenuText2){
     p.setBrush(icon);
     if( text.isEmpty() ) {
       p.drawRect( (r.w-icon.w())/2, (r.h-icon.h())/2, icon.w(), icon.h() );
       } else {
-      p.drawRect( m.left, (r.h-icon.h())/2, icon.w(), icon.h() );
+        p.drawRect( m.left, (r.h-icon.h())/2, icon.w(), icon.h() );
       dX=icon.w();
       }
     }
@@ -291,7 +291,10 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
   const int fntSz = int(fnt.metrics().ascent);
 
   Point at;
-  if(e==TE_MenuText2) {
+  if(e==TE_MenuText1) {
+    at = { m.left+dX, fntSz+m.top };
+    }
+  else if(e==TE_MenuText2) {
     const Size sz = text.wrapSize();
     at.x = m.left+r.w-m.xMargin()-sz.w;
     at.y = fntSz+m.top;
