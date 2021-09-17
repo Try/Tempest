@@ -42,3 +42,8 @@ void UiOverlay::dispatchDestroyWindow(SystemApi::Window* w) {
     owner = nullptr;
   }
 
+void UiOverlay::implShowCursor(CursorShape s) {
+  if(owner!=nullptr)
+    owner->implShowCursor(s);
+  }
+

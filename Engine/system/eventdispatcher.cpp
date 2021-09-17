@@ -383,6 +383,8 @@ void EventDispatcher::implExcMouseOver(Widget* w, Widget* old) {
       root = root->owner();
     if(auto r = dynamic_cast<Window*>(root))
       r->implShowCursor(w->wstate.cursor);
+    if(auto r = dynamic_cast<UiOverlay*>(root))
+      r->implShowCursor(w->wstate.cursor);
     }
   while(wx!=nullptr) {
     wx->wstate.moveOver = true;

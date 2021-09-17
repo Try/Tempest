@@ -1,3 +1,4 @@
+
 #include "windowsapi.h"
 
 #ifdef __WINDOWS__
@@ -336,6 +337,11 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
       if(!e.isAccepted())
         exit();
       return 0;
+      }
+
+    case WM_ACTIVATE:{
+      SetCursor(cb->cursorShape());
+      return DefWindowProc( hWnd, msg, wParam, lParam );
       }
 
     case WM_DESTROY: {

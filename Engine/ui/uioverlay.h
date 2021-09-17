@@ -16,6 +16,7 @@ class UiOverlay : public Tempest::Widget {
     bool bind(Widget& w);
     bool bind(Window& w);
     void dispatchDestroyWindow(SystemApi::Window* w);
+    void implShowCursor(CursorShape s);
 
     Window* owner=nullptr;
 
