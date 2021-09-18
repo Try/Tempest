@@ -59,8 +59,8 @@ class AbstractListDelegate : public ListDelegate {
       return b;
       }
 
-    void removeView(Widget* w, size_t /*position*/) override{
-      delete w;
+    void removeView(Widget* w, size_t position) override{
+      ListDelegate::removeView(w,position);
       }
 
   protected:
