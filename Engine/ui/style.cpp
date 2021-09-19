@@ -117,7 +117,7 @@ void Style::draw(Painter& p, Button *w, Element e, const WidgetState &st, const 
   const bool drawBackFrame = (buttonType!=Button::T_ToolButton || st.moveOver) &&
                              (buttonType!=Button::T_FlatButton || st.pressed) &&
                              (e!=E_MenuItemBackground);
-  if( drawBackFrame ) {
+  if(drawBackFrame) {
     if(st.pressed || st.checked!=WidgetState::Unchecked)
       p.setBrush(Color(0.4f,0.4f,0.45f,0.75f)); else
     if(st.moveOver)
@@ -186,7 +186,7 @@ void Style::draw(Painter &p, CheckBox *w, Element e, const WidgetState &st, cons
 
   p.setBrush(Color(1));
 
-  if( st.checked==WidgetState::Checked ) {
+  if(st.checked==WidgetState::Checked) {
     int x = 0,
         y = (r.h-sz.h)/2;
     int d = st.pressed ? 2 : 4;
@@ -269,7 +269,7 @@ void Style::draw(Painter &p, const TextModel &text, Style::TextElement e,
   const Sprite& icon = iconSprite(extra.icon,st,r);
   int dX = 0;
 
-  if(!icon.size().isEmpty() && e!=Style::TE_MenuText2){
+  if(!icon.size().isEmpty() && e!=Style::TE_MenuText2) {
     p.setBrush(icon);
     if( text.isEmpty() ) {
       p.drawRect( (r.w-icon.w())/2, (r.h-icon.h())/2, icon.w(), icon.h() );
