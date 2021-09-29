@@ -64,6 +64,9 @@ class Matrix4x4 final {
     void rotateOY(float angle);
     void rotateOZ(float angle);
 
+    inline float*       operator[](size_t x)       { return m[x]; }
+    inline const float* operator[](size_t x) const { return m[x]; }
+
     const  float *data() const;
     inline float at( int x, int y ) const     { return m[x][y]; }
     inline void  set( int x, int y, float v ) { m[x][y] = v;    }
