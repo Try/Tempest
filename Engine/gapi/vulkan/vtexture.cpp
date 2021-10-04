@@ -28,7 +28,7 @@ VkImageView VTexture::getView(VkDevice dev, const ComponentMapping& m, uint32_t 
      m.g==ComponentSwizzle::Identity &&
      m.b==ComponentSwizzle::Identity &&
      m.a==ComponentSwizzle::Identity &&
-     mipLevel==uint32_t(-1)) {
+     (mipLevel==uint32_t(-1) || mipCnt==1)) {
     return view;
     }
 
