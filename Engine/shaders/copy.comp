@@ -7,15 +7,30 @@ layout(binding = 1, std430) writeonly buffer Output {
   } result;
 
 layout(push_constant, std430) uniform UboPush {
-  int mip;
+  int   mip;
+  float mult;
   } push;
 
 void main() {
   ivec2 texSz = textureSize(source8bit,push.mip);
-  vec4  pixel = texelFetch (source8bit,ivec2(gl_GlobalInvocationID.xy),push.mip);
+  uint  texel = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*texSz.x;
 
-  //uint  pack  = packUnorm4x8(pixel);
-  uvec4 upx   = uvec4(pixel*255.0);
+#if defined(R8)
+  uint pack = 0;
+  for(int i=0; i<4; ++i) {
+    uint  tid   = texel+i;
+    ivec2 at    = ivec2(tid%texSz.x, tid/texSz.x);
+    vec4  pixel = texelFetch(source8bit,ivec2(gl_GlobalInvocationID.xy),push.mip);
+
+    uint  upx   = uint(pixel.x*255.0);
+    pack = pack | (upx << 8*(i));
+    }
+  result.val[texel/4] = pack;
+#else
+  vec4  pixel = texelFetch (source8bit,ivec2(gl_GlobalInvocationID.xy),push.mip);
+  uvec4 upx   = uvec4(pixel*push.mult);
   uint  pack  = upx.x | (upx.y << 8) | (upx.z << 16) | (upx.w << 24);
-  result.val[gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*texSz.x] = pack;
+  //uint  pack  = packUnorm4x8(pixel);
+  result.val[texel] = pack;
+#endif
   }

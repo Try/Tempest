@@ -25,8 +25,8 @@ class RenderState final {
 
     enum class BlendOp : uint8_t {
       Add,
-      Substract,
-      ReverseSubstract,
+      Subtract,
+      ReverseSubtract,
       Min,
       Max
       };
@@ -61,7 +61,7 @@ class RenderState final {
     BlendMode blendDest()      const { return blendD; }
     BlendOp   blendOperation() const { return blendO; }
 
-    bool      hasBlend() const { return blendS!=BlendMode::one || blendD!=BlendMode::zero || !(blendO==BlendOp::Add || blendO==BlendOp::Substract); }
+    bool      hasBlend() const { return blendS!=BlendMode::one || blendD!=BlendMode::zero || !(blendO==BlendOp::Add || blendO==BlendOp::Subtract); }
 
     void      setZTestMode(ZTestMode z){ zmode=z; }
     ZTestMode zTestMode() const { return zmode; }

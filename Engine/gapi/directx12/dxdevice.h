@@ -191,6 +191,7 @@ class DxDevice : public AbstractGraphicsApi::Device {
 
     DSharedPtr<DxPipelineLay*>  copyLayout;
     DSharedPtr<DxCompPipeline*> copy;
+    DSharedPtr<DxCompPipeline*> copyR8;
 
   private:
     ComPtr<ID3D12Fence>         idleFence;

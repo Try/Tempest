@@ -190,25 +190,39 @@ struct DxCommandBuffer::CopyBuf : Stage {
 
   void exec(DxCommandBuffer& cmd) override {
     auto& impl = *cmd.impl;
-    auto& dev  = cmd.dev;
 
     struct PushUbo {
-      int32_t mip = 0;
+      int32_t mip  = 0;
+      float   mult = 255;
       } push;
     push.mip = mip;
 
-    desc.set    (0,&src,0,Sampler2d::nearest(),src.format);
     //desc.set    (0,&src,0,Sampler2d::nearest(),DXGI_FORMAT_R8G8B8A8_UINT);
+    desc.set    (0,&src,0,Sampler2d::nearest(),src.format);
     desc.setSsbo(1,&dst,0);
 
-    auto& shader = *dev.copy.handler;
+    auto& shader = getShader(cmd);
     impl.SetPipelineState(shader.impl.get());
     impl.SetComputeRootSignature(shader.sign.get());
     cmd.implSetUniforms(desc,true);
 
     impl.SetComputeRoot32BitConstants(UINT(shader.pushConstantId),UINT(sizeof(push)/4),&push,0);
-
     impl.Dispatch(UINT(width),UINT(height),1u);
+    }
+
+  DxCompPipeline& getShader(DxCommandBuffer& cmd) {
+    auto& dev = cmd.dev;
+    switch(src.format) {
+      case DXGI_FORMAT_R8_TYPELESS:
+      case DXGI_FORMAT_R8_UNORM:
+      case DXGI_FORMAT_R8_UINT:
+      case DXGI_FORMAT_R8_SNORM:
+      case DXGI_FORMAT_R8_SINT:
+        return *dev.copyR8.handler;
+      default:
+        return *dev.copy.handler;
+      }
+    return *dev.copy.handler;
     }
 
   DxBuffer&         dst;

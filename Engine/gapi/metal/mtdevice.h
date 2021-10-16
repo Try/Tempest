@@ -157,9 +157,9 @@ inline MTLBlendOperation nativeFormat(RenderState::BlendOp op) {
       return MTLBlendOperationMax;
     case RenderState::BlendOp::Min:
       return MTLBlendOperationMin;
-    case RenderState::BlendOp::ReverseSubstract:
+    case RenderState::BlendOp::ReverseSubtract:
       return MTLBlendOperationReverseSubtract;
-    case RenderState::BlendOp::Substract:
+    case RenderState::BlendOp::Subtract:
       return MTLBlendOperationSubtract;
     }
   }

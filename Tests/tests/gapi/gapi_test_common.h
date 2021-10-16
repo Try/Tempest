@@ -163,11 +163,13 @@ void bufCopy() {
     GraphicsApi api{ApiFlags::Validation};
     Device      device(api);
 
-    auto src = device.attachment(frm,4,4);
-    auto fbo = device.frameBuffer(src);
-    auto rp  = device.pass(FboMode(FboMode::PreserveOut,Color(0.f,0.f,1.f)));
+    uint8_t ref[4] = {32,64,128,255};
+    auto    src    = device.attachment(frm,4,4);
+    auto    fbo    = device.frameBuffer(src);
+    auto    rp     = device.pass(FboMode(FboMode::PreserveOut,Color(ref[0]/255.f,ref[1]/255.f,ref[2]/255.f,ref[3]/255.f)));
 
-    auto dst = device.ssbo(nullptr, src.w()*src.h()*4);
+    auto bpp = Pixmap::bppForFormat(Pixmap::toPixmapFormat(frm));
+    auto dst = device.ssbo(nullptr, src.w()*src.h()*bpp);
 
     auto cmd = device.commandBuffer();
     {
@@ -184,10 +186,9 @@ void bufCopy() {
     std::vector<uint8_t> dstCpu(dst.size());
     device.readBytes(dst,dstCpu.data(),dstCpu.size());
     for(size_t i=0; i<dstCpu.size(); i+=4) {
-      EXPECT_EQ(dstCpu[i+0],0);
-      EXPECT_EQ(dstCpu[i+1],0);
-      EXPECT_EQ(dstCpu[i+2],255);
-      EXPECT_EQ(dstCpu[i+3],255);
+      for(size_t b=0; b<bpp; ++b){
+        EXPECT_EQ(dstCpu[i+b],ref[b]);
+        }
       }
     }
   catch(std::system_error& e) {
