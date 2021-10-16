@@ -74,13 +74,12 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
 
     {
     auto copyCs = DSharedPtr<DxShader*>(new DxShader(copy_comp_sprv,sizeof(copy_comp_sprv)));
-
-    copyLayout = DSharedPtr<DxPipelineLay*> (new DxPipelineLay(*this,copyCs.handler->lay));
-    copy       = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*copyLayout.handler,*copyCs.handler));
+    copyLayout  = DSharedPtr<DxPipelineLay*> (new DxPipelineLay(*this,copyCs.handler->lay));
+    copy        = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*copyLayout.handler,*copyCs.handler));
     }
     {
-    auto copyCs = DSharedPtr<DxShader*>(new DxShader(copy_r8_comp_sprv,sizeof(copy_r8_comp_sprv)));
-    copyR8      = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*copyLayout.handler,*copyCs.handler));
+    auto copyCs = DSharedPtr<DxShader*>(new DxShader(copy_s_comp_sprv,sizeof(copy_s_comp_sprv)));
+    copyS       = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*copyLayout.handler,*copyCs.handler));
     }
     }
 

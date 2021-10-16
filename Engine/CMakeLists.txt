@@ -151,7 +151,7 @@ add_shader(tex_brush.vert.sprv tex_brush.vert "")
 add_shader(tex_brush.frag.sprv tex_brush.frag "")
 
 add_shader(copy.comp.sprv      copy.comp      "")
-add_shader(copy.r8.comp.sprv   copy.comp      -DR8)
+add_shader(copy.s.comp.sprv    copy.comp      -DFRM_SMALL)
 
 add_custom_command(
   OUTPUT     ${GEN_SHADERS_HEADER}

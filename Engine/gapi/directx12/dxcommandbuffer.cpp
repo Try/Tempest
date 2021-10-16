@@ -192,25 +192,28 @@ struct DxCommandBuffer::CopyBuf : Stage {
     auto& impl = *cmd.impl;
 
     struct PushUbo {
-      int32_t mip  = 0;
-      float   mult = 255;
+      int32_t mip     = 0;
+      int32_t bitCnt  = 8;
+      int32_t compCnt = 4;
       } push;
     push.mip = mip;
 
-    //desc.set    (0,&src,0,Sampler2d::nearest(),DXGI_FORMAT_R8G8B8A8_UINT);
+    auto&  prog    = shader(cmd,push.bitCnt,push.compCnt);
+    size_t outSize = (width*height*(push.compCnt*push.bitCnt/8) + sizeof(uint32_t)-1)/sizeof(uint32_t);
+
     desc.set    (0,&src,0,Sampler2d::nearest(),src.format);
     desc.setSsbo(1,&dst,0);
 
-    auto& shader = getShader(cmd);
-    impl.SetPipelineState(shader.impl.get());
-    impl.SetComputeRootSignature(shader.sign.get());
+    impl.SetPipelineState(prog.impl.get());
+    impl.SetComputeRootSignature(prog.sign.get());
     cmd.implSetUniforms(desc,true);
 
-    impl.SetComputeRoot32BitConstants(UINT(shader.pushConstantId),UINT(sizeof(push)/4),&push,0);
-    impl.Dispatch(UINT(width),UINT(height),1u);
+    impl.SetComputeRoot32BitConstants(UINT(prog.pushConstantId),UINT(sizeof(push)/4),&push,0);
+    const size_t maxWG = 65535;
+    impl.Dispatch(UINT(std::min(outSize,maxWG)),UINT((outSize+maxWG-1)%maxWG),1u);
     }
 
-  DxCompPipeline& getShader(DxCommandBuffer& cmd) {
+  DxCompPipeline& shader(DxCommandBuffer& cmd, int32_t& bitCnt, int32_t& compCnt) {
     auto& dev = cmd.dev;
     switch(src.format) {
       case DXGI_FORMAT_R8_TYPELESS:
@@ -218,9 +221,51 @@ struct DxCommandBuffer::CopyBuf : Stage {
       case DXGI_FORMAT_R8_UINT:
       case DXGI_FORMAT_R8_SNORM:
       case DXGI_FORMAT_R8_SINT:
-        return *dev.copyR8.handler;
-      default:
+        bitCnt  = 8;
+        compCnt = 1;
+        return *dev.copyS.handler;
+      case DXGI_FORMAT_R8G8_TYPELESS:
+      case DXGI_FORMAT_R8G8_UNORM:
+      case DXGI_FORMAT_R8G8_UINT:
+      case DXGI_FORMAT_R8G8_SNORM:
+      case DXGI_FORMAT_R8G8_SINT:
+        bitCnt  = 8;
+        compCnt = 2;
+        return *dev.copyS.handler;
+      case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+      case DXGI_FORMAT_R8G8B8A8_UNORM:
+      case DXGI_FORMAT_R8G8B8A8_UINT:
+      case DXGI_FORMAT_R8G8B8A8_SNORM:
+      case DXGI_FORMAT_R8G8B8A8_SINT:
+        bitCnt  = 8;
+        compCnt = 4;
         return *dev.copy.handler;
+      case DXGI_FORMAT_R16_TYPELESS:
+      case DXGI_FORMAT_R16_UNORM:
+      case DXGI_FORMAT_R16_UINT:
+      case DXGI_FORMAT_R16_SNORM:
+      case DXGI_FORMAT_R16_SINT:
+        bitCnt  = 16;
+        compCnt = 1;
+        return *dev.copyS.handler;
+      case DXGI_FORMAT_R16G16_TYPELESS:
+      case DXGI_FORMAT_R16G16_UNORM:
+      case DXGI_FORMAT_R16G16_UINT:
+      case DXGI_FORMAT_R16G16_SNORM:
+      case DXGI_FORMAT_R16G16_SINT:
+        bitCnt  = 16;
+        compCnt = 2;
+        return *dev.copyS.handler;
+      case DXGI_FORMAT_R16G16B16A16_TYPELESS:
+      case DXGI_FORMAT_R16G16B16A16_UNORM:
+      case DXGI_FORMAT_R16G16B16A16_UINT:
+      case DXGI_FORMAT_R16G16B16A16_SNORM:
+      case DXGI_FORMAT_R16G16B16A16_SINT:
+        bitCnt  = 16;
+        compCnt = 4;
+        return *dev.copyS.handler;
+      default:
+        dxAssert(E_NOTIMPL);
       }
     return *dev.copy.handler;
     }

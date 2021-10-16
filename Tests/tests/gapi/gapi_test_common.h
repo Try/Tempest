@@ -155,7 +155,7 @@ void ssboDyn() {
     }
   }
 
-template<class GraphicsApi, Tempest::TextureFormat frm>
+template<class GraphicsApi, Tempest::TextureFormat frm, class iType>
 void bufCopy() {
   using namespace Tempest;
 
@@ -163,13 +163,15 @@ void bufCopy() {
     GraphicsApi api{ApiFlags::Validation};
     Device      device(api);
 
-    uint8_t ref[4] = {32,64,128,255};
-    auto    src    = device.attachment(frm,4,4);
-    auto    fbo    = device.frameBuffer(src);
-    auto    rp     = device.pass(FboMode(FboMode::PreserveOut,Color(ref[0]/255.f,ref[1]/255.f,ref[2]/255.f,ref[3]/255.f)));
+    iType   ref[4]   = {32,64,128,255};
+    float   maxIType = float(iType(-1));
+    auto    src      = device.attachment(frm,4,4);
+    auto    fbo      = device.frameBuffer(src);
+    auto    rp       = device.pass(FboMode(FboMode::PreserveOut,Color(ref[0]/maxIType,ref[1]/maxIType,ref[2]/maxIType,ref[3]/maxIType)));
 
-    auto bpp = Pixmap::bppForFormat(Pixmap::toPixmapFormat(frm));
-    auto dst = device.ssbo(nullptr, src.w()*src.h()*bpp);
+    auto bpp  = Pixmap::bppForFormat  (Pixmap::toPixmapFormat(frm));
+    auto ccnt = Pixmap::componentCount(Pixmap::toPixmapFormat(frm));
+    auto dst  = device.ssbo(nullptr, src.w()*src.h()*bpp);
 
     auto cmd = device.commandBuffer();
     {
@@ -183,10 +185,10 @@ void bufCopy() {
     device.submit(cmd,sync);
     sync.wait();
 
-    std::vector<uint8_t> dstCpu(dst.size());
-    device.readBytes(dst,dstCpu.data(),dstCpu.size());
-    for(size_t i=0; i<dstCpu.size(); i+=4) {
-      for(size_t b=0; b<bpp; ++b){
+    std::vector<iType> dstCpu(src.w()*src.h()*ccnt);
+    device.readBytes(dst,dstCpu.data(),dstCpu.size()*sizeof(iType));
+    for(size_t i=0; i<dstCpu.size(); i+=ccnt) {
+      for(size_t b=0; b<ccnt; ++b){
         EXPECT_EQ(dstCpu[i+b],ref[b]);
         }
       }
