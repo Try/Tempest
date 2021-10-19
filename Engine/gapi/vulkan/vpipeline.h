@@ -37,6 +37,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
 
     VkPipelineLayout   pipelineLayout = VK_NULL_HANDLE;
     VkShaderStageFlags pushStageFlags = 0;
+    uint32_t           pushSize       = 0;
     bool               ssboBarriers   = false;
 
     Inst&             instance(VFramebufferLayout &lay);
@@ -52,7 +53,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     SpinLock                               sync;
 
     void cleanup();
-    static VkPipelineLayout      initLayout(VkDevice device, const VPipelineLay& uboLay, VkShaderStageFlags& pushFlg);
+    static VkPipelineLayout      initLayout(VkDevice device, const VPipelineLay& uboLay, VkShaderStageFlags& pushFlg, uint32_t& pushSize);
     static VkPipeline            initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
                                                       const VFramebufferLayout &lay, const RenderState &st,
                                                       const Decl::ComponentType *decl, size_t declSize, size_t stride,
@@ -71,6 +72,7 @@ class VCompPipeline : public AbstractGraphicsApi::CompPipeline {
     VkDevice           device         = nullptr;
     VkPipelineLayout   pipelineLayout = VK_NULL_HANDLE;
     VkPipeline         impl           = VK_NULL_HANDLE;
+    uint32_t           pushSize       = 0;
     bool               ssboBarriers   = false;
   };
 }}

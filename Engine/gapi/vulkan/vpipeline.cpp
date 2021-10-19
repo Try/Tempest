@@ -36,7 +36,7 @@ VPipeline::VPipeline(VDevice& device,
       decl.reset(new Decl::ComponentType[declSize]);
       std::memcpy(decl.get(),vert->vdecl.data(),declSize*sizeof(Decl::ComponentType));
       }
-    pipelineLayout = initLayout(device.device.impl,ulay,pushStageFlags);
+    pipelineLayout = initLayout(device.device.impl,ulay,pushStageFlags,pushSize);
     ssboBarriers   = ulay.hasSSBO;
     }
   catch(...) {
@@ -86,7 +86,7 @@ void VPipeline::cleanup() {
     vkDestroyPipeline(device,i.val,nullptr);
   }
 
-VkPipelineLayout VPipeline::initLayout(VkDevice device, const VPipelineLay& uboLay, VkShaderStageFlags& pushStageFlags) {
+VkPipelineLayout VPipeline::initLayout(VkDevice device, const VPipelineLay& uboLay, VkShaderStageFlags& pushStageFlags, uint32_t& pushSize) {
   VkPushConstantRange push = {};
 
   VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
@@ -111,6 +111,8 @@ VkPipelineLayout VPipeline::initLayout(VkDevice device, const VPipelineLay& uboL
     push.stageFlags = pushStageFlags;
     push.offset     = 0;
     push.size       = uint32_t(uboLay.pb.size);
+
+    pushSize        = push.size;
 
     pipelineLayoutInfo.pPushConstantRanges    = &push;
     pipelineLayoutInfo.pushConstantRangeCount = 1;
@@ -340,7 +342,7 @@ VCompPipeline::VCompPipeline() {
 VCompPipeline::VCompPipeline(VDevice& dev, const VPipelineLay& ulay, VShader& comp)
   :device(dev.device.impl) {
   VkShaderStageFlags pushStageFlags = 0;
-  pipelineLayout = VPipeline::initLayout(device,ulay,pushStageFlags);
+  pipelineLayout = VPipeline::initLayout(device,ulay,pushStageFlags,pushSize);
   ssboBarriers   = ulay.hasSSBO;
 
   try {

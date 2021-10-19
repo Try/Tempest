@@ -139,6 +139,7 @@ void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
 
 void VCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) {
   VPipeline&        px=reinterpret_cast<VPipeline&>(p);
+  assert(size<=px.pushSize);
   vkCmdPushConstants(impl, px.pipelineLayout, px.pushStageFlags, 0, uint32_t(size), data);
   }
 
@@ -166,6 +167,7 @@ void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
 
 void VCommandBuffer::setBytes(AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) {
   VCompPipeline& px=reinterpret_cast<VCompPipeline&>(p);
+  assert(size<=px.pushSize);
   vkCmdPushConstants(impl, px.pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, uint32_t(size), data);
   }
 
