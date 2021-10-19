@@ -33,7 +33,7 @@ class ShaderReflection final {
       uint32_t layout=0;
       Class    cls   =Ubo;
       Stage    stage =Fragment;
-      size_t   size  =0;
+      uint64_t size  =0;
 
       spirv_cross::ID spvId;
       uint32_t        mslBinding  = uint32_t(-1);
@@ -42,7 +42,7 @@ class ShaderReflection final {
 
     struct PushBlock {
       Stage    stage = Fragment;
-      size_t   size  = 0;
+      uint64_t size  = 0;
       };
 
     static void getVertexDecl(std::vector<Decl::ComponentType>& data, spirv_cross::Compiler& comp);
