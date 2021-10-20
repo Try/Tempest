@@ -180,12 +180,12 @@ void VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& swapCh
   VkSemaphoreCreateInfo info = {};
   info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
   info.flags = 0;
-  sync.resize(imgCount);
+  sync.resize(views.size());
   for(auto& i:sync) {
     vkAssert(vkCreateSemaphore(device.device.impl,&info,nullptr,&i.aquire));
     vkAssert(vkCreateSemaphore(device.device.impl,&info,nullptr,&i.present));
     }
-  fence = FenceList(device.device.impl,imgCount);
+  fence = FenceList(device.device.impl,views.size());
   aquireNextImage();
   }
 
@@ -275,7 +275,7 @@ VkExtent2D VSwapchain::getSwapExtent(const VkSurfaceCapabilitiesKHR& capabilitie
 uint32_t VSwapchain::getImageCount(const SwapChainSupport& support) const {
   const uint32_t maxImages=support.capabilities.maxImageCount==0 ? uint32_t(-1) : support.capabilities.maxImageCount;
   uint32_t imageCount=support.capabilities.minImageCount+1;
-  if(support.capabilities.maxImageCount>0 && imageCount>maxImages)
+  if(0<support.capabilities.maxImageCount && imageCount>maxImages)
     imageCount = support.capabilities.maxImageCount;
   return imageCount;
   }
