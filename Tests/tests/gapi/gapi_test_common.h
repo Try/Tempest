@@ -166,8 +166,6 @@ void bufCopy() {
     iType   ref[4]   = {32,64,128,255};
     float   maxIType = float(iType(-1));
     auto    src      = device.attachment(frm,4,4);
-    auto    fbo      = device.frameBuffer(src);
-    auto    rp       = device.pass(FboMode(FboMode::PreserveOut,Color(ref[0]/maxIType,ref[1]/maxIType,ref[2]/maxIType,ref[3]/maxIType)));
 
     auto bpp  = Pixmap::bppForFormat  (Pixmap::toPixmapFormat(frm));
     auto ccnt = Pixmap::componentCount(Pixmap::toPixmapFormat(frm));
@@ -176,7 +174,7 @@ void bufCopy() {
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setFramebuffer(fbo,rp);
+      enc.setFramebuffer({{src,Vec4(ref[0]/maxIType,ref[1]/maxIType,ref[2]/maxIType,ref[3]/maxIType),Tempest::Preserve}});
       enc.setFramebuffer(nullptr);
       enc.copy(src,0,dst,0);
     }
@@ -268,13 +266,11 @@ void fbo(const char* outImg) {
     Device      device(api);
 
     auto tex = device.attachment(TextureFormat::RGBA8,128,128);
-    auto fbo = device.frameBuffer(tex);
-    auto rp  = device.pass(FboMode(FboMode::PreserveOut,Color(0.f,0.f,1.f)));
 
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setFramebuffer(fbo,rp);
+      enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
     }
 
     auto sync = device.fence();
@@ -307,13 +303,11 @@ void draw(const char* outImage) {
     auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
 
     auto tex  = device.attachment(format,128,128);
-    auto fbo  = device.frameBuffer(tex);
-    auto rp   = device.pass(FboMode(FboMode::PreserveOut,Color(0.f,0.f,1.f)));
 
     auto cmd  = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setFramebuffer(fbo,rp);
+      enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
       enc.setUniforms(pso);
       enc.draw(vbo,ibo);
     }
@@ -355,9 +349,6 @@ void uniforms(const char* outImage) {
     auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
 
     auto tex  = device.attachment(format,128,128);
-    auto fbo  = device.frameBuffer(tex);
-    auto rp   = device.pass(FboMode(FboMode::PreserveOut,Color(0.f,0.f,1.f)));
-
     auto ubo  = device.ubo(data);
     auto desc = device.descriptors(pso);
     desc.set(2,ubo);
@@ -365,7 +356,7 @@ void uniforms(const char* outImage) {
     auto cmd  = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setFramebuffer(fbo,rp);
+      enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
       enc.setUniforms(pso,desc);
       enc.draw(vbo,ibo);
     }
@@ -481,14 +472,12 @@ void mipMaps(const char* outImage) {
     auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
 
     auto tex  = device.attachment(format,128,128,true);
-    auto fbo  = device.frameBuffer(tex);
-    auto rp   = device.pass(FboMode(FboMode::PreserveOut,Color(0.f,0.f,1.f)));
     auto sync = device.fence();
 
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setFramebuffer(fbo,rp);
+      enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
       enc.setUniforms(pso);
       enc.draw(vbo,ibo);
       enc.setFramebuffer(nullptr);
@@ -553,9 +542,6 @@ void ssboWriteVs() {
     auto pso    = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
 
     auto tex    = device.attachment(TextureFormat::RGBA8,32,32);
-    auto fbo    = device.frameBuffer(tex);
-    auto rp     = device.pass(FboMode(FboMode::PreserveOut,Color(0.f,0.f,1.f)));
-
     auto vsOut  = device.ssbo(nullptr, sizeof(Vec4)*3);
     auto ubo    = device.descriptors(pso.layout());
     ubo.set(0,vsOut);
@@ -572,7 +558,7 @@ void ssboWriteVs() {
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setFramebuffer(fbo,rp);
+      enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
       enc.setUniforms(pso,ubo);
       enc.draw(vbo,ibo);
 

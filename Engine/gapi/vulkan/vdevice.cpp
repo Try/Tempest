@@ -60,7 +60,7 @@ VDevice::autoDevice::~autoDevice() {
   }
 
 VDevice::VDevice(VulkanInstance &api, const char* gpuName)
-  :instance(api.instance)  {
+  :instance(api.instance), fboMap(*this) {
   uint32_t deviceCount = 0;
   vkEnumeratePhysicalDevices(api.instance, &deviceCount, nullptr);
 

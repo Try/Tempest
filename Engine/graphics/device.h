@@ -2,8 +2,6 @@
 
 #include <Tempest/AbstractGraphicsApi>
 #include <Tempest/CommandBuffer>
-#include <Tempest/RenderPass>
-#include <Tempest/FrameBuffer>
 #include <Tempest/RenderPipeline>
 #include <Tempest/ComputePipeline>
 #include <Tempest/Shader>
@@ -138,20 +136,6 @@ class Device {
     Pixmap               readPixels (const Attachment&   t, uint32_t mip=0);
     Pixmap               readPixels (const StorageImage& t, uint32_t mip=0);
     void                 readBytes  (const StorageBuffer& ssbo, void* out, size_t size);
-
-    FrameBuffer          frameBuffer(Attachment& out);
-    FrameBuffer          frameBuffer(Attachment& out, ZBuffer& zbuf);
-    FrameBuffer          frameBuffer(Attachment& out0, Attachment& out1, ZBuffer& zbuf);
-    FrameBuffer          frameBuffer(Attachment& out0, Attachment& out1, Attachment& out2, ZBuffer& zbuf);
-    FrameBuffer          frameBuffer(Attachment& out0, Attachment& out1, Attachment& out2, Attachment& out3, ZBuffer& zbuf);
-    FrameBuffer          frameBuffer(Attachment** out, uint8_t count, ZBuffer* zbuf);
-
-    RenderPass           pass(const FboMode& color);
-    RenderPass           pass(const FboMode& color, const FboMode& depth);
-    RenderPass           pass(const FboMode& c0, const FboMode& c1, const FboMode& depth);
-    RenderPass           pass(const FboMode& c0, const FboMode& c1, const FboMode& c2, const FboMode& depth);
-    RenderPass           pass(const FboMode& c0, const FboMode& c1, const FboMode& c2, const FboMode& c3, const FboMode& depth);
-    RenderPass           pass(const FboMode** color, uint8_t count);
 
     template<class Vertex>
     RenderPipeline       pipeline(Topology tp,const RenderState& st, const Shader &vs, const Shader &fs);

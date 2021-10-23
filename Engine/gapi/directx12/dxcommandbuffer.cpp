@@ -1,15 +1,13 @@
 #if defined(TEMPEST_BUILD_DIRECTX12)
 
+#include "dxcommandbuffer.h"
 #include "dxbuffer.h"
 #include "dxtexture.h"
-#include "dxcommandbuffer.h"
 #include "dxdevice.h"
-#include "dxframebuffer.h"
-#include "dxpipeline.h"
 #include "dxswapchain.h"
 #include "dxdescriptorarray.h"
-#include "dxrenderpass.h"
 #include "dxfbolayout.h"
+#include "dxpipeline.h"
 
 #include "guid.h"
 
@@ -302,8 +300,6 @@ void DxCommandBuffer::begin() {
   }
 
 void DxCommandBuffer::end() {
-  if(currentFbo!=nullptr)
-    endRenderPass();
   resState.finalize(*this);
 
   dxAssert(impl->Close());
@@ -326,33 +322,39 @@ bool DxCommandBuffer::isRecording() const {
   return recording;
   }
 
-void DxCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*  f,
-                                      AbstractGraphicsApi::Pass* p,
-                                      uint32_t w, uint32_t h) {
-  auto& fbo  = *reinterpret_cast<DxFramebuffer*>(f);
-  auto& pass = *reinterpret_cast<DxRenderPass*>(p);
-
-  currentFbo  = &fbo;
-  currentPass = &pass;
-
-  for(size_t i=0;i<fbo.viewsCount;++i) {
-    const bool preserve = pass.isAttachPreserved(i);
-    resState.setLayout(fbo.views[i],fbo.views[i].renderLayout(),preserve);
+void Tempest::Detail::DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize, uint32_t w, uint32_t h,
+                                                      const TextureFormat* frm, AbstractGraphicsApi::Texture** att,
+                                                      AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) {
+  for(size_t i=0; i<descSize; ++i) {
+    if(isDepthFormat(frm[i]))
+      resState.setLayout(*att[i],TextureLayout::DepthAttach,desc[i].load==AccessOp::Preserve);
+    else if(frm[i]==TextureFormat::Undefined)
+      resState.setLayout(*sw[i],imgId[i],TextureLayout::ColorAttach,desc[i].load==AccessOp::Preserve);
+    else
+      resState.setLayout(*att[i],TextureLayout::ColorAttach,desc[i].load==AccessOp::Preserve);
     }
-  if(fbo.depth.res!=nullptr) {
-    const bool preserve = pass.isAttachPreserved(pass.att.size()-1);
-    resState.setLayout(fbo.depth,fbo.depth.renderLayout(),preserve);
-    }
-
-  isInCompute = false;
   resState.flushLayout(*this);
+  for(size_t i=0; i<descSize; ++i) {
+    if(isDepthFormat(frm[i]))
+      resState.setLayout(*att[i],TextureLayout::DepthAttach,desc[i].store==AccessOp::Preserve);
+    else if(frm[i]==TextureFormat::Undefined)
+      resState.setLayout(*sw[i],imgId[i],TextureLayout::Present,desc[i].store==AccessOp::Preserve);
+    else
+      resState.setLayout(*att[i],TextureLayout::Sampler,desc[i].store==AccessOp::Preserve);
+    }
 
-  auto desc = fbo.rtvHeap->GetCPUDescriptorHandleForHeapStart();
-  if(fbo.depth.res!=nullptr) {
-    auto ds = fbo.dsvHeap->GetCPUDescriptorHandleForHeapStart();
-    impl->OMSetRenderTargets(fbo.viewsCount, &desc, TRUE, &ds);
-    } else {
-    impl->OMSetRenderTargets(fbo.viewsCount, &desc, TRUE, nullptr);
+  //impl->BeginRenderPass(1, &renderPassRenderTargetDesc, &renderPassDepthStencilDesc, D3D12_RENDER_PASS_FLAG_NONE);
+
+  //  auto desc = fbo.rtvHeap->GetCPUDescriptorHandleForHeapStart();
+  D3D12_CPU_DESCRIPTOR_HANDLE handle;
+  D3D12_CPU_DESCRIPTOR_HANDLE ds;
+  for(size_t i=0; i<descSize; ++i) {
+    auto& dx = desc[i];
+    if(dx.attachment!=nullptr) {
+      impl->OMSetRenderTargets(UINT(descSize), &handle, TRUE, &ds);
+      } else {
+      impl->OMSetRenderTargets(UINT(descSize), &handle, TRUE, nullptr);
+      }
     }
 
   D3D12_VIEWPORT vp={};
@@ -371,40 +373,21 @@ void DxCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*  f,
   sr.bottom = LONG(h);
   impl->RSSetScissorRects(1, &sr);
 
-  for(size_t i=0;i<fbo.viewsCount;++i) {
-    auto& att = pass.att[i];
-    if(FboMode::ClearBit!=(att.mode&FboMode::ClearBit))
+  for(size_t i=0; i<descSize; ++i) {
+    auto& dx = desc[i];
+    if(dx.load!=AccessOp::Clear)
       continue;
-    const float clearColor[] = { att.clear.r(), att.clear.g(), att.clear.b(), att.clear.a() };
-    impl->ClearRenderTargetView(desc, clearColor, 0, nullptr);
-    desc.ptr+=fbo.rtvHeapInc;
-    }
-
-  if(fbo.depth.res!=nullptr) {
-    auto& att = pass.att.back();
-    if(FboMode::ClearBit==(att.mode&FboMode::ClearBit)) {
-      auto ds = fbo.dsvHeap->GetCPUDescriptorHandleForHeapStart();
-      impl->ClearDepthStencilView(ds,D3D12_CLEAR_FLAG_DEPTH,att.clear.r(),0, 0,nullptr);
+    if(dx.attachment!=nullptr) {
+      const float clearColor[] = { dx.clear.x, dx.clear.y, dx.clear.z, dx.clear.w };
+      impl->ClearRenderTargetView(handle, clearColor, 0, nullptr);
+      } else {
+      impl->ClearDepthStencilView(handle,D3D12_CLEAR_FLAG_DEPTH,dx.clear.x, 0, 0, nullptr);
       }
+    //desc.ptr+=fbo.rtvHeapInc;
     }
   }
 
-void DxCommandBuffer::endRenderPass() {
-  auto& fbo  = *currentFbo;
-  auto& pass = *currentPass;
-
-  for(size_t i=0;i<fbo.viewsCount;++i) {
-    const bool preserve = pass.isResultPreserved(i);
-    resState.setLayout(fbo.views[i],fbo.views[i].defaultLayout(),preserve);
-    }
-
-  if(fbo.depth.res!=nullptr) {
-    const bool preserve = pass.isResultPreserved(pass.att.size()-1);
-    resState.setLayout(fbo.depth,fbo.depth.defaultLayout(),preserve);
-    }
-
-  currentFbo  = nullptr;
-  currentPass = nullptr;
+void Tempest::Detail::DxCommandBuffer::endRendering() {
   }
 
 void DxCommandBuffer::setViewport(const Rect& r) {
@@ -424,7 +407,7 @@ void Tempest::Detail::DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi:
   vboStride    = px.stride;
   ssboBarriers = px.ssboBarriers;
 
-  impl->SetPipelineState(&px.instance(*currentFbo->lay.handler));
+  // impl->SetPipelineState(&px.instance(*currentFbo->lay.handler));
   impl->SetGraphicsRootSignature(px.sign.get());
   impl->IASetPrimitiveTopology(px.topology);
   }
@@ -499,18 +482,24 @@ void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Buffer& b, BufferLayout 
   impl->ResourceBarrier(1, &barrier);
   }
 
-void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Attach& att, TextureLayout prev, TextureLayout next, bool /*byRegion*/) {
-  auto& img = reinterpret_cast<DxFramebuffer::Attach&>(att);
-  if((prev==TextureLayout::ColorAttach || prev==TextureLayout::DepthAttach) && next==TextureLayout::Undefined)
-    impl->DiscardResource(img.res,nullptr);
+void DxCommandBuffer::changeLayout(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
+  for(size_t i=0; i<cnt; ++i) {
+    auto&           b         = desc[i];
+    ID3D12Resource* nativeImg = nullptr;
 
-  auto p = (prev==TextureLayout::Undefined ? att.defaultLayout() : prev);
-  auto n = (next==TextureLayout::Undefined ? att.defaultLayout() : next);
-  if(n!=p)
-    implChangeLayout(img.res,nativeFormat(p),nativeFormat(n));
+    if(b.texture!=nullptr) {
+      DxTexture& t   = *reinterpret_cast<DxTexture*>(b.texture);
+      nativeImg     = t.impl.get();
+      } else {
+      DxSwapchain& s = *reinterpret_cast<DxSwapchain*>(b.swapchain);
+      nativeImg     = s.views[b.swId].get();
+      }
 
-  if(prev==TextureLayout::Undefined && (next==TextureLayout::ColorAttach || next==TextureLayout::DepthAttach))
-    impl->DiscardResource(img.res,nullptr);
+    if(!b.preserve)
+      impl->DiscardResource(nativeImg,nullptr);
+    implChangeLayout(nativeImg,
+                     Detail::nativeFormat(b.prev), Detail::nativeFormat(b.next));
+    }
   }
 
 void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
@@ -529,8 +518,6 @@ void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
 void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, TextureLayout defLayout,
                            uint32_t width, uint32_t height, uint32_t mip,
                            AbstractGraphicsApi::Texture& srcTex, size_t offset) {
-  if(currentFbo!=nullptr)
-    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
   resState.flushLayout(*this);
 
   auto& dst = reinterpret_cast<DxBuffer&>(dstBuf);
@@ -667,9 +654,6 @@ void DxCommandBuffer::blitFS(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW
 
 void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img, TextureLayout defLayout,
                                      uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
-  if(currentFbo!=nullptr)
-    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
-
   if(mipLevels==1)
     return;
 

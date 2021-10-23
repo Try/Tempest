@@ -21,9 +21,10 @@ class Swapchain final {
 
     void                 reset();
 
-    uint32_t             imageCount() const;
-    Attachment&          image(size_t id);
     uint32_t             currentImage() const;
+    uint32_t             imageCount() const;
+    Attachment&          operator[](size_t id);
+    const Attachment&    operator[](size_t id) const;
 
   private:
     Swapchain(AbstractGraphicsApi::Swapchain* sw);

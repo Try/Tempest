@@ -10,6 +10,7 @@
 #include "vswapchain.h"
 #include "vfence.h"
 #include "vulkanapi_impl.h"
+#include "vframebuffermap.h"
 #include "exceptions/exception.h"
 #include "utility/spinlock.h"
 #include "utility/compiller_hints.h"
@@ -196,6 +197,8 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     std::mutex              allocSync;
     VAllocator              allocator;
+
+    VFramebufferMap         fboMap;
 
     VkProps                 props={};
 

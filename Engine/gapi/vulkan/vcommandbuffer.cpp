@@ -2,16 +2,16 @@
 
 #include "vcommandbuffer.h"
 
+#include <Tempest/Attachment>
+
 #include "vdevice.h"
 #include "vcommandpool.h"
-#include "vframebuffer.h"
-#include "vframebufferlayout.h"
-#include "vrenderpass.h"
 #include "vpipeline.h"
 #include "vbuffer.h"
 #include "vdescriptorarray.h"
 #include "vswapchain.h"
 #include "vtexture.h"
+#include "vframebuffermap.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -42,7 +42,7 @@ void VCommandBuffer::begin() {
   }
 
 void VCommandBuffer::begin(VkCommandBufferUsageFlags flg) {
-  state = NoPass;
+  state = Idle;
   swapchainSync.reserve(swapchainSync.size());
   swapchainSync.clear();
   curVbo = VK_NULL_HANDLE;
@@ -56,8 +56,6 @@ void VCommandBuffer::begin(VkCommandBufferUsageFlags flg) {
   }
 
 void VCommandBuffer::end() {
-  if(state==RenderPass)
-    endRenderPass();
   swapchainSync.reserve(swapchainSync.size());
   resState.finalize(*this);
   vkAssert(vkEndCommandBuffer(impl));
@@ -68,41 +66,48 @@ bool VCommandBuffer::isRecording() const {
   return state!=NoRecording;
   }
 
-void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
-                                     AbstractGraphicsApi::Pass*  p,
-                                     uint32_t width,uint32_t height) {
-  VFramebuffer& fbo =*reinterpret_cast<VFramebuffer*>(f);
-  VRenderPass&  pass=*reinterpret_cast<VRenderPass*>(p);
-
-  for(size_t i=0;i<fbo.attach.size();++i) {
-    const bool preserve = pass.isAttachPreserved(i);
-    resState.setLayout(fbo.attach[i],fbo.attach[i].renderLayout(),preserve);
-    if(fbo.attach[i].sw!=nullptr)
-      addDependency(*fbo.attach[i].sw,fbo.attach[i].id);
+void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
+                                    uint32_t width, uint32_t height,
+                                    const TextureFormat* frm,
+                                    AbstractGraphicsApi::Texture** att,
+                                    AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) {
+  for(size_t i=0; i<descSize; ++i) {
+    if(sw[i]!=nullptr)
+      addDependency(*reinterpret_cast<VSwapchain*>(sw[i]),imgId[i]);
     }
 
-  isInCompute = false;
+  fbo = device.fboMap.find(desc,descSize, frm,att,sw,imgId,width,height);
+  auto fb = fbo.get();
+
+  for(size_t i=0; i<descSize; ++i) {
+    if(isDepthFormat(frm[i]))
+      resState.setLayout(*att[i],TextureLayout::DepthAttach,desc[i].load==AccessOp::Preserve);
+    else if(frm[i]==TextureFormat::Undefined)
+      resState.setLayout(*sw[i],imgId[i],TextureLayout::ColorAttach,desc[i].load==AccessOp::Preserve);
+    else
+      resState.setLayout(*att[i],TextureLayout::ColorAttach,desc[i].load==AccessOp::Preserve);
+    }
   resState.flushLayout(*this);
-
-  if(fbo.rp.handler->attCount!=pass.attCount)
-    throw IncompleteFboException();
-
-  auto& rp = pass.instance(*fbo.rp.handler);
-  curFbo = &fbo;
-  curRp  = &pass;
+  for(size_t i=0; i<descSize; ++i) {
+    if(isDepthFormat(frm[i]))
+      resState.setLayout(*att[i],TextureLayout::DepthAttach,desc[i].store==AccessOp::Preserve);
+    else if(frm[i]==TextureFormat::Undefined)
+      resState.setLayout(*sw[i],imgId[i],TextureLayout::Present,desc[i].store==AccessOp::Preserve);
+    else
+      resState.setLayout(*att[i],TextureLayout::Sampler,desc[i].store==AccessOp::Preserve);
+    }
 
   VkRenderPassBeginInfo renderPassInfo = {};
   renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  renderPassInfo.renderPass        = rp.impl;
-  renderPassInfo.framebuffer       = fbo.impl;
+  renderPassInfo.renderPass        = fb->pass;
+  renderPassInfo.framebuffer       = fb->fbo;
   renderPassInfo.renderArea.offset = {0, 0};
   renderPassInfo.renderArea.extent = {width,height};
 
-  renderPassInfo.clearValueCount   = pass.attCount;
-  renderPassInfo.pClearValues      = rp.clear.get();
+  renderPassInfo.clearValueCount   = uint32_t(descSize);
+  renderPassInfo.pClearValues      = fb->clr;
 
   vkCmdBeginRenderPass(impl, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
   state = RenderPass;
 
   // setup dynamic state
@@ -115,24 +120,15 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
   vkCmdSetScissor (impl,0,1,&scissor);
   }
 
-void VCommandBuffer::endRenderPass() {
-  for(size_t i=0;i<curFbo->attach.size();++i) {
-    if(!curRp->isResultPreserved(i))
-      continue;
-    resState.setLayout(curFbo->attach[i],curFbo->attach[i].defaultLayout(),true);
-    }
+void VCommandBuffer::endRendering() {
   vkCmdEndRenderPass(impl);
-  state  = NoPass;
-  curFbo = nullptr;
-  curRp  = nullptr;
+  resState.flushLayout(*this);
+  state = Idle;
   }
 
 void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
-  if(curFbo==nullptr)
-    throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   VPipeline&           px = reinterpret_cast<VPipeline&>(p);
-  VFramebufferLayout*  l  = reinterpret_cast<VFramebufferLayout*>(curFbo->rp.handler);
-  auto& v = px.instance(*l);
+  auto& v = px.instance(fbo);
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v.val);
   ssboBarriers = px.ssboBarriers;
   }
@@ -154,11 +150,9 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraph
   }
 
 void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
-  if(curFbo!=nullptr)
-    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
-  if(!isInCompute) {
+  if(state!=Compute) {
     resState.flushLayout(*this);
-    isInCompute = true;
+    state = Compute;
     }
   VCompPipeline& px = reinterpret_cast<VCompPipeline&>(p);
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,px.impl);
@@ -333,8 +327,6 @@ void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, u
 void Tempest::Detail::VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dest, TextureLayout defLayout,
                                            uint32_t width, uint32_t height, uint32_t mip,
                                            AbstractGraphicsApi::Texture& src, size_t offset) {
-  if(curFbo!=nullptr)
-    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
   //resState.setLayout(src,TextureLayout::TransferSrc,true); // TODO: more advanced layout tracker
   resState.flushLayout(*this);
 
@@ -408,22 +400,24 @@ void VCommandBuffer::changeLayout(AbstractGraphicsApi::Buffer& buf, BufferLayout
         0, nullptr);
   }
 
-void VCommandBuffer::changeLayout(AbstractGraphicsApi::Attach& att, TextureLayout prev, TextureLayout next, bool byRegion) {
-  auto&    img          = reinterpret_cast<VFramebuffer::Attach&>(att);
-  VkImage  nativeImg    = VK_NULL_HANDLE;
-  VkFormat nativeFormat = VK_FORMAT_UNDEFINED;
-  if(img.sw!=nullptr) {
-    nativeImg    = img.sw->images[img.id];
-    nativeFormat = img.sw->format();
-    } else {
-    nativeImg    = img.tex->impl;
-    nativeFormat = img.tex->format;
+void VCommandBuffer::changeLayout(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
+  for(size_t i=0; i<cnt; ++i) {
+    auto&     b            = desc[i];
+    VkImage   nativeImg    = VK_NULL_HANDLE;
+    VkFormat  nativeFormat = VK_FORMAT_UNDEFINED;
+    if(b.texture!=nullptr) {
+      VTexture& t   = *reinterpret_cast<VTexture*>(b.texture);
+      nativeImg     = t.impl;
+      nativeFormat  = t.format;
+      } else {
+      VSwapchain& s = *reinterpret_cast<VSwapchain*>(b.swapchain);
+      nativeImg     = s.images[b.swId];
+      nativeFormat  = s.format();
+      }
+    implChangeLayout(nativeImg, nativeFormat,
+                     Detail::nativeFormat(b.prev), Detail::nativeFormat(b.next),
+                     !b.preserve, 0, VK_REMAINING_MIP_LEVELS, false);
     }
-
-  auto p = (prev==TextureLayout::Undefined ? att.defaultLayout() : prev);
-  implChangeLayout(nativeImg, nativeFormat,
-                   Detail::nativeFormat(p), Detail::nativeFormat(next),
-                   prev==TextureLayout::Undefined, 0, VK_REMAINING_MIP_LEVELS, byRegion);
   }
 
 void VCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
@@ -441,8 +435,6 @@ void VCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
 void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
                                     TextureLayout defLayout,
                                     uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
-  if(curFbo!=nullptr)
-    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
   resState.flushLayout(*this);
 
   if(mipLevels==1)
@@ -589,7 +581,7 @@ void VCommandBuffer::implChangeLayout(VkImage dest, VkFormat imageFormat,
   barrier.subresourceRange.baseArrayLayer = 0;
   barrier.subresourceRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
 
-  if(imageFormat==VK_FORMAT_D24_UNORM_S8_UINT)
+  if(imageFormat==VK_FORMAT_D24_UNORM_S8_UINT || imageFormat==VK_FORMAT_D16_UNORM_S8_UINT || imageFormat==VK_FORMAT_D32_SFLOAT_S8_UINT)
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT; else
   if(Detail::nativeIsDepthFormat(imageFormat))
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; else

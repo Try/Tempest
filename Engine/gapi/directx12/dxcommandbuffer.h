@@ -6,7 +6,6 @@
 
 #include "comptr.h"
 #include "gapi/resourcestate.h"
-#include "dxframebuffer.h"
 #include "dxpipelinelay.h"
 
 namespace Tempest {
@@ -32,10 +31,13 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void reset() override;
 
     bool isRecording() const override;
-    void beginRenderPass(AbstractGraphicsApi::Fbo* f,
-                         AbstractGraphicsApi::Pass*  p,
-                         uint32_t width,uint32_t height) override;
-    void endRenderPass() override;
+
+    void beginRendering(const AttachmentDesc* desc, size_t descSize,
+                        uint32_t w, uint32_t h,
+                        const TextureFormat* frm,
+                        AbstractGraphicsApi::Texture** att,
+                        AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) override;
+    void endRendering() override;
 
     void setViewport (const Rect& r) override;
 
@@ -53,8 +55,8 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
                       size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) override;
     void dispatch    (size_t x, size_t y, size_t z) override;
 
+    void changeLayout(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) override;
     void changeLayout(AbstractGraphicsApi::Buffer&  buf, BufferLayout  prev, BufferLayout  next) override;
-    void changeLayout(AbstractGraphicsApi::Attach&  img, TextureLayout prev, TextureLayout next, bool byRegion) override;
     void changeLayout(AbstractGraphicsApi::Texture& tex, TextureLayout prev, TextureLayout next, uint32_t mipId);
 
     void copy(AbstractGraphicsApi::Buffer& dest, TextureLayout defLayout, uint32_t width, uint32_t height, uint32_t mip, AbstractGraphicsApi::Texture& src, size_t offset) override;
@@ -73,8 +75,6 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     bool                              recording=false;
     bool                              resetDone=false;
 
-    DxFramebuffer*                    currentFbo  = nullptr;
-    DxRenderPass*                     currentPass = nullptr;
     ID3D12DescriptorHeap*             currentHeaps[DxPipelineLay::MAX_BINDS]={};
     DxDescriptorArray*                curUniforms = nullptr;
 

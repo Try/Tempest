@@ -3,26 +3,54 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-void ResourceState::setLayout(AbstractGraphicsApi::Attach& a, TextureLayout lay, bool preserve) {
-  State& img   = findImg(&a,preserve);
+
+void ResourceState::setLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id, TextureLayout lay, bool preserve) {
+  State& img   = findImg(nullptr,&s,id,TextureLayout::Present,preserve);
   img.next     = lay;
+  img.preserve = preserve;
+  img.outdated = true;
+  }
+
+void ResourceState::setLayout(AbstractGraphicsApi::Texture& a, TextureLayout lay, bool preserve) {
+  TextureLayout def = TextureLayout::Sampler;
+  if(lay==TextureLayout::DepthAttach)
+    def = TextureLayout::DepthAttach; // note: no readable depth
+
+  State& img   = findImg(&a,nullptr,0,def,preserve);
+  img.next     = lay;
+  img.preserve = preserve;
   img.outdated = true;
   }
 
 void ResourceState::setLayout(AbstractGraphicsApi::Buffer& b, BufferLayout lay) {
   BufState& buf = findBuf(&b);
-  buf.next     = lay;
-  buf.outdated = true;
+  buf.next      = lay;
+  buf.outdated  = true;
   }
 
 void ResourceState::flushLayout(AbstractGraphicsApi::CommandBuffer& cmd) {
+  AbstractGraphicsApi::BarrierDesc barrier[128];
+  uint8_t                          barrierCnt = 0;
   for(auto& i:imgState) {
     if(!i.outdated)
       continue;
-    cmd.changeLayout(*i.img,i.last,i.next,(i.next==i.last));
+    auto& b = barrier[barrierCnt];
+    b.swapchain = i.sw;
+    b.swId      = i.id;
+    b.texture   = i.img;
+    b.prev      = i.last;
+    b.next      = i.next;
+    b.preserve  = i.preserve;
+    ++barrierCnt;
+
     i.last     = i.next;
     i.outdated = false;
+    if(barrierCnt==128) {
+      cmd.changeLayout(barrier,barrierCnt);
+      barrierCnt = 0;
+      }
     }
+  cmd.changeLayout(barrier,barrierCnt);
   }
 
 void ResourceState::flushSSBO(AbstractGraphicsApi::CommandBuffer& cmd) {
@@ -40,7 +68,7 @@ void ResourceState::flushSSBO(AbstractGraphicsApi::CommandBuffer& cmd) {
 
 void ResourceState::finalize(AbstractGraphicsApi::CommandBuffer& cmd) {
   if(imgState.size()==0 && bufState.size()==0)
-    return; //early-out
+    return; // early-out
   flushLayout(cmd);
   flushSSBO(cmd);
   imgState.reserve(imgState.size());
@@ -49,16 +77,20 @@ void ResourceState::finalize(AbstractGraphicsApi::CommandBuffer& cmd) {
   bufState.clear();
   }
 
-ResourceState::State& ResourceState::findImg(AbstractGraphicsApi::Attach* img, bool preserve) {
-  auto nativeImg = img->nativeHandle();
+ResourceState::State& ResourceState::findImg(AbstractGraphicsApi::Texture* img, AbstractGraphicsApi::Swapchain* sw, uint32_t id,
+                                             TextureLayout def, bool preserve) {
+  auto nativeImg = img;
   for(auto& i:imgState) {
-    if(i.img->nativeHandle()==nativeImg)
+    if(i.sw==sw && i.id==id && i.img==nativeImg)
       return i;
     }
   State s={};
+  s.sw       = sw;
+  s.id       = id;
   s.img      = img;
-  s.last     = preserve ? img->defaultLayout() : TextureLayout::Undefined;
+  s.last     = def;
   s.next     = TextureLayout::Undefined;
+  s.preserve = preserve;
   s.outdated = false;
   imgState.push_back(s);
   return imgState.back();

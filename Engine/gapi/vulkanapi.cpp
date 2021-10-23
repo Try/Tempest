@@ -4,10 +4,7 @@
 
 #include "vulkan/vdevice.h"
 #include "vulkan/vswapchain.h"
-#include "vulkan/vrenderpass.h"
 #include "vulkan/vpipeline.h"
-#include "vulkan/vframebuffer.h"
-#include "vulkan/vframebufferlayout.h"
 #include "vulkan/vbuffer.h"
 #include "vulkan/vshader.h"
 #include "vulkan/vfence.h"
@@ -57,50 +54,6 @@ void VulkanApi::destroy(AbstractGraphicsApi::Device *d) {
 AbstractGraphicsApi::Swapchain *VulkanApi::createSwapchain(SystemApi::Window *w,AbstractGraphicsApi::Device *d) {
   Detail::VDevice* dx   = reinterpret_cast<Detail::VDevice*>(d);
   return new Detail::VSwapchain(*dx,w);
-  }
-
-AbstractGraphicsApi::PPass VulkanApi::createPass(AbstractGraphicsApi::Device *d,
-                                                 const FboMode** att,
-                                                 size_t acount) {
-  Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
-  return PPass(new Detail::VRenderPass(*dx,att,uint8_t(acount)));
-  }
-
-AbstractGraphicsApi::PFbo VulkanApi::createFbo(AbstractGraphicsApi::Device *d, FboLayout* lay,
-                                               uint32_t w, uint32_t h, uint8_t clCount,
-                                               Swapchain** s, Texture** cl, const uint32_t* imgId,
-                                               AbstractGraphicsApi::Texture *zbuf) {
-  Detail::VDevice*            dx=reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VFramebufferLayout* l =reinterpret_cast<Detail::VFramebufferLayout*>(lay);
-  Detail::VTexture*           zb=reinterpret_cast<Detail::VTexture*>(zbuf);
-
-  Detail::VTexture*   att[256] = {};
-  Detail::VSwapchain* sw[256] = {};
-  for(size_t i=0; i<clCount; ++i) {
-    att[i] = reinterpret_cast<Detail::VTexture*>  (cl[i]);
-    sw [i] = reinterpret_cast<Detail::VSwapchain*>(s[i]);
-    }
-  return PFbo(new Detail::VFramebuffer(*dx,*l, w,h,clCount, sw,att,imgId, zb));
-  }
-
-AbstractGraphicsApi::PFboLayout VulkanApi::createFboLayout(AbstractGraphicsApi::Device *d,
-                                                           Swapchain** s,
-                                                           Tempest::TextureFormat *att,
-                                                           uint8_t attCount) {
-  Detail::VDevice&    dx=*reinterpret_cast<Detail::VDevice*>(d);
-  VkFormat            frm[256] = {};
-  Detail::VSwapchain* sx[256] = {};
-
-  for(size_t i=0;i<attCount;++i){
-    frm[i] = Detail::nativeFormat(att[i]);
-    sx[i]  = reinterpret_cast<Detail::VSwapchain*>(s[i]);
-    }
-
-  Detail::DSharedPtr<AbstractGraphicsApi::FboLayout*> impl{
-    new Detail::VFramebufferLayout(dx,sx,frm,uint8_t(attCount))
-    };
-
-  return impl;
   }
 
 AbstractGraphicsApi::PPipeline VulkanApi::createPipeline(AbstractGraphicsApi::Device *d,

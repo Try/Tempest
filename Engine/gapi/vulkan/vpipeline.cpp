@@ -3,9 +3,6 @@
 #include "vpipeline.h"
 
 #include "vdevice.h"
-#include "vframebuffer.h"
-#include "vframebufferlayout.h"
-#include "vrenderpass.h"
 #include "vshader.h"
 #include "vpipelinelay.h"
 
@@ -56,18 +53,18 @@ VPipeline::~VPipeline() {
   cleanup();
   }
 
-VPipeline::Inst &VPipeline::instance(VFramebufferLayout &lay) {
+VPipeline::Inst& VPipeline::instance(const std::shared_ptr<VFramebufferMap::Fbo>& lay) {
   std::lock_guard<SpinLock> guard(sync);
 
   for(auto& i:inst)
-    if(i.lay.handler->isCompatible(lay))
+    if(i.lay->isCompatible(*lay))
       return i;
   VkPipeline val=VK_NULL_HANDLE;
   try {
-    val = initGraphicsPipeline(device,pipelineLayout,lay,st,
+    val = initGraphicsPipeline(device,pipelineLayout,*lay,st,
                                decl.get(),declSize,stride,
                                tp,modules);
-    inst.emplace_back(&lay,val);
+    inst.emplace_back(lay,val);
     }
   catch(...) {
     if(val!=VK_NULL_HANDLE)
@@ -124,7 +121,7 @@ VkPipelineLayout VPipeline::initLayout(VkDevice device, const VPipelineLay& uboL
   }
 
 VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
-                                           const VFramebufferLayout &lay, const RenderState &st,
+                                           const VFramebufferMap::Fbo& lay, const RenderState &st,
                                            const Decl::ComponentType *decl, size_t declSize,
                                            size_t stride, Topology tp,
                                            const DSharedPtr<const VShader*>* shaders) {
@@ -248,8 +245,11 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
     VK_BLEND_OP_MAX,
     };
 
-  VkPipelineColorBlendAttachmentState blendAtt[256] = {};
-  for(size_t i=0; i<lay.colorCount; ++i) {
+  VkPipelineColorBlendAttachmentState blendAtt[MaxFramebufferAttachments] = {};
+  uint32_t                            blendAttCount = 0;
+  for(size_t i=0; i<lay.descSize; ++i) {
+    if(nativeIsDepthFormat(lay.desc[i].frm))
+      continue;
     auto& a = blendAtt[i];
     a.colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     a.blendEnable         = st.hasBlend() ? VK_TRUE : VK_FALSE;
@@ -259,13 +259,14 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
     a.dstAlphaBlendFactor = a.dstColorBlendFactor;
     a.srcAlphaBlendFactor = a.srcColorBlendFactor;
     a.alphaBlendOp        = a.colorBlendOp;
+    ++blendAttCount;
     }
 
   VkPipelineColorBlendStateCreateInfo colorBlending = {};
   colorBlending.sType             = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
   colorBlending.logicOpEnable     = VK_FALSE;
   colorBlending.logicOp           = VK_LOGIC_OP_COPY;
-  colorBlending.attachmentCount   = lay.colorCount;
+  colorBlending.attachmentCount   = blendAttCount;
   colorBlending.pAttachments      = blendAtt;
   colorBlending.blendConstants[0] = 0.0f;
   colorBlending.blendConstants[1] = 0.0f;
@@ -321,7 +322,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   pipelineInfo.pColorBlendState    = &colorBlending;
   pipelineInfo.pDynamicState       = &dynamic;
   pipelineInfo.layout              = layout;
-  pipelineInfo.renderPass          = lay.impl;
+  pipelineInfo.renderPass          = lay.pass;
   pipelineInfo.subpass             = 0;
   pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
 

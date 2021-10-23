@@ -15,9 +15,7 @@
 #include "directx12/dxcommandbuffer.h"
 #include "directx12/dxswapchain.h"
 #include "directx12/dxfence.h"
-#include "directx12/dxframebuffer.h"
 #include "directx12/dxdescriptorarray.h"
-#include "directx12/dxrenderpass.h"
 #include "directx12/dxfbolayout.h"
 
 #include <Tempest/Pixmap>
@@ -155,35 +153,6 @@ void DirectX12Api::destroy(AbstractGraphicsApi::Device* d) {
 AbstractGraphicsApi::Swapchain* DirectX12Api::createSwapchain(SystemApi::Window* w, AbstractGraphicsApi::Device* d) {
   auto* dx = reinterpret_cast<Detail::DxDevice*>(d);
   return new Detail::DxSwapchain(*dx,*impl->DXGIFactory,w);
-  }
-
-AbstractGraphicsApi::PPass DirectX12Api::createPass(AbstractGraphicsApi::Device*, const FboMode** att, size_t acount) {
-  return PPass(new DxRenderPass(att,acount));
-  }
-
-AbstractGraphicsApi::PFbo DirectX12Api::createFbo(Device* d, FboLayout* l,
-                                                  uint32_t /*w*/, uint32_t /*h*/, uint8_t clCount,
-                                                  Swapchain** sx, Texture** cl, const uint32_t* imgId, Texture* zbuf) {
-  auto& dx  = *reinterpret_cast<Detail::DxDevice*>   (d);
-  auto& lay = *reinterpret_cast<Detail::DxFboLayout*>(l);
-  auto  z   =  reinterpret_cast<Detail::DxTexture*>  (zbuf);
-
-  Detail::DxTexture*   att[256] = {};
-  Detail::DxSwapchain* sw [256] = {};
-  for(size_t i=0; i<clCount; ++i) {
-    att[i] = reinterpret_cast<Detail::DxTexture*>(cl[i]);
-    sw[i]  = reinterpret_cast<Detail::DxSwapchain*>(sx[i]);
-    }
-
-  return PFbo(new DxFramebuffer(dx,lay,clCount, sw,att,imgId,z));
-  }
-
-AbstractGraphicsApi::PFboLayout DirectX12Api::createFboLayout(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Swapchain** s,
-                                                              TextureFormat* att, uint8_t attCount) {
-  Detail::DxSwapchain* sx[256] = {};
-  for(size_t i=0; i<attCount; ++i)
-    sx[i] = reinterpret_cast<Detail::DxSwapchain*>(s[i]);
-  return PFboLayout(new DxFboLayout(sx,att,attCount));
   }
 
 AbstractGraphicsApi::PPipeline DirectX12Api::createPipeline(AbstractGraphicsApi::Device* d, const RenderState& st, size_t stride,

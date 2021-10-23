@@ -3,7 +3,6 @@
 #include "dxpipeline.h"
 
 #include "dxdevice.h"
-#include "dxframebuffer.h"
 #include "dxshader.h"
 #include "dxpipelinelay.h"
 #include "guid.h"
