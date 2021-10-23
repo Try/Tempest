@@ -19,9 +19,6 @@ class IndexBuffer;
 
 class CommandBuffer;
 
-class RenderPass;
-class FrameBuffer;
-
 template<class T>
 class Encoder;
 

@@ -54,7 +54,7 @@ std::shared_ptr<VFramebufferMap::Fbo> VFramebufferMap::find(const AttachmentDesc
       d.frm = nativeFormat(frm[i]);
     if(sw[i]!=nullptr)
       d.view = reinterpret_cast<VSwapchain*>(sw[i])->views[imgId[i]]; else
-      d.view = reinterpret_cast<VTexture*>(att[i])->view;
+      d.view = reinterpret_cast<VTexture*>(att[i])->getFboView(dev.device.impl,0);
     }
 
   for(auto& i:val)

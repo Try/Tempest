@@ -17,7 +17,6 @@ namespace Tempest {
   class Pixmap;
   class Color;
   class RenderState;
-  class FboMode;
   class Device;
 
   namespace Decl {

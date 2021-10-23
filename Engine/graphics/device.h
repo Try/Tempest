@@ -177,8 +177,6 @@ class Device {
     static TextureFormat formatOf(const Attachment& a);
 
   friend class RenderPipeline;
-  friend class RenderPass;
-  friend class FrameBuffer;
   friend class Painter;
   friend class Shader;
   friend class CommandPool;
