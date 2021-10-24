@@ -15,27 +15,6 @@ Main idea behind this engine is to provide a low-level GPU-programming concepts,
 * Build-in 2d graphics support
 * Build-in UI library
 
-### Concept mapping
-| Tempest           | Vulkan                                                 | DirectX                  | Metal
-|-------------------|--------------------------------------------------------|--------------------------|-----
-| Device            | VkDevice                                               | ID3D12Device             | MTLDevice
-| Swapchain         | VkSwapchain                                            | IDXGISwapChain3          | CAMetalLayer
-| Shader            | VkShaderModule                                         | ID3DBlob                 | MTLFunction
-| VertexBuffer<T>   | VkBuffer                                               | ID3D12Resource           | MTLBuffer
-| IndexBuffer<T>    | VkBuffer                                               | ID3D12Resource           | MTLBuffer
-| UniformBuffer<T>  | VkBuffer                                               | ID3D12Resource           | MTLBuffer
-| StorageBuffer<T>  | VkBuffer                                               | ID3D12Resource           | MTLBuffer
-| DescriptorSet     | VkDescriptorSet                                        | ID3D12DescriptorHeap[]   | MTLResource[]
-| Attachment        | VkImage                                                | ID3D12Resource           | MTLTexture
-| ZBuffer           | VkImage                                                | ID3D12Resource           | MTLTexture
-| StorageImage      | VkImage                                                | ID3D12Resource           | MTLTexture
-| FrameBuffer       | VkFramebuffer                                          | ID3D12DescriptorHeap + D3D12_DESCRIPTOR_HEAP_TYPE_RTV | MTLTexture*[]
-| RenderPass        | VkRenderPass                                           |  ClearRenderTargetView/ClearDepthStencilView/DiscardResource | n/a
-| RenderPipeline<V> | VkPipeline[]                                           | ID3D12PipelineState      | MTLRenderPipelineState + MTLDepthStencilState
-| ComputePipeline   | VkPipeline                                             | ID3D12PipelineState      | MTLComputePipelineState
-| Fence             | VkFence                                                | n/a                      | n/a
-| CommandBuffer     | VkCommandPool                                          | ID3D12CommandList        | MTLCommandBuffer
-
 ### Examples
 ```c++
 // offscreen render
@@ -53,13 +32,11 @@ auto frag = device.loadShader("shader/simple_test.frag.sprv");
 auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
 
 auto tex  = device.attachment(format,128,128);
-auto fbo  = device.frameBuffer(tex);
-auto rp   = device.pass(FboMode(FboMode::PreserveOut,Color(0.f,0.f,1.f)));
 
 auto cmd  = device.commandBuffer();
 {
   auto enc = cmd.startEncoding(device);
-  enc.setFramebuffer(fbo,rp);
+  enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
   enc.setUniforms(pso);
   enc.draw(vbo,ibo);
 }
