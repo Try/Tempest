@@ -167,7 +167,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   Detail::VDevice* dx = reinterpret_cast<Detail::VDevice*>(d);
   
   Detail::VTexture buf=dx->allocator.alloc(w,h,mipCnt,frm,false);
-  Detail::DSharedPtr<Detail::VTexture*> pbuf(new Detail::VTexture(std::move(buf)));
+  Detail::DSharedPtr<Detail::VTexture*> pbuf(new Detail::VTextureWithFbo(std::move(buf)));
 
   return PTexture(pbuf.handler);
   }

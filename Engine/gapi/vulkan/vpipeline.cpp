@@ -53,18 +53,18 @@ VPipeline::~VPipeline() {
   cleanup();
   }
 
-VPipeline::Inst& VPipeline::instance(const std::shared_ptr<VFramebufferMap::Fbo>& lay) {
+VPipeline::Inst& VPipeline::instance(const std::shared_ptr<VFramebufferMap::RenderPass>& pass) {
   std::lock_guard<SpinLock> guard(sync);
 
   for(auto& i:inst)
-    if(i.lay->isCompatible(*lay))
+    if(i.lay->isCompatible(*pass))
       return i;
   VkPipeline val=VK_NULL_HANDLE;
   try {
-    val = initGraphicsPipeline(device,pipelineLayout,*lay,st,
+    val = initGraphicsPipeline(device,pipelineLayout,*pass,st,
                                decl.get(),declSize,stride,
                                tp,modules);
-    inst.emplace_back(lay,val);
+    inst.emplace_back(pass,val);
     }
   catch(...) {
     if(val!=VK_NULL_HANDLE)
@@ -121,7 +121,7 @@ VkPipelineLayout VPipeline::initLayout(VkDevice device, const VPipelineLay& uboL
   }
 
 VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
-                                           const VFramebufferMap::Fbo& lay, const RenderState &st,
+                                           const VFramebufferMap::RenderPass& lay, const RenderState &st,
                                            const Decl::ComponentType *decl, size_t declSize,
                                            size_t stride, Topology tp,
                                            const DSharedPtr<const VShader*>* shaders) {

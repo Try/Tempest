@@ -28,12 +28,12 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     ~VPipeline();
 
     struct Inst final {
-      Inst(const std::shared_ptr<VFramebufferMap::Fbo>& lay, VkPipeline val):lay(lay),val(val){}
+      Inst(const std::shared_ptr<VFramebufferMap::RenderPass>& lay, VkPipeline val):lay(lay),val(val){}
       Inst(Inst&&)=default;
       Inst& operator = (Inst&&)=default;
 
-      std::shared_ptr<VFramebufferMap::Fbo> lay;
-      VkPipeline                            val;
+      std::shared_ptr<VFramebufferMap::RenderPass> lay;
+      VkPipeline                                   val;
       };
 
     VkPipelineLayout   pipelineLayout = VK_NULL_HANDLE;
@@ -41,7 +41,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     uint32_t           pushSize       = 0;
     bool               ssboBarriers   = false;
 
-    Inst&             instance(const std::shared_ptr<VFramebufferMap::Fbo>& lay);
+    Inst&             instance(const std::shared_ptr<VFramebufferMap::RenderPass>& lay);
 
   private:
     VkDevice                               device=nullptr;
@@ -56,7 +56,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     void cleanup();
     static VkPipelineLayout      initLayout(VkDevice device, const VPipelineLay& uboLay, VkShaderStageFlags& pushFlg, uint32_t& pushSize);
     static VkPipeline            initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
-                                                      const VFramebufferMap::Fbo& lay, const RenderState &st,
+                                                      const VFramebufferMap::RenderPass& lay, const RenderState &st,
                                                       const Decl::ComponentType *decl, size_t declSize, size_t stride,
                                                       Topology tp,
                                                       const DSharedPtr<const VShader*>* shaders);

@@ -96,7 +96,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     VCommandPool                            pool;
 
     ResourceState                           resState;
-    std::shared_ptr<VFramebufferMap::Fbo>   fbo;
+    std::shared_ptr<VFramebufferMap::RenderPass> pass;
 
     RpState                                 state        = NoRecording;
     VDescriptorArray*                       curUniforms  = nullptr;

@@ -76,8 +76,9 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
       addDependency(*reinterpret_cast<VSwapchain*>(sw[i]),imgId[i]);
     }
 
-  fbo = device.fboMap.find(desc,descSize, frm,att,sw,imgId,width,height);
-  auto fb = fbo.get();
+  auto fbo = device.fboMap.find(desc,descSize, frm,att,sw,imgId,width,height);
+  auto fb  = fbo.get();
+  pass = fbo->pass;
 
   for(size_t i=0; i<descSize; ++i) {
     if(isDepthFormat(frm[i]))
@@ -97,15 +98,27 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
       resState.setLayout(*att[i],TextureLayout::Sampler,desc[i].store==AccessOp::Preserve);
     }
 
+  VkClearValue clr[MaxFramebufferAttachments];
+  for(size_t i=0; i<descSize; ++i) {
+    if(isDepthFormat(frm[i])) {
+      clr[i].depthStencil.depth = desc[i].clear.x;
+      } else {
+      clr[i].color.float32[0]   = desc[i].clear.x;
+      clr[i].color.float32[1]   = desc[i].clear.y;
+      clr[i].color.float32[2]   = desc[i].clear.z;
+      clr[i].color.float32[3]   = desc[i].clear.w;
+      }
+    }
+
   VkRenderPassBeginInfo renderPassInfo = {};
   renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  renderPassInfo.renderPass        = fb->pass;
+  renderPassInfo.renderPass        = fb->pass->pass;
   renderPassInfo.framebuffer       = fb->fbo;
   renderPassInfo.renderArea.offset = {0, 0};
   renderPassInfo.renderArea.extent = {width,height};
 
   renderPassInfo.clearValueCount   = uint32_t(descSize);
-  renderPassInfo.pClearValues      = fb->clr;
+  renderPassInfo.pClearValues      = clr;
 
   vkCmdBeginRenderPass(impl, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
   state = RenderPass;
@@ -128,7 +141,7 @@ void VCommandBuffer::endRendering() {
 
 void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
   VPipeline&           px = reinterpret_cast<VPipeline&>(p);
-  auto& v = px.instance(fbo);
+  auto& v = px.instance(pass);
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v.val);
   ssboBarriers = px.ssboBarriers;
   }

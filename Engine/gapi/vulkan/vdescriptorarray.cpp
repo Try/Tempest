@@ -98,7 +98,7 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Texture* t, 
 
   VkDescriptorImageInfo imageInfo = {};
   imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  imageInfo.imageView   = tex->getView(device,smp.mapping,uint32_t(-1));
+  imageInfo.imageView   = tex->view(device,smp.mapping,uint32_t(-1));
   imageInfo.sampler     = tex->alloc->updateSampler(smp);
 
   VkWriteDescriptorSet descriptorWrite = {};
@@ -118,7 +118,7 @@ void VDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi::Texture* t, uint3
 
   VkDescriptorImageInfo imageInfo = {};
   imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-  imageInfo.imageView   = tex->getView(device,ComponentMapping(),mipLevel);
+  imageInfo.imageView   = tex->view(device,ComponentMapping(),mipLevel);
 
   VkWriteDescriptorSet descriptorWrite = {};
   descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

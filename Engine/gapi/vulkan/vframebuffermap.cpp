@@ -6,17 +6,33 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-bool VFramebufferMap::Fbo::is(const Desc* d, size_t cnt) const {
-  return descSize==cnt && std::memcmp(desc,d,cnt*sizeof(Desc))==0;
-  }
-
-bool VFramebufferMap::Fbo::isCompatible(const Fbo& other) const {
+bool VFramebufferMap::RenderPass::isCompatible(const RenderPass& other) const {
   if(descSize!=other.descSize)
     return false;
   for(size_t i=0; i<descSize; ++i)
     if(desc[i].frm!=other.desc[i].frm)
       return false;
   return true;
+  }
+
+bool VFramebufferMap::RenderPass::isSame(const Desc* d, size_t cnt) const {
+  return
+      descSize==cnt &&
+      std::memcmp(desc,d,cnt*sizeof(Desc))==0;
+  }
+
+bool VFramebufferMap::Fbo::isSame(const Desc* d, const VkImageView* v, size_t cnt) const {
+  return
+      descSize==cnt &&
+      std::memcmp(pass->desc,d,cnt*sizeof(Desc))==0 &&
+      std::memcmp(view,v,cnt*sizeof(VkImageView))==0;
+  }
+
+bool VFramebufferMap::Fbo::hasImg(VkImageView v) const {
+  for(size_t i=0; i<descSize; ++i)
+    if(view[i]==v)
+      return true;
+  return false;
   }
 
 VFramebufferMap::VFramebufferMap(VDevice& dev) : dev(dev) {
@@ -31,8 +47,25 @@ VFramebufferMap::~VFramebufferMap() {
     auto& v = *i;
     if(v.fbo!=VK_NULL_HANDLE)
       vkDestroyFramebuffer(device,v.fbo,nullptr);
+    }
+  for(auto& i:rp) {
+    auto& v = *i;
     if(v.pass!=VK_NULL_HANDLE)
       vkDestroyRenderPass(device,v.pass,nullptr);
+    }
+  }
+
+void VFramebufferMap::notifyDestroy(VkImageView img) {
+  auto device = dev.device.impl;
+
+  std::lock_guard<std::mutex> guard(syncFbo);
+  for(size_t i=0; i<val.size(); ++i) {
+    auto& v = *val[i];
+    if(!v.hasImg(img))
+      continue;
+    vkDestroyFramebuffer(device,v.fbo,nullptr);
+    val[i] = std::move(val.back());
+    val.pop_back();
     }
   }
 
@@ -40,30 +73,38 @@ std::shared_ptr<VFramebufferMap::Fbo> VFramebufferMap::find(const AttachmentDesc
                                                             const TextureFormat* frm,
                                                             AbstractGraphicsApi::Texture** att, AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId,
                                                             uint32_t w, uint32_t h) {
-  std::lock_guard<std::mutex> guard(sync);
+  Desc        dx  [MaxFramebufferAttachments];
+  VkImageView view[MaxFramebufferAttachments] = {};
 
-  Desc dx[MaxFramebufferAttachments];
   for(size_t i=0; i<descSize; ++i) {
     auto& d = dx[i];
 
-    d.clear = desc[i].clear;
     d.load  = desc[i].load;
     d.store = desc[i].store;
     if(sw[i]!=nullptr)
       d.frm = reinterpret_cast<VSwapchain*>(sw[i])->format(); else
       d.frm = nativeFormat(frm[i]);
+
     if(sw[i]!=nullptr)
-      d.view = reinterpret_cast<VSwapchain*>(sw[i])->views[imgId[i]]; else
-      d.view = reinterpret_cast<VTexture*>(att[i])->getFboView(dev.device.impl,0);
+      view[i] = reinterpret_cast<VSwapchain*>(sw[i])->views[imgId[i]]; else
+      view[i] = reinterpret_cast<VTexture*>(att[i])->fboView(dev.device.impl,0);
     }
 
+  std::lock_guard<std::mutex> guard(syncFbo);
   for(auto& i:val)
-    if(i->is(dx,descSize))
+    if(i->isSame(dx,view,descSize))
       return i;
+
+  for(size_t i=0; i<descSize; ++i) {
+    if(sw[i]!=nullptr)
+      continue;
+    auto& t = *reinterpret_cast<VTextureWithFbo*>(att[i]);
+    t.map = this;
+    }
 
   val.push_back(std::make_shared<Fbo>());
   try {
-    *val.back() = mkFbo(dx,descSize,w,h);
+    *val.back() = mkFbo(dx,view,descSize,w,h);
     }
   catch(...) {
     val.pop_back();
@@ -72,24 +113,32 @@ std::shared_ptr<VFramebufferMap::Fbo> VFramebufferMap::find(const AttachmentDesc
   return val.back();
   }
 
-VFramebufferMap::Fbo VFramebufferMap::mkFbo(const Desc* desc, size_t attCount, uint32_t w, uint32_t h) {
+VFramebufferMap::Fbo VFramebufferMap::mkFbo(const Desc* desc, const VkImageView* view, size_t attCount, uint32_t w, uint32_t h) {
   Fbo ret = {};
-  ret.pass = mkRenderPass(desc,attCount);
+  ret.pass = findRenderpass(desc,attCount);
+  ret.fbo  = mkFramebuffer(view,attCount,w,h,ret.pass->pass);
+
+  std::memcpy(ret.view,view,attCount*sizeof(VkImageView));
+  ret.descSize = uint8_t(attCount);
+  return ret;
+  }
+
+std::shared_ptr<VFramebufferMap::RenderPass> VFramebufferMap::findRenderpass(const Desc* desc, size_t cnt) {
+  std::lock_guard<std::mutex> guard(syncRp);
+  for(auto& i:rp)
+    if(i->isSame(desc,cnt))
+      return i;
+  auto ret = std::make_shared<RenderPass>();
+  rp.push_back(ret);
   try {
-    ret.fbo  = mkFramebuffer(desc,attCount,w,h,ret.pass);
+    ret->pass = mkRenderPass(desc,cnt);
     }
   catch(...) {
-    vkDestroyRenderPass(dev.device.impl,ret.pass,nullptr);
+    rp.pop_back();
     throw;
     }
-  std::memcpy(ret.desc,desc,attCount*sizeof(Desc));
-  ret.descSize = uint8_t(attCount);
-  for(size_t i=0; i<attCount; ++i) {
-    ret.clr[i].color.float32[0] = desc[i].clear.x;
-    ret.clr[i].color.float32[1] = desc[i].clear.y;
-    ret.clr[i].color.float32[2] = desc[i].clear.z;
-    ret.clr[i].color.float32[3] = desc[i].clear.w;
-    }
+  ret->descSize = uint8_t(cnt);
+  std::memcpy(ret->desc,desc,cnt*sizeof(Desc));
   return ret;
   }
 
@@ -103,7 +152,7 @@ VkRenderPass VFramebufferMap::mkRenderPass(const Desc* desc, size_t attCount) {
   subpass.pColorAttachments       = ref;
   subpass.pDepthStencilAttachment = nullptr;
   subpass.colorAttachmentCount    = 0;
-  for(uint8_t i=0; i<attCount; ++i){
+  for(uint8_t i=0; i<attCount; ++i) {
     VkAttachmentDescription& a = attach[i];
     a.format  = desc[i].frm;
     a.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -157,12 +206,7 @@ VkRenderPass VFramebufferMap::mkRenderPass(const Desc* desc, size_t attCount) {
   return ret;
   }
 
-VkFramebuffer VFramebufferMap::mkFramebuffer(const Desc* desc, size_t attCount, uint32_t w, uint32_t h, VkRenderPass rp) {
-  VkImageView attach[MaxFramebufferAttachments] = {};
-  for(uint8_t i=0; i<attCount; ++i){
-    attach[i] = desc[i].view;
-    }
-
+VkFramebuffer VFramebufferMap::mkFramebuffer(const VkImageView* attach, size_t attCount, uint32_t w, uint32_t h, VkRenderPass rp) {
   VkFramebufferCreateInfo crt={};
   crt.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
   crt.renderPass      = rp;
@@ -176,4 +220,3 @@ VkFramebuffer VFramebufferMap::mkFramebuffer(const Desc* desc, size_t attCount, 
   vkAssert(vkCreateFramebuffer(dev.device.impl,&crt,nullptr,&ret));
   return ret;
   }
-
