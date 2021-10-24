@@ -75,7 +75,7 @@ void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline &p) {
     throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   if(state.curPipeline!=p.impl.handler) {
     impl->setPipeline(*p.impl.handler);
-    state.curPipeline=p.impl.handler;
+    state.curPipeline = p.impl.handler;
     }
   }
 
@@ -196,7 +196,8 @@ void Tempest::Encoder<Tempest::CommandBuffer>::implSetFramebuffer(const Attachme
 
   impl->beginRendering(desc,rtSize+(zd ? 1 : 0),w,h,
                        frm,att,sw,imgId);
-  state.stage = Rendering;
+  state.stage      = Rendering;
+  state.curPipeline = nullptr;
   }
 
 void Encoder<CommandBuffer>::copy(const Attachment& src, uint32_t mip, StorageBuffer& dest, size_t offset) {

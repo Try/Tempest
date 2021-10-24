@@ -96,10 +96,13 @@ std::shared_ptr<VFramebufferMap::Fbo> VFramebufferMap::find(const AttachmentDesc
       return i;
 
   for(size_t i=0; i<descSize; ++i) {
-    if(sw[i]!=nullptr)
-      continue;
-    auto& t = *reinterpret_cast<VTextureWithFbo*>(att[i]);
-    t.map = this;
+    if(sw[i]!=nullptr) {
+      auto& s = *reinterpret_cast<VSwapchain*>(sw[i]);
+      s.map = this;
+      } else {
+      auto& t = *reinterpret_cast<VTextureWithFbo*>(att[i]);
+      t.map = this;
+      }
     }
 
   val.push_back(std::make_shared<Fbo>());

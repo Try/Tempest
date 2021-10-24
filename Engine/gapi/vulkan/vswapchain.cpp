@@ -86,6 +86,10 @@ void VSwapchain::cleanupSwapchain() noexcept {
   fence = FenceList();
 
   for(auto imageView : views)
+    if(map!=nullptr && imageView!=VK_NULL_HANDLE)
+      map->notifyDestroy(imageView);
+
+  for(auto imageView : views)
     if(imageView!=VK_NULL_HANDLE)
       vkDestroyImageView(device.device.impl,imageView,nullptr);
   for(auto s : sync) {
