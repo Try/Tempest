@@ -1,8 +1,7 @@
 #include "encoder.h"
 
 #include <Tempest/Attachment>
-#include <Tempest/FrameBuffer>
-#include <Tempest/RenderPass>
+#include <Tempest/ZBuffer>
 #include <Tempest/Texture2d>
 
 using namespace Tempest;
@@ -38,6 +37,8 @@ Encoder<CommandBuffer> &Encoder<CommandBuffer>::operator =(Encoder<CommandBuffer
 Encoder<Tempest::CommandBuffer>::~Encoder() noexcept(false) {
   if(impl==nullptr)
     return;
+  if(state.stage==Rendering)
+    impl->endRendering();
   impl->end();
   }
 
@@ -70,11 +71,11 @@ void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const
   }
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline &p) {
-  if(curPass.fbo==nullptr)
+  if(state.stage!=Rendering)
     throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   if(state.curPipeline!=p.impl.handler) {
     impl->setPipeline(*p.impl.handler);
-    state.curPipeline=p.impl.handler;
+    state.curPipeline = p.impl.handler;
     }
   }
 
@@ -97,17 +98,18 @@ void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p, cons
   }
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p) {
-  if(curPass.fbo!=nullptr)
+  if(state.stage==Rendering)
     throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
   if(state.curCompute!=p.impl.handler) {
     impl->setComputePipeline(*p.impl.handler);
     state.curCompute  = p.impl.handler;
     state.curPipeline = nullptr;
+    state.stage       = Compute;
     }
   }
 
 void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer& vbo, size_t offset, size_t size, size_t firstInstance, size_t instanceCount) {
-  if(curPass.fbo==nullptr)
+  if(state.stage!=Rendering)
     throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   if(!vbo.impl)
     return;
@@ -116,7 +118,7 @@ void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer& vbo, size_t of
 
 void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer &vbo, const VideoBuffer &ibo, Detail::IndexClass index, size_t offset, size_t size,
                                                size_t firstInstance, size_t instanceCount) {
-  if(curPass.fbo==nullptr)
+  if(state.stage!=Rendering)
     throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   if(!vbo.impl || !ibo.impl)
     return;
@@ -124,52 +126,95 @@ void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer &vbo, const Vid
   }
 
 void Encoder<CommandBuffer>::dispatch(size_t x, size_t y, size_t z) {
-  if(curPass.fbo!=nullptr)
+  if(state.stage==Rendering)
     throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
   impl->dispatch(x,y,z);
   }
 
 void Encoder<CommandBuffer>::setFramebuffer(std::nullptr_t) {
-  setFramebuffer(FrameBuffer(),RenderPass());
+  if(state.stage!=Rendering)
+    return;
+  if(state.stage==Rendering)
+    impl->endRendering();
+  state.curPipeline = nullptr;
+  state.curCompute  = nullptr;
+  state.stage       = None;
   }
 
-void Encoder<CommandBuffer>::setFramebuffer(const FrameBuffer &fbo, const RenderPass &p) {
-  implEndRenderPass();
+void Encoder<CommandBuffer>::setFramebuffer(std::initializer_list<AttachmentDesc> rd, AttachmentDesc zd) {
+  implSetFramebuffer(rd.begin(),rd.size(),&zd);
+  }
 
-  if(fbo.impl.handler==nullptr && p.impl.handler==nullptr) {
-    state.curPipeline = nullptr;
+void Encoder<CommandBuffer>::setFramebuffer(std::initializer_list<AttachmentDesc> rd) {
+  if(rd.size()==0) {
+    setFramebuffer(nullptr);
     return;
     }
-
-  impl->beginRenderPass(fbo.impl.handler,p.impl.handler, fbo.w(),fbo.h());
-  curPass.fbo      = &fbo;
-  curPass.pass     = &p;
-  state.curCompute = nullptr;
+  implSetFramebuffer(rd.begin(),rd.size(),nullptr);
   }
 
-void Encoder<CommandBuffer>::implEndRenderPass() {
-  if(curPass.pass!=nullptr) {
-    state.curPipeline = nullptr;
-    curPass           = Pass();
-    impl->endRenderPass();
+void Tempest::Encoder<Tempest::CommandBuffer>::implSetFramebuffer(const AttachmentDesc* rt, size_t rtSize,
+                                                                  const AttachmentDesc* zd) {
+  if(state.stage==Rendering)
+    impl->endRendering();
+
+  if((rtSize+(zd ? 1 : 0)) > MaxFramebufferAttachments)
+    throw IncompleteFboException();
+
+  TextureFormat frm[MaxFramebufferAttachments+1] = {};
+  uint32_t      w = uint32_t(rt[0].attachment->w()); // FIXME: handle z-only passes
+  uint32_t      h = uint32_t(rt[0].attachment->h());
+
+  AttachmentDesc                  desc [MaxFramebufferAttachments] = {};
+  AbstractGraphicsApi::Texture*   att  [MaxFramebufferAttachments] = {};
+  AbstractGraphicsApi::Swapchain* sw   [MaxFramebufferAttachments] = {};
+  uint32_t                        imgId[MaxFramebufferAttachments] = {};
+
+  for(size_t i=0; i<rtSize; ++i) {
+    Attachment* ax = rt[i].attachment;
+    if(ax->w()!=int(w) || ax->h()!=int(h))
+      throw IncompleteFboException();
+
+    desc[i] = rt[i];
+    if(ax->sImpl.swapchain!=nullptr) {
+      frm[i]   = TextureFormat::Undefined;
+      sw[i]    = ax->sImpl.swapchain;
+      imgId[i] = ax->sImpl.id;
+      } else {
+      frm[i]   = ax->tImpl.frm;
+      att[i]   = ax->tImpl.impl.handler;
+      }
     }
+
+  if(zd!=nullptr) {
+    if(zd->zbuffer->w()!=int(w) || zd->zbuffer->h()!=int(h))
+      throw IncompleteFboException();
+    desc[rtSize] = *zd;
+    frm [rtSize] = zd->zbuffer->tImpl.frm;
+    att [rtSize] = zd->zbuffer->tImpl.impl.handler;
+    }
+
+  impl->beginRendering(desc,rtSize+(zd ? 1 : 0),w,h,
+                       frm,att,sw,imgId);
+  state.stage      = Rendering;
+  state.curPipeline = nullptr;
   }
 
 void Encoder<CommandBuffer>::copy(const Attachment& src, uint32_t mip, StorageBuffer& dest, size_t offset) {
   if(offset%4!=0)
     throw std::system_error(Tempest::GraphicsErrc::InvalidStorageBuffer);
   uint32_t w = src.w(), h = src.h();
-  impl->copy(*dest.impl.impl.handler,TextureLayout::Sampler,w,h,mip,*textureCast(src).impl.handler,offset);
+  impl->copy(*dest.impl.impl.handler,ResourceLayout::Sampler,w,h,mip,*textureCast(src).impl.handler,offset);
   }
 
 void Encoder<CommandBuffer>::copy(const Texture2d& src, uint32_t mip, StorageBuffer& dest, size_t offset) {
   if(offset%4!=0)
     throw std::system_error(Tempest::GraphicsErrc::InvalidStorageBuffer);
   uint32_t w = src.w(), h = src.h();
-  impl->copy(*dest.impl.impl.handler,TextureLayout::Sampler,w,h,mip,*src.impl.handler,offset);
+  impl->copy(*dest.impl.impl.handler,ResourceLayout::Sampler,w,h,mip,*src.impl.handler,offset);
   }
 
 void Encoder<CommandBuffer>::generateMipmaps(Attachment& tex) {
   uint32_t w = tex.w(), h = tex.h();
-  impl->generateMipmap(*textureCast(tex).impl.handler,TextureLayout::Sampler,w,h,mipCount(w,h));
+  impl->generateMipmap(*textureCast(tex).impl.handler,ResourceLayout::Sampler,w,h,mipCount(w,h));
   }

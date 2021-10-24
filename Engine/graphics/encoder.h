@@ -19,9 +19,6 @@ class IndexBuffer;
 
 class CommandBuffer;
 
-class RenderPass;
-class FrameBuffer;
-
 template<class T>
 class Encoder;
 
@@ -32,7 +29,8 @@ class Encoder<Tempest::CommandBuffer> {
     Encoder& operator = (Encoder&& e);
     virtual ~Encoder() noexcept(false);
 
-    void setFramebuffer(const FrameBuffer& fbo, const RenderPass& p);
+    void setFramebuffer(std::initializer_list<AttachmentDesc> rd);
+    void setFramebuffer(std::initializer_list<AttachmentDesc> rd, AttachmentDesc zd);
     void setFramebuffer(std::nullptr_t null);
 
     void setUniforms(const RenderPipeline& p, const DescriptorSet &ubo, const void* data, size_t sz);
@@ -79,21 +77,22 @@ class Encoder<Tempest::CommandBuffer> {
   private:
     Encoder(CommandBuffer* ow);
 
+    enum Stage : uint8_t {
+      None = 0,
+      Rendering,
+      Compute
+      };
+
     struct State {
       const AbstractGraphicsApi::Pipeline*     curPipeline = nullptr;
       const AbstractGraphicsApi::CompPipeline* curCompute  = nullptr;
-      };
-
-    struct Pass {
-      const FrameBuffer* fbo  = nullptr;
-      const RenderPass*  pass = nullptr;
+      Stage                                    stage       = None;
       };
 
     AbstractGraphicsApi::CommandBuffer* impl = nullptr;
     State                               state;
-    Pass                                curPass;
 
-    void         implEndRenderPass();
+    void         implSetFramebuffer(const AttachmentDesc* rt, size_t rtSize, const AttachmentDesc* zs);
     void         implDraw(const VideoBuffer& vbo, size_t offset, size_t size, size_t firstInstance, size_t instanceCount);
     void         implDraw(const VideoBuffer &vbo, const VideoBuffer &ibo, Detail::IndexClass index,
                           size_t offset, size_t size, size_t firstInstance, size_t instanceCount);

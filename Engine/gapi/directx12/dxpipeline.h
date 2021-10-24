@@ -39,7 +39,7 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
     bool                        ssboBarriers   = false;
 
     ID3D12PipelineState&        instance(DXGI_FORMAT  frm);
-    ID3D12PipelineState&        instance(DxFboLayout& frm);
+    ID3D12PipelineState&        instance(const DxFboLayout& frm);
 
   private:
     DxDevice&                   device;

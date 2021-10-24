@@ -21,13 +21,6 @@ class VulkanApi : public AbstractGraphicsApi {
 
     Swapchain*     createSwapchain(SystemApi::Window* w, Device *d) override;
 
-    PPass          createPass(Device *d, const FboMode** att, size_t acount) override;
-    PFbo           createFbo (Device *d, FboLayout* lay,
-                              uint32_t w, uint32_t h, uint8_t clCount,
-                              Swapchain** sw, Texture** cl, const uint32_t* imageId, Texture* zbuf) override;
-    PFboLayout     createFboLayout(Device *d, Swapchain** s,
-                                   TextureFormat *att, uint8_t attCount) override;
-
     PPipeline      createPipeline(Device* d, const RenderState &st,
                                   size_t stride, Topology tp,
                                   const PipelineLay& ulayImpl,
@@ -49,7 +42,7 @@ class VulkanApi : public AbstractGraphicsApi {
     PTexture       createStorage(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;
 
     void           readPixels(Device *d, Pixmap &out, const PTexture t,
-                              TextureLayout lay, TextureFormat frm,
+                              ResourceLayout lay, TextureFormat frm,
                               const uint32_t w, const uint32_t h, uint32_t mip) override;
     void           readBytes(Device* d, Buffer* buf, void* out, size_t size) override;
 

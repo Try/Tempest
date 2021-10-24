@@ -29,7 +29,7 @@ enum class BufferHeap : uint8_t {
   };
 
 
-enum class TextureLayout : uint8_t {
+enum class ResourceLayout : uint8_t {
   Undefined,
   Sampler,
   ColorAttach,
@@ -38,10 +38,7 @@ enum class TextureLayout : uint8_t {
   TransferSrc,
   TransferDest,
   Unordered,
-  };
 
-enum class BufferLayout : uint8_t {
-  Undefined,
   Vertex,
   Index,
   Uniform,
@@ -49,4 +46,5 @@ enum class BufferLayout : uint8_t {
   ComputeWrite,
   ComputeReadWrite,
   };
+
 }

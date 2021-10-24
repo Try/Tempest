@@ -2,16 +2,16 @@
 
 #include "vcommandbuffer.h"
 
+#include <Tempest/Attachment>
+
 #include "vdevice.h"
 #include "vcommandpool.h"
-#include "vframebuffer.h"
-#include "vframebufferlayout.h"
-#include "vrenderpass.h"
 #include "vpipeline.h"
 #include "vbuffer.h"
 #include "vdescriptorarray.h"
 #include "vswapchain.h"
 #include "vtexture.h"
+#include "vframebuffermap.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -42,7 +42,7 @@ void VCommandBuffer::begin() {
   }
 
 void VCommandBuffer::begin(VkCommandBufferUsageFlags flg) {
-  state = NoPass;
+  state = Idle;
   swapchainSync.reserve(swapchainSync.size());
   swapchainSync.clear();
   curVbo = VK_NULL_HANDLE;
@@ -56,8 +56,6 @@ void VCommandBuffer::begin(VkCommandBufferUsageFlags flg) {
   }
 
 void VCommandBuffer::end() {
-  if(state==RenderPass)
-    endRenderPass();
   swapchainSync.reserve(swapchainSync.size());
   resState.finalize(*this);
   vkAssert(vkEndCommandBuffer(impl));
@@ -68,41 +66,61 @@ bool VCommandBuffer::isRecording() const {
   return state!=NoRecording;
   }
 
-void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
-                                     AbstractGraphicsApi::Pass*  p,
-                                     uint32_t width,uint32_t height) {
-  VFramebuffer& fbo =*reinterpret_cast<VFramebuffer*>(f);
-  VRenderPass&  pass=*reinterpret_cast<VRenderPass*>(p);
-
-  for(size_t i=0;i<fbo.attach.size();++i) {
-    const bool preserve = pass.isAttachPreserved(i);
-    resState.setLayout(fbo.attach[i],fbo.attach[i].renderLayout(),preserve);
-    if(fbo.attach[i].sw!=nullptr)
-      addDependency(*fbo.attach[i].sw,fbo.attach[i].id);
+void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
+                                    uint32_t width, uint32_t height,
+                                    const TextureFormat* frm,
+                                    AbstractGraphicsApi::Texture** att,
+                                    AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) {
+  for(size_t i=0; i<descSize; ++i) {
+    if(sw[i]!=nullptr)
+      addDependency(*reinterpret_cast<VSwapchain*>(sw[i]),imgId[i]);
     }
 
-  isInCompute = false;
-  resState.flushLayout(*this);
+  auto fbo = device.fboMap.find(desc,descSize, frm,att,sw,imgId,width,height);
+  auto fb  = fbo.get();
+  pass = fbo->pass;
 
-  if(fbo.rp.handler->attCount!=pass.attCount)
-    throw IncompleteFboException();
+  for(size_t i=0; i<descSize; ++i) {
+    if(isDepthFormat(frm[i]))
+      resState.setLayout(*att[i],ResourceLayout::DepthAttach,desc[i].load==AccessOp::Preserve);
+    else if(frm[i]==TextureFormat::Undefined)
+      resState.setLayout(*sw[i],imgId[i],ResourceLayout::ColorAttach,desc[i].load==AccessOp::Preserve);
+    else
+      resState.setLayout(*att[i],ResourceLayout::ColorAttach,desc[i].load==AccessOp::Preserve);
+    }
+  resState.flush(*this);
+  for(size_t i=0; i<descSize; ++i) {
+    if(isDepthFormat(frm[i]))
+      resState.setLayout(*att[i],ResourceLayout::DepthAttach,desc[i].store==AccessOp::Preserve);
+    else if(frm[i]==TextureFormat::Undefined)
+      resState.setLayout(*sw[i],imgId[i],ResourceLayout::Present,desc[i].store==AccessOp::Preserve);
+    else
+      resState.setLayout(*att[i],ResourceLayout::Sampler,desc[i].store==AccessOp::Preserve);
+    }
 
-  auto& rp = pass.instance(*fbo.rp.handler);
-  curFbo = &fbo;
-  curRp  = &pass;
+  VkClearValue clr[MaxFramebufferAttachments];
+  for(size_t i=0; i<descSize; ++i) {
+    if(isDepthFormat(frm[i])) {
+      clr[i].depthStencil.depth = desc[i].clear.x;
+      } else {
+      clr[i].color.float32[0]   = desc[i].clear.x;
+      clr[i].color.float32[1]   = desc[i].clear.y;
+      clr[i].color.float32[2]   = desc[i].clear.z;
+      clr[i].color.float32[3]   = desc[i].clear.w;
+      }
+    }
 
   VkRenderPassBeginInfo renderPassInfo = {};
   renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  renderPassInfo.renderPass        = rp.impl;
-  renderPassInfo.framebuffer       = fbo.impl;
+  renderPassInfo.renderPass        = fb->pass->pass;
+  renderPassInfo.framebuffer       = fb->fbo;
   renderPassInfo.renderArea.offset = {0, 0};
   renderPassInfo.renderArea.extent = {width,height};
 
-  renderPassInfo.clearValueCount   = pass.attCount;
-  renderPassInfo.pClearValues      = rp.clear.get();
+  renderPassInfo.clearValueCount   = uint32_t(descSize);
+  renderPassInfo.pClearValues      = clr;
 
   vkCmdBeginRenderPass(impl, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
   state = RenderPass;
 
   // setup dynamic state
@@ -115,24 +133,15 @@ void VCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo*   f,
   vkCmdSetScissor (impl,0,1,&scissor);
   }
 
-void VCommandBuffer::endRenderPass() {
-  for(size_t i=0;i<curFbo->attach.size();++i) {
-    if(!curRp->isResultPreserved(i))
-      continue;
-    resState.setLayout(curFbo->attach[i],curFbo->attach[i].defaultLayout(),true);
-    }
+void VCommandBuffer::endRendering() {
   vkCmdEndRenderPass(impl);
-  state  = NoPass;
-  curFbo = nullptr;
-  curRp  = nullptr;
+  state = Idle;
+  resState.flush(*this);
   }
 
 void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
-  if(curFbo==nullptr)
-    throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   VPipeline&           px = reinterpret_cast<VPipeline&>(p);
-  VFramebufferLayout*  l  = reinterpret_cast<VFramebufferLayout*>(curFbo->rp.handler);
-  auto& v = px.instance(*l);
+  auto& v = px.instance(pass);
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v.val);
   ssboBarriers = px.ssboBarriers;
   }
@@ -154,11 +163,9 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraph
   }
 
 void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
-  if(curFbo!=nullptr)
-    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
-  if(!isInCompute) {
-    resState.flushLayout(*this);
-    isInCompute = true;
+  if(state!=Compute) {
+    resState.flush(*this);
+    state = Compute;
     }
   VCompPipeline& px = reinterpret_cast<VCompPipeline&>(p);
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,px.impl);
@@ -184,7 +191,6 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractG
 void VCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t offset, size_t size, size_t firstInstance, size_t instanceCount) {
   if(T_UNLIKELY(ssboBarriers)) {
     curUniforms->ssboBarriers(resState);
-    resState.flushSSBO(*this);
     }
   const VBuffer& vbo=reinterpret_cast<const VBuffer&>(ivbo);
   if(curVbo!=vbo.impl) {
@@ -200,7 +206,6 @@ void VCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, const 
                                  size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) {
   if(T_UNLIKELY(ssboBarriers)) {
     curUniforms->ssboBarriers(resState);
-    resState.flushSSBO(*this);
     }
   static const VkIndexType type[]={
     VK_INDEX_TYPE_UINT16,
@@ -222,7 +227,7 @@ void VCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, const 
 void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
   if(T_UNLIKELY(ssboBarriers)) {
     curUniforms->ssboBarriers(resState);
-    resState.flushSSBO(*this);
+    resState.flush(*this);
     }
   vkCmdDispatch(impl,uint32_t(x),uint32_t(y),uint32_t(z));
   }
@@ -330,120 +335,33 @@ void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, u
                  filter);
   }
 
-void Tempest::Detail::VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dest, TextureLayout defLayout,
+void Tempest::Detail::VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dest, ResourceLayout defLayout,
                                            uint32_t width, uint32_t height, uint32_t mip,
                                            AbstractGraphicsApi::Texture& src, size_t offset) {
-  if(curFbo!=nullptr)
-    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
   //resState.setLayout(src,TextureLayout::TransferSrc,true); // TODO: more advanced layout tracker
-  resState.flushLayout(*this);
+  resState.flush(*this);
 
-  changeLayout(src,defLayout,TextureLayout::TransferSrc,mip);
+  changeLayout(src,defLayout,ResourceLayout::TransferSrc,mip);
   implCopy(dest,width,height,mip,src,offset);
-  changeLayout(src,TextureLayout::TransferSrc,defLayout,mip);
-  }
-
-void VCommandBuffer::changeLayout(AbstractGraphicsApi::Buffer& buf, BufferLayout prev, BufferLayout next) {
-  VkBufferMemoryBarrier barrier = {};
-  barrier.sType                 = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-
-  barrier.srcQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
-  barrier.dstQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
-  barrier.buffer                = reinterpret_cast<VBuffer&>(buf).impl;
-  barrier.offset                = 0;
-  barrier.size                  = VK_WHOLE_SIZE;
-
-  VkPipelineStageFlags srcStage = 0;
-  VkPipelineStageFlags dstStage = 0;
-
-  bool hadWrite = false;
-  if(prev==BufferLayout::ComputeWrite || prev==BufferLayout::ComputeReadWrite) {
-    hadWrite = true;
-    }
-
-  switch(next) {
-    case BufferLayout::Undefined:
-      break;
-    case BufferLayout::ComputeRead:
-      if(hadWrite) {
-        // Read-after-Write
-        barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-        srcStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-        dstStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-        } else {
-        // Read-after-Read
-        return;
-        }
-      break;
-    case BufferLayout::ComputeReadWrite:
-      if(hadWrite) {
-        // Read-after-Write
-        barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-        srcStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-        dstStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-        } else {
-        // Write-after-Read
-        barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-
-        srcStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-        dstStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-        }
-      break;
-    default:
-      // unused for now
-      throw DeviceLostException();
-    }
-
-  vkCmdPipelineBarrier(
-        impl,
-        srcStage, dstStage,
-        0,
-        0, nullptr,
-        1, &barrier,
-        0, nullptr);
-  }
-
-void VCommandBuffer::changeLayout(AbstractGraphicsApi::Attach& att, TextureLayout prev, TextureLayout next, bool byRegion) {
-  auto&    img          = reinterpret_cast<VFramebuffer::Attach&>(att);
-  VkImage  nativeImg    = VK_NULL_HANDLE;
-  VkFormat nativeFormat = VK_FORMAT_UNDEFINED;
-  if(img.sw!=nullptr) {
-    nativeImg    = img.sw->images[img.id];
-    nativeFormat = img.sw->format();
-    } else {
-    nativeImg    = img.tex->impl;
-    nativeFormat = img.tex->format;
-    }
-
-  auto p = (prev==TextureLayout::Undefined ? att.defaultLayout() : prev);
-  implChangeLayout(nativeImg, nativeFormat,
-                   Detail::nativeFormat(p), Detail::nativeFormat(next),
-                   prev==TextureLayout::Undefined, 0, VK_REMAINING_MIP_LEVELS, byRegion);
+  changeLayout(src,ResourceLayout::TransferSrc,defLayout,mip);
   }
 
 void VCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
-                                  TextureLayout prev, TextureLayout next, uint32_t mipId) {
+                                  ResourceLayout prev, ResourceLayout next, uint32_t mipId) {
   auto&    vt       = reinterpret_cast<VTexture&>(t);
-  auto     p        = (prev==TextureLayout::Undefined ? TextureLayout::Sampler : prev);
+  auto     p        = (prev==ResourceLayout::Undefined ? ResourceLayout::Sampler : prev);
   uint32_t mipBase  = (mipId==uint32_t(-1) ? 0         : mipId);
   uint32_t mipCount = (mipId==uint32_t(-1) ? vt.mipCnt : 1);
 
   implChangeLayout(vt.impl,vt.format,
                    Detail::nativeFormat(p), Detail::nativeFormat(next),
-                   prev==TextureLayout::Undefined, mipBase, mipCount, false);
+                   prev==ResourceLayout::Undefined, mipBase, mipCount, false);
   }
 
 void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
-                                    TextureLayout defLayout,
+                                    ResourceLayout defLayout,
                                     uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
-  if(curFbo!=nullptr)
-    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
-  resState.flushLayout(*this);
+  resState.flush(*this);
 
   if(mipLevels==1)
     return;
@@ -460,23 +378,23 @@ void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
   int32_t w = int32_t(texWidth);
   int32_t h = int32_t(texHeight);
 
-  if(defLayout!=TextureLayout::TransferDest) {
-    changeLayout(img,defLayout,TextureLayout::TransferDest,uint32_t(-1));
+  if(defLayout!=ResourceLayout::TransferDest) {
+    changeLayout(img,defLayout,ResourceLayout::TransferDest,uint32_t(-1));
     }
 
   for(uint32_t i=1; i<mipLevels; ++i) {
     const int mw = (w==1 ? 1 : w/2);
     const int mh = (h==1 ? 1 : h/2);
 
-    changeLayout(img,TextureLayout::TransferDest,TextureLayout::TransferSrc,i-1);
+    changeLayout(img,ResourceLayout::TransferDest,ResourceLayout::TransferSrc,i-1);
     blit(img,  w, h, i-1,
          img, mw,mh, i);
-    changeLayout(img,TextureLayout::TransferSrc, TextureLayout::Sampler,    i-1);
+    changeLayout(img,ResourceLayout::TransferSrc, ResourceLayout::Sampler,    i-1);
 
     w = mw;
     h = mh;
     }
-  changeLayout(img,TextureLayout::TransferDest, TextureLayout::Sampler, mipLevels-1);
+  changeLayout(img,ResourceLayout::TransferDest, ResourceLayout::Sampler, mipLevels-1);
   }
 
 static VkPipelineStageFlags accessToStage(const VkAccessFlags a, const VulkanInstance::VkProp& prop) {
@@ -589,7 +507,7 @@ void VCommandBuffer::implChangeLayout(VkImage dest, VkFormat imageFormat,
   barrier.subresourceRange.baseArrayLayer = 0;
   barrier.subresourceRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
 
-  if(imageFormat==VK_FORMAT_D24_UNORM_S8_UINT)
+  if(imageFormat==VK_FORMAT_D24_UNORM_S8_UINT || imageFormat==VK_FORMAT_D16_UNORM_S8_UINT || imageFormat==VK_FORMAT_D32_SFLOAT_S8_UINT)
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT; else
   if(Detail::nativeIsDepthFormat(imageFormat))
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; else
@@ -618,6 +536,100 @@ void VCommandBuffer::implChangeLayout(VkImage dest, VkFormat imageFormat,
       0, nullptr,
       1, &barrier
         );
+  }
+
+void VCommandBuffer::implChangeLayout(AbstractGraphicsApi::Buffer& buf, ResourceLayout prev, ResourceLayout next) {
+  VkBufferMemoryBarrier barrier = {};
+  barrier.sType                 = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+
+  barrier.srcQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
+  barrier.buffer                = reinterpret_cast<VBuffer&>(buf).impl;
+  barrier.offset                = 0;
+  barrier.size                  = VK_WHOLE_SIZE;
+
+  VkPipelineStageFlags srcStage = 0;
+  VkPipelineStageFlags dstStage = 0;
+
+  bool hadWrite = false;
+  if(prev==ResourceLayout::ComputeWrite || prev==ResourceLayout::ComputeReadWrite) {
+    hadWrite = true;
+    }
+
+  switch(next) {
+    case ResourceLayout::Undefined:
+      break;
+    case ResourceLayout::ComputeRead:
+      if(hadWrite) {
+        // Read-after-Write
+        barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        srcStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        dstStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        } else {
+        // Read-after-Read
+        return;
+        }
+      break;
+    case ResourceLayout::ComputeReadWrite:
+      if(hadWrite) {
+        // Read-after-Write
+        barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        srcStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        dstStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        } else {
+        // Write-after-Read
+        barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+
+        srcStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        dstStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        }
+      break;
+    default:
+      // unused for now
+      throw DeviceLostException();
+    }
+
+  vkCmdPipelineBarrier(
+        impl,
+        srcStage, dstStage,
+        0,
+        0, nullptr,
+        1, &barrier,
+        0, nullptr);
+  }
+
+void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
+  for(size_t i=0; i<cnt; ++i) {
+    auto& b = desc[i];
+    if(b.buffer!=nullptr)
+      continue;
+    VkImage   nativeImg    = VK_NULL_HANDLE;
+    VkFormat  nativeFormat = VK_FORMAT_UNDEFINED;
+    if(b.texture!=nullptr) {
+      VTexture& t   = *reinterpret_cast<VTexture*>(b.texture);
+      nativeImg     = t.impl;
+      nativeFormat  = t.format;
+      } else {
+      VSwapchain& s = *reinterpret_cast<VSwapchain*>(b.swapchain);
+      nativeImg     = s.images[b.swId];
+      nativeFormat  = s.format();
+      }
+    implChangeLayout(nativeImg, nativeFormat,
+                     Detail::nativeFormat(b.prev), Detail::nativeFormat(b.next),
+                     !b.preserve, 0, VK_REMAINING_MIP_LEVELS, false);
+    }
+
+  for(size_t i=0; i<cnt; ++i) {
+    auto& b = desc[i];
+    if(b.buffer==nullptr)
+      continue;
+    implChangeLayout(*b.buffer, b.prev, b.next);
+    }
   }
 
 void VCommandBuffer::addDependency(VSwapchain& s, size_t imgId) {

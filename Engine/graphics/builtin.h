@@ -9,7 +9,6 @@
 namespace Tempest {
 
 class Device;
-class RenderPass;
 
 class Builtin final {
   private:

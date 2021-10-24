@@ -8,6 +8,7 @@ namespace Tempest {
 namespace Detail {
 
 class VDevice;
+class VFramebufferMap;
 
 class VSwapchain : public AbstractGraphicsApi::Swapchain {
   public:
@@ -31,6 +32,8 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
 
     uint32_t                 currentBackBufferIndex() override;
     void                     present(VDevice& dev);
+
+    VFramebufferMap*         map = nullptr;
 
     VkSwapchainKHR           swapChain=VK_NULL_HANDLE;
     std::vector<VkImageView> views;

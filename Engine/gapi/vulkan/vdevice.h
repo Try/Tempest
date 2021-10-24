@@ -10,6 +10,7 @@
 #include "vswapchain.h"
 #include "vfence.h"
 #include "vulkanapi_impl.h"
+#include "vframebuffermap.h"
 #include "exceptions/exception.h"
 #include "utility/spinlock.h"
 #include "utility/compiller_hints.h"
@@ -65,23 +66,33 @@ inline VkFormat nativeFormat(TextureFormat f) {
   return vfrm[f];
   }
 
-inline VkImageLayout nativeFormat(TextureLayout f) {
+inline VkImageLayout nativeFormat(ResourceLayout f) {
   switch(f) {
-    case TextureLayout::Undefined:
+    case ResourceLayout::Undefined:
       return VK_IMAGE_LAYOUT_UNDEFINED;
-    case TextureLayout::Sampler:
+    case ResourceLayout::Sampler:
       return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    case TextureLayout::ColorAttach:
+    case ResourceLayout::ColorAttach:
       return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    case TextureLayout::DepthAttach:
+    case ResourceLayout::DepthAttach:
       return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    case TextureLayout::Present:
+    case ResourceLayout::Present:
       return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    case TextureLayout::TransferSrc:
+    case ResourceLayout::TransferSrc:
       return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    case TextureLayout::TransferDest:
+    case ResourceLayout::TransferDest:
       return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    case TextureLayout::Unordered:
+    case ResourceLayout::Unordered:
+      return VK_IMAGE_LAYOUT_GENERAL;
+
+    case ResourceLayout::ComputeRead:
+    case ResourceLayout::ComputeWrite:
+    case ResourceLayout::ComputeReadWrite:
+      return VK_IMAGE_LAYOUT_GENERAL;
+
+    case ResourceLayout::Vertex:
+    case ResourceLayout::Index:
+    case ResourceLayout::Uniform:
       return VK_IMAGE_LAYOUT_GENERAL;
     }
   return VK_IMAGE_LAYOUT_UNDEFINED;
@@ -196,6 +207,8 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     std::mutex              allocSync;
     VAllocator              allocator;
+
+    VFramebufferMap         fboMap;
 
     VkProps                 props={};
 

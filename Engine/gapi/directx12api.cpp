@@ -15,9 +15,7 @@
 #include "directx12/dxcommandbuffer.h"
 #include "directx12/dxswapchain.h"
 #include "directx12/dxfence.h"
-#include "directx12/dxframebuffer.h"
 #include "directx12/dxdescriptorarray.h"
-#include "directx12/dxrenderpass.h"
 #include "directx12/dxfbolayout.h"
 
 #include <Tempest/Pixmap>
@@ -157,35 +155,6 @@ AbstractGraphicsApi::Swapchain* DirectX12Api::createSwapchain(SystemApi::Window*
   return new Detail::DxSwapchain(*dx,*impl->DXGIFactory,w);
   }
 
-AbstractGraphicsApi::PPass DirectX12Api::createPass(AbstractGraphicsApi::Device*, const FboMode** att, size_t acount) {
-  return PPass(new DxRenderPass(att,acount));
-  }
-
-AbstractGraphicsApi::PFbo DirectX12Api::createFbo(Device* d, FboLayout* l,
-                                                  uint32_t /*w*/, uint32_t /*h*/, uint8_t clCount,
-                                                  Swapchain** sx, Texture** cl, const uint32_t* imgId, Texture* zbuf) {
-  auto& dx  = *reinterpret_cast<Detail::DxDevice*>   (d);
-  auto& lay = *reinterpret_cast<Detail::DxFboLayout*>(l);
-  auto  z   =  reinterpret_cast<Detail::DxTexture*>  (zbuf);
-
-  Detail::DxTexture*   att[256] = {};
-  Detail::DxSwapchain* sw [256] = {};
-  for(size_t i=0; i<clCount; ++i) {
-    att[i] = reinterpret_cast<Detail::DxTexture*>(cl[i]);
-    sw[i]  = reinterpret_cast<Detail::DxSwapchain*>(sx[i]);
-    }
-
-  return PFbo(new DxFramebuffer(dx,lay,clCount, sw,att,imgId,z));
-  }
-
-AbstractGraphicsApi::PFboLayout DirectX12Api::createFboLayout(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Swapchain** s,
-                                                              TextureFormat* att, uint8_t attCount) {
-  Detail::DxSwapchain* sx[256] = {};
-  for(size_t i=0; i<attCount; ++i)
-    sx[i] = reinterpret_cast<Detail::DxSwapchain*>(s[i]);
-  return PFboLayout(new DxFboLayout(sx,att,attCount));
-  }
-
 AbstractGraphicsApi::PPipeline DirectX12Api::createPipeline(AbstractGraphicsApi::Device* d, const RenderState& st, size_t stride,
                                                             Topology tp,
                                                             const PipelineLay& ulayImpl,
@@ -297,8 +266,8 @@ AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixma
 
   cmd->copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
   if(mipCnt>1)
-    cmd->generateMipmap(*pbuf.handler, TextureLayout::TransferDest, p.w(), p.h(), mipCnt); else
-    cmd->changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler, uint32_t(-1));
+    cmd->generateMipmap(*pbuf.handler, ResourceLayout::TransferDest, p.w(), p.h(), mipCnt); else
+    cmd->changeLayout(*pbuf.handler, ResourceLayout::TransferDest, ResourceLayout::Sampler, uint32_t(-1));
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
   return PTexture(pbuf.handler);
@@ -358,17 +327,17 @@ AbstractGraphicsApi::PTexture DirectX12Api::createCompressedTexture(Device* d, c
     h = std::max<uint32_t>(4,h/2);
     }
 
-  cmd->changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler, uint32_t(-1));
+  cmd->changeLayout(*pbuf.handler, ResourceLayout::TransferDest, ResourceLayout::Sampler, uint32_t(-1));
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
   return PTexture(pbuf.handler);
   }
 
 AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const uint32_t w, const uint32_t h, uint32_t mipCnt, TextureFormat frm) {
-  Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
+  DxDevice& dx = *reinterpret_cast<DxDevice*>(d);
 
-  Detail::DxTexture buf=dx.allocator.alloc(w,h,mipCnt,frm,false);
-  Detail::DSharedPtr<Detail::DxTexture*> pbuf(new Detail::DxTexture(std::move(buf)));
+  DxTexture base=dx.allocator.alloc(w,h,mipCnt,frm,false);
+  DSharedPtr<DxTexture*> pbuf(new DxTextureWithRT(dx,std::move(base)));
 
   return PTexture(pbuf.handler);
   }
@@ -382,7 +351,7 @@ AbstractGraphicsApi::PTexture DirectX12Api::createStorage(AbstractGraphicsApi::D
   return PTexture(pbuf.handler);
   }
 
-void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureLayout lay,
+void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, ResourceLayout lay,
                               TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip) {
   Detail::DxDevice&  dx = *reinterpret_cast<Detail::DxDevice*>(d);
   Detail::DxTexture& tx = *reinterpret_cast<Detail::DxTexture*>(t.handler);
@@ -397,9 +366,9 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureL
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
-  cmd->changeLayout(tx,lay,TextureLayout::TransferSrc,mip);
+  cmd->changeLayout(tx,lay,ResourceLayout::TransferSrc,mip);
   cmd->copyRaw(stage,w,h,mip,tx,0);
-  cmd->changeLayout(tx,TextureLayout::TransferSrc,lay,mip);
+  cmd->changeLayout(tx,ResourceLayout::TransferSrc,lay,mip);
   cmd->end();
   dx.dataMgr().submitAndWait(std::move(cmd));
 

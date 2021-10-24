@@ -3,7 +3,6 @@
 #include "dxpipeline.h"
 
 #include "dxdevice.h"
-#include "dxframebuffer.h"
 #include "dxshader.h"
 #include "dxpipelinelay.h"
 #include "guid.h"
@@ -53,7 +52,7 @@ ID3D12PipelineState& DxPipeline::instance(DXGI_FORMAT frm) {
   return instance(lay);
   }
 
-ID3D12PipelineState& DxPipeline::instance(DxFboLayout& frm) {
+ID3D12PipelineState& DxPipeline::instance(const DxFboLayout& frm) {
   std::lock_guard<SpinLock> guard(sync);
 
   for(auto& i:inst) {

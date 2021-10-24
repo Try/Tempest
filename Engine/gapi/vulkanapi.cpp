@@ -4,10 +4,7 @@
 
 #include "vulkan/vdevice.h"
 #include "vulkan/vswapchain.h"
-#include "vulkan/vrenderpass.h"
 #include "vulkan/vpipeline.h"
-#include "vulkan/vframebuffer.h"
-#include "vulkan/vframebufferlayout.h"
 #include "vulkan/vbuffer.h"
 #include "vulkan/vshader.h"
 #include "vulkan/vfence.h"
@@ -57,50 +54,6 @@ void VulkanApi::destroy(AbstractGraphicsApi::Device *d) {
 AbstractGraphicsApi::Swapchain *VulkanApi::createSwapchain(SystemApi::Window *w,AbstractGraphicsApi::Device *d) {
   Detail::VDevice* dx   = reinterpret_cast<Detail::VDevice*>(d);
   return new Detail::VSwapchain(*dx,w);
-  }
-
-AbstractGraphicsApi::PPass VulkanApi::createPass(AbstractGraphicsApi::Device *d,
-                                                 const FboMode** att,
-                                                 size_t acount) {
-  Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
-  return PPass(new Detail::VRenderPass(*dx,att,uint8_t(acount)));
-  }
-
-AbstractGraphicsApi::PFbo VulkanApi::createFbo(AbstractGraphicsApi::Device *d, FboLayout* lay,
-                                               uint32_t w, uint32_t h, uint8_t clCount,
-                                               Swapchain** s, Texture** cl, const uint32_t* imgId,
-                                               AbstractGraphicsApi::Texture *zbuf) {
-  Detail::VDevice*            dx=reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VFramebufferLayout* l =reinterpret_cast<Detail::VFramebufferLayout*>(lay);
-  Detail::VTexture*           zb=reinterpret_cast<Detail::VTexture*>(zbuf);
-
-  Detail::VTexture*   att[256] = {};
-  Detail::VSwapchain* sw[256] = {};
-  for(size_t i=0; i<clCount; ++i) {
-    att[i] = reinterpret_cast<Detail::VTexture*>  (cl[i]);
-    sw [i] = reinterpret_cast<Detail::VSwapchain*>(s[i]);
-    }
-  return PFbo(new Detail::VFramebuffer(*dx,*l, w,h,clCount, sw,att,imgId, zb));
-  }
-
-AbstractGraphicsApi::PFboLayout VulkanApi::createFboLayout(AbstractGraphicsApi::Device *d,
-                                                           Swapchain** s,
-                                                           Tempest::TextureFormat *att,
-                                                           uint8_t attCount) {
-  Detail::VDevice&    dx=*reinterpret_cast<Detail::VDevice*>(d);
-  VkFormat            frm[256] = {};
-  Detail::VSwapchain* sx[256] = {};
-
-  for(size_t i=0;i<attCount;++i){
-    frm[i] = Detail::nativeFormat(att[i]);
-    sx[i]  = reinterpret_cast<Detail::VSwapchain*>(s[i]);
-    }
-
-  Detail::DSharedPtr<AbstractGraphicsApi::FboLayout*> impl{
-    new Detail::VFramebufferLayout(dx,sx,frm,uint8_t(attCount))
-    };
-
-  return impl;
   }
 
 AbstractGraphicsApi::PPipeline VulkanApi::createPipeline(AbstractGraphicsApi::Device *d,
@@ -180,7 +133,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   cmd->hold(pstage);
   cmd->hold(pbuf);
 
-  cmd->changeLayout(*pbuf.handler, TextureLayout::Undefined, TextureLayout::TransferDest, uint32_t(-1));
+  cmd->changeLayout(*pbuf.handler, ResourceLayout::Undefined, ResourceLayout::TransferDest, uint32_t(-1));
   if(isCompressedFormat(frm)){
     size_t blockSize  = Pixmap::blockSizeForFormat(pfrm);
     size_t bufferSize = 0;
@@ -195,12 +148,12 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
       h = std::max<uint32_t>(1,h/2);
       }
 
-    cmd->changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler, uint32_t(-1));
+    cmd->changeLayout(*pbuf.handler, ResourceLayout::TransferDest, ResourceLayout::Sampler, uint32_t(-1));
     } else {
     cmd->copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
     if(mipCnt>1)
-      cmd->generateMipmap(*pbuf.handler, TextureLayout::TransferDest, p.w(), p.h(), mipCnt); else
-      cmd->changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler, uint32_t(-1));
+      cmd->generateMipmap(*pbuf.handler, ResourceLayout::TransferDest, p.w(), p.h(), mipCnt); else
+      cmd->changeLayout(*pbuf.handler, ResourceLayout::TransferDest, ResourceLayout::Sampler, uint32_t(-1));
     }
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
@@ -214,7 +167,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   Detail::VDevice* dx = reinterpret_cast<Detail::VDevice*>(d);
   
   Detail::VTexture buf=dx->allocator.alloc(w,h,mipCnt,frm,false);
-  Detail::DSharedPtr<Detail::VTexture*> pbuf(new Detail::VTexture(std::move(buf)));
+  Detail::DSharedPtr<Detail::VTexture*> pbuf(new Detail::VTextureWithFbo(std::move(buf)));
 
   return PTexture(pbuf.handler);
   }
@@ -229,7 +182,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createStorage(AbstractGraphicsApi::Devi
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
-  cmd->changeLayout(*pbuf.handler,TextureLayout::Undefined,TextureLayout::Unordered,uint32_t(-1));
+  cmd->changeLayout(*pbuf.handler,ResourceLayout::Undefined,ResourceLayout::Unordered,uint32_t(-1));
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
 
@@ -237,7 +190,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createStorage(AbstractGraphicsApi::Devi
   }
 
 void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PTexture t,
-                           TextureLayout lay, TextureFormat frm,
+                           ResourceLayout lay, TextureFormat frm,
                            const uint32_t w, const uint32_t h, uint32_t mip) {
   Detail::VDevice&  dx = *reinterpret_cast<Detail::VDevice*>(d);
   Detail::VTexture& tx = *reinterpret_cast<Detail::VTexture*>(t.handler);

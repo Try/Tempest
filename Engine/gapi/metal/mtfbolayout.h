@@ -9,15 +9,13 @@ namespace Detail {
 
 class MtSwapchain;
 
-class MtFboLayout : public AbstractGraphicsApi::FboLayout {
+class MtFboLayout {
   public:
-    MtFboLayout(MtSwapchain** sw, TextureFormat* att, size_t attCount);
+    bool equals(const MtFboLayout& other) const;
 
-    bool equals(const FboLayout& other) const override;
-
-    MTLPixelFormat colorFormat[256] = {};
-    size_t         numColors        = 0;
-    MTLPixelFormat depthFormat      = MTLPixelFormatInvalid;
+    MTLPixelFormat colorFormat[MaxFramebufferAttachments] = {};
+    size_t         numColors                              = 0;
+    MTLPixelFormat depthFormat                            = MTLPixelFormatInvalid;
   };
 
 }

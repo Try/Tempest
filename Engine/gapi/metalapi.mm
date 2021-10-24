@@ -13,9 +13,6 @@
 #include "gapi/metal/mtpipeline.h"
 #include "gapi/metal/mtcommandbuffer.h"
 #include "gapi/metal/mttexture.h"
-#include "gapi/metal/mtfbolayout.h"
-#include "gapi/metal/mtframebuffer.h"
-#include "gapi/metal/mtrenderpass.h"
 #include "gapi/metal/mtpipelinelay.h"
 #include "gapi/metal/mtdescriptorarray.h"
 #include "gapi/metal/mtsync.h"
@@ -69,35 +66,6 @@ AbstractGraphicsApi::Swapchain *MetalApi::createSwapchain(SystemApi::Window *w,
   if([obj isKindOfClass : [NSWindow class]])
     return new MtSwapchain(dev,reinterpret_cast<NSWindow*>(w));
   return nullptr;
-  }
-
-AbstractGraphicsApi::PPass MetalApi::createPass(AbstractGraphicsApi::Device*, const FboMode **att, size_t acount) {
-  return PPass(new MtRenderPass(att,acount));
-  }
-
-AbstractGraphicsApi::PFbo MetalApi::createFbo(AbstractGraphicsApi::Device*,
-                                              AbstractGraphicsApi::FboLayout *lay,
-                                              uint32_t /*w*/, uint32_t /*h*/, uint8_t clCount,
-                                              AbstractGraphicsApi::Swapchain **sx,
-                                              AbstractGraphicsApi::Texture **cl,
-                                              const uint32_t *imgId,
-                                              AbstractGraphicsApi::Texture *zbuf) {
-  auto& lx = *reinterpret_cast<MtFboLayout*>(lay);
-  auto  zb = reinterpret_cast<MtTexture*>(zbuf);
-
-  MtTexture*   att[256] = {};
-  MtSwapchain* sw [256] = {};
-  for(size_t i=0; i<clCount; ++i) {
-    att[i] = reinterpret_cast<MtTexture*>(cl[i]);
-    sw [i] = reinterpret_cast<MtSwapchain*>(sx[i]);
-    }
-  return PFbo(new MtFramebuffer(lx,sw,imgId,att,clCount,zb));
-  }
-
-AbstractGraphicsApi::PFboLayout MetalApi::createFboLayout(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Swapchain **s,
-                                                          TextureFormat *att, uint8_t attCount) {
-  auto sw = reinterpret_cast<MtSwapchain**>(s);
-  return PFboLayout(new MtFboLayout(sw,att,attCount));
   }
 
 AbstractGraphicsApi::PPipeline MetalApi::createPipeline(AbstractGraphicsApi::Device *d,
@@ -193,7 +161,7 @@ AbstractGraphicsApi::PTexture MetalApi::createStorage(AbstractGraphicsApi::Devic
 
 void MetalApi::readPixels(AbstractGraphicsApi::Device*,
                           Pixmap& out, const AbstractGraphicsApi::PTexture t,
-                          TextureLayout /*lay*/, TextureFormat frm,
+                          ResourceLayout /*lay*/, TextureFormat frm,
                           const uint32_t w, const uint32_t h, uint32_t mip) {
   auto& tx = *reinterpret_cast<MtTexture*>(t.handler);
   tx.readPixels(out,frm,w,h,mip);

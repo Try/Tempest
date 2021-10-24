@@ -7,21 +7,12 @@
 namespace Tempest {
 namespace Detail {
 
-class DxSwapchain;
+struct DxFboLayout {
+  UINT        NumRenderTargets = 0;
+  DXGI_FORMAT RTVFormats[MaxFramebufferAttachments] = {};
+  DXGI_FORMAT DSVFormat = DXGI_FORMAT_UNKNOWN;
 
-class DxFboLayout : public AbstractGraphicsApi::FboLayout {
-  public:
-    DxFboLayout() = default;
-    DxFboLayout(const DxFboLayout& other);
-    DxFboLayout(Detail::DxSwapchain** sw, TextureFormat* att, size_t attCount);
-
-    DxFboLayout& operator = (const DxFboLayout& other);
-
-    bool equals(const FboLayout&) const override;
-
-    UINT        NumRenderTargets = 0;
-    DXGI_FORMAT RTVFormats[ 8 ] = {};
-    DXGI_FORMAT DSVFormat = DXGI_FORMAT_UNKNOWN;
+  bool        equals(const DxFboLayout& l) const;
   };
 
 }

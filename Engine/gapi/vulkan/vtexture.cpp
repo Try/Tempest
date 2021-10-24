@@ -10,7 +10,7 @@ using namespace Tempest::Detail;
 
 VTexture::VTexture(VTexture &&other) {
   std::swap(impl,     other.impl);
-  std::swap(view,     other.view);
+  std::swap(imgView,  other.imgView);
   std::swap(format,   other.format);
   std::swap(mipCnt,   other.mipCnt);
   std::swap(alloc,    other.alloc);
@@ -23,13 +23,13 @@ VTexture::~VTexture() {
     alloc->free(*this);
   }
 
-VkImageView VTexture::getView(VkDevice dev, const ComponentMapping& m, uint32_t mipLevel) {
+VkImageView VTexture::view(VkDevice dev, const ComponentMapping& m, uint32_t mipLevel) {
   if(m.r==ComponentSwizzle::Identity &&
      m.g==ComponentSwizzle::Identity &&
      m.b==ComponentSwizzle::Identity &&
      m.a==ComponentSwizzle::Identity &&
      (mipLevel==uint32_t(-1) || mipCnt==1)) {
-    return view;
+    return imgView;
     }
 
   std::lock_guard<Detail::SpinLock> guard(syncViews);
@@ -51,16 +51,16 @@ VkImageView VTexture::getView(VkDevice dev, const ComponentMapping& m, uint32_t 
   return v.v;
   }
 
-VkImageView VTexture::getFboView(VkDevice dev, uint32_t mip) {
-  return getView(dev,ComponentMapping(),mip);
+VkImageView VTexture::fboView(VkDevice dev, uint32_t mip) {
+  return view(dev,ComponentMapping(),mip);
   }
 
 void VTexture::createViews(VkDevice device) {
-  createView(view, device, format, nullptr, uint32_t(-1));
+  createView(imgView, device, format, nullptr, uint32_t(-1));
   }
 
 void VTexture::destroyViews(VkDevice device) {
-  vkDestroyImageView(device,view,nullptr);
+  vkDestroyImageView(device,imgView,nullptr);
   for(auto& i:extViews)
     vkDestroyImageView(device,i.v,nullptr);
   }
@@ -99,4 +99,18 @@ void VTexture::createView(VkImageView& ret, VkDevice device, VkFormat format,
   vkAssert(vkCreateImageView(device, &viewInfo, nullptr, &ret));
   }
 
+VTextureWithFbo::VTextureWithFbo(VTexture&& base)
+  :VTexture(std::move(base)) {
+
+  }
+
+VTextureWithFbo::~VTextureWithFbo() {
+  if(map!=nullptr) {
+    map->notifyDestroy(imgView);
+    for(auto& i:extViews)
+      map->notifyDestroy(i.v);
+    }
+  }
+
 #endif
+
