@@ -235,7 +235,6 @@ VkSurfaceFormatKHR VSwapchain::getSwapSurfaceFormat(const std::vector<VkSurfaceF
   return availableFormats[0];
   }
 
-
 VkPresentModeKHR VSwapchain::getSwapPresentMode(const std::vector<VkPresentModeKHR> &availablePresentModes) {
   /** intel says mailbox is better option for games
     * https://software.intel.com/content/www/us/en/develop/articles/api-without-secrets-introduction-to-vulkan-part-2.html
@@ -316,8 +315,15 @@ uint32_t VSwapchain::currentBackBufferIndex() {
   }
 
 void VSwapchain::present(VDevice& dev) {
-  auto&    slot = sync[imgIndex];
-  auto&    f    = fence.present[imgIndex];
+  size_t sId = 0;
+  for(size_t i=0; i<sync.size(); ++i)
+    if(sync[i].imgId==imgIndex) {
+      sId = i;
+      break;
+      }
+
+  auto&    slot = sync[sId];
+  auto&    f    = fence.present[sId];
   vkResetFences(device.device.impl,1,&f);
 
   VkSubmitInfo submitInfo = {};
@@ -333,6 +339,9 @@ void VSwapchain::present(VDevice& dev) {
   presentInfo.swapchainCount     = 1;
   presentInfo.pSwapchains        = &swapChain;
   presentInfo.pImageIndices      = &imgIndex;
+
+  slot.imgId = uint32_t(-1);
+  slot.state = S_Idle;
 
   //auto t = Application::tickCount();
   VkResult code = dev.presentQueue->present(presentInfo);
