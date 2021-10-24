@@ -2,17 +2,43 @@
 
 #include "mtbuffer.h"
 #include "mtdevice.h"
-#include "mtframebuffer.h"
 #include "mtpipeline.h"
-#include "mtrenderpass.h"
 #include "mtpipelinelay.h"
 #include "mtdescriptorarray.h"
 #include "mttexture.h"
+#include "mtswapchain.h"
 
 #include <Metal/MTLCommandQueue.h>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
+
+static MTLLoadAction mkLoadOp(const AccessOp m) {
+  switch(m) {
+    case AccessOp::Clear:    return MTLLoadActionClear;
+    case AccessOp::Preserve: return MTLLoadActionLoad;
+    case AccessOp::Discard:  return MTLLoadActionDontCare;
+    }
+  return MTLLoadActionDontCare;
+  }
+
+static MTLStoreAction mkStoreOp(const AccessOp m) {
+  switch(m) {
+    case AccessOp::Clear:    return MTLStoreActionStore;
+    case AccessOp::Preserve: return MTLStoreActionStore;
+    case AccessOp::Discard:  return MTLStoreActionDontCare;
+    }
+  return MTLStoreActionDontCare;
+  }
+
+static MTLClearColor mkClearColor(const Vec4& c) {
+  MTLClearColor ret;
+  ret.red   = c.x;
+  ret.green = c.y;
+  ret.blue  = c.z;
+  ret.alpha = c.w;
+  return ret;
+  }
 
 MtCommandBuffer::MtCommandBuffer(MtDevice& dev)
   : device(dev) {
@@ -33,7 +59,7 @@ void MtCommandBuffer::begin() {
   }
 
 void MtCommandBuffer::end() {
-  setEncoder(E_None,nullptr,nullptr);
+  setEncoder(E_None,nullptr);
   }
 
 void MtCommandBuffer::reset() {
@@ -45,25 +71,55 @@ void MtCommandBuffer::reset() {
   [desc release];
   }
 
-void MtCommandBuffer::beginRenderPass(AbstractGraphicsApi::Fbo *f,
-                                      AbstractGraphicsApi::Pass *p,
-                                      uint32_t width, uint32_t height) {
-  auto& fbo  = *reinterpret_cast<MtFramebuffer*>(f);
-  auto& pass = *reinterpret_cast<MtRenderPass*> (p);
+void MtCommandBuffer::beginRendering(const AttachmentDesc* d, size_t descSize,
+                                     uint32_t width, uint32_t height, const TextureFormat* frm,
+                                     AbstractGraphicsApi::Texture** att,
+                                     AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) {
+  curFbo.depthFormat = MTLPixelFormatInvalid;
+  curFbo.numColors   = 0;
 
-  setEncoder(E_Draw,&fbo,&pass);
-  curFbo  = &fbo;
+  MTLRenderPassDescriptor* desc = [MTLRenderPassDescriptor renderPassDescriptor];
+  for(size_t i=0; i<descSize; ++i) {
+    auto& dx = d[i];
+    if(dx.zbuffer!=nullptr) {
+      auto& t = *reinterpret_cast<MtTexture*>(att[i]);
+      desc.depthAttachment.texture     = t.impl;
+      desc.depthAttachment.loadAction  = mkLoadOp (dx.load);
+      desc.depthAttachment.storeAction = mkStoreOp(dx.store);
+      desc.depthAttachment.clearDepth  = dx.clear.x;
+      curFbo.depthFormat               = nativeFormat(frm[i]);
+      continue;
+      }
+    if(sw[i]!=nullptr) {
+      auto& s = *reinterpret_cast<MtSwapchain*>(sw[i]);
+      desc.colorAttachments[i].texture     = s.img[imgId[i]].tex;
+      curFbo.colorFormat[curFbo.numColors] = s.format();
+      } else {
+      auto& t = *reinterpret_cast<MtTexture*>(att[i]);
+      desc.colorAttachments[i].texture     = t.impl;
+      curFbo.colorFormat[curFbo.numColors] = nativeFormat(frm[i]);
+      }
+    desc.colorAttachments[i].loadAction  = mkLoadOp    (dx.load);
+    desc.colorAttachments[i].storeAction = mkStoreOp   (dx.store);
+    desc.colorAttachments[i].clearColor  = mkClearColor(dx.clear);
+    ++curFbo.numColors;
+    }
+
+  setEncoder(E_Draw,desc);
 
   // [enc setFrontFacingWinding:MTLWindingCounterClockwise];
   setViewport(Rect(0,0,width,height));
   }
 
-void MtCommandBuffer::endRenderPass() {
-  setEncoder(E_None,nullptr,nullptr);
-  curFbo = nullptr;
+void MtCommandBuffer::endRendering() {
+  setEncoder(E_None,nullptr);
   }
 
-void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MtFramebuffer* fbo, MtRenderPass* pass) {
+void MtCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
+  // nop
+  }
+
+void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MTLRenderPassDescriptor* desc) {
   if(encDraw!=nil && e!=E_Draw) {
     [encDraw endEncoding];
     [encDraw release];
@@ -89,7 +145,6 @@ void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MtFramebuffer* fbo,
         [encDraw endEncoding];
         [encDraw release];
         }
-      MTLRenderPassDescriptor* desc = fbo->instance(*pass);
       encDraw = [impl renderCommandEncoderWithDescriptor:desc];
       [encDraw retain];
       break;
@@ -111,16 +166,8 @@ void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MtFramebuffer* fbo,
     }
   }
 
-void MtCommandBuffer::changeLayout(AbstractGraphicsApi::Buffer&,
-                                   BufferLayout /*prev*/, BufferLayout /*next*/) {
-  }
-
-void MtCommandBuffer::changeLayout(AbstractGraphicsApi::Attach &,
-                                   TextureLayout /*prev*/, TextureLayout /*next*/, bool /*byRegion*/) {
-  }
-
 void MtCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline &p) {
-  setEncoder(E_Comp,nullptr,nullptr);
+  setEncoder(E_Comp,nullptr);
   auto& px = reinterpret_cast<MtCompPipeline&>(p);
   [encComp setComputePipelineState:px.impl];
   curLay   = px.lay.handler;
@@ -284,10 +331,10 @@ void MtCommandBuffer::setTexture(const MtPipelineLay::MTLBind& mtl,
   }
 
 void MtCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture &image,
-                                     TextureLayout /*defLayout*/,
+                                     ResourceLayout /*defLayout*/,
                                      uint32_t /*texWidth*/, uint32_t /*texHeight*/,
                                      uint32_t /*mipLevels*/) {
-  setEncoder(E_Blit,nullptr,nullptr);
+  setEncoder(E_Blit,nullptr);
 
   auto& t = reinterpret_cast<MtTexture&>(image);
   [encBlit generateMipmapsForTexture:t.impl];
@@ -295,9 +342,9 @@ void MtCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture &image,
 
 void MtCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
   auto& px   = reinterpret_cast<MtPipeline&>(p);
-  auto& inst = px.inst(*curFbo->layout.handler);
+  auto& inst = px.inst(curFbo);
 
-  if(curFbo->depth!=nullptr)
+  if(curFbo.depthFormat!=MTLPixelFormatInvalid)
     [encDraw setDepthStencilState:px.depthStZ]; else
     [encDraw setDepthStencilState:px.depthStNoZ];
   [encDraw setRenderPipelineState:inst.pso];
@@ -307,10 +354,10 @@ void MtCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
   curLay   = px.lay.handler;
   }
 
-void Tempest::Detail::MtCommandBuffer::copy(Tempest::AbstractGraphicsApi::Buffer& dest, Tempest::TextureLayout defLayout,
+void Tempest::Detail::MtCommandBuffer::copy(Tempest::AbstractGraphicsApi::Buffer& dest, ResourceLayout defLayout,
                                             uint32_t width, uint32_t height, uint32_t mip,
                                             Tempest::AbstractGraphicsApi::Texture& src, size_t offset) {
-  setEncoder(E_Blit,nullptr,nullptr);
+  setEncoder(E_Blit,nullptr);
 
   auto& s = reinterpret_cast<MtTexture&>(src);
   auto& d = reinterpret_cast<MtBuffer&> (dest);
@@ -326,3 +373,4 @@ void Tempest::Detail::MtCommandBuffer::copy(Tempest::AbstractGraphicsApi::Buffer
                            destinationBytesPerRow:bpp*width
                            destinationBytesPerImage:bpp*width*height];
   }
+

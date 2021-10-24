@@ -28,7 +28,6 @@ class Game : public Tempest::Window {
       };
 
   private:
-    void initSwapchain();
     void paintEvent(Tempest::PaintEvent& event);
     void resizeEvent(Tempest::SizeEvent& event);
     void render();
@@ -43,8 +42,6 @@ class Game : public Tempest::Window {
     Tempest::Swapchain                  swapchain;
     Tempest::TextureAtlas               texAtlass;
 
-    Tempest::RenderPass                 pass;
-
     Tempest::VectorImage                surface;
     Tempest::VectorImage::Mesh          surfaceMesh[MaxFramesInFlight];
 
@@ -54,6 +51,4 @@ class Game : public Tempest::Window {
     Tempest::CommandBuffer              commands[MaxFramesInFlight];
     std::vector<Tempest::Fence>         fence;
     uint8_t                             cmdId = 0;
-
-    std::vector<Tempest::FrameBuffer>   fbo;
   };

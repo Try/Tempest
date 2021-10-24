@@ -18,23 +18,10 @@ Game::Game(Device& device)
 
   for(uint8_t i=0;i<MaxFramesInFlight;++i)
     fence.emplace_back(device.fence());
-
-  pass = device.pass(Tempest::FboMode(Tempest::FboMode::PreserveOut,Color(0.f,0.f,1.f,1.f)));
-  initSwapchain();
   }
 
 Game::~Game() {
   device.waitIdle();
-  }
-
-void Game::initSwapchain(){
-  const size_t imgC=swapchain.imageCount();
-
-  fbo.clear();
-  for(size_t i=0;i<imgC;++i) {
-    Tempest::Attachment& frame=swapchain.image(i);
-    fbo.emplace_back(device.frameBuffer(frame));
-    }
   }
 
 void Game::paintEvent(PaintEvent& event) {
@@ -54,7 +41,7 @@ void Game::resizeEvent(SizeEvent&) {
   for(auto& i:fence)
     i.wait();
   swapchain.reset();
-  initSwapchain();
+  update();
   }
 
 void Game::render(){
@@ -68,7 +55,7 @@ void Game::render(){
 
     {
     auto enc = cmd.startEncoding(device);
-    enc.setFramebuffer(fbo[swapchain.currentImage()],pass);
+    enc.setFramebuffer({{swapchain[swapchain.currentImage()],Vec4(0,0,1,1),Tempest::Preserve}});
     surfaceMesh[cmdId].update(device,surface);
     surfaceMesh[cmdId].draw(enc);
     }
@@ -78,6 +65,6 @@ void Game::render(){
     }
   catch(const Tempest::SwapchainSuboptimal&) {
     swapchain.reset();
-    initSwapchain();
+    update();
     }
   }

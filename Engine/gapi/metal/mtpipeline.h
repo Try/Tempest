@@ -32,8 +32,8 @@ class MtPipeline : public AbstractGraphicsApi::Pipeline {
     ~MtPipeline();
 
     struct Inst {
-      id<MTLRenderPipelineState>     pso;
-      DSharedPtr<const MtFboLayout*> fbo;
+      id<MTLRenderPipelineState> pso;
+      MtFboLayout                fbo;
       };
     Inst& inst(const MtFboLayout &lay);
 

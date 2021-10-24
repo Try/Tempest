@@ -2,7 +2,6 @@
 
 #include "mtdevice.h"
 #include "mtshader.h"
-#include "mtframebuffer.h"
 #include "mtfbolayout.h"
 #include "mtpipelinelay.h"
 
@@ -74,12 +73,12 @@ MtPipeline::~MtPipeline() {
 
 MtPipeline::Inst& MtPipeline::inst(const MtFboLayout& lay) {
   for(auto& i:instance)
-    if(i.fbo.handler->equals(lay))
+    if(i.fbo.equals(lay))
       return i;
   instance.emplace_back();
 
   Inst& ix = instance.back();
-  ix.fbo = DSharedPtr<const MtFboLayout*>(&lay);
+  ix.fbo = lay;
 
   for(size_t i=0; i<lay.numColors; ++i) {
     pdesc.colorAttachments[i].pixelFormat                 = lay.colorFormat[i];

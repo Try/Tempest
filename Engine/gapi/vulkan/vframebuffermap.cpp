@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_VULKAN)
+
 #include "vframebuffermap.h"
 
 #include "vdevice.h"
@@ -223,3 +225,5 @@ VkFramebuffer VFramebufferMap::mkFramebuffer(const VkImageView* attach, size_t a
   vkAssert(vkCreateFramebuffer(dev.device.impl,&crt,nullptr,&ret));
   return ret;
   }
+
+#endif
