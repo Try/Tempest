@@ -343,19 +343,36 @@ void Tempest::Detail::DxCommandBuffer::beginRendering(const AttachmentDesc* desc
       resState.setLayout(*att[i],TextureLayout::Sampler,desc[i].store==AccessOp::Preserve);
     }
 
-  //impl->BeginRenderPass(1, &renderPassRenderTargetDesc, &renderPassDepthStencilDesc, D3D12_RENDER_PASS_FLAG_NONE);
+  // TODO: render-pass api
+  // impl->BeginRenderPass(1, &renderPassRenderTargetDesc, &renderPassDepthStencilDesc, D3D12_RENDER_PASS_FLAG_NONE);
 
-  //  auto desc = fbo.rtvHeap->GetCPUDescriptorHandleForHeapStart();
-  D3D12_CPU_DESCRIPTOR_HANDLE handle;
-  D3D12_CPU_DESCRIPTOR_HANDLE ds;
+  D3D12_CPU_DESCRIPTOR_HANDLE  view[MaxFramebufferAttachments] = {};
+  D3D12_CPU_DESCRIPTOR_HANDLE* ds     = nullptr;
+  UINT                         viewSz = 0;
   for(size_t i=0; i<descSize; ++i) {
-    auto& dx = desc[i];
-    if(dx.attachment!=nullptr) {
-      impl->OMSetRenderTargets(UINT(descSize), &handle, TRUE, &ds);
-      } else {
-      impl->OMSetRenderTargets(UINT(descSize), &handle, TRUE, nullptr);
+    if(sw[i]!=nullptr) {
+      auto& t                      = *reinterpret_cast<DxSwapchain*>(sw[i]);
+      view[viewSz]                 = t.handles[imgId[i]];
+      fboLayout.RTVFormats[viewSz] = t.format();
+      ++viewSz;
+      }
+    else if(desc[i].attachment!=nullptr) {
+      auto& t                      = *reinterpret_cast<DxTextureWithRT*>(att[i]);
+      view[viewSz]                 = t.handle;
+      fboLayout.RTVFormats[viewSz] = nativeFormat(frm[i]);
+      ++viewSz;
+      }
+    else {
+      auto& t = *reinterpret_cast<DxTextureWithRT*>(att[i]);
+      fboLayout.DSVFormat = nativeFormat(frm[i]);
+      ds = &t.handle;
       }
     }
+  fboLayout.NumRenderTargets = viewSz;
+  if(ds==nullptr)
+    fboLayout.DSVFormat = DXGI_FORMAT_UNKNOWN;
+
+  impl->OMSetRenderTargets(viewSz, view, FALSE, ds);
 
   D3D12_VIEWPORT vp={};
   vp.TopLeftX = float(0.f);
@@ -373,21 +390,24 @@ void Tempest::Detail::DxCommandBuffer::beginRendering(const AttachmentDesc* desc
   sr.bottom = LONG(h);
   impl->RSSetScissorRects(1, &sr);
 
+  viewSz = 0;
   for(size_t i=0; i<descSize; ++i) {
     auto& dx = desc[i];
-    if(dx.load!=AccessOp::Clear)
-      continue;
-    if(dx.attachment!=nullptr) {
-      const float clearColor[] = { dx.clear.x, dx.clear.y, dx.clear.z, dx.clear.w };
-      impl->ClearRenderTargetView(handle, clearColor, 0, nullptr);
-      } else {
-      impl->ClearDepthStencilView(handle,D3D12_CLEAR_FLAG_DEPTH,dx.clear.x, 0, 0, nullptr);
+    if(dx.load==AccessOp::Clear) {
+      if(dx.attachment!=nullptr) {
+        const float clearColor[] = { dx.clear.x, dx.clear.y, dx.clear.z, dx.clear.w };
+        impl->ClearRenderTargetView(view[viewSz], clearColor, 0, nullptr);
+        } else {
+        impl->ClearDepthStencilView(*ds, D3D12_CLEAR_FLAG_DEPTH, dx.clear.x, 0, 0, nullptr);
+        }
       }
-    //desc.ptr+=fbo.rtvHeapInc;
+    if(dx.attachment!=nullptr)
+      ++viewSz;
     }
   }
 
 void Tempest::Detail::DxCommandBuffer::endRendering() {
+  // resState.flushLayout(*this);
   }
 
 void DxCommandBuffer::setViewport(const Rect& r) {
@@ -407,7 +427,7 @@ void Tempest::Detail::DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi:
   vboStride    = px.stride;
   ssboBarriers = px.ssboBarriers;
 
-  // impl->SetPipelineState(&px.instance(*currentFbo->lay.handler));
+  impl->SetPipelineState(&px.instance(fboLayout));
   impl->SetGraphicsRootSignature(px.sign.get());
   impl->IASetPrimitiveTopology(px.topology);
   }
@@ -495,10 +515,19 @@ void DxCommandBuffer::changeLayout(const AbstractGraphicsApi::BarrierDesc* desc,
       nativeImg     = s.views[b.swId].get();
       }
 
-    if(!b.preserve)
+    D3D12_RESOURCE_BARRIER barrier = {};
+    barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    barrier.Transition.pResource   = nativeImg;
+    barrier.Transition.StateBefore = Detail::nativeFormat(b.prev);
+    barrier.Transition.StateAfter  = Detail::nativeFormat(b.next);
+    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+    if(barrier.Transition.StateBefore!=barrier.Transition.StateAfter)
+      impl->ResourceBarrier(1,&barrier);
+
+    if(!b.preserve && (b.next==TextureLayout::ColorAttach || b.next==TextureLayout::ColorAttach))
       impl->DiscardResource(nativeImg,nullptr);
-    implChangeLayout(nativeImg,
-                     Detail::nativeFormat(b.prev), Detail::nativeFormat(b.next));
     }
   }
 

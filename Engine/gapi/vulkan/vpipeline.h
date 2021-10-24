@@ -14,8 +14,6 @@ namespace Detail {
 
 class VShader;
 class VDevice;
-class VFramebuffer;
-class VFramebufferLayout;
 class VPipelineLay;
 
 class VPipeline : public AbstractGraphicsApi::Pipeline {

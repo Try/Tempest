@@ -380,16 +380,6 @@ namespace Tempest {
       struct Texture:Shared  {
         virtual uint32_t      mipCount() const = 0;
         };
-      struct Fbo:Shared      {
-        virtual ~Fbo(){}
-        };
-      struct FboLayout:Shared      {
-        virtual ~FboLayout()=default;
-        virtual bool equals(const FboLayout&) const = 0;
-        };
-      struct Pass:Shared     {
-        virtual ~Pass()=default;
-        };
       struct Pipeline:Shared {};
       struct CompPipeline:Shared {};
       struct Shader:Shared   {};
@@ -463,10 +453,7 @@ namespace Tempest {
       using PTexture      = Detail::DSharedPtr<Texture*>;
       using PPipeline     = Detail::DSharedPtr<Pipeline*>;
       using PCompPipeline = Detail::DSharedPtr<CompPipeline*>;
-      using PPass         = Detail::DSharedPtr<Pass*>;
       using PShader       = Detail::DSharedPtr<Shader*>;
-      using PFbo          = Detail::DSharedPtr<Fbo*>;
-      using PFboLayout    = Detail::DSharedPtr<FboLayout*>;
       using PPipelineLay  = Detail::DSharedPtr<PipelineLay*>;
 
       virtual std::vector<Props> devices() const = 0;

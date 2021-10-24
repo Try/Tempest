@@ -6,6 +6,7 @@
 
 #include "comptr.h"
 #include "gapi/resourcestate.h"
+#include "dxfbolayout.h"
 #include "dxpipelinelay.h"
 
 namespace Tempest {
@@ -17,9 +18,6 @@ namespace Detail {
 class DxDevice;
 class DxBuffer;
 class DxTexture;
-class DxFramebuffer;
-class DxFboLayout;
-class DxRenderPass;
 
 class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
   public:
@@ -74,6 +72,8 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     ComPtr<ID3D12GraphicsCommandList> impl;
     bool                              recording=false;
     bool                              resetDone=false;
+
+    DxFboLayout                       fboLayout;
 
     ID3D12DescriptorHeap*             currentHeaps[DxPipelineLay::MAX_BINDS]={};
     DxDescriptorArray*                curUniforms = nullptr;

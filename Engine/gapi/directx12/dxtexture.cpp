@@ -1,6 +1,9 @@
 #if defined(TEMPEST_BUILD_DIRECTX12)
 
+#include "dxdevice.h"
 #include "dxtexture.h"
+#include "guid.h"
+
 #include <Tempest/Except>
 
 using namespace Tempest;
@@ -332,6 +335,22 @@ UINT Tempest::Detail::DxTexture::bytePerBlockCount() const {
       return 16;
     }
   throw DeviceLostException();
+  }
+
+DxTextureWithRT::DxTextureWithRT(DxDevice& dev, DxTexture&& base)
+  :DxTexture(std::move(base)) {
+  auto& device = *dev.device;
+
+  D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+  desc.Type           = nativeIsDepthFormat(format) ? D3D12_DESCRIPTOR_HEAP_TYPE_DSV : D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+  desc.NumDescriptors = 1;
+  desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+  dxAssert(device.CreateDescriptorHeap(&desc, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&heap)));
+
+  handle = heap->GetCPUDescriptorHandleForHeapStart();
+  if(nativeIsDepthFormat(format))
+    device.CreateDepthStencilView(impl.get(), nullptr, handle); else
+    device.CreateRenderTargetView(impl.get(), nullptr, handle);
   }
 
 #endif

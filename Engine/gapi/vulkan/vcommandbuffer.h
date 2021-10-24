@@ -12,10 +12,6 @@
 namespace Tempest {
 namespace Detail {
 
-class VRenderPass;
-class VFramebuffer;
-class VFramebufferLayout;
-
 class VDevice;
 class VCommandPool;
 
