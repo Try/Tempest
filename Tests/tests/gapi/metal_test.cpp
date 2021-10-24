@@ -39,7 +39,7 @@ TEST(MetalApi,VboDyn) {
 
 TEST(MetalApi,SsboCopy) {
 #if defined(__OSX__)
-  GapiTestCommon::bufCopy<VulkanApi,TextureFormat::RGBA8,uint8_t>();
+  GapiTestCommon::bufCopy<MetalApi,TextureFormat::RGBA8,uint8_t>();
 #endif
   }
 
