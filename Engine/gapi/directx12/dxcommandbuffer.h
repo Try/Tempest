@@ -21,6 +21,12 @@ class DxTexture;
 
 class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
   public:
+    enum RpState : uint8_t {
+      NoRecording,
+      Idle,
+      RenderPass,
+      Compute,
+      };
     DxCommandBuffer(DxDevice& d);
     ~DxCommandBuffer();
 
@@ -53,12 +59,11 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
                       size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) override;
     void dispatch    (size_t x, size_t y, size_t z) override;
 
-    void changeLayout(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) override;
-    void changeLayout(AbstractGraphicsApi::Buffer&  buf, BufferLayout  prev, BufferLayout  next) override;
-    void changeLayout(AbstractGraphicsApi::Texture& tex, TextureLayout prev, TextureLayout next, uint32_t mipId);
+    void barrier     (const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) override;
+    void changeLayout(AbstractGraphicsApi::Texture& tex, ResourceLayout prev, ResourceLayout next, uint32_t mipId);
 
-    void copy(AbstractGraphicsApi::Buffer& dest, TextureLayout defLayout, uint32_t width, uint32_t height, uint32_t mip, AbstractGraphicsApi::Texture& src, size_t offset) override;
-    void generateMipmap(AbstractGraphicsApi::Texture& image, TextureLayout defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
+    void copy(AbstractGraphicsApi::Buffer& dest, ResourceLayout defLayout, uint32_t width, uint32_t height, uint32_t mip, AbstractGraphicsApi::Texture& src, size_t offset) override;
+    void generateMipmap(AbstractGraphicsApi::Texture& image, ResourceLayout defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
 
     void copyRaw(AbstractGraphicsApi::Buffer& dest, uint32_t width, uint32_t height, uint32_t mip, const AbstractGraphicsApi::Texture& src, size_t offset);
     void copy(AbstractGraphicsApi::Buffer&  dest, size_t offsetDest, const AbstractGraphicsApi::Buffer& src, size_t offsetSrc, size_t size);
@@ -70,7 +75,6 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     DxDevice&                         dev;
     ComPtr<ID3D12CommandAllocator>    pool;
     ComPtr<ID3D12GraphicsCommandList> impl;
-    bool                              recording=false;
     bool                              resetDone=false;
 
     DxFboLayout                       fboLayout;
@@ -81,8 +85,8 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     UINT                              vboStride=0;
 
     ResourceState                     resState;
+    RpState                           state        = NoRecording;
     bool                              ssboBarriers = false;
-    bool                              isInCompute  = false;
 
     struct Stage {
       virtual ~Stage() = default;

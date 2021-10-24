@@ -266,8 +266,8 @@ AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixma
 
   cmd->copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
   if(mipCnt>1)
-    cmd->generateMipmap(*pbuf.handler, TextureLayout::TransferDest, p.w(), p.h(), mipCnt); else
-    cmd->changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler, uint32_t(-1));
+    cmd->generateMipmap(*pbuf.handler, ResourceLayout::TransferDest, p.w(), p.h(), mipCnt); else
+    cmd->changeLayout(*pbuf.handler, ResourceLayout::TransferDest, ResourceLayout::Sampler, uint32_t(-1));
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
   return PTexture(pbuf.handler);
@@ -327,7 +327,7 @@ AbstractGraphicsApi::PTexture DirectX12Api::createCompressedTexture(Device* d, c
     h = std::max<uint32_t>(4,h/2);
     }
 
-  cmd->changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler, uint32_t(-1));
+  cmd->changeLayout(*pbuf.handler, ResourceLayout::TransferDest, ResourceLayout::Sampler, uint32_t(-1));
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
   return PTexture(pbuf.handler);
@@ -351,7 +351,7 @@ AbstractGraphicsApi::PTexture DirectX12Api::createStorage(AbstractGraphicsApi::D
   return PTexture(pbuf.handler);
   }
 
-void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureLayout lay,
+void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, ResourceLayout lay,
                               TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip) {
   Detail::DxDevice&  dx = *reinterpret_cast<Detail::DxDevice*>(d);
   Detail::DxTexture& tx = *reinterpret_cast<Detail::DxTexture*>(t.handler);
@@ -366,9 +366,9 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, TextureL
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
-  cmd->changeLayout(tx,lay,TextureLayout::TransferSrc,mip);
+  cmd->changeLayout(tx,lay,ResourceLayout::TransferSrc,mip);
   cmd->copyRaw(stage,w,h,mip,tx,0);
-  cmd->changeLayout(tx,TextureLayout::TransferSrc,lay,mip);
+  cmd->changeLayout(tx,ResourceLayout::TransferSrc,lay,mip);
   cmd->end();
   dx.dataMgr().submitAndWait(std::move(cmd));
 

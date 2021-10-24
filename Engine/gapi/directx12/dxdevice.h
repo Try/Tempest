@@ -75,18 +75,36 @@ inline DXGI_FORMAT nativeFormat(TextureFormat f) {
   return vfrm[f];
   }
 
-inline D3D12_RESOURCE_STATES nativeFormat(TextureLayout f) {
-  static const D3D12_RESOURCE_STATES lay[]={
-    D3D12_RESOURCE_STATE_COMMON,
-    D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
-    D3D12_RESOURCE_STATE_RENDER_TARGET,
-    D3D12_RESOURCE_STATE_DEPTH_WRITE,
-    D3D12_RESOURCE_STATE_PRESENT,
-    D3D12_RESOURCE_STATE_COPY_SOURCE,
-    D3D12_RESOURCE_STATE_COPY_DEST,
-    D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
-    };
-  return lay[uint8_t(f)];
+inline D3D12_RESOURCE_STATES nativeFormat(ResourceLayout f) {
+  switch(f) {
+    case ResourceLayout::Undefined:
+      return D3D12_RESOURCE_STATE_COMMON;
+    case ResourceLayout::Sampler:
+      return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    case ResourceLayout::ColorAttach:
+      return D3D12_RESOURCE_STATE_RENDER_TARGET;
+    case ResourceLayout::DepthAttach:
+      return D3D12_RESOURCE_STATE_DEPTH_WRITE;
+    case ResourceLayout::Present:
+      return D3D12_RESOURCE_STATE_PRESENT;
+    case ResourceLayout::TransferSrc:
+      return D3D12_RESOURCE_STATE_COPY_SOURCE;
+    case ResourceLayout::TransferDest:
+      return D3D12_RESOURCE_STATE_COPY_DEST;
+    case ResourceLayout::Unordered:
+      return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    case ResourceLayout::Vertex:
+      return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+    case ResourceLayout::Index:
+      return D3D12_RESOURCE_STATE_INDEX_BUFFER;
+    case ResourceLayout::Uniform:
+      return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+    case ResourceLayout::ComputeRead:
+    case ResourceLayout::ComputeWrite:
+    case ResourceLayout::ComputeReadWrite:
+      return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    }
+  return D3D12_RESOURCE_STATE_COMMON;
   }
 
 inline D3D12_TEXTURE_ADDRESS_MODE nativeFormat(ClampMode f){

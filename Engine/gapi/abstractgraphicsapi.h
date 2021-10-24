@@ -402,14 +402,14 @@ namespace Tempest {
         virtual void ssboBarriers(Detail::ResourceState& res) = 0;
         };
       struct BarrierDesc {
-        Buffer*       buffer    = nullptr;
-        Texture*      texture   = nullptr;
-        Swapchain*    swapchain = nullptr;
-        uint32_t      swId      = 0;
+        Buffer*        buffer    = nullptr;
+        Texture*       texture   = nullptr;
+        Swapchain*     swapchain = nullptr;
+        uint32_t       swId      = 0;
 
-        TextureLayout prev      = TextureLayout::Undefined;
-        TextureLayout next      = TextureLayout::Undefined;
-        bool          preserve  = false;
+        ResourceLayout prev      = ResourceLayout::Undefined;
+        ResourceLayout next      = ResourceLayout::Undefined;
+        bool           preserve  = false;
         };
       struct CommandBuffer:NoCopy {
         virtual ~CommandBuffer()=default;
@@ -421,11 +421,10 @@ namespace Tempest {
                                     AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) = 0;
         virtual void endRendering() = 0;
 
-        virtual void changeLayout  (const BarrierDesc* desc, size_t cnt)=0;
-        virtual void changeLayout  (Buffer&  buf, BufferLayout  prev, BufferLayout  next)=0;
+        virtual void barrier(const BarrierDesc* desc, size_t cnt) = 0;
 
-        virtual void generateMipmap(Texture& image, TextureLayout defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels)=0;
-        virtual void copy(Buffer& dest, TextureLayout defLayout, uint32_t width, uint32_t height, uint32_t mip, Texture& src, size_t offset)=0;
+        virtual void generateMipmap(Texture& image, ResourceLayout defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels)=0;
+        virtual void copy(Buffer& dest, ResourceLayout defLayout, uint32_t width, uint32_t height, uint32_t mip, Texture& src, size_t offset)=0;
 
         virtual bool isRecording() const = 0;
         virtual void begin()=0;
@@ -491,7 +490,7 @@ namespace Tempest {
       virtual PTexture   createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm)=0;
       virtual PTexture   createStorage(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm)=0;
       virtual void       readPixels   (Device* d, Pixmap &out,const PTexture t,
-                                       TextureLayout lay, TextureFormat frm,
+                                       ResourceLayout lay, TextureFormat frm,
                                        const uint32_t w, const uint32_t h, uint32_t mip) = 0;
       virtual void       readBytes    (Device* d, Buffer* buf, void* out, size_t size) = 0;
 

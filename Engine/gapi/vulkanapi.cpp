@@ -133,7 +133,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   cmd->hold(pstage);
   cmd->hold(pbuf);
 
-  cmd->changeLayout(*pbuf.handler, TextureLayout::Undefined, TextureLayout::TransferDest, uint32_t(-1));
+  cmd->changeLayout(*pbuf.handler, ResourceLayout::Undefined, ResourceLayout::TransferDest, uint32_t(-1));
   if(isCompressedFormat(frm)){
     size_t blockSize  = Pixmap::blockSizeForFormat(pfrm);
     size_t bufferSize = 0;
@@ -148,12 +148,12 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
       h = std::max<uint32_t>(1,h/2);
       }
 
-    cmd->changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler, uint32_t(-1));
+    cmd->changeLayout(*pbuf.handler, ResourceLayout::TransferDest, ResourceLayout::Sampler, uint32_t(-1));
     } else {
     cmd->copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
     if(mipCnt>1)
-      cmd->generateMipmap(*pbuf.handler, TextureLayout::TransferDest, p.w(), p.h(), mipCnt); else
-      cmd->changeLayout(*pbuf.handler, TextureLayout::TransferDest, TextureLayout::Sampler, uint32_t(-1));
+      cmd->generateMipmap(*pbuf.handler, ResourceLayout::TransferDest, p.w(), p.h(), mipCnt); else
+      cmd->changeLayout(*pbuf.handler, ResourceLayout::TransferDest, ResourceLayout::Sampler, uint32_t(-1));
     }
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
@@ -182,7 +182,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createStorage(AbstractGraphicsApi::Devi
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
-  cmd->changeLayout(*pbuf.handler,TextureLayout::Undefined,TextureLayout::Unordered,uint32_t(-1));
+  cmd->changeLayout(*pbuf.handler,ResourceLayout::Undefined,ResourceLayout::Unordered,uint32_t(-1));
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
 
@@ -190,7 +190,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createStorage(AbstractGraphicsApi::Devi
   }
 
 void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PTexture t,
-                           TextureLayout lay, TextureFormat frm,
+                           ResourceLayout lay, TextureFormat frm,
                            const uint32_t w, const uint32_t h, uint32_t mip) {
   Detail::VDevice&  dx = *reinterpret_cast<Detail::VDevice*>(d);
   Detail::VTexture& tx = *reinterpret_cast<Detail::VTexture*>(t.handler);
