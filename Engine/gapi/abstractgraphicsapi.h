@@ -80,7 +80,8 @@ namespace Tempest {
     }
 
   enum  : uint8_t {
-    MaxFramebufferAttachments = 8+1
+    MaxFramebufferAttachments = 8+1,
+    MaxBarriers = 64,
     };
 
   enum Topology : uint8_t {

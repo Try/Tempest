@@ -29,7 +29,7 @@ void ResourceState::setLayout(AbstractGraphicsApi::Buffer& b, ResourceLayout lay
   }
 
 void ResourceState::flush(AbstractGraphicsApi::CommandBuffer& cmd) {
-  AbstractGraphicsApi::BarrierDesc barrier[128];
+  AbstractGraphicsApi::BarrierDesc barrier[MaxBarriers];
   uint8_t                          barrierCnt = 0;
   for(auto& i:imgState) {
     if(!i.outdated)
@@ -45,7 +45,7 @@ void ResourceState::flush(AbstractGraphicsApi::CommandBuffer& cmd) {
 
     i.last     = i.next;
     i.outdated = false;
-    if(barrierCnt==128) {
+    if(barrierCnt==MaxBarriers) {
       cmd.barrier(barrier,barrierCnt);
       barrierCnt = 0;
       }
@@ -66,7 +66,7 @@ void ResourceState::flush(AbstractGraphicsApi::CommandBuffer& cmd) {
 
     i.last     = i.next;
     i.outdated = false;
-    if(barrierCnt==128) {
+    if(barrierCnt==MaxBarriers) {
       cmd.barrier(barrier,barrierCnt);
       barrierCnt = 0;
       }
