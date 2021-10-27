@@ -127,6 +127,8 @@ class Widget {
     void         paintNested    (Tempest::PaintEvent&  event);
     virtual void resizeEvent    (Tempest::SizeEvent&   event);
 
+    virtual void mouseDoubleClickEvent(Tempest::MouseEvent&  event);
+
     virtual void mouseDownEvent (Tempest::MouseEvent&  event);
     virtual void mouseUpEvent   (Tempest::MouseEvent&  event);
     virtual void mouseMoveEvent (Tempest::MouseEvent&  event);

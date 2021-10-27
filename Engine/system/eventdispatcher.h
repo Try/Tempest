@@ -44,9 +44,11 @@ class EventDispatcher final {
 
     Widget*                      customRoot=nullptr;
     std::weak_ptr<Widget::Ref>   mouseUp;
+    std::weak_ptr<Widget::Ref>   mouseLast;
     std::weak_ptr<Widget::Ref>   mouseOver;
 
     std::vector<UiOverlay*>      overlays;
+    uint64_t                     mouseLastTime = 0;
 
 
     struct Modify final {

@@ -1,5 +1,6 @@
 #include "eventdispatcher.h"
 
+#include <Tempest/Application>
 #include <Tempest/Shortcut>
 #include <Tempest/Platform>
 #include <Tempest/UiOverlay>
@@ -28,10 +29,15 @@ void EventDispatcher::dispatchMouseDown(Widget &wnd, MouseEvent &e) {
     mouseUp = implDispatch(*i,e1);
     if(!mouseUp.expired())
       break;
+    if(e1.type()==MouseEvent::MouseDown)
+      mouseLast = mouseUp;
     }
+
 
   if(mouseUp.expired())
     mouseUp = implDispatch(wnd,e1);
+  if(e1.type()==MouseEvent::MouseDown)
+    mouseLast = mouseUp;
 
   if(auto w = mouseUp.lock()) {
     if(w->widget->focusPolicy() & ClickFocus) {
@@ -243,9 +249,20 @@ std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget& w, MouseEvent
     }
 
   if(it.owner!=nullptr) {
-    if(event.type()==Event::MouseDown)
-      it.owner->mouseDownEvent(event); else
+    if(event.type()==Event::MouseDown) {
+      auto     last     = mouseLast.lock();
+      bool     dblClick = false;
+      uint64_t time     = Application::tickCount();
+      if(time-mouseLastTime<1000 && last!=nullptr && last->widget==it.owner) {
+        dblClick = true;
+        }
+      mouseLastTime = time;
+      if(dblClick)
+        it.owner->mouseDoubleClickEvent(event); else
+        it.owner->mouseDownEvent(event);
+      } else {
       it.owner->mouseMoveEvent(event);
+      }
 
     if(event.isAccepted() && it.owner)
       return it.owner->selfReference();
