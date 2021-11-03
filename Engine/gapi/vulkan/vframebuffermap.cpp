@@ -61,10 +61,12 @@ void VFramebufferMap::notifyDestroy(VkImageView img) {
   auto device = dev.device.impl;
 
   std::lock_guard<std::mutex> guard(syncFbo);
-  for(size_t i=0; i<val.size(); ++i) {
+  for(size_t i=0; i<val.size();) {
     auto& v = *val[i];
-    if(!v.hasImg(img))
+    if(!v.hasImg(img)) {
+      ++i;
       continue;
+      }
     vkDestroyFramebuffer(device,v.fbo,nullptr);
     val[i] = std::move(val.back());
     val.pop_back();
