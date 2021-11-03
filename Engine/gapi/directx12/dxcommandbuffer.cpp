@@ -491,47 +491,60 @@ void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompu
     }
   }
 
+static ID3D12Resource* toDxResource(const AbstractGraphicsApi::BarrierDesc& b) {
+  if(b.texture!=nullptr) {
+    DxTexture& t = *reinterpret_cast<DxTexture*>(b.texture);
+    return t.impl.get();
+    }
+
+  if(b.buffer!=nullptr) {
+    DxBuffer& buf = *reinterpret_cast<DxBuffer*>(b.buffer);
+    return buf.impl.get();
+    }
+
+  DxSwapchain& s = *reinterpret_cast<DxSwapchain*>(b.swapchain);
+  return s.views[b.swId].get();
+  }
+
 void DxCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
+  D3D12_RESOURCE_BARRIER rb[MaxBarriers];
+  uint32_t               rbCount = 0;
+
   for(size_t i=0; i<cnt; ++i) {
     auto& b = desc[i];
-    if(b.buffer!=nullptr)
-      continue;
-
-    ID3D12Resource* nativeImg = nullptr;
-    if(b.texture!=nullptr) {
-      DxTexture& t   = *reinterpret_cast<DxTexture*>(b.texture);
-      nativeImg     = t.impl.get();
-      } else {
-      DxSwapchain& s = *reinterpret_cast<DxSwapchain*>(b.swapchain);
-      nativeImg     = s.views[b.swId].get();
-      }
-
-    D3D12_RESOURCE_BARRIER barrier = {};
-    barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-    barrier.Transition.pResource   = nativeImg;
-    barrier.Transition.StateBefore = Detail::nativeFormat(b.prev);
-    barrier.Transition.StateAfter  = Detail::nativeFormat(b.next);
-    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-
-    if(barrier.Transition.StateBefore!=barrier.Transition.StateAfter)
-      impl->ResourceBarrier(1,&barrier);
-
-    if(!b.preserve && (b.next==ResourceLayout::ColorAttach || b.next==ResourceLayout::ColorAttach))
+    ID3D12Resource* nativeImg = toDxResource(b);
+    if(!b.preserve && (b.prev==ResourceLayout::ColorAttach || b.prev==ResourceLayout::DepthAttach))
       impl->DiscardResource(nativeImg,nullptr);
     }
 
   for(size_t i=0; i<cnt; ++i) {
     auto& b = desc[i];
-    if(b.buffer==nullptr)
-      continue;
-    DxBuffer& buf = *reinterpret_cast<DxBuffer*>(b.buffer);
-    D3D12_RESOURCE_BARRIER barrier = {};
-    barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-    barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-    barrier.UAV.pResource          = buf.impl.get();
+    D3D12_RESOURCE_BARRIER& barrier = rb[rbCount];
+    if(b.buffer!=nullptr) {
+      barrier.Type                    = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+      barrier.Flags                   = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+      barrier.UAV.pResource           = toDxResource(b);
+      } else {
+      barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+      barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+      barrier.Transition.pResource   = toDxResource(b);
+      barrier.Transition.StateBefore = Detail::nativeFormat(b.prev);
+      barrier.Transition.StateAfter  = Detail::nativeFormat(b.next);
+      barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+      if(barrier.Transition.StateBefore==barrier.Transition.StateAfter)
+        continue;
+      }
+    ++rbCount;
+    }
 
-    impl->ResourceBarrier(1, &barrier);
+  if(rbCount>0)
+    impl->ResourceBarrier(rbCount,rb);
+
+  for(size_t i=0; i<cnt; ++i) {
+    auto& b = desc[i];
+    ID3D12Resource* nativeImg = toDxResource(b);
+    if(!b.preserve && (b.next==ResourceLayout::ColorAttach || b.next==ResourceLayout::DepthAttach))
+      impl->DiscardResource(nativeImg,nullptr);
     }
   }
 

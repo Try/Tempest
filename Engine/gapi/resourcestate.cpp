@@ -71,7 +71,8 @@ void ResourceState::flush(AbstractGraphicsApi::CommandBuffer& cmd) {
       barrierCnt = 0;
       }
     }
-  cmd.barrier(barrier,barrierCnt);
+  if(barrierCnt>0)
+    cmd.barrier(barrier,barrierCnt);
   }
 
 void ResourceState::finalize(AbstractGraphicsApi::CommandBuffer& cmd) {
