@@ -72,21 +72,21 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     ID3D12GraphicsCommandList* get() { return impl.get(); }
 
   private:
-    DxDevice&                         dev;
-    ComPtr<ID3D12CommandAllocator>    pool;
-    ComPtr<ID3D12GraphicsCommandList> impl;
-    bool                              resetDone=false;
+    DxDevice&                          dev;
+    ComPtr<ID3D12CommandAllocator>     pool;
+    ComPtr<ID3D12GraphicsCommandList4> impl;
+    bool                               resetDone=false;
 
-    DxFboLayout                       fboLayout;
+    DxFboLayout                        fboLayout;
 
-    ID3D12DescriptorHeap*             currentHeaps[DxPipelineLay::MAX_BINDS]={};
-    DxDescriptorArray*                curUniforms = nullptr;
+    ID3D12DescriptorHeap*              currentHeaps[DxPipelineLay::MAX_BINDS]={};
+    DxDescriptorArray*                 curUniforms = nullptr;
 
-    UINT                              vboStride=0;
+    UINT                               vboStride=0;
 
-    ResourceState                     resState;
-    RpState                           state        = NoRecording;
-    bool                              ssboBarriers = false;
+    ResourceState                      resState;
+    RpState                            state        = NoRecording;
+    bool                               ssboBarriers = false;
 
     struct Stage {
       virtual ~Stage() = default;

@@ -16,6 +16,24 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+static D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE mkLoadOp(const AccessOp op) {
+  switch(op) {
+    case AccessOp::Discard:  return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
+    case AccessOp::Preserve: return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+    case AccessOp::Clear:    return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+    }
+  return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS;
+  }
+
+static D3D12_RENDER_PASS_ENDING_ACCESS_TYPE mkStoreOp(const AccessOp op) {
+  switch(op) {
+    case AccessOp::Discard:  return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
+    case AccessOp::Preserve: return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+    case AccessOp::Clear:    return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+    }
+  return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS;
+  }
+
 struct DxCommandBuffer::Blit : Stage {
   Blit(DxDevice& dev,
        DxTexture& src, uint32_t /*srcW*/, uint32_t /*srcH*/, uint32_t srcMip,
@@ -286,7 +304,7 @@ DxCommandBuffer::DxCommandBuffer(DxDevice& d)
                                             reinterpret_cast<void**>(&pool)));
 
   dxAssert(d.device->CreateCommandList(0, type, pool.get(), nullptr,
-                                       uuid<ID3D12GraphicsCommandList>(), reinterpret_cast<void**>(&impl)));
+                                       uuid<ID3D12GraphicsCommandList4>(), reinterpret_cast<void**>(&impl)));
   impl->Close();
   }
 
@@ -343,36 +361,59 @@ void Tempest::Detail::DxCommandBuffer::beginRendering(const AttachmentDesc* desc
       resState.setLayout(*att[i],ResourceLayout::Sampler,desc[i].store==AccessOp::Preserve);
     }
 
-  // TODO: render-pass api
-  // impl->BeginRenderPass(1, &renderPassRenderTargetDesc, &renderPassDepthStencilDesc, D3D12_RENDER_PASS_FLAG_NONE);
-
-  D3D12_CPU_DESCRIPTOR_HANDLE  view[MaxFramebufferAttachments] = {};
-  D3D12_CPU_DESCRIPTOR_HANDLE* ds     = nullptr;
-  UINT                         viewSz = 0;
+  D3D12_RENDER_PASS_RENDER_TARGET_DESC view[MaxFramebufferAttachments] = {};
+  UINT                                 viewSz = 0;
+  D3D12_RENDER_PASS_DEPTH_STENCIL_DESC zdesc  = {};
+  zdesc.DepthBeginningAccess.Type   = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS;
+  zdesc.DepthEndingAccess.Type      = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS;
+  zdesc.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS;
+  zdesc.StencilEndingAccess.Type    = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS;
   for(size_t i=0; i<descSize; ++i) {
+    auto& dx    = desc[i];
+    auto& rdesc = view[viewSz];
     if(sw[i]!=nullptr) {
       auto& t                      = *reinterpret_cast<DxSwapchain*>(sw[i]);
-      view[viewSz]                 = t.handles[imgId[i]];
+      rdesc.cpuDescriptor          = t.handles[imgId[i]];
       fboLayout.RTVFormats[viewSz] = t.format();
       ++viewSz;
       }
     else if(desc[i].attachment!=nullptr) {
       auto& t                      = *reinterpret_cast<DxTextureWithRT*>(att[i]);
-      view[viewSz]                 = t.handle;
+      rdesc.cpuDescriptor          = t.handle;
       fboLayout.RTVFormats[viewSz] = nativeFormat(frm[i]);
       ++viewSz;
       }
     else {
       auto& t = *reinterpret_cast<DxTextureWithRT*>(att[i]);
       fboLayout.DSVFormat = nativeFormat(frm[i]);
-      ds = &t.handle;
+      zdesc.cpuDescriptor = t.handle;
+      }
+
+    if(desc[i].zbuffer!=nullptr) {
+      zdesc.DepthBeginningAccess.Type                                = mkLoadOp(dx.load);
+      zdesc.DepthEndingAccess.Type                                   = mkStoreOp(dx.store);
+      zdesc.DepthBeginningAccess.Clear.ClearValue.Format             = DXGI_FORMAT_D32_FLOAT;
+      zdesc.DepthBeginningAccess.Clear.ClearValue.DepthStencil.Depth = dx.clear.x;
+      } else {
+      rdesc.BeginningAccess.Type                      = mkLoadOp(dx.load);
+      rdesc.EndingAccess.Type                         = mkStoreOp(dx.store);
+      rdesc.BeginningAccess.Clear.ClearValue.Format   = DXGI_FORMAT_R32G32B32A32_FLOAT;
+      rdesc.BeginningAccess.Clear.ClearValue.Color[0] = dx.clear.x;
+      rdesc.BeginningAccess.Clear.ClearValue.Color[1] = dx.clear.y;
+      rdesc.BeginningAccess.Clear.ClearValue.Color[2] = dx.clear.z;
+      rdesc.BeginningAccess.Clear.ClearValue.Color[3] = dx.clear.w;
       }
     }
+
   fboLayout.NumRenderTargets = viewSz;
-  if(ds==nullptr)
+  if(zdesc.DepthBeginningAccess.Type==D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS)
     fboLayout.DSVFormat = DXGI_FORMAT_UNKNOWN;
 
-  impl->OMSetRenderTargets(viewSz, view, FALSE, ds);
+  if(zdesc.DepthBeginningAccess.Type==D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS) {
+    impl->BeginRenderPass(viewSz, view, nullptr, D3D12_RENDER_PASS_FLAG_NONE);
+    } else {
+    impl->BeginRenderPass(viewSz, view, &zdesc,  D3D12_RENDER_PASS_FLAG_NONE);
+    }
   state = RenderPass;
 
   D3D12_VIEWPORT vp={};
@@ -390,24 +431,10 @@ void Tempest::Detail::DxCommandBuffer::beginRendering(const AttachmentDesc* desc
   sr.right  = LONG(w);
   sr.bottom = LONG(h);
   impl->RSSetScissorRects(1, &sr);
-
-  viewSz = 0;
-  for(size_t i=0; i<descSize; ++i) {
-    auto& dx = desc[i];
-    if(dx.load==AccessOp::Clear) {
-      if(dx.attachment!=nullptr) {
-        const float clearColor[] = { dx.clear.x, dx.clear.y, dx.clear.z, dx.clear.w };
-        impl->ClearRenderTargetView(view[viewSz], clearColor, 0, nullptr);
-        } else {
-        impl->ClearDepthStencilView(*ds, D3D12_CLEAR_FLAG_DEPTH, dx.clear.x, 0, 0, nullptr);
-        }
-      }
-    if(dx.attachment!=nullptr)
-      ++viewSz;
-    }
   }
 
 void Tempest::Detail::DxCommandBuffer::endRendering() {
+  impl->EndRenderPass();
   // resState.flushLayout(*this);
   }
 
@@ -512,13 +539,6 @@ void DxCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size
 
   for(size_t i=0; i<cnt; ++i) {
     auto& b = desc[i];
-    ID3D12Resource* nativeImg = toDxResource(b);
-    if(!b.preserve && (b.prev==ResourceLayout::ColorAttach || b.prev==ResourceLayout::DepthAttach))
-      impl->DiscardResource(nativeImg,nullptr);
-    }
-
-  for(size_t i=0; i<cnt; ++i) {
-    auto& b = desc[i];
     D3D12_RESOURCE_BARRIER& barrier = rb[rbCount];
     if(b.buffer!=nullptr) {
       barrier.Type                    = D3D12_RESOURCE_BARRIER_TYPE_UAV;
@@ -539,13 +559,6 @@ void DxCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size
 
   if(rbCount>0)
     impl->ResourceBarrier(rbCount,rb);
-
-  for(size_t i=0; i<cnt; ++i) {
-    auto& b = desc[i];
-    ID3D12Resource* nativeImg = toDxResource(b);
-    if(!b.preserve && (b.next==ResourceLayout::ColorAttach || b.next==ResourceLayout::DepthAttach))
-      impl->DiscardResource(nativeImg,nullptr);
-    }
   }
 
 void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
