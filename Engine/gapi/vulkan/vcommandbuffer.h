@@ -67,10 +67,10 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void barrier     (const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) override;
 
-    void changeLayout(AbstractGraphicsApi::Texture& tex, ResourceLayout prev, ResourceLayout next, uint32_t mipId);
+    void changeLayout(AbstractGraphicsApi::Texture& tex, ResourceAccess prev, ResourceAccess next, uint32_t mipId);
 
-    void copy(AbstractGraphicsApi::Buffer& dest, ResourceLayout defLayout, uint32_t width, uint32_t height, uint32_t mip, AbstractGraphicsApi::Texture& src, size_t offset) override;
-    void generateMipmap(AbstractGraphicsApi::Texture& image, ResourceLayout defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
+    void copy(AbstractGraphicsApi::Buffer& dest, ResourceAccess defLayout, uint32_t width, uint32_t height, uint32_t mip, AbstractGraphicsApi::Texture& src, size_t offset) override;
+    void generateMipmap(AbstractGraphicsApi::Texture& image, ResourceAccess defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
 
     void copy(AbstractGraphicsApi::Texture& dest, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Buffer&  src, size_t offset);
     void copy(AbstractGraphicsApi::Buffer&  dest, size_t offsetDest, const AbstractGraphicsApi::Buffer& src, size_t offsetSrc, size_t size);
@@ -81,10 +81,6 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
   private:
     void implCopy(AbstractGraphicsApi::Buffer&  dest, size_t width, size_t height, size_t mip,
                   const AbstractGraphicsApi::Texture& src, size_t offset);
-    void implChangeLayout(VkImage dest, VkFormat imageFormat,
-                          VkImageLayout oldLayout, VkImageLayout newLayout, bool discardOld,
-                          uint32_t mipBase, uint32_t mipCount, bool byRegion);
-    void implChangeLayout(AbstractGraphicsApi::Buffer&  buf, ResourceLayout prev, ResourceLayout next);
 
     void addDependency(VSwapchain& s, size_t imgId);
 

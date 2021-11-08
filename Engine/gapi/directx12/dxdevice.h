@@ -75,36 +75,36 @@ inline DXGI_FORMAT nativeFormat(TextureFormat f) {
   return vfrm[f];
   }
 
-inline D3D12_RESOURCE_STATES nativeFormat(ResourceLayout f) {
-  switch(f) {
-    case ResourceLayout::Undefined:
-      return D3D12_RESOURCE_STATE_COMMON;
-    case ResourceLayout::Sampler:
-      return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-    case ResourceLayout::ColorAttach:
-      return D3D12_RESOURCE_STATE_RENDER_TARGET;
-    case ResourceLayout::DepthAttach:
-      return D3D12_RESOURCE_STATE_DEPTH_WRITE;
-    case ResourceLayout::Present:
-      return D3D12_RESOURCE_STATE_PRESENT;
-    case ResourceLayout::TransferSrc:
-      return D3D12_RESOURCE_STATE_COPY_SOURCE;
-    case ResourceLayout::TransferDest:
-      return D3D12_RESOURCE_STATE_COPY_DEST;
-    case ResourceLayout::Unordered:
-      return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-    case ResourceLayout::Vertex:
-      return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-    case ResourceLayout::Index:
-      return D3D12_RESOURCE_STATE_INDEX_BUFFER;
-    case ResourceLayout::Uniform:
-      return D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-    case ResourceLayout::ComputeRead:
-    case ResourceLayout::ComputeWrite:
-    case ResourceLayout::ComputeReadWrite:
-      return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-    }
-  return D3D12_RESOURCE_STATE_COMMON;
+inline D3D12_RESOURCE_STATES nativeFormat(ResourceAccess f) {
+  uint32_t st = 0;
+
+  if((f&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
+    st |= D3D12_RESOURCE_STATE_COPY_SOURCE;
+  if((f&ResourceAccess::TransferDest)==ResourceAccess::TransferDest)
+    st |= D3D12_RESOURCE_STATE_COPY_DEST;
+
+  if((f&ResourceAccess::Sampler)==ResourceAccess::Sampler)
+    st |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+  if((f&ResourceAccess::ColorAttach)==ResourceAccess::ColorAttach)
+    st |= D3D12_RESOURCE_STATE_RENDER_TARGET;
+  if((f&ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach)
+    st |= D3D12_RESOURCE_STATE_DEPTH_WRITE;
+  if((f&ResourceAccess::Unordered)==ResourceAccess::Unordered)
+    st |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+
+  if((f&ResourceAccess::Vertex)==ResourceAccess::Vertex)
+    st |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+  if((f&ResourceAccess::Index)==ResourceAccess::Index)
+    st |= D3D12_RESOURCE_STATE_INDEX_BUFFER;
+  if((f&ResourceAccess::Uniform)==ResourceAccess::Uniform)
+    st |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+
+  if((f&ResourceAccess::ComputeRead)==ResourceAccess::ComputeRead)
+    st |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+  if((f&ResourceAccess::ComputeWrite)==ResourceAccess::ComputeWrite)
+    st |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+
+  return D3D12_RESOURCE_STATES(st);
   }
 
 inline D3D12_TEXTURE_ADDRESS_MODE nativeFormat(ClampMode f){

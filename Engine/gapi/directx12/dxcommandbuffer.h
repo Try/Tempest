@@ -60,10 +60,10 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void dispatch    (size_t x, size_t y, size_t z) override;
 
     void barrier     (const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) override;
-    void changeLayout(AbstractGraphicsApi::Texture& tex, ResourceLayout prev, ResourceLayout next, uint32_t mipId);
+    void changeLayout(AbstractGraphicsApi::Texture& tex, ResourceAccess prev, ResourceAccess next, uint32_t mipId);
 
-    void copy(AbstractGraphicsApi::Buffer& dest, ResourceLayout defLayout, uint32_t width, uint32_t height, uint32_t mip, AbstractGraphicsApi::Texture& src, size_t offset) override;
-    void generateMipmap(AbstractGraphicsApi::Texture& image, ResourceLayout defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
+    void copy(AbstractGraphicsApi::Buffer& dest, ResourceAccess defLayout, uint32_t width, uint32_t height, uint32_t mip, AbstractGraphicsApi::Texture& src, size_t offset) override;
+    void generateMipmap(AbstractGraphicsApi::Texture& image, ResourceAccess defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
 
     void copyRaw(AbstractGraphicsApi::Buffer& dest, uint32_t width, uint32_t height, uint32_t mip, const AbstractGraphicsApi::Texture& src, size_t offset);
     void copy(AbstractGraphicsApi::Buffer&  dest, size_t offsetDest, const AbstractGraphicsApi::Buffer& src, size_t offsetSrc, size_t size);
@@ -105,7 +105,6 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
                 AbstractGraphicsApi::Texture& dst, uint32_t dstW, uint32_t dstH, uint32_t dstMip);
 
     void implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompute);
-    void implChangeLayout(ID3D12Resource* res, D3D12_RESOURCE_STATES prev, D3D12_RESOURCE_STATES lay);
 
     friend class Tempest::DirectX12Api;
   };

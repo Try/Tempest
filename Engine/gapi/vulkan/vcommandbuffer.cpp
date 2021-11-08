@@ -16,6 +16,113 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+static VkAccessFlagBits nativeFormat(ResourceAccess rs) {
+  uint32_t ret = 0;
+  if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
+    ret |= VK_ACCESS_TRANSFER_READ_BIT;
+  if((rs&ResourceAccess::TransferDest)==ResourceAccess::TransferDest)
+    ret |= VK_ACCESS_TRANSFER_WRITE_BIT;
+
+  if((rs&ResourceAccess::Present)==ResourceAccess::Present)
+    ret |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+
+  if((rs&ResourceAccess::Sampler)==ResourceAccess::Sampler)
+    ret |= VK_ACCESS_SHADER_READ_BIT;
+  if((rs&ResourceAccess::ColorAttach)==ResourceAccess::ColorAttach)
+    ret |= (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+  if((rs&ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach)
+    ret |= (VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
+  if((rs&ResourceAccess::Unordered)==ResourceAccess::Unordered)
+    ret |= (VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+
+  if((rs&ResourceAccess::Index)==ResourceAccess::Index)
+    ret |= VK_ACCESS_INDEX_READ_BIT;
+  if((rs&ResourceAccess::Vertex)==ResourceAccess::Vertex)
+    ret |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+  if((rs&ResourceAccess::Vertex)==ResourceAccess::Uniform)
+    ret |= VK_ACCESS_UNIFORM_READ_BIT;
+
+  if((rs&ResourceAccess::ComputeRead)==ResourceAccess::ComputeRead)
+    ret |= VK_ACCESS_SHADER_READ_BIT;
+  if((rs&ResourceAccess::ComputeWrite)==ResourceAccess::ComputeWrite)
+    ret |= VK_ACCESS_SHADER_WRITE_BIT;
+
+  return VkAccessFlagBits(ret);
+  }
+
+static VkPipelineStageFlags toStage(VkAccessFlags a) {
+  uint32_t ret = 0;
+  if((a&VK_ACCESS_INDEX_READ_BIT)==VK_ACCESS_INDEX_READ_BIT)
+    ret |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+  if((a&VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)==VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)
+    ret |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+
+  if((a&VK_ACCESS_UNIFORM_READ_BIT)==VK_ACCESS_UNIFORM_READ_BIT)
+    ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+  if((a&VK_ACCESS_SHADER_READ_BIT)==VK_ACCESS_SHADER_READ_BIT)
+    ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+  if((a&VK_ACCESS_SHADER_WRITE_BIT)==VK_ACCESS_SHADER_WRITE_BIT)
+    ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
+  if((a&VK_ACCESS_COLOR_ATTACHMENT_READ_BIT)==VK_ACCESS_COLOR_ATTACHMENT_READ_BIT)
+    ret |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  if((a&VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)==VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+    ret |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+  if((a&VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT)==VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT)
+    ret |= (VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
+  if((a&VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)==VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
+    ret |= (VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
+
+  if((a&VK_ACCESS_TRANSFER_READ_BIT)==VK_ACCESS_TRANSFER_READ_BIT)
+    ret |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+  if((a&VK_ACCESS_TRANSFER_WRITE_BIT)==VK_ACCESS_TRANSFER_WRITE_BIT)
+    ret |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+  return VkPipelineStageFlagBits(ret);
+  }
+
+static VkImageLayout toLayout(VkAccessFlags a) {
+  if((a&VK_ACCESS_COLOR_ATTACHMENT_READ_BIT)==VK_ACCESS_COLOR_ATTACHMENT_READ_BIT)
+    return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+  if((a&VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)==VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+    return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+  if((a&VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT)==VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT)
+    return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+  if((a&VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)==VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
+    return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+
+  if((a&VK_ACCESS_TRANSFER_READ_BIT)==VK_ACCESS_TRANSFER_READ_BIT)
+    return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+  if((a&VK_ACCESS_TRANSFER_WRITE_BIT)==VK_ACCESS_TRANSFER_WRITE_BIT)
+    return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+  if((a&VK_ACCESS_SHADER_WRITE_BIT)==VK_ACCESS_SHADER_WRITE_BIT)
+    return VK_IMAGE_LAYOUT_GENERAL;
+
+  if(a==0)
+    return VK_IMAGE_LAYOUT_UNDEFINED;
+
+  return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  }
+
+static VkImage toVkResource(const AbstractGraphicsApi::BarrierDesc& b) {
+  if(b.texture!=nullptr) {
+    VTexture& t = *reinterpret_cast<VTexture*>(b.texture);
+    return t.impl;
+    }
+
+  if(b.buffer!=nullptr) {
+    VBuffer& buf = *reinterpret_cast<VBuffer*>(b.buffer);
+    return buf.impl;
+    }
+
+  VSwapchain& s = *reinterpret_cast<VSwapchain*>(b.swapchain);
+  return s.images[b.swId];
+  }
+
+
 VCommandBuffer::VCommandBuffer(VDevice& device, VkCommandPoolCreateFlags flags)
   :device(device), pool(device,flags) {
   VkCommandBufferAllocateInfo allocInfo = {};
@@ -80,23 +187,7 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
   auto fb  = fbo.get();
   pass = fbo->pass;
 
-  for(size_t i=0; i<descSize; ++i) {
-    if(isDepthFormat(frm[i]))
-      resState.setLayout(*att[i],ResourceLayout::DepthAttach,desc[i].load==AccessOp::Preserve);
-    else if(frm[i]==TextureFormat::Undefined)
-      resState.setLayout(*sw[i],imgId[i],ResourceLayout::ColorAttach,desc[i].load==AccessOp::Preserve);
-    else
-      resState.setLayout(*att[i],ResourceLayout::ColorAttach,desc[i].load==AccessOp::Preserve);
-    }
-  resState.flush(*this);
-  for(size_t i=0; i<descSize; ++i) {
-    if(isDepthFormat(frm[i]))
-      resState.setLayout(*att[i],ResourceLayout::DepthAttach,desc[i].store==AccessOp::Preserve);
-    else if(frm[i]==TextureFormat::Undefined)
-      resState.setLayout(*sw[i],imgId[i],ResourceLayout::Present,desc[i].store==AccessOp::Preserve);
-    else
-      resState.setLayout(*att[i],ResourceLayout::Sampler,desc[i].store==AccessOp::Preserve);
-    }
+  resState.setRenderpass(*this,desc,descSize,frm,att,sw,imgId);
 
   VkClearValue clr[MaxFramebufferAttachments];
   for(size_t i=0; i<descSize; ++i) {
@@ -335,31 +426,30 @@ void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, u
                  filter);
   }
 
-void Tempest::Detail::VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dest, ResourceLayout defLayout,
+void Tempest::Detail::VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dest, ResourceAccess defLayout,
                                            uint32_t width, uint32_t height, uint32_t mip,
                                            AbstractGraphicsApi::Texture& src, size_t offset) {
   //resState.setLayout(src,TextureLayout::TransferSrc,true); // TODO: more advanced layout tracker
   resState.flush(*this);
 
-  changeLayout(src,defLayout,ResourceLayout::TransferSrc,mip);
+  changeLayout(src,defLayout,ResourceAccess::TransferSrc,mip);
   implCopy(dest,width,height,mip,src,offset);
-  changeLayout(src,ResourceLayout::TransferSrc,defLayout,mip);
+  changeLayout(src,ResourceAccess::TransferSrc,defLayout,mip);
   }
 
 void VCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
-                                  ResourceLayout prev, ResourceLayout next, uint32_t mipId) {
-  auto&    vt       = reinterpret_cast<VTexture&>(t);
-  auto     p        = (prev==ResourceLayout::Undefined ? ResourceLayout::Sampler : prev);
-  uint32_t mipBase  = (mipId==uint32_t(-1) ? 0         : mipId);
-  uint32_t mipCount = (mipId==uint32_t(-1) ? vt.mipCnt : 1);
-
-  implChangeLayout(vt.impl,vt.format,
-                   Detail::nativeFormat(p), Detail::nativeFormat(next),
-                   prev==ResourceLayout::Undefined, mipBase, mipCount, false);
+                                  ResourceAccess prev, ResourceAccess next, uint32_t mipId) {
+  AbstractGraphicsApi::BarrierDesc b;
+  b.texture = &t;
+  b.prev     = prev;
+  b.next     = next;
+  b.mip      = mipId;
+  b.discard  = (prev==ResourceAccess::None);
+  barrier(&b,1);
   }
 
 void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
-                                    ResourceLayout defLayout,
+                                    ResourceAccess defLayout,
                                     uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
   resState.flush(*this);
 
@@ -378,258 +468,149 @@ void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
   int32_t w = int32_t(texWidth);
   int32_t h = int32_t(texHeight);
 
-  if(defLayout!=ResourceLayout::TransferDest) {
-    changeLayout(img,defLayout,ResourceLayout::TransferDest,uint32_t(-1));
-    }
+  if(defLayout!=ResourceAccess::TransferDest)
+    changeLayout(img,defLayout,ResourceAccess::TransferDest,uint32_t(-1));
 
   for(uint32_t i=1; i<mipLevels; ++i) {
     const int mw = (w==1 ? 1 : w/2);
     const int mh = (h==1 ? 1 : h/2);
 
-    changeLayout(img,ResourceLayout::TransferDest,ResourceLayout::TransferSrc,i-1);
+    changeLayout(img,ResourceAccess::TransferDest,ResourceAccess::TransferSrc,i-1);
     blit(img,  w, h, i-1,
          img, mw,mh, i);
-    changeLayout(img,ResourceLayout::TransferSrc, ResourceLayout::Sampler,    i-1);
+    changeLayout(img,ResourceAccess::TransferSrc, ResourceAccess::Sampler,    i-1);
 
     w = mw;
     h = mh;
     }
-  changeLayout(img,ResourceLayout::TransferDest, ResourceLayout::Sampler, mipLevels-1);
+  changeLayout(img,ResourceAccess::TransferDest, ResourceAccess::Sampler, mipLevels-1);
   }
 
-static VkPipelineStageFlags accessToStage(const VkAccessFlags a, const VulkanInstance::VkProp& prop) {
-  VkPipelineStageFlags ret = 0;
-
-  if(a&(VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_UNIFORM_READ_BIT)) {
-    ret |= (VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT  |
-            VK_PIPELINE_STAGE_VERTEX_SHADER_BIT   |
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-    if(prop.geometryShader)
-      ret |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
-    if(prop.tesselationShader)
-      ret |= VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT |
-             VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT;
-
-    /* TODO: ray tracing feature
-    ret |= (VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR      |
-            VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV |
-            VK_PIPELINE_STAGE_TASK_SHADER_BIT_NV);
-    */
+static void fillSubresource(VkImageMemoryBarrier& img, const AbstractGraphicsApi::BarrierDesc& desc) {
+  VkFormat nativeFormat = VK_FORMAT_UNDEFINED;
+  if(desc.texture!=nullptr) {
+    VTexture& t   = *reinterpret_cast<VTexture*>  (desc.texture);
+    nativeFormat  = t.format;
+    } else {
+    VSwapchain& s = *reinterpret_cast<VSwapchain*>(desc.swapchain);
+    nativeFormat  = s.format();
     }
 
-  if(a&(VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)) {
-    ret |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    }
+  img.subresourceRange.baseMipLevel   = desc.mip==uint32_t(-1) ? 0 : desc.mip;
+  img.subresourceRange.levelCount     = desc.mip==uint32_t(-1) ? VK_REMAINING_MIP_LEVELS : 1;
+  img.subresourceRange.baseArrayLayer = 0;
+  img.subresourceRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
 
-  if(a&(VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)) {
-    ret |= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    ret |= VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-    }
-
-  if(a&(VK_ACCESS_TRANSFER_READ_BIT|VK_ACCESS_TRANSFER_WRITE_BIT)) {
-    ret |= VK_PIPELINE_STAGE_TRANSFER_BIT;
-    }
-
-  if(a&(VK_ACCESS_HOST_READ_BIT|VK_ACCESS_HOST_WRITE_BIT)) {
-    ret |= VK_PIPELINE_STAGE_HOST_BIT;
-    }
-
-  if(a&(VK_ACCESS_MEMORY_READ_BIT|VK_ACCESS_MEMORY_WRITE_BIT)) {
-    ret |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-    }
-
-  return ret;
-  }
-
-static VkAccessFlags layoutToAccess(VkImageLayout lay) {
-  switch(lay) {
-    case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-      return VK_ACCESS_TRANSFER_READ_BIT;
-    case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-      return VK_ACCESS_TRANSFER_WRITE_BIT;
-    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-    case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL:
-    case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL:
-    case VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL:
-    case VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL:
-      return VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT|VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-      return VK_ACCESS_COLOR_ATTACHMENT_READ_BIT|VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-      return VK_ACCESS_SHADER_READ_BIT;
-    case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-      // can be BOTTOM_OF_PIPE for dest-access
-      return VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
-    case VK_IMAGE_LAYOUT_GENERAL:
-      return VK_ACCESS_MEMORY_READ_BIT|VK_ACCESS_MEMORY_WRITE_BIT;
-    case VK_IMAGE_LAYOUT_UNDEFINED:
-    case VK_IMAGE_LAYOUT_MAX_ENUM:
-      throw std::invalid_argument("invalid layout transition!");
-    case VK_IMAGE_LAYOUT_PREINITIALIZED:
-    case VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR:
-    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
-    case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL:
-    case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL:
-    //case VK_IMAGE_LAYOUT_SHADING_RATE_OPTIMAL_NV:
-    //case VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT:
-      //TODO
-      throw std::invalid_argument("unimplemented layout transition!");
-    }
-  throw std::invalid_argument("unimplemented layout transition!");
-  }
-
-void VCommandBuffer::implChangeLayout(VkImage dest, VkFormat imageFormat,
-                                      VkImageLayout oldLayout, VkImageLayout newLayout,
-                                      bool discardOld,
-                                      uint32_t mipBase, uint32_t mipCount,
-                                      bool byRegion) {
-  VkImageMemoryBarrier barrier = {};
-  barrier.sType                = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-  barrier.oldLayout            = oldLayout;
-  barrier.newLayout            = newLayout;
-  barrier.srcQueueFamilyIndex  = VK_QUEUE_FAMILY_IGNORED;
-  barrier.dstQueueFamilyIndex  = VK_QUEUE_FAMILY_IGNORED;
-  barrier.image                = dest;
-
-  if(device.graphicsQueue->family!=device.presentQueue->family) {
-    if(newLayout==VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
-      barrier.srcQueueFamilyIndex  = device.graphicsQueue->family;
-      barrier.dstQueueFamilyIndex  = device.presentQueue->family;
-      }
-    else if(oldLayout==VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
-      barrier.srcQueueFamilyIndex  = device.presentQueue->family;
-      barrier.dstQueueFamilyIndex  = device.graphicsQueue->family;
-      }
-    }
-
-  barrier.subresourceRange.baseMipLevel   = mipBase;
-  barrier.subresourceRange.levelCount     = mipCount;
-  barrier.subresourceRange.baseArrayLayer = 0;
-  barrier.subresourceRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
-
-  if(imageFormat==VK_FORMAT_D24_UNORM_S8_UINT || imageFormat==VK_FORMAT_D16_UNORM_S8_UINT || imageFormat==VK_FORMAT_D32_SFLOAT_S8_UINT)
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT; else
-  if(Detail::nativeIsDepthFormat(imageFormat))
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; else
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
-  VkAccessFlags srcAccessMask = layoutToAccess(oldLayout);
-  VkAccessFlags dstAccessMask = layoutToAccess(newLayout);
-
-  VkPipelineStageFlags srcStage = accessToStage(srcAccessMask,device.props);
-  VkPipelineStageFlags dstStage = accessToStage(dstAccessMask,device.props);
-
-  barrier.srcAccessMask = srcAccessMask;
-  barrier.dstAccessMask = dstAccessMask;
-
-  VkDependencyFlags depFlg=0;
-  if(byRegion)
-    depFlg = VK_DEPENDENCY_BY_REGION_BIT;
-  if(discardOld)
-    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-  vkCmdPipelineBarrier(
-      impl,
-      srcStage, dstStage,
-      depFlg,
-      0, nullptr,
-      0, nullptr,
-      1, &barrier
-        );
-  }
-
-void VCommandBuffer::implChangeLayout(AbstractGraphicsApi::Buffer& buf, ResourceLayout prev, ResourceLayout next) {
-  VkBufferMemoryBarrier barrier = {};
-  barrier.sType                 = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-
-  barrier.srcQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
-  barrier.dstQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
-  barrier.buffer                = reinterpret_cast<VBuffer&>(buf).impl;
-  barrier.offset                = 0;
-  barrier.size                  = VK_WHOLE_SIZE;
-
-  VkPipelineStageFlags srcStage = 0;
-  VkPipelineStageFlags dstStage = 0;
-
-  bool hadWrite = false;
-  if(prev==ResourceLayout::ComputeWrite || prev==ResourceLayout::ComputeReadWrite) {
-    hadWrite = true;
-    }
-
-  switch(next) {
-    case ResourceLayout::Undefined:
-      break;
-    case ResourceLayout::ComputeRead:
-      if(hadWrite) {
-        // Read-after-Write
-        barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-        srcStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-        dstStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-        } else {
-        // Read-after-Read
-        return;
-        }
-      break;
-    case ResourceLayout::ComputeReadWrite:
-      if(hadWrite) {
-        // Read-after-Write
-        barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-        srcStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-        dstStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-        } else {
-        // Write-after-Read
-        barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-
-        srcStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-        dstStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-        }
-      break;
-    default:
-      // unused for now
-      throw DeviceLostException();
-    }
-
-  vkCmdPipelineBarrier(
-        impl,
-        srcStage, dstStage,
-        0,
-        0, nullptr,
-        1, &barrier,
-        0, nullptr);
+  if(nativeFormat==VK_FORMAT_D24_UNORM_S8_UINT || nativeFormat==VK_FORMAT_D16_UNORM_S8_UINT || nativeFormat==VK_FORMAT_D32_SFLOAT_S8_UINT)
+    img.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT; else
+  if(Detail::nativeIsDepthFormat(nativeFormat))
+    img.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; else
+    img.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   }
 
 void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
-  for(size_t i=0; i<cnt; ++i) {
-    auto& b = desc[i];
-    if(b.buffer!=nullptr)
-      continue;
-    VkImage   nativeImg    = VK_NULL_HANDLE;
-    VkFormat  nativeFormat = VK_FORMAT_UNDEFINED;
-    if(b.texture!=nullptr) {
-      VTexture& t   = *reinterpret_cast<VTexture*>(b.texture);
-      nativeImg     = t.impl;
-      nativeFormat  = t.format;
-      } else {
-      VSwapchain& s = *reinterpret_cast<VSwapchain*>(b.swapchain);
-      nativeImg     = s.images[b.swId];
-      nativeFormat  = s.format();
-      }
-    implChangeLayout(nativeImg, nativeFormat,
-                     Detail::nativeFormat(b.prev), Detail::nativeFormat(b.next),
-                     !b.preserve, 0, VK_REMAINING_MIP_LEVELS, false);
-    }
+
+  {
+  VkBufferMemoryBarrier bufBarrier[MaxBarriers] = {};
+  VkPipelineStageFlags  srcStage = 0;
+  VkPipelineStageFlags  dstStage = 0;
+  uint32_t              pbCount  = 0;
 
   for(size_t i=0; i<cnt; ++i) {
     auto& b = desc[i];
     if(b.buffer==nullptr)
       continue;
-    implChangeLayout(*b.buffer, b.prev, b.next);
+    auto& bx = bufBarrier[pbCount];
+    bx.sType                 = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    bx.srcQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
+    bx.dstQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
+    bx.buffer                = reinterpret_cast<VBuffer&>(*b.buffer).impl;
+    bx.offset                = 0;
+    bx.size                  = VK_WHOLE_SIZE;
+
+    bx.srcAccessMask         = ::nativeFormat(b.prev);
+    bx.dstAccessMask         = ::nativeFormat(b.next);
+
+    srcStage                |= toStage(bx.srcAccessMask);
+    dstStage                |= toStage(bx.dstAccessMask);
+
+    if(srcStage==0)
+      srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT; // wait for nothing: asset uploading case
+
+    ++pbCount;
     }
+
+  if(pbCount>0) {
+    vkCmdPipelineBarrier(
+          impl,
+          srcStage, dstStage,
+          0,
+          0, nullptr,
+          pbCount, bufBarrier,
+          0, nullptr);
+    }
+  }
+
+  {
+  VkImageMemoryBarrier imgBarrier[MaxBarriers] = {};
+  VkPipelineStageFlags srcStage = 0;
+  VkPipelineStageFlags dstStage = 0;
+  uint32_t             pbCount  = 0;
+
+  for(size_t i=0; i<cnt; ++i) {
+    auto& b = desc[i];
+    if(b.buffer!=nullptr)
+      continue;
+    auto& bx = imgBarrier[pbCount];
+    bx.sType                 = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    bx.srcQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
+    bx.dstQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
+    bx.image                 = toVkResource(b);
+
+    bx.srcAccessMask         = ::nativeFormat(b.prev);
+    bx.dstAccessMask         = ::nativeFormat(b.next);
+
+    bx.oldLayout             = toLayout(bx.srcAccessMask);
+    bx.newLayout             = toLayout(bx.dstAccessMask);
+
+    srcStage                |= toStage(bx.srcAccessMask);
+    dstStage                |= toStage(bx.dstAccessMask);
+
+    if(srcStage==0)
+      srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT; // wait for nothing: asset uploading case
+    if(b.prev==ResourceAccess::Present)
+      bx.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    if(b.next==ResourceAccess::Present)
+      bx.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    fillSubresource(bx,b);
+    if(device.graphicsQueue->family!=device.presentQueue->family) {
+      if(bx.newLayout==VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+        bx.srcQueueFamilyIndex  = device.graphicsQueue->family;
+        bx.dstQueueFamilyIndex  = device.presentQueue->family;
+        }
+      else if(bx.oldLayout==VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+        bx.srcQueueFamilyIndex  = device.presentQueue->family;
+        bx.dstQueueFamilyIndex  = device.graphicsQueue->family;
+        }
+      }
+
+    if(b.discard)
+      bx.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    ++pbCount;
+    }
+
+  if(pbCount>0) {
+    vkCmdPipelineBarrier(
+          impl,
+          srcStage, dstStage,
+          0,
+          0, nullptr,
+          0, nullptr,
+          pbCount, imgBarrier);
+    }
+  }
   }
 
 void VCommandBuffer::addDependency(VSwapchain& s, size_t imgId) {

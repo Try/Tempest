@@ -331,7 +331,7 @@ void MtCommandBuffer::setTexture(const MtPipelineLay::MTLBind& mtl,
   }
 
 void MtCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture &image,
-                                     ResourceLayout /*defLayout*/,
+                                     ResourceAccess /*defLayout*/,
                                      uint32_t /*texWidth*/, uint32_t /*texHeight*/,
                                      uint32_t /*mipLevels*/) {
   setEncoder(E_Blit,nullptr);
@@ -354,7 +354,7 @@ void MtCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
   curLay   = px.lay.handler;
   }
 
-void Tempest::Detail::MtCommandBuffer::copy(Tempest::AbstractGraphicsApi::Buffer& dest, ResourceLayout defLayout,
+void Tempest::Detail::MtCommandBuffer::copy(Tempest::AbstractGraphicsApi::Buffer& dest, ResourceAccess defLayout,
                                             uint32_t width, uint32_t height, uint32_t mip,
                                             Tempest::AbstractGraphicsApi::Texture& src, size_t offset) {
   setEncoder(E_Blit,nullptr);

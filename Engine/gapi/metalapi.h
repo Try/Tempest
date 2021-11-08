@@ -35,7 +35,7 @@ class MetalApi : public AbstractGraphicsApi {
     PTexture       createStorage(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;
 
     void           readPixels(Device *d, Pixmap &out, const PTexture t,
-                              ResourceLayout lay, TextureFormat frm,
+                              ResourceAccess lay, TextureFormat frm,
                               const uint32_t w, const uint32_t h, uint32_t mip) override;
     void           readBytes(Device* d, Buffer* buf, void* out, size_t size) override;
 

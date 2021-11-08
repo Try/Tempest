@@ -407,10 +407,11 @@ namespace Tempest {
         Texture*       texture   = nullptr;
         Swapchain*     swapchain = nullptr;
         uint32_t       swId      = 0;
+        uint32_t       mip       = 0;
 
-        ResourceLayout prev      = ResourceLayout::Undefined;
-        ResourceLayout next      = ResourceLayout::Undefined;
-        bool           preserve  = false;
+        ResourceAccess prev      = ResourceAccess::None;
+        ResourceAccess next      = ResourceAccess::None;
+        bool           discard   = false;
         };
       struct CommandBuffer:NoCopy {
         virtual ~CommandBuffer()=default;
@@ -424,8 +425,8 @@ namespace Tempest {
 
         virtual void barrier(const BarrierDesc* desc, size_t cnt) = 0;
 
-        virtual void generateMipmap(Texture& image, ResourceLayout defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels)=0;
-        virtual void copy(Buffer& dest, ResourceLayout defLayout, uint32_t width, uint32_t height, uint32_t mip, Texture& src, size_t offset)=0;
+        virtual void generateMipmap(Texture& image, ResourceAccess defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels)=0;
+        virtual void copy(Buffer& dest, ResourceAccess defLayout, uint32_t width, uint32_t height, uint32_t mip, Texture& src, size_t offset)=0;
 
         virtual bool isRecording() const = 0;
         virtual void begin()=0;
@@ -491,7 +492,7 @@ namespace Tempest {
       virtual PTexture   createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm)=0;
       virtual PTexture   createStorage(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm)=0;
       virtual void       readPixels   (Device* d, Pixmap &out,const PTexture t,
-                                       ResourceLayout lay, TextureFormat frm,
+                                       ResourceAccess lay, TextureFormat frm,
                                        const uint32_t w, const uint32_t h, uint32_t mip) = 0;
       virtual void       readBytes    (Device* d, Buffer* buf, void* out, size_t size) = 0;
 

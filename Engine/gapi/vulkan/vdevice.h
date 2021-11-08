@@ -66,38 +66,6 @@ inline VkFormat nativeFormat(TextureFormat f) {
   return vfrm[f];
   }
 
-inline VkImageLayout nativeFormat(ResourceLayout f) {
-  switch(f) {
-    case ResourceLayout::Undefined:
-      return VK_IMAGE_LAYOUT_UNDEFINED;
-    case ResourceLayout::Sampler:
-      return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    case ResourceLayout::ColorAttach:
-      return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    case ResourceLayout::DepthAttach:
-      return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    case ResourceLayout::Present:
-      return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    case ResourceLayout::TransferSrc:
-      return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    case ResourceLayout::TransferDest:
-      return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    case ResourceLayout::Unordered:
-      return VK_IMAGE_LAYOUT_GENERAL;
-
-    case ResourceLayout::ComputeRead:
-    case ResourceLayout::ComputeWrite:
-    case ResourceLayout::ComputeReadWrite:
-      return VK_IMAGE_LAYOUT_GENERAL;
-
-    case ResourceLayout::Vertex:
-    case ResourceLayout::Index:
-    case ResourceLayout::Uniform:
-      return VK_IMAGE_LAYOUT_GENERAL;
-    }
-  return VK_IMAGE_LAYOUT_UNDEFINED;
-  }
-
 inline bool nativeIsDepthFormat(VkFormat f){
   return f==VK_FORMAT_D16_UNORM ||
          f==VK_FORMAT_X8_D24_UNORM_PACK32 ||

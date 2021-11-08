@@ -32,7 +32,7 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     void endRendering() override;
 
     void barrier       (const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) override;
-    void generateMipmap(AbstractGraphicsApi::Texture& image, ResourceLayout defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
+    void generateMipmap(AbstractGraphicsApi::Texture& image, ResourceAccess defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
 
     bool isRecording() const override;
     void begin() override;
@@ -55,7 +55,7 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
                       size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) override;
     void dispatch    (size_t x, size_t y, size_t z) override;
 
-    void copy        (AbstractGraphicsApi::Buffer& dest, ResourceLayout defLayout, uint32_t width, uint32_t height, uint32_t mip, AbstractGraphicsApi::Texture& src, size_t offset) override;
+    void copy        (AbstractGraphicsApi::Buffer& dest, ResourceAccess defLayout, uint32_t width, uint32_t height, uint32_t mip, AbstractGraphicsApi::Texture& src, size_t offset) override;
 
   private:
     enum EncType:uint8_t {

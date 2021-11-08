@@ -189,7 +189,7 @@ void VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& swapCh
     vkAssert(vkCreateSemaphore(device.device.impl,&info,nullptr,&i.aquire));
     vkAssert(vkCreateSemaphore(device.device.impl,&info,nullptr,&i.present));
     }
-  fence = FenceList(device.device.impl,views.size());
+  fence = FenceList(device.device.impl,uint32_t(views.size()));
   aquireNextImage();
   }
 

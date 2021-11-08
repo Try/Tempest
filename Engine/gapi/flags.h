@@ -28,23 +28,32 @@ enum class BufferHeap : uint8_t {
   Readback = 3,
   };
 
+// TODO: move away from public header
+enum ResourceAccess : uint32_t {
+  None             = 0,
+  TransferSrc      = 1 << 0,
+  TransferDest     = 1 << 1,
 
-enum class ResourceLayout : uint8_t {
-  Undefined,
-  Sampler,
-  ColorAttach,
-  DepthAttach,
-  Present,
-  TransferSrc,
-  TransferDest,
-  Unordered,
+  Present          = 1 << 2,
 
-  Vertex,
-  Index,
-  Uniform,
-  ComputeRead,
-  ComputeWrite,
-  ComputeReadWrite,
+  Sampler          = 1 << 3,
+  ColorAttach      = 1 << 4,
+  DepthAttach      = 1 << 5,
+  Unordered        = 1 << 6,
+
+  Index            = 1 << 7,
+  Vertex           = 1 << 8,
+  Uniform          = 1 << 9,
+  ComputeRead      = 1 << 10,
+  ComputeWrite     = 1 << 11,
   };
+
+inline ResourceAccess operator | (ResourceAccess a,const ResourceAccess& b) {
+  return ResourceAccess(uint32_t(a)|uint32_t(b));
+  }
+
+inline ResourceAccess operator & (ResourceAccess a,const ResourceAccess& b) {
+  return ResourceAccess(uint32_t(a)&uint32_t(b));
+  }
 
 }

@@ -46,7 +46,6 @@ TEST(DirectX12Api,SsboDyn) {
 
 TEST(DirectX12Api,SsboCopy) {
 #if defined(_MSC_VER)
-  RenderDoc::start();
   // TODO: test more formats
   GapiTestCommon::bufCopy<DirectX12Api,TextureFormat::R8,  uint8_t> ();
   GapiTestCommon::bufCopy<DirectX12Api,TextureFormat::R16, uint16_t>();
@@ -58,7 +57,6 @@ TEST(DirectX12Api,SsboCopy) {
 
   GapiTestCommon::bufCopy<DirectX12Api,TextureFormat::RGBA8, uint8_t> ();
   //GapiTestCommon::bufCopy<DirectX12Api,TextureFormat::RGBA16,uint16_t>();
-  RenderDoc::stop();
 #endif
   }
 

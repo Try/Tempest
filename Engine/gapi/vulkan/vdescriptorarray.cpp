@@ -184,10 +184,10 @@ void VDescriptorArray::ssboBarriers(ResourceState& res) {
       case ShaderReflection::Push:
         break;
       case ShaderReflection::SsboR:
-        res.setLayout(*ssbo[i].buf,ResourceLayout::ComputeRead);
+        res.setLayout(*ssbo[i].buf,ResourceAccess::ComputeRead);
         break;
       case ShaderReflection::SsboRW:
-        res.setLayout(*ssbo[i].buf,ResourceLayout::ComputeReadWrite);
+        res.setLayout(*ssbo[i].buf,ResourceAccess::ComputeRead | ResourceAccess::ComputeWrite);
         break;
       case ShaderReflection::ImgR:
       case ShaderReflection::ImgRW:
