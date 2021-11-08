@@ -227,7 +227,7 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
 void VCommandBuffer::endRendering() {
   vkCmdEndRenderPass(impl);
   state = Idle;
-  resState.flush(*this);
+  // resState.flush(*this);
   }
 
 void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {

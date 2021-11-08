@@ -23,7 +23,7 @@ void ResourceState::setRenderpass(AbstractGraphicsApi::CommandBuffer& cmd,
     if(isDepthFormat(frm[i]))
       setLayout(*att[i],ResourceAccess::DepthAttach,discard);
     else if(frm[i]==TextureFormat::Undefined)
-      setLayout(*sw[i],imgId[i],ResourceAccess::Present,discard);
+      setLayout(*sw[i],imgId[i],ResourceAccess::ColorAttach,discard); // execution barrier
     else
       setLayout(*att[i],ResourceAccess::Sampler,discard);
     }
@@ -123,6 +123,12 @@ void ResourceState::finalize(AbstractGraphicsApi::CommandBuffer& cmd) {
     if((i.last & ResourceAccess::ComputeWrite)!=ResourceAccess::ComputeWrite)
       continue;
     i.next     = ResourceAccess::ComputeRead;
+    i.outdated = true;
+    }
+  for(auto& i:imgState) {
+    if(i.sw==nullptr)
+      continue;
+    i.next     = ResourceAccess::Present;
     i.outdated = true;
     }
   flush(cmd);
