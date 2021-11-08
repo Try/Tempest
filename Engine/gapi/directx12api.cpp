@@ -25,6 +25,7 @@ using namespace Tempest::Detail;
 
 struct DirectX12Api::Impl {
   Impl(bool validation) {
+    CoInitialize(nullptr);
     d3d12_dll = LoadLibraryA("d3d12.dll");
     initApi(dllApi);
 
