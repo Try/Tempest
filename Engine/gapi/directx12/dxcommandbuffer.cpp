@@ -34,6 +34,54 @@ static D3D12_RENDER_PASS_ENDING_ACCESS_TYPE mkStoreOp(const AccessOp op) {
   return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS;
   }
 
+static D3D12_RESOURCE_STATES nativeFormat(ResourceAccess f) {
+  uint32_t st = 0;
+
+  if((f&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
+    st |= D3D12_RESOURCE_STATE_COPY_SOURCE;
+  if((f&ResourceAccess::TransferDest)==ResourceAccess::TransferDest)
+    st |= D3D12_RESOURCE_STATE_COPY_DEST;
+
+  if((f&ResourceAccess::Sampler)==ResourceAccess::Sampler)
+    st |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+
+  if((f&ResourceAccess::ColorAttach)==ResourceAccess::ColorAttach)
+    st |= D3D12_RESOURCE_STATE_RENDER_TARGET;
+  if((f&ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach)
+    st |= D3D12_RESOURCE_STATE_DEPTH_WRITE;
+  if((f&ResourceAccess::Unordered)==ResourceAccess::Unordered)
+    st |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+
+  if((f&ResourceAccess::Vertex)==ResourceAccess::Vertex)
+    st |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+  if((f&ResourceAccess::Index)==ResourceAccess::Index)
+    st |= D3D12_RESOURCE_STATE_INDEX_BUFFER;
+  if((f&ResourceAccess::Uniform)==ResourceAccess::Uniform)
+    st |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+
+  if((f&ResourceAccess::ComputeRead)==ResourceAccess::ComputeRead)
+    st |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+  if((f&ResourceAccess::ComputeWrite)==ResourceAccess::ComputeWrite)
+    st |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+
+  return D3D12_RESOURCE_STATES(st);
+  }
+
+static ID3D12Resource* toDxResource(const AbstractGraphicsApi::BarrierDesc& b) {
+  if(b.texture!=nullptr) {
+    DxTexture& t = *reinterpret_cast<DxTexture*>(b.texture);
+    return t.impl.get();
+    }
+
+  if(b.buffer!=nullptr) {
+    DxBuffer& buf = *reinterpret_cast<DxBuffer*>(b.buffer);
+    return buf.impl.get();
+    }
+
+  DxSwapchain& s = *reinterpret_cast<DxSwapchain*>(b.swapchain);
+  return s.views[b.swId].get();
+  }
+
 struct DxCommandBuffer::Blit : Stage {
   Blit(DxDevice& dev,
        DxTexture& src, uint32_t /*srcW*/, uint32_t /*srcH*/, uint32_t srcMip,
@@ -502,21 +550,6 @@ void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompu
     }
   }
 
-static ID3D12Resource* toDxResource(const AbstractGraphicsApi::BarrierDesc& b) {
-  if(b.texture!=nullptr) {
-    DxTexture& t = *reinterpret_cast<DxTexture*>(b.texture);
-    return t.impl.get();
-    }
-
-  if(b.buffer!=nullptr) {
-    DxBuffer& buf = *reinterpret_cast<DxBuffer*>(b.buffer);
-    return buf.impl.get();
-    }
-
-  DxSwapchain& s = *reinterpret_cast<DxSwapchain*>(b.swapchain);
-  return s.views[b.swId].get();
-  }
-
 void DxCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
   D3D12_RESOURCE_BARRIER rb[MaxBarriers];
   uint32_t               rbCount = 0;
@@ -532,8 +565,8 @@ void DxCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size
       barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
       barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
       barrier.Transition.pResource   = toDxResource(b);
-      barrier.Transition.StateBefore = Detail::nativeFormat(b.prev);
-      barrier.Transition.StateAfter  = Detail::nativeFormat(b.next);
+      barrier.Transition.StateBefore = ::nativeFormat(b.prev);
+      barrier.Transition.StateAfter  = ::nativeFormat(b.next);
       barrier.Transition.Subresource = (b.mip==uint32_t(-1) ?  D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES : b.mip);
       if(barrier.Transition.StateBefore==barrier.Transition.StateAfter)
         continue;

@@ -24,7 +24,7 @@ DxPipeline::DxPipeline(DxDevice& device,
     };
   topology       = dxTopolgy[int(tp)];
   pushConstantId = ulay.pushConstantId;
-  ssboBarriers   = ulay.hasSsbo;
+  ssboBarriers   = ulay.hasSSBO;
 
   if(vert!=nullptr) {
     declSize = UINT(vert->vdecl.size());
@@ -192,7 +192,7 @@ DxCompPipeline::DxCompPipeline(DxDevice& device, const DxPipelineLay& ulay, DxSh
   sign.get()->AddRef();
 
   pushConstantId = ulay.pushConstantId;
-  ssboBarriers   = ulay.hasSsbo;
+  ssboBarriers   = ulay.hasSSBO;
 
   D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
   psoDesc.pRootSignature = sign.get();

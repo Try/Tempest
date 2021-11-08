@@ -50,61 +50,70 @@ static VkAccessFlagBits nativeFormat(ResourceAccess rs) {
   return VkAccessFlagBits(ret);
   }
 
-static VkPipelineStageFlags toStage(VkAccessFlags a) {
+static VkPipelineStageFlags toStage(ResourceAccess rs) {
   uint32_t ret = 0;
-  if((a&VK_ACCESS_INDEX_READ_BIT)==VK_ACCESS_INDEX_READ_BIT)
-    ret |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-  if((a&VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)==VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)
-    ret |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-
-  if((a&VK_ACCESS_UNIFORM_READ_BIT)==VK_ACCESS_UNIFORM_READ_BIT)
-    ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-  if((a&VK_ACCESS_SHADER_READ_BIT)==VK_ACCESS_SHADER_READ_BIT)
-    ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-  if((a&VK_ACCESS_SHADER_WRITE_BIT)==VK_ACCESS_SHADER_WRITE_BIT)
-    ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-
-  if((a&VK_ACCESS_COLOR_ATTACHMENT_READ_BIT)==VK_ACCESS_COLOR_ATTACHMENT_READ_BIT)
-    ret |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-  if((a&VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)==VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-    ret |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
-  if((a&VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT)==VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT)
-    ret |= (VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
-  if((a&VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)==VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
-    ret |= (VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
-
-  if((a&VK_ACCESS_TRANSFER_READ_BIT)==VK_ACCESS_TRANSFER_READ_BIT)
+  if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
     ret |= VK_PIPELINE_STAGE_TRANSFER_BIT;
-  if((a&VK_ACCESS_TRANSFER_WRITE_BIT)==VK_ACCESS_TRANSFER_WRITE_BIT)
+  if((rs&ResourceAccess::TransferDest)==ResourceAccess::TransferDest)
     ret |= VK_PIPELINE_STAGE_TRANSFER_BIT;
 
+  if((rs&ResourceAccess::Present)==ResourceAccess::Present)
+    ret |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+  if((rs&ResourceAccess::Sampler)==ResourceAccess::Sampler)
+    ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+  if((rs&ResourceAccess::ColorAttach)==ResourceAccess::ColorAttach)
+    ret |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  if((rs&ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach)
+    ret |= (VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
+  if((rs&ResourceAccess::Unordered)==ResourceAccess::Unordered)
+    ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
+  if((rs&ResourceAccess::Index)==ResourceAccess::Index)
+    ret |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+  if((rs&ResourceAccess::Vertex)==ResourceAccess::Vertex)
+    ret |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+  if((rs&ResourceAccess::Vertex)==ResourceAccess::Uniform)
+    ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
+  if((rs&ResourceAccess::ComputeRead)==ResourceAccess::ComputeRead)
+    ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+  if((rs&ResourceAccess::ComputeWrite)==ResourceAccess::ComputeWrite)
+    ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
   return VkPipelineStageFlagBits(ret);
   }
 
-static VkImageLayout toLayout(VkAccessFlags a) {
-  if((a&VK_ACCESS_COLOR_ATTACHMENT_READ_BIT)==VK_ACCESS_COLOR_ATTACHMENT_READ_BIT)
-    return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-  if((a&VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)==VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-    return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-  if((a&VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT)==VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT)
-    return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
-  if((a&VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)==VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
-    return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
-
-  if((a&VK_ACCESS_TRANSFER_READ_BIT)==VK_ACCESS_TRANSFER_READ_BIT)
+static VkImageLayout toLayout(ResourceAccess rs) {
+  if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
     return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-  if((a&VK_ACCESS_TRANSFER_WRITE_BIT)==VK_ACCESS_TRANSFER_WRITE_BIT)
+  if((rs&ResourceAccess::TransferDest)==ResourceAccess::TransferDest)
     return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
-  if((a&VK_ACCESS_SHADER_WRITE_BIT)==VK_ACCESS_SHADER_WRITE_BIT)
+  if((rs&ResourceAccess::Present)==ResourceAccess::Present)
+    return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+  if((rs&ResourceAccess::Sampler)==ResourceAccess::Sampler)
+    return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  if((rs&ResourceAccess::ColorAttach)==ResourceAccess::ColorAttach)
+    return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+  if((rs&ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach)
+    return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+  if((rs&ResourceAccess::Unordered)==ResourceAccess::Unordered)
     return VK_IMAGE_LAYOUT_GENERAL;
 
-  if(a==0)
-    return VK_IMAGE_LAYOUT_UNDEFINED;
+  if((rs&ResourceAccess::Index)==ResourceAccess::Index)
+    return VK_IMAGE_LAYOUT_GENERAL;
+  if((rs&ResourceAccess::Vertex)==ResourceAccess::Vertex)
+    return VK_IMAGE_LAYOUT_GENERAL;
+  if((rs&ResourceAccess::Vertex)==ResourceAccess::Uniform)
+    return VK_IMAGE_LAYOUT_GENERAL;
 
-  return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  if((rs&ResourceAccess::ComputeRead)==ResourceAccess::ComputeRead)
+    return VK_IMAGE_LAYOUT_GENERAL;
+  if((rs&ResourceAccess::ComputeWrite)==ResourceAccess::ComputeWrite)
+    return VK_IMAGE_LAYOUT_GENERAL;
+
+  return VK_IMAGE_LAYOUT_UNDEFINED;
   }
 
 static VkImage toVkResource(const AbstractGraphicsApi::BarrierDesc& b) {
@@ -531,8 +540,8 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
     bx.srcAccessMask         = ::nativeFormat(b.prev);
     bx.dstAccessMask         = ::nativeFormat(b.next);
 
-    srcStage                |= toStage(bx.srcAccessMask);
-    dstStage                |= toStage(bx.dstAccessMask);
+    srcStage                |= toStage(b.prev);
+    dstStage                |= toStage(b.next);
 
     if(srcStage==0)
       srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT; // wait for nothing: asset uploading case
@@ -570,11 +579,11 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
     bx.srcAccessMask         = ::nativeFormat(b.prev);
     bx.dstAccessMask         = ::nativeFormat(b.next);
 
-    bx.oldLayout             = toLayout(bx.srcAccessMask);
-    bx.newLayout             = toLayout(bx.dstAccessMask);
+    bx.oldLayout             = toLayout(b.prev);
+    bx.newLayout             = toLayout(b.next);
 
-    srcStage                |= toStage(bx.srcAccessMask);
-    dstStage                |= toStage(bx.dstAccessMask);
+    srcStage                |= toStage(b.prev);
+    dstStage                |= toStage(b.next);
 
     if(srcStage==0)
       srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT; // wait for nothing: asset uploading case

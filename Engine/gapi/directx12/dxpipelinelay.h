@@ -76,7 +76,7 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
     size_t                      pushConstantId=0;
     std::vector<Binding>        lay;
 
-    bool                        hasSsbo = false;
+    bool                        hasSSBO = false;
 
     ComPtr<ID3D12RootSignature> impl;
     DxDevice&                   dev;

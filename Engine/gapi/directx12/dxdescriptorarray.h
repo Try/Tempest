@@ -26,6 +26,13 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
     DSharedPtr<DxPipelineLay*>    lay;
     DxPipelineLay::PoolAllocation val;
     UINT                          heapCnt = 0;
+
+  private:
+    struct SSBO {
+      AbstractGraphicsApi::Texture* tex = nullptr;
+      AbstractGraphicsApi::Buffer*  buf = nullptr;
+      };
+    std::unique_ptr<SSBO[]>  ssbo;
   };
 
 }}

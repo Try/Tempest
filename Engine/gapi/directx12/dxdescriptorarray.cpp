@@ -33,6 +33,8 @@ static int swizzle(ComponentSwizzle cs, int def){
 
 DxDescriptorArray::DxDescriptorArray(DxPipelineLay& vlay)
   : lay(&vlay) {
+  if(lay.handler->hasSSBO)
+    ssbo.reset(new SSBO[vlay.lay.size()]);
   val     = lay.handler->allocDescriptors();
   heapCnt = UINT(vlay.heaps.size());
   }
@@ -130,7 +132,7 @@ void DxDescriptorArray::setUbo(size_t id, AbstractGraphicsApi::Buffer* b, size_t
   device.CreateConstantBufferView(&cbvDesc, gpu);
   }
 
-void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, Tempest::AbstractGraphicsApi::Texture* tex, uint32_t mipLevel) {
+void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi::Texture* tex, uint32_t mipLevel) {
   auto&      device = *lay.handler->dev.device;
   DxTexture& t      = *reinterpret_cast<DxTexture*>(tex);
   auto&      prm    = lay.handler->prm[id];
@@ -161,6 +163,9 @@ void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, Tempest::AbstractGra
     gpu.ptr += prm.heapOffset;
     device.CreateShaderResourceView(t.impl.get(),&desc,gpu);
     }
+
+  if(lay.handler->hasSSBO)
+    ssbo[id].tex = tex;
   }
 
 void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi::Buffer* b,
@@ -198,9 +203,29 @@ void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi:
     gpu.ptr += prm.heapOffset;
     device.CreateShaderResourceView(buf.impl.get(),&desc,gpu);
     }
+
+  if(lay.handler->hasSSBO)
+    ssbo[id].buf = b;
   }
 
-void DxDescriptorArray::ssboBarriers(ResourceState& /*res*/) {
+void DxDescriptorArray::ssboBarriers(ResourceState& res) {
+  for(size_t i=0; i<lay.handler->lay.size(); ++i) {
+    switch(lay.handler->lay[i].cls) {
+      case ShaderReflection::Ubo:
+      case ShaderReflection::Texture:
+      case ShaderReflection::Push:
+        break;
+      case ShaderReflection::SsboR:
+        res.setLayout(*ssbo[i].buf,ResourceAccess::ComputeRead);
+        break;
+      case ShaderReflection::SsboRW:
+        res.setLayout(*ssbo[i].buf,ResourceAccess::ComputeRead | ResourceAccess::ComputeWrite);
+        break;
+      case ShaderReflection::ImgR:
+      case ShaderReflection::ImgRW:
+        break;
+      }
+    }
   }
 
 #endif
