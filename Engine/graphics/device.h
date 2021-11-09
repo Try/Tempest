@@ -57,10 +57,10 @@ class Device {
 
     Swapchain            swapchain(SystemApi::Window* w) const;
 
-    Shader               loadShader(RFile&          file);
-    Shader               loadShader(const char*     filename);
-    Shader               loadShader(const char16_t* filename);
-    Shader               shader    (const void* source, const size_t length);
+    Shader               shader(RFile&          file);
+    Shader               shader(const char*     filename);
+    Shader               shader(const char16_t* filename);
+    Shader               shader(const void* source, const size_t length);
 
     const Props&         properties() const;
 
@@ -126,11 +126,10 @@ class Device {
     DescriptorSet        descriptors(const ComputePipeline& pso) { return descriptors(pso.layout()); }
     DescriptorSet        descriptors(const PipelineLayout&  lay);
 
+    Texture2d            texture    (const Pixmap& pm, const bool mips = true);
     Attachment           attachment (TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips = false);
     ZBuffer              zbuffer    (TextureFormat frm, const uint32_t w, const uint32_t h);
-    Texture2d            loadTexture(const Pixmap& pm,bool mips=true);
-
-    StorageImage         image2d    (TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips=false);
+    StorageImage         image2d    (TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips = false);
 
     Pixmap               readPixels (const Texture2d&    t, uint32_t mip=0);
     Pixmap               readPixels (const Attachment&   t, uint32_t mip=0);

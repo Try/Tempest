@@ -150,11 +150,11 @@ TEST(DirectX12Api,Spirv_DS) {
     DirectX12Api api{ApiFlags::Validation};
     Device       device(api);
 
-    auto tese0 = device.loadShader("shader/tess.tese.sprv");
-    auto tese1 = device.loadShader("shader/spirv_ds_01.tese.sprv");
-    auto tese2 = device.loadShader("shader/spirv_ds_02.tese.sprv");
-    auto tese3 = device.loadShader("shader/spirv_ds_03.tese.sprv");
-    auto tese4 = device.loadShader("shader/spirv_ds_quad.tese.sprv");
+    auto tese0 = device.shader("shader/tess.tese.sprv");
+    auto tese1 = device.shader("shader/spirv_ds_01.tese.sprv");
+    auto tese2 = device.shader("shader/spirv_ds_02.tese.sprv");
+    auto tese3 = device.shader("shader/spirv_ds_03.tese.sprv");
+    auto tese4 = device.shader("shader/spirv_ds_quad.tese.sprv");
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
@@ -175,8 +175,8 @@ TEST(DirectX12Api,SpirvDefect_Link) {
     auto vbo  = device.vbo(GapiTestCommon::vboData,3);
     auto ibo  = device.ibo(GapiTestCommon::iboData,3);
 
-    auto vert = device.loadShader("shader/link_defect.vert.sprv");
-    auto frag = device.loadShader("shader/link_defect.frag.sprv");
+    auto vert = device.shader("shader/link_defect.vert.sprv");
+    auto frag = device.shader("shader/link_defect.frag.sprv");
     auto pso  = device.pipeline<GapiTestCommon::Vertex>(Topology::Triangles,RenderState(),vert,frag);
 
     auto tex  = device.attachment(Tempest::TextureFormat::RGBA8,128,128);
@@ -208,7 +208,7 @@ TEST(DirectX12Api,SpirvDefect_Loop) {
     DirectX12Api api{ApiFlags::Validation};
     Device       device(api);
 
-    auto pso  = device.pipeline(device.loadShader("shader/loop_defect.comp.sprv"));
+    auto pso  = device.pipeline(device.shader("shader/loop_defect.comp.sprv"));
     (void)pso;
     }
   catch(std::system_error& e) {

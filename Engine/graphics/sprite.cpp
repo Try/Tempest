@@ -11,7 +11,7 @@ Sprite::Sprite(TextureAtlas::Allocation a, uint32_t w, uint32_t h)
   :alloc(std::move(a)),texW(int(w)),texH(int(h)) {
   }
 
-const Texture2d &Sprite::pageRawData(Device& dev) const {
+const Texture2d& Sprite::pageRawData(Device& dev) const {
   if(!alloc.owner){
     static const Texture2d t;
     return t;
@@ -20,7 +20,7 @@ const Texture2d &Sprite::pageRawData(Device& dev) const {
   auto& mem=alloc.memory();
   if( mem.changed ){
     dev.waitIdle(); //FIXME: track usage of mem.gpu
-    mem.gpu=dev.loadTexture(mem.cpu,false);
+    mem.gpu=dev.texture(mem.cpu,false);
     mem.changed=false;
     }
   return mem.gpu;

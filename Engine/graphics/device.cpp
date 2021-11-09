@@ -79,7 +79,7 @@ void Device::implSubmit(const CommandBuffer* cmd[], AbstractGraphicsApi::Command
   api.submit(dev, hcmd, count, fdone);
   }
 
-Shader Device::loadShader(RFile &file) {
+Shader Device::shader(RFile &file) {
   const size_t fileSize=file.size();
 
   std::unique_ptr<uint8_t[]> buffer(new uint8_t[fileSize]);
@@ -91,14 +91,14 @@ Shader Device::loadShader(RFile &file) {
   return f;
   }
 
-Shader Device::loadShader(const char *filename) {
+Shader Device::shader(const char *filename) {
   Tempest::RFile file(filename);
-  return loadShader(file);
+  return shader(file);
   }
 
-Shader Device::loadShader(const char16_t *filename) {
+Shader Device::shader(const char16_t *filename) {
   Tempest::RFile file(filename);
-  return loadShader(file);
+  return shader(file);
   }
 
 Shader Device::shader(const void *source, const size_t length) {
@@ -133,7 +133,7 @@ ZBuffer Device::zbuffer(TextureFormat frm, const uint32_t w, const uint32_t h) {
   return ZBuffer(std::move(t),devProps.hasSamplerFormat(frm));
   }
 
-Texture2d Device::loadTexture(const Pixmap &pm, bool mips) {
+Texture2d Device::texture(const Pixmap &pm, const bool mips) {
   TextureFormat format = Pixmap::toTextureFormat(pm.format());
   uint32_t      mipCnt = mips ? mipCount(pm.w(),pm.h()) : 1;
   const Pixmap* p=&pm;

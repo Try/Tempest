@@ -206,8 +206,8 @@ void shader() {
     GraphicsApi api{ApiFlags::Validation};
     Device      device(api);
 
-    auto vert = device.loadShader("shader/simple_test.vert.sprv");
-    auto frag = device.loadShader("shader/simple_test.frag.sprv");
+    auto vert = device.shader("shader/simple_test.vert.sprv");
+    auto frag = device.shader("shader/simple_test.frag.sprv");
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
@@ -224,8 +224,8 @@ void pso() {
     GraphicsApi api{ApiFlags::Validation};
     Device      device(api);
 
-    auto vert = device.loadShader("shader/simple_test.vert.sprv");
-    auto frag = device.loadShader("shader/simple_test.frag.sprv");
+    auto vert = device.shader("shader/simple_test.vert.sprv");
+    auto frag = device.shader("shader/simple_test.frag.sprv");
     auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
     }
   catch(std::system_error& e) {
@@ -243,11 +243,11 @@ void psoTess() {
     GraphicsApi api{ApiFlags::Validation};
     Device      device(api);
 
-    auto tese = device.loadShader("shader/tess.tese.sprv");
-    auto tesc = device.loadShader("shader/tess.tesc.sprv");
+    auto tese = device.shader("shader/tess.tese.sprv");
+    auto tesc = device.shader("shader/tess.tesc.sprv");
 
-    auto vert = device.loadShader("shader/tess.vert.sprv");
-    auto frag = device.loadShader("shader/tess.frag.sprv");
+    auto vert = device.shader("shader/tess.vert.sprv");
+    auto frag = device.shader("shader/tess.frag.sprv");
     auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,tesc,tese,frag);
     }
   catch(std::system_error& e) {
@@ -298,8 +298,8 @@ void draw(const char* outImage) {
     auto vbo  = device.vbo(vboData,3);
     auto ibo  = device.ibo(iboData,3);
 
-    auto vert = device.loadShader("shader/simple_test.vert.sprv");
-    auto frag = device.loadShader("shader/simple_test.frag.sprv");
+    auto vert = device.shader("shader/simple_test.vert.sprv");
+    auto frag = device.shader("shader/simple_test.frag.sprv");
     auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
 
     auto tex  = device.attachment(format,128,128);
@@ -388,7 +388,7 @@ void ssboDispath() {
     auto input  = device.ssbo(inputCpu,sizeof(inputCpu));
     auto output = device.ssbo(nullptr, sizeof(inputCpu));
 
-    auto cs     = device.loadShader("shader/simple_test.comp.sprv");
+    auto cs     = device.shader("shader/simple_test.comp.sprv");
     auto pso    = device.pipeline(cs);
 
     auto ubo    = device.descriptors(pso.layout());
@@ -432,11 +432,11 @@ void dispathToDraw(const char* outImage) {
     auto ssbo   = device.ssbo(nullptr, sizeof(Vec4)*4);
     auto tex    = device.attachment(TextureFormat::RGBA8,4,4);
 
-    auto cs     = device.loadShader("shader/fillbuf.comp.sprv");
+    auto cs     = device.shader("shader/fillbuf.comp.sprv");
     auto psoC   = device.pipeline(cs);
 
-    auto vs     = device.loadShader("shader/simple_test.vert.sprv");
-    auto fs     = device.loadShader("shader/comp_test.frag.sprv");
+    auto vs     = device.shader("shader/simple_test.vert.sprv");
+    auto fs     = device.shader("shader/comp_test.frag.sprv");
     auto psoG   = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vs,fs);
 
     auto uboCs  = device.descriptors(psoC.layout());
@@ -478,9 +478,7 @@ void imageCompute(const char* outImage) {
     Device      device(api);
 
     auto img = device.image2d(TextureFormat::RGBA8,128,128,false);
-
-    auto cs  = device.loadShader("shader/image_store_test.comp.sprv");
-    auto pso = device.pipeline(cs);
+    auto pso = device.pipeline(device.shader("shader/image_store_test.comp.sprv"));
 
     auto ubo = device.descriptors(pso.layout());
     ubo.set(0,img);
@@ -517,8 +515,8 @@ void mipMaps(const char* outImage) {
     auto vbo  = device.vbo(vboData,3);
     auto ibo  = device.ibo(iboData,3);
 
-    auto vert = device.loadShader("shader/simple_test.vert.sprv");
-    auto frag = device.loadShader("shader/simple_test.frag.sprv");
+    auto vert = device.shader("shader/simple_test.vert.sprv");
+    auto frag = device.shader("shader/simple_test.frag.sprv");
     auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
 
     auto tex  = device.attachment(format,128,128,true);
@@ -554,7 +552,7 @@ void S3TC(const char* /*outImage*/) {
     Device      device(api);
 
     auto src = Pixmap("data/img/tst-dxt5.dds");
-    auto tex = device.loadTexture(src);
+    auto tex = device.texture(src);
     EXPECT_EQ(tex.format(),TextureFormat::DXT5);
 
     auto dst = device.readPixels(tex);
@@ -587,8 +585,8 @@ void ssboWriteVs() {
     auto vbo    = device.vbo(vboData,3);
     auto ibo    = device.ibo(iboData,3);
 
-    auto vert   = device.loadShader("shader/ssbo_write.vert.sprv");
-    auto frag   = device.loadShader("shader/simple_test.frag.sprv");
+    auto vert   = device.shader("shader/ssbo_write.vert.sprv");
+    auto frag   = device.shader("shader/simple_test.frag.sprv");
     auto pso    = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
 
     auto tex    = device.attachment(TextureFormat::RGBA8,32,32);
@@ -596,8 +594,8 @@ void ssboWriteVs() {
     auto ubo    = device.descriptors(pso.layout());
     ubo.set(0,vsOut);
 
-    // setup computer pipeline
-    auto cs     = device.loadShader("shader/ssbo_write_verify.comp.sprv");
+    // setup compute pipeline
+    auto cs     = device.shader("shader/ssbo_write_verify.comp.sprv");
     auto pso2   = device.pipeline(cs);
     auto csOut  = device.ssbo(nullptr, sizeof(Vec4)*3);
 
@@ -650,7 +648,7 @@ void pushConstant() {
     auto input  = device.ubo (&inputCpu,sizeof(Tempest::Vec4));
     auto output = device.ssbo(nullptr,  sizeof(Tempest::Vec4));
 
-    auto cs     = device.loadShader("shader/push_constant.comp.sprv");
+    auto cs     = device.shader("shader/push_constant.comp.sprv");
     auto pso    = device.pipeline(cs);
 
     auto ubo = device.descriptors(pso.layout());
