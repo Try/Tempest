@@ -266,7 +266,7 @@ AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixma
   cmd->hold(pstage); // preserve stage buffer, until gpu side copy is finished
 
   cmd->copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
-  cmd->changeLayout(*pbuf.handler, ResourceAccess::TransferDst, ResourceAccess::Sampler, uint32_t(-1));
+  cmd->barrier(*pbuf.handler, ResourceAccess::TransferDst, ResourceAccess::Sampler, uint32_t(-1));
   if(mipCnt>1)
     cmd->generateMipmap(*pbuf.handler, p.w(), p.h(), mipCnt);
   cmd->end();
@@ -328,7 +328,7 @@ AbstractGraphicsApi::PTexture DirectX12Api::createCompressedTexture(Device* d, c
     h = std::max<uint32_t>(4,h/2);
     }
 
-  cmd->changeLayout(*pbuf.handler, ResourceAccess::TransferDst, ResourceAccess::Sampler, uint32_t(-1));
+  cmd->barrier(*pbuf.handler, ResourceAccess::TransferDst, ResourceAccess::Sampler, uint32_t(-1));
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
   return PTexture(pbuf.handler);
@@ -368,9 +368,9 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t,
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
-  cmd->changeLayout(tx,defLay,ResourceAccess::TransferSrc,mip);
+  cmd->barrier(tx,defLay,ResourceAccess::TransferSrc,mip);
   cmd->copyNative(stage,0, tx,w,h,mip);
-  cmd->changeLayout(tx,ResourceAccess::TransferSrc,defLay,mip);
+  cmd->barrier(tx,ResourceAccess::TransferSrc,defLay,mip);
   cmd->end();
   dx.dataMgr().submitAndWait(std::move(cmd));
 

@@ -65,3 +65,13 @@ bool AbstractGraphicsApi::Props::hasStorageFormat(TextureFormat f) const {
   uint64_t  m = uint64_t(1) << uint64_t(f);
   return (storFormat&m)!=0;
   }
+
+void AbstractGraphicsApi::CommandBuffer::barrier(Texture& tex, ResourceAccess prev, ResourceAccess next, uint32_t mipId) {
+  AbstractGraphicsApi::BarrierDesc b;
+  b.texture  = &tex;
+  b.prev     = prev;
+  b.next     = next;
+  b.mip      = mipId;
+  b.discard  = (prev==ResourceAccess::None);
+  barrier(&b,1);
+  }

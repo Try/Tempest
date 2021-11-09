@@ -133,8 +133,8 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   cmd->hold(pstage);
   cmd->hold(pbuf);
 
-  cmd->changeLayout(*pbuf.handler, ResourceAccess::None, ResourceAccess::TransferDst, uint32_t(-1));
   if(isCompressedFormat(frm)) {
+    cmd->barrier(*pbuf.handler, ResourceAccess::None, ResourceAccess::TransferDst, uint32_t(-1));
     size_t blockSize  = Pixmap::blockSizeForFormat(pfrm);
     size_t bufferSize = 0;
 
@@ -148,10 +148,11 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
       h = std::max<uint32_t>(1,h/2);
       }
 
-    cmd->changeLayout(*pbuf.handler, ResourceAccess::TransferDst, ResourceAccess::Sampler, uint32_t(-1));
+    cmd->barrier(*pbuf.handler, ResourceAccess::TransferDst, ResourceAccess::Sampler, uint32_t(-1));
     } else {
+    cmd->barrier(*pbuf.handler, ResourceAccess::None, ResourceAccess::TransferDst, uint32_t(-1));
     cmd->copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
-    cmd->changeLayout(*pbuf.handler, ResourceAccess::TransferDst, ResourceAccess::Sampler, uint32_t(-1));
+    cmd->barrier(*pbuf.handler, ResourceAccess::TransferDst, ResourceAccess::Sampler, uint32_t(-1));
     if(mipCnt>1)
       cmd->generateMipmap(*pbuf.handler, p.w(), p.h(), mipCnt);
     }
@@ -182,7 +183,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createStorage(AbstractGraphicsApi::Devi
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
-  cmd->changeLayout(*pbuf.handler,ResourceAccess::None,ResourceAccess::Unordered,uint32_t(-1));
+  cmd->barrier(*pbuf.handler,ResourceAccess::None,ResourceAccess::Unordered,uint32_t(-1));
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
 
@@ -204,9 +205,9 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
-  cmd->changeLayout(tx,defLay,ResourceAccess::TransferSrc,uint32_t(-1));
+  cmd->barrier(tx,defLay,ResourceAccess::TransferSrc,uint32_t(-1));
   cmd->copyNative(stage,0, tx,w,h,mip);
-  cmd->changeLayout(tx,ResourceAccess::TransferSrc,defLay,uint32_t(-1));
+  cmd->barrier(tx,ResourceAccess::TransferSrc,defLay,uint32_t(-1));
   cmd->end();
 
   dx.dataMgr().waitFor(&tx);

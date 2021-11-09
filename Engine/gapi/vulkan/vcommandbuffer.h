@@ -33,8 +33,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     VCommandBuffer(VDevice &device, VkCommandPoolCreateFlags flags=VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
     ~VCommandBuffer();
 
-    VkCommandBuffer                impl=nullptr;
-    std::vector<VSwapchain::Sync*> swapchainSync;
+    using AbstractGraphicsApi::CommandBuffer::barrier;
 
     void reset() override;
 
@@ -65,9 +64,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
                      size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) override;
     void dispatch   (size_t x, size_t y, size_t z) override;
 
-    void barrier     (const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) override;
-
-    void changeLayout(AbstractGraphicsApi::Texture& tex, ResourceAccess prev, ResourceAccess next, uint32_t mipId);
+    void barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) override;
 
     void copy(AbstractGraphicsApi::Buffer& dst, size_t offset, AbstractGraphicsApi::Texture& src, uint32_t width, uint32_t height, uint32_t mip) override;
     void generateMipmap(AbstractGraphicsApi::Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
@@ -80,6 +77,9 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void blit(AbstractGraphicsApi::Texture& src, uint32_t srcW, uint32_t srcH, uint32_t srcMip,
               AbstractGraphicsApi::Texture& dst, uint32_t dstW, uint32_t dstH, uint32_t dstMip);
+
+    VkCommandBuffer                impl=nullptr;
+    std::vector<VSwapchain::Sync*> swapchainSync;
 
   private:
     void addDependency(VSwapchain& s, size_t imgId);

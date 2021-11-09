@@ -131,6 +131,28 @@ static VkImage toVkResource(const AbstractGraphicsApi::BarrierDesc& b) {
   return s.images[b.swId];
   }
 
+static void fillSubresource(VkImageMemoryBarrier& img, const AbstractGraphicsApi::BarrierDesc& desc) {
+  VkFormat nativeFormat = VK_FORMAT_UNDEFINED;
+  if(desc.texture!=nullptr) {
+    VTexture& t   = *reinterpret_cast<VTexture*>  (desc.texture);
+    nativeFormat  = t.format;
+    } else {
+    VSwapchain& s = *reinterpret_cast<VSwapchain*>(desc.swapchain);
+    nativeFormat  = s.format();
+    }
+
+  img.subresourceRange.baseMipLevel   = desc.mip==uint32_t(-1) ? 0 : desc.mip;
+  img.subresourceRange.levelCount     = desc.mip==uint32_t(-1) ? VK_REMAINING_MIP_LEVELS : 1;
+  img.subresourceRange.baseArrayLayer = 0;
+  img.subresourceRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
+
+  if(nativeFormat==VK_FORMAT_D24_UNORM_S8_UINT || nativeFormat==VK_FORMAT_D16_UNORM_S8_UINT || nativeFormat==VK_FORMAT_D32_SFLOAT_S8_UINT)
+    img.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT; else
+  if(Detail::nativeIsDepthFormat(nativeFormat))
+    img.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; else
+    img.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  }
+
 
 VCommandBuffer::VCommandBuffer(VDevice& device, VkCommandPoolCreateFlags flags)
   :device(device), pool(device,flags) {
@@ -447,17 +469,6 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dst, size_t offset,
   resState.setLayout(src,ResourceAccess::Sampler); // TODO: storage images
   }
 
-void VCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
-                                  ResourceAccess prev, ResourceAccess next, uint32_t mipId) {
-  AbstractGraphicsApi::BarrierDesc b;
-  b.texture = &t;
-  b.prev     = prev;
-  b.next     = next;
-  b.mip      = mipId;
-  b.discard  = (prev==ResourceAccess::None);
-  barrier(&b,1);
-  }
-
 void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
                                     uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
   if(mipLevels==1)
@@ -482,37 +493,15 @@ void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
     const int mw = (w==1 ? 1 : w/2);
     const int mh = (h==1 ? 1 : h/2);
 
-    changeLayout(img,ResourceAccess::TransferDst, ResourceAccess::TransferSrc,i-1);
+    barrier(img,ResourceAccess::TransferDst, ResourceAccess::TransferSrc,i-1);
     blit(img,  w, h, i-1,
          img, mw,mh, i);
 
     w = mw;
     h = mh;
     }
-  changeLayout(img,ResourceAccess::TransferDst, ResourceAccess::TransferSrc, mipLevels-1);
-  changeLayout(img,ResourceAccess::TransferSrc, ResourceAccess::Sampler,     uint32_t(-1));
-  }
-
-static void fillSubresource(VkImageMemoryBarrier& img, const AbstractGraphicsApi::BarrierDesc& desc) {
-  VkFormat nativeFormat = VK_FORMAT_UNDEFINED;
-  if(desc.texture!=nullptr) {
-    VTexture& t   = *reinterpret_cast<VTexture*>  (desc.texture);
-    nativeFormat  = t.format;
-    } else {
-    VSwapchain& s = *reinterpret_cast<VSwapchain*>(desc.swapchain);
-    nativeFormat  = s.format();
-    }
-
-  img.subresourceRange.baseMipLevel   = desc.mip==uint32_t(-1) ? 0 : desc.mip;
-  img.subresourceRange.levelCount     = desc.mip==uint32_t(-1) ? VK_REMAINING_MIP_LEVELS : 1;
-  img.subresourceRange.baseArrayLayer = 0;
-  img.subresourceRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
-
-  if(nativeFormat==VK_FORMAT_D24_UNORM_S8_UINT || nativeFormat==VK_FORMAT_D16_UNORM_S8_UINT || nativeFormat==VK_FORMAT_D32_SFLOAT_S8_UINT)
-    img.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT; else
-  if(Detail::nativeIsDepthFormat(nativeFormat))
-    img.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; else
-    img.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  barrier(img,ResourceAccess::TransferDst, ResourceAccess::TransferSrc, mipLevels-1);
+  barrier(img,ResourceAccess::TransferSrc, ResourceAccess::Sampler,     uint32_t(-1));
   }
 
 void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {

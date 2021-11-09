@@ -215,17 +215,17 @@ struct DxCommandBuffer::MipMaps : Stage {
 
     impl.IASetVertexBuffers(0,0,nullptr);
 
-    const ResourceAccess defLayout = ResourceAccess::Sampler;
-    if(defLayout!=ResourceAccess::ColorAttach)
-      cmd.changeLayout(img,defLayout,ResourceAccess::ColorAttach,uint32_t(-1));
-
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle  = rtvHeap->GetCPUDescriptorHandleForHeapStart();
     auto                        rtvHeapInc = dev.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+    auto& resState = cmd.resState;
+    resState.setLayout(img,ResourceAccess::TransferDst);
+    resState.flush(cmd);
     for(uint32_t i=1; i<mipLevels; ++i) {
       const int mw = (w==1 ? 1 : w/2);
       const int mh = (h==1 ? 1 : h/2);
 
-      cmd.changeLayout(img,ResourceAccess::ColorAttach,ResourceAccess::Sampler,i-1);
+      cmd.barrier(img,ResourceAccess::ColorAttach,ResourceAccess::Sampler,i-1);
       impl.OMSetRenderTargets(1, &rtvHandle, TRUE, nullptr);
       blit(cmd,i-1,mw,mh);
 
@@ -233,7 +233,7 @@ struct DxCommandBuffer::MipMaps : Stage {
       h             = mh;
       rtvHandle.ptr+= rtvHeapInc;
       }
-    cmd.changeLayout(img, ResourceAccess::ColorAttach, ResourceAccess::Sampler, mipLevels-1);
+    cmd.barrier(img, ResourceAccess::ColorAttach, ResourceAccess::Sampler, mipLevels-1);
     }
 
   DxTexture&                     img;
@@ -584,17 +584,6 @@ void DxCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size
 
   if(rbCount>0)
     impl->ResourceBarrier(rbCount,rb);
-  }
-
-void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
-                                   ResourceAccess prev, ResourceAccess next, uint32_t mipId) {
-  AbstractGraphicsApi::BarrierDesc b;
-  b.texture  = &t;
-  b.prev     = prev;
-  b.next     = next;
-  b.mip      = mipId;
-  b.discard  = (prev==ResourceAccess::None);
-  barrier(&b,1);
   }
 
 void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer&  dstBuf, size_t offset,
