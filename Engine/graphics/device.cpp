@@ -189,7 +189,7 @@ StorageImage Device::image2d(TextureFormat frm, const uint32_t w, const uint32_t
 
 Pixmap Device::readPixels(const Texture2d &t, uint32_t mip) {
   Pixmap pm;
-  api.readPixels(dev,pm,t.impl,ResourceAccess::Sampler,t.format(),uint32_t(t.w()),uint32_t(t.h()),mip);
+  api.readPixels(dev,pm,t.impl,t.format(),uint32_t(t.w()),uint32_t(t.h()),mip,false);
   return pm;
   }
 
@@ -202,7 +202,7 @@ Pixmap Device::readPixels(const Attachment& t, uint32_t mip) {
     w = (w==1 ? 1 : w/2);
     h = (h==1 ? 1 : h/2);
     }
-  api.readPixels(dev,pm,tx.impl,ResourceAccess::Sampler,tx.format(),w,h,mip);
+  api.readPixels(dev,pm,tx.impl,tx.format(),w,h,mip,false);
   return pm;
   }
 
@@ -214,7 +214,7 @@ Pixmap Device::readPixels(const StorageImage& t, uint32_t mip) {
     w = (w==1 ? 1 : w/2);
     h = (h==1 ? 1 : h/2);
     }
-  api.readPixels(dev,pm,t.impl,ResourceAccess::Unordered,t.format(),w,h,mip);
+  api.readPixels(dev,pm,t.impl,t.format(),w,h,mip,true);
   return pm;
   }
 

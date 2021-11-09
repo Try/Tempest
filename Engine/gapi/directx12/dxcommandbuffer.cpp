@@ -39,7 +39,7 @@ static D3D12_RESOURCE_STATES nativeFormat(ResourceAccess f) {
 
   if((f&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
     st |= D3D12_RESOURCE_STATE_COPY_SOURCE;
-  if((f&ResourceAccess::TransferDest)==ResourceAccess::TransferDest)
+  if((f&ResourceAccess::TransferDst)==ResourceAccess::TransferDst)
     st |= D3D12_RESOURCE_STATE_COPY_DEST;
 
   if((f&ResourceAccess::Sampler)==ResourceAccess::Sampler)
@@ -150,8 +150,8 @@ struct DxCommandBuffer::Blit : Stage {
   };
 
 struct DxCommandBuffer::MipMaps : Stage {
-  MipMaps(DxDevice& dev, DxTexture& image, ResourceAccess defLayout, uint32_t texW, uint32_t texH, uint32_t mipLevels)
-    :img(image),defLayout(defLayout),texW(texW),texH(texH),mipLevels(mipLevels) {
+  MipMaps(DxDevice& dev, DxTexture& image, uint32_t texW, uint32_t texH, uint32_t mipLevels)
+    :img(image),texW(texW),texH(texH),mipLevels(mipLevels) {
     // descriptor heap
     D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
     rtvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
@@ -215,6 +215,7 @@ struct DxCommandBuffer::MipMaps : Stage {
 
     impl.IASetVertexBuffers(0,0,nullptr);
 
+    const ResourceAccess defLayout = ResourceAccess::Sampler;
     if(defLayout!=ResourceAccess::ColorAttach)
       cmd.changeLayout(img,defLayout,ResourceAccess::ColorAttach,uint32_t(-1));
 
@@ -236,7 +237,6 @@ struct DxCommandBuffer::MipMaps : Stage {
     }
 
   DxTexture&                     img;
-  ResourceAccess                 defLayout;
   uint32_t                       texW;
   uint32_t                       texH;
   uint32_t                       mipLevels;
@@ -589,9 +589,8 @@ void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
   barrier(&b,1);
   }
 
-void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, ResourceAccess defLayout,
-                           uint32_t width, uint32_t height, uint32_t mip,
-                           AbstractGraphicsApi::Texture& srcTex, size_t offset) {
+void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer&  dstBuf, size_t offset, ResourceAccess defLayout,
+                           AbstractGraphicsApi::Texture& srcTex, uint32_t width, uint32_t height, uint32_t mip) {
   resState.flush(*this);
 
   auto& dst = reinterpret_cast<DxBuffer&>(dstBuf);
@@ -603,7 +602,7 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, ResourceAccess d
 
   if(pitch==pitchBase && (offset%D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)==0) {
     changeLayout(srcTex,defLayout,ResourceAccess::TransferSrc,mip);
-    copyRaw(dstBuf,width,height,mip,srcTex,offset);
+    copyNative(dstBuf,offset, srcTex,width,height,mip);
     changeLayout(srcTex,ResourceAccess::TransferSrc,defLayout,mip);
     return;
     }
@@ -724,19 +723,19 @@ void DxCommandBuffer::blitFS(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW
   pushStage(dx.release());
   }
 
-void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img, ResourceAccess defLayout,
+void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
                                      uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
   if(mipLevels==1)
     return;
 
   resState.flush(*this);
 
-  std::unique_ptr<MipMaps> dx(new MipMaps(dev,reinterpret_cast<DxTexture&>(img),defLayout,texWidth,texHeight,mipLevels));
+  std::unique_ptr<MipMaps> dx(new MipMaps(dev,reinterpret_cast<DxTexture&>(img),texWidth,texHeight,mipLevels));
   pushStage(dx.release());
   }
 
-void DxCommandBuffer::copyRaw(AbstractGraphicsApi::Buffer& dstBuf, uint32_t width, uint32_t height, uint32_t mip,
-                              const AbstractGraphicsApi::Texture& srcTex, size_t offset) {
+void DxCommandBuffer::copyNative(AbstractGraphicsApi::Buffer& dstBuf, size_t offset,
+                                 const AbstractGraphicsApi::Texture& srcTex, uint32_t width, uint32_t height, uint32_t mip) {
   auto& dst = reinterpret_cast<DxBuffer&>(dstBuf);
   auto& src = reinterpret_cast<const DxTexture&>(srcTex);
 

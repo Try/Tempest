@@ -161,8 +161,7 @@ AbstractGraphicsApi::PTexture MetalApi::createStorage(AbstractGraphicsApi::Devic
 
 void MetalApi::readPixels(AbstractGraphicsApi::Device*,
                           Pixmap& out, const AbstractGraphicsApi::PTexture t,
-                          ResourceAccess /*lay*/, TextureFormat frm,
-                          const uint32_t w, const uint32_t h, uint32_t mip) {
+                          TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip, bool storageImg) {
   auto& tx = *reinterpret_cast<MtTexture*>(t.handler);
   tx.readPixels(out,frm,w,h,mip);
   }

@@ -425,8 +425,8 @@ namespace Tempest {
 
         virtual void barrier(const BarrierDesc* desc, size_t cnt) = 0;
 
-        virtual void generateMipmap(Texture& image, ResourceAccess defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels)=0;
-        virtual void copy(Buffer& dest, ResourceAccess defLayout, uint32_t width, uint32_t height, uint32_t mip, Texture& src, size_t offset)=0;
+        virtual void generateMipmap(Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) = 0;
+        virtual void copy(Buffer& dest, size_t offset, ResourceAccess defLayout, Texture& src, uint32_t width, uint32_t height, uint32_t mip)=0;
 
         virtual bool isRecording() const = 0;
         virtual void begin()=0;
@@ -487,13 +487,12 @@ namespace Tempest {
 
       virtual Desc*      createDescriptors(Device* d,PipelineLay& layP)=0;
 
-      virtual PBuffer    createBuffer (Device* d,const void *mem,size_t count,size_t sz,size_t alignedSz,MemUsage usage,BufferHeap flg)=0;
-      virtual PTexture   createTexture(Device* d,const Pixmap& p,TextureFormat frm,uint32_t mips)=0;
-      virtual PTexture   createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm)=0;
-      virtual PTexture   createStorage(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm)=0;
-      virtual void       readPixels   (Device* d, Pixmap &out,const PTexture t,
-                                       ResourceAccess lay, TextureFormat frm,
-                                       const uint32_t w, const uint32_t h, uint32_t mip) = 0;
+      virtual PBuffer    createBuffer (Device* d, const void *mem, size_t count, size_t sz, size_t alignedSz, MemUsage usage, BufferHeap flg) = 0;
+      virtual PTexture   createTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mips) = 0;
+      virtual PTexture   createTexture(Device* d, const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) = 0;
+      virtual PTexture   createStorage(Device* d, const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) = 0;
+      virtual void       readPixels   (Device* d, Pixmap& out, const PTexture t,
+                                       TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip, bool storageImg) = 0;
       virtual void       readBytes    (Device* d, Buffer* buf, void* out, size_t size) = 0;
 
       virtual void       present  (Device *d, Swapchain* sw)=0;

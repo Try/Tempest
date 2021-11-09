@@ -32,7 +32,7 @@ enum class BufferHeap : uint8_t {
 enum ResourceAccess : uint32_t {
   None             = 0,
   TransferSrc      = 1 << 0,
-  TransferDest     = 1 << 1,
+  TransferDst      = 1 << 1,
 
   Present          = 1 << 2,
 

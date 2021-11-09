@@ -69,19 +69,19 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void changeLayout(AbstractGraphicsApi::Texture& tex, ResourceAccess prev, ResourceAccess next, uint32_t mipId);
 
-    void copy(AbstractGraphicsApi::Buffer& dest, ResourceAccess defLayout, uint32_t width, uint32_t height, uint32_t mip, AbstractGraphicsApi::Texture& src, size_t offset) override;
-    void generateMipmap(AbstractGraphicsApi::Texture& image, ResourceAccess defLayout, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
+    void copy(AbstractGraphicsApi::Buffer& dest, size_t offset, ResourceAccess defLayout, AbstractGraphicsApi::Texture& src, uint32_t width, uint32_t height, uint32_t mip) override;
+    void generateMipmap(AbstractGraphicsApi::Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
 
     void copy(AbstractGraphicsApi::Texture& dest, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Buffer&  src, size_t offset);
     void copy(AbstractGraphicsApi::Buffer&  dest, size_t offsetDest, const AbstractGraphicsApi::Buffer& src, size_t offsetSrc, size_t size);
+
+    void copyNative(AbstractGraphicsApi::Buffer&        dst, size_t offset,
+                    const AbstractGraphicsApi::Texture& src, size_t width, size_t height, size_t mip);
 
     void blit(AbstractGraphicsApi::Texture& src, uint32_t srcW, uint32_t srcH, uint32_t srcMip,
               AbstractGraphicsApi::Texture& dst, uint32_t dstW, uint32_t dstH, uint32_t dstMip);
 
   private:
-    void implCopy(AbstractGraphicsApi::Buffer&  dest, size_t width, size_t height, size_t mip,
-                  const AbstractGraphicsApi::Texture& src, size_t offset);
-
     void addDependency(VSwapchain& s, size_t imgId);
 
     VDevice&                                device;

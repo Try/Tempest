@@ -20,7 +20,7 @@ static VkAccessFlagBits nativeFormat(ResourceAccess rs) {
   uint32_t ret = 0;
   if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
     ret |= VK_ACCESS_TRANSFER_READ_BIT;
-  if((rs&ResourceAccess::TransferDest)==ResourceAccess::TransferDest)
+  if((rs&ResourceAccess::TransferDst)==ResourceAccess::TransferDst)
     ret |= VK_ACCESS_TRANSFER_WRITE_BIT;
 
   if((rs&ResourceAccess::Present)==ResourceAccess::Present)
@@ -54,7 +54,7 @@ static VkPipelineStageFlags toStage(ResourceAccess rs) {
   uint32_t ret = 0;
   if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
     ret |= VK_PIPELINE_STAGE_TRANSFER_BIT;
-  if((rs&ResourceAccess::TransferDest)==ResourceAccess::TransferDest)
+  if((rs&ResourceAccess::TransferDst)==ResourceAccess::TransferDst)
     ret |= VK_PIPELINE_STAGE_TRANSFER_BIT;
 
   if((rs&ResourceAccess::Present)==ResourceAccess::Present)
@@ -86,7 +86,7 @@ static VkPipelineStageFlags toStage(ResourceAccess rs) {
 static VkImageLayout toLayout(ResourceAccess rs) {
   if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
     return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-  if((rs&ResourceAccess::TransferDest)==ResourceAccess::TransferDest)
+  if((rs&ResourceAccess::TransferDst)==ResourceAccess::TransferDst)
     return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
   if((rs&ResourceAccess::Present)==ResourceAccess::Present)
@@ -377,10 +377,10 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, si
   vkCmdCopyBufferToImage(impl, src.impl, dst.impl, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
   }
 
-void VCommandBuffer::implCopy(AbstractGraphicsApi::Buffer& dstBuf, size_t width, size_t height, size_t mip,
-                              const AbstractGraphicsApi::Texture& srcTex, size_t offset) {
-  auto& src = reinterpret_cast<const VTexture&>(srcTex);
-  auto& dst = reinterpret_cast<VBuffer&>(dstBuf);
+void VCommandBuffer::copyNative(AbstractGraphicsApi::Buffer&        dst, size_t offset,
+                                const AbstractGraphicsApi::Texture& src, size_t width, size_t height, size_t mip) {
+  auto& nSrc = reinterpret_cast<const VTexture&>(src);
+  auto& nDst = reinterpret_cast<VBuffer&>(dst);
 
   VkBufferImageCopy region={};
   region.bufferOffset      = offset;
@@ -397,7 +397,7 @@ void VCommandBuffer::implCopy(AbstractGraphicsApi::Buffer& dstBuf, size_t width,
       1
   };
 
-  vkCmdCopyImageToBuffer(impl, src.impl, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dst.impl, 1, &region);
+  vkCmdCopyImageToBuffer(impl, nSrc.impl, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, nDst.impl, 1, &region);
   }
 
 void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, uint32_t srcH, uint32_t srcMip,
@@ -435,14 +435,14 @@ void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, u
                  filter);
   }
 
-void Tempest::Detail::VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dest, ResourceAccess defLayout,
-                                           uint32_t width, uint32_t height, uint32_t mip,
-                                           AbstractGraphicsApi::Texture& src, size_t offset) {
-  //resState.setLayout(src,TextureLayout::TransferSrc,true); // TODO: more advanced layout tracker
+void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dest, size_t offset,
+                          ResourceAccess defLayout,
+                          AbstractGraphicsApi::Texture& src, uint32_t width, uint32_t height, uint32_t mip) {
+  // resState.setLayout(src,TextureLayout::TransferSrc,true); // TODO: more advanced layout tracker
   resState.flush(*this);
 
   changeLayout(src,defLayout,ResourceAccess::TransferSrc,mip);
-  implCopy(dest,width,height,mip,src,offset);
+  copyNative(dest,offset, src,width,height,mip);
   changeLayout(src,ResourceAccess::TransferSrc,defLayout,mip);
   }
 
@@ -458,10 +458,7 @@ void VCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
   }
 
 void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
-                                    ResourceAccess defLayout,
                                     uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
-  resState.flush(*this);
-
   if(mipLevels==1)
     return;
 
@@ -477,22 +474,22 @@ void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
   int32_t w = int32_t(texWidth);
   int32_t h = int32_t(texHeight);
 
-  if(defLayout!=ResourceAccess::TransferDest)
-    changeLayout(img,defLayout,ResourceAccess::TransferDest,uint32_t(-1));
+  resState.setLayout(img,ResourceAccess::TransferDst,false);
+  resState.flush(*this);
 
   for(uint32_t i=1; i<mipLevels; ++i) {
     const int mw = (w==1 ? 1 : w/2);
     const int mh = (h==1 ? 1 : h/2);
 
-    changeLayout(img,ResourceAccess::TransferDest,ResourceAccess::TransferSrc,i-1);
+    changeLayout(img,ResourceAccess::TransferDst, ResourceAccess::TransferSrc,i-1);
     blit(img,  w, h, i-1,
          img, mw,mh, i);
-    changeLayout(img,ResourceAccess::TransferSrc, ResourceAccess::Sampler,    i-1);
 
     w = mw;
     h = mh;
     }
-  changeLayout(img,ResourceAccess::TransferDest, ResourceAccess::Sampler, mipLevels-1);
+  changeLayout(img,ResourceAccess::TransferDst, ResourceAccess::TransferSrc, mipLevels-1);
+  changeLayout(img,ResourceAccess::TransferSrc, ResourceAccess::Sampler,     uint32_t(-1));
   }
 
 static void fillSubresource(VkImageMemoryBarrier& img, const AbstractGraphicsApi::BarrierDesc& desc) {

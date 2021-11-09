@@ -266,9 +266,9 @@ AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixma
   cmd->hold(pstage); // preserve stage buffer, until gpu side copy is finished
 
   cmd->copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
+  cmd->changeLayout(*pbuf.handler, ResourceAccess::TransferDst, ResourceAccess::Sampler, uint32_t(-1));
   if(mipCnt>1)
-    cmd->generateMipmap(*pbuf.handler, ResourceAccess::TransferDest, p.w(), p.h(), mipCnt); else
-    cmd->changeLayout(*pbuf.handler, ResourceAccess::TransferDest, ResourceAccess::Sampler, uint32_t(-1));
+    cmd->generateMipmap(*pbuf.handler, p.w(), p.h(), mipCnt);
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
   return PTexture(pbuf.handler);
@@ -328,7 +328,7 @@ AbstractGraphicsApi::PTexture DirectX12Api::createCompressedTexture(Device* d, c
     h = std::max<uint32_t>(4,h/2);
     }
 
-  cmd->changeLayout(*pbuf.handler, ResourceAccess::TransferDest, ResourceAccess::Sampler, uint32_t(-1));
+  cmd->changeLayout(*pbuf.handler, ResourceAccess::TransferDst, ResourceAccess::Sampler, uint32_t(-1));
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
   return PTexture(pbuf.handler);
@@ -352,24 +352,25 @@ AbstractGraphicsApi::PTexture DirectX12Api::createStorage(AbstractGraphicsApi::D
   return PTexture(pbuf.handler);
   }
 
-void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t, ResourceAccess lay,
-                              TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip) {
+void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t,
+                              TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip, bool storageImg) {
   Detail::DxDevice&  dx = *reinterpret_cast<Detail::DxDevice*>(d);
   Detail::DxTexture& tx = *reinterpret_cast<Detail::DxTexture*>(t.handler);
 
-  Pixmap::Format   pfrm  = Pixmap::toPixmapFormat(frm);
-  size_t           bpb   = Pixmap::blockSizeForFormat(pfrm);
-  Size             bsz   = Pixmap::blockCount(pfrm,w,h);
+  Pixmap::Format   pfrm   = Pixmap::toPixmapFormat(frm);
+  size_t           bpb    = Pixmap::blockSizeForFormat(pfrm);
+  Size             bsz    = Pixmap::blockCount(pfrm,w,h);
 
-  uint32_t         row   = bsz.w*uint32_t(bpb);
-  const uint32_t   pith  = ((row+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
-  Detail::DxBuffer stage = dx.allocator.alloc(nullptr,bsz.h,bsz.w*bpb,pith,MemUsage::TransferDst,BufferHeap::Readback);
+  uint32_t         row    = bsz.w*uint32_t(bpb);
+  const uint32_t   pith   = ((row+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
+  Detail::DxBuffer stage  = dx.allocator.alloc(nullptr,bsz.h,bsz.w*bpb,pith,MemUsage::TransferDst,BufferHeap::Readback);
+  ResourceAccess   defLay = storageImg ? ResourceAccess::ComputeRead : ResourceAccess::Sampler;
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
-  cmd->changeLayout(tx,lay,ResourceAccess::TransferSrc,mip);
-  cmd->copyRaw(stage,w,h,mip,tx,0);
-  cmd->changeLayout(tx,ResourceAccess::TransferSrc,lay,mip);
+  cmd->changeLayout(tx,defLay,ResourceAccess::TransferSrc,mip);
+  cmd->copyNative(stage,0, tx,w,h,mip);
+  cmd->changeLayout(tx,ResourceAccess::TransferSrc,defLay,mip);
   cmd->end();
   dx.dataMgr().submitAndWait(std::move(cmd));
 
@@ -398,7 +399,7 @@ void DirectX12Api::present(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::
 void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::CommandBuffer* cmd, AbstractGraphicsApi::Fence* doneCpu) {
   Detail::DxDevice&        dx = *reinterpret_cast<Detail::DxDevice*>(d);
   Detail::DxCommandBuffer& bx = *reinterpret_cast<Detail::DxCommandBuffer*>(cmd);
-  ID3D12CommandList* cmdList[] = { bx.impl.get() };
+  ID3D12CommandList* cmdList[] = { bx.get() };
 
   dx.waitData();
   impl->submit(d,cmdList,1,doneCpu);
@@ -415,7 +416,7 @@ void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::C
     }
   for(size_t i=0;i<count;++i) {
     Detail::DxCommandBuffer& bx = *reinterpret_cast<Detail::DxCommandBuffer*>(cmd[i]);
-    cmdList[i] = bx.impl.get();
+    cmdList[i] = bx.get();
     }
   dx.waitData();
   impl->submit(d,cmdList,count,doneCpu);

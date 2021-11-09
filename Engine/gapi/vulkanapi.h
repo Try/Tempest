@@ -41,9 +41,8 @@ class VulkanApi : public AbstractGraphicsApi {
     PTexture       createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;
     PTexture       createStorage(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;
 
-    void           readPixels(Device *d, Pixmap &out, const PTexture t,
-                              ResourceAccess lay, TextureFormat frm,
-                              const uint32_t w, const uint32_t h, uint32_t mip) override;
+    void           readPixels(Device *d, Pixmap &out, const PTexture t, TextureFormat frm,
+                              const uint32_t w, const uint32_t h, uint32_t mip, bool storageImg) override;
     void           readBytes(Device* d, Buffer* buf, void* out, size_t size) override;
 
     CommandBuffer* createCommandBuffer(Device* d) override;
