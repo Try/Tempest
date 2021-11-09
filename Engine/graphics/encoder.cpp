@@ -205,8 +205,7 @@ void Encoder<CommandBuffer>::copy(const Attachment& src, uint32_t mip, StorageBu
     throw std::system_error(Tempest::GraphicsErrc::InvalidStorageBuffer);
   uint32_t w = src.w(), h = src.h();
   auto& tx = *textureCast(src).impl.handler;
-  impl->copy(*dest.impl.impl.handler,offset,ResourceAccess::Sampler,
-             tx,w,h,mip);
+  impl->copy(*dest.impl.impl.handler,offset,tx,w,h,mip);
   }
 
 void Encoder<CommandBuffer>::copy(const Texture2d& src, uint32_t mip, StorageBuffer& dest, size_t offset) {
@@ -214,8 +213,7 @@ void Encoder<CommandBuffer>::copy(const Texture2d& src, uint32_t mip, StorageBuf
     throw std::system_error(Tempest::GraphicsErrc::InvalidStorageBuffer);
   uint32_t w = src.w(), h = src.h();
   auto& tx = *src.impl.handler;
-  impl->copy(*dest.impl.impl.handler,offset,ResourceAccess::Sampler,
-             tx,w,h,mip);
+  impl->copy(*dest.impl.impl.handler,offset,tx,w,h,mip);
   }
 
 void Encoder<CommandBuffer>::generateMipmaps(Attachment& tex) {

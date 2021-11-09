@@ -69,7 +69,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void changeLayout(AbstractGraphicsApi::Texture& tex, ResourceAccess prev, ResourceAccess next, uint32_t mipId);
 
-    void copy(AbstractGraphicsApi::Buffer& dest, size_t offset, ResourceAccess defLayout, AbstractGraphicsApi::Texture& src, uint32_t width, uint32_t height, uint32_t mip) override;
+    void copy(AbstractGraphicsApi::Buffer& dst, size_t offset, AbstractGraphicsApi::Texture& src, uint32_t width, uint32_t height, uint32_t mip) override;
     void generateMipmap(AbstractGraphicsApi::Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
 
     void copy(AbstractGraphicsApi::Texture& dest, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Buffer&  src, size_t offset);

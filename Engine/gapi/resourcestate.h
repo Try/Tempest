@@ -16,7 +16,7 @@ class ResourceState {
                        AbstractGraphicsApi::Texture** att,
                        AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId);
     void setLayout  (AbstractGraphicsApi::Swapchain& s, uint32_t id, ResourceAccess lay, bool discard);
-    void setLayout  (AbstractGraphicsApi::Texture&   a, ResourceAccess lay, bool discard);
+    void setLayout  (AbstractGraphicsApi::Texture&   a, ResourceAccess lay, bool discard = false);
     void setLayout  (AbstractGraphicsApi::Buffer&    b, ResourceAccess lay);
 
     void flush      (AbstractGraphicsApi::CommandBuffer& cmd);

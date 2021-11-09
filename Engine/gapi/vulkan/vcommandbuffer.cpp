@@ -435,15 +435,16 @@ void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, u
                  filter);
   }
 
-void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dest, size_t offset,
-                          ResourceAccess defLayout,
+void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dst, size_t offset,
                           AbstractGraphicsApi::Texture& src, uint32_t width, uint32_t height, uint32_t mip) {
-  // resState.setLayout(src,TextureLayout::TransferSrc,true); // TODO: more advanced layout tracker
+  resState.setLayout(dst,ResourceAccess::TransferDst);
+  resState.setLayout(src,ResourceAccess::TransferSrc);
   resState.flush(*this);
 
-  changeLayout(src,defLayout,ResourceAccess::TransferSrc,mip);
-  copyNative(dest,offset, src,width,height,mip);
-  changeLayout(src,ResourceAccess::TransferSrc,defLayout,mip);
+  copyNative(dst,offset, src,width,height,mip);
+
+  resState.setLayout(dst,ResourceAccess::ComputeRead);
+  resState.setLayout(src,ResourceAccess::Sampler); // TODO: storage images
   }
 
 void VCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
@@ -474,7 +475,7 @@ void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
   int32_t w = int32_t(texWidth);
   int32_t h = int32_t(texHeight);
 
-  resState.setLayout(img,ResourceAccess::TransferDst,false);
+  resState.setLayout(img,ResourceAccess::TransferDst);
   resState.flush(*this);
 
   for(uint32_t i=1; i<mipLevels; ++i) {

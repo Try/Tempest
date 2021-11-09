@@ -248,7 +248,7 @@ struct DxCommandBuffer::MipMaps : Stage {
 struct DxCommandBuffer::CopyBuf : Stage {
   CopyBuf(DxDevice& dev,
           DxBuffer& dst, size_t offset,
-          const DxTexture& src, size_t width, size_t height, size_t mip)
+          DxTexture& src, size_t width, size_t height, size_t mip)
     :dst(dst), offset(offset), src(src), width(width), height(height), mip(int32_t(mip)), desc(*dev.copyLayout.handler) {
     }
 
@@ -271,10 +271,18 @@ struct DxCommandBuffer::CopyBuf : Stage {
     impl.SetPipelineState(prog.impl.get());
     impl.SetComputeRootSignature(prog.sign.get());
     cmd.implSetUniforms(desc,true);
-
     impl.SetComputeRoot32BitConstants(UINT(prog.pushConstantId),UINT(sizeof(push)/4),&push,0);
     const size_t maxWG = 65535;
+
+    auto& resState = cmd.resState;
+    resState.setLayout(dst,ResourceAccess::ComputeWrite);
+    resState.setLayout(src,ResourceAccess::TransferSrc);
+    resState.flush(cmd);
+
     impl.Dispatch(UINT(std::min(outSize,maxWG)),UINT((outSize+maxWG-1)%maxWG),1u);
+
+    resState.setLayout(dst,ResourceAccess::ComputeRead);
+    resState.setLayout(src,ResourceAccess::Sampler); // TODO: storage images
     }
 
   DxCompPipeline& shader(DxCommandBuffer& cmd, int32_t& bitCnt, int32_t& compCnt) {
@@ -336,7 +344,7 @@ struct DxCommandBuffer::CopyBuf : Stage {
 
   DxBuffer&         dst;
   const size_t      offset = 0;
-  const DxTexture&  src;
+  DxTexture&        src;
   const size_t      width  = 0;
   const size_t      height = 0;
   const int32_t     mip    = 0;
@@ -589,21 +597,24 @@ void DxCommandBuffer::changeLayout(AbstractGraphicsApi::Texture& t,
   barrier(&b,1);
   }
 
-void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer&  dstBuf, size_t offset, ResourceAccess defLayout,
+void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer&  dstBuf, size_t offset,
                            AbstractGraphicsApi::Texture& srcTex, uint32_t width, uint32_t height, uint32_t mip) {
-  resState.flush(*this);
-
   auto& dst = reinterpret_cast<DxBuffer&>(dstBuf);
-  auto& src = reinterpret_cast<const DxTexture&>(srcTex);
+  auto& src = reinterpret_cast<DxTexture&>(srcTex);
 
   const UINT bpp       = src.bitCount()/8;
   const UINT pitchBase = UINT(width)*bpp;
   const UINT pitch     = ((pitchBase+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
 
   if(pitch==pitchBase && (offset%D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)==0) {
-    changeLayout(srcTex,defLayout,ResourceAccess::TransferSrc,mip);
+    resState.setLayout(dst,ResourceAccess::TransferDst);
+    resState.setLayout(src,ResourceAccess::TransferSrc);
+    resState.flush(*this);
+
     copyNative(dstBuf,offset, srcTex,width,height,mip);
-    changeLayout(srcTex,ResourceAccess::TransferSrc,defLayout,mip);
+
+    resState.setLayout(dst,ResourceAccess::ComputeRead);
+    resState.setLayout(src,ResourceAccess::Sampler); // TODO: storage images
     return;
     }
 
