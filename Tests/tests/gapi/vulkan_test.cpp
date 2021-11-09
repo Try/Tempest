@@ -93,6 +93,12 @@ TEST(VulkanApi,ComputeImage) {
 #endif
   }
 
+TEST(VulkanApi,ComputeGraphics) {
+#if !defined(__OSX__)
+  GapiTestCommon::dispathToDraw<VulkanApi>("VulkanApi_GraphicsCompute.png");
+#endif
+  }
+
 TEST(VulkanApi,MipMaps) {
 #if !defined(__OSX__)
   GapiTestCommon::mipMaps<VulkanApi,TextureFormat::RGBA8>  ("VulkanApi_MipMaps_RGBA8.png");

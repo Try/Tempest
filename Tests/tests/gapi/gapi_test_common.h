@@ -420,6 +420,56 @@ void ssboDispath() {
   }
 
 template<class GraphicsApi>
+void dispathToDraw(const char* outImage) {
+  using namespace Tempest;
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto vbo    = device.vbo(vboData,3);
+    auto ibo    = device.ibo(iboData,3);
+    auto ssbo   = device.ssbo(nullptr, sizeof(Vec4)*4);
+    auto tex    = device.attachment(TextureFormat::RGBA8,4,4);
+
+    auto cs     = device.loadShader("shader/fillbuf.comp.sprv");
+    auto psoC   = device.pipeline(cs);
+
+    auto vs     = device.loadShader("shader/simple_test.vert.sprv");
+    auto fs     = device.loadShader("shader/comp_test.frag.sprv");
+    auto psoG   = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vs,fs);
+
+    auto uboCs  = device.descriptors(psoC.layout());
+    uboCs.set(0,ssbo);
+
+    auto uboFs  = device.descriptors(psoG.layout());
+    uboFs.set(0,ssbo);
+
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setUniforms(psoC,uboCs);
+      enc.dispatch(4,1,1);
+      enc.setFramebuffer({{tex,Vec4(0,0,0,0),Tempest::Preserve}});
+      enc.setUniforms(psoG,uboFs);
+      enc.draw(vbo,ibo);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    auto pm = device.readPixels(tex);
+    pm.save(outImage);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void imageCompute(const char* outImage) {
   using namespace Tempest;
 

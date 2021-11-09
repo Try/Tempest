@@ -104,6 +104,12 @@ TEST(DirectX12Api,ComputeImage) {
 #endif
   }
 
+TEST(DirectX12Api,ComputeGraphics) {
+#if defined(_MSC_VER)
+  GapiTestCommon::dispathToDraw<DirectX12Api>("DirectX12Api_GraphicsCompute.png");
+#endif
+  }
+
 TEST(DirectX12Api,MipMaps) {
 #if defined(_MSC_VER)
   GapiTestCommon::mipMaps<DirectX12Api,TextureFormat::RGBA8>  ("DirectX12Api_MipMaps_RGBA8.png");

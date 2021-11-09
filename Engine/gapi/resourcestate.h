@@ -19,6 +19,7 @@ class ResourceState {
     void setLayout  (AbstractGraphicsApi::Texture&   a, ResourceAccess lay, bool discard = false);
     void setLayout  (AbstractGraphicsApi::Buffer&    b, ResourceAccess lay);
 
+    void joinCompute();
     void flush      (AbstractGraphicsApi::CommandBuffer& cmd);
     void finalize   (AbstractGraphicsApi::CommandBuffer& cmd);
 

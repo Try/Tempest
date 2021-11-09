@@ -218,6 +218,7 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
   auto fb  = fbo.get();
   pass = fbo->pass;
 
+  resState.joinCompute();
   resState.setRenderpass(*this,desc,descSize,frm,att,sw,imgId);
 
   VkClearValue clr[MaxFramebufferAttachments];

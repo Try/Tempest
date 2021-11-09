@@ -399,6 +399,7 @@ bool DxCommandBuffer::isRecording() const {
 void Tempest::Detail::DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize, uint32_t w, uint32_t h,
                                                       const TextureFormat* frm, AbstractGraphicsApi::Texture** att,
                                                       AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) {
+  resState.joinCompute();
   resState.setRenderpass(*this,desc,descSize,frm,att,sw,imgId);
 
   D3D12_RENDER_PASS_RENDER_TARGET_DESC view[MaxFramebufferAttachments] = {};
@@ -475,7 +476,6 @@ void Tempest::Detail::DxCommandBuffer::beginRendering(const AttachmentDesc* desc
 
 void Tempest::Detail::DxCommandBuffer::endRendering() {
   impl->EndRenderPass();
-  // resState.flushLayout(*this);
   }
 
 void DxCommandBuffer::setViewport(const Rect& r) {

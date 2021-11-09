@@ -1,0 +1,9 @@
+#version 440
+
+layout(binding = 0, std140) buffer Input {
+  vec4 val[];
+  } result;
+
+void main() {
+  result.val[gl_GlobalInvocationID.x] = vec4(0.25,0.5,0.75,1.0);
+  }

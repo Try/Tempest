@@ -3,7 +3,6 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-
 void ResourceState::setRenderpass(AbstractGraphicsApi::CommandBuffer& cmd,
                                   const AttachmentDesc* desc, size_t descSize,
                                   const TextureFormat* frm, AbstractGraphicsApi::Texture** att,
@@ -67,9 +66,41 @@ void ResourceState::setLayout(AbstractGraphicsApi::Buffer& buf, ResourceAccess l
   bufState.push_back(s);
   }
 
+void ResourceState::joinCompute() {
+  for(auto& i:bufState) {
+    if(i.buf==nullptr)
+      continue;
+    if((i.last & ResourceAccess::ComputeWrite)!=ResourceAccess::ComputeWrite)
+      continue;
+    i.next     = ResourceAccess::ComputeRead;
+    i.outdated = true;
+    }
+  }
+
 void ResourceState::flush(AbstractGraphicsApi::CommandBuffer& cmd) {
   AbstractGraphicsApi::BarrierDesc barrier[MaxBarriers];
   uint8_t                          barrierCnt = 0;
+
+  for(auto& i:bufState) {
+    if(!i.outdated)
+      continue;
+    if(i.last==ResourceAccess::ComputeRead && i.next==ResourceAccess::ComputeRead)
+      continue;
+
+    auto& b = barrier[barrierCnt];
+    b.buffer = i.buf;
+    b.prev   = i.last;
+    b.next   = i.next;
+    ++barrierCnt;
+
+    i.last     = i.next;
+    i.outdated = false;
+    if(barrierCnt==MaxBarriers) {
+      cmd.barrier(barrier,barrierCnt);
+      barrierCnt = 0;
+      }
+    }
+
   for(auto& i:imgState) {
     if(!i.outdated)
       continue;
@@ -91,25 +122,6 @@ void ResourceState::flush(AbstractGraphicsApi::CommandBuffer& cmd) {
       }
     }
 
-  for(auto& i:bufState) {
-    if(!i.outdated)
-      continue;
-    if(i.last==ResourceAccess::ComputeRead && i.next==ResourceAccess::ComputeRead)
-      continue;
-
-    auto& b = barrier[barrierCnt];
-    b.buffer = i.buf;
-    b.prev   = i.last;
-    b.next   = i.next;
-    ++barrierCnt;
-
-    i.last     = i.next;
-    i.outdated = false;
-    if(barrierCnt==MaxBarriers) {
-      cmd.barrier(barrier,barrierCnt);
-      barrierCnt = 0;
-      }
-    }
   if(barrierCnt>0)
     cmd.barrier(barrier,barrierCnt);
   }
