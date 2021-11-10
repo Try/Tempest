@@ -172,9 +172,9 @@ void ResourceState::emitBarriers(AbstractGraphicsApi::CommandBuffer& cmd, Abstra
   if(cnt==0)
     return;
   std::sort(desc,desc+cnt,[](const AbstractGraphicsApi::BarrierDesc& l, const AbstractGraphicsApi::BarrierDesc& r) {
-    if(l.prev<r.next)
+    if(l.prev<r.prev)
       return true;
-    if(l.prev>r.next)
+    if(l.prev>r.prev)
       return false;
     return l.next<r.next;
     });

@@ -219,7 +219,7 @@ struct DxCommandBuffer::MipMaps : Stage {
     auto                        rtvHeapInc = dev.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
     auto& resState = cmd.resState;
-    resState.setLayout(img,ResourceAccess::TransferDst);
+    resState.setLayout(img,ResourceAccess::ColorAttach);
     resState.flush(cmd);
     for(uint32_t i=1; i<mipLevels; ++i) {
       const int mw = (w==1 ? 1 : w/2);
