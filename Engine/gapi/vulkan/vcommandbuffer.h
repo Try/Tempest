@@ -83,6 +83,8 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
   private:
     void addDependency(VSwapchain& s, size_t imgId);
+    void emitBarriers(VkPipelineStageFlags src, VkPipelineStageFlags dst, const VkBufferMemoryBarrier* b, uint32_t cnt);
+    void emitBarriers(VkPipelineStageFlags src, VkPipelineStageFlags dst, const VkImageMemoryBarrier* b, uint32_t cnt);
 
     VDevice&                                device;
     VCommandPool                            pool;

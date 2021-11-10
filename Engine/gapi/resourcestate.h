@@ -44,6 +44,7 @@ class ResourceState {
       };
 
     State&    findImg(AbstractGraphicsApi::Texture* img, AbstractGraphicsApi::Swapchain* sw, uint32_t id, ResourceAccess def, bool discard);
+    void      emitBarriers(AbstractGraphicsApi::CommandBuffer& cmd, AbstractGraphicsApi::BarrierDesc* desc, size_t cnt);
 
     std::vector<State>    imgState;
     std::vector<BufState> bufState;

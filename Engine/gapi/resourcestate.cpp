@@ -96,7 +96,7 @@ void ResourceState::flush(AbstractGraphicsApi::CommandBuffer& cmd) {
     i.last     = i.next;
     i.outdated = false;
     if(barrierCnt==MaxBarriers) {
-      cmd.barrier(barrier,barrierCnt);
+      emitBarriers(cmd,barrier,barrierCnt);
       barrierCnt = 0;
       }
     }
@@ -117,13 +117,12 @@ void ResourceState::flush(AbstractGraphicsApi::CommandBuffer& cmd) {
     i.last     = i.next;
     i.outdated = false;
     if(barrierCnt==MaxBarriers) {
-      cmd.barrier(barrier,barrierCnt);
+      emitBarriers(cmd,barrier,barrierCnt);
       barrierCnt = 0;
       }
     }
 
-  if(barrierCnt>0)
-    cmd.barrier(barrier,barrierCnt);
+  emitBarriers(cmd,barrier,barrierCnt);
   }
 
 void ResourceState::finalize(AbstractGraphicsApi::CommandBuffer& cmd) {
@@ -167,4 +166,17 @@ ResourceState::State& ResourceState::findImg(AbstractGraphicsApi::Texture* img, 
   s.outdated = false;
   imgState.push_back(s);
   return imgState.back();
+  }
+
+void ResourceState::emitBarriers(AbstractGraphicsApi::CommandBuffer& cmd, AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
+  if(cnt==0)
+    return;
+  std::sort(desc,desc+cnt,[](const AbstractGraphicsApi::BarrierDesc& l, const AbstractGraphicsApi::BarrierDesc& r) {
+    if(l.prev<r.next)
+      return true;
+    if(l.prev>r.next)
+      return false;
+    return l.next<r.next;
+    });
+  cmd.barrier(desc,cnt);
   }

@@ -50,7 +50,7 @@ static VkAccessFlagBits nativeFormat(ResourceAccess rs) {
   return VkAccessFlagBits(ret);
   }
 
-static VkPipelineStageFlags toStage(ResourceAccess rs) {
+static VkPipelineStageFlags toStage(ResourceAccess rs, bool isSrc) {
   uint32_t ret = 0;
   if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
     ret |= VK_PIPELINE_STAGE_TRANSFER_BIT;
@@ -80,6 +80,8 @@ static VkPipelineStageFlags toStage(ResourceAccess rs) {
     ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
   if((rs&ResourceAccess::ComputeWrite)==ResourceAccess::ComputeWrite)
     ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+  if(isSrc && ret==0)
+    ret = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT; // wait for nothing: asset uploading case
   return VkPipelineStageFlagBits(ret);
   }
 
@@ -517,6 +519,18 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
     auto& b = desc[i];
     if(b.buffer==nullptr)
       continue;
+    auto nSrcStage = toStage(b.prev,true);
+    auto nDstStage = toStage(b.next,false);
+    if(nSrcStage==0)
+      nSrcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT; // wait for nothing: asset uploading case
+
+    if(nSrcStage!=srcStage || nDstStage!=dstStage) {
+      emitBarriers(srcStage,dstStage,bufBarrier,pbCount);
+      srcStage = nSrcStage;
+      dstStage = nDstStage;
+      pbCount  = 0;
+      }
+
     auto& bx = bufBarrier[pbCount];
     bx.sType                 = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
     bx.srcQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
@@ -528,24 +542,9 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
     bx.srcAccessMask         = ::nativeFormat(b.prev);
     bx.dstAccessMask         = ::nativeFormat(b.next);
 
-    srcStage                |= toStage(b.prev);
-    dstStage                |= toStage(b.next);
-
-    if(srcStage==0)
-      srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT; // wait for nothing: asset uploading case
-
     ++pbCount;
     }
-
-  if(pbCount>0) {
-    vkCmdPipelineBarrier(
-          impl,
-          srcStage, dstStage,
-          0,
-          0, nullptr,
-          pbCount, bufBarrier,
-          0, nullptr);
-    }
+  emitBarriers(srcStage,dstStage,bufBarrier,pbCount);
   }
 
   {
@@ -558,6 +557,17 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
     auto& b = desc[i];
     if(b.buffer!=nullptr)
       continue;
+
+    auto nSrcStage = toStage(b.prev,true);
+    auto nDstStage = toStage(b.next,false);
+
+    if(nSrcStage!=srcStage || nDstStage!=dstStage) {
+      emitBarriers(srcStage,dstStage,imgBarrier,pbCount);
+      srcStage = nSrcStage;
+      dstStage = nDstStage;
+      pbCount  = 0;
+      }
+
     auto& bx = imgBarrier[pbCount];
     bx.sType                 = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     bx.srcQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
@@ -569,12 +579,6 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
 
     bx.oldLayout             = toLayout(b.prev);
     bx.newLayout             = toLayout(b.next);
-
-    srcStage                |= toStage(b.prev);
-    dstStage                |= toStage(b.next);
-
-    if(srcStage==0)
-      srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT; // wait for nothing: asset uploading case
     if(b.prev==ResourceAccess::Present)
       bx.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
     if(b.next==ResourceAccess::Present)
@@ -594,19 +598,9 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
 
     if(b.discard)
       bx.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
     ++pbCount;
     }
-
-  if(pbCount>0) {
-    vkCmdPipelineBarrier(
-          impl,
-          srcStage, dstStage,
-          0,
-          0, nullptr,
-          0, nullptr,
-          pbCount, imgBarrier);
-    }
+  emitBarriers(srcStage,dstStage,imgBarrier,pbCount);
   }
   }
 
@@ -622,6 +616,32 @@ void VCommandBuffer::addDependency(VSwapchain& s, size_t imgId) {
     if(i==sc)
       return;
   swapchainSync.push_back(sc);
+  }
+
+void VCommandBuffer::emitBarriers(VkPipelineStageFlags src, VkPipelineStageFlags dst,
+                                  const VkBufferMemoryBarrier* b, uint32_t cnt) {
+  if(cnt==0)
+    return;
+  vkCmdPipelineBarrier(
+        impl,
+        src, dst,
+        0,
+        0, nullptr,
+        cnt, b,
+        0, nullptr);
+  }
+
+void VCommandBuffer::emitBarriers(VkPipelineStageFlags src, VkPipelineStageFlags dst,
+                                  const VkImageMemoryBarrier* b, uint32_t cnt) {
+  if(cnt==0)
+    return;
+  vkCmdPipelineBarrier(
+        impl,
+        src, dst,
+        0,
+        0, nullptr,
+        0, nullptr,
+        cnt, b);
   }
 
 #endif
