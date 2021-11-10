@@ -107,7 +107,7 @@ TEST(MetalApi,S3TC) {
     MetalApi api{ApiFlags::Validation};
     Device       device(api);
 
-    auto tex = device.loadTexture("data/img/tst-dxt5.dds");
+    auto tex = device.texture("data/img/tst-dxt5.dds");
     EXPECT_EQ(tex.format(),TextureFormat::DXT5);
     }
   catch(std::system_error& e) {

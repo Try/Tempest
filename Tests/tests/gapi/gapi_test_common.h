@@ -344,8 +344,8 @@ void uniforms(const char* outImage) {
     auto vbo  = device.vbo(vboData,3);
     auto ibo  = device.ibo(iboData,3);
 
-    auto vert = device.loadShader("shader/ubo_input.vert.sprv");
-    auto frag = device.loadShader("shader/simple_test.frag.sprv");
+    auto vert = device.shader("shader/ubo_input.vert.sprv");
+    auto frag = device.shader("shader/simple_test.frag.sprv");
     auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
 
     auto tex  = device.attachment(format,128,128);
