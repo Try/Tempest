@@ -52,7 +52,7 @@ VulkanInstance::VulkanInstance(bool validation)
   createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
   createInfo.pApplicationInfo = &appInfo;
 
-  auto extensions = std::initializer_list<const char*>{
+  const std::initializer_list<const char*>& extensions = std::initializer_list<const char*>{
     VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
     VK_KHR_SURFACE_EXTENSION_NAME,
     SURFACE_EXTENSION_NAME,
