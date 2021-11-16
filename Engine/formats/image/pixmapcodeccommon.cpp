@@ -212,8 +212,8 @@ bool PixmapCodecCommon::save(ODevice &f, const char *ext, const uint8_t* cdata,
                              size_t dataSz, uint32_t w, uint32_t h, Pixmap::Format frm) const {
   (void)dataSz;
 
-  int bpp = int(Pixmap::bppForFormat(frm));
-  if(bpp==0)
+  int cmp = int(Pixmap::componentCount(frm));
+  if(cmp==0)
     return false;
 
   uint8_t *data = const_cast<uint8_t*>(cdata);
@@ -221,7 +221,7 @@ bool PixmapCodecCommon::save(ODevice &f, const char *ext, const uint8_t* cdata,
   if(ext==nullptr || std::strcmp("png",ext)==0) {
     int len=0;
     int stride_bytes=0;
-    uint8_t* dat = stbi_write_png_to_mem(data,stride_bytes,int(w),int(h),int(bpp),&len);
+    uint8_t* dat = stbi_write_png_to_mem(data,stride_bytes,int(w),int(h),int(cmp),&len);
     if(dat==nullptr)
       return false;
 
@@ -243,13 +243,16 @@ bool PixmapCodecCommon::save(ODevice &f, const char *ext, const uint8_t* cdata,
 
   WContext ctx = WContext{&f,false};
   if(std::strcmp("jpg",ext)==0 || std::strcmp("jpeg",ext)==0) {
-    stbi_write_jpg_to_func(WContext::write,&ctx,int(w),int(h),int(bpp),cdata,0);
+    stbi_write_jpg_to_func(WContext::write,&ctx,int(w),int(h),int(cmp),cdata,0);
     }
   else if(std::strcmp("bmp",ext)==0) {
-    stbi_write_bmp_to_func(WContext::write,&ctx,int(w),int(h),int(bpp),cdata);
+    stbi_write_bmp_to_func(WContext::write,&ctx,int(w),int(h),int(cmp),cdata);
     }
   else if(std::strcmp("tga",ext)==0) {
-    stbi_write_tga_to_func(WContext::write,&ctx,int(w),int(h),int(bpp),cdata);
+    stbi_write_tga_to_func(WContext::write,&ctx,int(w),int(h),int(cmp),cdata);
+    }
+  else if(std::strcmp("hdr",ext)==0) {
+    stbi_write_hdr_to_func(WContext::write,&ctx,int(w),int(h),int(cmp),reinterpret_cast<const float*>(cdata));
     }
   else {
     return false;

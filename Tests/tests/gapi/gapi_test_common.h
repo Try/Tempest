@@ -10,6 +10,8 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock-matchers.h>
 
+#include "utils/imagevalidator.h"
+
 namespace GapiTestCommon {
 
 struct Vertex {
@@ -318,6 +320,30 @@ void draw(const char* outImage) {
 
     auto pm = device.readPixels(tex);
     pm.save(outImage);
+
+    const uint32_t ccnt = Pixmap::componentCount(pm.format());
+    ImageValidator val(pm);
+    for(uint32_t y=0; y<pm.w(); ++y)
+      for(uint32_t x=0; x<pm.w(); ++x) {
+        auto pix = val.at(x,y);
+        auto ref = ImageValidator::Pixel();
+        if(x<y) {
+          ref.x[0] = 0;
+          ref.x[1] = 0;
+          ref.x[2] = 1;
+          ref.x[3] = 1;
+          } else {
+          const float u = (float(x)+0.5f)/float(pm.w());
+          const float v = (float(y)+0.5f)/float(pm.h());
+          ref.x[0] = u;
+          ref.x[1] = v;
+          ref.x[2] = 0;
+          ref.x[3] = 1;
+          }
+
+        for(uint32_t c=0; c<ccnt; ++c)
+          EXPECT_NEAR(pix.x[c],ref.x[c],0.01f);
+        }
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
