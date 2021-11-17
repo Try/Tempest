@@ -114,7 +114,7 @@ TEST(DirectX12Api,MipMaps) {
 #if defined(_MSC_VER)
   GapiTestCommon::mipMaps<DirectX12Api,TextureFormat::RGBA8>  ("DirectX12Api_MipMaps_RGBA8.png");
   GapiTestCommon::mipMaps<DirectX12Api,TextureFormat::RGBA16> ("DirectX12Api_MipMaps_RGBA16.png");
-  GapiTestCommon::mipMaps<DirectX12Api,TextureFormat::RGBA32F>("DirectX12Api_MipMaps_RGBA32.png");
+  GapiTestCommon::mipMaps<DirectX12Api,TextureFormat::RGBA32F>("DirectX12Api_MipMaps_RGBA32.hdr");
 #endif
   }
 

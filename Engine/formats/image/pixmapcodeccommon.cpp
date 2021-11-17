@@ -216,18 +216,46 @@ bool PixmapCodecCommon::save(ODevice &f, const char *ext, const uint8_t* cdata,
   if(cmp==0)
     return false;
 
+  bool isFlt  = false;
+  bool isNorm = false;
+  switch(frm) {
+    case Pixmap::Format::R:
+    case Pixmap::Format::RG:
+    case Pixmap::Format::RGB:
+    case Pixmap::Format::RGBA:
+    case Pixmap::Format::R16:
+    case Pixmap::Format::RG16:
+    case Pixmap::Format::RGB16:
+    case Pixmap::Format::RGBA16:
+      isNorm = true;
+      break;
+    case Pixmap::Format::R32F:
+    case Pixmap::Format::RG32F:
+    case Pixmap::Format::RGB32F:
+    case Pixmap::Format::RGBA32F:
+      isFlt = true;
+      break;
+    case Pixmap::Format::DXT1:
+    case Pixmap::Format::DXT3:
+    case Pixmap::Format::DXT5:
+      break;
+    }
+
   uint8_t *data = const_cast<uint8_t*>(cdata);
 
   if(ext==nullptr || std::strcmp("png",ext)==0) {
-    int len=0;
-    int stride_bytes=0;
-    uint8_t* dat = stbi_write_png_to_mem(data,stride_bytes,int(w),int(h),int(cmp),&len);
-    if(dat==nullptr)
-      return false;
+    if(isNorm) {
+      int len=0;
+      int stride_bytes=0;
+      uint8_t* dat = stbi_write_png_to_mem(data,stride_bytes,int(w),int(h),int(cmp),&len);
+      if(dat==nullptr)
+        return false;
 
-    bool ret=(f.write(dat,size_t(len))==size_t(len) && f.flush());
-    std::free(dat);
-    return ret;
+      bool ret=(f.write(dat,size_t(len))==size_t(len) && f.flush());
+      std::free(dat);
+      return ret;
+      }
+    ext = isFlt ? "hdr" : "png";
     }
 
   struct WContext final {
@@ -242,16 +270,16 @@ bool PixmapCodecCommon::save(ODevice &f, const char *ext, const uint8_t* cdata,
     };
 
   WContext ctx = WContext{&f,false};
-  if(std::strcmp("jpg",ext)==0 || std::strcmp("jpeg",ext)==0) {
+  if((std::strcmp("jpg",ext)==0 || std::strcmp("jpeg",ext)==0) && isNorm) {
     stbi_write_jpg_to_func(WContext::write,&ctx,int(w),int(h),int(cmp),cdata,0);
     }
-  else if(std::strcmp("bmp",ext)==0) {
+  else if((std::strcmp("bmp",ext)==0) && isNorm) {
     stbi_write_bmp_to_func(WContext::write,&ctx,int(w),int(h),int(cmp),cdata);
     }
-  else if(std::strcmp("tga",ext)==0) {
+  else if((std::strcmp("tga",ext)==0) && isNorm) {
     stbi_write_tga_to_func(WContext::write,&ctx,int(w),int(h),int(cmp),cdata);
     }
-  else if(std::strcmp("hdr",ext)==0) {
+  else if((std::strcmp("hdr",ext)==0) && isFlt) {
     stbi_write_hdr_to_func(WContext::write,&ctx,int(w),int(h),int(cmp),reinterpret_cast<const float*>(cdata));
     }
   else {

@@ -103,7 +103,7 @@ TEST(VulkanApi,MipMaps) {
 #if !defined(__OSX__)
   GapiTestCommon::mipMaps<VulkanApi,TextureFormat::RGBA8>  ("VulkanApi_MipMaps_RGBA8.png");
   GapiTestCommon::mipMaps<VulkanApi,TextureFormat::RGBA16> ("VulkanApi_MipMaps_RGBA16.png");
-  GapiTestCommon::mipMaps<VulkanApi,TextureFormat::RGBA32F>("VulkanApi_MipMaps_RGBA32.png");
+  GapiTestCommon::mipMaps<VulkanApi,TextureFormat::RGBA32F>("VulkanApi_MipMaps_RGBA32.hdr");
 #endif
   }
 
