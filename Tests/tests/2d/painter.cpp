@@ -1,0 +1,93 @@
+#include <Tempest/VulkanApi>
+#include <Tempest/DirectX12Api>
+
+#include <Tempest/Except>
+#include <Tempest/Device>
+#include <Tempest/Fence>
+#include <Tempest/Pixmap>
+#include <Tempest/Log>
+#include <Tempest/VectorImage>
+#include <Tempest/Event>
+#include <Tempest/Painter>
+
+#include <gtest/gtest.h>
+#include <gmock/gmock-matchers.h>
+
+using namespace Tempest;
+
+class PainterTest : public ::testing::Test {
+  protected:
+    void SetUp()    override {}
+    void TearDown() override {}
+
+    void draw(Attachment& fbo, const VectorImage::Mesh& mesh) {
+      auto cmd = device.commandBuffer();
+      {
+        auto enc = cmd.startEncoding(device);
+        enc.setFramebuffer({{fbo,Vec4(0,0,0,1),Tempest::Preserve}});
+        mesh.draw(enc);
+      }
+
+      auto sync = device.fence();
+      device.submit(cmd,sync);
+      sync.wait();
+      }
+
+    void logImage(const Attachment& fbo) {
+      auto name  = ::testing::UnitTest::GetInstance()->current_test_info()->name();
+      auto tcase = ::testing::UnitTest::GetInstance()->current_test_info()->test_case_name();
+      char buf[256] = {};
+      std::snprintf(buf,sizeof(buf),"%s-%s.png",tcase,name);
+
+      auto pm = device.readPixels(fbo);
+      pm.save(buf);
+      }
+
+#if defined(__OSX__)
+    MetalApi     api{ApiFlags::Validation};
+#else
+    VulkanApi    api{ApiFlags::Validation};
+#endif
+    Device       device{api};
+    TextureAtlas atlas{device};
+  };
+
+TEST_F(PainterTest, Quad)
+{
+  VectorImage       img;
+  VectorImage::Mesh imgMesh;
+
+  auto fbo = device.attachment(TextureFormat::RGBA8,512,512);
+  {
+  PaintEvent e(img,atlas,fbo.w(),fbo.h());
+  Painter    p(e);
+
+  p.setBrush(Color(0,0,1,1));
+  p.drawRect(32,32,128,128);
+  }
+
+  imgMesh.update(device,img);
+  draw(fbo, imgMesh);
+  logImage(fbo);
+}
+
+TEST_F(PainterTest, Line)
+{
+  VectorImage       img;
+  VectorImage::Mesh imgMesh;
+
+  auto fbo = device.attachment(TextureFormat::RGBA8,512,512);
+  {
+  PaintEvent e(img,atlas,fbo.w(),fbo.h());
+  Painter    p(e);
+
+  for(int i=1; i<10; ++i) {
+    p.setPen(Pen(Color(1,1,1,1),Painter::Alpha,float(i)));
+    p.drawLine(32,32*i,32+32,32*i+32);
+    }
+  }
+
+  imgMesh.update(device,img);
+  draw(fbo, imgMesh);
+  logImage(fbo);
+}

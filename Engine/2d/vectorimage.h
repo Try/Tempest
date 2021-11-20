@@ -20,7 +20,7 @@ class VectorImage : public Tempest::PaintDevice {
     class Mesh {
       public:
         void update(Device& dev, const VectorImage& src, BufferHeap heap = BufferHeap::Upload);
-        void draw  (Encoder<CommandBuffer>& cmd);
+        void draw  (Encoder<CommandBuffer>& cmd) const;
 
       private:
         struct Block {
