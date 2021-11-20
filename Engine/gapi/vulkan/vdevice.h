@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
+#include <Tempest/RenderState>
 #include <stdexcept>
 #include "vulkan_sdk.h"
 
@@ -85,6 +86,57 @@ inline VkSamplerAddressMode nativeFormat(ClampMode f){
     VK_SAMPLER_ADDRESS_MODE_REPEAT,
     };
   return vfrm[int(f)];
+  }
+
+inline VkBlendFactor nativeFormat(RenderState::BlendMode b) {
+  switch(b) {
+    case RenderState::BlendMode::Zero:             return VK_BLEND_FACTOR_ZERO;
+    case RenderState::BlendMode::One:              return VK_BLEND_FACTOR_ONE;
+    case RenderState::BlendMode::SrcColor:         return VK_BLEND_FACTOR_SRC_COLOR;
+    case RenderState::BlendMode::OneMinusSrcColor: return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+    case RenderState::BlendMode::SrcAlpha:         return VK_BLEND_FACTOR_SRC_ALPHA;
+    case RenderState::BlendMode::OneMinusSrcAlpha: return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    case RenderState::BlendMode::DstAlpha:         return VK_BLEND_FACTOR_DST_ALPHA;
+    case RenderState::BlendMode::OneMinusDstAlpha: return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+    case RenderState::BlendMode::DstColor:         return VK_BLEND_FACTOR_DST_COLOR;
+    case RenderState::BlendMode::OneMinusDstColor: return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+    case RenderState::BlendMode::SrcAlphaSaturate: return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
+    }
+  return VK_BLEND_FACTOR_ZERO;
+  }
+
+inline VkBlendOp nativeFormat(RenderState::BlendOp op) {
+  switch(op) {
+    case RenderState::BlendOp::Add:             return VK_BLEND_OP_ADD;
+    case RenderState::BlendOp::Subtract:        return VK_BLEND_OP_SUBTRACT;
+    case RenderState::BlendOp::ReverseSubtract: return VK_BLEND_OP_REVERSE_SUBTRACT;
+    case RenderState::BlendOp::Min:             return VK_BLEND_OP_MIN;
+    case RenderState::BlendOp::Max:             return VK_BLEND_OP_MAX;
+    }
+  return VK_BLEND_OP_ADD;
+  }
+
+inline VkCullModeFlags nativeFormat(RenderState::CullMode c) {
+  switch(c) {
+    case RenderState::CullMode::Back:   return VK_CULL_MODE_BACK_BIT;
+    case RenderState::CullMode::Front:  return VK_CULL_MODE_FRONT_BIT;
+    case RenderState::CullMode::NoCull: return 0;
+    }
+  return 0;
+  }
+
+inline VkCompareOp nativeFormat(RenderState::ZTestMode zm) {
+  switch(zm) {
+    case RenderState::ZTestMode::Always:  return VK_COMPARE_OP_ALWAYS;
+    case RenderState::ZTestMode::Never:   return VK_COMPARE_OP_NEVER;
+    case RenderState::ZTestMode::Greater: return VK_COMPARE_OP_GREATER;
+    case RenderState::ZTestMode::Less:    return VK_COMPARE_OP_LESS;
+    case RenderState::ZTestMode::GEqual:  return VK_COMPARE_OP_GREATER_OR_EQUAL;
+    case RenderState::ZTestMode::LEqual:  return VK_COMPARE_OP_LESS_OR_EQUAL;
+    case RenderState::ZTestMode::NOEqual: return VK_COMPARE_OP_NOT_EQUAL;
+    case RenderState::ZTestMode::Equal:   return VK_COMPARE_OP_EQUAL;
+    }
+  return VK_COMPARE_OP_ALWAYS;
   }
 
 inline VkFilter nativeFormat(Filter f){

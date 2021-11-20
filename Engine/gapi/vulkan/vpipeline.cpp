@@ -195,20 +195,13 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   viewportState.scissorCount  = 1;
   viewportState.pScissors     = nullptr;
 
-  static const VkCullModeFlags cullMode[]={
-    VK_CULL_MODE_BACK_BIT,
-    VK_CULL_MODE_FRONT_BIT,
-    0,
-    0
-    };
-
   VkPipelineRasterizationStateCreateInfo rasterizer = {};
   rasterizer.sType                   = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
   rasterizer.pNext                   = nullptr;
   rasterizer.flags                   = 0;
   rasterizer.rasterizerDiscardEnable = st.isRasterDiscardEnabled() ? VK_TRUE : VK_FALSE;
   rasterizer.polygonMode             = VkPolygonMode::VK_POLYGON_MODE_FILL;
-  rasterizer.cullMode                = cullMode[uint32_t(st.cullFaceMode())];//VkCullModeFlagBits::VK_CULL_MODE_FRONT_BIT;
+  rasterizer.cullMode                = nativeFormat(st.cullFaceMode());
   rasterizer.frontFace               = VkFrontFace::VK_FRONT_FACE_CLOCKWISE;
   rasterizer.depthClampEnable        = VK_FALSE;
   rasterizer.depthBiasEnable         = VK_FALSE;
@@ -222,29 +215,6 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   multisampling.sampleShadingEnable  = VK_FALSE;
   multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
-  static const VkBlendFactor blend[] = {
-    VK_BLEND_FACTOR_ZERO,                 //GL_ZERO,
-    VK_BLEND_FACTOR_ONE,                  //GL_ONE,
-    VK_BLEND_FACTOR_SRC_COLOR,            //GL_SRC_COLOR,
-    VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR,  //GL_ONE_MINUS_SRC_COLOR,
-    VK_BLEND_FACTOR_SRC_ALPHA,            //GL_SRC_ALPHA,
-    VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,  //GL_ONE_MINUS_SRC_ALPHA,
-    VK_BLEND_FACTOR_DST_ALPHA,            //GL_DST_ALPHA,
-    VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA,  //GL_ONE_MINUS_DST_ALPHA,
-    VK_BLEND_FACTOR_DST_COLOR,            //GL_DST_COLOR,
-    VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR,  //GL_ONE_MINUS_DST_COLOR,
-    VK_BLEND_FACTOR_SRC_ALPHA_SATURATE,   //GL_SRC_ALPHA_SATURATE,
-    VK_BLEND_FACTOR_ZERO
-    };
-
-  static const VkBlendOp blendOp[] = {
-    VK_BLEND_OP_ADD,
-    VK_BLEND_OP_SUBTRACT,
-    VK_BLEND_OP_REVERSE_SUBTRACT,
-    VK_BLEND_OP_MIN,
-    VK_BLEND_OP_MAX,
-    };
-
   VkPipelineColorBlendAttachmentState blendAtt[MaxFramebufferAttachments] = {};
   uint32_t                            blendAttCount = 0;
   for(size_t i=0; i<lay.descSize; ++i) {
@@ -253,9 +223,9 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
     auto& a = blendAtt[i];
     a.colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     a.blendEnable         = st.hasBlend() ? VK_TRUE : VK_FALSE;
-    a.dstColorBlendFactor = blend[uint8_t(st.blendDest())];
-    a.srcColorBlendFactor = blend[uint8_t(st.blendSource())];
-    a.colorBlendOp        = blendOp[uint8_t(st.blendOperation())];
+    a.dstColorBlendFactor = nativeFormat(st.blendDest());
+    a.srcColorBlendFactor = nativeFormat(st.blendSource());
+    a.colorBlendOp        = nativeFormat(st.blendOperation());
     a.dstAlphaBlendFactor = a.dstColorBlendFactor;
     a.srcAlphaBlendFactor = a.srcColorBlendFactor;
     a.alphaBlendOp        = a.colorBlendOp;
@@ -273,26 +243,11 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   colorBlending.blendConstants[2] = 0.0f;
   colorBlending.blendConstants[3] = 0.0f;
 
-  static const VkCompareOp zMode[]={
-    VK_COMPARE_OP_ALWAYS,
-    VK_COMPARE_OP_NEVER,
-
-    VK_COMPARE_OP_GREATER,
-    VK_COMPARE_OP_LESS,
-
-    VK_COMPARE_OP_GREATER_OR_EQUAL,
-    VK_COMPARE_OP_LESS_OR_EQUAL,
-
-    VK_COMPARE_OP_NOT_EQUAL,
-    VK_COMPARE_OP_EQUAL,
-    VK_COMPARE_OP_ALWAYS
-    };
-
   VkPipelineDepthStencilStateCreateInfo depthStencil = {};
   depthStencil.sType                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
   depthStencil.depthTestEnable       = st.zTestMode()!=RenderState::ZTestMode::Always ? VK_TRUE : VK_FALSE;
   depthStencil.depthWriteEnable      = st.isZWriteEnabled() ? VK_TRUE : VK_FALSE;
-  depthStencil.depthCompareOp        = zMode[uint32_t(st.zTestMode())];
+  depthStencil.depthCompareOp        = nativeFormat(st.zTestMode());
   depthStencil.depthBoundsTestEnable = VK_FALSE;
   depthStencil.stencilTestEnable     = VK_FALSE;
 

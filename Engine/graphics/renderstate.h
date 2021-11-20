@@ -9,18 +9,17 @@ class RenderState final {
     RenderState()=default;
 
     enum class BlendMode : uint8_t {
-      zero,                 //GL_ZERO,
-      one,                  //GL_ONE,
-      src_color,            //GL_SRC_COLOR,
-      one_minus_src_color,  //GL_ONE_MINUS_SRC_COLOR,
-      src_alpha,            //GL_SRC_ALPHA,
-      one_minus_src_alpha,  //GL_ONE_MINUS_SRC_ALPHA,
-      dst_alpha,            //GL_DST_ALPHA,
-      one_minus_dst_alpha,  //GL_ONE_MINUS_DST_ALPHA,
-      dst_color,            //GL_DST_COLOR,
-      one_minus_dst_color,  //GL_ONE_MINUS_DST_COLOR,
-      src_alpha_saturate,   //GL_SRC_ALPHA_SATURATE,
-      Count
+      Zero,
+      One,
+      SrcColor,
+      OneMinusSrcColor,
+      SrcAlpha,
+      OneMinusSrcAlpha,
+      DstAlpha,
+      OneMinusDstAlpha,
+      DstColor,
+      OneMinusDstColor,
+      SrcAlphaSaturate,
       };
 
     enum class BlendOp : uint8_t {
@@ -42,15 +41,13 @@ class RenderState final {
       LEqual,
 
       NOEqual,
-      Equal,
-      Count
+      Equal
       };
 
     enum class CullMode : uint8_t {
       Back=0,
       Front,
-      NoCull,
-      Count
+      NoCull
       };
 
     void      setBlendSource(BlendMode s) { blendS=s; }
@@ -61,7 +58,7 @@ class RenderState final {
     BlendMode blendDest()      const { return blendD; }
     BlendOp   blendOperation() const { return blendO; }
 
-    bool      hasBlend() const { return blendS!=BlendMode::one || blendD!=BlendMode::zero || !(blendO==BlendOp::Add || blendO==BlendOp::Subtract); }
+    bool      hasBlend() const { return blendS!=BlendMode::One || blendD!=BlendMode::Zero || !(blendO==BlendOp::Add || blendO==BlendOp::Subtract); }
 
     void      setZTestMode(ZTestMode z){ zmode=z; }
     ZTestMode zTestMode() const { return zmode; }
@@ -76,8 +73,8 @@ class RenderState final {
     void      setCullFaceMode(CullMode use) { cull=use; }
 
   private:
-    BlendMode blendS   = BlendMode::one;
-    BlendMode blendD   = BlendMode::zero;
+    BlendMode blendS   = BlendMode::One;
+    BlendMode blendD   = BlendMode::Zero;
     BlendOp   blendO   = BlendOp::Add;
     ZTestMode zmode    = ZTestMode::Always;
     CullMode  cull     = CullMode::Back;

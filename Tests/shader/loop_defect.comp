@@ -1,28 +1,37 @@
 #version 440
 
-layout(binding = 0, std140) readonly buffer Input {
-  ivec4 val[];
-  } source;
+#define REPRODUCER 1
 
-layout(binding = 1, std140) buffer Output {
-  ivec4 val[];
-  } result;
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_EXT_control_flow_attributes : enable
 
+#define MAX_RT_STACK_DEPTH 16
 
-int func(ivec4 flow) {
-  int ret = 0;
-  for(int i=0; i<flow.x; ++i) {
-    ret += flow.y;
-    }
-  return ret;
-  }
+struct TraverseStack {
+  uint v[MAX_RT_STACK_DEPTH+1];
+  };
+
+layout(binding = 1, std140) readonly buffer Tlas {
+  uint node[];
+  } tlas;
 
 void main() {
-  for(int i=0; ; ++i) {
-    ivec4 v = source.val[i];
-    result.val[gl_GlobalInvocationID.x] += v;
-    result.val[gl_GlobalInvocationID.x] += func(v);
-    if(v==ivec4(0))
-      break;
+#if REPRODUCER
+  TraverseStack stack;
+#else
+  uint stack[MAX_RT_STACK_DEPTH+1];
+#endif
+
+  stack.v[0] = 0;
+  int   pos  = 0;
+
+  [[dont_unroll]]
+  while(pos>=0) {
+    uint i = stack.v[pos];
+    uint n = tlas.node[i];
+
+    if(n>0)
+      stack.v[pos] = n; else
+      pos--;
     }
   }

@@ -200,7 +200,7 @@ TEST(DirectX12Api,SpirvDefect_Link) {
 #endif
   }
 
-TEST(DirectX12Api,SpirvDefect_Loop) {
+TEST(DirectX12Api,DISABLED_SpirvDefect_Loop) {
 #if defined(_MSC_VER)
   using namespace Tempest;
 

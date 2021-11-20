@@ -68,33 +68,11 @@ ID3D12PipelineState& DxPipeline::instance(const DxFboLayout& frm) {
   }
 
 D3D12_BLEND_DESC DxPipeline::getBlend(const RenderState& st) const {
-  static const D3D12_BLEND blendMode[size_t(RenderState::BlendMode::Count)] =  {
-    D3D12_BLEND_ZERO,
-    D3D12_BLEND_ONE,
-    D3D12_BLEND_SRC_COLOR,
-    D3D12_BLEND_INV_SRC_COLOR,
-    D3D12_BLEND_SRC_ALPHA,
-    D3D12_BLEND_INV_SRC_ALPHA,
-    D3D12_BLEND_DEST_ALPHA,
-    D3D12_BLEND_INV_DEST_ALPHA,
-    D3D12_BLEND_DEST_COLOR,
-    D3D12_BLEND_INV_DEST_COLOR,
-    D3D12_BLEND_SRC_ALPHA_SAT,
-    };
-
-  static const D3D12_BLEND_OP blendOp[] = {
-    D3D12_BLEND_OP_ADD,
-    D3D12_BLEND_OP_SUBTRACT,
-    D3D12_BLEND_OP_REV_SUBTRACT,
-    D3D12_BLEND_OP_MIN,
-    D3D12_BLEND_OP_MAX,
-    };
-
   D3D12_RENDER_TARGET_BLEND_DESC b;
   b.BlendEnable           = st.hasBlend() ? TRUE : FALSE;
-  b.SrcBlend              = blendMode[uint8_t(st.blendSource())];
-  b.DestBlend             = blendMode[uint8_t(st.blendDest())];
-  b.BlendOp               = blendOp[uint8_t(st.blendOperation())];
+  b.SrcBlend              = nativeFormat(st.blendSource());
+  b.DestBlend             = nativeFormat(st.blendDest());
+  b.BlendOp               = nativeFormat(st.blendOperation());
   b.SrcBlendAlpha         = b.SrcBlend;
   b.DestBlendAlpha        = b.DestBlend;
   b.BlendOpAlpha          = b.BlendOp;
@@ -102,7 +80,7 @@ D3D12_BLEND_DESC DxPipeline::getBlend(const RenderState& st) const {
   b.LogicOp               = D3D12_LOGIC_OP_CLEAR;
   b.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
-  D3D12_BLEND_DESC d={};
+  D3D12_BLEND_DESC d = {};
   d.AlphaToCoverageEnable  = FALSE;
   d.IndependentBlendEnable = FALSE;
   for(auto& i:d.RenderTarget)
@@ -112,32 +90,14 @@ D3D12_BLEND_DESC DxPipeline::getBlend(const RenderState& st) const {
   }
 
 D3D12_RASTERIZER_DESC DxPipeline::getRaster(const RenderState& st) const {
-  static const D3D12_CULL_MODE cull[size_t(RenderState::CullMode::Count)]={
-    D3D12_CULL_MODE_BACK,
-    D3D12_CULL_MODE_FRONT,
-    D3D12_CULL_MODE_NONE,
-  };
-
   D3D12_RASTERIZER_DESC rd = {};
   rd.FillMode              = D3D12_FILL_MODE_SOLID;
-  rd.CullMode              = cull[size_t(st.cullFaceMode())];
+  rd.CullMode              = nativeFormat(st.cullFaceMode());
   rd.FrontCounterClockwise = FALSE;
-
   return rd;
   }
 
 ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& frm) {
-  static const D3D12_COMPARISON_FUNC depthFn[size_t(RenderState::ZTestMode::Count)]= {
-    D3D12_COMPARISON_FUNC_ALWAYS,
-    D3D12_COMPARISON_FUNC_NEVER,
-    D3D12_COMPARISON_FUNC_GREATER,
-    D3D12_COMPARISON_FUNC_LESS,
-    D3D12_COMPARISON_FUNC_GREATER_EQUAL,
-    D3D12_COMPARISON_FUNC_LESS_EQUAL,
-    D3D12_COMPARISON_FUNC_NOT_EQUAL,
-    D3D12_COMPARISON_FUNC_EQUAL,
-    };
-
   D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
   psoDesc.InputLayout     = { vsInput.get(), UINT(declSize) };
   psoDesc.pRootSignature  = sign.get();
@@ -156,7 +116,7 @@ ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& 
   psoDesc.BlendState      = getBlend (rState);
   psoDesc.DepthStencilState.DepthEnable    = rState.zTestMode()!=RenderState::ZTestMode::Always ? TRUE : FALSE;
   psoDesc.DepthStencilState.DepthWriteMask = rState.isZWriteEnabled() ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
-  psoDesc.DepthStencilState.DepthFunc      = depthFn[size_t(rState.zTestMode())];
+  psoDesc.DepthStencilState.DepthFunc      = nativeFormat(rState.zTestMode());
   psoDesc.DepthStencilState.StencilEnable  = FALSE;
 
   psoDesc.SampleMask            = UINT_MAX;

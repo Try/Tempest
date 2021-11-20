@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
+#include <Tempest/RenderState>
 #include <stdexcept>
 #include <mutex>
 
@@ -93,6 +94,57 @@ inline bool nativeIsDepthFormat(DXGI_FORMAT frm) {
      frm==DXGI_FORMAT_D16_UNORM)
     return true;
   return false;
+  }
+
+inline D3D12_BLEND nativeFormat(RenderState::BlendMode b) {
+  switch(b) {
+    case RenderState::BlendMode::Zero:             return D3D12_BLEND_ZERO;
+    case RenderState::BlendMode::One:              return D3D12_BLEND_ONE;
+    case RenderState::BlendMode::SrcColor:         return D3D12_BLEND_SRC_COLOR;
+    case RenderState::BlendMode::OneMinusSrcColor: return D3D12_BLEND_INV_SRC_COLOR;
+    case RenderState::BlendMode::SrcAlpha:         return D3D12_BLEND_SRC_ALPHA;
+    case RenderState::BlendMode::OneMinusSrcAlpha: return D3D12_BLEND_INV_SRC_ALPHA;
+    case RenderState::BlendMode::DstAlpha:         return D3D12_BLEND_DEST_ALPHA;
+    case RenderState::BlendMode::OneMinusDstAlpha: return D3D12_BLEND_INV_DEST_ALPHA;
+    case RenderState::BlendMode::DstColor:         return D3D12_BLEND_DEST_COLOR;
+    case RenderState::BlendMode::OneMinusDstColor: return D3D12_BLEND_INV_DEST_COLOR;
+    case RenderState::BlendMode::SrcAlphaSaturate: return D3D12_BLEND_SRC_ALPHA_SAT;
+    }
+  return D3D12_BLEND_ZERO;
+  }
+
+inline D3D12_BLEND_OP nativeFormat(RenderState::BlendOp op) {
+  switch(op) {
+    case RenderState::BlendOp::Add:             return D3D12_BLEND_OP_ADD;
+    case RenderState::BlendOp::Subtract:        return D3D12_BLEND_OP_SUBTRACT;
+    case RenderState::BlendOp::ReverseSubtract: return D3D12_BLEND_OP_REV_SUBTRACT;
+    case RenderState::BlendOp::Min:             return D3D12_BLEND_OP_MIN;
+    case RenderState::BlendOp::Max:             return D3D12_BLEND_OP_MAX;
+    }
+  return D3D12_BLEND_OP_ADD;
+  }
+
+inline D3D12_CULL_MODE nativeFormat(RenderState::CullMode c) {
+  switch(c) {
+    case RenderState::CullMode::Back:   return D3D12_CULL_MODE_BACK;
+    case RenderState::CullMode::Front:  return D3D12_CULL_MODE_FRONT;
+    case RenderState::CullMode::NoCull: return D3D12_CULL_MODE_NONE;
+    }
+  return D3D12_CULL_MODE_NONE;
+  }
+
+inline D3D12_COMPARISON_FUNC nativeFormat(RenderState::ZTestMode zm) {
+  switch(zm) {
+    case RenderState::ZTestMode::Always:  return D3D12_COMPARISON_FUNC_ALWAYS;
+    case RenderState::ZTestMode::Never:   return D3D12_COMPARISON_FUNC_NEVER;
+    case RenderState::ZTestMode::Greater: return D3D12_COMPARISON_FUNC_GREATER;
+    case RenderState::ZTestMode::Less:    return D3D12_COMPARISON_FUNC_LESS;
+    case RenderState::ZTestMode::GEqual:  return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+    case RenderState::ZTestMode::LEqual:  return D3D12_COMPARISON_FUNC_LESS_EQUAL;
+    case RenderState::ZTestMode::NOEqual: return D3D12_COMPARISON_FUNC_NOT_EQUAL;
+    case RenderState::ZTestMode::Equal:   return D3D12_COMPARISON_FUNC_EQUAL;
+    }
+  return D3D12_COMPARISON_FUNC_ALWAYS;
   }
 
 inline DXGI_FORMAT nativeFormat(Decl::ComponentType t) {
