@@ -73,6 +73,7 @@ compile_shader(simple_test.comp)
 compile_shader(image_store_test.comp)
 
 compile_shader(fillbuf.comp)
+compile_shader(img2buf.comp)
 compile_shader(comp_test.frag)
 
 compile_shader(ubo_input.vert)

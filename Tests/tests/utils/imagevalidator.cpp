@@ -5,7 +5,7 @@
 using namespace Tempest;
 
 ImageValidator::Pixel ImageValidator::at(uint32_t x, uint32_t y) const {
-  auto d = reinterpret_cast<const uint8_t*>(pm.data()) + ((x+y*pm.w())*bpp);
+  auto d = reinterpret_cast<const uint8_t*>(pm) + ((x+y*width)*bpp);
 
   switch(frm) {
     case Pixmap::Format::DXT1:

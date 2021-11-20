@@ -89,21 +89,22 @@ TEST(VulkanApi,Compute) {
 
 TEST(VulkanApi,ComputeImage) {
 #if !defined(__OSX__)
-  GapiTestCommon::imageCompute<VulkanApi>("VulkanApi_Compute.png");
+  GapiTestCommon::ComputeImage<VulkanApi>("VulkanApi_ComputeImage.png");
 #endif
   }
 
-TEST(VulkanApi,ComputeGraphics) {
+TEST(VulkanApi,DispathToDraw) {
 #if !defined(__OSX__)
-  GapiTestCommon::dispathToDraw<VulkanApi>("VulkanApi_GraphicsCompute.png");
+  GapiTestCommon::DispathToDraw<VulkanApi>("VulkanApi_DispathToDraw.png");
+  GapiTestCommon::DrawToDispath<VulkanApi>();
 #endif
   }
 
 TEST(VulkanApi,MipMaps) {
 #if !defined(__OSX__)
-  GapiTestCommon::mipMaps<VulkanApi,TextureFormat::RGBA8>  ("VulkanApi_MipMaps_RGBA8.png");
-  GapiTestCommon::mipMaps<VulkanApi,TextureFormat::RGBA16> ("VulkanApi_MipMaps_RGBA16.png");
-  GapiTestCommon::mipMaps<VulkanApi,TextureFormat::RGBA32F>("VulkanApi_MipMaps_RGBA32.hdr");
+  GapiTestCommon::MipMaps<VulkanApi,TextureFormat::RGBA8>  ("VulkanApi_MipMaps_RGBA8.png");
+  GapiTestCommon::MipMaps<VulkanApi,TextureFormat::RGBA16> ("VulkanApi_MipMaps_RGBA16.png");
+  GapiTestCommon::MipMaps<VulkanApi,TextureFormat::RGBA32F>("VulkanApi_MipMaps_RGBA32.hdr");
 #endif
   }
 
@@ -121,12 +122,12 @@ TEST(VulkanApi,TesselationBasic) {
 
 TEST(VulkanApi,SsboWrite) {
 #if !defined(__OSX__)
-  GapiTestCommon::ssboWriteVs<VulkanApi>();
+  GapiTestCommon::SsboWrite<VulkanApi>();
 #endif
   }
 
 TEST(VulkanApi,PushRemapping) {
 #if !defined(__OSX__)
-  GapiTestCommon::pushConstant<VulkanApi>();
+  GapiTestCommon::PushRemapping<VulkanApi>();
 #endif
   }

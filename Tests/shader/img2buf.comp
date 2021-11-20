@@ -1,0 +1,12 @@
+#version 440
+
+layout(binding = 0) uniform sampler2D texture;
+layout(binding = 1, std140) buffer Output {
+  vec4 val[];
+  } result;
+
+void main() {
+  ivec2 p = ivec2(gl_GlobalInvocationID);
+  ivec2 s = textureSize(texture,0);
+  result.val[gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*s.x] = texelFetch(texture,p,0);
+  }

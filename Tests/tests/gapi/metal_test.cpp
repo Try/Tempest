@@ -89,15 +89,15 @@ TEST(MetalApi,Compute) {
 
 TEST(MetalApi,ComputeImage) {
 #if defined(__OSX__)
-  GapiTestCommon::imageCompute<MetalApi>("MetalApi_Compute.png");
+  GapiTestCommon::ComputeImage<MetalApi>("MetalApi_ComputeImage.png");
 #endif
   }
 
 TEST(MetalApi,MipMaps) {
 #if defined(__OSX__)
-  GapiTestCommon::mipMaps<MetalApi,TextureFormat::RGBA8>  ("MetalApi_MipMaps_RGBA8.png");
-  GapiTestCommon::mipMaps<MetalApi,TextureFormat::RGBA16> ("MetalApi_MipMaps_RGBA16.png");
-  GapiTestCommon::mipMaps<MetalApi,TextureFormat::RGBA32F>("MetalApi_MipMaps_RGBA32.png");
+  GapiTestCommon::MipMaps<MetalApi,TextureFormat::RGBA8>  ("MetalApi_MipMaps_RGBA8.png");
+  GapiTestCommon::MipMaps<MetalApi,TextureFormat::RGBA16> ("MetalApi_MipMaps_RGBA16.png");
+  GapiTestCommon::MipMaps<MetalApi,TextureFormat::RGBA32F>("MetalApi_MipMaps_RGBA32.png");
 #endif
   }
 
@@ -126,12 +126,12 @@ TEST(MetalApi,DISABLED_TesselationBasic) {
 
 TEST(MetalApi,SsboWrite) {
 #if defined(__OSX__)
-  GapiTestCommon::ssboWriteVs<MetalApi>();
+  GapiTestCommon::SsboWrite<MetalApi>();
 #endif
   }
 
 TEST(MetalApi,PushRemapping) {
 #if defined(__OSX__)
-  GapiTestCommon::pushConstant<MetalApi>();
+  GapiTestCommon::PushRemapping<MetalApi>();
 #endif
   }

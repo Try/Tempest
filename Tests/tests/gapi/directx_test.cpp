@@ -100,21 +100,22 @@ TEST(DirectX12Api,Compute) {
 
 TEST(DirectX12Api,ComputeImage) {
 #if defined(_MSC_VER)
-  GapiTestCommon::imageCompute<DirectX12Api>("DirectX12Api_Compute.png");
+  GapiTestCommon::ComputeImage<DirectX12Api>("DirectX12Api_ComputeImage.png");
 #endif
   }
 
 TEST(DirectX12Api,ComputeGraphics) {
 #if defined(_MSC_VER)
-  GapiTestCommon::dispathToDraw<DirectX12Api>("DirectX12Api_GraphicsCompute.png");
+  GapiTestCommon::DispathToDraw<DirectX12Api>("DirectX12Api_DispathToDraw.png");
+  GapiTestCommon::DrawToDispath<DirectX12Api>();
 #endif
   }
 
 TEST(DirectX12Api,MipMaps) {
 #if defined(_MSC_VER)
-  GapiTestCommon::mipMaps<DirectX12Api,TextureFormat::RGBA8>  ("DirectX12Api_MipMaps_RGBA8.png");
-  GapiTestCommon::mipMaps<DirectX12Api,TextureFormat::RGBA16> ("DirectX12Api_MipMaps_RGBA16.png");
-  GapiTestCommon::mipMaps<DirectX12Api,TextureFormat::RGBA32F>("DirectX12Api_MipMaps_RGBA32.hdr");
+  GapiTestCommon::MipMaps<DirectX12Api,TextureFormat::RGBA8>  ("DirectX12Api_MipMaps_RGBA8.png");
+  GapiTestCommon::MipMaps<DirectX12Api,TextureFormat::RGBA16> ("DirectX12Api_MipMaps_RGBA16.png");
+  GapiTestCommon::MipMaps<DirectX12Api,TextureFormat::RGBA32F>("DirectX12Api_MipMaps_RGBA32.hdr");
 #endif
   }
 
@@ -132,13 +133,13 @@ TEST(DirectX12Api,DISABLED_TesselationBasic) {
 
 TEST(DirectX12Api,SsboWrite) {
 #if defined(_MSC_VER)
-  GapiTestCommon::ssboWriteVs<DirectX12Api>();
+  GapiTestCommon::SsboWrite<DirectX12Api>();
 #endif
   }
 
 TEST(DirectX12Api,PushRemapping) {
 #if defined(_MSC_VER)
-  GapiTestCommon::pushConstant<DirectX12Api>();
+  GapiTestCommon::PushRemapping<DirectX12Api>();
 #endif
   }
 
