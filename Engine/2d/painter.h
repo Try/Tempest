@@ -141,6 +141,7 @@ class Painter {
                       float u1, float v1, float u2, float v2);
     void implDrawRectF(float x1, float y1, float x2, float y2,
                        float u1, float v1, float u2, float v2);
+    void implDrawWideLine(float width, int x1,int y1,int x2,int y2);
 
     friend class Font;
   };

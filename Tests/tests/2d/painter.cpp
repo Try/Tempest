@@ -57,6 +57,7 @@ TEST_F(PainterTest, Quad)
   VectorImage       img;
   VectorImage::Mesh imgMesh;
 
+  auto tex = device.texture("data/img/tst-dxt5.dds");
   auto fbo = device.attachment(TextureFormat::RGBA8,512,512);
   {
   PaintEvent e(img,atlas,fbo.w(),fbo.h());
@@ -64,6 +65,16 @@ TEST_F(PainterTest, Quad)
 
   p.setBrush(Color(0,0,1,1));
   p.drawRect(32,32,128,128);
+
+  p.setBrush(Color(0,1,0,1));
+  p.drawRect(256,32,128,128);
+
+  p.setBrush(Color(1,0,0,1));
+  p.drawRect(32,256,128,128);
+
+  p.setBrush(Brush(tex,Color(1,1,0,1)));
+  p.drawRect(256,256,128,128,
+             0,0,tex.w(),tex.h());
   }
 
   imgMesh.update(device,img);
@@ -81,9 +92,16 @@ TEST_F(PainterTest, Line)
   PaintEvent e(img,atlas,fbo.w(),fbo.h());
   Painter    p(e);
 
-  for(int i=1; i<10; ++i) {
+  for(int i=1; i<=15; ++i) {
     p.setPen(Pen(Color(1,1,1,1),Painter::Alpha,float(i)));
-    p.drawLine(32,32*i,32+32,32*i+32);
+
+    p.drawLine(20, 32*i,    20+32, 32*i+32);
+    p.drawLine(70, 32*i+15, 70+32, 32*i+15);
+    }
+
+  for(int i=1; i<=15; ++i) {
+    p.setPen(Pen(Color(1,1,1,1),Painter::Alpha,float(i)));
+    p.drawLine(128+i*20, 32+400, 128+20+i*20, 32);
     }
   }
 

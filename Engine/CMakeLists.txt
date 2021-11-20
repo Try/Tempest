@@ -142,16 +142,16 @@ function(add_shader OUTPUT SOURCE)
     )
 endfunction(add_shader)
 
-add_shader(blit.vert.sprv      blit.vert    "")
-add_shader(blit.frag.sprv      blit.frag    "")
+add_shader(blit.vert.sprv      blit.vert "")
+add_shader(blit.frag.sprv      blit.frag "")
 
-add_shader(empty.vert.sprv     empty.vert     "")
-add_shader(empty.frag.sprv     empty.frag     "")
-add_shader(tex_brush.vert.sprv tex_brush.vert "")
-add_shader(tex_brush.frag.sprv tex_brush.frag "")
+add_shader(empty.vert.sprv     brush.vert "")
+add_shader(empty.frag.sprv     brush.frag "")
+add_shader(tex_brush.vert.sprv brush.vert -DTEXTURE)
+add_shader(tex_brush.frag.sprv brush.frag -DTEXTURE)
 
-add_shader(copy.comp.sprv      copy.comp      "")
-add_shader(copy.s.comp.sprv    copy.comp      -DFRM_SMALL)
+add_shader(copy.comp.sprv      copy.comp  "")
+add_shader(copy.s.comp.sprv    copy.comp  -DFRM_SMALL)
 
 add_custom_command(
   OUTPUT     ${GEN_SHADERS_HEADER}

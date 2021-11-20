@@ -337,13 +337,43 @@ void Painter::implDrawRectF(float x1, float y1, float x2, float y2, float u1, fl
 
   FPoint trigBuf[4+4+4+4];
   implDrawTrig( x[0], y[0], u1, v1,
-                x[1], y[1], u2, v1,
-                x[2], y[2], u2, v2,
-                trigBuf, 0 );
+      x[1], y[1], u2, v1,
+      x[2], y[2], u2, v2,
+      trigBuf, 0 );
   implDrawTrig(x[0],y[0], u1,v1,
-               x[2],y[2], u2,v2,
-               x[3],y[3], u1,v2,
-               trigBuf, 0 );
+      x[2],y[2], u2,v2,
+      x[3],y[3], u1,v2,
+      trigBuf, 0 );
+  }
+
+void Painter::implDrawWideLine(float width, int x1, int y1, int x2, int y2) {
+  Vec2 ortho = {-float(y2-y1), float(x2-x1)};
+  auto l = ortho.length();
+  if(l<=0.f)
+    return;
+  ortho = (ortho/l)*width*0.5f;
+
+  if(state!=StBrush) {
+    dev.setTopology(Triangles);
+    state=StBrush;
+    implBrush(s.br);
+    }
+
+  float u1 = 0, v1 = 0, u2 = 0, v2 = 0;
+  float x[4] = {float(x1)-ortho.x, float(x2)-ortho.x, float(x2)+ortho.x, float(x1)+ortho.x};
+  float y[4] = {float(y1)-ortho.y, float(y2)-ortho.y, float(y2)+ortho.y, float(y1)+ortho.y};
+  for(size_t i=0;i<4;++i)
+    s.tr.mat.map(x[i],y[i],x[i],y[i]);
+
+  FPoint trigBuf[4+4+4+4];
+  implDrawTrig( x[0], y[0], u1, v1,
+      x[1], y[1], u2, v1,
+      x[2], y[2], u2, v2,
+      trigBuf, 0 );
+  implDrawTrig(x[0],y[0], u1,v1,
+      x[2],y[2], u2,v2,
+      x[3],y[3], u1,v2,
+      trigBuf, 0 );
   }
 
 void Painter::drawRect(float x, float y, float w, float h, float u1, float v1, float u2, float v2) {
@@ -382,11 +412,11 @@ void Painter::drawLine(int ix1, int iy1, int ix2, int iy2) {
     // scissor algo cannot work with empty rect
     return;
     }
-  /*
-  if(penWidth>1.f){
-    float dx=-(y2-y1),dy=x2-x1;
+
+  if(s.pn.width()>1.f) {
+    implDrawWideLine(s.pn.width(), ix1,iy1, ix2,iy2);
     return;
-    }*/
+    }
 
   float x1,y1,x2,y2;
 

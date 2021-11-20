@@ -12,7 +12,7 @@ class Device;
 
 class Builtin final {
   private:
-    Builtin(Device& owner);
+    Builtin(Device& device);
 
   public:
     struct Item {
@@ -26,16 +26,15 @@ class Builtin final {
       Tempest::RenderPipeline brushA;
       };
 
-    const Item& texture2d() const;
-    const Item& empty    () const;
+    const Item& texture2d() const { return brushT2; }
+    const Item& empty    () const { return brushE;  }
 
   private:
-    mutable Item            brushT2;
-    mutable Item            brushE;
+    Item            mkShaderSet(bool textures);
 
-    RenderState             stNormal, stBlend, stAlpha;
-    Device&                 owner;
-    Tempest::Shader         vsT2,fsT2,vsE,fsE;
+    Device&         device;
+    Item            brushT2;
+    Item            brushE;
 
   friend class Device;
   };
