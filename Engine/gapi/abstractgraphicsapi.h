@@ -444,6 +444,7 @@ namespace Tempest {
         virtual void setUniforms(CompPipeline& p,Desc& u)=0;
 
         virtual void setViewport(const Rect& r)=0;
+        virtual void setScissor (const Rect& r)=0;
 
         virtual void draw        (const Buffer& vbo, size_t offset, size_t vertexCount, size_t firstInstance, size_t instanceCount)=0;
         virtual void drawIndexed (const Buffer& vbo, const Buffer& ibo, Detail::IndexClass cls,

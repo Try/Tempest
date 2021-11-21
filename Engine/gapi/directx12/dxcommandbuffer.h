@@ -46,6 +46,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void endRendering() override;
 
     void setViewport (const Rect& r) override;
+    void setScissor  (const Rect& r) override;
 
     void setPipeline (AbstractGraphicsApi::Pipeline& p) override;
     void setBytes    (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;

@@ -490,6 +490,15 @@ void DxCommandBuffer::setViewport(const Rect& r) {
   impl->RSSetViewports(1, &vp);
   }
 
+void DxCommandBuffer::setScissor(const Rect& r) {
+  D3D12_RECT sr={};
+  sr.left   = r.x;
+  sr.top    = r.y;
+  sr.right  = LONG(r.x+r.w);
+  sr.bottom = LONG(r.y+r.h);
+  impl->RSSetScissorRects(1, &sr);
+  }
+
 void Tempest::Detail::DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p) {
   DxPipeline& px = reinterpret_cast<DxPipeline&>(p);
   vboStride    = px.stride;

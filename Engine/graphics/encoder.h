@@ -45,6 +45,9 @@ class Encoder<Tempest::CommandBuffer> {
     void setViewport(int x,int y,int w,int h);
     void setViewport(const Rect& vp);
 
+    void setScissor(int x,int y,int w,int h);
+    void setScissor(const Rect& vp);
+
     template<class T>
     void draw(const VertexBuffer<T>& vbo) { implDraw(vbo.impl,0,vbo.size(),0,1); }
 

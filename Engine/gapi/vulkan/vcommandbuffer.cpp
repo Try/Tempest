@@ -367,6 +367,13 @@ void VCommandBuffer::setViewport(const Tempest::Rect &r) {
   vkCmdSetViewport(impl,0,1,&viewPort);
   }
 
+void VCommandBuffer::setScissor(const Rect& r) {
+  VkRect2D scissor = {};
+  scissor.offset = {r.x, r.y};
+  scissor.extent = {uint32_t(r.w), uint32_t(r.h)};
+  vkCmdSetScissor(impl,0,1,&scissor);
+  }
+
 void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest, const AbstractGraphicsApi::Buffer &srcBuf, size_t offsetSrc, size_t size) {
   auto& src = reinterpret_cast<const VBuffer&>(srcBuf);
   auto& dst = reinterpret_cast<VBuffer&>(dstBuf);
