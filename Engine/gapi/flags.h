@@ -46,6 +46,7 @@ enum ResourceAccess : uint32_t {
   Uniform          = 1 << 9,
   ComputeRead      = 1 << 10,
   ComputeWrite     = 1 << 11,
+  ComputeReadWrite = (ComputeRead | ComputeWrite),
   };
 
 inline ResourceAccess operator | (ResourceAccess a,const ResourceAccess& b) {

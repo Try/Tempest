@@ -177,7 +177,7 @@ void bufCopy() {
     {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{src,Vec4(ref[0]/maxIType,ref[1]/maxIType,ref[2]/maxIType,ref[3]/maxIType),Tempest::Preserve}});
-      enc.setFramebuffer(nullptr);
+      enc.setFramebuffer({});
       enc.copy(src,0,dst,0);
     }
 
@@ -520,17 +520,14 @@ void DrawToDispath() {
     uboCs.set(0,tex);
     uboCs.set(1,ssbo);
 
-    auto uboFs  = device.descriptors(psoG.layout());
-    uboFs.set(0,ssbo);
-
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
-      enc.setUniforms(psoG,uboFs);
+      enc.setUniforms(psoG);
       enc.draw(vbo,ibo);
 
-      enc.setFramebuffer(nullptr);
+      enc.setFramebuffer({});
       enc.setUniforms(psoC,uboCs);
       enc.dispatch(tex.w(),tex.h(),1);
     }
@@ -631,7 +628,7 @@ void MipMaps(const char* outImage) {
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
       enc.setUniforms(pso);
       enc.draw(vbo,ibo);
-      enc.setFramebuffer(nullptr);
+      enc.setFramebuffer({});
       enc.generateMipmaps(tex);
     }
     device.submit(cmd,sync);
@@ -713,7 +710,7 @@ void SsboWrite() {
       enc.setUniforms(pso,ubo);
       enc.draw(vbo,ibo);
 
-      enc.setFramebuffer(nullptr);
+      enc.setFramebuffer({});
       enc.setUniforms(pso2,ubo2);
       enc.dispatch(3,1,1);
     }

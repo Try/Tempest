@@ -31,7 +31,6 @@ class Encoder<Tempest::CommandBuffer> {
 
     void setFramebuffer(std::initializer_list<AttachmentDesc> rd);
     void setFramebuffer(std::initializer_list<AttachmentDesc> rd, AttachmentDesc zd);
-    void setFramebuffer(std::nullptr_t null);
 
     void setUniforms(const RenderPipeline& p, const DescriptorSet &ubo, const void* data, size_t sz);
     void setUniforms(const RenderPipeline& p, const void* data, size_t sz);

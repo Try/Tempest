@@ -4,6 +4,8 @@
 #include <Tempest/ZBuffer>
 #include <Tempest/Texture2d>
 
+#include "utility/compiller_hints.h"
+
 using namespace Tempest;
 
 static uint32_t mipCount(uint32_t w, uint32_t h) {
@@ -131,7 +133,16 @@ void Encoder<CommandBuffer>::dispatch(size_t x, size_t y, size_t z) {
   impl->dispatch(x,y,z);
   }
 
-void Encoder<CommandBuffer>::setFramebuffer(std::nullptr_t) {
+void Encoder<CommandBuffer>::setFramebuffer(std::initializer_list<AttachmentDesc> rd, AttachmentDesc zd) {
+  implSetFramebuffer(rd.begin(),rd.size(),&zd);
+  }
+
+void Encoder<CommandBuffer>::setFramebuffer(std::initializer_list<AttachmentDesc> rd) {
+  if(T_LIKELY(rd.size()>0)) {
+    implSetFramebuffer(rd.begin(),rd.size(),nullptr);
+    return;
+    }
+  // rd.size==0 -> compute
   if(state.stage!=Rendering)
     return;
   if(state.stage==Rendering)
@@ -139,18 +150,6 @@ void Encoder<CommandBuffer>::setFramebuffer(std::nullptr_t) {
   state.curPipeline = nullptr;
   state.curCompute  = nullptr;
   state.stage       = None;
-  }
-
-void Encoder<CommandBuffer>::setFramebuffer(std::initializer_list<AttachmentDesc> rd, AttachmentDesc zd) {
-  implSetFramebuffer(rd.begin(),rd.size(),&zd);
-  }
-
-void Encoder<CommandBuffer>::setFramebuffer(std::initializer_list<AttachmentDesc> rd) {
-  if(rd.size()==0) {
-    setFramebuffer(nullptr);
-    return;
-    }
-  implSetFramebuffer(rd.begin(),rd.size(),nullptr);
   }
 
 void Tempest::Encoder<Tempest::CommandBuffer>::implSetFramebuffer(const AttachmentDesc* rt, size_t rtSize,

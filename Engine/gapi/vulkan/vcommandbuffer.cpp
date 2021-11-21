@@ -182,7 +182,7 @@ void VCommandBuffer::begin() {
   }
 
 void VCommandBuffer::begin(VkCommandBufferUsageFlags flg) {
-  state = Idle;
+  state     = Idle;
   swapchainSync.reserve(swapchainSync.size());
   swapchainSync.clear();
   curVbo = VK_NULL_HANDLE;
@@ -254,14 +254,13 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
 
   VkRect2D scissor = {};
   scissor.offset = {0, 0};
-  scissor.extent = {width,height};
-  vkCmdSetScissor (impl,0,1,&scissor);
+  scissor.extent = {width, height};
+  vkCmdSetScissor(impl,0,1,&scissor);
   }
 
 void VCommandBuffer::endRendering() {
   vkCmdEndRenderPass(impl);
-  state = Idle;
-  // resState.flush(*this);
+  state     = Idle;
   }
 
 void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
@@ -289,7 +288,6 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraph
 
 void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
   if(state!=Compute) {
-    resState.flush(*this);
     state = Compute;
     }
   VCompPipeline& px = reinterpret_cast<VCompPipeline&>(p);
@@ -521,8 +519,6 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
       continue;
     auto nSrcStage = toStage(b.prev,true);
     auto nDstStage = toStage(b.next,false);
-    if(nSrcStage==0)
-      nSrcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT; // wait for nothing: asset uploading case
 
     if(nSrcStage!=srcStage || nDstStage!=dstStage) {
       emitBarriers(srcStage,dstStage,bufBarrier,pbCount);
