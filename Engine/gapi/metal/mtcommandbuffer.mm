@@ -206,6 +206,18 @@ void MtCommandBuffer::setViewport(const Rect &r) {
   [encDraw setViewport:v];
   }
 
+void MtCommandBuffer::setScissor(const Rect& r) {
+  int x0 = std::max(0,r.x), y0 = std::max(0,r.y);
+  int w  = (r.x+r.w)-x0, h = (r.y+r.h)-y0;
+
+  MTLScissorRect v = {};
+  v.x      = x0;
+  v.y      = y0;
+  v.width  = w;
+  v.height = h;
+  [encDraw setScissorRect:v];
+  }
+
 void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t offset, size_t vertexCount, size_t firstInstance, size_t instanceCount) {
   auto& vbo = reinterpret_cast<const MtBuffer&>(ivbo);
   [encDraw setVertexBuffer:vbo.impl

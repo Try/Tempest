@@ -115,38 +115,36 @@ inline MTLCompareFunction nativeFormat(RenderState::ZTestMode m) {
       return MTLCompareFunctionNotEqual;
     case RenderState::ZTestMode::Equal:
       return MTLCompareFunctionEqual;
-    case RenderState::ZTestMode::Count:
-      return MTLCompareFunctionAlways;
     }
   return MTLCompareFunctionAlways;
   }
 
 inline MTLBlendFactor nativeFormat(RenderState::BlendMode m) {
   switch(m) {
-    case RenderState::BlendMode::zero:
-    case RenderState::BlendMode::Count:
+    case RenderState::BlendMode::Zero:
       return MTLBlendFactorZero;
-    case RenderState::BlendMode::one:
+    case RenderState::BlendMode::One:
       return MTLBlendFactorOne;
-    case RenderState::BlendMode::src_color:
+    case RenderState::BlendMode::SrcColor:
       return MTLBlendFactorSourceColor;
-    case RenderState::BlendMode::one_minus_src_color:
+    case RenderState::BlendMode::OneMinusSrcColor:
       return MTLBlendFactorOneMinusSourceColor;
-    case RenderState::BlendMode::src_alpha:
+    case RenderState::BlendMode::SrcAlpha:
       return MTLBlendFactorSourceAlpha;
-    case RenderState::BlendMode::src_alpha_saturate:
+    case RenderState::BlendMode::SrcAlphaSaturate:
       return MTLBlendFactorSourceAlphaSaturated;
-    case RenderState::BlendMode::one_minus_src_alpha:
+    case RenderState::BlendMode::OneMinusSrcAlpha:
       return MTLBlendFactorOneMinusSourceAlpha;
-    case RenderState::BlendMode::dst_color:
+    case RenderState::BlendMode::DstColor:
       return MTLBlendFactorDestinationColor;
-    case RenderState::BlendMode::one_minus_dst_color:
+    case RenderState::BlendMode::OneMinusDstColor:
       return MTLBlendFactorOneMinusDestinationColor;
-    case RenderState::BlendMode::dst_alpha:
+    case RenderState::BlendMode::DstAlpha:
       return MTLBlendFactorDestinationAlpha;
-    case RenderState::BlendMode::one_minus_dst_alpha:
+    case RenderState::BlendMode::OneMinusDstAlpha:
       return MTLBlendFactorOneMinusDestinationAlpha;
     }
+  return MTLBlendFactorZero;
   }
 
 inline MTLBlendOperation nativeFormat(RenderState::BlendOp op) {
@@ -162,18 +160,19 @@ inline MTLBlendOperation nativeFormat(RenderState::BlendOp op) {
     case RenderState::BlendOp::Subtract:
       return MTLBlendOperationSubtract;
     }
+  return MTLBlendOperationAdd;
   }
 
 inline MTLCullMode nativeFormat(RenderState::CullMode m) {
   switch(m) {
     case RenderState::CullMode::NoCull:
-    case RenderState::CullMode::Count:
       return MTLCullModeNone;
     case RenderState::CullMode::Back:
       return MTLCullModeBack;
     case RenderState::CullMode::Front:
       return MTLCullModeFront;
     }
+  return MTLCullModeNone;
   }
 
 inline MTLPrimitiveType nativeFormat(Topology t) {

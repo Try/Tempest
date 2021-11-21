@@ -1,5 +1,6 @@
 #include <Tempest/VulkanApi>
 #include <Tempest/DirectX12Api>
+#include <Tempest/MetalApi>
 
 #include <Tempest/Except>
 #include <Tempest/Device>
