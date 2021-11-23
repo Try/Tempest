@@ -3,6 +3,9 @@ configuration:
 
 environment:
   matrix:
+    - APPVEYOR_BUILD_WORKER_IMAGE: macos
+      GENERATOR: "Ninja"
+
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015  # used as mingw
       GENERATOR: "Ninja"
       CC:        C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin/gcc.exe
@@ -16,22 +19,22 @@ environment:
     - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
       GENERATOR: ""
 
-    - APPVEYOR_BUILD_WORKER_IMAGE: macos
-      GENERATOR: "Ninja"
-
 install:
 - git submodule -q update --init --recursive
 # Vulkan SDK and thirdparty
 - cmd: curl -L --silent --show-error --output VulkanSDK.exe https://sdk.lunarg.com/sdk/download/1.2.170.0/windows/vulkan_sdk.exe
-- cmd: VulkanSDK.exe /S
-- cmd: set VK_SDK_PATH=C:/VulkanSDK/1.2.170.0
-
-- sh:  sudo apt-get update
-- sh:  sudo apt-get --yes install libvulkan-dev libasound2-dev libx11-dev libxcursor-dev
 - sh:  curl -L --silent --show-error --output VulkanSDK.tar.gz https://sdk.lunarg.com/sdk/download/1.2.170.0/linux/vulkan_sdk.tar.gz
+- cmd: VulkanSDK.exe /S
 - sh:  mkdir VulkanSDK
 - sh:  tar -xzf VulkanSDK.tar.gz -C ./VulkanSDK
+- cmd: set VK_SDK_PATH=C:/VulkanSDK/1.2.170.0
 - sh:  export VK_SDK_PATH=$APPVEYOR_BUILD_FOLDER/VulkanSDK/1.2.170.0/x86_64
+
+- ps: >-
+    if($IsLinux) {
+      sudo apt-get update
+      sudo apt-get --yes install libvulkan-dev libasound2-dev libx11-dev libxcursor-dev
+      }
 
 # GLSL compiller
 - mkdir glslang

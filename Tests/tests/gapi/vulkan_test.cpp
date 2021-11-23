@@ -21,69 +21,78 @@ TEST(VulkanApi,VulkanApi) {
 
 TEST(VulkanApi,Vbo) {
 #if !defined(__OSX__)
-  GapiTestCommon::vbo<VulkanApi>();
+  GapiTestCommon::Vbo<VulkanApi>();
 #endif
   }
 
 TEST(VulkanApi,VboInit) {
 #if !defined(__OSX__)
-  GapiTestCommon::vboInit<VulkanApi>();
+  GapiTestCommon::VboInit<VulkanApi>();
 #endif
   }
 
 TEST(VulkanApi,VboDyn) {
 #if !defined(__OSX__)
-  GapiTestCommon::vboDyn<VulkanApi>();
+  GapiTestCommon::VboDyn<VulkanApi>();
 #endif
   }
 
 TEST(VulkanApi,SsboDyn) {
 #if !defined(__OSX__)
-  GapiTestCommon::ssboDyn<VulkanApi,float>();
+  GapiTestCommon::SsboDyn<VulkanApi,float>();
 #endif
   }
 
 TEST(VulkanApi,SsboCopy) {
 #if !defined(__OSX__)
-  GapiTestCommon::bufCopy<VulkanApi,TextureFormat::RGBA8,uint8_t>();
+  GapiTestCommon::SsboCopy<VulkanApi,TextureFormat::RGBA8,uint8_t>();
 #endif
   }
 
 TEST(VulkanApi,Shader) {
 #if !defined(__OSX__)
-  GapiTestCommon::shader<VulkanApi>();
+  GapiTestCommon::Shader<VulkanApi>();
 #endif
   }
 
 TEST(VulkanApi,Pso) {
 #if !defined(__OSX__)
-  GapiTestCommon::pso<VulkanApi>();
+  GapiTestCommon::Pso<VulkanApi>();
 #endif
   }
 
 TEST(VulkanApi,Fbo) {
 #if !defined(__OSX__)
-  GapiTestCommon::fbo<VulkanApi>("VulkanApi_Fbo.png");
+  GapiTestCommon::Fbo<VulkanApi>("VulkanApi_Fbo.png");
 #endif
   }
 
 TEST(VulkanApi,Draw) {
 #if !defined(__OSX__)
-  GapiTestCommon::draw<VulkanApi,TextureFormat::RGBA8>  ("VulkanApi_Draw_RGBA8.png");
-  GapiTestCommon::draw<VulkanApi,TextureFormat::RG8>    ("VulkanApi_Draw_RG8.png");
-  GapiTestCommon::draw<VulkanApi,TextureFormat::R8>     ("VulkanApi_Draw_R8.png");
-  GapiTestCommon::draw<VulkanApi,TextureFormat::RGBA16> ("VulkanApi_Draw_RGBA16.png");
-  GapiTestCommon::draw<VulkanApi,TextureFormat::RG16>   ("VulkanApi_Draw_RG16.png");
-  GapiTestCommon::draw<VulkanApi,TextureFormat::R16>    ("VulkanApi_Draw_R16.png");
-  GapiTestCommon::draw<VulkanApi,TextureFormat::RGBA32F>("VulkanApi_Draw_RGBA32F.hdr");
-  GapiTestCommon::draw<VulkanApi,TextureFormat::RG32F>  ("VulkanApi_Draw_RG32F.hdr");
-  GapiTestCommon::draw<VulkanApi,TextureFormat::R32F>   ("VulkanApi_Draw_R32F.hdr");
+  GapiTestCommon::Draw<VulkanApi,TextureFormat::RGBA8>  ("VulkanApi_Draw_RGBA8.png");
+  GapiTestCommon::Draw<VulkanApi,TextureFormat::RGB8>   ("VulkanApi_Draw_RGB8.png");
+  GapiTestCommon::Draw<VulkanApi,TextureFormat::RG8>    ("VulkanApi_Draw_RG8.png");
+  GapiTestCommon::Draw<VulkanApi,TextureFormat::R8>     ("VulkanApi_Draw_R8.png");
+  GapiTestCommon::Draw<VulkanApi,TextureFormat::RGBA16> ("VulkanApi_Draw_RGBA16.png");
+  GapiTestCommon::Draw<VulkanApi,TextureFormat::RGB16>  ("VulkanApi_Draw_RGB16.png");
+  GapiTestCommon::Draw<VulkanApi,TextureFormat::RG16>   ("VulkanApi_Draw_RG16.png");
+  GapiTestCommon::Draw<VulkanApi,TextureFormat::R16>    ("VulkanApi_Draw_R16.png");
+  GapiTestCommon::Draw<VulkanApi,TextureFormat::RGBA32F>("VulkanApi_Draw_RGBA32F.hdr");
+  GapiTestCommon::Draw<VulkanApi,TextureFormat::RGB32F> ("VulkanApi_Draw_RGB32F.hdr");
+  GapiTestCommon::Draw<VulkanApi,TextureFormat::RG32F>  ("VulkanApi_Draw_RG32F.hdr");
+  GapiTestCommon::Draw<VulkanApi,TextureFormat::R32F>   ("VulkanApi_Draw_R32F.hdr");
+#endif
+  }
+
+TEST(VulkanApi,Viewport) {
+#if !defined(__OSX__)
+  GapiTestCommon::Viewport<VulkanApi>("VulkanApi_Viewport.png");
 #endif
   }
 
 TEST(VulkanApi,Compute) {
 #if !defined(__OSX__)
-  GapiTestCommon::ssboDispath<VulkanApi>();
+  GapiTestCommon::Compute<VulkanApi>();
 #endif
   }
 
@@ -116,7 +125,7 @@ TEST(VulkanApi,S3TC) {
 
 TEST(VulkanApi,TesselationBasic) {
 #if !defined(__OSX__)
-  GapiTestCommon::psoTess<VulkanApi>();
+  GapiTestCommon::PsoTess<VulkanApi>();
 #endif
   }
 

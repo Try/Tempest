@@ -37,7 +37,7 @@ void init() {
   }
 
 template<class GraphicsApi>
-void vbo() {
+void Vbo() {
   using namespace Tempest;
 
   try {
@@ -55,7 +55,7 @@ void vbo() {
   }
 
 template<class GraphicsApi>
-void vboInit() {
+void VboInit() {
   using namespace Tempest;
 
   try {
@@ -98,7 +98,7 @@ void vboInit() {
   }
 
 template<class GraphicsApi>
-void vboDyn() {
+void VboDyn() {
   using namespace Tempest;
 
   Vertex readback[3] = {};
@@ -128,7 +128,7 @@ void vboDyn() {
   }
 
 template<class GraphicsApi, class T>
-void ssboDyn() {
+void SsboDyn() {
   using namespace Tempest;
   try {
     GraphicsApi api{ApiFlags::Validation};
@@ -158,7 +158,7 @@ void ssboDyn() {
   }
 
 template<class GraphicsApi, Tempest::TextureFormat frm, class iType>
-void bufCopy() {
+void SsboCopy() {
   using namespace Tempest;
 
   try {
@@ -201,7 +201,7 @@ void bufCopy() {
   }
 
 template<class GraphicsApi>
-void shader() {
+void Shader() {
   using namespace Tempest;
 
   try {
@@ -219,7 +219,7 @@ void shader() {
   }
 
 template<class GraphicsApi>
-void pso() {
+void Pso() {
   using namespace Tempest;
 
   try {
@@ -238,7 +238,7 @@ void pso() {
   }
 
 template<class GraphicsApi>
-void psoTess() {
+void PsoTess() {
   using namespace Tempest;
 
   try {
@@ -260,7 +260,7 @@ void psoTess() {
   }
 
 template<class GraphicsApi>
-void fbo(const char* outImg) {
+void Fbo(const char* outImg) {
   using namespace Tempest;
 
   try {
@@ -290,12 +290,17 @@ void fbo(const char* outImg) {
   }
 
 template<class GraphicsApi, Tempest::TextureFormat format>
-void draw(const char* outImage) {
+void Draw(const char* outImage) {
   using namespace Tempest;
 
   try {
     GraphicsApi api{ApiFlags::Validation};
     Device      device(api);
+
+    if(!device.properties().hasAttachFormat(format)) {
+      Log::d("Skipping graphics testcase: no format support");
+      return;
+      }
 
     auto vbo  = device.vbo(vboData,3);
     auto ibo  = device.ibo(iboData,3);
@@ -344,6 +349,51 @@ void draw(const char* outImage) {
         for(uint32_t c=0; c<ccnt; ++c)
           EXPECT_NEAR(pix.x[c],ref.x[c],0.01f);
         }
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+
+template<class GraphicsApi>
+void Viewport(const char* outImage) {
+  using namespace Tempest;
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto vbo  = device.vbo(vboData,3);
+    auto ibo  = device.ibo(iboData,3);
+
+    auto vert = device.shader("shader/simple_test.vert.sprv");
+    auto frag = device.shader("shader/simple_test.frag.sprv");
+    auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
+
+    auto tex  = device.attachment(TextureFormat::RGBA8,150,150);
+
+    auto cmd  = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
+      enc.setUniforms(pso);
+
+      enc.setViewport(-50,25,100,100);
+      enc.draw(vbo,ibo);
+
+      enc.setViewport(100,25,100,100);
+      enc.draw(vbo,ibo);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    auto pm = device.readPixels(tex);
+    pm.save(outImage);
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
@@ -402,7 +452,7 @@ void uniforms(const char* outImage) {
   }
 
 template<class GraphicsApi>
-void ssboDispath() {
+void Compute() {
   using namespace Tempest;
 
   try {

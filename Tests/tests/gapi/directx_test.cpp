@@ -22,79 +22,88 @@ TEST(DirectX12Api,DirectX12Api) {
 
 TEST(DirectX12Api,Vbo) {
 #if defined(_MSC_VER)
-  GapiTestCommon::vbo<DirectX12Api>();
+  GapiTestCommon::Vbo<DirectX12Api>();
 #endif
   }
 
 TEST(DirectX12Api,VboInit) {
 #if defined(_MSC_VER)
-  GapiTestCommon::vboInit<DirectX12Api>();
+  GapiTestCommon::VboInit<DirectX12Api>();
 #endif
   }
 
 TEST(DirectX12Api,VboDyn) {
 #if defined(_MSC_VER)
-  GapiTestCommon::vboDyn<DirectX12Api>();
+  GapiTestCommon::VboDyn<DirectX12Api>();
 #endif
   }
 
 TEST(DirectX12Api,SsboDyn) {
 #if defined(_MSC_VER)
-  GapiTestCommon::ssboDyn<DirectX12Api,float>();
+  GapiTestCommon::SsboDyn<DirectX12Api,float>();
 #endif
   }
 
 TEST(DirectX12Api,SsboCopy) {
 #if defined(_MSC_VER)
   // TODO: test more formats
-  GapiTestCommon::bufCopy<DirectX12Api,TextureFormat::R8,  uint8_t> ();
-  GapiTestCommon::bufCopy<DirectX12Api,TextureFormat::R16, uint16_t>();
-  //GapiTestCommon::bufCopy<DirectX12Api,TextureFormat::R32F,float>   ();
+  GapiTestCommon::SsboCopy<DirectX12Api,TextureFormat::R8,  uint8_t> ();
+  GapiTestCommon::SsboCopy<DirectX12Api,TextureFormat::R16, uint16_t>();
+  //GapiTestCommon::SsboCopy<DirectX12Api,TextureFormat::R32F,float>   ();
 
-  GapiTestCommon::bufCopy<DirectX12Api,TextureFormat::RG8,  uint8_t >();
-  GapiTestCommon::bufCopy<DirectX12Api,TextureFormat::RG16, uint16_t>();
-  //GapiTestCommon::bufCopy<DirectX12Api,TextureFormat::RG32F,float>   ();
+  GapiTestCommon::SsboCopy<DirectX12Api,TextureFormat::RG8,  uint8_t >();
+  GapiTestCommon::SsboCopy<DirectX12Api,TextureFormat::RG16, uint16_t>();
+  //GapiTestCommon::SsboCopy<DirectX12Api,TextureFormat::RG32F,float>   ();
 
-  GapiTestCommon::bufCopy<DirectX12Api,TextureFormat::RGBA8, uint8_t> ();
-  //GapiTestCommon::bufCopy<DirectX12Api,TextureFormat::RGBA16,uint16_t>();
+  GapiTestCommon::SsboCopy<DirectX12Api,TextureFormat::RGBA8, uint8_t> ();
+  //GapiTestCommon::SsboCopy<DirectX12Api,TextureFormat::RGBA16,uint16_t>();
 #endif
   }
 
 TEST(DirectX12Api,Shader) {
 #if defined(_MSC_VER)
-  GapiTestCommon::shader<DirectX12Api>();
+  GapiTestCommon::Shader<DirectX12Api>();
 #endif
   }
 
 TEST(DirectX12Api,Pso) {
 #if defined(_MSC_VER)
-  GapiTestCommon::pso<DirectX12Api>();
+  GapiTestCommon::Pso<DirectX12Api>();
 #endif
   }
 
 TEST(DirectX12Api,Fbo) {
 #if defined(_MSC_VER)
-  GapiTestCommon::fbo<DirectX12Api>("DirectX12Api_Fbo.png");
+  GapiTestCommon::Fbo<DirectX12Api>("DirectX12Api_Fbo.png");
 #endif
   }
 
 TEST(DirectX12Api,Draw) {
 #if defined(_MSC_VER)
-  GapiTestCommon::draw<DirectX12Api,TextureFormat::RGBA8>  ("DirectX12Api_Draw_RGBA8.png");
-  GapiTestCommon::draw<DirectX12Api,TextureFormat::RG8>    ("DirectX12Api_Draw_RG8.png");
-  GapiTestCommon::draw<DirectX12Api,TextureFormat::R8>     ("DirectX12Api_Draw_R8.png");
-  GapiTestCommon::draw<DirectX12Api,TextureFormat::RGBA16> ("DirectX12Api_Draw_RGBA16.png");
-  GapiTestCommon::draw<DirectX12Api,TextureFormat::RG16>   ("DirectX12Api_Draw_RG16.png");
-  GapiTestCommon::draw<DirectX12Api,TextureFormat::R16>    ("DirectX12Api_Draw_R16.png");
-  GapiTestCommon::draw<DirectX12Api,TextureFormat::RGBA32F>("DirectX12Api_Draw_RGBA32F.hdr");
-  GapiTestCommon::draw<DirectX12Api,TextureFormat::RG32F>  ("DirectX12Api_Draw_RG32F.hdr");
-  GapiTestCommon::draw<DirectX12Api,TextureFormat::R32F>   ("DirectX12Api_Draw_R32F.hdr");
+  GapiTestCommon::Draw<DirectX12Api,TextureFormat::RGBA8>  ("DirectX12Api_Draw_RGBA8.png");
+  GapiTestCommon::Draw<DirectX12Api,TextureFormat::RGB8>   ("DirectX12Api_Draw_RGB8.png");
+  GapiTestCommon::Draw<DirectX12Api,TextureFormat::RG8>    ("DirectX12Api_Draw_RG8.png");
+  GapiTestCommon::Draw<DirectX12Api,TextureFormat::R8>     ("DirectX12Api_Draw_R8.png");
+  GapiTestCommon::Draw<DirectX12Api,TextureFormat::RGBA16> ("DirectX12Api_Draw_RGBA16.png");
+  GapiTestCommon::Draw<DirectX12Api,TextureFormat::RGB16>  ("DirectX12Api_Draw_RGB16.png");
+  GapiTestCommon::Draw<DirectX12Api,TextureFormat::RG16>   ("DirectX12Api_Draw_RG16.png");
+  GapiTestCommon::Draw<DirectX12Api,TextureFormat::R16>    ("DirectX12Api_Draw_R16.png");
+  GapiTestCommon::Draw<DirectX12Api,TextureFormat::RGBA32F>("DirectX12Api_Draw_RGBA32F.hdr");
+  GapiTestCommon::Draw<DirectX12Api,TextureFormat::RGB32F> ("DirectX12Api_Draw_RGB32F.hdr");
+  GapiTestCommon::Draw<DirectX12Api,TextureFormat::RG32F>  ("DirectX12Api_Draw_RG32F.hdr");
+  GapiTestCommon::Draw<DirectX12Api,TextureFormat::R32F>   ("DirectX12Api_Draw_R32F.hdr");
+#endif
+  }
+
+TEST(DirectX12Api,Viewport) {
+#if defined(_MSC_VER)
+  GapiTestCommon::Viewport<DirectX12Api>("DirectX12Api_Viewport.png");
 #endif
   }
 
 TEST(DirectX12Api,Compute) {
 #if defined(_MSC_VER)
-  GapiTestCommon::ssboDispath<DirectX12Api>();
+  GapiTestCommon::Compute<DirectX12Api>();
 #endif
   }
 
@@ -127,7 +136,7 @@ TEST(DirectX12Api,S3TC) {
 
 TEST(DirectX12Api,DISABLED_TesselationBasic) {
 #if defined(_MSC_VER)
-  GapiTestCommon::psoTess<DirectX12Api>();
+  GapiTestCommon::PsoTess<DirectX12Api>();
 #endif
   }
 
