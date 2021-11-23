@@ -30,13 +30,13 @@ install:
       sudo apt-get update
       sudo apt-get --yes install libvulkan-dev libasound2-dev libx11-dev libxcursor-dev
       # Vulkan SDK
-      curl --silent --show-error --output VulkanSDK.tar.gz https://sdk.lunarg.com/sdk/download/1.2.170.0/linux/vulkan_sdk.tar.gz
+      Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/1.2.170.0/linux/vulkan_sdk.tar.gz -OutFile VulkanSDK.tar.gz
       mkdir VulkanSDK
       tar -xzf VulkanSDK.tar.gz -C ./VulkanSDK
       }
     if($IsWindows) {
       # Vulkan SDK
-      curl --silent --show-error --output VulkanSDK.exe https://sdk.lunarg.com/sdk/download/1.2.170.0/windows/vulkan_sdk.exe
+      Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/1.2.170.0/windows/vulkan_sdk.exe -OutFile VulkanSDK.exe
       VulkanSDK.exe /S
       }
     if($IsMacOS) {
