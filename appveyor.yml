@@ -3,7 +3,7 @@ configuration:
 
 environment:
   matrix:
-    - APPVEYOR_BUILD_WORKER_IMAGE: macos
+    - APPVEYOR_BUILD_WORKER_IMAGE: macos-bigsur
       GENERATOR: "Ninja"
 
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015  # used as mingw
@@ -22,24 +22,26 @@ environment:
 install:
 - git submodule -q update --init --recursive
 # Vulkan SDK and thirdparty
-- cmd: curl -L --silent --show-error --output VulkanSDK.exe https://sdk.lunarg.com/sdk/download/1.2.170.0/windows/vulkan_sdk.exe
-- sh:  curl -L --silent --show-error --output VulkanSDK.tar.gz https://sdk.lunarg.com/sdk/download/1.2.170.0/linux/vulkan_sdk.tar.gz
-- cmd: VulkanSDK.exe /S
-- sh:  mkdir VulkanSDK
-- sh:  tar -xzf VulkanSDK.tar.gz -C ./VulkanSDK
-- cmd: set VK_SDK_PATH=C:/VulkanSDK/1.2.170.0
+- cmd: set    VK_SDK_PATH=C:/VulkanSDK/1.2.170.0
 - sh:  export VK_SDK_PATH=$APPVEYOR_BUILD_FOLDER/VulkanSDK/1.2.170.0/x86_64
 
 - ps: >-
     if($IsLinux) {
       sudo apt-get update
       sudo apt-get --yes install libvulkan-dev libasound2-dev libx11-dev libxcursor-dev
-      }
-    if($IsMacOS) {
-      brew install glslang
+      # Vulkan SDK
+      curl -L --silent --show-error --output VulkanSDK.tar.gz https://sdk.lunarg.com/sdk/download/1.2.170.0/linux/vulkan_sdk.tar.gz
+      mkdir VulkanSDK
+      tar -xzf VulkanSDK.tar.gz -C ./VulkanSDK
       }
     if($IsWindows) {
-
+      # Vulkan SDK
+      curl -L --silent --show-error --output VulkanSDK.exe https://sdk.lunarg.com/sdk/download/1.2.170.0/windows/vulkan_sdk.exe
+      VulkanSDK.exe /S
+      }
+    if($IsMacOS) {
+      # GLSL compiller
+      brew install glslang
       }
 
 # GLSL compiller
