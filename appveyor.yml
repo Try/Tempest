@@ -35,6 +35,12 @@ install:
       sudo apt-get update
       sudo apt-get --yes install libvulkan-dev libasound2-dev libx11-dev libxcursor-dev
       }
+    if($IsMacOS) {
+      brew install glslang
+      }
+    if($IsWindows) {
+
+      }
 
 # GLSL compiller
 - mkdir glslang
