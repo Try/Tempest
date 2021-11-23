@@ -384,7 +384,7 @@ void Viewport(const char* outImage) {
       enc.setViewport(-50,25,100,100);
       enc.draw(vbo,ibo);
 
-      enc.setViewport(100,25,100,100);
+      enc.setViewport(150,25,100,100);
       enc.draw(vbo,ibo);
     }
 

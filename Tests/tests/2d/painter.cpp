@@ -18,6 +18,7 @@ using namespace Tempest;
 
 class PainterTest : public ::testing::Test {
   protected:
+    PainterTest(){ throw std::runtime_error(""); }
     void SetUp()    override {}
     void TearDown() override {}
 
@@ -53,7 +54,7 @@ class PainterTest : public ::testing::Test {
     TextureAtlas atlas{device};
   };
 
-TEST_F(PainterTest, Quad)
+TEST_F(PainterTest, DISABLED_Quad)
 {
   VectorImage       img;
   VectorImage::Mesh imgMesh;
@@ -83,7 +84,7 @@ TEST_F(PainterTest, Quad)
   logImage(fbo);
 }
 
-TEST_F(PainterTest, Line)
+TEST_F(PainterTest, DISABLED_Line)
 {
   VectorImage       img;
   VectorImage::Mesh imgMesh;
