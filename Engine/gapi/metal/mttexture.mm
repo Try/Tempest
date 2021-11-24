@@ -150,7 +150,14 @@ void MtTexture::readPixels(Pixmap& out, TextureFormat frm, const uint32_t w, con
     throw std::runtime_error("not implemented");
   out = Pixmap(w,h,pfrm);
 
-  id<MTLTexture> stage = alloc(frm,w,h,1,MTLStorageModeShared,MTLTextureUsageShaderRead);
+  MTLStorageMode opt = MTLStorageModeManaged;
+#ifdef __IOS__
+  opt = MTLStorageModeShared;
+#else
+  opt = MTLStorageModeManaged;
+#endif
+
+  id<MTLTexture> stage = alloc(frm,w,h,1,opt,MTLTextureUsageShaderRead);
   @autoreleasepool {
     id<MTLCommandBuffer>      cmd = [dev.queue commandBuffer];
     id<MTLBlitCommandEncoder> enc = [cmd blitCommandEncoder];
