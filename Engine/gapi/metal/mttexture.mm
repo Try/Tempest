@@ -170,7 +170,7 @@ void MtTexture::readPixels(Pixmap& out, TextureFormat frm, const uint32_t w, con
                          sliceCount:1
                          levelCount:1];
     if(opt==MTLStorageModeManaged)
-      [enc synchronizeResource:impl];
+      [enc synchronizeResource:stage];
     [enc endEncoding];
     [cmd commit];
     [cmd waitUntilCompleted];
