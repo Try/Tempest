@@ -24,7 +24,12 @@ MtTexture::MtTexture(MtDevice& d, const uint32_t w, const uint32_t h, uint32_t m
 MtTexture::MtTexture(MtDevice& dev, const Pixmap& pm, uint32_t mips, TextureFormat frm)
   :dev(dev), mips(mips) {
   const uint32_t smip  = (isCompressedFormat(frm) ? mips : 1);
-  id<MTLTexture> stage = alloc(frm,pm.w(),pm.h(),smip,MTLStorageModeShared,MTLTextureUsageShaderRead);
+#ifdef __IOS__
+  const MTLStorageMode smode = MTLStorageModeShared;
+#else
+  const MTLStorageMode smode = MTLStorageModeManaged;
+#endif
+  id<MTLTexture> stage = alloc(frm,pm.w(),pm.h(),smip,smode,MTLTextureUsageShaderRead);
 
   try{
     impl = alloc(frm,pm.w(),pm.h(),mips,MTLStorageModePrivate,MTLTextureUsageShaderRead);

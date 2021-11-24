@@ -347,7 +347,7 @@ void Draw(const char* outImage) {
           }
 
         for(uint32_t c=0; c<ccnt; ++c)
-          EXPECT_NEAR(pix.x[c],ref.x[c],0.01f);
+          ASSERT_NEAR(pix.x[c],ref.x[c],0.01f);
         }
     }
   catch(std::system_error& e) {
