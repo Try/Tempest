@@ -37,7 +37,7 @@ install:
     if($IsWindows) {
       # Vulkan SDK
       Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/1.2.170.0/windows/vulkan_sdk.exe -OutFile VulkanSDK.exe
-      VulkanSDK.exe /S
+      &VulkanSDK.exe /S
       }
     if($IsMacOS) {
       # GLSL compiller
