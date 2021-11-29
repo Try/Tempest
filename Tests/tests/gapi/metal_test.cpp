@@ -78,6 +78,12 @@ TEST(MetalApi,Draw) {
 #endif
   }
 
+TEST(MetalApi,Viewport) {
+#if defined(__OSX__)
+  GapiTestCommon::Viewport<MetalApi>("MetalApi_Viewport.png");
+#endif
+  }
+
 TEST(MetalApi,Ubo) {
 #if defined(__OSX__)
   GapiTestCommon::uniforms<MetalApi,TextureFormat::RGBA8>("MetalApi_Uniforms.png");

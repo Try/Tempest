@@ -298,7 +298,7 @@ void Draw(const char* outImage) {
     Device      device(api);
 
     if(!device.properties().hasAttachFormat(format)) {
-      Log::d("Skipping graphics testcase: no format support");
+      Log::d("Skipping draw testcase: no format support");
       return;
       }
 
@@ -327,6 +327,7 @@ void Draw(const char* outImage) {
     pm.save(outImage);
 
     const uint32_t ccnt = Pixmap::componentCount(pm.format());
+    uint32_t same = 0;
     ImageValidator val(pm);
     for(uint32_t y=0; y<pm.h(); ++y)
       for(uint32_t x=0; x<pm.w(); ++x) {
@@ -347,8 +348,10 @@ void Draw(const char* outImage) {
           }
 
         for(uint32_t c=0; c<ccnt; ++c)
-          ASSERT_NEAR(pix.x[c],ref.x[c],0.01f);
+          if(std::fabs(pix.x[c]<ref.x[c])<0.01f)
+            same++;
         }
+    EXPECT_EQ(same,pm.w()*pm.h()*ccnt);
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
