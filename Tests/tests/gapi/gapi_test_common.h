@@ -348,7 +348,7 @@ void Draw(const char* outImage) {
           }
 
         for(uint32_t c=0; c<ccnt; ++c)
-          if(std::fabs(pix.x[c]<ref.x[c])<0.01f)
+          if(std::fabs(pix.x[c]-ref.x[c])<0.01f)
             same++;
         }
     EXPECT_EQ(same,pm.w()*pm.h()*ccnt);
