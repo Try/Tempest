@@ -44,6 +44,7 @@ install:
       }
     if($IsLinux) {
       # GLSL compiller
+      sudo apt-get install -y libclang1-9
       mkdir glslang
       cd glslang
       Invoke-WebRequest -Uri https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip -OutFile glslang-master.zip
