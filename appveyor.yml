@@ -24,6 +24,9 @@ install:
 # Vulkan SDK and thirdparty
 - cmd: set    VK_SDK_PATH=C:/VulkanSDK/1.2.170.0
 - sh:  export VK_SDK_PATH=$APPVEYOR_BUILD_FOLDER/VulkanSDK/1.2.170.0/x86_64
+# GLSL compiller
+- cmd: "SET PATH=%APPVEYOR_BUILD_FOLDER%\\glslang\\bin;%PATH%"
+- sh:  export PATH="$PATH:$APPVEYOR_BUILD_FOLDER/glslang/bin"
 
 - ps: >-
     if($IsLinux) {
@@ -39,21 +42,25 @@ install:
       Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/1.2.170.0/windows/vulkan_sdk.exe -OutFile VulkanSDK.exe
       ./VulkanSDK.exe /S
       }
+
+    # GLSL compiller
+    if($IsLinux) {
+      mkdir glslang
+      cd glslang
+      curl -fsSL -o glslang-master-linux-Release.zip https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip
+      7z x glslang-master-linux-Release.zip
+      cd ..
+      }
+    if($IsWindows) {
+      mkdir glslang
+      cd glslang
+      curl -fsSL -o glslang-master-windows-x64-Release.zip https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-windows-x64-Release.zip
+      7z x glslang-master-linux-Release.zip
+      cd ..
+      }
     if($IsMacOS) {
-      # GLSL compiller
       brew install glslang
       }
-
-# GLSL compiller
-- mkdir glslang
-- cd glslang
-- cmd: curl -fsSL -o glslang-master-windows-x64-Release.zip https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-windows-x64-Release.zip
-- sh:  curl -fsSL -o glslang-master-linux-Release.zip https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip
-- cmd: 7z x glslang-master-windows-x64-Release.zip
-- sh:  7z x glslang-master-linux-Release.zip
-- cd ..
-- cmd: "SET PATH=%APPVEYOR_BUILD_FOLDER%\\glslang\\bin;%PATH%"
-- sh: export PATH="$PATH:$APPVEYOR_BUILD_FOLDER/glslang/bin"
 
 before_build:
 # Prepare the out-of-source build directory.
