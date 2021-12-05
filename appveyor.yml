@@ -42,8 +42,8 @@ install:
       Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/1.2.170.0/windows/vulkan_sdk.exe -OutFile VulkanSDK.exe
       ./VulkanSDK.exe /S
       }
-    # GLSL compiller
     if($IsLinux) {
+      # GLSL compiller
       mkdir glslang
       cd glslang
       Invoke-WebRequest -Uri https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip -OutFile glslang-master.zip
