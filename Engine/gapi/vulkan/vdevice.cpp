@@ -151,7 +151,7 @@ bool VDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surf, const
          (swapChainAdequate || surf==VK_NULL_HANDLE);
   }
 
-void VDevice::deviceQueueProps(VulkanInstance::VkProp& prop,VkPhysicalDevice device, VkSurfaceKHR surf) {
+void VDevice::deviceQueueProps(VulkanInstance::VkProp& prop, VkPhysicalDevice device, VkSurfaceKHR surf) {
   uint32_t queueFamilyCount = 0;
   vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 

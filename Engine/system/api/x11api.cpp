@@ -106,14 +106,6 @@ static void maximizeWindow(HWND& w) {
   }
 
 X11Api::X11Api() {
-  XInitThreads();
-  dpy = XOpenDisplay(nullptr);
-
-  if(dpy == nullptr)
-    throw std::runtime_error("cannot connect to X server!");
-
-  root = DefaultRootWindow(dpy);
-
   static const TranslateKeyPair k[] = {
     { XK_Control_L, Event::K_LControl },
     { XK_Control_R, Event::K_RControl },
@@ -147,8 +139,13 @@ X11Api::X11Api() {
 
     { 0,            Event::K_NoKey    }
     };
-
   setupKeyTranslate(k,24);
+
+  XInitThreads();
+  dpy = XOpenDisplay(nullptr);
+
+  if(dpy != nullptr)
+    root = DefaultRootWindow(dpy);
   }
 
 void *X11Api::display() {
@@ -165,8 +162,8 @@ void X11Api::alignGeometry(SystemApi::Window *w, Tempest::Window& owner) {
   }
 
 SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, uint32_t h) {
-  //GLint att[] = { GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None };
-  //XVisualInfo * vi = glXChooseVisual(dpy, 0, att);
+  if(dpy==nullptr)
+    return nullptr;
 
   long visualMask = VisualScreenMask;
   int numberOfVisuals;

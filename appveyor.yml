@@ -24,6 +24,7 @@ install:
 # Vulkan SDK and thirdparty
 - cmd: set    VK_SDK_PATH=C:/VulkanSDK/1.2.170.0
 - sh:  export VK_SDK_PATH=$APPVEYOR_BUILD_FOLDER/VulkanSDK/1.2.170.0/x86_64
+- sh:  export VK_LAYER_PATH=$VULKAN_SDK/lib/vulkan/layers
 
 - ps: >-
     if($IsLinux) {
