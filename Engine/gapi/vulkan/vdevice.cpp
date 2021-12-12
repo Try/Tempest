@@ -41,9 +41,7 @@ class VDevice::FakeWindow final {
   public:
     FakeWindow(VDevice& dev)
       :instance(dev.instance) {
-      Log::d(__func__," ",__LINE__);
       w = SystemApi::createWindow(nullptr,SystemApi::Hidden);
-      Log::d(__func__," ",__LINE__);
       }
     ~FakeWindow() {
       if(surface!=VK_NULL_HANDLE)
@@ -72,12 +70,17 @@ VDevice::VDevice(VulkanInstance &api, const char* gpuName)
   std::vector<VkPhysicalDevice> devices(deviceCount);
   vkEnumeratePhysicalDevices(api.instance, &deviceCount, devices.data());
 
+  Log::d(__func__," ",__LINE__);
   FakeWindow fakeWnd{*this};
+  Log::d(__func__," ",__LINE__);
   fakeWnd.surface = createSurface(fakeWnd.w);
+  Log::d(__func__," ",__LINE__);
 
   for(const auto& device:devices) {
     if(isDeviceSuitable(device,fakeWnd.surface,gpuName)) {
+      Log::d(__func__," ",__LINE__);
       implInit(device,fakeWnd.surface);
+      Log::d(__func__," ",__LINE__);
       return;
       }
     }
