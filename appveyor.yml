@@ -57,7 +57,7 @@ install:
       Invoke-WebRequest -Uri https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-windows-x64-Release.zip -OutFile glslang-master.zip
       7z x glslang-master.zip
       cd ..
-      $Env:PATH += ":$env:APPVEYOR_BUILD_FOLDER\glslang\bin"
+      $Env:PATH += ";$env:APPVEYOR_BUILD_FOLDER\glslang\bin"
       }
 
     if($IsMacOS) {
