@@ -69,18 +69,23 @@ VDevice::VDevice(VulkanInstance &api, const char* gpuName)
 
   std::vector<VkPhysicalDevice> devices(deviceCount);
   vkEnumeratePhysicalDevices(api.instance, &deviceCount, devices.data());
-  //std::swap(devices[0],devices[1]);
+  Log::d("[1]");
 
   FakeWindow fakeWnd{*this};
+  Log::d("[2]");
   fakeWnd.surface = createSurface(fakeWnd.w);
+  Log::d("[3]");
 
   for(const auto& device:devices) {
     if(isDeviceSuitable(device,fakeWnd.surface,gpuName)) {
+      Log::d("[4]");
       implInit(device,fakeWnd.surface);
+      Log::d("[5]");
       return;
       }
     }
 
+  Log::d("[6]");
   throw std::system_error(Tempest::GraphicsErrc::NoDevice);
   }
 

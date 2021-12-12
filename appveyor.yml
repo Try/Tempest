@@ -47,6 +47,7 @@ install:
       Invoke-WebRequest -Uri https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip -OutFile glslang-master.zip
       7z x glslang-master.zip
       cd ..
+      $Env:PATH += ":$env:APPVEYOR_BUILD_FOLDER/glslang/bin"
       }
     if($IsWindows) {
       mkdir glslang
@@ -54,14 +55,11 @@ install:
       Invoke-WebRequest -Uri https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-windows-x64-Release.zip -OutFile glslang-master.zip
       7z x glslang-master.zip
       cd ..
+      $Env:PATH += ":$env:APPVEYOR_BUILD_FOLDER/glslang/bin"
       }
     if($IsMacOS) {
       brew install glslang
       }
-
-# GLSL compiller
-- cmd: "SET PATH=%APPVEYOR_BUILD_FOLDER%\\glslang\\bin;%PATH%"
-- sh:  export PATH="$PATH:$APPVEYOR_BUILD_FOLDER/glslang/bin"
 
 before_build:
 # Prepare the out-of-source build directory.

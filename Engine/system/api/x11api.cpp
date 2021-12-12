@@ -148,7 +148,7 @@ X11Api::X11Api() {
     root = DefaultRootWindow(dpy);
   }
 
-void *X11Api::display() {
+void* X11Api::display() {
   return dpy;
   }
 
