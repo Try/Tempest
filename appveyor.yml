@@ -20,7 +20,7 @@ environment:
       PLATFORM:  x64
 
 install:
-- ps: |
+- ps: >-
   $VK_SDK = '1.2.170.0'
   if($IsLinux) {
     sudo apt-get update
