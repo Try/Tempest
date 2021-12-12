@@ -22,22 +22,22 @@ environment:
 install:
 - git submodule -q update --init --recursive
 # Vulkan SDK and thirdparty
-- cmd: set    VK_SDK_PATH=C:/VulkanSDK/1.2.170.0
-- sh:  export VK_SDK_PATH=$APPVEYOR_BUILD_FOLDER/VulkanSDK/1.2.170.0/x86_64
-- sh:  export VK_LAYER_PATH=$VULKAN_SDK/lib/vulkan/layers
-
 - ps: >-
+    $VK_SDK = "1.2.170.0"
     if($IsLinux) {
       sudo apt-get update
       sudo apt-get --yes install libvulkan-dev libasound2-dev libx11-dev libxcursor-dev
       # Vulkan SDK
-      Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/1.2.170.0/linux/vulkan_sdk.tar.gz -OutFile VulkanSDK.tar.gz
+      $Env:VK_SDK_PATH   = "$APPVEYOR_BUILD_FOLDER/VulkanSDK/$VK_SDK/x86_64"
+      $Env:VK_LAYER_PATH = "$env:VULKAN_SDK/lib/vulkan/layers"
+      Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/$VK_SDK/linux/vulkan_sdk.tar.gz -OutFile VulkanSDK.tar.gz
       mkdir VulkanSDK
       tar -xzf VulkanSDK.tar.gz -C ./VulkanSDK
       }
     if($IsWindows) {
       # Vulkan SDK
-      Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/1.2.170.0/windows/vulkan_sdk.exe -OutFile VulkanSDK.exe
+      $Env:VK_SDK_PATH = "C:/VulkanSDK/$VK_SDK"
+      Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/$VK_SDK/windows/vulkan_sdk.exe -OutFile VulkanSDK.exe
       ./VulkanSDK.exe /S
       }
     if($IsLinux) {
@@ -55,7 +55,7 @@ install:
       Invoke-WebRequest -Uri https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-windows-x64-Release.zip -OutFile glslang-master.zip
       7z x glslang-master.zip
       cd ..
-      $Env:PATH += ":$env:APPVEYOR_BUILD_FOLDER/glslang/bin"
+      $Env:PATH += ":$env:APPVEYOR_BUILD_FOLDER\glslang\bin"
       }
     if($IsMacOS) {
       brew install glslang
