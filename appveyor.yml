@@ -20,7 +20,7 @@ environment:
       PLATFORM:  x64
 
 install:
-- git submodule -q update --init --recursive
+  - git submodule -q update --init --recursive
 # Vulkan SDK and thirdparty
   - ps: |
   $VK_SDK = '1.2.170.0'
