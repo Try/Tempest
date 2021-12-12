@@ -199,6 +199,9 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, 
   }
 
 SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, SystemApi::ShowMode sm) {
+  if(dpy==nullptr)
+    return nullptr;
+
   Screen* s = DefaultScreenOfDisplay(dpy);
   int width = s->width;
   int height = s->height;

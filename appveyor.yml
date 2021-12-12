@@ -28,7 +28,7 @@ install:
       sudo apt-get --yes install libvulkan-dev libasound2-dev libx11-dev libxcursor-dev
       # Vulkan SDK
       $Env:VK_SDK_PATH   = "$APPVEYOR_BUILD_FOLDER/VulkanSDK/$VK_SDK/x86_64"
-      $Env:VK_LAYER_PATH = "$env:VULKAN_SDK/lib/vulkan/layers"
+      $Env:VK_LAYER_PATH = "$env:VULKAN_SDK/lib"
       Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/$VK_SDK/linux/vulkan_sdk.tar.gz -OutFile VulkanSDK.tar.gz
       mkdir VulkanSDK
       tar -xzf VulkanSDK.tar.gz -C ./VulkanSDK
