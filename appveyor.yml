@@ -20,8 +20,6 @@ environment:
       PLATFORM:  x64
 
 install:
-  - git submodule -q update --init --recursive
-# Vulkan SDK and thirdparty
   - ps: |
   $VK_SDK = '1.2.170.0'
   if($IsLinux) {
@@ -63,6 +61,7 @@ install:
 
 before_build:
 # Prepare the out-of-source build directory.
+  - git submodule -q update --init --recursive
   - mkdir build
   - cmd: set PATH=C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin;C:/Qt/Tools/QtCreator/bin;%Path%
 
