@@ -25,14 +25,14 @@ install:
 - cmd: set    VK_SDK_PATH=C:/VulkanSDK/1.2.170.0
 - sh:  export VK_SDK_PATH=$APPVEYOR_BUILD_FOLDER/VulkanSDK/1.2.170.0/x86_64
 # GLSL compiller
-- cmd: "SET PATH=%APPVEYOR_BUILD_FOLDER%\\glslang\\bin;%PATH%"
-- sh:  export PATH="$PATH:$APPVEYOR_BUILD_FOLDER/glslang/bin"
-# GLSL compiller
 - sh:  mkdir glslang
 - sh:  cd glslang
 - sh:  curl -fsSL -o glslang-master-linux-Release.zip https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip
 - sh:  7z x glslang-master-linux-Release.zip
 - sh:  cd ..
+# GLSL compiller
+- cmd: "SET PATH=%APPVEYOR_BUILD_FOLDER%\\glslang\\bin;%PATH%"
+- sh:  export PATH="$PATH:$APPVEYOR_BUILD_FOLDER/glslang/bin"
 
 - ps: >-
     if($IsLinux) {
