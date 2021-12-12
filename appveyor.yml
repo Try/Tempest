@@ -3,6 +3,9 @@ configuration:
 
 environment:
   matrix:
+    - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
+      GENERATOR: ""
+
     - APPVEYOR_BUILD_WORKER_IMAGE: macos-bigsur
       GENERATOR: "Ninja"
 
@@ -15,9 +18,6 @@ environment:
       GENERATOR: "NMake Makefiles JOM"
       VCVARSALL: "%VS140COMNTOOLS%/../../VC/vcvarsall.bat"
       PLATFORM:  x64
-
-    - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
-      GENERATOR: ""
 
 install:
 - git submodule -q update --init --recursive
@@ -32,7 +32,7 @@ install:
 - sh:  cd glslang
 - sh:  curl -fsSL -o glslang-master-linux-Release.zip https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip
 - sh:  7z x glslang-master-linux-Release.zip
-- cd ..
+- sh:  cd ..
 
 - ps: >-
     if($IsLinux) {
