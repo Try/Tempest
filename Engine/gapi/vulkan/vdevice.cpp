@@ -41,7 +41,9 @@ class VDevice::FakeWindow final {
   public:
     FakeWindow(VDevice& dev)
       :instance(dev.instance) {
+      Log::d(__func__," ",__LINE__);
       w = SystemApi::createWindow(nullptr,SystemApi::Hidden);
+      Log::d(__func__," ",__LINE__);
       }
     ~FakeWindow() {
       if(surface!=VK_NULL_HANDLE)

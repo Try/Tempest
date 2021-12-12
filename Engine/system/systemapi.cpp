@@ -10,6 +10,8 @@
 #include <Tempest/Event>
 #include <Tempest/Window>
 
+#include <Tempest/Log>
+
 #include <thread>
 #include <unordered_set>
 #include <atomic>
@@ -92,6 +94,7 @@ uint16_t SystemApi::translateKey(uint64_t scancode) {
   }
 
 SystemApi& SystemApi::inst() {
+  Log::d(__func__," ",__LINE__);
  #ifdef __WINDOWS__
   static WindowsApi api;
 #elif defined(__LINUX__)
@@ -99,6 +102,7 @@ SystemApi& SystemApi::inst() {
 #elif defined(__OSX__)
   static MacOSApi api;
 #endif
+  Log::d(__func__," ",__LINE__);
   return api;
   }
 
