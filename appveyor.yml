@@ -3,7 +3,7 @@ configuration:
 
 environment:
   matrix:
-    - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
+    - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu2004
       GENERATOR: ""
 
     - APPVEYOR_BUILD_WORKER_IMAGE: macos-bigsur
@@ -41,6 +41,11 @@ install:
       }
     if($IsLinux) {
       # GLSL compiller
+      mkdir glslang
+      cd glslang
+      Invoke-WebRequest -Uri https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip -OutFile glslang-master.zip
+      7z x glslang-master.zip
+      cd ..
       }
     if($IsWindows) {
       mkdir glslang
@@ -53,12 +58,6 @@ install:
       brew install glslang
       }
 
-# GLSL compiller
-- sh:  mkdir glslang
-- sh:  cd glslang
-- sh:  curl -fsSL -o glslang-master-linux-Release.zip https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip
-- sh:  7z x glslang-master-linux-Release.zip
-- sh:  cd ..
 # GLSL compiller
 - cmd: "SET PATH=%APPVEYOR_BUILD_FOLDER%\\glslang\\bin;%PATH%"
 - sh:  export PATH="$PATH:$APPVEYOR_BUILD_FOLDER/glslang/bin"
