@@ -140,7 +140,7 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
     if(memId.typeId==uint32_t(-1))
       continue;
 
-    ret.page = allocMemory(memRq,memId.heapId,memId.typeId,(props[i]&VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT));
+    ret.page = allocMemory(memRq,memId.heapId,memId.typeId,memId.hostVisible);
     if(!ret.page.page)
       continue;
 

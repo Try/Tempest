@@ -332,9 +332,10 @@ VDevice::MemIndex VDevice::memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFl
       continue;
     if(memoryProperties.memoryTypes[i].propertyFlags==props) {
       MemIndex ret;
-      ret.typeId = uint32_t(i);
+      ret.typeId      = uint32_t(i);
       // avoid bufferImageGranularity shenanigans
-      ret.heapId = (tiling==VK_IMAGE_TILING_OPTIMAL && this->props.bufferImageGranularity>1) ? ret.typeId*2+1 : ret.typeId*2+0;
+      ret.heapId      = (tiling==VK_IMAGE_TILING_OPTIMAL && this->props.bufferImageGranularity>1) ? ret.typeId*2+1 : ret.typeId*2+0;
+      ret.hostVisible = (memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
       return ret;
       }
     }
@@ -346,7 +347,8 @@ VDevice::MemIndex VDevice::memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFl
       MemIndex ret;
       ret.typeId = uint32_t(i);
       // avoid bufferImageGranularity shenanigans
-      ret.heapId = (tiling==VK_IMAGE_TILING_OPTIMAL && this->props.bufferImageGranularity>1) ? ret.typeId*2+1 : ret.typeId*2+0;
+      ret.heapId      = (tiling==VK_IMAGE_TILING_OPTIMAL && this->props.bufferImageGranularity>1) ? ret.typeId*2+1 : ret.typeId*2+0;
+      ret.hostVisible = (memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
       return ret;
       }
     }

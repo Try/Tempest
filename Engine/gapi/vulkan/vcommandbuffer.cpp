@@ -588,7 +588,7 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
       bx.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
     fillSubresource(bx,b);
-    if(device.graphicsQueue->family!=device.presentQueue->family) {
+    if(device.presentQueue!=nullptr && device.graphicsQueue->family!=device.presentQueue->family) {
       if(bx.newLayout==VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
         bx.srcQueueFamilyIndex  = device.graphicsQueue->family;
         bx.dstQueueFamilyIndex  = device.presentQueue->family;
