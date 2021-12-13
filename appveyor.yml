@@ -87,6 +87,7 @@ test_script:
   - cmd: cd %APPVEYOR_BUILD_FOLDER%\build\testsuite
   # - cmd: TempestTests.exe   disable, since appveyor image doesn't have vulkan drievr anymore
   - sh:  cd $APPVEYOR_BUILD_FOLDER/build/testsuite
+  - sh:  printenv
   - sh:  ./TempestTests
 
 artifacts:
