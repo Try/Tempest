@@ -38,7 +38,7 @@ VAllocator::Provider::~Provider() {
     vkFreeMemory(device->device.impl,lastFree,nullptr);
   }
 
-VAllocator::Provider::DeviceMemory VAllocator::Provider::alloc(size_t size,uint32_t typeId) {
+VAllocator::Provider::DeviceMemory VAllocator::Provider::alloc(size_t size, uint32_t typeId) {
   if(lastFree!=VK_NULL_HANDLE){
     if(lastType==typeId && lastSize==size){
       VkDeviceMemory memory=lastFree;
@@ -66,9 +66,9 @@ void VAllocator::Provider::free(VAllocator::Provider::DeviceMemory m, size_t siz
   if(lastFree!=VK_NULL_HANDLE)
     vkFreeMemory(device->device.impl,lastFree,nullptr);
 
-  lastFree=m;
-  lastSize=size;
-  lastType=typeId;
+  lastFree = m;
+  lastSize = size;
+  lastType = typeId;
   }
 
 static size_t GCD(size_t n1, size_t n2) {

@@ -114,9 +114,7 @@ void VboDyn() {
     auto ssbo = device.ssbo(BufferHeap::Upload,vboData,sizeof(vboData));
     ssbo.update(vboData2+1, 1*sizeof(vboData2[0]), 2*sizeof(vboData2[0]));
 
-    Log::d(__func__," ",__LINE__);
     device.readBytes(ssbo,readback,ssbo.size());
-    Log::d(__func__," ",__LINE__);
     for(int i=0; i<3; ++i) {
       EXPECT_EQ(readback[i].x,vboData2[i].x);
       EXPECT_EQ(readback[i].y,vboData2[i].y);
