@@ -422,7 +422,14 @@ string CompilerHLSL::type_to_glsl(const SPIRType &type, uint32_t id)
 	case SPIRType::ControlPointArray:
 	{
 		auto& template_type = get<SPIRType>(type.parent_type);
-		return "OutputPatch<" + type_to_glsl(template_type, id) + ",32>";
+		if (get_execution_model()==ExecutionModelTessellationControl)
+		{
+			return "InputPatch<" + type_to_glsl(template_type, id) + ",32>";
+		}
+		else
+		{
+			return "OutputPatch<" + type_to_glsl(template_type, id) + ",32>";
+		}
 	}
 
 	default:
@@ -568,6 +575,27 @@ void CompilerHLSL::emit_builtin_outputs_in_struct()
 {
 	auto &execution = get_entry_point();
 
+	if (execution.model == ExecutionModelTessellationControl)
+	{
+		active_output_builtins.for_each_bit([&](uint32_t i) {
+			auto builtin = static_cast<BuiltIn>(i);
+			switch (builtin)
+			{
+				case BuiltInTessLevelOuter:
+					statement("float ", builtin_to_glsl(builtin, StorageClassOutput), "[3] : SV_TessFactor;");
+					break;
+
+				case BuiltInTessLevelInner:
+					statement("float ", builtin_to_glsl(builtin, StorageClassOutput), " : SV_InsideTessFactor;");
+					break;
+
+				default:
+					break;
+			}
+			});
+		return;
+	}
+
 	bool legacy = hlsl_options.shader_model <= 30;
 	active_output_builtins.for_each_bit([&](uint32_t i) {
 		const char *type = nullptr;
@@ -644,6 +672,10 @@ void CompilerHLSL::emit_builtin_outputs_in_struct()
 				break;
 			else
 				SPIRV_CROSS_THROW("Unsupported builtin in HLSL.");
+
+			case BuiltInTessLevelOuter:
+			case BuiltInTessLevelInner:
+				break;
 
 		default:
 			SPIRV_CROSS_THROW("Unsupported builtin in HLSL.");
@@ -782,6 +814,12 @@ void CompilerHLSL::emit_builtin_inputs_in_struct()
 		case BuiltInPosition:
 			type = "float4";
 			semantic = "POSITION";
+			break;
+
+		case BuiltInInvocationId:
+			type = "int";
+			semantic = "SV_OutputControlPointID";
+			// semantic = "SV_GSInstanceID";
 			break;
 
 		default:
@@ -1179,6 +1217,10 @@ void CompilerHLSL::emit_builtin_variables()
 			type = "int";
 			break;
 
+		case BuiltInInvocationId:
+			type = "int";
+			break;
+
 		default:
 			SPIRV_CROSS_THROW(join("Unsupported builtin in HLSL: ", unsigned(builtin)));
 		}
@@ -1556,7 +1598,9 @@ void CompilerHLSL::emit_resources()
 	if (!input_variables.empty() || !input_builtins.empty())
 	{
 		require_input = true;
-		if (is_tessellation_shader())
+		if (execution.model==ExecutionModelTessellationControl)
+			statement("struct SPIRV_Cross_HS_Point_Input");
+		else if (execution.model==ExecutionModelTessellationEvaluation)
 			statement("struct SPIRV_Cross_DS_Point_Input");
 		else
 			statement("struct SPIRV_Cross_Input");
@@ -1597,7 +1641,10 @@ void CompilerHLSL::emit_resources()
 
 	if (is_tessellation_shader())
 	{
-		statement("struct SPIRV_Cross_DS_Constant_Input");
+		if (get_execution_model()==ExecutionModelTessellationEvaluation)
+			statement("struct SPIRV_Cross_DS_Constant_Input");
+		else
+			statement("struct SPIRV_Cross_HS_Constant_Output");
 		begin_scope();
 		for (auto &var : input_variables)
 		{
@@ -2446,6 +2493,8 @@ void CompilerHLSL::emit_function_prototype(SPIRFunction &func, const Bitset &ret
 			decl += "comp_main";
 		else if (execution.model == ExecutionModelTessellationEvaluation)
 			decl += "tese_main";
+		else if (execution.model == ExecutionModelTessellationControl)
+			decl += "tesc_main";
 		else
 			SPIRV_CROSS_THROW("Unsupported execution model.");
 		processing_entry_point = true;
@@ -2529,7 +2578,7 @@ void CompilerHLSL::append_gl_inout_to_functions(VariableID gl_in)
 }
 
 void CompilerHLSL::append_gl_inout_to_function(VariableID gl_in, uint32_t func_id,
-                                                          unordered_set<uint32_t> &processed_func_ids)
+                                               unordered_set<uint32_t> &processed_func_ids)
 {
 	auto &func = get<SPIRFunction>(func_id);
 	// Avoid processing a function more than once
@@ -2576,7 +2625,17 @@ void CompilerHLSL::append_gl_inout_to_function(VariableID gl_in, uint32_t func_i
 	ir.meta[next_id] = ir.meta[gl_in];
 }
 
+void CompilerHLSL::emit_hlsl_patch_constant_func()
+{
+	emit_hlsl_entry_common(true);
+}
+
 void CompilerHLSL::emit_hlsl_entry_point()
+{
+	emit_hlsl_entry_common(false);
+}
+
+void CompilerHLSL::emit_hlsl_entry_common(bool is_patch_constant)
 {
 	SmallVector<string> arguments;
 
@@ -2588,48 +2647,81 @@ void CompilerHLSL::emit_hlsl_entry_point()
 	if (require_input)
 	{
 		if (execution.model==ExecutionModelTessellationControl)
-			arguments.push_back("InputPatch<SPIRV_Cross_DS_Point_Input, 32> gl_out");
+		{
+			if (is_patch_constant)
+			{
+				arguments.push_back("InputPatch<SPIRV_Cross_HS_Point_Input, 32> gl_in");
+				arguments.push_back("SPIRV_Cross_Input stage_input");
+			}
+			else
+			{
+				arguments.push_back("InputPatch<SPIRV_Cross_HS_Point_Input, 32> gl_in");
+			}
+		}
 		else if (execution.model==ExecutionModelTessellationEvaluation)
+		{
 			arguments.push_back("OutputPatch<SPIRV_Cross_DS_Point_Input, 32> gl_in");
+		}
 		else
+		{
 			arguments.push_back("SPIRV_Cross_Input stage_input");
+		}
 	}
 
-	switch (execution.model)
+	if (!is_patch_constant)
 	{
-	case ExecutionModelGLCompute:
-	{
-		SpecializationConstant wg_x, wg_y, wg_z;
-		get_work_group_size_specialization_constants(wg_x, wg_y, wg_z);
+		switch (execution.model)
+		{
+		case ExecutionModelGLCompute:
+		{
+			SpecializationConstant wg_x, wg_y, wg_z;
+			get_work_group_size_specialization_constants(wg_x, wg_y, wg_z);
 
-		uint32_t x = execution.workgroup_size.x;
-		uint32_t y = execution.workgroup_size.y;
-		uint32_t z = execution.workgroup_size.z;
+			uint32_t x = execution.workgroup_size.x;
+			uint32_t y = execution.workgroup_size.y;
+			uint32_t z = execution.workgroup_size.z;
 
-		auto x_expr = wg_x.id ? get<SPIRConstant>(wg_x.id).specialization_constant_macro_name : to_string(x);
-		auto y_expr = wg_y.id ? get<SPIRConstant>(wg_y.id).specialization_constant_macro_name : to_string(y);
-		auto z_expr = wg_z.id ? get<SPIRConstant>(wg_z.id).specialization_constant_macro_name : to_string(z);
+			auto x_expr = wg_x.id ? get<SPIRConstant>(wg_x.id).specialization_constant_macro_name : to_string(x);
+			auto y_expr = wg_y.id ? get<SPIRConstant>(wg_y.id).specialization_constant_macro_name : to_string(y);
+			auto z_expr = wg_z.id ? get<SPIRConstant>(wg_z.id).specialization_constant_macro_name : to_string(z);
 
-		statement("[numthreads(", x_expr, ", ", y_expr, ", ", z_expr, ")]");
-		break;
+			statement("[numthreads(", x_expr, ", ", y_expr, ", ", z_expr, ")]");
+			break;
+		}
+		case ExecutionModelFragment:
+			if (execution.flags.get(ExecutionModeEarlyFragmentTests))
+				statement("[earlydepthstencil]");
+			break;
+
+		case ExecutionModelTessellationControl:
+			if (execution.flags.get(ExecutionModeTriangles))
+				statement("[domain(\"tri\")]");
+			if (execution.flags.get(ExecutionModeSpacingFractionalEven))
+				statement("[partitioning(\"fractional_even\")]");
+			if (execution.flags.get(ExecutionModeSpacingFractionalOdd))
+				statement("[partitioning(\"fractional_odd\")]");
+			if (execution.flags.get(ExecutionModeSpacingEqual))
+				statement("[partitioning(\"integer\")]");
+			statement("[outputtopology(\"triangle_cw\")]");
+			statement("[outputcontrolpoints(3)]"); // TODO
+			statement("[patchconstantfunc(\"tesc_patch_constant\")]");
+			break;
+
+		case ExecutionModelTessellationEvaluation:
+			if (execution.flags.get(ExecutionModeQuads))
+				statement("[domain(\"quad\")]");
+			if (execution.flags.get(ExecutionModeTriangles))
+				statement("[domain(\"tri\")]");
+			if (execution.flags.get(ExecutionModeIsolines))
+				statement("[domain(\"isoline\")]");
+			break;
+
+		default:
+			break;
+		}
 	}
-	case ExecutionModelFragment:
-		if (execution.flags.get(ExecutionModeEarlyFragmentTests))
-			statement("[earlydepthstencil]");
-		break;
-	case ExecutionModelTessellationEvaluation:
-		if (execution.flags.get(ExecutionModeQuads))
-			statement("[domain(\"quad\")]");
-		if (execution.flags.get(ExecutionModeTriangles))
-			statement("[domain(\"tri\")]");
-		if (execution.flags.get(ExecutionModeIsolines))
-			statement("[domain(\"isoline\")]");
-		break;
-	default:
-		break;
-	}
 
-	statement(require_output ? "SPIRV_Cross_Output " : "void ", "main(", merge(arguments), ")");
+	statement(require_output ? "SPIRV_Cross_Output " : "void ", is_patch_constant ? "tesc_patch_constant(" : "main(", merge(arguments), ")");
 	begin_scope();
 	bool legacy = hlsl_options.shader_model <= 30;
 
@@ -2753,7 +2845,7 @@ void CompilerHLSL::emit_hlsl_entry_point()
 			break;
 
 		case BuiltInPosition:
-			if (execution.model!=ExecutionModelTessellationEvaluation)
+			if (execution.model!=ExecutionModelTessellationControl && execution.model!=ExecutionModelTessellationEvaluation)
 				statement(builtin, " = stage_input.", builtin, ";");
 			break;
 
@@ -2847,6 +2939,13 @@ void CompilerHLSL::emit_hlsl_entry_point()
 		else
 			statement("tese_main();");
 	}
+	else if (execution.model == ExecutionModelTessellationControl)
+	{
+		if (require_input)
+			statement("tesc_main(gl_in);");
+		else
+			statement("tesc_main();");
+	}
 	else
 		SPIRV_CROSS_THROW("Unsupported shader stage.");
 
@@ -2874,6 +2973,11 @@ void CompilerHLSL::emit_hlsl_entry_point()
 					statement("stage_output.gl_CullDistance", cull / 4, ".", "xyzw"[cull & 3], " = gl_CullDistance[",
 					          cull, "];");
 				break;
+
+			case BuiltInTessLevelInner:
+			case BuiltInTessLevelOuter:
+				if (is_patch_constant)
+					break;
 
 			default:
 			{
@@ -2927,7 +3031,7 @@ void CompilerHLSL::emit_hlsl_entry_point()
 			}
 		});
 
-		statement("return stage_output;");
+	statement("return stage_output;");
 	}
 
 	end_scope();
@@ -2935,7 +3039,8 @@ void CompilerHLSL::emit_hlsl_entry_point()
 
 void CompilerHLSL::emit_per_vertex_inputs()
 {
-	if (!is_tessellation_shader())
+	const auto model = get_execution_model();
+	if (!is_tessellation_shader(model))
 		return;
 
 	// Tessellation evaluation per-vertex inputs are presented as arrays.
@@ -2950,7 +3055,14 @@ void CompilerHLSL::emit_per_vertex_inputs()
 	auto &ds_point_type = set<SPIRType>(offset);
 	ds_point_type.basetype = SPIRType::Struct;
 	set_decoration(ds_point_type.self, DecorationBlock);
-	set_name(ds_point_type.self,"SPIRV_Cross_DS_Point_Input");
+	if (model==ExecutionModelTessellationControl)
+	{
+		set_name(ds_point_type.self,"SPIRV_Cross_HS_Point_Input");
+	}
+	else
+	{
+		set_name(ds_point_type.self,"SPIRV_Cross_DS_Point_Input");
+	}
 
 	auto &pcp_type = set<SPIRType>(offset+1);
 	pcp_type.basetype = SPIRType::ControlPointArray;
@@ -4371,6 +4483,47 @@ string CompilerHLSL::write_access_chain_value(uint32_t value, const SmallVector<
 	if (enclose)
 		ret = enclose_expression(ret);
 	return ret;
+	}
+
+string CompilerHLSL::access_chain(uint32_t base, const uint32_t* indices, uint32_t count, const SPIRType& target_type,
+                                  AccessChainMeta* meta, bool ptr_chain)
+{
+	if (get_execution_model()!=ExecutionModelTessellationControl ||
+	    count<2 ||
+	    ir.ids[base].get_type()!=TypeVariable ||
+	    ir.ids[indices[0]].get_type()!=TypeExpression)
+	{
+		return CompilerGLSL::access_chain(base, indices, count, target_type, meta, ptr_chain);
+	}
+
+	auto &var = get<SPIRVariable>(base);
+	auto &dec = ir.meta[var.self].decoration;
+	auto &access = get<SPIRExpression>(indices[0]);
+
+	if (dec.alias=="gl_out")
+	{
+		if (ir.ids[access.loaded_from].get_type()!=TypeVariable)
+		{
+			SPIRV_CROSS_THROW("Backend does not support non uniform access to gl_out.");
+		}
+		auto &index = ir.meta[access.loaded_from].decoration;
+		if (index.builtin_type==BuiltInInvocationId)
+		{
+			AccessChainFlags flags = ACCESS_CHAIN_SKIP_REGISTER_EXPRESSION_READ_BIT;
+			if (ptr_chain)
+				flags |= ACCESS_CHAIN_PTR_CHAIN_BIT;
+			flags |= ACCESS_CHAIN_CHAIN_ONLY_BIT;
+			auto str = access_chain_internal(base, indices, count, flags, meta);
+			str.erase(0,18);
+			return str;
+		}
+		else
+		{
+			SPIRV_CROSS_THROW("Backend does not support non uniform access to gl_out.");
+		}
+	}
+
+	return CompilerGLSL::access_chain(base, indices, count, target_type, meta, ptr_chain);
 }
 
 void CompilerHLSL::write_access_chain(const SPIRAccessChain &chain, uint32_t value,
@@ -6040,6 +6193,11 @@ string CompilerHLSL::compile()
 		active_input_builtins.set(BuiltInFragCoord);
 
 	ExecutionModel model = get_execution_model();
+	if (model == ExecutionModelTessellationControl)
+	{
+		//backend.force_gl_in_out_block = true;
+		backend.force_gl_in_block_hlsl = true;
+	}
 	if (model == ExecutionModelTessellationEvaluation)
 	{
 		active_input_builtins.set(BuiltInTessCoord);
@@ -6064,6 +6222,10 @@ string CompilerHLSL::compile()
 		emit_resources();
 
 		emit_function(get<SPIRFunction>(ir.default_entry_point), Bitset());
+		if (get_execution_model()==ExecutionModelTessellationControl)
+		{
+			emit_hlsl_patch_constant_func();
+		}
 		emit_hlsl_entry_point();
 
 		pass_count++;

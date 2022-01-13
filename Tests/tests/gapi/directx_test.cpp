@@ -152,6 +152,24 @@ TEST(DirectX12Api,PushRemapping) {
 #endif
   }
 
+TEST(DirectX12Api,Spirv_HS) {
+#if defined(_MSC_VER)
+  using namespace Tempest;
+
+  try {
+    DirectX12Api api{ApiFlags::Validation};
+    Device       device(api);
+
+    auto tese0 = device.shader("shader/tess.tesc.sprv");
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+#endif
+  }
+
 TEST(DirectX12Api,Spirv_DS) {
 #if defined(_MSC_VER)
   using namespace Tempest;

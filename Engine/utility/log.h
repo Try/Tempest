@@ -43,7 +43,7 @@ class Log final {
   private:
     struct Context {
       Mode mode;
-      char buffer[128];
+      char buffer[256];
       };
 
     struct Globals {

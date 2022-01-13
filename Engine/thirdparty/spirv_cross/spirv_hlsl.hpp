@@ -215,6 +215,8 @@ private:
 	std::string image_type_hlsl_legacy(const SPIRType &type, uint32_t id);
 	void emit_function_prototype(SPIRFunction &func, const Bitset &return_flags) override;
 	void emit_hlsl_entry_point();
+	void emit_hlsl_patch_constant_func();
+	void emit_hlsl_entry_common(bool is_patch_constant);
 	void emit_header() override;
 	void emit_resources();
 	void declare_undefined_values() override;
@@ -261,6 +263,8 @@ private:
 	void write_access_chain_array(const SPIRAccessChain &chain, uint32_t value,
 	                              const SmallVector<uint32_t> &composite_chain);
 	std::string write_access_chain_value(uint32_t value, const SmallVector<uint32_t> &composite_chain, bool enclose);
+	std::string access_chain(uint32_t base, const uint32_t *indices, uint32_t count, const SPIRType &target_type,
+	                         AccessChainMeta *meta = nullptr, bool ptr_chain = false) override;
 	void emit_store(const Instruction &instruction);
 	void emit_atomic(const uint32_t *ops, uint32_t length, spv::Op op);
 	void emit_subgroup_op(const Instruction &i) override;
