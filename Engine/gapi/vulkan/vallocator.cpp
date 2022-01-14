@@ -72,16 +72,15 @@ void VAllocator::Provider::free(VAllocator::Provider::DeviceMemory m, size_t siz
   }
 
 static size_t GCD(size_t n1, size_t n2) {
-  if(n1==n2)
-    return n1;
+  if(n1==1 || n2==1)
+    return 1;
 
-  if(n1<n2) {
-    size_t d = n2 - n1;
-    return GCD(n1, d);
-    } else {
-    size_t d = n1 - n2;
-    return GCD(n2, d);
+  while(n1!=n2) {
+    if(n1<n2)
+      n2 = n2 - n1; else
+      n1 = n1 - n2;
     }
+  return n1;
   }
 
 static size_t LCM(size_t n1, size_t n2)  {
