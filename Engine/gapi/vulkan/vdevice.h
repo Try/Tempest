@@ -235,6 +235,7 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     PFN_vkGetBufferMemoryRequirements2KHR vkGetBufferMemoryRequirements2 = nullptr;
     PFN_vkGetImageMemoryRequirements2KHR  vkGetImageMemoryRequirements2  = nullptr;
+    PFN_vkCmdPipelineBarrier2KHR          vkCmdPipelineBarrier2KHR       = nullptr;
 
     void                    waitIdle() override;
 
@@ -252,7 +253,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     std::unique_ptr<DataMgr>         data;
     void                    waitIdleSync(Queue* q, size_t n);
 
-    void                    implInit(VkPhysicalDevice pdev, VkSurfaceKHR surf);
+    void                    implInit(VulkanInstance& api, VkPhysicalDevice pdev, VkSurfaceKHR surf);
     void                    pickPhysicalDevice();
     bool                    isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surf, const char* gpuName);
     void                    deviceQueueProps(VulkanInstance::VkProp& prop, VkPhysicalDevice device, VkSurfaceKHR surf);
@@ -261,7 +262,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     bool                    checkForExt(const std::vector<VkExtensionProperties>& list,const char* name);
     SwapChainSupport        querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface);
 
-    void                    createLogicalDevice(VkPhysicalDevice pdev);
+    void                    createLogicalDevice(VulkanInstance& api, VkPhysicalDevice pdev);
   };
 
 }}

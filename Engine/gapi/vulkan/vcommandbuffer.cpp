@@ -513,6 +513,10 @@ void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
   }
 
 void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
+  if(device.props.hasSync2) {
+    barrier2(desc,cnt);
+    return;
+    }
 
   {
   VkBufferMemoryBarrier bufBarrier[MaxBarriers] = {};
@@ -582,29 +586,108 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
 
     bx.oldLayout             = toLayout(b.prev);
     bx.newLayout             = toLayout(b.next);
-    if(b.prev==ResourceAccess::Present)
-      bx.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    if(b.next==ResourceAccess::Present)
-      bx.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    fillSubresource(bx,b);
-    if(device.presentQueue!=nullptr && device.graphicsQueue->family!=device.presentQueue->family) {
-      if(bx.newLayout==VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
-        bx.srcQueueFamilyIndex  = device.graphicsQueue->family;
-        bx.dstQueueFamilyIndex  = device.presentQueue->family;
-        }
-      else if(bx.oldLayout==VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
-        bx.srcQueueFamilyIndex  = device.presentQueue->family;
-        bx.dstQueueFamilyIndex  = device.graphicsQueue->family;
-        }
-      }
-
-    if(b.discard)
-      bx.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    finalizeImageBarrier(bx,b);
     ++pbCount;
     }
   emitBarriers(srcStage,dstStage,imgBarrier,pbCount);
   }
+  }
+
+void VCommandBuffer::barrier2(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
+  VkBufferMemoryBarrier2KHR bufBarrier[MaxBarriers] = {};
+  uint32_t                  bufCount = 0;
+  VkImageMemoryBarrier2KHR  imgBarrier[MaxBarriers] = {};
+  uint32_t                  imgCount = 0;
+
+  VkDependencyInfoKHR info = {};
+  info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR;
+
+  for(size_t i=0; i<cnt; ++i) {
+    auto& b  = desc[i];
+
+    if(b.buffer!=nullptr) {
+      auto& bx = bufBarrier[bufCount];
+      ++bufCount;
+
+      bx.sType                 = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR;
+      bx.srcQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
+      bx.dstQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
+      bx.buffer                = reinterpret_cast<VBuffer&>(*b.buffer).impl;
+      bx.offset                = 0;
+      bx.size                  = VK_WHOLE_SIZE;
+
+      bx.srcAccessMask         = ::nativeFormat(b.prev);
+      bx.dstAccessMask         = ::nativeFormat(b.next);
+      bx.srcStageMask          = toStage(b.prev,true);
+      bx.dstStageMask          = toStage(b.next,false);
+      } else {
+      auto& bx = imgBarrier[imgCount];
+      ++imgCount;
+
+      bx.sType                 = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2_KHR;
+      bx.srcQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
+      bx.dstQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
+      bx.image                 = toVkResource(b);
+
+      bx.srcAccessMask         = ::nativeFormat(b.prev);
+      bx.dstAccessMask         = ::nativeFormat(b.next);
+      bx.srcStageMask          = toStage(b.prev,true);
+      bx.dstStageMask          = toStage(b.next,false);
+
+      bx.oldLayout             = toLayout(b.prev);
+      bx.newLayout             = toLayout(b.next);
+      finalizeImageBarrier(bx,b);
+      }
+    }
+
+  info.pBufferMemoryBarriers    = bufBarrier;
+  info.bufferMemoryBarrierCount = bufCount;
+  info.pImageMemoryBarriers     = imgBarrier;
+  info.imageMemoryBarrierCount  = imgCount;
+
+  device.vkCmdPipelineBarrier2KHR(impl,&info);
+  }
+
+template<class T>
+void VCommandBuffer::finalizeImageBarrier(T& bx, const AbstractGraphicsApi::BarrierDesc& b) {
+  if(b.prev==ResourceAccess::Present)
+    bx.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+  if(b.next==ResourceAccess::Present)
+    bx.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+  VkFormat nativeFormat = VK_FORMAT_UNDEFINED;
+  if(b.texture!=nullptr) {
+    VTexture& t   = *reinterpret_cast<VTexture*>  (b.texture);
+    nativeFormat  = t.format;
+    } else {
+    VSwapchain& s = *reinterpret_cast<VSwapchain*>(b.swapchain);
+    nativeFormat  = s.format();
+    }
+
+  bx.subresourceRange.baseMipLevel   = b.mip==uint32_t(-1) ? 0 : b.mip;
+  bx.subresourceRange.levelCount     = b.mip==uint32_t(-1) ? VK_REMAINING_MIP_LEVELS : 1;
+  bx.subresourceRange.baseArrayLayer = 0;
+  bx.subresourceRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
+
+  if(nativeFormat==VK_FORMAT_D24_UNORM_S8_UINT || nativeFormat==VK_FORMAT_D16_UNORM_S8_UINT || nativeFormat==VK_FORMAT_D32_SFLOAT_S8_UINT)
+    bx.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT; else
+  if(Detail::nativeIsDepthFormat(nativeFormat))
+    bx.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; else
+    bx.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+  if(device.presentQueue!=nullptr && device.graphicsQueue->family!=device.presentQueue->family) {
+    if(bx.newLayout==VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+      bx.srcQueueFamilyIndex  = device.graphicsQueue->family;
+      bx.dstQueueFamilyIndex  = device.presentQueue->family;
+      }
+    else if(bx.oldLayout==VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+      bx.srcQueueFamilyIndex  = device.presentQueue->family;
+      bx.dstQueueFamilyIndex  = device.graphicsQueue->family;
+      }
+    }
+
+  if(b.discard)
+    bx.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   }
 
 void VCommandBuffer::addDependency(VSwapchain& s, size_t imgId) {

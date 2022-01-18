@@ -75,7 +75,7 @@ VDevice::VDevice(VulkanInstance &api, const char* gpuName)
 
   for(const auto& device:devices) {
     if(isDeviceSuitable(device,fakeWnd.surface,gpuName)) {
-      implInit(device,fakeWnd.surface);
+      implInit(api,device,fakeWnd.surface);
       return;
       }
     }
@@ -88,11 +88,11 @@ VDevice::~VDevice(){
   data.reset();
   }
 
-void VDevice::implInit(VkPhysicalDevice pdev, VkSurfaceKHR surf) {
+void VDevice::implInit(VulkanInstance &api, VkPhysicalDevice pdev, VkSurfaceKHR surf) {
   Detail::VulkanInstance::getDeviceProps(pdev,props);
   deviceQueueProps(props,pdev,surf);
 
-  createLogicalDevice(pdev);
+  createLogicalDevice(api,pdev);
   vkGetPhysicalDeviceMemoryProperties(pdev,&memoryProperties);
 
   physicalDevice = pdev;
@@ -243,7 +243,7 @@ VDevice::SwapChainSupport VDevice::querySwapChainSupport(VkPhysicalDevice device
   return details;
   }
 
-void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
+void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
   auto ext = extensionsList(pdev);
 
   std::vector<const char*> rqExt = requiredExtensions;
@@ -254,6 +254,9 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
   if(checkForExt(ext,VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME)) {
     props.hasDedicatedAlloc = true;
     rqExt.push_back(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
+    }
+  if(api.hasDeviceFeatures2 && checkForExt(ext,VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME)) {
+    rqExt.push_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
     }
 
   std::array<uint32_t,2>  uniqueQueueFamilies = {props.graphicsFamily, props.presentFamily};
@@ -306,8 +309,27 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
   createInfo.enabledExtensionCount   = static_cast<uint32_t>(rqExt.size());
   createInfo.ppEnabledExtensionNames = rqExt.data();
 
-  if(vkCreateDevice(pdev, &createInfo, nullptr, &device.impl)!=VK_SUCCESS)
-    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+  if(api.hasDeviceFeatures2) {
+    VkPhysicalDeviceSynchronization2FeaturesKHR sync2 = {};
+    sync2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR;
+
+    VkPhysicalDeviceFeatures2 enabledFeatures = {};
+    enabledFeatures.sType    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
+    enabledFeatures.pNext    = &sync2;
+    enabledFeatures.features = deviceFeatures;
+
+    vkGetPhysicalDeviceFeatures2(pdev, &enabledFeatures);
+
+    props.hasSync2 = (sync2.synchronization2==VK_TRUE);
+
+    createInfo.pNext            = &enabledFeatures;
+    createInfo.pEnabledFeatures = nullptr;
+    if(vkCreateDevice(pdev, &createInfo, nullptr, &device.impl)!=VK_SUCCESS)
+      throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+    } else {
+    if(vkCreateDevice(pdev, &createInfo, nullptr, &device.impl)!=VK_SUCCESS)
+      throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+    }
 
   for(size_t i=0; i<queueCnt; ++i) {
     vkGetDeviceQueue(device.impl, queues[i].family, 0, &queues[i].impl);
@@ -322,6 +344,11 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
         (vkGetDeviceProcAddr(device.impl,"vkGetBufferMemoryRequirements2KHR"));
     vkGetImageMemoryRequirements2 = reinterpret_cast<PFN_vkGetImageMemoryRequirements2KHR>
         (vkGetDeviceProcAddr(device.impl,"vkGetImageMemoryRequirements2KHR"));
+    }
+
+  if(props.hasSync2) {
+    vkCmdPipelineBarrier2KHR = reinterpret_cast<PFN_vkCmdPipelineBarrier2KHR>
+        (vkGetDeviceProcAddr(device.impl,"vkCmdPipelineBarrier2KHR"));
     }
   }
 

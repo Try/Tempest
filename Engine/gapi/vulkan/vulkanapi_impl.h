@@ -22,6 +22,7 @@ class VulkanInstance {
     std::vector<AbstractGraphicsApi::Props> devices() const;
 
     VkInstance       instance;
+    bool             hasDeviceFeatures2 = false;
 
     struct VkProp:Tempest::AbstractGraphicsApi::Props {
       uint32_t graphicsFamily=uint32_t(-1);
@@ -30,8 +31,9 @@ class VulkanInstance {
       size_t   nonCoherentAtomSize=0;
       size_t   bufferImageGranularity=0;
 
-      bool     hasMemRq2        =false;
-      bool     hasDedicatedAlloc=false;
+      bool     hasMemRq2          = false;
+      bool     hasDedicatedAlloc  = false;
+      bool     hasSync2           = false;
       };
 
     static void      getDeviceProps(VkPhysicalDevice physicalDevice, VkProp& c);
@@ -48,6 +50,7 @@ class VulkanInstance {
 
     const std::initializer_list<const char*>& checkValidationLayerSupport();
     bool layerSupport(const std::vector<VkLayerProperties>& sup,const std::initializer_list<const char*> dest);
+    std::vector<VkExtensionProperties> extensionsList();
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(
         VkDebugReportFlagsEXT       flags,

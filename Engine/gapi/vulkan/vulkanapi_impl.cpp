@@ -31,6 +31,13 @@ static const std::initializer_list<const char*> validationLayersLunarg = {
   "VK_LAYER_LUNARG_core_validation"
   };
 
+static bool checkForExt(const std::vector<VkExtensionProperties>& list, const char* name) {
+  for(auto& r:list)
+    if(std::strcmp(name,r.extensionName)==0)
+      return true;
+  return false;
+  }
+
 VulkanInstance::VulkanInstance(bool validation)
   :validation(validation) {
   std::initializer_list<const char*> validationLayers={};
@@ -52,14 +59,20 @@ VulkanInstance::VulkanInstance(bool validation)
   createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
   createInfo.pApplicationInfo = &appInfo;
 
-  const std::initializer_list<const char*>& extensions = std::initializer_list<const char*>{
+  std::vector<const char*> rqExt = {
     VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
     VK_KHR_SURFACE_EXTENSION_NAME,
     SURFACE_EXTENSION_NAME,
     };
 
-  createInfo.enabledExtensionCount   = static_cast<uint32_t>(extensions.size());
-  createInfo.ppEnabledExtensionNames = extensions.begin();
+  auto ext = extensionsList();
+  if(checkForExt(ext,VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {
+    rqExt.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+    hasDeviceFeatures2 = true;
+    }
+
+  createInfo.enabledExtensionCount   = static_cast<uint32_t>(rqExt.size());
+  createInfo.ppEnabledExtensionNames = rqExt.data();
 
   if(validation){
     createInfo.enabledLayerCount   = static_cast<uint32_t>(validationLayers.size());
@@ -97,6 +110,16 @@ VulkanInstance::~VulkanInstance(){
   if(vkDestroyDebugReportCallbackEXT)
     vkDestroyDebugReportCallbackEXT(instance,callback,nullptr);
   vkDestroyInstance(instance,nullptr);
+  }
+
+std::vector<VkExtensionProperties> VulkanInstance::extensionsList() {
+  uint32_t extensionCount;
+  vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+
+  std::vector<VkExtensionProperties> ext(extensionCount);
+  vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, ext.data());
+
+  return ext;
   }
 
 const std::initializer_list<const char*>& VulkanInstance::checkValidationLayerSupport() {
