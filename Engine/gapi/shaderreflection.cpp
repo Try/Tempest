@@ -1,6 +1,7 @@
 #include "shaderreflection.h"
 
 #include <Tempest/Except>
+#include <Tempest/Log>
 #include <algorithm>
 
 #include "thirdparty/spirv_cross/spirv_common.hpp"
@@ -169,7 +170,7 @@ void ShaderReflection::merge(std::vector<Binding>& ret,
         for(auto& r:ret)
           if(r.layout==u.layout) {
             r.stage = Stage(r.stage | u.stage);
-            r.size  = std::max(pb.size, u.size);
+            r.size  = std::max(r.size, u.size);
             ins     = true;
             break;
             }
