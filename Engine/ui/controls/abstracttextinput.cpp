@@ -173,21 +173,26 @@ void AbstractTextInput::keyEventImpl(KeyEvent& e) {
 
   if(e.key==Event::K_Left) {
     selS = textM.advance(selS,-1);
-    selE = selS;
+    if(e.modifier!=Event::M_Shift)
+      selE = selS;
     update();
     }
   else if(e.key==Event::K_Right) {
-    selS = textM.advance(selE, 1);
-    selE = selS;
+    selE = textM.advance(selE, 1);
+    if(e.modifier!=Event::M_Shift)
+      selS = selE;
     update();
     }
   else if(e.key==Event::K_Delete || e.key==Event::K_Back) {
-    TextModel::Cursor end = selE;
+    if(selE<selS)
+      std::swap(selE,selS);
+    TextModel::Cursor start = selS, end = selE;
     if(selS==selE)
       end = textM.advance(selS, e.key==Event::K_Delete ? 1 : -1);
     if(textM.isValid(end)) {
       stk.push(textM, new TextModel::CommandErase(selS,end));
-      selS = end;
+      if(selS==selE)
+        selS = textM.advance(selS, e.key==Event::K_Delete ? 0 : -1);
       selE = selS;
       onTextChanged(textM);
       onTextEdited(textM);
