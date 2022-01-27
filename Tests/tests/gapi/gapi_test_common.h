@@ -145,10 +145,13 @@ void SsboDyn() {
     std::vector<T> data(eltCount);
     device.readBytes(ssbo,data.data(),data.size()*sizeof(T));
 
+    size_t eqCount = 0;
     for(size_t i=0; i<eltCount; ++i) {
       T val = data[i];
-      EXPECT_EQ(val,T(i*i));
+      if(val==T(i*i))
+        ++eqCount;
       }
+    EXPECT_EQ(eltCount,eqCount);
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
