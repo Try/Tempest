@@ -394,7 +394,7 @@ void VDevice::waitIdleSync(VDevice::Queue* q, size_t n) {
     return;
     }
   if(q->impl!=nullptr) {
-    std::lock_guard<SpinLock> guard(q->sync);
+    std::lock_guard<std::mutex> guard(q->sync);
     waitIdleSync(q+1,n-1);
     } else {
     waitIdleSync(q+1,n-1);
@@ -412,12 +412,12 @@ void VDevice::submit(VCommandBuffer& cmd, VFence& sync) {
   }
 
 void VDevice::Queue::submit(uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence) {
-  std::lock_guard<SpinLock> guard(sync);
+  std::lock_guard<std::mutex> guard(sync);
   vkAssert(vkQueueSubmit(impl,submitCount,pSubmits,fence));
   }
 
 VkResult VDevice::Queue::present(VkPresentInfoKHR& presentInfo) {
-  std::lock_guard<SpinLock> guard(sync);
+  std::lock_guard<std::mutex> guard(sync);
   return vkQueuePresentKHR(impl,&presentInfo);
   }
 

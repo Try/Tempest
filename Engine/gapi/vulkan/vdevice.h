@@ -204,7 +204,7 @@ class VDevice : public AbstractGraphicsApi::Device {
       };
 
     struct Queue final {
-      SpinLock   sync;
+      std::mutex sync;
       VkQueue    impl=nullptr;
       uint32_t   family=0;
 
