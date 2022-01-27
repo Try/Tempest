@@ -37,7 +37,7 @@ TEST(VulkanApi,VboDyn) {
 #endif
   }
 // lavapipe WA
-TEST(VulkanApi,DISABLED_SsboDyn) {
+TEST(VulkanApi,SsboDyn) {
 #if !defined(__OSX__)
   GapiTestCommon::SsboDyn<VulkanApi,float>();
 #endif

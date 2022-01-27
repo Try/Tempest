@@ -368,7 +368,7 @@ bool VAllocator::update(VBuffer &dest, const void *mem,
   if(vkMapMemory(dev,page.page->memory,rgn.offset,rgn.size,0,&data)!=VK_SUCCESS)
     return false;
 
-  data = reinterpret_cast<uint8_t*>(data) + shift + offset*alignedSz;
+  data = reinterpret_cast<uint8_t*>(data) + shift;
   copyUpsample(mem,data,count,size,alignedSz);
 
   vkFlushMappedMemoryRanges(dev,1,&rgn);
@@ -394,7 +394,7 @@ bool VAllocator::read(VBuffer& src, void* mem, size_t offset, size_t count, size
     return false;
   vkInvalidateMappedMemoryRanges(dev,1,&rgn);
 
-  data = reinterpret_cast<uint8_t*>(data)+shift;
+  data = reinterpret_cast<uint8_t*>(data) + shift;
   copyUpsample(data,mem,count,size,alignedSz);
 
   vkUnmapMemory(dev,page.page->memory);
