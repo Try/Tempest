@@ -135,19 +135,20 @@ bool VDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surf, const
       return false;
     }
   deviceQueueProps(prop,device,surf);
-  bool    extensionsSupported = checkDeviceExtensionSupport(device);
+  bool extensionsSupported = checkDeviceExtensionSupport(device);
 
   bool swapChainAdequate = false;
-  if(extensionsSupported && surf!=VK_NULL_HANDLE) {
+  if(extensionsSupported && surf!=VK_NULL_HANDLE && prop.presentFamily!=uint32_t(-1)) {
     auto swapChainSupport = querySwapChainSupport(device,surf);
     swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
     }
 
-  // TODO: device selection api
-  return extensionsSupported &&
-         prop.graphicsFamily!=uint32_t(-1) &&
-         (prop.presentFamily!=uint32_t(-1) || surf==VK_NULL_HANDLE) &&
-         (swapChainAdequate || surf==VK_NULL_HANDLE);
+  if(prop.presentFamily!=uint32_t(-1)) {
+    if(!swapChainAdequate)
+      return false;
+    }
+
+  return extensionsSupported && prop.graphicsFamily!=uint32_t(-1);
   }
 
 void VDevice::deviceQueueProps(VulkanInstance::VkProp& prop, VkPhysicalDevice device, VkSurfaceKHR surf) {
