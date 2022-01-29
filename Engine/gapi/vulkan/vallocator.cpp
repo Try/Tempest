@@ -341,7 +341,7 @@ VAllocator::Allocation VAllocator::allocMemory(const VAllocator::MemRequirements
   return ret;
   }
 
-void VAllocator::alignRange(VkMappedMemoryRange& rgn, size_t nonCoherentAtomSize, size_t shift) {
+void VAllocator::alignRange(VkMappedMemoryRange& rgn, size_t nonCoherentAtomSize, size_t& shift) {
   shift = rgn.offset%nonCoherentAtomSize;
   rgn.offset -= shift;
   rgn.size   += shift;

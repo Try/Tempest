@@ -65,7 +65,7 @@ class VAllocator {
 
     void getMemoryRequirements   (MemRequirements& out, VkBuffer buf);
     void getImgMemoryRequirements(MemRequirements& out, VkImage  img);
-    void alignRange(VkMappedMemoryRange& rgn, size_t nonCoherentAtomSize, size_t shift);
+    void alignRange(VkMappedMemoryRange& rgn, size_t nonCoherentAtomSize, size_t &shift);
 
     Allocation allocMemory(const MemRequirements& rq, const uint32_t heapId, const uint32_t typeId, bool hostVisible);
 
