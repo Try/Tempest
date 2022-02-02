@@ -9,6 +9,9 @@ namespace Tempest {
     IBeam,
     SizeVer,
     SizeHor,
+    SizeBDiag,
+    SizeFDiag,
+    SizeAll,
     };
 
   class WidgetState final {

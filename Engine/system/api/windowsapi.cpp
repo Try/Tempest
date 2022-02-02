@@ -297,6 +297,15 @@ static void SetCursor(CursorShape show) {
     case Tempest::CursorShape::SizeHor:
       idc = IDC_SIZEWE;
       break;
+    case Tempest::CursorShape::SizeBDiag:
+      idc = IDC_SIZENESW;
+      break;
+    case Tempest::CursorShape::SizeFDiag:
+      idc = IDC_SIZENWSE;
+      break;
+    case Tempest::CursorShape::SizeAll:
+      idc = IDC_SIZEALL;
+      break;
     }
   HCURSOR hcur = idc==nullptr ? nullptr : LoadCursorA(nullptr, idc);
   SetCursor(hcur);
