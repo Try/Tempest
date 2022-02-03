@@ -79,6 +79,15 @@ namespace Tempest {
     return ApiFlags(uint16_t(a)&uint16_t(b));
     }
 
+  enum class DeviceType : uint8_t {
+    Unknown   = 0,
+    Virtual   = 1,
+    Cpu       = 2,
+    Integrated= 3,
+    Discrete  = 4,
+    };
+
+
   enum  : uint8_t {
     MaxFramebufferAttachments = 8+1,
     MaxBarriers = 64,
@@ -271,14 +280,6 @@ namespace Tempest {
 
     public:
       virtual ~AbstractGraphicsApi()=default;
-
-      enum DeviceType : uint8_t {
-        Unknown   = 0,
-        Virtual   = 1,
-        Cpu       = 2,
-        Integrated= 3,
-        Discrete  = 4,
-        };
 
       class Props {
         public:

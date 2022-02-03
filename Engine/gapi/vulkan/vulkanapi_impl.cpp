@@ -239,19 +239,19 @@ void VulkanInstance::getDevicePropsShort(VkPhysicalDevice physicalDevice, Tempes
 
   switch(prop.deviceType) {
     case VK_PHYSICAL_DEVICE_TYPE_CPU:
-      c.type = AbstractGraphicsApi::DeviceType::Cpu;
+      c.type = DeviceType::Cpu;
       break;
     case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
-      c.type = AbstractGraphicsApi::DeviceType::Virtual;
+      c.type = DeviceType::Virtual;
       break;
     case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
-      c.type = AbstractGraphicsApi::DeviceType::Integrated;
+      c.type = DeviceType::Integrated;
       break;
     case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-      c.type = AbstractGraphicsApi::DeviceType::Discrete;
+      c.type = DeviceType::Discrete;
       break;
     default:
-      c.type = AbstractGraphicsApi::DeviceType::Unknown;
+      c.type = DeviceType::Unknown;
       break;
     }
 

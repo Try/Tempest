@@ -261,7 +261,7 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     rqExt.push_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
     }
   /*
-   * TODO: enable once validation layers have full support for dynamic rendering
+   * //TODO: enable once validation layers have full support for dynamic rendering
   if(api.hasDeviceFeatures2 && checkForExt(ext,VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)) {
     props.hasDynRendering = true;
     rqExt.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);

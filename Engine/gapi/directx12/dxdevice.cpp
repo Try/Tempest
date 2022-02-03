@@ -112,14 +112,14 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, AbstractGraphicsApi::Props& pro
   prop.name[sizeof(prop.name)-1]='\0';
 
   if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) {
-    prop.type = AbstractGraphicsApi::Cpu;
+    prop.type = DeviceType::Cpu;
     }
   else if(desc.VendorId==0x8086) {
     // HACK: 0x8086 is common for intel GPU's
-    prop.type = AbstractGraphicsApi::Integrated;
+    prop.type = DeviceType::Integrated;
     }
   else {
-    prop.type = AbstractGraphicsApi::Discrete;
+    prop.type = DeviceType::Discrete;
     }
 
   // https://docs.microsoft.com/en-us/windows/win32/direct3ddxgi/hardware-support-for-direct3d-12-0-formats

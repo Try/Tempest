@@ -45,6 +45,7 @@ class Device {
 
     Device(AbstractGraphicsApi& api);
     Device(AbstractGraphicsApi& api, const char* name);
+    Device(AbstractGraphicsApi& api, DeviceType type);
     Device(const Device&)=delete;
     virtual ~Device();
 
@@ -152,6 +153,7 @@ class Device {
   private:
     struct Impl {
       Impl(AbstractGraphicsApi& api, const char* name);
+      Impl(AbstractGraphicsApi& api, DeviceType type);
       ~Impl();
 
       AbstractGraphicsApi&            api;

@@ -73,8 +73,8 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, id<MTLDevice> dev) 
 
   std::strncpy(prop.name,dev.name.UTF8String,sizeof(prop.name));
   if(dev.hasUnifiedMemory)
-    prop.type = AbstractGraphicsApi::DeviceType::Integrated; else
-    prop.type = AbstractGraphicsApi::DeviceType::Discrete;
+    prop.type = DeviceType::Integrated; else
+    prop.type = DeviceType::Discrete;
 
   // https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
   static const TextureFormat smp[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,

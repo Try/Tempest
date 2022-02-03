@@ -26,6 +26,22 @@ Device::Impl::Impl(AbstractGraphicsApi &api, const char* name)
   dev=api.createDevice(name);
   }
 
+Device::Impl::Impl(AbstractGraphicsApi& api, DeviceType type)
+  :api(api) {
+  if(type==DeviceType::Unknown) {
+    dev=api.createDevice(nullptr);
+    return;
+    }
+
+  auto d = api.devices();
+  for(auto& i:d)
+    if(i.type==type) {
+      dev=api.createDevice(i.name);
+      return;
+      }
+  throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+  }
+
 Device::Impl::~Impl() {
   api.destroy(dev);
   }
@@ -36,6 +52,11 @@ Device::Device(AbstractGraphicsApi& api)
 
 Device::Device(AbstractGraphicsApi &api, const char* name)
   :api(api), impl(api,name), dev(impl.dev), builtins(*this) {
+  api.getCaps(dev,devProps);
+  }
+
+Device::Device(AbstractGraphicsApi& api, DeviceType type)
+  :api(api), impl(api,type), dev(impl.dev), builtins(*this) {
   api.getCaps(dev,devProps);
   }
 
