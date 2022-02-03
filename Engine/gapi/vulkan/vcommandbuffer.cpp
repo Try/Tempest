@@ -16,6 +16,30 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+static VkAttachmentLoadOp mkLoadOp(const AccessOp op) {
+  switch (op) {
+    case AccessOp::Discard:
+      return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    case AccessOp::Preserve:
+      return VK_ATTACHMENT_LOAD_OP_LOAD;
+    case AccessOp::Clear:
+      return VK_ATTACHMENT_LOAD_OP_CLEAR;
+    }
+  return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  }
+
+static VkAttachmentStoreOp mkStoreOp(const AccessOp op) {
+  switch (op) {
+    case AccessOp::Discard:
+      return VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    case AccessOp::Preserve:
+      return VK_ATTACHMENT_STORE_OP_STORE;
+    case AccessOp::Clear:
+      return VK_ATTACHMENT_STORE_OP_STORE;
+    }
+  return VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  }
+
 static VkAccessFlagBits nativeFormat(ResourceAccess rs) {
   uint32_t ret = 0;
   if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
@@ -133,28 +157,6 @@ static VkImage toVkResource(const AbstractGraphicsApi::BarrierDesc& b) {
   return s.images[b.swId];
   }
 
-static void fillSubresource(VkImageMemoryBarrier& img, const AbstractGraphicsApi::BarrierDesc& desc) {
-  VkFormat nativeFormat = VK_FORMAT_UNDEFINED;
-  if(desc.texture!=nullptr) {
-    VTexture& t   = *reinterpret_cast<VTexture*>  (desc.texture);
-    nativeFormat  = t.format;
-    } else {
-    VSwapchain& s = *reinterpret_cast<VSwapchain*>(desc.swapchain);
-    nativeFormat  = s.format();
-    }
-
-  img.subresourceRange.baseMipLevel   = desc.mip==uint32_t(-1) ? 0 : desc.mip;
-  img.subresourceRange.levelCount     = desc.mip==uint32_t(-1) ? VK_REMAINING_MIP_LEVELS : 1;
-  img.subresourceRange.baseArrayLayer = 0;
-  img.subresourceRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
-
-  if(nativeFormat==VK_FORMAT_D24_UNORM_S8_UINT || nativeFormat==VK_FORMAT_D16_UNORM_S8_UINT || nativeFormat==VK_FORMAT_D32_SFLOAT_S8_UINT)
-    img.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT; else
-  if(Detail::nativeIsDepthFormat(nativeFormat))
-    img.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; else
-    img.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  }
-
 
 VCommandBuffer::VCommandBuffer(VDevice& device, VkCommandPoolCreateFlags flags)
   :device(device), pool(device,flags) {
@@ -216,36 +218,108 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
       addDependency(*reinterpret_cast<VSwapchain*>(sw[i]),imgId[i]);
     }
 
-  auto fbo = device.fboMap.find(desc,descSize, frm,att,sw,imgId,width,height);
-  auto fb  = fbo.get();
-  pass = fbo->pass;
-
   resState.joinCompute();
   resState.setRenderpass(*this,desc,descSize,frm,att,sw,imgId);
 
-  VkClearValue clr[MaxFramebufferAttachments];
-  for(size_t i=0; i<descSize; ++i) {
-    if(isDepthFormat(frm[i])) {
-      clr[i].depthStencil.depth = desc[i].clear.x;
-      } else {
-      clr[i].color.float32[0]   = desc[i].clear.x;
-      clr[i].color.float32[1]   = desc[i].clear.y;
-      clr[i].color.float32[2]   = desc[i].clear.z;
-      clr[i].color.float32[3]   = desc[i].clear.w;
+  if(device.props.hasDynRendering) {
+    VkRenderingAttachmentInfoKHR colorAtt[MaxFramebufferAttachments] = {};
+    VkRenderingAttachmentInfoKHR depthAtt = {};
+
+    VkRenderingInfoKHR info = {};
+    info.sType                = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
+    info.flags                = 0;
+    info.renderArea.offset    = {0, 0};
+    info.renderArea.extent    = {width,height};
+    info.layerCount           = 1;
+    info.viewMask             = 0;
+    info.colorAttachmentCount = 0;
+    info.pColorAttachments    = colorAtt;
+
+    passDyn.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+    passDyn.pNext                   = nullptr;
+    passDyn.viewMask                = info.viewMask;
+    passDyn.colorAttachmentCount    = 0;
+    passDyn.pColorAttachmentFormats = passDyn.colorFrm;
+
+    VkImageView imageView   = VK_NULL_HANDLE;
+    VkFormat    imageFormat = VK_FORMAT_UNDEFINED;
+    for(size_t i = 0; i < descSize; ++i) {
+      if(sw[i] != nullptr) {
+        auto& t = *reinterpret_cast<VSwapchain*>(sw[i]);
+        imageView   = t.views[imgId[i]];
+        imageFormat = t.format();
+        }
+      else if (desc[i].attachment != nullptr) {
+        auto& t = *reinterpret_cast<VTexture*>(att[i]);
+        imageView   = t.imgView;
+        imageFormat = t.format;
+        }
+      else {
+        auto &t = *reinterpret_cast<VTexture*>(att[i]);
+        imageView   = t.imgView;
+        imageFormat = t.format;
+        }
+
+      auto& att = isDepthFormat(frm[i]) ? depthAtt : colorAtt[info.colorAttachmentCount];
+      att.sType     = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+      att.imageView = imageView;
+
+      if(isDepthFormat(frm[i])) {
+        info.pDepthAttachment = &depthAtt;
+        att.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+        passDyn.depthAttachmentFormat = imageFormat;
+        auto& clr = att.clearValue;
+        clr.depthStencil.depth = desc[i].clear.x;
+        } else {
+        passDyn.colorFrm[info.colorAttachmentCount] = imageFormat;
+        ++info.colorAttachmentCount;
+
+        att.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        auto& clr = att.clearValue;
+        clr.color.float32[0] = desc[i].clear.x;
+        clr.color.float32[1] = desc[i].clear.y;
+        clr.color.float32[2] = desc[i].clear.z;
+        clr.color.float32[3] = desc[i].clear.w;
+        }
+
+      att.resolveMode        = VK_RESOLVE_MODE_NONE;
+      att.resolveImageView   = VK_NULL_HANDLE;
+      att.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+      att.loadOp             = mkLoadOp(desc[i].load);
+      att.storeOp            = mkStoreOp(desc[i].store);
       }
+    passDyn.colorAttachmentCount = info.colorAttachmentCount;
+
+    device.vkCmdBeginRenderingKHR(impl,&info);
+    } else {
+    auto fbo = device.fboMap.find(desc,descSize, att,sw,imgId,width,height);
+    auto fb  = fbo.get();
+    pass = fbo->pass;
+
+    VkClearValue clr[MaxFramebufferAttachments];
+    for(size_t i=0; i<descSize; ++i) {
+      if(isDepthFormat(frm[i])) {
+        clr[i].depthStencil.depth = desc[i].clear.x;
+        } else {
+        clr[i].color.float32[0]   = desc[i].clear.x;
+        clr[i].color.float32[1]   = desc[i].clear.y;
+        clr[i].color.float32[2]   = desc[i].clear.z;
+        clr[i].color.float32[3]   = desc[i].clear.w;
+        }
+      }
+
+    VkRenderPassBeginInfo info = {};
+    info.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    info.renderPass        = fb->pass->pass;
+    info.framebuffer       = fb->fbo;
+    info.renderArea.offset = {0, 0};
+    info.renderArea.extent = {width,height};
+
+    info.clearValueCount   = uint32_t(descSize);
+    info.pClearValues      = clr;
+
+    vkCmdBeginRenderPass(impl, &info, VK_SUBPASS_CONTENTS_INLINE);
     }
-
-  VkRenderPassBeginInfo renderPassInfo = {};
-  renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-  renderPassInfo.renderPass        = fb->pass->pass;
-  renderPassInfo.framebuffer       = fb->fbo;
-  renderPassInfo.renderArea.offset = {0, 0};
-  renderPassInfo.renderArea.extent = {width,height};
-
-  renderPassInfo.clearValueCount   = uint32_t(descSize);
-  renderPassInfo.pClearValues      = clr;
-
-  vkCmdBeginRenderPass(impl, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
   state = RenderPass;
 
   // setup dynamic state
@@ -259,13 +333,17 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
   }
 
 void VCommandBuffer::endRendering() {
-  vkCmdEndRenderPass(impl);
+  if(device.props.hasDynRendering) {
+    device.vkCmdEndRenderingKHR(impl);
+    } else {
+    vkCmdEndRenderPass(impl);
+    }
   state     = Idle;
   }
 
 void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
-  VPipeline&           px = reinterpret_cast<VPipeline&>(p);
-  auto& v = px.instance(pass);
+  VPipeline& px = reinterpret_cast<VPipeline&>(p);
+  auto&      v  = device.props.hasDynRendering ? px.instance(passDyn) : px.instance(pass);
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v.val);
   ssboBarriers = px.ssboBarriers;
   }

@@ -34,6 +34,7 @@ class VulkanInstance {
       bool     hasMemRq2          = false;
       bool     hasDedicatedAlloc  = false;
       bool     hasSync2           = false;
+      bool     hasDynRendering    = false;
       };
 
     static void      getDeviceProps(VkPhysicalDevice physicalDevice, VkProp& c);

@@ -44,7 +44,6 @@ class VFramebufferMap {
       };
 
     std::shared_ptr<Fbo> find(const AttachmentDesc* desc, size_t descSize,
-                              const TextureFormat* frm,
                               AbstractGraphicsApi::Texture** cl,
                               AbstractGraphicsApi::Swapchain** sw, const uint32_t* imageId,
                               uint32_t w, uint32_t h);

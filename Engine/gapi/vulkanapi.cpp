@@ -253,10 +253,9 @@ AbstractGraphicsApi::CommandBuffer* VulkanApi::createCommandBuffer(AbstractGraph
   return new Detail::VCommandBuffer(*dx);
   }
 
-void VulkanApi::present(Device *d, Swapchain *sw) {
-  Detail::VDevice*    dx=reinterpret_cast<Detail::VDevice*>(d);
+void VulkanApi::present(Device*, Swapchain *sw) {
   Detail::VSwapchain* sx=reinterpret_cast<Detail::VSwapchain*>(sw);
-  sx->present(*dx);
+  sx->present();
   }
 
 void VulkanApi::submit(Device *d, CommandBuffer* cmd, Fence *doneCpu) {

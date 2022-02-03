@@ -14,6 +14,20 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+bool VPipeline::InstDr::isCompatible(const VkPipelineRenderingCreateInfoKHR& dr) const {
+  if(lay.viewMask!=dr.viewMask)
+    return false;
+  if(lay.colorAttachmentCount!=dr.colorAttachmentCount)
+    return false;
+  if(std::memcmp(lay.pColorAttachmentFormats,dr.pColorAttachmentFormats,lay.colorAttachmentCount*sizeof(VkFormat))!=0)
+    return false;
+  if(lay.depthAttachmentFormat!=dr.depthAttachmentFormat ||
+     lay.stencilAttachmentFormat!=dr.stencilAttachmentFormat)
+    return false;
+  return true;
+  }
+
+
 VPipeline::VPipeline(){
   }
 
@@ -44,7 +58,8 @@ VPipeline::VPipeline(VDevice& device,
 
 VPipeline::VPipeline(VPipeline &&other) {
   std::swap(device,         other.device);
-  std::swap(inst,           other.inst);
+  std::swap(instRp,         other.instRp);
+  std::swap(instDr,         other.instDr);
   std::swap(pipelineLayout, other.pipelineLayout);
   std::swap(ssboBarriers,   other.ssboBarriers);
   }
@@ -56,22 +71,43 @@ VPipeline::~VPipeline() {
 VPipeline::Inst& VPipeline::instance(const std::shared_ptr<VFramebufferMap::RenderPass>& pass) {
   std::lock_guard<SpinLock> guard(sync);
 
-  for(auto& i:inst)
+  for(auto& i:instRp)
     if(i.lay->isCompatible(*pass))
       return i;
   VkPipeline val=VK_NULL_HANDLE;
   try {
-    val = initGraphicsPipeline(device,pipelineLayout,*pass,st,
+    val = initGraphicsPipeline(device,pipelineLayout,pass.get(),nullptr,st,
                                decl.get(),declSize,stride,
                                tp,modules);
-    inst.emplace_back(pass,val);
+    instRp.emplace_back(pass,val);
     }
   catch(...) {
     if(val!=VK_NULL_HANDLE)
       vkDestroyPipeline(device,val,nullptr);
     throw;
     }
-  return inst.back();
+  return instRp.back();
+  }
+
+VPipeline::Inst& VPipeline::instance(const VkPipelineRenderingCreateInfoKHR& info) {
+  std::lock_guard<SpinLock> guard(sync);
+
+  for(auto& i:instDr)
+    if(i.isCompatible(info))
+      return i;
+  VkPipeline val=VK_NULL_HANDLE;
+  try {
+    val = initGraphicsPipeline(device,pipelineLayout,nullptr,&info,st,
+                               decl.get(),declSize,stride,
+                               tp,modules);
+    instDr.emplace_back(info,val);
+    }
+  catch(...) {
+    if(val!=VK_NULL_HANDLE)
+      vkDestroyPipeline(device,val,nullptr);
+    throw;
+    }
+  return instDr.back();
   }
 
 void VPipeline::cleanup() {
@@ -79,7 +115,9 @@ void VPipeline::cleanup() {
     return;
   if(pipelineLayout!=VK_NULL_HANDLE)
     vkDestroyPipelineLayout(device,pipelineLayout,nullptr);
-  for(auto& i:inst)
+  for(auto& i:instRp)
+    vkDestroyPipeline(device,i.val,nullptr);
+  for(auto& i:instDr)
     vkDestroyPipeline(device,i.val,nullptr);
   }
 
@@ -121,7 +159,9 @@ VkPipelineLayout VPipeline::initLayout(VkDevice device, const VPipelineLay& uboL
   }
 
 VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
-                                           const VFramebufferMap::RenderPass& lay, const RenderState &st,
+                                           const VFramebufferMap::RenderPass* rpLay,
+                                           const VkPipelineRenderingCreateInfoKHR* dynLay,
+                                           const RenderState &st,
                                            const Decl::ComponentType *decl, size_t declSize,
                                            size_t stride, Topology tp,
                                            const DSharedPtr<const VShader*>* shaders) {
@@ -217,8 +257,11 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
 
   VkPipelineColorBlendAttachmentState blendAtt[MaxFramebufferAttachments] = {};
   uint32_t                            blendAttCount = 0;
-  for(size_t i=0; i<lay.descSize; ++i) {
-    if(nativeIsDepthFormat(lay.desc[i].frm))
+  {
+  const size_t size = rpLay!=nullptr ? rpLay->descSize : dynLay->colorAttachmentCount;
+  for(size_t i=0; i<size; ++i) {
+    const VkFormat frm = rpLay!=nullptr ? rpLay->desc[i].frm : dynLay->pColorAttachmentFormats[i];
+    if(nativeIsDepthFormat(frm))
       continue;
     auto& a = blendAtt[i];
     a.colorWriteMask      = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
@@ -231,6 +274,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
     a.alphaBlendOp        = a.colorBlendOp;
     ++blendAttCount;
     }
+  }
 
   VkPipelineColorBlendStateCreateInfo colorBlending = {};
   colorBlending.sType             = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -277,9 +321,12 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   pipelineInfo.pColorBlendState    = &colorBlending;
   pipelineInfo.pDynamicState       = &dynamic;
   pipelineInfo.layout              = layout;
-  pipelineInfo.renderPass          = lay.pass;
   pipelineInfo.subpass             = 0;
   pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
+
+  if(rpLay!=nullptr)
+    pipelineInfo.renderPass = rpLay->pass; else
+    pipelineInfo.pNext      = dynLay;
 
   if(useTesselation) {
     pipelineInfo.pTessellationState = &tesselation;

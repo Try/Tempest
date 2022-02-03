@@ -236,6 +236,8 @@ class VDevice : public AbstractGraphicsApi::Device {
     PFN_vkGetBufferMemoryRequirements2KHR vkGetBufferMemoryRequirements2 = nullptr;
     PFN_vkGetImageMemoryRequirements2KHR  vkGetImageMemoryRequirements2  = nullptr;
     PFN_vkCmdPipelineBarrier2KHR          vkCmdPipelineBarrier2KHR       = nullptr;
+    PFN_vkCmdBeginRenderingKHR            vkCmdBeginRenderingKHR         = nullptr;
+    PFN_vkCmdEndRenderingKHR              vkCmdEndRenderingKHR           = nullptr;
 
     void                    waitIdle() override;
 

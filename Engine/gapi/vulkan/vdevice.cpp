@@ -257,8 +257,16 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     rqExt.push_back(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
     }
   if(api.hasDeviceFeatures2 && checkForExt(ext,VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME)) {
+    props.hasSync2 = true;
     rqExt.push_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
     }
+  /*
+   * TODO: enable once validation layers have full support for dynamic rendering
+  if(api.hasDeviceFeatures2 && checkForExt(ext,VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)) {
+    props.hasDynRendering = true;
+    rqExt.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+    }
+    */
 
   std::array<uint32_t,2>  uniqueQueueFamilies = {props.graphicsFamily, props.presentFamily};
   float                   queuePriority       = 1.0f;
@@ -311,17 +319,29 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
   createInfo.ppEnabledExtensionNames = rqExt.data();
 
   if(api.hasDeviceFeatures2) {
+    VkPhysicalDeviceDynamicRenderingFeaturesKHR dynRendering = {};
+    dynRendering.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+
     VkPhysicalDeviceSynchronization2FeaturesKHR sync2 = {};
     sync2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR;
 
     VkPhysicalDeviceFeatures2 enabledFeatures = {};
     enabledFeatures.sType    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
-    enabledFeatures.pNext    = &sync2;
     enabledFeatures.features = deviceFeatures;
+
+    if(props.hasSync2) {
+      sync2.pNext = enabledFeatures.pNext;
+      enabledFeatures.pNext = &sync2;
+      }
+    if(props.hasDynRendering) {
+      dynRendering.pNext = enabledFeatures.pNext;
+      enabledFeatures.pNext = &dynRendering;
+      }
 
     vkGetPhysicalDeviceFeatures2(pdev, &enabledFeatures);
 
-    props.hasSync2 = (sync2.synchronization2==VK_TRUE);
+    props.hasSync2        = (sync2.synchronization2==VK_TRUE);
+    props.hasDynRendering = (dynRendering.dynamicRendering==VK_TRUE);
 
     createInfo.pNext            = &enabledFeatures;
     createInfo.pEnabledFeatures = nullptr;
@@ -350,6 +370,13 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
   if(props.hasSync2) {
     vkCmdPipelineBarrier2KHR = reinterpret_cast<PFN_vkCmdPipelineBarrier2KHR>
         (vkGetDeviceProcAddr(device.impl,"vkCmdPipelineBarrier2KHR"));
+    }
+
+  if(props.hasDynRendering) {
+    vkCmdBeginRenderingKHR = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>
+        (vkGetDeviceProcAddr(device.impl,"vkCmdBeginRenderingKHR"));
+    vkCmdEndRenderingKHR = reinterpret_cast<PFN_vkCmdEndRenderingKHR>
+        (vkGetDeviceProcAddr(device.impl,"vkCmdEndRenderingKHR"));
     }
   }
 

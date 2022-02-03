@@ -74,7 +74,6 @@ void VFramebufferMap::notifyDestroy(VkImageView img) {
   }
 
 std::shared_ptr<VFramebufferMap::Fbo> VFramebufferMap::find(const AttachmentDesc* desc, size_t descSize,
-                                                            const TextureFormat* frm,
                                                             AbstractGraphicsApi::Texture** att, AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId,
                                                             uint32_t w, uint32_t h) {
   Desc        dx  [MaxFramebufferAttachments];
@@ -85,13 +84,16 @@ std::shared_ptr<VFramebufferMap::Fbo> VFramebufferMap::find(const AttachmentDesc
 
     d.load  = desc[i].load;
     d.store = desc[i].store;
-    if(sw[i]!=nullptr)
-      d.frm = reinterpret_cast<VSwapchain*>(sw[i])->format(); else
-      d.frm = nativeFormat(frm[i]);
 
-    if(sw[i]!=nullptr)
-      view[i] = reinterpret_cast<VSwapchain*>(sw[i])->views[imgId[i]]; else
-      view[i] = reinterpret_cast<VTexture*>(att[i])->fboView(dev.device.impl,0);
+    if(sw[i]!=nullptr) {
+      auto& sx = *reinterpret_cast<VSwapchain*>(sw[i]);
+      view[i] = sx.views[imgId[i]];
+      d.frm   = sx.format();
+      } else {
+      auto& tx = *reinterpret_cast<VTexture*>(att[i]);
+      view[i] = tx.fboView(dev.device.impl,0);
+      d.frm = tx.format;
+      }
     }
 
   std::lock_guard<std::mutex> guard(syncFbo);

@@ -31,7 +31,7 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     uint32_t                 imageCount() const override { return uint32_t(views.size()); }
 
     uint32_t                 currentBackBufferIndex() override;
-    void                     present(VDevice& dev);
+    void                     present();
 
     VFramebufferMap*         map = nullptr;
 

@@ -2,6 +2,7 @@
 
 #include "vswapchain.h"
 
+#include <Tempest/Application>
 #include <Tempest/SystemApi>
 
 #include "vdevice.h"
@@ -314,7 +315,7 @@ uint32_t VSwapchain::currentBackBufferIndex() {
   return imgIndex;
   }
 
-void VSwapchain::present(VDevice& dev) {
+void VSwapchain::present() {
   size_t sId = 0;
   for(size_t i=0; i<sync.size(); ++i)
     if(sync[i].imgId==imgIndex) {
@@ -330,7 +331,7 @@ void VSwapchain::present(VDevice& dev) {
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
   submitInfo.signalSemaphoreCount = 1;
   submitInfo.pSignalSemaphores    = &slot.present;
-  dev.graphicsQueue->submit(1, &submitInfo, f);
+  device.graphicsQueue->submit(1, &submitInfo, f);
 
   VkPresentInfoKHR presentInfo = {};
   presentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -343,11 +344,12 @@ void VSwapchain::present(VDevice& dev) {
   slot.imgId = uint32_t(-1);
   slot.state = S_Idle;
 
-  //auto t = Application::tickCount();
-  VkResult code = dev.presentQueue->present(presentInfo);
+  //auto tx = Application::tickCount();
+  VkResult code = device.presentQueue->present(presentInfo);
   if(code==VK_ERROR_OUT_OF_DATE_KHR || code==VK_SUBOPTIMAL_KHR)
     throw SwapchainSuboptimal();
-  //Log::i("vkQueuePresentKHR = ",Application::tickCount()-t);
+  //tx = Application::tickCount()-tx;
+  //Log::i("vkQueuePresentKHR = ",tx);
   Detail::vkAssert(code);
 
   aquireNextImage();

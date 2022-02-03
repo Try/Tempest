@@ -25,13 +25,12 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     VPipeline(VPipeline&& other);
     ~VPipeline();
 
-    struct Inst final {
-      Inst(const std::shared_ptr<VFramebufferMap::RenderPass>& lay, VkPipeline val):lay(lay),val(val){}
+    struct Inst {
+      Inst(VkPipeline val):val(val){}
       Inst(Inst&&)=default;
       Inst& operator = (Inst&&)=default;
 
-      std::shared_ptr<VFramebufferMap::RenderPass> lay;
-      VkPipeline                                   val;
+      VkPipeline val;
       };
 
     VkPipelineLayout   pipelineLayout = VK_NULL_HANDLE;
@@ -40,21 +39,34 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     bool               ssboBarriers   = false;
 
     Inst&             instance(const std::shared_ptr<VFramebufferMap::RenderPass>& lay);
+    Inst&             instance(const VkPipelineRenderingCreateInfoKHR& info);
 
   private:
+    struct InstRp : Inst {
+      InstRp(const std::shared_ptr<VFramebufferMap::RenderPass>& lay, VkPipeline val):Inst(val),lay(lay){}
+      std::shared_ptr<VFramebufferMap::RenderPass> lay;
+      };
+
+    struct InstDr : Inst {
+      InstDr(const VkPipelineRenderingCreateInfoKHR& lay, VkPipeline val):Inst(val),lay(lay){}
+      VkPipelineRenderingCreateInfoKHR lay;
+      bool                             isCompatible(const VkPipelineRenderingCreateInfoKHR& dr) const;
+      };
+
     VkDevice                               device=nullptr;
     Tempest::RenderState                   st;
     size_t                                 declSize=0, stride=0;
     Topology                               tp=Topology::Triangles;
     DSharedPtr<const VShader*>             modules[5];
     std::unique_ptr<Decl::ComponentType[]> decl;
-    std::vector<Inst>                      inst;
+    std::vector<InstRp>                    instRp;
+    std::vector<InstDr>                    instDr;
     SpinLock                               sync;
 
     void cleanup();
     static VkPipelineLayout      initLayout(VkDevice device, const VPipelineLay& uboLay, VkShaderStageFlags& pushFlg, uint32_t& pushSize);
     static VkPipeline            initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
-                                                      const VFramebufferMap::RenderPass& lay, const RenderState &st,
+                                                      const VFramebufferMap::RenderPass* rpLay, const VkPipelineRenderingCreateInfoKHR* dynLay, const RenderState &st,
                                                       const Decl::ComponentType *decl, size_t declSize, size_t stride,
                                                       Topology tp,
                                                       const DSharedPtr<const VShader*>* shaders);

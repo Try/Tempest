@@ -91,11 +91,16 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     template<class T>
     void finalizeImageBarrier(T& bx, const AbstractGraphicsApi::BarrierDesc& desc);
 
+    struct PipelineInfo:VkPipelineRenderingCreateInfoKHR {
+      VkFormat colorFrm[MaxFramebufferAttachments];
+      };
+
     VDevice&                                device;
     VCommandPool                            pool;
 
     ResourceState                           resState;
     std::shared_ptr<VFramebufferMap::RenderPass> pass;
+    PipelineInfo                            passDyn = {};
 
     RpState                                 state        = NoRecording;
     VDescriptorArray*                       curUniforms  = nullptr;
