@@ -32,7 +32,7 @@ struct Tempest::VulkanApi::Impl : public VulkanInstance {
   };
 
 VulkanApi::VulkanApi(ApiFlags f) {
-  impl.reset(new Impl(bool(f&ApiFlags::Validation)));
+  impl.reset(new Impl(ApiFlags::Validation==(f&ApiFlags::Validation)));
   }
 
 VulkanApi::~VulkanApi(){

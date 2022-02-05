@@ -25,7 +25,7 @@ class DPtr {
     DPtr& operator = (const DPtr& other) = delete;
 
     bool operator !() const { return !handler; }
-    operator bool() const { return bool(handler); }
+    operator bool() const { return (handler!=nullptr); }
 
     Handler handler{};
   };
@@ -73,7 +73,7 @@ class DSharedPtr {
       }
 
     bool operator !() const { return !handler; }
-    operator bool() const { return bool(handler); }
+    operator bool() const { return handler!=nullptr; }
 
     Handler handler{};
 

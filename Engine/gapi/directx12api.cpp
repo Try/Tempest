@@ -133,7 +133,7 @@ struct DirectX12Api::Impl {
   };
 
 DirectX12Api::DirectX12Api(ApiFlags f) {
-  impl.reset(new Impl(bool(f&ApiFlags::Validation)));
+  impl.reset(new Impl(ApiFlags::Validation==(f&ApiFlags::Validation)));
   }
 
 DirectX12Api::~DirectX12Api(){
