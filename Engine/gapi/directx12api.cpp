@@ -54,7 +54,7 @@ struct DirectX12Api::Impl {
       adapter->GetDesc1(&desc);
 
       ComPtr<IDXGIAdapter3> adapter3;
-      adapter->QueryInterface(__uuidof(IDXGIAdapter3), reinterpret_cast<void**>(&adapter3.get()));
+      adapter->QueryInterface(uuid<IDXGIAdapter3>(), reinterpret_cast<void**>(&adapter3.get()));
 
       DXGI_ADAPTER_DESC2 desc2={};
       if(adapter3.get()!=nullptr)
