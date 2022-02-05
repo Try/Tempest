@@ -421,8 +421,8 @@ string CompilerHLSL::type_to_glsl(const SPIRType &type, uint32_t id)
 
 	case SPIRType::ControlPointArray:
 	{
-		auto& template_type = get<SPIRType>(type.parent_type);
-		if (get_execution_model()==ExecutionModelTessellationControl)
+		auto &template_type = get<SPIRType>(type.parent_type);
+		if (get_execution_model() == ExecutionModelTessellationControl)
 		{
 			return "InputPatch<" + type_to_glsl(template_type, id) + ",32>";
 		}
@@ -575,27 +575,6 @@ void CompilerHLSL::emit_builtin_outputs_in_struct()
 {
 	auto &execution = get_entry_point();
 
-	if (execution.model == ExecutionModelTessellationControl)
-	{
-		active_output_builtins.for_each_bit([&](uint32_t i) {
-			auto builtin = static_cast<BuiltIn>(i);
-			switch (builtin)
-			{
-				case BuiltInTessLevelOuter:
-					statement("float ", builtin_to_glsl(builtin, StorageClassOutput), "[3] : SV_TessFactor;");
-					break;
-
-				case BuiltInTessLevelInner:
-					statement("float ", builtin_to_glsl(builtin, StorageClassOutput), " : SV_InsideTessFactor;");
-					break;
-
-				default:
-					break;
-			}
-			});
-		return;
-	}
-
 	bool legacy = hlsl_options.shader_model <= 30;
 	active_output_builtins.for_each_bit([&](uint32_t i) {
 		const char *type = nullptr;
@@ -673,9 +652,9 @@ void CompilerHLSL::emit_builtin_outputs_in_struct()
 			else
 				SPIRV_CROSS_THROW("Unsupported builtin in HLSL.");
 
-			case BuiltInTessLevelOuter:
-			case BuiltInTessLevelInner:
-				break;
+		case BuiltInTessLevelOuter:
+		case BuiltInTessLevelInner:
+			break;
 
 		default:
 			SPIRV_CROSS_THROW("Unsupported builtin in HLSL.");
@@ -817,9 +796,6 @@ void CompilerHLSL::emit_builtin_inputs_in_struct()
 			break;
 
 		case BuiltInInvocationId:
-			type = "int";
-			semantic = "SV_OutputControlPointID";
-			// semantic = "SV_GSInstanceID";
 			break;
 
 		default:
@@ -1620,6 +1596,19 @@ void CompilerHLSL::emit_resources()
 		statement("");
 	}
 
+	if (execution.model == ExecutionModelTessellationControl)
+	{
+		if (active_input_builtins.get(BuiltInInvocationId))
+		{
+			statement("struct SPIRV_Cross_Input");
+			emit_tess_builtin_inputs_in_struct();
+			begin_scope();
+			statement("int ", builtin_to_glsl(BuiltInInvocationId, StorageClassInput), " : SV_OutputControlPointID;");
+			end_scope_decl();
+			statement("");
+		}
+	}
+
 	if (!output_variables.empty() || !active_output_builtins.empty())
 	{
 		require_output = true;
@@ -1639,12 +1628,9 @@ void CompilerHLSL::emit_resources()
 		statement("");
 	}
 
-	if (is_tessellation_shader())
+	if (execution.model == ExecutionModelTessellationEvaluation)
 	{
-		if (get_execution_model()==ExecutionModelTessellationEvaluation)
-			statement("struct SPIRV_Cross_DS_Constant_Input");
-		else
-			statement("struct SPIRV_Cross_HS_Constant_Output");
+		statement("struct SPIRV_Cross_DS_Constant_Input");
 		begin_scope();
 		for (auto &var : input_variables)
 		{
@@ -1656,6 +1642,41 @@ void CompilerHLSL::emit_resources()
 				emit_interface_block_in_struct(*var.var, active_inputs);
 		}
 		emit_tess_builtin_inputs_in_struct();
+		end_scope_decl();
+		statement("");
+	}
+
+	if (execution.model == ExecutionModelTessellationControl)
+	{
+		statement("struct SPIRV_Cross_HS_Constant_Output");
+		begin_scope();
+		for (auto &var : output_variables)
+		{
+			if (!has_decoration(var.var->self, DecorationPatch))
+				continue;
+			if (var.block)
+				emit_interface_block_member_in_struct(*var.var, var.block_member_index, var.location, active_inputs);
+			else
+				emit_interface_block_in_struct(*var.var, active_inputs);
+		}
+		active_output_builtins.for_each_bit(
+		    [&](uint32_t i)
+		    {
+			    auto builtin = static_cast<BuiltIn>(i);
+			    switch (builtin)
+			    {
+			    case BuiltInTessLevelOuter:
+				    statement("float ", builtin_to_glsl(builtin, StorageClassOutput), "[3] : SV_TessFactor;");
+				    break;
+
+			    case BuiltInTessLevelInner:
+				    statement("float ", builtin_to_glsl(builtin, StorageClassOutput), " : SV_InsideTessFactor;");
+				    break;
+
+			    default:
+				    break;
+			    }
+		    });
 		end_scope_decl();
 		statement("");
 	}
@@ -2641,8 +2662,14 @@ void CompilerHLSL::emit_hlsl_entry_common(bool is_patch_constant)
 
 	auto &execution = get_entry_point();
 
-	if (execution.model==ExecutionModelTessellationEvaluation)
+	if (execution.model == ExecutionModelTessellationEvaluation)
 		arguments.push_back("SPIRV_Cross_DS_Constant_Input stage_input");
+
+	if (execution.model == spv::ExecutionModelTessellationControl)
+	{
+		if (!is_patch_constant)
+			arguments.push_back("SPIRV_Cross_Input stage_input");
+	}
 
 	if (require_input)
 	{
@@ -2651,7 +2678,6 @@ void CompilerHLSL::emit_hlsl_entry_common(bool is_patch_constant)
 			if (is_patch_constant)
 			{
 				arguments.push_back("InputPatch<SPIRV_Cross_HS_Point_Input, 32> gl_in");
-				arguments.push_back("SPIRV_Cross_Input stage_input");
 			}
 			else
 			{
@@ -2694,6 +2720,7 @@ void CompilerHLSL::emit_hlsl_entry_common(bool is_patch_constant)
 			break;
 
 		case ExecutionModelTessellationControl:
+			/*
 			if (execution.flags.get(ExecutionModeTriangles))
 				statement("[domain(\"tri\")]");
 			if (execution.flags.get(ExecutionModeSpacingFractionalEven))
@@ -2702,6 +2729,9 @@ void CompilerHLSL::emit_hlsl_entry_common(bool is_patch_constant)
 				statement("[partitioning(\"fractional_odd\")]");
 			if (execution.flags.get(ExecutionModeSpacingEqual))
 				statement("[partitioning(\"integer\")]");
+			*/
+			statement("[domain(\"tri\")]");
+			statement("[partitioning(\"fractional_even\")]");
 			statement("[outputtopology(\"triangle_cw\")]");
 			statement("[outputcontrolpoints(3)]"); // TODO
 			statement("[patchconstantfunc(\"tesc_patch_constant\")]");
@@ -2721,7 +2751,9 @@ void CompilerHLSL::emit_hlsl_entry_common(bool is_patch_constant)
 		}
 	}
 
-	statement(require_output ? "SPIRV_Cross_Output " : "void ", is_patch_constant ? "tesc_patch_constant(" : "main(", merge(arguments), ")");
+	const char *out_type = (is_patch_constant ? "SPIRV_Cross_HS_Constant_Output" : "SPIRV_Cross_Output");
+	statement(require_output ? out_type : "void", is_patch_constant ? " tesc_patch_constant(" : " main(",
+	          merge(arguments), ")");
 	begin_scope();
 	bool legacy = hlsl_options.shader_model <= 30;
 
@@ -2874,6 +2906,13 @@ void CompilerHLSL::emit_hlsl_entry_common(bool is_patch_constant)
 				statement(builtin, " = stage_input.", builtin, ";");
 			break;
 
+		case BuiltInInvocationId:
+			if (is_patch_constant)
+				statement(builtin, " = 0;");
+			else
+				statement(builtin, " = stage_input.", builtin, ";");
+			break;
+
 		default:
 			statement(builtin, " = stage_input.", builtin, ";");
 			break;
@@ -2888,7 +2927,10 @@ void CompilerHLSL::emit_hlsl_entry_common(bool is_patch_constant)
 		if (var.storage != StorageClassInput)
 			return;
 
-		if (execution.model==ExecutionModelTessellationEvaluation && !has_decoration(var.self, DecorationPatch))
+		if (execution.model == ExecutionModelTessellationEvaluation && !has_decoration(var.self, DecorationPatch))
+			return;
+
+		if (execution.model == ExecutionModelTessellationControl)
 			return;
 
 		bool need_matrix_unroll = var.storage == StorageClassInput && execution.model == ExecutionModelVertex;
@@ -2952,7 +2994,10 @@ void CompilerHLSL::emit_hlsl_entry_common(bool is_patch_constant)
 	// Copy stage outputs.
 	if (require_output)
 	{
-		statement("SPIRV_Cross_Output stage_output;");
+		if (is_patch_constant)
+			statement("SPIRV_Cross_HS_Constant_Output stage_output;");
+		else
+			statement("SPIRV_Cross_Output stage_output;");
 
 		// Copy builtins from globals to return struct.
 		active_output_builtins.for_each_bit([&](uint32_t i) {
@@ -2975,14 +3020,29 @@ void CompilerHLSL::emit_hlsl_entry_common(bool is_patch_constant)
 				break;
 
 			case BuiltInTessLevelInner:
+				if (is_patch_constant)
+				{
+					auto builtin_expr = builtin_to_glsl(static_cast<BuiltIn>(i), StorageClassOutput);
+					statement("stage_output.", builtin_expr, " = ", builtin_expr, "[0];");
+				}
+				break;
+
 			case BuiltInTessLevelOuter:
 				if (is_patch_constant)
-					break;
+				{
+					auto builtin_expr = builtin_to_glsl(static_cast<BuiltIn>(i), StorageClassOutput);
+					for (uint32_t i = 0; i < 3; i++)
+						statement("stage_output.", builtin_expr, "[", i, "] = ", builtin_expr, "[", i, "];");
+				}
+				break;
 
 			default:
 			{
-				auto builtin_expr = builtin_to_glsl(static_cast<BuiltIn>(i), StorageClassOutput);
-				statement("stage_output.", builtin_expr, " = ", builtin_expr, ";");
+				if (execution.model != ExecutionModelTessellationControl || !is_patch_constant)
+				{
+					auto builtin_expr = builtin_to_glsl(static_cast<BuiltIn>(i), StorageClassOutput);
+					statement("stage_output.", builtin_expr, " = ", builtin_expr, ";");
+				}
 				break;
 			}
 			}
@@ -6194,9 +6254,8 @@ string CompilerHLSL::compile()
 
 	ExecutionModel model = get_execution_model();
 	if (model == ExecutionModelTessellationControl)
-	{
-		//backend.force_gl_in_out_block = true;
-		backend.force_gl_in_block_hlsl = true;
+  {
+    backend.force_gl_in_block_hlsl = true;
 	}
 	if (model == ExecutionModelTessellationEvaluation)
 	{
