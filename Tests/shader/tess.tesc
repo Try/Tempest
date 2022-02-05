@@ -3,9 +3,9 @@
 
 layout(vertices = 3) out;
 
-// layout(location = 0) in  vec4 dummyIn[];
-// layout(location = 0) out vec4 dummyOut[];
-// layout(location = 0) patch out vec4 dummy2;
+layout(location = 0) in  vec4 dummyIn[];
+layout(location = 0) out vec4 dummyOut[];
+layout(location = 1) patch out vec4 dummy2;
 
 void main(void) {
   const int inner = 3;
@@ -21,6 +21,6 @@ void main(void) {
     gl_TessLevelOuter[3] = outer;
     }
 
-  // dummyOut[gl_InvocationID] = dummyIn[gl_InvocationID];
+  dummyOut[gl_InvocationID] = dummyIn[gl_InvocationID];
   gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
   }

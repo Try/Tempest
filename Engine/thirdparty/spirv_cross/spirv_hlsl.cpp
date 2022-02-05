@@ -1460,8 +1460,12 @@ void CompilerHLSL::emit_resources()
 	ir.for_each_typed_id<SPIRVariable>([&](uint32_t, SPIRVariable &var) {
 		auto &type = this->get<SPIRType>(var.basetype);
 
-		bool is_cp_variable = (execution.model == ExecutionModelTessellationEvaluation && var.storage == StorageClassInput &&
-		                       !has_decoration(var.self,DecorationPatch));
+		bool is_cp_variable = false;
+		if (execution.model == ExecutionModelTessellationEvaluation ||
+		    execution.model == ExecutionModelTessellationControl)
+		{
+			is_cp_variable |= (var.storage == StorageClassInput && !has_decoration(var.self, DecorationPatch));
+		}
 
 		if (var.storage != StorageClassFunction && !var.remapped_variable && type.pointer &&
 		    (var.storage == StorageClassInput || var.storage == StorageClassOutput) && !is_builtin_variable(var) &&
@@ -1618,6 +1622,8 @@ void CompilerHLSL::emit_resources()
 		sort(output_variables.begin(), output_variables.end(), variable_compare);
 		for (auto &var : output_variables)
 		{
+			if (has_decoration(var.var->self, DecorationPatch))
+				continue;
 			if (var.block)
 				emit_interface_block_member_in_struct(*var.var, var.block_member_index, var.location, active_outputs);
 			else
@@ -3085,7 +3091,21 @@ void CompilerHLSL::emit_hlsl_entry_common(bool is_patch_constant)
 					}
 					else
 					{
-						statement("stage_output.", name, " = ", name, ";");
+						if (execution.model == spv::ExecutionModelTessellationControl)
+						{
+							const bool is_cp_variable = has_decoration(var.self, DecorationPatch);
+							if (is_cp_variable == is_patch_constant)
+							{
+								if (is_cp_variable)
+									statement("stage_output.", name, " = ", name, ";");
+								else
+									statement("stage_output.", name, " = ", name, "[gl_InvocationID];");
+							}
+						}
+						else
+						{
+							statement("stage_output.", name, " = ", name, ";");
+						}
 					}
 				}
 			}
