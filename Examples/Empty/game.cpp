@@ -14,7 +14,7 @@ Game::Game(Device& device)
 
   Tempest::Pixmap pm("img/texture.png");
   //Tempest::Pixmap pm("img/texture.hdr");
-  texture = device.loadTexture(pm);
+  texture = device.texture(pm);
 
   for(uint8_t i=0;i<MaxFramesInFlight;++i)
     fence.emplace_back(device.fence());

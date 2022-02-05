@@ -312,10 +312,19 @@ void X11Api::implShowCursor(SystemApi::Window *w, CursorShape show) {
         name = "xterm";
         break;
       case CursorShape::SizeHor:
-        name = "sb_h_double_arrow";
+        name = "size_hor";
         break;
       case CursorShape::SizeVer:
-        name = "sb_v_double_arrow";
+        name = "size_ver";
+        break;
+      case CursorShape::SizeFDiag:
+        name = "size_fdiag";
+        break;
+      case CursorShape::SizeBDiag:
+        name = "size_bdiag";
+        break;
+      case CursorShape::SizeAll:
+        name = "size_all";
         break;
       }
     Cursor c = name==nullptr ? 0 : XcursorLibraryLoadCursor(dpy,name);

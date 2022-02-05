@@ -9,12 +9,15 @@
 #include "game.h"
 
 std::unique_ptr<Tempest::AbstractGraphicsApi> mkApi(const char* av) {
+#if defined(__WINDOWS__)
+  if(std::strcmp(av,"dx12")==0)
+    return std::unique_ptr<Tempest::AbstractGraphicsApi>(new Tempest::DirectX12Api{Tempest::ApiFlags::Validation});
+#endif
 #if defined(__OSX__)
   (void)av;
   return std::unique_ptr<Tempest::AbstractGraphicsApi>(new Tempest::MetalApi{Tempest::ApiFlags::Validation});
 #else
-  if(std::strcmp(av,"dx12")==0)
-    return std::unique_ptr<Tempest::AbstractGraphicsApi>(new Tempest::DirectX12Api{Tempest::ApiFlags::Validation});
+  (void)av;
   return std::unique_ptr<Tempest::AbstractGraphicsApi>(new Tempest::VulkanApi{Tempest::ApiFlags::Validation});
 #endif
   }
