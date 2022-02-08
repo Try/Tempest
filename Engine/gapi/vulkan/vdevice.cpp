@@ -439,6 +439,11 @@ void VDevice::submit(VCommandBuffer& cmd, VFence& sync) {
   graphicsQueue->submit(1,&submitInfo,sync.impl);
   }
 
+void Tempest::Detail::VDevice::Queue::waitIdle() {
+  std::lock_guard<std::mutex> guard(sync);
+  vkAssert(vkQueueWaitIdle(impl));
+  }
+
 void VDevice::Queue::submit(uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence) {
   std::lock_guard<std::mutex> guard(sync);
   vkAssert(vkQueueSubmit(impl,submitCount,pSubmits,fence));

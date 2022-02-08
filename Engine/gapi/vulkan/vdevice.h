@@ -210,6 +210,7 @@ class VDevice : public AbstractGraphicsApi::Device {
 
       void       submit(uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence);
       VkResult   present(VkPresentInfoKHR& presentInfo);
+      void       waitIdle();
       };
 
     struct MemIndex final {
