@@ -753,17 +753,6 @@ void VCommandBuffer::finalizeImageBarrier(T& bx, const AbstractGraphicsApi::Barr
     bx.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT; else
     bx.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
-  if(device.presentQueue!=nullptr && device.graphicsQueue->family!=device.presentQueue->family) {
-    if(bx.newLayout==VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
-      bx.srcQueueFamilyIndex  = device.graphicsQueue->family;
-      bx.dstQueueFamilyIndex  = device.presentQueue->family;
-      }
-    else if(bx.oldLayout==VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
-      bx.srcQueueFamilyIndex  = device.presentQueue->family;
-      bx.dstQueueFamilyIndex  = device.graphicsQueue->family;
-      }
-    }
-
   if(b.discard)
     bx.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   }
