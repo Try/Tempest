@@ -98,6 +98,8 @@ D3D12_RASTERIZER_DESC DxPipeline::getRaster(const RenderState& st) const {
   }
 
 ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& frm) {
+  const bool useTesselation = (tcShader.handler || teShader.handler);
+
   D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
   psoDesc.InputLayout     = { vsInput.get(), UINT(declSize) };
   psoDesc.pRootSignature  = sign.get();
@@ -135,11 +137,19 @@ ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& 
   for(uint8_t i=0;i<frm.NumRenderTargets;++i)
     psoDesc.RTVFormats[i] = frm.RTVFormats[i];
 
+  if(useTesselation) {
+    psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
+    }
+
   ComPtr<ID3D12PipelineState> ret;
   auto err = device.device->CreateGraphicsPipelineState(&psoDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&ret));
   if(FAILED(err)) {
     if(vsShader.handler)
       vsShader.handler->disasm();
+    if(tcShader.handler)
+      tcShader.handler->disasm();
+    if(teShader.handler)
+      teShader.handler->disasm();
     if(fsShader.handler)
       fsShader.handler->disasm();
     dxAssert(err);

@@ -162,16 +162,17 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, AbstractGraphicsApi::Props& pro
   prop.ssbo.offsetAlign = 256;
   //prop.ssbo.maxRange    = size_t(prop.limits.maxStorageBufferRange);
 
-  prop.ubo.maxRange     = D3D12_REQ_CONSTANT_BUFFER_ELEMENT_COUNT*4;
-  prop.ubo.offsetAlign  = 256;
+  prop.ubo.maxRange      = D3D12_REQ_CONSTANT_BUFFER_ELEMENT_COUNT*4;
+  prop.ubo.offsetAlign   = 256;
 
-  prop.push.maxRange    = 256;
+  prop.push.maxRange     = 256;
 
-  prop.anisotropy       = true;
-  prop.maxAnisotropy    = 16;
+  prop.anisotropy        = true;
+  prop.maxAnisotropy     = 16;
+  prop.tesselationShader = false;
 
-  prop.storeAndAtomicVs = true;
-  prop.storeAndAtomicFs = true;
+  prop.storeAndAtomicVs  = true;
+  prop.storeAndAtomicFs  = true;
 
   prop.mrt.maxColorAttachments = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT;
 
