@@ -21,7 +21,7 @@ class VulkanInstance {
 
     std::vector<AbstractGraphicsApi::Props> devices() const;
 
-    VkInstance       instance;
+    VkInstance       instance = VK_NULL_HANDLE;
     bool             hasDeviceFeatures2 = false;
 
     struct VkProp:Tempest::AbstractGraphicsApi::Props {
@@ -63,8 +63,8 @@ class VulkanInstance {
         const char*                 pMessage,
         void*                       pUserData);
 
-    const bool                                      validation;
-    VkDebugReportCallbackEXT                        callback;
+    const bool                                      validation = false;
+    VkDebugReportCallbackEXT                        callback   = VK_NULL_HANDLE;
     PFN_vkDestroyDebugReportCallbackEXT             vkDestroyDebugReportCallbackEXT = nullptr;
   };
 

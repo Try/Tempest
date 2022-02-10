@@ -361,22 +361,17 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     }
 
   if(props.hasMemRq2) {
-    vkGetBufferMemoryRequirements2 = reinterpret_cast<PFN_vkGetBufferMemoryRequirements2KHR>
-        (vkGetDeviceProcAddr(device.impl,"vkGetBufferMemoryRequirements2KHR"));
-    vkGetImageMemoryRequirements2 = reinterpret_cast<PFN_vkGetImageMemoryRequirements2KHR>
-        (vkGetDeviceProcAddr(device.impl,"vkGetImageMemoryRequirements2KHR"));
+    vkGetBufferMemoryRequirements2 = PFN_vkGetBufferMemoryRequirements2KHR(vkGetDeviceProcAddr(device.impl,"vkGetBufferMemoryRequirements2KHR"));
+    vkGetImageMemoryRequirements2  = PFN_vkGetImageMemoryRequirements2KHR (vkGetDeviceProcAddr(device.impl,"vkGetImageMemoryRequirements2KHR"));
     }
 
   if(props.hasSync2) {
-    vkCmdPipelineBarrier2KHR = reinterpret_cast<PFN_vkCmdPipelineBarrier2KHR>
-        (vkGetDeviceProcAddr(device.impl,"vkCmdPipelineBarrier2KHR"));
+    vkCmdPipelineBarrier2KHR = PFN_vkCmdPipelineBarrier2KHR(vkGetDeviceProcAddr(device.impl,"vkCmdPipelineBarrier2KHR"));
     }
 
   if(props.hasDynRendering) {
-    vkCmdBeginRenderingKHR = reinterpret_cast<PFN_vkCmdBeginRenderingKHR>
-        (vkGetDeviceProcAddr(device.impl,"vkCmdBeginRenderingKHR"));
-    vkCmdEndRenderingKHR = reinterpret_cast<PFN_vkCmdEndRenderingKHR>
-        (vkGetDeviceProcAddr(device.impl,"vkCmdEndRenderingKHR"));
+    vkCmdBeginRenderingKHR = PFN_vkCmdBeginRenderingKHR(vkGetDeviceProcAddr(device.impl,"vkCmdBeginRenderingKHR"));
+    vkCmdEndRenderingKHR   = PFN_vkCmdEndRenderingKHR  (vkGetDeviceProcAddr(device.impl,"vkCmdEndRenderingKHR"));
     }
   }
 

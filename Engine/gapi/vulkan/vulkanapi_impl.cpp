@@ -49,11 +49,15 @@ VulkanInstance::VulkanInstance(bool validation)
 
   VkApplicationInfo appInfo = {};
   appInfo.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-  //appInfo.pApplicationName   = "Hello Triangle";
+  //appInfo.pApplicationName   = "";
   appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
   appInfo.pEngineName        = "Tempest";
   appInfo.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
   appInfo.apiVersion         = VK_API_VERSION_1_0;
+
+  if(auto vkEnumerateInstanceVersion = PFN_vkEnumerateInstanceVersion(vkGetInstanceProcAddr(nullptr,"vkEnumerateInstanceVersion"))) {
+    vkEnumerateInstanceVersion(&appInfo.apiVersion);
+    }
 
   VkInstanceCreateInfo createInfo = {};
   createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -74,11 +78,11 @@ VulkanInstance::VulkanInstance(bool validation)
   createInfo.enabledExtensionCount   = static_cast<uint32_t>(rqExt.size());
   createInfo.ppEnabledExtensionNames = rqExt.data();
 
-  if(validation){
+  if(validation) {
     createInfo.enabledLayerCount   = static_cast<uint32_t>(validationLayers.size());
     createInfo.ppEnabledLayerNames = validationLayers.begin();
     } else {
-    createInfo.enabledLayerCount = 0;
+    createInfo.enabledLayerCount   = 0;
     }
 
   VkResult ret = vkCreateInstance(&createInfo,nullptr,&instance);
