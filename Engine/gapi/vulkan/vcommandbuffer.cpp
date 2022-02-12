@@ -768,6 +768,7 @@ void VCommandBuffer::addDependency(VSwapchain& s, size_t imgId) {
   for(auto i:swapchainSync)
     if(i==sc)
       return;
+  assert(sc!=nullptr);
   swapchainSync.push_back(sc);
   }
 

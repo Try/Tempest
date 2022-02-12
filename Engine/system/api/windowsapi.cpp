@@ -231,8 +231,7 @@ void WindowsApi::implProcessEvents(SystemApi::AppCallBack& cb) {
     for(auto& i:windows) {
       HWND             h  = HWND(i);
       Tempest::Window* cb = reinterpret_cast<Tempest::Window*>(GetWindowLongPtr(h,GWLP_USERDATA));
-      LONG             s  = GetWindowLongA(h,GWL_STYLE);
-      if(cb && 0==(s&WS_MINIMIZE))
+      if(cb && !IsIconic(h))
         SystemApi::dispatchRender(*cb);
       }
     }
@@ -240,7 +239,7 @@ void WindowsApi::implProcessEvents(SystemApi::AppCallBack& cb) {
 
 Rect WindowsApi::implWindowClientRect(SystemApi::Window* w) {
   RECT rectWindow;
-  GetClientRect( HWND(w), &rectWindow);
+  GetClientRect(HWND(w), &rectWindow);
   int cW = rectWindow.right  - rectWindow.left;
   int cH = rectWindow.bottom - rectWindow.top;
 
@@ -336,7 +335,8 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
 
   switch( msg ) {
     case WM_PAINT:{
-      SystemApi::dispatchRender(*cb);
+      if(!IsIconic(hWnd))
+        SystemApi::dispatchRender(*cb);
       return DefWindowProc( hWnd, msg, wParam, lParam );
       }
 

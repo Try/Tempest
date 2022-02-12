@@ -115,13 +115,15 @@ void VSwapchain::cleanupSwapchain() noexcept {
 void VSwapchain::cleanupSurface() noexcept {
   if(surface!=VK_NULL_HANDLE)
     vkDestroySurfaceKHR(device.instance,surface,nullptr);
+  surface = VK_NULL_HANDLE;
   }
 
 void VSwapchain::reset() {
-  const Rect rect = SystemApi::windowClientRect(hwnd);
+  cleanupSwapchain();
+
+  Rect rect = SystemApi::windowClientRect(hwnd);
   if(rect.isEmpty())
     return;
-  cleanupSwapchain();
 
   try {
     auto     support  = device.querySwapChainSupport(surface);
@@ -129,7 +131,7 @@ void VSwapchain::reset() {
     createSwapchain(device,support,rect,imgCount);
     }
   catch(...) {
-    cleanup();
+    cleanupSwapchain();
     throw;
     }
   }
@@ -344,12 +346,18 @@ void VSwapchain::present() {
   slot.imgId = uint32_t(-1);
   slot.state = S_Idle;
 
-  //auto tx = Application::tickCount();
+  auto tx = Application::tickCount();
   VkResult code = device.presentQueue->present(presentInfo);
   if(code==VK_ERROR_OUT_OF_DATE_KHR || code==VK_SUBOPTIMAL_KHR)
     throw SwapchainSuboptimal();
-  //tx = Application::tickCount()-tx;
-  //Log::i("vkQueuePresentKHR = ",tx);
+  tx = Application::tickCount()-tx;
+  if(tx > 2) {
+    std::chrono::system_clock::time_point p = std::chrono::system_clock::now();
+    time_t t = std::chrono::system_clock::to_time_t(p);
+    char str[26] = {};
+    strftime(str, sizeof(str), "%H:%M.%S", localtime(&t));
+    Log::i(str," : vkQueuePresentKHR = ", tx);
+    }
   Detail::vkAssert(code);
 
   aquireNextImage();
