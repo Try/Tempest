@@ -68,7 +68,7 @@ VSwapchain::VSwapchain(VDevice &device, SystemApi::Window* hwnd)
     surface = device.createSurface(hwnd);
 
     auto     support  = device.querySwapChainSupport(surface);
-    uint32_t imgCount = getImageCount(support);
+    uint32_t imgCount = findImageCount(support);
     createSwapchain(device,support,SystemApi::windowClientRect(hwnd),imgCount);
     }
   catch(...) {
@@ -127,7 +127,7 @@ void VSwapchain::reset() {
 
   try {
     auto     support  = device.querySwapChainSupport(surface);
-    uint32_t imgCount = getImageCount(support);
+    uint32_t imgCount = findImageCount(support);
     createSwapchain(device,support,rect,imgCount);
     }
   catch(...) {
@@ -148,9 +148,9 @@ void VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& swapCh
   if(!support)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
-  VkSurfaceFormatKHR surfaceFormat = getSwapSurfaceFormat(swapChainSupport.formats);
-  VkPresentModeKHR   presentMode   = getSwapPresentMode  (swapChainSupport.presentModes);
-  VkExtent2D         extent        = getSwapExtent       (swapChainSupport.capabilities,uint32_t(rect.w),uint32_t(rect.h));
+  VkSurfaceFormatKHR surfaceFormat = findSwapSurfaceFormat(swapChainSupport.formats);
+  VkPresentModeKHR   presentMode   = findSwapPresentMode  (swapChainSupport.presentModes);
+  VkExtent2D         extent        = findSwapExtent       (swapChainSupport.capabilities,uint32_t(rect.w),uint32_t(rect.h));
 
   VkSwapchainCreateInfoKHR createInfo = {};
   createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -225,7 +225,7 @@ void VSwapchain::createImageViews(VDevice &device) {
     }
   }
 
-VkSurfaceFormatKHR VSwapchain::getSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
+VkSurfaceFormatKHR VSwapchain::findSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
   if(availableFormats.size()==1 && availableFormats[0].format==VK_FORMAT_UNDEFINED)
     return {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
 
@@ -238,7 +238,7 @@ VkSurfaceFormatKHR VSwapchain::getSwapSurfaceFormat(const std::vector<VkSurfaceF
   return availableFormats[0];
   }
 
-VkPresentModeKHR VSwapchain::getSwapPresentMode(const std::vector<VkPresentModeKHR> &availablePresentModes) {
+VkPresentModeKHR VSwapchain::findSwapPresentMode(const std::vector<VkPresentModeKHR> &availablePresentModes) {
   /** intel says mailbox is better option for games
     * https://software.intel.com/content/www/us/en/develop/articles/api-without-secrets-introduction-to-vulkan-part-2.html
     **/
@@ -259,8 +259,8 @@ VkPresentModeKHR VSwapchain::getSwapPresentMode(const std::vector<VkPresentModeK
   return VK_PRESENT_MODE_FIFO_KHR;
   }
 
-VkExtent2D VSwapchain::getSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities,
-                                     uint32_t w,uint32_t h) {
+VkExtent2D VSwapchain::findSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities,
+                                      uint32_t w,uint32_t h) {
   if(capabilities.currentExtent.width!=std::numeric_limits<uint32_t>::max()) {
     return capabilities.currentExtent;
     }
@@ -278,7 +278,7 @@ VkExtent2D VSwapchain::getSwapExtent(const VkSurfaceCapabilitiesKHR& capabilitie
   return actualExtent;
   }
 
-uint32_t VSwapchain::getImageCount(const SwapChainSupport& support) const {
+uint32_t VSwapchain::findImageCount(const SwapChainSupport& support) const {
   const uint32_t maxImages=support.capabilities.maxImageCount==0 ? uint32_t(-1) : support.capabilities.maxImageCount;
   uint32_t imageCount=support.capabilities.minImageCount+1;
   if(0<support.capabilities.maxImageCount && imageCount>maxImages)
@@ -346,18 +346,18 @@ void VSwapchain::present() {
   slot.imgId = uint32_t(-1);
   slot.state = S_Idle;
 
-  auto tx = Application::tickCount();
+  // auto tx = Application::tickCount();
   VkResult code = device.presentQueue->present(presentInfo);
   if(code==VK_ERROR_OUT_OF_DATE_KHR || code==VK_SUBOPTIMAL_KHR)
     throw SwapchainSuboptimal();
-  tx = Application::tickCount()-tx;
-  if(tx > 2) {
-    std::chrono::system_clock::time_point p = std::chrono::system_clock::now();
-    time_t t = std::chrono::system_clock::to_time_t(p);
-    char str[26] = {};
-    strftime(str, sizeof(str), "%H:%M.%S", localtime(&t));
-    Log::i(str," : vkQueuePresentKHR = ", tx);
-    }
+  // tx = Application::tickCount()-tx;
+  // if(tx > 2) {
+  //   std::chrono::system_clock::time_point p = std::chrono::system_clock::now();
+  //   time_t t = std::chrono::system_clock::to_time_t(p);
+  //   char str[26] = {};
+  //   strftime(str, sizeof(str), "%H:%M.%S", localtime(&t));
+  //   Log::i(str," : vkQueuePresentKHR = ", tx);
+  //   }
   Detail::vkAssert(code);
 
   aquireNextImage();
