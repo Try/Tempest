@@ -463,6 +463,19 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest
   vkCmdCopyBuffer(impl, src.impl, dst.impl, 1, &copyRegion);
   }
 
+void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest, const void* src, size_t size) {
+  auto&  dst    = reinterpret_cast<VBuffer&>(dstBuf);
+
+  auto   srcBuf = reinterpret_cast<const uint8_t*>(src);
+  size_t maxSz  = 0x10000;
+  for(size_t at=0; at<size; ) {
+    const size_t sz = std::min(size-at, maxSz);
+    vkCmdUpdateBuffer(impl,dst.impl,offsetDest+at,sz,srcBuf);
+    srcBuf+=sz;
+    at    +=sz;
+    }
+  }
+
 void VCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Buffer& srcBuf, size_t offset) {
   auto& src = reinterpret_cast<const VBuffer&>(srcBuf);
   auto& dst = reinterpret_cast<VTexture&>(dstTex);

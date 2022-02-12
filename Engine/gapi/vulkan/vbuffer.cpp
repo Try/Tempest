@@ -36,6 +36,20 @@ void VBuffer::update(const void *data, size_t off, size_t count, size_t size, si
     return;
     }
 
+  if(size==alignedSz && off%4==0 && (count*alignedSz)%4==0) {
+    Detail::DSharedPtr<Buffer*> pBuf  (this);
+
+    auto cmd = dx.dataMgr().get();
+    cmd->begin();
+    cmd->hold(pBuf); // NOTE: VBuffer may be deleted, before copy is finished
+    cmd->copy(*this, off*alignedSz, data, count*alignedSz);
+    cmd->end();
+
+    dx.dataMgr().waitFor(this); // write-after-write case
+    dx.dataMgr().submit(std::move(cmd));
+    return;
+    }
+
   auto  stage = dx.dataMgr().allocStagingMemory(data,count,size,alignedSz,MemUsage::TransferSrc,BufferHeap::Upload);
 
   Detail::DSharedPtr<Buffer*> pStage(new Detail::VBuffer(std::move(stage)));
