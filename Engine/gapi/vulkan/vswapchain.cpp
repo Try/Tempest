@@ -328,12 +328,25 @@ void VSwapchain::present() {
   auto&    slot = sync[sId];
   auto&    f    = fence.present[sId];
   vkResetFences(device.device.impl,1,&f);
+  if(device.vkQueueSubmit2!=nullptr) {
+    VkSemaphoreSubmitInfoKHR signal = {};
+    signal.sType     = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
+    signal.semaphore = slot.present;
+    signal.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR;
 
-  VkSubmitInfo submitInfo = {};
-  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submitInfo.signalSemaphoreCount = 1;
-  submitInfo.pSignalSemaphores    = &slot.present;
-  device.graphicsQueue->submit(1, &submitInfo, f);
+    VkSubmitInfo2KHR submitInfo = {};
+    submitInfo.sType                    = VK_STRUCTURE_TYPE_SUBMIT_INFO_2_KHR;
+    submitInfo.signalSemaphoreInfoCount = 1;
+    submitInfo.pSignalSemaphoreInfos    = &signal;
+
+    device.graphicsQueue->submit(1, &submitInfo, f, device.vkQueueSubmit2);
+    } else {
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores    = &slot.present;
+    device.graphicsQueue->submit(1, &submitInfo, f);
+    }
 
   VkPresentInfoKHR presentInfo = {};
   presentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;

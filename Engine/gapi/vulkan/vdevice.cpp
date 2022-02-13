@@ -366,7 +366,8 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     }
 
   if(props.hasSync2) {
-    vkCmdPipelineBarrier2KHR = PFN_vkCmdPipelineBarrier2KHR(vkGetDeviceProcAddr(device.impl,"vkCmdPipelineBarrier2KHR"));
+    vkCmdPipelineBarrier2 = PFN_vkCmdPipelineBarrier2KHR(vkGetDeviceProcAddr(device.impl,"vkCmdPipelineBarrier2KHR"));
+    vkQueueSubmit2        = PFN_vkQueueSubmit2KHR       (vkGetDeviceProcAddr(device.impl,"vkQueueSubmit2KHR"));
     }
 
   if(props.hasDynRendering) {
@@ -425,6 +426,20 @@ void VDevice::waitIdleSync(VDevice::Queue* q, size_t n) {
   }
 
 void VDevice::submit(VCommandBuffer& cmd, VFence& sync) {
+  if(vkQueueSubmit2!=nullptr) {
+    VkCommandBufferSubmitInfoKHR cmdInfo = {};
+    cmdInfo.sType         = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO_KHR;
+    cmdInfo.commandBuffer = cmd.impl;
+
+    VkSubmitInfo2KHR submitInfo = {};
+    submitInfo.sType                  = VK_STRUCTURE_TYPE_SUBMIT_INFO_2_KHR;
+    submitInfo.commandBufferInfoCount = 1;
+    submitInfo.pCommandBufferInfos    = &cmdInfo;
+
+    sync.reset();
+    graphicsQueue->submit(1,&submitInfo,sync.impl,vkQueueSubmit2);
+    return;
+    }
   VkSubmitInfo submitInfo = {};
   submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
   submitInfo.commandBufferCount = 1;
@@ -442,6 +457,11 @@ void Tempest::Detail::VDevice::Queue::waitIdle() {
 void VDevice::Queue::submit(uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence) {
   std::lock_guard<std::mutex> guard(sync);
   vkAssert(vkQueueSubmit(impl,submitCount,pSubmits,fence));
+  }
+
+void VDevice::Queue::submit(uint32_t submitCount, const VkSubmitInfo2KHR* pSubmits, VkFence fence, PFN_vkQueueSubmit2KHR vkQueueSubmit2) {
+  std::lock_guard<std::mutex> guard(sync);
+  vkAssert(vkQueueSubmit2(impl,submitCount,pSubmits,fence));
   }
 
 VkResult VDevice::Queue::present(VkPresentInfoKHR& presentInfo) {

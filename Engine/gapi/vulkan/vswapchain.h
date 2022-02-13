@@ -86,10 +86,10 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     void                     createSwapchain(VDevice& device, const SwapChainSupport& support, const Rect& rect, uint32_t imgCount);
     void                     createImageViews(VDevice &device);
 
-    VkSurfaceFormatKHR       getSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-    VkPresentModeKHR         getSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
-    VkExtent2D               getSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities, uint32_t w, uint32_t h);
-    uint32_t                 getImageCount(const SwapChainSupport& support) const;
+    VkSurfaceFormatKHR       findSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+    VkPresentModeKHR         findSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+    VkExtent2D               findSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities, uint32_t w, uint32_t h);
+    uint32_t                 findImageCount(const SwapChainSupport& support) const;
 
     void                     aquireNextImage();
 

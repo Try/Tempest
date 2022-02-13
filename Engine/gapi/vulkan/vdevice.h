@@ -209,6 +209,7 @@ class VDevice : public AbstractGraphicsApi::Device {
       uint32_t   family=0;
 
       void       submit(uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence);
+      void       submit(uint32_t submitCount, const VkSubmitInfo2KHR* pSubmits, VkFence fence, PFN_vkQueueSubmit2KHR fn);
       VkResult   present(VkPresentInfoKHR& presentInfo);
       void       waitIdle();
       };
@@ -236,13 +237,16 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     PFN_vkGetBufferMemoryRequirements2KHR vkGetBufferMemoryRequirements2 = nullptr;
     PFN_vkGetImageMemoryRequirements2KHR  vkGetImageMemoryRequirements2  = nullptr;
-    PFN_vkCmdPipelineBarrier2KHR          vkCmdPipelineBarrier2KHR       = nullptr;
+
+    PFN_vkCmdPipelineBarrier2KHR          vkCmdPipelineBarrier2          = nullptr;
+    PFN_vkQueueSubmit2KHR                 vkQueueSubmit2                 = nullptr;
+
     PFN_vkCmdBeginRenderingKHR            vkCmdBeginRenderingKHR         = nullptr;
     PFN_vkCmdEndRenderingKHR              vkCmdEndRenderingKHR           = nullptr;
 
     void                    waitIdle() override;
 
-    void                    submit(VCommandBuffer& cmd,VFence& sync);
+    void                    submit(VCommandBuffer& cmd, VFence& sync);
 
     VkSurfaceKHR            createSurface(void* hwnd);
     SwapChainSupport        querySwapChainSupport(VkSurfaceKHR surface) { return querySwapChainSupport(physicalDevice,surface); }

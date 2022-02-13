@@ -40,7 +40,7 @@ static VkAttachmentStoreOp mkStoreOp(const AccessOp op) {
   return VK_ATTACHMENT_STORE_OP_DONT_CARE;
   }
 
-static VkAccessFlagBits nativeFormat(ResourceAccess rs) {
+static VkAccessFlagBits toAccessBits(ResourceAccess rs) {
   uint32_t ret = 0;
   if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
     ret |= VK_ACCESS_TRANSFER_READ_BIT;
@@ -63,7 +63,7 @@ static VkAccessFlagBits nativeFormat(ResourceAccess rs) {
     ret |= VK_ACCESS_INDEX_READ_BIT;
   if((rs&ResourceAccess::Vertex)==ResourceAccess::Vertex)
     ret |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-  if((rs&ResourceAccess::Vertex)==ResourceAccess::Uniform)
+  if((rs&ResourceAccess::Uniform)==ResourceAccess::Uniform)
     ret |= VK_ACCESS_UNIFORM_READ_BIT;
 
   if((rs&ResourceAccess::ComputeRead)==ResourceAccess::ComputeRead)
@@ -72,6 +72,40 @@ static VkAccessFlagBits nativeFormat(ResourceAccess rs) {
     ret |= VK_ACCESS_SHADER_WRITE_BIT;
 
   return VkAccessFlagBits(ret);
+  }
+
+static VkAccessFlagBits2KHR toAccessBits2(ResourceAccess rs) {
+  uint32_t ret = 0;
+  if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
+    ret |= VK_ACCESS_2_TRANSFER_READ_BIT_KHR;
+  if((rs&ResourceAccess::TransferDst)==ResourceAccess::TransferDst)
+    ret |= VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR;
+
+  if((rs&ResourceAccess::Present)==ResourceAccess::Present)
+    ret |= VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT_KHR;
+
+  if((rs&ResourceAccess::Sampler)==ResourceAccess::Sampler)
+    ret |= VK_ACCESS_2_SHADER_READ_BIT_KHR;
+  if((rs&ResourceAccess::ColorAttach)==ResourceAccess::ColorAttach)
+    ret |= (VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT_KHR | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR);
+  if((rs&ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach)
+    ret |= (VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT_KHR | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR);
+  if((rs&ResourceAccess::Unordered)==ResourceAccess::Unordered)
+    ret |= (VK_ACCESS_2_SHADER_READ_BIT_KHR | VK_ACCESS_2_SHADER_WRITE_BIT_KHR);
+
+  if((rs&ResourceAccess::Index)==ResourceAccess::Index)
+    ret |= VK_ACCESS_2_INDEX_READ_BIT_KHR;
+  if((rs&ResourceAccess::Vertex)==ResourceAccess::Vertex)
+    ret |= VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT_KHR;
+  if((rs&ResourceAccess::Uniform)==ResourceAccess::Uniform)
+    ret |= VK_ACCESS_2_UNIFORM_READ_BIT_KHR;
+
+  if((rs&ResourceAccess::ComputeRead)==ResourceAccess::ComputeRead)
+    ret |= VK_ACCESS_2_SHADER_READ_BIT_KHR;
+  if((rs&ResourceAccess::ComputeWrite)==ResourceAccess::ComputeWrite)
+    ret |= VK_ACCESS_2_SHADER_WRITE_BIT_KHR;
+
+  return VkAccessFlagBits2KHR(ret);
   }
 
 static VkPipelineStageFlags toStage(ResourceAccess rs, bool isSrc) {
@@ -106,6 +140,41 @@ static VkPipelineStageFlags toStage(ResourceAccess rs, bool isSrc) {
     ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
   if(isSrc && ret==0)
     ret = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT; // wait for nothing: asset uploading case
+  return VkPipelineStageFlagBits(ret);
+  }
+
+static VkPipelineStageFlags2KHR toStage2(ResourceAccess rs, bool isSrc) {
+  uint32_t ret = 0;
+  if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
+    ret |= VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT_KHR;
+  if((rs&ResourceAccess::TransferDst)==ResourceAccess::TransferDst)
+    ret |= VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT_KHR;
+
+  if((rs&ResourceAccess::Present)==ResourceAccess::Present)
+    ret |= VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR;
+
+  if((rs&ResourceAccess::Sampler)==ResourceAccess::Sampler)
+    ret |= VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR;
+  if((rs&ResourceAccess::ColorAttach)==ResourceAccess::ColorAttach)
+    ret |= VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR;
+  if((rs&ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach)
+    ret |= (VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT_KHR);
+  if((rs&ResourceAccess::Unordered)==ResourceAccess::Unordered)
+    ret |= VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR;
+
+  if((rs&ResourceAccess::Index)==ResourceAccess::Index)
+    ret |= VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT_KHR;
+  if((rs&ResourceAccess::Vertex)==ResourceAccess::Vertex)
+    ret |= VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT_KHR;
+  if((rs&ResourceAccess::Vertex)==ResourceAccess::Uniform)
+    ret |= VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR;
+
+  if((rs&ResourceAccess::ComputeRead)==ResourceAccess::ComputeRead)
+    ret |= VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR;
+  if((rs&ResourceAccess::ComputeWrite)==ResourceAccess::ComputeWrite)
+    ret |= VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR;
+  if(isSrc && ret==0)
+    ret = VK_PIPELINE_STAGE_2_NONE_KHR; // wait for nothing: asset uploading case
   return VkPipelineStageFlagBits(ret);
   }
 
@@ -637,8 +706,8 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
     bx.offset                = 0;
     bx.size                  = VK_WHOLE_SIZE;
 
-    bx.srcAccessMask         = ::nativeFormat(b.prev);
-    bx.dstAccessMask         = ::nativeFormat(b.next);
+    bx.srcAccessMask         = toAccessBits(b.prev);
+    bx.dstAccessMask         = toAccessBits(b.next);
 
     ++pbCount;
     }
@@ -672,8 +741,8 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
     bx.dstQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
     bx.image                 = toVkResource(b);
 
-    bx.srcAccessMask         = ::nativeFormat(b.prev);
-    bx.dstAccessMask         = ::nativeFormat(b.next);
+    bx.srcAccessMask         = toAccessBits(b.prev);
+    bx.dstAccessMask         = toAccessBits(b.next);
 
     bx.oldLayout             = toLayout(b.prev);
     bx.newLayout             = toLayout(b.next);
@@ -707,10 +776,10 @@ void VCommandBuffer::barrier2(const AbstractGraphicsApi::BarrierDesc* desc, size
       bx.offset                = 0;
       bx.size                  = VK_WHOLE_SIZE;
 
-      bx.srcAccessMask         = ::nativeFormat(b.prev);
-      bx.dstAccessMask         = ::nativeFormat(b.next);
-      bx.srcStageMask          = toStage(b.prev,true);
-      bx.dstStageMask          = toStage(b.next,false);
+      bx.srcAccessMask         = toAccessBits2(b.prev);
+      bx.dstAccessMask         = toAccessBits2(b.next);
+      bx.srcStageMask          = toStage2(b.prev,true);
+      bx.dstStageMask          = toStage2(b.next,false);
       } else {
       auto& bx = imgBarrier[imgCount];
       ++imgCount;
@@ -720,10 +789,10 @@ void VCommandBuffer::barrier2(const AbstractGraphicsApi::BarrierDesc* desc, size
       bx.dstQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
       bx.image                 = toVkResource(b);
 
-      bx.srcAccessMask         = ::nativeFormat(b.prev);
-      bx.dstAccessMask         = ::nativeFormat(b.next);
-      bx.srcStageMask          = toStage(b.prev,true);
-      bx.dstStageMask          = toStage(b.next,false);
+      bx.srcAccessMask         = toAccessBits2(b.prev);
+      bx.dstAccessMask         = toAccessBits2(b.next);
+      bx.srcStageMask          = toStage2(b.prev,true);
+      bx.dstStageMask          = toStage2(b.next,false);
 
       bx.oldLayout             = toLayout(b.prev);
       bx.newLayout             = toLayout(b.next);
@@ -736,7 +805,7 @@ void VCommandBuffer::barrier2(const AbstractGraphicsApi::BarrierDesc* desc, size
   info.pImageMemoryBarriers     = imgBarrier;
   info.imageMemoryBarrierCount  = imgCount;
 
-  device.vkCmdPipelineBarrier2KHR(impl,&info);
+  device.vkCmdPipelineBarrier2(impl,&info);
   }
 
 template<class T>
