@@ -9,13 +9,27 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-DxBuffer::DxBuffer(DxDevice* dev, ComPtr<ID3D12Resource>&& b, UINT sizeInBytes)
-  :dev(dev), impl(std::move(b)), sizeInBytes(sizeInBytes) {
+DxBuffer::DxBuffer(DxDevice* dev, UINT sizeInBytes)
+  :dev(dev), sizeInBytes(sizeInBytes) {
   }
 
 DxBuffer::DxBuffer(Tempest::Detail::DxBuffer&& other)
-  :dev(other.dev), impl(std::move(other.impl)),sizeInBytes(other.sizeInBytes) {
-  other.sizeInBytes=0;
+  :dev(other.dev), page(std::move(other.page)), impl(std::move(other.impl)), sizeInBytes(other.sizeInBytes) {
+  other.sizeInBytes = 0;
+  other.page.page   = nullptr;
+  }
+
+DxBuffer::~DxBuffer() {
+  if(page.page!=nullptr)
+    dev->allocator.free(page);
+  }
+
+DxBuffer& DxBuffer::operator=(DxBuffer&& other) {
+  std::swap(dev,         other.dev);
+  std::swap(page,        other.page);
+  std::swap(impl,        other.impl);
+  std::swap(sizeInBytes, other.sizeInBytes);
+  return *this;
   }
 
 void DxBuffer::update(const void* data, size_t off, size_t count, size_t size, size_t alignedSz) {
@@ -62,9 +76,8 @@ void DxBuffer::read(void* data, size_t off, size_t size) {
 void DxBuffer::uploadS3TC(const uint8_t* d, uint32_t w, uint32_t h, uint32_t mipCnt, UINT blockSize) {
   ID3D12Resource& ret = *impl;
 
-  D3D12_RANGE rgn = {0,sizeInBytes};
   void*       mapped=nullptr;
-  dxAssert(ret.Map(0,&rgn,&mapped));
+  dxAssert(ret.Map(0,nullptr,&mapped));
 
   uint8_t* b = reinterpret_cast<uint8_t*>(mapped);
 
@@ -87,7 +100,8 @@ void DxBuffer::uploadS3TC(const uint8_t* d, uint32_t w, uint32_t h, uint32_t mip
     h = std::max<uint32_t>(1,h/2);
     }
 
-  ret.Unmap(0,nullptr);
+  D3D12_RANGE rgn = {0,sizeInBytes};
+  ret.Unmap(0,&rgn);
   }
 
 void DxBuffer::updateByStaging(DxBuffer* stage, const void* data, size_t offDst, size_t offSrc,
@@ -104,16 +118,16 @@ void DxBuffer::updateByStaging(DxBuffer* stage, const void* data, size_t offDst,
   cmd->copy(*this, offDst*alignedSz, *stage, offSrc*alignedSz, count*alignedSz);
   cmd->end();
 
-  dx.dataMgr().waitFor(this); // write-after-write case
   updateByMapped(*stage,data,offSrc,count,size,alignedSz);
+  dx.dataMgr().waitFor(this); // write-after-write case
   dx.dataMgr().submit(std::move(cmd));
   }
 
 void DxBuffer::updateByMapped(DxBuffer& stage, const void* data, size_t off, size_t count, size_t size, size_t alignedSz) {
   D3D12_RANGE rgn    = {off*alignedSz,count*alignedSz};
   void*       mapped = nullptr;
-  dxAssert(stage.impl->Map(0,&rgn,&mapped));
-  mapped = reinterpret_cast<uint8_t*>(mapped)+off;
+  dxAssert(stage.impl->Map(0,nullptr,&mapped));
+  mapped = reinterpret_cast<uint8_t*>(mapped)+off*alignedSz;
   copyUpsample(data,mapped,count,size,alignedSz);
   stage.impl->Unmap(0,&rgn);
   }

@@ -38,6 +38,10 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
     filter.DenyList.pIDList       = denyIds;
 
     dxAssert(pInfoQueue->PushStorageFilter(&filter));
+
+    pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
+    pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
+    pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, false);
     }
 
   DXGI_ADAPTER_DESC desc={};

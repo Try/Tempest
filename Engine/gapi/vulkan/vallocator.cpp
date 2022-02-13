@@ -242,12 +242,9 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mi
   return ret;
   }
 
-void VAllocator::free(VBuffer &buf) {
-  if(buf.impl!=VK_NULL_HANDLE)
-    vkDestroyBuffer (dev,buf.impl,nullptr);
-
-  if(buf.page.page!=nullptr)
-    allocator.free(buf.page);
+void VAllocator::free(VAllocator::Allocation &page) {
+  if(page.page!=nullptr)
+    allocator.free(page);
   }
 
 void VAllocator::free(VTexture &buf) {

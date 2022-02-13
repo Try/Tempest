@@ -25,7 +25,7 @@ inline MemUsage operator & (MemUsage a,const MemUsage& b) {
 enum class BufferHeap : uint8_t {
   Device   = 0,
   Upload   = 1,
-  Readback = 3,
+  Readback = 2,
   };
 
 // TODO: move away from public header

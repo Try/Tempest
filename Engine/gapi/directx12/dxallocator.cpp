@@ -13,20 +13,90 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+static UINT64 toAlignment(BufferHeap heap) {
+  // return D3D12_DEFAULT_MSAA_RESOURCE_PLACEMENT_ALIGNMENT;
+  return D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+  }
+
+DxAllocator::Provider::~Provider() {
+  if(last!=nullptr)
+    last->Release();
+  }
+
+DxAllocator::Provider::DeviceMemory DxAllocator::Provider::alloc(size_t size, uint32_t typeId) {
+  if(last!=nullptr) {
+    if(lastTypeId==typeId && lastSize==size){
+      auto ret = last;
+      last = nullptr;
+      return ret;
+      }
+    last->Release();
+    last = nullptr;
+    }
+
+  const auto bufferHeap = BufferHeap(typeId);
+
+  D3D12_HEAP_DESC heapDesc = {};
+  heapDesc.SizeInBytes                     = size;
+  heapDesc.Properties.Type                 = D3D12_HEAP_TYPE_DEFAULT;
+  heapDesc.Properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+  heapDesc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+  heapDesc.Properties.CreationNodeMask     = 1;
+  heapDesc.Properties.VisibleNodeMask      = 1;
+  heapDesc.Flags                           = D3D12_HEAP_FLAG_CREATE_NOT_ZEROED | D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
+  heapDesc.Alignment                       = toAlignment(bufferHeap);
+
+  if(bufferHeap==BufferHeap::Device) {
+    heapDesc.Properties.Type = D3D12_HEAP_TYPE_DEFAULT;
+    }
+  else if(bufferHeap==BufferHeap::Upload) {
+    heapDesc.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
+    }
+  else if(bufferHeap==BufferHeap::Readback) {
+    heapDesc.Properties.Type = D3D12_HEAP_TYPE_READBACK;
+    }
+
+  ID3D12Heap* ret = nullptr;
+  HRESULT hr = device->device->CreateHeap(&heapDesc, ::uuid<ID3D12Heap>(), reinterpret_cast<void**>(&ret));
+  if(SUCCEEDED(hr))
+    return ret;
+  return nullptr;
+  }
+
+void DxAllocator::Provider::free(DeviceMemory m, size_t size, uint32_t typeId) {
+  if(last!=nullptr)
+    last->Release();
+  last       = m;
+  lastSize   = size;
+  lastTypeId = typeId;
+  }
+
 DxAllocator::DxAllocator() {
+  auto& dev      = buferHeap[uint8_t(BufferHeap::Device)];
+  auto& upload   = buferHeap[uint8_t(BufferHeap::Upload)];
+  auto& readback = buferHeap[uint8_t(BufferHeap::Readback)];
+
+  dev.Type                 = D3D12_HEAP_TYPE_DEFAULT;
+  dev.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+  dev.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+  dev.CreationNodeMask     = 1;
+  dev.VisibleNodeMask      = 1;
+
+  upload = dev;
+  upload.Type              = D3D12_HEAP_TYPE_UPLOAD;
+
+  readback = dev;
+  readback.Type            = D3D12_HEAP_TYPE_READBACK;
   }
 
 void DxAllocator::setDevice(DxDevice& d) {
-  owner  = &d;
-  device = d.device.get();
+  owner           = &d;
+  device          = d.device.get();
+  provider.device = owner;
   }
 
 DxBuffer DxAllocator::alloc(const void* mem, size_t count, size_t size, size_t alignedSz,
                             MemUsage usage, BufferHeap bufFlg) {
-  ComPtr<ID3D12Resource> ret;
-
-  D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COMMON;
-
   D3D12_RESOURCE_DESC resDesc={};
   resDesc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
   resDesc.Alignment          = 0;
@@ -39,46 +109,30 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t count, size_t size, size_t a
   resDesc.SampleDesc.Quality = 0;
   resDesc.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
   resDesc.Flags              = D3D12_RESOURCE_FLAG_NONE;
-
   if(MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer)) {
     resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
 
-  D3D12_HEAP_PROPERTIES heapProp={};
-  heapProp.Type                 = D3D12_HEAP_TYPE_DEFAULT;
-  heapProp.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-  heapProp.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-  heapProp.CreationNodeMask     = 1;
-  heapProp.VisibleNodeMask      = 1;
-
+  D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COMMON;
   if(bufFlg==BufferHeap::Upload) {
-    heapProp.Type = D3D12_HEAP_TYPE_UPLOAD;
-    state         = D3D12_RESOURCE_STATE_GENERIC_READ;
+    state = D3D12_RESOURCE_STATE_GENERIC_READ;
     }
   else if(bufFlg==BufferHeap::Readback) {
-    heapProp.Type = D3D12_HEAP_TYPE_READBACK;
-    state         = D3D12_RESOURCE_STATE_COPY_DEST;
+    state = D3D12_RESOURCE_STATE_COPY_DEST;
     }
 
-  dxAssert(device->CreateCommittedResource(
-             &heapProp,
-             D3D12_HEAP_FLAG_NONE,
-             &resDesc,
-             state,
-             nullptr,
-             uuid<ID3D12Resource>(),
-             reinterpret_cast<void**>(&ret)
-             ));
+  DxBuffer ret(owner,UINT(resDesc.Width));
+  ret.page = allocator.alloc(count*alignedSz, toAlignment(bufFlg),
+                             uint32_t(bufFlg), uint32_t(bufFlg), (bufFlg!=BufferHeap::Device));
+  if(!ret.page.page)
+    throw std::system_error(Tempest::GraphicsErrc::OutOfVideoMemory);
 
-  if(mem!=nullptr) {
-    D3D12_RANGE rgn = {0,resDesc.Width};
-    void*       mapped=nullptr;
-    dxAssert(ret->Map(0,&rgn,&mapped));
-    copyUpsample(mem,mapped,count,size,alignedSz);
-    ret->Unmap(0,&rgn);
+  if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl.get(),
+             resDesc, state, ret.page.offset,
+             mem,count,size,alignedSz)) {
+    throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
     }
-
-  return DxBuffer(owner,std::move(ret),UINT(resDesc.Width));
+  return ret;
   }
 
 DxTexture DxAllocator::alloc(const Pixmap& pm, uint32_t mip, DXGI_FORMAT format) {
@@ -120,8 +174,6 @@ DxTexture DxAllocator::alloc(const Pixmap& pm, uint32_t mip, DXGI_FORMAT format)
   }
 
 DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mip, TextureFormat frm, bool imageStore) {
-  ComPtr<ID3D12Resource> ret;
-
   D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COMMON;
   D3D12_CLEAR_VALUE clr={};
 
@@ -161,6 +213,7 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
 
   clr.Format = resDesc.Format;
 
+  ComPtr<ID3D12Resource> ret;
   dxAssert(device->CreateCommittedResource(
              &heapProp,
              D3D12_HEAP_FLAG_NONE,
@@ -171,6 +224,35 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
              reinterpret_cast<void**>(&ret)
              ));
   return DxTexture(std::move(ret),resDesc.Format,resDesc.MipLevels);
+  }
+
+void DxAllocator::free(Allocation& page) {
+  if(page.page!=nullptr)
+    allocator.free(page);
+  }
+
+bool DxAllocator::commit(ID3D12Heap* heap, std::mutex& mmapSync,
+                         ID3D12Resource*& dest, const D3D12_RESOURCE_DESC& resDesc, D3D12_RESOURCE_STATES state,
+                         size_t offset, const void* mem, size_t count, size_t size, size_t alignedSz) {
+  std::lock_guard<std::mutex> g(mmapSync);
+  auto err = device->CreatePlacedResource(heap,
+                                          offset,
+                                          &resDesc,
+                                          state,
+                                          nullptr,
+                                          uuid<ID3D12Resource>(),
+                                          reinterpret_cast<void**>(&dest));
+  if(FAILED(err))
+    return false;
+  if(mem!=nullptr) {
+    D3D12_RANGE rgn = {0,resDesc.Width};
+    void*       mapped=nullptr;
+    if(FAILED(dest->Map(0,nullptr,&mapped)))
+      return false;
+    copyUpsample(mem,mapped,count,size,alignedSz);
+    dest->Unmap(0,&rgn);
+    }
+  return true;
   }
 
 #endif
