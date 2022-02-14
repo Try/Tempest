@@ -1,5 +1,7 @@
 #include "abstractgraphicsapi.h"
 
+#include <Tempest/Except>
+
 using namespace Tempest;
 
 static Sampler2d mkTrillinear() {
@@ -74,4 +76,8 @@ void AbstractGraphicsApi::CommandBuffer::barrier(Texture& tex, ResourceAccess pr
   b.mip      = mipId;
   b.discard  = (prev==ResourceAccess::None);
   barrier(&b,1);
+  }
+
+AbstractGraphicsApi::AccelerationStructure* AbstractGraphicsApi::createBottomAccelerationStruct(Device* d, Buffer* vbo, Buffer* ibo) {
+  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }

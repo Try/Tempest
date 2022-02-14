@@ -13,6 +13,7 @@
 #include "vulkan/vdescriptorarray.h"
 #include "vulkan/vpipelinelay.h"
 #include "vulkan/vtexture.h"
+#include "vulkan/vaccelerationstructure.h"
 
 #include "deviceallocator.h"
 #include "shaderreflection.h"
@@ -188,6 +189,13 @@ AbstractGraphicsApi::PTexture VulkanApi::createStorage(AbstractGraphicsApi::Devi
   dx.dataMgr().submit(std::move(cmd));
 
   return PTexture(pbuf.handler);
+  }
+
+AbstractGraphicsApi::AccelerationStructure* VulkanApi::createBottomAccelerationStruct(Device* d, Buffer* vbo, Buffer* ibo) {
+  Detail::VDevice& dx = *reinterpret_cast<Detail::VDevice*>(d);
+  auto&            vx = *reinterpret_cast<VBuffer*>(vbo);
+  auto&            ix = *reinterpret_cast<VBuffer*>(ibo);
+  return new VAccelerationStructure(dx,vx,ix);
   }
 
 void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PTexture t,

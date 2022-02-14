@@ -208,6 +208,13 @@ StorageImage Device::image2d(TextureFormat frm, const uint32_t w, const uint32_t
   return t;
   }
 
+AccelerationStructure Device::implBlas(const VideoBuffer& vbo, const VideoBuffer& ibo) {
+  if(!properties().raytracing.rayQuery)
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
+  auto blas = api.createBottomAccelerationStruct(dev,vbo.impl.handler,ibo.impl.handler);
+  return AccelerationStructure(*this,blas);
+  }
+
 Pixmap Device::readPixels(const Texture2d &t, uint32_t mip) {
   Pixmap pm;
   api.readPixels(dev,pm,t.impl,t.format(),uint32_t(t.w()),uint32_t(t.h()),mip,false);

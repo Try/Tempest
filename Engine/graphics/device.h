@@ -13,6 +13,7 @@
 #include <Tempest/IndexBuffer>
 #include <Tempest/StorageBuffer>
 #include <Tempest/StorageImage>
+#include <Tempest/AccelerationStructure>
 #include <Tempest/Builtin>
 #include <Tempest/Swapchain>
 #include <Tempest/UniformBuffer>
@@ -132,6 +133,9 @@ class Device {
     ZBuffer              zbuffer    (TextureFormat frm, const uint32_t w, const uint32_t h);
     StorageImage         image2d    (TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips = false);
 
+    template<class V, class I>
+    AccelerationStructure blas(const VertexBuffer<V>& vbo, const IndexBuffer<I>& ibo);
+
     Pixmap               readPixels (const Texture2d&    t, uint32_t mip=0);
     Pixmap               readPixels (const Attachment&   t, uint32_t mip=0);
     Pixmap               readPixels (const StorageImage& t, uint32_t mip=0);
@@ -168,6 +172,7 @@ class Device {
     Tempest::Builtin                builtins;
 
     VideoBuffer createVideoBuffer(const void* data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap flg);
+    AccelerationStructure implBlas(const VideoBuffer& vbo, const VideoBuffer& ibo);
 
     RenderPipeline
                 implPipeline(const RenderState &st, const Shader* shaders[],
@@ -228,6 +233,11 @@ inline UniformBuffer<T> Device::ubo(BufferHeap ht, const T *mem, size_t size) {
   VideoBuffer      data=createVideoBuffer(mem,size,sizeof(T),eltSize,MemUsage::UniformBuffer,ht);
   UniformBuffer<T> ubo(std::move(data),eltSize);
   return ubo;
+  }
+
+template<class V, class I>
+inline AccelerationStructure Device::blas(const VertexBuffer<V>& vbo, const IndexBuffer<I>& ibo) {
+  return implBlas(vbo.impl,ibo.impl);
   }
 
 template<class Vertex>

@@ -36,7 +36,7 @@ TEST(VulkanApi,VboDyn) {
   GapiTestCommon::VboDyn<VulkanApi>();
 #endif
   }
-// lavapipe WA
+
 TEST(VulkanApi,SsboDyn) {
 #if !defined(__OSX__)
   GapiTestCommon::SsboDyn<VulkanApi,float>();
@@ -138,5 +138,11 @@ TEST(VulkanApi,SsboWrite) {
 TEST(VulkanApi,PushRemapping) {
 #if !defined(__OSX__)
   GapiTestCommon::PushRemapping<VulkanApi>();
+#endif
+  }
+
+TEST(VulkanApi,Blas) {
+#if !defined(__OSX__)
+  GapiTestCommon::Blas<VulkanApi>();
 #endif
   }

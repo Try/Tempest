@@ -114,6 +114,17 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
   if(MemUsage::StorageBuffer==(usage & MemUsage::StorageBuffer))
     createInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
+  if(provider.device->props.raytracing.rayQuery) {
+    if(MemUsage::VertexBuffer==(usage & MemUsage::VertexBuffer) ||
+       MemUsage::IndexBuffer ==(usage & MemUsage::IndexBuffer)) {
+      // createInfo.usage |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
+      }
+    }
+
+  if(provider.device->props.hasDeviceAddress) {
+    createInfo.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+    }
+
   vkAssert(vkCreateBuffer(dev,&createInfo,nullptr,&ret.impl));
 
   MemRequirements memRq={};

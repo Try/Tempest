@@ -58,6 +58,8 @@ std::string GraphicsErrCategory::message(int ev) const {
       return "Frame buffer is not set, before drawcall";
     case GraphicsErrc::ComputeCallInRenderPass:
       return "Dispatch compute is not allowed in render pass";
+    case GraphicsErrc::UnsupportedExtension:
+      return "Extension is not suported";
     }
   return "(unrecognized error)";
   }

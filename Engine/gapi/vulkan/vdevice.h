@@ -244,6 +244,10 @@ class VDevice : public AbstractGraphicsApi::Device {
     PFN_vkCmdBeginRenderingKHR            vkCmdBeginRenderingKHR         = nullptr;
     PFN_vkCmdEndRenderingKHR              vkCmdEndRenderingKHR           = nullptr;
 
+    PFN_vkGetBufferDeviceAddressKHR       vkGetBufferDeviceAddress       = nullptr;
+
+    PFN_vkGetAccelerationStructureBuildSizesKHR vkGetAccelerationStructureBuildSizes = nullptr;
+
     void                    waitIdle() override;
 
     void                    submit(VCommandBuffer& cmd, VFence& sync);

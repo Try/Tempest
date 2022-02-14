@@ -57,6 +57,7 @@ enum class GraphicsErrc {
   InvalidStorageBuffer      = 9,
   DrawCallWithoutFbo        = 10,
   ComputeCallInRenderPass   = 11,
+  UnsupportedExtension      = 12,
   };
 
 struct GraphicsErrCategory : std::error_category {
