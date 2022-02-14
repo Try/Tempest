@@ -70,12 +70,17 @@ VDevice::VDevice(VulkanInstance &api, const char* gpuName)
   std::vector<VkPhysicalDevice> devices(deviceCount);
   vkEnumeratePhysicalDevices(api.instance, &deviceCount, devices.data());
 
+#if defined(__WINDOWS__)
+  const VkSurfaceKHR surface = VK_NULL_HANDLE;
+#else
   FakeWindow fakeWnd{*this};
   fakeWnd.surface = createSurface(fakeWnd.w);
+  const VkSurfaceKHR surface = fakeWnd.surface;
+#endif
 
   for(const auto& device:devices) {
-    if(isDeviceSuitable(device,fakeWnd.surface,gpuName)) {
-      implInit(api,device,fakeWnd.surface);
+    if(isDeviceSuitable(device,surface,gpuName)) {
+      implInit(api,device,surface);
       return;
       }
     }
@@ -138,11 +143,14 @@ bool VDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surf, const
   bool extensionsSupported = checkDeviceExtensionSupport(device);
 
   bool swapChainAdequate = false;
+#if defined(__WINDOWS__)
+  swapChainAdequate = true;
+#else
   if(extensionsSupported && surf!=VK_NULL_HANDLE && prop.presentFamily!=uint32_t(-1)) {
     auto swapChainSupport = querySwapChainSupport(device,surf);
     swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
     }
-
+#endif
   if(prop.presentFamily!=uint32_t(-1)) {
     if(!swapChainAdequate)
       return false;
@@ -170,10 +178,16 @@ void VDevice::deviceQueueProps(VulkanInstance::VkProp& prop, VkPhysicalDevice de
     static const VkQueueFlags rqFlag = (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
 
     const bool graphicsSupport = ((queueFamily.queueFlags & rqFlag)==rqFlag);
-
+#if defined(__WINDOWS__)
+    const bool presentSupport = vkGetPhysicalDeviceWin32PresentationSupportKHR(device,i)!=VK_FALSE;
+#elif defined(__LINUX__) && 0
+    // TODO: visualId + testing
+    const bool presentSupport = vkGetPhysicalDeviceXlibPresentationSupportKHR(device,i,reinterpret_cast<Display*>(X11Api::display()),visualId)!=VK_FALSE;
+#else
     VkBool32 presentSupport=false;
     if(surf!=VK_NULL_HANDLE)
       vkGetPhysicalDeviceSurfaceSupportKHR(device,i,surf,&presentSupport);
+#endif
 
     if(graphicsSupport)
       graphics = i;
@@ -225,7 +239,7 @@ VDevice::SwapChainSupport VDevice::querySwapChainSupport(VkPhysicalDevice device
 
   vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
 
-  uint32_t formatCount;
+  uint32_t formatCount = 0;
   vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
 
   if(formatCount != 0){
@@ -233,7 +247,7 @@ VDevice::SwapChainSupport VDevice::querySwapChainSupport(VkPhysicalDevice device
     vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
     }
 
-  uint32_t presentModeCount;
+  uint32_t presentModeCount = 0;
   vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
 
   if(presentModeCount != 0){
@@ -259,6 +273,23 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
   if(api.hasDeviceFeatures2 && checkForExt(ext,VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME)) {
     props.hasSync2 = true;
     rqExt.push_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
+    }
+  if(api.hasDeviceFeatures2 && checkForExt(ext,VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME)) {
+    props.hasDeviceAddress = true;
+    rqExt.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+    }
+  if(api.hasDeviceFeatures2 && checkForExt(ext,VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME)) {
+    rqExt.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+    }
+  if(api.hasDeviceFeatures2 && checkForExt(ext,VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME)) {
+    rqExt.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+    }
+  if(api.hasDeviceFeatures2 && checkForExt(ext,VK_KHR_SPIRV_1_4_EXTENSION_NAME)) {
+    rqExt.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+    }
+  if(api.hasDeviceFeatures2 && checkForExt(ext,VK_KHR_RAY_QUERY_EXTENSION_NAME)) {
+    props.raytracing.rayQuery = true;
+    rqExt.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
     }
   /*
    * //TODO: enable once validation layers have full support for dynamic rendering
@@ -319,19 +350,34 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
   createInfo.ppEnabledExtensionNames = rqExt.data();
 
   if(api.hasDeviceFeatures2) {
+    VkPhysicalDeviceFeatures2 enabledFeatures = {};
+    enabledFeatures.sType    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
+    enabledFeatures.features = deviceFeatures;
+
     VkPhysicalDeviceDynamicRenderingFeaturesKHR dynRendering = {};
     dynRendering.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
 
     VkPhysicalDeviceSynchronization2FeaturesKHR sync2 = {};
     sync2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR;
 
-    VkPhysicalDeviceFeatures2 enabledFeatures = {};
-    enabledFeatures.sType    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
-    enabledFeatures.features = deviceFeatures;
+    VkPhysicalDeviceBufferDeviceAddressFeaturesEXT bdaFeatures = {};
+    bdaFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_EXT;
+
+    VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures = {};
+    rayQueryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
+    rayQueryFeatures.rayQuery = VK_TRUE;
 
     if(props.hasSync2) {
       sync2.pNext = enabledFeatures.pNext;
       enabledFeatures.pNext = &sync2;
+      }
+    if(props.hasDeviceAddress) {
+      bdaFeatures.pNext = enabledFeatures.pNext;
+      enabledFeatures.pNext = &bdaFeatures;
+      }
+    if(props.raytracing.rayQuery) {
+      rayQueryFeatures.pNext = enabledFeatures.pNext;
+      enabledFeatures.pNext = &rayQueryFeatures;
       }
     if(props.hasDynRendering) {
       dynRendering.pNext = enabledFeatures.pNext;
@@ -339,9 +385,13 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
       }
 
     vkGetPhysicalDeviceFeatures2(pdev, &enabledFeatures);
+    bdaFeatures.bufferDeviceAddressCaptureReplay = VK_FALSE;
+    bdaFeatures.bufferDeviceAddressMultiDevice   = VK_FALSE;
 
-    props.hasSync2        = (sync2.synchronization2==VK_TRUE);
-    props.hasDynRendering = (dynRendering.dynamicRendering==VK_TRUE);
+    props.hasSync2            = (sync2.synchronization2==VK_TRUE);
+    props.hasDynRendering     = (dynRendering.dynamicRendering==VK_TRUE);
+    props.hasDeviceAddress    = (bdaFeatures.bufferDeviceAddress==VK_TRUE);
+    props.raytracing.rayQuery = (rayQueryFeatures.rayQuery==VK_TRUE);
 
     createInfo.pNext            = &enabledFeatures;
     createInfo.pEnabledFeatures = nullptr;
