@@ -34,6 +34,7 @@ DxAllocator::Provider::DeviceMemory DxAllocator::Provider::alloc(size_t size, ui
     last = nullptr;
     }
 
+  static const D3D12_HEAP_FLAGS D3D12_HEAP_FLAG_CREATE_NOT_ZEROED = D3D12_HEAP_FLAGS(0x1000);
   const auto bufferHeap = BufferHeap(typeId);
 
   D3D12_HEAP_DESC heapDesc = {};
@@ -43,11 +44,13 @@ DxAllocator::Provider::DeviceMemory DxAllocator::Provider::alloc(size_t size, ui
   heapDesc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
   heapDesc.Properties.CreationNodeMask     = 1;
   heapDesc.Properties.VisibleNodeMask      = 1;
-  heapDesc.Flags                           = D3D12_HEAP_FLAG_CREATE_NOT_ZEROED | D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
   heapDesc.Alignment                       = toAlignment(bufferHeap);
+
+  heapDesc.Flags                           = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS | D3D12_HEAP_FLAG_CREATE_NOT_ZEROED;
 
   if(bufferHeap==BufferHeap::Device) {
     heapDesc.Properties.Type = D3D12_HEAP_TYPE_DEFAULT;
+    heapDesc.Flags          |= D3D12_HEAP_FLAG_ALLOW_SHADER_ATOMICS;
     }
   else if(bufferHeap==BufferHeap::Upload) {
     heapDesc.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
