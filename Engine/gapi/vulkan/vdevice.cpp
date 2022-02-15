@@ -37,24 +37,6 @@ static const std::initializer_list<const char*> requiredExtensions = {
   VK_KHR_SWAPCHAIN_EXTENSION_NAME
   };
 
-class VDevice::FakeWindow final {
-  public:
-    FakeWindow(VDevice& dev)
-      :instance(dev.instance) {
-      w = SystemApi::createWindow(nullptr,SystemApi::Hidden);
-      }
-    ~FakeWindow() {
-      if(surface!=VK_NULL_HANDLE)
-        vkDestroySurfaceKHR(instance,surface,nullptr);
-      if(w!=nullptr)
-        SystemApi::destroyWindow(w);
-      }
-
-    VkInstance         instance = nullptr;
-    SystemApi::Window* w        = nullptr;
-    VkSurfaceKHR       surface  = VK_NULL_HANDLE;
-  };
-
 VDevice::autoDevice::~autoDevice() {
   vkDestroyDevice(impl,nullptr);
   }
@@ -70,17 +52,9 @@ VDevice::VDevice(VulkanInstance &api, const char* gpuName)
   std::vector<VkPhysicalDevice> devices(deviceCount);
   vkEnumeratePhysicalDevices(api.instance, &deviceCount, devices.data());
 
-#if defined(__WINDOWS__)
-  const VkSurfaceKHR surface = VK_NULL_HANDLE;
-#else
-  FakeWindow fakeWnd{*this};
-  fakeWnd.surface = createSurface(fakeWnd.w);
-  const VkSurfaceKHR surface = fakeWnd.surface;
-#endif
-
   for(const auto& device:devices) {
-    if(isDeviceSuitable(device,surface,gpuName)) {
-      implInit(api,device,surface);
+    if(isDeviceSuitable(device,gpuName)) {
+      implInit(api,device);
       return;
       }
     }
@@ -93,9 +67,9 @@ VDevice::~VDevice(){
   data.reset();
   }
 
-void VDevice::implInit(VulkanInstance &api, VkPhysicalDevice pdev, VkSurfaceKHR surf) {
+void VDevice::implInit(VulkanInstance &api, VkPhysicalDevice pdev) {
   Detail::VulkanInstance::getDeviceProps(pdev,props);
-  deviceQueueProps(props,pdev,surf);
+  deviceQueueProps(props,pdev);
 
   createLogicalDevice(api,pdev);
   vkGetPhysicalDeviceMemoryProperties(pdev,&memoryProperties);
@@ -132,34 +106,19 @@ VkSurfaceKHR VDevice::createSurface(void* hwnd) {
   return ret;
   }
 
-bool VDevice::isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surf, const char* gpuName) {
+bool VDevice::isDeviceSuitable(VkPhysicalDevice device, const char* gpuName) {
   VkProps prop = {};
   if(gpuName!=nullptr) {
     Detail::VulkanInstance::getDeviceProps(device,props);
     if(std::strcmp(gpuName,props.name)!=0)
       return false;
     }
-  deviceQueueProps(prop,device,surf);
+  deviceQueueProps(prop,device);
   bool extensionsSupported = checkDeviceExtensionSupport(device);
-
-  bool swapChainAdequate = false;
-#if defined(__WINDOWS__)
-  swapChainAdequate = true;
-#else
-  if(extensionsSupported && surf!=VK_NULL_HANDLE && prop.presentFamily!=uint32_t(-1)) {
-    auto swapChainSupport = querySwapChainSupport(device,surf);
-    swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
-    }
-#endif
-  if(prop.presentFamily!=uint32_t(-1)) {
-    if(!swapChainAdequate)
-      return false;
-    }
-
   return extensionsSupported && prop.graphicsFamily!=uint32_t(-1);
   }
 
-void VDevice::deviceQueueProps(VulkanInstance::VkProp& prop, VkPhysicalDevice device, VkSurfaceKHR surf) {
+void VDevice::deviceQueueProps(VulkanInstance::VkProp& prop, VkPhysicalDevice device) {
   uint32_t queueFamilyCount = 0;
   vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
@@ -188,9 +147,7 @@ void VDevice::deviceQueueProps(VulkanInstance::VkProp& prop, VkPhysicalDevice de
       presentSupport = vkGetPhysicalDeviceXlibPresentationSupportKHR(device,i,dpy,visualId)!=VK_FALSE;
       }
 #else
-    VkBool32 presentSupport=false;
-    if(surf!=VK_NULL_HANDLE)
-      vkGetPhysicalDeviceSurfaceSupportKHR(device,i,surf,&presentSupport);
+#warning "wsi for vulkan not implemented on this platform"
 #endif
 
     if(graphicsSupport)

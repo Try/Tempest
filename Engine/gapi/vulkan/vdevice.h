@@ -194,7 +194,6 @@ inline VkIndexType nativeFormat(Detail::IndexClass icls) {
 class VDevice : public AbstractGraphicsApi::Device {
   private:
     class DataStream;
-    class FakeWindow;
 
   public:
     using ResPtr = Detail::DSharedPtr<AbstractGraphicsApi::Shared*>;
@@ -277,10 +276,10 @@ class VDevice : public AbstractGraphicsApi::Device {
     std::unique_ptr<DataMgr>         data;
     void                    waitIdleSync(Queue* q, size_t n);
 
-    void                    implInit(VulkanInstance& api, VkPhysicalDevice pdev, VkSurfaceKHR surf);
+    void                    implInit(VulkanInstance& api, VkPhysicalDevice pdev);
     void                    pickPhysicalDevice();
-    bool                    isDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surf, const char* gpuName);
-    void                    deviceQueueProps(VulkanInstance::VkProp& prop, VkPhysicalDevice device, VkSurfaceKHR surf);
+    bool                    isDeviceSuitable(VkPhysicalDevice device, const char* gpuName);
+    void                    deviceQueueProps(VulkanInstance::VkProp& prop, VkPhysicalDevice device);
     bool                    checkDeviceExtensionSupport(VkPhysicalDevice device);
     auto                    extensionsList(VkPhysicalDevice device) -> std::vector<VkExtensionProperties>;
     bool                    checkForExt(const std::vector<VkExtensionProperties>& list,const char* name);
