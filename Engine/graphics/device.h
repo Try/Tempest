@@ -172,7 +172,7 @@ class Device {
     Tempest::Builtin                builtins;
 
     VideoBuffer createVideoBuffer(const void* data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap flg);
-    AccelerationStructure implBlas(const VideoBuffer& vbo, const VideoBuffer& ibo);
+    AccelerationStructure implBlas(const VideoBuffer& vbo, size_t stride, const VideoBuffer& ibo, Detail::IndexClass icls);
 
     RenderPipeline
                 implPipeline(const RenderState &st, const Shader* shaders[],
@@ -237,7 +237,7 @@ inline UniformBuffer<T> Device::ubo(BufferHeap ht, const T *mem, size_t size) {
 
 template<class V, class I>
 inline AccelerationStructure Device::blas(const VertexBuffer<V>& vbo, const IndexBuffer<I>& ibo) {
-  return implBlas(vbo.impl,ibo.impl);
+  return implBlas(vbo.impl,sizeof(V),ibo.impl,Detail::indexCls<I>());
   }
 
 template<class Vertex>

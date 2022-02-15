@@ -1,26 +1,29 @@
 #include "vaccelerationstructure.h"
 
-#include "vulkan_sdk.h"
 #include "vdevice.h"
 #include "vbuffer.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-VAccelerationStructure::VAccelerationStructure(VDevice& owner, VBuffer& vbo, VBuffer& ibo) {
-  auto device                               = owner.device.impl;
-  auto vkGetAccelerationStructureBuildSizes = owner.vkGetAccelerationStructureBuildSizes;
+VAccelerationStructure::VAccelerationStructure(VDevice& dx, VBuffer& vbo, size_t stride, VBuffer& ibo, IndexClass icls)
+  :owner(dx) {
+  auto device                               = dx.device.impl;
+  auto vkGetAccelerationStructureBuildSizes = dx.vkGetAccelerationStructureBuildSizes;
+  auto vkCreateAccelerationStructure        = dx.vkCreateAccelerationStructure;
 
+  const uint32_t maxVertex      = 3; // TODO
+  const uint32_t primitiveCount = 1;
 
   VkAccelerationStructureGeometryTrianglesDataKHR trianglesData = {};
   trianglesData.sType                    = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
   trianglesData.pNext                    = nullptr;
   trianglesData.vertexFormat             = VK_FORMAT_R32G32B32_SFLOAT;
-  trianglesData.vertexData.deviceAddress = vbo.toDeviceAddress(owner),
-  trianglesData.vertexStride             = sizeof(float) * 3;
-  trianglesData.maxVertex                = 3;//scene->attributes.num_vertices; // TODO
-  trianglesData.indexType                = VK_INDEX_TYPE_UINT32;
-  trianglesData.indexData.deviceAddress  = ibo.toDeviceAddress(owner);
+  trianglesData.vertexData.deviceAddress = vbo.toDeviceAddress(dx),
+  trianglesData.vertexStride             = stride;
+  trianglesData.maxVertex                = maxVertex;
+  trianglesData.indexType                = nativeFormat(icls);
+  trianglesData.indexData.deviceAddress  = ibo.toDeviceAddress(dx);
   trianglesData.transformData            = VkDeviceOrHostAddressConstKHR{};
 
   VkAccelerationStructureGeometryKHR geometry = {};
@@ -56,5 +59,34 @@ VAccelerationStructure::VAccelerationStructure(VDevice& owner, VBuffer& vbo, VBu
                                        &buildGeometryInfo.geometryCount,
                                        &buildSizesInfo);
 
-  // auto scratch = owner.;
+  data = dx.dataMgr().allocStagingMemory(nullptr,buildSizesInfo.accelerationStructureSize,1,1,
+                                         MemUsage::AsStorage,BufferHeap::Device);
+
+  auto  scratch = dx.dataMgr().allocStagingMemory(nullptr,buildSizesInfo.buildScratchSize,1,1,
+                                                  MemUsage::ScratchBuffer,BufferHeap::Device);
+
+  VkAccelerationStructureCreateInfoKHR createInfo = {};
+  createInfo.sType         = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
+  createInfo.pNext         = nullptr;
+  createInfo.createFlags   = 0;
+  createInfo.buffer        = data.impl,
+  createInfo.offset        = 0;
+  createInfo.size          = buildSizesInfo.accelerationStructureSize;
+  createInfo.type          = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+  createInfo.deviceAddress = VK_NULL_HANDLE;
+  vkCreateAccelerationStructure(device, &createInfo, nullptr, &impl);
+
+  auto cmd = dx.dataMgr().get();
+  cmd->begin();
+  //cmd->hold(scratch);
+  cmd->buildBlas(impl,vbo,stride,maxVertex,ibo,Detail::IndexClass::i32,primitiveCount,scratch);
+  cmd->end();
+
+  // dx.dataMgr().waitFor(this);
+  dx.dataMgr().submitAndWait(std::move(cmd));
+  }
+
+VAccelerationStructure::~VAccelerationStructure() {
+  auto device = owner.device.impl;
+  owner.vkDestroyAccelerationStructure(device,impl,nullptr);
   }

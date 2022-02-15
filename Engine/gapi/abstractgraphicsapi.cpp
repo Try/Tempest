@@ -78,6 +78,6 @@ void AbstractGraphicsApi::CommandBuffer::barrier(Texture& tex, ResourceAccess pr
   barrier(&b,1);
   }
 
-AbstractGraphicsApi::AccelerationStructure* AbstractGraphicsApi::createBottomAccelerationStruct(Device* d, Buffer* vbo, Buffer* ibo) {
+AbstractGraphicsApi::AccelerationStructure* AbstractGraphicsApi::createBottomAccelerationStruct(Device* d, Buffer* vbo, size_t stride, Buffer* ibo, Detail::IndexClass icls) {
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }

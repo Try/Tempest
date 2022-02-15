@@ -477,20 +477,16 @@ void VCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, const 
   if(T_UNLIKELY(ssboBarriers)) {
     curUniforms->ssboBarriers(resState);
     }
-  static const VkIndexType type[]={
-    VK_INDEX_TYPE_UINT16,
-    VK_INDEX_TYPE_UINT32
-    };
 
   const VBuffer& vbo = reinterpret_cast<const VBuffer&>(ivbo);
   const VBuffer& ibo = reinterpret_cast<const VBuffer&>(iibo);
   if(curVbo!=vbo.impl) {
     VkBuffer     buffers[1] = {vbo.impl};
     VkDeviceSize offsets[1] = {0};
-    vkCmdBindVertexBuffers(impl, 0, 1, buffers, offsets );
+    vkCmdBindVertexBuffers(impl, 0, 1, buffers, offsets);
     curVbo = vbo.impl;
     }
-  vkCmdBindIndexBuffer(impl, ibo.impl, 0, type[uint32_t(cls)]);
+  vkCmdBindIndexBuffer(impl, ibo.impl, 0, nativeFormat(cls));
   vkCmdDrawIndexed    (impl, uint32_t(isize), uint32_t(instanceCount), uint32_t(ioffset), int32_t(voffset), uint32_t(firstInstance));
   }
 
@@ -623,6 +619,51 @@ void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, u
                  dst.impl, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                  1, &blit,
                  filter);
+  }
+
+void VCommandBuffer::buildBlas(VkAccelerationStructureKHR dest,
+                               const AbstractGraphicsApi::Buffer& vbo, size_t stride, uint32_t maxVertex,
+                               const AbstractGraphicsApi::Buffer& ibo, IndexClass cls, uint32_t primitiveCount,
+                               AbstractGraphicsApi::Buffer& scratch) {
+  VkAccelerationStructureGeometryTrianglesDataKHR trianglesData = {};
+  trianglesData.sType                         = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+  trianglesData.pNext                         = nullptr;
+  trianglesData.vertexFormat                  = VK_FORMAT_R32G32B32_SFLOAT;
+  trianglesData.vertexData.deviceAddress      = reinterpret_cast<const VBuffer&>(vbo).toDeviceAddress(device),
+  trianglesData.vertexStride                  = stride;
+  trianglesData.maxVertex                     = maxVertex;
+  trianglesData.indexType                     = nativeFormat(cls);
+  trianglesData.indexData.deviceAddress       = reinterpret_cast<const VBuffer&>(ibo).toDeviceAddress(device);
+  trianglesData.transformData                 = VkDeviceOrHostAddressConstKHR{};
+
+  VkAccelerationStructureGeometryKHR geometry = {};
+  geometry.sType                              = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+  geometry.pNext                              = nullptr;
+  geometry.geometryType                       = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+  geometry.geometry.triangles                 = trianglesData;
+  geometry.flags                              = VK_GEOMETRY_OPAQUE_BIT_KHR;
+
+  VkAccelerationStructureBuildGeometryInfoKHR buildGeometryInfo = {};
+  buildGeometryInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+  buildGeometryInfo.pNext                     = nullptr;
+  buildGeometryInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+  buildGeometryInfo.flags                     = 0;
+  buildGeometryInfo.mode                      = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+  buildGeometryInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
+  buildGeometryInfo.dstAccelerationStructure  = dest;
+  buildGeometryInfo.geometryCount             = 1;
+  buildGeometryInfo.pGeometries               = &geometry;
+  buildGeometryInfo.ppGeometries              = nullptr;
+  buildGeometryInfo.scratchData.deviceAddress = reinterpret_cast<const VBuffer&>(scratch).toDeviceAddress(device);
+
+  VkAccelerationStructureBuildRangeInfoKHR buildRangeInfo = {};
+  buildRangeInfo.primitiveCount  = primitiveCount;
+  buildRangeInfo.primitiveOffset = 0;
+  buildRangeInfo.firstVertex     = 0;
+  buildRangeInfo.transformOffset = 0;
+
+  VkAccelerationStructureBuildRangeInfoKHR* pbuildRangeInfo = &buildRangeInfo;
+  device.vkCmdBuildAccelerationStructures(impl, 1, &buildGeometryInfo, &pbuildRangeInfo);
   }
 
 void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dst, size_t offset,

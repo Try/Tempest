@@ -80,6 +80,11 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void blit(AbstractGraphicsApi::Texture& src, uint32_t srcW, uint32_t srcH, uint32_t srcMip,
               AbstractGraphicsApi::Texture& dst, uint32_t dstW, uint32_t dstH, uint32_t dstMip);
 
+    void buildBlas(VkAccelerationStructureKHR dest,
+                   const AbstractGraphicsApi::Buffer& vbo, size_t stride, uint32_t maxVertex,
+                   const AbstractGraphicsApi::Buffer& ibo, Detail::IndexClass cls, uint32_t primitiveCount,
+                   AbstractGraphicsApi::Buffer& scratch);
+
     VkCommandBuffer                impl=nullptr;
     std::vector<VSwapchain::Sync*> swapchainSync;
 

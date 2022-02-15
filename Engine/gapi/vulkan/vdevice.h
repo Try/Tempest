@@ -181,6 +181,16 @@ inline VkFormat nativeFormat(Decl::ComponentType t) {
   return VK_FORMAT_UNDEFINED;
   }
 
+inline VkIndexType nativeFormat(Detail::IndexClass icls) {
+  switch(icls) {
+    case Detail::IndexClass::i16:
+      return VK_INDEX_TYPE_UINT16;
+    case Detail::IndexClass::i32:
+      return VK_INDEX_TYPE_UINT32;
+    }
+  return VK_INDEX_TYPE_UINT16;
+  }
+
 class VDevice : public AbstractGraphicsApi::Device {
   private:
     class DataStream;
@@ -246,7 +256,10 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     PFN_vkGetBufferDeviceAddressKHR       vkGetBufferDeviceAddress       = nullptr;
 
+    PFN_vkCreateAccelerationStructureKHR        vkCreateAccelerationStructure        = nullptr;
+    PFN_vkDestroyAccelerationStructureKHR       vkDestroyAccelerationStructure       = nullptr;
     PFN_vkGetAccelerationStructureBuildSizesKHR vkGetAccelerationStructureBuildSizes = nullptr;
+    PFN_vkCmdBuildAccelerationStructuresKHR     vkCmdBuildAccelerationStructures     = nullptr;
 
     void                    waitIdle() override;
 

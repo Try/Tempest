@@ -208,10 +208,10 @@ StorageImage Device::image2d(TextureFormat frm, const uint32_t w, const uint32_t
   return t;
   }
 
-AccelerationStructure Device::implBlas(const VideoBuffer& vbo, const VideoBuffer& ibo) {
+AccelerationStructure Device::implBlas(const VideoBuffer& vbo, size_t stride, const VideoBuffer& ibo, Detail::IndexClass icls) {
   if(!properties().raytracing.rayQuery)
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
-  auto blas = api.createBottomAccelerationStruct(dev,vbo.impl.handler,ibo.impl.handler);
+  auto blas = api.createBottomAccelerationStruct(dev,vbo.impl.handler,stride,ibo.impl.handler,icls);
   return AccelerationStructure(*this,blas);
   }
 

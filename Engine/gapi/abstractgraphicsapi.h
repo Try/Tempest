@@ -398,7 +398,7 @@ namespace Tempest {
         virtual void  update  (const void* data,size_t off,size_t count,size_t sz,size_t alignedSz)=0;
         virtual void  read    (      void* data,size_t off,size_t size)=0;
         };
-      struct AccelerationStructure:NoCopy {
+      struct AccelerationStructure:Shared {
 
         };
       struct Desc:NoCopy   {
@@ -501,7 +501,7 @@ namespace Tempest {
       virtual PTexture   createTexture(Device* d, const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) = 0;
       virtual PTexture   createStorage(Device* d, const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) = 0;
 
-      virtual AccelerationStructure* createBottomAccelerationStruct(Device* d, Buffer* vbo, Buffer* ibo);
+      virtual AccelerationStructure* createBottomAccelerationStruct(Device* d, Buffer* vbo, size_t stride, Buffer* ibo, Detail::IndexClass icls);
 
       virtual void       readPixels   (Device* d, Pixmap& out, const PTexture t,
                                        TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip, bool storageImg) = 0;

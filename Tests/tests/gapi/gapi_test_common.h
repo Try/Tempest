@@ -838,4 +838,24 @@ void PushRemapping() {
       throw;
     }
   }
+
+template<class GraphicsApi>
+void Blas() {
+  using namespace Tempest;
+
+  GraphicsApi api{ApiFlags::Validation};
+  //auto dev = api.devices();
+  try {
+    Device      device(api,DeviceType::Discrete);
+
+    auto vbo  = device.vbo(vboData,3);
+    auto ibo  = device.ibo(iboData,3);
+    auto blas = device.blas(vbo,ibo);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
 }

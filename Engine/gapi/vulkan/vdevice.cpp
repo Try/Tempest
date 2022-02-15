@@ -360,8 +360,11 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     VkPhysicalDeviceSynchronization2FeaturesKHR sync2 = {};
     sync2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR;
 
-    VkPhysicalDeviceBufferDeviceAddressFeaturesEXT bdaFeatures = {};
-    bdaFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_EXT;
+    VkPhysicalDeviceBufferDeviceAddressFeaturesKHR bdaFeatures = {};
+    bdaFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_KHR;
+
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR asFeatures = {};
+    asFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
 
     VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures = {};
     rayQueryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
@@ -376,6 +379,10 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
       enabledFeatures.pNext = &bdaFeatures;
       }
     if(props.raytracing.rayQuery) {
+      asFeatures.pNext = enabledFeatures.pNext;
+      enabledFeatures.pNext = &asFeatures;
+      }
+    if(props.raytracing.rayQuery) {
       rayQueryFeatures.pNext = enabledFeatures.pNext;
       enabledFeatures.pNext = &rayQueryFeatures;
       }
@@ -385,8 +392,12 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
       }
 
     vkGetPhysicalDeviceFeatures2(pdev, &enabledFeatures);
-    bdaFeatures.bufferDeviceAddressCaptureReplay = VK_FALSE;
-    bdaFeatures.bufferDeviceAddressMultiDevice   = VK_FALSE;
+    bdaFeatures.bufferDeviceAddressCaptureReplay  = VK_FALSE;
+    bdaFeatures.bufferDeviceAddressMultiDevice    = VK_FALSE;
+    asFeatures.accelerationStructureCaptureReplay = VK_FALSE;
+    asFeatures.accelerationStructureIndirectBuild = VK_FALSE;
+    asFeatures.accelerationStructureHostCommands  = VK_FALSE;
+    asFeatures.descriptorBindingAccelerationStructureUpdateAfterBind = VK_FALSE;
 
     props.hasSync2            = (sync2.synchronization2==VK_TRUE);
     props.hasDynRendering     = (dynRendering.dynamicRendering==VK_TRUE);
@@ -430,7 +441,10 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     }
 
   if(props.raytracing.rayQuery) {
+    vkCreateAccelerationStructure        = PFN_vkCreateAccelerationStructureKHR(vkGetDeviceProcAddr(device.impl,"vkCreateAccelerationStructureKHR"));
+    vkDestroyAccelerationStructure       = PFN_vkDestroyAccelerationStructureKHR(vkGetDeviceProcAddr(device.impl,"vkDestroyAccelerationStructureKHR"));
     vkGetAccelerationStructureBuildSizes = PFN_vkGetAccelerationStructureBuildSizesKHR(vkGetDeviceProcAddr(device.impl,"vkGetAccelerationStructureBuildSizesKHR"));
+    vkCmdBuildAccelerationStructures     = PFN_vkCmdBuildAccelerationStructuresKHR(vkGetDeviceProcAddr(device.impl,"vkCmdBuildAccelerationStructuresKHR"));
     }
   }
 

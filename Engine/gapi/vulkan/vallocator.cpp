@@ -50,13 +50,21 @@ VAllocator::Provider::DeviceMemory VAllocator::Provider::alloc(size_t size, uint
     }
   VkDeviceMemory memory=VK_NULL_HANDLE;
 
-  VkMemoryAllocateInfo vk_memoryAllocateInfo;
-  vk_memoryAllocateInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-  vk_memoryAllocateInfo.pNext           = nullptr;
-  vk_memoryAllocateInfo.allocationSize  = size;
-  vk_memoryAllocateInfo.memoryTypeIndex = typeId;
+  VkMemoryAllocateInfo memoryAllocateInfo;
+  memoryAllocateInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+  memoryAllocateInfo.pNext           = nullptr;
+  memoryAllocateInfo.allocationSize  = size;
+  memoryAllocateInfo.memoryTypeIndex = typeId;
 
-  auto code = vkAllocateMemory(device->device.impl,&vk_memoryAllocateInfo,nullptr,&memory);
+  VkMemoryAllocateFlagsInfo flagsInfo = {};
+  if(device->props.hasDeviceAddress) {
+    // auto hv = (device->memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    flagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+    flagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
+    memoryAllocateInfo.pNext = &flagsInfo;
+    }
+
+  auto code = vkAllocateMemory(device->device.impl,&memoryAllocateInfo,nullptr,&memory);
   if(code!=VK_SUCCESS)
     return VK_NULL_HANDLE;
   return memory;
@@ -115,10 +123,15 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
     createInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
   if(provider.device->props.raytracing.rayQuery) {
-    if(MemUsage::VertexBuffer==(usage & MemUsage::VertexBuffer) ||
-       MemUsage::IndexBuffer ==(usage & MemUsage::IndexBuffer)) {
-      // createInfo.usage |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
+    if(MemUsage::ScratchBuffer==(usage & MemUsage::ScratchBuffer)) {
+      createInfo.usage |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
+      createInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
       }
+    if(MemUsage::AsStorage==(usage & MemUsage::AsStorage))
+      createInfo.usage |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR;
+    if(MemUsage::VertexBuffer==(usage & MemUsage::VertexBuffer) ||
+       MemUsage::IndexBuffer ==(usage & MemUsage::IndexBuffer))
+      createInfo.usage |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
     }
 
   if(provider.device->props.hasDeviceAddress) {
@@ -146,7 +159,8 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
     props[0] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
   for(uint8_t i=0; i<propsCnt; ++i) {
-    VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,VkMemoryPropertyFlagBits(props[i]),VK_IMAGE_TILING_LINEAR);
+    auto p = VkMemoryPropertyFlagBits(props[i]);
+    VDevice::MemIndex memId = provider.device->memoryTypeIndex(memRq.memoryTypeBits,p,VK_IMAGE_TILING_LINEAR);
     if(memId.typeId==uint32_t(-1))
       continue;
 
