@@ -208,10 +208,10 @@ StorageImage Device::image2d(TextureFormat frm, const uint32_t w, const uint32_t
   return t;
   }
 
-AccelerationStructure Device::implBlas(const VideoBuffer& vbo, size_t stride, const VideoBuffer& ibo, Detail::IndexClass icls) {
+AccelerationStructure Device::implBlas(const VideoBuffer& vbo, size_t stride, const VideoBuffer& ibo, Detail::IndexClass icls, size_t offset, size_t count) {
   if(!properties().raytracing.rayQuery)
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
-  auto blas = api.createBottomAccelerationStruct(dev,vbo.impl.handler,stride,ibo.impl.handler,icls);
+  auto blas = api.createBottomAccelerationStruct(dev,vbo.impl.handler,vbo.size(),offset,stride,ibo.impl.handler,count,icls);
   return AccelerationStructure(*this,blas);
   }
 
@@ -304,4 +304,3 @@ DescriptorSet Device::descriptors(const PipelineLayout &ulay) {
   DescriptorSet ubo(api.createDescriptors(dev,*ulay.impl.handler));
   return ubo;
   }
-

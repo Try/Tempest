@@ -58,7 +58,7 @@ VAllocator::Provider::DeviceMemory VAllocator::Provider::alloc(size_t size, uint
 
   VkMemoryAllocateFlagsInfo flagsInfo = {};
   if(device->props.hasDeviceAddress) {
-    // auto hv = (device->memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    // condition?
     flagsInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
     flagsInfo.flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
     memoryAllocateInfo.pNext = &flagsInfo;

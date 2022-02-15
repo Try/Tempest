@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_VULKAN)
+
 #include "vaccelerationstructure.h"
 
 #include "vdevice.h"
@@ -6,20 +8,22 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-VAccelerationStructure::VAccelerationStructure(VDevice& dx, VBuffer& vbo, size_t stride, VBuffer& ibo, IndexClass icls)
+VAccelerationStructure::VAccelerationStructure(VDevice& dx,
+                                               VBuffer& vbo, size_t vboSz, size_t offset, size_t stride,
+                                               VBuffer& ibo, size_t iboSz, IndexClass icls)
   :owner(dx) {
   auto device                               = dx.device.impl;
   auto vkGetAccelerationStructureBuildSizes = dx.vkGetAccelerationStructureBuildSizes;
   auto vkCreateAccelerationStructure        = dx.vkCreateAccelerationStructure;
 
-  const uint32_t maxVertex      = 3; // TODO
-  const uint32_t primitiveCount = 1;
+  const uint32_t maxVertex      = uint32_t(vboSz/stride);
+  const uint32_t primitiveCount = uint32_t(iboSz/3u);
 
   VkAccelerationStructureGeometryTrianglesDataKHR trianglesData = {};
   trianglesData.sType                    = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
   trianglesData.pNext                    = nullptr;
   trianglesData.vertexFormat             = VK_FORMAT_R32G32B32_SFLOAT;
-  trianglesData.vertexData.deviceAddress = vbo.toDeviceAddress(dx),
+  trianglesData.vertexData.deviceAddress = vbo.toDeviceAddress(dx) + offset*stride,
   trianglesData.vertexStride             = stride;
   trianglesData.maxVertex                = maxVertex;
   trianglesData.indexType                = nativeFormat(icls);
@@ -90,3 +94,5 @@ VAccelerationStructure::~VAccelerationStructure() {
   auto device = owner.device.impl;
   owner.vkDestroyAccelerationStructure(device,impl,nullptr);
   }
+
+#endif

@@ -13,7 +13,9 @@ class VBuffer;
 
 class VAccelerationStructure : public AbstractGraphicsApi::AccelerationStructure {
   public:
-    VAccelerationStructure(VDevice& owner, VBuffer& vbo, size_t stride, VBuffer& ibo, Detail::IndexClass icls);
+    VAccelerationStructure(VDevice& owner,
+                           VBuffer& vbo, size_t vboSz, size_t offset, size_t stride,
+                           VBuffer& ibo, size_t iboSz, Detail::IndexClass icls);
     ~VAccelerationStructure();
 
     VDevice&                   owner;

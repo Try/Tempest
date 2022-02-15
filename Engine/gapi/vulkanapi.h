@@ -41,7 +41,9 @@ class VulkanApi : public AbstractGraphicsApi {
     PTexture       createTexture(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;
     PTexture       createStorage(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;
 
-    AccelerationStructure* createBottomAccelerationStruct(Device* d, Buffer* vbo, size_t stride, Buffer* ibo, Detail::IndexClass icls) override;
+    AccelerationStructure* createBottomAccelerationStruct(Device* d,
+                                                          Buffer* vbo, size_t vboSz, size_t offset, size_t stride,
+                                                          Buffer* ibo, size_t iboSz, Detail::IndexClass icls) override;
 
     void           readPixels(Device *d, Pixmap &out, const PTexture t, TextureFormat frm,
                               const uint32_t w, const uint32_t h, uint32_t mip, bool storageImg) override;

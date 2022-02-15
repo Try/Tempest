@@ -135,6 +135,8 @@ class Device {
 
     template<class V, class I>
     AccelerationStructure blas(const VertexBuffer<V>& vbo, const IndexBuffer<I>& ibo);
+    template<class V, class I>
+    AccelerationStructure blas(const VertexBuffer<V>& vbo, const IndexBuffer<I>& ibo, size_t offset, size_t count);
 
     Pixmap               readPixels (const Texture2d&    t, uint32_t mip=0);
     Pixmap               readPixels (const Attachment&   t, uint32_t mip=0);
@@ -172,7 +174,7 @@ class Device {
     Tempest::Builtin                builtins;
 
     VideoBuffer createVideoBuffer(const void* data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap flg);
-    AccelerationStructure implBlas(const VideoBuffer& vbo, size_t stride, const VideoBuffer& ibo, Detail::IndexClass icls);
+    AccelerationStructure implBlas(const VideoBuffer& vbo, size_t stride, const VideoBuffer& ibo, Detail::IndexClass icls, size_t offset, size_t count);
 
     RenderPipeline
                 implPipeline(const RenderState &st, const Shader* shaders[],
@@ -236,8 +238,13 @@ inline UniformBuffer<T> Device::ubo(BufferHeap ht, const T *mem, size_t size) {
   }
 
 template<class V, class I>
-inline AccelerationStructure Device::blas(const VertexBuffer<V>& vbo, const IndexBuffer<I>& ibo) {
-  return implBlas(vbo.impl,sizeof(V),ibo.impl,Detail::indexCls<I>());
+AccelerationStructure Device::blas(const VertexBuffer<V>& vbo, const IndexBuffer<I>& ibo) {
+  return implBlas(vbo.impl,sizeof(V),ibo.impl,Detail::indexCls<I>(),0,ibo.size());
+  }
+
+template<class V, class I>
+inline AccelerationStructure Device::blas(const VertexBuffer<V>& vbo, const IndexBuffer<I>& ibo, size_t offset, size_t count) {
+  return implBlas(vbo.impl,sizeof(V),ibo.impl,Detail::indexCls<I>(),offset,count);
   }
 
 template<class Vertex>
