@@ -181,10 +181,12 @@ void VDevice::deviceQueueProps(VulkanInstance::VkProp& prop, VkPhysicalDevice de
 #if defined(__WINDOWS__)
     const bool presentSupport = vkGetPhysicalDeviceWin32PresentationSupportKHR(device,i)!=VK_FALSE;
 #elif defined(__LINUX__)
-    auto dpy      = reinterpret_cast<Display*>(X11Api::display());
-    auto screen   = DefaultScreen(dpy);
-    auto visualId = XVisualIDFromVisual(DefaultVisual(dpy,screen));
-    const bool presentSupport = vkGetPhysicalDeviceXlibPresentationSupportKHR(device,i,dpy,visualId)!=VK_FALSE;
+    bool presentSupport = false;
+    if(auto dpy = reinterpret_cast<Display*>(X11Api::display())){
+      auto screen   = DefaultScreen(dpy);
+      auto visualId = XVisualIDFromVisual(DefaultVisual(dpy,screen));
+      presentSupport = vkGetPhysicalDeviceXlibPresentationSupportKHR(device,i,dpy,visualId)!=VK_FALSE;
+      }
 #else
     VkBool32 presentSupport=false;
     if(surf!=VK_NULL_HANDLE)
