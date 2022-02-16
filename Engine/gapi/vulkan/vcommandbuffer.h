@@ -81,7 +81,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
               AbstractGraphicsApi::Texture& dst, uint32_t dstW, uint32_t dstH, uint32_t dstMip);
 
     void buildBlas(VkAccelerationStructureKHR dest,
-                   const AbstractGraphicsApi::Buffer& vbo, size_t stride, uint32_t maxVertex,
+                   const AbstractGraphicsApi::Buffer& vbo, size_t offset, size_t stride, uint32_t maxVertex,
                    const AbstractGraphicsApi::Buffer& ibo, Detail::IndexClass cls, uint32_t primitiveCount,
                    AbstractGraphicsApi::Buffer& scratch);
 

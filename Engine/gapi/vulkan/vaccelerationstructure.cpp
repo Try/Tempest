@@ -83,7 +83,7 @@ VAccelerationStructure::VAccelerationStructure(VDevice& dx,
   auto cmd = dx.dataMgr().get();
   cmd->begin();
   //cmd->hold(scratch);
-  cmd->buildBlas(impl,vbo,stride,maxVertex,ibo,Detail::IndexClass::i32,primitiveCount,scratch);
+  cmd->buildBlas(impl,vbo,offset,stride,maxVertex,ibo,icls,primitiveCount,scratch);
   cmd->end();
 
   // dx.dataMgr().waitFor(this);

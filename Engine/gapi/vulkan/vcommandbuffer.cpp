@@ -622,14 +622,14 @@ void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, u
   }
 
 void VCommandBuffer::buildBlas(VkAccelerationStructureKHR dest,
-                               const AbstractGraphicsApi::Buffer& vbo, size_t stride, uint32_t maxVertex,
+                               const AbstractGraphicsApi::Buffer& vbo, size_t offset, size_t stride, uint32_t maxVertex,
                                const AbstractGraphicsApi::Buffer& ibo, IndexClass cls, uint32_t primitiveCount,
                                AbstractGraphicsApi::Buffer& scratch) {
   VkAccelerationStructureGeometryTrianglesDataKHR trianglesData = {};
   trianglesData.sType                         = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
   trianglesData.pNext                         = nullptr;
   trianglesData.vertexFormat                  = VK_FORMAT_R32G32B32_SFLOAT;
-  trianglesData.vertexData.deviceAddress      = reinterpret_cast<const VBuffer&>(vbo).toDeviceAddress(device),
+  trianglesData.vertexData.deviceAddress      = reinterpret_cast<const VBuffer&>(vbo).toDeviceAddress(device) + offset*stride,
   trianglesData.vertexStride                  = stride;
   trianglesData.maxVertex                     = maxVertex;
   trianglesData.indexType                     = nativeFormat(cls);
