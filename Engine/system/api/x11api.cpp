@@ -149,6 +149,7 @@ X11Api::X11Api() {
   }
 
 void* X11Api::display() {
+  SystemApi::inst();
   return dpy;
   }
 

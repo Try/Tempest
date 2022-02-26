@@ -95,11 +95,12 @@ class SystemApi {
     static void      dispatchResize    (Tempest::Window& cb, SizeEvent& e);
     static void      dispatchClose     (Tempest::Window& cb, CloseEvent& e);
 
+    static SystemApi& inst();
+
   private:
     static bool       isRunning();
     static int        exec(AppCallBack& cb);
     static void       processEvent(AppCallBack& cb);
-    static SystemApi& inst();
 
     struct Data;
     static Data m;
