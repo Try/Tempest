@@ -96,6 +96,9 @@ compile_shader(link_defect.frag)
 
 compile_shader(loop_defect.comp)
 
+compile_shader(texture.vert)
+compile_shader(texture.frag)
+
 target_sources(${PROJECT_NAME} PRIVATE
   ${SOURCES}
   ${SHADERS}

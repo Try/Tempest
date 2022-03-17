@@ -146,6 +146,12 @@ TEST(DirectX12Api,SsboWrite) {
 #endif
   }
 
+TEST(DirectX12Api,ComponentSwizzle) {
+#if !defined(__OSX__)
+  GapiTestCommon::ComponentSwizzle<DirectX12Api>();
+#endif
+  }
+
 TEST(DirectX12Api,PushRemapping) {
 #if defined(_MSC_VER)
   GapiTestCommon::PushRemapping<DirectX12Api>();

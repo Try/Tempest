@@ -792,6 +792,92 @@ void SsboWrite() {
   }
 
 template<class GraphicsApi>
+void ComponentSwizzle() {
+  using namespace Tempest;
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    static const Vertex vboData[6] = {
+      {-1,-1},{1,-1},{1,1},
+      {-1,-1},{1,1},{-1,1},
+    };
+    auto vbo = device.vbo(vboData,6);
+
+    Pixmap pm(1,1,Pixmap::Format::RGBA);
+    {
+    auto p = reinterpret_cast<uint8_t*>(pm.data());
+    p[0] = 255;
+    p[1] = 128;
+    p[2] = 64;
+    p[3] = 32;
+    }
+
+    auto vert   = device.shader("shader/texture.vert.sprv");
+    auto frag   = device.shader("shader/texture.frag.sprv");
+    auto pso    = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
+    auto tex    = device.texture(pm,false);
+
+    DescriptorSet ubo[4];
+    for(int i=0; i<4; ++i) {
+      ubo[i] = device.descriptors(pso.layout());
+
+      Sampler2d smp = Sampler2d::nearest();
+      smp.mapping.r = Tempest::ComponentSwizzle(int(ComponentSwizzle::R) + i);
+      smp.mapping.g = smp.mapping.r;
+      smp.mapping.b = smp.mapping.r;
+      smp.mapping.a = smp.mapping.r;
+      ubo[i].set(0,tex,smp);
+      }
+
+    auto fbo    = device.attachment(TextureFormat::RGBA8,2,2,false);
+    auto cmd    = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setFramebuffer({{fbo,Vec4(0,0,0,0),Tempest::Preserve}});
+
+      enc.setUniforms(pso,ubo[0]);
+      enc.setScissor(0,0,1,1);
+      enc.draw(vbo);
+
+      enc.setUniforms(pso,ubo[1]);
+      enc.setScissor(1,0,1,1);
+      enc.draw(vbo);
+
+      enc.setUniforms(pso,ubo[2]);
+      enc.setScissor(0,1,1,1);
+      enc.draw(vbo);
+
+      enc.setUniforms(pso,ubo[3]);
+      enc.setScissor(1,1,1,1);
+      enc.draw(vbo);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    {
+    auto ref = reinterpret_cast<const uint8_t*>(pm.data());
+    auto ret = device.readPixels(fbo);
+
+    auto    p   = reinterpret_cast<uint8_t*>(ret.data());
+    for(int i=0; i<4; ++i) {
+      EXPECT_EQ(p[i*4+0], ref[i]);
+      EXPECT_EQ(p[i*4+1], ref[i]);
+      EXPECT_EQ(p[i*4+2], ref[i]);
+      EXPECT_EQ(p[i*4+3], ref[i]);
+      }
+    }
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void PushRemapping() {
   using namespace Tempest;
 

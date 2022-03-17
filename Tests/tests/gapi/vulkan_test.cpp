@@ -135,6 +135,12 @@ TEST(VulkanApi,SsboWrite) {
 #endif
   }
 
+TEST(VulkanApi,ComponentSwizzle) {
+#if !defined(__OSX__)
+  GapiTestCommon::ComponentSwizzle<VulkanApi>();
+#endif
+  }
+
 TEST(VulkanApi,PushRemapping) {
 #if !defined(__OSX__)
   GapiTestCommon::PushRemapping<VulkanApi>();
