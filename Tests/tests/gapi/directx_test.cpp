@@ -147,7 +147,7 @@ TEST(DirectX12Api,SsboWrite) {
   }
 
 TEST(DirectX12Api,ComponentSwizzle) {
-#if !defined(__OSX__)
+#if defined(_MSC_VER)
   GapiTestCommon::ComponentSwizzle<DirectX12Api>();
 #endif
   }
