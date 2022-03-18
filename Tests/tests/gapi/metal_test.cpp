@@ -139,6 +139,12 @@ TEST(MetalApi,SsboWrite) {
 #endif
   }
 
+TEST(MetalApi,ComponentSwizzle) {
+#if defined(__OSX__)
+  GapiTestCommon::ComponentSwizzle<MetalApi>();
+#endif
+  }
+
 TEST(MetalApi,PushRemapping) {
 #if defined(__OSX__)
   GapiTestCommon::PushRemapping<MetalApi>();

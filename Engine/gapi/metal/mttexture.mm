@@ -134,7 +134,7 @@ id<MTLTexture> MtTexture::alloc(TextureFormat frm, const uint32_t w, const uint3
   desc.storageMode      = smode;
   desc.usage            = umode;
 
-  desc.swizzle = MTLTextureSwizzleChannelsDefault; // TODO: swizzling?!
+  desc.swizzle = MTLTextureSwizzleChannelsDefault;
   desc.allowGPUOptimizedContents = YES;
 
   auto ret = [dev.impl newTextureWithDescriptor:desc];
