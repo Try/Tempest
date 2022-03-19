@@ -3,6 +3,8 @@
 #include <Tempest/AbstractGraphicsApi>
 #include <Metal/MTLTexture.h>
 
+#include "utility/spinlock.h"
+
 namespace Tempest {
 namespace Detail {
 
@@ -21,9 +23,11 @@ class MtTexture : public Tempest::AbstractGraphicsApi::Texture {
 
     uint32_t bitCount() const;
 
+    id<MTLTexture>  view(ComponentMapping m, uint32_t mipLevel);
+
     MtDevice&       dev;
     id<MTLTexture>  impl;
-    const uint32_t  mips = 0;
+    const uint32_t  mipCnt = 0;
 
   private:
     void createCompressedTexture(id<MTLTexture> val, const Pixmap& p, TextureFormat frm, uint32_t mipCnt);
@@ -31,6 +35,14 @@ class MtTexture : public Tempest::AbstractGraphicsApi::Texture {
 
     id<MTLTexture> alloc(TextureFormat frm, const uint32_t w, const uint32_t h, const uint32 mips,
                          MTLStorageMode smode, MTLTextureUsage umode);
+
+    struct View {
+      ComponentMapping m;
+      uint32_t         mip = uint32_t(0);
+      id<MTLTexture>   v;
+      };
+    Detail::SpinLock  syncViews;
+    std::vector<View> extViews;
   };
 
 }

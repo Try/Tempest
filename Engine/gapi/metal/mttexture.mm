@@ -13,17 +13,33 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-MtTexture::MtTexture(MtDevice& d, const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm, bool storageTex)
-  :dev(d), mips(mips) {
+static MTLTextureSwizzle swizzle(ComponentSwizzle cs, MTLTextureSwizzle def){
+  switch(cs) {
+    case ComponentSwizzle::Identity:
+      return def;
+    case ComponentSwizzle::R:
+      return MTLTextureSwizzleRed;
+    case ComponentSwizzle::G:
+      return MTLTextureSwizzleGreen;
+    case ComponentSwizzle::B:
+      return MTLTextureSwizzleBlue;
+    case ComponentSwizzle::A:
+      return MTLTextureSwizzleAlpha;
+    }
+  return def;
+  }
+
+MtTexture::MtTexture(MtDevice& d, const uint32_t w, const uint32_t h, uint32_t mipCnt, TextureFormat frm, bool storageTex)
+  :dev(d), mipCnt(mipCnt) {
   MTLTextureUsage usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
   if(storageTex)
     usage |= MTLTextureUsageShaderWrite;
-  impl = alloc(frm,w,h,mips,MTLStorageModePrivate,usage);
+  impl = alloc(frm,w,h,mipCnt,MTLStorageModePrivate,usage);
   }
 
-MtTexture::MtTexture(MtDevice& dev, const Pixmap& pm, uint32_t mips, TextureFormat frm)
-  :dev(dev), mips(mips) {
-  const uint32_t smip  = (isCompressedFormat(frm) ? mips : 1);
+MtTexture::MtTexture(MtDevice& dev, const Pixmap& pm, uint32_t mipCnt, TextureFormat frm)
+  :dev(dev), mipCnt(mipCnt) {
+  const uint32_t smip  = (isCompressedFormat(frm) ? mipCnt : 1);
 #ifdef __IOS__
   const MTLStorageMode smode = MTLStorageModeShared;
 #else
@@ -32,7 +48,7 @@ MtTexture::MtTexture(MtDevice& dev, const Pixmap& pm, uint32_t mips, TextureForm
   id<MTLTexture> stage = alloc(frm,pm.w(),pm.h(),smip,smode,MTLTextureUsageShaderRead);
 
   try{
-    impl = alloc(frm,pm.w(),pm.h(),mips,MTLStorageModePrivate,MTLTextureUsageShaderRead);
+    impl = alloc(frm,pm.w(),pm.h(),mipCnt,MTLStorageModePrivate,MTLTextureUsageShaderRead);
     }
   catch(...){
     [stage release];
@@ -40,7 +56,7 @@ MtTexture::MtTexture(MtDevice& dev, const Pixmap& pm, uint32_t mips, TextureForm
     }
 
   if(isCompressedFormat(frm))
-    createCompressedTexture(stage,pm,frm,mips); else
+    createCompressedTexture(stage,pm,frm,mipCnt); else
     createRegularTexture(stage,pm);
 
   @autoreleasepool {
@@ -54,7 +70,7 @@ MtTexture::MtTexture(MtDevice& dev, const Pixmap& pm, uint32_t mips, TextureForm
                            destinationSlice:0
                            destinationLevel:0
                            sliceCount:1
-                           levelCount:mips];
+                           levelCount:mipCnt];
       } else {
       [enc copyFromTexture:stage
                            sourceSlice:0
@@ -64,7 +80,7 @@ MtTexture::MtTexture(MtDevice& dev, const Pixmap& pm, uint32_t mips, TextureForm
                            destinationLevel:0
                            sliceCount:1
                            levelCount:1];
-      if(mips>1)
+      if(mipCnt>1)
         [enc generateMipmapsForTexture:impl];
       }
 
@@ -78,6 +94,8 @@ MtTexture::MtTexture(MtDevice& dev, const Pixmap& pm, uint32_t mips, TextureForm
 
 MtTexture::~MtTexture() {
   [impl release];
+  for(auto& i:extViews)
+    [i.v release];
   }
 
 void MtTexture::createCompressedTexture(id<MTLTexture> val, const Pixmap& p, TextureFormat frm, uint32_t mipCnt) {
@@ -145,7 +163,7 @@ id<MTLTexture> MtTexture::alloc(TextureFormat frm, const uint32_t w, const uint3
   }
 
 uint32_t MtTexture::mipCount() const {
-  return mips;
+  return mipCnt;
   }
 
 void MtTexture::readPixels(Pixmap& out, TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip) {
@@ -380,4 +398,49 @@ uint32_t MtTexture::bitCount() const {
       return 32;
     }
   return 0;
+  }
+
+id<MTLTexture> MtTexture::view(ComponentMapping m, uint32_t mipLevel) {
+  if(m.r==ComponentSwizzle::Identity &&
+     m.g==ComponentSwizzle::Identity &&
+     m.b==ComponentSwizzle::Identity &&
+     m.a==ComponentSwizzle::Identity &&
+     (mipLevel==uint32_t(-1) || mipCnt==1)) {
+    return impl;
+    }
+
+  std::lock_guard<Detail::SpinLock> guard(syncViews);
+  for(auto& i:extViews) {
+    if(i.m==m && i.mip==mipLevel)
+      return i.v;
+    }
+
+  auto sw = MTLTextureSwizzleChannelsMake(swizzle(m.r, MTLTextureSwizzleRed),
+                                          swizzle(m.g, MTLTextureSwizzleGreen),
+                                          swizzle(m.b, MTLTextureSwizzleBlue),
+                                          swizzle(m.a, MTLTextureSwizzleAlpha));
+  NSRange levels = NSMakeRange(0, impl.mipmapLevelCount);
+  if(mipLevel!=uint32_t(-1)) {
+    levels = NSMakeRange(mipLevel,1);
+    }
+
+  View v;
+  v.v = [impl newTextureViewWithPixelFormat: impl.pixelFormat
+              textureType: impl.textureType
+              levels: levels
+              slices: NSMakeRange(0, impl.arrayLength)
+              swizzle:sw];
+  v.m   = m;
+  v.mip = mipLevel;
+
+  if(v.v==nil)
+    throw std::system_error(GraphicsErrc::OutOfVideoMemory);
+  try {
+    extViews.push_back(v);
+    }
+  catch (...) {
+    [v.v release];
+    throw;
+    }
+  return v.v;
   }

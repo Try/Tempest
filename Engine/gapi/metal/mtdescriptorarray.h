@@ -21,10 +21,7 @@ class MtDescriptorArray : public AbstractGraphicsApi::Desc {
     struct Desc {
       id       val;
       id       sampler;
-      union {
-        size_t offset = 0;
-        size_t mipLevel;
-        };
+      size_t   offset = 0;
       };
 
     MtDevice&                        dev;
