@@ -88,7 +88,7 @@ test_script:
   # - cmd: TempestTests.exe   disable, since appveyor image doesn't have vulkan drievr anymore
   - sh:  cd $APPVEYOR_BUILD_FOLDER/build/testsuite
   - sh:  printenv
-  - sh:  ./TempestTests
+  - sh:  ./TempestTests --gmock_verbose=info --gtest_stack_trace_depth=10
 
 artifacts:
   - path: build/tempest/tempest.zip
