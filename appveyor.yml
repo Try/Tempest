@@ -97,7 +97,7 @@ test_script:
     if($IsMacOS) {
       printenv
       cd $env:APPVEYOR_BUILD_FOLDER/build/testsuite
-      lldb -o run -- ./TempestTests
+      lldb -o run -o quit -- ./TempestTests
       }
 
 artifacts:
