@@ -22,8 +22,14 @@ MtDevice::autoDevice::autoDevice(const char* name) {
     [dev release];
     }
 
-  if(impl!=nil)
-    queue = [impl newCommandQueue];
+  if(impl==nil)
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+
+  queue = [impl newCommandQueue];
+  if(queue==nil) {
+    [impl release];
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+    }
   }
 
 MtDevice::autoDevice::~autoDevice() {
@@ -36,10 +42,6 @@ MtDevice::autoDevice::~autoDevice() {
 MtDevice::MtDevice(const char* name) : dev(name), samplers(dev.impl) {
   impl  = dev.impl;
   queue = dev.queue;
-
-  if(queue==nil)
-    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
-
   deductProps(prop,impl);
   }
 
