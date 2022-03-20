@@ -83,12 +83,22 @@ build_script:
   - cmake --build ../../build --target TempestTests
 
 test_script:
-  - cmd: set Path=C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin;%Path%
-  - cmd: cd %APPVEYOR_BUILD_FOLDER%\build\testsuite
-  # - cmd: TempestTests.exe   disable, since appveyor image doesn't have vulkan drievr anymore
-  - sh:  cd $APPVEYOR_BUILD_FOLDER/build/testsuite
-  - sh:  printenv
-  - sh:  lldb -o run -- ./TempestTests --gmock_verbose=info --gtest_stack_trace_depth=10
+- ps: >-
+    if($IsWindows) {
+      set Path=C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin;%Path%
+      cd %APPVEYOR_BUILD_FOLDER%\build\testsuite
+      TempestTests.exe
+      }
+    if($IsLinux) {
+      printenv
+      cd $APPVEYOR_BUILD_FOLDER/build/testsuite
+      ./TempestTests
+      }
+    if($IsMacOS) {
+      printenv
+      cd $APPVEYOR_BUILD_FOLDER/build/testsuite
+      lldb -o run -- ./TempestTests
+      }
 
 artifacts:
   - path: build/tempest/tempest.zip
