@@ -407,6 +407,10 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     vkGetAccelerationStructureBuildSizes = PFN_vkGetAccelerationStructureBuildSizesKHR(vkGetDeviceProcAddr(device.impl,"vkGetAccelerationStructureBuildSizesKHR"));
     vkCmdBuildAccelerationStructures     = PFN_vkCmdBuildAccelerationStructuresKHR(vkGetDeviceProcAddr(device.impl,"vkCmdBuildAccelerationStructuresKHR"));
     }
+
+  if(props.raytracing.rayQuery && props.hasDeviceAddress) {
+    vkGetAccelerationStructureDeviceAddress = PFN_vkGetAccelerationStructureDeviceAddressKHR(vkGetDeviceProcAddr(device.impl,"vkGetAccelerationStructureDeviceAddressKHR"));
+    }
   }
 
 VDevice::MemIndex VDevice::memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const {

@@ -84,6 +84,9 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
                    const AbstractGraphicsApi::Buffer& vbo, size_t offset, size_t stride, uint32_t maxVertex,
                    const AbstractGraphicsApi::Buffer& ibo, Detail::IndexClass cls, uint32_t primitiveCount,
                    AbstractGraphicsApi::Buffer& scratch);
+    void buildTlas(VkAccelerationStructureKHR dest,
+                   AbstractGraphicsApi::Buffer& tbo, const AbstractGraphicsApi::Buffer& instances, uint32_t numInstances,
+                   AbstractGraphicsApi::Buffer& scratch);
 
     VkCommandBuffer                impl=nullptr;
     std::vector<VSwapchain::Sync*> swapchainSync;

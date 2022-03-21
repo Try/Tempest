@@ -18,6 +18,18 @@ class VAccelerationStructure : public AbstractGraphicsApi::AccelerationStructure
                            VBuffer& ibo, size_t iboSz, Detail::IndexClass icls);
     ~VAccelerationStructure();
 
+    VkDeviceAddress            toDeviceAddress(VDevice& owner) const;
+
+    VDevice&                   owner;
+    VkAccelerationStructureKHR impl = VK_NULL_HANDLE;
+    VBuffer                    data;
+  };
+
+class VTopAccelerationStructure : public AbstractGraphicsApi::AccelerationStructure {
+  public:
+    VTopAccelerationStructure(VDevice& owner, const VAccelerationStructure* obj);
+    ~VTopAccelerationStructure();
+
     VDevice&                   owner;
     VkAccelerationStructureKHR impl = VK_NULL_HANDLE;
     VBuffer                    data;

@@ -215,6 +215,12 @@ AccelerationStructure Device::implBlas(const VideoBuffer& vbo, size_t stride, co
   return AccelerationStructure(*this,blas);
   }
 
+AccelerationStructure Device::tlas(const AccelerationStructure* geom, size_t geomSize) {
+  // TODO: handle multiple geom structs
+  auto tlas = api.createTopAccelerationStruct(dev,geom->impl.handler,geomSize);
+  return AccelerationStructure(*this,tlas);
+  }
+
 Pixmap Device::readPixels(const Texture2d &t, uint32_t mip) {
   Pixmap pm;
   api.readPixels(dev,pm,t.impl,t.format(),uint32_t(t.w()),uint32_t(t.h()),mip,false);

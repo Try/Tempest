@@ -937,6 +937,7 @@ void Blas() {
     auto vbo  = device.vbo(vboData,3);
     auto ibo  = device.ibo(iboData,3);
     auto blas = device.blas(vbo,ibo);
+    auto tlas = device.tlas(&blas,1);
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)

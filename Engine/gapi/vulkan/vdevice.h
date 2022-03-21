@@ -253,7 +253,8 @@ class VDevice : public AbstractGraphicsApi::Device {
     PFN_vkCmdBeginRenderingKHR            vkCmdBeginRenderingKHR         = nullptr;
     PFN_vkCmdEndRenderingKHR              vkCmdEndRenderingKHR           = nullptr;
 
-    PFN_vkGetBufferDeviceAddressKHR       vkGetBufferDeviceAddress       = nullptr;
+    PFN_vkGetBufferDeviceAddressKHR                vkGetBufferDeviceAddress                = nullptr;
+    PFN_vkGetAccelerationStructureDeviceAddressKHR vkGetAccelerationStructureDeviceAddress = nullptr;
 
     PFN_vkCreateAccelerationStructureKHR        vkCreateAccelerationStructure        = nullptr;
     PFN_vkDestroyAccelerationStructureKHR       vkDestroyAccelerationStructure       = nullptr;

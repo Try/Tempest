@@ -84,3 +84,9 @@ AbstractGraphicsApi::AccelerationStructure*
                                                       Buffer* ibo, size_t iboSz, Detail::IndexClass icls) {
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }
+
+AbstractGraphicsApi::AccelerationStructure*
+  AbstractGraphicsApi::createTopAccelerationStruct(Device* d,
+                                                   const AccelerationStructure* as, size_t cnt) {
+  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
+  }

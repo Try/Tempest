@@ -138,6 +138,9 @@ class Device {
     template<class V, class I>
     AccelerationStructure blas(const VertexBuffer<V>& vbo, const IndexBuffer<I>& ibo, size_t offset, size_t count);
 
+
+    AccelerationStructure tlas(const AccelerationStructure* geom, size_t geomSize);
+
     Pixmap               readPixels (const Texture2d&    t, uint32_t mip=0);
     Pixmap               readPixels (const Attachment&   t, uint32_t mip=0);
     Pixmap               readPixels (const StorageImage& t, uint32_t mip=0);
