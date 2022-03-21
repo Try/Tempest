@@ -428,7 +428,7 @@ string CompilerHLSL::type_to_glsl(const SPIRType &type, uint32_t id)
 		}
 		else
 		{
-			return "OutputPatch<" + type_to_glsl(template_type, id) + ",32>";
+      return "OutputPatch<" + type_to_glsl(template_type, id) + ",3>";
 		}
 	}
 
@@ -792,7 +792,7 @@ void CompilerHLSL::emit_builtin_inputs_in_struct()
 
 		case BuiltInPosition:
 			type = "float4";
-			semantic = "POSITION";
+			semantic = "SV_Position";
 			break;
 
 		case BuiltInInvocationId:
@@ -1730,9 +1730,6 @@ void CompilerHLSL::emit_resources()
 
 	declare_undefined_values();
 
-	if (require_input)
-		emit_per_vertex_inputs();
-
 	if (requires_op_fmod)
 	{
 		static const char *types[] = {
@@ -2654,15 +2651,91 @@ void CompilerHLSL::append_gl_inout_to_function(VariableID gl_in, uint32_t func_i
 
 void CompilerHLSL::emit_hlsl_patch_constant_func()
 {
-	emit_hlsl_entry_common(true);
+	SmallVector<string> arguments;
+	arguments.push_back("InputPatch<SPIRV_Cross_HS_Point_Input, 32> gl_in");
+
+	statement("SPIRV_Cross_HS_Constant_Output", " tesc_patch_constant(", merge(arguments), ")");
+	begin_scope();
+
+  auto &execution = get_entry_point();
+  for(uint32_t i=0; i<execution.output_vertices; ++i)
+  {
+    auto builtin_expr = builtin_to_glsl(BuiltInInvocationId, StorageClassInput);
+    statement(builtin_expr, " = ", i, ";");
+    if (require_input)
+      statement("tesc_main(gl_in);");
+    else
+      statement("tesc_main();");
+  }
+
+	statement("SPIRV_Cross_HS_Constant_Output stage_output;");
+
+	// Copy builtins from globals to return struct.
+	active_output_builtins.for_each_bit(
+	    [&](uint32_t i)
+	    {
+		    switch (static_cast<BuiltIn>(i))
+		    {
+		    case BuiltInTessLevelInner:
+		    {
+			    auto builtin_expr = builtin_to_glsl(static_cast<BuiltIn>(i), StorageClassOutput);
+			    statement("stage_output.", builtin_expr, " = ", builtin_expr, "[0];");
+			    break;
+		    }
+
+		    case BuiltInTessLevelOuter:
+		    {
+			    auto builtin_expr = builtin_to_glsl(static_cast<BuiltIn>(i), StorageClassOutput);
+			    for (uint32_t i = 0; i < 3; i++)
+				    statement("stage_output.", builtin_expr, "[", i, "] = ", builtin_expr, "[", i, "];");
+			    break;
+		    }
+
+		    default:
+			    break;
+		    }
+	    });
+
+	ir.for_each_typed_id<SPIRVariable>(
+	    [&](uint32_t, SPIRVariable &var)
+	    {
+		    auto &type = this->get<SPIRType>(var.basetype);
+		    bool block = has_decoration(type.self, DecorationBlock);
+
+		    if (var.storage != StorageClassOutput)
+			    return;
+
+		    if (!var.remapped_variable && type.pointer && !is_builtin_variable(var) &&
+		        interface_variable_exists_in_entry_point(var.self))
+		    {
+			    if (block)
+			    {
+				    // I/O blocks need to flatten output.
+				    auto type_name = to_name(type.self);
+				    auto var_name = to_name(var.self);
+				    for (uint32_t mbr_idx = 0; mbr_idx < uint32_t(type.member_types.size()); mbr_idx++)
+				    {
+					    auto mbr_name = to_member_name(type, mbr_idx);
+					    auto flat_name = join(type_name, "_", mbr_name);
+					    statement("stage_output.", flat_name, " = ", var_name, ".", mbr_name, ";");
+				    }
+			    }
+			    else
+			    {
+				    auto name = to_name(var.self);
+				    if (has_decoration(var.self, DecorationPatch))
+				    {
+					    statement("stage_output.", name, " = ", name, ";");
+				    }
+			    }
+		    }
+	    });
+
+	statement("return stage_output;");
+	end_scope();
 }
 
 void CompilerHLSL::emit_hlsl_entry_point()
-{
-	emit_hlsl_entry_common(false);
-}
-
-void CompilerHLSL::emit_hlsl_entry_common(bool is_patch_constant)
 {
 	SmallVector<string> arguments;
 
@@ -2673,26 +2746,18 @@ void CompilerHLSL::emit_hlsl_entry_common(bool is_patch_constant)
 
 	if (execution.model == spv::ExecutionModelTessellationControl)
 	{
-		if (!is_patch_constant)
-			arguments.push_back("SPIRV_Cross_Input stage_input");
+		arguments.push_back("SPIRV_Cross_Input stage_input");
 	}
 
 	if (require_input)
 	{
 		if (execution.model==ExecutionModelTessellationControl)
 		{
-			if (is_patch_constant)
-			{
-				arguments.push_back("InputPatch<SPIRV_Cross_HS_Point_Input, 32> gl_in");
-			}
-			else
-			{
-				arguments.push_back("InputPatch<SPIRV_Cross_HS_Point_Input, 32> gl_in");
-			}
+			arguments.push_back("InputPatch<SPIRV_Cross_HS_Point_Input, 32> gl_in");
 		}
 		else if (execution.model==ExecutionModelTessellationEvaluation)
 		{
-			arguments.push_back("OutputPatch<SPIRV_Cross_DS_Point_Input, 32> gl_in");
+      arguments.push_back("OutputPatch<SPIRV_Cross_DS_Point_Input, 3> gl_in");
 		}
 		else
 		{
@@ -2700,66 +2765,52 @@ void CompilerHLSL::emit_hlsl_entry_common(bool is_patch_constant)
 		}
 	}
 
-	if (!is_patch_constant)
+	switch (execution.model)
 	{
-		switch (execution.model)
-		{
-		case ExecutionModelGLCompute:
-		{
-			SpecializationConstant wg_x, wg_y, wg_z;
-			get_work_group_size_specialization_constants(wg_x, wg_y, wg_z);
+	case ExecutionModelGLCompute:
+	{
+		SpecializationConstant wg_x, wg_y, wg_z;
+		get_work_group_size_specialization_constants(wg_x, wg_y, wg_z);
 
-			uint32_t x = execution.workgroup_size.x;
-			uint32_t y = execution.workgroup_size.y;
-			uint32_t z = execution.workgroup_size.z;
+		uint32_t x = execution.workgroup_size.x;
+		uint32_t y = execution.workgroup_size.y;
+		uint32_t z = execution.workgroup_size.z;
 
-			auto x_expr = wg_x.id ? get<SPIRConstant>(wg_x.id).specialization_constant_macro_name : to_string(x);
-			auto y_expr = wg_y.id ? get<SPIRConstant>(wg_y.id).specialization_constant_macro_name : to_string(y);
-			auto z_expr = wg_z.id ? get<SPIRConstant>(wg_z.id).specialization_constant_macro_name : to_string(z);
+		auto x_expr = wg_x.id ? get<SPIRConstant>(wg_x.id).specialization_constant_macro_name : to_string(x);
+		auto y_expr = wg_y.id ? get<SPIRConstant>(wg_y.id).specialization_constant_macro_name : to_string(y);
+		auto z_expr = wg_z.id ? get<SPIRConstant>(wg_z.id).specialization_constant_macro_name : to_string(z);
 
-			statement("[numthreads(", x_expr, ", ", y_expr, ", ", z_expr, ")]");
-			break;
-		}
-		case ExecutionModelFragment:
-			if (execution.flags.get(ExecutionModeEarlyFragmentTests))
-				statement("[earlydepthstencil]");
-			break;
+		statement("[numthreads(", x_expr, ", ", y_expr, ", ", z_expr, ")]");
+		break;
+	}
+	case ExecutionModelFragment:
+		if (execution.flags.get(ExecutionModeEarlyFragmentTests))
+			statement("[earlydepthstencil]");
+		break;
 
-		case ExecutionModelTessellationControl:
-			/*
-			if (execution.flags.get(ExecutionModeTriangles))
-				statement("[domain(\"tri\")]");
-			if (execution.flags.get(ExecutionModeSpacingFractionalEven))
-				statement("[partitioning(\"fractional_even\")]");
-			if (execution.flags.get(ExecutionModeSpacingFractionalOdd))
-				statement("[partitioning(\"fractional_odd\")]");
-			if (execution.flags.get(ExecutionModeSpacingEqual))
-				statement("[partitioning(\"integer\")]");
-			*/
+	case ExecutionModelTessellationControl:
+		if (execution.flags.get(ExecutionModeOutputVertices))
+			statement("[outputcontrolpoints(", execution.output_vertices, ")]");
+		statement("[domain(\"tri\")]");
+		statement("[partitioning(\"fractional_even\")]");
+		statement("[outputtopology(\"triangle_cw\")]");
+		statement("[patchconstantfunc(\"tesc_patch_constant\")]");
+		break;
+
+	case ExecutionModelTessellationEvaluation:
+		if (execution.flags.get(ExecutionModeQuads))
+			statement("[domain(\"quad\")]");
+		if (execution.flags.get(ExecutionModeTriangles))
 			statement("[domain(\"tri\")]");
-			statement("[partitioning(\"fractional_even\")]");
-			statement("[outputtopology(\"triangle_cw\")]");
-			statement("[outputcontrolpoints(3)]"); // TODO
-			statement("[patchconstantfunc(\"tesc_patch_constant\")]");
-			break;
+		if (execution.flags.get(ExecutionModeIsolines))
+			statement("[domain(\"isoline\")]");
+		break;
 
-		case ExecutionModelTessellationEvaluation:
-			if (execution.flags.get(ExecutionModeQuads))
-				statement("[domain(\"quad\")]");
-			if (execution.flags.get(ExecutionModeTriangles))
-				statement("[domain(\"tri\")]");
-			if (execution.flags.get(ExecutionModeIsolines))
-				statement("[domain(\"isoline\")]");
-			break;
-
-		default:
-			break;
-		}
+	default:
+		break;
 	}
 
-	const char *out_type = (is_patch_constant ? "SPIRV_Cross_HS_Constant_Output" : "SPIRV_Cross_Output");
-	statement(require_output ? out_type : "void", is_patch_constant ? " tesc_patch_constant(" : " main(",
-	          merge(arguments), ")");
+	statement(require_output ? "SPIRV_Cross_Output" : "void", " main(", merge(arguments), ")");
 	begin_scope();
 	bool legacy = hlsl_options.shader_model <= 30;
 
@@ -2912,13 +2963,6 @@ void CompilerHLSL::emit_hlsl_entry_common(bool is_patch_constant)
 				statement(builtin, " = stage_input.", builtin, ";");
 			break;
 
-		case BuiltInInvocationId:
-			if (is_patch_constant)
-				statement(builtin, " = 0;");
-			else
-				statement(builtin, " = stage_input.", builtin, ";");
-			break;
-
 		default:
 			statement(builtin, " = stage_input.", builtin, ";");
 			break;
@@ -3000,10 +3044,7 @@ void CompilerHLSL::emit_hlsl_entry_common(bool is_patch_constant)
 	// Copy stage outputs.
 	if (require_output)
 	{
-		if (is_patch_constant)
-			statement("SPIRV_Cross_HS_Constant_Output stage_output;");
-		else
-			statement("SPIRV_Cross_Output stage_output;");
+		statement("SPIRV_Cross_Output stage_output;");
 
 		// Copy builtins from globals to return struct.
 		active_output_builtins.for_each_bit([&](uint32_t i) {
@@ -3026,29 +3067,13 @@ void CompilerHLSL::emit_hlsl_entry_common(bool is_patch_constant)
 				break;
 
 			case BuiltInTessLevelInner:
-				if (is_patch_constant)
-				{
-					auto builtin_expr = builtin_to_glsl(static_cast<BuiltIn>(i), StorageClassOutput);
-					statement("stage_output.", builtin_expr, " = ", builtin_expr, "[0];");
-				}
-				break;
-
 			case BuiltInTessLevelOuter:
-				if (is_patch_constant)
-				{
-					auto builtin_expr = builtin_to_glsl(static_cast<BuiltIn>(i), StorageClassOutput);
-					for (uint32_t i = 0; i < 3; i++)
-						statement("stage_output.", builtin_expr, "[", i, "] = ", builtin_expr, "[", i, "];");
-				}
 				break;
 
 			default:
 			{
-				if (execution.model != ExecutionModelTessellationControl || !is_patch_constant)
-				{
-					auto builtin_expr = builtin_to_glsl(static_cast<BuiltIn>(i), StorageClassOutput);
-					statement("stage_output.", builtin_expr, " = ", builtin_expr, ";");
-				}
+				auto builtin_expr = builtin_to_glsl(static_cast<BuiltIn>(i), StorageClassOutput);
+				statement("stage_output.", builtin_expr, " = ", builtin_expr, ";");
 				break;
 			}
 			}
@@ -3093,13 +3118,9 @@ void CompilerHLSL::emit_hlsl_entry_common(bool is_patch_constant)
 					{
 						if (execution.model == spv::ExecutionModelTessellationControl)
 						{
-							const bool is_cp_variable = has_decoration(var.self, DecorationPatch);
-							if (is_cp_variable == is_patch_constant)
+							if (!has_decoration(var.self, DecorationPatch))
 							{
-								if (is_cp_variable)
-									statement("stage_output.", name, " = ", name, ";");
-								else
-									statement("stage_output.", name, " = ", name, "[gl_InvocationID];");
+								statement("stage_output.", name, " = ", name, "[gl_InvocationID];");
 							}
 						}
 						else
@@ -3135,28 +3156,28 @@ void CompilerHLSL::emit_per_vertex_inputs()
 	auto &ds_point_type = set<SPIRType>(offset);
 	ds_point_type.basetype = SPIRType::Struct;
 	set_decoration(ds_point_type.self, DecorationBlock);
-	if (model==ExecutionModelTessellationControl)
+	if (model == ExecutionModelTessellationControl)
 	{
-		set_name(ds_point_type.self,"SPIRV_Cross_HS_Point_Input");
+		set_name(ds_point_type.self, "SPIRV_Cross_HS_Point_Input");
 	}
 	else
 	{
-		set_name(ds_point_type.self,"SPIRV_Cross_DS_Point_Input");
+		set_name(ds_point_type.self, "SPIRV_Cross_DS_Point_Input");
 	}
 
-	auto &pcp_type = set<SPIRType>(offset+1);
+	auto &pcp_type = set<SPIRType>(offset + 1);
 	pcp_type.basetype = SPIRType::ControlPointArray;
 	pcp_type.parent_type = ds_point_type.self;
 	pcp_type.storage = StorageClassInput;
 
-	auto &pcp_array_type = set<SPIRType>(offset+2);
+	auto &pcp_array_type = set<SPIRType>(offset + 2);
 	pcp_array_type.basetype = SPIRType::Struct;
 	pcp_array_type.parent_type = pcp_type.self;
 	pcp_array_type.storage = StorageClassGeneric;
 	pcp_array_type.array.push_back(32);
 	pcp_array_type.array_size_literal.push_back(true);
 
-	auto& gl_in = set<SPIRVariable>(offset+3, pcp_type.self, StorageClassInput);
+	auto &gl_in = set<SPIRVariable>(offset + 3, pcp_type.self, StorageClassInput);
 	append_gl_inout_to_functions(gl_in.self);
 }
 
@@ -6274,8 +6295,8 @@ string CompilerHLSL::compile()
 
 	ExecutionModel model = get_execution_model();
 	if (model == ExecutionModelTessellationControl)
-  {
-    backend.force_gl_in_block_hlsl = true;
+	{
+		backend.force_gl_in_block_hlsl = true;
 	}
 	if (model == ExecutionModelTessellationEvaluation)
 	{
@@ -6285,6 +6306,8 @@ string CompilerHLSL::compile()
 		backend.force_gl_in_out_block = true;
 		backend.force_gl_in_block_hlsl = true;
 	}
+
+	emit_per_vertex_inputs();
 
 	uint32_t pass_count = 0;
 	do

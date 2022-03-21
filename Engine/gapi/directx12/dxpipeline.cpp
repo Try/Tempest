@@ -23,6 +23,11 @@ DxPipeline::DxPipeline(DxDevice& device,
     D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST
     };
   topology       = dxTopolgy[int(tp)];
+  if(ctrl!=nullptr || tess!=nullptr) {
+    if(tp==Triangles)
+      topology = D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST; else
+      topology = D3D_PRIMITIVE_TOPOLOGY_2_CONTROL_POINT_PATCHLIST;
+    }
   pushConstantId = ulay.pushConstantId;
   ssboBarriers   = ulay.hasSSBO;
 
@@ -92,6 +97,7 @@ D3D12_BLEND_DESC DxPipeline::getBlend(const RenderState& st) const {
 D3D12_RASTERIZER_DESC DxPipeline::getRaster(const RenderState& st) const {
   D3D12_RASTERIZER_DESC rd = {};
   rd.FillMode              = D3D12_FILL_MODE_SOLID;
+  //rd.FillMode              = D3D12_FILL_MODE_WIREFRAME;
   rd.CullMode              = nativeFormat(st.cullFaceMode());
   rd.FrontCounterClockwise = FALSE;
   return rd;

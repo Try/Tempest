@@ -5,20 +5,18 @@ layout(vertices = 3) out;
 
 layout(location = 0) in  vec4 dummyIn[];
 layout(location = 0) out vec4 dummyOut[];
-layout(location = 1) patch out vec4 dummy2;
+layout(location = 1) patch out vec4 dummyOut2;
 
 void main(void) {
-  const int inner = 3;
-  const int outer = 2;
-
   if(gl_InvocationID==0) {
-    gl_TessLevelInner[0] = inner;
-    gl_TessLevelInner[1] = inner;
+    dummyOut2 = vec4(7);
+    gl_TessLevelInner[0] = 9;
+    gl_TessLevelInner[1] = 8;
 
-    gl_TessLevelOuter[0] = outer;
-    gl_TessLevelOuter[1] = outer;
-    gl_TessLevelOuter[2] = outer;
-    gl_TessLevelOuter[3] = outer;
+    gl_TessLevelOuter[0] = 0;
+    gl_TessLevelOuter[1] = 1;
+    gl_TessLevelOuter[2] = 2;
+    gl_TessLevelOuter[3] = 3;
     }
 
   dummyOut[gl_InvocationID] = dummyIn[gl_InvocationID];

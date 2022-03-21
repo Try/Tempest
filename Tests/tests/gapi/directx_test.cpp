@@ -133,13 +133,13 @@ TEST(DirectX12Api,S3TC) {
   GapiTestCommon::S3TC<DirectX12Api>("DirectX12Api_S3TC.png");
 #endif
   }
-TEST(VulkanApi,DISABLED_PsoTess) {
+TEST(DirectX12Api,DISABLED_PsoTess) {
 #if defined(_MSC_VER)
   GapiTestCommon::PsoTess<DirectX12Api>();
 #endif
   }
 
-TEST(VulkanApi,DISABLED_TesselationBasic) {
+TEST(DirectX12Api,DISABLED_TesselationBasic) {
 #if defined(_MSC_VER)
   GapiTestCommon::TesselationBasic<DirectX12Api>("DirectX12Api_TesselationBasic.png");
 #endif
@@ -181,7 +181,7 @@ TEST(DirectX12Api,Spirv_HS) {
 #endif
   }
 
-TEST(DirectX12Api,Spirv_DS) {
+TEST(DirectX12Api,DISABLED_Spirv_DS) {
 #if defined(_MSC_VER)
   using namespace Tempest;
 
