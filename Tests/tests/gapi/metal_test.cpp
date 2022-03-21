@@ -127,7 +127,7 @@ TEST(MetalApi,S3TC) {
 #endif
   }
 
-TEST(MetalApi,DISABLED_TesselationBasic) {
+TEST(MetalApi,DISABLED_PsoTess) {
 #if defined(__OSX__)
   GapiTestCommon::PsoTess<MetalApi>();
 #endif

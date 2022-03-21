@@ -263,6 +263,46 @@ void PsoTess() {
   }
 
 template<class GraphicsApi>
+void TesselationBasic(const char* outImg) {
+  using namespace Tempest;
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto vbo  = device.vbo<Vertex>({{-1, 1},{0,-1},{1,1}});
+
+    auto tese = device.shader("shader/tess_basic.tese.sprv");
+    auto tesc = device.shader("shader/tess_basic.tesc.sprv");
+
+    auto vert = device.shader("shader/tess_basic.vert.sprv");
+    auto frag = device.shader("shader/tess_basic.frag.sprv");
+    auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,tesc,tese,frag);
+
+    auto tex = device.attachment(TextureFormat::RGBA8,128,128);
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setFramebuffer({{tex,Vec4(0,0,0,1),Tempest::Preserve}});
+      enc.setUniforms(pso);
+      enc.draw(vbo);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    auto pm = device.readPixels(tex);
+    pm.save(outImg);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void Fbo(const char* outImg) {
   using namespace Tempest;
 

@@ -81,6 +81,11 @@ compile_shader(tess.frag)
 compile_shader(tess.tesc)
 compile_shader(tess.tese)
 
+compile_shader(tess_basic.vert)
+compile_shader(tess_basic.tesc)
+compile_shader(tess_basic.tese)
+compile_shader(tess_basic.frag)
+
 compile_shader(spirv_ds_01.tese)
 compile_shader(spirv_ds_02.tese)
 compile_shader(spirv_ds_03.tese)

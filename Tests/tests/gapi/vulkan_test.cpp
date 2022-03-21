@@ -123,9 +123,15 @@ TEST(VulkanApi,S3TC) {
 #endif
   }
 
-TEST(VulkanApi,TesselationBasic) {
+TEST(VulkanApi,PsoTess) {
 #if !defined(__OSX__)
   GapiTestCommon::PsoTess<VulkanApi>();
+#endif
+  }
+
+TEST(VulkanApi,TesselationBasic) {
+#if !defined(__OSX__)
+  GapiTestCommon::TesselationBasic<VulkanApi>("VulkanApi_TesselationBasic.png");
 #endif
   }
 

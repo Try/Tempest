@@ -133,10 +133,15 @@ TEST(DirectX12Api,S3TC) {
   GapiTestCommon::S3TC<DirectX12Api>("DirectX12Api_S3TC.png");
 #endif
   }
-
-TEST(DirectX12Api,DISABLED_TesselationBasic) {
+TEST(VulkanApi,DISABLED_PsoTess) {
 #if defined(_MSC_VER)
   GapiTestCommon::PsoTess<DirectX12Api>();
+#endif
+  }
+
+TEST(VulkanApi,DISABLED_TesselationBasic) {
+#if defined(_MSC_VER)
+  GapiTestCommon::TesselationBasic<DirectX12Api>("DirectX12Api_TesselationBasic.png");
 #endif
   }
 
