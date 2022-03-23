@@ -3,6 +3,11 @@ configuration:
 
 environment:
   matrix:
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+      GENERATOR: "NMake Makefiles JOM"
+      VCVARSALL: "%VS140COMNTOOLS%/../../VC/vcvarsall.bat"
+      PLATFORM:  x64
+
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015  # used as mingw
       GENERATOR: "Ninja"
       CC:        C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin/gcc.exe
@@ -13,11 +18,6 @@ environment:
 
     - APPVEYOR_BUILD_WORKER_IMAGE: macos-bigsur
       GENERATOR: "Ninja"
-
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-      GENERATOR: "NMake Makefiles JOM"
-      VCVARSALL: "%VS140COMNTOOLS%/../../VC/vcvarsall.bat"
-      PLATFORM:  x64
 
 install:
 - ps: >-
@@ -92,6 +92,7 @@ test_script:
       Start-FileDownload "$VULKAN_RUNTIME_URL" -FileName "vulkan-runtime.zip"
       7z e "vulkan-runtime.zip" "*/x64"
       ./TempestTests.exe
+       $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
       }
     if($IsLinux) {
       printenv
