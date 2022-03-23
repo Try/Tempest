@@ -216,7 +216,6 @@ private:
 	void emit_function_prototype(SPIRFunction &func, const Bitset &return_flags) override;
 	void emit_hlsl_entry_point();
 	void emit_hlsl_patch_constant_func();
-	void emit_hlsl_entry_common(bool is_patch_constant);
 	void emit_header() override;
 	void emit_resources();
 	void declare_undefined_values() override;
@@ -226,8 +225,8 @@ private:
 	                                           uint32_t location,
 	                                           std::unordered_set<uint32_t> &active_locations);
 	void emit_builtin_inputs_in_struct();
-	void emit_tess_builtin_inputs_in_struct();
 	void emit_builtin_outputs_in_struct();
+	void emit_tess_builtin_inputs_in_struct();
 	void emit_texture_op(const Instruction &i, bool sparse) override;
 	void emit_instruction(const Instruction &instruction) override;
 	void emit_glsl_op(uint32_t result_type, uint32_t result_id, uint32_t op, const uint32_t *args,
@@ -272,6 +271,7 @@ private:
 
 	void emit_struct_member(const SPIRType &type, uint32_t member_type_id, uint32_t index, const std::string &qualifier,
 	                        uint32_t base_offset = 0) override;
+	void emit_rayquery_function(const char *commited, const char *candidate, const uint32_t *ops);
 
 	const char *to_storage_qualifiers_glsl(const SPIRVariable &var) override;
 	void replace_illegal_names() override;
@@ -280,6 +280,8 @@ private:
 	void append_gl_inout_to_functions(VariableID gl_in);
 	void append_gl_inout_to_function(VariableID gl_in, uint32_t func_id,
 	                                 std::unordered_set<uint32_t> &processed_func_ids);
+
+	bool emitted_per_vertex_inputs = false;
 	void emit_per_vertex_inputs();
 
 	Options hlsl_options;

@@ -60,6 +60,7 @@ enum MSLShaderInputFormat
 struct MSLShaderInput
 {
 	uint32_t location = 0;
+	uint32_t component = 0;
 	MSLShaderInputFormat format = MSL_SHADER_INPUT_FORMAT_OTHER;
 	spv::BuiltIn builtin = spv::BuiltInMax;
 	uint32_t vecsize = 0;
@@ -392,7 +393,7 @@ public:
 		// and will be addressed using the current ViewIndex.
 		bool arrayed_subpass_input = false;
 
-		// Whether to use SIMD-group or quadgroup functions to implement group nnon-uniform
+		// Whether to use SIMD-group or quadgroup functions to implement group non-uniform
 		// operations. Some GPUs on iOS do not support the SIMD-group functions, only the
 		// quadgroup functions.
 		bool ios_use_simdgroup_functions = false;
@@ -442,6 +443,11 @@ public:
 		bool is_macos() const
 		{
 			return platform == macOS;
+		}
+
+		bool use_quadgroup_operation() const
+		{
+			return is_ios() && !ios_use_simdgroup_functions;
 		}
 
 		void set_msl_version(uint32_t major, uint32_t minor = 0, uint32_t patch = 0)
@@ -656,6 +662,7 @@ protected:
 		SPVFuncImplFMul,
 		SPVFuncImplFAdd,
 		SPVFuncImplFSub,
+		SPVFuncImplQuantizeToF16,
 		SPVFuncImplCubemapTo2DArrayFace,
 		SPVFuncImplUnsafeArray, // Allow Metal to use the array<T> template to make arrays a value type
 		SPVFuncImplInverse4x4,
@@ -824,12 +831,20 @@ protected:
 	bool add_component_variable_to_interface_block(spv::StorageClass storage, const std::string &ib_var_ref,
 	                                               SPIRVariable &var, const SPIRType &type,
 	                                               InterfaceBlockMeta &meta);
-	void add_plain_member_variable_to_interface_block(spv::StorageClass storage, const std::string &ib_var_ref,
-	                                                  SPIRType &ib_type, SPIRVariable &var, uint32_t index,
-	                                                  InterfaceBlockMeta &meta);
-	void add_composite_member_variable_to_interface_block(spv::StorageClass storage, const std::string &ib_var_ref,
-	                                                      SPIRType &ib_type, SPIRVariable &var, uint32_t index,
-	                                                      InterfaceBlockMeta &meta);
+	void add_plain_member_variable_to_interface_block(spv::StorageClass storage,
+	                                                  const std::string &ib_var_ref, SPIRType &ib_type,
+	                                                  SPIRVariable &var, SPIRType &var_type,
+	                                                  uint32_t mbr_idx, InterfaceBlockMeta &meta,
+	                                                  const std::string &mbr_name_qual,
+	                                                  const std::string &var_chain_qual,
+	                                                  uint32_t &location, uint32_t &var_mbr_idx);
+	void add_composite_member_variable_to_interface_block(spv::StorageClass storage,
+	                                                      const std::string &ib_var_ref, SPIRType &ib_type,
+	                                                      SPIRVariable &var, SPIRType &var_type,
+	                                                      uint32_t mbr_idx, InterfaceBlockMeta &meta,
+	                                                      const std::string &mbr_name_qual,
+	                                                      const std::string &var_chain_qual,
+	                                                      uint32_t &location, uint32_t &var_mbr_idx);
 	void add_tess_level_input_to_interface_block(const std::string &ib_var_ref, SPIRType &ib_type, SPIRVariable &var);
 
 	void fix_up_interface_member_indices(spv::StorageClass storage, uint32_t ib_type_id);
@@ -837,7 +852,7 @@ protected:
 	void mark_location_as_used_by_shader(uint32_t location, const SPIRType &type,
 	                                     spv::StorageClass storage, bool fallback = false);
 	uint32_t ensure_correct_builtin_type(uint32_t type_id, spv::BuiltIn builtin);
-	uint32_t ensure_correct_input_type(uint32_t type_id, uint32_t location,
+	uint32_t ensure_correct_input_type(uint32_t type_id, uint32_t location, uint32_t component,
 	                                   uint32_t num_components, bool strip_array);
 
 	void emit_custom_templates();
@@ -856,18 +871,21 @@ protected:
 	std::string entry_point_arg_stage_in();
 	void entry_point_args_builtin(std::string &args);
 	void entry_point_args_discrete_descriptors(std::string &args);
-	std::string to_qualified_member_name(const SPIRType &type, uint32_t index);
+	std::string append_member_name(const std::string &qualifier, const SPIRType &type, uint32_t index);
 	std::string ensure_valid_name(std::string name, std::string pfx);
 	std::string to_sampler_expression(uint32_t id);
 	std::string to_swizzle_expression(uint32_t id);
 	std::string to_buffer_size_expression(uint32_t id);
 	bool is_sample_rate() const;
+	bool is_intersection_query() const;
 	bool is_direct_input_builtin(spv::BuiltIn builtin);
 	std::string builtin_qualifier(spv::BuiltIn builtin);
 	std::string builtin_type_decl(spv::BuiltIn builtin, uint32_t id = 0);
 	std::string built_in_func_arg(spv::BuiltIn builtin, bool prefix_comma);
 	std::string member_attribute_qualifier(const SPIRType &type, uint32_t index);
+	std::string member_location_attribute_qualifier(const SPIRType &type, uint32_t index);
 	std::string argument_decl(const SPIRFunction::Parameter &arg);
+	const char *descriptor_address_space(uint32_t id, spv::StorageClass storage, const char *plain_address_space) const;
 	std::string round_fp_tex_coords(std::string tex_coords, bool coord_is_fp);
 	uint32_t get_metal_resource_index(SPIRVariable &var, SPIRType::BaseType basetype, uint32_t plane = 0);
 	uint32_t get_member_location(uint32_t type_id, uint32_t index, uint32_t *comp = nullptr) const;
@@ -916,8 +934,8 @@ protected:
 	std::string get_tess_factor_struct_name();
 	SPIRType &get_uint_type();
 	uint32_t get_uint_type_id();
-	void emit_atomic_func_op(uint32_t result_type, uint32_t result_id, const char *op, uint32_t mem_order_1,
-	                         uint32_t mem_order_2, bool has_mem_order_2, uint32_t op0, uint32_t op1 = 0,
+	void emit_atomic_func_op(uint32_t result_type, uint32_t result_id, const char *op, spv::Op opcode,
+	                         uint32_t mem_order_1, uint32_t mem_order_2, bool has_mem_order_2, uint32_t op0, uint32_t op1 = 0,
 	                         bool op1_is_pointer = false, bool op1_is_literal = false, uint32_t op2 = 0);
 	const char *get_memory_order(uint32_t spv_mem_sem);
 	void add_pragma_line(const std::string &line);
@@ -928,6 +946,8 @@ protected:
 	void build_implicit_builtins();
 	uint32_t build_constant_uint_array_pointer();
 	void emit_entry_point_declarations() override;
+	bool uses_explicit_early_fragment_test();
+
 	uint32_t builtin_frag_coord_id = 0;
 	uint32_t builtin_sample_id_id = 0;
 	uint32_t builtin_sample_mask_id = 0;
@@ -956,8 +976,8 @@ protected:
 
 	bool does_shader_write_sample_mask = false;
 
-	void cast_to_builtin_store(uint32_t target_id, std::string &expr, const SPIRType &expr_type) override;
-	void cast_from_builtin_load(uint32_t source_id, std::string &expr, const SPIRType &expr_type) override;
+	void cast_to_variable_store(uint32_t target_id, std::string &expr, const SPIRType &expr_type) override;
+	void cast_from_variable_load(uint32_t source_id, std::string &expr, const SPIRType &expr_type) override;
 	void emit_store_statement(uint32_t lhs_expression, uint32_t rhs_expression) override;
 
 	void analyze_sampled_image_usage();
@@ -979,7 +999,7 @@ protected:
 	Options msl_options;
 	std::set<SPVFuncImpl> spv_function_implementations;
 	// Must be ordered to ensure declarations are in a specific order.
-	std::map<uint32_t, MSLShaderInput> inputs_by_location;
+	std::map<LocationComponentPair, MSLShaderInput> inputs_by_location;
 	std::unordered_map<uint32_t, MSLShaderInput> inputs_by_builtin;
 	std::unordered_set<uint32_t> location_inputs_in_use;
 	std::unordered_set<uint32_t> location_inputs_in_use_fallback;

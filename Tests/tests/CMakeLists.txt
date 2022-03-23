@@ -91,6 +91,8 @@ compile_shader(spirv_ds_02.tese)
 compile_shader(spirv_ds_03.tese)
 compile_shader(spirv_ds_quad.tese)
 
+compile_shader(spirv_hs_01.tesc)
+
 compile_shader(ssbo_write_verify.comp)
 compile_shader(ssbo_write.vert)
 

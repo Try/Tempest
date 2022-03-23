@@ -133,13 +133,13 @@ TEST(DirectX12Api,S3TC) {
   GapiTestCommon::S3TC<DirectX12Api>("DirectX12Api_S3TC.png");
 #endif
   }
-TEST(DirectX12Api,DISABLED_PsoTess) {
+TEST(DirectX12Api,PsoTess) {
 #if defined(_MSC_VER)
   GapiTestCommon::PsoTess<DirectX12Api>();
 #endif
   }
 
-TEST(DirectX12Api,DISABLED_TesselationBasic) {
+TEST(DirectX12Api,TesselationBasic) {
 #if defined(_MSC_VER)
   GapiTestCommon::TesselationBasic<DirectX12Api>("DirectX12Api_TesselationBasic.png");
 #endif
@@ -171,7 +171,8 @@ TEST(DirectX12Api,Spirv_HS) {
     DirectX12Api api{ApiFlags::Validation};
     Device       device(api);
 
-    auto tese0 = device.shader("shader/tess.tesc.sprv");
+    //auto tesc0 = device.shader("shader/tess.tesc.sprv");
+    auto tesc1 = device.shader("shader/spirv_hs_01.tesc.sprv");
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
@@ -181,7 +182,7 @@ TEST(DirectX12Api,Spirv_HS) {
 #endif
   }
 
-TEST(DirectX12Api,DISABLED_Spirv_DS) {
+TEST(DirectX12Api,Spirv_DS) {
 #if defined(_MSC_VER)
   using namespace Tempest;
 
