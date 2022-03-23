@@ -3,16 +3,16 @@ configuration:
 
 environment:
   matrix:
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015  # used as mingw
+      GENERATOR: "Ninja"
+      CC:        C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin/gcc.exe
+      CXX:       C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin/g++.exe
+
     - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu2004
       GENERATOR: ""
 
     - APPVEYOR_BUILD_WORKER_IMAGE: macos-bigsur
       GENERATOR: "Ninja"
-
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015  # used as mingw
-      GENERATOR: "Ninja"
-      CC:        C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin/gcc.exe
-      CXX:       C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin/g++.exe
 
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
       GENERATOR: "NMake Makefiles JOM"
@@ -87,8 +87,8 @@ test_script:
     if($IsWindows) {
       $env:PATH += ";C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin"
       cd $env:APPVEYOR_BUILD_FOLDER\build\testsuite
-      ./TempestTests.exe
       iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+      ./TempestTests.exe
       }
     if($IsLinux) {
       printenv
