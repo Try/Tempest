@@ -88,7 +88,7 @@ test_script:
       $env:PATH += ";C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin"
       cd $env:APPVEYOR_BUILD_FOLDER\build\testsuite
       ./TempestTests.exe
-      # iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+      iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
       }
     if($IsLinux) {
       printenv
