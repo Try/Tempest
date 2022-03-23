@@ -35,8 +35,14 @@ inline void dxAssert(HRESULT code){
       throw std::system_error(Tempest::GraphicsErrc::OutOfVideoMemory);
     case E_OUTOFMEMORY:
       throw std::bad_alloc();
+    case DXGI_ERROR_DRIVER_INTERNAL_ERROR:
     case DXGI_DDI_ERR_WASSTILLDRAWING:
     case DXGI_ERROR_DEVICE_REMOVED:
+    case DXGI_ERROR_DEVICE_RESET:
+      throw DeviceLostException();
+
+    case DXGI_ERROR_ACCESS_DENIED:
+    case DXGI_ERROR_ACCESS_LOST:
       throw DeviceLostException();
 
     case DXGI_ERROR_DEVICE_HUNG:

@@ -125,7 +125,7 @@ struct DirectX12Api::Impl {
     t = reinterpret_cast<T>(GetProcAddress(d3d12_dll,name));
     }
 
-  HMODULE                d3d12_dll;
+  HMODULE                d3d12_dll = nullptr;
   DxDevice::ApiEntry     dllApi;
 
   ComPtr<ID3D12Debug>    D3D12DebugController;
