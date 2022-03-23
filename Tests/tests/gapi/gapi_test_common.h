@@ -969,9 +969,9 @@ template<class GraphicsApi>
 void Blas() {
   using namespace Tempest;
 
-  GraphicsApi api{ApiFlags::Validation};
-  //auto dev = api.devices();
   try {
+    GraphicsApi api{ApiFlags::Validation};
+    //auto dev = api.devices();
     Device      device(api,DeviceType::Discrete);
 
     auto vbo  = device.vbo(vboData,3);

@@ -87,8 +87,11 @@ test_script:
     if($IsWindows) {
       $env:PATH += ";C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin"
       cd $env:APPVEYOR_BUILD_FOLDER\build\testsuite
+      # Download vulkan-1.dll
+      $VULKAN_RUNTIME_URL = "https://sdk.lunarg.com/sdk/download/$VK_SDK/windows/vulkan-runtime-components.zip?Human=true"
+      Start-FileDownload "$VULKAN_RUNTIME_URL" -FileName "vulkan-runtime.zip"
+      7z e "vulkan-runtime.zip" "*/x64"
       ./TempestTests.exe
-      $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
       }
     if($IsLinux) {
       printenv
