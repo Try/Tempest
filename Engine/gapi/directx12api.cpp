@@ -195,16 +195,19 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
                                                         MemUsage usage, BufferHeap flg) {
   DxDevice& dx = *reinterpret_cast<DxDevice*>(d);
 
+  Log::d(__func__," ",__LINE__);
   const BufferHeap flgOrig = flg;
   if(MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer))
    flg = BufferHeap::Device;
 
   usage = usage|MemUsage::TransferSrc|MemUsage::TransferDst;
 
+  Log::d(__func__," ",__LINE__);
   if(flg==BufferHeap::Upload) {
     DxBuffer buf=dx.allocator.alloc(mem,count,size,alignedSz,usage,BufferHeap::Upload);
     return PBuffer(new DxBuffer(std::move(buf)));
     }
+  Log::d(__func__," ",__LINE__);
 
   if(flg!=flgOrig && flgOrig!=BufferHeap::Device) {
     DxBuffer                    base = dx.allocator.alloc(nullptr,count,size,alignedSz,usage,flg);
@@ -213,11 +216,13 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
       buf.handler->update(mem,0,count,size,alignedSz);
     return buf;
     }
+  Log::d(__func__," ",__LINE__);
 
   DxBuffer base = dx.allocator.alloc(nullptr,count,size,alignedSz,usage,flg);
   Detail::DSharedPtr<Buffer*> buf(new Detail::DxBuffer(std::move(base)));
   if(mem!=nullptr)
     buf.handler->update(mem,0,count,size,alignedSz);
+  Log::d(__func__," ",__LINE__);
   return buf;
   }
 

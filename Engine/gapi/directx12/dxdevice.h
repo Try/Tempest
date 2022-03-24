@@ -53,7 +53,7 @@ inline void dxAssert(HRESULT code){
       throw std::runtime_error("engine internal error");
 
     default:
-      throw std::runtime_error("undefined directx error"); //TODO
+      throw std::runtime_error("undefined directx error("+std::to_string(code)+")"); //TODO
     }
   }
 
