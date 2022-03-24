@@ -174,7 +174,7 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, AbstractGraphicsApi::Props& pro
 
   prop.anisotropy        = true;
   prop.maxAnisotropy     = 16;
-  prop.tesselationShader = false;
+  prop.tesselationShader = true;
 
   prop.storeAndAtomicVs  = true;
   prop.storeAndAtomicFs  = true;

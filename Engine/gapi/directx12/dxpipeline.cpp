@@ -109,8 +109,11 @@ ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& 
   D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
   psoDesc.InputLayout     = { vsInput.get(), UINT(declSize) };
   psoDesc.pRootSignature  = sign.get();
-  if(vsShader.handler)
-    psoDesc.VS = vsShader.handler->bytecode();
+  if(vsShader.handler) {
+    if(useTesselation)
+      psoDesc.VS = vsShader.handler->bytecode(DxShader::Flavor::NoFlipY); else
+      psoDesc.VS = vsShader.handler->bytecode();
+    }
   if(tcShader.handler)
     psoDesc.HS = tcShader.handler->bytecode();
   if(teShader.handler)

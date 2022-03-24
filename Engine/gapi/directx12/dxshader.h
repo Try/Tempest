@@ -14,16 +14,26 @@ class DxDevice;
 
 class DxShader:public AbstractGraphicsApi::Shader {
   public:
-    DxShader(const void* source, size_t src_size);
+    enum class Flavor : uint8_t {
+      Default,
+      NoFlipY,
+      };
+    DxShader(const void* source, const size_t src_size);
     ~DxShader();
 
     using Binding = ShaderReflection::Binding;
 
-    D3D12_SHADER_BYTECODE    bytecode() const;
+    D3D12_SHADER_BYTECODE    bytecode(Flavor f = Flavor::Default) const;
     void                     disasm() const;
 
     std::vector<Decl::ComponentType> vdecl;
     std::vector<Binding>             lay;
+
+    struct Tess {
+      mutable SpinLock         sync;
+      std::vector<uint32_t>    vertSrc;
+      mutable ComPtr<ID3DBlob> altShader;
+      } tess;
 
   private:
     mutable ComPtr<ID3DBlob>         shader;
