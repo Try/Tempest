@@ -53,6 +53,8 @@ struct DirectX12Api::Impl {
     for(UINT i = 0; DXGI_ERROR_NOT_FOUND != dxgi.EnumAdapters1(i, &adapter.get()); ++i) {
       DXGI_ADAPTER_DESC1 desc={};
       adapter->GetDesc1(&desc);
+      if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+        continue;
 
       ComPtr<IDXGIAdapter3> adapter3;
       adapter->QueryInterface(uuid<IDXGIAdapter3>(), reinterpret_cast<void**>(&adapter3.get()));

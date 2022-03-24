@@ -167,7 +167,6 @@ class Device {
 
       AbstractGraphicsApi&            api;
       AbstractGraphicsApi::Device*    dev=nullptr;
-      uint8_t                         maxFramesInFlight=1;
       };
 
     AbstractGraphicsApi&            api;
