@@ -1,6 +1,7 @@
 #if defined(TEMPEST_BUILD_DIRECTX12)
 
 #include <Tempest/Log>
+#include <iostream>
 
 #include "guid.h"
 #include "dxdevice.h"
@@ -202,12 +203,17 @@ void Detail::DxDevice::waitIdle() {
   }
 
 void DxDevice::submit(DxCommandBuffer& cmdBuffer, DxFence& sync) {
+  std::cout << __func__ << " " << __LINE__ << std::endl;
   sync.reset();
+  std::cout << __func__ << " " << __LINE__ << std::endl;
 
   std::lock_guard<SpinLock> guard(syncCmdQueue);
   ID3D12CommandList* cmd[] = {cmdBuffer.get()};
+  std::cout << __func__ << " " << __LINE__ << std::endl;
   cmdQueue->ExecuteCommandLists(1, cmd);
+  std::cout << __func__ << " " << __LINE__ << std::endl;
   sync.signal(*cmdQueue);
+  std::cout << __func__ << " " << __LINE__ << std::endl;
   }
 
 #endif
