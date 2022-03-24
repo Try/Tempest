@@ -92,7 +92,7 @@ test_script:
       Start-FileDownload "$VULKAN_RUNTIME_URL" -FileName "vulkan-runtime.zip"
       7z e "vulkan-runtime.zip" "*/x64"
       ./TempestTests.exe
-       $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+      # $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
       }
     if($IsLinux) {
       printenv
