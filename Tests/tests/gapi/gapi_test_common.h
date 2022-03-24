@@ -42,8 +42,6 @@ void Vbo() {
 
   try {
     GraphicsApi api{ApiFlags::Validation};
-    for(auto& i:api.devices())
-      std::cout << i.name << std::endl;
     Device      device(api);
 
     auto vbo = device.vbo(vboData,3);

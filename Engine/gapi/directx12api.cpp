@@ -19,7 +19,6 @@
 #include "directx12/dxfbolayout.h"
 
 #include <Tempest/Pixmap>
-#include <iostream>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -55,6 +54,8 @@ struct DirectX12Api::Impl {
       adapter->GetDesc1(&desc);
       if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
         continue;
+      if(lstrcmpW(desc.Description,L"Microsoft Basic Render Driver")==0)
+        continue;
 
       ComPtr<IDXGIAdapter3> adapter3;
       adapter->QueryInterface(uuid<IDXGIAdapter3>(), reinterpret_cast<void**>(&adapter3.get()));
@@ -84,6 +85,8 @@ struct DirectX12Api::Impl {
       DXGI_ADAPTER_DESC1 desc={};
       adapter->GetDesc1(&desc);
       if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
+        continue;
+      if(lstrcmpW(desc.Description,L"Microsoft Basic Render Driver")==0)
         continue;
 
       AbstractGraphicsApi::Props props={};
@@ -217,14 +220,10 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
     return buf;
     }
 
-  std::cout << __func__ << " " << __LINE__ << std::endl;
   DxBuffer base = dx.allocator.alloc(nullptr,count,size,alignedSz,usage,flg);
-  std::cout << __func__ << " " << __LINE__ << std::endl;
   Detail::DSharedPtr<Buffer*> buf(new Detail::DxBuffer(std::move(base)));
-  std::cout << __func__ << " " << __LINE__ << std::endl;
   if(mem!=nullptr)
     buf.handler->update(mem,0,count,size,alignedSz);
-  std::cout << __func__ << " " << __LINE__ << std::endl;
   return buf;
   }
 
