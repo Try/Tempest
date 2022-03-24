@@ -220,7 +220,9 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
   std::cout << __func__ << " " << __LINE__ << std::endl;
 
   DxBuffer base = dx.allocator.alloc(nullptr,count,size,alignedSz,usage,flg);
+  std::cout << __func__ << " " << __LINE__ << std::endl;
   Detail::DSharedPtr<Buffer*> buf(new Detail::DxBuffer(std::move(base)));
+  std::cout << __func__ << " " << __LINE__ << std::endl;
   if(mem!=nullptr)
     buf.handler->update(mem,0,count,size,alignedSz);
   std::cout << __func__ << " " << __LINE__ << std::endl;
