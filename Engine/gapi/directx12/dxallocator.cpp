@@ -9,6 +9,7 @@
 #include "gapi/graphicsmemutils.h"
 
 #include <Tempest/Pixmap>
+#include <iostream>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -60,7 +61,10 @@ DxAllocator::Provider::DeviceMemory DxAllocator::Provider::alloc(size_t size, ui
     }
 
   ID3D12Heap* ret = nullptr;
+  std::cout << __func__ << " " << device <<" " << __LINE__ << std::endl;
+  std::cout << __func__ << " " << device->device.get() <<" " << __LINE__ << std::endl;
   HRESULT hr = device->device->CreateHeap(&heapDesc, ::uuid<ID3D12Heap>(), reinterpret_cast<void**>(&ret));
+  std::cout << __func__ << " " << __LINE__ << std::endl;
   if(SUCCEEDED(hr))
     return ret;
   return nullptr;
