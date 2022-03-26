@@ -311,7 +311,7 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
   createInfo.ppEnabledExtensionNames = rqExt.data();
 
   if(api.hasDeviceFeatures2) {
-    vkGetPhysicalDeviceFeatures2 = PFN_vkGetPhysicalDeviceFeatures2(vkGetDeviceProcAddr(device.impl,"vkGetPhysicalDeviceFeatures2"));
+    vkGetPhysicalDeviceFeatures2 = PFN_vkGetPhysicalDeviceFeatures2(vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2"));
 
     VkPhysicalDeviceFeatures2 enabledFeatures = {};
     enabledFeatures.sType    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
