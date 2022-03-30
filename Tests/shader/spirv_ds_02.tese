@@ -12,7 +12,6 @@ layout(location = 1) patch in vec4 vColors;
 layout(location = 2) patch in vec4 vColorsArray[2];
 
 // I/O blocks, per patch and per control point.
-/* I/O block are not supported yet
 layout(location = 4) in Block
 {
         vec4 a;
@@ -24,7 +23,6 @@ layout(location = 6) patch in PatchBlock
         vec4 a;
         vec4 b;
 } patch_block;
-*/
 
 // Composites.
 struct Foo
@@ -40,14 +38,14 @@ layout(location = 14) in Foo vFoos[];
 
 void set_from_function()
 {
-        /*
         gl_Position = blocks[0].a;
         gl_Position += blocks[0].b;
         gl_Position += blocks[1].a;
         gl_Position += blocks[1].b;
+
         gl_Position += patch_block.a;
         gl_Position += patch_block.b;
-        */
+
         gl_Position += vColor[0];
         gl_Position += vColor[1];
         gl_Position += vColors;
