@@ -11,8 +11,9 @@ using namespace Tempest::Detail;
 MtPipeline::MtPipeline(MtDevice &d, Topology tp,
                        const RenderState &rs, size_t stride,
                        const MtPipelineLay& lay,
-                       const MtShader &vert, const MtShader &frag)
-  :lay(&lay), device(d), rs(rs), vert(&vert), frag(&frag) {
+                       const MtShader* vert, const MtShader* tesc, const MtShader* tese,
+                       const MtShader* frag)
+  :lay(&lay), device(d), rs(rs), vert(vert), frag(frag) {
   cullMode = nativeFormat(rs.cullFaceMode());
   topology = nativeFormat(tp);
 
@@ -27,8 +28,8 @@ MtPipeline::MtPipeline(MtDevice &d, Topology tp,
 
   vdesc = [MTLVertexDescriptor new];
   size_t offset = 0;
-  for(size_t i=0; i<vert.vdecl.size(); ++i) {
-    const auto& v = vert.vdecl[i];
+  for(size_t i=0; i<vert->vdecl.size(); ++i) {
+    const auto& v = vert->vdecl[i];
 
     vdesc.attributes[i].bufferIndex = lay.vboIndex;
     vdesc.attributes[i].offset      = offset;
@@ -42,10 +43,25 @@ MtPipeline::MtPipeline(MtDevice &d, Topology tp,
 
   pdesc = [MTLRenderPipelineDescriptor new];
   pdesc.sampleCount          = 1;
-  pdesc.vertexFunction       = vert.impl;
-  pdesc.fragmentFunction     = frag.impl;
-  pdesc.vertexDescriptor     = vdesc;
+  pdesc.vertexFunction       = vert->impl;
+  pdesc.fragmentFunction     = frag->impl;
   pdesc.rasterizationEnabled = rs.isRasterDiscardEnabled() ? NO : YES; // TODO: test it
+
+  if(tesc!=nullptr && tese!=nullptr) {
+    pdesc.maxTessellationFactor          = 16;
+    pdesc.tessellationFactorScaleEnabled = NO;
+    pdesc.tessellationFactorStepFunction = MTLTessellationFactorStepFunctionConstant;
+    pdesc.tessellationOutputWindingOrder = tese->tese.winding;
+    pdesc.tessellationPartitionMode      = tese->tese.partition;
+
+    pdesc.vertexFunction = tese->impl;
+
+    vdesc.layouts[lay.vboIndex].stepFunction = MTLVertexStepFunctionPerPatch;
+    pdesc.vertexDescriptor = vdesc;
+    isTesselation = true;
+    } else {
+    pdesc.vertexDescriptor = vdesc;
+    }
 
   for(size_t i=0; i<lay.lay.size(); ++i) {
     auto& l = lay.lay[i];

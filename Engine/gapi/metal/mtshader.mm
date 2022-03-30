@@ -42,6 +42,25 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
       if(i.cls==ShaderReflection::Texture)
         i.mslBinding2 = comp.get_automatic_msl_resource_binding_secondary(i.spvId);
       }
+
+    if(comp.get_execution_model()==spv::ExecutionModelTessellationEvaluation) {
+      auto& exec = comp.get_execution_mode_bitset();
+      if(exec.get(spv::ExecutionModeTriangles)) {
+
+        }
+
+      if(exec.get(spv::ExecutionModeVertexOrderCw))
+        tese.winding = MTLWindingClockwise;
+      else if(exec.get(spv::ExecutionModeVertexOrderCcw))
+        tese.winding = MTLWindingCounterClockwise;
+
+      if(exec.get(spv::ExecutionModeSpacingEqual))
+        tese.partition = MTLTessellationPartitionModeInteger;
+      else if(exec.get(spv::ExecutionModeSpacingFractionalEven))
+        tese.partition = MTLTessellationPartitionModeFractionalEven;
+      else if(exec.get(spv::ExecutionModeSpacingFractionalOdd))
+        tese.partition = MTLTessellationPartitionModeFractionalOdd;
+      }
     }
   catch(const std::bad_alloc&) {
     throw;

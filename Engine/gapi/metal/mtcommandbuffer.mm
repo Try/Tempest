@@ -218,16 +218,32 @@ void MtCommandBuffer::setScissor(const Rect& r) {
   [encDraw setScissorRect:v];
   }
 
-void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t offset, size_t vertexCount, size_t firstInstance, size_t instanceCount) {
+void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo,
+                           size_t offset, size_t vertexCount, size_t firstInstance, size_t instanceCount) {
   auto& vbo = reinterpret_cast<const MtBuffer&>(ivbo);
   [encDraw setVertexBuffer:vbo.impl
                     offset:0
                    atIndex:curVboId];
-  [encDraw drawPrimitives:topology
-                      vertexStart:offset
-                      vertexCount:vertexCount
-                      instanceCount:instanceCount
-                      baseInstance:firstInstance];
+
+  if(!isTesselation) {
+    [encDraw drawPrimitives:topology
+                        vertexStart:offset
+                        vertexCount:vertexCount
+                        instanceCount:instanceCount
+                        baseInstance:firstInstance];
+    } else {
+    [encDraw setTriangleFillMode:MTLTriangleFillModeLines]; // debug
+    [encDraw setTessellationFactorBuffer : nil
+                                  offset : 0
+                          instanceStride : 0];
+    [encDraw drawPatches: 3
+             patchStart: offset
+             patchCount: vertexCount
+             patchIndexBuffer: nil
+             patchIndexBufferOffset: 0
+             instanceCount: instanceCount
+             baseInstance: firstInstance];
+    }
   }
 
 void MtCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, const AbstractGraphicsApi::Buffer& iibo, Detail::IndexClass cls,
@@ -360,9 +376,10 @@ void MtCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
     [encDraw setDepthStencilState:px.depthStNoZ];
   [encDraw setRenderPipelineState:inst.pso];
   [encDraw setCullMode:px.cullMode];
-  topology = px.topology;
-  curVboId = px.lay.handler->vboIndex;
-  curLay   = px.lay.handler;
+  topology      = px.topology;
+  isTesselation = px.isTesselation;
+  curVboId      = px.lay.handler->vboIndex;
+  curLay        = px.lay.handler;
   }
 
 void MtCommandBuffer::copy(AbstractGraphicsApi::Buffer& dest, size_t offset,

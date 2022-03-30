@@ -81,10 +81,12 @@ AbstractGraphicsApi::PPipeline MetalApi::createPipeline(AbstractGraphicsApi::Dev
 
   auto& lay = reinterpret_cast<const MtPipelineLay&>(ulayImpl);
 
-  auto& vx  = *reinterpret_cast<const MtShader*>(vs);
-  auto& fx  = *reinterpret_cast<const MtShader*>(fs);
+  auto* vx   = reinterpret_cast<const MtShader*>(vs);
+  auto* tcx  = reinterpret_cast<const MtShader*>(tc);
+  auto* tex  = reinterpret_cast<const MtShader*>(te);
+  auto* fx   = reinterpret_cast<const MtShader*>(fs);
 
-  return PPipeline(new MtPipeline(dx,tp,st,stride,lay,vx,fx));
+  return PPipeline(new MtPipeline(dx,tp,st,stride,lay, vx,tcx,tex,fx));
   }
 
 AbstractGraphicsApi::PCompPipeline MetalApi::createComputePipeline(AbstractGraphicsApi::Device *d,

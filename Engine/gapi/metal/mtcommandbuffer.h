@@ -85,6 +85,7 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     MtFboLayout          curFbo;
     const MtPipelineLay* curLay   = nullptr;
     MTLPrimitiveType     topology = MTLPrimitiveTypePoint;
+    bool                 isTesselation = false;
 
     uint32               maxTotalThreadsPerThreadgroup = 0;
 

@@ -27,8 +27,8 @@ class MtPipeline : public AbstractGraphicsApi::Pipeline {
     MtPipeline(MtDevice &d, Topology tp, const Tempest::RenderState& rs,
                size_t stride,
                const MtPipelineLay& lay,
-               const MtShader &vert,
-               const MtShader &frag);
+               const MtShader* vert, const MtShader* tesc, const MtShader* tese,
+               const MtShader* frag);
     ~MtPipeline();
 
     struct Inst {
@@ -44,6 +44,7 @@ class MtPipeline : public AbstractGraphicsApi::Pipeline {
 
     MTLCullMode              cullMode = MTLCullModeNone;
     MTLPrimitiveType         topology = MTLPrimitiveTypeTriangle;
+    bool                     isTesselation = false;
 
   private:
     MtDevice&            device;
@@ -53,6 +54,8 @@ class MtPipeline : public AbstractGraphicsApi::Pipeline {
     MTLRenderPipelineDescriptor* pdesc = nil;
 
     const MtShader* vert = nullptr;
+    const MtShader* tesc = nullptr;
+    const MtShader* tese = nullptr;
     const MtShader* frag = nullptr;
 
     SpinLock        sync;

@@ -127,9 +127,15 @@ TEST(MetalApi,S3TC) {
 #endif
   }
 
-TEST(MetalApi,DISABLED_PsoTess) {
+TEST(MetalApi,PsoTess) {
 #if defined(__OSX__)
   GapiTestCommon::PsoTess<MetalApi>();
+#endif
+  }
+
+TEST(MetalApi,DISABLED_TesselationBasic) {
+#if defined(__OSX__)
+  GapiTestCommon::TesselationBasic<MetalApi>("MetalApi_TesselationBasic.png");
 #endif
   }
 

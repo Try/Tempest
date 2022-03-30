@@ -6,6 +6,7 @@
 #include "gapi/shaderreflection.h"
 
 #import <Metal/MTLDevice.h>
+#import <Metal/MTLRenderPipeline.h>
 
 namespace Tempest {
 namespace Detail {
@@ -24,6 +25,11 @@ class MtShader : public AbstractGraphicsApi::Shader {
 
     std::vector<Decl::ComponentType> vdecl;
     std::vector<Binding>             lay;
+
+    struct {
+      MTLWinding                   winding   = MTLWindingClockwise;
+      MTLTessellationPartitionMode partition = MTLTessellationPartitionModePow2;
+      } tese;
   };
 
 }
