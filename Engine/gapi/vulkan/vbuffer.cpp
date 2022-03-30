@@ -39,7 +39,7 @@ void VBuffer::update(const void *data, size_t off, size_t count, size_t size, si
     }
 
   if(size==alignedSz && off%4==0 && (count*alignedSz)%4==0) {
-    Detail::DSharedPtr<Buffer*> pBuf  (this);
+    Detail::DSharedPtr<Buffer*> pBuf(this);
 
     auto cmd = dx.dataMgr().get();
     cmd->begin();

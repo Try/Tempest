@@ -40,142 +40,70 @@ static VkAttachmentStoreOp mkStoreOp(const AccessOp op) {
   return VK_ATTACHMENT_STORE_OP_DONT_CARE;
   }
 
-static VkAccessFlagBits toAccessBits(ResourceAccess rs) {
+static void toStage(VkPipelineStageFlags2KHR& stage, VkAccessFlagBits2KHR& access, ResourceAccess rs, bool isSrc) {
   uint32_t ret = 0;
-  if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
-    ret |= VK_ACCESS_TRANSFER_READ_BIT;
-  if((rs&ResourceAccess::TransferDst)==ResourceAccess::TransferDst)
-    ret |= VK_ACCESS_TRANSFER_WRITE_BIT;
-
-  if((rs&ResourceAccess::Present)==ResourceAccess::Present)
-    ret |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
-
-  if((rs&ResourceAccess::Sampler)==ResourceAccess::Sampler)
-    ret |= VK_ACCESS_SHADER_READ_BIT;
-  if((rs&ResourceAccess::ColorAttach)==ResourceAccess::ColorAttach)
-    ret |= (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
-  if((rs&ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach)
-    ret |= (VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
-  if((rs&ResourceAccess::Unordered)==ResourceAccess::Unordered)
-    ret |= (VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
-
-  if((rs&ResourceAccess::Index)==ResourceAccess::Index)
-    ret |= VK_ACCESS_INDEX_READ_BIT;
-  if((rs&ResourceAccess::Vertex)==ResourceAccess::Vertex)
-    ret |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
-  if((rs&ResourceAccess::Uniform)==ResourceAccess::Uniform)
-    ret |= VK_ACCESS_UNIFORM_READ_BIT;
-
-  if((rs&ResourceAccess::ComputeRead)==ResourceAccess::ComputeRead)
-    ret |= VK_ACCESS_SHADER_READ_BIT;
-  if((rs&ResourceAccess::ComputeWrite)==ResourceAccess::ComputeWrite)
-    ret |= VK_ACCESS_SHADER_WRITE_BIT;
-
-  return VkAccessFlagBits(ret);
-  }
-
-static VkAccessFlagBits2KHR toAccessBits2(ResourceAccess rs) {
-  uint32_t ret = 0;
-  if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
-    ret |= VK_ACCESS_2_TRANSFER_READ_BIT_KHR;
-  if((rs&ResourceAccess::TransferDst)==ResourceAccess::TransferDst)
-    ret |= VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR;
-
-  if((rs&ResourceAccess::Present)==ResourceAccess::Present)
-    ret |= VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT_KHR;
-
-  if((rs&ResourceAccess::Sampler)==ResourceAccess::Sampler)
-    ret |= VK_ACCESS_2_SHADER_READ_BIT_KHR;
-  if((rs&ResourceAccess::ColorAttach)==ResourceAccess::ColorAttach)
-    ret |= (VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT_KHR | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR);
-  if((rs&ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach)
-    ret |= (VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT_KHR | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT_KHR);
-  if((rs&ResourceAccess::Unordered)==ResourceAccess::Unordered)
-    ret |= (VK_ACCESS_2_SHADER_READ_BIT_KHR | VK_ACCESS_2_SHADER_WRITE_BIT_KHR);
-
-  if((rs&ResourceAccess::Index)==ResourceAccess::Index)
-    ret |= VK_ACCESS_2_INDEX_READ_BIT_KHR;
-  if((rs&ResourceAccess::Vertex)==ResourceAccess::Vertex)
-    ret |= VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT_KHR;
-  if((rs&ResourceAccess::Uniform)==ResourceAccess::Uniform)
-    ret |= VK_ACCESS_2_UNIFORM_READ_BIT_KHR;
-
-  if((rs&ResourceAccess::ComputeRead)==ResourceAccess::ComputeRead)
-    ret |= VK_ACCESS_2_SHADER_READ_BIT_KHR;
-  if((rs&ResourceAccess::ComputeWrite)==ResourceAccess::ComputeWrite)
-    ret |= VK_ACCESS_2_SHADER_WRITE_BIT_KHR;
-
-  return VkAccessFlagBits2KHR(ret);
-  }
-
-static VkPipelineStageFlags toStage(ResourceAccess rs, bool isSrc) {
-  uint32_t ret = 0;
-  if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
+  uint32_t acc = 0;
+  if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc) {
     ret |= VK_PIPELINE_STAGE_TRANSFER_BIT;
-  if((rs&ResourceAccess::TransferDst)==ResourceAccess::TransferDst)
+    acc |= VK_ACCESS_TRANSFER_READ_BIT;
+    }
+  if((rs&ResourceAccess::TransferDst)==ResourceAccess::TransferDst) {
     ret |= VK_PIPELINE_STAGE_TRANSFER_BIT;
+    acc |= VK_ACCESS_TRANSFER_WRITE_BIT;
+    }
 
-  if((rs&ResourceAccess::Present)==ResourceAccess::Present)
+  if((rs&ResourceAccess::Present)==ResourceAccess::Present) {
     ret |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    acc |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+    }
 
-  if((rs&ResourceAccess::Sampler)==ResourceAccess::Sampler)
+  if((rs&ResourceAccess::Sampler)==ResourceAccess::Sampler) {
     ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-  if((rs&ResourceAccess::ColorAttach)==ResourceAccess::ColorAttach)
+    acc |= VK_ACCESS_SHADER_READ_BIT;
+    }
+  if((rs&ResourceAccess::ColorAttach)==ResourceAccess::ColorAttach) {
     ret |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-  if((rs&ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach)
+    acc |= (VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+    }
+  if((rs&ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach) {
     ret |= (VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
-  if((rs&ResourceAccess::Unordered)==ResourceAccess::Unordered)
+    acc |= (VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
+    }
+  if((rs&ResourceAccess::Unordered)==ResourceAccess::Unordered) {
     ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    acc |= (VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+    }
 
-  if((rs&ResourceAccess::Index)==ResourceAccess::Index)
+  if((rs&ResourceAccess::Index)==ResourceAccess::Index) {
     ret |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-  if((rs&ResourceAccess::Vertex)==ResourceAccess::Vertex)
+    acc |= VK_ACCESS_INDEX_READ_BIT;
+    }
+  if((rs&ResourceAccess::Vertex)==ResourceAccess::Vertex) {
     ret |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-  if((rs&ResourceAccess::Vertex)==ResourceAccess::Uniform)
+    acc |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+    }
+  if((rs&ResourceAccess::Vertex)==ResourceAccess::Uniform) {
     ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    acc |= VK_ACCESS_UNIFORM_READ_BIT;
+    }
 
-  if((rs&ResourceAccess::ComputeRead)==ResourceAccess::ComputeRead)
+  if((rs&ResourceAccess::ComputeRead)==ResourceAccess::ComputeRead) {
     ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-  if((rs&ResourceAccess::ComputeWrite)==ResourceAccess::ComputeWrite)
+    acc |= VK_ACCESS_SHADER_READ_BIT;
+    }
+  if((rs&ResourceAccess::ComputeWrite)==ResourceAccess::ComputeWrite) {
     ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-  if(isSrc && ret==0)
-    ret = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT; // wait for nothing: asset uploading case
-  return VkPipelineStageFlagBits(ret);
-  }
+    acc |= VK_ACCESS_SHADER_WRITE_BIT;
+    }
 
-static VkPipelineStageFlags2KHR toStage2(ResourceAccess rs, bool isSrc) {
-  uint32_t ret = 0;
-  if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
-    ret |= VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT_KHR;
-  if((rs&ResourceAccess::TransferDst)==ResourceAccess::TransferDst)
-    ret |= VK_PIPELINE_STAGE_2_ALL_TRANSFER_BIT_KHR;
+  if(isSrc && ret==0) {
+    // wait for nothing: asset uploading case
+    ret = VK_PIPELINE_STAGE_NONE_KHR;
+    acc = VK_ACCESS_NONE_KHR;
+    }
 
-  if((rs&ResourceAccess::Present)==ResourceAccess::Present)
-    ret |= VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR;
-
-  if((rs&ResourceAccess::Sampler)==ResourceAccess::Sampler)
-    ret |= VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR;
-  if((rs&ResourceAccess::ColorAttach)==ResourceAccess::ColorAttach)
-    ret |= VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR;
-  if((rs&ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach)
-    ret |= (VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT_KHR | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT_KHR);
-  if((rs&ResourceAccess::Unordered)==ResourceAccess::Unordered)
-    ret |= VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR;
-
-  if((rs&ResourceAccess::Index)==ResourceAccess::Index)
-    ret |= VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT_KHR;
-  if((rs&ResourceAccess::Vertex)==ResourceAccess::Vertex)
-    ret |= VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT_KHR;
-  if((rs&ResourceAccess::Vertex)==ResourceAccess::Uniform)
-    ret |= VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR;
-
-  if((rs&ResourceAccess::ComputeRead)==ResourceAccess::ComputeRead)
-    ret |= VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR;
-  if((rs&ResourceAccess::ComputeWrite)==ResourceAccess::ComputeWrite)
-    ret |= VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR;
-  if(isSrc && ret==0)
-    ret = VK_PIPELINE_STAGE_2_NONE_KHR; // wait for nothing: asset uploading case
-  return VkPipelineStageFlagBits(ret);
+  stage  = VkPipelineStageFlags2KHR(ret);
+  access = VkAccessFlagBits2KHR(acc);
   }
 
 static VkImageLayout toLayout(ResourceAccess rs) {
@@ -533,12 +461,29 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest
 
   auto   srcBuf = reinterpret_cast<const uint8_t*>(src);
   size_t maxSz  = 0x10000;
-  for(size_t at=0; at<size; ) {
-    const size_t sz = std::min(size-at, maxSz);
-    vkCmdUpdateBuffer(impl,dst.impl,offsetDest+at,sz,srcBuf);
-    srcBuf+=sz;
-    at    +=sz;
+  while(size>maxSz) {
+    vkCmdUpdateBuffer(impl,dst.impl,offsetDest,maxSz,srcBuf);
+    offsetDest += maxSz;
+    srcBuf     += maxSz;
+    size       -= maxSz;
     }
+  vkCmdUpdateBuffer(impl,dst.impl,offsetDest,size,srcBuf);
+
+  VkBufferMemoryBarrier buf = {};
+  buf.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+  buf.srcAccessMask       = VK_ACCESS_TRANSFER_WRITE_BIT;
+  buf.dstAccessMask       = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+  buf.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  buf.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  buf.buffer              = dst.impl;
+  buf.offset              = 0;
+  buf.size                = VK_WHOLE_SIZE;
+
+  vkCmdPipelineBarrier(impl, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                       0,
+                       0, nullptr,
+                       0, &buf,
+                       0, nullptr);
   }
 
 void VCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Buffer& srcBuf, size_t offset) {
@@ -754,87 +699,6 @@ void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
   }
 
 void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
-  if(device.props.hasSync2) {
-    barrier2(desc,cnt);
-    return;
-    }
-
-  {
-  VkBufferMemoryBarrier bufBarrier[MaxBarriers] = {};
-  VkPipelineStageFlags  srcStage = 0;
-  VkPipelineStageFlags  dstStage = 0;
-  uint32_t              pbCount  = 0;
-
-  for(size_t i=0; i<cnt; ++i) {
-    auto& b = desc[i];
-    if(b.buffer==nullptr)
-      continue;
-    auto nSrcStage = toStage(b.prev,true);
-    auto nDstStage = toStage(b.next,false);
-
-    if(nSrcStage!=srcStage || nDstStage!=dstStage) {
-      emitBarriers(srcStage,dstStage,bufBarrier,pbCount);
-      srcStage = nSrcStage;
-      dstStage = nDstStage;
-      pbCount  = 0;
-      }
-
-    auto& bx = bufBarrier[pbCount];
-    bx.sType                 = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-    bx.srcQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
-    bx.dstQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
-    bx.buffer                = reinterpret_cast<VBuffer&>(*b.buffer).impl;
-    bx.offset                = 0;
-    bx.size                  = VK_WHOLE_SIZE;
-
-    bx.srcAccessMask         = toAccessBits(b.prev);
-    bx.dstAccessMask         = toAccessBits(b.next);
-
-    ++pbCount;
-    }
-  emitBarriers(srcStage,dstStage,bufBarrier,pbCount);
-  }
-
-  {
-  VkImageMemoryBarrier imgBarrier[MaxBarriers] = {};
-  VkPipelineStageFlags srcStage = 0;
-  VkPipelineStageFlags dstStage = 0;
-  uint32_t             pbCount  = 0;
-
-  for(size_t i=0; i<cnt; ++i) {
-    auto& b = desc[i];
-    if(b.buffer!=nullptr)
-      continue;
-
-    auto nSrcStage = toStage(b.prev,true);
-    auto nDstStage = toStage(b.next,false);
-
-    if(nSrcStage!=srcStage || nDstStage!=dstStage) {
-      emitBarriers(srcStage,dstStage,imgBarrier,pbCount);
-      srcStage = nSrcStage;
-      dstStage = nDstStage;
-      pbCount  = 0;
-      }
-
-    auto& bx = imgBarrier[pbCount];
-    bx.sType                 = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    bx.srcQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
-    bx.dstQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
-    bx.image                 = toVkResource(b);
-
-    bx.srcAccessMask         = toAccessBits(b.prev);
-    bx.dstAccessMask         = toAccessBits(b.next);
-
-    bx.oldLayout             = toLayout(b.prev);
-    bx.newLayout             = toLayout(b.next);
-    finalizeImageBarrier(bx,b);
-    ++pbCount;
-    }
-  emitBarriers(srcStage,dstStage,imgBarrier,pbCount);
-  }
-  }
-
-void VCommandBuffer::barrier2(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
   VkBufferMemoryBarrier2KHR bufBarrier[MaxBarriers] = {};
   uint32_t                  bufCount = 0;
   VkImageMemoryBarrier2KHR  imgBarrier[MaxBarriers] = {};
@@ -857,10 +721,8 @@ void VCommandBuffer::barrier2(const AbstractGraphicsApi::BarrierDesc* desc, size
       bx.offset                = 0;
       bx.size                  = VK_WHOLE_SIZE;
 
-      bx.srcAccessMask         = toAccessBits2(b.prev);
-      bx.dstAccessMask         = toAccessBits2(b.next);
-      bx.srcStageMask          = toStage2(b.prev,true);
-      bx.dstStageMask          = toStage2(b.next,false);
+      toStage(bx.srcStageMask, bx.srcAccessMask, b.prev,true);
+      toStage(bx.dstStageMask, bx.dstAccessMask, b.next,false);
       } else {
       auto& bx = imgBarrier[imgCount];
       ++imgCount;
@@ -870,10 +732,8 @@ void VCommandBuffer::barrier2(const AbstractGraphicsApi::BarrierDesc* desc, size
       bx.dstQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
       bx.image                 = toVkResource(b);
 
-      bx.srcAccessMask         = toAccessBits2(b.prev);
-      bx.dstAccessMask         = toAccessBits2(b.next);
-      bx.srcStageMask          = toStage2(b.prev,true);
-      bx.dstStageMask          = toStage2(b.next,false);
+      toStage(bx.srcStageMask, bx.srcAccessMask, b.prev,true);
+      toStage(bx.dstStageMask, bx.dstAccessMask, b.next,false);
 
       bx.oldLayout             = toLayout(b.prev);
       bx.newLayout             = toLayout(b.next);
@@ -886,7 +746,109 @@ void VCommandBuffer::barrier2(const AbstractGraphicsApi::BarrierDesc* desc, size
   info.pImageMemoryBarriers     = imgBarrier;
   info.imageMemoryBarrierCount  = imgCount;
 
-  device.vkCmdPipelineBarrier2(impl,&info);
+  vkCmdPipelineBarrier2(impl,&info);
+  }
+
+void VCommandBuffer::vkCmdPipelineBarrier2(VkCommandBuffer impl, const VkDependencyInfoKHR* info) {
+  if(device.vkCmdPipelineBarrier2!=nullptr) {
+    device.vkCmdPipelineBarrier2(impl,info);
+    return;
+    }
+
+  VkPipelineStageFlags  srcStage = 0;
+  VkPipelineStageFlags  dstStage = 0;
+
+  uint32_t              memCount = 0;
+  VkMemoryBarrier       memBarrier[MaxBarriers] = {};
+  uint32_t              bufCount = 0;
+  VkBufferMemoryBarrier bufBarrier[MaxBarriers] = {};
+  uint32_t              imgCount = 0;
+  VkImageMemoryBarrier  imgBarrier[MaxBarriers] = {};
+
+  for(size_t i=0; i<info->memoryBarrierCount; ++i) {
+    auto& b = info->pMemoryBarriers[i];
+
+    if(memCount>MaxBarriers || b.srcStageMask!=srcStage || b.dstStageMask!=dstStage) {
+      if(memCount>0) {
+        vkCmdPipelineBarrier(impl,srcStage,dstStage,info->dependencyFlags,
+                             memCount,memBarrier,
+                             0,nullptr,
+                             0,nullptr);
+        }
+      srcStage = VkPipelineStageFlags(b.srcStageMask);
+      dstStage = VkPipelineStageFlags(b.dstStageMask);
+      memCount = 0;
+      }
+
+    auto& bx = memBarrier[memCount];
+    bx.sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    bx.srcAccessMask = VkAccessFlags(b.srcAccessMask);
+    bx.dstAccessMask = VkAccessFlags(b.dstAccessMask);
+    ++memCount;
+    }
+
+  for(size_t i=0; i<info->bufferMemoryBarrierCount; ++i) {
+    auto& b = info->pBufferMemoryBarriers[i];
+
+    if(bufCount>MaxBarriers || b.srcStageMask!=srcStage || b.dstStageMask!=dstStage) {
+      if(bufCount>0) {
+        vkCmdPipelineBarrier(impl,srcStage,dstStage,info->dependencyFlags,
+                             0,nullptr,
+                             bufCount,bufBarrier,
+                             0,nullptr);
+        }
+      srcStage = VkPipelineStageFlags(b.srcStageMask);
+      dstStage = VkPipelineStageFlags(b.dstStageMask);
+      bufCount = 0;
+      }
+
+    auto& bx = bufBarrier[bufCount];
+    bx.sType                 = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    bx.srcAccessMask         = VkAccessFlags(b.srcAccessMask);
+    bx.dstAccessMask         = VkAccessFlags(b.dstAccessMask);
+    bx.srcQueueFamilyIndex   = b.srcQueueFamilyIndex;
+    bx.dstQueueFamilyIndex   = b.dstQueueFamilyIndex;
+    bx.buffer                = b.buffer;
+    bx.offset                = b.offset;
+    bx.size                  = b.size;
+    ++bufCount;
+    }
+
+  for(size_t i=0; i<info->imageMemoryBarrierCount; ++i) {
+    auto& b = info->pImageMemoryBarriers[i];
+
+    if(imgCount>MaxBarriers || b.srcStageMask!=srcStage || b.dstStageMask!=dstStage) {
+      if(imgCount>0) {
+        vkCmdPipelineBarrier(impl,srcStage,dstStage,info->dependencyFlags,
+                             0,nullptr,
+                             0,nullptr,
+                             imgCount,imgBarrier);
+        }
+      srcStage = VkPipelineStageFlags(b.srcStageMask);
+      dstStage = VkPipelineStageFlags(b.dstStageMask);
+      imgCount = 0;
+      }
+
+    auto& bx = imgBarrier[imgCount];
+    bx.sType               = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    bx.srcAccessMask       = VkAccessFlags(b.srcAccessMask);
+    bx.dstAccessMask       = VkAccessFlags(b.dstAccessMask);
+    bx.oldLayout           = b.oldLayout;
+    bx.newLayout           = b.newLayout;
+    bx.srcQueueFamilyIndex = b.srcQueueFamilyIndex;
+    bx.dstQueueFamilyIndex = b.dstQueueFamilyIndex;
+    bx.image               = b.image;
+    bx.subresourceRange    = b.subresourceRange;
+    ++imgCount;
+    }
+
+  if(memCount==0 && bufCount==0 && imgCount==0)
+    return;
+
+  vkCmdPipelineBarrier(impl,srcStage,dstStage,info->dependencyFlags,
+                       memCount,memBarrier,
+                       bufCount,bufBarrier,
+                       imgCount,imgBarrier);
   }
 
 template<class T>
@@ -933,32 +895,6 @@ void VCommandBuffer::addDependency(VSwapchain& s, size_t imgId) {
       return;
   assert(sc!=nullptr);
   swapchainSync.push_back(sc);
-  }
-
-void VCommandBuffer::emitBarriers(VkPipelineStageFlags src, VkPipelineStageFlags dst,
-                                  const VkBufferMemoryBarrier* b, uint32_t cnt) {
-  if(cnt==0)
-    return;
-  vkCmdPipelineBarrier(
-        impl,
-        src, dst,
-        0,
-        0, nullptr,
-        cnt, b,
-        0, nullptr);
-  }
-
-void VCommandBuffer::emitBarriers(VkPipelineStageFlags src, VkPipelineStageFlags dst,
-                                  const VkImageMemoryBarrier* b, uint32_t cnt) {
-  if(cnt==0)
-    return;
-  vkCmdPipelineBarrier(
-        impl,
-        src, dst,
-        0,
-        0, nullptr,
-        0, nullptr,
-        cnt, b);
   }
 
 #endif
