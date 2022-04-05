@@ -407,6 +407,7 @@ namespace Tempest {
         virtual void setSsbo(size_t id,AbstractGraphicsApi::Texture *tex, uint32_t mipLevel)=0;
         virtual void setUbo (size_t id,AbstractGraphicsApi::Buffer* buf,size_t offset)=0;
         virtual void setSsbo(size_t id,AbstractGraphicsApi::Buffer* buf,size_t offset)=0;
+        virtual void setTlas(size_t,AbstractGraphicsApi::AccelerationStructure*) {}
         virtual void ssboBarriers(Detail::ResourceState& res) = 0;
         };
       struct BarrierDesc {

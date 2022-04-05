@@ -58,7 +58,7 @@ VAccelerationStructure::VAccelerationStructure(VDevice& dx,
   buildSizesInfo.buildScratchSize          = 0;
 
   vkGetAccelerationStructureBuildSizes(device,
-                                       VK_ACCELERATION_STRUCTURE_BUILD_TYPE_HOST_KHR,
+                                       VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
                                        &buildGeometryInfo,
                                        &buildGeometryInfo.geometryCount,
                                        &buildSizesInfo);
@@ -161,7 +161,7 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const VAcceler
   buildSizesInfo.pNext                       = nullptr;
 
   vkGetAccelerationStructureBuildSizes(device,
-                                       VK_ACCELERATION_STRUCTURE_BUILD_TYPE_HOST_KHR,
+                                       VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
                                        &buildGeometryInfo,
                                        &buildGeometryInfo.geometryCount,
                                        &buildSizesInfo);

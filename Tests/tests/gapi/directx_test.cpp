@@ -171,7 +171,7 @@ TEST(DirectX12Api,Spirv_HS) {
     DirectX12Api api{ApiFlags::Validation};
     Device       device(api);
 
-    //auto tesc0 = device.shader("shader/tess.tesc.sprv");
+    auto tesc0 = device.shader("shader/tess.tesc.sprv");
     auto tesc1 = device.shader("shader/spirv_hs_01.tesc.sprv");
     }
   catch(std::system_error& e) {

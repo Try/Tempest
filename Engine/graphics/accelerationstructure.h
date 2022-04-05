@@ -17,6 +17,7 @@ class AccelerationStructure final {
     Detail::DSharedPtr<AbstractGraphicsApi::AccelerationStructure*> impl;
 
   friend class Tempest::Device;
+  friend class Tempest::DescriptorSet;
   friend class Encoder<Tempest::CommandBuffer>;
   };
 

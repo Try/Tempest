@@ -966,7 +966,7 @@ void PushRemapping() {
   }
 
 template<class GraphicsApi>
-void Blas() {
+void Blas(const char* outImg) {
   using namespace Tempest;
 
   try {
@@ -978,6 +978,28 @@ void Blas() {
     auto ibo  = device.ibo(iboData,3);
     auto blas = device.blas(vbo,ibo);
     auto tlas = device.tlas(&blas,1);
+
+    auto fsq  = device.vbo<Vertex>({{-1,-1},{ 1,-1},{ 1, 1}, {-1,-1},{ 1, 1},{-1, 1}});
+    auto vert = device.shader("shader/simple_test.vert.sprv");
+    auto frag = device.shader("shader/ray_test.frag.sprv");
+    auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
+    auto ubo  = device.descriptors(pso);
+
+    ubo.set(0, tlas);
+    auto tex = device.attachment(TextureFormat::RGBA8,128,128);
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
+      enc.setUniforms(pso,ubo);
+      enc.draw(fsq);
+    }
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    auto pm = device.readPixels(tex);
+    pm.save(outImg);
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)

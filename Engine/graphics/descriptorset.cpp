@@ -2,6 +2,7 @@
 
 #include <Tempest/Device>
 #include <Tempest/UniformBuffer>
+#include <Tempest/AccelerationStructure>
 
 using namespace Tempest;
 
@@ -49,6 +50,12 @@ void DescriptorSet::set(size_t layoutBind, const StorageImage& tex, uint32_t mip
 void DescriptorSet::set(size_t layoutBind, const Detail::ResourcePtr<Texture2d> &tex, const Sampler2d& smp) {
   if(tex.impl.handler)
     impl.handler->set(layoutBind,tex.impl.handler,smp); else
+    throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
+  }
+
+void DescriptorSet::set(size_t layoutBind, const AccelerationStructure& tlas) {
+  if(tlas.impl.handler)
+    impl.handler->setTlas(layoutBind,tlas.impl.handler); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
   }
 

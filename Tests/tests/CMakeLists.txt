@@ -106,6 +106,8 @@ compile_shader(loop_defect.comp)
 compile_shader(texture.vert)
 compile_shader(texture.frag)
 
+compile_shader(ray_test.frag)
+
 target_sources(${PROJECT_NAME} PRIVATE
   ${SOURCES}
   ${SHADERS}

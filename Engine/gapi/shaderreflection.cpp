@@ -110,6 +110,15 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     b.spvId  = resource.id;
     lay.push_back(b);
     }
+  for(auto &resource : resources.acceleration_structures) {
+    unsigned binding  = comp.get_decoration(resource.id, spv::DecorationBinding);
+    Binding b;
+    b.layout = binding;
+    b.cls    = Tlas;
+    b.stage  = s;
+    b.spvId  = resource.id;
+    lay.push_back(b);
+    }
   for(auto &resource : resources.push_constant_buffers) {
     unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);
     auto&    t       = comp.get_type_from_variable(resource.id);

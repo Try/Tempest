@@ -11,13 +11,15 @@ namespace Detail {
 class ShaderReflection final {
   public:
     enum Class : uint8_t {
-      Ubo    =0,
-      Texture=1,
-      SsboR  =2,
-      SsboRW =3,
-      ImgR   =4,
-      ImgRW  =5,
-      Push   =6,
+      Ubo     = 0,
+      Texture = 1,
+      SsboR   = 2,
+      SsboRW  = 3,
+      ImgR    = 4,
+      ImgRW   = 5,
+      Tlas    = 6,
+      Push    = 7,
+      Count,
       };
 
     enum Stage : uint8_t {

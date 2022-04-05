@@ -7,6 +7,7 @@
 #include "vdevice.h"
 #include "vdescriptorarray.h"
 #include "vtexture.h"
+#include "vaccelerationstructure.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -47,19 +48,21 @@ VDescriptorArray::~VDescriptorArray() {
   }
 
 VkDescriptorPool VDescriptorArray::allocPool(const VPipelineLay& lay, size_t size) {
-  VkDescriptorPoolSize poolSize[3] = {};
+  VkDescriptorPoolSize poolSize[int(ShaderReflection::Count)] = {};
   size_t               pSize=0;
 
   for(size_t i=0;i<lay.lay.size();++i){
     auto cls = lay.lay[i].cls;
     switch(cls) {
-      case ShaderReflection::Ubo:     addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);         break;
-      case ShaderReflection::Texture: addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER); break;
+      case ShaderReflection::Ubo:     addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);             break;
+      case ShaderReflection::Texture: addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);     break;
       case ShaderReflection::SsboR:
-      case ShaderReflection::SsboRW:  addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);         break;
+      case ShaderReflection::SsboRW:  addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);             break;
       case ShaderReflection::ImgR:
-      case ShaderReflection::ImgRW:   addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);          break;
+      case ShaderReflection::ImgRW:   addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);              break;
+      case ShaderReflection::Tlas:    addPoolSize(poolSize,pSize,VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR); break;
       case ShaderReflection::Push:    break;
+      case ShaderReflection::Count:   break;
       }
     }
 
@@ -172,6 +175,29 @@ void VDescriptorArray::setSsbo(size_t id, Tempest::AbstractGraphicsApi::Buffer *
 
   if(lay.handler->hasSSBO)
     ssbo[id].buf = buf;
+
+  vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+  }
+
+void VDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) {
+  VAccelerationStructure* memory=reinterpret_cast<VAccelerationStructure*>(tlas);
+
+  VkWriteDescriptorSetAccelerationStructureKHR descriptorAccelerationStructureInfo{};
+  descriptorAccelerationStructureInfo.sType                      = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
+  descriptorAccelerationStructureInfo.accelerationStructureCount = 1;
+  descriptorAccelerationStructureInfo.pAccelerationStructures    = &memory->impl;
+
+  VkWriteDescriptorSet descriptorWrite = {};
+  descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  descriptorWrite.pNext           = &descriptorAccelerationStructureInfo;
+  descriptorWrite.dstSet          = desc;
+  descriptorWrite.dstBinding      = uint32_t(id);
+  descriptorWrite.dstArrayElement = 0;
+  descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+  descriptorWrite.descriptorCount = 1;
+
+  //if(lay.handler->hasSSBO)
+  //  ssbo[id].buf = buf;
 
   vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
   }
