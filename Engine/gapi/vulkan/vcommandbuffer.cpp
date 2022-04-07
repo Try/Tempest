@@ -575,23 +575,20 @@ void VCommandBuffer::buildBlas(VkAccelerationStructureKHR dest,
   auto& vbo = reinterpret_cast<const VBuffer&>(ivbo);
   auto& ibo = reinterpret_cast<const VBuffer&>(iibo);
 
-  VkAccelerationStructureGeometryTrianglesDataKHR trianglesData = {};
-  trianglesData.sType                         = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-  trianglesData.pNext                         = nullptr;
-  trianglesData.vertexFormat                  = VK_FORMAT_R32G32B32_SFLOAT;
-  trianglesData.vertexData.deviceAddress      = vbo.toDeviceAddress(device) + voffset*stride,
-  trianglesData.vertexStride                  = stride;
-  trianglesData.maxVertex                     = uint32_t(vboSz);
-  trianglesData.indexType                     = nativeFormat(icls);
-  trianglesData.indexData.deviceAddress       = ibo.toDeviceAddress(device);
-  trianglesData.transformData                 = VkDeviceOrHostAddressConstKHR{};
-
   VkAccelerationStructureGeometryKHR geometry = {};
   geometry.sType                              = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
   geometry.pNext                              = nullptr;
   geometry.geometryType                       = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-  geometry.geometry.triangles                 = trianglesData;
+  geometry.geometry.triangles.sType           = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+  geometry.geometry.triangles.vertexFormat    = VK_FORMAT_R32G32B32_SFLOAT;
+  geometry.geometry.triangles.vertexStride    = stride;
+  geometry.geometry.triangles.maxVertex       = uint32_t(vboSz);
+  geometry.geometry.triangles.indexType       = nativeFormat(icls);
+  geometry.geometry.triangles.transformData   = VkDeviceOrHostAddressConstKHR{};
   geometry.flags                              = VK_GEOMETRY_OPAQUE_BIT_KHR;
+
+  geometry.geometry.triangles.vertexData.deviceAddress = vbo.toDeviceAddress(device) + voffset*stride;
+  geometry.geometry.triangles.indexData .deviceAddress = ibo.toDeviceAddress(device);
 
   VkAccelerationStructureBuildGeometryInfoKHR buildGeometryInfo = {};
   buildGeometryInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
@@ -607,7 +604,7 @@ void VCommandBuffer::buildBlas(VkAccelerationStructureKHR dest,
   buildGeometryInfo.scratchData.deviceAddress = reinterpret_cast<const VBuffer&>(scratch).toDeviceAddress(device);
 
   VkAccelerationStructureBuildRangeInfoKHR buildRangeInfo = {};
-  buildRangeInfo.primitiveCount               = iboSz;
+  buildRangeInfo.primitiveCount               = uint32_t(iboSz/3);
   buildRangeInfo.primitiveOffset              = 0;
   buildRangeInfo.firstVertex                  = 0;
   buildRangeInfo.transformOffset              = 0;

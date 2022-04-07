@@ -43,16 +43,13 @@ VAccelerationStructure::VAccelerationStructure(VDevice& dx,
   buildGeometryInfo.scratchData              = {};
 
   VkAccelerationStructureBuildSizesInfoKHR buildSizesInfo = {};
-  buildSizesInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
-  buildSizesInfo.pNext                     = nullptr;
-  buildSizesInfo.accelerationStructureSize = 0;
-  buildSizesInfo.updateScratchSize         = 0;
-  buildSizesInfo.buildScratchSize          = 0;
+  buildSizesInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
 
+  const uint32_t maxPrimitiveCounts = uint32_t(iboSz/3);
   vkGetAccelerationStructureBuildSizes(device,
                                        VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
                                        &buildGeometryInfo,
-                                       &buildGeometryInfo.geometryCount,
+                                       &maxPrimitiveCounts,
                                        &buildSizesInfo);
 
   data = dx.allocator.alloc(nullptr, buildSizesInfo.accelerationStructureSize,1,1, MemUsage::AsStorage,BufferHeap::Device);
@@ -78,6 +75,9 @@ VAccelerationStructure::VAccelerationStructure(VDevice& dx,
   cmd->end();
 
   // dx.dataMgr().waitFor(this);
+  dx.dataMgr().waitFor(&vbo);
+  dx.dataMgr().waitFor(&ibo);
+
   dx.dataMgr().submitAndWait(std::move(cmd));
   }
 

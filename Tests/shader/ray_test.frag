@@ -6,7 +6,7 @@
 layout(location = 0) in  vec4 inPos;
 layout(location = 0) out vec4 outColor;
 
-layout(binding = 0, set = 0) uniform accelerationStructureEXT topLevelAS;
+layout(binding = 0) uniform accelerationStructureEXT topLevelAS;
 
 void main() {
   vec3  rayOrigin    = vec3(inPos.xy*4.0-vec2(2.0),1.0);
