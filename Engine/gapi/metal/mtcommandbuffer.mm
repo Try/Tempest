@@ -218,8 +218,8 @@ void MtCommandBuffer::setScissor(const Rect& r) {
   [encDraw setScissorRect:v];
   }
 
-void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo,
-                           size_t offset, size_t vertexCount, size_t firstInstance, size_t instanceCount) {
+void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t offset, size_t vertexCount,
+                           size_t firstInstance, size_t instanceCount) {
   auto& vbo = reinterpret_cast<const MtBuffer&>(ivbo);
   [encDraw setVertexBuffer:vbo.impl
                     offset:0
@@ -246,8 +246,9 @@ void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo,
     }
   }
 
-void MtCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, const AbstractGraphicsApi::Buffer& iibo, Detail::IndexClass cls,
-                                  size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) {
+void MtCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_t voffset,
+                                  const AbstractGraphicsApi::Buffer& iibo, Detail::IndexClass cls, size_t ioffset, size_t isize,
+                                  size_t firstInstance, size_t instanceCount) {
   static const MTLIndexType type[2] = {
     MTLIndexTypeUInt16,
     MTLIndexTypeUInt32,

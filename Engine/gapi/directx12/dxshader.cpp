@@ -13,7 +13,7 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-static const char* target(spv::ExecutionModel exec) {
+static const char* target(spv::ExecutionModel exec, uint32_t sm) {
   switch(exec) {
     case spv::ExecutionModelGLCompute:
       return "cs_5_0";
@@ -26,7 +26,13 @@ static const char* target(spv::ExecutionModel exec) {
     case spv::ExecutionModelGeometry:
       return "gs_5_0";
     case spv::ExecutionModelFragment:
-      return "ps_5_0";
+      if(sm==50)
+        return "ps_5_0";
+      if(sm==51)
+        return "ps_5_1";
+      if(sm==60)
+        return "ps_6_0";
+      return "ps_6_5";
     default: // unimplemented
       throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
@@ -38,6 +44,7 @@ DxShader::DxShader(const void *source, const size_t src_size) {
 
   spirv_cross::CompilerHLSL::Options optHLSL;
   optHLSL.shader_model = 50;
+  //optHLSL.shader_model = 65;
 
   spirv_cross::CompilerGLSL::Options optGLSL;
   optGLSL.vertex.flip_vert_y = false;
@@ -52,6 +59,16 @@ DxShader::DxShader(const void *source, const size_t src_size) {
       optGLSL.vertex.flip_vert_y = true;
     comp.set_hlsl_options  (optHLSL);
     comp.set_common_options(optGLSL);
+
+    for(auto& cap:comp.get_declared_capabilities()) {
+      switch(cap) {
+        case spv::CapabilityRayQueryKHR:
+          optHLSL.shader_model = std::max<uint32_t>(60,optHLSL.shader_model);
+          break;
+        default:
+          break;
+        }
+      }
     // comp.remap_num_workgroups_builtin();
     hlsl = comp.compile();
 
@@ -88,7 +105,8 @@ DxShader::DxShader(const void *source, const size_t src_size) {
   ComPtr<ID3DBlob> err;
   // TODO: D3DCOMPILE_ALL_RESOURCES_BOUND
   UINT compileFlags = 0; //D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-  HRESULT hr = D3DCompile(hlsl.c_str(),hlsl.size(),nullptr,nullptr,nullptr,"main",target(exec),compileFlags,0,
+  HRESULT hr = D3DCompile(hlsl.c_str(),hlsl.size(),nullptr,nullptr,nullptr,"main",
+                          target(exec,optHLSL.shader_model),compileFlags,0,
                           reinterpret_cast<ID3DBlob**>(&shader),reinterpret_cast<ID3DBlob**>(&err));
   if(hr!=S_OK) {
 #if !defined(NDEBUG)
@@ -96,7 +114,7 @@ DxShader::DxShader(const void *source, const size_t src_size) {
     Log::d(reinterpret_cast<const char*>(err->GetBufferPointer()));
 #endif
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
-  }
+    }
 
   if(false && exec == spv::ExecutionModelTessellationControl) {
     Log::d(hlsl);
@@ -129,7 +147,7 @@ D3D12_SHADER_BYTECODE DxShader::bytecode(Flavor f) const {
 
     auto hlsl = comp.compile();
     UINT compileFlags = 0;
-    HRESULT hr = D3DCompile(hlsl.c_str(),hlsl.size(),nullptr,nullptr,nullptr,"main",target(exec),compileFlags,0,
+    HRESULT hr = D3DCompile(hlsl.c_str(),hlsl.size(),nullptr,nullptr,nullptr,"main",target(exec,optHLSL.shader_model),compileFlags,0,
                             reinterpret_cast<ID3DBlob**>(&tess.altShader),nullptr);
     if(hr!=S_OK)
       throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);

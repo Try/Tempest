@@ -189,6 +189,16 @@ inline DXGI_FORMAT nativeFormat(Decl::ComponentType t) {
   return DXGI_FORMAT_UNKNOWN;
   }
 
+inline DXGI_FORMAT nativeFormat(Detail::IndexClass icls) {
+  switch(icls) {
+    case Detail::IndexClass::i16:
+      return DXGI_FORMAT_R16_UINT;
+    case Detail::IndexClass::i32:
+      return DXGI_FORMAT_R32_UINT;
+    }
+  return DXGI_FORMAT_R16_UINT;
+  }
+
 inline UINT alignTo(UINT x, UINT a) {
   a--;
   return (x+a) & (~a);
@@ -218,8 +228,8 @@ class DxDevice : public AbstractGraphicsApi::Device {
     void         waitData();
     void         waitIdle() override;
 
-    static void  getProp(IDXGIAdapter1& adapter, AbstractGraphicsApi::Props& prop);
-    static void  getProp(DXGI_ADAPTER_DESC1& desc, AbstractGraphicsApi::Props& prop);
+    static void  getProp(IDXGIAdapter1& adapter, ID3D12Device& dev, AbstractGraphicsApi::Props& prop);
+    static void  getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGraphicsApi::Props& prop);
     void         submit(DxCommandBuffer& cmd,DxFence& sync);
 
     DataMgr&     dataMgr() { return *data; }

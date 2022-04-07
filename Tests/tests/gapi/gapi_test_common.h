@@ -18,8 +18,9 @@ struct Vertex {
   float x,y;
   };
 
-static const Vertex   vboData[3] = {{-1,-1},{1,-1},{1,1}};
-static const uint16_t iboData[3] = {0,1,2};
+static const Vertex        vboData[3] = {{-1,-1},{1,-1},{1,1}};
+static const Tempest::Vec3 vboData3[3] = {{-1,-1,0},{1,-1,0},{1,1,0}};
+static const uint16_t      iboData[3] = {0,1,2};
 
 template<class GraphicsApi>
 void init() {
@@ -966,15 +967,39 @@ void PushRemapping() {
   }
 
 template<class GraphicsApi>
-void Blas(const char* outImg) {
+void Blas() {
+  using namespace Tempest;
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api,DeviceType::Discrete);
+    if(!device.properties().raytracing.rayQuery)
+      return;
+
+    auto vbo  = device.vbo(vboData3,3);
+    auto ibo  = device.ibo(iboData,3);
+    auto blas = device.blas(vbo,ibo);
+    auto tlas = device.tlas(&blas,1);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
+void RayQuery(const char* outImg) {
   using namespace Tempest;
 
   try {
     GraphicsApi api{ApiFlags::Validation};
     //auto dev = api.devices();
     Device      device(api,DeviceType::Discrete);
+    if(!device.properties().raytracing.rayQuery)
+      return;
 
-    auto vbo  = device.vbo(vboData,3);
+    auto vbo  = device.vbo(vboData3,3);
     auto ibo  = device.ibo(iboData,3);
     auto blas = device.blas(vbo,ibo);
     auto tlas = device.tlas(&blas,1);
@@ -983,9 +1008,10 @@ void Blas(const char* outImg) {
     auto vert = device.shader("shader/simple_test.vert.sprv");
     auto frag = device.shader("shader/ray_test.frag.sprv");
     auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
-    auto ubo  = device.descriptors(pso);
 
+    auto ubo  = device.descriptors(pso);
     ubo.set(0, tlas);
+
     auto tex = device.attachment(TextureFormat::RGBA8,128,128);
     auto cmd = device.commandBuffer();
     {

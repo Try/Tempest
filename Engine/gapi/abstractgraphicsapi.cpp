@@ -86,7 +86,6 @@ AbstractGraphicsApi::AccelerationStructure*
   }
 
 AbstractGraphicsApi::AccelerationStructure*
-  AbstractGraphicsApi::createTopAccelerationStruct(Device* d,
-                                                   const AccelerationStructure* as, size_t cnt) {
+  AbstractGraphicsApi::createTopAccelerationStruct(Device* d, AccelerationStructure* as, size_t cnt) {
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }

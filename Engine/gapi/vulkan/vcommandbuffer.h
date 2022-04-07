@@ -60,9 +60,10 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void setBytes   (AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) override;
     void setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc &u) override;
 
-    void draw       (const AbstractGraphicsApi::Buffer& vbo, size_t  offset, size_t size, size_t firstInstance, size_t instanceCount) override;
-    void drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, const AbstractGraphicsApi::Buffer& iibo, Detail::IndexClass cls,
-                     size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) override;
+    void draw       (const AbstractGraphicsApi::Buffer& vbo, size_t voffset, size_t vsize, size_t firstInstance, size_t instanceCount) override;
+    void drawIndexed(const AbstractGraphicsApi::Buffer& vbo, size_t voffset,
+                     const AbstractGraphicsApi::Buffer& ibo, Detail::IndexClass cls,
+                     size_t ioffset, size_t isize, size_t firstInstance, size_t instanceCount) override;
     void dispatch   (size_t x, size_t y, size_t z) override;
 
     void barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) override;
@@ -81,8 +82,8 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
               AbstractGraphicsApi::Texture& dst, uint32_t dstW, uint32_t dstH, uint32_t dstMip);
 
     void buildBlas(VkAccelerationStructureKHR dest,
-                   const AbstractGraphicsApi::Buffer& vbo, size_t offset, size_t stride, uint32_t maxVertex,
-                   const AbstractGraphicsApi::Buffer& ibo, Detail::IndexClass cls, uint32_t primitiveCount,
+                   const AbstractGraphicsApi::Buffer& vbo, size_t vboSz, size_t voffset, size_t stride,
+                   const AbstractGraphicsApi::Buffer& ibo, size_t iboSz, Detail::IndexClass icls,
                    AbstractGraphicsApi::Buffer& scratch);
     void buildTlas(VkAccelerationStructureKHR dest,
                    AbstractGraphicsApi::Buffer& tbo, const AbstractGraphicsApi::Buffer& instances, uint32_t numInstances,

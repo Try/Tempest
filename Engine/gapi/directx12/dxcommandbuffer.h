@@ -58,8 +58,9 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void draw        (const AbstractGraphicsApi::Buffer& vbo,
                       size_t offset,size_t vertexCount, size_t firstInstance, size_t instanceCount) override;
-    void drawIndexed (const AbstractGraphicsApi::Buffer& vbo, const AbstractGraphicsApi::Buffer& ibo, Detail::IndexClass cls,
-                      size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount) override;
+    void drawIndexed (const AbstractGraphicsApi::Buffer& vbo, size_t voffset,
+                      const AbstractGraphicsApi::Buffer& ibo, Detail::IndexClass cls, size_t ioffset, size_t isize,
+                      size_t firstInstance, size_t instanceCount) override;
     void dispatch    (size_t x, size_t y, size_t z) override;
 
     void barrier     (const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) override;
@@ -70,6 +71,13 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void copyNative(AbstractGraphicsApi::Buffer& dest, size_t offset, const AbstractGraphicsApi::Texture& src, uint32_t width, uint32_t height, uint32_t mip);
     void copy(AbstractGraphicsApi::Buffer&  dest, size_t offsetDest, const AbstractGraphicsApi::Buffer& src, size_t offsetSrc, size_t size);
     void copy(AbstractGraphicsApi::Texture& dest, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Buffer&  src, size_t offset);
+
+    void buildBlas(ID3D12Resource* dest,
+                   AbstractGraphicsApi::Buffer& vbo, size_t vboSz, size_t offset, size_t stride,
+                   AbstractGraphicsApi::Buffer& ibo, size_t iboSz, Detail::IndexClass cls,
+                   AbstractGraphicsApi::Buffer& scratch);
+    void buildTlas(AbstractGraphicsApi::Buffer& tbo, AbstractGraphicsApi::Buffer& instances, uint32_t numInstances,
+                   AbstractGraphicsApi::Buffer& scratch);
 
     ID3D12GraphicsCommandList* get() { return impl.get(); }
 

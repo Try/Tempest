@@ -56,7 +56,7 @@ void DescriptorSet::set(size_t layoutBind, const Detail::ResourcePtr<Texture2d> 
 void DescriptorSet::set(size_t layoutBind, const AccelerationStructure& tlas) {
   if(tlas.impl.handler)
     impl.handler->setTlas(layoutBind,tlas.impl.handler); else
-    throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
+    throw std::system_error(Tempest::GraphicsErrc::InvalidAccelerationStructure);
   }
 
 void DescriptorSet::set(size_t layoutBind, const StorageBuffer& vbuf) {

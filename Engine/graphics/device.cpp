@@ -8,6 +8,7 @@
 #include <Tempest/Except>
 
 #include <mutex>
+#include <cassert>
 
 using namespace Tempest;
 
@@ -211,7 +212,10 @@ StorageImage Device::image2d(TextureFormat frm, const uint32_t w, const uint32_t
 AccelerationStructure Device::implBlas(const VideoBuffer& vbo, size_t stride, const VideoBuffer& ibo, Detail::IndexClass icls, size_t offset, size_t count) {
   if(!properties().raytracing.rayQuery)
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
-  auto blas = api.createBottomAccelerationStruct(dev,vbo.impl.handler,vbo.size(),offset,stride,ibo.impl.handler,count,icls);
+  assert(3*sizeof(float)<=stride); // float3 positions, no overlap
+  auto blas = api.createBottomAccelerationStruct(dev,
+                                                 vbo.impl.handler,vbo.size()/stride,offset,stride,
+                                                 ibo.impl.handler,count,icls);
   return AccelerationStructure(*this,blas);
   }
 

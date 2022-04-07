@@ -163,6 +163,18 @@ TEST(DirectX12Api,PushRemapping) {
 #endif
   }
 
+TEST(DirectX12Api,Blas) {
+#if defined(_MSC_VER)
+  GapiTestCommon::Blas<DirectX12Api>();
+#endif
+  }
+
+TEST(DirectX12Api,DISABLED_RayQuery) {
+#if defined(_MSC_VER)
+  GapiTestCommon::RayQuery<DirectX12Api>("DirectX12Api_RayQuery.png");
+#endif
+  }
+
 TEST(DirectX12Api,Spirv_HS) {
 #if defined(_MSC_VER)
   using namespace Tempest;

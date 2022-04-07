@@ -17,6 +17,7 @@
 #include "directx12/dxfence.h"
 #include "directx12/dxdescriptorarray.h"
 #include "directx12/dxfbolayout.h"
+#include "directx12/dxaccelerationstructure.h"
 
 #include <Tempest/Pixmap>
 
@@ -57,18 +58,14 @@ struct DirectX12Api::Impl {
       if(lstrcmpW(desc.Description,L"Microsoft Basic Render Driver")==0)
         continue;
 
-      ComPtr<IDXGIAdapter3> adapter3;
-      adapter->QueryInterface(uuid<IDXGIAdapter3>(), reinterpret_cast<void**>(&adapter3.get()));
-
-      DXGI_ADAPTER_DESC2 desc2={};
-      if(adapter3.get()!=nullptr)
-        adapter3->GetDesc2(&desc2);
+      ComPtr<ID3D12Device> tmpDev;
+      if(FAILED(dllApi.D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_11_0, uuid<ID3D12Device>(),
+                                         reinterpret_cast<void**>(&tmpDev))))
+        continue;
 
       AbstractGraphicsApi::Props props={};
-      DxDevice::getProp(desc,props);
-      auto hr = dllApi.D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_11_0, uuid<ID3D12Device>(), nullptr);
-      if(SUCCEEDED(hr))
-        d.push_back(props);
+      DxDevice::getProp(desc,*tmpDev,props);
+      d.push_back(props);
       }
 
     return d;
@@ -89,16 +86,16 @@ struct DirectX12Api::Impl {
       if(lstrcmpW(desc.Description,L"Microsoft Basic Render Driver")==0)
         continue;
 
-      AbstractGraphicsApi::Props props={};
-      DxDevice::getProp(desc,props);
-      if(gpuName!=nullptr && std::strcmp(props.name,gpuName)!=0)
+      ComPtr<ID3D12Device> tmpDev;
+      if(FAILED(dllApi.D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_11_0, uuid<ID3D12Device>(),
+                                         reinterpret_cast<void**>(&tmpDev))))
         continue;
 
-      // Check to see if the adapter supports Direct3D 12, but don't create the
-      // actual device yet.
-      auto hr = dllApi.D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_11_0, uuid<ID3D12Device>(), nullptr);
-      if(SUCCEEDED(hr))
-        break;
+      AbstractGraphicsApi::Props props={};
+      DxDevice::getProp(desc,*tmpDev,props);
+      if(gpuName!=nullptr && std::strcmp(props.name,gpuName)!=0)
+        continue;
+      break;
       }
 
     if(adapter.get()==nullptr)
@@ -287,7 +284,6 @@ AbstractGraphicsApi::PTexture DirectX12Api::createCompressedTexture(Device* d, c
   Pixmap::Format pfrm      = Pixmap::toPixmapFormat(frm);
   UINT           blockSize = UINT(Pixmap::blockSizeForFormat(pfrm));
 
-  size_t bufferSize      = 0;
   UINT   stageBufferSize = 0;
   uint32_t w = p.w(), h = p.h();
 
@@ -295,7 +291,6 @@ AbstractGraphicsApi::PTexture DirectX12Api::createCompressedTexture(Device* d, c
     Size bsz   = Pixmap::blockCount(pfrm,w,h);
     UINT pitch = alignTo(bsz.w*blockSize,D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
 
-    bufferSize      += bsz.w*bsz.h*blockSize;
     stageBufferSize += pitch*bsz.h;
     stageBufferSize = alignTo(stageBufferSize,D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 
@@ -353,9 +348,24 @@ AbstractGraphicsApi::PTexture DirectX12Api::createStorage(AbstractGraphicsApi::D
   Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
 
   Detail::DxTexture buf=dx.allocator.alloc(w,h,mipCnt,frm,true);
-  Detail::DSharedPtr<Detail::DxTexture*> pbuf(new Detail::DxTexture(std::move(buf)));
+  Detail::DSharedPtr<DxTexture*> pbuf(new Detail::DxTexture(std::move(buf)));
 
   return PTexture(pbuf.handler);
+  }
+
+AbstractGraphicsApi::AccelerationStructure* DirectX12Api::createBottomAccelerationStruct(Device* d,
+                                                                                         Buffer* vbo, size_t vboSz, size_t offset, size_t stride,
+                                                                                         Buffer* ibo, size_t iboSz, Detail::IndexClass icls) {
+  auto& dx = *reinterpret_cast<DxDevice*>(d);
+  auto& vx = *reinterpret_cast<DxBuffer*>(vbo);
+  auto& ix = *reinterpret_cast<DxBuffer*>(ibo);
+  return new DxAccelerationStructure(dx,vx,vboSz,offset,stride,ix,iboSz,icls);
+  }
+
+AbstractGraphicsApi::AccelerationStructure* DirectX12Api::createTopAccelerationStruct(Device* d, AccelerationStructure* as, size_t cnt) {
+  auto& dx = *reinterpret_cast<DxDevice*>(d);
+  auto& ax = *reinterpret_cast<DxAccelerationStructure*>(as);
+  return new DxTopAccelerationStructure(dx, &ax);
   }
 
 void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t,

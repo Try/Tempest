@@ -47,7 +47,7 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
 
   DXGI_ADAPTER_DESC desc={};
   adapter.GetDesc(&desc);
-  getProp(adapter,props);
+  getProp(adapter,*device,props);
 
   D3D12_COMMAND_QUEUE_DESC queueDesc = {};
   queueDesc.Type  = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -98,13 +98,13 @@ DxDevice::~DxDevice() {
   CloseHandle(idleEvent);
   }
 
-void DxDevice::getProp(IDXGIAdapter1& adapter, AbstractGraphicsApi::Props& prop) {
+void DxDevice::getProp(IDXGIAdapter1& adapter, ID3D12Device& dev, AbstractGraphicsApi::Props& prop) {
   DXGI_ADAPTER_DESC1 desc={};
   adapter.GetDesc1(&desc);
-  return getProp(desc,prop);
+  return getProp(desc,dev,prop);
   }
 
-void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, AbstractGraphicsApi::Props& prop) {
+void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGraphicsApi::Props& prop) {
   for(size_t i=0;i<sizeof(prop.name);++i)  {
     WCHAR c = desc.Description[i];
     if(c==0)
@@ -115,17 +115,6 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, AbstractGraphicsApi::Props& pro
       prop.name[i] = '?';
     }
   prop.name[sizeof(prop.name)-1]='\0';
-
-  if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) {
-    prop.type = DeviceType::Cpu;
-    }
-  else if(desc.VendorId==0x8086) {
-    // HACK: 0x8086 is common for intel GPU's
-    prop.type = DeviceType::Integrated;
-    }
-  else {
-    prop.type = DeviceType::Discrete;
-    }
 
   // https://docs.microsoft.com/en-us/windows/win32/direct3ddxgi/hardware-support-for-direct3d-12-0-formats
   // NOTE: TextureFormat::RGB32F is not supported, because of mip-maps
@@ -188,6 +177,19 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, AbstractGraphicsApi::Props& pro
   prop.compute.maxGroupSize.x = D3D12_CS_THREAD_GROUP_MAX_X;
   prop.compute.maxGroupSize.y = D3D12_CS_THREAD_GROUP_MAX_Y;
   prop.compute.maxGroupSize.z = D3D12_CS_THREAD_GROUP_MAX_Z;
+
+  if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) {
+    prop.type = DeviceType::Cpu;
+    } else {
+    D3D12_FEATURE_DATA_ARCHITECTURE arch = {};
+    if(SUCCEEDED(dev.CheckFeatureSupport(D3D12_FEATURE_ARCHITECTURE, &arch, sizeof(arch))))
+      prop.type = arch.UMA ? DeviceType::Integrated : DeviceType::Discrete;
+    }
+
+  D3D12_FEATURE_DATA_D3D12_OPTIONS5 feature5 = {};
+  if(SUCCEEDED(dev.CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &feature5, sizeof(feature5)))) {
+    prop.raytracing.rayQuery = (feature5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED);
+    }
   }
 
 void DxDevice::waitData() {

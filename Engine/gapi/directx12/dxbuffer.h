@@ -12,7 +12,7 @@ class DxDevice;
 
 class DxBuffer : public AbstractGraphicsApi::Buffer {
   public:
-    DxBuffer() = delete;
+    DxBuffer() = default;
     DxBuffer(DxDevice* dev, UINT sizeInBytes);
     DxBuffer(DxBuffer&& other);
     ~DxBuffer();

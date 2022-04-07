@@ -45,19 +45,20 @@ inline std::error_code make_error_code(Tempest::SystemErrc e) noexcept {
 
 
 enum class GraphicsErrc {
-  NoDevice                  = 0,
-  OutOfVideoMemory          = 1,
-  OutOfHostMemory           = 2,
-  InvalidShaderModule       = 3,
-  UnsupportedTextureFormat  = 4,
-  InvalidUniformBuffer      = 5,
-  InvalidTexture            = 6,
-  InvalidBufferUpdate       = 7,
-  TooLargeUbo               = 8,
-  InvalidStorageBuffer      = 9,
-  DrawCallWithoutFbo        = 10,
-  ComputeCallInRenderPass   = 11,
-  UnsupportedExtension      = 12,
+  NoDevice                     = 0,
+  OutOfVideoMemory             = 1,
+  OutOfHostMemory              = 2,
+  InvalidShaderModule          = 3,
+  UnsupportedTextureFormat     = 4,
+  InvalidUniformBuffer         = 5,
+  InvalidTexture               = 6,
+  InvalidBufferUpdate          = 7,
+  TooLargeUbo                  = 8,
+  InvalidStorageBuffer         = 9,
+  DrawCallWithoutFbo           = 10,
+  ComputeCallInRenderPass      = 11,
+  UnsupportedExtension         = 12,
+  InvalidAccelerationStructure = 13,
   };
 
 struct GraphicsErrCategory : std::error_category {

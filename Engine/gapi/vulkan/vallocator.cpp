@@ -123,8 +123,10 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
     createInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
   if(provider.device->props.raytracing.rayQuery) {
-    if(MemUsage::ScratchBuffer==(usage & MemUsage::ScratchBuffer)) {
+    if(MemUsage::StorageBuffer==(usage & MemUsage::StorageBuffer)) {
       createInfo.usage |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
+      }
+    if(MemUsage::ScratchBuffer==(usage & MemUsage::ScratchBuffer)) {
       createInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
       }
     if(MemUsage::AsStorage==(usage & MemUsage::AsStorage))

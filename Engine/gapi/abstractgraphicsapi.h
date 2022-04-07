@@ -454,9 +454,11 @@ namespace Tempest {
         virtual void setViewport(const Rect& r)=0;
         virtual void setScissor (const Rect& r)=0;
 
-        virtual void draw        (const Buffer& vbo, size_t offset, size_t vertexCount, size_t firstInstance, size_t instanceCount)=0;
-        virtual void drawIndexed (const Buffer& vbo, const Buffer& ibo, Detail::IndexClass cls,
-                                  size_t ioffset, size_t isize, size_t voffset, size_t firstInstance, size_t instanceCount)=0;
+        virtual void draw        (const Buffer& vbo, size_t offset, size_t vertexCount,
+                                  size_t firstInstance, size_t instanceCount)=0;
+        virtual void drawIndexed (const Buffer& vbo, size_t voffset,
+                                  const Buffer& ibo, Detail::IndexClass cls, size_t ioffset, size_t isize,
+                                  size_t firstInstance, size_t instanceCount)=0;
         virtual void dispatch    (size_t x, size_t y, size_t z)=0;
         };
 
@@ -503,8 +505,7 @@ namespace Tempest {
       virtual PTexture   createStorage(Device* d, const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) = 0;
 
       virtual AccelerationStructure* createBottomAccelerationStruct(Device* d, Buffer* vbo, size_t vboSz, size_t offset, size_t stride, Buffer* ibo, size_t iboSz, Detail::IndexClass icls);
-      virtual AccelerationStructure* createTopAccelerationStruct(Device* d,
-                                                                 const AccelerationStructure* as, size_t cnt);
+      virtual AccelerationStructure* createTopAccelerationStruct(Device* d, AccelerationStructure* as, size_t cnt);
 
       virtual void       readPixels   (Device* d, Pixmap& out, const PTexture t,
                                        TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip, bool storageImg) = 0;

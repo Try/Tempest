@@ -155,6 +155,12 @@ TEST(VulkanApi,PushRemapping) {
 
 TEST(VulkanApi,Blas) {
 #if !defined(__OSX__)
-  GapiTestCommon::Blas<VulkanApi>("VulkanApi_Blas.png");
+  GapiTestCommon::Blas<VulkanApi>();
+#endif
+  }
+
+TEST(VulkanApi,RayQuery) {
+#if !defined(__OSX__)
+  GapiTestCommon::RayQuery<VulkanApi>("VulkanApi_RayQuery.png");
 #endif
   }

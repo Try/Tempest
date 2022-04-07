@@ -194,23 +194,22 @@ AbstractGraphicsApi::PTexture VulkanApi::createStorage(AbstractGraphicsApi::Devi
 AbstractGraphicsApi::AccelerationStructure* VulkanApi::createBottomAccelerationStruct(Device* d,
                                                                                       Buffer* vbo, size_t vboSz, size_t offset, size_t stride,
                                                                                       Buffer* ibo, size_t iboSz, Detail::IndexClass icls) {
-  Detail::VDevice& dx = *reinterpret_cast<Detail::VDevice*>(d);
-  auto&            vx = *reinterpret_cast<VBuffer*>(vbo);
-  auto&            ix = *reinterpret_cast<VBuffer*>(ibo);
+  auto& dx = *reinterpret_cast<VDevice*>(d);
+  auto& vx = *reinterpret_cast<VBuffer*>(vbo);
+  auto& ix = *reinterpret_cast<VBuffer*>(ibo);
   return new VAccelerationStructure(dx,vx,vboSz,offset,stride,ix,iboSz,icls);
   }
 
-AbstractGraphicsApi::AccelerationStructure* VulkanApi::createTopAccelerationStruct(Device* d,
-                                                                                   const AccelerationStructure* as, size_t cnt) {
-  auto& dx = *reinterpret_cast<Detail::VDevice*>(d);
+AbstractGraphicsApi::AccelerationStructure* VulkanApi::createTopAccelerationStruct(Device* d, AccelerationStructure* as, size_t cnt) {
+  auto& dx = *reinterpret_cast<VDevice*>(d);
   auto& ax = *reinterpret_cast<const VAccelerationStructure*>(as);
   return new VTopAccelerationStructure(dx, &ax);
   }
 
 void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PTexture t,
                            TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip, bool storageImg) {
-  Detail::VDevice&  dx = *reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VTexture& tx = *reinterpret_cast<Detail::VTexture*>(t.handler);
+  auto&           dx     = *reinterpret_cast<VDevice*>(d);
+  auto&           tx     = *reinterpret_cast<VTexture*>(t.handler);
 
   Pixmap::Format  pfrm   = Pixmap::toPixmapFormat(frm);
   size_t          bpb    = Pixmap::blockSizeForFormat(pfrm);

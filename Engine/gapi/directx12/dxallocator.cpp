@@ -113,9 +113,6 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t count, size_t size, size_t a
   resDesc.SampleDesc.Quality = 0;
   resDesc.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
   resDesc.Flags              = D3D12_RESOURCE_FLAG_NONE;
-  if(MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer)) {
-    resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-    }
 
   D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COMMON;
   if(bufFlg==BufferHeap::Upload) {
@@ -123,6 +120,19 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t count, size_t size, size_t a
     }
   else if(bufFlg==BufferHeap::Readback) {
     state = D3D12_RESOURCE_STATE_COPY_DEST;
+    }
+
+  if(MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer)) {
+    resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+    //state         |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    }
+  if(MemUsage::AsStorage==(usage&MemUsage::AsStorage)) {
+    resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+    state         |= D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
+    }
+  if(MemUsage::ScratchBuffer==(usage&MemUsage::ScratchBuffer)) {
+    resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+    state          = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     }
 
   DxBuffer ret(owner,UINT(resDesc.Width));
