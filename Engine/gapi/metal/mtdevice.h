@@ -183,6 +183,14 @@ inline MTLPrimitiveType nativeFormat(Topology t) {
   return MTLPrimitiveTypePoint;
   }
 
+inline MTLIndexType nativeFormat(IndexClass icls) {
+  switch(icls) {
+    case IndexClass::i16: return MTLIndexTypeUInt16;
+    case IndexClass::i32: return MTLIndexTypeUInt32;
+    }
+  return MTLIndexTypeUInt16;
+  }
+
 class MtDevice : public AbstractGraphicsApi::Device {
   public:
     MtDevice(const char* name);

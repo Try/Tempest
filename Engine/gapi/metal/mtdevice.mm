@@ -154,8 +154,25 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, id<MTLDevice> dev) 
   prop.anisotropy    = true;
   prop.maxAnisotropy = 16;
 
+#ifdef __IOS__
+  if([dev supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily3_v2])
+    prop.tesselationShader = false;//true;
+#else
+  if([dev supportsFeatureSet:MTLFeatureSet_macOS_GPUFamily1_v2])
+    prop.tesselationShader = false;//true;
+#endif
+
+#ifdef __IOS__
+  prop.storeAndAtomicVs = false;
+  prop.storeAndAtomicFs = false;
+#else
   // TODO: verify
-  //prop.storeAndAtomicVs = true;
-  //prop.storeAndAtomicFs = true;
+  prop.storeAndAtomicVs = false;
+  prop.storeAndAtomicFs = false;
+#endif
+
+  if(@available(macOS 12.0, *)) {
+    prop.raytracing.rayQuery = dev.supportsRaytracingFromRender;
+    }
   }
 

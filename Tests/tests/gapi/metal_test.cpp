@@ -156,3 +156,15 @@ TEST(MetalApi,PushRemapping) {
   GapiTestCommon::PushRemapping<MetalApi>();
 #endif
   }
+
+TEST(MetalApi,Blas) {
+#if defined(__OSX__)
+  GapiTestCommon::Blas<MetalApi>();
+#endif
+  }
+
+TEST(MetalApi,RayQuery) {
+#if defined(__OSX__)
+  GapiTestCommon::RayQuery<MetalApi>("MetalApi_RayQuery.png");
+#endif
+  }

@@ -4,6 +4,7 @@
 #include "mttexture.h"
 #include "mtbuffer.h"
 #include "mtpipelinelay.h"
+#include "mtaccelerationstructure.h"
 
 #import <Metal/MTLTexture.h>
 #import <Metal/MTLSampler.h>
@@ -41,4 +42,9 @@ void MtDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi::Buffer *buf, siz
   }
 
 void MtDescriptorArray::ssboBarriers(ResourceState&) {
+  }
+
+void MtDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure* a) {
+  auto& as = *reinterpret_cast<MtAccelerationStructure*>(a);
+  desc[id].val = as.impl;
   }

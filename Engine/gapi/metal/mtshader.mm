@@ -30,6 +30,16 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
   std::string msl;
   try {
     spirv_cross::CompilerMSL comp(reinterpret_cast<const uint32_t*>(source),srcSize/4);
+    for(auto& cap:comp.get_declared_capabilities()) {
+      switch(cap) {
+        case spv::CapabilityRayQueryKHR:
+          optMSL.msl_version = spirv_cross::CompilerMSL::Options::make_msl_version(2,3);
+          break;
+        default:
+          break;
+        }
+      }
+
     comp.set_msl_options   (optMSL );
     comp.set_common_options(optGLSL);
 

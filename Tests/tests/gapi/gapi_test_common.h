@@ -971,11 +971,17 @@ void Blas() {
   using namespace Tempest;
 
   try {
+    const char* rtDev = nullptr;
+
     GraphicsApi api{ApiFlags::Validation};
-    Device      device(api,DeviceType::Discrete);
-    if(!device.properties().raytracing.rayQuery)
+    auto dev = api.devices();
+    for(auto& i:dev)
+      if(i.raytracing.rayQuery)
+        rtDev = i.name;
+    if(rtDev==nullptr)
       return;
 
+    Device device(api,rtDev);
     auto vbo  = device.vbo(vboData3,3);
     auto ibo  = device.ibo(iboData,3);
     auto blas = device.blas(vbo,ibo);
@@ -993,12 +999,17 @@ void RayQuery(const char* outImg) {
   using namespace Tempest;
 
   try {
+    const char* rtDev = nullptr;
+
     GraphicsApi api{ApiFlags::Validation};
-    //auto dev = api.devices();
-    Device      device(api,DeviceType::Discrete);
-    if(!device.properties().raytracing.rayQuery)
+    auto dev = api.devices();
+    for(auto& i:dev)
+      if(i.raytracing.rayQuery)
+        rtDev = i.name;
+    if(rtDev==nullptr)
       return;
 
+    Device device(api,rtDev);
     auto vbo  = device.vbo(vboData3,3);
     auto ibo  = device.ibo(iboData,3);
     auto blas = device.blas(vbo,ibo);

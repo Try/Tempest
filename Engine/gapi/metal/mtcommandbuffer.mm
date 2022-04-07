@@ -255,7 +255,7 @@ void MtCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_
   };
   auto&    vbo     = reinterpret_cast<const MtBuffer&>(ivbo);
   auto&    ibo     = reinterpret_cast<const MtBuffer&>(iibo);
-  auto     iboType = type[uint32_t(cls)];
+  auto     iboType = nativeFormat(cls);
   uint32_t mul     = (iboType==MTLIndexTypeUInt16 ? 2 : 4);
 
   [encDraw setVertexBuffer:vbo.impl
@@ -313,6 +313,7 @@ void MtCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u) {
       continue;
     switch(l.cls) {
       case ShaderReflection::Push:
+      case ShaderReflection::Count:
         break;
       case ShaderReflection::Ubo:
       case ShaderReflection::SsboR:
@@ -323,6 +324,9 @@ void MtCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u) {
       case ShaderReflection::ImgR:
       case ShaderReflection::ImgRW:
         setTexture(mtl[i],d.desc[i].val,d.desc[i].sampler);
+        break;
+      case ShaderReflection::Tlas:
+        setTlas(mtl[i],d.desc[i].val);
         break;
       }
     }
@@ -357,6 +361,26 @@ void MtCommandBuffer::setTexture(const MtPipelineLay::MTLBind& mtl,
     [encComp setTexture:tex atIndex:mtl.bindCs];
   if(mtl.bindCsSmp!=uint32_t(-1))
     [encComp setSamplerState:ss atIndex:mtl.bindCsSmp];
+  }
+
+void MtCommandBuffer::setTlas(const MtPipelineLay::MTLBind& mtl,
+                              id<MTLAccelerationStructure> as) {
+  if(@available(macOS 12.0, *)) {
+    if(mtl.bindVs!=uint32_t(-1)) {
+      [encDraw setVertexAccelerationStructure:as atBufferIndex:mtl.bindVs];
+      }
+    if(mtl.bindFs!=uint32_t(-1)) {
+      [encDraw setFragmentAccelerationStructure:as atBufferIndex:mtl.bindFs];
+      }
+    } else {
+    if(mtl.bindVs!=uint32_t(-1) ||
+       mtl.bindFs!=uint32_t(-1))
+      throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
+    }
+
+  if(mtl.bindCs!=uint32_t(-1)) {
+    [encComp setAccelerationStructure:as atBufferIndex:mtl.bindCs];
+    }
   }
 
 void MtCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture &image,

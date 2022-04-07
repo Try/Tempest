@@ -17,6 +17,7 @@
 #include "gapi/metal/mtdescriptorarray.h"
 #include "gapi/metal/mtsync.h"
 #include "gapi/metal/mtswapchain.h"
+#include "gapi/metal/mtaccelerationstructure.h"
 
 #import  <Metal/MTLDevice.h>
 #import  <Metal/MTLCommandQueue.h>
@@ -158,6 +159,26 @@ AbstractGraphicsApi::PTexture MetalApi::createStorage(AbstractGraphicsApi::Devic
   @autoreleasepool {
     auto& dev = *reinterpret_cast<MtDevice*>(d);
     return PTexture(new MtTexture(dev,w,h,mips,frm,true));
+    }
+  }
+
+AbstractGraphicsApi::AccelerationStructure*
+MetalApi::createBottomAccelerationStruct(Device* d,
+                                         Buffer* vbo, size_t vboSz, size_t offset, size_t stride,
+                                         Buffer* ibo, size_t iboSz, Detail::IndexClass icls) {
+  @autoreleasepool {
+    auto& dev = *reinterpret_cast<MtDevice*>(d);
+    auto& vx  = *reinterpret_cast<MtBuffer*>(vbo);
+    auto& ix  = *reinterpret_cast<MtBuffer*>(ibo);
+    return new MtAccelerationStructure(dev,vx,vboSz,offset,stride, ix,iboSz,icls);
+    }
+  }
+
+AbstractGraphicsApi::AccelerationStructure* MetalApi::createTopAccelerationStruct(Device* d, AccelerationStructure* as, size_t cnt) {
+  @autoreleasepool {
+    auto& dev = *reinterpret_cast<MtDevice*>(d);
+    auto* ax  =  reinterpret_cast<MtAccelerationStructure*>(as);
+    return new MtTopAccelerationStructure(dev,ax);
     }
   }
 
