@@ -33,6 +33,7 @@ class VTopAccelerationStructure : public AbstractGraphicsApi::AccelerationStruct
     VDevice&                   owner;
     VkAccelerationStructureKHR impl = VK_NULL_HANDLE;
     VBuffer                    data;
+    //VBuffer                    inst;
   };
 
 }

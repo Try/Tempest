@@ -155,7 +155,7 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
     VkAccelerationStructureInstanceKHR objInstance = {};
     for(int x=0; x<3; ++x)
       for(int y=0; y<4; ++y)
-        objInstance.transform.matrix[x][y] = inst[i].mat.at(x,y);
+        objInstance.transform.matrix[x][y] = inst[i].mat.at(y,x);
     objInstance.instanceCustomIndex                    = 0;
     objInstance.mask                                   = 0xFF;
     objInstance.instanceShaderBindingTableRecordOffset = 0;
@@ -182,11 +182,13 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
   auto cmd = dx.dataMgr().get();
   cmd->begin();
   //cmd->hold(scratch);
-  cmd->buildTlas(impl,data,*pBuf.handler,1,scratch);
+  cmd->buildTlas(impl,data,*pBuf.handler,asSize,scratch);
   cmd->end();
 
   // dx.dataMgr().waitFor(this);
   dx.dataMgr().submitAndWait(std::move(cmd));
+
+  //this->inst = std::move(*pBuf.handler);
   }
 
 VTopAccelerationStructure::~VTopAccelerationStructure() {
