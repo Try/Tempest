@@ -23,7 +23,7 @@ class MtAccelerationStructure : public Tempest::AbstractGraphicsApi::Acceleratio
 
 class MtTopAccelerationStructure : public AbstractGraphicsApi::AccelerationStructure {
   public:
-    MtTopAccelerationStructure(MtDevice& owner, const MtAccelerationStructure* obj);
+    MtTopAccelerationStructure(MtDevice& owner, const RtInstance* inst, AccelerationStructure* const * as, size_t asSize);
     ~MtTopAccelerationStructure();
 
     MtDevice&                    owner;

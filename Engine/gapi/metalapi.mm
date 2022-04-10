@@ -177,8 +177,7 @@ MetalApi::createBottomAccelerationStruct(Device* d,
 AbstractGraphicsApi::AccelerationStructure* MetalApi::createTopAccelerationStruct(Device* d, const RtInstance* inst, AccelerationStructure*const* as, size_t size) {
   @autoreleasepool {
     auto& dev = *reinterpret_cast<MtDevice*>(d);
-    auto* ax  =  reinterpret_cast<MtAccelerationStructure*>(as[0]);
-    return new MtTopAccelerationStructure(dev,ax);
+    return new MtTopAccelerationStructure(dev,inst,as,size);
     }
   }
 

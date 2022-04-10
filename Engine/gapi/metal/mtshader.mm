@@ -99,8 +99,9 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
 
   if(err!=nil) {
 #if !defined(NDEBUG)
-    const char* e = [[err domain] UTF8String];
+    const char* e = [[err localizedDescription] UTF8String];
     Log::d("cros-compile error: \"",e,"\"");
+    Log::d(msl);
 #endif
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }

@@ -63,29 +63,42 @@ MtAccelerationStructure::~MtAccelerationStructure() {
   }
 
 
-MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const MtAccelerationStructure* obj)
+MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtInstance* inst, AccelerationStructure*const* as, size_t asSize)
   :owner(dx) {
-  MTLAccelerationStructureInstanceDescriptor inst[1] = {};
-  inst[0].transformationMatrix[0][0]      = 1;
-  inst[0].transformationMatrix[1][1]      = 1;
-  inst[0].transformationMatrix[2][2]      = 1;
-  inst[0].options                         = MTLAccelerationStructureInstanceOptionDisableTriangleCulling | MTLAccelerationStructureInstanceOptionOpaque;
-  inst[0].mask                            = 0xFF;
-  inst[0].intersectionFunctionTableOffset = 0;
-  inst[0].accelerationStructureIndex      = 0;
+  instances = [dx.impl newBufferWithLength:sizeof(MTLAccelerationStructureInstanceDescriptor)*asSize
+                                   options:MTLResourceStorageModeManaged];
 
-  instances = [dx.impl newBufferWithBytes:inst
-                                   length:sizeof(MTLAccelerationStructureInstanceDescriptor)*1
-                                  options:MTLResourceStorageModeManaged];
+  for(size_t i=0; i<asSize; ++i) {
+    auto& obj = reinterpret_cast<MTLAccelerationStructureInstanceDescriptor*>([instances contents])[i];
+
+    for(int x=0; x<3; ++x)
+      for(int y=0; y<4; ++y)
+        obj.transformationMatrix[x][y] = inst[i].mat.at(y,x);
+    obj.options                         = MTLAccelerationStructureInstanceOptionDisableTriangleCulling |
+                                           MTLAccelerationStructureInstanceOptionOpaque;
+    obj.mask                            = 0xFF;
+    obj.intersectionFunctionTableOffset = 0;
+    obj.accelerationStructureIndex      = i;
+    }
+
   if(instances==nil)
     throw std::system_error(GraphicsErrc::OutOfVideoMemory);
+
+  NSMutableArray* asArray = [NSMutableArray arrayWithCapacity:asSize];
+  if(instances==nil)
+    throw std::system_error(GraphicsErrc::OutOfHostMemory);
+
+  for(size_t i=0; i<asSize; ++i) {
+    auto* ax = reinterpret_cast<MtAccelerationStructure*>(as[i]);
+    [asArray addObject:ax->impl];
+    }
 
   auto* desc = [MTLInstanceAccelerationStructureDescriptor new];
   desc.instanceDescriptorBuffer        = instances;
   desc.instanceDescriptorBufferOffset  = 0;
   desc.instanceDescriptorStride        = sizeof(MTLAccelerationStructureInstanceDescriptor);
   desc.instanceCount                   = 1;
-  desc.instancedAccelerationStructures = @[obj->impl];
+  desc.instancedAccelerationStructures = asArray;
 
   MTLAccelerationStructureSizes sz = [dx.impl accelerationStructureSizesWithDescriptor:desc];
 
@@ -113,6 +126,8 @@ MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const MtAcc
 
   if(scratch!=nil)
     [scratch release];
+  if(asArray!=nil)
+    [asArray release];
   }
 
 MtTopAccelerationStructure::~MtTopAccelerationStructure() {
