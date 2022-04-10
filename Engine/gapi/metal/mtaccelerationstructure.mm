@@ -108,6 +108,7 @@ MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtIns
       auto* ax = reinterpret_cast<MtAccelerationStructure*>(as[i]);
       [asArray addObject:ax->impl];
       }
+    [instances didModifyRange:NSMakeRange(0,[instances length])];
 
     id<MTLBuffer> scratch = [dx.impl newBufferWithLength:sz.buildScratchBufferSize options:MTLResourceStorageModePrivate];
     if(scratch==nil && sz.buildScratchBufferSize>0)
