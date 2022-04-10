@@ -126,7 +126,12 @@ void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection
         add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,desc);
         break;
         }
+      case ShaderReflection::Tlas: {
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,desc);
+        break;
+        }
       case ShaderReflection::Push:
+      case ShaderReflection::Count:
         break;
       }
     }

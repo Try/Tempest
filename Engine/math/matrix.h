@@ -16,6 +16,7 @@ class Matrix4x4 final {
                float a41, float a42, float a43, float a44 );
     ~Matrix4x4()=default;
 
+    static Matrix4x4 mkIdentity();
     void identity();
 
     inline void translate(const float v[/*3*/]) {

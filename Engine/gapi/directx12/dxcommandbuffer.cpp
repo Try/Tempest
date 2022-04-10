@@ -760,7 +760,7 @@ void DxCommandBuffer::buildTlas(AbstractGraphicsApi::Buffer& tbo,
   D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS tlasInputs = {};
   tlasInputs.Type          = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
   tlasInputs.Flags         = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
-  tlasInputs.NumDescs      = 1;
+  tlasInputs.NumDescs      = numInstances;
   tlasInputs.DescsLayout   = D3D12_ELEMENTS_LAYOUT_ARRAY;
   tlasInputs.InstanceDescs = reinterpret_cast<DxBuffer&>(instances).impl->GetGPUVirtualAddress();
 

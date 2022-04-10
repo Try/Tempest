@@ -27,7 +27,7 @@ class VAccelerationStructure : public AbstractGraphicsApi::AccelerationStructure
 
 class VTopAccelerationStructure : public AbstractGraphicsApi::AccelerationStructure {
   public:
-    VTopAccelerationStructure(VDevice& owner, const VAccelerationStructure* obj);
+    VTopAccelerationStructure(VDevice& owner, const RtInstance* inst, AccelerationStructure* const * as, size_t size);
     ~VTopAccelerationStructure();
 
     VDevice&                   owner;

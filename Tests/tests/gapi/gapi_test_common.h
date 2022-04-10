@@ -5,6 +5,7 @@
 #include <Tempest/Fence>
 #include <Tempest/Pixmap>
 #include <Tempest/Log>
+#include <Tempest/Matrix4x4>
 #include <Tempest/Vec>
 
 #include <gtest/gtest.h>
@@ -985,7 +986,7 @@ void Blas() {
     auto vbo  = device.vbo(vboData3,3);
     auto ibo  = device.ibo(iboData,3);
     auto blas = device.blas(vbo,ibo);
-    auto tlas = device.tlas(&blas,1);
+    auto tlas = device.tlas({{Matrix4x4::mkIdentity(), &blas}});
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
@@ -1013,7 +1014,7 @@ void RayQuery(const char* outImg) {
     auto vbo  = device.vbo(vboData3,3);
     auto ibo  = device.ibo(iboData,3);
     auto blas = device.blas(vbo,ibo);
-    auto tlas = device.tlas(&blas,1);
+    auto tlas = device.tlas({{Matrix4x4::mkIdentity(),&blas}});
 
     auto fsq  = device.vbo<Vertex>({{-1,-1},{ 1,-1},{ 1, 1}, {-1,-1},{ 1, 1},{-1, 1}});
     auto vert = device.shader("shader/simple_test.vert.sprv");

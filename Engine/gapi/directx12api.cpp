@@ -20,6 +20,7 @@
 #include "directx12/dxaccelerationstructure.h"
 
 #include <Tempest/Pixmap>
+#include <Tempest/AccelerationStructure>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -362,10 +363,9 @@ AbstractGraphicsApi::AccelerationStructure* DirectX12Api::createBottomAccelerati
   return new DxAccelerationStructure(dx,vx,vboSz,offset,stride,ix,iboSz,icls);
   }
 
-AbstractGraphicsApi::AccelerationStructure* DirectX12Api::createTopAccelerationStruct(Device* d, AccelerationStructure* as, size_t cnt) {
+AbstractGraphicsApi::AccelerationStructure* DirectX12Api::createTopAccelerationStruct(Device* d, const RtInstance* inst, AccelerationStructure*const* as, size_t geomSize) {
   auto& dx = *reinterpret_cast<DxDevice*>(d);
-  auto& ax = *reinterpret_cast<DxAccelerationStructure*>(as);
-  return new DxTopAccelerationStructure(dx, &ax);
+  return new DxTopAccelerationStructure(dx, inst,as,geomSize);
   }
 
 void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t,

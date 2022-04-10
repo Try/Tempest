@@ -21,6 +21,7 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
     void setUbo (size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset) override;
     void setSsbo(size_t id, AbstractGraphicsApi::Texture *tex, uint32_t mipLevel) override;
     void setSsbo(size_t id, AbstractGraphicsApi::Buffer* buf, size_t offsetn) override;
+    void setTlas(size_t,AbstractGraphicsApi::AccelerationStructure*) override;
     void ssboBarriers(Detail::ResourceState& res) override;
 
     DSharedPtr<DxPipelineLay*>    lay;

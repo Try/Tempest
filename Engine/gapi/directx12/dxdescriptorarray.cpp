@@ -3,6 +3,7 @@
 
 #include <Tempest/PipelineLayout>
 
+#include "dxaccelerationstructure.h"
 #include "dxbuffer.h"
 #include "dxdevice.h"
 #include "dxtexture.h"
@@ -208,12 +209,32 @@ void Tempest::Detail::DxDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi:
     ssbo[id].buf = b;
   }
 
+void DxDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure* t) {
+  auto& device = *lay.handler->dev.device;
+  auto& tlas   = *reinterpret_cast<DxAccelerationStructure*>(t);
+  auto& prm    = lay.handler->prm[id];
+
+  D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+  desc.Format                  = DXGI_FORMAT_UNKNOWN;
+  desc.ViewDimension           = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
+  desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+  desc.RaytracingAccelerationStructure.Location = tlas.impl.impl->GetGPUVirtualAddress();
+
+  auto  gpu = val.cpu[prm.heapId];
+  gpu.ptr += prm.heapOffset;
+  device.CreateShaderResourceView(nullptr,&desc,gpu);
+  }
+
 void DxDescriptorArray::ssboBarriers(ResourceState& res) {
   for(size_t i=0; i<lay.handler->lay.size(); ++i) {
     switch(lay.handler->lay[i].cls) {
       case ShaderReflection::Ubo:
       case ShaderReflection::Texture:
       case ShaderReflection::Push:
+      case ShaderReflection::Count:
+        break;
+      case ShaderReflection::Tlas:
+        // TODO
         break;
       case ShaderReflection::SsboR:
         res.setLayout(*ssbo[i].buf,ResourceAccess::ComputeRead);

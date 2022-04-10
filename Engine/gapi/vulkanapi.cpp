@@ -200,10 +200,9 @@ AbstractGraphicsApi::AccelerationStructure* VulkanApi::createBottomAccelerationS
   return new VAccelerationStructure(dx,vx,vboSz,offset,stride,ix,iboSz,icls);
   }
 
-AbstractGraphicsApi::AccelerationStructure* VulkanApi::createTopAccelerationStruct(Device* d, AccelerationStructure* as, size_t cnt) {
+AbstractGraphicsApi::AccelerationStructure* VulkanApi::createTopAccelerationStruct(Device* d, const RtInstance* inst, AccelerationStructure*const* as, size_t size) {
   auto& dx = *reinterpret_cast<VDevice*>(d);
-  auto& ax = *reinterpret_cast<const VAccelerationStructure*>(as);
-  return new VTopAccelerationStructure(dx, &ax);
+  return new VTopAccelerationStructure(dx, inst, as, size);
   }
 
 void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PTexture t,

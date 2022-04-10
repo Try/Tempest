@@ -97,36 +97,17 @@ VkDeviceAddress VAccelerationStructure::toDeviceAddress(VDevice& dx) const {
   }
 
 
-VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const VAccelerationStructure* obj)
+VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstance* inst, AccelerationStructure*const* as, size_t asSize)
   :owner(dx) {
   auto device                               = dx.device.impl;
   auto vkGetAccelerationStructureBuildSizes = dx.vkGetAccelerationStructureBuildSizes;
   auto vkCreateAccelerationStructure        = dx.vkCreateAccelerationStructure;
 
-  VkAccelerationStructureInstanceKHR objInstance = {};
-  objInstance.transform.matrix[0][0]                 = 1.0;
-  objInstance.transform.matrix[1][1]                 = 1.0;
-  objInstance.transform.matrix[2][2]                 = 1.0;
-  objInstance.instanceCustomIndex                    = 0;
-  objInstance.mask                                   = 0xFF;
-  objInstance.instanceShaderBindingTableRecordOffset = 0;
-  objInstance.flags                                  = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-  objInstance.accelerationStructureReference         = obj->toDeviceAddress(dx);
-
-  Detail::DSharedPtr<VBuffer*> pBuf;
-  {
-  VBuffer buf = dx.allocator.alloc(nullptr,1,sizeof(objInstance),sizeof(objInstance),
-                                   MemUsage::TransferDst | MemUsage::StorageBuffer,BufferHeap::Device);
-
-  pBuf = Detail::DSharedPtr<VBuffer*>(new Detail::VBuffer(std::move(buf)));
-  pBuf.handler->update(&objInstance,0,1, sizeof(objInstance), sizeof(objInstance));
-  }
-
   VkAccelerationStructureGeometryInstancesDataKHR geometryInstancesData = {};
   geometryInstancesData.sType                = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
-  geometryInstancesData.pNext                = NULL;
+  geometryInstancesData.pNext                = nullptr;
   geometryInstancesData.arrayOfPointers      = VK_FALSE;
-  geometryInstancesData.data.deviceAddress   = pBuf.handler->toDeviceAddress(dx);
+  geometryInstancesData.data.deviceAddress   = {};
 
   VkAccelerationStructureGeometryKHR geometry = {};
   geometry.sType                             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
@@ -152,13 +133,37 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const VAcceler
   buildSizesInfo.sType                       = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
   buildSizesInfo.pNext                       = nullptr;
 
+  uint32_t numInstances = asSize;
   vkGetAccelerationStructureBuildSizes(device,
                                        VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
                                        &buildGeometryInfo,
-                                       &buildGeometryInfo.geometryCount,
+                                       &numInstances,
                                        &buildSizesInfo);
 
   data = dx.allocator.alloc(nullptr, buildSizesInfo.accelerationStructureSize,1,1, MemUsage::AsStorage,BufferHeap::Device);
+
+  Detail::DSharedPtr<VBuffer*> pBuf;
+  {
+  VBuffer buf = dx.allocator.alloc(nullptr,asSize,sizeof(VkAccelerationStructureInstanceKHR),sizeof(VkAccelerationStructureInstanceKHR),
+                                   MemUsage::TransferDst | MemUsage::StorageBuffer,BufferHeap::Upload);
+  pBuf = Detail::DSharedPtr<VBuffer*>(new Detail::VBuffer(std::move(buf)));
+  }
+
+  for(size_t i=0; i<asSize; ++i) {
+    auto blas = reinterpret_cast<VAccelerationStructure*>(as[i]);
+
+    VkAccelerationStructureInstanceKHR objInstance = {};
+    for(int x=0; x<3; ++x)
+      for(int y=0; y<4; ++y)
+        objInstance.transform.matrix[x][y] = inst[i].mat.at(x,y);
+    objInstance.instanceCustomIndex                    = 0;
+    objInstance.mask                                   = 0xFF;
+    objInstance.instanceShaderBindingTableRecordOffset = 0;
+    objInstance.flags                                  = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+    objInstance.accelerationStructureReference         = blas->toDeviceAddress(dx);
+
+    pBuf.handler->update(&objInstance,i, 1,sizeof(objInstance), sizeof(objInstance));
+    }
 
   auto  scratch = dx.dataMgr().allocStagingMemory(nullptr,buildSizesInfo.buildScratchSize,1,1,
                                                   MemUsage::ScratchBuffer,BufferHeap::Device);

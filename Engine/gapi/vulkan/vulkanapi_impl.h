@@ -38,9 +38,13 @@ class VulkanInstance {
       bool     hasDynRendering    = false;
       };
 
-    static void      getDeviceProps(VkPhysicalDevice physicalDevice, VkProp& c);
-    static void      getDevicePropsShort(VkPhysicalDevice physicalDevice, AbstractGraphicsApi::Props& c);
+    static bool checkForExt(const std::vector<VkExtensionProperties>& list, const char* name);
 
+    std::vector<VkExtensionProperties> instExtensionsList() const;
+    static std::vector<VkExtensionProperties> extensionsList(VkPhysicalDevice dev);
+
+    void deviceProps(VkPhysicalDevice physicalDevice, VkProp& c) const;
+    void devicePropsShort(VkPhysicalDevice physicalDevice, AbstractGraphicsApi::Props& c) const;
 
     void submit(VDevice *d, VCommandBuffer** cmd, size_t count, VFence *doneCpu);
 
@@ -52,7 +56,6 @@ class VulkanInstance {
 
     const std::initializer_list<const char*>& checkValidationLayerSupport();
     bool layerSupport(const std::vector<VkLayerProperties>& sup,const std::initializer_list<const char*> dest);
-    std::vector<VkExtensionProperties> extensionsList();
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(
         VkDebugReportFlagsEXT       flags,

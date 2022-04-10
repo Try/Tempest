@@ -2,6 +2,7 @@
 
 #include <Tempest/SystemApi>
 #include <Tempest/Color>
+#include <Tempest/Matrix4x4>
 #include <Tempest/Vec>
 
 #include <initializer_list>
@@ -208,6 +209,13 @@ namespace Tempest {
     bool operator!=(const Sampler2d& s) const {
       return !(*this==s);
       }
+    };
+
+  class AccelerationStructure;
+
+  struct RtInstance {
+    Tempest::Matrix4x4           mat  = Matrix4x4::mkIdentity();
+    const AccelerationStructure* blas = nullptr;
     };
 
   namespace Detail {
@@ -505,7 +513,7 @@ namespace Tempest {
       virtual PTexture   createStorage(Device* d, const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) = 0;
 
       virtual AccelerationStructure* createBottomAccelerationStruct(Device* d, Buffer* vbo, size_t vboSz, size_t offset, size_t stride, Buffer* ibo, size_t iboSz, Detail::IndexClass icls);
-      virtual AccelerationStructure* createTopAccelerationStruct(Device* d, AccelerationStructure* as, size_t cnt);
+      virtual AccelerationStructure* createTopAccelerationStruct(Device* d, const RtInstance* geom, AccelerationStructure*const* as, size_t geomSize);
 
       virtual void       readPixels   (Device* d, Pixmap& out, const PTexture t,
                                        TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip, bool storageImg) = 0;

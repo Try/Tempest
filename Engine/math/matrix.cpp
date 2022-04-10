@@ -288,6 +288,12 @@ Matrix4x4::Matrix4x4( float a11, float a12, float a13, float a14,
           a41, a42, a43, a44 );
   }
 
+Matrix4x4 Matrix4x4::mkIdentity() {
+  Matrix4x4 m;
+  m.identity();
+  return m;
+  }
+
 void Matrix4x4::identity(){
   setData( 1, 0, 0, 0,
            0, 1, 0, 0,

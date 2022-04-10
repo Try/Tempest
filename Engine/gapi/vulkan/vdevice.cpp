@@ -68,7 +68,7 @@ VDevice::~VDevice(){
   }
 
 void VDevice::implInit(VulkanInstance &api, VkPhysicalDevice pdev) {
-  Detail::VulkanInstance::getDeviceProps(pdev,props);
+  api.deviceProps(pdev,props);
   deviceQueueProps(props,pdev);
 
   createLogicalDevice(api,pdev);
@@ -107,12 +107,13 @@ VkSurfaceKHR VDevice::createSurface(void* hwnd) {
   }
 
 bool VDevice::isDeviceSuitable(VkPhysicalDevice device, const char* gpuName) {
-  VkProps prop = {};
   if(gpuName!=nullptr) {
-    Detail::VulkanInstance::getDeviceProps(device,props);
-    if(std::strcmp(gpuName,props.name)!=0)
+    VkPhysicalDeviceProperties prop={};
+    vkGetPhysicalDeviceProperties(device,&prop);
+    if(std::strcmp(gpuName,prop.deviceName)!=0)
       return false;
     }
+  VkProps prop = {};
   deviceQueueProps(prop,device);
   bool extensionsSupported = checkDeviceExtensionSupport(device);
   return extensionsSupported && prop.graphicsFamily!=uint32_t(-1);
@@ -179,20 +180,11 @@ bool VDevice::checkDeviceExtensionSupport(VkPhysicalDevice device) {
   }
 
 std::vector<VkExtensionProperties> VDevice::extensionsList(VkPhysicalDevice device) {
-  uint32_t extensionCount;
-  vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
-
-  std::vector<VkExtensionProperties> ext(extensionCount);
-  vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, ext.data());
-
-  return ext;
+  return VulkanInstance::extensionsList(device);
   }
 
 bool VDevice::checkForExt(const std::vector<VkExtensionProperties>& list, const char* name) {
-  for(auto& r:list)
-    if(std::strcmp(name,r.extensionName)==0)
-      return true;
-  return false;
+  return VulkanInstance::checkForExt(list,name);
   }
 
 VDevice::SwapChainSupport VDevice::querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface) {

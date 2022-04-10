@@ -56,35 +56,40 @@ DxAccelerationStructure::~DxAccelerationStructure() {
   }
 
 
-DxTopAccelerationStructure::DxTopAccelerationStructure(DxDevice& dx, DxAccelerationStructure* obj)
+DxTopAccelerationStructure::DxTopAccelerationStructure(DxDevice& dx, const RtInstance* inst, AccelerationStructure*const* as, size_t asSize)
   :owner(dx) {
   ComPtr<ID3D12Device5> m_dxrDevice;
   dx.device->QueryInterface(__uuidof(ID3D12Device5), reinterpret_cast<void**>(&m_dxrDevice));
 
-  // NOTE: same as vulkan
-  D3D12_RAYTRACING_INSTANCE_DESC objInstance = {};
-  objInstance.Transform[0][0]                     = 1.0;
-  objInstance.Transform[1][1]                     = 1.0;
-  objInstance.Transform[2][2]                     = 1.0;
-  objInstance.InstanceID                          = 0;
-  objInstance.InstanceMask                        = 0xFF;
-  objInstance.InstanceContributionToHitGroupIndex = 0;
-  objInstance.Flags                               = D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_CULL_DISABLE;
-  objInstance.AccelerationStructure               = obj->impl.impl->GetGPUVirtualAddress();
-
   Detail::DSharedPtr<DxBuffer*> pBuf;
   {
-  DxBuffer buf = dx.allocator.alloc(nullptr,1,sizeof(objInstance),sizeof(objInstance),
+  DxBuffer buf = dx.allocator.alloc(nullptr,asSize,sizeof(D3D12_RAYTRACING_INSTANCE_DESC),sizeof(D3D12_RAYTRACING_INSTANCE_DESC),
                                    MemUsage::TransferDst | MemUsage::StorageBuffer,BufferHeap::Device);
 
   pBuf = Detail::DSharedPtr<DxBuffer*>(new Detail::DxBuffer(std::move(buf)));
-  pBuf.handler->update(&objInstance,0,1, sizeof(objInstance), sizeof(objInstance));
   }
+
+  for(size_t i=0; i<asSize; ++i) {
+    auto blas = reinterpret_cast<DxAccelerationStructure*>(as[i]);
+
+    // NOTE: same as vulkan
+    D3D12_RAYTRACING_INSTANCE_DESC objInstance = {};
+    for(int x=0; x<3; ++x)
+      for(int y=0; y<4; ++y)
+        objInstance.Transform[x][y] = inst[i].mat.at(y,x);
+    objInstance.InstanceID                          = 0;
+    objInstance.InstanceMask                        = 0xFF;
+    objInstance.InstanceContributionToHitGroupIndex = 0;
+    objInstance.Flags                               = D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_CULL_DISABLE;
+    objInstance.AccelerationStructure               = blas->impl.impl->GetGPUVirtualAddress();
+
+    pBuf.handler->update(&objInstance,i, 1,sizeof(objInstance), sizeof(objInstance));
+    }
 
   D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS tlasInputs = {};
   tlasInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
   tlasInputs.Flags       = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
-  tlasInputs.NumDescs    = 1;
+  tlasInputs.NumDescs    = asSize;
   tlasInputs.Type        = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
 
   D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO buildSizesInfo = {};
@@ -99,7 +104,7 @@ DxTopAccelerationStructure::DxTopAccelerationStructure(DxDevice& dx, DxAccelerat
   auto cmd = dx.dataMgr().get();
   cmd->begin();
   // cmd->hold(scratch);
-  cmd->buildTlas(impl, *pBuf.handler, 1, scratch);
+  cmd->buildTlas(impl, *pBuf.handler, asSize, scratch);
   cmd->end();
 
   // dx.dataMgr().waitFor(this);

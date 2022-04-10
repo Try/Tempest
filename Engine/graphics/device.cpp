@@ -219,9 +219,19 @@ AccelerationStructure Device::implBlas(const VideoBuffer& vbo, size_t stride, co
   return AccelerationStructure(*this,blas);
   }
 
-AccelerationStructure Device::tlas(const AccelerationStructure* geom, size_t geomSize) {
-  // TODO: handle multiple geom structs
-  auto tlas = api.createTopAccelerationStruct(dev,geom->impl.handler,geomSize);
+AccelerationStructure Device::tlas(const std::initializer_list<RtInstance>& geom) {
+  return tlas(geom.begin(),geom.size());
+  }
+
+AccelerationStructure Device::tlas(const std::vector<RtInstance>& geom) {
+  return tlas(geom.data(),geom.size());
+  }
+
+AccelerationStructure Device::tlas(const RtInstance* geom, size_t geomSize) {
+  std::vector<AbstractGraphicsApi::AccelerationStructure*> as(geomSize);
+  for(size_t i=0; i<geomSize; ++i)
+    as[i] = geom[i].blas->impl.handler;
+  auto tlas = api.createTopAccelerationStruct(dev,geom,as.data(),geomSize);
   return AccelerationStructure(*this,tlas);
   }
 

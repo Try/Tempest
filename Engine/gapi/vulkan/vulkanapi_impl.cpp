@@ -31,13 +31,6 @@ static const std::initializer_list<const char*> validationLayersLunarg = {
   "VK_LAYER_LUNARG_core_validation"
   };
 
-static bool checkForExt(const std::vector<VkExtensionProperties>& list, const char* name) {
-  for(auto& r:list)
-    if(std::strcmp(name,r.extensionName)==0)
-      return true;
-  return false;
-  }
-
 VulkanInstance::VulkanInstance(bool validation)
   :validation(validation) {
   std::initializer_list<const char*> validationLayers={};
@@ -69,7 +62,7 @@ VulkanInstance::VulkanInstance(bool validation)
     SURFACE_EXTENSION_NAME,
     };
 
-  auto ext = extensionsList();
+  auto ext = instExtensionsList();
   if(checkForExt(ext,VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {
     rqExt.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
     hasDeviceFeatures2 = true;
@@ -116,12 +109,22 @@ VulkanInstance::~VulkanInstance(){
   vkDestroyInstance(instance,nullptr);
   }
 
-std::vector<VkExtensionProperties> VulkanInstance::extensionsList() {
+std::vector<VkExtensionProperties> VulkanInstance::instExtensionsList() const {
   uint32_t extensionCount;
   vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
 
   std::vector<VkExtensionProperties> ext(extensionCount);
   vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, ext.data());
+
+  return ext;
+  }
+
+std::vector<VkExtensionProperties> VulkanInstance::extensionsList(VkPhysicalDevice dev) {
+  uint32_t extensionCount;
+  vkEnumerateDeviceExtensionProperties(dev, nullptr, &extensionCount, nullptr);
+
+  std::vector<VkExtensionProperties> ext(extensionCount);
+  vkEnumerateDeviceExtensionProperties(dev, nullptr, &extensionCount, ext.data());
 
   return ext;
   }
@@ -171,13 +174,20 @@ std::vector<Tempest::AbstractGraphicsApi::Props> VulkanInstance::devices() const
 
   devList.resize(devices.size());
   for(size_t i=0;i<devList.size();++i) {
-    getDevicePropsShort(devices[i],devList[i]);
+    devicePropsShort(devices[i],devList[i]);
     }
   return devList;
   }
 
-void VulkanInstance::getDeviceProps(VkPhysicalDevice physicalDevice, VkProp& c) {
-  getDevicePropsShort(physicalDevice,c);
+bool VulkanInstance::checkForExt(const std::vector<VkExtensionProperties>& list, const char* name) {
+  for(auto& r:list)
+    if(std::strcmp(name,r.extensionName)==0)
+      return true;
+  return false;
+  }
+
+void VulkanInstance::deviceProps(VkPhysicalDevice physicalDevice, VkProp& c) const {
+  devicePropsShort(physicalDevice,c);
 
   VkPhysicalDeviceProperties prop={};
   vkGetPhysicalDeviceProperties(physicalDevice,&prop);
@@ -190,7 +200,7 @@ void VulkanInstance::getDeviceProps(VkPhysicalDevice physicalDevice, VkProp& c) 
     c.bufferImageGranularity=1;
   }
 
-void VulkanInstance::getDevicePropsShort(VkPhysicalDevice physicalDevice, Tempest::AbstractGraphicsApi::Props& c) {
+void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, Tempest::AbstractGraphicsApi::Props& c) const {
   /*
    * formats support table: https://vulkan.lunarg.com/doc/view/1.0.30.0/linux/vkspec.chunked/ch31s03.html
    */
@@ -205,6 +215,24 @@ void VulkanInstance::getDevicePropsShort(VkPhysicalDevice physicalDevice, Tempes
 
   VkPhysicalDeviceFeatures supportedFeatures={};
   vkGetPhysicalDeviceFeatures(physicalDevice,&supportedFeatures);
+
+  if(hasDeviceFeatures2) {
+    VkPhysicalDeviceFeatures2 features = {};
+    features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
+
+    VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures = {};
+    rayQueryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
+
+    auto ext = extensionsList(physicalDevice);
+    if(checkForExt(ext,VK_KHR_RAY_QUERY_EXTENSION_NAME)) {
+      c.raytracing.rayQuery = true;
+      rayQueryFeatures.pNext = features.pNext;
+      features.pNext = &rayQueryFeatures;
+      }
+    auto vkGetPhysicalDeviceFeatures2 = PFN_vkGetPhysicalDeviceFeatures2(vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2"));
+    vkGetPhysicalDeviceFeatures2(physicalDevice,&features);
+    c.raytracing.rayQuery = rayQueryFeatures.rayQuery!=VK_FALSE;
+    }
 
   std::memcpy(c.name,prop.deviceName,sizeof(c.name));
 

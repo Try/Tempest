@@ -24,7 +24,7 @@ class DxAccelerationStructure : public AbstractGraphicsApi::AccelerationStructur
 
 class DxTopAccelerationStructure : public AbstractGraphicsApi::AccelerationStructure {
   public:
-    DxTopAccelerationStructure(DxDevice& owner, DxAccelerationStructure* obj);
+    DxTopAccelerationStructure(DxDevice& owner, const RtInstance* inst, AccelerationStructure* const * as, size_t asSize);
     ~DxTopAccelerationStructure();
 
     DxDevice& owner;

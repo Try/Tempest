@@ -618,17 +618,17 @@ void VCommandBuffer::buildTlas(VkAccelerationStructureKHR dest,
                                const AbstractGraphicsApi::Buffer& instances, uint32_t numInstances,
                                AbstractGraphicsApi::Buffer& scratch) {
   VkAccelerationStructureGeometryInstancesDataKHR geometryInstancesData = {};
-  geometryInstancesData.sType                = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
-  geometryInstancesData.pNext                = NULL;
-  geometryInstancesData.arrayOfPointers      = VK_FALSE;
-  geometryInstancesData.data.deviceAddress   = reinterpret_cast<const VBuffer&>(instances).toDeviceAddress(device);
+  geometryInstancesData.sType                 = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
+  geometryInstancesData.pNext                 = NULL;
+  geometryInstancesData.arrayOfPointers       = VK_FALSE;
+  geometryInstancesData.data.deviceAddress    = reinterpret_cast<const VBuffer&>(instances).toDeviceAddress(device);
 
   VkAccelerationStructureGeometryKHR geometry = {};
-  geometry.sType                             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-  geometry.pNext                             = nullptr;
-  geometry.geometryType                      = VK_GEOMETRY_TYPE_INSTANCES_KHR;
-  geometry.geometry.instances                = geometryInstancesData;
-  geometry.flags                             = VK_GEOMETRY_OPAQUE_BIT_KHR;
+  geometry.sType                              = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+  geometry.pNext                              = nullptr;
+  geometry.geometryType                       = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+  geometry.geometry.instances                 = geometryInstancesData;
+  geometry.flags                              = VK_GEOMETRY_OPAQUE_BIT_KHR;
 
   VkAccelerationStructureBuildGeometryInfoKHR buildGeometryInfo = {};
   buildGeometryInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
@@ -638,16 +638,16 @@ void VCommandBuffer::buildTlas(VkAccelerationStructureKHR dest,
   buildGeometryInfo.mode                      = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
   buildGeometryInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
   buildGeometryInfo.dstAccelerationStructure  = dest;
-  buildGeometryInfo.geometryCount             = numInstances;
+  buildGeometryInfo.geometryCount             = 1;
   buildGeometryInfo.pGeometries               = &geometry;
   buildGeometryInfo.ppGeometries              = nullptr;
   buildGeometryInfo.scratchData.deviceAddress = reinterpret_cast<const VBuffer&>(scratch).toDeviceAddress(device);
 
   VkAccelerationStructureBuildRangeInfoKHR buildRangeInfo = {};
-  buildRangeInfo.primitiveCount  = 1;
-  buildRangeInfo.primitiveOffset = 0;
-  buildRangeInfo.firstVertex     = 0;
-  buildRangeInfo.transformOffset = 0;
+  buildRangeInfo.primitiveCount               = numInstances;
+  buildRangeInfo.primitiveOffset              = 0;
+  buildRangeInfo.firstVertex                  = 0;
+  buildRangeInfo.transformOffset              = 0;
 
   VkAccelerationStructureBuildRangeInfoKHR* pbuildRangeInfo = &buildRangeInfo;
   device.vkCmdBuildAccelerationStructures(impl, 1, &buildGeometryInfo, &pbuildRangeInfo);
