@@ -138,7 +138,7 @@ class Device {
     template<class V, class I>
     AccelerationStructure blas(const VertexBuffer<V>& vbo, const IndexBuffer<I>& ibo, size_t offset, size_t count);
 
-    AccelerationStructure tlas(const std::initializer_list<RtInstance>& geom);
+    AccelerationStructure tlas(std::initializer_list<RtInstance> geom);
     AccelerationStructure tlas(const std::vector<RtInstance>& geom);
     AccelerationStructure tlas(const RtInstance* geom, size_t geomSize);
 

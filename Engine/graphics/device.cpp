@@ -219,7 +219,7 @@ AccelerationStructure Device::implBlas(const VideoBuffer& vbo, size_t stride, co
   return AccelerationStructure(*this,blas);
   }
 
-AccelerationStructure Device::tlas(const std::initializer_list<RtInstance>& geom) {
+AccelerationStructure Device::tlas(std::initializer_list<RtInstance> geom) {
   return tlas(geom.begin(),geom.size());
   }
 
