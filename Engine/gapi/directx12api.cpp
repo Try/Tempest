@@ -355,12 +355,12 @@ AbstractGraphicsApi::PTexture DirectX12Api::createStorage(AbstractGraphicsApi::D
   }
 
 AbstractGraphicsApi::AccelerationStructure* DirectX12Api::createBottomAccelerationStruct(Device* d,
-                                                                                         Buffer* vbo, size_t vboSz, size_t offset, size_t stride,
-                                                                                         Buffer* ibo, size_t iboSz, Detail::IndexClass icls) {
+                                                                                         Buffer* vbo, size_t vboSz, size_t stride,
+                                                                                         Buffer* ibo, size_t iboSz, size_t offset, Detail::IndexClass icls) {
   auto& dx = *reinterpret_cast<DxDevice*>(d);
   auto& vx = *reinterpret_cast<DxBuffer*>(vbo);
   auto& ix = *reinterpret_cast<DxBuffer*>(ibo);
-  return new DxAccelerationStructure(dx,vx,vboSz,offset,stride,ix,iboSz,icls);
+  return new DxAccelerationStructure(dx,vx,vboSz,stride,ix,iboSz,offset,icls);
   }
 
 AbstractGraphicsApi::AccelerationStructure* DirectX12Api::createTopAccelerationStruct(Device* d, const RtInstance* inst, AccelerationStructure*const* as, size_t geomSize) {

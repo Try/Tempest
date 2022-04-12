@@ -14,8 +14,8 @@ class DxDevice;
 class DxAccelerationStructure : public AbstractGraphicsApi::AccelerationStructure {
   public:
     DxAccelerationStructure(DxDevice& owner,
-                            DxBuffer& vbo, size_t vboSz, size_t offset, size_t stride,
-                            DxBuffer& ibo, size_t iboSz, Detail::IndexClass icls);
+                            DxBuffer& vbo, size_t vboSz, size_t stride,
+                            DxBuffer& ibo, size_t iboSz, size_t ioffset, Detail::IndexClass icls);
     ~DxAccelerationStructure();
 
     DxDevice& owner;

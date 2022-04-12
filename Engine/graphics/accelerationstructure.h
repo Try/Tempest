@@ -20,8 +20,6 @@ class AccelerationStructure final {
 
   friend class Tempest::Device;
   friend class Tempest::DescriptorSet;
-  friend class DirectX12Api;
-  friend class MetalApi;
   friend class Encoder<Tempest::CommandBuffer>;
   };
 

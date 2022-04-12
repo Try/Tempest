@@ -9,8 +9,8 @@ using namespace Tempest;
 using namespace Tempest::Detail;
 
 VAccelerationStructure::VAccelerationStructure(VDevice& dx,
-                                               VBuffer& vbo, size_t vboSz, size_t voffset, size_t stride,
-                                               VBuffer& ibo, size_t iboSz, IndexClass icls)
+                                               VBuffer& vbo, size_t vboSz, size_t stride,
+                                               VBuffer& ibo, size_t iboSz, size_t ioffset, IndexClass icls)
   :owner(dx) {
   auto device                               = dx.device.impl;
   auto vkGetAccelerationStructureBuildSizes = dx.vkGetAccelerationStructureBuildSizes;
@@ -71,7 +71,9 @@ VAccelerationStructure::VAccelerationStructure(VDevice& dx,
   auto cmd = dx.dataMgr().get();
   cmd->begin();
   //cmd->hold(scratch);
-  cmd->buildBlas(impl, vbo,vboSz,voffset,stride, ibo,iboSz,icls, scratch);
+  cmd->buildBlas(impl,
+                 vbo,vboSz,stride,
+                 ibo,iboSz,ioffset,icls, scratch);
   cmd->end();
 
   // dx.dataMgr().waitFor(this);
@@ -187,8 +189,6 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
 
   // dx.dataMgr().waitFor(this);
   dx.dataMgr().submitAndWait(std::move(cmd));
-
-  //this->inst = std::move(*pBuf.handler);
   }
 
 VTopAccelerationStructure::~VTopAccelerationStructure() {

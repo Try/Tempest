@@ -249,10 +249,6 @@ void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t offse
 void MtCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_t voffset,
                                   const AbstractGraphicsApi::Buffer& iibo, Detail::IndexClass cls, size_t ioffset, size_t isize,
                                   size_t firstInstance, size_t instanceCount) {
-  static const MTLIndexType type[2] = {
-    MTLIndexTypeUInt16,
-    MTLIndexTypeUInt32,
-  };
   auto&    vbo     = reinterpret_cast<const MtBuffer&>(ivbo);
   auto&    ibo     = reinterpret_cast<const MtBuffer&>(iibo);
   auto     iboType = nativeFormat(cls);

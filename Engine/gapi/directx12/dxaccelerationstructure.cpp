@@ -9,8 +9,8 @@ using namespace Tempest;
 using namespace Tempest::Detail;
 
 DxAccelerationStructure::DxAccelerationStructure(DxDevice& dx,
-                                                 DxBuffer& vbo, size_t vboSz, size_t offset, size_t stride,
-                                                 DxBuffer& ibo, size_t iboSz, IndexClass icls)
+                                                 DxBuffer& vbo, size_t vboSz, size_t stride,
+                                                 DxBuffer& ibo, size_t iboSz, size_t ioffset, IndexClass icls)
   :owner(dx) {
   ComPtr<ID3D12Device5> m_dxrDevice;
   dx.device->QueryInterface(__uuidof(ID3D12Device5), reinterpret_cast<void**>(&m_dxrDevice));
@@ -45,7 +45,10 @@ DxAccelerationStructure::DxAccelerationStructure(DxDevice& dx,
   auto cmd = dx.dataMgr().get();
   cmd->begin();
   //cmd->hold(scratch);
-  cmd->buildBlas(impl.impl.get(), vbo,vboSz,offset,stride, ibo,iboSz,icls, scratch);
+  cmd->buildBlas(impl.impl.get(),
+                 vbo,vboSz,stride,
+                 ibo,iboSz,ioffset,icls,
+                 scratch);
   cmd->end();
 
   // dx.dataMgr().waitFor(this);

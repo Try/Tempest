@@ -569,8 +569,8 @@ void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, u
   }
 
 void VCommandBuffer::buildBlas(VkAccelerationStructureKHR dest,
-                               const AbstractGraphicsApi::Buffer& ivbo, size_t vboSz, size_t voffset, size_t stride,
-                               const AbstractGraphicsApi::Buffer& iibo, size_t iboSz, IndexClass icls,
+                               const AbstractGraphicsApi::Buffer& ivbo, size_t vboSz, size_t stride,
+                               const AbstractGraphicsApi::Buffer& iibo, size_t iboSz, size_t ioffset, IndexClass icls,
                                AbstractGraphicsApi::Buffer& scratch) {
   auto& vbo = reinterpret_cast<const VBuffer&>(ivbo);
   auto& ibo = reinterpret_cast<const VBuffer&>(iibo);
@@ -587,8 +587,8 @@ void VCommandBuffer::buildBlas(VkAccelerationStructureKHR dest,
   geometry.geometry.triangles.transformData   = VkDeviceOrHostAddressConstKHR{};
   geometry.flags                              = VK_GEOMETRY_OPAQUE_BIT_KHR;
 
-  geometry.geometry.triangles.vertexData.deviceAddress = vbo.toDeviceAddress(device) + voffset*stride;
-  geometry.geometry.triangles.indexData .deviceAddress = ibo.toDeviceAddress(device);
+  geometry.geometry.triangles.vertexData.deviceAddress = vbo.toDeviceAddress(device);
+  geometry.geometry.triangles.indexData .deviceAddress = ibo.toDeviceAddress(device) + ioffset*sizeofIndex(icls);
 
   VkAccelerationStructureBuildGeometryInfoKHR buildGeometryInfo = {};
   buildGeometryInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
@@ -617,6 +617,15 @@ void VCommandBuffer::buildTlas(VkAccelerationStructureKHR dest,
                                AbstractGraphicsApi::Buffer& tbo,
                                const AbstractGraphicsApi::Buffer& instances, uint32_t numInstances,
                                AbstractGraphicsApi::Buffer& scratch) {
+  // make sure BLAS'es are ready
+  VkMemoryBarrier barrier{VK_STRUCTURE_TYPE_MEMORY_BARRIER};
+  barrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+  barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+  vkCmdPipelineBarrier(impl,
+                       VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+                       VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+                       0, 1, &barrier, 0, nullptr, 0, nullptr);
+
   VkAccelerationStructureGeometryInstancesDataKHR geometryInstancesData = {};
   geometryInstancesData.sType                 = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
   geometryInstancesData.pNext                 = NULL;
@@ -634,7 +643,7 @@ void VCommandBuffer::buildTlas(VkAccelerationStructureKHR dest,
   buildGeometryInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
   buildGeometryInfo.pNext                     = nullptr;
   buildGeometryInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-  buildGeometryInfo.flags                     = VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
+  buildGeometryInfo.flags                     = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR | VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
   buildGeometryInfo.mode                      = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
   buildGeometryInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
   buildGeometryInfo.dstAccelerationStructure  = dest;

@@ -14,8 +14,8 @@ class VBuffer;
 class VAccelerationStructure : public AbstractGraphicsApi::AccelerationStructure {
   public:
     VAccelerationStructure(VDevice& owner,
-                           VBuffer& vbo, size_t vboSz, size_t voffset, size_t stride,
-                           VBuffer& ibo, size_t iboSz, Detail::IndexClass icls);
+                           VBuffer& vbo, size_t vboSz, size_t stride,
+                           VBuffer& ibo, size_t iboSz, size_t ioffset, Detail::IndexClass icls);
     ~VAccelerationStructure();
 
     VkDeviceAddress            toDeviceAddress(VDevice& owner) const;
@@ -33,7 +33,6 @@ class VTopAccelerationStructure : public AbstractGraphicsApi::AccelerationStruct
     VDevice&                   owner;
     VkAccelerationStructureKHR impl = VK_NULL_HANDLE;
     VBuffer                    data;
-    //VBuffer                    inst;
   };
 
 }

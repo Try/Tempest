@@ -396,9 +396,9 @@ bool DxCommandBuffer::isRecording() const {
   return state!=NoRecording;
   }
 
-void Tempest::Detail::DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize, uint32_t w, uint32_t h,
-                                                      const TextureFormat* frm, AbstractGraphicsApi::Texture** att,
-                                                      AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) {
+void DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize, uint32_t w, uint32_t h,
+                                     const TextureFormat* frm, AbstractGraphicsApi::Texture** att,
+                                     AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) {
   resState.joinCompute();
   resState.setRenderpass(*this,desc,descSize,frm,att,sw,imgId);
 
@@ -499,7 +499,7 @@ void DxCommandBuffer::setScissor(const Rect& r) {
   impl->RSSetScissorRects(1, &sr);
   }
 
-void Tempest::Detail::DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p) {
+void DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p) {
   DxPipeline& px = reinterpret_cast<DxPipeline&>(p);
   vboStride    = px.stride;
   ssboBarriers = px.ssboBarriers;
@@ -518,7 +518,7 @@ void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/, Abstract
   implSetUniforms(u,false);
   }
 
-void Tempest::Detail::DxCommandBuffer::setComputePipeline(Tempest::AbstractGraphicsApi::CompPipeline& p) {
+void DxCommandBuffer::setComputePipeline(Tempest::AbstractGraphicsApi::CompPipeline& p) {
   if(state!=Compute) {
     resState.flush(*this);
     state = Compute;
@@ -713,8 +713,8 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, s
   }
 
 void DxCommandBuffer::buildBlas(ID3D12Resource* dest,
-                                AbstractGraphicsApi::Buffer& ivbo, size_t vboSz, size_t offset, size_t stride,
-                                AbstractGraphicsApi::Buffer& iibo, size_t iboSz, IndexClass icls,
+                                AbstractGraphicsApi::Buffer& ivbo, size_t vboSz, size_t stride,
+                                AbstractGraphicsApi::Buffer& iibo, size_t iboSz, size_t ioffset, IndexClass icls,
                                 AbstractGraphicsApi::Buffer& scratch) {
   auto& vbo = reinterpret_cast<DxBuffer&>(ivbo);
   auto& ibo = reinterpret_cast<DxBuffer&>(iibo);
@@ -727,8 +727,8 @@ void DxCommandBuffer::buildBlas(ID3D12Resource* dest,
   geometryDesc.Triangles.VertexFormat               = DXGI_FORMAT_R32G32B32_FLOAT;
   geometryDesc.Triangles.IndexCount                 = UINT(iboSz);
   geometryDesc.Triangles.VertexCount                = UINT(vboSz);
-  geometryDesc.Triangles.IndexBuffer                = ibo.impl->GetGPUVirtualAddress();
-  geometryDesc.Triangles.VertexBuffer.StartAddress  = vbo.impl->GetGPUVirtualAddress() + offset*stride;
+  geometryDesc.Triangles.IndexBuffer                = ibo.impl->GetGPUVirtualAddress() + ioffset*sizeofIndex(icls);
+  geometryDesc.Triangles.VertexBuffer.StartAddress  = vbo.impl->GetGPUVirtualAddress();
   geometryDesc.Triangles.VertexBuffer.StrideInBytes = stride;
 
   D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS blasInputs = {};

@@ -39,8 +39,8 @@ class DirectX12Api : public AbstractGraphicsApi {
     PTexture       createStorage(Device* d,const uint32_t w,const uint32_t h,uint32_t mips, TextureFormat frm) override;
 
     AccelerationStructure* createBottomAccelerationStruct(Device* d,
-                                                          Buffer* vbo, size_t vboSz, size_t offset, size_t stride,
-                                                          Buffer* ibo, size_t iboSz, Detail::IndexClass icls) override;
+                                                          Buffer* vbo, size_t vboSz, size_t stride,
+                                                          Buffer* ibo, size_t iboSz, size_t offset, Detail::IndexClass icls) override;
     AccelerationStructure* createTopAccelerationStruct(Device* d, const RtInstance* inst, AccelerationStructure*const* as, size_t geomSize) override;
 
     void           readPixels(Device* d, Pixmap& out, const PTexture t,

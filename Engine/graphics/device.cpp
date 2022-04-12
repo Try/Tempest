@@ -214,8 +214,8 @@ AccelerationStructure Device::implBlas(const VideoBuffer& vbo, size_t stride, co
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   assert(3*sizeof(float)<=stride); // float3 positions, no overlap
   auto blas = api.createBottomAccelerationStruct(dev,
-                                                 vbo.impl.handler,vbo.size()/stride,offset,stride,
-                                                 ibo.impl.handler,count,icls);
+                                                 vbo.impl.handler,vbo.size()/stride,stride,
+                                                 ibo.impl.handler,count,offset,icls);
   return AccelerationStructure(*this,blas);
   }
 
