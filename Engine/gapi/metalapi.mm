@@ -165,12 +165,12 @@ AbstractGraphicsApi::PTexture MetalApi::createStorage(AbstractGraphicsApi::Devic
 AbstractGraphicsApi::AccelerationStructure*
 MetalApi::createBottomAccelerationStruct(Device* d,
                                          Buffer* vbo, size_t vboSz, size_t stride,
-                                         Buffer* ibo, size_t iboSz, size_t offset, Detail::IndexClass icls) {
+                                         Buffer* ibo, size_t iboSz, size_t ioffset, Detail::IndexClass icls) {
   @autoreleasepool {
     auto& dev = *reinterpret_cast<MtDevice*>(d);
     auto& vx  = *reinterpret_cast<MtBuffer*>(vbo);
     auto& ix  = *reinterpret_cast<MtBuffer*>(ibo);
-    return new MtAccelerationStructure(dev,vx,vboSz,offset,stride, ix,iboSz,icls);
+    return new MtAccelerationStructure(dev,vx,vboSz,stride, ix,iboSz,ioffset,icls);
     }
   }
 

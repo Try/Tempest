@@ -13,15 +13,15 @@
 using namespace Tempest::Detail;
 
 MtAccelerationStructure::MtAccelerationStructure(MtDevice& dx,
-                                                 MtBuffer& vbo, size_t vboSz, size_t voffset, size_t stride,
-                                                 MtBuffer& ibo, size_t iboSz, IndexClass icls)
+                                                 MtBuffer& vbo, size_t vboSz, size_t stride,
+                                                 MtBuffer& ibo, size_t iboSz, size_t ioffset, IndexClass icls)
   :owner(dx) {
   auto* geo = [MTLAccelerationStructureTriangleGeometryDescriptor new];
   geo.vertexBuffer       = vbo.impl;
-  geo.vertexBufferOffset = voffset;
+  geo.vertexBufferOffset = 0;
   geo.vertexStride       = stride;
   geo.indexBuffer        = ibo.impl;
-  geo.indexBufferOffset  = 0;
+  geo.indexBufferOffset  = ioffset*sizeofIndex(icls);
   geo.indexType          = nativeFormat(icls);
   geo.triangleCount      = iboSz/3;
 

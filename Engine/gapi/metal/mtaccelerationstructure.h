@@ -13,8 +13,8 @@ class MtBuffer;
 class MtAccelerationStructure : public Tempest::AbstractGraphicsApi::AccelerationStructure {
   public:
     MtAccelerationStructure(MtDevice& owner,
-                            MtBuffer& vbo, size_t vboSz, size_t voffset, size_t stride,
-                            MtBuffer& ibo, size_t iboSz, Detail::IndexClass icls);
+                            MtBuffer& vbo, size_t vboSz, size_t stride,
+                            MtBuffer& ibo, size_t iboSz, size_t ioffset, Detail::IndexClass icls);
     ~MtAccelerationStructure();
 
     MtDevice&                    owner;

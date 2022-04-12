@@ -247,12 +247,12 @@ void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t offse
   }
 
 void MtCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_t voffset,
-                                  const AbstractGraphicsApi::Buffer& iibo, Detail::IndexClass cls, size_t ioffset, size_t isize,
+                                  const AbstractGraphicsApi::Buffer& iibo, Detail::IndexClass icls, size_t ioffset, size_t isize,
                                   size_t firstInstance, size_t instanceCount) {
   auto&    vbo     = reinterpret_cast<const MtBuffer&>(ivbo);
   auto&    ibo     = reinterpret_cast<const MtBuffer&>(iibo);
-  auto     iboType = nativeFormat(cls);
-  uint32_t mul     = (iboType==MTLIndexTypeUInt16 ? 2 : 4);
+  auto     iboType = nativeFormat(icls);
+  uint32_t mul     = sizeofIndex(icls);
 
   [encDraw setVertexBuffer:vbo.impl
                     offset:0
