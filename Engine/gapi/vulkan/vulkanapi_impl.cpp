@@ -225,7 +225,6 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, Tempest::
 
     auto ext = extensionsList(physicalDevice);
     if(checkForExt(ext,VK_KHR_RAY_QUERY_EXTENSION_NAME)) {
-      c.raytracing.rayQuery = true;
       rayQueryFeatures.pNext = features.pNext;
       features.pNext = &rayQueryFeatures;
       }

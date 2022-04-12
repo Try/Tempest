@@ -323,7 +323,6 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
 
     VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures = {};
     rayQueryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
-    rayQueryFeatures.rayQuery = VK_TRUE;
 
     if(props.hasSync2) {
       sync2.pNext = enabledFeatures.pNext;
