@@ -123,6 +123,7 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);
     auto&    t       = comp.get_type_from_variable(resource.id);
     auto     sz      = comp.get_declared_struct_size(t);
+
     Binding b;
     b.layout = binding;
     b.cls    = Push;
@@ -142,7 +143,8 @@ void ShaderReflection::merge(std::vector<ShaderReflection::Binding>& ret,
     auto& u = comp[i];
     if(u.cls==ShaderReflection::Push) {
       pb.stage = ShaderReflection::Compute;
-      pb.size = u.size;
+      pb.size  = u.size;
+      pb.size  = std::max(pb.size, u.mslSize);
       continue;
       }
     ret.push_back(u);
@@ -172,6 +174,7 @@ void ShaderReflection::merge(std::vector<Binding>& ret,
       if(u.cls==Push) {
         pb.stage = Stage(pb.stage | u.stage);
         pb.size  = std::max(pb.size, u.size);
+        pb.size  = std::max(pb.size, u.mslSize);
         continue;
         }
       if(shId>0) {
@@ -180,6 +183,7 @@ void ShaderReflection::merge(std::vector<Binding>& ret,
           if(r.layout==u.layout) {
             r.stage = Stage(r.stage | u.stage);
             r.size  = std::max(r.size, u.size);
+            r.size  = std::max(r.size, u.mslSize);
             ins     = true;
             break;
             }
@@ -205,4 +209,32 @@ void ShaderReflection::finalize(std::vector<Binding>& ret) {
       fill.stage  = Stage(0);
       ret.insert(ret.begin()+int(i),fill);
       }
+  }
+
+size_t Tempest::Detail::ShaderReflection::mslSizeOf(const spirv_cross::ID& spvId,
+                                                    spirv_cross::Compiler& comp) {
+  auto& t = comp.get_type_from_variable(spvId);
+  return mslSizeOf(t,comp);
+  }
+
+size_t ShaderReflection::mslSizeOf(const spirv_cross::SPIRType& type,
+                                   spirv_cross::Compiler& comp) {
+  uint32_t member_index   = 0;
+  size_t   highest_offset = 0;
+  size_t   highest_sizeof = 0;
+  for(uint32_t i = 0; i < uint32_t(type.member_types.size()); i++) {
+    size_t offset = comp.type_struct_member_offset(type, i);
+    if(offset > highest_offset) {
+      highest_offset = offset;
+      member_index = i;
+      }
+    size_t sz = comp.get_declared_struct_member_size(type, member_index);
+    if(highest_sizeof<sz)
+      highest_sizeof = sz;
+    }
+
+  size_t size = highest_offset+comp.get_declared_struct_member_size(type, member_index);
+  if(highest_sizeof>0)
+    size = ((size+highest_sizeof-1)/highest_sizeof)*highest_sizeof;
+  return size;
   }

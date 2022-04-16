@@ -288,6 +288,12 @@ void MtCommandBuffer::implSetBytes(const void* bytes, size_t sz) {
 
   if(l.stage==0)
     return;
+  char tmp[256] = {};
+  if(sz!=l.size) {
+    std::memcpy(tmp,bytes,sz);
+    bytes = tmp;
+    sz    = l.size;
+    }
   if(mtl.bindVs!=uint32_t(-1)) {
     [encDraw setVertexBytes:bytes length:sz atIndex:mtl.bindVs];
     }

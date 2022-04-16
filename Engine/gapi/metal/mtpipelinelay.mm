@@ -26,6 +26,7 @@ MtPipelineLay::MtPipelineLay(const std::vector<Binding>** sh, size_t cnt) {
         bx.bindCs    = b.mslBinding;
         bx.bindCsSmp = b.mslBinding2;
         }
+      bx.mslPushSize = b.mslSize;
       }
     }
 

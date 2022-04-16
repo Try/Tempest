@@ -40,6 +40,7 @@ class ShaderReflection final {
       spirv_cross::ID spvId;
       uint32_t        mslBinding  = uint32_t(-1);
       uint32_t        mslBinding2 = uint32_t(-1);
+      uint64_t        mslSize     = 0;
       };
 
     struct PushBlock {
@@ -47,8 +48,9 @@ class ShaderReflection final {
       uint64_t size  = 0;
       };
 
-    static void getVertexDecl(std::vector<Decl::ComponentType>& data, spirv_cross::Compiler& comp);
-    static void getBindings(std::vector<Binding>& b, spirv_cross::Compiler& comp);
+    static void   getVertexDecl(std::vector<Decl::ComponentType>& data, spirv_cross::Compiler& comp);
+    static void   getBindings(std::vector<Binding>& b, spirv_cross::Compiler& comp);
+    static size_t mslSizeOf(const spirv_cross::ID& spvId, spirv_cross::Compiler& comp);
 
     static void merge(std::vector<Binding>& ret,
                       PushBlock& pb,
@@ -60,6 +62,7 @@ class ShaderReflection final {
 
   private:
     static void finalize(std::vector<Binding>& p);
+    static size_t mslSizeOf(const spirv_cross::SPIRType& type, spirv_cross::Compiler& comp);
   };
 
 }
