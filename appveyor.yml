@@ -96,7 +96,7 @@ test_script:
       $VULKAN_RUNTIME_URL = "https://sdk.lunarg.com/sdk/download/$VK_SDK/windows/vulkan-runtime-components.zip?Human=true"
       Start-FileDownload "$VULKAN_RUNTIME_URL" -FileName "vulkan-runtime.zip"
       7z e "vulkan-runtime.zip" "*/x64"
-      if($env:GENERATOR=="Visual Studio 16 2019") {
+      if("Visual Studio 16 2019" -eq $env:GENERATOR) {
         cp ".\Debug\TempestTests.exe" "TempestTests.exe";
         cp ".\Debug\Tempest.dll" "Tempest.dll";
         }
