@@ -48,6 +48,9 @@ inline void dxAssert(HRESULT code){
     case DXGI_ERROR_DEVICE_HUNG:
       throw DeviceHangException();
 
+    case DXGI_ERROR_SDK_COMPONENT_MISSING:
+      throw DeviceHangException();
+
     case E_NOINTERFACE:
       throw DeviceLostException();
 

@@ -32,8 +32,13 @@ struct DirectX12Api::Impl {
     initApi(dllApi);
 
     if(validation && dllApi.D3D12GetDebugInterface!=nullptr) {
-      dxAssert(dllApi.D3D12GetDebugInterface(uuid<ID3D12Debug>(), reinterpret_cast<void**>(&D3D12DebugController)));
-      D3D12DebugController->EnableDebugLayer();
+      auto code = dllApi.D3D12GetDebugInterface(uuid<ID3D12Debug>(), reinterpret_cast<void**>(&D3D12DebugController));
+      if(code!=S_OK) {
+        // DXGI_ERROR_SDK_COMPONENT_MISSING
+        Log::d("DirectX12Api: no validation layers available");
+        } else {
+        D3D12DebugController->EnableDebugLayer();
+        }
       }
     // Note  Don't mix the use of DXGI 1.0 (IDXGIFactory) and DXGI 1.1 (IDXGIFactory1) in an application.
     // Use IDXGIFactory or IDXGIFactory1, but not both in an application.
