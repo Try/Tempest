@@ -9,6 +9,7 @@
 #include <gmock/gmock-matchers.h>
 
 #include "gapi_test_common.h"
+#include "gapi_test_sync.h"
 
 using namespace testing;
 using namespace Tempest;
@@ -90,6 +91,13 @@ TEST(VulkanApi,Viewport) {
 #endif
   }
 
+TEST(VulkanApi,Uniforms) {
+#if !defined(__OSX__)
+  GapiTestCommon::Uniforms<VulkanApi>("VulkanApi_Uniforms_UBO.png", true);
+  GapiTestCommon::Uniforms<VulkanApi>("VulkanApi_Uniforms_SSBO.png",false);
+#endif
+  }
+
 TEST(VulkanApi,Compute) {
 #if !defined(__OSX__)
   GapiTestCommon::Compute<VulkanApi>();
@@ -104,8 +112,8 @@ TEST(VulkanApi,ComputeImage) {
 
 TEST(VulkanApi,DispathToDraw) {
 #if !defined(__OSX__)
-  GapiTestCommon::DispathToDraw<VulkanApi>("VulkanApi_DispathToDraw.png");
-  GapiTestCommon::DrawToDispath<VulkanApi>();
+  GapiTestSync::DispathToDraw<VulkanApi>("VulkanApi_DispathToDraw.png");
+  GapiTestSync::DrawToDispath<VulkanApi>();
 #endif
   }
 

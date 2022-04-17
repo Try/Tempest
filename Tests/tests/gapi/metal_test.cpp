@@ -84,6 +84,13 @@ TEST(MetalApi,Viewport) {
 #endif
   }
 
+TEST(MetalApi,Uniforms) {
+#if defined(__OSX__)
+  GapiTestCommon::Uniforms<MetalApi>("MetalApi_Uniforms_UBO.png", true);
+  GapiTestCommon::Uniforms<MetalApi>("MetalApi_Uniforms_SSBO.png",false);
+#endif
+  }
+
 TEST(MetalApi,Ubo) {
 #if defined(__OSX__)
   GapiTestCommon::uniforms<MetalApi,TextureFormat::RGBA8>("MetalApi_Uniforms.png");

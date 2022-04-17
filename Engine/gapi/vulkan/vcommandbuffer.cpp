@@ -611,12 +611,7 @@ void VCommandBuffer::buildBlas(VkAccelerationStructureKHR dest,
 
   VkAccelerationStructureBuildRangeInfoKHR* pbuildRangeInfo = &buildRangeInfo;
   device.vkCmdBuildAccelerationStructures(impl, 1, &buildGeometryInfo, &pbuildRangeInfo);
-  }
 
-void VCommandBuffer::buildTlas(VkAccelerationStructureKHR dest,
-                               AbstractGraphicsApi::Buffer& tbo,
-                               const AbstractGraphicsApi::Buffer& instances, uint32_t numInstances,
-                               AbstractGraphicsApi::Buffer& scratch) {
   // make sure BLAS'es are ready
   VkMemoryBarrier barrier{VK_STRUCTURE_TYPE_MEMORY_BARRIER};
   barrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
@@ -625,7 +620,12 @@ void VCommandBuffer::buildTlas(VkAccelerationStructureKHR dest,
                        VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
                        VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
                        0, 1, &barrier, 0, nullptr, 0, nullptr);
+  }
 
+void VCommandBuffer::buildTlas(VkAccelerationStructureKHR dest,
+                               AbstractGraphicsApi::Buffer& tbo,
+                               const AbstractGraphicsApi::Buffer& instances, uint32_t numInstances,
+                               AbstractGraphicsApi::Buffer& scratch) {
   VkAccelerationStructureGeometryInstancesDataKHR geometryInstancesData = {};
   geometryInstancesData.sType                 = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
   geometryInstancesData.pNext                 = NULL;
@@ -660,6 +660,15 @@ void VCommandBuffer::buildTlas(VkAccelerationStructureKHR dest,
 
   VkAccelerationStructureBuildRangeInfoKHR* pbuildRangeInfo = &buildRangeInfo;
   device.vkCmdBuildAccelerationStructures(impl, 1, &buildGeometryInfo, &pbuildRangeInfo);
+
+  // make sure TLAS is ready
+  VkMemoryBarrier barrier{VK_STRUCTURE_TYPE_MEMORY_BARRIER};
+  barrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+  barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+  vkCmdPipelineBarrier(impl,
+                       VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+                       VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+                       0, 1, &barrier, 0, nullptr, 0, nullptr);
   }
 
 void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dst, size_t offset,

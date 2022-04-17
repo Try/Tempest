@@ -424,7 +424,7 @@ string CompilerHLSL::type_to_glsl(const SPIRType &type, uint32_t id)
 		auto &template_type = get<SPIRType>(type.parent_type);
 		if (get_execution_model() == ExecutionModelTessellationControl)
 		{
-			return "InputPatch<" + type_to_glsl(template_type, id) + ",32>";
+      return "InputPatch<" + type_to_glsl(template_type, id) + ",3>";
 		}
 		else
 		{
@@ -2776,7 +2776,7 @@ void CompilerHLSL::emit_hlsl_patch_constant_func()
 {
 	SmallVector<string> arguments;
 	if (require_input)
-		arguments.push_back("InputPatch<SPIRV_Cross_HS_Point_Input, 32> gl_in");
+    arguments.push_back("InputPatch<SPIRV_Cross_HS_Point_Input, 3> gl_in");
 
 	statement("SPIRV_Cross_Output", " tesc_patch_constant(", merge(arguments), ")");
 	begin_scope();
@@ -2875,7 +2875,7 @@ void CompilerHLSL::emit_hlsl_entry_point()
 	{
 	case ExecutionModelTessellationControl:
 		arguments.push_back("SPIRV_Cross_Input stage_input");
-		arguments.push_back("InputPatch<SPIRV_Cross_HS_Point_Input, 32> gl_in");
+    arguments.push_back("InputPatch<SPIRV_Cross_HS_Point_Input, 3> gl_in");
 		break;
 
 	case ExecutionModelTessellationEvaluation:

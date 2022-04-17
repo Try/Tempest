@@ -9,6 +9,8 @@
 #include <gmock/gmock-matchers.h>
 
 #include "gapi_test_common.h"
+#include "gapi_test_sync.h"
+
 #include "../utils/renderdoc.h"
 
 using namespace testing;
@@ -101,6 +103,13 @@ TEST(DirectX12Api,Viewport) {
 #endif
   }
 
+TEST(DirectX12Api,Uniforms) {
+#if defined(_MSC_VER)
+  GapiTestCommon::Uniforms<DirectX12Api>("DirectX12Api_Uniforms_UBO.png", true);
+  GapiTestCommon::Uniforms<DirectX12Api>("DirectX12Api_Uniforms_SSBO.png",false);
+#endif
+  }
+
 TEST(DirectX12Api,Compute) {
 #if defined(_MSC_VER)
   GapiTestCommon::Compute<DirectX12Api>();
@@ -115,8 +124,8 @@ TEST(DirectX12Api,ComputeImage) {
 
 TEST(DirectX12Api,ComputeGraphics) {
 #if defined(_MSC_VER)
-  GapiTestCommon::DispathToDraw<DirectX12Api>("DirectX12Api_DispathToDraw.png");
-  GapiTestCommon::DrawToDispath<DirectX12Api>();
+  GapiTestSync::DispathToDraw<DirectX12Api>("DirectX12Api_DispathToDraw.png");
+  GapiTestSync::DrawToDispath<DirectX12Api>();
 #endif
   }
 
@@ -139,7 +148,8 @@ TEST(DirectX12Api,PsoTess) {
 #endif
   }
 
-TEST(DirectX12Api,TesselationBasic) {
+// NOTE: new DXIL compiller causes crashes
+TEST(DirectX12Api,DISABLED_TesselationBasic) {
 #if defined(_MSC_VER)
   GapiTestCommon::TesselationBasic<DirectX12Api>("DirectX12Api_TesselationBasic.png");
 #endif
@@ -169,7 +179,7 @@ TEST(DirectX12Api,Blas) {
 #endif
   }
 
-TEST(DirectX12Api,DISABLED_RayQuery) {
+TEST(DirectX12Api,RayQuery) {
 #if defined(_MSC_VER)
   GapiTestCommon::RayQuery<DirectX12Api>("DirectX12Api_RayQuery.png");
 #endif

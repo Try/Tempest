@@ -12,6 +12,15 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+static VkDescriptorType toWriteType(ShaderReflection::Class c) {
+  switch(c) {
+    case ShaderReflection::Ubo:    return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    case ShaderReflection::SsboR:  return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    case ShaderReflection::SsboRW: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    }
+  return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  }
+
 VDescriptorArray::VDescriptorArray(VkDevice device, VPipelineLay& vlay)
   :device(device),lay(&vlay) {
   if(lay.handler->hasSSBO)
@@ -150,7 +159,8 @@ void VDescriptorArray::setUbo(size_t id, Tempest::AbstractGraphicsApi::Buffer *b
   descriptorWrite.dstSet          = desc;
   descriptorWrite.dstBinding      = uint32_t(id);
   descriptorWrite.dstArrayElement = 0;
-  descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  //descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  descriptorWrite.descriptorType  = toWriteType(lay.handler->lay[id].cls);
   descriptorWrite.descriptorCount = 1;
   descriptorWrite.pBufferInfo     = &bufferInfo;
 
@@ -169,7 +179,8 @@ void VDescriptorArray::setSsbo(size_t id, Tempest::AbstractGraphicsApi::Buffer *
   descriptorWrite.dstSet          = desc;
   descriptorWrite.dstBinding      = uint32_t(id);
   descriptorWrite.dstArrayElement = 0;
-  descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  //descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  descriptorWrite.descriptorType  = toWriteType(lay.handler->lay[id].cls);
   descriptorWrite.descriptorCount = 1;
   descriptorWrite.pBufferInfo     = &bufferInfo;
 
