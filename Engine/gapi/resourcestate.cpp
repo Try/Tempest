@@ -46,6 +46,16 @@ void ResourceState::setLayout(AbstractGraphicsApi::Texture& a, ResourceAccess la
   img.outdated = true;
   }
 
+void ResourceState::forceLayout(AbstractGraphicsApi::Texture& img) {
+  for(auto& i:imgState) {
+    if(i.sw==nullptr && i.id==0 && i.img==&img) {
+      i.last     = i.next;
+      i.outdated = false;
+      return;
+      }
+    }
+  }
+
 void ResourceState::setLayout(AbstractGraphicsApi::Buffer& buf, ResourceAccess lay) {
   for(auto& i:bufState)
     if(i.buf==&buf) {

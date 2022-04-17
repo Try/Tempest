@@ -716,6 +716,8 @@ void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
     }
   barrier(img,ResourceAccess::TransferDst, ResourceAccess::TransferSrc, mipLevels-1);
   barrier(img,ResourceAccess::TransferSrc, ResourceAccess::Sampler,     uint32_t(-1));
+  resState.setLayout(img,ResourceAccess::Sampler);
+  resState.forceLayout(img);
   }
 
 void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {

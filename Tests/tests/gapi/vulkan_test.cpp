@@ -98,6 +98,14 @@ TEST(VulkanApi,Uniforms) {
 #endif
   }
 
+TEST(VulkanApi,DISABLED_SSBOReadOnly) {
+#if !defined(__OSX__)
+  // pBufferInfo must have been created with VK_BUFFER_USAGE_STORAGE_BUFFER_BIT set
+  GapiTestCommon::SSBOReadOnly<VulkanApi>(true);
+  GapiTestCommon::SSBOReadOnly<VulkanApi>(false);
+#endif
+  }
+
 TEST(VulkanApi,Compute) {
 #if !defined(__OSX__)
   GapiTestCommon::Compute<VulkanApi>();
@@ -158,6 +166,12 @@ TEST(VulkanApi,ComponentSwizzle) {
 TEST(VulkanApi,PushRemapping) {
 #if !defined(__OSX__)
   GapiTestCommon::PushRemapping<VulkanApi>();
+#endif
+  }
+
+TEST(VulkanApi,Bindless) {
+#if !defined(__OSX__)
+  GapiTestCommon::Bindless<VulkanApi>();
 #endif
   }
 

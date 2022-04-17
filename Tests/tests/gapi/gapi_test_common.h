@@ -503,6 +503,50 @@ void Uniforms(const char* outImage, bool useUbo) {
   }
 
 template<class GraphicsApi>
+void SSBOReadOnly(bool useUbo) {
+  using namespace Tempest;
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    Vec4 data = {1,2,3,4};
+    auto ssbo = device.ssbo(&data,  sizeof(data));
+    auto ubo  = device.ubo (data);
+    auto out  = device.ssbo(nullptr,sizeof(data));
+
+    auto cs  = device.shader("shader/ssbo_read.comp.sprv");
+    auto pso = device.pipeline(cs);
+
+    auto desc = device.descriptors(pso);
+    if(useUbo)
+      desc.set(0,ubo); else
+      desc.set(0,ssbo);
+    desc.set(1,out);
+
+    auto cmd  = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setFramebuffer({});
+      enc.setUniforms(pso,desc);
+      enc.dispatch(1,1,1);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    Vec4 ret = {};
+    device.readBytes(out,&ret,sizeof(ret));
+    EXPECT_EQ(ret,data);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void Compute() {
   using namespace Tempest;
 
@@ -838,6 +882,28 @@ void PushRemapping() {
     device.readBytes(output,&outputCpu,sizeof(outputCpu));
 
     EXPECT_EQ(outputCpu,Vec4(1,1,1,1));
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
+void Bindless() {
+  using namespace Tempest;
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto cs  = device.shader("shader/bindless.comp.sprv");
+    auto pso = device.pipeline(cs);
+
+    auto tex = device.texture("data/img/tst-dxt5.dds");
+
+    auto desc = device.descriptors(pso);
+    desc.set(0,tex);
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)

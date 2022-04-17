@@ -14,9 +14,15 @@ using namespace Tempest::Detail;
 
 static VkDescriptorType toWriteType(ShaderReflection::Class c) {
   switch(c) {
-    case ShaderReflection::Ubo:    return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    case ShaderReflection::SsboR:  return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    case ShaderReflection::SsboRW: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    case ShaderReflection::Ubo:     return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    case ShaderReflection::Texture: return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    case ShaderReflection::SsboR:   return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    case ShaderReflection::SsboRW:  return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    case ShaderReflection::ImgR:    return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    case ShaderReflection::ImgRW:   return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    case ShaderReflection::Tlas:    return VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+    case ShaderReflection::Push:    return VK_DESCRIPTOR_TYPE_MAX_ENUM;
+    case ShaderReflection::Count:   return VK_DESCRIPTOR_TYPE_MAX_ENUM;
     }
   return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   }
@@ -219,6 +225,7 @@ void VDescriptorArray::ssboBarriers(ResourceState& res) {
       case ShaderReflection::Ubo:
       case ShaderReflection::Texture:
       case ShaderReflection::Push:
+      case ShaderReflection::Count:
         break;
       case ShaderReflection::SsboR:
         res.setLayout(*ssbo[i].buf,ResourceAccess::ComputeRead);
@@ -228,6 +235,8 @@ void VDescriptorArray::ssboBarriers(ResourceState& res) {
         break;
       case ShaderReflection::ImgR:
       case ShaderReflection::ImgRW:
+        break;
+      case ShaderReflection::Tlas:
         break;
       }
     }
