@@ -16,6 +16,10 @@ static D3D12_SHADER_VISIBILITY nativeFormat(ShaderReflection::Stage stage){
   switch(stage) {
     case ShaderReflection::Stage::Vertex:
       return D3D12_SHADER_VISIBILITY_VERTEX;
+    case ShaderReflection::Stage::Control:
+      return D3D12_SHADER_VISIBILITY_HULL;
+    case ShaderReflection::Stage::Evaluate:
+      return D3D12_SHADER_VISIBILITY_DOMAIN;
     case ShaderReflection::Stage::Fragment:
       return D3D12_SHADER_VISIBILITY_PIXEL;
     case ShaderReflection::Stage::Geometry:
@@ -71,6 +75,7 @@ DxPipelineLay::DxPipelineLay(DxDevice& dev, const std::vector<ShaderReflection::
   ShaderReflection::PushBlock pb;
   ShaderReflection::merge(lay,pb, comp);
   init(lay,pb);
+  adjustSsboBindings();
   }
 
 DxPipelineLay::DxPipelineLay(DxDevice& dev, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt)
@@ -78,6 +83,7 @@ DxPipelineLay::DxPipelineLay(DxDevice& dev, const std::vector<ShaderReflection::
   ShaderReflection::PushBlock pb;
   ShaderReflection::merge(lay, pb, sh, cnt);
   init(lay,pb);
+  adjustSsboBindings();
   }
 
 size_t DxPipelineLay::descriptorsCount() {
@@ -326,6 +332,19 @@ void DxPipelineLay::freeDescriptors(DxPipelineLay::PoolAllocation& d) {
   std::lock_guard<SpinLock> guard(poolsSync);
   auto& p = pools[d.pool];
   p.allocated.set(d.offset,false);
+  }
+
+void DxPipelineLay::adjustSsboBindings() {
+  for(auto& i:lay)
+    if(i.size==0)
+      ;//i.size = VK_WHOLE_SIZE; // TODO?
+  for(auto& i:lay)
+    if(i.cls==ShaderReflection::SsboR  ||
+       i.cls==ShaderReflection::SsboRW ||
+       i.cls==ShaderReflection::ImgR   ||
+       i.cls==ShaderReflection::ImgRW ) {
+      hasSSBO = true;
+      }
   }
 
 #endif
