@@ -54,6 +54,8 @@ std::string GraphicsErrCategory::message(int ev) const {
       return "Uniform buffer element is too large";
     case GraphicsErrc::InvalidStorageBuffer:
       return "Invalid storage buffer";
+    case GraphicsErrc::InvalidAccelerationStructure:
+      return "Invalid acceleration structure";
     case GraphicsErrc::DrawCallWithoutFbo:
       return "Frame buffer is not set, before drawcall";
     case GraphicsErrc::ComputeCallInRenderPass:
