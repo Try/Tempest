@@ -162,7 +162,7 @@ TEST(DirectX12Api,SsboWrite) {
   }
 
 TEST(DirectX12Api,SSBOReadOnly) {
-#if !defined(__OSX__)
+#if defined(_MSC_VER)
   GapiTestCommon::SSBOReadOnly<DirectX12Api>(true);
   GapiTestCommon::SSBOReadOnly<DirectX12Api>(false);
 #endif
