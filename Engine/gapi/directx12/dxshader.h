@@ -36,6 +36,9 @@ class DxShader:public AbstractGraphicsApi::Shader {
       } tess;
 
   private:
+    HRESULT                          compile   (ComPtr<ID3DBlob>& shader, const char* hlsl, size_t len, spv::ExecutionModel exec, uint32_t sm) const;
+    HRESULT                          compileOld(ComPtr<ID3DBlob>& shader, const char* hlsl, size_t len, const char* target) const;
+    HRESULT                          compileDXC(ComPtr<ID3DBlob>& shader, const char* hlsl, size_t len, const char* target) const;
     mutable ComPtr<ID3DBlob>         shader;
   };
 

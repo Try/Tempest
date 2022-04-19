@@ -108,7 +108,7 @@ endif()
 ### Directx12
 if(WIN32 AND TEMPEST_BUILD_DIRECTX12)
   add_definitions(-DTEMPEST_BUILD_DIRECTX12)
-  target_link_libraries(${PROJECT_NAME} PRIVATE d3dcompiler dxgi)
+  target_link_libraries(${PROJECT_NAME} PRIVATE d3dcompiler dxcompiler dxgi)
 endif()
 
 ### Spirv-cross

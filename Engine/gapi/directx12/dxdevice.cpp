@@ -20,7 +20,7 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
   dxAssert(dllApi.D3D12CreateDevice(&adapter, D3D_FEATURE_LEVEL_11_0, uuid<ID3D12Device>(), reinterpret_cast<void**>(&device)));
 
   ComPtr<ID3D12InfoQueue> pInfoQueue;
-  if(SUCCEEDED(device->QueryInterface(__uuidof(ID3D12InfoQueue),reinterpret_cast<void**>(&pInfoQueue)))) {
+  if(SUCCEEDED(device->QueryInterface(uuid<ID3D12InfoQueue>(),reinterpret_cast<void**>(&pInfoQueue)))) {
     // Suppress messages based on their severity level
     D3D12_MESSAGE_SEVERITY severities[] = {
       D3D12_MESSAGE_SEVERITY_INFO
@@ -188,7 +188,7 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
 
   D3D12_FEATURE_DATA_D3D12_OPTIONS5 feature5 = {};
   if(SUCCEEDED(dev.CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &feature5, sizeof(feature5)))) {
-    prop.raytracing.rayQuery = (feature5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED);
+    //prop.raytracing.rayQuery = (feature5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED);
     }
   }
 

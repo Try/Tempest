@@ -5,6 +5,8 @@
 #include "dxdevice.h"
 #include "dxbuffer.h"
 
+#include "guid.h"
+
 using namespace Tempest;
 using namespace Tempest::Detail;
 
@@ -13,7 +15,7 @@ DxAccelerationStructure::DxAccelerationStructure(DxDevice& dx,
                                                  DxBuffer& ibo, size_t iboSz, size_t ioffset, IndexClass icls)
   :owner(dx) {
   ComPtr<ID3D12Device5> m_dxrDevice;
-  dx.device->QueryInterface(__uuidof(ID3D12Device5), reinterpret_cast<void**>(&m_dxrDevice));
+  dx.device->QueryInterface(uuid<ID3D12Device5>(), reinterpret_cast<void**>(&m_dxrDevice));
 
   D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc = {};
   geometryDesc.Type                                 = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
@@ -62,7 +64,7 @@ DxAccelerationStructure::~DxAccelerationStructure() {
 DxTopAccelerationStructure::DxTopAccelerationStructure(DxDevice& dx, const RtInstance* inst, AccelerationStructure*const* as, size_t asSize)
   :owner(dx) {
   ComPtr<ID3D12Device5> m_dxrDevice;
-  dx.device->QueryInterface(__uuidof(ID3D12Device5), reinterpret_cast<void**>(&m_dxrDevice));
+  dx.device->QueryInterface(uuid<ID3D12Device5>(), reinterpret_cast<void**>(&m_dxrDevice));
 
   Detail::DSharedPtr<DxBuffer*> pBuf;
   {
@@ -92,7 +94,7 @@ DxTopAccelerationStructure::DxTopAccelerationStructure(DxDevice& dx, const RtIns
   D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS tlasInputs = {};
   tlasInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
   tlasInputs.Flags       = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
-  tlasInputs.NumDescs    = asSize;
+  tlasInputs.NumDescs    = UINT(asSize);
   tlasInputs.Type        = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
 
   D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO buildSizesInfo = {};
@@ -107,7 +109,7 @@ DxTopAccelerationStructure::DxTopAccelerationStructure(DxDevice& dx, const RtIns
   auto cmd = dx.dataMgr().get();
   cmd->begin();
   // cmd->hold(scratch);
-  cmd->buildTlas(impl, *pBuf.handler, asSize, scratch);
+  cmd->buildTlas(impl, *pBuf.handler, uint32_t(asSize), scratch);
   cmd->end();
 
   // dx.dataMgr().waitFor(this);
