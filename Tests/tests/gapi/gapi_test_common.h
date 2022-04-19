@@ -1006,7 +1006,10 @@ void RayQuery(const char* outImg) {
     auto vbo  = device.vbo(vboData3,3);
     auto ibo  = device.ibo(iboData,3);
     auto blas = device.blas(vbo,ibo);
-    auto tlas = device.tlas({{Matrix4x4::mkIdentity(),&blas}});
+
+    auto m = Matrix4x4::mkIdentity();
+    m.translate(-1,1,0);
+    auto tlas = device.tlas({{m,&blas}});
 
     auto fsq  = device.vbo<Vertex>({{-1,-1},{ 1,-1},{ 1, 1}, {-1,-1},{ 1, 1},{-1, 1}});
     auto vert = device.shader("shader/simple_test.vert.sprv");

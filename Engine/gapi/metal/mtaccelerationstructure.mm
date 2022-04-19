@@ -18,7 +18,7 @@ MtAccelerationStructure::MtAccelerationStructure(MtDevice& dx,
                                                  MtBuffer& vbo, size_t vboSz, size_t stride,
                                                  MtBuffer& ibo, size_t iboSz, size_t ioffset, IndexClass icls)
   :owner(dx) {
-  auto* geo = [MTLAccelerationStructureTriangleGeometryDescriptor new];
+  auto* geo = [MTLAccelerationStructureTriangleGeometryDescriptor descriptor];
   geo.vertexBuffer       = vbo.impl;
   geo.vertexBufferOffset = 0;
   geo.vertexStride       = stride;
@@ -28,15 +28,19 @@ MtAccelerationStructure::MtAccelerationStructure(MtDevice& dx,
   geo.triangleCount      = iboSz/3;
 
   if(geo.indexBufferOffset%256!=0) {
-    Log::d("FIXME: index buffer offset alignment on metal(",geo.indexBufferOffset%256,")");
-    geo.indexBufferOffset = 0;
-    geo.triangleCount     = 0;
+    //Log::d("FIXME: index buffer offset alignment on metal(",geo.indexBufferOffset%256,")");
+    //geo.indexBufferOffset = 0;
+    //geo.triangleCount     = 0;
     }
 
   NSArray *geoArr = @[geo];
-  auto* desc = [MTLPrimitiveAccelerationStructureDescriptor new];
+  auto* desc = [MTLPrimitiveAccelerationStructureDescriptor descriptor];
   desc.geometryDescriptors = geoArr;
   desc.usage               = MTLAccelerationStructureUsageNone;
+  if(@available(macOS 12.0, *)) {
+    // ???
+    //desc.usage = MTLAccelerationStructureUsageExtendedLimits;
+    }
 
   MTLAccelerationStructureSizes sz = [dx.impl accelerationStructureSizesWithDescriptor:desc];
 
@@ -60,6 +64,9 @@ MtAccelerationStructure::MtAccelerationStructure(MtDevice& dx,
   [cmd commit];
   // TODO: implement proper upload engine
   [cmd waitUntilCompleted];
+  MTLCommandBufferStatus s = cmd.status;
+  if(s!=MTLCommandBufferStatus::MTLCommandBufferStatusCompleted)
+    throw DeviceLostException();
 
   if(scratch!=nil)
     [scratch release];
@@ -87,9 +94,9 @@ MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtIns
     for(size_t i=0; i<asSize; ++i) {
       auto& obj = reinterpret_cast<MTLAccelerationStructureInstanceDescriptor*>([instances contents])[i];
 
-      for(int x=0; x<3; ++x)
-        for(int y=0; y<4; ++y)
-          obj.transformationMatrix[x][y] = inst[i].mat.at(y,x);
+      for(int x=0; x<4; ++x)
+        for(int y=0; y<3; ++y)
+          obj.transformationMatrix[x][y] = inst[i].mat.at(x,y);
       obj.options                         = MTLAccelerationStructureInstanceOptionDisableTriangleCulling |
                                             MTLAccelerationStructureInstanceOptionOpaque;
       obj.mask                            = 0xFF;
@@ -101,7 +108,7 @@ MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtIns
       }
     [instances didModifyRange:NSMakeRange(0,[instances length])];
 
-    auto desc = [MTLInstanceAccelerationStructureDescriptor new];
+    auto desc = [MTLInstanceAccelerationStructureDescriptor descriptor];
     if(desc==nil)
       throw std::system_error(GraphicsErrc::OutOfHostMemory);
     desc.instanceDescriptorBuffer        = instances;
@@ -146,7 +153,7 @@ MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtIns
   if(scratch!=nil)
     [scratch release];
   if(asArray!=nil)
-    [asArray release];
+    ;//[asArray release];
   }
 
 MtTopAccelerationStructure::~MtTopAccelerationStructure() {

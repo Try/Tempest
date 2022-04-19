@@ -146,6 +146,12 @@ TEST(MetalApi,SsboWrite) {
 #endif
   }
 
+TEST(MetalApi,UnboundSsbo) {
+#if defined(__OSX__)
+  GapiTestCommon::UnboundSsbo<MetalApi>();
+#endif
+  }
+
 TEST(MetalApi,ComponentSwizzle) {
 #if defined(__OSX__)
   GapiTestCommon::ComponentSwizzle<MetalApi>();
