@@ -106,6 +106,12 @@ TEST(VulkanApi,DISABLED_SSBOReadOnly) {
 #endif
   }
 
+TEST(VulkanApi,UnboundSsbo) {
+#if !defined(__OSX__)
+  GapiTestCommon::UnboundSsbo<VulkanApi>();
+#endif
+  }
+
 TEST(VulkanApi,Compute) {
 #if !defined(__OSX__)
   GapiTestCommon::Compute<VulkanApi>();

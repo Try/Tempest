@@ -526,7 +526,6 @@ void SSBOReadOnly(bool useUbo) {
     auto cmd  = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setFramebuffer({});
       enc.setUniforms(pso,desc);
       enc.dispatch(1,1,1);
     }
@@ -537,6 +536,54 @@ void SSBOReadOnly(bool useUbo) {
 
     Vec4 ret = {};
     device.readBytes(out,&ret,sizeof(ret));
+    EXPECT_EQ(ret,data);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
+void UnboundSsbo() {
+  using namespace Tempest;
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    std::vector<Vec4> data;
+    data.resize(3000);
+    for(size_t i=0; i<data.size(); ++i) {
+      data[i].x = float(i)*4.f+0.f;
+      data[i].y = float(i)*4.f+1.f;
+      data[i].z = float(i)*4.f+2.f;
+      data[i].w = float(i)*4.f+3.f;
+      }
+
+    auto ssbo = device.ssbo(data.data(), sizeof(data[0])*data.size());
+    auto out  = device.ssbo(nullptr,     sizeof(data[0])*data.size());
+
+    auto cs  = device.shader("shader/ssbo_read.comp.sprv");
+    auto pso = device.pipeline(cs);
+
+    auto desc = device.descriptors(pso);
+    desc.set(0,ssbo);
+    desc.set(1,out);
+
+    auto cmd  = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setUniforms(pso,desc);
+      enc.dispatch(data.size(),1,1);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    std::vector<Vec4> ret(data.size());
+    device.readBytes(out,ret.data(),sizeof(data[0])*data.size());
     EXPECT_EQ(ret,data);
     }
   catch(std::system_error& e) {

@@ -168,6 +168,12 @@ TEST(DirectX12Api,SSBOReadOnly) {
 #endif
   }
 
+TEST(DirectX12Api,UnboundSsbo) {
+#if !defined(__OSX__)
+  GapiTestCommon::UnboundSsbo<DirectX12Api>();
+#endif
+  }
+
 TEST(DirectX12Api,ComponentSwizzle) {
 #if defined(_MSC_VER)
   GapiTestCommon::ComponentSwizzle<DirectX12Api>();
