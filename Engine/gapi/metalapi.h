@@ -55,6 +55,9 @@ class MetalApi : public AbstractGraphicsApi {
     void           submit   (Device *d, CommandBuffer** cmd, size_t count, Fence *doneCpu) override;
 
     void           getCaps  (Device *d, Props& caps) override;
+
+  private:
+    bool           validation = false;
   };
 
 }

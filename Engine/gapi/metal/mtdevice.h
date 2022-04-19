@@ -193,7 +193,7 @@ inline MTLIndexType nativeFormat(IndexClass icls) {
 
 class MtDevice : public AbstractGraphicsApi::Device {
   public:
-    MtDevice(const char* name);
+    MtDevice(const char* name, bool validation);
     ~MtDevice();
 
     void waitIdle() override;
@@ -214,6 +214,7 @@ class MtDevice : public AbstractGraphicsApi::Device {
 
     autoDevice     dev;
     MtSamplerCache samplers;
+    bool           validation = false;
 
     static void deductProps(AbstractGraphicsApi::Props& prop, id<MTLDevice> dev);
   };

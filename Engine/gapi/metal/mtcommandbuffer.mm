@@ -66,6 +66,10 @@ void MtCommandBuffer::reset() {
   MTLCommandBufferDescriptor* desc = [MTLCommandBufferDescriptor new];
   desc.retainedReferences = NO;
 
+  if(device.validation) {
+    desc.errorOptions = MTLCommandBufferErrorOptionEncoderExecutionStatus;
+    }
+
   impl = [device.queue commandBufferWithDescriptor:desc];
   [impl retain];
   [desc release];

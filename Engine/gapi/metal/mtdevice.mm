@@ -39,7 +39,8 @@ MtDevice::autoDevice::~autoDevice() {
     [impl release];
   }
 
-MtDevice::MtDevice(const char* name) : dev(name), samplers(dev.impl) {
+MtDevice::MtDevice(const char* name, bool validation)
+  : dev(name), samplers(dev.impl), validation(validation) {
   impl  = dev.impl;
   queue = dev.queue;
   deductProps(prop,impl);

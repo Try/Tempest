@@ -31,6 +31,7 @@ MetalApi::MetalApi(ApiFlags f) {
     setenv("METAL_DEVICE_WRAPPER_TYPE","1",1);
     setenv("METAL_DEBUG_ERROR_MODE",   "5",0);
     setenv("METAL_ERROR_MODE",         "5",0);
+    validation = true;
     }
   }
 
@@ -52,7 +53,7 @@ std::vector<AbstractGraphicsApi::Props> MetalApi::devices() const {
   }
 
 AbstractGraphicsApi::Device* MetalApi::createDevice(const char *gpuName) {
-  return new MtDevice(gpuName);
+  return new MtDevice(gpuName,validation);
   }
 
 void MetalApi::destroy(AbstractGraphicsApi::Device *d) {
@@ -251,7 +252,13 @@ void MetalApi::submit(AbstractGraphicsApi::Device*,
 
     [cmd addCompletedHandler:^(id<MTLCommandBuffer> c) {
       MTLCommandBufferStatus s = c.status;
-      if(s==MTLCommandBufferStatusCommitted)
+      if(s==MTLCommandBufferStatusNotEnqueued ||
+         s==MTLCommandBufferStatusEnqueued ||
+         s==MTLCommandBufferStatusCommitted ||
+         s==MTLCommandBufferStatusScheduled)
+        return;
+
+      if(s==MTLCommandBufferStatusCompleted)
         fence.reset(); else
         fence.reset(s);
       }];

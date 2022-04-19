@@ -10,6 +10,8 @@
 #import <Metal/MTLCommandQueue.h>
 #import <Metal/MTLCommandBuffer.h>
 
+#include <Tempest/Log>
+
 using namespace Tempest::Detail;
 
 MtAccelerationStructure::MtAccelerationStructure(MtDevice& dx,
@@ -25,8 +27,13 @@ MtAccelerationStructure::MtAccelerationStructure(MtDevice& dx,
   geo.indexType          = nativeFormat(icls);
   geo.triangleCount      = iboSz/3;
 
-  NSArray *geoArr = @[geo];
+  if(geo.indexBufferOffset%256!=0) {
+    Log::d("FIXME: index buffer offset alignment on metal(",geo.indexBufferOffset%256,")");
+    geo.indexBufferOffset = 0;
+    geo.triangleCount     = 0;
+    }
 
+  NSArray *geoArr = @[geo];
   auto* desc = [MTLPrimitiveAccelerationStructureDescriptor new];
   desc.geometryDescriptors = geoArr;
   desc.usage               = MTLAccelerationStructureUsageNone;
@@ -77,22 +84,6 @@ MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtIns
     if(asArray==nil && asSize>0)
       throw std::system_error(GraphicsErrc::OutOfHostMemory);
 
-    auto desc = [MTLInstanceAccelerationStructureDescriptor new];
-    if(desc==nil)
-      throw std::system_error(GraphicsErrc::OutOfHostMemory);
-
-    desc.instanceDescriptorBuffer        = instances;
-    desc.instanceDescriptorBufferOffset  = 0;
-    desc.instanceDescriptorStride        = sizeof(MTLAccelerationStructureInstanceDescriptor);
-    desc.instanceCount                   = asSize;
-    desc.instancedAccelerationStructures = asArray;
-
-    MTLAccelerationStructureSizes sz = [dx.impl accelerationStructureSizesWithDescriptor:desc];
-
-    impl = [dx.impl newAccelerationStructureWithSize:sz.accelerationStructureSize];
-    if(impl==nil)
-      throw std::system_error(GraphicsErrc::OutOfVideoMemory);
-
     for(size_t i=0; i<asSize; ++i) {
       auto& obj = reinterpret_cast<MTLAccelerationStructureInstanceDescriptor*>([instances contents])[i];
 
@@ -110,7 +101,22 @@ MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtIns
       }
     [instances didModifyRange:NSMakeRange(0,[instances length])];
 
-    id<MTLBuffer> scratch = [dx.impl newBufferWithLength:sz.buildScratchBufferSize options:MTLResourceStorageModePrivate];
+    auto desc = [MTLInstanceAccelerationStructureDescriptor new];
+    if(desc==nil)
+      throw std::system_error(GraphicsErrc::OutOfHostMemory);
+    desc.instanceDescriptorBuffer        = instances;
+    desc.instanceDescriptorBufferOffset  = 0;
+    desc.instanceDescriptorStride        = sizeof(MTLAccelerationStructureInstanceDescriptor);
+    desc.instanceCount                   = asSize;
+    desc.instancedAccelerationStructures = asArray;
+
+    MTLAccelerationStructureSizes sz = [dx.impl accelerationStructureSizesWithDescriptor:desc];
+
+    impl = [dx.impl newAccelerationStructureWithSize:sz.accelerationStructureSize];
+    if(impl==nil)
+      throw std::system_error(GraphicsErrc::OutOfVideoMemory);
+
+    scratch = [dx.impl newBufferWithLength:sz.buildScratchBufferSize options:MTLResourceStorageModePrivate];
     if(scratch==nil && sz.buildScratchBufferSize>0)
       throw std::system_error(GraphicsErrc::OutOfVideoMemory);
 
