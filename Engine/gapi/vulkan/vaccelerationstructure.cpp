@@ -135,7 +135,7 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
   buildSizesInfo.sType                       = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
   buildSizesInfo.pNext                       = nullptr;
 
-  uint32_t numInstances = asSize;
+  uint32_t numInstances = uint32_t(asSize);
   vkGetAccelerationStructureBuildSizes(device,
                                        VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
                                        &buildGeometryInfo,
@@ -184,7 +184,7 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
   auto cmd = dx.dataMgr().get();
   cmd->begin();
   //cmd->hold(scratch);
-  cmd->buildTlas(impl,data,*pBuf.handler,asSize,scratch);
+  cmd->buildTlas(impl,data,*pBuf.handler,uint32_t(asSize),scratch);
   cmd->end();
 
   // dx.dataMgr().waitFor(this);

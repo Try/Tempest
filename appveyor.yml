@@ -4,7 +4,7 @@ configuration:
 environment:
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-      GENERATOR: "Visual Studio 16 2019"
+      GENERATOR: "Ninja"
       VCVARSALL: "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Auxiliary/Build/vcvarsall.bat"
       PLATFORM:  x64
 
@@ -84,7 +84,7 @@ build_script:
   - cmd: if NOT "%VCVARSALL%" == "" call "%VCVARSALL%" %PLATFORM%
   - cmd: cmake -H. -B../../build -G "%GENERATOR%" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_SH=CMAKE_SH-NOTFOUND
   - sh:  cmake -H. -B../../build                  -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo
-  - ps:  $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+  # - ps:  $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
   - cmake --build ../../build --target TempestTests
 
 test_script:
