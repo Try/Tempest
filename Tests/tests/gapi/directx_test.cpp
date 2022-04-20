@@ -169,7 +169,7 @@ TEST(DirectX12Api,SSBOReadOnly) {
   }
 
 TEST(DirectX12Api,UnboundSsbo) {
-#if !defined(__OSX__)
+#if defined(_MSC_VER)
   GapiTestCommon::UnboundSsbo<DirectX12Api>();
 #endif
   }
