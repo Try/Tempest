@@ -268,10 +268,12 @@ std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget& w, MouseEvent
         dblClick = true;
         }
       mouseLastTime = time;
+      event.accept();
       if(dblClick)
         it.owner->mouseDoubleClickEvent(event); else
         it.owner->mouseDownEvent(event);
       } else {
+      event.accept();
       it.owner->mouseMoveEvent(event);
       }
 
