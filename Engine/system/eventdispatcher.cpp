@@ -25,17 +25,19 @@ void EventDispatcher::dispatchMouseDown(Widget& wnd, MouseEvent &e) {
                  e.delta,
                  e.mouseID,
                  Event::MouseDown );
+  e1.ignore();
+
   for(auto i:overlays) {
     if(!i->bind(wnd))
       continue;
     mouseUp = implDispatch(*i,e1);
-    if(!mouseUp.expired())
+    if(e1.isAccepted())
       break;
     if(e1.type()==MouseEvent::MouseDown)
       mouseLast = mouseUp;
     }
 
-  if(mouseUp.expired())
+  if(!e1.isAccepted())
     mouseUp = implDispatch(wnd,e1);
 
   if(prevEvCount!=mouseEvCount) {
@@ -69,8 +71,6 @@ void EventDispatcher::dispatchMouseUp(Widget& /*wnd*/, MouseEvent &e) {
                    e.mouseID,
                    Event::MouseUp );
     w->widget->mouseUpEvent(e1);
-    if(!e1.isAccepted())
-      return;
     }
   }
 
@@ -250,9 +250,11 @@ std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget& w, MouseEvent
                     event.mouseID,
                     event.type());
       auto ptr = implDispatch(*i,ex);
-      if(ex.isAccepted() && it.owner!=nullptr) {
+      if(ex.isAccepted()) {
         event.accept();
-        return ptr;
+        if(it.owner!=nullptr)
+          return ptr; else
+          return nullptr;
         }
       }
     }

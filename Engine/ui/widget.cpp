@@ -11,12 +11,12 @@ std::recursive_mutex Widget::syncSCuts;
 
 Widget::Iterator::Iterator(Widget* owner)
   :owner(owner),nodes(&owner->wx){
-  owner->iterator=this;
+  owner->iterator = this;
   }
 
 Widget::Iterator::~Iterator(){
   if(owner!=nullptr)
-    owner->iterator=nullptr;
+    owner->iterator = nullptr;
   }
 
 void Widget::Iterator::onDelete() {
@@ -45,7 +45,8 @@ void Widget::Iterator::next() {
   }
 
 void Widget::Iterator::prev() {
-  --id;
+  if(hasPrev())
+    --id;
   }
 
 void Widget::Iterator::moveToEnd() {
