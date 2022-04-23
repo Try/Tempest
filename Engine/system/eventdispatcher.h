@@ -49,6 +49,7 @@ class EventDispatcher final {
 
     std::vector<UiOverlay*>      overlays;
     uint64_t                     mouseLastTime = 0;
+    uint64_t                     mouseEvCount  = 0;
 
 
     struct Modify final {

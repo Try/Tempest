@@ -14,7 +14,10 @@ EventDispatcher::EventDispatcher(Widget &root)
   :customRoot(&root){
   }
 
-void EventDispatcher::dispatchMouseDown(Widget &wnd, MouseEvent &e) {
+void EventDispatcher::dispatchMouseDown(Widget& wnd, MouseEvent &e) {
+  ++mouseEvCount;
+  const uint64_t prevEvCount = mouseEvCount;
+
   MouseEvent e1( e.x,
                  e.y,
                  e.button,
@@ -22,7 +25,6 @@ void EventDispatcher::dispatchMouseDown(Widget &wnd, MouseEvent &e) {
                  e.delta,
                  e.mouseID,
                  Event::MouseDown );
-
   for(auto i:overlays) {
     if(!i->bind(wnd))
       continue;
@@ -33,9 +35,14 @@ void EventDispatcher::dispatchMouseDown(Widget &wnd, MouseEvent &e) {
       mouseLast = mouseUp;
     }
 
-
   if(mouseUp.expired())
     mouseUp = implDispatch(wnd,e1);
+
+  if(prevEvCount!=mouseEvCount) {
+    mouseLastTime = 0;
+    mouseUp.reset();
+    }
+
   if(e1.type()==MouseEvent::MouseDown)
     mouseLast = mouseUp;
 
@@ -47,6 +54,8 @@ void EventDispatcher::dispatchMouseDown(Widget &wnd, MouseEvent &e) {
   }
 
 void EventDispatcher::dispatchMouseUp(Widget& /*wnd*/, MouseEvent &e) {
+  ++mouseEvCount;
+
   auto ptr = mouseUp;
   mouseUp.reset();
 
@@ -65,7 +74,7 @@ void EventDispatcher::dispatchMouseUp(Widget& /*wnd*/, MouseEvent &e) {
     }
   }
 
-void EventDispatcher::dispatchMouseMove(Widget &wnd, MouseEvent &e) {
+void EventDispatcher::dispatchMouseMove(Widget& wnd, MouseEvent &e) {
   if(auto w = lock(mouseUp)) {
     auto p = e.pos() - w->widget->mapToRoot(Point());
     MouseEvent e0( p.x,
@@ -116,7 +125,7 @@ void EventDispatcher::dispatchMouseMove(Widget &wnd, MouseEvent &e) {
   implSetMouseOver(wptr,e1);
   }
 
-void EventDispatcher::dispatchMouseWheel(Widget &wnd, MouseEvent &e) {
+void EventDispatcher::dispatchMouseWheel(Widget& wnd, MouseEvent &e) {
   MouseEvent e1( e.x,
                  e.y,
                  e.button,
