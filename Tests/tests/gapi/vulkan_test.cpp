@@ -100,7 +100,6 @@ TEST(VulkanApi,Uniforms) {
 
 TEST(VulkanApi,SSBOReadOnly) {
 #if !defined(__OSX__)
-  // pBufferInfo must have been created with VK_BUFFER_USAGE_STORAGE_BUFFER_BIT set
   GapiTestCommon::SSBOReadOnly<VulkanApi>(true);
   GapiTestCommon::SSBOReadOnly<VulkanApi>(false);
 #endif
