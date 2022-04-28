@@ -118,7 +118,7 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
   if(MemUsage::IndexBuffer==(usage & MemUsage::IndexBuffer))
     createInfo.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
   if(MemUsage::UniformBuffer==(usage & MemUsage::UniformBuffer))
-    createInfo.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    createInfo.usage |= (VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
   if(MemUsage::StorageBuffer==(usage & MemUsage::StorageBuffer))
     createInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
