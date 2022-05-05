@@ -43,7 +43,7 @@ static const char* target(spv::ExecutionModel exec, uint32_t sm, char* buf) {
   }
 
 static int calcShaderModel(const spirv_cross::CompilerHLSL& comp) {
-  uint32_t shader_model = 50;//65;
+  uint32_t shader_model = 50//65;
   for(auto& cap:comp.get_declared_capabilities()) {
     switch(cap) {
       case spv::CapabilityRayQueryKHR:
@@ -61,7 +61,6 @@ DxShader::DxShader(const void *source, const size_t src_size) {
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
 
   spirv_cross::CompilerHLSL::Options optHLSL;
-  //optHLSL.shader_model = 50;
 
   spirv_cross::CompilerGLSL::Options optGLSL;
   optGLSL.vertex.flip_vert_y = false;
@@ -83,6 +82,7 @@ DxShader::DxShader(const void *source, const size_t src_size) {
 
     ShaderReflection::getVertexDecl(vdecl,comp);
     ShaderReflection::getBindings(lay,comp);
+    stage = ShaderReflection::getExecutionModel(comp);
 
     if(exec==spv::ExecutionModelVertex) {
       tess.vertSrc.resize(src_size/4);
