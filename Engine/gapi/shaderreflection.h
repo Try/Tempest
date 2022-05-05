@@ -29,6 +29,8 @@ class ShaderReflection final {
       Geometry=1<<3,
       Fragment=1<<4,
       Compute =1<<5,
+      Task    =1<<6,
+      Mesh    =1<<7,
       };
 
     struct Binding {
@@ -50,15 +52,13 @@ class ShaderReflection final {
 
     static void   getVertexDecl(std::vector<Decl::ComponentType>& data, spirv_cross::Compiler& comp);
     static void   getBindings(std::vector<Binding>& b, spirv_cross::Compiler& comp);
+    static Stage  getExecutionModel(spirv_cross::Compiler& comp);
     static size_t mslSizeOf(const spirv_cross::ID& spvId, spirv_cross::Compiler& comp);
 
-    static void merge(std::vector<Binding>& ret,
-                      PushBlock& pb,
-                      const std::vector<Binding>& comp);
-    static void merge(std::vector<Binding>& ret,
-                      PushBlock& pb,
-                      const std::vector<Binding>* sh[],
-                      size_t count);
+    static void   merge(std::vector<Binding>& ret,
+                        PushBlock& pb,
+                        const std::vector<Binding>* sh[],
+                        size_t count);
 
   private:
     static void finalize(std::vector<Binding>& p);

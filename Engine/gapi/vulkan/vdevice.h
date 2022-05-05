@@ -15,6 +15,7 @@
 #include "exceptions/exception.h"
 #include "utility/spinlock.h"
 #include "utility/compiller_hints.h"
+#include "gapi/shaderreflection.h"
 #include "gapi/uploadengine.h"
 
 namespace Tempest {
@@ -181,7 +182,7 @@ inline VkFormat nativeFormat(Decl::ComponentType t) {
   return VK_FORMAT_UNDEFINED;
   }
 
-inline VkIndexType nativeFormat(Detail::IndexClass icls) {
+inline VkIndexType nativeFormat(IndexClass icls) {
   switch(icls) {
     case Detail::IndexClass::i16:
       return VK_INDEX_TYPE_UINT16;
@@ -189,6 +190,43 @@ inline VkIndexType nativeFormat(Detail::IndexClass icls) {
       return VK_INDEX_TYPE_UINT32;
     }
   return VK_INDEX_TYPE_UINT16;
+  }
+
+inline VkDescriptorType nativeFormat(ShaderReflection::Class cls) {
+  switch(cls) {
+    case ShaderReflection::Ubo:
+      return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    case ShaderReflection::Texture:
+      return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    case ShaderReflection::SsboR:
+      return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    case ShaderReflection::SsboRW :
+      return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    case ShaderReflection::ImgR:
+      return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    case ShaderReflection::ImgRW:
+      return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    case ShaderReflection::Tlas:
+      return VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+    case ShaderReflection::Push:
+    case ShaderReflection::Count:
+      return VK_DESCRIPTOR_TYPE_MAX_ENUM;
+    }
+  return VK_DESCRIPTOR_TYPE_MAX_ENUM;
+  }
+
+inline VkShaderStageFlagBits nativeFormat(ShaderReflection::Stage st) {
+  switch(st) {
+    case ShaderReflection::Vertex  : return VK_SHADER_STAGE_VERTEX_BIT;
+    case ShaderReflection::Control : return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+    case ShaderReflection::Evaluate: return VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+    case ShaderReflection::Geometry: return VK_SHADER_STAGE_GEOMETRY_BIT;
+    case ShaderReflection::Fragment: return VK_SHADER_STAGE_FRAGMENT_BIT;
+    case ShaderReflection::Compute : return VK_SHADER_STAGE_COMPUTE_BIT;
+    case ShaderReflection::Task    : return VK_SHADER_STAGE_TASK_BIT_NV;
+    case ShaderReflection::Mesh    : return VK_SHADER_STAGE_MESH_BIT_NV;
+    }
+  return VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
   }
 
 class VDevice : public AbstractGraphicsApi::Device {
@@ -262,6 +300,8 @@ class VDevice : public AbstractGraphicsApi::Device {
     PFN_vkDestroyAccelerationStructureKHR       vkDestroyAccelerationStructure       = nullptr;
     PFN_vkGetAccelerationStructureBuildSizesKHR vkGetAccelerationStructureBuildSizes = nullptr;
     PFN_vkCmdBuildAccelerationStructuresKHR     vkCmdBuildAccelerationStructures     = nullptr;
+
+    PFN_vkCmdDrawMeshTasksNV                    vkCmdDrawMeshTasks = nullptr;
 
     void                    waitIdle() override;
 

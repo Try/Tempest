@@ -72,14 +72,14 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
     auto blitVs = DSharedPtr<DxShader*>(new DxShader(blit_vert_sprv,sizeof(blit_vert_sprv)));
     auto blitFs = DSharedPtr<DxShader*>(new DxShader(blit_frag_sprv,sizeof(blit_frag_sprv)));
 
-    blitLayout  = DSharedPtr<DxPipelineLay*>(new DxPipelineLay(*this,blitFs.handler->lay));
-    blit        = DSharedPtr<DxPipeline*>   (new DxPipeline   (*this,st,0,Triangles,*blitLayout.handler,
-                                                               blitVs.handler,nullptr,nullptr,nullptr,blitFs.handler));
+    DxShader* blitSh[2] = {blitVs.handler, blitFs.handler};
+    blitLayout  = DSharedPtr<DxPipelineLay*>(new DxPipelineLay(*this,&blitFs.handler->lay));
+    blit        = DSharedPtr<DxPipeline*>   (new DxPipeline   (*this,st,0,Triangles,*blitLayout.handler,blitSh,2));
     }
 
     {
     auto copyCs = DSharedPtr<DxShader*>(new DxShader(copy_comp_sprv,sizeof(copy_comp_sprv)));
-    copyLayout  = DSharedPtr<DxPipelineLay*> (new DxPipelineLay(*this,copyCs.handler->lay));
+    copyLayout  = DSharedPtr<DxPipelineLay*> (new DxPipelineLay(*this,&copyCs.handler->lay));
     copy        = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*copyLayout.handler,*copyCs.handler));
     }
     {
@@ -163,7 +163,7 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
 
   prop.anisotropy        = true;
   prop.maxAnisotropy     = 16;
-  prop.tesselationShader = true;
+  prop.tesselationShader = false;
 
   prop.storeAndAtomicVs  = true;
   prop.storeAndAtomicFs  = true;
@@ -188,7 +188,7 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
 
   D3D12_FEATURE_DATA_D3D12_OPTIONS5 feature5 = {};
   if(SUCCEEDED(dev.CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &feature5, sizeof(feature5)))) {
-    //prop.raytracing.rayQuery = (feature5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED);
+    prop.raytracing.rayQuery = (feature5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED);
     }
   }
 

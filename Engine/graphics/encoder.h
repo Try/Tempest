@@ -68,6 +68,7 @@ class Encoder<Tempest::CommandBuffer> {
     template<class T,class I>
     void draw(const VertexBuffer<T>& vbo,const IndexBuffer<I>& ibo,size_t offset,size_t count,size_t firstInstance,size_t instanceCount)
          { implDraw(vbo.impl,ibo.impl,Detail::indexCls<I>(),offset,count,firstInstance,instanceCount); }
+    void dispatchMesh(size_t firstInstance, size_t instanceCount);
 
     void dispatch(size_t x, size_t y, size_t z);
 

@@ -21,6 +21,7 @@ class VShader:public AbstractGraphicsApi::Shader {
     VkShaderModule                   impl;
     std::vector<Decl::ComponentType> vdecl;
     std::vector<Binding>             lay;
+    ShaderReflection::Stage          stage = ShaderReflection::Stage::Compute;
 
   private:
     VkDevice                         device;

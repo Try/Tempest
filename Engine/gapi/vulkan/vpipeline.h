@@ -6,13 +6,14 @@
 
 #include "../utility/dptr.h"
 #include "../utility/spinlock.h"
+#include "gapi/shaderreflection.h"
 #include "vframebuffermap.h"
+#include "vshader.h"
 #include "vulkan_sdk.h"
 
 namespace Tempest {
 namespace Detail {
 
-class VShader;
 class VDevice;
 class VPipelineLay;
 
@@ -20,9 +21,9 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
   public:
     VPipeline();
     VPipeline(VDevice &device,
-              const RenderState &st, size_t stride, Topology tp, const VPipelineLay& ulayImpl,
-              const VShader* vert, const VShader* ctrl, const VShader* tess, const VShader* geom,  const VShader* frag);
-    VPipeline(VPipeline&& other);
+              const RenderState &st, size_t stride, Topology tp, const VPipelineLay& ulay,
+              const VShader** sh, size_t count);
+    VPipeline(VPipeline&& other) = delete;
     ~VPipeline();
 
     struct Inst {
@@ -56,16 +57,18 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     VkDevice                               device=nullptr;
     Tempest::RenderState                   st;
     size_t                                 declSize=0, stride=0;
-    Topology                               tp=Topology::Triangles;
-    DSharedPtr<const VShader*>             modules[5];
+    Topology                               tp = Topology::Triangles;
+    DSharedPtr<const VShader*>             modules[5] = {};
     std::unique_ptr<Decl::ComponentType[]> decl;
     std::vector<InstRp>                    instRp;
     std::vector<InstDr>                    instDr;
     SpinLock                               sync;
 
+    const VShader*                         findShader(ShaderReflection::Stage sh) const;
+
     void cleanup();
     static VkPipelineLayout      initLayout(VkDevice device, const VPipelineLay& uboLay, VkShaderStageFlags& pushFlg, uint32_t& pushSize);
-    static VkPipeline            initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
+    VkPipeline                   initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
                                                       const VFramebufferMap::RenderPass* rpLay, const VkPipelineRenderingCreateInfoKHR* dynLay, const RenderState &st,
                                                       const Decl::ComponentType *decl, size_t declSize, size_t stride,
                                                       Topology tp,

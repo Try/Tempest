@@ -10,6 +10,8 @@
 #include <mutex>
 #include <cassert>
 
+#include "utility/smallarray.h"
+
 using namespace Tempest;
 
 static uint32_t mipCount(uint32_t w, uint32_t h) {
@@ -77,28 +79,15 @@ void Device::submit(const CommandBuffer &cmd, Fence &fdone) {
   }
 
 void Device::submit(const Tempest::CommandBuffer *cmd[], size_t count, Fence *fdone) {
-  if(count<=64) {
-    void* ptr[64];
-    auto cx = reinterpret_cast<AbstractGraphicsApi::CommandBuffer**>(ptr);
-
-    implSubmit(cmd,  cx, count, fdone->impl.handler);
-    } else {
-    std::unique_ptr<void*[]> ptr(new void*[count]);
-    auto cx = reinterpret_cast<AbstractGraphicsApi::CommandBuffer**>(ptr.get());
-
-    implSubmit(cmd, cx, count, fdone->impl.handler);
-    }
+  Detail::SmallArray<AbstractGraphicsApi::CommandBuffer*,64> cx(count);
+  for(size_t i=0;i<count;++i)
+    cx[i] = cmd[i]->impl.handler;
+  auto fence = (fdone==nullptr ? nullptr : fdone->impl.handler);
+  api.submit(dev, cx.get(), count, fence);
   }
 
 void Device::present(Swapchain& sw) {
   api.present(dev,sw.impl.handler);
-  }
-
-void Device::implSubmit(const CommandBuffer* cmd[], AbstractGraphicsApi::CommandBuffer*  hcmd[], size_t count, AbstractGraphicsApi::Fence* fdone) {
-  for(size_t i=0;i<count;++i)
-    hcmd[i] = cmd[i]->impl.handler;
-
-  api.submit(dev, hcmd, count, fdone);
   }
 
 Shader Device::shader(RFile &file) {
@@ -279,7 +268,7 @@ ComputePipeline Device::pipeline(const Shader& comp) {
   if(!comp.impl)
     return ComputePipeline();
 
-  auto ulay = api.createPipelineLayout(dev,nullptr,nullptr,nullptr,nullptr,nullptr,comp.impl.handler);
+  auto ulay = api.createPipelineLayout(dev,&comp.impl.handler,1);
   auto pipe = api.createComputePipeline(dev,*ulay.handler,comp.impl.handler);
   ComputePipeline f(std::move(pipe),std::move(ulay));
   return f;
@@ -298,8 +287,19 @@ RenderPipeline Device::implPipeline(const RenderState &st,
   for(size_t i=0; i<5; ++i)
     shv[i] = sh[i]!=nullptr ? sh[i]->impl.handler : nullptr;
 
-  auto ulay = api.createPipelineLayout(dev,shv[0],shv[1],shv[2],shv[3],shv[4],nullptr);
-  auto pipe = api.createPipeline(dev,st,stride,tp,*ulay.handler,shv[0],shv[1],shv[2],shv[3],shv[4]);
+  auto ulay = api.createPipelineLayout(dev,shv,5);
+  auto pipe = api.createPipeline(dev,st,stride,tp,*ulay.handler,shv,5);
+  RenderPipeline f(std::move(pipe),std::move(ulay));
+  return f;
+  }
+
+RenderPipeline Device::pipeline(const RenderState& st, const Shader& ts, const Shader& ms, const Shader& fs) {
+  const Shader*                sh [3] = {&ts,&ms,&fs};
+  AbstractGraphicsApi::Shader* shv[3] = {};
+  for(size_t i=0; i<3; ++i)
+    shv[i] = sh[i]!=nullptr ? sh[i]->impl.handler : nullptr;
+  auto ulay = api.createPipelineLayout(dev,shv,3);
+  auto pipe = api.createPipeline(dev,st,0,Topology::Triangles,*ulay.handler,shv,3);
   RenderPipeline f(std::move(pipe),std::move(ulay));
   return f;
   }

@@ -166,18 +166,14 @@ AbstractGraphicsApi::Swapchain* DirectX12Api::createSwapchain(SystemApi::Window*
   }
 
 AbstractGraphicsApi::PPipeline DirectX12Api::createPipeline(AbstractGraphicsApi::Device* d, const RenderState& st, size_t stride,
-                                                            Topology tp,
-                                                            const PipelineLay& ulayImpl,
-                                                            const Shader* vs, const Shader* tc, const Shader* te, const Shader* gs, const Shader* fs) {
+                                                            Topology tp, const PipelineLay& ulayImpl,
+                                                            const Shader*const*sh, size_t cnt) {
   auto* dx   = reinterpret_cast<Detail::DxDevice*>(d);
-  auto* vert = reinterpret_cast<const Detail::DxShader*>(vs);
-  auto* ctrl = reinterpret_cast<const Detail::DxShader*>(tc);
-  auto* tess = reinterpret_cast<const Detail::DxShader*>(te);
-  auto* geom = reinterpret_cast<const Detail::DxShader*>(gs);
-  auto* frag = reinterpret_cast<const Detail::DxShader*>(fs);
   auto& ul   = reinterpret_cast<const Detail::DxPipelineLay&>(ulayImpl);
-
-  return PPipeline(new Detail::DxPipeline(*dx,st,stride,tp,ul,vert,ctrl,tess,geom,frag));
+  const Detail::DxShader* shader[5] = {};
+  for(size_t i=0; i<cnt; ++i)
+    shader[i] = reinterpret_cast<const Detail::DxShader*>(sh[i]);
+  return PPipeline(new Detail::DxPipeline(*dx,st,stride,tp,ul,shader,cnt));
   }
 
 AbstractGraphicsApi::PCompPipeline DirectX12Api::createComputePipeline(AbstractGraphicsApi::Device* d,
@@ -235,16 +231,7 @@ AbstractGraphicsApi::Desc* DirectX12Api::createDescriptors(AbstractGraphicsApi::
   return new DxDescriptorArray(u);
   }
 
-AbstractGraphicsApi::PPipelineLay DirectX12Api::createPipelineLayout(Device * d,
-                                                                     const Shader* vs, const Shader* tc, const Shader* te,
-                                                                     const Shader* gs, const Shader* fs, const Shader* cs) {
-  auto* dx = reinterpret_cast<Detail::DxDevice*>(d);
-  if(cs!=nullptr) {
-    auto* comp = reinterpret_cast<const Detail::DxShader*>(cs);
-    return PPipelineLay(new Detail::DxPipelineLay(*dx,comp->lay));
-    }
-
-  const Shader* sh[] = {vs,tc,te,gs,fs};
+AbstractGraphicsApi::PPipelineLay DirectX12Api::createPipelineLayout(Device* d, const Shader*const* sh, size_t count) {
   const std::vector<Detail::ShaderReflection::Binding>* lay[5] = {};
   for(size_t i=0; i<5; ++i) {
     if(sh[i]==nullptr)
@@ -252,7 +239,8 @@ AbstractGraphicsApi::PPipelineLay DirectX12Api::createPipelineLayout(Device * d,
     auto* s = reinterpret_cast<const Detail::DxShader*>(sh[i]);
     lay[i] = &s->lay;
     }
-  return PPipelineLay(new Detail::DxPipelineLay(*dx,lay,5));
+  auto& dx = *reinterpret_cast<Detail::DxDevice*>(d);
+  return PPipelineLay(new Detail::DxPipelineLay(dx,lay,count));
   }
 
 AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mipCnt) {

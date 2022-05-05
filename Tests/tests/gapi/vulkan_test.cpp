@@ -191,3 +191,9 @@ TEST(VulkanApi,RayQuery) {
   GapiTestCommon::RayQuery<VulkanApi>("VulkanApi_RayQuery.png");
 #endif
   }
+
+TEST(VulkanApi,MeshShader) {
+#if !defined(__OSX__)
+  GapiTestCommon::MeshShader<VulkanApi>("VulkanApi_MeshShader.png");
+#endif
+  }

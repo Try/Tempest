@@ -31,22 +31,21 @@ bool VPipeline::InstDr::isCompatible(const VkPipelineRenderingCreateInfoKHR& dr)
 VPipeline::VPipeline(){
   }
 
-VPipeline::VPipeline(VDevice& device,
-                     const RenderState &st, size_t stride, Topology tp, const VPipelineLay& ulay,
-                     const VShader* vert, const VShader* ctrl, const VShader* tess, const VShader* geom, const VShader* frag)
-  : device(device.device.impl), st(st), stride(stride), tp(tp) {
+VPipeline::VPipeline(VDevice& device, const RenderState& st, size_t stride, Topology tp,
+                     const VPipelineLay& ulay,
+                     const VShader** sh, size_t count)
+  : device(device.device.impl), st(st), stride(stride), tp(tp)  {
   try {
-    modules[0] = Detail::DSharedPtr<const VShader*>{vert};
-    modules[1] = Detail::DSharedPtr<const VShader*>{ctrl};
-    modules[2] = Detail::DSharedPtr<const VShader*>{tess};
-    modules[3] = Detail::DSharedPtr<const VShader*>{geom};
-    modules[4] = Detail::DSharedPtr<const VShader*>{frag};
+    for(size_t i=0; i<count; ++i)
+      if(sh[i]!=nullptr)
+        modules[i] = Detail::DSharedPtr<const VShader*>{sh[i]};
 
-    if(vert!=nullptr) {
+    if(auto vert=findShader(ShaderReflection::Stage::Vertex)) {
       declSize = vert->vdecl.size();
       decl.reset(new Decl::ComponentType[declSize]);
       std::memcpy(decl.get(),vert->vdecl.data(),declSize*sizeof(Decl::ComponentType));
       }
+
     pipelineLayout = initLayout(device.device.impl,ulay,pushStageFlags,pushSize);
     ssboBarriers   = ulay.hasSSBO;
     }
@@ -54,14 +53,6 @@ VPipeline::VPipeline(VDevice& device,
     cleanup();
     throw;
     }
-  }
-
-VPipeline::VPipeline(VPipeline &&other) {
-  std::swap(device,         other.device);
-  std::swap(instRp,         other.instRp);
-  std::swap(instDr,         other.instDr);
-  std::swap(pipelineLayout, other.pipelineLayout);
-  std::swap(ssboBarriers,   other.ssboBarriers);
   }
 
 VPipeline::~VPipeline() {
@@ -110,6 +101,14 @@ VPipeline::Inst& VPipeline::instance(const VkPipelineRenderingCreateInfoKHR& inf
   return instDr.back();
   }
 
+const VShader* VPipeline::findShader(ShaderReflection::Stage sh) const {
+  for(auto& i:modules)
+    if(i.handler!=nullptr && i.handler->stage==sh) {
+      return i.handler;
+      }
+  return nullptr;
+  }
+
 void VPipeline::cleanup() {
   if(pipelineLayout==VK_NULL_HANDLE)
     return;
@@ -143,6 +142,10 @@ VkPipelineLayout VPipeline::initLayout(VkDevice device, const VPipelineLay& uboL
       pushStageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
     if(uboLay.pb.stage & ShaderReflection::Compute)
       pushStageFlags |= VK_SHADER_STAGE_COMPUTE_BIT;
+    if(uboLay.pb.stage&ShaderReflection::Task)
+      pushStageFlags |= VK_SHADER_STAGE_TASK_BIT_NV;
+    if(uboLay.pb.stage&ShaderReflection::Mesh)
+      pushStageFlags |= VK_SHADER_STAGE_MESH_BIT_NV;
     push.stageFlags = pushStageFlags;
     push.offset     = 0;
     push.size       = uint32_t(uboLay.pb.size);
@@ -165,27 +168,21 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
                                            const Decl::ComponentType *decl, size_t declSize,
                                            size_t stride, Topology tp,
                                            const DSharedPtr<const VShader*>* shaders) {
-  static const VkShaderStageFlagBits stageBits[] = {
-    VK_SHADER_STAGE_VERTEX_BIT,
-    VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT,
-    VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
-    VK_SHADER_STAGE_GEOMETRY_BIT,
-    VK_SHADER_STAGE_FRAGMENT_BIT
-    };
   VkPipelineShaderStageCreateInfo shaderStages[5] = {};
   size_t                          stagesCnt       = 0;
   for(size_t i=0; i<5; ++i) {
     if(shaders[i].handler!=nullptr) {
       VkPipelineShaderStageCreateInfo& sh = shaderStages[stagesCnt];
       sh.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-      sh.stage  = stageBits[i];
+      sh.stage  = nativeFormat(shaders[i].handler->stage);
       sh.module = shaders[i].handler->impl;
       sh.pName  = "main";
       stagesCnt++;
       }
     }
 
-  const bool useTesselation = (shaders[1] || shaders[2]);
+  const bool useTesselation = (findShader(ShaderReflection::Stage::Evaluate)!=nullptr ||
+                               findShader(ShaderReflection::Stage::Control) !=nullptr);
 
   VkVertexInputBindingDescription vertexInputBindingDescription;
   vertexInputBindingDescription.binding   = 0;
@@ -214,19 +211,24 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   vertexInputInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
   vertexInputInfo.pNext = nullptr;
   vertexInputInfo.flags = 0;
-  vertexInputInfo.vertexBindingDescriptionCount   = 1;
+  vertexInputInfo.vertexBindingDescriptionCount   = (declSize>0 ? 1 : 0);
   vertexInputInfo.pVertexBindingDescriptions      = &vertexInputBindingDescription;
   vertexInputInfo.vertexAttributeDescriptionCount = uint32_t(declSize);
   vertexInputInfo.pVertexAttributeDescriptions    = vsInput;
 
   VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
   inputAssembly.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-  inputAssembly.primitiveRestartEnable = VK_FALSE;
-  if(tp==Triangles)
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; else
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-  if(useTesselation)
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
+
+  if(findShader(ShaderReflection::Stage::Vertex)!=nullptr) {
+    inputAssembly.primitiveRestartEnable = VK_FALSE;
+    if(tp==Triangles)
+      inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; else
+      inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+    if(useTesselation)
+      inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
+    } else {
+    vertexInputInfo.vertexBindingDescriptionCount = 0;
+    }
 
   VkPipelineViewportStateCreateInfo viewportState = {};
   viewportState.sType         = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;

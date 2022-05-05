@@ -84,13 +84,10 @@ VkSurfaceKHR VDevice::createSurface(void* hwnd) {
     return VK_NULL_HANDLE;
   VkSurfaceKHR ret = VK_NULL_HANDLE;
 #ifdef __WINDOWS__
-  auto connection=GetModuleHandle(nullptr);
-
   VkWin32SurfaceCreateInfoKHR createInfo={};
   createInfo.sType     = VkStructureType::VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-  createInfo.hinstance = connection;
+  createInfo.hinstance = GetModuleHandleA(nullptr);
   createInfo.hwnd      = HWND(hwnd);
-
   if(vkCreateWin32SurfaceKHR(instance,&createInfo,nullptr,&ret)!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 #elif defined(__LINUX__)
@@ -244,6 +241,10 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     props.raytracing.rayQuery = true;
     rqExt.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
     }
+  if(api.hasDeviceFeatures2 && checkForExt(ext,VK_NV_MESH_SHADER_EXTENSION_NAME)) {
+    props.meshShader = true;
+    rqExt.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
+    }
   /*
    * //TODO: enable once validation layers have full support for dynamic rendering
   if(api.hasDeviceFeatures2 && checkForExt(ext,VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)) {
@@ -324,6 +325,9 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures = {};
     rayQueryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
 
+    VkPhysicalDeviceMeshShaderFeaturesNV meshFeatures = {};
+    meshFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
+
     if(props.hasSync2) {
       sync2.pNext = enabledFeatures.pNext;
       enabledFeatures.pNext = &sync2;
@@ -344,6 +348,10 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
       dynRendering.pNext = enabledFeatures.pNext;
       enabledFeatures.pNext = &dynRendering;
       }
+    if(props.meshShader) {
+      meshFeatures.pNext = enabledFeatures.pNext;
+      enabledFeatures.pNext = &meshFeatures;
+      }
 
     vkGetPhysicalDeviceFeatures2(pdev, &enabledFeatures);
     bdaFeatures.bufferDeviceAddressCaptureReplay  = VK_FALSE;
@@ -357,6 +365,7 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     props.hasDynRendering     = (dynRendering.dynamicRendering==VK_TRUE);
     props.hasDeviceAddress    = (bdaFeatures.bufferDeviceAddress==VK_TRUE);
     props.raytracing.rayQuery = (rayQueryFeatures.rayQuery==VK_TRUE);
+    props.meshShader          = (meshFeatures.taskShader==VK_TRUE && meshFeatures.meshShader==VK_TRUE);
 
     createInfo.pNext            = &enabledFeatures;
     createInfo.pEnabledFeatures = nullptr;
@@ -403,6 +412,10 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
 
   if(props.raytracing.rayQuery && props.hasDeviceAddress) {
     vkGetAccelerationStructureDeviceAddress = PFN_vkGetAccelerationStructureDeviceAddressKHR(vkGetDeviceProcAddr(device.impl,"vkGetAccelerationStructureDeviceAddressKHR"));
+    }
+
+  if(props.meshShader) {
+    vkCmdDrawMeshTasks = PFN_vkCmdDrawMeshTasksNV(vkGetDeviceProcAddr(device.impl,"vkCmdDrawMeshTasksNV"));
     }
   }
 

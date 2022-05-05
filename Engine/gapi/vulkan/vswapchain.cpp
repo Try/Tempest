@@ -365,11 +365,11 @@ void VSwapchain::present() {
     throw SwapchainSuboptimal();
   tx = Application::tickCount()-tx;
   if(tx > 2) {
-    std::chrono::system_clock::time_point p = std::chrono::system_clock::now();
-    time_t t = std::chrono::system_clock::to_time_t(p);
-    char str[26] = {};
-    strftime(str, sizeof(str), "%H:%M.%S", localtime(&t));
-    Log::i(str," : vkQueuePresentKHR = ", tx);
+    // std::chrono::system_clock::time_point p = std::chrono::system_clock::now();
+    // time_t t = std::chrono::system_clock::to_time_t(p);
+    // char str[26] = {};
+    // strftime(str, sizeof(str), "%H:%M.%S", localtime(&t));
+    // Log::i(str," : vkQueuePresentKHR = ", tx);
     }
   Detail::vkAssert(code);
 

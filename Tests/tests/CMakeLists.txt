@@ -14,7 +14,6 @@ add_test(${PROJECT_NAME} COMMAND ${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME} PRIVATE .)
 target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/../../Engine/include")
 
-
 add_definitions(-DGTEST_LANG_CXX11=1)
 if(MSVC)
   add_definitions(-D_USE_MATH_DEFINES)
@@ -109,6 +108,8 @@ compile_shader(texture.vert)
 compile_shader(texture.frag)
 
 compile_shader(ray_test.frag)
+
+compile_shader(simple_test.mesh)
 
 target_sources(${PROJECT_NAME} PRIVATE
   ${SOURCES}

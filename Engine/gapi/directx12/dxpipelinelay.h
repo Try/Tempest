@@ -21,7 +21,7 @@ class DxDevice;
 
 class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
   public:
-    DxPipelineLay(DxDevice& device, const std::vector<ShaderReflection::Binding>& comp);
+    DxPipelineLay(DxDevice& device, const std::vector<ShaderReflection::Binding>* sh);
     DxPipelineLay(DxDevice& device, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt);
 
     size_t descriptorsCount() override;

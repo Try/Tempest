@@ -70,12 +70,8 @@ DxPipelineLay::DescriptorPool::~DescriptorPool() {
   }
 
 
-DxPipelineLay::DxPipelineLay(DxDevice& dev, const std::vector<ShaderReflection::Binding>& comp)
-  :dev(dev) {
-  ShaderReflection::PushBlock pb;
-  ShaderReflection::merge(lay,pb, comp);
-  init(lay,pb);
-  adjustSsboBindings();
+DxPipelineLay::DxPipelineLay(DxDevice& dev, const std::vector<ShaderReflection::Binding>* sh)
+  :DxPipelineLay(dev,&sh,1) {
   }
 
 DxPipelineLay::DxPipelineLay(DxDevice& dev, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt)

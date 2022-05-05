@@ -42,29 +42,7 @@ void ShaderReflection::getVertexDecl(std::vector<Decl::ComponentType>& data, spi
 
 void ShaderReflection::getBindings(std::vector<Binding>&  lay,
                                    spirv_cross::Compiler& comp) {
-  Stage s = Stage::Compute;
-  switch(comp.get_execution_model()) {
-    case spv::ExecutionModelGLCompute:
-      s = Stage::Compute;
-      break;
-    case spv::ExecutionModelVertex:
-      s = Stage::Vertex;
-      break;
-    case spv::ExecutionModelTessellationControl:
-      s = Stage::Control;
-      break;
-    case spv::ExecutionModelTessellationEvaluation:
-      s = Stage::Evaluate;
-      break;
-    case spv::ExecutionModelGeometry:
-      s = Stage::Geometry;
-      break;
-    case spv::ExecutionModelFragment:
-      s = Stage::Fragment;
-      break;
-    default: // unimplemented
-      throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
-    }
+  const Stage s = getExecutionModel(comp);
 
   spirv_cross::ShaderResources resources = comp.get_shader_resources();
   for(auto &resource : resources.sampled_images) {
@@ -134,24 +112,27 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     }
   }
 
-void ShaderReflection::merge(std::vector<ShaderReflection::Binding>& ret,
-                             ShaderReflection::PushBlock& pb,
-                             const std::vector<ShaderReflection::Binding>& comp) {
-  ret.reserve(comp.size());
-  size_t id=0;
-  for(size_t i=0; i<comp.size(); ++i, ++id) {
-    auto& u = comp[i];
-    if(u.cls==ShaderReflection::Push) {
-      pb.stage = ShaderReflection::Compute;
-      pb.size  = u.size;
-      pb.size  = std::max(pb.size, u.mslSize);
-      continue;
-      }
-    ret.push_back(u);
-    ret.back().stage = ShaderReflection::Compute;
+ShaderReflection::Stage ShaderReflection::getExecutionModel(spirv_cross::Compiler& comp) {
+  switch(comp.get_execution_model()) {
+    case spv::ExecutionModelGLCompute:
+      return Stage::Compute;
+    case spv::ExecutionModelVertex:
+      return Stage::Vertex;
+    case spv::ExecutionModelTessellationControl:
+      return Stage::Control;
+    case spv::ExecutionModelTessellationEvaluation:
+      return Stage::Evaluate;
+    case spv::ExecutionModelGeometry:
+      return Stage::Geometry;
+    case spv::ExecutionModelFragment:
+      return Stage::Fragment;
+    case spv::ExecutionModelTaskNV:
+      return Stage::Task;
+    case spv::ExecutionModelMeshNV:
+      return Stage::Mesh;
+    default: // unimplemented
+      throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
-
-  finalize(ret);
   }
 
 void ShaderReflection::merge(std::vector<Binding>& ret,

@@ -20,7 +20,7 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
   public:
     DxPipeline(DxDevice &device,
                const RenderState &st, size_t stride, Topology tp, const DxPipelineLay& ulay,
-               const DxShader* vert, const DxShader* ctrl, const DxShader* tess, const DxShader* geom,  const DxShader* frag);
+               const DxShader*const* shaders, size_t cnt);
 
     struct Inst final {
       Inst() = default;
@@ -43,11 +43,13 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
 
   private:
     DxDevice&                   device;
+    DSharedPtr<const DxShader*> modules[5] = {};
+    /*
     DSharedPtr<const DxShader*> vsShader;
     DSharedPtr<const DxShader*> tcShader;
     DSharedPtr<const DxShader*> teShader;
     DSharedPtr<const DxShader*> gsShader;
-    DSharedPtr<const DxShader*> fsShader;
+    DSharedPtr<const DxShader*> fsShader;*/
     UINT                        declSize=0;
     RenderState                 rState;
     std::unique_ptr<D3D12_INPUT_ELEMENT_DESC[]> vsInput;
@@ -55,6 +57,7 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
     std::vector<Inst>           inst;
     SpinLock                    sync;
 
+    const DxShader*             findShader(ShaderReflection::Stage sh) const;
     D3D12_BLEND_DESC            getBlend(const RenderState &st) const;
     D3D12_RASTERIZER_DESC       getRaster(const RenderState &st) const;
     ComPtr<ID3D12PipelineState> initGraphicsPipeline(const DxFboLayout& frm);

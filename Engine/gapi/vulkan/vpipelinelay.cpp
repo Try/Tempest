@@ -5,36 +5,18 @@
 #include <Tempest/PipelineLayout>
 #include "vdevice.h"
 #include "gapi/shaderreflection.h"
+#include "utility/smallarray.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
-
-VPipelineLay::VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Binding>& comp)
-  : dev(dev.device.impl) {
-  ShaderReflection::merge(lay, pb, comp);
-  adjustSsboBindings();
-
-  if(lay.size()<=32) {
-    VkDescriptorSetLayoutBinding bind[32]={};
-    implCreate(bind);
-    } else {
-    std::unique_ptr<VkDescriptorSetLayoutBinding[]> bind(new VkDescriptorSetLayoutBinding[lay.size()]);
-    implCreate(bind.get());
-    }
-  }
 
 VPipelineLay::VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt)
   : dev(dev.device.impl) {
   ShaderReflection::merge(lay, pb, sh, cnt);
   adjustSsboBindings();
 
-  if(lay.size()<=32) {
-    VkDescriptorSetLayoutBinding bind[32]={};
-    implCreate(bind);
-    } else {
-    std::unique_ptr<VkDescriptorSetLayoutBinding[]> bind(new VkDescriptorSetLayoutBinding[lay.size()]);
-    implCreate(bind.get());
-    }
+  SmallArray<VkDescriptorSetLayoutBinding,32> bind(lay.size());
+  implCreate(bind.get());
   }
 
 VPipelineLay::~VPipelineLay() {
@@ -48,16 +30,6 @@ size_t VPipelineLay::descriptorsCount() {
   }
 
 void VPipelineLay::implCreate(VkDescriptorSetLayoutBinding* bind) {
-  static const VkDescriptorType types[] = {
-    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-    VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-    VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-    VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
-    };
-
   uint32_t count = 0;
   for(size_t i=0;i<lay.size();++i){
     auto& b=bind[count];
@@ -68,7 +40,7 @@ void VPipelineLay::implCreate(VkDescriptorSetLayoutBinding* bind) {
 
     b.binding         = e.layout;
     b.descriptorCount = 1;
-    b.descriptorType  = types[e.cls];
+    b.descriptorType  = nativeFormat(e.cls);
 
     b.stageFlags      = 0;
     if(e.stage&ShaderReflection::Compute)
@@ -83,6 +55,10 @@ void VPipelineLay::implCreate(VkDescriptorSetLayoutBinding* bind) {
       b.stageFlags |= VK_SHADER_STAGE_GEOMETRY_BIT;
     if(e.stage&ShaderReflection::Fragment)
       b.stageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+    if(e.stage&ShaderReflection::Task)
+      b.stageFlags |= VK_SHADER_STAGE_TASK_BIT_NV;
+    if(e.stage&ShaderReflection::Mesh)
+      b.stageFlags |= VK_SHADER_STAGE_MESH_BIT_NV;
     ++count;
     }
 

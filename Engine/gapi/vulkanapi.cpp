@@ -57,20 +57,28 @@ AbstractGraphicsApi::Swapchain *VulkanApi::createSwapchain(SystemApi::Window *w,
   return new Detail::VSwapchain(*dx,w);
   }
 
+AbstractGraphicsApi::PPipelineLay VulkanApi::createPipelineLayout(Device* d, const Shader*const* sh, size_t count) {
+  const std::vector<Detail::ShaderReflection::Binding>* lay[5] = {};
+  for(size_t i=0; i<count; ++i) {
+    if(sh[i]==nullptr)
+      continue;
+    auto* s = reinterpret_cast<const Detail::VShader*>(sh[i]);
+    lay[i] = &s->lay;
+    }
+  auto& dx = *reinterpret_cast<Detail::VDevice*>(d);
+  return PPipelineLay(new Detail::VPipelineLay(dx,lay,count));
+  }
+
 AbstractGraphicsApi::PPipeline VulkanApi::createPipeline(AbstractGraphicsApi::Device *d,
                                                          const RenderState &st, size_t stride, Topology tp,
                                                          const PipelineLay& ulayImpl,
-                                                         const Shader* vs, const Shader* tc, const Shader* te,
-                                                         const Shader* gs, const Shader* fs) {
+                                                         const Shader*const* sh, size_t cnt) {
   auto* dx   = reinterpret_cast<Detail::VDevice*>(d);
-  auto* vert = reinterpret_cast<const Detail::VShader*>(vs);
-  auto* ctrl = reinterpret_cast<const Detail::VShader*>(tc);
-  auto* tess = reinterpret_cast<const Detail::VShader*>(te);
-  auto* geom = reinterpret_cast<const Detail::VShader*>(gs);
-  auto* frag = reinterpret_cast<const Detail::VShader*>(fs);
   auto& ul   = reinterpret_cast<const Detail::VPipelineLay&>(ulayImpl);
-
-  return PPipeline(new Detail::VPipeline(*dx,st,stride,tp,ul,vert,ctrl,tess,geom,frag));
+  const Detail::VShader* shader[5] = {};
+  for(size_t i=0; i<cnt; ++i)
+    shader[i] = reinterpret_cast<const Detail::VShader*>(sh[i]);
+  return PPipeline(new Detail::VPipeline(*dx,st,stride,tp,ul,shader,cnt));
   }
 
 AbstractGraphicsApi::PCompPipeline VulkanApi::createComputePipeline(AbstractGraphicsApi::Device* d,
@@ -241,26 +249,6 @@ AbstractGraphicsApi::Desc* VulkanApi::createDescriptors(AbstractGraphicsApi::Dev
   auto* dx = reinterpret_cast<Detail::VDevice*>(d);
   auto& ul = reinterpret_cast<Detail::VPipelineLay&>(ulayImpl);
   return new Detail::VDescriptorArray(dx->device.impl,ul);
-  }
-
-AbstractGraphicsApi::PPipelineLay VulkanApi::createPipelineLayout(Device *d,
-                                                                  const Shader* vs, const Shader* tc, const Shader* te,
-                                                                  const Shader* gs, const Shader* fs, const Shader* cs) {
-  auto* dx = reinterpret_cast<Detail::VDevice*>(d);
-  if(cs!=nullptr) {
-    auto* comp = reinterpret_cast<const Detail::VShader*>(cs);
-    return PPipelineLay(new Detail::VPipelineLay(*dx,comp->lay));
-    }
-
-  const Shader* sh[] = {vs,tc,te,gs,fs};
-  const std::vector<Detail::ShaderReflection::Binding>* lay[5] = {};
-  for(size_t i=0; i<5; ++i) {
-    if(sh[i]==nullptr)
-      continue;
-    auto* s = reinterpret_cast<const Detail::VShader*>(sh[i]);
-    lay[i] = &s->lay;
-    }
-  return PPipelineLay(new Detail::VPipelineLay(*dx,lay,5));
   }
 
 AbstractGraphicsApi::CommandBuffer* VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device* d) {

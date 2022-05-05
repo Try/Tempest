@@ -348,6 +348,7 @@ namespace Tempest {
           float    maxAnisotropy     = 1.0f;
           bool     tesselationShader = false;
           bool     geometryShader    = false;
+          bool     meshShader        = false;
 
           bool     storeAndAtomicVs  = false;
           bool     storeAndAtomicFs  = false;
@@ -478,6 +479,7 @@ namespace Tempest {
                                   const Buffer& ibo, Detail::IndexClass cls, size_t ioffset, size_t isize,
                                   size_t firstInstance, size_t instanceCount)=0;
         virtual void dispatch    (size_t x, size_t y, size_t z)=0;
+        virtual void dispatchMesh(size_t firstInstance, size_t instanceCount);
         };
 
       using PBuffer       = Detail::DSharedPtr<Buffer*>;
@@ -496,13 +498,10 @@ namespace Tempest {
       virtual Swapchain* createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d)=0;
 
       virtual PPipelineLay
-                         createPipelineLayout(Device *d,
-                                              const Shader* vs, const Shader* tc, const Shader* te,
-                                              const Shader* gs, const Shader* fs, const Shader* cs)=0;
+                         createPipelineLayout(Device *d, const Shader* const* sh, size_t count) = 0;
 
       virtual PPipeline  createPipeline(Device* d, const RenderState &st, size_t stride, Topology tp,
-                                        const PipelineLay &ulayImpl,
-                                        const Shader* vs, const Shader* tc, const Shader* te, const Shader* gs, const Shader* fs)=0;
+                                        const PipelineLay &ulayImpl, const Shader* const* sh, size_t cnt)=0;
 
       virtual PCompPipeline createComputePipeline(Device* d,
                                                   const PipelineLay &ulayImpl,

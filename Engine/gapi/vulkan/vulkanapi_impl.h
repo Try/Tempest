@@ -46,14 +46,9 @@ class VulkanInstance {
     void deviceProps(VkPhysicalDevice physicalDevice, VkProp& c) const;
     void devicePropsShort(VkPhysicalDevice physicalDevice, AbstractGraphicsApi::Props& c) const;
 
-    void submit(VDevice *d, VCommandBuffer** cmd, size_t count, VFence *doneCpu);
+    void submit(VDevice *d, VCommandBuffer** cmd, size_t count, VFence *fence);
 
   private:
-    void implSubmit(VDevice *d,
-                    VkCommandBuffer* command, VCommandBuffer** cmd, size_t count,
-                    VkSemaphore* ws, VkPipelineStageFlags* wflg, size_t waitCnt,
-                    VFence *fence);
-
     const std::initializer_list<const char*>& checkValidationLayerSupport();
     bool layerSupport(const std::vector<VkLayerProperties>& sup,const std::initializer_list<const char*> dest);
 

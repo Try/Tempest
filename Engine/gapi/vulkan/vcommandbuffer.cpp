@@ -420,6 +420,14 @@ void VCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_t
   vkCmdDrawIndexed    (impl, uint32_t(isize), uint32_t(instanceCount), uint32_t(ioffset), int32_t(voffset), uint32_t(firstInstance));
   }
 
+void Tempest::Detail::VCommandBuffer::dispatchMesh(size_t firstInstance, size_t instanceCount) {
+  if(T_UNLIKELY(ssboBarriers)) {
+    curUniforms->ssboBarriers(resState);
+    resState.flush(*this);
+    }
+  device.vkCmdDrawMeshTasks(impl, uint32_t(instanceCount), uint32_t(firstInstance));
+  }
+
 void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
   if(T_UNLIKELY(ssboBarriers)) {
     curUniforms->ssboBarriers(resState);

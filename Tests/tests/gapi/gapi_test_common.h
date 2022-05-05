@@ -514,8 +514,8 @@ void SSBOReadOnly(bool useUbo) {
     auto ubo  = device.ubo (data);
     auto out  = device.ssbo(nullptr,sizeof(data));
 
-    auto cs  = device.shader("shader/ssbo_read.comp.sprv");
-    auto pso = device.pipeline(cs);
+    auto cs   = device.shader("shader/ssbo_read.comp.sprv");
+    auto pso  = device.pipeline(cs);
 
     auto desc = device.descriptors(pso);
     if(useUbo)
@@ -1026,6 +1026,55 @@ void RayQuery(const char* outImg) {
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
       enc.setUniforms(pso,ubo);
       enc.draw(fsq);
+    }
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    auto pm = device.readPixels(tex);
+    pm.save(outImg);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
+void MeshShader(const char* outImg) {
+  using namespace Tempest;
+
+  try {
+    const char* msDev = nullptr;
+
+    GraphicsApi api{ApiFlags::Validation};
+    auto dev = api.devices();
+    for(auto& i:dev)
+      if(i.meshShader)
+        msDev = i.name;
+    if(msDev==nullptr)
+      return;
+
+    Device device(api,msDev);
+    auto vbo  = device.vbo(vboData,3);
+    auto ibo  = device.ibo(iboData,3);
+
+    auto mesh = device.shader("shader/simple_test.mesh.sprv");
+    auto frag = device.shader("shader/simple_test.frag.sprv");
+    auto pso  = device.pipeline(RenderState(),Tempest::Shader(),mesh,frag);
+
+    auto ubo  = device.descriptors(pso);
+    // ubo.set(0, vbo);
+    // ubo.set(1, ibo);
+
+    auto tex = device.attachment(TextureFormat::RGBA8,128,128);
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
+      enc.setUniforms(pso,ubo);
+      enc.dispatchMesh(0,1);
     }
     auto sync = device.fence();
     device.submit(cmd,sync);

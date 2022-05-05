@@ -12,10 +12,9 @@ using namespace Tempest::Detail;
 
 DxPipeline::DxPipeline(DxDevice& device,
                        const RenderState& st, size_t stride, Topology tp, const DxPipelineLay& ulay,
-                       const DxShader* vert, const DxShader* ctrl, const DxShader* tess, const DxShader* geom, const DxShader* frag)
+                       const DxShader*const* sh, size_t count)
   : sign(ulay.impl.get()), stride(UINT(stride)),
-    device(device),
-    vsShader(vert), tcShader(ctrl), teShader(tess), gsShader(geom), fsShader(frag), rState(st) {
+    device(device), rState(st) {
   sign.get()->AddRef();
   static const D3D_PRIMITIVE_TOPOLOGY dxTopolgy[]= {
     D3D_PRIMITIVE_TOPOLOGY_UNDEFINED,
@@ -23,7 +22,10 @@ DxPipeline::DxPipeline(DxDevice& device,
     D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST
     };
   topology       = dxTopolgy[int(tp)];
-  if(ctrl!=nullptr || tess!=nullptr) {
+  for(size_t i=0; i<count; ++i)
+    if(sh[i]!=nullptr)
+      modules[i] = Detail::DSharedPtr<const DxShader*>{sh[i]};
+  if(findShader(ShaderReflection::Control)!=nullptr || findShader(ShaderReflection::Evaluate)!=nullptr) {
     if(tp==Triangles)
       topology = D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST; else
       topology = D3D_PRIMITIVE_TOPOLOGY_2_CONTROL_POINT_PATCHLIST;
@@ -31,7 +33,7 @@ DxPipeline::DxPipeline(DxDevice& device,
   pushConstantId = ulay.pushConstantId;
   ssboBarriers   = ulay.hasSSBO;
 
-  if(vert!=nullptr) {
+  if(auto vert = findShader(ShaderReflection::Vertex)) {
     declSize = UINT(vert->vdecl.size());
     vsInput.reset(new D3D12_INPUT_ELEMENT_DESC[declSize]);
     uint32_t offset=0;
@@ -72,6 +74,13 @@ ID3D12PipelineState& DxPipeline::instance(const DxFboLayout& frm) {
   return *inst.back().impl.get();
   }
 
+const DxShader* DxPipeline::findShader(ShaderReflection::Stage sh) const {
+  for(auto& i:modules)
+    if(i.handler!=nullptr && i.handler->stage==sh)
+      return i.handler;
+  return nullptr;
+  }
+
 D3D12_BLEND_DESC DxPipeline::getBlend(const RenderState& st) const {
   D3D12_RENDER_TARGET_BLEND_DESC b;
   b.BlendEnable           = st.hasBlend() ? TRUE : FALSE;
@@ -104,24 +113,25 @@ D3D12_RASTERIZER_DESC DxPipeline::getRaster(const RenderState& st) const {
   }
 
 ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& frm) {
-  const bool useTesselation = (tcShader.handler || teShader.handler);
 
   D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
   psoDesc.InputLayout     = { vsInput.get(), UINT(declSize) };
   psoDesc.pRootSignature  = sign.get();
-  if(vsShader.handler) {
+  if(auto sh = findShader(ShaderReflection::Control))
+    psoDesc.HS = sh->bytecode();
+  if(auto sh = findShader(ShaderReflection::Evaluate))
+    psoDesc.DS = sh->bytecode();
+  if(auto sh = findShader(ShaderReflection::Geometry))
+    psoDesc.GS = sh->bytecode();
+  if(auto sh = findShader(ShaderReflection::Fragment))
+    psoDesc.PS = sh->bytecode();
+
+  const bool useTesselation = (psoDesc.HS.pShaderBytecode!=nullptr || psoDesc.DS.pShaderBytecode!=nullptr);
+  if(auto sh = findShader(ShaderReflection::Vertex)) {
     if(useTesselation)
-      psoDesc.VS = vsShader.handler->bytecode(DxShader::Flavor::NoFlipY); else
-      psoDesc.VS = vsShader.handler->bytecode();
+      psoDesc.VS = sh->bytecode(DxShader::Flavor::NoFlipY); else
+      psoDesc.VS = sh->bytecode();
     }
-  if(tcShader.handler)
-    psoDesc.HS = tcShader.handler->bytecode();
-  if(teShader.handler)
-    psoDesc.DS = teShader.handler->bytecode();
-  if(gsShader.handler)
-    psoDesc.GS = gsShader.handler->bytecode();
-  if(fsShader.handler)
-    psoDesc.PS = fsShader.handler->bytecode();
 
   psoDesc.RasterizerState = getRaster(rState);
   psoDesc.BlendState      = getBlend (rState);
@@ -151,16 +161,11 @@ ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& 
     }
 
   ComPtr<ID3D12PipelineState> ret;
-  auto err = device.device->CreateGraphicsPipelineState(&psoDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&ret));
+  auto err = device.device->CreateGraphicsPipelineState(&psoDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&ret.get()));
   if(FAILED(err)) {
-    if(vsShader.handler)
-      vsShader.handler->disasm();
-    if(tcShader.handler)
-      tcShader.handler->disasm();
-    if(teShader.handler)
-      teShader.handler->disasm();
-    if(fsShader.handler)
-      fsShader.handler->disasm();
+    for(auto& i:modules)
+      if(i.handler!=nullptr)
+        i.handler->disasm();
     dxAssert(err);
     }
   return ret;

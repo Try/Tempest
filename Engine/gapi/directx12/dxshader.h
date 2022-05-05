@@ -28,6 +28,7 @@ class DxShader:public AbstractGraphicsApi::Shader {
 
     std::vector<Decl::ComponentType> vdecl;
     std::vector<Binding>             lay;
+    ShaderReflection::Stage          stage = ShaderReflection::Stage::Compute;
 
     struct Tess {
       mutable SpinLock         sync;

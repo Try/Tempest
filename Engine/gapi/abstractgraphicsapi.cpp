@@ -78,6 +78,10 @@ void AbstractGraphicsApi::CommandBuffer::barrier(Texture& tex, ResourceAccess pr
   barrier(&b,1);
   }
 
+void AbstractGraphicsApi::CommandBuffer::dispatchMesh(size_t firstInstance, size_t instanceCount) {
+  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
+  }
+
 AbstractGraphicsApi::AccelerationStructure*
   AbstractGraphicsApi::createBottomAccelerationStruct(Device* d,
                                                       Buffer* vbo, size_t vboSz, size_t stride,

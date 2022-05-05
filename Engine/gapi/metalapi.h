@@ -19,7 +19,7 @@ class MetalApi : public AbstractGraphicsApi {
 
     PPipeline      createPipeline(Device* d, const RenderState &st, size_t stride,
                                   Topology tp, const PipelineLay& ulayImpl,
-                                  const Shader* vs, const Shader* tc, const Shader* te, const Shader* gs, const Shader* fs) override;
+                                  const Shader*const* sh, size_t cnt) override;
     PCompPipeline  createComputePipeline(Device* d,
                                          const PipelineLay &ulayImpl,
                                          Shader* sh) override;
@@ -45,7 +45,7 @@ class MetalApi : public AbstractGraphicsApi {
 
     Desc*          createDescriptors(Device* d, PipelineLay& layP) override;
 
-    PPipelineLay   createPipelineLayout(Device *d, const Shader* vs, const Shader* tc,const Shader* te,const Shader* gs,const Shader* fs, const Shader* cs) override;
+    PPipelineLay   createPipelineLayout(Device *d, const Shader*const* vs, size_t cnt) override;
 
     CommandBuffer* createCommandBuffer(Device* d) override;
 

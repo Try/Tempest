@@ -23,6 +23,8 @@ VShader::VShader(VDevice& device, const void *source, size_t src_size)
   spirv_cross::Compiler comp(createInfo.pCode,uint32_t(src_size/4));
   ShaderReflection::getVertexDecl(vdecl,comp);
   ShaderReflection::getBindings(lay,comp);
+
+  stage = ShaderReflection::getExecutionModel(comp);
   }
 
   if(vkCreateShaderModule(device.device.impl,&createInfo,nullptr,&impl)!=VK_SUCCESS)

@@ -153,6 +153,8 @@ class Device {
     template<class Vertex>
     RenderPipeline       pipeline(Topology tp,const RenderState& st, const Shader &vs, const Shader &tc, const Shader &te, const Shader &fs);
 
+    RenderPipeline       pipeline(const RenderState& st, const Shader &ts, const Shader &ms, const Shader &fs);
+
     ComputePipeline      pipeline(const Shader &comp);
 
     Fence                fence();
@@ -182,8 +184,6 @@ class Device {
     RenderPipeline
                 implPipeline(const RenderState &st, const Shader* shaders[],
                              size_t stride, Topology tp);
-    void        implSubmit(const Tempest::CommandBuffer *cmd[], AbstractGraphicsApi::CommandBuffer* hcmd[],  size_t count,
-                           AbstractGraphicsApi::Fence*  fdone);
 
     static TextureFormat formatOf(const Attachment& a);
 

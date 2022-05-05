@@ -21,10 +21,9 @@ class VulkanApi : public AbstractGraphicsApi {
 
     Swapchain*     createSwapchain(SystemApi::Window* w, Device *d) override;
 
-    PPipeline      createPipeline(Device* d, const RenderState &st,
-                                  size_t stride, Topology tp,
-                                  const PipelineLay& ulayImpl,
-                                  const Shader* vs, const Shader* tc, const Shader* te, const Shader* gs, const Shader* fs) override;
+    PPipelineLay   createPipelineLayout(Device *d, const Shader*const* sh, size_t count) override;
+    PPipeline      createPipeline(Device* d, const RenderState &st, size_t stride, Topology tp,
+                                  const PipelineLay& ulayImpl, const Shader*const* sh, size_t cnt) override;
     PCompPipeline  createComputePipeline(Device* d,
                                          const PipelineLay &ulayImpl,
                                          Shader* sh) override;
@@ -32,7 +31,6 @@ class VulkanApi : public AbstractGraphicsApi {
     PShader        createShader(AbstractGraphicsApi::Device *d, const void* source, size_t src_size) override;
 
     Desc*          createDescriptors(Device* d, PipelineLay& layP) override;
-    PPipelineLay   createPipelineLayout(Device *d, const Shader* vs, const Shader* tc,const Shader* te,const Shader* gs,const Shader* fs, const Shader* cs) override;
 
     Fence*         createFence(Device *d) override;
 

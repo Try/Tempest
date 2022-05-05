@@ -135,6 +135,12 @@ void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer &vbo, const Vid
   impl->drawIndexed(*vbo.impl.handler,0,*ibo.impl.handler,icls,offset,size, firstInstance,instanceCount);
   }
 
+void Tempest::Encoder<Tempest::CommandBuffer>::dispatchMesh(size_t firstInstance, size_t instanceCount) {
+  if(state.stage!=Rendering)
+    throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
+  impl->dispatchMesh(firstInstance,instanceCount);
+  }
+
 void Encoder<CommandBuffer>::dispatch(size_t x, size_t y, size_t z) {
   if(state.stage==Rendering)
     throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
@@ -227,3 +233,4 @@ void Encoder<CommandBuffer>::generateMipmaps(Attachment& tex) {
   uint32_t w = tex.w(), h = tex.h();
   impl->generateMipmap(*textureCast(tex).impl.handler,w,h,mipCount(w,h));
   }
+

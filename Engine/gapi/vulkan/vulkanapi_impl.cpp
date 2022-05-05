@@ -6,6 +6,7 @@
 #include <Tempest/Platform>
 
 #include "exceptions/exception.h"
+#include "utility/smallarray.h"
 #include "vdevice.h"
 
 #include <set>
@@ -223,14 +224,22 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, Tempest::
     VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures = {};
     rayQueryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
 
+    VkPhysicalDeviceMeshShaderFeaturesNV meshFeatures = {};
+    meshFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
+
     auto ext = extensionsList(physicalDevice);
     if(checkForExt(ext,VK_KHR_RAY_QUERY_EXTENSION_NAME)) {
       rayQueryFeatures.pNext = features.pNext;
       features.pNext = &rayQueryFeatures;
       }
+    if(checkForExt(ext,VK_NV_MESH_SHADER_EXTENSION_NAME)) {
+      meshFeatures.pNext = features.pNext;
+      features.pNext = &meshFeatures;
+      }
     auto vkGetPhysicalDeviceFeatures2 = PFN_vkGetPhysicalDeviceFeatures2(vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2"));
     vkGetPhysicalDeviceFeatures2(physicalDevice,&features);
     c.raytracing.rayQuery = rayQueryFeatures.rayQuery!=VK_FALSE;
+    c.meshShader          = meshFeatures.meshShader!=VK_FALSE && meshFeatures.taskShader!=VK_FALSE;
     }
 
   std::memcpy(c.name,prop.deviceName,sizeof(c.name));
@@ -317,7 +326,7 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, Tempest::
   c.setStorageFormats(storFormat);
   }
 
-void VulkanInstance::submit(VDevice* dev, VCommandBuffer** cmd, size_t count, VFence* doneCpu) {
+void VulkanInstance::submit(VDevice* dev, VCommandBuffer** cmd, size_t count, VFence* fence) {
   size_t waitCnt = 0;
   for(size_t i=0; i<count; ++i) {
     for(auto& s:cmd[i]->swapchainSync) {
@@ -328,37 +337,10 @@ void VulkanInstance::submit(VDevice* dev, VCommandBuffer** cmd, size_t count, VF
       }
     }
 
-  VkCommandBuffer                    cxStk[32] = {};
-  std::unique_ptr<VkCommandBuffer[]> cxHeap;
-  VkCommandBuffer*                   cx = cxStk;
-  if(count>32) {
-    cxHeap.reset(new VkCommandBuffer[count]);
-    cx = cxHeap.get();
-    }
+  SmallArray<VkCommandBuffer, 32>      command(count);
+  SmallArray<VkSemaphore, 32>          wait      (waitCnt);
+  SmallArray<VkPipelineStageFlags, 32> waitStages(waitCnt);
 
-  VkSemaphore                             wxStk [32] = {};
-  VkPipelineStageFlags                    flgStk[32] = {};
-  std::unique_ptr<VkSemaphore[]>          wxHeap;
-  std::unique_ptr<VkPipelineStageFlags[]> flgHeap;
-  auto                                    wx  = wxStk;
-  auto                                    flg = flgStk;
-
-  if(waitCnt>32) {
-    flgHeap.reset(new VkPipelineStageFlags[waitCnt]);
-    wxHeap .reset(new VkSemaphore[waitCnt]);
-    wx  = wxHeap.get();
-    flg = flgHeap.get();
-    }
-
-  implSubmit(dev, cx, cmd, count,
-             wx, flg, waitCnt,
-             doneCpu);
-  }
-
-void VulkanInstance::implSubmit(VDevice* dx,
-                                VkCommandBuffer* command, VCommandBuffer** cmd, size_t count,
-                                VkSemaphore* wait, VkPipelineStageFlags* waitStages, size_t waitCnt,
-                                VFence* fence) {
   size_t waitId = 0;
   for(size_t i=0; i<count; ++i) {
     command[i] = cmd[i]->impl;
@@ -380,11 +362,11 @@ void VulkanInstance::implSubmit(VDevice* dx,
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
   submitInfo.waitSemaphoreCount   = uint32_t(waitCnt);
-  submitInfo.pWaitSemaphores      = wait;
-  submitInfo.pWaitDstStageMask    = waitStages;
+  submitInfo.pWaitSemaphores      = wait.get();
+  submitInfo.pWaitDstStageMask    = waitStages.get();
 
   submitInfo.commandBufferCount   = uint32_t(count);
-  submitInfo.pCommandBuffers      = command;
+  submitInfo.pCommandBuffers      = command.get();
 
   submitInfo.signalSemaphoreCount = 0;
   submitInfo.pSignalSemaphores    = nullptr;
@@ -392,8 +374,8 @@ void VulkanInstance::implSubmit(VDevice* dx,
   if(fence!=nullptr)
     fence->reset();
 
-  dx->dataMgr().wait();
-  dx->graphicsQueue->submit(1, &submitInfo, fence==nullptr ? VK_NULL_HANDLE : fence->impl);
+  dev->dataMgr().wait();
+  dev->graphicsQueue->submit(1, &submitInfo, fence==nullptr ? VK_NULL_HANDLE : fence->impl);
   }
 
 VkBool32 VulkanInstance::debugReportCallback(VkDebugReportFlagsEXT      flags,
