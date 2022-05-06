@@ -17,6 +17,7 @@ class MetalApi : public AbstractGraphicsApi {
 
     Swapchain*     createSwapchain(SystemApi::Window* w, Device *d) override;
 
+    PPipelineLay   createPipelineLayout(Device *d, const Shader*const* sh, size_t cnt) override;
     PPipeline      createPipeline(Device* d, const RenderState &st, size_t stride,
                                   Topology tp, const PipelineLay& ulayImpl,
                                   const Shader*const* sh, size_t cnt) override;
@@ -44,8 +45,6 @@ class MetalApi : public AbstractGraphicsApi {
     void           readBytes(Device* d, Buffer* buf, void* out, size_t size) override;
 
     Desc*          createDescriptors(Device* d, PipelineLay& layP) override;
-
-    PPipelineLay   createPipelineLayout(Device *d, const Shader*const* vs, size_t cnt) override;
 
     CommandBuffer* createCommandBuffer(Device* d) override;
 

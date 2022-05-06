@@ -25,6 +25,7 @@ class MtShader : public AbstractGraphicsApi::Shader {
 
     std::vector<Decl::ComponentType> vdecl;
     std::vector<Binding>             lay;
+    ShaderReflection::Stage          stage = ShaderReflection::Stage::Compute;
 
     struct {
       MTLWinding                   winding   = MTLWindingClockwise;

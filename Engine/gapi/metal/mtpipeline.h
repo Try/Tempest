@@ -5,6 +5,8 @@
 
 #include "utility/spinlock.h"
 #include "mtfbolayout.h"
+#include "mtshader.h"
+#include "gapi/shaderreflection.h"
 
 #import  <Metal/MTLRenderCommandEncoder.h>
 #import  <Metal/MTLVertexDescriptor.h>
@@ -25,10 +27,8 @@ class MtPipelineLay;
 class MtPipeline : public AbstractGraphicsApi::Pipeline {
   public:
     MtPipeline(MtDevice &d, Topology tp, const Tempest::RenderState& rs,
-               size_t stride,
-               const MtPipelineLay& lay,
-               const MtShader* vert, const MtShader* tesc, const MtShader* tese,
-               const MtShader* frag);
+               size_t stride, const MtPipelineLay& lay,
+               const MtShader*const* sh, size_t cnt);
     ~MtPipeline();
 
     struct Inst {
@@ -47,17 +47,14 @@ class MtPipeline : public AbstractGraphicsApi::Pipeline {
     bool                     isTesselation = false;
 
   private:
+    const MtShader*          findShader(ShaderReflection::Stage sh) const;
+
     MtDevice&            device;
     Tempest::RenderState rs;
 
     MTLVertexDescriptor*         vdesc = nil;
     MTLRenderPipelineDescriptor* pdesc = nil;
-
-    const MtShader* vert = nullptr;
-    const MtShader* tesc = nullptr;
-    const MtShader* tese = nullptr;
-    const MtShader* frag = nullptr;
-
+    DSharedPtr<const MtShader*>  modules[5] = {};
     SpinLock        sync;
     std::list<Inst> instance;
   };

@@ -11,9 +11,12 @@ using namespace Tempest::Detail;
 MtPipeline::MtPipeline(MtDevice &d, Topology tp,
                        const RenderState &rs, size_t stride,
                        const MtPipelineLay& lay,
-                       const MtShader* vert, const MtShader* tesc, const MtShader* tese,
-                       const MtShader* frag)
-  :lay(&lay), device(d), rs(rs), vert(vert), frag(frag) {
+                       const MtShader* const * sh, size_t count)
+  :lay(&lay), device(d), rs(rs) {
+  for(size_t i=0; i<count; ++i)
+    if(sh[i]!=nullptr)
+      modules[i] = Detail::DSharedPtr<const MtShader*>{sh[i]};
+
   cullMode = nativeFormat(rs.cullFaceMode());
   topology = nativeFormat(tp);
 
@@ -27,6 +30,12 @@ MtPipeline::MtPipeline(MtDevice &d, Topology tp,
   depthStNoZ = [d.impl newDepthStencilStateWithDescriptor:ddesc];
 
   vdesc = [MTLVertexDescriptor new];
+
+  auto vert = findShader(ShaderReflection::Vertex);
+  auto tesc = findShader(ShaderReflection::Control);
+  auto tese = findShader(ShaderReflection::Evaluate);
+  auto frag = findShader(ShaderReflection::Fragment);
+
   size_t offset = 0;
   for(size_t i=0; i<vert->vdecl.size(); ++i) {
     const auto& v = vert->vdecl[i];
@@ -117,6 +126,12 @@ MtPipeline::Inst& MtPipeline::inst(const MtFboLayout& lay) {
   return ix;
   }
 
+const MtShader* MtPipeline::findShader(ShaderReflection::Stage sh) const {
+  for(auto& i:modules)
+    if(i.handler!=nullptr && i.handler->stage==sh)
+      return i.handler;
+  return nullptr;
+  }
 
 MtCompPipeline::MtCompPipeline(MtDevice &device, const MtPipelineLay& lay, const MtShader &sh)
   :lay(&lay) {

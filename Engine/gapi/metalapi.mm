@@ -74,21 +74,14 @@ AbstractGraphicsApi::PPipeline MetalApi::createPipeline(AbstractGraphicsApi::Dev
                                                         const RenderState &st, size_t stride,
                                                         Topology tp,
                                                         const AbstractGraphicsApi::PipelineLay &ulayImpl,
-                                                        const AbstractGraphicsApi::Shader *vs,
-                                                        const AbstractGraphicsApi::Shader *tc,
-                                                        const AbstractGraphicsApi::Shader *te,
-                                                        const AbstractGraphicsApi::Shader *gs,
-                                                        const AbstractGraphicsApi::Shader *fs) {
+                                                        const AbstractGraphicsApi::Shader*const* sh,
+                                                        size_t cnt) {
   auto& dx  = *reinterpret_cast<MtDevice*>(d);
-
   auto& lay = reinterpret_cast<const MtPipelineLay&>(ulayImpl);
-
-  auto* vx   = reinterpret_cast<const MtShader*>(vs);
-  auto* tcx  = reinterpret_cast<const MtShader*>(tc);
-  auto* tex  = reinterpret_cast<const MtShader*>(te);
-  auto* fx   = reinterpret_cast<const MtShader*>(fs);
-
-  return PPipeline(new MtPipeline(dx,tp,st,stride,lay, vx,tcx,tex,fx));
+  const Detail::MtShader* shader[5] = {};
+  for(size_t i=0; i<cnt; ++i)
+    shader[i] = reinterpret_cast<const Detail::MtShader*>(sh[i]);
+  return PPipeline(new MtPipeline(dx,tp,st,stride,lay, shader,cnt));
   }
 
 AbstractGraphicsApi::PCompPipeline MetalApi::createComputePipeline(AbstractGraphicsApi::Device *d,
@@ -202,27 +195,16 @@ AbstractGraphicsApi::Desc *MetalApi::createDescriptors(AbstractGraphicsApi::Devi
   }
 
 AbstractGraphicsApi::PPipelineLay MetalApi::createPipelineLayout(AbstractGraphicsApi::Device*,
-                                                                 const AbstractGraphicsApi::Shader *vs,
-                                                                 const AbstractGraphicsApi::Shader *tc,
-                                                                 const AbstractGraphicsApi::Shader *te,
-                                                                 const AbstractGraphicsApi::Shader *gs,
-                                                                 const AbstractGraphicsApi::Shader *fs,
-                                                                 const AbstractGraphicsApi::Shader *cs) {
-  if(cs!=nullptr) {
-    auto* comp = reinterpret_cast<const Detail::MtShader*>(cs);
-    const std::vector<Detail::ShaderReflection::Binding>* lay[1] = {&comp->lay};
-    return PPipelineLay(new MtPipelineLay(lay,1));
-    }
-
-  const Shader* sh[] = {vs,tc,te,gs,fs};
+                                                                 const AbstractGraphicsApi::Shader*const*sh,
+                                                                 size_t cnt) {
   const std::vector<Detail::ShaderReflection::Binding>* lay[5] = {};
-  for(size_t i=0; i<5; ++i) {
+  for(size_t i=0; i<cnt; ++i) {
     if(sh[i]==nullptr)
       continue;
     auto* s = reinterpret_cast<const MtShader*>(sh[i]);
     lay[i] = &s->lay;
     }
-  return PPipelineLay(new MtPipelineLay(lay,5));
+  return PPipelineLay(new MtPipelineLay(lay,cnt));
   }
 
 AbstractGraphicsApi::CommandBuffer *MetalApi::createCommandBuffer(AbstractGraphicsApi::Device *d) {

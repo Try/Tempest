@@ -47,6 +47,8 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
 
     ShaderReflection::getVertexDecl(vdecl,comp);
     ShaderReflection::getBindings(lay,comp);
+    stage = ShaderReflection::getExecutionModel(comp);
+
     for(auto& i:lay) {
       i.mslBinding = comp.get_automatic_msl_resource_binding(i.spvId);
       if(i.cls==ShaderReflection::Texture)
