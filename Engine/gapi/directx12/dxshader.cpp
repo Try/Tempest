@@ -43,7 +43,8 @@ static const char* target(spv::ExecutionModel exec, uint32_t sm, char* buf) {
   }
 
 static int calcShaderModel(const spirv_cross::CompilerHLSL& comp) {
-  uint32_t shader_model = 50//65;
+  uint32_t shader_model = 50;
+  //uint32_t shader_model = 65;
   for(auto& cap:comp.get_declared_capabilities()) {
     switch(cap) {
       case spv::CapabilityRayQueryKHR:
