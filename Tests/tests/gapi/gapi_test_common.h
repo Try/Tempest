@@ -1058,15 +1058,15 @@ void MeshShader(const char* outImg) {
 
     Device device(api,msDev);
     auto vbo  = device.vbo(vboData,3);
-    auto ibo  = device.ibo(iboData,3);
 
+    auto task = device.shader("shader/simple_test.task.sprv");
     auto mesh = device.shader("shader/simple_test.mesh.sprv");
     auto frag = device.shader("shader/simple_test.frag.sprv");
-    auto pso  = device.pipeline(RenderState(),Tempest::Shader(),mesh,frag);
+    //auto pso  = device.pipeline(RenderState(),Tempest::Shader(),mesh,frag);
+    auto pso  = device.pipeline(RenderState(),task,mesh,frag);
 
     auto ubo  = device.descriptors(pso);
-    // ubo.set(0, vbo);
-    // ubo.set(1, ibo);
+    ubo.set(0, vbo);
 
     auto tex = device.attachment(TextureFormat::RGBA8,128,128);
     auto cmd = device.commandBuffer();

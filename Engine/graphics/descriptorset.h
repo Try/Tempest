@@ -2,6 +2,8 @@
 
 #include <Tempest/AbstractGraphicsApi>
 #include <Tempest/UniformBuffer>
+#include <Tempest/VertexBuffer>
+#include <Tempest/IndexBuffer>
 #include <Tempest/StorageBuffer>
 #include <Tempest/Except>
 
@@ -42,6 +44,11 @@ class DescriptorSet final {
 
     void set(size_t layoutBind, const AccelerationStructure& tlas);
 
+    template<class T>
+    void set(size_t layoutBind, const VertexBuffer<T>& vbuf);
+    template<class T>
+    void set(size_t layoutBind, const IndexBuffer<T>& ibuf);
+
   private:
     struct EmptyDesc : AbstractGraphicsApi::Desc {
       void set    (size_t,AbstractGraphicsApi::Texture*, const Sampler2d&){}
@@ -62,12 +69,22 @@ class DescriptorSet final {
   };
 
 template<class T>
-inline void DescriptorSet::set(size_t layoutBind,const UniformBuffer<T>& vbuf) {
+inline void DescriptorSet::set(size_t layoutBind, const UniformBuffer<T>& vbuf) {
   implBindUbo(layoutBind,vbuf.impl,0);
   }
 
 template<class T>
-inline void DescriptorSet::set(size_t layoutBind,const UniformBuffer<T>& vbuf, size_t offset) {
+inline void DescriptorSet::set(size_t layoutBind, const VertexBuffer<T>& vbuf) {
+  implBindUbo(layoutBind,vbuf.impl,0);
+  }
+
+template<class T>
+inline void DescriptorSet::set(size_t layoutBind, const IndexBuffer<T>& vbuf) {
+  implBindUbo(layoutBind,vbuf.impl,0);
+  }
+
+template<class T>
+inline void DescriptorSet::set(size_t layoutBind, const UniformBuffer<T>& vbuf, size_t offset) {
   if(offset!=0 && vbuf.alignedTSZ!=sizeof(T))
     throw std::system_error(Tempest::GraphicsErrc::InvalidUniformBuffer);
   implBindUbo(layoutBind,vbuf.impl,offset*vbuf.alignedTSZ);

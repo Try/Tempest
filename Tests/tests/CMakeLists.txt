@@ -109,6 +109,7 @@ compile_shader(texture.frag)
 
 compile_shader(ray_test.frag)
 
+compile_shader(simple_test.task)
 compile_shader(simple_test.mesh)
 
 target_sources(${PROJECT_NAME} PRIVATE

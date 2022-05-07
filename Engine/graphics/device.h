@@ -202,7 +202,8 @@ template<class T>
 inline VertexBuffer<T> Device::vbo(BufferHeap ht, const T* arr, size_t arrSize) {
   if(arrSize==0)
     return VertexBuffer<T>();
-  VideoBuffer     data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::VertexBuffer,ht);
+  static const auto usageBits = MemUsage::VertexBuffer | MemUsage::StorageBuffer | MemUsage::TransferDst;
+  VideoBuffer       data      = createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),usageBits,ht);
   VertexBuffer<T> vbo(std::move(data),arrSize);
   return vbo;
   }
@@ -211,8 +212,9 @@ template<class T>
 inline IndexBuffer<T> Device::ibo(BufferHeap ht, const T* arr, size_t arrSize) {
   if(arrSize==0)
     return IndexBuffer<T>();
-  VideoBuffer     data=createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),MemUsage::IndexBuffer,ht);
-  IndexBuffer<T>  ibo(std::move(data),arrSize);
+  static const auto usageBits = MemUsage::IndexBuffer | MemUsage::StorageBuffer | MemUsage::TransferDst;
+  VideoBuffer       data      = createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),usageBits,ht);
+  IndexBuffer<T>    ibo(std::move(data),arrSize);
   return ibo;
   }
 

@@ -9,9 +9,6 @@ namespace Tempest {
 class Device;
 
 template<class T>
-class VertexBufferDyn;
-
-template<class T>
 class Encoder;
 
 template<class T>
@@ -36,7 +33,7 @@ class VertexBuffer final {
 
   friend class Tempest::Device;
   friend class Tempest::Encoder<Tempest::CommandBuffer>;
-  friend class Tempest::VertexBufferDyn<T>;
+  friend class Tempest::DescriptorSet;
   };
 
 }

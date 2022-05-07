@@ -41,6 +41,7 @@ class IndexBuffer final {
 
   friend class Tempest::Device;
   friend class Tempest::Encoder<Tempest::CommandBuffer>;
+  friend class Tempest::DescriptorSet;
   };
 
 }
