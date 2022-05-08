@@ -48,7 +48,7 @@ VDescriptorArray::VDescriptorArray(VkDevice device, VPipelineLay& vlay)
 
     vlay.pool.emplace_back();
     auto& b = vlay.pool.back();
-    b.impl  = allocPool(vlay,Detail::VPipelineLay::POOL_SIZE);
+    b.impl  = allocPool(vlay,VPipelineLay::POOL_SIZE);
     desc    = allocDescSet(b.impl,lay.handler->impl);
     if(desc==VK_NULL_HANDLE)
       throw std::bad_alloc();
@@ -235,7 +235,7 @@ void VDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStruc
   }
 
 void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t cnt, const Sampler2d& smp) {
-  constexpr uint32_t granularity = 512;
+  constexpr uint32_t granularity = VPipelineLay::MAX_BINDLESS;
   uint32_t rSz = ((cnt+granularity-1u) & (~(granularity-1u)));
   if(runtimeArraySz!=rSz) {
     runtimeArraySz = rSz;

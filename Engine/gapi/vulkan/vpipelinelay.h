@@ -40,7 +40,8 @@ class VPipelineLay : public AbstractGraphicsApi::PipelineLay {
 
   private:
     enum {
-      POOL_SIZE=512
+      POOL_SIZE    = 512,
+      MAX_BINDLESS = 4096,
       };
 
     struct Pool {

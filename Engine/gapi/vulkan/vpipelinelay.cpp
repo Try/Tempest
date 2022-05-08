@@ -16,7 +16,7 @@ VPipelineLay::VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Bin
   adjustSsboBindings();
 
   //if(!runtimeSized)
-  impl = create(512);
+  impl = create(MAX_BINDLESS);
   }
 
 VPipelineLay::~VPipelineLay() {
@@ -42,7 +42,7 @@ VkDescriptorSetLayout VPipelineLay::create(uint32_t runtimeArraySz) const {
       continue;
 
     if(e.runtimeSized)
-      flg[count] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT; else
+      flg[count] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT; else
       flg[count] = 0;
     b.binding         = e.layout;
     b.descriptorCount = e.runtimeSized ? runtimeArraySz: 1;
