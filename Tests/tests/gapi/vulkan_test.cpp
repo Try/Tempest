@@ -176,7 +176,7 @@ TEST(VulkanApi,PushRemapping) {
 
 TEST(VulkanApi,Bindless) {
 #if !defined(__OSX__)
-  GapiTestCommon::Bindless<VulkanApi>();
+  GapiTestCommon::Bindless<VulkanApi>("VulkanApi_Bindless.png");
 #endif
   }
 

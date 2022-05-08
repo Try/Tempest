@@ -227,6 +227,9 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, Tempest::
     VkPhysicalDeviceMeshShaderFeaturesNV meshFeatures = {};
     meshFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
 
+    VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = {};
+    indexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+
     auto ext = extensionsList(physicalDevice);
     if(checkForExt(ext,VK_KHR_RAY_QUERY_EXTENSION_NAME)) {
       rayQueryFeatures.pNext = features.pNext;
@@ -236,10 +239,17 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, Tempest::
       meshFeatures.pNext = features.pNext;
       features.pNext = &meshFeatures;
       }
+    if(checkForExt(ext,VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME)) {
+      indexingFeatures.pNext = features.pNext;
+      features.pNext = &indexingFeatures;
+      }
     auto vkGetPhysicalDeviceFeatures2 = PFN_vkGetPhysicalDeviceFeatures2(vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2"));
     vkGetPhysicalDeviceFeatures2(physicalDevice,&features);
     c.raytracing.rayQuery = rayQueryFeatures.rayQuery!=VK_FALSE;
     c.meshShader          = meshFeatures.meshShader!=VK_FALSE && meshFeatures.taskShader!=VK_FALSE;
+    if(indexingFeatures.runtimeDescriptorArray!=VK_FALSE) {
+      c.bindless.sampledImage = (indexingFeatures.shaderSampledImageArrayNonUniformIndexing==VK_TRUE);
+      }
     }
 
   std::memcpy(c.name,prop.deviceName,sizeof(c.name));

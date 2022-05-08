@@ -4,6 +4,8 @@
 #include <Tempest/UniformBuffer>
 #include <Tempest/AccelerationStructure>
 
+#include "utility/smallarray.h"
+
 using namespace Tempest;
 
 DescriptorSet::EmptyDesc DescriptorSet::emptyDesc;
@@ -51,6 +53,13 @@ void DescriptorSet::set(size_t layoutBind, const Detail::ResourcePtr<Texture2d> 
   if(tex.impl.handler)
     impl.handler->set(layoutBind,tex.impl.handler,smp); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
+  }
+
+void DescriptorSet::set(size_t layoutBind, const std::vector<const Texture2d*>& tex) {
+  Detail::SmallArray<AbstractGraphicsApi::Texture*,32> arr(tex.size());
+  for(size_t i=0; i<tex.size(); ++i)
+    arr[i] = tex[i]->impl.handler;
+  impl.handler->set(layoutBind,arr.get(),tex.size(),Sampler2d::anisotrophy());
   }
 
 void DescriptorSet::set(size_t layoutBind, const AccelerationStructure& tlas) {

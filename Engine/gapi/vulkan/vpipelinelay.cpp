@@ -15,8 +15,8 @@ VPipelineLay::VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Bin
   ShaderReflection::merge(lay, pb, sh, cnt);
   adjustSsboBindings();
 
-  SmallArray<VkDescriptorSetLayoutBinding,32> bind(lay.size());
-  implCreate(bind.get());
+  //if(!runtimeSized)
+  impl = create(512);
   }
 
 VPipelineLay::~VPipelineLay() {
@@ -29,58 +29,63 @@ size_t VPipelineLay::descriptorsCount() {
   return lay.size();
   }
 
-void VPipelineLay::implCreate(VkDescriptorSetLayoutBinding* bind) {
+VkDescriptorSetLayout VPipelineLay::create(uint32_t runtimeArraySz) const {
+  SmallArray<VkDescriptorSetLayoutBinding,32> bind(lay.size());
+  SmallArray<VkDescriptorBindingFlags,32>     flg(lay.size());
+
   uint32_t count = 0;
   for(size_t i=0;i<lay.size();++i){
-    auto& b=bind[count];
-    auto& e=lay[i];
+    auto& b = bind[count];
+    auto& e = lay[i];
 
     if(e.stage==ShaderReflection::Stage(0))
       continue;
 
+    if(e.runtimeSized)
+      flg[count] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT; else
+      flg[count] = 0;
     b.binding         = e.layout;
-    b.descriptorCount = 1;
+    b.descriptorCount = e.runtimeSized ? runtimeArraySz: 1;
     b.descriptorType  = nativeFormat(e.cls);
-
-    b.stageFlags      = 0;
-    if(e.stage&ShaderReflection::Compute)
-      b.stageFlags |= VK_SHADER_STAGE_COMPUTE_BIT;
-    if(e.stage&ShaderReflection::Vertex)
-      b.stageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
-    if(e.stage&ShaderReflection::Control)
-      b.stageFlags |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-    if(e.stage&ShaderReflection::Evaluate)
-      b.stageFlags |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-    if(e.stage&ShaderReflection::Geometry)
-      b.stageFlags |= VK_SHADER_STAGE_GEOMETRY_BIT;
-    if(e.stage&ShaderReflection::Fragment)
-      b.stageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
-    if(e.stage&ShaderReflection::Task)
-      b.stageFlags |= VK_SHADER_STAGE_TASK_BIT_NV;
-    if(e.stage&ShaderReflection::Mesh)
-      b.stageFlags |= VK_SHADER_STAGE_MESH_BIT_NV;
+    b.stageFlags      = nativeFormat(e.stage);
     ++count;
     }
 
+  VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlags = {};
+  bindingFlags.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+  bindingFlags.bindingCount  = count;
+  bindingFlags.pBindingFlags = flg.get();
+
   VkDescriptorSetLayoutCreateInfo info={};
   info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+  info.pNext        = nullptr;
+  info.flags        = 0;
   info.bindingCount = count;
-  info.pBindings    = bind;
+  info.pBindings    = bind.get();
 
-  vkAssert(vkCreateDescriptorSetLayout(dev,&info,nullptr,&impl));
+  if(runtimeSized)
+    info.pNext = &bindingFlags;
+
+  VkDescriptorSetLayout ret = VK_NULL_HANDLE;
+  vkAssert(vkCreateDescriptorSetLayout(dev,&info,nullptr,&ret));
+  return ret;
   }
 
 void VPipelineLay::adjustSsboBindings() {
-  for(auto& i:lay)
-    if(i.size==0)
-      i.size = VK_WHOLE_SIZE;
-  for(auto& i:lay)
+  for(auto& i:lay) {
     if(i.cls==ShaderReflection::SsboR  ||
        i.cls==ShaderReflection::SsboRW ||
        i.cls==ShaderReflection::ImgR   ||
        i.cls==ShaderReflection::ImgRW ) {
       hasSSBO = true;
       }
+    if(i.size==0) {
+      i.size = VK_WHOLE_SIZE;
+      }
+    if(i.runtimeSized) {
+      runtimeSized = true;
+      }
+    }
   }
 
 #endif

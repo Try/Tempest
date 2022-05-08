@@ -46,12 +46,17 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
 
   spirv_cross::ShaderResources resources = comp.get_shader_resources();
   for(auto &resource : resources.sampled_images) {
+    auto&    t       = comp.get_type_from_variable(resource.id);
     unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);
     Binding b;
     b.layout = binding;
     b.cls    = Texture;
     b.stage  = s;
     b.spvId  = resource.id;
+    if(!t.array.empty() && t.array[0]<=1) {
+      // NOTE: in spirv there is dedicated decoration or something to identify runtime array
+      b.runtimeSized = true;
+      }
     lay.push_back(b);
     }
   for(auto &resource : resources.uniform_buffers) {

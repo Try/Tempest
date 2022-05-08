@@ -216,17 +216,24 @@ inline VkDescriptorType nativeFormat(ShaderReflection::Class cls) {
   }
 
 inline VkShaderStageFlagBits nativeFormat(ShaderReflection::Stage st) {
-  switch(st) {
-    case ShaderReflection::Vertex  : return VK_SHADER_STAGE_VERTEX_BIT;
-    case ShaderReflection::Control : return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-    case ShaderReflection::Evaluate: return VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-    case ShaderReflection::Geometry: return VK_SHADER_STAGE_GEOMETRY_BIT;
-    case ShaderReflection::Fragment: return VK_SHADER_STAGE_FRAGMENT_BIT;
-    case ShaderReflection::Compute : return VK_SHADER_STAGE_COMPUTE_BIT;
-    case ShaderReflection::Task    : return VK_SHADER_STAGE_TASK_BIT_NV;
-    case ShaderReflection::Mesh    : return VK_SHADER_STAGE_MESH_BIT_NV;
-    }
-  return VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
+  uint32_t stageFlags = 0;
+  if(st&ShaderReflection::Compute)
+    stageFlags |= VK_SHADER_STAGE_COMPUTE_BIT;
+  if(st&ShaderReflection::Vertex)
+    stageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
+  if(st&ShaderReflection::Control)
+    stageFlags |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+  if(st&ShaderReflection::Evaluate)
+    stageFlags |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+  if(st&ShaderReflection::Geometry)
+    stageFlags |= VK_SHADER_STAGE_GEOMETRY_BIT;
+  if(st&ShaderReflection::Fragment)
+    stageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+  if(st&ShaderReflection::Task)
+    stageFlags |= VK_SHADER_STAGE_TASK_BIT_NV;
+  if(st&ShaderReflection::Mesh)
+    stageFlags |= VK_SHADER_STAGE_MESH_BIT_NV;
+  return VkShaderStageFlagBits(stageFlags);
   }
 
 class VDevice : public AbstractGraphicsApi::Device {

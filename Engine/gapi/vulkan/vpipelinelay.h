@@ -27,14 +27,16 @@ class VPipelineLay : public AbstractGraphicsApi::PipelineLay {
     ~VPipelineLay();
 
     size_t descriptorsCount() override;
+    VkDescriptorSetLayout create(uint32_t runtimeArraySz) const;
 
     using Binding = ShaderReflection::Binding;
 
-    VkDevice                      dev =nullptr;
-    VkDescriptorSetLayout         impl=VK_NULL_HANDLE;
+    VkDevice                      dev = nullptr;
+    VkDescriptorSetLayout         impl = VK_NULL_HANDLE;
     std::vector<Binding>          lay;
     ShaderReflection::PushBlock   pb;
     bool                          hasSSBO = false;
+    bool                          runtimeSized = false;
 
   private:
     enum {
@@ -49,7 +51,6 @@ class VPipelineLay : public AbstractGraphicsApi::PipelineLay {
     Detail::SpinLock sync;
     std::list<Pool>  pool;
 
-    void implCreate(VkDescriptorSetLayoutBinding *bind);
     void adjustSsboBindings();
 
   friend class VDescriptorArray;

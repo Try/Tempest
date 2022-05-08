@@ -20,6 +20,9 @@ class VDescriptorArray : public AbstractGraphicsApi::Desc {
     void                     setUbo (size_t id, AbstractGraphicsApi::Buffer*  buf, size_t offset) override;
     void                     setSsbo(size_t id, AbstractGraphicsApi::Buffer*  buf, size_t offset) override;
     void                     setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) override;
+
+    void                     set    (size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler2d& smp) override;
+
     void                     ssboBarriers(Detail::ResourceState& res) override;
 
     VkDescriptorSet           desc=VK_NULL_HANDLE;
@@ -29,6 +32,10 @@ class VDescriptorArray : public AbstractGraphicsApi::Desc {
     DSharedPtr<VPipelineLay*> lay;
     VPipelineLay::Pool*       pool=nullptr;
 
+    VkDescriptorPool          dedicatedPool   = VK_NULL_HANDLE;
+    VkDescriptorSetLayout     dedicatedLayout = VK_NULL_HANDLE;
+    uint32_t                  runtimeArraySz  = 0; // TODO: per bind
+
     struct SSBO {
       AbstractGraphicsApi::Texture* tex = nullptr;
       AbstractGraphicsApi::Buffer*  buf = nullptr;
@@ -36,8 +43,9 @@ class VDescriptorArray : public AbstractGraphicsApi::Desc {
     std::unique_ptr<SSBO[]>  ssbo;
 
     VkDescriptorPool         allocPool(const VPipelineLay& lay, size_t size);
-    bool                     allocDescSet(VkDescriptorPool pool, VkDescriptorSetLayout lay);
-    static void              addPoolSize(VkDescriptorPoolSize* p, size_t& sz, VkDescriptorType elt);
+    VkDescriptorSet          allocDescSet(VkDescriptorPool pool, VkDescriptorSetLayout lay);
+    static void              addPoolSize(VkDescriptorPoolSize* p, size_t& sz, uint32_t cnt, VkDescriptorType elt);
+    void                     reallocSet();
   };
 
 }}

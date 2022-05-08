@@ -245,6 +245,10 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     props.meshShader = true;
     rqExt.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
     }
+  if(api.hasDeviceFeatures2 && checkForExt(ext,VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME)) {
+    props.hasDescIndexing = true;
+    rqExt.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+    }
   /*
    * //TODO: enable once validation layers have full support for dynamic rendering
   if(api.hasDeviceFeatures2 && checkForExt(ext,VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)) {
@@ -328,6 +332,9 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     VkPhysicalDeviceMeshShaderFeaturesNV meshFeatures = {};
     meshFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
 
+    VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = {};
+    indexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+
     if(props.hasSync2) {
       sync2.pNext = enabledFeatures.pNext;
       enabledFeatures.pNext = &sync2;
@@ -352,6 +359,10 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
       meshFeatures.pNext = enabledFeatures.pNext;
       enabledFeatures.pNext = &meshFeatures;
       }
+    if(props.hasDescIndexing) {
+      indexingFeatures.pNext = enabledFeatures.pNext;
+      enabledFeatures.pNext = &indexingFeatures;
+      }
 
     vkGetPhysicalDeviceFeatures2(pdev, &enabledFeatures);
     bdaFeatures.bufferDeviceAddressCaptureReplay  = VK_FALSE;
@@ -366,6 +377,10 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     props.hasDeviceAddress    = (bdaFeatures.bufferDeviceAddress==VK_TRUE);
     props.raytracing.rayQuery = (rayQueryFeatures.rayQuery==VK_TRUE);
     props.meshShader          = (meshFeatures.taskShader==VK_TRUE && meshFeatures.meshShader==VK_TRUE);
+
+    if(indexingFeatures.runtimeDescriptorArray!=VK_FALSE) {
+      props.bindless.sampledImage = (indexingFeatures.shaderSampledImageArrayNonUniformIndexing==VK_TRUE);
+      }
 
     createInfo.pNext            = &enabledFeatures;
     createInfo.pEnabledFeatures = nullptr;

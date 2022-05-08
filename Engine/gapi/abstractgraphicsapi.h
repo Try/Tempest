@@ -341,6 +341,10 @@ namespace Tempest {
             } tex2d;
 
           struct {
+            bool sampledImage = false;
+            } bindless;
+
+          struct {
             bool rayQuery = false;
             } raytracing;
 
@@ -427,6 +431,7 @@ namespace Tempest {
         virtual void setUbo (size_t id,AbstractGraphicsApi::Buffer* buf,size_t offset)=0;
         virtual void setSsbo(size_t id,AbstractGraphicsApi::Buffer* buf,size_t offset)=0;
         virtual void setTlas(size_t,AbstractGraphicsApi::AccelerationStructure*) {}
+        virtual void set    (size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler2d& smp);
         virtual void ssboBarriers(Detail::ResourceState& res) = 0;
         };
       struct BarrierDesc {

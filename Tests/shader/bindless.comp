@@ -1,6 +1,15 @@
 #version 440
 
+#extension GL_EXT_nonuniform_qualifier : require
+
 layout(binding = 0) uniform sampler2D tex[];
+layout(binding = 1, rgba8) uniform writeonly image2D ret;
 
 void main() {
+  ivec2 index = ivec2(gl_GlobalInvocationID.xy);
+  vec2  uv    = vec2(index.xy) / vec2(imageSize(ret));
+
+  uint  dynIndex = ((index.x/10+index.y/10)%2);
+  vec4  color    = texture(tex[nonuniformEXT(dynIndex)], uv);
+  imageStore(ret, index, color);
   }

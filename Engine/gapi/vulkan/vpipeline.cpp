@@ -130,22 +130,7 @@ VkPipelineLayout VPipeline::initLayout(VkDevice device, const VPipelineLay& uboL
   pipelineLayoutInfo.pushConstantRangeCount = 0;
 
   if(uboLay.pb.size>0) {
-    if(uboLay.pb.stage & ShaderReflection::Vertex)
-      pushStageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
-    if(uboLay.pb.stage & ShaderReflection::Geometry)
-      pushStageFlags |= VK_SHADER_STAGE_GEOMETRY_BIT;
-    if(uboLay.pb.stage & ShaderReflection::Control)
-      pushStageFlags |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-    if(uboLay.pb.stage & ShaderReflection::Evaluate)
-      pushStageFlags |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-    if(uboLay.pb.stage & ShaderReflection::Fragment)
-      pushStageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
-    if(uboLay.pb.stage & ShaderReflection::Compute)
-      pushStageFlags |= VK_SHADER_STAGE_COMPUTE_BIT;
-    if(uboLay.pb.stage&ShaderReflection::Task)
-      pushStageFlags |= VK_SHADER_STAGE_TASK_BIT_NV;
-    if(uboLay.pb.stage&ShaderReflection::Mesh)
-      pushStageFlags |= VK_SHADER_STAGE_MESH_BIT_NV;
+    pushStageFlags = nativeFormat(uboLay.pb.stage);
     push.stageFlags = pushStageFlags;
     push.offset     = 0;
     push.size       = uint32_t(uboLay.pb.size);
