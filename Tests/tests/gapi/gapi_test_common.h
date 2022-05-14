@@ -1082,7 +1082,7 @@ void MeshShader(const char* outImg) {
     GraphicsApi api{ApiFlags::Validation};
     auto dev = api.devices();
     for(auto& i:dev)
-      if(i.meshShader)
+      if(i.meshlets.meshShader)
         msDev = i.name;
     if(msDev==nullptr)
       return;

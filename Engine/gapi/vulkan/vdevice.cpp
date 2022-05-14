@@ -242,7 +242,8 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     rqExt.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
     }
   if(api.hasDeviceFeatures2 && checkForExt(ext,VK_NV_MESH_SHADER_EXTENSION_NAME)) {
-    props.meshShader = true;
+    props.meshlets.taskShader = true;
+    props.meshlets.meshShader = true;
     rqExt.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
     }
   if(api.hasDeviceFeatures2 && checkForExt(ext,VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME)) {
@@ -308,11 +309,12 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
   createInfo.ppEnabledExtensionNames = rqExt.data();
 
   if(api.hasDeviceFeatures2) {
-    vkGetPhysicalDeviceFeatures2 = PFN_vkGetPhysicalDeviceFeatures2(vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2"));
+    VkPhysicalDeviceFeatures2 features = {};
+    features.sType    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
+    features.features = deviceFeatures;
 
-    VkPhysicalDeviceFeatures2 enabledFeatures = {};
-    enabledFeatures.sType    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
-    enabledFeatures.features = deviceFeatures;
+    VkPhysicalDeviceProperties2 properties = {};
+    properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
 
     VkPhysicalDeviceDynamicRenderingFeaturesKHR dynRendering = {};
     dynRendering.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
@@ -332,39 +334,48 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     VkPhysicalDeviceMeshShaderFeaturesNV meshFeatures = {};
     meshFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
 
+    VkPhysicalDeviceMeshShaderPropertiesNV meshProperties = {};
+    meshProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
+
     VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = {};
     indexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
 
     if(props.hasSync2) {
-      sync2.pNext = enabledFeatures.pNext;
-      enabledFeatures.pNext = &sync2;
+      sync2.pNext = features.pNext;
+      features.pNext = &sync2;
       }
     if(props.hasDeviceAddress) {
-      bdaFeatures.pNext = enabledFeatures.pNext;
-      enabledFeatures.pNext = &bdaFeatures;
+      bdaFeatures.pNext = features.pNext;
+      features.pNext = &bdaFeatures;
       }
     if(props.raytracing.rayQuery) {
-      asFeatures.pNext = enabledFeatures.pNext;
-      enabledFeatures.pNext = &asFeatures;
+      asFeatures.pNext = features.pNext;
+      features.pNext = &asFeatures;
       }
     if(props.raytracing.rayQuery) {
-      rayQueryFeatures.pNext = enabledFeatures.pNext;
-      enabledFeatures.pNext = &rayQueryFeatures;
+      rayQueryFeatures.pNext = features.pNext;
+      features.pNext = &rayQueryFeatures;
       }
     if(props.hasDynRendering) {
-      dynRendering.pNext = enabledFeatures.pNext;
-      enabledFeatures.pNext = &dynRendering;
+      dynRendering.pNext = features.pNext;
+      features.pNext = &dynRendering;
       }
-    if(props.meshShader) {
-      meshFeatures.pNext = enabledFeatures.pNext;
-      enabledFeatures.pNext = &meshFeatures;
+    if(props.meshlets.meshShader) {
+      meshFeatures.pNext = features.pNext;
+      features.pNext = &meshFeatures;
+
+      meshProperties.pNext = properties.pNext;
+      properties.pNext = &meshProperties;
       }
     if(props.hasDescIndexing) {
-      indexingFeatures.pNext = enabledFeatures.pNext;
-      enabledFeatures.pNext = &indexingFeatures;
+      indexingFeatures.pNext = features.pNext;
+      features.pNext = &indexingFeatures;
       }
 
-    vkGetPhysicalDeviceFeatures2(pdev, &enabledFeatures);
+    auto vkGetPhysicalDeviceFeatures2   = PFN_vkGetPhysicalDeviceFeatures2  (vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2KHR"));
+    auto vkGetPhysicalDeviceProperties2 = PFN_vkGetPhysicalDeviceProperties2(vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceProperties2KHR"));
+
+    vkGetPhysicalDeviceFeatures2(pdev, &features);
     bdaFeatures.bufferDeviceAddressCaptureReplay  = VK_FALSE;
     bdaFeatures.bufferDeviceAddressMultiDevice    = VK_FALSE;
     asFeatures.accelerationStructureCaptureReplay = VK_FALSE;
@@ -372,17 +383,22 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     asFeatures.accelerationStructureHostCommands  = VK_FALSE;
     asFeatures.descriptorBindingAccelerationStructureUpdateAfterBind = VK_FALSE;
 
-    props.hasSync2            = (sync2.synchronization2==VK_TRUE);
-    props.hasDynRendering     = (dynRendering.dynamicRendering==VK_TRUE);
-    props.hasDeviceAddress    = (bdaFeatures.bufferDeviceAddress==VK_TRUE);
-    props.raytracing.rayQuery = (rayQueryFeatures.rayQuery==VK_TRUE);
-    props.meshShader          = (meshFeatures.taskShader==VK_TRUE && meshFeatures.meshShader==VK_TRUE);
+    vkGetPhysicalDeviceProperties2(pdev, &properties);
+
+    props.hasSync2                  = (sync2.synchronization2==VK_TRUE);
+    props.hasDynRendering           = (dynRendering.dynamicRendering==VK_TRUE);
+    props.hasDeviceAddress          = (bdaFeatures.bufferDeviceAddress==VK_TRUE);
+    props.raytracing.rayQuery       = (rayQueryFeatures.rayQuery==VK_TRUE);
+    props.meshlets.taskShader       = (meshFeatures.taskShader==VK_TRUE);
+    props.meshlets.meshShader       = (meshFeatures.meshShader==VK_TRUE);
+    props.meshlets.maxMeshGroups    = meshProperties.maxDrawMeshTasksCount;
+    props.meshlets.maxMeshGroupSize = meshProperties.maxMeshWorkGroupSize[0];
 
     if(indexingFeatures.runtimeDescriptorArray!=VK_FALSE) {
       props.bindless.sampledImage = (indexingFeatures.shaderSampledImageArrayNonUniformIndexing==VK_TRUE);
       }
 
-    createInfo.pNext            = &enabledFeatures;
+    createInfo.pNext            = &features;
     createInfo.pEnabledFeatures = nullptr;
     if(vkCreateDevice(pdev, &createInfo, nullptr, &device.impl)!=VK_SUCCESS)
       throw std::system_error(Tempest::GraphicsErrc::NoDevice);
@@ -429,7 +445,7 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     vkGetAccelerationStructureDeviceAddress = PFN_vkGetAccelerationStructureDeviceAddressKHR(vkGetDeviceProcAddr(device.impl,"vkGetAccelerationStructureDeviceAddressKHR"));
     }
 
-  if(props.meshShader) {
+  if(props.meshlets.meshShader) {
     vkCmdDrawMeshTasks = PFN_vkCmdDrawMeshTasksNV(vkGetDeviceProcAddr(device.impl,"vkCmdDrawMeshTasksNV"));
     }
   }

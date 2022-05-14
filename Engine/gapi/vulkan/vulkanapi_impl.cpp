@@ -190,6 +190,9 @@ bool VulkanInstance::checkForExt(const std::vector<VkExtensionProperties>& list,
 void VulkanInstance::deviceProps(VkPhysicalDevice physicalDevice, VkProp& c) const {
   devicePropsShort(physicalDevice,c);
 
+  VkPhysicalDeviceMeshShaderPropertiesNV propMesh = {};
+  propMesh.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
+
   VkPhysicalDeviceProperties prop={};
   vkGetPhysicalDeviceProperties(physicalDevice,&prop);
   c.nonCoherentAtomSize = size_t(prop.limits.nonCoherentAtomSize);
@@ -221,14 +224,21 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, Tempest::
     VkPhysicalDeviceFeatures2 features = {};
     features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
 
+    VkPhysicalDeviceProperties2 properties = {};
+    properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
+
+
     VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures = {};
     rayQueryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
+
+    VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = {};
+    indexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
 
     VkPhysicalDeviceMeshShaderFeaturesNV meshFeatures = {};
     meshFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
 
-    VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = {};
-    indexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+    VkPhysicalDeviceMeshShaderPropertiesNV meshProps = {};
+    meshProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
 
     auto ext = extensionsList(physicalDevice);
     if(checkForExt(ext,VK_KHR_RAY_QUERY_EXTENSION_NAME)) {
@@ -238,15 +248,26 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, Tempest::
     if(checkForExt(ext,VK_NV_MESH_SHADER_EXTENSION_NAME)) {
       meshFeatures.pNext = features.pNext;
       features.pNext = &meshFeatures;
+
+      meshProps.pNext = properties.pNext;
+      properties.pNext = &meshProps;
       }
     if(checkForExt(ext,VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME)) {
       indexingFeatures.pNext = features.pNext;
       features.pNext = &indexingFeatures;
       }
-    auto vkGetPhysicalDeviceFeatures2 = PFN_vkGetPhysicalDeviceFeatures2(vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2"));
+    auto vkGetPhysicalDeviceFeatures2   = PFN_vkGetPhysicalDeviceFeatures2  (vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2KHR"));
+    auto vkGetPhysicalDeviceProperties2 = PFN_vkGetPhysicalDeviceProperties2(vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceProperties2KHR"));
+
     vkGetPhysicalDeviceFeatures2(physicalDevice,&features);
     c.raytracing.rayQuery = rayQueryFeatures.rayQuery!=VK_FALSE;
-    c.meshShader          = meshFeatures.meshShader!=VK_FALSE && meshFeatures.taskShader!=VK_FALSE;
+    c.meshlets.taskShader = meshFeatures.taskShader!=VK_FALSE;
+    c.meshlets.meshShader = meshFeatures.meshShader!=VK_FALSE;
+
+    vkGetPhysicalDeviceProperties2(physicalDevice,&properties);
+    c.meshlets.maxMeshGroups    = meshProps.maxDrawMeshTasksCount;
+    c.meshlets.maxMeshGroupSize = meshProps.maxMeshWorkGroupSize[0];
+
     if(indexingFeatures.runtimeDescriptorArray!=VK_FALSE) {
       c.bindless.sampledImage = (indexingFeatures.shaderSampledImageArrayNonUniformIndexing==VK_TRUE);
       }

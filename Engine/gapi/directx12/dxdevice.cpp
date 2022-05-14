@@ -189,6 +189,7 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
   D3D12_FEATURE_DATA_D3D12_OPTIONS5 feature5 = {};
   if(SUCCEEDED(dev.CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &feature5, sizeof(feature5)))) {
     prop.raytracing.rayQuery = (feature5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED);
+    prop.raytracing.rayQuery = false; // TODO: dxil compiller
     }
   }
 

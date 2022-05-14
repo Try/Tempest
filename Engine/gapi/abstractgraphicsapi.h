@@ -348,11 +348,17 @@ namespace Tempest {
             bool rayQuery = false;
             } raytracing;
 
+          struct {
+            bool     taskShader       = false;
+            bool     meshShader       = false;
+            uint32_t maxMeshGroups    = 32;
+            uint32_t maxMeshGroupSize = 32;
+            } meshlets;
+
           bool     anisotropy        = false;
           float    maxAnisotropy     = 1.0f;
           bool     tesselationShader = false;
           bool     geometryShader    = false;
-          bool     meshShader        = false;
 
           bool     storeAndAtomicVs  = false;
           bool     storeAndAtomicFs  = false;

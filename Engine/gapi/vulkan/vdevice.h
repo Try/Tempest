@@ -289,8 +289,6 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     VkProps                 props={};
 
-    PFN_vkGetPhysicalDeviceFeatures2      vkGetPhysicalDeviceFeatures2 = nullptr;
-
     PFN_vkGetBufferMemoryRequirements2KHR vkGetBufferMemoryRequirements2 = nullptr;
     PFN_vkGetImageMemoryRequirements2KHR  vkGetImageMemoryRequirements2  = nullptr;
 
