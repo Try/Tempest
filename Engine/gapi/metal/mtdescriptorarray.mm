@@ -18,33 +18,22 @@ MtDescriptorArray::MtDescriptorArray(MtDevice& dev, const MtPipelineLay &lay)
   desc.reset(new Desc[lay.lay.size()]);
   }
 
-void MtDescriptorArray::set(size_t i, AbstractGraphicsApi::Texture *tex, const Sampler2d &smp) {
+void MtDescriptorArray::set(size_t i, AbstractGraphicsApi::Texture *tex, const Sampler2d &smp, uint32_t mipLevel) {
   auto& t = *reinterpret_cast<MtTexture*>(tex);
-  desc[i].val     = t.view(smp.mapping,uint32_t(-1));
+  desc[i].val     = t.view(smp.mapping,mipLevel);
   desc[i].sampler = dev.samplers.get(smp);
   }
 
-void MtDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi::Texture *tex, uint32_t mipLevel) {
-  auto& t = *reinterpret_cast<MtTexture*>(tex);
-  desc[id].val = t.view(ComponentMapping(),mipLevel);
-  }
-
-void MtDescriptorArray::setUbo(size_t id, AbstractGraphicsApi::Buffer *buf, size_t offset) {
+void MtDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer *buf, size_t offset) {
   auto& b = *reinterpret_cast<MtBuffer*>(buf);
   desc[id].val    = b.impl;
   desc[id].offset = offset;
-  }
-
-void MtDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi::Buffer *buf, size_t offset) {
-  auto& b = *reinterpret_cast<MtBuffer*>(buf);
-  desc[id].val    = b.impl;
-  desc[id].offset = offset;
-  }
-
-void MtDescriptorArray::ssboBarriers(ResourceState&) {
   }
 
 void MtDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure* a) {
   auto& as = *reinterpret_cast<MtAccelerationStructure*>(a);
   desc[id].val = as.impl;
+  }
+
+void MtDescriptorArray::ssboBarriers(ResourceState&) {
   }

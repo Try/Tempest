@@ -33,25 +33,25 @@ DescriptorSet& DescriptorSet::operator=(DescriptorSet&& u) {
 
 void DescriptorSet::set(size_t layoutBind, const Texture2d &tex, const Sampler2d& smp) {
   if(tex.impl.handler)
-    impl.handler->set(layoutBind,tex.impl.handler,smp); else
+    impl.handler->set(layoutBind,tex.impl.handler,smp,uint32_t(-1)); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
   }
 
 void DescriptorSet::set(size_t layoutBind, const Attachment& tex, const Sampler2d& smp) {
   if(tex.tImpl.impl.handler)
-    impl.handler->set(layoutBind,tex.tImpl.impl.handler,smp); else
+    impl.handler->set(layoutBind,tex.tImpl.impl.handler,smp,uint32_t(-1)); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
   }
 
-void DescriptorSet::set(size_t layoutBind, const StorageImage& tex, uint32_t mipLevel) {
+void DescriptorSet::set(size_t layoutBind, const StorageImage& tex, const Sampler2d& smp, uint32_t mipLevel) {
   if(tex.impl.handler)
-    impl.handler->setSsbo(layoutBind,tex.impl.handler,mipLevel); else
+    impl.handler->set(layoutBind,tex.impl.handler,smp,mipLevel); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
   }
 
 void DescriptorSet::set(size_t layoutBind, const Detail::ResourcePtr<Texture2d> &tex, const Sampler2d& smp) {
   if(tex.impl.handler)
-    impl.handler->set(layoutBind,tex.impl.handler,smp); else
+    impl.handler->set(layoutBind,tex.impl.handler,smp,uint32_t(-1)); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
   }
 
@@ -78,12 +78,12 @@ void DescriptorSet::set(size_t layoutBind, const StorageBuffer& vbuf, size_t off
 
 void DescriptorSet::implBindUbo(size_t layoutBind, const VideoBuffer& vbuf, size_t offsetBytes) {
   if(vbuf.impl.handler)
-    impl.handler->setUbo(layoutBind,vbuf.impl.handler,offsetBytes); else
+    impl.handler->set(layoutBind,vbuf.impl.handler,offsetBytes); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidUniformBuffer);
   }
 
 void DescriptorSet::implBindSsbo(size_t layoutBind, const VideoBuffer& vbuf, size_t offsetBytes) {
   if(vbuf.impl.handler)
-    impl.handler->setSsbo(layoutBind,vbuf.impl.handler,offsetBytes); else
+    impl.handler->set(layoutBind,vbuf.impl.handler,offsetBytes); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidStorageBuffer);
   }

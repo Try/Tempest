@@ -23,6 +23,7 @@ class ShaderReflection final {
       };
 
     enum Stage : uint8_t {
+      None    =0,
       Vertex  =1<<0,
       Control =1<<1,
       Evaluate=1<<2,
@@ -36,7 +37,7 @@ class ShaderReflection final {
     struct Binding {
       uint32_t        layout=0;
       Class           cls   =Ubo;
-      Stage           stage =Fragment;
+      Stage           stage =None;
       bool            runtimeSized = false;
       uint64_t        size  =0;
 
@@ -47,7 +48,7 @@ class ShaderReflection final {
       };
 
     struct PushBlock {
-      Stage    stage = Fragment;
+      Stage    stage = None;
       uint64_t size  = 0;
       };
 

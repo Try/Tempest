@@ -126,41 +126,30 @@ VkDescriptorSet VDescriptorArray::allocDescSet(VkDescriptorPool pool, VkDescript
   return desc;
   }
 
-void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Texture* t, const Sampler2d& smp) {
+void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* t, const Sampler2d& smp, uint32_t mipLevel) {
   VTexture* tex=reinterpret_cast<VTexture*>(t);
 
   VkDescriptorImageInfo imageInfo = {};
-  imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  imageInfo.imageView   = tex->view(device,smp.mapping,uint32_t(-1));
-  imageInfo.sampler     = tex->alloc->updateSampler(smp);
 
-  VkWriteDescriptorSet descriptorWrite = {};
+  VkWriteDescriptorSet  descriptorWrite = {};
   descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
   descriptorWrite.dstSet          = desc;
   descriptorWrite.dstBinding      = uint32_t(id);
   descriptorWrite.dstArrayElement = 0;
-  descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  descriptorWrite.descriptorType  = toWriteType(lay.handler->lay[id].cls);
   descriptorWrite.descriptorCount = 1;
   descriptorWrite.pImageInfo      = &imageInfo;
 
-  vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
-  }
+  if(descriptorWrite.descriptorType==VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+    imageInfo.sampler     = tex->alloc->updateSampler(smp);
+    imageInfo.imageView   = tex->view(device,smp.mapping,mipLevel);
+    } else {
+    imageInfo.imageView   = tex->view(device,ComponentMapping(),mipLevel);
+    }
 
-void VDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi::Texture* t, uint32_t mipLevel) {
-  VTexture* tex=reinterpret_cast<VTexture*>(t);
-
-  VkDescriptorImageInfo imageInfo = {};
-  imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-  imageInfo.imageView   = tex->view(device,ComponentMapping(),mipLevel);
-
-  VkWriteDescriptorSet descriptorWrite = {};
-  descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  descriptorWrite.dstSet          = desc;
-  descriptorWrite.dstBinding      = uint32_t(id);
-  descriptorWrite.dstArrayElement = 0;
-  descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-  descriptorWrite.descriptorCount = 1;
-  descriptorWrite.pImageInfo      = &imageInfo;
+  if(descriptorWrite.descriptorType==VK_DESCRIPTOR_TYPE_STORAGE_IMAGE || tex->isStorageImage)
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL; else
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
   if(lay.handler->hasSSBO)
     ssbo[id].tex = t;
@@ -168,7 +157,7 @@ void VDescriptorArray::setSsbo(size_t id, AbstractGraphicsApi::Texture* t, uint3
   vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
   }
 
-void VDescriptorArray::setUbo(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf, size_t offset) {
+void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf, size_t offset) {
   VBuffer* memory=reinterpret_cast<VBuffer*>(buf);
   VkDescriptorBufferInfo bufferInfo = {};
   bufferInfo.buffer = memory->impl;
@@ -180,35 +169,14 @@ void VDescriptorArray::setUbo(size_t id, Tempest::AbstractGraphicsApi::Buffer *b
   descriptorWrite.dstSet          = desc;
   descriptorWrite.dstBinding      = uint32_t(id);
   descriptorWrite.dstArrayElement = 0;
-  //descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   descriptorWrite.descriptorType  = toWriteType(lay.handler->lay[id].cls);
   descriptorWrite.descriptorCount = 1;
   descriptorWrite.pBufferInfo     = &bufferInfo;
 
   vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
-  }
-
-void VDescriptorArray::setSsbo(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf, size_t offset) {
-  VBuffer* memory=reinterpret_cast<VBuffer*>(buf);
-  VkDescriptorBufferInfo bufferInfo = {};
-  bufferInfo.buffer = memory->impl;
-  bufferInfo.offset = offset;
-  bufferInfo.range  = lay.handler->lay[id].size;
-
-  VkWriteDescriptorSet descriptorWrite = {};
-  descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  descriptorWrite.dstSet          = desc;
-  descriptorWrite.dstBinding      = uint32_t(id);
-  descriptorWrite.dstArrayElement = 0;
-  //descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  descriptorWrite.descriptorType  = toWriteType(lay.handler->lay[id].cls);
-  descriptorWrite.descriptorCount = 1;
-  descriptorWrite.pBufferInfo     = &bufferInfo;
 
   if(lay.handler->hasSSBO)
     ssbo[id].buf = buf;
-
-  vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
   }
 
 void VDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) {

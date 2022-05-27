@@ -9,13 +9,14 @@ using namespace Tempest;
 using namespace Tempest::Detail;
 
 VTexture::VTexture(VTexture &&other) {
-  std::swap(impl,     other.impl);
-  std::swap(imgView,  other.imgView);
-  std::swap(format,   other.format);
-  std::swap(mipCnt,   other.mipCnt);
-  std::swap(alloc,    other.alloc);
-  std::swap(page,     other.page);
-  std::swap(extViews, other.extViews);
+  std::swap(impl,           other.impl);
+  std::swap(imgView,        other.imgView);
+  std::swap(format,         other.format);
+  std::swap(mipCnt,         other.mipCnt);
+  std::swap(alloc,          other.alloc);
+  std::swap(page,           other.page);
+  std::swap(isStorageImage, other.isStorageImage);
+  std::swap(extViews,       other.extViews);
   }
 
 VTexture::~VTexture() {

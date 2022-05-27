@@ -127,7 +127,7 @@ struct DxCommandBuffer::Blit : Stage {
     sr.bottom = LONG(dstH);
     impl.RSSetScissorRects(1, &sr);
 
-    desc.set(0,&src,srcMip,Sampler2d::bilinear(),src.format);
+    desc.implSet(0,&src,srcMip,Sampler2d::bilinear(),src.format);
 
     auto& shader = *dev.blit.handler;
     impl.SetPipelineState(&shader.instance(frm));
@@ -195,7 +195,7 @@ struct DxCommandBuffer::MipMaps : Stage {
 
     desc.emplace_back(*dev.blitLayout.handler);
     DxDescriptorArray& ubo = this->desc.back();
-    ubo.set(0,&img,srcMip,Sampler2d::bilinear(),img.format);
+    ubo.implSet(0,&img,srcMip,Sampler2d::bilinear(),img.format);
     cmd.implSetUniforms(ubo,false);
 
     impl.DrawInstanced(6,1,0,0);
@@ -265,8 +265,8 @@ struct DxCommandBuffer::CopyBuf : Stage {
     auto&  prog    = shader(cmd,push.bitCnt,push.compCnt);
     size_t outSize = (width*height*(push.compCnt*push.bitCnt/8) + sizeof(uint32_t)-1)/sizeof(uint32_t);
 
-    desc.set    (0,&src,0,Sampler2d::nearest(),src.format);
-    desc.setSsbo(1,&dst,0);
+    desc.implSet(0,&src,0,Sampler2d::nearest(),src.format);
+    desc.set(1,&dst,0);
 
     impl.SetPipelineState(prog.impl.get());
     impl.SetComputeRootSignature(prog.sign.get());

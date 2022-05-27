@@ -263,8 +263,9 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mi
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
     }
 
-  ret.format = imageInfo.format;
-  ret.mipCnt = mip;
+  ret.format         = imageInfo.format;
+  ret.mipCnt         = mip;
+  ret.isStorageImage = imgStorage;
   ret.createViews(dev);
   return ret;
   }

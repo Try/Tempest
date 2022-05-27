@@ -39,7 +39,7 @@ class DescriptorSet final {
 
     void set(size_t layoutBind, const Texture2d&    tex, const Sampler2d& smp = Sampler2d::anisotrophy());
     void set(size_t layoutBind, const Attachment&   tex, const Sampler2d& smp = Sampler2d::anisotrophy());
-    void set(size_t layoutBind, const StorageImage& tex, uint32_t mipLevel=0);
+    void set(size_t layoutBind, const StorageImage& tex, const Sampler2d& smp = Sampler2d::anisotrophy(), uint32_t mipLevel=0);
     void set(size_t layoutBind, const Detail::ResourcePtr<Texture2d>& tex, const Sampler2d& smp = Sampler2d::anisotrophy());
 
     void set(size_t layoutBind, const std::vector<const Texture2d*>& tex);
@@ -53,10 +53,8 @@ class DescriptorSet final {
 
   private:
     struct EmptyDesc : AbstractGraphicsApi::Desc {
-      void set    (size_t,AbstractGraphicsApi::Texture*, const Sampler2d&){}
-      void setSsbo(size_t,AbstractGraphicsApi::Texture*, uint32_t){}
-      void setUbo (size_t,AbstractGraphicsApi::Buffer*,  size_t){}
-      void setSsbo(size_t,AbstractGraphicsApi::Buffer*,  size_t){}
+      void set(size_t,AbstractGraphicsApi::Texture*, const Sampler2d&, uint32_t){}
+      void set(size_t,AbstractGraphicsApi::Buffer*,  size_t){}
       void ssboBarriers(Detail::ResourceState&){}
       };
     DescriptorSet(AbstractGraphicsApi::Desc* desc);

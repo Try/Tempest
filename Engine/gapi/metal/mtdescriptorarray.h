@@ -12,10 +12,8 @@ class MtDescriptorArray : public AbstractGraphicsApi::Desc {
   public:
     MtDescriptorArray(MtDevice& dev, const MtPipelineLay &lay);
 
-    void set    (size_t id, AbstractGraphicsApi::Texture* tex, const Sampler2d& smp) override;
-    void setSsbo(size_t id, AbstractGraphicsApi::Texture* tex, uint32_t mipLevel) override;
-    void setUbo (size_t id, AbstractGraphicsApi::Buffer*  buf, size_t offset) override;
-    void setSsbo(size_t id, AbstractGraphicsApi::Buffer*  buf, size_t offset) override;
+    void set    (size_t id, AbstractGraphicsApi::Texture* tex, const Sampler2d& smp, uint32_t mipLevel) override;
+    void set    (size_t id, AbstractGraphicsApi::Buffer*  buf, size_t offset) override;
     void setTlas(size_t,AbstractGraphicsApi::AccelerationStructure*) override;
     void ssboBarriers(Detail::ResourceState& res) override;
 
