@@ -8,7 +8,7 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-VTexture::VTexture(VTexture &&other) {
+VTexture::VTexture(VTexture&& other) {
   std::swap(impl,           other.impl);
   std::swap(imgView,        other.imgView);
   std::swap(format,         other.format);

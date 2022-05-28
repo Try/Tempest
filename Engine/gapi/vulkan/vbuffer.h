@@ -19,8 +19,8 @@ class VBuffer : public AbstractGraphicsApi::Buffer {
     void update  (const void* data, size_t off, size_t count, size_t sz, size_t alignedSz) override;
     void read    (void* data, size_t off, size_t sz) override;
 
-    VkDeviceAddress               toDeviceAddress(VDevice& owner) const;
-    VkBuffer                      impl=VK_NULL_HANDLE;
+    VkDeviceAddress        toDeviceAddress(VDevice& owner) const;
+    VkBuffer               impl      = VK_NULL_HANDLE;
 
   private:
     VAllocator*            alloc=nullptr;

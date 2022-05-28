@@ -133,21 +133,6 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const 
   const DxTexture& t = *reinterpret_cast<const DxTexture*>(tex);
   implSet(id,tex,mipLevel,smp,t.format);
   }
-/*
-void DxDescriptorArray::setUbo(size_t id, AbstractGraphicsApi::Buffer* b, size_t offset) {
-  auto&      device = *lay.handler->dev.device;
-  DxBuffer&  buf    = *reinterpret_cast<DxBuffer*>(b);
-
-  D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
-  cbvDesc.BufferLocation = buf.impl->GetGPUVirtualAddress()+offset;
-  cbvDesc.SizeInBytes    = UINT(lay.handler->lay[id].size);
-  cbvDesc.SizeInBytes    = ((cbvDesc.SizeInBytes+255)/256)*256; // CB size is required to be 256-byte aligned.
-
-  auto& prm = lay.handler->prm[id];
-  auto  gpu = val.cpu[prm.heapId];
-  gpu.ptr += prm.heapOffset;
-  device.CreateConstantBufferView(&cbvDesc, gpu);
-  }*/
 
 void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer* b, size_t offset) {
   auto&      device = *lay.handler->dev.device;
@@ -169,21 +154,6 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer* b, size_t of
 
     device.CreateUnorderedAccessView(buf.impl.get(),nullptr,&desc,gpu);
     } else {
-    /*
-    D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
-    desc.Format                  = DXGI_FORMAT_R32_TYPELESS;
-    desc.ViewDimension           = D3D12_SRV_DIMENSION_BUFFER;
-    desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-    desc.Buffer.FirstElement     = UINT(offsetn/4);
-    cbvDesc.SizeInBytes    = ((cbvDesc.SizeInBytes+255)/256)*256; // CB size is required to be 256-byte aligned.
-    desc.Buffer.Flags            = D3D12_BUFFER_SRV_FLAG_RAW;
-    if(desc.Buffer.NumElements==0)
-      desc.Buffer.NumElements = buf.sizeInBytes/4;
-
-    auto  gpu = val.cpu[prm.heapId];
-    gpu.ptr += prm.heapOffset;
-    device.CreateShaderResourceView(buf.impl.get(),&desc,gpu);
-    */
     D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc = {};
     cbvDesc.BufferLocation = buf.impl->GetGPUVirtualAddress()+offset;
     cbvDesc.SizeInBytes    = UINT(lay.handler->lay[id].size);

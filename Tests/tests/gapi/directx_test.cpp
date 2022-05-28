@@ -122,12 +122,13 @@ TEST(DirectX12Api,ComputeImage) {
 #endif
   }
 
-TEST(DirectX12Api,ComputeGraphics) {
+TEST(DirectX12Api,DispathToDraw) {
 #if defined(_MSC_VER)
   GapiTestSync::DispathToDraw<DirectX12Api>("DirectX12Api_DispathToDraw.png");
   GapiTestSync::DrawToDispath<DirectX12Api>();
 #endif
   }
+
 
 TEST(DirectX12Api,MipMaps) {
 #if defined(_MSC_VER)

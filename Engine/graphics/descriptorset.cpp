@@ -44,8 +44,8 @@ void DescriptorSet::set(size_t layoutBind, const Attachment& tex, const Sampler2
   }
 
 void DescriptorSet::set(size_t layoutBind, const StorageImage& tex, const Sampler2d& smp, uint32_t mipLevel) {
-  if(tex.impl.handler)
-    impl.handler->set(layoutBind,tex.impl.handler,smp,mipLevel); else
+  if(tex.tImpl.impl.handler)
+    impl.handler->set(layoutBind,tex.tImpl.impl.handler,smp,mipLevel); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
   }
 

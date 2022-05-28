@@ -28,9 +28,9 @@ class VTexture : public AbstractGraphicsApi::Texture {
     VkImageView fboView(VkDevice dev, uint32_t mip);
     uint32_t    mipCount() const override { return mipCnt; }
 
-    VkImage                impl     = VK_NULL_HANDLE;
-    VkImageView            imgView  = VK_NULL_HANDLE;
-    VkFormat               format   = VK_FORMAT_UNDEFINED;
+    VkImage                impl      = VK_NULL_HANDLE;
+    VkImageView            imgView   = VK_NULL_HANDLE;
+    VkFormat               format    = VK_FORMAT_UNDEFINED;
 
     uint32_t               mipCnt = 1;
     VAllocator*            alloc =nullptr;

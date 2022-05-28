@@ -215,7 +215,7 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
       addDependency(*reinterpret_cast<VSwapchain*>(sw[i]),imgId[i]);
     }
 
-  resState.joinCompute();
+  resState.joinCompute(*this);
   resState.setRenderpass(*this,desc,descSize,frm,att,sw,imgId);
 
   if(device.props.hasDynRendering) {
@@ -420,10 +420,9 @@ void VCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_t
   vkCmdDrawIndexed    (impl, uint32_t(isize), uint32_t(instanceCount), uint32_t(ioffset), int32_t(voffset), uint32_t(firstInstance));
   }
 
-void Tempest::Detail::VCommandBuffer::dispatchMesh(size_t firstInstance, size_t instanceCount) {
+void VCommandBuffer::dispatchMesh(size_t firstInstance, size_t instanceCount) {
   if(T_UNLIKELY(ssboBarriers)) {
     curUniforms->ssboBarriers(resState);
-    // resState.flush(*this);
     }
   device.vkCmdDrawMeshTasks(impl, uint32_t(instanceCount), uint32_t(firstInstance));
   }
@@ -733,6 +732,7 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
   uint32_t                  bufCount = 0;
   VkImageMemoryBarrier2KHR  imgBarrier[MaxBarriers] = {};
   uint32_t                  imgCount = 0;
+  VkMemoryBarrier2KHR       memBarrier = {};
 
   VkDependencyInfoKHR info = {};
   info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO_KHR;
@@ -775,6 +775,9 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
   info.bufferMemoryBarrierCount = bufCount;
   info.pImageMemoryBarriers     = imgBarrier;
   info.imageMemoryBarrierCount  = imgCount;
+  info.pMemoryBarriers          = &memBarrier;
+  if(memBarrier.sType==VK_STRUCTURE_TYPE_MEMORY_BARRIER_2_KHR)
+    info.memoryBarrierCount++;
 
   vkCmdPipelineBarrier2(impl,&info);
   }

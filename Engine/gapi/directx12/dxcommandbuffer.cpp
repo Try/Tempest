@@ -399,7 +399,7 @@ bool DxCommandBuffer::isRecording() const {
 void DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize, uint32_t w, uint32_t h,
                                      const TextureFormat* frm, AbstractGraphicsApi::Texture** att,
                                      AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) {
-  resState.joinCompute();
+  resState.joinCompute(*this);
   resState.setRenderpass(*this,desc,descSize,frm,att,sw,imgId);
 
   D3D12_RENDER_PASS_RENDER_TARGET_DESC view[MaxFramebufferAttachments] = {};
@@ -574,7 +574,12 @@ void DxCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size
   for(size_t i=0; i<cnt; ++i) {
     auto& b = desc[i];
     D3D12_RESOURCE_BARRIER& barrier = rb[rbCount];
-    if(b.buffer!=nullptr) {
+    if(b.buffer!=nullptr && b.texture==nullptr && b.swapchain==nullptr) {
+      barrier.Type                    = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+      barrier.Flags                   = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+      barrier.UAV.pResource           = nullptr;
+      }
+    else if(b.buffer!=nullptr) {
       barrier.Type                    = D3D12_RESOURCE_BARRIER_TYPE_UAV;
       barrier.Flags                   = D3D12_RESOURCE_BARRIER_FLAG_NONE;
       barrier.UAV.pResource           = toDxResource(b);

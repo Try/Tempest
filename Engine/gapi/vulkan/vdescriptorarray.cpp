@@ -151,18 +151,20 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* t, const Sam
     imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL; else
     imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
+  vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+
   if(lay.handler->hasSSBO)
     ssbo[id].tex = t;
-
-  vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
   }
 
 void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf, size_t offset) {
-  VBuffer* memory=reinterpret_cast<VBuffer*>(buf);
+  VBuffer* memory = reinterpret_cast<VBuffer*>(buf);
+  auto&    slot   = lay.handler->lay[id];
+
   VkDescriptorBufferInfo bufferInfo = {};
   bufferInfo.buffer = memory->impl;
   bufferInfo.offset = offset;
-  bufferInfo.range  = lay.handler->lay[id].size;
+  bufferInfo.range  = slot.size;
 
   VkWriteDescriptorSet descriptorWrite = {};
   descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -245,7 +247,10 @@ void VDescriptorArray::ssboBarriers(ResourceState& res) {
         res.setLayout(*ssbo[i].buf,ResourceAccess::ComputeRead | ResourceAccess::ComputeWrite);
         break;
       case ShaderReflection::ImgR:
+        //res.setLayout(*ssbo[i].tex,ResourceAccess::ComputeRead);
+        break;
       case ShaderReflection::ImgRW:
+        //res.setLayout(*ssbo[i].tex,ResourceAccess::ComputeRead | ResourceAccess::ComputeWrite);
         break;
       case ShaderReflection::Tlas:
         break;

@@ -29,7 +29,7 @@ void ResourceState::setRenderpass(AbstractGraphicsApi::CommandBuffer& cmd,
   }
 
 void ResourceState::setLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id, ResourceAccess lay, bool discard) {
-  State& img   = findImg(nullptr,&s,id,ResourceAccess::Present,discard);
+  ImgState& img   = findImg(nullptr,&s,id,ResourceAccess::Present,discard);
   img.next     = lay;
   img.discard  = discard;
   img.outdated = true;
@@ -40,7 +40,7 @@ void ResourceState::setLayout(AbstractGraphicsApi::Texture& a, ResourceAccess la
   if(lay==ResourceAccess::DepthAttach)
     def = ResourceAccess::DepthAttach; // note: no readable depth
 
-  State& img   = findImg(&a,nullptr,0,def,discard);
+  ImgState& img = findImg(&a,nullptr,0,def,discard);
   img.next     = lay;
   img.discard  = discard;
   img.outdated = true;
@@ -76,7 +76,7 @@ void ResourceState::setLayout(AbstractGraphicsApi::Buffer& buf, ResourceAccess l
   bufState.push_back(s);
   }
 
-void ResourceState::joinCompute() {
+void ResourceState::joinCompute(AbstractGraphicsApi::CommandBuffer& cmd) {
   for(auto& i:bufState) {
     if(i.buf==nullptr)
       continue;
@@ -159,14 +159,14 @@ void ResourceState::finalize(AbstractGraphicsApi::CommandBuffer& cmd) {
   bufState.clear();
   }
 
-ResourceState::State& ResourceState::findImg(AbstractGraphicsApi::Texture* img, AbstractGraphicsApi::Swapchain* sw, uint32_t id,
-                                             ResourceAccess def, bool discard) {
+ResourceState::ImgState& ResourceState::findImg(AbstractGraphicsApi::Texture* img, AbstractGraphicsApi::Swapchain* sw, uint32_t id,
+                                                ResourceAccess def, bool discard) {
   auto nativeImg = img;
   for(auto& i:imgState) {
     if(i.sw==sw && i.id==id && i.img==nativeImg)
       return i;
     }
-  State s={};
+  ImgState s={};
   s.sw       = sw;
   s.id       = id;
   s.img      = img;

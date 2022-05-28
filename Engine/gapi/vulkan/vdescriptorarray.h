@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
+#include "gapi/resourcestate.h"
 #include "vulkan_sdk.h"
 
 #include "vpipelinelay.h"
@@ -15,13 +16,13 @@ class VDescriptorArray : public AbstractGraphicsApi::Desc {
     VDescriptorArray(VkDevice device, VPipelineLay& vlay);
     ~VDescriptorArray() override;
 
-    void                     set    (size_t id, AbstractGraphicsApi::Texture* tex, const Sampler2d& smp, uint32_t mipLevel) override;
-    void                     set    (size_t id, AbstractGraphicsApi::Buffer*  buf, size_t offset) override;
-    void                     setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) override;
+    void                      set    (size_t id, AbstractGraphicsApi::Texture* tex, const Sampler2d& smp, uint32_t mipLevel) override;
+    void                      set    (size_t id, AbstractGraphicsApi::Buffer*  buf, size_t offset) override;
+    void                      setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) override;
 
-    void                     set    (size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler2d& smp) override;
+    void                      set    (size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler2d& smp) override;
 
-    void                     ssboBarriers(Detail::ResourceState& res) override;
+    void                      ssboBarriers(Detail::ResourceState& res) override;
 
     VkDescriptorSet           desc=VK_NULL_HANDLE;
 
@@ -38,12 +39,12 @@ class VDescriptorArray : public AbstractGraphicsApi::Desc {
       AbstractGraphicsApi::Texture* tex = nullptr;
       AbstractGraphicsApi::Buffer*  buf = nullptr;
       };
-    std::unique_ptr<SSBO[]>  ssbo;
+    std::unique_ptr<SSBO[]>   ssbo;
 
-    VkDescriptorPool         allocPool(const VPipelineLay& lay, size_t size);
-    VkDescriptorSet          allocDescSet(VkDescriptorPool pool, VkDescriptorSetLayout lay);
-    static void              addPoolSize(VkDescriptorPoolSize* p, size_t& sz, uint32_t cnt, VkDescriptorType elt);
-    void                     reallocSet();
+    VkDescriptorPool          allocPool(const VPipelineLay& lay, size_t size);
+    VkDescriptorSet           allocDescSet(VkDescriptorPool pool, VkDescriptorSetLayout lay);
+    static void               addPoolSize(VkDescriptorPoolSize* p, size_t& sz, uint32_t cnt, VkDescriptorType elt);
+    void                      reallocSet();
   };
 
 }}

@@ -194,8 +194,8 @@ StorageImage Device::image2d(TextureFormat frm, const uint32_t w, const uint32_t
   if(w>devProps.tex2d.maxSize || h>devProps.tex2d.maxSize)
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
   uint32_t mipCnt = mips ? mipCount(w,h) : 1;
-  StorageImage t(*this,api.createStorage(dev,w,h,mipCnt,frm),w,h,frm);
-  return t;
+  Texture2d t(*this,api.createStorage(dev,w,h,mipCnt,frm),w,h,frm);
+  return StorageImage(std::move(t));
   }
 
 AccelerationStructure Device::implBlas(const VideoBuffer& vbo, size_t stride, const VideoBuffer& ibo, Detail::IndexClass icls, size_t offset, size_t count) {
@@ -251,7 +251,7 @@ Pixmap Device::readPixels(const StorageImage& t, uint32_t mip) {
     w = (w==1 ? 1 : w/2);
     h = (h==1 ? 1 : h/2);
     }
-  api.readPixels(dev,pm,t.impl,t.format(),w,h,mip,true);
+  api.readPixels(dev,pm,t.tImpl.impl,t.format(),w,h,mip,true);
   return pm;
   }
 
