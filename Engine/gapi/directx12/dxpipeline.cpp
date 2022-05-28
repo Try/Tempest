@@ -31,7 +31,6 @@ DxPipeline::DxPipeline(DxDevice& device,
       topology = D3D_PRIMITIVE_TOPOLOGY_2_CONTROL_POINT_PATCHLIST;
     }
   pushConstantId = ulay.pushConstantId;
-  ssboBarriers   = ulay.hasSSBO;
 
   if(auto vert = findShader(ShaderReflection::Vertex)) {
     declSize = UINT(vert->vdecl.size());
@@ -176,7 +175,6 @@ DxCompPipeline::DxCompPipeline(DxDevice& device, const DxPipelineLay& ulay, DxSh
   sign.get()->AddRef();
 
   pushConstantId = ulay.pushConstantId;
-  ssboBarriers   = ulay.hasSSBO;
 
   D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
   psoDesc.pRootSignature = sign.get();

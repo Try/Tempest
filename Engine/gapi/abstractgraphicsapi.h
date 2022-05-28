@@ -438,6 +438,11 @@ namespace Tempest {
         virtual void set    (size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler2d& smp);
         virtual void ssboBarriers(Detail::ResourceState& res) = 0;
         };
+      struct EmptyDesc : Desc {
+        void set(size_t,AbstractGraphicsApi::Texture*, const Sampler2d&, uint32_t){}
+        void set(size_t,AbstractGraphicsApi::Buffer*,  size_t){}
+        void ssboBarriers(Detail::ResourceState&){}
+        };
       struct BarrierDesc {
         Buffer*        buffer    = nullptr;
         Texture*       texture   = nullptr;

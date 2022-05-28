@@ -98,7 +98,8 @@ static size_t LCM(size_t n1, size_t n2)  {
 VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t alignedSz,
                           MemUsage usage, BufferHeap bufHeap) {
   VBuffer ret;
-  ret.alloc = this;
+  ret.alloc     = this;
+  ret.nonUniqId = 0x1; // TODO: proper generator
 
   VkBufferCreateInfo createInfo={};
   createInfo.sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -180,9 +181,10 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
   throw std::system_error(Tempest::GraphicsErrc::OutOfVideoMemory);
   }
 
-VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip,VkFormat format) {
+VTexture VAllocator::alloc(const Pixmap& pm, uint32_t mip, VkFormat format) {
   VTexture ret;
-  ret.alloc = this;
+  ret.alloc     = this;
+  ret.nonUniqId = 0x0;
 
   VkImageCreateInfo imageInfo = {};
   imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -224,7 +226,8 @@ VTexture VAllocator::alloc(const Pixmap& pm,uint32_t mip,VkFormat format) {
 
 VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mip, TextureFormat frm, bool imgStorage) {
   VTexture ret;
-  ret.alloc = this;
+  ret.alloc     = this;
+  ret.nonUniqId = imgStorage ? 0x2 : 0x0; //TODO: proper id gen
 
   VkImageCreateInfo imageInfo = {};
   imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;

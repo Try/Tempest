@@ -12,12 +12,12 @@ using namespace Tempest::Detail;
 DxTexture::DxTexture() {
   }
 
-DxTexture::DxTexture(ComPtr<ID3D12Resource>&& b, DXGI_FORMAT frm, UINT mips)
-  :impl(std::move(b)), format(frm), mips(mips) {
+DxTexture::DxTexture(ComPtr<ID3D12Resource>&& b, DXGI_FORMAT frm, uint64_t nonUniqId, UINT mips)
+  :impl(std::move(b)), format(frm), nonUniqId(nonUniqId), mips(mips) {
   }
 
 DxTexture::DxTexture(DxTexture&& other)
-  :impl(std::move(other.impl)), format(other.format), mips(other.mips) {
+  :impl(std::move(other.impl)), format(other.format), nonUniqId(other.nonUniqId), mips(other.mips) {
   }
 
 UINT DxTexture::bitCount() const {
@@ -178,7 +178,7 @@ UINT DxTexture::bitCount() const {
   throw DeviceLostException();
   }
 
-UINT Tempest::Detail::DxTexture::bytePerBlockCount() const {
+UINT DxTexture::bytePerBlockCount() const {
   switch(format) {
     case DXGI_FORMAT_UNKNOWN:
     case DXGI_FORMAT_FORCE_UINT:

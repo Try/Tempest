@@ -13,8 +13,8 @@ DxBuffer::DxBuffer(DxDevice* dev, UINT sizeInBytes)
   :dev(dev), sizeInBytes(sizeInBytes) {
   }
 
-DxBuffer::DxBuffer(Tempest::Detail::DxBuffer&& other)
-  :dev(other.dev), page(std::move(other.page)), impl(std::move(other.impl)), sizeInBytes(other.sizeInBytes) {
+DxBuffer::DxBuffer(DxBuffer&& other)
+  :dev(other.dev), page(std::move(other.page)), impl(std::move(other.impl)), nonUniqId(other.nonUniqId), sizeInBytes(other.sizeInBytes) {
   other.sizeInBytes = 0;
   other.page.page   = nullptr;
   }
@@ -28,6 +28,7 @@ DxBuffer& DxBuffer::operator=(DxBuffer&& other) {
   std::swap(dev,         other.dev);
   std::swap(page,        other.page);
   std::swap(impl,        other.impl);
+  std::swap(nonUniqId,   other.nonUniqId);
   std::swap(sizeInBytes, other.sizeInBytes);
   return *this;
   }

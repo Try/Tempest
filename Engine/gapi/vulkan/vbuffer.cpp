@@ -21,9 +21,10 @@ VBuffer::~VBuffer() {
   }
 
 VBuffer& VBuffer::operator=(VBuffer&& other) {
-  std::swap(impl,  other.impl);
-  std::swap(alloc, other.alloc);
-  std::swap(page,  other.page);
+  std::swap(impl,      other.impl);
+  std::swap(nonUniqId, other.nonUniqId);
+  std::swap(alloc,     other.alloc);
+  std::swap(page,      other.page);
   return *this;
   }
 

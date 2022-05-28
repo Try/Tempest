@@ -47,7 +47,6 @@ VPipeline::VPipeline(VDevice& device, const RenderState& st, size_t stride, Topo
       }
 
     pipelineLayout = initLayout(device.device.impl,ulay,pushStageFlags,pushSize);
-    ssboBarriers   = ulay.hasSSBO;
     }
   catch(...) {
     cleanup();
@@ -333,7 +332,6 @@ VCompPipeline::VCompPipeline(VDevice& dev, const VPipelineLay& ulay, VShader& co
   :device(dev.device.impl) {
   VkShaderStageFlags pushStageFlags = 0;
   pipelineLayout = VPipeline::initLayout(device,ulay,pushStageFlags,pushSize);
-  ssboBarriers   = ulay.hasSSBO;
 
   try {
     VkComputePipelineCreateInfo info = {};
@@ -355,7 +353,6 @@ VCompPipeline::VCompPipeline(VCompPipeline&& other) {
   std::swap(device,         other.device);
   std::swap(impl,           other.impl);
   std::swap(pipelineLayout, other.pipelineLayout);
-  std::swap(ssboBarriers,   other.ssboBarriers);
   }
 
 VCompPipeline::~VCompPipeline() {

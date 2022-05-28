@@ -8,7 +8,7 @@
 
 using namespace Tempest;
 
-DescriptorSet::EmptyDesc DescriptorSet::emptyDesc;
+AbstractGraphicsApi::EmptyDesc DescriptorSet::emptyDesc;
 
 DescriptorSet::DescriptorSet(AbstractGraphicsApi::Desc *desc)
   : impl(desc) {

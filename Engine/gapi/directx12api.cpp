@@ -373,7 +373,7 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t,
   uint32_t         row    = bsz.w*uint32_t(bpb);
   const uint32_t   pith   = ((row+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
   Detail::DxBuffer stage  = dx.allocator.alloc(nullptr,bsz.h,bsz.w*bpb,pith,MemUsage::TransferDst,BufferHeap::Readback);
-  ResourceAccess   defLay = storageImg ? ResourceAccess::ComputeRead : ResourceAccess::Sampler;
+  ResourceAccess   defLay = storageImg ? ResourceAccess::UavRead : ResourceAccess::Sampler;
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();

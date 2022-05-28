@@ -59,9 +59,9 @@ static D3D12_RESOURCE_STATES nativeFormat(ResourceAccess f) {
   if((f&ResourceAccess::Uniform)==ResourceAccess::Uniform)
     st |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
 
-  if((f&ResourceAccess::ComputeRead)==ResourceAccess::ComputeRead)
+  if((f&ResourceAccess::UavRead)==ResourceAccess::UavRead)
     st |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-  if((f&ResourceAccess::ComputeWrite)==ResourceAccess::ComputeWrite)
+  if((f&ResourceAccess::UavWrite)==ResourceAccess::UavWrite)
     st |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 
   return D3D12_RESOURCE_STATES(st);
@@ -82,72 +82,6 @@ static ID3D12Resource* toDxResource(const AbstractGraphicsApi::BarrierDesc& b) {
   return s.views[b.swId].get();
   }
 
-struct DxCommandBuffer::Blit : Stage {
-  Blit(DxDevice& dev,
-       DxTexture& src, uint32_t /*srcW*/, uint32_t /*srcH*/, uint32_t srcMip,
-       DxTexture& dst, uint32_t dstW, uint32_t dstH, uint32_t dstMip)
-    :src(src), srcMip(srcMip), dstW(dstW), dstH(dstH), desc(*dev.blitLayout.handler) {
-    // descriptor heap
-    D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-    rtvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-    rtvHeapDesc.NumDescriptors = UINT(1);
-    rtvHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    dxAssert(dev.device->CreateDescriptorHeap(&rtvHeapDesc, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&rtvHeap)));
-
-    rtvHandle = rtvHeap->GetCPUDescriptorHandleForHeapStart();
-
-    D3D12_RENDER_TARGET_VIEW_DESC view = {};
-    view.Format             = dst.format;
-    view.ViewDimension      = D3D12_RTV_DIMENSION_TEXTURE2D;
-    view.Texture2D.MipSlice = UINT(dstMip);
-
-    dev.device->CreateRenderTargetView(dst.impl.get(), &view, rtvHandle);
-    }
-
-  void exec(DxCommandBuffer& cmd) override {
-    auto& impl = *cmd.impl;
-    auto& dev  = cmd.dev;
-
-    const DXGI_FORMAT frm = src.format;
-    impl.OMSetRenderTargets(1, &rtvHandle, TRUE, nullptr);
-
-    D3D12_VIEWPORT vp={};
-    vp.TopLeftX = float(0.f);
-    vp.TopLeftY = float(0.f);
-    vp.Width    = float(dstW);
-    vp.Height   = float(dstH);
-    vp.MinDepth = 0.f;
-    vp.MaxDepth = 1.f;
-    impl.RSSetViewports(1, &vp);
-
-    D3D12_RECT sr={};
-    sr.left   = 0;
-    sr.top    = 0;
-    sr.right  = LONG(dstW);
-    sr.bottom = LONG(dstH);
-    impl.RSSetScissorRects(1, &sr);
-
-    desc.implSet(0,&src,srcMip,Sampler2d::bilinear(),src.format);
-
-    auto& shader = *dev.blit.handler;
-    impl.SetPipelineState(&shader.instance(frm));
-    impl.SetGraphicsRootSignature(shader.sign.get());
-    impl.IASetPrimitiveTopology(shader.topology);
-    cmd.implSetUniforms(desc,false);
-
-    impl.IASetVertexBuffers(0,0,nullptr);
-    impl.DrawInstanced(6,1,0,0);
-    };
-
-  DxTexture&                   src;
-  uint32_t                     srcMip;
-  uint32_t                     dstW;
-  uint32_t                     dstH;
-
-  ComPtr<ID3D12DescriptorHeap> rtvHeap;
-  D3D12_CPU_DESCRIPTOR_HANDLE  rtvHandle;
-  DxDescriptorArray            desc;
-  };
 
 struct DxCommandBuffer::MipMaps : Stage {
   MipMaps(DxDevice& dev, DxTexture& image, uint32_t texW, uint32_t texH, uint32_t mipLevels)
@@ -195,7 +129,7 @@ struct DxCommandBuffer::MipMaps : Stage {
 
     desc.emplace_back(*dev.blitLayout.handler);
     DxDescriptorArray& ubo = this->desc.back();
-    ubo.implSet(0,&img,srcMip,Sampler2d::bilinear(),img.format);
+    ubo.set(0,&img,Sampler2d::bilinear(),srcMip);
     cmd.implSetUniforms(ubo,false);
 
     impl.DrawInstanced(6,1,0,0);
@@ -253,8 +187,6 @@ struct DxCommandBuffer::CopyBuf : Stage {
     }
 
   void exec(DxCommandBuffer& cmd) override {
-    auto& impl = *cmd.impl;
-
     struct PushUbo {
       int32_t mip     = 0;
       int32_t bitCnt  = 8;
@@ -265,24 +197,14 @@ struct DxCommandBuffer::CopyBuf : Stage {
     auto&  prog    = shader(cmd,push.bitCnt,push.compCnt);
     size_t outSize = (width*height*(push.compCnt*push.bitCnt/8) + sizeof(uint32_t)-1)/sizeof(uint32_t);
 
-    desc.implSet(0,&src,0,Sampler2d::nearest(),src.format);
+    desc.set(0,&src,Sampler2d::nearest(),0);
     desc.set(1,&dst,0);
 
-    impl.SetPipelineState(prog.impl.get());
-    impl.SetComputeRootSignature(prog.sign.get());
-    cmd.implSetUniforms(desc,true);
-    impl.SetComputeRoot32BitConstants(UINT(prog.pushConstantId),UINT(sizeof(push)/4),&push,0);
+    cmd.setComputePipeline(prog);
+    cmd.setUniforms(prog,desc);
+    cmd.setBytes(prog,&push,sizeof(push));
     const size_t maxWG = 65535;
-
-    auto& resState = cmd.resState;
-    resState.setLayout(dst,ResourceAccess::ComputeWrite);
-    resState.setLayout(src,ResourceAccess::TransferSrc);
-    resState.flush(cmd);
-
-    impl.Dispatch(UINT(std::min(outSize,maxWG)),UINT((outSize+maxWG-1)%maxWG),1u);
-
-    resState.setLayout(dst,ResourceAccess::ComputeRead);
-    resState.setLayout(src,ResourceAccess::Sampler); // TODO: storage images
+    cmd.dispatch(std::min(outSize,maxWG),(outSize+maxWG-1)%maxWG,1u);
     }
 
   DxCompPipeline& shader(DxCommandBuffer& cmd, int32_t& bitCnt, int32_t& compCnt) {
@@ -352,6 +274,7 @@ struct DxCommandBuffer::CopyBuf : Stage {
   DxDescriptorArray desc;
   };
 
+
 DxCommandBuffer::DxCommandBuffer(DxDevice& d)
   : dev(d) {
   D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -389,7 +312,7 @@ void DxCommandBuffer::reset() {
   clearStage();
   dxAssert(pool->Reset());
   dxAssert(impl->Reset(pool.get(),nullptr));
-  resetDone = true;
+  resetDone   = true;
   }
 
 bool DxCommandBuffer::isRecording() const {
@@ -499,10 +422,31 @@ void DxCommandBuffer::setScissor(const Rect& r) {
   impl->RSSetScissorRects(1, &sr);
   }
 
+void DxCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
+  state = Compute;
+  auto& px = reinterpret_cast<DxCompPipeline&>(p);
+  impl->SetPipelineState(px.impl.get());
+  impl->SetComputeRootSignature(px.sign.get());
+  }
+
+void DxCommandBuffer::setBytes(AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) {
+  auto& px = reinterpret_cast<DxCompPipeline&>(p);
+  impl->SetComputeRoot32BitConstants(UINT(px.pushConstantId),UINT(size/4),data,0);
+  }
+
+void DxCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& /*p*/, AbstractGraphicsApi::Desc& u) {
+  implSetUniforms(u,true);
+  }
+
+void DxCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
+  curUniforms->ssboBarriers(resState);
+  resState.flush(*this);
+  impl->Dispatch(UINT(x),UINT(y),UINT(z));
+  }
+
 void DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p) {
   DxPipeline& px = reinterpret_cast<DxPipeline&>(p);
-  vboStride    = px.stride;
-  ssboBarriers = px.ssboBarriers;
+  vboStride = px.stride;
 
   impl->SetPipelineState(&px.instance(fboLayout));
   impl->SetGraphicsRootSignature(px.sign.get());
@@ -515,27 +459,8 @@ void DxCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, const void* dat
   }
 
 void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/, AbstractGraphicsApi::Desc& u) {
+  u.ssboBarriers(resState);
   implSetUniforms(u,false);
-  }
-
-void DxCommandBuffer::setComputePipeline(Tempest::AbstractGraphicsApi::CompPipeline& p) {
-  if(state!=Compute) {
-    resState.flush(*this);
-    state = Compute;
-    }
-  auto& px = reinterpret_cast<DxCompPipeline&>(p);
-  impl->SetPipelineState(px.impl.get());
-  impl->SetComputeRootSignature(px.sign.get());
-  ssboBarriers = px.ssboBarriers;
-  }
-
-void DxCommandBuffer::setBytes(AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) {
-  auto& px = reinterpret_cast<DxCompPipeline&>(p);
-  impl->SetComputeRoot32BitConstants(UINT(px.pushConstantId),UINT(size/4),data,0);
-  }
-
-void DxCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& /*p*/, AbstractGraphicsApi::Desc& u) {
-  implSetUniforms(u,true);
   }
 
 void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompute) {
@@ -574,7 +499,7 @@ void DxCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size
   for(size_t i=0; i<cnt; ++i) {
     auto& b = desc[i];
     D3D12_RESOURCE_BARRIER& barrier = rb[rbCount];
-    if(b.buffer!=nullptr && b.texture==nullptr && b.swapchain==nullptr) {
+    if(b.buffer==nullptr && b.texture==nullptr && b.swapchain==nullptr) {
       barrier.Type                    = D3D12_RESOURCE_BARRIER_TYPE_UAV;
       barrier.Flags                   = D3D12_RESOURCE_BARRIER_FLAG_NONE;
       barrier.UAV.pResource           = nullptr;
@@ -610,13 +535,13 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer&  dstBuf, size_t offset,
   const UINT pitch     = ((pitchBase+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
 
   if(pitch==pitchBase && (offset%D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)==0) {
-    resState.setLayout(dst,ResourceAccess::TransferDst);
+    resState.onUavUsage(dst.nonUniqId,0);
     resState.setLayout(src,ResourceAccess::TransferSrc);
     resState.flush(*this);
 
     copyNative(dstBuf,offset, srcTex,width,height,mip);
 
-    resState.setLayout(dst,ResourceAccess::ComputeRead);
+    //resState.setLayout(dst,ResourceAccess::UavRead);
     resState.setLayout(src,ResourceAccess::Sampler); // TODO: storage images
     return;
     }
@@ -627,9 +552,6 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer&  dstBuf, size_t offset,
 
 void DxCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t offset, size_t vertexCount,
                            size_t firstInstance, size_t instanceCount) {
-  if(T_UNLIKELY(ssboBarriers)) {
-    curUniforms->ssboBarriers(resState);
-    }
   const DxBuffer& vbo = reinterpret_cast<const DxBuffer&>(ivbo);
   D3D12_VERTEX_BUFFER_VIEW view;
   view.BufferLocation = vbo.impl.get()->GetGPUVirtualAddress();
@@ -642,13 +564,6 @@ void DxCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t offse
 void DxCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_t voffset,
                                   const AbstractGraphicsApi::Buffer& iibo, Detail::IndexClass cls, size_t ioffset, size_t isize,
                                   size_t firstInstance, size_t instanceCount) {
-  if(T_UNLIKELY(ssboBarriers)) {
-    curUniforms->ssboBarriers(resState);
-    }
-  static const DXGI_FORMAT type[]={
-    DXGI_FORMAT_R16_UINT,
-    DXGI_FORMAT_R32_UINT
-    };
   const DxBuffer& vbo = reinterpret_cast<const DxBuffer&>(ivbo);
   const DxBuffer& ibo = reinterpret_cast<const DxBuffer&>(iibo);
 
@@ -661,18 +576,10 @@ void DxCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_
   D3D12_INDEX_BUFFER_VIEW iview;
   iview.BufferLocation = ibo.impl.get()->GetGPUVirtualAddress();
   iview.SizeInBytes    = ibo.sizeInBytes;
-  iview.Format         = type[uint32_t(cls)];
+  iview.Format         = nativeFormat(cls);
   impl->IASetIndexBuffer(&iview);
 
   impl->DrawIndexedInstanced(UINT(isize),UINT(instanceCount),UINT(ioffset),INT(voffset),UINT(firstInstance));
-  }
-
-void DxCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
-  if(T_UNLIKELY(ssboBarriers)) {
-    curUniforms->ssboBarriers(resState);
-    resState.flush(*this);
-    }
-  impl->Dispatch(UINT(x),UINT(y),UINT(z));
   }
 
 void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest, const AbstractGraphicsApi::Buffer& srcBuf, size_t offsetSrc, size_t size) {
@@ -799,14 +706,6 @@ void DxCommandBuffer::pushStage(DxCommandBuffer::Stage* cmd) {
   cmd->next = stageResources;
   stageResources = cmd;
   stageResources->exec(*this);
-  }
-
-void DxCommandBuffer::blitFS(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, uint32_t srcH, uint32_t srcMip,
-                             AbstractGraphicsApi::Texture& dstTex, uint32_t dstW, uint32_t dstH, uint32_t dstMip) {
-  std::unique_ptr<Blit> dx(new Blit(dev,
-                                    reinterpret_cast<DxTexture&>(srcTex),srcW,srcH,srcMip,
-                                    reinterpret_cast<DxTexture&>(dstTex),dstW,dstH,dstMip));
-  pushStage(dx.release());
   }
 
 void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,

@@ -2,6 +2,7 @@
 
 #include "vcommandbuffer.h"
 
+#include <Tempest/DescriptorSet>
 #include <Tempest/Attachment>
 
 #include "vdevice.h"
@@ -87,11 +88,11 @@ static void toStage(VkPipelineStageFlags2KHR& stage, VkAccessFlagBits2KHR& acces
     acc |= VK_ACCESS_UNIFORM_READ_BIT;
     }
 
-  if((rs&ResourceAccess::ComputeRead)==ResourceAccess::ComputeRead) {
+  if((rs&ResourceAccess::UavRead)==ResourceAccess::UavRead) {
     ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
     acc |= VK_ACCESS_SHADER_READ_BIT;
     }
-  if((rs&ResourceAccess::ComputeWrite)==ResourceAccess::ComputeWrite) {
+  if((rs&ResourceAccess::UavWrite)==ResourceAccess::UavWrite) {
     ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
     acc |= VK_ACCESS_SHADER_WRITE_BIT;
     }
@@ -131,9 +132,9 @@ static VkImageLayout toLayout(ResourceAccess rs) {
   if((rs&ResourceAccess::Vertex)==ResourceAccess::Uniform)
     return VK_IMAGE_LAYOUT_GENERAL;
 
-  if((rs&ResourceAccess::ComputeRead)==ResourceAccess::ComputeRead)
+  if((rs&ResourceAccess::UavRead)==ResourceAccess::UavRead)
     return VK_IMAGE_LAYOUT_GENERAL;
-  if((rs&ResourceAccess::ComputeWrite)==ResourceAccess::ComputeWrite)
+  if((rs&ResourceAccess::UavWrite)==ResourceAccess::UavWrite)
     return VK_IMAGE_LAYOUT_GENERAL;
 
   return VK_IMAGE_LAYOUT_UNDEFINED;
@@ -342,7 +343,6 @@ void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
   VPipeline& px = reinterpret_cast<VPipeline&>(p);
   auto&      v  = device.props.hasDynRendering ? px.instance(passDyn) : px.instance(pass);
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v.val);
-  ssboBarriers = px.ssboBarriers;
   }
 
 void VCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) {
@@ -355,6 +355,7 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraph
   VPipeline&        px=reinterpret_cast<VPipeline&>(p);
   VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
   curUniforms = &ux;
+  curUniforms->ssboBarriers(resState);
   vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,
                           px.pipelineLayout,0,
                           1,&ux.desc,
@@ -362,12 +363,15 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraph
   }
 
 void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
-  if(state!=Compute) {
-    state = Compute;
-    }
+  state = Compute;
   VCompPipeline& px = reinterpret_cast<VCompPipeline&>(p);
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,px.impl);
-  ssboBarriers = px.ssboBarriers;
+  }
+
+void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
+  curUniforms->ssboBarriers(resState);
+  resState.flush(*this);
+  vkCmdDispatch(impl,uint32_t(x),uint32_t(y),uint32_t(z));
   }
 
 void VCommandBuffer::setBytes(AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) {
@@ -388,9 +392,6 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractG
 
 void VCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t voffset, size_t vsize,
                           size_t firstInstance, size_t instanceCount) {
-  if(T_UNLIKELY(ssboBarriers)) {
-    curUniforms->ssboBarriers(resState);
-    }
   const VBuffer& vbo=reinterpret_cast<const VBuffer&>(ivbo);
   if(curVbo!=vbo.impl) {
     VkBuffer     buffers[1] = {vbo.impl};
@@ -404,10 +405,6 @@ void VCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t voffse
 void VCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_t voffset,
                                  const AbstractGraphicsApi::Buffer& iibo, Detail::IndexClass cls,
                                  size_t ioffset, size_t isize, size_t firstInstance, size_t instanceCount) {
-  if(T_UNLIKELY(ssboBarriers)) {
-    curUniforms->ssboBarriers(resState);
-    }
-
   const VBuffer& vbo = reinterpret_cast<const VBuffer&>(ivbo);
   const VBuffer& ibo = reinterpret_cast<const VBuffer&>(iibo);
   if(curVbo!=vbo.impl) {
@@ -421,18 +418,7 @@ void VCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_t
   }
 
 void VCommandBuffer::dispatchMesh(size_t firstInstance, size_t instanceCount) {
-  if(T_UNLIKELY(ssboBarriers)) {
-    curUniforms->ssboBarriers(resState);
-    }
   device.vkCmdDrawMeshTasks(impl, uint32_t(instanceCount), uint32_t(firstInstance));
-  }
-
-void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
-  if(T_UNLIKELY(ssboBarriers)) {
-    curUniforms->ssboBarriers(resState);
-    resState.flush(*this);
-    }
-  vkCmdDispatch(impl,uint32_t(x),uint32_t(y),uint32_t(z));
   }
 
 void VCommandBuffer::setViewport(const Tempest::Rect &r) {
@@ -680,13 +666,14 @@ void VCommandBuffer::buildTlas(VkAccelerationStructureKHR dest,
 
 void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dst, size_t offset,
                           AbstractGraphicsApi::Texture& src, uint32_t width, uint32_t height, uint32_t mip) {
-  resState.setLayout(dst,ResourceAccess::TransferDst);
+  auto& nDst = reinterpret_cast<VBuffer&>(dst);
+  resState.onUavUsage(nDst.nonUniqId,0);
   resState.setLayout(src,ResourceAccess::TransferSrc);
   resState.flush(*this);
 
   copyNative(dst,offset, src,width,height,mip);
 
-  resState.setLayout(dst,ResourceAccess::ComputeRead);
+  // resState.setLayout(dst,ResourceAccess::UavRead);
   resState.setLayout(src,ResourceAccess::Sampler); // TODO: storage images
   }
 
@@ -740,7 +727,21 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
   for(size_t i=0; i<cnt; ++i) {
     auto& b  = desc[i];
 
-    if(b.buffer!=nullptr) {
+    if(b.buffer==nullptr && b.texture==nullptr && b.swapchain==nullptr) {
+      VkPipelineStageFlags2KHR srcStageMask  = 0;
+      VkAccessFlags2KHR        srcAccessMask = 0;
+      VkPipelineStageFlags2KHR dstStageMask  = 0;
+      VkAccessFlags2KHR        dstAccessMask = 0;
+      toStage(srcStageMask, srcAccessMask, b.prev,true);
+      toStage(dstStageMask, dstAccessMask, b.next,false);
+
+      memBarrier.sType          = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2_KHR;
+      memBarrier.srcStageMask  |= srcStageMask;
+      memBarrier.srcAccessMask |= srcAccessMask;
+      memBarrier.dstStageMask  |= dstStageMask;
+      memBarrier.dstAccessMask |= dstAccessMask;
+      }
+    else if(b.buffer!=nullptr) {
       auto& bx = bufBarrier[bufCount];
       ++bufCount;
 

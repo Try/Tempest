@@ -1,7 +1,8 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-
+#include "utility/smallarray.h"
+#include "gapi/resourcestate.h"
 #include "dxpipelinelay.h"
 
 namespace Tempest {
@@ -15,8 +16,6 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
     DxDescriptorArray(DxDescriptorArray&& other);
     ~DxDescriptorArray();
 
-    void implSet(size_t id, AbstractGraphicsApi::Texture* tex, uint32_t mipLevel, const Sampler2d& smp, DXGI_FORMAT vfrm);
-
     void set    (size_t id, AbstractGraphicsApi::Texture *tex, const Sampler2d& smp, uint32_t mipLevel) override;
     void set    (size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset) override;
     void setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) override;
@@ -27,11 +26,12 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
     UINT                          heapCnt = 0;
 
   private:
-    struct SSBO {
+    struct UAV {
       AbstractGraphicsApi::Texture* tex = nullptr;
       AbstractGraphicsApi::Buffer*  buf = nullptr;
       };
-    std::unique_ptr<SSBO[]>  ssbo;
+    SmallArray<UAV,16>            uav;
+    ResourceState::Usage          uavUsage;
   };
 
 }}

@@ -90,13 +90,12 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     DxFboLayout                        fboLayout;
 
     ID3D12DescriptorHeap*              currentHeaps[DxPipelineLay::MAX_BINDS]={};
-    DxDescriptorArray*                 curUniforms = nullptr;
+    AbstractGraphicsApi::Desc*         curUniforms  = nullptr;
 
     UINT                               vboStride=0;
 
     ResourceState                      resState;
-    RpState                            state        = NoRecording;
-    bool                               ssboBarriers = false;
+    RpState                            state = NoRecording;
 
     struct Stage {
       virtual ~Stage() = default;
@@ -110,10 +109,6 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void clearStage();
     void pushStage(Stage* cmd);
-
-    void blitFS(AbstractGraphicsApi::Texture& src, uint32_t srcW, uint32_t srcH, uint32_t srcMip,
-                AbstractGraphicsApi::Texture& dst, uint32_t dstW, uint32_t dstH, uint32_t dstMip);
-
     void implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompute);
   };
 

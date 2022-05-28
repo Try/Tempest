@@ -56,60 +56,44 @@ void ResourceState::forceLayout(AbstractGraphicsApi::Texture& img) {
     }
   }
 
-void ResourceState::setLayout(AbstractGraphicsApi::Buffer& buf, ResourceAccess lay) {
-  for(auto& i:bufState)
-    if(i.buf==&buf) {
-      i.next      = lay;
-      i.outdated  = true;
-      return;
-      }
+void ResourceState::onUavUsage(uint64_t read, uint64_t write) {
+  ResourceState::Usage uavUsage;
+  uavUsage.read  = read;
+  uavUsage.write = write;
+  onUavUsage(uavUsage);
+  }
 
-  // read access assumed as default; RaR barrier are equal to NOP
-  if(lay==ResourceAccess::ComputeRead)
-    return;
-
-  BufState s = {};
-  s.buf      = &buf;
-  s.last     = ResourceAccess::ComputeRead;
-  s.next     = lay;
-  s.outdated = true;
-  bufState.push_back(s);
+void ResourceState::onUavUsage(const Usage& u) {
+  if((uavUsage.write & u.read) !=0 ||
+     (uavUsage.write & u.write)!=0 ){
+    // RaW, WaW barrier
+    needUavRBarrier = true;
+    needUavWBarrier = true;
+    uavUsage        = u;
+    }
+  else if((uavUsage.read & u.write)!=0) {
+    // WaR barrier
+    needUavRBarrier = true;
+    uavUsage        = u;
+    }
+  else {
+    uavUsage.read  |= u.read;
+    uavUsage.write |= u.write;
+    }
   }
 
 void ResourceState::joinCompute(AbstractGraphicsApi::CommandBuffer& cmd) {
-  for(auto& i:bufState) {
-    if(i.buf==nullptr)
-      continue;
-    if((i.last & ResourceAccess::ComputeWrite)!=ResourceAccess::ComputeWrite)
-      continue;
-    i.next     = ResourceAccess::ComputeRead;
-    i.outdated = true;
+  if(/*uavUsage.read!=0 ||*/ uavUsage.write!=0) {
+    // NOTE: VS/FS side effects will require WaR barrier
+    needUavRBarrier = (uavUsage.read !=0);
+    needUavWBarrier = (uavUsage.write!=0);
+    uavUsage        = ResourceState::Usage();
     }
   }
 
 void ResourceState::flush(AbstractGraphicsApi::CommandBuffer& cmd) {
   AbstractGraphicsApi::BarrierDesc barrier[MaxBarriers];
   uint8_t                          barrierCnt = 0;
-
-  for(auto& i:bufState) {
-    if(!i.outdated)
-      continue;
-    if(i.last==ResourceAccess::ComputeRead && i.next==ResourceAccess::ComputeRead)
-      continue;
-
-    auto& b = barrier[barrierCnt];
-    b.buffer = i.buf;
-    b.prev   = i.last;
-    b.next   = i.next;
-    ++barrierCnt;
-
-    i.last     = i.next;
-    i.outdated = false;
-    if(barrierCnt==MaxBarriers) {
-      emitBarriers(cmd,barrier,barrierCnt);
-      barrierCnt = 0;
-      }
-    }
 
   for(auto& i:imgState) {
     if(!i.outdated)
@@ -132,20 +116,23 @@ void ResourceState::flush(AbstractGraphicsApi::CommandBuffer& cmd) {
       }
     }
 
+  if(needUavRBarrier || needUavWBarrier) {
+    auto& b = barrier[barrierCnt];
+    b.buffer = nullptr;
+    if(needUavWBarrier)
+      b.prev = ResourceAccess::UavReadWrite; else
+      b.prev = ResourceAccess::UavRead;
+    b.next   = ResourceAccess::UavReadWrite;
+    ++barrierCnt;
+    needUavRBarrier = false;
+    needUavWBarrier = false;
+    }
   emitBarriers(cmd,barrier,barrierCnt);
   }
 
 void ResourceState::finalize(AbstractGraphicsApi::CommandBuffer& cmd) {
-  if(imgState.size()==0 && bufState.size()==0)
+  if(imgState.size()==0 && needUavRBarrier==false && needUavWBarrier==false)
     return; // early-out
-  for(auto& i:bufState) {
-    if(i.buf==nullptr)
-      continue;
-    if((i.last & ResourceAccess::ComputeWrite)!=ResourceAccess::ComputeWrite)
-      continue;
-    i.next     = ResourceAccess::ComputeRead;
-    i.outdated = true;
-    }
   for(auto& i:imgState) {
     if(i.sw==nullptr)
       continue;
@@ -155,8 +142,9 @@ void ResourceState::finalize(AbstractGraphicsApi::CommandBuffer& cmd) {
   flush(cmd);
   imgState.reserve(imgState.size());
   imgState.clear();
-  bufState.reserve(bufState.size());
-  bufState.clear();
+  needUavRBarrier = false;
+  needUavWBarrier = false;
+  uavUsage        = ResourceState::Usage();
   }
 
 ResourceState::ImgState& ResourceState::findImg(AbstractGraphicsApi::Texture* img, AbstractGraphicsApi::Swapchain* sw, uint32_t id,

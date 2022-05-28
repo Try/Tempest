@@ -334,13 +334,6 @@ void DxPipelineLay::adjustSsboBindings() {
   for(auto& i:lay)
     if(i.size==0)
       ;//i.size = VK_WHOLE_SIZE; // TODO?
-  for(auto& i:lay)
-    if(i.cls==ShaderReflection::SsboR  ||
-       i.cls==ShaderReflection::SsboRW ||
-       i.cls==ShaderReflection::ImgR   ||
-       i.cls==ShaderReflection::ImgRW ) {
-      hasSSBO = true;
-      }
   }
 
 #endif

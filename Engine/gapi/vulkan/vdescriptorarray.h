@@ -1,10 +1,11 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
+#include "utility/smallarray.h"
 #include "gapi/resourcestate.h"
-#include "vulkan_sdk.h"
-
 #include "vpipelinelay.h"
+
+#include "vulkan_sdk.h"
 
 namespace Tempest {
 namespace Detail {
@@ -35,11 +36,12 @@ class VDescriptorArray : public AbstractGraphicsApi::Desc {
     VkDescriptorSetLayout     dedicatedLayout = VK_NULL_HANDLE;
     uint32_t                  runtimeArraySz  = 0; // TODO: per bind
 
-    struct SSBO {
+    struct UAV {
       AbstractGraphicsApi::Texture* tex = nullptr;
       AbstractGraphicsApi::Buffer*  buf = nullptr;
       };
-    std::unique_ptr<SSBO[]>   ssbo;
+    SmallArray<UAV,16>        uav;
+    ResourceState::Usage      uavUsage;
 
     VkDescriptorPool          allocPool(const VPipelineLay& lay, size_t size);
     VkDescriptorSet           allocDescSet(VkDescriptorPool pool, VkDescriptorSetLayout lay);

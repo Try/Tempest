@@ -35,7 +35,6 @@ class VPipelineLay : public AbstractGraphicsApi::PipelineLay {
     VkDescriptorSetLayout         impl = VK_NULL_HANDLE;
     std::vector<Binding>          lay;
     ShaderReflection::PushBlock   pb;
-    bool                          hasSSBO = false;
     bool                          runtimeSized = false;
 
   private:

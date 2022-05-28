@@ -12,6 +12,7 @@ VTexture::VTexture(VTexture&& other) {
   std::swap(impl,           other.impl);
   std::swap(imgView,        other.imgView);
   std::swap(format,         other.format);
+  std::swap(nonUniqId,      other.nonUniqId);
   std::swap(mipCnt,         other.mipCnt);
   std::swap(alloc,          other.alloc);
   std::swap(page,           other.page);

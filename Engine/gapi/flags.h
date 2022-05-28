@@ -46,9 +46,9 @@ enum ResourceAccess : uint32_t {
   Index            = 1 << 7,
   Vertex           = 1 << 8,
   Uniform          = 1 << 9,
-  ComputeRead      = 1 << 10,
-  ComputeWrite     = 1 << 11,
-  ComputeReadWrite = (ComputeRead | ComputeWrite),
+  UavRead          = 1 << 10,
+  UavWrite         = 1 << 11,
+  UavReadWrite     = (UavRead | UavWrite),
   };
 
 inline ResourceAccess operator | (ResourceAccess a,const ResourceAccess& b) {

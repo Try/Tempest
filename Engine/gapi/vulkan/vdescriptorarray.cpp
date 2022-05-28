@@ -29,9 +29,7 @@ static VkDescriptorType toWriteType(ShaderReflection::Class c) {
   }
 
 VDescriptorArray::VDescriptorArray(VkDevice device, VPipelineLay& vlay)
-  :device(device),lay(&vlay) {
-  if(lay.handler->hasSSBO)
-    ssbo.reset(new SSBO[vlay.lay.size()]);
+  :device(device), lay(&vlay), uav(vlay.lay.size()) {
 
   if(!vlay.runtimeSized) {
     std::lock_guard<Detail::SpinLock> guard(vlay.sync);
@@ -153,16 +151,16 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* t, const Sam
 
   vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 
-  if(lay.handler->hasSSBO)
-    ssbo[id].tex = t;
+  uav[id].tex     = t;
+  uavUsage.durty |= (tex->nonUniqId!=0);
   }
 
-void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf, size_t offset) {
-  VBuffer* memory = reinterpret_cast<VBuffer*>(buf);
-  auto&    slot   = lay.handler->lay[id];
+void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer* b, size_t offset) {
+  VBuffer* buf  = reinterpret_cast<VBuffer*>(b);
+  auto&    slot = lay.handler->lay[id];
 
   VkDescriptorBufferInfo bufferInfo = {};
-  bufferInfo.buffer = memory->impl;
+  bufferInfo.buffer = buf->impl;
   bufferInfo.offset = offset;
   bufferInfo.range  = slot.size;
 
@@ -177,8 +175,8 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer *buf,
 
   vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 
-  if(lay.handler->hasSSBO)
-    ssbo[id].buf = buf;
+  uav[id].buf     = b;
+  uavUsage.durty |= (buf->nonUniqId!=0);
   }
 
 void VDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) {
@@ -198,10 +196,9 @@ void VDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStruc
   descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
   descriptorWrite.descriptorCount = 1;
 
-  //if(lay.handler->hasSSBO)
-  //  ssbo[id].buf = buf;
-
   vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+
+  // uavUsage.durty = true;
   }
 
 void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t cnt, const Sampler2d& smp) {
@@ -233,29 +230,22 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t c
   }
 
 void VDescriptorArray::ssboBarriers(ResourceState& res) {
-  for(size_t i=0; i<lay.handler->lay.size(); ++i) {
-    switch(lay.handler->lay[i].cls) {
-      case ShaderReflection::Ubo:
-      case ShaderReflection::Texture:
-      case ShaderReflection::Push:
-      case ShaderReflection::Count:
-        break;
-      case ShaderReflection::SsboR:
-        res.setLayout(*ssbo[i].buf,ResourceAccess::ComputeRead);
-        break;
-      case ShaderReflection::SsboRW:
-        res.setLayout(*ssbo[i].buf,ResourceAccess::ComputeRead | ResourceAccess::ComputeWrite);
-        break;
-      case ShaderReflection::ImgR:
-        //res.setLayout(*ssbo[i].tex,ResourceAccess::ComputeRead);
-        break;
-      case ShaderReflection::ImgRW:
-        //res.setLayout(*ssbo[i].tex,ResourceAccess::ComputeRead | ResourceAccess::ComputeWrite);
-        break;
-      case ShaderReflection::Tlas:
-        break;
+  auto& lay = this->lay.handler->lay;
+  if(T_UNLIKELY(uavUsage.durty)) {
+    for(size_t i=0; i<lay.size(); ++i) {
+      uint64_t id = 0;
+      if(uav[i].buf!=nullptr)
+        id = reinterpret_cast<VBuffer*> (uav[i].buf)->nonUniqId;
+      if(uav[i].tex!=nullptr)
+        id = reinterpret_cast<VTexture*>(uav[i].tex)->nonUniqId;
+
+      uavUsage.read |= id;
+      if(lay[i].cls==ShaderReflection::ImgRW || lay[i].cls==ShaderReflection::SsboRW)
+        uavUsage.write |= id;
       }
+    uavUsage.durty = false;
     }
+  res.onUavUsage(uavUsage);
   }
 
 void VDescriptorArray::addPoolSize(VkDescriptorPoolSize *p, size_t &sz, uint32_t cnt, VkDescriptorType elt) {

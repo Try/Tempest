@@ -112,9 +112,8 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     PipelineInfo                            passDyn = {};
 
     RpState                                 state        = NoRecording;
-    VDescriptorArray*                       curUniforms  = nullptr;
+    AbstractGraphicsApi::Desc*              curUniforms  = nullptr;
     VkBuffer                                curVbo       = VK_NULL_HANDLE;
-    bool                                    ssboBarriers = false;
   };
 
 }}

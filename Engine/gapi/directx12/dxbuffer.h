@@ -28,6 +28,7 @@ class DxBuffer : public AbstractGraphicsApi::Buffer {
     DxAllocator::Allocation page={};
 
     ComPtr<ID3D12Resource>  impl;
+    uint64_t                nonUniqId = 0;
     UINT                    sizeInBytes=0;
 
   protected:
