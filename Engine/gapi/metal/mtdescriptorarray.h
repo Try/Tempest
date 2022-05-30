@@ -1,6 +1,8 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
+#include <Metal/Metal.hpp>
+#include "utility/smallarray.h"
 
 namespace Tempest {
 namespace Detail {
@@ -18,13 +20,13 @@ class MtDescriptorArray : public AbstractGraphicsApi::Desc {
     void ssboBarriers(Detail::ResourceState& res) override;
 
     struct Desc {
-      id       val;
-      id       sampler;
-      size_t   offset = 0;
+      void*              val     = nullptr;
+      MTL::SamplerState* sampler = nullptr;
+      size_t             offset  = 0;
       };
 
     MtDevice&                        dev;
-    std::unique_ptr<Desc[]>          desc;
+    SmallArray<Desc,16>              desc;
     DSharedPtr<const MtPipelineLay*> lay;
   };
 

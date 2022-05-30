@@ -1,8 +1,8 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include <Metal/MTLTexture.h>
-
+#include <Metal/Metal.hpp>
+#include "nsptr.h"
 #include "utility/spinlock.h"
 
 namespace Tempest {
@@ -21,25 +21,25 @@ class MtTexture : public Tempest::AbstractGraphicsApi::Texture {
     void     readPixels(Pixmap& out, TextureFormat frm,
                         const uint32_t w, const uint32_t h, uint32_t mip);
 
-    uint32_t bitCount() const;
+    uint32_t bitCount();
 
-    id<MTLTexture>  view(ComponentMapping m, uint32_t mipLevel);
+    MTL::Texture&       view(ComponentMapping m, uint32_t mipLevel);
 
-    MtDevice&       dev;
-    id<MTLTexture>  impl;
-    const uint32_t  mipCnt = 0;
+    MtDevice&           dev;
+    NsPtr<MTL::Texture> impl;
+    const uint32_t      mipCnt = 0;
 
   private:
-    void createCompressedTexture(id<MTLTexture> val, const Pixmap& p, TextureFormat frm, uint32_t mipCnt);
-    void createRegularTexture(id<MTLTexture> val, const Pixmap& p);
+    void createCompressedTexture(MTL::Texture& val, const Pixmap& p, TextureFormat frm, uint32_t mipCnt);
+    void createRegularTexture(MTL::Texture& val, const Pixmap& p);
 
-    id<MTLTexture> alloc(TextureFormat frm, const uint32_t w, const uint32_t h, const uint32 mips,
-                         MTLStorageMode smode, MTLTextureUsage umode);
+    NsPtr<MTL::Texture>  alloc(TextureFormat frm, const uint32_t w, const uint32_t h, const uint32_t mips,
+                               MTL::StorageMode smode, MTL::TextureUsage umode);
 
     struct View {
-      ComponentMapping m;
-      uint32_t         mip = uint32_t(0);
-      id<MTLTexture>   v;
+      ComponentMapping    m;
+      uint32_t            mip = uint32_t(0);
+      NsPtr<MTL::Texture> v;
       };
     Detail::SpinLock  syncViews;
     std::vector<View> extViews;

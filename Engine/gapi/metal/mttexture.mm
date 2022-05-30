@@ -1,104 +1,73 @@
 #include "mttexture.h"
 
+#include <Tempest/AbstractGraphicsApi>
 #include <Tempest/Pixmap>
 #include <Tempest/Except>
+
 #include "mtdevice.h"
-
-#include <Tempest/AbstractGraphicsApi>
-
-#import <Metal/MTLDevice.h>
-#import <Metal/MTLCommandQueue.h>
-#import <Metal/MTLCommandBuffer.h>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-static MTLTextureSwizzle swizzle(ComponentSwizzle cs, MTLTextureSwizzle def){
+static MTL::TextureSwizzle swizzle(ComponentSwizzle cs, MTL::TextureSwizzle def){
   switch(cs) {
     case ComponentSwizzle::Identity:
       return def;
     case ComponentSwizzle::R:
-      return MTLTextureSwizzleRed;
+      return MTL::TextureSwizzleRed;
     case ComponentSwizzle::G:
-      return MTLTextureSwizzleGreen;
+      return MTL::TextureSwizzleGreen;
     case ComponentSwizzle::B:
-      return MTLTextureSwizzleBlue;
+      return MTL::TextureSwizzleBlue;
     case ComponentSwizzle::A:
-      return MTLTextureSwizzleAlpha;
+      return MTL::TextureSwizzleAlpha;
     }
   return def;
   }
 
 MtTexture::MtTexture(MtDevice& d, const uint32_t w, const uint32_t h, uint32_t mipCnt, TextureFormat frm, bool storageTex)
   :dev(d), mipCnt(mipCnt) {
-  MTLTextureUsage usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
+  MTL::TextureUsage usage = MTL::TextureUsageRenderTarget | MTL::TextureUsageShaderRead;
   if(storageTex)
-    usage |= MTLTextureUsageShaderWrite;
-  impl = alloc(frm,w,h,mipCnt,MTLStorageModePrivate,usage);
+    usage |= MTL::TextureUsageShaderWrite;
+  impl = alloc(frm,w,h,mipCnt,MTL::StorageModePrivate,usage);
   }
 
 MtTexture::MtTexture(MtDevice& dev, const Pixmap& pm, uint32_t mipCnt, TextureFormat frm)
   :dev(dev), mipCnt(mipCnt) {
   const uint32_t smip  = (isCompressedFormat(frm) ? mipCnt : 1);
 #ifdef __IOS__
-  const MTLStorageMode smode = MTLStorageModeShared;
+  const MTL::StorageMode smode = MTL::StorageModeShared;
 #else
-  const MTLStorageMode smode = MTLStorageModeManaged;
+  const MTL::StorageMode smode = MTL::StorageModeManaged;
 #endif
-  id<MTLTexture> stage = alloc(frm,pm.w(),pm.h(),smip,smode,MTLTextureUsageShaderRead);
-
-  try{
-    impl = alloc(frm,pm.w(),pm.h(),mipCnt,MTLStorageModePrivate,MTLTextureUsageShaderRead);
-    }
-  catch(...){
-    [stage release];
-    throw std::system_error(GraphicsErrc::OutOfVideoMemory);
-    }
+  NsPtr<MTL::Texture> stage = alloc(frm,pm.w(),pm.h(),smip,smode,MTL::TextureUsageShaderRead);
+  impl = alloc(frm,pm.w(),pm.h(),mipCnt,MTL::StorageModePrivate,MTL::TextureUsageShaderRead);
 
   if(isCompressedFormat(frm))
-    createCompressedTexture(stage,pm,frm,mipCnt); else
-    createRegularTexture(stage,pm);
+    createCompressedTexture(*stage,pm,frm,mipCnt); else
+    createRegularTexture(*stage,pm);
 
-  @autoreleasepool {
-    id<MTLCommandBuffer>      cmd = [dev.queue commandBuffer];
-    id<MTLBlitCommandEncoder> enc = [cmd blitCommandEncoder];
-    if(isCompressedFormat(frm)) {
-      [enc copyFromTexture:stage
-                           sourceSlice:0
-                           sourceLevel:0
-                           toTexture:impl
-                           destinationSlice:0
-                           destinationLevel:0
-                           sliceCount:1
-                           levelCount:mipCnt];
-      } else {
-      [enc copyFromTexture:stage
-                           sourceSlice:0
-                           sourceLevel:0
-                           toTexture:impl
-                           destinationSlice:0
-                           destinationLevel:0
-                           sliceCount:1
-                           levelCount:1];
-      if(mipCnt>1)
-        [enc generateMipmapsForTexture:impl];
-      }
-
-    [enc endEncoding];
-    [cmd commit];
-    // TODO: implement proper upload engine
-    [cmd waitUntilCompleted];
+  auto pool = NsPtr<NS::AutoreleasePool>::init();
+  auto cmd  = dev.queue->commandBuffer();
+  auto enc  = cmd->blitCommandEncoder();
+  if(isCompressedFormat(frm)) {
+    enc->copyFromTexture(stage.get(),0,0, impl.get(),0,0, 1,mipCnt);
+    } else {
+    enc->copyFromTexture(stage.get(),0,0, impl.get(),0,0, 1,1);
+    if(mipCnt>1)
+      enc->generateMipmaps(impl.get());
     }
-  [stage release];
+  enc->endEncoding();
+  cmd->commit();
+  // TODO: implement proper upload engine
+  cmd->waitUntilCompleted();
   }
 
 MtTexture::~MtTexture() {
-  [impl release];
-  for(auto& i:extViews)
-    [i.v release];
   }
 
-void MtTexture::createCompressedTexture(id<MTLTexture> val, const Pixmap& p, TextureFormat frm, uint32_t mipCnt) {
+void MtTexture::createCompressedTexture(MTL::Texture& val, const Pixmap& p, TextureFormat frm, uint32_t mipCnt) {
   uint32_t       blockSize = (frm==TextureFormat::DXT1) ? 8 : 16;
   const uint8_t* pdata     = reinterpret_cast<const uint8_t*>(p.data());
 
@@ -108,15 +77,7 @@ void MtTexture::createCompressedTexture(id<MTLTexture> val, const Pixmap& p, Tex
     uint32_t hBlk  = (h+3)/4;
     uint32_t pitch = wBlk*blockSize;
 
-    MTLRegion region = {
-      { 0, 0, 0 },
-      { w, h, 1 }
-      };
-    [val replaceRegion:region
-           mipmapLevel:i
-           withBytes  :pdata
-           bytesPerRow:pitch
-          ];
+    val.replaceRegion(MTL::Region(0,0,w,h),i,pdata,pitch);
 
     w = std::max<uint32_t>(1,w/2);
     h = std::max<uint32_t>(1,h/2);
@@ -124,40 +85,35 @@ void MtTexture::createCompressedTexture(id<MTLTexture> val, const Pixmap& p, Tex
     }
   }
 
-void MtTexture::createRegularTexture(id<MTLTexture> val, const Pixmap& p) {
-  MTLRegion region = {
-    { 0, 0, 0 },
-    {p.w(), p.h(), 1}
-    };
-  [val replaceRegion:region
-         mipmapLevel:0
-           withBytes:p.data()
-         bytesPerRow:p.w()*Pixmap::bppForFormat(p.format())
-        ];
+void MtTexture::createRegularTexture(MTL::Texture& val, const Pixmap& p) {
+  val.replaceRegion(MTL::Region(0,0,p.w(),p.h()), 0, p.data(), p.w()*Pixmap::bppForFormat(p.format()));
   }
 
-id<MTLTexture> MtTexture::alloc(TextureFormat frm, const uint32_t w, const uint32_t h, const uint32 mips,
-                                MTLStorageMode smode, MTLTextureUsage umode) {
-  MTLTextureDescriptor* desc = [MTLTextureDescriptor new];
-  if(desc==nil)
+NsPtr<MTL::Texture> MtTexture::alloc(TextureFormat frm, const uint32_t w, const uint32_t h, const uint32_t mips,
+                                     MTL::StorageMode smode, MTL::TextureUsage umode) {
+  auto desc = NsPtr<MTL::TextureDescriptor>::init();
+  if(desc==nullptr)
     throw std::system_error(GraphicsErrc::OutOfHostMemory);
 
-  desc.textureType      = MTLTextureType2D;
-  desc.pixelFormat      = nativeFormat(frm);
-  desc.width            = w;
-  desc.height           = h;
-  desc.mipmapLevelCount = mips;
+  desc->setTextureType(MTL::TextureType2D);
+  desc->setPixelFormat(nativeFormat(frm));
+  desc->setWidth(w);
+  desc->setHeight(h);
+  desc->setMipmapLevelCount(mips);
+  desc->setCpuCacheMode(MTL::CPUCacheModeWriteCombined);
+  desc->setStorageMode(smode);
+  desc->setUsage(umode);
+  desc->setAllowGPUOptimizedContents(true);
 
-  desc.cpuCacheMode     = MTLCPUCacheModeWriteCombined;
-  desc.storageMode      = smode;
-  desc.usage            = umode;
+  MTL::TextureSwizzleChannels sw;
+  sw.red   = MTL::TextureSwizzleRed;
+  sw.green = MTL::TextureSwizzleGreen;
+  sw.blue  = MTL::TextureSwizzleBlue;
+  sw.alpha = MTL::TextureSwizzleAlpha;
+  desc->setSwizzle(sw);
 
-  desc.swizzle = MTLTextureSwizzleChannelsDefault;
-  desc.allowGPUOptimizedContents = YES;
-
-  auto ret = [dev.impl newTextureWithDescriptor:desc];
-  [desc release];
-  if(ret==nil)
+  auto ret = NsPtr<MTL::Texture>(dev.impl->newTexture(desc.get()));
+  if(ret==nullptr)
     throw std::system_error(GraphicsErrc::OutOfVideoMemory);
   return ret;
   }
@@ -173,274 +129,259 @@ void MtTexture::readPixels(Pixmap& out, TextureFormat frm, const uint32_t w, con
     throw std::runtime_error("not implemented");
   out = Pixmap(w,h,pfrm);
 
-  MTLStorageMode opt = MTLStorageModeManaged;
+  MTL::StorageMode opt = MTL::StorageModeManaged;
 #ifdef __IOS__
-  opt = MTLStorageModeShared;
+  opt = MTL::StorageModeShared;
 #else
-  opt = MTLStorageModeManaged;
+  opt = MTL::StorageModeManaged;
 #endif
 
-  id<MTLTexture> stage = alloc(frm,w,h,1,opt,MTLTextureUsageShaderRead);
-  @autoreleasepool {
-    id<MTLCommandBuffer>      cmd = [dev.queue commandBuffer];
-    id<MTLBlitCommandEncoder> enc = [cmd blitCommandEncoder];
-    [enc copyFromTexture:impl
-                         sourceSlice:0
-                         sourceLevel:mip
-                         toTexture:stage
-                         destinationSlice:0
-                         destinationLevel:0
-                         sliceCount:1
-                         levelCount:1];
-    if(opt==MTLStorageModeManaged)
-      [enc synchronizeResource:stage];
-    [enc endEncoding];
-    [cmd commit];
-    [cmd waitUntilCompleted];
+  NsPtr<MTL::Texture> stage = alloc(frm,w,h,1,opt,MTL::TextureUsageShaderRead);
+  auto pool = NsPtr<NS::AutoreleasePool>::init();
+  auto cmd  = dev.queue->commandBuffer();
+  auto enc  = cmd->blitCommandEncoder();
+  enc->copyFromTexture(impl.get(),0,mip,stage.get(),0,0,1,1);
+  if(opt==MTL::StorageModeManaged)
+    enc->synchronizeResource(stage.get());
+  enc->endEncoding();
+  cmd->commit();
+  cmd->waitUntilCompleted();
+
+  stage->getBytes(out.data(), w*bpp,MTL::Region(0,0,w,h),0);
   }
 
-  [stage getBytes: out.data()
-    bytesPerRow: w*bpp
-    fromRegion : MTLRegionMake2D(0,0,w,h)
-    mipmapLevel: 0
-    ];
-  [stage release];
-  }
-
-uint32_t MtTexture::bitCount() const {
-  MTLPixelFormat frm = impl.pixelFormat;
+uint32_t MtTexture::bitCount() {
+  MTL::PixelFormat frm = impl->pixelFormat();
   switch(frm) {
-    case MTLPixelFormatInvalid:
+    case MTL::PixelFormatInvalid:
       return 0;
     /* Normal 8 bit formats */
-    case MTLPixelFormatA8Unorm:
-    case MTLPixelFormatR8Unorm:
-    case MTLPixelFormatR8Unorm_sRGB:
-    case MTLPixelFormatR8Snorm:
-    case MTLPixelFormatR8Uint:
-    case MTLPixelFormatR8Sint:
+    case MTL::PixelFormatA8Unorm:
+    case MTL::PixelFormatR8Unorm:
+    case MTL::PixelFormatR8Unorm_sRGB:
+    case MTL::PixelFormatR8Snorm:
+    case MTL::PixelFormatR8Uint:
+    case MTL::PixelFormatR8Sint:
       return 8;
     /* Normal 16 bit formats */
-    case MTLPixelFormatR16Unorm:
-    case MTLPixelFormatR16Snorm:
-    case MTLPixelFormatR16Uint:
-    case MTLPixelFormatR16Sint:
-    case MTLPixelFormatR16Float:
-    case MTLPixelFormatRG8Unorm:
-    case MTLPixelFormatRG8Unorm_sRGB:
-    case MTLPixelFormatRG8Snorm:
-    case MTLPixelFormatRG8Uint:
-    case MTLPixelFormatRG8Sint:
+    case MTL::PixelFormatR16Unorm:
+    case MTL::PixelFormatR16Snorm:
+    case MTL::PixelFormatR16Uint:
+    case MTL::PixelFormatR16Sint:
+    case MTL::PixelFormatR16Float:
+    case MTL::PixelFormatRG8Unorm:
+    case MTL::PixelFormatRG8Unorm_sRGB:
+    case MTL::PixelFormatRG8Snorm:
+    case MTL::PixelFormatRG8Uint:
+    case MTL::PixelFormatRG8Sint:
       return 16;
     /* Packed 16 bit formats */
-    case MTLPixelFormatB5G6R5Unorm:
-    case MTLPixelFormatA1BGR5Unorm:
-    case MTLPixelFormatABGR4Unorm:
-    case MTLPixelFormatBGR5A1Unorm:
+    case MTL::PixelFormatB5G6R5Unorm:
+    case MTL::PixelFormatA1BGR5Unorm:
+    case MTL::PixelFormatABGR4Unorm:
+    case MTL::PixelFormatBGR5A1Unorm:
       return 16;
     /* Normal 32 bit formats */
-    case MTLPixelFormatR32Uint:
-    case MTLPixelFormatR32Sint:
-    case MTLPixelFormatR32Float:
-    case MTLPixelFormatRG16Unorm:
-    case MTLPixelFormatRG16Snorm:
-    case MTLPixelFormatRG16Uint:
-    case MTLPixelFormatRG16Sint:
-    case MTLPixelFormatRG16Float:
-    case MTLPixelFormatRGBA8Unorm:
-    case MTLPixelFormatRGBA8Unorm_sRGB:
-    case MTLPixelFormatRGBA8Snorm:
-    case MTLPixelFormatRGBA8Uint:
-    case MTLPixelFormatRGBA8Sint:
-    case MTLPixelFormatBGRA8Unorm:
-    case MTLPixelFormatBGRA8Unorm_sRGB:
+    case MTL::PixelFormatR32Uint:
+    case MTL::PixelFormatR32Sint:
+    case MTL::PixelFormatR32Float:
+    case MTL::PixelFormatRG16Unorm:
+    case MTL::PixelFormatRG16Snorm:
+    case MTL::PixelFormatRG16Uint:
+    case MTL::PixelFormatRG16Sint:
+    case MTL::PixelFormatRG16Float:
+    case MTL::PixelFormatRGBA8Unorm:
+    case MTL::PixelFormatRGBA8Unorm_sRGB:
+    case MTL::PixelFormatRGBA8Snorm:
+    case MTL::PixelFormatRGBA8Uint:
+    case MTL::PixelFormatRGBA8Sint:
+    case MTL::PixelFormatBGRA8Unorm:
+    case MTL::PixelFormatBGRA8Unorm_sRGB:
       return 32;
     /* Packed 32 bit formats */
-    case MTLPixelFormatRGB10A2Unorm:
-    case MTLPixelFormatRGB10A2Uint:
-    case MTLPixelFormatRG11B10Float:
-    case MTLPixelFormatRGB9E5Float:
-    case MTLPixelFormatBGR10A2Unorm:
-    case MTLPixelFormatBGR10_XR:
-    case MTLPixelFormatBGR10_XR_sRGB:
+    case MTL::PixelFormatRGB10A2Unorm:
+    case MTL::PixelFormatRGB10A2Uint:
+    case MTL::PixelFormatRG11B10Float:
+    case MTL::PixelFormatRGB9E5Float:
+    case MTL::PixelFormatBGR10A2Unorm:
+    case MTL::PixelFormatBGR10_XR:
+    case MTL::PixelFormatBGR10_XR_sRGB:
       return 32;
     /* Normal 64 bit formats */
-    case MTLPixelFormatRG32Uint:
-    case MTLPixelFormatRG32Sint:
-    case MTLPixelFormatRG32Float:
-    case MTLPixelFormatRGBA16Unorm:
-    case MTLPixelFormatRGBA16Snorm:
-    case MTLPixelFormatRGBA16Uint:
-    case MTLPixelFormatRGBA16Sint:
-    case MTLPixelFormatRGBA16Float:
+    case MTL::PixelFormatRG32Uint:
+    case MTL::PixelFormatRG32Sint:
+    case MTL::PixelFormatRG32Float:
+    case MTL::PixelFormatRGBA16Unorm:
+    case MTL::PixelFormatRGBA16Snorm:
+    case MTL::PixelFormatRGBA16Uint:
+    case MTL::PixelFormatRGBA16Sint:
+    case MTL::PixelFormatRGBA16Float:
       return 64;
-    case MTLPixelFormatBGRA10_XR:
-    case MTLPixelFormatBGRA10_XR_sRGB:
+    case MTL::PixelFormatBGRA10_XR:
+    case MTL::PixelFormatBGRA10_XR_sRGB:
       return 64;
     /* Normal 128 bit formats */
-    case MTLPixelFormatRGBA32Uint:
-    case MTLPixelFormatRGBA32Sint:
-    case MTLPixelFormatRGBA32Float:
+    case MTL::PixelFormatRGBA32Uint:
+    case MTL::PixelFormatRGBA32Sint:
+    case MTL::PixelFormatRGBA32Float:
       return 128;
 
     /* Compressed formats. */
     /* S3TC/DXT */
-    case MTLPixelFormatBC1_RGBA:
-    case MTLPixelFormatBC1_RGBA_sRGB:
+    case MTL::PixelFormatBC1_RGBA:
+    case MTL::PixelFormatBC1_RGBA_sRGB:
       return 4;
-    case MTLPixelFormatBC2_RGBA:
-    case MTLPixelFormatBC2_RGBA_sRGB:
-    case MTLPixelFormatBC3_RGBA:
-    case MTLPixelFormatBC3_RGBA_sRGB:
+    case MTL::PixelFormatBC2_RGBA:
+    case MTL::PixelFormatBC2_RGBA_sRGB:
+    case MTL::PixelFormatBC3_RGBA:
+    case MTL::PixelFormatBC3_RGBA_sRGB:
       return 8;
     /* RGTC */
-    case MTLPixelFormatBC4_RUnorm:
-    case MTLPixelFormatBC4_RSnorm:
-    case MTLPixelFormatBC5_RGUnorm:
-    case MTLPixelFormatBC5_RGSnorm:
+    case MTL::PixelFormatBC4_RUnorm:
+    case MTL::PixelFormatBC4_RSnorm:
+    case MTL::PixelFormatBC5_RGUnorm:
+    case MTL::PixelFormatBC5_RGSnorm:
       return 8;
 
     /* BPTC */
-    case MTLPixelFormatBC6H_RGBFloat:
-    case MTLPixelFormatBC6H_RGBUfloat:
-    case MTLPixelFormatBC7_RGBAUnorm:
-    case MTLPixelFormatBC7_RGBAUnorm_sRGB:
+    case MTL::PixelFormatBC6H_RGBFloat:
+    case MTL::PixelFormatBC6H_RGBUfloat:
+    case MTL::PixelFormatBC7_RGBAUnorm:
+    case MTL::PixelFormatBC7_RGBAUnorm_sRGB:
       return 8;
 
     /* PVRTC */
-    case MTLPixelFormatPVRTC_RGB_2BPP:
-    case MTLPixelFormatPVRTC_RGB_2BPP_sRGB:
-    case MTLPixelFormatPVRTC_RGB_4BPP:
-    case MTLPixelFormatPVRTC_RGB_4BPP_sRGB:
-    case MTLPixelFormatPVRTC_RGBA_2BPP:
-    case MTLPixelFormatPVRTC_RGBA_2BPP_sRGB:
-    case MTLPixelFormatPVRTC_RGBA_4BPP:
-    case MTLPixelFormatPVRTC_RGBA_4BPP_sRGB:
+    case MTL::PixelFormatPVRTC_RGB_2BPP:
+    case MTL::PixelFormatPVRTC_RGB_2BPP_sRGB:
+    case MTL::PixelFormatPVRTC_RGB_4BPP:
+    case MTL::PixelFormatPVRTC_RGB_4BPP_sRGB:
+    case MTL::PixelFormatPVRTC_RGBA_2BPP:
+    case MTL::PixelFormatPVRTC_RGBA_2BPP_sRGB:
+    case MTL::PixelFormatPVRTC_RGBA_4BPP:
+    case MTL::PixelFormatPVRTC_RGBA_4BPP_sRGB:
       return 0;
     /* ETC2 */
-    case MTLPixelFormatEAC_R11Unorm:
-    case MTLPixelFormatEAC_R11Snorm:
-    case MTLPixelFormatEAC_RG11Unorm:
-    case MTLPixelFormatEAC_RG11Snorm:
-    case MTLPixelFormatEAC_RGBA8:
-    case MTLPixelFormatEAC_RGBA8_sRGB:
+    case MTL::PixelFormatEAC_R11Unorm:
+    case MTL::PixelFormatEAC_R11Snorm:
+    case MTL::PixelFormatEAC_RG11Unorm:
+    case MTL::PixelFormatEAC_RG11Snorm:
+    case MTL::PixelFormatEAC_RGBA8:
+    case MTL::PixelFormatEAC_RGBA8_sRGB:
       return 0;
-    case MTLPixelFormatETC2_RGB8:
-    case MTLPixelFormatETC2_RGB8_sRGB:
-    case MTLPixelFormatETC2_RGB8A1:
-    case MTLPixelFormatETC2_RGB8A1_sRGB:
+    case MTL::PixelFormatETC2_RGB8:
+    case MTL::PixelFormatETC2_RGB8_sRGB:
+    case MTL::PixelFormatETC2_RGB8A1:
+    case MTL::PixelFormatETC2_RGB8A1_sRGB:
       return 0;
     /* ASTC */
-    case MTLPixelFormatASTC_4x4_sRGB:
-    case MTLPixelFormatASTC_5x4_sRGB:
-    case MTLPixelFormatASTC_5x5_sRGB:
-    case MTLPixelFormatASTC_6x5_sRGB:
-    case MTLPixelFormatASTC_6x6_sRGB:
-    case MTLPixelFormatASTC_8x5_sRGB:
-    case MTLPixelFormatASTC_8x6_sRGB:
-    case MTLPixelFormatASTC_8x8_sRGB:
-    case MTLPixelFormatASTC_10x5_sRGB:
-    case MTLPixelFormatASTC_10x6_sRGB:
-    case MTLPixelFormatASTC_10x8_sRGB:
-    case MTLPixelFormatASTC_10x10_sRGB:
-    case MTLPixelFormatASTC_12x10_sRGB:
-    case MTLPixelFormatASTC_12x12_sRGB:
+    case MTL::PixelFormatASTC_4x4_sRGB:
+    case MTL::PixelFormatASTC_5x4_sRGB:
+    case MTL::PixelFormatASTC_5x5_sRGB:
+    case MTL::PixelFormatASTC_6x5_sRGB:
+    case MTL::PixelFormatASTC_6x6_sRGB:
+    case MTL::PixelFormatASTC_8x5_sRGB:
+    case MTL::PixelFormatASTC_8x6_sRGB:
+    case MTL::PixelFormatASTC_8x8_sRGB:
+    case MTL::PixelFormatASTC_10x5_sRGB:
+    case MTL::PixelFormatASTC_10x6_sRGB:
+    case MTL::PixelFormatASTC_10x8_sRGB:
+    case MTL::PixelFormatASTC_10x10_sRGB:
+    case MTL::PixelFormatASTC_12x10_sRGB:
+    case MTL::PixelFormatASTC_12x12_sRGB:
       return 0;
-    case MTLPixelFormatASTC_4x4_LDR:
-    case MTLPixelFormatASTC_5x4_LDR:
-    case MTLPixelFormatASTC_5x5_LDR:
-    case MTLPixelFormatASTC_6x5_LDR:
-    case MTLPixelFormatASTC_6x6_LDR:
-    case MTLPixelFormatASTC_8x5_LDR:
-    case MTLPixelFormatASTC_8x6_LDR:
-    case MTLPixelFormatASTC_8x8_LDR:
-    case MTLPixelFormatASTC_10x5_LDR:
-    case MTLPixelFormatASTC_10x6_LDR:
-    case MTLPixelFormatASTC_10x8_LDR:
-    case MTLPixelFormatASTC_10x10_LDR:
-    case MTLPixelFormatASTC_12x10_LDR:
-    case MTLPixelFormatASTC_12x12_LDR:
+    case MTL::PixelFormatASTC_4x4_LDR:
+    case MTL::PixelFormatASTC_5x4_LDR:
+    case MTL::PixelFormatASTC_5x5_LDR:
+    case MTL::PixelFormatASTC_6x5_LDR:
+    case MTL::PixelFormatASTC_6x6_LDR:
+    case MTL::PixelFormatASTC_8x5_LDR:
+    case MTL::PixelFormatASTC_8x6_LDR:
+    case MTL::PixelFormatASTC_8x8_LDR:
+    case MTL::PixelFormatASTC_10x5_LDR:
+    case MTL::PixelFormatASTC_10x6_LDR:
+    case MTL::PixelFormatASTC_10x8_LDR:
+    case MTL::PixelFormatASTC_10x10_LDR:
+    case MTL::PixelFormatASTC_12x10_LDR:
+    case MTL::PixelFormatASTC_12x12_LDR:
       return 0;
     // ASTC HDR (High Dynamic Range) Formats
-    case MTLPixelFormatASTC_4x4_HDR:
-    case MTLPixelFormatASTC_5x4_HDR:
-    case MTLPixelFormatASTC_5x5_HDR:
-    case MTLPixelFormatASTC_6x5_HDR:
-    case MTLPixelFormatASTC_6x6_HDR:
-    case MTLPixelFormatASTC_8x5_HDR:
-    case MTLPixelFormatASTC_8x6_HDR:
-    case MTLPixelFormatASTC_8x8_HDR:
-    case MTLPixelFormatASTC_10x5_HDR:
-    case MTLPixelFormatASTC_10x6_HDR:
-    case MTLPixelFormatASTC_10x8_HDR:
-    case MTLPixelFormatASTC_10x10_HDR:
-    case MTLPixelFormatASTC_12x10_HDR:
-    case MTLPixelFormatASTC_12x12_HDR:
-    case MTLPixelFormatGBGR422:
-    case MTLPixelFormatBGRG422:
+    case MTL::PixelFormatASTC_4x4_HDR:
+    case MTL::PixelFormatASTC_5x4_HDR:
+    case MTL::PixelFormatASTC_5x5_HDR:
+    case MTL::PixelFormatASTC_6x5_HDR:
+    case MTL::PixelFormatASTC_6x6_HDR:
+    case MTL::PixelFormatASTC_8x5_HDR:
+    case MTL::PixelFormatASTC_8x6_HDR:
+    case MTL::PixelFormatASTC_8x8_HDR:
+    case MTL::PixelFormatASTC_10x5_HDR:
+    case MTL::PixelFormatASTC_10x6_HDR:
+    case MTL::PixelFormatASTC_10x8_HDR:
+    case MTL::PixelFormatASTC_10x10_HDR:
+    case MTL::PixelFormatASTC_12x10_HDR:
+    case MTL::PixelFormatASTC_12x12_HDR:
+    case MTL::PixelFormatGBGR422:
+    case MTL::PixelFormatBGRG422:
       return 0;
     /* Depth */
-    case MTLPixelFormatDepth16Unorm:
+    case MTL::PixelFormatDepth16Unorm:
       return 16;
-    case MTLPixelFormatDepth32Float:
+    case MTL::PixelFormatDepth32Float:
       return 32;
     /* Stencil */
-    case MTLPixelFormatStencil8:
+    case MTL::PixelFormatStencil8:
       return 8;
     /* Depth Stencil */
-    case MTLPixelFormatDepth24Unorm_Stencil8:
+    case MTL::PixelFormatDepth24Unorm_Stencil8:
       return 32;
-    case MTLPixelFormatDepth32Float_Stencil8:
+    case MTL::PixelFormatDepth32Float_Stencil8:
       return 40;
-    case MTLPixelFormatX32_Stencil8:
+    case MTL::PixelFormatX32_Stencil8:
       return 40;
-    case MTLPixelFormatX24_Stencil8:
+    case MTL::PixelFormatX24_Stencil8:
       return 32;
     }
   return 0;
   }
 
-id<MTLTexture> MtTexture::view(ComponentMapping m, uint32_t mipLevel) {
+MTL::Texture& MtTexture::view(ComponentMapping m, uint32_t mipLevel) {
   if(m.r==ComponentSwizzle::Identity &&
      m.g==ComponentSwizzle::Identity &&
      m.b==ComponentSwizzle::Identity &&
      m.a==ComponentSwizzle::Identity &&
      (mipLevel==uint32_t(-1) || mipCnt==1)) {
-    return impl;
+    return *impl;
     }
 
   std::lock_guard<Detail::SpinLock> guard(syncViews);
   for(auto& i:extViews) {
     if(i.m==m && i.mip==mipLevel)
-      return i.v;
+      return *i.v;
     }
 
-  auto sw = MTLTextureSwizzleChannelsMake(swizzle(m.r, MTLTextureSwizzleRed),
-                                          swizzle(m.g, MTLTextureSwizzleGreen),
-                                          swizzle(m.b, MTLTextureSwizzleBlue),
-                                          swizzle(m.a, MTLTextureSwizzleAlpha));
-  NSRange levels = NSMakeRange(0, impl.mipmapLevelCount);
+  MTL::TextureSwizzleChannels sw;
+  sw.red   = swizzle(m.r, MTL::TextureSwizzleRed);
+  sw.green = swizzle(m.g, MTL::TextureSwizzleGreen);
+  sw.blue  = swizzle(m.b, MTL::TextureSwizzleBlue);
+  sw.alpha = swizzle(m.a, MTL::TextureSwizzleAlpha);
+
+  auto levels = NS::Range(0, impl->mipmapLevelCount());
   if(mipLevel!=uint32_t(-1)) {
-    levels = NSMakeRange(mipLevel,1);
+    levels = NS::Range(mipLevel,1);
     }
 
   View v;
-  v.v = [impl newTextureViewWithPixelFormat: impl.pixelFormat
-              textureType: impl.textureType
-              levels: levels
-              slices: NSMakeRange(0, impl.arrayLength)
-              swizzle:sw];
+  v.v   = NsPtr<MTL::Texture>(impl->newTextureView(impl->pixelFormat(),impl->textureType(),
+                              levels,NS::Range(0,impl->arrayLength()),sw));
   v.m   = m;
   v.mip = mipLevel;
 
-  if(v.v==nil)
+  if(v.v==nullptr)
     throw std::system_error(GraphicsErrc::OutOfVideoMemory);
   try {
-    extViews.push_back(v);
+    extViews.push_back(std::move(v));
     }
   catch (...) {
-    [v.v release];
     throw;
     }
-  return v.v;
+  return *extViews.back().v;
   }

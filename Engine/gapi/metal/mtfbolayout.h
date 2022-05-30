@@ -1,8 +1,7 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-
-#include <Metal/MTLPixelFormat.h>
+#include <Metal/Metal.hpp>
 
 namespace Tempest {
 namespace Detail {
@@ -13,9 +12,9 @@ class MtFboLayout {
   public:
     bool equals(const MtFboLayout& other) const;
 
-    MTLPixelFormat colorFormat[MaxFramebufferAttachments] = {};
-    size_t         numColors                              = 0;
-    MTLPixelFormat depthFormat                            = MTLPixelFormatInvalid;
+    MTL::PixelFormat colorFormat[MaxFramebufferAttachments] = {};
+    size_t           numColors                              = 0;
+    MTL::PixelFormat depthFormat                            = MTL::PixelFormatInvalid;
   };
 
 }

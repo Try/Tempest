@@ -1,14 +1,12 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#import  <Metal/MTLStageInputOutputDescriptor.h>
-#import  <Metal/MTLCommandBuffer.h>
-#import  <Metal/MTLRenderCommandEncoder.h>
+#include <Metal/Metal.hpp>
 
 #include "gapi/shaderreflection.h"
-
 #include "mtfbolayout.h"
 #include "mtpipelinelay.h"
+#include "nsptr.h"
 
 namespace Tempest {
 
@@ -67,31 +65,29 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
       E_Comp,
       E_Blit,
       };
-    void setEncoder(EncType e, MTLRenderPassDescriptor* desc);
+    void setEncoder(EncType e, MTL::RenderPassDescriptor* desc);
     void implSetBytes   (const void* bytes, size_t sz);
     void implSetUniforms(AbstractGraphicsApi::Desc& u);
 
-    void setBuffer (const MtPipelineLay::MTLBind& mtl,
-                    id<MTLBuffer>  b, size_t offset);
-    void setTexture(const MtPipelineLay::MTLBind& mtl,
-                    id<MTLTexture> b, id<MTLSamplerState> ss);
-    void setTlas   (const MtPipelineLay::MTLBind& mtl,
-                    id<MTLAccelerationStructure> as);
+    void setBuffer (const MtPipelineLay::MTLBind& mtl, MTL::Buffer* b, size_t offset);
+    void setTexture(const MtPipelineLay::MTLBind& mtl, MTL::Texture* t, MTL::SamplerState* ss);
+    void setTlas   (const MtPipelineLay::MTLBind& mtl, MTL::AccelerationStructure* as);
 
-    MtDevice&            device;
-    id<MTLCommandBuffer> impl = nil;
+    MtDevice&                         device;
+    NsPtr<MTL::CommandBuffer>         impl;
 
-    id<MTLRenderCommandEncoder>  encDraw = nil;
-    id<MTLComputeCommandEncoder> encComp = nil;
-    id<MTLBlitCommandEncoder>    encBlit = nil;
+    NsPtr<MTL::RenderCommandEncoder>  encDraw;
+    NsPtr<MTL::ComputeCommandEncoder> encComp;
+    NsPtr<MTL::BlitCommandEncoder>    encBlit;
 
-    uint32_t             curVboId = 0;
-    MtFboLayout          curFbo;
-    const MtPipelineLay* curLay   = nullptr;
-    MTLPrimitiveType     topology = MTLPrimitiveTypePoint;
-    bool                 isTesselation = false;
+    uint32_t                          curVboId = 0;
+    MtFboLayout                       curFbo;
+    const MtPipelineLay*              curLay   = nullptr;
+    MTL::Size                         localSize = {};
+    MTL::PrimitiveType                topology = MTL::PrimitiveTypePoint;
+    bool                              isTesselation = false;
 
-    uint32               maxTotalThreadsPerThreadgroup = 0;
+    uint32_t                          maxTotalThreadsPerThreadgroup = 0;
 
   friend class Tempest::MetalApi;
   };

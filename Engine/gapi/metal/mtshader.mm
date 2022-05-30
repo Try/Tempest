@@ -64,16 +64,22 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
         }
 
       if(exec.get(spv::ExecutionModeVertexOrderCw))
-        tese.winding = MTLWindingClockwise;
+        tese.winding = MTL::WindingClockwise;
       else if(exec.get(spv::ExecutionModeVertexOrderCcw))
-        tese.winding = MTLWindingCounterClockwise;
+        tese.winding = MTL::WindingCounterClockwise;
 
       if(exec.get(spv::ExecutionModeSpacingEqual))
-        tese.partition = MTLTessellationPartitionModeInteger;
+        tese.partition = MTL::TessellationPartitionModeInteger;
       else if(exec.get(spv::ExecutionModeSpacingFractionalEven))
-        tese.partition = MTLTessellationPartitionModeFractionalEven;
+        tese.partition = MTL::TessellationPartitionModeFractionalEven;
       else if(exec.get(spv::ExecutionModeSpacingFractionalOdd))
-        tese.partition = MTLTessellationPartitionModeFractionalOdd;
+        tese.partition = MTL::TessellationPartitionModeFractionalOdd;
+      }
+
+    if(comp.get_execution_model()==spv::ExecutionModelGLCompute) {
+      this->comp.localSize.width  = comp.get_execution_mode_argument(spv::ExecutionModeLocalSize,0);
+      this->comp.localSize.height = comp.get_execution_mode_argument(spv::ExecutionModeLocalSize,1);
+      this->comp.localSize.depth  = comp.get_execution_mode_argument(spv::ExecutionModeLocalSize,2);
       }
     }
   catch(const std::bad_alloc&) {
@@ -93,26 +99,22 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
 
   //Log::d(msl);
 
-  auto     opt = [MTLCompileOptions new];
-  NSError* err = nil;
-  auto     str = [NSString stringWithCString:msl.c_str() encoding:[NSString defaultCStringEncoding]];
+  auto       opt = NsPtr<MTL::CompileOptions>::init();
+  NS::Error* err = nullptr;
+  auto       str = NsPtr<NS::String>(NS::String::string(msl.c_str(),NS::UTF8StringEncoding));
+  library = NsPtr<MTL::Library>(dev.impl->newLibrary(str.get(), opt.get(), &err));
 
-  library = [dev.impl newLibraryWithSource:str options:opt error:&err];
-  [opt release];
-  [str release];
-
-  if(err!=nil) {
+  if(err!=nullptr) {
 #if !defined(NDEBUG)
-    const char* e = [[err localizedDescription] UTF8String];
+    const char* e = err->localizedDescription()->utf8String();
     Log::d("cros-compile error: \"",e,"\"");
     Log::d(msl);
 #endif
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
-  impl = [library newFunctionWithName: @"main0"];
+  auto main = NsPtr<NS::String>(NS::String::string("main0",NS::UTF8StringEncoding));
+  impl = NsPtr<MTL::Function>(library->newFunction(main.get()));
   }
 
 MtShader::~MtShader() {
-  [impl    release];
-  [library release];
   }

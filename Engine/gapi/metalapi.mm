@@ -19,9 +19,7 @@
 #include "gapi/metal/mtswapchain.h"
 #include "gapi/metal/mtaccelerationstructure.h"
 
-#import  <Metal/MTLDevice.h>
-#import  <Metal/MTLCommandQueue.h>
-#import  <AppKit/AppKit.h>
+#include <Metal/Metal.hpp>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -39,15 +37,16 @@ MetalApi::~MetalApi() {
   }
 
 std::vector<AbstractGraphicsApi::Props> MetalApi::devices() const {
-  NSArray<id<MTLDevice>>* dev = MTLCopyAllDevices();
+  auto dev = MTL::CopyAllDevices();
   try {
-    std::vector<AbstractGraphicsApi::Props> p(dev.count);
+    std::vector<AbstractGraphicsApi::Props> p(dev->count());
     for(size_t i=0; i<p.size(); ++i)
-      MtDevice::deductProps(p[i],dev[i]);
+      MtDevice::deductProps(p[i],*reinterpret_cast<MTL::Device*>(dev->object(i)));
+    dev->release();
     return p;
     }
   catch(...) {
-    [dev release];
+    dev->release();
     throw;
     }
   }
@@ -107,25 +106,25 @@ AbstractGraphicsApi::PBuffer MetalApi::createBuffer(AbstractGraphicsApi::Device 
                                                     MemUsage /*usage*/, BufferHeap flg) {
   auto& dx = *reinterpret_cast<MtDevice*>(d);
 
-  MTLResourceOptions opt = 0;
+  MTL::ResourceOptions opt = 0;
   // https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/MTLBestPracticesGuide/ResourceOptions.html#//apple_ref/doc/uid/TP40016642-CH17-SW1
   switch(flg) {
     case BufferHeap::Device:
-      opt |= MTLResourceStorageModePrivate;
+      opt |= MTL::ResourceStorageModePrivate;
       break;
     case BufferHeap::Upload:
 #ifndef __IOS__
       if(count*alignedSz>PAGE_SIZE)
-        opt |= MTLResourceStorageModeManaged; else
-        opt |= MTLResourceStorageModeShared;
+        opt |= MTL::ResourceStorageModeManaged; else
+        opt |= MTL::ResourceStorageModeShared;
 #else
-      opt |= MTLResourceStorageModeShared;
+      opt |= MTL::ResourceStorageModeShared;
 #endif
-      opt |= MTLResourceCPUCacheModeWriteCombined;
+      opt |= MTL::ResourceCPUCacheModeWriteCombined;
       break;
     case BufferHeap::Readback:
-      opt |= MTLResourceStorageModeManaged;
-      opt |= MTLResourceCPUCacheModeDefaultCache;
+      opt |= MTL::ResourceStorageModeManaged;
+      opt |= MTL::ResourceCPUCacheModeDefaultCache;
       break;
     }
 
@@ -230,21 +229,20 @@ void MetalApi::submit(AbstractGraphicsApi::Device*,
   fence.signal();
   for(size_t i=0; i<count; ++i) {
     auto& cx = *reinterpret_cast<MtCommandBuffer*>(pcmd[i]);
-    id<MTLCommandBuffer> cmd = cx.impl;
-
-    [cmd addCompletedHandler:^(id<MTLCommandBuffer> c) {
-      MTLCommandBufferStatus s = c.status;
-      if(s==MTLCommandBufferStatusNotEnqueued ||
-         s==MTLCommandBufferStatusEnqueued ||
-         s==MTLCommandBufferStatusCommitted ||
-         s==MTLCommandBufferStatusScheduled)
+    MTL::CommandBuffer& cmd = *cx.impl;
+    cmd.addCompletedHandler(^(MTL::CommandBuffer* c){
+      MTL::CommandBufferStatus s = c->status();
+      if(s==MTL::CommandBufferStatusNotEnqueued ||
+         s==MTL::CommandBufferStatusEnqueued ||
+         s==MTL::CommandBufferStatusCommitted ||
+         s==MTL::CommandBufferStatusScheduled)
         return;
 
-      if(s==MTLCommandBufferStatusCompleted)
+      if(s==MTL::CommandBufferStatusCompleted)
         fence.reset(); else
         fence.reset(s);
-      }];
-    [cmd commit];
+      });
+    cmd.commit();
     }
   }
 

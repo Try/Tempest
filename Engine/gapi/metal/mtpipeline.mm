@@ -20,16 +20,14 @@ MtPipeline::MtPipeline(MtDevice &d, Topology tp,
   cullMode = nativeFormat(rs.cullFaceMode());
   topology = nativeFormat(tp);
 
-  MTLDepthStencilDescriptor *ddesc = [MTLDepthStencilDescriptor new];
-  ddesc.depthCompareFunction = nativeFormat(rs.zTestMode());
-  ddesc.depthWriteEnabled    = rs.isZWriteEnabled() ? YES : NO;
-  depthStZ   = [d.impl newDepthStencilStateWithDescriptor:ddesc];
+  auto ddesc = NsPtr<MTL::DepthStencilDescriptor>::init();
+  ddesc->setDepthCompareFunction(nativeFormat(rs.zTestMode()));
+  ddesc->setDepthWriteEnabled(rs.isZWriteEnabled());
+  depthStZ = NsPtr<MTL::DepthStencilState>(d.impl->newDepthStencilState(ddesc.get()));
 
-  ddesc.depthCompareFunction = MTLCompareFunctionAlways;
-  ddesc.depthWriteEnabled    = NO;
-  depthStNoZ = [d.impl newDepthStencilStateWithDescriptor:ddesc];
-
-  vdesc = [MTLVertexDescriptor new];
+  ddesc->setDepthCompareFunction(MTL::CompareFunctionAlways);
+  ddesc->setDepthWriteEnabled(false);
+  depthStNoZ = NsPtr<MTL::DepthStencilState>(d.impl->newDepthStencilState(ddesc.get()));
 
   auto vert = findShader(ShaderReflection::Vertex);
   auto tesc = findShader(ShaderReflection::Control);
@@ -37,39 +35,39 @@ MtPipeline::MtPipeline(MtDevice &d, Topology tp,
   auto frag = findShader(ShaderReflection::Fragment);
 
   size_t offset = 0;
+  vdesc = NsPtr<MTL::VertexDescriptor>::init();
+  vdesc->retain();
   for(size_t i=0; i<vert->vdecl.size(); ++i) {
     const auto& v = vert->vdecl[i];
-
-    vdesc.attributes[i].bufferIndex = lay.vboIndex;
-    vdesc.attributes[i].offset      = offset;
-    vdesc.attributes[i].format      = nativeFormat(v);
-
+    vdesc->attributes()->object(i)->setBufferIndex(lay.vboIndex);
+    vdesc->attributes()->object(i)->setOffset(offset);
+    vdesc->attributes()->object(i)->setFormat(nativeFormat(v));
     offset += Decl::size(v);
     }
-  vdesc.layouts[lay.vboIndex].stride       = stride;
-  vdesc.layouts[lay.vboIndex].stepRate     = 1;
-  vdesc.layouts[lay.vboIndex].stepFunction = MTLVertexStepFunctionPerVertex;
+  vdesc->layouts()->object(lay.vboIndex)->setStride(stride);
+  vdesc->layouts()->object(lay.vboIndex)->setStepRate(1);
+  vdesc->layouts()->object(lay.vboIndex)->setStepFunction(MTL::VertexStepFunctionPerVertex);
 
-  pdesc = [MTLRenderPipelineDescriptor new];
-  pdesc.sampleCount          = 1;
-  pdesc.vertexFunction       = vert->impl;
-  pdesc.fragmentFunction     = frag->impl;
-  pdesc.rasterizationEnabled = rs.isRasterDiscardEnabled() ? NO : YES; // TODO: test it
+  pdesc = NsPtr<MTL::RenderPipelineDescriptor>::init();
+  pdesc->retain();
+  pdesc->setSampleCount(1);
+  pdesc->setVertexFunction(vert->impl.get());
+  pdesc->setFragmentFunction(frag->impl.get());
+  pdesc->setRasterizationEnabled(!rs.isRasterDiscardEnabled()); // TODO: test it
 
   if(tesc!=nullptr && tese!=nullptr) {
-    pdesc.maxTessellationFactor          = 16;
-    pdesc.tessellationFactorScaleEnabled = NO;
-    pdesc.tessellationFactorStepFunction = MTLTessellationFactorStepFunctionConstant;
-    pdesc.tessellationOutputWindingOrder = tese->tese.winding;
-    pdesc.tessellationPartitionMode      = tese->tese.partition;
+    pdesc->setMaxTessellationFactor(16);
+    pdesc->setTessellationFactorScaleEnabled(false);
+    pdesc->setTessellationFactorStepFunction(MTL::TessellationFactorStepFunctionConstant);
+    pdesc->setTessellationOutputWindingOrder(tese->tese.winding);
+    pdesc->setTessellationPartitionMode(tese->tese.partition);
+    pdesc->setVertexFunction(tese->impl.get());
 
-    pdesc.vertexFunction = tese->impl;
-
-    vdesc.layouts[lay.vboIndex].stepFunction = MTLVertexStepFunctionPerPatch;
-    pdesc.vertexDescriptor = vdesc;
+    vdesc->layouts()->object(lay.vboIndex)->setStepFunction(MTL::VertexStepFunctionPerPatch);
+    pdesc->setVertexDescriptor(vdesc.get());
     isTesselation = true;
     } else {
-    pdesc.vertexDescriptor = vdesc;
+    pdesc->setVertexDescriptor(vdesc.get());
     }
 
   for(size_t i=0; i<lay.lay.size(); ++i) {
@@ -79,21 +77,16 @@ MtPipeline::MtPipeline(MtDevice &d, Topology tp,
       continue;
     if(l.cls!=ShaderReflection::Ubo && l.cls!=ShaderReflection::SsboR && l.cls!=ShaderReflection::SsboRW)
       continue;
-    MTLMutability mu = (l.cls==ShaderReflection::SsboRW) ? MTLMutabilityMutable: MTLMutabilityImmutable;
+    MTL::Mutability mu = (l.cls==ShaderReflection::SsboRW) ? MTL::MutabilityMutable: MTL::MutabilityImmutable;
 
     if(m.bindVs!=uint32_t(-1))
-      pdesc.vertexBuffers[m.bindVs].mutability = mu;
+      pdesc->vertexBuffers()->object(m.bindVs)->setMutability(mu);
     if(m.bindFs!=uint32_t(-1))
-      pdesc.fragmentBuffers[m.bindFs].mutability = mu;
+      pdesc->fragmentBuffers()->object(m.bindFs)->setMutability(mu);
     }
   }
 
 MtPipeline::~MtPipeline() {
-  for(auto& i:instance)
-    if(i.pso!=nil)
-      [i.pso release];
-  [vdesc release];
-  [pdesc release];
   }
 
 MtPipeline::Inst& MtPipeline::inst(const MtFboLayout& lay) {
@@ -106,23 +99,21 @@ MtPipeline::Inst& MtPipeline::inst(const MtFboLayout& lay) {
   ix.fbo = lay;
 
   for(size_t i=0; i<lay.numColors; ++i) {
-    pdesc.colorAttachments[i].pixelFormat                 = lay.colorFormat[i];
-
-    pdesc.colorAttachments[i].blendingEnabled             = rs.hasBlend() ? YES : NO;
-    pdesc.colorAttachments[i].rgbBlendOperation           = nativeFormat(rs.blendOperation());
-    pdesc.colorAttachments[i].alphaBlendOperation         = pdesc.colorAttachments[i].rgbBlendOperation;
-    pdesc.colorAttachments[i].destinationRGBBlendFactor   = nativeFormat(rs.blendDest());
-    pdesc.colorAttachments[i].destinationAlphaBlendFactor = pdesc.colorAttachments[i].destinationRGBBlendFactor;
-    pdesc.colorAttachments[i].sourceRGBBlendFactor        = nativeFormat(rs.blendSource());
-    pdesc.colorAttachments[i].sourceAlphaBlendFactor      = pdesc.colorAttachments[i].sourceRGBBlendFactor;
+    auto clr = pdesc->colorAttachments()->object(i);
+    clr->setPixelFormat(lay.colorFormat[i]);
+    clr->setBlendingEnabled(rs.hasBlend());
+    clr->setRgbBlendOperation          (nativeFormat(rs.blendOperation()));
+    clr->setAlphaBlendOperation        (nativeFormat(rs.blendOperation()));
+    clr->setDestinationRGBBlendFactor  (nativeFormat(rs.blendDest()));
+    clr->setDestinationAlphaBlendFactor(nativeFormat(rs.blendDest()));
+    clr->setSourceRGBBlendFactor       (nativeFormat(rs.blendSource()));
+    clr->setSourceAlphaBlendFactor     (nativeFormat(rs.blendSource()));
     }
-  pdesc.depthAttachmentPixelFormat = lay.depthFormat;
+  pdesc->setDepthAttachmentPixelFormat(lay.depthFormat);
 
-  id dev = device.impl;
-
-  NSError* error = nil;
-  ix.pso = [dev newRenderPipelineStateWithDescriptor:pdesc error:&error];
-  mtAssert(ix.pso,error);
+  NS::Error* error = nullptr;
+  ix.pso = NsPtr<MTL::RenderPipelineState>(device.impl->newRenderPipelineState(pdesc.get(),&error));
+  mtAssert(ix.pso.get(),error);
   return ix;
   }
 
@@ -133,13 +124,14 @@ const MtShader* MtPipeline::findShader(ShaderReflection::Stage sh) const {
   return nullptr;
   }
 
+
 MtCompPipeline::MtCompPipeline(MtDevice &device, const MtPipelineLay& lay, const MtShader &sh)
   :lay(&lay) {
-  id dev = device.impl;
-
-  MTLComputePipelineDescriptor* pdesc = [MTLComputePipelineDescriptor new];
-  pdesc.computeFunction                                 = sh.impl;
-  // pdesc.threadGroupSizeIsMultipleOfThreadExecutionWidth = YES;
+  localSize = sh.comp.localSize;
+  auto desc = NsPtr<MTL::ComputePipelineDescriptor>::init();
+  desc->setComputeFunction(sh.impl.get());
+  desc->setThreadGroupSizeIsMultipleOfThreadExecutionWidth(false); // it seems no way to guess correct with value
+  desc->setMaxTotalThreadsPerThreadgroup(localSize.width*localSize.height*localSize.depth);
 
   for(size_t i=0; i<lay.lay.size(); ++i) {
     auto& l = lay.lay[i];
@@ -148,17 +140,12 @@ MtCompPipeline::MtCompPipeline(MtDevice &device, const MtPipelineLay& lay, const
       continue;
     if(l.cls!=ShaderReflection::Ubo && l.cls!=ShaderReflection::SsboR && l.cls!=ShaderReflection::SsboRW)
       continue;
-    MTLMutability mu = (l.cls==ShaderReflection::SsboRW) ? MTLMutabilityMutable: MTLMutabilityImmutable;
+    MTL::Mutability mu = (l.cls==ShaderReflection::SsboRW) ? MTL::MutabilityMutable: MTL::MutabilityImmutable;
     if(m.bindCs!=uint32_t(-1))
-      pdesc.buffers[m.bindCs].mutability = mu;
+      desc->buffers()->object(m.bindCs)->setMutability(mu);
     }
 
-  NSError* error = nil;
-  impl = [dev newComputePipelineStateWithDescriptor:pdesc
-              options:MTLPipelineOptionNone
-              reflection:nil
-              error:&error];
-  [pdesc release];
-
-  mtAssert(impl,error);
+  NS::Error* error = nullptr;
+  impl = NsPtr<MTL::ComputePipelineState>(device.impl->newComputePipelineState(desc.get(), MTL::PipelineOptionNone, nullptr, &error));
+  mtAssert(impl.get(),error);
   }

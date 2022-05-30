@@ -1,8 +1,9 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include <Metal/MTLBuffer.h>
-#include <Metal/MTLAccelerationStructure.h>
+#include <Metal/Metal.hpp>
+
+#include "nsptr.h"
 
 namespace Tempest {
 namespace Detail {
@@ -17,8 +18,8 @@ class MtAccelerationStructure : public Tempest::AbstractGraphicsApi::Acceleratio
                             MtBuffer& ibo, size_t iboSz, size_t ioffset, Detail::IndexClass icls);
     ~MtAccelerationStructure();
 
-    MtDevice&                    owner;
-    id<MTLAccelerationStructure> impl;
+    MtDevice&                         owner;
+    NsPtr<MTL::AccelerationStructure> impl;
   };
 
 class MtTopAccelerationStructure : public AbstractGraphicsApi::AccelerationStructure {
@@ -26,9 +27,9 @@ class MtTopAccelerationStructure : public AbstractGraphicsApi::AccelerationStruc
     MtTopAccelerationStructure(MtDevice& owner, const RtInstance* inst, AccelerationStructure* const * as, size_t asSize);
     ~MtTopAccelerationStructure();
 
-    MtDevice&                    owner;
-    id<MTLAccelerationStructure> impl;
-    id<MTLBuffer>                instances;
+    MtDevice&                         owner;
+    NsPtr<MTL::AccelerationStructure> impl;
+    NsPtr<MTL::Buffer>                instances;
   };
 }
 }

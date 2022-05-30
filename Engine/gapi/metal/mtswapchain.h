@@ -1,10 +1,12 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#import  <AppKit/AppKit.h>
-#import  <QuartzCore/QuartzCore.h>
-#import  <Metal/MTLTexture.h>
 #include "utility/spinlock.h"
+#include "nsptr.h"
+
+#import  <AppKit/AppKit.h>
+#include <QuartzCore/QuartzCore.hpp>
+#include <Metal/Metal.hpp>
 
 @class MetalView;
 
@@ -25,26 +27,25 @@ class MtSwapchain : public AbstractGraphicsApi::Swapchain {
     uint32_t      h() const override;
     void          present();
 
-    MTLPixelFormat format() const;
+    MTL::PixelFormat format() const;
 
     struct Image {
-      id<MTLTexture>      tex      = nil;
-      bool                inUse    = false;
+      NsPtr<MTL::Texture> tex;
+      bool                inUse = false;
       };
-    std::vector<Image> img;
+    std::vector<Image>    img;
 
   private:
-    SpinLock       sync;
+    SpinLock              sync;
 
-    MtDevice&      dev;
-    NSWindow*      wnd  = nil;
-    MetalView*     view = nil;
-    Tempest::Size  sz;
+    MtDevice&             dev;
+    NSWindow*             wnd  = nil;
+    MetalView*            view = nil;
+    Tempest::Size         sz;
 
-    uint32_t       imgCount   = 0;
-    uint32         currentImg = 0;
-    void           releaseTex();
-    id<MTLTexture> mkTexture();
+    uint32_t              imgCount   = 0;
+    uint32                currentImg = 0;
+    NsPtr<MTL::Texture>   mkTexture();
   };
 
 }

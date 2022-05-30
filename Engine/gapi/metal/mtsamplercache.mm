@@ -8,78 +8,72 @@ using namespace Tempest::Detail;
 namespace Tempest {
 namespace Detail  {
 
-static MTLSamplerAddressMode nativeFormat(ClampMode m) {
+static MTL::SamplerAddressMode nativeFormat(ClampMode m) {
   switch(m) {
-    case ClampMode::ClampToBorder:  return MTLSamplerAddressModeClampToBorderColor;
-    case ClampMode::ClampToEdge:    return MTLSamplerAddressModeClampToEdge;
-    case ClampMode::MirroredRepeat: return MTLSamplerAddressModeMirrorRepeat;
-    case ClampMode::Repeat:         return MTLSamplerAddressModeRepeat;
-    case ClampMode::Count:          return MTLSamplerAddressModeRepeat;
+    case ClampMode::ClampToBorder:  return MTL::SamplerAddressModeClampToBorderColor;
+    case ClampMode::ClampToEdge:    return MTL::SamplerAddressModeClampToEdge;
+    case ClampMode::MirroredRepeat: return MTL::SamplerAddressModeMirrorRepeat;
+    case ClampMode::Repeat:         return MTL::SamplerAddressModeRepeat;
+    case ClampMode::Count:          return MTL::SamplerAddressModeRepeat;
     }
-  return MTLSamplerAddressModeRepeat;
+  return MTL::SamplerAddressModeRepeat;
   }
 
-static MTLSamplerMinMagFilter nativeFormat(Tempest::Filter f) {
+static MTL::SamplerMinMagFilter nativeFormat(Tempest::Filter f) {
   switch(f) {
-    case Filter::Nearest: return MTLSamplerMinMagFilterNearest;
-    case Filter::Linear:  return MTLSamplerMinMagFilterLinear;
-    case Filter::Count:   return MTLSamplerMinMagFilterLinear;
+    case Filter::Nearest: return MTL::SamplerMinMagFilterNearest;
+    case Filter::Linear:  return MTL::SamplerMinMagFilterLinear;
+    case Filter::Count:   return MTL::SamplerMinMagFilterLinear;
     }
-  return MTLSamplerMinMagFilterLinear;
+  return MTL::SamplerMinMagFilterLinear;
   }
 }
 }
 
-MtSamplerCache::MtSamplerCache(id<MTLDevice> dev)
+MtSamplerCache::MtSamplerCache(MTL::Device& dev)
   :dev(dev) {
   def = mkSampler(Sampler2d());
-  if(def==nil)
+  if(def==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
   }
 
 MtSamplerCache::~MtSamplerCache() {
-  [def release];
-  for(auto& i:values)
-    [i.val release];
   }
 
-id<MTLSamplerState> MtSamplerCache::get(Tempest::Sampler2d src) {
+MTL::SamplerState& MtSamplerCache::get(Tempest::Sampler2d src) {
   src.mapping = ComponentMapping(); // handled in imageview
   static const Tempest::Sampler2d defSrc;
   if(src==defSrc)
-    return def;
+    return *def;
 
-  std::lock_guard<SpinLock> guard(sync);
+  std::lock_guard<std::mutex> guard(sync);
   for(auto& i:values)
     if(i.src==src)
-      return i.val;
+      return *i.val;
   values.emplace_back(Entry());
   auto& b = values.back();
   b.src = src;
   b.val = mkSampler(src);
-  if(b.val==nil)
+  if(b.val==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
-  return b.val;
+  return *b.val;
   }
 
-id<MTLSamplerState> MtSamplerCache::mkSampler(const Tempest::Sampler2d& src) {
-  MTLSamplerDescriptor* sdesc = [MTLSamplerDescriptor new];
-  sdesc.rAddressMode  = nativeFormat(src.uClamp);
-  sdesc.sAddressMode  = nativeFormat(src.vClamp);
-  sdesc.tAddressMode  = MTLSamplerAddressModeRepeat;
-  sdesc.minFilter     = nativeFormat(src.minFilter);
-  sdesc.magFilter     = nativeFormat(src.magFilter);
-  sdesc.mipFilter     = MTLSamplerMipFilterNotMipmapped;
+NsPtr<MTL::SamplerState> MtSamplerCache::mkSampler(const Tempest::Sampler2d& src) {
+  auto desc = NsPtr<MTL::SamplerDescriptor>::init();
+  desc->setRAddressMode(nativeFormat(src.uClamp));
+  desc->setSAddressMode(nativeFormat(src.vClamp));
+  desc->setTAddressMode(MTL::SamplerAddressModeRepeat);
+
+  desc->setMinFilter(nativeFormat(src.minFilter));
+  desc->setMagFilter(nativeFormat(src.magFilter));
   if(src.mipFilter==Filter::Nearest)
-    sdesc.mipFilter = MTLSamplerMipFilterNearest; else
-    sdesc.mipFilter = MTLSamplerMipFilterLinear;
-  sdesc.maxAnisotropy = src.anisotropic ? 16 : 1;
-  sdesc.borderColor   = MTLSamplerBorderColorOpaqueWhite;
-  sdesc.lodAverage    = NO;
+    desc->setMipFilter(MTL::SamplerMipFilterNearest); else
+    desc->setMipFilter(MTL::SamplerMipFilterLinear);
+  desc->setMaxAnisotropy(src.anisotropic ? 16 : 1);
+  desc->setBorderColor(MTL::SamplerBorderColorOpaqueWhite);
+  desc->setLodAverage(false);
+  desc->setSupportArgumentBuffers(false);
 
-  sdesc.supportArgumentBuffers = NO;
-
-  id<MTLSamplerState> sampler = [dev newSamplerStateWithDescriptor:sdesc];
-  [sdesc release];
-  return sampler;
+  return NsPtr<MTL::SamplerState>(dev.newSamplerState(desc.get()));
   }

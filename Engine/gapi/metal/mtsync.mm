@@ -33,7 +33,7 @@ void MtSync::reset() {
   cv.notify_all();
   }
 
-void MtSync::reset(MTLCommandBufferStatus err) {
+void MtSync::reset(MTL::CommandBufferStatus err) {
   std::unique_lock<std::mutex> guard(sync);
   status = err;
   hasWait.store(false);
@@ -46,6 +46,6 @@ void MtSync::signal() {
   }
 
 void MtSync::propogateError() {
-  if(status==MTLCommandBufferStatusError)
+  if(status==MTL::CommandBufferStatusError)
     throw DeviceLostException();
   }

@@ -37,7 +37,7 @@ MtSwapchain::MtSwapchain(MtDevice& dev, NSWindow *w)
   wnd.contentView = view;
 
   CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);
-  lay.device = dev.impl;
+  lay.device = id<MTLDevice>(dev.impl.get());
 
   const float dpi = [NSScreen mainScreen].backingScaleFactor;
   [lay setContentsScale:dpi];
@@ -51,7 +51,6 @@ MtSwapchain::MtSwapchain(MtDevice& dev, NSWindow *w)
   }
 
 MtSwapchain::~MtSwapchain() {
-  releaseTex();
   if(view!=nil)
     [view release];
   }
@@ -59,7 +58,6 @@ MtSwapchain::~MtSwapchain() {
 void MtSwapchain::reset() {
   std::lock_guard<SpinLock> guard(sync);
   // https://developer.apple.com/documentation/quartzcore/cametallayer?language=objc
-  releaseTex();
 
   CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);
 
@@ -98,16 +96,17 @@ void MtSwapchain::present() {
   uint32_t      i   = currentImg;
 
   @autoreleasepool {
+    id<MTLCommandQueue>       queue    = id<MTLCommandQueue>(dev.queue.get());
     id<CAMetalDrawable>       drawable = [lay nextDrawable];
-    id<MTLCommandBuffer>      cmd      = [dev.queue commandBuffer];
+    id<MTLCommandBuffer>      cmd      = [queue commandBuffer];
     id<MTLBlitCommandEncoder> blit     = [cmd blitCommandEncoder];
 
     id<MTLTexture> dr = drawable.texture;
-    if(dr.width!=img[i].tex.width || dr.height!=img[i].tex.height)
+    if(dr.width!=img[i].tex->width() || dr.height!=img[i].tex->height())
       throw SwapchainSuboptimal();
 
     std::lock_guard<SpinLock> guard(sync);
-    [blit copyFromTexture:img[i].tex
+    [blit copyFromTexture:(id<MTLTexture>)img[i].tex.get()
                           sourceSlice:0
                           sourceLevel:0
                           toTexture:dr
@@ -126,31 +125,23 @@ void MtSwapchain::present() {
     }
   }
 
-void MtSwapchain::releaseTex() {
-  for(size_t i=0; i<img.size(); ++i) {
-    [img[i].tex release];
-    }
-  }
-
-id<MTLTexture> MtSwapchain::mkTexture() {
-  MTLTextureDescriptor* desc = [MTLTextureDescriptor new];
-  if(desc==nil)
+NsPtr<MTL::Texture> MtSwapchain::mkTexture() {
+  auto desc = NsPtr<MTL::TextureDescriptor>::init();
+  if(desc==nullptr)
     throw std::system_error(GraphicsErrc::OutOfVideoMemory);
 
-  desc.textureType      = MTLTextureType2D;
-  desc.pixelFormat      = MTLPixelFormatBGRA8Unorm;
-  desc.width            = sz.w;
-  desc.height           = sz.h;
-  desc.mipmapLevelCount = 1;
+  desc->setTextureType(MTL::TextureType2D);
+  desc->setPixelFormat(MTL::PixelFormatBGRA8Unorm);
+  desc->setWidth(sz.w);
+  desc->setHeight(sz.h);
+  desc->setMipmapLevelCount(1);
+  desc->setCpuCacheMode(MTL::CPUCacheModeDefaultCache);
+  desc->setStorageMode(MTL::StorageModePrivate);
+  desc->setUsage(MTL::TextureUsageRenderTarget);
+  desc->setAllowGPUOptimizedContents(true);
 
-  desc.cpuCacheMode = MTLCPUCacheModeDefaultCache;
-  desc.storageMode  = MTLStorageModePrivate;
-  desc.usage        = MTLTextureUsageRenderTarget;
-
-  desc.allowGPUOptimizedContents = YES;
-
-  auto impl = [dev.impl newTextureWithDescriptor:desc];
-  if(impl==nil)
+  auto impl = NsPtr<MTL::Texture>(dev.impl->newTexture(desc.get()));
+  if(impl==nullptr)
     throw std::system_error(GraphicsErrc::OutOfVideoMemory);
   return impl;
   }
@@ -167,7 +158,7 @@ uint32_t MtSwapchain::h() const {
   return sz.h;
   }
 
-MTLPixelFormat MtSwapchain::format() const {
+MTL::PixelFormat MtSwapchain::format() const {
   CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);
-  return lay.pixelFormat;
+  return MTL::PixelFormat(lay.pixelFormat);
   }

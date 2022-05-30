@@ -8,31 +8,29 @@
 #include "mttexture.h"
 #include "mtswapchain.h"
 
-#include <Metal/MTLCommandQueue.h>
-
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-static MTLLoadAction mkLoadOp(const AccessOp m) {
+static MTL::LoadAction mkLoadOp(const AccessOp m) {
   switch(m) {
-    case AccessOp::Clear:    return MTLLoadActionClear;
-    case AccessOp::Preserve: return MTLLoadActionLoad;
-    case AccessOp::Discard:  return MTLLoadActionDontCare;
+    case AccessOp::Clear:    return MTL::LoadActionClear;
+    case AccessOp::Preserve: return MTL::LoadActionLoad;
+    case AccessOp::Discard:  return MTL::LoadActionDontCare;
     }
-  return MTLLoadActionDontCare;
+  return MTL::LoadActionDontCare;
   }
 
-static MTLStoreAction mkStoreOp(const AccessOp m) {
+static MTL::StoreAction mkStoreOp(const AccessOp m) {
   switch(m) {
-    case AccessOp::Clear:    return MTLStoreActionStore;
-    case AccessOp::Preserve: return MTLStoreActionStore;
-    case AccessOp::Discard:  return MTLStoreActionDontCare;
+    case AccessOp::Clear:    return MTL::StoreActionStore;
+    case AccessOp::Preserve: return MTL::StoreActionStore;
+    case AccessOp::Discard:  return MTL::StoreActionDontCare;
     }
-  return MTLStoreActionDontCare;
+  return MTL::StoreActionDontCare;
   }
 
-static MTLClearColor mkClearColor(const Vec4& c) {
-  MTLClearColor ret;
+static MTL::ClearColor mkClearColor(const Vec4& c) {
+  MTL::ClearColor ret;
   ret.red   = c.x;
   ret.green = c.y;
   ret.blue  = c.z;
@@ -46,12 +44,11 @@ MtCommandBuffer::MtCommandBuffer(MtDevice& dev)
   }
 
 MtCommandBuffer::~MtCommandBuffer() {
-  [impl release];
   }
 
 bool MtCommandBuffer::isRecording() const {
   // FIXME
-  return encDraw!=nil && encComp!=nil && encBlit!=nullptr;
+  return encDraw!=nullptr || encComp!=nullptr || encBlit!=nullptr;
   }
 
 void MtCommandBuffer::begin() {
@@ -63,53 +60,55 @@ void MtCommandBuffer::end() {
   }
 
 void MtCommandBuffer::reset() {
-  MTLCommandBufferDescriptor* desc = [MTLCommandBufferDescriptor new];
-  desc.retainedReferences = NO;
+  auto pool = NsPtr<NS::AutoreleasePool>::init();
+  auto desc = NsPtr<MTL::CommandBufferDescriptor>::init();
+  desc->setRetainedReferences(false);
 
   if(device.validation) {
-    desc.errorOptions = MTLCommandBufferErrorOptionEncoderExecutionStatus;
+    desc->setErrorOptions(MTL::CommandBufferErrorOptionEncoderExecutionStatus);
     }
 
-  impl = [device.queue commandBufferWithDescriptor:desc];
-  [impl retain];
-  [desc release];
+  impl = NsPtr<MTL::CommandBuffer>(device.queue->commandBuffer(desc.get()));
+  impl->retain();
   }
 
 void MtCommandBuffer::beginRendering(const AttachmentDesc* d, size_t descSize,
                                      uint32_t width, uint32_t height, const TextureFormat* frm,
                                      AbstractGraphicsApi::Texture** att,
                                      AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) {
-  curFbo.depthFormat = MTLPixelFormatInvalid;
+  curFbo.depthFormat = MTL::PixelFormatInvalid;
   curFbo.numColors   = 0;
 
-  MTLRenderPassDescriptor* desc = [MTLRenderPassDescriptor renderPassDescriptor];
+  auto pool = NsPtr<NS::AutoreleasePool>::init();
+  auto desc = NsPtr<MTL::RenderPassDescriptor>::init();
   for(size_t i=0; i<descSize; ++i) {
     auto& dx = d[i];
     if(dx.zbuffer!=nullptr) {
       auto& t = *reinterpret_cast<MtTexture*>(att[i]);
-      desc.depthAttachment.texture     = t.impl;
-      desc.depthAttachment.loadAction  = mkLoadOp (dx.load);
-      desc.depthAttachment.storeAction = mkStoreOp(dx.store);
-      desc.depthAttachment.clearDepth  = dx.clear.x;
-      curFbo.depthFormat               = nativeFormat(frm[i]);
+      desc->depthAttachment()->setTexture    (t.impl.get());
+      desc->depthAttachment()->setLoadAction (mkLoadOp (dx.load));
+      desc->depthAttachment()->setStoreAction(mkStoreOp(dx.store));
+      desc->depthAttachment()->setClearDepth (dx.clear.x);
+      curFbo.depthFormat = nativeFormat(frm[i]);
       continue;
       }
+    auto clr = desc->colorAttachments()->object(i);
     if(sw[i]!=nullptr) {
       auto& s = *reinterpret_cast<MtSwapchain*>(sw[i]);
-      desc.colorAttachments[i].texture     = s.img[imgId[i]].tex;
+      clr->setTexture(s.img[imgId[i]].tex.get());
       curFbo.colorFormat[curFbo.numColors] = s.format();
       } else {
       auto& t = *reinterpret_cast<MtTexture*>(att[i]);
-      desc.colorAttachments[i].texture     = t.impl;
+      clr->setTexture(t.impl.get());
       curFbo.colorFormat[curFbo.numColors] = nativeFormat(frm[i]);
       }
-    desc.colorAttachments[i].loadAction  = mkLoadOp    (dx.load);
-    desc.colorAttachments[i].storeAction = mkStoreOp   (dx.store);
-    desc.colorAttachments[i].clearColor  = mkClearColor(dx.clear);
+    clr->setLoadAction (mkLoadOp (dx.load));
+    clr->setStoreAction(mkStoreOp(dx.store));
+    clr->setClearColor (mkClearColor(dx.clear));
     ++curFbo.numColors;
     }
 
-  setEncoder(E_Draw,desc);
+  setEncoder(E_Draw,desc.get());
 
   // [enc setFrontFacingWinding:MTLWindingCounterClockwise];
   setViewport(Rect(0,0,width,height));
@@ -123,21 +122,18 @@ void MtCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size
   // nop
   }
 
-void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MTLRenderPassDescriptor* desc) {
-  if(encDraw!=nil && e!=E_Draw) {
-    [encDraw endEncoding];
-    [encDraw release];
-    encDraw = nil;
+void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MTL::RenderPassDescriptor* desc) {
+  if(encDraw!=nullptr && e!=E_Draw) {
+    encDraw->endEncoding();
+    encDraw = NsPtr<MTL::RenderCommandEncoder>();
     }
-  if(encComp!=nil && e!=E_Comp) {
-    [encComp endEncoding];
-    [encComp release];
-    encComp = nil;
+  if(encComp!=nullptr && e!=E_Comp) {
+    encComp->endEncoding();
+    encComp = NsPtr<MTL::ComputeCommandEncoder>();
     }
-  if(encBlit!=nil && e!=E_Blit) {
-    [encBlit endEncoding];
-    [encBlit release];
-    encBlit = nil;
+  if(encBlit!=nullptr && e!=E_Blit) {
+    encBlit->endEncoding();
+    encBlit = NsPtr<MTL::BlitCommandEncoder>();
     }
 
   switch(e) {
@@ -145,26 +141,26 @@ void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MTLRenderPassDescri
       break;
       }
     case E_Draw: {
-      if(encDraw!=nil) {
-        [encDraw endEncoding];
-        [encDraw release];
+      if(encDraw!=nullptr) {
+        encDraw->endEncoding();
+        encDraw = NsPtr<MTL::RenderCommandEncoder>();
         }
-      encDraw = [impl renderCommandEncoderWithDescriptor:desc];
-      [encDraw retain];
+      encDraw = NsPtr<MTL::RenderCommandEncoder>(impl->renderCommandEncoder(desc));
+      encDraw->retain();
       break;
       }
     case E_Comp: {
-      if(encComp!=nil)
+      if(encComp!=nullptr)
         return;
-      encComp = [impl computeCommandEncoder];
-      [encComp retain];
+      encComp = NsPtr<MTL::ComputeCommandEncoder>(impl->computeCommandEncoder());
+      encComp->retain();
       break;
       }
     case E_Blit: {
-      if(encBlit!=nil)
+      if(encBlit!=nullptr)
         return;
-      encBlit = [impl blitCommandEncoder];
-      [encBlit retain];
+      encBlit = NsPtr<MTL::BlitCommandEncoder>(impl->blitCommandEncoder());
+      encBlit->retain();
       break;
       }
     }
@@ -173,9 +169,10 @@ void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MTLRenderPassDescri
 void MtCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline &p) {
   setEncoder(E_Comp,nullptr);
   auto& px = reinterpret_cast<MtCompPipeline&>(p);
-  [encComp setComputePipelineState:px.impl];
-  curLay   = px.lay.handler;
-  maxTotalThreadsPerThreadgroup = px.impl.maxTotalThreadsPerThreadgroup;
+  encComp->setComputePipelineState(px.impl.get());
+  curLay    = px.lay.handler;
+  localSize = px.localSize;
+  maxTotalThreadsPerThreadgroup = px.impl->maxTotalThreadsPerThreadgroup();
   }
 
 void MtCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline&,
@@ -199,7 +196,7 @@ void MtCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline&,
   }
 
 void MtCommandBuffer::setViewport(const Rect &r) {
-  MTLViewport v = {};
+  MTL::Viewport v = {};
   v.originX = r.x;
   v.originY = r.y;
   v.width   = r.w;
@@ -207,46 +204,32 @@ void MtCommandBuffer::setViewport(const Rect &r) {
   v.znear   = 0;
   v.zfar    = 1;
 
-  [encDraw setViewport:v];
+  encDraw->setViewport(v);
   }
 
 void MtCommandBuffer::setScissor(const Rect& r) {
   int x0 = std::max(0,r.x), y0 = std::max(0,r.y);
   int w  = (r.x+r.w)-x0, h = (r.y+r.h)-y0;
 
-  MTLScissorRect v = {};
+  MTL::ScissorRect v = {};
   v.x      = x0;
   v.y      = y0;
   v.width  = w;
   v.height = h;
-  [encDraw setScissorRect:v];
+  encDraw->setScissorRect(v);
   }
 
 void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t offset, size_t vertexCount,
                            size_t firstInstance, size_t instanceCount) {
   auto& vbo = reinterpret_cast<const MtBuffer&>(ivbo);
-  [encDraw setVertexBuffer:vbo.impl
-                    offset:0
-                   atIndex:curVboId];
+  encDraw->setVertexBuffer(vbo.impl.get(),0,curVboId);
 
   if(!isTesselation) {
-    [encDraw drawPrimitives:topology
-                        vertexStart:offset
-                        vertexCount:vertexCount
-                        instanceCount:instanceCount
-                        baseInstance:firstInstance];
+    encDraw->drawPrimitives(topology,offset,vertexCount,instanceCount,firstInstance);
     } else {
-    [encDraw setTriangleFillMode:MTLTriangleFillModeLines]; // debug
-    [encDraw setTessellationFactorBuffer : nil
-                                  offset : 0
-                          instanceStride : 0];
-    [encDraw drawPatches: 3
-             patchStart: offset
-             patchCount: vertexCount
-             patchIndexBuffer: nil
-             patchIndexBufferOffset: 0
-             instanceCount: instanceCount
-             baseInstance: firstInstance];
+    encDraw->setTriangleFillMode(MTL::TriangleFillModeLines);  // debug
+    encDraw->setTessellationFactorBuffer(nullptr,0,0);
+    encDraw->drawPatches(3, offset, vertexCount, nullptr, 0, instanceCount, firstInstance);
     }
   }
 
@@ -258,32 +241,16 @@ void MtCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_
   auto     iboType = nativeFormat(icls);
   uint32_t mul     = sizeofIndex(icls);
 
-  [encDraw setVertexBuffer:vbo.impl
-                    offset:0
-                   atIndex:curVboId];
-  [encDraw drawIndexedPrimitives:topology
-                             indexCount:isize
-                             indexType:iboType
-                             indexBuffer:ibo.impl
-                             indexBufferOffset:ioffset*mul
-                             instanceCount:instanceCount
-                             baseVertex:voffset
-                             baseInstance:firstInstance
-                             ];
+  encDraw->setVertexBuffer(vbo.impl.get(),0,curVboId);
+  encDraw->drawIndexedPrimitives(topology,isize,iboType,ibo.impl.get(),
+                                 ioffset*mul,instanceCount,voffset,firstInstance);
   }
 
 void MtCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
-  MTLSize sz;
-  sz.width  = x;
-  sz.height = y;
-  sz.depth  = z;
-
-  MTLSize th;
-  th.width  = 1;
-  th.height = 1;
-  th.depth  = 1;
-
-  [encComp dispatchThreadgroups:sz threadsPerThreadgroup:th];
+  x *= localSize.width;
+  y *= localSize.height;
+  z *= localSize.depth;
+  encComp->dispatchThreadgroups(MTL::Size(x,y,z), localSize);
   }
 
 void MtCommandBuffer::implSetBytes(const void* bytes, size_t sz) {
@@ -299,13 +266,13 @@ void MtCommandBuffer::implSetBytes(const void* bytes, size_t sz) {
     sz    = l.size;
     }
   if(mtl.bindVs!=uint32_t(-1)) {
-    [encDraw setVertexBytes:bytes length:sz atIndex:mtl.bindVs];
+    encDraw->setVertexBytes(bytes,sz,mtl.bindVs);
     }
   if(mtl.bindFs!=uint32_t(-1)) {
-    [encDraw setFragmentBytes:bytes length:sz atIndex:mtl.bindFs];
+    encDraw->setFragmentBytes(bytes,sz,mtl.bindFs);
     }
   if(mtl.bindCs!=uint32_t(-1)) {
-    [encComp setBytes:bytes length:sz atIndex:mtl.bindCs];
+    encComp->setBytes(bytes,sz,mtl.bindCs);
     }
   }
 
@@ -324,59 +291,56 @@ void MtCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u) {
       case ShaderReflection::Ubo:
       case ShaderReflection::SsboR:
       case ShaderReflection::SsboRW:
-        setBuffer(mtl[i],d.desc[i].val,d.desc[i].offset);
+        setBuffer(mtl[i],reinterpret_cast<MTL::Buffer*>(d.desc[i].val),d.desc[i].offset);
         break;
       case ShaderReflection::Texture:
       case ShaderReflection::ImgR:
       case ShaderReflection::ImgRW:
-        setTexture(mtl[i],d.desc[i].val,d.desc[i].sampler);
+        setTexture(mtl[i],reinterpret_cast<MTL::Texture*>(d.desc[i].val),d.desc[i].sampler);
         break;
       case ShaderReflection::Tlas:
-        setTlas(mtl[i],d.desc[i].val);
+        setTlas(mtl[i],reinterpret_cast<MTL::AccelerationStructure*>(d.desc[i].val));
         break;
       }
     }
   }
 
-void MtCommandBuffer::setBuffer(const MtPipelineLay::MTLBind& mtl,
-                                id<MTLBuffer> buf, size_t offset) {
+void MtCommandBuffer::setBuffer(const MtPipelineLay::MTLBind& mtl, MTL::Buffer* buf, size_t offset) {
   if(mtl.bindVs!=uint32_t(-1)) {
-    [encDraw setVertexBuffer:buf offset:offset atIndex:mtl.bindVs];
+    encDraw->setVertexBuffer(buf,offset,mtl.bindVs);
     }
   if(mtl.bindFs!=uint32_t(-1)) {
-    [encDraw setFragmentBuffer:buf offset:offset atIndex:mtl.bindFs];
+    encDraw->setFragmentBuffer(buf,offset,mtl.bindFs);
     }
   if(mtl.bindCs!=uint32_t(-1)) {
-    [encComp setBuffer:buf offset:offset atIndex:mtl.bindCs];
+    encComp->setBuffer(buf,offset,mtl.bindCs);
     }
   }
 
-void MtCommandBuffer::setTexture(const MtPipelineLay::MTLBind& mtl,
-                                 id<MTLTexture> tex, id<MTLSamplerState> ss) {
+void MtCommandBuffer::setTexture(const MtPipelineLay::MTLBind& mtl, MTL::Texture* tex, MTL::SamplerState* ss) {
   if(mtl.bindVs!=uint32_t(-1))
-    [encDraw setVertexTexture:tex atIndex:mtl.bindVs];
+    encDraw->setVertexTexture(tex,mtl.bindVs);
   if(mtl.bindVsSmp!=uint32_t(-1))
-    [encDraw setVertexSamplerState:ss atIndex:mtl.bindVsSmp];
+    encDraw->setVertexSamplerState(ss,mtl.bindVsSmp);
 
   if(mtl.bindFs!=uint32_t(-1))
-    [encDraw setFragmentTexture:tex atIndex:mtl.bindFs];
+    encDraw->setFragmentTexture(tex,mtl.bindFs);
   if(mtl.bindFsSmp!=uint32_t(-1))
-    [encDraw setFragmentSamplerState:ss atIndex:mtl.bindFsSmp];
+    encDraw->setFragmentSamplerState(ss,mtl.bindFsSmp);
 
   if(mtl.bindCs!=uint32_t(-1))
-    [encComp setTexture:tex atIndex:mtl.bindCs];
+    encComp->setTexture(tex,mtl.bindCs);
   if(mtl.bindCsSmp!=uint32_t(-1))
-    [encComp setSamplerState:ss atIndex:mtl.bindCsSmp];
+    encComp->setSamplerState(ss,mtl.bindCsSmp);
   }
 
-void MtCommandBuffer::setTlas(const MtPipelineLay::MTLBind& mtl,
-                              id<MTLAccelerationStructure> as) {
+void MtCommandBuffer::setTlas(const MtPipelineLay::MTLBind& mtl, MTL::AccelerationStructure* as) {
   if(@available(macOS 12.0, *)) {
     if(mtl.bindVs!=uint32_t(-1)) {
-      [encDraw setVertexAccelerationStructure:as atBufferIndex:mtl.bindVs];
+      encDraw->setVertexAccelerationStructure(as,mtl.bindVs);
       }
     if(mtl.bindFs!=uint32_t(-1)) {
-      [encDraw setFragmentAccelerationStructure:as atBufferIndex:mtl.bindFs];
+      encDraw->setFragmentAccelerationStructure(as,mtl.bindFs);
       }
     } else {
     if(mtl.bindVs!=uint32_t(-1) ||
@@ -385,7 +349,7 @@ void MtCommandBuffer::setTlas(const MtPipelineLay::MTLBind& mtl,
     }
 
   if(mtl.bindCs!=uint32_t(-1)) {
-    [encComp setAccelerationStructure:as atBufferIndex:mtl.bindCs];
+    encComp->setAccelerationStructure(as,mtl.bindCs);
     }
   }
 
@@ -395,18 +359,18 @@ void MtCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture &image,
   setEncoder(E_Blit,nullptr);
 
   auto& t = reinterpret_cast<MtTexture&>(image);
-  [encBlit generateMipmapsForTexture:t.impl];
+  encBlit->generateMipmaps(t.impl.get());
   }
 
 void MtCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
   auto& px   = reinterpret_cast<MtPipeline&>(p);
   auto& inst = px.inst(curFbo);
 
-  if(curFbo.depthFormat!=MTLPixelFormatInvalid)
-    [encDraw setDepthStencilState:px.depthStZ]; else
-    [encDraw setDepthStencilState:px.depthStNoZ];
-  [encDraw setRenderPipelineState:inst.pso];
-  [encDraw setCullMode:px.cullMode];
+  if(curFbo.depthFormat!=MTL::PixelFormatInvalid)
+    encDraw->setDepthStencilState(px.depthStZ.get()); else
+    encDraw->setDepthStencilState(px.depthStNoZ.get());
+  encDraw->setRenderPipelineState(inst.pso.get());
+  encDraw->setCullMode(px.cullMode);
   topology      = px.topology;
   isTesselation = px.isTesselation;
   curVboId      = px.lay.handler->vboIndex;
@@ -421,14 +385,9 @@ void MtCommandBuffer::copy(AbstractGraphicsApi::Buffer& dest, size_t offset,
   auto& d = reinterpret_cast<MtBuffer&> (dest);
   const uint32_t bpp = s.bitCount()/8;
 
-  [encBlit copyFromTexture:s.impl
-                           sourceSlice:0
-                           sourceLevel:mip
-                           sourceOrigin:MTLOriginMake(0,0,0)
-                           sourceSize:MTLSizeMake(width,height,1)
-                           toBuffer:d.impl
-                           destinationOffset:offset
-                           destinationBytesPerRow:bpp*width
-                           destinationBytesPerImage:bpp*width*height];
+  encBlit->copyFromTexture(s.impl.get(), 0,mip,
+                           MTL::Origin(0,0,0),MTL::Size(width,height,1),
+                           d.impl.get(),
+                           offset, bpp*width,bpp*width*height);
   }
 

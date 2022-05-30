@@ -5,8 +5,8 @@
 
 #include "gapi/shaderreflection.h"
 
-#import <Metal/MTLDevice.h>
-#import <Metal/MTLRenderPipeline.h>
+#include <Metal/Metal.hpp>
+#include "nsptr.h"
 
 namespace Tempest {
 namespace Detail {
@@ -20,17 +20,21 @@ class MtShader : public AbstractGraphicsApi::Shader {
 
     using Binding = ShaderReflection::Binding;
 
-    id<MTLLibrary>  library;
-    id<MTLFunction> impl;
+    NsPtr<MTL::Library>              library;
+    NsPtr<MTL::Function>             impl;
 
     std::vector<Decl::ComponentType> vdecl;
     std::vector<Binding>             lay;
     ShaderReflection::Stage          stage = ShaderReflection::Stage::Compute;
 
     struct {
-      MTLWinding                   winding   = MTLWindingClockwise;
-      MTLTessellationPartitionMode partition = MTLTessellationPartitionModePow2;
+      MTL::Winding                   winding   = MTL::WindingClockwise;
+      MTL::TessellationPartitionMode partition = MTL::TessellationPartitionModePow2;
       } tese;
+
+    struct {
+      MTL::Size localSize = {};
+      } comp;
   };
 
 }

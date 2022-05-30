@@ -4,191 +4,190 @@
 #include <Tempest/RenderState>
 #include <Tempest/Except>
 
+#include <Metal/Metal.hpp>
+#include <Foundation/Foundation.hpp>
+
 #include "../utility/compiller_hints.h"
 #include "mtsamplercache.h"
-#import  <Metal/MTLPixelFormat.h>
-#import  <Metal/MTLVertexDescriptor.h>
-#import  <Metal/MTLDepthStencil.h>
-#import  <Metal/MTLRenderPipeline.h>
-#import  <Foundation/NSError.h>
+#include "nsptr.h"
 
 class MTLDevice;
 
 namespace Tempest {
 namespace Detail {
 
-inline MTLPixelFormat nativeFormat(TextureFormat frm) {
+inline MTL::PixelFormat nativeFormat(TextureFormat frm) {
   switch(frm) {
     case Undefined:
     case Last:
-      return MTLPixelFormatInvalid;
+      return MTL::PixelFormatInvalid;
     case R8:
-      return MTLPixelFormatR8Unorm;
+      return MTL::PixelFormatR8Unorm;
     case RG8:
-      return MTLPixelFormatRG8Unorm;
+      return MTL::PixelFormatRG8Unorm;
     case RGB8:
-      return MTLPixelFormatInvalid;
+      return MTL::PixelFormatInvalid;
     case RGBA8:
-      return MTLPixelFormatRGBA8Unorm;
+      return MTL::PixelFormatRGBA8Unorm;
     case R16:
-      return MTLPixelFormatR16Unorm;
+      return MTL::PixelFormatR16Unorm;
     case RG16:
-      return MTLPixelFormatRG16Unorm;
+      return MTL::PixelFormatRG16Unorm;
     case RGB16:
-      return MTLPixelFormatInvalid;
+      return MTL::PixelFormatInvalid;
     case RGBA16:
-      return MTLPixelFormatRGBA16Unorm;
+      return MTL::PixelFormatRGBA16Unorm;
     case R32F:
-      return MTLPixelFormatR32Float;
+      return MTL::PixelFormatR32Float;
     case RG32F:
-      return MTLPixelFormatRG32Float;
+      return MTL::PixelFormatRG32Float;
     case RGB32F:
-      return MTLPixelFormatInvalid;
+      return MTL::PixelFormatInvalid;
     case RGBA32F:
-      return MTLPixelFormatRGBA32Float;
+      return MTL::PixelFormatRGBA32Float;
     case Depth16:
-      return MTLPixelFormatDepth16Unorm;
+      return MTL::PixelFormatDepth16Unorm;
     case Depth24x8:
-      return MTLPixelFormatInvalid;
+      return MTL::PixelFormatInvalid;
     case Depth24S8:
-      return MTLPixelFormatDepth24Unorm_Stencil8;
+      return MTL::PixelFormatDepth24Unorm_Stencil8;
     case DXT1:
-      return MTLPixelFormatBC1_RGBA;
+      return MTL::PixelFormatBC1_RGBA;
     case DXT3:
-      return MTLPixelFormatBC2_RGBA;
+      return MTL::PixelFormatBC2_RGBA;
     case DXT5:
-      return MTLPixelFormatBC3_RGBA;
+      return MTL::PixelFormatBC3_RGBA;
     }
-  return MTLPixelFormatInvalid;
+  return MTL::PixelFormatInvalid;
   }
 
-inline MTLVertexFormat nativeFormat(Decl::ComponentType t) {
+inline MTL::VertexFormat nativeFormat(Decl::ComponentType t) {
   switch(t) {
     case Decl::ComponentType::count:
     case Decl::ComponentType::float0:
-      return MTLVertexFormatInvalid;
+      return MTL::VertexFormatInvalid;
     case Decl::ComponentType::float1:
-      return MTLVertexFormatFloat;
+      return MTL::VertexFormatFloat;
     case Decl::ComponentType::float2:
-      return MTLVertexFormatFloat2;
+      return MTL::VertexFormatFloat2;
     case Decl::ComponentType::float3:
-      return MTLVertexFormatFloat3;
+      return MTL::VertexFormatFloat3;
     case Decl::ComponentType::float4:
-      return MTLVertexFormatFloat4;
+      return MTL::VertexFormatFloat4;
 
     case Decl::ComponentType::int1:
-      return MTLVertexFormatInt;
+      return MTL::VertexFormatInt;
     case Decl::ComponentType::int2:
-      return MTLVertexFormatInt2;
+      return MTL::VertexFormatInt2;
     case Decl::ComponentType::int3:
-      return MTLVertexFormatInt3;
+      return MTL::VertexFormatInt3;
     case Decl::ComponentType::int4:
-      return MTLVertexFormatInt4;
+      return MTL::VertexFormatInt4;
 
     case Decl::ComponentType::uint1:
-      return MTLVertexFormatUInt;
+      return MTL::VertexFormatUInt;
     case Decl::ComponentType::uint2:
-      return MTLVertexFormatUInt2;
+      return MTL::VertexFormatUInt2;
     case Decl::ComponentType::uint3:
-      return MTLVertexFormatUInt3;
+      return MTL::VertexFormatUInt3;
     case Decl::ComponentType::uint4:
-      return MTLVertexFormatUInt4;
+      return MTL::VertexFormatUInt4;
     }
-  return MTLVertexFormatInvalid;
+  return MTL::VertexFormatInvalid;
   }
 
-inline MTLCompareFunction nativeFormat(RenderState::ZTestMode m) {
+inline MTL::CompareFunction nativeFormat(RenderState::ZTestMode m) {
   switch(m) {
     case RenderState::ZTestMode::Always:
-      return MTLCompareFunctionAlways;
+      return MTL::CompareFunctionAlways;
     case RenderState::ZTestMode::Never:
-      return MTLCompareFunctionNever;
+      return MTL::CompareFunctionNever;
     case RenderState::ZTestMode::Greater:
-      return MTLCompareFunctionGreater;
+      return MTL::CompareFunctionGreater;
     case RenderState::ZTestMode::Less:
-      return MTLCompareFunctionLess;
+      return MTL::CompareFunctionLess;
     case RenderState::ZTestMode::GEqual:
-      return MTLCompareFunctionGreaterEqual;
+      return MTL::CompareFunctionGreaterEqual;
     case RenderState::ZTestMode::LEqual:
-      return MTLCompareFunctionLessEqual;
+      return MTL::CompareFunctionLessEqual;
     case RenderState::ZTestMode::NOEqual:
-      return MTLCompareFunctionNotEqual;
+      return MTL::CompareFunctionNotEqual;
     case RenderState::ZTestMode::Equal:
-      return MTLCompareFunctionEqual;
+      return MTL::CompareFunctionEqual;
     }
-  return MTLCompareFunctionAlways;
+  return MTL::CompareFunctionAlways;
   }
 
-inline MTLBlendFactor nativeFormat(RenderState::BlendMode m) {
+inline MTL::BlendFactor nativeFormat(RenderState::BlendMode m) {
   switch(m) {
     case RenderState::BlendMode::Zero:
-      return MTLBlendFactorZero;
+      return MTL::BlendFactorZero;
     case RenderState::BlendMode::One:
-      return MTLBlendFactorOne;
+      return MTL::BlendFactorOne;
     case RenderState::BlendMode::SrcColor:
-      return MTLBlendFactorSourceColor;
+      return MTL::BlendFactorSourceColor;
     case RenderState::BlendMode::OneMinusSrcColor:
-      return MTLBlendFactorOneMinusSourceColor;
+      return MTL::BlendFactorOneMinusSourceColor;
     case RenderState::BlendMode::SrcAlpha:
-      return MTLBlendFactorSourceAlpha;
+      return MTL::BlendFactorSourceAlpha;
     case RenderState::BlendMode::SrcAlphaSaturate:
-      return MTLBlendFactorSourceAlphaSaturated;
+      return MTL::BlendFactorSourceAlphaSaturated;
     case RenderState::BlendMode::OneMinusSrcAlpha:
-      return MTLBlendFactorOneMinusSourceAlpha;
+      return MTL::BlendFactorOneMinusSourceAlpha;
     case RenderState::BlendMode::DstColor:
-      return MTLBlendFactorDestinationColor;
+      return MTL::BlendFactorDestinationColor;
     case RenderState::BlendMode::OneMinusDstColor:
-      return MTLBlendFactorOneMinusDestinationColor;
+      return MTL::BlendFactorOneMinusDestinationColor;
     case RenderState::BlendMode::DstAlpha:
-      return MTLBlendFactorDestinationAlpha;
+      return MTL::BlendFactorDestinationAlpha;
     case RenderState::BlendMode::OneMinusDstAlpha:
-      return MTLBlendFactorOneMinusDestinationAlpha;
+      return MTL::BlendFactorOneMinusDestinationAlpha;
     }
-  return MTLBlendFactorZero;
+  return MTL::BlendFactorZero;
   }
 
-inline MTLBlendOperation nativeFormat(RenderState::BlendOp op) {
+inline MTL::BlendOperation nativeFormat(RenderState::BlendOp op) {
   switch(op) {
     case RenderState::BlendOp::Add:
-      return MTLBlendOperationAdd;
+      return MTL::BlendOperationAdd;
     case RenderState::BlendOp::Max:
-      return MTLBlendOperationMax;
+      return MTL::BlendOperationMax;
     case RenderState::BlendOp::Min:
-      return MTLBlendOperationMin;
+      return MTL::BlendOperationMin;
     case RenderState::BlendOp::ReverseSubtract:
-      return MTLBlendOperationReverseSubtract;
+      return MTL::BlendOperationReverseSubtract;
     case RenderState::BlendOp::Subtract:
-      return MTLBlendOperationSubtract;
+      return MTL::BlendOperationSubtract;
     }
-  return MTLBlendOperationAdd;
+  return MTL::BlendOperationAdd;
   }
 
-inline MTLCullMode nativeFormat(RenderState::CullMode m) {
+inline MTL::CullMode nativeFormat(RenderState::CullMode m) {
   switch(m) {
     case RenderState::CullMode::NoCull:
-      return MTLCullModeNone;
+      return MTL::CullModeNone;
     case RenderState::CullMode::Back:
-      return MTLCullModeBack;
+      return MTL::CullModeBack;
     case RenderState::CullMode::Front:
-      return MTLCullModeFront;
+      return MTL::CullModeFront;
     }
-  return MTLCullModeNone;
+  return MTL::CullModeNone;
   }
 
-inline MTLPrimitiveType nativeFormat(Topology t) {
+inline MTL::PrimitiveType nativeFormat(Topology t) {
   switch(t) {
-    case Topology::Lines:     return MTLPrimitiveTypeLine;
-    case Topology::Triangles: return MTLPrimitiveTypeTriangle;
+    case Topology::Lines:     return MTL::PrimitiveTypeLine;
+    case Topology::Triangles: return MTL::PrimitiveTypeTriangle;
     }
-  return MTLPrimitiveTypePoint;
+  return MTL::PrimitiveTypePoint;
   }
 
-inline MTLIndexType nativeFormat(IndexClass icls) {
+inline MTL::IndexType nativeFormat(IndexClass icls) {
   switch(icls) {
-    case IndexClass::i16: return MTLIndexTypeUInt16;
-    case IndexClass::i32: return MTLIndexTypeUInt32;
+    case IndexClass::i16: return MTL::IndexTypeUInt16;
+    case IndexClass::i32: return MTL::IndexTypeUInt32;
     }
-  return MTLIndexTypeUInt16;
+  return MTL::IndexTypeUInt16;
   }
 
 class MtDevice : public AbstractGraphicsApi::Device {
@@ -198,29 +197,27 @@ class MtDevice : public AbstractGraphicsApi::Device {
 
     void waitIdle() override;
 
-    static void handleError(NSError* err);
+    static void handleError(NS::Error* err);
 
     struct autoDevice {
       autoDevice(const char* name);
       ~autoDevice();
-      id<MTLDevice>       impl;
-      id<MTLCommandQueue> queue;
+      NsPtr<MTL::Device>       impl;
+      NsPtr<MTL::CommandQueue> queue;
       };
 
-    id<MTLDevice>       impl;
-    id<MTLCommandQueue> queue;
+    NsPtr<MTL::Device>         impl;
+    NsPtr<MTL::CommandQueue>   queue;
 
     AbstractGraphicsApi::Props prop;
+    MtSamplerCache             samplers;
+    bool                       validation = false;
 
-    autoDevice     dev;
-    MtSamplerCache samplers;
-    bool           validation = false;
-
-    static void deductProps(AbstractGraphicsApi::Props& prop, id<MTLDevice> dev);
+    static void deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev);
   };
 
-inline void mtAssert(id obj, NSError* err) {
-  if(T_LIKELY(obj!=nil))
+inline void mtAssert(void* obj, NS::Error* err) {
+  if(T_LIKELY(obj!=nullptr))
     return;
   MtDevice::handleError(err);
   }

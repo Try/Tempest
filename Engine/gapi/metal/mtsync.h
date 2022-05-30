@@ -3,7 +3,7 @@
 #include <Tempest/AbstractGraphicsApi>
 #include <mutex>
 
-#import  <Metal/MTLCommandBuffer.h>
+#include <Metal/Metal.hpp>
 
 namespace Tempest {
 namespace Detail {
@@ -16,15 +16,15 @@ class MtSync : public AbstractGraphicsApi::Fence {
     void wait() override;
     bool wait(uint64_t time) override;
     void reset() override;
-    void reset(MTLCommandBufferStatus err);
+    void reset(MTL::CommandBufferStatus err);
 
     void signal();
 
   private:
-    std::mutex              sync;
-    std::condition_variable cv;
-    std::atomic_bool        hasWait{false};
-    MTLCommandBufferStatus  status = MTLCommandBufferStatusNotEnqueued;
+    std::mutex               sync;
+    std::condition_variable  cv;
+    std::atomic_bool         hasWait{false};
+    MTL::CommandBufferStatus status = MTL::CommandBufferStatusNotEnqueued;
     void propogateError();
   };
 

@@ -8,42 +8,31 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-MtDevice::autoDevice::autoDevice(const char* name) {
-  if(name==nullptr) {
-    impl = MTLCreateSystemDefaultDevice();
-    } else {
-    NSArray<id<MTLDevice>>* dev = MTLCopyAllDevices();
-    for(size_t i=0; i<dev.count; ++i) {
-      if(std::strcmp(name,dev[i].name.UTF8String)==0) {
-        impl = dev[i];
-        break;
-        }
+static NsPtr<MTL::Device> mkDevice(const char* name) {
+  if(name==nullptr)
+    return NsPtr<MTL::Device>(MTL::CreateSystemDefaultDevice());
+
+  auto dev = NsPtr<NS::Array>(MTL::CopyAllDevices());
+  for(size_t i=0; i<dev->count(); ++i) {
+    NS::Object*  at = dev->object(i);
+    MTL::Device* d  = reinterpret_cast<MTL::Device*>(at);
+    if(std::strcmp(name,d->name()->utf8String())==0) {
+      return NsPtr<MTL::Device>(d);
       }
-    [dev release];
     }
-
-  if(impl==nil)
-    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
-
-  queue = [impl newCommandQueue];
-  if(queue==nil) {
-    [impl release];
-    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
-    }
-  }
-
-MtDevice::autoDevice::~autoDevice() {
-  if(queue!=nil)
-    [queue release];
-  if(impl!=nil)
-    [impl release];
+  return NsPtr<MTL::Device>(nullptr);
   }
 
 MtDevice::MtDevice(const char* name, bool validation)
-  : dev(name), samplers(dev.impl), validation(validation) {
-  impl  = dev.impl;
-  queue = dev.queue;
-  deductProps(prop,impl);
+  : impl(mkDevice(name)), samplers(*impl), validation(validation) {
+  if(impl.get()==nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+
+  queue = NsPtr<MTL::CommandQueue>(impl->newCommandQueue());
+  if(queue.get()==nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+
+  deductProps(prop,*impl);
   }
 
 MtDevice::~MtDevice() {
@@ -51,22 +40,22 @@ MtDevice::~MtDevice() {
 
 void MtDevice::waitIdle() {
   // TODO: verify, if this correct at all
-  id<MTLCommandBuffer> cmd = [queue commandBuffer];
-  [cmd commit];
-  [cmd waitUntilCompleted];
+  auto cmd = queue->commandBuffer();
+  cmd->commit();
+  cmd->waitUntilCompleted();
   }
 
-void Tempest::Detail::MtDevice::handleError(NSError *err) {
-  if(err==nil)
+void Tempest::Detail::MtDevice::handleError(NS::Error *err) {
+  if(err==nullptr)
     return;
 #if !defined(NDEBUG)
-  const char* e = [[err domain] UTF8String];
+  const char* e = err->domain()->utf8String();
   Log::d("NSError: \"",e,"\"");
 #endif
   throw DeviceLostException();
   }
 
-void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, id<MTLDevice> dev) {
+void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
   SInt32 majorVersion = 0, minorVersion = 0;
   if([[NSProcessInfo processInfo] respondsToSelector:@selector(operatingSystemVersion)]) {
     NSOperatingSystemVersion ver = [[NSProcessInfo processInfo] operatingSystemVersion];
@@ -74,8 +63,8 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, id<MTLDevice> dev) 
     minorVersion = ver.minorVersion;
     }
 
-  std::strncpy(prop.name,dev.name.UTF8String,sizeof(prop.name));
-  if(dev.hasUnifiedMemory)
+  std::strncpy(prop.name,dev.name()->utf8String(),sizeof(prop.name));
+  if(dev.hasUnifiedMemory())
     prop.type = DeviceType::Integrated; else
     prop.type = DeviceType::Discrete;
 
@@ -108,13 +97,13 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, id<MTLDevice> dev) 
   for(auto& i:ds)
     dsBit  |= uint64_t(1) << uint64_t(i);
 
-  if(dev.supportsBCTextureCompression) {
+  if(dev.supportsBCTextureCompression()) {
     static const TextureFormat bc[] = {TextureFormat::DXT1, TextureFormat::DXT3, TextureFormat::DXT5};
     for(auto& i:bc)
       smpBit |= uint64_t(1) << uint64_t(i);
     }
 
-  if(dev.depth24Stencil8PixelFormatSupported) {
+  if(dev.depth24Stencil8PixelFormatSupported()) {
     static const TextureFormat ds[] = {TextureFormat::Depth24S8};
     for(auto& i:ds)
       dsBit  |= uint64_t(1) << uint64_t(i);
@@ -126,7 +115,7 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, id<MTLDevice> dev) 
   prop.setStorageFormats(storBit);
 
   prop.mrt.maxColorAttachments = 4;
-  if([dev supportsFamily:MTLGPUFamilyApple2])
+  if(dev.supportsFamily(MTL::GPUFamilyApple2))
     prop.mrt.maxColorAttachments = 8;
 
   // https://developer.apple.com/documentation/metal/mtlrendercommandencoder/1515829-setvertexbuffer?language=objc
@@ -146,7 +135,7 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, id<MTLDevice> dev) 
   prop.compute.maxGroupSize.x = 512;
   prop.compute.maxGroupSize.y = 512;
   prop.compute.maxGroupSize.z = 512;
-  if([dev supportsFamily:MTLGPUFamilyApple4]) {
+  if(dev.supportsFamily(MTL::GPUFamilyApple4)) {
     prop.compute.maxGroupSize.x = 1024;
     prop.compute.maxGroupSize.y = 1024;
     prop.compute.maxGroupSize.z = 1024;
@@ -156,10 +145,10 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, id<MTLDevice> dev) 
   prop.maxAnisotropy = 16;
 
 #ifdef __IOS__
-  if([dev supportsFeatureSet:MTLFeatureSet_iOS_GPUFamily3_v2])
+  if(dev.supportsFeatureSet(MTL::FeatureSet_iOS_GPUFamily3_v2))
     prop.tesselationShader = false;//true;
 #else
-  if([dev supportsFeatureSet:MTLFeatureSet_macOS_GPUFamily1_v2])
+  if(dev.supportsFeatureSet(MTL::FeatureSet_macOS_GPUFamily1_v2))
     prop.tesselationShader = false;//true;
 #endif
 
@@ -173,7 +162,7 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, id<MTLDevice> dev) 
 #endif
 
   if(@available(macOS 12.0, *)) {
-    prop.raytracing.rayQuery = dev.supportsRaytracingFromRender;
+    prop.raytracing.rayQuery = dev.supportsRaytracingFromRender();
     }
   }
 

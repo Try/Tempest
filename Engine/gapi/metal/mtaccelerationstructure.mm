@@ -6,10 +6,6 @@
 #include "utility/compiller_hints.h"
 #include "gapi/graphicsmemutils.h"
 
-#import <Metal/MTLDevice.h>
-#import <Metal/MTLCommandQueue.h>
-#import <Metal/MTLCommandBuffer.h>
-
 #include <Tempest/Log>
 
 using namespace Tempest::Detail;
@@ -18,145 +14,118 @@ MtAccelerationStructure::MtAccelerationStructure(MtDevice& dx,
                                                  MtBuffer& vbo, size_t vboSz, size_t stride,
                                                  MtBuffer& ibo, size_t iboSz, size_t ioffset, IndexClass icls)
   :owner(dx) {
-  auto* geo = [MTLAccelerationStructureTriangleGeometryDescriptor descriptor];
-  geo.vertexBuffer       = vbo.impl;
-  geo.vertexBufferOffset = 0;
-  geo.vertexStride       = stride;
-  geo.indexBuffer        = ibo.impl;
-  geo.indexBufferOffset  = ioffset*sizeofIndex(icls);
-  geo.indexType          = nativeFormat(icls);
-  geo.triangleCount      = iboSz/3;
+  auto pool = NsPtr<NS::AutoreleasePool>::init();
+  auto geo  = NsPtr<MTL::AccelerationStructureTriangleGeometryDescriptor>::init();
+  if(geo==nullptr)
+    throw std::system_error(GraphicsErrc::OutOfHostMemory);
+  geo->setVertexBuffer(vbo.impl.get());
+  geo->setVertexBufferOffset(0);
+  geo->setVertexStride(stride);
+  geo->setIndexBuffer(ibo.impl.get());
+  geo->setIndexBufferOffset(ioffset*sizeofIndex(icls));
+  geo->setIndexType(nativeFormat(icls));
+  geo->setTriangleCount(iboSz/3);
 
-  if(geo.indexBufferOffset%256!=0) {
+  if(geo->indexBufferOffset()%256!=0) {
     //Log::d("FIXME: index buffer offset alignment on metal(",geo.indexBufferOffset%256,")");
     //geo.indexBufferOffset = 0;
     //geo.triangleCount     = 0;
     }
 
-  NSArray *geoArr = @[geo];
-  auto* desc = [MTLPrimitiveAccelerationStructureDescriptor descriptor];
-  desc.geometryDescriptors = geoArr;
-  desc.usage               = MTLAccelerationStructureUsageNone;
+  auto geoArr = NsPtr<NS::Array>(NS::Array::array(geo.get()));
+  auto desc   = NsPtr<MTL::PrimitiveAccelerationStructureDescriptor>::init();
+  desc->retain();
+  desc->setGeometryDescriptors(geoArr.get());
+  desc->setUsage(MTL::AccelerationStructureUsageNone);
+
   if(@available(macOS 12.0, *)) {
     // ???
     //desc.usage = MTLAccelerationStructureUsageExtendedLimits;
     }
 
-  MTLAccelerationStructureSizes sz = [dx.impl accelerationStructureSizesWithDescriptor:desc];
+  auto sz = dx.impl->accelerationStructureSizes(desc.get());
 
-  impl = [dx.impl newAccelerationStructureWithSize:sz.accelerationStructureSize];
-  if(impl==nil)
+  impl = NsPtr<MTL::AccelerationStructure>(dx.impl->newAccelerationStructure(sz.accelerationStructureSize));
+  if(impl==nullptr)
     throw std::system_error(GraphicsErrc::OutOfVideoMemory);
 
-  id<MTLBuffer> scratch = [dx.impl newBufferWithLength:sz.buildScratchBufferSize options:MTLResourceStorageModePrivate];
-  if(scratch==nil && sz.buildScratchBufferSize>0) {
-    [impl release];
+  NsPtr<MTL::Buffer> scratch = NsPtr<MTL::Buffer>(dx.impl->newBuffer(sz.buildScratchBufferSize, MTL::ResourceStorageModePrivate));
+  if(scratch==nil && sz.buildScratchBufferSize>0)
     throw std::system_error(GraphicsErrc::OutOfVideoMemory);
-    }
 
-  id<MTLCommandBuffer>                       cmd = [dx.queue commandBuffer];
-  id<MTLAccelerationStructureCommandEncoder> enc = [cmd accelerationStructureCommandEncoder];
-  [enc buildAccelerationStructure:impl
-                       descriptor:desc
-                    scratchBuffer:scratch
-              scratchBufferOffset:0];
-  [enc endEncoding];
-  [cmd commit];
+  auto cmd = dx.queue->commandBuffer();
+  auto enc = cmd->accelerationStructureCommandEncoder();
+  enc->buildAccelerationStructure(impl.get(), desc.get(), scratch.get(), 0);
+  enc->endEncoding();
+  cmd->commit();
   // TODO: implement proper upload engine
-  [cmd waitUntilCompleted];
-  MTLCommandBufferStatus s = cmd.status;
-  if(s!=MTLCommandBufferStatus::MTLCommandBufferStatusCompleted)
-    throw DeviceLostException();
+  cmd->waitUntilCompleted();
 
-  if(scratch!=nil)
-    [scratch release];
+  MTL::CommandBufferStatus s = cmd->status();
+  if(s!=MTL::CommandBufferStatus::CommandBufferStatusCompleted)
+    throw DeviceLostException();
   }
 
 MtAccelerationStructure::~MtAccelerationStructure() {
-  [impl release];
   }
 
 
-MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtInstance* inst, AccelerationStructure*const* as, size_t asSize)
+MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtInstance* inst,
+                                                       AccelerationStructure*const* as, size_t asSize)
   :owner(dx) {
-  NSMutableArray* asArray = nil;
-  id<MTLBuffer>   scratch = nil;
-  try {
-    instances = [dx.impl newBufferWithLength:sizeof(MTLAccelerationStructureInstanceDescriptor)*asSize
-                                     options:MTLResourceStorageModeManaged];
-    if(instances==nil)
-      throw std::system_error(GraphicsErrc::OutOfVideoMemory);
+  auto pool = NsPtr<NS::AutoreleasePool>::init();
+  instances = NsPtr<MTL::Buffer>(dx.impl->newBuffer(sizeof(MTL::AccelerationStructureInstanceDescriptor)*asSize,
+                                                    MTL::ResourceStorageModeManaged));
+  if(instances==nullptr)
+    throw std::system_error(GraphicsErrc::OutOfVideoMemory);
 
-    asArray = [NSMutableArray arrayWithCapacity:asSize];
-    if(asArray==nil && asSize>0)
-      throw std::system_error(GraphicsErrc::OutOfHostMemory);
+  std::unique_ptr<NS::Object*[]> asCpp;
+  asCpp.reset(new NS::Object*[asSize]);
+  for(size_t i=0; i<asSize; ++i) {
+    auto& obj = reinterpret_cast<MTL::AccelerationStructureInstanceDescriptor*>(instances->contents())[i];
 
-    for(size_t i=0; i<asSize; ++i) {
-      auto& obj = reinterpret_cast<MTLAccelerationStructureInstanceDescriptor*>([instances contents])[i];
+    for(int x=0; x<4; ++x)
+      for(int y=0; y<3; ++y)
+        obj.transformationMatrix[x][y] = inst[i].mat.at(x,y);
+    obj.options                         = MTL::AccelerationStructureInstanceOptionDisableTriangleCulling |
+                                          MTL::AccelerationStructureInstanceOptionOpaque;
+    obj.mask                            = 0xFF;
+    obj.intersectionFunctionTableOffset = 0;
+    obj.accelerationStructureIndex      = i;
 
-      for(int x=0; x<4; ++x)
-        for(int y=0; y<3; ++y)
-          obj.transformationMatrix[x][y] = inst[i].mat.at(x,y);
-      obj.options                         = MTLAccelerationStructureInstanceOptionDisableTriangleCulling |
-                                            MTLAccelerationStructureInstanceOptionOpaque;
-      obj.mask                            = 0xFF;
-      obj.intersectionFunctionTableOffset = 0;
-      obj.accelerationStructureIndex      = i;
-
-      auto* ax = reinterpret_cast<MtAccelerationStructure*>(as[i]);
-      [asArray addObject:ax->impl];
-      }
-    [instances didModifyRange:NSMakeRange(0,[instances length])];
-
-    auto desc = [MTLInstanceAccelerationStructureDescriptor descriptor];
-    if(desc==nil)
-      throw std::system_error(GraphicsErrc::OutOfHostMemory);
-    desc.instanceDescriptorBuffer        = instances;
-    desc.instanceDescriptorBufferOffset  = 0;
-    desc.instanceDescriptorStride        = sizeof(MTLAccelerationStructureInstanceDescriptor);
-    desc.instanceCount                   = asSize;
-    desc.instancedAccelerationStructures = asArray;
-
-    MTLAccelerationStructureSizes sz = [dx.impl accelerationStructureSizesWithDescriptor:desc];
-
-    impl = [dx.impl newAccelerationStructureWithSize:sz.accelerationStructureSize];
-    if(impl==nil)
-      throw std::system_error(GraphicsErrc::OutOfVideoMemory);
-
-    scratch = [dx.impl newBufferWithLength:sz.buildScratchBufferSize options:MTLResourceStorageModePrivate];
-    if(scratch==nil && sz.buildScratchBufferSize>0)
-      throw std::system_error(GraphicsErrc::OutOfVideoMemory);
-
-    id<MTLCommandBuffer>                       cmd = [dx.queue commandBuffer];
-    id<MTLAccelerationStructureCommandEncoder> enc = [cmd accelerationStructureCommandEncoder];
-    [enc buildAccelerationStructure:impl
-                         descriptor:desc
-                      scratchBuffer:scratch
-                scratchBufferOffset:0];
-    [enc endEncoding];
-    [cmd commit];
-    // TODO: implement proper upload engine
-    [cmd waitUntilCompleted];
+    auto* ax = reinterpret_cast<MtAccelerationStructure*>(as[i]);
+    asCpp[i] = ax->impl.get();
     }
-  catch(...) {
-    if(asArray!=nil)
-      [asArray release];
-    if(scratch!=nil)
-      [scratch release];
-    if(impl!=nil)
-      [impl release];
-    if(instances!=nil)
-      [instances release];
-    throw;
-    }
+  instances->didModifyRange(NS::Range(0,instances->length()));
 
-  if(scratch!=nil)
-    [scratch release];
-  if(asArray!=nil)
-    ;//[asArray release];
+  auto asArray = NsPtr<NS::Array>(NS::Array::array(asCpp.get(), asSize));
+  auto desc    = NsPtr<MTL::InstanceAccelerationStructureDescriptor>::init();
+  if(desc==nullptr)
+    throw std::system_error(GraphicsErrc::OutOfHostMemory);
+  desc->retain();
+  desc->setInstanceDescriptorBuffer(instances.get());
+  desc->setInstanceDescriptorBufferOffset(0);
+  desc->setInstanceDescriptorStride(sizeof(MTL::AccelerationStructureInstanceDescriptor));
+  desc->setInstanceCount(asSize);
+  desc->setInstancedAccelerationStructures(asArray.get());
+
+  auto sz = dx.impl->accelerationStructureSizes(desc.get());
+  impl = NsPtr<MTL::AccelerationStructure>(dx.impl->newAccelerationStructure(sz.accelerationStructureSize));
+  if(impl==nullptr)
+    throw std::system_error(GraphicsErrc::OutOfVideoMemory);
+
+  auto scratch = NsPtr<MTL::Buffer>(dx.impl->newBuffer(sz.buildScratchBufferSize,MTL::ResourceStorageModePrivate));
+  if(scratch==nullptr && sz.buildScratchBufferSize>0)
+    throw std::system_error(GraphicsErrc::OutOfVideoMemory);
+
+  auto cmd = dx.queue->commandBuffer();
+  auto enc = cmd->accelerationStructureCommandEncoder();
+  enc->buildAccelerationStructure(impl.get(), desc.get(), scratch.get(), 0);
+  enc->endEncoding();
+  cmd->commit();
+  // TODO: implement proper upload engine
+  cmd->waitUntilCompleted();
   }
 
 MtTopAccelerationStructure::~MtTopAccelerationStructure() {
-  [instances release];
-  [impl release];
   }

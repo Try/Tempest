@@ -1,7 +1,12 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(Tempest)
-set(CMAKE_CXX_STANDARD 14)
+
+if(APPLE)
+  set(CMAKE_CXX_STANDARD 17)
+else()
+  set(CMAKE_CXX_STANDARD 14)
+endif()
 
 option(TEMPEST_BUILD_SHARED "Build shared Tempest." ON)
 
@@ -109,6 +114,12 @@ endif()
 if(WIN32 AND TEMPEST_BUILD_DIRECTX12)
   add_definitions(-DTEMPEST_BUILD_DIRECTX12)
   target_link_libraries(${PROJECT_NAME} PRIVATE d3dcompiler dxcompiler dxgi)
+endif()
+
+### Metal
+if(APPLE)
+  add_subdirectory("thirdparty/metal-cpp")
+  target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/metal-cpp")
 endif()
 
 ### Spirv-cross

@@ -2,19 +2,14 @@
 
 #include <Tempest/AbstractGraphicsApi>
 #include <Tempest/RenderState>
+#include <Metal/Metal.hpp>
+#include <list>
 
 #include "utility/spinlock.h"
 #include "mtfbolayout.h"
 #include "mtshader.h"
 #include "gapi/shaderreflection.h"
-
-#import  <Metal/MTLRenderCommandEncoder.h>
-#import  <Metal/MTLVertexDescriptor.h>
-#import  <Metal/MTLDepthStencil.h>
-#import  <Metal/MTLRenderPipeline.h>
-#import  <Metal/MTLComputePipeline.h>
-
-#include <list>
+#include "nsptr.h"
 
 namespace Tempest {
 namespace Detail {
@@ -32,39 +27,40 @@ class MtPipeline : public AbstractGraphicsApi::Pipeline {
     ~MtPipeline();
 
     struct Inst {
-      id<MTLRenderPipelineState> pso;
-      MtFboLayout                fbo;
+      NsPtr<MTL::RenderPipelineState> pso;
+      MtFboLayout                     fbo;
       };
     Inst& inst(const MtFboLayout &lay);
 
-    DSharedPtr<const MtPipelineLay*> lay;
+    DSharedPtr<const MtPipelineLay*>  lay;
 
-    id<MTLDepthStencilState> depthStZ;
-    id<MTLDepthStencilState> depthStNoZ;
+    NsPtr<MTL::DepthStencilState>     depthStZ;
+    NsPtr<MTL::DepthStencilState>     depthStNoZ;
 
-    MTLCullMode              cullMode = MTLCullModeNone;
-    MTLPrimitiveType         topology = MTLPrimitiveTypeTriangle;
-    bool                     isTesselation = false;
+    MTL::CullMode                     cullMode = MTL::CullModeNone;
+    MTL::PrimitiveType                topology = MTL::PrimitiveTypeTriangle;
+    bool                              isTesselation = false;
 
   private:
-    const MtShader*          findShader(ShaderReflection::Stage sh) const;
+    const MtShader*                   findShader(ShaderReflection::Stage sh) const;
 
-    MtDevice&            device;
-    Tempest::RenderState rs;
+    MtDevice&                            device;
+    Tempest::RenderState                 rs;
 
-    MTLVertexDescriptor*         vdesc = nil;
-    MTLRenderPipelineDescriptor* pdesc = nil;
-    DSharedPtr<const MtShader*>  modules[5] = {};
-    SpinLock        sync;
-    std::list<Inst> instance;
+    NsPtr<MTL::VertexDescriptor>         vdesc;
+    NsPtr<MTL::RenderPipelineDescriptor> pdesc;
+    DSharedPtr<const MtShader*>          modules[5] = {};
+    SpinLock                             sync;
+    std::list<Inst>                      instance;
   };
 
 class MtCompPipeline : public AbstractGraphicsApi::CompPipeline {
   public:
     MtCompPipeline(MtDevice &d, const MtPipelineLay& lay, const MtShader& sh);
 
-    id<MTLComputePipelineState>      impl;
+    NsPtr<MTL::ComputePipelineState> impl;
     DSharedPtr<const MtPipelineLay*> lay;
+    MTL::Size                        localSize = {};
   };
 
 }

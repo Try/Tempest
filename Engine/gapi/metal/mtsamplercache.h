@@ -1,11 +1,10 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
+#include <Metal/Metal.hpp>
+#include <mutex>
 
-#include <Metal/MTLSampler.h>
-#include <Metal/MTLDevice.h>
-
-#include "utility/spinlock.h"
+#include "nsptr.h"
 
 namespace Tempest {
 namespace Detail {
@@ -14,24 +13,24 @@ class MtDevice;
 
 class MtSamplerCache {
   public:
-    MtSamplerCache(id<MTLDevice> dev);
+    MtSamplerCache(MTL::Device& dev);
     ~MtSamplerCache();
 
-    id<MTLSamplerState> get(Sampler2d src);
+    MTL::SamplerState& get(Sampler2d src);
 
   private:
-    id<MTLSamplerState> mkSampler(const Sampler2d& src);
+    NsPtr<MTL::SamplerState> mkSampler(const Sampler2d& src);
 
     struct Entry {
-      Sampler2d           src;
-      id<MTLSamplerState> val;
+      Sampler2d                src;
+      NsPtr<MTL::SamplerState> val;
       };
 
-    id<MTLDevice>       dev;
-    id<MTLSamplerState> def;
+    MTL::Device&             dev;
+    NsPtr<MTL::SamplerState> def;
 
-    SpinLock            sync;
-    std::vector<Entry>  values;
+    std::mutex               sync;
+    std::vector<Entry>       values;
   };
 
 }
