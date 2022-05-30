@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_METAL)
+
 #include "mtpipelinelay.h"
 
 #include "mtshader.h"
@@ -56,3 +58,4 @@ size_t MtPipelineLay::descriptorsCount() {
   return lay.size();
   }
 
+#endif

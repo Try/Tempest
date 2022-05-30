@@ -117,7 +117,8 @@ if(WIN32 AND TEMPEST_BUILD_DIRECTX12)
 endif()
 
 ### Metal
-if(APPLE)
+if(TEMPEST_BUILD_METAL)
+  add_definitions(-DTEMPEST_BUILD_METAL)
   add_subdirectory("thirdparty/metal-cpp")
   target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/metal-cpp")
 endif()

@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_METAL)
+
 #include "mtsamplercache.h"
 
 #include "mtdevice.h"
@@ -77,3 +79,5 @@ NsPtr<MTL::SamplerState> MtSamplerCache::mkSampler(const Tempest::Sampler2d& src
 
   return NsPtr<MTL::SamplerState>(dev.newSamplerState(desc.get()));
   }
+
+#endif

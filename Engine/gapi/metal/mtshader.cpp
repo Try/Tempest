@@ -1,14 +1,13 @@
-#include "mtshader.h"
+#if defined(TEMPEST_BUILD_METAL)
 
-#include "mtdevice.h"
+#include "mtshader.h"
 
 #include <Tempest/Log>
 #include <Tempest/Except>
 
+#include "mtdevice.h"
 #include "gapi/shaderreflection.h"
 #include "thirdparty/spirv_cross/spirv_msl.hpp"
-
-#include <Metal/MTLLibrary.h>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -118,3 +117,5 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
 
 MtShader::~MtShader() {
   }
+
+#endif

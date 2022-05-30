@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_METAL)
+
 #include "mtswapchain.h"
 
 #include <Tempest/Application>
@@ -6,12 +8,16 @@
 
 #include "mtdevice.h"
 
+#import <AppKit/AppKit.h>
+#import <QuartzCore/QuartzCore.hpp>
 #import <QuartzCore/CAMetalLayer.h>
 #import <Metal/MTLTexture.h>
 #import <Metal/MTLCommandQueue.h>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
+
+@class MetalView;
 
 @interface MetalView : NSView
 @end
@@ -26,17 +32,26 @@ using namespace Tempest::Detail;
   }
 @end
 
+struct MtSwapchain::Impl {
+  NSWindow*  wnd  = nil;
+  MetalView* view = nil;
+  };
+
 // note : MoltenVK supports NSView, UIView, CAMetalLayer, so we should align to it
-MtSwapchain::MtSwapchain(MtDevice& dev, NSWindow *w)
-  :dev(dev), wnd(w) {
-  NSRect rect = [wnd frame];
+MtSwapchain::MtSwapchain(MtDevice& dev, SystemApi::Window *w)
+  :dev(dev), pimpl(new Impl()) {
+  NSObject* obj = reinterpret_cast<NSObject*>(w);
+  if([obj isKindOfClass : [NSWindow class]])
+    pimpl->wnd = reinterpret_cast<NSWindow*>(w);
+
+  NSRect rect = [pimpl->wnd frame];
   sz = {int(rect.size.width), int(rect.size.height)};
 
-  view = [[MetalView alloc] initWithFrame:rect];
-  view.wantsLayer = YES;
-  wnd.contentView = view;
+  pimpl->view = [[MetalView alloc] initWithFrame:rect];
+  pimpl->view.wantsLayer = YES;
+  pimpl->wnd.contentView = pimpl->view;
 
-  CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);
+  CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(pimpl->wnd.contentView.layer);
   lay.device = id<MTLDevice>(dev.impl.get());
 
   const float dpi = [NSScreen mainScreen].backingScaleFactor;
@@ -51,17 +66,17 @@ MtSwapchain::MtSwapchain(MtDevice& dev, NSWindow *w)
   }
 
 MtSwapchain::~MtSwapchain() {
-  if(view!=nil)
-    [view release];
+  if(pimpl->view!=nil)
+    [pimpl->view release];
   }
 
 void MtSwapchain::reset() {
   std::lock_guard<SpinLock> guard(sync);
   // https://developer.apple.com/documentation/quartzcore/cametallayer?language=objc
 
-  CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);
+  CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(pimpl->wnd.contentView.layer);
 
-  NSRect wrect = [wnd convertRectToBacking:[wnd frame]];
+  NSRect wrect = [pimpl->wnd convertRectToBacking:[pimpl->wnd frame]];
   NSRect lrect = lay.frame;
   if(wrect.size.width!=lrect.size.width || wrect.size.height!=lrect.size.height) {
     // TODO:screen.backingScaleFactor
@@ -92,7 +107,7 @@ uint32_t MtSwapchain::currentBackBufferIndex() {
   }
 
 void MtSwapchain::present() {
-  CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);
+  CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(pimpl->wnd.contentView.layer);
   uint32_t      i   = currentImg;
 
   @autoreleasepool {
@@ -159,6 +174,8 @@ uint32_t MtSwapchain::h() const {
   }
 
 MTL::PixelFormat MtSwapchain::format() const {
-  CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);
+  CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(pimpl->wnd.contentView.layer);
   return MTL::PixelFormat(lay.pixelFormat);
   }
+
+#endif

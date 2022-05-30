@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_METAL)
+
 #include "mtdescriptorarray.h"
 
 #include "mtdevice.h"
@@ -5,10 +7,6 @@
 #include "mtbuffer.h"
 #include "mtpipelinelay.h"
 #include "mtaccelerationstructure.h"
-
-#import <Metal/MTLTexture.h>
-#import <Metal/MTLSampler.h>
-#import <Metal/Metal.h>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -36,3 +34,5 @@ void MtDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStru
 
 void MtDescriptorArray::ssboBarriers(ResourceState&) {
   }
+
+#endif

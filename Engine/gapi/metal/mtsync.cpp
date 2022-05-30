@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_METAL)
+
 #include "mtsync.h"
 
 #include <Tempest/Except>
@@ -49,3 +51,5 @@ void MtSync::propogateError() {
   if(status==MTL::CommandBufferStatusError)
     throw DeviceLostException();
   }
+
+#endif

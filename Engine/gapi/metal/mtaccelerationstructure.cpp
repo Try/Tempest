@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_METAL)
+
 #include "mtaccelerationstructure.h"
 
 #include "mtdevice.h"
@@ -38,10 +40,12 @@ MtAccelerationStructure::MtAccelerationStructure(MtDevice& dx,
   desc->setGeometryDescriptors(geoArr.get());
   desc->setUsage(MTL::AccelerationStructureUsageNone);
 
+  /*
   if(@available(macOS 12.0, *)) {
     // ???
     //desc.usage = MTLAccelerationStructureUsageExtendedLimits;
     }
+  */
 
   auto sz = dx.impl->accelerationStructureSizes(desc.get());
 
@@ -129,3 +133,5 @@ MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtIns
 
 MtTopAccelerationStructure::~MtTopAccelerationStructure() {
   }
+
+#endif

@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_METAL)
+
 #include "mtbuffer.h"
 #include "mtdevice.h"
 
@@ -77,3 +79,5 @@ void MtBuffer::implUpdate(const void *data, size_t off, size_t count, size_t sz,
 
   impl->didModifyRange(NS::Range(off,count*alignedSz));
   }
+
+#endif

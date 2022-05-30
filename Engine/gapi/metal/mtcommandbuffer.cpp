@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_METAL)
+
 #include "mtcommandbuffer.h"
 
 #include "mtbuffer.h"
@@ -335,19 +337,12 @@ void MtCommandBuffer::setTexture(const MtPipelineLay::MTLBind& mtl, MTL::Texture
   }
 
 void MtCommandBuffer::setTlas(const MtPipelineLay::MTLBind& mtl, MTL::AccelerationStructure* as) {
-  if(@available(macOS 12.0, *)) {
-    if(mtl.bindVs!=uint32_t(-1)) {
-      encDraw->setVertexAccelerationStructure(as,mtl.bindVs);
-      }
-    if(mtl.bindFs!=uint32_t(-1)) {
-      encDraw->setFragmentAccelerationStructure(as,mtl.bindFs);
-      }
-    } else {
-    if(mtl.bindVs!=uint32_t(-1) ||
-       mtl.bindFs!=uint32_t(-1))
-      throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
+  if(mtl.bindVs!=uint32_t(-1)) {
+    encDraw->setVertexAccelerationStructure(as,mtl.bindVs);
     }
-
+  if(mtl.bindFs!=uint32_t(-1)) {
+    encDraw->setFragmentAccelerationStructure(as,mtl.bindFs);
+    }
   if(mtl.bindCs!=uint32_t(-1)) {
     encComp->setAccelerationStructure(as,mtl.bindCs);
     }
@@ -391,3 +386,4 @@ void MtCommandBuffer::copy(AbstractGraphicsApi::Buffer& dest, size_t offset,
                            offset, bpp*width,bpp*width*height);
   }
 
+#endif

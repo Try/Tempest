@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_METAL)
+
 #include "mtfbolayout.h"
 
 #include <Tempest/Except>
@@ -17,3 +19,5 @@ bool MtFboLayout::equals(const MtFboLayout& oth) const {
       return false;
   return true;
   }
+
+#endif

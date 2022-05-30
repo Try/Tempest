@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_METAL)
+
 #include "mttexture.h"
 
 #include <Tempest/AbstractGraphicsApi>
@@ -385,3 +387,5 @@ MTL::Texture& MtTexture::view(ComponentMapping m, uint32_t mipLevel) {
     }
   return *extViews.back().v;
   }
+
+#endif

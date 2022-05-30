@@ -1,9 +1,9 @@
-#include "mtdevice.h"
+#if defined(TEMPEST_BUILD_METAL)
 
+#include "mtdevice.h"
 #include <Tempest/Log>
 
-#include <Metal/MTLDevice.h>
-#include <Metal/MTLCommandQueue.h>
+#include <Foundation/NSProcessInfo.h>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -161,8 +161,10 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
   prop.storeAndAtomicFs = false;
 #endif
 
-  if(@available(macOS 12.0, *)) {
+#ifdef __OSX__
+  if(majorVersion>=12)
     prop.raytracing.rayQuery = dev.supportsRaytracingFromRender();
-    }
+#endif
   }
 
+#endif

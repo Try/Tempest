@@ -1,3 +1,5 @@
+#if defined(TEMPEST_BUILD_METAL)
+
 #include "metalapi.h"
 
 #if __has_feature(objc_arc)
@@ -62,11 +64,7 @@ void MetalApi::destroy(AbstractGraphicsApi::Device *d) {
 AbstractGraphicsApi::Swapchain *MetalApi::createSwapchain(SystemApi::Window *w,
                                                           AbstractGraphicsApi::Device* d) {
   auto& dev = *reinterpret_cast<MtDevice*>(d);
-
-  NSObject* obj = reinterpret_cast<NSObject*>(w);
-  if([obj isKindOfClass : [NSWindow class]])
-    return new MtSwapchain(dev,reinterpret_cast<NSWindow*>(w));
-  return nullptr;
+  return new MtSwapchain(dev,w);
   }
 
 AbstractGraphicsApi::PPipeline MetalApi::createPipeline(AbstractGraphicsApi::Device *d,
@@ -133,45 +131,35 @@ AbstractGraphicsApi::PBuffer MetalApi::createBuffer(AbstractGraphicsApi::Device 
 
 AbstractGraphicsApi::PTexture MetalApi::createTexture(AbstractGraphicsApi::Device *d,
                                                       const Pixmap &p, TextureFormat frm, uint32_t mips) {
-  @autoreleasepool {
-    auto& dev = *reinterpret_cast<MtDevice*>(d);
-    return PTexture(new MtTexture(dev,p,mips,frm));
-    }
+  auto& dev = *reinterpret_cast<MtDevice*>(d);
+  return PTexture(new MtTexture(dev,p,mips,frm));
   }
 
 AbstractGraphicsApi::PTexture MetalApi::createTexture(AbstractGraphicsApi::Device *d,
                                                       const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) {
-  @autoreleasepool {
-    auto& dev = *reinterpret_cast<MtDevice*>(d);
-    return PTexture(new MtTexture(dev,w,h,mips,frm,false));
-    }
+  auto& dev = *reinterpret_cast<MtDevice*>(d);
+  return PTexture(new MtTexture(dev,w,h,mips,frm,false));
   }
 
 AbstractGraphicsApi::PTexture MetalApi::createStorage(AbstractGraphicsApi::Device *d,
                                                       const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) {
-  @autoreleasepool {
-    auto& dev = *reinterpret_cast<MtDevice*>(d);
-    return PTexture(new MtTexture(dev,w,h,mips,frm,true));
-    }
+  auto& dev = *reinterpret_cast<MtDevice*>(d);
+  return PTexture(new MtTexture(dev,w,h,mips,frm,true));
   }
 
 AbstractGraphicsApi::AccelerationStructure*
 MetalApi::createBottomAccelerationStruct(Device* d,
                                          Buffer* vbo, size_t vboSz, size_t stride,
                                          Buffer* ibo, size_t iboSz, size_t ioffset, Detail::IndexClass icls) {
-  @autoreleasepool {
-    auto& dev = *reinterpret_cast<MtDevice*>(d);
-    auto& vx  = *reinterpret_cast<MtBuffer*>(vbo);
-    auto& ix  = *reinterpret_cast<MtBuffer*>(ibo);
-    return new MtAccelerationStructure(dev,vx,vboSz,stride, ix,iboSz,ioffset,icls);
-    }
+  auto& dev = *reinterpret_cast<MtDevice*>(d);
+  auto& vx  = *reinterpret_cast<MtBuffer*>(vbo);
+  auto& ix  = *reinterpret_cast<MtBuffer*>(ibo);
+  return new MtAccelerationStructure(dev,vx,vboSz,stride, ix,iboSz,ioffset,icls);
   }
 
 AbstractGraphicsApi::AccelerationStructure* MetalApi::createTopAccelerationStruct(Device* d, const RtInstance* inst, AccelerationStructure*const* as, size_t size) {
-  @autoreleasepool {
-    auto& dev = *reinterpret_cast<MtDevice*>(d);
-    return new MtTopAccelerationStructure(dev,inst,as,size);
-    }
+  auto& dev = *reinterpret_cast<MtDevice*>(d);
+  return new MtTopAccelerationStructure(dev,inst,as,size);
   }
 
 void MetalApi::readPixels(AbstractGraphicsApi::Device*,
@@ -250,3 +238,5 @@ void MetalApi::getCaps(AbstractGraphicsApi::Device *d, AbstractGraphicsApi::Prop
   auto& dx = *reinterpret_cast<MtDevice*>(d);
   caps = dx.prop;
   }
+
+#endif

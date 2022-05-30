@@ -4,11 +4,7 @@
 #include "utility/spinlock.h"
 #include "nsptr.h"
 
-#import  <AppKit/AppKit.h>
-#include <QuartzCore/QuartzCore.hpp>
 #include <Metal/Metal.hpp>
-
-@class MetalView;
 
 namespace Tempest {
 namespace Detail {
@@ -17,7 +13,7 @@ class MtDevice;
 
 class MtSwapchain : public AbstractGraphicsApi::Swapchain {
   public:
-    MtSwapchain(MtDevice& dev, NSWindow *w);
+    MtSwapchain(MtDevice& dev, SystemApi::Window* w);
     ~MtSwapchain();
 
     void          reset() override;
@@ -36,15 +32,15 @@ class MtSwapchain : public AbstractGraphicsApi::Swapchain {
     std::vector<Image>    img;
 
   private:
-    SpinLock              sync;
+    struct Impl;
+    std::unique_ptr<Impl> pimpl;
 
+    SpinLock              sync;
     MtDevice&             dev;
-    NSWindow*             wnd  = nil;
-    MetalView*            view = nil;
     Tempest::Size         sz;
 
     uint32_t              imgCount   = 0;
-    uint32                currentImg = 0;
+    uint32_t              currentImg = 0;
     NsPtr<MTL::Texture>   mkTexture();
   };
 
