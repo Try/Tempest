@@ -198,7 +198,7 @@ void DxDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStru
   device.CreateShaderResourceView(nullptr,&desc,gpu);
   }
 
-void DxDescriptorArray::ssboBarriers(ResourceState& res) {
+void DxDescriptorArray::ssboBarriers(ResourceState& res, PipelineStage st) {
   auto& lay = this->lay.handler->lay;
   if(T_UNLIKELY(uavUsage.durty)) {
     uavUsage.read  = 0;
@@ -216,7 +216,7 @@ void DxDescriptorArray::ssboBarriers(ResourceState& res) {
       }
     uavUsage.durty = false;
     }
-  res.onUavUsage(uavUsage);
+  res.onUavUsage(uavUsage,st);
   }
 
 #endif

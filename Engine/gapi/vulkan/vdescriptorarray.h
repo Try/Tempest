@@ -23,7 +23,7 @@ class VDescriptorArray : public AbstractGraphicsApi::Desc {
 
     void                      set    (size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler2d& smp) override;
 
-    void                      ssboBarriers(Detail::ResourceState& res) override;
+    void                      ssboBarriers(Detail::ResourceState& res, PipelineStage st) override;
 
     VkDescriptorSet           desc=VK_NULL_HANDLE;
 

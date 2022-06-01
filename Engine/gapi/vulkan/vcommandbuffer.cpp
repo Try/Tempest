@@ -88,12 +88,22 @@ static void toStage(VkPipelineStageFlags2KHR& stage, VkAccessFlagBits2KHR& acces
     acc |= VK_ACCESS_UNIFORM_READ_BIT;
     }
 
-  if((rs&ResourceAccess::UavRead)==ResourceAccess::UavRead) {
-    ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+  // memory barriers
+  if((rs&ResourceAccess::UavReadGr)==ResourceAccess::UavReadGr) {
+    ret |= VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
     acc |= VK_ACCESS_SHADER_READ_BIT;
     }
-  if((rs&ResourceAccess::UavWrite)==ResourceAccess::UavWrite) {
-    ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+  if((rs&ResourceAccess::UavWriteGr)==ResourceAccess::UavWriteGr) {
+    ret |= VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+    acc |= VK_ACCESS_SHADER_WRITE_BIT;
+    }
+
+  if((rs&ResourceAccess::UavReadComp)==ResourceAccess::UavReadComp) {
+    ret |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+    acc |= VK_ACCESS_SHADER_READ_BIT;
+    }
+  if((rs&ResourceAccess::UavWriteComp)==ResourceAccess::UavWriteComp) {
+    ret |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
     acc |= VK_ACCESS_SHADER_WRITE_BIT;
     }
 
@@ -132,9 +142,7 @@ static VkImageLayout toLayout(ResourceAccess rs) {
   if((rs&ResourceAccess::Vertex)==ResourceAccess::Uniform)
     return VK_IMAGE_LAYOUT_GENERAL;
 
-  if((rs&ResourceAccess::UavRead)==ResourceAccess::UavRead)
-    return VK_IMAGE_LAYOUT_GENERAL;
-  if((rs&ResourceAccess::UavWrite)==ResourceAccess::UavWrite)
+  if((rs&ResourceAccess::UavReadWriteAll)!=ResourceAccess::None)
     return VK_IMAGE_LAYOUT_GENERAL;
 
   return VK_IMAGE_LAYOUT_UNDEFINED;
@@ -355,7 +363,7 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraph
   VPipeline&        px=reinterpret_cast<VPipeline&>(p);
   VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
   curUniforms = &ux;
-  curUniforms->ssboBarriers(resState);
+  curUniforms->ssboBarriers(resState,PipelineStage::S_Graphics);
   vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,
                           px.pipelineLayout,0,
                           1,&ux.desc,
@@ -369,7 +377,7 @@ void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
   }
 
 void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
-  curUniforms->ssboBarriers(resState);
+  curUniforms->ssboBarriers(resState,PipelineStage::S_Compute);
   resState.flush(*this);
   vkCmdDispatch(impl,uint32_t(x),uint32_t(y),uint32_t(z));
   }
@@ -667,7 +675,7 @@ void VCommandBuffer::buildTlas(VkAccelerationStructureKHR dest,
 void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dst, size_t offset,
                           AbstractGraphicsApi::Texture& src, uint32_t width, uint32_t height, uint32_t mip) {
   auto& nDst = reinterpret_cast<VBuffer&>(dst);
-  resState.onUavUsage(nDst.nonUniqId,0);
+  resState.onUavUsage(nDst.nonUniqId,0,PipelineStage::S_Tranfer);
   resState.setLayout(src,ResourceAccess::TransferSrc);
   resState.flush(*this);
 
@@ -776,9 +784,10 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
   info.bufferMemoryBarrierCount = bufCount;
   info.pImageMemoryBarriers     = imgBarrier;
   info.imageMemoryBarrierCount  = imgCount;
-  info.pMemoryBarriers          = &memBarrier;
-  if(memBarrier.sType==VK_STRUCTURE_TYPE_MEMORY_BARRIER_2_KHR)
+  if(memBarrier.sType==VK_STRUCTURE_TYPE_MEMORY_BARRIER_2_KHR) {
+    info.pMemoryBarriers = &memBarrier;
     info.memoryBarrierCount++;
+    }
 
   vkCmdPipelineBarrier2(impl,&info);
   }

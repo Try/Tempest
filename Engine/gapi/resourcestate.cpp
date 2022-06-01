@@ -56,38 +56,45 @@ void ResourceState::forceLayout(AbstractGraphicsApi::Texture& img) {
     }
   }
 
-void ResourceState::onUavUsage(uint64_t read, uint64_t write) {
+void ResourceState::onUavUsage(uint32_t read, uint32_t write, PipelineStage st) {
   ResourceState::Usage uavUsage;
   uavUsage.read  = read;
   uavUsage.write = write;
-  onUavUsage(uavUsage);
+  onUavUsage(uavUsage,st);
   }
 
-void ResourceState::onUavUsage(const Usage& u) {
-  if((uavUsage.write & u.read) !=0 ||
-     (uavUsage.write & u.write)!=0 ){
-    // RaW, WaW barrier
-    needUavRBarrier = true;
-    needUavWBarrier = true;
-    uavUsage        = u;
+void ResourceState::onUavUsage(const Usage& u, PipelineStage st) {
+  ResourceAccess rd[PipelineStage::S_Count] = {ResourceAccess::None,ResourceAccess::UavReadComp, ResourceAccess::UavReadGr};
+  ResourceAccess wr[PipelineStage::S_Count] = {ResourceAccess::None,ResourceAccess::UavWriteComp,ResourceAccess::UavWriteGr};
+
+  for(PipelineStage p = PipelineStage::S_Tranfer; p<PipelineStage::S_Count; p = PipelineStage(p+1)) {
+    auto& usagePrev = uavUsage[p];
+    if((usagePrev.write & u.write)!=0 ||
+       (usagePrev.write & u.read) !=0) {
+      // WaW, RaW barrier
+      uavPrev      = uavPrev | rd[p];
+      uavPrev      = uavPrev | wr[p];
+      uavUsage[p]  = Usage();
+      }
+    else if((usagePrev.read & u.write)!=0) {
+      // WaR barrier
+      uavPrev          = uavPrev | rd[p];
+      uavUsage[p].read = 0;
+      }
     }
-  else if((uavUsage.read & u.write)!=0) {
-    // WaR barrier
-    needUavRBarrier = true;
-    uavUsage        = u;
-    }
-  else {
-    uavUsage.read  |= u.read;
-    uavUsage.write |= u.write;
-    }
+  uavUsage[st].read  |= u.read;
+  uavUsage[st].write |= u.write;
   }
 
 void ResourceState::joinCompute(AbstractGraphicsApi::CommandBuffer& cmd) {
-  if(/*uavUsage.read!=0 ||*/ uavUsage.write!=0) {
+  auto& usage = uavUsage[PipelineStage::S_Compute];
+  if(/*uavUsage.read!=0 ||*/ usage.write!=0) {
     // NOTE: VS/FS side effects will require WaR barrier
-    needUavRBarrier = (uavUsage.read !=0);
-    needUavWBarrier = (uavUsage.write!=0);
-    uavUsage        = ResourceState::Usage();
+    if(usage.read !=0)
+      uavPrev = uavPrev | ResourceAccess::UavReadComp;
+    if(usage.write !=0)
+      uavPrev = uavPrev | ResourceAccess::UavWriteComp;
+    usage = ResourceState::Usage();
     }
   }
 
@@ -116,23 +123,25 @@ void ResourceState::flush(AbstractGraphicsApi::CommandBuffer& cmd) {
       }
     }
 
-  if(needUavRBarrier || needUavWBarrier) {
+  if(uavPrev!=ResourceAccess::None) {
     auto& b = barrier[barrierCnt];
     b.buffer = nullptr;
-    if(needUavWBarrier)
-      b.prev = ResourceAccess::UavReadWrite; else
-      b.prev = ResourceAccess::UavRead;
-    b.next   = ResourceAccess::UavReadWrite;
+    b.prev   = uavPrev;
+    b.next   = ResourceAccess::UavReadWriteAll; //TODO
     ++barrierCnt;
-    needUavRBarrier = false;
-    needUavWBarrier = false;
+    uavPrev = ResourceAccess::None;
     }
   emitBarriers(cmd,barrier,barrierCnt);
   }
 
 void ResourceState::finalize(AbstractGraphicsApi::CommandBuffer& cmd) {
-  if(imgState.size()==0 && needUavRBarrier==false && needUavWBarrier==false)
+  for(auto& i:uavUsage)
+    if(i.write!=0)
+      uavPrev = ResourceAccess::UavReadWriteAll;
+
+  if(imgState.size()==0 && uavPrev==ResourceAccess::None)
     return; // early-out
+
   for(auto& i:imgState) {
     if(i.sw==nullptr)
       continue;
@@ -142,9 +151,8 @@ void ResourceState::finalize(AbstractGraphicsApi::CommandBuffer& cmd) {
   flush(cmd);
   imgState.reserve(imgState.size());
   imgState.clear();
-  needUavRBarrier = false;
-  needUavWBarrier = false;
-  uavUsage        = ResourceState::Usage();
+  for(auto& i:uavUsage)
+    i = ResourceState::Usage();
   }
 
 ResourceState::ImgState& ResourceState::findImg(AbstractGraphicsApi::Texture* img, AbstractGraphicsApi::Swapchain* sw, uint32_t id,

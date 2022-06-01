@@ -46,9 +46,17 @@ enum ResourceAccess : uint32_t {
   Index            = 1 << 7,
   Vertex           = 1 << 8,
   Uniform          = 1 << 9,
-  UavRead          = 1 << 10,
-  UavWrite         = 1 << 11,
-  UavReadWrite     = (UavRead | UavWrite),
+
+  UavReadComp      = 1 << 10,
+  UavWriteComp     = 1 << 11,
+
+  UavReadGr        = 1 << 12,
+  UavWriteGr       = 1 << 13,
+
+  // for debug view
+  UavReadWriteComp = (UavReadComp    | UavWriteComp),
+  UavReadWriteGr   = (UavReadGr      | UavWriteGr  ),
+  UavReadWriteAll  = (UavReadWriteGr | UavReadWriteComp),
   };
 
 inline ResourceAccess operator | (ResourceAccess a,const ResourceAccess& b) {
@@ -58,5 +66,12 @@ inline ResourceAccess operator | (ResourceAccess a,const ResourceAccess& b) {
 inline ResourceAccess operator & (ResourceAccess a,const ResourceAccess& b) {
   return ResourceAccess(uint32_t(a)&uint32_t(b));
   }
+
+enum PipelineStage : uint8_t {
+  S_Tranfer,
+  S_Compute,
+  S_Graphics,
+  S_Count,
+  };
 
 }

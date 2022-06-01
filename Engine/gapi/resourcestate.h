@@ -13,8 +13,8 @@ class ResourceState {
     ResourceState() = default;
 
     struct Usage {
-      uint64_t read  = 0;
-      uint64_t write = 0;
+      uint32_t read  = 0;
+      uint32_t write = 0;
       bool     durty = false;
       };
 
@@ -26,8 +26,8 @@ class ResourceState {
     void setLayout  (AbstractGraphicsApi::Swapchain& s, uint32_t id, ResourceAccess lay, bool discard);
     void setLayout  (AbstractGraphicsApi::Texture&   a, ResourceAccess lay, bool discard = false);
 
-    void onUavUsage (uint64_t read, uint64_t write);
-    void onUavUsage (const ResourceState::Usage& uavUsage);
+    void onUavUsage (uint32_t read, uint32_t write, PipelineStage st);
+    void onUavUsage (const ResourceState::Usage& uavUsage, PipelineStage st);
     void forceLayout(AbstractGraphicsApi::Texture&   a);
 
     void joinCompute(AbstractGraphicsApi::CommandBuffer& cmd);
@@ -51,9 +51,9 @@ class ResourceState {
     void      emitBarriers(AbstractGraphicsApi::CommandBuffer& cmd, AbstractGraphicsApi::BarrierDesc* desc, size_t cnt);
 
     std::vector<ImgState> imgState;
-    ResourceState::Usage  uavUsage;
-    bool                  needUavRBarrier = false;
-    bool                  needUavWBarrier = false;
+
+    ResourceState::Usage  uavUsage[PipelineStage::S_Count] = {};
+    ResourceAccess        uavPrev = ResourceAccess::None;
   };
 
 }

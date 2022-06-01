@@ -224,7 +224,7 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
 
   const size_t    size   = bsz.w*bsz.h*bpb;
   Detail::VBuffer stage  = dx.allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
-  ResourceAccess  defLay = storageImg ? ResourceAccess::UavRead : ResourceAccess::Sampler;
+  ResourceAccess  defLay = storageImg ? (ResourceAccess::UavReadGr | ResourceAccess::UavReadComp) : ResourceAccess::Sampler;
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();

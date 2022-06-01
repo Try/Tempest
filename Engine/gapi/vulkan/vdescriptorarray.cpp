@@ -230,7 +230,7 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t c
   vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
   }
 
-void VDescriptorArray::ssboBarriers(ResourceState& res) {
+void VDescriptorArray::ssboBarriers(ResourceState& res, PipelineStage st) {
   auto& lay = this->lay.handler->lay;
   if(T_UNLIKELY(uavUsage.durty)) {
     uavUsage.read  = 0;
@@ -248,7 +248,7 @@ void VDescriptorArray::ssboBarriers(ResourceState& res) {
       }
     uavUsage.durty = false;
     }
-  res.onUavUsage(uavUsage);
+  res.onUavUsage(uavUsage,st);
   }
 
 void VDescriptorArray::addPoolSize(VkDescriptorPoolSize *p, size_t &sz, uint32_t cnt, VkDescriptorType elt) {

@@ -59,9 +59,7 @@ static D3D12_RESOURCE_STATES nativeFormat(ResourceAccess f) {
   if((f&ResourceAccess::Uniform)==ResourceAccess::Uniform)
     st |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
 
-  if((f&ResourceAccess::UavRead)==ResourceAccess::UavRead)
-    st |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-  if((f&ResourceAccess::UavWrite)==ResourceAccess::UavWrite)
+  if((f&ResourceAccess::UavReadWriteAll)==ResourceAccess::None)
     st |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 
   return D3D12_RESOURCE_STATES(st);
@@ -439,7 +437,7 @@ void DxCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& /*p*/, Abst
   }
 
 void DxCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
-  curUniforms->ssboBarriers(resState);
+  curUniforms->ssboBarriers(resState,PipelineStage::S_Compute);
   resState.flush(*this);
   impl->Dispatch(UINT(x),UINT(y),UINT(z));
   }
@@ -459,7 +457,7 @@ void DxCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, const void* dat
   }
 
 void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/, AbstractGraphicsApi::Desc& u) {
-  u.ssboBarriers(resState);
+  u.ssboBarriers(resState,PipelineStage::S_Graphics);
   implSetUniforms(u,false);
   }
 
@@ -535,7 +533,7 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer&  dstBuf, size_t offset,
   const UINT pitch     = ((pitchBase+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
 
   if(pitch==pitchBase && (offset%D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)==0) {
-    resState.onUavUsage(dst.nonUniqId,0);
+    resState.onUavUsage(dst.nonUniqId,0,PipelineStage::S_Tranfer);
     resState.setLayout(src,ResourceAccess::TransferSrc);
     resState.flush(*this);
 
