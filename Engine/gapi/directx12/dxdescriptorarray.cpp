@@ -67,6 +67,8 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const 
   auto&      prm    = lay.handler->prm[id];
 
   if(prm.rgnType==D3D12_DESCRIPTOR_RANGE_TYPE_UAV) {
+    if(mipLevel==uint32_t(-1))
+      mipLevel = 0;
     D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
     desc.Format             = t.format;
     desc.ViewDimension      = D3D12_UAV_DIMENSION_TEXTURE2D;

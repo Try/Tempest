@@ -39,7 +39,8 @@ class DescriptorSet final {
 
     void set(size_t layoutBind, const Texture2d&    tex, const Sampler2d& smp = Sampler2d::anisotrophy());
     void set(size_t layoutBind, const Attachment&   tex, const Sampler2d& smp = Sampler2d::anisotrophy());
-    void set(size_t layoutBind, const StorageImage& tex, const Sampler2d& smp = Sampler2d::anisotrophy(), uint32_t mipLevel=0);
+    void set(size_t layoutBind, const StorageImage& tex, const Sampler2d& smp = Sampler2d::anisotrophy(), uint32_t mipLevel=uint32_t(-1));
+
     void set(size_t layoutBind, const Detail::ResourcePtr<Texture2d>& tex, const Sampler2d& smp = Sampler2d::anisotrophy());
 
     void set(size_t layoutBind, const std::vector<const Texture2d*>& tex);

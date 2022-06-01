@@ -139,10 +139,12 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* t, const Sam
   descriptorWrite.pImageInfo      = &imageInfo;
 
   if(descriptorWrite.descriptorType==VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
-    imageInfo.sampler     = tex->alloc->updateSampler(smp);
-    imageInfo.imageView   = tex->view(device,smp.mapping,mipLevel);
+    imageInfo.sampler   = tex->alloc->updateSampler(smp);
+    imageInfo.imageView = tex->view(device,smp.mapping,mipLevel);
     } else {
-    imageInfo.imageView   = tex->view(device,ComponentMapping(),mipLevel);
+    if(mipLevel==uint32_t(-1))
+      mipLevel = 0;
+    imageInfo.imageView = tex->view(device,ComponentMapping(),mipLevel);
     }
 
   if(descriptorWrite.descriptorType==VK_DESCRIPTOR_TYPE_STORAGE_IMAGE || tex->isStorageImage)
@@ -197,7 +199,6 @@ void VDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStruc
   descriptorWrite.descriptorCount = 1;
 
   vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
-
   // uavUsage.durty = true;
   }
 
@@ -232,6 +233,8 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t c
 void VDescriptorArray::ssboBarriers(ResourceState& res) {
   auto& lay = this->lay.handler->lay;
   if(T_UNLIKELY(uavUsage.durty)) {
+    uavUsage.read  = 0;
+    uavUsage.write = 0;
     for(size_t i=0; i<lay.size(); ++i) {
       uint64_t id = 0;
       if(uav[i].buf!=nullptr)

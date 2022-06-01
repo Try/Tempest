@@ -238,12 +238,9 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     rqExt.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
     }
   if(api.hasDeviceFeatures2 && checkForExt(ext,VK_KHR_RAY_QUERY_EXTENSION_NAME)) {
-    props.raytracing.rayQuery = true;
     rqExt.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
     }
   if(api.hasDeviceFeatures2 && checkForExt(ext,VK_NV_MESH_SHADER_EXTENSION_NAME)) {
-    props.meshlets.taskShader = true;
-    props.meshlets.meshShader = true;
     rqExt.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
     }
   if(api.hasDeviceFeatures2 && checkForExt(ext,VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME)) {

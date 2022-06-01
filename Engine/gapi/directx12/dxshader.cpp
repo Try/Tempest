@@ -37,6 +37,12 @@ static const char* target(spv::ExecutionModel exec, uint32_t sm, char* buf) {
     case spv::ExecutionModelFragment:
       std::snprintf(buf,32,"ps_%d_%d", sm/10, sm%10);
       return buf;
+    case spv::ExecutionModelTaskNV:
+      std::snprintf(buf,32,"as_%d_%d", sm/10, sm%10);
+      return buf;
+    case spv::ExecutionModelMeshNV:
+      std::snprintf(buf,32,"ms_%d_%d", sm/10, sm%10);
+      return buf;
     default: // unimplemented
       throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }

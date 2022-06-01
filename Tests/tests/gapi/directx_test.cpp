@@ -199,6 +199,12 @@ TEST(DirectX12Api,RayQuery) {
 #endif
   }
 
+TEST(DirectX12Api,MeshShader) {
+#if defined(_MSC_VER)
+  GapiTestCommon::MeshShader<DirectX12Api>("DirectX12Api_MeshShader.png");
+#endif
+  }
+
 TEST(DirectX12Api,Spirv_HS) {
 #if defined(_MSC_VER)
   using namespace Tempest;

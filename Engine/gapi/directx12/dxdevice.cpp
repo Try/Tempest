@@ -191,6 +191,11 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
     prop.raytracing.rayQuery = (feature5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED);
     prop.raytracing.rayQuery = false; // TODO: dxil compiller
     }
+
+  D3D12_FEATURE_DATA_D3D12_OPTIONS7 feature7 = {};
+  if(SUCCEEDED(dev.CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &feature7, sizeof(feature7)))) {
+    // prop.meshlets.meshShader = feature7.MeshShaderTier!=D3D12_MESH_SHADER_TIER_NOT_SUPPORTED;
+    }
   }
 
 void DxDevice::waitData() {

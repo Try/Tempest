@@ -227,7 +227,6 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, Tempest::
     VkPhysicalDeviceProperties2 properties = {};
     properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
 
-
     VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures = {};
     rayQueryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
 
