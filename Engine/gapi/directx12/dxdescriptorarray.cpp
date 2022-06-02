@@ -201,10 +201,10 @@ void DxDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStru
 void DxDescriptorArray::ssboBarriers(ResourceState& res, PipelineStage st) {
   auto& lay = this->lay.handler->lay;
   if(T_UNLIKELY(uavUsage.durty)) {
-    uavUsage.read  = 0;
-    uavUsage.write = 0;
+    uavUsage.read  = NonUniqResId::I_None;
+    uavUsage.write = NonUniqResId::I_None;
     for(size_t i=0; i<lay.size(); ++i) {
-      uint64_t id = 0;
+      NonUniqResId id = NonUniqResId::I_None;
       if(uav[i].buf!=nullptr)
         id = reinterpret_cast<DxBuffer*>(uav[i].buf)->nonUniqId;
       if(uav[i].tex!=nullptr)

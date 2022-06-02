@@ -59,7 +59,7 @@ static D3D12_RESOURCE_STATES nativeFormat(ResourceAccess f) {
   if((f&ResourceAccess::Uniform)==ResourceAccess::Uniform)
     st |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
 
-  if((f&ResourceAccess::UavReadWriteAll)==ResourceAccess::None)
+  if((f&ResourceAccess::UavReadWriteAll)!=ResourceAccess::None)
     st |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
 
   return D3D12_RESOURCE_STATES(st);
@@ -320,7 +320,7 @@ bool DxCommandBuffer::isRecording() const {
 void DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize, uint32_t w, uint32_t h,
                                      const TextureFormat* frm, AbstractGraphicsApi::Texture** att,
                                      AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) {
-  resState.joinCompute(*this);
+  resState.joinCompute(PipelineStage::S_Graphics);
   resState.setRenderpass(*this,desc,descSize,frm,att,sw,imgId);
 
   D3D12_RENDER_PASS_RENDER_TARGET_DESC view[MaxFramebufferAttachments] = {};
@@ -506,7 +506,8 @@ void DxCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size
       barrier.Type                    = D3D12_RESOURCE_BARRIER_TYPE_UAV;
       barrier.Flags                   = D3D12_RESOURCE_BARRIER_FLAG_NONE;
       barrier.UAV.pResource           = toDxResource(b);
-      } else {
+      }
+    else {
       barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
       barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
       barrier.Transition.pResource   = toDxResource(b);
@@ -533,14 +534,11 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer&  dstBuf, size_t offset,
   const UINT pitch     = ((pitchBase+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
 
   if(pitch==pitchBase && (offset%D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)==0) {
-    resState.onUavUsage(dst.nonUniqId,0,PipelineStage::S_Tranfer);
-    resState.setLayout(src,ResourceAccess::TransferSrc);
+    resState.setLayout(src,ResourceAccess::Sampler);
+    resState.onTranferUsage(dst.nonUniqId,src.nonUniqId);
     resState.flush(*this);
 
     copyNative(dstBuf,offset, srcTex,width,height,mip);
-
-    //resState.setLayout(dst,ResourceAccess::UavRead);
-    resState.setLayout(src,ResourceAccess::Sampler); // TODO: storage images
     return;
     }
 

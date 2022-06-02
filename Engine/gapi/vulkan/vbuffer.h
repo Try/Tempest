@@ -21,7 +21,7 @@ class VBuffer : public AbstractGraphicsApi::Buffer {
 
     VkDeviceAddress        toDeviceAddress(VDevice& owner) const;
     VkBuffer               impl      = VK_NULL_HANDLE;
-    uint64_t               nonUniqId = 0;
+    NonUniqResId           nonUniqId = NonUniqResId::I_None;
 
   private:
     VAllocator*            alloc=nullptr;

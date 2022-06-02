@@ -416,6 +416,11 @@ VkBool32 VulkanInstance::debugReportCallback(VkDebugReportFlagsEXT      flags,
                                              const char                *pLayerPrefix,
                                              const char                *pMessage,
                                              void                      *pUserData) {
+  if(flags==VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT && messageCode==0) {
+    // [ UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout ]
+    // warning: layout should be VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL instead of GENERAL
+    return VK_FALSE;
+    }
   Log::e(pMessage," object=",object,", type=",objectType," th:",std::this_thread::get_id());
   return VK_FALSE;
   }

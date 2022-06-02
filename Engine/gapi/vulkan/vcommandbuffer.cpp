@@ -224,7 +224,7 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
       addDependency(*reinterpret_cast<VSwapchain*>(sw[i]),imgId[i]);
     }
 
-  resState.joinCompute(*this);
+  resState.joinCompute(PipelineStage::S_Graphics);
   resState.setRenderpass(*this,desc,descSize,frm,att,sw,imgId);
 
   if(device.props.hasDynRendering) {
@@ -531,7 +531,8 @@ void VCommandBuffer::copyNative(AbstractGraphicsApi::Buffer&        dst, size_t 
       1
   };
 
-  vkCmdCopyImageToBuffer(impl, nSrc.impl, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, nDst.impl, 1, &region);
+  VkImageLayout layout =  nSrc.isStorageImage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+  vkCmdCopyImageToBuffer(impl, nSrc.impl, layout, nDst.impl, 1, &region);
   }
 
 void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, uint32_t srcH, uint32_t srcMip,
@@ -675,14 +676,14 @@ void VCommandBuffer::buildTlas(VkAccelerationStructureKHR dest,
 void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dst, size_t offset,
                           AbstractGraphicsApi::Texture& src, uint32_t width, uint32_t height, uint32_t mip) {
   auto& nDst = reinterpret_cast<VBuffer&>(dst);
-  resState.onUavUsage(nDst.nonUniqId,0,PipelineStage::S_Tranfer);
-  resState.setLayout(src,ResourceAccess::TransferSrc);
+  auto& nSrc = reinterpret_cast<const VTexture&>(src);
+  if(!nSrc.isStorageImage)
+    resState.setLayout(src,ResourceAccess::TransferSrc);
+  resState.onTranferUsage(nDst.nonUniqId,nSrc.nonUniqId);
   resState.flush(*this);
-
   copyNative(dst,offset, src,width,height,mip);
-
-  // resState.setLayout(dst,ResourceAccess::UavRead);
-  resState.setLayout(src,ResourceAccess::Sampler); // TODO: storage images
+  if(!nSrc.isStorageImage)
+    resState.setLayout(src,ResourceAccess::Sampler);
   }
 
 void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,

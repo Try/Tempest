@@ -147,7 +147,7 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t count, size_t size, size_t a
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
     }
 
-  ret.nonUniqId = (MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer)) ? 0x1 : 0x0;
+  ret.nonUniqId = (MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer)) ? NonUniqResId::I_Ssbo : NonUniqResId::I_Buf;
   return ret;
   }
 
@@ -186,12 +186,12 @@ DxTexture DxAllocator::alloc(const Pixmap& pm, uint32_t mip, DXGI_FORMAT format)
              uuid<ID3D12Resource>(),
              reinterpret_cast<void**>(&ret)
              ));
-  return DxTexture(std::move(ret),resDesc.Format,0x0,resDesc.MipLevels);
+  return DxTexture(std::move(ret),resDesc.Format,NonUniqResId::I_None,resDesc.MipLevels);
   }
 
 DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mip, TextureFormat frm, bool imageStore) {
   D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COMMON;
-  D3D12_CLEAR_VALUE clr={};
+  D3D12_CLEAR_VALUE     clr   = {};
 
   D3D12_RESOURCE_DESC resDesc = {};
   resDesc.MipLevels          = mip;
@@ -239,7 +239,7 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
              uuid<ID3D12Resource>(),
              reinterpret_cast<void**>(&ret)
              ));
-  uint64_t nonUniqId = (imageStore) ? 0x2 : 0x0;
+  auto nonUniqId = (imageStore) ? NonUniqResId::I_Img : NonUniqResId::I_None;
   return DxTexture(std::move(ret),resDesc.Format,nonUniqId,resDesc.MipLevels);
   }
 

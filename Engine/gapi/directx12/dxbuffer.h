@@ -28,8 +28,8 @@ class DxBuffer : public AbstractGraphicsApi::Buffer {
     DxAllocator::Allocation page={};
 
     ComPtr<ID3D12Resource>  impl;
-    uint64_t                nonUniqId = 0;
-    UINT                    sizeInBytes=0;
+    NonUniqResId            nonUniqId   = NonUniqResId::I_None;
+    UINT                    sizeInBytes = 0;
 
   protected:
     void  updateByStaging(DxBuffer* stage, const void* data, size_t offDst, size_t offSrc, size_t count, size_t sz, size_t alignedSz);

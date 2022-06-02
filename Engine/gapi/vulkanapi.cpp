@@ -224,13 +224,16 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
 
   const size_t    size   = bsz.w*bsz.h*bpb;
   Detail::VBuffer stage  = dx.allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
-  ResourceAccess  defLay = storageImg ? (ResourceAccess::UavReadGr | ResourceAccess::UavReadComp) : ResourceAccess::Sampler;
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
-  cmd->barrier(tx,defLay,ResourceAccess::TransferSrc,uint32_t(-1));
-  cmd->copyNative(stage,0, tx,w,h,mip);
-  cmd->barrier(tx,ResourceAccess::TransferSrc,defLay,uint32_t(-1));
+  if(storageImg) {
+    cmd->copyNative(stage,0, tx,w,h,mip);
+    } else {
+    cmd->barrier(tx,ResourceAccess::Sampler,ResourceAccess::TransferSrc,uint32_t(-1));
+    cmd->copyNative(stage,0, tx,w,h,mip);
+    cmd->barrier(tx,ResourceAccess::TransferSrc,ResourceAccess::Sampler,uint32_t(-1));
+    }
   cmd->end();
 
   dx.dataMgr().waitFor(&tx);

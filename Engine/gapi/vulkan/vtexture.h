@@ -31,7 +31,7 @@ class VTexture : public AbstractGraphicsApi::Texture {
     VkImage                impl      = VK_NULL_HANDLE;
     VkImageView            imgView   = VK_NULL_HANDLE;
     VkFormat               format    = VK_FORMAT_UNDEFINED;
-    uint64_t               nonUniqId = 0;
+    NonUniqResId           nonUniqId = NonUniqResId::I_None;
 
     uint32_t               mipCnt = 1;
     VAllocator*            alloc =nullptr;

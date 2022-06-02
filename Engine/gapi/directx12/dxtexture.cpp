@@ -12,7 +12,7 @@ using namespace Tempest::Detail;
 DxTexture::DxTexture() {
   }
 
-DxTexture::DxTexture(ComPtr<ID3D12Resource>&& b, DXGI_FORMAT frm, uint64_t nonUniqId, UINT mips)
+DxTexture::DxTexture(ComPtr<ID3D12Resource>&& b, DXGI_FORMAT frm, NonUniqResId nonUniqId, UINT mips)
   :impl(std::move(b)), format(frm), nonUniqId(nonUniqId), mips(mips) {
   }
 

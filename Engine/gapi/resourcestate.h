@@ -13,9 +13,13 @@ class ResourceState {
     ResourceState() = default;
 
     struct Usage {
-      uint32_t read  = 0;
-      uint32_t write = 0;
-      bool     durty = false;
+      NonUniqResId read  = NonUniqResId::I_None;
+      NonUniqResId write = NonUniqResId::I_None;
+      bool         durty = false;
+      };
+
+    enum DurtyBits : uint32_t {
+
       };
 
     void setRenderpass(AbstractGraphicsApi::CommandBuffer& cmd,
@@ -26,11 +30,11 @@ class ResourceState {
     void setLayout  (AbstractGraphicsApi::Swapchain& s, uint32_t id, ResourceAccess lay, bool discard);
     void setLayout  (AbstractGraphicsApi::Texture&   a, ResourceAccess lay, bool discard = false);
 
-    void onUavUsage (uint32_t read, uint32_t write, PipelineStage st);
-    void onUavUsage (const ResourceState::Usage& uavUsage, PipelineStage st);
-    void forceLayout(AbstractGraphicsApi::Texture&   a);
+    void onTranferUsage(NonUniqResId read, NonUniqResId write);
+    void onUavUsage    (const ResourceState::Usage& uavUsage, PipelineStage st);
+    void forceLayout   (AbstractGraphicsApi::Texture&   a);
 
-    void joinCompute(AbstractGraphicsApi::CommandBuffer& cmd);
+    void joinCompute(PipelineStage st);
     void flush      (AbstractGraphicsApi::CommandBuffer& cmd);
     void finalize   (AbstractGraphicsApi::CommandBuffer& cmd);
 
@@ -52,8 +56,16 @@ class ResourceState {
 
     std::vector<ImgState> imgState;
 
-    ResourceState::Usage  uavUsage[PipelineStage::S_Count] = {};
-    ResourceAccess        uavPrev = ResourceAccess::None;
+    struct Stage {
+      union {
+        NonUniqResId depend[PipelineStage::S_Count];
+        uint32_t     any;
+        };
+      };
+    Stage                 uavRead [PipelineStage::S_Count] = {};
+    Stage                 uavWrite[PipelineStage::S_Count] = {};
+    ResourceAccess        uavSrcBarrier = ResourceAccess::None;
+    ResourceAccess        uavDstBarrier = ResourceAccess::None;
   };
 
 }
