@@ -32,7 +32,4 @@ void MtDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStru
   desc[id].val = as.impl.get();
   }
 
-void MtDescriptorArray::ssboBarriers(ResourceState&) {
-  }
-
 #endif

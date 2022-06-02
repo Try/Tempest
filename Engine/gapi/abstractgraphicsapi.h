@@ -436,7 +436,7 @@ namespace Tempest {
         virtual void set    (size_t id,AbstractGraphicsApi::Buffer*  buf, size_t offset)=0;
         virtual void setTlas(size_t,AbstractGraphicsApi::AccelerationStructure*) {}
         virtual void set    (size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler2d& smp);
-        virtual void ssboBarriers(Detail::ResourceState& res, PipelineStage st) = 0;
+        virtual void ssboBarriers(Detail::ResourceState& res, PipelineStage st);
         };
       struct EmptyDesc : Desc {
         void set(size_t,AbstractGraphicsApi::Texture*, const Sampler2d&, uint32_t){}
