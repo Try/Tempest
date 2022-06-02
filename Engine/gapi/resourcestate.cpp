@@ -98,12 +98,12 @@ void ResourceState::onUavUsage(const Usage& u, PipelineStage st) {
 void ResourceState::joinCompute(PipelineStage st) {
   ResourceAccess dst[PipelineStage::S_Count] = {ResourceAccess::UavReadWriteComp, ResourceAccess::UavReadWriteGr};
 
-  auto& usage = uavWrite[PipelineStage::S_Compute];
+  auto& usage = uavWrite[st];
   if(/*uavUsage.read!=0 ||*/ usage.any!=0) {
     // NOTE: VS/FS side effects will require WaR barrier
-    if(uavRead[PipelineStage::S_Compute].any!=0)
+    if(uavRead[st].depend[PipelineStage::S_Compute]!=0)
       uavSrcBarrier = uavSrcBarrier | ResourceAccess::UavReadComp;
-    if(uavWrite[PipelineStage::S_Compute].any!=0)
+    if(uavWrite[st].depend[PipelineStage::S_Compute]!=0)
       uavSrcBarrier = uavSrcBarrier | ResourceAccess::UavWriteComp;
     uavDstBarrier = uavDstBarrier | dst[st];
 
