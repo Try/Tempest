@@ -36,6 +36,10 @@ class DxShader:public AbstractGraphicsApi::Shader {
       mutable ComPtr<ID3DBlob> altShader;
       } tess;
 
+    struct Comp {
+      IVec3 wgSize;
+      } comp;
+
   private:
     HRESULT                          compile   (ComPtr<ID3DBlob>& shader, const char* hlsl, size_t len, spv::ExecutionModel exec, uint32_t sm) const;
     HRESULT                          compileOld(ComPtr<ID3DBlob>& shader, const char* hlsl, size_t len, const char* target) const;

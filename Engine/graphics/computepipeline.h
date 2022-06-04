@@ -21,6 +21,7 @@ class ComputePipeline final {
     ComputePipeline& operator = (ComputePipeline&& other);
 
     bool isEmpty() const { return impl.handler==nullptr; }
+    IVec3 workGroupSize() const;
     const PipelineLayout& layout() const { return ulay; }
 
   private:

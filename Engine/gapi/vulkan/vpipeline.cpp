@@ -332,6 +332,7 @@ VCompPipeline::VCompPipeline(VDevice& dev, const VPipelineLay& ulay, VShader& co
   :device(dev.device.impl) {
   VkShaderStageFlags pushStageFlags = 0;
   pipelineLayout = VPipeline::initLayout(device,ulay,pushStageFlags,pushSize);
+  wgSize         = comp.comp.wgSize;
 
   try {
     VkComputePipelineCreateInfo info = {};
@@ -349,17 +350,15 @@ VCompPipeline::VCompPipeline(VDevice& dev, const VPipelineLay& ulay, VShader& co
     }
   }
 
-VCompPipeline::VCompPipeline(VCompPipeline&& other) {
-  std::swap(device,         other.device);
-  std::swap(impl,           other.impl);
-  std::swap(pipelineLayout, other.pipelineLayout);
-  }
-
 VCompPipeline::~VCompPipeline() {
   if(pipelineLayout==VK_NULL_HANDLE)
     return;
   vkDestroyPipelineLayout(device,pipelineLayout,nullptr);
   vkDestroyPipeline(device,impl,nullptr);
+  }
+
+IVec3 VCompPipeline::workGroupSize() const {
+  return wgSize;
   }
 
 #endif

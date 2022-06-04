@@ -147,6 +147,16 @@ void Encoder<CommandBuffer>::dispatch(size_t x, size_t y, size_t z) {
   impl->dispatch(x,y,z);
   }
 
+void Tempest::Encoder<Tempest::CommandBuffer>::dispatchThreads(size_t x, size_t y, size_t z) {
+  if(state.stage==Rendering)
+    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
+  auto sz = state.curCompute->workGroupSize();
+  x = (x+sz.x-1)/sz.x;
+  y = (y+sz.y-1)/sz.y;
+  z = (z+sz.z-1)/sz.z;
+  impl->dispatch(x,y,z);
+  }
+
 void Encoder<CommandBuffer>::setFramebuffer(std::initializer_list<AttachmentDesc> rd, AttachmentDesc zd) {
   implSetFramebuffer(rd.begin(),rd.size(),&zd);
   }

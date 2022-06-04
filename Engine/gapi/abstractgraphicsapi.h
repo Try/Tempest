@@ -415,7 +415,9 @@ namespace Tempest {
         virtual uint32_t      mipCount() const = 0;
         };
       struct Pipeline:Shared {};
-      struct CompPipeline:Shared {};
+      struct CompPipeline:Shared {
+        virtual IVec3 workGroupSize() const = 0;
+        };
       struct Shader:Shared   {};
       struct Uniforms        {};
       struct PipelineLay:Shared {

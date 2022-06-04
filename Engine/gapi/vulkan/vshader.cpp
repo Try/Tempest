@@ -25,6 +25,11 @@ VShader::VShader(VDevice& device, const void *source, size_t src_size)
   ShaderReflection::getBindings(lay,comp);
 
   stage = ShaderReflection::getExecutionModel(comp);
+  if(stage==ShaderReflection::Compute) {
+    this->comp.wgSize.x = comp.get_execution_mode_argument(spv::ExecutionModeLocalSize,0);
+    this->comp.wgSize.y = comp.get_execution_mode_argument(spv::ExecutionModeLocalSize,1);
+    this->comp.wgSize.z = comp.get_execution_mode_argument(spv::ExecutionModeLocalSize,2);
+    }
   }
 
   if(vkCreateShaderModule(device.device.impl,&createInfo,nullptr,&impl)!=VK_SUCCESS)

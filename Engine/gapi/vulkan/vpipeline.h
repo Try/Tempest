@@ -79,12 +79,15 @@ class VCompPipeline : public AbstractGraphicsApi::CompPipeline {
   public:
     VCompPipeline();
     VCompPipeline(VDevice &device, const VPipelineLay& ulay, VShader &comp);
-    VCompPipeline(VCompPipeline&& other);
+    VCompPipeline(VCompPipeline&& other) = delete;
     ~VCompPipeline();
+
+    IVec3              workGroupSize() const;
 
     VkDevice           device         = nullptr;
     VkPipelineLayout   pipelineLayout = VK_NULL_HANDLE;
     VkPipeline         impl           = VK_NULL_HANDLE;
+    IVec3              wgSize;
     uint32_t           pushSize       = 0;
   };
 }}

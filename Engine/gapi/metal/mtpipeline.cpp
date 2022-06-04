@@ -152,4 +152,8 @@ MtCompPipeline::MtCompPipeline(MtDevice &device, const MtPipelineLay& lay, const
   mtAssert(impl.get(),error);
   }
 
+IVec3 MtCompPipeline::workGroupSize() const {
+  return IVec3{localSize.width,localSize.height,localSize.depth};
+  }
+
 #endif

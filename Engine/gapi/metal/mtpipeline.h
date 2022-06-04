@@ -58,6 +58,8 @@ class MtCompPipeline : public AbstractGraphicsApi::CompPipeline {
   public:
     MtCompPipeline(MtDevice &d, const MtPipelineLay& lay, const MtShader& sh);
 
+    IVec3 workGroupSize() const;
+
     NsPtr<MTL::ComputePipelineState> impl;
     DSharedPtr<const MtPipelineLay*> lay;
     MTL::Size                        localSize = {};

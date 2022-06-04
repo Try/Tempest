@@ -95,6 +95,11 @@ DxShader::DxShader(const void *source, const size_t src_size) {
       tess.vertSrc.resize(src_size/4);
       std::memcpy(tess.vertSrc.data(),source,src_size);
       }
+    if(exec==spv::ExecutionModelGLCompute) {
+      this->comp.wgSize.x = comp.get_execution_mode_argument(spv::ExecutionModeLocalSize,0);
+      this->comp.wgSize.y = comp.get_execution_mode_argument(spv::ExecutionModeLocalSize,1);
+      this->comp.wgSize.z = comp.get_execution_mode_argument(spv::ExecutionModeLocalSize,2);
+      }
     }
   catch(const std::bad_alloc&) {
     throw;

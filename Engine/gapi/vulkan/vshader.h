@@ -23,6 +23,9 @@ class VShader:public AbstractGraphicsApi::Shader {
     std::vector<Binding>             lay;
     ShaderReflection::Stage          stage = ShaderReflection::Stage::Compute;
 
+    struct Comp {
+      IVec3 wgSize;
+      } comp;
   private:
     VkDevice                         device;
   };
