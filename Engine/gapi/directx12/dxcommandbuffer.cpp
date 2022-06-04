@@ -37,6 +37,9 @@ static D3D12_RENDER_PASS_ENDING_ACCESS_TYPE mkStoreOp(const AccessOp op) {
 static D3D12_RESOURCE_STATES nativeFormat(ResourceAccess f) {
   uint32_t st = 0;
 
+  if(f==ResourceAccess::None)
+    return D3D12_RESOURCE_STATE_COMMON;
+
   if((f&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
     st |= D3D12_RESOURCE_STATE_COPY_SOURCE;
   if((f&ResourceAccess::TransferDst)==ResourceAccess::TransferDst)
@@ -49,8 +52,8 @@ static D3D12_RESOURCE_STATES nativeFormat(ResourceAccess f) {
     st |= D3D12_RESOURCE_STATE_RENDER_TARGET;
   if((f&ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach)
     st |= D3D12_RESOURCE_STATE_DEPTH_WRITE;
-  if((f&ResourceAccess::Unordered)==ResourceAccess::Unordered)
-    st |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+  if((f&ResourceAccess::DepthReadOnly)==ResourceAccess::DepthReadOnly)
+    st |= D3D12_RESOURCE_STATE_DEPTH_READ;
 
   if((f&ResourceAccess::Vertex)==ResourceAccess::Vertex)
     st |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;

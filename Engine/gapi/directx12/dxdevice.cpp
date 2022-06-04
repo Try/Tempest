@@ -141,8 +141,10 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
     smpBit |= uint64_t(1) << uint64_t(i);
   for(auto& i:att)
     attBit |= uint64_t(1) << uint64_t(i);
-  for(auto& i:ds)
+  for(auto& i:ds) {
     dsBit  |= uint64_t(1) << uint64_t(i);
+    smpBit |= uint64_t(1) << uint64_t(i);
+    }
   for(auto& i:sso)
     storBit  |= uint64_t(1) << uint64_t(i);
   prop.setSamplerFormats(smpBit);

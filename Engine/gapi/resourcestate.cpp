@@ -20,7 +20,7 @@ void ResourceState::setRenderpass(AbstractGraphicsApi::CommandBuffer& cmd,
   for(size_t i=0; i<descSize; ++i) {
     const bool discard = desc[i].store!=AccessOp::Preserve;
     if(isDepthFormat(frm[i]))
-      setLayout(*att[i],ResourceAccess::DepthAttach,discard);
+      setLayout(*att[i],ResourceAccess::DepthReadOnly,discard);
     else if(frm[i]==TextureFormat::Undefined)
       setLayout(*sw[i],imgId[i],ResourceAccess::ColorAttach,discard); // execution barrier
     else
@@ -38,7 +38,7 @@ void ResourceState::setLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id, Re
 void ResourceState::setLayout(AbstractGraphicsApi::Texture& a, ResourceAccess lay, bool discard) {
   ResourceAccess def = ResourceAccess::Sampler;
   if(lay==ResourceAccess::DepthAttach)
-    def = ResourceAccess::DepthAttach; // note: no readable depth
+    def = ResourceAccess::DepthReadOnly;
 
   ImgState& img = findImg(&a,nullptr,0,def,discard);
   img.next     = lay;

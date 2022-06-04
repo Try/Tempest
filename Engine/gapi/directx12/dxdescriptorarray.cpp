@@ -88,6 +88,13 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const 
       srvDesc.Texture2D.MipLevels       = 1;
       }
 
+    if(srvDesc.Format==DXGI_FORMAT_D16_UNORM)
+      srvDesc.Format = DXGI_FORMAT_R16_UNORM;
+    else if(srvDesc.Format==DXGI_FORMAT_D32_FLOAT)
+      srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+    else if(srvDesc.Format==DXGI_FORMAT_D24_UNORM_S8_UINT)
+      srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+
     UINT filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
     D3D12_SAMPLER_DESC smpDesc = {};
     smpDesc.Filter           = D3D12_FILTER_MIN_MAG_MIP_POINT;

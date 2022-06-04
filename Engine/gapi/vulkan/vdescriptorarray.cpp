@@ -147,8 +147,11 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* t, const Sam
     imageInfo.imageView = tex->view(device,ComponentMapping(),mipLevel);
     }
 
-  if(descriptorWrite.descriptorType==VK_DESCRIPTOR_TYPE_STORAGE_IMAGE || tex->isStorageImage)
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL; else
+  if(nativeIsDepthFormat(tex->format))
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+  else if(tex->isStorageImage)
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+  else
     imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
   vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);

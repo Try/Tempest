@@ -70,9 +70,9 @@ static void toStage(VkPipelineStageFlags2KHR& stage, VkAccessFlagBits2KHR& acces
     ret |= (VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT);
     acc |= (VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT);
     }
-  if((rs&ResourceAccess::Unordered)==ResourceAccess::Unordered) {
+  if((rs&ResourceAccess::DepthReadOnly)==ResourceAccess::DepthReadOnly) {
     ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-    acc |= (VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+    acc |= VK_ACCESS_SHADER_READ_BIT;
     }
 
   if((rs&ResourceAccess::Index)==ResourceAccess::Index) {
@@ -118,6 +118,9 @@ static void toStage(VkPipelineStageFlags2KHR& stage, VkAccessFlagBits2KHR& acces
   }
 
 static VkImageLayout toLayout(ResourceAccess rs) {
+  if(rs==ResourceAccess::None)
+    return VK_IMAGE_LAYOUT_UNDEFINED;
+
   if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
     return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
   if((rs&ResourceAccess::TransferDst)==ResourceAccess::TransferDst)
@@ -130,22 +133,12 @@ static VkImageLayout toLayout(ResourceAccess rs) {
     return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
   if((rs&ResourceAccess::ColorAttach)==ResourceAccess::ColorAttach)
     return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+  if((rs&ResourceAccess::DepthReadOnly)==ResourceAccess::DepthReadOnly)
+    return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
   if((rs&ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach)
     return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
-  if((rs&ResourceAccess::Unordered)==ResourceAccess::Unordered)
-    return VK_IMAGE_LAYOUT_GENERAL;
 
-  if((rs&ResourceAccess::Index)==ResourceAccess::Index)
-    return VK_IMAGE_LAYOUT_GENERAL;
-  if((rs&ResourceAccess::Vertex)==ResourceAccess::Vertex)
-    return VK_IMAGE_LAYOUT_GENERAL;
-  if((rs&ResourceAccess::Vertex)==ResourceAccess::Uniform)
-    return VK_IMAGE_LAYOUT_GENERAL;
-
-  if((rs&ResourceAccess::UavReadWriteAll)!=ResourceAccess::None)
-    return VK_IMAGE_LAYOUT_GENERAL;
-
-  return VK_IMAGE_LAYOUT_UNDEFINED;
+  return VK_IMAGE_LAYOUT_GENERAL;
   }
 
 static VkImage toVkResource(const AbstractGraphicsApi::BarrierDesc& b) {

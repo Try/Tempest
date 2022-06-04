@@ -41,7 +41,7 @@ enum ResourceAccess : uint32_t {
   Sampler          = 1 << 3,
   ColorAttach      = 1 << 4,
   DepthAttach      = 1 << 5,
-  Unordered        = 1 << 6,
+  DepthReadOnly    = 1 << 6,
 
   Index            = 1 << 7,
   Vertex           = 1 << 8,

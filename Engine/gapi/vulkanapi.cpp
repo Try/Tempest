@@ -192,7 +192,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createStorage(AbstractGraphicsApi::Devi
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
-  cmd->barrier(*pbuf.handler,ResourceAccess::None,ResourceAccess::Unordered,uint32_t(-1));
+  cmd->barrier(*pbuf.handler,ResourceAccess::None,ResourceAccess::UavReadWriteAll,uint32_t(-1));
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
 
