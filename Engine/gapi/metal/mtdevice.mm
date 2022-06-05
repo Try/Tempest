@@ -5,6 +5,8 @@
 
 #include <Foundation/NSProcessInfo.h>
 
+//#include <Metal/MTLPixelFormat.h>
+
 using namespace Tempest;
 using namespace Tempest::Detail;
 
@@ -108,6 +110,29 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
     for(auto& i:ds)
       dsBit  |= uint64_t(1) << uint64_t(i);
     }
+
+  {
+  /* NOTE1: https://developer.apple.com/metal/Metal-Shading-Language-Specification.pdf
+   * > You must declare textures with depth formats as one of the following texture data types
+   * > depth2d
+   *
+   * NOTE2: https://github.com/KhronosGroup/SPIRV-Cross/issues/529
+   * It seems MSL and Metal validation-layer doesn't really care, if depth is sampled as texture2d<>
+   *
+   * Testing shows, that texture2d works on MacOS
+  */
+#ifdef __OSX__
+  // API_AVAILABLE(macos(10.12), ios(13.0))
+  if(majorVersion>=11 || (majorVersion==10 && minorVersion>=12))
+    smpBit |= uint64_t(1) << TextureFormat::Depth16;
+  // API_AVAILABLE(macos(10.11), macCatalyst(13.0))
+  if((majorVersion>=11 || (majorVersion==10 && minorVersion>=11)) && dev.depth24Stencil8PixelFormatSupported())
+    smpBit |= uint64_t(1) << TextureFormat::Depth24S8;
+#else
+  if(majorVersion>=13)
+    smpBit |= uint64_t(1) << TextureFormat::Depth16;
+#endif
+  }
 
   prop.setSamplerFormats(smpBit);
   prop.setAttachFormats (attBit);
