@@ -185,8 +185,14 @@ void Tempest::Encoder<Tempest::CommandBuffer>::implSetFramebuffer(const Attachme
     throw IncompleteFboException();
 
   TextureFormat frm[MaxFramebufferAttachments+1] = {};
-  uint32_t      w = uint32_t(rt[0].attachment->w()); // FIXME: handle z-only passes
-  uint32_t      h = uint32_t(rt[0].attachment->h());
+  uint32_t      w, h;
+  if(T_UNLIKELY(rtSize==0)) {
+    w = uint32_t(zd->zbuffer->w());
+    h = uint32_t(zd->zbuffer->h());
+    } else {
+    w = uint32_t(rt[0].attachment->w());
+    h = uint32_t(rt[0].attachment->h());
+    }
 
   AttachmentDesc                  desc [MaxFramebufferAttachments] = {};
   AbstractGraphicsApi::Texture*   att  [MaxFramebufferAttachments] = {};
