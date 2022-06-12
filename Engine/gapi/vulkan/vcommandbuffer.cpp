@@ -356,10 +356,10 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraph
   VPipeline&        px=reinterpret_cast<VPipeline&>(p);
   VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
   curUniforms = &ux;
-  curUniforms->ssboBarriers(resState,PipelineStage::S_Graphics);
+  ux.ssboBarriers(resState,PipelineStage::S_Graphics);
   vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,
                           px.pipelineLayout,0,
-                          1,&ux.desc,
+                          1,&ux.impl,
                           0,nullptr);
   }
 
@@ -387,7 +387,7 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractG
   curUniforms = &ux;
   vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_COMPUTE,
                           px.pipelineLayout,0,
-                          1,&ux.desc,
+                          1,&ux.impl,
                           0,nullptr);
   }
 

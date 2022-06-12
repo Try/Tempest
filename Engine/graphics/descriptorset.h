@@ -44,7 +44,8 @@ class DescriptorSet final {
 
     void set(size_t layoutBind, const Detail::ResourcePtr<Texture2d>& tex, const Sampler2d& smp = Sampler2d::anisotrophy());
 
-    void set(size_t layoutBind, const std::vector<const Texture2d*>& tex);
+    void set(size_t layoutBind, const std::vector<const Texture2d*>&   tex);
+    void set(size_t layoutBind, const std::vector<const VideoBuffer*>& buf);
 
     void set(size_t layoutBind, const AccelerationStructure& tlas);
 

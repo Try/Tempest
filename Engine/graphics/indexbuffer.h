@@ -42,6 +42,22 @@ class IndexBuffer final {
   friend class Tempest::Device;
   friend class Tempest::Encoder<Tempest::CommandBuffer>;
   friend class Tempest::DescriptorSet;
+
+  template<class T2>
+  friend       VideoBuffer& bufferCast(IndexBuffer<T2>& s);
+
+  template<class T2>
+  friend const VideoBuffer& bufferCast(const IndexBuffer<T2>& s);
   };
+
+template<class T>
+inline VideoBuffer& bufferCast(IndexBuffer<T>& s) {
+  return s.impl;
+  }
+
+template<class T>
+inline const VideoBuffer& bufferCast(const IndexBuffer<T>& s) {
+  return s.impl;
+  }
 
 }

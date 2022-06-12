@@ -9,6 +9,11 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+static bool isRuntimeSized(const spirv_cross::SPIRType& t) {
+  // NOTE: in spirv there is no dedicated decoration or something to identify runtime array
+  return (!t.array.empty() && t.array[0]<=1);
+  }
+
 void ShaderReflection::getVertexDecl(std::vector<Decl::ComponentType>& data, spirv_cross::Compiler& comp) {
   if(comp.get_execution_model()!=spv::ExecutionModelVertex)
     return;
@@ -49,14 +54,11 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     auto&    t       = comp.get_type_from_variable(resource.id);
     unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);
     Binding b;
-    b.layout = binding;
-    b.cls    = Texture;
-    b.stage  = s;
-    b.spvId  = resource.id;
-    if(!t.array.empty() && t.array[0]<=1) {
-      // NOTE: in spirv there is dedicated decoration or something to identify runtime array
-      b.runtimeSized = true;
-      }
+    b.layout       = binding;
+    b.cls          = Texture;
+    b.stage        = s;
+    b.spvId        = resource.id;
+    b.runtimeSized = isRuntimeSized(t);
     lay.push_back(b);
     }
   for(auto &resource : resources.uniform_buffers) {
@@ -64,11 +66,12 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);
     auto     sz      = comp.get_declared_struct_size(t);
     Binding b;
-    b.layout = binding;
-    b.cls    = Ubo;
-    b.stage  = s;
-    b.size   = sz;
-    b.spvId  = resource.id;
+    b.layout       = binding;
+    b.cls          = Ubo;
+    b.stage        = s;
+    b.size         = sz;
+    b.spvId        = resource.id;
+    b.runtimeSized = isRuntimeSized(t);
     lay.push_back(b);
     }
   for(auto &resource : resources.storage_buffers) {
@@ -77,29 +80,34 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     auto     readonly = comp.get_buffer_block_flags(resource.id);
     auto     sz       = comp.get_declared_struct_size(t);
     Binding b;
-    b.layout = binding;
-    b.cls    = (readonly.get(spv::DecorationNonWritable) ? SsboR : SsboRW);
-    b.stage  = s;
-    b.size   = sz;
-    b.spvId  = resource.id;
+    b.layout       = binding;
+    b.cls          = (readonly.get(spv::DecorationNonWritable) ? SsboR : SsboRW);
+    b.stage        = s;
+    b.size         = sz;
+    b.spvId        = resource.id;
+    b.runtimeSized = isRuntimeSized(t);
     lay.push_back(b);
     }
   for(auto &resource : resources.storage_images) {
+    auto&    t        = comp.get_type_from_variable(resource.id);
     unsigned binding  = comp.get_decoration(resource.id, spv::DecorationBinding);
     Binding b;
-    b.layout = binding;
-    b.cls    = ImgRW; // (readonly.get(spv::DecorationNonWritable) ? UniformsLayout::ImgR : UniformsLayout::ImgRW);
-    b.stage  = s;
-    b.spvId  = resource.id;
+    b.layout       = binding;
+    b.cls          = ImgRW; // (readonly.get(spv::DecorationNonWritable) ? UniformsLayout::ImgR : UniformsLayout::ImgRW);
+    b.stage        = s;
+    b.spvId        = resource.id;
+    b.runtimeSized = isRuntimeSized(t);
     lay.push_back(b);
     }
   for(auto &resource : resources.acceleration_structures) {
+    auto&    t        = comp.get_type_from_variable(resource.id);
     unsigned binding  = comp.get_decoration(resource.id, spv::DecorationBinding);
     Binding b;
-    b.layout = binding;
-    b.cls    = Tlas;
-    b.stage  = s;
-    b.spvId  = resource.id;
+    b.layout       = binding;
+    b.cls          = Tlas;
+    b.stage        = s;
+    b.spvId        = resource.id;
+    b.runtimeSized = isRuntimeSized(t);
     lay.push_back(b);
     }
   for(auto &resource : resources.push_constant_buffers) {
@@ -167,9 +175,10 @@ void ShaderReflection::merge(std::vector<Binding>& ret,
         bool  ins = false;
         for(auto& r:ret)
           if(r.layout==u.layout) {
-            r.stage = Stage(r.stage | u.stage);
-            r.size  = std::max(r.size, u.size);
-            r.size  = std::max(r.size, u.mslSize);
+            r.stage         = Stage(r.stage | u.stage);
+            r.size          = std::max(r.size, u.size);
+            r.size          = std::max(r.size, u.mslSize);
+            r.runtimeSized |= u.runtimeSized;
             ins     = true;
             break;
             }

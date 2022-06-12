@@ -27,6 +27,16 @@ class StorageBuffer final {
   friend class Tempest::CommandBuffer;
   friend class Tempest::DescriptorSet;
   friend class Tempest::Encoder<Tempest::CommandBuffer>;
+
+  friend       VideoBuffer& bufferCast(StorageBuffer& s);
+  friend const VideoBuffer& bufferCast(const StorageBuffer& s);
   };
 
+inline VideoBuffer& bufferCast(StorageBuffer& s) {
+  return s.impl;
+  }
+
+inline const VideoBuffer& bufferCast(const StorageBuffer& s) {
+  return s.impl;
+  }
 }

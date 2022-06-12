@@ -22,10 +22,11 @@ class VDescriptorArray : public AbstractGraphicsApi::Desc {
     void                      setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) override;
 
     void                      set    (size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler2d& smp) override;
+    void                      set    (size_t id, AbstractGraphicsApi::Buffer**  buf, size_t cnt) override;
 
     void                      ssboBarriers(Detail::ResourceState& res, PipelineStage st) override;
 
-    VkDescriptorSet           desc=VK_NULL_HANDLE;
+    VkDescriptorSet           impl = VK_NULL_HANDLE;
 
   private:
     VkDevice                  device=nullptr;
@@ -43,10 +44,10 @@ class VDescriptorArray : public AbstractGraphicsApi::Desc {
     SmallArray<UAV,16>        uav;
     ResourceState::Usage      uavUsage;
 
-    VkDescriptorPool          allocPool(const VPipelineLay& lay, size_t size);
+    VkDescriptorPool          allocPool(const VPipelineLay& lay, size_t size, uint32_t runtimeArraySz);
     VkDescriptorSet           allocDescSet(VkDescriptorPool pool, VkDescriptorSetLayout lay);
     static void               addPoolSize(VkDescriptorPoolSize* p, size_t& sz, uint32_t cnt, VkDescriptorType elt);
-    void                      reallocSet();
+    void                      reallocSet(uint32_t newRuntimeSz);
   };
 
 }}

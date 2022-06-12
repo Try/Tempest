@@ -34,6 +34,22 @@ class VertexBuffer final {
   friend class Tempest::Device;
   friend class Tempest::Encoder<Tempest::CommandBuffer>;
   friend class Tempest::DescriptorSet;
+
+  template<class T2>
+  friend       VideoBuffer& bufferCast(VertexBuffer<T2>& s);
+
+  template<class T2>
+  friend const VideoBuffer& bufferCast(const VertexBuffer<T2>& s);
   };
+
+template<class T>
+inline VideoBuffer& bufferCast(VertexBuffer<T>& s) {
+  return s.impl;
+  }
+
+template<class T>
+inline const VideoBuffer& bufferCast(const VertexBuffer<T>& s) {
+  return s.impl;
+  }
 
 }

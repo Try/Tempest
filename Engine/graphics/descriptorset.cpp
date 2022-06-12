@@ -68,6 +68,13 @@ void DescriptorSet::set(size_t layoutBind, const std::vector<const Texture2d*>& 
   impl.handler->set(layoutBind,arr.get(),tex.size(),Sampler2d::anisotrophy());
   }
 
+void DescriptorSet::set(size_t layoutBind, const std::vector<const VideoBuffer*>& buf) {
+  Detail::SmallArray<AbstractGraphicsApi::Buffer*,32> arr(buf.size());
+  for(size_t i=0; i<buf.size(); ++i)
+    arr[i] = buf[i] ? buf[i]->impl.handler : nullptr;
+  impl.handler->set(layoutBind,arr.get(),buf.size());
+  }
+
 void DescriptorSet::set(size_t layoutBind, const AccelerationStructure& tlas) {
   if(tlas.impl.handler)
     impl.handler->setTlas(layoutBind,tlas.impl.handler); else
