@@ -98,6 +98,10 @@ void AbstractGraphicsApi::Desc::set(size_t id, Texture** tex, size_t cnt, const 
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }
 
+void Tempest::AbstractGraphicsApi::Desc::set(size_t id, Buffer** buf, size_t cnt) {
+  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
+  }
+
 void AbstractGraphicsApi::Desc::ssboBarriers(Detail::ResourceState&, PipelineStage) {
   // NOP by default
   }
