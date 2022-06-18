@@ -14,6 +14,13 @@ static bool isRuntimeSized(const spirv_cross::SPIRType& t) {
   return (!t.array.empty() && t.array[0]<=1);
   }
 
+static uint32_t arraySize(const spirv_cross::SPIRType& t) {
+  uint32_t cnt = 1;
+  for(auto& i:t.array)
+    cnt *= i;
+  return cnt;
+  }
+
 void ShaderReflection::getVertexDecl(std::vector<Decl::ComponentType>& data, spirv_cross::Compiler& comp) {
   if(comp.get_execution_model()!=spv::ExecutionModelVertex)
     return;
@@ -59,6 +66,7 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     b.stage        = s;
     b.spvId        = resource.id;
     b.runtimeSized = isRuntimeSized(t);
+    b.arraySize    = arraySize(t);
     lay.push_back(b);
     }
   for(auto &resource : resources.uniform_buffers) {
@@ -69,9 +77,10 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     b.layout       = binding;
     b.cls          = Ubo;
     b.stage        = s;
-    b.size         = sz;
-    b.spvId        = resource.id;
     b.runtimeSized = isRuntimeSized(t);
+    b.arraySize    = arraySize(t);
+    b.byteSize     = sz;
+    b.spvId        = resource.id;
     lay.push_back(b);
     }
   for(auto &resource : resources.storage_buffers) {
@@ -83,9 +92,10 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     b.layout       = binding;
     b.cls          = (readonly.get(spv::DecorationNonWritable) ? SsboR : SsboRW);
     b.stage        = s;
-    b.size         = sz;
-    b.spvId        = resource.id;
     b.runtimeSized = isRuntimeSized(t);
+    b.arraySize    = arraySize(t);
+    b.byteSize     = sz;
+    b.spvId        = resource.id;
     lay.push_back(b);
     }
   for(auto &resource : resources.storage_images) {
@@ -95,8 +105,9 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     b.layout       = binding;
     b.cls          = ImgRW; // (readonly.get(spv::DecorationNonWritable) ? UniformsLayout::ImgR : UniformsLayout::ImgRW);
     b.stage        = s;
-    b.spvId        = resource.id;
     b.runtimeSized = isRuntimeSized(t);
+    b.arraySize    = arraySize(t);
+    b.spvId        = resource.id;
     lay.push_back(b);
     }
   for(auto &resource : resources.acceleration_structures) {
@@ -106,8 +117,9 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     b.layout       = binding;
     b.cls          = Tlas;
     b.stage        = s;
-    b.spvId        = resource.id;
+    b.arraySize    = arraySize(t);
     b.runtimeSized = isRuntimeSized(t);
+    b.spvId        = resource.id;
     lay.push_back(b);
     }
   for(auto &resource : resources.push_constant_buffers) {
@@ -116,11 +128,11 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     auto     sz      = comp.get_declared_struct_size(t);
 
     Binding b;
-    b.layout = binding;
-    b.cls    = Push;
-    b.stage  = s;
-    b.size   = sz;
-    b.spvId  = resource.id;
+    b.layout   = binding;
+    b.cls      = Push;
+    b.stage    = s;
+    b.byteSize = sz;
+    b.spvId    = resource.id;
     lay.push_back(b);
     }
   }
@@ -167,7 +179,7 @@ void ShaderReflection::merge(std::vector<Binding>& ret,
       auto& u   = vs[i];
       if(u.cls==Push) {
         pb.stage = Stage(pb.stage | u.stage);
-        pb.size  = std::max(pb.size, u.size);
+        pb.size  = std::max(pb.size, u.byteSize);
         pb.size  = std::max(pb.size, u.mslSize);
         continue;
         }
@@ -176,8 +188,8 @@ void ShaderReflection::merge(std::vector<Binding>& ret,
         for(auto& r:ret)
           if(r.layout==u.layout) {
             r.stage         = Stage(r.stage | u.stage);
-            r.size          = std::max(r.size, u.size);
-            r.size          = std::max(r.size, u.mslSize);
+            r.byteSize      = std::max(r.byteSize, u.byteSize);
+            r.byteSize      = std::max(r.byteSize, u.mslSize);
             r.runtimeSized |= u.runtimeSized;
             ins     = true;
             break;

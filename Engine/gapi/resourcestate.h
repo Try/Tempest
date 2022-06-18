@@ -18,10 +18,6 @@ class ResourceState {
       bool         durty = false;
       };
 
-    enum DurtyBits : uint32_t {
-
-      };
-
     void setRenderpass(AbstractGraphicsApi::CommandBuffer& cmd,
                        const AttachmentDesc* desc, size_t descSize,
                        const TextureFormat* frm,

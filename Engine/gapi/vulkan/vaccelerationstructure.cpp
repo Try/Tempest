@@ -28,6 +28,7 @@ VAccelerationStructure::VAccelerationStructure(VDevice& dx,
   geometry.geometry.triangles.indexData      = VkDeviceOrHostAddressConstKHR{};
   geometry.geometry.triangles.transformData  = VkDeviceOrHostAddressConstKHR{};
   geometry.flags                             = VK_GEOMETRY_OPAQUE_BIT_KHR;
+  //geometry.flags                             = 0;
 
   VkAccelerationStructureBuildGeometryInfoKHR buildGeometryInfo = {};
   buildGeometryInfo.sType                    = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
@@ -117,6 +118,7 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
   geometry.geometryType                      = VK_GEOMETRY_TYPE_INSTANCES_KHR;
   geometry.geometry.instances                = geometryInstancesData;
   geometry.flags                             = VK_GEOMETRY_OPAQUE_BIT_KHR;
+  //geometry.flags                             = 0;
 
   VkAccelerationStructureBuildGeometryInfoKHR buildGeometryInfo = {};
   buildGeometryInfo.sType                    = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
@@ -158,7 +160,7 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
     for(int x=0; x<3; ++x)
       for(int y=0; y<4; ++y)
         objInstance.transform.matrix[x][y] = inst[i].mat.at(y,x);
-    objInstance.instanceCustomIndex                    = 0;
+    objInstance.instanceCustomIndex                    = inst[i].id;
     objInstance.mask                                   = 0xFF;
     objInstance.instanceShaderBindingTableRecordOffset = 0;
     objInstance.flags                                  = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;

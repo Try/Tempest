@@ -174,6 +174,12 @@ TEST(VulkanApi,PushRemapping) {
 #endif
   }
 
+TEST(VulkanApi,ArrayedTextures) {
+#if !defined(__OSX__)
+  GapiTestCommon::ArrayedTextures<VulkanApi>("VulkanApi_ArrayedTextures.png");
+#endif
+  }
+
 TEST(VulkanApi,Bindless) {
 #if !defined(__OSX__)
   GapiTestCommon::Bindless<VulkanApi>("VulkanApi_Bindless.png");

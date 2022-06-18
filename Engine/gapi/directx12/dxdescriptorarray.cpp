@@ -147,7 +147,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer* b, size_t of
     desc.Format              = DXGI_FORMAT_R32_TYPELESS;
     desc.ViewDimension       = D3D12_UAV_DIMENSION_BUFFER;
     desc.Buffer.FirstElement = UINT(offset/4);
-    desc.Buffer.NumElements  = UINT((lay.handler->lay[id].size+3)/4); // UAV size is required to be 4-byte aligned.
+    desc.Buffer.NumElements  = UINT((lay.handler->lay[id].byteSize+3)/4); // UAV size is required to be 4-byte aligned.
     desc.Buffer.Flags        = D3D12_BUFFER_UAV_FLAG_RAW;
     if(desc.Buffer.NumElements==0)
       desc.Buffer.NumElements = buf.sizeInBytes/4;
@@ -163,7 +163,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer* b, size_t of
     desc.ViewDimension           = D3D12_SRV_DIMENSION_BUFFER;
     desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
     desc.Buffer.FirstElement     = UINT(offset/4);
-    desc.Buffer.NumElements      = UINT((lay.handler->lay[id].size+3)/4); // SRV size is required to be 4-byte aligned.
+    desc.Buffer.NumElements      = UINT((lay.handler->lay[id].byteSize+3)/4); // SRV size is required to be 4-byte aligned.
     desc.Buffer.Flags            = D3D12_BUFFER_SRV_FLAG_RAW;
     if(desc.Buffer.NumElements==0)
       desc.Buffer.NumElements = buf.sizeInBytes/4;
@@ -174,7 +174,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer* b, size_t of
   else {
     D3D12_CONSTANT_BUFFER_VIEW_DESC desc = {};
     desc.BufferLocation = buf.impl->GetGPUVirtualAddress()+offset;
-    desc.SizeInBytes    = UINT(lay.handler->lay[id].size);
+    desc.SizeInBytes    = UINT(lay.handler->lay[id].byteSize);
     if(desc.SizeInBytes==0)
       desc.SizeInBytes = buf.sizeInBytes;
     desc.SizeInBytes = ((desc.SizeInBytes+255)/256)*256; // CB size is required to be 256-byte aligned.

@@ -77,7 +77,7 @@ VkDescriptorPool VDescriptorArray::allocPool(const VPipelineLay& lay, size_t siz
 
   for(size_t i=0;i<lay.lay.size();++i){
     auto     cls = lay.lay[i].cls;
-    uint32_t cnt = 1;
+    uint32_t cnt = lay.lay[i].arraySize;
     if(lay.lay[i].runtimeSized)
       cnt = runtimeArraySz;
     switch(cls) {
@@ -171,7 +171,7 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer* b, s
   VkDescriptorBufferInfo bufferInfo = {};
   bufferInfo.buffer = buf->impl;
   bufferInfo.offset = offset;
-  bufferInfo.range  = slot.size;
+  bufferInfo.range  = slot.byteSize;
 
   VkWriteDescriptorSet descriptorWrite = {};
   descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -210,11 +210,14 @@ void VDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStruc
   }
 
 void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t cnt, const Sampler2d& smp) {
-  constexpr uint32_t granularity = VPipelineLay::MAX_BINDLESS;
-  uint32_t rSz = ((cnt+granularity-1u) & (~(granularity-1u)));
-  if(runtimeArraySz!=rSz) {
-    reallocSet(rSz);
-    runtimeArraySz = rSz;
+  auto& l = lay.handler->lay[id];
+  if(l.runtimeSized) {
+    constexpr uint32_t granularity = VPipelineLay::MAX_BINDLESS;
+    uint32_t rSz = ((cnt+granularity-1u) & (~(granularity-1u)));
+    if(runtimeArraySz!=rSz) {
+      reallocSet(rSz);
+      runtimeArraySz = rSz;
+      }
     }
 
   SmallArray<VkDescriptorImageInfo,32> imageInfo(cnt);
@@ -223,6 +226,7 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t c
     imageInfo[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     imageInfo[i].imageView   = tex->view(device,smp.mapping,uint32_t(-1));
     imageInfo[i].sampler     = tex->alloc->updateSampler(smp);
+    assert(tex->nonUniqId==0);
     }
 
   VkWriteDescriptorSet descriptorWrite = {};
@@ -251,6 +255,7 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** b, size_t cn
     bufInfo[i].buffer = buf ? buf->impl : VK_NULL_HANDLE;
     bufInfo[i].offset = 0;
     bufInfo[i].range  = VK_WHOLE_SIZE;
+    // assert(buf->nonUniqId==0);
     }
 
   VkWriteDescriptorSet descriptorWrite = {};
@@ -341,7 +346,7 @@ void VDescriptorArray::reallocSet(uint32_t newRuntimeSz) {
     cx.dstBinding      = uint32_t(i);
     cx.dstArrayElement = 0;
 
-    cx.descriptorCount = lx.runtimeSized ? runtimeArraySz : 1;
+    cx.descriptorCount = lx.runtimeSized ? runtimeArraySz : lx.arraySize;
     if(cx.descriptorCount>0)
       ++cnt;
     }

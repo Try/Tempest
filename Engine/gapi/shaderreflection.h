@@ -35,11 +35,12 @@ class ShaderReflection final {
       };
 
     struct Binding {
-      uint32_t        layout=0;
-      Class           cls   =Ubo;
-      Stage           stage =None;
+      uint32_t        layout       = 0;
+      Class           cls          = Ubo;
+      Stage           stage        = None;
       bool            runtimeSized = false;
-      uint64_t        size  =0;
+      uint32_t        arraySize    = 0;
+      uint64_t        byteSize     = 0;
 
       spirv_cross::ID spvId;
       uint32_t        mslBinding  = uint32_t(-1);

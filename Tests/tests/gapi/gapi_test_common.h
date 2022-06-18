@@ -938,6 +938,59 @@ void PushRemapping() {
   }
 
 template<class GraphicsApi>
+void ArrayedTextures(const char* outImg) {
+  using namespace Tempest;
+  try {
+    const char* devName = nullptr;
+
+    GraphicsApi api{ApiFlags::Validation};
+    auto dev = api.devices();
+    for(auto& i:dev)
+      if(i.bindless.sampledImage)
+        devName = i.name;
+    if(devName==nullptr)
+      return;
+
+    Device device(api,devName);
+
+    auto cs  = device.shader("shader/array_texture.comp.sprv");
+    auto pso = device.pipeline(cs);
+    auto ret = device.image2d(TextureFormat::RGBA8,128,128,false);
+
+    std::vector<Tempest::Texture2d> tex(2);
+    tex[0] = device.texture("data/img/texture.png");
+    tex[1] = device.texture("data/img/tst-dxt5.dds");
+
+    std::vector<const Tempest::Texture2d*> ptex(tex.size());
+    for(size_t i=0; i<tex.size(); ++i)
+      ptex[i] = &tex[i];
+
+    auto desc = device.descriptors(pso);
+    desc.set(0,ptex);
+    desc.set(1,ret);
+
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setUniforms(pso,desc);
+      enc.dispatch(ret.w(),ret.h(),1);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    auto pm = device.readPixels(ret);
+    pm.save(outImg);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void Bindless(const char* outImg) {
   using namespace Tempest;
   try {
@@ -1009,7 +1062,7 @@ void Blas() {
     auto vbo  = device.vbo(vboData3,3);
     auto ibo  = device.ibo(iboData,3);
     auto blas = device.blas(vbo,ibo);
-    auto tlas = device.tlas({{Matrix4x4::mkIdentity(), &blas}});
+    auto tlas = device.tlas({{Matrix4x4::mkIdentity(), 0, &blas}});
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
@@ -1040,7 +1093,7 @@ void RayQuery(const char* outImg) {
 
     auto m = Matrix4x4::mkIdentity();
     m.translate(-1,1,0);
-    auto tlas = device.tlas({{m,&blas}});
+    auto tlas = device.tlas({{m,0,&blas}});
 
     auto fsq  = device.vbo<Vertex>({{-1,-1},{ 1,-1},{ 1, 1}, {-1,-1},{ 1, 1},{-1, 1}});
     auto vert = device.shader("shader/simple_test.vert.sprv");

@@ -45,7 +45,7 @@ VkDescriptorSetLayout VPipelineLay::create(uint32_t runtimeArraySz) const {
       flg[count] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT; else
       flg[count] = 0;
     b.binding         = e.layout;
-    b.descriptorCount = e.runtimeSized ? runtimeArraySz: 1;
+    b.descriptorCount = e.runtimeSized ? runtimeArraySz : e.arraySize;
     b.descriptorType  = nativeFormat(e.cls);
     b.stageFlags      = nativeFormat(e.stage);
     ++count;
@@ -73,8 +73,8 @@ VkDescriptorSetLayout VPipelineLay::create(uint32_t runtimeArraySz) const {
 
 void VPipelineLay::adjustSsboBindings() {
   for(auto& i:lay) {
-    if(i.size==0) {
-      i.size = VK_WHOLE_SIZE;
+    if(i.byteSize==0) {
+      i.byteSize = VK_WHOLE_SIZE;
       }
     if(i.runtimeSized) {
       runtimeSized = true;

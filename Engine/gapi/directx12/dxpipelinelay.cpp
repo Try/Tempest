@@ -332,7 +332,7 @@ void DxPipelineLay::freeDescriptors(DxPipelineLay::PoolAllocation& d) {
 
 void DxPipelineLay::adjustSsboBindings() {
   for(auto& i:lay)
-    if(i.size==0)
+    if(i.byteSize==0)
       ;//i.size = VK_WHOLE_SIZE; // TODO?
   }
 
