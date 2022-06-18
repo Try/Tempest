@@ -209,7 +209,7 @@ void VDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStruc
   // uavUsage.durty = true;
   }
 
-void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t cnt, const Sampler2d& smp) {
+void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t cnt, const Sampler2d& smp, uint32_t mipLevel) {
   auto& l = lay.handler->lay[id];
   if(l.runtimeSized) {
     constexpr uint32_t granularity = VPipelineLay::MAX_BINDLESS;

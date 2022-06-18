@@ -62,17 +62,25 @@ void DescriptorSet::set(size_t layoutBind, const Detail::ResourcePtr<Texture2d> 
   }
 
 void DescriptorSet::set(size_t layoutBind, const std::vector<const Texture2d*>& tex) {
-  Detail::SmallArray<AbstractGraphicsApi::Texture*,32> arr(tex.size());
-  for(size_t i=0; i<tex.size(); ++i)
-    arr[i] = tex[i]->impl.handler;
-  impl.handler->set(layoutBind,arr.get(),tex.size(),Sampler2d::anisotrophy());
+  set(layoutBind,tex.data(),tex.size());
   }
 
 void DescriptorSet::set(size_t layoutBind, const std::vector<const VideoBuffer*>& buf) {
-  Detail::SmallArray<AbstractGraphicsApi::Buffer*,32> arr(buf.size());
-  for(size_t i=0; i<buf.size(); ++i)
+  set(layoutBind,buf.data(),buf.size());
+  }
+
+void DescriptorSet::set(size_t layoutBind, const Texture2d* const * tex, size_t count) {
+  Detail::SmallArray<AbstractGraphicsApi::Texture*,32> arr(count);
+  for(size_t i=0; i<count; ++i)
+    arr[i] = tex[i]->impl.handler;
+  impl.handler->set(layoutBind,arr.get(),count,Sampler2d::anisotrophy(),uint32_t(-1));
+  }
+
+void DescriptorSet::set(size_t layoutBind, const VideoBuffer* const* buf, size_t count) {
+  Detail::SmallArray<AbstractGraphicsApi::Buffer*,32> arr(count);
+  for(size_t i=0; i<count; ++i)
     arr[i] = buf[i] ? buf[i]->impl.handler : nullptr;
-  impl.handler->set(layoutBind,arr.get(),buf.size());
+  impl.handler->set(layoutBind,arr.get(),count);
   }
 
 void DescriptorSet::set(size_t layoutBind, const AccelerationStructure& tlas) {

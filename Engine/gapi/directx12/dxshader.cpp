@@ -131,7 +131,7 @@ DxShader::DxShader(const void *source, const size_t src_size) {
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
 
-  if(false && exec == spv::ExecutionModelTessellationControl) {
+  if(false && exec == spv::ExecutionModelGLCompute) {
     Log::d(hlsl);
     disasm();
     }

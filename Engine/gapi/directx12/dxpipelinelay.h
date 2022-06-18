@@ -96,7 +96,7 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
     UINT                        smpSize  = 0;
 
     void init(const std::vector<Binding>& lay, const ShaderReflection::PushBlock& pb);
-    void add (const ShaderReflection::Binding& b, D3D12_DESCRIPTOR_RANGE_TYPE type, std::vector<Parameter>& root);
+    void add (const ShaderReflection::Binding& b, D3D12_DESCRIPTOR_RANGE_TYPE type, uint32_t cnt, std::vector<Parameter>& root);
     void adjustSsboBindings();
   };
 

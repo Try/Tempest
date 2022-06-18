@@ -94,7 +94,7 @@ AbstractGraphicsApi::AccelerationStructure*
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }
 
-void AbstractGraphicsApi::Desc::set(size_t id, Texture** tex, size_t cnt, const Sampler2d& smp) {
+void AbstractGraphicsApi::Desc::set(size_t id, Texture** tex, size_t cnt, const Sampler2d& smp, uint32_t mipLevel) {
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }
 

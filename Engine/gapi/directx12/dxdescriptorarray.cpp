@@ -62,77 +62,9 @@ DxDescriptorArray::~DxDescriptorArray() {
   }
 
 void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const Sampler2d& smp, uint32_t mipLevel) {
-  auto&      device = *lay.handler->dev.device;
-  DxTexture& t      = *reinterpret_cast<DxTexture*>(tex);
-  auto&      prm    = lay.handler->prm[id];
+  auto& t = *reinterpret_cast<DxTexture*>(tex);
 
-  if(prm.rgnType==D3D12_DESCRIPTOR_RANGE_TYPE_UAV) {
-    if(mipLevel==uint32_t(-1))
-      mipLevel = 0;
-    D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
-    desc.Format             = t.format;
-    desc.ViewDimension      = D3D12_UAV_DIMENSION_TEXTURE2D;
-    desc.Texture2D.MipSlice = mipLevel;
-
-    auto  gpu = val.cpu[prm.heapId];
-    gpu.ptr += prm.heapOffset;
-    device.CreateUnorderedAccessView(t.impl.get(),nullptr,&desc,gpu);
-    } else {
-    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-    srvDesc.Shader4ComponentMapping = compMapping(smp.mapping);
-    srvDesc.Format                  = t.format;
-    srvDesc.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE2D;
-    srvDesc.Texture2D.MipLevels     = t.mips;
-    if(mipLevel!=uint32_t(-1)) {
-      srvDesc.Texture2D.MostDetailedMip = mipLevel;
-      srvDesc.Texture2D.MipLevels       = 1;
-      }
-
-    if(srvDesc.Format==DXGI_FORMAT_D16_UNORM)
-      srvDesc.Format = DXGI_FORMAT_R16_UNORM;
-    else if(srvDesc.Format==DXGI_FORMAT_D32_FLOAT)
-      srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
-    else if(srvDesc.Format==DXGI_FORMAT_D24_UNORM_S8_UINT)
-      srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
-
-    UINT filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-    D3D12_SAMPLER_DESC smpDesc = {};
-    smpDesc.Filter           = D3D12_FILTER_MIN_MAG_MIP_POINT;
-    smpDesc.AddressU         = nativeFormat(smp.uClamp);
-    smpDesc.AddressV         = nativeFormat(smp.vClamp);
-    smpDesc.AddressW         = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
-    smpDesc.MipLODBias       = 0;
-    smpDesc.MaxAnisotropy    = 1;
-    smpDesc.ComparisonFunc   = D3D12_COMPARISON_FUNC_NEVER;
-    smpDesc.BorderColor[0]   = 1;
-    smpDesc.BorderColor[1]   = 1;
-    smpDesc.BorderColor[2]   = 1;
-    smpDesc.BorderColor[3]   = 1;
-    smpDesc.MinLOD           = 0.0f;
-    smpDesc.MaxLOD           = D3D12_FLOAT32_MAX;
-
-    if(smp.minFilter==Filter::Linear)
-      filter |= (1u<<D3D12_MIN_FILTER_SHIFT);
-    if(smp.magFilter==Filter::Linear)
-      filter |= (1u<<D3D12_MAG_FILTER_SHIFT);
-    if(smp.mipFilter==Filter::Linear)
-      filter |= (1u<<D3D12_MIP_FILTER_SHIFT);
-
-    if(smp.anisotropic) {
-      smpDesc.MaxAnisotropy = 16;
-      filter |= D3D12_ANISOTROPIC_FILTERING_BIT;
-      }
-    smpDesc.Filter = D3D12_FILTER(filter);
-
-    auto  gpu = val.cpu[prm.heapId];
-    gpu.ptr += prm.heapOffset;
-    device.CreateShaderResourceView(t.impl.get(), &srvDesc, gpu);
-
-    gpu = val.cpu[prm.heapIdSmp];
-    gpu.ptr += prm.heapOffsetSmp;
-    device.CreateSampler(&smpDesc,gpu);
-    }
-
+  set(id, &tex, 1, smp, mipLevel);
   uav[id].tex     = tex;
   uavUsage.durty |= (t.nonUniqId!=0);
   }
@@ -203,6 +135,146 @@ void DxDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStru
   auto  gpu = val.cpu[prm.heapId];
   gpu.ptr += prm.heapOffset;
   device.CreateShaderResourceView(nullptr,&desc,gpu);
+  }
+
+void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler2d& smp, uint32_t mipLevel) {
+  auto& device = *lay.handler->dev.device;
+  auto& prm    = lay.handler->prm[id];
+
+  uint32_t descSize = 0;
+  uint32_t smpSize  = 0;
+
+  if(cnt>1) {
+    descSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    smpSize  = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+    }
+
+  for(size_t i=0; i<cnt; ++i) {
+    auto& t = *reinterpret_cast<DxTexture*>(tex[i]);
+
+    if(prm.rgnType==D3D12_DESCRIPTOR_RANGE_TYPE_UAV) {
+      if(mipLevel==uint32_t(-1))
+        mipLevel = 0;
+      D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+      desc.Format             = t.format;
+      desc.ViewDimension      = D3D12_UAV_DIMENSION_TEXTURE2D;
+      desc.Texture2D.MipSlice = mipLevel;
+
+      auto  gpu = val.cpu[prm.heapId];
+      gpu.ptr += (prm.heapOffset + i*descSize);
+      device.CreateUnorderedAccessView(t.impl.get(),nullptr,&desc,gpu);
+      } else {
+      D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+      srvDesc.Shader4ComponentMapping = compMapping(smp.mapping);
+      srvDesc.Format                  = t.format;
+      srvDesc.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE2D;
+      srvDesc.Texture2D.MipLevels     = t.mips;
+      if(mipLevel!=uint32_t(-1)) {
+        srvDesc.Texture2D.MostDetailedMip = mipLevel;
+        srvDesc.Texture2D.MipLevels       = 1;
+        }
+
+      if(srvDesc.Format==DXGI_FORMAT_D16_UNORM)
+        srvDesc.Format = DXGI_FORMAT_R16_UNORM;
+      else if(srvDesc.Format==DXGI_FORMAT_D32_FLOAT)
+        srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+      else if(srvDesc.Format==DXGI_FORMAT_D24_UNORM_S8_UINT)
+        srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+
+      UINT filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+      D3D12_SAMPLER_DESC smpDesc = {};
+      smpDesc.Filter           = D3D12_FILTER_MIN_MAG_MIP_POINT;
+      smpDesc.AddressU         = nativeFormat(smp.uClamp);
+      smpDesc.AddressV         = nativeFormat(smp.vClamp);
+      smpDesc.AddressW         = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+      smpDesc.MipLODBias       = 0;
+      smpDesc.MaxAnisotropy    = 1;
+      smpDesc.ComparisonFunc   = D3D12_COMPARISON_FUNC_NEVER;
+      smpDesc.BorderColor[0]   = 1;
+      smpDesc.BorderColor[1]   = 1;
+      smpDesc.BorderColor[2]   = 1;
+      smpDesc.BorderColor[3]   = 1;
+      smpDesc.MinLOD           = 0.0f;
+      smpDesc.MaxLOD           = D3D12_FLOAT32_MAX;
+
+      if(smp.minFilter==Filter::Linear)
+        filter |= (1u<<D3D12_MIN_FILTER_SHIFT);
+      if(smp.magFilter==Filter::Linear)
+        filter |= (1u<<D3D12_MAG_FILTER_SHIFT);
+      if(smp.mipFilter==Filter::Linear)
+        filter |= (1u<<D3D12_MIP_FILTER_SHIFT);
+
+      if(smp.anisotropic) {
+        smpDesc.MaxAnisotropy = 16;
+        filter |= D3D12_ANISOTROPIC_FILTERING_BIT;
+        }
+      smpDesc.Filter = D3D12_FILTER(filter);
+
+      auto  gpu = val.cpu[prm.heapId];
+      gpu.ptr += (prm.heapOffset + i*descSize);
+      device.CreateShaderResourceView(t.impl.get(), &srvDesc, gpu);
+
+      gpu = val.cpu[prm.heapIdSmp];
+      gpu.ptr += (prm.heapOffsetSmp + i*smpSize);
+      device.CreateSampler(&smpDesc,gpu);
+      }
+    }
+  }
+
+void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** b, size_t cnt) {
+  auto&    device = *lay.handler->dev.device;
+  auto&    prm    = lay.handler->prm[id];
+
+  uint32_t descSize = 0;
+  if(cnt>1)
+    descSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+  for(size_t i=0; i<cnt; ++i) {
+    auto&  buf    = *reinterpret_cast<DxBuffer*>(b[i]);
+
+    if(prm.rgnType==D3D12_DESCRIPTOR_RANGE_TYPE_UAV) {
+      D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+      desc.Format              = DXGI_FORMAT_R32_TYPELESS;
+      desc.ViewDimension       = D3D12_UAV_DIMENSION_BUFFER;
+      desc.Buffer.FirstElement = 0;
+      desc.Buffer.NumElements  = UINT((lay.handler->lay[id].byteSize+3)/4); // UAV size is required to be 4-byte aligned.
+      desc.Buffer.Flags        = D3D12_BUFFER_UAV_FLAG_RAW;
+      if(desc.Buffer.NumElements==0)
+        desc.Buffer.NumElements = buf.sizeInBytes/4;
+
+      auto  gpu = val.cpu[prm.heapId];
+      gpu.ptr += (prm.heapOffset + i*descSize);
+
+      device.CreateUnorderedAccessView(buf.impl.get(),nullptr,&desc,gpu);
+      }
+    else if(prm.rgnType==D3D12_DESCRIPTOR_RANGE_TYPE_SRV) {
+      D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+      desc.Format                  = DXGI_FORMAT_R32_TYPELESS;
+      desc.ViewDimension           = D3D12_SRV_DIMENSION_BUFFER;
+      desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+      desc.Buffer.FirstElement     = 0;
+      desc.Buffer.NumElements      = UINT((lay.handler->lay[id].byteSize+3)/4); // SRV size is required to be 4-byte aligned.
+      desc.Buffer.Flags            = D3D12_BUFFER_SRV_FLAG_RAW;
+      if(desc.Buffer.NumElements==0)
+        desc.Buffer.NumElements = buf.sizeInBytes/4;
+      auto  gpu = val.cpu[prm.heapId];
+      gpu.ptr += (prm.heapOffset + i*descSize);
+      device.CreateShaderResourceView(buf.impl.get(),&desc,gpu);
+      }
+    else {
+      D3D12_CONSTANT_BUFFER_VIEW_DESC desc = {};
+      desc.BufferLocation = buf.impl->GetGPUVirtualAddress();
+      desc.SizeInBytes    = UINT(lay.handler->lay[id].byteSize);
+      if(desc.SizeInBytes==0)
+        desc.SizeInBytes = buf.sizeInBytes;
+      desc.SizeInBytes = ((desc.SizeInBytes+255)/256)*256; // CB size is required to be 256-byte aligned.
+
+      auto& prm = lay.handler->prm[id];
+      auto  gpu = val.cpu[prm.heapId];
+      gpu.ptr += (prm.heapOffset + i*descSize);
+      device.CreateConstantBufferView(&desc, gpu);
+      }
+    }
   }
 
 void DxDescriptorArray::ssboBarriers(ResourceState& res, PipelineStage st) {

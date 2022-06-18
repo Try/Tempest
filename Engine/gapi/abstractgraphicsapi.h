@@ -215,6 +215,7 @@ namespace Tempest {
 
   struct RtInstance {
     Tempest::Matrix4x4           mat  = Matrix4x4::mkIdentity();
+    uint32_t                     id   = 0;
     const AccelerationStructure* blas = nullptr;
     };
 
@@ -437,7 +438,7 @@ namespace Tempest {
         virtual void set    (size_t id,AbstractGraphicsApi::Texture* tex, const Sampler2d& smp, uint32_t mipLevel)=0;
         virtual void set    (size_t id,AbstractGraphicsApi::Buffer*  buf, size_t offset)=0;
         virtual void setTlas(size_t,AbstractGraphicsApi::AccelerationStructure*) {}
-        virtual void set    (size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler2d& smp);
+        virtual void set    (size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler2d& smp, uint32_t mipLevel);
         virtual void set    (size_t id, AbstractGraphicsApi::Buffer**  buf, size_t cnt);
         virtual void ssboBarriers(Detail::ResourceState& res, PipelineStage st);
         };

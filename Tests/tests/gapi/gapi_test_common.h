@@ -941,17 +941,8 @@ template<class GraphicsApi>
 void ArrayedTextures(const char* outImg) {
   using namespace Tempest;
   try {
-    const char* devName = nullptr;
-
     GraphicsApi api{ApiFlags::Validation};
-    auto dev = api.devices();
-    for(auto& i:dev)
-      if(i.bindless.sampledImage)
-        devName = i.name;
-    if(devName==nullptr)
-      return;
-
-    Device device(api,devName);
+    Device device(api);
 
     auto cs  = device.shader("shader/array_texture.comp.sprv");
     auto pso = device.pipeline(cs);

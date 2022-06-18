@@ -14,6 +14,8 @@ using namespace Tempest::Detail;
 
 static D3D12_SHADER_VISIBILITY nativeFormat(ShaderReflection::Stage stage){
   switch(stage) {
+    case ShaderReflection::Stage::None:
+      return D3D12_SHADER_VISIBILITY_ALL;
     case ShaderReflection::Stage::Vertex:
       return D3D12_SHADER_VISIBILITY_VERTEX;
     case ShaderReflection::Stage::Control:
@@ -24,6 +26,10 @@ static D3D12_SHADER_VISIBILITY nativeFormat(ShaderReflection::Stage stage){
       return D3D12_SHADER_VISIBILITY_PIXEL;
     case ShaderReflection::Stage::Geometry:
       return D3D12_SHADER_VISIBILITY_GEOMETRY;
+    case ShaderReflection::Stage::Mesh:
+      return D3D12_SHADER_VISIBILITY_MESH;
+    case ShaderReflection::Stage::Task:
+      return D3D12_SHADER_VISIBILITY_AMPLIFICATION;
     case ShaderReflection::Stage::Compute:
       return D3D12_SHADER_VISIBILITY_ALL;
     }
@@ -91,6 +97,8 @@ void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection
   descSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
   smpSize  = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
+  uint32_t runtimeArraySz = 1; // TODO
+
   uint32_t lastBind=0;
   for(auto& i:lay)
     lastBind = std::max(lastBind,i.layout);
@@ -102,34 +110,37 @@ void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection
     auto& l = lay[i];
     if(l.stage==ShaderReflection::Stage(0))
       continue;
+    uint32_t cnt = l.arraySize;
+    if(l.runtimeSized)
+      cnt = runtimeArraySz;
     switch(l.cls) {
       case ShaderReflection::Ubo: {
-        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_CBV,desc);
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_CBV,cnt,desc);
         break;
         }
       case ShaderReflection::SsboR: {
-        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,desc);
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,cnt,desc);
         break;
         }
       case ShaderReflection::SsboRW: {
-        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_UAV,desc);
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_UAV,cnt,desc);
         break;
         }
       case ShaderReflection::ImgR: {
-        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,desc);
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,cnt,desc);
         break;
         }
       case ShaderReflection::ImgRW: {
-        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_UAV,desc);
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_UAV,cnt,desc);
         break;
         }
       case ShaderReflection::Texture: {
-        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,    desc);
-        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,desc);
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,    cnt,desc);
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,cnt,desc);
         break;
         }
       case ShaderReflection::Tlas: {
-        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,desc);
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,cnt,desc);
         break;
         }
       case ShaderReflection::Push:
@@ -194,10 +205,10 @@ void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection
     auto& p = prm[desc[i].id];
     p.rgnType = D3D12_DESCRIPTOR_RANGE_TYPE(curRgnType);
     if(curRgnType==D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER) {
-      p.heapOffsetSmp = heap->numDesc-1;
+      p.heapOffsetSmp = heap->numDesc - rgn[i].NumDescriptors;
       p.heapIdSmp     = uint8_t(std::distance(&heaps[0],heap));
       } else {
-      p.heapOffset    = heap->numDesc-1;
+      p.heapOffset    = heap->numDesc - rgn[i].NumDescriptors;
       p.heapId        = uint8_t(std::distance(&heaps[0],heap));
       }
     }
@@ -265,11 +276,12 @@ void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection
 
 void DxPipelineLay::add(const ShaderReflection::Binding& b,
                         D3D12_DESCRIPTOR_RANGE_TYPE type,
+                        uint32_t cnt,
                         std::vector<Parameter>& root) {
   Parameter rp;
 
   rp.rgn.RangeType          = type;
-  rp.rgn.NumDescriptors     = 1;
+  rp.rgn.NumDescriptors     = cnt;
   rp.rgn.BaseShaderRegister = b.layout;
   rp.rgn.RegisterSpace      = 0;
   rp.rgn.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;

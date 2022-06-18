@@ -47,6 +47,9 @@ class DescriptorSet final {
     void set(size_t layoutBind, const std::vector<const Texture2d*>&   tex);
     void set(size_t layoutBind, const std::vector<const VideoBuffer*>& buf);
 
+    void set(size_t layoutBind, const Texture2d* const *   tex, size_t count);
+    void set(size_t layoutBind, const VideoBuffer* const * buf, size_t count);
+
     void set(size_t layoutBind, const AccelerationStructure& tlas);
 
     template<class T>

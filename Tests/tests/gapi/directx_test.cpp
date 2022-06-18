@@ -187,6 +187,12 @@ TEST(DirectX12Api,PushRemapping) {
 #endif
   }
 
+TEST(DirectX12Api,ArrayedTextures) {
+#if defined(_MSC_VER)
+  GapiTestCommon::ArrayedTextures<DirectX12Api>("DirectX12Api_ArrayedTextures.png");
+#endif
+  }
+
 TEST(DirectX12Api,Blas) {
 #if defined(_MSC_VER)
   GapiTestCommon::Blas<DirectX12Api>();
