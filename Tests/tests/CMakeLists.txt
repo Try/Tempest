@@ -69,8 +69,10 @@ compile_shader(simple_test.frag)
 compile_shader(simple_test.comp)
 compile_shader(image_store_test.comp)
 compile_shader(ssbo_read.comp)
+
 compile_shader(bindless.comp)
 compile_shader(array_texture.comp)
+compile_shader(array_ssbo.comp)
 
 compile_shader(fillbuf.comp)
 compile_shader(img2buf.comp)

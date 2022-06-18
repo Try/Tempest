@@ -242,11 +242,14 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t c
   }
 
 void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** b, size_t cnt) {
-  constexpr uint32_t granularity = VPipelineLay::MAX_BINDLESS;
-  uint32_t rSz = ((cnt+granularity-1u) & (~(granularity-1u)));
-  if(runtimeArraySz!=rSz) {
-    reallocSet(rSz);
-    runtimeArraySz = rSz;
+  auto& l = lay.handler->lay[id];
+  if(l.runtimeSized) {
+    constexpr uint32_t granularity = VPipelineLay::MAX_BINDLESS;
+    uint32_t rSz = ((cnt+granularity-1u) & (~(granularity-1u)));
+    if(runtimeArraySz!=rSz) {
+      reallocSet(rSz);
+      runtimeArraySz = rSz;
+      }
     }
 
   SmallArray<VkDescriptorBufferInfo,32> bufInfo(cnt);

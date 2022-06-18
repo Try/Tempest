@@ -180,6 +180,12 @@ TEST(VulkanApi,ArrayedTextures) {
 #endif
   }
 
+TEST(VulkanApi,ArrayedSsbo) {
+#if !defined(__OSX__)
+  GapiTestCommon::ArrayedSsbo<VulkanApi>("VulkanApi_ArrayedSsbo.png");
+#endif
+  }
+
 TEST(VulkanApi,Bindless) {
 #if !defined(__OSX__)
   GapiTestCommon::Bindless<VulkanApi>("VulkanApi_Bindless.png");

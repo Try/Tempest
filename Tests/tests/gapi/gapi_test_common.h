@@ -982,6 +982,51 @@ void ArrayedTextures(const char* outImg) {
   }
 
 template<class GraphicsApi>
+void ArrayedSsbo(const char* outImg) {
+  using namespace Tempest;
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device device(api);
+
+    auto cs  = device.shader("shader/array_ssbo.comp.sprv");
+    auto pso = device.pipeline(cs);
+    auto ret = device.image2d(TextureFormat::RGBA8,128,128,false);
+
+    std::vector<Tempest::StorageBuffer> buf(3);
+    buf[0] = device.ssbo<Vec4>({Vec4(1,0,0,1)});
+    buf[1] = device.ssbo<Vec4>({Vec4(0,1,0,1)});
+    buf[2] = device.ssbo<Vec4>({Vec4(0,0,1,1)});
+
+    std::vector<const Tempest::VideoBuffer*> pbuf(buf.size());
+    for(size_t i=0; i<buf.size(); ++i)
+      pbuf[i] = &bufferCast(buf[i]);
+
+    auto desc = device.descriptors(pso);
+    desc.set(0,pbuf);
+    desc.set(1,ret);
+
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setUniforms(pso,desc);
+      enc.dispatch(ret.w(),ret.h(),1);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    auto pm = device.readPixels(ret);
+    pm.save(outImg);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void Bindless(const char* outImg) {
   using namespace Tempest;
   try {
