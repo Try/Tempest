@@ -201,7 +201,8 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
     // props.meshlets.maxMeshGroups    = meshProperties.maxDrawMeshTasksCount;
     // props.meshlets.maxMeshGroupSize = meshProperties.maxMeshWorkGroupSize[0];
     }
-  prop.bindless.nonUniformIndexing = true; // SM5.1
+  prop.bindless.nonUniformIndexing = true;  // SM5.1
+  prop.bindless.nonUniformIndexing = false; // TEST: DirectX12.Bindless2
   }
 
 void DxDevice::waitData() {
