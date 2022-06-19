@@ -206,7 +206,7 @@ TEST(DirectX12Api,Bindless) {
   }
 
 TEST(DirectX12Api,DISABLED_Bindless2) {
-#if !defined(__OSX__)
+#if defined(_MSC_VER)
   GapiTestCommon::Bindless2<DirectX12Api>("DirectX12Api_Bindless2.png");
 #endif
   }
