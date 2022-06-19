@@ -882,6 +882,9 @@ void VCommandBuffer::vkCmdPipelineBarrier2(VkCommandBuffer impl, const VkDepende
   if(memCount==0 && bufCount==0 && imgCount==0)
     return;
 
+  if(srcStage==0)
+    srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
   vkCmdPipelineBarrier(impl,srcStage,dstStage,info->dependencyFlags,
                        memCount,memBarrier,
                        bufCount,bufBarrier,
