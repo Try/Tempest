@@ -73,7 +73,7 @@ void DescriptorSet::set(size_t layoutBind, const Texture2d* const * tex, size_t 
   Detail::SmallArray<AbstractGraphicsApi::Texture*,32> arr(count);
   for(size_t i=0; i<count; ++i)
     arr[i] = tex[i]->impl.handler;
-  impl.handler->set(layoutBind,arr.get(),count,Sampler2d::anisotrophy(),uint32_t(-1));
+  impl.handler->set(layoutBind,arr.get(),count,Sampler2d::nearest(),uint32_t(-1));
   }
 
 void DescriptorSet::set(size_t layoutBind, const VideoBuffer* const* buf, size_t count) {
