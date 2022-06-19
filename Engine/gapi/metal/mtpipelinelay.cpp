@@ -43,8 +43,8 @@ MtPipelineLay::MtPipelineLay(const std::vector<Binding>** sh, size_t cnt) {
     }
 
   for(auto& i:lay)
-    if(i.size==0)
-      i.size = 0; // TODO: ???
+    if(i.byteSize==0)
+      i.byteSize = 0; // TODO: ???
   for(auto& i:lay)
     if(i.cls==ShaderReflection::SsboR  ||
        i.cls==ShaderReflection::SsboRW ||
