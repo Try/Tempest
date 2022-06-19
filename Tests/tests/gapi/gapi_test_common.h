@@ -941,8 +941,16 @@ template<class GraphicsApi>
 void ArrayedTextures(const char* outImg) {
   using namespace Tempest;
   try {
+    const char* devName = nullptr;
+
     GraphicsApi api{ApiFlags::Validation};
-    Device device(api);
+    auto dev = api.devices();
+    for(auto& i:dev)
+      if(i.bindless.nonUniformIndexing)
+        devName = i.name;
+    if(devName==nullptr)
+      return;
+    Device device(api,devName);
 
     auto cs  = device.shader("shader/array_texture.comp.sprv");
     auto pso = device.pipeline(cs);
@@ -985,8 +993,16 @@ template<class GraphicsApi>
 void ArrayedSsbo(const char* outImg) {
   using namespace Tempest;
   try {
+    const char* devName = nullptr;
+
     GraphicsApi api{ApiFlags::Validation};
-    Device device(api);
+    auto dev = api.devices();
+    for(auto& i:dev)
+      if(i.bindless.nonUniformIndexing)
+        devName = i.name;
+    if(devName==nullptr)
+      return;
+    Device device(api,devName);
 
     auto cs  = device.shader("shader/array_ssbo.comp.sprv");
     auto pso = device.pipeline(cs);
