@@ -199,6 +199,18 @@ TEST(DirectX12Api,ArrayedSsbo) {
 #endif
   }
 
+TEST(DirectX12Api,Bindless) {
+#if defined(_MSC_VER)
+  GapiTestCommon::Bindless<DirectX12Api>("DirectX12Api_Bindless.png");
+#endif
+  }
+
+TEST(DirectX12Api,DISABLED_Bindless2) {
+#if !defined(__OSX__)
+  GapiTestCommon::Bindless2<DirectX12Api>("DirectX12Api_Bindless2.png");
+#endif
+  }
+
 TEST(DirectX12Api,Blas) {
 #if defined(_MSC_VER)
   GapiTestCommon::Blas<DirectX12Api>();

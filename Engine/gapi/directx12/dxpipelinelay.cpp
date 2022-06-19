@@ -36,14 +36,14 @@ static D3D12_SHADER_VISIBILITY nativeFormat(ShaderReflection::Stage stage){
   return D3D12_SHADER_VISIBILITY_ALL;
   }
 
-DxPipelineLay::DescriptorPool::DescriptorPool(DxPipelineLay& vlay) {
+DxPipelineLay::DescriptorPool::DescriptorPool(DxPipelineLay& vlay, uint32_t poolSize) {
   auto& device = *vlay.dev.device;
 
   try {
     for(size_t i=0;i<vlay.heaps.size();++i) {
       D3D12_DESCRIPTOR_HEAP_DESC d = {};
       d.Type           = vlay.heaps[i].type;
-      d.NumDescriptors = vlay.heaps[i].numDesc * POOL_SIZE;
+      d.NumDescriptors = vlay.heaps[i].numDesc * poolSize;
       d.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
       dxAssert(device.CreateDescriptorHeap(&d, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&heap[i])));
 
@@ -84,7 +84,13 @@ DxPipelineLay::DxPipelineLay(DxDevice& dev, const std::vector<ShaderReflection::
   : dev(dev) {
   ShaderReflection::PushBlock pb;
   ShaderReflection::merge(lay, pb, sh, cnt);
-  init(lay,pb);
+  for(auto& i:lay)
+    if(i.runtimeSized)
+      runtimeSized = true;
+  uint32_t runtimeArraySz = 1; // TODO
+  if(runtimeSized)
+    runtimeArraySz = MAX_BINDLESS;
+  init(lay,pb,runtimeArraySz);
   adjustSsboBindings();
   }
 
@@ -92,12 +98,11 @@ size_t DxPipelineLay::descriptorsCount() {
   return lay.size();
   }
 
-void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection::PushBlock& pb) {
+void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection::PushBlock& pb,
+                         uint32_t runtimeArraySz) {
   auto& device = *dev.device;
   descSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
   smpSize  = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-
-  uint32_t runtimeArraySz = 1; // TODO
 
   uint32_t lastBind=0;
   for(auto& i:lay)
@@ -305,7 +310,7 @@ DxPipelineLay::PoolAllocation DxPipelineLay::allocDescriptors() {
     }
 
   if(pool==nullptr) {
-    pools.emplace_back(*this);
+    pools.emplace_back(*this,(runtimeSized ? 1 : POOL_SIZE));
     pool = &pools.back();
     }
 

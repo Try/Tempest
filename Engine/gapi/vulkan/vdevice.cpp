@@ -392,7 +392,11 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     props.meshlets.maxMeshGroupSize = meshProperties.maxMeshWorkGroupSize[0];
 
     if(indexingFeatures.runtimeDescriptorArray!=VK_FALSE) {
-      props.bindless.sampledImage = (indexingFeatures.shaderSampledImageArrayNonUniformIndexing==VK_TRUE);
+      props.bindless.nonUniformIndexing =
+          (indexingFeatures.shaderUniformBufferArrayNonUniformIndexing==VK_TRUE) &&
+          (indexingFeatures.shaderSampledImageArrayNonUniformIndexing ==VK_TRUE) &&
+          (indexingFeatures.shaderStorageBufferArrayNonUniformIndexing==VK_TRUE) &&
+          (indexingFeatures.shaderStorageImageArrayNonUniformIndexing ==VK_TRUE);
       }
 
     createInfo.pNext            = &features;

@@ -30,12 +30,16 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
     UINT                          heapCnt = 0;
 
   private:
+    void reallocSet(uint32_t newRuntimeSz);
+
     struct UAV {
       AbstractGraphicsApi::Texture* tex = nullptr;
       AbstractGraphicsApi::Buffer*  buf = nullptr;
       };
     SmallArray<UAV,16>            uav;
     ResourceState::Usage          uavUsage;
+
+    uint32_t                      runtimeArraySz = 0;
   };
 
 }}

@@ -342,7 +342,7 @@ namespace Tempest {
             } tex2d;
 
           struct {
-            bool sampledImage = false;
+            bool nonUniformIndexing = false;
             } bindless;
 
           struct {

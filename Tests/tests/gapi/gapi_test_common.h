@@ -1035,7 +1035,7 @@ void Bindless(const char* outImg) {
     GraphicsApi api{ApiFlags::Validation};
     auto dev = api.devices();
     for(auto& i:dev)
-      if(i.bindless.sampledImage)
+      if(i.bindless.nonUniformIndexing)
         devName = i.name;
     if(devName==nullptr)
       return;
@@ -1057,6 +1057,69 @@ void Bindless(const char* outImg) {
     auto desc = device.descriptors(pso);
     desc.set(0,ptex);
     desc.set(1,ret);
+
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setUniforms(pso,desc);
+      enc.dispatch(ret.w(),ret.h(),1);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    auto pm = device.readPixels(ret);
+    pm.save(outImg);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
+void Bindless2(const char* outImg) {
+  using namespace Tempest;
+  try {
+    const char* devName = nullptr;
+
+    GraphicsApi api{ApiFlags::Validation};
+    auto dev = api.devices();
+    for(auto& i:dev)
+      if(i.bindless.nonUniformIndexing)
+        devName = i.name;
+    if(devName==nullptr)
+      return;
+
+    Device device(api,devName);
+
+    auto cs  = device.shader("shader/bindless2.comp.sprv");
+    auto pso = device.pipeline(cs);
+    auto ret = device.image2d(TextureFormat::RGBA8,128,128,false);
+
+    std::vector<Tempest::Texture2d> tex(2);
+    tex[0] = device.texture("data/img/texture.png");
+    tex[1] = device.texture("data/img/tst-dxt5.dds");
+
+    std::vector<Tempest::StorageBuffer> buf(3);
+    buf[0] = device.ssbo<Vec4>({Vec4(1,0,0,1)});
+    buf[1] = device.ssbo<Vec4>({Vec4(0,1,0,1)});
+    buf[2] = device.ssbo<Vec4>({Vec4(0,0,1,1)});
+
+    std::vector<const Tempest::Texture2d*> ptex(tex.size());
+    for(size_t i=0; i<tex.size(); ++i)
+      ptex[i] = &tex[i];
+
+    std::vector<const Tempest::VideoBuffer*> pbuf(buf.size());
+    for(size_t i=0; i<buf.size(); ++i)
+      pbuf[i] = &bufferCast(buf[i]);
+
+    auto desc = device.descriptors(pso);
+    desc.set(0,ptex);
+    desc.set(1,pbuf);
+    desc.set(2,ret);
 
     auto cmd = device.commandBuffer();
     {

@@ -268,7 +268,11 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, Tempest::
     c.meshlets.maxMeshGroupSize = meshProps.maxMeshWorkGroupSize[0];
 
     if(indexingFeatures.runtimeDescriptorArray!=VK_FALSE) {
-      c.bindless.sampledImage = (indexingFeatures.shaderSampledImageArrayNonUniformIndexing==VK_TRUE);
+      c.bindless.nonUniformIndexing =
+          (indexingFeatures.shaderUniformBufferArrayNonUniformIndexing==VK_TRUE) &&
+          (indexingFeatures.shaderSampledImageArrayNonUniformIndexing ==VK_TRUE) &&
+          (indexingFeatures.shaderStorageBufferArrayNonUniformIndexing==VK_TRUE) &&
+          (indexingFeatures.shaderStorageImageArrayNonUniformIndexing ==VK_TRUE);
       }
     }
 

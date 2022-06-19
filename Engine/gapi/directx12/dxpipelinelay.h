@@ -29,8 +29,9 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
     using Binding = ShaderReflection::Binding;
 
     enum {
-      POOL_SIZE = 128,
-      MAX_BINDS = 3
+      POOL_SIZE    = 128,
+      MAX_BINDS    = 3,
+      MAX_BINDLESS = 2048,
       };
 
     struct Param {
@@ -54,7 +55,7 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
       };
 
     struct DescriptorPool {
-      DescriptorPool(DxPipelineLay& lay);
+      DescriptorPool(DxPipelineLay& lay, uint32_t poolSize);
       DescriptorPool(DescriptorPool&& oth);
       ~DescriptorPool();
 
@@ -94,8 +95,9 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
 
     UINT                        descSize = 0;
     UINT                        smpSize  = 0;
+    bool                        runtimeSized = false;
 
-    void init(const std::vector<Binding>& lay, const ShaderReflection::PushBlock& pb);
+    void init(const std::vector<Binding>& lay, const ShaderReflection::PushBlock& pb, uint32_t runtimeArraySz);
     void add (const ShaderReflection::Binding& b, D3D12_DESCRIPTOR_RANGE_TYPE type, uint32_t cnt, std::vector<Parameter>& root);
     void adjustSsboBindings();
   };

@@ -192,6 +192,12 @@ TEST(VulkanApi,Bindless) {
 #endif
   }
 
+TEST(VulkanApi,Bindless2) {
+#if !defined(__OSX__)
+  GapiTestCommon::Bindless2<VulkanApi>("VulkanApi_Bindless2.png");
+#endif
+  }
+
 TEST(VulkanApi,Blas) {
 #if !defined(__OSX__)
   GapiTestCommon::Blas<VulkanApi>();

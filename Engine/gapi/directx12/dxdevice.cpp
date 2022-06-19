@@ -165,7 +165,7 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
 
   prop.anisotropy        = true;
   prop.maxAnisotropy     = 16;
-  prop.tesselationShader = false;
+  prop.tesselationShader = false; // TODO: dxil compiller crashes
 
   prop.storeAndAtomicVs  = true;
   prop.storeAndAtomicFs  = true;
@@ -191,13 +191,17 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
   D3D12_FEATURE_DATA_D3D12_OPTIONS5 feature5 = {};
   if(SUCCEEDED(dev.CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &feature5, sizeof(feature5)))) {
     prop.raytracing.rayQuery = (feature5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED);
-    prop.raytracing.rayQuery = false; // TODO: dxil compiller
+    //prop.raytracing.rayQuery = false; // TODO: dxil compiller
     }
 
   D3D12_FEATURE_DATA_D3D12_OPTIONS7 feature7 = {};
   if(SUCCEEDED(dev.CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &feature7, sizeof(feature7)))) {
+    // prop.meshlets.taskShader = feature7.MeshShaderTier!=D3D12_MESH_SHADER_TIER_NOT_SUPPORTED;
     // prop.meshlets.meshShader = feature7.MeshShaderTier!=D3D12_MESH_SHADER_TIER_NOT_SUPPORTED;
+    // props.meshlets.maxMeshGroups    = meshProperties.maxDrawMeshTasksCount;
+    // props.meshlets.maxMeshGroupSize = meshProperties.maxMeshWorkGroupSize[0];
     }
+  prop.bindless.nonUniformIndexing = true; // SM5.1
   }
 
 void DxDevice::waitData() {

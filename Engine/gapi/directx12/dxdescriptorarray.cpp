@@ -141,6 +141,16 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** tex, size_
   auto& device = *lay.handler->dev.device;
   auto& prm    = lay.handler->prm[id];
 
+  auto& l = lay.handler->lay[id];
+  if(l.runtimeSized) {
+    constexpr uint32_t granularity = DxPipelineLay::MAX_BINDLESS;
+    uint32_t rSz = ((cnt+granularity-1u) & (~(granularity-1u)));
+    if(runtimeArraySz!=rSz) {
+      reallocSet(rSz);
+      runtimeArraySz = rSz;
+      }
+    }
+
   uint32_t descSize = 0;
   uint32_t smpSize  = 0;
 
@@ -296,6 +306,10 @@ void DxDescriptorArray::ssboBarriers(ResourceState& res, PipelineStage st) {
     uavUsage.durty = false;
     }
   res.onUavUsage(uavUsage,st);
+  }
+
+void DxDescriptorArray::reallocSet(uint32_t newRuntimeSz) {
+
   }
 
 #endif
