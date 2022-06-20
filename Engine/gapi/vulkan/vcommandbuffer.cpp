@@ -583,13 +583,13 @@ void VCommandBuffer::buildBlas(VkAccelerationStructureKHR dest,
   geometry.flags                              = VK_GEOMETRY_OPAQUE_BIT_KHR;
 
   geometry.geometry.triangles.vertexData.deviceAddress = vbo.toDeviceAddress(device);
-  geometry.geometry.triangles.indexData .deviceAddress = ibo.toDeviceAddress(device) + ioffset*sizeofIndex(icls);
+  geometry.geometry.triangles.indexData .deviceAddress = ibo.toDeviceAddress(device);
 
   VkAccelerationStructureBuildGeometryInfoKHR buildGeometryInfo = {};
   buildGeometryInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
   buildGeometryInfo.pNext                     = nullptr;
   buildGeometryInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-  buildGeometryInfo.flags                     = 0;
+  buildGeometryInfo.flags                     = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
   buildGeometryInfo.mode                      = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
   buildGeometryInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
   buildGeometryInfo.dstAccelerationStructure  = dest;
@@ -600,7 +600,7 @@ void VCommandBuffer::buildBlas(VkAccelerationStructureKHR dest,
 
   VkAccelerationStructureBuildRangeInfoKHR buildRangeInfo = {};
   buildRangeInfo.primitiveCount               = uint32_t(iboSz/3);
-  buildRangeInfo.primitiveOffset              = 0;
+  buildRangeInfo.primitiveOffset              = uint32_t(ioffset*sizeofIndex(icls));
   buildRangeInfo.firstVertex                  = 0;
   buildRangeInfo.transformOffset              = 0;
 

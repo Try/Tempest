@@ -34,7 +34,7 @@ VAccelerationStructure::VAccelerationStructure(VDevice& dx,
   buildGeometryInfo.sType                    = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
   buildGeometryInfo.pNext                    = nullptr;
   buildGeometryInfo.type                     = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-  buildGeometryInfo.flags                    = 0;
+  buildGeometryInfo.flags                    = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
   buildGeometryInfo.mode                     = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
   buildGeometryInfo.srcAccelerationStructure = VK_NULL_HANDLE;
   buildGeometryInfo.dstAccelerationStructure = VK_NULL_HANDLE;
