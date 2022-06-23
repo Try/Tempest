@@ -22,7 +22,8 @@ class DxDevice;
 class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
   public:
     DxPipelineLay(DxDevice& device, const std::vector<ShaderReflection::Binding>* sh);
-    DxPipelineLay(DxDevice& device, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt);
+    DxPipelineLay(DxDevice& device, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt,
+                  bool has_baseVertex_baseInstance);
 
     size_t descriptorsCount() override;
 
@@ -74,7 +75,8 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
     std::vector<Param>          prm;
     std::vector<Heap>           heaps;
     std::vector<RootPrm>        roots;
-    size_t                      pushConstantId=0;
+    uint32_t                    pushConstantId     = uint32_t(-1);
+    uint32_t                    pushBaseInstanceId = uint32_t(-1);
     std::vector<Binding>        lay;
 
     ComPtr<ID3D12RootSignature> impl;
@@ -97,7 +99,10 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
     UINT                        smpSize  = 0;
     bool                        runtimeSized = false;
 
-    void init(const std::vector<Binding>& lay, const ShaderReflection::PushBlock& pb, uint32_t runtimeArraySz);
+    uint32_t findBinding(const std::vector<D3D12_ROOT_PARAMETER>& except) const;
+
+    void init(const std::vector<Binding>& lay, const ShaderReflection::PushBlock& pb,
+              uint32_t runtimeArraySz, bool has_baseVertex_baseInstance);
     void add (const ShaderReflection::Binding& b, D3D12_DESCRIPTOR_RANGE_TYPE type, uint32_t cnt, std::vector<Parameter>& root);
     void adjustSsboBindings();
   };

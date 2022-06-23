@@ -77,10 +77,11 @@ DxPipelineLay::DescriptorPool::~DescriptorPool() {
 
 
 DxPipelineLay::DxPipelineLay(DxDevice& dev, const std::vector<ShaderReflection::Binding>* sh)
-  :DxPipelineLay(dev,&sh,1) {
+  :DxPipelineLay(dev,&sh,1,false) {
   }
 
-DxPipelineLay::DxPipelineLay(DxDevice& dev, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt)
+DxPipelineLay::DxPipelineLay(DxDevice& dev, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt,
+                             bool has_baseVertex_baseInstance)
   : dev(dev) {
   ShaderReflection::PushBlock pb;
   ShaderReflection::merge(lay, pb, sh, cnt);
@@ -90,7 +91,7 @@ DxPipelineLay::DxPipelineLay(DxDevice& dev, const std::vector<ShaderReflection::
   uint32_t runtimeArraySz = 1; // TODO
   if(runtimeSized)
     runtimeArraySz = MAX_BINDLESS;
-  init(lay,pb,runtimeArraySz);
+  init(lay,pb,runtimeArraySz,has_baseVertex_baseInstance);
   adjustSsboBindings();
   }
 
@@ -99,7 +100,7 @@ size_t DxPipelineLay::descriptorsCount() {
   }
 
 void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection::PushBlock& pb,
-                         uint32_t runtimeArraySz) {
+                         uint32_t runtimeArraySz, bool has_baseVertex_baseInstance) {
   auto& device = *dev.device;
   descSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
   smpSize  = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
@@ -236,20 +237,20 @@ void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection
     prmPush.Constants.ShaderRegister = 0;
     prmPush.Constants.RegisterSpace  = 0;
     prmPush.Constants.Num32BitValues = UINT((pb.size+3)/4);
-    // remap register to match spiv-cross codegen
-    uint32_t layout = 0;
-    for(layout=0; ; ++layout) {
-      bool done = true;
-      for(auto& i:lay)
-        if(i.stage!=ShaderReflection::Stage(0) && i.cls==ShaderReflection::Ubo && i.layout==layout) {
-          done = false;
-          break;
-          }
-      if(done)
-        break;
-      }
-    prmPush.Constants.ShaderRegister = layout;
-    pushConstantId = rootPrm.size();
+    prmPush.Constants.ShaderRegister = findBinding(rootPrm);
+    pushConstantId = uint32_t(rootPrm.size());
+    rootPrm.push_back(prmPush);
+    }
+
+  if(has_baseVertex_baseInstance) {
+    D3D12_ROOT_PARAMETER prmPush = {};
+    prmPush.ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    prmPush.ShaderVisibility         = D3D12_SHADER_VISIBILITY_ALL;
+    prmPush.Constants.ShaderRegister = 0;
+    prmPush.Constants.RegisterSpace  = 0;
+    prmPush.Constants.Num32BitValues = 2u;
+    prmPush.Constants.ShaderRegister = findBinding(rootPrm);
+    pushBaseInstanceId = uint32_t(rootPrm.size());
     rootPrm.push_back(prmPush);
     }
 
@@ -345,6 +346,29 @@ void DxPipelineLay::freeDescriptors(DxPipelineLay::PoolAllocation& d) {
   std::lock_guard<SpinLock> guard(poolsSync);
   auto& p = pools[d.pool];
   p.allocated.set(d.offset,false);
+  }
+
+uint32_t DxPipelineLay::findBinding(const std::vector<D3D12_ROOT_PARAMETER>& except) const {
+  // remap register to match spiv-cross codegen
+  uint32_t layout = 0;
+  for(layout=0; ; ++layout) {
+    bool done = true;
+    for(auto& i:lay)
+      if(i.stage!=ShaderReflection::Stage(0) && i.cls==ShaderReflection::Ubo && i.layout==layout) {
+        done = false;
+        break;
+        }
+
+    for(auto& i:except)
+      if(i.ParameterType==D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS && i.Constants.ShaderRegister==layout){
+        done = false;
+        break;
+        }
+
+    if(done)
+      return layout;
+    }
+  return layout;
   }
 
 void DxPipelineLay::adjustSsboBindings() {

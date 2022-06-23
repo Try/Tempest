@@ -93,6 +93,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     AbstractGraphicsApi::Desc*         curUniforms  = nullptr;
 
     UINT                               vboStride=0;
+    uint32_t                           pushBaseInstanceId = -1;
 
     ResourceState                      resState;
     RpState                            state = NoRecording;
@@ -107,6 +108,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     struct CopyBuf;
     Stage*                            stageResources = nullptr;
 
+    void prepareDraw(size_t voffset, size_t firstInstance);
     void clearStage();
     void pushStage(Stage* cmd);
     void implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompute);

@@ -447,7 +447,8 @@ void DxCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
 
 void DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p) {
   DxPipeline& px = reinterpret_cast<DxPipeline&>(p);
-  vboStride = px.stride;
+  vboStride          = px.stride;
+  pushBaseInstanceId = px.pushBaseInstanceId;
 
   impl->SetPipelineState(&px.instance(fboLayout));
   impl->SetGraphicsRootSignature(px.sign.get());
@@ -549,8 +550,21 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer&  dstBuf, size_t offset,
   pushStage(dx.release());
   }
 
+void Tempest::Detail::DxCommandBuffer::prepareDraw(size_t voffset, size_t firstInstance) {
+  if(T_UNLIKELY(pushBaseInstanceId!=uint32_t(-1))) {
+    struct SPIRV_Cross_VertexInfo {
+      int32_t SPIRV_Cross_BaseVertex;
+      int32_t SPIRV_Cross_BaseInstance;
+      } compat;
+    compat.SPIRV_Cross_BaseVertex   = int32_t(voffset);
+    compat.SPIRV_Cross_BaseInstance = int32_t(firstInstance);
+    impl->SetGraphicsRoot32BitConstants(UINT(pushBaseInstanceId),UINT(2),&compat,0);
+    }
+  }
+
 void DxCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t offset, size_t vertexCount,
                            size_t firstInstance, size_t instanceCount) {
+  prepareDraw(offset, firstInstance);
   const DxBuffer& vbo = reinterpret_cast<const DxBuffer&>(ivbo);
   D3D12_VERTEX_BUFFER_VIEW view;
   view.BufferLocation = vbo.impl.get()->GetGPUVirtualAddress();
@@ -563,6 +577,7 @@ void DxCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t offse
 void DxCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_t voffset,
                                   const AbstractGraphicsApi::Buffer& iibo, Detail::IndexClass cls, size_t ioffset, size_t isize,
                                   size_t firstInstance, size_t instanceCount) {
+  prepareDraw(voffset, firstInstance);
   const DxBuffer& vbo = reinterpret_cast<const DxBuffer&>(ivbo);
   const DxBuffer& ibo = reinterpret_cast<const DxBuffer&>(iibo);
 

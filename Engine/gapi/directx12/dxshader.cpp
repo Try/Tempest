@@ -5,6 +5,7 @@
 
 #include <Tempest/Log>
 #include <d3dcompiler.h>
+#include <libspirv/libspirv.h>
 
 #include <dxcapi.h>
 
@@ -76,11 +77,22 @@ DxShader::DxShader(const void *source, const size_t src_size) {
   spv::ExecutionModel exec = spv::ExecutionModelMax;
 
   try {
+    libspirv::Bytecode code(reinterpret_cast<const uint32_t*>(source),src_size/4);
+    for(auto& i:code) {
+      if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBuiltIn && i[3]==spv::BuiltInInstanceIndex) {
+        has_baseVertex_baseInstance = true;
+        }
+      if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBuiltIn && i[3]==spv::BuiltInBaseVertex) {
+        has_baseVertex_baseInstance = true;
+        }
+      }
+
     spirv_cross::CompilerHLSL comp(reinterpret_cast<const uint32_t*>(source),src_size/4);
     exec = comp.get_execution_model();
     if(exec==spv::ExecutionModelVertex || exec==spv::ExecutionModelTessellationEvaluation)
       optGLSL.vertex.flip_vert_y = true;
     optHLSL.shader_model = calcShaderModel(comp);
+    optHLSL.support_nonzero_base_vertex_base_instance = has_baseVertex_baseInstance;
     comp.set_hlsl_options  (optHLSL);
     comp.set_common_options(optGLSL);
 
@@ -131,7 +143,7 @@ DxShader::DxShader(const void *source, const size_t src_size) {
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
 
-  if(false && exec == spv::ExecutionModelGLCompute) {
+  if(false && exec == spv::ExecutionModelVertex) {
     Log::d(hlsl);
     disasm();
     }

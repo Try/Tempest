@@ -30,7 +30,8 @@ DxPipeline::DxPipeline(DxDevice& device,
       topology = D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST; else
       topology = D3D_PRIMITIVE_TOPOLOGY_2_CONTROL_POINT_PATCHLIST;
     }
-  pushConstantId = ulay.pushConstantId;
+  pushConstantId     = ulay.pushConstantId;
+  pushBaseInstanceId = ulay.pushBaseInstanceId;
 
   if(auto vert = findShader(ShaderReflection::Vertex)) {
     declSize = UINT(vert->vdecl.size());

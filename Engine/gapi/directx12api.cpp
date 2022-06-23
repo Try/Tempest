@@ -233,14 +233,16 @@ AbstractGraphicsApi::Desc* DirectX12Api::createDescriptors(AbstractGraphicsApi::
 
 AbstractGraphicsApi::PPipelineLay DirectX12Api::createPipelineLayout(Device* d, const Shader*const* sh, size_t count) {
   const std::vector<Detail::ShaderReflection::Binding>* lay[5] = {};
+  bool has_baseVertex_baseInstance = false;
   for(size_t i=0; i<5; ++i) {
     if(sh[i]==nullptr)
       continue;
     auto* s = reinterpret_cast<const Detail::DxShader*>(sh[i]);
     lay[i] = &s->lay;
+    has_baseVertex_baseInstance |= s->has_baseVertex_baseInstance;
     }
   auto& dx = *reinterpret_cast<Detail::DxDevice*>(d);
-  return PPipelineLay(new Detail::DxPipelineLay(dx,lay,count));
+  return PPipelineLay(new Detail::DxPipelineLay(dx,lay,count,has_baseVertex_baseInstance));
   }
 
 AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mipCnt) {

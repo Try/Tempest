@@ -85,6 +85,12 @@ TEST(VulkanApi,Draw) {
 #endif
   }
 
+TEST(VulkanApi,InstanceIndex) {
+#if !defined(__OSX__)
+  GapiTestCommon::InstanceIndex<VulkanApi>("VulkanApi_InstanceIndex.png");
+#endif
+  }
+
 TEST(VulkanApi,Viewport) {
 #if !defined(__OSX__)
   GapiTestCommon::Viewport<VulkanApi>("VulkanApi_Viewport.png");

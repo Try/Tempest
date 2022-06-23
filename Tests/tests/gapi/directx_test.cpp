@@ -97,6 +97,12 @@ TEST(DirectX12Api,Draw) {
 #endif
   }
 
+TEST(DirectX12Api,InstanceIndex) {
+#if defined(_MSC_VER)
+  GapiTestCommon::InstanceIndex<DirectX12Api>("DirectX12Api_InstanceIndex.png");
+#endif
+  }
+
 TEST(DirectX12Api,Viewport) {
 #if defined(_MSC_VER)
   GapiTestCommon::Viewport<DirectX12Api>("DirectX12Api_Viewport.png");
