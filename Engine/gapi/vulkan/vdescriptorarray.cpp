@@ -75,7 +75,9 @@ VkDescriptorPool VDescriptorArray::allocPool(const VPipelineLay& lay, size_t siz
   VkDescriptorPoolSize poolSize[int(ShaderReflection::Class::Count)] = {};
   size_t               pSize=0;
 
-  for(size_t i=0;i<lay.lay.size();++i){
+  for(size_t i=0;i<lay.lay.size();++i) {
+    if(lay.lay[i].stage==Tempest::Detail::ShaderReflection::None)
+      continue;
     auto     cls = lay.lay[i].cls;
     uint32_t cnt = lay.lay[i].arraySize;
     if(lay.lay[i].runtimeSized)
@@ -252,10 +254,19 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** b, size_t cn
       }
     }
 
+  VkBuffer nonNull = VK_NULL_HANDLE;
+  for(size_t i=0; i<cnt; ++i)
+    if(b[i]!=nullptr) {
+      // The Vulkan spec states: If the nullDescriptor feature is not enabled, buffer must not be VK_NULL_HANDLE
+      VBuffer* buf = reinterpret_cast<VBuffer*>(b[i]);
+      nonNull = buf->impl;
+      break;
+      }
+
   SmallArray<VkDescriptorBufferInfo,32> bufInfo(cnt);
   for(size_t i=0; i<cnt; ++i) {
     VBuffer* buf = reinterpret_cast<VBuffer*>(b[i]);
-    bufInfo[i].buffer = buf ? buf->impl : VK_NULL_HANDLE;
+    bufInfo[i].buffer = buf ? buf->impl : nonNull;
     bufInfo[i].offset = 0;
     bufInfo[i].range  = VK_WHOLE_SIZE;
     // assert(buf->nonUniqId==0);

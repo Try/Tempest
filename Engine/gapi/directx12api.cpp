@@ -234,7 +234,7 @@ AbstractGraphicsApi::Desc* DirectX12Api::createDescriptors(AbstractGraphicsApi::
 AbstractGraphicsApi::PPipelineLay DirectX12Api::createPipelineLayout(Device* d, const Shader*const* sh, size_t count) {
   const std::vector<Detail::ShaderReflection::Binding>* lay[5] = {};
   bool has_baseVertex_baseInstance = false;
-  for(size_t i=0; i<5; ++i) {
+  for(size_t i=0; i<count; ++i) {
     if(sh[i]==nullptr)
       continue;
     auto* s = reinterpret_cast<const Detail::DxShader*>(sh[i]);
