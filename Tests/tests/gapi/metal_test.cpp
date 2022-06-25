@@ -78,6 +78,12 @@ TEST(MetalApi,Draw) {
 #endif
   }
 
+TEST(MetalApi,InstanceIndex) {
+#if defined(__OSX__)
+  GapiTestCommon::InstanceIndex<MetalApi>("MetalApi_InstanceIndex.png");
+#endif
+  }
+
 TEST(MetalApi,Viewport) {
 #if defined(__OSX__)
   GapiTestCommon::Viewport<MetalApi>("MetalApi_Viewport.png");
