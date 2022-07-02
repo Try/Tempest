@@ -3,6 +3,7 @@
 #include "vshader.h"
 
 #include <Tempest/File>
+#include <libspirv/libspirv.h>
 
 #include "vdevice.h"
 #include "gapi/shaderreflection.h"
@@ -24,11 +25,18 @@ VShader::VShader(VDevice& device, const void *source, size_t src_size)
   ShaderReflection::getVertexDecl(vdecl,comp);
   ShaderReflection::getBindings(lay,comp);
 
-  stage = ShaderReflection::getExecutionModel(comp);
+  libspirv::Bytecode code(reinterpret_cast<const uint32_t*>(source),src_size/4);
+  stage = ShaderReflection::getExecutionModel(code);
   if(stage==ShaderReflection::Compute) {
-    this->comp.wgSize.x = comp.get_execution_mode_argument(spv::ExecutionModeLocalSize,0);
-    this->comp.wgSize.y = comp.get_execution_mode_argument(spv::ExecutionModeLocalSize,1);
-    this->comp.wgSize.z = comp.get_execution_mode_argument(spv::ExecutionModeLocalSize,2);
+    for(auto& i:code) {
+      if(i.op()!=spv::OpExecutionMode)
+        continue;
+      if(i[2]==spv::ExecutionModeLocalSize) {
+        this->comp.wgSize.x = i[3];
+        this->comp.wgSize.y = i[4];
+        this->comp.wgSize.z = i[5];
+        }
+      }
     }
   }
 

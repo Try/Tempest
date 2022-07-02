@@ -3,6 +3,7 @@
 #include <Tempest/Except>
 #include <Tempest/Log>
 #include <algorithm>
+#include <libspirv/libspirv.h>
 
 #include "thirdparty/spirv_cross/spirv_common.hpp"
 
@@ -138,7 +139,16 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
   }
 
 ShaderReflection::Stage ShaderReflection::getExecutionModel(spirv_cross::Compiler& comp) {
-  switch(comp.get_execution_model()) {
+  return getExecutionModel(comp.get_execution_model());
+  }
+
+ShaderReflection::Stage ShaderReflection::getExecutionModel(libspirv::Bytecode& comp) {
+  auto c = comp.findExecutionModel();
+  return getExecutionModel(c);
+  }
+
+ShaderReflection::Stage ShaderReflection::getExecutionModel(spv::ExecutionModel m) {
+  switch(m) {
     case spv::ExecutionModelGLCompute:
       return Stage::Compute;
     case spv::ExecutionModelVertex:

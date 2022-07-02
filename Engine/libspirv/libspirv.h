@@ -49,6 +49,8 @@ class Bytecode {
 
     Iterator begin() const;
     Iterator end() const;
+    
+    spv::ExecutionModel findExecutionModel() const;
 
   private:
     const OpCode* spirv   = nullptr;

@@ -5,6 +5,10 @@
 
 #include "thirdparty/spirv_cross/spirv_cross.hpp"
 
+namespace libspirv {
+class Bytecode;
+};
+
 namespace Tempest {
 namespace Detail {
 
@@ -56,6 +60,8 @@ class ShaderReflection final {
     static void   getVertexDecl(std::vector<Decl::ComponentType>& data, spirv_cross::Compiler& comp);
     static void   getBindings(std::vector<Binding>& b, spirv_cross::Compiler& comp);
     static Stage  getExecutionModel(spirv_cross::Compiler& comp);
+    static Stage  getExecutionModel(libspirv::Bytecode& comp);
+    static Stage  getExecutionModel(spv::ExecutionModel m);
     static size_t mslSizeOf(const spirv_cross::ID& spvId, spirv_cross::Compiler& comp);
 
     static void   merge(std::vector<Binding>& ret,

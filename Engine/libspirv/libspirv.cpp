@@ -19,3 +19,12 @@ Bytecode::Iterator Bytecode::end() const {
   Iterator it{spirv+codeLen};
   return it;
   }
+
+spv::ExecutionModel Bytecode::findExecutionModel() const {
+  for(auto& i:*this) {
+    if(i.op()!=spv::OpEntryPoint)
+      continue;
+    return spv::ExecutionModel(i[1]);
+    }
+  return spv::ExecutionModelMax;
+  }

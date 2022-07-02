@@ -78,6 +78,8 @@ DxShader::DxShader(const void *source, const size_t src_size) {
 
   try {
     libspirv::Bytecode code(reinterpret_cast<const uint32_t*>(source),src_size/4);
+    exec = code.findExecutionModel();
+    stage = ShaderReflection::getExecutionModel(exec);
     for(auto& i:code) {
       if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBuiltIn && i[3]==spv::BuiltInInstanceIndex) {
         has_baseVertex_baseInstance = true;
@@ -85,11 +87,17 @@ DxShader::DxShader(const void *source, const size_t src_size) {
       if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBuiltIn && i[3]==spv::BuiltInBaseVertex) {
         has_baseVertex_baseInstance = true;
         }
+      if(stage==ShaderReflection::Compute && i.op()==spv::OpExecutionMode) {
+        if(i[2]==spv::ExecutionModeLocalSize) {
+          this->comp.wgSize.x = i[3];
+          this->comp.wgSize.y = i[4];
+          this->comp.wgSize.z = i[5];
+          }
+        }
       }
 
     spirv_cross::CompilerHLSL comp(reinterpret_cast<const uint32_t*>(source),src_size/4);
-    exec = comp.get_execution_model();
-    if(exec==spv::ExecutionModelVertex || exec==spv::ExecutionModelTessellationEvaluation)
+    if(stage==ShaderReflection::Stage::Vertex || stage==ShaderReflection::Stage::Evaluate)
       optGLSL.vertex.flip_vert_y = true;
     optHLSL.shader_model = calcShaderModel(comp);
     optHLSL.support_nonzero_base_vertex_base_instance = has_baseVertex_baseInstance;
@@ -101,16 +109,10 @@ DxShader::DxShader(const void *source, const size_t src_size) {
 
     ShaderReflection::getVertexDecl(vdecl,comp);
     ShaderReflection::getBindings(lay,comp);
-    stage = ShaderReflection::getExecutionModel(comp);
 
-    if(exec==spv::ExecutionModelVertex) {
+    if(stage==ShaderReflection::Stage::Vertex) {
       tess.vertSrc.resize(src_size/4);
       std::memcpy(tess.vertSrc.data(),source,src_size);
-      }
-    if(exec==spv::ExecutionModelGLCompute) {
-      this->comp.wgSize.x = comp.get_execution_mode_argument(spv::ExecutionModeLocalSize,0);
-      this->comp.wgSize.y = comp.get_execution_mode_argument(spv::ExecutionModeLocalSize,1);
-      this->comp.wgSize.z = comp.get_execution_mode_argument(spv::ExecutionModeLocalSize,2);
       }
     }
   catch(const std::bad_alloc&) {
