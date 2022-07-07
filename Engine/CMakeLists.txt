@@ -2,11 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(Tempest)
 
-if(APPLE)
-  set(CMAKE_CXX_STANDARD 17)
-else()
-  set(CMAKE_CXX_STANDARD 14)
-endif()
+set(CMAKE_CXX_STANDARD 17)
 
 option(TEMPEST_BUILD_SHARED "Build shared Tempest." ON)
 
