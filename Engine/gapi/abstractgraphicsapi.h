@@ -350,10 +350,11 @@ namespace Tempest {
             } raytracing;
 
           struct {
-            bool     taskShader       = false;
-            bool     meshShader       = false;
-            uint32_t maxMeshGroups    = 32;
-            uint32_t maxMeshGroupSize = 32;
+            bool     taskShader         = false;
+            bool     meshShader         = false;
+            bool     meshShaderEmulated = false;
+            uint32_t maxMeshGroups      = 32;
+            uint32_t maxMeshGroupSize   = 32;
             } meshlets;
 
           bool     anisotropy        = false;

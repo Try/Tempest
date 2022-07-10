@@ -266,6 +266,9 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, Tempest::
     vkGetPhysicalDeviceProperties2(physicalDevice,&properties);
     c.meshlets.maxMeshGroups    = meshProps.maxDrawMeshTasksCount;
     c.meshlets.maxMeshGroupSize = meshProps.maxMeshWorkGroupSize[0];
+    if(!c.meshlets.meshShader) {
+      c.meshlets.meshShaderEmulated = true;
+      }
 
     if(indexingFeatures.runtimeDescriptorArray!=VK_FALSE) {
       c.bindless.nonUniformIndexing =

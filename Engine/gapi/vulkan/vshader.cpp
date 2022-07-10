@@ -27,7 +27,8 @@ VShader::VShader(VDevice& device, const void *source, size_t src_size)
 
   libspirv::Bytecode code(reinterpret_cast<const uint32_t*>(source),src_size/4);
   stage = ShaderReflection::getExecutionModel(code);
-  if(stage==ShaderReflection::Compute) {
+  if(stage==ShaderReflection::Compute ||
+     stage==ShaderReflection::Task || stage==ShaderReflection::Mesh) {
     for(auto& i:code) {
       if(i.op()!=spv::OpExecutionMode)
         continue;

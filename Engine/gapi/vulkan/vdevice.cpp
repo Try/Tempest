@@ -391,6 +391,10 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     props.meshlets.maxMeshGroups    = meshProperties.maxDrawMeshTasksCount;
     props.meshlets.maxMeshGroupSize = meshProperties.maxMeshWorkGroupSize[0];
 
+    if(!props.meshlets.meshShader) {
+      props.meshlets.meshShaderEmulated = true;
+      }
+
     if(indexingFeatures.runtimeDescriptorArray!=VK_FALSE) {
       props.bindless.nonUniformIndexing =
           (indexingFeatures.shaderUniformBufferArrayNonUniformIndexing==VK_TRUE) &&

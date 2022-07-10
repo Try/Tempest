@@ -47,10 +47,10 @@ MutableBytecode::Iterator MutableBytecode::end() {
   return it;
   }
 
-MutableBytecode::Iterator MutableBytecode::fineEntryPoint(spv::ExecutionModel em, std::string_view destName) {
+MutableBytecode::Iterator MutableBytecode::findOpEntryPoint(spv::ExecutionModel em, std::string_view destName) {
   for(auto it = begin(), end = this->end(); it!=end; ++it) {
     auto& i = *it;
-    if(i.op()!=spv::OpEntryPoint)
+    if(i.op()!=spv::OpEntryPoint || i[1]!=em)
       continue;
     std::string_view name = reinterpret_cast<const char*>(&i[3]);
     if(name!=destName)
@@ -111,14 +111,59 @@ MutableBytecode::Iterator MutableBytecode::findSectionEnd(Section s) {
   return fn;
   }
 
-MutableBytecode::Iterator MutableBytecode::findFunctionsDeclBlock() {
-  auto ret = begin();
-  while(ret!=end()) {
-    if(ret.code->code==spv::OpFunction)
-      return ret;
-    ++ret;
+uint32_t MutableBytecode::OpTypeVoid(Iterator& typesEnd) {
+  for(auto it=begin(); it!=typesEnd; ++it) {
+    auto& i = *it;
+    if(i.op()==spv::OpTypeVoid)
+      return i[1];
     }
+  const uint32_t tRet = fetchAddBound();
+  typesEnd.insert(spv::OpTypeVoid,{tRet});
+  return tRet;
+  }
+
+uint32_t MutableBytecode::OpTypeBool(Iterator& typesEnd) {
+  for(auto it=begin(); it!=typesEnd; ++it) {
+    auto& i = *it;
+    if(i.op()==spv::OpTypeBool)
+      return i[1];
+    }
+  const uint32_t tRet = fetchAddBound();
+  typesEnd.insert(spv::OpTypeBool,{tRet});
+  return tRet;
+  }
+
+uint32_t MutableBytecode::OpTypeInt(Iterator& typesEnd, uint16_t bitness, bool sign) {
+  uint32_t s = (sign ? 1 :0);
+  for(auto it=begin(); it!=typesEnd; ++it) {
+    auto& i = *it;
+    if(i.op()==spv::OpTypeInt && i[2]==bitness && i[3]==s)
+      return i[1];
+    }
+  const uint32_t tRet = fetchAddBound();
+  typesEnd.insert(spv::OpTypeInt, {tRet, bitness, s});
+  return tRet;
+  }
+
+uint32_t MutableBytecode::OpTypeFunction(Iterator& typesEnd, uint32_t idRet) {
+  for(auto it=begin(); it!=typesEnd; ++it) {
+    auto& i = *it;
+    if(i.op()==spv::OpTypeFunction && i[2]==idRet && i.len==3)
+      return i[1];
+    }
+  const uint32_t tFn = fetchAddBound();
+  typesEnd.insert(spv::OpTypeFunction,{tFn,idRet});
+  return tFn;
+  }
+
+uint32_t MutableBytecode::OpConstant(Iterator& typesEnd, uint32_t idType, uint32_t u32) {
+  const uint32_t ret = fetchAddBound();
+  typesEnd.insert(spv::OpConstant, {idType, ret, u32});
   return ret;
+  }
+
+uint32_t MutableBytecode::OpConstant(Iterator& typesEnd, uint32_t idType, int32_t i32) {
+  return OpConstant(typesEnd,idType,reinterpret_cast<uint32_t&>(i32));
   }
 
 void MutableBytecode::removeNops() {
@@ -180,6 +225,22 @@ void MutableBytecode::Iterator::set(uint16_t id, OpCode c) {
   mut = c;
   }
 
+void MutableBytecode::Iterator::set(uint16_t id, std::string_view text) {
+  size_t at   = std::distance(static_cast<const OpCode*>(owner->code.data()), code);
+  auto   p    = reinterpret_cast<uint32_t*>(&owner->code[at+id]);
+  size_t padd = (text.size()+1+3)/4 - (owner->code[at].len-id);
+
+  owner->code[at].len+=padd;
+  owner->code.insert(owner->code.begin()+at+id, padd, OpCode());
+  for(size_t i=0; i<=text.size(); i+=4) {
+    char buf[4] = {};
+    for(size_t r=0; r<4 && (i+r)<text.size(); ++r)
+      buf[r] = text[i+r];
+    std::memcpy(p, buf, 4);
+    ++p;
+    }
+  }
+
 void MutableBytecode::Iterator::insert(OpCode c) {
   size_t at = std::distance(static_cast<const OpCode*>(owner->code.data()), code);
   owner->code.insert(owner->code.begin()+at,c);
@@ -202,7 +263,7 @@ void MutableBytecode::Iterator::insert(spv::Op op, const uint32_t* args, const s
     reinterpret_cast<uint32_t&>(c[at+i+1]) = *(args+i);
     }
   owner->invalidateSpvPointers();
-  code = &owner->code[at+len];
+  code = owner->code.data()+at+len;
   }
 
 void MutableBytecode::Iterator::insert(spv::Op op, std::initializer_list<uint32_t> args) {

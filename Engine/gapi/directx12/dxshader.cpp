@@ -87,8 +87,9 @@ DxShader::DxShader(const void *source, const size_t src_size) {
       if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBuiltIn && i[3]==spv::BuiltInBaseVertex) {
         has_baseVertex_baseInstance = true;
         }
-      if(stage==ShaderReflection::Compute && i.op()==spv::OpExecutionMode) {
-        if(i[2]==spv::ExecutionModeLocalSize) {
+      if(stage==ShaderReflection::Compute||
+         stage==ShaderReflection::Task || stage==ShaderReflection::Mesh) {
+        if(i.op()==spv::OpExecutionMode && i[2]==spv::ExecutionModeLocalSize) {
           this->comp.wgSize.x = i[3];
           this->comp.wgSize.y = i[4];
           this->comp.wgSize.z = i[5];

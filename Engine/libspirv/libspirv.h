@@ -91,6 +91,7 @@ class MutableBytecode : public Bytecode {
         void setToNop();
         void set(uint16_t id, uint32_t code);
         void set(uint16_t id, OpCode   code);
+        void set(uint16_t id, std::string_view text);
 
         void insert(OpCode code);
         void insert(spv::Op op, const uint32_t* args, size_t argsSize);
@@ -110,15 +111,19 @@ class MutableBytecode : public Bytecode {
     Iterator begin();
     Iterator end();
 
-    Iterator fineEntryPoint(spv::ExecutionModel em, std::string_view name);
+    Iterator findOpEntryPoint(spv::ExecutionModel em, std::string_view name);
 
     Iterator findSection(Section s);
     Iterator findSection(Iterator begin, Section s);
-
     Iterator findSectionEnd(Section s);
 
-    // Section 10 of logical layout, or 11 if 10 is absent, or 'end()'
-    Iterator findFunctionsDeclBlock();
+    uint32_t OpTypeVoid    (Iterator& typesEnd);
+    uint32_t OpTypeBool    (Iterator& typesEnd);
+    uint32_t OpTypeInt     (Iterator& typesEnd, uint16_t bitness, bool sign);
+    uint32_t OpTypeFunction(Iterator& typesEnd, uint32_t idRet);
+
+    uint32_t OpConstant    (Iterator& typesEnd, uint32_t idType, uint32_t u32);
+    uint32_t OpConstant    (Iterator& typesEnd, uint32_t idType, int32_t  i32);
 
     void     removeNops();
     uint32_t fetchAddBound();
