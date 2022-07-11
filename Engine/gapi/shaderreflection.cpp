@@ -22,6 +22,26 @@ static uint32_t arraySize(const spirv_cross::SPIRType& t) {
   return cnt;
   }
 
+static uint32_t declaredSize(spirv_cross::Compiler& comp, const spirv_cross::SPIRType& t) {
+  // Offsets can be declared out of order, so we need to deduce the actual size
+  // based on last member instead.
+  uint32_t member_index = 0;
+  size_t highest_offset = 0;
+  for(uint32_t i = 0; i < uint32_t(t.member_types.size()); i++) {
+    size_t offset = comp.type_struct_member_offset(t, i);
+    if(offset > highest_offset) {
+      highest_offset = offset;
+      member_index = i;
+      }
+    }
+
+  // GLSL: There can only be one array of variable size per SSBO and it has to be the bottommost variable in the block definition.
+  size_t size = comp.get_declared_struct_member_size(t, member_index);
+  if(size==0)
+    return 0; // runtime sized tail
+  return uint32_t(highest_offset + size);
+  }
+
 void ShaderReflection::getVertexDecl(std::vector<Decl::ComponentType>& data, spirv_cross::Compiler& comp) {
   if(comp.get_execution_model()!=spv::ExecutionModelVertex)
     return;
@@ -73,7 +93,7 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
   for(auto &resource : resources.uniform_buffers) {
     auto&    t       = comp.get_type_from_variable(resource.id);
     unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);
-    auto     sz      = comp.get_declared_struct_size(t);
+    auto     sz      = declaredSize(comp,t);
     Binding b;
     b.layout       = binding;
     b.cls          = Ubo;
@@ -88,7 +108,7 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     auto&    t        = comp.get_type_from_variable(resource.id);
     unsigned binding  = comp.get_decoration(resource.id, spv::DecorationBinding);
     auto     readonly = comp.get_buffer_block_flags(resource.id);
-    auto     sz       = comp.get_declared_struct_size(t);
+    auto     sz       = declaredSize(comp,t);
     Binding b;
     b.layout       = binding;
     b.cls          = (readonly.get(spv::DecorationNonWritable) ? SsboR : SsboRW);
@@ -126,7 +146,7 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
   for(auto &resource : resources.push_constant_buffers) {
     unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);
     auto&    t       = comp.get_type_from_variable(resource.id);
-    auto     sz      = comp.get_declared_struct_size(t);
+    auto     sz      = declaredSize(comp,t);
 
     Binding b;
     b.layout   = binding;
