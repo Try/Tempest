@@ -43,7 +43,7 @@ static void avoidReservedFixup(libspirv::MutableBytecode& code) {
     }
   }
 
-static void injectEngineTypes(libspirv::MutableBytecode& code, const uint32_t idPrimitiveCountNV) {
+static void injectCountingPass(libspirv::MutableBytecode& code, const uint32_t idPrimitiveCountNV) {
   auto fn = code.findSectionEnd(libspirv::Bytecode::S_Types);
 
   const uint32_t tVoid     = code.OpTypeVoid(fn);
@@ -238,7 +238,7 @@ VMeshShaderEmulated::VMeshShaderEmulated(VDevice& device, const void *source, si
     }
 
   // inject counting buffer
-  injectEngineTypes(code,idPrimitiveCountNV);
+  injectCountingPass(code,idPrimitiveCountNV);
 
   // nops are not valid to have outsize of block
   code.removeNops();

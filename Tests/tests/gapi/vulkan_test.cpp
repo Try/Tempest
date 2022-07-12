@@ -227,3 +227,9 @@ TEST(VulkanApi,DISABLED_MeshShaderEmulated) {
   GapiTestCommon::MeshShaderEmulated<VulkanApi>("VulkanApi_MeshShaderEmulated.png");
 #endif
   }
+
+TEST(VulkanApi,DISABLED_MeshComputePrototype) {
+#if !defined(__OSX__)
+  GapiTestCommon::MeshComputePrototype<VulkanApi>("VulkanApi_MeshComputePrototype.png");
+#endif
+  }

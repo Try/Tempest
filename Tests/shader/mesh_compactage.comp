@@ -1,0 +1,57 @@
+#version 440
+
+struct IndirectCmd {
+  uint    indexCount;
+  uint    instanceCount;
+  uint    firstIndex;    // prefix sum
+  int     vertexOffset;  // can be abused to offset into var_buffer
+  uint    firstInstance; // caps: should be zero
+
+  uint    self;
+  uint    padd0;
+  uint    padd1;
+  };
+
+layout(binding = 10, std430) buffer EngineInternal0 {
+  IndirectCmd cmd[];
+  } indirect;
+
+layout(set = 0, binding = 11, std430) buffer EngineInternal1 {
+  uint    grow;
+  uint    ibo[];
+  } ind;
+
+layout(set = 0, binding = 12, std430) buffer EngineInternal2 {
+  uint    grow;
+  uint    vbo[];
+  } var;
+
+layout(set = 0, binding = 13, std430) buffer EngineInternal3 {
+  uint    grow;
+  uint    dispatchY;
+  uint    dispatchZ;
+  uint    desc[];
+  } mesh;
+
+layout(set = 0, binding = 14, std430) buffer EngineInternal4 {
+  uint    ibo[];
+  } indFlat;
+
+layout(local_size_x = 1) in;
+
+void main() {
+  uint index = gl_GlobalInvocationID.x;
+  //if(index>mesh.grow)
+  //  return;
+
+  uint mestId     = index*3;
+  uint self       = mesh.desc[mestId+0];
+  uint indDest    = mesh.desc[mestId+1];
+  uint indSize    = mesh.desc[mestId+2];
+
+  uint firstIndex = indirect.cmd[self].firstIndex;
+  uint indOffset  = firstIndex + atomicAdd(indirect.cmd[self].indexCount,indSize);
+
+  for(int i=0; i<indSize; ++i)
+    indFlat.ibo[indOffset+i] = ind.ibo[indDest+i];
+  }

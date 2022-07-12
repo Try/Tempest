@@ -1,0 +1,142 @@
+/**
+  Expected output of mesh-shader -> compute codegen
+  for prototyping purpose only.
+*/
+
+#version 440
+
+layout(local_size_x = 1) in;
+const uint max_vertices = 3;
+const uint max_primitives = 1;
+//layout(triangles, max_vertices = 3, max_primitives = 1) out;
+
+struct te_MeshPerVertexNV
+{
+    vec4  te_Position;
+    float te_PointSize;
+    float te_ClipDistance[1];
+    float te_CullDistance[1];
+};
+const uint sizeof_te_MeshPerVertexNV = 7; // NOTE: in uint32 elements, not in bytes
+
+// Custom vertex output block
+//layout(location = 0) out PerVertexData {
+struct PerVertexData {
+  vec4 color;
+  };
+const uint sizeof_te_PerVertexData = 4;
+
+struct te_MeshDesc {
+  uint owner;
+  uint ptr;
+  uint size;
+  };
+
+shared te_MeshPerVertexNV te_MeshVerticesNV[max_vertices];
+shared PerVertexData v_out[max_vertices];
+shared uint te_PrimitiveIndicesNV[3];
+shared uint te_PrimitiveCountNV;
+
+// Injected interface block, should be at set=1
+layout(set = 0, binding = 10, std430) buffer EngineInternal0
+{
+   uint    indexCount;
+   uint    instanceCount;
+   uint    firstIndex;    // prefix sum
+   int     vertexOffset;  // can be abused to offset into var_buffer
+   uint    firstInstance; // caps: should be zero
+
+   uint    self;
+   uint    padd0;
+   uint    padd1;
+} indirect;
+
+layout(set = 0, binding = 11, std430) buffer EngineInternal1
+{
+  uint    grow;
+  uint    ibo[];
+} ind;
+
+layout(set = 0, binding = 12, std430) buffer EngineInternal2
+{
+  uint    grow;
+  uint    vbo[];
+} var;
+
+layout(set = 0, binding = 13, std430) buffer EngineInternal3
+{
+  uint    grow;
+  uint    dispatchY;
+  uint    dispatchZ;
+  uint    desc[];
+} mesh;
+
+// User bindings
+layout(std430, binding = 0) readonly buffer Vbo { vec2 vertices[]; };
+const vec3 colors[3] = {vec3(1,0,0), vec3(0,1,0), vec3(0,0,1)};
+
+void original_main() {
+  // Vertices position
+  te_MeshVerticesNV[0].te_Position = vec4(vertices[0], 0, 1);
+  te_MeshVerticesNV[1].te_Position = vec4(vertices[1], 0, 1);
+  te_MeshVerticesNV[2].te_Position = vec4(vertices[2], 0, 1);
+
+  // Vertices color
+  v_out[0].color = vec4(colors[0], 1.0);
+  v_out[1].color = vec4(colors[1], 1.0);
+  v_out[2].color = vec4(colors[2], 1.0);
+
+  // Triangle indices
+  te_PrimitiveIndicesNV[0] = 0;
+  te_PrimitiveIndicesNV[1] = 1;
+  te_PrimitiveIndicesNV[2] = 2;
+
+  // Number of triangles
+  te_PrimitiveCountNV = 1;
+  }
+
+// Suppose to be similar to injected entry-point
+void main() {
+  original_main();
+  barrier();
+
+  if(te_PrimitiveCountNV==0)
+    return;
+
+  if(gl_LocalInvocationID.x!=0)
+    return;
+
+  const uint varSize = (sizeof_te_MeshPerVertexNV+sizeof_te_PerVertexData);
+  const uint indSize = te_PrimitiveCountNV*3;
+
+  // Fair counting of indices
+  atomicAdd(indirect.indexCount, indSize);
+
+  uint indDest  = atomicAdd(ind .grow, indSize);
+  uint varDest  = atomicAdd(var .grow, max_vertices*varSize);
+  uint meshDest = atomicAdd(mesh.grow, 1)*3;
+
+  mesh.desc[meshDest+0] = indirect.self; // owner
+  mesh.desc[meshDest+1] = indDest;       // ptr
+  mesh.desc[meshDest+2] = indSize;       // size
+
+  for(uint i=0; i<te_PrimitiveCountNV*3; ++i)
+    ind.ibo[indDest+i] = varDest + te_PrimitiveIndicesNV[i]*varSize;
+
+  for(uint i=0; i<max_vertices; ++i) {
+    uint at = varDest+i*varSize;
+    // gl_PerVertex
+    var.vbo[at+ 0] = floatBitsToUint(te_MeshVerticesNV[i].te_Position.x);
+    var.vbo[at+ 1] = floatBitsToUint(te_MeshVerticesNV[i].te_Position.y);
+    var.vbo[at+ 2] = floatBitsToUint(te_MeshVerticesNV[i].te_Position.z);
+    var.vbo[at+ 3] = floatBitsToUint(te_MeshVerticesNV[i].te_Position.w);
+    var.vbo[at+ 4] = floatBitsToUint(te_MeshVerticesNV[i].te_PointSize);
+    var.vbo[at+ 5] = floatBitsToUint(te_MeshVerticesNV[i].te_ClipDistance[0]);
+    var.vbo[at+ 6] = floatBitsToUint(te_MeshVerticesNV[i].te_CullDistance[0]);
+    // User data
+    var.vbo[at+ 7] = floatBitsToUint(v_out[i].color.x);
+    var.vbo[at+ 8] = floatBitsToUint(v_out[i].color.y);
+    var.vbo[at+ 9] = floatBitsToUint(v_out[i].color.z);
+    var.vbo[at+10] = floatBitsToUint(v_out[i].color.w);
+    }
+  }

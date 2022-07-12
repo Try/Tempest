@@ -1,0 +1,49 @@
+#version 440
+
+struct IndirectCmd {
+  uint    indexCount;
+  uint    instanceCount;
+  uint    firstIndex;    // prefix sum
+  int     vertexOffset;  // can be abused to offset into var_buffer
+  uint    firstInstance; // caps: should be zero
+
+  uint    self;
+  uint    padd0;
+  uint    padd1;
+  };
+
+layout(binding = 0, std430) buffer EngineInternal0 {
+  IndirectCmd cmd[];
+  } indirect;
+
+layout(local_size_x = 256) in;
+
+shared uint partialSumm[gl_WorkGroupSize.x];
+
+void main() {
+  uint index = gl_LocalInvocationID.x;
+  uint len   = indirect.cmd.length();
+
+  uint b = ((index+0)*len)/gl_WorkGroupSize.x;
+  uint e = ((index+1)*len)/gl_WorkGroupSize.x;
+
+  uint sum = 0;
+  for(uint i=b; i<e; ++i)
+    sum += indirect.cmd[i].indexCount;
+  partialSumm[index] = sum;
+
+  memoryBarrierShared();
+  barrier();
+
+  uint prefix = 0;
+  for(uint i=0; i<index; ++i)
+    prefix += partialSumm[i];
+
+  for(uint i=b; i<e; ++i) {
+    uint s = prefix;
+    prefix += indirect.cmd[i].indexCount;
+
+    indirect.cmd[i].firstIndex = s;
+    indirect.cmd[i].indexCount = 0;
+    }
+  }

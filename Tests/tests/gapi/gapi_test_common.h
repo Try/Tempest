@@ -1401,4 +1401,128 @@ void MeshShaderEmulated(const char* outImg) {
       throw;
     }
   }
+
+template<class GraphicsApi>
+void MeshComputePrototype(const char* outImg) {
+  using namespace Tempest;
+
+  struct VkDrawIndexedIndirectCommand {
+    uint32_t    indexCount = 0;
+    uint32_t    instanceCount;
+    uint32_t    firstIndex;
+    int32_t     vertexOffset;
+    uint32_t    firstInstance;
+
+    uint32_t    self    = 0xFFFFFFFF;
+    uint32_t    padd0   = 0x0BADF00D;
+    uint32_t    padd1   = 0x0BADF00D;
+    };
+  static_assert(sizeof(VkDrawIndexedIndirectCommand)==32);
+
+  try {
+    const char* msDev = nullptr;
+
+    GraphicsApi api{ApiFlags::Validation};
+    auto dev = api.devices();
+    for(auto& i:dev)
+      if(i.meshlets.meshShader)
+        msDev = i.name;
+    if(msDev==nullptr)
+      return;
+
+    Device device(api,msDev);
+    auto vbo  = device.vbo(vboData,3);
+
+    VkDrawIndexedIndirectCommand ix[2] = {};
+    ix[0].self       = 0;
+    ix[0].firstIndex = 0;
+
+    ix[1].self       = 1;
+    ix[1].firstIndex = 0;
+    auto indirect = device.ssbo(ix,sizeof(ix));
+
+    auto ind  = device.ssbo(nullptr, 4*3*100 + 4*3); // 100 trinagles cap + counter
+    auto ind2 = device.ssbo(nullptr, 4*3*100);       // 100 trinagles cap
+    auto var  = device.ssbo(nullptr, 4*16*1024);     // big buffer for counting
+    auto mesh = device.ssbo(nullptr, 4*256);         // buffer meshlet descriptors
+
+    const uint32_t zero = 0;
+    ind.update(&zero,0,4);
+    var.update(&zero,0,4);
+
+    const IVec3 msz = {0,1,1};
+    mesh.update(&msz,0,sizeof(msz));
+
+    auto shaderMs = device.shader("shader/simple_test.mesh.comp.sprv");
+    auto psoMs    = device.pipeline(shaderMs);
+
+    auto ubo0  = device.descriptors(psoMs);
+    ubo0.set(0,  vbo);
+    ubo0.set(10, indirect);
+    ubo0.set(11, ind);
+    ubo0.set(12, var);
+    ubo0.set(13, mesh);
+
+    auto ubo1  = device.descriptors(psoMs);
+    ubo1.set(0,  vbo);
+    ubo1.set(10, indirect, sizeof(VkDrawIndexedIndirectCommand));
+    ubo1.set(11, ind);
+    ubo1.set(12, var);
+    ubo1.set(13, mesh);
+
+    auto shSum  = device.shader("shader/mesh_prefix_sum.comp.sprv");
+    auto psoSum = device.pipeline(shSum);
+    auto uboSum = device.descriptors(psoSum);
+    uboSum.set(0, indirect);
+
+    auto shCompactage  = device.shader("shader/mesh_compactage.comp.sprv");
+    auto psoCompactage = device.pipeline(shCompactage);
+    auto uboCompactage = device.descriptors(psoCompactage);
+    uboCompactage.set(10, indirect);
+    uboCompactage.set(11, ind);
+    uboCompactage.set(12, var);
+    uboCompactage.set(13, mesh);
+    uboCompactage.set(14, ind2);
+
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setUniforms(psoMs,ubo0);
+      enc.dispatch(3, 1,1);
+
+      enc.setUniforms(psoMs,ubo1);
+      enc.dispatch(2, 1,1);
+      // ^ 3+2 meshlets
+
+      // prefix summ pass
+      enc.setUniforms(psoSum,uboSum);
+      enc.dispatch(1,1,1);
+      // should be dispatch-indirect
+      enc.setUniforms(psoCompactage,uboCompactage);
+      enc.dispatch(5,1,1);
+      // should be draw-indirect at the end
+    }
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    std::vector<uint32_t> indCpu(ind.size()/4);
+    std::vector<uint32_t> meshCpu(mesh.size()/4);
+    std::vector<float>    varCpu (var.size()/4);
+    device.readBytes(ind,     indCpu.data(),ind.size());
+    device.readBytes(mesh,    meshCpu.data(),mesh.size());
+    device.readBytes(var,     varCpu.data(), var.size() );
+    device.readBytes(indirect,ix,indirect.size());
+
+    std::vector<uint32_t> ind2Cpu(ind2.size()/4);
+    device.readBytes(ind2,ind2Cpu.data(),ind2.size());
+    EXPECT_EQ(ix[0].indexCount,9);
+    EXPECT_EQ(ix[1].indexCount,6);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
 }

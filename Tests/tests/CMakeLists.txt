@@ -116,6 +116,10 @@ compile_shader(ray_test.frag)
 compile_shader(simple_test.task)
 compile_shader(simple_test.mesh)
 
+compile_shader(simple_test.mesh.comp)
+compile_shader(mesh_prefix_sum.comp)
+compile_shader(mesh_compactage.comp)
+
 target_sources(${PROJECT_NAME} PRIVATE
   ${SOURCES}
   ${SHADERS}
