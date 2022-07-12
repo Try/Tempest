@@ -95,9 +95,11 @@ AbstractGraphicsApi::PCompPipeline VulkanApi::createComputePipeline(AbstractGrap
 
 AbstractGraphicsApi::PShader VulkanApi::createShader(AbstractGraphicsApi::Device *d, const void* source, size_t src_size) {
   Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
-  libspirv::Bytecode code(reinterpret_cast<const uint32_t*>(source),src_size/4);
-  if(code.findExecutionModel()==spv::ExecutionModelMeshNV) {
-    return PShader(new Detail::VMeshShaderEmulated(*dx,source,src_size));
+  if(dx->props.meshlets.meshShaderEmulated) {
+    libspirv::Bytecode code(reinterpret_cast<const uint32_t*>(source),src_size/4);
+    if(code.findExecutionModel()==spv::ExecutionModelMeshNV) {
+      return PShader(new Detail::VMeshShaderEmulated(*dx,source,src_size));
+      }
     }
   return PShader(new Detail::VShader(*dx,source,src_size));
   }

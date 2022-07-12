@@ -12,7 +12,7 @@ struct IndirectCmd {
   uint    padd1;
   };
 
-layout(binding = 10, std430) buffer EngineInternal0 {
+layout(set = 0, binding = 10, std430) buffer EngineInternal0 {
   IndirectCmd cmd[];
   } indirect;
 

@@ -1407,9 +1407,9 @@ void MeshComputePrototype(const char* outImg) {
   using namespace Tempest;
 
   struct VkDrawIndexedIndirectCommand {
-    uint32_t    indexCount = 0;
-    uint32_t    instanceCount;
-    uint32_t    firstIndex;
+    uint32_t    indexCount    = 0;
+    uint32_t    instanceCount = 1;
+    uint32_t    firstIndex    = 0;
     int32_t     vertexOffset;
     uint32_t    firstInstance;
 
