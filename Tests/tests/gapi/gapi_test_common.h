@@ -1419,6 +1419,12 @@ void MeshComputePrototype(const char* outImg) {
     };
   static_assert(sizeof(VkDrawIndexedIndirectCommand)==32);
 
+  enum : uint32_t {
+    B_Indirect = 10,
+    B_Meshlet  = 11,
+    B_Var      = 12,
+  };
+
   try {
     const char* msDev = nullptr;
 
@@ -1441,13 +1447,11 @@ void MeshComputePrototype(const char* outImg) {
     ix[1].firstIndex = 0;
     auto indirect = device.ssbo(ix,sizeof(ix));
 
-    auto ind  = device.ssbo(nullptr, 4*3*100 + 4*3); // 100 trinagles cap + counter
-    auto ind2 = device.ssbo(nullptr, 4*3*100);       // 100 trinagles cap
-    auto var  = device.ssbo(nullptr, 4*16*1024);     // big buffer for counting
+    auto var  = device.ssbo(nullptr, 4*16*1024);     // big buffer for meshlet data
+    auto flat = device.ssbo(nullptr, var.size());    // double buffer
     auto mesh = device.ssbo(nullptr, 4*256);         // buffer meshlet descriptors
 
     const uint32_t zero = 0;
-    ind.update(&zero,0,4);
     var.update(&zero,0,4);
 
     const IVec3 msz = {0,1,1};
@@ -1458,17 +1462,15 @@ void MeshComputePrototype(const char* outImg) {
 
     auto ubo0  = device.descriptors(psoMs);
     ubo0.set(0,  vbo);
-    ubo0.set(10, indirect);
-    ubo0.set(11, ind);
-    ubo0.set(12, var);
-    ubo0.set(13, mesh);
+    ubo0.set(B_Indirect, indirect);
+    ubo0.set(B_Meshlet,  mesh);
+    ubo0.set(B_Var,      var);
 
     auto ubo1  = device.descriptors(psoMs);
     ubo1.set(0,  vbo);
-    ubo1.set(10, indirect, sizeof(VkDrawIndexedIndirectCommand));
-    ubo1.set(11, ind);
-    ubo1.set(12, var);
-    ubo1.set(13, mesh);
+    ubo1.set(B_Indirect, indirect, sizeof(VkDrawIndexedIndirectCommand));
+    ubo1.set(B_Meshlet,  mesh);
+    ubo1.set(B_Var,      var);
 
     auto shSum  = device.shader("shader/mesh_prefix_sum.comp.sprv");
     auto psoSum = device.pipeline(shSum);
@@ -1478,11 +1480,10 @@ void MeshComputePrototype(const char* outImg) {
     auto shCompactage  = device.shader("shader/mesh_compactage.comp.sprv");
     auto psoCompactage = device.pipeline(shCompactage);
     auto uboCompactage = device.descriptors(psoCompactage);
-    uboCompactage.set(10, indirect);
-    uboCompactage.set(11, ind);
-    uboCompactage.set(12, var);
-    uboCompactage.set(13, mesh);
-    uboCompactage.set(14, ind2);
+    uboCompactage.set(1,          flat);
+    uboCompactage.set(B_Indirect, indirect);
+    uboCompactage.set(B_Meshlet,  mesh);
+    uboCompactage.set(B_Var,      var);
 
     auto cmd = device.commandBuffer();
     {
@@ -1506,16 +1507,14 @@ void MeshComputePrototype(const char* outImg) {
     device.submit(cmd,sync);
     sync.wait();
 
-    std::vector<uint32_t> indCpu(ind.size()/4);
     std::vector<uint32_t> meshCpu(mesh.size()/4);
     std::vector<float>    varCpu (var.size()/4);
-    device.readBytes(ind,     indCpu.data(),ind.size());
-    device.readBytes(mesh,    meshCpu.data(),mesh.size());
-    device.readBytes(var,     varCpu.data(), var.size() );
+    device.readBytes(mesh,    meshCpu.data(), mesh.size());
+    device.readBytes(var,     varCpu.data(),  var.size() );
     device.readBytes(indirect,ix,indirect.size());
 
-    std::vector<uint32_t> ind2Cpu(ind2.size()/4);
-    device.readBytes(ind2,ind2Cpu.data(),ind2.size());
+    std::vector<uint32_t> flatCpu(flat.size()/4);
+    device.readBytes(flat,flatCpu.data(),flat.size());
     EXPECT_EQ(ix[0].indexCount,9);
     EXPECT_EQ(ix[1].indexCount,6);
     }

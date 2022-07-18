@@ -16,24 +16,19 @@ layout(set = 0, binding = 10, std430) buffer EngineInternal0 {
   IndirectCmd cmd[];
   } indirect;
 
-layout(set = 0, binding = 11, std430) buffer EngineInternal1 {
-  uint    grow;
-  uint    ibo[];
-  } ind;
-
-layout(set = 0, binding = 12, std430) buffer EngineInternal2 {
-  uint    grow;
-  uint    vbo[];
-  } var;
-
-layout(set = 0, binding = 13, std430) buffer EngineInternal3 {
+layout(set = 0, binding = 11, std430) buffer EngineInternal3 {
   uint    grow;
   uint    dispatchY;
   uint    dispatchZ;
   uint    desc[];
   } mesh;
 
-layout(set = 0, binding = 14, std430) buffer EngineInternal4 {
+layout(set = 0, binding = 12, std430) buffer EngineInternal2 {
+  uint    grow;
+  uint    heap[];
+  } var;
+
+layout(set = 0, binding = 1, std430) buffer EngineInternal4 {
   uint    ibo[];
   } indFlat;
 
@@ -53,5 +48,5 @@ void main() {
   uint indOffset  = firstIndex + atomicAdd(indirect.cmd[self].indexCount,indSize);
 
   for(int i=0; i<indSize; ++i)
-    indFlat.ibo[indOffset+i] = ind.ibo[indDest+i];
+    indFlat.ibo[indOffset+i] = var.heap[indDest+i];
   }

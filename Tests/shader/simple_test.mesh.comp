@@ -54,22 +54,16 @@ layout(set = 0, binding = 10, std430) buffer EngineInternal0
 layout(set = 0, binding = 11, std430) buffer EngineInternal1
 {
   uint    grow;
-  uint    ibo[];
-} ind;
-
-layout(set = 0, binding = 12, std430) buffer EngineInternal2
-{
-  uint    grow;
-  uint    vbo[];
-} var;
-
-layout(set = 0, binding = 13, std430) buffer EngineInternal3
-{
-  uint    grow;
   uint    dispatchY;
   uint    dispatchZ;
   uint    desc[];
 } mesh;
+
+layout(set = 0, binding = 12, std430) buffer EngineInternal2
+{
+  uint    grow;
+  uint    heap[];
+} var;
 
 // User bindings
 layout(std430, binding = 0) readonly buffer Vbo { vec2 vertices[]; };
@@ -112,8 +106,8 @@ void main() {
   // Fair counting of indices
   atomicAdd(indirect.indexCount, indSize);
 
-  uint indDest  = atomicAdd(ind .grow, indSize);
-  uint varDest  = atomicAdd(var .grow, max_vertices*varSize);
+  uint indDest  = atomicAdd(var .grow, indSize + max_vertices*varSize);
+  uint varDest  = indDest + indSize;
   uint meshDest = atomicAdd(mesh.grow, 1)*3;
 
   mesh.desc[meshDest+0] = indirect.self; // owner
@@ -121,22 +115,22 @@ void main() {
   mesh.desc[meshDest+2] = indSize;       // size
 
   for(uint i=0; i<te_PrimitiveCountNV*3; ++i)
-    ind.ibo[indDest+i] = varDest + te_PrimitiveIndicesNV[i]*varSize;
+    var.heap[indDest+i] = varDest + te_PrimitiveIndicesNV[i]*varSize;
 
   for(uint i=0; i<max_vertices; ++i) {
-    uint at = varDest+i*varSize;
+    uint at = varDest + i*varSize;
     // gl_PerVertex
-    var.vbo[at+ 0] = floatBitsToUint(te_MeshVerticesNV[i].te_Position.x);
-    var.vbo[at+ 1] = floatBitsToUint(te_MeshVerticesNV[i].te_Position.y);
-    var.vbo[at+ 2] = floatBitsToUint(te_MeshVerticesNV[i].te_Position.z);
-    var.vbo[at+ 3] = floatBitsToUint(te_MeshVerticesNV[i].te_Position.w);
-    var.vbo[at+ 4] = floatBitsToUint(te_MeshVerticesNV[i].te_PointSize);
-    var.vbo[at+ 5] = floatBitsToUint(te_MeshVerticesNV[i].te_ClipDistance[0]);
-    var.vbo[at+ 6] = floatBitsToUint(te_MeshVerticesNV[i].te_CullDistance[0]);
+    var.heap[at+ 0] = floatBitsToUint(te_MeshVerticesNV[i].te_Position.x);
+    var.heap[at+ 1] = floatBitsToUint(te_MeshVerticesNV[i].te_Position.y);
+    var.heap[at+ 2] = floatBitsToUint(te_MeshVerticesNV[i].te_Position.z);
+    var.heap[at+ 3] = floatBitsToUint(te_MeshVerticesNV[i].te_Position.w);
+    var.heap[at+ 4] = floatBitsToUint(te_MeshVerticesNV[i].te_PointSize);
+    var.heap[at+ 5] = floatBitsToUint(te_MeshVerticesNV[i].te_ClipDistance[0]);
+    var.heap[at+ 6] = floatBitsToUint(te_MeshVerticesNV[i].te_CullDistance[0]);
     // User data
-    var.vbo[at+ 7] = floatBitsToUint(v_out[i].color.x);
-    var.vbo[at+ 8] = floatBitsToUint(v_out[i].color.y);
-    var.vbo[at+ 9] = floatBitsToUint(v_out[i].color.z);
-    var.vbo[at+10] = floatBitsToUint(v_out[i].color.w);
+    var.heap[at+ 7] = floatBitsToUint(v_out[i].color.x);
+    var.heap[at+ 8] = floatBitsToUint(v_out[i].color.y);
+    var.heap[at+ 9] = floatBitsToUint(v_out[i].color.z);
+    var.heap[at+10] = floatBitsToUint(v_out[i].color.w);
     }
   }
