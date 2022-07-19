@@ -48,6 +48,7 @@ static Display*         dpy  = nullptr;
 static ::Window         root = {};
 static std::atomic_bool isExit{0};
 static int              activeCursorChange = 0;
+static XIM              xim = 0;
 
 static std::unordered_map<SystemApi::Window*,Tempest::Window*> windows;
 
@@ -146,6 +147,17 @@ X11Api::X11Api() {
 
   if(dpy != nullptr)
     root = DefaultRootWindow(dpy);
+
+  // X input method setup, only strictly necessary for intl key text
+  // loads the XMODIFIERS environment variable to see what IME to use
+  XSetLocaleModifiers("");
+
+  xim = XOpenIM(dpy, 0, 0, 0);
+  if(xim==nullptr){
+    // fallback to internal input method
+    XSetLocaleModifiers("@im=none");
+    xim = XOpenIM(dpy, 0, 0, 0);
+    }
   }
 
 void* X11Api::display() {
@@ -194,6 +206,16 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, 
   windows[ret] = owner;
   XMapWindow(dpy, win);
   XSync(dpy,False);
+
+  // X input context, you can have multiple for text boxes etc, but having a
+  // single one is the easiest.
+  XIC xic = XCreateIC(xim,
+                      XNInputStyle,   XIMPreeditNothing | XIMStatusNothing,
+                      XNClientWindow, win,
+                      XNFocusWindow,  win,
+                      NULL);
+  XSetICFocus(xic);
+
   if(owner!=nullptr)
     alignGeometry(win.ptr(),*owner);
   return ret;
@@ -439,13 +461,25 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
         }
       case KeyPress:
       case KeyRelease: {
+        // NOTE: it's not optimal to recreate xic on every button, but it's good engough
+        XIC xic = XCreateIC(xim,
+                            XNInputStyle,   XIMPreeditNothing | XIMStatusNothing,
+                            XNClientWindow, xev.xclient.window,
+                            XNFocusWindow,  xev.xclient.window,
+                            nullptr);
         int keysyms_per_keycode_return = 0;
-        KeySym *ksym = XGetKeyboardMapping( dpy, KeyCode(xev.xkey.keycode),
-                                            1,
-                                            &keysyms_per_keycode_return );
+        KeySym *ksym = XGetKeyboardMapping(dpy, KeyCode(xev.xkey.keycode),
+                                           1,
+                                           &keysyms_per_keycode_return );
 
-        char txt[10]={};
-        XLookupString(&xev.xkey, txt, sizeof(txt)-1, ksym, nullptr );
+        char txt[64]={};
+        Status status = {};
+        Xutf8LookupString(xic, &xev.xkey, txt, sizeof(txt)-1, ksym, &status);
+        if(status == XBufferOverflow) {
+          txt[0] = '\0';
+          }
+        // XLookupString(&xev.xkey, txt, sizeof(txt)-1, ksym, nullptr );
+        XDestroyIC(xic);
 
         auto u16 = TextCodec::toUtf16(txt); // TODO: remove dynamic allocation
         auto key = SystemApi::translateKey(XLookupKeysym(&xev.xkey,0));
