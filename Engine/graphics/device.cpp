@@ -78,14 +78,6 @@ void Device::submit(const CommandBuffer &cmd, Fence &fdone) {
   api.submit(dev,cmd.impl.handler,fdone.impl.handler);
   }
 
-void Device::submit(const Tempest::CommandBuffer *cmd[], size_t count, Fence *fdone) {
-  Detail::SmallArray<AbstractGraphicsApi::CommandBuffer*,64> cx(count);
-  for(size_t i=0;i<count;++i)
-    cx[i] = cmd[i]->impl.handler;
-  auto fence = (fdone==nullptr ? nullptr : fdone->impl.handler);
-  api.submit(dev, cx.get(), count, fence);
-  }
-
 void Device::present(Swapchain& sw) {
   api.present(dev,sw.impl.handler);
   }

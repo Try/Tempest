@@ -416,23 +416,6 @@ void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::C
   impl->submit(d,cmdList,1,doneCpu);
   }
 
-void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::CommandBuffer** cmd, size_t count, AbstractGraphicsApi::Fence* doneCpu) {
-  Detail::DxDevice&                     dx = *reinterpret_cast<Detail::DxDevice*>(d);
-  ID3D12CommandList*                    cmdListStk[16]={};
-  std::unique_ptr<ID3D12CommandList*[]> cmdListHeap;
-  ID3D12CommandList**                   cmdList = cmdListStk;
-  if(count>16) {
-    cmdListHeap.reset(new ID3D12CommandList*[16]);
-    cmdList = cmdListHeap.get();
-    }
-  for(size_t i=0;i<count;++i) {
-    Detail::DxCommandBuffer& bx = *reinterpret_cast<Detail::DxCommandBuffer*>(cmd[i]);
-    cmdList[i] = bx.get();
-    }
-  dx.waitData();
-  impl->submit(d,cmdList,count,doneCpu);
-  }
-
 void DirectX12Api::getCaps(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Props& caps) {
   Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
   caps = dx.props;

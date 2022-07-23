@@ -53,9 +53,7 @@ class DirectX12Api : public AbstractGraphicsApi {
     CommandBuffer* createCommandBuffer(Device* d) override;
 
     void           present  (Device *d, Swapchain* sw) override;
-
     void           submit   (Device *d, CommandBuffer* cmd,  Fence* doneCpu) override;
-    void           submit   (Device *d, CommandBuffer** cmd, size_t count, Fence *doneCpu) override;
 
     void           getCaps  (Device *d,Props& caps) override;
 

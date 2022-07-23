@@ -233,7 +233,7 @@ class DxDevice : public AbstractGraphicsApi::Device {
 
     static void  getProp(IDXGIAdapter1& adapter, ID3D12Device& dev, AbstractGraphicsApi::Props& prop);
     static void  getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGraphicsApi::Props& prop);
-    void         submit(DxCommandBuffer& cmd,DxFence& sync);
+    void         submit(DxCommandBuffer& cmd, DxFence* sync);
 
     DataMgr&     dataMgr() { return *data; }
 

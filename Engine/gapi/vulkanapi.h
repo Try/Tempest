@@ -52,8 +52,7 @@ class VulkanApi : public AbstractGraphicsApi {
 
     void           present  (Device *d, Swapchain* sw) override;
 
-    void           submit   (Device *d, CommandBuffer* cmd, Fence* onReadyCpu) override;
-    void           submit   (Device *d, CommandBuffer** cmd, size_t count, Fence *doneCpu) override;
+    void           submit   (Device *d, CommandBuffer* cmd, Fence* sync) override;
 
     void           getCaps  (Device *d, Props& props) override;
 

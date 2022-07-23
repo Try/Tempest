@@ -504,28 +504,70 @@ void VDevice::waitIdleSync(VDevice::Queue* q, size_t n) {
     }
   }
 
-void VDevice::submit(VCommandBuffer& cmd, VFence& sync) {
+void VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
+  size_t waitCnt = 0;
+  for(auto& s:cmd.swapchainSync) {
+    if(s->state!=Detail::VSwapchain::S_Pending)
+      continue;
+    s->state = Detail::VSwapchain::S_Draw0;
+    ++waitCnt;
+    }
+
+  SmallArray<VkSemaphore, 32>          wait      (waitCnt);
+  SmallArray<VkPipelineStageFlags, 32> waitStages(waitCnt);
+  size_t                               waitId  = 0;
+  for(auto& s:cmd.swapchainSync) {
+    if(s->state!=Detail::VSwapchain::S_Draw0)
+      continue;
+    s->state = Detail::VSwapchain::S_Draw1;
+    wait[waitId] = s->aquire;
+    ++waitId;
+    }
+
+  for(size_t i=0; i<waitCnt; ++i) {
+    // NOTE: our sw images are draw-only
+    waitStages[i] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    }
+
+  VkFence fence = VK_NULL_HANDLE;
+  if(sync!=nullptr) {
+    sync->reset();
+    fence = sync->impl;
+    }
+
   if(vkQueueSubmit2!=nullptr) {
-    VkCommandBufferSubmitInfoKHR cmdInfo = {};
-    cmdInfo.sType         = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO_KHR;
-    cmdInfo.commandBuffer = cmd.impl;
+    SmallArray<VkCommandBufferSubmitInfoKHR,64> flat(cmd.chunks.size());
+    auto node = cmd.chunks.begin();
+    for(size_t i=0; i<cmd.chunks.size(); ++i) {
+      flat[i].sType         = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO_KHR;
+      flat[i].pNext         = nullptr;
+      flat[i].commandBuffer = node->val[i%cmd.chunks.chunkSize].impl;
+      flat[i].deviceMask    = 0;
+      if(i+1==cmd.chunks.chunkSize)
+        node = node->next;
+      }
 
     VkSubmitInfo2KHR submitInfo = {};
     submitInfo.sType                  = VK_STRUCTURE_TYPE_SUBMIT_INFO_2_KHR;
-    submitInfo.commandBufferInfoCount = 1;
-    submitInfo.pCommandBufferInfos    = &cmdInfo;
+    submitInfo.commandBufferInfoCount = uint32_t(cmd.chunks.size());
+    submitInfo.pCommandBufferInfos    = flat.get();
 
-    sync.reset();
-    graphicsQueue->submit(1,&submitInfo,sync.impl,vkQueueSubmit2);
-    return;
+    graphicsQueue->submit(1,&submitInfo,fence,vkQueueSubmit2);
+    } else {
+    SmallArray<VkCommandBuffer,64> flat(cmd.chunks.size());
+    auto node = cmd.chunks.begin();
+    for(size_t i=0; i<cmd.chunks.size(); ++i) {
+      flat[i] = node->val[i%cmd.chunks.chunkSize].impl;
+      if(i+1==cmd.chunks.chunkSize)
+        node = node->next;
+      }
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = uint32_t(cmd.chunks.size());
+    submitInfo.pCommandBuffers    = flat.get();
+
+    graphicsQueue->submit(1,&submitInfo,fence);
     }
-  VkSubmitInfo submitInfo = {};
-  submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers    = &cmd.impl;
-
-  sync.reset();
-  graphicsQueue->submit(1,&submitInfo,sync.impl);
   }
 
 void Tempest::Detail::VDevice::Queue::waitIdle() {

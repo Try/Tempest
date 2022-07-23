@@ -7,6 +7,8 @@
 #include "vcommandpool.h"
 #include "vframebuffermap.h"
 #include "vswapchain.h"
+
+#include "../utility/smallarray.h"
 #include "../utility/dptr.h"
 
 namespace Tempest {
@@ -26,6 +28,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
       NoRecording,
       Idle,
       RenderPass,
+      PostRenderPass,
       Compute,
       };
 
@@ -38,7 +41,6 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void reset() override;
 
     void begin() override;
-    void begin(VkCommandBufferUsageFlags flg);
     void end() override;
     bool isRecording() const override;
 
@@ -90,7 +92,10 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
                    AbstractGraphicsApi::Buffer& tbo, const AbstractGraphicsApi::Buffer& instances, uint32_t numInstances,
                    AbstractGraphicsApi::Buffer& scratch);
 
-    VkCommandBuffer                impl=nullptr;
+    struct Chunk {
+      VkCommandBuffer impl = nullptr;
+      };
+    Detail::SmallList<Chunk,32>    chunks;
     std::vector<VSwapchain::Sync*> swapchainSync;
 
   private:
@@ -100,12 +105,16 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     template<class T>
     void finalizeImageBarrier(T& bx, const AbstractGraphicsApi::BarrierDesc& desc);
 
+    void pushChunk();
+    void newChunk();
+
     struct PipelineInfo:VkPipelineRenderingCreateInfoKHR {
       VkFormat colorFrm[MaxFramebufferAttachments];
       };
 
     VDevice&                                device;
     VCommandPool                            pool;
+    VkCommandBuffer                         impl=nullptr;
 
     ResourceState                           resState;
     std::shared_ptr<VFramebufferMap::RenderPass> pass;

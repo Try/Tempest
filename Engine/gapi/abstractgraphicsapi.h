@@ -550,9 +550,7 @@ namespace Tempest {
       virtual void       readBytes    (Device* d, Buffer* buf, void* out, size_t size) = 0;
 
       virtual void       present  (Device *d, Swapchain* sw)=0;
-
       virtual void       submit   (Device *d, CommandBuffer*  cmd, Fence* fence)=0;
-      virtual void       submit   (Device *d, CommandBuffer** cmd, size_t count, Fence* fence)=0;
 
       virtual void       getCaps  (Device *d,Props& caps)=0;
 

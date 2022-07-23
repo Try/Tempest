@@ -52,9 +52,8 @@ class Device {
 
     void                 waitIdle();
 
-    void                 submit(const CommandBuffer&  cmd);
-    void                 submit(const CommandBuffer&  cmd, Fence& fdone);
-    void                 submit(const CommandBuffer *cmd[], size_t count, Fence* fdone);
+    void                 submit(const CommandBuffer& cmd);
+    void                 submit(const CommandBuffer& cmd, Fence& fdone);
     void                 present(Swapchain& sw);
 
     Swapchain            swapchain(SystemApi::Window* w) const;

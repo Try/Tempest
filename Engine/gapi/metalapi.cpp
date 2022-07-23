@@ -207,31 +207,24 @@ void MetalApi::present(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Swapch
 void MetalApi::submit(AbstractGraphicsApi::Device *d,
                       AbstractGraphicsApi::CommandBuffer *cmd,
                       AbstractGraphicsApi::Fence *doneCpu) {
-  this->submit(d,&cmd,1,doneCpu);
-  }
-
-void MetalApi::submit(AbstractGraphicsApi::Device*,
-                      AbstractGraphicsApi::CommandBuffer **pcmd, size_t count,
-                      AbstractGraphicsApi::Fence *doneCpu) {
   auto& fence = *reinterpret_cast<MtSync*>(doneCpu);
   fence.signal();
-  for(size_t i=0; i<count; ++i) {
-    auto& cx = *reinterpret_cast<MtCommandBuffer*>(pcmd[i]);
-    MTL::CommandBuffer& cmd = *cx.impl;
-    cmd.addCompletedHandler(^(MTL::CommandBuffer* c){
-      MTL::CommandBufferStatus s = c->status();
-      if(s==MTL::CommandBufferStatusNotEnqueued ||
-         s==MTL::CommandBufferStatusEnqueued ||
-         s==MTL::CommandBufferStatusCommitted ||
-         s==MTL::CommandBufferStatusScheduled)
-        return;
 
-      if(s==MTL::CommandBufferStatusCompleted)
-        fence.reset(); else
-        fence.reset(s);
-      });
-    cmd.commit();
-    }
+  auto& cx = *reinterpret_cast<MtCommandBuffer*>(pcmd[i]);
+  MTL::CommandBuffer& cmd = *cx.impl;
+  cmd.addCompletedHandler(^(MTL::CommandBuffer* c){
+    MTL::CommandBufferStatus s = c->status();
+    if(s==MTL::CommandBufferStatusNotEnqueued ||
+       s==MTL::CommandBufferStatusEnqueued ||
+       s==MTL::CommandBufferStatusCommitted ||
+       s==MTL::CommandBufferStatusScheduled)
+      return;
+
+    if(s==MTL::CommandBufferStatusCompleted)
+      fence.reset(); else
+      fence.reset(s);
+    });
+  cmd.commit();
   }
 
 void MetalApi::getCaps(AbstractGraphicsApi::Device *d, AbstractGraphicsApi::Props &caps) {

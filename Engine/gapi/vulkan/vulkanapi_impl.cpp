@@ -363,58 +363,6 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, Tempest::
   c.setStorageFormats(storFormat);
   }
 
-void VulkanInstance::submit(VDevice* dev, VCommandBuffer** cmd, size_t count, VFence* fence) {
-  size_t waitCnt = 0;
-  for(size_t i=0; i<count; ++i) {
-    for(auto& s:cmd[i]->swapchainSync) {
-      if(s->state!=Detail::VSwapchain::S_Pending)
-        continue;
-      s->state = Detail::VSwapchain::S_Draw0;
-      ++waitCnt;
-      }
-    }
-
-  SmallArray<VkCommandBuffer, 32>      command(count);
-  SmallArray<VkSemaphore, 32>          wait      (waitCnt);
-  SmallArray<VkPipelineStageFlags, 32> waitStages(waitCnt);
-
-  size_t waitId = 0;
-  for(size_t i=0; i<count; ++i) {
-    command[i] = cmd[i]->impl;
-    for(auto& s:cmd[i]->swapchainSync) {
-      if(s->state!=Detail::VSwapchain::S_Draw0)
-        continue;
-      s->state = Detail::VSwapchain::S_Draw1;
-      wait[waitId] = s->aquire;
-      ++waitId;
-      }
-    }
-
-  for(size_t i=0; i<waitCnt; ++i) {
-    // NOTE: our sw images are draw-only
-    waitStages[i] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    }
-
-  VkSubmitInfo submitInfo = {};
-  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-  submitInfo.waitSemaphoreCount   = uint32_t(waitCnt);
-  submitInfo.pWaitSemaphores      = wait.get();
-  submitInfo.pWaitDstStageMask    = waitStages.get();
-
-  submitInfo.commandBufferCount   = uint32_t(count);
-  submitInfo.pCommandBuffers      = command.get();
-
-  submitInfo.signalSemaphoreCount = 0;
-  submitInfo.pSignalSemaphores    = nullptr;
-
-  if(fence!=nullptr)
-    fence->reset();
-
-  dev->dataMgr().wait();
-  dev->graphicsQueue->submit(1, &submitInfo, fence==nullptr ? VK_NULL_HANDLE : fence->impl);
-  }
-
 VkBool32 VulkanInstance::debugReportCallback(VkDebugReportFlagsEXT      flags,
                                              VkDebugReportObjectTypeEXT objectType,
                                              uint64_t                   object,

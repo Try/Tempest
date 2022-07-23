@@ -273,18 +273,13 @@ void VulkanApi::present(Device*, Swapchain *sw) {
   sx->present();
   }
 
-void VulkanApi::submit(Device *d, CommandBuffer* cmd, Fence *doneCpu) {
-  Detail::VDevice*        dx=reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VCommandBuffer* cx=reinterpret_cast<Detail::VCommandBuffer*>(cmd);
-  auto*                   rc=reinterpret_cast<Detail::VFence*>(doneCpu);
+void VulkanApi::submit(Device *d, CommandBuffer* cmd, Fence *sync) {
+  Detail::VDevice&        dx    = *reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VCommandBuffer& cx    = *reinterpret_cast<Detail::VCommandBuffer*>(cmd);
+  auto*                   fence =  reinterpret_cast<Detail::VFence*>(sync);
 
-  impl->submit(dx,&cx,1,rc);
-  }
-
-void VulkanApi::submit(AbstractGraphicsApi::Device *d, AbstractGraphicsApi::CommandBuffer **cmd, size_t count, Fence* doneCpu) {
-  auto* dx = reinterpret_cast<VDevice*>(d);
-  auto* rc = reinterpret_cast<VFence*>(doneCpu);
-  impl->submit(dx,reinterpret_cast<VCommandBuffer**>(cmd),count,rc);
+  dx.dataMgr().wait();
+  dx.submit(cx,fence);
   }
 
 void VulkanApi::getCaps(Device *d, Props& props) {

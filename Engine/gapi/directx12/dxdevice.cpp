@@ -217,13 +217,13 @@ void Detail::DxDevice::waitIdle() {
   dxAssert(idleFence->Signal(DxFence::Waiting));
   }
 
-void DxDevice::submit(DxCommandBuffer& cmdBuffer, DxFence& sync) {
-  sync.reset();
+void DxDevice::submit(DxCommandBuffer& cmdBuffer, DxFence* sync) {
+  sync->reset();
 
   std::lock_guard<SpinLock> guard(syncCmdQueue);
   ID3D12CommandList* cmd[] = {cmdBuffer.get()};
   cmdQueue->ExecuteCommandLists(1, cmd);
-  sync.signal(*cmdQueue);
+  sync->signal(*cmdQueue);
   }
 
 #endif

@@ -310,7 +310,7 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     void                    waitIdle() override;
 
-    void                    submit(VCommandBuffer& cmd, VFence& sync);
+    void                    submit(VCommandBuffer& cmd, VFence* sync);
 
     VkSurfaceKHR            createSurface(void* hwnd);
     SwapChainSupport        querySwapChainSupport(VkSurfaceKHR surface) { return querySwapChainSupport(physicalDevice,surface); }

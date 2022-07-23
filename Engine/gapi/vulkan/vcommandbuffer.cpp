@@ -159,41 +159,57 @@ static VkImage toVkResource(const AbstractGraphicsApi::BarrierDesc& b) {
 
 VCommandBuffer::VCommandBuffer(VDevice& device, VkCommandPoolCreateFlags flags)
   :device(device), pool(device,flags) {
-  VkCommandBufferAllocateInfo allocInfo = {};
-  allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  allocInfo.commandPool        = pool.impl;
-  allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-  allocInfo.commandBufferCount = 1;
-
-  vkAssert(vkAllocateCommandBuffers(device.device.impl,&allocInfo,&impl));
   }
 
 VCommandBuffer::~VCommandBuffer() {
-  vkFreeCommandBuffers(device.device.impl,pool.impl,1,&impl);
+  if(chunks.size()==0)
+    return;
+
+  SmallArray<VkCommandBuffer,64> flat(chunks.size());
+  auto node = chunks.begin();
+  for(size_t i=0; i<chunks.size(); ++i) {
+    flat[i] = node->val[i%chunks.chunkSize].impl;
+    if(i+1==chunks.chunkSize)
+      node = node->next;
+    }
+  vkFreeCommandBuffers(device.device.impl,pool.impl,uint32_t(chunks.size()),flat.get());
   }
 
 void VCommandBuffer::reset() {
-  vkResetCommandBuffer(impl,VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+  vkAssert(vkResetCommandPool(device.device.impl,pool.impl,0));
+
+  SmallArray<VkCommandBuffer,64> flat(chunks.size());
+  auto node = chunks.begin();
+  if(chunks.size()>0) {
+    impl = node->val[0].impl;
+    vkResetCommandBuffer(impl,VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
+    }
+  for(size_t i=1; i<chunks.size(); ++i) {
+    auto cmd = node->val[i%chunks.chunkSize].impl;
+    vkFreeCommandBuffers(device.device.impl,pool.impl,1,&cmd);
+    if(i+1==chunks.chunkSize)
+      node = node->next;
+    }
+  chunks.clear();
+
   swapchainSync.reserve(swapchainSync.size());
   swapchainSync.clear();
   }
 
 void VCommandBuffer::begin() {
-  begin(0);
-  }
-
-void VCommandBuffer::begin(VkCommandBufferUsageFlags flg) {
-  state     = Idle;
-  swapchainSync.reserve(swapchainSync.size());
-  swapchainSync.clear();
+  state  = Idle;
   curVbo = VK_NULL_HANDLE;
-
-  VkCommandBufferBeginInfo beginInfo = {};
-  beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  beginInfo.flags            = flg;
-  beginInfo.pInheritanceInfo = nullptr;
-
-  vkAssert(vkBeginCommandBuffer(impl,&beginInfo));
+  if(chunks.size()>0)
+    reset();
+  if(impl==nullptr) {
+    newChunk();
+    } else {
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags            = 0;
+    beginInfo.pInheritanceInfo = nullptr;
+    vkAssert(vkBeginCommandBuffer(impl,&beginInfo));
+    }
   }
 
 void VCommandBuffer::end() {
@@ -201,6 +217,8 @@ void VCommandBuffer::end() {
   resState.finalize(*this);
   vkAssert(vkEndCommandBuffer(impl));
   state = NoRecording;
+
+  pushChunk();
   }
 
 bool VCommandBuffer::isRecording() const {
@@ -215,6 +233,11 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
   for(size_t i=0; i<descSize; ++i) {
     if(sw[i]!=nullptr)
       addDependency(*reinterpret_cast<VSwapchain*>(sw[i]),imgId[i]);
+    }
+
+  if(state!=Idle) {
+    vkAssert(vkEndCommandBuffer(impl));
+    newChunk();
     }
 
   resState.joinCompute(PipelineStage::S_Graphics);
@@ -337,7 +360,7 @@ void VCommandBuffer::endRendering() {
     } else {
     vkCmdEndRenderPass(impl);
     }
-  state     = Idle;
+  state = PostRenderPass;
   }
 
 void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
@@ -889,6 +912,35 @@ void VCommandBuffer::vkCmdPipelineBarrier2(VkCommandBuffer impl, const VkDepende
                        memCount,memBarrier,
                        bufCount,bufBarrier,
                        imgCount,imgBarrier);
+  }
+
+void VCommandBuffer::pushChunk() {
+  if(impl!=nullptr) {
+    Chunk ch;
+    ch.impl = impl;
+    chunks.push(ch);
+    impl = nullptr;
+    }
+  }
+
+void VCommandBuffer::newChunk() {
+  pushChunk();
+
+  VkCommandBufferAllocateInfo allocInfo = {};
+  allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+  allocInfo.commandPool        = pool.impl;
+  allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+  allocInfo.commandBufferCount = 1;
+  vkAssert(vkAllocateCommandBuffers(device.device.impl,&allocInfo,&impl));
+
+  VkCommandBufferBeginInfo beginInfo = {};
+  beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  beginInfo.flags            = 0;
+  beginInfo.pInheritanceInfo = nullptr;
+  vkAssert(vkBeginCommandBuffer(impl,&beginInfo));
+
+  curVbo      = VK_NULL_HANDLE;
+  curUniforms = nullptr;
   }
 
 template<class T>

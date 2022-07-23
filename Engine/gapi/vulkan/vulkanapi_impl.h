@@ -47,8 +47,6 @@ class VulkanInstance {
     void deviceProps(VkPhysicalDevice physicalDevice, VkProp& c) const;
     void devicePropsShort(VkPhysicalDevice physicalDevice, AbstractGraphicsApi::Props& c) const;
 
-    void submit(VDevice *d, VCommandBuffer** cmd, size_t count, VFence *fence);
-
   private:
     const std::initializer_list<const char*>& checkValidationLayerSupport();
     bool layerSupport(const std::vector<VkLayerProperties>& sup,const std::initializer_list<const char*> dest);
