@@ -7,7 +7,6 @@
 #include "dxbuffer.h"
 #include "dxdevice.h"
 #include "dxtexture.h"
-#include "guid.h"
 
 #include <cassert>
 
@@ -121,6 +120,44 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer* b, size_t of
   uavUsage.durty = true;
   }
 
+void DxDescriptorArray::set(size_t id, const Sampler2d& smp) {
+  auto& device = *lay.handler->dev.device;
+  auto& prm    = lay.handler->prm[id];
+
+  UINT filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+  D3D12_SAMPLER_DESC smpDesc = {};
+  smpDesc.Filter           = D3D12_FILTER_MIN_MAG_MIP_POINT;
+  smpDesc.AddressU         = nativeFormat(smp.uClamp);
+  smpDesc.AddressV         = nativeFormat(smp.vClamp);
+  smpDesc.AddressW         = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+  smpDesc.MipLODBias       = 0;
+  smpDesc.MaxAnisotropy    = 1;
+  smpDesc.ComparisonFunc   = D3D12_COMPARISON_FUNC_NEVER;
+  smpDesc.BorderColor[0]   = 1;
+  smpDesc.BorderColor[1]   = 1;
+  smpDesc.BorderColor[2]   = 1;
+  smpDesc.BorderColor[3]   = 1;
+  smpDesc.MinLOD           = 0.0f;
+  smpDesc.MaxLOD           = D3D12_FLOAT32_MAX;
+
+  if(smp.minFilter==Filter::Linear)
+    filter |= (1u<<D3D12_MIN_FILTER_SHIFT);
+  if(smp.magFilter==Filter::Linear)
+    filter |= (1u<<D3D12_MAG_FILTER_SHIFT);
+  if(smp.mipFilter==Filter::Linear)
+    filter |= (1u<<D3D12_MIP_FILTER_SHIFT);
+
+  if(smp.anisotropic) {
+    smpDesc.MaxAnisotropy = 16;
+    filter |= D3D12_ANISOTROPIC_FILTERING_BIT;
+    }
+  smpDesc.Filter = D3D12_FILTER(filter);
+
+  auto gpu = val.cpu[prm.heapIdSmp];
+  gpu.ptr += prm.heapOffsetSmp;
+  device.CreateSampler(&smpDesc,gpu);
+  }
+
 void DxDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure* t) {
   auto& device = *lay.handler->dev.device;
   auto& tlas   = *reinterpret_cast<DxAccelerationStructure*>(t);
@@ -140,8 +177,8 @@ void DxDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStru
 void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler2d& smp, uint32_t mipLevel) {
   auto& device = *lay.handler->dev.device;
   auto& prm    = lay.handler->prm[id];
+  auto& l      = lay.handler->lay[id];
 
-  auto& l = lay.handler->lay[id];
   if(l.runtimeSized) {
     constexpr uint32_t granularity = DxPipelineLay::MAX_BINDLESS;
     uint32_t rSz = ((cnt+granularity-1u) & (~(granularity-1u)));
@@ -224,9 +261,11 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** tex, size_
       gpu.ptr += (prm.heapOffset + i*descSize);
       device.CreateShaderResourceView(t.impl.get(), &srvDesc, gpu);
 
-      gpu = val.cpu[prm.heapIdSmp];
-      gpu.ptr += (prm.heapOffsetSmp + i*smpSize);
-      device.CreateSampler(&smpDesc,gpu);
+      if(l.cls==ShaderReflection::Texture) {
+        gpu = val.cpu[prm.heapIdSmp];
+        gpu.ptr += (prm.heapOffsetSmp + i*smpSize);
+        device.CreateSampler(&smpDesc,gpu);
+        }
       }
     }
   }

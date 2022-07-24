@@ -6,6 +6,8 @@
 
 #include "utility/smallarray.h"
 
+#include <cassert>
+
 using namespace Tempest;
 
 AbstractGraphicsApi::EmptyDesc DescriptorSet::emptyDesc;
@@ -53,6 +55,12 @@ void DescriptorSet::set(size_t layoutBind, const StorageImage& tex, const Sample
   if(tex.tImpl.impl.handler)
     impl.handler->set(layoutBind,tex.tImpl.impl.handler,smp,mipLevel); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
+  }
+
+void DescriptorSet::set(size_t layoutBind, const Sampler2d& smp) {
+  // NOTE: separable samplers do not support mappings in native api
+  assert(smp.mapping==ComponentMapping());
+  impl.handler->set(layoutBind,smp);
   }
 
 void DescriptorSet::set(size_t layoutBind, const Detail::ResourcePtr<Texture2d> &tex, const Sampler2d& smp) {

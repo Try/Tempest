@@ -258,9 +258,9 @@ void VulkanApi::readBytes(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Buf
   }
 
 AbstractGraphicsApi::Desc* VulkanApi::createDescriptors(AbstractGraphicsApi::Device* d, PipelineLay& ulayImpl) {
-  auto* dx = reinterpret_cast<Detail::VDevice*>(d);
+  auto& dx = *reinterpret_cast<Detail::VDevice*>(d);
   auto& ul = reinterpret_cast<Detail::VPipelineLay&>(ulayImpl);
-  return new Detail::VDescriptorArray(dx->device.impl,ul);
+  return new Detail::VDescriptorArray(dx,ul);
   }
 
 AbstractGraphicsApi::CommandBuffer* VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device* d) {

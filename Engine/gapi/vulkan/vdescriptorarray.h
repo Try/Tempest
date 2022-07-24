@@ -14,11 +14,12 @@ class VPipelineLay;
 
 class VDescriptorArray : public AbstractGraphicsApi::Desc {
   public:
-    VDescriptorArray(VkDevice device, VPipelineLay& vlay);
+    VDescriptorArray(VDevice& device, VPipelineLay& vlay);
     ~VDescriptorArray() override;
 
     void                      set    (size_t id, AbstractGraphicsApi::Texture* tex, const Sampler2d& smp, uint32_t mipLevel) override;
     void                      set    (size_t id, AbstractGraphicsApi::Buffer*  buf, size_t offset) override;
+    void                      set    (size_t id, const Sampler2d& smp) override;
     void                      setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) override;
 
     void                      set    (size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler2d& smp, uint32_t mipLevel) override;
@@ -29,7 +30,7 @@ class VDescriptorArray : public AbstractGraphicsApi::Desc {
     VkDescriptorSet           impl = VK_NULL_HANDLE;
 
   private:
-    VkDevice                  device=nullptr;
+    VDevice&                  device;
     DSharedPtr<VPipelineLay*> lay;
     VPipelineLay::Pool*       pool=nullptr;
 

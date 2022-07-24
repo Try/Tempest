@@ -91,7 +91,7 @@ std::shared_ptr<VFramebufferMap::Fbo> VFramebufferMap::find(const AttachmentDesc
       d.frm   = sx.format();
       } else {
       auto& tx = *reinterpret_cast<VTexture*>(att[i]);
-      view[i] = tx.fboView(dev.device.impl,0);
+      view[i] = tx.fboView(0);
       d.frm = tx.format;
       }
     }

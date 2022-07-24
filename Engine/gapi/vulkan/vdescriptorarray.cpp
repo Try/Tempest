@@ -13,24 +13,16 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-static VkDescriptorType toWriteType(ShaderReflection::Class c) {
-  switch(c) {
-    case ShaderReflection::Ubo:     return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    case ShaderReflection::Texture: return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    case ShaderReflection::SsboR:   return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    case ShaderReflection::SsboRW:  return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    case ShaderReflection::ImgR:    return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    case ShaderReflection::ImgRW:   return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    case ShaderReflection::Tlas:    return VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-    case ShaderReflection::Push:    return VK_DESCRIPTOR_TYPE_MAX_ENUM;
-    case ShaderReflection::Count:   return VK_DESCRIPTOR_TYPE_MAX_ENUM;
-    }
-  return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+static VkImageLayout toWriteLayout(VTexture& tex) {
+  if(nativeIsDepthFormat(tex.format))
+    return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+  if(tex.isStorageImage)
+    return VK_IMAGE_LAYOUT_GENERAL;
+  return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
   }
 
-VDescriptorArray::VDescriptorArray(VkDevice device, VPipelineLay& vlay)
+VDescriptorArray::VDescriptorArray(VDevice& device, VPipelineLay& vlay)
   :device(device), lay(&vlay), uav(vlay.lay.size()) {
-
   if(!vlay.runtimeSized) {
     std::lock_guard<Detail::SpinLock> guard(vlay.sync);
     for(auto& i:vlay.pool){
@@ -58,15 +50,17 @@ VDescriptorArray::VDescriptorArray(VkDevice device, VPipelineLay& vlay)
 VDescriptorArray::~VDescriptorArray() {
   if(impl==VK_NULL_HANDLE)
     return;
+
+  VkDevice dev = device.device.impl;
   if(dedicatedPool!=VK_NULL_HANDLE) {
-    vkFreeDescriptorSets(device,dedicatedPool,1,&impl);
-    vkDestroyDescriptorPool(device,dedicatedPool,nullptr);
-    vkDestroyDescriptorSetLayout(device,dedicatedLayout,nullptr);
+    vkFreeDescriptorSets(dev,dedicatedPool,1,&impl);
+    vkDestroyDescriptorPool(dev,dedicatedPool,nullptr);
+    vkDestroyDescriptorSetLayout(dev,dedicatedLayout,nullptr);
     } else {
     Detail::VPipelineLay* layImpl = lay.handler;
     std::lock_guard<Detail::SpinLock> guard(layImpl->sync);
 
-    vkFreeDescriptorSets(device,pool->impl,1,&impl);
+    vkFreeDescriptorSets(dev,pool->impl,1,&impl);
     pool->freeCount++;
     }
   }
@@ -85,6 +79,8 @@ VkDescriptorPool VDescriptorArray::allocPool(const VPipelineLay& lay, size_t siz
     switch(cls) {
       case ShaderReflection::Ubo:     addPoolSize(poolSize,pSize,cnt,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);             break;
       case ShaderReflection::Texture: addPoolSize(poolSize,pSize,cnt,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);     break;
+      case ShaderReflection::Image:   addPoolSize(poolSize,pSize,cnt,VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);              break;
+      case ShaderReflection::Sampler: addPoolSize(poolSize,pSize,cnt,VK_DESCRIPTOR_TYPE_SAMPLER);                    break;
       case ShaderReflection::SsboR:
       case ShaderReflection::SsboRW:  addPoolSize(poolSize,pSize,cnt,VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);             break;
       case ShaderReflection::ImgR:
@@ -105,8 +101,9 @@ VkDescriptorPool VDescriptorArray::allocPool(const VPipelineLay& lay, size_t siz
   poolInfo.poolSizeCount = uint32_t(pSize);
   poolInfo.pPoolSizes    = poolSize;
 
+  VkDevice dev = device.device.impl;
   VkDescriptorPool ret = VK_NULL_HANDLE;
-  vkAssert(vkCreateDescriptorPool(device,&poolInfo,nullptr,&ret));
+  vkAssert(vkCreateDescriptorPool(dev,&poolInfo,nullptr,&ret));
   return ret;
   }
 
@@ -117,8 +114,9 @@ VkDescriptorSet VDescriptorArray::allocDescSet(VkDescriptorPool pool, VkDescript
   allocInfo.descriptorSetCount = 1;
   allocInfo.pSetLayouts        = &lay;
 
+  VkDevice        dev  = device.device.impl;
   VkDescriptorSet desc = VK_NULL_HANDLE;
-  VkResult ret=vkAllocateDescriptorSets(device,&allocInfo,&desc);
+  VkResult        ret  = vkAllocateDescriptorSets(dev,&allocInfo,&desc);
   if(ret==VK_ERROR_FRAGMENTED_POOL)
     return VK_NULL_HANDLE;
   if(ret!=VK_SUCCESS)
@@ -127,44 +125,39 @@ VkDescriptorSet VDescriptorArray::allocDescSet(VkDescriptorPool pool, VkDescript
   }
 
 void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* t, const Sampler2d& smp, uint32_t mipLevel) {
-  VTexture* tex=reinterpret_cast<VTexture*>(t);
+  VkDevice  dev = device.device.impl;
+  VTexture& tex = *reinterpret_cast<VTexture*>(t);
   if(impl==VK_NULL_HANDLE)
     reallocSet(runtimeArraySz);
 
   VkDescriptorImageInfo imageInfo = {};
+  if(lay.handler->lay[id].cls==ShaderReflection::Texture) {
+    imageInfo.sampler   = device.allocator.updateSampler(smp);
+    imageInfo.imageView = tex.view(smp.mapping,mipLevel);
+    } else {
+    if(mipLevel==uint32_t(-1))
+      mipLevel = 0;
+    imageInfo.imageView = tex.view(ComponentMapping(),mipLevel);
+    }
+  imageInfo.imageLayout = toWriteLayout(tex);
 
   VkWriteDescriptorSet  descriptorWrite = {};
   descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
   descriptorWrite.dstSet          = impl;
   descriptorWrite.dstBinding      = uint32_t(id);
   descriptorWrite.dstArrayElement = 0;
-  descriptorWrite.descriptorType  = toWriteType(lay.handler->lay[id].cls);
+  descriptorWrite.descriptorType  = nativeFormat(lay.handler->lay[id].cls);
   descriptorWrite.descriptorCount = 1;
   descriptorWrite.pImageInfo      = &imageInfo;
 
-  if(descriptorWrite.descriptorType==VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
-    imageInfo.sampler   = tex->alloc->updateSampler(smp);
-    imageInfo.imageView = tex->view(device,smp.mapping,mipLevel);
-    } else {
-    if(mipLevel==uint32_t(-1))
-      mipLevel = 0;
-    imageInfo.imageView = tex->view(device,ComponentMapping(),mipLevel);
-    }
-
-  if(nativeIsDepthFormat(tex->format))
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-  else if(tex->isStorageImage)
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-  else
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-  vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+  vkUpdateDescriptorSets(dev, 1, &descriptorWrite, 0, nullptr);
 
   uav[id].tex     = t;
-  uavUsage.durty |= (tex->nonUniqId!=0);
+  uavUsage.durty |= (tex.nonUniqId!=0);
   }
 
 void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer* b, size_t offset) {
+  VkDevice dev  = device.device.impl;
   VBuffer* buf  = reinterpret_cast<VBuffer*>(b);
   auto&    slot = lay.handler->lay[id];
   if(impl==VK_NULL_HANDLE)
@@ -180,18 +173,36 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer* b, s
   descriptorWrite.dstSet          = impl;
   descriptorWrite.dstBinding      = uint32_t(id);
   descriptorWrite.dstArrayElement = 0;
-  descriptorWrite.descriptorType  = toWriteType(lay.handler->lay[id].cls);
+  descriptorWrite.descriptorType  = nativeFormat(lay.handler->lay[id].cls);
   descriptorWrite.descriptorCount = 1;
   descriptorWrite.pBufferInfo     = &bufferInfo;
 
-  vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+  vkUpdateDescriptorSets(dev, 1, &descriptorWrite, 0, nullptr);
 
   uav[id].buf     = b;
   uavUsage.durty |= (buf->nonUniqId!=0);
   }
 
+void VDescriptorArray::set(size_t id, const Sampler2d& smp) {
+  VkDevice dev = device.device.impl;
+  VkDescriptorImageInfo imageInfo = {};
+  imageInfo.sampler = device.allocator.updateSampler(smp);
+
+  VkWriteDescriptorSet  descriptorWrite = {};
+  descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  descriptorWrite.dstSet          = impl;
+  descriptorWrite.dstBinding      = uint32_t(id);
+  descriptorWrite.dstArrayElement = 0;
+  descriptorWrite.descriptorType  = nativeFormat(lay.handler->lay[id].cls);
+  descriptorWrite.descriptorCount = 1;
+  descriptorWrite.pImageInfo      = &imageInfo;
+
+  vkUpdateDescriptorSets(dev, 1, &descriptorWrite, 0, nullptr);
+  }
+
 void VDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) {
-  VAccelerationStructure* memory=reinterpret_cast<VAccelerationStructure*>(tlas);
+  VkDevice                dev    = device.device.impl;
+  VAccelerationStructure* memory = reinterpret_cast<VAccelerationStructure*>(tlas);
 
   VkWriteDescriptorSetAccelerationStructureKHR descriptorAccelerationStructureInfo{};
   descriptorAccelerationStructureInfo.sType                      = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
@@ -207,12 +218,13 @@ void VDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStruc
   descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
   descriptorWrite.descriptorCount = 1;
 
-  vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+  vkUpdateDescriptorSets(dev, 1, &descriptorWrite, 0, nullptr);
   // uavUsage.durty = true;
   }
 
 void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t cnt, const Sampler2d& smp, uint32_t mipLevel) {
-  auto& l = lay.handler->lay[id];
+  VkDevice dev = device.device.impl;
+  auto&    l   = lay.handler->lay[id];
   if(l.runtimeSized) {
     constexpr uint32_t granularity = VPipelineLay::MAX_BINDLESS;
     uint32_t rSz = ((cnt+granularity-1u) & (~(granularity-1u)));
@@ -224,11 +236,12 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t c
 
   SmallArray<VkDescriptorImageInfo,32> imageInfo(cnt);
   for(size_t i=0; i<cnt; ++i) {
-    VTexture* tex=reinterpret_cast<VTexture*>(t[i]);
-    imageInfo[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    imageInfo[i].imageView   = tex->view(device,smp.mapping,uint32_t(-1));
-    imageInfo[i].sampler     = tex->alloc->updateSampler(smp);
-    assert(tex->nonUniqId==0);
+    VTexture& tex = *reinterpret_cast<VTexture*>(t[i]);
+    imageInfo[i].imageLayout = toWriteLayout(tex);
+    imageInfo[i].imageView   = tex.view(smp.mapping,uint32_t(-1));
+    imageInfo[i].sampler     = device.allocator.updateSampler(smp);
+    // TODO: support mutable textures in bindings
+    assert(tex.nonUniqId==0);
     }
 
   VkWriteDescriptorSet descriptorWrite = {};
@@ -236,15 +249,16 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t c
   descriptorWrite.dstSet          = impl;
   descriptorWrite.dstBinding      = uint32_t(id);
   descriptorWrite.dstArrayElement = 0;
-  descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+  descriptorWrite.descriptorType  = nativeFormat(l.cls);
   descriptorWrite.descriptorCount = uint32_t(cnt);
   descriptorWrite.pImageInfo      = imageInfo.get();
 
-  vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+  vkUpdateDescriptorSets(dev, 1, &descriptorWrite, 0, nullptr);
   }
 
 void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** b, size_t cnt) {
-  auto& l = lay.handler->lay[id];
+  VkDevice dev = device.device.impl;
+  auto&    l   = lay.handler->lay[id];
   if(l.runtimeSized) {
     constexpr uint32_t granularity = VPipelineLay::MAX_BINDLESS;
     uint32_t rSz = ((cnt+granularity-1u) & (~(granularity-1u)));
@@ -281,7 +295,7 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** b, size_t cn
   descriptorWrite.descriptorCount = uint32_t(cnt);
   descriptorWrite.pBufferInfo     = bufInfo.get();
 
-  vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+  vkUpdateDescriptorSets(dev, 1, &descriptorWrite, 0, nullptr);
   }
 
 void VDescriptorArray::ssboBarriers(ResourceState& res, PipelineStage st) {
@@ -318,6 +332,7 @@ void VDescriptorArray::addPoolSize(VkDescriptorPoolSize *p, size_t &sz, uint32_t
   }
 
 void VDescriptorArray::reallocSet(uint32_t newRuntimeSz) {
+  auto  dev      = device.device.impl;
   auto& lay      = *this->lay.handler;
   auto  prevLay  = dedicatedLayout;
   auto  prevPool = dedicatedPool;
@@ -364,14 +379,14 @@ void VDescriptorArray::reallocSet(uint32_t newRuntimeSz) {
     if(cx.descriptorCount>0)
       ++cnt;
     }
-  vkUpdateDescriptorSets(device,0,nullptr,uint32_t(cnt),cpy.get());
+  vkUpdateDescriptorSets(dev,0,nullptr,uint32_t(cnt),cpy.get());
 
   if(prevDesc!=VK_NULL_HANDLE)
-    vkFreeDescriptorSets(device,prevPool,1,&prevDesc);
+    vkFreeDescriptorSets(dev,prevPool,1,&prevDesc);
   if(prevPool!=VK_NULL_HANDLE)
-    vkDestroyDescriptorPool(device,prevPool,nullptr);
+    vkDestroyDescriptorPool(dev,prevPool,nullptr);
   if(prevLay!=VK_NULL_HANDLE)
-    vkDestroyDescriptorSetLayout(device,prevLay,nullptr);
+    vkDestroyDescriptorSetLayout(dev,prevLay,nullptr);
   }
 
 #endif

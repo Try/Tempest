@@ -2,10 +2,10 @@
 
 #extension GL_EXT_nonuniform_qualifier : require
 
-layout(binding = 0, std140) readonly buffer Input {
+layout(binding = 0, rgba8) uniform writeonly image2D ret;
+layout(binding = 1, std140) readonly buffer Input {
   vec4 val[];
   } ssbo[3];
-layout(binding = 1, rgba8) uniform writeonly image2D ret;
 
 void main() {
   ivec2 index = ivec2(gl_GlobalInvocationID.xy);

@@ -25,7 +25,9 @@ VTexture::~VTexture() {
     alloc->free(*this);
   }
 
-VkImageView VTexture::view(VkDevice dev, const ComponentMapping& m, uint32_t mipLevel) {
+VkImageView VTexture::view(const ComponentMapping& m, uint32_t mipLevel) {
+  VkDevice dev = alloc->device()->device.impl;
+
   if(m.r==ComponentSwizzle::Identity &&
      m.g==ComponentSwizzle::Identity &&
      m.b==ComponentSwizzle::Identity &&
@@ -53,8 +55,8 @@ VkImageView VTexture::view(VkDevice dev, const ComponentMapping& m, uint32_t mip
   return v.v;
   }
 
-VkImageView VTexture::fboView(VkDevice dev, uint32_t mip) {
-  return view(dev,ComponentMapping(),mip);
+VkImageView VTexture::fboView(uint32_t mip) {
+  return view(ComponentMapping(),mip);
   }
 
 void VTexture::createViews(VkDevice device) {

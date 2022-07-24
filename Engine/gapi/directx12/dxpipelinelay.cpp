@@ -124,6 +124,19 @@ void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection
         add(l,D3D12_DESCRIPTOR_RANGE_TYPE_CBV,cnt,desc);
         break;
         }
+      case ShaderReflection::Texture: {
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,    cnt,desc);
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,cnt,desc);
+        break;
+        }
+      case ShaderReflection::Image: {
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,    cnt,desc);
+        break;
+        }
+      case ShaderReflection::Sampler: {
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,cnt,desc);
+        break;
+        }
       case ShaderReflection::SsboR: {
         add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,cnt,desc);
         break;
@@ -138,11 +151,6 @@ void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection
         }
       case ShaderReflection::ImgRW: {
         add(l,D3D12_DESCRIPTOR_RANGE_TYPE_UAV,cnt,desc);
-        break;
-        }
-      case ShaderReflection::Texture: {
-        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,    cnt,desc);
-        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,cnt,desc);
         break;
         }
       case ShaderReflection::Tlas: {

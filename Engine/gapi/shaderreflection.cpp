@@ -90,6 +90,30 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     b.arraySize    = arraySize(t);
     lay.push_back(b);
     }
+  for(auto &resource : resources.separate_images) {
+    auto&    t       = comp.get_type_from_variable(resource.id);
+    unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);
+    Binding b;
+    b.layout       = binding;
+    b.cls          = Image;
+    b.stage        = s;
+    b.spvId        = resource.id;
+    b.runtimeSized = isRuntimeSized(t);
+    b.arraySize    = arraySize(t);
+    lay.push_back(b);
+    }
+  for(auto &resource : resources.separate_samplers) {
+    auto&    t       = comp.get_type_from_variable(resource.id);
+    unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);
+    Binding b;
+    b.layout       = binding;
+    b.cls          = Sampler;
+    b.stage        = s;
+    b.spvId        = resource.id;
+    b.runtimeSized = isRuntimeSized(t);
+    b.arraySize    = arraySize(t);
+    lay.push_back(b);
+    }
   for(auto &resource : resources.uniform_buffers) {
     auto&    t       = comp.get_type_from_variable(resource.id);
     unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);

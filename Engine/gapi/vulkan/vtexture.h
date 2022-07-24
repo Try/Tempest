@@ -24,8 +24,8 @@ class VTexture : public AbstractGraphicsApi::Texture {
 
     VTexture& operator=(const VTexture& other)=delete;
 
-    VkImageView view(VkDevice dev, const ComponentMapping& m, uint32_t mipLevel);
-    VkImageView fboView(VkDevice dev, uint32_t mip);
+    VkImageView view(const ComponentMapping& m, uint32_t mipLevel);
+    VkImageView fboView(uint32_t mip);
     uint32_t    mipCount() const override { return mipCnt; }
 
     VkImage                impl      = VK_NULL_HANDLE;

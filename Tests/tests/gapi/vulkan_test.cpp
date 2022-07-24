@@ -186,6 +186,12 @@ TEST(VulkanApi,ArrayedTextures) {
 #endif
   }
 
+TEST(VulkanApi,ArrayedImages) {
+#if !defined(__OSX__)
+  GapiTestCommon::ArrayedImages<VulkanApi>("VulkanApi_ArrayedImages.png");
+#endif
+  }
+
 TEST(VulkanApi,ArrayedSsbo) {
 #if !defined(__OSX__)
   GapiTestCommon::ArrayedSsbo<VulkanApi>("VulkanApi_ArrayedSsbo.png");

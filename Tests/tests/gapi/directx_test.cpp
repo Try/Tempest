@@ -199,6 +199,12 @@ TEST(DirectX12Api,ArrayedTextures) {
 #endif
   }
 
+TEST(DirectX12Api,ArrayedImages) {
+#if defined(_MSC_VER)
+  GapiTestCommon::ArrayedImages<DirectX12Api>("DirectX12Api_ArrayedImages.png");
+#endif
+  }
+
 TEST(DirectX12Api,ArrayedSsbo) {
 #if defined(_MSC_VER)
   GapiTestCommon::ArrayedSsbo<DirectX12Api>("DirectX12Api_ArrayedSsbo.png");

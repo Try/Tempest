@@ -198,6 +198,10 @@ inline VkDescriptorType nativeFormat(ShaderReflection::Class cls) {
       return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     case ShaderReflection::Texture:
       return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    case ShaderReflection::Image:
+      return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    case ShaderReflection::Sampler:
+      return VK_DESCRIPTOR_TYPE_SAMPLER;
     case ShaderReflection::SsboR:
       return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     case ShaderReflection::SsboRW :

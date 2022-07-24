@@ -17,12 +17,14 @@ class ShaderReflection final {
     enum Class : uint8_t {
       Ubo     = 0,
       Texture = 1,
-      SsboR   = 2,
-      SsboRW  = 3,
-      ImgR    = 4,
-      ImgRW   = 5,
-      Tlas    = 6,
-      Push    = 7,
+      Image   = 2,
+      Sampler = 3,
+      SsboR   = 4,
+      SsboRW  = 5,
+      ImgR    = 6,
+      ImgRW   = 7,
+      Tlas    = 8,
+      Push    = 9,
       Count,
       };
 
