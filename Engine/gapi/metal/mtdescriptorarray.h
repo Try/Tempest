@@ -16,6 +16,7 @@ class MtDescriptorArray : public AbstractGraphicsApi::Desc {
 
     void set    (size_t id, AbstractGraphicsApi::Texture* tex, const Sampler2d& smp, uint32_t mipLevel) override;
     void set    (size_t id, AbstractGraphicsApi::Buffer*  buf, size_t offset) override;
+    void set    (size_t id, const Sampler2d& smp) override;
     void setTlas(size_t,AbstractGraphicsApi::AccelerationStructure*) override;
 
     struct Desc {

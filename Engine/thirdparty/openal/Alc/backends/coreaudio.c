@@ -32,6 +32,8 @@
 #include <AudioUnit/AudioUnit.h>
 #include <AudioToolbox/AudioToolbox.h>
 
+#include <AudioToolbox/AudioComponent.h>
+
 
 typedef struct {
     AudioUnit audioUnit;
@@ -152,6 +154,10 @@ static ALCenum ca_open_playback(ALCdevice *device, const ALCchar *deviceName)
     desc.componentManufacturer = kAudioUnitManufacturer_Apple;
     desc.componentFlags = 0;
     desc.componentFlagsMask = 0;
+
+    while((comp = AudioComponentFindNext(comp, &desc))) {
+      // Found an AU
+      }
 
     comp = FindNextComponent(NULL, &desc);
     if(comp == NULL)

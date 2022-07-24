@@ -24,9 +24,11 @@ if(WIN32)
     "Alc/backends/loopback.c"
     )
 elseif(APPLE)
+  # add_definitions(-DHAVE_COREAUDIO)
   file(GLOB AlcBackend
     "Alc/backends/null.c"
     "Alc/backends/loopback.c"
+    "Alc/backends/coreaudio.c"
     )
 elseif(UNIX)
   add_definitions(-DHAVE_ALSA)
@@ -51,7 +53,7 @@ if(WIN32)
 endif()
 
 if(APPLE)
-  #TODO
+  target_link_libraries(${PROJECT_NAME} PRIVATE "-framework AudioToolbox" "-framework CoreAudio")
 elseif(UNIX)
   target_link_libraries(${PROJECT_NAME} PRIVATE asound)
 endif()

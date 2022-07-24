@@ -296,9 +296,13 @@ void MtCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u) {
         setBuffer(mtl[i],reinterpret_cast<MTL::Buffer*>(d.desc[i].val),d.desc[i].offset);
         break;
       case ShaderReflection::Texture:
+      case ShaderReflection::Image:
       case ShaderReflection::ImgR:
       case ShaderReflection::ImgRW:
         setTexture(mtl[i],reinterpret_cast<MTL::Texture*>(d.desc[i].val),d.desc[i].sampler);
+        break;
+      case ShaderReflection::Sampler:
+        setTexture(mtl[i],nullptr,d.desc[i].sampler);
         break;
       case ShaderReflection::Tlas:
         setTlas(mtl[i],reinterpret_cast<MTL::AccelerationStructure*>(d.desc[i].val));

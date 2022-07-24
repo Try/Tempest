@@ -21,6 +21,11 @@ void MtDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture *tex, const 
   desc[id].sampler = &dev.samplers.get(smp);
   }
 
+void MtDescriptorArray::set(size_t id, const Sampler2d& smp) {
+  desc[id].val     = nullptr;
+  desc[id].sampler = &dev.samplers.get(smp);
+  }
+
 void MtDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer *buf, size_t offset) {
   auto& b = *reinterpret_cast<MtBuffer*>(buf);
   desc[id].val    = b.impl.get();

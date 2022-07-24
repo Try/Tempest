@@ -205,12 +205,12 @@ void MetalApi::present(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Swapch
   }
 
 void MetalApi::submit(AbstractGraphicsApi::Device *d,
-                      AbstractGraphicsApi::CommandBuffer *cmd,
-                      AbstractGraphicsApi::Fence *doneCpu) {
+                      AbstractGraphicsApi::CommandBuffer* pcmd,
+                      AbstractGraphicsApi::Fence* doneCpu) {
   auto& fence = *reinterpret_cast<MtSync*>(doneCpu);
   fence.signal();
 
-  auto& cx = *reinterpret_cast<MtCommandBuffer*>(pcmd[i]);
+  auto& cx = *reinterpret_cast<MtCommandBuffer*>(pcmd);
   MTL::CommandBuffer& cmd = *cx.impl;
   cmd.addCompletedHandler(^(MTL::CommandBuffer* c){
     MTL::CommandBufferStatus s = c->status();
