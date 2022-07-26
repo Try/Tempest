@@ -58,12 +58,12 @@ VPipeline::~VPipeline() {
   cleanup();
   }
 
-VPipeline::Inst& VPipeline::instance(const std::shared_ptr<VFramebufferMap::RenderPass>& pass) {
+VkPipeline VPipeline::instance(const std::shared_ptr<VFramebufferMap::RenderPass>& pass) {
   std::lock_guard<SpinLock> guard(sync);
 
   for(auto& i:instRp)
     if(i.lay->isCompatible(*pass))
-      return i;
+      return i.val;
   VkPipeline val=VK_NULL_HANDLE;
   try {
     val = initGraphicsPipeline(device,pipelineLayout,pass.get(),nullptr,st,
@@ -76,15 +76,15 @@ VPipeline::Inst& VPipeline::instance(const std::shared_ptr<VFramebufferMap::Rend
       vkDestroyPipeline(device,val,nullptr);
     throw;
     }
-  return instRp.back();
+  return instRp.back().val;
   }
 
-VPipeline::Inst& VPipeline::instance(const VkPipelineRenderingCreateInfoKHR& info) {
+VkPipeline VPipeline::instance(const VkPipelineRenderingCreateInfoKHR& info) {
   std::lock_guard<SpinLock> guard(sync);
 
   for(auto& i:instDr)
     if(i.isCompatible(info))
-      return i;
+      return i.val;
   VkPipeline val=VK_NULL_HANDLE;
   try {
     val = initGraphicsPipeline(device,pipelineLayout,nullptr,&info,st,
@@ -97,7 +97,7 @@ VPipeline::Inst& VPipeline::instance(const VkPipelineRenderingCreateInfoKHR& inf
       vkDestroyPipeline(device,val,nullptr);
     throw;
     }
-  return instDr.back();
+  return instDr.back().val;
   }
 
 const VShader* VPipeline::findShader(ShaderReflection::Stage sh) const {

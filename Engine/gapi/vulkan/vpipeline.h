@@ -38,8 +38,8 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     VkShaderStageFlags pushStageFlags = 0;
     uint32_t           pushSize       = 0;
 
-    Inst&             instance(const std::shared_ptr<VFramebufferMap::RenderPass>& lay);
-    Inst&             instance(const VkPipelineRenderingCreateInfoKHR& info);
+    VkPipeline         instance(const std::shared_ptr<VFramebufferMap::RenderPass>& lay);
+    VkPipeline         instance(const VkPipelineRenderingCreateInfoKHR& info);
 
   private:
     struct InstRp : Inst {

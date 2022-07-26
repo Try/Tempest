@@ -365,8 +365,8 @@ void VCommandBuffer::endRendering() {
 
 void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
   VPipeline& px = reinterpret_cast<VPipeline&>(p);
-  auto&      v  = device.props.hasDynRendering ? px.instance(passDyn) : px.instance(pass);
-  vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v.val);
+  VkPipeline v  = device.props.hasDynRendering ? px.instance(passDyn) : px.instance(pass);
+  vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v);
   }
 
 void VCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) {
