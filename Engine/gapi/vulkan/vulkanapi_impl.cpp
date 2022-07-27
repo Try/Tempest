@@ -175,7 +175,9 @@ std::vector<Tempest::AbstractGraphicsApi::Props> VulkanInstance::devices() const
 
   devList.resize(devices.size());
   for(size_t i=0;i<devList.size();++i) {
-    devicePropsShort(devices[i],devList[i]);
+    VkProp prop = {};
+    devicePropsShort(devices[i],prop);
+    devList[i] = static_cast<Tempest::AbstractGraphicsApi::Props&>(prop);
     }
   return devList;
   }
@@ -204,7 +206,7 @@ void VulkanInstance::deviceProps(VkPhysicalDevice physicalDevice, VkProp& c) con
     c.bufferImageGranularity=1;
   }
 
-void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, Tempest::AbstractGraphicsApi::Props& c) const {
+void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& props) const {
   /*
    * formats support table: https://vulkan.lunarg.com/doc/view/1.0.30.0/linux/vkspec.chunked/ch31s03.html
    */
@@ -214,64 +216,134 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, Tempest::
   VkFormatFeatureFlags depthAttflags   = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
   VkFormatFeatureFlags storageAttflags = VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
 
-  VkPhysicalDeviceProperties prop={};
-  vkGetPhysicalDeviceProperties(physicalDevice,&prop);
+  auto ext = extensionsList(physicalDevice);
+  if(checkForExt(ext,VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME))
+    props.hasMemRq2 = true;
+  if(checkForExt(ext,VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME))
+    props.hasDedicatedAlloc = true;
+  if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME))
+    props.hasSync2 = true;
+  if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME))
+    props.hasDeviceAddress = true;
+  if(hasDeviceFeatures2 &&
+     checkForExt(ext,VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME) &&
+     checkForExt(ext,VK_KHR_SPIRV_1_4_EXTENSION_NAME) &&
+     checkForExt(ext,VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME) &&
+     checkForExt(ext,VK_KHR_RAY_QUERY_EXTENSION_NAME)) {
+    props.raytracing.rayQuery = true;
+    }
+  if(hasDeviceFeatures2 && checkForExt(ext,VK_NV_MESH_SHADER_EXTENSION_NAME)) {
+    props.meshlets.meshShader = true;
+    }
+  if(hasDeviceFeatures2 && checkForExt(ext,VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME)) {
+    props.hasDescIndexing = true;
+    }
+  if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)) {
+    // TODO: enable once validation layers have full support for dynamic rendering
+    // props.hasDynRendering = true;
+    }
+
+  VkPhysicalDeviceProperties devP={};
+  vkGetPhysicalDeviceProperties(physicalDevice,&devP);
 
   VkPhysicalDeviceFeatures supportedFeatures={};
   vkGetPhysicalDeviceFeatures(physicalDevice,&supportedFeatures);
 
+  VkPhysicalDeviceFeatures deviceFeatures = {};
+  deviceFeatures.samplerAnisotropy    = supportedFeatures.samplerAnisotropy;
+  deviceFeatures.textureCompressionBC = supportedFeatures.textureCompressionBC;
+  deviceFeatures.tessellationShader   = supportedFeatures.tessellationShader;
+  deviceFeatures.geometryShader       = supportedFeatures.geometryShader;
+  deviceFeatures.fillModeNonSolid     = supportedFeatures.fillModeNonSolid;
+
+  deviceFeatures.vertexPipelineStoresAndAtomics = supportedFeatures.vertexPipelineStoresAndAtomics;
+  deviceFeatures.fragmentStoresAndAtomics       = supportedFeatures.fragmentStoresAndAtomics;
+
   if(hasDeviceFeatures2) {
     VkPhysicalDeviceFeatures2 features = {};
-    features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
+    features.sType    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
+    features.features = deviceFeatures;
 
     VkPhysicalDeviceProperties2 properties = {};
     properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
 
+    VkPhysicalDeviceDynamicRenderingFeaturesKHR dynRendering = {};
+    dynRendering.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+
+    VkPhysicalDeviceSynchronization2FeaturesKHR sync2 = {};
+    sync2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR;
+
+    VkPhysicalDeviceBufferDeviceAddressFeaturesKHR bdaFeatures = {};
+    bdaFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_KHR;
+
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR asFeatures = {};
+    asFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+
     VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures = {};
     rayQueryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
-
-    VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = {};
-    indexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
 
     VkPhysicalDeviceMeshShaderFeaturesNV meshFeatures = {};
     meshFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
 
-    VkPhysicalDeviceMeshShaderPropertiesNV meshProps = {};
-    meshProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
+    VkPhysicalDeviceMeshShaderPropertiesNV meshProperties = {};
+    meshProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
 
-    auto ext = extensionsList(physicalDevice);
-    if(checkForExt(ext,VK_KHR_RAY_QUERY_EXTENSION_NAME)) {
+    VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = {};
+    indexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+
+    if(props.hasSync2) {
+      sync2.pNext = features.pNext;
+      features.pNext = &sync2;
+      }
+    if(props.hasDeviceAddress) {
+      bdaFeatures.pNext = features.pNext;
+      features.pNext = &bdaFeatures;
+      }
+    if(props.raytracing.rayQuery) {
+      asFeatures.pNext = features.pNext;
+      features.pNext = &asFeatures;
+      }
+    if(props.raytracing.rayQuery) {
       rayQueryFeatures.pNext = features.pNext;
       features.pNext = &rayQueryFeatures;
       }
-    if(checkForExt(ext,VK_NV_MESH_SHADER_EXTENSION_NAME)) {
+    if(props.hasDynRendering) {
+      dynRendering.pNext = features.pNext;
+      features.pNext = &dynRendering;
+      }
+    if(props.meshlets.meshShader) {
       meshFeatures.pNext = features.pNext;
       features.pNext = &meshFeatures;
 
-      meshProps.pNext = properties.pNext;
-      properties.pNext = &meshProps;
+      meshProperties.pNext = properties.pNext;
+      properties.pNext = &meshProperties;
       }
-    if(checkForExt(ext,VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME)) {
+    if(props.hasDescIndexing) {
       indexingFeatures.pNext = features.pNext;
       features.pNext = &indexingFeatures;
       }
+
     auto vkGetPhysicalDeviceFeatures2   = PFN_vkGetPhysicalDeviceFeatures2  (vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2KHR"));
     auto vkGetPhysicalDeviceProperties2 = PFN_vkGetPhysicalDeviceProperties2(vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceProperties2KHR"));
 
-    vkGetPhysicalDeviceFeatures2(physicalDevice,&features);
-    c.raytracing.rayQuery = rayQueryFeatures.rayQuery!=VK_FALSE;
-    c.meshlets.taskShader = meshFeatures.taskShader!=VK_FALSE;
-    c.meshlets.meshShader = meshFeatures.meshShader!=VK_FALSE;
+    vkGetPhysicalDeviceFeatures2  (physicalDevice, &features);
+    vkGetPhysicalDeviceProperties2(physicalDevice, &properties);
 
-    vkGetPhysicalDeviceProperties2(physicalDevice,&properties);
-    c.meshlets.maxMeshGroups    = meshProps.maxDrawMeshTasksCount;
-    c.meshlets.maxMeshGroupSize = meshProps.maxMeshWorkGroupSize[0];
-    if(!c.meshlets.meshShader) {
-      c.meshlets.meshShaderEmulated = true;
+    props.hasSync2                  = (sync2.synchronization2==VK_TRUE);
+    props.hasDynRendering           = (dynRendering.dynamicRendering==VK_TRUE);
+    props.hasDeviceAddress          = (bdaFeatures.bufferDeviceAddress==VK_TRUE);
+    props.raytracing.rayQuery       = (rayQueryFeatures.rayQuery==VK_TRUE);
+    props.meshlets.taskShader       = (meshFeatures.taskShader==VK_TRUE);
+    props.meshlets.meshShader       = (meshFeatures.meshShader==VK_TRUE);
+    props.meshlets.maxMeshGroups    = meshProperties.maxDrawMeshTasksCount;
+    props.meshlets.maxMeshGroupSize = meshProperties.maxMeshWorkGroupSize[0];
+
+    if(!props.meshlets.meshShader) {
+      props.meshlets.meshShaderEmulated = true;
       }
 
     if(indexingFeatures.runtimeDescriptorArray!=VK_FALSE) {
-      c.bindless.nonUniformIndexing =
+      props.bindless.nonUniformIndexing =
           (indexingFeatures.shaderUniformBufferArrayNonUniformIndexing==VK_TRUE) &&
           (indexingFeatures.shaderSampledImageArrayNonUniformIndexing ==VK_TRUE) &&
           (indexingFeatures.shaderStorageBufferArrayNonUniformIndexing==VK_TRUE) &&
@@ -279,56 +351,56 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, Tempest::
       }
     }
 
-  std::memcpy(c.name,prop.deviceName,sizeof(c.name));
+  std::memcpy(props.name,devP.deviceName,sizeof(props.name));
 
-  c.vbo.maxAttribs    = size_t(prop.limits.maxVertexInputAttributes);
-  c.vbo.maxRange      = size_t(prop.limits.maxVertexInputBindingStride);
+  props.vbo.maxAttribs    = size_t(devP.limits.maxVertexInputAttributes);
+  props.vbo.maxRange      = size_t(devP.limits.maxVertexInputBindingStride);
 
-  c.ibo.maxValue      = size_t(prop.limits.maxDrawIndexedIndexValue);
+  props.ibo.maxValue      = size_t(devP.limits.maxDrawIndexedIndexValue);
 
-  c.ssbo.offsetAlign  = size_t(prop.limits.minUniformBufferOffsetAlignment);
-  c.ssbo.maxRange     = size_t(prop.limits.maxStorageBufferRange);
+  props.ssbo.offsetAlign  = size_t(devP.limits.minUniformBufferOffsetAlignment);
+  props.ssbo.maxRange     = size_t(devP.limits.maxStorageBufferRange);
 
-  c.ubo.offsetAlign   = size_t(prop.limits.minUniformBufferOffsetAlignment);
-  c.ubo.maxRange      = size_t(prop.limits.maxUniformBufferRange);
+  props.ubo.offsetAlign   = size_t(devP.limits.minUniformBufferOffsetAlignment);
+  props.ubo.maxRange      = size_t(devP.limits.maxUniformBufferRange);
   
-  c.push.maxRange     = size_t(prop.limits.maxPushConstantsSize);
+  props.push.maxRange     = size_t(devP.limits.maxPushConstantsSize);
 
-  c.anisotropy        = supportedFeatures.samplerAnisotropy;
-  c.maxAnisotropy     = prop.limits.maxSamplerAnisotropy;
-  c.tesselationShader = supportedFeatures.tessellationShader;
-  c.geometryShader    = supportedFeatures.geometryShader;
+  props.anisotropy        = supportedFeatures.samplerAnisotropy;
+  props.maxAnisotropy     = devP.limits.maxSamplerAnisotropy;
+  props.tesselationShader = supportedFeatures.tessellationShader;
+  props.geometryShader    = supportedFeatures.geometryShader;
 
-  c.storeAndAtomicVs  = supportedFeatures.vertexPipelineStoresAndAtomics;
-  c.storeAndAtomicFs  = supportedFeatures.fragmentStoresAndAtomics;
+  props.storeAndAtomicVs  = supportedFeatures.vertexPipelineStoresAndAtomics;
+  props.storeAndAtomicFs  = supportedFeatures.fragmentStoresAndAtomics;
 
-  c.mrt.maxColorAttachments = prop.limits.maxColorAttachments;
+  props.mrt.maxColorAttachments = devP.limits.maxColorAttachments;
 
-  c.compute.maxGroups.x = prop.limits.maxComputeWorkGroupCount[0];
-  c.compute.maxGroups.y = prop.limits.maxComputeWorkGroupCount[1];
-  c.compute.maxGroups.z = prop.limits.maxComputeWorkGroupCount[2];
+  props.compute.maxGroups.x = devP.limits.maxComputeWorkGroupCount[0];
+  props.compute.maxGroups.y = devP.limits.maxComputeWorkGroupCount[1];
+  props.compute.maxGroups.z = devP.limits.maxComputeWorkGroupCount[2];
 
-  c.compute.maxGroupSize.x = prop.limits.maxComputeWorkGroupSize[0];
-  c.compute.maxGroupSize.y = prop.limits.maxComputeWorkGroupSize[1];
-  c.compute.maxGroupSize.z = prop.limits.maxComputeWorkGroupSize[2];
+  props.compute.maxGroupSize.x = devP.limits.maxComputeWorkGroupSize[0];
+  props.compute.maxGroupSize.y = devP.limits.maxComputeWorkGroupSize[1];
+  props.compute.maxGroupSize.z = devP.limits.maxComputeWorkGroupSize[2];
 
-  c.tex2d.maxSize = prop.limits.maxImageDimension2D;
+  props.tex2d.maxSize = devP.limits.maxImageDimension2D;
 
-  switch(prop.deviceType) {
+  switch(devP.deviceType) {
     case VK_PHYSICAL_DEVICE_TYPE_CPU:
-      c.type = DeviceType::Cpu;
+      props.type = DeviceType::Cpu;
       break;
     case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
-      c.type = DeviceType::Virtual;
+      props.type = DeviceType::Virtual;
       break;
     case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
-      c.type = DeviceType::Integrated;
+      props.type = DeviceType::Integrated;
       break;
     case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-      c.type = DeviceType::Discrete;
+      props.type = DeviceType::Discrete;
       break;
     default:
-      c.type = DeviceType::Unknown;
+      props.type = DeviceType::Unknown;
       break;
     }
 
@@ -357,10 +429,10 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, Tempest::
       storFormat |= (1ull<<i);
       }
     }
-  c.setSamplerFormats(smpFormat);
-  c.setAttachFormats (attFormat);
-  c.setDepthFormats  (dattFormat);
-  c.setStorageFormats(storFormat);
+  props.setSamplerFormats(smpFormat);
+  props.setAttachFormats (attFormat);
+  props.setDepthFormats  (dattFormat);
+  props.setStorageFormats(storFormat);
   }
 
 VkBool32 VulkanInstance::debugReportCallback(VkDebugReportFlagsEXT      flags,

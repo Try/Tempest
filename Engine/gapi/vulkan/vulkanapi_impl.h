@@ -45,7 +45,7 @@ class VulkanInstance {
     static std::vector<VkExtensionProperties> extensionsList(VkPhysicalDevice dev);
 
     void deviceProps(VkPhysicalDevice physicalDevice, VkProp& c) const;
-    void devicePropsShort(VkPhysicalDevice physicalDevice, AbstractGraphicsApi::Props& c) const;
+    void devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& props) const;
 
   private:
     const std::initializer_list<const char*>& checkValidationLayerSupport();

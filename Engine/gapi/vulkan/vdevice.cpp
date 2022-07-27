@@ -209,52 +209,6 @@ VDevice::SwapChainSupport VDevice::querySwapChainSupport(VkPhysicalDevice device
   }
 
 void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
-  auto ext = extensionsList(pdev);
-
-  std::vector<const char*> rqExt = requiredExtensions;
-  if(checkForExt(ext,VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME)) {
-    props.hasMemRq2 = true;
-    rqExt.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
-    }
-  if(checkForExt(ext,VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME)) {
-    props.hasDedicatedAlloc = true;
-    rqExt.push_back(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
-    }
-  if(api.hasDeviceFeatures2 && checkForExt(ext,VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME)) {
-    props.hasSync2 = true;
-    rqExt.push_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
-    }
-  if(api.hasDeviceFeatures2 && checkForExt(ext,VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME)) {
-    props.hasDeviceAddress = true;
-    rqExt.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
-    }
-  if(api.hasDeviceFeatures2 && checkForExt(ext,VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME)) {
-    rqExt.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
-    }
-  if(api.hasDeviceFeatures2 && checkForExt(ext,VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME)) {
-    rqExt.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
-    }
-  if(api.hasDeviceFeatures2 && checkForExt(ext,VK_KHR_SPIRV_1_4_EXTENSION_NAME)) {
-    rqExt.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
-    }
-  if(api.hasDeviceFeatures2 && checkForExt(ext,VK_KHR_RAY_QUERY_EXTENSION_NAME)) {
-    rqExt.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
-    }
-  if(api.hasDeviceFeatures2 && checkForExt(ext,VK_NV_MESH_SHADER_EXTENSION_NAME)) {
-    rqExt.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
-    }
-  if(api.hasDeviceFeatures2 && checkForExt(ext,VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME)) {
-    props.hasDescIndexing = true;
-    rqExt.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
-    }
-  /*
-   * //TODO: enable once validation layers have full support for dynamic rendering
-  if(api.hasDeviceFeatures2 && checkForExt(ext,VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)) {
-    props.hasDynRendering = true;
-    rqExt.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
-    }
-    */
-
   std::array<uint32_t,2>  uniqueQueueFamilies = {props.graphicsFamily, props.presentFamily};
   float                   queuePriority       = 1.0f;
   size_t                  queueCnt            = 0;
@@ -280,6 +234,35 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
 
     q.family = family;
     queueCnt++;
+    }
+
+  std::vector<const char*> rqExt = requiredExtensions;
+  if(props.hasMemRq2) {
+    rqExt.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
+    }
+  if(props.hasDedicatedAlloc) {
+    rqExt.push_back(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
+    }
+  if(props.hasSync2) {
+    rqExt.push_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
+    }
+  if(props.hasDeviceAddress) {
+    rqExt.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+    }
+  if(props.raytracing.rayQuery) {
+    rqExt.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+    rqExt.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+    rqExt.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+    rqExt.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+    }
+  if(props.meshlets.meshShader) {
+    rqExt.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
+    }
+  if(props.hasDescIndexing) {
+    rqExt.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+    }
+  if(props.hasDynRendering) {
+    rqExt.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
     }
 
   VkPhysicalDeviceFeatures supportedFeatures={};
@@ -310,9 +293,6 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     features.sType    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
     features.features = deviceFeatures;
 
-    VkPhysicalDeviceProperties2 properties = {};
-    properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
-
     VkPhysicalDeviceDynamicRenderingFeaturesKHR dynRendering = {};
     dynRendering.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
 
@@ -330,9 +310,6 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
 
     VkPhysicalDeviceMeshShaderFeaturesNV meshFeatures = {};
     meshFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
-
-    VkPhysicalDeviceMeshShaderPropertiesNV meshProperties = {};
-    meshProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
 
     VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = {};
     indexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
@@ -360,17 +337,13 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     if(props.meshlets.meshShader) {
       meshFeatures.pNext = features.pNext;
       features.pNext = &meshFeatures;
-
-      meshProperties.pNext = properties.pNext;
-      properties.pNext = &meshProperties;
       }
     if(props.hasDescIndexing) {
       indexingFeatures.pNext = features.pNext;
       features.pNext = &indexingFeatures;
       }
 
-    auto vkGetPhysicalDeviceFeatures2   = PFN_vkGetPhysicalDeviceFeatures2  (vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2KHR"));
-    auto vkGetPhysicalDeviceProperties2 = PFN_vkGetPhysicalDeviceProperties2(vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceProperties2KHR"));
+    auto vkGetPhysicalDeviceFeatures2 = PFN_vkGetPhysicalDeviceFeatures2  (vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2KHR"));
 
     vkGetPhysicalDeviceFeatures2(pdev, &features);
     bdaFeatures.bufferDeviceAddressCaptureReplay  = VK_FALSE;
@@ -379,29 +352,6 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     asFeatures.accelerationStructureIndirectBuild = VK_FALSE;
     asFeatures.accelerationStructureHostCommands  = VK_FALSE;
     asFeatures.descriptorBindingAccelerationStructureUpdateAfterBind = VK_FALSE;
-
-    vkGetPhysicalDeviceProperties2(pdev, &properties);
-
-    props.hasSync2                  = (sync2.synchronization2==VK_TRUE);
-    props.hasDynRendering           = (dynRendering.dynamicRendering==VK_TRUE);
-    props.hasDeviceAddress          = (bdaFeatures.bufferDeviceAddress==VK_TRUE);
-    props.raytracing.rayQuery       = (rayQueryFeatures.rayQuery==VK_TRUE);
-    props.meshlets.taskShader       = (meshFeatures.taskShader==VK_TRUE);
-    props.meshlets.meshShader       = (meshFeatures.meshShader==VK_TRUE);
-    props.meshlets.maxMeshGroups    = meshProperties.maxDrawMeshTasksCount;
-    props.meshlets.maxMeshGroupSize = meshProperties.maxMeshWorkGroupSize[0];
-
-    if(!props.meshlets.meshShader) {
-      props.meshlets.meshShaderEmulated = true;
-      }
-
-    if(indexingFeatures.runtimeDescriptorArray!=VK_FALSE) {
-      props.bindless.nonUniformIndexing =
-          (indexingFeatures.shaderUniformBufferArrayNonUniformIndexing==VK_TRUE) &&
-          (indexingFeatures.shaderSampledImageArrayNonUniformIndexing ==VK_TRUE) &&
-          (indexingFeatures.shaderStorageBufferArrayNonUniformIndexing==VK_TRUE) &&
-          (indexingFeatures.shaderStorageImageArrayNonUniformIndexing ==VK_TRUE);
-      }
 
     createInfo.pNext            = &features;
     createInfo.pEnabledFeatures = nullptr;
