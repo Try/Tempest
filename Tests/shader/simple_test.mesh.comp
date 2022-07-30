@@ -110,10 +110,10 @@ void main() {
     }
 
   // Fair counting of indices
-  atomicAdd(indirect.indexCount,    indSize);
-  atomicAdd(indirect.instanceCount, indMax*varSize); // abuse: vbo size
-
   uint maxVertex = indMax+1;
+  atomicAdd(indirect.indexCount,    indSize);
+  atomicAdd(indirect.instanceCount, maxVertex*varSize); // abuse: vbo size
+
   uint maxVar    = maxVertex*varSize;
   uint heapDest  = atomicAdd(var.grow, indSize + maxVar);
   uint varDest   = heapDest + indSize;
