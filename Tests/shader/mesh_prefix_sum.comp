@@ -8,7 +8,7 @@ struct IndirectCmd {
   uint    firstInstance; // caps: should be zero
 
   uint    self;
-  uint    padd0;
+  uint    vboOffset;
   uint    padd1;
   };
 
@@ -16,9 +16,16 @@ layout(binding = 0, std430) buffer EngineInternal0 {
   IndirectCmd cmd[];
   } indirect;
 
+layout(set = 0, binding = 1, std430) buffer EngineInternal2 {
+  uint    grow;
+  uint    heap[];
+  } var;
+
 layout(local_size_x = 256) in;
 
-shared uint partialSumm[gl_WorkGroupSize.x];
+shared uint maxInd;
+shared uint partialSummIbo[gl_WorkGroupSize.x];
+shared uint partialSummVbo[gl_WorkGroupSize.x];
 
 void main() {
   uint index = gl_LocalInvocationID.x;
@@ -27,23 +34,43 @@ void main() {
   uint b = ((index+0)*len)/gl_WorkGroupSize.x;
   uint e = ((index+1)*len)/gl_WorkGroupSize.x;
 
-  uint sum = 0;
-  for(uint i=b; i<e; ++i)
-    sum += indirect.cmd[i].indexCount;
-  partialSumm[index] = sum;
+  uint sumVbo = 0;
+  uint sumIbo = 0;
+  for(uint i=b; i<e; ++i) {
+    sumVbo += indirect.cmd[i].indexCount;
+    sumIbo += indirect.cmd[i].instanceCount;
+    }
+  partialSummIbo[index] = sumVbo;
+  partialSummVbo[index] = sumIbo;
 
   memoryBarrierShared();
   barrier();
 
-  uint prefix = 0;
-  for(uint i=0; i<index; ++i)
-    prefix += partialSumm[i];
+  uint prefixIbo = 0;
+  uint prefixVbo = 0;
+  for(uint i=0; i<index; ++i) {
+    prefixIbo += partialSummIbo[i];
+    prefixVbo += partialSummVbo[i];
+    }
+  if(index==255) {
+    maxInd = prefixIbo + partialSummIbo[index];
+    }
+
+  memoryBarrierShared();
+  barrier();
 
   for(uint i=b; i<e; ++i) {
-    uint s = prefix;
-    prefix += indirect.cmd[i].indexCount;
+    uint s = prefixIbo;
+    prefixIbo += indirect.cmd[i].indexCount;
 
-    indirect.cmd[i].firstIndex = s;
-    indirect.cmd[i].indexCount = 0;
+    uint v = prefixVbo;
+    prefixVbo += indirect.cmd[i].instanceCount;
+
+    indirect.cmd[i].indexCount    = 0;
+    indirect.cmd[i].instanceCount = 1;
+    indirect.cmd[i].firstIndex    = s;
+    indirect.cmd[i].vertexOffset  = 0;
+    indirect.cmd[i].firstInstance = 0;
+    indirect.cmd[i].vboOffset     = maxInd + v;
     }
   }

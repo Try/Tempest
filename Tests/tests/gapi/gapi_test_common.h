@@ -1461,14 +1461,13 @@ void MeshComputePrototype(const char* outImg) {
 
   struct VkDrawIndexedIndirectCommand {
     uint32_t    indexCount    = 0;
-    uint32_t    instanceCount = 1;
+    uint32_t    instanceCount = 0;
     uint32_t    firstIndex    = 0;
-    int32_t     vertexOffset;
-    uint32_t    firstInstance;
-
-    uint32_t    self    = 0xFFFFFFFF;
-    uint32_t    padd0   = 0x0BADF00D;
-    uint32_t    padd1   = 0x0BADF00D;
+    int32_t     vertexOffset  = 0;
+    uint32_t    firstInstance = 0;
+    uint32_t    self          = 0;
+    uint32_t    vboOffset     = 0;
+    uint32_t    padd1         = 0;
     };
   static_assert(sizeof(VkDrawIndexedIndirectCommand)==32);
 
@@ -1493,11 +1492,8 @@ void MeshComputePrototype(const char* outImg) {
     auto vbo  = device.vbo(vboData,3);
 
     VkDrawIndexedIndirectCommand ix[2] = {};
-    ix[0].self       = 0;
-    ix[0].firstIndex = 0;
-
-    ix[1].self       = 1;
-    ix[1].firstIndex = 0;
+    ix[0].self = 0;
+    ix[1].self = 1;
     auto indirect = device.ssbo(ix,sizeof(ix));
 
     auto var  = device.ssbo(nullptr, 4*16*1024);     // big buffer for meshlet data
@@ -1529,6 +1525,7 @@ void MeshComputePrototype(const char* outImg) {
     auto psoSum = device.pipeline(shSum);
     auto uboSum = device.descriptors(psoSum);
     uboSum.set(0, indirect);
+    uboSum.set(1, var);
 
     auto shCompactage  = device.shader("shader/mesh_compactage.comp.sprv");
     auto psoCompactage = device.pipeline(shCompactage);
@@ -1543,7 +1540,6 @@ void MeshComputePrototype(const char* outImg) {
       auto enc = cmd.startEncoding(device);
       enc.setUniforms(psoMs,ubo0);
       enc.dispatch(3, 1,1);
-
       enc.setUniforms(psoMs,ubo1);
       enc.dispatch(2, 1,1);
       // ^ 3+2 meshlets
@@ -1551,6 +1547,7 @@ void MeshComputePrototype(const char* outImg) {
       // prefix summ pass
       enc.setUniforms(psoSum,uboSum);
       enc.dispatch(1,1,1);
+
       // should be dispatch-indirect
       enc.setUniforms(psoCompactage,uboCompactage);
       enc.dispatch(5,1,1);
@@ -1561,13 +1558,46 @@ void MeshComputePrototype(const char* outImg) {
     sync.wait();
 
     std::vector<uint32_t> meshCpu(mesh.size()/4);
-    std::vector<float>    varCpu (var.size()/4);
+    std::vector<uint32_t> varCpu (var.size()/4);
     device.readBytes(mesh,    meshCpu.data(), mesh.size());
     device.readBytes(var,     varCpu.data(),  var.size() );
     device.readBytes(indirect,ix,indirect.size());
 
     std::vector<uint32_t> flatCpu(flat.size()/4);
     device.readBytes(flat,flatCpu.data(),flat.size());
+
+    EXPECT_EQ(meshCpu[0],5);
+    for(uint32_t i=0; i<meshCpu[0]; ++i) {
+      uint32_t self = meshCpu[3+i*3+0];
+      uint32_t heap = meshCpu[3+i*3+1];
+      uint32_t desc = meshCpu[3+i*3+2];
+
+      uint32_t indSize   = (desc       ) & 0x3FF;
+      uint32_t maxVertex = (desc >> 10 ) & 0xFF;
+      uint32_t varSize   = (desc >> 18u);
+
+      Log::i("{self=",self,", heap=",heap,", gl_PrimitiveCountNV=",indSize,", varSize=",varSize,", maxVertex=",maxVertex,"}");
+      }
+
+    for(uint32_t i=0; i<2; ++i) {
+      Log::i("{indexCount=",ix[i].indexCount,", instanceCount=",ix[i].instanceCount,
+             ", firstIndex=",ix[i].firstIndex,", vertexOffset=",ix[i].vertexOffset,
+             ", firstInstance=",ix[i].firstInstance, ", v = ",ix[i].vboOffset,"}");
+      }
+
+    for(uint32_t i=0; i<2; ++i) {
+      std::stringstream ibo,vbo;
+      for(uint32_t r=0; r<ix[i].indexCount; ++r) {
+        uint32_t idx = flatCpu[ix[i].firstIndex+r];
+        ibo << idx << ", ";
+
+        auto *v = reinterpret_cast<const float*>(&flatCpu[idx]);
+        vbo << "{" << v[0] <<", " << v[1] << ", " << v[2] << "}, ";
+        }
+      Log::d(ibo.str());
+      Log::d(vbo.str());
+      }
+
     EXPECT_EQ(ix[0].indexCount,9);
     EXPECT_EQ(ix[1].indexCount,6);
     }
