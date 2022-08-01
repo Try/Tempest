@@ -22,7 +22,7 @@ class VulkanApi : public AbstractGraphicsApi {
     Swapchain*     createSwapchain(SystemApi::Window* w, Device *d) override;
 
     PPipelineLay   createPipelineLayout(Device *d, const Shader*const* sh, size_t count) override;
-    PPipeline      createPipeline(Device* d, const RenderState &st, size_t stride, Topology tp,
+    PPipeline      createPipeline(Device* d, const RenderState &st, Topology tp,
                                   const PipelineLay& ulayImpl, const Shader*const* sh, size_t cnt) override;
     PCompPipeline  createComputePipeline(Device* d,
                                          const PipelineLay &ulayImpl,

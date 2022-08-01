@@ -20,42 +20,43 @@ class VPipelineLay;
 class VPipeline : public AbstractGraphicsApi::Pipeline {
   public:
     VPipeline();
-    VPipeline(VDevice &device,
-              const RenderState &st, size_t stride, Topology tp, const VPipelineLay& ulay,
+    VPipeline(VDevice &device, const RenderState &st, Topology tp, const VPipelineLay& ulay,
               const VShader** sh, size_t count);
     VPipeline(VPipeline&& other) = delete;
     ~VPipeline();
 
     struct Inst {
-      Inst(VkPipeline val):val(val){}
+      Inst(VkPipeline val, size_t stride):val(val),stride(stride){}
       Inst(Inst&&)=default;
       Inst& operator = (Inst&&)=default;
 
       VkPipeline val;
+      size_t     stride;
       };
 
     VkPipelineLayout   pipelineLayout = VK_NULL_HANDLE;
     VkShaderStageFlags pushStageFlags = 0;
     uint32_t           pushSize       = 0;
+    size_t             defaultStride  = 0;
 
-    VkPipeline         instance(const std::shared_ptr<VFramebufferMap::RenderPass>& lay);
-    VkPipeline         instance(const VkPipelineRenderingCreateInfoKHR& info);
+    VkPipeline         instance(const std::shared_ptr<VFramebufferMap::RenderPass>& lay, size_t stride);
+    VkPipeline         instance(const VkPipelineRenderingCreateInfoKHR& info, size_t stride);
 
   private:
     struct InstRp : Inst {
-      InstRp(const std::shared_ptr<VFramebufferMap::RenderPass>& lay, VkPipeline val):Inst(val),lay(lay){}
+      InstRp(const std::shared_ptr<VFramebufferMap::RenderPass>& lay, size_t stride, VkPipeline val):Inst(val,stride),lay(lay){}
       std::shared_ptr<VFramebufferMap::RenderPass> lay;
       };
 
     struct InstDr : Inst {
-      InstDr(const VkPipelineRenderingCreateInfoKHR& lay, VkPipeline val):Inst(val),lay(lay){}
+      InstDr(const VkPipelineRenderingCreateInfoKHR& lay, size_t stride, VkPipeline val):Inst(val,stride),lay(lay){}
       VkPipelineRenderingCreateInfoKHR lay;
-      bool                             isCompatible(const VkPipelineRenderingCreateInfoKHR& dr) const;
+      bool                             isCompatible(const VkPipelineRenderingCreateInfoKHR& dr, size_t stride) const;
       };
 
     VkDevice                               device=nullptr;
     Tempest::RenderState                   st;
-    size_t                                 declSize=0, stride=0;
+    size_t                                 declSize=0;
     Topology                               tp = Topology::Triangles;
     DSharedPtr<const VShader*>             modules[5] = {};
     std::unique_ptr<Decl::ComponentType[]> decl;

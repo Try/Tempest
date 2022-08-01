@@ -240,6 +240,18 @@ inline VkShaderStageFlagBits nativeFormat(ShaderReflection::Stage st) {
   return VkShaderStageFlagBits(stageFlags);
   }
 
+inline VkPrimitiveTopology nativeFormat(Topology tp) {
+  switch(tp) {
+    case Topology::Points:
+      return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+    case Topology::Lines:
+      return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+    case Topology::Triangles:
+      return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    }
+  return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+  }
+
 class VDevice : public AbstractGraphicsApi::Device {
   private:
     class DataStream;

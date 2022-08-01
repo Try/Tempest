@@ -48,26 +48,29 @@ class Encoder<Tempest::CommandBuffer> {
     void setScissor(int x,int y,int w,int h);
     void setScissor(const Rect& vp);
 
-    template<class T>
-    void draw(const VertexBuffer<T>& vbo) { implDraw(vbo.impl,0,vbo.size(),0,1); }
+    void draw(const size_t vertexCount) { implDraw(vertexCount,0,1); }
+    void draw(const size_t vertexCount, size_t firstInstance, size_t instanceCount) { implDraw(vertexCount,firstInstance,instanceCount); }
 
     template<class T>
-    void draw(const VertexBuffer<T>& vbo,size_t offset,size_t count) { implDraw(vbo.impl,offset,count,0,1); }
+    void draw(const VertexBuffer<T>& vbo) { implDraw(vbo.impl,sizeof(T),0,vbo.size(),0,1); }
 
     template<class T>
-    void draw(const VertexBuffer<T>& vbo,size_t offset,size_t count,size_t firstInstance,size_t instanceCount) { implDraw(vbo.impl,offset,count,firstInstance,instanceCount); }
+    void draw(const VertexBuffer<T>& vbo,size_t offset,size_t count) { implDraw(vbo.impl,sizeof(T),offset,count,0,1); }
+
+    template<class T>
+    void draw(const VertexBuffer<T>& vbo,size_t offset,size_t count,size_t firstInstance,size_t instanceCount) { implDraw(vbo.impl,sizeof(T),offset,count,firstInstance,instanceCount); }
 
     template<class T,class I>
     void draw(const VertexBuffer<T>& vbo,const IndexBuffer<I>& ibo)
-         { implDraw(vbo.impl,ibo.impl,Detail::indexCls<I>(),0,ibo.size(),0,1); }
+         { implDraw(vbo.impl,sizeof(T),ibo.impl,Detail::indexCls<I>(),0,ibo.size(),0,1); }
 
     template<class T,class I>
     void draw(const VertexBuffer<T>& vbo,const IndexBuffer<I>& ibo,size_t offset,size_t count)
-         { implDraw(vbo.impl,ibo.impl,Detail::indexCls<I>(),offset,count,0,1); }
+         { implDraw(vbo.impl,sizeof(T),ibo.impl,Detail::indexCls<I>(),offset,count,0,1); }
 
     template<class T,class I>
     void draw(const VertexBuffer<T>& vbo,const IndexBuffer<I>& ibo,size_t offset,size_t count,size_t firstInstance,size_t instanceCount)
-         { implDraw(vbo.impl,ibo.impl,Detail::indexCls<I>(),offset,count,firstInstance,instanceCount); }
+         { implDraw(vbo.impl,sizeof(T),ibo.impl,Detail::indexCls<I>(),offset,count,firstInstance,instanceCount); }
     void dispatchMesh(size_t firstInstance, size_t instanceCount);
 
     void dispatch(size_t x, size_t y=1, size_t z=1);
@@ -79,7 +82,7 @@ class Encoder<Tempest::CommandBuffer> {
     void generateMipmaps(Attachment& tex);
 
   private:
-    Encoder(CommandBuffer* ow);
+    explicit Encoder(CommandBuffer* ow);
 
     enum Stage : uint8_t {
       None = 0,
@@ -97,8 +100,9 @@ class Encoder<Tempest::CommandBuffer> {
     State                               state;
 
     void         implSetFramebuffer(const AttachmentDesc* rt, size_t rtSize, const AttachmentDesc* zs);
-    void         implDraw(const VideoBuffer& vbo, size_t offset, size_t size, size_t firstInstance, size_t instanceCount);
-    void         implDraw(const VideoBuffer &vbo, const VideoBuffer &ibo, Detail::IndexClass index,
+    void         implDraw(size_t size, size_t firstInstance, size_t instanceCount);
+    void         implDraw(const VideoBuffer& vbo, size_t stride, size_t offset, size_t size, size_t firstInstance, size_t instanceCount);
+    void         implDraw(const VideoBuffer& vbo, size_t stride, const VideoBuffer &ibo, Detail::IndexClass index,
                           size_t offset, size_t size, size_t firstInstance, size_t instanceCount);
 
   friend class CommandBuffer;

@@ -68,7 +68,7 @@ AbstractGraphicsApi::Swapchain *MetalApi::createSwapchain(SystemApi::Window *w,
   }
 
 AbstractGraphicsApi::PPipeline MetalApi::createPipeline(AbstractGraphicsApi::Device *d,
-                                                        const RenderState &st, size_t stride,
+                                                        const RenderState &st,
                                                         Topology tp,
                                                         const AbstractGraphicsApi::PipelineLay &ulayImpl,
                                                         const AbstractGraphicsApi::Shader*const* sh,
@@ -78,7 +78,7 @@ AbstractGraphicsApi::PPipeline MetalApi::createPipeline(AbstractGraphicsApi::Dev
   const Detail::MtShader* shader[5] = {};
   for(size_t i=0; i<cnt; ++i)
     shader[i] = reinterpret_cast<const Detail::MtShader*>(sh[i]);
-  return PPipeline(new MtPipeline(dx,tp,st,stride,lay, shader,cnt));
+  return PPipeline(new MtPipeline(dx,tp,st,lay, shader,cnt));
   }
 
 AbstractGraphicsApi::PCompPipeline MetalApi::createComputePipeline(AbstractGraphicsApi::Device *d,

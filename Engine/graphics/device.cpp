@@ -266,21 +266,28 @@ ComputePipeline Device::pipeline(const Shader& comp) {
   return f;
   }
 
-RenderPipeline Device::implPipeline(const RenderState &st,
-                                    const Shader* sh[],
-                                    size_t   stride,
-                                    Topology tp) {
-  if(sh[0]==nullptr || sh[4]==nullptr)
-    return RenderPipeline();
-  if(!sh[0]->impl || !sh[4]->impl)
-    return RenderPipeline();
+RenderPipeline Device::pipeline(Topology tp, const RenderState &st, const Shader &vs, const Shader &fs) {
+  const Shader* sh[] = {&vs,nullptr,nullptr,nullptr,&fs};
+  return implPipeline(st,sh,tp);
+  }
 
+RenderPipeline Device::pipeline(Topology tp, const RenderState &st, const Shader &vs, const Shader &gs, const Shader &fs) {
+  const Shader* sh[] = {&vs,nullptr,nullptr,&gs,&fs};
+  return implPipeline(st,sh,tp);
+  }
+
+RenderPipeline Device::pipeline(Topology tp, const RenderState &st, const Shader &vs, const Shader &tc, const Shader &te, const Shader &fs) {
+  const Shader* sh[] = {&vs,&tc,&te,nullptr,&fs};
+  return implPipeline(st,sh,tp);
+  }
+
+RenderPipeline Device::implPipeline(const RenderState &st, const Shader* sh[], Topology tp) {
   AbstractGraphicsApi::Shader* shv[5] = {};
   for(size_t i=0; i<5; ++i)
     shv[i] = sh[i]!=nullptr ? sh[i]->impl.handler : nullptr;
 
   auto ulay = api.createPipelineLayout(dev,shv,5);
-  auto pipe = api.createPipeline(dev,st,stride,tp,*ulay.handler,shv,5);
+  auto pipe = api.createPipeline(dev,st,tp,*ulay.handler,shv,5);
   RenderPipeline f(std::move(pipe),std::move(ulay));
   return f;
   }
@@ -291,7 +298,7 @@ RenderPipeline Device::pipeline(const RenderState& st, const Shader& ts, const S
   for(size_t i=0; i<3; ++i)
     shv[i] = sh[i]!=nullptr ? sh[i]->impl.handler : nullptr;
   auto ulay = api.createPipelineLayout(dev,shv,3);
-  auto pipe = api.createPipeline(dev,st,0,Topology::Triangles,*ulay.handler,shv,3);
+  auto pipe = api.createPipeline(dev,st,Topology::Triangles,*ulay.handler,shv,3);
   RenderPipeline f(std::move(pipe),std::move(ulay));
   return f;
   }

@@ -447,7 +447,6 @@ void DxCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
 
 void DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p) {
   DxPipeline& px = reinterpret_cast<DxPipeline&>(p);
-  vboStride          = px.stride;
   pushBaseInstanceId = px.pushBaseInstanceId;
 
   impl->SetPipelineState(&px.instance(fboLayout));
@@ -562,19 +561,19 @@ void Tempest::Detail::DxCommandBuffer::prepareDraw(size_t voffset, size_t firstI
     }
   }
 
-void DxCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t offset, size_t vertexCount,
+void DxCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t stride, size_t offset, size_t vertexCount,
                            size_t firstInstance, size_t instanceCount) {
   prepareDraw(offset, firstInstance);
   const DxBuffer& vbo = reinterpret_cast<const DxBuffer&>(ivbo);
   D3D12_VERTEX_BUFFER_VIEW view;
   view.BufferLocation = vbo.impl.get()->GetGPUVirtualAddress();
   view.SizeInBytes    = vbo.sizeInBytes;
-  view.StrideInBytes  = vboStride;
+  view.StrideInBytes  = UINT(stride);
   impl->IASetVertexBuffers(0,1,&view);
   impl->DrawInstanced(UINT(vertexCount),UINT(instanceCount),UINT(offset),UINT(firstInstance));
   }
 
-void DxCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_t voffset,
+void DxCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_t stride, size_t voffset,
                                   const AbstractGraphicsApi::Buffer& iibo, Detail::IndexClass cls, size_t ioffset, size_t isize,
                                   size_t firstInstance, size_t instanceCount) {
   prepareDraw(voffset, firstInstance);
@@ -584,7 +583,7 @@ void DxCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_
   D3D12_VERTEX_BUFFER_VIEW view;
   view.BufferLocation = vbo.impl.get()->GetGPUVirtualAddress();
   view.SizeInBytes    = vbo.sizeInBytes;
-  view.StrideInBytes  = vboStride;
+  view.StrideInBytes  = UINT(stride);
   impl->IASetVertexBuffers(0,1,&view);
 
   D3D12_INDEX_BUFFER_VIEW iview;

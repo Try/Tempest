@@ -14,7 +14,9 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-bool VPipeline::InstDr::isCompatible(const VkPipelineRenderingCreateInfoKHR& dr) const {
+bool VPipeline::InstDr::isCompatible(const VkPipelineRenderingCreateInfoKHR& dr, size_t stride) const {
+  if(this->stride!=stride)
+    return false;
   if(lay.viewMask!=dr.viewMask)
     return false;
   if(lay.colorAttachmentCount!=dr.colorAttachmentCount)
@@ -31,10 +33,10 @@ bool VPipeline::InstDr::isCompatible(const VkPipelineRenderingCreateInfoKHR& dr)
 VPipeline::VPipeline(){
   }
 
-VPipeline::VPipeline(VDevice& device, const RenderState& st, size_t stride, Topology tp,
+VPipeline::VPipeline(VDevice& device, const RenderState& st, Topology tp,
                      const VPipelineLay& ulay,
                      const VShader** sh, size_t count)
-  : device(device.device.impl), st(st), stride(stride), tp(tp)  {
+  : device(device.device.impl), st(st), tp(tp)  {
   try {
     for(size_t i=0; i<count; ++i)
       if(sh[i]!=nullptr)
@@ -44,6 +46,10 @@ VPipeline::VPipeline(VDevice& device, const RenderState& st, size_t stride, Topo
       declSize = vert->vdecl.size();
       decl.reset(new Decl::ComponentType[declSize]);
       std::memcpy(decl.get(),vert->vdecl.data(),declSize*sizeof(Decl::ComponentType));
+      defaultStride = 0;
+      for(size_t i=0;i<declSize;++i){
+        defaultStride += uint32_t(Decl::size(decl[i]));
+        }
       }
 
     pipelineLayout = initLayout(device.device.impl,ulay,pushStageFlags,pushSize);
@@ -58,18 +64,18 @@ VPipeline::~VPipeline() {
   cleanup();
   }
 
-VkPipeline VPipeline::instance(const std::shared_ptr<VFramebufferMap::RenderPass>& pass) {
+VkPipeline VPipeline::instance(const std::shared_ptr<VFramebufferMap::RenderPass>& pass, size_t stride) {
   std::lock_guard<SpinLock> guard(sync);
 
   for(auto& i:instRp)
-    if(i.lay->isCompatible(*pass))
+    if(i.stride!=stride || i.lay->isCompatible(*pass))
       return i.val;
   VkPipeline val=VK_NULL_HANDLE;
   try {
     val = initGraphicsPipeline(device,pipelineLayout,pass.get(),nullptr,st,
                                decl.get(),declSize,stride,
                                tp,modules);
-    instRp.emplace_back(pass,val);
+    instRp.emplace_back(pass,stride,val);
     }
   catch(...) {
     if(val!=VK_NULL_HANDLE)
@@ -79,18 +85,18 @@ VkPipeline VPipeline::instance(const std::shared_ptr<VFramebufferMap::RenderPass
   return instRp.back().val;
   }
 
-VkPipeline VPipeline::instance(const VkPipelineRenderingCreateInfoKHR& info) {
+VkPipeline VPipeline::instance(const VkPipelineRenderingCreateInfoKHR& info, size_t stride) {
   std::lock_guard<SpinLock> guard(sync);
 
   for(auto& i:instDr)
-    if(i.isCompatible(info))
+    if(i.isCompatible(info,stride))
       return i.val;
   VkPipeline val=VK_NULL_HANDLE;
   try {
     val = initGraphicsPipeline(device,pipelineLayout,nullptr,&info,st,
                                decl.get(),declSize,stride,
                                tp,modules);
-    instDr.emplace_back(info,val);
+    instDr.emplace_back(info,stride,val);
     }
   catch(...) {
     if(val!=VK_NULL_HANDLE)
@@ -205,9 +211,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
 
   if(findShader(ShaderReflection::Stage::Vertex)!=nullptr) {
     inputAssembly.primitiveRestartEnable = VK_FALSE;
-    if(tp==Triangles)
-      inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; else
-      inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+    inputAssembly.topology               = nativeFormat(tp);
     if(useTesselation)
       inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
     } else {

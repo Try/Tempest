@@ -38,13 +38,13 @@ Builtin::Item Builtin::mkShaderSet(bool textures) {
   stAlpha.setZWriteEnabled(false);
 
   Item ret;
-  ret.pen    = device.pipeline<PaintDevice::Point>(Lines,    stNormal,vs,fs);
-  ret.brush  = device.pipeline<PaintDevice::Point>(Triangles,stNormal,vs,fs);
+  ret.pen    = device.pipeline(Lines,    stNormal,vs,fs);
+  ret.brush  = device.pipeline(Triangles,stNormal,vs,fs);
 
-  ret.penB   = device.pipeline<PaintDevice::Point>(Lines,    stBlend,vs,fs);
-  ret.brushB = device.pipeline<PaintDevice::Point>(Triangles,stBlend,vs,fs);
+  ret.penB   = device.pipeline(Lines,    stBlend,vs,fs);
+  ret.brushB = device.pipeline(Triangles,stBlend,vs,fs);
 
-  ret.penA   = device.pipeline<PaintDevice::Point>(Lines,    stAlpha,vs,fs);
-  ret.brushA = device.pipeline<PaintDevice::Point>(Triangles,stAlpha,vs,fs);
+  ret.penA   = device.pipeline(Lines,    stAlpha,vs,fs);
+  ret.brushA = device.pipeline(Triangles,stAlpha,vs,fs);
   return ret;
   }

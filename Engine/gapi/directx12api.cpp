@@ -16,7 +16,6 @@
 #include "directx12/dxswapchain.h"
 #include "directx12/dxfence.h"
 #include "directx12/dxdescriptorarray.h"
-#include "directx12/dxfbolayout.h"
 #include "directx12/dxaccelerationstructure.h"
 
 #include <Tempest/Pixmap>
@@ -165,7 +164,7 @@ AbstractGraphicsApi::Swapchain* DirectX12Api::createSwapchain(SystemApi::Window*
   return new Detail::DxSwapchain(*dx,*impl->DXGIFactory,w);
   }
 
-AbstractGraphicsApi::PPipeline DirectX12Api::createPipeline(AbstractGraphicsApi::Device* d, const RenderState& st, size_t stride,
+AbstractGraphicsApi::PPipeline DirectX12Api::createPipeline(AbstractGraphicsApi::Device* d, const RenderState& st,
                                                             Topology tp, const PipelineLay& ulayImpl,
                                                             const Shader*const*sh, size_t cnt) {
   auto* dx   = reinterpret_cast<Detail::DxDevice*>(d);
@@ -173,7 +172,7 @@ AbstractGraphicsApi::PPipeline DirectX12Api::createPipeline(AbstractGraphicsApi:
   const Detail::DxShader* shader[5] = {};
   for(size_t i=0; i<cnt; ++i)
     shader[i] = reinterpret_cast<const Detail::DxShader*>(sh[i]);
-  return PPipeline(new Detail::DxPipeline(*dx,st,stride,tp,ul,shader,cnt));
+  return PPipeline(new Detail::DxPipeline(*dx,st,tp,ul,shader,cnt));
   }
 
 AbstractGraphicsApi::PCompPipeline DirectX12Api::createComputePipeline(AbstractGraphicsApi::Device* d,

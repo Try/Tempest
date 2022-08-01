@@ -95,8 +95,9 @@ namespace Tempest {
     };
 
   enum Topology : uint8_t {
+    Points   =0,
     Lines    =1,
-    Triangles=2
+    Triangles=2,
     };
 
   enum TextureFormat : uint8_t {
@@ -494,9 +495,10 @@ namespace Tempest {
         virtual void setViewport(const Rect& r)=0;
         virtual void setScissor (const Rect& r)=0;
 
-        virtual void draw        (const Buffer& vbo, size_t offset, size_t vertexCount,
+        virtual void draw        (size_t vsize, size_t firstInstance, size_t instanceCount);
+        virtual void draw        (const Buffer& vbo, size_t stride, size_t offset, size_t vertexCount,
                                   size_t firstInstance, size_t instanceCount)=0;
-        virtual void drawIndexed (const Buffer& vbo, size_t voffset,
+        virtual void drawIndexed (const Buffer& vbo, size_t stride, size_t voffset,
                                   const Buffer& ibo, Detail::IndexClass cls, size_t ioffset, size_t isize,
                                   size_t firstInstance, size_t instanceCount)=0;
         virtual void dispatch    (size_t x, size_t y, size_t z)=0;
@@ -521,7 +523,7 @@ namespace Tempest {
       virtual PPipelineLay
                          createPipelineLayout(Device *d, const Shader* const* sh, size_t count) = 0;
 
-      virtual PPipeline  createPipeline(Device* d, const RenderState &st, size_t stride, Topology tp,
+      virtual PPipeline  createPipeline(Device* d, const RenderState &st, Topology tp,
                                         const PipelineLay &ulayImpl, const Shader* const* sh, size_t cnt)=0;
 
       virtual PCompPipeline createComputePipeline(Device* d,

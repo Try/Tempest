@@ -295,7 +295,7 @@ TEST(DirectX12Api,SpirvDefect_Link) {
 
     auto vert = device.shader("shader/link_defect.vert.sprv");
     auto frag = device.shader("shader/link_defect.frag.sprv");
-    auto pso  = device.pipeline<GapiTestCommon::Vertex>(Topology::Triangles,RenderState(),vert,frag);
+    auto pso  = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
 
     auto tex  = device.attachment(Tempest::TextureFormat::RGBA8,128,128);
     auto cmd  = device.commandBuffer();

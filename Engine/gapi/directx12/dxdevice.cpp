@@ -6,8 +6,6 @@
 #include "guid.h"
 #include "dxdevice.h"
 
-#include "dxbuffer.h"
-#include "dxtexture.h"
 #include "dxshader.h"
 #include "dxpipeline.h"
 #include "builtin_shader.h"
@@ -74,7 +72,7 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
 
     DxShader* blitSh[2] = {blitVs.handler, blitFs.handler};
     blitLayout  = DSharedPtr<DxPipelineLay*>(new DxPipelineLay(*this,&blitFs.handler->lay));
-    blit        = DSharedPtr<DxPipeline*>   (new DxPipeline   (*this,st,0,Triangles,*blitLayout.handler,blitSh,2));
+    blit        = DSharedPtr<DxPipeline*>   (new DxPipeline   (*this,st,Triangles,*blitLayout.handler,blitSh,2));
     }
 
     {

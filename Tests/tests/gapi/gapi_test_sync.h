@@ -42,7 +42,7 @@ void DispathToDraw(const char* outImage) {
 
     auto vs     = device.shader("shader/simple_test.vert.sprv");
     auto fs     = device.shader("shader/comp_test.frag.sprv");
-    auto psoG   = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vs,fs);
+    auto psoG   = device.pipeline(Topology::Triangles,RenderState(),vs,fs);
 
     auto uboCs  = device.descriptors(psoC.layout());
     uboCs.set(0,ssbo);
@@ -93,7 +93,7 @@ void DrawToDispath() {
 
     auto vs     = device.shader("shader/simple_test.vert.sprv");
     auto fs     = device.shader("shader/simple_test.frag.sprv");
-    auto psoG   = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vs,fs);
+    auto psoG   = device.pipeline(Topology::Triangles,RenderState(),vs,fs);
 
     auto uboCs  = device.descriptors(psoC.layout());
     uboCs.set(0,tex);

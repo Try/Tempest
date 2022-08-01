@@ -11,20 +11,15 @@ using namespace Tempest;
 using namespace Tempest::Detail;
 
 DxPipeline::DxPipeline(DxDevice& device,
-                       const RenderState& st, size_t stride, Topology tp, const DxPipelineLay& ulay,
+                       const RenderState& st, Topology tp, const DxPipelineLay& ulay,
                        const DxShader*const* sh, size_t count)
-  : sign(ulay.impl.get()), stride(UINT(stride)),
-    device(device), rState(st) {
+  : sign(ulay.impl.get()), device(device), rState(st) {
   sign.get()->AddRef();
-  static const D3D_PRIMITIVE_TOPOLOGY dxTopolgy[]= {
-    D3D_PRIMITIVE_TOPOLOGY_UNDEFINED,
-    D3D_PRIMITIVE_TOPOLOGY_LINELIST,
-    D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST
-    };
-  topology       = dxTopolgy[int(tp)];
   for(size_t i=0; i<count; ++i)
     if(sh[i]!=nullptr)
       modules[i] = Detail::DSharedPtr<const DxShader*>{sh[i]};
+
+  topology = nativeFormat(tp);
   if(findShader(ShaderReflection::Control)!=nullptr || findShader(ShaderReflection::Evaluate)!=nullptr) {
     if(tp==Triangles)
       topology = D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST; else

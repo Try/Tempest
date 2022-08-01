@@ -162,6 +162,12 @@ TEST(VulkanApi,TesselationBasic) {
 #endif
   }
 
+TEST(VulkanApi,GeomBasic) {
+#if !defined(__OSX__)
+  GapiTestCommon::GeomBasic<VulkanApi>("VulkanApi_GeomBasic.png");
+#endif
+  }
+
 TEST(VulkanApi,SsboWrite) {
 #if !defined(__OSX__)
   GapiTestCommon::SsboWrite<VulkanApi>();

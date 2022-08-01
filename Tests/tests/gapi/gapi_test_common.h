@@ -233,7 +233,7 @@ void Pso() {
 
     auto vert = device.shader("shader/simple_test.vert.sprv");
     auto frag = device.shader("shader/simple_test.frag.sprv");
-    auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
+    auto pso  = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
@@ -255,7 +255,7 @@ void PsoTess() {
 
     auto vert = device.shader("shader/tess.vert.sprv");
     auto frag = device.shader("shader/tess.frag.sprv");
-    auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,tesc,tese,frag);
+    auto pso  = device.pipeline(Topology::Triangles,RenderState(),vert,tesc,tese,frag);
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
@@ -279,7 +279,7 @@ void TesselationBasic(const char* outImg) {
 
     auto vert = device.shader("shader/tess_basic.vert.sprv");
     auto frag = device.shader("shader/tess_basic.frag.sprv");
-    auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,tesc,tese,frag);
+    auto pso  = device.pipeline(Topology::Triangles,RenderState(),vert,tesc,tese,frag);
 
     auto tex = device.attachment(TextureFormat::RGBA8,128,128);
     auto cmd = device.commandBuffer();
@@ -288,6 +288,50 @@ void TesselationBasic(const char* outImg) {
       enc.setFramebuffer({{tex,Vec4(0,0,0,1),Tempest::Preserve}});
       enc.setUniforms(pso);
       enc.draw(vbo);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    auto pm = device.readPixels(tex);
+    pm.save(outImg);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
+void GeomBasic(const char* outImg) {
+  using namespace Tempest;
+
+  try {
+    const char* devName = nullptr;
+    GraphicsApi api{ApiFlags::Validation};
+    auto dev = api.devices();
+    for(auto& i:dev)
+      if(i.geometryShader)
+        devName = i.name;
+    if(devName==nullptr)
+      return;
+
+    Device      device(api);
+
+    auto vert = device.shader("shader/geom_basic.vert.sprv");
+    auto geom = device.shader("shader/geom_basic.geom.sprv");
+    auto frag = device.shader("shader/geom_basic.frag.sprv");
+    auto pso  = device.pipeline(Topology::Points,RenderState(),vert,geom,frag);
+
+    auto tex = device.attachment(TextureFormat::RGBA8,128,128);
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
+      enc.setUniforms(pso);
+      enc.draw(1);
     }
 
     auto sync = device.fence();
@@ -352,7 +396,7 @@ void Draw(const char* outImage) {
 
     auto vert = device.shader("shader/simple_test.vert.sprv");
     auto frag = device.shader("shader/simple_test.frag.sprv");
-    auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
+    auto pso  = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
 
     auto tex  = device.attachment(format,128,128);
 
@@ -418,7 +462,7 @@ void InstanceIndex(const char* outImage) {
 
     auto vert = device.shader("shader/simple_test.vert.sprv");
     auto frag = device.shader("shader/simple_test.frag.sprv");
-    auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
+    auto pso  = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
 
     auto tex  = device.attachment(Tempest::RGBA8,128,128);
 
@@ -484,7 +528,7 @@ void Viewport(const char* outImage) {
 
     auto vert = device.shader("shader/simple_test.vert.sprv");
     auto frag = device.shader("shader/simple_test.frag.sprv");
-    auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
+    auto pso  = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
 
     auto tex  = device.attachment(TextureFormat::RGBA8,150,150);
 
@@ -538,7 +582,7 @@ void Uniforms(const char* outImage, bool useUbo) {
 
     auto vert = device.shader("shader/ubo_input.vert.sprv");
     auto frag = device.shader("shader/simple_test.frag.sprv");
-    auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
+    auto pso  = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
 
     auto tex  = device.attachment(TextureFormat::RGBA8,128,128);
     auto desc = device.descriptors(pso);
@@ -751,7 +795,7 @@ void MipMaps(const char* outImage) {
 
     auto vert = device.shader("shader/simple_test.vert.sprv");
     auto frag = device.shader("shader/simple_test.frag.sprv");
-    auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
+    auto pso  = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
 
     auto tex  = device.attachment(format,128,128,true);
     auto sync = device.fence();
@@ -821,7 +865,7 @@ void SsboWrite() {
 
     auto vert   = device.shader("shader/ssbo_write.vert.sprv");
     auto frag   = device.shader("shader/simple_test.frag.sprv");
-    auto pso    = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
+    auto pso    = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
 
     auto tex    = device.attachment(TextureFormat::RGBA8,32,32);
     auto vsOut  = device.ssbo(nullptr, sizeof(Vec4)*3);
@@ -893,7 +937,7 @@ void ComponentSwizzle() {
 
     auto vert   = device.shader("shader/texture.vert.sprv");
     auto frag   = device.shader("shader/texture.frag.sprv");
-    auto pso    = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
+    auto pso    = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
     auto tex    = device.texture(pm,false);
 
     DescriptorSet ubo[4];
@@ -1332,7 +1376,7 @@ void RayQuery(const char* outImg) {
     auto fsq  = device.vbo<Vertex>({{-1,-1},{ 1,-1},{ 1, 1}, {-1,-1},{ 1, 1},{-1, 1}});
     auto vert = device.shader("shader/simple_test.vert.sprv");
     auto frag = device.shader("shader/ray_test.frag.sprv");
-    auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
+    auto pso  = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
 
     auto ubo  = device.descriptors(pso);
     ubo.set(0, tlas);

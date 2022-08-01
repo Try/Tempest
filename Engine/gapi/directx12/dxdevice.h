@@ -202,6 +202,18 @@ inline DXGI_FORMAT nativeFormat(Detail::IndexClass icls) {
   return DXGI_FORMAT_R16_UINT;
   }
 
+inline D3D_PRIMITIVE_TOPOLOGY nativeFormat(Topology tp) {
+  switch (tp) {
+    case Topology::Points:
+      return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+    case Topology::Lines:
+      return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+    case Topology::Triangles:
+      return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+    }
+  return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+  }
+
 inline UINT alignTo(UINT x, UINT a) {
   a--;
   return (x+a) & (~a);

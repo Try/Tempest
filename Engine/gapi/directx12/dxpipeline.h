@@ -19,7 +19,7 @@ class DxShader;
 class DxPipeline : public AbstractGraphicsApi::Pipeline {
   public:
     DxPipeline(DxDevice &device,
-               const RenderState &st, size_t stride, Topology tp, const DxPipelineLay& ulay,
+               const RenderState &st, Topology tp, const DxPipelineLay& ulay,
                const DxShader*const* shaders, size_t cnt);
 
     struct Inst final {
@@ -33,7 +33,6 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
 
     ComPtr<ID3D12RootSignature> sign;
 
-    UINT                        stride             = 0;
     D3D_PRIMITIVE_TOPOLOGY      topology           = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
     size_t                      pushConstantId     = 0;
     uint32_t                    pushBaseInstanceId = 0;

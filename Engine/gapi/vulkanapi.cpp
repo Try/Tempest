@@ -73,15 +73,14 @@ AbstractGraphicsApi::PPipelineLay VulkanApi::createPipelineLayout(Device* d, con
   }
 
 AbstractGraphicsApi::PPipeline VulkanApi::createPipeline(AbstractGraphicsApi::Device *d,
-                                                         const RenderState &st, size_t stride, Topology tp,
-                                                         const PipelineLay& ulayImpl,
+                                                         const RenderState &st, Topology tp, const PipelineLay& ulayImpl,
                                                          const Shader*const* sh, size_t cnt) {
   auto* dx   = reinterpret_cast<Detail::VDevice*>(d);
   auto& ul   = reinterpret_cast<const Detail::VPipelineLay&>(ulayImpl);
   const Detail::VShader* shader[5] = {};
   for(size_t i=0; i<cnt; ++i)
     shader[i] = reinterpret_cast<const Detail::VShader*>(sh[i]);
-  return PPipeline(new Detail::VPipeline(*dx,st,stride,tp,ul,shader,cnt));
+  return PPipeline(new Detail::VPipeline(*dx,st,tp,ul,shader,cnt));
   }
 
 AbstractGraphicsApi::PCompPipeline VulkanApi::createComputePipeline(AbstractGraphicsApi::Device* d,

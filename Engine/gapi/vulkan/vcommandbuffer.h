@@ -62,8 +62,9 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void setBytes   (AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) override;
     void setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc &u) override;
 
-    void draw       (const AbstractGraphicsApi::Buffer& vbo, size_t voffset, size_t vsize, size_t firstInstance, size_t instanceCount) override;
-    void drawIndexed(const AbstractGraphicsApi::Buffer& vbo, size_t voffset,
+    void draw       (size_t vsize, size_t firstInstance, size_t instanceCount) override;
+    void draw       (const AbstractGraphicsApi::Buffer& vbo, size_t stride, size_t voffset, size_t vsize, size_t firstInstance, size_t instanceCount) override;
+    void drawIndexed(const AbstractGraphicsApi::Buffer& vbo, size_t stride, size_t voffset,
                      const AbstractGraphicsApi::Buffer& ibo, Detail::IndexClass cls,
                      size_t ioffset, size_t isize, size_t firstInstance, size_t instanceCount) override;
     void dispatchMesh(size_t firstInstance, size_t instanceCount) override;
@@ -108,6 +109,8 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void pushChunk();
     void newChunk();
 
+    void bindVbo(const VBuffer& vbo, size_t stride);
+
     struct PipelineInfo:VkPipelineRenderingCreateInfoKHR {
       VkFormat colorFrm[MaxFramebufferAttachments];
       };
@@ -120,9 +123,11 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     std::shared_ptr<VFramebufferMap::RenderPass> pass;
     PipelineInfo                            passDyn = {};
 
-    RpState                                 state        = NoRecording;
-    AbstractGraphicsApi::Desc*              curUniforms  = nullptr;
-    VkBuffer                                curVbo       = VK_NULL_HANDLE;
+    RpState                                 state           = NoRecording;
+    VPipeline*                              curDrawPipeline = nullptr;
+    AbstractGraphicsApi::Desc*              curUniforms     = nullptr;
+    VkBuffer                                curVbo          = VK_NULL_HANDLE;
+    size_t                                  vboStride       = 0;
   };
 
 }}

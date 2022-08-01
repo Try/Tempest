@@ -146,12 +146,9 @@ class Device {
     Pixmap               readPixels (const StorageImage& t, uint32_t mip=0);
     void                 readBytes  (const StorageBuffer& ssbo, void* out, size_t size);
 
-    template<class Vertex>
     RenderPipeline       pipeline(Topology tp,const RenderState& st, const Shader &vs, const Shader &fs);
-
-    template<class Vertex>
     RenderPipeline       pipeline(Topology tp,const RenderState& st, const Shader &vs, const Shader &tc, const Shader &te, const Shader &fs);
-
+    RenderPipeline       pipeline(Topology tp,const RenderState& st, const Shader &vs, const Shader &gs, const Shader &fs);
     RenderPipeline       pipeline(const RenderState& st, const Shader &ts, const Shader &ms, const Shader &fs);
 
     ComputePipeline      pipeline(const Shader &comp);
@@ -180,9 +177,7 @@ class Device {
     VideoBuffer createVideoBuffer(const void* data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap flg);
     AccelerationStructure implBlas(const VideoBuffer& vbo, size_t stride, const VideoBuffer& ibo, Detail::IndexClass icls, size_t offset, size_t count);
 
-    RenderPipeline
-                implPipeline(const RenderState &st, const Shader* shaders[],
-                             size_t stride, Topology tp);
+    RenderPipeline implPipeline(const RenderState &st, const Shader* shaders[], Topology tp);
 
     static TextureFormat formatOf(const Attachment& a);
 
@@ -249,18 +244,6 @@ AccelerationStructure Device::blas(const VertexBuffer<V>& vbo, const IndexBuffer
 template<class V, class I>
 inline AccelerationStructure Device::blas(const VertexBuffer<V>& vbo, const IndexBuffer<I>& ibo, size_t offset, size_t count) {
   return implBlas(vbo.impl,sizeof(V),ibo.impl,Detail::indexCls<I>(),offset,count);
-  }
-
-template<class Vertex>
-RenderPipeline Device::pipeline(Topology tp, const RenderState &st, const Shader &vs, const Shader &fs) {
-  const Shader* sh[] = {&vs,nullptr,nullptr,nullptr,&fs};
-  return implPipeline(st,sh,sizeof(Vertex),tp);
-  }
-
-template<class Vertex>
-RenderPipeline Device::pipeline(Topology tp, const RenderState &st, const Shader &vs, const Shader &tc, const Shader &te, const Shader &fs) {
-  const Shader* sh[] = {&vs,&tc,&te,nullptr,&fs};
-  return implPipeline(st,sh,sizeof(Vertex),tp);
   }
 
 }

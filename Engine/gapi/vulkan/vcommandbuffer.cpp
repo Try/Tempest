@@ -364,8 +364,11 @@ void VCommandBuffer::endRendering() {
   }
 
 void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
-  VPipeline& px = reinterpret_cast<VPipeline&>(p);
-  VkPipeline v  = device.props.hasDynRendering ? px.instance(passDyn) : px.instance(pass);
+  VPipeline& px   = reinterpret_cast<VPipeline&>(p);
+  curDrawPipeline = &px;
+  vboStride       = px.defaultStride;
+
+  VkPipeline v  = device.props.hasDynRendering ? px.instance(passDyn,vboStride) : px.instance(pass,vboStride);
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v);
   }
 
@@ -414,35 +417,44 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractG
                           0,nullptr);
   }
 
-void VCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t voffset, size_t vsize,
+void VCommandBuffer::draw(size_t vsize, size_t firstInstance, size_t instanceCount) {
+  vkCmdDraw(impl, uint32_t(vsize), uint32_t(instanceCount), 0, uint32_t(firstInstance));
+  }
+
+void VCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t stride, size_t voffset, size_t vsize,
                           size_t firstInstance, size_t instanceCount) {
   const VBuffer& vbo=reinterpret_cast<const VBuffer&>(ivbo);
-  if(curVbo!=vbo.impl) {
-    VkBuffer     buffers[1] = {vbo.impl};
-    VkDeviceSize offsets[1] = {0};
-    vkCmdBindVertexBuffers(impl, 0, 1, buffers, offsets );
-    curVbo = vbo.impl;
-    }
+  bindVbo(vbo,stride);
   vkCmdDraw(impl, uint32_t(vsize), uint32_t(instanceCount), uint32_t(voffset), uint32_t(firstInstance));
   }
 
-void VCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_t voffset,
+void VCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_t stride, size_t voffset,
                                  const AbstractGraphicsApi::Buffer& iibo, Detail::IndexClass cls,
                                  size_t ioffset, size_t isize, size_t firstInstance, size_t instanceCount) {
   const VBuffer& vbo = reinterpret_cast<const VBuffer&>(ivbo);
   const VBuffer& ibo = reinterpret_cast<const VBuffer&>(iibo);
-  if(curVbo!=vbo.impl) {
-    VkBuffer     buffers[1] = {vbo.impl};
-    VkDeviceSize offsets[1] = {0};
-    vkCmdBindVertexBuffers(impl, 0, 1, buffers, offsets);
-    curVbo = vbo.impl;
-    }
+  bindVbo(vbo,stride);
   vkCmdBindIndexBuffer(impl, ibo.impl, 0, nativeFormat(cls));
   vkCmdDrawIndexed    (impl, uint32_t(isize), uint32_t(instanceCount), uint32_t(ioffset), int32_t(voffset), uint32_t(firstInstance));
   }
 
 void VCommandBuffer::dispatchMesh(size_t firstInstance, size_t instanceCount) {
   device.vkCmdDrawMeshTasks(impl, uint32_t(instanceCount), uint32_t(firstInstance));
+  }
+
+void VCommandBuffer::bindVbo(const VBuffer& vbo, size_t stride) {
+  if(curVbo!=vbo.impl) {
+    if(T_UNLIKELY(vboStride!=stride)) {
+      auto& px = *curDrawPipeline;
+      vboStride = stride;
+      VkPipeline v  = device.props.hasDynRendering ? px.instance(passDyn,vboStride) : px.instance(pass,vboStride);
+      vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v);
+      }
+    VkBuffer     buffers[1] = {vbo.impl};
+    VkDeviceSize offsets[1] = {0};
+    vkCmdBindVertexBuffers(impl, 0, 1, buffers, offsets);
+    curVbo = vbo.impl;
+    }
   }
 
 void VCommandBuffer::setViewport(const Tempest::Rect &r) {
