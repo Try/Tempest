@@ -495,13 +495,13 @@ namespace Tempest {
         virtual void setViewport(const Rect& r)=0;
         virtual void setScissor (const Rect& r)=0;
 
-        virtual void draw        (size_t vsize, size_t firstInstance, size_t instanceCount);
+        virtual void draw        (size_t vsize, size_t firstInstance, size_t instanceCount) = 0;
         virtual void draw        (const Buffer& vbo, size_t stride, size_t offset, size_t vertexCount,
-                                  size_t firstInstance, size_t instanceCount)=0;
+                                  size_t firstInstance, size_t instanceCount) = 0;
         virtual void drawIndexed (const Buffer& vbo, size_t stride, size_t voffset,
                                   const Buffer& ibo, Detail::IndexClass cls, size_t ioffset, size_t isize,
-                                  size_t firstInstance, size_t instanceCount)=0;
-        virtual void dispatch    (size_t x, size_t y, size_t z)=0;
+                                  size_t firstInstance, size_t instanceCount) = 0;
+        virtual void dispatch    (size_t x, size_t y, size_t z) = 0;
         virtual void dispatchMesh(size_t firstInstance, size_t instanceCount);
         };
 

@@ -561,6 +561,11 @@ void Tempest::Detail::DxCommandBuffer::prepareDraw(size_t voffset, size_t firstI
     }
   }
 
+void DxCommandBuffer::draw(size_t vertexCount, size_t firstInstance, size_t instanceCount) {
+  prepareDraw(0, firstInstance);
+  impl->DrawInstanced(UINT(vertexCount),UINT(instanceCount),UINT(0),UINT(firstInstance));
+  }
+
 void DxCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t stride, size_t offset, size_t vertexCount,
                            size_t firstInstance, size_t instanceCount) {
   prepareDraw(offset, firstInstance);
