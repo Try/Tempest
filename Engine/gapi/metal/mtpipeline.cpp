@@ -11,7 +11,7 @@ using namespace Tempest;
 using namespace Tempest::Detail;
 
 MtPipeline::MtPipeline(MtDevice &d, Topology tp,
-                       const RenderState &rs, size_t stride,
+                       const RenderState &rs,
                        const MtPipelineLay& lay,
                        const MtShader* const * sh, size_t count)
   :lay(&lay), device(d), rs(rs) {
@@ -37,18 +37,21 @@ MtPipeline::MtPipeline(MtDevice &d, Topology tp,
   auto frag = findShader(ShaderReflection::Fragment);
 
   size_t offset = 0;
+  vboIndex = lay.vboIndex;
   vdesc = NsPtr<MTL::VertexDescriptor>::init();
   vdesc->retain();
   for(size_t i=0; i<vert->vdecl.size(); ++i) {
     const auto& v = vert->vdecl[i];
-    vdesc->attributes()->object(i)->setBufferIndex(lay.vboIndex);
+    vdesc->attributes()->object(i)->setBufferIndex(vboIndex);
     vdesc->attributes()->object(i)->setOffset(offset);
     vdesc->attributes()->object(i)->setFormat(nativeFormat(v));
     offset += Decl::size(v);
     }
-  vdesc->layouts()->object(lay.vboIndex)->setStride(stride);
-  vdesc->layouts()->object(lay.vboIndex)->setStepRate(1);
-  vdesc->layouts()->object(lay.vboIndex)->setStepFunction(MTL::VertexStepFunctionPerVertex);
+  defaultStride = offset;
+
+  vdesc->layouts()->object(vboIndex)->setStride(defaultStride);
+  vdesc->layouts()->object(vboIndex)->setStepRate(1);
+  vdesc->layouts()->object(vboIndex)->setStepFunction(MTL::VertexStepFunctionPerVertex);
 
   pdesc = NsPtr<MTL::RenderPipelineDescriptor>::init();
   pdesc->retain();
@@ -91,14 +94,17 @@ MtPipeline::MtPipeline(MtDevice &d, Topology tp,
 MtPipeline::~MtPipeline() {
   }
 
-MtPipeline::Inst& MtPipeline::inst(const MtFboLayout& lay) {
+MTL::RenderPipelineState& MtPipeline::inst(const MtFboLayout& lay, size_t stride) {
+  std::lock_guard<SpinLock> guard(sync);
+
   for(auto& i:instance)
-    if(i.fbo.equals(lay))
-      return i;
+    if(i.stride==stride && i.fbo.equals(lay))
+      return *i.pso.get();
   instance.emplace_back();
 
   Inst& ix = instance.back();
-  ix.fbo = lay;
+  ix.stride = stride;
+  ix.fbo    = lay;
 
   for(size_t i=0; i<lay.numColors; ++i) {
     auto clr = pdesc->colorAttachments()->object(i);
@@ -111,12 +117,13 @@ MtPipeline::Inst& MtPipeline::inst(const MtFboLayout& lay) {
     clr->setSourceRGBBlendFactor       (nativeFormat(rs.blendSource()));
     clr->setSourceAlphaBlendFactor     (nativeFormat(rs.blendSource()));
     }
+  vdesc->layouts()->object(vboIndex)->setStride(stride);
   pdesc->setDepthAttachmentPixelFormat(lay.depthFormat);
 
   NS::Error* error = nullptr;
   ix.pso = NsPtr<MTL::RenderPipelineState>(device.impl->newRenderPipelineState(pdesc.get(),&error));
   mtAssert(ix.pso.get(),error);
-  return ix;
+  return *ix.pso.get();
   }
 
 const MtShader* MtPipeline::findShader(ShaderReflection::Stage sh) const {

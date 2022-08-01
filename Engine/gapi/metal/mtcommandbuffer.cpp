@@ -221,9 +221,20 @@ void MtCommandBuffer::setScissor(const Rect& r) {
   encDraw->setScissorRect(v);
   }
 
-void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t offset, size_t vertexCount,
+void MtCommandBuffer::draw(size_t vsize, size_t firstInstance, size_t instanceCount) {
+  encDraw->drawPrimitives(topology,0,vsize,instanceCount,firstInstance);
+  }
+
+void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t stride, size_t offset, size_t vertexCount,
                            size_t firstInstance, size_t instanceCount) {
   auto& vbo = reinterpret_cast<const MtBuffer&>(ivbo);
+
+  if(T_UNLIKELY(stride!=vboStride)) {
+    auto& px   = *curDrawPipeline;
+    auto& inst = px.inst(curFbo,px.defaultStride);
+    encDraw->setRenderPipelineState(&inst);
+    }
+
   encDraw->setVertexBuffer(vbo.impl.get(),0,curVboId);
 
   if(!isTesselation) {
@@ -235,13 +246,19 @@ void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t offse
     }
   }
 
-void MtCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_t voffset,
+void MtCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_t stride, size_t voffset,
                                   const AbstractGraphicsApi::Buffer& iibo, Detail::IndexClass icls, size_t ioffset, size_t isize,
                                   size_t firstInstance, size_t instanceCount) {
   auto&    vbo     = reinterpret_cast<const MtBuffer&>(ivbo);
   auto&    ibo     = reinterpret_cast<const MtBuffer&>(iibo);
   auto     iboType = nativeFormat(icls);
   uint32_t mul     = sizeofIndex(icls);
+
+  if(T_UNLIKELY(stride!=vboStride)) {
+    auto& px   = *curDrawPipeline;
+    auto& inst = px.inst(curFbo,px.defaultStride);
+    encDraw->setRenderPipelineState(&inst);
+    }
 
   encDraw->setVertexBuffer(vbo.impl.get(),0,curVboId);
   encDraw->drawIndexedPrimitives(topology,isize,iboType,ibo.impl.get(),
@@ -363,17 +380,20 @@ void MtCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture &image,
 
 void MtCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
   auto& px   = reinterpret_cast<MtPipeline&>(p);
-  auto& inst = px.inst(curFbo);
+  auto& inst = px.inst(curFbo,px.defaultStride);
 
   if(curFbo.depthFormat!=MTL::PixelFormatInvalid)
     encDraw->setDepthStencilState(px.depthStZ.get()); else
     encDraw->setDepthStencilState(px.depthStNoZ.get());
-  encDraw->setRenderPipelineState(inst.pso.get());
+  encDraw->setRenderPipelineState(&inst);
   encDraw->setCullMode(px.cullMode);
-  topology      = px.topology;
-  isTesselation = px.isTesselation;
-  curVboId      = px.lay.handler->vboIndex;
-  curLay        = px.lay.handler;
+
+  topology        = px.topology;
+  isTesselation   = px.isTesselation;
+  curDrawPipeline = &px;
+  vboStride       = px.defaultStride;
+  curLay          = px.lay.handler;
+  curVboId        = px.lay.handler->vboIndex;
   }
 
 void MtCommandBuffer::copy(AbstractGraphicsApi::Buffer& dest, size_t offset,

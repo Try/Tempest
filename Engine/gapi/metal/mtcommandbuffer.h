@@ -16,6 +16,7 @@ namespace Detail {
 
 class MtDevice;
 class MtBuffer;
+class MtPipeline;
 
 class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
   public:
@@ -46,9 +47,10 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     void setViewport(const Rect& r) override;
     void setScissor (const Rect& r) override;
 
-    void draw        (const AbstractGraphicsApi::Buffer& vbo, size_t voffset,size_t vertexCount,
+    void draw        (size_t vsize, size_t firstInstance, size_t instanceCount) override;
+    void draw        (const AbstractGraphicsApi::Buffer& vbo, size_t stride, size_t voffset,size_t vertexCount,
                       size_t firstInstance, size_t instanceCount) override;
-    void drawIndexed (const AbstractGraphicsApi::Buffer& vbo, size_t voffset,
+    void drawIndexed (const AbstractGraphicsApi::Buffer& vbo, size_t stride, size_t voffset,
                       const AbstractGraphicsApi::Buffer &ibo, Detail::IndexClass cls,
                       size_t ioffset, size_t isize, size_t firstInstance, size_t instanceCount) override;
     void dispatch    (size_t x, size_t y, size_t z) override;
@@ -80,12 +82,14 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     NsPtr<MTL::ComputeCommandEncoder> encComp;
     NsPtr<MTL::BlitCommandEncoder>    encBlit;
 
-    uint32_t                          curVboId = 0;
     MtFboLayout                       curFbo;
-    const MtPipelineLay*              curLay   = nullptr;
-    MTL::Size                         localSize = {};
-    MTL::PrimitiveType                topology = MTL::PrimitiveTypePoint;
-    bool                              isTesselation = false;
+    MtPipeline*                       curDrawPipeline = nullptr;
+    size_t                            vboStride       = 0;
+    const MtPipelineLay*              curLay          = nullptr;
+    uint32_t                          curVboId        = 0;
+    MTL::Size                         localSize       = {};
+    MTL::PrimitiveType                topology        = MTL::PrimitiveTypePoint;
+    bool                              isTesselation   = false;
 
     uint32_t                          maxTotalThreadsPerThreadgroup = 0;
 

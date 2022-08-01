@@ -21,16 +21,16 @@ class MtPipelineLay;
 
 class MtPipeline : public AbstractGraphicsApi::Pipeline {
   public:
-    MtPipeline(MtDevice &d, Topology tp, const Tempest::RenderState& rs,
-               size_t stride, const MtPipelineLay& lay,
+    MtPipeline(MtDevice &d, Topology tp, const Tempest::RenderState& rs, const MtPipelineLay& lay,
                const MtShader*const* sh, size_t cnt);
     ~MtPipeline();
 
     struct Inst {
       NsPtr<MTL::RenderPipelineState> pso;
+      size_t                          stride=0;
       MtFboLayout                     fbo;
       };
-    Inst& inst(const MtFboLayout &lay);
+    MTL::RenderPipelineState& inst(const MtFboLayout &lay, size_t stride);
 
     DSharedPtr<const MtPipelineLay*>  lay;
 
@@ -39,6 +39,7 @@ class MtPipeline : public AbstractGraphicsApi::Pipeline {
 
     MTL::CullMode                     cullMode = MTL::CullModeNone;
     MTL::PrimitiveType                topology = MTL::PrimitiveTypeTriangle;
+    size_t                            defaultStride = 0;
     bool                              isTesselation = false;
 
   private:
@@ -49,7 +50,9 @@ class MtPipeline : public AbstractGraphicsApi::Pipeline {
 
     NsPtr<MTL::VertexDescriptor>         vdesc;
     NsPtr<MTL::RenderPipelineDescriptor> pdesc;
+    uint32_t                             vboIndex = 0;
     DSharedPtr<const MtShader*>          modules[5] = {};
+
     SpinLock                             sync;
     std::list<Inst>                      instance;
   };
