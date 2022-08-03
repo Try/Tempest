@@ -14,6 +14,7 @@ class VDevice;
 class VShader:public AbstractGraphicsApi::Shader {
   public:
     VShader(VDevice& device, const void* source, size_t src_size);
+    explicit VShader(VDevice& device);
     ~VShader();
 
     using Binding = ShaderReflection::Binding;
@@ -26,7 +27,9 @@ class VShader:public AbstractGraphicsApi::Shader {
     struct Comp {
       IVec3 wgSize;
       } comp;
-  private:
+
+  protected:
+    void                             fetchBindings(const uint32_t* source, size_t size);
     VkDevice                         device;
   };
 

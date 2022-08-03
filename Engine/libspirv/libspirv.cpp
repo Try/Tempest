@@ -26,6 +26,36 @@ spv::ExecutionModel Bytecode::findExecutionModel() const {
   return spv::ExecutionModelMax;
   }
 
+bool Bytecode::isTypeDecl(spv::Op op) {
+  switch(op) {
+    case spv::OpTypeVoid:
+    case spv::OpTypeBool:
+    case spv::OpTypeInt:
+    case spv::OpTypeFloat:
+    case spv::OpTypeVector:
+    case spv::OpTypeMatrix:
+    case spv::OpTypeImage:
+    case spv::OpTypeSampler:
+    case spv::OpTypeSampledImage:
+    case spv::OpTypeArray:
+    case spv::OpTypeRuntimeArray:
+    case spv::OpTypeStruct:
+    case spv::OpTypeOpaque:
+    case spv::OpTypePointer:
+    case spv::OpTypeFunction:
+    case spv::OpTypeEvent:
+    case spv::OpTypeDeviceEvent:
+    case spv::OpTypeReserveId:
+    case spv::OpTypeQueue:
+    case spv::OpTypePipe:
+    case spv::OpTypeForwardPointer:
+      return true;
+    default:
+      break;
+    }
+  return false;
+  }
+
 uint32_t Bytecode::spirvVersion() const {
   return reinterpret_cast<const uint32_t&>(spirv[1]);
   }
@@ -37,6 +67,11 @@ MutableBytecode::MutableBytecode(const uint32_t* spirv, size_t codeLen)
   Bytecode::codeLen = code.size();
   }
 
+static const uint32_t header[5] = {0x07230203, 0x00010000, 0x00080001, 0x00000000, 0x00000000};
+MutableBytecode::MutableBytecode()
+  :MutableBytecode(header,5){
+  }
+
 MutableBytecode::Iterator MutableBytecode::begin() {
   Iterator it{this, spirv+HeaderSize};
   return it;
@@ -44,6 +79,11 @@ MutableBytecode::Iterator MutableBytecode::begin() {
 
 MutableBytecode::Iterator MutableBytecode::end() {
   Iterator it{this, spirv+codeLen};
+  return it;
+  }
+
+MutableBytecode::Iterator MutableBytecode::fromOffset(size_t off) {
+  Iterator it{this, spirv+off};
   return it;
   }
 
@@ -65,8 +105,8 @@ MutableBytecode::Iterator MutableBytecode::findSection(Section s) {
   }
 
 MutableBytecode::Iterator MutableBytecode::findSection(Iterator begin, Section s) {
-  auto ret = begin;
-  while(ret!=end()) {
+  auto ret = begin, e = end();
+  while(ret!=e) {
     const auto op = ret.code->code;
     // 1: capability instructions
     if(s<=S_Capability && op==spv::OpCapability)
@@ -145,6 +185,80 @@ uint32_t MutableBytecode::OpTypeInt(Iterator& typesEnd, uint16_t bitness, bool s
   return tRet;
   }
 
+uint32_t MutableBytecode::OpTypeFloat(Iterator& typesEnd, uint16_t bitness) {
+  for(auto it=begin(); it!=typesEnd; ++it) {
+    auto& i = *it;
+    if(i.op()==spv::OpTypeFloat && i[2]==bitness)
+      return i[1];
+    }
+  const uint32_t tRet = fetchAddBound();
+  typesEnd.insert(spv::OpTypeFloat, {tRet, bitness});
+  return tRet;
+  }
+
+uint32_t MutableBytecode::OpTypeVector(Iterator& typesEnd, uint32_t eltType, uint32_t size) {
+  for(auto it=begin(); it!=typesEnd; ++it) {
+    auto& i = *it;
+    if(i.op()==spv::OpTypeVector && i[2]==eltType && i[3]==size)
+      return i[1];
+    }
+  const uint32_t tRet = fetchAddBound();
+  typesEnd.insert(spv::OpTypeVector, {tRet, eltType, size});
+  return tRet;
+  }
+
+uint32_t MutableBytecode::OpTypeRuntimeArray(Iterator& typesEnd, uint32_t eltType) {
+  for(auto it=begin(); it!=typesEnd; ++it) {
+    auto& i = *it;
+    if(i.op()==spv::OpTypeRuntimeArray && i[2]==eltType)
+      return i[1];
+    }
+  const uint32_t tRet = fetchAddBound();
+  typesEnd.insert(spv::OpTypeRuntimeArray, {tRet, eltType});
+  return tRet;
+  }
+
+uint32_t MutableBytecode::OpTypePointer(Iterator& typesEnd, spv::StorageClass cls, uint32_t eltType) {
+  for(auto it=begin(); it!=typesEnd; ++it) {
+    auto& i = *it;
+    if(i.op()==spv::OpTypePointer && i[2]==cls && i[3]==eltType)
+      return i[1];
+    }
+  const uint32_t tRet = fetchAddBound();
+  typesEnd.insert(spv::OpTypePointer, {tRet, cls, eltType});
+  return tRet;
+  }
+
+uint32_t MutableBytecode::OpTypeStruct(Iterator& typesEnd, std::initializer_list<uint32_t> member) {
+  for(auto it=begin(); it!=typesEnd; ++it) {
+    auto& i = *it;
+    if(i.op()!=spv::OpTypeStruct || i.len!=member.size()+2)
+      continue;
+    if(std::memcmp(&i[2],&(*member.begin()),member.size()*4)!=0)
+      break;
+    return i[1];
+    }
+
+  const uint32_t tRet = fetchAddBound();
+  uint16_t len = uint16_t(member.size() + 2);
+  OpCode   cx  = {uint16_t(spv::OpTypeStruct),len};
+  size_t   at  = std::distance(static_cast<const OpCode*>(code.data()), typesEnd.code);
+
+  code.resize(code.size()+cx.len);
+  for(size_t i=code.size()-cx.len; i>at;) {
+    --i;
+    code[i+cx.len] = code[i];
+    }
+  code[at+0] = cx;
+  code[at+1] = reinterpret_cast<const OpCode&>(tRet);
+  for(size_t i=0; i<member.size(); ++i) {
+    reinterpret_cast<uint32_t&>(code[at+i+2]) = *(member.begin()+i);
+    }
+  invalidateSpvPointers();
+  typesEnd.code = code.data()+at+len;
+  return tRet;
+  }
+
 uint32_t MutableBytecode::OpTypeFunction(Iterator& typesEnd, uint32_t idRet) {
   for(auto it=begin(); it!=typesEnd; ++it) {
     auto& i = *it;
@@ -166,9 +280,15 @@ uint32_t MutableBytecode::OpConstant(Iterator& typesEnd, uint32_t idType, int32_
   return OpConstant(typesEnd,idType,reinterpret_cast<uint32_t&>(i32));
   }
 
+uint32_t MutableBytecode::OpVariable(Iterator& fn, uint32_t idType, spv::StorageClass cls) {
+  const uint32_t ret = fetchAddBound();
+  fn.insert(spv::OpVariable, {idType, ret, cls});
+  return ret;
+  }
+
 void MutableBytecode::removeNops() {
   size_t cnt = HeaderSize;
-  OpCode *i=&code.data()[HeaderSize], *dest=i, *end = code.data()+code.size();
+  OpCode* i = &code.data()[HeaderSize], *dest=i, *end = code.data()+code.size();
 
   while(i!=end) {
     if(i->code==spv::OpNop) {
@@ -197,9 +317,90 @@ uint32_t MutableBytecode::fetchAddBound() {
   return ret;
   }
 
+void MutableBytecode::traverseType(uint32_t typeId, std::function<void (const AccessChain*, uint32_t)> fn) {
+  TraverseContext ctx = {
+    findSection(libspirv::Bytecode::S_Types),
+    findSectionEnd(libspirv::Bytecode::S_Types)
+    };
+
+  AccessChain ac[256] = {};
+  implTraverseType(ctx, typeId, ac, 0, fn);
+  }
+
+void MutableBytecode::implTraverseType(TraverseContext& ctx, uint32_t typeId,
+                                       AccessChain* ac, const uint32_t acLen,
+                                       std::function<void (const AccessChain*, uint32_t)>& fn) {
+  for(auto it = ctx.typesB; it!=ctx.typesE; ++it) {
+    auto& i = *it;
+    if(!isTypeDecl(i.op()))
+      continue;
+    if(i[1]!=typeId)
+      continue;
+    ac[acLen].type  = &i;
+    ac[acLen].index = 0;
+
+    switch(i.op()) {
+      case spv::OpTypeVoid:
+      case spv::OpTypeBool:
+      case spv::OpTypeInt:
+      case spv::OpTypeFloat:
+        fn(ac,acLen+1);
+        break;
+      case spv::OpTypeVector:
+      case spv::OpTypeMatrix: {
+        for(uint32_t r=0; r<i[3]; ++r) {
+          ac[acLen].index = r;
+          implTraverseType(ctx,i[2],ac,acLen+1,fn);
+          }
+        break;
+        }
+      case spv::OpTypeImage:
+      case spv::OpTypeSampler:
+      case spv::OpTypeSampledImage:
+        break;
+      case spv::OpTypeArray:
+      case spv::OpTypeRuntimeArray: {
+        implTraverseType(ctx,i[2],ac,acLen+1,fn);
+        break;
+        }
+      case spv::OpTypeStruct:
+        for(uint32_t r=2; r<i.length(); ++r) {
+          ac[acLen].index = (r-2);
+          implTraverseType(ctx,i[r],ac,acLen+1,fn);
+          }
+        break;
+      case spv::OpTypeOpaque:
+        break;
+      case spv::OpTypePointer:
+        implTraverseType(ctx,i[3],ac,acLen+1,fn);
+        break;
+      case spv::OpTypeFunction:
+      case spv::OpTypeEvent:
+      case spv::OpTypeDeviceEvent:
+      case spv::OpTypeReserveId:
+      case spv::OpTypeQueue:
+      case spv::OpTypePipe:
+      case spv::OpTypeForwardPointer:
+        break;
+      default:
+        break;
+      }
+    break;
+    }
+  }
+
 void MutableBytecode::invalidateSpvPointers() {
   spirv   = code.data();
   codeLen = code.size();
+  }
+
+size_t MutableBytecode::Iterator::toOffset() const {
+  return std::distance(static_cast<const OpCode*>(owner->code.data()), code);
+  }
+
+void MutableBytecode::Iterator::invalidateIterator(size_t at) {
+  owner->invalidateSpvPointers();
+  code = owner->code.data()+at;
   }
 
 void MutableBytecode::Iterator::setToNop() {
@@ -225,26 +426,24 @@ void MutableBytecode::Iterator::set(uint16_t id, OpCode c) {
   mut = c;
   }
 
-void MutableBytecode::Iterator::set(uint16_t id, std::string_view text) {
-  size_t at   = std::distance(static_cast<const OpCode*>(owner->code.data()), code);
-  auto   p    = reinterpret_cast<uint32_t*>(&owner->code[at+id]);
-  size_t padd = (text.size()+1+3)/4 - (owner->code[at].len-id);
+void MutableBytecode::Iterator::append(uint32_t op) {
+  size_t at  = std::distance(static_cast<const OpCode*>(owner->code.data()), code);
+  size_t end = at+owner->code[at].len;
 
-  owner->code[at].len+=padd;
-  owner->code.insert(owner->code.begin()+at+id, padd, OpCode());
-  for(size_t i=0; i<=text.size(); i+=4) {
-    char buf[4] = {};
-    for(size_t r=0; r<4 && (i+r)<text.size(); ++r)
-      buf[r] = text[i+r];
-    std::memcpy(p, buf, 4);
-    ++p;
+  owner->code[at].len+=1;
+  if(end<owner->code.size() && owner->code[end].code==spv::OpNop) {
+    owner->code[end] = reinterpret_cast<OpCode&>(op);
+    return;
     }
+
+  owner->code.insert(owner->code.begin()+int(end), reinterpret_cast<OpCode&>(op));
+  invalidateIterator(at);
   }
 
 void MutableBytecode::Iterator::insert(OpCode c) {
   size_t at = std::distance(static_cast<const OpCode*>(owner->code.data()), code);
   owner->code.insert(owner->code.begin()+at,c);
-  owner->invalidateSpvPointers();
+  invalidateIterator(at+1);
   }
 
 void MutableBytecode::Iterator::insert(spv::Op op, const uint32_t* args, const size_t argsSize) {
@@ -262,8 +461,8 @@ void MutableBytecode::Iterator::insert(spv::Op op, const uint32_t* args, const s
   for(int i=0; i<argsSize; ++i) {
     reinterpret_cast<uint32_t&>(c[at+i+1]) = *(args+i);
     }
-  owner->invalidateSpvPointers();
-  code = owner->code.data()+at+len;
+
+  invalidateIterator(at+len);
   }
 
 void MutableBytecode::Iterator::insert(spv::Op op, std::initializer_list<uint32_t> args) {
@@ -294,3 +493,22 @@ void MutableBytecode::Iterator::insert(spv::Op op, uint32_t id0, uint32_t id1, c
   sz = 2 + (sz+1+3)/4;
   insert(op, args, sz);
   }
+
+void MutableBytecode::Iterator::insert(const Bytecode& block) {
+  size_t at  = std::distance(static_cast<const OpCode*>(owner->code.data()), code);
+  size_t len = block.size()-HeaderSize;
+  auto&  c   = owner->code;
+
+  c.resize(c.size()+len);
+  for(size_t i=c.size()-len; i>at;) {
+    --i;
+    c[i+len] = c[i];
+    }
+
+  for(size_t i=0; i<len; ++i) {
+    c[at+i] = block.spirv[i+HeaderSize];
+    }
+
+  invalidateIterator(at+len);
+  }
+

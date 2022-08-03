@@ -1,9 +1,9 @@
 #version 450
 
 layout(points) in;
-layout(triangle_strip, max_vertices = 5) out;
+layout(triangle_strip, max_vertices = 3) out;
 
-out gl_PerVertex {
+in gl_PerVertex {
   vec4 gl_Position;
   };
 

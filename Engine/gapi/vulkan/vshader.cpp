@@ -20,12 +20,27 @@ VShader::VShader(VDevice& device, const void *source, size_t src_size)
   createInfo.codeSize = src_size;
   createInfo.pCode    = reinterpret_cast<const uint32_t*>(source);
 
-  {
-  spirv_cross::Compiler comp(createInfo.pCode,uint32_t(src_size/4));
+  fetchBindings(createInfo.pCode,uint32_t(src_size/4));
+
+  if(vkCreateShaderModule(device.device.impl,&createInfo,nullptr,&impl)!=VK_SUCCESS)
+    throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
+  }
+
+VShader::VShader(VDevice& device)
+  :device(device.device.impl) {
+  }
+
+VShader::~VShader() {
+  vkDestroyShaderModule(device,impl,nullptr);
+  }
+
+void VShader::fetchBindings(const uint32_t *source, size_t size) {
+  // TODO: remove spirv-corss?
+  spirv_cross::Compiler comp(source, size);
   ShaderReflection::getVertexDecl(vdecl,comp);
   ShaderReflection::getBindings(lay,comp);
 
-  libspirv::Bytecode code(reinterpret_cast<const uint32_t*>(source),src_size/4);
+  libspirv::Bytecode code(source, size);
   stage = ShaderReflection::getExecutionModel(code);
   if(stage==ShaderReflection::Compute ||
      stage==ShaderReflection::Task || stage==ShaderReflection::Mesh) {
@@ -39,14 +54,6 @@ VShader::VShader(VDevice& device, const void *source, size_t src_size)
         }
       }
     }
-  }
-
-  if(vkCreateShaderModule(device.device.impl,&createInfo,nullptr,&impl)!=VK_SUCCESS)
-    throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
-  }
-
-VShader::~VShader() {
-  vkDestroyShaderModule(device,impl,nullptr);
   }
 
 #endif

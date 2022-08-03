@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <vector>
 #include <string_view>
+#include <functional>
 
 namespace libspirv {
 
@@ -43,7 +44,7 @@ class Bytecode {
           }
 
       private:
-        Iterator(const OpCode* code):code(code){}
+        explicit Iterator(const OpCode* code):code(code){}
         const OpCode* code = nullptr;
 
       friend class Bytecode;
@@ -66,11 +67,17 @@ class Bytecode {
       S_FuncDefinitions  = 11,
       };
 
+    struct AccessChain {
+      const OpCode* type  = nullptr;
+      uint32_t      index = 0;
+      };
+
     Iterator begin() const;
     Iterator end() const;
     size_t   size() const { return codeLen; }
     
     spv::ExecutionModel findExecutionModel() const;
+    static bool         isTypeDecl(spv::Op op);
     uint32_t            spirvVersion() const;
 
   protected:
@@ -80,28 +87,36 @@ class Bytecode {
     };
     const OpCode* spirv   = nullptr;
     size_t        codeLen = 0;
+
+  friend class MutableBytecode;
   };
 
 class MutableBytecode : public Bytecode {
   public:
     MutableBytecode(const uint32_t* spirv, size_t codeLen);
+    MutableBytecode();
 
     struct Iterator : Bytecode::Iterator {
       public:
         void setToNop();
         void set(uint16_t id, uint32_t code);
         void set(uint16_t id, OpCode   code);
-        void set(uint16_t id, std::string_view text);
+        void append(uint32_t op);
 
         void insert(OpCode code);
         void insert(spv::Op op, const uint32_t* args, size_t argsSize);
         void insert(spv::Op op, std::initializer_list<uint32_t> args);
         void insert(spv::Op op, uint32_t id, const char* annotation);
         void insert(spv::Op op, uint32_t id0, uint32_t id1, const char* annotation);
+        void insert(const Bytecode& block);
+
+        size_t toOffset() const;
 
       private:
         Iterator(MutableBytecode* owner, const OpCode* code):Bytecode::Iterator(code), owner(owner){}
         MutableBytecode* owner = nullptr;
+
+        void invalidateIterator(size_t at);
 
       friend class MutableBytecode;
       };
@@ -111,25 +126,42 @@ class MutableBytecode : public Bytecode {
     Iterator begin();
     Iterator end();
 
+    Iterator fromOffset(size_t off);
     Iterator findOpEntryPoint(spv::ExecutionModel em, std::string_view name);
 
     Iterator findSection(Section s);
     Iterator findSection(Iterator begin, Section s);
     Iterator findSectionEnd(Section s);
 
-    uint32_t OpTypeVoid    (Iterator& typesEnd);
-    uint32_t OpTypeBool    (Iterator& typesEnd);
-    uint32_t OpTypeInt     (Iterator& typesEnd, uint16_t bitness, bool sign);
-    uint32_t OpTypeFunction(Iterator& typesEnd, uint32_t idRet);
+    uint32_t OpTypeVoid        (Iterator& typesEnd);
+    uint32_t OpTypeBool        (Iterator& typesEnd);
+    uint32_t OpTypeInt         (Iterator& typesEnd, uint16_t bitness, bool sign);
+    uint32_t OpTypeFloat       (Iterator& typesEnd, uint16_t bitness);
+    uint32_t OpTypeVector      (Iterator& typesEnd, uint32_t eltType, uint32_t size);
+    uint32_t OpTypeRuntimeArray(Iterator& typesEnd, uint32_t eltType);
+    uint32_t OpTypePointer     (Iterator& typesEnd, spv::StorageClass cls, uint32_t eltType);
+    uint32_t OpTypeStruct      (Iterator& typesEnd, std::initializer_list<uint32_t> member);
+    uint32_t OpTypeFunction    (Iterator& typesEnd, uint32_t idRet);
 
     uint32_t OpConstant    (Iterator& typesEnd, uint32_t idType, uint32_t u32);
     uint32_t OpConstant    (Iterator& typesEnd, uint32_t idType, int32_t  i32);
 
+    uint32_t OpVariable    (Iterator& fn, uint32_t idType, spv::StorageClass cls);
+
     void     removeNops();
     uint32_t fetchAddBound();
 
+    void     traverseType(uint32_t typeId, std::function<void(const AccessChain* indexes, uint32_t len)> fn);
+
   private:
     std::vector<OpCode> code;
-    void                invalidateSpvPointers();
+    struct TraverseContext {
+      Iterator typesB;
+      Iterator typesE;
+      };
+    void     invalidateSpvPointers();
+    void     implTraverseType(TraverseContext& ctx, uint32_t typeId,
+                              AccessChain* ac, const uint32_t acLen,
+                              std::function<void(const AccessChain* indexes, uint32_t len)>& fn);
   };
 }
