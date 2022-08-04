@@ -7,6 +7,7 @@
 #include <vector>
 #include <string_view>
 #include <functional>
+#include <cassert>
 
 namespace libspirv {
 
@@ -36,16 +37,19 @@ class Bytecode {
           }
 
         friend bool operator == (const Iterator& l, const Iterator& r) {
+          assert(l.gen==r.gen);
           return l.code==r.code;
           }
 
         friend bool operator != (const Iterator& l, const Iterator& r) {
+          assert(l.gen==r.gen);
           return l.code!=r.code;
           }
 
       private:
-        explicit Iterator(const OpCode* code):code(code){}
+        explicit Iterator(const OpCode* code, uint32_t gen):code(code),gen(gen){}
         const OpCode* code = nullptr;
+        uint32_t      gen  = uint32_t(-1);
 
       friend class Bytecode;
       friend class MutableBytecode;
@@ -67,6 +71,11 @@ class Bytecode {
       S_FuncDefinitions  = 11,
       };
 
+    enum TraverseMode : uint8_t {
+      T_PreOrder  = 0,
+      T_PostOrder = 1,
+      };
+
     struct AccessChain {
       const OpCode* type  = nullptr;
       uint32_t      index = 0;
@@ -76,17 +85,22 @@ class Bytecode {
     Iterator end() const;
     size_t   size() const { return codeLen; }
     
-    spv::ExecutionModel findExecutionModel() const;
-    static bool         isTypeDecl(spv::Op op);
     uint32_t            spirvVersion() const;
+    spv::ExecutionModel findExecutionModel() const;
+
+    static bool         isTypeDecl(spv::Op op);
+    static bool         isBasicTypeDecl(spv::Op op);
 
   protected:
     enum {
       // see: 2.3. Physical Layout of a SPIR-V Module and Instruction
       HeaderSize = 5
     };
-    const OpCode* spirv   = nullptr;
-    size_t        codeLen = 0;
+    const OpCode* spirv       = nullptr;
+    size_t        codeLen     = 0;
+#ifndef NDEBUG
+    uint32_t      iteratorGen = 0;
+#endif
 
   friend class MutableBytecode;
   };
@@ -113,7 +127,7 @@ class MutableBytecode : public Bytecode {
         size_t toOffset() const;
 
       private:
-        Iterator(MutableBytecode* owner, const OpCode* code):Bytecode::Iterator(code), owner(owner){}
+        Iterator(MutableBytecode* owner, const OpCode* code, uint32_t gen):Bytecode::Iterator(code,gen), owner(owner){}
         MutableBytecode* owner = nullptr;
 
         void invalidateIterator(size_t at);
@@ -138,9 +152,12 @@ class MutableBytecode : public Bytecode {
     uint32_t OpTypeInt         (Iterator& typesEnd, uint16_t bitness, bool sign);
     uint32_t OpTypeFloat       (Iterator& typesEnd, uint16_t bitness);
     uint32_t OpTypeVector      (Iterator& typesEnd, uint32_t eltType, uint32_t size);
+    uint32_t OpTypeMatrix      (Iterator& typesEnd, uint32_t eltType, uint32_t size);
+    uint32_t OpTypeArray       (Iterator& typesEnd, uint32_t eltType, uint32_t size);
     uint32_t OpTypeRuntimeArray(Iterator& typesEnd, uint32_t eltType);
     uint32_t OpTypePointer     (Iterator& typesEnd, spv::StorageClass cls, uint32_t eltType);
     uint32_t OpTypeStruct      (Iterator& typesEnd, std::initializer_list<uint32_t> member);
+    uint32_t OpTypeStruct      (Iterator& typesEnd, const uint32_t* member, const size_t size);
     uint32_t OpTypeFunction    (Iterator& typesEnd, uint32_t idRet);
 
     uint32_t OpConstant    (Iterator& typesEnd, uint32_t idType, uint32_t u32);
@@ -151,13 +168,15 @@ class MutableBytecode : public Bytecode {
     void     removeNops();
     uint32_t fetchAddBound();
 
-    void     traverseType(uint32_t typeId, std::function<void(const AccessChain* indexes, uint32_t len)> fn);
+    void     traverseType(uint32_t typeId, std::function<void(const AccessChain* indexes, uint32_t len)> fn,
+                          TraverseMode mode = TraverseMode::T_PreOrder);
 
   private:
     std::vector<OpCode> code;
     struct TraverseContext {
-      Iterator typesB;
-      Iterator typesE;
+      Iterator     typesB;
+      Iterator     typesE;
+      TraverseMode mode = TraverseMode::T_PreOrder;
       };
     void     invalidateSpvPointers();
     void     implTraverseType(TraverseContext& ctx, uint32_t typeId,

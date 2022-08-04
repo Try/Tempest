@@ -16,26 +16,7 @@ class MeshConverter {
   private:
     struct VarItm {
       uint32_t type     = 0;
-      };
-
-    struct BaseTypes {
-      uint32_t void_t  = -1;
-      uint32_t bool_t  = -1;
-      uint32_t uint32  = -1;
-      uint32_t int32   = -1;
-      uint32_t float32 = -1;
-
-      uint32_t vec2    = -1;
-      uint32_t vec3    = -1;
-      uint32_t vec4    = -1;
-
-      uint32_t uvec2   = -1;
-      uint32_t uvec3   = -1;
-      uint32_t uvec4   = -1;
-
-      uint32_t ivec2   = -1;
-      uint32_t ivec3   = -1;
-      uint32_t ivec4   = -1;
+      uint32_t location = -1;
       };
 
     void     avoidReservedFixup();
@@ -47,17 +28,21 @@ class MeshConverter {
     void     injectCountingPass(const uint32_t idMainFunc);
     void     replaceEntryPoint(const uint32_t idMainFunc, const uint32_t idEngineMain);
 
+    void     vsTypeRemaps(libspirv::MutableBytecode::Iterator& fn, std::unordered_map<uint32_t, uint32_t>& typeRemaps,
+                          const libspirv::Bytecode::AccessChain* ids, uint32_t len);
+
     libspirv::MutableBytecode& code;
     libspirv::MutableBytecode  vert;
 
     // meslet builtins
-    uint32_t idPrimitiveCountNV   = -1;
-    uint32_t idPrimind            = -1;
-    uint32_t idPrimitiveIndicesNV = -1;
-    uint32_t idLocalInvocationId  = -1;
-    uint32_t idGlobalInvocationId = -1;
-    uint32_t idWorkGroupID        = -1;
-    uint32_t std450Import         = -1;
+    uint32_t idGlPerVertex        = 0;
+    uint32_t idPrimitiveCountNV   = 0;
+    uint32_t idPrimind            = 0;
+    uint32_t idPrimitiveIndicesNV = 0;
+    uint32_t idLocalInvocationId  = 0;
+    uint32_t idGlobalInvocationId = 0;
+    uint32_t idWorkGroupID        = 0;
+    uint32_t std450Import         = 0;
 
     std::unordered_map<uint32_t,VarItm> outVar;
   };

@@ -31,7 +31,8 @@ VShader::VShader(VDevice& device)
   }
 
 VShader::~VShader() {
-  vkDestroyShaderModule(device,impl,nullptr);
+  if(impl!=VK_NULL_HANDLE)
+    vkDestroyShaderModule(device,impl,nullptr);
   }
 
 void VShader::fetchBindings(const uint32_t *source, size_t size) {

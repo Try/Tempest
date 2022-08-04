@@ -6,7 +6,6 @@
 #include <libspirv/libspirv.h>
 
 #include "gapi/spirv/meshconverter.h"
-#include "gapi/shaderreflection.h"
 
 #include "vdevice.h"
 
@@ -29,9 +28,18 @@ VMeshShaderEmulated::VMeshShaderEmulated(VDevice& device, const void *source, si
   MeshConverter conv(code);
   conv.exec();
 
+  auto& vert = conv.vertexPassthrough();
+
+  debugLog("mesh_conv.vert.spv", vert.opcodes(), vert.size());
   debugLog("mesh_conv.comp.spv", code.opcodes(), code.size());
 
   VkShaderModuleCreateInfo createInfo = {};
+  createInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+  createInfo.codeSize = vert.size()*4u;
+  createInfo.pCode    = vert.opcodes();
+  if(vkCreateShaderModule(device.device.impl,&createInfo,nullptr,&impl)!=VK_SUCCESS)
+    throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
+
   createInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
   createInfo.codeSize = code.size()*4u;
   createInfo.pCode    = code.opcodes();
