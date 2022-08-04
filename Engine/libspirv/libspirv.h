@@ -98,9 +98,7 @@ class Bytecode {
     };
     const OpCode* spirv       = nullptr;
     size_t        codeLen     = 0;
-#ifndef NDEBUG
     uint32_t      iteratorGen = 0;
-#endif
 
   friend class MutableBytecode;
   };

@@ -5,6 +5,7 @@
 #include "vdevice.h"
 #include "vshader.h"
 #include "vpipelinelay.h"
+#include "vmeshshaderemulated.h"
 
 #include <algorithm>
 
@@ -50,6 +51,10 @@ VPipeline::VPipeline(VDevice& device, const RenderState& st, Topology tp,
       for(size_t i=0;i<declSize;++i){
         defaultStride += uint32_t(Decl::size(decl[i]));
         }
+      }
+
+    if(auto vert=findShader(ShaderReflection::Stage::Mesh)) {
+      isMesh = true;
       }
 
     pipelineLayout = initLayout(device.device.impl,ulay,pushStageFlags,pushSize);
@@ -106,6 +111,10 @@ VkPipeline VPipeline::instance(const VkPipelineRenderingCreateInfoKHR& info, siz
   return instDr.back().val;
   }
 
+bool VPipeline::isMeshPipeline() const {
+  return isMesh;
+  }
+
 const VShader* VPipeline::findShader(ShaderReflection::Stage sh) const {
   for(auto& i:modules)
     if(i.handler!=nullptr && i.handler->stage==sh) {
@@ -128,11 +137,18 @@ void VPipeline::cleanup() {
 VkPipelineLayout VPipeline::initLayout(VkDevice device, const VPipelineLay& uboLay, VkShaderStageFlags& pushStageFlags, uint32_t& pushSize) {
   VkPushConstantRange push = {};
 
+  VkDescriptorSetLayout pSetLayouts[4] = {uboLay.impl};
+
   VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
   pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-  pipelineLayoutInfo.pSetLayouts            = &uboLay.impl;
+  pipelineLayoutInfo.pSetLayouts            = pSetLayouts;
   pipelineLayoutInfo.setLayoutCount         = 1;
   pipelineLayoutInfo.pushConstantRangeCount = 0;
+
+  if(uboLay.msHelper!=VK_NULL_HANDLE) {
+    pSetLayouts[pipelineLayoutInfo.setLayoutCount] = uboLay.msHelper;
+    pipelineLayoutInfo.setLayoutCount++;
+    }
 
   if(uboLay.pb.size>0) {
     pushStageFlags = nativeFormat(uboLay.pb.stage);
@@ -167,6 +183,10 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
       sh.stage  = nativeFormat(shaders[i].handler->stage);
       sh.module = shaders[i].handler->impl;
       sh.pName  = "main";
+      if(auto ms = dynamic_cast<const VMeshShaderEmulated*>(shaders[i].handler)) {
+        sh.stage  = VK_SHADER_STAGE_VERTEX_BIT;
+        sh.module = ms->impl;
+        }
       stagesCnt++;
       }
     }
@@ -179,13 +199,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   vertexInputBindingDescription.stride    = uint32_t(stride);
   vertexInputBindingDescription.inputRate = VkVertexInputRate::VK_VERTEX_INPUT_RATE_VERTEX;
 
-  VkVertexInputAttributeDescription                  vsInputsStk[16]={};
-  std::unique_ptr<VkVertexInputAttributeDescription> vsInputHeap;
-  VkVertexInputAttributeDescription*                 vsInput = vsInputsStk;
-  if(declSize>16) {
-    vsInputHeap.reset(new VkVertexInputAttributeDescription[declSize]);
-    vsInput = vsInputHeap.get();
-    }
+  SmallArray<VkVertexInputAttributeDescription,16> vsInput(declSize);
   uint32_t offset=0;
   for(size_t i=0;i<declSize;++i){
     auto& loc=vsInput[i];
@@ -204,7 +218,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   vertexInputInfo.vertexBindingDescriptionCount   = (declSize>0 ? 1 : 0);
   vertexInputInfo.pVertexBindingDescriptions      = &vertexInputBindingDescription;
   vertexInputInfo.vertexAttributeDescriptionCount = uint32_t(declSize);
-  vertexInputInfo.pVertexAttributeDescriptions    = vsInput;
+  vertexInputInfo.pVertexAttributeDescriptions    = vsInput.get();
 
   VkPipelineInputAssemblyStateCreateInfo inputAssembly = {};
   inputAssembly.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -332,7 +346,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
 VCompPipeline::VCompPipeline() {
   }
 
-VCompPipeline::VCompPipeline(VDevice& dev, const VPipelineLay& ulay, VShader& comp)
+VCompPipeline::VCompPipeline(VDevice& dev, const VPipelineLay& ulay, const VShader& comp)
   :device(dev.device.impl) {
   VkShaderStageFlags pushStageFlags = 0;
   pipelineLayout = VPipeline::initLayout(device,ulay,pushStageFlags,pushSize);

@@ -28,11 +28,14 @@ class VPipelineLay : public AbstractGraphicsApi::PipelineLay {
 
     size_t                descriptorsCount() override;
     VkDescriptorSetLayout create(uint32_t runtimeArraySz) const;
+    VkDescriptorSetLayout createMsHealper() const;
 
     using Binding = ShaderReflection::Binding;
 
-    VkDevice                      dev = nullptr;
-    VkDescriptorSetLayout         impl = VK_NULL_HANDLE;
+    VDevice&                      dev;
+    VkDescriptorSetLayout         impl     = VK_NULL_HANDLE;
+    VkDescriptorSetLayout         msHelper = VK_NULL_HANDLE;
+
     std::vector<Binding>          lay;
     ShaderReflection::PushBlock   pb;
     bool                          runtimeSized = false;

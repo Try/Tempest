@@ -264,6 +264,10 @@ AbstractGraphicsApi::Desc* VulkanApi::createDescriptors(AbstractGraphicsApi::Dev
 
 AbstractGraphicsApi::CommandBuffer* VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device* d) {
   Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
+  if(dx->props.meshlets.meshShaderEmulated) {
+    // CB with meshlet emulation support
+    return new Detail::VMeshCommandBuffer(*dx);
+    }
   return new Detail::VCommandBuffer(*dx);
   }
 

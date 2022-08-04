@@ -43,8 +43,7 @@ void VShader::fetchBindings(const uint32_t *source, size_t size) {
 
   libspirv::Bytecode code(source, size);
   stage = ShaderReflection::getExecutionModel(code);
-  if(stage==ShaderReflection::Compute ||
-     stage==ShaderReflection::Task || stage==ShaderReflection::Mesh) {
+  if(stage==ShaderReflection::Compute || stage==ShaderReflection::Task || stage==ShaderReflection::Mesh) {
     for(auto& i:code) {
       if(i.op()!=spv::OpExecutionMode)
         continue;

@@ -42,6 +42,8 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     VkPipeline         instance(const std::shared_ptr<VFramebufferMap::RenderPass>& lay, size_t stride);
     VkPipeline         instance(const VkPipelineRenderingCreateInfoKHR& info, size_t stride);
 
+    bool               isMeshPipeline() const;
+
   private:
     struct InstRp : Inst {
       InstRp(const std::shared_ptr<VFramebufferMap::RenderPass>& lay, size_t stride, VkPipeline val):Inst(val,stride),lay(lay){}
@@ -57,9 +59,11 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     VkDevice                               device=nullptr;
     Tempest::RenderState                   st;
     size_t                                 declSize=0;
-    Topology                               tp = Topology::Triangles;
     DSharedPtr<const VShader*>             modules[5] = {};
     std::unique_ptr<Decl::ComponentType[]> decl;
+    Topology                               tp = Topology::Triangles;
+    bool                                   isMesh = false;
+
     std::vector<InstRp>                    instRp;
     std::vector<InstDr>                    instDr;
     SpinLock                               sync;
@@ -79,7 +83,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
 class VCompPipeline : public AbstractGraphicsApi::CompPipeline {
   public:
     VCompPipeline();
-    VCompPipeline(VDevice &device, const VPipelineLay& ulay, VShader &comp);
+    VCompPipeline(VDevice &device, const VPipelineLay& ulay, const VShader& comp);
     VCompPipeline(VCompPipeline&& other) = delete;
     ~VCompPipeline();
 

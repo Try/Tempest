@@ -11,18 +11,37 @@ using namespace Tempest;
 using namespace Tempest::Detail;
 
 VPipelineLay::VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt)
-  : dev(dev.device.impl) {
+  : dev(dev) {
   ShaderReflection::merge(lay, pb, sh, cnt);
   adjustSsboBindings();
 
-  //if(!runtimeSized)
+  bool needMsHelper = false;
+  for(size_t i=0; i<cnt; ++i) {
+    if(sh[i]==nullptr)
+      continue;
+    for(auto& r:*sh[i])
+      if(r.stage==ShaderReflection::Mesh) {
+        needMsHelper = true;
+        break;
+        }
+    }
+
   impl = create(MAX_BINDLESS);
+  if(needMsHelper) {
+    try {
+      msHelper = createMsHealper();
+      }
+    catch(...) {
+      vkDestroyDescriptorSetLayout(dev.device.impl,impl,nullptr);
+      throw;
+      }
+    }
   }
 
 VPipelineLay::~VPipelineLay() {
   for(auto& i:pool)
-    vkDestroyDescriptorPool(dev,i.impl,nullptr);
-  vkDestroyDescriptorSetLayout(dev,impl,nullptr);
+    vkDestroyDescriptorPool(dev.device.impl,i.impl,nullptr);
+  vkDestroyDescriptorSetLayout(dev.device.impl,impl,nullptr);
   }
 
 size_t VPipelineLay::descriptorsCount() {
@@ -31,10 +50,10 @@ size_t VPipelineLay::descriptorsCount() {
 
 VkDescriptorSetLayout VPipelineLay::create(uint32_t runtimeArraySz) const {
   SmallArray<VkDescriptorSetLayoutBinding,32> bind(lay.size());
-  SmallArray<VkDescriptorBindingFlags,32>     flg(lay.size());
+  SmallArray<VkDescriptorBindingFlags,32>     flg (lay.size());
 
   uint32_t count = 0;
-  for(size_t i=0;i<lay.size();++i){
+  for(size_t i=0;i<lay.size();++i) {
     auto& b = bind[count];
     auto& e = lay[i];
 
@@ -48,6 +67,8 @@ VkDescriptorSetLayout VPipelineLay::create(uint32_t runtimeArraySz) const {
     b.descriptorCount = e.runtimeSized ? runtimeArraySz : e.arraySize;
     b.descriptorType  = nativeFormat(e.cls);
     b.stageFlags      = nativeFormat(e.stage);
+    if(b.stageFlags==VK_SHADER_STAGE_MESH_BIT_NV && dev.props.meshlets.meshShaderEmulated)
+      b.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
     ++count;
     }
 
@@ -67,7 +88,29 @@ VkDescriptorSetLayout VPipelineLay::create(uint32_t runtimeArraySz) const {
     info.pNext = &bindingFlags;
 
   VkDescriptorSetLayout ret = VK_NULL_HANDLE;
-  vkAssert(vkCreateDescriptorSetLayout(dev,&info,nullptr,&ret));
+  vkAssert(vkCreateDescriptorSetLayout(dev.device.impl,&info,nullptr,&ret));
+  return ret;
+  }
+
+VkDescriptorSetLayout VPipelineLay::createMsHealper() const {
+  VkDescriptorSetLayoutBinding bind[3] = {};
+
+  for(int i=0; i<3; ++i) {
+    bind[i].binding         = i;
+    bind[i].descriptorCount = 1;
+    bind[i].descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    bind[i].stageFlags      = VK_SHADER_STAGE_VERTEX_BIT; //VK_SHADER_STAGE_COMPUTE_BIT;
+    }
+
+  VkDescriptorSetLayoutCreateInfo info={};
+  info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+  info.pNext        = nullptr;
+  info.flags        = 0;
+  info.bindingCount = 1; // one for vertex
+  info.pBindings    = bind;
+
+  VkDescriptorSetLayout ret = VK_NULL_HANDLE;
+  vkAssert(vkCreateDescriptorSetLayout(dev.device.impl,&info,nullptr,&ret));
   return ret;
   }
 

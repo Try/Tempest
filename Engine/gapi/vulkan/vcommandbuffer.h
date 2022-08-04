@@ -130,4 +130,12 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     size_t                                  vboStride       = 0;
   };
 
+class VMeshCommandBuffer:public VCommandBuffer {
+  public:
+    using VCommandBuffer::VCommandBuffer;
+
+    void setPipeline(AbstractGraphicsApi::Pipeline& p) override;
+    void dispatchMesh(size_t firstInstance, size_t instanceCount) override;
+  };
+
 }}

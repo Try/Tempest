@@ -1001,4 +1001,14 @@ void VCommandBuffer::addDependency(VSwapchain& s, size_t imgId) {
   swapchainSync.push_back(sc);
   }
 
+
+void VMeshCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
+  VPipeline& px = reinterpret_cast<VPipeline&>(p);
+  VCommandBuffer::setPipeline(px);
+  }
+
+void VMeshCommandBuffer::dispatchMesh(size_t firstInstance, size_t instanceCount) {
+  // TODO
+  }
+
 #endif
