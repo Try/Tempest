@@ -6,6 +6,7 @@
 #include "vshader.h"
 #include "vpipelinelay.h"
 #include "vmeshshaderemulated.h"
+#include "vmeshlethelper.h"
 
 #include <algorithm>
 
@@ -52,16 +53,22 @@ VPipeline::VPipeline(VDevice& device, const RenderState& st, Topology tp,
         defaultStride += uint32_t(Decl::size(decl[i]));
         }
       }
+    pipelineLayout = initLayout(device,ulay,pushStageFlags,pushSize,false);
 
-    if(auto vert=findShader(ShaderReflection::Stage::Mesh)) {
-      isMesh = true;
-      }
-
-    if(isMesh) {
+    if(auto ms=findShader(ShaderReflection::Stage::Mesh)) {
       device.allocMeshletHelper();
-      }
 
-    pipelineLayout = initLayout(device.device.impl,ulay,pushStageFlags,pushSize);
+      pipelineLayoutMs = initLayout(device,ulay,pushStageFlags,pushSize,true);
+
+      VkComputePipelineCreateInfo info = {};
+      info.sType        = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+      info.stage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+      info.stage.stage  = VK_SHADER_STAGE_COMPUTE_BIT;
+      info.stage.module = reinterpret_cast<const VMeshShaderEmulated*>(ms)->compPass;
+      info.stage.pName  = "main";
+      info.layout       = pipelineLayoutMs;
+      vkAssert(vkCreateComputePipelines(device.device.impl, VK_NULL_HANDLE, 1, &info, nullptr, &meshCompuePipeline));
+      }
     }
   catch(...) {
     cleanup();
@@ -115,8 +122,12 @@ VkPipeline VPipeline::instance(const VkPipelineRenderingCreateInfoKHR& info, siz
   return instDr.back().val;
   }
 
-bool VPipeline::isMeshPipeline() const {
-  return isMesh;
+VkPipeline VPipeline::meshPipeline() const {
+  return meshCompuePipeline;
+  }
+
+VkPipelineLayout VPipeline::meshPipelineLayout() const {
+  return pipelineLayoutMs;
   }
 
 const VShader* VPipeline::findShader(ShaderReflection::Stage sh) const {
@@ -128,8 +139,11 @@ const VShader* VPipeline::findShader(ShaderReflection::Stage sh) const {
   }
 
 void VPipeline::cleanup() {
-  if(pipelineLayout==VK_NULL_HANDLE)
-    return;
+  if(pipelineLayoutMs!=VK_NULL_HANDLE)
+    vkDestroyPipelineLayout(device,pipelineLayoutMs,nullptr);
+  if(meshCompuePipeline!=VK_NULL_HANDLE)
+    vkDestroyPipeline(device,meshCompuePipeline,nullptr);
+
   if(pipelineLayout!=VK_NULL_HANDLE)
     vkDestroyPipelineLayout(device,pipelineLayout,nullptr);
   for(auto& i:instRp)
@@ -138,7 +152,9 @@ void VPipeline::cleanup() {
     vkDestroyPipeline(device,i.val,nullptr);
   }
 
-VkPipelineLayout VPipeline::initLayout(VkDevice device, const VPipelineLay& uboLay, VkShaderStageFlags& pushStageFlags, uint32_t& pushSize) {
+VkPipelineLayout VPipeline::initLayout(VDevice& device, const VPipelineLay& uboLay,
+                                       VkShaderStageFlags& pushStageFlags, uint32_t& pushSize,
+                                       bool isMeshCompPass) {
   VkPushConstantRange push = {};
 
   VkDescriptorSetLayout pSetLayouts[4] = {uboLay.impl};
@@ -150,8 +166,14 @@ VkPipelineLayout VPipeline::initLayout(VkDevice device, const VPipelineLay& uboL
   pipelineLayoutInfo.pushConstantRangeCount = 0;
 
   if(uboLay.msHelper!=VK_NULL_HANDLE) {
-    pSetLayouts[pipelineLayoutInfo.setLayoutCount] = uboLay.msHelper;
-    pipelineLayoutInfo.setLayoutCount++;
+    if(isMeshCompPass) {
+      auto& ms = *device.meshHelper.get();
+      pSetLayouts[pipelineLayoutInfo.setLayoutCount] = ms.lay();
+      pipelineLayoutInfo.setLayoutCount++;
+      } else {
+      pSetLayouts[pipelineLayoutInfo.setLayoutCount] = uboLay.msHelper;
+      pipelineLayoutInfo.setLayoutCount++;
+      }
     }
 
   if(uboLay.pb.size>0) {
@@ -167,7 +189,7 @@ VkPipelineLayout VPipeline::initLayout(VkDevice device, const VPipelineLay& uboL
     }
 
   VkPipelineLayout ret;
-  vkAssert(vkCreatePipelineLayout(device,&pipelineLayoutInfo,nullptr,&ret));
+  vkAssert(vkCreatePipelineLayout(device.device.impl,&pipelineLayoutInfo,nullptr,&ret));
   return ret;
   }
 
@@ -353,7 +375,7 @@ VCompPipeline::VCompPipeline() {
 VCompPipeline::VCompPipeline(VDevice& dev, const VPipelineLay& ulay, const VShader& comp)
   :device(dev.device.impl) {
   VkShaderStageFlags pushStageFlags = 0;
-  pipelineLayout = VPipeline::initLayout(device,ulay,pushStageFlags,pushSize);
+  pipelineLayout = VPipeline::initLayout(dev,ulay,pushStageFlags,pushSize,false);
   wgSize         = comp.comp.wgSize;
 
   try {

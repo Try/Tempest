@@ -129,6 +129,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     AbstractGraphicsApi::Desc*              curUniforms     = nullptr;
     VkBuffer                                curVbo          = VK_NULL_HANDLE;
     size_t                                  vboStride       = 0;
+    size_t                                  meshIndirectId  = 0;
   };
 
 class VMeshCommandBuffer:public VCommandBuffer {
@@ -136,6 +137,8 @@ class VMeshCommandBuffer:public VCommandBuffer {
     using VCommandBuffer::VCommandBuffer;
 
     void setPipeline(AbstractGraphicsApi::Pipeline& p) override;
+    void setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc &u) override;
+
     void dispatchMesh(size_t firstInstance, size_t instanceCount) override;
   };
 

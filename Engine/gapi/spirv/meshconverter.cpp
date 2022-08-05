@@ -322,8 +322,8 @@ void MeshConverter::generateVs() {
       });
     }
   }
-  fn.insert(spv::OpReturn,           {});
-  fn.insert(spv::OpFunctionEnd,      {});
+  fn.insert(spv::OpReturn,      {});
+  fn.insert(spv::OpFunctionEnd, {});
 
   fn = vert.findSectionEnd(libspirv::Bytecode::S_Debug);
   fn.insert(spv::OpName, gl_VertexIndex, "gl_VertexIndex");
@@ -821,7 +821,7 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
   {
     const uint32_t ptrHeap0 = code.fetchAddBound();
     fn.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrHeap0, vEngine1, const3, meshDest});
-    fn.insert(spv::OpStore, {ptrHeap0, const264}); // TODO: writeout self-id
+    fn.insert(spv::OpStore, {ptrHeap0, const0}); // TODO: writeout self-id
 
     const uint32_t dest1 = code.fetchAddBound();
     fn.insert(spv::OpIAdd, {uint_t, dest1, meshDest, const1});

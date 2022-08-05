@@ -141,6 +141,9 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
     createInfo.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
     }
 
+  if(MemUsage::Indirect==(usage & MemUsage::Indirect))
+    createInfo.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+
   vkAssert(vkCreateBuffer(dev,&createInfo,nullptr,&ret.impl));
 
   MemRequirements memRq={};

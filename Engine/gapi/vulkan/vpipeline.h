@@ -42,7 +42,8 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     VkPipeline         instance(const std::shared_ptr<VFramebufferMap::RenderPass>& lay, size_t stride);
     VkPipeline         instance(const VkPipelineRenderingCreateInfoKHR& info, size_t stride);
 
-    bool               isMeshPipeline() const;
+    VkPipeline         meshPipeline() const;
+    VkPipelineLayout   meshPipelineLayout() const;
 
   private:
     struct InstRp : Inst {
@@ -62,7 +63,9 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     DSharedPtr<const VShader*>             modules[5] = {};
     std::unique_ptr<Decl::ComponentType[]> decl;
     Topology                               tp = Topology::Triangles;
-    bool                                   isMesh = false;
+
+    VkPipelineLayout                       pipelineLayoutMs = VK_NULL_HANDLE;
+    VkPipeline                             meshCompuePipeline = VK_NULL_HANDLE;
 
     std::vector<InstRp>                    instRp;
     std::vector<InstDr>                    instDr;
@@ -71,7 +74,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     const VShader*                         findShader(ShaderReflection::Stage sh) const;
 
     void cleanup();
-    static VkPipelineLayout      initLayout(VkDevice device, const VPipelineLay& uboLay, VkShaderStageFlags& pushFlg, uint32_t& pushSize);
+    static VkPipelineLayout      initLayout(VDevice& device, const VPipelineLay& uboLay, VkShaderStageFlags& pushFlg, uint32_t& pushSize, bool isMeshCompPass);
     VkPipeline                   initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
                                                       const VFramebufferMap::RenderPass* rpLay, const VkPipelineRenderingCreateInfoKHR* dynLay, const RenderState &st,
                                                       const Decl::ComponentType *decl, size_t declSize, size_t stride,

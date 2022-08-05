@@ -23,6 +23,7 @@ class VShader;
 
 class VPipelineLay : public AbstractGraphicsApi::PipelineLay {
   public:
+    VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Binding>* sh);
     VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt);
     ~VPipelineLay();
 

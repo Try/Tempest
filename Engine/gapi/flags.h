@@ -4,7 +4,7 @@
 
 namespace Tempest {
 
-enum class MemUsage : uint8_t {
+enum class MemUsage : uint16_t {
   TransferSrc  =1<<0,
   TransferDst  =1<<1,
   UniformBuffer=1<<2,
@@ -13,14 +13,15 @@ enum class MemUsage : uint8_t {
   StorageBuffer=1<<5,
   ScratchBuffer=1<<6,
   AsStorage    =1<<7,
+  Indirect     =1<<8,
   };
 
 inline MemUsage operator | (MemUsage a,const MemUsage& b) {
-  return MemUsage(uint8_t(a)|uint8_t(b));
+  return MemUsage(uint16_t(a)|uint16_t(b));
   }
 
 inline MemUsage operator & (MemUsage a,const MemUsage& b) {
-  return MemUsage(uint8_t(a)&uint8_t(b));
+  return MemUsage(uint16_t(a)&uint16_t(b));
   }
 
 
