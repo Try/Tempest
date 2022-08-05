@@ -99,7 +99,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     Detail::SmallList<Chunk,32>    chunks;
     std::vector<VSwapchain::Sync*> swapchainSync;
 
-  private:
+  protected:
     void addDependency(VSwapchain& s, size_t imgId);
     void vkCmdPipelineBarrier2(VkCommandBuffer impl, const VkDependencyInfoKHR* info);
 
@@ -118,6 +118,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     VDevice&                                device;
     VCommandPool                            pool;
     VkCommandBuffer                         impl=nullptr;
+    VkCommandBuffer                         cbHelper=nullptr;
 
     ResourceState                           resState;
     std::shared_ptr<VFramebufferMap::RenderPass> pass;

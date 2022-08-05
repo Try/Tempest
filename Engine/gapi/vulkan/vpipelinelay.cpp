@@ -41,6 +41,8 @@ VPipelineLay::VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Bin
 VPipelineLay::~VPipelineLay() {
   for(auto& i:pool)
     vkDestroyDescriptorPool(dev.device.impl,i.impl,nullptr);
+  if(msHelper!=VK_NULL_HANDLE)
+    vkDestroyDescriptorSetLayout(dev.device.impl,msHelper,nullptr);
   vkDestroyDescriptorSetLayout(dev.device.impl,impl,nullptr);
   }
 
@@ -93,14 +95,11 @@ VkDescriptorSetLayout VPipelineLay::create(uint32_t runtimeArraySz) const {
   }
 
 VkDescriptorSetLayout VPipelineLay::createMsHealper() const {
-  VkDescriptorSetLayoutBinding bind[3] = {};
-
-  for(int i=0; i<3; ++i) {
-    bind[i].binding         = i;
-    bind[i].descriptorCount = 1;
-    bind[i].descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    bind[i].stageFlags      = VK_SHADER_STAGE_VERTEX_BIT; //VK_SHADER_STAGE_COMPUTE_BIT;
-    }
+  VkDescriptorSetLayoutBinding bind[1] = {};
+  bind[0].binding         = 0;
+  bind[0].descriptorCount = 1;
+  bind[0].descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  bind[0].stageFlags      = VK_SHADER_STAGE_VERTEX_BIT;
 
   VkDescriptorSetLayoutCreateInfo info={};
   info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;

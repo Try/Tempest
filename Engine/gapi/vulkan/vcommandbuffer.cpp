@@ -927,6 +927,12 @@ void VCommandBuffer::vkCmdPipelineBarrier2(VkCommandBuffer impl, const VkDepende
   }
 
 void VCommandBuffer::pushChunk() {
+  if(cbHelper!=nullptr) {
+    Chunk ch;
+    ch.impl = impl;
+    chunks.push(ch);
+    cbHelper = nullptr;
+    }
   if(impl!=nullptr) {
     Chunk ch;
     ch.impl = impl;
@@ -1004,11 +1010,30 @@ void VCommandBuffer::addDependency(VSwapchain& s, size_t imgId) {
 
 void VMeshCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
   VPipeline& px = reinterpret_cast<VPipeline&>(p);
+  if(false) {
+    VkCommandBufferAllocateInfo allocInfo = {};
+    allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool        = pool.impl;
+    allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = 1;
+    vkAssert(vkAllocateCommandBuffers(device.device.impl,&allocInfo,&cbHelper));
+
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags            = 0;
+    beginInfo.pInheritanceInfo = nullptr;
+    vkAssert(vkBeginCommandBuffer(cbHelper,&beginInfo));
+    }
+
   VCommandBuffer::setPipeline(px);
+
+  //auto& ms = *device.meshHelper;
+  //vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,);
   }
 
 void VMeshCommandBuffer::dispatchMesh(size_t firstInstance, size_t instanceCount) {
   // TODO
+  vkCmdDrawIndexed(impl, 0, 1, 0, 0, 0);
   }
 
 #endif

@@ -22,8 +22,8 @@ namespace Tempest {
 namespace Detail {
 
 class VFence;
-
 class VTexture;
+class VMeshletHelper;
 
 inline void vkAssert(VkResult code){
   if(T_LIKELY(code==VkResult::VK_SUCCESS))
@@ -303,6 +303,9 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     VFramebufferMap         fboMap;
 
+    std::mutex                      meshSync;
+    std::unique_ptr<VMeshletHelper> meshHelper;
+
     VkProps                 props={};
 
     PFN_vkGetBufferMemoryRequirements2KHR vkGetBufferMemoryRequirements2 = nullptr;
@@ -325,7 +328,6 @@ class VDevice : public AbstractGraphicsApi::Device {
     PFN_vkCmdDrawMeshTasksNV                    vkCmdDrawMeshTasks = nullptr;
 
     void                    waitIdle() override;
-
     void                    submit(VCommandBuffer& cmd, VFence* sync);
 
     VkSurfaceKHR            createSurface(void* hwnd);
@@ -335,9 +337,12 @@ class VDevice : public AbstractGraphicsApi::Device {
     using DataMgr = UploadEngine<VDevice,VCommandBuffer,VFence,VBuffer>;
     DataMgr&                dataMgr() const { return *data; }
 
+    void                    allocMeshletHelper();
+
   private:
     VkPhysicalDeviceMemoryProperties memoryProperties;
     std::unique_ptr<DataMgr>         data;
+
     void                    waitIdleSync(Queue* q, size_t n);
 
     void                    implInit(VulkanInstance& api, VkPhysicalDevice pdev);

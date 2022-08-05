@@ -8,6 +8,7 @@
 #include "vswapchain.h"
 #include "vbuffer.h"
 #include "vtexture.h"
+#include "vmeshlethelper.h"
 #include "system/api/x11api.h"
 
 #include <Tempest/Log>
@@ -435,6 +436,12 @@ VDevice::MemIndex VDevice::memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFl
   MemIndex ret;
   ret.typeId = uint32_t(-1);
   return ret;
+  }
+
+void VDevice::allocMeshletHelper() {
+  std::unique_lock<std::mutex> guard(meshSync);
+  if(meshHelper==nullptr)
+    meshHelper.reset(new VMeshletHelper(*this));
   }
 
 void VDevice::waitIdle() {

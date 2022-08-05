@@ -57,6 +57,10 @@ VPipeline::VPipeline(VDevice& device, const RenderState& st, Topology tp,
       isMesh = true;
       }
 
+    if(isMesh) {
+      device.allocMeshletHelper();
+      }
+
     pipelineLayout = initLayout(device.device.impl,ulay,pushStageFlags,pushSize);
     }
   catch(...) {
