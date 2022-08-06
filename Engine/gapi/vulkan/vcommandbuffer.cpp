@@ -1065,7 +1065,9 @@ void VMeshCommandBuffer::dispatchMesh(size_t firstInstance, size_t instanceCount
     return;
 
   auto& ms = *device.meshHelper;
-  vkCmdDispatch(cbHelper, instanceCount, 1, 1);
+  device.vkCmdDispatchBase(cbHelper,
+                           firstInstance, meshIndirectId, 1,
+                           instanceCount, 1, 1);
   ms.drawIndirect(impl, meshIndirectId);
 
   ++meshIndirectId;

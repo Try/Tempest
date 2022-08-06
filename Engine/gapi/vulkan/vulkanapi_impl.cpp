@@ -242,6 +242,9 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
     // TODO: enable once validation layers have full support for dynamic rendering
     // props.hasDynRendering = true;
     }
+  if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_DEVICE_GROUP_EXTENSION_NAME)) {
+    props.hasDevGroup = true;
+    }
 
   VkPhysicalDeviceProperties devP={};
   vkGetPhysicalDeviceProperties(physicalDevice,&devP);
@@ -337,9 +340,14 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
     props.meshlets.meshShader       = (meshFeatures.meshShader==VK_TRUE);
     props.meshlets.maxMeshGroups    = meshProperties.maxDrawMeshTasksCount;
     props.meshlets.maxMeshGroupSize = meshProperties.maxMeshWorkGroupSize[0];
+    // props.hasDevGroup               = ;
 
     if(!props.meshlets.meshShader) {
-      props.meshlets.meshShaderEmulated = true;
+      props.meshlets.meshShaderEmulated = props.hasDevGroup;
+      if(props.meshlets.meshShaderEmulated) {
+        props.meshlets.maxMeshGroups      = devP.limits.maxComputeWorkGroupCount[0];
+        props.meshlets.maxMeshGroupSize   = devP.limits.maxComputeWorkGroupSize [0];
+        }
       }
 
     if(indexingFeatures.runtimeDescriptorArray!=VK_FALSE) {

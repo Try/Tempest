@@ -62,6 +62,7 @@ VPipeline::VPipeline(VDevice& device, const RenderState& st, Topology tp,
 
       VkComputePipelineCreateInfo info = {};
       info.sType        = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+      info.flags        = VK_PIPELINE_CREATE_DISPATCH_BASE;
       info.stage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
       info.stage.stage  = VK_SHADER_STAGE_COMPUTE_BIT;
       info.stage.module = reinterpret_cast<const VMeshShaderEmulated*>(ms)->compPass;

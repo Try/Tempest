@@ -37,6 +37,7 @@ class VulkanInstance {
       bool     hasDeviceAddress   = false;
       bool     hasDynRendering    = false;
       bool     hasDescIndexing    = false;
+      bool     hasDevGroup        = false;
       };
 
     static bool checkForExt(const std::vector<VkExtensionProperties>& list, const char* name);

@@ -169,6 +169,27 @@ void MeshConverter::exec() {
       }
     }
 
+  if(idWorkGroupID==0) {
+    auto fn = code.findSectionEnd(libspirv::Bytecode::S_Types);
+    const uint32_t tUInt             = code.OpTypeInt(fn,32,false);
+    const uint32_t v3uint            = code.OpTypeVector(fn,tUInt,3);
+    const uint32_t _ptr_Input_v3uint = code.OpTypePointer(fn,spv::StorageClassInput,v3uint);
+
+    idWorkGroupID = code.fetchAddBound();
+    fn.insert(spv::OpVariable, {_ptr_Input_v3uint, idWorkGroupID, spv::StorageClassInput});
+
+    fn = code.findSectionEnd(libspirv::Bytecode::S_Debug);
+    fn.insert(spv::OpName, idWorkGroupID, "gl_WorkGroupID");
+
+    fn = code.findSectionEnd(libspirv::Bytecode::S_Annotations);
+    fn.insert(spv::OpDecorate, {idWorkGroupID, spv::DecorationBuiltIn, spv::BuiltInWorkgroupId});
+
+    auto ep = code.findOpEntryPoint(spv::ExecutionModelGLCompute,"main");
+    if(ep!=code.end()) {
+      ep.append(idWorkGroupID);
+      }
+    }
+
   injectCountingPass(idMain);
   // nops are not valid to have outsize of block
   code.removeNops();
@@ -730,13 +751,18 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
   const uint32_t maxVar = code.fetchAddBound();
   fn.insert(spv::OpIMul, {uint_t, maxVar, maxVertex, varSize});
   {
+  const uint32_t ptrWorkGroupID = code.fetchAddBound();
+  fn.insert(spv::OpAccessChain, {_ptr_Input_uint, ptrWorkGroupID, idWorkGroupID, const1});
+  const uint32_t workIdX = code.fetchAddBound();
+  fn.insert(spv::OpLoad, {uint_t, workIdX, ptrWorkGroupID});
+
   const uint32_t ptrCmdDest = code.fetchAddBound();
-  fn.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrCmdDest, vEngine0, const0, const0, const0});
+  fn.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrCmdDest, vEngine0, const0, workIdX, const0});
   const uint32_t cmdDest  = code.fetchAddBound();
   fn.insert(spv::OpAtomicIAdd, {uint_t, cmdDest, ptrCmdDest, const1/*scope*/, const0/*semantices*/, indSize});
 
   const uint32_t ptrCmdDest2 = code.fetchAddBound();
-  fn.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrCmdDest2, vEngine0, const0, const0, const1});
+  fn.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrCmdDest2, vEngine0, const0, workIdX, const1});
   const uint32_t cmdDest2  = code.fetchAddBound();
   fn.insert(spv::OpAtomicIAdd, {uint_t, cmdDest2, ptrCmdDest2, const1/*scope*/, const0/*semantices*/, maxVar});
   }

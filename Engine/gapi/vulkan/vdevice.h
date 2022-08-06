@@ -326,6 +326,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     PFN_vkCmdBuildAccelerationStructuresKHR     vkCmdBuildAccelerationStructures     = nullptr;
 
     PFN_vkCmdDrawMeshTasksNV                    vkCmdDrawMeshTasks = nullptr;
+    PFN_vkCmdDispatchBase                       vkCmdDispatchBase = nullptr;
 
     void                    waitIdle() override;
     void                    submit(VCommandBuffer& cmd, VFence* sync);
