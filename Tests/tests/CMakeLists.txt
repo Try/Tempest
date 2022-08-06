@@ -140,6 +140,13 @@ endif()
 
 target_link_libraries(${PROJECT_NAME} Tempest)
 
+# copy data to binary directory
+add_custom_command(
+    TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND}
+    -E copy_directory ${CMAKE_SOURCE_DIR}/../../bin/
+    ${CMAKE_CURRENT_BINARY_DIR}/testsuite/data/)
+
 install(
     TARGETS ${PROJECT_NAME}
     DESTINATION bin
