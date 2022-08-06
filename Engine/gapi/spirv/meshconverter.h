@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <unordered_set>
+#include <unordered_map>
 
 #include "libspirv/libspirv.h"
 

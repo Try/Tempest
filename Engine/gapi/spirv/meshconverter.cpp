@@ -3,7 +3,6 @@
 
 #include <cassert>
 #include <iostream>
-#include <unordered_set>
 
 MeshConverter::MeshConverter(libspirv::MutableBytecode& code)
   : code(code) {
