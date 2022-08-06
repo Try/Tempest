@@ -451,9 +451,15 @@ void MeshConverter::vsTypeRemaps(libspirv::MutableBytecode::Iterator& fn,
       }
     case spv::OpTypeArray:{
       if(typeRemaps.find(id)==typeRemaps.end()) {
+        uint32_t csize = 1;
+        for(auto& i:code)
+          if(i.op()==spv::OpConstant && i[2]==op[3]) {
+            csize = i[3];
+            break;
+            }
         uint32_t uint_t = vert.OpTypeInt(fn, 32, false);
         uint32_t elt    = typeRemaps[op[2]];
-        uint32_t sz     = vert.OpConstant(fn, uint_t, 1);
+        uint32_t sz     = vert.OpConstant(fn, uint_t, csize);
         uint32_t ix     = vert.OpTypeArray(fn, elt, sz);
         typeRemaps[id] = ix;
         }

@@ -15,12 +15,12 @@ using namespace Tempest::Detail;
 VMeshletHelper::VMeshletHelper(VDevice& dev) : dev(dev) {
   const auto ind = MemUsage::StorageBuffer | MemUsage::Indirect | MemUsage::TransferDst;
   const auto ms  = MemUsage::StorageBuffer | MemUsage::Indirect | MemUsage::TransferDst;
-  const auto geo = MemUsage::StorageBuffer | MemUsage::VertexBuffer | MemUsage::IndexBuffer | MemUsage::TransferDst;
+  const auto geo = MemUsage::StorageBuffer | MemUsage::VertexBuffer | MemUsage::IndexBuffer;
 
   indirect  = dev.allocator.alloc(nullptr, IndirectMemorySize, 1,1, ind, BufferHeap::Device);
   meshlets  = dev.allocator.alloc(nullptr, MeshletsMemorySize, 1,1, ms,  BufferHeap::Device);
 
-  scratch   = dev.allocator.alloc(nullptr, PipelineMemorySize, 1,1, MemUsage::StorageBuffer, BufferHeap::Device);
+  scratch   = dev.allocator.alloc(nullptr, PipelineMemorySize, 1,1, MemUsage::StorageBuffer | MemUsage::TransferDst, BufferHeap::Device);
   compacted = dev.allocator.alloc(nullptr, PipelineMemorySize, 1,1, geo, BufferHeap::Device);
 
   try {
