@@ -1051,7 +1051,7 @@ void VMeshCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, const void* 
   VPipeline& px = reinterpret_cast<VPipeline&>(p);
   if(px.meshPipeline()==VK_NULL_HANDLE)
     return;
-  vkCmdPushConstants(impl, px.meshPipelineLayout(), VK_PIPELINE_BIND_POINT_COMPUTE, 0, uint32_t(size), data);
+  vkCmdPushConstants(cbHelper, px.meshPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, uint32_t(size), data);
   }
 
 void VMeshCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc& u) {

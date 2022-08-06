@@ -37,6 +37,11 @@ class MeshConverter {
     libspirv::MutableBytecode& code;
     libspirv::MutableBytecode  vert;
 
+    struct gl_MeshPerVertexNV {
+      bool gl_Position  = false;
+      bool gl_PointSize = false;
+      } gl_MeshPerVertexNV;
+
     // meslet builtins
     uint32_t idMeshPerVertexNV    = 0;
     uint32_t idGlPerVertex        = 0;

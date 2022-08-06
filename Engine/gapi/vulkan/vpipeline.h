@@ -74,7 +74,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     const VShader*                         findShader(ShaderReflection::Stage sh) const;
 
     void cleanup();
-    static VkPipelineLayout      initLayout(VDevice& device, const VPipelineLay& uboLay, VkShaderStageFlags& pushFlg, uint32_t& pushSize, bool isMeshCompPass);
+    static VkPipelineLayout      initLayout(VDevice& device, const VPipelineLay& uboLay, VkShaderStageFlags pushFlg, uint32_t& pushSize, bool isMeshCompPass);
     VkPipeline                   initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
                                                       const VFramebufferMap::RenderPass* rpLay, const VkPipelineRenderingCreateInfoKHR* dynLay, const RenderState &st,
                                                       const Decl::ComponentType *decl, size_t declSize, size_t stride,

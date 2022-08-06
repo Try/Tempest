@@ -28,9 +28,9 @@ class VMeshletHelper {
 
   public:
     enum {
-      PipelineMemorySize = 16*1024*1024,
-      MeshletsMemorySize = 16*1024,
-      IndirectMemorySize = 1024*sizeof(VkDrawIndexedIndirectCommand),
+      PipelineMemorySize = 32*1024*1024,
+      MeshletsMemorySize = 32*1024,
+      IndirectMemorySize = 2048*sizeof(VkDrawIndexedIndirectCommand),
       };
     explicit VMeshletHelper(VDevice& dev);
     ~VMeshletHelper();

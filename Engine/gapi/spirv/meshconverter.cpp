@@ -73,17 +73,19 @@ void MeshConverter::exec() {
   // gl_MeshPerVertexNV block
   for(auto it = code.begin(), end = code.end(); it!=end; ++it) {
     auto& i = *it;
-    if(i.op()==spv::OpMemberDecorate && i[3]==spv::DecorationPerViewNV) {
-      idMeshPerVertexNV = i[1];
+    if(i.op()==spv::OpMemberDecorate && i[3]==spv::DecorationBuiltIn && i[4]==spv::BuiltInPosition) {
+      idMeshPerVertexNV              = i[1];
+      gl_MeshPerVertexNV.gl_Position = true;
       break;
       }
     }
 
   removeMultiview(code);
   removeCullClip(code);
+
   for(auto it = code.begin(), end = code.end(); it!=end; ++it) {
     auto& i = *it;
-    if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBlock) {
+    if(i.op()==spv::OpDecorate && i[1]==idMeshPerVertexNV && i[2]==spv::DecorationBlock) {
       it.setToNop();
       continue;
       }
@@ -93,6 +95,9 @@ void MeshConverter::exec() {
       continue;
       }
     if(i.op()==spv::OpMemberDecorate && i[3]==spv::DecorationBuiltIn) {
+      if(i[4]==spv::BuiltInPointSize) {
+        gl_MeshPerVertexNV.gl_PointSize = true;
+        }
       it.setToNop();
       continue;
       }
@@ -104,6 +109,12 @@ void MeshConverter::exec() {
       auto str = std::string_view(reinterpret_cast<const char*>(&i[2]));
       if(str=="gl_MeshPerVertexNV")
         idGlPerVertex = i[1];
+      continue;
+      }
+    if(i.op()==spv::OpSourceExtension) {
+      auto str = std::string_view(reinterpret_cast<const char*>(&i[2]));
+      if(str=="GL_NV_mesh_shader")
+        it.setToNop();
       continue;
       }
     }
@@ -359,7 +370,9 @@ void MeshConverter::generateVs() {
 
   fn.insert(spv::OpName,       typeRemaps[idGlPerVertex], "gl_PerVertex");
   fn.insert(spv::OpMemberName, typeRemaps[idGlPerVertex], 0, "gl_Position");
-  fn.insert(spv::OpMemberName, typeRemaps[idGlPerVertex], 1, "gl_PointSize");
+  if(gl_MeshPerVertexNV.gl_PointSize) {
+    fn.insert(spv::OpMemberName, typeRemaps[idGlPerVertex], 1, "gl_PointSize");
+    }
   //fn.insert(spv::OpMemberName, typeRemaps[idGlPerVertex], 2, "gl_ClipDistance");
   //fn.insert(spv::OpMemberName, typeRemaps[idGlPerVertex], 3, "gl_CullDistance");
 
@@ -379,7 +392,9 @@ void MeshConverter::generateVs() {
   fn.insert(spv::OpDecorate,       {gl_VertexIndex, spv::DecorationBuiltIn, spv::BuiltInVertexIndex});
   fn.insert(spv::OpDecorate,       {typeRemaps[idGlPerVertex], spv::DecorationBlock});
   fn.insert(spv::OpMemberDecorate, {typeRemaps[idGlPerVertex], 0, spv::DecorationBuiltIn, spv::BuiltInPosition});
-  fn.insert(spv::OpMemberDecorate, {typeRemaps[idGlPerVertex], 1, spv::DecorationBuiltIn, spv::BuiltInPointSize});
+  if(gl_MeshPerVertexNV.gl_PointSize) {
+    fn.insert(spv::OpMemberDecorate, {typeRemaps[idGlPerVertex], 1, spv::DecorationBuiltIn, spv::BuiltInPointSize});
+    }
   //fn.insert(spv::OpMemberDecorate, {typeRemaps[idGlPerVertex], 2, spv::DecorationBuiltIn, spv::BuiltInClipDistance});
   //fn.insert(spv::OpMemberDecorate, {typeRemaps[idGlPerVertex], 3, spv::DecorationBuiltIn, spv::BuiltInCullDistance});
   }

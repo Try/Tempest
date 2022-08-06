@@ -245,11 +245,14 @@ uint32_t MutableBytecode::OpTypeArray(Iterator& typesEnd, uint32_t eltType, uint
   }
 
 uint32_t MutableBytecode::OpTypeRuntimeArray(Iterator& typesEnd, uint32_t eltType) {
+  // NOTE: spirv allows for multiple declarations of array with different strides(specifyed by Decoration)
+  /*
   for(auto it=begin(); it!=typesEnd; ++it) {
     auto& i = *it;
     if(i.op()==spv::OpTypeRuntimeArray && i[2]==eltType)
-      return i[1];
+      ;//return i[1];
     }
+  */
   const uint32_t tRet = fetchAddBound();
   typesEnd.insert(spv::OpTypeRuntimeArray, {tRet, eltType});
   return tRet;

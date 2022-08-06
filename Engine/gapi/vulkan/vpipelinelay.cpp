@@ -73,8 +73,10 @@ VkDescriptorSetLayout VPipelineLay::create(uint32_t runtimeArraySz) const {
     b.descriptorCount = e.runtimeSized ? runtimeArraySz : e.arraySize;
     b.descriptorType  = nativeFormat(e.cls);
     b.stageFlags      = nativeFormat(e.stage);
-    if(b.stageFlags==VK_SHADER_STAGE_MESH_BIT_NV && dev.props.meshlets.meshShaderEmulated)
-      b.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    if((b.stageFlags&VK_SHADER_STAGE_MESH_BIT_NV)==VK_SHADER_STAGE_MESH_BIT_NV && dev.props.meshlets.meshShaderEmulated) {
+      b.stageFlags &= ~VK_SHADER_STAGE_MESH_BIT_NV;
+      b.stageFlags |= VK_SHADER_STAGE_COMPUTE_BIT;
+      }
     ++count;
     }
 

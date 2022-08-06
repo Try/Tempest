@@ -53,6 +53,10 @@ VPipeline::VPipeline(VDevice& device, const RenderState& st, Topology tp,
         defaultStride += uint32_t(Decl::size(decl[i]));
         }
       }
+
+    if(ulay.pb.size>0) {
+      pushStageFlags = nativeFormat(ulay.pb.stage);
+      }
     pipelineLayout = initLayout(device,ulay,pushStageFlags,pushSize,false);
 
     if(auto ms=findShader(ShaderReflection::Stage::Mesh)) {
@@ -69,6 +73,9 @@ VPipeline::VPipeline(VDevice& device, const RenderState& st, Topology tp,
       info.stage.pName  = "main";
       info.layout       = pipelineLayoutMs;
       vkAssert(vkCreateComputePipelines(device.device.impl, VK_NULL_HANDLE, 1, &info, nullptr, &meshCompuePipeline));
+
+      // cancel native mesh shading
+      pushStageFlags &= ~VK_SHADER_STAGE_MESH_BIT_NV;
       }
     }
   catch(...) {
@@ -153,8 +160,8 @@ void VPipeline::cleanup() {
     vkDestroyPipeline(device,i.val,nullptr);
   }
 
-VkPipelineLayout VPipeline::initLayout(VDevice& device, const VPipelineLay& uboLay,
-                                       VkShaderStageFlags& pushStageFlags, uint32_t& pushSize,
+VkPipelineLayout VPipeline::initLayout(VDevice& dev, const VPipelineLay& uboLay,
+                                       VkShaderStageFlags pushStageFlags, uint32_t& pushSize,
                                        bool isMeshCompPass) {
   VkPushConstantRange push = {};
 
@@ -168,7 +175,7 @@ VkPipelineLayout VPipeline::initLayout(VDevice& device, const VPipelineLay& uboL
 
   if(uboLay.msHelper!=VK_NULL_HANDLE) {
     if(isMeshCompPass) {
-      auto& ms = *device.meshHelper.get();
+      auto& ms = *dev.meshHelper.get();
       pSetLayouts[pipelineLayoutInfo.setLayoutCount] = ms.lay();
       pipelineLayoutInfo.setLayoutCount++;
       } else {
@@ -179,6 +186,16 @@ VkPipelineLayout VPipeline::initLayout(VDevice& device, const VPipelineLay& uboL
 
   if(uboLay.pb.size>0) {
     pushStageFlags = nativeFormat(uboLay.pb.stage);
+
+    if(uboLay.msHelper!=VK_NULL_HANDLE) {
+      if(isMeshCompPass) {
+        if((pushStageFlags&VK_SHADER_STAGE_MESH_BIT_NV)==VK_SHADER_STAGE_MESH_BIT_NV) {
+          pushStageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+          }
+        } else {
+        pushStageFlags &= ~VK_SHADER_STAGE_MESH_BIT_NV;
+        }
+      }
     push.stageFlags = pushStageFlags;
     push.offset     = 0;
     push.size       = uint32_t(uboLay.pb.size);
@@ -190,7 +207,7 @@ VkPipelineLayout VPipeline::initLayout(VDevice& device, const VPipelineLay& uboL
     }
 
   VkPipelineLayout ret;
-  vkAssert(vkCreatePipelineLayout(device.device.impl,&pipelineLayoutInfo,nullptr,&ret));
+  vkAssert(vkCreatePipelineLayout(dev.device.impl,&pipelineLayoutInfo,nullptr,&ret));
   return ret;
   }
 
