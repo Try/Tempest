@@ -29,7 +29,7 @@ class VPipelineLay : public AbstractGraphicsApi::PipelineLay {
 
     size_t                descriptorsCount() override;
     VkDescriptorSetLayout create(uint32_t runtimeArraySz) const;
-    VkDescriptorSetLayout createMsHealper() const;
+    VkDescriptorSetLayout createMsHelper() const;
 
     using Binding = ShaderReflection::Binding;
 

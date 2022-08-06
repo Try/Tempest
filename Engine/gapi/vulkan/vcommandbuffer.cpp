@@ -1042,7 +1042,7 @@ void VMeshCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
 
   vkCmdBindPipeline(cbHelper,VK_PIPELINE_BIND_POINT_COMPUTE,px.meshPipeline());
   ms.bindCS(cbHelper,px.meshPipelineLayout());
-  ms.bindVS(impl);
+  ms.bindVS(impl,    px.pipelineLayout);
   }
 
 void VMeshCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc& u) {
@@ -1060,14 +1060,13 @@ void VMeshCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractG
   }
 
 void VMeshCommandBuffer::dispatchMesh(size_t firstInstance, size_t instanceCount) {
-  VPipeline& px = reinterpret_cast<VPipeline&>(curDrawPipeline);
+  VPipeline& px = reinterpret_cast<VPipeline&>(*curDrawPipeline);
   if(px.meshPipeline()==VK_NULL_HANDLE)
     return;
 
-  // TODO
+  auto& ms = *device.meshHelper;
   vkCmdDispatch(cbHelper, instanceCount, 1, 1);
-
-  // vkCmdDrawIndexed(impl, 0, 3, 0, 0, 0);
+  ms.drawIndirect(impl, meshIndirectId);
 
   ++meshIndirectId;
   }

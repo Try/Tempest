@@ -1,5 +1,7 @@
 #version 440
 
+layout(local_size_x = 1) in;
+
 struct IndirectCmd {
   uint    indexCount;
   uint    instanceCount;
@@ -12,27 +14,25 @@ struct IndirectCmd {
   uint    padd1;
   };
 
-layout(set = 1, binding = 0, std430) buffer EngineInternal0 {
+layout(binding = 0, std430) buffer EngineInternal0 {
   IndirectCmd cmd[];
   } indirect;
 
-layout(set = 1, binding = 1, std430) readonly buffer EngineInternal3 {
+layout(binding = 1, std430) readonly buffer EngineInternal3 {
   uint    grow;
   uint    dispatchY;
   uint    dispatchZ;
   uint    desc[];
   } mesh;
 
-layout(set = 1, binding = 2, std430) readonly buffer EngineInternal2 {
+layout(binding = 2, std430) readonly buffer EngineInternal2 {
   uint    grow;
   uint    heap[];
   } var;
 
-layout(set = 0, binding = 1, std430) buffer EngineInternal4 {
+layout(binding = 3, std430) buffer EngineInternal4 {
   uint    heap[];
   } varFlat;
-
-layout(local_size_x = 1) in;
 
 void main() {
   uint index = gl_GlobalInvocationID.x;

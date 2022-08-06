@@ -33,7 +33,7 @@ VPipelineLay::VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Bin
   impl = create(MAX_BINDLESS);
   if(needMsHelper) {
     try {
-      msHelper = createMsHealper();
+      msHelper = createMsHelper();
       }
     catch(...) {
       vkDestroyDescriptorSetLayout(dev.device.impl,impl,nullptr);
@@ -98,7 +98,7 @@ VkDescriptorSetLayout VPipelineLay::create(uint32_t runtimeArraySz) const {
   return ret;
   }
 
-VkDescriptorSetLayout VPipelineLay::createMsHealper() const {
+VkDescriptorSetLayout VPipelineLay::createMsHelper() const {
   VkDescriptorSetLayoutBinding bind[1] = {};
   bind[0].binding         = 0;
   bind[0].descriptorCount = 1;

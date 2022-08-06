@@ -1,25 +1,36 @@
 #version 440
 
-struct IndirectCmd {
-  uint    indexCount;
-  uint    instanceCount;
-  uint    firstIndex;    // prefix sum
-  int     vertexOffset;  // can be abused to offset into var_buffer
-  uint    firstInstance; // caps: should be zero
+struct VkDrawIndexedIndirectCommand
+{
+    uint indexCount;
+    uint instanceCount;
+    uint firstIndex;    // prefix sum
+    int  vertexOffset;  // can be abused to offset into var_buffer
+    uint firstInstance; // caps: should be zero
 
-  uint    self;
-  uint    vboOffset;
-  uint    padd1;
-  };
+    uint self;
+    uint vboOffset;
+    uint padd1;
+};
 
-layout(binding = 0, std430) buffer EngineInternal0 {
-  IndirectCmd cmd[];
-  } indirect;
+layout(binding = 0, std430) buffer EngineInternal0
+{
+    VkDrawIndexedIndirectCommand cmd[];
+} indirect;
 
-layout(set = 0, binding = 1, std430) buffer EngineInternal2 {
-  uint    grow;
-  uint    heap[];
-  } var;
+layout(binding = 1, std430) buffer EngineInternal1
+{
+    uint grow;
+    uint dispatchY;
+    uint dispatchZ;
+    uint desc[];
+} _116;
+
+layout(binding = 2, std430) buffer EngineInternal2
+{
+    uint grow;
+    uint heap[];
+} var;
 
 layout(local_size_x = 256) in;
 
