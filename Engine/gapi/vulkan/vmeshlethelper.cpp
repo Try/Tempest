@@ -92,14 +92,37 @@ void VMeshletHelper::bindVS(VkCommandBuffer impl, VkPipelineLayout lay) {
 void VMeshletHelper::drawIndirect(VkCommandBuffer impl, uint32_t id) {
   uint32_t off = id*sizeof(VkDrawIndexedIndirectCommand);
   vkCmdDrawIndexedIndirect(impl, indirect.impl, off, 1, sizeof(VkDrawIndexedIndirectCommand));
+  // vkCmdDrawIndexed(impl, 3, 1, 0, 0, 0);
   }
 
 void VMeshletHelper::initRP(VkCommandBuffer impl) {
-  // VkDrawIndexedIndirectCommand cmd = {};
-  // indirect.read(&cmd,0,sizeof(cmd));
+  if(false) {
+    VkDrawIndexedIndirectCommand cmd = {};
+    indirect.read(&cmd,0,sizeof(cmd));
 
-  // IVec3 cmdSz = {};
-  // meshlets.read(&cmdSz,0,sizeof(cmdSz));
+    IVec3 cmdSz = {};
+    meshlets.read(&cmdSz,0,sizeof(cmdSz));
+
+    IVec3 desc = {};
+    meshlets.read(&desc,3*4,sizeof(desc));
+
+    uint32_t indSize   = (desc.z       ) & 0x3FF;
+    uint32_t maxVertex = (desc.z >> 10 ) & 0xFF;
+    uint32_t varSize   = (desc.z >> 18u);
+
+    uint32_t ibo[3] = {};
+    compacted.read(ibo,0,sizeof(ibo));
+
+    float    vbo[11*3] = {};
+    uint32_t vboI[11*3] = {};
+    compacted.read(vbo, 3*4,sizeof(vbo));
+    compacted.read(vboI,3*4,sizeof(vboI));
+
+    float sc[11*3+3] = {};
+    scratch.read(sc,0,sizeof(sc));
+
+    Log::i("");
+    }
 
   // drawcall-related parts should be set to zeros
   vkCmdFillBuffer(impl, indirect.impl, 0, VK_WHOLE_SIZE, 0);
@@ -115,6 +138,7 @@ void VMeshletHelper::initRP(VkCommandBuffer impl) {
 
 void VMeshletHelper::sortPass(VkCommandBuffer impl, uint32_t meshCallsCount) {
   // prefix summ pass
+  // Issue: sync for indirect buffer will ruing pipelining, by serializing all renderpasses
   barrier(impl,
           VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
           VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,

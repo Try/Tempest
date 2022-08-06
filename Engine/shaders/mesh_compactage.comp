@@ -32,7 +32,7 @@ layout(binding = 2, std430) readonly buffer EngineInternal2 {
 
 layout(binding = 3, std430) buffer EngineInternal4 {
   uint    heap[];
-  } varFlat;
+  } compacted;
 
 void main() {
   uint index = gl_GlobalInvocationID.x;
@@ -41,23 +41,24 @@ void main() {
 
   uint mestId     = index*3;
   uint self       = mesh.desc[mestId+0];
-  uint indDest    = mesh.desc[mestId+1];
+  uint indPtr     = mesh.desc[mestId+1];
   uint desc       = mesh.desc[mestId+2];
 
   uint indSize   = (desc       ) & 0x3FF;
   uint maxVertex = (desc >> 10 ) & 0xFF;
   uint varSize   = (desc >> 18u);
   uint vMem      = maxVertex*varSize;
+  uint vertPtr   = indPtr + indSize;
 
   uint firstIndex = indirect.cmd[self].firstIndex;
   uint iboOffset  = atomicAdd(indirect.cmd[self].indexCount, indSize) + firstIndex;
   uint vboOffset  = atomicAdd(indirect.cmd[self].vboOffset,  vMem);
 
   for(uint i=0; i<vMem; ++i) {
-    varFlat.heap[vboOffset+i] = var.heap[indDest+indSize+i];
+    compacted.heap[vboOffset+i] = var.heap[vertPtr+i];
     }
 
   for(uint i=0; i<indSize; ++i) {
-    varFlat.heap[iboOffset+i] = vboOffset + var.heap[indDest+i]*varSize;
+    compacted.heap[iboOffset+i] = vboOffset + var.heap[indPtr+i]*varSize;
     }
   }

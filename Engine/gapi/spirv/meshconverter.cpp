@@ -72,7 +72,16 @@ void MeshConverter::exec() {
     }
 
   // gl_MeshPerVertexNV block
+  for(auto it = code.begin(), end = code.end(); it!=end; ++it) {
+    auto& i = *it;
+    if(i.op()==spv::OpMemberDecorate && i[3]==spv::DecorationPerViewNV) {
+      idMeshPerVertexNV = i[1];
+      break;
+      }
+    }
+
   removeMultiview(code);
+  removeCullClip(code);
   for(auto it = code.begin(), end = code.end(); it!=end; ++it) {
     auto& i = *it;
     if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBlock) {
@@ -331,8 +340,8 @@ void MeshConverter::generateVs() {
   fn.insert(spv::OpName,       typeRemaps[idGlPerVertex], "gl_PerVertex");
   fn.insert(spv::OpMemberName, typeRemaps[idGlPerVertex], 0, "gl_Position");
   fn.insert(spv::OpMemberName, typeRemaps[idGlPerVertex], 1, "gl_PointSize");
-  fn.insert(spv::OpMemberName, typeRemaps[idGlPerVertex], 2, "gl_ClipDistance");
-  fn.insert(spv::OpMemberName, typeRemaps[idGlPerVertex], 3, "gl_CullDistance");
+  //fn.insert(spv::OpMemberName, typeRemaps[idGlPerVertex], 2, "gl_ClipDistance");
+  //fn.insert(spv::OpMemberName, typeRemaps[idGlPerVertex], 3, "gl_CullDistance");
 
   fn = vert.findSectionEnd(libspirv::Bytecode::S_Annotations);
   for(auto& i:outVar) {
@@ -351,8 +360,8 @@ void MeshConverter::generateVs() {
   fn.insert(spv::OpDecorate,       {typeRemaps[idGlPerVertex], spv::DecorationBlock});
   fn.insert(spv::OpMemberDecorate, {typeRemaps[idGlPerVertex], 0, spv::DecorationBuiltIn, spv::BuiltInPosition});
   fn.insert(spv::OpMemberDecorate, {typeRemaps[idGlPerVertex], 1, spv::DecorationBuiltIn, spv::BuiltInPointSize});
-  fn.insert(spv::OpMemberDecorate, {typeRemaps[idGlPerVertex], 2, spv::DecorationBuiltIn, spv::BuiltInClipDistance});
-  fn.insert(spv::OpMemberDecorate, {typeRemaps[idGlPerVertex], 3, spv::DecorationBuiltIn, spv::BuiltInCullDistance});
+  //fn.insert(spv::OpMemberDecorate, {typeRemaps[idGlPerVertex], 2, spv::DecorationBuiltIn, spv::BuiltInClipDistance});
+  //fn.insert(spv::OpMemberDecorate, {typeRemaps[idGlPerVertex], 3, spv::DecorationBuiltIn, spv::BuiltInCullDistance});
   }
 
 void MeshConverter::vsTypeRemaps(libspirv::MutableBytecode::Iterator& fn,
@@ -625,6 +634,7 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
   fn.insert(spv::OpMemberName, IndirectCommand, 5, "self");
   fn.insert(spv::OpMemberName, IndirectCommand, 6, "vboOffset");
   fn.insert(spv::OpMemberName, IndirectCommand, 7, "padd1");
+  fn.insert(spv::OpName,       EngineInternal0,    "EngineInternal0");
 
   fn.insert(spv::OpName,       EngineInternal1,    "EngineInternal1");
   fn.insert(spv::OpMemberName, EngineInternal1, 0, "grow");
@@ -888,16 +898,7 @@ void MeshConverter::replaceEntryPoint(const uint32_t idMainFunc, const uint32_t 
   }
 
 void MeshConverter::removeMultiview(libspirv::MutableBytecode& code) {
-  uint32_t idMeshPerVertexNV = uint32_t(-1);
-  for(auto it = code.begin(), end = code.end(); it!=end; ++it) {
-    auto& i = *it;
-    if(i.op()==spv::OpMemberDecorate && i[3]==spv::DecorationPerViewNV) {
-      idMeshPerVertexNV = i[1];
-      break;
-      }
-    }
-
-  if(idMeshPerVertexNV==uint32_t(-1))
+  if(idMeshPerVertexNV==0)
     return;
 
   std::unordered_set<uint32_t> perView;
@@ -909,11 +910,39 @@ void MeshConverter::removeMultiview(libspirv::MutableBytecode& code) {
       }
     }
 
+  removeFromPerVertex(code,perView);
+  }
+
+void MeshConverter::removeCullClip(libspirv::MutableBytecode& code) {
+  if(idMeshPerVertexNV==0)
+    return;
+
+  std::unordered_set<uint32_t> perView;
+  for(auto it = code.begin(), end = code.end(); it!=end; ++it) {
+    auto& i = *it;
+    if(i.op()!=spv::OpMemberDecorate || i[3]!=spv::DecorationBuiltIn)
+      continue;
+
+    if(i[4]==spv::BuiltInClipDistance) {
+      perView.insert(i[2]);
+      continue;
+      }
+    if(i[4]==spv::BuiltInCullDistance) {
+      perView.insert(i[2]);
+      continue;
+      }
+    }
+
+  removeFromPerVertex(code,perView);
+  }
+
+void MeshConverter::removeFromPerVertex(libspirv::MutableBytecode& code,
+                                        const std::unordered_set<uint32_t>& fields) {
   for(auto it = code.begin(), end = code.end(); it!=end; ++it) {
     auto& i = *it;
     if((i.op()!=spv::OpMemberDecorate && i.op()!=spv::OpMemberName) || i[1]!=idMeshPerVertexNV)
       continue;
-    if(perView.find(i[2])==perView.end())
+    if(fields.find(i[2])==fields.end())
       continue;
     it.setToNop();
     }
@@ -929,7 +958,7 @@ void MeshConverter::removeMultiview(libspirv::MutableBytecode& code) {
     uint32_t args[16] = {};
     args[0] = i[1];
     for(size_t r=2; r<i.length(); ++r) {
-      if(perView.find(r-2)!=perView.end())
+      if(fields.find(r-2)!=fields.end())
         continue;
       args[argc] = i[r];
       ++argc;

@@ -21,6 +21,8 @@ class MeshConverter {
 
     void     avoidReservedFixup();
     void     removeMultiview(libspirv::MutableBytecode& code);
+    void     removeCullClip(libspirv::MutableBytecode& code);
+    void     removeFromPerVertex(libspirv::MutableBytecode& code, const std::unordered_set<uint32_t>& fields);
 
     void     injectLoop(libspirv::MutableBytecode::Iterator& fn,
                         uint32_t varI, uint32_t begin, uint32_t end, uint32_t inc, std::function<void(libspirv::MutableBytecode::Iterator& fn)> body);
@@ -35,6 +37,7 @@ class MeshConverter {
     libspirv::MutableBytecode  vert;
 
     // meslet builtins
+    uint32_t idMeshPerVertexNV    = 0;
     uint32_t idGlPerVertex        = 0;
     uint32_t idPrimitiveCountNV   = 0;
     uint32_t idPrimind            = 0;
