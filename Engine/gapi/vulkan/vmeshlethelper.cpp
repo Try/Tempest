@@ -15,7 +15,7 @@ using namespace Tempest::Detail;
 VMeshletHelper::VMeshletHelper(VDevice& dev) : dev(dev) {
   const auto ind = MemUsage::StorageBuffer | MemUsage::Indirect | MemUsage::TransferDst;
   const auto ms  = MemUsage::StorageBuffer | MemUsage::Indirect | MemUsage::TransferDst;
-  const auto geo = MemUsage::StorageBuffer | MemUsage::VertexBuffer | MemUsage::IndexBuffer;
+  const auto geo = MemUsage::StorageBuffer | MemUsage::VertexBuffer | MemUsage::IndexBuffer | MemUsage::TransferDst;
 
   indirect  = dev.allocator.alloc(nullptr, IndirectMemorySize, 1,1, ind, BufferHeap::Device);
   meshlets  = dev.allocator.alloc(nullptr, MeshletsMemorySize, 1,1, ms,  BufferHeap::Device);
@@ -129,6 +129,9 @@ void VMeshletHelper::initRP(VkCommandBuffer impl) {
   // {0, 1, 1, <undefined>}
   IVec3 meshletBufInit = {0,1,1};
   vkCmdUpdateBuffer(impl ,meshlets.impl, 0, sizeof(meshletBufInit), &meshletBufInit);
+  // var.grow
+  vkCmdFillBuffer(impl, scratch.impl, 0, sizeof(uint32_t), 0);
+
   barrier(impl,
           VK_PIPELINE_STAGE_TRANSFER_BIT,
           VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,

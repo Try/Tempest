@@ -30,8 +30,8 @@ VMeshShaderEmulated::VMeshShaderEmulated(VDevice& device, const void *source, si
 
   auto& vert = conv.vertexPassthrough();
 
-  debugLog("mesh_conv.vert.spv", vert.opcodes(), vert.size());
-  debugLog("mesh_conv.comp.spv", code.opcodes(), code.size());
+  //debugLog("mesh_conv.vert.spv", vert.opcodes(), vert.size());
+  //debugLog("mesh_conv.comp.spv", code.opcodes(), code.size());
 
   VkShaderModuleCreateInfo createInfo = {};
   createInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
