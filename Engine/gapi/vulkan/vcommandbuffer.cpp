@@ -1045,6 +1045,15 @@ void VMeshCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
   ms.bindVS(impl,    px.pipelineLayout);
   }
 
+void VMeshCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) {
+  VCommandBuffer::setBytes(p,data,size);
+
+  VPipeline& px = reinterpret_cast<VPipeline&>(p);
+  if(px.meshPipeline()==VK_NULL_HANDLE)
+    return;
+  vkCmdPushConstants(impl, px.meshPipelineLayout(), VK_PIPELINE_BIND_POINT_COMPUTE, 0, uint32_t(size), data);
+  }
+
 void VMeshCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc& u) {
   VCommandBuffer::setUniforms(p,u);
 

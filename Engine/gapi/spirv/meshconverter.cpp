@@ -860,9 +860,14 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
 
   // Writeout meshlet descriptor
   {
+    const uint32_t ptrWorkGroupID = code.fetchAddBound();
+    fn.insert(spv::OpAccessChain, {_ptr_Input_uint, ptrWorkGroupID, idWorkGroupID, const1});
+    const uint32_t workIdX = code.fetchAddBound();
+    fn.insert(spv::OpLoad, {uint_t, workIdX, ptrWorkGroupID});
+
     const uint32_t ptrHeap0 = code.fetchAddBound();
     fn.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrHeap0, vEngine1, const3, meshDest});
-    fn.insert(spv::OpStore, {ptrHeap0, const0}); // TODO: writeout self-id
+    fn.insert(spv::OpStore, {ptrHeap0, workIdX});
 
     const uint32_t dest1 = code.fetchAddBound();
     fn.insert(spv::OpIAdd, {uint_t, dest1, meshDest, const1});

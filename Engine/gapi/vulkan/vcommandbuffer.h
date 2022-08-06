@@ -137,6 +137,7 @@ class VMeshCommandBuffer:public VCommandBuffer {
     using VCommandBuffer::VCommandBuffer;
 
     void setPipeline(AbstractGraphicsApi::Pipeline& p) override;
+    void setBytes   (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;
     void setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc &u) override;
 
     void dispatchMesh(size_t firstInstance, size_t instanceCount) override;
