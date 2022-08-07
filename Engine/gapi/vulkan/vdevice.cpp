@@ -490,7 +490,7 @@ void VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
     }
 
   if(vkQueueSubmit2!=nullptr) {
-    SmallArray<VkSemaphoreSubmitInfo, 32> wait2(waitCnt);
+    SmallArray<VkSemaphoreSubmitInfoKHR, 32> wait2(waitCnt);
     for(size_t i=0; i<waitCnt; ++i) {
       wait2[i].sType       = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
       wait2[i].pNext       = nullptr;
