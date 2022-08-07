@@ -1078,7 +1078,6 @@ void VMeshCommandBuffer::dispatchMesh(size_t firstInstance, size_t instanceCount
                            firstInstance, meshIndirectId, 0,
                            instanceCount, 1, 1);
   ms.drawIndirect(impl, meshIndirectId);
-
   ++meshIndirectId;
   }
 

@@ -36,8 +36,8 @@ layout(binding = 3, std430) buffer EngineInternal4 {
 
 void main() {
   uint index = gl_GlobalInvocationID.x;
-  //if(index>mesh.grow)
-  //  return;
+  if(index>mesh.desc.length())
+    return;
 
   uint mestId     = index*3;
   uint self       = mesh.desc[mestId+0];

@@ -59,23 +59,25 @@ VPipeline::VPipeline(VDevice& device, const RenderState& st, Topology tp,
       }
     pipelineLayout = initLayout(device,ulay,pushStageFlags,pushSize,false);
 
-    if(auto ms=findShader(ShaderReflection::Stage::Mesh)) {
-      device.allocMeshletHelper();
+    if(device.props.meshlets.meshShaderEmulated) {
+      if(auto ms=findShader(ShaderReflection::Stage::Mesh)) {
+        device.allocMeshletHelper();
 
-      pipelineLayoutMs = initLayout(device,ulay,pushStageFlags,pushSize,true);
+        pipelineLayoutMs = initLayout(device,ulay,pushStageFlags,pushSize,true);
 
-      VkComputePipelineCreateInfo info = {};
-      info.sType        = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-      info.flags        = VK_PIPELINE_CREATE_DISPATCH_BASE;
-      info.stage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-      info.stage.stage  = VK_SHADER_STAGE_COMPUTE_BIT;
-      info.stage.module = reinterpret_cast<const VMeshShaderEmulated*>(ms)->compPass;
-      info.stage.pName  = "main";
-      info.layout       = pipelineLayoutMs;
-      vkAssert(vkCreateComputePipelines(device.device.impl, VK_NULL_HANDLE, 1, &info, nullptr, &meshCompuePipeline));
+        VkComputePipelineCreateInfo info = {};
+        info.sType        = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+        info.flags        = VK_PIPELINE_CREATE_DISPATCH_BASE;
+        info.stage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        info.stage.stage  = VK_SHADER_STAGE_COMPUTE_BIT;
+        info.stage.module = reinterpret_cast<const VMeshShaderEmulated*>(ms)->compPass;
+        info.stage.pName  = "main";
+        info.layout       = pipelineLayoutMs;
+        vkAssert(vkCreateComputePipelines(device.device.impl, VK_NULL_HANDLE, 1, &info, nullptr, &meshCompuePipeline));
 
-      // cancel native mesh shading
-      pushStageFlags &= ~VK_SHADER_STAGE_MESH_BIT_NV;
+        // cancel native mesh shading
+        pushStageFlags &= ~VK_SHADER_STAGE_MESH_BIT_NV;
+        }
       }
     }
   catch(...) {

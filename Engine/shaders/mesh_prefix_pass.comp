@@ -77,8 +77,10 @@ void main() {
     uint v = prefixVbo;
     prefixVbo += indirect.cmd[i].instanceCount;
 
+    uint inst = indirect.cmd[i].indexCount>0 ? 1 : 0;
+
     indirect.cmd[i].indexCount    = 0;
-    indirect.cmd[i].instanceCount = 1;
+    indirect.cmd[i].instanceCount = inst;
     indirect.cmd[i].firstIndex    = s;
     indirect.cmd[i].vertexOffset  = 0;
     indirect.cmd[i].firstInstance = 0;
