@@ -28,9 +28,10 @@ class VMeshletHelper {
 
   public:
     enum {
-      MeshletsMaxCount   = 1024*16,
+      MeshletsMaxCount   = 1024*32,
       IndirectCmdCount   = 4048,
-      PipelineMemorySize = 64*1024*1024,
+      PipelinewordsCount = 32*1024*1024,
+      PipelineMemorySize = PipelinewordsCount*4,
       MeshletsMemorySize = MeshletsMaxCount*3*4,
       IndirectMemorySize = IndirectCmdCount*sizeof(VkDrawIndexedIndirectCommand),
       };
