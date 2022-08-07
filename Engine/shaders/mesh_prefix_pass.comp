@@ -1,4 +1,6 @@
-#version 440
+#version 450
+
+#extension GL_EXT_control_flow_attributes:enable
 
 struct VkDrawIndexedIndirectCommand
 {
@@ -47,6 +49,7 @@ void main() {
 
   uint sumVbo = 0;
   uint sumIbo = 0;
+  [[loop]]
   for(uint i=b; i<e; ++i) {
     sumIbo += indirect.cmd[i].indexCount;
     sumVbo += indirect.cmd[i].instanceCount;
@@ -70,6 +73,7 @@ void main() {
   memoryBarrierShared();
   barrier();
 
+  [[loop]]
   for(uint i=b; i<e; ++i) {
     uint s = prefixIbo;
     prefixIbo += indirect.cmd[i].indexCount;

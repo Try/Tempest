@@ -473,20 +473,14 @@ void VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
     ++waitCnt;
     }
 
-  SmallArray<VkSemaphore, 32>          wait      (waitCnt);
-  SmallArray<VkPipelineStageFlags, 32> waitStages(waitCnt);
-  size_t                               waitId  = 0;
+  SmallArray<VkSemaphore, 32> wait(waitCnt);
+  size_t                      waitId  = 0;
   for(auto& s:cmd.swapchainSync) {
     if(s->state!=Detail::VSwapchain::S_Draw0)
       continue;
     s->state = Detail::VSwapchain::S_Draw1;
     wait[waitId] = s->aquire;
     ++waitId;
-    }
-
-  for(size_t i=0; i<waitCnt; ++i) {
-    // NOTE: our sw images are draw-only
-    waitStages[i] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     }
 
   VkFence fence = VK_NULL_HANDLE;
@@ -496,6 +490,15 @@ void VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
     }
 
   if(vkQueueSubmit2!=nullptr) {
+    SmallArray<VkSemaphoreSubmitInfo, 32> wait2(waitCnt);
+    for(size_t i=0; i<waitCnt; ++i) {
+      wait2[i].sType       = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
+      wait2[i].pNext       = nullptr;
+      wait2[i].semaphore   = wait[i];
+      wait2[i].value       = 0;
+      wait2[i].stageMask   = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+      wait2[i].deviceIndex = 0;
+      }
     SmallArray<VkCommandBufferSubmitInfoKHR,64> flat(cmd.chunks.size());
     auto node = cmd.chunks.begin();
     for(size_t i=0; i<cmd.chunks.size(); ++i) {
@@ -511,9 +514,17 @@ void VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
     submitInfo.sType                  = VK_STRUCTURE_TYPE_SUBMIT_INFO_2_KHR;
     submitInfo.commandBufferInfoCount = uint32_t(cmd.chunks.size());
     submitInfo.pCommandBufferInfos    = flat.get();
+    submitInfo.waitSemaphoreInfoCount = waitCnt;
+    submitInfo.pWaitSemaphoreInfos    = wait2.get();
 
     graphicsQueue->submit(1,&submitInfo,fence,vkQueueSubmit2);
     } else {
+    SmallArray<VkPipelineStageFlags, 32> waitStages(waitCnt);
+    for(size_t i=0; i<waitCnt; ++i) {
+      // NOTE: our sw images are draw-only
+      waitStages[i] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+      }
+
     SmallArray<VkCommandBuffer,64> flat(cmd.chunks.size());
     auto node = cmd.chunks.begin();
     for(size_t i=0; i<cmd.chunks.size(); ++i) {
@@ -525,6 +536,9 @@ void VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
     submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = uint32_t(cmd.chunks.size());
     submitInfo.pCommandBuffers    = flat.get();
+    submitInfo.waitSemaphoreCount = waitCnt;
+    submitInfo.pWaitSemaphores    = wait.get();
+    submitInfo.pWaitDstStageMask  = waitStages.get();
 
     graphicsQueue->submit(1,&submitInfo,fence);
     }

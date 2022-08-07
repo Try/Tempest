@@ -287,8 +287,14 @@ uint32_t VSwapchain::findImageCount(const SwapChainSupport& support) const {
   }
 
 void VSwapchain::aquireNextImage() {
-  auto&    slot = sync[syncIndex];
-  auto&    f    = fence.aquire[syncIndex];
+  size_t sId = 0;
+  for(size_t i=0; i<sync.size(); ++i)
+    if(sync[i].imgId==imgIndex) {
+      sId = i;
+      break;
+      }
+  auto&    slot = sync[sId];
+  auto&    f    = fence.aquire[sId];
 
   vkWaitForFences(device.device.impl,1,&f,VK_TRUE,std::numeric_limits<uint64_t>::max());
   vkResetFences(device.device.impl,1,&f);
@@ -310,7 +316,6 @@ void VSwapchain::aquireNextImage() {
   imgIndex   = id;
   slot.imgId = id;
   slot.state = S_Pending;
-  syncIndex = (syncIndex+1)%uint32_t(sync.size());
   }
 
 uint32_t VSwapchain::currentBackBufferIndex() {
@@ -327,7 +332,9 @@ void VSwapchain::present() {
 
   auto&    slot = sync[sId];
   auto&    f    = fence.present[sId];
+  vkWaitForFences(device.device.impl,1,&f,VK_TRUE,std::numeric_limits<uint64_t>::max());
   vkResetFences(device.device.impl,1,&f);
+
   if(device.vkQueueSubmit2!=nullptr) {
     VkSemaphoreSubmitInfoKHR signal = {};
     signal.sType     = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;

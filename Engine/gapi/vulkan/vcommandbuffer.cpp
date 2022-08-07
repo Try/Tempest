@@ -862,14 +862,15 @@ void VCommandBuffer::vkCmdPipelineBarrier2(VkCommandBuffer impl, const VkDepende
     auto& b = info->pBufferMemoryBarriers[i];
 
     if(bufCount>MaxBarriers || b.srcStageMask!=srcStage || b.dstStageMask!=dstStage) {
-      if(bufCount>0) {
+      if(bufCount>0 || memCount>0) {
         vkCmdPipelineBarrier(impl,srcStage,dstStage,info->dependencyFlags,
-                             0,nullptr,
+                             memCount,memBarrier,
                              bufCount,bufBarrier,
                              0,nullptr);
         }
       srcStage = VkPipelineStageFlags(b.srcStageMask);
       dstStage = VkPipelineStageFlags(b.dstStageMask);
+      memCount = 0;
       bufCount = 0;
       }
 
@@ -889,14 +890,16 @@ void VCommandBuffer::vkCmdPipelineBarrier2(VkCommandBuffer impl, const VkDepende
     auto& b = info->pImageMemoryBarriers[i];
 
     if(imgCount>MaxBarriers || b.srcStageMask!=srcStage || b.dstStageMask!=dstStage) {
-      if(imgCount>0) {
+      if(imgCount>0 || bufCount>0 || memCount>0) {
         vkCmdPipelineBarrier(impl,srcStage,dstStage,info->dependencyFlags,
-                             0,nullptr,
-                             0,nullptr,
+                             memCount,memBarrier,
+                             bufCount,bufBarrier,
                              imgCount,imgBarrier);
         }
       srcStage = VkPipelineStageFlags(b.srcStageMask);
       dstStage = VkPipelineStageFlags(b.dstStageMask);
+      memCount = 0;
+      bufCount = 0;
       imgCount = 0;
       }
 

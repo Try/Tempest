@@ -1,6 +1,8 @@
-#version 440
+#version 450
 
-layout(local_size_x = 1) in;
+#extension GL_EXT_control_flow_attributes:enable
+
+layout(local_size_x = 64) in;
 
 struct IndirectCmd {
   uint    indexCount;
@@ -34,12 +36,16 @@ layout(binding = 3, std430) buffer EngineInternal4 {
   uint    heap[];
   } compacted;
 
+shared uint iboOffset;
+shared uint vboOffset;
+
 void main() {
-  uint index = gl_GlobalInvocationID.x;
-  if(index>mesh.desc.length())
+  if(gl_WorkGroupID.x>mesh.desc.length())
     return;
 
-  uint mestId     = index*3;
+  const uint index = gl_LocalInvocationID.x;
+
+  uint mestId     = gl_WorkGroupID.x*3;
   uint self       = mesh.desc[mestId+0];
   uint indPtr     = mesh.desc[mestId+1];
   uint desc       = mesh.desc[mestId+2];
@@ -50,15 +56,26 @@ void main() {
   uint vMem      = maxVertex*varSize;
   uint vertPtr   = indPtr + indSize;
 
-  uint firstIndex = indirect.cmd[self].firstIndex;
-  uint iboOffset  = atomicAdd(indirect.cmd[self].indexCount, indSize) + firstIndex;
-  uint vboOffset  = atomicAdd(indirect.cmd[self].vboOffset,  vMem);
+  [[branch]]
+  if(index==0) {
+    uint firstIndex = indirect.cmd[self].firstIndex;
+    iboOffset = atomicAdd(indirect.cmd[self].indexCount, indSize) + firstIndex;
+    vboOffset = atomicAdd(indirect.cmd[self].vboOffset,  vMem);
+    }
 
-  for(uint i=0; i<vMem; ++i) {
+  barrier();
+
+  uint b     = ((index+0)*vMem)/gl_WorkGroupSize.x;
+  uint e     = ((index+1)*vMem)/gl_WorkGroupSize.x;
+  [[loop]]
+  for(uint i=b; i<e; ++i) {
     compacted.heap[vboOffset+i] = var.heap[vertPtr+i];
     }
 
-  for(uint i=0; i<indSize; ++i) {
+  b = ((index+0)*indSize)/gl_WorkGroupSize.x;
+  e = ((index+1)*indSize)/gl_WorkGroupSize.x;
+  [[loop]]
+  for(uint i=b; i<e; ++i) {
     compacted.heap[iboOffset+i] = vboOffset + var.heap[indPtr+i]*varSize;
     }
   }

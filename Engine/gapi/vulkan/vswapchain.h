@@ -73,7 +73,6 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     SystemApi::Window*       hwnd      = nullptr;
     VkSurfaceKHR             surface   = VK_NULL_HANDLE;
 
-    uint32_t                 syncIndex = 0;
     uint32_t                 imgIndex  = 0;
 
     VkFormat                 swapChainImageFormat = VK_FORMAT_UNDEFINED;
