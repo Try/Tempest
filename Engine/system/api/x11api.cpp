@@ -403,6 +403,9 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
           }
         break;
         }
+      case MappingNotify:
+        XRefreshKeyboardMapping(&xev.xmapping);
+        break;
       case ButtonPress:
       case ButtonRelease: {
         bool isWheel = false;
@@ -461,30 +464,32 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
         }
       case KeyPress:
       case KeyRelease: {
+        KeySym ksym = XLookupKeysym(&xev.xkey,0);
+
         // NOTE: it's not optimal to recreate xic on every button, but it's good engough
         XIC xic = XCreateIC(xim,
                             XNInputStyle,   XIMPreeditNothing | XIMStatusNothing,
                             XNClientWindow, xev.xclient.window,
                             XNFocusWindow,  xev.xclient.window,
                             nullptr);
-        int keysyms_per_keycode_return = 0;
-        KeySym *ksym = XGetKeyboardMapping(dpy, KeyCode(xev.xkey.keycode),
-                                           1,
-                                           &keysyms_per_keycode_return );
-
         char txt[64]={};
-        Status status = {};
-        Xutf8LookupString(xic, &xev.xkey, txt, sizeof(txt)-1, ksym, &status);
-        if(status == XBufferOverflow) {
-          txt[0] = '\0';
+        if(xic!=nullptr) {
+          XEvent xev2 = xev;
+          xev2.type = KeyPress; // HACK: Their behavior when a client passes a KeyRelease event is undefined.
+          Status status = {};
+          Xutf8LookupString(xic, &xev2.xkey, txt, sizeof(txt)-1, &ksym, &status);
+          if(status == XBufferOverflow) {
+            txt[0] = '\0';
+            }
+          // XLookupString(&xev.xkey, txt, sizeof(txt)-1, ksym, nullptr );
+          XDestroyIC(xic);
           }
-        // XLookupString(&xev.xkey, txt, sizeof(txt)-1, ksym, nullptr );
-        XDestroyIC(xic);
 
         auto u16 = TextCodec::toUtf16(txt); // TODO: remove dynamic allocation
-        auto key = SystemApi::translateKey(XLookupKeysym(&xev.xkey,0));
+        auto key = SystemApi::translateKey(ksym);
 
         uint32_t scan = xev.xkey.keycode;
+        // printf("%s\n",txt);
 
         Tempest::KeyEvent e(Event::KeyType(key),uint32_t(u16.size()>0 ? u16[0] : 0),Event::M_NoModifier,(xev.type==KeyPress) ? Event::KeyDown : Event::KeyUp);
         if(xev.type==KeyPress)
