@@ -90,6 +90,7 @@ void VMeshletHelper::bindVS(VkCommandBuffer impl, VkPipelineLayout lay) {
   }
 
 void VMeshletHelper::drawIndirect(VkCommandBuffer impl, uint32_t id) {
+  assert(id<IndirectCmdCount);
   uint32_t off = id*sizeof(VkDrawIndexedIndirectCommand);
   vkCmdDrawIndexedIndirect(impl, indirect.impl, off, 1, sizeof(VkDrawIndexedIndirectCommand));
   // vkCmdDrawIndexed(impl, 3, 1, 0, 0, 0);
@@ -124,6 +125,11 @@ void VMeshletHelper::initRP(VkCommandBuffer impl) {
     Log::i("");
     }
 
+  barrier(impl,
+          VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+          VK_PIPELINE_STAGE_TRANSFER_BIT,
+          VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
+          VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT);
   // drawcall-related parts should be set to zeros
   vkCmdFillBuffer(impl, indirect.impl, 0, VK_WHOLE_SIZE, 0);
   // {0, 1, 1, <undefined>}

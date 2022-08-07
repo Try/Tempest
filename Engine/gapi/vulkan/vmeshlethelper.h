@@ -21,16 +21,18 @@ class VMeshletHelper {
       int32_t  vertexOffset;  // can be abused to offset into var_buffer
       uint32_t firstInstance; // caps: should be zero
 
-      uint32_t self;
+      uint32_t padd0;
       uint32_t vboOffset;
       uint32_t padd1;
       };
 
   public:
     enum {
-      PipelineMemorySize = 32*1024*1024,
-      MeshletsMemorySize = 32*1024,
-      IndirectMemorySize = 2048*sizeof(VkDrawIndexedIndirectCommand),
+      MeshletsMaxCount   = 1024*16,
+      IndirectCmdCount   = 4048,
+      PipelineMemorySize = 64*1024*1024,
+      MeshletsMemorySize = MeshletsMaxCount*3*4,
+      IndirectMemorySize = IndirectCmdCount*sizeof(VkDrawIndexedIndirectCommand),
       };
     explicit VMeshletHelper(VDevice& dev);
     ~VMeshletHelper();

@@ -404,7 +404,21 @@ void MutableBytecode::implTraverseType(TraverseContext& ctx, uint32_t typeId,
       case spv::OpTypeSampler:
       case spv::OpTypeSampledImage:
         break;
-      case spv::OpTypeArray:
+      case spv::OpTypeArray: {
+        uint32_t len = 1;
+        for(auto rt = ctx.typesB; rt!=ctx.typesE; ++rt) {
+          auto& r = *rt;
+          if(r.op()==spv::OpConstant && r[2]==i[3]) {
+            len = r[3];
+            break;
+            }
+          }
+        for(uint32_t r=0; r<len; ++r) {
+          ac[acLen].index = r;
+          implTraverseType(ctx,i[2],ac,acLen+1,fn);
+          }
+        break;
+        }
       case spv::OpTypeRuntimeArray: {
         implTraverseType(ctx,i[2],ac,acLen+1,fn);
         break;

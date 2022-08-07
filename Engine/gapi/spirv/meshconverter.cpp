@@ -275,6 +275,8 @@ void MeshConverter::generateVs() {
     code.traverseType(i.second.type,[&](const libspirv::MutableBytecode::AccessChain* ids, uint32_t len) {
       if(!code.isBasicTypeDecl(ids[len-1].type->op()))
         return;
+      if(len<2 || ids[1].index!=0)
+        return; // [max_vertex] arrayness
       for(uint32_t i=0; i<len; ++i) {
         uint32_t x = ids[i].index;
         if(constants.find(x)==constants.end())
@@ -329,6 +331,8 @@ void MeshConverter::generateVs() {
     code.traverseType(type,[&](const libspirv::MutableBytecode::AccessChain* ids, uint32_t len) {
       if(!code.isBasicTypeDecl(ids[len-1].type->op()))
         return;
+      if(len<2 || ids[1].index!=0)
+        return; // [max_vertex] arrayness
       const uint32_t ptrR = vert.fetchAddBound();
       const uint32_t valR = vert.fetchAddBound();
       const uint32_t rDst = vert.fetchAddBound();
@@ -622,6 +626,8 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
     code.traverseType(i.second.type,[&](const libspirv::MutableBytecode::AccessChain* ids, uint32_t len) {
       if(!code.isBasicTypeDecl(ids[len-1].type->op()))
         return;
+      if(len<2 || ids[1].index!=0)
+        return; // [max_vertex] arrayness
       for(uint32_t i=0; i<len; ++i) {
         uint32_t x = ids[i].index;
         if(constants.find(x)==constants.end())
@@ -795,15 +801,18 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
   fn.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrHeapDest, vEngine2, const0});
   const uint32_t heapDest  = code.fetchAddBound();
   fn.insert(spv::OpAtomicIAdd, {uint_t, heapDest, ptrHeapDest, const1/*scope*/, const0/*semantices*/, heapAllocSz});
-  // uint varDest = indDest + indSize;
-  const uint32_t varDest  = code.fetchAddBound();
-  fn.insert(spv::OpIAdd, {uint_t, varDest, heapDest, indSize});
 
   // uint meshDest = atomicAdd(mesh.grow, 1)*3;
   const uint32_t ptrMeshDest = code.fetchAddBound();
   fn.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrMeshDest, vEngine1, const0});
   const uint32_t meshDestRaw  = code.fetchAddBound();
   fn.insert(spv::OpAtomicIAdd, {uint_t, meshDestRaw, ptrMeshDest, const1/*scope*/, const0/*semantices*/, const1});
+
+  // uint varDest = indDest + indSize;
+  const uint32_t varDest  = code.fetchAddBound();
+  fn.insert(spv::OpIAdd, {uint_t, varDest, heapDest, indSize});
+
+  // meshDest = grow*3;
   const uint32_t meshDest = code.fetchAddBound();
   fn.insert(spv::OpIMul, {uint_t, meshDest, meshDestRaw, const3});
 
@@ -844,6 +853,8 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
       code.traverseType(type,[&](const libspirv::MutableBytecode::AccessChain* ids, uint32_t len) {
         if(!code.isBasicTypeDecl(ids[len-1].type->op()))
           return;
+        if(len<2 || ids[1].index!=0)
+          return; // [max_vertex] arrayness
         // at += memberId
         const uint32_t rDst = code.fetchAddBound();
         block.insert(spv::OpIAdd, {uint_t, rDst, rAt, constants[seq]});
