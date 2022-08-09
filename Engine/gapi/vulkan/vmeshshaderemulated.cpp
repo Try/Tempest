@@ -50,12 +50,9 @@ VMeshShaderEmulated::VMeshShaderEmulated(VDevice& device, const void *source, si
   createInfo.pCode    = code.opcodes();
   if(vkCreateShaderModule(device.device.impl,&createInfo,nullptr,&compPass)!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
-
-  //stage = ShaderReflection::Stage::Vertex;
   }
 
 VMeshShaderEmulated::~VMeshShaderEmulated() {
-  //vkDestroyShaderModule(device,vertPass,nullptr);
   vkDestroyShaderModule(device,compPass,nullptr);
   }
 

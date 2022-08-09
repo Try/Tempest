@@ -3,7 +3,6 @@
 #include <Tempest/AbstractGraphicsApi>
 #include <Tempest/PipelineLayout>
 
-#include "gapi/shaderreflection.h"
 #include "vshader.h"
 #include "vulkan_sdk.h"
 
@@ -17,10 +16,7 @@ class VMeshShaderEmulated : public VShader {
     VMeshShaderEmulated(VDevice& device, const void* source, size_t src_size);
     ~VMeshShaderEmulated();
 
-    using Binding = ShaderReflection::Binding;
-
-    VkShaderModule                   compPass = VK_NULL_HANDLE;
-    //VkShaderModule                   vertPass = VK_NULL_HANDLE;
+    VkShaderModule compPass = VK_NULL_HANDLE;
   };
 
 }}

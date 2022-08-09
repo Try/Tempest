@@ -234,7 +234,7 @@ TEST(VulkanApi,MeshShader) {
 #endif
   }
 
-TEST(VulkanApi,DISABLED_MeshShaderEmulated) {
+TEST(VulkanApi,MeshShaderEmulated) {
 #if !defined(__OSX__)
   GapiTestCommon::MeshShaderEmulated<VulkanApi>("VulkanApi_MeshShaderEmulated.png");
 #endif
