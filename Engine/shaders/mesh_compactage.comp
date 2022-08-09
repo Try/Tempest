@@ -20,62 +20,51 @@ layout(binding = 0, std430) buffer EngineInternal0 {
   IndirectCmd cmd[];
   } indirect;
 
-layout(binding = 1, std430) readonly buffer EngineInternal3 {
+layout(binding = 1, std430) readonly buffer EngineInternal1 {
+  uint    varGrow;
   uint    grow;
+  uint    dispatchX;
   uint    dispatchY;
   uint    dispatchZ;
   uint    desc[];
   } mesh;
 
 layout(binding = 2, std430) readonly buffer EngineInternal2 {
-  uint    grow;
   uint    heap[];
   } var;
 
-layout(binding = 3, std430) buffer EngineInternal4 {
+layout(binding = 3, std430) buffer EngineInternal3 {
   uint    heap[];
   } compacted;
 
-shared uint iboOffset;
-shared uint vboOffset;
-
 void main() {
-  if(gl_WorkGroupID.x>mesh.desc.length())
+  uint mestId     = gl_GlobalInvocationID.x*3;
+
+  [[branch]]
+  if(gl_GlobalInvocationID.x>=mesh.grow)
     return;
 
-  const uint index = gl_LocalInvocationID.x;
-
-  uint mestId     = gl_WorkGroupID.x*3;
   uint self       = mesh.desc[mestId+0];
   uint indPtr     = mesh.desc[mestId+1];
   uint desc       = mesh.desc[mestId+2];
 
-  uint indSize   = (desc       ) & 0x3FF;
-  uint maxVertex = (desc >> 10 ) & 0xFF;
-  uint varSize   = (desc >> 18u);
-  uint vMem      = maxVertex*varSize;
-  uint vertPtr   = indPtr + indSize;
+  uint indSize    = (desc       ) & 0x3FF;
+  uint maxVertex  = (desc >> 10 ) & 0xFF;
+  uint varSize    = (desc >> 18u);
+  uint vMem       = maxVertex*varSize;
+  uint vertPtr    = indPtr + indSize;
 
-  [[branch]]
-  if(index==0) {
-    uint firstIndex = indirect.cmd[self].firstIndex;
-    iboOffset = atomicAdd(indirect.cmd[self].indexCount, indSize) + firstIndex;
-    vboOffset = atomicAdd(indirect.cmd[self].vboOffset,  vMem);
-    }
+  uint firstIndex = indirect.cmd[self].firstIndex;
+  uint iboOffset  = atomicAdd(indirect.cmd[self].indexCount, indSize) + firstIndex;
+  uint vboOffset  = atomicAdd(indirect.cmd[self].vboOffset,  vMem);
 
-  barrier();
-
-  uint b     = ((index+0)*vMem)/gl_WorkGroupSize.x;
-  uint e     = ((index+1)*vMem)/gl_WorkGroupSize.x;
   [[loop]]
-  for(uint i=b; i<e; ++i) {
+  for(uint i=0; i<vMem; ++i) {
     compacted.heap[vboOffset+i] = var.heap[vertPtr+i];
     }
 
-  b = ((index+0)*indSize)/gl_WorkGroupSize.x;
-  e = ((index+1)*indSize)/gl_WorkGroupSize.x;
   [[loop]]
-  for(uint i=b; i<e; ++i) {
+  for(uint i=0; i<indSize; ++i) {
     compacted.heap[iboOffset+i] = vboOffset + var.heap[indPtr+i]*varSize;
     }
   }

@@ -6,10 +6,7 @@ struct IndirectCmd {
   uint    firstIndex;    // prefix sum
   int     vertexOffset;  // can be abused to offset into var_buffer
   uint    firstInstance; // caps: should be zero
-
-  uint    self;
   uint    vboOffset;
-  uint    padd1;
   };
 
 layout(set = 0, binding = 10, std430) buffer EngineInternal0 {
@@ -17,6 +14,7 @@ layout(set = 0, binding = 10, std430) buffer EngineInternal0 {
   } indirect;
 
 layout(set = 0, binding = 11, std430) readonly buffer EngineInternal3 {
+  uint    varGrow;
   uint    grow;
   uint    dispatchY;
   uint    dispatchZ;
@@ -24,13 +22,12 @@ layout(set = 0, binding = 11, std430) readonly buffer EngineInternal3 {
   } mesh;
 
 layout(set = 0, binding = 12, std430) buffer EngineInternal2 {
-  uint    grow;
   uint    heap[];
   } var;
 
 layout(set = 0, binding = 1, std430) buffer EngineInternal4 {
   uint    heap[];
-  } varFlat;
+  } compacted;
 
 layout(local_size_x = 1) in;
 
@@ -54,10 +51,10 @@ void main() {
   uint vboOffset  = atomicAdd(indirect.cmd[self].vboOffset,  vMem);
 
   for(uint i=0; i<vMem; ++i) {
-    varFlat.heap[vboOffset+i] = var.heap[indDest+indSize+i];
+    compacted.heap[vboOffset+i] = var.heap[indDest+indSize+i];
     }
 
   for(uint i=0; i<indSize; ++i) {
-    varFlat.heap[iboOffset+i] = vboOffset + var.heap[indDest+i]*varSize;
+    compacted.heap[iboOffset+i] = vboOffset + var.heap[indDest+i]*varSize;
     }
   }

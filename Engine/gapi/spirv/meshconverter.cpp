@@ -602,8 +602,8 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
   const uint32_t _runtimearr_cmd      = code.OpTypeRuntimeArray(fn, IndirectCommand);
 
   const uint32_t EngineInternal0      = code.OpTypeStruct (fn, {_runtimearr_cmd});
-  const uint32_t EngineInternal1      = code.OpTypeStruct (fn, {uint_t, uint_t, uint_t, _runtimearr_uint});
-  const uint32_t EngineInternal2      = code.OpTypeStruct (fn, {uint_t, _runtimearr_uint});
+  const uint32_t EngineInternal1      = code.OpTypeStruct (fn, {uint_t, uint_t, uint_t, uint_t, uint_t, _runtimearr_uint});
+  const uint32_t EngineInternal2      = code.OpTypeStruct (fn, {_runtimearr_uint});
 
   const uint32_t _ptr_Uniform_EngineInternal0 = code.OpTypePointer(fn,spv::StorageClassUniform, EngineInternal0);
   const uint32_t _ptr_Uniform_EngineInternal1 = code.OpTypePointer(fn,spv::StorageClassUniform, EngineInternal1);
@@ -613,6 +613,7 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
   const uint32_t const1   = code.OpConstant(fn,uint_t,1);
   const uint32_t const2   = code.OpConstant(fn,uint_t,2);
   const uint32_t const3   = code.OpConstant(fn,uint_t,3);
+  const uint32_t const5   = code.OpConstant(fn,uint_t,5);
   const uint32_t const10  = code.OpConstant(fn,uint_t,10);
   const uint32_t const18  = code.OpConstant(fn,uint_t,18);
   const uint32_t const128 = code.OpConstant(fn,uint_t,128);
@@ -662,13 +663,13 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
   fn.insert(spv::OpDecorate, {EngineInternal1, spv::DecorationBufferBlock});
   fn.insert(spv::OpDecorate, {vEngine1, spv::DecorationDescriptorSet, 1});
   fn.insert(spv::OpDecorate, {vEngine1, spv::DecorationBinding, 1});
-  for(uint32_t i=0; i<4; ++i)
+  for(uint32_t i=0; i<6; ++i)
     fn.insert(spv::OpMemberDecorate, {EngineInternal1, i, spv::DecorationOffset, i*4});
 
   fn.insert(spv::OpDecorate, {EngineInternal2, spv::DecorationBufferBlock});
   fn.insert(spv::OpDecorate, {vEngine2, spv::DecorationDescriptorSet, 1});
   fn.insert(spv::OpDecorate, {vEngine2, spv::DecorationBinding, 2});
-  for(uint32_t i=0; i<2; ++i)
+  for(uint32_t i=0; i<1; ++i)
     fn.insert(spv::OpMemberDecorate, {EngineInternal2, i, spv::DecorationOffset, i*4});
 
   fn = code.findSectionEnd(libspirv::Bytecode::S_Debug);
@@ -684,14 +685,15 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
   fn.insert(spv::OpName,       EngineInternal0,    "EngineInternal0");
 
   fn.insert(spv::OpName,       EngineInternal1,    "EngineInternal1");
-  fn.insert(spv::OpMemberName, EngineInternal1, 0, "grow");
-  fn.insert(spv::OpMemberName, EngineInternal1, 1, "dispatchY");
-  fn.insert(spv::OpMemberName, EngineInternal1, 2, "dispatchZ");
-  fn.insert(spv::OpMemberName, EngineInternal1, 3, "desc");
+  fn.insert(spv::OpMemberName, EngineInternal1, 0, "varGrow");
+  fn.insert(spv::OpMemberName, EngineInternal1, 1, "grow");
+  fn.insert(spv::OpMemberName, EngineInternal1, 2, "dispatchX");
+  fn.insert(spv::OpMemberName, EngineInternal1, 3, "dispatchY");
+  fn.insert(spv::OpMemberName, EngineInternal1, 4, "dispatchZ");
+  fn.insert(spv::OpMemberName, EngineInternal1, 5, "desc");
 
   fn.insert(spv::OpName,       EngineInternal2,    "EngineInternal2");
-  fn.insert(spv::OpMemberName, EngineInternal2, 0, "grow");
-  fn.insert(spv::OpMemberName, EngineInternal2, 1, "heap");
+  fn.insert(spv::OpMemberName, EngineInternal2, 0, "heap");
 
   // engine-level main
   fn = code.end();
@@ -797,14 +799,15 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
   const uint32_t heapAllocSz = code.fetchAddBound();
   fn.insert(spv::OpIAdd, {uint_t, heapAllocSz, maxVar, indSize});
 
+  // uint heapDest  = atomicAdd(mesh.varGrow, indSize + maxVar);
   const uint32_t ptrHeapDest = code.fetchAddBound();
-  fn.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrHeapDest, vEngine2, const0});
+  fn.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrHeapDest, vEngine1, const0});
   const uint32_t heapDest  = code.fetchAddBound();
   fn.insert(spv::OpAtomicIAdd, {uint_t, heapDest, ptrHeapDest, const1/*scope*/, const0/*semantices*/, heapAllocSz});
 
   // uint meshDest = atomicAdd(mesh.grow, 1)*3;
   const uint32_t ptrMeshDest = code.fetchAddBound();
-  fn.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrMeshDest, vEngine1, const0});
+  fn.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrMeshDest, vEngine1, const1});
   const uint32_t meshDestRaw  = code.fetchAddBound();
   fn.insert(spv::OpAtomicIAdd, {uint_t, meshDestRaw, ptrMeshDest, const1/*scope*/, const0/*semantices*/, const1});
 
@@ -823,7 +826,7 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
     const uint32_t rDst = code.fetchAddBound();
     fn.insert(spv::OpIAdd, {uint_t, rDst, rI, heapDest});
     const uint32_t ptrHeap = code.fetchAddBound();
-    fn.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrHeap, vEngine2, const1, rDst});
+    fn.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrHeap, vEngine2, const0, rDst});
 
     const uint32_t ptrIndicesNV = code.fetchAddBound();
     fn.insert(spv::OpAccessChain, {_ptr_Workgroup_uint, ptrIndicesNV, idPrimitiveIndicesNV, rI});
@@ -860,7 +863,7 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
         block.insert(spv::OpIAdd, {uint_t, rDst, rAt, constants[seq]});
         ++seq;
         const uint32_t ptrHeap = code.fetchAddBound();
-        block.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrHeap, vEngine2, const1, rDst});
+        block.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrHeap, vEngine2, const0, rDst});
 
         // NOTE: ids is pointer to array of X, we need only X
         const uint32_t varPtr = code.fetchAddBound();
@@ -898,19 +901,19 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
     fn.insert(spv::OpLoad, {uint_t, workIdX, ptrWorkGroupID});
 
     const uint32_t ptrHeap0 = code.fetchAddBound();
-    fn.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrHeap0, vEngine1, const3, meshDest});
+    fn.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrHeap0, vEngine1, const5, meshDest});
     fn.insert(spv::OpStore, {ptrHeap0, workIdX});
 
     const uint32_t dest1 = code.fetchAddBound();
     fn.insert(spv::OpIAdd, {uint_t, dest1, meshDest, const1});
     const uint32_t ptrHeap1 = code.fetchAddBound();
-    fn.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrHeap1, vEngine1, const3, dest1});
+    fn.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrHeap1, vEngine1, const5, dest1});
     fn.insert(spv::OpStore, {ptrHeap1, heapDest});
 
     const uint32_t dest2 = code.fetchAddBound();
     fn.insert(spv::OpIAdd, {uint_t, dest2, meshDest, const2});
     const uint32_t ptrHeap2 = code.fetchAddBound();
-    fn.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrHeap2, vEngine1, const3, dest2});
+    fn.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrHeap2, vEngine1, const5, dest2});
 
     const uint32_t tmp0 = code.fetchAddBound();
     fn.insert(spv::OpShiftLeftLogical, {uint_t, tmp0, maxVertex, const10});

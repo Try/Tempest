@@ -6,18 +6,22 @@ struct IndirectCmd {
   uint    firstIndex;    // prefix sum
   int     vertexOffset;  // can be abused to offset into var_buffer
   uint    firstInstance; // caps: should be zero
-
-  uint    self;
   uint    vboOffset;
-  uint    padd1;
   };
 
-layout(binding = 0, std430) buffer EngineInternal0 {
+layout(set = 0, binding = 0, std430) buffer EngineInternal0 {
   IndirectCmd cmd[];
   } indirect;
 
-layout(set = 0, binding = 1, std430) buffer EngineInternal2 {
+layout(set = 0, binding = 1, std430) readonly buffer EngineInternal3 {
+  uint    varGrow;
   uint    grow;
+  uint    dispatchY;
+  uint    dispatchZ;
+  uint    desc[];
+  } mesh;
+
+layout(set = 0, binding = 2, std430) buffer EngineInternal2 {
   uint    heap[];
   } var;
 

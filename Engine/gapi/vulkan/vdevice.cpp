@@ -3,11 +3,8 @@
 #include "vdevice.h"
 
 #include "vcommandbuffer.h"
-#include "vcommandpool.h"
 #include "vfence.h"
 #include "vswapchain.h"
-#include "vbuffer.h"
-#include "vtexture.h"
 #include "vmeshlethelper.h"
 #include "system/api/x11api.h"
 
@@ -514,7 +511,7 @@ void VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
     submitInfo.sType                  = VK_STRUCTURE_TYPE_SUBMIT_INFO_2_KHR;
     submitInfo.commandBufferInfoCount = uint32_t(cmd.chunks.size());
     submitInfo.pCommandBufferInfos    = flat.get();
-    submitInfo.waitSemaphoreInfoCount = waitCnt;
+    submitInfo.waitSemaphoreInfoCount = uint32_t(waitCnt);
     submitInfo.pWaitSemaphoreInfos    = wait2.get();
 
     graphicsQueue->submit(1,&submitInfo,fence,vkQueueSubmit2);
@@ -536,7 +533,7 @@ void VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
     submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = uint32_t(cmd.chunks.size());
     submitInfo.pCommandBuffers    = flat.get();
-    submitInfo.waitSemaphoreCount = waitCnt;
+    submitInfo.waitSemaphoreCount = uint32_t(waitCnt);
     submitInfo.pWaitSemaphores    = wait.get();
     submitInfo.pWaitDstStageMask  = waitStages.get();
 

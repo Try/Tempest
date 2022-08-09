@@ -1509,11 +1509,9 @@ void MeshComputePrototype(const char* outImg) {
     uint32_t    firstIndex    = 0;
     int32_t     vertexOffset  = 0;
     uint32_t    firstInstance = 0;
-    uint32_t    self          = 0;
+
     uint32_t    vboOffset     = 0;
-    uint32_t    padd1         = 0;
     };
-  static_assert(sizeof(VkDrawIndexedIndirectCommand)==32);
 
   enum : uint32_t {
     B_Indirect = 10,
@@ -1525,29 +1523,18 @@ void MeshComputePrototype(const char* outImg) {
     const char* msDev = nullptr;
 
     GraphicsApi api{ApiFlags::Validation};
-    auto dev = api.devices();
-    for(auto& i:dev)
-      if(i.meshlets.meshShader)
-        msDev = i.name;
-    if(msDev==nullptr)
-      return;
 
     Device device(api,msDev);
     auto vbo  = device.vbo(vboData,3);
 
     VkDrawIndexedIndirectCommand ix[2] = {};
-    ix[0].self = 0;
-    ix[1].self = 1;
     auto indirect = device.ssbo(ix,sizeof(ix));
 
     auto var  = device.ssbo(nullptr, 4*16*1024);     // big buffer for meshlet data
     auto flat = device.ssbo(nullptr, var.size());    // double buffer
     auto mesh = device.ssbo(nullptr, 4*256);         // buffer meshlet descriptors
 
-    const uint32_t zero = 0;
-    var.update(&zero,0,4);
-
-    const IVec3 msz = {0,1,1};
+    const uint32_t msz[4] = {0,0,1,1};
     mesh.update(&msz,0,sizeof(msz));
 
     auto shaderMs = device.shader("shader/simple_test.mesh.comp.sprv");
@@ -1561,7 +1548,7 @@ void MeshComputePrototype(const char* outImg) {
 
     auto ubo1  = device.descriptors(psoMs);
     ubo1.set(0,  vbo);
-    ubo1.set(B_Indirect, indirect, sizeof(VkDrawIndexedIndirectCommand));
+    ubo1.set(B_Indirect, indirect);
     ubo1.set(B_Meshlet,  mesh);
     ubo1.set(B_Var,      var);
 
@@ -1569,7 +1556,8 @@ void MeshComputePrototype(const char* outImg) {
     auto psoSum = device.pipeline(shSum);
     auto uboSum = device.descriptors(psoSum);
     uboSum.set(0, indirect);
-    uboSum.set(1, var);
+    uboSum.set(1, mesh);
+    uboSum.set(2, var);
 
     auto shCompactage  = device.shader("shader/mesh_compactage.comp.sprv");
     auto psoCompactage = device.pipeline(shCompactage);
@@ -1582,9 +1570,11 @@ void MeshComputePrototype(const char* outImg) {
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setUniforms(psoMs,ubo0);
+      uint32_t id = 0;
+      enc.setUniforms(psoMs,ubo0,&id,sizeof(id));
       enc.dispatch(3, 1,1);
-      enc.setUniforms(psoMs,ubo1);
+      id = 1;
+      enc.setUniforms(psoMs,ubo1,&id,sizeof(id));
       enc.dispatch(2, 1,1);
       // ^ 3+2 meshlets
 
@@ -1610,11 +1600,11 @@ void MeshComputePrototype(const char* outImg) {
     std::vector<uint32_t> flatCpu(flat.size()/4);
     device.readBytes(flat,flatCpu.data(),flat.size());
 
-    EXPECT_EQ(meshCpu[0],5);
-    for(uint32_t i=0; i<meshCpu[0]; ++i) {
-      uint32_t self = meshCpu[3+i*3+0];
-      uint32_t heap = meshCpu[3+i*3+1];
-      uint32_t desc = meshCpu[3+i*3+2];
+    EXPECT_EQ(meshCpu[1],5);
+    for(uint32_t i=0; i<meshCpu[1]; ++i) {
+      uint32_t self = meshCpu[4+i*3+0];
+      uint32_t heap = meshCpu[4+i*3+1];
+      uint32_t desc = meshCpu[4+i*3+2];
 
       uint32_t indSize   = (desc       ) & 0x3FF;
       uint32_t maxVertex = (desc >> 10 ) & 0xFF;

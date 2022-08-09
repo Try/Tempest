@@ -37,22 +37,28 @@ shared PerVertexData v_out[max_vertices];
 shared uint te_PrimitiveIndicesNV[3];
 shared uint te_PrimitiveCountNV;
 
-// Injected interface block, should be at set=1
-layout(set = 0, binding = 10, std430) buffer EngineInternal0
-{
-   uint    indexCount;
-   uint    instanceCount;
-   uint    firstIndex;    // prefix sum
-   int     vertexOffset;  // can be abused to offset into var_buffer
-   uint    firstInstance; // caps: should be zero
+// should be dispatch base Y parameter
+layout(std140, push_constant) uniform Push {
+  uint self;
+  };
 
-   uint    self;
-   uint    padd0;
-   uint    padd1;
-} indirect;
+struct IndirectCmd {
+  uint    indexCount;
+  uint    instanceCount;
+  uint    firstIndex;    // prefix sum
+  int     vertexOffset;  // can be abused to offset into var_buffer
+  uint    firstInstance; // caps: should be zero
+  uint    vboOffset;
+  };
+
+// Injected interface block, should be at set=1
+layout(set = 0, binding = 10, std430) buffer EngineInternal0 {
+  IndirectCmd cmd[];
+  } indirect;
 
 layout(set = 0, binding = 11, std430) buffer EngineInternal1
 {
+  uint    varGrow;
   uint    grow;
   uint    dispatchY;
   uint    dispatchZ;
@@ -61,7 +67,6 @@ layout(set = 0, binding = 11, std430) buffer EngineInternal1
 
 layout(set = 0, binding = 12, std430) buffer EngineInternal2
 {
-  uint    grow;
   uint    heap[];
 } var;
 
@@ -113,10 +118,10 @@ void main() {
   uint maxVertex = indMax+1;
   uint maxVar    = maxVertex*varSize;
 
-  atomicAdd(indirect.indexCount,    indSize);
-  atomicAdd(indirect.instanceCount, maxVar); // abuse: vbo size
-  uint heapDest  = atomicAdd(var.grow, indSize + maxVar);
-  uint meshDest  = atomicAdd(mesh.grow, 1)*3;
+  atomicAdd(indirect.cmd[self].indexCount,    indSize);
+  atomicAdd(indirect.cmd[self].instanceCount, maxVar); // abuse: vbo size
+  uint heapDest  = atomicAdd(mesh.varGrow, indSize + maxVar);
+  uint meshDest  = atomicAdd(mesh.grow,    1)*3;
 
   uint varDest   = heapDest + indSize;
 
@@ -144,7 +149,7 @@ void main() {
     }
 
   // Writeout meshlet descriptor
-  mesh.desc[meshDest+0] = indirect.self; // owner
-  mesh.desc[meshDest+1] = heapDest;       // ptr
+  mesh.desc[meshDest+0] = self;     // owner
+  mesh.desc[meshDest+1] = heapDest; // ptr
   mesh.desc[meshDest+2] = (varSize<<18u) | (maxVertex<<10u) | (indSize);
   }

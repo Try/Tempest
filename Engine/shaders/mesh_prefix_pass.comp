@@ -22,15 +22,16 @@ layout(binding = 0, std430) buffer EngineInternal0
 
 layout(binding = 1, std430) buffer EngineInternal1
 {
+    uint varGrow;
     uint grow;
+    uint dispatchX;
     uint dispatchY;
     uint dispatchZ;
     uint desc[];
-} _116;
+} mesh;
 
 layout(binding = 2, std430) buffer EngineInternal2
 {
-    uint grow;
     uint heap[];
 } var;
 
@@ -40,9 +41,13 @@ shared uint maxInd;
 shared uint partialSummIbo[gl_WorkGroupSize.x];
 shared uint partialSummVbo[gl_WorkGroupSize.x];
 
+layout(push_constant, std140) uniform UboPush {
+  uint indirectCmdCount;
+  };
+
 void main() {
   uint index = gl_LocalInvocationID.x;
-  uint len   = indirect.cmd.length();
+  uint len   = indirectCmdCount;
 
   uint b = ((index+0)*len)/gl_WorkGroupSize.x;
   uint e = ((index+1)*len)/gl_WorkGroupSize.x;
@@ -66,8 +71,13 @@ void main() {
     prefixIbo += partialSummIbo[i];
     prefixVbo += partialSummVbo[i];
     }
+
+  [[branch]]
   if(index==255) {
-    maxInd = prefixIbo + partialSummIbo[index];
+    maxInd         = prefixIbo + partialSummIbo[index];
+    mesh.dispatchX = (mesh.grow+64-1)/64;
+    mesh.dispatchY = 1;
+    mesh.dispatchZ = 1;
     }
 
   memoryBarrierShared();
