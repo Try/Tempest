@@ -141,6 +141,7 @@ class VMeshCommandBuffer:public VCommandBuffer {
     void setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc &u) override;
 
     void dispatchMesh(size_t firstInstance, size_t instanceCount) override;
+  friend class VMeshletHelper;
   };
 
 }}

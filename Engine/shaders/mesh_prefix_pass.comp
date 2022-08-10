@@ -2,6 +2,14 @@
 
 #extension GL_EXT_control_flow_attributes:enable
 
+layout(local_size_x = 256) in;
+
+struct IndirectCommand
+{
+  uint indexCount;
+  uint varyingCount;
+};
+
 struct VkDrawIndexedIndirectCommand
 {
     uint indexCount;
@@ -9,33 +17,39 @@ struct VkDrawIndexedIndirectCommand
     uint firstIndex;    // prefix sum
     int  vertexOffset;  // can be abused to offset into var_buffer
     uint firstInstance; // caps: should be zero
-
-    uint self;
-    uint vboOffset;
-    uint padd1;
+    uint vboOffset;     // prefix sum
 };
 
 layout(binding = 0, std430) buffer EngineInternal0
 {
-    VkDrawIndexedIndirectCommand cmd[];
-} indirect;
+    IndirectCommand cmd[];
+} indirectSrc;
 
 layout(binding = 1, std430) buffer EngineInternal1
 {
     uint varGrow;
     uint grow;
+    uint meshletCount;
     uint dispatchX;
     uint dispatchY;
     uint dispatchZ;
     uint desc[];
 } mesh;
 
-layout(binding = 2, std430) buffer EngineInternal2
+layout(binding = 2, std430) readonly buffer EngineInternal2
 {
     uint heap[];
 } var;
 
-layout(local_size_x = 256) in;
+layout(binding = 3, std430) writeonly buffer EngineInternal3
+{
+    VkDrawIndexedIndirectCommand cmd[];
+} indirect;
+
+layout(binding = 4, std430) writeonly buffer EngineInternal4 // unused
+{
+  uint    heap[];
+} compacted;
 
 shared uint maxInd;
 shared uint partialSummIbo[gl_WorkGroupSize.x];
@@ -56,8 +70,8 @@ void main() {
   uint sumIbo = 0;
   [[loop]]
   for(uint i=b; i<e; ++i) {
-    sumIbo += indirect.cmd[i].indexCount;
-    sumVbo += indirect.cmd[i].instanceCount;
+    sumIbo += indirectSrc.cmd[i].indexCount;
+    sumVbo += indirectSrc.cmd[i].varyingCount;
     }
   partialSummIbo[index] = sumIbo;
   partialSummVbo[index] = sumVbo;
@@ -75,9 +89,13 @@ void main() {
   [[branch]]
   if(index==255) {
     maxInd         = prefixIbo + partialSummIbo[index];
-    mesh.dispatchX = (mesh.grow+64-1)/64;
-    mesh.dispatchY = 1;
-    mesh.dispatchZ = 1;
+    mesh.meshletCount = mesh.grow;
+    mesh.dispatchX    = (mesh.grow+64-1)/64;
+    mesh.dispatchY    = 1;
+    mesh.dispatchZ    = 1;
+
+    mesh.varGrow      = 0;
+    mesh.grow         = 0;
     }
 
   memoryBarrierShared();
@@ -85,13 +103,16 @@ void main() {
 
   [[loop]]
   for(uint i=b; i<e; ++i) {
+    uint indexCount   = indirectSrc.cmd[i].indexCount;
+    uint varyingCount = indirectSrc.cmd[i].varyingCount;
+
     uint s = prefixIbo;
-    prefixIbo += indirect.cmd[i].indexCount;
+    prefixIbo += indexCount;
 
     uint v = prefixVbo;
-    prefixVbo += indirect.cmd[i].instanceCount;
+    prefixVbo += varyingCount;
 
-    uint inst = indirect.cmd[i].indexCount>0 ? 1 : 0;
+    uint inst = indexCount>0 ? 1 : 0;
 
     indirect.cmd[i].indexCount    = 0;
     indirect.cmd[i].instanceCount = inst;
@@ -99,5 +120,11 @@ void main() {
     indirect.cmd[i].vertexOffset  = 0;
     indirect.cmd[i].firstInstance = 0;
     indirect.cmd[i].vboOffset     = maxInd + v;
+    }
+
+  [[dependency_infinite]]
+  for(uint i=b; i<e; ++i) {
+    indirectSrc.cmd[i].indexCount   = 0;
+    indirectSrc.cmd[i].varyingCount = 0;
     }
   }

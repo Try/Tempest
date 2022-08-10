@@ -4,25 +4,30 @@
 
 layout(local_size_x = 64) in;
 
-struct IndirectCmd {
-  uint    indexCount;
-  uint    instanceCount;
-  uint    firstIndex;    // prefix sum
-  int     vertexOffset;  // can be abused to offset into var_buffer
-  uint    firstInstance; // caps: should be zero
+struct IndirectCommand
+{
+  uint indexCount;
+  uint varyingCount;
+};
 
-  uint    self;
-  uint    vboOffset;
-  uint    padd1;
-  };
+struct VkDrawIndexedIndirectCommand
+{
+    uint indexCount;
+    uint instanceCount;
+    uint firstIndex;    // prefix sum
+    int  vertexOffset;  // can be abused to offset into var_buffer
+    uint firstInstance; // caps: should be zero
+    uint vboOffset;     // prefix sum
+};
 
-layout(binding = 0, std430) buffer EngineInternal0 {
-  IndirectCmd cmd[];
-  } indirect;
+layout(binding = 0, std430) writeonly buffer EngineInternal0 {
+  IndirectCommand cmd[];
+  } indirectSrc;
 
 layout(binding = 1, std430) readonly buffer EngineInternal1 {
   uint    varGrow;
   uint    grow;
+  uint    meshletCount;
   uint    dispatchX;
   uint    dispatchY;
   uint    dispatchZ;
@@ -33,15 +38,21 @@ layout(binding = 2, std430) readonly buffer EngineInternal2 {
   uint    heap[];
   } var;
 
-layout(binding = 3, std430) buffer EngineInternal3 {
+layout(binding = 3, std430) buffer EngineInternal3
+{
+    VkDrawIndexedIndirectCommand cmd[];
+} indirect;
+
+layout(binding = 4, std430) writeonly buffer EngineInternal4
+{
   uint    heap[];
-  } compacted;
+} compacted;
 
 void main() {
   uint mestId     = gl_GlobalInvocationID.x*3;
 
   [[branch]]
-  if(gl_GlobalInvocationID.x>=mesh.grow)
+  if(gl_GlobalInvocationID.x>=mesh.meshletCount)
     return;
 
   uint self       = mesh.desc[mestId+0];
@@ -58,12 +69,12 @@ void main() {
   uint iboOffset  = atomicAdd(indirect.cmd[self].indexCount, indSize) + firstIndex;
   uint vboOffset  = atomicAdd(indirect.cmd[self].vboOffset,  vMem);
 
-  [[loop]]
+  [[loop, dependency_infinite]]
   for(uint i=0; i<vMem; ++i) {
     compacted.heap[vboOffset+i] = var.heap[vertPtr+i];
     }
 
-  [[loop]]
+  [[loop, dependency_infinite]]
   for(uint i=0; i<indSize; ++i) {
     compacted.heap[iboOffset+i] = vboOffset + var.heap[indPtr+i]*varSize;
     }

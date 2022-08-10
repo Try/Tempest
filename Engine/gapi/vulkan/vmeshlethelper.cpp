@@ -5,6 +5,7 @@
 #include "builtin_shader.h"
 
 #include "vdevice.h"
+#include "vcommandbuffer.h"
 #include "vbuffer.h"
 #include "vshader.h"
 #include "vpipelinelay.h"
@@ -17,11 +18,30 @@ VMeshletHelper::VMeshletHelper(VDevice& dev) : dev(dev) {
   const auto ms  = MemUsage::StorageBuffer | MemUsage::Indirect | MemUsage::TransferDst;
   const auto geo = MemUsage::StorageBuffer | MemUsage::VertexBuffer | MemUsage::IndexBuffer;
 
-  indirect  = dev.allocator.alloc(nullptr, IndirectMemorySize, 1,1, ind, BufferHeap::Device);
-  meshlets  = dev.allocator.alloc(nullptr, MeshletsMemorySize, 1,1, ms,  BufferHeap::Device);
+  indirectSrc = dev.allocator.alloc(nullptr, IndirectScratchSize, 1,1, ind, BufferHeap::Device);
+  indirect    = dev.allocator.alloc(nullptr, IndirectMemorySize,  1,1, ind, BufferHeap::Device);
 
-  scratch   = dev.allocator.alloc(nullptr, PipelineMemorySize, 1,1, MemUsage::StorageBuffer | MemUsage::TransferDst, BufferHeap::Device);
-  compacted = dev.allocator.alloc(nullptr, PipelineMemorySize, 1,1, geo, BufferHeap::Device);
+  meshlets    = dev.allocator.alloc(nullptr, MeshletsMemorySize, 1,1, ms,  BufferHeap::Device);
+
+  scratch     = dev.allocator.alloc(nullptr, PipelineMemorySize, 1,1, MemUsage::StorageBuffer | MemUsage::TransferDst, BufferHeap::Device);
+  compacted   = dev.allocator.alloc(nullptr, PipelineMemorySize, 1,1, geo, BufferHeap::Device);
+
+  {
+    auto c = dev.dataMgr().get();
+    auto& cmd = reinterpret_cast<VMeshCommandBuffer&>(*c.get());
+    cmd.begin();
+    // drawcall-related parts should be set to zeros.
+    vkCmdFillBuffer(cmd.impl, indirectSrc.impl, 0, VK_WHOLE_SIZE, 0);
+    // meshlet counters
+    vkCmdFillBuffer(cmd.impl, meshlets.impl, 0, sizeof(uint32_t)*2, 0);
+    barrier(cmd.impl,
+            VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT);
+    cmd.end();
+    dev.dataMgr().submit(std::move(c));
+  }
 
   try {
     initShaders(dev);
@@ -31,9 +51,9 @@ VMeshletHelper::VMeshletHelper(VDevice& dev) : dev(dev) {
     engSet   = initDescriptors(dev,engPool,engLay);
     initEngSet(engSet,3);
 
-    compPool = initPool(dev,4);
+    compPool = initPool(dev,5);
     compSet  = initDescriptors(dev,compPool,compactageLay.handler->impl);
-    initEngSet(compSet,4);
+    initEngSet(compSet,5);
 
     drawLay  = initDrawLayout(dev);
     drawPool = initPool(dev,1);
@@ -124,22 +144,6 @@ void VMeshletHelper::initRP(VkCommandBuffer impl) {
 
     Log::i("");
     }
-
-  barrier(impl,
-          VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-          VK_PIPELINE_STAGE_TRANSFER_BIT,
-          VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
-          VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT);
-  // drawcall-related parts should be set to zeros. TODO: remove
-  vkCmdFillBuffer(impl, indirect.impl, 0, VK_WHOLE_SIZE, 0);
-  // meshlet counters
-  vkCmdFillBuffer(impl, meshlets.impl, 0, sizeof(uint32_t)*2, 0);
-
-  barrier(impl,
-          VK_PIPELINE_STAGE_TRANSFER_BIT,
-          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-          VK_ACCESS_TRANSFER_WRITE_BIT,
-          VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT);
   }
 
 void VMeshletHelper::sortPass(VkCommandBuffer impl, uint32_t meshCallsCount) {
@@ -155,7 +159,7 @@ void VMeshletHelper::sortPass(VkCommandBuffer impl, uint32_t meshCallsCount) {
           VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,prefixSum.handler->impl);
   vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_COMPUTE, prefixSum.handler->pipelineLayout,
-                          0, 1,&engSet, 0,nullptr);
+                          0, 1,&compSet, 0,nullptr);
   vkCmdPushConstants(impl,prefixSum.handler->pipelineLayout,VK_SHADER_STAGE_COMPUTE_BIT,0,4,&meshCallsCount);
   vkCmdDispatch(impl, 1,1,1); // one threadgroup for prefix pass
 
@@ -168,7 +172,7 @@ void VMeshletHelper::sortPass(VkCommandBuffer impl, uint32_t meshCallsCount) {
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,compactage.handler->impl);
   vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_COMPUTE, compactage.handler->pipelineLayout,
                           0, 1,&compSet, 0,nullptr);
-  vkCmdDispatchIndirect(impl, meshlets.impl, sizeof(uint32_t)*2);
+  vkCmdDispatchIndirect(impl, meshlets.impl, sizeof(uint32_t)*3);
 
   // ready for draw
   barrier(impl,
@@ -271,8 +275,8 @@ VkDescriptorSet VMeshletHelper::initDescriptors(VDevice& device,
   }
 
 void VMeshletHelper::initEngSet(VkDescriptorSet set, uint32_t cnt) {
-  VkDescriptorBufferInfo buf[4] = {};
-  buf[0].buffer = indirect.impl;
+  VkDescriptorBufferInfo buf[5] = {};
+  buf[0].buffer = indirectSrc.impl;
   buf[0].offset = 0;
   buf[0].range  = VK_WHOLE_SIZE;
 
@@ -284,11 +288,15 @@ void VMeshletHelper::initEngSet(VkDescriptorSet set, uint32_t cnt) {
   buf[2].offset = 0;
   buf[2].range  = VK_WHOLE_SIZE;
 
-  buf[3].buffer = compacted.impl;
+  buf[3].buffer = indirect.impl;
   buf[3].offset = 0;
   buf[3].range  = VK_WHOLE_SIZE;
 
-  VkWriteDescriptorSet write[4] = {};
+  buf[4].buffer = compacted.impl;
+  buf[4].offset = 0;
+  buf[4].range  = VK_WHOLE_SIZE;
+
+  VkWriteDescriptorSet write[5] = {};
   for(int i=0; i<cnt; ++i) {
     write[i].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write[i].dstSet          = set;
