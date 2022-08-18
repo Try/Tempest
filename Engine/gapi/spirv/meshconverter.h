@@ -6,6 +6,8 @@
 
 #include "libspirv/libspirv.h"
 
+#include "shaderanalyzer.h"
+
 class MeshConverter {
   public:
     explicit MeshConverter(libspirv::MutableBytecode& code);
@@ -15,11 +17,6 @@ class MeshConverter {
     void generateVs();
 
   private:
-    struct VarItm {
-      uint32_t type     = 0;
-      uint32_t location = -1;
-      };
-
     void     avoidReservedFixup();
     void     removeMultiview(libspirv::MutableBytecode& code);
     void     removeCullClip(libspirv::MutableBytecode& code);
@@ -35,6 +32,7 @@ class MeshConverter {
                           const libspirv::Bytecode::AccessChain* ids, uint32_t len);
 
     libspirv::MutableBytecode& code;
+    ShaderAnalyzer             an;
     libspirv::MutableBytecode  vert;
 
     struct gl_MeshPerVertexNV {
@@ -43,16 +41,7 @@ class MeshConverter {
       } gl_MeshPerVertexNV;
 
     // meslet builtins
-    uint32_t idMeshPerVertexNV    = 0;
     uint32_t idGlPerVertex        = 0;
-    uint32_t idPrimitiveCountNV   = 0;
-    uint32_t idPrimind            = 0;
-    uint32_t idPrimitiveIndicesNV = 0;
-    uint32_t idLocalInvocationId  = 0;
-    uint32_t idGlobalInvocationId = 0;
-    uint32_t idWorkGroupID        = 0;
     uint32_t std450Import         = 0;
-
-    std::unordered_map<uint32_t,VarItm> outVar;
   };
 

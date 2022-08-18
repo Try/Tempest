@@ -5,30 +5,24 @@
 #include <iostream>
 
 MeshConverter::MeshConverter(libspirv::MutableBytecode& code)
-  : code(code) {
+  : code(code), an(code) {
   }
 
 void MeshConverter::exec() {
+  an.analyze();
+
+  // gl_MeshPerVertexNV block
+  if(an.idMeshPerVertexNV!=0)
+    gl_MeshPerVertexNV.gl_Position = true;
+  if(an.idPointSize!=0)
+    gl_MeshPerVertexNV.gl_PointSize = true;
+
   for(auto it = code.begin(), end = code.end(); it!=end; ++it) {
     auto& i = *it;
     if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBuiltIn) {
-      if(i[3]==spv::BuiltInPrimitiveCountNV) {
-        idPrimitiveCountNV = i[1];
+      if(i[3]==spv::BuiltInPrimitiveCountNV ||
+         i[3]==spv::BuiltInPrimitiveIndicesNV) {
         it.setToNop();
-        }
-      if(i[3]==spv::BuiltInPrimitiveIndicesNV) {
-        idPrimitiveIndicesNV = i[1];
-        it.setToNop();
-        }
-
-      if(i[3]==spv::BuiltInLocalInvocationId) {
-        idLocalInvocationId = i[1];
-        }
-      if(i[3]==spv::BuiltInGlobalInvocationId) {
-        idGlobalInvocationId = i[1];
-        }
-      if(i[3]==spv::BuiltInWorkgroupId) {
-        idWorkGroupID = i[1];
         }
       }
     if(i.op()==spv::OpExtInstImport) {
@@ -36,10 +30,11 @@ void MeshConverter::exec() {
       if(name=="GLSL.std.450")
         std450Import = i[1];
       }
-    if(i.op()==spv::OpExecutionMode &&
-       (i[2]==spv::ExecutionModeOutputVertices || i[2]==spv::ExecutionModeOutputLinesNV || i[2]==spv::ExecutionModeOutputPrimitivesNV ||
-        i[2]==spv::ExecutionModeOutputTrianglesNV)) {
-      it.setToNop();
+    if(i.op()==spv::OpExecutionMode) {
+      if(i[2]==spv::ExecutionModeOutputVertices || i[2]==spv::ExecutionModeOutputLinesNV ||
+         i[2]==spv::ExecutionModeOutputPrimitivesNV || i[2]==spv::ExecutionModeOutputTrianglesNV) {
+        it.setToNop();
+        }
       }
     if(i.op()==spv::OpExtension) {
       std::string_view name = reinterpret_cast<const char*>(&i[1]);
@@ -57,26 +52,10 @@ void MeshConverter::exec() {
   for(auto it = code.begin(), end = code.end(); it!=end; ++it) {
     auto& i = *it;
     if((i.op()==spv::OpVariable && i[3]==spv::StorageClassOutput)) {
-      if(i[2]!=idPrimitiveCountNV &&
-         i[2]!=idPrimitiveIndicesNV) {
-        VarItm it;
-        it.type = i[1];
-        outVar.insert({i[2],it});
-        }
       it.set(3, spv::StorageClassWorkgroup);
       }
     if((i.op()==spv::OpTypePointer && i[2]==spv::StorageClassOutput)) {
       it.set(2, spv::StorageClassWorkgroup);
-      }
-    }
-
-  // gl_MeshPerVertexNV block
-  for(auto it = code.begin(), end = code.end(); it!=end; ++it) {
-    auto& i = *it;
-    if(i.op()==spv::OpMemberDecorate && i[3]==spv::DecorationBuiltIn && i[4]==spv::BuiltInPosition) {
-      idMeshPerVertexNV              = i[1];
-      gl_MeshPerVertexNV.gl_Position = true;
-      break;
       }
     }
 
@@ -85,24 +64,18 @@ void MeshConverter::exec() {
 
   for(auto it = code.begin(), end = code.end(); it!=end; ++it) {
     auto& i = *it;
-    if(i.op()==spv::OpDecorate && i[1]==idMeshPerVertexNV && i[2]==spv::DecorationBlock) {
+    if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBlock && i[1]==an.idMeshPerVertexNV) {
       it.setToNop();
       continue;
       }
     if(i.op()==spv::OpDecorate && i[2]==spv::DecorationLocation) {
-      outVar[i[1]].location = i[3];
       it.setToNop();
       continue;
       }
-    if(i.op()==spv::OpMemberDecorate && i[3]==spv::DecorationBuiltIn) {
-      if(i[4]==spv::BuiltInPointSize) {
-        gl_MeshPerVertexNV.gl_PointSize = true;
-        }
-      it.setToNop();
-      continue;
-      }
-    if(i.op()==spv::OpMemberDecorate && i[3]==spv::DecorationPerViewNV) {
-      it.setToNop();
+    if(i.op()==spv::OpMemberDecorate) {
+      if(i[3]==spv::DecorationBuiltIn ||
+         i[3]==spv::DecorationPerViewNV)
+        it.setToNop();
       continue;
       }
     if(i.op()==spv::OpName) {
@@ -143,9 +116,9 @@ void MeshConverter::exec() {
 
       for(uint16_t r=ix.length(); r<i.length(); ++r) {
         auto cp = (*ep)[r];
-        if(cp!=idLocalInvocationId &&
-           cp!=idGlobalInvocationId &&
-           cp!=idWorkGroupID) {
+        if(cp!=an.idLocalInvocationID &&
+           cp!=an.idGlobalInvocationID &&
+           cp!=an.idWorkGroupID) {
           continue;
           }
         ep.set(ix.len,cp);
@@ -159,45 +132,45 @@ void MeshConverter::exec() {
     }
   }
 
-  if(idLocalInvocationId==0) {
+  if(an.idLocalInvocationID==0) {
     auto fn = code.findSectionEnd(libspirv::Bytecode::S_Types);
     const uint32_t tUInt             = code.OpTypeInt(fn,32,false);
     const uint32_t v3uint            = code.OpTypeVector(fn,tUInt,3);
     const uint32_t _ptr_Input_v3uint = code.OpTypePointer(fn,spv::StorageClassInput,v3uint);
 
-    idLocalInvocationId = code.fetchAddBound();
-    fn.insert(spv::OpVariable, {_ptr_Input_v3uint, idLocalInvocationId, spv::StorageClassInput});
+    an.idLocalInvocationID = code.fetchAddBound();
+    fn.insert(spv::OpVariable, {_ptr_Input_v3uint, an.idLocalInvocationID, spv::StorageClassInput});
 
     fn = code.findSectionEnd(libspirv::Bytecode::S_Debug);
-    fn.insert(spv::OpName, idLocalInvocationId, "gl_LocalInvocationID");
+    fn.insert(spv::OpName, an.idLocalInvocationID, "gl_LocalInvocationID");
 
     fn = code.findSectionEnd(libspirv::Bytecode::S_Annotations);
-    fn.insert(spv::OpDecorate, {idLocalInvocationId, spv::DecorationBuiltIn, spv::BuiltInLocalInvocationId});
+    fn.insert(spv::OpDecorate, {an.idLocalInvocationID, spv::DecorationBuiltIn, spv::BuiltInLocalInvocationId});
 
     auto ep = code.findOpEntryPoint(spv::ExecutionModelGLCompute,"main");
     if(ep!=code.end()) {
-      ep.append(idLocalInvocationId);
+      ep.append(an.idLocalInvocationID);
       }
     }
 
-  if(idWorkGroupID==0) {
+  if(an.idWorkGroupID==0) {
     auto fn = code.findSectionEnd(libspirv::Bytecode::S_Types);
     const uint32_t tUInt             = code.OpTypeInt(fn,32,false);
     const uint32_t v3uint            = code.OpTypeVector(fn,tUInt,3);
     const uint32_t _ptr_Input_v3uint = code.OpTypePointer(fn,spv::StorageClassInput,v3uint);
 
-    idWorkGroupID = code.fetchAddBound();
-    fn.insert(spv::OpVariable, {_ptr_Input_v3uint, idWorkGroupID, spv::StorageClassInput});
+    an.idWorkGroupID = code.fetchAddBound();
+    fn.insert(spv::OpVariable, {_ptr_Input_v3uint, an.idWorkGroupID, spv::StorageClassInput});
 
     fn = code.findSectionEnd(libspirv::Bytecode::S_Debug);
-    fn.insert(spv::OpName, idWorkGroupID, "gl_WorkGroupID");
+    fn.insert(spv::OpName, an.idWorkGroupID, "gl_WorkGroupID");
 
     fn = code.findSectionEnd(libspirv::Bytecode::S_Annotations);
-    fn.insert(spv::OpDecorate, {idWorkGroupID, spv::DecorationBuiltIn, spv::BuiltInWorkgroupId});
+    fn.insert(spv::OpDecorate, {an.idWorkGroupID, spv::DecorationBuiltIn, spv::BuiltInWorkgroupId});
 
     auto ep = code.findOpEntryPoint(spv::ExecutionModelGLCompute,"main");
     if(ep!=code.end()) {
-      ep.append(idWorkGroupID);
+      ep.append(an.idWorkGroupID);
       }
     }
 
@@ -232,7 +205,7 @@ void MeshConverter::generateVs() {
   const uint32_t vEngine3                     = vert.fetchAddBound();
 
   std::unordered_map<uint32_t,uint32_t> varRemaps;
-  for(auto& i:outVar) {
+  for(auto& i:an.varying) {
     varRemaps[i.first] = vert.fetchAddBound();
     }
 
@@ -270,7 +243,7 @@ void MeshConverter::generateVs() {
   std::unordered_map<uint32_t,uint32_t> constants;
   uint32_t varCount = 0;
   {
-  for(auto& i:outVar) {
+  for(auto& i:an.varying) {
     // preallocate indexes
     code.traverseType(i.second.type,[&](const libspirv::MutableBytecode::AccessChain* ids, uint32_t len) {
       if(!code.isBasicTypeDecl(ids[len-1].type->op()))
@@ -290,7 +263,7 @@ void MeshConverter::generateVs() {
   }
 
   std::unordered_map<uint32_t,uint32_t> typeRemaps;
-  for(auto& i:outVar) {
+  for(auto& i:an.varying) {
     code.traverseType(i.second.type,[&](const libspirv::MutableBytecode::AccessChain* ids, uint32_t len) {
       vsTypeRemaps(fn,typeRemaps,ids,len);
       },libspirv::Bytecode::T_PostOrder);
@@ -312,7 +285,7 @@ void MeshConverter::generateVs() {
   fn.insert(spv::OpVariable,         {_ptr_Input_int, gl_VertexIndex, spv::StorageClassInput});
 
   // varyings variables
-  for(auto& i:outVar) {
+  for(auto& i:an.varying) {
     uint32_t tId = typeRemaps[i.second.type];
     uint32_t id  = varRemaps [i.first];
     fn.insert(spv::OpVariable,       {tId, id, spv::StorageClassOutput});
@@ -324,8 +297,8 @@ void MeshConverter::generateVs() {
   const uint32_t rAt = vert.fetchAddBound();
   fn.insert(spv::OpLoad, {int_t, rAt, gl_VertexIndex});
 
-  uint32_t seq  = 0;
-  for(auto& i:outVar) {
+  uint32_t seq = 0;
+  for(auto& i:an.varying) {
     uint32_t varId = varRemaps[i.first];
     uint32_t type  = i.second.type;
     code.traverseType(type,[&](const libspirv::MutableBytecode::AccessChain* ids, uint32_t len) {
@@ -381,10 +354,10 @@ void MeshConverter::generateVs() {
   //fn.insert(spv::OpMemberName, typeRemaps[idGlPerVertex], 3, "gl_CullDistance");
 
   fn = vert.findSectionEnd(libspirv::Bytecode::S_Annotations);
-  for(auto& i:outVar) {
+  for(auto& i:an.varying) {
     uint32_t varId = varRemaps[i.first];
     uint32_t type  = i.second.type;
-    for(auto& v:outVar) {
+    for(auto& v:an.varying) {
       if(v.second.type!=type)
         continue;
       uint32_t loc = v.second.location;
@@ -622,7 +595,7 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
   std::unordered_map<uint32_t,uint32_t> constants;
   uint32_t varCount = 0;
   {
-  for(auto& i:outVar) {
+  for(auto& i:an.varying) {
     // preallocate indexes
     code.traverseType(i.second.type,[&](const libspirv::MutableBytecode::AccessChain* ids, uint32_t len) {
       if(!code.isBasicTypeDecl(ids[len-1].type->op()))
@@ -707,7 +680,7 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
   fn.insert(spv::OpControlBarrier, {const2, const2, const264}); // barrier()
 
   const uint32_t primCount = code.fetchAddBound();
-  fn.insert(spv::OpLoad, {uint_t, primCount, idPrimitiveCountNV});
+  fn.insert(spv::OpLoad, {uint_t, primCount, an.idPrimitiveCountNV});
 
   // gl_PrimitiveCountNV <= 0
   {
@@ -726,7 +699,7 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
   // gl_LocalInvocationID.x != 0
   {
     const uint32_t ptrInvocationIdX = code.fetchAddBound();
-    fn.insert(spv::OpAccessChain, {_ptr_Input_uint, ptrInvocationIdX, idLocalInvocationId, const0});
+    fn.insert(spv::OpAccessChain, {_ptr_Input_uint, ptrInvocationIdX, an.idLocalInvocationID, const0});
     const uint32_t invocationId = code.fetchAddBound();
     fn.insert(spv::OpLoad, {uint_t, invocationId, ptrInvocationIdX});
     const uint32_t cond1 = code.fetchAddBound();
@@ -752,7 +725,7 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
     fn.insert(spv::OpLoad, {uint_t, rI, varI});
 
     const uint32_t ptrIndicesNV = code.fetchAddBound();
-    fn.insert(spv::OpAccessChain, {_ptr_Workgroup_uint, ptrIndicesNV, idPrimitiveIndicesNV, rI});
+    fn.insert(spv::OpAccessChain, {_ptr_Workgroup_uint, ptrIndicesNV, an.idPrimitiveIndicesNV, rI});
 
     const uint32_t rInd = code.fetchAddBound();
     fn.insert(spv::OpLoad, {uint_t, rInd, ptrIndicesNV});
@@ -776,7 +749,7 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
   fn.insert(spv::OpIMul, {uint_t, maxVar, maxVertex, varSize});
   {
   const uint32_t ptrWorkGroupID = code.fetchAddBound();
-  fn.insert(spv::OpAccessChain, {_ptr_Input_uint, ptrWorkGroupID, idWorkGroupID, const1});
+  fn.insert(spv::OpAccessChain, {_ptr_Input_uint, ptrWorkGroupID, an.idWorkGroupID, const1});
   const uint32_t workIdX = code.fetchAddBound();
   fn.insert(spv::OpLoad, {uint_t, workIdX, ptrWorkGroupID});
 
@@ -824,7 +797,7 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
     fn.insert(spv::OpAccessChain, {_ptr_Uniform_uint, ptrHeap, vEngine2, const0, rDst});
 
     const uint32_t ptrIndicesNV = code.fetchAddBound();
-    fn.insert(spv::OpAccessChain, {_ptr_Workgroup_uint, ptrIndicesNV, idPrimitiveIndicesNV, rI});
+    fn.insert(spv::OpAccessChain, {_ptr_Workgroup_uint, ptrIndicesNV, an.idPrimitiveIndicesNV, rI});
 
     const uint32_t rInd = code.fetchAddBound();
     fn.insert(spv::OpLoad, {uint_t, rInd, ptrIndicesNV});
@@ -846,7 +819,7 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
     libspirv::MutableBytecode b;
     auto block = b.end();
     uint32_t seq  = 0;
-    for(auto& i:outVar) {
+    for(auto& i:an.varying) {
       uint32_t type = i.second.type;
       code.traverseType(type,[&](const libspirv::MutableBytecode::AccessChain* ids, uint32_t len) {
         if(!code.isBasicTypeDecl(ids[len-1].type->op()))
@@ -891,7 +864,7 @@ void MeshConverter::injectCountingPass(const uint32_t idMainFunc) {
   // Writeout meshlet descriptor
   {
     const uint32_t ptrWorkGroupID = code.fetchAddBound();
-    fn.insert(spv::OpAccessChain, {_ptr_Input_uint, ptrWorkGroupID, idWorkGroupID, const1});
+    fn.insert(spv::OpAccessChain, {_ptr_Input_uint, ptrWorkGroupID, an.idWorkGroupID, const1});
     const uint32_t workIdX = code.fetchAddBound();
     fn.insert(spv::OpLoad, {uint_t, workIdX, ptrWorkGroupID});
 
@@ -958,7 +931,7 @@ void MeshConverter::replaceEntryPoint(const uint32_t idMainFunc, const uint32_t 
   }
 
 void MeshConverter::removeMultiview(libspirv::MutableBytecode& code) {
-  if(idMeshPerVertexNV==0)
+  if(an.idMeshPerVertexNV==0)
     return;
 
   std::unordered_set<uint32_t> perView;
@@ -974,7 +947,7 @@ void MeshConverter::removeMultiview(libspirv::MutableBytecode& code) {
   }
 
 void MeshConverter::removeCullClip(libspirv::MutableBytecode& code) {
-  if(idMeshPerVertexNV==0)
+  if(an.idMeshPerVertexNV==0)
     return;
 
   std::unordered_set<uint32_t> perView;
@@ -1000,7 +973,7 @@ void MeshConverter::removeFromPerVertex(libspirv::MutableBytecode& code,
                                         const std::unordered_set<uint32_t>& fields) {
   for(auto it = code.begin(), end = code.end(); it!=end; ++it) {
     auto& i = *it;
-    if((i.op()!=spv::OpMemberDecorate && i.op()!=spv::OpMemberName) || i[1]!=idMeshPerVertexNV)
+    if((i.op()!=spv::OpMemberDecorate && i.op()!=spv::OpMemberName) || i[1]!=an.idMeshPerVertexNV)
       continue;
     if(fields.find(i[2])==fields.end())
       continue;
@@ -1011,7 +984,7 @@ void MeshConverter::removeFromPerVertex(libspirv::MutableBytecode& code,
     auto& i = *it;
     if(i.op()!=spv::OpTypeStruct)
       continue;
-    if(idMeshPerVertexNV!=i[1])
+    if(an.idMeshPerVertexNV!=i[1])
       continue;
 
     uint16_t argc = 1;

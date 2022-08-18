@@ -27,6 +27,10 @@ spv::ExecutionModel Bytecode::findExecutionModel() const {
   return spv::ExecutionModelMax;
   }
 
+size_t Bytecode::toOffset(const OpCode& op) const {
+  return std::distance(spirv, &op);
+  }
+
 bool Bytecode::isTypeDecl(spv::Op op) {
   switch(op) {
     case spv::OpTypeVoid:
@@ -353,10 +357,21 @@ void MutableBytecode::removeNops() {
   invalidateSpvPointers();
   }
 
+uint32_t MutableBytecode::bound() const {
+  return reinterpret_cast<const uint32_t&>(code[3]);
+  }
+
 uint32_t MutableBytecode::fetchAddBound() {
   uint32_t& v   = reinterpret_cast<uint32_t&>(code[3]);
   auto      ret = v;
   ++v;
+  return ret;
+  }
+
+uint32_t MutableBytecode::fetchAddBound(uint32_t cnt) {
+  uint32_t& v   = reinterpret_cast<uint32_t&>(code[3]);
+  auto      ret = v;
+  v+=cnt;
   return ret;
   }
 

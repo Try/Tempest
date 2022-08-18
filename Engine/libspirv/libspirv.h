@@ -87,6 +87,7 @@ class Bytecode {
     
     uint32_t            spirvVersion() const;
     spv::ExecutionModel findExecutionModel() const;
+    size_t              toOffset(const OpCode& op) const;
 
     static bool         isTypeDecl(spv::Op op);
     static bool         isBasicTypeDecl(spv::Op op);
@@ -158,13 +159,15 @@ class MutableBytecode : public Bytecode {
     uint32_t OpTypeStruct      (Iterator& typesEnd, const uint32_t* member, const size_t size);
     uint32_t OpTypeFunction    (Iterator& typesEnd, uint32_t idRet);
 
-    uint32_t OpConstant    (Iterator& typesEnd, uint32_t idType, uint32_t u32);
-    uint32_t OpConstant    (Iterator& typesEnd, uint32_t idType, int32_t  i32);
+    uint32_t OpConstant         (Iterator& typesEnd, uint32_t idType, uint32_t u32);
+    uint32_t OpConstant         (Iterator& typesEnd, uint32_t idType, int32_t  i32);
 
-    uint32_t OpVariable    (Iterator& fn, uint32_t idType, spv::StorageClass cls);
+    uint32_t OpVariable         (Iterator& fn, uint32_t idType, spv::StorageClass cls);
 
     void     removeNops();
+    uint32_t bound() const;
     uint32_t fetchAddBound();
+    uint32_t fetchAddBound(uint32_t cnt);
 
     void     traverseType(uint32_t typeId, std::function<void(const AccessChain* indexes, uint32_t len)> fn,
                           TraverseMode mode = TraverseMode::T_PreOrder);
