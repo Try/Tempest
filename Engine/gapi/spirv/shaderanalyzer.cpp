@@ -94,8 +94,8 @@ ShaderAnalyzer::ShaderAnalyzer(libspirv::MutableBytecode& code)
 
 template<class ... T>
 void ShaderAnalyzer::log(const T& ... args) {
-  //int dummy[] = {(std::cout << args, 0)...}; (void)dummy;
-  //std::cout << std::endl;
+  // int dummy[] = {(std::cout << args, 0)...}; (void)dummy;
+  // std::cout << std::endl;
   }
 
 void ShaderAnalyzer::analyze() {
@@ -305,6 +305,8 @@ void ShaderAnalyzer::analyzeThreadMap() {
 
     for(auto& i:variables) {
       i.second.v.access = toAccessBits(spv::StorageClass(i.second.cls));
+      if(i.second.cls==spv::StorageClassOutput)
+        i.second.v.access = AC_None;
       }
 
     auto st = registers;
@@ -372,7 +374,7 @@ void ShaderAnalyzer::analyzeBlock(const uint32_t functionCurrent, const libspirv
         return;
         }
       case spv::OpReturn: {
-        // std::cout << " + return" << std::endl;
+        log(" + return ");
         break;
         }
       case spv::OpReturnValue: {
@@ -380,6 +382,7 @@ void ShaderAnalyzer::analyzeBlock(const uint32_t functionCurrent, const libspirv
         auto&    l   = registers[ret];  // reg
         auto&    r   = registers[i[1]]; // reg
         l.v = r.v;
+        // l.v.access |= fn.read;
         log(" + return ", toStr(r.v.access));
         break;
         }
@@ -484,13 +487,18 @@ void ShaderAnalyzer::analyzeInstr(const uint32_t functionCurrent, const libspirv
       break;
       }
     case spv::OpStore: {
-      // FIXME: control flow ?
       auto  l  = registers[i[1]]; // ptr
       auto  r  = registers[i[2]]; // reg
       auto  id = dereferenceAccessChain(l.v.pointer);
 
       auto& v  = variables[id];
-      v.v         = r.v;
+      if(l.v.pointer.chain.size()<=1) {
+        v.v = r.v;
+        } else {
+        // composite object
+        v.v.hasVal = false;
+        v.v.access |= r.v.access;
+        }
       v.v.access |= l.v.access;
       v.v.access |= acExt;
 
@@ -503,10 +511,11 @@ void ShaderAnalyzer::analyzeInstr(const uint32_t functionCurrent, const libspirv
         //std::cout << toStr(l.v);
         std::cout << "] = " << toStr(v.v.access) << std::endl;
         */
+
         if(l.v.pointer.chain.size()>1 && id!=idPrimitiveIndicesNV && id!=idPrimitiveCountNV) {
           markOutputsAsThreadRelated(l.v.pointer.chain[1], currentThread, v.v.access);
           }
-        else if(l.v.pointer.chain.size()>1 && id==idPrimitiveIndicesNV) {
+        else if(l.v.pointer.chain.size()>1 && id==idPrimitiveCountNV) {
           markIndexAsThreadRelated(l.v.pointer.chain[1], currentThread, v.v.access);
           }
         }
@@ -534,7 +543,7 @@ void ShaderAnalyzer::analyzeInstr(const uint32_t functionCurrent, const libspirv
           l.v.pointer.chain.push_back(uint32_t(-1));
         }
 
-      makeWriteAccess(functionCurrent, blockId, t.access);
+      // makeWriteAccess(functionCurrent, blockId, t.access);
       break;
       }
     case spv::OpCompositeConstruct:{
@@ -629,7 +638,7 @@ void ShaderAnalyzer::analyzeInstr(const uint32_t functionCurrent, const libspirv
       l.v.access = (a.v.access | b.v.access);
       break;
       }
-    case spv::OpBitcast:{
+    case spv::OpBitcast: {
       auto& l = registers[i[2]];
       auto  r = registers[i[3]];
       l.v = r.v;

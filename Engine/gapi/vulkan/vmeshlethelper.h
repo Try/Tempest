@@ -31,7 +31,7 @@ class VMeshletHelper {
   public:
     enum {
       MeshletsMaxCount   = 1024*32,
-      IndirectCmdCount   = 4048,
+      IndirectCmdCount   = 8096,
       PipelinewordsCount = 32*1024*1024,
       PipelineMemorySize = PipelinewordsCount*4,
       MeshletsMemorySize = MeshletsMaxCount*3*4,

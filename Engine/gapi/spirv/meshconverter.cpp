@@ -79,9 +79,8 @@ void MeshConverter::exec() {
       it.setToNop();
       continue;
       }
-    if(i.op()==spv::OpMemberDecorate) {
-      if(i[3]==spv::DecorationBuiltIn ||
-         i[3]==spv::DecorationPerViewNV)
+    if(i.op()==spv::OpMemberDecorate && i[3]==spv::DecorationBuiltIn) {
+      if(i[4]==spv::BuiltInPosition || i[4]==spv::BuiltInPointSize)
         it.setToNop();
       continue;
       }
@@ -103,12 +102,13 @@ void MeshConverter::exec() {
 
   if(an.canGenerateVs()) {
     generateVsSplit();
+    removeMultiview(code);
+    removeCullClip(code);
     } else {
+    removeMultiview(code);
+    removeCullClip(code);
     generateVsDefault();
     }
-
-  removeMultiview(code);
-  removeCullClip(code);
 
   // meslet entry-point
   uint32_t idMain = -1;
@@ -797,16 +797,16 @@ void MeshConverter::removeMultiview(libspirv::MutableBytecode& code) {
   if(an.idMeshPerVertexNV==0)
     return;
 
-  std::unordered_set<uint32_t> perView;
+  std::unordered_set<uint32_t> fields;
   for(auto it = code.begin(), end = code.end(); it!=end; ++it) {
     auto& i = *it;
     if(i.op()==spv::OpMemberDecorate && i[3]==spv::DecorationPerViewNV) {
-      perView.insert(i[2]);
+      fields.insert(i[2]);
       continue;
       }
     }
 
-  removeFromPerVertex(code,perView);
+  removeFromPerVertex(code,fields);
   }
 
 void MeshConverter::removeCullClip(libspirv::MutableBytecode& code) {
@@ -834,6 +834,9 @@ void MeshConverter::removeCullClip(libspirv::MutableBytecode& code) {
 
 void MeshConverter::removeFromPerVertex(libspirv::MutableBytecode& code,
                                         const std::unordered_set<uint32_t>& fields) {
+  if(fields.size()==0)
+    return;
+
   for(auto it = code.begin(), end = code.end(); it!=end; ++it) {
     auto& i = *it;
     if((i.op()!=spv::OpMemberDecorate && i.op()!=spv::OpMemberName) || i[1]!=an.idMeshPerVertexNV)
@@ -952,8 +955,8 @@ void MeshConverter::generateVsDefault() {
   fn.insert(spv::OpTypeRuntimeArray, {_runtimearr_uint, uint_t});
 
   std::unordered_map<uint32_t,uint32_t> constants;
-  uint32_t varCount = 0;
   {
+  uint32_t varCount = 0;
   for(auto& i:an.varying) {
     // preallocate indexes
     code.traverseType(i.second.type,[&](const libspirv::MutableBytecode::AccessChain* ids, uint32_t len) {

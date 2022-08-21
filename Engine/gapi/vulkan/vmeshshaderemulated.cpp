@@ -28,7 +28,7 @@ VMeshShaderEmulated::VMeshShaderEmulated(VDevice& device, const void *source, si
   MeshConverter conv(code);
   conv.exec();
 
-  // debugLog("mesh_orig.mesh.spv", reinterpret_cast<const uint32_t*>(source),src_size/4);
+  //debugLog("mesh_orig.mesh.spv", reinterpret_cast<const uint32_t*>(source),src_size/4);
 
   auto& vert = conv.vertexPassthrough();
   // debugLog("mesh_conv.comp.spv", code.opcodes(), code.size());
@@ -37,7 +37,7 @@ VMeshShaderEmulated::VMeshShaderEmulated(VDevice& device, const void *source, si
   std::system("spirv-val.exe      .\\mesh_conv.comp.spv");
   */
 
-  // debugLog("mesh_conv.vert.spv", vert.opcodes(), vert.size());
+  //debugLog("mesh_conv.vert.spv", vert.opcodes(), vert.size());
   /*
   std::system("spirv-cross.exe -V .\\mesh_conv.vert.spv");
   std::system("spirv-val.exe      .\\mesh_conv.vert.spv");
