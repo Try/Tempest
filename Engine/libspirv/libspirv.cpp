@@ -278,6 +278,7 @@ uint32_t MutableBytecode::OpTypeStruct(Iterator& typesEnd, std::initializer_list
   }
 
 uint32_t MutableBytecode::OpTypeStruct(Iterator& typesEnd, const uint32_t* member, const size_t size) {
+  /*
   for(auto it=begin(); it!=typesEnd; ++it) {
     auto& i = *it;
     if(i.op()!=spv::OpTypeStruct || i.len!=size+2)
@@ -286,7 +287,7 @@ uint32_t MutableBytecode::OpTypeStruct(Iterator& typesEnd, const uint32_t* membe
       break;
     return i[1];
     }
-
+  */
   const uint32_t tRet = fetchAddBound();
   uint16_t len = uint16_t(size + 2);
   OpCode   cx  = {uint16_t(spv::OpTypeStruct),len};

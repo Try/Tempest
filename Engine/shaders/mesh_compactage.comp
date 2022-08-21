@@ -69,12 +69,19 @@ void main() {
   uint iboOffset  = atomicAdd(indirect.cmd[self].indexCount, indSize) + firstIndex;
   uint vboOffset  = atomicAdd(indirect.cmd[self].vboOffset,  vMem);
 
-  [[loop, dependency_infinite]]
+  [[loop]]
   for(uint i=0; i<vMem; ++i) {
     compacted.heap[vboOffset+i] = var.heap[vertPtr+i];
     }
 
-  [[loop, dependency_infinite]]
+  [[branch]]
+  if(varSize==0) {
+    // varying work moved to vertex shader and ibo represents used as-is
+    vboOffset = 0;
+    varSize   = 1;
+    }
+
+  [[loop]]
   for(uint i=0; i<indSize; ++i) {
     compacted.heap[iboOffset+i] = vboOffset + var.heap[indPtr+i]*varSize;
     }

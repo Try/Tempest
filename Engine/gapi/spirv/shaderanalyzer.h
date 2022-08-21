@@ -4,33 +4,26 @@
 
 class ShaderAnalyzer {
   public:
+    struct Function;
+    struct Varying;
+
     explicit ShaderAnalyzer(libspirv::MutableBytecode& code);
     libspirv::MutableBytecode& vertexPassthrough() { return vert; }
 
     void analyze();
-    void generateVs();
+    void analyzeThreadMap();
 
-    struct Varying {
-      uint32_t type     = 0;
-      uint32_t location = -1;
+    bool canGenerateVs() const;
+    bool canSkipFromVs(uint32_t offset) const;
+
+    const Function& function(uint32_t id) const;
+
+    enum {
+      MaxIndex   = 256*3,
+      MaxThreads = 256,
+      NoThread   = MaxThreads+1,
       };
 
-    uint32_t idVoid               = 0;
-
-    uint32_t idLocalInvocationID  = 0;
-    uint32_t idGlobalInvocationID = 0;
-    uint32_t idWorkGroupID        = 0;
-
-    uint32_t idPrimitiveIndicesNV = 0;
-    uint32_t idPrimitiveCountNV   = 0;
-    uint32_t idMeshPerVertexNV    = 0;
-    uint32_t idPerVertex          = 0;
-    uint32_t idPointSize          = 0;
-    uint32_t idMain               = 0;
-
-    std::unordered_map<uint32_t,Varying> varying;
-
-  private:
     enum AccessBits : uint16_t {
       AC_None    = 0x0,
       AC_Const   = 0x1,
@@ -46,11 +39,6 @@ class ShaderAnalyzer {
       AC_All     = 0x1FF,
       };
 
-    enum {
-      MaxThreads = 256,
-      NoThread   = MaxThreads+1,
-      };
-
     friend AccessBits operator | (const AccessBits a, const AccessBits b) {
       return AccessBits(uint16_t(a) | uint16_t(b));
       }
@@ -59,6 +47,48 @@ class ShaderAnalyzer {
       a = AccessBits(uint16_t(a) | uint16_t(b));
       }
 
+    struct Varying {
+      uint32_t type     = 0;
+      uint32_t location = -1;
+      };
+
+    struct Function {
+      uint32_t    codeOffset = 0;
+      bool        analyzed   = false;
+      AccessBits  read       = AC_None;
+      AccessBits  write      = AC_None;
+      bool        hasIll     = false;
+      bool        barrier    = false;
+      const char* dbgName    = nullptr;
+      uint32_t    returnType = 0;
+
+      bool        isPureUniform() const;
+      };
+
+
+    uint32_t idVoid               = 0;
+
+    uint32_t idLocalInvocationID  = 0;
+    uint32_t idGlobalInvocationID = 0;
+    uint32_t idWorkGroupID        = 0;
+
+    uint32_t idPrimitiveIndicesNV = 0;
+    uint32_t idPrimitiveCountNV   = 0;
+    uint32_t idMeshPerVertexNV    = 0;
+    uint32_t idPerVertex          = 0;
+    uint32_t idPointSize          = 0;
+    uint32_t idMain               = 0;
+
+    uint32_t localSizeX           = 0;
+    uint32_t outputPrimitivesNV   = 0;
+    uint32_t outputIndexes        = 0;
+
+    uint32_t threadMapping   [MaxIndex] = {};
+    uint32_t threadMappingIbo[MaxIndex] = {};
+
+    std::unordered_map<uint32_t,Varying> varying;
+
+  private:
     struct AccessChain {
       AccessChain() = default;
       explicit AccessChain(uint32_t ptr):chain({ptr}){}
@@ -114,19 +144,6 @@ class ShaderAnalyzer {
       AccessBits        access = AccessBits::AC_None;
       };
 
-    struct Func {
-      uint32_t    codeOffset = 0;
-      bool        analyzed   = false;
-      AccessBits  read       = AC_None;
-      AccessBits  write      = AC_None;
-      bool        hasIll     = false;
-      bool        barrier    = false;
-      const char* dbgName    = nullptr;
-      uint32_t    returnType = 0;
-
-      bool        isPureUniform() const;
-      };
-
     struct CFG {
       bool        skipFromVs = false;
       };
@@ -152,18 +169,15 @@ class ShaderAnalyzer {
 
     static bool isVertexFriendly(spv::StorageClass cls);
 
-    libspirv::MutableBytecode&         code;
-    libspirv::MutableBytecode          vert;
+    libspirv::MutableBytecode&            code;
+    libspirv::MutableBytecode             vert;
 
-    std::unordered_map<uint32_t,Reg>   registers;
-    std::unordered_map<uint32_t,Type>  pointerTypes;
-    std::unordered_map<uint32_t,Var>   variables;
-    std::unordered_map<uint32_t,Func>  functions;
-    std::unordered_map<uint32_t,CFG>   control;
+    std::unordered_map<uint32_t,Reg>      registers;
+    std::unordered_map<uint32_t,Type>     pointerTypes;
+    std::unordered_map<uint32_t,Var>      variables;
+    std::unordered_map<uint32_t,Function> func;
+    std::unordered_map<uint32_t,CFG>      control;
 
-    uint32_t                           localSizeX        = 0;
-    uint32_t                           currentThread        = 0;
-    uint32_t                           threadMapping[MaxThreads] = {};
-    uint32_t                           threadMappingIbo[MaxThreads] = {};
+    uint32_t                              currentThread = 0;
 };
 

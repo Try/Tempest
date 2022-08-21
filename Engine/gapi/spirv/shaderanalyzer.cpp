@@ -81,7 +81,7 @@ ShaderAnalyzer::AccessBits ShaderAnalyzer::toAccessBits(spv::StorageClass c) {
     }
   }
 
-bool ShaderAnalyzer::Func::isPureUniform() const {
+bool ShaderAnalyzer::Function::isPureUniform() const {
   auto wmsk = AC_Const | AC_Arg | AC_Local | AC_Uniform;
   auto rmsk = AC_Const | AC_Arg | AC_Local | AC_Uniform | AC_Input;
   return (write & (~wmsk))==0 && (read & (~rmsk))==0;
@@ -164,7 +164,7 @@ void ShaderAnalyzer::analyze() {
         break;
         }
       case spv::OpFunction: {
-        auto& fn = functions[i[2]];
+        auto& fn = func[i[2]];
         fn.codeOffset = code.toOffset(i);
         fn.returnType = i[1];
         break;
@@ -175,12 +175,13 @@ void ShaderAnalyzer::analyze() {
       }
     }
 
+  uint32_t indPerPrimitive = 3;
   localSizeX = 0;
   for(auto& i:code) {
     switch(i.op()) {
       case spv::OpName: {
-        auto ptr = functions.find(i[1]);
-        if(ptr!=functions.end()) {
+        auto ptr = func.find(i[1]);
+        if(ptr!=func.end()) {
           auto& fn = ptr->second;
           fn.dbgName = reinterpret_cast<const char*>(&i[2]);
           }
@@ -228,12 +229,25 @@ void ShaderAnalyzer::analyze() {
         if(i[2]==spv::ExecutionModeLocalSize) {
           localSizeX = i[3];
           }
+        if(i[2]==spv::ExecutionModeOutputPrimitivesNV) {
+          outputPrimitivesNV = i[3];
+          }
+        if(i[2]==spv::ExecutionModeOutputTrianglesNV) {
+          indPerPrimitive = 3;
+          }
+        if(i[2]==spv::ExecutionModeOutputLinesNV) {
+          indPerPrimitive = 2;
+          }
+        if(i[2]==spv::ExecutionModeOutputPoints) {
+          indPerPrimitive = 1;
+          }
         break;
         }
       default:
         break;
       }
     }
+  outputIndexes = outputPrimitivesNV*indPerPrimitive;
 
   for(auto& i:code) {
     switch(i.op()) {
@@ -265,7 +279,9 @@ void ShaderAnalyzer::analyze() {
         break;
       }
     }
+  }
 
+void ShaderAnalyzer::analyzeThreadMap() {
   for(auto& i:threadMapping)
     i = NoThread;
   for(auto& i:threadMappingIbo)
@@ -291,12 +307,21 @@ void ShaderAnalyzer::analyze() {
     }
   }
 
+bool ShaderAnalyzer::canGenerateVs() const {
+  for(size_t i=0; i<outputIndexes; ++i)
+    if(threadMapping[i]==MaxThreads)
+      return false;
+  //TODO: handle unknown instructions/control flow?
+  //return false;
+  return true;
+  }
+
 void ShaderAnalyzer::analyzeFunc(const uint32_t functionCurrent, const libspirv::Bytecode::OpCode& calee) {
-  auto& func = functions[functionCurrent];
+  auto& fn = func[functionCurrent];
   // std::cout << "func " << func.dbgName << std::endl;
 
   size_t prm  = 0;
-  for(auto it = code.fromOffset(func.codeOffset); it!=code.end(); ++it) {
+  for(auto it = code.fromOffset(fn.codeOffset); it!=code.end(); ++it) {
     auto& i = *it;
     switch(i.op()) {
       case spv::OpFunction:
@@ -324,14 +349,14 @@ void ShaderAnalyzer::analyzeFunc(const uint32_t functionCurrent, const libspirv:
       break;
     }
 
-  func.analyzed = true;
+  fn.analyzed = true;
   // std::cout << "~" << func.dbgName << std::endl;
   }
 
 void ShaderAnalyzer::analyzeBlock(const uint32_t functionCurrent, const libspirv::Bytecode::OpCode& calee,
                                    libspirv::Bytecode::Iterator& it, AccessBits acExt,
                                    const uint32_t blockId, uint32_t mergeLbl) {
-  auto& func  = functions[functionCurrent];
+  auto& fn = func[functionCurrent];
 
   for(; it!=code.end(); ++it) {
     auto& i = *it;
@@ -363,8 +388,8 @@ void ShaderAnalyzer::analyzeBlock(const uint32_t functionCurrent, const libspirv
 
           auto  access = (AC_Cond | acExt | v.v.access);
           // std::cout << "   OpBranchConditional " << toStr(access) << std::endl;
-          auto& c = control[code.toOffset(i)];
           if((access & (AC_Shared|AC_Output|AC_UAV))!=AC_None) {
+            auto& c = control[code.toOffset(i)];
             c.skipFromVs = true;
             }
           if(b[2]!=b[3]) {
@@ -379,13 +404,13 @@ void ShaderAnalyzer::analyzeBlock(const uint32_t functionCurrent, const libspirv
           // std::cout << " - block merge %" << i[1] << std::endl;
           } else {
           // switches are too difficult
-          func.hasIll = true;
+          fn.hasIll = true;
           }
         break;
         }
       case spv::OpLoopMerge: {
         // loops are too difficult
-        func.hasIll = true;
+        fn.hasIll = true;
         break;
         }
       case spv::OpLabel: {
@@ -394,21 +419,19 @@ void ShaderAnalyzer::analyzeBlock(const uint32_t functionCurrent, const libspirv
         break;
         }
       case spv::OpFunctionCall: {
-        auto& f = functions[i[3]];
-        // if(!(f.analyzed && f.isPureUniform())) {
-        //   }
+        auto& f = func[i[3]];
         analyzeFunc(i[3],i);
-        func.read    |= f.read;
-        func.write   |= f.write;
-        func.barrier |= f.barrier;
-        func.hasIll  |= f.hasIll;
+        fn.read    |= f.read;
+        fn.write   |= f.write;
+        fn.barrier |= f.barrier;
+        fn.hasIll  |= f.hasIll;
         break;
         }
       case spv::OpControlBarrier:
       case spv::OpMemoryBarrier: {
         //auto& block = blocks[blockId];
         //block.barrier = true;
-        func.barrier  = true;
+        fn.barrier  = true;
         for(auto& v:registers) {
           if(v.second.cls==spv::StorageClassWorkgroup)
             v.second.v.access = AC_Shared; // now side-effect can be observed
@@ -519,7 +542,15 @@ void ShaderAnalyzer::analyzeInstr(const uint32_t functionCurrent, const libspirv
     case spv::OpISub:
     case spv::OpIMul:
     case spv::OpIEqual:
-    case spv::OpINotEqual:{
+    case spv::OpINotEqual:
+    case spv::OpUGreaterThan:
+    case spv::OpSGreaterThan:
+    case spv::OpUGreaterThanEqual:
+    case spv::OpSGreaterThanEqual:
+    case spv::OpULessThan:
+    case spv::OpSLessThan:
+    case spv::OpULessThanEqual:
+    case spv::OpSLessThanEqual: {
       auto& l = registers[i[2]]; // reg
       auto  a = registers[i[3]]; // a
       auto  b = registers[i[4]]; // b
@@ -585,7 +616,7 @@ void ShaderAnalyzer::analyzeInstr(const uint32_t functionCurrent, const libspirv
       }
     default: {
       if(functionCurrent!=0) {
-        auto& f = functions[functionCurrent];
+        auto& f = func[functionCurrent];
         f.hasIll = true;
         // reset registers info maybe?
         }
@@ -633,7 +664,7 @@ void ShaderAnalyzer::markIndexAsThreadRelated(uint32_t elt, uint32_t thread) {
   }
 
 void ShaderAnalyzer::makeReadAccess(const uint32_t functionCurrent, const uint32_t blockId, AccessBits ac) {
-  auto& f = functions[functionCurrent];
+  auto& f = func[functionCurrent];
   f.read |= ac;
   // auto& b = blocks[blockId];
   // b.read |= ac;
@@ -641,7 +672,7 @@ void ShaderAnalyzer::makeReadAccess(const uint32_t functionCurrent, const uint32
 
 void ShaderAnalyzer::makeWriteAccess(const uint32_t functionCurrent, const uint32_t blockId,
                                       AccessBits ac) {
-  auto& f = functions[functionCurrent];
+  auto& f = func[functionCurrent];
   f.write |= ac;
   // auto& b = blocks[blockId];
   // b.write |= ac;
@@ -669,199 +700,17 @@ uint32_t ShaderAnalyzer::mappingTable(libspirv::MutableBytecode::Iterator& fn, u
   return vRet;
   }
 
-void ShaderAnalyzer::generateVs() {
-  vert.fetchAddBound(code.bound()-vert.bound());
-  auto gen = vert.end();
-
-  const uint32_t idVertexIndex = vert.fetchAddBound();
-  std::unordered_set<uint32_t> var;
-  for(auto it = code.begin(); it!=code.end(); ++it) {
-    auto& i = *it;
-    if(i.op()==spv::OpCapability) {
-      if(i[1]==spv::CapabilityMeshShadingNV) {
-        gen.insert(spv::OpCapability,{spv::CapabilityShader});
-        continue;
-        }
-      }
-    if(i.op()==spv::OpExecutionMode) {
-      continue;
-      }
-    if(i.op()==spv::OpEntryPoint) {
-      gen.insert(spv::OpEntryPoint, {spv::ExecutionModelVertex, i[2], 0x6E69616D, 0x0, idVertexIndex});
-      continue;
-      }
-    if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBuiltIn) {
-      if(i[3]==spv::BuiltInPrimitiveCountNV ||
-         i[3]==spv::BuiltInPrimitiveIndicesNV ||
-         i[3]==spv::BuiltInLocalInvocationId ||
-         i[3]==spv::BuiltInGlobalInvocationId ||
-         i[3]==spv::BuiltInWorkgroupId) {
-        continue;
-        }
-      }
-
-    if(i.op()==spv::OpTypePointer) {
-      uint32_t cls = i[2];
-      if(isVertexFriendly(spv::StorageClass(cls))) {
-        cls = spv::StorageClassPrivate;
-        }
-      gen.insert(i.op(),{i[1],cls,i[3]});
-      continue;
-      }
-    if(i.op()==spv::OpVariable) {
-      uint32_t cls = i[3];
-      if(isVertexFriendly(spv::StorageClass(cls))) {
-        cls = spv::StorageClassPrivate;
-        }
-      var.insert(i[2]);
-      gen.insert(i.op(),{i[1],i[2],cls});
-      continue;
-      }
-
-    if(i.op()==spv::OpFunction) {
-      auto& fn = functions[i[2]];
-      var.insert(i[2]);
-      if(!(fn.isPureUniform() || i[2]==idMain)) {
-        gen.insert(i.op(),&i[1],i.length()-1);
-        while((*it).op()!=spv::OpFunctionEnd) {
-          auto& i = *it;
-          if(i.op()==spv::OpFunctionParameter)
-            gen.insert(i.op(),&i[1],i.length()-1);
-          ++it;
-          }
-        uint32_t id = vert.fetchAddBound();
-        gen.insert(spv::OpLabel,{id});
-
-        if(fn.returnType==idVoid) {
-          gen.insert(spv::OpReturn,{});
-          } else {
-          uint32_t id = vert.fetchAddBound();
-          gen.insert(spv::OpUndef,{fn.returnType, id});
-          gen.insert(spv::OpReturnValue,{id});
-          }
-        gen.insert(spv::OpFunctionEnd,{});
-        continue;
-        }
-      }
-
-    if(i.op()==spv::OpFunctionCall) {
-      //
-      }
-
-    if(i.op()==spv::OpSelectionMerge) {
-      auto& c = control[code.toOffset(i)];
-      if(c.skipFromVs) {
-        uint32_t merge = i[1];
-        for(;;++it) {
-          auto& i = *it;
-          if(i.op()==spv::OpLabel & i[1]==merge)
-            break;
-          }
-        continue;
-        }
-      }
-
-    gen.insert(i.op(),&i[1],i.length()-1);
-    }
-
-  for(auto it = vert.begin(); it!=vert.end(); ++it) {
-    auto& i = *it;
-    if(i.op()==spv::OpName) {
-      if(var.find(i[1])==var.end() || i[1]==idMain)
-        it.setToNop();
-      std::string_view name = reinterpret_cast<const char*>(&i[2]);
-      if(name=="gl_LocalInvocationID")
-        ;//it.setToNop();
-      }
-    }
-
-  // engine-level main
-  {
-  auto fn = vert.findSectionEnd(libspirv::Bytecode::S_Types);
-  const uint32_t void_t            = vert.OpTypeVoid(fn);
-  const uint32_t func_void         = vert.OpTypeFunction(fn, void_t);
-  const uint32_t uint_t            = vert.OpTypeInt(fn, 32, false);
-  const uint32_t int_t             = vert.OpTypeInt(fn, 32, true);
-  const uint32_t _ptr_Input_int    = vert.OpTypePointer(fn,spv::StorageClassInput,   int_t);
-  const uint32_t _ptr_Private_uint = vert.OpTypePointer(fn,spv::StorageClassPrivate, uint_t);
-
-  const uint32_t const0            = vert.OpConstant(fn,int_t,0);
-  const uint32_t const1            = vert.OpConstant(fn,int_t,1);
-  const uint32_t const2            = vert.OpConstant(fn,int_t,2);
-  const uint32_t const1u           = vert.OpConstant(fn,uint_t,1);
-  const uint32_t const8u           = vert.OpConstant(fn,uint_t,8);
-  const uint32_t const255u         = vert.OpConstant(fn,uint_t,255);
-  const uint32_t mappings          = mappingTable(fn,uint_t);
-
-  // input
-  fn.insert(spv::OpVariable, {_ptr_Input_int, idVertexIndex, spv::StorageClassInput});
-
-  // annotations
-  fn = vert.findSectionEnd(libspirv::Bytecode::S_Annotations);
-  fn.insert(spv::OpDecorate, {idVertexIndex, spv::DecorationBuiltIn, spv::BuiltInVertexIndex});
-
-  fn = vert.end();
-  const uint32_t engineMain = vert.fetchAddBound();
-  const uint32_t lblMain    = vert.fetchAddBound();
-  fn.insert(spv::OpFunction, {void_t, engineMain, spv::FunctionControlMaskNone, func_void});
-  fn.insert(spv::OpLabel,    {lblMain});
-
-  const uint32_t rAt = vert.fetchAddBound();
-  fn.insert(spv::OpLoad, {int_t, rAt, idVertexIndex});
-  const uint32_t rIndex = vert.fetchAddBound();
-  fn.insert(spv::OpBitcast, {uint_t, rIndex, rAt});
-
-  if(idLocalInvocationID!=0) {
-    // gl_PrimitiveIndex = gl_VertexIndex & 0xFF;
-    // gl_LocalInvocationID.x = tbl[gl_PrimitiveIndex];
-    const uint32_t ptrIdX = vert.fetchAddBound();
-    const uint32_t mod    = vert.fetchAddBound();
-    const uint32_t ptrTbl = vert.fetchAddBound();
-    const uint32_t tbl    = vert.fetchAddBound();
-
-    fn.insert(spv::OpAccessChain, {_ptr_Private_uint, ptrIdX, idLocalInvocationID, const0});
-    fn.insert(spv::OpBitwiseAnd,  {uint_t, mod, rIndex, const255u});
-
-    fn.insert(spv::OpAccessChain, {_ptr_Private_uint, ptrTbl, mappings, mod});
-    fn.insert(spv::OpLoad, {int_t, tbl, ptrTbl});
-    fn.insert(spv::OpStore,      {ptrIdX, tbl});
-
-    const uint32_t ptrIdY = vert.fetchAddBound();
-    fn.insert(spv::OpAccessChain, {_ptr_Private_uint, ptrIdY, idLocalInvocationID, const1});
-    fn.insert(spv::OpStore, {ptrIdY, const1u});
-
-    const uint32_t ptrIdZ = vert.fetchAddBound();
-    fn.insert(spv::OpAccessChain, {_ptr_Private_uint, ptrIdZ, idLocalInvocationID, const2});
-    fn.insert(spv::OpStore, {ptrIdZ, const1u});
-    }
-
-  if(idWorkGroupID!=0) {
-    // gl_WorkGroupID.x = gl_VertexIndex >> 8;
-    const uint32_t ptrIdX = vert.fetchAddBound();
-    fn.insert(spv::OpAccessChain, {_ptr_Private_uint, ptrIdX, idWorkGroupID, const0});
-    const uint32_t mod = vert.fetchAddBound();
-    fn.insert(spv::OpShiftRightLogical, {uint_t, mod, rIndex, const8u});
-    fn.insert(spv::OpStore,             {ptrIdX, mod});
-
-    const uint32_t ptrIdY = vert.fetchAddBound();
-    fn.insert(spv::OpAccessChain, {_ptr_Private_uint, ptrIdY, idWorkGroupID, const1});
-    fn.insert(spv::OpStore, {ptrIdY, const1u});
-
-    const uint32_t ptrIdZ = vert.fetchAddBound();
-    fn.insert(spv::OpAccessChain, {_ptr_Private_uint, ptrIdZ, idWorkGroupID, const2});
-    fn.insert(spv::OpStore, {ptrIdZ, const1u});
-    }
-
-  const uint32_t tmp0 = vert.fetchAddBound();
-  fn.insert(spv::OpFunctionCall, {void_t, tmp0, idMain});
-
-  fn.insert(spv::OpReturn,      {});
-  fn.insert(spv::OpFunctionEnd, {});
-
-  auto ep = vert.findOpEntryPoint(spv::ExecutionModelVertex,"main");
-  assert(ep!=vert.end());
-  ep.set(2,engineMain);
+bool ShaderAnalyzer::canSkipFromVs(uint32_t offset) const {
+  auto it = control.find(offset);
+  if(it==control.end())
+    return false;
+  return it->second.skipFromVs;
   }
 
-  vert.removeNops();
+const ShaderAnalyzer::Function& ShaderAnalyzer::function(uint32_t id) const {
+  auto it = func.find(id);
+  if(it!=func.end())
+    return it->second;
+  static Function f;
+  return f;
   }

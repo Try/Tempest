@@ -77,6 +77,7 @@ VPipeline::VPipeline(VDevice& device, const RenderState& st, Topology tp,
 
         // cancel native mesh shading
         pushStageFlags &= ~VK_SHADER_STAGE_MESH_BIT_NV;
+        pushStageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
         }
       }
     }
@@ -196,6 +197,7 @@ VkPipelineLayout VPipeline::initLayout(VDevice& dev, const VPipelineLay& uboLay,
           }
         } else {
         pushStageFlags &= ~VK_SHADER_STAGE_MESH_BIT_NV;
+        pushStageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
         }
       }
     push.stageFlags = pushStageFlags;

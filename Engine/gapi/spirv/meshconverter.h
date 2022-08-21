@@ -13,8 +13,7 @@ class MeshConverter {
     explicit MeshConverter(libspirv::MutableBytecode& code);
     libspirv::MutableBytecode& vertexPassthrough() { return vert; }
 
-    void exec();
-    void generateVs();
+    void     exec();
 
   private:
     void     avoidReservedFixup();
@@ -30,6 +29,13 @@ class MeshConverter {
 
     void     vsTypeRemaps(libspirv::MutableBytecode::Iterator& fn, std::unordered_map<uint32_t, uint32_t>& typeRemaps,
                           const libspirv::Bytecode::AccessChain* ids, uint32_t len);
+    uint32_t mappingTable(libspirv::MutableBytecode::Iterator& fn, uint32_t arrType, uint32_t eltType);
+    uint32_t declareGlPerVertex(libspirv::MutableBytecode::Iterator& fn);
+
+    void     generateVsDefault();
+    void     generateVsSplit();
+
+    void     annotateVertexBuiltins(libspirv::MutableBytecode& vert, uint32_t idVertexIndex, uint32_t glPerVertexT);
 
     libspirv::MutableBytecode& code;
     ShaderAnalyzer             an;

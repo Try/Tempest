@@ -122,7 +122,6 @@ void main() {
     indirect.cmd[i].vboOffset     = maxInd + v;
     }
 
-  [[dependency_infinite]]
   for(uint i=b; i<e; ++i) {
     indirectSrc.cmd[i].indexCount   = 0;
     indirectSrc.cmd[i].varyingCount = 0;
