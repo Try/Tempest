@@ -161,13 +161,16 @@ class ShaderAnalyzer {
     uint32_t mappingTable(libspirv::MutableBytecode::Iterator& typesEnd, uint32_t eltType);
 
     uint32_t dereferenceAccessChain(const AccessChain& id);
-    void     markOutputsAsThreadRelated(uint32_t elt, uint32_t thread);
-    void     markIndexAsThreadRelated(uint32_t elt, uint32_t thread);
+    void     markOutputsAsThreadRelated(uint32_t elt, uint32_t thread, AccessBits bits);
+    void     markIndexAsThreadRelated(uint32_t elt, uint32_t thread, AccessBits bits);
 
     void     makeReadAccess (const uint32_t functionCurrent, const uint32_t blockId, AccessBits ac);
     void     makeWriteAccess(const uint32_t functionCurrent, const uint32_t blockId, AccessBits ac);
 
     static bool isVertexFriendly(spv::StorageClass cls);
+
+    template<class ... T>
+    void     log(const T&... t);
 
     libspirv::MutableBytecode&            code;
     libspirv::MutableBytecode             vert;

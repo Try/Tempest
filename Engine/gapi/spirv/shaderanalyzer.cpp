@@ -92,6 +92,12 @@ ShaderAnalyzer::ShaderAnalyzer(libspirv::MutableBytecode& code)
   :code(code) {
   }
 
+template<class ... T>
+void ShaderAnalyzer::log(const T& ... args) {
+  //int dummy[] = {(std::cout << args, 0)...}; (void)dummy;
+  //std::cout << std::endl;
+  }
+
 void ShaderAnalyzer::analyze() {
   for(auto& i:code) {
     switch(i.op()) {
@@ -318,7 +324,7 @@ bool ShaderAnalyzer::canGenerateVs() const {
 
 void ShaderAnalyzer::analyzeFunc(const uint32_t functionCurrent, const libspirv::Bytecode::OpCode& calee) {
   auto& fn = func[functionCurrent];
-  // std::cout << "func " << func.dbgName << std::endl;
+  log("func ", fn.dbgName);
 
   size_t prm  = 0;
   for(auto it = code.fromOffset(fn.codeOffset); it!=code.end(); ++it) {
@@ -337,9 +343,9 @@ void ShaderAnalyzer::analyzeFunc(const uint32_t functionCurrent, const libspirv:
         }
       case spv::OpLabel: {
         ++it;
-        // std::cout << " + block %" << i[1] << std::endl;
+        log(" + block %",i[1]);
         analyzeBlock(functionCurrent, calee, it, AC_None, i[1], 0);
-        // std::cout << " - block %" << i[1] << std::endl;
+        log(" - block %",i[1]);
         break;
         }
       default:
@@ -350,7 +356,7 @@ void ShaderAnalyzer::analyzeFunc(const uint32_t functionCurrent, const libspirv:
     }
 
   fn.analyzed = true;
-  // std::cout << "~" << func.dbgName << std::endl;
+  log("~    ", fn.dbgName);
   }
 
 void ShaderAnalyzer::analyzeBlock(const uint32_t functionCurrent, const libspirv::Bytecode::OpCode& calee,
@@ -374,7 +380,7 @@ void ShaderAnalyzer::analyzeBlock(const uint32_t functionCurrent, const libspirv
         auto&    l   = registers[ret];  // reg
         auto&    r   = registers[i[1]]; // reg
         l.v = r.v;
-        // std::cout << " + return " << toStr(r.v.access) << std::endl;
+        log(" + return ", toStr(r.v.access));
         break;
         }
       case spv::OpSelectionMerge: {
@@ -387,21 +393,21 @@ void ShaderAnalyzer::analyzeBlock(const uint32_t functionCurrent, const libspirv
           auto& v      = registers[cond];
 
           auto  access = (AC_Cond | acExt | v.v.access);
-          // std::cout << "   OpBranchConditional " << toStr(access) << std::endl;
+          log("   OpBranchConditional ", toStr(access));
           if((access & (AC_Shared|AC_Output|AC_UAV))!=AC_None) {
             auto& c = control[code.toOffset(i)];
             c.skipFromVs = true;
             }
           if(b[2]!=b[3]) {
-            // std::cout << " + block true %" << b[2] << std::endl;
+            log(" + block true %", b[2]);
             analyzeBlock(functionCurrent,calee,it,access,b[2],b[3]);
-            // std::cout << "   block else %" << b[3] << std::endl;
+            log("   block else %", b[3]);
             analyzeBlock(functionCurrent,calee,it,access,b[3],merge);
             } else {
-            // std::cout << " + block true&false %" << b[2] << std::endl;
+            log(" + block true&false %", b[2]);
             analyzeBlock(functionCurrent,calee,it,access,b[2],merge);
             }
-          // std::cout << " - block merge %" << i[1] << std::endl;
+          log(" - block merge %", i[1]);
           } else {
           // switches are too difficult
           fn.hasIll = true;
@@ -429,10 +435,8 @@ void ShaderAnalyzer::analyzeBlock(const uint32_t functionCurrent, const libspirv
         }
       case spv::OpControlBarrier:
       case spv::OpMemoryBarrier: {
-        //auto& block = blocks[blockId];
-        //block.barrier = true;
         fn.barrier  = true;
-        for(auto& v:registers) {
+        for(auto& v:variables) {
           if(v.second.cls==spv::StorageClassWorkgroup)
             v.second.v.access = AC_Shared; // now side-effect can be observed
           }
@@ -448,6 +452,16 @@ void ShaderAnalyzer::analyzeBlock(const uint32_t functionCurrent, const libspirv
 void ShaderAnalyzer::analyzeInstr(const uint32_t functionCurrent, const libspirv::Bytecode::OpCode& i,
                                    AccessBits acExt, const uint32_t blockId) {
   switch(i.op()) {
+    case spv::OpVariable: {
+      uint32_t id = i[2];
+      Reg var = {};
+      var.cls       = spv::StorageClass(i[3]);
+      var.v.access  = AC_None;
+      var.v.pointer = AccessChain{id};
+      registers[id] = var;
+      variables[id].cls = var.cls;
+      break;
+      }
     case spv::OpLoad: {
       auto& l  = registers[i[2]]; // reg
       auto  p  = registers[i[3]]; // ptr
@@ -490,10 +504,10 @@ void ShaderAnalyzer::analyzeInstr(const uint32_t functionCurrent, const libspirv
         std::cout << "] = " << toStr(v.v.access) << std::endl;
         */
         if(l.v.pointer.chain.size()>1 && id!=idPrimitiveIndicesNV && id!=idPrimitiveCountNV) {
-          markOutputsAsThreadRelated(l.v.pointer.chain[1], currentThread);
+          markOutputsAsThreadRelated(l.v.pointer.chain[1], currentThread, v.v.access);
           }
         else if(l.v.pointer.chain.size()>1 && id==idPrimitiveIndicesNV) {
-          markIndexAsThreadRelated(l.v.pointer.chain[1], currentThread);
+          markIndexAsThreadRelated(l.v.pointer.chain[1], currentThread, v.v.access);
           }
         }
 
@@ -593,8 +607,15 @@ void ShaderAnalyzer::analyzeInstr(const uint32_t functionCurrent, const libspirv
       auto  a = registers[i[3]]; // a
       auto  b = registers[i[4]]; // b
       l.v.access = (a.v.access | b.v.access);
-
-      // std::cout << toStr(l.v) << " = " << toStr(a.v) << " ** " << toStr(b.v) << std::endl;
+      //log(toStr(l.v), toStr(a.v), "**", toStr(b.v));
+      break;
+      }
+    case spv::OpVectorShuffle: {
+      auto& l = registers[i[2]]; // reg
+      auto  a = registers[i[3]]; // a
+      auto  b = registers[i[4]]; // b
+      l.v.access = (a.v.access | b.v.access);
+      //log(toStr(l.v), toStr(a.v), "**", toStr(b.v));
       break;
       }
     case spv::OpVectorTimesScalar:
@@ -629,24 +650,30 @@ uint32_t ShaderAnalyzer::dereferenceAccessChain(const AccessChain& id) {
   return id.chain[0];
   }
 
-void ShaderAnalyzer::markOutputsAsThreadRelated(uint32_t elt, uint32_t thread) {
+void ShaderAnalyzer::markOutputsAsThreadRelated(uint32_t elt, uint32_t thread, AccessBits bits) {
+  uint32_t tId = currentThread;
+
+  auto msk = (AC_Const | AC_Uniform | AC_Local | AC_Global | AC_Input);
+  if((bits & (~msk))!=AC_None)
+    tId = MaxThreads;
+
   if(elt==uint32_t(-1)) {
     // not a constant-uniform array index
     for(auto& t:threadMapping) {
-      if(t==NoThread || t==currentThread)
-        t = currentThread; else
+      if(t==NoThread || t==tId)
+        t = tId; else
         t = MaxThreads;
       }
     return;
     }
 
   auto& t = threadMapping[elt];
-  if(t==NoThread || t==currentThread)
-    t = currentThread; else
+  if(t==NoThread || t==tId)
+    t = tId; else
     t = MaxThreads;
   }
 
-void ShaderAnalyzer::markIndexAsThreadRelated(uint32_t elt, uint32_t thread) {
+void ShaderAnalyzer::markIndexAsThreadRelated(uint32_t elt, uint32_t thread, AccessBits bits) {
   if(elt==uint32_t(-1)) {
     // not a constant-uniform array index
     for(auto& t:threadMappingIbo) {
