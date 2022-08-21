@@ -2,6 +2,8 @@
 
 #include "libspirv/libspirv.h"
 
+#include <unordered_map>
+
 class ShaderAnalyzer {
   public:
     struct Function;
