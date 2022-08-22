@@ -1121,6 +1121,9 @@ void MeshConverter::generateVsSplit() {
     if(i.op()==spv::OpMemberDecorate && i[3]==spv::DecorationBuiltIn) {
       continue;
       }
+    if(i.op()==spv::OpMemberDecorate && i[3]==spv::DecorationPerViewNV) {
+      continue;
+      }
 
     if(i.op()==spv::OpTypePointer) {
       uint32_t cls = i[2];
