@@ -235,12 +235,12 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
       addDependency(*reinterpret_cast<VSwapchain*>(sw[i]),imgId[i]);
     }
 
+  resState.joinCompute(PipelineStage::S_Graphics);
+  resState.setRenderpass(*this,desc,descSize,frm,att,sw,imgId);
+
   if(state!=Idle) {
     newChunk();
     }
-
-  resState.joinCompute(PipelineStage::S_Graphics);
-  resState.setRenderpass(*this,desc,descSize,frm,att,sw,imgId);
 
   if(device.props.hasDynRendering) {
     VkRenderingAttachmentInfoKHR colorAtt[MaxFramebufferAttachments] = {};

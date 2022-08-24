@@ -20,14 +20,16 @@ VPipelineLay::VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Bin
   adjustSsboBindings();
 
   bool needMsHelper = false;
-  for(size_t i=0; i<cnt; ++i) {
-    if(sh[i]==nullptr)
-      continue;
-    for(auto& r:*sh[i])
-      if(r.stage==ShaderReflection::Mesh) {
-        needMsHelper = true;
-        break;
-        }
+  if(dev.props.meshlets.meshShaderEmulated) {
+    for(size_t i=0; i<cnt; ++i) {
+      if(sh[i]==nullptr)
+        continue;
+      for(auto& r:*sh[i])
+        if(r.stage==ShaderReflection::Mesh) {
+          needMsHelper = true;
+          break;
+          }
+      }
     }
 
   impl = create(MAX_BINDLESS);
