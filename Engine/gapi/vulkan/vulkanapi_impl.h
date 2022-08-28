@@ -38,6 +38,7 @@ class VulkanInstance {
       bool     hasDynRendering    = false;
       bool     hasDescIndexing    = false;
       bool     hasDevGroup        = false;
+      bool     hasBarycentricsNV  = false;
       };
 
     static bool checkForExt(const std::vector<VkExtensionProperties>& list, const char* name);

@@ -245,6 +245,9 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
   if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_DEVICE_GROUP_EXTENSION_NAME)) {
     props.hasDevGroup = true;
     }
+  if(hasDeviceFeatures2 && checkForExt(ext,VK_NV_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME)) {
+    props.hasBarycentricsNV = true;
+    }
 
   VkPhysicalDeviceProperties devP={};
   vkGetPhysicalDeviceProperties(physicalDevice,&devP);
@@ -338,6 +341,7 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
     props.raytracing.rayQuery       = (rayQueryFeatures.rayQuery==VK_TRUE);
     props.meshlets.taskShader       = (meshFeatures.taskShader==VK_TRUE);
     props.meshlets.meshShader       = (meshFeatures.meshShader==VK_TRUE);
+    // props.meshlets.meshShader       = false;
     props.meshlets.maxMeshGroups    = meshProperties.maxDrawMeshTasksCount;
     props.meshlets.maxMeshGroupSize = meshProperties.maxMeshWorkGroupSize[0];
     // props.hasDevGroup               = ;

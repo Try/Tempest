@@ -262,6 +262,9 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
   if(props.hasDynRendering) {
     rqExt.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
     }
+  if(props.hasBarycentricsNV) {
+    rqExt.push_back(VK_NV_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME);
+    }
 
   VkPhysicalDeviceFeatures supportedFeatures={};
   vkGetPhysicalDeviceFeatures(pdev,&supportedFeatures);
@@ -312,6 +315,9 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = {};
     indexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
 
+    VkPhysicalDeviceFragmentShaderBarycentricFeaturesNV barycentricsNVFeatures = {};
+    barycentricsNVFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_NV;
+
     if(props.hasSync2) {
       sync2.pNext = features.pNext;
       features.pNext = &sync2;
@@ -340,8 +346,12 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
       indexingFeatures.pNext = features.pNext;
       features.pNext = &indexingFeatures;
       }
+    if(props.hasBarycentricsNV) {
+      barycentricsNVFeatures.pNext = features.pNext;
+      features.pNext = &barycentricsNVFeatures;
+      }
 
-    auto vkGetPhysicalDeviceFeatures2 = PFN_vkGetPhysicalDeviceFeatures2  (vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2KHR"));
+    auto vkGetPhysicalDeviceFeatures2 = PFN_vkGetPhysicalDeviceFeatures2(vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2KHR"));
 
     vkGetPhysicalDeviceFeatures2(pdev, &features);
     bdaFeatures.bufferDeviceAddressCaptureReplay  = VK_FALSE;
