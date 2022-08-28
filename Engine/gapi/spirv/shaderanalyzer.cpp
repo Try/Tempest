@@ -320,8 +320,8 @@ bool ShaderAnalyzer::canGenerateVs() const {
     if(threadMapping[i]==MaxThreads)
       return false;
   //TODO: handle unknown instructions/control flow?
-  //return false;
-  return true;
+  return false;
+  //return true;
   }
 
 void ShaderAnalyzer::analyzeFunc(const uint32_t functionCurrent, const libspirv::Bytecode::OpCode& calee) {
