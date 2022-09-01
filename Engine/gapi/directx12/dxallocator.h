@@ -36,7 +36,7 @@ class DxAllocator {
 
     DxBuffer  alloc(const void *mem, size_t count,  size_t size, size_t alignedSz, MemUsage usage, BufferHeap bufFlg);
     DxTexture alloc(const Pixmap &pm, uint32_t mip, DXGI_FORMAT format);
-    DxTexture alloc(const uint32_t w, const uint32_t h, const uint32_t mip, TextureFormat frm, bool imageStore);
+    DxTexture alloc(const uint32_t w, const uint32_t h, const uint32_t d, const uint32_t mip, TextureFormat frm, bool imageStore);
     void      free (Allocation& page);
 
   private:

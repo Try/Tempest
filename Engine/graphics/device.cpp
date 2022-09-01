@@ -190,6 +190,16 @@ StorageImage Device::image2d(TextureFormat frm, const uint32_t w, const uint32_t
   return StorageImage(std::move(t));
   }
 
+StorageImage Device::image3d(TextureFormat frm, const uint32_t w, const uint32_t h, const uint32_t d, const bool mips) {
+  if(!devProps.hasStorageFormat(frm))
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
+  if(w>devProps.tex2d.maxSize || h>devProps.tex2d.maxSize)
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
+  uint32_t mipCnt = mips ? mipCount(w,h) : 1;
+  Texture2d t(*this,api.createStorage(dev,w,h,d,mipCnt,frm),w,h,frm);
+  return StorageImage(std::move(t));
+  }
+
 AccelerationStructure Device::implBlas(const VideoBuffer& vbo, size_t stride, const VideoBuffer& ibo, Detail::IndexClass icls, size_t offset, size_t count) {
   if(!properties().raytracing.rayQuery)
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);

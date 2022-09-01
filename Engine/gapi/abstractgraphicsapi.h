@@ -343,6 +343,10 @@ namespace Tempest {
             } tex2d;
 
           struct {
+            uint32_t maxSize = 4096;
+            } tex3d;
+
+          struct {
             bool nonUniformIndexing = false;
             } bindless;
 
@@ -543,6 +547,7 @@ namespace Tempest {
       virtual PTexture   createTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mips) = 0;
       virtual PTexture   createTexture(Device* d, const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) = 0;
       virtual PTexture   createStorage(Device* d, const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) = 0;
+      virtual PTexture   createStorage(Device* d, const uint32_t w, const uint32_t h, const uint32_t depth, uint32_t mips, TextureFormat frm);
 
       virtual AccelerationStructure* createBottomAccelerationStruct(Device* d,
                                                                     Buffer* vbo, size_t vboSz, size_t stride,

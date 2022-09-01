@@ -226,7 +226,7 @@ VTexture VAllocator::alloc(const Pixmap& pm, uint32_t mip, VkFormat format) {
   return ret;
   }
 
-VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mip, TextureFormat frm, bool imgStorage) {
+VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t d, const uint32_t mip, TextureFormat frm, bool imgStorage) {
   VTexture ret;
   ret.alloc     = this;
   if(imgStorage)
@@ -234,10 +234,10 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mi
 
   VkImageCreateInfo imageInfo = {};
   imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-  imageInfo.imageType     = VK_IMAGE_TYPE_2D;
+  imageInfo.imageType     = d<=1 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
   imageInfo.extent.width  = w;
   imageInfo.extent.height = h;
-  imageInfo.extent.depth  = 1;
+  imageInfo.extent.depth  = d;
   imageInfo.mipLevels     = mip;
   imageInfo.arrayLayers   = 1;
   imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;

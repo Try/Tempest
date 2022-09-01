@@ -50,87 +50,88 @@ class Device {
     Device(const Device&)=delete;
     virtual ~Device();
 
-    void                 waitIdle();
+    void                  waitIdle();
 
-    void                 submit(const CommandBuffer& cmd);
-    void                 submit(const CommandBuffer& cmd, Fence& fdone);
-    void                 present(Swapchain& sw);
+    void                  submit(const CommandBuffer& cmd);
+    void                  submit(const CommandBuffer& cmd, Fence& fdone);
+    void                  present(Swapchain& sw);
 
-    Swapchain            swapchain(SystemApi::Window* w) const;
+    Swapchain             swapchain(SystemApi::Window* w) const;
 
-    Shader               shader(RFile&          file);
-    Shader               shader(const char*     filename);
-    Shader               shader(const char16_t* filename);
-    Shader               shader(const void* source, const size_t length);
+    Shader                shader(RFile&          file);
+    Shader                shader(const char*     filename);
+    Shader                shader(const char16_t* filename);
+    Shader                shader(const void* source, const size_t length);
 
-    const Props&         properties() const;
+    const Props&          properties() const;
 
     template<class T>
-    VertexBuffer<T>      vbo(const T* arr, size_t arrSize) {
+    VertexBuffer<T>       vbo(const T* arr, size_t arrSize) {
       return vbo(BufferHeap::Device,arr,arrSize);
       }
     template<class T>
-    VertexBuffer<T>      vbo(const std::vector<T>& arr){
+    VertexBuffer<T>       vbo(const std::vector<T>& arr){
       return vbo(BufferHeap::Device,arr.data(),arr.size());
       }
     template<class T>
-    VertexBuffer<T>      vbo(BufferHeap ht, const T* arr,size_t arrSize);
+    VertexBuffer<T>       vbo(BufferHeap ht, const T* arr,size_t arrSize);
     template<class T>
-    VertexBuffer<T>      vbo(BufferHeap ht, const std::vector<T>& arr) {
+    VertexBuffer<T>       vbo(BufferHeap ht, const std::vector<T>& arr) {
       return vbo(ht,arr.data(),arr.size());
       }
 
     template<class T>
-    IndexBuffer<T>       ibo(const T* arr, size_t arrSize) {
+    IndexBuffer<T>        ibo(const T* arr, size_t arrSize) {
       return ibo(BufferHeap::Device,arr,arrSize);
       }
     template<class T>
-    IndexBuffer<T>       ibo(const std::vector<T>& arr) {
+    IndexBuffer<T>        ibo(const std::vector<T>& arr) {
       return ibo(BufferHeap::Device,arr.data(),arr.size());
       }
     template<class T>
-    IndexBuffer<T>       ibo(BufferHeap ht, const T* arr, size_t arrSize);
+    IndexBuffer<T>        ibo(BufferHeap ht, const T* arr, size_t arrSize);
     template<class T>
-    IndexBuffer<T>       ibo(BufferHeap ht, const std::vector<T>& arr) {
+    IndexBuffer<T>        ibo(BufferHeap ht, const std::vector<T>& arr) {
       return ibo(ht,arr.data(),arr.size());
       }
 
     template<class T>
-    UniformBuffer<T>     ubo(const T* data, size_t size) {
+    UniformBuffer<T>      ubo(const T* data, size_t size) {
       return ubo(BufferHeap::Upload,data,size);
       }
     template<class T>
-    UniformBuffer<T>     ubo(const T& data)  {
+    UniformBuffer<T>      ubo(const T& data)  {
       return ubo(BufferHeap::Upload,&data,1);
       }
     template<class T>
-    UniformBuffer<T>     ubo(BufferHeap ht, const T* data, size_t size);
+    UniformBuffer<T>      ubo(BufferHeap ht, const T* data, size_t size);
     template<class T>
-    UniformBuffer<T>     ubo(BufferHeap ht, const T& data)  {
+    UniformBuffer<T>      ubo(BufferHeap ht, const T& data)  {
       return ubo(ht,&data,1);
       }
 
-    StorageBuffer        ssbo(BufferHeap ht, const void* data, size_t size);
+    StorageBuffer         ssbo(BufferHeap ht, const void* data, size_t size);
     template<class T>
-    StorageBuffer        ssbo(BufferHeap ht, const std::vector<T>& arr) {
+    StorageBuffer         ssbo(BufferHeap ht, const std::vector<T>& arr) {
       return ssbo(ht,arr.data(),arr.size()*sizeof(T));
       }
-    StorageBuffer        ssbo(const void* data, size_t size) {
+    StorageBuffer         ssbo(const void* data, size_t size) {
       return ssbo(BufferHeap::Device,data,size);
       }
     template<class T>
-    StorageBuffer        ssbo(const std::vector<T>& arr) {
+    StorageBuffer         ssbo(const std::vector<T>& arr) {
       return ssbo(BufferHeap::Device,arr.data(),arr.size()*sizeof(T));
       }
 
-    DescriptorSet        descriptors(const RenderPipeline&  pso) { return descriptors(pso.layout()); }
-    DescriptorSet        descriptors(const ComputePipeline& pso) { return descriptors(pso.layout()); }
-    DescriptorSet        descriptors(const PipelineLayout&  lay);
+    DescriptorSet         descriptors(const RenderPipeline&  pso) { return descriptors(pso.layout()); }
+    DescriptorSet         descriptors(const ComputePipeline& pso) { return descriptors(pso.layout()); }
+    DescriptorSet         descriptors(const PipelineLayout&  lay);
 
-    Texture2d            texture    (const Pixmap& pm, const bool mips = true);
-    Attachment           attachment (TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips = false);
-    ZBuffer              zbuffer    (TextureFormat frm, const uint32_t w, const uint32_t h);
-    StorageImage         image2d    (TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips = false);
+    Texture2d             texture    (const Pixmap& pm, const bool mips = true);
+    Attachment            attachment (TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips = false);
+    ZBuffer               zbuffer    (TextureFormat frm, const uint32_t w, const uint32_t h);
+    StorageImage          image2d    (TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips = false);
+    StorageImage          image3d    (TextureFormat frm, const uint32_t w, const uint32_t h, const uint32_t d, const bool mips = false);
 
     template<class V, class I>
     AccelerationStructure blas(const VertexBuffer<V>& vbo, const IndexBuffer<I>& ibo);

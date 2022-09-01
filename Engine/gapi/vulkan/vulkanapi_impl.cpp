@@ -397,6 +397,7 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
   props.compute.maxGroupSize.z = devP.limits.maxComputeWorkGroupSize[2];
 
   props.tex2d.maxSize = devP.limits.maxImageDimension2D;
+  props.tex3d.maxSize = devP.limits.maxImageDimension3D;
 
   switch(devP.deviceType) {
     case VK_PHYSICAL_DEVICE_TYPE_CPU:

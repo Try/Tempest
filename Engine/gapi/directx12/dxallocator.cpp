@@ -189,7 +189,7 @@ DxTexture DxAllocator::alloc(const Pixmap& pm, uint32_t mip, DXGI_FORMAT format)
   return DxTexture(std::move(ret),resDesc.Format,NonUniqResId::I_None,resDesc.MipLevels);
   }
 
-DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t mip, TextureFormat frm, bool imageStore) {
+DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t d, const uint32_t mip, TextureFormat frm, bool imageStore) {
   D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COMMON;
   D3D12_CLEAR_VALUE     clr   = {};
 
@@ -198,6 +198,7 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
   resDesc.Format             = Detail::nativeFormat(frm);
   resDesc.Width              = w;
   resDesc.Height             = h;
+  resDesc.DepthOrArraySize   = d;
   if(isDepthFormat(frm)) {
     //state                    = D3D12_RESOURCE_STATE_DEPTH_WRITE;
     state                    = D3D12_RESOURCE_STATE_DEPTH_READ;
@@ -216,10 +217,9 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
     state          = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
-  resDesc.DepthOrArraySize   = 1;
   resDesc.SampleDesc.Count   = 1;
   resDesc.SampleDesc.Quality = 0;
-  resDesc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+  resDesc.Dimension          = d<=1 ? D3D12_RESOURCE_DIMENSION_TEXTURE2D : D3D12_RESOURCE_DIMENSION_TEXTURE3D;
 
   D3D12_HEAP_PROPERTIES heapProp={};
   heapProp.Type                 = D3D12_HEAP_TYPE_DEFAULT;
