@@ -55,7 +55,7 @@ class VAllocator {
     bool     read  (VBuffer& src,        void *mem, size_t offset, size_t count, size_t size, size_t alignedSz);
     bool     read  (VBuffer& src,        void *mem, size_t offset, size_t size);
 
-    VkSampler updateSampler(const Sampler2d& s);
+    VkSampler updateSampler(const Sampler& s);
 
   private:
     VkDevice                          dev=nullptr;

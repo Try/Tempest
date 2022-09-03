@@ -33,10 +33,11 @@ class VTexture : public AbstractGraphicsApi::Texture {
     VkFormat               format    = VK_FORMAT_UNDEFINED;
     NonUniqResId           nonUniqId = NonUniqResId::I_None;
 
-    uint32_t               mipCnt = 1;
-    VAllocator*            alloc =nullptr;
-    VAllocator::Allocation page  ={};
+    uint32_t               mipCnt         = 1;
+    VAllocator*            alloc          = nullptr;
+    VAllocator::Allocation page           = {};
     bool                   isStorageImage = false;
+    bool                   is3D           = false;
 
   protected:
     void createViews (VkDevice device);

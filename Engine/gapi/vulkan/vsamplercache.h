@@ -17,12 +17,12 @@ class VSamplerCache final {
     VSamplerCache();
     ~VSamplerCache();
 
-    VkSampler get(Sampler2d s);
+    VkSampler get(Sampler s);
     void      setDevice(VDevice &dev);
 
   private:
     struct Entry {
-      Sampler2d smp;
+      Sampler   smp;
       VkSampler sampler=VK_NULL_HANDLE;
       };
 
@@ -35,7 +35,7 @@ class VSamplerCache final {
     bool               anisotropy    = false;
     float              maxAnisotropy = 1.f;
 
-    VkSampler          alloc(const Sampler2d& s);
+    VkSampler          alloc(const Sampler& s);
   };
 
 }}

@@ -33,37 +33,37 @@ DescriptorSet& DescriptorSet::operator=(DescriptorSet&& u) {
   return *this;
   }
 
-void DescriptorSet::set(size_t layoutBind, const Texture2d &tex, const Sampler2d& smp) {
+void DescriptorSet::set(size_t layoutBind, const Texture2d &tex, const Sampler& smp) {
   if(tex.impl.handler)
     impl.handler->set(layoutBind,tex.impl.handler,smp,uint32_t(-1)); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
   }
 
-void DescriptorSet::set(size_t layoutBind, const Attachment& tex, const Sampler2d& smp) {
+void DescriptorSet::set(size_t layoutBind, const Attachment& tex, const Sampler& smp) {
   if(tex.tImpl.impl.handler)
     impl.handler->set(layoutBind,tex.tImpl.impl.handler,smp,uint32_t(-1)); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
   }
 
-void DescriptorSet::set(size_t layoutBind, const ZBuffer& tex, const Sampler2d& smp) {
+void DescriptorSet::set(size_t layoutBind, const ZBuffer& tex, const Sampler& smp) {
   if(tex.tImpl.impl.handler)
     impl.handler->set(layoutBind,tex.tImpl.impl.handler,smp,uint32_t(-1)); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
   }
 
-void DescriptorSet::set(size_t layoutBind, const StorageImage& tex, const Sampler2d& smp, uint32_t mipLevel) {
+void DescriptorSet::set(size_t layoutBind, const StorageImage& tex, const Sampler& smp, uint32_t mipLevel) {
   if(tex.tImpl.impl.handler)
     impl.handler->set(layoutBind,tex.tImpl.impl.handler,smp,mipLevel); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
   }
 
-void DescriptorSet::set(size_t layoutBind, const Sampler2d& smp) {
+void DescriptorSet::set(size_t layoutBind, const Sampler& smp) {
   // NOTE: separable samplers do not support mappings in native api
   assert(smp.mapping==ComponentMapping());
   impl.handler->set(layoutBind,smp);
   }
 
-void DescriptorSet::set(size_t layoutBind, const Detail::ResourcePtr<Texture2d> &tex, const Sampler2d& smp) {
+void DescriptorSet::set(size_t layoutBind, const Detail::ResourcePtr<Texture2d> &tex, const Sampler& smp) {
   if(tex.impl.handler)
     impl.handler->set(layoutBind,tex.impl.handler,smp,uint32_t(-1)); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
@@ -81,7 +81,7 @@ void DescriptorSet::set(size_t layoutBind, const Texture2d* const * tex, size_t 
   Detail::SmallArray<AbstractGraphicsApi::Texture*,32> arr(count);
   for(size_t i=0; i<count; ++i)
     arr[i] = tex[i]->impl.handler;
-  impl.handler->set(layoutBind,arr.get(),count,Sampler2d::nearest(),uint32_t(-1));
+  impl.handler->set(layoutBind,arr.get(),count,Sampler::nearest(),uint32_t(-1));
   }
 
 void DescriptorSet::set(size_t layoutBind, const VideoBuffer* const* buf, size_t count) {

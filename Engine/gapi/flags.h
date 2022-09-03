@@ -32,7 +32,7 @@ enum class BufferHeap : uint8_t {
   };
 
 // TODO: move away from public header
-enum ResourceAccess : uint32_t {
+enum class ResourceAccess : uint32_t {
   None             = 0,
   TransferSrc      = 1 << 0,
   TransferDst      = 1 << 1,

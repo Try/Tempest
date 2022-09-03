@@ -171,21 +171,22 @@ namespace Tempest {
     Count
     };
 
-  struct Sampler2d final {
-    Filter           minFilter=Filter::Linear;
-    Filter           magFilter=Filter::Linear;
-    Filter           mipFilter=Filter::Linear;
+  struct Sampler final {
+    Filter           minFilter = Filter::Linear;
+    Filter           magFilter = Filter::Linear;
+    Filter           mipFilter = Filter::Linear;
 
-    ClampMode        uClamp   =ClampMode::Repeat;
-    ClampMode        vClamp   =ClampMode::Repeat;
+    ClampMode        uClamp    = ClampMode::Repeat;
+    ClampMode        vClamp    = ClampMode::Repeat;
+    ClampMode        wClamp    = ClampMode::Repeat;
 
-    bool             anisotropic=true;
+    bool             anisotropic = true;
     ComponentMapping mapping;
 
-    static const Sampler2d& anisotrophy();
-    static const Sampler2d& bilinear();
-    static const Sampler2d& trillinear();
-    static const Sampler2d& nearest();
+    static const Sampler& anisotrophy();
+    static const Sampler& bilinear();
+    static const Sampler& trillinear();
+    static const Sampler& nearest();
 
     void setClamping(ClampMode c){
       uClamp = c;
@@ -198,7 +199,7 @@ namespace Tempest {
       mipFilter = f;
       }
 
-    bool operator==(const Sampler2d& s) const {
+    bool operator==(const Sampler& s) const {
       return minFilter==s.minFilter &&
              magFilter==s.magFilter &&
              mipFilter==s.mipFilter &&
@@ -207,7 +208,7 @@ namespace Tempest {
              anisotropic==s.anisotropic;
       }
 
-    bool operator!=(const Sampler2d& s) const {
+    bool operator!=(const Sampler& s) const {
       return !(*this==s);
       }
     };
@@ -441,18 +442,18 @@ namespace Tempest {
         };
       struct Desc:NoCopy   {
         virtual ~Desc()=default;
-        virtual void set    (size_t id, AbstractGraphicsApi::Texture* tex, const Sampler2d& smp, uint32_t mipLevel)=0;
-        virtual void set    (size_t id, const Sampler2d& smp)=0;
+        virtual void set    (size_t id, AbstractGraphicsApi::Texture* tex, const Sampler& smp, uint32_t mipLevel)=0;
+        virtual void set    (size_t id, const Sampler& smp)=0;
         virtual void set    (size_t id, AbstractGraphicsApi::Buffer*  buf, size_t offset)=0;
         virtual void setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure*) {}
-        virtual void set    (size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler2d& smp, uint32_t mipLevel);
+        virtual void set    (size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler& smp, uint32_t mipLevel);
         virtual void set    (size_t id, AbstractGraphicsApi::Buffer**  buf, size_t cnt);
         virtual void ssboBarriers(Detail::ResourceState& res, PipelineStage st);
         };
       struct EmptyDesc : Desc {
-        void set(size_t, AbstractGraphicsApi::Texture*, const Sampler2d&, uint32_t){}
+        void set(size_t, AbstractGraphicsApi::Texture*, const Sampler&, uint32_t){}
         void set(size_t, AbstractGraphicsApi::Buffer*,  size_t){}
-        void set(size_t, const Sampler2d& smp){}
+        void set(size_t, const Sampler& smp){}
         void ssboBarriers(Detail::ResourceState&,PipelineStage){}
         };
       struct BarrierDesc {

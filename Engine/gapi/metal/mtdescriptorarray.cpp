@@ -15,13 +15,13 @@ MtDescriptorArray::MtDescriptorArray(MtDevice& dev, const MtPipelineLay &lay)
   :dev(dev), lay(&lay), desc(lay.lay.size()) {
   }
 
-void MtDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture *tex, const Sampler2d &smp, uint32_t mipLevel) {
+void MtDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture *tex, const Sampler &smp, uint32_t mipLevel) {
   auto& t = *reinterpret_cast<MtTexture*>(tex);
   desc[id].val     = &t.view(smp.mapping,mipLevel);
   desc[id].sampler = &dev.samplers.get(smp);
   }
 
-void MtDescriptorArray::set(size_t id, const Sampler2d& smp) {
+void MtDescriptorArray::set(size_t id, const Sampler& smp) {
   desc[id].val     = nullptr;
   desc[id].sampler = &dev.samplers.get(smp);
   }

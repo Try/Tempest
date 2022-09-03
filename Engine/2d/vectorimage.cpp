@@ -196,7 +196,7 @@ void VectorImage::Mesh::update(Device& dev, const VectorImage& src, BufferHeap h
 
     if(T_LIKELY(b.hasImg)) {
       if(b.tex.brush) {
-        Sampler2d s;
+        Sampler s;
         if(T_UNLIKELY(b.tex.frm==TextureFormat::R8 || b.tex.frm==TextureFormat::R16 || b.tex.frm==TextureFormat::R32F)) {
           s.mapping.r = ComponentSwizzle::R;
           s.mapping.g = ComponentSwizzle::R;

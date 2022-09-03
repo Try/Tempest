@@ -16,13 +16,13 @@ class MtSamplerCache {
     MtSamplerCache(MTL::Device& dev);
     ~MtSamplerCache();
 
-    MTL::SamplerState& get(Sampler2d src);
+    MTL::SamplerState& get(Sampler src);
 
   private:
-    NsPtr<MTL::SamplerState> mkSampler(const Sampler2d& src);
+    NsPtr<MTL::SamplerState> mkSampler(const Sampler& src);
 
     struct Entry {
-      Sampler2d                src;
+      Sampler                  src;
       NsPtr<MTL::SamplerState> val;
       };
 

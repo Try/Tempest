@@ -22,13 +22,13 @@ void VSamplerCache::setDevice(VDevice &dev) {
   anisotropy    = dev.props.anisotropy;
   maxAnisotropy = dev.props.maxAnisotropy;
 
-  smpDefault    = alloc(Sampler2d());
+  smpDefault    = alloc(Sampler());
   }
 
-VkSampler VSamplerCache::get(Sampler2d s) {
+VkSampler VSamplerCache::get(Sampler s) {
   s.mapping = ComponentMapping();
 
-  static const Sampler2d def;
+  static const Sampler def;
   if(def==s)
     return smpDefault;
 
@@ -50,7 +50,7 @@ VkSampler VSamplerCache::get(Sampler2d s) {
   return b.sampler;
   }
 
-VkSampler VSamplerCache::alloc(const Sampler2d &s) {
+VkSampler VSamplerCache::alloc(const Sampler &s) {
   VkSampler           sampler=VK_NULL_HANDLE;
   VkSamplerCreateInfo samplerInfo = {};
   samplerInfo.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -62,7 +62,7 @@ VkSampler VSamplerCache::alloc(const Sampler2d &s) {
     samplerInfo.mipmapMode            = VK_SAMPLER_MIPMAP_MODE_LINEAR;
   samplerInfo.addressModeU            = nativeFormat(s.uClamp);
   samplerInfo.addressModeV            = nativeFormat(s.vClamp);
-  samplerInfo.addressModeW            = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+  samplerInfo.addressModeW            = nativeFormat(s.wClamp);
   if(s.anisotropic && anisotropy) {
     samplerInfo.anisotropyEnable      = VK_TRUE;
     samplerInfo.maxAnisotropy         = maxAnisotropy;

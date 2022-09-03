@@ -272,6 +272,7 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t d,
   ret.format         = imageInfo.format;
   ret.mipCnt         = mip;
   ret.isStorageImage = imgStorage;
+  ret.is3D           = (imageInfo.imageType==VK_IMAGE_TYPE_3D);
   ret.createViews(dev);
   return ret;
   }
@@ -456,7 +457,7 @@ bool VAllocator::read(VBuffer &src, void *mem, size_t offset, size_t size) {
   return true;
   }
 
-VkSampler VAllocator::updateSampler(const Tempest::Sampler2d &s) {
+VkSampler VAllocator::updateSampler(const Tempest::Sampler &s) {
   return samplers.get(s);
   }
 

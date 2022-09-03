@@ -60,7 +60,7 @@ DxDescriptorArray::~DxDescriptorArray() {
     lay.handler->freeDescriptors(val);
   }
 
-void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const Sampler2d& smp, uint32_t mipLevel) {
+void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const Sampler& smp, uint32_t mipLevel) {
   auto& t = *reinterpret_cast<DxTexture*>(tex);
 
   set(id, &tex, 1, smp, mipLevel);
@@ -120,7 +120,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer* b, size_t of
   uavUsage.durty = true;
   }
 
-void DxDescriptorArray::set(size_t id, const Sampler2d& smp) {
+void DxDescriptorArray::set(size_t id, const Sampler& smp) {
   auto& device = *lay.handler->dev.device;
   auto& prm    = lay.handler->prm[id];
 
@@ -129,7 +129,7 @@ void DxDescriptorArray::set(size_t id, const Sampler2d& smp) {
   smpDesc.Filter           = D3D12_FILTER_MIN_MAG_MIP_POINT;
   smpDesc.AddressU         = nativeFormat(smp.uClamp);
   smpDesc.AddressV         = nativeFormat(smp.vClamp);
-  smpDesc.AddressW         = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+  smpDesc.AddressW         = nativeFormat(smp.wClamp);
   smpDesc.MipLODBias       = 0;
   smpDesc.MaxAnisotropy    = 1;
   smpDesc.ComparisonFunc   = D3D12_COMPARISON_FUNC_NEVER;
@@ -174,7 +174,7 @@ void DxDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStru
   device.CreateShaderResourceView(nullptr,&desc,gpu);
   }
 
-void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler2d& smp, uint32_t mipLevel) {
+void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler& smp, uint32_t mipLevel) {
   auto& device = *lay.handler->dev.device;
   auto& prm    = lay.handler->prm[id];
   auto& l      = lay.handler->lay[id];
@@ -233,7 +233,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** tex, size_
       smpDesc.Filter           = D3D12_FILTER_MIN_MAG_MIP_POINT;
       smpDesc.AddressU         = nativeFormat(smp.uClamp);
       smpDesc.AddressV         = nativeFormat(smp.vClamp);
-      smpDesc.AddressW         = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+      smpDesc.AddressW         = nativeFormat(smp.wClamp);
       smpDesc.MipLODBias       = 0;
       smpDesc.MaxAnisotropy    = 1;
       smpDesc.ComparisonFunc   = D3D12_COMPARISON_FUNC_NEVER;

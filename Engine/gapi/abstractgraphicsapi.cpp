@@ -4,14 +4,14 @@
 
 using namespace Tempest;
 
-static Sampler2d mkTrillinear() {
-  Sampler2d s;
+static Sampler mkTrillinear() {
+  Sampler s;
   s.anisotropic = false;
   return s;
   }
 
-static Sampler2d mkNearest() {
-  Sampler2d s;
+static Sampler mkNearest() {
+  Sampler s;
   s.minFilter   = Filter::Nearest;
   s.magFilter   = Filter::Nearest;
   s.mipFilter   = Filter::Nearest;
@@ -19,8 +19,8 @@ static Sampler2d mkNearest() {
   return s;
   }
 
-static Sampler2d mkBilinear() {
-  Sampler2d s;
+static Sampler mkBilinear() {
+  Sampler s;
   s.minFilter   = Filter::Linear;
   s.magFilter   = Filter::Linear;
   s.mipFilter   = Filter::Nearest;
@@ -28,23 +28,23 @@ static Sampler2d mkBilinear() {
   return s;
   }
 
-const Sampler2d& Sampler2d::anisotrophy() {
-  static Sampler2d s = Sampler2d();
+const Sampler& Sampler::anisotrophy() {
+  static Sampler s = Sampler();
   return s;
   }
 
-const Sampler2d& Sampler2d::bilinear() {
-  static Sampler2d s = mkBilinear();
+const Sampler& Sampler::bilinear() {
+  static Sampler s = mkBilinear();
   return s;
   }
 
-const Sampler2d& Sampler2d::trillinear() {
-  static Sampler2d s = mkTrillinear();
+const Sampler& Sampler::trillinear() {
+  static Sampler s = mkTrillinear();
   return s;
   }
 
-const Sampler2d& Sampler2d::nearest() {
-  static Sampler2d s = mkNearest();
+const Sampler& Sampler::nearest() {
+  static Sampler s = mkNearest();
   return s;
   }
 
@@ -98,7 +98,7 @@ AbstractGraphicsApi::AccelerationStructure*
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }
 
-void AbstractGraphicsApi::Desc::set(size_t id, Texture** tex, size_t cnt, const Sampler2d& smp, uint32_t mipLevel) {
+void AbstractGraphicsApi::Desc::set(size_t id, Texture** tex, size_t cnt, const Sampler& smp, uint32_t mipLevel) {
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }
 

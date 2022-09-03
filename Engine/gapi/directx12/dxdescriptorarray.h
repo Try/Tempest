@@ -16,12 +16,12 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
     DxDescriptorArray(DxDescriptorArray&& other);
     ~DxDescriptorArray();
 
-    void set    (size_t id, AbstractGraphicsApi::Texture *tex, const Sampler2d& smp, uint32_t mipLevel) override;
+    void set    (size_t id, AbstractGraphicsApi::Texture *tex, const Sampler& smp, uint32_t mipLevel) override;
     void set    (size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset) override;
-    void set    (size_t id, const Sampler2d& smp) override;
+    void set    (size_t id, const Sampler& smp) override;
     void setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) override;
 
-    void set    (size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler2d& smp, uint32_t mipLevel) override;
+    void set    (size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler& smp, uint32_t mipLevel) override;
     void set    (size_t id, AbstractGraphicsApi::Buffer**  buf, size_t cnt) override;
 
     void ssboBarriers(Detail::ResourceState& res, PipelineStage st) override;

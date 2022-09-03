@@ -34,7 +34,7 @@ static MTL::SamplerMinMagFilter nativeFormat(Tempest::Filter f) {
 
 MtSamplerCache::MtSamplerCache(MTL::Device& dev)
   :dev(dev) {
-  def = mkSampler(Sampler2d());
+  def = mkSampler(Sampler());
   if(def==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
   }
@@ -42,9 +42,9 @@ MtSamplerCache::MtSamplerCache(MTL::Device& dev)
 MtSamplerCache::~MtSamplerCache() {
   }
 
-MTL::SamplerState& MtSamplerCache::get(Tempest::Sampler2d src) {
+MTL::SamplerState& MtSamplerCache::get(Tempest::Sampler src) {
   src.mapping = ComponentMapping(); // handled in imageview
-  static const Tempest::Sampler2d defSrc;
+  static const Tempest::Sampler defSrc;
   if(src==defSrc)
     return *def;
 
@@ -61,11 +61,11 @@ MTL::SamplerState& MtSamplerCache::get(Tempest::Sampler2d src) {
   return *b.val;
   }
 
-NsPtr<MTL::SamplerState> MtSamplerCache::mkSampler(const Tempest::Sampler2d& src) {
+NsPtr<MTL::SamplerState> MtSamplerCache::mkSampler(const Tempest::Sampler& src) {
   auto desc = NsPtr<MTL::SamplerDescriptor>::init();
   desc->setRAddressMode(nativeFormat(src.uClamp));
   desc->setSAddressMode(nativeFormat(src.vClamp));
-  desc->setTAddressMode(MTL::SamplerAddressModeRepeat);
+  desc->setTAddressMode(nativeFormat(src.wClamp));
 
   desc->setMinFilter(nativeFormat(src.minFilter));
   desc->setMagFilter(nativeFormat(src.magFilter));

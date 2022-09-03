@@ -17,6 +17,7 @@ VTexture::VTexture(VTexture&& other) {
   std::swap(alloc,          other.alloc);
   std::swap(page,           other.page);
   std::swap(isStorageImage, other.isStorageImage);
+  std::swap(is3D,           other.is3D);
   std::swap(extViews,       other.extViews);
   }
 
@@ -74,7 +75,7 @@ void VTexture::createView(VkImageView& ret, VkDevice device, VkFormat format,
   VkImageViewCreateInfo viewInfo = {};
   viewInfo.sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   viewInfo.image    = impl;
-  viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+  viewInfo.viewType = is3D ? VK_IMAGE_VIEW_TYPE_3D : VK_IMAGE_VIEW_TYPE_2D;
   viewInfo.format   = format;
 
   if(cmap!=nullptr) {

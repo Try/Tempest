@@ -124,7 +124,7 @@ VkDescriptorSet VDescriptorArray::allocDescSet(VkDescriptorPool pool, VkDescript
   return desc;
   }
 
-void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* t, const Sampler2d& smp, uint32_t mipLevel) {
+void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* t, const Sampler& smp, uint32_t mipLevel) {
   VkDevice  dev = device.device.impl;
   VTexture& tex = *reinterpret_cast<VTexture*>(t);
   if(impl==VK_NULL_HANDLE)
@@ -183,7 +183,7 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer* b, s
   uavUsage.durty |= (buf->nonUniqId!=0);
   }
 
-void VDescriptorArray::set(size_t id, const Sampler2d& smp) {
+void VDescriptorArray::set(size_t id, const Sampler& smp) {
   VkDevice dev = device.device.impl;
   VkDescriptorImageInfo imageInfo = {};
   imageInfo.sampler = device.allocator.updateSampler(smp);
@@ -222,7 +222,7 @@ void VDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStruc
   // uavUsage.durty = true;
   }
 
-void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t cnt, const Sampler2d& smp, uint32_t mipLevel) {
+void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t cnt, const Sampler& smp, uint32_t mipLevel) {
   VkDevice dev = device.device.impl;
   auto&    l   = lay.handler->lay[id];
   if(l.runtimeSized) {
