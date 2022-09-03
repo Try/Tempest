@@ -29,7 +29,7 @@ auto ibo  = device.ibo(iboData,3);
 
 auto vert = device.shader("shader/simple_test.vert.sprv");
 auto frag = device.shader("shader/simple_test.frag.sprv");
-auto pso  = device.pipeline<Vertex>(Topology::Triangles,RenderState(),vert,frag);
+auto pso  = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
 
 auto tex  = device.attachment(format,128,128);
 
