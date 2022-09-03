@@ -944,7 +944,7 @@ void ComponentSwizzle() {
     for(int i=0; i<4; ++i) {
       ubo[i] = device.descriptors(pso.layout());
 
-      Sampler2d smp = Sampler2d::nearest();
+      Sampler smp = Sampler::nearest();
       smp.mapping.r = Tempest::ComponentSwizzle(int(ComponentSwizzle::R) + i);
       smp.mapping.g = smp.mapping.r;
       smp.mapping.b = smp.mapping.r;
@@ -1129,7 +1129,7 @@ void ArrayedImages(const char* outImg) {
     auto desc = device.descriptors(pso);
     desc.set(0,ret);
     desc.set(1,ptex);
-    desc.set(2,Sampler2d::bilinear());
+    desc.set(2,Sampler::bilinear());
 
     auto cmd = device.commandBuffer();
     {

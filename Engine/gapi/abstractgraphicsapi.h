@@ -191,6 +191,7 @@ namespace Tempest {
     void setClamping(ClampMode c){
       uClamp = c;
       vClamp = c;
+      wClamp = c;
       }
 
     void setFiltration(Filter f){
@@ -205,6 +206,7 @@ namespace Tempest {
              mipFilter==s.mipFilter &&
              uClamp   ==s.uClamp    &&
              vClamp   ==s.vClamp    &&
+             wClamp   ==s.wClamp    &&
              anisotropic==s.anisotropic;
       }
 
