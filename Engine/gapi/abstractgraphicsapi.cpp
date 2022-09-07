@@ -82,10 +82,6 @@ void AbstractGraphicsApi::CommandBuffer::dispatchMesh(size_t firstInstance, size
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }
 
-AbstractGraphicsApi::PTexture AbstractGraphicsApi::createStorage(Device* d, const uint32_t w, const uint32_t h, const uint32_t depth, uint32_t mips, TextureFormat frm) {
-  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
-  }
-
 AbstractGraphicsApi::AccelerationStructure*
   AbstractGraphicsApi::createBottomAccelerationStruct(Device* d,
                                                       Buffer* vbo, size_t vboSz, size_t stride,

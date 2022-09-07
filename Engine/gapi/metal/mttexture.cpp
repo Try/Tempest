@@ -27,12 +27,13 @@ static MTL::TextureSwizzle swizzle(ComponentSwizzle cs, MTL::TextureSwizzle def)
   return def;
   }
 
-MtTexture::MtTexture(MtDevice& d, const uint32_t w, const uint32_t h, uint32_t mipCnt, TextureFormat frm, bool storageTex)
+MtTexture::MtTexture(MtDevice& d, const uint32_t w, const uint32_t h, const uint32_t depth,
+                     uint32_t mipCnt, TextureFormat frm, bool storageTex)
   :dev(d), mipCnt(mipCnt) {
   MTL::TextureUsage usage = MTL::TextureUsageRenderTarget | MTL::TextureUsageShaderRead;
   if(storageTex)
     usage |= MTL::TextureUsageShaderWrite;
-  impl = alloc(frm,w,h,mipCnt,MTL::StorageModePrivate,usage);
+  impl = alloc(frm,w,h,depth,mipCnt,MTL::StorageModePrivate,usage);
   }
 
 MtTexture::MtTexture(MtDevice& dev, const Pixmap& pm, uint32_t mipCnt, TextureFormat frm)
@@ -43,8 +44,8 @@ MtTexture::MtTexture(MtDevice& dev, const Pixmap& pm, uint32_t mipCnt, TextureFo
 #else
   const MTL::StorageMode smode = MTL::StorageModeManaged;
 #endif
-  NsPtr<MTL::Texture> stage = alloc(frm,pm.w(),pm.h(),smip,smode,MTL::TextureUsageShaderRead);
-  impl = alloc(frm,pm.w(),pm.h(),mipCnt,MTL::StorageModePrivate,MTL::TextureUsageShaderRead);
+  NsPtr<MTL::Texture> stage = alloc(frm,pm.w(),pm.h(),1,smip,smode,MTL::TextureUsageShaderRead);
+  impl = alloc(frm,pm.w(),pm.h(),1,mipCnt,MTL::StorageModePrivate,MTL::TextureUsageShaderRead);
 
   if(isCompressedFormat(frm))
     createCompressedTexture(*stage,pm,frm,mipCnt); else
@@ -91,16 +92,18 @@ void MtTexture::createRegularTexture(MTL::Texture& val, const Pixmap& p) {
   val.replaceRegion(MTL::Region(0,0,p.w(),p.h()), 0, p.data(), p.w()*Pixmap::bppForFormat(p.format()));
   }
 
-NsPtr<MTL::Texture> MtTexture::alloc(TextureFormat frm, const uint32_t w, const uint32_t h, const uint32_t mips,
+NsPtr<MTL::Texture> MtTexture::alloc(TextureFormat frm,
+                                     const uint32_t w, const uint32_t h, const uint32_t d, const uint32_t mips,
                                      MTL::StorageMode smode, MTL::TextureUsage umode) {
   auto desc = NsPtr<MTL::TextureDescriptor>::init();
   if(desc==nullptr)
     throw std::system_error(GraphicsErrc::OutOfHostMemory);
 
-  desc->setTextureType(MTL::TextureType2D);
+  desc->setTextureType(d==1 ? MTL::TextureType2D : MTL::TextureType3D);
   desc->setPixelFormat(nativeFormat(frm));
   desc->setWidth(w);
   desc->setHeight(h);
+  desc->setDepth(d);
   desc->setMipmapLevelCount(mips);
   desc->setCpuCacheMode(MTL::CPUCacheModeWriteCombined);
   desc->setStorageMode(smode);
@@ -138,7 +141,7 @@ void MtTexture::readPixels(Pixmap& out, TextureFormat frm, const uint32_t w, con
   opt = MTL::StorageModeManaged;
 #endif
 
-  NsPtr<MTL::Texture> stage = alloc(frm,w,h,1,opt,MTL::TextureUsageShaderRead);
+  NsPtr<MTL::Texture> stage = alloc(frm,w,h,1,1,opt,MTL::TextureUsageShaderRead);
   auto pool = NsPtr<NS::AutoreleasePool>::init();
   auto cmd  = dev.queue->commandBuffer();
   auto enc  = cmd->blitCommandEncoder();

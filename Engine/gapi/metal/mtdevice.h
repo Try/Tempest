@@ -176,6 +176,7 @@ inline MTL::CullMode nativeFormat(RenderState::CullMode m) {
 
 inline MTL::PrimitiveType nativeFormat(Topology t) {
   switch(t) {
+    case Topology::Points:    return MTL::PrimitiveTypePoint;
     case Topology::Lines:     return MTL::PrimitiveTypeLine;
     case Topology::Triangles: return MTL::PrimitiveTypeTriangle;
     }
