@@ -419,10 +419,10 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
         if( isWheel ){
           int ticks = 0;
           if( xev.xbutton.button == Button4 ) {
-            ticks = 100;
+            ticks = 120;
             }
           else if ( xev.xbutton.button == Button5 ) {
-            ticks = -100;
+            ticks = -120;
             }
           Tempest::MouseEvent e( xev.xbutton.x,
                                  xev.xbutton.y,
