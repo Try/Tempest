@@ -5,6 +5,7 @@
 #include <algorithm>
 
 using namespace Tempest;
+using namespace Tempest::Detail;
 
 VideoBuffer::VideoBuffer(AbstractGraphicsApi::PBuffer&& impl, size_t size)
   :impl(std::move(impl)),sz(size) {

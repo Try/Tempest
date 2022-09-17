@@ -14,7 +14,6 @@ class CommandBuffer;
 class Texture2d;
 class Attachment;
 class StorageImage;
-class VideoBuffer;
 class AccelerationStructure;
 
 template<class T>
@@ -46,23 +45,18 @@ class DescriptorSet final {
 
     void set(size_t layoutBind, const Detail::ResourcePtr<Texture2d>& tex, const Sampler& smp = Sampler::anisotrophy());
 
-    void set(size_t layoutBind, const std::vector<const Texture2d*>&   tex);
-    void set(size_t layoutBind, const std::vector<const VideoBuffer*>& buf);
+    void set(size_t layoutBind, const std::vector<const Texture2d*>&     tex);
+    void set(size_t layoutBind, const std::vector<const StorageBuffer*>& buf);
 
-    void set(size_t layoutBind, const Texture2d* const *   tex, size_t count);
-    void set(size_t layoutBind, const VideoBuffer* const * buf, size_t count);
+    void set(size_t layoutBind, const Texture2d*   const *   tex, size_t count);
+    void set(size_t layoutBind, const StorageBuffer* const * buf, size_t count);
 
     void set(size_t layoutBind, const AccelerationStructure& tlas);
 
-    template<class T>
-    void set(size_t layoutBind, const VertexBuffer<T>& vbuf);
-    template<class T>
-    void set(size_t layoutBind, const IndexBuffer<T>& ibuf);
-
   private:
     DescriptorSet(AbstractGraphicsApi::Desc* desc);
-    void implBindUbo (size_t layoutBind, const VideoBuffer& vbuf, size_t offsetBytes);
-    void implBindSsbo(size_t layoutBind, const VideoBuffer& vbuf, size_t offsetBytes);
+    void implBindUbo (size_t layoutBind, const Detail::VideoBuffer& vbuf, size_t offsetBytes);
+    void implBindSsbo(size_t layoutBind, const Detail::VideoBuffer& vbuf, size_t offsetBytes);
 
     Detail::DPtr<AbstractGraphicsApi::Desc*> impl;
     static AbstractGraphicsApi::EmptyDesc    emptyDesc;
@@ -73,16 +67,6 @@ class DescriptorSet final {
 
 template<class T>
 inline void DescriptorSet::set(size_t layoutBind, const UniformBuffer<T>& vbuf) {
-  implBindUbo(layoutBind,vbuf.impl,0);
-  }
-
-template<class T>
-inline void DescriptorSet::set(size_t layoutBind, const VertexBuffer<T>& vbuf) {
-  implBindUbo(layoutBind,vbuf.impl,0);
-  }
-
-template<class T>
-inline void DescriptorSet::set(size_t layoutBind, const IndexBuffer<T>& vbuf) {
   implBindUbo(layoutBind,vbuf.impl,0);
   }
 

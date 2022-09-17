@@ -200,7 +200,7 @@ StorageImage Device::image3d(TextureFormat frm, const uint32_t w, const uint32_t
   return StorageImage(std::move(t));
   }
 
-AccelerationStructure Device::implBlas(const VideoBuffer& vbo, size_t stride, const VideoBuffer& ibo, Detail::IndexClass icls, size_t offset, size_t count) {
+AccelerationStructure Device::implBlas(const Detail::VideoBuffer& vbo, size_t stride, const Detail::VideoBuffer& ibo, Detail::IndexClass icls, size_t offset, size_t count) {
   if(!properties().raytracing.rayQuery)
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   assert(3*sizeof(float)<=stride); // float3 positions, no overlap
@@ -322,8 +322,8 @@ const Builtin& Device::builtin() const {
   return builtins;
   }
 
-VideoBuffer Device::createVideoBuffer(const void *data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap flg) {
-  VideoBuffer buf(api.createBuffer(dev,data,count,size,alignedSz,usage,flg),count*alignedSz);
+Detail::VideoBuffer Device::createVideoBuffer(const void *data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap flg) {
+  Detail::VideoBuffer buf(api.createBuffer(dev,data,count,size,alignedSz,usage,flg),count*alignedSz);
   return  buf;
   }
 

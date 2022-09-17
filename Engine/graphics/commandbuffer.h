@@ -9,7 +9,6 @@ namespace Tempest {
 class Device;
 class Frame;
 class RenderPipeline;
-class VideoBuffer;
 class DescriptorSet;
 class Texture2d;
 

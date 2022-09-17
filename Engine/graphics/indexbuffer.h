@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include "videobuffer.h"
+#include <Tempest/StorageBuffer>
 
 namespace Tempest {
 
@@ -19,7 +19,7 @@ namespace Detail {
   }
 
 template<class T>
-class IndexBuffer final {
+class IndexBuffer : public StorageBuffer {
   public:
     static_assert(Detail::IsIndexType<T>::value,"unsupported index type");
 
@@ -32,32 +32,15 @@ class IndexBuffer final {
     void   update(const T* data,size_t offset,size_t size) { return this->impl.update(data,offset,size,sizeof(T),sizeof(T)); }
 
   private:
-    IndexBuffer(Tempest::VideoBuffer&& impl,size_t size)
-      :impl(std::move(impl)),sz(size) {
+    IndexBuffer(Tempest::Detail::VideoBuffer&& impl,size_t size)
+      :StorageBuffer(std::move(impl)),sz(size) {
       }
 
-    Tempest::VideoBuffer impl;
     size_t               sz=0;
 
   friend class Tempest::Device;
   friend class Tempest::Encoder<Tempest::CommandBuffer>;
   friend class Tempest::DescriptorSet;
-
-  template<class T2>
-  friend       VideoBuffer& bufferCast(IndexBuffer<T2>& s);
-
-  template<class T2>
-  friend const VideoBuffer& bufferCast(const IndexBuffer<T2>& s);
   };
-
-template<class T>
-inline VideoBuffer& bufferCast(IndexBuffer<T>& s) {
-  return s.impl;
-  }
-
-template<class T>
-inline const VideoBuffer& bufferCast(const IndexBuffer<T>& s) {
-  return s.impl;
-  }
 
 }

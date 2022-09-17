@@ -124,7 +124,7 @@ void Encoder<Tempest::CommandBuffer>::implDraw(size_t size, size_t firstInstance
   impl->draw(size,firstInstance,instanceCount);
   }
 
-void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer& vbo, size_t stride, size_t offset, size_t size, size_t firstInstance, size_t instanceCount) {
+void Encoder<Tempest::CommandBuffer>::implDraw(const Detail::VideoBuffer& vbo, size_t stride, size_t offset, size_t size, size_t firstInstance, size_t instanceCount) {
   if(state.stage!=Rendering)
     throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   if(!vbo.impl)
@@ -132,7 +132,7 @@ void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer& vbo, size_t st
   impl->draw(*vbo.impl.handler,stride,offset,size,firstInstance,instanceCount);
   }
 
-void Encoder<Tempest::CommandBuffer>::implDraw(const VideoBuffer &vbo, size_t stride, const VideoBuffer &ibo, Detail::IndexClass icls, size_t offset, size_t size,
+void Encoder<Tempest::CommandBuffer>::implDraw(const Detail::VideoBuffer &vbo, size_t stride, const Detail::VideoBuffer &ibo, Detail::IndexClass icls, size_t offset, size_t size,
                                                size_t firstInstance, size_t instanceCount) {
   if(state.stage!=Rendering)
     throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);

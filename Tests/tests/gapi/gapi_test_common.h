@@ -88,9 +88,9 @@ void VboInit() {
     auto ssboD = device.ssbo(BufferHeap::Device,  vboData,sizeof(vboData));
     auto ssboR = device.ssbo(BufferHeap::Readback,vboData,sizeof(vboData));
     auto ssboU = device.ssbo(BufferHeap::Upload,  vboData,sizeof(vboData));
-    EXPECT_EQ(ssboD.size(),sizeof(vboData));
-    EXPECT_EQ(ssboR.size(),sizeof(vboData));
-    EXPECT_EQ(ssboU.size(),sizeof(vboData));
+    EXPECT_EQ(ssboD.byteSize(),sizeof(vboData));
+    EXPECT_EQ(ssboR.byteSize(),sizeof(vboData));
+    EXPECT_EQ(ssboU.byteSize(),sizeof(vboData));
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
@@ -116,7 +116,7 @@ void VboDyn() {
     auto ssbo = device.ssbo(BufferHeap::Upload,vboData,sizeof(vboData));
     ssbo.update(vboData2+1, 1*sizeof(vboData2[0]), 2*sizeof(vboData2[0]));
 
-    device.readBytes(ssbo,readback,ssbo.size());
+    device.readBytes(ssbo,readback,ssbo.byteSize());
     for(int i=0; i<3; ++i) {
       EXPECT_EQ(readback[i].x,vboData2[i].x);
       EXPECT_EQ(readback[i].y,vboData2[i].y);
@@ -1176,9 +1176,9 @@ void ArrayedSsbo(const char* outImg) {
     buf[1] = device.ssbo<Vec4>({Vec4(0,1,0,1)});
     buf[2] = device.ssbo<Vec4>({Vec4(0,0,1,1)});
 
-    std::vector<const Tempest::VideoBuffer*> pbuf(buf.size());
+    std::vector<const Tempest::StorageBuffer*> pbuf(buf.size());
     for(size_t i=0; i<buf.size(); ++i)
-      pbuf[i] = &bufferCast(buf[i]);
+      pbuf[i] = &buf[i];
 
     auto desc = device.descriptors(pso);
     desc.set(0,ret);
@@ -1291,9 +1291,9 @@ void Bindless2(const char* outImg) {
     for(size_t i=0; i<tex.size(); ++i)
       ptex[i] = &tex[i];
 
-    std::vector<const Tempest::VideoBuffer*> pbuf(buf.size());
+    std::vector<const Tempest::StorageBuffer*> pbuf(buf.size());
     for(size_t i=0; i<buf.size(); ++i)
-      pbuf[i] = &bufferCast(buf[i]);
+      pbuf[i] = &buf[i];
 
     auto desc = device.descriptors(pso);
     desc.set(0,ptex);
@@ -1530,9 +1530,9 @@ void MeshComputePrototype(const char* outImg) {
     VkDrawIndexedIndirectCommand ix[2] = {};
     auto indirect = device.ssbo(ix,sizeof(ix));
 
-    auto var  = device.ssbo(nullptr, 4*16*1024);     // big buffer for meshlet data
-    auto flat = device.ssbo(nullptr, var.size());    // double buffer
-    auto mesh = device.ssbo(nullptr, 4*256);         // buffer meshlet descriptors
+    auto var  = device.ssbo(nullptr, 4*16*1024);      // big buffer for meshlet data
+    auto flat = device.ssbo(nullptr, var.byteSize()); // double buffer
+    auto mesh = device.ssbo(nullptr, 4*256);          // buffer meshlet descriptors
 
     const uint32_t msz[4] = {0,0,1,1};
     mesh.update(&msz,0,sizeof(msz));
@@ -1591,14 +1591,14 @@ void MeshComputePrototype(const char* outImg) {
     device.submit(cmd,sync);
     sync.wait();
 
-    std::vector<uint32_t> meshCpu(mesh.size()/4);
-    std::vector<uint32_t> varCpu (var.size()/4);
-    device.readBytes(mesh,    meshCpu.data(), mesh.size());
-    device.readBytes(var,     varCpu.data(),  var.size() );
-    device.readBytes(indirect,ix,indirect.size());
+    std::vector<uint32_t> meshCpu(mesh.byteSize()/4);
+    std::vector<uint32_t> varCpu (var.byteSize()/4);
+    device.readBytes(mesh,    meshCpu.data(), mesh.byteSize());
+    device.readBytes(var,     varCpu.data(),  var.byteSize() );
+    device.readBytes(indirect,ix,indirect.byteSize());
 
-    std::vector<uint32_t> flatCpu(flat.size()/4);
-    device.readBytes(flat,flatCpu.data(),flat.size());
+    std::vector<uint32_t> flatCpu(flat.byteSize()/4);
+    device.readBytes(flat,flatCpu.data(),flat.byteSize());
 
     EXPECT_EQ(meshCpu[1],5);
     for(uint32_t i=0; i<meshCpu[1]; ++i) {

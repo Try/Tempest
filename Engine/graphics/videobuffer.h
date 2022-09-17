@@ -11,6 +11,8 @@ class DescriptorSet;
 template<class T>
 class Encoder;
 
+namespace Detail {
+
 class VideoBuffer {
   public:
     VideoBuffer()=default;
@@ -32,6 +34,8 @@ class VideoBuffer {
   friend class Tempest::DescriptorSet;
   friend class Tempest::Encoder<Tempest::CommandBuffer>;
   };
+
+}
 
 }
 

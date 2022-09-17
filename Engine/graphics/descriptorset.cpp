@@ -73,7 +73,7 @@ void DescriptorSet::set(size_t layoutBind, const std::vector<const Texture2d*>& 
   set(layoutBind,tex.data(),tex.size());
   }
 
-void DescriptorSet::set(size_t layoutBind, const std::vector<const VideoBuffer*>& buf) {
+void DescriptorSet::set(size_t layoutBind, const std::vector<const StorageBuffer*>& buf) {
   set(layoutBind,buf.data(),buf.size());
   }
 
@@ -84,10 +84,10 @@ void DescriptorSet::set(size_t layoutBind, const Texture2d* const * tex, size_t 
   impl.handler->set(layoutBind,arr.get(),count,Sampler::nearest(),uint32_t(-1));
   }
 
-void DescriptorSet::set(size_t layoutBind, const VideoBuffer* const* buf, size_t count) {
+void DescriptorSet::set(size_t layoutBind, const StorageBuffer* const* buf, size_t count) {
   Detail::SmallArray<AbstractGraphicsApi::Buffer*,32> arr(count);
   for(size_t i=0; i<count; ++i)
-    arr[i] = buf[i] ? buf[i]->impl.handler : nullptr;
+    arr[i] = buf[i] ? buf[i]->impl.impl.handler : nullptr;
   impl.handler->set(layoutBind,arr.get(),count);
   }
 
@@ -105,13 +105,13 @@ void DescriptorSet::set(size_t layoutBind, const StorageBuffer& vbuf, size_t off
   implBindSsbo(layoutBind,vbuf.impl,offset);
   }
 
-void DescriptorSet::implBindUbo(size_t layoutBind, const VideoBuffer& vbuf, size_t offsetBytes) {
+void DescriptorSet::implBindUbo(size_t layoutBind, const Detail::VideoBuffer& vbuf, size_t offsetBytes) {
   if(vbuf.impl.handler)
     impl.handler->set(layoutBind,vbuf.impl.handler,offsetBytes); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidUniformBuffer);
   }
 
-void DescriptorSet::implBindSsbo(size_t layoutBind, const VideoBuffer& vbuf, size_t offsetBytes) {
+void DescriptorSet::implBindSsbo(size_t layoutBind, const Detail::VideoBuffer& vbuf, size_t offsetBytes) {
   if(vbuf.impl.handler)
     impl.handler->set(layoutBind,vbuf.impl.handler,offsetBytes); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidStorageBuffer);

@@ -15,13 +15,13 @@ class UniformBuffer final {
     size_t size() const { return arrTSZ; }
 
   private:
-    UniformBuffer(Tempest::VideoBuffer&& impl, size_t alignedTSZ)
+    UniformBuffer(Tempest::Detail::VideoBuffer&& impl, size_t alignedTSZ)
       :impl(std::move(impl)), alignedTSZ(alignedTSZ), arrTSZ(this->impl.size()/alignedTSZ) {
       }
 
-    Tempest::VideoBuffer impl;
-    size_t               alignedTSZ=0;
-    size_t               arrTSZ=0;
+    Tempest::Detail::VideoBuffer impl;
+    size_t                       alignedTSZ=0;
+    size_t                       arrTSZ=0;
 
   friend class Tempest::Device;
   friend class Tempest::CommandBuffer;

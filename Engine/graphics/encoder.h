@@ -5,10 +5,6 @@
 #include <Tempest/ComputePipeline>
 #include <Tempest/DescriptorSet>
 
-#include "videobuffer.h"
-
-#include <vector>
-
 namespace Tempest {
 
 template<class T>
@@ -101,8 +97,8 @@ class Encoder<Tempest::CommandBuffer> {
 
     void         implSetFramebuffer(const AttachmentDesc* rt, size_t rtSize, const AttachmentDesc* zs);
     void         implDraw(size_t size, size_t firstInstance, size_t instanceCount);
-    void         implDraw(const VideoBuffer& vbo, size_t stride, size_t offset, size_t size, size_t firstInstance, size_t instanceCount);
-    void         implDraw(const VideoBuffer& vbo, size_t stride, const VideoBuffer &ibo, Detail::IndexClass index,
+    void         implDraw(const Detail::VideoBuffer& vbo, size_t stride, size_t offset, size_t size, size_t firstInstance, size_t instanceCount);
+    void         implDraw(const Detail::VideoBuffer& vbo, size_t stride, const Detail::VideoBuffer &ibo, Detail::IndexClass index,
                           size_t offset, size_t size, size_t firstInstance, size_t instanceCount);
 
   friend class CommandBuffer;
