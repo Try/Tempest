@@ -204,8 +204,14 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** tex, size_
         mipLevel = 0;
       D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
       desc.Format             = t.format;
-      desc.ViewDimension      = D3D12_UAV_DIMENSION_TEXTURE2D;
-      desc.Texture2D.MipSlice = mipLevel;
+      if(t.sliceCnt>1) {
+        desc.ViewDimension      = D3D12_UAV_DIMENSION_TEXTURE3D;
+        desc.Texture3D.MipSlice = mipLevel;
+        desc.Texture3D.WSize    = t.sliceCnt;
+        } else {
+        desc.ViewDimension      = D3D12_UAV_DIMENSION_TEXTURE2D;
+        desc.Texture2D.MipSlice = mipLevel;
+        }
 
       auto  gpu = val.cpu[prm.heapId];
       gpu.ptr += (prm.heapOffset + i*descSize);
@@ -214,11 +220,21 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** tex, size_
       D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
       srvDesc.Shader4ComponentMapping = compMapping(smp.mapping);
       srvDesc.Format                  = t.format;
-      srvDesc.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE2D;
-      srvDesc.Texture2D.MipLevels     = t.mips;
-      if(mipLevel!=uint32_t(-1)) {
-        srvDesc.Texture2D.MostDetailedMip = mipLevel;
-        srvDesc.Texture2D.MipLevels       = 1;
+      if(t.sliceCnt>1) {
+        srvDesc.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE3D;
+        srvDesc.Texture3D.MipLevels     = t.mips;
+        //srvDesc.Texture3D.WSize         = t.sliceCnt;
+        if(mipLevel!=uint32_t(-1)) {
+          srvDesc.Texture3D.MostDetailedMip = mipLevel;
+          srvDesc.Texture3D.MipLevels       = 1;
+          }
+        } else {
+        srvDesc.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Texture2D.MipLevels     = t.mips;
+        if(mipLevel!=uint32_t(-1)) {
+          srvDesc.Texture2D.MostDetailedMip = mipLevel;
+          srvDesc.Texture2D.MipLevels       = 1;
+          }
         }
 
       if(srvDesc.Format==DXGI_FORMAT_D16_UNORM)

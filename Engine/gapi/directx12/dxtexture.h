@@ -14,7 +14,7 @@ class DxDevice;
 class DxTexture : public AbstractGraphicsApi::Texture {
   public:
     DxTexture();
-    DxTexture(ComPtr<ID3D12Resource>&& b, DXGI_FORMAT frm, NonUniqResId nonUniqId, UINT mips);
+    DxTexture(ComPtr<ID3D12Resource>&& b, DXGI_FORMAT frm, NonUniqResId nonUniqId, UINT mips, UINT sliceCnt);
     DxTexture(DxTexture&& other);
 
     uint32_t mipCount() const override { return mips; }
@@ -26,6 +26,7 @@ class DxTexture : public AbstractGraphicsApi::Texture {
     DXGI_FORMAT            format    = DXGI_FORMAT_UNKNOWN;
     NonUniqResId           nonUniqId = NonUniqResId::I_None;
     UINT                   mips      = 1;
+    UINT                   sliceCnt  = 1;
   };
 
 class DxTextureWithRT : public DxTexture {

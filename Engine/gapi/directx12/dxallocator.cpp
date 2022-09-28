@@ -186,7 +186,7 @@ DxTexture DxAllocator::alloc(const Pixmap& pm, uint32_t mip, DXGI_FORMAT format)
              uuid<ID3D12Resource>(),
              reinterpret_cast<void**>(&ret)
              ));
-  return DxTexture(std::move(ret),resDesc.Format,NonUniqResId::I_None,resDesc.MipLevels);
+  return DxTexture(std::move(ret),resDesc.Format,NonUniqResId::I_None,resDesc.MipLevels,1);
   }
 
 DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t d, const uint32_t mip, TextureFormat frm, bool imageStore) {
@@ -241,7 +241,7 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
              reinterpret_cast<void**>(&ret)
              ));
   auto nonUniqId = (imageStore) ? NonUniqResId::I_Img : NonUniqResId::I_None;
-  return DxTexture(std::move(ret),resDesc.Format,nonUniqId,resDesc.MipLevels);
+  return DxTexture(std::move(ret),resDesc.Format,nonUniqId,resDesc.MipLevels,UINT(d));
   }
 
 void DxAllocator::free(Allocation& page) {
