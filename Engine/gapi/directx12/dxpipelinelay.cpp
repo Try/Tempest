@@ -242,10 +242,9 @@ void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection
     D3D12_ROOT_PARAMETER prmPush = {};
     prmPush.ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
     prmPush.ShaderVisibility         = ::nativeFormat(pb.stage);
-    prmPush.Constants.ShaderRegister = 0;
+    prmPush.Constants.ShaderRegister = findBinding(rootPrm);
     prmPush.Constants.RegisterSpace  = 0;
     prmPush.Constants.Num32BitValues = UINT((pb.size+3)/4);
-    prmPush.Constants.ShaderRegister = findBinding(rootPrm);
     pushConstantId = uint32_t(rootPrm.size());
     rootPrm.push_back(prmPush);
     }
@@ -253,11 +252,10 @@ void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection
   if(has_baseVertex_baseInstance) {
     D3D12_ROOT_PARAMETER prmPush = {};
     prmPush.ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-    prmPush.ShaderVisibility         = D3D12_SHADER_VISIBILITY_ALL;
-    prmPush.Constants.ShaderRegister = 0;
+    prmPush.ShaderVisibility         = D3D12_SHADER_VISIBILITY_VERTEX;
+    prmPush.Constants.ShaderRegister = 255; //findBinding(rootPrm);
     prmPush.Constants.RegisterSpace  = 0;
     prmPush.Constants.Num32BitValues = 2u;
-    prmPush.Constants.ShaderRegister = findBinding(rootPrm);
     pushBaseInstanceId = uint32_t(rootPrm.size());
     rootPrm.push_back(prmPush);
     }

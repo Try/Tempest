@@ -1248,7 +1248,7 @@ void CompilerHLSL::emit_builtin_variables()
 
 	if (need_base_vertex_info)
 	{
-		statement("cbuffer SPIRV_Cross_VertexInfo");
+    statement("cbuffer SPIRV_Cross_VertexInfo : register(b255, space0)");
 		begin_scope();
 		statement("int SPIRV_Cross_BaseVertex;");
 		statement("int SPIRV_Cross_BaseInstance;");
