@@ -65,8 +65,8 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
       };
 
     struct PoolAllocation {
-      D3D12_CPU_DESCRIPTOR_HANDLE cpu[MAX_BINDS] = {};
-      D3D12_GPU_DESCRIPTOR_HANDLE gpu[MAX_BINDS] = {};
+      D3D12_CPU_DESCRIPTOR_HANDLE cpu [MAX_BINDS] = {};
+      D3D12_GPU_DESCRIPTOR_HANDLE gpu [MAX_BINDS] = {};
       ID3D12DescriptorHeap*       heap[MAX_BINDS] = {};
       size_t                      pool           = 0;
       size_t                      offset         = 0;

@@ -108,7 +108,6 @@ D3D12_RASTERIZER_DESC DxPipeline::getRaster(const RenderState& st) const {
   }
 
 ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& frm) {
-
   D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
   psoDesc.InputLayout     = { vsInput.get(), UINT(declSize) };
   psoDesc.pRootSignature  = sign.get();

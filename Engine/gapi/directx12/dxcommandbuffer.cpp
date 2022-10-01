@@ -550,7 +550,7 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer&  dstBuf, size_t offset,
   }
 
 void Tempest::Detail::DxCommandBuffer::prepareDraw(size_t voffset, size_t firstInstance) {
-  if(T_UNLIKELY(pushBaseInstanceId!=uint32_t(-1))) {
+  if(pushBaseInstanceId!=uint32_t(-1)) {
     struct SPIRV_Cross_VertexInfo {
       int32_t SPIRV_Cross_BaseVertex;
       int32_t SPIRV_Cross_BaseInstance;
