@@ -193,7 +193,7 @@ TEST(DirectX12Api,PushRemapping) {
 #endif
   }
 
-TEST(DirectX12Api,PushRemappingGr) {
+TEST(DirectX12Api,DISABLED_PushRemappingGr) {
 #if defined(_MSC_VER)
   GapiTestCommon::PushRemappingGr<DirectX12Api>("DirectX12Api_PushRemappingGr.png");
 #endif
