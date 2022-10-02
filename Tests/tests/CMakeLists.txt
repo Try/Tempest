@@ -107,6 +107,8 @@ compile_shader(ssbo_write_verify.comp)
 compile_shader(ssbo_write.vert)
 
 compile_shader(push_constant.comp)
+compile_shader(push_test.vert)
+compile_shader(push_test.frag)
 
 compile_shader(link_defect.vert)
 compile_shader(link_defect.frag)

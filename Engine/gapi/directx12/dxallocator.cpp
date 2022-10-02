@@ -114,6 +114,11 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t count, size_t size, size_t a
   resDesc.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
   resDesc.Flags              = D3D12_RESOURCE_FLAG_NONE;
 
+  if(MemUsage::UniformBuffer==(usage&MemUsage::UniformBuffer) && resDesc.Width%256!=0) {
+    // CB size is required to be 256-byte aligned.
+    resDesc.Width += 256-resDesc.Width%256;
+    }
+
   D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COMMON;
   if(bufFlg==BufferHeap::Upload) {
     state = D3D12_RESOURCE_STATE_GENERIC_READ;

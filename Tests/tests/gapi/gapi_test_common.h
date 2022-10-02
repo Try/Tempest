@@ -1048,6 +1048,74 @@ void PushRemapping() {
   }
 
 template<class GraphicsApi>
+void PushRemappingGr(const char* outImage) {
+  using namespace Tempest;
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto push = Vec4(1,1,1,1);
+    auto vbo  = device.vbo(vboData,3);
+    auto ibo  = device.ibo(iboData,3);
+    auto ssbo = device.ssbo<float>({0.5,0.5,0.5,0.5});
+
+    auto vert = device.shader("shader/push_test.vert.sprv");
+    auto frag = device.shader("shader/push_test.frag.sprv");
+    auto pso  = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
+    auto desc = device.descriptors(pso);
+    desc.set(0,ssbo);
+
+    auto tex  = device.attachment(Tempest::RGBA8,128,128);
+
+    auto cmd  = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
+      enc.setUniforms(pso,desc,&push,sizeof(push));
+      enc.draw(vbo,ibo, 0,ibo.size());
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    auto pm = device.readPixels(tex);
+    pm.save(outImage);
+
+    const uint32_t ccnt = Pixmap::componentCount(pm.format());
+    uint32_t same = 0;
+    ImageValidator val(pm);
+    for(uint32_t y=0; y<pm.h(); ++y)
+      for(uint32_t x=0; x<pm.w(); ++x) {
+        auto pix = val.at(x,y);
+        auto ref = ImageValidator::Pixel();
+        if(x<y) {
+          ref.x[0] = 0;
+          ref.x[1] = 0;
+          ref.x[2] = 1;
+          ref.x[3] = 1;
+          } else {
+          ref.x[0] = 0.5;
+          ref.x[1] = 0.5;
+          ref.x[2] = 1;
+          ref.x[3] = 1;
+          }
+
+        for(uint32_t c=0; c<ccnt; ++c)
+          if(std::fabs(pix.x[c]-ref.x[c])<0.01f)
+            same++;
+        }
+    EXPECT_EQ(same,pm.w()*pm.h()*ccnt);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void ArrayedTextures(const char* outImg) {
   using namespace Tempest;
   try {
