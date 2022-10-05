@@ -98,7 +98,8 @@ bool Compiler::block_is_pure(const SPIRBlock &block)
 	// This is a global side effect of the function.
 	if (block.terminator == SPIRBlock::Kill ||
 	    block.terminator == SPIRBlock::TerminateRay ||
-	    block.terminator == SPIRBlock::IgnoreIntersection)
+	    block.terminator == SPIRBlock::IgnoreIntersection ||
+	    block.terminator == SPIRBlock::EmitMeshTasks)
 		return false;
 
 	for (auto &i : block.ops)
@@ -152,6 +153,11 @@ bool Compiler::block_is_pure(const SPIRBlock &block)
 		case OpEmitStreamVertex:
 		case OpEndStreamPrimitive:
 		case OpEmitVertex:
+			return false;
+
+		// Mesh shader functions modify global state.
+		// (EmitMeshTasks is a terminator).
+		case OpSetMeshOutputsEXT:
 			return false;
 
 		// Barriers disallow any reordering, so we should treat blocks with barrier as writing.
@@ -985,6 +991,10 @@ ShaderResources Compiler::get_shader_resources(const unordered_set<VariableID> *
 			// in the future.
 			res.push_constant_buffers.push_back({ var.self, var.basetype, type.self, get_name(var.self) });
 		}
+		else if (type.storage == StorageClassShaderRecordBufferKHR)
+		{
+			res.shader_record_buffers.push_back({ var.self, var.basetype, type.self, get_remapped_declared_block_name(var.self, ssbo_instance_name) });
+		}
 		// Images
 		else if (type.storage == StorageClassUniformConstant && type.basetype == SPIRType::Image &&
 		         type.image.sampled == 2)
@@ -1069,8 +1079,11 @@ void Compiler::parse_fixup()
 		{
 			auto &var = id.get<SPIRVariable>();
 			if (var.storage == StorageClassPrivate || var.storage == StorageClassWorkgroup ||
+			    var.storage == StorageClassTaskPayloadWorkgroupEXT ||
 			    var.storage == StorageClassOutput)
+			{
 				global_variables.push_back(var.self);
+			}
 			if (variable_storage_is_aliased(var))
 				aliased_variables.push_back(var.self);
 		}
@@ -2177,6 +2190,10 @@ void Compiler::set_execution_mode(ExecutionMode mode, uint32_t arg0, uint32_t ar
 		execution.output_vertices = arg0;
 		break;
 
+	case ExecutionModeOutputPrimitivesEXT:
+		execution.output_primitives = arg0;
+		break;
+
 	default:
 		break;
 	}
@@ -2297,6 +2314,9 @@ uint32_t Compiler::get_execution_mode_argument(spv::ExecutionMode mode, uint32_t
 	case ExecutionModeOutputVertices:
 		return execution.output_vertices;
 
+	case ExecutionModeOutputPrimitivesEXT:
+		return execution.output_primitives;
+
 	default:
 		return 0;
 	}
@@ -2357,6 +2377,19 @@ void Compiler::add_implied_read_expression(SPIRAccessChain &e, uint32_t source)
 	auto itr = find(begin(e.implied_read_expressions), end(e.implied_read_expressions), ID(source));
 	if (itr == end(e.implied_read_expressions))
 		e.implied_read_expressions.push_back(source);
+}
+
+void Compiler::add_active_interface_variable(uint32_t var_id)
+{
+	active_interface_variables.insert(var_id);
+
+	// In SPIR-V 1.4 and up we must also track the interface variable in the entry point.
+	if (ir.get_spirv_version() >= 0x10400)
+	{
+		auto &vars = get_entry_point().interface_variables;
+		if (find(begin(vars), end(vars), VariableID(var_id)) == end(vars))
+			vars.push_back(var_id);
+	}
 }
 
 void Compiler::inherit_expression_dependencies(uint32_t dst, uint32_t source_expression)
@@ -3229,7 +3262,20 @@ bool Compiler::AnalyzeVariableScopeAccessHandler::handle(spv::Op op, const uint3
 	// Keep track of the types of temporaries, so we can hoist them out as necessary.
 	uint32_t result_type, result_id;
 	if (compiler.instruction_to_result_type(result_type, result_id, op, args, length))
+	{
+		// For some opcodes, we will need to override the result id.
+		// If we need to hoist the temporary, the temporary type is the input, not the result.
+		// FIXME: This will likely break with OpCopyObject + hoisting, but we'll have to
+		// solve it if we ever get there ...
+		if (op == OpConvertUToAccelerationStructureKHR)
+		{
+			auto itr = result_id_to_type.find(args[2]);
+			if (itr != result_id_to_type.end())
+				result_type = itr->second;
+		}
+
 		result_id_to_type[result_id] = result_type;
+	}
 
 	switch (op)
 	{
@@ -3731,6 +3777,7 @@ void Compiler::analyze_variable_scope(SPIRFunction &entry, AnalyzeVariableScopeA
 		DominatorBuilder builder(cfg);
 		auto &blocks = var.second;
 		auto &type = expression_type(var.first);
+		BlockID potential_continue_block = 0;
 
 		// Figure out which block is dominating all accesses of those variables.
 		for (auto &block : blocks)
@@ -3752,14 +3799,13 @@ void Compiler::analyze_variable_scope(SPIRFunction &entry, AnalyzeVariableScopeA
 				{
 					// The variable is used in multiple continue blocks, this is not a loop
 					// candidate, signal that by setting block to -1u.
-					auto &potential = potential_loop_variables[var.first];
-
-					if (potential == 0)
-						potential = block;
+					if (potential_continue_block == 0)
+						potential_continue_block = block;
 					else
-						potential = ~(0u);
+						potential_continue_block = ~(0u);
 				}
 			}
+
 			builder.add_block(block);
 		}
 
@@ -3767,6 +3813,34 @@ void Compiler::analyze_variable_scope(SPIRFunction &entry, AnalyzeVariableScopeA
 
 		// Add it to a per-block list of variables.
 		BlockID dominating_block = builder.get_dominator();
+
+		if (dominating_block && potential_continue_block != 0 && potential_continue_block != ~0u)
+		{
+			auto &inner_block = get<SPIRBlock>(dominating_block);
+
+			BlockID merge_candidate = 0;
+
+			// Analyze the dominator. If it lives in a different loop scope than the candidate continue
+			// block, reject the loop variable candidate.
+			if (inner_block.merge == SPIRBlock::MergeLoop)
+				merge_candidate = inner_block.merge_block;
+			else if (inner_block.loop_dominator != SPIRBlock::NoDominator)
+				merge_candidate = get<SPIRBlock>(inner_block.loop_dominator).merge_block;
+
+			if (merge_candidate != 0 && cfg.is_reachable(merge_candidate))
+			{
+				// If the merge block has a higher post-visit order, we know that continue candidate
+				// cannot reach the merge block, and we have two separate scopes.
+				if (!cfg.is_reachable(potential_continue_block) ||
+				    cfg.get_visit_order(merge_candidate) > cfg.get_visit_order(potential_continue_block))
+				{
+					potential_continue_block = 0;
+				}
+			}
+		}
+
+		if (potential_continue_block != 0 && potential_continue_block != ~0u)
+			potential_loop_variables[var.first] = potential_continue_block;
 
 		// For variables whose dominating block is inside a loop, there is a risk that these variables
 		// actually need to be preserved across loop iterations. We can express this by adding
@@ -4369,6 +4443,7 @@ void Compiler::analyze_image_and_sampler_usage()
 
 	comparison_ids = std::move(handler.comparison_ids);
 	need_subpass_input = handler.need_subpass_input;
+	need_subpass_input_ms = handler.need_subpass_input_ms;
 
 	// Forward information from separate images and samplers into combined image samplers.
 	for (auto &combined : combined_image_samplers)
@@ -4535,7 +4610,11 @@ bool Compiler::CombinedImageSamplerUsageHandler::handle(Op opcode, const uint32_
 		// If we load an image, we're going to use it and there is little harm in declaring an unused gl_FragCoord.
 		auto &type = compiler.get<SPIRType>(args[0]);
 		if (type.image.dim == DimSubpassData)
+		{
 			need_subpass_input = true;
+			if (type.image.ms)
+				need_subpass_input_ms = true;
+		}
 
 		// If we load a SampledImage and it will be used with Dref, propagate the state up.
 		if (dref_combined_samplers.count(args[1]) != 0)
@@ -4710,46 +4789,22 @@ bool Compiler::reflection_ssbo_instance_name_is_significant() const
 	return aliased_ssbo_types;
 }
 
-bool Compiler::instruction_to_result_type(uint32_t &result_type, uint32_t &result_id, spv::Op op, const uint32_t *args,
-                                          uint32_t length)
+bool Compiler::instruction_to_result_type(uint32_t &result_type, uint32_t &result_id, spv::Op op,
+                                          const uint32_t *args, uint32_t length)
 {
-	// Most instructions follow the pattern of <result-type> <result-id> <arguments>.
-	// There are some exceptions.
-	switch (op)
-	{
-	case OpStore:
-	case OpCopyMemory:
-	case OpCopyMemorySized:
-	case OpImageWrite:
-	case OpAtomicStore:
-	case OpAtomicFlagClear:
-	case OpEmitStreamVertex:
-	case OpEndStreamPrimitive:
-	case OpControlBarrier:
-	case OpMemoryBarrier:
-	case OpGroupWaitEvents:
-	case OpRetainEvent:
-	case OpReleaseEvent:
-	case OpSetUserEventStatus:
-	case OpCaptureEventProfilingInfo:
-	case OpCommitReadPipe:
-	case OpCommitWritePipe:
-	case OpGroupCommitReadPipe:
-	case OpGroupCommitWritePipe:
-	case OpLine:
-	case OpNoLine:
+	if (length < 2)
 		return false;
 
-	default:
-		if (length > 1 && maybe_get<SPIRType>(args[0]) != nullptr)
-		{
-			result_type = args[0];
-			result_id = args[1];
-			return true;
-		}
-		else
-			return false;
+	bool has_result_id = false, has_result_type = false;
+	HasResultAndType(op, &has_result_id, &has_result_type);
+	if (has_result_id && has_result_type)
+	{
+		result_type = args[0];
+		result_id = args[1];
+		return true;
 	}
+	else
+		return false;
 }
 
 Bitset Compiler::combined_decoration_for_member(const SPIRType &type, uint32_t index) const

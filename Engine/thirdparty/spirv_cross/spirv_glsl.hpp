@@ -145,6 +145,12 @@ public:
 		// compares.
 		bool relax_nan_checks = false;
 
+		// Loading row-major matrices from UBOs on older AMD Windows OpenGL drivers is problematic.
+		// To load these types correctly, we must generate a wrapper. them in a dummy function which only purpose is to
+		// ensure row_major decoration is actually respected.
+		// This workaround may cause significant performance degeneration on some Android devices.
+		bool enable_row_major_load_workaround = true;
+
 		// If non-zero, controls layout(num_views = N) in; in GL_OVR_multiview2.
 		uint32_t ovr_multiview_view_count = 0;
 
@@ -364,10 +370,16 @@ protected:
 	virtual void emit_function_prototype(SPIRFunction &func, const Bitset &return_flags);
 
 	SPIRBlock *current_emitting_block = nullptr;
-	SPIRBlock *current_emitting_switch = nullptr;
+	SmallVector<SPIRBlock *> current_emitting_switch_stack;
 	bool current_emitting_switch_fallthrough = false;
 
 	virtual void emit_instruction(const Instruction &instr);
+	struct TemporaryCopy
+	{
+		uint32_t dst_id;
+		uint32_t src_id;
+	};
+	TemporaryCopy handle_instruction_precision(const Instruction &instr);
 	void emit_block_instructions(SPIRBlock &block);
 
 	// For relax_nan_checks.
@@ -512,6 +524,7 @@ protected:
 	// on a single line separated by comma.
 	SmallVector<std::string> *redirect_statement = nullptr;
 	const SPIRBlock *current_continue_block = nullptr;
+	bool block_temporary_hoisting = false;
 
 	void begin_scope();
 	void end_scope();
@@ -589,7 +602,6 @@ protected:
 		bool allow_precision_qualifiers = false;
 		bool can_swizzle_scalar = false;
 		bool force_gl_in_out_block = false;
-		bool force_gl_in_block_hlsl = false;
 		bool can_return_array = true;
 		bool allow_truncated_access_chain = false;
 		bool supports_extensions = false;
@@ -606,6 +618,7 @@ protected:
 		bool support_precise_qualifier = false;
 		bool support_64bit_switch = false;
 		bool workgroup_size_is_hidden = false;
+		bool requires_relaxed_precision_analysis = false;
 	} backend;
 
 	void emit_struct(SPIRType &type);
@@ -615,7 +628,7 @@ protected:
 	void emit_buffer_reference_block(uint32_t type_id, bool forward_declaration);
 	void emit_buffer_block_legacy(const SPIRVariable &var);
 	void emit_buffer_block_flattened(const SPIRVariable &type);
-	void fixup_implicit_builtin_block_names();
+	void fixup_implicit_builtin_block_names(spv::ExecutionModel model);
 	void emit_declared_builtin_block(spv::StorageClass storage, spv::ExecutionModel model);
 	bool should_force_emit_builtin_block(spv::StorageClass storage);
 	void emit_push_constant_block_vulkan(const SPIRVariable &var);
@@ -704,12 +717,12 @@ protected:
 	spv::StorageClass get_expression_effective_storage_class(uint32_t ptr);
 	virtual bool access_chain_needs_stage_io_builtin_translation(uint32_t base);
 
+	virtual void check_physical_type_cast(std::string &expr, const SPIRType *type, uint32_t physical_type);
 	virtual void prepare_access_chain_for_scalar_access(std::string &expr, const SPIRType &type,
 	                                                    spv::StorageClass storage, bool &is_packed);
 
-	virtual std::string access_chain(uint32_t base, const uint32_t *indices, uint32_t count,
-	                                 const SPIRType &target_type, AccessChainMeta *meta = nullptr,
-	                                 bool ptr_chain = false);
+	std::string access_chain(uint32_t base, const uint32_t *indices, uint32_t count, const SPIRType &target_type,
+	                         AccessChainMeta *meta = nullptr, bool ptr_chain = false);
 
 	std::string flattened_access_chain(uint32_t base, const uint32_t *indices, uint32_t count,
 	                                   const SPIRType &target_type, uint32_t offset, uint32_t matrix_stride,
@@ -759,7 +772,7 @@ protected:
 	std::string type_to_glsl_constructor(const SPIRType &type);
 	std::string argument_decl(const SPIRFunction::Parameter &arg);
 	virtual std::string to_qualifiers_glsl(uint32_t id);
-	void fixup_io_block_patch_qualifiers(const SPIRVariable &var);
+	void fixup_io_block_patch_primitive_qualifiers(const SPIRVariable &var);
 	void emit_output_variable_initializer(const SPIRVariable &var);
 	std::string to_precision_qualifiers_glsl(uint32_t id);
 	virtual const char *to_storage_qualifiers_glsl(const SPIRVariable &var);
@@ -809,6 +822,10 @@ protected:
 	void replace_fragment_output(SPIRVariable &var);
 	void replace_fragment_outputs();
 	std::string legacy_tex_op(const std::string &op, const SPIRType &imgtype, uint32_t id);
+
+	void forward_relaxed_precision(uint32_t dst_id, const uint32_t *args, uint32_t length);
+	void analyze_precision_requirements(uint32_t type_id, uint32_t dst_id, uint32_t *args, uint32_t length);
+	Options::Precision analyze_expression_precision(const uint32_t *args, uint32_t length) const;
 
 	uint32_t indent = 0;
 
@@ -867,6 +884,7 @@ protected:
 	bool requires_transpose_3x3 = false;
 	bool requires_transpose_4x4 = false;
 	bool ray_tracing_is_khr = false;
+	bool barycentric_is_nv = false;
 	void ray_tracing_khr_fixup_locations();
 
 	bool args_will_forward(uint32_t id, const uint32_t *args, uint32_t num_args, bool pure);
@@ -902,6 +920,11 @@ protected:
 	void handle_invalid_expression(uint32_t id);
 	void force_temporary_and_recompile(uint32_t id);
 	void find_static_extensions();
+
+	uint32_t consume_temporary_in_precision_context(uint32_t type_id, uint32_t id, Options::Precision precision);
+	std::unordered_map<uint32_t, uint32_t> temporary_to_mirror_precision_alias;
+	std::unordered_set<uint32_t> composite_insert_overwritten;
+	std::unordered_set<uint32_t> block_composite_insert_overwrite;
 
 	std::string emit_for_loop_initializers(const SPIRBlock &block);
 	void emit_while_loop_initializers(const SPIRBlock &block);

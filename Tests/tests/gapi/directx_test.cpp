@@ -149,7 +149,7 @@ TEST(DirectX12Api,S3TC) {
   GapiTestCommon::S3TC<DirectX12Api>("DirectX12Api_S3TC.png");
 #endif
   }
-TEST(DirectX12Api,PsoTess) {
+TEST(DirectX12Api,DISABLED_PsoTess) {
 #if defined(_MSC_VER)
   GapiTestCommon::PsoTess<DirectX12Api>();
 #endif
@@ -193,7 +193,7 @@ TEST(DirectX12Api,PushRemapping) {
 #endif
   }
 
-TEST(DirectX12Api,DISABLED_PushRemappingGr) {
+TEST(DirectX12Api,PushRemappingGr) {
 #if defined(_MSC_VER)
   GapiTestCommon::PushRemappingGr<DirectX12Api>("DirectX12Api_PushRemappingGr.png");
 #endif
@@ -247,7 +247,7 @@ TEST(DirectX12Api,MeshShader) {
 #endif
   }
 
-TEST(DirectX12Api,Spirv_HS) {
+TEST(DirectX12Api,DISABLED_Spirv_HS) {
 #if defined(_MSC_VER)
   using namespace Tempest;
 
@@ -266,7 +266,7 @@ TEST(DirectX12Api,Spirv_HS) {
 #endif
   }
 
-TEST(DirectX12Api,Spirv_DS) {
+TEST(DirectX12Api,DISABLED_Spirv_DS) {
 #if defined(_MSC_VER)
   using namespace Tempest;
 

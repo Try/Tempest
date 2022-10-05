@@ -5,6 +5,7 @@
 #include <Tempest/PipelineLayout>
 
 #include "dxdevice.h"
+#include "dxshader.h"
 #include "guid.h"
 
 #include <cassert>
@@ -242,7 +243,7 @@ void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection
     D3D12_ROOT_PARAMETER prmPush = {};
     prmPush.ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
     prmPush.ShaderVisibility         = ::nativeFormat(pb.stage);
-    prmPush.Constants.ShaderRegister = findBinding(rootPrm);
+    prmPush.Constants.ShaderRegister = DxShader::HLSL_PUSH; //findBinding(rootPrm);
     prmPush.Constants.RegisterSpace  = 0;
     prmPush.Constants.Num32BitValues = UINT((pb.size+3)/4);
     pushConstantId = uint32_t(rootPrm.size());
@@ -253,7 +254,7 @@ void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection
     D3D12_ROOT_PARAMETER prmPush = {};
     prmPush.ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
     prmPush.ShaderVisibility         = D3D12_SHADER_VISIBILITY_VERTEX;
-    prmPush.Constants.ShaderRegister = 255; //findBinding(rootPrm);
+    prmPush.Constants.ShaderRegister = DxShader::HLSL_BASE_VERTEX_INSTANCE; //findBinding(rootPrm);
     prmPush.Constants.RegisterSpace  = 0;
     prmPush.Constants.Num32BitValues = 2u;
     pushBaseInstanceId = uint32_t(rootPrm.size());

@@ -21,6 +21,11 @@ class DxShader:public AbstractGraphicsApi::Shader {
     DxShader(const void* source, const size_t src_size);
     ~DxShader();
 
+    enum Bindings : uint32_t {
+      HLSL_PUSH                 = 256,
+      HLSL_BASE_VERTEX_INSTANCE = 257,
+    };
+
     using Binding = ShaderReflection::Binding;
 
     D3D12_SHADER_BYTECODE    bytecode(Flavor f = Flavor::Default) const;

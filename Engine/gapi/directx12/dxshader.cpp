@@ -104,6 +104,15 @@ DxShader::DxShader(const void *source, const size_t src_size) {
     optHLSL.support_nonzero_base_vertex_base_instance = has_baseVertex_baseInstance;
     comp.set_hlsl_options  (optHLSL);
     comp.set_common_options(optGLSL);
+    comp.set_hlsl_aux_buffer_binding(spirv_cross::HLSL_AUX_BINDING_BASE_VERTEX_INSTANCE, HLSL_BASE_VERTEX_INSTANCE, 0);
+
+    spirv_cross::HLSLResourceBinding push_binding;
+    push_binding.stage = exec;
+    push_binding.desc_set = spirv_cross::ResourceBindingPushConstantDescriptorSet;
+    push_binding.binding = spirv_cross::ResourceBindingPushConstantBinding;
+    push_binding.cbv.register_binding = HLSL_PUSH;
+    push_binding.cbv.register_space = 0;
+    comp.add_hlsl_resource_binding(push_binding);
 
     // comp.remap_num_workgroups_builtin();
     hlsl = comp.compile();
@@ -146,7 +155,7 @@ DxShader::DxShader(const void *source, const size_t src_size) {
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
 
-  if(false && exec == spv::ExecutionModelVertex) {
+  if(false) {
     Log::d(hlsl);
     disasm();
     }
@@ -174,6 +183,15 @@ D3D12_SHADER_BYTECODE DxShader::bytecode(Flavor f) const {
     optHLSL.shader_model = calcShaderModel(comp);
     comp.set_hlsl_options  (optHLSL);
     comp.set_common_options(optGLSL);
+    comp.set_hlsl_aux_buffer_binding(spirv_cross::HLSL_AUX_BINDING_BASE_VERTEX_INSTANCE, HLSL_BASE_VERTEX_INSTANCE, 0);
+
+    spirv_cross::HLSLResourceBinding push_binding;
+    push_binding.stage = exec;
+    push_binding.desc_set = spirv_cross::ResourceBindingPushConstantDescriptorSet;
+    push_binding.binding = spirv_cross::ResourceBindingPushConstantBinding;
+    push_binding.cbv.register_binding = HLSL_PUSH;
+    push_binding.cbv.register_space = 0;
+    comp.add_hlsl_resource_binding(push_binding);
 
     auto    hlsl = comp.compile();
     HRESULT hr   = compile(tess.altShader,hlsl.c_str(),hlsl.size(),exec,optHLSL.shader_model);

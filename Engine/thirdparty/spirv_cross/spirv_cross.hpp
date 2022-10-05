@@ -24,6 +24,9 @@
 #ifndef SPIRV_CROSS_HPP
 #define SPIRV_CROSS_HPP
 
+#ifndef SPV_ENABLE_UTILITY_CODE
+#define SPV_ENABLE_UTILITY_CODE
+#endif
 #include "spirv.hpp"
 #include "spirv_cfg.hpp"
 #include "spirv_cross_parsed_ir.hpp"
@@ -95,6 +98,8 @@ struct ShaderResources
 	// There can only be one push constant block,
 	// but keep the vector in case this restriction is lifted in the future.
 	SmallVector<Resource> push_constant_buffers;
+
+	SmallVector<Resource> shader_record_buffers;
 
 	// For Vulkan GLSL and HLSL source,
 	// these correspond to separate texture2D and samplers respectively.
@@ -556,6 +561,11 @@ protected:
 		}
 	}
 
+	uint32_t *stream_mutable(const Instruction &instr) const
+	{
+		return const_cast<uint32_t *>(stream(instr));
+	}
+
 	ParsedIR ir;
 	// Marks variables which have global scope and variables which can alias with other variables
 	// (SSBO, image load store, etc)
@@ -747,6 +757,7 @@ protected:
 	void inherit_expression_dependencies(uint32_t dst, uint32_t source);
 	void add_implied_read_expression(SPIRExpression &e, uint32_t source);
 	void add_implied_read_expression(SPIRAccessChain &e, uint32_t source);
+	void add_active_interface_variable(uint32_t var_id);
 
 	// For proper multiple entry point support, allow querying if an Input or Output
 	// variable is part of that entry points interface.
@@ -922,6 +933,7 @@ protected:
 	// Similar is implemented for images, as well as if subpass inputs are needed.
 	std::unordered_set<uint32_t> comparison_ids;
 	bool need_subpass_input = false;
+	bool need_subpass_input_ms = false;
 
 	// In certain backends, we will need to use a dummy sampler to be able to emit code.
 	// GLSL does not support texelFetch on texture2D objects, but SPIR-V does,
@@ -961,6 +973,7 @@ protected:
 
 		void add_hierarchy_to_comparison_ids(uint32_t ids);
 		bool need_subpass_input = false;
+		bool need_subpass_input_ms = false;
 		void add_dependency(uint32_t dst, uint32_t src);
 	};
 
