@@ -44,28 +44,52 @@ inline void vkAssert(VkResult code){
   }
 
 inline VkFormat nativeFormat(TextureFormat f) {
-  static const VkFormat vfrm[]={
-    VK_FORMAT_UNDEFINED,
-    VK_FORMAT_R8_UNORM,
-    VK_FORMAT_R8G8_UNORM,
-    VK_FORMAT_R8G8B8_UNORM,
-    VK_FORMAT_R8G8B8A8_UNORM,
-    VK_FORMAT_R16_UNORM,
-    VK_FORMAT_R16G16_UNORM,
-    VK_FORMAT_R16G16B16_UNORM,
-    VK_FORMAT_R16G16B16A16_UNORM,
-    VK_FORMAT_R32_SFLOAT,
-    VK_FORMAT_R32G32_SFLOAT,
-    VK_FORMAT_R32G32B32_SFLOAT,
-    VK_FORMAT_R32G32B32A32_SFLOAT,
-    VK_FORMAT_D16_UNORM,
-    VK_FORMAT_X8_D24_UNORM_PACK32,
-    VK_FORMAT_D24_UNORM_S8_UINT,
-    VK_FORMAT_BC1_RGBA_UNORM_BLOCK,
-    VK_FORMAT_BC2_UNORM_BLOCK,
-    VK_FORMAT_BC3_UNORM_BLOCK,
-    };
-  return vfrm[f];
+  switch(f) {
+    case TextureFormat::Last:
+    case TextureFormat::Undefined:
+      return VK_FORMAT_UNDEFINED;
+    case TextureFormat::R8:
+      return VK_FORMAT_R8_UNORM;
+    case TextureFormat::RG8:
+      return VK_FORMAT_R8G8_UNORM;
+    case TextureFormat::RGB8:
+      return VK_FORMAT_R8G8B8_UNORM;
+    case TextureFormat::RGBA8:
+      return VK_FORMAT_R8G8B8A8_UNORM;
+    case TextureFormat::R16:
+      return VK_FORMAT_R16_UNORM;
+    case TextureFormat::RG16:
+      return VK_FORMAT_R16G16_UNORM;
+    case TextureFormat::RGB16:
+      return VK_FORMAT_R16G16B16_UNORM;
+    case TextureFormat::RGBA16:
+      return VK_FORMAT_R16G16B16A16_UNORM;
+    case TextureFormat::R32F:
+      return VK_FORMAT_R32_SFLOAT;
+    case TextureFormat::RG32F:
+      return VK_FORMAT_R32G32_SFLOAT;
+    case TextureFormat::RGB32F:
+      return VK_FORMAT_R32G32B32_SFLOAT;
+    case TextureFormat::RGBA32F:
+      return VK_FORMAT_R32G32B32A32_SFLOAT;
+    case TextureFormat::Depth16:
+      return VK_FORMAT_D16_UNORM;
+    case TextureFormat::Depth24x8:
+      return VK_FORMAT_X8_D24_UNORM_PACK32;
+    case TextureFormat::Depth24S8:
+      return VK_FORMAT_D24_UNORM_S8_UINT;
+    case TextureFormat::DXT1:
+      return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
+    case TextureFormat::DXT3:
+      return VK_FORMAT_BC2_UNORM_BLOCK;
+    case TextureFormat::DXT5:
+      return VK_FORMAT_BC3_UNORM_BLOCK;
+    case TextureFormat::R11G11B10UF:
+      return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
+    case TextureFormat::RGBA16F:
+      return VK_FORMAT_R16G16B16A16_SFLOAT;
+    }
+  return VK_FORMAT_UNDEFINED;
   }
 
 inline bool nativeIsDepthFormat(VkFormat f){

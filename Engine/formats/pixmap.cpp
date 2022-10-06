@@ -479,6 +479,10 @@ Pixmap::Format Pixmap::toPixmapFormat(TextureFormat f) {
     case TextureFormat::DXT3:      return Pixmap::Format::DXT3;
     case TextureFormat::DXT5:      return Pixmap::Format::DXT5;
     //---
+    case TextureFormat::R11G11B10UF:
+    case TextureFormat::RGBA16F:
+      break; //fallthrough to exception
+    //---
     case TextureFormat::Depth16:   return Pixmap::Format::R16;
     case TextureFormat::Depth24S8:
     case TextureFormat::Depth24x8:

@@ -64,28 +64,52 @@ inline void dxAssert(HRESULT code){
   }
 
 inline DXGI_FORMAT nativeFormat(TextureFormat f) {
-  static const DXGI_FORMAT vfrm[]={
-    DXGI_FORMAT_UNKNOWN,
-    DXGI_FORMAT_R8_UNORM,
-    DXGI_FORMAT_R8G8_UNORM,
-    DXGI_FORMAT_UNKNOWN, // DXGI_FORMAT_R8G8B8_UNORM ?
-    DXGI_FORMAT_R8G8B8A8_UNORM,
-    DXGI_FORMAT_R16_UNORM,
-    DXGI_FORMAT_R16G16_UNORM,
-    DXGI_FORMAT_UNKNOWN, // DXGI_FORMAT_R16G16B16_UNORM ?
-    DXGI_FORMAT_R16G16B16A16_UNORM,
-    DXGI_FORMAT_R32_FLOAT,
-    DXGI_FORMAT_R32G32_FLOAT,
-    DXGI_FORMAT_R32G32B32_FLOAT,
-    DXGI_FORMAT_R32G32B32A32_FLOAT,
-    DXGI_FORMAT_D16_UNORM,
-    DXGI_FORMAT_D24_UNORM_S8_UINT,
-    DXGI_FORMAT_D24_UNORM_S8_UINT,
-    DXGI_FORMAT_BC1_UNORM,
-    DXGI_FORMAT_BC2_UNORM,
-    DXGI_FORMAT_BC3_UNORM,
-    };
-  return vfrm[f];
+  switch(f) {
+    case TextureFormat::Last:
+    case TextureFormat::Undefined:
+      return DXGI_FORMAT_UNKNOWN;
+    case TextureFormat::R8:
+      return DXGI_FORMAT_R8_UNORM;
+    case TextureFormat::RG8:
+      return DXGI_FORMAT_R8G8_UNORM;
+    case TextureFormat::RGB8:
+      return DXGI_FORMAT_UNKNOWN;
+    case TextureFormat::RGBA8:
+      return DXGI_FORMAT_R8G8B8A8_UNORM;
+    case TextureFormat::R16:
+      return DXGI_FORMAT_R16_UNORM;
+    case TextureFormat::RG16:
+      return DXGI_FORMAT_R16G16_UNORM;
+    case TextureFormat::RGB16:
+      return DXGI_FORMAT_UNKNOWN;
+    case TextureFormat::RGBA16:
+      return DXGI_FORMAT_R16G16B16A16_UNORM;
+    case TextureFormat::R32F:
+      return DXGI_FORMAT_R32_FLOAT;
+    case TextureFormat::RG32F:
+      return DXGI_FORMAT_R32G32_FLOAT;
+    case TextureFormat::RGB32F:
+      return DXGI_FORMAT_R32G32B32_FLOAT;
+    case TextureFormat::RGBA32F:
+      return DXGI_FORMAT_R32G32B32A32_FLOAT;
+    case TextureFormat::Depth16:
+      return DXGI_FORMAT_D16_UNORM;
+    case TextureFormat::Depth24x8:
+      return DXGI_FORMAT_D24_UNORM_S8_UINT;
+    case TextureFormat::Depth24S8:
+      return DXGI_FORMAT_D24_UNORM_S8_UINT;
+    case TextureFormat::DXT1:
+      return DXGI_FORMAT_BC1_UNORM;
+    case TextureFormat::DXT3:
+      return DXGI_FORMAT_BC2_UNORM;
+    case TextureFormat::DXT5:
+      return DXGI_FORMAT_BC3_UNORM;
+    case TextureFormat::R11G11B10UF:
+      return DXGI_FORMAT_R11G11B10_FLOAT;
+    case TextureFormat::RGBA16F:
+      return DXGI_FORMAT_R16G16B16A16_FLOAT;
+    }
+  return DXGI_FORMAT_UNKNOWN;
   }
 
 inline D3D12_TEXTURE_ADDRESS_MODE nativeFormat(ClampMode f){

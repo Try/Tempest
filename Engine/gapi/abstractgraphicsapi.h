@@ -120,6 +120,8 @@ namespace Tempest {
     DXT1,
     DXT3,
     DXT5,
+    R11G11B10UF,
+    RGBA16F,
     Last
     };
 
