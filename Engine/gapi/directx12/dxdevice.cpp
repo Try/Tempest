@@ -120,19 +120,19 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
                                       TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
                                       TextureFormat::R32F, TextureFormat::RG32F, /*TextureFormat::RGB32F,*/ TextureFormat::RGBA32F,
                                       TextureFormat::DXT1, TextureFormat::DXT3,  TextureFormat::DXT5,
-                                      TextureFormat::R11G11B10UF, TextureFormat::R16G16B16A16F,
+                                      TextureFormat::R11G11B10UF, TextureFormat::RGBA16F,
                                      };
 
   static const TextureFormat att[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
                                       TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
                                       TextureFormat::R32F, TextureFormat::RG32F, TextureFormat::RGBA32F,
-                                      TextureFormat::R11G11B10UF, TextureFormat::R16G16B16A16F,
+                                      TextureFormat::R11G11B10UF, TextureFormat::RGBA16F,
                                      };
 
   static const TextureFormat sso[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
                                       TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
                                       TextureFormat::R32F, TextureFormat::RGBA32F,
-                                      TextureFormat::R11G11B10UF, TextureFormat::R16G16B16A16F,
+                                      TextureFormat::R11G11B10UF, TextureFormat::RGBA16F,
                                      };
 
   static const TextureFormat ds[]  = {TextureFormat::Depth16, TextureFormat::Depth24x8, TextureFormat::Depth24S8};
