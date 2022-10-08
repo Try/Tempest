@@ -73,17 +73,20 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
   // https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
   static const TextureFormat smp[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
                                       TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
-                                      TextureFormat::R32F, TextureFormat::RG32F, TextureFormat::RGBA32F
+                                      TextureFormat::R32F, TextureFormat::RG32F, TextureFormat::RGBA32F,
+                                      TextureFormat::R11G11B10UF, TextureFormat::RGBA16F,
                                      };
 
   static const TextureFormat att[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
                                       TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
-                                      TextureFormat::R32F, TextureFormat::RG32F, TextureFormat::RGBA32F
+                                      TextureFormat::R32F, TextureFormat::RG32F, TextureFormat::RGBA32F,
+                                      TextureFormat::R11G11B10UF, TextureFormat::RGBA16F,
                                      };
 
   static const TextureFormat sso[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
                                       TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
-                                      TextureFormat::R32F, TextureFormat::RGBA32F
+                                      TextureFormat::R32F, TextureFormat::RGBA32F,
+                                      TextureFormat::R11G11B10UF, TextureFormat::RGBA16F,
                                      };
 
   // TODO: expose MTLPixelFormatDepth32Float
