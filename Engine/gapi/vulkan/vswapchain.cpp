@@ -93,7 +93,7 @@ void VSwapchain::cleanupSwapchain() noexcept {
   for(auto imageView : views)
     if(imageView!=VK_NULL_HANDLE)
       vkDestroyImageView(device.device.impl,imageView,nullptr);
-  for(auto s : sync) {
+  for(auto& s : sync) {
     if(s.aquire!=VK_NULL_HANDLE)
       vkDestroySemaphore(device.device.impl,s.aquire,nullptr);
     if(s.present!=VK_NULL_HANDLE)
