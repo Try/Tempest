@@ -1,7 +1,6 @@
 #if defined(TEMPEST_BUILD_DIRECTX12)
 
 #include "dxpipeline.h"
-
 #include "dxdevice.h"
 #include "dxshader.h"
 #include "dxpipelinelay.h"
@@ -9,6 +8,56 @@
 
 using namespace Tempest;
 using namespace Tempest::Detail;
+
+struct D3DX12_MESH_SHADER_PIPELINE_STATE_DESC {
+  D3D12_PIPELINE_STATE_SUBOBJECT_TYPE _Type0 = D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_FLAGS;
+  D3D12_PIPELINE_STATE_FLAGS    Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+
+  D3D12_PIPELINE_STATE_SUBOBJECT_TYPE _Type1 = D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_NODE_MASK;
+  UINT                          NodeMask = 0;
+
+  D3D12_PIPELINE_STATE_SUBOBJECT_TYPE _Type2 = D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_ROOT_SIGNATURE;
+  ID3D12RootSignature*          pRootSignature = nullptr;
+
+  D3D12_PIPELINE_STATE_SUBOBJECT_TYPE _Type3 = D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PS;
+  D3D12_SHADER_BYTECODE         PS = {};
+
+  D3D12_PIPELINE_STATE_SUBOBJECT_TYPE _Type4 = D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_AS;
+  D3D12_SHADER_BYTECODE         AS = {};
+
+  D3D12_PIPELINE_STATE_SUBOBJECT_TYPE _Type5 = D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MS;
+  D3D12_SHADER_BYTECODE         MS = {};
+
+  D3D12_PIPELINE_STATE_SUBOBJECT_TYPE _Type6 = D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_BLEND;
+  D3D12_BLEND_DESC              BlendState = {};
+  uint32_t                      padd0 = 0;
+
+  D3D12_PIPELINE_STATE_SUBOBJECT_TYPE _Type7 = D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL1;
+  D3D12_DEPTH_STENCIL_DESC1     DepthStencilState = {};
+  uint32_t                      padd1 = 0;
+
+  D3D12_PIPELINE_STATE_SUBOBJECT_TYPE _Type8 = D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL_FORMAT;
+  DXGI_FORMAT                   DSVFormat = DXGI_FORMAT_UNKNOWN;
+
+  D3D12_PIPELINE_STATE_SUBOBJECT_TYPE _Type9 = D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER;
+  D3D12_RASTERIZER_DESC         RasterizerState = {};
+
+  D3D12_PIPELINE_STATE_SUBOBJECT_TYPE _Type10 = D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RENDER_TARGET_FORMATS;
+  D3D12_RT_FORMAT_ARRAY         RTVFormats = {};
+
+  D3D12_PIPELINE_STATE_SUBOBJECT_TYPE _Type11 = D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_DESC;
+  DXGI_SAMPLE_DESC              SampleDesc = {};
+  uint32_t                      padd2 = 0;
+
+  D3D12_PIPELINE_STATE_SUBOBJECT_TYPE _Type12 = D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_MASK;
+  UINT                          SampleMask = 0;
+
+  D3D12_PIPELINE_STATE_SUBOBJECT_TYPE _Type13 = D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_CACHED_PSO;
+  D3D12_CACHED_PIPELINE_STATE   CachedPSO = {};
+
+  D3D12_PIPELINE_STATE_SUBOBJECT_TYPE _Type14 = D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_VIEW_INSTANCING;
+  D3D12_VIEW_INSTANCING_DESC    ViewInstancingDesc = {};
+  };
 
 DxPipeline::DxPipeline(DxDevice& device,
                        const RenderState& st, Topology tp, const DxPipelineLay& ulay,
@@ -64,7 +113,10 @@ ID3D12PipelineState& DxPipeline::instance(const DxFboLayout& frm) {
 
   Inst pso;
   pso.lay  = frm;
-  pso.impl = initGraphicsPipeline(frm);
+  if(auto sh = findShader(ShaderReflection::Mesh))
+    pso.impl = initMeshPipeline(frm); else
+    pso.impl = initGraphicsPipeline(frm);
+
   inst.emplace_back(std::move(pso));
   return *inst.back().impl.get();
   }
@@ -156,6 +208,54 @@ ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& 
 
   ComPtr<ID3D12PipelineState> ret;
   auto err = device.device->CreateGraphicsPipelineState(&psoDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&ret.get()));
+  if(FAILED(err)) {
+    for(auto& i:modules)
+      if(i.handler!=nullptr)
+        i.handler->disasm();
+    dxAssert(err);
+    }
+  return ret;
+  }
+
+
+ComPtr<ID3D12PipelineState> DxPipeline::initMeshPipeline(const DxFboLayout& frm) {
+  D3DX12_MESH_SHADER_PIPELINE_STATE_DESC psoDesc;
+  psoDesc.pRootSignature  = sign.get();
+  if(auto sh = findShader(ShaderReflection::Task))
+    psoDesc.AS = sh->bytecode();
+  if(auto sh = findShader(ShaderReflection::Mesh))
+    psoDesc.MS = sh->bytecode();
+  if(auto sh = findShader(ShaderReflection::Fragment))
+    psoDesc.PS = sh->bytecode();
+
+  //int x = offsetof(D3DX12_MESH_SHADER_PIPELINE_STATE_DESC, D3DX12_MESH_SHADER_PIPELINE_STATE_DESC::RasterizerState)      - 4;
+  //int y = offsetof(D3DX12_MESH_SHADER_PIPELINE_STATE_DESC, D3DX12_MESH_SHADER_PIPELINE_STATE_DESC::SampleMask) - 4;
+
+  psoDesc.BlendState      = getBlend (rState);
+  psoDesc.SampleMask      = UINT_MAX;
+  psoDesc.RasterizerState = getRaster(rState);
+  psoDesc.DepthStencilState.DepthEnable    = rState.zTestMode()!=RenderState::ZTestMode::Always ? TRUE : FALSE;
+  psoDesc.DepthStencilState.DepthWriteMask = rState.isZWriteEnabled() ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
+  psoDesc.DepthStencilState.DepthFunc      = nativeFormat(rState.zTestMode());
+  psoDesc.DepthStencilState.StencilEnable  = FALSE;
+  psoDesc.RTVFormats.NumRenderTargets = frm.NumRenderTargets;
+  for(uint8_t i=0;i<frm.NumRenderTargets;++i)
+    psoDesc.RTVFormats.RTFormats[i] = frm.RTVFormats[i];
+  psoDesc.DSVFormat = frm.DSVFormat;
+  psoDesc.SampleDesc.Quality    = 0;
+  psoDesc.SampleDesc.Count      = 1;
+
+  ComPtr<ID3D12PipelineState> ret;
+  //auto err = device.device->CreateGraphicsPipelineState(&psoDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&ret.get()));
+  // Populate the stream desc with our defined PSO descriptor
+  D3D12_PIPELINE_STATE_STREAM_DESC streamDesc = {};
+  streamDesc.SizeInBytes                   = sizeof(psoDesc);
+  streamDesc.pPipelineStateSubobjectStream = &psoDesc;
+
+  ComPtr<ID3D12Device2> dev;
+  device.device->QueryInterface(uuid<ID3D12Device2>(), reinterpret_cast<void**>(&dev));
+
+  auto err = dev->CreatePipelineState(&streamDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&ret.get()));
   if(FAILED(err)) {
     for(auto& i:modules)
       if(i.handler!=nullptr)

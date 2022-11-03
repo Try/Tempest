@@ -284,7 +284,7 @@ DxCommandBuffer::DxCommandBuffer(DxDevice& d)
                                             reinterpret_cast<void**>(&pool)));
 
   dxAssert(d.device->CreateCommandList(0, type, pool.get(), nullptr,
-                                       uuid<ID3D12GraphicsCommandList4>(), reinterpret_cast<void**>(&impl)));
+                                       uuid<ID3D12GraphicsCommandList6>(), reinterpret_cast<void**>(&impl)));
   impl->Close();
   }
 
@@ -598,6 +598,11 @@ void DxCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_
   impl->IASetIndexBuffer(&iview);
 
   impl->DrawIndexedInstanced(UINT(isize),UINT(instanceCount),UINT(ioffset),INT(voffset),UINT(firstInstance));
+  }
+
+void DxCommandBuffer::dispatchMesh(size_t firstInstance, size_t instanceCount) {
+  // TODO: multidimentional dispath
+  impl->DispatchMesh(UINT(instanceCount),1,1);
   }
 
 void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest, const AbstractGraphicsApi::Buffer& srcBuf, size_t offsetSrc, size_t size) {

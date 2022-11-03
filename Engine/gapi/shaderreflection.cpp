@@ -206,8 +206,10 @@ ShaderReflection::Stage ShaderReflection::getExecutionModel(spv::ExecutionModel 
     case spv::ExecutionModelFragment:
       return Stage::Fragment;
     case spv::ExecutionModelTaskNV:
+    case spv::ExecutionModelTaskEXT:
       return Stage::Task;
     case spv::ExecutionModelMeshNV:
+    case spv::ExecutionModelMeshEXT:
       return Stage::Mesh;
     default: // unimplemented
       throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);

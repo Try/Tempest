@@ -60,6 +60,7 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
     D3D12_BLEND_DESC            getBlend(const RenderState &st) const;
     D3D12_RASTERIZER_DESC       getRaster(const RenderState &st) const;
     ComPtr<ID3D12PipelineState> initGraphicsPipeline(const DxFboLayout& frm);
+    ComPtr<ID3D12PipelineState> initMeshPipeline(const DxFboLayout& frm);
   };
 
 class DxCompPipeline : public AbstractGraphicsApi::CompPipeline {

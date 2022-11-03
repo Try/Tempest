@@ -256,6 +256,9 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
   if(props.meshlets.meshShader) {
     rqExt.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
     }
+  if(props.hasMeshEXT) {
+    rqExt.push_back(VK_EXT_MESH_SHADER_EXTENSION_NAME);
+    }
   if(props.hasDescIndexing) {
     rqExt.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
     }

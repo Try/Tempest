@@ -235,6 +235,10 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
   if(hasDeviceFeatures2 && checkForExt(ext,VK_NV_MESH_SHADER_EXTENSION_NAME)) {
     props.meshlets.meshShader = true;
     }
+  if(hasDeviceFeatures2 && checkForExt(ext,VK_EXT_MESH_SHADER_EXTENSION_NAME)) {
+    props.meshlets.meshShader = true;
+    props.hasMeshEXT = true;
+    }
   if(hasDeviceFeatures2 && checkForExt(ext,VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME)) {
     props.hasDescIndexing = true;
     }
@@ -288,11 +292,17 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
     VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures = {};
     rayQueryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
 
+    // TODO: switch to EXT and remove NV
     VkPhysicalDeviceMeshShaderFeaturesNV meshFeatures = {};
     meshFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
+    VkPhysicalDeviceMeshShaderFeaturesEXT meshFeaturesEXT = {};
+    meshFeaturesEXT.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
 
     VkPhysicalDeviceMeshShaderPropertiesNV meshProperties = {};
     meshProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
+
+    VkPhysicalDeviceMeshShaderPropertiesEXT meshPropertiesEXT = {};
+    meshPropertiesEXT.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT;
 
     VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = {};
     indexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
@@ -323,6 +333,13 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
 
       meshProperties.pNext = properties.pNext;
       properties.pNext = &meshProperties;
+      }
+    if(props.hasMeshEXT) {
+      meshFeaturesEXT.pNext = features.pNext;
+      features.pNext = &meshFeaturesEXT;
+
+      meshPropertiesEXT.pNext = properties.pNext;
+      properties.pNext = &meshPropertiesEXT;
       }
     if(props.hasDescIndexing) {
       indexingFeatures.pNext = features.pNext;
@@ -375,7 +392,7 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
 
   props.ubo.offsetAlign   = size_t(devP.limits.minUniformBufferOffsetAlignment);
   props.ubo.maxRange      = size_t(devP.limits.maxUniformBufferRange);
-  
+
   props.push.maxRange     = size_t(devP.limits.maxPushConstantsSize);
 
   props.anisotropy        = supportedFeatures.samplerAnisotropy;

@@ -9,17 +9,13 @@
 #include "vulkan/vshader.h"
 #include "vulkan/vfence.h"
 #include "vulkan/vmeshshaderemulated.h"
-#include "vulkan/vcommandpool.h"
 #include "vulkan/vcommandbuffer.h"
 #include "vulkan/vdescriptorarray.h"
 #include "vulkan/vpipelinelay.h"
 #include "vulkan/vtexture.h"
 #include "vulkan/vaccelerationstructure.h"
 
-#include "deviceallocator.h"
 #include "shaderreflection.h"
-
-#include "vulkan/vulkan_sdk.h"
 
 #include <Tempest/Pixmap>
 #include <Tempest/Log>

@@ -38,10 +38,10 @@ static const char* target(spv::ExecutionModel exec, uint32_t sm, char* buf) {
     case spv::ExecutionModelFragment:
       std::snprintf(buf,32,"ps_%d_%d", sm/10, sm%10);
       return buf;
-    case spv::ExecutionModelTaskNV:
+    case spv::ExecutionModelTaskEXT:
       std::snprintf(buf,32,"as_%d_%d", sm/10, sm%10);
       return buf;
-    case spv::ExecutionModelMeshNV:
+    case spv::ExecutionModelMeshEXT:
       std::snprintf(buf,32,"ms_%d_%d", sm/10, sm%10);
       return buf;
     default: // unimplemented
@@ -155,9 +155,9 @@ DxShader::DxShader(const void *source, const size_t src_size) {
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
 
-  if(false) {
-    Log::d(hlsl);
-    disasm();
+  if(stage==ShaderReflection::Stage::Mesh) {
+    //Log::d(hlsl);
+    //disasm();
     }
   }
 
