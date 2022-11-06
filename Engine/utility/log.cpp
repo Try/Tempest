@@ -86,6 +86,10 @@ void Log::write(Context& ctx, char *&out, size_t &count, const std::string &msg)
   write(ctx,out,count,msg.c_str());
   }
 
+void Tempest::Log::write(Context& ctx, char*& out, size_t& count, std::string_view msg) {
+
+  }
+
 void Log::write(Context& ctx, char *&out, size_t &count, float msg) {
   char sym[16];
   snprintf(sym,sizeof(sym),"%f",double(msg));

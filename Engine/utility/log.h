@@ -57,6 +57,7 @@ class Log final {
 
     static void flush(Context& ctx, char*& msg, size_t& count);
     static void write(Context& ctx, char*& out, size_t& count, const std::string& msg);
+    static void write(Context& ctx, char*& out, size_t& count, std::string_view   msg);
     static void write(Context& ctx, char*& out, size_t& count, const char*        msg);
     static void write(Context& ctx, char*& out, size_t& count, char               msg);
     static void write(Context& ctx, char*& out, size_t& count, int8_t             msg);
