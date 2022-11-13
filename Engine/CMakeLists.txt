@@ -92,9 +92,6 @@ set(LIBTYPE "STATIC") # TODO: any proper way to do this?!
 add_definitions(-DAL_ALEXT_PROTOTYPES)
 add_subdirectory("thirdparty/openal-soft")
 target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/openal-soft/include")
-target_include_directories(OpenAL PRIVATE "thirdparty/openal-soft")
-target_include_directories(OpenAL PRIVATE "thirdparty/openal-soft/common")
-target_include_directories(OpenAL PRIVATE "thirdparty/openal-soft/al/eax")
 target_link_libraries(${PROJECT_NAME} PRIVATE OpenAL)
 
 ### Vulkan
