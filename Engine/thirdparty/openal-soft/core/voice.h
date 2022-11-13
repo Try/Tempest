@@ -4,7 +4,6 @@
 #include <array>
 #include <atomic>
 #include <bitset>
-#include <chrono>
 #include <memory>
 #include <stddef.h>
 #include <string>
@@ -52,7 +51,7 @@ enum class DirectMode : unsigned char {
 /* Maximum number of extra source samples that may need to be loaded, for
  * resampling or conversion purposes.
  */
-constexpr uint MaxPostVoiceLoad{MaxResamplerEdge + DecoderBase::sMaxPadding};
+constexpr uint MaxPostVoiceLoad{MaxResamplerEdge + UhjDecoder::sFilterDelay};
 
 
 enum {
@@ -86,8 +85,8 @@ struct SendParams {
     BiquadFilter HighPass;
 
     struct {
-        std::array<float,MaxAmbiChannels> Current;
-        std::array<float,MaxAmbiChannels> Target;
+        std::array<float,MAX_OUTPUT_CHANNELS> Current;
+        std::array<float,MAX_OUTPUT_CHANNELS> Target;
     } Gains;
 };
 
@@ -198,7 +197,7 @@ struct Voice {
      * Source offset in samples, relative to the currently playing buffer, NOT
      * the whole queue.
      */
-    std::atomic<int> mPosition;
+    std::atomic<uint> mPosition;
     /** Fractional (fixed-point) offset to the next sample. */
     std::atomic<uint> mPositionFrac;
 
@@ -209,8 +208,6 @@ struct Voice {
      * looping voices).
      */
     std::atomic<VoiceBufferItem*> mLoopBuffer;
-
-    std::chrono::nanoseconds mStartTime{};
 
     /* Properties for the attached buffer(s). */
     FmtChannels mFmtChannels;
@@ -265,8 +262,7 @@ struct Voice {
     Voice(const Voice&) = delete;
     Voice& operator=(const Voice&) = delete;
 
-    void mix(const State vstate, ContextBase *Context, const std::chrono::nanoseconds deviceTime,
-        const uint SamplesToDo);
+    void mix(const State vstate, ContextBase *Context, const uint SamplesToDo);
 
     void prepare(DeviceBase *device);
 

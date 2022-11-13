@@ -99,8 +99,8 @@ struct PshifterState final : public EffectState {
     alignas(16) FloatBufferLine mBufferOut;
 
     /* Effect gains for each output channel */
-    float mCurrentGains[MaxAmbiChannels];
-    float mTargetGains[MaxAmbiChannels];
+    float mCurrentGains[MAX_OUTPUT_CHANNELS];
+    float mTargetGains[MAX_OUTPUT_CHANNELS];
 
 
     void deviceUpdate(const DeviceBase *device, const Buffer &buffer) override;
@@ -140,7 +140,7 @@ void PshifterState::update(const ContextBase*, const EffectSlot *slot,
     mPitchShiftI = fastf2u(pitch*MixerFracOne);
     mPitchShift  = mPitchShiftI * double{1.0/MixerFracOne};
 
-    static constexpr auto coeffs = CalcDirectionCoeffs({0.0f, 0.0f, -1.0f});
+    const auto coeffs = CalcDirectionCoeffs({0.0f, 0.0f, -1.0f}, 0.0f);
 
     mOutTarget = target.Main->Buffer;
     ComputePanGains(target.Main, coeffs.data(), slot->Gain, mTargetGains);

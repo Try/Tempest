@@ -34,8 +34,7 @@
 
 void althrd_setname(const char *name)
 {
-#if defined(_MSC_VER) && !defined(_M_ARM)
-
+#if defined(_MSC_VER)
 #define MS_VC_EXCEPTION 0x406D1388
 #pragma pack(push,8)
     struct {
@@ -56,9 +55,7 @@ void althrd_setname(const char *name)
     __except(EXCEPTION_CONTINUE_EXECUTION) {
     }
 #undef MS_VC_EXCEPTION
-
 #else
-
     (void)name;
 #endif
 }
@@ -103,8 +100,7 @@ namespace {
 
 using setname_t1 = int(*)(const char*);
 using setname_t2 = int(*)(pthread_t, const char*);
-using setname_t3 = void(*)(pthread_t, const char*);
-using setname_t4 = int(*)(pthread_t, const char*, void*);
+using setname_t3 = int(*)(pthread_t, const char*, void*);
 
 void setname_caller(setname_t1 func, const char *name)
 { func(name); }
@@ -113,9 +109,6 @@ void setname_caller(setname_t2 func, const char *name)
 { func(pthread_self(), name); }
 
 void setname_caller(setname_t3 func, const char *name)
-{ func(pthread_self(), name); }
-
-void setname_caller(setname_t4 func, const char *name)
 { func(pthread_self(), "%s", static_cast<void*>(const_cast<char*>(name))); }
 
 } // namespace
@@ -132,7 +125,6 @@ void althrd_setname(const char *name)
     std::ignore = static_cast<void(*)(setname_t1,const char*)>(&setname_caller);
     std::ignore = static_cast<void(*)(setname_t2,const char*)>(&setname_caller);
     std::ignore = static_cast<void(*)(setname_t3,const char*)>(&setname_caller);
-    std::ignore = static_cast<void(*)(setname_t4,const char*)>(&setname_caller);
 }
 
 #ifdef __APPLE__

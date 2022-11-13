@@ -24,7 +24,7 @@ enum CompatFlags : uint8_t {
 };
 using CompatFlagBitset = std::bitset<CompatFlags::Count>;
 
-void aluInit(CompatFlagBitset flags, const float nfcscale);
+void aluInit(CompatFlagBitset flags);
 
 /* aluInitRenderer
  *

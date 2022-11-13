@@ -60,8 +60,8 @@ struct EchoState final : public EffectState {
 
     /* The panning gains for the two taps */
     struct {
-        float Current[MaxAmbiChannels]{};
-        float Target[MaxAmbiChannels]{};
+        float Current[MAX_OUTPUT_CHANNELS]{};
+        float Target[MAX_OUTPUT_CHANNELS]{};
     } mGains[2];
 
     BiquadFilter mFilter;

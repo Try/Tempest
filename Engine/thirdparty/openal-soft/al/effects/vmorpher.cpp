@@ -267,7 +267,7 @@ public:
 
 class EaxVocalMorpherEffect final : public EaxEffect4<EaxVocalMorpherEffectException, EAXVOCALMORPHERPROPERTIES> {
 public:
-    EaxVocalMorpherEffect(int eax_version);
+    EaxVocalMorpherEffect(const EaxCall& call);
 
 private:
     struct PhonemeAValidator {
@@ -363,8 +363,8 @@ private:
     bool commit_props(const Props& props) override;
 }; // EaxVocalMorpherEffect
 
-EaxVocalMorpherEffect::EaxVocalMorpherEffect(int eax_version)
-    : EaxEffect4{AL_EFFECT_VOCAL_MORPHER, eax_version}
+EaxVocalMorpherEffect::EaxVocalMorpherEffect(const EaxCall& call)
+    : EaxEffect4{AL_EFFECT_VOCAL_MORPHER, call}
 {}
 
 void EaxVocalMorpherEffect::set_defaults(Props& props)
@@ -570,9 +570,9 @@ bool EaxVocalMorpherEffect::commit_props(const Props& props)
 
 } // namespace
 
-EaxEffectUPtr eax_create_eax_vocal_morpher_effect(int eax_version)
+EaxEffectUPtr eax_create_eax_vocal_morpher_effect(const EaxCall& call)
 {
-    return eax_create_eax4_effect<EaxVocalMorpherEffect>(eax_version);
+    return eax_create_eax4_effect<EaxVocalMorpherEffect>(call);
 }
 
 #endif // ALSOFT_EAX

@@ -472,7 +472,7 @@ if(CMAKE_SIZEOF_VOID_P MATCHES "4" AND HAVE_SSE2)
             # assumes the stack is suitably aligned. Older Linux code or other
             # OSs don't guarantee this on 32-bit, so externally-callable
             # functions need to ensure an aligned stack.
-            set(EXPORT_DECL "${EXPORT_DECL}__attribute__((force_align_arg_pointer))")
+            set(EXPORT_DECL "${EXPORT_DECL} __attribute__((force_align_arg_pointer))")
         endif()
     endif()
 endif()
@@ -1086,22 +1086,19 @@ if(COREAUDIO_FRAMEWORK AND AUDIOUNIT_INCLUDE_DIR)
         set(HAVE_COREAUDIO 1)
         set(ALC_OBJS  ${ALC_OBJS} alc/backends/coreaudio.cpp alc/backends/coreaudio.h)
         set(BACKENDS  "${BACKENDS} CoreAudio,")
-
-        set(EXTRA_LIBS -Wl,-framework,CoreAudio ${EXTRA_LIBS})
-        if(CMAKE_SYSTEM_NAME MATCHES "^(iOS|tvOS)$")
+        if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
             find_library(COREFOUNDATION_FRAMEWORK NAMES CoreFoundation)
-            if(COREFOUNDATION_FRAMEWORK)
-                set(EXTRA_LIBS -Wl,-framework,CoreFoundation ${EXTRA_LIBS})
-            endif()
+            set(EXTRA_LIBS ${COREAUDIO_FRAMEWORK} ${COREFOUNDATION_FRAMEWORK} ${EXTRA_LIBS})
         else()
-            set(EXTRA_LIBS -Wl,-framework,AudioUnit,-framework,ApplicationServices ${EXTRA_LIBS})
+            set(EXTRA_LIBS ${COREAUDIO_FRAMEWORK} /System/Library/Frameworks/AudioUnit.framework
+                /System/Library/Frameworks/ApplicationServices.framework ${EXTRA_LIBS})
         endif()
 
         # Some versions of OSX may need the AudioToolbox framework. Add it if
         # it's found.
         find_library(AUDIOTOOLBOX_LIBRARY NAMES AudioToolbox)
         if(AUDIOTOOLBOX_LIBRARY)
-            set(EXTRA_LIBS -Wl,-framework,AudioToolbox ${EXTRA_LIBS})
+            set(EXTRA_LIBS ${AUDIOTOOLBOX_LIBRARY} ${EXTRA_LIBS})
         endif()
 
         set(INC_PATHS ${INC_PATHS} ${AUDIOUNIT_INCLUDE_DIR})
@@ -1355,8 +1352,7 @@ else()
 
     # !important: for osx framework public header works, the headers must be in
     # the project
-    set(TARGET_PUBLIC_HEADERS include/AL/al.h include/AL/alc.h include/AL/alext.h include/AL/efx.h
-        include/AL/efx-presets.h)
+    set(TARGET_PUBLIC_HEADERS include/AL/al.h include/AL/alc.h include/AL/alext.h include/AL/efx.h)
     add_library(${IMPL_TARGET} SHARED ${OPENAL_OBJS} ${ALC_OBJS} ${CORE_OBJS} ${RC_CONFIG}
         ${TARGET_PUBLIC_HEADERS})
     if(WIN32)
@@ -1368,7 +1364,7 @@ else()
         # Sets framework name to soft_oal to avoid ambiguity with the system OpenAL.framework
         set(LIBNAME "soft_oal")
         if(GIT_FOUND)
-            EXECUTE_PROCESS(COMMAND ${GIT_EXECUTABLE} rev-list --count HEAD
+            EXECUTE_PROCESS(COMMAND ${GIT_EXECUTABLE} rev-list --count head
                 TIMEOUT 5
                 OUTPUT_VARIABLE BUNDLE_VERSION
                 OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -1389,8 +1385,8 @@ else()
             FRAMEWORK_VERSION C
             MACOSX_FRAMEWORK_NAME "${IMPL_TARGET}"
             MACOSX_FRAMEWORK_IDENTIFIER "org.openal-soft.openal"
-            MACOSX_FRAMEWORK_SHORT_VERSION_STRING "${LIB_VERSION}"
-            MACOSX_FRAMEWORK_BUNDLE_VERSION "${BUNDLE_VERSION}"
+            MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${LIB_VERSION}
+            MACOSX_FRAMEWORK_BUNDLE_VERSION ${BUNDLE_VERSION}
             XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ""
             XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"
             XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO"
@@ -1685,24 +1681,24 @@ if(ALSOFT_EXAMPLES)
         set(FFVER_OK FALSE)
         if(FFMPEG_FOUND)
             set(FFVER_OK TRUE)
-            if(AVFORMAT_VERSION VERSION_LESS "59.27.100")
-                message(STATUS "libavformat is too old! (${AVFORMAT_VERSION}, wanted 59.27.100)")
+            if(AVFORMAT_VERSION VERSION_LESS "57.56.101")
+                message(STATUS "libavformat is too old! (${AVFORMAT_VERSION}, wanted 57.56.101)")
                 set(FFVER_OK FALSE)
             endif()
-            if(AVCODEC_VERSION VERSION_LESS "59.37.100")
-                message(STATUS "libavcodec is too old! (${AVCODEC_VERSION}, wanted 59.37.100)")
+            if(AVCODEC_VERSION VERSION_LESS "57.64.101")
+                message(STATUS "libavcodec is too old! (${AVCODEC_VERSION}, wanted 57.64.101)")
                 set(FFVER_OK FALSE)
             endif()
-            if(AVUTIL_VERSION VERSION_LESS "57.28.100")
-                message(STATUS "libavutil is too old! (${AVUTIL_VERSION}, wanted 57.28.100)")
+            if(AVUTIL_VERSION VERSION_LESS "55.34.101")
+                message(STATUS "libavutil is too old! (${AVUTIL_VERSION}, wanted 55.34.101)")
                 set(FFVER_OK FALSE)
             endif()
-            if(SWSCALE_VERSION VERSION_LESS "6.7.100")
-                message(STATUS "libswscale is too old! (${SWSCALE_VERSION}, wanted 6.7.100)")
+            if(SWSCALE_VERSION VERSION_LESS "4.2.100")
+                message(STATUS "libswscale is too old! (${SWSCALE_VERSION}, wanted 4.2.100)")
                 set(FFVER_OK FALSE)
             endif()
-            if(SWRESAMPLE_VERSION VERSION_LESS "4.7.100")
-                message(STATUS "libswresample is too old! (${SWRESAMPLE_VERSION}, wanted 4.7.100)")
+            if(SWRESAMPLE_VERSION VERSION_LESS "2.3.100")
+                message(STATUS "libswresample is too old! (${SWRESAMPLE_VERSION}, wanted 2.3.100)")
                 set(FFVER_OK FALSE)
             endif()
         endif()

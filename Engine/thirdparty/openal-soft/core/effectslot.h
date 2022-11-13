@@ -51,8 +51,6 @@ struct EffectSlotProps {
 
 
 struct EffectSlot {
-    bool InUse{false};
-
     std::atomic<EffectSlotProps*> Update{nullptr};
 
     /* Wet buffer configuration is ACN channel order with N3D scaling.
@@ -68,7 +66,7 @@ struct EffectSlot {
 
     EffectSlotType EffectType{EffectSlotType::None};
     EffectProps mEffectProps{};
-    al::intrusive_ptr<EffectState> mEffectState;
+    EffectState *mEffectState{nullptr};
 
     float RoomRolloff{0.0f}; /* Added to the source's room rolloff, not multiplied. */
     float DecayTime{0.0f};
@@ -78,12 +76,13 @@ struct EffectSlot {
     float AirAbsorptionGainHF{1.0f};
 
     /* Mixing buffer used by the Wet mix. */
-    al::vector<FloatBufferLine,16> mWetBuffer;
+    WetBuffer *mWetBuffer{nullptr};
 
+    ~EffectSlot();
 
     static EffectSlotArray *CreatePtrArray(size_t count) noexcept;
 
-    DEF_NEWDEL(EffectSlot)
+    DISABLE_ALLOC()
 };
 
 #endif /* CORE_EFFECTSLOT_H */

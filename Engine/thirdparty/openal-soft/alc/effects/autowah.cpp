@@ -71,8 +71,8 @@ struct AutowahState final : public EffectState {
         } Filter;
 
         /* Effect gains for each output channel */
-        float CurrentGains[MaxAmbiChannels];
-        float TargetGains[MaxAmbiChannels];
+        float CurrentGains[MAX_OUTPUT_CHANNELS];
+        float TargetGains[MAX_OUTPUT_CHANNELS];
     } mChans[MaxAmbiChannels];
 
     /* Effects buffers */

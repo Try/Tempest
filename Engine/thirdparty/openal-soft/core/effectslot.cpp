@@ -17,3 +17,9 @@ EffectSlotArray *EffectSlot::CreatePtrArray(size_t count) noexcept
     void *ptr{al_calloc(alignof(EffectSlotArray), EffectSlotArray::Sizeof(count*2))};
     return al::construct_at(static_cast<EffectSlotArray*>(ptr), count);
 }
+
+EffectSlot::~EffectSlot()
+{
+    if(mWetBuffer)
+        mWetBuffer->mInUse = false;
+}

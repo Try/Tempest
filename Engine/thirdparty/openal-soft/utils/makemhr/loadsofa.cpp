@@ -90,7 +90,7 @@ static bool PrepareLayout(const uint m, const float *xyzs, HrirDataT *hData)
 }
 
 
-float GetSampleRate(MYSOFA_HRTF *sofaHrtf)
+bool PrepareSampleRate(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData)
 {
     const char *srate_dim{nullptr};
     const char *srate_units{nullptr};
@@ -103,7 +103,7 @@ float GetSampleRate(MYSOFA_HRTF *sofaHrtf)
             if(srate_dim)
             {
                 fprintf(stderr, "Duplicate SampleRate.DIMENSION_LIST\n");
-                return 0.0f;
+                return false;
             }
             srate_dim = srate_attrs->value;
         }
@@ -112,7 +112,7 @@ float GetSampleRate(MYSOFA_HRTF *sofaHrtf)
             if(srate_units)
             {
                 fprintf(stderr, "Duplicate SampleRate.Units\n");
-                return 0.0f;
+                return false;
             }
             srate_units = srate_attrs->value;
         }
@@ -124,40 +124,35 @@ float GetSampleRate(MYSOFA_HRTF *sofaHrtf)
     if(!srate_dim)
     {
         fprintf(stderr, "Missing sample rate dimensions\n");
-        return 0.0f;
+        return false;
     }
     if(srate_dim != std::string{"I"})
     {
         fprintf(stderr, "Unsupported sample rate dimensions: %s\n", srate_dim);
-        return 0.0f;
+        return false;
     }
     if(!srate_units)
     {
         fprintf(stderr, "Missing sample rate unit type\n");
-        return 0.0f;
+        return false;
     }
     if(srate_units != std::string{"hertz"})
     {
         fprintf(stderr, "Unsupported sample rate unit type: %s\n", srate_units);
-        return 0.0f;
+        return false;
     }
     /* I dimensions guarantees 1 element, so just extract it. */
-    if(srate_array->values[0] < MIN_RATE || srate_array->values[0] > MAX_RATE)
+    hData->mIrRate = static_cast<uint>(srate_array->values[0] + 0.5f);
+    if(hData->mIrRate < MIN_RATE || hData->mIrRate > MAX_RATE)
     {
-        fprintf(stderr, "Sample rate out of range: %f (expected %u to %u)", srate_array->values[0],
+        fprintf(stderr, "Sample rate out of range: %u (expected %u to %u)", hData->mIrRate,
             MIN_RATE, MAX_RATE);
-        return 0.0f;
+        return false;
     }
-    return srate_array->values[0];
+    return true;
 }
 
-enum class DelayType : uint8_t {
-    None,
-    I_R, /* [1][Channels] */
-    M_R, /* [HRIRs][Channels] */
-    Invalid,
-};
-DelayType PrepareDelay(MYSOFA_HRTF *sofaHrtf)
+bool PrepareDelay(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData)
 {
     const char *delay_dim{nullptr};
     MYSOFA_ARRAY *delay_array{&sofaHrtf->DataDelay};
@@ -169,27 +164,38 @@ DelayType PrepareDelay(MYSOFA_HRTF *sofaHrtf)
             if(delay_dim)
             {
                 fprintf(stderr, "Duplicate Delay.DIMENSION_LIST\n");
-                return DelayType::Invalid;
+                return false;
             }
             delay_dim = delay_attrs->value;
         }
         else
             fprintf(stderr, "Unexpected delay attribute: %s = %s\n", delay_attrs->name,
-                delay_attrs->value ? delay_attrs->value : "<null>");
+                delay_attrs->value);
         delay_attrs = delay_attrs->next;
     }
     if(!delay_dim)
     {
         fprintf(stderr, "Missing delay dimensions\n");
-        return DelayType::None;
+        /*return false;*/
     }
-    if(delay_dim == std::string{"I,R"})
-        return DelayType::I_R;
-    else if(delay_dim == std::string{"M,R"})
-        return DelayType::M_R;
-
-    fprintf(stderr, "Unsupported delay dimensions: %s\n", delay_dim);
-    return DelayType::Invalid;
+    else if(delay_dim != std::string{"I,R"})
+    {
+        fprintf(stderr, "Unsupported delay dimensions: %s\n", delay_dim);
+        return false;
+    }
+    else if(hData->mChannelType == CT_STEREO)
+    {
+        /* I,R is 1xChannelCount. Makemhr currently removes any delay constant,
+         * so we can ignore this as long as it's equal.
+         */
+        if(delay_array->values[0] != delay_array->values[1])
+        {
+            fprintf(stderr, "Mismatched delays not supported: %f, %f\n", delay_array->values[0],
+                delay_array->values[1]);
+            return false;
+        }
+    }
+    return true;
 }
 
 bool CheckIrData(MYSOFA_HRTF *sofaHrtf)
@@ -210,7 +216,7 @@ bool CheckIrData(MYSOFA_HRTF *sofaHrtf)
         }
         else
             fprintf(stderr, "Unexpected IR attribute: %s = %s\n", ir_attrs->name,
-                ir_attrs->value ? ir_attrs->value : "<null>");
+                ir_attrs->value);
         ir_attrs = ir_attrs->next;
     }
     if(!ir_dim)
@@ -251,12 +257,11 @@ static void CalcHrirMagnitude(const uint points, const uint n, al::span<complex_
     MagnitudeResponse(n, h.data(), hrir);
 }
 
-static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayType delayType,
-    const uint outRate)
+static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const uint outRate)
 {
     std::atomic<uint> loaded_count{0u};
 
-    auto load_proc = [sofaHrtf,hData,delayType,outRate,&loaded_count]() -> bool
+    auto load_proc = [sofaHrtf,hData,outRate,&loaded_count]() -> bool
     {
         const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
         hData->mHrirsBase.resize(channels * hData->mIrCount * hData->mIrSize, 0.0);
@@ -328,20 +333,10 @@ static bool LoadResponses(MYSOFA_HRTF *sofaHrtf, HrirDataT *hData, const DelayTy
                 }
             }
 
-            /* Include any per-channel or per-HRIR delays. */
-            if(delayType == DelayType::I_R)
-            {
-                const float *delayValues{sofaHrtf->DataDelay.values};
-                for(uint ti{0u};ti < channels;++ti)
-                    azd->mDelays[ti] = delayValues[ti] / static_cast<float>(hData->mIrRate);
-            }
-            else if(delayType == DelayType::M_R)
-            {
-                const float *delayValues{sofaHrtf->DataDelay.values};
-                for(uint ti{0u};ti < channels;++ti)
-                    azd->mDelays[ti] = delayValues[si*sofaHrtf->R + ti] /
-                        static_cast<float>(hData->mIrRate);
-            }
+            /* TODO: Since some SOFA files contain minimum phase HRIRs,
+             * it would be beneficial to check for per-measurement delays
+             * (when available) to reconstruct the HRTDs.
+             */
         }
 
         if(outRate && outRate != hData->mIrRate)
@@ -458,19 +453,13 @@ bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSiz
     /* Assume a default head radius of 9cm. */
     hData->mRadius = 0.09;
 
-    hData->mIrRate = static_cast<uint>(GetSampleRate(sofaHrtf.get()) + 0.5f);
-    if(!hData->mIrRate)
-        return false;
-
-    DelayType delayType = PrepareDelay(sofaHrtf.get());
-    if(delayType == DelayType::Invalid)
-        return false;
-
-    if(!CheckIrData(sofaHrtf.get()))
+    if(!PrepareSampleRate(sofaHrtf.get(), hData) || !PrepareDelay(sofaHrtf.get(), hData)
+        || !CheckIrData(sofaHrtf.get()))
         return false;
     if(!PrepareLayout(sofaHrtf->M, sofaHrtf->SourcePosition.values, hData))
         return false;
-    if(!LoadResponses(sofaHrtf.get(), hData, delayType, outRate))
+
+    if(!LoadResponses(sofaHrtf.get(), hData, outRate))
         return false;
     sofaHrtf = nullptr;
 
@@ -547,7 +536,7 @@ bool LoadSofaFile(const char *filename, const uint numThreads, const uint fftSiz
                     for(uint ti{0};ti < channels;ti++)
                     {
                         hrir_done.fetch_add(1u, std::memory_order_acq_rel);
-                        azd.mDelays[ti] += CalcHrirOnset(rs, hData->mIrRate, hData->mIrPoints,
+                        azd.mDelays[ti] = CalcHrirOnset(rs, hData->mIrRate, hData->mIrPoints,
                             upsampled, azd.mIrs[ti]);
                     }
                 }

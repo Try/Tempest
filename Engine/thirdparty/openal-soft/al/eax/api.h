@@ -28,14 +28,11 @@ typedef struct _GUID {
     std::uint8_t Data4[8];
 } GUID;
 
-#ifndef _SYS_GUID_OPERATOR_EQ_
-#define _SYS_GUID_OPERATOR_EQ_
 inline bool operator==(const GUID& lhs, const GUID& rhs) noexcept
 { return std::memcmp(&lhs, &rhs, sizeof(GUID)) == 0; }
 
 inline bool operator!=(const GUID& lhs, const GUID& rhs) noexcept
 { return !(lhs == rhs); }
-#endif  // _SYS_GUID_OPERATOR_EQ_
 #endif // GUID_DEFINED
 
 
@@ -290,19 +287,21 @@ extern const GUID EAXPROPERTYID_EAX40_Context;
 extern const GUID EAXPROPERTYID_EAX50_Context;
 
 // EAX50
-constexpr auto HEADPHONES = 0UL;
-constexpr auto SPEAKERS_2 = 1UL;
-constexpr auto SPEAKERS_4 = 2UL;
-constexpr auto SPEAKERS_5 = 3UL; // 5.1 speakers
-constexpr auto SPEAKERS_6 = 4UL; // 6.1 speakers
-constexpr auto SPEAKERS_7 = 5UL; // 7.1 speakers
-
-constexpr auto EAXCONTEXT_MINSPEAKERCONFIG = HEADPHONES;
-constexpr auto EAXCONTEXT_MAXSPEAKERCONFIG = SPEAKERS_7;
+enum : unsigned long
+{
+    HEADPHONES = 0,
+    SPEAKERS_2,
+    SPEAKERS_4,
+    SPEAKERS_5,	// 5.1 speakers
+    SPEAKERS_6, // 6.1 speakers
+    SPEAKERS_7, // 7.1 speakers
+};
 
 // EAX50
-constexpr auto EAX_40 = 5UL; // EAX 4.0
-constexpr auto EAX_50 = 6UL; // EAX 5.0
+enum : unsigned long {
+    EAX_40 = 5, // EAX 4.0
+    EAX_50 = 6, // EAX 5.0
+};
 
 constexpr auto EAXCONTEXT_MINEAXSESSION = EAX_40;
 constexpr auto EAXCONTEXT_MAXEAXSESSION = EAX_50;
@@ -371,8 +370,7 @@ extern const GUID EAXPROPERTYID_EAX50_FXSlot2;
 extern const GUID EAXPROPERTYID_EAX40_FXSlot3;
 extern const GUID EAXPROPERTYID_EAX50_FXSlot3;
 
-extern const GUID EAX40CONTEXT_DEFAULTPRIMARYFXSLOTID;
-extern const GUID EAX50CONTEXT_DEFAULTPRIMARYFXSLOTID;
+extern const GUID EAXCONTEXT_DEFAULTPRIMARYFXSLOTID;
 
 enum EAXFXSLOT_PROPERTY : unsigned int {
     EAXFXSLOT_PARAMETER = 0,

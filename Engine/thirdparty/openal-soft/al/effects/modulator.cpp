@@ -156,7 +156,7 @@ public:
 class EaxRingModulatorEffect final : public EaxEffect4<EaxRingModulatorEffectException, EAXRINGMODULATORPROPERTIES>
 {
 public:
-    EaxRingModulatorEffect(int eax_version);
+    EaxRingModulatorEffect(const EaxCall& call);
 
 private:
     struct FrequencyValidator {
@@ -213,8 +213,8 @@ private:
     bool commit_props(const Props& props) override;
 }; // EaxRingModulatorEffect
 
-EaxRingModulatorEffect::EaxRingModulatorEffect(int eax_version)
-    : EaxEffect4{AL_EFFECT_RING_MODULATOR, eax_version}
+EaxRingModulatorEffect::EaxRingModulatorEffect(const EaxCall& call)
+    : EaxEffect4{AL_EFFECT_RING_MODULATOR, call}
 {}
 
 void EaxRingModulatorEffect::set_defaults(Props& props)
@@ -311,9 +311,9 @@ bool EaxRingModulatorEffect::commit_props(const Props& props)
 
 } // namespace
 
-EaxEffectUPtr eax_create_eax_ring_modulator_effect(int eax_version)
+EaxEffectUPtr eax_create_eax_ring_modulator_effect(const EaxCall& call)
 {
-    return eax_create_eax4_effect<EaxRingModulatorEffect>(eax_version);
+    return eax_create_eax4_effect<EaxRingModulatorEffect>(call);
 }
 
 #endif // ALSOFT_EAX

@@ -31,7 +31,6 @@
 #include <cmath>
 #include <cstdint>
 #include <functional>
-#include <inttypes.h>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -161,7 +160,7 @@ void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context
     auto copy_send = [](const ALsource::SendData &srcsend) noexcept -> VoiceProps::SendData
     {
         VoiceProps::SendData ret{};
-        ret.Slot = srcsend.Slot ? srcsend.Slot->mSlot : nullptr;
+        ret.Slot = srcsend.Slot ? &srcsend.Slot->mSlot : nullptr;
         ret.Gain = srcsend.Gain;
         ret.GainHF = srcsend.GainHF;
         ret.HFReference = srcsend.HFReference;
@@ -171,7 +170,7 @@ void UpdateSourceProps(const ALsource *source, Voice *voice, ALCcontext *context
     };
     std::transform(source->Send.cbegin(), source->Send.cend(), props->Send, copy_send);
     if(!props->Send[0].Slot && context->mDefaultSlot)
-        props->Send[0].Slot = context->mDefaultSlot->mSlot;
+        props->Send[0].Slot = &context->mDefaultSlot->mSlot;
 
     /* Set the new container for updating internal parameters. */
     props = voice->mUpdate.exchange(props, std::memory_order_acq_rel);
@@ -194,9 +193,9 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds
 {
     ALCdevice *device{context->mALDevice.get()};
     const VoiceBufferItem *Current{};
-    int64_t readPos{};
-    uint refcount{};
-    Voice *voice{};
+    uint64_t readPos{};
+    ALuint refcount;
+    Voice *voice;
 
     do {
         refcount = device->waitForMix();
@@ -206,8 +205,9 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds
         {
             Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
 
-            readPos  = int64_t{voice->mPosition.load(std::memory_order_relaxed)} << MixerFracBits;
-            readPos += voice->mPositionFrac.load(std::memory_order_relaxed);
+            readPos  = uint64_t{voice->mPosition.load(std::memory_order_relaxed)} << 32;
+            readPos |= uint64_t{voice->mPositionFrac.load(std::memory_order_relaxed)} <<
+                       (32-MixerFracBits);
         }
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != device->MixCount.load(std::memory_order_relaxed));
@@ -218,11 +218,9 @@ int64_t GetSourceSampleOffset(ALsource *Source, ALCcontext *context, nanoseconds
     for(auto &item : Source->mQueue)
     {
         if(&item == Current) break;
-        readPos += int64_t{item.mSampleLen} << MixerFracBits;
+        readPos += uint64_t{item.mSampleLen} << 32;
     }
-    if(readPos > std::numeric_limits<int64_t>::max() >> (32-MixerFracBits))
-        return std::numeric_limits<int64_t>::max();
-    return readPos << (32-MixerFracBits);
+    return static_cast<int64_t>(minu64(readPos, 0x7fffffffffffffff_u64));
 }
 
 /* GetSourceSecOffset
@@ -234,9 +232,9 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
 {
     ALCdevice *device{context->mALDevice.get()};
     const VoiceBufferItem *Current{};
-    int64_t readPos{};
-    uint refcount{};
-    Voice *voice{};
+    uint64_t readPos{};
+    ALuint refcount;
+    Voice *voice;
 
     do {
         refcount = device->waitForMix();
@@ -246,8 +244,8 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
         {
             Current = voice->mCurrentBuffer.load(std::memory_order_relaxed);
 
-            readPos  = int64_t{voice->mPosition.load(std::memory_order_relaxed)} << MixerFracBits;
-            readPos += voice->mPositionFrac.load(std::memory_order_relaxed);
+            readPos  = uint64_t{voice->mPosition.load(std::memory_order_relaxed)} << MixerFracBits;
+            readPos |= voice->mPositionFrac.load(std::memory_order_relaxed);
         }
         std::atomic_thread_fence(std::memory_order_acquire);
     } while(refcount != device->MixCount.load(std::memory_order_relaxed));
@@ -260,7 +258,7 @@ double GetSourceSecOffset(ALsource *Source, ALCcontext *context, nanoseconds *cl
     while(BufferList != Source->mQueue.cend() && std::addressof(*BufferList) != Current)
     {
         if(!BufferFmt) BufferFmt = BufferList->mBuffer;
-        readPos += int64_t{BufferList->mSampleLen} << MixerFracBits;
+        readPos += uint64_t{BufferList->mSampleLen} << MixerFracBits;
         ++BufferList;
     }
     while(BufferList != Source->mQueue.cend() && !BufferFmt)
@@ -283,9 +281,9 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
 {
     ALCdevice *device{context->mALDevice.get()};
     const VoiceBufferItem *Current{};
-    int64_t readPos{};
-    uint readPosFrac{};
-    uint refcount;
+    ALuint readPos{};
+    ALuint readPosFrac{};
+    ALuint refcount;
     Voice *voice;
 
     do {
@@ -323,12 +321,11 @@ double GetSourceOffset(ALsource *Source, ALenum name, ALCcontext *context)
     switch(name)
     {
     case AL_SEC_OFFSET:
-        offset  = static_cast<double>(readPos) + readPosFrac/double{MixerFracOne};
-        offset /= BufferFmt->mSampleRate;
+        offset = (readPos + readPosFrac/double{MixerFracOne}) / BufferFmt->mSampleRate;
         break;
 
     case AL_SAMPLE_OFFSET:
-        offset = static_cast<double>(readPos) + readPosFrac/double{MixerFracOne};
+        offset = readPos + readPosFrac/double{MixerFracOne};
         break;
 
     case AL_BYTE_OFFSET:
@@ -413,8 +410,7 @@ double GetSourceLength(const ALsource *source, ALenum name)
 
 
 struct VoicePos {
-    int pos;
-    uint frac;
+    ALuint pos, frac;
     ALbufferQueueItem *bufferitem;
 };
 
@@ -439,67 +435,45 @@ al::optional<VoicePos> GetSampleOffset(al::deque<ALbufferQueueItem> &BufferList,
         return al::nullopt;
 
     /* Get sample frame offset */
-    int64_t offset{};
-    uint frac{};
+    ALuint offset{0u}, frac{0u};
     double dbloff, dblfrac;
     switch(OffsetType)
     {
     case AL_SEC_OFFSET:
         dblfrac = std::modf(Offset*BufferFmt->mSampleRate, &dbloff);
-        if(dblfrac < 0.0)
-        {
-            /* If there's a negative fraction, reduce the offset to "floor" it,
-             * and convert the fraction to a percentage to the next value (e.g.
-             * -2.75 -> -3 + 0.25).
-             */
-            dbloff -= 1.0;
-            dblfrac += 1.0;
-        }
-        offset = static_cast<int64_t>(dbloff);
-        frac = static_cast<uint>(mind(dblfrac*MixerFracOne, MixerFracOne-1.0));
+        offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<ALuint>::max()));
+        frac = static_cast<ALuint>(mind(dblfrac*MixerFracOne, MixerFracOne-1.0));
         break;
 
     case AL_SAMPLE_OFFSET:
         dblfrac = std::modf(Offset, &dbloff);
-        if(dblfrac < 0.0)
-        {
-            dbloff -= 1.0;
-            dblfrac += 1.0;
-        }
-        offset = static_cast<int64_t>(dbloff);
-        frac = static_cast<uint>(mind(dblfrac*MixerFracOne, MixerFracOne-1.0));
+        offset = static_cast<ALuint>(mind(dbloff, std::numeric_limits<ALuint>::max()));
+        frac = static_cast<ALuint>(mind(dblfrac*MixerFracOne, MixerFracOne-1.0));
         break;
 
     case AL_BYTE_OFFSET:
         /* Determine the ByteOffset (and ensure it is block aligned) */
+        offset = static_cast<ALuint>(Offset);
         if(BufferFmt->OriginalType == UserFmtIMA4)
         {
             const ALuint align{(BufferFmt->OriginalAlign-1)/2 + 4};
-            Offset = std::floor(Offset / align / BufferFmt->channelsFromFmt());
-            Offset *= BufferFmt->OriginalAlign;
+            offset /= align * BufferFmt->channelsFromFmt();
+            offset *= BufferFmt->OriginalAlign;
         }
         else if(BufferFmt->OriginalType == UserFmtMSADPCM)
         {
             const ALuint align{(BufferFmt->OriginalAlign-2)/2 + 7};
-            Offset = std::floor(Offset / align / BufferFmt->channelsFromFmt());
-            Offset *= BufferFmt->OriginalAlign;
+            offset /= align * BufferFmt->channelsFromFmt();
+            offset *= BufferFmt->OriginalAlign;
         }
         else
-            Offset = std::floor(Offset / BufferFmt->channelsFromFmt());
-        offset = static_cast<int64_t>(Offset);
+            offset /= BufferFmt->frameSizeFromFmt();
         frac = 0;
         break;
     }
 
     /* Find the bufferlist item this offset belongs to. */
-    if(offset < 0)
-    {
-        if(offset < std::numeric_limits<int>::min())
-            return al::nullopt;
-        return VoicePos{static_cast<int>(offset), frac, &BufferList.front()};
-    }
-
-    int64_t totalBufferLen{0};
+    ALuint totalBufferLen{0u};
     for(auto &item : BufferList)
     {
         if(totalBufferLen > offset)
@@ -507,7 +481,7 @@ al::optional<VoicePos> GetSampleOffset(al::deque<ALbufferQueueItem> &BufferList,
         if(item.mSampleLen > offset-totalBufferLen)
         {
             /* Offset is in this buffer */
-            return VoicePos{static_cast<int>(offset-totalBufferLen), frac, &item};
+            return VoicePos{offset-totalBufferLen, frac, &item};
         }
         totalBufferLen += item.mSampleLen;
     }
@@ -645,7 +619,6 @@ bool SetVoiceOffset(Voice *oldvoice, const VoicePos &vpos, ALsource *source, ALC
     newvoice->mPosition.store(vpos.pos, std::memory_order_relaxed);
     newvoice->mPositionFrac.store(vpos.frac, std::memory_order_relaxed);
     newvoice->mCurrentBuffer.store(vpos.bufferitem, std::memory_order_relaxed);
-    newvoice->mStartTime = oldvoice->mStartTime;
     newvoice->mFlags.reset();
     if(vpos.pos > 0 || vpos.frac > 0 || vpos.bufferitem != &source->mQueue.front())
         newvoice->mFlags.set(VoiceIsFading);
@@ -1310,7 +1283,7 @@ void SetSourcefv(ALsource *Source, ALCcontext *Context, SourceProp prop,
     case AL_SAMPLE_OFFSET:
     case AL_BYTE_OFFSET:
         CHECKSIZE(values, 1);
-        CHECKVAL(std::isfinite(values[0]));
+        CHECKVAL(values[0] >= 0.0f);
 
         if(Voice *voice{GetSourceVoice(Source, Context)})
         {
@@ -1530,6 +1503,7 @@ void SetSourceiv(ALsource *Source, ALCcontext *Context, SourceProp prop,
     case AL_SAMPLE_OFFSET:
     case AL_BYTE_OFFSET:
         CHECKSIZE(values, 1);
+        CHECKVAL(values[0] >= 0);
 
         if(Voice *voice{GetSourceVoice(Source, Context)})
         {
@@ -2432,178 +2406,6 @@ bool GetSourcei64v(ALsource *Source, ALCcontext *Context, SourceProp prop, const
     return false;
 }
 
-
-void StartSources(ALCcontext *context, const al::span<ALsource*> srchandles,
-    nanoseconds start_time=nanoseconds::min())
-{
-    ALCdevice *device{context->mALDevice.get()};
-    /* If the device is disconnected, and voices stop on disconnect, go right
-     * to stopped.
-     */
-    if(unlikely(!device->Connected.load(std::memory_order_acquire)))
-    {
-        if(context->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
-        {
-            for(ALsource *source : srchandles)
-            {
-                /* TODO: Send state change event? */
-                source->Offset = 0.0;
-                source->OffsetType = AL_NONE;
-                source->state = AL_STOPPED;
-            }
-            return;
-        }
-    }
-
-    /* Count the number of reusable voices. */
-    auto voicelist = context->getVoicesSpan();
-    size_t free_voices{0};
-    for(const Voice *voice : voicelist)
-    {
-        free_voices += (voice->mPlayState.load(std::memory_order_acquire) == Voice::Stopped
-            && voice->mSourceID.load(std::memory_order_relaxed) == 0u
-            && voice->mPendingChange.load(std::memory_order_relaxed) == false);
-        if(free_voices == srchandles.size())
-            break;
-    }
-    if(unlikely(srchandles.size() != free_voices))
-    {
-        const size_t inc_amount{srchandles.size() - free_voices};
-        auto &allvoices = *context->mVoices.load(std::memory_order_relaxed);
-        if(inc_amount > allvoices.size() - voicelist.size())
-        {
-            /* Increase the number of voices to handle the request. */
-            context->allocVoices(inc_amount - (allvoices.size() - voicelist.size()));
-        }
-        context->mActiveVoiceCount.fetch_add(inc_amount, std::memory_order_release);
-        voicelist = context->getVoicesSpan();
-    }
-
-    auto voiceiter = voicelist.begin();
-    ALuint vidx{0};
-    VoiceChange *tail{}, *cur{};
-    for(ALsource *source : srchandles)
-    {
-        /* Check that there is a queue containing at least one valid, non zero
-         * length buffer.
-         */
-        auto BufferList = source->mQueue.begin();
-        for(;BufferList != source->mQueue.end();++BufferList)
-        {
-            if(BufferList->mSampleLen != 0 || BufferList->mCallback)
-                break;
-        }
-
-        /* If there's nothing to play, go right to stopped. */
-        if(unlikely(BufferList == source->mQueue.end()))
-        {
-            /* NOTE: A source without any playable buffers should not have a
-             * Voice since it shouldn't be in a playing or paused state. So
-             * there's no need to look up its voice and clear the source.
-             */
-            source->Offset = 0.0;
-            source->OffsetType = AL_NONE;
-            source->state = AL_STOPPED;
-            continue;
-        }
-
-        if(!cur)
-            cur = tail = GetVoiceChanger(context);
-        else
-        {
-            cur->mNext.store(GetVoiceChanger(context), std::memory_order_relaxed);
-            cur = cur->mNext.load(std::memory_order_relaxed);
-        }
-
-        Voice *voice{GetSourceVoice(source, context)};
-        switch(GetSourceState(source, voice))
-        {
-        case AL_PAUSED:
-            /* A source that's paused simply resumes. If there's no voice, it
-             * was lost from a disconnect, so just start over with a new one.
-             */
-            cur->mOldVoice = nullptr;
-            if(!voice) break;
-            cur->mVoice = voice;
-            cur->mSourceID = source->id;
-            cur->mState = VChangeState::Play;
-            source->state = AL_PLAYING;
-#ifdef ALSOFT_EAX
-            if(source->eax_is_initialized())
-                source->eax_commit();
-#endif // ALSOFT_EAX
-            continue;
-
-        case AL_PLAYING:
-            /* A source that's already playing is restarted from the beginning.
-             * Stop the current voice and start a new one so it properly cross-
-             * fades back to the beginning.
-             */
-            if(voice)
-                voice->mPendingChange.store(true, std::memory_order_relaxed);
-            cur->mOldVoice = voice;
-            voice = nullptr;
-            break;
-
-        default:
-            assert(voice == nullptr);
-            cur->mOldVoice = nullptr;
-#ifdef ALSOFT_EAX
-            if(source->eax_is_initialized())
-                source->eax_commit();
-#endif // ALSOFT_EAX
-            break;
-        }
-
-        /* Find the next unused voice to play this source with. */
-        for(;voiceiter != voicelist.end();++voiceiter,++vidx)
-        {
-            Voice *v{*voiceiter};
-            if(v->mPlayState.load(std::memory_order_acquire) == Voice::Stopped
-                && v->mSourceID.load(std::memory_order_relaxed) == 0u
-                && v->mPendingChange.load(std::memory_order_relaxed) == false)
-            {
-                voice = v;
-                break;
-            }
-        }
-        ASSUME(voice != nullptr);
-
-        voice->mPosition.store(0, std::memory_order_relaxed);
-        voice->mPositionFrac.store(0, std::memory_order_relaxed);
-        voice->mCurrentBuffer.store(&source->mQueue.front(), std::memory_order_relaxed);
-        voice->mStartTime = start_time;
-        voice->mFlags.reset();
-        /* A source that's not playing or paused has any offset applied when it
-         * starts playing.
-         */
-        if(const ALenum offsettype{source->OffsetType})
-        {
-            const double offset{source->Offset};
-            source->OffsetType = AL_NONE;
-            source->Offset = 0.0;
-            if(auto vpos = GetSampleOffset(source->mQueue, offsettype, offset))
-            {
-                voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
-                voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
-                voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_relaxed);
-                if(vpos->pos!=0 || vpos->frac!=0 || vpos->bufferitem!=&source->mQueue.front())
-                    voice->mFlags.set(VoiceIsFading);
-            }
-        }
-        InitVoice(voice, source, std::addressof(*BufferList), context, device);
-
-        source->VoiceIdx = vidx;
-        source->state = AL_PLAYING;
-
-        cur->mVoice = voice;
-        cur->mSourceID = source->id;
-        cur->mState = VChangeState::Play;
-    }
-    if(likely(tail))
-        SendVoiceChanges(context, tail);
-}
-
 } // namespace
 
 AL_API void AL_APIENTRY alGenSources(ALsizei n, ALuint *sources)
@@ -3203,35 +3005,7 @@ END_API_FUNC
 
 AL_API void AL_APIENTRY alSourcePlay(ALuint source)
 START_API_FUNC
-{
-    ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
-
-    std::lock_guard<std::mutex> _{context->mSourceLock};
-    ALsource *srchandle{LookupSource(context.get(), source)};
-    if(!srchandle)
-        SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", source);
-
-    StartSources(context.get(), {&srchandle, 1});
-}
-END_API_FUNC
-
-void AL_APIENTRY alSourcePlayAtTimeSOFT(ALuint source, ALint64SOFT start_time)
-START_API_FUNC
-{
-    ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
-
-    if(unlikely(start_time < 0))
-        SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid time point %" PRId64, start_time);
-
-    std::lock_guard<std::mutex> _{context->mSourceLock};
-    ALsource *srchandle{LookupSource(context.get(), source)};
-    if(!srchandle)
-        SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", source);
-
-    StartSources(context.get(), {&srchandle, 1}, nanoseconds{start_time});
-}
+{ alSourcePlayv(1, &source); }
 END_API_FUNC
 
 AL_API void AL_APIENTRY alSourcePlayv(ALsizei n, const ALuint *sources)
@@ -3264,44 +3038,171 @@ START_API_FUNC
         ++sources;
     }
 
-    StartSources(context.get(), srchandles);
-}
-END_API_FUNC
-
-void AL_APIENTRY alSourcePlayAtTimevSOFT(ALsizei n, const ALuint *sources, ALint64SOFT start_time)
-START_API_FUNC
-{
-    ContextRef context{GetContextRef()};
-    if UNLIKELY(!context) return;
-
-    if UNLIKELY(n < 0)
-        context->setError(AL_INVALID_VALUE, "Playing %d sources", n);
-    if UNLIKELY(n <= 0) return;
-
-    if(unlikely(start_time < 0))
-        SETERR_RETURN(context, AL_INVALID_VALUE,, "Invalid time point %" PRId64, start_time);
-
-    al::vector<ALsource*> extra_sources;
-    std::array<ALsource*,8> source_storage;
-    al::span<ALsource*> srchandles;
-    if LIKELY(static_cast<ALuint>(n) <= source_storage.size())
-        srchandles = {source_storage.data(), static_cast<ALuint>(n)};
-    else
+    ALCdevice *device{context->mALDevice.get()};
+    /* If the device is disconnected, and voices stop on disconnect, go right
+     * to stopped.
+     */
+    if UNLIKELY(!device->Connected.load(std::memory_order_acquire))
     {
-        extra_sources.resize(static_cast<ALuint>(n));
-        srchandles = {extra_sources.data(), extra_sources.size()};
+        if(context->mStopVoicesOnDisconnect.load(std::memory_order_acquire))
+        {
+            for(ALsource *source : srchandles)
+            {
+                /* TODO: Send state change event? */
+                source->Offset = 0.0;
+                source->OffsetType = AL_NONE;
+                source->state = AL_STOPPED;
+            }
+            return;
+        }
     }
 
-    std::lock_guard<std::mutex> _{context->mSourceLock};
-    for(auto &srchdl : srchandles)
+    /* Count the number of reusable voices. */
+    auto voicelist = context->getVoicesSpan();
+    size_t free_voices{0};
+    for(const Voice *voice : voicelist)
     {
-        srchdl = LookupSource(context.get(), *sources);
-        if(!srchdl)
-            SETERR_RETURN(context, AL_INVALID_NAME,, "Invalid source ID %u", *sources);
-        ++sources;
+        free_voices += (voice->mPlayState.load(std::memory_order_acquire) == Voice::Stopped
+            && voice->mSourceID.load(std::memory_order_relaxed) == 0u
+            && voice->mPendingChange.load(std::memory_order_relaxed) == false);
+        if(free_voices == srchandles.size())
+            break;
+    }
+    if UNLIKELY(srchandles.size() != free_voices)
+    {
+        const size_t inc_amount{srchandles.size() - free_voices};
+        auto &allvoices = *context->mVoices.load(std::memory_order_relaxed);
+        if(inc_amount > allvoices.size() - voicelist.size())
+        {
+            /* Increase the number of voices to handle the request. */
+            context->allocVoices(inc_amount - (allvoices.size() - voicelist.size()));
+        }
+        context->mActiveVoiceCount.fetch_add(inc_amount, std::memory_order_release);
+        voicelist = context->getVoicesSpan();
     }
 
-    StartSources(context.get(), srchandles, nanoseconds{start_time});
+    auto voiceiter = voicelist.begin();
+    ALuint vidx{0};
+    VoiceChange *tail{}, *cur{};
+    for(ALsource *source : srchandles)
+    {
+        /* Check that there is a queue containing at least one valid, non zero
+         * length buffer.
+         */
+        auto BufferList = source->mQueue.begin();
+        for(;BufferList != source->mQueue.end();++BufferList)
+        {
+            if(BufferList->mSampleLen != 0 || BufferList->mCallback)
+                break;
+        }
+
+        /* If there's nothing to play, go right to stopped. */
+        if UNLIKELY(BufferList == source->mQueue.end())
+        {
+            /* NOTE: A source without any playable buffers should not have a
+             * Voice since it shouldn't be in a playing or paused state. So
+             * there's no need to look up its voice and clear the source.
+             */
+            source->Offset = 0.0;
+            source->OffsetType = AL_NONE;
+            source->state = AL_STOPPED;
+            continue;
+        }
+
+        if(!cur)
+            cur = tail = GetVoiceChanger(context.get());
+        else
+        {
+            cur->mNext.store(GetVoiceChanger(context.get()), std::memory_order_relaxed);
+            cur = cur->mNext.load(std::memory_order_relaxed);
+        }
+
+        Voice *voice{GetSourceVoice(source, context.get())};
+        switch(GetSourceState(source, voice))
+        {
+        case AL_PAUSED:
+            /* A source that's paused simply resumes. If there's no voice, it
+             * was lost from a disconnect, so just start over with a new one.
+             */
+            cur->mOldVoice = nullptr;
+            if(!voice) break;
+            cur->mVoice = voice;
+            cur->mSourceID = source->id;
+            cur->mState = VChangeState::Play;
+            source->state = AL_PLAYING;
+#ifdef ALSOFT_EAX
+            if(source->eax_is_initialized())
+                source->eax_commit();
+#endif // ALSOFT_EAX
+            continue;
+
+        case AL_PLAYING:
+            /* A source that's already playing is restarted from the beginning.
+             * Stop the current voice and start a new one so it properly cross-
+             * fades back to the beginning.
+             */
+            if(voice)
+                voice->mPendingChange.store(true, std::memory_order_relaxed);
+            cur->mOldVoice = voice;
+            voice = nullptr;
+            break;
+
+        default:
+            assert(voice == nullptr);
+            cur->mOldVoice = nullptr;
+#ifdef ALSOFT_EAX
+            if(source->eax_is_initialized())
+                source->eax_commit();
+#endif // ALSOFT_EAX
+            break;
+        }
+
+        /* Find the next unused voice to play this source with. */
+        for(;voiceiter != voicelist.end();++voiceiter,++vidx)
+        {
+            Voice *v{*voiceiter};
+            if(v->mPlayState.load(std::memory_order_acquire) == Voice::Stopped
+                && v->mSourceID.load(std::memory_order_relaxed) == 0u
+                && v->mPendingChange.load(std::memory_order_relaxed) == false)
+            {
+                voice = v;
+                break;
+            }
+        }
+        ASSUME(voice != nullptr);
+
+        voice->mPosition.store(0u, std::memory_order_relaxed);
+        voice->mPositionFrac.store(0, std::memory_order_relaxed);
+        voice->mCurrentBuffer.store(&source->mQueue.front(), std::memory_order_relaxed);
+        voice->mFlags.reset();
+        /* A source that's not playing or paused has any offset applied when it
+         * starts playing.
+         */
+        if(const ALenum offsettype{source->OffsetType})
+        {
+            const double offset{source->Offset};
+            source->OffsetType = AL_NONE;
+            source->Offset = 0.0;
+            if(auto vpos = GetSampleOffset(source->mQueue, offsettype, offset))
+            {
+                voice->mPosition.store(vpos->pos, std::memory_order_relaxed);
+                voice->mPositionFrac.store(vpos->frac, std::memory_order_relaxed);
+                voice->mCurrentBuffer.store(vpos->bufferitem, std::memory_order_relaxed);
+                if(vpos->pos!=0 || vpos->frac!=0 || vpos->bufferitem!=&source->mQueue.front())
+                    voice->mFlags.set(VoiceIsFading);
+            }
+        }
+        InitVoice(voice, source, std::addressof(*BufferList), context.get(), device);
+
+        source->VoiceIdx = vidx;
+        source->state = AL_PLAYING;
+
+        cur->mVoice = voice;
+        cur->mSourceID = source->id;
+        cur->mState = VChangeState::Play;
+    }
+    if LIKELY(tail)
+        SendVoiceChanges(context.get(), tail);
 }
 END_API_FUNC
 
@@ -4112,44 +4013,26 @@ EaxAlLowPassParam ALsource::eax_create_direct_filter_param() const noexcept
             eax_.source.flOcclusionDirectRatio,
             eax_.source.flOcclusionLFRatio);
 
-    const auto has_source_occlusion = (eax_.source.lOcclusion != 0);
-
     auto gain_hf_mb =
         static_cast<float>(eax_.source.lDirectHF) +
-        static_cast<float>(eax_.source.lObstruction);
+        static_cast<float>(eax_.source.lObstruction) +
+        (static_cast<float>(eax_.source.lOcclusion) * eax_.source.flOcclusionDirectRatio);
 
     for (auto i = std::size_t{}; i < EAX_MAX_FXSLOTS; ++i)
     {
-        if(!eax_active_fx_slots_[i])
+        if (!eax_active_fx_slots_[i])
+        {
             continue;
-
-        if(has_source_occlusion) {
-            const auto& fx_slot = eax_al_context_->eax_get_fx_slot(i);
-            const auto& fx_slot_eax = fx_slot.eax_get_eax_fx_slot();
-            const auto is_environmental_fx = ((fx_slot_eax.ulFlags & EAXFXSLOTFLAGS_ENVIRONMENT) != 0);
-            const auto is_primary = (eax_primary_fx_slot_id_.value_or(-1) == fx_slot.eax_get_index());
-            const auto is_listener_environment = (is_environmental_fx && is_primary);
-
-            if(is_listener_environment) {
-                gain_mb += eax_calculate_dst_occlusion_mb(
-                    eax_.source.lOcclusion,
-                    eax_.source.flOcclusionDirectRatio,
-                    eax_.source.flOcclusionLFRatio);
-
-                gain_hf_mb += static_cast<float>(eax_.source.lOcclusion) * eax_.source.flOcclusionDirectRatio;
-            }
         }
 
         const auto& send = eax_.sends[i];
 
-        if(send.lOcclusion != 0) {
-            gain_mb += eax_calculate_dst_occlusion_mb(
-                send.lOcclusion,
-                send.flOcclusionDirectRatio,
-                send.flOcclusionLFRatio);
+        gain_mb += eax_calculate_dst_occlusion_mb(
+            send.lOcclusion,
+            send.flOcclusionDirectRatio,
+            send.flOcclusionLFRatio);
 
-            gain_hf_mb += static_cast<float>(send.lOcclusion) * send.flOcclusionDirectRatio;
-        }
+        gain_hf_mb += static_cast<float>(send.lOcclusion) * send.flOcclusionDirectRatio;
     }
 
     const auto al_low_pass_param = EaxAlLowPassParam{
@@ -4164,38 +4047,25 @@ EaxAlLowPassParam ALsource::eax_create_room_filter_param(
     const EAXSOURCEALLSENDPROPERTIES& send) const noexcept
 {
     const auto& fx_slot_eax = fx_slot.eax_get_eax_fx_slot();
-    const auto is_environmental_fx = ((fx_slot_eax.ulFlags & EAXFXSLOTFLAGS_ENVIRONMENT) != 0);
-    const auto is_primary = (eax_primary_fx_slot_id_.value_or(-1) == fx_slot.eax_get_index());
-    const auto is_listener_environment = (is_environmental_fx && is_primary);
 
     const auto gain_mb =
-        (static_cast<float>(fx_slot_eax.lOcclusion) * fx_slot_eax.flOcclusionLFRatio) +
-        static_cast<float>((is_environmental_fx ? eax_.source.lRoom : 0) + send.lSend) +
-        (is_listener_environment ?
-            eax_calculate_dst_occlusion_mb(
-                eax_.source.lOcclusion,
-                eax_.source.flOcclusionRoomRatio,
-                eax_.source.flOcclusionLFRatio) :
-            0.0f) +
+        static_cast<float>(eax_.source.lRoom + send.lSend) +
+        eax_calculate_dst_occlusion_mb(
+            eax_.source.lOcclusion,
+            eax_.source.flOcclusionRoomRatio,
+            eax_.source.flOcclusionLFRatio) +
         eax_calculate_dst_occlusion_mb(
             send.lOcclusion,
             send.flOcclusionRoomRatio,
             send.flOcclusionLFRatio) +
-        (is_listener_environment ?
-            (static_cast<float>(eax_.source.lExclusion) * eax_.source.flExclusionLFRatio) :
-            0.0f) +
+        (static_cast<float>(eax_.source.lExclusion) * eax_.source.flExclusionLFRatio) +
         (static_cast<float>(send.lExclusion) * send.flExclusionLFRatio);
 
     const auto gain_hf_mb =
-        static_cast<float>(fx_slot_eax.lOcclusion) +
-        static_cast<float>((is_environmental_fx ? eax_.source.lRoomHF : 0) + send.lSendHF) +
-        (is_listener_environment ?
-            ((static_cast<float>(eax_.source.lOcclusion) * eax_.source.flOcclusionRoomRatio)) :
-            0.0f) +
+        static_cast<float>(eax_.source.lRoomHF + send.lSendHF) +
+        (static_cast<float>(fx_slot_eax.lOcclusion + eax_.source.lOcclusion) * eax_.source.flOcclusionRoomRatio) +
         (static_cast<float>(send.lOcclusion) * send.flOcclusionRoomRatio) +
-        (is_listener_environment ?
-            static_cast<float>(eax_.source.lExclusion + send.lExclusion) :
-            0.0f);
+        static_cast<float>(eax_.source.lExclusion + send.lExclusion);
 
     const auto al_low_pass_param = EaxAlLowPassParam{
         level_mb_to_gain(gain_mb),
@@ -4616,15 +4486,6 @@ void ALsource::eax_set(const EaxCall& call)
     eax_version_ = eax_version;
 }
 
-void ALsource::eax_get_active_fx_slot_id(const EaxCall& call, const GUID* ids, size_t max_count)
-{
-    assert(ids != nullptr);
-    assert(max_count == EAX40_MAX_ACTIVE_FXSLOTS || max_count == EAX50_MAX_ACTIVE_FXSLOTS);
-    const auto dst_ids = call.get_values<GUID>(max_count);
-    const auto count = dst_ids.size();
-    std::uninitialized_copy_n(ids, count, dst_ids.begin());
-}
-
 void ALsource::eax1_get(const EaxCall& call, const Eax1Props& props)
 {
     switch (call.get_property_id()) {
@@ -4870,7 +4731,7 @@ void ALsource::eax4_get(const EaxCall& call, const Eax4Props& props)
             break;
 
         case EAXSOURCE_ACTIVEFXSLOTID:
-            eax_get_active_fx_slot_id(call, props.active_fx_slots.guidActiveFXSlots, EAX40_MAX_ACTIVE_FXSLOTS);
+            call.set_value<Exception>(props.active_fx_slots);
             break;
 
         default:
@@ -4942,7 +4803,7 @@ void ALsource::eax5_get(const EaxCall& call, const Eax5Props& props)
             break;
 
         case EAXSOURCE_ACTIVEFXSLOTID:
-            eax_get_active_fx_slot_id(call, props.active_fx_slots.guidActiveFXSlots, EAX50_MAX_ACTIVE_FXSLOTS);
+            call.set_value<Exception>(props.active_fx_slots);
             break;
 
         case EAXSOURCE_MACROFXFACTOR:
@@ -4997,36 +4858,28 @@ void ALsource::eax_set_al_source_send(ALeffectslot *slot, size_t sendidx, const 
 
 void ALsource::eax_commit_active_fx_slots()
 {
-    // Clear all slots to an inactive state.
+    // Mark all slots as non-active.
     eax_active_fx_slots_.fill(false);
 
-    // Mark the set slots as active.
-    for(const auto& slot_id : eax_.active_fx_slots.guidActiveFXSlots)
-    {
-        if(slot_id == EAX_NULL_GUID)
-        {
-        }
-        else if(slot_id == EAX_PrimaryFXSlotID)
-        {
-            // Mark primary FX slot as active.
-            if(eax_primary_fx_slot_id_.has_value())
-                eax_active_fx_slots_[*eax_primary_fx_slot_id_] = true;
-        }
-        else if(slot_id == EAXPROPERTYID_EAX50_FXSlot0)
+    // Mark primary FX slot as active.
+    if (eax_primary_fx_slot_id_.has_value())
+        eax_active_fx_slots_[*eax_primary_fx_slot_id_] = true;
+
+    // Mark the other FX slots as active.
+    for (const auto& slot_id : eax_.active_fx_slots.guidActiveFXSlots) {
+        if (slot_id == EAXPROPERTYID_EAX50_FXSlot0)
             eax_active_fx_slots_[0] = true;
-        else if(slot_id == EAXPROPERTYID_EAX50_FXSlot1)
+        else if (slot_id == EAXPROPERTYID_EAX50_FXSlot1)
             eax_active_fx_slots_[1] = true;
-        else if(slot_id == EAXPROPERTYID_EAX50_FXSlot2)
+        else if (slot_id == EAXPROPERTYID_EAX50_FXSlot2)
             eax_active_fx_slots_[2] = true;
-        else if(slot_id == EAXPROPERTYID_EAX50_FXSlot3)
+        else if (slot_id == EAXPROPERTYID_EAX50_FXSlot3)
             eax_active_fx_slots_[3] = true;
     }
 
-    // Deactivate EFX auxiliary effect slots for inactive slots. Active slots
-    // will be updated with the room filters.
-    for(auto i = size_t{}; i < EAX_MAX_FXSLOTS; ++i)
-    {
-        if(!eax_active_fx_slots_[i])
+    // Deactivate EFX auxiliary effect slots.
+    for (auto i = size_t{}; i < EAX_MAX_FXSLOTS; ++i) {
+        if (!eax_active_fx_slots_[i])
             eax_set_al_source_send(nullptr, i, EaxAlLowPassParam{1.0f, 1.0f});
     }
 }

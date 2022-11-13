@@ -623,6 +623,7 @@ int AlsaPlayback::mixerNoMMapProc()
 
 void AlsaPlayback::open(const char *name)
 {
+    al::optional<std::string> driveropt;
     const char *driver{"default"};
     if(name)
     {
@@ -639,7 +640,7 @@ void AlsaPlayback::open(const char *name)
     else
     {
         name = alsaDevice;
-        if(auto driveropt = ConfigValueStr(nullptr, "alsa", "device"))
+        if(bool{driveropt = ConfigValueStr(nullptr, "alsa", "device")})
             driver = driveropt->c_str();
     }
     TRACE("Opening device \"%s\"\n", driver);
@@ -895,6 +896,7 @@ AlsaCapture::~AlsaCapture()
 
 void AlsaCapture::open(const char *name)
 {
+    al::optional<std::string> driveropt;
     const char *driver{"default"};
     if(name)
     {
@@ -911,7 +913,7 @@ void AlsaCapture::open(const char *name)
     else
     {
         name = alsaDevice;
-        if(auto driveropt = ConfigValueStr(nullptr, "alsa", "capture"))
+        if(bool{driveropt = ConfigValueStr(nullptr, "alsa", "capture")})
             driver = driveropt->c_str();
     }
 

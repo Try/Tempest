@@ -32,7 +32,6 @@
 #include <memory>
 #include <mutex>
 #include <stdint.h>
-#include <thread>
 #include <type_traits>
 #include <utility>
 
@@ -126,7 +125,6 @@ namespace {
 #endif
 
 using std::chrono::seconds;
-using std::chrono::milliseconds;
 using std::chrono::nanoseconds;
 using uint = unsigned int;
 
@@ -646,10 +644,6 @@ const spa_audio_channel MonoMap[]{
 }, X71Map[]{
     SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR, SPA_AUDIO_CHANNEL_FC, SPA_AUDIO_CHANNEL_LFE,
     SPA_AUDIO_CHANNEL_RL, SPA_AUDIO_CHANNEL_RR, SPA_AUDIO_CHANNEL_SL, SPA_AUDIO_CHANNEL_SR
-}, X714Map[]{
-    SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR, SPA_AUDIO_CHANNEL_FC, SPA_AUDIO_CHANNEL_LFE,
-    SPA_AUDIO_CHANNEL_RL, SPA_AUDIO_CHANNEL_RR, SPA_AUDIO_CHANNEL_SL, SPA_AUDIO_CHANNEL_SR,
-    SPA_AUDIO_CHANNEL_TFL, SPA_AUDIO_CHANNEL_TFR, SPA_AUDIO_CHANNEL_TRL, SPA_AUDIO_CHANNEL_TRR
 };
 
 /**
@@ -753,9 +747,7 @@ void DeviceNode::parsePositions(const spa_pod *value) noexcept
 
     mIs51Rear = false;
 
-    if(MatchChannelMap(chanmap, X714Map))
-        mChannels = DevFmtX714;
-    else if(MatchChannelMap(chanmap, X71Map))
+    if(MatchChannelMap(chanmap, X71Map))
         mChannels = DevFmtX71;
     else if(MatchChannelMap(chanmap, X61Map))
         mChannels = DevFmtX61;
@@ -797,7 +789,6 @@ constexpr char MonitorPrefix[]{"Monitor of "};
 constexpr auto MonitorPrefixLen = al::size(MonitorPrefix) - 1;
 constexpr char AudioSinkClass[]{"Audio/Sink"};
 constexpr char AudioSourceClass[]{"Audio/Source"};
-constexpr char AudioSourceVirtualClass[]{"Audio/Source/Virtual"};
 constexpr char AudioDuplexClass[]{"Audio/Duplex"};
 constexpr char StreamClass[]{"Stream/"};
 
@@ -862,10 +853,7 @@ void NodeProxy::infoCallback(const pw_node_info *info)
         NodeType ntype{};
         if(al::strcasecmp(media_class, AudioSinkClass) == 0)
             ntype = NodeType::Sink;
-        else if(
-            al::strcasecmp(media_class, AudioSourceClass) == 0
-            || al::strcasecmp(media_class, AudioSourceVirtualClass) == 0
-        )
+        else if(al::strcasecmp(media_class, AudioSourceClass) == 0)
             ntype = NodeType::Source;
         else if(al::strcasecmp(media_class, AudioDuplexClass) == 0)
             ntype = NodeType::Duplex;
@@ -1106,7 +1094,6 @@ void EventManager::addCallback(uint32_t id, uint32_t, const char *type, uint32_t
         /* Specifically, audio sinks and sources (and duplexes). */
         const bool isGood{al::strcasecmp(media_class, AudioSinkClass) == 0
             || al::strcasecmp(media_class, AudioSourceClass) == 0
-            || al::strcasecmp(media_class, AudioSourceVirtualClass) == 0
             || al::strcasecmp(media_class, AudioDuplexClass) == 0};
         if(!isGood)
         {
@@ -1240,7 +1227,6 @@ spa_audio_info_raw make_spa_info(DeviceBase *device, bool is51rear, use_f32p_e u
         break;
     case DevFmtX61: map = X61Map; break;
     case DevFmtX71: map = X71Map; break;
-    case DevFmtX714: map = X714Map; break;
     case DevFmtX3D71: map = X71Map; break;
     case DevFmtAmbi3D:
         info.flags |= SPA_AUDIO_FLAG_UNPOSITIONED;
@@ -1546,7 +1532,7 @@ bool PipeWirePlayback::reset()
     static constexpr pw_stream_events streamEvents{CreateEvents()};
     pw_stream_add_listener(mStream.get(), &mStreamListener, &streamEvents, this);
 
-    static constexpr pw_stream_flags Flags{PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_INACTIVE
+    constexpr pw_stream_flags Flags{PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_INACTIVE
         | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS};
     if(int res{pw_stream_connect(mStream.get(), PW_DIRECTION_OUTPUT, mTargetId, Flags, &params, 1)})
         throw al::backend_exception{al::backend_error::DeviceError,
@@ -1597,49 +1583,10 @@ void PipeWirePlayback::start()
         return state == PW_STREAM_STATE_STREAMING;
     });
 
-    /* HACK: Try to work out the update size and total buffering size. There's
-     * no simple query for this, so we have to work it out from the stream time
-     * info. The stream time info may also not be available right away, so we
-     * have to wait until it is (up to about 2 seconds).
-     */
-    int wait_count{100};
-    pw_stream_state state{PW_STREAM_STATE_STREAMING};
-    while(state == PW_STREAM_STATE_STREAMING && mRateMatch)
+    if(mRateMatch && mRateMatch->size)
     {
-        pw_time ptime{};
-        if(int res{pw_stream_get_time_n(mStream.get(), &ptime, sizeof(ptime))})
-        {
-            ERR("Failed to get PipeWire stream time (res: %d)\n", res);
-            break;
-        }
-
-        /* The time info will be valid when there's a valid rate. Assume
-         * ptime.avail_buffers+ptime.queued_buffers is the target buffer queue
-         * size.
-         */
-        if(ptime.rate.denom > 0 && (ptime.avail_buffers || ptime.queued_buffers))
-        {
-            /* The rate match size is the update size for each buffer. */
-            uint updatesize{mRateMatch ? mRateMatch->size : 0u};
-            if(!updatesize) updatesize = mDevice->UpdateSize;
-            const uint totalbuffers{ptime.avail_buffers + ptime.queued_buffers};
-
-            /* Ensure the delay is in sample frames. */
-            const uint64_t delay{static_cast<uint64_t>(ptime.delay) * mDevice->Frequency *
-                ptime.rate.num / ptime.rate.denom};
-
-            mDevice->UpdateSize = updatesize;
-            mDevice->BufferSize = static_cast<uint>(ptime.buffered + delay +
-                totalbuffers*updatesize);
-            break;
-        }
-        if(!--wait_count)
-            break;
-
-        plock.unlock();
-        std::this_thread::sleep_for(milliseconds{20});
-        plock.lock();
-        state = pw_stream_get_state(mStream.get(), nullptr);
+        mDevice->UpdateSize = mRateMatch->size;
+        mDevice->BufferSize = mDevice->UpdateSize * 2;
     }
 }
 

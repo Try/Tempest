@@ -75,7 +75,7 @@
 
 ## frequency:
 #  Sets the output frequency. If left unspecified it will try to detect a
-#  default from the system, otherwise it will default to 48000.
+#  default from the system, otherwise it will default to 44100.
 #frequency =
 
 ## period_size:
@@ -139,7 +139,7 @@
 #  Specifies the impulse response size, in samples, for the HRTF filter. Larger
 #  values increase the filter quality, while smaller values reduce processing
 #  cost. A value of 0 (default) uses the full filter size in the dataset, and
-#  the default dataset has a filter size of 64 samples at 48khz.
+#  the default dataset has a filter size of 32 samples at 44.1khz.
 #hrtf-size = 0
 
 ## default-hrtf:
@@ -265,9 +265,9 @@
 ## default-reverb: (global)
 #  A reverb preset that applies by default to all sources on send 0
 #  (applications that set their own slots on send 0 will override this).
-#  Available presets include: None, Generic, PaddedCell, Room, Bathroom,
+#  Available presets are: None, Generic, PaddedCell, Room, Bathroom,
 #  Livingroom, Stoneroom, Auditorium, ConcertHall, Cave, Arena, Hangar,
-#  CarpetedHallway, Hallway, StoneCorridor, Alley, Forest, City, Mountains,
+#  CarpetedHallway, Hallway, StoneCorridor, Alley, Forest, City, Moutains,
 #  Quarry, Plain, ParkingLot, SewerPipe, Underwater, Drugged, Dizzy, Psychotic.
 #default-reverb =
 
@@ -305,22 +305,22 @@
 ## nfc:
 #  Enables near-field control filters. This simulates and compensates for low-
 #  frequency effects caused by the curvature of nearby sound-waves, which
-#  creates a more realistic perception of sound distance with surround sound
-#  output. Note that the effect may be stronger or weaker than intended if the
-#  application doesn't use or specify an appropriate unit scale, or if
-#  incorrect speaker distances are set. For HRTF output, hrtf-mode must be set
-#  to one of the ambi* values for this to function.
+#  creates a more realistic perception of sound distance. Note that the effect
+#  may be stronger or weaker than intended if the application doesn't use or
+#  specify an appropriate unit scale, or if incorrect speaker distances are set
+#  in the decoder configuration file.
 #nfc = false
 
-## speaker-dist:
-#  Specifies the speaker distance in meters, used by the near-field control
-#  filters with surround sound output. For ambisonic output modes, this value
-#  is the basis for the NFC-HOA Reference Delay parameter (calculated as
-#  delay_seconds = speaker_dist/343.3). This value is not used when a decoder
-#  configuration is set for the output mode (since they specify the per-speaker
-#  distances, overriding this setting), or when the NFC filters are off. Valid
-#  values range from 0.1 to 10.
-#speaker-dist = 1
+## nfc-ref-delay
+#  Specifies the reference delay value for ambisonic output when NFC filters
+#  are enabled. If channels is set to one of the ambi* formats, this option
+#  enables NFC-HOA output with the specified Reference Delay parameter. The
+#  specified value can then be shared with an appropriate NFC-HOA decoder to
+#  reproduce correct near-field effects. Keep in mind that despite being
+#  designed for higher-order ambisonics, this also applies to first-order
+#  output. When left unset, normal output is created with no near-field
+#  simulation. Requires the nfc option to also be enabled.
+#nfc-ref-delay =
 
 ## quad:
 #  Decoder configuration file for Quadraphonic channel output. See
@@ -347,27 +347,6 @@
 #  docs/ambdec.txt for a description of the file format. See also
 #  docs/3D7.1.txt for information about 3D7.1.
 #surround3d71 =
-
-##
-## UHJ and Super Stereo stuff
-##
-[uhj]
-
-## decode-filter: (global)
-#  Specifies the all-pass filter type for UHJ decoding and Super Stereo
-#  processing. Valid values are:
-#  iir - utilizes dual IIR filters, providing a wide pass-band with low CPU
-#        use, but causes additional phase shifts on the signal.
-#  fir256 - utilizes a 256-point FIR filter, providing more stable results but
-#           exhibiting attenuation in the lower and higher frequency bands.
-#  fir512 - utilizes a 512-point FIR filter, providing a wider pass-band than
-#           fir256, at the cost of more CPU use.
-#decode-filter = iir
-
-## encode-filter: (global)
-#  Specifies the all-pass filter type for UHJ output encoding. Valid values are
-#  the same as for decode-filter.
-#encode-filter = iir
 
 ##
 ## Reverb effect stuff (includes EAX reverb)
@@ -622,14 +601,6 @@
 ## files, *NOT* system- or user-level!)
 ##
 [game_compat]
-
-## nfc-scale: (global)
-#  A meters-per-unit distance scale applied to NFC filters. If a game doesn't
-#  use real-world meters for in-game units, the filters may create a too-near
-#  or too-distant effect. For instance, if the game uses 1 foot per unit, a
-#  value of 0.3048 will correctly adjust the filters. Or if the game uses 1
-#  kilometer per unit, a value of 1000 will correctly adjust the filters.
-#nfc-scale = 1
 
 ## reverse-x: (global)
 #  Reverses the local X (left-right) position of 3D sound sources.

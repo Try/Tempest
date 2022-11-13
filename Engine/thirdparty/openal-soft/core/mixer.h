@@ -52,18 +52,6 @@ inline std::array<float,MaxAmbiChannels> CalcDirectionCoeffs(const float (&dir)[
 }
 
 /**
- * CalcDirectionCoeffs
- *
- * Calculates ambisonic coefficients based on an OpenAL direction vector. The
- * vector must be normalized (unit length).
- */
-constexpr std::array<float,MaxAmbiChannels> CalcDirectionCoeffs(const float (&dir)[3])
-{
-    /* Convert from OpenAL coords to Ambisonics. */
-    return CalcAmbiCoeffs(-dir[0], dir[1], -dir[2]);
-}
-
-/**
  * CalcAngleCoeffs
  *
  * Calculates ambisonic coefficients based on azimuth and elevation. The
@@ -90,7 +78,7 @@ inline std::array<float,MaxAmbiChannels> CalcAngleCoeffs(const float azimuth,
  * scale and orient the sound samples.
  */
 void ComputePanGains(const MixParams *mix, const float*RESTRICT coeffs, const float ingain,
-    const al::span<float,MaxAmbiChannels> gains);
+    const al::span<float,MAX_OUTPUT_CHANNELS> gains);
 
 
 /** Helper to set an identity/pass-through panning for ambisonic mixing (3D input). */

@@ -133,7 +133,7 @@ public:
 class EaxDistortionEffect final : public EaxEffect4<EaxDistortionEffectException, EAXDISTORTIONPROPERTIES>
 {
 public:
-    EaxDistortionEffect(int eax_version);
+    EaxDistortionEffect(const EaxCall& call);
 
 private:
     struct EdgeValidator {
@@ -216,8 +216,8 @@ private:
     bool commit_props(const Props& props) override;
 }; // EaxDistortionEffect
 
-EaxDistortionEffect::EaxDistortionEffect(int eax_version)
-    : EaxEffect4{AL_EFFECT_DISTORTION, eax_version}
+EaxDistortionEffect::EaxDistortionEffect(const EaxCall& call)
+    : EaxEffect4{AL_EFFECT_DISTORTION, call}
 {}
 
 void EaxDistortionEffect::set_defaults(Props& props)
@@ -347,9 +347,9 @@ bool EaxDistortionEffect::commit_props(const Props& props)
 
 } // namespace
 
-EaxEffectUPtr eax_create_eax_distortion_effect(int eax_version)
+EaxEffectUPtr eax_create_eax_distortion_effect(const EaxCall& call)
 {
-    return eax_create_eax4_effect<EaxDistortionEffect>(eax_version);
+    return eax_create_eax4_effect<EaxDistortionEffect>(call);
 }
 
 #endif // ALSOFT_EAX

@@ -42,11 +42,7 @@ namespace {
 struct HrtfEntry {
     std::string mDispName;
     std::string mFilename;
-
-    /* GCC warns when it tries to inline this. */
-    ~HrtfEntry();
 };
-HrtfEntry::~HrtfEntry() = default;
 
 struct LoadedHrtf {
     std::string mFilename;
@@ -262,7 +258,7 @@ void GetHrtfCoeffs(const HrtfStore *Hrtf, float elevation, float azimuth, float 
 std::unique_ptr<DirectHrtfState> DirectHrtfState::Create(size_t num_chans)
 { return std::unique_ptr<DirectHrtfState>{new(FamCount(num_chans)) DirectHrtfState{num_chans}}; }
 
-void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize, const bool perHrirMin,
+void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize,
     const al::span<const AngularPoint> AmbiPoints, const float (*AmbiMatrix)[MaxAmbiChannels],
     const float XOverFreq, const al::span<const float,MaxAmbiOrder+1> AmbiOrderHFGain)
 {
@@ -273,11 +269,10 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize, const bool
     };
 
     const double xover_norm{double{XOverFreq} / Hrtf->sampleRate};
-    mChannels[0].mSplitter.init(static_cast<float>(xover_norm));
     for(size_t i{0};i < mChannels.size();++i)
     {
         const size_t order{AmbiIndex::OrderFromChannel()[i]};
-        mChannels[i].mSplitter = mChannels[0].mSplitter;
+        mChannels[i].mSplitter.init(static_cast<float>(xover_norm));
         mChannels[i].mHfScale = AmbiOrderHFGain[order];
     }
 
@@ -301,8 +296,15 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize, const bool
             ir1offset + ((az1.idx+1) % Hrtf->elev[elev1_idx].azCount)
         };
 
+        const std::array<double,4> blend{{
+            (1.0-elev0.blend) * (1.0-az0.blend),
+            (1.0-elev0.blend) * (    az0.blend),
+            (    elev0.blend) * (1.0-az1.blend),
+            (    elev0.blend) * (    az1.blend)
+        }};
+
         /* The largest blend factor serves as the closest HRIR. */
-        const size_t irOffset{idx[(elev0.blend >= 0.5f)*2 + (az1.blend >= 0.5f)]};
+        const size_t irOffset{idx[std::max_element(blend.begin(), blend.end()) - blend.begin()]};
         ImpulseResponse res{Hrtf->coeffs[irOffset],
             Hrtf->delays[irOffset][0], Hrtf->delays[irOffset][1]};
 
@@ -318,12 +320,13 @@ void DirectHrtfState::build(const HrtfStore *Hrtf, const uint irSize, const bool
     TRACE("Min delay: %.2f, max delay: %.2f, FIR length: %u\n",
         min_delay/double{HrirDelayFracOne}, max_delay/double{HrirDelayFracOne}, irSize);
 
+    const bool per_hrir_min{mChannels.size() > AmbiChannelsFromOrder(1)};
     auto tmpres = al::vector<std::array<double2,HrirLength>>(mChannels.size());
     max_delay = 0;
     for(size_t c{0u};c < AmbiPoints.size();++c)
     {
         const ConstHrirSpan hrir{impres[c].hrir};
-        const uint base_delay{perHrirMin ? minu(impres[c].ldelay, impres[c].rdelay) : min_delay};
+        const uint base_delay{per_hrir_min ? minu(impres[c].ldelay, impres[c].rdelay) : min_delay};
         const uint ldelay{hrir_delay_round(impres[c].ldelay - base_delay)};
         const uint rdelay{hrir_delay_round(impres[c].rdelay - base_delay)};
         max_delay = maxu(max_delay, maxu(impres[c].ldelay, impres[c].rdelay) - base_delay);

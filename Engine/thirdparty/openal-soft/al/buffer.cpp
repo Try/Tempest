@@ -631,9 +631,6 @@ void LoadData(ALCcontext *context, ALbuffer *ALBuf, ALsizei freq, ALuint size,
         }
         newdata.swap(ALBuf->mData);
     }
-#ifdef ALSOFT_EAX
-    eax_x_ram_clear(*context->mALDevice, *ALBuf);
-#endif
 
     if(SrcType == UserFmtIMA4)
     {

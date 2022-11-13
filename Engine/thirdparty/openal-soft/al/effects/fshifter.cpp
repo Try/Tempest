@@ -149,7 +149,7 @@ public:
 
 class EaxFrequencyShifterEffect final : public EaxEffect4<EaxFrequencyShifterEffectException, EAXFREQUENCYSHIFTERPROPERTIES> {
 public:
-    EaxFrequencyShifterEffect(int eax_version);
+    EaxFrequencyShifterEffect(const EaxCall& call);
 
 private:
     struct FrequencyValidator {
@@ -207,8 +207,8 @@ private:
 }; // EaxFrequencyShifterEffect
 
 
-EaxFrequencyShifterEffect::EaxFrequencyShifterEffect(int eax_version)
-    : EaxEffect4{AL_EFFECT_FREQUENCY_SHIFTER, eax_version}
+EaxFrequencyShifterEffect::EaxFrequencyShifterEffect(const EaxCall& call)
+    : EaxEffect4{AL_EFFECT_FREQUENCY_SHIFTER, call}
 {}
 
 void EaxFrequencyShifterEffect::set_defaults(Props& props)
@@ -308,9 +308,9 @@ bool EaxFrequencyShifterEffect::commit_props(const Props& props)
 
 } // namespace
 
-EaxEffectUPtr eax_create_eax_frequency_shifter_effect(int eax_version)
+EaxEffectUPtr eax_create_eax_frequency_shifter_effect(const EaxCall& call)
 {
-    return eax_create_eax4_effect<EaxFrequencyShifterEffect>(eax_version);
+    return eax_create_eax4_effect<EaxFrequencyShifterEffect>(call);
 }
 
 #endif // ALSOFT_EAX

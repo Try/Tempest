@@ -452,9 +452,6 @@ const struct {
     DECL(alAuxiliaryEffectSlotPlayvSOFT),
     DECL(alAuxiliaryEffectSlotStopSOFT),
     DECL(alAuxiliaryEffectSlotStopvSOFT),
-
-    DECL(alSourcePlayAtTimeSOFT),
-    DECL(alSourcePlayAtTimevSOFT),
 #ifdef ALSOFT_EAX
 }, eaxFunctions[] = {
     DECL(EAXGet),
@@ -1127,55 +1124,24 @@ void alc_initconfig(void)
     if(auto limopt = ConfigValueBool(nullptr, nullptr, "rt-time-limit"))
         AllowRTTimeLimit = *limopt;
 
+    CompatFlagBitset compatflags{};
+    auto checkflag = [](const char *envname, const char *optname) -> bool
     {
-        CompatFlagBitset compatflags{};
-        auto checkflag = [](const char *envname, const char *optname) -> bool
+        if(auto optval = al::getenv(envname))
         {
-            if(auto optval = al::getenv(envname))
-            {
-                if(al::strcasecmp(optval->c_str(), "true") == 0
-                    || strtol(optval->c_str(), nullptr, 0) == 1)
-                    return true;
-                return false;
-            }
-            return GetConfigValueBool(nullptr, "game_compat", optname, false);
-        };
-        compatflags.set(CompatFlags::ReverseX, checkflag("__ALSOFT_REVERSE_X", "reverse-x"));
-        compatflags.set(CompatFlags::ReverseY, checkflag("__ALSOFT_REVERSE_Y", "reverse-y"));
-        compatflags.set(CompatFlags::ReverseZ, checkflag("__ALSOFT_REVERSE_Z", "reverse-z"));
+            if(al::strcasecmp(optval->c_str(), "true") == 0
+                || strtol(optval->c_str(), nullptr, 0) == 1)
+                return true;
+            return false;
+        }
+        return GetConfigValueBool(nullptr, "game_compat", optname, false);
+    };
+    compatflags.set(CompatFlags::ReverseX, checkflag("__ALSOFT_REVERSE_X", "reverse-x"));
+    compatflags.set(CompatFlags::ReverseY, checkflag("__ALSOFT_REVERSE_Y", "reverse-y"));
+    compatflags.set(CompatFlags::ReverseZ, checkflag("__ALSOFT_REVERSE_Z", "reverse-z"));
 
-        aluInit(compatflags, ConfigValueFloat(nullptr, "game_compat", "nfc-scale").value_or(1.0f));
-    }
+    aluInit(compatflags);
     Voice::InitMixer(ConfigValueStr(nullptr, nullptr, "resampler"));
-
-    auto uhjfiltopt = ConfigValueStr(nullptr, "uhj", "decode-filter");
-    if(!uhjfiltopt)
-    {
-        if((uhjfiltopt = ConfigValueStr(nullptr, "uhj", "filter")))
-            WARN("uhj/filter is deprecated, please use uhj/decode-filter\n");
-    }
-    if(uhjfiltopt)
-    {
-        if(al::strcasecmp(uhjfiltopt->c_str(), "fir256") == 0)
-            UhjDecodeQuality = UhjQualityType::FIR256;
-        else if(al::strcasecmp(uhjfiltopt->c_str(), "fir512") == 0)
-            UhjDecodeQuality = UhjQualityType::FIR512;
-        else if(al::strcasecmp(uhjfiltopt->c_str(), "iir") == 0)
-            UhjDecodeQuality = UhjQualityType::IIR;
-        else
-            WARN("Unsupported uhj/decode-filter: %s\n", uhjfiltopt->c_str());
-    }
-    if((uhjfiltopt = ConfigValueStr(nullptr, "uhj", "encode-filter")))
-    {
-        if(al::strcasecmp(uhjfiltopt->c_str(), "fir256") == 0)
-            UhjEncodeQuality = UhjQualityType::FIR256;
-        else if(al::strcasecmp(uhjfiltopt->c_str(), "fir512") == 0)
-            UhjEncodeQuality = UhjQualityType::FIR512;
-        else if(al::strcasecmp(uhjfiltopt->c_str(), "iir") == 0)
-            UhjEncodeQuality = UhjQualityType::IIR;
-        else
-            WARN("Unsupported uhj/encode-filter: %s\n", uhjfiltopt->c_str());
-    }
 
     auto traperr = al::getenv("ALSOFT_TRAP_ERROR");
     if(traperr && (al::strcasecmp(traperr->c_str(), "true") == 0
@@ -1482,7 +1448,6 @@ ALCenum EnumFromDevFmt(DevFmtChannels channels)
     case DevFmtX71: return ALC_7POINT1_SOFT;
     case DevFmtAmbi3D: return ALC_BFORMAT3D_SOFT;
     /* FIXME: Shouldn't happen. */
-    case DevFmtX714:
     case DevFmtX3D71: break;
     }
     throw std::runtime_error{"Invalid DevFmtChannels: "+std::to_string(int(channels))};
@@ -1536,12 +1501,12 @@ ALCenum EnumFromDevAmbi(DevAmbiScaling scaling)
  * PulseAudio's.
  */
 const std::array<InputRemixMap,6> StereoDownmix{{
-    { FrontCenter, {{{FrontLeft,  0.5f},      {FrontRight, 0.5f}}} },
-    { SideLeft,    {{{FrontLeft,  1.0f/9.0f}}} },
-    { SideRight,   {{{FrontRight, 1.0f/9.0f}}} },
-    { BackLeft,    {{{FrontLeft,  1.0f/9.0f}}} },
-    { BackRight,   {{{FrontRight, 1.0f/9.0f}}} },
-    { BackCenter,  {{{FrontLeft,  0.5f/9.0f}, {FrontRight, 0.5f/9.0f}}} },
+    { FrontCenter, {{{FrontLeft, 0.5f},      {FrontRight, 0.5f}}} },
+    { SideLeft,    {{{FrontLeft, 1.0f/9.0f}, {FrontRight, 0.0f}}} },
+    { SideRight,   {{{FrontLeft, 0.0f},      {FrontRight, 1.0f/9.0f}}} },
+    { BackLeft,    {{{FrontLeft, 1.0f/9.0f}, {FrontRight, 0.0f}}} },
+    { BackRight,   {{{FrontLeft, 0.0f},      {FrontRight, 1.0f/9.0f}}} },
+    { BackCenter,  {{{FrontLeft, 0.5f/9.0f}, {FrontRight, 0.5f/9.0f}}} },
 }};
 const std::array<InputRemixMap,4> QuadDownmix{{
     { FrontCenter, {{{FrontLeft,  0.5f}, {FrontRight, 0.5f}}} },
@@ -1550,9 +1515,9 @@ const std::array<InputRemixMap,4> QuadDownmix{{
     { BackCenter,  {{{BackLeft,   0.5f}, {BackRight,  0.5f}}} },
 }};
 const std::array<InputRemixMap,3> X51Downmix{{
-    { BackLeft,   {{{SideLeft,  1.0f}}} },
-    { BackRight,  {{{SideRight, 1.0f}}} },
-    { BackCenter, {{{SideLeft,  0.5f}, {SideRight, 0.5f}}} },
+    { BackLeft,   {{{SideLeft, 1.0f}, {SideRight, 0.0f}}} },
+    { BackRight,  {{{SideLeft, 0.0f}, {SideRight, 1.0f}}} },
+    { BackCenter, {{{SideLeft, 0.5f}, {SideRight, 0.5f}}} },
 }};
 const std::array<InputRemixMap,2> X61Downmix{{
     { BackLeft,  {{{BackCenter, 0.5f}, {SideLeft,  0.5f}}} },
@@ -1954,7 +1919,6 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 { "surround51", DevFmtX51,    0 },
                 { "surround61", DevFmtX61,    0 },
                 { "surround71", DevFmtX71,    0 },
-                { "surround714", DevFmtX714,  0 },
                 { "surround3d71", DevFmtX3D71, 0 },
                 { "surround51rear", DevFmtX51, 0 },
                 { "ambi1", DevFmtAmbi3D, 1 },
@@ -2135,14 +2099,13 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
     case DevFmtX51: device->RealOut.RemixMap = X51Downmix; break;
     case DevFmtX61: device->RealOut.RemixMap = X61Downmix; break;
     case DevFmtX71: device->RealOut.RemixMap = X71Downmix; break;
-    case DevFmtX714: device->RealOut.RemixMap = X71Downmix; break;
     case DevFmtX3D71: device->RealOut.RemixMap = X51Downmix; break;
     case DevFmtAmbi3D: break;
     }
 
     nanoseconds::rep sample_delay{0};
-    if(auto *encoder{device->mUhjEncoder.get()})
-        sample_delay += encoder->getDelay();
+    if(device->mUhjEncoder)
+        sample_delay += UhjEncoder::sFilterDelay;
     if(auto *ambidec = device->AmbiDecoder.get())
     {
         if(ambidec->hasStablizer())
@@ -2254,36 +2217,16 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
         std::unique_lock<std::mutex> proplock{context->mPropLock};
         std::unique_lock<std::mutex> slotlock{context->mEffectSlotLock};
 
-        /* Clear out unused effect slot clusters. */
-        auto slot_cluster_not_in_use = [](ContextBase::EffectSlotCluster &cluster)
-        {
-            for(size_t i{0};i < ContextBase::EffectSlotClusterSize;++i)
-            {
-                if(cluster[i].InUse)
-                    return false;
-            }
-            return true;
-        };
-        auto slotcluster_iter = std::remove_if(context->mEffectSlotClusters.begin(),
-            context->mEffectSlotClusters.end(), slot_cluster_not_in_use);
-        context->mEffectSlotClusters.erase(slotcluster_iter, context->mEffectSlotClusters.end());
-
-        /* Free all wet buffers. Any in use will be reallocated with an updated
-         * configuration in aluInitEffectPanning.
-         */
-        for(auto&& slots : context->mEffectSlotClusters)
-        {
-            for(size_t i{0};i < ContextBase::EffectSlotClusterSize;++i)
-            {
-                slots[i].mWetBuffer.clear();
-                slots[i].mWetBuffer.shrink_to_fit();
-                slots[i].Wet.Buffer = {};
-            }
-        }
+        /* Clear out unused wet buffers. */
+        auto buffer_not_in_use = [](WetBufferPtr &wetbuffer) noexcept -> bool
+        { return !wetbuffer->mInUse; };
+        auto wetbuffer_iter = std::remove_if(context->mWetBuffers.begin(),
+            context->mWetBuffers.end(), buffer_not_in_use);
+        context->mWetBuffers.erase(wetbuffer_iter, context->mWetBuffers.end());
 
         if(ALeffectslot *slot{context->mDefaultSlot.get()})
         {
-            aluInitEffectPanning(slot->mSlot, context);
+            aluInitEffectPanning(&slot->mSlot, context);
 
             EffectState *state{slot->Effect.State.get()};
             state->mOutTarget = device->Dry.Buffer;
@@ -2302,7 +2245,7 @@ ALCenum UpdateDeviceParams(ALCdevice *device, const int *attrList)
                 ALeffectslot *slot{sublist.EffectSlots + idx};
                 usemask &= ~(1_u64 << idx);
 
-                aluInitEffectPanning(slot->mSlot, context);
+                aluInitEffectPanning(&slot->mSlot, context);
 
                 EffectState *state{slot->Effect.State.get()};
                 state->mOutTarget = device->Dry.Buffer;

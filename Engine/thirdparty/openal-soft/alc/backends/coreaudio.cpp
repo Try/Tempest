@@ -548,8 +548,6 @@ struct CoreAudioCapture final : public BackendBase {
 
     SampleConverterPtr mConverter;
 
-    al::vector<char> mCaptureData;
-
     RingBufferPtr mRing{nullptr};
 
     DEF_NEWDEL(CoreAudioCapture)
@@ -563,29 +561,49 @@ CoreAudioCapture::~CoreAudioCapture()
 }
 
 
-OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags *ioActionFlags,
-    const AudioTimeStamp *inTimeStamp, UInt32 inBusNumber, UInt32 inNumberFrames,
+OSStatus CoreAudioCapture::RecordProc(AudioUnitRenderActionFlags*,
+    const AudioTimeStamp *inTimeStamp, UInt32, UInt32 inNumberFrames,
     AudioBufferList*) noexcept
 {
+    AudioUnitRenderActionFlags flags = 0;
     union {
-        al::byte _[maxz(sizeof(AudioBufferList), offsetof(AudioBufferList, mBuffers[1]))];
+        al::byte _[sizeof(AudioBufferList) + sizeof(AudioBuffer)*2];
         AudioBufferList list;
     } audiobuf{};
 
-    audiobuf.list.mNumberBuffers = 1;
-    audiobuf.list.mBuffers[0].mNumberChannels = mFormat.mChannelsPerFrame;
-    audiobuf.list.mBuffers[0].mData = mCaptureData.data();
-    audiobuf.list.mBuffers[0].mDataByteSize = static_cast<UInt32>(mCaptureData.size());
+    auto rec_vec = mRing->getWriteVector();
+    inNumberFrames = static_cast<UInt32>(minz(inNumberFrames,
+        rec_vec.first.len+rec_vec.second.len));
 
-    OSStatus err{AudioUnitRender(mAudioUnit, ioActionFlags, inTimeStamp, inBusNumber,
+    // Fill the ringbuffer's two segments with data from the input device
+    if(rec_vec.first.len >= inNumberFrames)
+    {
+        audiobuf.list.mNumberBuffers = 1;
+        audiobuf.list.mBuffers[0].mNumberChannels = mFormat.mChannelsPerFrame;
+        audiobuf.list.mBuffers[0].mData = rec_vec.first.buf;
+        audiobuf.list.mBuffers[0].mDataByteSize = inNumberFrames * mFormat.mBytesPerFrame;
+    }
+    else
+    {
+        const auto remaining = static_cast<uint>(inNumberFrames - rec_vec.first.len);
+        audiobuf.list.mNumberBuffers = 2;
+        audiobuf.list.mBuffers[0].mNumberChannels = mFormat.mChannelsPerFrame;
+        audiobuf.list.mBuffers[0].mData = rec_vec.first.buf;
+        audiobuf.list.mBuffers[0].mDataByteSize = static_cast<UInt32>(rec_vec.first.len) *
+            mFormat.mBytesPerFrame;
+        audiobuf.list.mBuffers[1].mNumberChannels = mFormat.mChannelsPerFrame;
+        audiobuf.list.mBuffers[1].mData = rec_vec.second.buf;
+        audiobuf.list.mBuffers[1].mDataByteSize = remaining * mFormat.mBytesPerFrame;
+    }
+    OSStatus err{AudioUnitRender(mAudioUnit, &flags, inTimeStamp, audiobuf.list.mNumberBuffers,
         inNumberFrames, &audiobuf.list)};
     if(err != noErr)
     {
-        ERR("AudioUnitRender capture error: %d\n", err);
+        ERR("AudioUnitRender error: %d\n", err);
         return err;
     }
 
-    mRing->write(mCaptureData.data(), inNumberFrames);
+    mRing->writeAdvance(inNumberFrames);
     return noErr;
 }
 
@@ -748,7 +766,6 @@ void CoreAudioCapture::open(const char *name)
     case DevFmtX51:
     case DevFmtX61:
     case DevFmtX71:
-    case DevFmtX714:
     case DevFmtX3D71:
     case DevFmtAmbi3D:
         throw al::backend_exception{al::backend_error::DeviceError, "%s not supported",
@@ -797,8 +814,6 @@ void CoreAudioCapture::open(const char *name)
     if(err != noErr || propertySize != sizeof(outputFrameCount))
         throw al::backend_exception{al::backend_error::DeviceError,
             "Could not get input frame count: %u", err};
-
-    mCaptureData.resize(outputFrameCount * mFrameSize);
 
     outputFrameCount = static_cast<UInt32>(maxu64(outputFrameCount, FrameCount64));
     mRing = RingBuffer::Create(outputFrameCount, mFrameSize, false);
