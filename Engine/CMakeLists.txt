@@ -84,9 +84,11 @@ add_definitions(-DSTB_TRUETYPE_IMPLEMENTATION)
 add_definitions(-DSTB_IMAGE_WRITE_IMPLEMENTATION)
 
 ### OpenAl
-set(AL_LIBTYPE_STATIC  ON  CACHE INTERNAL "")
-set(ALSOFT_EXAMPLES    OFF CACHE INTERNAL "")
-set(ALSOFT_UTILS       OFF CACHE INTERNAL "")
+set(AL_LIBTYPE_STATIC   ON  CACHE INTERNAL "")
+set(ALSOFT_EXAMPLES     OFF CACHE INTERNAL "")
+set(ALSOFT_UTILS        OFF CACHE INTERNAL "")
+set(ALSOFT_BUILD_ROUTER OFF CACHE INTERNAL "")
+set(LIBTYPE "STATIC") # TODO: any proper way to do this?!
 add_definitions(-DAL_ALEXT_PROTOTYPES)
 add_subdirectory("thirdparty/openal-soft")
 target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/openal-soft/include")
