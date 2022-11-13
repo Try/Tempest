@@ -8,6 +8,7 @@ option(TEMPEST_BUILD_SHARED "Build shared Tempest." ON)
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+set(CMAKE_OSX_DEPLOYMENT_TARGET 12.0)
 
 if(MSVC)
   option(TEMPEST_BUILD_DIRECTX12   "Build directx12 support" ON )
@@ -83,16 +84,6 @@ add_definitions(-DSTB_TRUETYPE_IMPLEMENTATION)
 add_definitions(-DSTB_IMAGE_WRITE_IMPLEMENTATION)
 
 ### OpenAl
-#add_definitions(-DAL_ALEXT_PROTOTYPES)
-#add_subdirectory("thirdparty/openal_old")
-#target_link_libraries(${PROJECT_NAME} PRIVATE OpenAL)
-#target_include_directories(${PROJECT_NAME} PRIVATE
-#  "thirdparty/openal_old/include"
-#  "thirdparty/openal_old/openal32/include")
-#if(WIN32)
-#  target_link_libraries(${PROJECT_NAME} PRIVATE winmm)
-#endif()
-
 set(AL_LIBTYPE_STATIC  ON  CACHE INTERNAL "")
 set(ALSOFT_EXAMPLES    OFF CACHE INTERNAL "")
 set(ALSOFT_UTILS       OFF CACHE INTERNAL "")
@@ -131,10 +122,17 @@ if(TEMPEST_BUILD_METAL)
 endif()
 
 ### Spirv-cross
-set(SPIRV_CROSS_CLI         OFF CACHE INTERNAL "")
-set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE INTERNAL "")
+set(SPIRV_CROSS_CLI            OFF CACHE INTERNAL "")
+set(SPIRV_CROSS_ENABLE_UTIL    OFF CACHE INTERNAL "")
+set(SPIRV_CROSS_ENABLE_TESTS   OFF CACHE INTERNAL "")
+set(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE INTERNAL "")
+set(SPIRV_CROSS_STATIC         ON  CACHE INTERNAL "")
+set(SPIRV_CROSS_ENABLE_MSL     ON  CACHE INTERNAL "")
 add_subdirectory("thirdparty/spirv_cross")
 target_link_libraries(${PROJECT_NAME} PRIVATE spirv-cross-core)
+target_link_libraries(${PROJECT_NAME} PRIVATE spirv-cross-glsl)
+target_link_libraries(${PROJECT_NAME} PRIVATE spirv-cross-hlsl)
+target_link_libraries(${PROJECT_NAME} PRIVATE spirv-cross-msl)
 
 ### squish
 add_subdirectory("thirdparty/squish")
