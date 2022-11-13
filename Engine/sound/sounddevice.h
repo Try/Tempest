@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <mutex>
 
 namespace Tempest {
 
@@ -37,9 +38,13 @@ class SoundDevice final {
 
     std::unique_ptr<Data> data;
 
-    static std::shared_ptr<Device> device();
-    static std::shared_ptr<Device> implDevice();
+    static std::unique_lock<std::mutex> globalLock();
+    static void                         setThreadContext();
 
+    static std::shared_ptr<Device>      device();
+    static std::shared_ptr<Device>      implDevice();
+
+  friend class Sound;
   friend class SoundEffect;
   };
 

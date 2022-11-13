@@ -2,6 +2,7 @@
 
 #include <AL/al.h>
 #include <AL/alc.h>
+#include <AL/alext.h>
 
 #include <Tempest/File>
 #include <Tempest/Sound>
@@ -23,12 +24,18 @@ struct SoundDevice::Device {
     dev = alcOpenDevice(nullptr);
     if(dev==nullptr)
       throw std::system_error(Tempest::SoundErrc::NoDevice);
+    // dummy context for buffers
+    ctx = alcCreateContext(dev,nullptr);
+    if(ctx==nullptr)
+      throw std::system_error(Tempest::SoundErrc::NoDevice);
     }
   ~Device(){
+    alcDestroyContext(ctx);
     alcCloseDevice(dev);
     }
 
-  ALCdevice* dev=nullptr;
+  ALCdevice*  dev = nullptr;
+  ALCcontext* ctx = nullptr;
   };
 
 SoundDevice::SoundDevice():data( new Data() ) {
@@ -38,7 +45,10 @@ SoundDevice::SoundDevice():data( new Data() ) {
   if(data->context==nullptr)
     throw std::system_error(Tempest::SoundErrc::NoDevice);
 
-  alDistanceModel(data->context, AL_LINEAR_DISTANCE);
+  alcSetThreadContext(data->context);
+  alDistanceModel(AL_EXPONENT_DISTANCE);
+  // TODO: api
+  alListenerf(AL_METERS_PER_UNIT, 100.f);
   process();
   }
 
@@ -76,21 +86,36 @@ void SoundDevice::suspend() {
 
 void SoundDevice::setListenerPosition(float x, float y, float z) {
   float xyz[]={x,y,z};
-  alListenerfvCt(data->context,AL_POSITION,xyz);
+  // alListenerfvCt(data->context,AL_POSITION,xyz);
+  alcSetThreadContext(data->context);
+  alListenerfv(AL_POSITION,xyz);
   }
 
-void SoundDevice::setListenerDirection(float dx,float dy,float dz,float ux,float uy,float uz) {
+void SoundDevice::setListenerDirection(float dx,float dy,float dz, float ux,float uy,float uz) {
   float ori[6] = {dx,dy,dz, ux,uy,uz};
-  alListenerfvCt(data->context,AL_ORIENTATION,ori);
+  // alListenerfvCt(data->context,AL_ORIENTATION,ori);
+  alcSetThreadContext(data->context);
+  alListenerfv(AL_ORIENTATION,ori);
   }
 
 void SoundDevice::setGlobalVolume(float v) {
-  float fv[]={v};
-  alListenerfvCt(data->context,AL_GAIN,fv);
+  alcSetThreadContext(data->context);
+  alListenerf(AL_GAIN,v);
   }
 
 void* SoundDevice::context() {
   return data->context;
+  }
+
+std::unique_lock<std::mutex> SoundDevice::globalLock() {
+  static std::mutex gil;
+  std::unique_lock<std::mutex> g(gil);
+  return g;
+  }
+
+void SoundDevice::setThreadContext() {
+  auto d = device();
+  alcSetThreadContext(d->ctx);
   }
 
 std::shared_ptr<SoundDevice::Device> SoundDevice::device() {

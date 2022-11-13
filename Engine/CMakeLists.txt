@@ -83,15 +83,26 @@ add_definitions(-DSTB_TRUETYPE_IMPLEMENTATION)
 add_definitions(-DSTB_IMAGE_WRITE_IMPLEMENTATION)
 
 ### OpenAl
+#add_definitions(-DAL_ALEXT_PROTOTYPES)
+#add_subdirectory("thirdparty/openal_old")
+#target_link_libraries(${PROJECT_NAME} PRIVATE OpenAL)
+#target_include_directories(${PROJECT_NAME} PRIVATE
+#  "thirdparty/openal_old/include"
+#  "thirdparty/openal_old/openal32/include")
+#if(WIN32)
+#  target_link_libraries(${PROJECT_NAME} PRIVATE winmm)
+#endif()
+
+set(AL_LIBTYPE_STATIC  ON  CACHE INTERNAL "")
+set(ALSOFT_EXAMPLES    OFF CACHE INTERNAL "")
+set(ALSOFT_UTILS       OFF CACHE INTERNAL "")
 add_definitions(-DAL_ALEXT_PROTOTYPES)
-add_subdirectory("thirdparty/openal")
+add_subdirectory("thirdparty/openal-soft")
+target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/openal-soft/include")
+target_include_directories(OpenAL PRIVATE "thirdparty/openal-soft")
+target_include_directories(OpenAL PRIVATE "thirdparty/openal-soft/common")
+target_include_directories(OpenAL PRIVATE "thirdparty/openal-soft/al/eax")
 target_link_libraries(${PROJECT_NAME} PRIVATE OpenAL)
-target_include_directories(${PROJECT_NAME} PRIVATE
-  "thirdparty/openal/include"
-  "thirdparty/openal/openal32/include")
-if(WIN32)
-  target_link_libraries(${PROJECT_NAME} PRIVATE winmm)
-endif()
 
 ### Vulkan
 if(TEMPEST_BUILD_VULKAN)
@@ -120,7 +131,14 @@ if(TEMPEST_BUILD_METAL)
 endif()
 
 ### Spirv-cross
+set(SPIRV_CROSS_CLI         OFF CACHE INTERNAL "")
+set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE INTERNAL "")
 add_subdirectory("thirdparty/spirv_cross")
+target_link_libraries(${PROJECT_NAME} PRIVATE spirv-cross-core)
+
+### squish
+add_subdirectory("thirdparty/squish")
+target_link_libraries(${PROJECT_NAME} PRIVATE squish-tempest)
 
 ### Shaders
 set(GEN_SHADERS_HEADER "${PROJECT_BINARY_DIR}/sprv/builtin_shader.h")
@@ -179,28 +197,39 @@ add_custom_target(shaders
 target_include_directories(${PROJECT_NAME} PRIVATE "${PROJECT_BINARY_DIR}/sprv")
 add_dependencies(${PROJECT_NAME} shaders)
 
-file(GLOB SOURCES
-    "*.h"
-    "*.cpp"
-    "**/*.h"
-    "**/*.cpp"
-    "**/**/*.h"
-    "**/**/*.cpp"
-    "**/**/**/*.h"
-    "**/**/**/*.cpp"
-    "**/**/**/**/*.h"
-    "**/**/**/**/*.cpp"
+file(GLOB_RECURSE SOURCES
+  "2d/*.h"
+  "2d/*.cpp"
+  "exceptions/*.h"
+  "exceptions/*.cpp"
+  "formats/*.h"
+  "formats/*.cpp"
+  "gapi/*.h"
+  "gapi/*.cpp"
+  "graphics/*.h"
+  "graphics/*.cpp"
+  "io/*.h"
+  "io/*.cpp"
+  "libspirv/*.h"
+  "libspirv/*.cpp"
+  "math/*.h"
+  "math/*.cpp"
+  "sound/*.h"
+  "sound/*.cpp"
+  "system/*.h"
+  "system/*.cpp"
+  "ui/*.h"
+  "ui/*.cpp"
+  "utility/*.h"
+  "utility/*.cpp"
   )
 
 if(APPLE)
   set(CMAKE_OSX_DEPLOYMENT_TARGET "11.2")
   enable_language(OBJCXX)
-  file(GLOB ObjCSOURCES
+  file(GLOB_RECURSE ObjCSOURCES
     "*.mm"
-    "**/*.mm"
-    "**/**/*.mm"
-    "**/**/**/*.mm"
-    "**/**/**/**/*.mm")
+    "**/*.mm")
 endif()
 
 # FIXME: the headers include some SOURCES files so installing them is useless

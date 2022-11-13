@@ -5,12 +5,17 @@
 #include <Tempest/File>
 #include <Tempest/Except>
 
+#include "sounddevice.h"
+
 #include <vector>
 #include <cstring>
 #include <algorithm>
 
 #include <AL/alc.h>
 #include <AL/al.h>
+#include <AL/alext.h>
+
+//#include <emmintrin.h>
 
 using namespace Tempest;
 
@@ -56,18 +61,19 @@ const int32_t Sound::indexTable[] = {
   };
 
 Sound::Data::~Data() {
-  alDelBuffer(reinterpret_cast<ALbuffer*>(buffer));
+  // alDelBuffer(reinterpret_cast<ALbuffer*>(buffer));
+  SoundDevice::setThreadContext();
+  alDeleteBuffers(1,&buffer);
   }
 
 uint64_t Sound::Data::timeLength() const {
-  auto buf = reinterpret_cast<ALbuffer*>(buffer);
+  SoundDevice::setThreadContext();
   int size=0,fr=0,bits=0,channels=0;
-  if(alGetBufferiCt(buf, AL_SIZE,      &size)    !=AL_NO_ERROR ||
-     alGetBufferiCt(buf, AL_BITS,      &bits)    !=AL_NO_ERROR ||
-     alGetBufferiCt(buf, AL_CHANNELS,  &channels)!=AL_NO_ERROR ||
-     alGetBufferiCt(buf, AL_FREQUENCY, &fr)      !=AL_NO_ERROR) {
-    throw std::system_error(Tempest::SoundErrc::NoDevice);
-    }
+
+  alGetBufferi(buffer, AL_SIZE,      &size);
+  alGetBufferi(buffer, AL_BITS,      &bits);
+  alGetBufferi(buffer, AL_CHANNELS,  &channels);
+  alGetBufferi(buffer, AL_FREQUENCY, &fr);
 
   if(channels<=0 || fr<=0)
     return 0;
@@ -100,6 +106,27 @@ Sound::Sound(const std::u16string &path) {
 
 Sound::Sound(IDevice& f) {
   implLoad(f);
+  }
+
+void Sound::initData(const char* bytes, int format, size_t size, size_t rate) {
+  SoundDevice::setThreadContext();
+  auto guard = SoundDevice::globalLock();
+
+  uint32_t b = 0;
+  alGenBuffers(1,&b);
+  if(alGetError()!=AL_NO_ERROR) {
+    throw std::bad_alloc();
+    }
+
+  alBufferData(b, format, bytes, int(size), int(rate));
+  if(alGetError()!=AL_NO_ERROR) {
+    alDeleteBuffers(1, &b);
+    throw std::bad_alloc();
+    }
+
+  auto d = std::make_shared<Data>();
+  d->buffer = b;
+  data      = d;
   }
 
 bool Sound::isEmpty() const {
@@ -136,7 +163,7 @@ void Sound::implLoad(IDevice &f) {
         return;
       }
 
-    upload(data.get(),format,dataSize,fmt.samplesPerSec);
+    initData(data.get(),format,dataSize,fmt.samplesPerSec);
     }
   }
 
@@ -180,21 +207,6 @@ std::unique_ptr<char[]> Sound::readWAVFull(IDevice &f, WAVEHeader& header, FmtCh
   return buffer;
   }
 
-void Sound::upload(char* bytes, int format, size_t size, size_t rate) {
-  auto b = alNewBuffer();
-  if(!b)
-    throw std::bad_alloc();
-
-  if(!alBufferDataCt(nullptr, b, format, bytes, int(size), int(rate))) {
-    alDelBuffer(b);
-    throw std::bad_alloc();
-    }
-
-  auto d = std::make_shared<Data>();
-  d->buffer=b;
-  data = d;
-  }
-
 void Sound::decodeAdPcm(const FmtChunk& fmt,const uint8_t* src,uint32_t dataSize,uint32_t maxSamples) {
   if(fmt.blockAlign==0)
     return;
@@ -225,7 +237,7 @@ void Sound::decodeAdPcm(const FmtChunk& fmt,const uint8_t* src,uint32_t dataSize
     sample += block_pcm_samples;
     }
 
-  upload(reinterpret_cast<char*>(dest.data()),AL_FORMAT_MONO16,dest.size(),fmt.samplesPerSec);
+  initData(reinterpret_cast<char*>(dest.data()),AL_FORMAT_MONO16,dest.size(),fmt.samplesPerSec);
   }
 
 int Sound::decodeAdPcmBlock(int16_t *outbuf, const uint8_t *inbuf, size_t inbufsize, uint16_t channels) {

@@ -25,14 +25,15 @@ class Sound final {
     struct FmtChunk;
 
     std::unique_ptr<char[]> readWAVFull(Tempest::IDevice& d, WAVEHeader &header, FmtChunk& fmt, size_t& dataSize);
-    void                    upload(char *data, int format, size_t size, size_t rate);
+    void                    initData(const char* data, int format, size_t size, size_t rate);
     void                    decodeAdPcm(const FmtChunk& fmt, const uint8_t *src, uint32_t dataSize, uint32_t maxSamples);
     static int              decodeAdPcmBlock(int16_t *outbuf, const uint8_t *inbuf, size_t inbufsize, uint16_t channels);
     void                    implLoad(IDevice& input);
 
     struct Data {
       ~Data();
-      void*    buffer=nullptr;
+      // void*    buffer=nullptr;
+      uint32_t buffer = 0;
       uint64_t timeLength() const;
       };
     std::shared_ptr<Data> data;
