@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Tempest/Vec>
+
 #include <memory>
 #include <mutex>
 
@@ -26,8 +28,12 @@ class SoundDevice final {
     void process();
     void suspend();
 
+    void setListenerPosition(const Tempest::Vec3& p);
     void setListenerPosition(float x,float y,float z);
+
+    void setListenerDirection(const Tempest::Vec3& forward, const Tempest::Vec3& up);
     void setListenerDirection(float dx, float dy, float dz, float ux, float uy, float uz);
+
     void setGlobalVolume(float v);
 
   private:

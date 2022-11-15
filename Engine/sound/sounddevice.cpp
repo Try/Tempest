@@ -46,16 +46,16 @@ SoundDevice::SoundDevice():data( new Data() ) {
     throw std::system_error(Tempest::SoundErrc::NoDevice);
 
   alcSetThreadContext(data->context);
-  alDistanceModel(AL_EXPONENT_DISTANCE);
+  alDistanceModel(AL_LINEAR_DISTANCE);
   // TODO: api
   alListenerf(AL_METERS_PER_UNIT, 100.f);
   process();
+  alcSetThreadContext(nullptr);
   }
 
 SoundDevice::~SoundDevice() {
-  if( data->context ){
+  if(data->context)
     alcDestroyContext(data->context);
-    }
   }
 
 SoundEffect SoundDevice::load(const char *fname) {
@@ -84,23 +84,35 @@ void SoundDevice::suspend() {
   alcSuspendContext(data->context);
   }
 
-void SoundDevice::setListenerPosition(float x, float y, float z) {
-  float xyz[]={x,y,z};
-  // alListenerfvCt(data->context,AL_POSITION,xyz);
+void SoundDevice::setListenerPosition(const Vec3& p) {
+  float xyz[] = {p.x,p.y,p.z};
   alcSetThreadContext(data->context);
   alListenerfv(AL_POSITION,xyz);
+  alcSetThreadContext(nullptr);
+  }
+
+void SoundDevice::setListenerPosition(float x, float y, float z) {
+  float xyz[] = {x,y,z};
+  alcSetThreadContext(data->context);
+  alListenerfv(AL_POSITION,xyz);
+  alcSetThreadContext(nullptr);
+  }
+
+void SoundDevice::setListenerDirection(const Vec3& f, const Vec3& up) {
+  setListenerDirection(f.x,f.y,f.z, up.x,up.y,up.z);
   }
 
 void SoundDevice::setListenerDirection(float dx,float dy,float dz, float ux,float uy,float uz) {
   float ori[6] = {dx,dy,dz, ux,uy,uz};
-  // alListenerfvCt(data->context,AL_ORIENTATION,ori);
   alcSetThreadContext(data->context);
   alListenerfv(AL_ORIENTATION,ori);
+  alcSetThreadContext(nullptr);
   }
 
 void SoundDevice::setGlobalVolume(float v) {
   alcSetThreadContext(data->context);
   alListenerf(AL_GAIN,v);
+  alcSetThreadContext(nullptr);
   }
 
 void* SoundDevice::context() {

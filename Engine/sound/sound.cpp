@@ -61,19 +61,20 @@ const int32_t Sound::indexTable[] = {
   };
 
 Sound::Data::~Data() {
-  // alDelBuffer(reinterpret_cast<ALbuffer*>(buffer));
   SoundDevice::setThreadContext();
   alDeleteBuffers(1,&buffer);
+  alcSetThreadContext(nullptr);
   }
 
 uint64_t Sound::Data::timeLength() const {
-  SoundDevice::setThreadContext();
   int size=0,fr=0,bits=0,channels=0;
 
+  SoundDevice::setThreadContext();
   alGetBufferi(buffer, AL_SIZE,      &size);
   alGetBufferi(buffer, AL_BITS,      &bits);
   alGetBufferi(buffer, AL_CHANNELS,  &channels);
   alGetBufferi(buffer, AL_FREQUENCY, &fr);
+  alcSetThreadContext(nullptr);
 
   if(channels<=0 || fr<=0)
     return 0;
@@ -109,20 +110,23 @@ Sound::Sound(IDevice& f) {
   }
 
 void Sound::initData(const char* bytes, int format, size_t size, size_t rate) {
+  auto guard = SoundDevice::globalLock(); // for alGetError
   SoundDevice::setThreadContext();
-  auto guard = SoundDevice::globalLock();
 
   uint32_t b = 0;
   alGenBuffers(1,&b);
   if(alGetError()!=AL_NO_ERROR) {
+    alcSetThreadContext(nullptr);
     throw std::bad_alloc();
     }
 
   alBufferData(b, format, bytes, int(size), int(rate));
   if(alGetError()!=AL_NO_ERROR) {
     alDeleteBuffers(1, &b);
+    alcSetThreadContext(nullptr);
     throw std::bad_alloc();
     }
+  alcSetThreadContext(nullptr);
 
   auto d = std::make_shared<Data>();
   d->buffer = b;

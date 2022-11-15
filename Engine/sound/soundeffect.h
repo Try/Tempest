@@ -1,6 +1,8 @@
 #pragma once
 
 #include <Tempest/Sound>
+#include <Tempest/Vec>
+
 #include <cstdint>
 #include <array>
 
@@ -37,13 +39,13 @@ class SoundEffect final {
     uint64_t timeLength()  const;
     uint64_t currentTime() const;
 
+    void     setPosition(const Tempest::Vec3& pos);
     void     setPosition(float x,float y,float z);
     void     setMaxDistance(float dist);
-    void     setRefDistance(float dist);
     void     setVolume(float val);
     float    volume() const;
 
-    std::array<float,3> position() const;
+    Tempest::Vec3 position() const;
     float    x() const;
     float    y() const;
     float    z() const;
