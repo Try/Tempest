@@ -7,13 +7,11 @@
 
 #include "vallocator.h"
 #include "vcommandbuffer.h"
-#include "vcommandpool.h"
 #include "vswapchain.h"
 #include "vfence.h"
 #include "vulkanapi_impl.h"
 #include "vframebuffermap.h"
 #include "exceptions/exception.h"
-#include "utility/spinlock.h"
 #include "utility/compiller_hints.h"
 #include "gapi/shaderreflection.h"
 #include "gapi/uploadengine.h"
