@@ -31,6 +31,7 @@ struct SoundEffect::Impl {
     auto guard = SoundDevice::globalLock();
     alGenSources(1, &source);
     alSourcei(source, AL_BUFFER, data->buffer);
+    alSourcei(source, AL_SOURCE_SPATIALIZE_SOFT, AL_TRUE);
     if(alGetError()!=AL_NO_ERROR) {
       alcSetThreadContext(nullptr);
       throw std::bad_alloc();
