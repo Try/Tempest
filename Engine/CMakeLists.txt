@@ -90,7 +90,7 @@ set(ALSOFT_UTILS        OFF CACHE INTERNAL "")
 set(ALSOFT_BUILD_ROUTER OFF CACHE INTERNAL "")
 set(LIBTYPE "STATIC") # TODO: any proper way to do this?!
 add_definitions(-DAL_ALEXT_PROTOTYPES)
-add_subdirectory("thirdparty/openal-soft")
+add_subdirectory("thirdparty/openal-soft" EXCLUDE_FROM_ALL)
 target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/openal-soft/include")
 target_link_libraries(${PROJECT_NAME} PRIVATE OpenAL)
 
@@ -127,14 +127,14 @@ set(SPIRV_CROSS_ENABLE_TESTS   OFF CACHE INTERNAL "")
 set(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE INTERNAL "")
 set(SPIRV_CROSS_STATIC         ON  CACHE INTERNAL "")
 set(SPIRV_CROSS_ENABLE_MSL     ON  CACHE INTERNAL "")
-add_subdirectory("thirdparty/spirv_cross")
+add_subdirectory("thirdparty/spirv_cross" EXCLUDE_FROM_ALL)
 target_link_libraries(${PROJECT_NAME} PRIVATE spirv-cross-core)
 target_link_libraries(${PROJECT_NAME} PRIVATE spirv-cross-glsl)
 target_link_libraries(${PROJECT_NAME} PRIVATE spirv-cross-hlsl)
 target_link_libraries(${PROJECT_NAME} PRIVATE spirv-cross-msl)
 
 ### squish
-add_subdirectory("thirdparty/squish")
+add_subdirectory("thirdparty/squish" EXCLUDE_FROM_ALL)
 target_link_libraries(${PROJECT_NAME} PRIVATE squish-tempest)
 
 ### Shaders
