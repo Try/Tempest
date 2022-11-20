@@ -28,9 +28,11 @@ Log::Globals& Log::globals() {
   }
 
 void Log::flush(Context& ctx, char *&out, size_t &count) {
-  std::lock_guard<std::recursive_mutex> g(globals().sync);
+  if(count==sizeof(ctx.buffer))
+    return;
 
-  if(count!=sizeof(ctx.buffer)) {
+  std::lock_guard<std::recursive_mutex> g(globals().sync);
+  {
     *out = '\0';
 #ifdef __ANDROID__
     switch(ctx.mode) {
