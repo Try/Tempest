@@ -255,6 +255,7 @@ HRESULT DxShader::compileDXC(ComPtr<ID3DBlob>& shader, const char* hlsl, size_t 
     L"-T",
     targetW,
     L"-Qstrip_reflect",
+    L"-res-may-alias"
 #if !defined(NDEBUG)
     // DXC_ARG_DEBUG,
 #endif
