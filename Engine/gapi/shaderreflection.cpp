@@ -239,7 +239,7 @@ void ShaderReflection::merge(std::vector<Binding>& ret,
         pb.size  = std::max(pb.size, u.mslSize);
         continue;
         }
-      if(shId>0) {
+      {
         bool  ins = false;
         for(auto& r:ret)
           if(r.layout==u.layout) {
