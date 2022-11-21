@@ -56,6 +56,23 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
         i.mslSize = ShaderReflection::mslSizeOf(i.spvId,comp);
       }
 
+    size_t nsize = 0;
+    for(size_t i=0; i<lay.size(); ++i) {
+      bool uniq = true;
+      for(size_t r=0; r<i; ++r) {
+        if(lay[i].layout!=lay[r].layout)
+          continue;
+        uniq = false;
+        lay[r].mslBinding  = std::min(lay[r].mslBinding,  lay[i].mslBinding);
+        lay[r].mslBinding2 = std::min(lay[r].mslBinding2, lay[i].mslBinding2);
+        }
+      if(uniq) {
+        lay[nsize] = lay[i];
+        nsize++;
+        }
+      }
+    lay.resize(nsize);
+
     if(comp.get_execution_model()==spv::ExecutionModelTessellationEvaluation) {
       auto& exec = comp.get_execution_mode_bitset();
       if(exec.get(spv::ExecutionModeTriangles)) {
