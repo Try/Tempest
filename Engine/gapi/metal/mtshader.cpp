@@ -59,12 +59,16 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
     size_t nsize = 0;
     for(size_t i=0; i<lay.size(); ++i) {
       bool uniq = true;
-      for(size_t r=0; r<i; ++r) {
-        if(lay[i].layout!=lay[r].layout)
-          continue;
-        uniq = false;
-        lay[r].mslBinding  = std::min(lay[r].mslBinding,  lay[i].mslBinding);
-        lay[r].mslBinding2 = std::min(lay[r].mslBinding2, lay[i].mslBinding2);
+      if(lay[i].cls!=ShaderReflection::Push) {
+        for(size_t r=0; r<i; ++r) {
+          if(lay[r].cls==ShaderReflection::Push)
+            continue;
+          if(lay[i].layout!=lay[r].layout)
+            continue;
+          uniq = false;
+          lay[r].mslBinding  = std::min(lay[r].mslBinding,  lay[i].mslBinding);
+          lay[r].mslBinding2 = std::min(lay[r].mslBinding2, lay[i].mslBinding2);
+          }
         }
       if(uniq) {
         lay[nsize] = lay[i];
