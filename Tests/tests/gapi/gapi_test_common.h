@@ -704,6 +704,54 @@ void UnboundSsbo() {
   }
 
 template<class GraphicsApi>
+void SbboOverlap() {
+  using namespace Tempest;
+
+  struct Buf {
+    uint32_t src = 1;
+    uint32_t dst = 2;
+    uint32_t padd[2] = {};
+    Vec4     a = {1,2,3,4};
+    Vec4     b = {};
+    };
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    Buf  buf;
+    auto ssbo   = device.ssbo(&buf,sizeof(buf));
+
+    auto cs     = device.shader("shader/overlap_test.comp.sprv");
+    auto pso    = device.pipeline(cs);
+
+    auto ubo    = device.descriptors(pso.layout());
+    ubo.set(0,ssbo);
+
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setUniforms(pso,ubo);
+      enc.dispatch(1);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    Buf output;
+    device.readBytes(ssbo,&output,sizeof(output));
+
+    EXPECT_EQ(buf.a,output.b);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void Compute() {
   using namespace Tempest;
 

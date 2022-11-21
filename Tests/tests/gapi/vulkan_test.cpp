@@ -117,6 +117,12 @@ TEST(VulkanApi,UnboundSsbo) {
 #endif
   }
 
+TEST(VulkanApi,SbboOverlap) {
+#if !defined(__OSX__)
+  GapiTestCommon::SbboOverlap<VulkanApi>();
+#endif
+  }
+
 TEST(VulkanApi,Compute) {
 #if !defined(__OSX__)
   GapiTestCommon::Compute<VulkanApi>();

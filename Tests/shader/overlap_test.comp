@@ -1,0 +1,15 @@
+#version 440
+
+layout(local_size_x = 1) in;
+
+layout(binding = 0, std430) buffer Input {
+  vec4 vval[];
+  };
+
+layout(binding = 0, std430) buffer Output {
+  uint ival[];
+  };
+
+void main() {
+  vval[ival[1]] = vval[ival[0]];
+  }
