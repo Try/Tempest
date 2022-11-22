@@ -12,12 +12,9 @@ using namespace Tempest::Detail;
 
 VSwapchain::FenceList::FenceList(VkDevice dev, uint32_t cnt)
   :dev(dev), size(0) {
-  aquire .reset(new VkFence[cnt]);
-  present.reset(new VkFence[cnt]);
-  for(uint32_t i=0; i<cnt; ++i) {
+  aquire.reset(new VkFence[cnt]);
+  for(uint32_t i=0; i<cnt; ++i)
     aquire [i] = VK_NULL_HANDLE;
-    present[i] = VK_NULL_HANDLE;
-    }
 
   try {
     VkFenceCreateInfo fenceInfo = {};
@@ -25,7 +22,6 @@ VSwapchain::FenceList::FenceList(VkDevice dev, uint32_t cnt)
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
     for(uint32_t i=0; i<cnt; ++i) {
       vkAssert(vkCreateFence(dev,&fenceInfo,nullptr,&aquire [i]));
-      vkAssert(vkCreateFence(dev,&fenceInfo,nullptr,&present[i]));
       ++size;
       }
     }
@@ -33,8 +29,6 @@ VSwapchain::FenceList::FenceList(VkDevice dev, uint32_t cnt)
     for(uint32_t i=0; i<cnt; ++i) {
       if(aquire[i]!=VK_NULL_HANDLE)
         vkDestroyFence(dev,aquire [i],nullptr);
-      if(present[i]!=VK_NULL_HANDLE)
-        vkDestroyFence(dev,present[i],nullptr);
       }
     throw;
     }
@@ -43,23 +37,19 @@ VSwapchain::FenceList::FenceList(VkDevice dev, uint32_t cnt)
 VSwapchain::FenceList::FenceList(VSwapchain::FenceList&& oth)
   :dev(oth.dev), size(oth.size) {
   aquire   = std::move(oth.aquire);
-  present  = std::move(oth.present);
   oth.size = 0;
   }
 
 VSwapchain::FenceList& VSwapchain::FenceList::operator =(VSwapchain::FenceList&& oth) {
-  std::swap(dev,     oth.dev);
-  std::swap(aquire,  oth.aquire);
-  std::swap(present, oth.present);
-  std::swap(size,    oth.size);
+  std::swap(dev,    oth.dev);
+  std::swap(aquire, oth.aquire);
+  std::swap(size,   oth.size);
   return *this;
   }
 
 VSwapchain::FenceList::~FenceList() {
-  for(uint32_t i=0; i<size; ++i) {
+  for(uint32_t i=0; i<size; ++i)
     vkDestroyFence(dev,aquire [i],nullptr);
-    vkDestroyFence(dev,present[i],nullptr);
-    }
   }
 
 VSwapchain::VSwapchain(VDevice &device, SystemApi::Window* hwnd)
@@ -82,28 +72,31 @@ VSwapchain::~VSwapchain() {
   }
 
 void VSwapchain::cleanupSwapchain() noexcept {
+  // aquire is not a 'true' queue operation - have to wait explicitly on it
   vkWaitForFences(device.device.impl,fence.size,fence.aquire.get(), VK_TRUE,std::numeric_limits<uint64_t>::max());
-  vkWaitForFences(device.device.impl,fence.size,fence.present.get(),VK_TRUE,std::numeric_limits<uint64_t>::max());
+  // wait for vkQueuePresent to finish, so we can delete semaphores
+  // NOTE: maybe update to VK_KHR_present_wait ?
+  device.presentQueue->waitIdle();
   fence = FenceList();
 
   for(auto imageView : views)
     if(map!=nullptr && imageView!=VK_NULL_HANDLE)
       map->notifyDestroy(imageView);
-
+  map = nullptr;
   for(auto imageView : views)
     if(imageView!=VK_NULL_HANDLE)
       vkDestroyImageView(device.device.impl,imageView,nullptr);
+  views.clear();
+
   for(auto& s : sync) {
     if(s.aquire!=VK_NULL_HANDLE)
       vkDestroySemaphore(device.device.impl,s.aquire,nullptr);
     if(s.present!=VK_NULL_HANDLE)
       vkDestroySemaphore(device.device.impl,s.present,nullptr);
     }
-
-  views.clear();
-  images.clear();
   sync.clear();
 
+  images.clear();
   if(swapChain!=VK_NULL_HANDLE)
     vkDestroySwapchainKHR(device.device.impl,swapChain,nullptr);
 
@@ -330,11 +323,7 @@ void VSwapchain::present() {
       break;
       }
 
-  auto&    slot = sync[sId];
-  auto&    f    = fence.present[sId];
-  vkWaitForFences(device.device.impl,1,&f,VK_TRUE,std::numeric_limits<uint64_t>::max());
-  vkResetFences(device.device.impl,1,&f);
-
+  auto& slot = sync[sId];
   if(device.vkQueueSubmit2!=nullptr) {
     VkSemaphoreSubmitInfoKHR signal = {};
     signal.sType     = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
@@ -346,13 +335,13 @@ void VSwapchain::present() {
     submitInfo.signalSemaphoreInfoCount = 1;
     submitInfo.pSignalSemaphoreInfos    = &signal;
 
-    device.graphicsQueue->submit(1, &submitInfo, f, device.vkQueueSubmit2);
+    device.graphicsQueue->submit(1, &submitInfo, VK_NULL_HANDLE, device.vkQueueSubmit2);
     } else {
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores    = &slot.present;
-    device.graphicsQueue->submit(1, &submitInfo, f);
+    device.graphicsQueue->submit(1, &submitInfo, VK_NULL_HANDLE);
     }
 
   VkPresentInfoKHR presentInfo = {};

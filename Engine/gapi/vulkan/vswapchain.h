@@ -64,7 +64,7 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
 
       VkDevice                   dev = VK_NULL_HANDLE;
       std::unique_ptr<VkFence[]> aquire;
-      std::unique_ptr<VkFence[]> present;
+      // std::unique_ptr<VkFence[]> present;
       uint32_t                   size = 0;
       };
     FenceList                fence;
