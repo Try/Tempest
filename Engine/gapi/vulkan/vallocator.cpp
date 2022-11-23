@@ -148,6 +148,10 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
 
   MemRequirements memRq={};
   getMemoryRequirements(memRq,ret.impl);
+  if(MemUsage::ScratchBuffer==(usage & MemUsage::ScratchBuffer)) {
+    memRq.alignment = std::max(memRq.alignment,
+                               provider.device->props.accelerationStructureScratchOffsetAlignment);
+    }
 
   uint32_t props[2] = {};
   uint8_t  propsCnt = 1;

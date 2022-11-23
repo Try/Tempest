@@ -25,11 +25,12 @@ class VulkanInstance {
     bool             hasDeviceFeatures2 = false;
 
     struct VkProp:Tempest::AbstractGraphicsApi::Props {
-      uint32_t graphicsFamily=uint32_t(-1);
-      uint32_t presentFamily =uint32_t(-1);
+      uint32_t graphicsFamily = uint32_t(-1);
+      uint32_t presentFamily  = uint32_t(-1);
 
-      size_t   nonCoherentAtomSize=0;
-      size_t   bufferImageGranularity=0;
+      size_t   nonCoherentAtomSize = 0;
+      size_t   bufferImageGranularity = 0;
+      size_t   accelerationStructureScratchOffsetAlignment = 0;
 
       bool     hasMemRq2          = false;
       bool     hasDedicatedAlloc  = false;

@@ -289,6 +289,9 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
     VkPhysicalDeviceAccelerationStructureFeaturesKHR asFeatures = {};
     asFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
 
+    VkPhysicalDeviceAccelerationStructurePropertiesKHR asProperties = {};
+    asProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR;
+
     VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures = {};
     rayQueryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
 
@@ -318,6 +321,9 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
     if(props.raytracing.rayQuery) {
       asFeatures.pNext = features.pNext;
       features.pNext = &asFeatures;
+
+      asProperties.pNext = properties.pNext;
+      properties.pNext = &asProperties;
       }
     if(props.raytracing.rayQuery) {
       rayQueryFeatures.pNext = features.pNext;
@@ -362,6 +368,7 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
     props.meshlets.maxMeshGroups    = meshProperties.maxDrawMeshTasksCount;
     props.meshlets.maxMeshGroupSize = meshProperties.maxMeshWorkGroupSize[0];
     // props.hasDevGroup               = ;
+    props.accelerationStructureScratchOffsetAlignment = asProperties.minAccelerationStructureScratchOffsetAlignment;
 
     if(!props.meshlets.meshShader) {
       props.meshlets.meshShaderEmulated = props.hasDevGroup;
