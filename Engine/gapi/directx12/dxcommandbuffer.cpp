@@ -600,9 +600,8 @@ void DxCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_
   impl->DrawIndexedInstanced(UINT(isize),UINT(instanceCount),UINT(ioffset),INT(voffset),UINT(firstInstance));
   }
 
-void DxCommandBuffer::dispatchMesh(size_t firstInstance, size_t instanceCount) {
-  // TODO: multidimentional dispath
-  impl->DispatchMesh(UINT(instanceCount),1,1);
+void DxCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
+  impl->DispatchMesh(UINT(x),UINT(y),UINT(z));
   }
 
 void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest, const AbstractGraphicsApi::Buffer& srcBuf, size_t offsetSrc, size_t size) {

@@ -437,8 +437,9 @@ void VCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_t
   vkCmdDrawIndexed    (impl, uint32_t(isize), uint32_t(instanceCount), uint32_t(ioffset), int32_t(voffset), uint32_t(firstInstance));
   }
 
-void VCommandBuffer::dispatchMesh(size_t firstInstance, size_t instanceCount) {
-  device.vkCmdDrawMeshTasks(impl, uint32_t(instanceCount), uint32_t(firstInstance));
+void VCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
+  device.vkCmdDrawMeshTasksNV(impl, uint32_t(x), uint32_t(0));
+  //device.vkCmdDrawMeshTasks(impl, uint32_t(x), uint32_t(y), uint32_t(z));
   }
 
 void VCommandBuffer::bindVbo(const VBuffer& vbo, size_t stride) {
@@ -1071,15 +1072,15 @@ void VMeshCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractG
                           0,nullptr);
   }
 
-void VMeshCommandBuffer::dispatchMesh(size_t firstInstance, size_t instanceCount) {
+void VMeshCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
   VPipeline& px = reinterpret_cast<VPipeline&>(*curDrawPipeline);
   if(px.meshPipeline()==VK_NULL_HANDLE)
     return;
 
   auto& ms = *device.meshHelper;
   device.vkCmdDispatchBase(cbHelper,
-                           firstInstance, meshIndirectId, 0,
-                           instanceCount, 1, 1);
+                           x, meshIndirectId, 0,
+                           y, 1, 1);
   ms.drawIndirect(impl, meshIndirectId);
   ++meshIndirectId;
   }

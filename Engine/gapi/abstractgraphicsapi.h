@@ -117,6 +117,7 @@ namespace Tempest {
     Depth16,
     Depth24x8,
     Depth24S8,
+    Depth32F,
     DXT1,
     DXT3,
     DXT5,
@@ -511,7 +512,7 @@ namespace Tempest {
                                   const Buffer& ibo, Detail::IndexClass cls, size_t ioffset, size_t isize,
                                   size_t firstInstance, size_t instanceCount) = 0;
         virtual void dispatch    (size_t x, size_t y, size_t z) = 0;
-        virtual void dispatchMesh(size_t firstInstance, size_t instanceCount);
+        virtual void dispatchMesh(size_t x, size_t y, size_t z);
         };
 
       using PBuffer       = Detail::DSharedPtr<Buffer*>;

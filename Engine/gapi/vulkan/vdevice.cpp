@@ -412,7 +412,8 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     }
 
   if(props.meshlets.meshShader) {
-    vkCmdDrawMeshTasks = PFN_vkCmdDrawMeshTasksNV(vkGetDeviceProcAddr(device.impl,"vkCmdDrawMeshTasksNV"));
+    vkCmdDrawMeshTasksNV = PFN_vkCmdDrawMeshTasksNV (vkGetDeviceProcAddr(device.impl,"vkCmdDrawMeshTasksNV"));
+    vkCmdDrawMeshTasks   = PFN_vkCmdDrawMeshTasksEXT(vkGetDeviceProcAddr(device.impl,"vkCmdDrawMeshTasksEXT"));
     }
   if(props.hasDevGroup) {
     vkCmdDispatchBase = PFN_vkCmdDispatchBase(vkGetDeviceProcAddr(device.impl,"vkCmdDispatchBase"));

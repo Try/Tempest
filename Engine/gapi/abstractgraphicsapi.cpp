@@ -78,7 +78,7 @@ void AbstractGraphicsApi::CommandBuffer::barrier(Texture& tex, ResourceAccess pr
   barrier(&b,1);
   }
 
-void AbstractGraphicsApi::CommandBuffer::dispatchMesh(size_t firstInstance, size_t instanceCount) {
+void AbstractGraphicsApi::CommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }
 
