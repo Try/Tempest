@@ -486,6 +486,8 @@ Pixmap::Format Pixmap::toPixmapFormat(TextureFormat f) {
     case TextureFormat::Depth16:   return Pixmap::Format::R16;
     case TextureFormat::Depth24S8:
     case TextureFormat::Depth24x8:
+      break; //fallthrough to exception
+    case TextureFormat::Depth32F:  return Pixmap::Format::R32F;
     case TextureFormat::Undefined:
     case TextureFormat::Last:
       break; //fallthrough to exception

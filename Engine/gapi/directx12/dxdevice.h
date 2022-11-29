@@ -98,6 +98,8 @@ inline DXGI_FORMAT nativeFormat(TextureFormat f) {
       return DXGI_FORMAT_D24_UNORM_S8_UINT;
     case TextureFormat::Depth24S8:
       return DXGI_FORMAT_D24_UNORM_S8_UINT;
+    case TextureFormat::Depth32F:
+      return DXGI_FORMAT_D32_FLOAT;
     case TextureFormat::DXT1:
       return DXGI_FORMAT_BC1_UNORM;
     case TextureFormat::DXT3:

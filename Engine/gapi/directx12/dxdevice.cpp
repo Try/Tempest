@@ -135,7 +135,7 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
                                       TextureFormat::R11G11B10UF, TextureFormat::RGBA16F,
                                      };
 
-  static const TextureFormat ds[]  = {TextureFormat::Depth16, TextureFormat::Depth24x8, TextureFormat::Depth24S8};
+  static const TextureFormat ds[]  = {TextureFormat::Depth16, TextureFormat::Depth24x8, TextureFormat::Depth24S8, TextureFormat::Depth32F};
 
   uint64_t smpBit = 0, attBit = 0, dsBit = 0, storBit = 0;
   for(auto& i:smp)

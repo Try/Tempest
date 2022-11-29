@@ -76,6 +76,8 @@ inline VkFormat nativeFormat(TextureFormat f) {
       return VK_FORMAT_X8_D24_UNORM_PACK32;
     case TextureFormat::Depth24S8:
       return VK_FORMAT_D24_UNORM_S8_UINT;
+    case TextureFormat::Depth32F:
+      return VK_FORMAT_D32_SFLOAT;
     case TextureFormat::DXT1:
       return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
     case TextureFormat::DXT3:
