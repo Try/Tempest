@@ -5,6 +5,8 @@
 #include <Tempest/Painter>
 #include <Tempest/Rect>
 
+#include "shader.h"
+
 using namespace Tempest;
 
 Game::Game(Device& device)
