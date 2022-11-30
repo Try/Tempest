@@ -37,7 +37,8 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     VkPipelineLayout   pipelineLayout = VK_NULL_HANDLE;
     VkShaderStageFlags pushStageFlags = 0;
     uint32_t           pushSize       = 0;
-    size_t             defaultStride  = 0;
+    uint32_t           defaultStride  = 0;
+    bool               isLegasyNV     = false;
 
     VkPipeline         instance(const std::shared_ptr<VFramebufferMap::RenderPass>& lay, size_t stride);
     VkPipeline         instance(const VkPipelineRenderingCreateInfoKHR& info, size_t stride);

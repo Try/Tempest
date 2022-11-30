@@ -23,6 +23,7 @@ class VShader:public AbstractGraphicsApi::Shader {
     std::vector<Decl::ComponentType> vdecl;
     std::vector<Binding>             lay;
     ShaderReflection::Stage          stage = ShaderReflection::Stage::Compute;
+    bool                             isLegasyNV = false;
 
     struct Comp {
       IVec3 wgSize;
