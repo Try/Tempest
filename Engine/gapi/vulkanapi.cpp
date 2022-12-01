@@ -250,7 +250,13 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
   cmd->begin();
   if(storageImg) {
     cmd->copyNative(stage,0, tx,w,h,mip);
-    } else {
+    }
+  else if(isDepthFormat(frm)) {
+    cmd->barrier(tx,ResourceAccess::DepthReadOnly,ResourceAccess::TransferSrc,uint32_t(-1));
+    cmd->copyNative(stage,0, tx,w,h,mip);
+    cmd->barrier(tx,ResourceAccess::TransferSrc,ResourceAccess::DepthReadOnly,uint32_t(-1));
+    }
+  else {
     cmd->barrier(tx,ResourceAccess::Sampler,ResourceAccess::TransferSrc,uint32_t(-1));
     cmd->copyNative(stage,0, tx,w,h,mip);
     cmd->barrier(tx,ResourceAccess::TransferSrc,ResourceAccess::Sampler,uint32_t(-1));

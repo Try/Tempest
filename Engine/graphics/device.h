@@ -141,22 +141,22 @@ class Device {
     AccelerationStructure tlas(const std::vector<RtInstance>& geom);
     AccelerationStructure tlas(const RtInstance* geom, size_t geomSize);
 
-    Pixmap               readPixels (const Texture2d&    t, uint32_t mip=0);
-    Pixmap               readPixels (const Attachment&   t, uint32_t mip=0);
-    Pixmap               readPixels (const StorageImage& t, uint32_t mip=0);
-    void                 readBytes  (const StorageBuffer& ssbo, void* out, size_t size);
+    Pixmap                readPixels(const Texture2d&    t, uint32_t mip=0);
+    Pixmap                readPixels(const Attachment&   t, uint32_t mip=0);
+    Pixmap                readPixels(const StorageImage& t, uint32_t mip=0);
+    void                  readBytes (const StorageBuffer& ssbo, void* out, size_t size);
 
-    RenderPipeline       pipeline(Topology tp,const RenderState& st, const Shader &vs, const Shader &fs);
-    RenderPipeline       pipeline(Topology tp,const RenderState& st, const Shader &vs, const Shader &tc, const Shader &te, const Shader &fs);
-    RenderPipeline       pipeline(Topology tp,const RenderState& st, const Shader &vs, const Shader &gs, const Shader &fs);
-    RenderPipeline       pipeline(const RenderState& st, const Shader &ts, const Shader &ms, const Shader &fs);
+    RenderPipeline        pipeline(Topology tp,const RenderState& st, const Shader &vs, const Shader &fs);
+    RenderPipeline        pipeline(Topology tp,const RenderState& st, const Shader &vs, const Shader &tc, const Shader &te, const Shader &fs);
+    RenderPipeline        pipeline(Topology tp,const RenderState& st, const Shader &vs, const Shader &gs, const Shader &fs);
+    RenderPipeline        pipeline(const RenderState& st, const Shader &ts, const Shader &ms, const Shader &fs);
 
-    ComputePipeline      pipeline(const Shader &comp);
+    ComputePipeline       pipeline(const Shader &comp);
 
-    Fence                fence();
-    CommandBuffer        commandBuffer();
+    Fence                 fence();
+    CommandBuffer         commandBuffer();
 
-    const Builtin&       builtin() const;
+    const Builtin&        builtin() const;
 
   private:
     struct Impl {

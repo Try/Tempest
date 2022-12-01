@@ -560,6 +560,9 @@ void VCommandBuffer::copyNative(AbstractGraphicsApi::Buffer&        dst, size_t 
       1
   };
 
+  if(nativeIsDepthFormat(nSrc.format))
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
   VkImageLayout layout =  nSrc.isStorageImage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
   vkCmdCopyImageToBuffer(impl, nSrc.impl, layout, nDst.impl, 1, &region);
   }
