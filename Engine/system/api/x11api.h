@@ -4,13 +4,12 @@
 
 namespace Tempest {
 
-class X11Api : public SystemApi {
+class X11Api final: SystemApi {
   public:
-    X11Api();
-
     static void* display();
 
-  protected:
+  private:
+    X11Api();
     Window*  implCreateWindow(Tempest::Window *owner, uint32_t width, uint32_t height) override;
     Window*  implCreateWindow(Tempest::Window *owner, ShowMode sm) override;
     void     implDestroyWindow(Window* w) override;
@@ -28,7 +27,6 @@ class X11Api : public SystemApi {
     void     implProcessEvents(AppCallBack& cb) override;
     bool     implIsRunning() override;
 
-  private:
     void     alignGeometry(Window *w, Tempest::Window& owner);
 };
 
