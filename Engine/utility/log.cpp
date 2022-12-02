@@ -88,8 +88,19 @@ void Log::write(Context& ctx, char *&out, size_t &count, const std::string &msg)
   write(ctx,out,count,msg.c_str());
   }
 
-void Tempest::Log::write(Context& ctx, char*& out, size_t& count, std::string_view msg) {
+void Log::write(Context& ctx, char*& out, size_t& count, std::string_view msg) {
+  for(size_t i=0; i<msg.size(); ++i) {
+    if(count<=1)
+      flush(ctx,out,count);
 
+    if(msg[i]=='\n') {
+      flush(ctx,out,count);
+      } else {
+      *out = msg[i];
+      ++out;
+      --count;
+      }
+    }
   }
 
 void Log::write(Context& ctx, char *&out, size_t &count, float msg) {
