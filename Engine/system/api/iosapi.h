@@ -4,7 +4,7 @@
 
 namespace Tempest {
 
-class iOSApi final: public SystemApi {
+class iOSApi final: SystemApi {
   private:
     iOSApi();
 
@@ -24,6 +24,7 @@ class iOSApi final: public SystemApi {
     bool     implIsRunning() override;
     int      implExec(AppCallBack& cb) override;
     void     implProcessEvents(AppCallBack& cb) override;
+  friend class SystemApi;
   };
 
 }

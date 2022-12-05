@@ -13,10 +13,9 @@ class ImplMacOSApi {
 }
 
 class MacOSApi final: SystemApi {
-  protected:
+  private:
     MacOSApi();
 
-  private:
     Window*  implCreateWindow(Tempest::Window* owner, uint32_t width, uint32_t height, ShowMode sm);
     Window*  implCreateWindow(Tempest::Window *owner, uint32_t width, uint32_t height) override;
     Window*  implCreateWindow(Tempest::Window *owner, ShowMode sm) override;
