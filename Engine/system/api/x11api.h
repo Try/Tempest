@@ -6,10 +6,10 @@ namespace Tempest {
 
 class X11Api final: SystemApi {
   public:
+    X11Api();
     static void* display();
 
   private:
-    X11Api();
     Window*  implCreateWindow(Tempest::Window *owner, uint32_t width, uint32_t height) override;
     Window*  implCreateWindow(Tempest::Window *owner, ShowMode sm) override;
     void     implDestroyWindow(Window* w) override;
