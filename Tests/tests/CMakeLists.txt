@@ -45,17 +45,16 @@ function(compile_shader SOURCE)
   set(OUTPUT_FILE "${CMAKE_CURRENT_BINARY_DIR}/testsuite/shader/${SOURCE}.sprv")
   set(SOURCE_FILE "${CMAKE_SOURCE_DIR}/../shader/${SOURCE}")
 
-  string(REGEX MATCH "\.(spv14)\." SPV14 ${SOURCE})
-  if(SPV14)
-    set(ARG --target-env spirv1.4)
-  else()
-    set(ARG "")
+  set(ARGS "")
+
+  if("${SOURCE}" MATCHES "\.(spv14)\.")
+    list(APPEND ARGS "--target-env" "spirv1.4")
   endif()
 
   add_custom_command(
     OUTPUT ${OUTPUT_FILE}
     COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/testsuite/shader/"
-    COMMAND ${GLSLANGVALIDATOR} -V ${ARG} ${SOURCE_FILE} -o ${OUTPUT_FILE}
+    COMMAND ${GLSLANGVALIDATOR} -V ${ARGS} ${SOURCE_FILE} -o ${OUTPUT_FILE}
     DEPENDS ${SOURCE_FILE})
   set(SHADERS ${SHADERS} ${OUTPUT_FILE} PARENT_SCOPE)
 endfunction(compile_shader)
