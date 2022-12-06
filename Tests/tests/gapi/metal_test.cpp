@@ -55,6 +55,12 @@ TEST(MetalApi,Pso) {
 #endif
   }
 
+TEST(MetalApi,PsoInconsistentVaryings) {
+#if defined(__OSX__)
+  GapiTestCommon::PsoInconsistentVaryings<MetalApi>();
+#endif
+  }
+
 TEST(MetalApi,Fbo) {
 #if defined(__OSX__)
   GapiTestCommon::Fbo<MetalApi>("MetalApi_Fbo.png");

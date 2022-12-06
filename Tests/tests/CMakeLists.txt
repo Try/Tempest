@@ -77,6 +77,7 @@ compile_shader(simple_test.comp)
 compile_shader(image_store_test.comp)
 compile_shader(ssbo_read.comp)
 compile_shader(overlap_test.comp)
+compile_shader(varying_test.frag)
 
 compile_shader(bindless.comp)
 compile_shader(bindless2.comp)
@@ -128,10 +129,8 @@ compile_shader(texture.frag)
 
 compile_shader(ray_test.frag)
 
-compile_shader(simple_test.task)
-compile_shader(simple_test.mesh)
-
-compile_shader(ext_mesh.spv14.mesh)
+compile_shader(simple_test.spv14.task)
+compile_shader(simple_test.spv14.mesh)
 
 compile_shader(simple_test.mesh.comp)
 compile_shader(mesh_prefix_sum.comp)

@@ -243,6 +243,34 @@ void Pso() {
   }
 
 template<class GraphicsApi>
+void PsoInconsistentVaryings() {
+  using namespace Tempest;
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto vert = device.shader("shader/simple_test.vert.sprv");
+    auto frag = device.shader("shader/varying_test.frag.sprv");
+    auto pso  = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
+
+    auto tex = device.attachment(TextureFormat::RGBA8,128,128);
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
+      enc.setUniforms(pso); // late linkpakage
+    }
+
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void PsoTess() {
   using namespace Tempest;
 
@@ -1537,10 +1565,9 @@ void MeshShader(const char* outImg) {
     Device device(api,msDev);
     auto vbo  = device.vbo(vboData,3);
 
-    auto task = device.shader("shader/simple_test.task.sprv");
-    auto mesh = device.shader("shader/simple_test.mesh.sprv");
+    auto task = device.shader("shader/simple_test.spv14.task.sprv");
+    auto mesh = device.shader("shader/simple_test.spv14.mesh.sprv");
     auto frag = device.shader("shader/simple_test.frag.sprv");
-    //auto pso  = device.pipeline(RenderState(),Tempest::Shader(),mesh,frag);
     auto pso  = device.pipeline(RenderState(),task,mesh,frag);
 
     auto ubo  = device.descriptors(pso);
@@ -1567,56 +1594,6 @@ void MeshShader(const char* outImg) {
       throw;
     }
   }
-
-template<class GraphicsApi>
-void MeshShaderEXT(const char* outImg) {
-  using namespace Tempest;
-
-  try {
-    const char* msDev = nullptr;
-
-    GraphicsApi api{ApiFlags::Validation};
-    auto dev = api.devices();
-    for(auto& i:dev)
-      if(i.meshlets.meshShader)
-        msDev = i.name;
-    if(msDev==nullptr)
-      return;
-
-    Device device(api,msDev);
-    auto vbo  = device.vbo(vboData,3);
-
-    RenderState rs;
-    rs.setCullFaceMode(Tempest::RenderState::CullMode::NoCull);
-    auto mesh = device.shader("shader/ext_mesh.spv14.mesh.sprv");
-    auto frag = device.shader("shader/simple_test.frag.sprv");
-    auto pso  = device.pipeline(rs,Tempest::Shader(),mesh,frag);
-
-    auto ubo  = device.descriptors(pso);
-    ubo.set(0, vbo);
-
-    auto tex = device.attachment(TextureFormat::RGBA8,128,128);
-    auto cmd = device.commandBuffer();
-    {
-      auto enc = cmd.startEncoding(device);
-      enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
-      enc.setUniforms(pso,ubo);
-      enc.dispatchMesh(0,1);
-    }
-    auto sync = device.fence();
-    device.submit(cmd,sync);
-    sync.wait();
-
-    auto pm = device.readPixels(tex);
-    pm.save(outImg);
-    }
-  catch(std::system_error& e) {
-    if(e.code()==Tempest::GraphicsErrc::NoDevice)
-      Log::d("Skipping graphics testcase: ", e.what()); else
-      throw;
-    }
-  }
-
 
 template<class GraphicsApi>
 void MeshShaderEmulated(const char* outImg) {

@@ -438,9 +438,7 @@ void VCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_t
   }
 
 void VCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
-  if(curDrawPipeline->isLegasyNV)
-    device.vkCmdDrawMeshTasksNV(impl, uint32_t(x*y*z), uint32_t(0)); else
-    device.vkCmdDrawMeshTasks(impl, uint32_t(x), uint32_t(y), uint32_t(z));
+  device.vkCmdDrawMeshTasks(impl, uint32_t(x), uint32_t(y), uint32_t(z));
   }
 
 void VCommandBuffer::bindVbo(const VBuffer& vbo, size_t stride) {

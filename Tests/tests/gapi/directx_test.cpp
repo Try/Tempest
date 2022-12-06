@@ -74,6 +74,12 @@ TEST(DirectX12Api,Pso) {
 #endif
   }
 
+TEST(DirectX12Api,DISABLED_PsoInconsistentVaryings) {
+#if defined(_MSC_VER)
+  GapiTestCommon::PsoInconsistentVaryings<DirectX12Api>();
+#endif
+  }
+
 TEST(DirectX12Api,Fbo) {
 #if defined(_MSC_VER)
   GapiTestCommon::Fbo<DirectX12Api>("DirectX12Api_Fbo.png");
@@ -244,12 +250,6 @@ TEST(DirectX12Api,RayQuery) {
 TEST(DirectX12Api,MeshShader) {
 #if defined(_MSC_VER)
   GapiTestCommon::MeshShader<DirectX12Api>("DirectX12Api_MeshShader.png");
-#endif
-  }
-
-TEST(DirectX12Api,MeshShaderEXT) {
-#if defined(_MSC_VER)
-  GapiTestCommon::MeshShaderEXT<DirectX12Api>("DirectX12Api_MeshShaderEXT.png");
 #endif
   }
 

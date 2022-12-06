@@ -47,16 +47,10 @@ void Log::flush(Context& ctx, char *&out, size_t &count) {
         __android_log_print(ANDROID_LOG_INFO,  "app", "%s", ctx.buffer);
         break;
       }
-#elif defined(__WINDOWS_PHONE__)
-#if !defined(_DEBUG)
-  OutputDebugStringA(ctx.buffer);
-  OutputDebugStringA("\r\n");
-#endif
 #else
 #if defined(_MSC_VER) && !defined(_NDEBUG)
   (void)ctx;
   OutputDebugStringA(ctx.buffer);
-  OutputDebugStringA("\r\n");
 #else
   if(ctx.mode==Error){
     std::cerr << ctx.buffer << std::endl;

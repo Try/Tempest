@@ -254,9 +254,6 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     rqExt.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
     }
   if(props.meshlets.meshShader) {
-    rqExt.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
-    }
-  if(props.hasMeshEXT) {
     rqExt.push_back(VK_EXT_MESH_SHADER_EXTENSION_NAME);
     }
   if(props.hasDescIndexing) {
@@ -412,8 +409,7 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     }
 
   if(props.meshlets.meshShader) {
-    vkCmdDrawMeshTasksNV = PFN_vkCmdDrawMeshTasksNV (vkGetDeviceProcAddr(device.impl,"vkCmdDrawMeshTasksNV"));
-    vkCmdDrawMeshTasks   = PFN_vkCmdDrawMeshTasksEXT(vkGetDeviceProcAddr(device.impl,"vkCmdDrawMeshTasksEXT"));
+    vkCmdDrawMeshTasks = PFN_vkCmdDrawMeshTasksEXT(vkGetDeviceProcAddr(device.impl,"vkCmdDrawMeshTasksEXT"));
     }
   if(props.hasDevGroup) {
     vkCmdDispatchBase = PFN_vkCmdDispatchBase(vkGetDeviceProcAddr(device.impl,"vkCmdDispatchBase"));

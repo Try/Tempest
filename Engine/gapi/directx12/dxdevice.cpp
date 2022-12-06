@@ -201,10 +201,14 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
     prop.meshlets.meshShader = false; // feature7.MeshShaderTier!=D3D12_MESH_SHADER_TIER_NOT_SUPPORTED;
     // https://microsoft.github.io/DirectX-Specs/d3d/MeshShader.html#dispatchmesh-api
     // ThreadGroupCountX*ThreadGroupCountY*ThreadGroupCountZ must not exceed 2^22.
-    prop.meshlets.maxMeshGroups    = 2 << 22;
+    prop.meshlets.maxGroups.x = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+    prop.meshlets.maxGroups.y = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
+    prop.meshlets.maxGroups.z = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
     // https://microsoft.github.io/DirectX-Specs/d3d/MeshShader.html#numthreads
     // The number of threads can not exceed X * Y * Z = 128
-    prop.meshlets.maxMeshGroupSize = 128;
+    prop.meshlets.maxGroupSize.x = 128;
+    prop.meshlets.maxGroupSize.y = 128;
+    prop.meshlets.maxGroupSize.z = 128;
     }
   prop.bindless.nonUniformIndexing = true;  // SM5.1
   prop.bindless.nonUniformIndexing = false; // TEST: DirectX12.Bindless2

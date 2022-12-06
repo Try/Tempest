@@ -54,10 +54,6 @@ void VShader::fetchBindings(const uint32_t *source, size_t size) {
         }
       }
     }
-
-  if(spv::ExecutionModelMeshNV==code.findExecutionModel()) {
-    isLegasyNV = true;
-    }
   }
 
 #endif

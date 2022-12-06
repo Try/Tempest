@@ -297,7 +297,7 @@ void VMeshletHelper::initEngSet(VkDescriptorSet set, uint32_t cnt) {
   buf[4].range  = VK_WHOLE_SIZE;
 
   VkWriteDescriptorSet write[5] = {};
-  for(int i=0; i<cnt; ++i) {
+  for(uint32_t i=0; i<cnt; ++i) {
     write[i].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write[i].dstSet          = set;
     write[i].dstBinding      = uint32_t(i);

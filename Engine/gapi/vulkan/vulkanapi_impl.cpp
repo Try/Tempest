@@ -232,12 +232,8 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
      checkForExt(ext,VK_KHR_RAY_QUERY_EXTENSION_NAME)) {
     props.raytracing.rayQuery = true;
     }
-  if(hasDeviceFeatures2 && checkForExt(ext,VK_NV_MESH_SHADER_EXTENSION_NAME)) {
-    props.meshlets.meshShader = true;
-    }
   if(hasDeviceFeatures2 && checkForExt(ext,VK_EXT_MESH_SHADER_EXTENSION_NAME)) {
     props.meshlets.meshShader = true;
-    props.hasMeshEXT = true;
     }
   if(hasDeviceFeatures2 && checkForExt(ext,VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME)) {
     props.hasDescIndexing = true;
@@ -295,17 +291,11 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
     VkPhysicalDeviceRayQueryFeaturesKHR rayQueryFeatures = {};
     rayQueryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR;
 
-    // TODO: switch to EXT and remove NV
-    VkPhysicalDeviceMeshShaderFeaturesNV meshFeatures = {};
-    meshFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
-    VkPhysicalDeviceMeshShaderFeaturesEXT meshFeaturesEXT = {};
-    meshFeaturesEXT.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
+    VkPhysicalDeviceMeshShaderFeaturesEXT meshFeatures = {};
+    meshFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT;
 
-    VkPhysicalDeviceMeshShaderPropertiesNV meshProperties = {};
-    meshProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
-
-    VkPhysicalDeviceMeshShaderPropertiesEXT meshPropertiesEXT = {};
-    meshPropertiesEXT.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT;
+    VkPhysicalDeviceMeshShaderPropertiesEXT meshProperties = {};
+    meshProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT;
 
     VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = {};
     indexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
@@ -340,13 +330,6 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
       meshProperties.pNext = properties.pNext;
       properties.pNext = &meshProperties;
       }
-    if(props.hasMeshEXT) {
-      meshFeaturesEXT.pNext = features.pNext;
-      features.pNext = &meshFeaturesEXT;
-
-      meshPropertiesEXT.pNext = properties.pNext;
-      properties.pNext = &meshPropertiesEXT;
-      }
     if(props.hasDescIndexing) {
       indexingFeatures.pNext = features.pNext;
       features.pNext = &indexingFeatures;
@@ -365,16 +348,24 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
     props.meshlets.taskShader       = (meshFeatures.taskShader==VK_TRUE);
     props.meshlets.meshShader       = (meshFeatures.meshShader==VK_TRUE);
     // props.meshlets.meshShader       = false;
-    props.meshlets.maxMeshGroups    = meshProperties.maxDrawMeshTasksCount;
-    props.meshlets.maxMeshGroupSize = meshProperties.maxMeshWorkGroupSize[0];
-    // props.hasDevGroup               = ;
+    props.meshlets.maxGroups.x      = meshProperties.maxMeshWorkGroupCount[0];
+    props.meshlets.maxGroups.y      = meshProperties.maxMeshWorkGroupCount[1];
+    props.meshlets.maxGroups.z      = meshProperties.maxMeshWorkGroupCount[2];
+    props.meshlets.maxGroupSize.x   = meshProperties.maxMeshWorkGroupSize[0];
+    props.meshlets.maxGroupSize.y   = meshProperties.maxMeshWorkGroupSize[1];
+    props.meshlets.maxGroupSize.z   = meshProperties.maxMeshWorkGroupSize[2];
+
     props.accelerationStructureScratchOffsetAlignment = asProperties.minAccelerationStructureScratchOffsetAlignment;
 
     if(!props.meshlets.meshShader && false) {
       props.meshlets.meshShaderEmulated = props.hasDevGroup;
       if(props.meshlets.meshShaderEmulated) {
-        props.meshlets.maxMeshGroups      = devP.limits.maxComputeWorkGroupCount[0];
-        props.meshlets.maxMeshGroupSize   = devP.limits.maxComputeWorkGroupSize [0];
+        props.meshlets.maxGroups.x      = devP.limits.maxComputeWorkGroupCount[0];
+        props.meshlets.maxGroups.y      = devP.limits.maxComputeWorkGroupCount[1];
+        props.meshlets.maxGroups.z      = devP.limits.maxComputeWorkGroupCount[2];
+        props.meshlets.maxGroupSize.x   = devP.limits.maxComputeWorkGroupSize [0];
+        props.meshlets.maxGroupSize.y   = devP.limits.maxComputeWorkGroupSize [1];
+        props.meshlets.maxGroupSize.z   = devP.limits.maxComputeWorkGroupSize [2];
         }
       }
 

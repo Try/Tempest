@@ -60,7 +60,6 @@ VPipeline::VPipeline(VDevice& device, const RenderState& st, Topology tp,
     pipelineLayout = initLayout(device,ulay,pushStageFlags,pushSize,false);
 
     if(auto ms=findShader(ShaderReflection::Stage::Mesh)) {
-      isLegasyNV = ms->isLegasyNV;
       if(device.props.meshlets.meshShaderEmulated) {
         device.allocMeshletHelper();
 

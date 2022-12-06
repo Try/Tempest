@@ -62,6 +62,12 @@ TEST(VulkanApi,Pso) {
 #endif
   }
 
+TEST(VulkanApi,PsoInconsistentVaryings) {
+#if !defined(__OSX__)
+  GapiTestCommon::PsoInconsistentVaryings<VulkanApi>();
+#endif
+  }
+
 TEST(VulkanApi,Fbo) {
 #if !defined(__OSX__)
   GapiTestCommon::Fbo<VulkanApi>("VulkanApi_Fbo.png");
@@ -237,12 +243,6 @@ TEST(VulkanApi,RayQuery) {
 TEST(VulkanApi,MeshShader) {
 #if !defined(__OSX__)
   GapiTestCommon::MeshShader<VulkanApi>("VulkanApi_MeshShader.png");
-#endif
-  }
-
-TEST(VulkanApi,MeshShaderEXT) {
-#if !defined(__OSX__)
-  GapiTestCommon::MeshShaderEXT<VulkanApi>("VulkanApi_MeshShaderEXT.png");
 #endif
   }
 
