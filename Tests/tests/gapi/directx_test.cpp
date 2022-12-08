@@ -247,6 +247,12 @@ TEST(DirectX12Api,RayQuery) {
 #endif
   }
 
+TEST(DirectX12Api,RayQueryFace) {
+#if defined(_MSC_VER)
+  GapiTestCommon::RayQueryFace<DirectX12Api>("DirectX12Api_RayQueryFace.png");
+#endif
+  }
+
 TEST(DirectX12Api,MeshShader) {
 #if defined(_MSC_VER)
   GapiTestCommon::MeshShader<DirectX12Api>("DirectX12Api_MeshShader.png");

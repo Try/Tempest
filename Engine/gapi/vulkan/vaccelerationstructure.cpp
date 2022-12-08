@@ -163,7 +163,7 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
     objInstance.instanceCustomIndex                    = inst[i].id;
     objInstance.mask                                   = 0xFF;
     objInstance.instanceShaderBindingTableRecordOffset = 0;
-    objInstance.flags                                  = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+    objInstance.flags                                  = 0; // none
     objInstance.accelerationStructureReference         = blas->toDeviceAddress(dx);
 
     pBuf.handler->update(&objInstance,i, 1,sizeof(objInstance), sizeof(objInstance));

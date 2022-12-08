@@ -127,6 +127,7 @@ compile_shader(texture.vert)
 compile_shader(texture.frag)
 
 compile_shader(ray_test.frag)
+compile_shader(ray_test_face.frag)
 
 compile_shader(simple_test.spv14.task)
 compile_shader(simple_test.spv14.mesh)

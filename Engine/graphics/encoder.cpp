@@ -3,6 +3,7 @@
 #include <Tempest/Attachment>
 #include <Tempest/ZBuffer>
 #include <Tempest/Texture2d>
+#include <cassert>
 
 #include "utility/compiller_hints.h"
 
@@ -83,6 +84,7 @@ void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const
 void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline &p) {
   if(state.stage!=Rendering)
     throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
+  assert(p.impl.handler);
   if(state.curPipeline!=p.impl.handler) {
     impl->setPipeline(*p.impl.handler);
     state.curPipeline = p.impl.handler;
@@ -110,6 +112,7 @@ void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p, cons
 void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p) {
   if(state.stage==Rendering)
     throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
+  assert(p.impl.handler);
   if(state.curCompute!=p.impl.handler) {
     impl->setComputePipeline(*p.impl.handler);
     state.curCompute  = p.impl.handler;

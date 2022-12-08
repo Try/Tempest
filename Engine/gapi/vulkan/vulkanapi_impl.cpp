@@ -476,6 +476,10 @@ VkBool32 VulkanInstance::debugReportCallback(VkDebugReportFlagsEXT      flags,
     // warning: layout should be VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL instead of GENERAL
     return VK_FALSE;
     }
+  if(location==461143016) {
+    // bug?
+    return VK_FALSE;
+    }
   Log::e(pMessage," object=",object,", type=",objectType," th:",std::this_thread::get_id());
   return VK_FALSE;
   }

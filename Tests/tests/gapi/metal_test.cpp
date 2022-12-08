@@ -193,3 +193,9 @@ TEST(MetalApi,RayQuery) {
   GapiTestCommon::RayQuery<MetalApi>("MetalApi_RayQuery.png");
 #endif
   }
+
+TEST(MetalApi,RayQueryFace) {
+#if defined(__OSX__)
+  GapiTestCommon::RayQueryFace<MetalApi>("MetalApi_RayQueryFace.png");
+#endif
+  }

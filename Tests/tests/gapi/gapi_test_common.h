@@ -1548,6 +1548,67 @@ void RayQuery(const char* outImg) {
   }
 
 template<class GraphicsApi>
+void RayQueryFace(const char* outImg) {
+  using namespace Tempest;
+
+  try {
+    const char* rtDev = nullptr;
+
+    GraphicsApi api{ApiFlags::Validation};
+    auto dev = api.devices();
+    for(auto& i:dev)
+      if(i.raytracing.rayQuery)
+        rtDev = i.name;
+    if(rtDev==nullptr)
+      return;
+
+    Device device(api,rtDev);
+
+    const Tempest::Vec3 vboData[4] = {{-1,-1,0},{ 1,-1,0},{1,1,0},{-1, 1,0}};
+    const uint16_t      iboData[6] = {0,1,2, 0,3,2};
+    auto vbo  = device.vbo(vboData,4);
+    auto ibo  = device.ibo(iboData,6);
+    auto blas = device.blas(vbo,ibo);
+
+    auto m = Matrix4x4::mkIdentity();
+    m.translate(-1,1,0);
+    auto tlas = device.tlas({{m,0,&blas}});
+
+    auto fsq  = device.vbo<Vertex>({{-1,-1},{ 1,-1},{ 1, 1}, {-1,-1},{ 1, 1},{-1, 1}});
+    auto vert = device.shader("shader/simple_test.vert.sprv");
+    auto frag = device.shader("shader/ray_test_face.frag.sprv");
+    auto pso  = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
+
+    auto ubo  = device.descriptors(pso);
+    ubo.set(0, tlas);
+
+    auto tex = device.attachment(TextureFormat::RGBA8,128,128);
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
+      enc.setUniforms(pso,ubo);
+      enc.draw(fsq);
+    }
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    auto pm = device.readPixels(tex);
+    pm.save(outImg);
+
+    const uint32_t* px = reinterpret_cast<const uint32_t*>(pm.data());
+    EXPECT_EQ(px[ 0 + 127*pm.w()], 0xFF00FF00);
+    EXPECT_EQ(px[63 +  64*pm.w()], 0xFF0000FF);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void MeshShader(const char* outImg) {
   using namespace Tempest;
 
