@@ -89,8 +89,7 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
                                       TextureFormat::R11G11B10UF, TextureFormat::RGBA16F,
                                      };
 
-  // TODO: expose MTLPixelFormatDepth32Float
-  static const TextureFormat ds[]  = {TextureFormat::Depth16};
+  static const TextureFormat ds[]  = {TextureFormat::Depth16, TextureFormat::Depth32F};
 
   uint64_t smpBit = 0, attBit = 0, dsBit = 0, storBit = 0;
   for(auto& i:smp)
@@ -125,12 +124,15 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
    * Testing shows, that texture2d works on MacOS
   */
 #ifdef __OSX__
-  // API_AVAILABLE(macos(10.12), ios(13.0))
+  if(majorVersion>=11 || (majorVersion==10 && minorVersion>=11))
+    smpBit |= uint64_t(1) << TextureFormat::Depth32F;
+#else
+  // no iOS, for Depth32F
+#endif
+
+#ifdef __OSX__
   if(majorVersion>=11 || (majorVersion==10 && minorVersion>=12))
     smpBit |= uint64_t(1) << TextureFormat::Depth16;
-  // API_AVAILABLE(macos(10.11), macCatalyst(13.0))
-  if((majorVersion>=11 || (majorVersion==10 && minorVersion>=11)) && dev.depth24Stencil8PixelFormatSupported())
-    smpBit |= uint64_t(1) << TextureFormat::Depth24S8;
 #else
   if(majorVersion>=13)
     smpBit |= uint64_t(1) << TextureFormat::Depth16;
