@@ -47,11 +47,11 @@ void MtDevice::waitIdle() {
   cmd->waitUntilCompleted();
   }
 
-void Tempest::Detail::MtDevice::handleError(NS::Error *err) {
+void MtDevice::handleError(NS::Error *err) {
   if(err==nullptr)
     return;
 #if !defined(NDEBUG)
-  const char* e = err->domain()->utf8String();
+  const char* e = err->localizedDescription()->utf8String();
   Log::d("NSError: \"",e,"\"");
 #endif
   throw DeviceLostException();
@@ -194,6 +194,16 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
 #ifdef __OSX__
   if(majorVersion>=12)
     prop.raytracing.rayQuery = dev.supportsRaytracingFromRender();
+#endif
+
+#ifdef __IOS__
+  // TODO
+#else
+  if(dev.supportsFeatureSet(MTL::FeatureSet_macOS_GPUFamily2_v1)) {
+    //prop.meshlets.meshShader = true;
+    prop.meshlets.maxGroups = prop.compute.maxGroups;
+    prop.meshlets.maxGroupSize = prop.compute.maxGroupSize;
+    }
 #endif
   }
 

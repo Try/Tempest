@@ -35,6 +35,9 @@ class MtShader : public AbstractGraphicsApi::Shader {
     struct {
       MTL::Size localSize = {};
       } comp;
+
+  private:
+    void fetchBindings(const uint32_t *source, size_t size);
   };
 
 }

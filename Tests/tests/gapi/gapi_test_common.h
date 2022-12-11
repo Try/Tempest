@@ -1626,7 +1626,7 @@ void MeshShader(const char* outImg) {
     Device device(api,msDev);
     auto vbo  = device.vbo(vboData,3);
 
-    auto task = device.shader("shader/simple_test.spv14.task.sprv");
+    auto task = Tempest::Shader(); //device.shader("shader/simple_test.spv14.task.sprv");
     auto mesh = device.shader("shader/simple_test.spv14.mesh.sprv");
     auto frag = device.shader("shader/simple_test.frag.sprv");
     auto pso  = device.pipeline(RenderState(),task,mesh,frag);
@@ -1640,7 +1640,7 @@ void MeshShader(const char* outImg) {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
       enc.setUniforms(pso,ubo);
-      enc.dispatchMesh(0,1);
+      enc.dispatchMesh(1);
     }
     auto sync = device.fence();
     device.submit(cmd,sync);
@@ -1687,7 +1687,7 @@ void MeshShaderEmulated(const char* outImg) {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
       enc.setUniforms(pso,ubo);
-      enc.dispatchMesh(0,1);
+      enc.dispatchMesh(1);
     }
     auto sync = device.fence();
     device.submit(cmd,sync);

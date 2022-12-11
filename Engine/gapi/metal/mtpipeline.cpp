@@ -31,6 +31,93 @@ MtPipeline::MtPipeline(MtDevice &d, Topology tp,
   ddesc->setDepthWriteEnabled(false);
   depthStNoZ = NsPtr<MTL::DepthStencilState>(d.impl->newDepthStencilState(ddesc.get()));
 
+  auto mesh = findShader(ShaderReflection::Mesh);
+  if(mesh!=nullptr) {
+    mkMeshPso(lay);
+    } else {
+    mkVertexPso(lay);
+    }
+
+  for(size_t i=0; i<lay.lay.size(); ++i) {
+    auto& l = lay.lay[i];
+    auto& m = lay.bind[i];
+    if(l.stage==0)
+      continue;
+    if(l.cls!=ShaderReflection::Ubo && l.cls!=ShaderReflection::SsboR && l.cls!=ShaderReflection::SsboRW)
+      continue;
+    MTL::Mutability mu = (l.cls==ShaderReflection::SsboRW) ? MTL::MutabilityMutable: MTL::MutabilityImmutable;
+
+    if(m.bindVs!=uint32_t(-1))
+      pdesc->vertexBuffers()->object(m.bindVs)->setMutability(mu);
+    if(m.bindFs!=uint32_t(-1) && pdesc!=nullptr)
+      pdesc->fragmentBuffers()->object(m.bindFs)->setMutability(mu);
+
+    if(m.bindMs!=uint32_t(-1))
+      mdesc->meshBuffers()->object(m.bindMs)->setMutability(mu);
+    if(m.bindFs!=uint32_t(-1) && mdesc!=nullptr)
+      mdesc->fragmentBuffers()->object(m.bindFs)->setMutability(mu);
+    }
+  }
+
+MtPipeline::~MtPipeline() {
+  }
+
+MTL::RenderPipelineState& MtPipeline::inst(const MtFboLayout& lay, size_t stride) {
+  std::lock_guard<SpinLock> guard(sync);
+
+  for(auto& i:instance)
+    if(i.stride==stride && i.fbo.equals(lay))
+      return *i.pso.get();
+  instance.emplace_back();
+
+  Inst& ix = instance.back();
+  ix.stride = stride;
+  ix.fbo    = lay;
+
+  MTL::RenderPipelineColorAttachmentDescriptorArray* att = nullptr;
+  if(pdesc!=nullptr)
+    att = pdesc->colorAttachments();
+  if(mdesc!=nullptr)
+    att = mdesc->colorAttachments();
+
+  for(size_t i=0; i<lay.numColors; ++i) {
+    auto clr = att->object(i);
+    clr->setPixelFormat(lay.colorFormat[i]);
+    clr->setBlendingEnabled(rs.hasBlend());
+    clr->setRgbBlendOperation          (nativeFormat(rs.blendOperation()));
+    clr->setAlphaBlendOperation        (nativeFormat(rs.blendOperation()));
+    clr->setDestinationRGBBlendFactor  (nativeFormat(rs.blendDest()));
+    clr->setDestinationAlphaBlendFactor(nativeFormat(rs.blendDest()));
+    clr->setSourceRGBBlendFactor       (nativeFormat(rs.blendSource()));
+    clr->setSourceAlphaBlendFactor     (nativeFormat(rs.blendSource()));
+    }
+
+  if(mdesc!=nullptr) {
+    mdesc->setDepthAttachmentPixelFormat(lay.depthFormat);
+
+    NS::Error* error = nullptr;
+    ix.pso = NsPtr<MTL::RenderPipelineState>(device.impl->newRenderPipelineState(mdesc.get(),MTL::PipelineOptionNone,nullptr,&error));
+    mtAssert(ix.pso.get(),error);
+    } else {
+    vdesc->layouts()->object(vboIndex)->setStride(stride);
+    pdesc->setDepthAttachmentPixelFormat(lay.depthFormat);
+
+    NS::Error* error = nullptr;
+    ix.pso = NsPtr<MTL::RenderPipelineState>(device.impl->newRenderPipelineState(pdesc.get(),&error));
+    mtAssert(ix.pso.get(),error);
+    }
+
+  return *ix.pso.get();
+  }
+
+const MtShader* MtPipeline::findShader(ShaderReflection::Stage sh) const {
+  for(auto& i:modules)
+    if(i.handler!=nullptr && i.handler->stage==sh)
+      return i.handler;
+  return nullptr;
+  }
+
+void MtPipeline::mkVertexPso(const MtPipelineLay& lay) {
   auto vert = findShader(ShaderReflection::Vertex);
   auto tesc = findShader(ShaderReflection::Control);
   auto tese = findShader(ShaderReflection::Evaluate);
@@ -55,7 +142,7 @@ MtPipeline::MtPipeline(MtDevice &d, Topology tp,
 
   pdesc = NsPtr<MTL::RenderPipelineDescriptor>::init();
   pdesc->retain();
-  pdesc->setSampleCount(1);
+  pdesc->setSampleCount(1); // deprecated
   pdesc->setVertexFunction(vert->impl.get());
   pdesc->setFragmentFunction(frag->impl.get());
   pdesc->setRasterizationEnabled(!rs.isRasterDiscardEnabled()); // TODO: test it
@@ -74,63 +161,22 @@ MtPipeline::MtPipeline(MtDevice &d, Topology tp,
     } else {
     pdesc->setVertexDescriptor(vdesc.get());
     }
-
-  for(size_t i=0; i<lay.lay.size(); ++i) {
-    auto& l = lay.lay[i];
-    auto& m = lay.bind[i];
-    if(l.stage==0)
-      continue;
-    if(l.cls!=ShaderReflection::Ubo && l.cls!=ShaderReflection::SsboR && l.cls!=ShaderReflection::SsboRW)
-      continue;
-    MTL::Mutability mu = (l.cls==ShaderReflection::SsboRW) ? MTL::MutabilityMutable: MTL::MutabilityImmutable;
-
-    if(m.bindVs!=uint32_t(-1))
-      pdesc->vertexBuffers()->object(m.bindVs)->setMutability(mu);
-    if(m.bindFs!=uint32_t(-1))
-      pdesc->fragmentBuffers()->object(m.bindFs)->setMutability(mu);
-    }
   }
 
-MtPipeline::~MtPipeline() {
-  }
+void MtPipeline::mkMeshPso(const MtPipelineLay& lay) {
+  auto mesh = findShader(ShaderReflection::Mesh);
+  auto frag = findShader(ShaderReflection::Fragment);
 
-MTL::RenderPipelineState& MtPipeline::inst(const MtFboLayout& lay, size_t stride) {
-  std::lock_guard<SpinLock> guard(sync);
+  localSize = mesh->comp.localSize;
 
-  for(auto& i:instance)
-    if(i.stride==stride && i.fbo.equals(lay))
-      return *i.pso.get();
-  instance.emplace_back();
+  mdesc = NsPtr<MTL::MeshRenderPipelineDescriptor>::init();
+  mdesc->retain();
+  //mdesc->setSampleCount(1);
+  mdesc->setObjectFunction(nullptr);
+  mdesc->setMeshFunction(mesh->impl.get());
+  mdesc->setFragmentFunction(frag->impl.get());
+  mdesc->setRasterizationEnabled(!rs.isRasterDiscardEnabled()); // TODO: test
 
-  Inst& ix = instance.back();
-  ix.stride = stride;
-  ix.fbo    = lay;
-
-  for(size_t i=0; i<lay.numColors; ++i) {
-    auto clr = pdesc->colorAttachments()->object(i);
-    clr->setPixelFormat(lay.colorFormat[i]);
-    clr->setBlendingEnabled(rs.hasBlend());
-    clr->setRgbBlendOperation          (nativeFormat(rs.blendOperation()));
-    clr->setAlphaBlendOperation        (nativeFormat(rs.blendOperation()));
-    clr->setDestinationRGBBlendFactor  (nativeFormat(rs.blendDest()));
-    clr->setDestinationAlphaBlendFactor(nativeFormat(rs.blendDest()));
-    clr->setSourceRGBBlendFactor       (nativeFormat(rs.blendSource()));
-    clr->setSourceAlphaBlendFactor     (nativeFormat(rs.blendSource()));
-    }
-  vdesc->layouts()->object(vboIndex)->setStride(stride);
-  pdesc->setDepthAttachmentPixelFormat(lay.depthFormat);
-
-  NS::Error* error = nullptr;
-  ix.pso = NsPtr<MTL::RenderPipelineState>(device.impl->newRenderPipelineState(pdesc.get(),&error));
-  mtAssert(ix.pso.get(),error);
-  return *ix.pso.get();
-  }
-
-const MtShader* MtPipeline::findShader(ShaderReflection::Stage sh) const {
-  for(auto& i:modules)
-    if(i.handler!=nullptr && i.handler->stage==sh)
-      return i.handler;
-  return nullptr;
   }
 
 

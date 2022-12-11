@@ -42,14 +42,21 @@ class MtPipeline : public AbstractGraphicsApi::Pipeline {
     size_t                            defaultStride = 0;
     bool                              isTesselation = false;
 
+    MTL::Size                         localSize     = {};
+
   private:
-    const MtShader*                   findShader(ShaderReflection::Stage sh) const;
+    const MtShader*                      findShader(ShaderReflection::Stage sh) const;
+    void                                 mkVertexPso(const MtPipelineLay& lay);
+    void                                 mkMeshPso(const MtPipelineLay& lay);
 
     MtDevice&                            device;
     Tempest::RenderState                 rs;
 
     NsPtr<MTL::VertexDescriptor>         vdesc;
     NsPtr<MTL::RenderPipelineDescriptor> pdesc;
+
+    NsPtr<MTL::MeshRenderPipelineDescriptor> mdesc;
+
     uint32_t                             vboIndex = 0;
     DSharedPtr<const MtShader*>          modules[5] = {};
 

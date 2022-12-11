@@ -59,7 +59,6 @@ function(compile_shader SOURCE)
   set(SHADERS ${SHADERS} ${OUTPUT_FILE} PARENT_SCOPE)
 endfunction(compile_shader)
 
-
 file(GLOB SOURCES
   "*.h"
   "*.cpp"

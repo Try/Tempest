@@ -5,6 +5,9 @@
 layout(local_size_x = 3, local_size_y = 1, local_size_z = 1) in;
 layout(triangles, max_vertices = 3, max_primitives = 1) out;
 
+out gl_MeshPerVertexEXT {
+  vec4 gl_Position;
+  } gl_MeshVerticesEXT[];
 // Custom vertex output block
 layout(location = 0) out vec4 v_out[];  // [max_vertices]
 

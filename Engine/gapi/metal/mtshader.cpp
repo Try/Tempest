@@ -9,6 +9,8 @@
 #include "gapi/shaderreflection.h"
 #include "thirdparty/spirv_cross/spirv_msl.hpp"
 
+#include "libspirv/libspirv.h"
+
 using namespace Tempest;
 using namespace Tempest::Detail;
 
@@ -29,24 +31,29 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
   std::string msl;
   try {
     spirv_cross::CompilerMSL comp(reinterpret_cast<const uint32_t*>(source),srcSize/4);
+    optMSL.msl_version = spirv_cross::CompilerMSL::Options::make_msl_version(2,0);
     for(auto& cap:comp.get_declared_capabilities()) {
       switch(cap) {
-        case spv::CapabilityRayQueryKHR:
-          optMSL.msl_version = spirv_cross::CompilerMSL::Options::make_msl_version(2,3);
+        case spv::CapabilityRayQueryKHR: {
+          auto ver = spirv_cross::CompilerMSL::Options::make_msl_version(2,3);
+          optMSL.msl_version = std::max(optMSL.msl_version, ver);
           break;
+          }
+        case spv::CapabilityMeshShadingEXT: {
+          auto ver = spirv_cross::CompilerMSL::Options::make_msl_version(3,0);
+          optMSL.msl_version = std::max(optMSL.msl_version, ver);
+          break;
+          }
         default:
           break;
         }
       }
-
     comp.set_msl_options   (optMSL );
     comp.set_common_options(optGLSL);
 
     msl = comp.compile();
 
-    ShaderReflection::getVertexDecl(vdecl,comp);
-    ShaderReflection::getBindings(lay,comp);
-    stage = ShaderReflection::getExecutionModel(comp);
+    fetchBindings(reinterpret_cast<const uint32_t*>(source),srcSize/4);
 
     for(auto& i:lay) {
       i.mslBinding = comp.get_automatic_msl_resource_binding(i.spvId);
@@ -95,12 +102,6 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
       else if(exec.get(spv::ExecutionModeSpacingFractionalOdd))
         tese.partition = MTL::TessellationPartitionModeFractionalOdd;
       }
-
-    if(comp.get_execution_model()==spv::ExecutionModelGLCompute) {
-      this->comp.localSize.width  = comp.get_execution_mode_argument(spv::ExecutionModeLocalSize,0);
-      this->comp.localSize.height = comp.get_execution_mode_argument(spv::ExecutionModeLocalSize,1);
-      this->comp.localSize.depth  = comp.get_execution_mode_argument(spv::ExecutionModeLocalSize,2);
-      }
     }
   catch(const std::bad_alloc&) {
     throw;
@@ -132,11 +133,37 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
 #endif
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
+
+  if(stage==ShaderReflection::Stage::Fragment) {
+    Log::d(msl);
+    }
+
   auto main = NsPtr<NS::String>(NS::String::string("main0",NS::UTF8StringEncoding));
   impl = NsPtr<MTL::Function>(library->newFunction(main.get()));
   }
 
 MtShader::~MtShader() {
+  }
+
+void MtShader::fetchBindings(const uint32_t *source, size_t size) {
+  // TODO: remove spirv-corss?
+  spirv_cross::Compiler comp(source, size);
+  ShaderReflection::getVertexDecl(vdecl,comp);
+  ShaderReflection::getBindings(lay,comp);
+
+  libspirv::Bytecode code(source, size);
+  stage = ShaderReflection::getExecutionModel(code);
+  if(stage==ShaderReflection::Compute || stage==ShaderReflection::Task || stage==ShaderReflection::Mesh) {
+    for(auto& i:code) {
+      if(i.op()!=spv::OpExecutionMode)
+        continue;
+      if(i[2]==spv::ExecutionModeLocalSize) {
+        this->comp.localSize.width  = i[3];
+        this->comp.localSize.height = i[4];
+        this->comp.localSize.depth  = i[5];
+        }
+      }
+    }
   }
 
 #endif
