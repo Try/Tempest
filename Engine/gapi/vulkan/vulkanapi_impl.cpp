@@ -239,8 +239,7 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
     props.hasDescIndexing = true;
     }
   if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)) {
-    // TODO: enable once validation layers have full support for dynamic rendering
-    // props.hasDynRendering = true;
+    props.hasDynRendering = true;
     }
   if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_DEVICE_GROUP_EXTENSION_NAME)) {
     props.hasDevGroup = true;
