@@ -52,8 +52,12 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
       };
 
     struct InstDr : Inst {
-      InstDr(const VkPipelineRenderingCreateInfoKHR& lay, size_t stride, VkPipeline val):Inst(val,stride),lay(lay){}
+      InstDr(const VkPipelineRenderingCreateInfoKHR& lay, size_t stride, VkPipeline val):Inst(val,stride),lay(lay){
+        std::memcpy(colorFrm, lay.pColorAttachmentFormats, lay.colorAttachmentCount*sizeof(VkFormat));
+        }
       VkPipelineRenderingCreateInfoKHR lay;
+      VkFormat                         colorFrm[MaxFramebufferAttachments] = {};
+
       bool                             isCompatible(const VkPipelineRenderingCreateInfoKHR& dr, size_t stride) const;
       };
 

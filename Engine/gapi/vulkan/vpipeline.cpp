@@ -23,7 +23,7 @@ bool VPipeline::InstDr::isCompatible(const VkPipelineRenderingCreateInfoKHR& dr,
     return false;
   if(lay.colorAttachmentCount!=dr.colorAttachmentCount)
     return false;
-  if(std::memcmp(lay.pColorAttachmentFormats,dr.pColorAttachmentFormats,lay.colorAttachmentCount*sizeof(VkFormat))!=0)
+  if(std::memcmp(colorFrm,dr.pColorAttachmentFormats,dr.colorAttachmentCount*sizeof(VkFormat))!=0)
     return false;
   if(lay.depthAttachmentFormat!=dr.depthAttachmentFormat ||
      lay.stencilAttachmentFormat!=dr.stencilAttachmentFormat)

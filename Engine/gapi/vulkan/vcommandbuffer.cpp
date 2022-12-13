@@ -261,10 +261,11 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
     passDyn.viewMask                = info.viewMask;
     passDyn.colorAttachmentCount    = 0;
     passDyn.pColorAttachmentFormats = passDyn.colorFrm;
+    passDyn.depthAttachmentFormat   = VK_FORMAT_UNDEFINED;
 
     VkImageView imageView   = VK_NULL_HANDLE;
     VkFormat    imageFormat = VK_FORMAT_UNDEFINED;
-    for(size_t i = 0; i < descSize; ++i) {
+    for(size_t i=0; i<descSize; ++i) {
       if(sw[i] != nullptr) {
         auto& t = *reinterpret_cast<VSwapchain*>(sw[i]);
         imageView   = t.views[imgId[i]];
@@ -367,7 +368,7 @@ void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
   curDrawPipeline = &px;
   vboStride       = px.defaultStride;
 
-  VkPipeline v  = device.props.hasDynRendering ? px.instance(passDyn,vboStride) : px.instance(pass,vboStride);
+  VkPipeline v    = device.props.hasDynRendering ? px.instance(passDyn,vboStride) : px.instance(pass,vboStride);
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v);
   }
 
@@ -1081,9 +1082,9 @@ void VMeshCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
 
   auto& ms = *device.meshHelper;
   device.vkCmdDispatchBase(cbHelper,
-                           x, meshIndirectId, 0,
+                           x, uint32_t(meshIndirectId), 0,
                            y, 1, 1);
-  ms.drawIndirect(impl, meshIndirectId);
+  ms.drawIndirect(impl, uint32_t(meshIndirectId));
   ++meshIndirectId;
   }
 
