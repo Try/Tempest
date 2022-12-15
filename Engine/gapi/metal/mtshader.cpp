@@ -134,8 +134,8 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
 
-  if(stage==ShaderReflection::Stage::Fragment) {
-    Log::d(msl);
+  if(stage==ShaderReflection::Stage::Mesh) {
+    // Log::d(msl);
     }
 
   auto main = NsPtr<NS::String>(NS::String::string("main0",NS::UTF8StringEncoding));

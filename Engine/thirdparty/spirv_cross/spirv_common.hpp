@@ -567,7 +567,8 @@ struct SPIRType : IVariant
 		// Keep internal types at the end.
 		ControlPointArray,
 		Interpolant,
-		Char
+		Char,
+		Meshlet,
 	};
 
 	// Scalar/vector/matrix support.
@@ -643,7 +644,8 @@ struct SPIRExtension : IVariant
 		SPV_AMD_shader_explicit_vertex_parameter,
 		SPV_AMD_shader_trinary_minmax,
 		SPV_AMD_gcn_shader,
-		NonSemanticDebugPrintf
+		NonSemanticDebugPrintf,
+		NonSemanticShaderDebugInfo
 	};
 
 	explicit SPIRExtension(Extension ext_)

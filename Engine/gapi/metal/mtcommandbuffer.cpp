@@ -266,16 +266,10 @@ void MtCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_
   }
 
 void MtCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
-  x *= localSize.width;
-  y *= localSize.height;
-  z *= localSize.depth;
   encDraw->drawMeshThreadgroups(MTL::Size(x,y,z), MTL::Size(), localSize);
   }
 
 void MtCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
-  x *= localSize.width;
-  y *= localSize.height;
-  z *= localSize.depth;
   encComp->dispatchThreadgroups(MTL::Size(x,y,z), localSize);
   }
 
