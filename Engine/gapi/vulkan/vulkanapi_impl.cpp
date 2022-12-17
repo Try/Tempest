@@ -6,7 +6,6 @@
 #include <Tempest/Platform>
 
 #include "exceptions/exception.h"
-#include "utility/smallarray.h"
 #include "vdevice.h"
 
 #include <set>

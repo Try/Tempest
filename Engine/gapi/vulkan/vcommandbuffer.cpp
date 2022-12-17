@@ -935,7 +935,7 @@ void VCommandBuffer::vkCmdPipelineBarrier2(VkCommandBuffer impl, const VkDepende
 void VCommandBuffer::pushChunk() {
   if(cbHelper!=nullptr) {
     auto& ms = *device.meshHelper;
-    ms.sortPass(cbHelper,meshIndirectId);
+    ms.sortPass(cbHelper,uint32_t(meshIndirectId));
 
     vkAssert(vkEndCommandBuffer(cbHelper));
     Chunk ch;
@@ -1082,8 +1082,8 @@ void VMeshCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
 
   auto& ms = *device.meshHelper;
   device.vkCmdDispatchBase(cbHelper,
-                           x, uint32_t(meshIndirectId), 0,
-                           y, 1, 1);
+                           uint32_t(x), uint32_t(meshIndirectId), 0,
+                           uint32_t(y), 1, 1);
   ms.drawIndirect(impl, uint32_t(meshIndirectId));
   ++meshIndirectId;
   }

@@ -11,6 +11,9 @@ using namespace Tempest;
 using namespace Tempest::Detail;
 
 static bool isRuntimeSized(const spirv_cross::SPIRType& t) {
+  if(t.array.empty())
+    return false;
+  // OpTypeRuntimeArray ?
   // NOTE: in spirv there is no dedicated decoration or something to identify runtime array
   return (!t.array.empty() && t.array[0]<=1);
   }
