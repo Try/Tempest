@@ -489,8 +489,9 @@ void Widget::implSetFocus(Widget* Additive::*add, bool WidgetState::*flag, bool 
         auto mv=w->astate.*add;
         w->astate.*add=nullptr;
         if(mv==nullptr){
+          if(w->wstate.*flag)
+            previous = w;
           w->wstate.*flag=false;
-          previous = w;
           break;
           }
         w=mv;

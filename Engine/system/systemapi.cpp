@@ -142,6 +142,10 @@ void SystemApi::dispatchClose(Tempest::Window& cb, CloseEvent& e) {
   dispatcher.dispatchClose(cb,e);
   }
 
+void SystemApi::dispatchFocus(Tempest::Window& cb, FocusEvent& e) {
+  dispatcher.dispatchFocus(cb,e);
+  }
+
 bool SystemApi::isRunning() {
   return inst().implIsRunning();
   }

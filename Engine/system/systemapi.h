@@ -14,6 +14,7 @@ class MouseEvent;
 class KeyEvent;
 class CloseEvent;
 class PaintEvent;
+class FocusEvent;
 
 class Widget;
 class Window;
@@ -94,6 +95,8 @@ class SystemApi {
 
     static void      dispatchResize    (Tempest::Window& cb, SizeEvent& e);
     static void      dispatchClose     (Tempest::Window& cb, CloseEvent& e);
+
+    static void      dispatchFocus     (Tempest::Window& cb, FocusEvent& e);
 
     static SystemApi& inst();
 

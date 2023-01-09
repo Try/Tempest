@@ -23,6 +23,8 @@ class EventDispatcher final {
     void dispatchResize    (Widget& wnd, Tempest::SizeEvent&  event);
     void dispatchClose     (Widget& wnd, Tempest::CloseEvent& event);
 
+    void dispatchFocus     (Widget& wnd, Tempest::FocusEvent& event);
+
     void dispatchRender    (Window& wnd);
     void dispatchOverlayRender(Window& wnd,Tempest::PaintEvent& e);
     void addOverlay        (UiOverlay* ui);
@@ -32,6 +34,7 @@ class EventDispatcher final {
 
   private:
     std::shared_ptr<Widget::Ref> implDispatch(Tempest::Widget &w, Tempest::MouseEvent& event);
+    std::shared_ptr<Widget::Ref> implDispatch(Tempest::Widget &w, Tempest::FocusEvent& event);
     void                         implMouseWhell(Widget &w, MouseEvent &event);
 
     bool                         implShortcut(Tempest::Widget &w, Tempest::KeyEvent& event);
@@ -46,6 +49,8 @@ class EventDispatcher final {
     std::weak_ptr<Widget::Ref>   mouseUp;
     std::weak_ptr<Widget::Ref>   mouseLast;
     std::weak_ptr<Widget::Ref>   mouseOver;
+
+    std::weak_ptr<Widget::Ref>   focusLast;
 
     std::vector<UiOverlay*>      overlays;
     uint64_t                     mouseLastTime = 0;

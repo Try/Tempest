@@ -197,6 +197,27 @@ void EventDispatcher::dispatchClose(Widget& wnd, CloseEvent& e) {
   wnd.closeEvent(e);
   }
 
+void EventDispatcher::dispatchFocus(Widget& wnd, FocusEvent& e) {
+  if(e.in) {
+    if(auto f = focusLast.lock()) {
+      f->widget->setFocus(true);
+      }
+    focusLast.reset();
+    return;
+    }
+
+  focusLast.reset();
+  for(auto i:overlays) {
+    if(!i->bind(wnd))
+      continue;
+    focusLast = implDispatch(*i,e);
+    if(!focusLast.expired())
+      return;
+    }
+
+  focusLast = implDispatch(wnd,e);
+  }
+
 void EventDispatcher::dispatchRender(Window& wnd) {
   if(wnd.w()>0 && wnd.h()>0)
     wnd.render();
@@ -279,6 +300,19 @@ std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget& w, MouseEvent
 
     if(event.isAccepted() && it.owner)
       return it.owner->selfReference();
+    }
+  return nullptr;
+  }
+
+std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget& root, FocusEvent& event) {
+  Widget* w = &root;
+  while(w->astate.focus!=nullptr) {
+    w = w->astate.focus;
+    }
+  if(w->wstate.focus) {
+    auto ptr = w->selfReference();
+    w->setFocus(false);
+    return ptr;
     }
   return nullptr;
   }
