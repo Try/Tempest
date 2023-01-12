@@ -309,7 +309,7 @@ std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget& root, FocusEv
   while(w->astate.focus!=nullptr) {
     w = w->astate.focus;
     }
-  if(w->wstate.focus) {
+  if(!event.in) {
     auto ptr = w->selfReference();
     w->setFocus(false);
     return ptr;
