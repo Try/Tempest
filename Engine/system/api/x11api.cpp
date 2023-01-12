@@ -191,7 +191,8 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, 
   swa.colormap   = cmap;
   swa.event_mask = PointerMotionMask | ExposureMask |
                    ButtonPressMask | ButtonReleaseMask |
-                   KeyPressMask | KeyReleaseMask;
+                   KeyPressMask | KeyReleaseMask |
+                   FocusChangeMask;
 
   HWND win = XCreateWindow( dpy, root, 0, 0, w, h,
                             0, vi->depth, InputOutput, vi->visual,
@@ -497,6 +498,16 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
           SystemApi::dispatchKeyUp  (cb,e,scan);
         break;
         }
+      case FocusIn: {
+        FocusEvent e(true, Event::UnknownReason);
+        SystemApi::dispatchFocus(cb, e);
+        break;
+      }
+      case FocusOut: {
+        FocusEvent e(false, Event::UnknownReason);
+        SystemApi::dispatchFocus(cb, e);
+        break;
+      }
       }
 
     std::this_thread::yield();
