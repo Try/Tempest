@@ -206,7 +206,7 @@ void EventDispatcher::dispatchFocus(Widget& wnd, FocusEvent& e) {
     return;
     }
 
-  if (!wnd.hasFocus() || !focusLast.expired())
+  if (!focusLast.expired())
     return;
 
   focusLast.reset();
