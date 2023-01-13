@@ -206,7 +206,9 @@ void EventDispatcher::dispatchFocus(Widget& wnd, FocusEvent& e) {
     return;
     }
 
-  focusLast.reset();
+  if(!focusLast.expired())
+    return;
+
   for(auto i:overlays) {
     if(!i->bind(wnd))
       continue;
