@@ -502,12 +502,12 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
         FocusEvent e(true, Event::UnknownReason);
         SystemApi::dispatchFocus(cb, e);
         break;
-      }
+        }
       case FocusOut: {
         FocusEvent e(false, Event::UnknownReason);
         SystemApi::dispatchFocus(cb, e);
         break;
-      }
+        }
       }
 
     std::this_thread::yield();
