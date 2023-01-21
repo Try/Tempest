@@ -9,6 +9,8 @@ class ImplMacOSApi {
   public:
     static void onDisplayLink(void* hwnd);
     static void onDidResize(void* hwnd, void* w);
+    static void onDidBecomeKey(void* hwnd, void* w);
+    static void onDidResignKey(void* hwnd, void* w);
   };
 }
 

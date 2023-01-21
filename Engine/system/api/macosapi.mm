@@ -105,6 +105,22 @@ void Detail::ImplMacOSApi::onDidResize(void* hwnd, void* w) {
   MacOSApi::dispatchResize(*cb,sz);
   }
 
+void Detail::ImplMacOSApi::onDidBecomeKey(void* hwnd, void* w) {
+  auto      cb  = reinterpret_cast<Tempest::Window*>(hwnd);
+  NSWindow* wnd = reinterpret_cast<NSWindow*>(w);
+
+  FocusEvent e(true, Event::UnknownReason);
+  MacOSApi::dispatchFocus(*cb, e);
+  }
+
+void Detail::ImplMacOSApi::onDidResignKey(void* hwnd, void* w) {
+  auto      cb  = reinterpret_cast<Tempest::Window*>(hwnd);
+  NSWindow* wnd = reinterpret_cast<NSWindow*>(w);
+
+  FocusEvent e(false, Event::UnknownReason);
+  MacOSApi::dispatchFocus(*cb, e);
+  }
+
 @interface TempestWindowDelegate : NSObject<NSWindowDelegate> {
   @public Tempest::Window* owner;
   @public CVDisplayLinkRef displayLink;
@@ -146,6 +162,16 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef /*displayLink*/,
 
 - (void)windowWillClose:(id)sender {
   isRunning.store(false);
+  }
+
+- (void)windowDidBecomeKey:(NSNotification *)notification {
+  NSWindow* wnd  = [notification object];
+  Detail::ImplMacOSApi::onDidBecomeKey(owner,wnd);
+  }
+
+- (void)windowDidResignKey:(NSNotification *)notification {
+  NSWindow* wnd  = [notification object];
+  Detail::ImplMacOSApi::onDidResignKey(owner,wnd);
   }
 
 - (void)windowDidResize:(NSNotification*)notification {
