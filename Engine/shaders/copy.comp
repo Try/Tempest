@@ -16,7 +16,7 @@ void main() {
   ivec2 texSz  = textureSize(source,push.mip);
   uint  texel  = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y*65535;
   uint  bitCnt = push.bitCnt;
-  uint  maxV   = (1<<bitCnt)-1;
+  uint  maxV   = (1u<<bitCnt)-1;
 
 #if defined(FRM_SMALL)
   uint  pack   = 0;
