@@ -1494,6 +1494,35 @@ void Blas() {
   }
 
 template<class GraphicsApi>
+void TlasEmpty() {
+  // NOTE: it's brutally difficult to check for empty tlas on shader side, so better to have engine-size handling
+  // Vulkan - WA needed
+  // DX12   - just works
+  using namespace Tempest;
+
+  try {
+    const char* rtDev = nullptr;
+
+    GraphicsApi api{ApiFlags::Validation};
+    auto dev = api.devices();
+    for(auto& i:dev)
+      if(i.raytracing.rayQuery)
+        rtDev = i.name;
+    if(rtDev==nullptr)
+      return;
+
+    Device device(api,rtDev);
+    //auto blas = device.blas(vbo,ibo);
+    auto tlas = device.tlas({});
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void RayQuery(const char* outImg) {
   using namespace Tempest;
 

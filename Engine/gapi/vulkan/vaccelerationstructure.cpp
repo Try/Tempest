@@ -147,11 +147,11 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
   data = dx.allocator.alloc(nullptr, buildSizesInfo.accelerationStructureSize,1,1, MemUsage::AsStorage,BufferHeap::Device);
 
   Detail::DSharedPtr<VBuffer*> pBuf;
-  {
-  VBuffer buf = dx.allocator.alloc(nullptr,asSize,sizeof(VkAccelerationStructureInstanceKHR),sizeof(VkAccelerationStructureInstanceKHR),
-                                   MemUsage::TransferDst | MemUsage::StorageBuffer,BufferHeap::Upload);
-  pBuf = Detail::DSharedPtr<VBuffer*>(new Detail::VBuffer(std::move(buf)));
-  }
+  if(asSize>0) {
+    VBuffer buf = dx.allocator.alloc(nullptr,asSize,sizeof(VkAccelerationStructureInstanceKHR),sizeof(VkAccelerationStructureInstanceKHR),
+                                     MemUsage::TransferDst | MemUsage::StorageBuffer,BufferHeap::Upload);
+    pBuf = Detail::DSharedPtr<VBuffer*>(new Detail::VBuffer(std::move(buf)));
+    }
 
   for(size_t i=0; i<asSize; ++i) {
     auto blas = reinterpret_cast<VAccelerationStructure*>(as[i]);

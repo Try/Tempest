@@ -663,7 +663,8 @@ void VCommandBuffer::buildTlas(VkAccelerationStructureKHR dest,
   geometryInstancesData.sType                 = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
   geometryInstancesData.pNext                 = NULL;
   geometryInstancesData.arrayOfPointers       = VK_FALSE;
-  geometryInstancesData.data.deviceAddress    = reinterpret_cast<const VBuffer&>(instances).toDeviceAddress(device);
+  if(numInstances>0)
+    geometryInstancesData.data.deviceAddress  = reinterpret_cast<const VBuffer&>(instances).toDeviceAddress(device);
 
   VkAccelerationStructureGeometryKHR geometry = {};
   geometry.sType                              = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;

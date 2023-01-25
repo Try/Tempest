@@ -67,12 +67,12 @@ DxTopAccelerationStructure::DxTopAccelerationStructure(DxDevice& dx, const RtIns
   dx.device->QueryInterface(uuid<ID3D12Device5>(), reinterpret_cast<void**>(&m_dxrDevice));
 
   Detail::DSharedPtr<DxBuffer*> pBuf;
-  {
-  DxBuffer buf = dx.allocator.alloc(nullptr,asSize,sizeof(D3D12_RAYTRACING_INSTANCE_DESC),sizeof(D3D12_RAYTRACING_INSTANCE_DESC),
-                                   MemUsage::TransferDst | MemUsage::StorageBuffer,BufferHeap::Device);
+  if(asSize>0) {
+    DxBuffer buf = dx.allocator.alloc(nullptr,asSize,sizeof(D3D12_RAYTRACING_INSTANCE_DESC),sizeof(D3D12_RAYTRACING_INSTANCE_DESC),
+                                     MemUsage::TransferDst | MemUsage::StorageBuffer,BufferHeap::Device);
 
-  pBuf = Detail::DSharedPtr<DxBuffer*>(new Detail::DxBuffer(std::move(buf)));
-  }
+    pBuf = Detail::DSharedPtr<DxBuffer*>(new Detail::DxBuffer(std::move(buf)));
+    }
 
   for(size_t i=0; i<asSize; ++i) {
     auto blas = reinterpret_cast<DxAccelerationStructure*>(as[i]);

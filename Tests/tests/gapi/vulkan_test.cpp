@@ -234,6 +234,12 @@ TEST(VulkanApi,Blas) {
 #endif
   }
 
+TEST(VulkanApi,TlasEmpty) {
+#if !defined(__OSX__)
+  GapiTestCommon::TlasEmpty<VulkanApi>();
+#endif
+  }
+
 TEST(VulkanApi,RayQuery) {
 #if !defined(__OSX__)
   GapiTestCommon::RayQuery<VulkanApi>("VulkanApi_RayQuery.png");

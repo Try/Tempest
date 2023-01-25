@@ -204,6 +204,8 @@ AccelerationStructure Device::implBlas(const Detail::VideoBuffer& vbo, size_t st
   if(!properties().raytracing.rayQuery)
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   assert(3*sizeof(float)<=stride); // float3 positions, no overlap
+  if(count==0)
+    return AccelerationStructure();
   auto blas = api.createBottomAccelerationStruct(dev,
                                                  vbo.impl.handler,vbo.size()/stride,stride,
                                                  ibo.impl.handler,count,offset,icls);
@@ -220,9 +222,12 @@ AccelerationStructure Device::tlas(const std::vector<RtInstance>& geom) {
 
 AccelerationStructure Device::tlas(const RtInstance* geom, size_t geomSize) {
   std::vector<AbstractGraphicsApi::AccelerationStructure*> as(geomSize);
-  for(size_t i=0; i<geomSize; ++i)
-    as[i] = geom[i].blas->impl.handler;
-  auto tlas = api.createTopAccelerationStruct(dev,geom,as.data(),geomSize);
+  size_t nonEmptyGeomSize = 0;
+  for(size_t i=0; i<geomSize; ++i) {
+    as[nonEmptyGeomSize] = geom[i].blas->impl.handler;
+    ++nonEmptyGeomSize;
+    }
+  auto tlas = api.createTopAccelerationStruct(dev,geom,as.data(),nonEmptyGeomSize);
   return AccelerationStructure(*this,tlas);
   }
 

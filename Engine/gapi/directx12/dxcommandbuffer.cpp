@@ -689,6 +689,7 @@ void DxCommandBuffer::buildBlas(ID3D12Resource* dest,
 void DxCommandBuffer::buildTlas(AbstractGraphicsApi::Buffer& tbo,
                                 AbstractGraphicsApi::Buffer& instances, uint32_t numInstances,
                                 AbstractGraphicsApi::Buffer& scratch) {
+  // NOTE: instances must be 16 bytes aligned
   auto& dest = *reinterpret_cast<DxBuffer&>(tbo).impl;
 
   D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS tlasInputs = {};
@@ -696,7 +697,8 @@ void DxCommandBuffer::buildTlas(AbstractGraphicsApi::Buffer& tbo,
   tlasInputs.Flags         = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
   tlasInputs.NumDescs      = numInstances;
   tlasInputs.DescsLayout   = D3D12_ELEMENTS_LAYOUT_ARRAY;
-  tlasInputs.InstanceDescs = reinterpret_cast<DxBuffer&>(instances).impl->GetGPUVirtualAddress();
+  if(numInstances>0)
+    tlasInputs.InstanceDescs = reinterpret_cast<DxBuffer&>(instances).impl->GetGPUVirtualAddress();
 
   D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC desc = {};
   desc.DestAccelerationStructureData    = dest.GetGPUVirtualAddress();

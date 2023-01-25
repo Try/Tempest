@@ -241,6 +241,12 @@ TEST(DirectX12Api,Blas) {
 #endif
   }
 
+TEST(DirectX12Api,TlasEmpty) {
+#if defined(_MSC_VER)
+  GapiTestCommon::TlasEmpty<DirectX12Api>();
+#endif
+  }
+
 TEST(DirectX12Api,RayQuery) {
 #if defined(_MSC_VER)
   GapiTestCommon::RayQuery<DirectX12Api>("DirectX12Api_RayQuery.png");
