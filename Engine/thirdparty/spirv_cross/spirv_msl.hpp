@@ -811,6 +811,7 @@ protected:
 
 	// GCC workaround of lambdas calling protected functions (for older GCC versions)
 	std::string variable_decl(const SPIRType &type, const std::string &name, uint32_t id = 0) override;
+	std::string variable_decl_function_local(SPIRVariable &variable) override;
 
 	std::string image_type_glsl(const SPIRType &type, uint32_t id = 0) override;
 	std::string sampler_type(const SPIRType &type, uint32_t id);
@@ -838,6 +839,7 @@ protected:
 
 	void replace_illegal_entry_point_names();
 	void sync_entry_point_aliases_and_names();
+	void emit_mesh_entry_point();
 
 	static const std::unordered_set<std::string> &get_reserved_keyword_set();
 	static const std::unordered_set<std::string> &get_illegal_func_names();
@@ -1109,6 +1111,7 @@ protected:
 	VariableID tess_level_inner_var_id = 0;
 	VariableID tess_level_outer_var_id = 0;
 	VariableID mesh_out_per_vertex = 0;
+	VariableID mesh_out_per_primitive = 0;
 	VariableID stage_out_masked_builtin_type_id = 0;
 
 	// Handle HLSL-style 0-based vertex/instance index.
