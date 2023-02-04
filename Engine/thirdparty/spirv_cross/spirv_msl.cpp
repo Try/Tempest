@@ -9500,7 +9500,7 @@ void CompilerMSL::emit_texture_op(const Instruction &i, bool sparse)
 
 void CompilerMSL::emit_barrier(uint32_t id_exe_scope, uint32_t id_mem_scope, uint32_t id_mem_sem)
 {
-	if (get_execution_model() != ExecutionModelGLCompute && !is_tesc_shader())
+  if (get_execution_model() != ExecutionModelGLCompute && !is_tesc_shader() && !is_mesh_shader())
 		return;
 
 	uint32_t exe_scope = id_exe_scope ? evaluate_constant_u32(id_exe_scope) : uint32_t(ScopeInvocation);
