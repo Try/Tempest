@@ -199,7 +199,7 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
 #ifdef __IOS__
   // TODO
 #else
-  if(dev.supportsFeatureSet(MTL::FeatureSet_macOS_GPUFamily2_v1)) {
+  if(dev.supportsFamily(MTL::GPUFamilyMetal3)) {
     //prop.meshlets.meshShader = true;
     prop.meshlets.maxGroups = prop.compute.maxGroups;
     prop.meshlets.maxGroupSize = prop.compute.maxGroupSize;

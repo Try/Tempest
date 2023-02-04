@@ -176,7 +176,6 @@ void MtPipeline::mkMeshPso(const MtPipelineLay& lay) {
   mdesc->setMeshFunction(mesh->impl.get());
   mdesc->setFragmentFunction(frag->impl.get());
   mdesc->setRasterizationEnabled(!rs.isRasterDiscardEnabled()); // TODO: test
-
   }
 
 
