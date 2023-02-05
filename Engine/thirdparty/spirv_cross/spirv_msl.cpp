@@ -1154,7 +1154,22 @@ uint32_t CompilerMSL::get_uint_type_id()
 	type.basetype = SPIRType::UInt;
 	type.width = 32;
 	set<SPIRType>(uint_type_id, type);
-	return uint_type_id;
+  return uint_type_id;
+}
+
+uint32_t CompilerMSL::get_shared_uint_type_id()
+{
+  if (shared_uint_type_id != 0)
+    return shared_uint_type_id;
+
+  shared_uint_type_id = ir.increase_bound_by(1);
+
+  SPIRType type;
+  type.basetype = SPIRType::UInt;
+  type.width = 32;
+  type.storage = StorageClassWorkgroup;
+  set<SPIRType>(shared_uint_type_id, type);
+  return shared_uint_type_id;
 }
 
 uint32_t CompilerMSL::get_meshlet_type_id()
@@ -1451,6 +1466,11 @@ void CompilerMSL::emit_entry_point_declarations()
 		statement(variable_decl(var), ";");
 		var.deferred_declaration = false;
 	}
+
+  if (is_mesh_shader())
+  {
+    statement("threadgroup uint spv_primitive_count;");
+  }
 }
 
 string CompilerMSL::compile()
@@ -2161,6 +2181,20 @@ void CompilerMSL::extract_global_variables_from_function(uint32_t func_id, std::
 
 					set_name(next_id, "spvMesh");
 					unset_decoration(next_id, DecorationBuiltIn);
+          {
+            uint32_t uint_type_id = get_shared_uint_type_id();
+            uint32_t next_id = ir.increase_bound_by(1);
+            func.add_parameter(uint_type_id, next_id, true);
+            auto& v = set<SPIRVariable>(next_id, uint_type_id, StorageClassFunction, 0, arg_id);
+            v.basevariable = 0;
+
+            // Ensure the existing variable has a valid name and the new variable has all the same meta info
+            auto& meta = ir.meta[next_id];
+            meta = ir.meta[arg_id];
+
+            set_name(next_id, "spv_primitive_count");
+            unset_decoration(next_id, DecorationBuiltIn);
+          }
 				}
 				else
 				{
@@ -9475,8 +9509,8 @@ void CompilerMSL::emit_instruction(const Instruction &instruction)
 	}
 	case OpSetMeshOutputsEXT:
 	{
-		flush_variable_declaration(builtin_primitive_indices_id);
-		statement("spvMesh.set_primitive_count(", to_unpacked_expression(ops[1]), ");");
+    flush_variable_declaration(builtin_primitive_indices_id);
+    statement("spv_primitive_count = ", to_unpacked_expression(ops[1]), ";");
 		break;
 	}
 
@@ -13926,8 +13960,14 @@ void CompilerMSL::emit_mesh_outputs()
 	{
 		auto &type_vert = get<SPIRType>(mesh_out_per_vertex);
 		statement("threadgroup_barrier(mem_flags::mem_threadgroup);");
-		statement("for (uint spvI = gl_LocalInvocationIndex, spvThreadCount = (gl_WorkGroupSize.x*gl_WorkGroupSize.y*gl_WorkGroupSize.z); spvI < ", mode.output_vertices, "; spvI += spvThreadCount)");
+    statement("if(spv_primitive_count==0)");
+    begin_scope();
+    statement("return;");
+    end_scope();
+    statement("spvMesh.set_primitive_count(spv_primitive_count);");
+    statement("for (uint spvI = gl_LocalInvocationIndex, spvThreadCount = (gl_WorkGroupSize.x*gl_WorkGroupSize.y*gl_WorkGroupSize.z); spvI < ", mode.output_vertices, "; spvI += spvThreadCount)");
 		begin_scope();
+    // statement("uint spvI = gl_LocalInvocationIndex;");
 		statement("spvPerVertex spvV = {};");
 		for (size_t index = 0; index < type_vert.member_types.size(); ++index)
 		{
