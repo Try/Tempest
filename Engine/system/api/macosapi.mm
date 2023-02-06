@@ -578,7 +578,7 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
         SystemApi::dispatchKeyDown(cb,k,evt.keyCode); else
         SystemApi::dispatchKeyUp(cb,k,evt.keyCode);
       return;
-	  }
+      }
     case NSEventTypeAppKitDefined:
       break;
     case NSEventTypeMouseEntered:
