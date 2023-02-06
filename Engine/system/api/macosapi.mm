@@ -514,74 +514,71 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
       return;
       }
     case NSEventTypeFlagsChanged: {
-      NSEventModifierFlags flag = 0;
-      KeyEvent::KeyType kt = KeyEvent::K_NoKey;
-      Event::Modifier modifier = Event::M_NoModifier;
+      NSEventModifierFlags flag     = 0;
+      KeyEvent::KeyType    kt       = KeyEvent::K_NoKey;
+      Event::Modifier      modifier = Event::M_NoModifier;
 
       switch(evt.keyCode) {
         case kVK_Command: {
-          flag = NSEventModifierFlagCommand;
-          kt = KeyEvent::K_LCommand;
+          flag     = NSEventModifierFlagCommand;
+          kt       = KeyEvent::K_LCommand;
           modifier = Event::M_Command;
           break;
-        }
+          }
         case kVK_Shift: {
-          flag = NSEventModifierFlagShift;
-          kt = KeyEvent::K_LShift;
+          flag     = NSEventModifierFlagShift;
+          kt       = KeyEvent::K_LShift;
           modifier = Event::M_Shift;
           break;
-        }
+          }
         case kVK_Option: {
-          flag = NSEventModifierFlagOption;
-          kt = KeyEvent::K_LAlt;
+          flag     = NSEventModifierFlagOption;
+          kt       = KeyEvent::K_LAlt;
           modifier = Event::M_Alt;
           break;
-        }
+          }
         case kVK_Control: {
-          flag = NSEventModifierFlagControl;
-          kt = KeyEvent::K_LControl;
+          flag     = NSEventModifierFlagControl;
+          kt       = KeyEvent::K_LControl;
           modifier = Event::M_Ctrl;
           break;
-        }
+          }
         case kVK_RightCommand: {
-          flag = NSEventModifierFlagCommand;
-          kt = KeyEvent::K_RCommand;
+          flag     = NSEventModifierFlagCommand;
+          kt       = KeyEvent::K_RCommand;
           modifier = Event::M_Command;
           break;
-        }
+          }
         case kVK_RightShift: {
-          flag = NSEventModifierFlagShift;
-          kt = KeyEvent::K_RShift;
+          flag     = NSEventModifierFlagShift;
+          kt       = KeyEvent::K_RShift;
           modifier = Event::M_Shift;
           break;
-        }
+          }
         case kVK_RightOption: {
-          flag = NSEventModifierFlagOption;
-          kt = KeyEvent::K_RAlt;
+          flag     = NSEventModifierFlagOption;
+          kt       = KeyEvent::K_RAlt;
           modifier = Event::M_Alt;
           break;
-        }
+          }
         case kVK_RightControl: {
-          flag = NSEventModifierFlagControl;
-          kt = KeyEvent::K_RControl;
+          flag     = NSEventModifierFlagControl;
+          kt       = KeyEvent::K_RControl;
           modifier = Event::M_Ctrl;
           break;
-        }
+          }
         default: break;
-      }
+		}
 
       auto isDown = evt.modifierFlags & flag;
       auto eType  = (isDown ? Event::KeyDown : Event::KeyUp);
-      auto key    = evt.keyCode;
-      auto k      = KeyEvent(kt,0,modifier,eType);
+      auto k      = KeyEvent(kt,modifier,eType);
 
-      if(isDown) {
-        SystemApi::dispatchKeyDown(cb,k,key);
-      } else {
-        SystemApi::dispatchKeyUp(cb,k,key);
-      }
+      if(isDown)
+        SystemApi::dispatchKeyDown(cb,k,evt.keyCode); else
+        SystemApi::dispatchKeyUp(cb,k,evt.keyCode);
       return;
-    }
+	  }
     case NSEventTypeAppKitDefined:
       break;
     case NSEventTypeMouseEntered:
