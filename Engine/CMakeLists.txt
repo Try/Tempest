@@ -111,6 +111,8 @@ endif()
 if(WIN32 AND TEMPEST_BUILD_DIRECTX12)
   add_definitions(-DTEMPEST_BUILD_DIRECTX12)
   target_link_libraries(${PROJECT_NAME} PRIVATE d3dcompiler dxcompiler dxgi)
+  find_package(directx-dxc CONFIG REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE Microsoft::DirectXShaderCompiler)
 endif()
 
 ### Metal
