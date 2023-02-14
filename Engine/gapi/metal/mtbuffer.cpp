@@ -77,7 +77,7 @@ void MtBuffer::implUpdate(const void *data, size_t off, size_t count, size_t sz,
   if(impl->storageMode()!=MTL::StorageModeManaged)
     return;
 
-  impl->didModifyRange(NS::Range(off,count*alignedSz));
+  impl->didModifyRange(NS::Range(off*alignedSz,count*alignedSz));
   }
 
 #endif
