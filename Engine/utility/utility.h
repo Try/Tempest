@@ -229,7 +229,7 @@ struct BasicRect {
     return contains(p.x, p.y);
     }
   bool contains( const T& px,const T& py ) const {
-    return ( x<px && px<x+w ) && ( y<py && py<y+h );
+    return ( x<=px && px<x+w ) && ( y<=py && py<y+h );
     }
 
   bool contains( const BasicPoint<T,2> & p, bool border ) const {
