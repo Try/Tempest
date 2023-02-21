@@ -1239,7 +1239,8 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
     double distances[MAX_FD_COUNT];
     uint fdCount = 0;
     uint evCounts[MAX_FD_COUNT];
-    std::vector<uint> azCounts(MAX_FD_COUNT * MAX_EV_COUNT);
+    auto azCounts = std::vector<std::array<uint,MAX_EV_COUNT>>(MAX_FD_COUNT);
+    for(auto &azs : azCounts) azs.fill(0u);
 
     TrIndication(tr, &line, &col);
     while(TrIsIdent(tr))
@@ -1388,7 +1389,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
             {
                 if(!TrReadInt(tr, MIN_AZ_COUNT, MAX_AZ_COUNT, &intVal))
                     return 0;
-                azCounts[(count * MAX_EV_COUNT) + evCounts[count]++] = static_cast<uint>(intVal);
+                azCounts[count][evCounts[count]++] = static_cast<uint>(intVal);
                 if(TrIsOperator(tr, ","))
                 {
                     if(evCounts[count] >= MAX_EV_COUNT)
@@ -1405,7 +1406,7 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
                         TrErrorAt(tr, line, col, "Did not reach the minimum of %d azimuth counts.\n", MIN_EV_COUNT);
                         return 0;
                     }
-                    if(azCounts[count * MAX_EV_COUNT] != 1 || azCounts[(count * MAX_EV_COUNT) + evCounts[count] - 1] != 1)
+                    if(azCounts[count][0] != 1 || azCounts[count][evCounts[count] - 1] != 1)
                     {
                         TrError(tr, "Poles are not singular for field %d.\n", count - 1);
                         return 0;
@@ -1450,7 +1451,8 @@ static int ProcessMetrics(TokenReaderT *tr, const uint fftSize, const uint trunc
     }
     if(hData->mChannelType == CT_NONE)
         hData->mChannelType = CT_MONO;
-    if(!PrepareHrirData(fdCount, distances, evCounts, azCounts.data(), hData))
+    const auto azs = al::as_span(azCounts).first<MAX_FD_COUNT>();
+    if(!PrepareHrirData({distances, fdCount}, evCounts, azs, hData))
     {
         fprintf(stderr, "Error:  Out of memory.\n");
         exit(-1);
@@ -1463,9 +1465,9 @@ static int ReadIndexTriplet(TokenReaderT *tr, const HrirDataT *hData, uint *fi, 
 {
     int intVal;
 
-    if(hData->mFdCount > 1)
+    if(hData->mFds.size() > 1)
     {
-        if(!TrReadInt(tr, 0, static_cast<int>(hData->mFdCount) - 1, &intVal))
+        if(!TrReadInt(tr, 0, static_cast<int>(hData->mFds.size()-1), &intVal))
             return 0;
         *fi = static_cast<uint>(intVal);
         if(!TrReadOperator(tr, ","))
@@ -1475,12 +1477,12 @@ static int ReadIndexTriplet(TokenReaderT *tr, const HrirDataT *hData, uint *fi, 
     {
         *fi = 0;
     }
-    if(!TrReadInt(tr, 0, static_cast<int>(hData->mFds[*fi].mEvCount) - 1, &intVal))
+    if(!TrReadInt(tr, 0, static_cast<int>(hData->mFds[*fi].mEvs.size()-1), &intVal))
         return 0;
     *ei = static_cast<uint>(intVal);
     if(!TrReadOperator(tr, ","))
         return 0;
-    if(!TrReadInt(tr, 0, static_cast<int>(hData->mFds[*fi].mEvs[*ei].mAzCount) - 1, &intVal))
+    if(!TrReadInt(tr, 0, static_cast<int>(hData->mFds[*fi].mEvs[*ei].mAzs.size()-1), &intVal))
         return 0;
     *ai = static_cast<uint>(intVal);
     return 1;
@@ -1743,12 +1745,11 @@ static void AverageHrirMagnitude(const uint points, const uint n, const double *
 // Process the list of sources in the data set definition.
 static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate)
 {
-    uint channels = (hData->mChannelType == CT_STEREO) ? 2 : 1;
+    const uint channels{(hData->mChannelType == CT_STEREO) ? 2u : 1u};
     hData->mHrirsBase.resize(channels * hData->mIrCount * hData->mIrSize);
     double *hrirs = hData->mHrirsBase.data();
     auto hrir = std::make_unique<double[]>(hData->mIrSize);
     uint line, col, fi, ei, ai;
-    int count;
 
     std::vector<double> onsetSamples(OnsetRateMultiple * hData->mIrPoints);
     PPhaseResampler onsetResampler;
@@ -1764,7 +1765,7 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
 
     printf("Loading sources...");
     fflush(stdout);
-    count = 0;
+    int count{0};
     while(TrIsOperator(tr, "["))
     {
         double factor[2]{ 1.0, 1.0 };
@@ -1846,28 +1847,29 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
                 else
                     aer[0] = std::fmod(360.0f - aer[0], 360.0f);
 
-                for(fi = 0;fi < hData->mFdCount;fi++)
-                {
-                    double delta = aer[2] - hData->mFds[fi].mDistance;
-                    if(std::abs(delta) < 0.001) break;
-                }
-                if(fi >= hData->mFdCount)
+                auto field = std::find_if(hData->mFds.cbegin(), hData->mFds.cend(),
+                    [&aer](const HrirFdT &fld) -> bool
+                    { return (std::abs(aer[2] - fld.mDistance) < 0.001); });
+                if(field == hData->mFds.cend())
                     continue;
+                fi = static_cast<uint>(std::distance(hData->mFds.cbegin(), field));
 
-                double ef{(90.0 + aer[1]) / 180.0 * (hData->mFds[fi].mEvCount - 1)};
+                const double evscale{180.0 / static_cast<double>(field->mEvs.size()-1)};
+                double ef{(90.0 + aer[1]) / evscale};
                 ei = static_cast<uint>(std::round(ef));
-                ef = (ef - ei) * 180.0 / (hData->mFds[fi].mEvCount - 1);
+                ef = (ef - ei) * evscale;
                 if(std::abs(ef) >= 0.1)
                     continue;
 
-                double af{aer[0] / 360.0 * hData->mFds[fi].mEvs[ei].mAzCount};
+                const double azscale{360.0 / static_cast<double>(field->mEvs[ei].mAzs.size())};
+                double af{aer[0] / azscale};
                 ai = static_cast<uint>(std::round(af));
-                af = (af - ai) * 360.0 / hData->mFds[fi].mEvs[ei].mAzCount;
-                ai = ai % hData->mFds[fi].mEvs[ei].mAzCount;
+                af = (af - ai) * azscale;
+                ai %= static_cast<uint>(field->mEvs[ei].mAzs.size());
                 if(std::abs(af) >= 0.1)
                     continue;
 
-                HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
+                HrirAzT *azd = &field->mEvs[ei].mAzs[ai];
                 if(azd->mIrs[0] != nullptr)
                 {
                     TrErrorAt(tr, line, col, "Redefinition of source [ %d, %d, %d ].\n", fi, ei, ai);
@@ -1981,28 +1983,28 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
         hData->mIrPoints = irPoints;
         resampler.reset();
     }
-    for(fi = 0;fi < hData->mFdCount;fi++)
+    for(fi = 0;fi < hData->mFds.size();fi++)
     {
-        for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
+        for(ei = 0;ei < hData->mFds[fi].mEvs.size();ei++)
         {
-            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzs.size();ai++)
             {
                 HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
                 if(azd->mIrs[0] != nullptr)
                     break;
             }
-            if(ai < hData->mFds[fi].mEvs[ei].mAzCount)
+            if(ai < hData->mFds[fi].mEvs[ei].mAzs.size())
                 break;
         }
-        if(ei >= hData->mFds[fi].mEvCount)
+        if(ei >= hData->mFds[fi].mEvs.size())
         {
             TrError(tr, "Missing source references [ %d, *, * ].\n", fi);
             return 0;
         }
         hData->mFds[fi].mEvStart = ei;
-        for(;ei < hData->mFds[fi].mEvCount;ei++)
+        for(;ei < hData->mFds[fi].mEvs.size();ei++)
         {
-            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+            for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzs.size();ai++)
             {
                 HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
 
@@ -2016,11 +2018,11 @@ static int ProcessSources(TokenReaderT *tr, HrirDataT *hData, const uint outRate
     }
     for(uint ti{0};ti < channels;ti++)
     {
-        for(fi = 0;fi < hData->mFdCount;fi++)
+        for(fi = 0;fi < hData->mFds.size();fi++)
         {
-            for(ei = 0;ei < hData->mFds[fi].mEvCount;ei++)
+            for(ei = 0;ei < hData->mFds[fi].mEvs.size();ei++)
             {
-                for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzCount;ai++)
+                for(ai = 0;ai < hData->mFds[fi].mEvs[ei].mAzs.size();ai++)
                 {
                     HrirAzT *azd = &hData->mFds[fi].mEvs[ei].mAzs[ai];
 
