@@ -11,18 +11,17 @@
   #define __WINDOWS__	1
 #endif
 
-#if defined(linux) || defined(__linux) || defined(__linux__)
+
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#elif defined(unix) || defined(__unix__) || defined(__unix)
   #ifndef __ANDROID__
-    #undef  __LINUX__
-    #define __LINUX__	1
+    #undef  __UNIX__
+    #define __UNIX__	1
   #else
     #undef  __ANDROID__
     #define __ANDROID__	1
   #endif
-#endif
-
-#ifdef __APPLE__
-#include <TargetConditionals.h>
 #endif
 
 #if defined(__WINDOWS_PHONE__) || defined(__ANDROID__) || (defined(TARGET_OS_IOS) && TARGET_OS_IOS)
