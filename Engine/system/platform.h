@@ -15,6 +15,10 @@
 #ifdef __APPLE__
 #include <TargetConditionals.h>
 #elif defined(unix) || defined(__unix__) || defined(__unix)
+  #if defined(linux) || defined(__linux) || defined(__linux__)
+    #undef  __LINUX__
+    #define __LINUX__   1
+  #endif
   #ifndef __ANDROID__
     #undef  __UNIX__
     #define __UNIX__	1
