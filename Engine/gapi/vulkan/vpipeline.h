@@ -42,6 +42,8 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     VkPipeline         instance(const std::shared_ptr<VFramebufferMap::RenderPass>& lay, size_t stride);
     VkPipeline         instance(const VkPipelineRenderingCreateInfoKHR& info, size_t stride);
 
+    IVec3              workGroupSize() const override;
+
     VkPipeline         meshPipeline() const;
     VkPipelineLayout   meshPipelineLayout() const;
 
@@ -67,6 +69,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     DSharedPtr<const VShader*>             modules[5] = {};
     std::unique_ptr<Decl::ComponentType[]> decl;
     Topology                               tp = Topology::Triangles;
+    IVec3                                  wgSize = {};
 
     VkPipelineLayout                       pipelineLayoutMs = VK_NULL_HANDLE;
     VkPipeline                             meshCompuePipeline = VK_NULL_HANDLE;

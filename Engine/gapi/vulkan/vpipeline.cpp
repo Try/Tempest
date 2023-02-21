@@ -57,6 +57,14 @@ VPipeline::VPipeline(VDevice& device, const RenderState& st, Topology tp,
     if(ulay.pb.size>0) {
       pushStageFlags = nativeFormat(ulay.pb.stage);
       }
+
+    if(auto task=findShader(ShaderReflection::Stage::Task)) {
+      wgSize = task->comp.wgSize;
+      }
+    else if(auto mesh=findShader(ShaderReflection::Stage::Mesh)) {
+      wgSize = mesh->comp.wgSize;
+      }
+
     pipelineLayout = initLayout(device,ulay,pushStageFlags,pushSize,false);
 
     if(auto ms=findShader(ShaderReflection::Stage::Mesh)) {
@@ -131,6 +139,10 @@ VkPipeline VPipeline::instance(const VkPipelineRenderingCreateInfoKHR& info, siz
     throw;
     }
   return instDr.back().val;
+  }
+
+IVec3 VPipeline::workGroupSize() const {
+  return wgSize;
   }
 
 VkPipeline VPipeline::meshPipeline() const {
@@ -245,7 +257,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   VkVertexInputBindingDescription vertexInputBindingDescription;
   vertexInputBindingDescription.binding   = 0;
   vertexInputBindingDescription.stride    = uint32_t(stride);
-  vertexInputBindingDescription.inputRate = VkVertexInputRate::VK_VERTEX_INPUT_RATE_VERTEX;
+  vertexInputBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
   SmallArray<VkVertexInputAttributeDescription,16> vsInput(declSize);
   uint32_t offset=0;
@@ -260,7 +272,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
     }
 
   VkPipelineVertexInputStateCreateInfo vertexInputInfo = {};
-  vertexInputInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+  vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
   vertexInputInfo.pNext = nullptr;
   vertexInputInfo.flags = 0;
   vertexInputInfo.vertexBindingDescriptionCount   = (declSize>0 ? 1 : 0);
@@ -292,9 +304,9 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   rasterizer.pNext                   = nullptr;
   rasterizer.flags                   = 0;
   rasterizer.rasterizerDiscardEnable = st.isRasterDiscardEnabled() ? VK_TRUE : VK_FALSE;
-  rasterizer.polygonMode             = VkPolygonMode::VK_POLYGON_MODE_FILL;
+  rasterizer.polygonMode             = VK_POLYGON_MODE_FILL;
   rasterizer.cullMode                = nativeFormat(st.cullFaceMode());
-  rasterizer.frontFace               = VkFrontFace::VK_FRONT_FACE_CLOCKWISE;
+  rasterizer.frontFace               = VK_FRONT_FACE_CLOCKWISE;
   rasterizer.depthClampEnable        = VK_FALSE;
   rasterizer.depthBiasEnable         = VK_FALSE;
   rasterizer.depthBiasConstantFactor = 0.0f;

@@ -121,6 +121,10 @@ ID3D12PipelineState& DxPipeline::instance(const DxFboLayout& frm) {
   return *inst.back().impl.get();
   }
 
+IVec3 DxPipeline::workGroupSize() const {
+  return wgSize;
+  }
+
 const DxShader* DxPipeline::findShader(ShaderReflection::Stage sh) const {
   for(auto& i:modules)
     if(i.handler!=nullptr && i.handler->stage==sh)
@@ -227,6 +231,13 @@ ComPtr<ID3D12PipelineState> DxPipeline::initMeshPipeline(const DxFboLayout& frm)
     psoDesc.MS = sh->bytecode();
   if(auto sh = findShader(ShaderReflection::Fragment))
     psoDesc.PS = sh->bytecode();
+
+  if(auto task = findShader(ShaderReflection::Task)) {
+    wgSize = task->comp.wgSize;
+    }
+  else if(auto mesh = findShader(ShaderReflection::Mesh)) {
+    wgSize = mesh->comp.wgSize;
+    }
 
   //int x = offsetof(D3DX12_MESH_SHADER_PIPELINE_STATE_DESC, D3DX12_MESH_SHADER_PIPELINE_STATE_DESC::RasterizerState)      - 4;
   //int y = offsetof(D3DX12_MESH_SHADER_PIPELINE_STATE_DESC, D3DX12_MESH_SHADER_PIPELINE_STATE_DESC::SampleMask) - 4;

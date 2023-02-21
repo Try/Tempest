@@ -150,6 +150,16 @@ void Tempest::Encoder<Tempest::CommandBuffer>::dispatchMesh(size_t x, size_t y, 
   impl->dispatchMesh(x,y,z);
   }
 
+void Tempest::Encoder<Tempest::CommandBuffer>::dispatchMeshThreads(size_t x, size_t y, size_t z) {
+  if(state.stage!=Rendering)
+    throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
+  auto sz = state.curPipeline->workGroupSize();
+  x = (x+sz.x-1)/sz.x;
+  y = (y+sz.y-1)/sz.y;
+  z = (z+sz.z-1)/sz.z;
+  impl->dispatchMesh(x,y,z);
+  }
+
 void Encoder<CommandBuffer>::dispatch(size_t x, size_t y, size_t z) {
   if(state.stage==Rendering)
     throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);

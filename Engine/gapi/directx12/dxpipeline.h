@@ -40,15 +40,13 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
     ID3D12PipelineState&        instance(DXGI_FORMAT  frm);
     ID3D12PipelineState&        instance(const DxFboLayout& frm);
 
+    IVec3                       workGroupSize() const override;
+
   private:
     DxDevice&                   device;
     DSharedPtr<const DxShader*> modules[5] = {};
-    /*
-    DSharedPtr<const DxShader*> vsShader;
-    DSharedPtr<const DxShader*> tcShader;
-    DSharedPtr<const DxShader*> teShader;
-    DSharedPtr<const DxShader*> gsShader;
-    DSharedPtr<const DxShader*> fsShader;*/
+    IVec3                       wgSize = {};
+
     UINT                        declSize=0;
     RenderState                 rState;
     std::unique_ptr<D3D12_INPUT_ELEMENT_DESC[]> vsInput;

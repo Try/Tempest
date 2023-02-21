@@ -258,9 +258,9 @@ inline VkShaderStageFlagBits nativeFormat(ShaderReflection::Stage st) {
   if(st&ShaderReflection::Fragment)
     stageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
   if(st&ShaderReflection::Task)
-    stageFlags |= VK_SHADER_STAGE_TASK_BIT_NV;
+    stageFlags |= VK_SHADER_STAGE_TASK_BIT_EXT;
   if(st&ShaderReflection::Mesh)
-    stageFlags |= VK_SHADER_STAGE_MESH_BIT_NV;
+    stageFlags |= VK_SHADER_STAGE_MESH_BIT_EXT;
   return VkShaderStageFlagBits(stageFlags);
   }
 
