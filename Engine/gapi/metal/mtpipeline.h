@@ -25,6 +25,8 @@ class MtPipeline : public AbstractGraphicsApi::Pipeline {
                const MtShader*const* sh, size_t cnt);
     ~MtPipeline();
 
+    IVec3 workGroupSize() const override;
+
     struct Inst {
       NsPtr<MTL::RenderPipelineState> pso;
       size_t                          stride=0;

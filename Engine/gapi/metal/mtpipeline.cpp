@@ -62,6 +62,10 @@ MtPipeline::MtPipeline(MtDevice &d, Topology tp,
 MtPipeline::~MtPipeline() {
   }
 
+IVec3 MtPipeline::workGroupSize() const {
+  return IVec3(localSize.width, localSize.height, localSize.depth);
+  }
+
 MTL::RenderPipelineState& MtPipeline::inst(const MtFboLayout& lay, size_t stride) {
   std::lock_guard<SpinLock> guard(sync);
 
@@ -164,10 +168,13 @@ void MtPipeline::mkVertexPso(const MtPipelineLay& lay) {
   }
 
 void MtPipeline::mkMeshPso(const MtPipelineLay& lay) {
+  auto task = findShader(ShaderReflection::Task);
   auto mesh = findShader(ShaderReflection::Mesh);
   auto frag = findShader(ShaderReflection::Fragment);
 
-  localSize = mesh->comp.localSize;
+  if(task!=nullptr)
+    localSize = task->comp.localSize; else
+    localSize = mesh->comp.localSize;
 
   mdesc = NsPtr<MTL::MeshRenderPipelineDescriptor>::init();
   mdesc->retain();
