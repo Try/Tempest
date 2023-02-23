@@ -19,7 +19,7 @@
 #  define VK_USE_PLATFORM_WIN32_KHR
 #  include <windows.h>
 #  include <vulkan/vulkan_win32.h>
-#elif defined(__LINUX__)
+#elif defined(__UNIX__)
 #  define VK_USE_PLATFORM_XLIB_KHR
 #  include <X11/Xlib.h>
 #  include <vulkan/vulkan_xlib.h>
@@ -88,7 +88,7 @@ VkSurfaceKHR VDevice::createSurface(void* hwnd) {
   createInfo.hwnd      = HWND(hwnd);
   if(vkCreateWin32SurfaceKHR(instance,&createInfo,nullptr,&ret)!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
-#elif defined(__LINUX__)
+#elif defined(__UNIX__)
   VkXlibSurfaceCreateInfoKHR createInfo = {};
   createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
   createInfo.dpy    = reinterpret_cast<Display*>(X11Api::display());
@@ -135,7 +135,7 @@ void VDevice::deviceQueueProps(VulkanInstance::VkProp& prop, VkPhysicalDevice de
     const bool graphicsSupport = ((queueFamily.queueFlags & rqFlag)==rqFlag);
 #if defined(__WINDOWS__)
     const bool presentSupport = vkGetPhysicalDeviceWin32PresentationSupportKHR(device,i)!=VK_FALSE;
-#elif defined(__LINUX__)
+#elif defined(__UNIX__)
     bool presentSupport = false;
     if(auto dpy = reinterpret_cast<Display*>(X11Api::display())){
       auto screen   = DefaultScreen(dpy);

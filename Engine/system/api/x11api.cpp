@@ -1,6 +1,6 @@
 #include "x11api.h"
 
-#ifdef __LINUX__
+#ifdef __UNIX__
 #include <Tempest/Event>
 #include <Tempest/TextCodec>
 #include <Tempest/Window>
