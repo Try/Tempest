@@ -200,7 +200,8 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
   // TODO
 #else
   if(dev.supportsFamily(MTL::GPUFamilyMetal3)) {
-    //prop.meshlets.meshShader = true;
+    prop.meshlets.taskShader = true;
+    prop.meshlets.meshShader = true;
     prop.meshlets.maxGroups = prop.compute.maxGroups;
     prop.meshlets.maxGroupSize = prop.compute.maxGroupSize;
     }

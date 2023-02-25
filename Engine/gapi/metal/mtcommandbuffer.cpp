@@ -266,7 +266,7 @@ void MtCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_
   }
 
 void MtCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
-  encDraw->drawMeshThreadgroups(MTL::Size(x,y,z), MTL::Size(), localSize);
+  encDraw->drawMeshThreadgroups(MTL::Size(x,y,z), localSize, localSizeMesh);
   }
 
 void MtCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
@@ -284,6 +284,9 @@ void MtCommandBuffer::implSetBytes(const void* bytes, size_t sz) {
     std::memcpy(tmp,bytes,sz);
     bytes = tmp;
     sz    = l.size;
+    }
+  if(mtl.bindTs!=uint32_t(-1)) {
+    encDraw->setObjectBytes(bytes,sz,mtl.bindTs);
     }
   if(mtl.bindMs!=uint32_t(-1)) {
     encDraw->setMeshBytes(bytes,sz,mtl.bindMs);
@@ -333,6 +336,9 @@ void MtCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u) {
   }
 
 void MtCommandBuffer::setBuffer(const MtPipelineLay::MTLBind& mtl, MTL::Buffer* buf, size_t offset) {
+  if(mtl.bindTs!=uint32_t(-1)) {
+    encDraw->setObjectBuffer(buf,offset,mtl.bindTs);
+    }
   if(mtl.bindMs!=uint32_t(-1)) {
     encDraw->setMeshBuffer(buf,offset,mtl.bindMs);
     }
@@ -348,6 +354,11 @@ void MtCommandBuffer::setBuffer(const MtPipelineLay::MTLBind& mtl, MTL::Buffer* 
   }
 
 void MtCommandBuffer::setTexture(const MtPipelineLay::MTLBind& mtl, MTL::Texture* tex, MTL::SamplerState* ss) {
+  if(mtl.bindTs!=uint32_t(-1))
+    encDraw->setObjectTexture(tex,mtl.bindTs);
+  if(mtl.bindTsSmp!=uint32_t(-1))
+    encDraw->setObjectSamplerState(ss,mtl.bindTsSmp);
+
   if(mtl.bindMs!=uint32_t(-1))
     encDraw->setMeshTexture(tex,mtl.bindMs);
   if(mtl.bindMsSmp!=uint32_t(-1))
@@ -370,6 +381,10 @@ void MtCommandBuffer::setTexture(const MtPipelineLay::MTLBind& mtl, MTL::Texture
   }
 
 void MtCommandBuffer::setTlas(const MtPipelineLay::MTLBind& mtl, MTL::AccelerationStructure* as) {
+  if(mtl.bindTs!=uint32_t(-1)) {
+    // not suported?
+    // encDraw->setObjectAccelerationStructure(as,mtl.bindTs);
+    }
   if(mtl.bindMs!=uint32_t(-1)) {
     // not suported?
     // encDraw->setMeshAccelerationStructure(as,mtl.bindMs);
@@ -411,6 +426,7 @@ void MtCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
   curLay          = px.lay.handler;
   curVboId        = px.lay.handler->vboIndex;
   localSize       = px.localSize;
+  localSizeMesh   = px.localSizeMesh;
   }
 
 void MtCommandBuffer::copy(AbstractGraphicsApi::Buffer& dest, size_t offset,

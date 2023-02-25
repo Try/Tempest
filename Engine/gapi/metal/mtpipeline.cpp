@@ -52,6 +52,8 @@ MtPipeline::MtPipeline(MtDevice &d, Topology tp,
     if(m.bindFs!=uint32_t(-1) && pdesc!=nullptr)
       pdesc->fragmentBuffers()->object(m.bindFs)->setMutability(mu);
 
+    if(m.bindTs!=uint32_t(-1))
+      mdesc->objectBuffers()->object(m.bindTs)->setMutability(mu);
     if(m.bindMs!=uint32_t(-1))
       mdesc->meshBuffers()->object(m.bindMs)->setMutability(mu);
     if(m.bindFs!=uint32_t(-1) && mdesc!=nullptr)
@@ -63,7 +65,9 @@ MtPipeline::~MtPipeline() {
   }
 
 IVec3 MtPipeline::workGroupSize() const {
-  return IVec3(localSize.width, localSize.height, localSize.depth);
+  if(localSize.width>0)
+    return IVec3(localSize.width, localSize.height, localSize.depth);
+  return IVec3(localSizeMesh.width, localSizeMesh.height, localSizeMesh.depth);
   }
 
 MTL::RenderPipelineState& MtPipeline::inst(const MtFboLayout& lay, size_t stride) {
@@ -172,14 +176,17 @@ void MtPipeline::mkMeshPso(const MtPipelineLay& lay) {
   auto mesh = findShader(ShaderReflection::Mesh);
   auto frag = findShader(ShaderReflection::Fragment);
 
-  if(task!=nullptr)
-    localSize = task->comp.localSize; else
-    localSize = mesh->comp.localSize;
+  if(task!=nullptr) {
+    localSize     = task->comp.localSize;
+    localSizeMesh = mesh->comp.localSize;
+    } else {
+    localSize     = mesh->comp.localSize;
+    }
 
   mdesc = NsPtr<MTL::MeshRenderPipelineDescriptor>::init();
   mdesc->retain();
   //mdesc->setSampleCount(1);
-  mdesc->setObjectFunction(nullptr);
+  mdesc->setObjectFunction((task!=nullptr) ? task->impl.get() : nullptr);
   mdesc->setMeshFunction(mesh->impl.get());
   mdesc->setFragmentFunction(frag->impl.get());
   mdesc->setRasterizationEnabled(!rs.isRasterDiscardEnabled()); // TODO: test

@@ -254,7 +254,7 @@ void CompilerMSL::build_implicit_builtins()
 	    (active_input_builtins.get(BuiltInVertexId) || active_input_builtins.get(BuiltInVertexIndex) ||
 	     active_input_builtins.get(BuiltInBaseVertex) || active_input_builtins.get(BuiltInInstanceId) ||
 	     active_input_builtins.get(BuiltInInstanceIndex) || active_input_builtins.get(BuiltInBaseInstance));
-	bool need_local_invocation_index = msl_options.emulate_subgroups && active_input_builtins.get(BuiltInSubgroupId);
+	bool need_local_invocation_index = (msl_options.emulate_subgroups && active_input_builtins.get(BuiltInSubgroupId)) || is_mesh_shader();
 	bool need_workgroup_size = msl_options.emulate_subgroups && active_input_builtins.get(BuiltInNumSubgroups);
 
 	if (need_subpass_input || need_sample_pos || need_subgroup_mask || need_vertex_params || need_tesc_params ||
@@ -1154,22 +1154,22 @@ uint32_t CompilerMSL::get_uint_type_id()
 	type.basetype = SPIRType::UInt;
 	type.width = 32;
 	set<SPIRType>(uint_type_id, type);
-  return uint_type_id;
+	return uint_type_id;
 }
 
 uint32_t CompilerMSL::get_shared_uint_type_id()
 {
-  if (shared_uint_type_id != 0)
-    return shared_uint_type_id;
+	if (shared_uint_type_id != 0)
+		return shared_uint_type_id;
 
-  shared_uint_type_id = ir.increase_bound_by(1);
+	shared_uint_type_id = ir.increase_bound_by(1);
 
-  SPIRType type;
-  type.basetype = SPIRType::UInt;
-  type.width = 32;
-  type.storage = StorageClassWorkgroup;
-  set<SPIRType>(shared_uint_type_id, type);
-  return shared_uint_type_id;
+	SPIRType type;
+	type.basetype = SPIRType::UInt;
+	type.width = 32;
+	type.storage = spv::StorageClassWorkgroup;
+	set<SPIRType>(shared_uint_type_id, type);
+	return shared_uint_type_id;
 }
 
 uint32_t CompilerMSL::get_meshlet_type_id()
@@ -1467,10 +1467,10 @@ void CompilerMSL::emit_entry_point_declarations()
 		var.deferred_declaration = false;
 	}
 
-  if (is_mesh_shader())
-  {
-    statement("threadgroup uint spv_primitive_count;");
-  }
+	if (processing_entry_point && is_mesh_shader())
+	{
+		statement("threadgroup uint spv_primitive_count;");
+	}
 }
 
 string CompilerMSL::compile()
@@ -1737,7 +1737,7 @@ void CompilerMSL::localize_global_variables()
 	{
 		uint32_t v_id = *iter;
 		auto &var = get<SPIRVariable>(v_id);
-		if (var.storage == StorageClassPrivate || var.storage == StorageClassWorkgroup)
+		if (var.storage == StorageClassPrivate || var.storage == StorageClassWorkgroup || var.storage == StorageClassTaskPayloadWorkgroupEXT)
 		{
 			if (!variable_is_lut(var))
 				entry_func.add_local_variable(v_id);
@@ -2064,6 +2064,15 @@ void CompilerMSL::extract_global_variables_from_function(uint32_t func_id, std::
 				break;
 			}
 
+			case OpSetMeshOutputsEXT:
+			{
+				if (builtin_primitive_indices_id != 0)
+					added_arg_ids.insert(builtin_primitive_indices_id);
+				if (builtin_local_invocation_index_id != 0)
+					added_arg_ids.insert(builtin_local_invocation_index_id);
+				break;
+			}
+
 			default:
 				break;
 			}
@@ -2172,29 +2181,24 @@ void CompilerMSL::extract_global_variables_from_function(uint32_t func_id, std::
 					uint32_t mesh_type_id = get_meshlet_type_id();
 					uint32_t next_id = ir.increase_bound_by(1);
 					func.add_parameter(mesh_type_id, next_id, true);
-					auto& v = set<SPIRVariable>(next_id, mesh_type_id, StorageClassFunction, 0, arg_id);
-					v.basevariable = 0;
+					auto& v_mesh = set<SPIRVariable>(next_id, mesh_type_id, StorageClassOutput, 0, arg_id);
+					v_mesh.basevariable = 0;
 
 					// Ensure the existing variable has a valid name and the new variable has all the same meta info
-					auto& meta = ir.meta[next_id];
-					meta = ir.meta[arg_id];
-
+					ir.meta[next_id] = ir.meta[arg_id];
 					set_name(next_id, "spvMesh");
 					unset_decoration(next_id, DecorationBuiltIn);
-          {
-            uint32_t uint_type_id = get_shared_uint_type_id();
-            uint32_t next_id = ir.increase_bound_by(1);
-            func.add_parameter(uint_type_id, next_id, true);
-            auto& v = set<SPIRVariable>(next_id, uint_type_id, StorageClassFunction, 0, arg_id);
-            v.basevariable = 0;
 
-            // Ensure the existing variable has a valid name and the new variable has all the same meta info
-            auto& meta = ir.meta[next_id];
-            meta = ir.meta[arg_id];
+					uint32_t int_id = get_shared_uint_type_id();
+					next_id = ir.increase_bound_by(1);
+					func.add_parameter(int_id, next_id, true);
+					auto& v_prim_count = set<SPIRVariable>(next_id, int_id, StorageClassFunction, 0, arg_id);
+					v_prim_count.basevariable = 0;
 
-            set_name(next_id, "spv_primitive_count");
-            unset_decoration(next_id, DecorationBuiltIn);
-          }
+					// Ensure the existing variable has a valid name and the new variable has all the same meta info
+					ir.meta[next_id] = ir.meta[arg_id];
+					set_name(next_id, "spv_primitive_count");
+					unset_decoration(next_id, DecorationBuiltIn);
 				}
 				else
 				{
@@ -5431,12 +5435,22 @@ void CompilerMSL::emit_custom_templates()
 			begin_scope();
 			statement("return elements[pos];");
 			end_scope();
-			statement("");
-			statement("constexpr const constant T& operator [] (size_t pos) const constant");
-			begin_scope();
-			statement("return elements[pos];");
-			end_scope();
-			statement("");
+      statement("");
+      statement("constexpr const constant T& operator [] (size_t pos) const constant");
+      begin_scope();
+      statement("return elements[pos];");
+      end_scope();
+      statement("");
+      statement("constexpr const object_data T& operator [] (size_t pos) const object_data");
+      begin_scope();
+      statement("return elements[pos];");
+      end_scope();
+      statement("");
+      statement("constexpr object_data T& operator [] (size_t pos) object_data");
+      begin_scope();
+      statement("return elements[pos];");
+      end_scope();
+      statement("");
 			statement("threadgroup T& operator [] (size_t pos) threadgroup");
 			begin_scope();
 			statement("return elements[pos];");
@@ -9509,8 +9523,19 @@ void CompilerMSL::emit_instruction(const Instruction &instruction)
 	}
 	case OpSetMeshOutputsEXT:
 	{
-    flush_variable_declaration(builtin_primitive_indices_id);
-    statement("spv_primitive_count = ", to_unpacked_expression(ops[1]), ";");
+		flush_variable_declaration(builtin_primitive_indices_id);
+		statement("if (gl_LocalInvocationIndex == 0)");
+		begin_scope();
+		statement("spv_primitive_count = ", to_unpacked_expression(ops[1]), ";");
+		end_scope();
+		break;
+	}
+	case OpEmitMeshTasksEXT:
+	{
+		statement("spvMpg.set_threadgroups_per_grid(uint3(", to_unpacked_expression(ops[0]), ", ", to_unpacked_expression(ops[1]), ", ", to_unpacked_expression(ops[2]), "));");
+		// GLSL: Once this instruction is called, the workgroup is terminated immediately, and the mesh shaders are launched.
+		// TODO: better way (relieble) of terminating shader.
+		statement("return;");
 		break;
 	}
 
@@ -10537,6 +10562,26 @@ void CompilerMSL::emit_function_prototype(SPIRFunction &func, const Bitset &)
 
 		if (&arg != &func.arguments.back())
 			decl += ", ";
+	}
+
+	if (processing_entry_point)
+	{
+		for (auto &v : func.local_variables)
+		{
+			auto &var = get<SPIRVariable>(v);
+			if (var.storage != StorageClassTaskPayloadWorkgroupEXT)
+				continue;
+
+			add_local_variable_name(v);
+			if (!decl.empty())
+				decl += ", ";
+
+			SPIRFunction::Parameter arg = {};
+			arg.id = v;
+			arg.type = var.basetype;
+			arg.alias_global_variable = true;
+			decl += argument_decl(arg) + " [[payload]]";
+		}
 	}
 
 	decl += ")";
@@ -12484,6 +12529,9 @@ string CompilerMSL::func_type_decl(SPIRType &type)
 	case ExecutionModelMeshEXT:
 		entry_type = "[[mesh]]";
 		break;
+	case ExecutionModelTaskEXT:
+		entry_type = "[[object]]";
+		break;
 	default:
 		entry_type = "unknown";
 		break;
@@ -12621,6 +12669,13 @@ string CompilerMSL::get_type_address_space(const SPIRType &type, uint32_t id, bo
 		{
 			addr_space = "threadgroup";
 		}
+		break;
+
+	case StorageClassTaskPayloadWorkgroupEXT:
+		if (is_mesh_shader())
+			addr_space = "const object_data";
+		else
+			addr_space = "object_data";
 		break;
 
 	default:
@@ -13025,6 +13080,13 @@ void CompilerMSL::entry_point_args_builtin(string &ep_args)
 		if (!ep_args.empty())
 			ep_args += ", ";
 		ep_args += join("spvMesh_t spvMesh");
+	}
+
+	if (get_execution_model() == ExecutionModelTaskEXT)
+	{
+		if (!ep_args.empty())
+			ep_args += ", ";
+		ep_args += join("mesh_grid_properties spvMpg");
 	}
 }
 
@@ -13956,18 +14018,38 @@ void CompilerMSL::emit_mesh_outputs()
 {
 	auto& mode = get_entry_point();
 
+	// predefined thread count or zero, if specialization constant is in use
+	uint32_t num_invocaions = 0;
+	if (mode.workgroup_size.id_x == 0 && mode.workgroup_size.id_y == 0 && mode.workgroup_size.id_z == 0)
+	{
+		num_invocaions = mode.workgroup_size.x * mode.workgroup_size.y * mode.workgroup_size.z;
+	}
+
+	{
+		statement("threadgroup_barrier(mem_flags::mem_threadgroup);");
+		statement("if (spv_primitive_count == 0)");
+		begin_scope();
+		statement("return;");
+		end_scope();
+		statement("spvMesh.set_primitive_count(spv_primitive_count);");
+	}
+
 	if (mesh_out_per_vertex != 0)
 	{
 		auto &type_vert = get<SPIRType>(mesh_out_per_vertex);
-		statement("threadgroup_barrier(mem_flags::mem_threadgroup);");
-    statement("if(spv_primitive_count==0)");
-    begin_scope();
-    statement("return;");
-    end_scope();
-    statement("spvMesh.set_primitive_count(spv_primitive_count);");
-    statement("for (uint spvI = gl_LocalInvocationIndex, spvThreadCount = (gl_WorkGroupSize.x*gl_WorkGroupSize.y*gl_WorkGroupSize.z); spvI < ", mode.output_vertices, "; spvI += spvThreadCount)");
+		if (num_invocaions < mode.output_vertices)
+		{
+			statement("for (uint spvI = gl_LocalInvocationIndex, spvThreadCount = (gl_WorkGroupSize.x*gl_WorkGroupSize.y*gl_WorkGroupSize.z); spvI < ", mode.output_vertices, "; spvI += spvThreadCount)");
+		}
+		else if (num_invocaions != mode.output_vertices)
+		{
+			statement("if (gl_LocalInvocationIndex < ", mode.output_vertices, ")");
+		}
 		begin_scope();
-    // statement("uint spvI = gl_LocalInvocationIndex;");
+		if (num_invocaions >= mode.output_vertices)
+		{
+			statement("const uint spvI = gl_LocalInvocationIndex;");
+		}
 		statement("spvPerVertex spvV = {};");
 		for (size_t index = 0; index < type_vert.member_types.size(); ++index)
 		{
@@ -13998,7 +14080,9 @@ void CompilerMSL::emit_mesh_outputs()
 
 			statement("spvV.", to_member_name(type_vert, index), " = ", to_name(orig_var),  "[spvI]", access, ";");
 			if (options.vertex.flip_vert_y && builtin==BuiltInPosition)
+			{
 				statement("spvV.", to_member_name(type_vert, index), ".y = -(", "spvV.", to_member_name(type_vert, index), ".y);", "    // Invert Y-axis for Metal");
+			}
 		}
 		statement("spvMesh.set_vertex(spvI, spvV);");
 		end_scope();
@@ -14007,8 +14091,19 @@ void CompilerMSL::emit_mesh_outputs()
 	if (mesh_out_per_primitive != 0)
 	{
 		auto &type_prim = get<SPIRType>(mesh_out_per_primitive);
-		statement("for (uint spvI = gl_LocalInvocationIndex, spvThreadCount = (gl_WorkGroupSize.x*gl_WorkGroupSize.y*gl_WorkGroupSize.z); spvI < ", mode.output_primitives, "; spvI += spvThreadCount)");
+		if (num_invocaions < mode.output_primitives)
+		{
+			statement("for (uint spvI = gl_LocalInvocationIndex, spvThreadCount = (gl_WorkGroupSize.x*gl_WorkGroupSize.y*gl_WorkGroupSize.z); spvI < ", mode.output_primitives, "; spvI += spvThreadCount)");
+		}
+		else if (num_invocaions != mode.output_primitives)
+		{
+			statement("if (gl_LocalInvocationIndex < ", mode.output_primitives, ")");
+		}
 		begin_scope();
+		if (num_invocaions >= mode.output_primitives)
+		{
+			statement("const uint spvI = gl_LocalInvocationIndex;");
+		}
 		statement("spvPerPrimitive spvP = {};");
 		for (size_t index = 0; index < type_prim.member_types.size(); ++index)
 		{
@@ -14840,8 +14935,8 @@ void CompilerMSL::emit_mesh_entry_point()
 	auto &f = get<SPIRFunction>(ir.default_entry_point);
 
 	const uint32_t func_id  = ir.increase_bound_by(3);
-	const uint32_t block_id = func_id+1;
-	const uint32_t ret_id   = func_id+2;
+	const uint32_t block_id = func_id + 1;
+	const uint32_t ret_id   = func_id + 2;
 	current_function = &set<SPIRFunction>(func_id, f.return_type, f.function_type);
 
 	current_function->blocks.push_back(block_id);
@@ -14906,6 +15001,9 @@ string CompilerMSL::to_qualifiers_glsl(uint32_t id)
 
 	auto *var = maybe_get<SPIRVariable>(id);
 	auto &type = expression_type(id);
+
+	if (type.storage == StorageClassTaskPayloadWorkgroupEXT)
+		quals += "object_data ";
 
 	if (type.storage == StorageClassWorkgroup || (var && variable_decl_is_remapped_storage(*var, StorageClassWorkgroup)))
 		quals += "threadgroup ";

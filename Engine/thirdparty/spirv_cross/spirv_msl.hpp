@@ -1004,9 +1004,9 @@ protected:
 	SPIRType &get_patch_stage_in_struct_type();
 	SPIRType &get_patch_stage_out_struct_type();
 	std::string get_tess_factor_struct_name();
-  SPIRType &get_uint_type();
-  uint32_t get_uint_type_id();
-  uint32_t get_shared_uint_type_id();
+	SPIRType &get_uint_type();
+	uint32_t get_uint_type_id();
+	uint32_t get_shared_uint_type_id();
 	uint32_t get_meshlet_type_id();
 	void emit_atomic_func_op(uint32_t result_type, uint32_t result_id, const char *op, spv::Op opcode,
 	                         uint32_t mem_order_1, uint32_t mem_order_2, bool has_mem_order_2, uint32_t op0, uint32_t op1 = 0,
@@ -1046,7 +1046,7 @@ protected:
 	uint32_t view_mask_buffer_id = 0;
 	uint32_t dynamic_offsets_buffer_id = 0;
 	uint32_t uint_type_id = 0;
-  uint32_t shared_uint_type_id = 0;
+	uint32_t shared_uint_type_id = 0;
 	uint32_t meshlet_type_id = 0;
 	uint32_t argument_buffer_padding_buffer_type_id = 0;
 	uint32_t argument_buffer_padding_image_type_id = 0;

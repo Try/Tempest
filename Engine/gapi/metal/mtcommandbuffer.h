@@ -89,6 +89,7 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     const MtPipelineLay*              curLay          = nullptr;
     uint32_t                          curVboId        = 0;
     MTL::Size                         localSize       = {};
+    MTL::Size                         localSizeMesh   = {};
     MTL::PrimitiveType                topology        = MTL::PrimitiveTypePoint;
     bool                              isTesselation   = false;
 

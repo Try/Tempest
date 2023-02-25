@@ -1647,7 +1647,7 @@ void MeshShader(const char* outImg) {
     GraphicsApi api{ApiFlags::Validation};
     auto dev = api.devices();
     for(auto& i:dev)
-      if(i.meshlets.meshShader)
+      if(i.meshlets.meshShader && i.meshlets.taskShader)
         msDev = i.name;
     if(msDev==nullptr)
       return;
@@ -1655,7 +1655,7 @@ void MeshShader(const char* outImg) {
     Device device(api,msDev);
     auto vbo  = device.vbo(vboData,3);
 
-    auto task = Tempest::Shader(); //device.shader("shader/simple_test.spv14.task.sprv");
+    auto task = device.shader("shader/simple_test.spv14.task.sprv");
     auto mesh = device.shader("shader/simple_test.spv14.mesh.sprv");
     auto frag = device.shader("shader/simple_test.frag.sprv");
     auto pso  = device.pipeline(RenderState(),task,mesh,frag);

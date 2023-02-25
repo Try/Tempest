@@ -134,7 +134,7 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
 
-  if(stage==ShaderReflection::Stage::Mesh) {
+  if(stage==ShaderReflection::Stage::Task) {
     // Log::d(msl);
     }
 

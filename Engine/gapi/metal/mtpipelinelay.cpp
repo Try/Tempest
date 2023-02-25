@@ -20,6 +20,10 @@ MtPipelineLay::MtPipelineLay(const std::vector<Binding>** sh, size_t cnt) {
         bx.bindVs    = b.mslBinding;
         bx.bindVsSmp = b.mslBinding2;
         }
+      if((b.stage & ShaderReflection::Task)!=0) {
+        bx.bindTs    = b.mslBinding;
+        bx.bindTsSmp = b.mslBinding2;
+        }
       if((b.stage & ShaderReflection::Mesh)!=0) {
         bx.bindMs    = b.mslBinding;
         bx.bindMsSmp = b.mslBinding2;

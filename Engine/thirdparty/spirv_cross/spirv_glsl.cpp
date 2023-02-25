@@ -13821,6 +13821,13 @@ void CompilerGLSL::emit_instruction(const Instruction &instruction)
 		statement("SetMeshOutputsEXT(", to_unpacked_expression(ops[0]), ", ", to_unpacked_expression(ops[1]), ");");
 		break;
 
+	case OpEmitMeshTasksEXT:
+		statement("EmitMeshTasksEXT(",
+							to_unpacked_expression(ops[0]), ", ",
+							to_unpacked_expression(ops[1]), ", ",
+							to_unpacked_expression(ops[2]), ");");
+		break;
+
 	default:
 		statement("// unimplemented op ", instruction.op);
 		break;
@@ -14978,6 +14985,10 @@ void CompilerGLSL::emit_function(SPIRFunction &func, const Bitset &return_flags)
 	{
 		auto &var = get<SPIRVariable>(v);
 		var.deferred_declaration = false;
+		if (var.storage == StorageClassTaskPayloadWorkgroupEXT)
+		{
+			continue;
+		}
 
 		if (variable_decl_is_remapped_storage(var, StorageClassWorkgroup))
 		{
@@ -16336,10 +16347,6 @@ void CompilerGLSL::emit_block_chain(SPIRBlock &block)
 		break;
 
 	case SPIRBlock::EmitMeshTasks:
-		statement("EmitMeshTasksEXT(",
-		          to_unpacked_expression(block.mesh.groups[0]), ", ",
-		          to_unpacked_expression(block.mesh.groups[1]), ", ",
-		          to_unpacked_expression(block.mesh.groups[2]), ");");
 		break;
 
 	default:

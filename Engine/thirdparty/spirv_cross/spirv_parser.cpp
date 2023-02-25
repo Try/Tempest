@@ -1121,8 +1121,15 @@ void Parser::parse(const Instruction &instruction)
 		break;
 
 	case OpEmitMeshTasksEXT:
+	{
 		if (!current_block)
 			SPIRV_CROSS_THROW("Trying to end a non-existing block.");
+
+		const auto *type = maybe_get<SPIRType>(ops[0]);
+		if (type)
+			ir.load_type_width.insert({ ops[1], type->width });
+		current_block->ops.push_back(instruction);
+
 		current_block->terminator = SPIRBlock::EmitMeshTasks;
 		for (uint32_t i = 0; i < 3; i++)
 			current_block->mesh.groups[i] = ops[i];
@@ -1131,6 +1138,7 @@ void Parser::parse(const Instruction &instruction)
 		// Currently glslang is bugged and does not treat EmitMeshTasksEXT as a terminator.
 		ignore_trailing_block_opcodes = true;
 		break;
+	}
 
 	case OpReturn:
 	{

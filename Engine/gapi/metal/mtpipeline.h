@@ -45,6 +45,7 @@ class MtPipeline : public AbstractGraphicsApi::Pipeline {
     bool                              isTesselation = false;
 
     MTL::Size                         localSize     = {};
+    MTL::Size                         localSizeMesh = {};
 
   private:
     const MtShader*                      findShader(ShaderReflection::Stage sh) const;
