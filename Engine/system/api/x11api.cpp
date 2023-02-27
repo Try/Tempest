@@ -192,7 +192,7 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, 
   swa.event_mask = PointerMotionMask | ExposureMask |
                    ButtonPressMask | ButtonReleaseMask |
                    KeyPressMask | KeyReleaseMask |
-                   FocusChangeMask;
+                   FocusChangeMask | StructureNotifyMask;
 
   HWND win = XCreateWindow( dpy, root, 0, 0, w, h,
                             0, vi->depth, InputOutput, vi->visual,
@@ -404,6 +404,14 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
           }
         break;
         }
+      case ConfigureNotify: {
+        cb.setPosition(xev.xconfigure.x, xev.xconfigure.y);
+        if(xev.xconfigure.width !=cb.w() || xev.xconfigure.height!=cb.h()) {
+          Tempest::SizeEvent e(xev.xconfigure.width, xev.xconfigure.height);
+          SystemApi::dispatchResize(cb,e);
+          }
+        break;
+        }
       case MappingNotify:
         XRefreshKeyboardMapping(&xev.xmapping);
         break;
@@ -517,8 +525,6 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
     for(auto& i:windows) {
       if(i.second==nullptr)
         continue;
-      // artificial move/resize event
-      alignGeometry(i.first,*i.second);
       SystemApi::dispatchRender(*i.second);
       }
     }
