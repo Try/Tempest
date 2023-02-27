@@ -50,6 +50,8 @@ class SystemApi {
     static bool     setAsFullscreen(SystemApi::Window *w, bool fullScreen);
     static bool     isFullscreen(SystemApi::Window *w);
 
+    static void     setWindowTitle(SystemApi::Window *w, const char* utf8);
+
     static uint16_t translateKey(uint64_t scancode);
     static void     setupKeyTranslate(const TranslateKeyPair k[], uint16_t funcCount);
 
@@ -79,6 +81,8 @@ class SystemApi {
     virtual bool     implIsRunning() = 0;
     virtual int      implExec(AppCallBack& cb) = 0;
     virtual void     implProcessEvents(AppCallBack& cb) = 0;
+
+    virtual void     implSetWindowTitle(SystemApi::Window *w, const char* utf8);
 
     static void      setCursorPosition(SystemApi::Window *w, int x, int y);
     static void      showCursor(SystemApi::Window *w, CursorShape c);

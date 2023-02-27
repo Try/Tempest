@@ -227,7 +227,7 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, 
   Atom prot[] = {WM_DELETE_WINDOW()};
   XSetWMProtocols(dpy, win, prot, 1);
 
-  XStoreName(dpy, win, wndClassName);
+  XStoreName(dpy, win, "");
 
   XFreeColormap( dpy, cmap );
   XFree(vi);
@@ -313,6 +313,11 @@ bool X11Api::implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) {
 
 bool X11Api::implIsFullscreen(SystemApi::Window *w) {
   return fullscreenWindows.find(w) != fullscreenWindows.end();
+  }
+
+void X11Api::implSetWindowTitle(SystemApi::Window *w, const char *utf8) {
+  // XStoreName(dpy, HWND(w), utf8);
+  Xutf8SetWMProperties(dpy, HWND(w), utf8, nullptr, nullptr, 0, nullptr, nullptr, nullptr);
   }
 
 void X11Api::implSetCursorPosition(SystemApi::Window *w, int x, int y) {

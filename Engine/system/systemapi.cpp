@@ -28,6 +28,10 @@ SystemApi::Data SystemApi::m;
 SystemApi::SystemApi() {
   }
 
+void SystemApi::implSetTitle(Window *w, const char *utf8) {
+  // TODO
+  }
+
 void SystemApi::setupKeyTranslate(const TranslateKeyPair k[], uint16_t funcCount ) {
   m.keys.clear();
   m.a. clear();
@@ -185,6 +189,10 @@ bool SystemApi::setAsFullscreen(SystemApi::Window *wx,bool fullScreen) {
 
 bool SystemApi::isFullscreen(SystemApi::Window *w) {
   return inst().implIsFullscreen(w);
+  }
+
+void SystemApi::setWindowTitle(Window *w, const char *utf8) {
+  return inst().implSetWindowTitle(w, utf8);
   }
 
 void SystemApi::setCursorPosition(SystemApi::Window *w, int x, int y) {

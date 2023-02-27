@@ -21,6 +21,8 @@ class X11Api final: SystemApi {
     bool     implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) override;
     bool     implIsFullscreen(SystemApi::Window *w) override;
 
+    void     implSetWindowTitle(SystemApi::Window *w, const char* utf8) override;
+
     void     implSetCursorPosition(SystemApi::Window *w, int x, int y) override;
     void     implShowCursor(SystemApi::Window *w, CursorShape show) override;
 
