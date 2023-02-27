@@ -89,6 +89,10 @@ void VBuffer::read(void* out, size_t off, size_t size) {
   stage.read(out,0,size);
   }
 
+bool VBuffer::isHostVisible() const {
+  return page.page->hostVisible;
+  }
+
 VkDeviceAddress VBuffer::toDeviceAddress(VDevice& owner) const {
   VkBufferDeviceAddressInfo bufferDeviceAddressInfo = {};
   bufferDeviceAddressInfo.sType  = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;

@@ -485,6 +485,29 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest
   copyRegion.srcOffset = offsetSrc;
   copyRegion.size      = size;
   vkCmdCopyBuffer(impl, src.impl, dst.impl, 1, &copyRegion);
+
+  VkPipelineStageFlags  dstStageMask = (VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT |
+                                        VK_PIPELINE_STAGE_HOST_BIT);
+  VkBufferMemoryBarrier buf = {};
+  buf.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+  buf.srcAccessMask       = VK_ACCESS_TRANSFER_WRITE_BIT;
+  buf.dstAccessMask       = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+  buf.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  buf.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  buf.buffer              = dst.impl;
+  buf.offset              = offsetDest;
+  buf.size                = size;
+
+  if(dst.isHostVisible()) {
+    buf.dstAccessMask |= VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_READ_BIT;
+    dstStageMask      |= VK_PIPELINE_STAGE_HOST_BIT;
+    }
+
+  vkCmdPipelineBarrier(impl, VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask,
+                       0,
+                       0, nullptr,
+                       1, &buf,
+                       0, nullptr);
   }
 
 void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest, const void* src, size_t size) {
