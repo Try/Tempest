@@ -4,12 +4,14 @@
 #include <Tempest/Event>
 #include <Tempest/TextCodec>
 #include <Tempest/Window>
+#include <Tempest/Log>
 
 #include <atomic>
 #include <stdexcept>
 #include <cstring>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <X11/X.h>
 #include <X11/Xlib.h>
@@ -51,8 +53,9 @@ static int              activeCursorChange = 0;
 static XIM              xim = 0;
 
 static std::unordered_map<SystemApi::Window*,Tempest::Window*> windows;
+static std::unordered_set<SystemApi::Window*> fullscreenWindows;
 
-static Atom& wmDeleteMessage(){
+static Atom& WM_DELETE_WINDOW(){
   static Atom w  = XInternAtom( dpy, "WM_DELETE_WINDOW", 0);
   return w;
   }
@@ -75,6 +78,29 @@ static Atom& _NET_WM_STATE_MAXIMIZED_VERT(){
 static Atom& _NET_WM_STATE_FULLSCREEN(){
   static Atom w  = XInternAtom( dpy, "_NET_WM_STATE_FULLSCREEN", 0);
   return w;
+  }
+
+static bool nativeIsFullscreen(HWND& w) {
+  Atom actualType;
+  int actualFormat;
+  unsigned long numItems, bytesAfter;
+  unsigned char *propertyValue = NULL;
+  long maxLength = 1024;
+
+  bool result = false;
+  if(XGetWindowProperty(dpy, w, _NET_WM_STATE(),
+                        0l, maxLength, False, XA_ATOM, &actualType,
+                        &actualFormat, &numItems, &bytesAfter,
+                        &propertyValue) == Success) {
+    Atom *atoms = reinterpret_cast<Atom*>(propertyValue);
+    for(uint32_t i = 0; i < numItems; ++i)
+      if(atoms[i] == _NET_WM_STATE_FULLSCREEN()) {
+        result = true;
+        break;
+        }
+    }
+  XFree(propertyValue);
+  return result;
   }
 
 static Event::MouseButton toButton( XButtonEvent& msg ){
@@ -192,12 +218,15 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, 
   swa.event_mask = PointerMotionMask | ExposureMask |
                    ButtonPressMask | ButtonReleaseMask |
                    KeyPressMask | KeyReleaseMask |
-                   FocusChangeMask | StructureNotifyMask;
+                   FocusChangeMask | StructureNotifyMask |
+                   PropertyChangeMask;
 
   HWND win = XCreateWindow( dpy, root, 0, 0, w, h,
                             0, vi->depth, InputOutput, vi->visual,
                             CWColormap | CWEventMask, &swa );
-  XSetWMProtocols(dpy, win, &wmDeleteMessage(), 1);
+  Atom prot[] = {WM_DELETE_WINDOW()};
+  XSetWMProtocols(dpy, win, prot, 1);
+
   XStoreName(dpy, win, wndClassName);
 
   XFreeColormap( dpy, cmap );
@@ -217,8 +246,11 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, 
                       NULL);
   XSetICFocus(xic);
 
-  if(owner!=nullptr)
+  if(owner!=nullptr) {
     alignGeometry(win.ptr(),*owner);
+    if(nativeIsFullscreen(win))
+      fullscreenWindows.insert(win.ptr());
+    }
   return ret;
   }
 
@@ -255,7 +287,8 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, SystemApi::S
   }
 
 void X11Api::implDestroyWindow(SystemApi::Window *w) {
-  windows.erase(w); //NOTE: X11 can send events to ded window
+  windows.erase(w); //NOTE: X11 can send events to dead window
+  fullscreenWindows.erase(w);
   XDestroyWindow(dpy, HWND(w));
   }
 
@@ -279,29 +312,7 @@ bool X11Api::implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) {
   }
 
 bool X11Api::implIsFullscreen(SystemApi::Window *w) {
-  Atom actualType;
-  int actualFormat;
-  unsigned long numItems, bytesAfter;
-  unsigned char *propertyValue = NULL;
-  long maxLength = 1024;
-
-  if(XGetWindowProperty(dpy, HWND(w), _NET_WM_STATE(),
-                        0l, maxLength, False, XA_ATOM, &actualType,
-                        &actualFormat, &numItems, &bytesAfter,
-                        &propertyValue) == Success) {
-    int fullscreen = 0;
-    Atom *atoms = reinterpret_cast<Atom*>(propertyValue);
-
-    for(uint32_t i = 0; i < numItems; ++i) {
-      if(atoms[i] == _NET_WM_STATE_FULLSCREEN()) {
-        fullscreen = 1;
-        }
-      }
-
-    if(fullscreen)
-      return true;
-    }
-  return false;
+  return fullscreenWindows.find(w) != fullscreenWindows.end();
   }
 
 void X11Api::implSetCursorPosition(SystemApi::Window *w, int x, int y) {
@@ -399,7 +410,7 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
     Tempest::Window& cb = *it->second; //TODO: validation
     switch( xev.type ) {
       case ClientMessage: {
-        if( xev.xclient.data.l[0] == long(wmDeleteMessage()) ){
+        if(xev.xclient.data.l[0] == long(WM_DELETE_WINDOW())){
           SystemApi::exit();
           }
         break;
@@ -409,6 +420,14 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
         if(xev.xconfigure.width !=cb.w() || xev.xconfigure.height!=cb.h()) {
           Tempest::SizeEvent e(xev.xconfigure.width, xev.xconfigure.height);
           SystemApi::dispatchResize(cb,e);
+          }
+        break;
+        }
+      case PropertyNotify:{
+        if(nativeIsFullscreen(hWnd)) {
+          fullscreenWindows.insert(hWnd.ptr());
+          } else {
+          fullscreenWindows.erase(hWnd.ptr());
           }
         break;
         }
