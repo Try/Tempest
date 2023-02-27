@@ -441,15 +441,7 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
         break;
       case ButtonPress:
       case ButtonRelease: {
-        bool isWheel = false;
-        if( xev.type==ButtonPress && XPending(dpy) &&
-            (xev.xbutton.button == Button4 || xev.xbutton.button == Button5) ){
-          XEvent ev;
-          XNextEvent(dpy, &ev);
-          isWheel = (ev.type==ButtonRelease);
-          }
-
-        if( isWheel ){
+        if(xev.xbutton.button==Button4 || xev.xbutton.button==Button5) {
           int ticks = 0;
           if( xev.xbutton.button == Button4 ) {
             ticks = 120;
@@ -457,14 +449,16 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
           else if ( xev.xbutton.button == Button5 ) {
             ticks = -120;
             }
-          Tempest::MouseEvent e( xev.xbutton.x,
-                                 xev.xbutton.y,
-                                 Tempest::Event::ButtonNone,
-                                 Event::M_NoModifier,
-                                 ticks,
-                                 0,
-                                 Event::MouseWheel );
-          SystemApi::dispatchMouseWheel(cb, e);
+          if(xev.type==ButtonPress) {
+            Tempest::MouseEvent e( xev.xbutton.x,
+                                   xev.xbutton.y,
+                                   Tempest::Event::ButtonNone,
+                                   Event::M_NoModifier,
+                                   ticks,
+                                   0,
+                                   Event::MouseWheel );
+            SystemApi::dispatchMouseWheel(cb, e);
+            }
           } else {
           MouseEvent e( xev.xbutton.x,
                         xev.xbutton.y,
