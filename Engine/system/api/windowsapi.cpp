@@ -5,6 +5,7 @@
 
 #include <Tempest/Event>
 #include <Tempest/Except>
+#include <Tempest/TextCodec>
 
 #include "system/eventdispatcher.h"
 
@@ -269,6 +270,12 @@ bool WindowsApi::implSetAsFullscreen(SystemApi::Window *wx,bool fullScreen) {
 bool WindowsApi::implIsFullscreen(SystemApi::Window *w) {
   HWND hwnd = HWND(w);
   return ULONG(GetWindowLongPtr(hwnd, GWL_STYLE)) & WS_POPUP;
+  }
+
+void WindowsApi::implSetWindowTitle(Window* w, const char* utf8) {
+  auto utf16 = TextCodec::toUtf16(utf8);
+  HWND hwnd = HWND(w);
+  SetWindowTextW(hwnd, reinterpret_cast<const wchar_t*>(utf16.c_str()));
   }
 
 void WindowsApi::implSetCursorPosition(SystemApi::Window *w, int x, int y) {

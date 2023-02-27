@@ -28,7 +28,7 @@ SystemApi::Data SystemApi::m;
 SystemApi::SystemApi() {
   }
 
-void SystemApi::implSetTitle(Window *w, const char *utf8) {
+void SystemApi::implSetWindowTitle(Window *w, const char *utf8) {
   // TODO
   }
 
