@@ -6,48 +6,58 @@
 
 #include "libspirv/libspirv.h"
 
-#include "shaderanalyzer.h"
-
 class MeshConverter {
   public:
     explicit MeshConverter(libspirv::MutableBytecode& code);
+
+    libspirv::MutableBytecode& computeShader()     { return comp; }
     libspirv::MutableBytecode& vertexPassthrough() { return vert; }
 
     void     exec();
 
   private:
-    void     avoidReservedFixup();
-    void     removeMultiview(libspirv::MutableBytecode& code);
-    void     removeCullClip(libspirv::MutableBytecode& code);
-    void     removeFromPerVertex(libspirv::MutableBytecode& code, const std::unordered_set<uint32_t>& fields);
+    void     analyzeBuiltins();
+    void     traveseVaryings();
 
-    void     injectLoop(libspirv::MutableBytecode::Iterator& fn,
-                        uint32_t varI, uint32_t begin, uint32_t end, uint32_t inc, std::function<void(libspirv::MutableBytecode::Iterator& fn)> body);
-    void     injectEngineBindings(const uint32_t idMainFunc);
-    void     injectCountingPass(const uint32_t idMainFunc);
-    void     replaceEntryPoint(const uint32_t idMainFunc, const uint32_t idEngineMain);
+    void     emitComp();
+    void     emitVert();
 
-    void     vsTypeRemaps(libspirv::MutableBytecode::Iterator& fn, std::unordered_map<uint32_t, uint32_t>& typeRemaps,
-                          const libspirv::Bytecode::AccessChain* ids, uint32_t len);
-    uint32_t mappingTable(libspirv::MutableBytecode::Iterator& fn, uint32_t arrType, uint32_t eltType);
-    uint32_t declareGlPerVertex(libspirv::MutableBytecode::Iterator& fn);
+    void     emitConstants();
+    void     emitEngSsbo();
+    void     emitSetMeshOutputs(uint32_t engSetMesh);
+    void     emitEngMain (uint32_t engMain);
+    void     emitVboStore(libspirv::MutableBytecode::Iterator& gen, const libspirv::Bytecode::OpCode& op, uint32_t achain);
+    void     emitIboStore(libspirv::MutableBytecode::Iterator& gen, const libspirv::Bytecode::OpCode& op, uint32_t achain);
 
-    void     generateVsDefault();
-    void     generateVsSplit();
+    libspirv::Bytecode&        code;
+    libspirv::MutableBytecode  comp, vert;
 
-    void     annotateVertexBuiltins(libspirv::MutableBytecode& vert, uint32_t idVertexIndex, uint32_t glPerVertexT);
+    struct Varying {
+      uint32_t type        = 0;
+      uint32_t writeOffset = 0;
+      };
 
-    libspirv::MutableBytecode& code;
-    ShaderAnalyzer             an;
-    libspirv::MutableBytecode  vert;
+    uint32_t gl_NumWorkGroups               = 0;
+    uint32_t gl_WorkGroupSize               = 0;
+    uint32_t gl_WorkGroupID                 = 0;
+    uint32_t gl_LocalInvocationID           = 0;
+    uint32_t gl_LocalInvocationIndex        = 0;
+    uint32_t gl_GlobalInvocationID          = 0;
+    uint32_t gl_MeshPerVertexEXT            = 0;
+    uint32_t gl_PrimitiveTriangleIndicesEXT = 0;
+    uint32_t main                           = 0;
 
-    struct gl_MeshPerVertexNV {
-      bool gl_Position  = false;
-      bool gl_PointSize = false;
-      } gl_MeshPerVertexNV;
+    uint32_t vEngine0                       = 0;
+    uint32_t vEngine1                       = 0;
+    uint32_t vIboPtr                        = 0;
+    uint32_t vVboPtr                        = 0;
+    uint32_t vTmp                           = 0;
 
-    // meslet builtins
-    uint32_t idGlPerVertex        = 0;
-    uint32_t std450Import         = 0;
+    uint32_t varCount                       = 0;
+
+    std::unordered_map<uint32_t, size_t>  iboAccess;
+    std::unordered_map<uint32_t, size_t>  vboAccess;
+    std::unordered_map<uint32_t, Varying> varying;
+    std::vector<uint32_t>                 constants;
   };
 

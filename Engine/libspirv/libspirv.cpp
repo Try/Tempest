@@ -9,6 +9,8 @@ Bytecode::Bytecode(const uint32_t* spirv, size_t codeLen)
   }
 
 Bytecode::Iterator Bytecode::begin() const {
+  if(codeLen==0)
+    return end();
   Iterator it{spirv+HeaderSize, iteratorGen};
   return it;
   }
@@ -16,6 +18,10 @@ Bytecode::Iterator Bytecode::begin() const {
 Bytecode::Iterator Bytecode::end() const {
   Iterator it{spirv+codeLen, iteratorGen};
   return it;
+  }
+
+uint32_t Bytecode::bound() const {
+  return reinterpret_cast<const uint32_t&>(spirv[3]);
   }
 
 spv::ExecutionModel Bytecode::findExecutionModel() const {
@@ -27,8 +33,64 @@ spv::ExecutionModel Bytecode::findExecutionModel() const {
   return spv::ExecutionModelMax;
   }
 
+Bytecode::Iterator Bytecode::fromOffset(size_t off) const {
+  Iterator it{spirv+off, iteratorGen};
+  return it;
+  }
+
 size_t Bytecode::toOffset(const OpCode& op) const {
   return std::distance(spirv, &op);
+  }
+
+Bytecode::Iterator Bytecode::findSection(Section s) {
+  return findSection(begin(),s);
+  }
+
+Bytecode::Iterator Bytecode::findSection(Iterator begin, Section s) {
+  auto ret = begin, e = end();
+  while(ret!=e) {
+    const auto op = ret.code->code;
+    // 1: capability instructions
+    if(s<=S_Capability && op==spv::OpCapability)
+      return ret;
+    // 2: extensions to SPIR-V
+    if(s<=S_Extension && op==spv::OpExtension)
+      return ret;
+    // 3: import instructions
+    if(s<=S_ExtInstImport && op==spv::OpExtInstImport)
+      return ret;
+    // 4: memory model instruction
+    if(s<=S_MemoryModel && op==spv::OpMemoryModel)
+      return ret;
+    // 5: all entry point declarations
+    if(s<=S_EntryPoint && op==spv::OpEntryPoint)
+      return ret;
+    // 6: all execution-mode declarations
+    if(s<=S_ExecutionMode && (op==spv::OpExecutionMode || op==spv::OpExecutionModeId))
+      return ret;
+    // 7: debug instructions
+    if(s<=S_Debug && ((spv::OpSourceContinued<=op && op<=spv::OpLine) || op==spv::OpNoLine || op==spv::OpModuleProcessed))
+      return ret;
+    // 8: decorations block
+    if(s<=S_Annotations && ((spv::OpDecorate<=op && op<=spv::OpGroupMemberDecorate) ||
+                            op==spv::OpDecorateId || op==spv::OpDecorateString || op==spv::OpMemberDecorateString))
+      return ret;
+    // 9: types block
+    if(s<=S_Types && ((spv::OpTypeVoid<=op && op<=spv::OpTypeForwardPointer) ||
+                      op==spv::OpTypePipeStorage || op==spv::OpTypeNamedBarrier || op==spv::OpTypeBufferSurfaceINTEL || op==spv::OpTypeStructContinuedINTEL))
+      return ret;
+    // 10/11: functions block
+    if(s<=S_FuncDefinitions && op==spv::OpFunction)
+      return ret;
+    ++ret;
+    }
+  return ret;
+  }
+
+Bytecode::Iterator Bytecode::findSectionEnd(Section s) {
+  auto fn = findSection(s);
+  fn      = findSection(fn,libspirv::Bytecode::Section(s+1));
+  return fn;
   }
 
 bool Bytecode::isTypeDecl(spv::Op op) {
@@ -72,6 +134,100 @@ bool Bytecode::isBasicTypeDecl(spv::Op op) {
       break;
     }
   return false;
+  }
+
+void Bytecode::traverseType(uint32_t typeId, std::function<void (const AccessChain*, uint32_t)> fn, TraverseMode mode) {
+  TraverseContext ctx = {
+    findSection(libspirv::Bytecode::S_Types),
+    findSectionEnd(libspirv::Bytecode::S_Types),
+    mode,
+    };
+
+  AccessChain ac[256] = {};
+  implTraverseType(ctx, typeId, ac, 0, fn);
+  }
+
+void Bytecode::implTraverseType(TraverseContext& ctx, uint32_t typeId,
+                                AccessChain* ac, const uint32_t acLen,
+                                std::function<void (const AccessChain*, uint32_t)>& fn) {
+  for(auto it = ctx.typesB; it!=ctx.typesE; ++it) {
+    auto& i = *it;
+    if(!isTypeDecl(i.op()))
+      continue;
+    if(i[1]!=typeId)
+      continue;
+    ac[acLen].type  = &i;
+    ac[acLen].index = 0;
+
+    if(ctx.mode==TraverseMode::T_PreOrder)
+      fn(ac,acLen+1);
+
+    switch(i.op()) {
+      case spv::OpTypeVoid:
+      case spv::OpTypeBool:
+      case spv::OpTypeInt:
+      case spv::OpTypeFloat:
+        break;
+      case spv::OpTypeVector:
+      case spv::OpTypeMatrix: {
+        for(uint32_t r=0; r<i[3]; ++r) {
+          ac[acLen].index = r;
+          implTraverseType(ctx,i[2],ac,acLen+1,fn);
+          }
+        break;
+        }
+      case spv::OpTypeImage:
+      case spv::OpTypeSampler:
+      case spv::OpTypeSampledImage:
+        break;
+      case spv::OpTypeArray: {
+        uint32_t len = 1;
+        for(auto rt = ctx.typesB; rt!=ctx.typesE; ++rt) {
+          auto& r = *rt;
+          if(r.op()==spv::OpConstant && r[2]==i[3]) {
+            len = r[3];
+            break;
+            }
+          }
+        for(uint32_t r=0; r<len; ++r) {
+          ac[acLen].index = r;
+          implTraverseType(ctx,i[2],ac,acLen+1,fn);
+          }
+        break;
+        }
+      case spv::OpTypeRuntimeArray: {
+        implTraverseType(ctx,i[2],ac,acLen+1,fn);
+        break;
+        }
+      case spv::OpTypeStruct:
+        for(uint32_t r=2; r<i.length(); ++r) {
+          ac[acLen].index = (r-2);
+          implTraverseType(ctx,i[r],ac,acLen+1,fn);
+          }
+        break;
+      case spv::OpTypeOpaque:
+        break;
+      case spv::OpTypePointer: {
+        implTraverseType(ctx,i[3],ac,acLen+1,fn);
+        break;
+        }
+      case spv::OpTypeFunction:
+      case spv::OpTypeEvent:
+      case spv::OpTypeDeviceEvent:
+      case spv::OpTypeReserveId:
+      case spv::OpTypeQueue:
+      case spv::OpTypePipe:
+      case spv::OpTypeForwardPointer:
+        assert(false);
+        break;
+      default:
+        break;
+      }
+
+    if(ctx.mode==TraverseMode::T_PostOrder)
+      fn(ac,acLen+1);
+    break;
+    }
   }
 
 uint32_t Bytecode::spirvVersion() const {
@@ -124,44 +280,10 @@ MutableBytecode::Iterator MutableBytecode::findSection(Section s) {
   }
 
 MutableBytecode::Iterator MutableBytecode::findSection(Iterator begin, Section s) {
-  auto ret = begin, e = end();
-  while(ret!=e) {
-    const auto op = ret.code->code;
-    // 1: capability instructions
-    if(s<=S_Capability && op==spv::OpCapability)
-      return ret;
-    // 2: extensions to SPIR-V
-    if(s<=S_Extension && op==spv::OpExtension)
-      return ret;
-    // 3: import instructions
-    if(s<=S_ExtInstImport && op==spv::OpExtInstImport)
-      return ret;
-    // 4: memory model instruction
-    if(s<=S_MemoryModel && op==spv::OpMemoryModel)
-      return ret;
-    // 5: all entry point declarations
-    if(s<=S_EntryPoint && op==spv::OpEntryPoint)
-      return ret;
-    // 6: all execution-mode declarations
-    if(s<=S_ExecutionMode && (op==spv::OpExecutionMode || op==spv::OpExecutionModeId))
-      return ret;
-    // 7: debug instructions
-    if(s<=S_Debug && ((spv::OpSourceContinued<=op && op<=spv::OpLine) || op==spv::OpNoLine || op==spv::OpModuleProcessed))
-      return ret;
-    // 8: decorations block
-    if(s<=S_Annotations && ((spv::OpDecorate<=op && op<=spv::OpGroupMemberDecorate) ||
-                            op==spv::OpDecorateId || op==spv::OpDecorateString || op==spv::OpMemberDecorateString))
-      return ret;
-    // 9: types block
-    if(s<=S_Types && ((spv::OpTypeVoid<=op && op<=spv::OpTypeForwardPointer) ||
-                      op==spv::OpTypePipeStorage || op==spv::OpTypeNamedBarrier || op==spv::OpTypeBufferSurfaceINTEL || op==spv::OpTypeStructContinuedINTEL))
-      return ret;
-    // 10/11: functions block
-    if(s<=S_FuncDefinitions && op==spv::OpFunction)
-      return ret;
-    ++ret;
-    }
-  return ret;
+  auto cit = Bytecode::findSection(begin,s);
+  if(cit==Bytecode::end())
+    return end();
+  return fromOffset(toOffset(*cit));
   }
 
 MutableBytecode::Iterator MutableBytecode::findSectionEnd(Section s) {
@@ -286,8 +408,8 @@ uint32_t MutableBytecode::OpTypeStruct(Iterator& typesEnd, const uint32_t* membe
     if(std::memcmp(&i[2],member,size*4)!=0)
       break;
     return i[1];
-    }
-  */
+    }*/
+
   const uint32_t tRet = fetchAddBound();
   uint16_t len = uint16_t(size + 2);
   OpCode   cx  = {uint16_t(spv::OpTypeStruct),len};
@@ -318,6 +440,23 @@ uint32_t MutableBytecode::OpTypeFunction(Iterator& typesEnd, uint32_t idRet) {
   return tFn;
   }
 
+uint32_t MutableBytecode::OpTypeFunction(Iterator& typesEnd, uint32_t idRet, std::initializer_list<uint32_t> args) {
+  for(auto it=begin(); it!=typesEnd; ++it) {
+    auto& i = *it;
+    if(i.op()==spv::OpTypeFunction && i[2]==idRet && i.len==(3+args.size())) {
+
+      //return i[1];
+      }
+    }
+
+  const uint32_t tFn = fetchAddBound();
+  uint32_t arr[32] = {tFn,idRet};
+  std::memcpy(arr+2, &*args.begin(), args.size()*sizeof(uint32_t));
+
+  typesEnd.insert(spv::OpTypeFunction, arr, args.size()+2);
+  return tFn;
+  }
+
 uint32_t MutableBytecode::OpConstant(Iterator& typesEnd, uint32_t idType, uint32_t u32) {
   const uint32_t ret = fetchAddBound();
   typesEnd.insert(spv::OpConstant, {idType, ret, u32});
@@ -331,6 +470,12 @@ uint32_t MutableBytecode::OpConstant(Iterator& typesEnd, uint32_t idType, int32_
 uint32_t MutableBytecode::OpVariable(Iterator& fn, uint32_t idType, spv::StorageClass cls) {
   const uint32_t ret = fetchAddBound();
   fn.insert(spv::OpVariable, {idType, ret, uint32_t(cls)});
+  return ret;
+  }
+
+uint32_t MutableBytecode::OpFunctionParameter(Iterator& fn, uint32_t idType) {
+  const uint32_t ret = fetchAddBound();
+  fn.insert(spv::OpFunctionParameter, {idType, ret});
   return ret;
   }
 
@@ -358,10 +503,6 @@ void MutableBytecode::removeNops() {
   invalidateSpvPointers();
   }
 
-uint32_t MutableBytecode::bound() const {
-  return reinterpret_cast<const uint32_t&>(code[3]);
-  }
-
 uint32_t MutableBytecode::fetchAddBound() {
   uint32_t& v   = reinterpret_cast<uint32_t&>(code[3]);
   auto      ret = v;
@@ -376,6 +517,11 @@ uint32_t MutableBytecode::fetchAddBound(uint32_t cnt) {
   return ret;
   }
 
+void MutableBytecode::setSpirvVersion(uint32_t bitver) {
+  uint32_t& v   = reinterpret_cast<uint32_t&>(code[1]);
+  v = bitver;
+  }
+
 void MutableBytecode::traverseType(uint32_t typeId, std::function<void (const AccessChain*, uint32_t)> fn, TraverseMode mode) {
   TraverseContext ctx = {
     findSection(libspirv::Bytecode::S_Types),
@@ -385,89 +531,6 @@ void MutableBytecode::traverseType(uint32_t typeId, std::function<void (const Ac
 
   AccessChain ac[256] = {};
   implTraverseType(ctx, typeId, ac, 0, fn);
-  }
-
-void MutableBytecode::implTraverseType(TraverseContext& ctx, uint32_t typeId,
-                                       AccessChain* ac, const uint32_t acLen,
-                                       std::function<void (const AccessChain*, uint32_t)>& fn) {
-  for(auto it = ctx.typesB; it!=ctx.typesE; ++it) {
-    auto& i = *it;
-    if(!isTypeDecl(i.op()))
-      continue;
-    if(i[1]!=typeId)
-      continue;
-    ac[acLen].type  = &i;
-    ac[acLen].index = 0;
-
-    if(ctx.mode==TraverseMode::T_PreOrder)
-      fn(ac,acLen+1);
-
-    switch(i.op()) {
-      case spv::OpTypeVoid:
-      case spv::OpTypeBool:
-      case spv::OpTypeInt:
-      case spv::OpTypeFloat:
-        break;
-      case spv::OpTypeVector:
-      case spv::OpTypeMatrix: {
-        for(uint32_t r=0; r<i[3]; ++r) {
-          ac[acLen].index = r;
-          implTraverseType(ctx,i[2],ac,acLen+1,fn);
-          }
-        break;
-        }
-      case spv::OpTypeImage:
-      case spv::OpTypeSampler:
-      case spv::OpTypeSampledImage:
-        break;
-      case spv::OpTypeArray: {
-        uint32_t len = 1;
-        for(auto rt = ctx.typesB; rt!=ctx.typesE; ++rt) {
-          auto& r = *rt;
-          if(r.op()==spv::OpConstant && r[2]==i[3]) {
-            len = r[3];
-            break;
-            }
-          }
-        for(uint32_t r=0; r<len; ++r) {
-          ac[acLen].index = r;
-          implTraverseType(ctx,i[2],ac,acLen+1,fn);
-          }
-        break;
-        }
-      case spv::OpTypeRuntimeArray: {
-        implTraverseType(ctx,i[2],ac,acLen+1,fn);
-        break;
-        }
-      case spv::OpTypeStruct:
-        for(uint32_t r=2; r<i.length(); ++r) {
-          ac[acLen].index = (r-2);
-          implTraverseType(ctx,i[r],ac,acLen+1,fn);
-          }
-        break;
-      case spv::OpTypeOpaque:
-        break;
-      case spv::OpTypePointer: {
-        implTraverseType(ctx,i[3],ac,acLen+1,fn);
-        break;
-        }
-      case spv::OpTypeFunction:
-      case spv::OpTypeEvent:
-      case spv::OpTypeDeviceEvent:
-      case spv::OpTypeReserveId:
-      case spv::OpTypeQueue:
-      case spv::OpTypePipe:
-      case spv::OpTypeForwardPointer:
-        assert(false);
-        break;
-      default:
-        break;
-      }
-
-    if(ctx.mode==TraverseMode::T_PostOrder)
-      fn(ac,acLen+1);
-    break;
-    }
   }
 
 void MutableBytecode::invalidateSpvPointers() {

@@ -84,19 +84,40 @@ class Bytecode {
     Iterator begin() const;
     Iterator end() const;
     size_t   size() const { return codeLen; }
-    
+
+    uint32_t bound() const;
+
     uint32_t            spirvVersion() const;
     spv::ExecutionModel findExecutionModel() const;
+
+    Iterator            fromOffset(size_t off) const;
     size_t              toOffset(const OpCode& op) const;
+
+    Iterator            findSection(Section s);
+    Iterator            findSection(Iterator begin, Section s);
+    Iterator            findSectionEnd(Section s);
 
     static bool         isTypeDecl(spv::Op op);
     static bool         isBasicTypeDecl(spv::Op op);
+
+    void     traverseType(uint32_t typeId, std::function<void(const AccessChain* indexes, uint32_t len)> fn,
+                          TraverseMode mode = TraverseMode::T_PreOrder);
 
   protected:
     enum {
       // see: 2.3. Physical Layout of a SPIR-V Module and Instruction
       HeaderSize = 5
-    };
+      };
+
+    struct TraverseContext {
+      Iterator     typesB;
+      Iterator     typesE;
+      TraverseMode mode = TraverseMode::T_PreOrder;
+      };
+    void     implTraverseType(TraverseContext& ctx, uint32_t typeId,
+                              AccessChain* ac, const uint32_t acLen,
+                              std::function<void(const AccessChain* indexes, uint32_t len)>& fn);
+
     const OpCode* spirv       = nullptr;
     size_t        codeLen     = 0;
     uint32_t      iteratorGen = 0;
@@ -158,30 +179,24 @@ class MutableBytecode : public Bytecode {
     uint32_t OpTypeStruct      (Iterator& typesEnd, std::initializer_list<uint32_t> member);
     uint32_t OpTypeStruct      (Iterator& typesEnd, const uint32_t* member, const size_t size);
     uint32_t OpTypeFunction    (Iterator& typesEnd, uint32_t idRet);
+    uint32_t OpTypeFunction    (Iterator& typesEnd, uint32_t idRet, std::initializer_list<uint32_t> args);
 
     uint32_t OpConstant         (Iterator& typesEnd, uint32_t idType, uint32_t u32);
     uint32_t OpConstant         (Iterator& typesEnd, uint32_t idType, int32_t  i32);
 
     uint32_t OpVariable         (Iterator& fn, uint32_t idType, spv::StorageClass cls);
+    uint32_t OpFunctionParameter(Iterator& fn, uint32_t idType);
 
     void     removeNops();
-    uint32_t bound() const;
     uint32_t fetchAddBound();
     uint32_t fetchAddBound(uint32_t cnt);
+    void     setSpirvVersion(uint32_t bitver);
 
     void     traverseType(uint32_t typeId, std::function<void(const AccessChain* indexes, uint32_t len)> fn,
                           TraverseMode mode = TraverseMode::T_PreOrder);
 
   private:
     std::vector<OpCode> code;
-    struct TraverseContext {
-      Iterator     typesB;
-      Iterator     typesE;
-      TraverseMode mode = TraverseMode::T_PreOrder;
-      };
     void     invalidateSpvPointers();
-    void     implTraverseType(TraverseContext& ctx, uint32_t typeId,
-                              AccessChain* ac, const uint32_t acLen,
-                              std::function<void(const AccessChain* indexes, uint32_t len)>& fn);
   };
 }
