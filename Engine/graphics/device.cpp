@@ -119,9 +119,9 @@ const Device::Props& Device::properties() const {
 
 Attachment Device::attachment(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips) {
   if(!devProps.hasSamplerFormat(frm) && !devProps.hasAttachFormat(frm))
-    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat, formatName(frm));
   if(w>devProps.tex2d.maxSize || h>devProps.tex2d.maxSize)
-    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat, formatName(frm));
   uint32_t mipCnt = mips ? mipCount(w,h) : 1;
   Texture2d t(*this,api.createTexture(dev,w,h,mipCnt,frm),w,h,frm);
   return Attachment(std::move(t));
@@ -129,9 +129,9 @@ Attachment Device::attachment(TextureFormat frm, const uint32_t w, const uint32_
 
 ZBuffer Device::zbuffer(TextureFormat frm, const uint32_t w, const uint32_t h) {
   if(!devProps.hasDepthFormat(frm))
-    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat, formatName(frm));
   if(w>devProps.tex2d.maxSize || h>devProps.tex2d.maxSize)
-    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat, formatName(frm));
   Texture2d t(*this,api.createTexture(dev,w,h,1,frm),w,h,frm);
   return ZBuffer(std::move(t),devProps.hasSamplerFormat(frm));
   }
@@ -143,7 +143,7 @@ Texture2d Device::texture(const Pixmap &pm, const bool mips) {
   Pixmap        alt;
 
   if(pm.w()>devProps.tex2d.maxSize || pm.h()>devProps.tex2d.maxSize)
-    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat, formatName(format));
 
   if(isCompressedFormat(format)){
     if(devProps.hasSamplerFormat(format) && (!mips || pm.mipCount()>1)){
@@ -172,7 +172,7 @@ Texture2d Device::texture(const Pixmap &pm, const bool mips) {
       format = TextureFormat::RGBA32F;
       }
     else {
-      throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
+      throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat, formatName(format));
       }
     }
 
@@ -182,9 +182,9 @@ Texture2d Device::texture(const Pixmap &pm, const bool mips) {
 
 StorageImage Device::image2d(TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips) {
   if(!devProps.hasStorageFormat(frm))
-    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat, formatName(frm));
   if(w>devProps.tex2d.maxSize || h>devProps.tex2d.maxSize)
-    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat, formatName(frm));
   uint32_t mipCnt = mips ? mipCount(w,h) : 1;
   Texture2d t(*this,api.createStorage(dev,w,h,mipCnt,frm),w,h,frm);
   return StorageImage(std::move(t));
@@ -192,9 +192,9 @@ StorageImage Device::image2d(TextureFormat frm, const uint32_t w, const uint32_t
 
 StorageImage Device::image3d(TextureFormat frm, const uint32_t w, const uint32_t h, const uint32_t d, const bool mips) {
   if(!devProps.hasStorageFormat(frm))
-    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat, formatName(frm));
   if(w>devProps.tex2d.maxSize || h>devProps.tex2d.maxSize)
-    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat);
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat, formatName(frm));
   uint32_t mipCnt = mips ? mipCount(w,h) : 1;
   Texture2d t(*this,api.createStorage(dev,w,h,d,mipCnt,frm),w,h,frm);
   return StorageImage(std::move(t));
@@ -202,7 +202,7 @@ StorageImage Device::image3d(TextureFormat frm, const uint32_t w, const uint32_t
 
 AccelerationStructure Device::implBlas(const Detail::VideoBuffer& vbo, size_t stride, const Detail::VideoBuffer& ibo, Detail::IndexClass icls, size_t offset, size_t count) {
   if(!properties().raytracing.rayQuery)
-    throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension, "rayQuery");
   assert(3*sizeof(float)<=stride); // float3 positions, no overlap
   if(count==0)
     return AccelerationStructure();
@@ -224,6 +224,8 @@ AccelerationStructure Device::tlas(const RtInstance* geom, size_t geomSize) {
   std::vector<AbstractGraphicsApi::AccelerationStructure*> as(geomSize);
   size_t nonEmptyGeomSize = 0;
   for(size_t i=0; i<geomSize; ++i) {
+    if(geom[i].blas->impl.handler==nullptr)
+      continue;
     as[nonEmptyGeomSize] = geom[i].blas->impl.handler;
     ++nonEmptyGeomSize;
     }
@@ -312,6 +314,7 @@ RenderPipeline Device::pipeline(const RenderState& st, const Shader& ts, const S
   AbstractGraphicsApi::Shader* shv[3] = {};
   for(size_t i=0; i<3; ++i)
     shv[i] = sh[i]!=nullptr ? sh[i]->impl.handler : nullptr;
+
   auto ulay = api.createPipelineLayout(dev,shv,3);
   auto pipe = api.createPipeline(dev,st,Topology::Triangles,*ulay.handler,shv,3);
   RenderPipeline f(std::move(pipe),std::move(ulay));

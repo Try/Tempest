@@ -126,6 +126,36 @@ namespace Tempest {
     Last
     };
 
+  inline const char* formatName(TextureFormat f) {
+    switch(f) {
+      case Undefined:   return "Undefined";
+      case R8:          return "R8";
+      case RG8:         return "RG8";
+      case RGB8:        return "RGB8";
+      case RGBA8:       return "RGBA8";
+      case R16:         return "R16";
+      case RG16:        return "RG16";
+      case RGB16:       return "RGB16";
+      case RGBA16:      return "RGBA16";
+      case R32F:        return "R32F";
+      case RG32F:       return "RG32F";
+      case RGB32F:      return "RGB32F";
+      case RGBA32F:     return "RGBA32F";
+      case Depth16:     return "Depth16";
+      case Depth24x8:   return "Depth24x8";
+      case Depth24S8:   return "Depth24S8";
+      case Depth32F:    return "Depth32F";
+      case DXT1:        return "DXT1";
+      case DXT3:        return "DXT3";
+      case DXT5:        return "DXT5";
+      case R11G11B10UF: return "R11G11B10UF";
+      case RGBA16F:     return "RGBA16F";
+      case Last:
+        break;
+      }
+    return "Unknown";
+    }
+
   inline bool isDepthFormat(TextureFormat f){
     return f==TextureFormat::Depth16 || f==TextureFormat::Depth24x8 || f==TextureFormat::Depth24S8 || f==TextureFormat::Depth32F;
     }
