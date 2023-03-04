@@ -41,7 +41,6 @@ layout(binding = 1, std430) restrict buffer EngineInternal1
 layout(binding = 2, std430) restrict buffer EngineInternal2
 {
   uint grow;
-  uint grow2;
   uint heap[];
 } var;
 
@@ -103,7 +102,6 @@ void main() {
   if(gl_LocalInvocationIndex==0) {
     mesh.grow2 = 0;
     var.grow   = 0;
-    var.grow2  = grow;
     }
   for(uint i=b; i<e; ++i) {
     indirectSrc.cmd[i].indexCount = 0;

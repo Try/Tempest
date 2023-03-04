@@ -101,7 +101,7 @@ void VMeshletHelper::bindCS(VkCommandBuffer impl, VkPipelineLayout lay) {
   }
 
 void VMeshletHelper::bindVS(VkCommandBuffer impl, VkPipelineLayout lay) {
-  vkCmdBindIndexBuffer   (impl, scratch.impl, 2*sizeof(uint32_t), VK_INDEX_TYPE_UINT32);
+  vkCmdBindIndexBuffer   (impl, scratch.impl, 1*sizeof(uint32_t), VK_INDEX_TYPE_UINT32);
   vkCmdBindDescriptorSets(impl, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           lay, 1,
                           1,&drawSet,

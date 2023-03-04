@@ -379,7 +379,7 @@ void MeshConverter::emitEngSsbo() {
   const uint32_t EngineInternal1_t            = comp.OpTypeStruct (fn, {uint_t, uint_t, _runtimearr_desc}); // descritors
   const uint32_t _ptr_Storage_EngineInternal1 = comp.OpTypePointer(fn,spv::StorageClassStorageBuffer, EngineInternal1_t);
 
-  const uint32_t EngineInternal2_t            = comp.OpTypeStruct (fn, {uint_t, uint_t, _runtimearr_uint}); // heap
+  const uint32_t EngineInternal2_t            = comp.OpTypeStruct (fn, {uint_t, _runtimearr_uint}); // heap
   const uint32_t _ptr_Storage_EngineInternal2 = comp.OpTypePointer(fn,spv::StorageClassStorageBuffer, EngineInternal2_t);
 
   const uint32_t _ptr_Workgroup_uint          = comp.OpTypePointer(fn, spv::StorageClassWorkgroup, uint_t);
@@ -427,7 +427,6 @@ void MeshConverter::emitEngSsbo() {
   fn.insert(spv::OpDecorate,       {EngineInternal2_t,    spv::DecorationBlock});
   fn.insert(spv::OpMemberDecorate, {EngineInternal2_t, 0, spv::DecorationOffset, 0});
   fn.insert(spv::OpMemberDecorate, {EngineInternal2_t, 1, spv::DecorationOffset, 4});
-  fn.insert(spv::OpMemberDecorate, {EngineInternal2_t, 2, spv::DecorationOffset, 8});
 
   fn = comp.findSectionEnd(libspirv::Bytecode::S_Debug);
   fn.insert(spv::OpName,       IndirectCommand,    "IndirectCommand");
@@ -455,8 +454,7 @@ void MeshConverter::emitEngSsbo() {
 
   fn.insert(spv::OpName,       EngineInternal2_t,    "EngineInternal2");
   fn.insert(spv::OpMemberName, EngineInternal2_t, 0, "grow");
-  fn.insert(spv::OpMemberName, EngineInternal2_t, 1, "grow2");
-  fn.insert(spv::OpMemberName, EngineInternal2_t, 2, "var");
+  fn.insert(spv::OpMemberName, EngineInternal2_t, 1, "var");
 
   fn.insert(spv::OpName,       vIboPtr, "iboPtr");
   fn.insert(spv::OpName,       vVboPtr, "vboPtr");
@@ -645,7 +643,7 @@ void MeshConverter::emitVboStore(libspirv::MutableBytecode::Iterator& gen,
   lchain[0] = _ptr_Storage_uint;
   // lchain[1] = comp.fetchAddBound();
   lchain[2] = vScratch;
-  lchain[3] = const2;
+  lchain[3] = const1;
 
   gen = comp.end();
   auto regPVboBase = comp.fetchAddBound();
@@ -761,7 +759,7 @@ void MeshConverter::emitIboStore(libspirv::MutableBytecode::Iterator& gen,
 
     nchain[1] = comp.fetchAddBound();
     nchain[2] = vScratch;
-    nchain[3] = const2;
+    nchain[3] = const1;
     nchain[4] = regPIbo; // TODO: iboPtr+i
     gen.insert(spv::OpAccessChain, nchain, 5);
 
@@ -812,11 +810,10 @@ void MeshConverter::emitVert() {
   fn.insert(spv::OpEntryPoint,       {spv::ExecutionModelVertex, main, 0x6E69616D, 0x0, gl_VertexIndex, vScratch});
   fn.insert(spv::OpSource,           {spv::SourceLanguageGLSL, 450});
 
-  fn.insert(spv::OpName,             gl_VertexIndex,    "gl_VertexIndex");
+  fn.insert(spv::OpName,             gl_VertexIndex,       "gl_VertexIndex");
   fn.insert(spv::OpName,             EngineInternal2_t,    "EngineInternal2");
   fn.insert(spv::OpMemberName,       EngineInternal2_t, 0, "grow");
-  fn.insert(spv::OpMemberName,       EngineInternal2_t, 1, "grow2");
-  fn.insert(spv::OpMemberName,       EngineInternal2_t, 2, "heap");
+  fn.insert(spv::OpMemberName,       EngineInternal2_t, 1, "heap");
 
   fn.insert(spv::OpDecorate,         {gl_VertexIndex, spv::DecorationBuiltIn, spv::BuiltInVertexIndex});
 
@@ -826,10 +823,8 @@ void MeshConverter::emitVert() {
   fn.insert(spv::OpDecorate,         {EngineInternal2_t,    spv::DecorationBlock});
   fn.insert(spv::OpMemberDecorate,   {EngineInternal2_t, 0, spv::DecorationOffset, 0});
   fn.insert(spv::OpMemberDecorate,   {EngineInternal2_t, 1, spv::DecorationOffset, 4});
-  fn.insert(spv::OpMemberDecorate,   {EngineInternal2_t, 2, spv::DecorationOffset, 8});
   fn.insert(spv::OpMemberDecorate,   {EngineInternal2_t, 0, spv::DecorationNonWritable});
   fn.insert(spv::OpMemberDecorate,   {EngineInternal2_t, 1, spv::DecorationNonWritable});
-  fn.insert(spv::OpMemberDecorate,   {EngineInternal2_t, 2, spv::DecorationNonWritable});
 
   fn.insert(spv::OpTypeVoid,         {void_t});
   fn.insert(spv::OpTypeBool,         {bool_t});
@@ -920,7 +915,7 @@ void MeshConverter::emitVert() {
       }, libspirv::Bytecode::T_PostOrder);
     }
 
-  fn.insert(spv::OpTypeStruct,       {EngineInternal2_t, uint_t, uint_t, _runtimearr_uint}); // heap
+  fn.insert(spv::OpTypeStruct,       {EngineInternal2_t, uint_t, _runtimearr_uint}); // heap
   fn.insert(spv::OpTypePointer,      {_ptr_Storage_EngineInternal2, spv::StorageClassStorageBuffer, EngineInternal2_t});
 
   fn.insert(spv::OpVariable,         {_ptr_Input_int, gl_VertexIndex, spv::StorageClassInput});
@@ -963,7 +958,7 @@ void MeshConverter::emitVert() {
       const uint32_t valR = vert.fetchAddBound();
       const uint32_t rDst = vert.fetchAddBound();
       fn.insert(spv::OpIAdd,        {uint_t, rDst, rg_VertexIndex, constants[seq]});
-      fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, ptrR, vScratch, constants[2], rDst});
+      fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, ptrR, vScratch, constants[1], rDst});
       fn.insert(spv::OpLoad,        {uint_t, valR, ptrR});
 
       const uint32_t ptrL  = vert.fetchAddBound();
