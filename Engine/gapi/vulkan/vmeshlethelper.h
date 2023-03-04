@@ -45,8 +45,10 @@ class VMeshletHelper {
     void bindVS(VkCommandBuffer impl, VkPipelineLayout lay);
 
     void initRP(VkCommandBuffer impl);
-    void sortPass(VkCommandBuffer impl, uint32_t meshCallsCount);
+
+    void firstDraw(VkCommandBuffer impl);
     void drawIndirect(VkCommandBuffer impl, uint32_t id);
+    void sortPass(VkCommandBuffer impl, uint32_t meshCallsCount);
 
     VkDescriptorSetLayout lay() const { return engLay; }
 

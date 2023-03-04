@@ -73,7 +73,7 @@ void main() {
 
     const Descriptor d = mesh.desc[at];
     if(gl_LocalInvocationIndex==0) {
-      iboOffset = atomicAdd(indirect.cmd[d.drawId].indexCount, d.indSz) + var.grow2;
+      iboOffset = atomicAdd(indirect.cmd[d.drawId].indexCount, d.indSz) + indirect.cmd[d.drawId].firstIndex;
       }
     barrier();
 

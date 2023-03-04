@@ -22,7 +22,7 @@ class MeshConverter {
     void     emitComp();
     void     emitVert();
 
-    void     emitConstants();
+    void     emitConstants(libspirv::MutableBytecode& comp);
     void     emitEngSsbo();
     void     emitSetMeshOutputs(uint32_t engSetMesh);
     void     emitEngMain (uint32_t engMain);
@@ -35,6 +35,8 @@ class MeshConverter {
     struct Varying {
       uint32_t type        = 0;
       uint32_t writeOffset = 0;
+      uint32_t vsVariable  = 0;
+      uint32_t location    = uint32_t(-1);
       };
 
     uint32_t gl_NumWorkGroups               = 0;

@@ -94,15 +94,15 @@ void VMeshletHelper::cleanup() {
   }
 
 void VMeshletHelper::bindCS(VkCommandBuffer impl, VkPipelineLayout lay) {
-  vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_COMPUTE,
+  vkCmdBindDescriptorSets(impl, VK_PIPELINE_BIND_POINT_COMPUTE,
                           lay, 1,
                           1,&engSet,
                           0,nullptr);
   }
 
 void VMeshletHelper::bindVS(VkCommandBuffer impl, VkPipelineLayout lay) {
-  vkCmdBindIndexBuffer   (impl, scratch.impl, 0, VK_INDEX_TYPE_UINT32);
-  vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,
+  vkCmdBindIndexBuffer   (impl, scratch.impl, 2*sizeof(uint32_t), VK_INDEX_TYPE_UINT32);
+  vkCmdBindDescriptorSets(impl, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           lay, 1,
                           1,&drawSet,
                           0,nullptr);
@@ -111,7 +111,7 @@ void VMeshletHelper::bindVS(VkCommandBuffer impl, VkPipelineLayout lay) {
 void VMeshletHelper::drawIndirect(VkCommandBuffer impl, uint32_t id) {
   assert(id<IndirectCmdCount);
   uint32_t off = id*sizeof(VkDrawIndexedIndirectCommand);
-  // vkCmdDrawIndexedIndirect(impl, indirect.impl, off, 1, sizeof(VkDrawIndexedIndirectCommand));
+  vkCmdDrawIndexedIndirect(impl, indirect.impl, off, 1, sizeof(VkDrawIndexedIndirectCommand));
   // vkCmdDrawIndexed(impl, 3, 1, 0, 0, 0);
   }
 
@@ -127,8 +127,6 @@ void VMeshletHelper::initRP(VkCommandBuffer impl) {
     meshlets.read(&desc,5*4,sizeof(desc));
 
     uint32_t indSize   = (desc[0].z       ) & 0x3FF;
-    uint32_t maxVertex = (desc[0].z >> 10 ) & 0xFF;
-    uint32_t varSize   = (desc[0].z >> 18u);
 
     //uint32_t ibo[3*3] = {};
     //compacted.read(ibo,0,sizeof(ibo));
@@ -178,7 +176,16 @@ void VMeshletHelper::sortPass(VkCommandBuffer impl, uint32_t meshCallsCount) {
           VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
           VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT | VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
           VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
+          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
+  }
+
+void VMeshletHelper::firstDraw(VkCommandBuffer impl) {
+  // wait for draw
+  barrier(impl,
+          VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT | VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
+          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
   }
 
 void VMeshletHelper::barrier(VkCommandBuffer      impl,
@@ -274,7 +281,7 @@ VkDescriptorSet VMeshletHelper::initDescriptors(VDevice& device,
   }
 
 void VMeshletHelper::initEngSet(VkDescriptorSet set, uint32_t cnt) {
-  VkDescriptorBufferInfo buf[5] = {};
+  VkDescriptorBufferInfo buf[4] = {};
   buf[0].buffer = indirectSrc.impl;
   buf[0].offset = 0;
   buf[0].range  = VK_WHOLE_SIZE;
