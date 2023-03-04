@@ -47,8 +47,9 @@ class MeshConverter {
     uint32_t gl_PrimitiveTriangleIndicesEXT = 0;
     uint32_t main                           = 0;
 
-    uint32_t vEngine0                       = 0;
-    uint32_t vEngine1                       = 0;
+    uint32_t vIndirectCmd                   = 0;
+    uint32_t vDecriptors                    = 0;
+    uint32_t vScratch                       = 0;
     uint32_t vIboPtr                        = 0;
     uint32_t vVboPtr                        = 0;
     uint32_t vTmp                           = 0;

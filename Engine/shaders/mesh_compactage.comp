@@ -7,82 +7,79 @@ layout(local_size_x = 64) in;
 struct IndirectCommand
 {
   uint indexCount;
-  uint varyingCount;
+};
+
+struct Descriptor
+{
+  uint drawId;
+  uint ptr;
+  uint indSz;
 };
 
 struct VkDrawIndexedIndirectCommand
 {
-    uint indexCount;
-    uint instanceCount;
-    uint firstIndex;    // prefix sum
-    int  vertexOffset;  // can be abused to offset into var_buffer
-    uint firstInstance; // caps: should be zero
-    uint vboOffset;     // prefix sum
+  uint indexCount;
+  uint instanceCount;
+  uint firstIndex;    // prefix sum
+  int  vertexOffset;  // can be abused to offset into var_buffer
+  uint firstInstance; // caps: should be zero
+  uint vboOffset;     // prefix sum
 };
 
-layout(binding = 0, std430) writeonly buffer EngineInternal0 {
+layout(binding = 0, std430) restrict writeonly buffer EngineInternal0
+{
   IndirectCommand cmd[];
-  } indirectSrc;
+} indirectSrc;
 
-layout(binding = 1, std430) readonly buffer EngineInternal1 {
-  uint    varGrow;
+layout(binding = 1, std430) restrict buffer EngineInternal1
+{
+  uint       grow;
+  uint       grow2;
+  Descriptor desc[];
+} mesh;
+
+layout(binding = 2, std430) restrict buffer EngineInternal2
+{
   uint    grow;
-  uint    meshletCount;
-  uint    dispatchX;
-  uint    dispatchY;
-  uint    dispatchZ;
-  uint    desc[];
-  } mesh;
-
-layout(binding = 2, std430) readonly buffer EngineInternal2 {
+  uint    grow2;
   uint    heap[];
-  } var;
+} var;
 
 layout(binding = 3, std430) buffer EngineInternal3
 {
-    VkDrawIndexedIndirectCommand cmd[];
+  VkDrawIndexedIndirectCommand cmd[];
 } indirect;
 
-layout(binding = 4, std430) writeonly buffer EngineInternal4
-{
-  uint    heap[];
-} compacted;
+shared uint workId;
+shared uint iboOffset;
 
 void main() {
-  uint mestId     = gl_GlobalInvocationID.x*3;
+  const uint total = atomicAdd(mesh.grow, 0);
 
-  [[branch]]
-  if(gl_GlobalInvocationID.x>=mesh.meshletCount)
-    return;
+  while(true) {
+    [[branch]]
+    if(gl_LocalInvocationIndex==0) {
+      uint at = atomicAdd(mesh.grow2, 1);
+      if(at==total)
+        atomicExchange(mesh.grow, 0);
+      workId = at;
+      }
+    barrier();
 
-  uint self       = mesh.desc[mestId+0];
-  uint indPtr     = mesh.desc[mestId+1];
-  uint desc       = mesh.desc[mestId+2];
+    const uint at = workId;
+    [[branch]]
+    if(at>=total)
+      return;
 
-  uint indSize    = (desc       ) & 0x3FF;
-  uint maxVertex  = (desc >> 10 ) & 0xFF;
-  uint varSize    = (desc >> 18u);
-  uint vMem       = maxVertex*varSize;
-  uint vertPtr    = indPtr + indSize;
+    const Descriptor d = mesh.desc[at];
+    if(gl_LocalInvocationIndex==0) {
+      iboOffset = atomicAdd(indirect.cmd[d.drawId].indexCount, d.indSz) + var.grow2;
+      }
+    barrier();
 
-  uint firstIndex = indirect.cmd[self].firstIndex;
-  uint iboOffset  = atomicAdd(indirect.cmd[self].indexCount, indSize) + firstIndex;
-  uint vboOffset  = atomicAdd(indirect.cmd[self].vboOffset,  vMem);
-
-  [[loop]]
-  for(uint i=0; i<vMem; ++i) {
-    compacted.heap[vboOffset+i] = var.heap[vertPtr+i];
-    }
-
-  [[branch]]
-  if(varSize==0) {
-    // varying work moved to vertex shader and ibo represents used as-is
-    vboOffset = 0;
-    varSize   = 1;
-    }
-
-  [[loop]]
-  for(uint i=0; i<indSize; ++i) {
-    compacted.heap[iboOffset+i] = vboOffset + var.heap[indPtr+i]*varSize;
+    [[loop]]
+    for(uint i=gl_LocalInvocationIndex; i<d.indSz; i+=gl_WorkGroupSize.x) {
+      var.heap[iboOffset+i] = var.heap[d.ptr+i];
+      }
     }
   }

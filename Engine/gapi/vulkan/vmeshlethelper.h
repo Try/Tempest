@@ -16,7 +16,6 @@ class VMeshletHelper {
   private:
     struct IndirectCommand {
       uint32_t indexCount;
-      uint32_t varyingCount;
       };
 
     struct VkDrawIndexedIndirectCommand {
@@ -66,19 +65,19 @@ class VMeshletHelper {
                                   VkPipelineStageFlags srcStageMask, VkPipelineStageFlags dstStageMask,
                                   VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask);
 
-    VDevice&              dev;
-    VBuffer               indirectSrc, indirect, meshlets, scratch, compacted;
+    VDevice&                   dev;
+    VBuffer                    indirectSrc, indirect, meshlets, scratch;
 
-    VkDescriptorSetLayout engLay   = VK_NULL_HANDLE;
-    VkDescriptorPool      engPool  = VK_NULL_HANDLE;
-    VkDescriptorSet       engSet   = VK_NULL_HANDLE;
+    VkDescriptorSetLayout      engLay   = VK_NULL_HANDLE;
+    VkDescriptorPool           engPool  = VK_NULL_HANDLE;
+    VkDescriptorSet            engSet   = VK_NULL_HANDLE;
 
-    VkDescriptorSet       compPool = VK_NULL_HANDLE;
-    VkDescriptorSet       compSet  = VK_NULL_HANDLE;
+    VkDescriptorSet            compPool = VK_NULL_HANDLE;
+    VkDescriptorSet            compSet  = VK_NULL_HANDLE;
 
-    VkDescriptorSetLayout drawLay  = VK_NULL_HANDLE;
-    VkDescriptorSet       drawPool = VK_NULL_HANDLE;
-    VkDescriptorSet       drawSet  = VK_NULL_HANDLE;
+    VkDescriptorSetLayout      drawLay  = VK_NULL_HANDLE;
+    VkDescriptorSet            drawPool = VK_NULL_HANDLE;
+    VkDescriptorSet            drawSet  = VK_NULL_HANDLE;
 
     DSharedPtr<VPipelineLay*>  prefixSumLay;
     DSharedPtr<VCompPipeline*> prefixSum;

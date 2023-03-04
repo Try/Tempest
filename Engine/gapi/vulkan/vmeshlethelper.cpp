@@ -14,17 +14,17 @@
 using namespace Tempest::Detail;
 
 VMeshletHelper::VMeshletHelper(VDevice& dev) : dev(dev) {
-  const auto ind = MemUsage::StorageBuffer | MemUsage::Indirect | MemUsage::TransferDst;
-  const auto ms  = MemUsage::StorageBuffer | MemUsage::Indirect | MemUsage::TransferDst;
-  const auto geo = MemUsage::StorageBuffer | MemUsage::VertexBuffer | MemUsage::IndexBuffer;
+  const auto ind = MemUsage::StorageBuffer | MemUsage::Indirect    | MemUsage::TransferDst | MemUsage::TransferSrc;
+  const auto ms  = MemUsage::StorageBuffer | MemUsage::Indirect    | MemUsage::TransferDst | MemUsage::TransferSrc;
+  const auto geo = MemUsage::StorageBuffer | MemUsage::IndexBuffer | MemUsage::TransferDst | MemUsage::TransferSrc;
 
   indirectSrc = dev.allocator.alloc(nullptr, IndirectScratchSize, 1,1, ind, BufferHeap::Device);
   indirect    = dev.allocator.alloc(nullptr, IndirectMemorySize,  1,1, ind, BufferHeap::Device);
 
-  meshlets    = dev.allocator.alloc(nullptr, MeshletsMemorySize, 1,1, ms,  BufferHeap::Device);
+  meshlets    = dev.allocator.alloc(nullptr, MeshletsMemorySize,  1,1, ms,  BufferHeap::Device);
 
-  scratch     = dev.allocator.alloc(nullptr, PipelineMemorySize, 1,1, MemUsage::StorageBuffer | MemUsage::TransferDst, BufferHeap::Device);
-  compacted   = dev.allocator.alloc(nullptr, PipelineMemorySize, 1,1, geo, BufferHeap::Device);
+  // scratch     = dev.allocator.alloc(nullptr, PipelineMemorySize,  1,1, geo, BufferHeap::Device);
+  scratch     = dev.allocator.alloc(nullptr, PipelineMemorySize,  1,1, geo, BufferHeap::Upload);
 
   {
     auto c = dev.dataMgr().get();
@@ -34,6 +34,9 @@ VMeshletHelper::VMeshletHelper(VDevice& dev) : dev(dev) {
     vkCmdFillBuffer(cmd.impl, indirectSrc.impl, 0, VK_WHOLE_SIZE, 0);
     // meshlet counters
     vkCmdFillBuffer(cmd.impl, meshlets.impl, 0, sizeof(uint32_t)*2, 0);
+    // heap counters
+    vkCmdFillBuffer(cmd.impl, scratch.impl,  0, sizeof(uint32_t)*2, 0);
+
     barrier(cmd.impl,
             VK_PIPELINE_STAGE_TRANSFER_BIT,
             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
@@ -51,9 +54,9 @@ VMeshletHelper::VMeshletHelper(VDevice& dev) : dev(dev) {
     engSet   = initDescriptors(dev,engPool,engLay);
     initEngSet(engSet,3);
 
-    compPool = initPool(dev,5);
+    compPool = initPool(dev,4);
     compSet  = initDescriptors(dev,compPool,compactageLay.handler->impl);
-    initEngSet(compSet,5);
+    initEngSet(compSet,4);
 
     drawLay  = initDrawLayout(dev);
     drawPool = initPool(dev,1);
@@ -98,11 +101,7 @@ void VMeshletHelper::bindCS(VkCommandBuffer impl, VkPipelineLayout lay) {
   }
 
 void VMeshletHelper::bindVS(VkCommandBuffer impl, VkPipelineLayout lay) {
-  VkBuffer     buffers[1] = {compacted.impl};
-  VkDeviceSize offsets[1] = {0};
-  vkCmdBindVertexBuffers(impl, 0, 1, buffers, offsets);
-  vkCmdBindIndexBuffer  (impl, compacted.impl, 0, VK_INDEX_TYPE_UINT32);
-
+  vkCmdBindIndexBuffer   (impl, scratch.impl, 0, VK_INDEX_TYPE_UINT32);
   vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,
                           lay, 1,
                           1,&drawSet,
@@ -112,7 +111,7 @@ void VMeshletHelper::bindVS(VkCommandBuffer impl, VkPipelineLayout lay) {
 void VMeshletHelper::drawIndirect(VkCommandBuffer impl, uint32_t id) {
   assert(id<IndirectCmdCount);
   uint32_t off = id*sizeof(VkDrawIndexedIndirectCommand);
-  vkCmdDrawIndexedIndirect(impl, indirect.impl, off, 1, sizeof(VkDrawIndexedIndirectCommand));
+  // vkCmdDrawIndexedIndirect(impl, indirect.impl, off, 1, sizeof(VkDrawIndexedIndirectCommand));
   // vkCmdDrawIndexed(impl, 3, 1, 0, 0, 0);
   }
 
@@ -131,31 +130,31 @@ void VMeshletHelper::initRP(VkCommandBuffer impl) {
     uint32_t maxVertex = (desc[0].z >> 10 ) & 0xFF;
     uint32_t varSize   = (desc[0].z >> 18u);
 
-    uint32_t ibo[3*3] = {};
-    compacted.read(ibo,0,sizeof(ibo));
+    //uint32_t ibo[3*3] = {};
+    //compacted.read(ibo,0,sizeof(ibo));
 
-    float    vbo[11*3] = {};
-    uint32_t vboI[11*3] = {};
-    compacted.read(vbo, 3*4,sizeof(vbo));
-    compacted.read(vboI,3*4,sizeof(vboI));
+    // float    vbo[11*3] = {};
+    // uint32_t vboI[11*3] = {};
+    // compacted.read(vbo, 3*4,sizeof(vbo));
+    // compacted.read(vboI,3*4,sizeof(vboI));
 
     float sc[12*3+3] = {};
     scratch.read(sc,0,sizeof(sc));
 
     Log::i("");
+
+    uint32_t zero = 0;
+    scratch.update(&zero, 0, 1, 4, 4);
     }
   }
 
 void VMeshletHelper::sortPass(VkCommandBuffer impl, uint32_t meshCallsCount) {
   if(meshCallsCount==0)
     return;
-  // Issue: sync for indirect buffer will ruin pipelining, by serializing all renderpasses
 
   // prefix summ pass
-  barrier(impl,
-          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
-          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
+  barrier(impl, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
           VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,prefixSum.handler->impl);
   vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_COMPUTE, prefixSum.handler->pipelineLayout,
@@ -167,12 +166,12 @@ void VMeshletHelper::sortPass(VkCommandBuffer impl, uint32_t meshCallsCount) {
   barrier(impl,
           VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
           VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
-          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
+          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
           VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,compactage.handler->impl);
   vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_COMPUTE, compactage.handler->pipelineLayout,
                           0, 1,&compSet, 0,nullptr);
-  vkCmdDispatchIndirect(impl, meshlets.impl, sizeof(uint32_t)*3);
+  vkCmdDispatch(impl, 1024,1,1); // persistent(almost) threads
 
   // ready for draw
   barrier(impl,
@@ -292,11 +291,7 @@ void VMeshletHelper::initEngSet(VkDescriptorSet set, uint32_t cnt) {
   buf[3].offset = 0;
   buf[3].range  = VK_WHOLE_SIZE;
 
-  buf[4].buffer = compacted.impl;
-  buf[4].offset = 0;
-  buf[4].range  = VK_WHOLE_SIZE;
-
-  VkWriteDescriptorSet write[5] = {};
+  VkWriteDescriptorSet write[4] = {};
   for(uint32_t i=0; i<cnt; ++i) {
     write[i].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write[i].dstSet          = set;
@@ -312,7 +307,7 @@ void VMeshletHelper::initEngSet(VkDescriptorSet set, uint32_t cnt) {
 
 void VMeshletHelper::initDrawSet(VkDescriptorSet set) {
   VkDescriptorBufferInfo buf[1] = {};
-  buf[0].buffer = compacted.impl;
+  buf[0].buffer = scratch.impl;
   buf[0].offset = 0;
   buf[0].range  = VK_WHOLE_SIZE;
 

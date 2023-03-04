@@ -1106,7 +1106,7 @@ void VMeshCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
 
   auto& ms = *device.meshHelper;
   device.vkCmdDispatchBase(cbHelper,
-                           uint32_t(x), uint32_t(meshIndirectId), 0,
+                           uint32_t(x), 0, uint32_t(meshIndirectId),
                            uint32_t(y), 1, 1);
   ms.drawIndirect(impl, uint32_t(meshIndirectId));
   ++meshIndirectId;
