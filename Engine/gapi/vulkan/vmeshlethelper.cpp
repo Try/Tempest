@@ -128,8 +128,8 @@ void VMeshletHelper::initRP(VkCommandBuffer impl) {
 
     uint32_t indSize   = (desc[0].z       ) & 0x3FF;
 
-    //uint32_t ibo[3*3] = {};
-    //compacted.read(ibo,0,sizeof(ibo));
+    // uint32_t ibo[3*3] = {};
+    // compacted.read(ibo,0,sizeof(ibo));
 
     // float    vbo[11*3] = {};
     // uint32_t vboI[11*3] = {};

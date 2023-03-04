@@ -1104,6 +1104,7 @@ void VMeshCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
   if(px.meshPipeline()==VK_NULL_HANDLE)
     return;
 
+  assert(z==1); // abused as drawId
   auto& ms = *device.meshHelper;
 
   if(meshIndirectId==0) {

@@ -84,7 +84,7 @@ VPipeline::VPipeline(VDevice& device, const RenderState& st, Topology tp,
         vkAssert(vkCreateComputePipelines(device.device.impl, VK_NULL_HANDLE, 1, &info, nullptr, &meshCompuePipeline));
 
         // cancel native mesh shading
-        pushStageFlags &= ~VK_SHADER_STAGE_MESH_BIT_NV;
+        pushStageFlags &= ~VK_SHADER_STAGE_MESH_BIT_EXT;
         pushStageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
         }
       }
@@ -204,11 +204,11 @@ VkPipelineLayout VPipeline::initLayout(VDevice& dev, const VPipelineLay& uboLay,
 
     if(uboLay.msHelper!=VK_NULL_HANDLE) {
       if(isMeshCompPass) {
-        if((pushStageFlags&VK_SHADER_STAGE_MESH_BIT_NV)==VK_SHADER_STAGE_MESH_BIT_NV) {
+        if((pushStageFlags&VK_SHADER_STAGE_MESH_BIT_EXT)==VK_SHADER_STAGE_MESH_BIT_EXT) {
           pushStageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
           }
         } else {
-        pushStageFlags &= ~VK_SHADER_STAGE_MESH_BIT_NV;
+        pushStageFlags &= ~VK_SHADER_STAGE_MESH_BIT_EXT;
         pushStageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
         }
       }
