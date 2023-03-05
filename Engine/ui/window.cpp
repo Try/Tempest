@@ -27,6 +27,10 @@ Window::~Window() {
   Tempest::SystemApi::destroyWindow(id);
   }
 
+void Window::setWindowTitle(const char* utf8) {
+  Tempest::SystemApi::setWindowTitle(hwnd(), utf8);
+  }
+
 void Window::render() {
   }
 

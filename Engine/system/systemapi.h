@@ -82,7 +82,7 @@ class SystemApi {
     virtual int      implExec(AppCallBack& cb) = 0;
     virtual void     implProcessEvents(AppCallBack& cb) = 0;
 
-    virtual void     implSetWindowTitle(SystemApi::Window *w, const char* utf8);
+    virtual void     implSetWindowTitle(SystemApi::Window *w, const char* utf8) = 0;
 
     static void      setCursorPosition(SystemApi::Window *w, int x, int y);
     static void      showCursor(SystemApi::Window *w, CursorShape c);

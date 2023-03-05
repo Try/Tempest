@@ -31,6 +31,8 @@ class MacOSApi final: SystemApi {
     void     implSetCursorPosition(SystemApi::Window *w, int x, int y) override;
     void     implShowCursor(SystemApi::Window *w, CursorShape show) override;
 
+    void     implSetWindowTitle(SystemApi::Window *w, const char* utf8) override;
+
     bool     implIsRunning() override;
     int      implExec(AppCallBack& cb) override;
     void     implProcessEvents(AppCallBack& cb) override;

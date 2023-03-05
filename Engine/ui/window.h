@@ -21,6 +21,8 @@ class Window : public Widget {
     Window( ShowMode sm );
     ~Window() override;
 
+    void setWindowTitle(const char* utf8);
+
   protected:
     virtual void render();
     using        Widget::dispatchPaintEvent;
@@ -32,9 +34,9 @@ class Window : public Widget {
     void         setCursorPosition(int x, int y);
     void         setCursorPosition(const Point& p);
 
+  private:
     void         implShowCursor(CursorShape s);
 
-  private:
     SystemApi::Window* id=nullptr;
 
   friend class Widget;
