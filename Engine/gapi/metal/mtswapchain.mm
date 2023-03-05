@@ -8,7 +8,15 @@
 
 #include "mtdevice.h"
 
+#ifdef __OSX__
 #import <AppKit/AppKit.h>
+#endif
+
+#ifdef __IOS__
+#import <UIKit/UIKit.h>
+#import <Foundation/Foundation.h>
+#endif
+
 #import <QuartzCore/QuartzCore.hpp>
 #import <QuartzCore/CAMetalLayer.h>
 #import <Metal/MTLTexture.h>
@@ -17,9 +25,19 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+#ifdef __OSX__
+using SysView = NSView;
+using SysWindow = NSWindow;
+#endif
+
+#ifdef __IOS__
+using SysView = UIView;
+using SysWindow = UIWindow;
+#endif
+
 @class MetalView;
 
-@interface MetalView : NSView
+@interface MetalView : SysView
 @end
 
 @implementation MetalView
@@ -33,28 +51,51 @@ using namespace Tempest::Detail;
 @end
 
 struct MtSwapchain::Impl {
-  NSWindow*  wnd  = nil;
+  SysWindow* wnd  = nil;
   MetalView* view = nil;
+
+  CAMetalLayer* metalLayer() {
+#if defined(__OSX__)
+    return reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);
+#elif defined(__IOS__)
+    return reinterpret_cast<CAMetalLayer*>(wnd.layer);
+#endif
+    }
   };
+
+static float backingScaleFactor() {
+#if defined(__OSX__)
+  return [NSScreen mainScreen].backingScaleFactor;
+#elif defined(__IOS__)
+  return [UIScreen mainScreen].scale;
+#endif
+  }
 
 // note : MoltenVK supports NSView, UIView, CAMetalLayer, so we should align to it
 MtSwapchain::MtSwapchain(MtDevice& dev, SystemApi::Window *w)
   :dev(dev), pimpl(new Impl()) {
   NSObject* obj = reinterpret_cast<NSObject*>(w);
-  if([obj isKindOfClass : [NSWindow class]])
-    pimpl->wnd = reinterpret_cast<NSWindow*>(w);
+  if([obj isKindOfClass : [SysWindow class]])
+    pimpl->wnd = reinterpret_cast<SysWindow*>(w);
 
-  NSRect rect = [pimpl->wnd frame];
+#if defined(__OSX__)
+  CGRect rect = [pimpl->wnd frame];
+#elif defined(__IOS__)
+  CGRect rect = [ [ UIScreen mainScreen ] bounds ];
+#endif
+      
   sz = {int(rect.size.width), int(rect.size.height)};
 
   pimpl->view = [[MetalView alloc] initWithFrame:rect];
+#if defined(__OSX__)
   pimpl->view.wantsLayer = YES;
   pimpl->wnd.contentView = pimpl->view;
+#endif
 
-  CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(pimpl->wnd.contentView.layer);
+  CAMetalLayer* lay = pimpl->metalLayer();
   lay.device = id<MTLDevice>(dev.impl.get());
 
-  const float dpi = [NSScreen mainScreen].backingScaleFactor;
+  const float dpi = backingScaleFactor();
   [lay setContentsScale:dpi];
 
   //lay.maximumDrawableCount      = 2;
@@ -74,8 +115,8 @@ void MtSwapchain::reset() {
   std::lock_guard<SpinLock> guard(sync);
   // https://developer.apple.com/documentation/quartzcore/cametallayer?language=objc
 
-  CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(pimpl->wnd.contentView.layer);
-
+  CAMetalLayer* lay = pimpl->metalLayer();
+#ifdef __OSX__
   NSRect wrect = [pimpl->wnd convertRectToBacking:[pimpl->wnd frame]];
   NSRect lrect = lay.frame;
   if(wrect.size.width!=lrect.size.width || wrect.size.height!=lrect.size.height) {
@@ -90,6 +131,7 @@ void MtSwapchain::reset() {
     for(size_t i=0; i<imgCount; ++i)
       img[i].tex = mkTexture();
     }
+#endif
   }
 
 uint32_t MtSwapchain::currentBackBufferIndex() {
@@ -99,15 +141,15 @@ uint32_t MtSwapchain::currentBackBufferIndex() {
       if(img[i].inUse)
         continue;
       img[i].inUse = true;
-      currentImg = i;
-      return i;
+      currentImg = uint32_t(i);
+      return uint32_t(i);
       }
     }
   throw SwapchainSuboptimal();
   }
 
 void MtSwapchain::present() {
-  CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(pimpl->wnd.contentView.layer);
+  CAMetalLayer* lay = pimpl->metalLayer();
   uint32_t      i   = currentImg;
 
   @autoreleasepool {
@@ -174,7 +216,7 @@ uint32_t MtSwapchain::h() const {
   }
 
 MTL::PixelFormat MtSwapchain::format() const {
-  CAMetalLayer* lay = reinterpret_cast<CAMetalLayer*>(pimpl->wnd.contentView.layer);
+  CAMetalLayer* lay = pimpl->metalLayer();
   return MTL::PixelFormat(lay.pixelFormat);
   }
 

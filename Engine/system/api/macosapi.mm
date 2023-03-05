@@ -1,5 +1,7 @@
 #include "macosapi.h"
 
+#ifdef __OSX__
+
 #include <Carbon/Carbon.h>
 #include <AppKit/AppKit.h>
 
@@ -590,3 +592,5 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
     }
   [NSApp sendEvent: evt];
   }
+
+#endif

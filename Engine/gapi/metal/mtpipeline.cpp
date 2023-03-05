@@ -190,6 +190,11 @@ void MtPipeline::mkMeshPso(const MtPipelineLay& lay) {
   mdesc->setMeshFunction(mesh->impl.get());
   mdesc->setFragmentFunction(frag->impl.get());
   mdesc->setRasterizationEnabled(!rs.isRasterDiscardEnabled()); // TODO: test
+
+  if(task!=nullptr) {
+    mdesc->setMaxTotalThreadsPerMeshThreadgroup(localSizeMesh.width*localSizeMesh.height*localSizeMesh.depth);
+    mdesc->setMaxTotalThreadsPerObjectThreadgroup(localSize.width*localSize.height*localSize.depth);
+    }
   }
 
 

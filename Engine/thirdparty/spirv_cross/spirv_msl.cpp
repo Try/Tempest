@@ -5435,22 +5435,12 @@ void CompilerMSL::emit_custom_templates()
 			begin_scope();
 			statement("return elements[pos];");
 			end_scope();
-      statement("");
-      statement("constexpr const constant T& operator [] (size_t pos) const constant");
-      begin_scope();
-      statement("return elements[pos];");
-      end_scope();
-      statement("");
-      statement("constexpr const object_data T& operator [] (size_t pos) const object_data");
-      begin_scope();
-      statement("return elements[pos];");
-      end_scope();
-      statement("");
-      statement("constexpr object_data T& operator [] (size_t pos) object_data");
-      begin_scope();
-      statement("return elements[pos];");
-      end_scope();
-      statement("");
+			statement("");
+			statement("constexpr const constant T& operator [] (size_t pos) const constant");
+			begin_scope();
+			statement("return elements[pos];");
+			end_scope();
+			statement("");
 			statement("threadgroup T& operator [] (size_t pos) threadgroup");
 			begin_scope();
 			statement("return elements[pos];");
@@ -5459,6 +5449,18 @@ void CompilerMSL::emit_custom_templates()
 			begin_scope();
 			statement("return elements[pos];");
 			end_scope();
+			if (msl_options.supports_msl_version(3, 0))
+			{
+				statement("");
+				statement("object_data T& operator [] (size_t pos) object_data");
+				begin_scope();
+				statement("return elements[pos];");
+				end_scope();
+				statement("constexpr const object_data T& operator [] (size_t pos) const object_data");
+				begin_scope();
+				statement("return elements[pos];");
+				end_scope();
+			}
 			end_scope_decl();
 			statement("");
 			break;
