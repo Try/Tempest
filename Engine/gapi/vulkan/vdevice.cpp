@@ -247,10 +247,12 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
   if(props.hasDeviceAddress) {
     rqExt.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
     }
+  if(props.hasSpirv_1_4) {
+    rqExt.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+    }
   if(props.raytracing.rayQuery) {
     rqExt.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
     rqExt.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
-    rqExt.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
     rqExt.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
     }
   if(props.meshlets.meshShader) {
@@ -262,8 +264,8 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
   if(props.hasDynRendering) {
     rqExt.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
     }
-  if(props.hasBarycentricsNV) {
-    rqExt.push_back(VK_NV_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME);
+  if(props.hasBarycentrics) {
+    rqExt.push_back(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME);
     }
 
   VkPhysicalDeviceFeatures supportedFeatures={};
@@ -315,8 +317,8 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = {};
     indexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
 
-    VkPhysicalDeviceFragmentShaderBarycentricFeaturesNV barycentricsNVFeatures = {};
-    barycentricsNVFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_NV;
+    VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR barycentricsFeatures = {};
+    barycentricsFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR;
 
     if(props.hasSync2) {
       sync2.pNext = features.pNext;
@@ -346,9 +348,9 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
       indexingFeatures.pNext = features.pNext;
       features.pNext = &indexingFeatures;
       }
-    if(props.hasBarycentricsNV) {
-      barycentricsNVFeatures.pNext = features.pNext;
-      features.pNext = &barycentricsNVFeatures;
+    if(props.hasBarycentrics) {
+      barycentricsFeatures.pNext = features.pNext;
+      features.pNext = &barycentricsFeatures;
       }
 
     auto vkGetPhysicalDeviceFeatures2 = PFN_vkGetPhysicalDeviceFeatures2(vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2KHR"));

@@ -49,7 +49,7 @@ VulkanInstance::VulkanInstance(bool validation)
   appInfo.apiVersion         = VK_API_VERSION_1_0;
 
   if(auto vkEnumerateInstanceVersion = PFN_vkEnumerateInstanceVersion(vkGetInstanceProcAddr(nullptr,"vkEnumerateInstanceVersion"))) {
-    appInfo.apiVersion = VK_API_VERSION_1_2;
+    appInfo.apiVersion = VK_API_VERSION_1_3;
     }
 
   VkInstanceCreateInfo createInfo = {};
@@ -224,9 +224,11 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
     props.hasSync2 = true;
   if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME))
     props.hasDeviceAddress = true;
+  if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_SPIRV_1_4_EXTENSION_NAME)) {
+    props.hasSpirv_1_4 = true;
+    }
   if(hasDeviceFeatures2 &&
      checkForExt(ext,VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME) &&
-     checkForExt(ext,VK_KHR_SPIRV_1_4_EXTENSION_NAME) &&
      checkForExt(ext,VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME) &&
      checkForExt(ext,VK_KHR_RAY_QUERY_EXTENSION_NAME)) {
     props.raytracing.rayQuery = true;
@@ -243,8 +245,8 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
   if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_DEVICE_GROUP_EXTENSION_NAME)) {
     props.hasDevGroup = true;
     }
-  if(hasDeviceFeatures2 && checkForExt(ext,VK_NV_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME)) {
-    props.hasBarycentricsNV = true;
+  if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME)) {
+    props.hasBarycentrics = true;
     }
 
   VkPhysicalDeviceProperties devP={};
@@ -355,7 +357,7 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
 
     props.accelerationStructureScratchOffsetAlignment = asProperties.minAccelerationStructureScratchOffsetAlignment;
 
-    if(!props.meshlets.meshShader && false) {
+    if(!props.meshlets.meshShader && props.hasSpirv_1_4 && false) {
       props.meshlets.meshShaderEmulated = props.hasDevGroup;
       if(props.meshlets.meshShaderEmulated) {
         props.meshlets.maxGroups.x      = devP.limits.maxComputeWorkGroupCount[0];
