@@ -42,6 +42,7 @@ dbg.png
 # QtCreator
 Engine/CMakeLists.txt.user
 Tests/tests/CMakeLists.txt.user
+Examples/out/*
 
 # MacOS
 .DS_Store
