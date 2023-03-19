@@ -5,7 +5,7 @@
 
 #include <Foundation/NSProcessInfo.h>
 
-//#include <Metal/MTLPixelFormat.h>
+// #include <Metal/MTLPixelFormat.h>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -109,8 +109,10 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
 
   if(dev.depth24Stencil8PixelFormatSupported()) {
     static const TextureFormat ds[] = {TextureFormat::Depth24S8};
-    for(auto& i:ds)
+    for(auto& i:ds) {
       dsBit  |= uint64_t(1) << uint64_t(i);
+      smpBit |= uint64_t(1) << uint64_t(i);
+      }
     }
 
   {
@@ -124,18 +126,24 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
    * Testing shows, that texture2d works on MacOS
   */
 #ifdef __OSX__
-  if(majorVersion>=11 || (majorVersion==10 && minorVersion>=11))
+  if(majorVersion>=11 || (majorVersion==10 && minorVersion>=11)) {
+    dsBit  |= uint64_t(1) << TextureFormat::Depth32F;
     smpBit |= uint64_t(1) << TextureFormat::Depth32F;
+    }
 #else
   // no iOS, for Depth32F
 #endif
 
 #ifdef __OSX__
-  if(majorVersion>=11 || (majorVersion==10 && minorVersion>=12))
+  if(majorVersion>=11 || (majorVersion==10 && minorVersion>=12)) {
+    dsBit  |= uint64_t(1) << TextureFormat::Depth16;
     smpBit |= uint64_t(1) << TextureFormat::Depth16;
+    }
 #else
-  if(majorVersion>=13)
+  if(majorVersion>=13) {
+    dsBit  |= uint64_t(1) << TextureFormat::Depth16;
     smpBit |= uint64_t(1) << TextureFormat::Depth16;
+    }
 #endif
   }
 
@@ -143,6 +151,12 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
   prop.setAttachFormats (attBit);
   prop.setDepthFormats  (dsBit);
   prop.setStorageFormats(storBit);
+
+  prop.tex2d.maxSize = 8092;
+  prop.tex3d.maxSize = 2048;
+  if(dev.supportsFamily(MTL::GPUFamilyApple3)) {
+    prop.tex2d.maxSize = 16384;
+    }
 
   prop.mrt.maxColorAttachments = 4;
   if(dev.supportsFamily(MTL::GPUFamilyApple2))

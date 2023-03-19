@@ -121,7 +121,7 @@ Attachment Device::attachment(TextureFormat frm, const uint32_t w, const uint32_
   if(!devProps.hasSamplerFormat(frm) && !devProps.hasAttachFormat(frm))
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat, formatName(frm));
   if(w>devProps.tex2d.maxSize || h>devProps.tex2d.maxSize)
-    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat, formatName(frm));
+    throw std::system_error(Tempest::GraphicsErrc::TooLargeTexture, std::to_string(std::max(w,h)));
   uint32_t mipCnt = mips ? mipCount(w,h) : 1;
   Texture2d t(*this,api.createTexture(dev,w,h,mipCnt,frm),w,h,frm);
   return Attachment(std::move(t));
@@ -131,7 +131,7 @@ ZBuffer Device::zbuffer(TextureFormat frm, const uint32_t w, const uint32_t h) {
   if(!devProps.hasDepthFormat(frm))
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat, formatName(frm));
   if(w>devProps.tex2d.maxSize || h>devProps.tex2d.maxSize)
-    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat, formatName(frm));
+    throw std::system_error(Tempest::GraphicsErrc::TooLargeTexture, std::to_string(std::max(w,h)));
   Texture2d t(*this,api.createTexture(dev,w,h,1,frm),w,h,frm);
   return ZBuffer(std::move(t),devProps.hasSamplerFormat(frm));
   }
@@ -143,7 +143,7 @@ Texture2d Device::texture(const Pixmap &pm, const bool mips) {
   Pixmap        alt;
 
   if(pm.w()>devProps.tex2d.maxSize || pm.h()>devProps.tex2d.maxSize)
-    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat, formatName(format));
+    throw std::system_error(Tempest::GraphicsErrc::TooLargeTexture, std::to_string(std::max(pm.w(),pm.h())));
 
   if(isCompressedFormat(format)){
     if(devProps.hasSamplerFormat(format) && (!mips || pm.mipCount()>1)){

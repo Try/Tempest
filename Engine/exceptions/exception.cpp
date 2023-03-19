@@ -50,8 +50,10 @@ std::string GraphicsErrCategory::message(int ev) const {
       return "Invalide texture";
     case GraphicsErrc::InvalidBufferUpdate:
       return "Invalid buffer update";
-    case GraphicsErrc::TooLargeUbo:
-      return "Uniform buffer element is too large";
+    case GraphicsErrc::TooLargeBuffer:
+      return "Uniform/Storage buffer element is too large";
+    case GraphicsErrc::TooLargeTexture:
+      return "Texture size is too large";
     case GraphicsErrc::InvalidStorageBuffer:
       return "Invalid storage buffer";
     case GraphicsErrc::InvalidAccelerationStructure:

@@ -195,6 +195,9 @@ template<class T>
 inline VertexBuffer<T> Device::vbo(BufferHeap ht, const T* arr, size_t arrSize) {
   if(arrSize==0)
     return VertexBuffer<T>();
+  //if(sizeof(T)*arrSize>devProps.vbo.maxRange)
+  //  throw std::system_error(Tempest::GraphicsErrc::TooLargeBuffer);
+
   static const auto   usageBits = MemUsage::VertexBuffer | MemUsage::StorageBuffer | MemUsage::TransferDst;
   Detail::VideoBuffer data      = createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),usageBits,ht);
   VertexBuffer<T> vbo(std::move(data),arrSize);
@@ -205,6 +208,7 @@ template<class T>
 inline IndexBuffer<T> Device::ibo(BufferHeap ht, const T* arr, size_t arrSize) {
   if(arrSize==0)
     return IndexBuffer<T>();
+
   static const auto   usageBits = MemUsage::IndexBuffer | MemUsage::StorageBuffer | MemUsage::TransferDst;
   Detail::VideoBuffer data      = createVideoBuffer(arr,arrSize,sizeof(T),sizeof(T),usageBits,ht);
   IndexBuffer<T>    ibo(std::move(data),arrSize);
@@ -214,6 +218,9 @@ inline IndexBuffer<T> Device::ibo(BufferHeap ht, const T* arr, size_t arrSize) {
 inline StorageBuffer Device::ssbo(BufferHeap ht, const void* data, size_t size) {
   if(size==0)
     return StorageBuffer();
+  if(size>devProps.ssbo.maxRange)
+    throw std::system_error(Tempest::GraphicsErrc::TooLargeBuffer);
+
   static const auto usageBits = MemUsage::VertexBuffer  | MemUsage::IndexBuffer   |
                                 MemUsage::UniformBuffer | MemUsage::StorageBuffer |
                                 MemUsage::TransferSrc   | MemUsage::TransferDst;
@@ -229,7 +236,7 @@ inline UniformBuffer<T> Device::ubo(BufferHeap ht, const T *mem, size_t size) {
   const size_t eltSize = ((sizeof(T)+align-1)/align)*align;
 
   if(sizeof(T)>devProps.ubo.maxRange)
-    throw std::system_error(Tempest::GraphicsErrc::TooLargeUbo);
+    throw std::system_error(Tempest::GraphicsErrc::TooLargeBuffer);
 
   Detail::VideoBuffer data = createVideoBuffer(mem,size,sizeof(T),eltSize,MemUsage::UniformBuffer,ht);
   UniformBuffer<T> ubo(std::move(data),eltSize);

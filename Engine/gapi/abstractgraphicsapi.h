@@ -379,7 +379,7 @@ namespace Tempest {
             } tex2d;
 
           struct {
-            uint32_t maxSize = 4096;
+            uint32_t maxSize = 2048;
             } tex3d;
 
           struct {

@@ -53,12 +53,13 @@ enum class GraphicsErrc {
   InvalidUniformBuffer         = 5,
   InvalidTexture               = 6,
   InvalidBufferUpdate          = 7,
-  TooLargeUbo                  = 8,
-  InvalidStorageBuffer         = 9,
-  DrawCallWithoutFbo           = 10,
-  ComputeCallInRenderPass      = 11,
-  UnsupportedExtension         = 12,
-  InvalidAccelerationStructure = 13,
+  TooLargeBuffer               = 8,
+  TooLargeTexture              = 9,
+  InvalidStorageBuffer         = 10,
+  DrawCallWithoutFbo           = 11,
+  ComputeCallInRenderPass      = 12,
+  UnsupportedExtension         = 13,
+  InvalidAccelerationStructure = 14,
   };
 
 struct GraphicsErrCategory : std::error_category {
