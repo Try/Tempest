@@ -52,30 +52,47 @@ static Event::MouseButton toButton(uint type) {
   return Event::ButtonNone;
   }
 
+static NSRect windowRect(NSWindow* wnd) {
+  // NSRect fr = [wnd convertRectToBacking: [wnd frame]];
+  // NSRect fr = [wnd convertRectToBacking: wnd.contentView.frame];
+  NSRect fr = [wnd contentRectForFrameRect:[wnd frame]];
+  return fr;
+  }
+
+static NSPoint mouseGlobalPos(NSPoint px, NSWindow* wnd) {
+  px = [wnd convertPointFromBacking:px];
+
+  NSRect fr = windowRect(wnd);
+  px.y  = fr.size.height - px.y;
+
+  px = [wnd.contentView convertPoint:px toView:nil];
+  return px;
+  }
+
 static NSPoint mousePos(NSPoint px, NSWindow* wnd, bool& inWindow) {
-  NSRect fr = wnd.contentView.frame;
-  fr = [wnd contentRectForFrameRect:fr];
+  px = [wnd.contentView convertPoint:px fromView:nil];
 
-  px = [wnd convertPointToBacking:px];
-  fr = [wnd convertRectToBacking: fr];
-
+  NSRect fr = windowRect(wnd);
   px.y = fr.size.height - px.y;
-
-  px.x -= fr.origin.x;
-  px.y -= fr.origin.y;
 
   if(0<=px.x && px.x<fr.size.width &&
      0<=px.y && px.y<fr.size.height)
     inWindow = true; else
     inWindow = false;
 
+  px = [wnd convertPointToBacking:px];
   return px;
   }
 
 static Tempest::Point mousePos(NSEvent* e, bool& inWindow) {
   static NSPoint err = {};
-  NSPoint p  = e.locationInWindow;
-  NSPoint px = mousePos(p, e.window, inWindow);
+
+  auto    wnd = e.window;
+  NSPoint p   = e.locationInWindow;
+  NSPoint px  = mousePos(p, wnd, inWindow);
+
+  //NSRect  fr  = [wnd contentRectForFrameRect:[wnd frame]];
+  //p = [wnd convertPointFromScreen:p];
 
   px.x += err.x;
   px.y += err.y;
@@ -102,8 +119,10 @@ void Detail::ImplMacOSApi::onDidResize(void* hwnd, void* w) {
   auto      cb  = reinterpret_cast<Tempest::Window*>(hwnd);
   NSWindow* wnd = reinterpret_cast<NSWindow*>(w);
 
-  NSRect r = [wnd convertRectToBacking: [wnd frame]];
-  SizeEvent sz{int32_t(r.size.width),int32_t(r.size.height)};
+  NSRect    fr  = windowRect(wnd);
+  fr = [wnd convertRectToBacking:fr];
+
+  SizeEvent sz{int32_t(fr.size.width),int32_t(fr.size.height)};
   MacOSApi::dispatchResize(*cb,sz);
   }
 
@@ -310,9 +329,8 @@ void MacOSApi::implExit() {
   }
 
 Tempest::Rect MacOSApi::implWindowClientRect(SystemApi::Window *w) {
-  NSWindow* wnd = reinterpret_cast<NSWindow*>(w);
-  NSRect frame = [wnd frame];
-  frame = [wnd contentRectForFrameRect:frame];
+  NSWindow* wnd   = reinterpret_cast<NSWindow*>(w);
+  NSRect    frame = windowRect(wnd);
   frame = [wnd convertRectToBacking:frame];
   return Rect(frame.origin.x,frame.origin.y,frame.size.width,frame.size.height);
   }
@@ -332,17 +350,16 @@ bool MacOSApi::implIsFullscreen(SystemApi::Window *w) {
   }
 
 void MacOSApi::implSetCursorPosition(SystemApi::Window *w, int x, int y) {
-  NSWindow* wnd      = reinterpret_cast<NSWindow*>(w);
-  NSRect    frame    = [wnd frame];
-  frame = [wnd convertRectToBacking:frame];
+  NSWindow* wnd = reinterpret_cast<NSWindow*>(w);
+  NSPoint   to  = {CGFloat(x),CGFloat(y)};
 
-  NSPoint to = {CGFloat(x),CGFloat(y)};
-  to.x += frame.origin.x;
-  to.y += frame.origin.y;
-  to.y =  frame.size.height-to.y;
-
-  NSPoint p = [wnd convertPointFromBacking:to];
+  //auto vf = [[NSScreen mainScreen] visibleFrame];
+  auto vf = [wnd.screen frame];
+  auto p  = mouseGlobalPos(to, wnd);
   p = [wnd convertPointToScreen:p];
+
+  // CG, unlike NS uses top-down coordinates O_o
+  p.y = vf.origin.y + vf.size.height - p.y;
 
   CGWarpMouseCursorPosition(p);
   // see: https://www.winehq.org/pipermail/wine-patches/2015-October/143826.html

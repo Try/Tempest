@@ -71,6 +71,14 @@ static float backingScaleFactor() {
 #endif
   }
 
+#if defined(__OSX__)
+static NSRect windowRect(NSWindow* wnd) {
+  NSRect fr = [wnd contentRectForFrameRect:[wnd frame]];
+  fr = [wnd convertRectToBacking:fr];
+  return fr;
+  }
+#endif
+
 // note : MoltenVK supports NSView, UIView, CAMetalLayer, so we should align to it
 MtSwapchain::MtSwapchain(MtDevice& dev, SystemApi::Window *w)
   :dev(dev), pimpl(new Impl()) {
@@ -117,10 +125,9 @@ void MtSwapchain::reset() {
 
   CAMetalLayer* lay = pimpl->metalLayer();
 #ifdef __OSX__
-  NSRect wrect = [pimpl->wnd convertRectToBacking:[pimpl->wnd frame]];
+  NSRect wrect = windowRect(pimpl->wnd);
   NSRect lrect = lay.frame;
   if(wrect.size.width!=lrect.size.width || wrect.size.height!=lrect.size.height) {
-    // TODO:screen.backingScaleFactor
     lay.drawableSize = wrect.size;
     sz = {int(wrect.size.width), int(wrect.size.height)};
     }
