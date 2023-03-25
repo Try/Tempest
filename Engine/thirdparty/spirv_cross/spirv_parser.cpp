@@ -295,6 +295,8 @@ void Parser::parse(const Instruction &instruction)
 			spirv_ext = SPIRExtension::NonSemanticDebugPrintf;
 		else if (ext == "NonSemantic.Shader.DebugInfo.100")
 			spirv_ext = SPIRExtension::NonSemanticShaderDebugInfo;
+		else if (ext.find("NonSemantic.") == 0)
+			spirv_ext = SPIRExtension::NonSemanticGeneric;
 
 		set<SPIRExtension>(id, spirv_ext);
 		// Other SPIR-V extensions which have ExtInstrs are currently not supported.
@@ -1131,8 +1133,6 @@ void Parser::parse(const Instruction &instruction)
 		current_block->ops.push_back(instruction);
 
 		current_block->terminator = SPIRBlock::EmitMeshTasks;
-		for (uint32_t i = 0; i < 3; i++)
-			current_block->mesh.groups[i] = ops[i];
 		current_block->mesh.payload = length >= 4 ? ops[3] : 0;
 		current_block = nullptr;
 		// Currently glslang is bugged and does not treat EmitMeshTasksEXT as a terminator.

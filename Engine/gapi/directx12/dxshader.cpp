@@ -98,7 +98,7 @@ DxShader::DxShader(const void *source, const size_t src_size) {
       }
 
     spirv_cross::CompilerHLSL comp(reinterpret_cast<const uint32_t*>(source),src_size/4);
-    if(stage==ShaderReflection::Stage::Vertex || stage==ShaderReflection::Stage::Evaluate)
+    if(stage==ShaderReflection::Stage::Vertex || stage==ShaderReflection::Stage::Mesh)
       optGLSL.vertex.flip_vert_y = true;
     optHLSL.shader_model = calcShaderModel(comp);
     optHLSL.support_nonzero_base_vertex_base_instance = has_baseVertex_baseInstance;
@@ -114,16 +114,11 @@ DxShader::DxShader(const void *source, const size_t src_size) {
     push_binding.cbv.register_space = 0;
     comp.add_hlsl_resource_binding(push_binding);
 
-    // comp.remap_num_workgroups_builtin();
-    hlsl = comp.compile();
-
     ShaderReflection::getVertexDecl(vdecl,comp);
     ShaderReflection::getBindings(lay,comp);
 
-    if(stage==ShaderReflection::Stage::Vertex) {
-      tess.vertSrc.resize(src_size/4);
-      std::memcpy(tess.vertSrc.data(),source,src_size);
-      }
+    // comp.remap_num_workgroups_builtin();
+    hlsl = comp.compile();
     }
   catch(const std::bad_alloc&) {
     throw;
@@ -164,44 +159,8 @@ DxShader::DxShader(const void *source, const size_t src_size) {
 DxShader::~DxShader() {
   }
 
-D3D12_SHADER_BYTECODE DxShader::bytecode(Flavor f) const {
-  if(f==Flavor::Default)
-    return D3D12_SHADER_BYTECODE{shader->GetBufferPointer(),shader->GetBufferSize()};
-
-  if(f==Flavor::NoFlipY) {
-    std::lock_guard<SpinLock> guard(tess.sync);
-    if(tess.altShader.get()!=nullptr)
-      return D3D12_SHADER_BYTECODE{tess.altShader->GetBufferPointer(),tess.altShader->GetBufferSize()};
-
-    spv::ExecutionModel exec = spv::ExecutionModelVertex;
-
-    spirv_cross::CompilerHLSL::Options optHLSL;
-    spirv_cross::CompilerGLSL::Options optGLSL;
-    optGLSL.vertex.flip_vert_y = false;
-
-    spirv_cross::CompilerHLSL comp(tess.vertSrc.data(),tess.vertSrc.size());
-    optHLSL.shader_model = calcShaderModel(comp);
-    comp.set_hlsl_options  (optHLSL);
-    comp.set_common_options(optGLSL);
-    comp.set_hlsl_aux_buffer_binding(spirv_cross::HLSL_AUX_BINDING_BASE_VERTEX_INSTANCE, HLSL_BASE_VERTEX_INSTANCE, 0);
-
-    spirv_cross::HLSLResourceBinding push_binding;
-    push_binding.stage = exec;
-    push_binding.desc_set = spirv_cross::ResourceBindingPushConstantDescriptorSet;
-    push_binding.binding = spirv_cross::ResourceBindingPushConstantBinding;
-    push_binding.cbv.register_binding = HLSL_PUSH;
-    push_binding.cbv.register_space = 0;
-    comp.add_hlsl_resource_binding(push_binding);
-
-    auto    hlsl = comp.compile();
-    HRESULT hr   = compile(tess.altShader,hlsl.c_str(),hlsl.size(),exec,optHLSL.shader_model);
-
-    if(hr!=S_OK)
-      throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
-    return D3D12_SHADER_BYTECODE{tess.altShader->GetBufferPointer(),tess.altShader->GetBufferSize()};
-    }
-
-  throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
+D3D12_SHADER_BYTECODE DxShader::bytecode() const {
+  return D3D12_SHADER_BYTECODE{shader->GetBufferPointer(),shader->GetBufferSize()};
   }
 
 void DxShader::disasm() const {

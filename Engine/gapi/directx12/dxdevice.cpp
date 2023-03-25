@@ -211,7 +211,7 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
     prop.meshlets.maxGroupSize.z = 128;
     }
   prop.bindless.nonUniformIndexing = true;  // SM5.1
-  prop.bindless.nonUniformIndexing = false; // TEST: DirectX12.Bindless2
+  // prop.bindless.nonUniformIndexing = false; // TEST: DirectX12.Bindless2
   }
 
 void DxDevice::waitData() {

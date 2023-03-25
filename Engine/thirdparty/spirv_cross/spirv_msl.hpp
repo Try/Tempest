@@ -339,9 +339,24 @@ public:
 		bool dispatch_base = false;
 		bool texture_1D_as_2D = false;
 
-		// Enable use of MSL 2.0 indirect argument buffers.
+		// Enable use of Metal argument buffers.
 		// MSL 2.0 must also be enabled.
 		bool argument_buffers = false;
+
+		// Defines Metal argument buffer tier levels.
+		// Uses same values as Metal MTLArgumentBuffersTier enumeration.
+		enum class ArgumentBuffersTier
+		{
+			Tier1 = 0,
+			Tier2 = 1,
+		};
+
+		// When using Metal argument buffers, indicates the Metal argument buffer tier level supported by the Metal platform.
+		// Ignored when Options::argument_buffers is disabled.
+		// - Tier1 supports writable images on macOS, but not on iOS.
+		// - Tier2 supports writable images on macOS and iOS, and higher resource count limits.
+		// Tier capabilities based on recommendations from Apple engineering.
+		ArgumentBuffersTier argument_buffers_tier = ArgumentBuffersTier::Tier1;
 
 		// Ensures vertex and instance indices start at zero. This reflects the behavior of HLSL with SV_VertexID and SV_InstanceID.
 		bool enable_base_index_zero = false;
@@ -471,6 +486,15 @@ public:
 		// bug is fixed in Metal; it is provided as an option so it can be enabled
 		// only when the bug is present.
 		bool check_discarded_frag_stores = false;
+
+		// If set, Lod operands to OpImageSample*DrefExplicitLod for 1D and 2D array images
+		// will be implemented using a gradient instead of passing the level operand directly.
+		// Some Metal devices have a bug where the level() argument to depth2d_array<T>::sample_compare()
+		// in a fragment shader is biased by some unknown amount, possibly dependent on the
+		// partial derivatives of the texture coordinates. This is a workaround that is only
+		// expected to be needed until the bug is fixed in Metal; it is provided as an option
+		// so it can be enabled only when the bug is present.
+		bool sample_dref_lod_array_as_grad = false;
 
 		bool is_ios() const
 		{
@@ -811,7 +835,6 @@ protected:
 
 	// GCC workaround of lambdas calling protected functions (for older GCC versions)
 	std::string variable_decl(const SPIRType &type, const std::string &name, uint32_t id = 0) override;
-	std::string variable_decl_function_local(SPIRVariable &variable) override;
 
 	std::string image_type_glsl(const SPIRType &type, uint32_t id = 0) override;
 	std::string sampler_type(const SPIRType &type, uint32_t id);
@@ -839,7 +862,6 @@ protected:
 
 	void replace_illegal_entry_point_names();
 	void sync_entry_point_aliases_and_names();
-	void emit_mesh_entry_point();
 
 	static const std::unordered_set<std::string> &get_reserved_keyword_set();
 	static const std::unordered_set<std::string> &get_illegal_func_names();
@@ -851,11 +873,10 @@ protected:
 	bool is_non_native_row_major_matrix(uint32_t id) override;
 	bool member_is_non_native_row_major_matrix(const SPIRType &type, uint32_t index) override;
 	std::string convert_row_major_matrix(std::string exp_str, const SPIRType &exp_type, uint32_t physical_type_id,
-	                                     bool is_packed) override;
+	                                     bool is_packed, bool relaxed) override;
 
 	bool is_tesc_shader() const;
 	bool is_tese_shader() const;
-	bool is_mesh_shader() const;
 
 	void preprocess_op_codes();
 	void localize_global_variables();
@@ -870,7 +891,6 @@ protected:
 	                                            std::unordered_set<uint32_t> &processed_func_ids);
 	uint32_t add_interface_block(spv::StorageClass storage, bool patch = false);
 	uint32_t add_interface_block_pointer(uint32_t ib_var_id, spv::StorageClass storage);
-	uint32_t add_meshlet_block(bool per_primitive = false);
 
 	struct InterfaceBlockMeta
 	{
@@ -933,7 +953,6 @@ protected:
 	uint32_t get_resource_array_size(uint32_t id) const;
 
 	void fix_up_shader_inputs_outputs();
-	void emit_mesh_outputs();
 
 	std::string func_type_decl(SPIRType &type);
 	std::string entry_point_args_classic(bool append_comma);
@@ -1006,8 +1025,6 @@ protected:
 	std::string get_tess_factor_struct_name();
 	SPIRType &get_uint_type();
 	uint32_t get_uint_type_id();
-	uint32_t get_shared_uint_type_id();
-	uint32_t get_meshlet_type_id();
 	void emit_atomic_func_op(uint32_t result_type, uint32_t result_id, const char *op, spv::Op opcode,
 	                         uint32_t mem_order_1, uint32_t mem_order_2, bool has_mem_order_2, uint32_t op0, uint32_t op1 = 0,
 	                         bool op1_is_pointer = false, bool op1_is_literal = false, uint32_t op2 = 0);
@@ -1040,14 +1057,11 @@ protected:
 	uint32_t builtin_stage_input_size_id = 0;
 	uint32_t builtin_local_invocation_index_id = 0;
 	uint32_t builtin_workgroup_size_id = 0;
-	uint32_t builtin_primitive_indices_id = 0;
 	uint32_t swizzle_buffer_id = 0;
 	uint32_t buffer_size_buffer_id = 0;
 	uint32_t view_mask_buffer_id = 0;
 	uint32_t dynamic_offsets_buffer_id = 0;
 	uint32_t uint_type_id = 0;
-	uint32_t shared_uint_type_id = 0;
-	uint32_t meshlet_type_id = 0;
 	uint32_t argument_buffer_padding_buffer_type_id = 0;
 	uint32_t argument_buffer_padding_image_type_id = 0;
 	uint32_t argument_buffer_padding_sampler_type_id = 0;
@@ -1112,8 +1126,6 @@ protected:
 	VariableID stage_out_ptr_var_id = 0;
 	VariableID tess_level_inner_var_id = 0;
 	VariableID tess_level_outer_var_id = 0;
-	VariableID mesh_out_per_vertex = 0;
-	VariableID mesh_out_per_primitive = 0;
 	VariableID stage_out_masked_builtin_type_id = 0;
 
 	// Handle HLSL-style 0-based vertex/instance index.

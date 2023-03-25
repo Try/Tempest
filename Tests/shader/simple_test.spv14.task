@@ -4,6 +4,12 @@
 
 layout(local_size_x = 1) in;
 
+struct TaskPayload {
+  int dummy;
+  };
+taskPayloadSharedEXT TaskPayload payload;
+
 void main() {
+  payload.dummy = 0;
   EmitMeshTasksEXT(1,1,1);
   }

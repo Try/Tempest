@@ -169,19 +169,10 @@ ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& 
   psoDesc.pRootSignature  = sign.get();
   if(auto sh = findShader(ShaderReflection::Control))
     psoDesc.HS = sh->bytecode();
-  if(auto sh = findShader(ShaderReflection::Evaluate))
-    psoDesc.DS = sh->bytecode();
-  if(auto sh = findShader(ShaderReflection::Geometry))
-    psoDesc.GS = sh->bytecode();
+  if(auto sh = findShader(ShaderReflection::Vertex))
+    psoDesc.VS = sh->bytecode();
   if(auto sh = findShader(ShaderReflection::Fragment))
     psoDesc.PS = sh->bytecode();
-
-  const bool useTesselation = (psoDesc.HS.pShaderBytecode!=nullptr || psoDesc.DS.pShaderBytecode!=nullptr);
-  if(auto sh = findShader(ShaderReflection::Vertex)) {
-    if(useTesselation)
-      psoDesc.VS = sh->bytecode(DxShader::Flavor::NoFlipY); else
-      psoDesc.VS = sh->bytecode();
-    }
 
   psoDesc.RasterizerState = getRaster(rState);
   psoDesc.BlendState      = getBlend (rState);
@@ -205,10 +196,6 @@ ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& 
   psoDesc.NumRenderTargets = frm.NumRenderTargets;
   for(uint8_t i=0;i<frm.NumRenderTargets;++i)
     psoDesc.RTVFormats[i] = frm.RTVFormats[i];
-
-  if(useTesselation) {
-    psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
-    }
 
   ComPtr<ID3D12PipelineState> ret;
   auto err = device.device->CreateGraphicsPipelineState(&psoDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&ret.get()));

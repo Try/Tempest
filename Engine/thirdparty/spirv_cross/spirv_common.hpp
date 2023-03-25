@@ -567,8 +567,7 @@ struct SPIRType : IVariant
 		// Keep internal types at the end.
 		ControlPointArray,
 		Interpolant,
-		Char,
-		Meshlet,
+		Char
 	};
 
 	// Scalar/vector/matrix support.
@@ -645,7 +644,8 @@ struct SPIRExtension : IVariant
 		SPV_AMD_shader_trinary_minmax,
 		SPV_AMD_gcn_shader,
 		NonSemanticDebugPrintf,
-		NonSemanticShaderDebugInfo
+		NonSemanticShaderDebugInfo,
+		NonSemanticGeneric
 	};
 
 	explicit SPIRExtension(Extension ext_)
@@ -845,7 +845,6 @@ struct SPIRBlock : IVariant
 	// If terminator is EmitMeshTasksEXT.
 	struct
 	{
-		ID groups[3];
 		ID payload;
 	} mesh = {};
 
