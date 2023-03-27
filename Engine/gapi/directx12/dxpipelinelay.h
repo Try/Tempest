@@ -26,21 +26,22 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
                   bool has_baseVertex_baseInstance);
 
     size_t descriptorsCount() override;
+    bool   isRuntimeSized() const { return runtimeSized; }
 
     using Binding = ShaderReflection::Binding;
 
     enum {
+      HEAP_RES     = 0,
+      HEAP_SMP     = 1,
+      HEAP_MAX     = 2,
+
       POOL_SIZE    = 128,
-      MAX_BINDS    = 3,
       MAX_BINDLESS = 2048,
       };
 
     struct Param {
-      UINT64  heapOffset=0;
-      uint8_t heapId=0;
-
-      UINT64  heapOffsetSmp=0;
-      uint8_t heapIdSmp=0;
+      UINT64  heapOffset    = 0;
+      UINT64  heapOffsetSmp = 0;
 
       D3D12_DESCRIPTOR_RANGE_TYPE rgnType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
       };
@@ -51,8 +52,9 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
       };
 
     struct RootPrm {
-      size_t heap = 0;
-      UINT   heapOffset = 0;
+      size_t   heap = 0;
+      UINT     heapOffset = 0;
+      uint32_t binding = 0;
       };
 
     struct DescriptorPool {
@@ -60,23 +62,24 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
       DescriptorPool(DescriptorPool&& oth);
       ~DescriptorPool();
 
-      ID3D12DescriptorHeap*     heap[MAX_BINDS] = {};
+      ID3D12DescriptorHeap*     heap[HEAP_MAX] = {};
       std::bitset<POOL_SIZE>    allocated;
       };
 
     struct PoolAllocation {
-      D3D12_CPU_DESCRIPTOR_HANDLE cpu [MAX_BINDS] = {};
-      D3D12_GPU_DESCRIPTOR_HANDLE gpu [MAX_BINDS] = {};
-      ID3D12DescriptorHeap*       heap[MAX_BINDS] = {};
+      D3D12_CPU_DESCRIPTOR_HANDLE cpu [HEAP_MAX] = {};
+      D3D12_GPU_DESCRIPTOR_HANDLE gpu [HEAP_MAX] = {};
+      ID3D12DescriptorHeap*       heap[HEAP_MAX] = {};
       size_t                      pool           = 0;
       size_t                      offset         = 0;
       };
 
-    std::vector<Param>          prm;
-    std::vector<Heap>           heaps;
+    Heap                        heaps[HEAP_MAX] = {};
     std::vector<RootPrm>        roots;
     uint32_t                    pushConstantId     = uint32_t(-1);
     uint32_t                    pushBaseInstanceId = uint32_t(-1);
+
+    std::vector<Param>          prm;
     std::vector<Binding>        lay;
 
     ComPtr<ID3D12RootSignature> impl;
@@ -88,7 +91,7 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
   private:
     struct Parameter final {
       D3D12_DESCRIPTOR_RANGE  rgn;
-      uint32_t                id=0;
+      uint32_t                id = 0;
       D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL;
       };
 
@@ -101,9 +104,8 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
 
     uint32_t findBinding(const std::vector<D3D12_ROOT_PARAMETER>& except) const;
 
-    void init(const std::vector<Binding>& lay, const ShaderReflection::PushBlock& pb,
-              uint32_t runtimeArraySz, bool has_baseVertex_baseInstance);
-    void add (const ShaderReflection::Binding& b, D3D12_DESCRIPTOR_RANGE_TYPE type, uint32_t cnt, std::vector<Parameter>& root);
+    void init(const std::vector<Binding>& lay, const ShaderReflection::PushBlock& pb, bool has_baseVertex_baseInstance);
+    void add (const ShaderReflection::Binding& b, D3D12_DESCRIPTOR_RANGE_TYPE type, std::vector<Parameter>& root);
     void adjustSsboBindings();
   };
 

@@ -41,12 +41,17 @@ DxPipelineLay::DescriptorPool::DescriptorPool(DxPipelineLay& vlay, uint32_t pool
   auto& device = *vlay.dev.device;
 
   try {
-    for(size_t i=0;i<vlay.heaps.size();++i) {
+    for(auto& i:vlay.heaps) {
+      if(i.numDesc==0)
+        continue;
+
       D3D12_DESCRIPTOR_HEAP_DESC d = {};
-      d.Type           = vlay.heaps[i].type;
-      d.NumDescriptors = vlay.heaps[i].numDesc * poolSize;
+      d.Type           = i.type;
+      d.NumDescriptors = i.numDesc * poolSize;
       d.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-      dxAssert(device.CreateDescriptorHeap(&d, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&heap[i])));
+
+      uint8_t id = (d.Type==D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV ? HEAP_RES : HEAP_SMP);
+      dxAssert(device.CreateDescriptorHeap(&d, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&heap[id])));
 
       // auto  gpu = heap[i]->GetCPUDescriptorHandleForHeapStart();
       // Log::d("src_gpu.ptr = ",gpu.ptr);
@@ -60,11 +65,15 @@ DxPipelineLay::DescriptorPool::DescriptorPool(DxPipelineLay& vlay, uint32_t pool
         i->Release();
     throw;
     }
+
+  for(size_t i=poolSize; i<POOL_SIZE; ++i) {
+    allocated.set(i, false);
+    }
   }
 
 DxPipelineLay::DescriptorPool::DescriptorPool(DxPipelineLay::DescriptorPool&& oth)
   :allocated(oth.allocated) {
-  for(size_t i=0;i<MAX_BINDS;++i) {
+  for(size_t i=0; i<HEAP_MAX; ++i) {
     heap[i] = oth.heap[i];
     oth.heap[i] = nullptr;
     }
@@ -89,10 +98,7 @@ DxPipelineLay::DxPipelineLay(DxDevice& dev, const std::vector<ShaderReflection::
   for(auto& i:lay)
     if(i.runtimeSized)
       runtimeSized = true;
-  uint32_t runtimeArraySz = 1; // TODO
-  if(runtimeSized)
-    runtimeArraySz = MAX_BINDLESS;
-  init(lay,pb,runtimeArraySz,has_baseVertex_baseInstance);
+  init(lay,pb,has_baseVertex_baseInstance);
   adjustSsboBindings();
   }
 
@@ -101,7 +107,7 @@ size_t DxPipelineLay::descriptorsCount() {
   }
 
 void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection::PushBlock& pb,
-                         uint32_t runtimeArraySz, bool has_baseVertex_baseInstance) {
+                         bool has_baseVertex_baseInstance) {
   auto& device = *dev.device;
   descSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
   smpSize  = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
@@ -117,45 +123,42 @@ void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection
     auto& l = lay[i];
     if(l.stage==ShaderReflection::Stage(0))
       continue;
-    uint32_t cnt = l.arraySize;
-    if(l.runtimeSized)
-      cnt = runtimeArraySz;
     switch(l.cls) {
       case ShaderReflection::Ubo: {
-        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_CBV,cnt,desc);
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_CBV,desc);
         break;
         }
       case ShaderReflection::Texture: {
-        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,    cnt,desc);
-        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,cnt,desc);
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,    desc);
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,desc);
         break;
         }
       case ShaderReflection::Image: {
-        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,    cnt,desc);
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,    desc);
         break;
         }
       case ShaderReflection::Sampler: {
-        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,cnt,desc);
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,desc);
         break;
         }
       case ShaderReflection::SsboR: {
-        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,cnt,desc);
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,desc);
         break;
         }
       case ShaderReflection::SsboRW: {
-        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_UAV,cnt,desc);
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_UAV,desc);
         break;
         }
       case ShaderReflection::ImgR: {
-        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,cnt,desc);
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,desc);
         break;
         }
       case ShaderReflection::ImgRW: {
-        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_UAV,cnt,desc);
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_UAV,desc);
         break;
         }
       case ShaderReflection::Tlas: {
-        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,cnt,desc);
+        add(l,D3D12_DESCRIPTOR_RANGE_TYPE_SRV,desc);
         break;
         }
       case ShaderReflection::Push:
@@ -164,14 +167,19 @@ void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection
       }
     }
   std::sort(desc.begin(),desc.end(),[](const Parameter& a, const Parameter& b){
-    return std::tie(a.visibility,a.rgn.RangeType)<std::tie(b.visibility,b.rgn.RangeType);
+    return std::tie(a.rgn.RegisterSpace,a.visibility,a.rgn.RangeType) <
+           std::tie(b.rgn.RegisterSpace,b.visibility,b.rgn.RangeType);
     });
 
   std::vector<D3D12_DESCRIPTOR_RANGE> rgn(desc.size());
   std::vector<D3D12_ROOT_PARAMETER>   rootPrm;
 
+  heaps[HEAP_RES].type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+  heaps[HEAP_SMP].type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+
   uint8_t curVisibility = 255;
   uint8_t curRgnType    = 255;
+  uint8_t curRgnSpace   = 255;
   for(size_t i=0; i<rgn.size(); ++i) {
     rgn[i] = desc[i].rgn;
 
@@ -180,23 +188,11 @@ void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection
           D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER :
           D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 
-    Heap* heap = nullptr;
-    for(size_t r=0;r<heaps.size();++r) {
-      if(heaps[r].type==heapType) {
-        heap = &heaps[r];
-        break;
-        }
-      }
+    Heap& heap = (heapType==D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) ? heaps[HEAP_RES] : heaps[HEAP_SMP];
 
-    if(heap==nullptr) {
-      heaps.emplace_back();
-      heap = &heaps.back();
-      heap->type    = heapType;
-      heap->numDesc = 0;
-      }
-
-    if(uint8_t(desc[i].visibility)   !=curVisibility ||
-       uint8_t(desc[i].rgn.RangeType)!=curRgnType) {
+    if(uint8_t(desc[i].visibility)       !=curVisibility ||
+       uint8_t(desc[i].rgn.RangeType)    !=curRgnType ||
+       uint8_t(desc[i].rgn.RegisterSpace)!=curRgnSpace) {
       D3D12_ROOT_PARAMETER p = {};
       p.ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
       p.ShaderVisibility                    = desc[i].visibility;
@@ -205,27 +201,39 @@ void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection
       rootPrm.push_back(p);
 
       RootPrm r = {};
-      r.heap       = uint8_t(std::distance(&heaps[0],heap));
-      r.heapOffset = heap->numDesc;
+      r.heap       = uint8_t(std::distance(&heaps[0],&heap));
+      r.heapOffset = heap.numDesc;
+      if(rgn[i].RegisterSpace>0)
+        r.binding = rgn[i].RegisterSpace-1; else
+        r.binding = -1;
       roots.push_back(r);
 
       curVisibility = uint8_t(desc[i].visibility);
       curRgnType    = uint8_t(desc[i].rgn.RangeType);
+      curRgnSpace   = uint8_t(desc[i].rgn.RegisterSpace);
       }
 
     auto& px = rootPrm.back();
     px.DescriptorTable.NumDescriptorRanges++;
-    heap->numDesc += rgn[i].NumDescriptors;
+    if(rgn[i].RegisterSpace==0) {
+      heap.numDesc += rgn[i].NumDescriptors;
+      }
 
     auto& p = prm[desc[i].id];
     p.rgnType = D3D12_DESCRIPTOR_RANGE_TYPE(curRgnType);
     if(curRgnType==D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER) {
-      p.heapOffsetSmp = heap->numDesc - rgn[i].NumDescriptors;
-      p.heapIdSmp     = uint8_t(std::distance(&heaps[0],heap));
+      p.heapOffsetSmp = heap.numDesc - rgn[i].NumDescriptors;
       } else {
-      p.heapOffset    = heap->numDesc - rgn[i].NumDescriptors;
-      p.heapId        = uint8_t(std::distance(&heaps[0],heap));
+      p.heapOffset    = heap.numDesc - rgn[i].NumDescriptors;
       }
+    }
+
+  for(size_t i=0; i<desc.size(); ++i) {
+    if(desc[i].rgn.NumDescriptors!=UINT(-1))
+      continue;
+    size_t id = desc[i].id;
+    prm[id].heapOffset    = heaps[HEAP_RES].numDesc;
+    prm[id].heapOffsetSmp = heaps[HEAP_SMP].numDesc;
     }
 
   for(auto& i:prm) {
@@ -289,15 +297,21 @@ void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection
 
 void DxPipelineLay::add(const ShaderReflection::Binding& b,
                         D3D12_DESCRIPTOR_RANGE_TYPE type,
-                        uint32_t cnt,
                         std::vector<Parameter>& root) {
   Parameter rp;
 
   rp.rgn.RangeType          = type;
-  rp.rgn.NumDescriptors     = cnt;
+  rp.rgn.NumDescriptors     = b.arraySize;
   rp.rgn.BaseShaderRegister = b.layout;
   rp.rgn.RegisterSpace      = 0;
   rp.rgn.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+  if(b.runtimeSized) {
+    rp.rgn.BaseShaderRegister                = 0;
+    rp.rgn.RegisterSpace                     = b.layout+1;
+    rp.rgn.NumDescriptors                    = -1;
+    rp.rgn.OffsetInDescriptorsFromTableStart = 0;
+    }
 
   rp.id         = b.layout;
   rp.visibility = ::nativeFormat(b.stage);
@@ -329,7 +343,7 @@ DxPipelineLay::PoolAllocation DxPipelineLay::allocDescriptors() {
       PoolAllocation a;
       a.pool   = std::distance(pools.data(),pool);
       a.offset = i;
-      for(size_t r=0; r<MAX_BINDS; ++r) {
+      for(size_t r=0; r<HEAP_MAX; ++r) {
         if(pool->heap[r]==nullptr)
           continue;
         a.heap[r] = pool->heap[r];

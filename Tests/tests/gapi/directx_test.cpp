@@ -155,18 +155,6 @@ TEST(DirectX12Api,S3TC) {
   GapiTestCommon::S3TC<DirectX12Api>("DirectX12Api_S3TC.png");
 #endif
   }
-TEST(DirectX12Api,DISABLED_PsoTess) {
-#if defined(_MSC_VER)
-  GapiTestCommon::PsoTess<DirectX12Api>();
-#endif
-  }
-
-// NOTE: new DXIL compiller causes crashes
-TEST(DirectX12Api,DISABLED_TesselationBasic) {
-#if defined(_MSC_VER)
-  GapiTestCommon::TesselationBasic<DirectX12Api>("DirectX12Api_TesselationBasic.png");
-#endif
-  }
 
 TEST(DirectX12Api,SsboWrite) {
 #if defined(_MSC_VER)
@@ -262,47 +250,6 @@ TEST(DirectX12Api,RayQueryFace) {
 TEST(DirectX12Api,MeshShader) {
 #if defined(_MSC_VER)
   GapiTestCommon::MeshShader<DirectX12Api>("DirectX12Api_MeshShader.png");
-#endif
-  }
-
-TEST(DirectX12Api,DISABLED_Spirv_HS) {
-#if defined(_MSC_VER)
-  using namespace Tempest;
-
-  try {
-    DirectX12Api api{ApiFlags::Validation};
-    Device       device(api);
-
-    auto tesc0 = device.shader("shader/tess.tesc.sprv");
-    auto tesc1 = device.shader("shader/spirv_hs_01.tesc.sprv");
-    }
-  catch(std::system_error& e) {
-    if(e.code()==Tempest::GraphicsErrc::NoDevice)
-      Log::d("Skipping graphics testcase: ", e.what()); else
-      throw;
-    }
-#endif
-  }
-
-TEST(DirectX12Api,DISABLED_Spirv_DS) {
-#if defined(_MSC_VER)
-  using namespace Tempest;
-
-  try {
-    DirectX12Api api{ApiFlags::Validation};
-    Device       device(api);
-
-    auto tese0 = device.shader("shader/tess.tese.sprv");
-    auto tese1 = device.shader("shader/spirv_ds_01.tese.sprv");
-    auto tese2 = device.shader("shader/spirv_ds_02.tese.sprv");
-    auto tese3 = device.shader("shader/spirv_ds_03.tese.sprv");
-    auto tese4 = device.shader("shader/spirv_ds_quad.tese.sprv");
-    }
-  catch(std::system_error& e) {
-    if(e.code()==Tempest::GraphicsErrc::NoDevice)
-      Log::d("Skipping graphics testcase: ", e.what()); else
-      throw;
-    }
 #endif
   }
 

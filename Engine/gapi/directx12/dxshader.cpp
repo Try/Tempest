@@ -1,9 +1,10 @@
 #if defined(TEMPEST_BUILD_DIRECTX12)
 
 #include "dxshader.h"
-#include "dxdevice.h"
 
 #include <Tempest/Log>
+#include <Tempest/Except>
+
 #include <d3dcompiler.h>
 #include <libspirv/libspirv.h>
 
@@ -117,6 +118,22 @@ DxShader::DxShader(const void *source, const size_t src_size) {
     ShaderReflection::getVertexDecl(vdecl,comp);
     ShaderReflection::getBindings(lay,comp);
 
+    for(auto& i:lay)
+      if(i.runtimeSized) {
+        spirv_cross::HLSLResourceBinding bindless = {};
+        bindless.stage    = exec;
+        bindless.desc_set = 0;
+        bindless.binding  = i.layout;
+
+        // bindless.*.register_binding = 0
+        bindless.cbv    .register_space = i.layout+1;
+        bindless.uav    .register_space = i.layout+1;
+        bindless.srv    .register_space = i.layout+1;
+        bindless.sampler.register_space = i.layout+1;
+
+        comp.add_hlsl_resource_binding(bindless);
+        }
+
     // comp.remap_num_workgroups_builtin();
     hlsl = comp.compile();
     }
@@ -150,7 +167,7 @@ DxShader::DxShader(const void *source, const size_t src_size) {
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
 
-  if(stage==ShaderReflection::Stage::Mesh) {
+  if(stage==ShaderReflection::Stage::Compute) {
     //Log::d(hlsl);
     //disasm();
     }

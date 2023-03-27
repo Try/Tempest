@@ -48,6 +48,8 @@ class ShaderReflection final {
       uint32_t        arraySize    = 0;
       uint64_t        byteSize     = 0;
 
+      bool            hasSampler() const { return cls==Texture || cls==Sampler; }
+
       spirv_cross::ID spvId;
       uint32_t        mslBinding  = uint32_t(-1);
       uint32_t        mslBinding2 = uint32_t(-1);

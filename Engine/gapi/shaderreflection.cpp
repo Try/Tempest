@@ -19,6 +19,8 @@ static bool isRuntimeSized(const spirv_cross::SPIRType& t) {
   }
 
 static uint32_t arraySize(const spirv_cross::SPIRType& t) {
+  if(isRuntimeSized(t))
+    return 0;
   uint32_t cnt = 1;
   for(auto& i:t.array)
     cnt *= i;

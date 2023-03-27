@@ -2,12 +2,17 @@
 
 #extension GL_EXT_nonuniform_qualifier : require
 
-layout(binding = 0) uniform sampler2D tex[];
-layout(binding = 1, std140) readonly buffer Input {
+layout(binding = 0) uniform sampler2D tex0[];
+layout(binding = 1) uniform texture2D tex1[];
+layout(binding = 2, std140) readonly buffer Input {
   vec4 val[];
   } ssbo[];
 
-layout(binding = 2, rgba8) uniform writeonly image2D ret;
+layout(binding = 3, rgba8) uniform writeonly image2D ret;
+// layout(binding = 4, rgba8) uniform writeonly image2D dummy;
+layout(binding = 4, std140) uniform UBO {
+  vec4 clr;
+  };
 
 void main() {
   ivec2 index = ivec2(gl_GlobalInvocationID.xy);
@@ -16,7 +21,7 @@ void main() {
   uint  dynIndex = ((index.x/10+index.y/10)%5);
   vec4  color    = vec4(0);
   if(dynIndex<2)
-    color = texture(tex[nonuniformEXT(dynIndex)], uv); else
+    color = texture(tex0[nonuniformEXT(dynIndex)], uv); else
     color = ssbo[nonuniformEXT(dynIndex-2)].val[0];
   imageStore(ret, index, color);
   }

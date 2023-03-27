@@ -103,13 +103,6 @@ compile_shader(geom_basic.vert)
 compile_shader(geom_basic.geom)
 compile_shader(geom_basic.frag)
 
-compile_shader(spirv_ds_01.tese)
-compile_shader(spirv_ds_02.tese)
-compile_shader(spirv_ds_03.tese)
-compile_shader(spirv_ds_quad.tese)
-
-compile_shader(spirv_hs_01.tesc)
-
 compile_shader(ssbo_write_verify.comp)
 compile_shader(ssbo_write.vert)
 

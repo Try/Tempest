@@ -36,7 +36,7 @@ class VDescriptorArray : public AbstractGraphicsApi::Desc {
 
     VkDescriptorPool          dedicatedPool   = VK_NULL_HANDLE;
     VkDescriptorSetLayout     dedicatedLayout = VK_NULL_HANDLE;
-    uint32_t                  runtimeArraySz  = 0; // TODO: per bind
+    uint32_t                  runtimeArraySz  = 1; // TODO: per bind
 
     struct UAV {
       AbstractGraphicsApi::Texture* tex = nullptr;

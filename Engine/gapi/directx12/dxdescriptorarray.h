@@ -8,7 +8,8 @@
 namespace Tempest {
 namespace Detail {
 
-class VPipelineLay;
+class DxTexture;
+class DxBuffer;
 
 class DxDescriptorArray : public AbstractGraphicsApi::Desc {
   public:
@@ -26,12 +27,26 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
 
     void ssboBarriers(Detail::ResourceState& res, PipelineStage st) override;
 
-    DSharedPtr<DxPipelineLay*>    lay;
-    DxPipelineLay::PoolAllocation val;
-    UINT                          heapCnt = 0;
+    void bindRuntimeSized(ID3D12GraphicsCommandList6& enc, ID3D12DescriptorHeap** currentHeaps, bool isCompute);
+
+    DSharedPtr<DxPipelineLay*>         lay;
+    DxPipelineLay::PoolAllocation      val;
+    UINT                               heapCnt = 0;
 
   private:
-    void reallocSet(uint32_t newRuntimeSz);
+    enum {
+      HEAP_RES = DxPipelineLay::HEAP_RES,
+      HEAP_SMP = DxPipelineLay::HEAP_SMP,
+      HEAP_MAX = DxPipelineLay::HEAP_MAX,
+    };
+    void reallocSet    (size_t id, uint32_t newRuntimeSz);
+
+    void placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE_TYPE rgn, const D3D12_CPU_DESCRIPTOR_HANDLE& at,
+                     UINT64 heapOffset, DxTexture& t, const ComponentMapping& map, uint32_t mipLevel);
+    void placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE_TYPE rgn, const D3D12_CPU_DESCRIPTOR_HANDLE& at,
+                     UINT64 heapOffset, const Sampler& smp);
+    void placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE_TYPE rgn, const D3D12_CPU_DESCRIPTOR_HANDLE& at,
+                     UINT64 heapOffset, DxBuffer& buf, uint64_t byteSize);
 
     struct UAV {
       AbstractGraphicsApi::Texture* tex = nullptr;
@@ -40,7 +55,13 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
     SmallArray<UAV,16>            uav;
     ResourceState::Usage          uavUsage;
 
-    uint32_t                      runtimeArraySz = 0;
+    struct DynBinding {
+      size_t                      heapOffset    = 0;
+      size_t                      heapOffsetSmp = 0;
+      size_t                      size          = 0;
+      };
+    ID3D12DescriptorHeap*         heapDyn[DxPipelineLay::HEAP_MAX] = {};
+    std::vector<DynBinding>       runtimeArrays;
   };
 
 }}

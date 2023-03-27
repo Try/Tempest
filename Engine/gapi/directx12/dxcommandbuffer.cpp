@@ -303,7 +303,7 @@ void DxCommandBuffer::end() {
   dxAssert(impl->Close());
   state     = NoRecording;
   resetDone = false;
-  for(size_t i=0;i<DxPipelineLay::MAX_BINDS;++i)
+  for(size_t i=0; i<DxPipelineLay::HEAP_MAX; ++i)
     currentHeaps[i] = nullptr;
   }
 
@@ -468,8 +468,14 @@ void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompu
   DxDescriptorArray& ux = reinterpret_cast<DxDescriptorArray&>(u);
   curUniforms = &ux;
 
+  auto& lx = *ux.lay.handler;
+  if(lx.isRuntimeSized()) {
+    ux.bindRuntimeSized(*impl, currentHeaps, isCompute);
+    return;
+    }
+
   bool setH = false;
-  for(size_t i=0;i<DxPipelineLay::MAX_BINDS;++i) {
+  for(size_t i=0; i<DxPipelineLay::HEAP_MAX; ++i) {
     if(ux.val.heap[i]!=currentHeaps[i]) {
       setH = true;
       break;
@@ -477,16 +483,16 @@ void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompu
     }
 
   if(setH) {
-    for(size_t i=0;i<DxPipelineLay::MAX_BINDS;++i)
+    for(size_t i=0; i<DxPipelineLay::HEAP_MAX; ++i)
       currentHeaps[i] = ux.val.heap[i];
+    // NOTE: pDescriptorHeaps[i] must not be NULL
     impl->SetDescriptorHeaps(ux.heapCnt, currentHeaps);
     }
 
-  auto& lx = *ux.lay.handler;
   for(size_t i=0;i<lx.roots.size();++i) {
     auto& r   = lx.roots[i];
     auto desc = ux.val.gpu[r.heap];
-    desc.ptr+=r.heapOffset;
+    desc.ptr += r.heapOffset;
     if(isCompute)
       impl->SetComputeRootDescriptorTable (UINT(i), desc); else
       impl->SetGraphicsRootDescriptorTable(UINT(i), desc);
@@ -549,7 +555,7 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer&  dstBuf, size_t offset,
   pushStage(dx.release());
   }
 
-void Tempest::Detail::DxCommandBuffer::prepareDraw(size_t voffset, size_t firstInstance) {
+void DxCommandBuffer::prepareDraw(size_t voffset, size_t firstInstance) {
   if(pushBaseInstanceId!=uint32_t(-1)) {
     struct SPIRV_Cross_VertexInfo {
       int32_t SPIRV_Cross_BaseVertex;
