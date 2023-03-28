@@ -197,8 +197,9 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
 
   D3D12_FEATURE_DATA_D3D12_OPTIONS7 feature7 = {};
   if(SUCCEEDED(dev.CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &feature7, sizeof(feature7)))) {
-    prop.meshlets.taskShader = false; // feature7.MeshShaderTier!=D3D12_MESH_SHADER_TIER_NOT_SUPPORTED;
-    prop.meshlets.meshShader = false; // feature7.MeshShaderTier!=D3D12_MESH_SHADER_TIER_NOT_SUPPORTED;
+    // TODO: flyp-Y
+    // prop.meshlets.taskShader = feature7.MeshShaderTier!=D3D12_MESH_SHADER_TIER_NOT_SUPPORTED;
+    // prop.meshlets.meshShader = feature7.MeshShaderTier!=D3D12_MESH_SHADER_TIER_NOT_SUPPORTED;
     // https://microsoft.github.io/DirectX-Specs/d3d/MeshShader.html#dispatchmesh-api
     // ThreadGroupCountX*ThreadGroupCountY*ThreadGroupCountZ must not exceed 2^22.
     prop.meshlets.maxGroups.x = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
@@ -211,7 +212,6 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
     prop.meshlets.maxGroupSize.z = 128;
     }
   prop.bindless.nonUniformIndexing = true;  // SM5.1
-  // prop.bindless.nonUniformIndexing = false; // TEST: DirectX12.Bindless2
   }
 
 void DxDevice::waitData() {
