@@ -10,6 +10,7 @@ namespace Detail {
 
 class DxTexture;
 class DxBuffer;
+class DxAccelerationStructure;
 
 class DxDescriptorArray : public AbstractGraphicsApi::Desc {
   public:
@@ -38,15 +39,18 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
       HEAP_RES = DxPipelineLay::HEAP_RES,
       HEAP_SMP = DxPipelineLay::HEAP_SMP,
       HEAP_MAX = DxPipelineLay::HEAP_MAX,
-    };
-    void reallocSet    (size_t id, uint32_t newRuntimeSz);
+      };
+    void reallocSet(size_t id, uint32_t newRuntimeSz);
+    void reflushSet();
 
     void placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE_TYPE rgn, const D3D12_CPU_DESCRIPTOR_HANDLE& at,
                      UINT64 heapOffset, DxTexture& t, const ComponentMapping& map, uint32_t mipLevel);
     void placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE_TYPE rgn, const D3D12_CPU_DESCRIPTOR_HANDLE& at,
                      UINT64 heapOffset, const Sampler& smp);
     void placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE_TYPE rgn, const D3D12_CPU_DESCRIPTOR_HANDLE& at,
-                     UINT64 heapOffset, DxBuffer& buf, uint64_t byteSize);
+                     UINT64 heapOffset, DxBuffer& buf, uint64_t bufOffset, uint64_t byteSize);
+    void placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE_TYPE rgn, const D3D12_CPU_DESCRIPTOR_HANDLE& at,
+                     UINT64 heapOffset, DxAccelerationStructure& as);
 
     struct UAV {
       AbstractGraphicsApi::Texture* tex = nullptr;
@@ -59,6 +63,11 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
       size_t                      heapOffset    = 0;
       size_t                      heapOffsetSmp = 0;
       size_t                      size          = 0;
+
+      std::vector<AbstractGraphicsApi::Shared*> data;
+      Sampler                                   smp;
+      uint32_t                                  mipLevel = 0;
+      size_t                                    offset   = 0;
       };
     ID3D12DescriptorHeap*         heapDyn[DxPipelineLay::HEAP_MAX] = {};
     std::vector<DynBinding>       runtimeArrays;

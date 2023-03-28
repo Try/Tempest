@@ -9,10 +9,7 @@ layout(binding = 2, std140) readonly buffer Input {
   } ssbo[];
 
 layout(binding = 3, rgba8) uniform writeonly image2D ret;
-// layout(binding = 4, rgba8) uniform writeonly image2D dummy;
-layout(binding = 4, std140) uniform UBO {
-  vec4 clr;
-  };
+layout(binding = 4) uniform sampler dummy;
 
 void main() {
   ivec2 index = ivec2(gl_GlobalInvocationID.xy);

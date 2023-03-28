@@ -1441,8 +1441,9 @@ void Bindless2(const char* outImg) {
 
     auto desc = device.descriptors(pso);
     desc.set(0,ptex);
-    desc.set(1,pbuf);
-    desc.set(2,ret);
+    desc.set(1,ptex);
+    desc.set(2,pbuf);
+    desc.set(3,ret);
 
     auto cmd = device.commandBuffer();
     {
