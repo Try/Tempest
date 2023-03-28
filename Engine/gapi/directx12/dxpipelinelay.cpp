@@ -37,55 +37,6 @@ static D3D12_SHADER_VISIBILITY nativeFormat(ShaderReflection::Stage stage){
   return D3D12_SHADER_VISIBILITY_ALL;
   }
 
-DxPipelineLay::DescriptorPool::DescriptorPool(DxPipelineLay& vlay, uint32_t poolSize) {
-  auto& device = *vlay.dev.device;
-
-  try {
-    for(auto& i:vlay.heaps) {
-      if(i.numDesc==0)
-        continue;
-
-      D3D12_DESCRIPTOR_HEAP_DESC d = {};
-      d.Type           = i.type;
-      d.NumDescriptors = i.numDesc * poolSize;
-      d.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-
-      uint8_t id = (d.Type==D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV ? HEAP_RES : HEAP_SMP);
-      dxAssert(device.CreateDescriptorHeap(&d, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&heap[id])));
-
-      // auto  gpu = heap[i]->GetCPUDescriptorHandleForHeapStart();
-      // Log::d("src_gpu.ptr = ",gpu.ptr);
-      // if(gpu.ptr==0)
-      //   Log::d("src_gpu.ptr = ",gpu.ptr);
-      }
-    }
-  catch(...){
-    for(auto i:heap)
-      if(i!=nullptr)
-        i->Release();
-    throw;
-    }
-
-  for(size_t i=poolSize; i<POOL_SIZE; ++i) {
-    allocated.set(i, false);
-    }
-  }
-
-DxPipelineLay::DescriptorPool::DescriptorPool(DxPipelineLay::DescriptorPool&& oth)
-  :allocated(oth.allocated) {
-  for(size_t i=0; i<HEAP_MAX; ++i) {
-    heap[i] = oth.heap[i];
-    oth.heap[i] = nullptr;
-    }
-  }
-
-DxPipelineLay::DescriptorPool::~DescriptorPool() {
-  for(auto i:heap)
-    if(i!=nullptr)
-      i->Release();
-  }
-
-
 DxPipelineLay::DxPipelineLay(DxDevice& dev, const std::vector<ShaderReflection::Binding>* sh)
   :DxPipelineLay(dev,&sh,1,false) {
   }
@@ -108,9 +59,9 @@ size_t DxPipelineLay::descriptorsCount() {
 
 void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection::PushBlock& pb,
                          bool has_baseVertex_baseInstance) {
-  auto& device = *dev.device;
-  descSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-  smpSize  = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+  auto&      device   = *dev.device;
+  const UINT descSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+  const UINT smpSize  = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
   uint32_t lastBind=0;
   for(auto& i:lay)
@@ -317,56 +268,6 @@ void DxPipelineLay::add(const ShaderReflection::Binding& b,
   rp.visibility = ::nativeFormat(b.stage);
 
   root.push_back(rp);
-  }
-
-DxPipelineLay::PoolAllocation DxPipelineLay::allocDescriptors() {
-  std::lock_guard<SpinLock> guard(poolsSync);
-
-  DescriptorPool* pool = nullptr;
-  for(size_t i=0; i<pools.size(); ++i) {
-    auto& p = pools[i];
-    if(p.allocated.all())
-      continue;
-    pool = &p;
-    break;
-    }
-
-  if(pool==nullptr) {
-    pools.emplace_back(*this,(runtimeSized ? 1 : POOL_SIZE));
-    pool = &pools.back();
-    }
-
-  for(size_t i=0; ; ++i)
-    if(!pool->allocated.test(i)) {
-      pool->allocated.set(i);
-
-      PoolAllocation a;
-      a.pool   = std::distance(pools.data(),pool);
-      a.offset = i;
-      for(size_t r=0; r<HEAP_MAX; ++r) {
-        if(pool->heap[r]==nullptr)
-          continue;
-        a.heap[r] = pool->heap[r];
-        a.cpu [r] = pool->heap[r]->GetCPUDescriptorHandleForHeapStart();
-        a.gpu [r] = pool->heap[r]->GetGPUDescriptorHandleForHeapStart();
-
-        UINT64 offset = heaps[r].numDesc*i;
-        if(heaps[r].type==D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) {
-          a.cpu[r].ptr += descSize*offset;
-          a.gpu[r].ptr += descSize*offset;
-          } else {
-          a.cpu[r].ptr += smpSize *offset;
-          a.gpu[r].ptr += smpSize *offset;
-          }
-        }
-      return a;
-      }
-  }
-
-void DxPipelineLay::freeDescriptors(DxPipelineLay::PoolAllocation& d) {
-  std::lock_guard<SpinLock> guard(poolsSync);
-  auto& p = pools[d.pool];
-  p.allocated.set(d.offset,false);
   }
 
 uint32_t DxPipelineLay::findBinding(const std::vector<D3D12_ROOT_PARAMETER>& except) const {

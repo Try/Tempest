@@ -467,10 +467,12 @@ void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/, Abstract
 void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompute) {
   DxDescriptorArray& ux = reinterpret_cast<DxDescriptorArray&>(u);
   curUniforms = &ux;
+  ux.bind(*impl, currentHeaps, isCompute);
 
+  /*
   auto& lx = *ux.lay.handler;
   if(lx.isRuntimeSized()) {
-    ux.bindRuntimeSized(*impl, currentHeaps, isCompute);
+    ux.bind(*impl, currentHeaps, isCompute);
     return;
     }
 
@@ -497,6 +499,7 @@ void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompu
       impl->SetComputeRootDescriptorTable (UINT(i), desc); else
       impl->SetGraphicsRootDescriptorTable(UINT(i), desc);
     }
+    */
   }
 
 void DxCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {

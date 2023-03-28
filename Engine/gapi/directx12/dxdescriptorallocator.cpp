@@ -61,6 +61,8 @@ void DxDescriptorAllocator::setDevice(DxDevice& device) {
   }
 
 DxDescriptorAllocator::Allocation DxDescriptorAllocator::alloc(size_t count, bool smp) {
+  if(count==0)
+    return Allocation();
   uint32_t id  = (smp ? 1 : 0);
   auto     ret = allocator.alloc(count, 1, id, id, false);
   return ret;
@@ -72,11 +74,14 @@ void DxDescriptorAllocator::free(Allocation& page) {
   }
 
 ID3D12DescriptorHeap* DxDescriptorAllocator::heapof(const Allocation& a) {
-  return a.page->memory;
+  return a.page!=nullptr ? a.page->memory : nullptr;
   }
 
 D3D12_CPU_DESCRIPTOR_HANDLE DxDescriptorAllocator::handle(const Allocation& a) {
   D3D12_CPU_DESCRIPTOR_HANDLE ptr = D3D12_CPU_DESCRIPTOR_HANDLE();
+  if(a.page==nullptr)
+    return ptr;
+
   if(a.page->memory!=nullptr)
     ptr = a.page->memory->GetCPUDescriptorHandleForHeapStart();
 
@@ -89,6 +94,9 @@ D3D12_CPU_DESCRIPTOR_HANDLE DxDescriptorAllocator::handle(const Allocation& a) {
 
 D3D12_GPU_DESCRIPTOR_HANDLE Tempest::Detail::DxDescriptorAllocator::gpuHandle(const Allocation& a) {
   D3D12_GPU_DESCRIPTOR_HANDLE ptr = D3D12_GPU_DESCRIPTOR_HANDLE();
+  if(a.page==nullptr)
+    return ptr;
+
   if(a.page->memory!=nullptr)
     ptr = a.page->memory->GetGPUDescriptorHandleForHeapStart();
 

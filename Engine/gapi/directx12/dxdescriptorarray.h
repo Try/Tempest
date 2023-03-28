@@ -29,11 +29,9 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
 
     void ssboBarriers(Detail::ResourceState& res, PipelineStage st) override;
 
-    void bindRuntimeSized(ID3D12GraphicsCommandList6& enc, ID3D12DescriptorHeap** currentHeaps, bool isCompute);
+    void bind(ID3D12GraphicsCommandList6& enc, ID3D12DescriptorHeap** currentHeaps, bool isCompute);
 
-    DSharedPtr<DxPipelineLay*>         lay;
-    DxPipelineLay::PoolAllocation      val;
-    UINT                               heapCnt = 0;
+    DSharedPtr<DxPipelineLay*> lay;
 
   private:
     enum {
@@ -61,6 +59,7 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
       };
     SmallArray<UAV,16>            uav;
     ResourceState::Usage          uavUsage;
+    Allocation                    heap[DxPipelineLay::HEAP_MAX] = {};
 
     struct DynBinding {
       size_t                      heapOffset    = 0;
@@ -72,7 +71,6 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
       uint32_t                                  mipLevel = 0;
       size_t                                    offset   = 0;
       };
-    Allocation                    heapDyn[DxPipelineLay::HEAP_MAX] = {};
     std::vector<DynBinding>       runtimeArrays;
   };
 

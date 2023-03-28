@@ -57,23 +57,6 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
       uint32_t binding = 0;
       };
 
-    struct DescriptorPool {
-      DescriptorPool(DxPipelineLay& lay, uint32_t poolSize);
-      DescriptorPool(DescriptorPool&& oth);
-      ~DescriptorPool();
-
-      ID3D12DescriptorHeap*     heap[HEAP_MAX] = {};
-      std::bitset<POOL_SIZE>    allocated;
-      };
-
-    struct PoolAllocation {
-      D3D12_CPU_DESCRIPTOR_HANDLE cpu [HEAP_MAX] = {};
-      D3D12_GPU_DESCRIPTOR_HANDLE gpu [HEAP_MAX] = {};
-      ID3D12DescriptorHeap*       heap[HEAP_MAX] = {};
-      size_t                      pool           = 0;
-      size_t                      offset         = 0;
-      };
-
     Heap                        heaps[HEAP_MAX] = {};
     std::vector<RootPrm>        roots;
     uint32_t                    pushConstantId     = uint32_t(-1);
@@ -85,21 +68,13 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
     ComPtr<ID3D12RootSignature> impl;
     DxDevice&                   dev;
 
-    PoolAllocation              allocDescriptors();
-    void                        freeDescriptors(PoolAllocation& d);
-
   private:
     struct Parameter final {
-      D3D12_DESCRIPTOR_RANGE  rgn;
-      uint32_t                id = 0;
-      D3D12_SHADER_VISIBILITY visibility = D3D12_SHADER_VISIBILITY_ALL;
+      D3D12_DESCRIPTOR_RANGE    rgn;
+      uint32_t                  id = 0;
+      D3D12_SHADER_VISIBILITY   visibility = D3D12_SHADER_VISIBILITY_ALL;
       };
 
-    SpinLock                    poolsSync;
-    std::vector<DescriptorPool> pools;
-
-    UINT                        descSize = 0;
-    UINT                        smpSize  = 0;
     bool                        runtimeSized = false;
 
     uint32_t findBinding(const std::vector<D3D12_ROOT_PARAMETER>& except) const;
