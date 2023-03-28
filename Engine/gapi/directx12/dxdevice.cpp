@@ -53,6 +53,7 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
   dxAssert(device->CreateCommandQueue(&queueDesc, uuid<ID3D12CommandQueue>(), reinterpret_cast<void**>(&cmdQueue)));
 
   allocator.setDevice(*this);
+  descAlloc.setDevice(*this);
 
   dxAssert(device->CreateFence(DxFence::Waiting, D3D12_FENCE_FLAG_NONE,
                                uuid<ID3D12Fence>(),

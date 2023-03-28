@@ -11,6 +11,7 @@
 #include "gapi/directx12/comptr.h"
 #include "gapi/directx12/dxcommandbuffer.h"
 #include "exceptions/exception.h"
+#include "gapi/directx12/dxdescriptorallocator.h"
 #include "utility/spinlock.h"
 #include "utility/compiller_hints.h"
 #include "dxallocator.h"
@@ -283,6 +284,7 @@ class DxDevice : public AbstractGraphicsApi::Device {
     ComPtr<ID3D12CommandQueue>  cmdQueue;
 
     DxAllocator                 allocator;
+    DxDescriptorAllocator       descAlloc;
 
     DSharedPtr<DxPipelineLay*>  blitLayout;
     DSharedPtr<DxPipeline*>     blit;

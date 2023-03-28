@@ -95,10 +95,11 @@ DxDescriptorArray::~DxDescriptorArray() {
   if(lay && !lay.handler->isRuntimeSized())
     lay.handler->freeDescriptors(val);
 
-  if(heapDyn[0]!=nullptr)
-    heapDyn[0]->Release();
-  if(heapDyn[1]!=nullptr)
-    heapDyn[1]->Release();
+  if(lay) {
+    auto& allocator = lay.handler->dev.descAlloc;
+    allocator.free(heapDyn[HEAP_RES]);
+    allocator.free(heapDyn[HEAP_SMP]);
+    }
   }
 
 void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const Sampler& smp, uint32_t mipLevel) {
@@ -111,6 +112,8 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* tex, const 
 
 void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer* b, size_t offset) {
   auto&  device     = *lay.handler->dev.device;
+  auto&  allocator  = lay.handler->dev.descAlloc;
+
   auto&  buf        = *reinterpret_cast<DxBuffer*>(b);
   auto&  prm        = lay.handler->prm[id];
   auto&  l          = lay.handler->lay[id];
@@ -119,7 +122,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer* b, size_t of
   auto   heapOffset = prm.heapOffset;
 
   if(lay.handler->isRuntimeSized()) {
-    descPtr = heapDyn[HEAP_RES]!=nullptr ? heapDyn[HEAP_RES]->GetCPUDescriptorHandleForHeapStart() : D3D12_CPU_DESCRIPTOR_HANDLE();
+    descPtr    = allocator.handle(heapDyn[HEAP_RES]);
     heapOffset = runtimeArrays[id].heapOffset;
     runtimeArrays[id].data   = {b};
     runtimeArrays[id].offset = offset;
@@ -132,14 +135,15 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer* b, size_t of
   }
 
 void DxDescriptorArray::set(size_t id, const Sampler& smp) {
-  auto& device = *lay.handler->dev.device;
-  auto& prm    = lay.handler->prm[id];
+  auto& device        = *lay.handler->dev.device;
+  auto& allocator     = lay.handler->dev.descAlloc;
 
+  auto& prm           = lay.handler->prm[id];
   auto  smpPtr        = val.cpu[HEAP_SMP];
   auto  heapOffsetSmp = prm.heapOffset;
 
   if(lay.handler->isRuntimeSized()) {
-    smpPtr = heapDyn[HEAP_SMP]!=nullptr ? heapDyn[HEAP_SMP]->GetCPUDescriptorHandleForHeapStart() : D3D12_CPU_DESCRIPTOR_HANDLE();
+    smpPtr = allocator.handle(heapDyn[HEAP_SMP]);
     heapOffsetSmp = runtimeArrays[id].heapOffset;
     runtimeArrays[id].smp = smp;
     }
@@ -148,14 +152,15 @@ void DxDescriptorArray::set(size_t id, const Sampler& smp) {
   }
 
 void DxDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure* t) {
-  auto& device = *lay.handler->dev.device;
-  auto& tlas   = *reinterpret_cast<DxAccelerationStructure*>(t);
-  auto& prm    = lay.handler->prm[id];
+  auto& device     = *lay.handler->dev.device;
+  auto& allocator  = lay.handler->dev.descAlloc;
+  auto& tlas       = *reinterpret_cast<DxAccelerationStructure*>(t);
+  auto& prm        = lay.handler->prm[id];
 
   auto  gpu        = val.cpu[HEAP_RES];
   auto  heapOffset = prm.heapOffset;
   if(lay.handler->isRuntimeSized()) {
-    gpu        = heapDyn[HEAP_RES]!=nullptr ? heapDyn[HEAP_RES]->GetCPUDescriptorHandleForHeapStart() : D3D12_CPU_DESCRIPTOR_HANDLE();
+    gpu        = allocator.handle(heapDyn[HEAP_RES]);
     heapOffset = runtimeArrays[id].heapOffset;
     runtimeArrays[id].data = {t};
     }
@@ -164,9 +169,10 @@ void DxDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStru
   }
 
 void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler& smp, uint32_t mipLevel) {
-  auto& device = *lay.handler->dev.device;
-  auto& prm    = lay.handler->prm[id];
-  auto& l      = lay.handler->lay[id];
+  auto& device    = *lay.handler->dev.device;
+  auto& allocator = lay.handler->dev.descAlloc;
+  auto& prm       = lay.handler->prm[id];
+  auto& l         = lay.handler->lay[id];
 
   if(l.runtimeSized) {
     constexpr uint32_t granularity = DxPipelineLay::BINDLESS_GRANULARITY;
@@ -207,8 +213,8 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** tex, size_
   UINT64                      heapOffsetSmp = prm.heapOffsetSmp;
 
   if(lay.handler->isRuntimeSized()) {
-    descPtr       = heapDyn[0]!=nullptr ? heapDyn[0]->GetCPUDescriptorHandleForHeapStart() : D3D12_CPU_DESCRIPTOR_HANDLE();
-    smpPtr        = heapDyn[1]!=nullptr ? heapDyn[1]->GetCPUDescriptorHandleForHeapStart() : D3D12_CPU_DESCRIPTOR_HANDLE();
+    descPtr       = allocator.handle(heapDyn[HEAP_RES]);
+    smpPtr        = allocator.handle(heapDyn[HEAP_SMP]);
     heapOffset    = runtimeArrays[id].heapOffset;
     heapOffsetSmp = runtimeArrays[id].heapOffsetSmp;
     }
@@ -224,9 +230,10 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** tex, size_
   }
 
 void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** b, size_t cnt) {
-  auto&    device = *lay.handler->dev.device;
-  auto&    prm    = lay.handler->prm[id];
-  auto&    l      = lay.handler->lay[id];
+  auto& device    = *lay.handler->dev.device;
+  auto& allocator = lay.handler->dev.descAlloc;
+  auto& prm       = lay.handler->prm[id];
+  auto& l         = lay.handler->lay[id];
 
   if(l.runtimeSized) {
     constexpr uint32_t granularity = 1; //DxPipelineLay::MAX_BINDLESS;
@@ -256,7 +263,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** b, size_t c
   UINT64                      heapOffset = prm.heapOffset;
 
   if(lay.handler->isRuntimeSized()) {
-    descPtr = heapDyn[0]!=nullptr ? heapDyn[0]->GetCPUDescriptorHandleForHeapStart() : D3D12_CPU_DESCRIPTOR_HANDLE();
+    descPtr    = allocator.handle(heapDyn[HEAP_RES]);
     heapOffset = runtimeArrays[id].heapOffset;
     }
 
@@ -290,21 +297,26 @@ void DxDescriptorArray::ssboBarriers(ResourceState& res, PipelineStage st) {
   }
 
 void DxDescriptorArray::bindRuntimeSized(ID3D12GraphicsCommandList6& enc, ID3D12DescriptorHeap** currentHeaps, bool isCompute) {
-  // auto& device = *lay.handler->dev.device;
-  auto& lx     = *lay.handler;
+  auto& allocator = lay.handler->dev.descAlloc;
+  auto& lx        = *lay.handler;
 
-  if(currentHeaps[HEAP_RES]!=heapDyn[HEAP_RES] || currentHeaps[HEAP_SMP]!=heapDyn[HEAP_SMP]) {
+  ID3D12DescriptorHeap* heaps[HEAP_MAX] = {};
+  heaps[HEAP_RES] = allocator.heapof(heapDyn[HEAP_RES]);
+  heaps[HEAP_SMP] = allocator.heapof(heapDyn[HEAP_SMP]);
+  if(heaps[HEAP_RES]==nullptr)
+    heaps[HEAP_RES] = heaps[HEAP_SMP];
+
+  if(currentHeaps[HEAP_RES]!=heaps[HEAP_RES] || currentHeaps[HEAP_SMP]!=heaps[HEAP_SMP]) {
     // TODO: single heap case
-    currentHeaps[HEAP_RES] = heapDyn[HEAP_RES];
-    currentHeaps[HEAP_SMP] = heapDyn[HEAP_SMP];
+    currentHeaps[HEAP_RES] = heaps[HEAP_RES];
+    currentHeaps[HEAP_SMP] = heaps[HEAP_SMP];
 
-    const uint8_t cnt = (heapDyn[HEAP_SMP]==nullptr ? 1 : 2);
-    enc.SetDescriptorHeaps(cnt, heapDyn);
+    const uint8_t cnt = (heaps[HEAP_SMP]==nullptr ? 1 : 2);
+    enc.SetDescriptorHeaps(cnt, heaps);
     }
 
-  D3D12_GPU_DESCRIPTOR_HANDLE descPtr  = heapDyn[HEAP_RES]!=nullptr ? heapDyn[HEAP_RES]->GetGPUDescriptorHandleForHeapStart() : D3D12_GPU_DESCRIPTOR_HANDLE();
-  D3D12_GPU_DESCRIPTOR_HANDLE smpPtr   = heapDyn[HEAP_SMP]!=nullptr ? heapDyn[HEAP_SMP]->GetGPUDescriptorHandleForHeapStart() : D3D12_GPU_DESCRIPTOR_HANDLE();
-
+  auto descPtr = allocator.gpuHandle(heapDyn[HEAP_RES]);
+  auto smpPtr  = allocator.gpuHandle(heapDyn[HEAP_SMP]);
   for(size_t i=0; i<lx.roots.size(); ++i) {
     auto&                       r    = lx.roots[i];
     D3D12_GPU_DESCRIPTOR_HANDLE desc = {};
@@ -330,7 +342,8 @@ void DxDescriptorArray::bindRuntimeSized(ID3D12GraphicsCommandList6& enc, ID3D12
   }
 
 void DxDescriptorArray::reallocSet(size_t id, uint32_t newRuntimeSz) {
-  auto&  device        = *lay.handler->dev.device;
+  auto& device    = *lay.handler->dev.device;
+  auto& allocator = lay.handler->dev.descAlloc;
 
   const uint32_t descSize      = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
   const uint32_t smpSize       = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
@@ -365,52 +378,39 @@ void DxDescriptorArray::reallocSet(size_t id, uint32_t newRuntimeSz) {
       }
     }
 
-  ID3D12DescriptorHeap* heapDesc = nullptr;
-  ID3D12DescriptorHeap* heapSmp  = nullptr;
+  Allocation heapDesc, heapSmp;
   try {
-    if((len[0]!=lenOld[0] || heapDyn[0]==nullptr) && len[0]>0) {
-      D3D12_DESCRIPTOR_HEAP_DESC d = {};
-      d.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-      d.NumDescriptors = UINT(len[0]);
-      d.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-      dxAssert(device.CreateDescriptorHeap(&d, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&heapDesc)));
+    if((len[0]!=lenOld[0] || heapDyn[0].size==0) && len[0]>0) {
+      heapDesc = allocator.alloc(len[0], false);
       }
-
-    if((len[1]!=lenOld[1] || heapDyn[1]==nullptr) && len[1]>0) {
-      D3D12_DESCRIPTOR_HEAP_DESC d = {};
-      d.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
-      d.NumDescriptors = UINT(len[1]);
-      d.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-      dxAssert(device.CreateDescriptorHeap(&d, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&heapSmp)));
+    if((len[1]!=lenOld[1] || heapDyn[1].size==0) && len[1]>0) {
+      heapSmp  = allocator.alloc(len[1], true);
       }
     }
   catch(...) {
-    if(heapDesc!=nullptr)
-      heapDesc->Release();
-    if(heapSmp!=nullptr)
-      heapSmp->Release();
+    allocator.free(heapDesc);
+    allocator.free(heapSmp);
     throw;
     }
 
-  if(heapDesc!=nullptr || len[HEAP_RES]==0)
+  if(heapDesc.size>0 || len[HEAP_RES]==0)
     std::swap(heapDyn[0], heapDesc);
-  if(heapSmp !=nullptr || len[HEAP_SMP]==0)
+  if(heapSmp .size>0 || len[HEAP_SMP]==0)
     std::swap(heapDyn[1], heapSmp);
 
-  if(heapDesc!=nullptr)
-    heapDesc->Release();
-  if(heapSmp!=nullptr)
-    heapSmp->Release();
+  allocator.free(heapDesc);
+  allocator.free(heapSmp);
   }
 
 void DxDescriptorArray::reflushSet() {
-  auto& device = *lay.handler->dev.device;
+  auto& device    = *lay.handler->dev.device;
+  auto& allocator = lay.handler->dev.descAlloc;
 
   uint32_t descSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
   uint32_t smpSize  = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
-  D3D12_CPU_DESCRIPTOR_HANDLE descPtr = heapDyn[0]!=nullptr ? heapDyn[0]->GetCPUDescriptorHandleForHeapStart() : D3D12_CPU_DESCRIPTOR_HANDLE();
-  D3D12_CPU_DESCRIPTOR_HANDLE smpPtr  = heapDyn[1]!=nullptr ? heapDyn[1]->GetCPUDescriptorHandleForHeapStart() : D3D12_CPU_DESCRIPTOR_HANDLE();
+  D3D12_CPU_DESCRIPTOR_HANDLE descPtr = allocator.handle(heapDyn[0]);
+  D3D12_CPU_DESCRIPTOR_HANDLE smpPtr  = allocator.handle(heapDyn[1]);
 
   for(size_t id=0; id<lay.handler->lay.size(); ++id) {
     auto&  prm           = lay.handler->prm[id];

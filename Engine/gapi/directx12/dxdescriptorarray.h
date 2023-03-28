@@ -1,8 +1,9 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include "utility/smallarray.h"
 #include "gapi/resourcestate.h"
+#include "utility/smallarray.h"
+#include "dxdescriptorallocator.h"
 #include "dxpipelinelay.h"
 
 namespace Tempest {
@@ -40,6 +41,8 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
       HEAP_SMP = DxPipelineLay::HEAP_SMP,
       HEAP_MAX = DxPipelineLay::HEAP_MAX,
       };
+    using Allocation = DxDescriptorAllocator::Allocation;
+
     void reallocSet(size_t id, uint32_t newRuntimeSz);
     void reflushSet();
 
@@ -69,7 +72,7 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
       uint32_t                                  mipLevel = 0;
       size_t                                    offset   = 0;
       };
-    ID3D12DescriptorHeap*         heapDyn[DxPipelineLay::HEAP_MAX] = {};
+    Allocation                    heapDyn[DxPipelineLay::HEAP_MAX] = {};
     std::vector<DynBinding>       runtimeArrays;
   };
 

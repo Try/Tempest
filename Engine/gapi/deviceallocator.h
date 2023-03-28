@@ -59,9 +59,13 @@ class DeviceAllocator {
       return rawAlloc(size,align,heapId,typeId,hostVisible,true);
       }
 
+    void setDefaultPageSize(uint32_t sz) {
+      defPageSize = sz;
+      }
+
   private:
     Allocation rawAlloc(size_t size, size_t align, uint32_t heapId, uint32_t typeId, bool hostVisible, bool dedicated){
-      const uint32_t pgSize = (dedicated ? uint32_t(size) : std::max<uint32_t>(DEFAULT_PAGE_SIZE,uint32_t(size)));
+      const uint32_t pgSize = (dedicated ? uint32_t(size) : std::max<uint32_t>(defPageSize,uint32_t(size)));
       Page pg(pgSize);
       pg.memory      = device.alloc(pg.allSize,typeId);
       pg.typeId      = typeId;
@@ -87,6 +91,7 @@ class DeviceAllocator {
     MemoryProvider&         device;
     std::mutex              sync;
     std::forward_list<Page> pages;
+    uint32_t                defPageSize = DEFAULT_PAGE_SIZE;
   };
 
 template<class MemoryProvider>

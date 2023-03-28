@@ -4,7 +4,6 @@
 #include <d3d12.h>
 
 #include "gapi/deviceallocator.h"
-#include "dxcommandbuffer.h"
 
 namespace Tempest {
 namespace Detail {
