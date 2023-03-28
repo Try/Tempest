@@ -35,8 +35,8 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
       HEAP_SMP     = 1,
       HEAP_MAX     = 2,
 
-      POOL_SIZE    = 128,
-      MAX_BINDLESS = 2048,
+      POOL_SIZE            = 128,
+      BINDLESS_GRANULARITY = 256,
       };
 
     struct Param {

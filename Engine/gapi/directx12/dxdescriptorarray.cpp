@@ -169,7 +169,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** tex, size_
   auto& l      = lay.handler->lay[id];
 
   if(l.runtimeSized) {
-    constexpr uint32_t granularity = 1; //DxPipelineLay::MAX_BINDLESS;
+    constexpr uint32_t granularity = DxPipelineLay::BINDLESS_GRANULARITY;
     uint32_t rSz = ((cnt+granularity-1u) & (~(granularity-1u)));
     if(rSz!=runtimeArrays[id].size) {
       auto prev  = std::move(runtimeArrays[id].data);
@@ -187,6 +187,11 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** tex, size_
       reflushSet();
       return;
       }
+    }
+  else if(lay.handler->isRuntimeSized()) {
+    runtimeArrays[id].data     = {tex[0]};
+    runtimeArrays[id].smp      = smp;
+    runtimeArrays[id].mipLevel = mipLevel;
     }
 
   uint32_t descSize = 0;
