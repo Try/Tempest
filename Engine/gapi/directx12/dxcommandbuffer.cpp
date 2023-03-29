@@ -303,8 +303,7 @@ void DxCommandBuffer::end() {
   dxAssert(impl->Close());
   state     = NoRecording;
   resetDone = false;
-  for(size_t i=0; i<DxPipelineLay::HEAP_MAX; ++i)
-    currentHeaps[i] = nullptr;
+  curHeaps  = DxDescriptorArray::CbState{};
   }
 
 void DxCommandBuffer::reset() {
@@ -467,39 +466,7 @@ void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/, Abstract
 void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompute) {
   DxDescriptorArray& ux = reinterpret_cast<DxDescriptorArray&>(u);
   curUniforms = &ux;
-  ux.bind(*impl, currentHeaps, isCompute);
-
-  /*
-  auto& lx = *ux.lay.handler;
-  if(lx.isRuntimeSized()) {
-    ux.bind(*impl, currentHeaps, isCompute);
-    return;
-    }
-
-  bool setH = false;
-  for(size_t i=0; i<DxPipelineLay::HEAP_MAX; ++i) {
-    if(ux.val.heap[i]!=currentHeaps[i]) {
-      setH = true;
-      break;
-      }
-    }
-
-  if(setH) {
-    for(size_t i=0; i<DxPipelineLay::HEAP_MAX; ++i)
-      currentHeaps[i] = ux.val.heap[i];
-    // NOTE: pDescriptorHeaps[i] must not be NULL
-    impl->SetDescriptorHeaps(ux.heapCnt, currentHeaps);
-    }
-
-  for(size_t i=0;i<lx.roots.size();++i) {
-    auto& r   = lx.roots[i];
-    auto desc = ux.val.gpu[r.heap];
-    desc.ptr += r.heapOffset;
-    if(isCompute)
-      impl->SetComputeRootDescriptorTable (UINT(i), desc); else
-      impl->SetGraphicsRootDescriptorTable(UINT(i), desc);
-    }
-    */
+  ux.bind(*impl, curHeaps, isCompute);
   }
 
 void DxCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {

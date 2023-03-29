@@ -70,8 +70,13 @@ DxDescriptorArray::DxDescriptorArray(DxPipelineLay& vlay)
     reallocSet(0, 0);
     } else {
     auto* h = lay.handler->heaps;
-    heap[HEAP_RES] = allocator.alloc(h[HEAP_RES].numDesc,false);
-    heap[HEAP_SMP] = allocator.alloc(h[HEAP_SMP].numDesc,true);
+
+    size_t len[HEAP_MAX] = {h[HEAP_RES].numDesc, h[HEAP_SMP].numDesc};
+    for(auto& l:len)
+      l = ((l+ALLOC_GRANULARITY-1u) & (~(ALLOC_GRANULARITY-1u)));
+
+    heap[HEAP_RES] = allocator.alloc(len[HEAP_RES],false);
+    heap[HEAP_SMP] = allocator.alloc(len[HEAP_SMP],true);
 
     if((heap[HEAP_RES].page==nullptr && h[HEAP_RES].numDesc>0) ||
        (heap[HEAP_SMP].page==nullptr && h[HEAP_SMP].numDesc>0)) {
@@ -171,14 +176,12 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** tex, size_
   auto& l         = lay.handler->lay[id];
 
   if(l.runtimeSized) {
-    constexpr uint32_t granularity = DxPipelineLay::BINDLESS_GRANULARITY;
-    uint32_t rSz = ((cnt+granularity-1u) & (~(granularity-1u)));
-    if(rSz!=runtimeArrays[id].size) {
+    if(cnt!=runtimeArrays[id].size) {
       auto prev  = std::move(runtimeArrays[id].data);
       runtimeArrays[id].data.assign(tex, tex+cnt);
       try {
-        reallocSet(id, rSz);
-        runtimeArrays[id].size     = rSz;
+        reallocSet(id, cnt);
+        runtimeArrays[id].size     = cnt;
         runtimeArrays[id].mipLevel = mipLevel;
         runtimeArrays[id].smp      = smp;
         }
@@ -232,14 +235,12 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** b, size_t c
   auto& l         = lay.handler->lay[id];
 
   if(l.runtimeSized) {
-    constexpr uint32_t granularity = 1; //DxPipelineLay::MAX_BINDLESS;
-    uint32_t rSz = ((cnt+granularity-1u) & (~(granularity-1u)));
-    if(rSz!=runtimeArrays[id].size) {
+    if(cnt!=runtimeArrays[id].size) {
       auto prev  = std::move(runtimeArrays[id].data);
       runtimeArrays[id].data.assign(b, b+cnt);
       try {
-        reallocSet(id, rSz);
-        runtimeArrays[id].size   = rSz;
+        reallocSet(id, cnt);
+        runtimeArrays[id].size   = cnt;
         runtimeArrays[id].offset = 0;
         }
       catch(...) {
@@ -265,7 +266,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** b, size_t c
   for(size_t i=0; i<cnt; ++i) {
     if(b[i]==nullptr)
       continue;
-    auto&  buf    = *reinterpret_cast<DxBuffer*>(b[i]);
+    auto& buf = *reinterpret_cast<DxBuffer*>(b[i]);
     placeInHeap(device, prm.rgnType, descPtr, heapOffset + i*descSize, buf, 0, lay.handler->lay[id].byteSize);
     }
   }
@@ -291,7 +292,7 @@ void DxDescriptorArray::ssboBarriers(ResourceState& res, PipelineStage st) {
   res.onUavUsage(uavUsage,st);
   }
 
-void DxDescriptorArray::bind(ID3D12GraphicsCommandList6& enc, ID3D12DescriptorHeap** currentHeaps, bool isCompute) {
+void DxDescriptorArray::bind(ID3D12GraphicsCommandList6& enc, CbState& state, bool isCompute) {
   auto& allocator = lay.handler->dev.descAlloc;
   auto& lx        = *lay.handler;
 
@@ -302,10 +303,9 @@ void DxDescriptorArray::bind(ID3D12GraphicsCommandList6& enc, ID3D12DescriptorHe
   heaps[HEAP_RES] = allocator.heapof(heap[HEAP_RES]);
   heaps[HEAP_SMP] = allocator.heapof(heap[HEAP_SMP]);
 
-  if(currentHeaps[HEAP_RES]!=heaps[HEAP_RES] || currentHeaps[HEAP_SMP]!=heaps[HEAP_SMP]) {
-    // TODO: single heap case
-    currentHeaps[HEAP_RES] = heaps[HEAP_RES];
-    currentHeaps[HEAP_SMP] = heaps[HEAP_SMP];
+  if(state.heaps[HEAP_RES]!=heaps[HEAP_RES] || state.heaps[HEAP_SMP]!=heaps[HEAP_SMP]) {
+    state.heaps[HEAP_RES] = heaps[HEAP_RES];
+    state.heaps[HEAP_SMP] = heaps[HEAP_SMP];
 
     const uint8_t cnt = (heaps[HEAP_SMP]==nullptr ? 1 : 2);
     if(heaps[HEAP_RES]==nullptr)
@@ -348,23 +348,21 @@ void DxDescriptorArray::bind(ID3D12GraphicsCommandList6& enc, ID3D12DescriptorHe
     }
   }
 
-void DxDescriptorArray::reallocSet(size_t id, uint32_t newRuntimeSz) {
+void DxDescriptorArray::reallocSet(size_t id, size_t newRuntimeSz) {
   auto& device    = *lay.handler->dev.device;
   auto& allocator = lay.handler->dev.descAlloc;
 
   const uint32_t descSize      = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
   const uint32_t smpSize       = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
-  const size_t   heapOffset    = lay.handler->heaps[0].numDesc;
-  const size_t   heapOffsetSmp = lay.handler->heaps[1].numDesc;
+  const size_t   heapOffset    = lay.handler->heaps[HEAP_RES].numDesc;
+  const size_t   heapOffsetSmp = lay.handler->heaps[HEAP_SMP].numDesc;
 
-  size_t lenOld[HEAP_MAX] = {heapOffset, heapOffsetSmp};
-  size_t len   [HEAP_MAX] = {heapOffset, heapOffsetSmp};
+  size_t len[HEAP_MAX] = {heapOffset, heapOffsetSmp};
   for(size_t i=0; i<runtimeArrays.size(); ++i) {
     auto& l       = lay.handler->lay[i];
     auto& prm     = lay.handler->prm[i];
     auto  size    = (i==id ? newRuntimeSz : runtimeArrays[i].size);
-    auto  sizeOld = runtimeArrays[i].size;
 
     if(l.runtimeSized) {
       runtimeArrays[i].heapOffset    = len[HEAP_RES]*descSize;
@@ -374,26 +372,24 @@ void DxDescriptorArray::reallocSet(size_t id, uint32_t newRuntimeSz) {
       runtimeArrays[i].heapOffsetSmp = prm.heapOffsetSmp;
       }
 
-    if(l.cls!=ShaderReflection::Sampler) {
-      len   [HEAP_RES] += size;
-      lenOld[HEAP_RES] += sizeOld;
-      }
-
-    if(l.hasSampler()) {
-      len   [HEAP_SMP] += size;
-      lenOld[HEAP_SMP] += sizeOld;
-      }
+    if(l.cls!=ShaderReflection::Sampler)
+      len[HEAP_RES] += size;
+    if(l.hasSampler())
+      len[HEAP_SMP] += size;
     }
+
+  for(auto& lx:len)
+    lx = ((lx+ALLOC_GRANULARITY-1u) & (~(ALLOC_GRANULARITY-1u)));
 
   Allocation heapDesc, heapSmp;
   try {
-    if((len[0]!=lenOld[HEAP_RES] || heap[HEAP_RES].size==0) && len[HEAP_RES]>0) {
-      heapDesc = allocator.alloc(len[0], false);
+    if(len[HEAP_RES]!=heap[HEAP_RES].size) {
+      heapDesc = allocator.alloc(len[HEAP_RES], false);
       if(heapDesc.page==nullptr)
         throw std::bad_alloc();
       }
-    if((len[1]!=lenOld[1] || heap[1].size==0) && len[1]>0) {
-      heapSmp = allocator.alloc(len[1], true);
+    if(len[HEAP_SMP]!=heap[HEAP_SMP].size) {
+      heapSmp = allocator.alloc(len[HEAP_SMP], true);
       if(heapSmp.page==nullptr)
         throw std::bad_alloc();
       }
@@ -405,9 +401,9 @@ void DxDescriptorArray::reallocSet(size_t id, uint32_t newRuntimeSz) {
     }
 
   if(heapDesc.size>0 || len[HEAP_RES]==0)
-    std::swap(heap[0], heapDesc);
+    std::swap(heap[HEAP_RES], heapDesc);
   if(heapSmp .size>0 || len[HEAP_SMP]==0)
-    std::swap(heap[1], heapSmp);
+    std::swap(heap[HEAP_SMP], heapSmp);
 
   allocator.free(heapDesc);
   allocator.free(heapSmp);
@@ -420,8 +416,8 @@ void DxDescriptorArray::reflushSet() {
   uint32_t descSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
   uint32_t smpSize  = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
-  auto     descPtr  = allocator.handle(heap[0]);
-  auto     smpPtr   = allocator.handle(heap[1]);
+  auto     descPtr  = allocator.handle(heap[HEAP_RES]);
+  auto     smpPtr   = allocator.handle(heap[HEAP_SMP]);
 
   for(size_t id=0; id<lay.handler->lay.size(); ++id) {
     auto&  prm           = lay.handler->prm[id];
@@ -495,8 +491,6 @@ void DxDescriptorArray::placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE
       desc.Texture2D.MipSlice = mipLevel;
       }
 
-    // auto  gpu = val.cpu[prm.heapId];
-    // gpu.ptr += (prm.heapOffset + i*descSize);
     auto gpu = at;
     gpu.ptr += heapOffset;
     device.CreateUnorderedAccessView(t.impl.get(),nullptr,&desc,gpu);

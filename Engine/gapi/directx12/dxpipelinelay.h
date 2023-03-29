@@ -31,12 +31,9 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
     using Binding = ShaderReflection::Binding;
 
     enum {
-      HEAP_RES     = 0,
-      HEAP_SMP     = 1,
-      HEAP_MAX     = 2,
-
-      POOL_SIZE            = 128,
-      BINDLESS_GRANULARITY = 256,
+      HEAP_RES = 0,
+      HEAP_SMP = 1,
+      HEAP_MAX = 2,
       };
 
     struct Param {

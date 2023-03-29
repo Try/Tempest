@@ -51,26 +51,32 @@ DxDescriptorAllocator::DxDescriptorAllocator() {
   }
 
 void DxDescriptorAllocator::setDevice(DxDevice& device) {
-  provider.device = &device;
+  providerRes.device = &device;
+  providerSmp.device = &device;
 
   auto& dx = *device.device.get();
   descSize = dx.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
   smpSize  = dx.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
-  allocator.setDefaultPageSize(2048);
+  allocatorRes.setDefaultPageSize(65535); // 1'000'000 is allowed to preallocate, but 65k is fine
+  allocatorSmp.setDefaultPageSize( 2048);
   }
 
 DxDescriptorAllocator::Allocation DxDescriptorAllocator::alloc(size_t count, bool smp) {
   if(count==0)
     return Allocation();
-  uint32_t id  = (smp ? 1 : 0);
+  uint32_t id        = (smp ? 1 : 0);
+  auto&    allocator = (smp ? allocatorSmp : allocatorRes);
   auto     ret = allocator.alloc(count, 1, id, id, false);
   return ret;
   }
 
 void DxDescriptorAllocator::free(Allocation& page) {
-  if(page.page!=nullptr)
+  if(page.page!=nullptr) {
+    bool  smp       = (page.page->heapId==1);
+    auto& allocator = (smp ? allocatorSmp : allocatorRes);
     allocator.free(page);
+    }
   }
 
 ID3D12DescriptorHeap* DxDescriptorAllocator::heapof(const Allocation& a) {
@@ -78,7 +84,7 @@ ID3D12DescriptorHeap* DxDescriptorAllocator::heapof(const Allocation& a) {
   }
 
 D3D12_CPU_DESCRIPTOR_HANDLE DxDescriptorAllocator::handle(const Allocation& a) {
-  D3D12_CPU_DESCRIPTOR_HANDLE ptr = D3D12_CPU_DESCRIPTOR_HANDLE();
+  D3D12_CPU_DESCRIPTOR_HANDLE ptr = {};
   if(a.page==nullptr)
     return ptr;
 
@@ -92,8 +98,8 @@ D3D12_CPU_DESCRIPTOR_HANDLE DxDescriptorAllocator::handle(const Allocation& a) {
   return ptr;
   }
 
-D3D12_GPU_DESCRIPTOR_HANDLE Tempest::Detail::DxDescriptorAllocator::gpuHandle(const Allocation& a) {
-  D3D12_GPU_DESCRIPTOR_HANDLE ptr = D3D12_GPU_DESCRIPTOR_HANDLE();
+D3D12_GPU_DESCRIPTOR_HANDLE DxDescriptorAllocator::gpuHandle(const Allocation& a) {
+  D3D12_GPU_DESCRIPTOR_HANDLE ptr = {};
   if(a.page==nullptr)
     return ptr;
 

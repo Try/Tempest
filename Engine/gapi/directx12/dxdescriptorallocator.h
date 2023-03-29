@@ -26,7 +26,7 @@ class DxDescriptorAllocator {
       DeviceMemory alloc(size_t size, uint32_t typeId);
       void         free(DeviceMemory m, size_t size, uint32_t typeId);
       };
-    void      setDevice(DxDevice& device);
+    void       setDevice(DxDevice& device);
 
     using Allocation=typename Tempest::Detail::DeviceAllocator<Provider>::Allocation;
 
@@ -38,8 +38,11 @@ class DxDescriptorAllocator {
     D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle(const Allocation& a);
 
   private:
-    Provider                          provider;
-    Detail::DeviceAllocator<Provider> allocator{provider};
+    Provider                          providerRes;
+    Detail::DeviceAllocator<Provider> allocatorRes{providerRes};
+
+    Provider                          providerSmp;
+    Detail::DeviceAllocator<Provider> allocatorSmp{providerSmp};
 
     uint32_t                          descSize = 1;
     uint32_t                          smpSize  = 1;

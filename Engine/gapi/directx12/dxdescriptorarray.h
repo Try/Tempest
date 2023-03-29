@@ -19,6 +19,17 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
     DxDescriptorArray(DxDescriptorArray&& other);
     ~DxDescriptorArray();
 
+    enum {
+      HEAP_RES          = DxPipelineLay::HEAP_RES,
+      HEAP_SMP          = DxPipelineLay::HEAP_SMP,
+      HEAP_MAX          = DxPipelineLay::HEAP_MAX,
+      ALLOC_GRANULARITY = 4,
+      };
+
+    struct CbState {
+      ID3D12DescriptorHeap* heaps[HEAP_MAX] = {};
+      };
+
     void set    (size_t id, AbstractGraphicsApi::Texture *tex, const Sampler& smp, uint32_t mipLevel) override;
     void set    (size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset) override;
     void set    (size_t id, const Sampler& smp) override;
@@ -29,19 +40,14 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
 
     void ssboBarriers(Detail::ResourceState& res, PipelineStage st) override;
 
-    void bind(ID3D12GraphicsCommandList6& enc, ID3D12DescriptorHeap** currentHeaps, bool isCompute);
+    void bind(ID3D12GraphicsCommandList6& enc, CbState& state, bool isCompute);
 
     DSharedPtr<DxPipelineLay*> lay;
 
   private:
-    enum {
-      HEAP_RES = DxPipelineLay::HEAP_RES,
-      HEAP_SMP = DxPipelineLay::HEAP_SMP,
-      HEAP_MAX = DxPipelineLay::HEAP_MAX,
-      };
     using Allocation = DxDescriptorAllocator::Allocation;
 
-    void reallocSet(size_t id, uint32_t newRuntimeSz);
+    void reallocSet(size_t id, size_t newRuntimeSz);
     void reflushSet();
 
     void placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE_TYPE rgn, const D3D12_CPU_DESCRIPTOR_HANDLE& at,

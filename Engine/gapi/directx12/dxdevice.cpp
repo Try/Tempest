@@ -190,6 +190,29 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
       prop.type = arch.UMA ? DeviceType::Integrated : DeviceType::Discrete;
     }
 
+  D3D12_FEATURE_DATA_D3D12_OPTIONS feature0 = {};
+  if(SUCCEEDED(dev.CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &feature0, sizeof(feature0)))) {
+    // feature0.ResourceHeapTier; // TODO: check use cases
+
+    // TODO: expose per-stage limits
+    uint32_t maxSamplers  = 16;
+    uint32_t maxResources = 16;
+    switch(feature0.ResourceBindingTier) {
+      case D3D12_RESOURCE_BINDING_TIER_1:
+        maxSamplers  = 16;
+        maxResources = 8;
+        break;
+      case D3D12_RESOURCE_BINDING_TIER_2:
+        maxSamplers  = 2048;
+        maxResources = 64;
+        break;
+      case D3D12_RESOURCE_BINDING_TIER_3:
+        maxSamplers  = 2048;
+        maxResources = -1;
+        break;
+      }
+    }
+
   D3D12_FEATURE_DATA_D3D12_OPTIONS5 feature5 = {};
   if(SUCCEEDED(dev.CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &feature5, sizeof(feature5)))) {
     prop.raytracing.rayQuery = (feature5.RaytracingTier >= D3D12_RAYTRACING_TIER_1_1);

@@ -6,6 +6,7 @@
 
 #include "comptr.h"
 #include "gapi/resourcestate.h"
+#include "dxdescriptorarray.h"
 #include "dxfbolayout.h"
 #include "dxpipelinelay.h"
 
@@ -91,8 +92,8 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     DxFboLayout                        fboLayout;
 
-    ID3D12DescriptorHeap*              currentHeaps[DxPipelineLay::HEAP_MAX] = {};
     AbstractGraphicsApi::Desc*         curUniforms  = nullptr;
+    DxDescriptorArray::CbState         curHeaps;
 
     uint32_t                           pushBaseInstanceId = -1;
 
