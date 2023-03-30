@@ -367,9 +367,12 @@ void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
   VPipeline& px   = reinterpret_cast<VPipeline&>(p);
   curDrawPipeline = &px;
   vboStride       = px.defaultStride;
+  pipelineLayout  = px.pipelineLayout;
 
-  VkPipeline v    = device.props.hasDynRendering ? px.instance(passDyn,vboStride) : px.instance(pass,vboStride);
-  vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v);
+  VkPipeline v    = device.props.hasDynRendering ? px.instance(passDyn,pipelineLayout,vboStride)
+                                                 : px.instance(pass,   pipelineLayout,vboStride);
+  if(!px.isRuntimeSized())
+    vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v);
   }
 
 void VCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) {
@@ -383,16 +386,29 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraph
   VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
   curUniforms = &ux;
   ux.ssboBarriers(resState,PipelineStage::S_Graphics);
+
+  const auto lay = (ux.pipelineLayout() ? ux.pipelineLayout() : px.pipelineLayout);
+  if(T_UNLIKELY(pipelineLayout!=lay)) {
+    pipelineLayout = lay;
+
+    auto&      px = *curDrawPipeline;
+    VkPipeline v  = device.props.hasDynRendering ? px.instance(passDyn,pipelineLayout,vboStride)
+                                                 : px.instance(pass,   pipelineLayout,vboStride);
+    vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v);
+    }
+
   vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          px.pipelineLayout,0,
-                          1,&ux.impl,
+                          pipelineLayout,0,1,&ux.impl,
                           0,nullptr);
   }
 
 void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
   state = Compute;
-  VCompPipeline& px = reinterpret_cast<VCompPipeline&>(p);
-  vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,px.impl);
+  auto& px = reinterpret_cast<VCompPipeline&>(p);
+
+  pipelineLayout = px.pipelineLayout;
+  if(!px.isRuntimeSized())
+    vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,px.impl);
   }
 
 void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
@@ -411,9 +427,18 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractG
   VCompPipeline&    px=reinterpret_cast<VCompPipeline&>(p);
   VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
   curUniforms = &ux;
+  // ssboBarriers are per-dispatch
+
+  const auto lay = (ux.pipelineLayout() ? ux.pipelineLayout() : px.pipelineLayout);
+  if(T_UNLIKELY(pipelineLayout!=lay)) {
+    pipelineLayout = lay;
+    auto pso = px.instance(pipelineLayout);
+    // no need to restore old pso - it was also runtime-based
+    vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,pso);
+    }
+
   vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_COMPUTE,
-                          px.pipelineLayout,0,
-                          1,&ux.impl,
+                          pipelineLayout,0,1,&ux.impl,
                           0,nullptr);
   }
 
@@ -447,7 +472,8 @@ void VCommandBuffer::bindVbo(const VBuffer& vbo, size_t stride) {
     if(T_UNLIKELY(vboStride!=stride)) {
       auto& px = *curDrawPipeline;
       vboStride = stride;
-      VkPipeline v  = device.props.hasDynRendering ? px.instance(passDyn,vboStride) : px.instance(pass,vboStride);
+      VkPipeline v  = device.props.hasDynRendering ? px.instance(passDyn,pipelineLayout,vboStride)
+                                                   : px.instance(pass,   pipelineLayout,vboStride);
       vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v);
       }
     VkBuffer     buffers[1] = {vbo.impl};

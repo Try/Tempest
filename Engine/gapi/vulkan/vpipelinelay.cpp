@@ -1,9 +1,9 @@
 #if defined(TEMPEST_BUILD_VULKAN)
-
 #include "vpipelinelay.h"
 
 #include <Tempest/PipelineLayout>
 #include "vdevice.h"
+#include "vpipeline.h"
 #include "gapi/shaderreflection.h"
 #include "utility/smallarray.h"
 
@@ -32,7 +32,12 @@ VPipelineLay::VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Bin
       }
     }
 
-  impl = create(MAX_BINDLESS);
+  // TODO: avoid creating dummy impl for bindless
+  std::vector<uint32_t> runtimeArrays;
+  if(runtimeSized)
+    runtimeArrays.resize(lay.size());
+  impl = createDescLayout(runtimeArrays);
+
   if(needMsHelper) {
     try {
       msHelper = createMsHelper();
@@ -50,18 +55,56 @@ VPipelineLay::~VPipelineLay() {
   if(msHelper!=VK_NULL_HANDLE)
     vkDestroyDescriptorSetLayout(dev.device.impl,msHelper,nullptr);
   vkDestroyDescriptorSetLayout(dev.device.impl,impl,nullptr);
+
+  for(auto& i:dedicatedLay) {
+    vkDestroyPipelineLayout(dev.device.impl,i.pLay,nullptr);
+    vkDestroyDescriptorSetLayout(dev.device.impl,i.dLay,nullptr);
+    }
   }
 
 size_t VPipelineLay::descriptorsCount() {
   return lay.size();
   }
 
-VkDescriptorSetLayout VPipelineLay::create(uint32_t runtimeArraySz) const {
+VPipelineLay::DedicatedLay VPipelineLay::create(const std::vector<uint32_t>& runtimeArrays) {
+  std::lock_guard<Detail::SpinLock> guard(syncLay);
+
+  for(auto& i:dedicatedLay) {
+    if(i.runtimeArrays==runtimeArrays)
+      return DedicatedLay(i);
+    }
+
+  DLay ret;
+  ret.runtimeArrays = runtimeArrays;
+
+  ret.dLay = createDescLayout(runtimeArrays);
+  if(ret.dLay==VK_NULL_HANDLE) {
+    throw std::bad_alloc();
+    }
+
+  ret.pLay = VPipeline::initLayout(dev, *this, ret.dLay, false);
+  if(ret.pLay==VK_NULL_HANDLE) {
+    vkDestroyDescriptorSetLayout(dev.device.impl,ret.dLay,nullptr);
+    throw std::bad_alloc();
+    }
+
+  try {
+    dedicatedLay.push_back(ret);
+    }
+  catch (...) {
+    vkDestroyPipelineLayout(dev.device.impl,ret.pLay,nullptr);
+    vkDestroyDescriptorSetLayout(dev.device.impl,ret.dLay,nullptr);
+    }
+
+  return ret;
+  }
+
+VkDescriptorSetLayout VPipelineLay::createDescLayout(const std::vector<uint32_t>& runtimeArrays) const {
   SmallArray<VkDescriptorSetLayoutBinding,32> bind(lay.size());
   SmallArray<VkDescriptorBindingFlags,32>     flg (lay.size());
 
   uint32_t count = 0;
-  for(size_t i=0;i<lay.size();++i) {
+  for(size_t i=0; i<lay.size(); ++i) {
     auto& b = bind[count];
     auto& e = lay[i];
 
@@ -69,10 +112,11 @@ VkDescriptorSetLayout VPipelineLay::create(uint32_t runtimeArraySz) const {
       continue;
 
     if(e.runtimeSized)
-      flg[count] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT; else
+      flg[count] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT; else
       flg[count] = 0;
+
     b.binding         = e.layout;
-    b.descriptorCount = e.runtimeSized ? runtimeArraySz : e.arraySize;
+    b.descriptorCount = e.runtimeSized ? runtimeArrays[i] : e.arraySize;
     b.descriptorType  = nativeFormat(e.cls);
     b.stageFlags      = nativeFormat(e.stage);
     if((b.stageFlags&VK_SHADER_STAGE_MESH_BIT_EXT)==VK_SHADER_STAGE_MESH_BIT_EXT && dev.props.meshlets.meshShaderEmulated) {

@@ -27,24 +27,28 @@ class VPipelineLay : public AbstractGraphicsApi::PipelineLay {
     VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt);
     ~VPipelineLay();
 
-    size_t                descriptorsCount() override;
-    VkDescriptorSetLayout create(uint32_t runtimeArraySz) const;
-    VkDescriptorSetLayout createMsHelper() const;
-
     using Binding = ShaderReflection::Binding;
 
-    VDevice&                      dev;
-    VkDescriptorSetLayout         impl     = VK_NULL_HANDLE;
-    VkDescriptorSetLayout         msHelper = VK_NULL_HANDLE;
+    struct DedicatedLay {
+      VkDescriptorSetLayout dLay = VK_NULL_HANDLE;
+      VkPipelineLayout      pLay = VK_NULL_HANDLE;
+      };
 
-    std::vector<Binding>          lay;
-    ShaderReflection::PushBlock   pb;
-    bool                          runtimeSized = false;
+    size_t                descriptorsCount() override;
+    DedicatedLay          create(const std::vector<uint32_t>& runtimeArrays);
+
+    VDevice&                    dev;
+    VkDescriptorSetLayout       impl     = VK_NULL_HANDLE;
+    VkDescriptorSetLayout       msHelper = VK_NULL_HANDLE;
+
+    std::vector<Binding>        lay;
+    ShaderReflection::PushBlock pb;
+    bool                        runtimeSized = false;
 
   private:
     enum {
       POOL_SIZE    = 512,
-      MAX_BINDLESS = 4096,
+      // MAX_BINDLESS = 4096,
       };
 
     struct Pool {
@@ -52,10 +56,20 @@ class VPipelineLay : public AbstractGraphicsApi::PipelineLay {
       uint16_t         freeCount = POOL_SIZE;
       };
 
+    struct DLay : DedicatedLay {
+      std::vector<uint32_t> runtimeArrays;
+      };
+
     Detail::SpinLock sync;
     std::list<Pool>  pool;
 
-    void adjustSsboBindings();
+    Detail::SpinLock  syncLay;
+    std::vector<DLay> dedicatedLay;
+
+    VkDescriptorSetLayout createDescLayout(const std::vector<uint32_t>& runtimeArrays) const;
+    VkDescriptorSetLayout createMsHelper() const;
+
+    void                  adjustSsboBindings();
 
   friend class VDescriptorArray;
   };

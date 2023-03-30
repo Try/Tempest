@@ -16,9 +16,21 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-bool VPipeline::InstDr::isCompatible(const VkPipelineRenderingCreateInfoKHR& dr, size_t stride) const {
+bool VPipeline::InstRp::isCompatible(const std::shared_ptr<VFramebufferMap::RenderPass>& dr, VkPipelineLayout pLay, size_t stride) const {
   if(this->stride!=stride)
     return false;
+  if(this->pLay!=pLay)
+    return false;
+
+  return lay->isCompatible(*dr);
+  }
+
+bool VPipeline::InstDr::isCompatible(const VkPipelineRenderingCreateInfoKHR& dr, VkPipelineLayout pLay, size_t stride) const {
+  if(this->stride!=stride)
+    return false;
+  if(this->pLay!=pLay)
+    return false;
+
   if(lay.viewMask!=dr.viewMask)
     return false;
   if(lay.colorAttachmentCount!=dr.colorAttachmentCount)
@@ -38,7 +50,7 @@ VPipeline::VPipeline(){
 VPipeline::VPipeline(VDevice& device, const RenderState& st, Topology tp,
                      const VPipelineLay& ulay,
                      const VShader** sh, size_t count)
-  : device(device.device.impl), st(st), tp(tp)  {
+  : device(device.device.impl), st(st), tp(tp), runtimeSized(ulay.runtimeSized)  {
   try {
     for(size_t i=0; i<count; ++i)
       if(sh[i]!=nullptr)
@@ -56,6 +68,7 @@ VPipeline::VPipeline(VDevice& device, const RenderState& st, Topology tp,
 
     if(ulay.pb.size>0) {
       pushStageFlags = nativeFormat(ulay.pb.stage);
+      pushSize       = uint32_t(ulay.pb.size);
       }
 
     if(auto task=findShader(ShaderReflection::Stage::Task)) {
@@ -65,13 +78,13 @@ VPipeline::VPipeline(VDevice& device, const RenderState& st, Topology tp,
       wgSize = mesh->comp.wgSize;
       }
 
-    pipelineLayout = initLayout(device,ulay,pushStageFlags,pushSize,false);
+    pipelineLayout = initLayout(device,ulay,false);
 
     if(auto ms=findShader(ShaderReflection::Stage::Mesh)) {
       if(device.props.meshlets.meshShaderEmulated) {
         device.allocMeshletHelper();
 
-        pipelineLayoutMs = initLayout(device,ulay,pushStageFlags,pushSize,true);
+        pipelineLayoutMs = initLayout(device,ulay,true);
 
         VkComputePipelineCreateInfo info = {};
         info.sType        = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
@@ -99,18 +112,18 @@ VPipeline::~VPipeline() {
   cleanup();
   }
 
-VkPipeline VPipeline::instance(const std::shared_ptr<VFramebufferMap::RenderPass>& pass, size_t stride) {
+VkPipeline VPipeline::instance(const std::shared_ptr<VFramebufferMap::RenderPass>& pass, VkPipelineLayout pLay, size_t stride) {
   std::lock_guard<SpinLock> guard(sync);
 
   for(auto& i:instRp)
-    if(i.stride!=stride || i.lay->isCompatible(*pass))
+    if(i.isCompatible(pass,pLay,stride))
       return i.val;
-  VkPipeline val=VK_NULL_HANDLE;
+  VkPipeline val = VK_NULL_HANDLE;
   try {
     val = initGraphicsPipeline(device,pipelineLayout,pass.get(),nullptr,st,
                                decl.get(),declSize,stride,
                                tp,modules);
-    instRp.emplace_back(pass,stride,val);
+    instRp.emplace_back(pass,pLay,stride,val);
     }
   catch(...) {
     if(val!=VK_NULL_HANDLE)
@@ -120,18 +133,18 @@ VkPipeline VPipeline::instance(const std::shared_ptr<VFramebufferMap::RenderPass
   return instRp.back().val;
   }
 
-VkPipeline VPipeline::instance(const VkPipelineRenderingCreateInfoKHR& info, size_t stride) {
+VkPipeline VPipeline::instance(const VkPipelineRenderingCreateInfoKHR& info, VkPipelineLayout pLay, size_t stride) {
   std::lock_guard<SpinLock> guard(sync);
 
   for(auto& i:instDr)
-    if(i.isCompatible(info,stride))
+    if(i.isCompatible(info,pLay,stride))
       return i.val;
-  VkPipeline val=VK_NULL_HANDLE;
+  VkPipeline val = VK_NULL_HANDLE;
   try {
-    val = initGraphicsPipeline(device,pipelineLayout,nullptr,&info,st,
+    val = initGraphicsPipeline(device,pLay,nullptr,&info,st,
                                decl.get(),declSize,stride,
                                tp,modules);
-    instDr.emplace_back(info,stride,val);
+    instDr.emplace_back(info,pLay,stride,val);
     }
   catch(...) {
     if(val!=VK_NULL_HANDLE)
@@ -175,12 +188,15 @@ void VPipeline::cleanup() {
     vkDestroyPipeline(device,i.val,nullptr);
   }
 
+VkPipelineLayout VPipeline::initLayout(VDevice& dev, const VPipelineLay& uboLay, bool isMeshCompPass) {
+  return initLayout(dev, uboLay, uboLay.impl, isMeshCompPass);
+  }
+
 VkPipelineLayout VPipeline::initLayout(VDevice& dev, const VPipelineLay& uboLay,
-                                       VkShaderStageFlags pushStageFlags, uint32_t& pushSize,
-                                       bool isMeshCompPass) {
+                                       VkDescriptorSetLayout lay, bool isMeshCompPass) {
   VkPushConstantRange push = {};
 
-  VkDescriptorSetLayout pSetLayouts[4] = {uboLay.impl};
+  VkDescriptorSetLayout pSetLayouts[4] = {lay};
 
   VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
   pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -200,8 +216,7 @@ VkPipelineLayout VPipeline::initLayout(VDevice& dev, const VPipelineLay& uboLay,
     }
 
   if(uboLay.pb.size>0) {
-    pushStageFlags = nativeFormat(uboLay.pb.stage);
-
+    VkShaderStageFlags pushStageFlags = nativeFormat(uboLay.pb.stage);
     if(uboLay.msHelper!=VK_NULL_HANDLE) {
       if(isMeshCompPass) {
         if((pushStageFlags&VK_SHADER_STAGE_MESH_BIT_EXT)==VK_SHADER_STAGE_MESH_BIT_EXT) {
@@ -215,8 +230,6 @@ VkPipelineLayout VPipeline::initLayout(VDevice& dev, const VPipelineLay& uboLay,
     push.stageFlags = pushStageFlags;
     push.offset     = 0;
     push.size       = uint32_t(uboLay.pb.size);
-
-    pushSize        = push.size;
 
     pipelineLayoutInfo.pPushConstantRanges    = &push;
     pipelineLayoutInfo.pushConstantRangeCount = 1;
@@ -386,7 +399,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   pipelineInfo.pDynamicState       = &dynamic;
   pipelineInfo.layout              = layout;
   pipelineInfo.subpass             = 0;
-  pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
+  pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE; // TODO: dummy default pso
 
   if(rpLay!=nullptr)
     pipelineInfo.renderPass = rpLay->pass; else
@@ -403,14 +416,18 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   }
 
 
-VCompPipeline::VCompPipeline() {
+bool VCompPipeline::Inst::isCompatible(VkDescriptorSetLayout lay) const {
+  return dLay==lay;
   }
 
+
 VCompPipeline::VCompPipeline(VDevice& dev, const VPipelineLay& ulay, const VShader& comp)
-  :device(dev.device.impl) {
-  VkShaderStageFlags pushStageFlags = 0;
-  pipelineLayout = VPipeline::initLayout(dev,ulay,pushStageFlags,pushSize,false);
-  wgSize         = comp.comp.wgSize;
+  :dev(dev), device(dev.device.impl), wgSize(comp.comp.wgSize), runtimeSized(ulay.runtimeSized)  {
+  pipelineLayout = VPipeline::initLayout(dev,ulay,false);
+  pushSize       = uint32_t(ulay.pb.size);
+
+  shader = Detail::DSharedPtr<const VShader*>{&comp};
+  lay    = Detail::DSharedPtr<const VPipelineLay*>{&ulay};
 
   try {
     VkComputePipelineCreateInfo info = {};
@@ -420,6 +437,8 @@ VCompPipeline::VCompPipeline(VDevice& dev, const VPipelineLay& ulay, const VShad
     info.stage.module = comp.impl;
     info.stage.pName  = "main";
     info.layout       = pipelineLayout;
+    if(ulay.runtimeSized)
+      info.flags = VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT;
     vkAssert(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &info, nullptr, &impl));
     }
   catch(...) {
@@ -433,10 +452,43 @@ VCompPipeline::~VCompPipeline() {
     return;
   vkDestroyPipelineLayout(device,pipelineLayout,nullptr);
   vkDestroyPipeline(device,impl,nullptr);
+  for(auto& i:inst)
+    vkDestroyPipeline(device,i.val,nullptr);
   }
 
 IVec3 VCompPipeline::workGroupSize() const {
   return wgSize;
+  }
+
+VkPipeline VCompPipeline::instance(VkPipelineLayout pLay) {
+  std::lock_guard<SpinLock> guard(sync);
+
+  for(auto& i:inst)
+    if(i.isCompatible(pLay))
+      return i.val;
+
+  VkPipeline val = VK_NULL_HANDLE;
+  try {
+    VkComputePipelineCreateInfo info = {};
+    info.sType              = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    info.stage.sType        = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    info.stage.stage        = VK_SHADER_STAGE_COMPUTE_BIT;
+    info.stage.module       = shader.handler->impl;
+    info.stage.pName        = "main";
+    info.layout             = pLay;
+    info.flags              = VK_PIPELINE_CREATE_DERIVATIVE_BIT;
+    info.basePipelineHandle = impl;
+    info.basePipelineIndex  = -1;
+    vkAssert(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &info, nullptr, &val));
+
+    inst.emplace_back(pLay,val);
+    }
+  catch(...) {
+    if(val!=VK_NULL_HANDLE)
+      vkDestroyPipeline(device,val,nullptr);
+    throw;
+    }
+  return inst.back().val;
   }
 
 #endif

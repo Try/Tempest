@@ -129,6 +129,8 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     AbstractGraphicsApi::Desc*              curUniforms     = nullptr;
     VkBuffer                                curVbo          = VK_NULL_HANDLE;
     size_t                                  vboStride       = 0;
+    VkPipelineLayout                        pipelineLayout  = VK_NULL_HANDLE;
+
     size_t                                  meshIndirectId  = 0;
   };
 

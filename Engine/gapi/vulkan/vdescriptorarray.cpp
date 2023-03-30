@@ -8,6 +8,7 @@
 #include "vdescriptorarray.h"
 #include "vtexture.h"
 #include "vaccelerationstructure.h"
+
 #include "utility/smallarray.h"
 
 using namespace Tempest;
@@ -23,9 +24,15 @@ static VkImageLayout toWriteLayout(VTexture& tex) {
 
 VDescriptorArray::VDescriptorArray(VDevice& device, VPipelineLay& vlay)
   :device(device), lay(&vlay), uav(vlay.lay.size()) {
-  if(!vlay.runtimeSized) {
+  if(vlay.runtimeSized) {
+    runtimeArrays.resize(vlay.lay.size());
+    for(size_t i=0; i<vlay.lay.size(); ++i) {
+      auto& lx = vlay.lay[i];
+      runtimeArrays[i] = lx.arraySize;
+      }
+    } else {
     std::lock_guard<Detail::SpinLock> guard(vlay.sync);
-    for(auto& i:vlay.pool){
+    for(auto& i:vlay.pool) {
       if(i.freeCount==0)
         continue;
       impl = allocDescSet(i.impl,lay.handler->impl);
@@ -38,7 +45,7 @@ VDescriptorArray::VDescriptorArray(VDevice& device, VPipelineLay& vlay)
 
     vlay.pool.emplace_back();
     auto& b = vlay.pool.back();
-    b.impl  = allocPool(vlay,VPipelineLay::POOL_SIZE,runtimeArraySz);
+    b.impl  = allocPool(vlay);
     impl    = allocDescSet(b.impl,lay.handler->impl);
     if(impl==VK_NULL_HANDLE)
       throw std::bad_alloc();
@@ -55,7 +62,6 @@ VDescriptorArray::~VDescriptorArray() {
   if(dedicatedPool!=VK_NULL_HANDLE) {
     vkFreeDescriptorSets(dev,dedicatedPool,1,&impl);
     vkDestroyDescriptorPool(dev,dedicatedPool,nullptr);
-    vkDestroyDescriptorSetLayout(dev,dedicatedLayout,nullptr);
     } else {
     Detail::VPipelineLay* layImpl = lay.handler;
     std::lock_guard<Detail::SpinLock> guard(layImpl->sync);
@@ -65,9 +71,12 @@ VDescriptorArray::~VDescriptorArray() {
     }
   }
 
-VkDescriptorPool VDescriptorArray::allocPool(const VPipelineLay& lay, size_t size, uint32_t runtimeArraySz) {
+VkDescriptorPool VDescriptorArray::allocPool(const VPipelineLay& lay) {
   VkDescriptorPoolSize poolSize[int(ShaderReflection::Class::Count)] = {};
   size_t               pSize=0;
+  uint32_t             maxSets = VPipelineLay::POOL_SIZE;
+  if(lay.runtimeSized)
+    maxSets = 1;
 
   for(size_t i=0;i<lay.lay.size();++i) {
     if(lay.lay[i].stage==Tempest::Detail::ShaderReflection::None)
@@ -75,7 +84,9 @@ VkDescriptorPool VDescriptorArray::allocPool(const VPipelineLay& lay, size_t siz
     auto     cls = lay.lay[i].cls;
     uint32_t cnt = lay.lay[i].arraySize;
     if(lay.lay[i].runtimeSized)
-      cnt = runtimeArraySz;
+      cnt = runtimeArrays[i];
+    if(cnt==0)
+      continue;
     switch(cls) {
       case ShaderReflection::Ubo:     addPoolSize(poolSize,pSize,cnt,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);             break;
       case ShaderReflection::Texture: addPoolSize(poolSize,pSize,cnt,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);     break;
@@ -92,11 +103,11 @@ VkDescriptorPool VDescriptorArray::allocPool(const VPipelineLay& lay, size_t siz
     }
 
   for(auto& i:poolSize)
-    i.descriptorCount*=uint32_t(size);
+    i.descriptorCount *= maxSets;
 
   VkDescriptorPoolCreateInfo poolInfo = {};
   poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-  poolInfo.maxSets       = uint32_t(size);
+  poolInfo.maxSets       = maxSets;
   poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
   poolInfo.poolSizeCount = uint32_t(pSize);
   poolInfo.pPoolSizes    = poolSize;
@@ -127,8 +138,9 @@ VkDescriptorSet VDescriptorArray::allocDescSet(VkDescriptorPool pool, VkDescript
 void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* t, const Sampler& smp, uint32_t mipLevel) {
   VkDevice  dev = device.device.impl;
   VTexture& tex = *reinterpret_cast<VTexture*>(t);
-  if(impl==VK_NULL_HANDLE)
-    reallocSet(runtimeArraySz);
+  if(impl==VK_NULL_HANDLE) {
+    reallocSet(id, 0);
+    }
 
   VkDescriptorImageInfo imageInfo = {};
   if(lay.handler->lay[id].cls==ShaderReflection::Texture) {
@@ -160,8 +172,9 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer* b, s
   VkDevice dev  = device.device.impl;
   VBuffer* buf  = reinterpret_cast<VBuffer*>(b);
   auto&    slot = lay.handler->lay[id];
-  if(impl==VK_NULL_HANDLE)
-    reallocSet(runtimeArraySz);
+  if(impl==VK_NULL_HANDLE) {
+    reallocSet(id, 0);
+    }
 
   VkDescriptorBufferInfo bufferInfo = {};
   bufferInfo.buffer = buf->impl;
@@ -226,11 +239,17 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t c
   VkDevice dev = device.device.impl;
   auto&    l   = lay.handler->lay[id];
   if(l.runtimeSized) {
-    constexpr uint32_t granularity = VPipelineLay::MAX_BINDLESS;
-    uint32_t rSz = ((cnt+granularity-1u) & (~(granularity-1u)));
-    if(runtimeArraySz<rSz) {
-      reallocSet(rSz);
-      runtimeArraySz = rSz;
+    const uint32_t rSz = ((cnt+ALLOC_GRANULARITY-1u) & (~(ALLOC_GRANULARITY-1u)));
+    if(runtimeArrays[id]!=rSz) {
+      auto oldSz = runtimeArrays[id];
+      try {
+        runtimeArrays[id] = rSz;
+        reallocSet(id, oldSz);
+        }
+      catch(...) {
+        runtimeArrays[id] = oldSz;
+        throw;
+        }
       }
     }
 
@@ -260,11 +279,17 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** b, size_t cn
   VkDevice dev = device.device.impl;
   auto&    l   = lay.handler->lay[id];
   if(l.runtimeSized) {
-    constexpr uint32_t granularity = VPipelineLay::MAX_BINDLESS;
-    uint32_t rSz = ((cnt+granularity-1u) & (~(granularity-1u)));
-    if(runtimeArraySz!=rSz) {
-      reallocSet(rSz);
-      runtimeArraySz = rSz;
+    const uint32_t rSz = ((cnt+ALLOC_GRANULARITY-1u) & (~(ALLOC_GRANULARITY-1u)));
+    if(runtimeArrays[id]!=rSz) {
+      auto oldSz = runtimeArrays[id];
+      try {
+        runtimeArrays[id] = rSz;
+        reallocSet(id, oldSz);
+        }
+      catch(...) {
+        runtimeArrays[id] = oldSz;
+        throw;
+        }
       }
     }
 
@@ -319,6 +344,10 @@ void VDescriptorArray::ssboBarriers(ResourceState& res, PipelineStage st) {
   res.onUavUsage(uavUsage,st);
   }
 
+bool VDescriptorArray::isRuntimeSized() const {
+  return runtimeArrays.size()>0;
+  }
+
 void VDescriptorArray::addPoolSize(VkDescriptorPoolSize *p, size_t &sz, uint32_t cnt, VkDescriptorType elt) {
   for(size_t i=0;i<sz;++i){
     if(p[i].type==elt) {
@@ -331,32 +360,30 @@ void VDescriptorArray::addPoolSize(VkDescriptorPoolSize *p, size_t &sz, uint32_t
   sz++;
   }
 
-void VDescriptorArray::reallocSet(uint32_t newRuntimeSz) {
+void VDescriptorArray::reallocSet(size_t id, uint32_t oldRuntimeSz) {
   auto  dev      = device.device.impl;
   auto& lay      = *this->lay.handler;
-  auto  prevLay  = dedicatedLayout;
   auto  prevPool = dedicatedPool;
   auto  prevDesc = impl;
 
-  dedicatedLayout = lay.create(newRuntimeSz);
-  if(dedicatedLayout==VK_NULL_HANDLE) {
-    dedicatedLayout = prevLay;
-    throw std::bad_alloc();
-    }
-  dedicatedPool = allocPool(lay,1,newRuntimeSz);
+  auto lx = lay.create(runtimeArrays);
+
+  dedicatedPool = allocPool(lay);
   if(dedicatedPool==VK_NULL_HANDLE) {
-    dedicatedLayout = prevLay;
-    dedicatedPool   = prevPool;
-    throw std::bad_alloc();
-    }
-  impl = allocDescSet(dedicatedPool,dedicatedLayout);
-  if(impl==VK_NULL_HANDLE) {
-    dedicatedLayout = prevLay;
-    dedicatedPool   = prevPool;
-    impl            = prevDesc;
+    dedicatedPool = prevPool;
     throw std::bad_alloc();
     }
 
+  impl = allocDescSet(dedicatedPool,lx.dLay);
+  if(impl==VK_NULL_HANDLE) {
+    vkDestroyDescriptorPool(dev,dedicatedPool,nullptr);
+
+    dedicatedPool    = prevPool;
+    impl             = prevDesc;
+    throw std::bad_alloc();
+    }
+
+  dedicatedLayout = lx.pLay;
   if(prevDesc==VK_NULL_HANDLE)
     return;
 
@@ -375,7 +402,10 @@ void VDescriptorArray::reallocSet(uint32_t newRuntimeSz) {
     cx.dstBinding      = uint32_t(i);
     cx.dstArrayElement = 0;
 
-    cx.descriptorCount = lx.runtimeSized ? runtimeArraySz : lx.arraySize;
+    cx.descriptorCount = lx.runtimeSized ? runtimeArrays[i] : lx.arraySize;
+    if(i==id)
+      cx.descriptorCount = oldRuntimeSz;
+
     if(cx.descriptorCount>0)
       ++cnt;
     }
@@ -385,8 +415,6 @@ void VDescriptorArray::reallocSet(uint32_t newRuntimeSz) {
     vkFreeDescriptorSets(dev,prevPool,1,&prevDesc);
   if(prevPool!=VK_NULL_HANDLE)
     vkDestroyDescriptorPool(dev,prevPool,nullptr);
-  if(prevLay!=VK_NULL_HANDLE)
-    vkDestroyDescriptorSetLayout(dev,prevLay,nullptr);
   }
 
 #endif
