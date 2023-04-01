@@ -404,7 +404,7 @@ void VDescriptorArray::reallocSet(size_t id, uint32_t oldRuntimeSz) {
 
     cx.descriptorCount = lx.runtimeSized ? runtimeArrays[i] : lx.arraySize;
     if(i==id)
-      cx.descriptorCount = oldRuntimeSz;
+      cx.descriptorCount = std::min(oldRuntimeSz, cx.descriptorCount);
 
     if(cx.descriptorCount>0)
       ++cnt;
