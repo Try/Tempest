@@ -49,3 +49,49 @@ sync.wait();
 auto pm = device.readPixels(tex);
 pm.save(outImg);
 ```
+
+### Ecosystem
+During development various issues of Vulkan stack been found, reported and some were fixed. 
+
+#### Contribution 
+* - [x] State tracking of VkCopyDescriptorSet for KHR-acceleration-structure  
+https://github.com/KhronosGroup/Vulkan-ValidationLayers/pull/4219
+
+* - [x] HLSL: Add mesh shader support  
+https://github.com/KhronosGroup/SPIRV-Cross/pull/2052
+
+* - [x] HLSL: Add task(amplification) shader support  
+https://github.com/KhronosGroup/SPIRV-Cross/pull/2124
+
+* - [x] Mesh shader: fix implicit index-array size calculation for lines and triangles  
+https://github.com/KhronosGroup/glslang/pull/3050
+
+* - [ ] Fix crash in HLSL frontend  
+https://github.com/KhronosGroup/glslang/pull/2916
+
+#### Issues
+
+* - [x] [HLSL] SPIRV_Cross_VertexInfo is not relieble  
+https://github.com/KhronosGroup/SPIRV-Cross/issues/2032
+
+* - [x] MSL: invalid codegen, when using rayquery  
+https://github.com/KhronosGroup/SPIRV-Cross/issues/1910
+
+* - [x] HLSL: link error: Signatures between stages are incompatible  
+https://github.com/KhronosGroup/SPIRV-Cross/issues/1691
+
+* - [x] HLSL: error X4503: output TEXCOORD2 used more than once  
+https://github.com/KhronosGroup/SPIRV-Cross/issues/1645
+
+* - [ ] MSL: RayQuery implementation is incomplete  
+https://github.com/KhronosGroup/SPIRV-Cross/issues/2115
+
+* - [ ] SPIR-V -> HLSL : cross compiling bindings overlap  
+https://github.com/KhronosGroup/SPIRV-Cross/issues/2064
+
+* - [ ] Component swizzling of gl_MeshVerticesEXT[].gl_Position, produces invalid code  
+https://github.com/KhronosGroup/glslang/issues/3058
+
+* - [ ] HLSL: crash, while compiling HULL shader  
+https://github.com/KhronosGroup/glslang/issues/2914
+
