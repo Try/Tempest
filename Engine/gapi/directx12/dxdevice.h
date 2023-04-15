@@ -93,6 +93,14 @@ inline DXGI_FORMAT nativeFormat(TextureFormat f) {
       return DXGI_FORMAT_R32G32B32_FLOAT;
     case TextureFormat::RGBA32F:
       return DXGI_FORMAT_R32G32B32A32_FLOAT;
+    case TextureFormat::R32U:
+      return DXGI_FORMAT_R32_UINT;
+    case TextureFormat::RG32U:
+      return DXGI_FORMAT_R32G32_UINT;
+    case TextureFormat::RGB32U:
+      return DXGI_FORMAT_R32G32B32_UINT;
+    case TextureFormat::RGBA32U:
+      return DXGI_FORMAT_R32G32B32A32_UINT;
     case TextureFormat::Depth16:
       return DXGI_FORMAT_D16_UNORM;
     case TextureFormat::Depth24x8:
@@ -113,6 +121,17 @@ inline DXGI_FORMAT nativeFormat(TextureFormat f) {
       return DXGI_FORMAT_R16G16B16A16_FLOAT;
     }
   return DXGI_FORMAT_UNKNOWN;
+  }
+
+inline DXGI_FORMAT nativeSrvFormat(DXGI_FORMAT frm) {
+  switch(frm) {
+    case DXGI_FORMAT_D16_UNORM:            return DXGI_FORMAT_R16_UNORM;
+    case DXGI_FORMAT_D24_UNORM_S8_UINT:    return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+    case DXGI_FORMAT_D32_FLOAT_S8X24_UINT: return DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+    case DXGI_FORMAT_D32_FLOAT:            return DXGI_FORMAT_R32_FLOAT;
+    default:
+      return frm;
+    }
   }
 
 inline D3D12_TEXTURE_ADDRESS_MODE nativeFormat(ClampMode f){

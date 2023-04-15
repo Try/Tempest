@@ -114,6 +114,10 @@ namespace Tempest {
     RG32F,
     RGB32F,
     RGBA32F,
+    R32U,
+    RG32U,
+    RGB32U,
+    RGBA32U,
     Depth16,
     Depth24x8,
     Depth24S8,
@@ -141,6 +145,10 @@ namespace Tempest {
       case RG32F:       return "RG32F";
       case RGB32F:      return "RGB32F";
       case RGBA32F:     return "RGBA32F";
+      case R32U:        return "R32U";
+      case RG32U:       return "RG32U";
+      case RGB32U:      return "RGB32U";
+      case RGBA32U:     return "RGBA32U";
       case Depth16:     return "Depth16";
       case Depth24x8:   return "Depth24x8";
       case Depth24S8:   return "Depth24S8";

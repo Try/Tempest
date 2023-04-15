@@ -70,6 +70,14 @@ inline VkFormat nativeFormat(TextureFormat f) {
       return VK_FORMAT_R32G32B32_SFLOAT;
     case TextureFormat::RGBA32F:
       return VK_FORMAT_R32G32B32A32_SFLOAT;
+    case TextureFormat::R32U:
+      return VK_FORMAT_R32_UINT;
+    case TextureFormat::RG32U:
+      return VK_FORMAT_R32G32_UINT;
+    case TextureFormat::RGB32U:
+      return VK_FORMAT_R32G32B32_UINT;
+    case TextureFormat::RGBA32U:
+      return VK_FORMAT_R32G32B32A32_UINT;
     case TextureFormat::Depth16:
       return VK_FORMAT_D16_UNORM;
     case TextureFormat::Depth24x8:

@@ -474,6 +474,11 @@ Pixmap::Format Pixmap::toPixmapFormat(TextureFormat f) {
     case TextureFormat::RG32F:     return Pixmap::Format::RG32F;
     case TextureFormat::RGB32F:    return Pixmap::Format::RGB32F;
     case TextureFormat::RGBA32F:   return Pixmap::Format::RGBA32F;
+    //--- use float for now
+    case TextureFormat::R32U:      return Pixmap::Format::R32F;
+    case TextureFormat::RG32U:     return Pixmap::Format::RG32F;
+    case TextureFormat::RGB32U:    return Pixmap::Format::RGB32F;
+    case TextureFormat::RGBA32U:   return Pixmap::Format::RGBA32F;
     //---
     case TextureFormat::DXT1:      return Pixmap::Format::DXT1;
     case TextureFormat::DXT3:      return Pixmap::Format::DXT3;

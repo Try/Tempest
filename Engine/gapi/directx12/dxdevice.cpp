@@ -117,38 +117,49 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
 
   // https://docs.microsoft.com/en-us/windows/win32/direct3ddxgi/hardware-support-for-direct3d-12-0-formats
   // NOTE: TextureFormat::RGB32F is not supported, because of mip-maps
-  static const TextureFormat smp[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
-                                      TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
-                                      TextureFormat::R32F, TextureFormat::RG32F, /*TextureFormat::RGB32F,*/ TextureFormat::RGBA32F,
-                                      TextureFormat::DXT1, TextureFormat::DXT3,  TextureFormat::DXT5,
-                                      TextureFormat::R11G11B10UF, TextureFormat::RGBA16F,
-                                     };
-
-  static const TextureFormat att[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
-                                      TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
-                                      TextureFormat::R32F, TextureFormat::RG32F, TextureFormat::RGBA32F,
-                                      TextureFormat::R11G11B10UF, TextureFormat::RGBA16F,
-                                     };
-
-  static const TextureFormat sso[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
-                                      TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
-                                      TextureFormat::R32F, TextureFormat::RGBA32F,
-                                      TextureFormat::R11G11B10UF, TextureFormat::RGBA16F,
-                                     };
-
-  static const TextureFormat ds[]  = {TextureFormat::Depth16, TextureFormat::Depth24x8, TextureFormat::Depth24S8, TextureFormat::Depth32F};
-
   uint64_t smpBit = 0, attBit = 0, dsBit = 0, storBit = 0;
-  for(auto& i:smp)
-    smpBit |= uint64_t(1) << uint64_t(i);
-  for(auto& i:att)
-    attBit |= uint64_t(1) << uint64_t(i);
-  for(auto& i:ds) {
-    dsBit  |= uint64_t(1) << uint64_t(i);
-    smpBit |= uint64_t(1) << uint64_t(i);
+
+  for(uint32_t i=0; i<TextureFormat::Last; ++i){
+    D3D12_FEATURE_DATA_FORMAT_SUPPORT d = {};
+    d.Format = nativeFormat(TextureFormat(i));
+    if(d.Format==DXGI_FORMAT_UNKNOWN || d.Format==DXGI_FORMAT_R32G32B32_FLOAT)
+      continue;
+
+    if(FAILED(dev.CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &d, sizeof(d))))
+      continue;
+
+    if(nativeIsDepthFormat(d.Format)) {
+      D3D12_FEATURE_DATA_FORMAT_SUPPORT d2 = {};
+      d2.Format = nativeSrvFormat(d.Format);
+      if(SUCCEEDED(dev.CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &d2, sizeof(d2)))) {
+        d.Support1 |= d2.Support1;
+        d.Support2 |= d2.Support2;
+        }
+      }
+
+    if(d.Support1 & D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE &&
+       d.Support1 & D3D12_FORMAT_SUPPORT1_SHADER_GATHER &&
+       //d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE1D  &&
+       d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE2D ) {
+      smpBit |= uint64_t(1) << uint64_t(i);
+      }
+    if(d.Support1 & D3D12_FORMAT_SUPPORT1_RENDER_TARGET &&
+       d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE2D) {
+      attBit |= uint64_t(1) << uint64_t(i);
+      }
+    if(d.Support1 & D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL &&
+       d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE2D) {
+      dsBit |= uint64_t(1) << uint64_t(i);
+      }
+    if(d.Support2 & D3D12_FORMAT_SUPPORT2_UAV_TYPED_LOAD &&
+       d.Support2 & D3D12_FORMAT_SUPPORT2_UAV_TYPED_STORE &&
+       d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE1D &&
+       d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE2D &&
+       d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE3D) {
+      storBit |= uint64_t(1) << uint64_t(i);
+      }
     }
-  for(auto& i:sso)
-    storBit  |= uint64_t(1) << uint64_t(i);
+
   prop.setSamplerFormats(smpBit);
   prop.setAttachFormats (attBit);
   prop.setDepthFormats  (dsBit);

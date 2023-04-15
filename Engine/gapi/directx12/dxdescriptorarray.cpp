@@ -497,7 +497,7 @@ void DxDescriptorArray::placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE
     } else {
     D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
     srvDesc.Shader4ComponentMapping = compMapping(mapping);
-    srvDesc.Format                  = t.format;
+    srvDesc.Format                  = nativeSrvFormat(t.format);
     if(t.sliceCnt>1) {
       srvDesc.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE3D;
       srvDesc.Texture3D.MipLevels     = t.mips;
@@ -514,13 +514,6 @@ void DxDescriptorArray::placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE
         srvDesc.Texture2D.MipLevels       = 1;
         }
       }
-
-    if(srvDesc.Format==DXGI_FORMAT_D16_UNORM)
-      srvDesc.Format = DXGI_FORMAT_R16_UNORM;
-    else if(srvDesc.Format==DXGI_FORMAT_D32_FLOAT)
-      srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
-    else if(srvDesc.Format==DXGI_FORMAT_D24_UNORM_S8_UINT)
-      srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
 
     auto gpu = at;
     gpu.ptr += heapOffset;

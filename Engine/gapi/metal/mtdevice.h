@@ -45,6 +45,14 @@ inline MTL::PixelFormat nativeFormat(TextureFormat frm) {
       return MTL::PixelFormatInvalid;
     case RGBA32F:
       return MTL::PixelFormatRGBA32Float;
+    case R32U:
+      return MTL::PixelFormatR32Uint;
+    case RG32U:
+      return MTL::PixelFormatRG32Uint;
+    case RGB32U:
+      return MTL::PixelFormatInvalid;
+    case RGBA32U:
+      return MTL::PixelFormatRGBA32Uint;
     case Depth16:
       return MTL::PixelFormatDepth16Unorm;
     case Depth24x8:
