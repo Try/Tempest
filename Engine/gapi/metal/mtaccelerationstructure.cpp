@@ -30,8 +30,8 @@ MtAccelerationStructure::MtAccelerationStructure(MtDevice& dx,
 
   if(geo->indexBufferOffset()%256!=0) {
     //Log::d("FIXME: index buffer offset alignment on metal(",geo.indexBufferOffset%256,")");
-    //geo.indexBufferOffset = 0;
-    //geo.triangleCount     = 0;
+    geo->setIndexBufferOffset(0);
+    geo->setTriangleCount(0);
     }
 
   auto geoArr = NsPtr<NS::Array>(NS::Array::array(geo.get()));
@@ -39,13 +39,6 @@ MtAccelerationStructure::MtAccelerationStructure(MtDevice& dx,
   desc->retain();
   desc->setGeometryDescriptors(geoArr.get());
   desc->setUsage(MTL::AccelerationStructureUsageNone);
-
-  /*
-  if(@available(macOS 12.0, *)) {
-    // ???
-    //desc.usage = MTLAccelerationStructureUsageExtendedLimits;
-    }
-  */
 
   auto sz = dx.impl->accelerationStructureSizes(desc.get());
 
