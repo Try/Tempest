@@ -69,7 +69,7 @@ https://github.com/KhronosGroup/glslang/pull/3050
 * - [x] Fix crash in HLSL frontend  
 https://github.com/KhronosGroup/glslang/pull/2916
 
-* - [x] stb_image: fix CRC reading at the end of IEND chunk in png file
+* - [x] stb_image: fix CRC reading at the end of IEND chunk in png file  
 https://github.com/nothings/stb/pull/835
 
 #### Issues
