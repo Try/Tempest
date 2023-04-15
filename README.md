@@ -66,8 +66,11 @@ https://github.com/KhronosGroup/SPIRV-Cross/pull/2124
 * - [x] Mesh shader: fix implicit index-array size calculation for lines and triangles  
 https://github.com/KhronosGroup/glslang/pull/3050
 
-* - [ ] Fix crash in HLSL frontend  
+* - [x] Fix crash in HLSL frontend  
 https://github.com/KhronosGroup/glslang/pull/2916
+
+* - [x] stb_image: fix CRC reading at the end of IEND chunk in png file
+https://github.com/nothings/stb/pull/835
 
 #### Issues
 
@@ -83,6 +86,9 @@ https://github.com/KhronosGroup/SPIRV-Cross/issues/1691
 * - [x] HLSL: error X4503: output TEXCOORD2 used more than once  
 https://github.com/KhronosGroup/SPIRV-Cross/issues/1645
 
+* - [x] HLSL: crash, while compiling HULL shader  
+https://github.com/KhronosGroup/glslang/issues/2914
+
 * - [ ] MSL: RayQuery implementation is incomplete  
 https://github.com/KhronosGroup/SPIRV-Cross/issues/2115
 
@@ -91,7 +97,4 @@ https://github.com/KhronosGroup/SPIRV-Cross/issues/2064
 
 * - [ ] Component swizzling of gl_MeshVerticesEXT[].gl_Position, produces invalid code  
 https://github.com/KhronosGroup/glslang/issues/3058
-
-* - [ ] HLSL: crash, while compiling HULL shader  
-https://github.com/KhronosGroup/glslang/issues/2914
 
