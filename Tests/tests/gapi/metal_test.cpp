@@ -200,7 +200,7 @@ TEST(MetalApi,DISABLED_RayQueryFace) {
 #endif
   }
 
-TEST(MetalApi,MeshShader) {
+TEST(MetalApi,DISABLED_MeshShader) {
 #if defined(__OSX__)
   GapiTestCommon::MeshShader<MetalApi>("MetalApi_MeshShader.png");
 #endif

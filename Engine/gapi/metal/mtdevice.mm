@@ -74,6 +74,7 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
   static const TextureFormat smp[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
                                       TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
                                       TextureFormat::R32F, TextureFormat::RG32F, TextureFormat::RGBA32F,
+                                      TextureFormat::R32U, TextureFormat::RG32U, TextureFormat::RGBA32U,
                                       TextureFormat::R11G11B10UF, TextureFormat::RGBA16F,
                                      };
 
@@ -85,6 +86,7 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
 
   static const TextureFormat sso[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
                                       TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
+                                      TextureFormat::R32U, TextureFormat::RG32U, TextureFormat::RGBA32U,
                                       TextureFormat::R32F, TextureFormat::RGBA32F,
                                       TextureFormat::R11G11B10UF, TextureFormat::RGBA16F,
                                      };
@@ -214,8 +216,8 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
   // TODO
 #else
   if(dev.supportsFamily(MTL::GPUFamilyMetal3)) {
-    prop.meshlets.taskShader = true;
-    prop.meshlets.meshShader = true;
+    //prop.meshlets.taskShader = true;
+    //prop.meshlets.meshShader = true;
     prop.meshlets.maxGroups = prop.compute.maxGroups;
     prop.meshlets.maxGroupSize = prop.compute.maxGroupSize;
     }
