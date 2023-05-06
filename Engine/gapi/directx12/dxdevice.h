@@ -171,6 +171,24 @@ inline D3D12_BLEND nativeFormat(RenderState::BlendMode b) {
   return D3D12_BLEND_ZERO;
   }
 
+// NOTE: need to be coherent with Vulkan backend: https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkBlendFactor.html
+inline D3D12_BLEND nativeABlendFormat(RenderState::BlendMode b) {
+  switch(b) {
+    case RenderState::BlendMode::Zero:             return D3D12_BLEND_ZERO;
+    case RenderState::BlendMode::One:              return D3D12_BLEND_ONE;
+    case RenderState::BlendMode::SrcColor:         return D3D12_BLEND_SRC_ALPHA;
+    case RenderState::BlendMode::OneMinusSrcColor: return D3D12_BLEND_INV_SRC_ALPHA;
+    case RenderState::BlendMode::SrcAlpha:         return D3D12_BLEND_SRC_ALPHA;
+    case RenderState::BlendMode::OneMinusSrcAlpha: return D3D12_BLEND_INV_SRC_ALPHA;
+    case RenderState::BlendMode::DstAlpha:         return D3D12_BLEND_DEST_ALPHA;
+    case RenderState::BlendMode::OneMinusDstAlpha: return D3D12_BLEND_INV_DEST_ALPHA;
+    case RenderState::BlendMode::DstColor:         return D3D12_BLEND_DEST_ALPHA;
+    case RenderState::BlendMode::OneMinusDstColor: return D3D12_BLEND_INV_DEST_ALPHA;
+    case RenderState::BlendMode::SrcAlphaSaturate: return D3D12_BLEND_SRC_ALPHA_SAT;
+    }
+  return D3D12_BLEND_ZERO;
+  }
+
 inline D3D12_BLEND_OP nativeFormat(RenderState::BlendOp op) {
   switch(op) {
     case RenderState::BlendOp::Add:             return D3D12_BLEND_OP_ADD;

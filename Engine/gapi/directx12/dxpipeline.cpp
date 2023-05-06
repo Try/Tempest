@@ -138,8 +138,8 @@ D3D12_BLEND_DESC DxPipeline::getBlend(const RenderState& st) const {
   b.SrcBlend              = nativeFormat(st.blendSource());
   b.DestBlend             = nativeFormat(st.blendDest());
   b.BlendOp               = nativeFormat(st.blendOperation());
-  b.SrcBlendAlpha         = b.SrcBlend;
-  b.DestBlendAlpha        = b.DestBlend;
+  b.SrcBlendAlpha         = nativeABlendFormat(st.blendSource());
+  b.DestBlendAlpha        = nativeABlendFormat(st.blendDest());
   b.BlendOpAlpha          = b.BlendOp;
   b.LogicOpEnable         = FALSE;
   b.LogicOp               = D3D12_LOGIC_OP_CLEAR;
@@ -167,8 +167,7 @@ ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& 
   D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
   psoDesc.InputLayout     = { vsInput.get(), UINT(declSize) };
   psoDesc.pRootSignature  = sign.get();
-  if(auto sh = findShader(ShaderReflection::Control))
-    psoDesc.HS = sh->bytecode();
+
   if(auto sh = findShader(ShaderReflection::Vertex))
     psoDesc.VS = sh->bytecode();
   if(auto sh = findShader(ShaderReflection::Fragment))
