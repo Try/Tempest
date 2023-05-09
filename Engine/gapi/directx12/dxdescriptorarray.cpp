@@ -122,7 +122,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer* b, size_t of
   auto&  prm        = lay.handler->prm[id];
   auto&  l          = lay.handler->lay[id];
 
-  auto   descPtr    = allocator.handle(heap[HEAP_RES]);;
+  auto   descPtr    = allocator.handle(heap[HEAP_RES]);
   auto   heapOffset = prm.heapOffset;
 
   if(lay.handler->isRuntimeSized()) {
