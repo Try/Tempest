@@ -166,7 +166,7 @@ inline VkCompareOp nativeFormat(RenderState::ZTestMode zm) {
     case RenderState::ZTestMode::Less:    return VK_COMPARE_OP_LESS;
     case RenderState::ZTestMode::GEqual:  return VK_COMPARE_OP_GREATER_OR_EQUAL;
     case RenderState::ZTestMode::LEqual:  return VK_COMPARE_OP_LESS_OR_EQUAL;
-    case RenderState::ZTestMode::NOEqual: return VK_COMPARE_OP_NOT_EQUAL;
+    case RenderState::ZTestMode::NoEqual: return VK_COMPARE_OP_NOT_EQUAL;
     case RenderState::ZTestMode::Equal:   return VK_COMPARE_OP_EQUAL;
     }
   return VK_COMPARE_OP_ALWAYS;

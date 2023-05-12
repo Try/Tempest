@@ -40,7 +40,7 @@ class RenderState final {
       GEqual,
       LEqual,
 
-      NOEqual,
+      NoEqual,
       Equal
       };
 

@@ -298,6 +298,7 @@ namespace Tempest {
     Discard,
     Preserve,
     Clear,
+    Readonly,
     };
 
   template<AccessOp l>
@@ -305,6 +306,7 @@ namespace Tempest {
 
   static const auto Discard  = AccessOpT<AccessOp::Discard>();
   static const auto Preserve = AccessOpT<AccessOp::Preserve>();
+  static const auto Readonly = AccessOpT<AccessOp::Readonly>();
 
   class AttachmentDesc final {
     public:
@@ -330,6 +332,8 @@ namespace Tempest {
 
       AttachmentDesc(ZBuffer&    a, float                         l, AccessOpT<AccessOp::Discard>  s):clear(l,l,l,l),zbuffer(&a),load(AccessOp::Clear),store(AccessOp::Discard) {(void)l; (void)s;}
       AttachmentDesc(ZBuffer&    a, float                         l, AccessOpT<AccessOp::Preserve> s):clear(l,l,l,l),zbuffer(&a),load(AccessOp::Clear),store(AccessOp::Preserve){(void)l; (void)s;}
+
+      AttachmentDesc(ZBuffer&    a, AccessOpT<AccessOp::Readonly> r):zbuffer(&a),load(AccessOp::Readonly),store(AccessOp::Readonly) {(void)r;}
 
       Tempest::Vec4 clear      = {};
       Attachment*   attachment = nullptr;

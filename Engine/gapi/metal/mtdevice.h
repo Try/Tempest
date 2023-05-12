@@ -124,7 +124,7 @@ inline MTL::CompareFunction nativeFormat(RenderState::ZTestMode m) {
       return MTL::CompareFunctionGreaterEqual;
     case RenderState::ZTestMode::LEqual:
       return MTL::CompareFunctionLessEqual;
-    case RenderState::ZTestMode::NOEqual:
+    case RenderState::ZTestMode::NoEqual:
       return MTL::CompareFunctionNotEqual;
     case RenderState::ZTestMode::Equal:
       return MTL::CompareFunctionEqual;

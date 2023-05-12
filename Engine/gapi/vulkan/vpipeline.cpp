@@ -120,7 +120,7 @@ VkPipeline VPipeline::instance(const std::shared_ptr<VFramebufferMap::RenderPass
       return i.val;
   VkPipeline val = VK_NULL_HANDLE;
   try {
-    val = initGraphicsPipeline(device,pipelineLayout,pass.get(),nullptr,st,
+    val = initGraphicsPipeline(device,pLay,pass.get(),nullptr,st,
                                decl.get(),declSize,stride,
                                tp,modules);
     instRp.emplace_back(pass,pLay,stride,val);

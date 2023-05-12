@@ -18,6 +18,7 @@ static MTL::LoadAction mkLoadOp(const AccessOp m) {
     case AccessOp::Clear:    return MTL::LoadActionClear;
     case AccessOp::Preserve: return MTL::LoadActionLoad;
     case AccessOp::Discard:  return MTL::LoadActionDontCare;
+    case AccessOp::Readonly: return MTL::LoadActionLoad;
     }
   return MTL::LoadActionDontCare;
   }
@@ -27,6 +28,7 @@ static MTL::StoreAction mkStoreOp(const AccessOp m) {
     case AccessOp::Clear:    return MTL::StoreActionStore;
     case AccessOp::Preserve: return MTL::StoreActionStore;
     case AccessOp::Discard:  return MTL::StoreActionDontCare;
+    case AccessOp::Readonly: return MTL::StoreActionStore;
     }
   return MTL::StoreActionDontCare;
   }

@@ -26,6 +26,8 @@ static VkAttachmentLoadOp mkLoadOp(const AccessOp op) {
       return VK_ATTACHMENT_LOAD_OP_LOAD;
     case AccessOp::Clear:
       return VK_ATTACHMENT_LOAD_OP_CLEAR;
+    case AccessOp::Readonly:
+      return VK_ATTACHMENT_LOAD_OP_LOAD;
     }
   return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
   }
@@ -37,6 +39,8 @@ static VkAttachmentStoreOp mkStoreOp(const AccessOp op) {
     case AccessOp::Preserve:
       return VK_ATTACHMENT_STORE_OP_STORE;
     case AccessOp::Clear:
+      return VK_ATTACHMENT_STORE_OP_STORE;
+    case AccessOp::Readonly:
       return VK_ATTACHMENT_STORE_OP_STORE;
     }
   return VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -287,8 +291,10 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
       att.imageView = imageView;
 
       if(isDepthFormat(frm[i])) {
-        info.pDepthAttachment = &depthAtt;
-        att.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+        if(desc[i].load==AccessOp::Readonly)
+          att.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL; else
+          att.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+        info.pDepthAttachment = &att;
         passDyn.depthAttachmentFormat = imageFormat;
         auto& clr = att.clearValue;
         clr.depthStencil.depth = desc[i].clear.x;

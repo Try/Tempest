@@ -205,7 +205,6 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
   resDesc.Height             = h;
   resDesc.DepthOrArraySize   = d;
   if(isDepthFormat(frm)) {
-    //state                    = D3D12_RESOURCE_STATE_DEPTH_WRITE;
     state                    = D3D12_RESOURCE_STATE_DEPTH_READ;
     resDesc.Flags            = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
     clr.DepthStencil.Depth   = 1.f;

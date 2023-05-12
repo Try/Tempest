@@ -217,7 +217,7 @@ inline D3D12_COMPARISON_FUNC nativeFormat(RenderState::ZTestMode zm) {
     case RenderState::ZTestMode::Less:    return D3D12_COMPARISON_FUNC_LESS;
     case RenderState::ZTestMode::GEqual:  return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
     case RenderState::ZTestMode::LEqual:  return D3D12_COMPARISON_FUNC_LESS_EQUAL;
-    case RenderState::ZTestMode::NOEqual: return D3D12_COMPARISON_FUNC_NOT_EQUAL;
+    case RenderState::ZTestMode::NoEqual: return D3D12_COMPARISON_FUNC_NOT_EQUAL;
     case RenderState::ZTestMode::Equal:   return D3D12_COMPARISON_FUNC_EQUAL;
     }
   return D3D12_COMPARISON_FUNC_ALWAYS;

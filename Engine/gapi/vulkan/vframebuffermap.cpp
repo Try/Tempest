@@ -171,6 +171,10 @@ VkRenderPass VFramebufferMap::mkRenderPass(const Desc* desc, size_t attCount) {
     a.storeOp = (x.store==AccessOp::Preserve) ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
     if(x.load == AccessOp::Clear)
       a.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    if(x.load == AccessOp::Readonly) {
+      a.loadOp  = VK_ATTACHMENT_LOAD_OP_LOAD;
+      a.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+      }
 
     // Stencil is not implemented
     a.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
@@ -182,6 +186,10 @@ VkRenderPass VFramebufferMap::mkRenderPass(const Desc* desc, size_t attCount) {
     if(Detail::nativeIsDepthFormat(a.format)) {
       a.initialLayout = init  ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
       a.finalLayout   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+      if(x.load == AccessOp::Readonly) {
+        a.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+        a.finalLayout   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+        }
       } else {
       a.initialLayout = init  ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
       a.finalLayout   = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -190,7 +198,9 @@ VkRenderPass VFramebufferMap::mkRenderPass(const Desc* desc, size_t attCount) {
     if(Detail::nativeIsDepthFormat(a.format)) {
       VkAttachmentReference& r = zs;
       r.attachment = i;
-      r.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+      if(x.load != AccessOp::Readonly)
+        r.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL; else
+        r.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
       subpass.pDepthStencilAttachment = &r;
       } else {
       VkAttachmentReference& r = ref[subpass.colorAttachmentCount];

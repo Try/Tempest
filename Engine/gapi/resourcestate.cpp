@@ -8,6 +8,8 @@ void ResourceState::setRenderpass(AbstractGraphicsApi::CommandBuffer& cmd,
                                   const TextureFormat* frm, AbstractGraphicsApi::Texture** att,
                                   AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) {
   for(size_t i=0; i<descSize; ++i) {
+    if(desc[i].load==AccessOp::Readonly)
+      continue;
     const bool discard = desc[i].load!=AccessOp::Preserve;
     if(isDepthFormat(frm[i]))
       setLayout(*att[i],ResourceAccess::DepthAttach,discard);
@@ -18,6 +20,8 @@ void ResourceState::setRenderpass(AbstractGraphicsApi::CommandBuffer& cmd,
     }
   flush(cmd);
   for(size_t i=0; i<descSize; ++i) {
+    if(desc[i].load==AccessOp::Readonly)
+      continue;
     const bool discard = desc[i].store!=AccessOp::Preserve;
     if(isDepthFormat(frm[i]))
       setLayout(*att[i],ResourceAccess::DepthReadOnly,discard);
