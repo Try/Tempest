@@ -297,6 +297,8 @@ size_t ShaderReflection::mslSizeOf(const spirv_cross::SPIRType& type,
       member_index = i;
       }
     size_t sz = comp.get_declared_struct_member_size(type, member_index);
+    if(sz==3*4)
+      sz = 4*4; // vec3
     if(highest_sizeof<sz)
       highest_sizeof = sz;
     }
