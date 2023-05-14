@@ -60,6 +60,7 @@ template<class T>
 class BasicPoint<T,2> {
   public:
     BasicPoint()=default;
+    BasicPoint(T xy):x(xy),y(xy){}
     BasicPoint(T x,T y):x(x),y(y){}
 
     BasicPoint& operator -= ( const BasicPoint & p ){ x-=p.x; y-=p.y; return *this; }
@@ -101,6 +102,7 @@ template<class T>
 class BasicPoint<T,3> {
   public:
     BasicPoint()=default;
+    BasicPoint(T xyz):x(xyz),y(xyz),z(xyz){}
     BasicPoint(T x,T y,T z):x(x),y(y),z(z){}
 
     BasicPoint& operator -= ( const BasicPoint & p ){ x-=p.x; y-=p.y; z-=p.z; return *this; }
@@ -147,6 +149,7 @@ template<class T>
 class BasicPoint<T,4> {
   public:
     BasicPoint()=default;
+    BasicPoint(T xyzw):x(xyzw),y(xyzw),z(xyzw),w(xyzw){}
     BasicPoint(T x,T y,T z,T w):x(x),y(y),z(z),w(w){}
 
     BasicPoint& operator -= ( const BasicPoint & p ){ x-=p.x; y-=p.y; z-=p.z; w-=p.w; return *this; }
