@@ -633,7 +633,7 @@ void DxCommandBuffer::buildBlas(ID3D12Resource* dest,
 
   D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc = {};
   geometryDesc.Type                                 = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-  geometryDesc.Flags                                = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+  geometryDesc.Flags                                = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
   geometryDesc.Triangles.Transform3x4               = 0;
   geometryDesc.Triangles.IndexFormat                = nativeFormat(icls);
   geometryDesc.Triangles.VertexFormat               = DXGI_FORMAT_R32G32B32_FLOAT;

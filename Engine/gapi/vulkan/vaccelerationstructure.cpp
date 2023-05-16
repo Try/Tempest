@@ -27,8 +27,7 @@ VAccelerationStructure::VAccelerationStructure(VDevice& dx,
   geometry.geometry.triangles.indexType      = nativeFormat(icls);
   geometry.geometry.triangles.indexData      = VkDeviceOrHostAddressConstKHR{};
   geometry.geometry.triangles.transformData  = VkDeviceOrHostAddressConstKHR{};
-  geometry.flags                             = VK_GEOMETRY_OPAQUE_BIT_KHR;
-  //geometry.flags                             = 0;
+  geometry.flags                             = 0;
 
   VkAccelerationStructureBuildGeometryInfoKHR buildGeometryInfo = {};
   buildGeometryInfo.sType                    = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
@@ -117,8 +116,7 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
   geometry.pNext                             = nullptr;
   geometry.geometryType                      = VK_GEOMETRY_TYPE_INSTANCES_KHR;
   geometry.geometry.instances                = geometryInstancesData;
-  geometry.flags                             = VK_GEOMETRY_OPAQUE_BIT_KHR;
-  //geometry.flags                             = 0;
+  geometry.flags                             = 0;
 
   VkAccelerationStructureBuildGeometryInfoKHR buildGeometryInfo = {};
   buildGeometryInfo.sType                    = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
@@ -163,7 +161,7 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
     objInstance.instanceCustomIndex                    = inst[i].id;
     objInstance.mask                                   = 0xFF;
     objInstance.instanceShaderBindingTableRecordOffset = 0;
-    objInstance.flags                                  = 0; // none
+    objInstance.flags                                  = nativeFormat(inst[i].flags);
     objInstance.accelerationStructureReference         = blas->toDeviceAddress(dx);
 
     pBuf.handler->update(&objInstance,i, 1,sizeof(objInstance), sizeof(objInstance));

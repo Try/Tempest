@@ -673,7 +673,7 @@ void VCommandBuffer::buildBlas(VkAccelerationStructureKHR dest,
   geometry.geometry.triangles.maxVertex       = uint32_t(vboSz);
   geometry.geometry.triangles.indexType       = nativeFormat(icls);
   geometry.geometry.triangles.transformData   = VkDeviceOrHostAddressConstKHR{};
-  geometry.flags                              = VK_GEOMETRY_OPAQUE_BIT_KHR;
+  geometry.flags                              = 0;
 
   geometry.geometry.triangles.vertexData.deviceAddress = vbo.toDeviceAddress(device);
   geometry.geometry.triangles.indexData .deviceAddress = ibo.toDeviceAddress(device);
@@ -726,7 +726,7 @@ void VCommandBuffer::buildTlas(VkAccelerationStructureKHR dest,
   geometry.pNext                              = nullptr;
   geometry.geometryType                       = VK_GEOMETRY_TYPE_INSTANCES_KHR;
   geometry.geometry.instances                 = geometryInstancesData;
-  geometry.flags                              = VK_GEOMETRY_OPAQUE_BIT_KHR;
+  geometry.flags                              = 0;
 
   VkAccelerationStructureBuildGeometryInfoKHR buildGeometryInfo = {};
   buildGeometryInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;

@@ -258,10 +258,24 @@ namespace Tempest {
 
   class AccelerationStructure;
 
+  enum class RtInstanceFlags : uint8_t {
+    Opaque    = 0,
+    NonOpaque = 1,
+    };
+
+  inline RtInstanceFlags operator | (RtInstanceFlags a, RtInstanceFlags b){
+    return RtInstanceFlags(uint16_t(a)|uint16_t(b));
+    }
+
+  inline RtInstanceFlags operator & (RtInstanceFlags a, RtInstanceFlags b){
+    return RtInstanceFlags(uint16_t(a)&uint16_t(b));
+    }
+
   struct RtInstance {
-    Tempest::Matrix4x4           mat  = Matrix4x4::mkIdentity();
-    uint32_t                     id   = 0;
-    const AccelerationStructure* blas = nullptr;
+    Tempest::Matrix4x4           mat   = Matrix4x4::mkIdentity();
+    uint32_t                     id    = 0;
+    RtInstanceFlags              flags = RtInstanceFlags::Opaque;
+    const AccelerationStructure* blas  = nullptr;
     };
 
   namespace Detail {

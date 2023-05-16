@@ -278,6 +278,14 @@ inline D3D_PRIMITIVE_TOPOLOGY nativeFormat(Topology tp) {
   return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
   }
 
+inline D3D12_RAYTRACING_INSTANCE_FLAGS nativeFormat(RtInstanceFlags f) {
+  D3D12_RAYTRACING_INSTANCE_FLAGS ret = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
+  if((f & RtInstanceFlags::NonOpaque)==RtInstanceFlags::NonOpaque)
+    ret |= D3D12_RAYTRACING_INSTANCE_FLAG_NONE; else
+    ret |= D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_OPAQUE;
+  return ret;
+  }
+
 inline UINT alignTo(UINT x, UINT a) {
   a--;
   return (x+a) & (~a);

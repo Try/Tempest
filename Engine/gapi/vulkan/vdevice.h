@@ -284,6 +284,14 @@ inline VkPrimitiveTopology nativeFormat(Topology tp) {
   return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
   }
 
+inline VkGeometryInstanceFlagsKHR nativeFormat(RtInstanceFlags f) {
+  VkGeometryInstanceFlagsKHR ret = 0;
+  if((f & RtInstanceFlags::NonOpaque)==RtInstanceFlags::NonOpaque)
+    ret |= 0; else
+    ret |= VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
+  return ret;
+  }
+
 class VDevice : public AbstractGraphicsApi::Device {
   private:
     class DataStream;

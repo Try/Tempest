@@ -85,7 +85,7 @@ DxTopAccelerationStructure::DxTopAccelerationStructure(DxDevice& dx, const RtIns
     objInstance.InstanceID                          = inst[i].id;
     objInstance.InstanceMask                        = 0xFF;
     objInstance.InstanceContributionToHitGroupIndex = 0;
-    objInstance.Flags                               = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
+    objInstance.Flags                               = nativeFormat(inst[i].flags);
     objInstance.AccelerationStructure               = blas->impl.impl->GetGPUVirtualAddress();
 
     pBuf.handler->update(&objInstance,i, 1,sizeof(objInstance), sizeof(objInstance));
