@@ -12,23 +12,23 @@ using namespace Tempest::Detail;
 
 VSwapchain::FenceList::FenceList(VkDevice dev, uint32_t cnt)
   :dev(dev), size(0) {
-  aquire.reset(new VkFence[cnt]);
+  acquire.reset(new VkFence[cnt]);
   for(uint32_t i=0; i<cnt; ++i)
-    aquire [i] = VK_NULL_HANDLE;
+    acquire [i] = VK_NULL_HANDLE;
 
   try {
     VkFenceCreateInfo fenceInfo = {};
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
     for(uint32_t i=0; i<cnt; ++i) {
-      vkAssert(vkCreateFence(dev,&fenceInfo,nullptr,&aquire [i]));
+      vkAssert(vkCreateFence(dev,&fenceInfo,nullptr,&acquire [i]));
       ++size;
       }
     }
   catch(...) {
     for(uint32_t i=0; i<cnt; ++i) {
-      if(aquire[i]!=VK_NULL_HANDLE)
-        vkDestroyFence(dev,aquire [i],nullptr);
+      if(acquire[i]!=VK_NULL_HANDLE)
+        vkDestroyFence(dev,acquire[i],nullptr);
       }
     throw;
     }
@@ -36,20 +36,20 @@ VSwapchain::FenceList::FenceList(VkDevice dev, uint32_t cnt)
 
 VSwapchain::FenceList::FenceList(VSwapchain::FenceList&& oth)
   :dev(oth.dev), size(oth.size) {
-  aquire   = std::move(oth.aquire);
+  acquire   = std::move(oth.acquire);
   oth.size = 0;
   }
 
 VSwapchain::FenceList& VSwapchain::FenceList::operator =(VSwapchain::FenceList&& oth) {
-  std::swap(dev,    oth.dev);
-  std::swap(aquire, oth.aquire);
-  std::swap(size,   oth.size);
+  std::swap(dev,     oth.dev);
+  std::swap(acquire, oth.acquire);
+  std::swap(size,    oth.size);
   return *this;
   }
 
 VSwapchain::FenceList::~FenceList() {
   for(uint32_t i=0; i<size; ++i)
-    vkDestroyFence(dev,aquire [i],nullptr);
+    vkDestroyFence(dev,acquire[i],nullptr);
   }
 
 VSwapchain::VSwapchain(VDevice &device, SystemApi::Window* hwnd)
@@ -73,7 +73,7 @@ VSwapchain::~VSwapchain() {
 
 void VSwapchain::cleanupSwapchain() noexcept {
   // aquire is not a 'true' queue operation - have to wait explicitly on it
-  vkWaitForFences(device.device.impl,fence.size,fence.aquire.get(), VK_TRUE,std::numeric_limits<uint64_t>::max());
+  vkWaitForFences(device.device.impl,fence.size,fence.acquire.get(), VK_TRUE,std::numeric_limits<uint64_t>::max());
   // wait for vkQueuePresent to finish, so we can delete semaphores
   // NOTE: maybe update to VK_KHR_present_wait ?
   device.presentQueue->waitIdle();
@@ -89,8 +89,8 @@ void VSwapchain::cleanupSwapchain() noexcept {
   views.clear();
 
   for(auto& s : sync) {
-    if(s.aquire!=VK_NULL_HANDLE)
-      vkDestroySemaphore(device.device.impl,s.aquire,nullptr);
+    if(s.acquire!=VK_NULL_HANDLE)
+      vkDestroySemaphore(device.device.impl,s.acquire,nullptr);
     if(s.present!=VK_NULL_HANDLE)
       vkDestroySemaphore(device.device.impl,s.present,nullptr);
     }
@@ -182,11 +182,11 @@ void VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& swapCh
   info.flags = 0;
   sync.resize(views.size());
   for(auto& i:sync) {
-    vkAssert(vkCreateSemaphore(device.device.impl,&info,nullptr,&i.aquire));
+    vkAssert(vkCreateSemaphore(device.device.impl,&info,nullptr,&i.acquire));
     vkAssert(vkCreateSemaphore(device.device.impl,&info,nullptr,&i.present));
     }
   fence = FenceList(device.device.impl,uint32_t(views.size()));
-  aquireNextImage();
+  acquireNextImage();
   }
 
 void VSwapchain::createImageViews(VDevice &device) {
@@ -279,7 +279,7 @@ uint32_t VSwapchain::findImageCount(const SwapChainSupport& support) const {
   return imageCount;
   }
 
-void VSwapchain::aquireNextImage() {
+void VSwapchain::acquireNextImage() {
   size_t sId = 0;
   for(size_t i=0; i<sync.size(); ++i)
     if(sync[i].imgId==imgIndex) {
@@ -287,7 +287,7 @@ void VSwapchain::aquireNextImage() {
       break;
       }
   auto&    slot = sync[sId];
-  auto&    f    = fence.aquire[sId];
+  auto&    f    = fence.acquire[sId];
 
   vkWaitForFences(device.device.impl,1,&f,VK_TRUE,std::numeric_limits<uint64_t>::max());
   vkResetFences(device.device.impl,1,&f);
@@ -296,7 +296,7 @@ void VSwapchain::aquireNextImage() {
   VkResult code = vkAcquireNextImageKHR(device.device.impl,
                                         swapChain,
                                         std::numeric_limits<uint64_t>::max(),
-                                        slot.aquire,
+                                        slot.acquire,
                                         f,
                                         &id);
   if(code==VK_ERROR_OUT_OF_DATE_KHR)
@@ -369,7 +369,7 @@ void VSwapchain::present() {
     }
   Detail::vkAssert(code);
 
-  aquireNextImage();
+  acquireNextImage();
   }
 
 #endif

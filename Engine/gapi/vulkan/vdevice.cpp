@@ -488,7 +488,7 @@ void VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
     if(s->state!=Detail::VSwapchain::S_Draw0)
       continue;
     s->state = Detail::VSwapchain::S_Draw1;
-    wait[waitId] = s->aquire;
+    wait[waitId] = s->acquire;
     ++waitId;
     }
 

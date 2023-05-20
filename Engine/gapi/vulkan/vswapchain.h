@@ -49,7 +49,7 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     struct Sync {
       SyncState   state   = S_Idle;
       uint32_t    imgId   = uint32_t(-1);
-      VkSemaphore aquire  = VK_NULL_HANDLE;
+      VkSemaphore acquire = VK_NULL_HANDLE;
       VkSemaphore present = VK_NULL_HANDLE;
       };
     std::vector<Sync>        sync;
@@ -63,20 +63,19 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
       ~FenceList();
 
       VkDevice                   dev = VK_NULL_HANDLE;
-      std::unique_ptr<VkFence[]> aquire;
-      // std::unique_ptr<VkFence[]> present;
+      std::unique_ptr<VkFence[]> acquire;
       uint32_t                   size = 0;
       };
     FenceList                fence;
 
     VDevice&                 device;
-    SystemApi::Window*       hwnd      = nullptr;
-    VkSurfaceKHR             surface   = VK_NULL_HANDLE;
+    SystemApi::Window*       hwnd     = nullptr;
+    VkSurfaceKHR             surface  = VK_NULL_HANDLE;
 
-    uint32_t                 imgIndex  = 0;
+    uint32_t                 imgIndex = 0;
 
     VkFormat                 swapChainImageFormat = VK_FORMAT_UNDEFINED;
-    VkExtent2D               swapChainExtent={};
+    VkExtent2D               swapChainExtent = {};
 
     void                     cleanupSwapchain() noexcept;
     void                     cleanupSurface() noexcept;
@@ -90,7 +89,7 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     VkExtent2D               findSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities, uint32_t w, uint32_t h);
     uint32_t                 findImageCount(const SwapChainSupport& support) const;
 
-    void                     aquireNextImage();
+    void                     acquireNextImage();
 
   };
 
