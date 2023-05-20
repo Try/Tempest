@@ -905,7 +905,7 @@ void S3TC(const char* /*outImage*/) {
     GraphicsApi api{ApiFlags::Validation};
     Device      device(api);
 
-    auto src = Pixmap("data/img/tst-dxt5.dds");
+    auto src = Pixmap("assets/gapi/tst-dxt5.dds");
     auto tex = device.texture(src);
     EXPECT_EQ(tex.format(),TextureFormat::DXT5);
 
@@ -1211,8 +1211,8 @@ void ArrayedTextures(const char* outImg) {
     auto ret = device.image2d(TextureFormat::RGBA8,128,128,false);
 
     std::vector<Tempest::Texture2d> tex(2);
-    tex[0] = device.texture("data/img/texture.png");
-    tex[1] = device.texture("data/img/tst-dxt5.dds");
+    tex[0] = device.texture("assets/gapi/tst-rgba.png");
+    tex[1] = device.texture("assets/gapi/tst-dxt5.dds");
 
     std::vector<const Tempest::Texture2d*> ptex(tex.size());
     for(size_t i=0; i<tex.size(); ++i)
@@ -1263,8 +1263,8 @@ void ArrayedImages(const char* outImg) {
     auto ret = device.image2d(TextureFormat::RGBA8,128,128,false);
 
     std::vector<Tempest::Texture2d> tex(2);
-    tex[0] = device.texture("data/img/texture.png");
-    tex[1] = device.texture("data/img/tst-dxt5.dds");
+    tex[0] = device.texture("assets/gapi/tst-rgba.png");
+    tex[1] = device.texture("assets/gapi/tst-dxt5.dds");
 
     std::vector<const Tempest::Texture2d*> ptex(tex.size());
     for(size_t i=0; i<tex.size(); ++i)
@@ -1370,8 +1370,8 @@ void Bindless(const char* outImg) {
     auto ret = device.image2d(TextureFormat::RGBA8,128,128,false);
 
     std::vector<Tempest::Texture2d> tex(2);
-    tex[0] = device.texture("data/img/texture.png");
-    tex[1] = device.texture("data/img/tst-dxt5.dds");
+    tex[0] = device.texture("assets/gapi/tst-rgba.png");
+    tex[1] = device.texture("assets/gapi/tst-dxt5.dds");
 
     std::vector<const Tempest::Texture2d*> ptex(tex.size());
     for(size_t i=0; i<tex.size(); ++i)
@@ -1423,8 +1423,8 @@ void Bindless2(const char* outImg) {
     auto ret = device.image2d(TextureFormat::RGBA8,128,128,false);
 
     std::vector<Tempest::Texture2d> tex(2);
-    tex[0] = device.texture("data/img/texture.png");
-    tex[1] = device.texture("data/img/tst-dxt5.dds");
+    tex[0] = device.texture("assets/gapi/tst-rgba.png");
+    tex[1] = device.texture("assets/gapi/tst-dxt5.dds");
 
     std::vector<Tempest::StorageBuffer> buf(3);
     buf[0] = device.ssbo<Vec4>({Vec4(1,0,0,1)});

@@ -12,10 +12,10 @@ using namespace Tempest;
 Game::Game(Device& device)
   :device(device), swapchain(device,hwnd()), texAtlass(device) {
   //VectorImage image;
-  //image.load("img/test.svg");
+  //image.load("assets/test.svg");
 
-  Tempest::Pixmap pm("img/texture.png");
-  //Tempest::Pixmap pm("img/texture.hdr");
+  Tempest::Pixmap pm("assets/texture.png");
+  //Tempest::Pixmap pm("assets/texture.hdr");
   texture = device.texture(pm);
 
   for(uint8_t i=0;i<MaxFramesInFlight;++i)

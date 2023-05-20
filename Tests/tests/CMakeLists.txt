@@ -147,8 +147,8 @@ target_link_libraries(${PROJECT_NAME} Tempest)
 add_custom_command(
     TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND}
-    -E copy_directory ${CMAKE_SOURCE_DIR}/../../bin/
-    ${CMAKE_CURRENT_BINARY_DIR}/testsuite/data/)
+    -E copy_directory ${CMAKE_SOURCE_DIR}/../assets/
+    ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets/)
 
 install(
     TARGETS ${PROJECT_NAME}
