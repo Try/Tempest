@@ -505,25 +505,14 @@ void Matrix4x4::project( float   x, float   y, float   z, float   w,
   }
 
 void Matrix4x4::perspective(float angle, float aspect, float zNear, float zFar) {
-  float range = float(tan( 3.141592654*(double(angle) / 2.0)/180.0 )) * zNear;
-  float left = -range * aspect;
-  float right = range * aspect;
-  float bottom = -range;
-  float top = range;
-
-  for( int i=0; i<4; ++i )
-    for( int r=0; r<4; ++r )
-       m[i][r] = 0;
-
-  m[0][0] = (float(2) * zNear) / (right - left);
-  m[1][1] = (float(2) * zNear) / (top - bottom);
-  m[2][2] = - (zFar + zNear) / (zFar - zNear);
-  m[2][3] = - float(1);
-  m[3][2] = - (float(2) * zFar * zNear) / (zFar - zNear);
-
-  m[2][3] = 1;
-  m[2][2] = zFar/(zFar-zNear);
-  m[3][2] = -zNear*zFar/(zFar-zNear);
+  double fovy_rads = angle*M_PI/180.0;
+  double g         = 1.0 / tan(fovy_rads * 0.5);
+  float  k         = zFar / (zFar - zNear);
+  float  s         = aspect;
+  *this = Matrix4x4(g / s,  0.0f,   0.0f,   0.0f,
+                    0.0f,   g,      0.0f,   0.0f,
+                    0.0f,   0.0f,   k,      -zNear * k,
+                    0.0f,   0.0f,   1.0f,   0.0f);
   }
 
 void Matrix4x4::ortho(int width,int height,float zNear, float zFar) {
