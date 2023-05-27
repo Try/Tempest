@@ -263,19 +263,22 @@ VkExtent2D VSwapchain::findSwapExtent(const VkSurfaceCapabilitiesKHR& capabiliti
     static_cast<uint32_t>(h)
     };
 
-  actualExtent.width  = std::max(capabilities.minImageExtent.width,
-                                 std::min(capabilities.maxImageExtent.width, actualExtent.width));
-  actualExtent.height = std::max(capabilities.minImageExtent.height,
-                                 std::min(capabilities.maxImageExtent.height, actualExtent.height));
+  actualExtent.width  = std::clamp(actualExtent.width,  capabilities.minImageExtent.width,  capabilities.maxImageExtent.width );
+  actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 
   return actualExtent;
   }
 
 uint32_t VSwapchain::findImageCount(const SwapChainSupport& support) const {
-  const uint32_t maxImages=support.capabilities.maxImageCount==0 ? uint32_t(-1) : support.capabilities.maxImageCount;
-  uint32_t imageCount=support.capabilities.minImageCount+1;
-  if(0<support.capabilities.maxImageCount && imageCount>maxImages)
-    imageCount = support.capabilities.maxImageCount;
+  const uint32_t maxImages = support.capabilities.maxImageCount==0 ? uint32_t(-1) : support.capabilities.maxImageCount;
+  const uint32_t minImages = support.capabilities.minImageCount;
+
+  /* NOTE: https://github.com/KhronosGroup/Vulkan-Docs/issues/1158#issuecomment-573874821
+   * It's not clear how many images make a good fit
+   */
+  uint32_t imageCount = minImages + 1;
+
+  imageCount = std::clamp(imageCount, minImages, maxImages);
   return imageCount;
   }
 

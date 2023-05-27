@@ -83,7 +83,8 @@ uint32_t DxSwapchain::currentBackBufferIndex() {
   }
 
 void DxSwapchain::queuePresent() {
-  dxAssert(impl->Present(1/*vsync*/, 0));
+  static int vsunc = 1;
+  dxAssert(impl->Present(vsunc, 0));
 
   ++frameCounter;
   dev.cmdQueue->Signal(fence.impl.get(),frameCounter);
