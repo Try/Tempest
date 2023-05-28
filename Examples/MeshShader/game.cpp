@@ -3,6 +3,8 @@
 #include "mesh.h"
 #include "shader.h"
 
+#include <Tempest/Application>
+
 using namespace Tempest;
 
 Game::Game(Device& device)
@@ -98,6 +100,8 @@ Matrix4x4 Game::objMatrix() const {
 
 void Game::render(){
   try {
+    static uint64_t time = Application::tickCount();
+
     auto&       sync = fence   [cmdId];
     auto&       cmd  = commands[cmdId];
     sync.wait();
@@ -120,6 +124,10 @@ void Game::render(){
 
     device.submit(cmd,sync);
     device.present(swapchain);
+
+    auto t = Application::tickCount();
+    setWindowTitle(("FPS = " + std::to_string(1000.f/std::max<float>(1, t-time))).c_str());
+    time = t;
     }
   catch(const Tempest::SwapchainSuboptimal&) {
     resetSwapchain();

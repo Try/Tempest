@@ -42,6 +42,7 @@ int main(int argc, const char** argv) {
     return 0;
 
   Tempest::Log::i(msDev);
+  Tempest::Log::i(emulated ? "mesh-shader-emulated" : "GL_EXT_mesh_shader");
   Tempest::Device device{*api,msDev};
   Game            wx(device);
 
