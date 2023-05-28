@@ -1,0 +1,16 @@
+#version 450
+
+#extension GL_EXT_mesh_shader : require
+
+layout(local_size_x = 1) in;
+
+struct Payload {
+  int dummy;
+  };
+
+taskPayloadSharedEXT Payload payload;
+
+void main() {
+  payload.dummy = 0;
+  EmitMeshTasksEXT(1, 1, 1);
+  }
