@@ -39,8 +39,9 @@ else()
   add_library(${PROJECT_NAME} STATIC)
 endif()
 
-### Compillers
+### Compilers
 if(MSVC)
+  add_definitions(-D_USE_MATH_DEFINES)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
   add_definitions(-DNOMINMAX)
@@ -150,6 +151,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE spirv-cross-msl)
 ### squish
 add_subdirectory("thirdparty/squish" EXCLUDE_FROM_ALL)
 target_link_libraries(${PROJECT_NAME} PRIVATE squish-tempest)
+
+### Font
+set(GEN_FONTS_HEADER "${PROJECT_BINARY_DIR}/builtin_fonts.h")
+add_subdirectory("fonts" EXCLUDE_FROM_ALL)
+target_include_directories(${PROJECT_NAME} PRIVATE "${PROJECT_BINARY_DIR}/fonts")
+target_link_libraries(${PROJECT_NAME} PRIVATE fonts-tempest)
 
 ### Shaders
 set(GEN_SHADERS_HEADER "${PROJECT_BINARY_DIR}/sprv/builtin_shader.h")

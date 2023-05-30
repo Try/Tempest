@@ -27,6 +27,7 @@ class Application {
 
     static void         setFont(const Font& fnt);
     static const Font&  font();
+    static const Font&  defaultFont();
 
   private:
     struct Impl;

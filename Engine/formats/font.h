@@ -19,6 +19,7 @@ class FontElement final {
     FontElement(const std::string&    file);
     FontElement(const char16_t*       file);
     FontElement(const std::u16string& file);
+    FontElement(const void* data, size_t size);
 
     class LetterGeometry final {
       public:

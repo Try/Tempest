@@ -9,6 +9,8 @@
 #include <thread>
 #include <chrono>
 
+#include "fonts/builtin_fonts.h"
+
 using namespace Tempest;
 
 struct Application::Impl : SystemApi::AppCallBack {
@@ -101,6 +103,19 @@ void Application::setFont(const Font& fnt) {
 
 const Font& Application::font() {
   return impl.font;
+  }
+
+const Font& Application::defaultFont() {
+  auto regular = AppFonts::get("Roboto-Regular.ttf");
+  auto bold    = AppFonts::get("Roboto-Bold.ttf");
+  auto italic  = AppFonts::get("Roboto-Italic.ttf");
+  auto bItalic = AppFonts::get("Roboto-BoldItalic.ttf");
+
+  static auto font = Font(FontElement(regular.data, regular.len),
+                          FontElement(bold.data, bold.len),
+                          FontElement(italic.data, italic.len),
+                          FontElement(bItalic.data, bItalic.len));
+  return font;
   }
 
 void Application::implAddTimer(Timer &t) {

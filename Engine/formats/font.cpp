@@ -131,6 +131,18 @@ struct FontElement::Impl {
     stbtt_GetFontVMetrics(&info,&metrics0.ascent,&metrics0.descent,&lineGap);
     }
 
+  Impl(const void *d, size_t sz) {
+    size = sz;
+    data = new uint8_t[size];
+    std::memcpy(data, d, size);
+
+    if(stbtt_InitFont(&info,data,0)==0) {
+      delete[] data;
+      throw std::system_error(Tempest::SystemErrc::UnableToLoadAsset);
+      }
+    stbtt_GetFontVMetrics(&info,&metrics0.ascent,&metrics0.descent,&lineGap);
+    }
+
   ~Impl() {
     delete[] data;
     std::free(rasterBuf);
@@ -318,6 +330,10 @@ FontElement::FontElement(const std::string& file)
 
 FontElement::FontElement(const std::u16string& file)
   :FontElement(file.c_str(),std::true_type()) {
+  }
+
+FontElement::FontElement(const void* data, size_t size)
+  :ptr(std::make_shared<Impl>(data,size)) {
   }
 
 const FontElement::LetterGeometry& FontElement::letterGeometry(char32_t ch, float size) const { //FIXME: UB?

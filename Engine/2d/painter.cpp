@@ -13,6 +13,9 @@ using namespace Tempest;
 Painter::Painter(PaintEvent &ev, Mode m)
   : dev(ev.device()), ta(ev.ta) {
   s.fnt = Application::font();
+  if(s.fnt.isEmpty())
+    s.fnt = Application::defaultFont();
+
   const Point& dp=ev.orign();
   s.tr.mat = Transform(1,0,0,
                        0,1,0,
