@@ -25,7 +25,7 @@ std::unique_ptr<Tempest::AbstractGraphicsApi> mkApi(const char* av) {
 int main(int argc, const char** argv) {
   Tempest::Application app;
 
-  const bool emulated = false;
+  const bool emulated = true;
 
   const char* msDev = nullptr;
   auto api = mkApi(argc>1 ? argv[1] : "");

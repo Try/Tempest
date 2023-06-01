@@ -10,6 +10,11 @@ class MeshConverter {
   public:
     explicit MeshConverter(libspirv::MutableBytecode& code);
 
+    struct Options {
+      bool deferredMeshShading = false;
+      };
+    Options options;
+
     libspirv::MutableBytecode& computeShader()     { return comp; }
     libspirv::MutableBytecode& vertexPassthrough() { return vert; }
 
@@ -19,15 +24,19 @@ class MeshConverter {
     void     analyzeBuiltins();
     void     traveseVaryings();
 
-    void     emitComp();
-    void     emitVert();
+    void     emitComp (libspirv::MutableBytecode& comp);
+    void     emitVert (libspirv::MutableBytecode& vert);
+    void     emitMVert(libspirv::MutableBytecode& vert);
 
     void     emitConstants(libspirv::MutableBytecode& comp);
-    void     emitEngSsbo();
-    void     emitSetMeshOutputs(uint32_t engSetMesh);
-    void     emitEngMain (uint32_t engMain);
-    void     emitVboStore(libspirv::MutableBytecode::Iterator& gen, const libspirv::Bytecode::OpCode& op, uint32_t achain);
-    void     emitIboStore(libspirv::MutableBytecode::Iterator& gen, const libspirv::Bytecode::OpCode& op, uint32_t achain);
+    void     emitEngSsbo(libspirv::MutableBytecode& comp, spv::ExecutionModel emode);
+    void     emitSetMeshOutputs(libspirv::MutableBytecode& comp, uint32_t engSetMesh,
+                                uint32_t gl_LocalInvocationIndex, uint32_t gl_WorkGroupID);
+    void     emitEngMain (libspirv::MutableBytecode& comp, uint32_t engMain);
+    void     emitVboStore(libspirv::MutableBytecode& comp, libspirv::MutableBytecode::Iterator& gen,
+                          const libspirv::Bytecode::OpCode& op, uint32_t achain);
+    void     emitIboStore(libspirv::MutableBytecode& comp, libspirv::MutableBytecode::Iterator& gen,
+                          const libspirv::Bytecode::OpCode& op, uint32_t achain);
 
     libspirv::Bytecode&        code;
     libspirv::MutableBytecode  comp, vert;
@@ -39,6 +48,7 @@ class MeshConverter {
       uint32_t location    = uint32_t(-1);
       };
 
+    uint32_t workGroupSize[3]               = {};
     uint32_t gl_NumWorkGroups               = 0;
     uint32_t gl_WorkGroupSize               = 0;
     uint32_t gl_WorkGroupID                 = 0;

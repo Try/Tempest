@@ -86,16 +86,18 @@ class Bytecode {
     size_t   size() const { return codeLen; }
 
     uint32_t bound() const;
-
+    
     uint32_t            spirvVersion() const;
     spv::ExecutionModel findExecutionModel() const;
 
     Iterator            fromOffset(size_t off) const;
     size_t              toOffset(const OpCode& op) const;
 
-    Iterator            findSection(Section s);
-    Iterator            findSection(Iterator begin, Section s);
-    Iterator            findSectionEnd(Section s);
+    Iterator            findSection(Section s) const;
+    Iterator            findSection(Iterator begin, Section s) const;
+    Iterator            findSectionEnd(Section s) const;
+
+    Iterator            findOpType(uint32_t typeId) const;
 
     static bool         isTypeDecl(spv::Op op);
     static bool         isBasicTypeDecl(spv::Op op);
@@ -136,6 +138,7 @@ class MutableBytecode : public Bytecode {
         void set(uint16_t id, uint32_t code);
         void set(uint16_t id, OpCode   code);
         void append(uint32_t op);
+        void evict (uint32_t id);
 
         void insert(OpCode code);
         void insert(spv::Op op, const uint32_t* args, size_t argsSize);
@@ -162,6 +165,7 @@ class MutableBytecode : public Bytecode {
 
     Iterator fromOffset(size_t off);
     Iterator findOpEntryPoint(spv::ExecutionModel em, std::string_view name);
+    Iterator findFunction(uint32_t fnId);
 
     Iterator findSection(Section s);
     Iterator findSection(Iterator begin, Section s);

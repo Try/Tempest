@@ -66,14 +66,18 @@ struct Mesh::Meshlet {
       id[indAt + i*4 + 0] = std::get<0>(ibo[i]);
       id[indAt + i*4 + 1] = std::get<1>(ibo[i]);
       id[indAt + i*4 + 2] = std::get<2>(ibo[i]);
+      id[indAt + i*4 + 3] = 0;
       }
     for(size_t i=primSz; i<MaxPrim; ++i) {
       id[indAt + i*4 + 0] = 0;
       id[indAt + i*4 + 1] = 0;
       id[indAt + i*4 + 2] = 0;
+      id[indAt + i*4 + 3] = 0;
       }
+    id[indAt + 3] = primSz;
 
-    // Log::i("vert = ", 100.f*vertSz/float(MaxVert), "% ind = ", 100.f*primSz/float(MaxPrim));
+    // Log::i("vert = ", 100.f*vertSz/float(MaxVert), "% prim = ", 100.f*primSz/float(MaxPrim));
+    // Log::i("vert = ", vertSz, " prim = ", primSz);
     clear();
     return true;
     }
@@ -182,7 +186,7 @@ void Mesh::packMeshlets(std::vector<Vertex>& vbo, std::vector<uint8_t>& ibo8, co
 
   std::vector<bool> used(shp.mesh.indices.size()/3);
 
-  const bool tightPacking = true;
+  const bool tightPacking = false;
   Meshlet  active;
   uint8_t  firstVert   = 0;
   uint32_t firstUnused = 0;
@@ -202,7 +206,7 @@ void Mesh::packMeshlets(std::vector<Vertex>& vbo, std::vector<uint8_t>& ibo8, co
       firstVert = r+1;
       }
 
-    if(prim==uint32_t(-1) && (active.primSz>0 && !tightPacking)) {
+    if(prim==uint32_t(-1) && (active.primSz>OptPrim && !tightPacking)) {
       meshletCount += active.flush(data,vbo,ibo8);
       firstVert = 0;
       }

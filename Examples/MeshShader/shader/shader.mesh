@@ -52,17 +52,28 @@ uvec3 primitive(uint id) {
   return prim;
   }
 
-void main() {
-  const uint index = gl_LocalInvocationID.x;
+uvec2 meshlet() {
+  uint id   = gl_WorkGroupID.x * MaxPrim;
+  uint bits = primitives[id];
 
-  SetMeshOutputsEXT(MaxVert, MaxPrim);
+  uvec2 m;
+  m.x = MaxVert;
+  m.y = ((bits >> 24) & 0xFF);
+  return m;
+  }
+
+void main() {
+  const uint  index = gl_LocalInvocationID.x;
 
   const vec4  pos  = push.mvp * vec4(vertex(index), 1);
   const uvec3 prim = primitive(index);
+  const uvec2 ms   = meshlet();
+
+  SetMeshOutputsEXT(ms.x, ms.y);
 
   gl_MeshVerticesEXT[index].gl_Position = pos;
-  gl_PrimitiveTriangleIndicesEXT[index] = prim;
-
   // Vertices color
   outColor[index] = vec4(debugColors[gl_WorkGroupID.x%MAX_DEBUG_COLORS], 1.0);
+  if(index<ms.y)
+    gl_PrimitiveTriangleIndicesEXT[index] = prim;
   }

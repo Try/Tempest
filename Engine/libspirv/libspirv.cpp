@@ -42,11 +42,11 @@ size_t Bytecode::toOffset(const OpCode& op) const {
   return std::distance(spirv, &op);
   }
 
-Bytecode::Iterator Bytecode::findSection(Section s) {
+Bytecode::Iterator Bytecode::findSection(Section s) const {
   return findSection(begin(),s);
   }
 
-Bytecode::Iterator Bytecode::findSection(Iterator begin, Section s) {
+Bytecode::Iterator Bytecode::findSection(Iterator begin, Section s) const {
   auto ret = begin, e = end();
   while(ret!=e) {
     const auto op = ret.code->code;
@@ -87,10 +87,48 @@ Bytecode::Iterator Bytecode::findSection(Iterator begin, Section s) {
   return ret;
   }
 
-Bytecode::Iterator Bytecode::findSectionEnd(Section s) {
+Bytecode::Iterator Bytecode::findSectionEnd(Section s) const {
   auto fn = findSection(s);
   fn      = findSection(fn,libspirv::Bytecode::Section(s+1));
   return fn;
+  }
+
+Bytecode::Iterator Bytecode::findOpType(uint32_t typeId) const {
+  auto b = findSection(libspirv::Bytecode::S_Types);
+  auto e = findSection(b,libspirv::Bytecode::Section(libspirv::Bytecode::S_Types+1));
+
+  for(auto i=b; i!=e; ++i) {
+    auto& it = *i;
+    switch(it.op()) {
+      case spv::OpTypeVoid:
+      case spv::OpTypeBool:
+      case spv::OpTypeInt:
+      case spv::OpTypeFloat:
+      case spv::OpTypeVector:
+      case spv::OpTypeMatrix:
+      case spv::OpTypeImage:
+      case spv::OpTypeSampler:
+      case spv::OpTypeSampledImage:
+      case spv::OpTypeArray:
+      case spv::OpTypeRuntimeArray:
+      case spv::OpTypeStruct:
+      case spv::OpTypeOpaque:
+      case spv::OpTypePointer:
+      case spv::OpTypeFunction:
+      case spv::OpTypeEvent:
+      case spv::OpTypeDeviceEvent:
+      case spv::OpTypeReserveId:
+      case spv::OpTypeQueue:
+      case spv::OpTypePipe:
+      case spv::OpTypeForwardPointer:
+        if(it[1]==typeId)
+          return i;
+      default:
+        break;
+      }
+    }
+
+  return end();
   }
 
 bool Bytecode::isTypeDecl(spv::Op op) {
@@ -270,6 +308,21 @@ MutableBytecode::Iterator MutableBytecode::findOpEntryPoint(spv::ExecutionModel 
     std::string_view name = reinterpret_cast<const char*>(&i[3]);
     if(name!=destName)
       continue;
+    return it;
+    }
+  return end();
+  }
+
+MutableBytecode::Iterator MutableBytecode::findFunction(uint32_t fnId) {
+  for(auto it = begin(), end = this->end(); it!=end; ++it) {
+    auto& i = *it;
+    if(i.op()!=spv::OpFunction || i[2]!=fnId)
+      continue;
+    ++it;
+    if((*it).op()==spv::OpLabel)
+      ++it;
+    while((*it).op()==spv::OpVariable)
+      ++it;
     return it;
     }
   return end();
@@ -587,6 +640,13 @@ void MutableBytecode::Iterator::append(uint32_t op) {
     }
 
   owner->code.insert(owner->code.begin()+int(end), reinterpret_cast<OpCode&>(op));
+  invalidateIterator(at);
+  }
+
+void MutableBytecode::Iterator::evict(uint32_t id) {
+  size_t at  = std::distance(static_cast<const OpCode*>(owner->code.data()), code);
+  owner->code[at].len -= 1;
+  owner->code.erase(owner->code.begin()+int(at+id));
   invalidateIterator(at);
   }
 

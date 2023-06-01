@@ -8,8 +8,14 @@ MeshConverter::MeshConverter(libspirv::MutableBytecode& code):code(code) {
 void MeshConverter::exec() {
   analyzeBuiltins();
   traveseVaryings();
-  emitComp();
-  emitVert();
+
+  if(options.deferredMeshShading) {
+    emitComp(comp);
+    emitMVert(vert);
+    } else {
+    emitComp(comp);
+    emitVert(vert);
+    }
   }
 
 void MeshConverter::analyzeBuiltins() {
@@ -97,7 +103,7 @@ void MeshConverter::traveseVaryings() {
     }
   }
 
-void MeshConverter::emitComp() {
+void MeshConverter::emitComp(libspirv::MutableBytecode& comp) {
   bool ssboEmitted = false;
 
   comp.setSpirvVersion(code.spirvVersion());
@@ -128,6 +134,11 @@ void MeshConverter::emitComp() {
         continue;
       }
     if(i.op()==spv::OpExecutionMode) {
+      if(i[2]==spv::ExecutionModeLocalSize) {
+        workGroupSize[0] = i[3];
+        workGroupSize[1] = i[4];
+        workGroupSize[2] = i[5];
+        }
       if(i[2]==spv::ExecutionModeOutputVertices) {
         continue;
         }
@@ -230,7 +241,7 @@ void MeshConverter::emitComp() {
     if(i.op()==spv::OpFunction) {
       if(!ssboEmitted) {
         emitConstants(comp);
-        emitEngSsbo();
+        emitEngSsbo(comp, spv::ExecutionModelGLCompute);
         ssboEmitted = true;
         gen = comp.end();
         }
@@ -278,11 +289,11 @@ void MeshConverter::emitComp() {
     if(i.op()==spv::OpStore) {
       auto chain = i[1];
       if(auto it=iboAccess.find(chain); it!=iboAccess.end()) {
-        emitIboStore(gen, i, it->second);
+        emitIboStore(comp, gen, i, it->second);
         continue;
         }
       if(auto it=vboAccess.find(chain); it!=vboAccess.end()) {
-        emitVboStore(gen, i, it->second);
+        emitVboStore(comp, gen, i, it->second);
         continue;
         }
       }
@@ -307,6 +318,7 @@ void MeshConverter::emitComp() {
     }
   comp.removeNops();
 
+  uint32_t gl_LocalInvocationIndex = this->gl_LocalInvocationIndex;
   if(gl_LocalInvocationIndex==0) {
     auto it = comp.findSectionEnd(libspirv::Bytecode::S_Types);
     const uint32_t uint_t          = comp.OpTypeInt(it, 32, false);
@@ -325,6 +337,7 @@ void MeshConverter::emitComp() {
     it.append(gl_LocalInvocationIndex);
     }
 
+  uint32_t gl_WorkGroupID = this->gl_WorkGroupID;
   if(gl_WorkGroupID==0) {
     auto it = comp.findSectionEnd(libspirv::Bytecode::S_Types);
     const uint32_t uint_t           = comp.OpTypeInt(it, 32, false);
@@ -344,8 +357,8 @@ void MeshConverter::emitComp() {
     it.append(gl_WorkGroupID);
     }
 
-  emitSetMeshOutputs(engSetMesh);
-  emitEngMain(myMain);
+  emitSetMeshOutputs(comp, engSetMesh, gl_LocalInvocationIndex, gl_WorkGroupID);
+  emitEngMain(comp, myMain);
   }
 
 void MeshConverter::emitConstants(libspirv::MutableBytecode& comp) {
@@ -359,7 +372,7 @@ void MeshConverter::emitConstants(libspirv::MutableBytecode& comp) {
     }
   }
 
-void MeshConverter::emitEngSsbo() {
+void MeshConverter::emitEngSsbo(libspirv::MutableBytecode& comp, spv::ExecutionModel emode) {
   auto fn = comp.findSectionEnd(libspirv::Bytecode::S_Types);
 
   const uint32_t int_t                        = comp.OpTypeInt(fn, 32, true);
@@ -390,7 +403,9 @@ void MeshConverter::emitEngSsbo() {
 
   vIboPtr      = comp.OpVariable(fn, _ptr_Priate_uint,    spv::StorageClassPrivate);
   vVboPtr      = comp.OpVariable(fn, _ptr_Priate_uint,    spv::StorageClassPrivate);
-  vTmp         = comp.OpVariable(fn, _ptr_Workgroup_uint, spv::StorageClassWorkgroup);
+  if(emode==spv::ExecutionModelGLCompute) {
+    vTmp = comp.OpVariable(fn, _ptr_Workgroup_uint, spv::StorageClassWorkgroup);
+    }
 
   fn = comp.findSectionEnd(libspirv::Bytecode::S_Annotations);
   fn.insert(spv::OpDecorate,       {_runtimearr_uint, spv::DecorationArrayStride, 4});
@@ -458,18 +473,24 @@ void MeshConverter::emitEngSsbo() {
 
   fn.insert(spv::OpName,       vIboPtr, "iboPtr");
   fn.insert(spv::OpName,       vVboPtr, "vboPtr");
-  fn.insert(spv::OpName,       vTmp,    "wgHelper");
+  if(emode==spv::ExecutionModelGLCompute) {
+    fn.insert(spv::OpName, vTmp, "wgHelper");
+    }
 
-  fn = comp.findOpEntryPoint(spv::ExecutionModelGLCompute,"main");
+  fn = comp.findOpEntryPoint(emode,"main");
+  assert(fn!=comp.end());
   fn.append(vIndirectCmd);
   fn.append(vDecriptors);
   fn.append(vScratch);
   fn.append(vIboPtr);
   fn.append(vVboPtr);
-  fn.append(vTmp);
+  if(emode==spv::ExecutionModelGLCompute) {
+    fn.append(vTmp);
+    }
   }
 
-void MeshConverter::emitSetMeshOutputs(uint32_t engSetMesh) {
+void MeshConverter::emitSetMeshOutputs(libspirv::MutableBytecode& comp, uint32_t engSetMesh,
+                                       uint32_t gl_LocalInvocationIndex, uint32_t gl_WorkGroupID) {
   auto fn = comp.findSectionEnd(libspirv::Bytecode::S_Debug);
   fn.insert(spv::OpName, engSetMesh, "OpSetMeshOutputs");
 
@@ -501,31 +522,40 @@ void MeshConverter::emitSetMeshOutputs(uint32_t engSetMesh) {
 
   fn.insert(spv::OpLabel,            {comp.fetchAddBound()});
 
-  const uint32_t rgAllocSize = comp.fetchAddBound();
-  const uint32_t rgIboSize   = comp.fetchAddBound();
-  {
-  const uint32_t rgMaxV = comp.fetchAddBound();
-  const uint32_t rgMaxP = comp.fetchAddBound();
-  fn.insert(spv::OpLoad, {uint_t, rgMaxV, maxV});
-  fn.insert(spv::OpLoad, {uint_t, rgMaxP, maxP});
+  const uint32_t rgAllocSize     = comp.fetchAddBound();
+  const uint32_t rgIboSize       = comp.fetchAddBound();
+  const uint32_t indPerPrimitive = const3; // Tringles
+  if(options.deferredMeshShading) {
+    const uint32_t rgMaxV = comp.fetchAddBound();
+    const uint32_t rgMaxP = comp.fetchAddBound();
+    fn.insert(spv::OpLoad, {uint_t, rgMaxV, maxV});
+    fn.insert(spv::OpLoad, {uint_t, rgMaxP, maxP});
 
-  const uint32_t rg0 = comp.fetchAddBound();
-  fn.insert(spv::OpIMul, {uint_t, rg0, rgMaxV, constVertSz});
+    const uint32_t rg0 = comp.fetchAddBound();
+    fn.insert(spv::OpIMul,    {uint_t, rg0, rgMaxV, constVertSz});
+    fn.insert(spv::OpIMul,    {uint_t, rgIboSize, rgMaxP, indPerPrimitive});
+    fn.insert(spv::OpBitcast, {uint_t, rgAllocSize, rgIboSize});
+    } else {
+    const uint32_t rgMaxV = comp.fetchAddBound();
+    const uint32_t rgMaxP = comp.fetchAddBound();
+    fn.insert(spv::OpLoad, {uint_t, rgMaxV, maxV});
+    fn.insert(spv::OpLoad, {uint_t, rgMaxP, maxP});
 
-  fn.insert(spv::OpIMul, {uint_t, rgIboSize, rgMaxP, const3}); // Tringles
-
-  fn.insert(spv::OpIAdd, {uint_t, rgAllocSize, rg0, rgIboSize});
-  }
+    const uint32_t rg0 = comp.fetchAddBound();
+    fn.insert(spv::OpIMul, {uint_t, rg0, rgMaxV, constVertSz});
+    fn.insert(spv::OpIMul, {uint_t, rgIboSize, rgMaxP, indPerPrimitive});
+    fn.insert(spv::OpIAdd, {uint_t, rgAllocSize, rg0, rgIboSize});
+    }
 
   const uint32_t rgThreadId    = comp.fetchAddBound();
-  fn.insert(spv::OpLoad, {uint_t, rgThreadId, gl_LocalInvocationIndex}); // gl_LocalInvocationIndex
+  fn.insert(spv::OpLoad, {uint_t, rgThreadId, gl_LocalInvocationIndex});
 
   const uint32_t drawId   = comp.fetchAddBound();
   const uint32_t rgDrawId = comp.fetchAddBound();
   fn.insert(spv::OpAccessChain, {_ptr_Input_uint, drawId, gl_WorkGroupID, const2}); // &gl_WorkGroupID.z (abused as drawid)
   fn.insert(spv::OpLoad, {uint_t, rgDrawId, drawId});
 
-  // wgHelper==gl_LocalInvocationIndex
+  // gl_LocalInvocationIndex==0
   {
     const uint32_t cond0 = comp.fetchAddBound();
     fn.insert(spv::OpIEqual, {bool_t, cond0, rgThreadId, const0});
@@ -567,9 +597,6 @@ void MeshConverter::emitSetMeshOutputs(uint32_t engSetMesh) {
     fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, descDestSz, vDecriptors, const2, rgTmp2, const2}); //&EngineInternal1::desc[].indSz
     fn.insert(spv::OpStore, {descDestSz, rgIboSize});
 
-    // const uint32_t rgTmp3 = comp.fetchAddBound();
-    // fn.insert(spv::OpAtomicIAdd, {uint_t, rgTmp3, descDest, const1/*scope*/, const0/*semantices*/, const1});
-
     fn.insert(spv::OpBranch, {condBlockEnd});
     fn.insert(spv::OpLabel,  {condBlockEnd});
   }
@@ -578,27 +605,46 @@ void MeshConverter::emitSetMeshOutputs(uint32_t engSetMesh) {
   fn.insert(spv::OpControlBarrier, {const2, const2, const264}); // barrier()
 
   // iboPtr =
+  // vboPtr =
   {
   const uint32_t rg0 = comp.fetchAddBound();
   fn.insert(spv::OpLoad, {uint_t, rg0, vTmp});
   fn.insert(spv::OpStore, {vIboPtr, rg0});
 
-  const uint32_t rgMaxP = comp.fetchAddBound();
-  fn.insert(spv::OpLoad, {uint_t, rgMaxP, maxP});
+  if(options.deferredMeshShading) {
+    const uint32_t wgSize = workGroupSize[0]*workGroupSize[1]*workGroupSize[2];
+    fn = comp.findSectionEnd(libspirv::Bytecode::S_Types);
+    const uint32_t uint_t = comp.OpTypeInt(fn, 32, false);
+    const uint32_t constI = comp.OpConstant(fn,uint_t,wgSize);
 
-  const uint32_t rg1 = comp.fetchAddBound();
-  fn.insert(spv::OpIMul, {uint_t, rg1, rgMaxP, const3}); // Tringles
-  const uint32_t rg2 = comp.fetchAddBound();
-  fn.insert(spv::OpIAdd, {uint_t, rg2, rg0, rg1});
+    fn = comp.end();
+    const uint32_t rg1 = comp.fetchAddBound();
+    fn.insert(spv::OpAccessChain, {_ptr_Input_uint, rg1, gl_WorkGroupID, const0});
+    const uint32_t rg2 = comp.fetchAddBound();
+    fn.insert(spv::OpLoad,  {uint_t, rg2, rg1});
 
-  fn.insert(spv::OpStore, {vVboPtr, rg2});
+    const uint32_t rg3 = comp.fetchAddBound();
+    fn.insert(spv::OpIMul,  {uint_t, rg3, rg2, constI});
+
+    fn.insert(spv::OpStore, {vVboPtr, rg3});
+    } else {
+    const uint32_t rgMaxP = comp.fetchAddBound();
+    fn.insert(spv::OpLoad, {uint_t, rgMaxP, maxP});
+
+    const uint32_t rg1 = comp.fetchAddBound();
+    fn.insert(spv::OpIMul, {uint_t, rg1, rgMaxP, const3}); // Tringles
+    const uint32_t rg2 = comp.fetchAddBound();
+    fn.insert(spv::OpIAdd, {uint_t, rg2, rg0, rg1});
+
+    fn.insert(spv::OpStore, {vVboPtr, rg2});
+    }
   }
 
   fn.insert(spv::OpReturn,           {});
   fn.insert(spv::OpFunctionEnd,      {});
   }
 
-void MeshConverter::emitEngMain(uint32_t engMain) {
+void MeshConverter::emitEngMain(libspirv::MutableBytecode& comp, uint32_t engMain) {
   auto fn = comp.findSectionEnd(libspirv::Bytecode::S_Types);
 
   const uint32_t void_t    = comp.OpTypeVoid(fn);
@@ -615,8 +661,11 @@ void MeshConverter::emitEngMain(uint32_t engMain) {
   fn.insert(spv::OpFunctionEnd,      {});
   }
 
-void MeshConverter::emitVboStore(libspirv::MutableBytecode::Iterator& gen,
+void MeshConverter::emitVboStore(libspirv::MutableBytecode& comp, libspirv::MutableBytecode::Iterator& gen,
                                   const libspirv::Bytecode::OpCode& op, uint32_t achain) {
+  if(options.deferredMeshShading)
+    return;
+
   const auto val = op[2];
 
   // Types
@@ -716,7 +765,7 @@ void MeshConverter::emitVboStore(libspirv::MutableBytecode::Iterator& gen,
     });
   }
 
-void MeshConverter::emitIboStore(libspirv::MutableBytecode::Iterator& gen,
+void MeshConverter::emitIboStore(libspirv::MutableBytecode& comp, libspirv::MutableBytecode::Iterator& gen,
                                   const libspirv::Bytecode::OpCode& op, uint32_t achain) {
   const auto triplet = op[2];
 
@@ -760,25 +809,34 @@ void MeshConverter::emitIboStore(libspirv::MutableBytecode::Iterator& gen,
     nchain[1] = comp.fetchAddBound();
     nchain[2] = vScratch;
     nchain[3] = const1;
-    nchain[4] = regPIbo; // TODO: iboPtr+i
+    nchain[4] = regPIbo;
     gen.insert(spv::OpAccessChain, nchain, 5);
 
     auto elt = comp.fetchAddBound();
     gen.insert(spv::OpCompositeExtract, {uint_t, elt, triplet, uint32_t(i)});
 
-    const uint32_t rg1 = comp.fetchAddBound();
-    gen.insert(spv::OpIMul, {uint_t, rg1, elt, constVertSz});
+    if(options.deferredMeshShading) {
+      const uint32_t rg2 = comp.fetchAddBound();
+      gen.insert(spv::OpLoad, {uint_t, rg2, vVboPtr});
 
-    const uint32_t rg2 = comp.fetchAddBound();
-    gen.insert(spv::OpLoad, {uint_t, rg2, vVboPtr});
+      const uint32_t rg3 = comp.fetchAddBound();
+      gen.insert(spv::OpIAdd, {uint_t, rg3, rg2, elt});
+      gen.insert(spv::OpStore, {nchain[1], rg3});
+      } else {
+      const uint32_t rg1 = comp.fetchAddBound();
+      gen.insert(spv::OpIMul, {uint_t, rg1, elt, constVertSz});
 
-    const uint32_t rg3 = comp.fetchAddBound();
-    gen.insert(spv::OpIAdd, {uint_t, rg3, rg2, rg1});
-    gen.insert(spv::OpStore, {nchain[1], rg3});
+      const uint32_t rg2 = comp.fetchAddBound();
+      gen.insert(spv::OpLoad, {uint_t, rg2, vVboPtr});
+
+      const uint32_t rg3 = comp.fetchAddBound();
+      gen.insert(spv::OpIAdd, {uint_t, rg3, rg2, rg1});
+      gen.insert(spv::OpStore, {nchain[1], rg3});
+      }
     }
   }
 
-void MeshConverter::emitVert() {
+void MeshConverter::emitVert(libspirv::MutableBytecode& vert) {
   const uint32_t glslStd           = vert.fetchAddBound();
   const uint32_t main              = vert.fetchAddBound();
   const uint32_t lblMain           = vert.fetchAddBound();
@@ -963,7 +1021,7 @@ void MeshConverter::emitVert() {
 
       const uint32_t ptrL  = vert.fetchAddBound();
       const uint32_t rCast = vert.fetchAddBound();
-      // NOTE: ids is pointer to array of X, we need only X
+      // NOTE: ids is pointer to array of T, we need only T
       const uint32_t ptrVar = vert.fetchAddBound();
       uint32_t chain[255] = {_ptr_Output_float, ptrL, varId};
       uint32_t chainSz    = 3;
@@ -972,6 +1030,7 @@ void MeshConverter::emitVert() {
         ++chainSz;
         }
 
+      // TODO: bool, maybe signed int
       if(ids[len-1].type->op()==spv::OpTypeFloat) {
         chain[0] = _ptr_Output_float;
         fn.insert(spv::OpAccessChain, chain, chainSz);
@@ -1017,4 +1076,321 @@ void MeshConverter::emitVert() {
       }
     }
   }
+  }
+
+void MeshConverter::emitMVert(libspirv::MutableBytecode& comp) {
+  bool ssboEmitted = false;
+
+  iboAccess.clear();
+  vboAccess.clear();
+
+  comp.setSpirvVersion(code.spirvVersion());
+  comp.fetchAddBound(code.bound()-comp.bound());
+
+  const uint32_t gl_VertexIndex = vert.fetchAddBound();
+
+  auto gen = comp.end();
+
+  // copy most of mesh code
+  for(auto it = code.begin(); it!=code.end(); ++it) {
+    auto& i = *it;
+    if(i.op()==spv::OpCapability) {
+      if(i[1]==spv::CapabilityMeshShadingEXT) {
+        gen.insert(spv::OpCapability,{spv::CapabilityShader});
+        continue;
+        }
+      }
+    if(i.op()==spv::OpSourceExtension) {
+      std::string_view name = reinterpret_cast<const char*>(&i[1]);
+      if(name=="GL_EXT_mesh_shader")
+        continue;
+      }
+    if(i.op()==spv::OpExtension) {
+      std::string_view name = reinterpret_cast<const char*>(&i[1]);
+      if(name=="SPV_EXT_mesh_shader")
+        continue;
+      }
+    if(i.op()==spv::OpExecutionMode) {
+      if(i[2]==spv::ExecutionModeLocalSize) {
+        workGroupSize[0] = i[3];
+        workGroupSize[1] = i[4];
+        workGroupSize[2] = i[5];
+        }
+      if(i[2]==spv::ExecutionModeOutputVertices) {
+        continue;
+        }
+      if(i[2]==spv::ExecutionModeOutputPrimitivesEXT) {
+        continue;
+        }
+      if(i[2]==spv::ExecutionModeOutputTrianglesEXT) {
+        continue;
+        }
+      if(i[2]==spv::ExecutionModeLocalSize) {
+        continue;
+        }
+      }
+    if(i.op()==spv::OpEntryPoint) {
+      uint32_t ops[128] = {};
+      ops[0] = spv::OpEntryPoint;
+      ops[1] = spv::ExecutionModelVertex;
+      ops[2] = i[2];       // main id
+      ops[3] = 0x6E69616D; // "main"
+      ops[4] = 0x0;
+
+      uint32_t cnt = 5;
+      for(size_t r=5; r<i.length(); ++r) {
+        uint32_t id = i[r];
+        if(id==gl_PrimitiveTriangleIndicesEXT)
+          continue;
+        if(varying.find(id)!=varying.end())
+          ;//continue;
+        ops[cnt] = id; ++cnt;
+        }
+
+      gen.insert(i.op(),&ops[1],cnt-1);
+      continue;
+      }
+    if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBuiltIn) {
+      if( i[3]==spv::BuiltInPrimitivePointIndicesEXT ||
+          i[3]==spv::BuiltInPrimitiveLineIndicesEXT  ||
+          i[3]==spv::BuiltInPrimitiveTriangleIndicesEXT ||
+          //i[3]==spv::BuiltInNumWorkgroups ||
+          i[3]==spv::BuiltInWorkgroupSize ||
+          i[3]==spv::BuiltInWorkgroupId ||
+          i[3]==spv::BuiltInLocalInvocationId ||
+          i[3]==spv::BuiltInLocalInvocationIndex ||
+          i[3]==spv::BuiltInGlobalInvocationId) {
+        continue;
+        }
+      }
+    if(i.op()==spv::OpMemberDecorate && i[3]==spv::DecorationBuiltIn) {
+      // continue;
+      }
+    if(i.op()==spv::OpName) {
+      auto name = std::string_view(reinterpret_cast<const char*>(&i[2]));
+      if(name=="gl_MeshPerVertexEXT") {
+        gen.insert(i.op(), i[1], "gl_PerVertex");
+        continue;
+        }
+
+      auto off = gen.toOffset();
+      gen.insert(i.op(),&i[1],i.length()-1);
+
+      if(name.find("gl_")==0) {
+        auto ix = comp.fromOffset(off);
+        uint32_t gl = (*ix)[2];
+        reinterpret_cast<char*>(&gl)[1] = '1';
+        ix.set(2,gl);
+        }
+      continue;
+      }
+    if(i.op()==spv::OpMemberName) {
+      auto name = std::string_view(reinterpret_cast<const char*>(&i[3]));
+      if(name=="gl_Position") {
+        continue;
+        }
+      auto off = gen.toOffset();
+      gen.insert(i.op(),&i[1],i.length()-1);
+      if(name.find("gl_")==0) {
+        auto ix = comp.fromOffset(off);
+        uint32_t gl = (*ix)[3];
+        reinterpret_cast<char*>(&gl)[1] = '1';
+        ix.set(3,gl);
+        }
+      continue;
+      }
+    if(i.op()==spv::OpTypePointer) {
+      auto off = gen.toOffset();
+      gen.insert(i.op(),&i[1],i.length()-1);
+      if(i[2]==spv::StorageClassOutput) {
+        // flatten array
+        auto ix   = comp.fromOffset(off);
+        auto type = code.findOpType((*ix)[3]);
+
+        if((*type).op()==spv::OpTypeArray)
+          type = code.findOpType((*type)[2]);
+
+        ix.set(2, spv::StorageClassOutput);
+        ix.set(3, (*type)[1]);
+        }
+      else if(i[2]==spv::StorageClassWorkgroup) {
+        auto ix = comp.fromOffset(off);
+        ix.set(2,spv::StorageClassPrivate);
+        }
+      else if(i[2]==spv::StorageClassInput) {
+        auto ix = comp.fromOffset(off);
+        ix.set(2,spv::StorageClassPrivate);
+        }
+      continue;
+      }
+    if(i.op()==spv::OpVariable) {
+      auto off = gen.toOffset();
+      gen.insert(i.op(),&i[1],i.length()-1);
+      if(i[3]==spv::StorageClassOutput) {
+        // auto ix = comp.fromOffset(off);
+        // ix.set(3,spv::StorageClassPrivate);
+        }
+      else if(i[3]==spv::StorageClassWorkgroup) {
+        auto ix = comp.fromOffset(off);
+        ix.set(3,spv::StorageClassPrivate);
+        }
+      else if(i[3]==spv::StorageClassInput) {
+        auto ix = comp.fromOffset(off);
+        ix.set(3,spv::StorageClassPrivate);
+        }
+      continue;
+      }
+    if(i.op()==spv::OpFunction) {
+      if(!ssboEmitted) {
+        emitConstants(comp);
+        // emitEngSsbo(comp, spv::ExecutionModelVertex);
+        ssboEmitted = true;
+        gen = comp.end();
+        }
+      }
+    if(i.op()==spv::OpSetMeshOutputsEXT) {
+      continue;
+      }
+    if(i.op()==spv::OpAccessChain) {
+      if(i[3]==gl_PrimitiveTriangleIndicesEXT) {
+        iboAccess[i[2]] = code.toOffset(i);
+        continue;
+        }
+      if(varying.find(i[3])!=varying.end()) {
+        vboAccess[i[2]] = code.toOffset(i);
+
+        auto off = gen.toOffset();
+        gen.insert(i.op(),&i[1],i.length()-1);
+
+        auto ix = comp.fromOffset(off);
+        ix.evict(4);
+        gen = comp.end();
+        continue;
+        }
+      }
+    if(i.op()==spv::OpStore) {
+      auto chain = i[1];
+      if(auto it=iboAccess.find(chain); it!=iboAccess.end()) {
+        continue;
+        }
+      if(auto it=vboAccess.find(chain); it!=vboAccess.end()) {
+        //continue;
+        }
+      }
+    gen.insert(i.op(),&i[1],i.length()-1);
+    }
+
+  for(auto it = comp.begin(), end = comp.end(); it!=end; ++it) {
+    auto& i = *it;
+    if(i.op()==spv::OpName && (i[1]==gl_PrimitiveTriangleIndicesEXT)) {
+      it.setToNop();
+      }
+    if(i.op()==spv::OpVariable && (i[2]==gl_PrimitiveTriangleIndicesEXT)) {
+      it.setToNop();
+      }
+    }
+  comp.removeNops();
+
+  // declaration
+  if(gl_VertexIndex!=0) {
+    auto it = comp.findSectionEnd(libspirv::Bytecode::S_Types);
+    const uint32_t int_t          = comp.OpTypeInt(it, 32, true);
+    const uint32_t _ptr_Input_int = comp.OpTypePointer(it,spv::StorageClassInput, int_t);
+
+    it = comp.findSectionEnd(libspirv::Bytecode::S_Debug);
+    it.insert(spv::OpName, gl_VertexIndex, "gl_VertexIndex");
+
+    it = comp.findSectionEnd(libspirv::Bytecode::S_Annotations);
+    it.insert(spv::OpDecorate, {gl_VertexIndex, spv::DecorationBuiltIn, spv::BuiltInVertexIndex});
+
+    it = comp.findOpEntryPoint(spv::ExecutionModelVertex, "main");
+    it.append(gl_VertexIndex);
+
+    it = comp.findSectionEnd(libspirv::Bytecode::S_Types);
+    it.insert(spv::OpVariable, {_ptr_Input_int, gl_VertexIndex, spv::StorageClassInput});
+    }
+
+  // compyte variables
+  if(gl_VertexIndex!=0) {
+    const uint32_t rg_VertexIndexI = vert.fetchAddBound();
+    const uint32_t rg_VertexIndexU = vert.fetchAddBound();
+
+    auto it = comp.findSectionEnd(libspirv::Bytecode::S_Types);
+    const uint32_t wgSize            = workGroupSize[0]*workGroupSize[1]*workGroupSize[2];
+    const uint32_t uint_t            = comp.OpTypeInt(it, 32, false);
+    const uint32_t int_t             = comp.OpTypeInt(it, 32, true);
+    const uint32_t _ptr_Private_uint = comp.OpTypePointer(it, spv::StorageClassPrivate, uint_t);
+    const uint32_t constWg           = comp.OpConstant(it,uint_t,wgSize);
+
+    it = comp.findOpEntryPoint(spv::ExecutionModelVertex,"main");
+    uint32_t mainId = (*it)[2];
+
+    it = comp.findFunction(mainId);
+    it.insert(spv::OpLoad,    {int_t,  rg_VertexIndexI, gl_VertexIndex});
+    it.insert(spv::OpBitcast, {uint_t, rg_VertexIndexU, rg_VertexIndexI});
+
+    if(gl_LocalInvocationIndex!=0) {
+      const uint32_t tmp0 = vert.fetchAddBound();
+      const uint32_t tmp1 = vert.fetchAddBound();
+      it.insert(spv::OpAccessChain, {_ptr_Private_uint, tmp0, gl_LocalInvocationIndex});
+      it.insert(spv::OpUMod,        {uint_t, tmp1, rg_VertexIndexU, constWg});
+      it.insert(spv::OpStore,       {tmp0, tmp1});
+      }
+
+    if(gl_LocalInvocationID!=0) {
+      const uint32_t tmp0 = vert.fetchAddBound();
+      const uint32_t tmp1 = vert.fetchAddBound();
+      it.insert(spv::OpAccessChain, {_ptr_Private_uint, tmp0, gl_LocalInvocationID, constants[0]});
+      it.insert(spv::OpUMod,        {uint_t, tmp1, rg_VertexIndexU, constWg});
+      it.insert(spv::OpStore,       {tmp0, tmp1});
+      }
+
+    if(gl_WorkGroupID!=0) {
+      const uint32_t tmp0 = vert.fetchAddBound();
+      const uint32_t tmp1 = vert.fetchAddBound();
+      it.insert(spv::OpAccessChain, {_ptr_Private_uint, tmp0, gl_WorkGroupID, constants[0]});
+      it.insert(spv::OpUDiv,        {uint_t, tmp1, rg_VertexIndexU, constWg});
+      it.insert(spv::OpStore,       {tmp0, tmp1});
+      }
+    }
+
+  if(false && gl_LocalInvocationIndex==0) {
+    auto it = comp.findSectionEnd(libspirv::Bytecode::S_Types);
+    const uint32_t uint_t          = comp.OpTypeInt(it, 32, false);
+    const uint32_t _ptr_Input_uint = comp.OpTypePointer(it,spv::StorageClassInput, uint_t);
+
+    it = comp.findSectionEnd(libspirv::Bytecode::S_Types);
+    gl_LocalInvocationIndex = comp.OpVariable(it, _ptr_Input_uint, spv::StorageClassInput);
+
+    it = comp.findSectionEnd(libspirv::Bytecode::S_Debug);
+    it.insert(spv::OpName, gl_LocalInvocationIndex, "gl_LocalInvocationIndex");
+
+    it = comp.findSectionEnd(libspirv::Bytecode::S_Annotations);
+    it.insert(spv::OpDecorate, {gl_LocalInvocationIndex, spv::DecorationBuiltIn, spv::BuiltInLocalInvocationIndex});
+
+    it = comp.findOpEntryPoint(spv::ExecutionModelVertex,"main");
+    it.append(gl_LocalInvocationIndex);
+    }
+
+  if(false && gl_WorkGroupID==0) {
+    auto it = comp.findSectionEnd(libspirv::Bytecode::S_Types);
+    const uint32_t uint_t           = comp.OpTypeInt(it, 32, false);
+    const uint32_t uint3_t          = comp.OpTypeVector(it, uint_t, 3);
+    const uint32_t _ptr_Input_uint3 = comp.OpTypePointer(it,spv::StorageClassInput, uint3_t);
+
+    it = comp.findSectionEnd(libspirv::Bytecode::S_Types);
+    gl_WorkGroupID = comp.OpVariable(it, _ptr_Input_uint3, spv::StorageClassInput);
+
+    it = comp.findSectionEnd(libspirv::Bytecode::S_Debug);
+    it.insert(spv::OpName, gl_WorkGroupID, "gl_WorkGroupID");
+
+    it = comp.findSectionEnd(libspirv::Bytecode::S_Annotations);
+    it.insert(spv::OpDecorate, {gl_WorkGroupID, spv::DecorationBuiltIn, spv::BuiltInWorkgroupId});
+
+    it = comp.findOpEntryPoint(spv::ExecutionModelVertex,"main");
+    it.append(gl_WorkGroupID);
+    }
+
+  // emitSetMeshOutputs(comp, engSetMesh);
+  // emitEngMain(comp, myMain);
   }

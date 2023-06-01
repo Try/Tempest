@@ -38,11 +38,11 @@ VMeshShaderEmulated::VMeshShaderEmulated(VDevice& device, const void *source, si
   */
 
   auto& vert = conv.vertexPassthrough();
-  /*
-  debugLog("mesh_conv.vert.spv", vert.opcodes(), vert.size());
-  std::system("spirv-cross.exe -V .\\mesh_conv.vert.spv");
-  std::system("spirv-val.exe      .\\mesh_conv.vert.spv");
-  */
+
+  // debugLog("mesh_conv.vert.spv", vert.opcodes(), vert.size());
+  // std::system("spirv-cross.exe -V .\\mesh_conv.vert.spv");
+  // std::system("spirv-val.exe      .\\mesh_conv.vert.spv");
+
 
   VkShaderModuleCreateInfo createInfo = {};
   createInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

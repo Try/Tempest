@@ -16,6 +16,7 @@ class Mesh {
 
     enum {
       MaxVert = 64,
+      OptPrim = 48,
       MaxPrim = 64,
       };
 

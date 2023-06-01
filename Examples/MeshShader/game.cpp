@@ -1,9 +1,12 @@
 #include "game.h"
 
+#include <Tempest/Application>
+#include <Tempest/Button>
+#include <Tempest/Painter>
+#include <Tempest/Panel>
+
 #include "mesh.h"
 #include "shader.h"
-
-#include <Tempest/Application>
 
 using namespace Tempest;
 
@@ -12,6 +15,11 @@ Game::Game(Device& device)
   for(uint8_t i=0;i<MaxFramesInFlight;++i)
     fence.emplace_back(device.fence());
   resetSwapchain();
+
+  auto& p = addWidget(new Panel());
+  p.setDragable(true);
+  p.addWidget(new Button()).setText("Button");
+  p.setLayout(Vertical);
 
   mesh = Mesh(device, "assets/dragon.obj");
   //mesh = Mesh(device, "assets/box.obj");
@@ -102,9 +110,14 @@ void Game::render(){
   try {
     static uint64_t time = Application::tickCount();
 
+    cmdId = (cmdId+1)%MaxFramesInFlight;
+
     auto&       sync = fence   [cmdId];
     auto&       cmd  = commands[cmdId];
     sync.wait();
+
+    dispatchPaintEvent(surface,texAtlass);
+    surfaceMesh[cmdId].update(device,surface);
 
     Matrix4x4 ret = projMatrix();
     ret.mul(viewMatrix());
@@ -120,6 +133,7 @@ void Game::render(){
         } else {
         enc.dispatchMesh(mesh.meshletCount);
         }
+      surfaceMesh[cmdId].draw(enc);
     }
 
     device.submit(cmd,sync);
