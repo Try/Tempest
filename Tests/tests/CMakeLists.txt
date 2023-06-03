@@ -128,6 +128,9 @@ compile_shader(simple_test.mesh.comp)
 compile_shader(mesh_prefix_sum.comp)
 compile_shader(mesh_compactage.comp)
 
+compile_shader(array_length.vert)
+compile_shader(array_length.frag)
+
 target_sources(${PROJECT_NAME} PRIVATE
   ${SOURCES}
   ${SHADERS}

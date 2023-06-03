@@ -24,6 +24,7 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
 #else
   optMSL.platform = spirv_cross::CompilerMSL::Options::iOS;
 #endif
+  optMSL.buffer_size_buffer_index = MSL_PUSH;
 
   spirv_cross::CompilerGLSL::Options optGLSL;
   optGLSL.vertex.flip_vert_y = true;

@@ -206,6 +206,47 @@ void SsboCopy() {
   }
 
 template<class GraphicsApi>
+void ArrayLength() {
+  using namespace Tempest;
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto vert = device.shader("shader/array_length.vert.sprv");
+    auto frag = device.shader("shader/array_length.frag.sprv");
+    auto pso  = device.pipeline(Topology::Triangles, RenderState(), vert, frag);
+    auto desc = device.descriptors(pso);
+
+    auto src  = device.attachment(TextureFormat::RGBA8,4,4);
+    auto dst  = device.ssbo(nullptr, 6*sizeof(uint32_t));
+
+    desc.set(0, dst);
+
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setFramebuffer({{src,Vec4(0),Tempest::Preserve}});
+      enc.setUniforms(pso, desc);
+      enc.draw(6);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    uint32_t sz = 0;
+    device.readBytes(dst, &sz, sizeof(sz));
+    EXPECT_EQ(sz, 6);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void Shader() {
   using namespace Tempest;
 

@@ -18,6 +18,10 @@ class MtShader : public AbstractGraphicsApi::Shader {
     MtShader(MtDevice& dev, const void* source, size_t srcSize);
     ~MtShader();
 
+    enum Bindings : uint32_t {
+      MSL_PUSH = 29,
+    };
+
     using Binding = ShaderReflection::Binding;
 
     NsPtr<MTL::Library>              library;
