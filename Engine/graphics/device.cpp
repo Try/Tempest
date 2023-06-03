@@ -10,8 +10,6 @@
 #include <mutex>
 #include <cassert>
 
-#include "utility/smallarray.h"
-
 using namespace Tempest;
 
 static uint32_t mipCount(uint32_t w, uint32_t h) {

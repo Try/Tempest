@@ -210,8 +210,15 @@ void ArrayLength() {
   using namespace Tempest;
 
   try {
+    const char* msDev = nullptr;
     GraphicsApi api{ApiFlags::Validation};
-    Device      device(api);
+    auto dev = api.devices();
+    for(auto& i:dev)
+      if(i.storeAndAtomicVs)
+        msDev = i.name;
+    if(msDev==nullptr)
+      return;
+    Device      device(api, msDev);
 
     auto vert = device.shader("shader/array_length.vert.sprv");
     auto frag = device.shader("shader/array_length.frag.sprv");

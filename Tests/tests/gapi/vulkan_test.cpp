@@ -50,6 +50,12 @@ TEST(VulkanApi,SsboCopy) {
 #endif
   }
 
+TEST(VulkanApi,ArrayLength) {
+#if !defined(__OSX__)
+  GapiTestCommon::ArrayLength<VulkanApi>();
+#endif
+  }
+
 TEST(VulkanApi,Shader) {
 #if !defined(__OSX__)
   GapiTestCommon::Shader<VulkanApi>();

@@ -62,6 +62,12 @@ TEST(DirectX12Api,SsboCopy) {
 #endif
   }
 
+TEST(DirectX12Api,ArrayLength) {
+#if defined(_MSC_VER)
+  GapiTestCommon::ArrayLength<DirectX12Api>();
+#endif
+  }
+
 TEST(DirectX12Api,Shader) {
 #if defined(_MSC_VER)
   GapiTestCommon::Shader<DirectX12Api>();
