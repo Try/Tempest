@@ -2,7 +2,9 @@
 
 #include <Tempest/AbstractGraphicsApi>
 #include <Metal/Metal.hpp>
+
 #include "utility/smallarray.h"
+#include "gapi/shaderreflection.h"
 
 namespace Tempest {
 namespace Detail {
@@ -19,6 +21,8 @@ class MtDescriptorArray : public AbstractGraphicsApi::Desc {
     void set    (size_t id, const Sampler& smp) override;
     void setTlas(size_t,AbstractGraphicsApi::AccelerationStructure*) override;
 
+    void fillBufferSizeBuffer(uint32_t* ret, ShaderReflection::Stage stage);
+
     struct Desc {
       void*              val     = nullptr;
       MTL::SamplerState* sampler = nullptr;
@@ -28,6 +32,8 @@ class MtDescriptorArray : public AbstractGraphicsApi::Desc {
     MtDevice&                        dev;
     SmallArray<Desc,16>              desc;
     DSharedPtr<const MtPipelineLay*> lay;
+
+    ShaderReflection::Stage          bufferSizeBuffer = ShaderReflection::Stage::None;
   };
 
 }

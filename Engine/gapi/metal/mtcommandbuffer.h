@@ -17,6 +17,7 @@ namespace Detail {
 class MtDevice;
 class MtBuffer;
 class MtPipeline;
+class MtDescriptorArray;
 
 class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
   public:
@@ -71,6 +72,7 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     void setEncoder(EncType e, MTL::RenderPassDescriptor* desc);
     void implSetBytes   (const void* bytes, size_t sz);
     void implSetUniforms(AbstractGraphicsApi::Desc& u);
+    void implSetAlux    (MtDescriptorArray& u);
 
     void setBuffer (const MtPipelineLay::MTLBind& mtl, MTL::Buffer* b, size_t offset);
     void setTexture(const MtPipelineLay::MTLBind& mtl, MTL::Texture* t, MTL::SamplerState* ss);

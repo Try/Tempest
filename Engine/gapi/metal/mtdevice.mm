@@ -1,10 +1,10 @@
 #if defined(TEMPEST_BUILD_METAL)
 
 #include "mtdevice.h"
+#include "thirdparty/spirv_cross/spirv_msl.hpp"
+
 #include <Tempest/Log>
-
 #include <Foundation/NSProcessInfo.h>
-
 // #include <Metal/MTLPixelFormat.h>
 
 using namespace Tempest;
@@ -34,7 +34,7 @@ MtDevice::MtDevice(const char* name, bool validation)
   if(queue.get()==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
-  deductProps(prop,*impl);
+  deductProps(prop,*impl,mslVersion);
   }
 
 MtDevice::~MtDevice() {
@@ -57,7 +57,7 @@ void MtDevice::handleError(NS::Error *err) {
   throw DeviceLostException();
   }
 
-void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
+void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev, uint32_t& mslVersion) {
   SInt32 majorVersion = 0, minorVersion = 0;
   if([[NSProcessInfo processInfo] respondsToSelector:@selector(operatingSystemVersion)]) {
     NSOperatingSystemVersion ver = [[NSProcessInfo processInfo] operatingSystemVersion];
@@ -69,6 +69,13 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
   if(dev.hasUnifiedMemory())
     prop.type = DeviceType::Integrated; else
     prop.type = DeviceType::Discrete;
+
+  mslVersion = spirv_cross::CompilerMSL::Options::make_msl_version(2,0);
+#ifdef __OSX__
+  if(dev.supportsFeatureSet(MTL::FeatureSet_macOS_GPUFamily1_v3)){
+    mslVersion = spirv_cross::CompilerMSL::Options::make_msl_version(2,2);
+    }
+#endif
 
   // https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
   static const TextureFormat smp[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
@@ -202,14 +209,17 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
   prop.storeAndAtomicVs = false;
   prop.storeAndAtomicFs = false;
 #else
-  // TODO: verify
-  prop.storeAndAtomicVs = false;
-  prop.storeAndAtomicFs = false;
+  if(mslVersion>=spirv_cross::CompilerMSL::Options::make_msl_version(2,2)) {
+    // 2.1 for buffers
+    // 2.2 for images
+    prop.storeAndAtomicVs = true;
+    prop.storeAndAtomicFs = true;
+    }
 #endif
 
 #ifdef __OSX__
   if(majorVersion>=12)
-    prop.raytracing.rayQuery = dev.supportsRaytracingFromRender();
+    prop.raytracing.rayQuery = dev.supportsRaytracingFromRender() && dev.supportsRaytracing();
 #endif
 
 #ifdef __IOS__

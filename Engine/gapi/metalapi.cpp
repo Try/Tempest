@@ -42,8 +42,10 @@ std::vector<AbstractGraphicsApi::Props> MetalApi::devices() const {
   auto dev = MTL::CopyAllDevices();
   try {
     std::vector<AbstractGraphicsApi::Props> p(dev->count());
-    for(size_t i=0; i<p.size(); ++i)
-      MtDevice::deductProps(p[i],*reinterpret_cast<MTL::Device*>(dev->object(i)));
+    for(size_t i=0; i<p.size(); ++i) {
+      uint32_t mslVer = 0;
+      MtDevice::deductProps(p[i],*reinterpret_cast<MTL::Device*>(dev->object(i)),mslVer);
+      }
     dev->release();
     return p;
     }
@@ -191,14 +193,20 @@ AbstractGraphicsApi::Desc *MetalApi::createDescriptors(AbstractGraphicsApi::Devi
 AbstractGraphicsApi::PPipelineLay MetalApi::createPipelineLayout(AbstractGraphicsApi::Device*,
                                                                  const AbstractGraphicsApi::Shader*const*sh,
                                                                  size_t cnt) {
+  auto bufferSizeBuffer = ShaderReflection::None;
   const std::vector<Detail::ShaderReflection::Binding>* lay[5] = {};
+
   for(size_t i=0; i<cnt; ++i) {
     if(sh[i]==nullptr)
       continue;
     auto* s = reinterpret_cast<const MtShader*>(sh[i]);
     lay[i] = &s->lay;
+    if(s->bufferSizeBuffer) {
+      bufferSizeBuffer = ShaderReflection::Stage(bufferSizeBuffer | s->stage);
+      }
     }
-  return PPipelineLay(new MtPipelineLay(lay,cnt));
+
+  return PPipelineLay(new MtPipelineLay(lay,cnt,bufferSizeBuffer));
   }
 
 AbstractGraphicsApi::CommandBuffer *MetalApi::createCommandBuffer(AbstractGraphicsApi::Device *d) {

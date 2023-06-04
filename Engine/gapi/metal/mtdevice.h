@@ -227,8 +227,9 @@ class MtDevice : public AbstractGraphicsApi::Device {
     AbstractGraphicsApi::Props prop;
     MtSamplerCache             samplers;
     bool                       validation = false;
+    uint32_t                   mslVersion = 0;
 
-    static void deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev);
+    static void deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev, uint32_t& mslVersion);
   };
 
 inline void mtAssert(void* obj, NS::Error* err) {

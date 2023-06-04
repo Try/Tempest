@@ -24,7 +24,7 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
 #else
   optMSL.platform = spirv_cross::CompilerMSL::Options::iOS;
 #endif
-  optMSL.buffer_size_buffer_index = MSL_PUSH;
+  optMSL.buffer_size_buffer_index = MSL_BUFFER_LENGTH;
 
   spirv_cross::CompilerGLSL::Options optGLSL;
   optGLSL.vertex.flip_vert_y = true;
@@ -32,7 +32,7 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
   std::string msl;
   try {
     spirv_cross::CompilerMSL comp(reinterpret_cast<const uint32_t*>(source),srcSize/4);
-    optMSL.msl_version = spirv_cross::CompilerMSL::Options::make_msl_version(2,0);
+    optMSL.msl_version = dev.mslVersion;
     for(auto& cap:comp.get_declared_capabilities()) {
       switch(cap) {
         case spv::CapabilityRayQueryKHR: {
@@ -55,6 +55,7 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
     msl = comp.compile();
 
     fetchBindings(reinterpret_cast<const uint32_t*>(source),srcSize/4);
+    bufferSizeBuffer = comp.needs_buffer_size_buffer();
 
     for(auto& i:lay) {
       i.mslBinding = comp.get_automatic_msl_resource_binding(i.spvId);
@@ -135,7 +136,7 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
 
-  if(stage==ShaderReflection::Stage::Task) {
+  if(stage==ShaderReflection::Stage::Vertex) {
     // Log::d(msl);
     }
 

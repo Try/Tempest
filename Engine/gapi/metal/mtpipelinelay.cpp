@@ -7,7 +7,8 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-MtPipelineLay::MtPipelineLay(const std::vector<Binding>** sh, size_t cnt) {
+MtPipelineLay::MtPipelineLay(const std::vector<Binding>** sh, size_t cnt, ShaderReflection::Stage bufferSizeBuffer)
+  : bufferSizeBuffer(bufferSizeBuffer) {
   ShaderReflection::merge(lay,pb,sh,cnt);
   bind.resize(lay.size());
 

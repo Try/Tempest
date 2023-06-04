@@ -43,6 +43,12 @@ TEST(MetalApi,SsboCopy) {
 #endif
   }
 
+TEST(MetalApi,ArrayLength) {
+#if defined(__OSX__)
+  GapiTestCommon::ArrayLength<MetalApi>();
+#endif
+  }
+
 TEST(MetalApi,Shader) {
 #if defined(__OSX__)
   GapiTestCommon::Shader<MetalApi>();

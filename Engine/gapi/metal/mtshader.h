@@ -19,7 +19,8 @@ class MtShader : public AbstractGraphicsApi::Shader {
     ~MtShader();
 
     enum Bindings : uint32_t {
-      MSL_PUSH = 29,
+      MSL_BUFFER_LENGTH      = 29,
+      MSL_BUFFER_LENGTH_SIZE = 30,
     };
 
     using Binding = ShaderReflection::Binding;
@@ -30,6 +31,7 @@ class MtShader : public AbstractGraphicsApi::Shader {
     std::vector<Decl::ComponentType> vdecl;
     std::vector<Binding>             lay;
     ShaderReflection::Stage          stage = ShaderReflection::Stage::Compute;
+    bool                             bufferSizeBuffer = false;
 
     struct {
       MTL::Winding                   winding   = MTL::WindingClockwise;

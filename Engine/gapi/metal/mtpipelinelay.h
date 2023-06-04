@@ -36,7 +36,7 @@ class MtPipelineLay : public AbstractGraphicsApi::PipelineLay {
       uint32_t mslPushSize = 0;
       };
 
-    MtPipelineLay(const std::vector<Binding> **sh, size_t cnt);
+    MtPipelineLay(const std::vector<Binding> **sh, size_t cnt, ShaderReflection::Stage bufferSizeBuffer);
 
     size_t descriptorsCount() override;
 
@@ -49,6 +49,7 @@ class MtPipelineLay : public AbstractGraphicsApi::PipelineLay {
     MTLBind                       bindPush;
 
     uint32_t                      vboIndex = 0;
+    ShaderReflection::Stage       bufferSizeBuffer = ShaderReflection::Stage::None;
     bool                          hasSSBO = false;
   };
 

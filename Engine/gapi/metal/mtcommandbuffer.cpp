@@ -335,6 +335,34 @@ void MtCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u) {
         break;
       }
     }
+  implSetAlux(d);
+  }
+
+void MtCommandBuffer::implSetAlux(MtDescriptorArray& u) {
+  uint32_t bufSz[MtShader::MSL_BUFFER_LENGTH_SIZE] = {};
+
+  if(u.bufferSizeBuffer!=ShaderReflection::None) {
+    if(u.bufferSizeBuffer & ShaderReflection::Task) {
+      u.fillBufferSizeBuffer(bufSz, ShaderReflection::Task);
+      encDraw->setObjectBytes(bufSz, sizeof(bufSz), MtShader::MSL_BUFFER_LENGTH);
+      }
+    if(u.bufferSizeBuffer & ShaderReflection::Mesh) {
+      u.fillBufferSizeBuffer(bufSz, ShaderReflection::Mesh);
+      encDraw->setMeshBytes(bufSz, sizeof(bufSz), MtShader::MSL_BUFFER_LENGTH);
+      }
+    if(u.bufferSizeBuffer & ShaderReflection::Vertex) {
+      u.fillBufferSizeBuffer(bufSz, ShaderReflection::Vertex);
+      encDraw->setVertexBytes(bufSz, sizeof(bufSz), MtShader::MSL_BUFFER_LENGTH);
+      }
+    if(u.bufferSizeBuffer & ShaderReflection::Fragment) {
+      u.fillBufferSizeBuffer(bufSz, ShaderReflection::Fragment);
+      encDraw->setFragmentBytes(bufSz, sizeof(bufSz), MtShader::MSL_BUFFER_LENGTH);
+      }
+    if(u.bufferSizeBuffer & ShaderReflection::Compute) {
+      u.fillBufferSizeBuffer(bufSz, ShaderReflection::Compute);
+      encComp->setBytes(bufSz, sizeof(bufSz), MtShader::MSL_BUFFER_LENGTH);
+      }
+    }
   }
 
 void MtCommandBuffer::setBuffer(const MtPipelineLay::MTLBind& mtl, MTL::Buffer* buf, size_t offset) {

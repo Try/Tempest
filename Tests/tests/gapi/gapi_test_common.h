@@ -226,9 +226,11 @@ void ArrayLength() {
     auto desc = device.descriptors(pso);
 
     auto src  = device.attachment(TextureFormat::RGBA8,4,4);
-    auto dst  = device.ssbo(nullptr, 6*sizeof(uint32_t));
+    auto dst0 = device.ssbo(nullptr, 6*sizeof(uint32_t));
+    auto dst1 = device.ssbo(nullptr, 1*sizeof(uint32_t));
 
-    desc.set(0, dst);
+    desc.set(0, dst0);
+    desc.set(1, dst1);
 
     auto cmd = device.commandBuffer();
     {
@@ -243,8 +245,11 @@ void ArrayLength() {
     sync.wait();
 
     uint32_t sz = 0;
-    device.readBytes(dst, &sz, sizeof(sz));
+    device.readBytes(dst0, &sz, sizeof(sz));
     EXPECT_EQ(sz, 6);
+
+    device.readBytes(dst1, &sz, sizeof(sz));
+    EXPECT_EQ(sz, 1234);
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
