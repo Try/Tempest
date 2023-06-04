@@ -140,7 +140,7 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t count, size_t size, size_t a
     state          = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     }
 
-  DxBuffer ret(owner,UINT(resDesc.Width));
+  DxBuffer ret(owner,UINT(resDesc.Width), UINT(count*alignedSz));
   ret.page = allocator.alloc(count*alignedSz, toAlignment(bufFlg),
                              uint32_t(bufFlg), uint32_t(bufFlg), (bufFlg!=BufferHeap::Device));
   if(!ret.page.page)

@@ -9,12 +9,13 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-DxBuffer::DxBuffer(DxDevice* dev, UINT sizeInBytes)
-  :dev(dev), sizeInBytes(sizeInBytes) {
+DxBuffer::DxBuffer(DxDevice* dev, UINT sizeInBytes, UINT appSize)
+  :dev(dev), sizeInBytes(sizeInBytes), appSize(appSize) {
   }
 
 DxBuffer::DxBuffer(DxBuffer&& other)
-  :dev(other.dev), page(std::move(other.page)), impl(std::move(other.impl)), nonUniqId(other.nonUniqId), sizeInBytes(other.sizeInBytes) {
+  :dev(other.dev), page(std::move(other.page)), impl(std::move(other.impl)), nonUniqId(other.nonUniqId),
+    sizeInBytes(other.sizeInBytes), appSize(other.appSize) {
   other.sizeInBytes = 0;
   other.page.page   = nullptr;
   }
@@ -30,6 +31,7 @@ DxBuffer& DxBuffer::operator=(DxBuffer&& other) {
   std::swap(impl,        other.impl);
   std::swap(nonUniqId,   other.nonUniqId);
   std::swap(sizeInBytes, other.sizeInBytes);
+  std::swap(appSize,     other.appSize);
   return *this;
   }
 

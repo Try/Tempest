@@ -568,7 +568,7 @@ void DxDescriptorArray::placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE
     desc.Buffer.NumElements  = UINT((byteSize+3)/4); // UAV size is required to be 4-byte aligned.
     desc.Buffer.Flags        = D3D12_BUFFER_UAV_FLAG_RAW;
     if(desc.Buffer.NumElements==0)
-      desc.Buffer.NumElements = UINT(buf.sizeInBytes-bufOffset)/4;
+      desc.Buffer.NumElements = UINT(buf.appSize-bufOffset+3)/4;
 
     auto gpu = at;
     gpu.ptr += heapOffset;
@@ -583,7 +583,7 @@ void DxDescriptorArray::placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE
     desc.Buffer.NumElements      = UINT((byteSize+3)/4); // SRV size is required to be 4-byte aligned.
     desc.Buffer.Flags            = D3D12_BUFFER_SRV_FLAG_RAW;
     if(desc.Buffer.NumElements==0)
-      desc.Buffer.NumElements = UINT(buf.sizeInBytes-bufOffset)/4;
+      desc.Buffer.NumElements = UINT(buf.appSize-bufOffset+3)/4;
 
     auto gpu = at;
     gpu.ptr += heapOffset;
