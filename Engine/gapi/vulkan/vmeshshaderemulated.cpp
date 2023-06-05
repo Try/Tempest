@@ -26,16 +26,17 @@ VMeshShaderEmulated::VMeshShaderEmulated(VDevice& device, const void *source, si
   assert(code.findExecutionModel()==spv::ExecutionModelMeshEXT);
 
   MeshConverter conv(code);
+  // conv.options.deferredMeshShading = true;
   conv.exec();
 
   //debugLog("mesh_orig.mesh.spv", reinterpret_cast<const uint32_t*>(source),src_size/4);
 
   auto& comp = conv.computeShader();
-  /*
-  debugLog("mesh_conv.comp.spv", comp.opcodes(), comp.size());
-  std::system("spirv-cross.exe -V .\\mesh_conv.comp.spv");
-  std::system("spirv-val.exe      .\\mesh_conv.comp.spv");
-  */
+
+  // debugLog("mesh_conv.comp.spv", comp.opcodes(), comp.size());
+  // std::system("spirv-cross.exe -V .\\mesh_conv.comp.spv");
+  // std::system("spirv-val.exe      .\\mesh_conv.comp.spv");
+
 
   auto& vert = conv.vertexPassthrough();
 

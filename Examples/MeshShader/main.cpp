@@ -25,7 +25,7 @@ std::unique_ptr<Tempest::AbstractGraphicsApi> mkApi(const char* av) {
 int main(int argc, const char** argv) {
   Tempest::Application app;
 
-  const bool emulated = true;
+  const bool emulated = false;
 
   const char* msDev = nullptr;
   auto api = mkApi(argc>1 ? argv[1] : "");
@@ -43,6 +43,9 @@ int main(int argc, const char** argv) {
 
   Tempest::Log::i(msDev);
   Tempest::Log::i(emulated ? "mesh-shader-emulated" : "GL_EXT_mesh_shader");
+
+  app.setFont(Tempest::Application::defaultFont());
+
   Tempest::Device device{*api,msDev};
   Game            wx(device);
 

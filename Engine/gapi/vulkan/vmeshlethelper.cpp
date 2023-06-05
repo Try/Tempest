@@ -18,20 +18,19 @@ VMeshletHelper::VMeshletHelper(VDevice& dev) : dev(dev) {
   const auto ms  = MemUsage::StorageBuffer | MemUsage::Indirect    | MemUsage::TransferDst | MemUsage::TransferSrc;
   const auto geo = MemUsage::StorageBuffer | MemUsage::IndexBuffer | MemUsage::TransferDst | MemUsage::TransferSrc;
 
-  indirectSrc = dev.allocator.alloc(nullptr, IndirectScratchSize, 1,1, ind, BufferHeap::Device);
   indirect    = dev.allocator.alloc(nullptr, IndirectMemorySize,  1,1, ind, BufferHeap::Device);
-
   meshlets    = dev.allocator.alloc(nullptr, MeshletsMemorySize,  1,1, ms,  BufferHeap::Device);
+  scratch     = dev.allocator.alloc(nullptr, PipelineMemorySize,  1,1, geo, BufferHeap::Device);
 
-  // scratch     = dev.allocator.alloc(nullptr, PipelineMemorySize,  1,1, geo, BufferHeap::Device);
-  scratch     = dev.allocator.alloc(nullptr, PipelineMemorySize,  1,1, geo, BufferHeap::Upload);
+  // TODO
+  // assert(dev.props.ssbo.offsetAlign <= 32);
 
   {
     auto c = dev.dataMgr().get();
     auto& cmd = reinterpret_cast<VMeshCommandBuffer&>(*c.get());
     cmd.begin();
     // drawcall-related parts should be set to zeros.
-    vkCmdFillBuffer(cmd.impl, indirectSrc.impl, 0, VK_WHOLE_SIZE, 0);
+    vkCmdFillBuffer(cmd.impl, indirect.impl, 0, VK_WHOLE_SIZE, 0);
     // meshlet counters
     vkCmdFillBuffer(cmd.impl, meshlets.impl, 0, sizeof(uint32_t)*2, 0);
     // heap counters
@@ -52,11 +51,11 @@ VMeshletHelper::VMeshletHelper(VDevice& dev) : dev(dev) {
     engLay   = initLayout(dev);
     engPool  = initPool(dev,3);
     engSet   = initDescriptors(dev,engPool,engLay);
-    initEngSet(engSet,3);
+    initEngSet(engSet,3,true);
 
-    compPool = initPool(dev,4);
+    compPool = initPool(dev,3);
     compSet  = initDescriptors(dev,compPool,compactageLay.handler->impl);
-    initEngSet(compSet,4);
+    initEngSet(compSet,3,false);
 
     drawLay  = initDrawLayout(dev);
     drawPool = initPool(dev,1);
@@ -94,10 +93,7 @@ void VMeshletHelper::cleanup() {
   }
 
 void VMeshletHelper::bindCS(VkCommandBuffer impl, VkPipelineLayout lay) {
-  vkCmdBindDescriptorSets(impl, VK_PIPELINE_BIND_POINT_COMPUTE,
-                          lay, 1,
-                          1,&engSet,
-                          0,nullptr);
+  currentCsLayout = lay;
   }
 
 void VMeshletHelper::bindVS(VkCommandBuffer impl, VkPipelineLayout lay) {
@@ -108,9 +104,9 @@ void VMeshletHelper::bindVS(VkCommandBuffer impl, VkPipelineLayout lay) {
                           0,nullptr);
   }
 
-void VMeshletHelper::drawIndirect(VkCommandBuffer impl, uint32_t id) {
-  assert(id<IndirectCmdCount);
-  uint32_t off = id*sizeof(VkDrawIndexedIndirectCommand);
+void VMeshletHelper::drawIndirect(VkCommandBuffer impl, uint32_t drawId) {
+  assert(drawId<IndirectCmdCount);
+  uint32_t off = drawId*sizeof(VkDrawIndexedIndirectCommand) + 2*sizeof(uint32_t);
   vkCmdDrawIndexedIndirect(impl, indirect.impl, off, 1, sizeof(VkDrawIndexedIndirectCommand));
   // vkCmdDrawIndexed(impl, 3, 1, 0, 0, 0);
   }
@@ -149,6 +145,7 @@ void VMeshletHelper::initRP(VkCommandBuffer impl) {
 void VMeshletHelper::sortPass(VkCommandBuffer impl, uint32_t meshCallsCount) {
   if(meshCallsCount==0)
     return;
+  currentCsLayout = VK_NULL_HANDLE;
 
   // prefix summ pass
   barrier(impl, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
@@ -188,6 +185,16 @@ void VMeshletHelper::firstDraw(VkCommandBuffer impl) {
           VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
   }
 
+void VMeshletHelper::drawCompute(VkCommandBuffer impl, uint32_t drawId, size_t x, size_t y, size_t z) {
+  if(drawId==0)
+    firstDraw(impl);
+  vkCmdBindDescriptorSets(impl, VK_PIPELINE_BIND_POINT_COMPUTE,
+                          currentCsLayout, 1,
+                          1,&engSet,
+                          1,&drawId);
+  vkCmdDispatch(impl, uint32_t(x), uint32_t(y), uint32_t(z));
+  }
+
 void VMeshletHelper::barrier(VkCommandBuffer      impl,
                              VkPipelineStageFlags srcStageMask,
                              VkPipelineStageFlags dstStageMask,
@@ -215,6 +222,7 @@ VkDescriptorSetLayout VMeshletHelper::initLayout(VDevice& device) {
     bind[i].descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     bind[i].stageFlags      = VK_SHADER_STAGE_COMPUTE_BIT;
     }
+  bind[0].descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
 
   VkDescriptorSetLayoutCreateInfo info={};
   info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -280,9 +288,9 @@ VkDescriptorSet VMeshletHelper::initDescriptors(VDevice& device,
   return desc;
   }
 
-void VMeshletHelper::initEngSet(VkDescriptorSet set, uint32_t cnt) {
+void VMeshletHelper::initEngSet(VkDescriptorSet set, uint32_t cnt, bool dynamic) {
   VkDescriptorBufferInfo buf[4] = {};
-  buf[0].buffer = indirectSrc.impl;
+  buf[0].buffer = indirect.impl;
   buf[0].offset = 0;
   buf[0].range  = VK_WHOLE_SIZE;
 
@@ -294,10 +302,6 @@ void VMeshletHelper::initEngSet(VkDescriptorSet set, uint32_t cnt) {
   buf[2].offset = 0;
   buf[2].range  = VK_WHOLE_SIZE;
 
-  buf[3].buffer = indirect.impl;
-  buf[3].offset = 0;
-  buf[3].range  = VK_WHOLE_SIZE;
-
   VkWriteDescriptorSet write[4] = {};
   for(uint32_t i=0; i<cnt; ++i) {
     write[i].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -307,6 +311,10 @@ void VMeshletHelper::initEngSet(VkDescriptorSet set, uint32_t cnt) {
     write[i].descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
     write[i].descriptorCount = 1;
     write[i].pBufferInfo     = &buf[i];
+    }
+
+  if(dynamic) {
+    write[0].descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
     }
 
   vkUpdateDescriptorSets(dev.device.impl, cnt, write, 0, nullptr);

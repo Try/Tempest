@@ -4,11 +4,6 @@
 
 layout(local_size_x = 128) in;
 
-struct IndirectCommand
-{
-  uint indexCount;
-};
-
 struct Descriptor
 {
   uint drawId;
@@ -16,20 +11,22 @@ struct Descriptor
   uint indSz;
 };
 
-struct VkDrawIndexedIndirectCommand
+struct DrawIndexedIndirectCommand
 {
+  uint drawId;
+  uint indexCountSrc;
   uint indexCount;
   uint instanceCount;
   uint firstIndex;    // prefix sum
   int  vertexOffset;  // can be abused to offset into var_buffer
   uint firstInstance; // caps: should be zero
-  uint vboOffset;     // prefix sum
+  uint padding0;
 };
 
 layout(binding = 0, std430) restrict buffer EngineInternal0
 {
-  IndirectCommand cmd[];
-} indirectSrc;
+  DrawIndexedIndirectCommand indirect[];
+};
 
 layout(binding = 1, std430) restrict buffer EngineInternal1
 {
@@ -43,11 +40,6 @@ layout(binding = 2, std430) restrict buffer EngineInternal2
   uint grow;
   uint heap[];
 } var;
-
-layout(binding = 3, std430) writeonly buffer EngineInternal3
-{
-    VkDrawIndexedIndirectCommand cmd[];
-} indirect;
 
 shared uint partialSummIbo[gl_WorkGroupSize.x];
 
@@ -65,7 +57,7 @@ void main() {
   uint sumIbo = 0;
   [[loop]]
   for(uint i=b; i<e; ++i) {
-    sumIbo += indirectSrc.cmd[i].indexCount;
+    sumIbo += indirect[i].indexCountSrc;
     }
   partialSummIbo[index] = sumIbo;
 
@@ -82,18 +74,18 @@ void main() {
   const uint grow = var.grow;
   [[loop]]
   for(uint i=b; i<e; ++i) {
-    uint indexCount = indirectSrc.cmd[i].indexCount;
+    uint indexCount = indirect[i].indexCountSrc;
     uint firstIndex = grow + prefixIbo;
     uint inst       = indexCount>0 ? 1 : 0;
 
     prefixIbo += indexCount;
 
-    indirect.cmd[i].indexCount    = 0;
-    indirect.cmd[i].instanceCount = inst;
-    indirect.cmd[i].firstIndex    = firstIndex;
-    indirect.cmd[i].vertexOffset  = 0;
-    indirect.cmd[i].firstInstance = 0;
-    indirect.cmd[i].vboOffset     = 0;
+    indirect[i].indexCount    = 0;
+    indirect[i].instanceCount = inst;
+    indirect[i].firstIndex    = firstIndex;
+    indirect[i].vertexOffset  = 0;
+    indirect[i].firstInstance = 0;
+    indirect[i].padding0      = 0;
     }
 
   barrier();
@@ -104,6 +96,6 @@ void main() {
     var.grow   = 0;
     }
   for(uint i=b; i<e; ++i) {
-    indirectSrc.cmd[i].indexCount = 0;
+    indirect[i].indexCountSrc = 0;
     }
   }

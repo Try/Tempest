@@ -31,8 +31,12 @@ class Game : public Tempest::Window {
   void mouseDownEvent(Tempest::MouseEvent& event) override;
   void mouseDragEvent(Tempest::MouseEvent& event) override;
 
+  void setupUi();
   void render() override;
   void resetSwapchain();
+
+  void onShaderType(size_t type);
+  void onAsset(size_t type);
 
   Tempest::Matrix4x4 projMatrix() const;
   Tempest::Matrix4x4 viewMatrix() const;
@@ -49,7 +53,7 @@ class Game : public Tempest::Window {
   Tempest::RenderPipeline     pso;
   Tempest::DescriptorSet      desc;
   Mesh                        mesh;
-  const bool                  useVertex = false;
+  bool                        useVertex = false;
 
   Tempest::CommandBuffer      commands[MaxFramesInFlight];
   std::vector<Tempest::Fence> fence;

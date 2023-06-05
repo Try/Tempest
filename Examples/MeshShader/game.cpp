@@ -1,6 +1,7 @@
 #include "game.h"
 
 #include <Tempest/Application>
+#include <Tempest/ComboBox>
 #include <Tempest/Button>
 #include <Tempest/Painter>
 #include <Tempest/Panel>
@@ -15,44 +16,31 @@ Game::Game(Device& device)
   for(uint8_t i=0;i<MaxFramesInFlight;++i)
     fence.emplace_back(device.fence());
   resetSwapchain();
+  setupUi();
 
-  auto& p = addWidget(new Panel());
-  p.setDragable(true);
-  p.addWidget(new Button()).setText("Button");
-  p.setLayout(Vertical);
-
-  mesh = Mesh(device, "assets/dragon.obj");
-  //mesh = Mesh(device, "assets/box.obj");
-  //mesh = Mesh(device, "assets/cylinder.obj");
-
-  RenderState rs;
-  rs.setCullFaceMode(RenderState::CullMode::NoCull);
-  rs.setZTestMode(RenderState::ZTestMode::Less);
-
-  if(useVertex) {
-    auto sh   = AppShader::get("shader.vert.sprv");
-    auto vert = device.shader(sh.data, sh.len);
-    sh        = AppShader::get("shader.frag.sprv");
-    auto frag = device.shader(sh.data, sh.len);
-
-    pso = device.pipeline(Topology::Triangles, rs, vert, frag);
-    } else {
-    auto sh   = AppShader::get("shader.mesh.sprv");
-    auto mesh = device.shader(sh.data, sh.len);
-    sh        = AppShader::get("shader.frag.sprv");
-    auto frag = device.shader(sh.data, sh.len);
-    pso = device.pipeline(Topology::Triangles, rs, mesh, frag);
-    }
-
-  desc = device.descriptors(pso);
-  if(!useVertex) {
-    desc.set(0, mesh.vbo);
-    desc.set(1, mesh.ibo8);
-    }
+  onAsset(0);
+  onShaderType(useVertex ? 1 : 0);
   }
 
 Game::~Game() {
   device.waitIdle();
+  }
+
+void Game::setupUi() {
+  auto& p = addWidget(new Panel());
+  p.setDragable(true);
+
+  auto& cbShader = p.addWidget(new ComboBox());
+  cbShader.setItems({"Mesh shader", "Vertex shader"});
+  cbShader.setCurrentIndex(useVertex ? 1 : 0);
+  cbShader.onItemSelected.bind(this, &Game::onShaderType);
+
+  auto& cbObj = p.addWidget(new ComboBox());
+  cbObj.setItems({"Dragon", "Box", "Cylinder"});
+  cbObj.onItemSelected.bind(this, &Game::onAsset);
+
+  p.addWidget(new Widget());
+  p.setLayout(Vertical);
   }
 
 void Game::resizeEvent(SizeEvent&) {
@@ -152,5 +140,55 @@ void Game::render(){
 void Game::resetSwapchain() {
   swapchain.reset();
   zbuffer = device.zbuffer(TextureFormat::Depth32F, w(), h());
+  }
+
+void Game::onShaderType(size_t type) {
+  device.waitIdle();
+  useVertex = bool(type!=0);
+
+  RenderState rs;
+  rs.setCullFaceMode(RenderState::CullMode::NoCull);
+  rs.setZTestMode(RenderState::ZTestMode::Less);
+
+  if(useVertex) {
+    auto sh   = AppShader::get("shader.vert.sprv");
+    auto vert = device.shader(sh.data, sh.len);
+    sh        = AppShader::get("shader.frag.sprv");
+    auto frag = device.shader(sh.data, sh.len);
+
+    pso = device.pipeline(Topology::Triangles, rs, vert, frag);
+    } else {
+    auto sh   = AppShader::get("shader.mesh.sprv");
+    auto mesh = device.shader(sh.data, sh.len);
+    sh        = AppShader::get("shader.frag.sprv");
+    auto frag = device.shader(sh.data, sh.len);
+    pso = device.pipeline(Topology::Triangles, rs, mesh, frag);
+    }
+
+  desc = device.descriptors(pso);
+  if(!useVertex) {
+    desc.set(0, mesh.vbo);
+    desc.set(1, mesh.ibo8);
+    }
+  }
+
+void Game::onAsset(size_t type) {
+  device.waitIdle();
+  switch (type) {
+    case 0:
+      mesh = Mesh(device, "assets/dragon.obj");
+      break;
+    case 1:
+      mesh = Mesh(device, "assets/box.obj");
+      break;
+    case 2:
+      mesh = Mesh(device, "assets/cylinder.obj");
+      break;
+    }
+
+  if(!useVertex && !desc.isEmpty()) {
+    desc.set(0, mesh.vbo);
+    desc.set(1, mesh.ibo8);
+    }
   }
 

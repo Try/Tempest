@@ -24,7 +24,7 @@ void main() {
   SetMeshOutputsEXT(3, 1);
 
   // Vertices position
-  gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position = vec4(vertices[gl_LocalInvocationIndex], 0, 1);
+  gl_MeshVerticesEXT[gl_LocalInvocationIndex].gl_Position = vec4(vertices[gl_LocalInvocationIndex], payload.dummy, 1);
 
   // Vertices color
   v_out[gl_LocalInvocationIndex] = vec4(colors[gl_LocalInvocationIndex], 1.0);

@@ -19,6 +19,8 @@ class VMeshletHelper {
       };
 
     struct VkDrawIndexedIndirectCommand {
+      uint32_t drawId;
+      uint32_t indexCountSrc;
       uint32_t indexCount;
       uint32_t instanceCount;
       uint32_t firstIndex;    // prefix sum
@@ -47,7 +49,8 @@ class VMeshletHelper {
     void initRP(VkCommandBuffer impl);
 
     void firstDraw(VkCommandBuffer impl);
-    void drawIndirect(VkCommandBuffer impl, uint32_t id);
+    void drawCompute(VkCommandBuffer impl, uint32_t drawId, size_t x, size_t y, size_t z);
+    void drawIndirect(VkCommandBuffer impl, uint32_t drawId);
     void sortPass(VkCommandBuffer impl, uint32_t meshCallsCount);
 
     VkDescriptorSetLayout lay() const { return engLay; }
@@ -60,7 +63,7 @@ class VMeshletHelper {
     VkDescriptorSet       initDescriptors(VDevice& device, VkDescriptorPool pool, VkDescriptorSetLayout lay);
     void                  initShaders(VDevice& device);
 
-    void                  initEngSet (VkDescriptorSet set, uint32_t cnt);
+    void                  initEngSet (VkDescriptorSet set, uint32_t cnt, bool dynamic);
     void                  initDrawSet(VkDescriptorSet set);
 
     void                  barrier(VkCommandBuffer impl,
@@ -68,7 +71,7 @@ class VMeshletHelper {
                                   VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask);
 
     VDevice&                   dev;
-    VBuffer                    indirectSrc, indirect, meshlets, scratch;
+    VBuffer                    indirect, meshlets, scratch;
 
     VkDescriptorSetLayout      engLay   = VK_NULL_HANDLE;
     VkDescriptorPool           engPool  = VK_NULL_HANDLE;
@@ -80,6 +83,8 @@ class VMeshletHelper {
     VkDescriptorSetLayout      drawLay  = VK_NULL_HANDLE;
     VkDescriptorSet            drawPool = VK_NULL_HANDLE;
     VkDescriptorSet            drawSet  = VK_NULL_HANDLE;
+
+    VkPipelineLayout           currentCsLayout = VK_NULL_HANDLE;
 
     DSharedPtr<VPipelineLay*>  prefixSumLay;
     DSharedPtr<VCompPipeline*> prefixSum;

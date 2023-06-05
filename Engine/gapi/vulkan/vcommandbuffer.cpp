@@ -1136,16 +1136,8 @@ void VMeshCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
   if(px.meshPipeline()==VK_NULL_HANDLE)
     return;
 
-  assert(z==1); // abused as drawId
   auto& ms = *device.meshHelper;
-
-  if(meshIndirectId==0) {
-    ms.firstDraw(cbHelper);
-    }
-
-  device.vkCmdDispatchBase(cbHelper,
-                           0, 0, uint32_t(meshIndirectId),
-                           uint32_t(x), uint32_t(y), 1);
+  ms.drawCompute(cbHelper, uint32_t(meshIndirectId), x,y,z);
   ms.drawIndirect(impl, uint32_t(meshIndirectId));
   ++meshIndirectId;
   }

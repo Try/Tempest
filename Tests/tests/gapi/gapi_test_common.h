@@ -1757,7 +1757,7 @@ void MeshShaderEmulated(const char* outImg) {
     Device device(api,msDev);
     auto vbo  = device.vbo(vboData,3);
 
-    auto mesh = device.shader("shader/simple_test.mesh.sprv");
+    auto mesh = device.shader("shader/simple_test.spv14.mesh.sprv");
     auto frag = device.shader("shader/simple_test.frag.sprv");
     auto pso  = device.pipeline(RenderState(),Tempest::Shader(),mesh,frag);
 

@@ -4,11 +4,6 @@
 
 layout(local_size_x = 64) in;
 
-struct IndirectCommand
-{
-  uint indexCount;
-};
-
 struct Descriptor
 {
   uint drawId;
@@ -16,20 +11,22 @@ struct Descriptor
   uint indSz;
 };
 
-struct VkDrawIndexedIndirectCommand
+struct DrawIndexedIndirectCommand
 {
+  uint drawId;
+  uint indexCountSrc;
   uint indexCount;
   uint instanceCount;
   uint firstIndex;    // prefix sum
   int  vertexOffset;  // can be abused to offset into var_buffer
   uint firstInstance; // caps: should be zero
-  uint vboOffset;     // prefix sum
+  uint padding0;
 };
 
-layout(binding = 0, std430) restrict writeonly buffer EngineInternal0
+layout(binding = 0, std430) restrict buffer EngineInternal0
 {
-  IndirectCommand cmd[];
-} indirectSrc;
+  DrawIndexedIndirectCommand indirect[];
+};
 
 layout(binding = 1, std430) restrict buffer EngineInternal1
 {
@@ -43,11 +40,6 @@ layout(binding = 2, std430) restrict buffer EngineInternal2
   uint    grow;
   uint    heap[];
 } var;
-
-layout(binding = 3, std430) buffer EngineInternal3
-{
-  VkDrawIndexedIndirectCommand cmd[];
-} indirect;
 
 shared uint workId;
 shared uint iboOffset;
@@ -72,7 +64,7 @@ void main() {
 
     const Descriptor d = mesh.desc[at];
     if(gl_LocalInvocationIndex==0) {
-      iboOffset = atomicAdd(indirect.cmd[d.drawId].indexCount, d.indSz) + indirect.cmd[d.drawId].firstIndex;
+      iboOffset = atomicAdd(indirect[d.drawId].indexCount, d.indSz) + indirect[d.drawId].firstIndex;
       }
     barrier();
 
