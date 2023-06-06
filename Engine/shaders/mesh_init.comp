@@ -37,46 +37,20 @@ layout(binding = 1, std430) restrict buffer EngineInternal1
 
 layout(binding = 2, std430) restrict buffer EngineInternal2
 {
-  uint    grow;
-  uint    heap[];
+  uint grow;
+  uint heap[];
 } var;
+
+shared uint partialSummIbo[gl_WorkGroupSize.x];
 
 layout(push_constant, std430) uniform UboPush {
   uint indirectRate;
   uint indirectCmdCount;
   };
 
-shared uint workId;
-shared uint iboOffset;
-
 void main() {
-  const uint total = atomicAdd(mesh.grow, 0);
-
-  while(true) {
-    [[branch]]
-    if(gl_LocalInvocationIndex==0) {
-      uint at = atomicAdd(mesh.grow2, 1);
-      if(at==total)
-        atomicExchange(mesh.grow, 0);
-      workId = at;
-      }
-    barrier();
-
-    const uint at = workId;
-    [[branch]]
-    if(at>=total)
-      return;
-
-    const Descriptor d = mesh.desc[at];
-    if(gl_LocalInvocationIndex==0) {
-      uint idx = d.drawId*indirectRate;
-      iboOffset = atomicAdd(indirect[idx].indexCount, d.indSz) + indirect[idx].firstIndex;
-      }
-    barrier();
-
-    [[loop]]
-    for(uint i=gl_LocalInvocationIndex; i<d.indSz; i+=gl_WorkGroupSize.x) {
-      var.heap[iboOffset+i] = var.heap[d.ptr+i];
-      }
-    }
+  uint index = gl_LocalInvocationID.x;
+  if(index>=indirect.length())
+    return;
+  indirect[index].drawId = index/indirectRate;
   }

@@ -43,7 +43,8 @@ layout(binding = 2, std430) restrict buffer EngineInternal2
 
 shared uint partialSummIbo[gl_WorkGroupSize.x];
 
-layout(push_constant, std140) uniform UboPush {
+layout(push_constant, std430) uniform UboPush {
+  uint indirectRate;
   uint indirectCmdCount;
   };
 
@@ -57,7 +58,7 @@ void main() {
   uint sumIbo = 0;
   [[loop]]
   for(uint i=b; i<e; ++i) {
-    sumIbo += indirect[i].indexCountSrc;
+    sumIbo += indirect[i*indirectRate].indexCountSrc;
     }
   partialSummIbo[index] = sumIbo;
 
@@ -74,18 +75,19 @@ void main() {
   const uint grow = var.grow;
   [[loop]]
   for(uint i=b; i<e; ++i) {
-    uint indexCount = indirect[i].indexCountSrc;
+    uint idx        = i*indirectRate;
+    uint indexCount = indirect[idx].indexCountSrc;
     uint firstIndex = grow + prefixIbo;
     uint inst       = indexCount>0 ? 1 : 0;
 
     prefixIbo += indexCount;
 
-    indirect[i].indexCount    = 0;
-    indirect[i].instanceCount = inst;
-    indirect[i].firstIndex    = firstIndex;
-    indirect[i].vertexOffset  = 0;
-    indirect[i].firstInstance = 0;
-    indirect[i].padding0      = 0;
+    indirect[idx].indexCount    = 0;
+    indirect[idx].instanceCount = inst;
+    indirect[idx].firstIndex    = firstIndex;
+    indirect[idx].vertexOffset  = 0;
+    indirect[idx].firstInstance = 0;
+    indirect[idx].padding0      = 0;
     }
 
   barrier();
@@ -96,6 +98,6 @@ void main() {
     var.grow   = 0;
     }
   for(uint i=b; i<e; ++i) {
-    indirect[i].indexCountSrc = 0;
+    indirect[i*indirectRate].indexCountSrc = 0;
     }
   }

@@ -198,6 +198,7 @@ add_shader(tex_brush.frag.sprv brush.frag -DTEXTURE)
 add_shader(copy.comp.sprv      copy.comp  "")
 add_shader(copy.s.comp.sprv    copy.comp  -DFRM_SMALL)
 
+add_shader(mesh_init.comp.sprv         mesh_init.comp  "")
 add_shader(mesh_prefix_pass.comp.sprv  mesh_prefix_pass.comp  "")
 add_shader(mesh_compactage.comp.sprv   mesh_compactage.comp   "")
 

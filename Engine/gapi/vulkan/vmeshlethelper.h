@@ -18,7 +18,7 @@ class VMeshletHelper {
       uint32_t indexCount;
       };
 
-    struct VkDrawIndexedIndirectCommand {
+    struct DrawIndexedIndirectCommand {
       uint32_t drawId;
       uint32_t indexCountSrc;
       uint32_t indexCount;
@@ -85,6 +85,11 @@ class VMeshletHelper {
     VkDescriptorSet            drawSet  = VK_NULL_HANDLE;
 
     VkPipelineLayout           currentCsLayout = VK_NULL_HANDLE;
+    uint32_t                   indirectRate    = 1;
+    uint32_t                   indirectOffset  = 0;
+
+    DSharedPtr<VPipelineLay*>  initLay;
+    DSharedPtr<VCompPipeline*> init;
 
     DSharedPtr<VPipelineLay*>  prefixSumLay;
     DSharedPtr<VCompPipeline*> prefixSum;

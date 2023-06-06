@@ -22,28 +22,13 @@ VMeshletHelper::VMeshletHelper(VDevice& dev) : dev(dev) {
   meshlets    = dev.allocator.alloc(nullptr, MeshletsMemorySize,  1,1, ms,  BufferHeap::Device);
   scratch     = dev.allocator.alloc(nullptr, PipelineMemorySize,  1,1, geo, BufferHeap::Device);
 
-  // TODO
-  // assert(dev.props.ssbo.offsetAlign <= 32);
-
-  {
-    auto c = dev.dataMgr().get();
-    auto& cmd = reinterpret_cast<VMeshCommandBuffer&>(*c.get());
-    cmd.begin();
-    // drawcall-related parts should be set to zeros.
-    vkCmdFillBuffer(cmd.impl, indirect.impl, 0, VK_WHOLE_SIZE, 0);
-    // meshlet counters
-    vkCmdFillBuffer(cmd.impl, meshlets.impl, 0, sizeof(uint32_t)*2, 0);
-    // heap counters
-    vkCmdFillBuffer(cmd.impl, scratch.impl,  0, sizeof(uint32_t)*2, 0);
-
-    barrier(cmd.impl,
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-            VK_ACCESS_TRANSFER_WRITE_BIT,
-            VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT);
-    cmd.end();
-    dev.dataMgr().submit(std::move(c));
-  }
+  static_assert(sizeof(DrawIndexedIndirectCommand)==32);
+  if(dev.props.ssbo.offsetAlign > sizeof(DrawIndexedIndirectCommand)) {
+    indirectRate   = dev.props.ssbo.offsetAlign/sizeof(DrawIndexedIndirectCommand);
+    indirectOffset = dev.props.ssbo.offsetAlign;
+    } else {
+    indirectOffset = sizeof(DrawIndexedIndirectCommand);
+    }
 
   try {
     initShaders(dev);
@@ -65,6 +50,41 @@ VMeshletHelper::VMeshletHelper(VDevice& dev) : dev(dev) {
   catch(...) {
     cleanup();
     }
+
+  {
+    struct Push {
+      uint32_t indirectRate;
+      uint32_t indirectCmdCount;
+      } push;
+    push.indirectRate     = 2;
+    push.indirectCmdCount = 0;
+
+    auto c = dev.dataMgr().get();
+    auto& cmd = reinterpret_cast<VMeshCommandBuffer&>(*c.get());
+    cmd.begin();
+    // drawcall-related parts should be set to zeros.
+    vkCmdFillBuffer(cmd.impl, indirect.impl, 0, VK_WHOLE_SIZE, 0);
+    // meshlet counters
+    vkCmdFillBuffer(cmd.impl, meshlets.impl, 0, sizeof(uint32_t)*2, 0);
+    // heap counters
+    vkCmdFillBuffer(cmd.impl, scratch.impl,  0, sizeof(uint32_t)*2, 0);
+
+    vkCmdBindPipeline(cmd.impl,VK_PIPELINE_BIND_POINT_COMPUTE,init.handler->impl);
+    vkCmdBindDescriptorSets(cmd.impl,VK_PIPELINE_BIND_POINT_COMPUTE, init.handler->pipelineLayout,
+                            0, 1,&compSet, 0,nullptr);
+    vkCmdPushConstants(cmd.impl,init.handler->pipelineLayout,VK_SHADER_STAGE_COMPUTE_BIT,0,sizeof(push),&push);
+
+    const uint32_t sz = init.handler->workGroupSize().x;
+    vkCmdDispatch(cmd.impl, (IndirectCmdCount+sz-1)/sz,1,1); // one threadgroup for prefix pass
+
+    barrier(cmd.impl,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT);
+    cmd.end();
+    dev.dataMgr().submit(std::move(c));
+  }
   }
 
 VMeshletHelper::~VMeshletHelper() {
@@ -106,8 +126,8 @@ void VMeshletHelper::bindVS(VkCommandBuffer impl, VkPipelineLayout lay) {
 
 void VMeshletHelper::drawIndirect(VkCommandBuffer impl, uint32_t drawId) {
   assert(drawId<IndirectCmdCount);
-  uint32_t off = drawId*sizeof(VkDrawIndexedIndirectCommand) + 2*sizeof(uint32_t);
-  vkCmdDrawIndexedIndirect(impl, indirect.impl, off, 1, sizeof(VkDrawIndexedIndirectCommand));
+  uint32_t off = drawId*indirectOffset + 2*sizeof(uint32_t);
+  vkCmdDrawIndexedIndirect(impl, indirect.impl, off, 1, 0);
   // vkCmdDrawIndexed(impl, 3, 1, 0, 0, 0);
   }
 
@@ -147,6 +167,13 @@ void VMeshletHelper::sortPass(VkCommandBuffer impl, uint32_t meshCallsCount) {
     return;
   currentCsLayout = VK_NULL_HANDLE;
 
+  struct Push {
+    uint32_t indirectRate;
+    uint32_t indirectCmdCount;
+    } push;
+  push.indirectRate     = 2;
+  push.indirectCmdCount = meshCallsCount;
+
   // prefix summ pass
   barrier(impl, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
           VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
@@ -154,7 +181,7 @@ void VMeshletHelper::sortPass(VkCommandBuffer impl, uint32_t meshCallsCount) {
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,prefixSum.handler->impl);
   vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_COMPUTE, prefixSum.handler->pipelineLayout,
                           0, 1,&compSet, 0,nullptr);
-  vkCmdPushConstants(impl,prefixSum.handler->pipelineLayout,VK_SHADER_STAGE_COMPUTE_BIT,0,4,&meshCallsCount);
+  vkCmdPushConstants(impl,prefixSum.handler->pipelineLayout,VK_SHADER_STAGE_COMPUTE_BIT,0,sizeof(push),&push);
   vkCmdDispatch(impl, 1,1,1); // one threadgroup for prefix pass
 
   // compactage pass
@@ -188,10 +215,11 @@ void VMeshletHelper::firstDraw(VkCommandBuffer impl) {
 void VMeshletHelper::drawCompute(VkCommandBuffer impl, uint32_t drawId, size_t x, size_t y, size_t z) {
   if(drawId==0)
     firstDraw(impl);
+  uint32_t dynOffset = drawId*indirectOffset;
   vkCmdBindDescriptorSets(impl, VK_PIPELINE_BIND_POINT_COMPUTE,
                           currentCsLayout, 1,
                           1,&engSet,
-                          1,&drawId);
+                          1,&dynOffset);
   vkCmdDispatch(impl, uint32_t(x), uint32_t(y), uint32_t(z));
   }
 
@@ -292,7 +320,7 @@ void VMeshletHelper::initEngSet(VkDescriptorSet set, uint32_t cnt, bool dynamic)
   VkDescriptorBufferInfo buf[4] = {};
   buf[0].buffer = indirect.impl;
   buf[0].offset = 0;
-  buf[0].range  = VK_WHOLE_SIZE;
+  buf[0].range  = dynamic ? sizeof(DrawIndexedIndirectCommand) : VK_WHOLE_SIZE;
 
   buf[1].buffer = meshlets.impl;
   buf[1].offset = 0;
@@ -338,6 +366,10 @@ void VMeshletHelper::initDrawSet(VkDescriptorSet set) {
   }
 
 void VMeshletHelper::initShaders(VDevice& device) {
+  auto initCs = DSharedPtr<VShader*>(new VShader(device,mesh_init_comp_sprv,sizeof(mesh_init_comp_sprv)));
+  initLay = DSharedPtr<VPipelineLay*> (new VPipelineLay (device,&initCs.handler->lay));
+  init    = DSharedPtr<VCompPipeline*>(new VCompPipeline(device,*initLay.handler,*initCs.handler));
+
   auto prefixSumCs = DSharedPtr<VShader*>(new VShader(device,mesh_prefix_pass_comp_sprv,sizeof(mesh_prefix_pass_comp_sprv)));
   prefixSumLay  = DSharedPtr<VPipelineLay*> (new VPipelineLay (device,&prefixSumCs.handler->lay));
   prefixSum     = DSharedPtr<VCompPipeline*>(new VCompPipeline(device,*prefixSumLay.handler,*prefixSumCs.handler));
