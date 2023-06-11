@@ -9,7 +9,7 @@
 #include <thread>
 #include <chrono>
 
-#include "fonts/builtin_fonts.h"
+#include "builtin_fonts.h"
 
 using namespace Tempest;
 
