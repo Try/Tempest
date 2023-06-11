@@ -32,11 +32,15 @@ class BasicPoint<T,1> {
     BasicPoint& operator /= ( const T& p ){ x/=p; return *this; }
     BasicPoint& operator *= ( const T& p ){ x*=p; return *this; }
 
+    BasicPoint& operator *= ( const BasicPoint& p ){ x*=p.x; return *this; }
+
     friend BasicPoint operator - ( BasicPoint l,const BasicPoint & r ){ l-=r; return l; }
     friend BasicPoint operator + ( BasicPoint l,const BasicPoint & r ){ l+=r; return l; }
 
     friend BasicPoint operator / ( BasicPoint l,const T r ){ l/=r; return l; }
     friend BasicPoint operator * ( BasicPoint l,const T r ){ l*=r; return l; }
+
+    friend BasicPoint operator * ( BasicPoint l, const BasicPoint r){ l*=r; return l; }
 
     BasicPoint operator - () const { return BasicPoint(-x); }
 
@@ -69,11 +73,15 @@ class BasicPoint<T,2> {
     BasicPoint& operator /= ( const T& p ){ x/=p; y/=p; return *this; }
     BasicPoint& operator *= ( const T& p ){ x*=p; y*=p; return *this; }
 
+    BasicPoint& operator *= ( const BasicPoint& p ){ x*=p.x; y*=p.y; return *this; }
+
     friend BasicPoint operator - ( BasicPoint l,const BasicPoint & r ){ l-=r; return l; }
     friend BasicPoint operator + ( BasicPoint l,const BasicPoint & r ){ l+=r; return l; }
 
     friend BasicPoint operator / ( BasicPoint l,const T r ){ l/=r; return l; }
     friend BasicPoint operator * ( BasicPoint l,const T r ){ l*=r; return l; }
+
+    friend BasicPoint operator * ( BasicPoint l, const BasicPoint r){ l*=r; return l; }
 
     BasicPoint operator - () const { return BasicPoint(-x,-y); }
 
@@ -111,11 +119,15 @@ class BasicPoint<T,3> {
     BasicPoint& operator /= ( const T& p ){ x/=p; y/=p; z/=p; return *this; }
     BasicPoint& operator *= ( const T& p ){ x*=p; y*=p; z*=p; return *this; }
 
+    BasicPoint& operator *= ( const BasicPoint& p ){ x*=p.x; y*=p.y; z*=p.z; return *this; }
+
     friend BasicPoint operator - ( BasicPoint l,const BasicPoint & r ){ l-=r; return l; }
     friend BasicPoint operator + ( BasicPoint l,const BasicPoint & r ){ l+=r; return l; }
 
     friend BasicPoint operator / ( BasicPoint l,const T r ){ l/=r; return l; }
     friend BasicPoint operator * ( BasicPoint l,const T r ){ l*=r; return l; }
+
+    friend BasicPoint operator * ( BasicPoint l, const BasicPoint r){ l*=r; return l; }
 
     BasicPoint operator - () const { return BasicPoint(-x,-y,-z); }
 
@@ -158,11 +170,15 @@ class BasicPoint<T,4> {
     BasicPoint& operator /= ( const T& p ){ x/=p; y/=p; z/=p; w/=p; return *this; }
     BasicPoint& operator *= ( const T& p ){ x*=p; y*=p; z*=p; w*=p; return *this; }
 
+    BasicPoint& operator *= ( const BasicPoint& p ){ x*=p.x; y*=p.y; z*=p.z; w*=p.w; return *this; }
+
     friend BasicPoint operator - ( BasicPoint l,const BasicPoint & r ){ l-=r; return l; }
     friend BasicPoint operator + ( BasicPoint l,const BasicPoint & r ){ l+=r; return l; }
 
     friend BasicPoint operator / ( BasicPoint l,const T r ){ l/=r; return l; }
     friend BasicPoint operator * ( BasicPoint l,const T r ){ l*=r; return l; }
+
+    friend BasicPoint operator * ( BasicPoint l, const BasicPoint r){ l*=r; return l; }
 
     BasicPoint operator - () const { return BasicPoint(-x,-y,-z,-w); }
 
