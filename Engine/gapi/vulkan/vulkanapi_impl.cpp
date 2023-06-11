@@ -242,9 +242,6 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
   if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)) {
     props.hasDynRendering = true;
     }
-  if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_DEVICE_GROUP_EXTENSION_NAME)) {
-    props.hasDevGroup = true;
-    }
   if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME)) {
     props.hasBarycentrics = true;
     }
@@ -358,7 +355,7 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
     props.accelerationStructureScratchOffsetAlignment = asProperties.minAccelerationStructureScratchOffsetAlignment;
 
     if(!props.meshlets.meshShader && props.hasSpirv_1_4 && false) {
-      props.meshlets.meshShaderEmulated = props.hasDevGroup;
+      props.meshlets.meshShaderEmulated = true;
       if(props.meshlets.meshShaderEmulated) {
         props.meshlets.maxGroups.x      = devP.limits.maxComputeWorkGroupCount[0];
         props.meshlets.maxGroups.y      = devP.limits.maxComputeWorkGroupCount[1];

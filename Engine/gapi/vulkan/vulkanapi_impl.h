@@ -38,7 +38,6 @@ class VulkanInstance {
       bool     hasDeviceAddress   = false;
       bool     hasDynRendering    = false;
       bool     hasDescIndexing    = false;
-      bool     hasDevGroup        = false;
       bool     hasBarycentrics    = false;
       bool     hasSpirv_1_4       = false;
       };
