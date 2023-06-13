@@ -4,6 +4,8 @@
 #include <AL/alc.h>
 #include <AL/alext.h>
 
+//#include "thirdparty/openal-soft/core/logging.h"
+
 #include <Tempest/File>
 #include <Tempest/Sound>
 #include <Tempest/SoundEffect>
@@ -14,6 +16,14 @@
 
 using namespace Tempest;
 
+enum class LogLevel {
+  Disable,
+  Error,
+  Warning,
+  Trace
+  };
+extern LogLevel gLogLevel; // HACK: openal spams too much
+
 struct SoundDevice::Data {
   std::shared_ptr<Device> dev;
   ALCcontext*             context;
@@ -21,6 +31,7 @@ struct SoundDevice::Data {
 
 struct SoundDevice::Device {
   Device() {
+    gLogLevel = LogLevel::Error;
     dev = alcOpenDevice(nullptr);
     if(dev==nullptr)
       throw std::system_error(Tempest::SoundErrc::NoDevice);

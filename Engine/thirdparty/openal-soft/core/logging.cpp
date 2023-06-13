@@ -63,6 +63,11 @@ void al_print(LogLevel level, FILE *logfile, const char *fmt, ...)
         fputs(str, logfile);
         fflush(logfile);
     }
+    else
+    {
+        return;
+    }
+
 #if defined(_WIN32) && !defined(NDEBUG)
     /* OutputDebugStringW has no 'level' property to distinguish between
      * informational, warning, or error debug messages. So only print them for
