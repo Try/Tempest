@@ -63,8 +63,20 @@ Application::~Application(){
   impl.font = Font();
   }
 
-void Application::sleep(unsigned int msec) {
-  std::this_thread::sleep_for(std::chrono::milliseconds(msec));
+void Application::sleep(uint32_t msecIn) {
+  const auto     start         = std::chrono::high_resolution_clock::now();
+  const auto     wtime         = std::chrono::milliseconds(msecIn);
+  const uint32_t wtGranularity = 5;
+
+  if(msecIn>wtGranularity) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(msecIn-wtGranularity));
+    }
+  // spin lock
+  while(true) {
+    auto ms = (std::chrono::high_resolution_clock::now() - start);
+    if(ms>=wtime)
+      break;
+    }
   }
 
 uint64_t Application::tickCount() {

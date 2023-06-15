@@ -15,7 +15,7 @@ class Application {
     Application(const Application&)=delete;
     virtual ~Application();
 
-    static void         sleep(unsigned int msec);
+    static void         sleep(uint32_t msec);
     static uint64_t     tickCount();
 
     int                 exec();
