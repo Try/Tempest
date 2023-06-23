@@ -23,12 +23,15 @@ MtAccelerationStructure::MtAccelerationStructure(MtDevice& dx,
   geo->setVertexBuffer(vbo.impl.get());
   geo->setVertexBufferOffset(0);
   geo->setVertexStride(stride);
+  geo->setVertexFormat(MTL::AttributeFormatFloat3);
   geo->setIndexBuffer(ibo.impl.get());
   geo->setIndexBufferOffset(ioffset*sizeofIndex(icls));
   geo->setIndexType(nativeFormat(icls));
   geo->setTriangleCount(iboSz/3);
+  //geo->setOpaque(true); // no intersections
+  geo->setAllowDuplicateIntersectionFunctionInvocation(true);
 
-  if(geo->indexBufferOffset()%256!=0) {
+  if(false && geo->indexBufferOffset()%256!=0) {
     //Log::d("FIXME: index buffer offset alignment on metal(",geo.indexBufferOffset%256,")");
     geo->setIndexBufferOffset(0);
     geo->setTriangleCount(0);
@@ -71,7 +74,7 @@ MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtIns
                                                        AccelerationStructure*const* as, size_t asSize)
   :owner(dx) {
   auto pool = NsPtr<NS::AutoreleasePool>::init();
-  instances = NsPtr<MTL::Buffer>(dx.impl->newBuffer(sizeof(MTL::AccelerationStructureInstanceDescriptor)*asSize,
+  instances = NsPtr<MTL::Buffer>(dx.impl->newBuffer(sizeof(MTL::AccelerationStructureUserIDInstanceDescriptor)*asSize,
                                                     MTL::ResourceStorageModeManaged));
   if(instances==nullptr)
     throw std::system_error(GraphicsErrc::OutOfVideoMemory);
@@ -79,16 +82,16 @@ MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtIns
   std::unique_ptr<NS::Object*[]> asCpp;
   asCpp.reset(new NS::Object*[asSize]);
   for(size_t i=0; i<asSize; ++i) {
-    auto& obj = reinterpret_cast<MTL::AccelerationStructureInstanceDescriptor*>(instances->contents())[i];
+    auto& obj = reinterpret_cast<MTL::AccelerationStructureUserIDInstanceDescriptor*>(instances->contents())[i];
 
     for(int x=0; x<4; ++x)
       for(int y=0; y<3; ++y)
         obj.transformationMatrix[x][y] = inst[i].mat.at(x,y);
-    obj.options                         = MTL::AccelerationStructureInstanceOptionDisableTriangleCulling |
-                                          MTL::AccelerationStructureInstanceOptionOpaque;
+    obj.options                         = MTL::AccelerationStructureInstanceOptionOpaque;
     obj.mask                            = 0xFF;
     obj.intersectionFunctionTableOffset = 0;
     obj.accelerationStructureIndex      = i;
+    obj.userID                          = inst[i].id;
 
     auto* ax = reinterpret_cast<MtAccelerationStructure*>(as[i]);
     asCpp[i] = ax->impl.get();
@@ -102,9 +105,10 @@ MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtIns
   desc->retain();
   desc->setInstanceDescriptorBuffer(instances.get());
   desc->setInstanceDescriptorBufferOffset(0);
-  desc->setInstanceDescriptorStride(sizeof(MTL::AccelerationStructureInstanceDescriptor));
+  desc->setInstanceDescriptorStride(sizeof(MTL::AccelerationStructureUserIDInstanceDescriptor));
   desc->setInstanceCount(asSize);
   desc->setInstancedAccelerationStructures(asArray.get());
+  desc->setInstanceDescriptorType(MTL::AccelerationStructureInstanceDescriptorTypeUserID);
 
   auto sz = dx.impl->accelerationStructureSizes(desc.get());
   impl = NsPtr<MTL::AccelerationStructure>(dx.impl->newAccelerationStructure(sz.accelerationStructureSize));
