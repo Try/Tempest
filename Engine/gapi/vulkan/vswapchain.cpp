@@ -153,7 +153,8 @@ void VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& swapCh
   createInfo.imageColorSpace  = surfaceFormat.colorSpace;
   createInfo.imageExtent      = extent;
   createInfo.imageArrayLayers = 1;
-  createInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+  createInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+  createInfo.imageUsage      &= swapChainSupport.capabilities.supportedUsageFlags;
 
   if(device.graphicsQueue!=device.presentQueue) {
     const uint32_t qidx[]  = {device.graphicsQueue->family,device.presentQueue->family};
@@ -167,7 +168,7 @@ void VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& swapCh
   createInfo.preTransform   = swapChainSupport.capabilities.currentTransform;
   createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
   createInfo.presentMode    = presentMode;
-  createInfo.clipped        = VK_TRUE;
+  createInfo.clipped        = VK_FALSE;
 
   if(vkCreateSwapchainKHR(device.device.impl, &createInfo, nullptr, &swapChain) != VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
@@ -236,9 +237,9 @@ VkPresentModeKHR VSwapchain::findSwapPresentMode(const std::vector<VkPresentMode
     * https://software.intel.com/content/www/us/en/develop/articles/api-without-secrets-introduction-to-vulkan-part-2.html
     **/
   std::initializer_list<VkPresentModeKHR> modes={
+    VK_PRESENT_MODE_FIFO_KHR,         // vsync; optimal
     VK_PRESENT_MODE_MAILBOX_KHR,      // vsync; wait until vsync
     VK_PRESENT_MODE_FIFO_RELAXED_KHR, // vsync; optimal, but tearing
-    VK_PRESENT_MODE_FIFO_KHR,         // vsync; optimal
     VK_PRESENT_MODE_IMMEDIATE_KHR,    // no vsync
     };
 
@@ -368,7 +369,7 @@ void VSwapchain::present() {
     // time_t t = std::chrono::system_clock::to_time_t(p);
     // char str[26] = {};
     // strftime(str, sizeof(str), "%H:%M.%S", localtime(&t));
-    // Log::i(str," : vkQueuePresentKHR = ", tx);
+    // Log::i(str," : vkQueuePresentKHR[",imgIndex,"] = ", tx);
     }
   Detail::vkAssert(code);
 
