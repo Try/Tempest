@@ -31,8 +31,8 @@ MtAccelerationStructure::MtAccelerationStructure(MtDevice& dx,
   //geo->setOpaque(true); // no intersections
   geo->setAllowDuplicateIntersectionFunctionInvocation(true);
 
-  if(false && geo->indexBufferOffset()%256!=0) {
-    //Log::d("FIXME: index buffer offset alignment on metal(",geo.indexBufferOffset%256,")");
+  if(geo->indexBufferOffset()%32!=0) {
+    Log::d("FIXME: index buffer offset alignment on metal(",geo->indexBufferOffset()%32,")");
     geo->setIndexBufferOffset(0);
     geo->setTriangleCount(0);
     }
