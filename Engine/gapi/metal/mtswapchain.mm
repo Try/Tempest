@@ -166,8 +166,10 @@ void MtSwapchain::present() {
     id<MTLBlitCommandEncoder> blit     = [cmd blitCommandEncoder];
 
     id<MTLTexture> dr = drawable.texture;
-    if(dr.width!=img[i].tex->width() || dr.height!=img[i].tex->height())
+    if(dr.width!=img[i].tex->width() || dr.height!=img[i].tex->height()) {
+      [blit endEncoding];
       throw SwapchainSuboptimal();
+      }
 
     std::lock_guard<SpinLock> guard(sync);
     [blit copyFromTexture:(id<MTLTexture>)img[i].tex.get()
