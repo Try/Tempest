@@ -9,6 +9,7 @@
 #include <memory>
 #include <atomic>
 #include <vector>
+#include <string_view>
 
 #include "../utility/dptr.h"
 #include "flags.h"
@@ -563,6 +564,7 @@ namespace Tempest {
 
         virtual void setViewport(const Rect& r)=0;
         virtual void setScissor (const Rect& r)=0;
+        virtual void setDebugMarker(std::string_view tag);
 
         virtual void draw        (size_t vsize, size_t firstInstance, size_t instanceCount) = 0;
         virtual void draw        (const Buffer& vbo, size_t stride, size_t offset, size_t vertexCount,

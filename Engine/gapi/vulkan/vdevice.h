@@ -367,6 +367,9 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     PFN_vkCmdDrawMeshTasksEXT                   vkCmdDrawMeshTasks = nullptr;
 
+    PFN_vkCmdDebugMarkerBeginEXT                vkCmdDebugMarkerBegin = nullptr;
+    PFN_vkCmdDebugMarkerEndEXT                  vkCmdDebugMarkerEnd   = nullptr;
+
     void                    waitIdle() override;
     void                    submit(VCommandBuffer& cmd, VFence* sync);
 

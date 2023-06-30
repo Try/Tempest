@@ -53,6 +53,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void setViewport(const Rect& r) override;
     void setScissor (const Rect& r) override;
+    void setDebugMarker(std::string_view tag) override;
 
     void setPipeline(AbstractGraphicsApi::Pipeline& p) override;
     void setBytes   (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;
@@ -132,6 +133,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     VkPipelineLayout                        pipelineLayout  = VK_NULL_HANDLE;
 
     size_t                                  meshIndirectId  = 0;
+    bool                                    isDbgRegion = false;
   };
 
 class VMeshCommandBuffer:public VCommandBuffer {

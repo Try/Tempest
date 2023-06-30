@@ -218,6 +218,9 @@ void VCommandBuffer::begin() {
   }
 
 void VCommandBuffer::end() {
+  if(isDbgRegion) {
+    device.vkCmdDebugMarkerEnd(impl);
+    }
   swapchainSync.reserve(swapchainSync.size());
   resState.finalize(*this);
   state = NoRecording;
@@ -361,6 +364,9 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
   }
 
 void VCommandBuffer::endRendering() {
+  if(isDbgRegion) {
+    device.vkCmdDebugMarkerEnd(impl);
+    }
   if(device.props.hasDynRendering) {
     device.vkCmdEndRenderingKHR(impl);
     } else {
@@ -506,6 +512,23 @@ void VCommandBuffer::setScissor(const Rect& r) {
   scissor.offset = {r.x, r.y};
   scissor.extent = {uint32_t(r.w), uint32_t(r.h)};
   vkCmdSetScissor(impl,0,1,&scissor);
+  }
+
+void VCommandBuffer::setDebugMarker(std::string_view tag) {
+  if(isDbgRegion) {
+    device.vkCmdDebugMarkerEnd(impl);
+    isDbgRegion = false;
+    }
+
+  if(device.vkCmdDebugMarkerBegin!=nullptr && !tag.empty()) {
+    char buf[128] = {};
+    std::snprintf(buf, sizeof(buf), "%.*s", int(tag.size()), tag.data());
+    VkDebugMarkerMarkerInfoEXT info = {};
+    info.sType       = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
+    info.pMarkerName = buf;
+    device.vkCmdDebugMarkerBegin(impl, &info);
+    isDbgRegion = true;
+    }
   }
 
 void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest, const AbstractGraphicsApi::Buffer &srcBuf, size_t offsetSrc, size_t size) {

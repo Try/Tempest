@@ -413,6 +413,11 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
   if(props.meshlets.meshShader) {
     vkCmdDrawMeshTasks = PFN_vkCmdDrawMeshTasksEXT(vkGetDeviceProcAddr(device.impl,"vkCmdDrawMeshTasksEXT"));
     }
+
+  if(props.hasDebugMarker) {
+    vkCmdDebugMarkerBegin = PFN_vkCmdDebugMarkerBeginEXT(vkGetDeviceProcAddr(device.impl,"vkCmdDebugMarkerBeginEXT"));
+    vkCmdDebugMarkerEnd   = PFN_vkCmdDebugMarkerEndEXT  (vkGetDeviceProcAddr(device.impl,"vkCmdDebugMarkerEndEXT"));
+    }
   }
 
 VDevice::MemIndex VDevice::memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const {

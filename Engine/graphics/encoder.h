@@ -44,6 +44,8 @@ class Encoder<Tempest::CommandBuffer> {
     void setScissor(int x,int y,int w,int h);
     void setScissor(const Rect& vp);
 
+    void setDebugMarker(std::string_view tag);
+
     void draw(const size_t vertexCount) { implDraw(vertexCount,0,1); }
     void draw(const size_t vertexCount, size_t firstInstance, size_t instanceCount) { implDraw(vertexCount,firstInstance,instanceCount); }
 

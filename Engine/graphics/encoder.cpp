@@ -61,6 +61,10 @@ void Encoder<Tempest::CommandBuffer>::setScissor(const Rect &vp) {
   impl->setScissor(vp);
   }
 
+void Encoder<Tempest::CommandBuffer>::setDebugMarker(std::string_view tag) {
+  impl->setDebugMarker(tag);
+  }
+
 void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const DescriptorSet &ubo, const void* data, size_t sz) {
   setUniforms(p);
   if(sz>0)
