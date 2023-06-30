@@ -47,6 +47,7 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
 
     void setViewport(const Rect& r) override;
     void setScissor (const Rect& r) override;
+    void setDebugMarker(std::string_view tag) override;
 
     void draw        (size_t vsize, size_t firstInstance, size_t instanceCount) override;
     void draw        (const AbstractGraphicsApi::Buffer& vbo, size_t stride, size_t voffset,size_t vertexCount,
@@ -96,6 +97,7 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     bool                              isTesselation   = false;
 
     uint32_t                          maxTotalThreadsPerThreadgroup = 0;
+    bool                              isDbgRegion = false;
 
   friend class Tempest::MetalApi;
   };

@@ -140,6 +140,16 @@ void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MTL::RenderPassDesc
     encBlit = NsPtr<MTL::BlitCommandEncoder>();
     }
 
+  if(isDbgRegion) {
+    if(encDraw!=nullptr)
+      encDraw->popDebugGroup();
+    if(encComp!=nullptr)
+      encComp->popDebugGroup();
+    if(encBlit!=nullptr)
+      encBlit->popDebugGroup();
+    isDbgRegion = false;
+    }
+
   switch(e) {
     case E_None: {
       break;
@@ -221,6 +231,34 @@ void MtCommandBuffer::setScissor(const Rect& r) {
   v.width  = w;
   v.height = h;
   encDraw->setScissorRect(v);
+  }
+
+void MtCommandBuffer::setDebugMarker(std::string_view tag) {
+  MTL::CommandEncoder* enc = nullptr;
+  if(encDraw!=nullptr)
+    enc = encDraw.get();
+  if(encComp!=nullptr)
+    enc = encComp.get();
+  if(encBlit!=nullptr)
+    enc = encBlit.get();
+
+  if(enc==nullptr)
+    return;
+
+  if(isDbgRegion) {
+    enc->popDebugGroup();
+    isDbgRegion = false;
+    }
+
+  if(!tag.empty()) {
+    auto pool = NsPtr<NS::AutoreleasePool>::init();
+    char buf[128] = {};
+    std::snprintf(buf, sizeof(buf), "%.*s", int(tag.size()), tag.data());
+    auto str = NsPtr<NS::String>(NS::String::string(buf,NS::UTF8StringEncoding));
+    str->retain();
+    enc->pushDebugGroup(str.get());
+    isDbgRegion = true;
+    }
   }
 
 void MtCommandBuffer::draw(size_t vsize, size_t firstInstance, size_t instanceCount) {
