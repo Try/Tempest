@@ -34,8 +34,9 @@ void MtDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer *buf, size_t 
   }
 
 void MtDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure* a) {
-  auto& as = *reinterpret_cast<MtAccelerationStructure*>(a);
-  desc[id].val = as.impl.get();
+  auto& as = *reinterpret_cast<MtTopAccelerationStructure*>(a);
+  desc[id].val  = as.impl.get();
+  desc[id].tlas = &as;
   }
 
 void MtDescriptorArray::fillBufferSizeBuffer(uint32_t* ret, ShaderReflection::Stage stage) {
@@ -72,6 +73,27 @@ void MtDescriptorArray::fillBufferSizeBuffer(uint32_t* ret, ShaderReflection::St
       auto& b = *reinterpret_cast<MTL::Buffer*>(desc[i].val);
       ret[at] = b.length() - desc[i].offset;
       }
+    }
+  }
+
+void MtDescriptorArray::useResource(MTL::ComputeCommandEncoder& cmd) {
+  implUseResource(cmd);
+  }
+
+void MtDescriptorArray::useResource(MTL::RenderCommandEncoder& cmd) {
+  implUseResource(cmd);
+  }
+
+template<class Enc>
+void MtDescriptorArray::implUseResource(Enc&  cmd) {
+  auto& lx  = lay.handler->lay;
+  auto& mtl = lay.handler->bind;
+  for(size_t i=0; i<lx.size(); ++i) {
+    if(lx[i].cls!=ShaderReflection::Tlas)
+      continue;
+
+    auto& blas = desc[i].tlas->blas;
+    cmd.useResources(blas.data(), blas.size(), MTL::ResourceUsageRead);
     }
   }
 

@@ -11,6 +11,7 @@ namespace Detail {
 
 class MtPipelineLay;
 class MtDevice;
+class MtTopAccelerationStructure;
 
 class MtDescriptorArray : public AbstractGraphicsApi::Desc {
   public:
@@ -22,11 +23,15 @@ class MtDescriptorArray : public AbstractGraphicsApi::Desc {
     void setTlas(size_t,AbstractGraphicsApi::AccelerationStructure*) override;
 
     void fillBufferSizeBuffer(uint32_t* ret, ShaderReflection::Stage stage);
+    void useResource(MTL::ComputeCommandEncoder& cmd);
+    void useResource(MTL::RenderCommandEncoder&  cmd);
 
     struct Desc {
       void*              val     = nullptr;
       MTL::SamplerState* sampler = nullptr;
       size_t             offset  = 0;
+
+      MtTopAccelerationStructure* tlas = nullptr;
       };
 
     MtDevice&                        dev;
@@ -34,6 +39,10 @@ class MtDescriptorArray : public AbstractGraphicsApi::Desc {
     DSharedPtr<const MtPipelineLay*> lay;
 
     ShaderReflection::Stage          bufferSizeBuffer = ShaderReflection::Stage::None;
+
+  private:
+    template<class Enc>
+    void implUseResource(Enc&  cmd);
   };
 
 }

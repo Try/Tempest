@@ -9,6 +9,7 @@
 #include "gapi/graphicsmemutils.h"
 
 #include <Tempest/Log>
+#include <unordered_map>
 
 using namespace Tempest::Detail;
 
@@ -79,8 +80,8 @@ MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtIns
   if(instances==nullptr)
     throw std::system_error(GraphicsErrc::OutOfVideoMemory);
 
-  std::unique_ptr<NS::Object*[]> asCpp;
-  asCpp.reset(new NS::Object*[asSize]);
+  std::unordered_map<MTL::Resource*,uint32_t> usedBlas;
+  blas.reserve(asSize);
   for(size_t i=0; i<asSize; ++i) {
     auto& obj = reinterpret_cast<MTL::AccelerationStructureUserIDInstanceDescriptor*>(instances->contents())[i];
 
@@ -94,11 +95,18 @@ MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtIns
     obj.userID                          = inst[i].id;
 
     auto* ax = reinterpret_cast<MtAccelerationStructure*>(as[i]);
-    asCpp[i] = ax->impl.get();
+    auto it = usedBlas.find(ax->impl.get());
+    if(it!=usedBlas.end()) {
+      obj.accelerationStructureIndex = it->second;
+      } else {
+      obj.accelerationStructureIndex = uint32_t(blas.size());
+      usedBlas[ax->impl.get()] = blas.size();
+      blas.push_back(ax->impl.get());
+      }
     }
   instances->didModifyRange(NS::Range(0,instances->length()));
 
-  auto asArray = NsPtr<NS::Array>(NS::Array::array(asCpp.get(), asSize));
+  auto asArray = NsPtr<NS::Array>(NS::Array::array(reinterpret_cast<NS::Object**>(blas.data()), blas.size()));
   auto desc    = NsPtr<MTL::InstanceAccelerationStructureDescriptor>::init();
   if(desc==nullptr)
     throw std::system_error(GraphicsErrc::OutOfHostMemory);

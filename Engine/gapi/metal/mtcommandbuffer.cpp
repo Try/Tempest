@@ -346,6 +346,12 @@ void MtCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u) {
   auto& d   = reinterpret_cast<MtDescriptorArray&>(u);
   auto& lay = curLay->lay;
   auto& mtl = curLay->bind;
+
+  if(encComp!=nullptr)
+    d.useResource(*encComp);
+  if(encDraw!=nullptr)
+    d.useResource(*encDraw);
+
   for(size_t i=0; i<lay.size(); ++i) {
     auto& l = lay[i];
     if(l.stage==0)

@@ -30,6 +30,8 @@ class MtTopAccelerationStructure : public AbstractGraphicsApi::AccelerationStruc
     MtDevice&                         owner;
     NsPtr<MTL::AccelerationStructure> impl;
     NsPtr<MTL::Buffer>                instances;
+
+    std::vector<MTL::Resource*>       blas;
   };
 }
 }
