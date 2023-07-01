@@ -205,6 +205,14 @@ inline MTL::IndexType nativeFormat(IndexClass icls) {
   return MTL::IndexTypeUInt16;
   }
 
+inline MTL::AccelerationStructureInstanceOptions nativeFormat(RtInstanceFlags f) {
+  MTL::AccelerationStructureInstanceOptions ret = 0;
+  if((f & RtInstanceFlags::NonOpaque)==RtInstanceFlags::NonOpaque)
+    ret |= MTL::AccelerationStructureInstanceOptionNonOpaque; else
+    ret |= MTL::AccelerationStructureInstanceOptionOpaque;
+  return ret;
+  }
+
 class MtDevice : public AbstractGraphicsApi::Device {
   public:
     MtDevice(const char* name, bool validation);

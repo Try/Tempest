@@ -29,7 +29,7 @@ MtAccelerationStructure::MtAccelerationStructure(MtDevice& dx,
   geo->setIndexBufferOffset(ioffset*sizeofIndex(icls));
   geo->setIndexType(nativeFormat(icls));
   geo->setTriangleCount(iboSz/3);
-  //geo->setOpaque(true); // no intersections
+  geo->setOpaque(true);
   geo->setAllowDuplicateIntersectionFunctionInvocation(true);
 
   if(geo->indexBufferOffset()%32!=0) {
@@ -88,7 +88,7 @@ MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtIns
     for(int x=0; x<4; ++x)
       for(int y=0; y<3; ++y)
         obj.transformationMatrix[x][y] = inst[i].mat.at(x,y);
-    obj.options                         = MTL::AccelerationStructureInstanceOptionOpaque;
+    obj.options                         = nativeFormat(inst[i].flags);
     obj.mask                            = 0xFF;
     obj.intersectionFunctionTableOffset = 0;
     obj.accelerationStructureIndex      = i;
