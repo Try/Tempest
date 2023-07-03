@@ -24,8 +24,8 @@ VMeshletHelper::VMeshletHelper(VDevice& dev) : dev(dev) {
 
   static_assert(sizeof(DrawIndexedIndirectCommand)==32);
   if(dev.props.ssbo.offsetAlign > sizeof(DrawIndexedIndirectCommand)) {
-    indirectRate   = dev.props.ssbo.offsetAlign/sizeof(DrawIndexedIndirectCommand);
-    indirectOffset = dev.props.ssbo.offsetAlign;
+    indirectRate   = uint32_t(dev.props.ssbo.offsetAlign/sizeof(DrawIndexedIndirectCommand));
+    indirectOffset = uint32_t(dev.props.ssbo.offsetAlign);
     } else {
     indirectOffset = sizeof(DrawIndexedIndirectCommand);
     }

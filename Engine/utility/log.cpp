@@ -51,6 +51,7 @@ void Log::flush(Context& ctx, char *&out, size_t &count) {
 #if defined(_MSC_VER) && !defined(_NDEBUG)
   (void)ctx;
   OutputDebugStringA(ctx.buffer);
+  OutputDebugStringA("\n");
 #else
   if(ctx.mode==Error){
     std::cerr << ctx.buffer << std::endl;

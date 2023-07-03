@@ -166,7 +166,7 @@ void MeshConverter::emitComp(libspirv::MutableBytecode& comp) {
       ops[4] = 0x0;
 
       uint32_t cnt = 5;
-      for(size_t r=5; r<i.length(); ++r) {
+      for(uint16_t r=5; r<i.length(); ++r) {
         uint32_t id = i[r];
         if(id==gl_PrimitiveTriangleIndicesEXT)
           continue;
@@ -515,7 +515,7 @@ void MeshConverter::emitSetMeshOutputs(libspirv::MutableBytecode& comp, uint32_t
   const uint32_t const3              = comp.OpConstant(fn,uint_t,3);
   const uint32_t constVertSz         = comp.OpConstant(fn,uint_t,varCount);
   const uint32_t const264            = comp.OpConstant(fn,uint_t,264);
-  const uint32_t constMax            = comp.OpConstant(fn,uint_t,uint16_t(-1));
+  // const uint32_t constMax            = comp.OpConstant(fn,uint_t,uint16_t(-1));
 
   // Function
   fn = comp.end();
@@ -694,16 +694,11 @@ void MeshConverter::emitVboStore(libspirv::MutableBytecode& comp, libspirv::Muta
   // Types
   auto fn = comp.findSectionEnd(libspirv::Bytecode::S_Types);
   const uint32_t uint_t            = comp.OpTypeInt(fn, 32,false);
-  const uint32_t float_t           = comp.OpTypeFloat(fn, 32);
   const uint32_t _ptr_Storage_uint = comp.OpTypePointer(fn, spv::StorageClassStorageBuffer, uint_t);
-  const uint32_t _ptr_Priate_uint  = comp.OpTypePointer(fn, spv::StorageClassPrivate,       uint_t);
 
   // Constants
-  const uint32_t const0            = constants[0];
-  const uint32_t const1            = constants[1];
-  const uint32_t const2            = constants[2];
-  const uint32_t const3            = constants[3];
-  const uint32_t constVertSz       = constants[varCount];
+  const uint32_t const1      = constants[1];
+  const uint32_t constVertSz = constants[varCount];
 
   // Function
   const auto& chain = *code.fromOffset(achain);
@@ -796,7 +791,6 @@ void MeshConverter::emitIboStore(libspirv::MutableBytecode& comp, libspirv::Muta
   auto fn = comp.findSectionEnd(libspirv::Bytecode::S_Types);
   const uint32_t uint_t             = comp.OpTypeInt(fn, 32,false);
   const uint32_t _ptr_Storage_uint  = comp.OpTypePointer(fn, spv::StorageClassStorageBuffer, uint_t);
-  const uint32_t _ptr_Priate_uint   = comp.OpTypePointer(fn, spv::StorageClassPrivate,       uint_t);
 
   // Constants
   const uint32_t const0             = constants[0];
@@ -971,7 +965,7 @@ void MeshConverter::emitVert(libspirv::MutableBytecode& vert) {
           }
         case spv::OpTypeStruct:{
           std::vector<uint32_t> idx(op.length()-2);
-          for(size_t i=0; i<idx.size(); ++i)
+          for(uint16_t i=0; i<idx.size(); ++i)
             idx[i] = typeRemap[op[2+i]];
           uint32_t ix = vert.OpTypeStruct(fn, idx.data(), idx.size());
           typeRemap[id] = ix;
