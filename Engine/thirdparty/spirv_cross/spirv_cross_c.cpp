@@ -820,6 +820,43 @@ spvc_result spvc_compiler_require_extension(spvc_compiler compiler, const char *
 #endif
 }
 
+size_t spvc_compiler_get_num_required_extensions(spvc_compiler compiler) 
+{
+#if SPIRV_CROSS_C_API_GLSL
+	if (compiler->backend != SPVC_BACKEND_GLSL)
+	{
+		compiler->context->report_error("Enabled extensions can only be queried on GLSL backend.");
+		return SPVC_ERROR_INVALID_ARGUMENT;
+	}
+
+	return static_cast<CompilerGLSL *>(compiler->compiler.get())->get_required_extensions().size();
+#else
+	compiler->context->report_error("Enabled extensions can only be queried on GLSL backend.");
+	return 0;
+#endif
+}
+
+const char *spvc_compiler_get_required_extension(spvc_compiler compiler, size_t index)
+{
+#if SPIRV_CROSS_C_API_GLSL
+	if (compiler->backend != SPVC_BACKEND_GLSL)
+	{
+		compiler->context->report_error("Enabled extensions can only be queried on GLSL backend.");
+		return nullptr;
+	}
+
+	auto &exts = static_cast<CompilerGLSL *>(compiler->compiler.get())->get_required_extensions();
+	if (index < exts.size())
+		return exts[index].c_str();
+	else
+		return nullptr;
+#else
+	(void)index;
+	compiler->context->report_error("Enabled extensions can only be queried on GLSL backend.");
+	return nullptr;
+#endif
+}
+
 spvc_result spvc_compiler_flatten_buffer_block(spvc_compiler compiler, spvc_variable_id id)
 {
 #if SPIRV_CROSS_C_API_GLSL
@@ -2533,6 +2570,51 @@ void spvc_constant_get_subconstants(spvc_constant constant, const spvc_constant_
 spvc_type_id spvc_constant_get_type(spvc_constant constant)
 {
 	return constant->constant_type;
+}
+
+void spvc_constant_set_scalar_fp16(spvc_constant constant, unsigned column, unsigned row, unsigned short value)
+{
+	constant->m.c[column].r[row].u32 = value;
+}
+
+void spvc_constant_set_scalar_fp32(spvc_constant constant, unsigned column, unsigned row, float value)
+{
+	constant->m.c[column].r[row].f32 = value;
+}
+
+void spvc_constant_set_scalar_fp64(spvc_constant constant, unsigned column, unsigned row, double value)
+{
+	constant->m.c[column].r[row].f64 = value;
+}
+
+void spvc_constant_set_scalar_u32(spvc_constant constant, unsigned column, unsigned row, unsigned value)
+{
+	constant->m.c[column].r[row].u32 = value;
+}
+
+void spvc_constant_set_scalar_i32(spvc_constant constant, unsigned column, unsigned row, int value)
+{
+	constant->m.c[column].r[row].i32 = value;
+}
+
+void spvc_constant_set_scalar_u16(spvc_constant constant, unsigned column, unsigned row, unsigned short value)
+{
+	constant->m.c[column].r[row].u32 = uint32_t(value);
+}
+
+void spvc_constant_set_scalar_i16(spvc_constant constant, unsigned column, unsigned row, signed short value)
+{
+	constant->m.c[column].r[row].u32 = uint32_t(value);
+}
+
+void spvc_constant_set_scalar_u8(spvc_constant constant, unsigned column, unsigned row, unsigned char value)
+{
+	constant->m.c[column].r[row].u32 = uint32_t(value);
+}
+
+void spvc_constant_set_scalar_i8(spvc_constant constant, unsigned column, unsigned row, signed char value)
+{
+	constant->m.c[column].r[row].u32 = uint32_t(value);
 }
 
 spvc_bool spvc_compiler_get_binary_offset_for_decoration(spvc_compiler compiler, spvc_variable_id id,

@@ -5,7 +5,6 @@
 #include <Tempest/Log>
 #include <Tempest/Except>
 
-#include <d3dcompiler.h>
 #include <libspirv/libspirv.h>
 
 #include <dxcapi.h>
@@ -180,37 +179,9 @@ D3D12_SHADER_BYTECODE DxShader::bytecode() const {
   return D3D12_SHADER_BYTECODE{shader->GetBufferPointer(),shader->GetBufferSize()};
   }
 
-void DxShader::disasm() const {
-  ID3D10Blob *asm_blob = nullptr;
-  D3DDisassemble(shader->GetBufferPointer(),shader->GetBufferSize(),
-                 D3D_DISASM_ENABLE_INSTRUCTION_NUMBERING,"",&asm_blob);
-  if(!asm_blob)
-    return;
-
-  Log::d(reinterpret_cast<const char*>(asm_blob->GetBufferPointer()));
-  asm_blob->Release();
-  }
-
 HRESULT DxShader::compile(ComPtr<ID3DBlob>& shader, const char* hlsl, size_t len, spv::ExecutionModel exec, uint32_t sm) const {
   char tg[32] = {};
-  if(sm>50)
-    return compileDXC(shader,hlsl,len,target(exec,sm,tg));
-  return compileOld(shader,hlsl,len,target(exec,sm,tg));
-  }
-
-HRESULT DxShader::compileOld(ComPtr<ID3DBlob>& shader, const char* hlsl, size_t len, const char* target) const {
-  ComPtr<ID3DBlob> err;
-  // TODO: D3DCOMPILE_ALL_RESOURCES_BOUND
-  UINT compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-  HRESULT hr = D3DCompile(hlsl,len,nullptr,nullptr,nullptr,"main",
-                          target,compileFlags,0,
-                          reinterpret_cast<ID3DBlob**>(&shader.get()),reinterpret_cast<ID3DBlob**>(&err.get()));
-  if(hr!=S_OK) {
-#if !defined(NDEBUG)
-    Log::d(reinterpret_cast<const char*>(err->GetBufferPointer()));
-#endif
-    }
-  return hr;
+  return compileDXC(shader,hlsl,len,target(exec,sm,tg));
   }
 
 HRESULT DxShader::compileDXC(ComPtr<ID3DBlob>& shader, const char* hlsl, size_t len, const char* target) const {

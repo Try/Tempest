@@ -25,7 +25,6 @@ class DxShader:public AbstractGraphicsApi::Shader {
     using Binding = ShaderReflection::Binding;
 
     D3D12_SHADER_BYTECODE    bytecode() const;
-    void                     disasm() const;
 
     std::vector<Decl::ComponentType> vdecl;
     std::vector<Binding>             lay;
@@ -38,7 +37,6 @@ class DxShader:public AbstractGraphicsApi::Shader {
 
   private:
     HRESULT                          compile   (ComPtr<ID3DBlob>& shader, const char* hlsl, size_t len, spv::ExecutionModel exec, uint32_t sm) const;
-    HRESULT                          compileOld(ComPtr<ID3DBlob>& shader, const char* hlsl, size_t len, const char* target) const;
     HRESULT                          compileDXC(ComPtr<ID3DBlob>& shader, const char* hlsl, size_t len, const char* target) const;
     mutable ComPtr<ID3DBlob>         shader;
   };

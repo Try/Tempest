@@ -201,7 +201,7 @@ ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& 
   if(FAILED(err)) {
     for(auto& i:modules)
       if(i.handler!=nullptr)
-        i.handler->disasm();
+        ;//i.handler->disasm();
     dxAssert(err);
     }
   return ret;
@@ -256,7 +256,7 @@ ComPtr<ID3D12PipelineState> DxPipeline::initMeshPipeline(const DxFboLayout& frm)
   if(FAILED(err)) {
     for(auto& i:modules)
       if(i.handler!=nullptr)
-        i.handler->disasm();
+        ;//i.handler->disasm();
     dxAssert(err);
     }
   return ret;
