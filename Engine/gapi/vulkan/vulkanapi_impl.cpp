@@ -245,6 +245,9 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
   if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME)) {
     props.hasBarycentrics = true;
     }
+  if(checkForExt(ext,VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
+    props.hasDebugMarker = true;
+    }
 
   VkPhysicalDeviceProperties devP={};
   vkGetPhysicalDeviceProperties(physicalDevice,&devP);
