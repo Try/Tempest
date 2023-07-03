@@ -281,7 +281,7 @@ inline D3D_PRIMITIVE_TOPOLOGY nativeFormat(Topology tp) {
 inline D3D12_RAYTRACING_INSTANCE_FLAGS nativeFormat(RtInstanceFlags f) {
   D3D12_RAYTRACING_INSTANCE_FLAGS ret = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
   if((f & RtInstanceFlags::NonOpaque)==RtInstanceFlags::NonOpaque)
-    ret |= D3D12_RAYTRACING_INSTANCE_FLAG_NONE; else
+    ret |= D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_NON_OPAQUE; else
     ret |= D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_OPAQUE;
   return ret;
   }

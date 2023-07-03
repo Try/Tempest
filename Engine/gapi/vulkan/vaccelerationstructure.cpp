@@ -27,7 +27,7 @@ VAccelerationStructure::VAccelerationStructure(VDevice& dx,
   geometry.geometry.triangles.indexType      = nativeFormat(icls);
   geometry.geometry.triangles.indexData      = VkDeviceOrHostAddressConstKHR{};
   geometry.geometry.triangles.transformData  = VkDeviceOrHostAddressConstKHR{};
-  geometry.flags                             = 0;
+  geometry.flags                             = VK_GEOMETRY_OPAQUE_BIT_KHR;
 
   VkAccelerationStructureBuildGeometryInfoKHR buildGeometryInfo = {};
   buildGeometryInfo.sType                    = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;

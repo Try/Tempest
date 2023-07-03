@@ -287,7 +287,7 @@ inline VkPrimitiveTopology nativeFormat(Topology tp) {
 inline VkGeometryInstanceFlagsKHR nativeFormat(RtInstanceFlags f) {
   VkGeometryInstanceFlagsKHR ret = 0;
   if((f & RtInstanceFlags::NonOpaque)==RtInstanceFlags::NonOpaque)
-    ret |= 0; else
+    ret |= VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR; else
     ret |= VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
   return ret;
   }
