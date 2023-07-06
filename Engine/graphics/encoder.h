@@ -71,9 +71,11 @@ class Encoder<Tempest::CommandBuffer> {
          { implDraw(vbo.impl,sizeof(T),ibo.impl,Detail::indexCls<I>(),offset,count,firstInstance,instanceCount); }
     void dispatchMesh(size_t x, size_t y=1, size_t z=1);
     void dispatchMeshThreads(size_t x, size_t y=1, size_t z=1);
+    void dispatchMeshThreads(Size sz);
 
     void dispatch(size_t x, size_t y=1, size_t z=1);
     void dispatchThreads(size_t x, size_t y=1, size_t z=1);
+    void dispatchThreads(Size sz);
 
     void copy(const Attachment& src, uint32_t mip, StorageBuffer& dest, size_t offset);
     void copy(const Texture2d&  src, uint32_t mip, StorageBuffer& dest, size_t offset);

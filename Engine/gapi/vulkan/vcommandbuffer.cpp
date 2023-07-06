@@ -364,9 +364,6 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
   }
 
 void VCommandBuffer::endRendering() {
-  if(isDbgRegion) {
-    device.vkCmdDebugMarkerEnd(impl);
-    }
   if(device.props.hasDynRendering) {
     device.vkCmdEndRenderingKHR(impl);
     } else {

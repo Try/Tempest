@@ -148,13 +148,13 @@ void Encoder<Tempest::CommandBuffer>::implDraw(const Detail::VideoBuffer &vbo, s
   impl->drawIndexed(*vbo.impl.handler,stride,0,*ibo.impl.handler,icls,offset,size, firstInstance,instanceCount);
   }
 
-void Tempest::Encoder<Tempest::CommandBuffer>::dispatchMesh(size_t x, size_t y, size_t z) {
+void Encoder<Tempest::CommandBuffer>::dispatchMesh(size_t x, size_t y, size_t z) {
   if(state.stage!=Rendering)
     throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   impl->dispatchMesh(x,y,z);
   }
 
-void Tempest::Encoder<Tempest::CommandBuffer>::dispatchMeshThreads(size_t x, size_t y, size_t z) {
+void Encoder<Tempest::CommandBuffer>::dispatchMeshThreads(size_t x, size_t y, size_t z) {
   if(state.stage!=Rendering)
     throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   auto sz = state.curPipeline->workGroupSize();
@@ -164,13 +164,17 @@ void Tempest::Encoder<Tempest::CommandBuffer>::dispatchMeshThreads(size_t x, siz
   impl->dispatchMesh(x,y,z);
   }
 
+void Encoder<Tempest::CommandBuffer>::dispatchMeshThreads(Size sz) {
+  dispatchMeshThreads(size_t(sz.w), size_t(sz.h), 1);
+  }
+
 void Encoder<CommandBuffer>::dispatch(size_t x, size_t y, size_t z) {
   if(state.stage==Rendering)
     throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
   impl->dispatch(x,y,z);
   }
 
-void Tempest::Encoder<Tempest::CommandBuffer>::dispatchThreads(size_t x, size_t y, size_t z) {
+void Encoder<Tempest::CommandBuffer>::dispatchThreads(size_t x, size_t y, size_t z) {
   if(state.stage==Rendering)
     throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
   auto sz = state.curCompute->workGroupSize();
@@ -178,6 +182,10 @@ void Tempest::Encoder<Tempest::CommandBuffer>::dispatchThreads(size_t x, size_t 
   y = (y+sz.y-1)/sz.y;
   z = (z+sz.z-1)/sz.z;
   impl->dispatch(x,y,z);
+  }
+
+void Encoder<Tempest::CommandBuffer>::dispatchThreads(Size sz) {
+  dispatchThreads(size_t(sz.w), size_t(sz.h), 1);
   }
 
 void Encoder<CommandBuffer>::setFramebuffer(std::initializer_list<AttachmentDesc> rd, AttachmentDesc zd) {
