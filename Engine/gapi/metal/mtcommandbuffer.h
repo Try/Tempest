@@ -79,6 +79,8 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     void setTexture(const MtPipelineLay::MTLBind& mtl, MTL::Texture* t, MTL::SamplerState* ss);
     void setTlas   (const MtPipelineLay::MTLBind& mtl, MTL::AccelerationStructure* as);
 
+    void setBindless(const MtPipelineLay::MTLBind& mtl, MTL::Buffer* b);
+
     MtDevice&                         device;
     NsPtr<MTL::CommandBuffer>         impl;
 

@@ -8,8 +8,11 @@
 
 using namespace Tempest::Detail;
 
+MtBuffer::MtBuffer() {
+  }
+
 MtBuffer::MtBuffer(MtDevice& dev, const void* data, size_t count, size_t sz, size_t alignedSz, MTL::ResourceOptions f)
-  :dev(dev) {
+  :dev(&dev) {
   const MTL::ResourceOptions flg = f | MTL::HazardTrackingModeDefault;
   if(data==nullptr) {
     impl = NsPtr<MTL::Buffer>(dev.impl->newBuffer(count*alignedSz,flg));
@@ -34,6 +37,14 @@ MtBuffer::MtBuffer(MtDevice& dev, const void* data, size_t count, size_t sz, siz
 MtBuffer::~MtBuffer() {
   }
 
+MtBuffer& MtBuffer::operator =(MtBuffer&& other) {
+  assert(other.counter.load()==0); // internal use only
+  assert(this->counter.load()==0);
+  std::swap(dev,  other.dev);
+  std::swap(impl, other.impl);
+  return *this;
+  }
+
 void MtBuffer::update(const void *data, size_t off, size_t count, size_t sz, size_t alignedSz) {
   if(T_LIKELY(impl->storageMode()!=MTL::StorageModePrivate)) {
     implUpdate(data,off,count,sz,alignedSz);
@@ -42,10 +53,10 @@ void MtBuffer::update(const void *data, size_t off, size_t count, size_t sz, siz
 
   auto pool = NsPtr<NS::AutoreleasePool>::init();
   MTL::ResourceOptions opt   = MTL::ResourceStorageModeShared | MTL::ResourceCPUCacheModeWriteCombined;
-  auto                 stage = NsPtr<MTL::Buffer>(dev.impl->newBuffer(count*alignedSz,opt));
+  auto                 stage = NsPtr<MTL::Buffer>(dev->impl->newBuffer(count*alignedSz,opt));
   copyUpsample(data, stage->contents(), count, sz, alignedSz);
 
-  auto cmd = dev.queue->commandBuffer();
+  auto cmd = dev->queue->commandBuffer();
   auto enc = cmd->blitCommandEncoder();
   enc->copyFromBuffer(stage.get(),0,impl.get(),0, count*alignedSz);
   enc->endEncoding();
@@ -59,8 +70,8 @@ void MtBuffer::read(void *data, size_t off, size_t size) {
 
   MTL::ResourceOptions opt   = MTL::ResourceStorageModeShared | MTL::ResourceCPUCacheModeDefaultCache |
                                MTL::ResourceHazardTrackingModeTracked;
-  auto                 stage = NsPtr<MTL::Buffer>(dev.impl->newBuffer(size,opt));
-  auto cmd = dev.queue->commandBuffer();
+  auto                 stage = NsPtr<MTL::Buffer>(dev->impl->newBuffer(size,opt));
+  auto cmd = dev->queue->commandBuffer();
   auto enc = cmd->blitCommandEncoder();
   enc->copyFromBuffer(impl.get(),off,stage.get(),0, size);
   enc->endEncoding();

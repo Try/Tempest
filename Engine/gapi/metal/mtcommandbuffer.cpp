@@ -369,7 +369,9 @@ void MtCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u) {
       case ShaderReflection::Image:
       case ShaderReflection::ImgR:
       case ShaderReflection::ImgRW:
-        setTexture(mtl[i],reinterpret_cast<MTL::Texture*>(d.desc[i].val),d.desc[i].sampler);
+        if(l.runtimeSized)
+          setBindless(mtl[i], d.desc[i].argsBuf.impl.get()); else
+          setTexture(mtl[i],reinterpret_cast<MTL::Texture*>(d.desc[i].val),d.desc[i].sampler);
         break;
       case ShaderReflection::Sampler:
         setTexture(mtl[i],nullptr,d.desc[i].sampler);
@@ -471,6 +473,24 @@ void MtCommandBuffer::setTlas(const MtPipelineLay::MTLBind& mtl, MTL::Accelerati
     }
   if(mtl.bindCs!=uint32_t(-1)) {
     encComp->setAccelerationStructure(as,mtl.bindCs);
+    }
+  }
+
+void MtCommandBuffer::setBindless(const MtPipelineLay::MTLBind& mtl, MTL::Buffer* buf) {
+  if(mtl.bindTs!=uint32_t(-1)) {
+    encDraw->setObjectBuffer(buf,0,mtl.bindTs);
+    }
+  if(mtl.bindMs!=uint32_t(-1)) {
+    encDraw->setMeshBuffer(buf,0,mtl.bindMs);
+    }
+  if(mtl.bindVs!=uint32_t(-1)) {
+    encDraw->setVertexBuffer(buf,0,mtl.bindVs);
+    }
+  if(mtl.bindFs!=uint32_t(-1)) {
+    encDraw->setFragmentBuffer(buf,0,mtl.bindFs);
+    }
+  if(mtl.bindCs!=uint32_t(-1)) {
+    encComp->setBuffer(buf,0,mtl.bindCs);
     }
   }
 

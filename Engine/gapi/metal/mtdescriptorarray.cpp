@@ -39,6 +39,22 @@ void MtDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStru
   desc[id].tlas = &as;
   }
 
+void MtDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt,
+                            const Sampler& smp, uint32_t mipLevel) {
+  auto& d = desc[id];
+  d.argsBuf = MtBuffer(dev, nullptr, cnt,
+                       sizeof(MTL::ResourceID), sizeof(MTL::ResourceID),
+                       MTL::ResourceStorageModePrivate);
+
+  std::unique_ptr<MTL::ResourceID[]> addr(new MTL::ResourceID[cnt]);
+  d.args.resize(cnt);
+  for(size_t i=0; i<cnt; ++i) {
+    addr[i]   = reinterpret_cast<MtTexture*>(tex[i])->impl->gpuResourceID();
+    d.args[i] = reinterpret_cast<MtTexture*>(tex[i])->impl.get();
+    }
+  d.argsBuf.update(addr.get(), 0, cnt, sizeof(MTL::ResourceID), sizeof(MTL::ResourceID));
+  }
+
 void MtDescriptorArray::fillBufferSizeBuffer(uint32_t* ret, ShaderReflection::Stage stage) {
   auto& lx  = lay.handler->lay;
   auto& mtl = lay.handler->bind;
@@ -89,11 +105,14 @@ void MtDescriptorArray::implUseResource(Enc&  cmd) {
   auto& lx  = lay.handler->lay;
   auto& mtl = lay.handler->bind;
   for(size_t i=0; i<lx.size(); ++i) {
-    if(lx[i].cls!=ShaderReflection::Tlas)
-      continue;
-
-    auto& blas = desc[i].tlas->blas;
-    cmd.useResources(blas.data(), blas.size(), MTL::ResourceUsageRead);
+    if(lx[i].cls==ShaderReflection::Tlas) {
+      auto& blas = desc[i].tlas->blas;
+      cmd.useResources(blas.data(), blas.size(), MTL::ResourceUsageRead);
+      }
+    if(lx[i].cls==ShaderReflection::Image && lx[i].runtimeSized) {
+      auto& args = desc[i].args;
+      cmd.useResources(args.data(), args.size(), MTL::ResourceUsageRead);
+      }
     }
   }
 

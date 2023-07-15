@@ -188,6 +188,12 @@ TEST(MetalApi,PushRemapping) {
 #endif
   }
 
+TEST(MetalApi,Bindless) {
+#if defined(__OSX__)
+  GapiTestCommon::Bindless<MetalApi>("MetalApi_Bindless.png");
+#endif
+  }
+
 TEST(MetalApi,Blas) {
 #if defined(__OSX__)
   GapiTestCommon::Blas<MetalApi>();

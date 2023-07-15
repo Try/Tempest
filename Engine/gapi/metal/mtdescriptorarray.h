@@ -5,6 +5,7 @@
 
 #include "utility/smallarray.h"
 #include "gapi/shaderreflection.h"
+#include "mtbuffer.h"
 
 namespace Tempest {
 namespace Detail {
@@ -22,6 +23,8 @@ class MtDescriptorArray : public AbstractGraphicsApi::Desc {
     void set    (size_t id, const Sampler& smp) override;
     void setTlas(size_t,AbstractGraphicsApi::AccelerationStructure*) override;
 
+    void set(size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler& smp, uint32_t mipLevel) override;
+
     void fillBufferSizeBuffer(uint32_t* ret, ShaderReflection::Stage stage);
     void useResource(MTL::ComputeCommandEncoder& cmd);
     void useResource(MTL::RenderCommandEncoder&  cmd);
@@ -32,6 +35,9 @@ class MtDescriptorArray : public AbstractGraphicsApi::Desc {
       size_t             offset  = 0;
 
       MtTopAccelerationStructure* tlas = nullptr;
+
+      MtBuffer           argsBuf;
+      std::vector<MTL::Resource*> args;
       };
 
     MtDevice&                        dev;
