@@ -7217,6 +7217,15 @@ void CompilerMSL::emit_custom_functions()
 			statement("");
 			break;
 
+		case SPVFuncImplVariableDescriptor:
+			statement("template<typename T>");
+			statement("struct spvDescriptor");
+			begin_scope();
+			statement("T value;");
+			end_scope_decl();
+			statement("");
+			break;
+
 		default:
 			break;
 		}
@@ -13141,7 +13150,16 @@ void CompilerMSL::entry_point_args_discrete_descriptors(string &ep_args)
 				ep_args += image_type_glsl(type, var_id) + " " + r.name;
 				if (r.plane > 0)
 					ep_args += join(plane_name_suffix, r.plane);
-				ep_args += " [[texture(" + convert_to_string(r.index) + ")";
+
+				if (!type.array.empty() && to_array_size_literal(type) == 0)
+				{
+					ep_args += " [[buffer(" + convert_to_string(r.index) + ")";
+				}
+				else
+				{
+					ep_args += " [[texture(" + convert_to_string(r.index) + ")";
+				}
+
 				if (interlocked_resources.count(var_id))
 					ep_args += ", raster_order_group(0)";
 				ep_args += "]]";
@@ -13847,7 +13865,7 @@ uint32_t CompilerMSL::get_metal_resource_index(SPIRVariable &var, SPIRType::Base
 	for (uint32_t i = 0; i < uint32_t(type.array.size()); i++)
 		binding_stride *= to_array_size_literal(type, i);
 
-	assert(binding_stride != 0);
+	// assert(binding_stride != 0);
 
 	// If a binding has not been specified, revert to incrementing resource indices.
 	uint32_t resource_index;
@@ -14972,8 +14990,12 @@ string CompilerMSL::image_type_glsl(const SPIRType &type, uint32_t id)
 		if (array_size == 0)
 			array_size = get_resource_array_size(id);
 
-		if (array_size == 0)
-			SPIRV_CROSS_THROW("Unsized array of images is not supported in MSL.");
+		if (array_size == 0 && !msl_options.argument_buffers)
+		{
+			add_spv_func_and_recompile(SPVFuncImplVariableDescriptor);
+			auto &parent = get<SPIRType>(get_pointee_type(type).parent_type);
+			return join("device spvDescriptor<", image_type_glsl(parent, id), ">* ");
+		}
 
 		auto &parent = get<SPIRType>(get_pointee_type(type).parent_type);
 		return join("array<", image_type_glsl(parent, id), ", ", array_size, ">");
