@@ -364,16 +364,16 @@ void MtCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u) {
       case ShaderReflection::SsboR:
       case ShaderReflection::SsboRW:
         if(l.runtimeSized)
-          setBindless(mtl[i], d.desc[i].argsBuf.impl.get()); else
-          setBuffer(mtl[i],reinterpret_cast<MTL::Buffer*>(d.desc[i].val),d.desc[i].offset);
+          setBindless(mtl[i], d.desc[i].argsBuf.impl.get(), d.desc[i].args.size()); else
+          setBuffer(mtl[i], reinterpret_cast<MTL::Buffer*>(d.desc[i].val), d.desc[i].offset);
         break;
       case ShaderReflection::Texture:
       case ShaderReflection::Image:
       case ShaderReflection::ImgR:
       case ShaderReflection::ImgRW:
         if(l.runtimeSized)
-          setBindless(mtl[i], d.desc[i].argsBuf.impl.get()); else
-          setTexture(mtl[i],reinterpret_cast<MTL::Texture*>(d.desc[i].val),d.desc[i].sampler);
+          setBindless(mtl[i], d.desc[i].argsBuf.impl.get(), d.desc[i].args.size()); else
+          setTexture(mtl[i], reinterpret_cast<MTL::Texture*>(d.desc[i].val), d.desc[i].sampler);
         break;
       case ShaderReflection::Sampler:
         setTexture(mtl[i],nullptr,d.desc[i].sampler);
@@ -478,7 +478,7 @@ void MtCommandBuffer::setTlas(const MtPipelineLay::MTLBind& mtl, MTL::Accelerati
     }
   }
 
-void MtCommandBuffer::setBindless(const MtPipelineLay::MTLBind& mtl, MTL::Buffer* buf) {
+void MtCommandBuffer::setBindless(const MtPipelineLay::MTLBind& mtl, MTL::Buffer* buf, size_t numRes) {
   if(mtl.bindTs!=uint32_t(-1)) {
     encDraw->setObjectBuffer(buf,0,mtl.bindTs);
     }
@@ -493,6 +493,26 @@ void MtCommandBuffer::setBindless(const MtPipelineLay::MTLBind& mtl, MTL::Buffer
     }
   if(mtl.bindCs!=uint32_t(-1)) {
     encComp->setBuffer(buf,0,mtl.bindCs);
+    }
+
+  // samplers
+  uint32_t shift = numRes * sizeof(MTL::ResourceID);
+  shift  = ((shift+16-1)/16)*16;
+
+  if(mtl.bindTsSmp!=uint32_t(-1)) {
+    encDraw->setObjectBuffer(buf,shift,mtl.bindTsSmp);
+    }
+  if(mtl.bindMsSmp!=uint32_t(-1)) {
+    encDraw->setMeshBuffer(buf,shift,mtl.bindMsSmp);
+    }
+  if(mtl.bindVsSmp!=uint32_t(-1)) {
+    encDraw->setVertexBuffer(buf,shift,mtl.bindVsSmp);
+    }
+  if(mtl.bindFsSmp!=uint32_t(-1)) {
+    encDraw->setFragmentBuffer(buf,shift,mtl.bindFsSmp);
+    }
+  if(mtl.bindCsSmp!=uint32_t(-1)) {
+    encComp->setBuffer(buf,shift,mtl.bindCsSmp);
     }
   }
 

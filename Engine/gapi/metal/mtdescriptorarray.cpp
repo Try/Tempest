@@ -41,22 +41,41 @@ void MtDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStru
 
 void MtDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt,
                             const Sampler& smp, uint32_t mipLevel) {
-  auto& d = desc[id];
-  d.argsBuf = MtBuffer(dev, nullptr, cnt,
-                       sizeof(MTL::ResourceID), sizeof(MTL::ResourceID),
-                       MTL::ResourceStorageModePrivate);
+  auto& d   = desc[id];
+  auto  cls = lay.handler->lay[id].cls;
 
-  std::unique_ptr<MTL::ResourceID[]> addr(new MTL::ResourceID[cnt]);
+  size_t shift = 0;
+  size_t bufSz = cnt*sizeof(MTL::ResourceID);
+  if(cls==ShaderReflection::Texture) {
+    bufSz  = ((bufSz+16-1)/16)*16;
+    shift  = bufSz;
+    bufSz += cnt*sizeof(MTL::ResourceID);
+    }
+  d.argsBuf = MtBuffer(dev, nullptr, bufSz, 1, 1, MTL::ResourceStorageModePrivate);
+
+  std::unique_ptr<uint8_t[]> addr(new uint8_t[bufSz]);
   d.args.reserve(cnt);
   for(size_t i=0; i<cnt; ++i) {
+    auto* ptr = reinterpret_cast<MTL::ResourceID*>(addr.get());
     if(tex[i]==nullptr) {
-      addr[i] = MTL::ResourceID{0};
+      ptr[i] = MTL::ResourceID{0};
       continue;
       }
-    addr[i]   = reinterpret_cast<MtTexture*>(tex[i])->impl->gpuResourceID();
+    auto& t    = *reinterpret_cast<MtTexture*>(tex[i]);
+    auto& view = t.view(smp.mapping,mipLevel);
+    ptr[i]     = view.gpuResourceID();
     d.args.push_back(reinterpret_cast<MtTexture*>(tex[i])->impl.get());
     }
-  d.argsBuf.update(addr.get(), 0, cnt, sizeof(MTL::ResourceID), sizeof(MTL::ResourceID));
+
+  if(cls==ShaderReflection::Texture) {
+    auto& sampler = dev.samplers.get(smp,true);
+    auto* ptr     = reinterpret_cast<MTL::ResourceID*>(addr.get() + shift);
+    for(size_t i=0; i<cnt; ++i) {
+      ptr[i] = sampler.gpuResourceID();
+      }
+    }
+
+  d.argsBuf.update(addr.get(), 0, bufSz, 1, 1);
   }
 
 void MtDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** buf, size_t cnt) {
@@ -134,7 +153,7 @@ void MtDescriptorArray::implUseResource(Enc&  cmd) {
       }
     if(lx[i].runtimeSized) {
       auto& args = desc[i].args;
-      cmd.useResources(args.data(), args.size(), MTL::ResourceUsageRead);
+      cmd.useResources(args.data(), args.size(), MTL::ResourceUsageRead | MTL::ResourceUsageSample);
       }
     }
   }

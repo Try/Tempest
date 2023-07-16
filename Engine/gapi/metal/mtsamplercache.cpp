@@ -34,7 +34,7 @@ static MTL::SamplerMinMagFilter nativeFormat(Tempest::Filter f) {
 
 MtSamplerCache::MtSamplerCache(MTL::Device& dev)
   :dev(dev) {
-  def = mkSampler(Sampler());
+  def = mkSampler(Sampler(),false);
   if(def==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
   }
@@ -42,7 +42,7 @@ MtSamplerCache::MtSamplerCache(MTL::Device& dev)
 MtSamplerCache::~MtSamplerCache() {
   }
 
-MTL::SamplerState& MtSamplerCache::get(Tempest::Sampler src) {
+MTL::SamplerState& MtSamplerCache::get(Tempest::Sampler src, bool argBuffers) {
   src.mapping = ComponentMapping(); // handled in imageview
   static const Tempest::Sampler defSrc;
   if(src==defSrc)
@@ -50,18 +50,19 @@ MTL::SamplerState& MtSamplerCache::get(Tempest::Sampler src) {
 
   std::lock_guard<std::mutex> guard(sync);
   for(auto& i:values)
-    if(i.src==src)
+    if(i.src==src && i.argBuffers==argBuffers)
       return *i.val;
   values.emplace_back(Entry());
   auto& b = values.back();
-  b.src = src;
-  b.val = mkSampler(src);
+  b.src        = src;
+  b.argBuffers = argBuffers;
+  b.val        = mkSampler(src,argBuffers);
   if(b.val==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
   return *b.val;
   }
 
-NsPtr<MTL::SamplerState> MtSamplerCache::mkSampler(const Tempest::Sampler& src) {
+NsPtr<MTL::SamplerState> MtSamplerCache::mkSampler(const Tempest::Sampler& src, bool argBuffers) {
   auto desc = NsPtr<MTL::SamplerDescriptor>::init();
   desc->setRAddressMode(nativeFormat(src.uClamp));
   desc->setSAddressMode(nativeFormat(src.vClamp));
@@ -75,7 +76,7 @@ NsPtr<MTL::SamplerState> MtSamplerCache::mkSampler(const Tempest::Sampler& src) 
   desc->setMaxAnisotropy(src.anisotropic ? 16 : 1);
   desc->setBorderColor(MTL::SamplerBorderColorOpaqueWhite);
   desc->setLodAverage(false);
-  desc->setSupportArgumentBuffers(false);
+  desc->setSupportArgumentBuffers(argBuffers);
 
   return NsPtr<MTL::SamplerState>(dev.newSamplerState(desc.get()));
   }

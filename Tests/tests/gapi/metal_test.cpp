@@ -194,6 +194,12 @@ TEST(MetalApi,Bindless) {
 #endif
   }
 
+TEST(MetalApi,Bindless2) {
+#if defined(__OSX__)
+  GapiTestCommon::Bindless2<MetalApi>("MetalApi_Bindless2.png");
+#endif
+  }
+
 TEST(MetalApi,Blas) {
 #if defined(__OSX__)
   GapiTestCommon::Blas<MetalApi>();

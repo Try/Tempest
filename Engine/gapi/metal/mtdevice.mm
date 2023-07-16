@@ -217,6 +217,10 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev, u
     }
 #endif
 
+  if(dev.supportsFamily(MTL::GPUFamilyMetal3) && dev.argumentBuffersSupport()>=MTL::ArgumentBuffersTier2) {
+    // prop.bindless.nonUniformIndexing = true;
+    }
+
 #ifdef __OSX__
   if(majorVersion>=12)
     prop.raytracing.rayQuery = dev.supportsRaytracingFromRender() && dev.supportsRaytracing();
