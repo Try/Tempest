@@ -7222,6 +7222,10 @@ void CompilerMSL::emit_custom_functions()
 			statement("struct spvDescriptor");
 			begin_scope();
 			statement("T value;");
+			statement("const device T& operator -> () const device");
+			begin_scope();
+			statement("return value;");
+			end_scope();
 			end_scope_decl();
 			statement("");
 			break;
@@ -10389,7 +10393,7 @@ void CompilerMSL::emit_function_prototype(SPIRFunction &func, const Bitset &)
 			// Manufacture automatic sampler arg for SampledImage texture
 			if (arg_type.image.dim != DimBuffer)
 			{
-				if (arg_type.array.empty())
+				if (arg_type.array.empty() || to_array_size_literal(arg_type) == 0)
 				{
 					decl += join(", ", sampler_type(arg_type, arg.id), " ", to_sampler_expression(name_id));
 				}
@@ -14053,7 +14057,8 @@ string CompilerMSL::argument_decl(const SPIRFunction::Parameter &arg)
 		else
 			decl = join(cv_qualifier, type_to_glsl(type, arg.id));
 	}
-	else if ((type_storage == StorageClassUniform || type_storage == StorageClassStorageBuffer) && is_array(type))
+	else if ((type_storage == StorageClassUniform || type_storage == StorageClassStorageBuffer) && is_array(type) &&
+	         to_array_size_literal(type) != 0)
 	{
 		is_using_builtin_array = true;
 		decl += join(cv_qualifier, type_to_glsl(type, arg.id), "*");
@@ -14186,7 +14191,7 @@ string CompilerMSL::argument_decl(const SPIRFunction::Parameter &arg)
 	}
 	else if (type_is_image)
 	{
-		if (type.array.empty())
+		if (type.array.empty() || to_array_size_literal(type) == 0)
 		{
 			// For non-arrayed types we can just pass opaque descriptors by value.
 			// This fixes problems if descriptors are passed by value from argument buffers and plain descriptors
@@ -14832,6 +14837,11 @@ string CompilerMSL::type_to_glsl(const SPIRType &type, uint32_t id, bool member)
 	}
 	else
 	{
+		if (!type.array.empty() && to_array_size_literal(type) == 0)
+		{
+			return "spvDescriptor<const device " + type_name + "*>*";
+		}
+
 		// Allow Metal to use the array<T> template to make arrays a value type
 		add_spv_func_and_recompile(SPVFuncImplUnsafeArray);
 		string res;
@@ -14972,7 +14982,7 @@ std::string CompilerMSL::sampler_type(const SPIRType &type, uint32_t id)
 		{
 			add_spv_func_and_recompile(SPVFuncImplVariableDescriptor);
 			auto &parent = get<SPIRType>(get_pointee_type(type).parent_type);
-			return join("device spvDescriptor<", sampler_type(parent, id), ">* ");
+			return join("device spvDescriptor<", sampler_type(parent, id), ">*");
 		}
 
 		auto &parent = get<SPIRType>(get_pointee_type(type).parent_type);
@@ -15022,7 +15032,7 @@ string CompilerMSL::image_type_glsl(const SPIRType &type, uint32_t id)
 		{
 			add_spv_func_and_recompile(SPVFuncImplVariableDescriptor);
 			auto &parent = get<SPIRType>(get_pointee_type(type).parent_type);
-			return join("device spvDescriptor<", image_type_glsl(parent, id), ">* ");
+			return join("device spvDescriptor<", image_type_glsl(parent, id), ">*");
 		}
 
 		auto &parent = get<SPIRType>(get_pointee_type(type).parent_type);
