@@ -47,12 +47,35 @@ void MtDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** tex, size_
                        MTL::ResourceStorageModePrivate);
 
   std::unique_ptr<MTL::ResourceID[]> addr(new MTL::ResourceID[cnt]);
-  d.args.resize(cnt);
+  d.args.reserve(cnt);
   for(size_t i=0; i<cnt; ++i) {
+    if(tex[i]==nullptr) {
+      addr[i] = MTL::ResourceID{0};
+      continue;
+      }
     addr[i]   = reinterpret_cast<MtTexture*>(tex[i])->impl->gpuResourceID();
-    d.args[i] = reinterpret_cast<MtTexture*>(tex[i])->impl.get();
+    d.args.push_back(reinterpret_cast<MtTexture*>(tex[i])->impl.get());
     }
   d.argsBuf.update(addr.get(), 0, cnt, sizeof(MTL::ResourceID), sizeof(MTL::ResourceID));
+  }
+
+void MtDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** buf, size_t cnt) {
+  auto& d = desc[id];
+  d.argsBuf = MtBuffer(dev, nullptr, cnt,
+                       sizeof(uint64_t), sizeof(uint64_t),
+                       MTL::ResourceStorageModePrivate);
+
+  std::unique_ptr<uint64_t[]> addr(new uint64_t[cnt]);
+  d.args.reserve(cnt);
+  for(size_t i=0; i<cnt; ++i) {
+    if(buf[i]==nullptr) {
+      addr[i] = 0;
+      continue;
+      }
+    addr[i]   = reinterpret_cast<MtBuffer*>(buf[i])->impl->gpuAddress();
+    d.args.push_back(reinterpret_cast<MtBuffer*>(buf[i])->impl.get());
+    }
+  d.argsBuf.update(addr.get(), 0, cnt, sizeof(uint64_t), sizeof(uint64_t));
   }
 
 void MtDescriptorArray::fillBufferSizeBuffer(uint32_t* ret, ShaderReflection::Stage stage) {
@@ -109,7 +132,7 @@ void MtDescriptorArray::implUseResource(Enc&  cmd) {
       auto& blas = desc[i].tlas->blas;
       cmd.useResources(blas.data(), blas.size(), MTL::ResourceUsageRead);
       }
-    if(lx[i].cls==ShaderReflection::Image && lx[i].runtimeSized) {
+    if(lx[i].runtimeSized) {
       auto& args = desc[i].args;
       cmd.useResources(args.data(), args.size(), MTL::ResourceUsageRead);
       }

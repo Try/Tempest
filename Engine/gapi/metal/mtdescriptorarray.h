@@ -23,7 +23,8 @@ class MtDescriptorArray : public AbstractGraphicsApi::Desc {
     void set    (size_t id, const Sampler& smp) override;
     void setTlas(size_t,AbstractGraphicsApi::AccelerationStructure*) override;
 
-    void set(size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler& smp, uint32_t mipLevel) override;
+    void set    (size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler& smp, uint32_t mipLevel) override;
+    void set    (size_t id, AbstractGraphicsApi::Buffer**  buf, size_t cnt) override;
 
     void fillBufferSizeBuffer(uint32_t* ret, ShaderReflection::Stage stage);
     void useResource(MTL::ComputeCommandEncoder& cmd);

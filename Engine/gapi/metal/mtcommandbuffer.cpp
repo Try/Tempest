@@ -363,7 +363,9 @@ void MtCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u) {
       case ShaderReflection::Ubo:
       case ShaderReflection::SsboR:
       case ShaderReflection::SsboRW:
-        setBuffer(mtl[i],reinterpret_cast<MTL::Buffer*>(d.desc[i].val),d.desc[i].offset);
+        if(l.runtimeSized)
+          setBindless(mtl[i], d.desc[i].argsBuf.impl.get()); else
+          setBuffer(mtl[i],reinterpret_cast<MTL::Buffer*>(d.desc[i].val),d.desc[i].offset);
         break;
       case ShaderReflection::Texture:
       case ShaderReflection::Image:
