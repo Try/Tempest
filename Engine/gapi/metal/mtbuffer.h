@@ -12,19 +12,19 @@ class MtDevice;
 class MtBuffer : public Tempest::AbstractGraphicsApi::Buffer {
   public:
     MtBuffer();
-    MtBuffer(MtDevice& dev, const void* data, size_t count, size_t sz, size_t alignedSz, MTL::ResourceOptions flg);
+    MtBuffer(MtDevice& dev, const void* data, size_t size, MTL::ResourceOptions flg);
     ~MtBuffer();
 
     MtBuffer& operator = (MtBuffer&& other);
 
-    void  update  (const void* data, size_t off, size_t count, size_t sz, size_t alignedSz) override;
+    void  update  (const void* data, size_t off, size_t size) override;
     void  read    (      void* data, size_t off, size_t size) override;
 
     MtDevice*          dev = nullptr;
     NsPtr<MTL::Buffer> impl;
 
   private:
-    void implUpdate(const void *data, size_t off, size_t count, size_t sz, size_t alignedSz);
+    void implUpdate(const void *data, size_t off, size_t size);
   };
 
 }

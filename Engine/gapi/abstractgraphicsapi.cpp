@@ -110,6 +110,10 @@ void AbstractGraphicsApi::Desc::ssboBarriers(Detail::ResourceState&, PipelineSta
   // NOP by default
   }
 
+void AbstractGraphicsApi::Buffer::update(const void* data, size_t off, size_t count, size_t sz, size_t alignedSz) {
+  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
+  }
+
 void AbstractGraphicsApi::Buffer::update(const void* data, size_t off, size_t size) {
   this->update(data,off,size,1,1);
   }

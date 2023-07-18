@@ -128,7 +128,7 @@ AbstractGraphicsApi::PBuffer MetalApi::createBuffer(AbstractGraphicsApi::Device 
       break;
     }
 
-  return PBuffer(new MtBuffer(dx,mem,count,sz,alignedSz,opt));
+  return PBuffer(new MtBuffer(dx,mem,count*alignedSz,opt));
   }
 
 AbstractGraphicsApi::PTexture MetalApi::createTexture(AbstractGraphicsApi::Device *d,

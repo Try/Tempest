@@ -11,27 +11,27 @@ using namespace Tempest::Detail;
 MtBuffer::MtBuffer() {
   }
 
-MtBuffer::MtBuffer(MtDevice& dev, const void* data, size_t count, size_t sz, size_t alignedSz, MTL::ResourceOptions f)
+MtBuffer::MtBuffer(MtDevice& dev, const void* data, size_t size, MTL::ResourceOptions f)
   :dev(&dev) {
   const MTL::ResourceOptions flg = f | MTL::HazardTrackingModeDefault;
   if(data==nullptr) {
-    impl = NsPtr<MTL::Buffer>(dev.impl->newBuffer(count*alignedSz,flg));
+    impl = NsPtr<MTL::Buffer>(dev.impl->newBuffer(size,flg));
     if(impl==nullptr)
       throw std::system_error(GraphicsErrc::OutOfVideoMemory);
     return;
     }
 
-  if(alignedSz==sz && 0==(flg & MTL::ResourceStorageModePrivate)) {
-    impl = NsPtr<MTL::Buffer>(dev.impl->newBuffer(data,count*alignedSz,flg));
+  if(0==(flg & MTL::ResourceStorageModePrivate)) {
+    impl = NsPtr<MTL::Buffer>(dev.impl->newBuffer(data,size,flg));
     if(impl==nullptr)
       throw std::system_error(GraphicsErrc::OutOfVideoMemory);
     return;
     }
 
-  impl = NsPtr<MTL::Buffer>(dev.impl->newBuffer(count*alignedSz,flg));
+  impl = NsPtr<MTL::Buffer>(dev.impl->newBuffer(size,flg));
   if(impl==nullptr)
     throw std::system_error(GraphicsErrc::OutOfVideoMemory);
-  update(data,0,count,sz,alignedSz);
+  update(data,0,size);
   }
 
 MtBuffer::~MtBuffer() {
@@ -45,20 +45,20 @@ MtBuffer& MtBuffer::operator =(MtBuffer&& other) {
   return *this;
   }
 
-void MtBuffer::update(const void *data, size_t off, size_t count, size_t sz, size_t alignedSz) {
+void MtBuffer::update(const void *data, size_t off, size_t size) {
   if(T_LIKELY(impl->storageMode()!=MTL::StorageModePrivate)) {
-    implUpdate(data,off,count,sz,alignedSz);
+    implUpdate(data,off,size);
     return;
     }
 
   auto pool = NsPtr<NS::AutoreleasePool>::init();
   MTL::ResourceOptions opt   = MTL::ResourceStorageModeShared | MTL::ResourceCPUCacheModeWriteCombined;
-  auto                 stage = NsPtr<MTL::Buffer>(dev->impl->newBuffer(count*alignedSz,opt));
-  copyUpsample(data, stage->contents(), count, sz, alignedSz);
+  auto                 stage = NsPtr<MTL::Buffer>(dev->impl->newBuffer(size,opt));
+  std::memcpy(stage->contents(), data, size);
 
   auto cmd = dev->queue->commandBuffer();
   auto enc = cmd->blitCommandEncoder();
-  enc->copyFromBuffer(stage.get(),0,impl.get(),0, count*alignedSz);
+  enc->copyFromBuffer(stage.get(), 0,impl.get(), 0,size);
   enc->endEncoding();
   cmd->commit();
   // TODO: implement proper upload engine
@@ -81,14 +81,14 @@ void MtBuffer::read(void *data, size_t off, size_t size) {
   std::memcpy(data,stage->contents(),size);
   }
 
-void MtBuffer::implUpdate(const void *data, size_t off, size_t count, size_t sz, size_t alignedSz) {
+void MtBuffer::implUpdate(const void *data, size_t off, size_t size) {
   auto ptr = reinterpret_cast<uint8_t*>(impl->contents());
 
-  copyUpsample(data, ptr+off, count, sz, alignedSz);
+  std::memcpy(ptr+off, data, size);
   if(impl->storageMode()!=MTL::StorageModeManaged)
     return;
 
-  impl->didModifyRange(NS::Range(off*alignedSz,count*alignedSz));
+  impl->didModifyRange(NS::Range(off,size));
   }
 
 #endif
