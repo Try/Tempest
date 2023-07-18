@@ -329,7 +329,7 @@ const Builtin& Device::builtin() const {
   }
 
 Detail::VideoBuffer Device::createVideoBuffer(const void *data, size_t size, MemUsage usage, BufferHeap flg) {
-  Detail::VideoBuffer buf(api.createBuffer(dev,data,size,1,1,usage,flg), size);
+  Detail::VideoBuffer buf(api.createBuffer(dev,data,size,usage,flg), size);
   return  buf;
   }
 

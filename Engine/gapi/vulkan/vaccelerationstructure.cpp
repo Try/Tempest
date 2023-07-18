@@ -52,9 +52,9 @@ VAccelerationStructure::VAccelerationStructure(VDevice& dx,
                                        &maxPrimitiveCounts,
                                        &buildSizesInfo);
 
-  data = dx.allocator.alloc(nullptr, buildSizesInfo.accelerationStructureSize,1,1, MemUsage::AsStorage,BufferHeap::Device);
+  data = dx.allocator.alloc(nullptr, buildSizesInfo.accelerationStructureSize, MemUsage::AsStorage, BufferHeap::Device);
 
-  auto  scratch = dx.dataMgr().allocStagingMemory(nullptr,buildSizesInfo.buildScratchSize,MemUsage::ScratchBuffer,BufferHeap::Device);
+  auto  scratch = dx.dataMgr().allocStagingMemory(nullptr, buildSizesInfo.buildScratchSize, MemUsage::ScratchBuffer, BufferHeap::Device);
 
   VkAccelerationStructureCreateInfoKHR createInfo = {};
   createInfo.sType         = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
@@ -141,12 +141,11 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
                                        &numInstances,
                                        &buildSizesInfo);
 
-  data = dx.allocator.alloc(nullptr, buildSizesInfo.accelerationStructureSize,1,1, MemUsage::AsStorage,BufferHeap::Device);
+  data = dx.allocator.alloc(nullptr, buildSizesInfo.accelerationStructureSize, MemUsage::AsStorage, BufferHeap::Device);
 
   Detail::DSharedPtr<VBuffer*> pBuf;
   if(asSize>0) {
-    VBuffer buf = dx.allocator.alloc(nullptr,asSize,sizeof(VkAccelerationStructureInstanceKHR),sizeof(VkAccelerationStructureInstanceKHR),
-                                     MemUsage::TransferDst | MemUsage::StorageBuffer,BufferHeap::Upload);
+    VBuffer buf = dx.allocator.alloc(nullptr,asSize*sizeof(VkAccelerationStructureInstanceKHR),MemUsage::TransferDst | MemUsage::StorageBuffer,BufferHeap::Upload);
     pBuf = Detail::DSharedPtr<VBuffer*>(new Detail::VBuffer(std::move(buf)));
     }
 
@@ -163,7 +162,7 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
     objInstance.flags                                  = nativeFormat(inst[i].flags);
     objInstance.accelerationStructureReference         = blas->toDeviceAddress(dx);
 
-    pBuf.handler->update(&objInstance,i, 1,sizeof(objInstance), sizeof(objInstance));
+    pBuf.handler->update(&objInstance, i*sizeof(objInstance), sizeof(objInstance));
     }
 
   auto  scratch = dx.dataMgr().allocStagingMemory(nullptr,buildSizesInfo.buildScratchSize,MemUsage::ScratchBuffer,BufferHeap::Device);

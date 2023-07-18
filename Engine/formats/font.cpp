@@ -288,7 +288,7 @@ struct FontElement::Impl {
     }
 
   uint8_t*       data=nullptr;
-  uint32_t       size=0;
+  size_t         size=0;
   stbtt_fontinfo info={};
 
   std::mutex     syncMem;

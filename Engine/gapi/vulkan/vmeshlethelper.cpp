@@ -18,9 +18,9 @@ VMeshletHelper::VMeshletHelper(VDevice& dev) : dev(dev) {
   const auto ms  = MemUsage::StorageBuffer | MemUsage::Indirect    | MemUsage::TransferDst | MemUsage::TransferSrc;
   const auto geo = MemUsage::StorageBuffer | MemUsage::IndexBuffer | MemUsage::TransferDst | MemUsage::TransferSrc;
 
-  indirect    = dev.allocator.alloc(nullptr, IndirectMemorySize,  1,1, ind, BufferHeap::Device);
-  meshlets    = dev.allocator.alloc(nullptr, MeshletsMemorySize,  1,1, ms,  BufferHeap::Device);
-  scratch     = dev.allocator.alloc(nullptr, PipelineMemorySize,  1,1, geo, BufferHeap::Device);
+  indirect    = dev.allocator.alloc(nullptr, IndirectMemorySize, ind, BufferHeap::Device);
+  meshlets    = dev.allocator.alloc(nullptr, MeshletsMemorySize, ms,  BufferHeap::Device);
+  scratch     = dev.allocator.alloc(nullptr, PipelineMemorySize, geo, BufferHeap::Device);
 
   static_assert(sizeof(DrawIndexedIndirectCommand)==32);
   if(dev.props.ssbo.offsetAlign > sizeof(DrawIndexedIndirectCommand)) {
@@ -158,7 +158,7 @@ void VMeshletHelper::initRP(VkCommandBuffer impl) {
     Log::i("");
 
     uint32_t zero = 0;
-    scratch.update(&zero, 0, 1, 4, 4);
+    scratch.update(&zero, 0, 4);
     }
   }
 

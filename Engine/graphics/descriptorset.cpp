@@ -105,14 +105,14 @@ void DescriptorSet::set(size_t layoutBind, const StorageBuffer& vbuf, size_t off
   implBindSsbo(layoutBind,vbuf.impl,offset);
   }
 
-void DescriptorSet::implBindUbo(size_t layoutBind, const Detail::VideoBuffer& vbuf, size_t offsetBytes) {
+void DescriptorSet::implBindUbo(size_t layoutBind, const Detail::VideoBuffer& vbuf) {
   if(vbuf.impl.handler)
-    impl.handler->set(layoutBind,vbuf.impl.handler,offsetBytes); else
+    impl.handler->set(layoutBind,vbuf.impl.handler,0); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidUniformBuffer);
   }
 
-void DescriptorSet::implBindSsbo(size_t layoutBind, const Detail::VideoBuffer& vbuf, size_t offsetBytes) {
+void DescriptorSet::implBindSsbo(size_t layoutBind, const Detail::VideoBuffer& vbuf, size_t offset) {
   if(vbuf.impl.handler)
-    impl.handler->set(layoutBind,vbuf.impl.handler,offsetBytes); else
+    impl.handler->set(layoutBind,vbuf.impl.handler,offset); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidStorageBuffer);
   }

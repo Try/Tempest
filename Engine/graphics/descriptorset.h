@@ -30,11 +30,9 @@ class DescriptorSet final {
 
     template<class T>
     void set(size_t layoutBind, const UniformBuffer<T>& vbuf);
-    template<class T>
-    void set(size_t layoutBind, const UniformBuffer<T>& vbuf, size_t  offset);
 
     void set(size_t layoutBind, const StorageBuffer& vbuf);
-    void set(size_t layoutBind, const StorageBuffer& vbuf, size_t  offset);
+    void set(size_t layoutBind, const StorageBuffer& vbuf, size_t offset);
 
     void set(size_t layoutBind, const Texture2d&    tex, const Sampler& smp = Sampler::anisotrophy());
     void set(size_t layoutBind, const Attachment&   tex, const Sampler& smp = Sampler::anisotrophy());
@@ -55,8 +53,8 @@ class DescriptorSet final {
 
   private:
     DescriptorSet(AbstractGraphicsApi::Desc* desc);
-    void implBindUbo (size_t layoutBind, const Detail::VideoBuffer& vbuf, size_t offsetBytes);
-    void implBindSsbo(size_t layoutBind, const Detail::VideoBuffer& vbuf, size_t offsetBytes);
+    void implBindUbo (size_t layoutBind, const Detail::VideoBuffer& vbuf);
+    void implBindSsbo(size_t layoutBind, const Detail::VideoBuffer& vbuf, size_t offset);
 
     Detail::DPtr<AbstractGraphicsApi::Desc*> impl;
     static AbstractGraphicsApi::EmptyDesc    emptyDesc;
@@ -67,14 +65,8 @@ class DescriptorSet final {
 
 template<class T>
 inline void DescriptorSet::set(size_t layoutBind, const UniformBuffer<T>& vbuf) {
-  implBindUbo(layoutBind,vbuf.impl,0);
+  implBindUbo(layoutBind,vbuf.impl);
   }
 
-template<class T>
-inline void DescriptorSet::set(size_t layoutBind, const UniformBuffer<T>& vbuf, size_t offset) {
-  if(offset!=0 && vbuf.alignedTSZ!=sizeof(T))
-    throw std::system_error(Tempest::GraphicsErrc::InvalidUniformBuffer);
-  implBindUbo(layoutBind,vbuf.impl,offset*vbuf.alignedTSZ);
-  }
 
 }

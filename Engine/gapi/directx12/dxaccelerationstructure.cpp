@@ -40,8 +40,8 @@ DxAccelerationStructure::DxAccelerationStructure(DxDevice& dx,
   if(buildSizesInfo.ResultDataMaxSizeInBytes<=0)
     throw std::system_error(GraphicsErrc::UnsupportedExtension);
 
-  auto  scratch = dx.dataMgr().allocStagingMemory(nullptr,buildSizesInfo.ScratchDataSizeInBytes,MemUsage::ScratchBuffer,BufferHeap::Device);
-  impl = dx.allocator.alloc(nullptr, buildSizesInfo.ResultDataMaxSizeInBytes,1,1, MemUsage::AsStorage,BufferHeap::Device);
+  auto  scratch = dx.dataMgr().allocStagingMemory(nullptr, buildSizesInfo.ScratchDataSizeInBytes, MemUsage::ScratchBuffer, BufferHeap::Device);
+  impl = dx.allocator.alloc(nullptr, buildSizesInfo.ResultDataMaxSizeInBytes, MemUsage::AsStorage, BufferHeap::Device);
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
@@ -67,8 +67,8 @@ DxTopAccelerationStructure::DxTopAccelerationStructure(DxDevice& dx, const RtIns
 
   Detail::DSharedPtr<DxBuffer*> pBuf;
   if(asSize>0) {
-    DxBuffer buf = dx.allocator.alloc(nullptr,asSize,sizeof(D3D12_RAYTRACING_INSTANCE_DESC),sizeof(D3D12_RAYTRACING_INSTANCE_DESC),
-                                     MemUsage::TransferDst | MemUsage::StorageBuffer,BufferHeap::Device);
+    DxBuffer buf = dx.allocator.alloc(nullptr,asSize*sizeof(D3D12_RAYTRACING_INSTANCE_DESC),
+                                      MemUsage::TransferDst | MemUsage::StorageBuffer,BufferHeap::Device);
 
     pBuf = Detail::DSharedPtr<DxBuffer*>(new Detail::DxBuffer(std::move(buf)));
     }
@@ -87,7 +87,7 @@ DxTopAccelerationStructure::DxTopAccelerationStructure(DxDevice& dx, const RtIns
     objInstance.Flags                               = nativeFormat(inst[i].flags);
     objInstance.AccelerationStructure               = blas->impl.impl->GetGPUVirtualAddress();
 
-    pBuf.handler->update(&objInstance,i, 1,sizeof(objInstance), sizeof(objInstance));
+    pBuf.handler->update(&objInstance, i*sizeof(objInstance), sizeof(objInstance));
     }
 
   D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS tlasInputs = {};
@@ -102,7 +102,7 @@ DxTopAccelerationStructure::DxTopAccelerationStructure(DxDevice& dx, const RtIns
     throw std::system_error(GraphicsErrc::UnsupportedExtension);
 
   auto  scratch = dx.dataMgr().allocStagingMemory(nullptr,buildSizesInfo.ScratchDataSizeInBytes,MemUsage::ScratchBuffer,BufferHeap::Device);
-  impl = dx.allocator.alloc(nullptr, buildSizesInfo.ResultDataMaxSizeInBytes,1,1, MemUsage::AsStorage,BufferHeap::Device);
+  impl = dx.allocator.alloc(nullptr, buildSizesInfo.ResultDataMaxSizeInBytes, MemUsage::AsStorage, BufferHeap::Device);
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();

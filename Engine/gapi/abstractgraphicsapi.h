@@ -319,9 +319,9 @@ namespace Tempest {
   template<AccessOp l>
   struct AccessOpT{};
 
-  static const auto Discard  = AccessOpT<AccessOp::Discard>();
-  static const auto Preserve = AccessOpT<AccessOp::Preserve>();
-  static const auto Readonly = AccessOpT<AccessOp::Readonly>();
+  static constexpr auto Discard  = AccessOpT<AccessOp::Discard>();
+  static constexpr auto Preserve = AccessOpT<AccessOp::Preserve>();
+  static constexpr auto Readonly = AccessOpT<AccessOp::Readonly>();
 
   class AttachmentDesc final {
     public:
@@ -499,9 +499,8 @@ namespace Tempest {
         };
       struct Buffer:Shared   {
         virtual ~Buffer()=default;
-        virtual void  update  (const void* data,size_t off,size_t count,size_t sz,size_t alignedSz);
-        virtual void  update  (const void* data,size_t off,size_t size)=0;
-        virtual void  read    (      void* data,size_t off,size_t size)=0;
+        virtual void  update  (const void* data, size_t off, size_t size)=0;
+        virtual void  read    (      void* data, size_t off, size_t size)=0;
         };
       struct AccelerationStructure:Shared {
 
@@ -611,7 +610,7 @@ namespace Tempest {
 
       virtual Desc*      createDescriptors(Device* d,PipelineLay& layP)=0;
 
-      virtual PBuffer    createBuffer (Device* d, const void *mem, size_t count, size_t sz, size_t alignedSz, MemUsage usage, BufferHeap flg) = 0;
+      virtual PBuffer    createBuffer (Device* d, const void* mem, size_t size, MemUsage usage, BufferHeap flg) = 0;
       virtual PTexture   createTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mips) = 0;
       virtual PTexture   createTexture(Device* d, const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) = 0;
       virtual PTexture   createStorage(Device* d, const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) = 0;

@@ -95,8 +95,7 @@ static size_t LCM(size_t n1, size_t n2)  {
   return n1*n2 / GCD(n1, n2);
   }
 
-VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t alignedSz,
-                          MemUsage usage, BufferHeap bufHeap) {
+VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferHeap bufHeap) {
   VBuffer ret;
   ret.alloc     = this;
   ret.nonUniqId = (MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer)) ? NonUniqResId::I_Ssbo : NonUniqResId::I_Buf;
@@ -105,7 +104,7 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
   createInfo.sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
   createInfo.pNext                 = nullptr;
   createInfo.flags                 = 0;
-  createInfo.size                  = count*alignedSz;
+  createInfo.size                  = size;
   createInfo.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
   createInfo.queueFamilyIndexCount = 0;
   createInfo.pQueueFamilyIndices   = nullptr;
@@ -178,8 +177,7 @@ VBuffer VAllocator::alloc(const void *mem, size_t count, size_t size, size_t ali
     if(!ret.page.page)
       continue;
 
-    if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset,
-               mem,count,size,alignedSz)) {
+    if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl,ret.page.offset,mem,size)) {
       throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
       }
     return ret;
@@ -386,16 +384,15 @@ void VAllocator::alignRange(VkMappedMemoryRange& rgn, size_t nonCoherentAtomSize
     rgn.size += nonCoherentAtomSize-rgn.size%nonCoherentAtomSize;
   }
 
-bool VAllocator::update(VBuffer &dest, const void *mem,
-                        size_t offset, size_t count, size_t size, size_t alignedSz) {
+bool VAllocator::update(VBuffer &dest, const void *mem, size_t offset, size_t size) {
   auto& page = dest.page;
   void* data = nullptr;
 
   VkMappedMemoryRange rgn={};
   rgn.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
   rgn.memory = page.page->memory;
-  rgn.offset = page.offset+offset*alignedSz;
-  rgn.size   = count*alignedSz;
+  rgn.offset = page.offset+offset;
+  rgn.size   = size;
 
   size_t shift = 0;
   alignRange(rgn,provider.device->props.nonCoherentAtomSize,shift);
@@ -405,33 +402,9 @@ bool VAllocator::update(VBuffer &dest, const void *mem,
     return false;
 
   data = reinterpret_cast<uint8_t*>(data) + shift;
-  copyUpsample(mem,data,count,size,alignedSz);
+  std::memcpy(data, mem, size);
 
   vkFlushMappedMemoryRanges(dev,1,&rgn);
-
-  vkUnmapMemory(dev,page.page->memory);
-  return true;
-  }
-
-bool VAllocator::read(VBuffer& src, void* mem, size_t offset, size_t count, size_t size, size_t alignedSz) {
-  auto& page = src.page;
-  void* data = nullptr;
-
-  VkMappedMemoryRange rgn={};
-  rgn.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-  rgn.memory = page.page->memory;
-  rgn.offset = page.offset+offset;
-  rgn.size   = count*alignedSz;
-  size_t shift = 0;
-  alignRange(rgn,provider.device->props.nonCoherentAtomSize,shift);
-
-  std::lock_guard<std::mutex> g(page.page->mmapSync);
-  if(vkMapMemory(dev,page.page->memory,rgn.offset,rgn.size,0,&data)!=VK_SUCCESS)
-    return false;
-  vkInvalidateMappedMemoryRanges(dev,1,&rgn);
-
-  data = reinterpret_cast<uint8_t*>(data) + shift;
-  copyUpsample(data,mem,count,size,alignedSz);
 
   vkUnmapMemory(dev,page.page->memory);
   return true;
@@ -465,13 +438,12 @@ VkSampler VAllocator::updateSampler(const Tempest::Sampler &s) {
   return samplers.get(s);
   }
 
-bool VAllocator::commit(VkDeviceMemory dmem, std::mutex &mmapSync, VkBuffer dest,
-                        size_t pageOffset, const void* mem,  size_t count, size_t size, size_t alignedSz) {
+bool VAllocator::commit(VkDeviceMemory dmem, std::mutex &mmapSync, VkBuffer dest, size_t pageOffset, const void* mem, size_t size) {
   VkMappedMemoryRange rgn={};
   rgn.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
   rgn.memory = dmem;
   rgn.offset = pageOffset;
-  rgn.size   = count*alignedSz;
+  rgn.size   = size;
   size_t shift = 0;
   alignRange(rgn,provider.device->props.nonCoherentAtomSize,shift);
 
@@ -483,7 +455,7 @@ bool VAllocator::commit(VkDeviceMemory dmem, std::mutex &mmapSync, VkBuffer dest
     if(vkMapMemory(dev,dmem,pageOffset,rgn.size,0,&data)!=VK_SUCCESS)
       return false;
     data = reinterpret_cast<uint8_t*>(data)+shift;
-    copyUpsample(mem,data,count,size,alignedSz);
+    copyUpsample(mem,data,size,1,1);
     vkFlushMappedMemoryRanges(dev,1,&rgn);
     vkUnmapMemory(dev,dmem);
     }

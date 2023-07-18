@@ -28,52 +28,12 @@ VBuffer& VBuffer::operator=(VBuffer&& other) {
   return *this;
   }
 
-// deprecated
-void VBuffer::update(const void *data, size_t off, size_t count, size_t size, size_t alignedSz) {
-  auto& dx = *alloc->device();
-
-  if(T_LIKELY(page.page->hostVisible)) {
-    dx.dataMgr().waitFor(this); // write-after-write case
-    alloc->update(*this,data,off,count,size,alignedSz);
-    return;
-    }
-
-  if(size==alignedSz && off%4==0 && (count*alignedSz)%4==0) {
-    Detail::DSharedPtr<Buffer*> pBuf(this);
-
-    auto cmd = dx.dataMgr().get();
-    cmd->begin();
-    cmd->hold(pBuf); // NOTE: VBuffer may be deleted, before copy is finished
-    cmd->copy(*this, off*alignedSz, data, count*alignedSz);
-    cmd->end();
-
-    dx.dataMgr().waitFor(this); // write-after-write case
-    dx.dataMgr().submit(std::move(cmd));
-    return;
-    }
-
-  auto  stage = dx.dataMgr().allocStagingMemory(data,count,size,alignedSz,MemUsage::TransferSrc,BufferHeap::Upload);
-
-  Detail::DSharedPtr<Buffer*> pStage(new Detail::VBuffer(std::move(stage)));
-  Detail::DSharedPtr<Buffer*> pBuf  (this);
-
-  auto cmd = dx.dataMgr().get();
-  cmd->begin();
-  cmd->hold(pBuf); // NOTE: VBuffer may be deleted, before copy is finished
-  cmd->hold(pStage);
-  cmd->copy(*this, off*alignedSz, *pStage.handler,0, count*alignedSz);
-  cmd->end();
-
-  dx.dataMgr().waitFor(this); // write-after-write case
-  dx.dataMgr().submit(std::move(cmd));
-  }
-
 void VBuffer::update(const void* data, size_t off, size_t size) {
   auto& dx = *alloc->device();
 
   if(T_LIKELY(page.page->hostVisible)) {
     dx.dataMgr().waitFor(this); // write-after-write case
-    alloc->update(*this,data,off,size,1,1);
+    alloc->update(*this,data,off,size);
     return;
     }
 

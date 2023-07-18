@@ -104,27 +104,26 @@ AbstractGraphicsApi::Fence *VulkanApi::createFence(AbstractGraphicsApi::Device *
   return new Detail::VFence(*dx);
   }
 
-AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device *d,
-                                                     const void *mem, size_t count, size_t size, size_t alignedSz,
+AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device *d, const void *mem, size_t size,
                                                      MemUsage usage, BufferHeap flg) {
   Detail::VDevice& dx = *reinterpret_cast<Detail::VDevice*>(d);
 
   if(flg==BufferHeap::Upload) {
-    VBuffer buf = dx.allocator.alloc(mem,count,size,alignedSz,usage|MemUsage::TransferSrc,BufferHeap::Upload);
+    VBuffer buf = dx.allocator.alloc(mem, size, usage|MemUsage::TransferSrc, BufferHeap::Upload);
     return PBuffer(new VBuffer(std::move(buf)));
     }
 
   if(flg==BufferHeap::Readback) {
-    VBuffer buf = dx.allocator.alloc(mem,count,size,alignedSz,usage|MemUsage::TransferDst,BufferHeap::Readback);
+    VBuffer buf = dx.allocator.alloc(mem, size, usage|MemUsage::TransferDst, BufferHeap::Readback);
     return PBuffer(new VBuffer(std::move(buf)));
     }
 
-  VBuffer buf = dx.allocator.alloc(nullptr,count,size,alignedSz, usage|MemUsage::TransferDst|MemUsage::TransferSrc,BufferHeap::Device);
+  VBuffer buf = dx.allocator.alloc(nullptr, size, usage|MemUsage::TransferDst|MemUsage::TransferSrc, BufferHeap::Device);
   if(mem==nullptr)
     return PBuffer(new VBuffer(std::move(buf)));
 
   DSharedPtr<Buffer*> pbuf(new VBuffer(std::move(buf)));
-  pbuf.handler->update(mem,0,count,size,alignedSz);
+  pbuf.handler->update(mem,0,size);
   return PBuffer(pbuf.handler);
   }
 
@@ -135,7 +134,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   VkFormat         format = Detail::nativeFormat(frm);
   Pixmap::Format   pfrm   = Pixmap::toPixmapFormat(frm);
 
-  Detail::VBuffer  stage  = dx.allocator.alloc(p.data(),size,1,1,MemUsage::TransferSrc,BufferHeap::Upload);
+  Detail::VBuffer  stage  = dx.allocator.alloc(p.data(),size,MemUsage::TransferSrc,BufferHeap::Upload);
   Detail::VTexture buf    = dx.allocator.alloc(p,mipCnt,format);
 
   Detail::DSharedPtr<Buffer*>  pstage(new Detail::VBuffer (std::move(stage)));
@@ -244,7 +243,7 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
   Size            bsz    = Pixmap::blockCount(pfrm,w,h);
 
   const size_t    size   = bsz.w*bsz.h*bpb;
-  Detail::VBuffer stage  = dx.allocator.alloc(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
+  Detail::VBuffer stage  = dx.allocator.alloc(nullptr, size, MemUsage::TransferDst, BufferHeap::Readback);
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();

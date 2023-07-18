@@ -99,12 +99,11 @@ void DxAllocator::setDevice(DxDevice& d) {
   provider.device = owner;
   }
 
-DxBuffer DxAllocator::alloc(const void* mem, size_t count, size_t size, size_t alignedSz,
-                            MemUsage usage, BufferHeap bufFlg) {
+DxBuffer DxAllocator::alloc(const void* mem, size_t size, MemUsage usage, BufferHeap bufFlg) {
   D3D12_RESOURCE_DESC resDesc={};
   resDesc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
   resDesc.Alignment          = 0;
-  resDesc.Width              = count*alignedSz;
+  resDesc.Width              = size;
   resDesc.Height             = 1;
   resDesc.DepthOrArraySize   = 1;
   resDesc.MipLevels          = 1;
@@ -140,15 +139,15 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t count, size_t size, size_t a
     state          = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     }
 
-  DxBuffer ret(owner,UINT(resDesc.Width), UINT(count*alignedSz));
-  ret.page = allocator.alloc(count*alignedSz, toAlignment(bufFlg),
+  DxBuffer ret(owner,UINT(resDesc.Width), UINT(size));
+  ret.page = allocator.alloc(size, toAlignment(bufFlg),
                              uint32_t(bufFlg), uint32_t(bufFlg), (bufFlg!=BufferHeap::Device));
   if(!ret.page.page)
     throw std::system_error(Tempest::GraphicsErrc::OutOfVideoMemory);
 
   if(!commit(ret.page.page->memory,ret.page.page->mmapSync,ret.impl.get(),
              resDesc, state, ret.page.offset,
-             mem,count,size,alignedSz)) {
+             mem,size)) {
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
     }
 
@@ -255,7 +254,7 @@ void DxAllocator::free(Allocation& page) {
 
 bool DxAllocator::commit(ID3D12Heap* heap, std::mutex& mmapSync,
                          ID3D12Resource*& dest, const D3D12_RESOURCE_DESC& resDesc, D3D12_RESOURCE_STATES state,
-                         size_t offset, const void* mem, size_t count, size_t size, size_t alignedSz) {
+                         size_t offset, const void* mem, size_t size) {
   std::lock_guard<std::mutex> g(mmapSync);
   auto err = device->CreatePlacedResource(heap,
                                           offset,
@@ -271,7 +270,7 @@ bool DxAllocator::commit(ID3D12Heap* heap, std::mutex& mmapSync,
     void*       mapped=nullptr;
     if(FAILED(dest->Map(0,nullptr,&mapped)))
       return false;
-    copyUpsample(mem,mapped,count,size,alignedSz);
+    copyUpsample(mem,mapped,size,1,1);
     dest->Unmap(0,&rgn);
     }
   return true;

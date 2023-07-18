@@ -101,8 +101,7 @@ AbstractGraphicsApi::Fence *MetalApi::createFence(AbstractGraphicsApi::Device*) 
   return new MtSync();
   }
 
-AbstractGraphicsApi::PBuffer MetalApi::createBuffer(AbstractGraphicsApi::Device *d,
-                                                    const void *mem, size_t size, size_t _1, size_t _2,
+AbstractGraphicsApi::PBuffer MetalApi::createBuffer(AbstractGraphicsApi::Device *d, const void *mem, size_t size,
                                                     MemUsage usage, BufferHeap flg) {
   auto& dx = *reinterpret_cast<MtDevice*>(d);
 
