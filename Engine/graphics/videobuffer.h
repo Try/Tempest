@@ -20,7 +20,7 @@ class VideoBuffer {
     ~VideoBuffer();
     VideoBuffer& operator=(VideoBuffer&&);
 
-    void   update(const void* data, size_t offset, size_t count, size_t size, size_t alignedSz);
+    void   update(const void* data, size_t offset, size_t size);
     size_t size() const { return sz; }
 
   private:

@@ -53,6 +53,24 @@ void DxBuffer::update(const void* data, size_t off, size_t count, size_t size, s
   updateByStaging(pstage.handler,data,off,0,count,size,alignedSz);
   }
 
+void DxBuffer::update(const void* data, size_t off, size_t size) {
+  auto& dx = *dev;
+
+  D3D12_HEAP_PROPERTIES prop = {};
+  ID3D12Resource&       ret  = *impl;
+  ret.GetHeapProperties(&prop,nullptr);
+
+  if(prop.Type==D3D12_HEAP_TYPE_UPLOAD) {
+    dx.dataMgr().waitFor(this); // write-after-write case
+    updateByMapped(*this,data,off,size,1,1);
+    return;
+    }
+
+  auto stage = dx.dataMgr().allocStagingMemory(nullptr,size,MemUsage::TransferSrc,BufferHeap::Upload);
+  Detail::DSharedPtr<DxBuffer*> pstage(new Detail::DxBuffer(std::move(stage)));
+  updateByStaging(pstage.handler,data,off,0,size,1,1);
+  }
+
 void DxBuffer::read(void* data, size_t off, size_t size) {
   auto& dx = *dev;
 
@@ -66,7 +84,7 @@ void DxBuffer::read(void* data, size_t off, size_t size) {
     return;
     }
 
-  auto stage = dx.dataMgr().allocStagingMemory(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
+  auto stage = dx.dataMgr().allocStagingMemory(nullptr,size,MemUsage::TransferDst,BufferHeap::Readback);
   auto cmd = dx.dataMgr().get();
   cmd->begin();
   cmd->copy(stage,0, *this,off,size);
@@ -161,11 +179,11 @@ void DxBuffer::readFromMapped(DxBuffer& stage, void* data, size_t off, size_t si
 DxBufferWithStaging::DxBufferWithStaging(DxBuffer&& base, BufferHeap stagingHeap)
   :DxBuffer(std::move(base)) {
   if(stagingHeap==BufferHeap::Readback) {
-    auto  stage = dev->dataMgr().allocStagingMemory(nullptr,sizeInBytes,1,1,MemUsage::TransferDst,BufferHeap::Readback);
+    auto  stage = dev->dataMgr().allocStagingMemory(nullptr,sizeInBytes,MemUsage::TransferDst,BufferHeap::Readback);
     stagingR = Detail::DSharedPtr<DxBuffer*>(new Detail::DxBuffer(std::move(stage)));
     }
   if(stagingHeap==BufferHeap::Upload) {
-    auto  stage = dev->dataMgr().allocStagingMemory(nullptr,sizeInBytes,1,1,MemUsage::TransferSrc,BufferHeap::Upload);
+    auto  stage = dev->dataMgr().allocStagingMemory(nullptr,sizeInBytes,MemUsage::TransferSrc,BufferHeap::Upload);
     stagingU = Detail::DSharedPtr<DxBuffer*>(new Detail::DxBuffer(std::move(stage)));
     }
   }

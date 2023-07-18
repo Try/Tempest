@@ -109,3 +109,7 @@ void Tempest::AbstractGraphicsApi::Desc::set(size_t id, Buffer** buf, size_t cnt
 void AbstractGraphicsApi::Desc::ssboBarriers(Detail::ResourceState&, PipelineStage) {
   // NOP by default
   }
+
+void AbstractGraphicsApi::Buffer::update(const void* data, size_t off, size_t size) {
+  this->update(data,off,size,1,1);
+  }

@@ -15,8 +15,8 @@ class StorageBuffer {
     size_t byteSize() const { return impl.size();    }
 
     template<class T>
-    void   update(const std::vector<T>& v)                      { return impl.update(v.data(),0,v.size()*sizeof(T),1,1); }
-    void   update(const void* data, size_t offset, size_t size) { return impl.update(data,offset,size,1,1); }
+    void   update(const std::vector<T>& v)                      { return impl.update(v.data(),0,v.size()*sizeof(T)); }
+    void   update(const void* data, size_t offset, size_t size) { return impl.update(data,offset,size); }
 
   private:
     explicit StorageBuffer(Tempest::Detail::VideoBuffer&& impl)

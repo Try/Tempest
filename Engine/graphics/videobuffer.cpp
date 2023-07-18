@@ -25,10 +25,10 @@ VideoBuffer &VideoBuffer::operator=(VideoBuffer &&other) {
   return *this;
   }
 
-void VideoBuffer::update(const void *data, size_t offset, size_t count, size_t size, size_t alignedSz) {
-  if(count==0)
+void VideoBuffer::update(const void* data, size_t offset, size_t size) {
+  if(size==0)
     return;
-  if((offset+count)*alignedSz>sz)
+  if(offset+size>sz)
     throw std::system_error(Tempest::GraphicsErrc::InvalidBufferUpdate);
-  impl.handler->update(data,offset,count,size,alignedSz);
+  impl.handler->update(data,offset,size);
   }

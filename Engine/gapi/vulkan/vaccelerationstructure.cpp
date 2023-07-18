@@ -54,8 +54,7 @@ VAccelerationStructure::VAccelerationStructure(VDevice& dx,
 
   data = dx.allocator.alloc(nullptr, buildSizesInfo.accelerationStructureSize,1,1, MemUsage::AsStorage,BufferHeap::Device);
 
-  auto  scratch = dx.dataMgr().allocStagingMemory(nullptr,buildSizesInfo.buildScratchSize,1,1,
-                                                  MemUsage::ScratchBuffer,BufferHeap::Device);
+  auto  scratch = dx.dataMgr().allocStagingMemory(nullptr,buildSizesInfo.buildScratchSize,MemUsage::ScratchBuffer,BufferHeap::Device);
 
   VkAccelerationStructureCreateInfoKHR createInfo = {};
   createInfo.sType         = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
@@ -167,8 +166,7 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
     pBuf.handler->update(&objInstance,i, 1,sizeof(objInstance), sizeof(objInstance));
     }
 
-  auto  scratch = dx.dataMgr().allocStagingMemory(nullptr,buildSizesInfo.buildScratchSize,1,1,
-                                                  MemUsage::ScratchBuffer,BufferHeap::Device);
+  auto  scratch = dx.dataMgr().allocStagingMemory(nullptr,buildSizesInfo.buildScratchSize,MemUsage::ScratchBuffer,BufferHeap::Device);
 
   VkAccelerationStructureCreateInfoKHR createInfo = {};
   createInfo.sType         = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,

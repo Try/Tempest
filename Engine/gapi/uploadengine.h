@@ -84,6 +84,7 @@ class UploadEngine final {
     void                      waitFor(AbstractGraphicsApi::Shared* s);
 
     Buffer                    allocStagingMemory(const void* data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap heap);
+    Buffer                    allocStagingMemory(const void* data, size_t size, MemUsage usage, BufferHeap heap);
 
   private:
     Device&                   device;
@@ -170,6 +171,19 @@ Buffer UploadEngine<Device, CommandBuffer, Fence,Buffer>::allocStagingMemory(con
     }
   }
 
+template<class Device, class CommandBuffer, class Fence, class Buffer>
+Buffer UploadEngine<Device, CommandBuffer, Fence,Buffer>::allocStagingMemory(const void* data, size_t size, MemUsage usage, BufferHeap heap) {
+  try {
+    return device.allocator.alloc(data,size,1,1,usage,heap);
+    }
+  catch(std::system_error& err) {
+    if(err.code()!=Tempest::GraphicsErrc::OutOfVideoMemory)
+      throw;
+    // wait for other staging resources to be released
+    wait();
+    return device.allocator.alloc(data,size,1,1,usage,heap);
+    }
+  }
 }}
 
 

@@ -28,6 +28,7 @@ VBuffer& VBuffer::operator=(VBuffer&& other) {
   return *this;
   }
 
+// deprecated
 void VBuffer::update(const void *data, size_t off, size_t count, size_t size, size_t alignedSz) {
   auto& dx = *alloc->device();
 
@@ -67,6 +68,45 @@ void VBuffer::update(const void *data, size_t off, size_t count, size_t size, si
   dx.dataMgr().submit(std::move(cmd));
   }
 
+void VBuffer::update(const void* data, size_t off, size_t size) {
+  auto& dx = *alloc->device();
+
+  if(T_LIKELY(page.page->hostVisible)) {
+    dx.dataMgr().waitFor(this); // write-after-write case
+    alloc->update(*this,data,off,size,1,1);
+    return;
+    }
+
+  if(off%4==0 && size%4==0) {
+    Detail::DSharedPtr<Buffer*> pBuf(this);
+
+    auto cmd = dx.dataMgr().get();
+    cmd->begin();
+    cmd->hold(pBuf); // NOTE: VBuffer may be deleted, before copy is finished
+    cmd->copy(*this, off, data, size);
+    cmd->end();
+
+    dx.dataMgr().waitFor(this); // write-after-write case
+    dx.dataMgr().submit(std::move(cmd));
+    return;
+    }
+
+  auto  stage = dx.dataMgr().allocStagingMemory(data,size,MemUsage::TransferSrc,BufferHeap::Upload);
+
+  Detail::DSharedPtr<Buffer*> pStage(new Detail::VBuffer(std::move(stage)));
+  Detail::DSharedPtr<Buffer*> pBuf  (this);
+
+  auto cmd = dx.dataMgr().get();
+  cmd->begin();
+  cmd->hold(pBuf); // NOTE: VBuffer may be deleted, before copy is finished
+  cmd->hold(pStage);
+  cmd->copy(*this, off, *pStage.handler, 0, size);
+  cmd->end();
+
+  dx.dataMgr().waitFor(this); // write-after-write case
+  dx.dataMgr().submit(std::move(cmd));
+  }
+
 void VBuffer::read(void* out, size_t off, size_t size) {
   auto& dx = *alloc->device();
 
@@ -76,7 +116,7 @@ void VBuffer::read(void* out, size_t off, size_t size) {
     return;
     }
 
-  auto  stage = dx.dataMgr().allocStagingMemory(nullptr,size,1,1,MemUsage::TransferDst,BufferHeap::Readback);
+  auto  stage = dx.dataMgr().allocStagingMemory(nullptr,size,MemUsage::TransferDst,BufferHeap::Readback);
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
