@@ -95,18 +95,12 @@ class Device {
       }
 
     template<class T>
-    UniformBuffer<T>      ubo(const T* data, size_t size) {
-      return ubo(BufferHeap::Upload,data,size);
-      }
-    template<class T>
     UniformBuffer<T>      ubo(const T& data)  {
-      return ubo(BufferHeap::Upload,&data,1);
+      return implUbo<T>(BufferHeap::Upload,&data);
       }
-    template<class T>
-    UniformBuffer<T>      ubo(BufferHeap ht, const T* data, size_t size);
     template<class T>
     UniformBuffer<T>      ubo(BufferHeap ht, const T& data)  {
-      return ubo(ht,&data,1);
+      return implUbo<T>(ht,&data);
       }
 
     StorageBuffer         ssbo(BufferHeap ht, const void* data, size_t size);
@@ -178,6 +172,8 @@ class Device {
     AccelerationStructure implBlas(const Detail::VideoBuffer& vbo, size_t stride, const Detail::VideoBuffer& ibo, Detail::IndexClass icls, size_t offset, size_t count);
 
     RenderPipeline implPipeline(const RenderState &st, const Shader* shaders[], Topology tp);
+    template<class T>
+    UniformBuffer<T>      implUbo(BufferHeap ht, const void* data);
 
     static TextureFormat formatOf(const Attachment& a);
 
@@ -229,17 +225,12 @@ inline StorageBuffer Device::ssbo(BufferHeap ht, const void* data, size_t size) 
   }
 
 template<class T>
-inline UniformBuffer<T> Device::ubo(BufferHeap ht, const T *mem, size_t size) {
-  if(size==0)
-    return UniformBuffer<T>();
-  const size_t align   = devProps.ubo.offsetAlign;
-  const size_t eltSize = ((sizeof(T)+align-1)/align)*align;
-
+inline UniformBuffer<T> Device::implUbo(BufferHeap ht, const void* mem) {
   if(sizeof(T)>devProps.ubo.maxRange)
     throw std::system_error(Tempest::GraphicsErrc::TooLargeBuffer);
 
-  Detail::VideoBuffer data = createVideoBuffer(mem,size,sizeof(T),eltSize,MemUsage::UniformBuffer,ht);
-  UniformBuffer<T> ubo(std::move(data),eltSize);
+  Detail::VideoBuffer data = createVideoBuffer(mem,1,sizeof(T),sizeof(T),MemUsage::UniformBuffer,ht);
+  UniformBuffer<T> ubo(std::move(data));
   return ubo;
   }
 

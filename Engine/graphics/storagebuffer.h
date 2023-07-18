@@ -11,7 +11,8 @@ class StorageBuffer {
     StorageBuffer& operator=(StorageBuffer&&)=default;
     virtual ~StorageBuffer() = default;
 
-    size_t byteSize() const { return impl.size(); }
+    bool   isEmpty()  const { return impl.size()==0; }
+    size_t byteSize() const { return impl.size();    }
 
     template<class T>
     void   update(const std::vector<T>& v)                      { return impl.update(v.data(),0,v.size()*sizeof(T),1,1); }

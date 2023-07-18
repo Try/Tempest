@@ -11,17 +11,15 @@ class UniformBuffer final {
     UniformBuffer(UniformBuffer&&)=default;
     UniformBuffer& operator=(UniformBuffer&&)=default;
 
-    void   update(const T* data,size_t offset,size_t size) { return impl.update(data,offset,size,sizeof(T),alignedTSZ); }
-    size_t size() const { return arrTSZ; }
+    bool isEmpty() const { return impl.size()==0; }
+    void update(const T* data) { return impl.update(data,0,1,sizeof(T),sizeof(T)); }
 
   private:
-    UniformBuffer(Tempest::Detail::VideoBuffer&& impl, size_t alignedTSZ)
-      :impl(std::move(impl)), alignedTSZ(alignedTSZ), arrTSZ(this->impl.size()/alignedTSZ) {
+    UniformBuffer(Tempest::Detail::VideoBuffer&& impl)
+      :impl(std::move(impl)) {
       }
 
     Tempest::Detail::VideoBuffer impl;
-    size_t                       alignedTSZ=0;
-    size_t                       arrTSZ=0;
 
   friend class Tempest::Device;
   friend class Tempest::CommandBuffer;

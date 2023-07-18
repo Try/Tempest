@@ -78,12 +78,12 @@ void VboInit() {
     EXPECT_EQ(iboR.size(),3);
     EXPECT_EQ(iboU.size(),3);
 
-    auto uboD = device.ubo(BufferHeap::Device,  vboData,3);
-    auto uboR = device.ubo(BufferHeap::Readback,vboData,3);
-    auto uboU = device.ubo(BufferHeap::Upload,  vboData,3);
-    EXPECT_EQ(uboD.size(),3);
-    EXPECT_EQ(uboR.size(),3);
-    EXPECT_EQ(uboU.size(),3);
+    auto uboD = device.ubo(BufferHeap::Device,  vboData);
+    auto uboR = device.ubo(BufferHeap::Readback,vboData);
+    auto uboU = device.ubo(BufferHeap::Upload,  vboData);
+    EXPECT_EQ(uboD.isEmpty(),false);
+    EXPECT_EQ(uboR.isEmpty(),false);
+    EXPECT_EQ(uboU.isEmpty(),false);
 
     auto ssboD = device.ssbo(BufferHeap::Device,  vboData,sizeof(vboData));
     auto ssboR = device.ssbo(BufferHeap::Readback,vboData,sizeof(vboData));
@@ -1143,8 +1143,8 @@ void PushRemapping() {
 
     Push inputCpu;
 
-    auto input  = device.ubo (&inputCpu,sizeof(Tempest::Vec4));
-    auto output = device.ssbo(nullptr,  sizeof(Tempest::Vec4));
+    auto input  = device.ubo (inputCpu);
+    auto output = device.ssbo(nullptr, sizeof(Tempest::Vec4));
 
     auto cs     = device.shader("shader/push_constant.comp.sprv");
     auto pso    = device.pipeline(cs);
