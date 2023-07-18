@@ -20,7 +20,8 @@ class MtBuffer : public Tempest::AbstractGraphicsApi::Buffer {
     void  update  (const void* data, size_t off, size_t size) override;
     void  read    (      void* data, size_t off, size_t size) override;
 
-    MtDevice*          dev = nullptr;
+    MtDevice*          dev  = nullptr;
+    size_t             size = 0;
     NsPtr<MTL::Buffer> impl;
 
   private:

@@ -31,6 +31,7 @@ void MtDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer *buf, size_t 
   auto& b = *reinterpret_cast<MtBuffer*>(buf);
   desc[id].val    = b.impl.get();
   desc[id].offset = offset;
+  desc[id].length = b.size - offset;
   }
 
 void MtDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure* a) {
@@ -126,8 +127,7 @@ void MtDescriptorArray::fillBufferSizeBuffer(uint32_t* ret, ShaderReflection::St
         }
       if(at==uint32_t(-1))
         continue;
-      auto& b = *reinterpret_cast<MTL::Buffer*>(desc[i].val);
-      ret[at] = b.length() - desc[i].offset;
+      ret[at] = desc[i].length;
       }
     }
   }

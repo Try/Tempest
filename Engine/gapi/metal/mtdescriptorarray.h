@@ -34,6 +34,7 @@ class MtDescriptorArray : public AbstractGraphicsApi::Desc {
       void*              val     = nullptr;
       MTL::SamplerState* sampler = nullptr;
       size_t             offset  = 0;
+      size_t             length  = 0;
 
       MtTopAccelerationStructure* tlas = nullptr;
 

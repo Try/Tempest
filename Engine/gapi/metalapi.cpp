@@ -102,8 +102,8 @@ AbstractGraphicsApi::Fence *MetalApi::createFence(AbstractGraphicsApi::Device*) 
   }
 
 AbstractGraphicsApi::PBuffer MetalApi::createBuffer(AbstractGraphicsApi::Device *d,
-                                                    const void *mem, size_t count, size_t sz, size_t alignedSz,
-                                                    MemUsage /*usage*/, BufferHeap flg) {
+                                                    const void *mem, size_t size, size_t _1, size_t _2,
+                                                    MemUsage usage, BufferHeap flg) {
   auto& dx = *reinterpret_cast<MtDevice*>(d);
 
   MTL::ResourceOptions opt = 0;
@@ -114,7 +114,7 @@ AbstractGraphicsApi::PBuffer MetalApi::createBuffer(AbstractGraphicsApi::Device 
       break;
     case BufferHeap::Upload:
 #ifndef __IOS__
-      if(count*alignedSz>PAGE_SIZE)
+      if(size>PAGE_SIZE)
         opt |= MTL::ResourceStorageModeManaged; else
         opt |= MTL::ResourceStorageModeShared;
 #else
@@ -128,7 +128,7 @@ AbstractGraphicsApi::PBuffer MetalApi::createBuffer(AbstractGraphicsApi::Device 
       break;
     }
 
-  return PBuffer(new MtBuffer(dx,mem,count*alignedSz,opt));
+  return PBuffer(new MtBuffer(dx,mem,size,opt));
   }
 
 AbstractGraphicsApi::PTexture MetalApi::createTexture(AbstractGraphicsApi::Device *d,
