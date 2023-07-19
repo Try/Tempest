@@ -6,8 +6,6 @@
 #include "dxtexture.h"
 #include "guid.h"
 
-#include "gapi/graphicsmemutils.h"
-
 #include <Tempest/Pixmap>
 #include <iostream>
 
@@ -270,7 +268,7 @@ bool DxAllocator::commit(ID3D12Heap* heap, std::mutex& mmapSync,
     void*       mapped=nullptr;
     if(FAILED(dest->Map(0,nullptr,&mapped)))
       return false;
-    copyUpsample(mem,mapped,size,1,1);
+    std::memcpy(mapped, mem, size);
     dest->Unmap(0,&rgn);
     }
   return true;

@@ -4,7 +4,6 @@
 #include "mtdevice.h"
 
 #include "utility/compiller_hints.h"
-#include "gapi/graphicsmemutils.h"
 
 using namespace Tempest::Detail;
 

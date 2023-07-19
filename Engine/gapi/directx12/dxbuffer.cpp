@@ -4,8 +4,6 @@
 #include "dxdevice.h"
 #include <cassert>
 
-#include "gapi/graphicsmemutils.h"
-
 using namespace Tempest;
 using namespace Tempest::Detail;
 

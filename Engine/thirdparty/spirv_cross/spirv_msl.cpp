@@ -7226,6 +7226,10 @@ void CompilerMSL::emit_custom_functions()
 			begin_scope();
 			statement("return value;");
 			end_scope();
+			statement("const device T& operator * () const device");
+			begin_scope();
+			statement("return value;");
+			end_scope();
 			end_scope_decl();
 			statement("");
 			break;
@@ -8333,6 +8337,14 @@ void CompilerMSL::check_physical_type_cast(std::string &expr, const SPIRType *ty
 			expr += ".x";
 
 		expr = join("((", type_to_glsl(*type), ")", expr, ")");
+	}
+
+	if (type != nullptr && is_runtime_size_array(*type) &&
+	    (type->basetype == SPIRType::Image || type->basetype == SPIRType::Sampler ||
+	     type->basetype == SPIRType::SampledImage || type->basetype == SPIRType::AccelerationStructure))
+	{
+		// expr = "*" + expr;
+		expr += ".value";
 	}
 }
 
@@ -13101,8 +13113,9 @@ void CompilerMSL::entry_point_args_discrete_descriptors(string &ep_args)
 				uint32_t array_size = to_array_size_literal(type);
 
 				is_using_builtin_array = true;
-				if (array_size == 0)
+				if (is_runtime_size_array(type))
 				{
+					add_spv_func_and_recompile(SPVFuncImplVariableDescriptor);
 					if (!ep_args.empty())
 						ep_args += ", ";
 					ep_args += "const device spvDescriptor<" + get_argument_address_space(var) + " " +
@@ -13202,9 +13215,22 @@ void CompilerMSL::entry_point_args_discrete_descriptors(string &ep_args)
 			break;
 		}
 		case SPIRType::AccelerationStructure:
-			ep_args += ", " + type_to_glsl(type, var_id) + " " + r.name;
-			ep_args += " [[buffer(" + convert_to_string(r.index) + ")]]";
+		{
+			if (is_runtime_size_array(type))
+			{
+				add_spv_func_and_recompile(SPVFuncImplVariableDescriptor);
+				const auto &parent_type = get<SPIRType>(type.parent_type);
+				ep_args += ", const device spvDescriptor<" + type_to_glsl(parent_type) + ">* " +
+				           to_restrict(var_id, true) + r.name;
+				ep_args += " [[buffer(" + convert_to_string(r.index) + ")]]";
+			}
+			else
+			{
+				ep_args += ", " + type_to_glsl(type, var_id) + " " + r.name;
+				ep_args += " [[buffer(" + convert_to_string(r.index) + ")]]";
+			}
 			break;
+		}
 		default:
 			if (!ep_args.empty())
 				ep_args += ", ";
@@ -14000,6 +14026,7 @@ string CompilerMSL::argument_decl(const SPIRFunction::Parameter &arg)
 
 	bool type_is_image = type.basetype == SPIRType::Image || type.basetype == SPIRType::SampledImage ||
 	                     type.basetype == SPIRType::Sampler;
+	bool type_is_tlas = type.basetype == SPIRType::AccelerationStructure;
 
 	// For opaque types we handle const later due to descriptor address spaces.
 	const char *cv_qualifier = (constref && !type_is_image) ? "const " : "";
@@ -14053,11 +14080,14 @@ string CompilerMSL::argument_decl(const SPIRFunction::Parameter &arg)
 	else if (is_runtime_size_array(type))
 	{
 		const auto *parent_type = &get<SPIRType>(type.parent_type);
-		decl = join(cv_qualifier, type_to_glsl(*parent_type, arg.id));
-		if (type_is_image)
-			decl = "spvDescriptor<" + decl + ">*";
+		// decl = join(cv_qualifier, decl);
+		auto type_name = type_to_glsl(*parent_type, arg.id);
+		if (type.basetype == SPIRType::AccelerationStructure)
+			decl = join("spvDescriptor<", type_name, ">*");
+		else if (type_is_image)
+			decl = join("spvDescriptor<", cv_qualifier, type_name, ">*");
 		else
-			decl = "spvDescriptor<" + address_space + " " + decl + "*>*";
+			decl = join("spvDescriptor<", address_space, " ", type_name, "*>*");
 		address_space = "const device";
 	}
 	else if ((type_storage == StorageClassUniform || type_storage == StorageClassStorageBuffer) && is_array(type))
@@ -14177,7 +14207,8 @@ string CompilerMSL::argument_decl(const SPIRFunction::Parameter &arg)
 			}
 		}
 	}
-	else if (!type_is_image && (!pull_model_inputs.count(var.basevariable) || type.basetype == SPIRType::Struct))
+	else if (!type_is_image && !type_is_tlas &&
+	         (!pull_model_inputs.count(var.basevariable) || type.basetype == SPIRType::Struct))
 	{
 		// If this is going to be a reference to a variable pointer, the address space
 		// for the reference has to go before the '&', but after the '*'.
@@ -14197,7 +14228,7 @@ string CompilerMSL::argument_decl(const SPIRFunction::Parameter &arg)
 		decl += to_restrict(name_id, true);
 		decl += to_expression(name_id);
 	}
-	else if (type_is_image)
+	else if (type_is_image || type_is_tlas)
 	{
 		if (is_runtime_size_array(type))
 		{
@@ -14985,7 +15016,7 @@ std::string CompilerMSL::sampler_type(const SPIRType &type, uint32_t id)
 		if (array_size == 0)
 			array_size = get_resource_array_size(id);
 
-		if (array_size == 0 && !msl_options.argument_buffers)
+		if (array_size == 0)
 		{
 			add_spv_func_and_recompile(SPVFuncImplVariableDescriptor);
 			auto &parent = get<SPIRType>(get_pointee_type(type).parent_type);
@@ -15035,7 +15066,7 @@ string CompilerMSL::image_type_glsl(const SPIRType &type, uint32_t id)
 		if (array_size == 0)
 			array_size = get_resource_array_size(id);
 
-		if (array_size == 0 && !msl_options.argument_buffers)
+		if (array_size == 0)
 		{
 			add_spv_func_and_recompile(SPVFuncImplVariableDescriptor);
 			auto &parent = get<SPIRType>(get_pointee_type(type).parent_type);

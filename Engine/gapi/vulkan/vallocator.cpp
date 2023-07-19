@@ -12,8 +12,6 @@
 #include <Tempest/Log>
 #include <thread>
 
-#include "gapi/graphicsmemutils.h"
-
 using namespace Tempest;
 using namespace Tempest::Detail;
 
@@ -455,7 +453,7 @@ bool VAllocator::commit(VkDeviceMemory dmem, std::mutex &mmapSync, VkBuffer dest
     if(vkMapMemory(dev,dmem,pageOffset,rgn.size,0,&data)!=VK_SUCCESS)
       return false;
     data = reinterpret_cast<uint8_t*>(data)+shift;
-    copyUpsample(mem,data,size,1,1);
+    std::memcpy(data, mem, size);
     vkFlushMappedMemoryRanges(dev,1,&rgn);
     vkUnmapMemory(dev,dmem);
     }

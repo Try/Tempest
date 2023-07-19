@@ -6,7 +6,6 @@
 #include "mtbuffer.h"
 
 #include "utility/compiller_hints.h"
-#include "gapi/graphicsmemutils.h"
 
 #include <Tempest/Log>
 #include <unordered_map>
