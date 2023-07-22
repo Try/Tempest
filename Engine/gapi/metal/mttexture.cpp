@@ -128,11 +128,10 @@ uint32_t MtTexture::mipCount() const {
   }
 
 void MtTexture::readPixels(Pixmap& out, TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip) {
-  Pixmap::Format  pfrm = Pixmap::toPixmapFormat(frm);
-  size_t          bpp  = Pixmap::bppForFormat(pfrm);
+  size_t bpp = Pixmap::bppForFormat(frm);
   if(bpp==0)
     throw std::runtime_error("not implemented");
-  out = Pixmap(w,h,pfrm);
+  out = Pixmap(w,h,frm);
 
   MTL::StorageMode opt = MTL::StorageModeManaged;
 #ifdef __IOS__
