@@ -231,7 +231,7 @@ struct FontElement::Impl {
       std::lock_guard<std::mutex> guard(syncMem);
       uint8_t* bitmap=getGlyphBitmapSubpixel(&info,scale,index,w,h,dx,dy);
       if(bitmap!=nullptr)
-        spr = tex->load(bitmap,uint32_t(w),uint32_t(h),Pixmap::Format::R);
+        spr = tex->load(bitmap,uint32_t(w),uint32_t(h),Pixmap::Format::R8);
       } else {
       int ix0=0,ix1=0,iy0=0,iy1=0;
       stbtt_GetGlyphBitmapBoxSubpixel(&info,index,scale,scale,0.f,0.f,&ix0,&iy0,&ix1,&iy1);

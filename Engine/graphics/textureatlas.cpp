@@ -41,6 +41,8 @@ void TextureAtlas::emplace(TextureAtlas::Allocation &dest, const void* img,
   uint32_t sh   = ph;
 
   switch(format) {
+    case Pixmap::Format::Undefined:
+      break;
     case Pixmap::Format::DXT1:
     case Pixmap::Format::DXT3:
     case Pixmap::Format::DXT5:{
@@ -99,12 +101,12 @@ void TextureAtlas::emplace(TextureAtlas::Allocation &dest, const void* img,
         }
       break;
       }
-    case Pixmap::Format::RGBA: {
+    case Pixmap::Format::RGBA8: {
       for(uint32_t iy=0;iy<sh;++iy)
         std::memcpy(data+((y+iy)*dw+dx),src+iy*sw,sw);
       break;
       }
-    case Pixmap::Format::RGB: {
+    case Pixmap::Format::RGB8: {
       for(uint32_t iy=0;iy<sh;++iy){
         auto data0=data+((y+iy)*dw+dx);
         auto src0 =src+iy*sw;
@@ -117,7 +119,7 @@ void TextureAtlas::emplace(TextureAtlas::Allocation &dest, const void* img,
         }
       break;
       }
-    case Pixmap::Format::RG: {
+    case Pixmap::Format::RG8: {
       for(uint32_t iy=0;iy<sh;++iy){
         auto data0=data+((y+iy)*dw+dx);
         auto src0 =src+iy*sw;
@@ -130,7 +132,7 @@ void TextureAtlas::emplace(TextureAtlas::Allocation &dest, const void* img,
         }
       break;
       }
-    case Pixmap::Format::R: {
+    case Pixmap::Format::R8: {
       for(uint32_t iy=0;iy<sh;++iy){
         auto data0=data+((y+iy)*dw+dx);
         auto src0 =src+iy*sw;

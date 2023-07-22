@@ -42,31 +42,31 @@ struct PixmapCodecPng::Impl {
       if(bitDepth<8)
         png_set_expand_gray_1_2_4_to_8(png_ptr);
       outBpp = 1;
-      frm    = Pixmap::Format::R;
+      frm    = Pixmap::Format::R8;
       }
     else if(colorType==PNG_COLOR_TYPE_GRAY_ALPHA) {
       //png_set_gray_to_rgb(png_ptr);
       if(bitDepth!=8 && bitDepth!=16)
         return false;
       outBpp = 2;
-      frm    = Pixmap::Format::RG;
+      frm    = Pixmap::Format::RG8;
       }
     else if(colorType==PNG_COLOR_TYPE_RGB) {
       if(bitDepth!=8 && bitDepth!=16)
         return false;
       outBpp = 3;
-      frm    = Pixmap::Format::RGB;
+      frm    = Pixmap::Format::RGB8;
       }
     else if(colorType==PNG_COLOR_TYPE_RGB_ALPHA) {
       if(bitDepth!=8 && bitDepth!=16)
         return false;
       outBpp = 4;
-      frm    = Pixmap::Format::RGBA;
+      frm    = Pixmap::Format::RGBA8;
       }
     else if(colorType==PNG_COLOR_TYPE_PALETTE) {
       png_set_palette_to_rgb(png_ptr);
       outBpp = 3;
-      frm    = Pixmap::Format::RGB;
+      frm    = Pixmap::Format::RGB8;
       }
     else {
       return false;
@@ -75,7 +75,7 @@ struct PixmapCodecPng::Impl {
     if(bitDepth==16) {
       png_set_swap(png_ptr);
       outBpp*=2;
-      frm = Pixmap::Format(uint8_t(Pixmap::Format::R16)+uint8_t(frm)-uint8_t(Pixmap::Format::R));
+      frm = Pixmap::Format(uint8_t(Pixmap::Format::R16)+uint8_t(frm)-uint8_t(Pixmap::Format::R8));
       }
 
     out = reinterpret_cast<uint8_t*>(malloc(outW*outH*outBpp));
@@ -172,19 +172,19 @@ bool PixmapCodecPng::save(ODevice& f, const char* ext, const uint8_t* data,
   uint32_t bitDepth  = 0;
   int      colorType = 0;
   switch(frm) {
-    case Pixmap::Format::R:{
+    case Pixmap::Format::R8:{
       bpp       = 1;
       bitDepth  = 8;
       colorType = PNG_COLOR_TYPE_GRAY;
       break;
       }
-    case Pixmap::Format::RG:{
+    case Pixmap::Format::RG8:{
       bpp       = 2;
       bitDepth  = 8;
       colorType = PNG_COLOR_TYPE_GRAY_ALPHA;
       break;
       }
-    case Pixmap::Format::RGB:{
+    case Pixmap::Format::RGB8:{
       bpp       = 3;
       bitDepth  = 8;
       colorType = PNG_COLOR_TYPE_RGB;
@@ -202,7 +202,7 @@ bool PixmapCodecPng::save(ODevice& f, const char* ext, const uint8_t* data,
       colorType = PNG_COLOR_TYPE_GRAY_ALPHA;
       break;
       }
-    case Pixmap::Format::RGBA:{
+    case Pixmap::Format::RGBA8:{
       bpp      = 4;
       bitDepth = 8;
       colorType = PNG_COLOR_TYPE_RGBA;

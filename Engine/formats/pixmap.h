@@ -13,26 +13,28 @@ class ODevice;
 class Pixmap final {
   public:
     enum class Format : uint8_t {
-      R       = 0,
-      RG      = 1,
-      RGB     = 2,
-      RGBA    = 3,
-      R16     = 4,
-      RG16    = 5,
-      RGB16   = 6,
-      RGBA16  = 7,
-      R32F    = 8,
-      RG32F   = 9,
-      RGB32F  = 10,
-      RGBA32F = 11,
-      DXT1    = 12,
-      DXT3    = 13,
-      DXT5    = 14,
+      Undefined,
+      R8,
+      RG8,
+      RGB8,
+      RGBA8,
+      R16,
+      RG16,
+      RGB16,
+      RGBA16,
+      R32F,
+      RG32F,
+      RGB32F,
+      RGBA32F,
+
+      DXT1,
+      DXT3,
+      DXT5,
       };
 
     Pixmap();
-    Pixmap(const Pixmap& src,Format conv);
-    Pixmap(uint32_t w,uint32_t h,Format frm);
+    Pixmap(const Pixmap& src, Format conv);
+    Pixmap(uint32_t w, uint32_t h, Format frm);
     Pixmap(const char* path);
     Pixmap(const std::string& path);
     Pixmap(const char16_t* path);

@@ -11,8 +11,6 @@
 #include <cstring>
 #include <squish.h>
 
-#include "ddsdef.h"
-
 using namespace Tempest;
 
 PixmapCodec::Context::Context(IDevice &dev)

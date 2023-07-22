@@ -26,7 +26,7 @@ class TextureAtlas {
   private:
     struct Memory {
       Memory()=default;
-      Memory(uint32_t w,uint32_t h):cpu(w,h,Pixmap::Format::RGBA){}
+      Memory(uint32_t w,uint32_t h):cpu(w,h,Pixmap::Format::RGBA8){}
       Memory(Memory&&)=default;
 
       Memory& operator=(Memory&&)=default;

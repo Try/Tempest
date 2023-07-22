@@ -8,18 +8,19 @@ ImageValidator::Pixel ImageValidator::at(uint32_t x, uint32_t y) const {
   auto d = reinterpret_cast<const uint8_t*>(pm) + ((x+y*width)*bpp);
 
   switch(frm) {
+    case Pixmap::Format::Undefined:
     case Pixmap::Format::DXT1:
     case Pixmap::Format::DXT3:
     case Pixmap::Format::DXT5:
       assert(false);
       break;
-    case Pixmap::Format::R:
+    case Pixmap::Format::R8:
       return decode<uint8_t,1>(d);
-    case Pixmap::Format::RG:
+    case Pixmap::Format::RG8:
       return decode<uint8_t,2>(d);
-    case Pixmap::Format::RGB:
+    case Pixmap::Format::RGB8:
       return decode<uint8_t,3>(d);
-    case Pixmap::Format::RGBA:
+    case Pixmap::Format::RGBA8:
       return decode<uint8_t,4>(d);
 
     case Pixmap::Format::R16:

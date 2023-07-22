@@ -16,7 +16,7 @@ Icon::Icon(const Pixmap &pm, TextureAtlas &atl) {
   uint8_t*       d = reinterpret_cast<uint8_t*>(dst.data());
 
   switch(pm.format()) {
-    case Pixmap::Format::RGB: {
+    case Pixmap::Format::RGB8: {
       for(uint32_t r=0; r<h; ++r)
         for(uint32_t i=0; i<w; ++i){
           //0.299, 0.587, 0.114
@@ -31,7 +31,7 @@ Icon::Icon(const Pixmap &pm, TextureAtlas &atl) {
       set(ST_Disabled,atl.load(dst));
       break;
       }
-    case Pixmap::Format::RGBA: {
+    case Pixmap::Format::RGBA8: {
       for(uint32_t r=0; r<h; ++r)
         for(uint32_t i=0; i<w; ++i){
           //0.299, 0.587, 0.114

@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <cstring>
+#include <cassert>
 #include <squish.h>
 
 using namespace Tempest;
@@ -36,7 +37,7 @@ struct Pixmap::Impl {
       throw std::bad_alloc();
     dataSz = size;
 
-    if(frm==Format::RGBA && other.frm==Format::RGB) {
+    if(frm==Format::RGBA8 && other.frm==Format::RGB8) {
       // specialize a common case
       const size_t sz = size_t(w)*size_t(h);
       for(size_t i=0;i<sz;++i) {
@@ -48,10 +49,9 @@ struct Pixmap::Impl {
       }
 
     if(isCompressed(other.frm)) {
-      if(frm!=Format::RGB && frm!=Format::RGBA)
-        throw std::runtime_error("assert"); // handle outside of this function
+      assert(frm==Format::RGB8 || frm==Format::RGBA8); // rest is handled outside of this function
       static const int kfrm[] = {squish::kDxt1,squish::kDxt3,squish::kDxt5};
-      if(frm==Format::RGB)
+      if(frm==Format::RGB8)
         ddsToRgba(data,other.data,w,h,kfrm[uint8_t(other.frm)-uint8_t(Format::DXT1)],3); else
         ddsToRgba(data,other.data,w,h,kfrm[uint8_t(other.frm)-uint8_t(Format::DXT1)],4);
       return;
@@ -99,7 +99,7 @@ struct Pixmap::Impl {
 
   Impl(IDevice& f){
     uint32_t bpp = 0;
-    frm  = Pixmap::Format::RGBA;
+    frm  = Pixmap::Format::RGBA8;
     data = PixmapCodec::loadImg(f,w,h,frm,mipCnt,bpp,dataSz);
 
     if(data==nullptr && bpp==0)
@@ -121,9 +121,9 @@ struct Pixmap::Impl {
       return std::unique_ptr<Impl,Deleter>(new Impl(other)); //copy
 
     if(isCompressed(other.frm)) {
-      if(frm!=Format::RGB && frm!=Format::RGBA) {
+      if(frm!=Format::RGB8 && frm!=Format::RGBA8) {
         // cross-conversion: DDS -> RGBA -> frm
-        Impl tmp(other,Format::RGBA);
+        Impl tmp(other,Format::RGBA8);
         return std::unique_ptr<Impl,Deleter>(new Impl(tmp,frm));
         }
       }
@@ -232,7 +232,7 @@ struct Pixmap::Impl {
   uint32_t       w      = 0;
   uint32_t       h      = 0;
   size_t         dataSz = 0;
-  Pixmap::Format frm    = Pixmap::Format::RGB;
+  Pixmap::Format frm    = Pixmap::Format::RGB8;
   uint32_t       mipCnt = 1;
 
   static Impl    zero;
@@ -364,58 +364,64 @@ size_t Pixmap::bppForFormat(Format f) {
 
 size_t Pixmap::blockSizeForFormat(Pixmap::Format frm) {
   switch(frm) {
-    case Pixmap::Format::R:       return 1;
-    case Pixmap::Format::RG:      return 2;
-    case Pixmap::Format::RGB:     return 3;
-    case Pixmap::Format::RGBA:    return 4;
+    case Pixmap::Format::Undefined: return 0;
     //---
-    case Pixmap::Format::R16:     return 2;
-    case Pixmap::Format::RG16:    return 4;
-    case Pixmap::Format::RGB16:   return 6;
-    case Pixmap::Format::RGBA16:  return 8;
+    case Pixmap::Format::R8:        return 1;
+    case Pixmap::Format::RG8:       return 2;
+    case Pixmap::Format::RGB8:      return 3;
+    case Pixmap::Format::RGBA8:     return 4;
     //---
-    case Pixmap::Format::R32F:    return 4;
-    case Pixmap::Format::RG32F:   return 8;
-    case Pixmap::Format::RGB32F:  return 12;
-    case Pixmap::Format::RGBA32F: return 16;
+    case Pixmap::Format::R16:       return 2;
+    case Pixmap::Format::RG16:      return 4;
+    case Pixmap::Format::RGB16:     return 6;
+    case Pixmap::Format::RGBA16:    return 8;
     //---
-    case Pixmap::Format::DXT1:    return 8;
-    case Pixmap::Format::DXT3:    return 16;
-    case Pixmap::Format::DXT5:    return 16;
+    case Pixmap::Format::R32F:      return 4;
+    case Pixmap::Format::RG32F:     return 8;
+    case Pixmap::Format::RGB32F:    return 12;
+    case Pixmap::Format::RGBA32F:   return 16;
+    //---
+    case Pixmap::Format::DXT1:      return 8;
+    case Pixmap::Format::DXT3:      return 16;
+    case Pixmap::Format::DXT5:      return 16;
     }
   return 0;
   }
 
 uint8_t Pixmap::componentCount(Pixmap::Format frm) {
   switch(frm) {
-    case Pixmap::Format::R:       return 1;
-    case Pixmap::Format::RG:      return 2;
-    case Pixmap::Format::RGB:     return 3;
-    case Pixmap::Format::RGBA:    return 4;
+    case Pixmap::Format::Undefined: return 0;
     //---
-    case Pixmap::Format::R16:     return 1;
-    case Pixmap::Format::RG16:    return 2;
-    case Pixmap::Format::RGB16:   return 3;
-    case Pixmap::Format::RGBA16:  return 4;
+    case Pixmap::Format::R8:        return 1;
+    case Pixmap::Format::RG8:       return 2;
+    case Pixmap::Format::RGB8:      return 3;
+    case Pixmap::Format::RGBA8:     return 4;
     //---
-    case Pixmap::Format::R32F:    return 1;
-    case Pixmap::Format::RG32F:   return 2;
-    case Pixmap::Format::RGB32F:  return 3;
-    case Pixmap::Format::RGBA32F: return 4;
+    case Pixmap::Format::R16:       return 1;
+    case Pixmap::Format::RG16:      return 2;
+    case Pixmap::Format::RGB16:     return 3;
+    case Pixmap::Format::RGBA16:    return 4;
     //---
-    case Pixmap::Format::DXT1:    return 3;
-    case Pixmap::Format::DXT3:    return 4;
-    case Pixmap::Format::DXT5:    return 4;
+    case Pixmap::Format::R32F:      return 1;
+    case Pixmap::Format::RG32F:     return 2;
+    case Pixmap::Format::RGB32F:    return 3;
+    case Pixmap::Format::RGBA32F:   return 4;
+    //---
+    case Pixmap::Format::DXT1:      return 3;
+    case Pixmap::Format::DXT3:      return 4;
+    case Pixmap::Format::DXT5:      return 4;
     }
   return 0;
   }
 
 Size Pixmap::blockCount(Format frm, uint32_t w, uint32_t h) {
   switch(frm) {
-    case Pixmap::Format::R:
-    case Pixmap::Format::RG:
-    case Pixmap::Format::RGB:
-    case Pixmap::Format::RGBA:
+    case Pixmap::Format::Undefined:
+      return Size(0,0);
+    case Pixmap::Format::R8:
+    case Pixmap::Format::RG8:
+    case Pixmap::Format::RGB8:
+    case Pixmap::Format::RGBA8:
     case Pixmap::Format::R16:
     case Pixmap::Format::RG16:
     case Pixmap::Format::RGB16:
@@ -435,24 +441,25 @@ Size Pixmap::blockCount(Format frm, uint32_t w, uint32_t h) {
 
 TextureFormat Pixmap::toTextureFormat(Pixmap::Format f) {
   switch(f) {
-    case Pixmap::Format::R:       return TextureFormat::R8;
-    case Pixmap::Format::RG:      return TextureFormat::RG8;
-    case Pixmap::Format::RGB:     return TextureFormat::RGB8;
-    case Pixmap::Format::RGBA:    return TextureFormat::RGBA8;
+    case Pixmap::Format::Undefined: return TextureFormat::Undefined;
+    case Pixmap::Format::R8:        return TextureFormat::R8;
+    case Pixmap::Format::RG8:       return TextureFormat::RG8;
+    case Pixmap::Format::RGB8:      return TextureFormat::RGB8;
+    case Pixmap::Format::RGBA8:     return TextureFormat::RGBA8;
 
-    case Pixmap::Format::R16:     return TextureFormat::R16;
-    case Pixmap::Format::RG16:    return TextureFormat::RG16;
-    case Pixmap::Format::RGB16:   return TextureFormat::RGB16;
-    case Pixmap::Format::RGBA16:  return TextureFormat::RGBA16;
+    case Pixmap::Format::R16:       return TextureFormat::R16;
+    case Pixmap::Format::RG16:      return TextureFormat::RG16;
+    case Pixmap::Format::RGB16:     return TextureFormat::RGB16;
+    case Pixmap::Format::RGBA16:    return TextureFormat::RGBA16;
 
-    case Pixmap::Format::R32F:    return TextureFormat::R32F;
-    case Pixmap::Format::RG32F:   return TextureFormat::RG32F;
-    case Pixmap::Format::RGB32F:  return TextureFormat::RGB32F;
-    case Pixmap::Format::RGBA32F: return TextureFormat::RGBA32F;
+    case Pixmap::Format::R32F:      return TextureFormat::R32F;
+    case Pixmap::Format::RG32F:     return TextureFormat::RG32F;
+    case Pixmap::Format::RGB32F:    return TextureFormat::RGB32F;
+    case Pixmap::Format::RGBA32F:   return TextureFormat::RGBA32F;
 
-    case Pixmap::Format::DXT1:    return TextureFormat::DXT1;
-    case Pixmap::Format::DXT3:    return TextureFormat::DXT3;
-    case Pixmap::Format::DXT5:    return TextureFormat::DXT5;
+    case Pixmap::Format::DXT1:      return TextureFormat::DXT1;
+    case Pixmap::Format::DXT3:      return TextureFormat::DXT3;
+    case Pixmap::Format::DXT5:      return TextureFormat::DXT5;
     }
   return TextureFormat::Undefined;
   }
@@ -460,10 +467,10 @@ TextureFormat Pixmap::toTextureFormat(Pixmap::Format f) {
 Pixmap::Format Pixmap::toPixmapFormat(TextureFormat f) {
   switch(f) {
     //---
-    case TextureFormat::R8:        return Pixmap::Format::R;
-    case TextureFormat::RG8:       return Pixmap::Format::RG;
-    case TextureFormat::RGB8:      return Pixmap::Format::RGB;
-    case TextureFormat::RGBA8:     return Pixmap::Format::RGBA;
+    case TextureFormat::R8:        return Pixmap::Format::R8;
+    case TextureFormat::RG8:       return Pixmap::Format::RG8;
+    case TextureFormat::RGB8:      return Pixmap::Format::RGB8;
+    case TextureFormat::RGBA8:     return Pixmap::Format::RGBA8;
     //---
     case TextureFormat::R16:       return Pixmap::Format::R16;
     case TextureFormat::RG16:      return Pixmap::Format::RG16;

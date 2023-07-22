@@ -1055,7 +1055,7 @@ void ComponentSwizzle() {
     };
     auto vbo = device.vbo(vboData,6);
 
-    Pixmap pm(1,1,Pixmap::Format::RGBA);
+    Pixmap pm(1,1,Pixmap::Format::RGBA8);
     {
     auto p = reinterpret_cast<uint8_t*>(pm.data());
     p[0] = 255;

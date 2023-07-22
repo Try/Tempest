@@ -147,7 +147,7 @@ Texture2d Device::texture(const Pixmap &pm, const bool mips) {
     if(devProps.hasSamplerFormat(format) && (!mips || pm.mipCount()>1)){
       mipCnt = pm.mipCount();
       } else {
-      alt    = Pixmap(pm,Pixmap::Format::RGBA);
+      alt    = Pixmap(pm,Pixmap::Format::RGBA8);
       p      = &alt;
       format = TextureFormat::RGBA8;
       }
@@ -155,7 +155,7 @@ Texture2d Device::texture(const Pixmap &pm, const bool mips) {
 
   if(!devProps.hasSamplerFormat(format)) {
     if(format==TextureFormat::RGB8){
-      alt    = Pixmap(pm,Pixmap::Format::RGBA);
+      alt    = Pixmap(pm,Pixmap::Format::RGBA8);
       p      = &alt;
       format = TextureFormat::RGBA8;
       }

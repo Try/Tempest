@@ -64,7 +64,7 @@ static uint8_t* loadUnorm(stbi__context& s, uint32_t &ow, uint32_t &oh, Pixmap::
     return nullptr;
 
   if(ri.bits_per_channel==8) {
-    frm = Pixmap::Format(int(Pixmap::Format::R)+compCnt-1);
+    frm = Pixmap::Format(int(Pixmap::Format::R8)+compCnt-1);
     }
   else if(ri.bits_per_channel==16) {
     frm = Pixmap::Format(int(Pixmap::Format::R16)+compCnt-1);
@@ -161,16 +161,16 @@ uint8_t* PixmapCodecCommon::load(PixmapCodec::Context &ctx, uint32_t &ow, uint32
 
   bpp = 0;
   switch(frm) {
-    case Pixmap::Format::R:
+    case Pixmap::Format::R8:
       bpp = 1;
       break;
-    case Pixmap::Format::RG:
+    case Pixmap::Format::RG8:
       bpp = 2;
       break;
-    case Pixmap::Format::RGB:
+    case Pixmap::Format::RGB8:
       bpp = 3;
       break;
-    case Pixmap::Format::RGBA:
+    case Pixmap::Format::RGBA8:
       bpp = 4;
       break;
     case Pixmap::Format::R16:
@@ -219,10 +219,10 @@ bool PixmapCodecCommon::save(ODevice &f, const char *ext, const uint8_t* cdata,
   bool isFlt  = false;
   bool isNorm = false;
   switch(frm) {
-    case Pixmap::Format::R:
-    case Pixmap::Format::RG:
-    case Pixmap::Format::RGB:
-    case Pixmap::Format::RGBA:
+    case Pixmap::Format::R8:
+    case Pixmap::Format::RG8:
+    case Pixmap::Format::RGB8:
+    case Pixmap::Format::RGBA8:
     case Pixmap::Format::R16:
     case Pixmap::Format::RG16:
     case Pixmap::Format::RGB16:
