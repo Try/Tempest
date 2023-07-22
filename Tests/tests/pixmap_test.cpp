@@ -12,14 +12,14 @@ TEST(main,PixmapIO_0) {
   Pixmap pm("assets/pixmap_io/rgba.png");
   EXPECT_EQ(pm.w(),     256);
   EXPECT_EQ(pm.h(),     256);
-  EXPECT_EQ(pm.format(),Pixmap::Format::RGBA8);
+  EXPECT_EQ(pm.format(),TextureFormat::RGBA8);
   }
 
 TEST(main,PixmapIO_1) {
   Pixmap pm("assets/pixmap_io/rgb.jpg");
   EXPECT_EQ(pm.w(),     852);
   EXPECT_EQ(pm.h(),     480);
-  EXPECT_EQ(pm.format(),Pixmap::Format::RGB8);
+  EXPECT_EQ(pm.format(),TextureFormat::RGB8);
   }
 
 TEST(main,PixmapIO_SymetricIO) {
@@ -44,13 +44,13 @@ TEST(main,PixmapConv) {
   Pixmap pm("assets/pixmap_io/dxt5.dds");
   EXPECT_EQ(pm.w(),     512);
   EXPECT_EQ(pm.h(),     512);
-  EXPECT_EQ(pm.format(),Pixmap::Format::DXT5);
+  EXPECT_EQ(pm.format(),TextureFormat::DXT5);
 
-  Pixmap px0(pm,Pixmap::Format::RGB8);
-  EXPECT_EQ(px0.format(),Pixmap::Format::RGB8);
+  Pixmap px0(pm,TextureFormat::RGB8);
+  EXPECT_EQ(px0.format(),TextureFormat::RGB8);
   px0.save("tst-dxt5.png");
 
-  Pixmap px1(px0,Pixmap::Format::RGBA16);
-  EXPECT_EQ(px1.format(),Pixmap::Format::RGBA16);
+  Pixmap px1(px0,TextureFormat::RGBA16);
+  EXPECT_EQ(px1.format(),TextureFormat::RGBA16);
   px1.save("tst-dxt5.png");
   }

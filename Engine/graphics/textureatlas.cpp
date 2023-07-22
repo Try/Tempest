@@ -18,7 +18,7 @@ Sprite TextureAtlas::load(const Pixmap &pm) {
   return load(pm.data(),pm.w(),pm.h(),pm.format());
   }
 
-Sprite TextureAtlas::load(const void *data, uint32_t w, uint32_t h, Pixmap::Format format) {
+Sprite TextureAtlas::load(const void *data, uint32_t w, uint32_t h, TextureFormat format) {
   auto a = alloc.alloc(w,h);
   auto p = a.pos();
   emplace(a,data,w,h,format,uint32_t(p.x),uint32_t(p.y));
@@ -27,7 +27,7 @@ Sprite TextureAtlas::load(const void *data, uint32_t w, uint32_t h, Pixmap::Form
   }
 
 void TextureAtlas::emplace(TextureAtlas::Allocation &dest, const void* img,
-                           uint32_t pw, uint32_t ph, Pixmap::Format format,
+                           uint32_t pw, uint32_t ph, TextureFormat format,
                            uint32_t x, uint32_t y) {
   dest.memory().changed=true;
   Pixmap&  cpu  = dest.memory().cpu;
@@ -41,15 +41,15 @@ void TextureAtlas::emplace(TextureAtlas::Allocation &dest, const void* img,
   uint32_t sh   = ph;
 
   switch(format) {
-    case Pixmap::Format::Undefined:
+    case TextureFormat::Undefined:
       break;
-    case Pixmap::Format::DXT1:
-    case Pixmap::Format::DXT3:
-    case Pixmap::Format::DXT5:{
+    case TextureFormat::DXT1:
+    case TextureFormat::DXT3:
+    case TextureFormat::DXT5:{
       Log::d("compressed sprites are not implemented");
       break;
       }
-    case Pixmap::Format::RGBA16: {
+    case TextureFormat::RGBA16: {
       for(uint32_t iy=0;iy<sh;++iy){
         auto data0=data+((y+iy)*dw+dx);
         auto src0 =reinterpret_cast<const uint16_t*>(src+iy*sw);
@@ -62,7 +62,7 @@ void TextureAtlas::emplace(TextureAtlas::Allocation &dest, const void* img,
         }
       break;
       }
-    case Pixmap::Format::RGB16: {
+    case TextureFormat::RGB16: {
       for(uint32_t iy=0;iy<sh;++iy){
         auto data0=data+((y+iy)*dw+dx);
         auto src0 =reinterpret_cast<const uint16_t*>(src+iy*sw);
@@ -75,7 +75,7 @@ void TextureAtlas::emplace(TextureAtlas::Allocation &dest, const void* img,
         }
       break;
       }
-    case Pixmap::Format::RG16: {
+    case TextureFormat::RG16: {
       for(uint32_t iy=0;iy<sh;++iy){
         auto data0=data+((y+iy)*dw+dx);
         auto src0 =reinterpret_cast<const uint16_t*>(src+iy*sw);
@@ -88,7 +88,7 @@ void TextureAtlas::emplace(TextureAtlas::Allocation &dest, const void* img,
         }
       break;
       }
-    case Pixmap::Format::R16: {
+    case TextureFormat::R16: {
       for(uint32_t iy=0;iy<sh;++iy){
         auto data0=data+((y+iy)*dw+dx);
         auto src0 =reinterpret_cast<const uint16_t*>(src+iy*sw);
@@ -101,12 +101,12 @@ void TextureAtlas::emplace(TextureAtlas::Allocation &dest, const void* img,
         }
       break;
       }
-    case Pixmap::Format::RGBA8: {
+    case TextureFormat::RGBA8: {
       for(uint32_t iy=0;iy<sh;++iy)
         std::memcpy(data+((y+iy)*dw+dx),src+iy*sw,sw);
       break;
       }
-    case Pixmap::Format::RGB8: {
+    case TextureFormat::RGB8: {
       for(uint32_t iy=0;iy<sh;++iy){
         auto data0=data+((y+iy)*dw+dx);
         auto src0 =src+iy*sw;
@@ -119,7 +119,7 @@ void TextureAtlas::emplace(TextureAtlas::Allocation &dest, const void* img,
         }
       break;
       }
-    case Pixmap::Format::RG8: {
+    case TextureFormat::RG8: {
       for(uint32_t iy=0;iy<sh;++iy){
         auto data0=data+((y+iy)*dw+dx);
         auto src0 =src+iy*sw;
@@ -132,7 +132,7 @@ void TextureAtlas::emplace(TextureAtlas::Allocation &dest, const void* img,
         }
       break;
       }
-    case Pixmap::Format::R8: {
+    case TextureFormat::R8: {
       for(uint32_t iy=0;iy<sh;++iy){
         auto data0=data+((y+iy)*dw+dx);
         auto src0 =src+iy*sw;

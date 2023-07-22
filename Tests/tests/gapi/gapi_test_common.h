@@ -174,8 +174,8 @@ void SsboCopy() {
     float   maxIType = float(iType(-1));
     auto    src      = device.attachment(frm,4,4);
 
-    auto bpp  = Pixmap::bppForFormat  (Pixmap::toPixmapFormat(frm));
-    auto ccnt = Pixmap::componentCount(Pixmap::toPixmapFormat(frm));
+    auto bpp  = Pixmap::bppForFormat  (frm);
+    auto ccnt = Pixmap::componentCount(frm);
     auto dst  = device.ssbo(nullptr, src.w()*src.h()*bpp);
 
     auto cmd = device.commandBuffer();
@@ -963,7 +963,7 @@ void S3TC(const char* /*outImage*/) {
     EXPECT_EQ(tex.format(),TextureFormat::DXT5);
 
     auto dst = device.readPixels(tex);
-    EXPECT_EQ(dst.format(),Pixmap::Format::DXT5);
+    EXPECT_EQ(dst.format(),TextureFormat::DXT5);
 
     // EXPECT_EQ(dst.dataSize(),src.dataSize());
     EXPECT_TRUE(std::memcmp(dst.data(),src.data(),dst.dataSize())==0);
@@ -1055,7 +1055,7 @@ void ComponentSwizzle() {
     };
     auto vbo = device.vbo(vboData,6);
 
-    Pixmap pm(1,1,Pixmap::Format::RGBA8);
+    Pixmap pm(1,1,TextureFormat::RGBA8);
     {
     auto p = reinterpret_cast<uint8_t*>(pm.data());
     p[0] = 255;

@@ -21,7 +21,7 @@ struct PixmapCodecPng::Impl {
     }
 
   bool readPng(png_structp png_ptr, png_infop info_ptr,
-               Pixmap::Format& frm, uint32_t& outW, uint32_t& outH, uint32_t& outBpp) {
+               TextureFormat& frm, uint32_t& outW, uint32_t& outH, uint32_t& outBpp) {
     if(setjmp(png_jmpbuf(png_ptr))) {
       // png exception
       return false;
@@ -42,31 +42,31 @@ struct PixmapCodecPng::Impl {
       if(bitDepth<8)
         png_set_expand_gray_1_2_4_to_8(png_ptr);
       outBpp = 1;
-      frm    = Pixmap::Format::R8;
+      frm    = TextureFormat::R8;
       }
     else if(colorType==PNG_COLOR_TYPE_GRAY_ALPHA) {
       //png_set_gray_to_rgb(png_ptr);
       if(bitDepth!=8 && bitDepth!=16)
         return false;
       outBpp = 2;
-      frm    = Pixmap::Format::RG8;
+      frm    = TextureFormat::RG8;
       }
     else if(colorType==PNG_COLOR_TYPE_RGB) {
       if(bitDepth!=8 && bitDepth!=16)
         return false;
       outBpp = 3;
-      frm    = Pixmap::Format::RGB8;
+      frm    = TextureFormat::RGB8;
       }
     else if(colorType==PNG_COLOR_TYPE_RGB_ALPHA) {
       if(bitDepth!=8 && bitDepth!=16)
         return false;
       outBpp = 4;
-      frm    = Pixmap::Format::RGBA8;
+      frm    = TextureFormat::RGBA8;
       }
     else if(colorType==PNG_COLOR_TYPE_PALETTE) {
       png_set_palette_to_rgb(png_ptr);
       outBpp = 3;
-      frm    = Pixmap::Format::RGB8;
+      frm    = TextureFormat::RGB8;
       }
     else {
       return false;
@@ -75,7 +75,7 @@ struct PixmapCodecPng::Impl {
     if(bitDepth==16) {
       png_set_swap(png_ptr);
       outBpp*=2;
-      frm = Pixmap::Format(uint8_t(Pixmap::Format::R16)+uint8_t(frm)-uint8_t(Pixmap::Format::R8));
+      frm = TextureFormat(uint8_t(TextureFormat::R16)+uint8_t(frm)-uint8_t(TextureFormat::R8));
       }
 
     out = reinterpret_cast<uint8_t*>(malloc(outW*outH*outBpp));
@@ -128,7 +128,7 @@ bool PixmapCodecPng::testFormat(const PixmapCodec::Context& c) const {
   }
 
 uint8_t* PixmapCodecPng::load(PixmapCodec::Context& c, uint32_t& w, uint32_t& h,
-                              Pixmap::Format& frm, uint32_t& mipCnt, size_t& dataSz, uint32_t& bpp) const {
+                              TextureFormat& frm, uint32_t& mipCnt, size_t& dataSz, uint32_t& bpp) const {
   auto& f = c.device;
   png_byte head[8];
   if(f.read(head,8)!=8 || png_sig_cmp(head, 0, 8)!=0)
@@ -164,7 +164,7 @@ uint8_t* PixmapCodecPng::load(PixmapCodec::Context& c, uint32_t& w, uint32_t& h,
   }
 
 bool PixmapCodecPng::save(ODevice& f, const char* ext, const uint8_t* data,
-                          size_t /*dataSz*/, uint32_t w, uint32_t h, Pixmap::Format frm) const {
+                          size_t /*dataSz*/, uint32_t w, uint32_t h, TextureFormat frm) const {
   if(ext!=nullptr && std::strcmp("png",ext)!=0)
     return false;
 
@@ -172,49 +172,49 @@ bool PixmapCodecPng::save(ODevice& f, const char* ext, const uint8_t* data,
   uint32_t bitDepth  = 0;
   int      colorType = 0;
   switch(frm) {
-    case Pixmap::Format::R8:{
+    case TextureFormat::R8:{
       bpp       = 1;
       bitDepth  = 8;
       colorType = PNG_COLOR_TYPE_GRAY;
       break;
       }
-    case Pixmap::Format::RG8:{
+    case TextureFormat::RG8:{
       bpp       = 2;
       bitDepth  = 8;
       colorType = PNG_COLOR_TYPE_GRAY_ALPHA;
       break;
       }
-    case Pixmap::Format::RGB8:{
+    case TextureFormat::RGB8:{
       bpp       = 3;
       bitDepth  = 8;
       colorType = PNG_COLOR_TYPE_RGB;
       break;
       }
-    case Pixmap::Format::R16:{
+    case TextureFormat::R16:{
       bpp       = 2;
       bitDepth  = 16;
       colorType = PNG_COLOR_TYPE_GRAY;
       break;
       }
-    case Pixmap::Format::RG16:{
+    case TextureFormat::RG16:{
       bpp       = 4;
       bitDepth  = 16;
       colorType = PNG_COLOR_TYPE_GRAY_ALPHA;
       break;
       }
-    case Pixmap::Format::RGBA8:{
+    case TextureFormat::RGBA8:{
       bpp      = 4;
       bitDepth = 8;
       colorType = PNG_COLOR_TYPE_RGBA;
       break;
       }
-    case Pixmap::Format::RGB16:{
+    case TextureFormat::RGB16:{
       bpp      = 6;
       bitDepth = 16;
       colorType = PNG_COLOR_TYPE_RGB;
       break;
       }
-    case Pixmap::Format::RGBA16:{
+    case TextureFormat::RGBA16:{
       bpp      = 8;
       bitDepth = 16;
       colorType = PNG_COLOR_TYPE_RGBA;

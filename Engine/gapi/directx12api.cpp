@@ -275,14 +275,13 @@ AbstractGraphicsApi::PTexture DirectX12Api::createCompressedTexture(Device* d, c
   Detail::DxDevice& dx     = *reinterpret_cast<Detail::DxDevice*>(d);
 
   DXGI_FORMAT    format    = Detail::nativeFormat(frm);
-  Pixmap::Format pfrm      = Pixmap::toPixmapFormat(frm);
-  UINT           blockSize = UINT(Pixmap::blockSizeForFormat(pfrm));
+  UINT           blockSize = UINT(Pixmap::blockSizeForFormat(frm));
 
   UINT   stageBufferSize = 0;
   uint32_t w = p.w(), h = p.h();
 
   for(uint32_t i=0; i<mipCnt; i++) {
-    Size bsz   = Pixmap::blockCount(pfrm,w,h);
+    Size bsz   = Pixmap::blockCount(frm,w,h);
     UINT pitch = alignTo(bsz.w*blockSize,D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
 
     stageBufferSize += pitch*bsz.h;
@@ -377,9 +376,8 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t,
   Detail::DxDevice&  dx = *reinterpret_cast<Detail::DxDevice*>(d);
   Detail::DxTexture& tx = *reinterpret_cast<Detail::DxTexture*>(t.handler);
 
-  Pixmap::Format   pfrm   = Pixmap::toPixmapFormat(frm);
-  size_t           bpb    = Pixmap::blockSizeForFormat(pfrm);
-  Size             bsz    = Pixmap::blockCount(pfrm,w,h);
+  size_t           bpb    = Pixmap::blockSizeForFormat(frm);
+  Size             bsz    = Pixmap::blockCount(frm,w,h);
 
   uint32_t         row    = bsz.w*uint32_t(bpb);
   const uint32_t   pith   = ((row+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
@@ -396,7 +394,7 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t,
   cmd->end();
   dx.dataMgr().submitAndWait(std::move(cmd));
 
-  out = Pixmap(w,h,pfrm);
+  out = Pixmap(w,h,frm);
   for(int32_t i=0; i<bsz.h; ++i)
     stage.read(reinterpret_cast<uint8_t*>(out.data())+i*bsz.w*bpb, i*pith, bsz.w*bpb);
   }

@@ -36,7 +36,7 @@ struct PixmapCodec::Impl {
     codec.emplace_back(std::make_unique<PixmapCodecCommon>());
     }
 
-  uint8_t*  load(IDevice& f, uint32_t& w, uint32_t& h, Pixmap::Format& frm, uint32_t& mipCnt, uint32_t& bpp, size_t& dataSz) {
+  uint8_t*  load(IDevice& f, uint32_t& w, uint32_t& h, TextureFormat& frm, uint32_t& mipCnt, uint32_t& bpp, size_t& dataSz) {
     Context ctx(f);
 
     for(auto& i:codec)
@@ -49,7 +49,7 @@ struct PixmapCodec::Impl {
     throw std::system_error(Tempest::SystemErrc::UnableToLoadAsset);
     }
 
-  void implSave(ODevice &f, char *ext, const uint8_t *data, size_t dataSz, uint32_t w, uint32_t h, Pixmap::Format frm) {
+  void implSave(ODevice &f, char *ext, const uint8_t *data, size_t dataSz, uint32_t w, uint32_t h, TextureFormat frm) {
     if(ext!=nullptr) {
       for(size_t i=0;ext[i];++i)
         if('A'<=ext[i] && ext[i]<='Z')
@@ -69,7 +69,7 @@ struct PixmapCodec::Impl {
     throw std::system_error(Tempest::SystemErrc::UnableToSaveAsset);
     }
 
-  void save(ODevice &f, const char *ext, const uint8_t *data, size_t dataSz, uint32_t w, uint32_t h, Pixmap::Format frm) {
+  void save(ODevice &f, const char *ext, const uint8_t *data, size_t dataSz, uint32_t w, uint32_t h, TextureFormat frm) {
     if(ext==nullptr) {
       implSave(f,nullptr,data,dataSz,w,h,frm);
       return;
@@ -95,11 +95,11 @@ PixmapCodec::Impl &PixmapCodec::instance() {
   return inst;
   }
 
-uint8_t* PixmapCodec::loadImg(IDevice &f, uint32_t &w, uint32_t &h, Pixmap::Format &frm, uint32_t &mipCnt, uint32_t &bpp, size_t &dataSz) {
+uint8_t* PixmapCodec::loadImg(IDevice &f, uint32_t &w, uint32_t &h, TextureFormat& frm, uint32_t &mipCnt, uint32_t &bpp, size_t &dataSz) {
   return instance().load(f,w,h,frm,mipCnt,bpp,dataSz);
   }
 
-void PixmapCodec::saveImg(ODevice &f, const char *ext, const uint8_t *data, size_t dataSz, uint32_t w, uint32_t h, Pixmap::Format frm) {
+void PixmapCodec::saveImg(ODevice &f, const char *ext, const uint8_t *data, size_t dataSz, uint32_t w, uint32_t h, TextureFormat frm) {
   instance().save(f,ext,data,dataSz,w,h,frm);
   }
 

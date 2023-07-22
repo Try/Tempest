@@ -135,7 +135,7 @@ ZBuffer Device::zbuffer(TextureFormat frm, const uint32_t w, const uint32_t h) {
   }
 
 Texture2d Device::texture(const Pixmap &pm, const bool mips) {
-  TextureFormat format = Pixmap::toTextureFormat(pm.format());
+  TextureFormat format = pm.format();
   uint32_t      mipCnt = mips ? mipCount(pm.w(),pm.h()) : 1;
   const Pixmap* p=&pm;
   Pixmap        alt;
@@ -147,7 +147,7 @@ Texture2d Device::texture(const Pixmap &pm, const bool mips) {
     if(devProps.hasSamplerFormat(format) && (!mips || pm.mipCount()>1)){
       mipCnt = pm.mipCount();
       } else {
-      alt    = Pixmap(pm,Pixmap::Format::RGBA8);
+      alt    = Pixmap(pm,TextureFormat::RGBA8);
       p      = &alt;
       format = TextureFormat::RGBA8;
       }
@@ -155,17 +155,17 @@ Texture2d Device::texture(const Pixmap &pm, const bool mips) {
 
   if(!devProps.hasSamplerFormat(format)) {
     if(format==TextureFormat::RGB8){
-      alt    = Pixmap(pm,Pixmap::Format::RGBA8);
+      alt    = Pixmap(pm,TextureFormat::RGBA8);
       p      = &alt;
       format = TextureFormat::RGBA8;
       }
     else if(format==TextureFormat::RGB16){
-      alt    = Pixmap(pm,Pixmap::Format::RGBA16);
+      alt    = Pixmap(pm,TextureFormat::RGBA16);
       p      = &alt;
       format = TextureFormat::RGBA16;
       }
     else if(format==TextureFormat::RGB32F){
-      alt    = Pixmap(pm,Pixmap::Format::RGBA32F);
+      alt    = Pixmap(pm,TextureFormat::RGBA32F);
       p      = &alt;
       format = TextureFormat::RGBA32F;
       }

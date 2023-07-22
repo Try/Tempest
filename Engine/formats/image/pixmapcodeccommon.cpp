@@ -55,7 +55,7 @@ static void stbi__start_file(stbi__context *s, StbContext *f) {
   stbi__start_callbacks(s,&stbi__stdio_callbacks,reinterpret_cast<void*>(f));
   }
 
-static uint8_t* loadUnorm(stbi__context& s, uint32_t &ow, uint32_t &oh, Pixmap::Format &frm) {
+static uint8_t* loadUnorm(stbi__context& s, uint32_t &ow, uint32_t &oh, TextureFormat &frm) {
   int w=0,h=0,compCnt=0;
   stbi__result_info ri;
 
@@ -64,10 +64,10 @@ static uint8_t* loadUnorm(stbi__context& s, uint32_t &ow, uint32_t &oh, Pixmap::
     return nullptr;
 
   if(ri.bits_per_channel==8) {
-    frm = Pixmap::Format(int(Pixmap::Format::R8)+compCnt-1);
+    frm = TextureFormat(int(TextureFormat::R8)+compCnt-1);
     }
   else if(ri.bits_per_channel==16) {
-    frm = Pixmap::Format(int(Pixmap::Format::R16)+compCnt-1);
+    frm = TextureFormat(int(TextureFormat::R16)+compCnt-1);
     }
   else {
     std::free(result);
@@ -79,7 +79,7 @@ static uint8_t* loadUnorm(stbi__context& s, uint32_t &ow, uint32_t &oh, Pixmap::
   return result;
   }
 
-static uint8_t* loadFloat(stbi__context& s, uint32_t &ow, uint32_t &oh, Pixmap::Format &frm) {
+static uint8_t* loadFloat(stbi__context& s, uint32_t &ow, uint32_t &oh, TextureFormat &frm) {
   int w=0, h=0, compCnt=0;
   float* result = stbi__loadf_main(&s, &w, &h, &compCnt, STBI_default);
   if(result==nullptr)
@@ -88,16 +88,16 @@ static uint8_t* loadFloat(stbi__context& s, uint32_t &ow, uint32_t &oh, Pixmap::
   oh  = uint32_t(h);
   switch(compCnt) {
     case 1:
-      frm = Pixmap::Format::R32F;
+      frm = TextureFormat::R32F;
       break;
     case 2:
-      frm = Pixmap::Format::RG32F;
+      frm = TextureFormat::RG32F;
       break;
     case 3:
-      frm = Pixmap::Format::RGB32F;
+      frm = TextureFormat::RGB32F;
       break;
     case 4:
-      frm = Pixmap::Format::RGBA32F;
+      frm = TextureFormat::RGBA32F;
       break;
     default:
       std::free(result);
@@ -141,7 +141,7 @@ bool PixmapCodecCommon::testFormat(const Tempest::PixmapCodec::Context &ctx) con
   }
 
 uint8_t* PixmapCodecCommon::load(PixmapCodec::Context &ctx, uint32_t &ow, uint32_t &oh,
-                                 Pixmap::Format &frm, uint32_t &mipCnt, size_t &dataSz, uint32_t &bpp) const {
+                                 TextureFormat& frm, uint32_t &mipCnt, size_t &dataSz, uint32_t &bpp) const {
   StbContext f = {ctx.device,false};
   stbi__context s;
   stbi__start_file(&s,&f);
@@ -161,45 +161,45 @@ uint8_t* PixmapCodecCommon::load(PixmapCodec::Context &ctx, uint32_t &ow, uint32
 
   bpp = 0;
   switch(frm) {
-    case Pixmap::Format::R8:
+    case TextureFormat::R8:
       bpp = 1;
       break;
-    case Pixmap::Format::RG8:
+    case TextureFormat::RG8:
       bpp = 2;
       break;
-    case Pixmap::Format::RGB8:
+    case TextureFormat::RGB8:
       bpp = 3;
       break;
-    case Pixmap::Format::RGBA8:
+    case TextureFormat::RGBA8:
       bpp = 4;
       break;
-    case Pixmap::Format::R16:
+    case TextureFormat::R16:
       bpp = 2;
       break;
-    case Pixmap::Format::RG16:
+    case TextureFormat::RG16:
       bpp = 4;
       break;
-    case Pixmap::Format::RGB16:
+    case TextureFormat::RGB16:
       bpp = 6;
       break;
-    case Pixmap::Format::RGBA16:
+    case TextureFormat::RGBA16:
       bpp = 8;
       break;
-    case Pixmap::Format::R32F:
+    case TextureFormat::R32F:
       bpp = sizeof(float);
       break;
-    case Pixmap::Format::RG32F:
+    case TextureFormat::RG32F:
       bpp = 2*sizeof(float);
       break;
-    case Pixmap::Format::RGB32F:
+    case TextureFormat::RGB32F:
       bpp = 3*sizeof(float);
       break;
-    case Pixmap::Format::RGBA32F:
+    case TextureFormat::RGBA32F:
       bpp = 4*sizeof(float);
       break;
-    case Pixmap::Format::DXT1:
-    case Pixmap::Format::DXT3:
-    case Pixmap::Format::DXT5:
+    case TextureFormat::DXT1:
+    case TextureFormat::DXT3:
+    case TextureFormat::DXT5:
       // not supported by common codec
       throw std::system_error(Tempest::SystemErrc::UnableToLoadAsset);
     }
@@ -209,7 +209,7 @@ uint8_t* PixmapCodecCommon::load(PixmapCodec::Context &ctx, uint32_t &ow, uint32
   }
 
 bool PixmapCodecCommon::save(ODevice &f, const char *ext, const uint8_t* cdata,
-                             size_t dataSz, uint32_t w, uint32_t h, Pixmap::Format frm) const {
+                             size_t dataSz, uint32_t w, uint32_t h, TextureFormat frm) const {
   (void)dataSz;
 
   int cmp = int(Pixmap::componentCount(frm));
@@ -219,25 +219,30 @@ bool PixmapCodecCommon::save(ODevice &f, const char *ext, const uint8_t* cdata,
   bool isFlt  = false;
   bool isNorm = false;
   switch(frm) {
-    case Pixmap::Format::R8:
-    case Pixmap::Format::RG8:
-    case Pixmap::Format::RGB8:
-    case Pixmap::Format::RGBA8:
-    case Pixmap::Format::R16:
-    case Pixmap::Format::RG16:
-    case Pixmap::Format::RGB16:
-    case Pixmap::Format::RGBA16:
+    case TextureFormat::R8:
+    case TextureFormat::RG8:
+    case TextureFormat::RGB8:
+    case TextureFormat::RGBA8:
+    case TextureFormat::R16:
+    case TextureFormat::RG16:
+    case TextureFormat::RGB16:
+    case TextureFormat::RGBA16:
       isNorm = true;
       break;
-    case Pixmap::Format::R32F:
-    case Pixmap::Format::RG32F:
-    case Pixmap::Format::RGB32F:
-    case Pixmap::Format::RGBA32F:
+    case TextureFormat::R32F:
+    case TextureFormat::RG32F:
+    case TextureFormat::RGB32F:
+    case TextureFormat::RGBA32F:
       isFlt = true;
       break;
-    case Pixmap::Format::DXT1:
-    case Pixmap::Format::DXT3:
-    case Pixmap::Format::DXT5:
+    case TextureFormat::R32U:
+    case TextureFormat::RG32U:
+    case TextureFormat::RGB32U:
+    case TextureFormat::RGBA32U:
+      break;
+    case TextureFormat::DXT1:
+    case TextureFormat::DXT3:
+    case TextureFormat::DXT5:
       break;
     }
 

@@ -18,7 +18,7 @@ bool PixmapCodecDDS::testFormat(const PixmapCodec::Context &c) const {
   }
 
 uint8_t* PixmapCodecDDS::load(PixmapCodec::Context &c, uint32_t &ow, uint32_t &oh,
-                              Pixmap::Format& frm, uint32_t& mipCnt, size_t& dataSz, uint32_t &bpp) const {
+                              TextureFormat& frm, uint32_t& mipCnt, size_t& dataSz, uint32_t &bpp) const {
   using namespace Tempest::Detail;
 
   auto& f = c.device;
@@ -37,19 +37,19 @@ uint8_t* PixmapCodecDDS::load(PixmapCodec::Context &c, uint32_t &ow, uint32_t &o
     case FOURCC_DXT1:
       bpp          = 3;
       compressType = squish::kDxt1;
-      frm          = Pixmap::Format::DXT1;
+      frm          = TextureFormat::DXT1;
       break;
 
     case FOURCC_DXT3:
       bpp          = 4;
       compressType = squish::kDxt3;
-      frm          = Pixmap::Format::DXT3;
+      frm          = TextureFormat::DXT3;
       break;
 
     case FOURCC_DXT5:
       bpp          = 4;
       compressType = squish::kDxt5;
-      frm          = Pixmap::Format::DXT5;
+      frm          = TextureFormat::DXT5;
       break;
 
     default:
@@ -84,6 +84,6 @@ uint8_t* PixmapCodecDDS::load(PixmapCodec::Context &c, uint32_t &ow, uint32_t &o
   }
 
 bool PixmapCodecDDS::save(ODevice &, const char* /*ext*/, const uint8_t *data, size_t dataSz,
-                          uint32_t w, uint32_t h, Pixmap::Format frm) const {
+                          uint32_t w, uint32_t h, TextureFormat frm) const {
   return false;
   }

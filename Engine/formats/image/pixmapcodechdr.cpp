@@ -29,7 +29,7 @@ bool PixmapCodecHDR::testFormat(const PixmapCodec::Context &c) const {
   }
 
 uint8_t* PixmapCodecHDR::load(PixmapCodec::Context &c, uint32_t &ow, uint32_t &oh,
-                              Pixmap::Format& frm, uint32_t& mipCnt, size_t& dataSz, uint32_t &bpp) const {
+                              TextureFormat& frm, uint32_t& mipCnt, size_t& dataSz, uint32_t &bpp) const {
   char buf[256] = {};
   if(!readToken(c.device,buf,256))
     return nullptr;
@@ -66,7 +66,7 @@ uint8_t* PixmapCodecHDR::load(PixmapCodec::Context &c, uint32_t &ow, uint32_t &o
     return nullptr;
     }
 
-  frm    = Pixmap::Format::RGB32F;
+  frm    = TextureFormat::RGB32F;
   ow     = width;
   oh     = height;
   mipCnt = 1;
@@ -74,7 +74,7 @@ uint8_t* PixmapCodecHDR::load(PixmapCodec::Context &c, uint32_t &ow, uint32_t &o
   }
 
 bool PixmapCodecHDR::save(ODevice &, const char* /*ext*/, const uint8_t*, size_t,
-                          uint32_t, uint32_t, Pixmap::Format) const {
+                          uint32_t, uint32_t, TextureFormat) const {
   return false;
   }
 

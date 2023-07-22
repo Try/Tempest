@@ -132,7 +132,6 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
 
   const uint32_t   size   = uint32_t(p.dataSize());
   VkFormat         format = Detail::nativeFormat(frm);
-  Pixmap::Format   pfrm   = Pixmap::toPixmapFormat(frm);
 
   Detail::VBuffer  stage  = dx.allocator.alloc(p.data(),size,MemUsage::TransferSrc,BufferHeap::Upload);
   Detail::VTexture buf    = dx.allocator.alloc(p,mipCnt,format);
@@ -147,14 +146,14 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
 
   if(isCompressedFormat(frm)) {
     cmd->barrier(*pbuf.handler, ResourceAccess::None, ResourceAccess::TransferDst, uint32_t(-1));
-    size_t blockSize  = Pixmap::blockSizeForFormat(pfrm);
+    size_t blockSize  = Pixmap::blockSizeForFormat(frm);
     size_t bufferSize = 0;
 
     uint32_t w = uint32_t(p.w()), h = uint32_t(p.h());
     for(uint32_t i=0; i<mipCnt; i++){
       cmd->copy(*pbuf.handler,w,h,i,*pstage.handler,bufferSize);
 
-      Size bsz   = Pixmap::blockCount(pfrm,w,h);
+      Size bsz   = Pixmap::blockCount(frm,w,h);
       bufferSize += bsz.w*bsz.h*blockSize;
       w = std::max<uint32_t>(1,w/2);
       h = std::max<uint32_t>(1,h/2);
@@ -238,9 +237,8 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
   auto&           dx     = *reinterpret_cast<VDevice*>(d);
   auto&           tx     = *reinterpret_cast<VTexture*>(t.handler);
 
-  Pixmap::Format  pfrm   = Pixmap::toPixmapFormat(frm);
-  size_t          bpb    = Pixmap::blockSizeForFormat(pfrm);
-  Size            bsz    = Pixmap::blockCount(pfrm,w,h);
+  size_t          bpb    = Pixmap::blockSizeForFormat(frm);
+  Size            bsz    = Pixmap::blockCount(frm,w,h);
 
   const size_t    size   = bsz.w*bsz.h*bpb;
   Detail::VBuffer stage  = dx.allocator.alloc(nullptr, size, MemUsage::TransferDst, BufferHeap::Readback);
@@ -265,7 +263,7 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
   dx.dataMgr().waitFor(&tx);
   dx.dataMgr().submitAndWait(std::move(cmd));
 
-  out = Pixmap(w,h,pfrm);
+  out = Pixmap(w,h,frm);
   stage.read(out.data(),0,size);
   }
 

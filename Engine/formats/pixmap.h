@@ -12,29 +12,9 @@ class ODevice;
 
 class Pixmap final {
   public:
-    enum class Format : uint8_t {
-      Undefined,
-      R8,
-      RG8,
-      RGB8,
-      RGBA8,
-      R16,
-      RG16,
-      RGB16,
-      RGBA16,
-      R32F,
-      RG32F,
-      RGB32F,
-      RGBA32F,
-
-      DXT1,
-      DXT3,
-      DXT5,
-      };
-
     Pixmap();
-    Pixmap(const Pixmap& src, Format conv);
-    Pixmap(uint32_t w, uint32_t h, Format frm);
+    Pixmap(const Pixmap& src, TextureFormat conv);
+    Pixmap(uint32_t w, uint32_t h, TextureFormat frm);
     Pixmap(const char* path);
     Pixmap(const std::string& path);
     Pixmap(const char16_t* path);
@@ -62,15 +42,12 @@ class Pixmap final {
     void*       data();
     size_t      dataSize() const;
 
-    Format      format() const;
+    TextureFormat format() const;
 
-    static size_t        bppForFormat      (Format f);
-    static size_t        blockSizeForFormat(Format f);
-    static uint8_t       componentCount    (Format f);
-    static Size          blockCount        (Format f, uint32_t w, uint32_t h);
-
-    static TextureFormat toTextureFormat(Format f);
-    static Format        toPixmapFormat (TextureFormat f);
+    static size_t  bppForFormat      (TextureFormat f);
+    static size_t  blockSizeForFormat(TextureFormat f);
+    static uint8_t componentCount    (TextureFormat f);
+    static Size    blockCount        (TextureFormat f, uint32_t w, uint32_t h);
 
   private:
     struct Impl;

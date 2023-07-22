@@ -12,10 +12,23 @@
 
 using namespace Tempest;
 
+static bool isFloat32Frm(TextureFormat f) {
+  switch (f) {
+    case R32F:
+    case RG32F:
+    case RGB32F:
+    case RGBA32F:
+    case Depth32F:
+      return true;
+    default:
+      return false;
+    }
+  }
+
 struct Pixmap::Impl {
   Impl()=default;
 
-  Impl(uint32_t w,uint32_t h,Pixmap::Format frm):w(w),h(h),frm(frm) {
+  Impl(uint32_t w, uint32_t h, TextureFormat frm):w(w),h(h),frm(frm) {
     dataSz = calcDataSize(w,h,frm);
     data   = reinterpret_cast<uint8_t*>(std::malloc(dataSz));
     if(!data)
@@ -30,14 +43,14 @@ struct Pixmap::Impl {
     std::memcpy(data,other.data,dataSz);
     }
 
-  Impl(const Impl& other,Pixmap::Format conv):w(other.w),h(other.h),frm(conv) {
+  Impl(const Impl& other, TextureFormat conv):w(other.w),h(other.h),frm(conv) {
     size_t size = calcDataSize(w,h,frm);
     data = reinterpret_cast<uint8_t*>(std::malloc(size));
     if(!data)
       throw std::bad_alloc();
     dataSz = size;
 
-    if(frm==Format::RGBA8 && other.frm==Format::RGB8) {
+    if(frm==TextureFormat::RGBA8 && other.frm==TextureFormat::RGB8) {
       // specialize a common case
       const size_t sz = size_t(w)*size_t(h);
       for(size_t i=0;i<sz;++i) {
@@ -49,11 +62,11 @@ struct Pixmap::Impl {
       }
 
     if(isCompressed(other.frm)) {
-      assert(frm==Format::RGB8 || frm==Format::RGBA8); // rest is handled outside of this function
+      assert(frm==TextureFormat::RGB8 || frm==TextureFormat::RGBA8); // rest is handled outside of this function
       static const int kfrm[] = {squish::kDxt1,squish::kDxt3,squish::kDxt5};
-      if(frm==Format::RGB8)
-        ddsToRgba(data,other.data,w,h,kfrm[uint8_t(other.frm)-uint8_t(Format::DXT1)],3); else
-        ddsToRgba(data,other.data,w,h,kfrm[uint8_t(other.frm)-uint8_t(Format::DXT1)],4);
+      if(frm==TextureFormat::RGB8)
+        ddsToRgba(data,other.data,w,h,kfrm[uint8_t(other.frm)-uint8_t(TextureFormat::DXT1)],3); else
+        ddsToRgba(data,other.data,w,h,kfrm[uint8_t(other.frm)-uint8_t(TextureFormat::DXT1)],4);
       return;
       }
 
@@ -62,7 +75,7 @@ struct Pixmap::Impl {
       throw std::runtime_error("unimplemented");
       }
 
-    // noncompressed
+    // noncompressed, non-packed
     const uint8_t compDst = Pixmap::componentCount(frm);
     const uint8_t compSrc = Pixmap::componentCount(other.frm);
 
@@ -74,32 +87,48 @@ struct Pixmap::Impl {
         switch(byteSrc) {
           case 1: noncompresedConv<uint8_t,uint8_t> (w,h, data,other.data, compDst, compSrc); return;
           case 2: noncompresedConv<uint8_t,uint16_t>(w,h, data,other.data, compDst, compSrc); return;
-          case 4: noncompresedConv<uint8_t,float>   (w,h, data,other.data, compDst, compSrc); return;
+          case 4:
+            if(isFloat32Frm(other.frm))
+              noncompresedConv<uint8_t,float>   (w,h, data,other.data, compDst, compSrc); else
+              noncompresedConv<uint8_t,uint32_t>(w,h, data,other.data, compDst, compSrc);
+            return;
           }
         }
       case 2:{
         switch(byteSrc) {
           case 1: noncompresedConv<uint16_t,uint8_t> (w,h, data,other.data, compDst, compSrc); return;
           case 2: noncompresedConv<uint16_t,uint16_t>(w,h, data,other.data, compDst, compSrc); return;
-          case 4: noncompresedConv<uint16_t,float>   (w,h, data,other.data, compDst, compSrc); return;
+          case 4:
+            if(isFloat32Frm(other.frm))
+              noncompresedConv<uint16_t,float>   (w,h, data,other.data, compDst, compSrc); else
+              noncompresedConv<uint16_t,uint32_t>(w,h, data,other.data, compDst, compSrc);
+            return;
           }
         }
       case 4:{
         switch(byteSrc) {
           case 1: noncompresedConv<float,uint8_t> (w,h, data,other.data, compDst, compSrc); return;
           case 2: noncompresedConv<float,uint16_t>(w,h, data,other.data, compDst, compSrc); return;
-          case 4: noncompresedConv<float,float>   (w,h, data,other.data, compDst, compSrc); return;
+          case 4:
+            if(isFloat32Frm(frm) && isFloat32Frm(other.frm))
+              noncompresedConv<float,float>(w,h, data,other.data, compDst, compSrc); else
+            if(isFloat32Frm(frm))
+                noncompresedConv<float,uint32_t>(w,h, data,other.data, compDst, compSrc); else
+            if(isFloat32Frm(other.frm))
+              noncompresedConv<uint32_t,float>(w,h, data,other.data, compDst, compSrc); else
+              noncompresedConv<uint32_t,uint32_t>(w,h, data,other.data, compDst, compSrc);
+            return;
           }
         }
       }
 
-    // unreachable
+    // TODO: non-trivial formats
     throw std::runtime_error("unimplemented");
     }
 
   Impl(IDevice& f){
     uint32_t bpp = 0;
-    frm  = Pixmap::Format::RGBA8;
+    frm  = TextureFormat::RGBA8;
     data = PixmapCodec::loadImg(f,w,h,frm,mipCnt,bpp,dataSz);
 
     if(data==nullptr && bpp==0)
@@ -110,20 +139,20 @@ struct Pixmap::Impl {
     PixmapCodec::freeImg(data);
     }
 
-  static size_t calcDataSize(uint32_t w, uint32_t h, Format frm) {
+  static size_t calcDataSize(uint32_t w, uint32_t h, TextureFormat frm) {
     auto bsz = blockCount(frm,w,h);
     auto bpb = blockSizeForFormat(frm);
     return size_t(bsz.w)*size_t(bsz.h)*size_t(bpb);
     }
 
-  static std::unique_ptr<Impl,Deleter> convert(const Impl& other,Format frm) {
+  static std::unique_ptr<Impl,Deleter> convert(const Impl& other, TextureFormat frm) {
     if(other.frm==frm)
       return std::unique_ptr<Impl,Deleter>(new Impl(other)); //copy
 
     if(isCompressed(other.frm)) {
-      if(frm!=Format::RGB8 && frm!=Format::RGBA8) {
+      if(frm!=TextureFormat::RGB8 && frm!=TextureFormat::RGBA8) {
         // cross-conversion: DDS -> RGBA -> frm
-        Impl tmp(other,Format::RGBA8);
+        Impl tmp(other,TextureFormat::RGBA8);
         return std::unique_ptr<Impl,Deleter>(new Impl(tmp,frm));
         }
       }
@@ -160,24 +189,35 @@ struct Pixmap::Impl {
       }
     }
 
+  // uint8_t-unorm
   static void copy(uint8_t& r,uint8_t v){
     r = v;
     }
   static void copy(uint8_t& r,uint16_t v){
     r = v/256;
     }
+  static void copy(uint8_t& r,uint32_t v){
+    r = v;
+    }
   static void copy(uint8_t& r,float v){
     r = uint8_t(std::fmax(0.f,std::fmin(v,1.f))*255.f);
+    }
+
+  // uint16_t-unorm
+  static void copy(uint16_t& r,uint8_t v){
+    r = v*256+255*(v%2);
     }
   static void copy(uint16_t& r,uint16_t v){
     r = v;
     }
-  static void copy(uint16_t& r,uint8_t v){
-    r = v*256+255*(v%2);
+  static void copy(uint16_t& r,uint32_t v){
+    r = v;
     }
   static void copy(uint16_t& r,float v){
     r = uint16_t(std::fmax(0.f,std::fmin(v,1.f))*65535);
     }
+
+  // float
   static void copy(float& r,uint8_t v){
     r = v/255.f;
     }
@@ -187,22 +227,39 @@ struct Pixmap::Impl {
   static void copy(float& r,float v){
     r = v;
     }
+  static void copy(float& r,uint32_t v){
+    r = float(v);
+    }
 
-  static uint8_t bytesPerChannel(Pixmap::Format frm) {
+  // uint32_t
+  static void copy(uint32_t& r,uint8_t v){
+    r = v==0 ? 0 : 1;
+    }
+  static void copy(uint32_t& r,uint16_t v){
+    r = v==0 ? 0 : 1;
+    }
+  static void copy(uint32_t& r,uint32_t v){
+    r = v;
+    }
+  static void copy(uint32_t& r,float v){
+    r = uint32_t(std::max(0.f, v));
+    }
+
+  static uint8_t bytesPerChannel(TextureFormat frm) {
     switch(frm) {
-      case Pixmap::Format::DXT1:    return 0;
-      case Pixmap::Format::DXT3:    return 0;
-      case Pixmap::Format::DXT5:    return 0;
+      case TextureFormat::DXT1:    return 0;
+      case TextureFormat::DXT3:    return 0;
+      case TextureFormat::DXT5:    return 0;
       //---
       default:
         return uint8_t(Pixmap::bppForFormat(frm)/Pixmap::componentCount(frm));
       }
     }
 
-  static bool isCompressed(Pixmap::Format frm) {
-    return frm==Pixmap::Format::DXT1 ||
-           frm==Pixmap::Format::DXT3 ||
-           frm==Pixmap::Format::DXT5;
+  static bool isCompressed(TextureFormat frm) {
+    return frm==TextureFormat::DXT1 ||
+           frm==TextureFormat::DXT3 ||
+           frm==TextureFormat::DXT5;
     }
 
   void save(ODevice& f,const char* ext){
@@ -228,14 +285,14 @@ struct Pixmap::Impl {
         }
     }
 
-  uint8_t*       data   = nullptr;
-  uint32_t       w      = 0;
-  uint32_t       h      = 0;
-  size_t         dataSz = 0;
-  Pixmap::Format frm    = Pixmap::Format::RGB8;
-  uint32_t       mipCnt = 1;
+  uint8_t*      data   = nullptr;
+  uint32_t      w      = 0;
+  uint32_t      h      = 0;
+  size_t        dataSz = 0;
+  TextureFormat frm    = TextureFormat::RGB8;
+  uint32_t      mipCnt = 1;
 
-  static Impl    zero;
+  static Impl   zero;
   };
 
 Pixmap::Impl Pixmap::Impl::zero;
@@ -248,11 +305,11 @@ void Pixmap::Deleter::operator()(Pixmap::Impl *ptr) {
 Pixmap::Pixmap():impl(&Impl::zero){
   }
 
-Pixmap::Pixmap(const Pixmap &src, Pixmap::Format conv)
+Pixmap::Pixmap(const Pixmap &src, TextureFormat conv)
   :impl(Impl::convert(*src.impl,conv)){
   }
 
-Pixmap::Pixmap(uint32_t w, uint32_t h, Pixmap::Format frm)
+Pixmap::Pixmap(uint32_t w, uint32_t h, TextureFormat frm)
   :impl(new Impl(w,h,frm)){
   }
 
@@ -352,157 +409,129 @@ size_t Pixmap::dataSize() const {
   return impl->dataSz;
   }
 
-Pixmap::Format Pixmap::format() const {
+TextureFormat Pixmap::format() const {
   return impl->frm;
   }
 
-size_t Pixmap::bppForFormat(Format f) {
+size_t Pixmap::bppForFormat(TextureFormat f) {
   if(Impl::isCompressed(f))
     return 0;
   return blockSizeForFormat(f);
   }
 
-size_t Pixmap::blockSizeForFormat(Pixmap::Format frm) {
+size_t Pixmap::blockSizeForFormat(TextureFormat frm) {
   switch(frm) {
-    case Pixmap::Format::Undefined: return 0;
+    case TextureFormat::Undefined:   return 0;
+    case TextureFormat::Last:        return 0;
     //---
-    case Pixmap::Format::R8:        return 1;
-    case Pixmap::Format::RG8:       return 2;
-    case Pixmap::Format::RGB8:      return 3;
-    case Pixmap::Format::RGBA8:     return 4;
+    case TextureFormat::R8:          return 1;
+    case TextureFormat::RG8:         return 2;
+    case TextureFormat::RGB8:        return 3;
+    case TextureFormat::RGBA8:       return 4;
     //---
-    case Pixmap::Format::R16:       return 2;
-    case Pixmap::Format::RG16:      return 4;
-    case Pixmap::Format::RGB16:     return 6;
-    case Pixmap::Format::RGBA16:    return 8;
+    case TextureFormat::R16:         return 2;
+    case TextureFormat::RG16:        return 4;
+    case TextureFormat::RGB16:       return 6;
+    case TextureFormat::RGBA16:      return 8;
     //---
-    case Pixmap::Format::R32F:      return 4;
-    case Pixmap::Format::RG32F:     return 8;
-    case Pixmap::Format::RGB32F:    return 12;
-    case Pixmap::Format::RGBA32F:   return 16;
+    case TextureFormat::R32F:        return 4;
+    case TextureFormat::RG32F:       return 8;
+    case TextureFormat::RGB32F:      return 12;
+    case TextureFormat::RGBA32F:     return 16;
     //---
-    case Pixmap::Format::DXT1:      return 8;
-    case Pixmap::Format::DXT3:      return 16;
-    case Pixmap::Format::DXT5:      return 16;
+    case TextureFormat::R32U:        return 4;
+    case TextureFormat::RG32U:       return 8;
+    case TextureFormat::RGB32U:      return 12;
+    case TextureFormat::RGBA32U:     return 16;
+    //---
+    case TextureFormat::Depth16:     return 2;
+    case TextureFormat::Depth24x8:   return 4;
+    case TextureFormat::Depth24S8:   return 4;
+    case TextureFormat::Depth32F:    return 4;
+    //---
+    case TextureFormat::DXT1:        return 8;
+    case TextureFormat::DXT3:        return 16;
+    case TextureFormat::DXT5:        return 16;
+    //---
+    case TextureFormat::R11G11B10UF: return 4;
+    case TextureFormat::RGBA16F:     return 8;
     }
   return 0;
   }
 
-uint8_t Pixmap::componentCount(Pixmap::Format frm) {
+uint8_t Pixmap::componentCount(TextureFormat frm) {
   switch(frm) {
-    case Pixmap::Format::Undefined: return 0;
+    case TextureFormat::Undefined:   return 0;
+    case TextureFormat::Last:        return 0;
     //---
-    case Pixmap::Format::R8:        return 1;
-    case Pixmap::Format::RG8:       return 2;
-    case Pixmap::Format::RGB8:      return 3;
-    case Pixmap::Format::RGBA8:     return 4;
+    case TextureFormat::R8:          return 1;
+    case TextureFormat::RG8:         return 2;
+    case TextureFormat::RGB8:        return 3;
+    case TextureFormat::RGBA8:       return 4;
     //---
-    case Pixmap::Format::R16:       return 1;
-    case Pixmap::Format::RG16:      return 2;
-    case Pixmap::Format::RGB16:     return 3;
-    case Pixmap::Format::RGBA16:    return 4;
+    case TextureFormat::R16:         return 1;
+    case TextureFormat::RG16:        return 2;
+    case TextureFormat::RGB16:       return 3;
+    case TextureFormat::RGBA16:      return 4;
     //---
-    case Pixmap::Format::R32F:      return 1;
-    case Pixmap::Format::RG32F:     return 2;
-    case Pixmap::Format::RGB32F:    return 3;
-    case Pixmap::Format::RGBA32F:   return 4;
+    case TextureFormat::R32F:        return 1;
+    case TextureFormat::RG32F:       return 2;
+    case TextureFormat::RGB32F:      return 3;
+    case TextureFormat::RGBA32F:     return 4;
     //---
-    case Pixmap::Format::DXT1:      return 3;
-    case Pixmap::Format::DXT3:      return 4;
-    case Pixmap::Format::DXT5:      return 4;
+    case TextureFormat::R32U:        return 1;
+    case TextureFormat::RG32U:       return 2;
+    case TextureFormat::RGB32U:      return 3;
+    case TextureFormat::RGBA32U:     return 4;
+    //---
+    case TextureFormat::Depth16:     return 1;
+    case TextureFormat::Depth24x8:   return 1;
+    case TextureFormat::Depth24S8:   return 2;
+    case TextureFormat::Depth32F:    return 1;
+    //---
+    case TextureFormat::DXT1:        return 3;
+    case TextureFormat::DXT3:        return 4;
+    case TextureFormat::DXT5:        return 4;
+    //---
+    case TextureFormat::R11G11B10UF: return 3;
+    case TextureFormat::RGBA16F:     return 4;
     }
   return 0;
   }
 
-Size Pixmap::blockCount(Format frm, uint32_t w, uint32_t h) {
+Size Pixmap::blockCount(TextureFormat frm, uint32_t w, uint32_t h) {
   switch(frm) {
-    case Pixmap::Format::Undefined:
-      return Size(0,0);
-    case Pixmap::Format::R8:
-    case Pixmap::Format::RG8:
-    case Pixmap::Format::RGB8:
-    case Pixmap::Format::RGBA8:
-    case Pixmap::Format::R16:
-    case Pixmap::Format::RG16:
-    case Pixmap::Format::RGB16:
-    case Pixmap::Format::RGBA16:
-    case Pixmap::Format::R32F:
-    case Pixmap::Format::RG32F:
-    case Pixmap::Format::RGB32F:
-    case Pixmap::Format::RGBA32F:
-      return Size(w,h);
-    case Pixmap::Format::DXT1:
-    case Pixmap::Format::DXT3:
-    case Pixmap::Format::DXT5:
-      return Size((w+3)/4,(h+3)/4);
-    }
-  return Size(0,0);
-  }
-
-TextureFormat Pixmap::toTextureFormat(Pixmap::Format f) {
-  switch(f) {
-    case Pixmap::Format::Undefined: return TextureFormat::Undefined;
-    case Pixmap::Format::R8:        return TextureFormat::R8;
-    case Pixmap::Format::RG8:       return TextureFormat::RG8;
-    case Pixmap::Format::RGB8:      return TextureFormat::RGB8;
-    case Pixmap::Format::RGBA8:     return TextureFormat::RGBA8;
-
-    case Pixmap::Format::R16:       return TextureFormat::R16;
-    case Pixmap::Format::RG16:      return TextureFormat::RG16;
-    case Pixmap::Format::RGB16:     return TextureFormat::RGB16;
-    case Pixmap::Format::RGBA16:    return TextureFormat::RGBA16;
-
-    case Pixmap::Format::R32F:      return TextureFormat::R32F;
-    case Pixmap::Format::RG32F:     return TextureFormat::RG32F;
-    case Pixmap::Format::RGB32F:    return TextureFormat::RGB32F;
-    case Pixmap::Format::RGBA32F:   return TextureFormat::RGBA32F;
-
-    case Pixmap::Format::DXT1:      return TextureFormat::DXT1;
-    case Pixmap::Format::DXT3:      return TextureFormat::DXT3;
-    case Pixmap::Format::DXT5:      return TextureFormat::DXT5;
-    }
-  return TextureFormat::Undefined;
-  }
-
-Pixmap::Format Pixmap::toPixmapFormat(TextureFormat f) {
-  switch(f) {
-    //---
-    case TextureFormat::R8:        return Pixmap::Format::R8;
-    case TextureFormat::RG8:       return Pixmap::Format::RG8;
-    case TextureFormat::RGB8:      return Pixmap::Format::RGB8;
-    case TextureFormat::RGBA8:     return Pixmap::Format::RGBA8;
-    //---
-    case TextureFormat::R16:       return Pixmap::Format::R16;
-    case TextureFormat::RG16:      return Pixmap::Format::RG16;
-    case TextureFormat::RGB16:     return Pixmap::Format::RGB16;
-    case TextureFormat::RGBA16:    return Pixmap::Format::RGBA16;
-    //---
-    case TextureFormat::R32F:      return Pixmap::Format::R32F;
-    case TextureFormat::RG32F:     return Pixmap::Format::RG32F;
-    case TextureFormat::RGB32F:    return Pixmap::Format::RGB32F;
-    case TextureFormat::RGBA32F:   return Pixmap::Format::RGBA32F;
-    //--- use float for now
-    case TextureFormat::R32U:      return Pixmap::Format::R32F;
-    case TextureFormat::RG32U:     return Pixmap::Format::RG32F;
-    case TextureFormat::RGB32U:    return Pixmap::Format::RGB32F;
-    case TextureFormat::RGBA32U:   return Pixmap::Format::RGBA32F;
-    //---
-    case TextureFormat::DXT1:      return Pixmap::Format::DXT1;
-    case TextureFormat::DXT3:      return Pixmap::Format::DXT3;
-    case TextureFormat::DXT5:      return Pixmap::Format::DXT5;
-    //---
-    case TextureFormat::R11G11B10UF:
-    case TextureFormat::RGBA16F:
-      break; //fallthrough to exception
-    //---
-    case TextureFormat::Depth16:   return Pixmap::Format::R16;
-    case TextureFormat::Depth24S8:
-    case TextureFormat::Depth24x8:
-      break; //fallthrough to exception
-    case TextureFormat::Depth32F:  return Pixmap::Format::R32F;
     case TextureFormat::Undefined:
     case TextureFormat::Last:
-      break; //fallthrough to exception
+      return Size(0,0);
+    case TextureFormat::R8:
+    case TextureFormat::RG8:
+    case TextureFormat::RGB8:
+    case TextureFormat::RGBA8:
+    case TextureFormat::R16:
+    case TextureFormat::RG16:
+    case TextureFormat::RGB16:
+    case TextureFormat::RGBA16:
+    case TextureFormat::R32F:
+    case TextureFormat::RG32F:
+    case TextureFormat::RGB32F:
+    case TextureFormat::RGBA32F:
+    case TextureFormat::R32U:
+    case TextureFormat::RG32U:
+    case TextureFormat::RGB32U:
+    case TextureFormat::RGBA32U:
+    case TextureFormat::Depth16:
+    case TextureFormat::Depth24x8:
+    case TextureFormat::Depth24S8:
+    case TextureFormat::Depth32F:
+    case TextureFormat::R11G11B10UF:
+    case TextureFormat::RGBA16F:
+      return Size(w,h);
+    case TextureFormat::DXT1:
+    case TextureFormat::DXT3:
+    case TextureFormat::DXT5:
+      return Size((w+3)/4,(h+3)/4);
+      break;
     }
-  throw std::runtime_error("cannot convert depth format to pixmap format");
+  return Size(0,0);
   }
