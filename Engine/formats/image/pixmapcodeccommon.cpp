@@ -219,6 +219,9 @@ bool PixmapCodecCommon::save(ODevice &f, const char *ext, const uint8_t* cdata,
   bool isFlt  = false;
   bool isNorm = false;
   switch(frm) {
+    case TextureFormat::Undefined:
+    case TextureFormat::Last:
+      break;
     case TextureFormat::R8:
     case TextureFormat::RG8:
     case TextureFormat::RGB8:
@@ -240,9 +243,23 @@ bool PixmapCodecCommon::save(ODevice &f, const char *ext, const uint8_t* cdata,
     case TextureFormat::RGB32U:
     case TextureFormat::RGBA32U:
       break;
+    case TextureFormat::Depth16:
+      isNorm = true;
+      break;
+    case TextureFormat::Depth24x8:
+    case TextureFormat::Depth24S8:
+      isNorm = true;
+      break;
+    case TextureFormat::Depth32F:
+      isFlt = true;
+      break;
     case TextureFormat::DXT1:
     case TextureFormat::DXT3:
     case TextureFormat::DXT5:
+      break;
+    case TextureFormat::R11G11B10UF:
+    case TextureFormat::RGBA16F:
+      // hdr or exr?
       break;
     }
 
