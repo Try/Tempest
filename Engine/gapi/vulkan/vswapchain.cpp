@@ -283,7 +283,7 @@ uint32_t VSwapchain::findImageCount(const SwapChainSupport& support) const {
   return imageCount;
   }
 
-void VSwapchain::acquireNextImage() {
+void VSwapchain::acquireNextImage(const bool ignoreSuboptimal) {
   size_t sId = 0;
   for(size_t i=0; i<sync.size(); ++i)
     if(sync[i].imgId==imgIndex) {
@@ -303,6 +303,9 @@ void VSwapchain::acquireNextImage() {
                                         slot.acquire,
                                         f,
                                         &id);
+  if(ignoreSuboptimal && code==VK_SUBOPTIMAL_KHR)
+    code = VK_SUCCESS;
+
   if(code==VK_ERROR_OUT_OF_DATE_KHR)
     throw DeviceLostException();
   if(code==VK_SUBOPTIMAL_KHR)
@@ -373,7 +376,7 @@ void VSwapchain::present() {
     }
   Detail::vkAssert(code);
 
-  acquireNextImage();
+  acquireNextImage(false);
   }
 
 #endif

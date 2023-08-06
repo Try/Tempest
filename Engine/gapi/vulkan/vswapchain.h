@@ -89,8 +89,7 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     VkExtent2D               findSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities, uint32_t w, uint32_t h);
     uint32_t                 findImageCount(const SwapChainSupport& support) const;
 
-    void                     acquireNextImage();
-
+    void                     acquireNextImage(const bool ignoreSuboptimal = true);
   };
 
 }}
