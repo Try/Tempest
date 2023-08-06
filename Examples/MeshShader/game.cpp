@@ -115,12 +115,23 @@ void Game::render(){
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{swapchain[swapchain.currentImage()],Vec4(0),Tempest::Preserve}}, {zbuffer, 1.f, Tempest::Preserve});
       enc.setUniforms(pso,desc,&ret,sizeof(ret));
-
+      /*
+      enc.setViewport(0,0,256,256);
       if(useVertex) {
         enc.draw(mesh.vbo, mesh.ibo);
         } else {
         enc.dispatchMesh(mesh.meshletCount);
         }
+
+      enc.setViewport(256,0,256,256);
+      */
+      if(useVertex) {
+        enc.draw(mesh.vbo, mesh.ibo);
+        } else {
+        enc.dispatchMesh(mesh.meshletCount);
+        }
+
+      enc.setViewport(0,0,w(),h());
       surfaceMesh[cmdId].draw(enc);
     }
 
@@ -128,7 +139,13 @@ void Game::render(){
     device.present(swapchain);
 
     auto t = Application::tickCount();
-    setWindowTitle(("FPS = " + std::to_string(1000.f/std::max<float>(1, t-time))).c_str());
+    frameTime[fpsId++] = t-time;
+    fpsId = (fpsId+1)%std::extent<decltype(frameTime)>();
+
+    float tx = 0;
+    for(auto i:frameTime)
+      tx += i;
+    setWindowTitle(("FPS = " + std::to_string(1000.f/std::max<float>(1, tx))).c_str());
     time = t;
     }
   catch(const Tempest::SwapchainSuboptimal&) {

@@ -62,4 +62,7 @@ class Game : public Tempest::Window {
   Tempest::Point              mpos;
   Tempest::Vec2               rotation = {0, 100.f};
   float                       zoom = 0.5f;
+
+  float                       frameTime[10] = {};
+  uint32_t                    fpsId = 0;
   };
