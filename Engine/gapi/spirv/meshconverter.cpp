@@ -647,8 +647,9 @@ void MeshConverter::emitEmitMeshTasks(libspirv::MutableBytecode& comp, uint32_t 
 
   uint32_t seq = 0;
   // dispatch size
+  const uint32_t szArr[] = {szX, szY, szZ};
   for(int i=0; i<3; ++i) {
-    const uint32_t szV    = std::array{szX, szY, szZ}[i];
+    const uint32_t szV    = szArr[i];
     const uint32_t rgX    = comp.fetchAddBound();
     const uint32_t wgXptr = comp.fetchAddBound();
     const uint32_t rDst   = comp.fetchAddBound();
