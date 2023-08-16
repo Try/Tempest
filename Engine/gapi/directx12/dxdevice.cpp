@@ -204,23 +204,22 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
 
   D3D12_FEATURE_DATA_D3D12_OPTIONS feature0 = {};
   if(SUCCEEDED(dev.CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &feature0, sizeof(feature0)))) {
-    // feature0.ResourceHeapTier; // TODO: check use cases
-
-    // TODO: expose per-stage limits
-    uint32_t maxSamplers  = 16;
-    uint32_t maxResources = 16;
+    prop.descriptors.nonUniformIndexing = true;  // SM5.1
     switch(feature0.ResourceBindingTier) {
       case D3D12_RESOURCE_BINDING_TIER_1:
-        maxSamplers  = 16;
-        maxResources = 8;
+        prop.descriptors.maxSamplers = 16;
+        prop.descriptors.maxTexture  = 64;
+        prop.descriptors.maxStorage  = 8;  // 64 for feature levels 11.1, but pointless anyway
         break;
       case D3D12_RESOURCE_BINDING_TIER_2:
-        maxSamplers  = 2048;
-        maxResources = 64;
+        prop.descriptors.maxSamplers = 2048;
+        prop.descriptors.maxTexture  = 500'000;
+        prop.descriptors.maxStorage  = 64;
         break;
       case D3D12_RESOURCE_BINDING_TIER_3:
-        maxSamplers  = 2048;
-        maxResources = -1;
+        prop.descriptors.maxSamplers = 2048;
+        prop.descriptors.maxTexture  = 500'000; // half-heap for both
+        prop.descriptors.maxStorage  = 500'000;
         break;
       }
     }
@@ -245,8 +244,6 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
     prop.meshlets.maxGroupSize.y = 128;
     prop.meshlets.maxGroupSize.z = 128;
     }
-
-  prop.bindless.nonUniformIndexing = true;  // SM5.1
   }
 
 void DxDevice::waitData() {

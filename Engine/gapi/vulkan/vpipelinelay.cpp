@@ -139,8 +139,10 @@ VkDescriptorSetLayout VPipelineLay::createDescLayout(const std::vector<uint32_t>
   info.bindingCount = count;
   info.pBindings    = bind.get();
 
-  if(runtimeSized)
-    info.pNext = &bindingFlags;
+  if(runtimeSized) {
+    info.pNext  = &bindingFlags;
+    info.flags |= VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+    }
 
   VkDescriptorSetLayout ret = VK_NULL_HANDLE;
   vkAssert(vkCreateDescriptorSetLayout(dev.device.impl,&info,nullptr,&ret));

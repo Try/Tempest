@@ -31,6 +31,12 @@ static const std::initializer_list<const char*> validationLayersLunarg = {
   "VK_LAYER_LUNARG_core_validation"
   };
 
+template<class T, class ... Args>
+T max(T t, Args... args) {
+  T ax[] = {t, args...};
+  return *std::max_element(std::begin(ax), std::end(ax));
+  }
+
 VulkanInstance::VulkanInstance(bool validation)
   :validation(validation) {
   std::initializer_list<const char*> validationLayers={};
@@ -265,6 +271,16 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
   deviceFeatures.vertexPipelineStoresAndAtomics = supportedFeatures.vertexPipelineStoresAndAtomics;
   deviceFeatures.fragmentStoresAndAtomics       = supportedFeatures.fragmentStoresAndAtomics;
 
+  // non-bindless limit
+  props.descriptors.maxSamplers = std::max(devP.limits.maxDescriptorSetSamplers,
+                                           devP.limits.maxPerStageDescriptorSamplers);
+  props.descriptors.maxTexture = std::max(devP.limits.maxDescriptorSetSampledImages,
+                                          devP.limits.maxPerStageDescriptorSampledImages);
+  props.descriptors.maxStorage = max(devP.limits.maxDescriptorSetStorageBuffers,
+                                     devP.limits.maxPerStageDescriptorStorageBuffers,
+                                     devP.limits.maxDescriptorSetStorageImages,
+                                     devP.limits.maxPerStageDescriptorStorageImages);
+
   if(hasDeviceFeatures2) {
     VkPhysicalDeviceFeatures2 features = {};
     features.sType    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
@@ -300,6 +316,9 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
     VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = {};
     indexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
 
+    VkPhysicalDeviceDescriptorIndexingProperties indexingProps = {};
+    indexingProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES;
+
     if(props.hasSync2) {
       sync2.pNext = features.pNext;
       features.pNext = &sync2;
@@ -333,6 +352,9 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
     if(props.hasDescIndexing) {
       indexingFeatures.pNext = features.pNext;
       features.pNext = &indexingFeatures;
+
+      indexingProps.pNext = properties.pNext;
+      properties.pNext = &indexingProps;
       }
 
     auto vkGetPhysicalDeviceFeatures2   = PFN_vkGetPhysicalDeviceFeatures2  (vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2KHR"));
@@ -370,11 +392,30 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
       }
 
     if(indexingFeatures.runtimeDescriptorArray!=VK_FALSE) {
-      props.bindless.nonUniformIndexing =
-          (indexingFeatures.shaderUniformBufferArrayNonUniformIndexing==VK_TRUE) &&
+      props.descriptors.nonUniformIndexing =
+          // (indexingFeatures.shaderUniformBufferArrayNonUniformIndexing==VK_TRUE) && // NOTE: no UBO support
+          // (indexingFeatures.shaderStorageImageArrayNonUniformIndexing ==VK_TRUE) && // Hm? no support on Intel
           (indexingFeatures.shaderSampledImageArrayNonUniformIndexing ==VK_TRUE) &&
-          (indexingFeatures.shaderStorageBufferArrayNonUniformIndexing==VK_TRUE) &&
-          (indexingFeatures.shaderStorageImageArrayNonUniformIndexing ==VK_TRUE);
+          (indexingFeatures.shaderStorageBufferArrayNonUniformIndexing==VK_TRUE);
+      }
+
+    if(indexingFeatures.runtimeDescriptorArray!=VK_FALSE) {
+      props.descriptors.maxSamplers = std::max(indexingProps.maxDescriptorSetUpdateAfterBindSamplers,
+                                               indexingProps.maxPerStageDescriptorUpdateAfterBindSamplers);
+
+      props.descriptors.maxTexture  = std::max(indexingProps.maxDescriptorSetUpdateAfterBindSampledImages,
+                                               indexingProps.maxPerStageDescriptorUpdateAfterBindSampledImages);
+
+      props.descriptors.maxStorage  = max(indexingProps.maxDescriptorSetUpdateAfterBindStorageBuffers,
+                                          indexingProps.maxPerStageDescriptorUpdateAfterBindStorageBuffers,
+                                          indexingProps.maxDescriptorSetUpdateAfterBindStorageImages,
+                                          indexingProps.maxPerStageDescriptorUpdateAfterBindStorageImages);
+      }
+
+    if(asFeatures.descriptorBindingAccelerationStructureUpdateAfterBind!=VK_FALSE) {
+      props.descriptors.maxStorage = max(props.descriptors.maxStorage,
+                                         asProperties.maxDescriptorSetAccelerationStructures,
+                                         asProperties.maxPerStageDescriptorAccelerationStructures);
       }
     }
 

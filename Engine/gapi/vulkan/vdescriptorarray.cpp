@@ -112,6 +112,9 @@ VkDescriptorPool VDescriptorArray::allocPool(const VPipelineLay& lay) {
   poolInfo.poolSizeCount = uint32_t(pSize);
   poolInfo.pPoolSizes    = poolSize;
 
+  if(lay.runtimeSized)
+    poolInfo.flags |= VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+
   VkDevice dev = device.device.impl;
   VkDescriptorPool ret = VK_NULL_HANDLE;
   vkAssert(vkCreateDescriptorPool(dev,&poolInfo,nullptr,&ret));
@@ -253,7 +256,8 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t c
       }
     }
 
-  SmallArray<VkDescriptorImageInfo,32> imageInfo(cnt);
+  // 16 is non-bindless limit
+  SmallArray<VkDescriptorImageInfo,16> imageInfo(cnt);
   for(size_t i=0; i<cnt; ++i) {
     VTexture& tex = *reinterpret_cast<VTexture*>(t[i]);
     imageInfo[i].imageLayout = toWriteLayout(tex);

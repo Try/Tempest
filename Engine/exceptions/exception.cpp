@@ -47,7 +47,7 @@ std::string GraphicsErrCategory::message(int ev) const {
     case GraphicsErrc::InvalidUniformBuffer:
       return "Invalid uniform buffer";
     case GraphicsErrc::InvalidTexture:
-      return "Invalide texture";
+      return "Invalid texture";
     case GraphicsErrc::InvalidBufferUpdate:
       return "Invalid buffer update";
     case GraphicsErrc::TooLargeBuffer:

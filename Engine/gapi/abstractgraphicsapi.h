@@ -410,8 +410,11 @@ namespace Tempest {
             } tex3d;
 
           struct {
-            bool nonUniformIndexing = false;
-            } bindless;
+            bool     nonUniformIndexing = false;
+            uint32_t maxStorage         = 500000;
+            uint32_t maxTexture         = 500000;
+            uint32_t maxSamplers        = 2048;
+            } descriptors;
 
           struct {
             bool rayQuery = false;

@@ -1253,7 +1253,7 @@ void ArrayedTextures(const char* outImg) {
     GraphicsApi api{ApiFlags::Validation};
     auto dev = api.devices();
     for(auto& i:dev)
-      if(i.bindless.nonUniformIndexing)
+      if(i.descriptors.nonUniformIndexing)
         devName = i.name;
     if(devName==nullptr)
       return;
@@ -1305,7 +1305,7 @@ void ArrayedImages(const char* outImg) {
     GraphicsApi api{ApiFlags::Validation};
     auto dev = api.devices();
     for(auto& i:dev)
-      if(i.bindless.nonUniformIndexing)
+      if(i.descriptors.nonUniformIndexing)
         devName = i.name;
     if(devName==nullptr)
       return;
@@ -1358,7 +1358,7 @@ void ArrayedSsbo(const char* outImg) {
     GraphicsApi api{ApiFlags::Validation};
     auto dev = api.devices();
     for(auto& i:dev)
-      if(i.bindless.nonUniformIndexing)
+      if(i.descriptors.nonUniformIndexing)
         devName = i.name;
     if(devName==nullptr)
       return;
@@ -1411,7 +1411,7 @@ void Bindless(const char* outImg) {
     GraphicsApi api{ApiFlags::Validation};
     auto dev = api.devices();
     for(auto& i:dev)
-      if(i.bindless.nonUniformIndexing)
+      if(i.descriptors.nonUniformIndexing)
         devName = i.name;
     if(devName==nullptr)
       return;
@@ -1464,7 +1464,7 @@ void Bindless2(const char* outImg) {
     GraphicsApi api{ApiFlags::Validation};
     auto dev = api.devices();
     for(auto& i:dev)
-      if(i.bindless.nonUniformIndexing)
+      if(i.descriptors.nonUniformIndexing)
         devName = i.name;
     if(devName==nullptr)
       return;
