@@ -218,7 +218,7 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev, u
 #endif
 
   if(dev.supportsFamily(MTL::GPUFamilyMetal3) && dev.argumentBuffersSupport()>=MTL::ArgumentBuffersTier2) {
-    // prop.descriptors.nonUniformIndexing = true;
+    prop.descriptors.nonUniformIndexing = true;
     prop.descriptors.maxStorage         = 500000;
     prop.descriptors.maxTexture         = 500000;
     prop.descriptors.maxSamplers        = 2048;

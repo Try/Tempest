@@ -31,8 +31,19 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
 
   std::string msl;
   try {
+    fetchBindings(reinterpret_cast<const uint32_t*>(source),srcSize/4);
+
     spirv_cross::CompilerMSL comp(reinterpret_cast<const uint32_t*>(source),srcSize/4);
     optMSL.msl_version = dev.mslVersion;
+    if(dev.prop.descriptors.nonUniformIndexing) {
+      optMSL.argument_buffers_tier = spirv_cross::CompilerMSL::Options::ArgumentBuffersTier::Tier2;
+      }
+
+    for(auto& i:lay)
+      if(i.runtimeSized && (i.cls==ShaderReflection::SsboR || i.cls==ShaderReflection::SsboRW)) {
+        optMSL.runtime_array_rich_descriptor = true;
+        }
+
     for(auto& cap:comp.get_declared_capabilities()) {
       switch(cap) {
         case spv::CapabilityRayQueryKHR: {
@@ -54,7 +65,6 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
 
     msl = comp.compile();
 
-    fetchBindings(reinterpret_cast<const uint32_t*>(source),srcSize/4);
     bufferSizeBuffer = comp.needs_buffer_size_buffer();
 
     for(auto& i:lay) {
