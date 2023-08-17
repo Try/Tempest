@@ -392,11 +392,14 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
       }
 
     if(indexingFeatures.runtimeDescriptorArray!=VK_FALSE) {
+      // NOTE1: no UBO support - won't do
+      // NOTE2: no Storage-ismage support on Intel
       props.descriptors.nonUniformIndexing =
-          // (indexingFeatures.shaderUniformBufferArrayNonUniformIndexing==VK_TRUE) && // NOTE: no UBO support
-          // (indexingFeatures.shaderStorageImageArrayNonUniformIndexing ==VK_TRUE) && // Hm? no support on Intel
           (indexingFeatures.shaderSampledImageArrayNonUniformIndexing ==VK_TRUE) &&
           (indexingFeatures.shaderStorageBufferArrayNonUniformIndexing==VK_TRUE);
+      props.descriptors.nonUniformIndexing &=
+        (indexingFeatures.descriptorBindingSampledImageUpdateAfterBind ==VK_TRUE) &&
+        (indexingFeatures.descriptorBindingStorageBufferUpdateAfterBind==VK_TRUE);
       }
 
     if(indexingFeatures.runtimeDescriptorArray!=VK_FALSE) {
