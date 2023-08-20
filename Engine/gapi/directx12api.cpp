@@ -251,8 +251,13 @@ AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixma
   DXGI_FORMAT       format = Detail::nativeFormat(frm);
   uint32_t          row    = p.w()*p.bpp();
   const uint32_t    pith   = ((row+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
-  Detail::DxBuffer  stage  = dx.allocator.alloc(p.data(),p.h()*pith,MemUsage::TransferSrc,BufferHeap::Upload);
+  Detail::DxBuffer  stage  = dx.allocator.alloc(nullptr,p.h()*pith,MemUsage::TransferSrc,BufferHeap::Upload);
   Detail::DxTexture buf    = dx.allocator.alloc(p,mipCnt,format);
+
+  for(uint32_t y=0; y<p.h(); ++y) {
+    auto px = reinterpret_cast<const uint8_t*>(p.data());
+    stage.update(px+y*row, y*pith, row);
+    }
 
   Detail::DSharedPtr<Buffer*>  pstage(new Detail::DxBuffer (std::move(stage)));
   Detail::DSharedPtr<Texture*> pbuf  (new Detail::DxTexture(std::move(buf)));
