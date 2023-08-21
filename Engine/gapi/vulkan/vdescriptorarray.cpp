@@ -256,6 +256,9 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t c
       }
     }
 
+  if(cnt==0)
+    return;
+
   // 16 is non-bindless limit
   SmallArray<VkDescriptorImageInfo,16> imageInfo(cnt);
   for(size_t i=0; i<cnt; ++i) {
@@ -296,6 +299,9 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** b, size_t cn
         }
       }
     }
+
+  if(cnt==0)
+    return;
 
   VkBuffer nonNull = VK_NULL_HANDLE;
   for(size_t i=0; i<cnt; ++i)
