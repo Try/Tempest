@@ -8,53 +8,92 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-VAccelerationStructure::VAccelerationStructure(VDevice& dx,
-                                               VBuffer& vbo, size_t vboSz, size_t stride,
-                                               VBuffer& ibo, size_t iboSz, size_t ioffset, IndexClass icls)
-  :owner(dx) {
-  auto device                               = dx.device.impl;
-  auto vkGetAccelerationStructureBuildSizes = dx.vkGetAccelerationStructureBuildSizes;
-  auto vkCreateAccelerationStructure        = dx.vkCreateAccelerationStructure;
+void VBlasBuildCtx::pushGeometry(VDevice& dx,
+                                 const VBuffer& vbo, size_t vboSz, size_t stride,
+                                 const VBuffer& ibo, size_t iboSz, size_t ioffset, IndexClass icls) {
+  VkAccelerationStructureBuildRangeInfoKHR range = {};
+  range.primitiveCount  = uint32_t(iboSz/3);
+  range.primitiveOffset = uint32_t(ioffset*sizeofIndex(icls));
+  range.firstVertex     = 0;
+  range.transformOffset = 0;
 
   VkAccelerationStructureGeometryKHR geometry = {};
-  geometry.sType                             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-  geometry.geometryType                      = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-  geometry.geometry.triangles.sType          = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-  geometry.geometry.triangles.vertexFormat   = VK_FORMAT_R32G32B32_SFLOAT;
-  geometry.geometry.triangles.vertexData     = VkDeviceOrHostAddressConstKHR{};
-  geometry.geometry.triangles.vertexStride   = stride;
-  geometry.geometry.triangles.maxVertex      = uint32_t(vboSz);
-  geometry.geometry.triangles.indexType      = nativeFormat(icls);
-  geometry.geometry.triangles.indexData      = VkDeviceOrHostAddressConstKHR{};
-  geometry.geometry.triangles.transformData  = VkDeviceOrHostAddressConstKHR{};
-  geometry.flags                             = VK_GEOMETRY_OPAQUE_BIT_KHR;
+  geometry.sType                              = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+  geometry.pNext                              = nullptr;
+  geometry.geometryType                       = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+  geometry.geometry.triangles.sType           = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+  geometry.geometry.triangles.vertexFormat    = VK_FORMAT_R32G32B32_SFLOAT;
+  geometry.geometry.triangles.vertexStride    = stride;
+  geometry.geometry.triangles.maxVertex       = uint32_t(vboSz);
+  geometry.geometry.triangles.indexType       = nativeFormat(icls);
+  geometry.geometry.triangles.transformData   = VkDeviceOrHostAddressConstKHR{};
+  geometry.flags                              = VK_GEOMETRY_OPAQUE_BIT_KHR;
 
-  VkAccelerationStructureBuildGeometryInfoKHR buildGeometryInfo = {};
-  buildGeometryInfo.sType                    = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-  buildGeometryInfo.pNext                    = nullptr;
-  buildGeometryInfo.type                     = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-  buildGeometryInfo.flags                    = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-  buildGeometryInfo.mode                     = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-  buildGeometryInfo.srcAccelerationStructure = VK_NULL_HANDLE;
-  buildGeometryInfo.dstAccelerationStructure = VK_NULL_HANDLE;
-  buildGeometryInfo.geometryCount            = 1;
-  buildGeometryInfo.pGeometries              = &geometry;
-  buildGeometryInfo.ppGeometries             = nullptr;
-  buildGeometryInfo.scratchData              = {};
+  geometry.geometry.triangles.vertexData.deviceAddress = vbo.toDeviceAddress(dx);
+  geometry.geometry.triangles.indexData .deviceAddress = ibo.toDeviceAddress(dx);
+
+  this->ranges.push_back(range);
+  this->geometry.push_back(geometry);
+  maxPrimitiveCounts.push_back(uint32_t(iboSz/3));
+  }
+
+VkAccelerationStructureBuildSizesInfoKHR VBlasBuildCtx::buildSizes(VDevice& dx) const {
+  auto device                               = dx.device.impl;
+  auto vkGetAccelerationStructureBuildSizes = dx.vkGetAccelerationStructureBuildSizes;
+
+  auto buildGeometryInfo = buildCmd(dx, VK_NULL_HANDLE, nullptr);
 
   VkAccelerationStructureBuildSizesInfoKHR buildSizesInfo = {};
   buildSizesInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
 
-  const uint32_t maxPrimitiveCounts = uint32_t(iboSz/3);
   vkGetAccelerationStructureBuildSizes(device,
                                        VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
                                        &buildGeometryInfo,
-                                       &maxPrimitiveCounts,
+                                       maxPrimitiveCounts.data(),
                                        &buildSizesInfo);
+  return buildSizesInfo;
+  }
+
+VkAccelerationStructureBuildGeometryInfoKHR VBlasBuildCtx::buildCmd(VDevice& dx, VkAccelerationStructureKHR dest, VBuffer* scratch) const {
+  VkAccelerationStructureBuildGeometryInfoKHR buildGeometryInfo = {};
+  buildGeometryInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+  buildGeometryInfo.pNext                     = nullptr;
+  buildGeometryInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+  buildGeometryInfo.flags                     = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+  buildGeometryInfo.mode                      = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+  buildGeometryInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
+  buildGeometryInfo.dstAccelerationStructure  = dest;
+  buildGeometryInfo.geometryCount             = uint32_t(geometry.size());
+  buildGeometryInfo.pGeometries               = geometry.data();
+  buildGeometryInfo.ppGeometries              = nullptr;
+  buildGeometryInfo.scratchData.deviceAddress = scratch!=nullptr ? reinterpret_cast<const VBuffer&>(*scratch).toDeviceAddress(dx) : VkDeviceAddress{};
+  return buildGeometryInfo;
+  }
+
+
+VAccelerationStructure::VAccelerationStructure(VDevice& dx, const AbstractGraphicsApi::RtGeometry* geom, size_t size)
+  :owner(dx) {
+  auto device                        = dx.device.impl;
+  auto vkCreateAccelerationStructure = dx.vkCreateAccelerationStructure;
+
+  VBlasBuildCtx ctx;
+  for(size_t i=0; i<size; ++i) {
+    auto& vbo     = *reinterpret_cast<const VBuffer*>(geom[i].vbo);
+    auto  vboSz   = geom[i].vboSz;
+    auto  stride  = geom[i].stride;
+    auto& ibo     = *reinterpret_cast<const VBuffer*>(geom[i].ibo);
+    auto  iboSz   = geom[i].iboSz;
+    auto  ioffset = geom[i].ioffset;
+    auto  icls    = geom[i].icls;
+    ctx.pushGeometry(dx, vbo, vboSz, stride, ibo, iboSz, ioffset, icls);
+    }
+
+  const auto buildSizesInfo = ctx.buildSizes(dx);
+  if(buildSizesInfo.accelerationStructureSize<=0)
+    throw std::system_error(GraphicsErrc::UnsupportedExtension);
 
   data = dx.allocator.alloc(nullptr, buildSizesInfo.accelerationStructureSize, MemUsage::AsStorage, BufferHeap::Device);
-
-  auto  scratch = dx.dataMgr().allocStagingMemory(nullptr, buildSizesInfo.buildScratchSize, MemUsage::ScratchBuffer, BufferHeap::Device);
+  auto scratch = dx.dataMgr().allocStagingMemory(nullptr, buildSizesInfo.buildScratchSize, MemUsage::ScratchBuffer, BufferHeap::Device);
 
   VkAccelerationStructureCreateInfoKHR createInfo = {};
   createInfo.sType         = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
@@ -67,19 +106,20 @@ VAccelerationStructure::VAccelerationStructure(VDevice& dx,
   createInfo.deviceAddress = VK_NULL_HANDLE;
   vkCreateAccelerationStructure(device, &createInfo, nullptr, &impl);
 
-  auto cmd = dx.dataMgr().get();
+  auto& mgr = dx.dataMgr();
+  auto  cmd = dx.dataMgr().get();
   cmd->begin();
-  //cmd->hold(scratch);
-  cmd->buildBlas(impl,
-                 vbo,vboSz,stride,
-                 ibo,iboSz,ioffset,icls, scratch);
+  // cmd->hold(scratch);
+  cmd->buildBlas(impl,ctx,scratch);
   cmd->end();
 
   // dx.dataMgr().waitFor(this);
-  dx.dataMgr().waitFor(&vbo);
-  dx.dataMgr().waitFor(&ibo);
+  for(size_t i=0; i<size; ++i) {
+    mgr.waitFor(geom[i].vbo);
+    mgr.waitFor(geom[i].ibo);
+    }
 
-  dx.dataMgr().submitAndWait(std::move(cmd));
+  mgr.submitAndWait(std::move(cmd));
   }
 
 VAccelerationStructure::~VAccelerationStructure() {

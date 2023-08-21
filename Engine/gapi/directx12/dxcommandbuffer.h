@@ -75,10 +75,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void copy(AbstractGraphicsApi::Buffer&  dest, size_t offsetDest, const AbstractGraphicsApi::Buffer& src, size_t offsetSrc, size_t size);
     void copy(AbstractGraphicsApi::Texture& dest, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Buffer&  src, size_t offset);
 
-    void buildBlas(ID3D12Resource* dest,
-                   AbstractGraphicsApi::Buffer& vbo, size_t vboSz, size_t stride,
-                   AbstractGraphicsApi::Buffer& ibo, size_t iboSz, size_t ioffset, Detail::IndexClass cls,
-                   AbstractGraphicsApi::Buffer& scratch);
+    void buildBlas(ID3D12Resource* dest, AbstractGraphicsApi::BlasBuildCtx& rtctx, AbstractGraphicsApi::Buffer& scratch);
     void buildTlas(AbstractGraphicsApi::Buffer& tbo, AbstractGraphicsApi::Buffer& instances, uint32_t numInstances,
                    AbstractGraphicsApi::Buffer& scratch);
 

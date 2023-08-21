@@ -2,6 +2,7 @@
 
 #include <Tempest/AbstractGraphicsApi>
 #include <Tempest/RenderState>
+#include <Tempest/AccelerationStructure>
 #include <stdexcept>
 #include "vulkan_sdk.h"
 
@@ -330,13 +331,13 @@ class VDevice : public AbstractGraphicsApi::Device {
       bool     hostVisible = false;
       };
 
-    VkInstance              instance           =nullptr;
-    VkPhysicalDevice        physicalDevice     =nullptr;
+    VkInstance              instance       = nullptr;
+    VkPhysicalDevice        physicalDevice = nullptr;
     autoDevice              device;
 
     Queue                   queues[3];
-    Queue*                  graphicsQueue=nullptr;
-    Queue*                  presentQueue =nullptr;
+    Queue*                  graphicsQueue = nullptr;
+    Queue*                  presentQueue  = nullptr;
 
     std::mutex              allocSync;
     VAllocator              allocator;

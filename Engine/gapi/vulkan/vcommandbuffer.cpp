@@ -14,6 +14,7 @@
 #include "vtexture.h"
 #include "vframebuffermap.h"
 #include "vmeshlethelper.h"
+#include "vaccelerationstructure.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -676,48 +677,12 @@ void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, u
                  filter);
   }
 
-void VCommandBuffer::buildBlas(VkAccelerationStructureKHR dest,
-                               const AbstractGraphicsApi::Buffer& ivbo, size_t vboSz, size_t stride,
-                               const AbstractGraphicsApi::Buffer& iibo, size_t iboSz, size_t ioffset, IndexClass icls,
-                               AbstractGraphicsApi::Buffer& scratch) {
-  auto& vbo = reinterpret_cast<const VBuffer&>(ivbo);
-  auto& ibo = reinterpret_cast<const VBuffer&>(iibo);
+void VCommandBuffer::buildBlas(VkAccelerationStructureKHR dest, AbstractGraphicsApi::BlasBuildCtx& rtctx, AbstractGraphicsApi::Buffer& scratch) {
+  auto& ctx = reinterpret_cast<VBlasBuildCtx&>(rtctx);
 
-  VkAccelerationStructureGeometryKHR geometry = {};
-  geometry.sType                              = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-  geometry.pNext                              = nullptr;
-  geometry.geometryType                       = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-  geometry.geometry.triangles.sType           = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-  geometry.geometry.triangles.vertexFormat    = VK_FORMAT_R32G32B32_SFLOAT;
-  geometry.geometry.triangles.vertexStride    = stride;
-  geometry.geometry.triangles.maxVertex       = uint32_t(vboSz);
-  geometry.geometry.triangles.indexType       = nativeFormat(icls);
-  geometry.geometry.triangles.transformData   = VkDeviceOrHostAddressConstKHR{};
-  geometry.flags                              = VK_GEOMETRY_OPAQUE_BIT_KHR;
+  auto buildGeometryInfo = ctx.buildCmd(device, dest, &reinterpret_cast<VBuffer&>(scratch));
 
-  geometry.geometry.triangles.vertexData.deviceAddress = vbo.toDeviceAddress(device);
-  geometry.geometry.triangles.indexData .deviceAddress = ibo.toDeviceAddress(device);
-
-  VkAccelerationStructureBuildGeometryInfoKHR buildGeometryInfo = {};
-  buildGeometryInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-  buildGeometryInfo.pNext                     = nullptr;
-  buildGeometryInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-  buildGeometryInfo.flags                     = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
-  buildGeometryInfo.mode                      = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-  buildGeometryInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
-  buildGeometryInfo.dstAccelerationStructure  = dest;
-  buildGeometryInfo.geometryCount             = 1;
-  buildGeometryInfo.pGeometries               = &geometry;
-  buildGeometryInfo.ppGeometries              = nullptr;
-  buildGeometryInfo.scratchData.deviceAddress = reinterpret_cast<const VBuffer&>(scratch).toDeviceAddress(device);
-
-  VkAccelerationStructureBuildRangeInfoKHR buildRangeInfo = {};
-  buildRangeInfo.primitiveCount               = uint32_t(iboSz/3);
-  buildRangeInfo.primitiveOffset              = uint32_t(ioffset*sizeofIndex(icls));
-  buildRangeInfo.firstVertex                  = 0;
-  buildRangeInfo.transformOffset              = 0;
-
-  VkAccelerationStructureBuildRangeInfoKHR* pbuildRangeInfo = &buildRangeInfo;
+  VkAccelerationStructureBuildRangeInfoKHR* pbuildRangeInfo = ctx.ranges.data();
   device.vkCmdBuildAccelerationStructures(impl, 1, &buildGeometryInfo, &pbuildRangeInfo);
 
   // make sure BLAS'es are ready

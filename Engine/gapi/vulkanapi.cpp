@@ -218,13 +218,9 @@ AbstractGraphicsApi::PTexture VulkanApi::createStorage(Device* d,
   return PTexture(pbuf.handler);
   }
 
-AbstractGraphicsApi::AccelerationStructure* VulkanApi::createBottomAccelerationStruct(Device* d,
-                                                                                      Buffer* vbo, size_t vboSz, size_t stride,
-                                                                                      Buffer* ibo, size_t iboSz, size_t ioffset, Detail::IndexClass icls) {
+AbstractGraphicsApi::AccelerationStructure* VulkanApi::createBottomAccelerationStruct(Device* d, const RtGeometry* geom, size_t size) {
   auto& dx = *reinterpret_cast<VDevice*>(d);
-  auto& vx = *reinterpret_cast<VBuffer*>(vbo);
-  auto& ix = *reinterpret_cast<VBuffer*>(ibo);
-  return new VAccelerationStructure(dx,vx,vboSz,stride,ix,iboSz,ioffset,icls);
+  return new VAccelerationStructure(dx, geom, size);
   }
 
 AbstractGraphicsApi::AccelerationStructure* VulkanApi::createTopAccelerationStruct(Device* d, const RtInstance* inst, AccelerationStructure*const* as, size_t size) {

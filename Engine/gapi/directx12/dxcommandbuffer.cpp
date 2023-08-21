@@ -8,6 +8,7 @@
 #include "dxdescriptorarray.h"
 #include "dxfbolayout.h"
 #include "dxpipeline.h"
+#include "dxaccelerationstructure.h"
 
 #include "guid.h"
 
@@ -624,30 +625,14 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, s
   impl->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, nullptr);
   }
 
-void DxCommandBuffer::buildBlas(ID3D12Resource* dest,
-                                AbstractGraphicsApi::Buffer& ivbo, size_t vboSz, size_t stride,
-                                AbstractGraphicsApi::Buffer& iibo, size_t iboSz, size_t ioffset, IndexClass icls,
-                                AbstractGraphicsApi::Buffer& scratch) {
-  auto& vbo = reinterpret_cast<DxBuffer&>(ivbo);
-  auto& ibo = reinterpret_cast<DxBuffer&>(iibo);
-
-  D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc = {};
-  geometryDesc.Type                                 = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-  geometryDesc.Flags                                = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
-  geometryDesc.Triangles.Transform3x4               = 0;
-  geometryDesc.Triangles.IndexFormat                = nativeFormat(icls);
-  geometryDesc.Triangles.VertexFormat               = DXGI_FORMAT_R32G32B32_FLOAT;
-  geometryDesc.Triangles.IndexCount                 = UINT(iboSz);
-  geometryDesc.Triangles.VertexCount                = UINT(vboSz);
-  geometryDesc.Triangles.IndexBuffer                = ibo.impl->GetGPUVirtualAddress() + ioffset*sizeofIndex(icls);
-  geometryDesc.Triangles.VertexBuffer.StartAddress  = vbo.impl->GetGPUVirtualAddress();
-  geometryDesc.Triangles.VertexBuffer.StrideInBytes = stride;
+void DxCommandBuffer::buildBlas(ID3D12Resource* dest, AbstractGraphicsApi::BlasBuildCtx& rtctx, AbstractGraphicsApi::Buffer& scratch) {
+  auto& ctx = reinterpret_cast<DxBlasBuildCtx&>(rtctx);
 
   D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS blasInputs = {};
   blasInputs.Type           = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
   blasInputs.Flags          = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
-  blasInputs.pGeometryDescs = &geometryDesc;
-  blasInputs.NumDescs       = 1;
+  blasInputs.pGeometryDescs = ctx.geometry.data();
+  blasInputs.NumDescs       = UINT(ctx.geometry.size());
 
   D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC desc = {};
   desc.DestAccelerationStructureData    = dest->GetGPUVirtualAddress();

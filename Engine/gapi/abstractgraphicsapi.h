@@ -257,28 +257,6 @@ namespace Tempest {
       }
     };
 
-  class AccelerationStructure;
-
-  enum class RtInstanceFlags : uint8_t {
-    Opaque    = 0,
-    NonOpaque = 1,
-    };
-
-  inline RtInstanceFlags operator | (RtInstanceFlags a, RtInstanceFlags b){
-    return RtInstanceFlags(uint16_t(a)|uint16_t(b));
-    }
-
-  inline RtInstanceFlags operator & (RtInstanceFlags a, RtInstanceFlags b){
-    return RtInstanceFlags(uint16_t(a)&uint16_t(b));
-    }
-
-  struct RtInstance {
-    Tempest::Matrix4x4           mat   = Matrix4x4::mkIdentity();
-    uint32_t                     id    = 0;
-    RtInstanceFlags              flags = RtInstanceFlags::Opaque;
-    const AccelerationStructure* blas  = nullptr;
-    };
-
   namespace Detail {
     enum class IndexClass:uint8_t {
       i16=0,
@@ -308,6 +286,7 @@ namespace Tempest {
 
   class Attachment;
   class ZBuffer;
+  class RtInstance;
 
   enum class AccessOp : uint8_t {
     Discard,
@@ -505,6 +484,18 @@ namespace Tempest {
         virtual void  update  (const void* data, size_t off, size_t size)=0;
         virtual void  read    (      void* data, size_t off, size_t size)=0;
         };
+
+      struct RtGeometry {
+        const Buffer* vbo    = nullptr;
+        const Buffer* ibo    = nullptr;
+
+        size_t             vboSz   = 0;
+        size_t             stride  = 0;
+        size_t             iboSz   = 0;
+        size_t             ioffset = 0;
+        Detail::IndexClass icls    = Detail::IndexClass::i32;
+        };
+      struct BlasBuildCtx {};
       struct AccelerationStructure:Shared {
 
         };
@@ -619,9 +610,7 @@ namespace Tempest {
       virtual PTexture   createStorage(Device* d, const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) = 0;
       virtual PTexture   createStorage(Device* d, const uint32_t w, const uint32_t h, const uint32_t depth, uint32_t mips, TextureFormat frm) = 0;
 
-      virtual AccelerationStructure* createBottomAccelerationStruct(Device* d,
-                                                                    Buffer* vbo, size_t vboSz, size_t stride,
-                                                                    Buffer* ibo, size_t iboSz, size_t offset, Detail::IndexClass icls);
+      virtual AccelerationStructure* createBottomAccelerationStruct(Device* d, const RtGeometry* geom, size_t geomSize);
       virtual AccelerationStructure* createTopAccelerationStruct(Device* d, const RtInstance* geom, AccelerationStructure*const* as, size_t geomSize);
 
       virtual void       readPixels   (Device* d, Pixmap& out, const PTexture t,

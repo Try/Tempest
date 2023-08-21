@@ -2,6 +2,7 @@
 
 #include <Tempest/AbstractGraphicsApi>
 #include <Tempest/RenderState>
+#include <Tempest/AccelerationStructure>
 #include <stdexcept>
 #include <mutex>
 

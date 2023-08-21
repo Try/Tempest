@@ -47,7 +47,7 @@ class TransferCmd : public CmdBuffer {
       holdRes.clear();
       }
 
-    bool waitFor(AbstractGraphicsApi::Shared* s) {
+    bool waitFor(const AbstractGraphicsApi::Shared* s) {
       for(auto& i:holdRes)
         if(i.handler==s) {
           wait();
@@ -81,7 +81,7 @@ class UploadEngine final {
     void                      submit(std::unique_ptr<Commands>&& cmd);
     void                      submitAndWait(std::unique_ptr<Commands>&& cmd);
     void                      wait();
-    void                      waitFor(AbstractGraphicsApi::Shared* s);
+    void                      waitFor(const AbstractGraphicsApi::Shared* s);
 
     Buffer                    allocStagingMemory(const void* data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap heap);
     Buffer                    allocStagingMemory(const void* data, size_t size, MemUsage usage, BufferHeap heap);
@@ -128,7 +128,7 @@ void UploadEngine<Device,CommandBuffer,Fence,Buffer>::wait() {
   }
 
 template<class Device, class CommandBuffer, class Fence, class Buffer>
-void UploadEngine<Device,CommandBuffer,Fence,Buffer>::waitFor(AbstractGraphicsApi::Shared* s) {
+void UploadEngine<Device,CommandBuffer,Fence,Buffer>::waitFor(const AbstractGraphicsApi::Shared* s) {
   std::lock_guard<SpinLock> guard(sync);
   if(!hasWaits)
     return;

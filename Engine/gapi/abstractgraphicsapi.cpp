@@ -86,10 +86,7 @@ void AbstractGraphicsApi::CommandBuffer::dispatchMesh(size_t x, size_t y, size_t
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }
 
-AbstractGraphicsApi::AccelerationStructure*
-  AbstractGraphicsApi::createBottomAccelerationStruct(Device* d,
-                                                      Buffer* vbo, size_t vboSz, size_t stride,
-                                                      Buffer* ibo, size_t iboSz, size_t offset, Detail::IndexClass icls) {
+AbstractGraphicsApi::AccelerationStructure* AbstractGraphicsApi::createBottomAccelerationStruct(Device* d, const RtGeometry* geom, size_t geomSize) {
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }
 

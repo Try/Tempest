@@ -86,10 +86,8 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void blit(AbstractGraphicsApi::Texture& src, uint32_t srcW, uint32_t srcH, uint32_t srcMip,
               AbstractGraphicsApi::Texture& dst, uint32_t dstW, uint32_t dstH, uint32_t dstMip);
 
-    void buildBlas(VkAccelerationStructureKHR dest,
-                   const AbstractGraphicsApi::Buffer& vbo, size_t vboSz, size_t stride,
-                   const AbstractGraphicsApi::Buffer& ibo, size_t iboSz, size_t ioffset, Detail::IndexClass icls,
-                   AbstractGraphicsApi::Buffer& scratch);
+    void buildBlas(VkAccelerationStructureKHR dest, AbstractGraphicsApi::BlasBuildCtx& ctx, AbstractGraphicsApi::Buffer& scratch);
+
     void buildTlas(VkAccelerationStructureKHR dest,
                    AbstractGraphicsApi::Buffer& tbo, const AbstractGraphicsApi::Buffer& instances, uint32_t numInstances,
                    AbstractGraphicsApi::Buffer& scratch);

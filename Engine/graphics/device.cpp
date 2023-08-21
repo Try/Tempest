@@ -1,4 +1,5 @@
 #include "device.h"
+#include "utility/smallarray.h"
 
 #include <Tempest/Fence>
 #include <Tempest/PipelineLayout>
@@ -198,15 +199,35 @@ StorageImage Device::image3d(TextureFormat frm, const uint32_t w, const uint32_t
   return StorageImage(std::move(t));
   }
 
-AccelerationStructure Device::implBlas(const Detail::VideoBuffer& vbo, size_t stride, const Detail::VideoBuffer& ibo, Detail::IndexClass icls, size_t offset, size_t count) {
+AccelerationStructure Device::blas(const std::vector<RtGeometry>& geom) {
+  return blas(geom.data(), geom.size());
+  }
+
+AccelerationStructure Device::blas(std::initializer_list<RtGeometry> geom) {
+  return blas(geom.begin(), geom.size());
+  }
+
+AccelerationStructure Device::blas(const RtGeometry* geom, size_t geomSize) {
   if(!properties().raytracing.rayQuery)
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension, "rayQuery");
-  assert(3*sizeof(float)<=stride); // float3 positions, no overlap
-  if(count==0)
+  if(geomSize==0)
     return AccelerationStructure();
-  auto blas = api.createBottomAccelerationStruct(dev,
-                                                 vbo.impl.handler,vbo.size()/stride,stride,
-                                                 ibo.impl.handler,count,offset,icls);
+
+  Detail::SmallArray<AbstractGraphicsApi::RtGeometry,32> g(geomSize);
+  for(size_t i=0; i<geomSize; ++i) {
+    const uint32_t stride = uint32_t(geom[i].vboStride);
+    assert(3*sizeof(float)<=stride); // float3 positions, no overlap
+
+    auto& gx = g[i];
+    gx.vbo     = geom[i].vbo->impl.impl.handler;
+    gx.vboSz   = geom[i].vbo->byteSize()/stride;
+    gx.stride  = geom[i].vboStride;
+    gx.ibo     = geom[i].ibo->impl.impl.handler;
+    gx.iboSz   = geom[i].iboSize;
+    gx.ioffset = geom[i].iboOffset;
+    gx.icls    = geom[i].icls;
+    }
+  auto blas = api.createBottomAccelerationStruct(dev, g.get(), geomSize);
   return AccelerationStructure(*this,blas);
   }
 

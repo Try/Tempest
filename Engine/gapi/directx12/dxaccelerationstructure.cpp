@@ -10,12 +10,11 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-DxAccelerationStructure::DxAccelerationStructure(DxDevice& dx,
-                                                 DxBuffer& vbo, size_t vboSz, size_t stride,
-                                                 DxBuffer& ibo, size_t iboSz, size_t ioffset, IndexClass icls)
-  :owner(dx) {
-  ComPtr<ID3D12Device5> m_dxrDevice;
-  dx.device->QueryInterface(uuid<ID3D12Device5>(), reinterpret_cast<void**>(&m_dxrDevice));
+void DxBlasBuildCtx::pushGeometry(DxDevice& dx,
+                                  const DxBuffer& ivbo, size_t vboSz, size_t stride,
+                                  const DxBuffer& iibo, size_t iboSz, size_t ioffset, IndexClass icls) {
+  auto& vbo = const_cast<DxBuffer&>(ivbo);
+  auto& ibo = const_cast<DxBuffer&>(iibo);
 
   D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc = {};
   geometryDesc.Type                                 = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
@@ -25,34 +24,68 @@ DxAccelerationStructure::DxAccelerationStructure(DxDevice& dx,
   geometryDesc.Triangles.VertexFormat               = DXGI_FORMAT_R32G32B32_FLOAT;
   geometryDesc.Triangles.IndexCount                 = UINT(iboSz);
   geometryDesc.Triangles.VertexCount                = UINT(vboSz);
-  geometryDesc.Triangles.IndexBuffer                = 0;
-  geometryDesc.Triangles.VertexBuffer.StartAddress  = 0;
+  geometryDesc.Triangles.IndexBuffer                = ibo.impl->GetGPUVirtualAddress() + ioffset*sizeofIndex(icls);
+  geometryDesc.Triangles.VertexBuffer.StartAddress  = vbo.impl->GetGPUVirtualAddress();
   geometryDesc.Triangles.VertexBuffer.StrideInBytes = stride;
 
-  D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS  blasInputs = {};
+  geometry.push_back(geometryDesc);
+  }
+
+D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO DxBlasBuildCtx::buildSizes(DxDevice& dx) const {
+  D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS  blasInputs     = buildCmd(dx, nullptr);
+  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO buildSizesInfo = {};
+
+  ComPtr<ID3D12Device5> m_dxrDevice;
+  dx.device->QueryInterface(uuid<ID3D12Device5>(), reinterpret_cast<void**>(&m_dxrDevice));
+  m_dxrDevice->GetRaytracingAccelerationStructurePrebuildInfo(&blasInputs, &buildSizesInfo);
+
+  return buildSizesInfo;
+  }
+
+D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS DxBlasBuildCtx::buildCmd(DxDevice& dx, DxBuffer* scratch) const {
+  D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS blasInputs = {};
   blasInputs.Type           = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
   blasInputs.Flags          = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
-  blasInputs.pGeometryDescs = &geometryDesc;
-  blasInputs.NumDescs       = 1;
+  blasInputs.pGeometryDescs = geometry.data();
+  blasInputs.NumDescs       = UINT(geometry.size());
+  return blasInputs;
+  }
 
-  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO buildSizesInfo = {};
-  m_dxrDevice->GetRaytracingAccelerationStructurePrebuildInfo(&blasInputs, &buildSizesInfo);
+
+DxAccelerationStructure::DxAccelerationStructure(DxDevice& dx, const AbstractGraphicsApi::RtGeometry* geom, size_t size)
+  :owner(dx) {
+  DxBlasBuildCtx ctx;
+  for(size_t i=0; i<size; ++i) {
+    auto& vbo     = *reinterpret_cast<const DxBuffer*>(geom[i].vbo);
+    auto  vboSz   = geom[i].vboSz;
+    auto  stride  = geom[i].stride;
+    auto& ibo     = *reinterpret_cast<const DxBuffer*>(geom[i].ibo);
+    auto  iboSz   = geom[i].iboSz;
+    auto  ioffset = geom[i].ioffset;
+    auto  icls    = geom[i].icls;
+    ctx.pushGeometry(dx, vbo, vboSz, stride, ibo, iboSz, ioffset, icls);
+    }
+
+  const auto buildSizesInfo = ctx.buildSizes(dx);
   if(buildSizesInfo.ResultDataMaxSizeInBytes<=0)
     throw std::system_error(GraphicsErrc::UnsupportedExtension);
 
   auto  scratch = dx.dataMgr().allocStagingMemory(nullptr, buildSizesInfo.ScratchDataSizeInBytes, MemUsage::ScratchBuffer, BufferHeap::Device);
   impl = dx.allocator.alloc(nullptr, buildSizesInfo.ResultDataMaxSizeInBytes, MemUsage::AsStorage, BufferHeap::Device);
 
-  auto cmd = dx.dataMgr().get();
+  auto& mgr = dx.dataMgr();
+  auto  cmd = dx.dataMgr().get();
   cmd->begin();
   //cmd->hold(scratch);
-  cmd->buildBlas(impl.impl.get(),
-                 vbo,vboSz,stride,
-                 ibo,iboSz,ioffset,icls,
-                 scratch);
+  cmd->buildBlas(impl.impl.get(), ctx, scratch);
   cmd->end();
 
   // dx.dataMgr().waitFor(this);
+  for(size_t i=0; i<size; ++i) {
+    mgr.waitFor(geom[i].vbo);
+    mgr.waitFor(geom[i].ibo);
+    }
+
   dx.dataMgr().submitAndWait(std::move(cmd));
   }
 

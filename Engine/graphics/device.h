@@ -126,6 +126,10 @@ class Device {
     StorageImage          image2d    (TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips = false);
     StorageImage          image3d    (TextureFormat frm, const uint32_t w, const uint32_t h, const uint32_t d, const bool mips = false);
 
+    AccelerationStructure blas(const std::vector<RtGeometry>& geom);
+    AccelerationStructure blas(std::initializer_list<RtGeometry> geom);
+    AccelerationStructure blas(const RtGeometry* geom, size_t geomSize);
+
     template<class V, class I>
     AccelerationStructure blas(const VertexBuffer<V>& vbo, const IndexBuffer<I>& ibo);
     template<class V, class I>
@@ -169,13 +173,11 @@ class Device {
     Tempest::Builtin                builtins;
 
     Detail::VideoBuffer   createVideoBuffer(const void* data, size_t size, MemUsage usage, BufferHeap flg);
-    AccelerationStructure implBlas(const Detail::VideoBuffer& vbo, size_t stride, const Detail::VideoBuffer& ibo, Detail::IndexClass icls, size_t offset, size_t count);
-
-    RenderPipeline implPipeline(const RenderState &st, const Shader* shaders[], Topology tp);
+    RenderPipeline        implPipeline(const RenderState &st, const Shader* shaders[], Topology tp);
     template<class T>
     UniformBuffer<T>      implUbo(BufferHeap ht, const void* data);
 
-    static TextureFormat formatOf(const Attachment& a);
+    static TextureFormat  formatOf(const Attachment& a);
 
   friend class RenderPipeline;
   friend class Painter;
@@ -236,12 +238,14 @@ inline UniformBuffer<T> Device::implUbo(BufferHeap ht, const void* mem) {
 
 template<class V, class I>
 AccelerationStructure Device::blas(const VertexBuffer<V>& vbo, const IndexBuffer<I>& ibo) {
-  return implBlas(vbo.impl,sizeof(V),ibo.impl,Detail::indexCls<I>(),0,ibo.size());
+  RtGeometry g{vbo, ibo};
+  return blas(&g, 1);
   }
 
 template<class V, class I>
 inline AccelerationStructure Device::blas(const VertexBuffer<V>& vbo, const IndexBuffer<I>& ibo, size_t offset, size_t count) {
-  return implBlas(vbo.impl,sizeof(V),ibo.impl,Detail::indexCls<I>(),offset,count);
+  RtGeometry g{vbo, ibo, offset, count};
+  return blas(&g, 1);
   }
 
 }
