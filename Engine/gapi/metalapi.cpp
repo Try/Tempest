@@ -155,14 +155,11 @@ AbstractGraphicsApi::PTexture MetalApi::createStorage(Device* d,
   return PTexture(new MtTexture(dev,w,h,depth,mips,frm,true));
   }
 
-AbstractGraphicsApi::AccelerationStructure*
-MetalApi::createBottomAccelerationStruct(Device* d,
-                                         Buffer* vbo, size_t vboSz, size_t stride,
-                                         Buffer* ibo, size_t iboSz, size_t ioffset, Detail::IndexClass icls) {
+AbstractGraphicsApi::AccelerationStructure* MetalApi::createBottomAccelerationStruct(Device* d, const RtGeometry* geom, size_t size) {
   auto& dev = *reinterpret_cast<MtDevice*>(d);
-  auto& vx  = *reinterpret_cast<MtBuffer*>(vbo);
-  auto& ix  = *reinterpret_cast<MtBuffer*>(ibo);
-  return new MtAccelerationStructure(dev,vx,vboSz,stride, ix,iboSz,ioffset,icls);
+  // auto& ix  = *reinterpret_cast<MtBuffer*>(ibo);
+  // auto& vx  = *reinterpret_cast<MtBuffer*>(vbo);
+  return new MtAccelerationStructure(dev, geom, size);
   }
 
 AbstractGraphicsApi::AccelerationStructure* MetalApi::createTopAccelerationStruct(Device* d, const RtInstance* inst, AccelerationStructure*const* as, size_t size) {

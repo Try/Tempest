@@ -12,14 +12,13 @@
 
 using namespace Tempest::Detail;
 
-MtAccelerationStructure::MtAccelerationStructure(MtDevice& dx,
-                                                 MtBuffer& vbo, size_t vboSz, size_t stride,
-                                                 MtBuffer& ibo, size_t iboSz, size_t ioffset, IndexClass icls)
-  :owner(dx) {
-  auto pool = NsPtr<NS::AutoreleasePool>::init();
-  auto geo  = NsPtr<MTL::AccelerationStructureTriangleGeometryDescriptor>::init();
+void MtBlasBuildCtx::pushGeometry(MtDevice& dx,
+                                  const MtBuffer& vbo, size_t vboSz, size_t stride,
+                                  const MtBuffer& ibo, size_t iboSz, size_t ioffset, IndexClass icls) {
+  auto geo = NsPtr<MTL::AccelerationStructureTriangleGeometryDescriptor>::init();
   if(geo==nullptr)
     throw std::system_error(GraphicsErrc::OutOfHostMemory);
+
   geo->setVertexBuffer(vbo.impl.get());
   geo->setVertexBufferOffset(0);
   geo->setVertexStride(stride);
@@ -36,14 +35,40 @@ MtAccelerationStructure::MtAccelerationStructure(MtDevice& dx,
     geo->setIndexBufferOffset(0);
     geo->setTriangleCount(0);
     }
+  ranges.emplace_back(std::move(geo));
+  this->geo.push_back(ranges.back().get());
+  }
 
-  auto geoArr = NsPtr<NS::Array>(NS::Array::array(geo.get()));
-  auto desc   = NsPtr<MTL::PrimitiveAccelerationStructureDescriptor>::init();
+void MtBlasBuildCtx::bake() {
+  auto geoArr = NsPtr<NS::Array>(NS::Array::array(geo.data(), geo.size()));
+  desc = NsPtr<MTL::PrimitiveAccelerationStructureDescriptor>::init();
   desc->retain();
   desc->setGeometryDescriptors(geoArr.get());
   desc->setUsage(MTL::AccelerationStructureUsageNone);
+  }
 
-  auto sz = dx.impl->accelerationStructureSizes(desc.get());
+MTL::AccelerationStructureSizes MtBlasBuildCtx::buildSizes(MtDevice& dx) const {
+  return dx.impl->accelerationStructureSizes(desc.get());
+  }
+
+
+MtAccelerationStructure::MtAccelerationStructure(MtDevice& dx, const Tempest::AbstractGraphicsApi::RtGeometry* geom, size_t size)
+  :owner(dx) {
+  auto pool = NsPtr<NS::AutoreleasePool>::init();
+  MtBlasBuildCtx ctx;
+  for(size_t i=0; i<size; ++i) {
+    auto& vbo     = *reinterpret_cast<const MtBuffer*>(geom[i].vbo);
+    auto  vboSz   = geom[i].vboSz;
+    auto  stride  = geom[i].stride;
+    auto& ibo     = *reinterpret_cast<const MtBuffer*>(geom[i].ibo);
+    auto  iboSz   = geom[i].iboSz;
+    auto  ioffset = geom[i].ioffset;
+    auto  icls    = geom[i].icls;
+    ctx.pushGeometry(dx, vbo, vboSz, stride, ibo, iboSz, ioffset, icls);
+    }
+  ctx.bake();
+
+  auto sz = ctx.buildSizes(dx);
 
   impl = NsPtr<MTL::AccelerationStructure>(dx.impl->newAccelerationStructure(sz.accelerationStructureSize));
   if(impl==nullptr)
@@ -55,7 +80,7 @@ MtAccelerationStructure::MtAccelerationStructure(MtDevice& dx,
 
   auto cmd = dx.queue->commandBuffer();
   auto enc = cmd->accelerationStructureCommandEncoder();
-  enc->buildAccelerationStructure(impl.get(), desc.get(), scratch.get(), 0);
+  enc->buildAccelerationStructure(impl.get(), ctx.desc.get(), scratch.get(), 0);
   enc->endEncoding();
   cmd->commit();
   // TODO: implement proper upload engine
@@ -86,7 +111,7 @@ MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtIns
 
     for(int x=0; x<4; ++x)
       for(int y=0; y<3; ++y)
-        obj.transformationMatrix[x][y] = inst[i].mat.at(x,y);
+        obj.transformationMatrix[x][y]  = inst[i].mat.at(x,y);
     obj.options                         = nativeFormat(inst[i].flags);
     obj.mask                            = 0xFF;
     obj.intersectionFunctionTableOffset = 0;
@@ -139,3 +164,4 @@ MtTopAccelerationStructure::~MtTopAccelerationStructure() {
   }
 
 #endif
+

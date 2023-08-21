@@ -11,11 +11,25 @@ namespace Detail {
 class MtDevice;
 class MtBuffer;
 
+struct MtBlasBuildCtx : AbstractGraphicsApi::BlasBuildCtx {
+  void pushGeometry(MtDevice& dx,
+                    const MtBuffer& vbo, size_t vboSz, size_t stride,
+                    const MtBuffer& ibo, size_t iboSz, size_t ioffset, IndexClass icls);
+  void bake();
+
+  MTL::AccelerationStructureSizes buildSizes(MtDevice& dx) const;
+
+  std::vector<NsPtr<MTL::AccelerationStructureTriangleGeometryDescriptor>> ranges;
+  std::vector<const NS::Object*>                                           geo;
+  NsPtr<MTL::PrimitiveAccelerationStructureDescriptor>                     desc;
+  };
+
 class MtAccelerationStructure : public Tempest::AbstractGraphicsApi::AccelerationStructure {
   public:
     MtAccelerationStructure(MtDevice& owner,
                             MtBuffer& vbo, size_t vboSz, size_t stride,
                             MtBuffer& ibo, size_t iboSz, size_t ioffset, Detail::IndexClass icls);
+    MtAccelerationStructure(MtDevice& owner, const AbstractGraphicsApi::RtGeometry* geom, size_t size);
     ~MtAccelerationStructure();
 
     MtDevice&                         owner;

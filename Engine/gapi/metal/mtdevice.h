@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
+#include <Tempest/AccelerationStructure>
 #include <Tempest/RenderState>
 #include <Tempest/Except>
 
