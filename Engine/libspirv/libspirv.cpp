@@ -504,7 +504,7 @@ uint32_t MutableBytecode::OpTypeFunction(Iterator& typesEnd, uint32_t idRet, std
 
   const uint32_t tFn = fetchAddBound();
   uint32_t arr[32] = {tFn,idRet};
-  std::memcpy(arr+2, &*args.begin(), args.size()*sizeof(uint32_t));
+  std::memcpy(arr+2, args.begin(), args.size()*sizeof(uint32_t));
 
   typesEnd.insert(spv::OpTypeFunction, arr, args.size()+2);
   return tFn;
