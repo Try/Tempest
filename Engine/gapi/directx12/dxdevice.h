@@ -284,6 +284,10 @@ inline D3D12_RAYTRACING_INSTANCE_FLAGS nativeFormat(RtInstanceFlags f) {
   if((f & RtInstanceFlags::NonOpaque)==RtInstanceFlags::NonOpaque)
     ret |= D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_NON_OPAQUE; else
     ret |= D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_OPAQUE;
+  if((f & RtInstanceFlags::CullDisable)==RtInstanceFlags::CullDisable)
+    ret |= D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_CULL_DISABLE;
+  if((f & RtInstanceFlags::CullFlip)==RtInstanceFlags::CullFlip)
+    ret |= D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
   return ret;
   }
 

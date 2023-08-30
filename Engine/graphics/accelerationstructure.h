@@ -16,8 +16,10 @@ class StorageBuffer;
 class AccelerationStructure;
 
 enum class RtInstanceFlags : uint8_t {
-  Opaque    = 0,
-  NonOpaque = 1,
+  Opaque      = 0x0,
+  NonOpaque   = 0x1,
+  CullDisable = 0x2,
+  CullFlip    = 0x4,
   };
 
 inline RtInstanceFlags operator | (RtInstanceFlags a, RtInstanceFlags b){

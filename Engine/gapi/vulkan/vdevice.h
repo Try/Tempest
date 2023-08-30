@@ -290,6 +290,10 @@ inline VkGeometryInstanceFlagsKHR nativeFormat(RtInstanceFlags f) {
   if((f & RtInstanceFlags::NonOpaque)==RtInstanceFlags::NonOpaque)
     ret |= VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR; else
     ret |= VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
+  if((f & RtInstanceFlags::CullDisable)==RtInstanceFlags::CullDisable)
+    ret |= VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+  if((f & RtInstanceFlags::CullFlip)==RtInstanceFlags::CullFlip)
+    ret |= VK_GEOMETRY_INSTANCE_TRIANGLE_FLIP_FACING_BIT_KHR;
   return ret;
   }
 
