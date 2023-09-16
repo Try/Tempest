@@ -211,6 +211,10 @@ inline MTL::AccelerationStructureInstanceOptions nativeFormat(RtInstanceFlags f)
   if((f & RtInstanceFlags::NonOpaque)==RtInstanceFlags::NonOpaque)
     ret |= MTL::AccelerationStructureInstanceOptionNonOpaque; else
     ret |= MTL::AccelerationStructureInstanceOptionOpaque;
+  if((f & RtInstanceFlags::CullDisable)==RtInstanceFlags::CullDisable)
+    ret |= MTL::AccelerationStructureInstanceOptionDisableTriangleCulling;
+  if((f & RtInstanceFlags::CullFlip)==RtInstanceFlags::CullFlip)
+    ret |= MTL::AccelerationStructureInstanceOptionTriangleFrontFacingWindingCounterClockwise;
   return ret;
   }
 
