@@ -37,12 +37,8 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
     optMSL.msl_version = dev.mslVersion;
     if(dev.prop.descriptors.nonUniformIndexing) {
       optMSL.argument_buffers_tier = spirv_cross::CompilerMSL::Options::ArgumentBuffersTier::Tier2;
+      optMSL.runtime_array_rich_descriptor = true;
       }
-
-    for(auto& i:lay)
-      if(i.runtimeSized && (i.cls==ShaderReflection::SsboR || i.cls==ShaderReflection::SsboRW)) {
-        optMSL.runtime_array_rich_descriptor = true;
-        }
 
     for(auto& cap:comp.get_declared_capabilities()) {
       switch(cap) {
