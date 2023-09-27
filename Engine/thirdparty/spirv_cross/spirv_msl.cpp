@@ -1898,9 +1898,18 @@ void CompilerMSL::extract_global_variables_from_function(uint32_t func_id, std::
 			case OpAtomicOr:
 			case OpAtomicXor:
 			case OpImageWrite:
+			{
 				if (needs_frag_discard_checks())
 					added_arg_ids.insert(builtin_helper_invocation_id);
+				uint32_t ptr = 0;
+				if (op == OpAtomicStore || op == OpImageWrite)
+					ptr = ops[0];
+				else
+					ptr = ops[2];
+				if (global_var_ids.find(ptr) != global_var_ids.end())
+					added_arg_ids.insert(ptr);
 				break;
+			}
 
 			// Emulate texture2D atomic operations
 			case OpImageTexelPointer:
@@ -9366,6 +9375,7 @@ void CompilerMSL::emit_instruction(const Instruction &instruction)
 	case OpRayQueryInitializeKHR:
 	{
 		flush_variable_declaration(ops[0]);
+		register_write(ops[0]);
 		add_spv_func_and_recompile(SPVFuncImplRayQueryIntersectionParams);
 
 		statement(to_expression(ops[0]), ".reset(", "ray(", to_expression(ops[4]), ", ", to_expression(ops[6]), ", ",
@@ -9376,6 +9386,7 @@ void CompilerMSL::emit_instruction(const Instruction &instruction)
 	case OpRayQueryProceedKHR:
 	{
 		flush_variable_declaration(ops[0]);
+		register_write(ops[2]);
 		emit_op(ops[0], ops[1], join(to_expression(ops[2]), ".next()"), false);
 		break;
 	}
@@ -9436,14 +9447,17 @@ void CompilerMSL::emit_instruction(const Instruction &instruction)
 	}
 	case OpRayQueryConfirmIntersectionKHR:
 		flush_variable_declaration(ops[0]);
+		register_write(ops[0]);
 		statement(to_expression(ops[0]), ".commit_triangle_intersection();");
 		break;
 	case OpRayQueryGenerateIntersectionKHR:
 		flush_variable_declaration(ops[0]);
+		register_write(ops[0]);
 		statement(to_expression(ops[0]), ".commit_bounding_box_intersection(", to_expression(ops[1]), ");");
 		break;
 	case OpRayQueryTerminateKHR:
 		flush_variable_declaration(ops[0]);
+		register_write(ops[0]);
 		statement(to_expression(ops[0]), ".abort();");
 		break;
 #undef MSL_RAY_QUERY_GET_OP
