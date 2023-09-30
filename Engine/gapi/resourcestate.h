@@ -3,8 +3,6 @@
 #include <Tempest/AbstractGraphicsApi>
 #include <vector>
 
-#include "gapi/shaderreflection.h"
-
 namespace Tempest {
 namespace Detail {
 

@@ -110,7 +110,7 @@ void VboDyn() {
 
     auto vbo = device.vbo(vboData,3);
 
-    Vertex   vboData2[3] = {vboData[0],{3,4},{5,6}};
+    Vertex vboData2[3] = {vboData[0],{3,4},{5,6}};
     vbo.update(vboData2,1,2);
 
     auto ssbo = device.ssbo(BufferHeap::Upload,vboData,sizeof(vboData));
