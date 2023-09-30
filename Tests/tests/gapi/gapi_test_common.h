@@ -785,7 +785,7 @@ void UnboundSsbo() {
   }
 
 template<class GraphicsApi>
-void SbboOverlap() {
+void SsboOverlap() {
   using namespace Tempest;
 
   struct Buf {

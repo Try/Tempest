@@ -109,9 +109,9 @@ TEST(MetalApi,Uniforms) {
 #endif
   }
 
-TEST(MetalApi,SbboOverlap) {
+TEST(MetalApi,SsboOverlap) {
 #if defined(__OSX__)
-  GapiTestCommon::SbboOverlap<MetalApi>();
+  GapiTestCommon::SsboOverlap<MetalApi>();
 #endif
   }
 
