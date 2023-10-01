@@ -32,6 +32,8 @@ static const char* toString(ResourceAccess rs) {
     case ResourceAccess::UavReadWriteAll:
       break;
     }
+  if(rs==(ResourceAccess::TransferSrc|ResourceAccess::TransferDst))
+    return "Transfer";
   return "Uav";
   }
 
@@ -94,11 +96,30 @@ TEST(main, ResourceStateBasic) {
   TestCommandBuffer cmd;
 
   ResourceState rs;
-  // rs.onTranferUsage(NonUniqResId::I_Buf, NonUniqResId::I_Buf);
   rs.setLayout(t, ResourceAccess::ColorAttach, true);
   rs.flush(cmd);
   rs.setLayout(t, ResourceAccess::Sampler, false);
   rs.flush(cmd);
   }
+
+TEST(main, ResourceStateTranfer) {
+  TestCommandBuffer cmd;
+
+  ResourceState rs;
+  rs.onTranferUsage(NonUniqResId::I_None, NonUniqResId::I_Ssbo, false);
+  //rs.flush(cmd);
+  rs.finalize(cmd);
+/*
+  rs.onTranferUsage(NonUniqResId::I_None, NonUniqResId::I_Ssbo);
+  rs.flush(cmd);
+
+  rs.joinCompute(PipelineStage::S_Graphics);
+
+  ResourceState::Usage u = {NonUniqResId::I_Ssbo, NonUniqResId::I_None, false};
+  rs.onUavUsage(u, PipelineStage::S_Compute);
+  rs.flush(cmd);
+  */
+  }
+
 
 

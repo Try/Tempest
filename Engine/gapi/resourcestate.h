@@ -24,8 +24,8 @@ class ResourceState {
     void setLayout  (AbstractGraphicsApi::Swapchain& s, uint32_t id, ResourceAccess lay, bool discard);
     void setLayout  (AbstractGraphicsApi::Texture&   a, ResourceAccess lay, bool discard = false);
 
-    void onTranferUsage(NonUniqResId read, NonUniqResId write);
-    void onUavUsage    (const ResourceState::Usage& uavUsage, PipelineStage st);
+    void onTranferUsage(NonUniqResId read, NonUniqResId write, bool host);
+    void onUavUsage    (const ResourceState::Usage& uavUsage, PipelineStage st, bool host = false);
     void forceLayout   (AbstractGraphicsApi::Texture&   a);
 
     void joinCompute(PipelineStage st);

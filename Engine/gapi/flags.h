@@ -36,25 +36,29 @@ enum class ResourceAccess : uint32_t {
   None             = 0,
   TransferSrc      = 1 << 0,
   TransferDst      = 1 << 1,
+  TransferHost     = 1 << 2,
 
-  Present          = 1 << 2,
+  Present          = 1 << 3,
 
-  Sampler          = 1 << 3,
-  ColorAttach      = 1 << 4,
-  DepthAttach      = 1 << 5,
-  DepthReadOnly    = 1 << 6,
+  Sampler          = 1 << 4,
+  ColorAttach      = 1 << 5,
+  DepthAttach      = 1 << 6,
+  DepthReadOnly    = 1 << 7,
 
-  Index            = 1 << 7,
-  Vertex           = 1 << 8,
-  Uniform          = 1 << 9,
+  Index            = 1 << 8,
+  Vertex           = 1 << 9,
+  Uniform          = 1 << 10,
 
-  UavReadComp      = 1 << 10,
-  UavWriteComp     = 1 << 11,
+  Blas             = 1 << 11,
+  Tlas             = 1 << 12,
 
-  UavReadGr        = 1 << 12,
-  UavWriteGr       = 1 << 13,
+  UavReadComp      = 1 << 13,
+  UavWriteComp     = 1 << 14,
 
-  // for debug view
+  UavReadGr        = 1 << 15,
+  UavWriteGr       = 1 << 16,
+
+  TransferSrcDst   = (TransferSrc    | TransferDst),
   UavReadWriteComp = (UavReadComp    | UavWriteComp),
   UavReadWriteGr   = (UavReadGr      | UavWriteGr  ),
   UavReadWriteAll  = (UavReadWriteGr | UavReadWriteComp),
@@ -70,9 +74,9 @@ inline ResourceAccess operator & (ResourceAccess a,const ResourceAccess& b) {
 
 enum NonUniqResId : uint8_t {
   I_None = 0x0,
-  I_Buf  = 0x1,
-  I_Ssbo = 0x2,
-  I_Img  = 0x4,
+  I_Img  = 0x1,
+  I_Buf  = 0x2,
+  I_Ssbo = 0x4,
   };
 
 inline NonUniqResId operator | (NonUniqResId a,const NonUniqResId& b) {
@@ -88,10 +92,12 @@ inline NonUniqResId operator & (NonUniqResId a,const NonUniqResId& b) {
   }
 
 enum PipelineStage : uint8_t {
+  S_Transfer,
+  // S_RtAs,
   S_Compute,
   S_Graphics,
 
-  S_First = S_Compute,
+  S_First = S_Transfer,
   S_Count = S_Graphics+1,
   };
 

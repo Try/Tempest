@@ -60,19 +60,19 @@ void ResourceState::forceLayout(AbstractGraphicsApi::Texture& img) {
     }
   }
 
-void ResourceState::onTranferUsage(NonUniqResId read, NonUniqResId write) {
-  if(read!=NonUniqResId::I_None)
-    uavSrcBarrier = uavSrcBarrier| ResourceAccess::TransferSrc;
-  if(write!=NonUniqResId::I_None)
-    uavDstBarrier = uavDstBarrier| ResourceAccess::TransferDst;
+void ResourceState::onTranferUsage(NonUniqResId read, NonUniqResId write, bool host) {
+  ResourceState::Usage u = {read, write, false};
+  onUavUsage(u, PipelineStage::S_Transfer, host);
   }
 
-void ResourceState::onUavUsage(const Usage& u, PipelineStage st) {
-  ResourceAccess rd [PipelineStage::S_Count] = {ResourceAccess::UavReadComp, ResourceAccess::UavReadGr};
-  ResourceAccess wr [PipelineStage::S_Count] = {ResourceAccess::UavWriteComp,ResourceAccess::UavWriteGr};
+void ResourceState::onUavUsage(const Usage& u, PipelineStage st, bool host) {
+  const ResourceAccess rd[PipelineStage::S_Count] = {ResourceAccess::TransferSrc, ResourceAccess::UavReadComp, ResourceAccess::UavReadGr};
+  const ResourceAccess wr[PipelineStage::S_Count] = {ResourceAccess::TransferDst, ResourceAccess::UavWriteComp,ResourceAccess::UavWriteGr};
+
+  const ResourceAccess hv = (host ? ResourceAccess::TransferHost : ResourceAccess::None);
 
   for(PipelineStage p = PipelineStage::S_First; p<PipelineStage::S_Count; p = PipelineStage(p+1)) {
-    if((uavRead [st].depend[p] & u.write)!=0 ||
+    if((uavWrite[st].depend[p] & u.write)!=0 ||
        (uavWrite[st].depend[p] & u.read)!=0) {
       // WaW, RaW barrier - execution+cache
       uavSrcBarrier = uavSrcBarrier | rd[p];
@@ -91,16 +91,27 @@ void ResourceState::onUavUsage(const Usage& u, PipelineStage st) {
       uavRead [st].depend[p] = NonUniqResId::I_None;
       uavWrite[st].depend[p] = u.write;
       }
+    else if(u.write!=0) {
+      // WaR barrier - assume reads from previous commandbuffer
+      uavSrcBarrier          = uavSrcBarrier | rd[p];
+      uavDstBarrier          = uavDstBarrier | wr[st];
+      uavRead [st].depend[p] = NonUniqResId::I_None;
+      uavWrite[st].depend[p] = u.write;
+      }
     else {
       // RaR - no barrier needed
       uavRead [p].depend[st] |= u.read;
       uavWrite[p].depend[st] |= u.write;
       }
+
+    if(host) {
+      uavDstBarrier = uavDstBarrier | hv;
+      }
     }
   }
 
 void ResourceState::joinCompute(PipelineStage st) {
-  ResourceAccess dst[PipelineStage::S_Count] = {ResourceAccess::UavReadWriteComp, ResourceAccess::UavReadWriteGr};
+  ResourceAccess dst[PipelineStage::S_Count] = {ResourceAccess::TransferSrcDst, ResourceAccess::UavReadWriteComp, ResourceAccess::UavReadWriteGr};
 
   auto& usage = uavWrite[st];
   if(/*uavUsage.read!=0 ||*/ usage.any!=0) {

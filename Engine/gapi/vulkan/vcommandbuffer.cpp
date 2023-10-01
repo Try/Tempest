@@ -58,6 +58,10 @@ static void toStage(VkPipelineStageFlags2KHR& stage, VkAccessFlagBits2KHR& acces
     ret |= VK_PIPELINE_STAGE_TRANSFER_BIT;
     acc |= VK_ACCESS_TRANSFER_WRITE_BIT;
     }
+  if((rs&ResourceAccess::TransferHost)==ResourceAccess::TransferHost) {
+    ret |= VK_PIPELINE_STAGE_HOST_BIT;
+    acc |= VK_ACCESS_HOST_READ_BIT;
+    }
 
   if((rs&ResourceAccess::Present)==ResourceAccess::Present) {
     ret |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -93,6 +97,17 @@ static void toStage(VkPipelineStageFlags2KHR& stage, VkAccessFlagBits2KHR& acces
     ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
     acc |= VK_ACCESS_UNIFORM_READ_BIT;
     }
+
+  /*
+  if((rs&ResourceAccess::Blas)==ResourceAccess::Blas) {
+    if(isSrc) {
+      ret |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
+      acc |= VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+      }
+    ret |= VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+    acc |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+    }
+  */
 
   // memory barriers
   if((rs&ResourceAccess::UavReadGr)==ResourceAccess::UavReadGr) {
@@ -533,40 +548,23 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest
   auto& src = reinterpret_cast<const VBuffer&>(srcBuf);
   auto& dst = reinterpret_cast<VBuffer&>(dstBuf);
 
+  resState.flush(*this);
+
   VkBufferCopy copyRegion = {};
   copyRegion.dstOffset = offsetDest;
   copyRegion.srcOffset = offsetSrc;
   copyRegion.size      = size;
   vkCmdCopyBuffer(impl, src.impl, dst.impl, 1, &copyRegion);
 
-  VkPipelineStageFlags  dstStageMask = (VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT |
-                                        VK_PIPELINE_STAGE_HOST_BIT);
-  VkBufferMemoryBarrier buf = {};
-  buf.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-  buf.srcAccessMask       = VK_ACCESS_TRANSFER_WRITE_BIT;
-  buf.dstAccessMask       = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-  buf.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  buf.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  buf.buffer              = dst.impl;
-  buf.offset              = offsetDest;
-  buf.size                = size;
-
-  if(dst.isHostVisible()) {
-    buf.dstAccessMask |= VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_READ_BIT;
-    dstStageMask      |= VK_PIPELINE_STAGE_HOST_BIT;
-    }
-
-  vkCmdPipelineBarrier(impl, VK_PIPELINE_STAGE_TRANSFER_BIT, dstStageMask,
-                       0,
-                       0, nullptr,
-                       1, &buf,
-                       0, nullptr);
+  resState.onTranferUsage(src.nonUniqId, dst.nonUniqId, dst.isHostVisible());
   }
 
 void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest, const void* src, size_t size) {
   auto&  dst    = reinterpret_cast<VBuffer&>(dstBuf);
-
   auto   srcBuf = reinterpret_cast<const uint8_t*>(src);
+
+  resState.flush(*this);
+
   size_t maxSz  = 0x10000;
   while(size>maxSz) {
     vkCmdUpdateBuffer(impl,dst.impl,offsetDest,maxSz,srcBuf);
@@ -575,25 +573,11 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest
     size       -= maxSz;
     }
   vkCmdUpdateBuffer(impl,dst.impl,offsetDest,size,srcBuf);
-
-  VkBufferMemoryBarrier buf = {};
-  buf.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-  buf.srcAccessMask       = VK_ACCESS_TRANSFER_WRITE_BIT;
-  buf.dstAccessMask       = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-  buf.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  buf.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-  buf.buffer              = dst.impl;
-  buf.offset              = 0;
-  buf.size                = VK_WHOLE_SIZE;
-
-  vkCmdPipelineBarrier(impl, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                       0,
-                       0, nullptr,
-                       1, &buf,
-                       0, nullptr);
+  resState.onTranferUsage(NonUniqResId::I_None, dst.nonUniqId, dst.isHostVisible());
   }
 
-void VCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Buffer& srcBuf, size_t offset) {
+void VCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, size_t height, size_t mip,
+                          const AbstractGraphicsApi::Buffer& srcBuf, size_t offset) {
   auto& src = reinterpret_cast<const VBuffer&>(srcBuf);
   auto& dst = reinterpret_cast<VTexture&>(dstTex);
 
@@ -612,7 +596,9 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, si
       1
   };
 
+  resState.flush(*this);
   vkCmdCopyBufferToImage(impl, src.impl, dst.impl, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+  resState.onTranferUsage(NonUniqResId::I_None, dst.nonUniqId, false);
   }
 
 void VCommandBuffer::copyNative(AbstractGraphicsApi::Buffer&        dst, size_t offset,
@@ -682,8 +668,13 @@ void VCommandBuffer::buildBlas(VkAccelerationStructureKHR dest, AbstractGraphics
 
   auto buildGeometryInfo = ctx.buildCmd(device, dest, &reinterpret_cast<VBuffer&>(scratch));
 
+  resState.flush(*this);
+
   VkAccelerationStructureBuildRangeInfoKHR* pbuildRangeInfo = ctx.ranges.data();
   device.vkCmdBuildAccelerationStructures(impl, 1, &buildGeometryInfo, &pbuildRangeInfo);
+
+  // ResourceState::Usage u = {NonUniqResId::I_None, NonUniqResId::I_Ssbo, false};
+  // resState.onUavUsage(u, PipelineStage::S_RtAs, false);
 
   // make sure BLAS'es are ready
   VkMemoryBarrier barrier{VK_STRUCTURE_TYPE_MEMORY_BARRIER};
@@ -732,6 +723,8 @@ void VCommandBuffer::buildTlas(VkAccelerationStructureKHR dest,
   buildRangeInfo.firstVertex                  = 0;
   buildRangeInfo.transformOffset              = 0;
 
+  resState.flush(*this);
+
   VkAccelerationStructureBuildRangeInfoKHR* pbuildRangeInfo = &buildRangeInfo;
   device.vkCmdBuildAccelerationStructures(impl, 1, &buildGeometryInfo, &pbuildRangeInfo);
 
@@ -745,17 +738,17 @@ void VCommandBuffer::buildTlas(VkAccelerationStructureKHR dest,
                        0, 1, &barrier, 0, nullptr, 0, nullptr);
   }
 
-void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dst, size_t offset,
-                          AbstractGraphicsApi::Texture& src, uint32_t width, uint32_t height, uint32_t mip) {
-  auto& nDst = reinterpret_cast<VBuffer&>(dst);
-  auto& nSrc = reinterpret_cast<const VTexture&>(src);
-  if(!nSrc.isStorageImage)
-    resState.setLayout(src,ResourceAccess::TransferSrc);
-  resState.onTranferUsage(nDst.nonUniqId,nSrc.nonUniqId);
+void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offset,
+                          AbstractGraphicsApi::Texture& srcTex, uint32_t width, uint32_t height, uint32_t mip) {
+  auto& dst = reinterpret_cast<VBuffer&>(dstBuf);
+  auto& src = reinterpret_cast<const VTexture&>(srcTex);
+  if(!src.isStorageImage)
+    resState.setLayout(srcTex,ResourceAccess::TransferSrc);
+  resState.onTranferUsage(dst.nonUniqId, src.nonUniqId, dst.isHostVisible());
   resState.flush(*this);
   copyNative(dst,offset, src,width,height,mip);
-  if(!nSrc.isStorageImage)
-    resState.setLayout(src,ResourceAccess::Sampler);
+  if(!src.isStorageImage)
+    resState.setLayout(srcTex,ResourceAccess::Sampler);
   }
 
 void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,

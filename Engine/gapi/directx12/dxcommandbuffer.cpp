@@ -517,7 +517,7 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer&  dstBuf, size_t offset,
 
   if(pitch==pitchBase && (offset%D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)==0) {
     resState.setLayout(src,ResourceAccess::Sampler);
-    resState.onTranferUsage(dst.nonUniqId,src.nonUniqId);
+    resState.onTranferUsage(src.nonUniqId, dst.nonUniqId, false);
     resState.flush(*this);
 
     copyNative(dstBuf,offset, srcTex,width,height,mip);
