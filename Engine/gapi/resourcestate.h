@@ -8,7 +8,7 @@ namespace Detail {
 
 class ResourceState {
   public:
-    ResourceState() = default;
+    ResourceState();
 
     struct Usage {
       NonUniqResId read  = NonUniqResId::I_None;
@@ -25,10 +25,12 @@ class ResourceState {
     void setLayout  (AbstractGraphicsApi::Texture&   a, ResourceAccess lay, bool discard = false);
 
     void onTranferUsage(NonUniqResId read, NonUniqResId write, bool host);
+    void onUavUsage    (NonUniqResId read, NonUniqResId write, PipelineStage st);
     void onUavUsage    (const ResourceState::Usage& uavUsage, PipelineStage st, bool host = false);
     void forceLayout   (AbstractGraphicsApi::Texture&   a);
 
-    void joinCompute(PipelineStage st);
+    void joinWriters(PipelineStage st);
+    void clearReaders();
     void flush      (AbstractGraphicsApi::CommandBuffer& cmd);
     void finalize   (AbstractGraphicsApi::CommandBuffer& cmd);
 
@@ -45,6 +47,7 @@ class ResourceState {
       bool                            outdated = false;
       };
 
+    void      fillReads();
     ImgState& findImg(AbstractGraphicsApi::Texture* img, AbstractGraphicsApi::Swapchain* sw, uint32_t id, ResourceAccess def, bool discard);
     void      emitBarriers(AbstractGraphicsApi::CommandBuffer& cmd, AbstractGraphicsApi::BarrierDesc* desc, size_t cnt);
 

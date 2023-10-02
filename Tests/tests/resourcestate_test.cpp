@@ -4,37 +4,53 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock-matchers.h>
+#include <sstream>
 
 using namespace testing;
 
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-static const char* toString(ResourceAccess rs) {
-  switch (rs) {
-    case ResourceAccess::None:          return "None";
-    case ResourceAccess::TransferSrc:   return "TransferSrc";
-    case ResourceAccess::TransferDst:   return "TransferDst";
-    case ResourceAccess::Present:       return "Present";
-    case ResourceAccess::Sampler:       return "Sampler";
-    case ResourceAccess::ColorAttach:   return "ColorAttach";
-    case ResourceAccess::DepthAttach:   return "DepthAttach";
-    case ResourceAccess::DepthReadOnly: return "DepthReadOnly";
-    case ResourceAccess::Index:         return "Index";
-    case ResourceAccess::Vertex:        return "Vertex";
-    case ResourceAccess::Uniform:       return "Uniform";
-    case ResourceAccess::UavReadComp:
-    case ResourceAccess::UavWriteComp:
-    case ResourceAccess::UavReadGr:
-    case ResourceAccess::UavWriteGr:
-    case ResourceAccess::UavReadWriteComp:
-    case ResourceAccess::UavReadWriteGr:
-    case ResourceAccess::UavReadWriteAll:
-      break;
-    }
-  if(rs==(ResourceAccess::TransferSrc|ResourceAccess::TransferDst))
-    return "Transfer";
-  return "Uav";
+static std::string toString(ResourceAccess rs) {
+  std::stringstream text;
+  if((rs & ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
+    text << "TransferSrc | ";
+  if((rs & ResourceAccess::TransferDst)==ResourceAccess::TransferDst)
+    text << "TransferDst | ";
+  if((rs & ResourceAccess::TransferHost)==ResourceAccess::TransferHost)
+    text << "TransferHost | ";
+  if((rs & ResourceAccess::Present)==ResourceAccess::Present)
+    text << "Present | ";
+  if((rs & ResourceAccess::Sampler)==ResourceAccess::Sampler)
+    text << "Sampler | ";
+  if((rs & ResourceAccess::ColorAttach)==ResourceAccess::ColorAttach)
+    text << "ColorAttach | ";
+  if((rs & ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach)
+    text << "DepthAttach | ";
+  if((rs & ResourceAccess::Index)==ResourceAccess::Index)
+    text << "Index | ";
+  if((rs & ResourceAccess::Vertex)==ResourceAccess::Vertex)
+    text << "Vertex | ";
+  if((rs & ResourceAccess::Uniform)==ResourceAccess::Uniform)
+    text << "Uniform | ";
+  if((rs & ResourceAccess::UavReadComp)==ResourceAccess::UavReadComp)
+    text << "UavReadComp | ";
+  if((rs & ResourceAccess::UavWriteComp)==ResourceAccess::UavWriteComp)
+    text << "UavWriteComp | ";
+  if((rs & ResourceAccess::UavReadGr)==ResourceAccess::UavReadGr)
+    text << "UavReadGr | ";
+  if((rs & ResourceAccess::UavWriteGr)==ResourceAccess::UavWriteGr)
+    text << "UavWriteGr | ";
+  if((rs & ResourceAccess::RtAsRead)==ResourceAccess::RtAsRead)
+    text << "RtAsRead | ";
+  if((rs & ResourceAccess::RtAsWrite)==ResourceAccess::RtAsWrite)
+    text << "RtAsWrite | ";
+
+
+  auto ret = text.str();
+  if(ret.rfind(" | ")==ret.size()-3)
+    ret.resize(ret.size()-3);
+  return ret;
   }
 
 struct TestTexture : Tempest::AbstractGraphicsApi::Texture {
@@ -102,23 +118,56 @@ TEST(main, ResourceStateBasic) {
   rs.flush(cmd);
   }
 
+TEST(main, ResourceStateJoin) {
+  TestTexture       t;
+  TestCommandBuffer cmd;
+
+  {
+    ResourceState rs;
+    rs.onUavUsage(NonUniqResId::I_None, NonUniqResId::I_Ssbo, PipelineStage::S_Compute);
+    rs.flush(cmd);
+
+    rs.joinWriters(PipelineStage::S_Graphics);
+    rs.flush(cmd);
+  }
+  {
+    ResourceState rs;
+    rs.onUavUsage(NonUniqResId::I_None, NonUniqResId::I_Ssbo, PipelineStage::S_RtAs);
+    rs.flush(cmd);
+
+    rs.joinWriters(PipelineStage::S_Graphics);
+    rs.flush(cmd);
+    rs.onUavUsage(NonUniqResId::I_Ssbo, NonUniqResId::I_None, PipelineStage::S_Graphics);
+
+    rs.joinWriters(PipelineStage::S_Graphics);
+    rs.flush(cmd);
+  }
+  }
+
 TEST(main, ResourceStateTranfer) {
   TestCommandBuffer cmd;
 
   ResourceState rs;
   rs.onTranferUsage(NonUniqResId::I_None, NonUniqResId::I_Ssbo, false);
-  //rs.flush(cmd);
-  rs.finalize(cmd);
-/*
-  rs.onTranferUsage(NonUniqResId::I_None, NonUniqResId::I_Ssbo);
   rs.flush(cmd);
 
-  rs.joinCompute(PipelineStage::S_Graphics);
-
-  ResourceState::Usage u = {NonUniqResId::I_Ssbo, NonUniqResId::I_None, false};
-  rs.onUavUsage(u, PipelineStage::S_Compute);
+  rs.onTranferUsage(NonUniqResId::I_None, NonUniqResId::I_Ssbo, false);
   rs.flush(cmd);
-  */
+
+  rs.onUavUsage(NonUniqResId::I_Ssbo, NonUniqResId::I_None, PipelineStage::S_Compute);
+  rs.flush(cmd);
+  }
+
+TEST(main, ResourceStateBlas) {
+  TestCommandBuffer cmd;
+
+  ResourceState rs;
+
+  rs.onUavUsage(NonUniqResId::I_None, NonUniqResId::T_RtAs, PipelineStage::S_RtAs);
+  rs.flush(cmd);
+
+  rs.onUavUsage(NonUniqResId::T_RtAs, NonUniqResId::I_None, PipelineStage::S_Compute);
+  rs.flush(cmd);
   }
 
 

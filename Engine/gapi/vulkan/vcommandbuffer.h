@@ -40,6 +40,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void reset() override;
 
+    void begin(bool tranfer) override;
     void begin() override;
     void end() override;
     bool isRecording() const override;

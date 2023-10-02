@@ -33,6 +33,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     using AbstractGraphicsApi::CommandBuffer::barrier;
 
+    void begin(bool transfer) override;
     void begin() override;
     void end()   override;
     void reset() override;
@@ -75,7 +76,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void copy(AbstractGraphicsApi::Buffer&  dest, size_t offsetDest, const AbstractGraphicsApi::Buffer& src, size_t offsetSrc, size_t size);
     void copy(AbstractGraphicsApi::Texture& dest, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Buffer&  src, size_t offset);
 
-    void buildBlas(ID3D12Resource* dest, AbstractGraphicsApi::BlasBuildCtx& rtctx, AbstractGraphicsApi::Buffer& scratch);
+    void buildBlas(AbstractGraphicsApi::Buffer& bbo, AbstractGraphicsApi::BlasBuildCtx& rtctx, AbstractGraphicsApi::Buffer& scratch);
     void buildTlas(AbstractGraphicsApi::Buffer& tbo, AbstractGraphicsApi::Buffer& instances, uint32_t numInstances,
                    AbstractGraphicsApi::Buffer& scratch);
 

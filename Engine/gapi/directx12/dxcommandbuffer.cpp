@@ -295,9 +295,15 @@ DxCommandBuffer::~DxCommandBuffer() {
   clearStage();
   }
 
-void DxCommandBuffer::begin() {
+void DxCommandBuffer::begin(bool transfer) {
   reset();
   state = Idle;
+  if(transfer)
+    resState.clearReaders();
+  }
+
+void DxCommandBuffer::begin() {
+  begin(false);
   }
 
 void DxCommandBuffer::end() {
@@ -325,7 +331,7 @@ bool DxCommandBuffer::isRecording() const {
 void DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize, uint32_t w, uint32_t h,
                                      const TextureFormat* frm, AbstractGraphicsApi::Texture** att,
                                      AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) {
-  resState.joinCompute(PipelineStage::S_Graphics);
+  resState.joinWriters(PipelineStage::S_Graphics);
   resState.setRenderpass(*this,desc,descSize,frm,att,sw,imgId);
 
   D3D12_RENDER_PASS_RENDER_TARGET_DESC view[MaxFramebufferAttachments] = {};
@@ -622,11 +628,14 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, s
   srcLoc.Type             = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
   srcLoc.PlacedFootprint  = foot;
 
+  resState.onTranferUsage(src.nonUniqId, dst.nonUniqId, false);
+  resState.flush(*this);
   impl->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, nullptr);
   }
 
-void DxCommandBuffer::buildBlas(ID3D12Resource* dest, AbstractGraphicsApi::BlasBuildCtx& rtctx, AbstractGraphicsApi::Buffer& scratch) {
-  auto& ctx = reinterpret_cast<DxBlasBuildCtx&>(rtctx);
+void DxCommandBuffer::buildBlas(AbstractGraphicsApi::Buffer& bbo, AbstractGraphicsApi::BlasBuildCtx& rtctx, AbstractGraphicsApi::Buffer& scratch) {
+  auto& ctx  = reinterpret_cast<DxBlasBuildCtx&>(rtctx);
+  auto& dest = *reinterpret_cast<DxBuffer&>(bbo).impl;
 
   D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS blasInputs = {};
   blasInputs.Type           = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
@@ -635,18 +644,15 @@ void DxCommandBuffer::buildBlas(ID3D12Resource* dest, AbstractGraphicsApi::BlasB
   blasInputs.NumDescs       = UINT(ctx.geometry.size());
 
   D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC desc = {};
-  desc.DestAccelerationStructureData    = dest->GetGPUVirtualAddress();
+  desc.DestAccelerationStructureData    = dest.GetGPUVirtualAddress();
   desc.Inputs                           = blasInputs;
   desc.SourceAccelerationStructureData  = 0;
   desc.ScratchAccelerationStructureData = reinterpret_cast<DxBuffer&>(scratch).impl->GetGPUVirtualAddress();
 
+  // make sure BLAS'es are ready
+  resState.onUavUsage(NonUniqResId::I_None, NonUniqResId::T_RtAs, PipelineStage::S_RtAs);
+  resState.flush(*this);
   impl->BuildRaytracingAccelerationStructure(&desc,0,nullptr);
-
-  D3D12_RESOURCE_BARRIER pb = {};
-  pb.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-  pb.Flags         = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-  pb.UAV.pResource = dest;
-  impl->ResourceBarrier(1, &pb);
   }
 
 void DxCommandBuffer::buildTlas(AbstractGraphicsApi::Buffer& tbo,
@@ -669,16 +675,9 @@ void DxCommandBuffer::buildTlas(AbstractGraphicsApi::Buffer& tbo,
   desc.SourceAccelerationStructureData  = 0;
   desc.ScratchAccelerationStructureData = reinterpret_cast<DxBuffer&>(scratch).impl->GetGPUVirtualAddress();
 
-  // Log::d("tbo       = ",&dest);
-  // Log::d("instances = ",reinterpret_cast<const DxBuffer&>(instances).impl.get());
-  // Log::d("scratch   = ",reinterpret_cast<DxBuffer&>(scratch).impl.get());
+  resState.onUavUsage(NonUniqResId::I_None, NonUniqResId::T_RtAs, PipelineStage::S_RtAs);
+  resState.flush(*this);
   impl->BuildRaytracingAccelerationStructure(&desc,0,nullptr);
-
-  D3D12_RESOURCE_BARRIER pb = {};
-  pb.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-  pb.Flags         = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-  pb.UAV.pResource = &dest;
-  impl->ResourceBarrier(1, &pb);
   }
 
 void DxCommandBuffer::clearStage() {

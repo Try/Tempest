@@ -19,9 +19,11 @@ namespace Detail {
 template<class CmdBuffer, class Fence>
 class TransferCmd : public CmdBuffer {
   public:
-    using BufPtr = Detail::DSharedPtr<AbstractGraphicsApi::Buffer*>;
-    using TexPtr = Detail::DSharedPtr<AbstractGraphicsApi::Texture*>;
-    using ResPtr = Detail::DSharedPtr<AbstractGraphicsApi::Shared*>;
+    using BufPtr  = Detail::DSharedPtr<AbstractGraphicsApi::Buffer*>;
+    using CBufPtr = Detail::DSharedPtr<const AbstractGraphicsApi::Buffer*>;
+    using TexPtr  = Detail::DSharedPtr<AbstractGraphicsApi::Texture*>;
+    using AsPtr   = Detail::DSharedPtr<AbstractGraphicsApi::AccelerationStructure*>;
+    using ResPtr  = Detail::DSharedPtr<const AbstractGraphicsApi::Shared*>;
 
     template<class Device>
     TransferCmd(Device& dev):CmdBuffer(dev), fence(dev) {
@@ -32,7 +34,15 @@ class TransferCmd : public CmdBuffer {
       holdRes.emplace_back(ResPtr(b.handler));
       }
 
+    void hold(CBufPtr &b) {
+      holdRes.emplace_back(ResPtr(b.handler));
+      }
+
     void hold(TexPtr &b) {
+      holdRes.emplace_back(ResPtr(b.handler));
+      }
+
+    void hold(AsPtr &b) {
       holdRes.emplace_back(ResPtr(b.handler));
       }
 

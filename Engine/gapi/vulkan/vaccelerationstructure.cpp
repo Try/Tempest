@@ -95,6 +95,8 @@ VAccelerationStructure::VAccelerationStructure(VDevice& dx, const AbstractGraphi
   data = dx.allocator.alloc(nullptr, buildSizesInfo.accelerationStructureSize, MemUsage::AsStorage, BufferHeap::Device);
   auto scratch = dx.dataMgr().allocStagingMemory(nullptr, buildSizesInfo.buildScratchSize, MemUsage::ScratchBuffer, BufferHeap::Device);
 
+  DSharedPtr<AbstractGraphicsApi::Buffer*> pScratch(new VBuffer(std::move(scratch)));
+
   VkAccelerationStructureCreateInfoKHR createInfo = {};
   createInfo.sType         = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
   createInfo.pNext         = nullptr;
@@ -106,20 +108,23 @@ VAccelerationStructure::VAccelerationStructure(VDevice& dx, const AbstractGraphi
   createInfo.deviceAddress = VK_NULL_HANDLE;
   vkCreateAccelerationStructure(device, &createInfo, nullptr, &impl);
 
+  DSharedPtr<AbstractGraphicsApi::AccelerationStructure*> pThis(this);
+
   auto& mgr = dx.dataMgr();
   auto  cmd = dx.dataMgr().get();
-  cmd->begin();
-  // cmd->hold(scratch);
-  cmd->buildBlas(impl,ctx,scratch);
+  cmd->begin(true);
+  for(size_t i=0; i<size; ++i) {
+    DSharedPtr<const AbstractGraphicsApi::Buffer*> vbo(geom[i].vbo);
+    DSharedPtr<const AbstractGraphicsApi::Buffer*> ibo(geom[i].ibo);
+    cmd->hold(vbo);
+    cmd->hold(ibo);
+    }
+  cmd->hold(pScratch);
+  cmd->hold(pThis);
+  cmd->buildBlas(impl,ctx,*pScratch.handler);
   cmd->end();
 
-  // dx.dataMgr().waitFor(this);
-  for(size_t i=0; i<size; ++i) {
-    mgr.waitFor(geom[i].vbo);
-    mgr.waitFor(geom[i].ibo);
-    }
-
-  mgr.submitAndWait(std::move(cmd));
+  mgr.submit(std::move(cmd));
   }
 
 VAccelerationStructure::~VAccelerationStructure() {
@@ -183,10 +188,10 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
 
   data = dx.allocator.alloc(nullptr, buildSizesInfo.accelerationStructureSize, MemUsage::AsStorage, BufferHeap::Device);
 
-  Detail::DSharedPtr<VBuffer*> pBuf;
+  Detail::DSharedPtr<AbstractGraphicsApi::Buffer*> pBuf;
   if(asSize>0) {
     VBuffer buf = dx.allocator.alloc(nullptr,asSize*sizeof(VkAccelerationStructureInstanceKHR),MemUsage::TransferDst | MemUsage::StorageBuffer,BufferHeap::Upload);
-    pBuf = Detail::DSharedPtr<VBuffer*>(new Detail::VBuffer(std::move(buf)));
+    pBuf = Detail::DSharedPtr<AbstractGraphicsApi::Buffer*>(new Detail::VBuffer(std::move(buf)));
     }
 
   for(size_t i=0; i<asSize; ++i) {
@@ -206,6 +211,7 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
     }
 
   auto  scratch = dx.dataMgr().allocStagingMemory(nullptr,buildSizesInfo.buildScratchSize,MemUsage::ScratchBuffer,BufferHeap::Device);
+  DSharedPtr<AbstractGraphicsApi::Buffer*> pScratch(new VBuffer(std::move(scratch)));
 
   VkAccelerationStructureCreateInfoKHR createInfo = {};
   createInfo.sType         = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
@@ -218,14 +224,18 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
   createInfo.deviceAddress = VK_NULL_HANDLE;
   vkCreateAccelerationStructure(device, &createInfo, nullptr, &impl);
 
+  DSharedPtr<AbstractGraphicsApi::AccelerationStructure*> pThis(this);
+
   auto cmd = dx.dataMgr().get();
   cmd->begin();
-  //cmd->hold(scratch);
-  cmd->buildTlas(impl,data,*pBuf.handler,uint32_t(asSize),scratch);
+  cmd->hold(pScratch);
+  cmd->hold(pBuf);
+  cmd->hold(pThis);
+  cmd->buildTlas(impl,data,*pBuf.handler,uint32_t(asSize),*pScratch.handler);
   cmd->end();
 
   // dx.dataMgr().waitFor(this);
-  dx.dataMgr().submitAndWait(std::move(cmd));
+  dx.dataMgr().submit(std::move(cmd));
   }
 
 VTopAccelerationStructure::~VTopAccelerationStructure() {

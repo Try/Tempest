@@ -71,22 +71,26 @@ DxAccelerationStructure::DxAccelerationStructure(DxDevice& dx, const AbstractGra
     throw std::system_error(GraphicsErrc::UnsupportedExtension);
 
   auto  scratch = dx.dataMgr().allocStagingMemory(nullptr, buildSizesInfo.ScratchDataSizeInBytes, MemUsage::ScratchBuffer, BufferHeap::Device);
+  DSharedPtr<AbstractGraphicsApi::Buffer*> pScratch(new DxBuffer(std::move(scratch)));
+
   impl = dx.allocator.alloc(nullptr, buildSizesInfo.ResultDataMaxSizeInBytes, MemUsage::AsStorage, BufferHeap::Device);
+  DSharedPtr<AbstractGraphicsApi::AccelerationStructure*> pThis(this);
 
   auto& mgr = dx.dataMgr();
   auto  cmd = dx.dataMgr().get();
-  cmd->begin();
-  //cmd->hold(scratch);
-  cmd->buildBlas(impl.impl.get(), ctx, scratch);
+  cmd->begin(true);
+  for(size_t i=0; i<size; ++i) {
+    DSharedPtr<const AbstractGraphicsApi::Buffer*> vbo(geom[i].vbo);
+    DSharedPtr<const AbstractGraphicsApi::Buffer*> ibo(geom[i].ibo);
+    cmd->hold(vbo);
+    cmd->hold(ibo);
+    }
+  cmd->hold(pScratch);
+  cmd->hold(pThis);
+  cmd->buildBlas(impl,ctx,*pScratch.handler);
   cmd->end();
 
-  // dx.dataMgr().waitFor(this);
-  for(size_t i=0; i<size; ++i) {
-    mgr.waitFor(geom[i].vbo);
-    mgr.waitFor(geom[i].ibo);
-    }
-
-  dx.dataMgr().submitAndWait(std::move(cmd));
+  mgr.submit(std::move(cmd));
   }
 
 DxAccelerationStructure::~DxAccelerationStructure() {
@@ -98,12 +102,12 @@ DxTopAccelerationStructure::DxTopAccelerationStructure(DxDevice& dx, const RtIns
   ComPtr<ID3D12Device5> m_dxrDevice;
   dx.device->QueryInterface(uuid<ID3D12Device5>(), reinterpret_cast<void**>(&m_dxrDevice));
 
-  Detail::DSharedPtr<DxBuffer*> pBuf;
+  Detail::DSharedPtr<AbstractGraphicsApi::Buffer*> pBuf;
   if(asSize>0) {
     DxBuffer buf = dx.allocator.alloc(nullptr,asSize*sizeof(D3D12_RAYTRACING_INSTANCE_DESC),
                                       MemUsage::TransferDst | MemUsage::StorageBuffer,BufferHeap::Device);
 
-    pBuf = Detail::DSharedPtr<DxBuffer*>(new Detail::DxBuffer(std::move(buf)));
+    pBuf = Detail::DSharedPtr<AbstractGraphicsApi::Buffer*>(new Detail::DxBuffer(std::move(buf)));
     }
 
   for(size_t i=0; i<asSize; ++i) {
@@ -137,14 +141,19 @@ DxTopAccelerationStructure::DxTopAccelerationStructure(DxDevice& dx, const RtIns
   auto  scratch = dx.dataMgr().allocStagingMemory(nullptr,buildSizesInfo.ScratchDataSizeInBytes,MemUsage::ScratchBuffer,BufferHeap::Device);
   impl = dx.allocator.alloc(nullptr, buildSizesInfo.ResultDataMaxSizeInBytes, MemUsage::AsStorage, BufferHeap::Device);
 
-  auto cmd = dx.dataMgr().get();
-  cmd->begin();
-  // cmd->hold(scratch);
-  cmd->buildTlas(impl, *pBuf.handler, uint32_t(asSize), scratch);
+  DSharedPtr<AbstractGraphicsApi::AccelerationStructure*> pThis(this);
+  DSharedPtr<AbstractGraphicsApi::Buffer*> pScratch(new DxBuffer(std::move(scratch)));
+
+  auto& mgr = dx.dataMgr();
+  auto  cmd = dx.dataMgr().get();
+  cmd->begin(true);
+  cmd->hold(pScratch);
+  cmd->hold(pBuf);
+  cmd->hold(pThis);
+  cmd->buildTlas(impl, *pBuf.handler, uint32_t(asSize), *pScratch.handler);
   cmd->end();
 
-  // dx.dataMgr().waitFor(this);
-  dx.dataMgr().submitAndWait(std::move(cmd));
+  mgr.submit(std::move(cmd));
   }
 
 DxTopAccelerationStructure::~DxTopAccelerationStructure() {

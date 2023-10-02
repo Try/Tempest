@@ -543,6 +543,7 @@ namespace Tempest {
         virtual void copy(Buffer& dest, size_t offset, Texture& src, uint32_t width, uint32_t height, uint32_t mip) = 0;
 
         virtual bool isRecording() const = 0;
+        virtual void begin(bool tranfer);
         virtual void begin()=0;
         virtual void end()  =0;
         virtual void reset()=0;

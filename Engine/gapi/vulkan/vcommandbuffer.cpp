@@ -47,7 +47,7 @@ static VkAttachmentStoreOp mkStoreOp(const AccessOp op) {
   return VK_ATTACHMENT_STORE_OP_DONT_CARE;
   }
 
-static void toStage(VkPipelineStageFlags2KHR& stage, VkAccessFlagBits2KHR& access, ResourceAccess rs, bool isSrc) {
+static void toStage(VDevice& dev, VkPipelineStageFlags2KHR& stage, VkAccessFlagBits2KHR& access, ResourceAccess rs, bool isSrc) {
   uint32_t ret = 0;
   uint32_t acc = 0;
   if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc) {
@@ -93,21 +93,21 @@ static void toStage(VkPipelineStageFlags2KHR& stage, VkAccessFlagBits2KHR& acces
     ret |= VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
     acc |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
     }
-  if((rs&ResourceAccess::Vertex)==ResourceAccess::Uniform) {
+  if((rs&ResourceAccess::Uniform)==ResourceAccess::Uniform) {
     ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
     acc |= VK_ACCESS_UNIFORM_READ_BIT;
     }
 
-  /*
-  if((rs&ResourceAccess::Blas)==ResourceAccess::Blas) {
-    if(isSrc) {
-      ret |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
-      acc |= VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+  if(dev.props.raytracing.rayQuery) {
+    if((rs&ResourceAccess::RtAsRead)==ResourceAccess::RtAsRead) {
+      ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+      acc |= VK_ACCESS_2_ACCELERATION_STRUCTURE_READ_BIT_KHR;
       }
-    ret |= VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-    acc |= VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+    if((rs&ResourceAccess::RtAsWrite)==ResourceAccess::RtAsWrite) {
+      ret |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
+      acc |= VK_ACCESS_2_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+      }
     }
-  */
 
   // memory barriers
   if((rs&ResourceAccess::UavReadGr)==ResourceAccess::UavReadGr) {
@@ -217,11 +217,15 @@ void VCommandBuffer::reset() {
   swapchainSync.clear();
   }
 
-void VCommandBuffer::begin() {
+void VCommandBuffer::begin(bool tranfer) {
   state  = Idle;
   curVbo = VK_NULL_HANDLE;
   if(chunks.size()>0)
     reset();
+
+  if(tranfer)
+    resState.clearReaders();
+
   if(impl==nullptr) {
     newChunk();
     } else {
@@ -231,6 +235,10 @@ void VCommandBuffer::begin() {
     beginInfo.pInheritanceInfo = nullptr;
     vkAssert(vkBeginCommandBuffer(impl,&beginInfo));
     }
+  }
+
+void VCommandBuffer::begin() {
+  begin(false);
   }
 
 void VCommandBuffer::end() {
@@ -258,7 +266,7 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
       addDependency(*reinterpret_cast<VSwapchain*>(sw[i]),imgId[i]);
     }
 
-  resState.joinCompute(PipelineStage::S_Graphics);
+  resState.joinWriters(PipelineStage::S_Graphics);
   resState.setRenderpass(*this,desc,descSize,frm,att,sw,imgId);
 
   if(state!=Idle) {
@@ -548,6 +556,7 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest
   auto& src = reinterpret_cast<const VBuffer&>(srcBuf);
   auto& dst = reinterpret_cast<VBuffer&>(dstBuf);
 
+  resState.onTranferUsage(src.nonUniqId, dst.nonUniqId, dst.isHostVisible());
   resState.flush(*this);
 
   VkBufferCopy copyRegion = {};
@@ -555,8 +564,6 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest
   copyRegion.srcOffset = offsetSrc;
   copyRegion.size      = size;
   vkCmdCopyBuffer(impl, src.impl, dst.impl, 1, &copyRegion);
-
-  resState.onTranferUsage(src.nonUniqId, dst.nonUniqId, dst.isHostVisible());
   }
 
 void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest, const void* src, size_t size) {
@@ -572,8 +579,9 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest
     srcBuf     += maxSz;
     size       -= maxSz;
     }
-  vkCmdUpdateBuffer(impl,dst.impl,offsetDest,size,srcBuf);
   resState.onTranferUsage(NonUniqResId::I_None, dst.nonUniqId, dst.isHostVisible());
+  resState.flush(*this);
+  vkCmdUpdateBuffer(impl,dst.impl,offsetDest,size,srcBuf);
   }
 
 void VCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, size_t height, size_t mip,
@@ -596,9 +604,9 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, si
       1
   };
 
+  resState.onTranferUsage(NonUniqResId::I_None, dst.nonUniqId, false);
   resState.flush(*this);
   vkCmdCopyBufferToImage(impl, src.impl, dst.impl, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-  resState.onTranferUsage(NonUniqResId::I_None, dst.nonUniqId, false);
   }
 
 void VCommandBuffer::copyNative(AbstractGraphicsApi::Buffer&        dst, size_t offset,
@@ -666,24 +674,13 @@ void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, u
 void VCommandBuffer::buildBlas(VkAccelerationStructureKHR dest, AbstractGraphicsApi::BlasBuildCtx& rtctx, AbstractGraphicsApi::Buffer& scratch) {
   auto& ctx = reinterpret_cast<VBlasBuildCtx&>(rtctx);
 
-  auto buildGeometryInfo = ctx.buildCmd(device, dest, &reinterpret_cast<VBuffer&>(scratch));
-
+  // make sure BLAS'es are ready
+  resState.onUavUsage(NonUniqResId::I_None, NonUniqResId::T_RtAs, PipelineStage::S_RtAs);
   resState.flush(*this);
 
   VkAccelerationStructureBuildRangeInfoKHR* pbuildRangeInfo = ctx.ranges.data();
+  auto buildGeometryInfo = ctx.buildCmd(device, dest, &reinterpret_cast<VBuffer&>(scratch));
   device.vkCmdBuildAccelerationStructures(impl, 1, &buildGeometryInfo, &pbuildRangeInfo);
-
-  // ResourceState::Usage u = {NonUniqResId::I_None, NonUniqResId::I_Ssbo, false};
-  // resState.onUavUsage(u, PipelineStage::S_RtAs, false);
-
-  // make sure BLAS'es are ready
-  VkMemoryBarrier barrier{VK_STRUCTURE_TYPE_MEMORY_BARRIER};
-  barrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-  barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
-  vkCmdPipelineBarrier(impl,
-                       VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-                       VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-                       0, 1, &barrier, 0, nullptr, 0, nullptr);
   }
 
 void VCommandBuffer::buildTlas(VkAccelerationStructureKHR dest,
@@ -723,19 +720,12 @@ void VCommandBuffer::buildTlas(VkAccelerationStructureKHR dest,
   buildRangeInfo.firstVertex                  = 0;
   buildRangeInfo.transformOffset              = 0;
 
+  // make sure TLAS is ready
+  resState.onUavUsage(NonUniqResId::I_None, NonUniqResId::T_RtAs, PipelineStage::S_RtAs);
   resState.flush(*this);
 
   VkAccelerationStructureBuildRangeInfoKHR* pbuildRangeInfo = &buildRangeInfo;
   device.vkCmdBuildAccelerationStructures(impl, 1, &buildGeometryInfo, &pbuildRangeInfo);
-
-  // make sure TLAS is ready
-  VkMemoryBarrier barrier{VK_STRUCTURE_TYPE_MEMORY_BARRIER};
-  barrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-  barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
-  vkCmdPipelineBarrier(impl,
-                       VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-                       VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-                       0, 1, &barrier, 0, nullptr, 0, nullptr);
   }
 
 void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offset,
@@ -806,8 +796,8 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
       VkAccessFlags2KHR        srcAccessMask = 0;
       VkPipelineStageFlags2KHR dstStageMask  = 0;
       VkAccessFlags2KHR        dstAccessMask = 0;
-      toStage(srcStageMask, srcAccessMask, b.prev,true);
-      toStage(dstStageMask, dstAccessMask, b.next,false);
+      toStage(device, srcStageMask, srcAccessMask, b.prev, true);
+      toStage(device, dstStageMask, dstAccessMask, b.next, false);
 
       memBarrier.sType          = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2_KHR;
       memBarrier.srcStageMask  |= srcStageMask;
@@ -826,8 +816,8 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
       bx.offset                = 0;
       bx.size                  = VK_WHOLE_SIZE;
 
-      toStage(bx.srcStageMask, bx.srcAccessMask, b.prev,true);
-      toStage(bx.dstStageMask, bx.dstAccessMask, b.next,false);
+      toStage(device, bx.srcStageMask, bx.srcAccessMask, b.prev, true);
+      toStage(device, bx.dstStageMask, bx.dstAccessMask, b.next, false);
       } else {
       auto& bx = imgBarrier[imgCount];
       ++imgCount;
@@ -837,8 +827,8 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
       bx.dstQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
       bx.image                 = toVkResource(b);
 
-      toStage(bx.srcStageMask, bx.srcAccessMask, b.prev,true);
-      toStage(bx.dstStageMask, bx.dstAccessMask, b.next,false);
+      toStage(device, bx.srcStageMask, bx.srcAccessMask, b.prev, true);
+      toStage(device, bx.dstStageMask, bx.dstAccessMask, b.next, false);
 
       bx.oldLayout             = toLayout(b.prev);
       bx.newLayout             = toLayout(b.next);

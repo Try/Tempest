@@ -49,19 +49,22 @@ enum class ResourceAccess : uint32_t {
   Vertex           = 1 << 9,
   Uniform          = 1 << 10,
 
-  Blas             = 1 << 11,
-  Tlas             = 1 << 12,
+  UavReadComp      = 1 << 11,
+  UavWriteComp     = 1 << 12,
 
-  UavReadComp      = 1 << 13,
-  UavWriteComp     = 1 << 14,
+  UavReadGr        = 1 << 13,
+  UavWriteGr       = 1 << 14,
 
-  UavReadGr        = 1 << 15,
-  UavWriteGr       = 1 << 16,
+  RtAsRead         = 1 << 15,
+  RtAsWrite        = 1 << 16,
 
   TransferSrcDst   = (TransferSrc    | TransferDst),
   UavReadWriteComp = (UavReadComp    | UavWriteComp),
   UavReadWriteGr   = (UavReadGr      | UavWriteGr  ),
   UavReadWriteAll  = (UavReadWriteGr | UavReadWriteComp),
+
+  UavRead = (TransferSrc | Index | Vertex | Uniform | UavReadComp | UavReadGr | RtAsRead),
+  AnyRead = (UavRead | Sampler | DepthReadOnly),
   };
 
 inline ResourceAccess operator | (ResourceAccess a,const ResourceAccess& b) {
@@ -77,6 +80,7 @@ enum NonUniqResId : uint8_t {
   I_Img  = 0x1,
   I_Buf  = 0x2,
   I_Ssbo = 0x4,
+  T_RtAs = 0x8,
   };
 
 inline NonUniqResId operator | (NonUniqResId a,const NonUniqResId& b) {
@@ -93,7 +97,7 @@ inline NonUniqResId operator & (NonUniqResId a,const NonUniqResId& b) {
 
 enum PipelineStage : uint8_t {
   S_Transfer,
-  // S_RtAs,
+  S_RtAs,
   S_Compute,
   S_Graphics,
 

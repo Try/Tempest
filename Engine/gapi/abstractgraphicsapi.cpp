@@ -78,6 +78,10 @@ void AbstractGraphicsApi::CommandBuffer::barrier(Texture& tex, ResourceAccess pr
   barrier(&b,1);
   }
 
+void AbstractGraphicsApi::CommandBuffer::begin(bool tranfer) {
+  begin();
+  }
+
 void AbstractGraphicsApi::CommandBuffer::setDebugMarker(std::string_view tag) {
   (void)tag;
   }
