@@ -75,24 +75,20 @@ inline ResourceAccess operator & (ResourceAccess a,const ResourceAccess& b) {
   return ResourceAccess(uint32_t(a)&uint32_t(b));
   }
 
-enum NonUniqResId : uint8_t {
+enum NonUniqResId : uint32_t {
   I_None = 0x0,
-  I_Img  = 0x1,
-  I_Buf  = 0x2,
-  I_Ssbo = 0x4,
-  T_RtAs = 0x8,
   };
 
 inline NonUniqResId operator | (NonUniqResId a,const NonUniqResId& b) {
-  return NonUniqResId(uint8_t(a)|uint8_t(b));
+  return NonUniqResId(uint32_t(a)|uint32_t(b));
   }
 
 inline void operator |= (NonUniqResId& a,const NonUniqResId& b) {
-  a = NonUniqResId(uint8_t(a)|uint8_t(b));
+  a = NonUniqResId(uint32_t(a)|uint32_t(b));
   }
 
 inline NonUniqResId operator & (NonUniqResId a,const NonUniqResId& b) {
-  return NonUniqResId(uint8_t(a)&uint8_t(b));
+  return NonUniqResId(uint32_t(a)&uint32_t(b));
   }
 
 enum PipelineStage : uint8_t {

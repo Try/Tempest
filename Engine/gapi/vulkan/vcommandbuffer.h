@@ -87,10 +87,11 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void blit(AbstractGraphicsApi::Texture& src, uint32_t srcW, uint32_t srcH, uint32_t srcMip,
               AbstractGraphicsApi::Texture& dst, uint32_t dstW, uint32_t dstH, uint32_t dstMip);
 
-    void buildBlas(VkAccelerationStructureKHR dest, AbstractGraphicsApi::BlasBuildCtx& ctx, AbstractGraphicsApi::Buffer& scratch);
+    void buildBlas(VkAccelerationStructureKHR dest, AbstractGraphicsApi::Buffer& bbo,
+                   AbstractGraphicsApi::BlasBuildCtx& ctx, AbstractGraphicsApi::Buffer& scratch);
 
-    void buildTlas(VkAccelerationStructureKHR dest,
-                   AbstractGraphicsApi::Buffer& tbo, const AbstractGraphicsApi::Buffer& instances, uint32_t numInstances,
+    void buildTlas(VkAccelerationStructureKHR dest, AbstractGraphicsApi::Buffer& tbo,
+                   const AbstractGraphicsApi::Buffer& instances, uint32_t numInstances,
                    AbstractGraphicsApi::Buffer& scratch);
 
     struct Chunk {

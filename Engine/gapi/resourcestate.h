@@ -54,10 +54,7 @@ class ResourceState {
     std::vector<ImgState> imgState;
 
     struct Stage {
-      union {
-        NonUniqResId depend[PipelineStage::S_Count];
-        uint32_t     any;
-        };
+      NonUniqResId depend[PipelineStage::S_Count];
       };
     Stage                 uavRead [PipelineStage::S_Count] = {};
     Stage                 uavWrite[PipelineStage::S_Count] = {};

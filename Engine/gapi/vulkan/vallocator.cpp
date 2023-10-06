@@ -15,6 +15,13 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+static NonUniqResId nextId(){
+  static std::atomic_uint32_t i = {};
+  uint32_t ix = i.fetch_add(1) % 32;
+  uint32_t b = 1u << ix;
+  return NonUniqResId(b);
+  }
+
 VAllocator::VAllocator() {
   }
 
@@ -95,8 +102,12 @@ static size_t LCM(size_t n1, size_t n2)  {
 
 VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferHeap bufHeap) {
   VBuffer ret;
-  ret.alloc     = this;
-  ret.nonUniqId = (MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer)) ? NonUniqResId::I_Ssbo : NonUniqResId::I_Buf;
+  ret.alloc = this;
+  if( MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer) ||
+      MemUsage::TransferDst  ==(usage&MemUsage::TransferDst) ||
+      MemUsage::AsStorage    ==(usage&MemUsage::AsStorage)) {
+    ret.nonUniqId = nextId();
+    }
 
   VkBufferCreateInfo createInfo={};
   createInfo.sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -226,11 +237,10 @@ VTexture VAllocator::alloc(const Pixmap& pm, uint32_t mip, VkFormat format) {
   return ret;
   }
 
-VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t d, const uint32_t mip, TextureFormat frm, bool imgStorage) {
+VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t d, const uint32_t mip, TextureFormat frm, bool imageStore) {
   VTexture ret;
   ret.alloc     = this;
-  if(imgStorage)
-    ret.nonUniqId = NonUniqResId::I_Img;
+  ret.nonUniqId = (imageStore) ?  nextId() : NonUniqResId::I_None;
 
   VkImageCreateInfo imageInfo = {};
   imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -249,7 +259,7 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t d,
   imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
   imageInfo.format        = nativeFormat(frm);
 
-  if(imgStorage)
+  if(imageStore)
     imageInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
 
   vkAssert(vkCreateImage(dev, &imageInfo, nullptr, &ret.impl));
@@ -271,7 +281,7 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t d,
 
   ret.format         = imageInfo.format;
   ret.mipCnt         = mip;
-  ret.isStorageImage = imgStorage;
+  ret.isStorageImage = imageStore;
   ret.is3D           = (imageInfo.imageType==VK_IMAGE_TYPE_3D);
   ret.createViews(dev);
   return ret;

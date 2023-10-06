@@ -671,11 +671,12 @@ void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, u
                  filter);
   }
 
-void VCommandBuffer::buildBlas(VkAccelerationStructureKHR dest, AbstractGraphicsApi::BlasBuildCtx& rtctx, AbstractGraphicsApi::Buffer& scratch) {
+void VCommandBuffer::buildBlas(VkAccelerationStructureKHR dest, AbstractGraphicsApi::Buffer& bbo,
+                               AbstractGraphicsApi::BlasBuildCtx& rtctx, AbstractGraphicsApi::Buffer& scratch) {
   auto& ctx = reinterpret_cast<VBlasBuildCtx&>(rtctx);
 
   // make sure BLAS'es are ready
-  resState.onUavUsage(NonUniqResId::I_None, NonUniqResId::T_RtAs, PipelineStage::S_RtAs);
+  resState.onUavUsage(NonUniqResId::I_None, reinterpret_cast<const VBuffer&>(bbo).nonUniqId, PipelineStage::S_RtAs);
   resState.flush(*this);
 
   VkAccelerationStructureBuildRangeInfoKHR* pbuildRangeInfo = ctx.ranges.data();
@@ -721,7 +722,7 @@ void VCommandBuffer::buildTlas(VkAccelerationStructureKHR dest,
   buildRangeInfo.transformOffset              = 0;
 
   // make sure TLAS is ready
-  resState.onUavUsage(NonUniqResId::I_None, NonUniqResId::T_RtAs, PipelineStage::S_RtAs);
+  resState.onUavUsage(NonUniqResId::I_None, reinterpret_cast<const VBuffer&>(tbo).nonUniqId, PipelineStage::S_RtAs);
   resState.flush(*this);
 
   VkAccelerationStructureBuildRangeInfoKHR* pbuildRangeInfo = &buildRangeInfo;

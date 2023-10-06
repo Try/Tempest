@@ -650,7 +650,7 @@ void DxCommandBuffer::buildBlas(AbstractGraphicsApi::Buffer& bbo, AbstractGraphi
   desc.ScratchAccelerationStructureData = reinterpret_cast<DxBuffer&>(scratch).impl->GetGPUVirtualAddress();
 
   // make sure BLAS'es are ready
-  resState.onUavUsage(NonUniqResId::I_None, NonUniqResId::T_RtAs, PipelineStage::S_RtAs);
+  resState.onUavUsage(NonUniqResId::I_None, reinterpret_cast<DxBuffer&>(bbo).nonUniqId, PipelineStage::S_RtAs);
   resState.flush(*this);
   impl->BuildRaytracingAccelerationStructure(&desc,0,nullptr);
   }
@@ -675,7 +675,7 @@ void DxCommandBuffer::buildTlas(AbstractGraphicsApi::Buffer& tbo,
   desc.SourceAccelerationStructureData  = 0;
   desc.ScratchAccelerationStructureData = reinterpret_cast<DxBuffer&>(scratch).impl->GetGPUVirtualAddress();
 
-  resState.onUavUsage(NonUniqResId::I_None, NonUniqResId::T_RtAs, PipelineStage::S_RtAs);
+  resState.onUavUsage(NonUniqResId::I_None, reinterpret_cast<DxBuffer&>(tbo).nonUniqId, PipelineStage::S_RtAs);
   resState.flush(*this);
   impl->BuildRaytracingAccelerationStructure(&desc,0,nullptr);
   }

@@ -113,7 +113,7 @@ void ResourceState::onUavUsage(const Usage& u, PipelineStage st, bool host) {
   }
 
 void ResourceState::joinWriters(PipelineStage st) {
-  ResourceState::Usage u = {NonUniqResId::I_Ssbo, NonUniqResId::I_None, false};
+  ResourceState::Usage u = {NonUniqResId(-1), NonUniqResId::I_None, false};
   onUavUsage(u, st);
   }
 
@@ -181,9 +181,9 @@ void ResourceState::finalize(AbstractGraphicsApi::CommandBuffer& cmd) {
   uavDstBarrier = ResourceAccess::None;
 
   for(auto& i:uavRead)
-    i.any = 0;
+    i = Stage();
   for(auto& i:uavWrite)
-    i.any = 0;
+    i = Stage();
   fillReads();
   }
 
@@ -191,7 +191,7 @@ void ResourceState::fillReads() {
   // assume that previous command buffer may read anything
   for(auto& i:uavRead)
     for(auto& r:i.depend)
-      r = NonUniqResId(I_Img | I_Buf | I_Ssbo | T_RtAs);
+      r = NonUniqResId(-1);
   }
 
 ResourceState::ImgState& ResourceState::findImg(AbstractGraphicsApi::Texture* img, AbstractGraphicsApi::Swapchain* sw, uint32_t id,

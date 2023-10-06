@@ -121,7 +121,7 @@ VAccelerationStructure::VAccelerationStructure(VDevice& dx, const AbstractGraphi
     }
   cmd->hold(pScratch);
   cmd->hold(pThis);
-  cmd->buildBlas(impl,ctx,*pScratch.handler);
+  cmd->buildBlas(impl,data,ctx,*pScratch.handler);
   cmd->end();
 
   mgr.submit(std::move(cmd));

@@ -17,6 +17,13 @@ static UINT64 toAlignment(BufferHeap heap) {
   return D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
   }
 
+static NonUniqResId nextId(){
+  static std::atomic_uint32_t i = {};
+  uint32_t ix = i.fetch_add(1) % 32;
+  uint32_t b = 1u << ix;
+  return NonUniqResId(b);
+  }
+
 DxAllocator::Provider::~Provider() {
   if(last!=nullptr)
     last->Release();
@@ -149,7 +156,11 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t size, MemUsage usage, Buffer
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
     }
 
-  ret.nonUniqId = (MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer)) ? NonUniqResId::I_Ssbo : NonUniqResId::I_Buf;
+  if( MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer) ||
+      MemUsage::TransferDst  ==(usage&MemUsage::TransferDst) ||
+      MemUsage::AsStorage    ==(usage&MemUsage::AsStorage)) {
+    ret.nonUniqId = nextId();
+    }
   return ret;
   }
 
@@ -241,7 +252,7 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
              uuid<ID3D12Resource>(),
              reinterpret_cast<void**>(&ret)
              ));
-  auto nonUniqId = (imageStore) ? NonUniqResId::I_Img : NonUniqResId::I_None;
+  const auto nonUniqId = (imageStore) ?  nextId() : NonUniqResId::I_None;
   return DxTexture(std::move(ret),resDesc.Format,nonUniqId,resDesc.MipLevels,UINT(d));
   }
 
