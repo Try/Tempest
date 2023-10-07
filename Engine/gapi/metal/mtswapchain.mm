@@ -58,7 +58,7 @@ struct MtSwapchain::Impl {
 #if defined(__OSX__)
     return reinterpret_cast<CAMetalLayer*>(wnd.contentView.layer);
 #elif defined(__IOS__)
-    return reinterpret_cast<CAMetalLayer*>(wnd.layer);
+    return reinterpret_cast<CAMetalLayer*>(wnd.rootViewController.view.layer);
 #endif
     }
   };
@@ -75,6 +75,15 @@ static float backingScaleFactor() {
 static NSRect windowRect(NSWindow* wnd) {
   NSRect fr = [wnd contentRectForFrameRect:[wnd frame]];
   fr = [wnd convertRectToBacking:fr];
+  return fr;
+  }
+#elif defined(__IOS__)
+static CGRect windowRect(UIWindow* wnd) {
+  CGRect  fr    = wnd.rootViewController.view.frame;
+  // CGFloat scale = wnd.rootViewController.view.contentScaleFactor;
+  
+  //fr.size.width  *= scale;
+  //fr.size.height *= scale;
   return fr;
   }
 #endif
@@ -98,14 +107,16 @@ MtSwapchain::MtSwapchain(MtDevice& dev, SystemApi::Window *w)
 #if defined(__OSX__)
   pimpl->view.wantsLayer = YES;
   pimpl->wnd.contentView = pimpl->view;
+#elif defined(__IOS__)
+  pimpl->wnd.rootViewController.view = pimpl->view;
 #endif
 
   CAMetalLayer* lay = pimpl->metalLayer();
-  lay.device = id<MTLDevice>(dev.impl.get());
-
   const float dpi = backingScaleFactor();
+    
+  lay.device = id<MTLDevice>(dev.impl.get());
+    
   [lay setContentsScale:dpi];
-
   //lay.maximumDrawableCount      = 2;
   lay.pixelFormat               = MTLPixelFormatBGRA8Unorm;
   lay.allowsNextDrawableTimeout = NO;
@@ -124,9 +135,9 @@ void MtSwapchain::reset() {
   // https://developer.apple.com/documentation/quartzcore/cametallayer?language=objc
 
   CAMetalLayer* lay = pimpl->metalLayer();
-#ifdef __OSX__
-  NSRect wrect = windowRect(pimpl->wnd);
-  NSRect lrect = lay.frame;
+//#ifdef __OSX__
+  auto wrect = windowRect(pimpl->wnd);
+  auto lrect = lay.frame;
   if(wrect.size.width!=lrect.size.width || wrect.size.height!=lrect.size.height) {
     lay.drawableSize = wrect.size;
     sz = {int(wrect.size.width), int(wrect.size.height)};
@@ -138,7 +149,7 @@ void MtSwapchain::reset() {
     for(size_t i=0; i<imgCount; ++i)
       img[i].tex = mkTexture();
     }
-#endif
+//#endif
   }
 
 uint32_t MtSwapchain::currentBackBufferIndex() {

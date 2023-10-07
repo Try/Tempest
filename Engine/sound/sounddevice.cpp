@@ -1,5 +1,7 @@
 #include "sounddevice.h"
 
+#if defined(TEMPEST_BUILD_AUDIO)
+
 #include <AL/al.h>
 #include <AL/alc.h>
 #include <AL/alext.h>
@@ -156,3 +158,5 @@ std::shared_ptr<SoundDevice::Device> SoundDevice::implDevice() {
   val = vx;
   return vx;
   }
+
+#endif

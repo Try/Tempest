@@ -163,7 +163,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef /*displayLink*/,
                  [self dispatchRenderer];
                  });
   return kCVReturnSuccess;
- }
+  }
 
 @implementation TempestWindowDelegate
 - (id)init {

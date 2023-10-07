@@ -5,10 +5,12 @@
 namespace Tempest {
 
 class iOSApi final: SystemApi {
+  public:
+    using  SystemApi::dispatchRender;
+  
   private:
     iOSApi();
 
-    Window*  implCreateWindow(Tempest::Window* owner, uint32_t width, uint32_t height, ShowMode sm);
     Window*  implCreateWindow(Tempest::Window *owner, uint32_t width, uint32_t height) override;
     Window*  implCreateWindow(Tempest::Window *owner, ShowMode sm) override;
     void     implDestroyWindow(Window* w) override;
@@ -24,6 +26,9 @@ class iOSApi final: SystemApi {
     bool     implIsRunning() override;
     int      implExec(AppCallBack& cb) override;
     void     implProcessEvents(AppCallBack& cb) override;
+
+    void     implSetWindowTitle(SystemApi::Window *w, const char* utf8) override;
+
   friend class SystemApi;
   };
 

@@ -1,5 +1,7 @@
 #include "soundeffect.h"
 
+#if defined(TEMPEST_BUILD_AUDIO)
+
 #include <AL/al.h>
 #include <AL/alc.h>
 #include <AL/alext.h>
@@ -256,3 +258,5 @@ float SoundEffect::volume() const {
   alcSetThreadContext(nullptr);
   return val;
   }
+
+#endif

@@ -1,5 +1,7 @@
 #include "sound.h"
 
+#if defined(TEMPEST_BUILD_AUDIO)
+
 #include <Tempest/IDevice>
 #include <Tempest/MemReader>
 #include <Tempest/File>
@@ -304,3 +306,5 @@ int Sound::decodeAdPcmBlock(int16_t *outbuf, const uint8_t *inbuf, size_t inbufs
     }
   return samples;
   }
+
+#endif

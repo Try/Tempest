@@ -115,7 +115,8 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev, u
     for(auto& i:bc)
       smpBit |= uint64_t(1) << uint64_t(i);
     }
-
+  
+#ifdef __OSX__
   if(dev.depth24Stencil8PixelFormatSupported()) {
     static const TextureFormat ds[] = {TextureFormat::Depth24S8};
     for(auto& i:ds) {
@@ -123,6 +124,7 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev, u
       smpBit |= uint64_t(1) << uint64_t(i);
       }
     }
+#endif
 
   {
   /* NOTE1: https://developer.apple.com/metal/Metal-Shading-Language-Specification.pdf
