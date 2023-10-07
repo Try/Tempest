@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.14)
 
 project(Empty)
 set(CMAKE_CXX_STANDARD 20)
@@ -13,6 +13,11 @@ if(WIN32)
   else()
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -mwindows")
   endif()
+elseif(APPLE OR IOS)
+  set(MACOSX_BUNDLE_GUI_IDENTIFIER ${PROJECT_NAME})
+  set(MACOSX_BUNDLE_BUNDLE_VERSION 1)
+  set(MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0")
+  set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY XCODE_STARTUP_PROJECT ${PROJECT_NAME})
 endif()
 
 # Tempest

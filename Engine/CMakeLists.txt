@@ -24,6 +24,12 @@ else()
   option(TEMPEST_BUILD_METAL       "Build metal support"     OFF)
 endif()
 
+if(IOS)
+  set(TEMPEST_BUILD_SHARED OFF)
+endif()
+
+option(TEMPEST_BUILD_AUDIO "Build openal sound support" ON)
+
 ### The Library
 # avoid cmake link_directories issue
 if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
@@ -85,25 +91,28 @@ add_definitions(-DSTB_TRUETYPE_IMPLEMENTATION)
 add_definitions(-DSTB_IMAGE_WRITE_IMPLEMENTATION)
 
 ### OpenAl
-if(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
-    set(ALSOFT_BACKEND_WAVE     ON  CACHE INTERNAL "")
-    set(ALSOFT_BACKEND_OSS      ON  CACHE INTERNAL "")
-    set(ALSOFT_REQUIRE_OSS      ON  CACHE INTERNAL "")
-    set(ALSOFT_REQUIRE_QSA      OFF CACHE INTERNAL "")
-    set(ALSOFT_REQUIRE_SOLARIS  OFF CACHE INTERNAL "")
-    set(ALSOFT_BACKEND_ALSA     OFF CACHE INTERNAL "")
-    set(ALSOFT_DLOPEN           OFF CACHE INTERNAL "")
-    set(ALSOFT_NO_CONFIG_UTIL   OFF CACHE INTERNAL "")
+if(TEMPEST_BUILD_AUDIO)
+  add_definitions(-DTEMPEST_BUILD_AUDIO)
+  if(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
+      set(ALSOFT_BACKEND_WAVE     ON  CACHE INTERNAL "")
+      set(ALSOFT_BACKEND_OSS      ON  CACHE INTERNAL "")
+      set(ALSOFT_REQUIRE_OSS      ON  CACHE INTERNAL "")
+      set(ALSOFT_REQUIRE_QSA      OFF CACHE INTERNAL "")
+      set(ALSOFT_REQUIRE_SOLARIS  OFF CACHE INTERNAL "")
+      set(ALSOFT_BACKEND_ALSA     OFF CACHE INTERNAL "")
+      set(ALSOFT_DLOPEN           OFF CACHE INTERNAL "")
+      set(ALSOFT_NO_CONFIG_UTIL   OFF CACHE INTERNAL "")
+  endif()
+  set(AL_LIBTYPE_STATIC   ON  CACHE INTERNAL "")
+  set(ALSOFT_EXAMPLES     OFF CACHE INTERNAL "")
+  set(ALSOFT_UTILS        OFF CACHE INTERNAL "")
+  set(ALSOFT_BUILD_ROUTER OFF CACHE INTERNAL "")
+  set(LIBTYPE "STATIC") # TODO: any proper way to do this?!
+  add_definitions(-DAL_ALEXT_PROTOTYPES)
+  add_subdirectory("thirdparty/openal-soft" EXCLUDE_FROM_ALL)
+  target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/openal-soft/include")
+  target_link_libraries(${PROJECT_NAME} PRIVATE OpenAL)
 endif()
-set(AL_LIBTYPE_STATIC   ON  CACHE INTERNAL "")
-set(ALSOFT_EXAMPLES     OFF CACHE INTERNAL "")
-set(ALSOFT_UTILS        OFF CACHE INTERNAL "")
-set(ALSOFT_BUILD_ROUTER OFF CACHE INTERNAL "")
-set(LIBTYPE "STATIC") # TODO: any proper way to do this?!
-add_definitions(-DAL_ALEXT_PROTOTYPES)
-add_subdirectory("thirdparty/openal-soft" EXCLUDE_FROM_ALL)
-target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/openal-soft/include")
-target_link_libraries(${PROJECT_NAME} PRIVATE OpenAL)
 
 ### Vulkan
 if(TEMPEST_BUILD_VULKAN)
@@ -266,9 +275,11 @@ set_target_properties(
 
 if(WIN32)
   target_link_libraries(${PROJECT_NAME} PRIVATE shlwapi Kernel32)
+elseif(IOS)
+  #NOTE: use -DCMAKE_SYSTEM_NAME=iOS on first configure
+  target_link_libraries(${PROJECT_NAME} PRIVATE "-framework UiKit" "-framework Foundation" "-framework QuartzCore" "-framework Metal")
 elseif(APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE "-framework AppKit" "-framework QuartzCore" "-framework Metal")
-  # target_link_libraries(${PROJECT_NAME} PRIVATE "-framework UiKit")
 elseif(UNIX)
   target_link_libraries(${PROJECT_NAME} PRIVATE X11 Xcursor)
 endif()
