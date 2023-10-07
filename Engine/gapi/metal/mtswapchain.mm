@@ -80,10 +80,13 @@ static NSRect windowRect(NSWindow* wnd) {
 #elif defined(__IOS__)
 static CGRect windowRect(UIWindow* wnd) {
   CGRect  fr    = wnd.rootViewController.view.frame;
-  // CGFloat scale = wnd.rootViewController.view.contentScaleFactor;
+  CGFloat scale = wnd.contentScaleFactor;
+  // fr = [wnd convertRect:fr fromView:wnd.rootViewController.view];
   
-  //fr.size.width  *= scale;
-  //fr.size.height *= scale;
+  fr.origin.x    *= scale;
+  fr.origin.y    *= scale;
+  fr.size.width  *= scale;
+  fr.size.height *= scale;
   return fr;
   }
 #endif
@@ -95,12 +98,7 @@ MtSwapchain::MtSwapchain(MtDevice& dev, SystemApi::Window *w)
   if([obj isKindOfClass : [SysWindow class]])
     pimpl->wnd = reinterpret_cast<SysWindow*>(w);
 
-#if defined(__OSX__)
-  CGRect rect = [pimpl->wnd frame];
-#elif defined(__IOS__)
-  CGRect rect = [ [ UIScreen mainScreen ] bounds ];
-#endif
-      
+  const CGRect rect = windowRect(pimpl->wnd);
   sz = {int(rect.size.width), int(rect.size.height)};
 
   pimpl->view = [[MetalView alloc] initWithFrame:rect];
@@ -135,7 +133,6 @@ void MtSwapchain::reset() {
   // https://developer.apple.com/documentation/quartzcore/cametallayer?language=objc
 
   CAMetalLayer* lay = pimpl->metalLayer();
-//#ifdef __OSX__
   auto wrect = windowRect(pimpl->wnd);
   auto lrect = lay.frame;
   if(wrect.size.width!=lrect.size.width || wrect.size.height!=lrect.size.height) {
@@ -149,7 +146,6 @@ void MtSwapchain::reset() {
     for(size_t i=0; i<imgCount; ++i)
       img[i].tex = mkTexture();
     }
-//#endif
   }
 
 uint32_t MtSwapchain::currentBackBufferIndex() {
@@ -167,39 +163,34 @@ uint32_t MtSwapchain::currentBackBufferIndex() {
   }
 
 void MtSwapchain::present() {
-  CAMetalLayer* lay = pimpl->metalLayer();
-  uint32_t      i   = currentImg;
-
-  @autoreleasepool {
-    id<MTLCommandQueue>       queue    = id<MTLCommandQueue>(dev.queue.get());
-    id<CAMetalDrawable>       drawable = [lay nextDrawable];
-    id<MTLCommandBuffer>      cmd      = [queue commandBuffer];
-    id<MTLBlitCommandEncoder> blit     = [cmd blitCommandEncoder];
-
-    id<MTLTexture> dr = drawable.texture;
-    if(dr.width!=img[i].tex->width() || dr.height!=img[i].tex->height()) {
-      [blit endEncoding];
-      throw SwapchainSuboptimal();
-      }
-
-    std::lock_guard<SpinLock> guard(sync);
-    [blit copyFromTexture:(id<MTLTexture>)img[i].tex.get()
-                          sourceSlice:0
-                          sourceLevel:0
-                          toTexture:dr
-                          destinationSlice:0
-                          destinationLevel:0
-                          sliceCount:1
-                          levelCount:1];
-    [blit endEncoding];
-
-    [cmd presentDrawable:drawable];
-    [cmd addCompletedHandler:^(id<MTLCommandBuffer>)  {
-      std::lock_guard<SpinLock> guard(sync);
-      img[i].inUse = false;
-      }];
-    [cmd commit];
+  auto pool = NsPtr<NS::AutoreleasePool>::init();
+  
+  CA::MetalLayer* lay      = reinterpret_cast<CA::MetalLayer*>(pimpl->metalLayer());
+  uint32_t        i        = currentImg;
+  auto            drawable = lay->nextDrawable();
+  
+  std::lock_guard<SpinLock> guard(sync);
+  auto cmd = dev.queue->commandBuffer();
+  auto enc = cmd->blitCommandEncoder();
+  
+  auto dr  = drawable->texture();
+  if(dr->width()!=img[i].tex->width() || dr->height()!=img[i].tex->height()) {
+    enc->endEncoding();
+    throw SwapchainSuboptimal();
     }
+  enc->copyFromTexture(img[i].tex.get(), 0, 0,
+                       dr, 0, 0,
+                       1, 1);
+  enc->endEncoding();
+
+  img[i].tex->retain();
+  cmd->presentDrawable(drawable);
+  cmd->addCompletedHandler(^(MTL::CommandBuffer*){
+    std::lock_guard<SpinLock> guard(sync);
+    img[i].inUse = false;
+    img[i].tex->release();
+    });
+  cmd->commit();
   }
 
 NsPtr<MTL::Texture> MtSwapchain::mkTexture() {
