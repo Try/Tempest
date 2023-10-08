@@ -3,7 +3,8 @@
 #include <Tempest/Sprite>
 #include <Tempest/Log>
 #include <cstring>
-#include <squish.h>
+
+#include "thirdparty/squish/squish.h"
 
 using namespace Tempest;
 

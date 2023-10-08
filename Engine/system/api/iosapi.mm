@@ -297,6 +297,8 @@ bool iOSApi::implIsRunning() {
 int iOSApi::implExec(AppCallBack& cb) {
   while(::isRunning.load()) {
     implProcessEvents(cb);
+    if(!cb.onTimer())
+      std::this_thread::yield();
     }
   return 0;
   }

@@ -9,7 +9,7 @@
 #include <Tempest/Except>
 
 #include <cstring>
-#include <squish.h>
+#include "thirdparty/squish/squish.h"
 
 using namespace Tempest;
 

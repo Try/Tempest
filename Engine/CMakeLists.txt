@@ -69,9 +69,6 @@ set(ZLIB_LIBRARY zlibstatic)
 set(ZLIB_INCLUDE_DIR "thirdparty/zlib")
 target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/zlib")
 
-### squish
-target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/squish")
-
 ### libpng16
 set(PNG_SHARED                 OFF CACHE INTERNAL "")
 set(PNG_STATIC                 ON  CACHE INTERNAL "")

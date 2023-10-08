@@ -4,11 +4,11 @@
 #include <Tempest/Except>
 
 #include "pixmapcodec.h"
+#include "thirdparty/squish/squish.h"
 
 #include <vector>
 #include <cstring>
 #include <cassert>
-#include <squish.h>
 
 using namespace Tempest;
 

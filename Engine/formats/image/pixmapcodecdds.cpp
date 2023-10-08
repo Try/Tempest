@@ -4,7 +4,8 @@
 
 #include <algorithm>
 #include <cstring>
-#include <squish.h>
+
+#include "thirdparty/squish/squish.h"
 #include "../ddsdef.h"
 
 using namespace Tempest;
