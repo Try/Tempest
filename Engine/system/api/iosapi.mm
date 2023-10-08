@@ -1,12 +1,16 @@
 #include "iosapi.h"
+
 #include <Tempest/Platform>
 
 #ifdef __IOS__
 
-#import <UIKit/UIKit.h>
+#import  <UIKit/UIKit.h>
 #include <string>
 #include <thread>
 #include <TargetConditionals.h>
+
+#include <Tempest/Window>
+#include <Tempest/Event>
 
 using namespace Tempest;
 
@@ -36,15 +40,40 @@ static void drawFrame();
   @public Tempest::Window* owner;
   @public CADisplayLink*   displayLink;
   @public std::atomic_bool hasPendingFrame;
+  
+  union Ev {
+    Ev(){}
+    ~Ev(){}
+
+    Event          noEvent;
+    SizeEvent      size;
+    MouseEvent     mouse;
+    KeyEvent       key;
+    CloseEvent     close;
+    Tempest::Point move;
+    } event;
+  Event::Type curentEvent;
   }
 @end
 @implementation TempestWindow
 - (void)layoutSubviews {
   [super layoutSubviews];
+  
+  const CGFloat scale = self.contentScaleFactor;
+  //CGRect frame        = self.rootViewController.view.bounds;
+  CGRect frame        = self.bounds;
+  frame.origin.x      = 0;
+  frame.origin.y      = 0;
+  [self.rootViewController.view setFrame: frame];
+
+  new (&event.size) SizeEvent(int32_t(frame.size.width*scale), int32_t(frame.size.height*scale));
+  curentEvent = Event::Resize;
+  swapContext();
   }
+
 - (void)drawFrame {
   hasPendingFrame.store(true);
-  //swapContext();
+  swapContext();
   drawFrame();
   }
 @end
@@ -57,7 +86,7 @@ static TempestWindow* mainWindow = nullptr;
 
 @implementation ViewController
 - (void)viewDidLoad {
-    [self prefersStatusBarHidden];
+  [self prefersStatusBarHidden];
   }
 
 - (BOOL)prefersStatusBarHidden {
@@ -68,11 +97,19 @@ static TempestWindow* mainWindow = nullptr;
   return YES;
   }
 
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
+  (void)interfaceOrientation;
+  return YES;
+  }
+
+-(UIInterfaceOrientationMask)supportedInterfaceOrientations {
+  return UIInterfaceOrientationMaskAll;
+  }
 @end
 
 @interface AppDelegate : NSObject <UIApplicationDelegate> {
   }
-  @end
+@end
 
 @implementation AppDelegate
 
@@ -86,11 +123,12 @@ static TempestWindow* mainWindow = nullptr;
   window.rootViewController = [ViewController new];
   window.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 
-  window.backgroundColor = [ UIColor blueColor ];
+  window.backgroundColor = [ UIColor blackColor ];
 
   window->owner = nullptr;
   window->displayLink = nullptr;
   window->hasPendingFrame.store(false);
+  window->curentEvent = Event::Type::NoEvent;
   
   mainWindow = window;
   [ window makeKeyAndVisible ]; // possible switch here
@@ -99,34 +137,29 @@ static TempestWindow* mainWindow = nullptr;
 
 - (UIInterfaceOrientationMask)application:(UIApplication *)application
   supportedInterfaceOrientationsForWindow:(UIWindow *)window {
-    return UIInterfaceOrientationMaskAll;
+  return UIInterfaceOrientationMaskAll;
   }
 
 - (void)applicationWillResignActive:(UIApplication *)application {
-    (void)application;
+  (void)application;
   }
-
 
 - (void)applicationDidEnterBackground:(UIApplication *)application {
-    (void)application;
+  (void)application;
   }
-
 
 - (void)applicationWillEnterForeground:(UIApplication *)application {
-    (void)application;
+  (void)application;
   }
-
 
 - (void)applicationDidBecomeActive:(UIApplication *)application  {
-    (void)application;
-    swapContext();
+  (void)application;
+  swapContext();
   }
-
 
 - (void)applicationWillTerminate:(UIApplication *)application {
-    (void)application;
+  (void)application;
   }
-
 @end
 
 
@@ -157,23 +190,20 @@ inline static void createAppleSubContext()  {
     __volatile__ uintptr_t ptr  = reinterpret_cast<uintptr_t>(appleStack);
     __volatile__ uintptr_t base = alignDown(ptr + sizeof(appleStack), FUNCTION_CALL_ALIGNMENT);
 
-    /*
-    __asm__ __volatile__("mov lr, %0"
-      :
-      : "r" (alignDown(0llu, FUNCTION_CALL_ALIGNMENT)));*/
-
     __asm__ __volatile__(
                 SET_STACK_POINTER
                 : // no outputs
                 : "r" (alignDown(base, FUNCTION_CALL_ALIGNMENT))
             );
 
+    std::atomic_thread_fence(std::memory_order_seq_cst);
     currentContext = &appleContext;
     appleMain(nullptr);
     }
   }
 
 inline static void swapContext() {
+  std::atomic_thread_fence(std::memory_order_seq_cst);
   if(currentContext==&appleContext) {
     currentContext = &mainContext;
     if(_setjmp(appleContext.jmp) == 0)
@@ -183,6 +213,7 @@ inline static void swapContext() {
     if(_setjmp(mainContext.jmp) == 0)
       _longjmp(appleContext.jmp, 1);
     }
+  std::atomic_thread_fence(std::memory_order_seq_cst);
   }
 
 static void drawFrame() {
@@ -211,6 +242,7 @@ static SystemApi::Window* createWindow(Tempest::Window *owner, uint32_t w, uint3
   //by adding the display link to the run loop our draw method will be called 60 times per second
   [window->displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSDefaultRunLoopMode];
   window->hasPendingFrame.store(true);
+  
   return reinterpret_cast<SystemApi::Window*>(window);
   }
 
@@ -234,8 +266,14 @@ void iOSApi::implExit() {
   }
 
 Tempest::Rect iOSApi::implWindowClientRect(Window* w) {
-  CGRect rect = [ [ UIScreen mainScreen ] bounds ];
-  return Rect(0,0,rect.size.width,rect.size.height);
+  auto wx = reinterpret_cast<TempestWindow*>(w);
+  const CGFloat scale = wx.contentScaleFactor;
+  const CGRect  frame = wx.frame;
+  //wner->resize(int32_t(frame.size.width*scale), int32_t(frame.size.height*scale));
+  
+  //CGRect rect = [ [ UIScreen mainScreen ] bounds ];
+  return Rect(int32_t(frame.origin.x*scale), int32_t(frame.origin.y*scale),
+              int32_t(frame.size.width*scale), int32_t(frame.size.height*scale));
   }
 
 bool iOSApi::implSetAsFullscreen(Window* w, bool fullScreen) {
@@ -243,7 +281,7 @@ bool iOSApi::implSetAsFullscreen(Window* w, bool fullScreen) {
   }
 
 bool iOSApi::implIsFullscreen(Window* w) {
-
+  return false;
   }
 
 void iOSApi::implSetCursorPosition(Window* w, int x, int y) {
@@ -264,16 +302,31 @@ int iOSApi::implExec(AppCallBack& cb) {
   }
 
 void iOSApi::implProcessEvents(AppCallBack& cb) {
-  if(mainWindow!=nil && mainWindow->hasPendingFrame.load()) {
-    auto cb = (mainWindow->owner);
-    @autoreleasepool {
-      if(cb!=nullptr) {
-        mainWindow->hasPendingFrame.store(false);
-        iOSApi::dispatchRender(*cb);
-        }
-      }
+  if(mainWindow==nil || mainWindow->owner==nullptr) {
     swapContext();
     return;
+    }
+  
+  @autoreleasepool {
+    auto& wnd   = *mainWindow->owner;
+    auto  eType = mainWindow->curentEvent;
+    mainWindow->curentEvent = Event::Type::NoEvent;
+    
+    switch(eType) {
+      case Event::Type::Resize: {
+        auto evt = mainWindow->event.size;
+        mainWindow->event.size.~SizeEvent();
+        iOSApi::dispatchResize(wnd, evt);
+        break;
+        }
+        
+      default:
+        if(mainWindow->hasPendingFrame.load()) {
+          mainWindow->hasPendingFrame.store(false);
+          iOSApi::dispatchRender(wnd);
+          }
+        break;
+      }
     }
   swapContext();
   }

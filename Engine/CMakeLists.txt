@@ -79,6 +79,7 @@ set(PNG_TESTS                  OFF CACHE INTERNAL "")
 set(PNG_BUILD_ZLIB             ON  CACHE INTERNAL "")
 set(SKIP_INSTALL_ALL           ON  CACHE INTERNAL "")
 set(PNG_HARDWARE_OPTIMIZATIONS OFF CACHE INTERNAL "")
+add_definitions(-DPNG_ARM_NEON_OPT=0)
 add_subdirectory("thirdparty/libpng" EXCLUDE_FROM_ALL)
 target_include_directories(png_static PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(png_static PRIVATE "thirdparty/zlib")
@@ -112,6 +113,9 @@ if(TEMPEST_BUILD_AUDIO)
   add_subdirectory("thirdparty/openal-soft" EXCLUDE_FROM_ALL)
   target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/openal-soft/include")
   target_link_libraries(${PROJECT_NAME} PRIVATE OpenAL)
+  if(IOS)
+    target_compile_options(OpenAL PRIVATE -Wno-nullability-completeness)
+  endif()
 endif()
 
 ### Vulkan
@@ -252,7 +256,7 @@ file(GLOB_RECURSE SOURCES
   "utility/*.cpp"
   )
 
-if(APPLE)
+if(APPLE OR IOS)
   set(CMAKE_OSX_DEPLOYMENT_TARGET 12.0)
   enable_language(OBJCXX)
   file(GLOB_RECURSE ObjCSOURCES

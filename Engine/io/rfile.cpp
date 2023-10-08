@@ -48,13 +48,15 @@ RFile::RFile(RFile &&other)
   other.handle = nullptr;
   }
 
-#ifdef __WINDOWS__
+#if defined(__WINDOWS__)
 void* RFile::implOpen(const wchar_t *wstr) {
   void* ret = CreateFileW(wstr,GENERIC_READ,FILE_SHARE_READ,nullptr,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,nullptr);
   if(ret==HANDLE(LONG_PTR(-1)))
     throw std::system_error(Tempest::SystemErrc::UnableToOpenFile);
   return ret;
   }
+#elif defined(__IOS__)
+// rfile.mm
 #else
 void* RFile::implOpen(const char *cstr) {
   void* ret = fopen(cstr,"rb");
