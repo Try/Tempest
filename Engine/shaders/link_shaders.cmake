@@ -16,5 +16,5 @@ foreach(i ${SOURCES})
   string(LENGTH ${SHADER_SPRV} SHADER_SPRV_LEN)
   string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1," SHADER_SPRV ${SHADER_SPRV})
 
-  file(APPEND ${HEADER} "static const uint8_t ${CLEAN_NAME}[] = {${SHADER_SPRV}};\n")
+  file(APPEND ${HEADER} "alignas(uint32_t) static const uint8_t ${CLEAN_NAME}[] = {${SHADER_SPRV}};\n")
 endforeach()

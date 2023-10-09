@@ -15,7 +15,7 @@ class Bytecode {
   public:
     Bytecode(const uint32_t* spirv, size_t codeLen);
 
-    struct OpCode {
+    struct alignas(uint32_t) OpCode {
       uint16_t code = 0;
       uint16_t len  = 0;
 
