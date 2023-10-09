@@ -267,7 +267,7 @@ struct Pixmap::Impl {
     }
 
   static void ddsToRgba(uint8_t* px,const uint8_t* dds,const uint32_t w,const uint32_t h,const int frm,uint8_t bpp) {
-    squish::u8 pixels[4][4][4];
+    squish::u8 pixels[4][4][4] = {};
 
     const uint32_t w4        = (w+3)/4;
     const uint32_t blocksize = (frm==squish::kDxt1) ? 8 : 16;

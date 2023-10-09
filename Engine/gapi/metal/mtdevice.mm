@@ -13,7 +13,7 @@ using namespace Tempest::Detail;
 static NsPtr<MTL::Device> mkDevice(const char* name) {
   if(name==nullptr)
     return NsPtr<MTL::Device>(MTL::CreateSystemDefaultDevice());
-
+#if defined(__OSX__)
   auto dev = NsPtr<NS::Array>(MTL::CopyAllDevices());
   for(size_t i=0; i<dev->count(); ++i) {
     NS::Object*  at = dev->object(i);
@@ -22,6 +22,10 @@ static NsPtr<MTL::Device> mkDevice(const char* name) {
       return NsPtr<MTL::Device>(d);
       }
     }
+#else
+  return NsPtr<MTL::Device>(MTL::CreateSystemDefaultDevice());
+#endif
+  
   return NsPtr<MTL::Device>(nullptr);
   }
 

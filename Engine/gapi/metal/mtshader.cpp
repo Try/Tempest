@@ -18,6 +18,7 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
   if(srcSize%4!=0)
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
 
+  auto pool = NsPtr<NS::AutoreleasePool>::init();
   spirv_cross::CompilerMSL::Options optMSL;
 #if defined(__OSX__)
   optMSL.platform = spirv_cross::CompilerMSL::Options::macOS;
@@ -131,6 +132,7 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
   auto       opt = NsPtr<MTL::CompileOptions>::init();
   NS::Error* err = nullptr;
   auto       str = NsPtr<NS::String>(NS::String::string(msl.c_str(),NS::UTF8StringEncoding));
+  str->retain();
   library = NsPtr<MTL::Library>(dev.impl->newLibrary(str.get(), opt.get(), &err));
 
   if(err!=nullptr) {
@@ -147,6 +149,7 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
     }
 
   auto main = NsPtr<NS::String>(NS::String::string("main0",NS::UTF8StringEncoding));
+  main->retain();
   impl = NsPtr<MTL::Function>(library->newFunction(main.get()));
   }
 

@@ -39,6 +39,7 @@ MetalApi::~MetalApi() {
   }
 
 std::vector<AbstractGraphicsApi::Props> MetalApi::devices() const {
+#if defined(__OSX__)
   auto dev = MTL::CopyAllDevices();
   try {
     std::vector<AbstractGraphicsApi::Props> p(dev->count());
@@ -53,6 +54,13 @@ std::vector<AbstractGraphicsApi::Props> MetalApi::devices() const {
     dev->release();
     throw;
     }
+#else
+  std::vector<AbstractGraphicsApi::Props> p(1);
+  auto     dev    = NsPtr<MTL::Device>(MTL::CreateSystemDefaultDevice());
+  uint32_t mslVer = 0;
+  MtDevice::deductProps(p[0],*dev,mslVer);
+  return p;
+#endif
   }
 
 AbstractGraphicsApi::Device* MetalApi::createDevice(const char *gpuName) {

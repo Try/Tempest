@@ -1,6 +1,7 @@
 #include "iosapi.h"
 
 #include <Tempest/Platform>
+#include <Tempest/Log>
 
 #ifdef __IOS__
 
@@ -60,12 +61,14 @@ static void drawFrame();
   [super layoutSubviews];
   
   const CGFloat scale = self.contentScaleFactor;
-  //CGRect frame        = self.rootViewController.view.bounds;
   CGRect frame        = self.bounds;
   frame.origin.x      = 0;
   frame.origin.y      = 0;
   [self.rootViewController.view setFrame: frame];
 
+  if(owner==nullptr)
+    return;
+  
   new (&event.size) SizeEvent(int32_t(frame.size.width*scale), int32_t(frame.size.height*scale));
   curentEvent = Event::Resize;
   swapContext();
@@ -74,7 +77,28 @@ static void drawFrame();
 - (void)drawFrame {
   hasPendingFrame.store(true);
   swapContext();
-  drawFrame();
+  // drawFrame();
+  }
+
+- (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)ex {
+  const CGFloat scale = self.contentScaleFactor;
+  CGRect frame        = self.bounds;
+  
+  for(UITouch *touch in touches ) {
+    CGPoint p  = [touch locationInView:self];
+    int     id = 0; //state.addTouch(touch,point);
+    
+    new (&event.mouse) MouseEvent(int(p.x*scale),
+                                  int(frame.size.height*scale - p.y*scale),
+                                  Event::ButtonLeft,
+                                  Event::M_NoModifier,
+                                  0,
+                                  id,
+                                  Event::MouseDown
+                                  );
+    curentEvent = Event::MouseDown;
+    swapContext();
+    }
   }
 @end
 
@@ -111,8 +135,9 @@ static TempestWindow* mainWindow = nullptr;
   }
 @end
 
-@implementation AppDelegate
+static bool isApplicationActive = false;
 
+@implementation AppDelegate
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
   (void)application;
   (void)launchOptions;
@@ -142,6 +167,8 @@ static TempestWindow* mainWindow = nullptr;
 
 - (void)applicationWillResignActive:(UIApplication *)application {
   (void)application;
+  isApplicationActive = false;
+  swapContext();
   }
 
 - (void)applicationDidEnterBackground:(UIApplication *)application {
@@ -154,6 +181,7 @@ static TempestWindow* mainWindow = nullptr;
 
 - (void)applicationDidBecomeActive:(UIApplication *)application  {
   (void)application;
+  isApplicationActive = true;
   swapContext();
   }
 
@@ -164,15 +192,7 @@ static TempestWindow* mainWindow = nullptr;
 
 
 struct Fiber  {
-  ucontext_t  fib;
-  jmp_buf     jmp;
-  };
-
-struct FiberCtx  {
-  void(*      fnc)(void*);
-  void*       ctx;
-  jmp_buf*    cur;
-  ucontext_t* prv;
+  jmp_buf jmp = {};
   };
 
 static std::atomic_bool isRunning{true};
@@ -229,7 +249,7 @@ static void drawFrame() {
 static void appleMain(void*) {
   static std::string app = "application";
   char * argv[2] = {
-    &app[0],nullptr
+    &app[0], nullptr
     };
   UIApplicationMain(1, argv, nil, NSStringFromClass( [ AppDelegate class ] ) );
   }
@@ -321,9 +341,16 @@ void iOSApi::implProcessEvents(AppCallBack& cb) {
         iOSApi::dispatchResize(wnd, evt);
         break;
         }
-        
+      case Event::MouseDown:
+      case Event::MouseMove:
+      case Event::MouseUp: {
+        auto evt = mainWindow->event.mouse;
+        mainWindow->event.mouse.~MouseEvent();
+        iOSApi::dispatchMouseDown(wnd, evt);
+        break;
+        }
       default:
-        if(mainWindow->hasPendingFrame.load()) {
+        if(isApplicationActive && mainWindow->hasPendingFrame.load()) {
           mainWindow->hasPendingFrame.store(false);
           iOSApi::dispatchRender(wnd);
           }
