@@ -271,7 +271,7 @@ namespace Tempest {
     template<>
     inline IndexClass indexCls<uint32_t>() { return IndexClass::i32; }
 
-    inline size_t sizeofIndex(Detail::IndexClass icls) {
+    inline uint32_t sizeofIndex(Detail::IndexClass icls) {
       switch(icls) {
         case Detail::IndexClass::i16:
           return 2;

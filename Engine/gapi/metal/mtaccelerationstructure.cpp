@@ -115,7 +115,7 @@ MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtIns
     obj.options                         = nativeFormat(inst[i].flags);
     obj.mask                            = 0xFF;
     obj.intersectionFunctionTableOffset = 0;
-    obj.accelerationStructureIndex      = i;
+    obj.accelerationStructureIndex      = uint32_t(i);
     obj.userID                          = inst[i].id;
 
     auto* ax = reinterpret_cast<MtAccelerationStructure*>(as[i]);
@@ -124,7 +124,7 @@ MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtIns
       obj.accelerationStructureIndex = it->second;
       } else {
       obj.accelerationStructureIndex = uint32_t(blas.size());
-      usedBlas[ax->impl.get()] = blas.size();
+      usedBlas[ax->impl.get()] = uint32_t(blas.size());
       blas.push_back(ax->impl.get());
       }
     }

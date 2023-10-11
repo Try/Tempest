@@ -44,11 +44,22 @@ MtDevice::MtDevice(const char* name, bool validation)
 MtDevice::~MtDevice() {
   }
 
+void MtDevice::onSubmit() {
+  std::lock_guard<std::mutex> guard(devIdleSync);
+  devCmdBuf.fetch_add(1u);
+  }
+
+void MtDevice::onFinish() {
+  std::lock_guard<std::mutex> guard(devIdleSync);
+  devCmdBuf.fetch_add(-1);
+  devIdleCv.notify_all();
+  }
+
 void MtDevice::waitIdle() {
-  // TODO: verify, if this correct at all
-  auto cmd = queue->commandBuffer();
-  cmd->commit();
-  cmd->waitUntilCompleted();
+  std::unique_lock<std::mutex> guard(devIdleSync);
+  devIdleCv.wait(guard,[this](){
+    return 0==devCmdBuf.load();
+    });
   }
 
 void MtDevice::handleError(NS::Error *err) {
@@ -62,11 +73,11 @@ void MtDevice::handleError(NS::Error *err) {
   }
 
 void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev, uint32_t& mslVersion) {
-  SInt32 majorVersion = 0, minorVersion = 0;
+  int32_t majorVersion = 0, minorVersion = 0;
   if([[NSProcessInfo processInfo] respondsToSelector:@selector(operatingSystemVersion)]) {
     NSOperatingSystemVersion ver = [[NSProcessInfo processInfo] operatingSystemVersion];
-    majorVersion = ver.majorVersion;
-    minorVersion = ver.minorVersion;
+    majorVersion = int32_t(ver.majorVersion);
+    minorVersion = int32_t(ver.minorVersion);
     }
 
   std::strncpy(prop.name,dev.name()->utf8String(),sizeof(prop.name));

@@ -6,6 +6,11 @@
 
 #include <Metal/Metal.hpp>
 
+namespace CA
+{
+class MetalDrawable;
+}
+
 namespace Tempest {
 namespace Detail {
 
@@ -27,7 +32,6 @@ class MtSwapchain : public AbstractGraphicsApi::Swapchain {
 
     struct Image {
       NsPtr<MTL::Texture> tex;
-      bool                inUse = false;
       };
     std::vector<Image>    img;
 
@@ -41,7 +45,9 @@ class MtSwapchain : public AbstractGraphicsApi::Swapchain {
 
     uint32_t              imgCount   = 0;
     uint32_t              currentImg = 0;
+
     NsPtr<MTL::Texture>   mkTexture();
+    void                  nextDrawable();
   };
 
 }

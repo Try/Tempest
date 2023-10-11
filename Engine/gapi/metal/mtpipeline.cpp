@@ -66,8 +66,8 @@ MtPipeline::~MtPipeline() {
 
 IVec3 MtPipeline::workGroupSize() const {
   if(localSize.width>0)
-    return IVec3(localSize.width, localSize.height, localSize.depth);
-  return IVec3(localSizeMesh.width, localSizeMesh.height, localSizeMesh.depth);
+    return IVec3(int(localSize.width), int(localSize.height), int(localSize.depth));
+  return IVec3(int(localSizeMesh.width), int(localSizeMesh.height), int(localSizeMesh.depth));
   }
 
 MTL::RenderPipelineState& MtPipeline::inst(const MtFboLayout& lay, size_t stride) {

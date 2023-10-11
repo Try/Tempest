@@ -223,6 +223,8 @@ class MtDevice : public AbstractGraphicsApi::Device {
     MtDevice(const char* name, bool validation);
     ~MtDevice();
 
+    void onSubmit();
+    void onFinish();
     void waitIdle() override;
 
     static void handleError(NS::Error* err);
@@ -236,6 +238,10 @@ class MtDevice : public AbstractGraphicsApi::Device {
 
     NsPtr<MTL::Device>         impl;
     NsPtr<MTL::CommandQueue>   queue;
+
+    std::condition_variable    devIdleCv;
+    std::mutex                 devIdleSync;
+    std::atomic_uint32_t       devCmdBuf{0};
 
     AbstractGraphicsApi::Props prop;
     MtSamplerCache             samplers;

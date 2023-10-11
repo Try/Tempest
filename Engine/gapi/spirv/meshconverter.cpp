@@ -353,11 +353,11 @@ void MeshConverter::emitComp(libspirv::MutableBytecode& comp) {
     if(i.op()==spv::OpStore) {
       auto chain = i[1];
       if(auto it=iboAccess.find(chain); it!=iboAccess.end()) {
-        emitIboStore(comp, gen, i, it->second);
+        emitIboStore(comp, gen, i, uint32_t(it->second));
         continue;
         }
       if(auto it=vboAccess.find(chain); it!=vboAccess.end()) {
-        emitVboStore(comp, gen, i, it->second);
+        emitVboStore(comp, gen, i, uint32_t(it->second));
         continue;
         }
       }

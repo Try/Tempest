@@ -55,7 +55,7 @@ MtPipelineLay::MtPipelineLay(const std::vector<Binding>** sh, size_t cnt, Shader
         bx.bindCs = -1;
         }
 
-      bx.mslPushSize = b.mslSize;
+      bx.mslPushSize = uint32_t(b.mslSize);
       }
     }
 

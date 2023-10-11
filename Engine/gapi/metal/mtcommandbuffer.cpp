@@ -186,7 +186,7 @@ void MtCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline &p) {
   encComp->setComputePipelineState(px.impl.get());
   curLay    = px.lay.handler;
   localSize = px.localSize;
-  maxTotalThreadsPerThreadgroup = px.impl->maxTotalThreadsPerThreadgroup();
+  maxTotalThreadsPerThreadgroup = uint32_t(px.impl->maxTotalThreadsPerThreadgroup());
   }
 
 void MtCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline&,
@@ -496,7 +496,7 @@ void MtCommandBuffer::setBindless(const MtPipelineLay::MTLBind& mtl, MTL::Buffer
     }
 
   // samplers
-  uint32_t shift = numRes * sizeof(MTL::ResourceID);
+  uint32_t shift = uint32_t(numRes * sizeof(MTL::ResourceID));
   shift  = ((shift+16-1)/16)*16;
 
   if(mtl.bindTsSmp!=uint32_t(-1)) {

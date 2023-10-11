@@ -229,8 +229,11 @@ void MetalApi::submit(AbstractGraphicsApi::Device *d,
   auto& fence = *reinterpret_cast<MtSync*>(doneCpu);
   fence.signal();
 
+  auto* dx = reinterpret_cast<MtDevice*>(d);
   auto& cx = *reinterpret_cast<MtCommandBuffer*>(pcmd);
+
   MTL::CommandBuffer& cmd = *cx.impl;
+  dx->onSubmit();
   cmd.addCompletedHandler(^(MTL::CommandBuffer* c){
     MTL::CommandBufferStatus s = c->status();
     if(s==MTL::CommandBufferStatusNotEnqueued ||
@@ -242,6 +245,7 @@ void MetalApi::submit(AbstractGraphicsApi::Device *d,
     if(s==MTL::CommandBufferStatusCompleted)
       fence.reset(); else
       fence.reset(s);
+    dx->onFinish();
     });
   cmd.commit();
   }

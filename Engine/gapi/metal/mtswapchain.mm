@@ -129,9 +129,11 @@ MtSwapchain::~MtSwapchain() {
   }
 
 void MtSwapchain::reset() {
-  std::lock_guard<SpinLock> guard(sync);
-  // https://developer.apple.com/documentation/quartzcore/cametallayer?language=objc
+  dev.waitIdle(); // pending commands
 
+  std::lock_guard<SpinLock> guard(sync);
+
+  // https://developer.apple.com/documentation/quartzcore/cametallayer?language=objc
   CAMetalLayer* lay = pimpl->metalLayer();
   auto wrect = windowRect(pimpl->wnd);
   auto lrect = lay.frame;
@@ -139,27 +141,19 @@ void MtSwapchain::reset() {
     lay.drawableSize = wrect.size;
     sz = {int(wrect.size.width), int(wrect.size.height)};
     }
-  imgCount = 2; //lay.maximumDrawableCount;
+  imgCount = uint32_t(lay.maximumDrawableCount);
 
   @autoreleasepool {
     img.resize(imgCount);
     for(size_t i=0; i<imgCount; ++i)
       img[i].tex = mkTexture();
     }
+
+  currentImg = 0;
   }
 
 uint32_t MtSwapchain::currentBackBufferIndex() {
-  for(;;) {
-    std::lock_guard<SpinLock> guard(sync);
-    for(size_t i=0; i<img.size(); ++i) {
-      if(img[i].inUse)
-        continue;
-      img[i].inUse = true;
-      currentImg = uint32_t(i);
-      return uint32_t(i);
-      }
-    }
-  throw SwapchainSuboptimal();
+  return currentImg;
   }
 
 void MtSwapchain::present() {
@@ -172,8 +166,8 @@ void MtSwapchain::present() {
   std::lock_guard<SpinLock> guard(sync);
   auto cmd = dev.queue->commandBuffer();
   auto enc = cmd->blitCommandEncoder();
-  
   auto dr  = drawable->texture();
+
   if(dr->width()!=img[i].tex->width() || dr->height()!=img[i].tex->height()) {
     enc->endEncoding();
     throw SwapchainSuboptimal();
@@ -182,15 +176,25 @@ void MtSwapchain::present() {
                        dr, 0, 0,
                        1, 1);
   enc->endEncoding();
-
-  img[i].tex->retain();
   cmd->presentDrawable(drawable);
-  cmd->addCompletedHandler(^(MTL::CommandBuffer*){
-    std::lock_guard<SpinLock> guard(sync);
-    img[i].inUse = false;
-    img[i].tex->release();
+
+  dev.onSubmit();
+  cmd->addCompletedHandler(^(MTL::CommandBuffer* c){
+    MTL::CommandBufferStatus s = c->status();
+    if(s==MTL::CommandBufferStatusNotEnqueued ||
+       s==MTL::CommandBufferStatusEnqueued ||
+       s==MTL::CommandBufferStatusCommitted ||
+       s==MTL::CommandBufferStatusScheduled)
+      return;
+
+    if(s!=MTL::CommandBufferStatusCompleted)
+      Log::e("swapchain fatal error");
+
+    dev.onFinish();
     });
   cmd->commit();
+
+  nextDrawable();
   }
 
 NsPtr<MTL::Texture> MtSwapchain::mkTexture() {
@@ -212,6 +216,10 @@ NsPtr<MTL::Texture> MtSwapchain::mkTexture() {
   if(impl==nullptr)
     throw std::system_error(GraphicsErrc::OutOfVideoMemory);
   return impl;
+  }
+
+void MtSwapchain::nextDrawable() {
+  currentImg = (currentImg+1) % img.size();
   }
 
 uint32_t MtSwapchain::imageCount() const {

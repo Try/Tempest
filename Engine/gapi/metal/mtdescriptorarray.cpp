@@ -98,7 +98,7 @@ void MtDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** buf, size_t
       continue;
       }
     addr[i].ptr = reinterpret_cast<MtBuffer*>(buf[i])->impl->gpuAddress();
-    addr[i].len = reinterpret_cast<MtBuffer*>(buf[i])->size;
+    addr[i].len = uint32_t(reinterpret_cast<MtBuffer*>(buf[i])->size);
     d.args.push_back(reinterpret_cast<MtBuffer*>(buf[i])->impl.get());
     }
   d.argsBuf.update(addr.get(), 0, cnt*sizeof(spvBufferDescriptor));
@@ -135,7 +135,7 @@ void MtDescriptorArray::fillBufferSizeBuffer(uint32_t* ret, ShaderReflection::St
         }
       if(at==uint32_t(-1))
         continue;
-      ret[at] = desc[i].length;
+      ret[at] = uint32_t(desc[i].length);
       }
     }
   }
