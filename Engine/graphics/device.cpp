@@ -31,7 +31,7 @@ Device::Impl::Impl(AbstractGraphicsApi &api, std::string_view name)
 Device::Impl::Impl(AbstractGraphicsApi& api, DeviceType type)
   :api(api) {
   if(type==DeviceType::Unknown) {
-    dev=api.createDevice(nullptr);
+    dev=api.createDevice("");
     return;
     }
 
