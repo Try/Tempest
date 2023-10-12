@@ -42,6 +42,11 @@ static void drawFrame();
   @public CADisplayLink*   displayLink;
   @public std::atomic_bool hasPendingFrame;
   
+  struct Touch {
+    const UITouch* id;
+    CGPoint        pos;
+    };
+  
   union Ev {
     Ev(){}
     ~Ev(){}
@@ -54,6 +59,58 @@ static void drawFrame();
     Tempest::Point move;
     } event;
   Event::Type curentEvent;
+  
+  struct TouchState {
+    std::vector<Touch> touch;
+    TouchState() {
+      touch.reserve(2);
+      }
+    
+    int add(const UITouch* id, const CGPoint& pos) {
+      for(auto& t:touch)
+        if(t.id==id)
+          return -1;
+      
+      Touch tx = {};
+      tx.id  = id;
+      tx.pos = pos;
+      
+      for(size_t i=0; i<touch.size(); ++i)
+        if(touch[i].id==nullptr) {
+          touch[i] = tx;
+          return int(i);
+          }
+      
+      touch.push_back(tx);
+      return int(touch.size()-1);
+      }
+    
+    int del(const UITouch* id) {
+      int res = -1;
+      for(size_t i=0; i<touch.size(); ++i)
+        if(touch[i].id==id) {
+          touch[i].id = nullptr;
+          if(res<0)
+            res = int(i);
+          }
+      
+      while(touch.size() && touch.back().id==nullptr)
+        touch.pop_back();
+      return res;
+      }
+    
+    int update(const UITouch* id, const CGPoint& pos) {
+      for(size_t i=0; i<touch.size(); ++i)
+        if(touch[i].id==id){
+          if(touch[i].pos.x==pos.x && touch[i].pos.y==pos.y)
+            return -1;
+          touch[i].pos = pos;
+          return int(i);
+          }
+      return -1;
+      }
+    };
+  TouchState touch;
   }
 @end
 @implementation TempestWindow
@@ -82,14 +139,13 @@ static void drawFrame();
 
 - (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)ex {
   const CGFloat scale = self.contentScaleFactor;
-  CGRect frame        = self.bounds;
-  
-  for(UITouch *touch in touches ) {
-    CGPoint p  = [touch locationInView:self];
-    int     id = 0; //state.addTouch(touch,point);
-    
+  for(UITouch *tx in touches) {
+    CGPoint p  = [tx locationInView:self];
+    int     id = touch.add(tx, p);
+    if(id<0)
+      continue;
     new (&event.mouse) MouseEvent(int(p.x*scale),
-                                  int(frame.size.height*scale - p.y*scale),
+                                  int(p.y*scale),
                                   Event::ButtonLeft,
                                   Event::M_NoModifier,
                                   0,
@@ -97,6 +153,47 @@ static void drawFrame();
                                   Event::MouseDown
                                   );
     curentEvent = Event::MouseDown;
+    swapContext();
+    }
+  }
+
+- (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)ex {
+  const CGFloat scale = self.contentScaleFactor;
+  for(UITouch *tx in touches) {
+    CGPoint p  = [tx locationInView:self];
+    int     id = touch.update(tx,p);
+    if(id<0)
+      continue;
+    new (&event.mouse) MouseEvent(int(p.x*scale),
+                                  int(p.y*scale),
+                                  Event::ButtonLeft,
+                                  Event::M_NoModifier,
+                                  0,
+                                  id,
+                                  Event::MouseMove
+                                  );
+    curentEvent = Event::MouseMove;
+    swapContext();
+    }
+  }
+
+- (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)ex {
+  const CGFloat scale = self.contentScaleFactor;
+  for(UITouch *tx in touches) {
+    CGPoint p  = [tx locationInView:self];
+    int     id = touch.del(tx);
+    if(id<0)
+      continue;
+    
+    new (&event.mouse) MouseEvent(int(p.x*scale),
+                                  int(p.y*scale),
+                                  Event::ButtonLeft,
+                                  Event::M_NoModifier,
+                                  0,
+                                  id,
+                                  Event::MouseUp
+                                  );
+    curentEvent = Event::MouseUp;
     swapContext();
     }
   }
@@ -346,7 +443,12 @@ void iOSApi::implProcessEvents(AppCallBack& cb) {
       case Event::MouseUp: {
         auto evt = mainWindow->event.mouse;
         mainWindow->event.mouse.~MouseEvent();
-        iOSApi::dispatchMouseDown(wnd, evt);
+        if(eType==Event::MouseDown)
+          iOSApi::dispatchMouseDown(wnd, evt);
+        else if(eType==Event::MouseMove)
+          iOSApi::dispatchMouseMove(wnd, evt);
+        else if(eType==Event::MouseUp)
+          iOSApi::dispatchMouseUp(wnd, evt);
         break;
         }
       default:
