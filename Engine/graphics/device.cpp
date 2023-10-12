@@ -23,7 +23,7 @@ static uint32_t mipCount(uint32_t w, uint32_t h) {
   return n;
   }
 
-Device::Impl::Impl(AbstractGraphicsApi &api, const char* name)
+Device::Impl::Impl(AbstractGraphicsApi &api, std::string_view name)
   :api(api) {
   dev=api.createDevice(name);
   }
@@ -52,7 +52,7 @@ Device::Device(AbstractGraphicsApi& api)
   :Device(api,nullptr){
   }
 
-Device::Device(AbstractGraphicsApi &api, const char* name)
+Device::Device(AbstractGraphicsApi &api, std::string_view name)
   :api(api), impl(api,name), dev(impl.dev), builtins(*this) {
   api.getCaps(dev,devProps);
   }

@@ -39,7 +39,7 @@ VDevice::autoDevice::~autoDevice() {
   vkDestroyDevice(impl,nullptr);
   }
 
-VDevice::VDevice(VulkanInstance &api, const char* gpuName)
+VDevice::VDevice(VulkanInstance &api, std::string_view gpuName)
   :instance(api.instance), fboMap(*this) {
   uint32_t deviceCount = 0;
   vkEnumeratePhysicalDevices(api.instance, &deviceCount, nullptr);
@@ -101,11 +101,11 @@ VkSurfaceKHR VDevice::createSurface(void* hwnd) {
   return ret;
   }
 
-bool VDevice::isDeviceSuitable(VkPhysicalDevice device, const char* gpuName) {
-  if(gpuName!=nullptr) {
+bool VDevice::isDeviceSuitable(VkPhysicalDevice device, std::string_view gpuName) {
+  if(!gpuName.empty()) {
     VkPhysicalDeviceProperties prop={};
     vkGetPhysicalDeviceProperties(device,&prop);
-    if(std::strcmp(gpuName,prop.deviceName)!=0)
+    if(gpuName!=prop.deviceName)
       return false;
     }
   VkProps prop = {};

@@ -581,10 +581,10 @@ namespace Tempest {
       virtual std::vector<Props> devices() const = 0;
 
     protected:
-      virtual Device*    createDevice(const char* gpuName)=0;
-      virtual void       destroy(Device* d)=0;
+      virtual Device*    createDevice(std::string_view gpuName) = 0;
+      virtual void       destroy(Device* d) = 0;
 
-      virtual Swapchain* createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d)=0;
+      virtual Swapchain* createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d) = 0;
 
       virtual PPipelineLay
                          createPipelineLayout(Device *d, const Shader* const* sh, size_t count) = 0;

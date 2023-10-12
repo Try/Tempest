@@ -42,7 +42,7 @@ std::vector<AbstractGraphicsApi::Props> VulkanApi::devices() const {
   return impl->devices();
   }
 
-AbstractGraphicsApi::Device *VulkanApi::createDevice(const char* gpuName) {
+AbstractGraphicsApi::Device *VulkanApi::createDevice(std::string_view gpuName) {
   return new VDevice(*impl,gpuName);
   }
 

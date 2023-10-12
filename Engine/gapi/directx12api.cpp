@@ -76,7 +76,7 @@ struct DirectX12Api::Impl {
     return d;
     }
 
-  AbstractGraphicsApi::Device* createDevice(const char* gpuName) {
+  AbstractGraphicsApi::Device* createDevice(std::string_view gpuName) {
     if(dllApi.D3D12CreateDevice==nullptr)
       throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
@@ -98,7 +98,7 @@ struct DirectX12Api::Impl {
 
       AbstractGraphicsApi::Props props={};
       DxDevice::getProp(desc,*tmpDev,props);
-      if(gpuName!=nullptr && std::strcmp(props.name,gpuName)!=0)
+      if(!gpuName.empty() && gpuName!=props.name)
         continue;
       break;
       }
@@ -151,7 +151,7 @@ std::vector<AbstractGraphicsApi::Props> DirectX12Api::devices() const {
   return impl->devices();
   }
 
-AbstractGraphicsApi::Device* DirectX12Api::createDevice(const char* gpuName) {
+AbstractGraphicsApi::Device* DirectX12Api::createDevice(std::string_view gpuName) {
   return impl->createDevice(gpuName);
   }
 

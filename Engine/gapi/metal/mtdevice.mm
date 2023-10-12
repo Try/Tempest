@@ -10,15 +10,15 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-static NsPtr<MTL::Device> mkDevice(const char* name) {
-  if(name==nullptr)
+static NsPtr<MTL::Device> mkDevice(std::string_view name) {
+  if(name.empty())
     return NsPtr<MTL::Device>(MTL::CreateSystemDefaultDevice());
 #if defined(__OSX__)
   auto dev = NsPtr<NS::Array>(MTL::CopyAllDevices());
   for(size_t i=0; i<dev->count(); ++i) {
     NS::Object*  at = dev->object(i);
     MTL::Device* d  = reinterpret_cast<MTL::Device*>(at);
-    if(std::strcmp(name,d->name()->utf8String())==0) {
+    if(name==d->name()->utf8String()) {
       return NsPtr<MTL::Device>(d);
       }
     }
@@ -29,7 +29,7 @@ static NsPtr<MTL::Device> mkDevice(const char* name) {
   return NsPtr<MTL::Device>(nullptr);
   }
 
-MtDevice::MtDevice(const char* name, bool validation)
+MtDevice::MtDevice(std::string_view name, bool validation)
   : impl(mkDevice(name)), samplers(*impl), validation(validation) {
   if(impl.get()==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);

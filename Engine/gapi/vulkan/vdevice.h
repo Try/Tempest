@@ -310,7 +310,7 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     using SwapChainSupport = VSwapchain::SwapChainSupport;
 
-    VDevice(VulkanInstance& api,const char* gpuName);
+    VDevice(VulkanInstance& api, std::string_view gpuName);
     ~VDevice() override;
 
     struct autoDevice {
@@ -395,7 +395,7 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     void                    implInit(VulkanInstance& api, VkPhysicalDevice pdev);
     void                    pickPhysicalDevice();
-    bool                    isDeviceSuitable(VkPhysicalDevice device, const char* gpuName);
+    bool                    isDeviceSuitable(VkPhysicalDevice device, std::string_view gpuName);
     void                    deviceQueueProps(VulkanInstance::VkProp& prop, VkPhysicalDevice device);
     bool                    checkDeviceExtensionSupport(VkPhysicalDevice device);
     auto                    extensionsList(VkPhysicalDevice device) -> std::vector<VkExtensionProperties>;

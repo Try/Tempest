@@ -12,7 +12,7 @@ class MetalApi : public AbstractGraphicsApi {
     std::vector<Props> devices() const override;
 
   protected:
-    Device*        createDevice(const char* gpuName) override;
+    Device*        createDevice(std::string_view gpuName) override;
     void           destroy(Device* d) override;
 
     Swapchain*     createSwapchain(SystemApi::Window* w, Device *d) override;

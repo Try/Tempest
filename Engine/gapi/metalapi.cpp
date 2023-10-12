@@ -63,7 +63,7 @@ std::vector<AbstractGraphicsApi::Props> MetalApi::devices() const {
 #endif
   }
 
-AbstractGraphicsApi::Device* MetalApi::createDevice(const char *gpuName) {
+AbstractGraphicsApi::Device* MetalApi::createDevice(std::string_view gpuName) {
   return new MtDevice(gpuName,validation);
   }
 

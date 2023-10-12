@@ -220,7 +220,7 @@ inline MTL::AccelerationStructureInstanceOptions nativeFormat(RtInstanceFlags f)
 
 class MtDevice : public AbstractGraphicsApi::Device {
   public:
-    MtDevice(const char* name, bool validation);
+    MtDevice(std::string_view name, bool validation);
     ~MtDevice();
 
     void onSubmit();
@@ -228,13 +228,6 @@ class MtDevice : public AbstractGraphicsApi::Device {
     void waitIdle() override;
 
     static void handleError(NS::Error* err);
-
-    struct autoDevice {
-      autoDevice(const char* name);
-      ~autoDevice();
-      NsPtr<MTL::Device>       impl;
-      NsPtr<MTL::CommandQueue> queue;
-      };
 
     NsPtr<MTL::Device>         impl;
     NsPtr<MTL::CommandQueue>   queue;

@@ -44,7 +44,7 @@ class Device {
     using Props=AbstractGraphicsApi::Props;
 
     Device(AbstractGraphicsApi& api);
-    Device(AbstractGraphicsApi& api, const char* name);
+    Device(AbstractGraphicsApi& api, std::string_view name);
     Device(AbstractGraphicsApi& api, DeviceType type);
     Device(const Device&)=delete;
     virtual ~Device();
@@ -158,7 +158,7 @@ class Device {
 
   private:
     struct Impl {
-      Impl(AbstractGraphicsApi& api, const char* name);
+      Impl(AbstractGraphicsApi& api, std::string_view name);
       Impl(AbstractGraphicsApi& api, DeviceType type);
       ~Impl();
 
