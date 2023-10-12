@@ -49,7 +49,7 @@ Device::Impl::~Impl() {
   }
 
 Device::Device(AbstractGraphicsApi& api)
-  :Device(api,nullptr){
+  :Device(api,""){
   }
 
 Device::Device(AbstractGraphicsApi &api, std::string_view name)
