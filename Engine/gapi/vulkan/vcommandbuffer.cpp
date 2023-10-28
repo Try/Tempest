@@ -244,6 +244,7 @@ void VCommandBuffer::begin() {
 void VCommandBuffer::end() {
   if(isDbgRegion) {
     device.vkCmdDebugMarkerEnd(impl);
+    isDbgRegion = false;
     }
   swapchainSync.reserve(swapchainSync.size());
   resState.finalize(*this);
