@@ -167,7 +167,11 @@ VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferHe
     propsCnt = 2;
     props[0] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
     props[1] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-    //props[1]|=(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);// to avoid vkFlushMappedMemoryRanges
+    }
+  else if(bufHeap==BufferHeap::Upload && (usage & MemUsage::StorageBuffer)==MemUsage::StorageBuffer) {
+    propsCnt = 2;
+    props[0] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    props[1] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     }
   else if(bufHeap==BufferHeap::Upload)
     props[0] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
