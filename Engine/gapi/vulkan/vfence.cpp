@@ -26,8 +26,12 @@ void VFence::wait() {
   }
 
 bool VFence::wait(uint64_t time) {
-  if(time<std::numeric_limits<uint64_t>::max())
-    time/=uint64_t(1000*1000); // nano to millis convertion
+  static const uint64_t toNano = uint64_t(1000*1000);
+  if(time < std::numeric_limits<uint64_t>::max()/toNano) {
+    time *= toNano; // millis to nano convertion
+    } else {
+    time = std::numeric_limits<uint64_t>::max();
+    }
   VkResult res = vkWaitForFences(device,1,&impl,VK_TRUE,time);
   if(res==VK_TIMEOUT)
     return false;
