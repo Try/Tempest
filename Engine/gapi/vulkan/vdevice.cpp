@@ -555,7 +555,7 @@ void VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
     }
   }
 
-void Tempest::Detail::VDevice::Queue::waitIdle() {
+void VDevice::Queue::waitIdle() {
   std::lock_guard<std::mutex> guard(sync);
   vkAssert(vkQueueWaitIdle(impl));
   }

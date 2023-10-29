@@ -113,6 +113,9 @@ if(TEMPEST_BUILD_AUDIO)
   if(IOS)
     target_compile_options(OpenAL PRIVATE -Wno-nullability-completeness)
   endif()
+  if(NOT MSVC)
+    target_compile_options(OpenAL PRIVATE -Wno-attributes)
+  endif()
 endif()
 
 ### Vulkan
