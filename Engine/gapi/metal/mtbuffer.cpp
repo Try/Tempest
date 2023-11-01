@@ -60,7 +60,7 @@ void MtBuffer::update(const void *data, size_t off, size_t size) {
 
   auto cmd = dev->queue->commandBuffer();
   auto enc = cmd->blitCommandEncoder();
-  enc->copyFromBuffer(stage.get(), 0,impl.get(), 0,size);
+  enc->copyFromBuffer(stage.get(),0, impl.get(),off, size);
   enc->endEncoding();
   cmd->commit();
   // TODO: implement proper upload engine
