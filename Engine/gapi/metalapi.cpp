@@ -244,7 +244,7 @@ void MetalApi::submit(AbstractGraphicsApi::Device *d,
 
     if(s==MTL::CommandBufferStatusCompleted)
       fence.reset(); else
-      fence.reset(s);
+      fence.reset(s, c->error());
     dx->onFinish();
     });
   cmd.commit();

@@ -14,16 +14,20 @@ MtSync::~MtSync() {
   }
 
 void MtSync::wait() {
-  if(!hasWait.load())
+  if(!hasWait.load()) {
+    propogateError();
     return;
+    }
   std::unique_lock<std::mutex> guard(sync);
   cv.wait(guard,[this](){ return !hasWait.load(); });
   propogateError();
   }
 
 bool MtSync::wait(uint64_t time) {
-  if(!hasWait.load())
+  if(!hasWait.load()) {
+    propogateError();
     return true;
+    }
   std::unique_lock<std::mutex> guard(sync);
   const bool ret = cv.wait_for(guard,std::chrono::milliseconds(time),[this](){ return !hasWait.load(); });
   propogateError();
@@ -35,9 +39,11 @@ void MtSync::reset() {
   cv.notify_all();
   }
 
-void MtSync::reset(MTL::CommandBufferStatus err) {
+void MtSync::reset(MTL::CommandBufferStatus err, NS::Error* desc) {
   std::unique_lock<std::mutex> guard(sync);
   status = err;
+  auto str = desc->debugDescription()->cString(NS::UTF8StringEncoding);
+  (void)str; // TODO: rich error reporting
   hasWait.store(false);
   cv.notify_all();
   }

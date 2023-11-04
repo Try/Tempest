@@ -16,7 +16,7 @@ class MtSync : public AbstractGraphicsApi::Fence {
     void wait() override;
     bool wait(uint64_t time) override;
     void reset() override;
-    void reset(MTL::CommandBufferStatus err);
+    void reset(MTL::CommandBufferStatus err, NS::Error* desc);
 
     void signal();
 
