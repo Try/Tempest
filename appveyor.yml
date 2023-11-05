@@ -16,7 +16,7 @@ environment:
     - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu2004
       GENERATOR: ""
 
-    - APPVEYOR_BUILD_WORKER_IMAGE: macos-bigsur
+    - APPVEYOR_BUILD_WORKER_IMAGE: macos-monterey
       GENERATOR: "Ninja"
 
 install:
