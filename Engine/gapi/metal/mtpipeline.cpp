@@ -180,7 +180,8 @@ void MtPipeline::mkMeshPso(const MtPipelineLay& lay) {
     localSize     = task->comp.localSize;
     localSizeMesh = mesh->comp.localSize;
     } else {
-    localSize     = mesh->comp.localSize;
+    localSize     = MTL::Size(0,0,0);
+    localSizeMesh = mesh->comp.localSize;
     }
 
   mdesc = NsPtr<MTL::MeshRenderPipelineDescriptor>::init();
@@ -191,9 +192,14 @@ void MtPipeline::mkMeshPso(const MtPipelineLay& lay) {
   mdesc->setFragmentFunction(frag->impl.get());
   mdesc->setRasterizationEnabled(!rs.isRasterDiscardEnabled()); // TODO: test
 
-  if(task!=nullptr) {
+  if(mesh!=nullptr) {
     mdesc->setMaxTotalThreadsPerMeshThreadgroup(localSizeMesh.width*localSizeMesh.height*localSizeMesh.depth);
+    //mdesc->setMeshThreadgroupSizeIsMultipleOfThreadExecutionWidth(true);
+    }
+
+  if(task!=nullptr) {
     mdesc->setMaxTotalThreadsPerObjectThreadgroup(localSize.width*localSize.height*localSize.depth);
+    //mdesc->setObjectThreadgroupSizeIsMultipleOfThreadExecutionWidth(true);
     }
   }
 
