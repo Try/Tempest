@@ -42,7 +42,7 @@ static const uint keyTable[26]={
 
 static std::atomic_bool isRunning{true};
 
-static Event::MouseButton toButton(uint type) {
+static Event::MouseButton toButton(NSEventType type) {
   if(type==NSEventTypeLeftMouseDown || type==NSEventTypeLeftMouseUp)
     return Event::ButtonLeft;
   if(type==NSEventTypeRightMouseDown || type==NSEventTypeRightMouseUp)

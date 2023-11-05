@@ -171,7 +171,7 @@ void ShaderAnalyzer::analyze() {
         }
       case spv::OpFunction: {
         auto& fn = func[i[2]];
-        fn.codeOffset = code.toOffset(i);
+        fn.codeOffset = uint32_t(code.toOffset(i));
         fn.returnType = i[1];
         break;
         }
