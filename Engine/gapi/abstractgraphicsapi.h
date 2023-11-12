@@ -420,17 +420,20 @@ namespace Tempest {
           bool     hasAttachFormat (TextureFormat f) const;
           bool     hasDepthFormat  (TextureFormat f) const;
           bool     hasStorageFormat(TextureFormat f) const;
+          bool     hasAtomicFormat (TextureFormat f) const;
 
           void     setSamplerFormats(uint64_t t) { smpFormat  = t; }
           void     setAttachFormats (uint64_t t) { attFormat  = t; }
           void     setDepthFormats  (uint64_t t) { dattFormat = t; }
           void     setStorageFormats(uint64_t t) { storFormat = t; }
+          void     setAtomicFormats (uint64_t t) { atomFormat = t; }
 
         private:
           uint64_t smpFormat =0;
           uint64_t attFormat =0;
           uint64_t dattFormat=0;
           uint64_t storFormat=0;
+          uint64_t atomFormat=0;
         };
 
       struct NoCopy {

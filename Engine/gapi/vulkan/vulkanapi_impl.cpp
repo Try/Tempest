@@ -476,7 +476,7 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
       break;
     }
 
-  uint64_t smpFormat=0, attFormat=0, dattFormat=0, storFormat=0;
+  uint64_t smpFormat=0, attFormat=0, dattFormat=0, storFormat=0, atomFormat=0;
   for(uint32_t i=0;i<TextureFormat::Last;++i){
     VkFormat f = Detail::nativeFormat(TextureFormat(i));
 
@@ -501,10 +501,14 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
       storFormat |= (1ull<<i);
       }
     }
+  // https://github.com/KhronosGroup/Vulkan-Guide/blob/main/chapters/atomics.adoc
+  atomFormat |= (1ull<<TextureFormat::R32U); // With Vulkan 1.0 and no extensions, an application is allowed to use 32-bit int type for atomics
+
   props.setSamplerFormats(smpFormat);
   props.setAttachFormats (attFormat);
   props.setDepthFormats  (dattFormat);
   props.setStorageFormats(storFormat);
+  props.setAtomicFormats (atomFormat & storFormat);
   }
 
 VkBool32 VulkanInstance::debugReportCallback(VkDebugReportFlagsEXT      flags,

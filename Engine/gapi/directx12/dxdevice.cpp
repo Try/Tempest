@@ -117,7 +117,7 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
 
   // https://docs.microsoft.com/en-us/windows/win32/direct3ddxgi/hardware-support-for-direct3d-12-0-formats
   // NOTE: TextureFormat::RGB32F is not supported, because of mip-maps
-  uint64_t smpBit = 0, attBit = 0, dsBit = 0, storBit = 0;
+  uint64_t smpBit = 0, attBit = 0, dsBit = 0, storBit = 0, atomBit = 0;
 
   for(uint32_t i=0; i<TextureFormat::Last; ++i){
     D3D12_FEATURE_DATA_FORMAT_SUPPORT d = {};
@@ -159,12 +159,23 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
        d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE3D) {
       storBit |= uint64_t(1) << uint64_t(i);
       }
+    if(d.Support2 & D3D12_FORMAT_SUPPORT2_UAV_ATOMIC_ADD &&
+       d.Support2 & D3D12_FORMAT_SUPPORT2_UAV_ATOMIC_BITWISE_OPS &&
+       d.Support2 & D3D12_FORMAT_SUPPORT2_UAV_ATOMIC_COMPARE_STORE_OR_COMPARE_EXCHANGE &&
+       d.Support2 & D3D12_FORMAT_SUPPORT2_UAV_ATOMIC_EXCHANGE &&
+       d.Support2 & D3D12_FORMAT_SUPPORT2_UAV_ATOMIC_UNSIGNED_MIN_OR_MAX &&
+       d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE1D &&
+       d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE2D &&
+       d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE3D) {
+      atomBit |= uint64_t(1) << uint64_t(i);
+      }
     }
 
   prop.setSamplerFormats(smpBit);
   prop.setAttachFormats (attBit);
   prop.setDepthFormats  (dsBit);
   prop.setStorageFormats(storBit);
+  prop.setAtomicFormats (atomBit);
 
   // TODO: buffer limits
   //prop.vbo.maxRange    = ;
