@@ -13,11 +13,12 @@ class StorageImage final {
     ~StorageImage() = default;
     StorageImage& operator=(StorageImage&&) = default;
 
-    int           w()       const { return tImpl.w();       }
-    int           h()       const { return tImpl.h();       }
-    Size          size()    const { return tImpl.size();    }
-    bool          isEmpty() const { return tImpl.isEmpty(); }
-    TextureFormat format()  const { return tImpl.format();  }
+    int           w()        const { return tImpl.w();        }
+    int           h()        const { return tImpl.h();        }
+    Size          size()     const { return tImpl.size();     }
+    bool          isEmpty()  const { return tImpl.isEmpty();  }
+    TextureFormat format()   const { return tImpl.format();   }
+    uint32_t      mipCount() const { return tImpl.mipCount(); }
 
   private:
     StorageImage(Texture2d&& t):tImpl(std::move(t)){}
