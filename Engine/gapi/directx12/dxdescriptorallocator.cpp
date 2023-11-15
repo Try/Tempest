@@ -23,13 +23,16 @@ DxDescriptorAllocator::Provider::DeviceMemory DxDescriptorAllocator::Provider::a
     last = nullptr;
     }
 
-  static const D3D12_DESCRIPTOR_HEAP_TYPE tid[2] = {D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-                                                    D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER};
+  static const D3D12_DESCRIPTOR_HEAP_TYPE tid[3] = {D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+                                                    D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
+                                                    D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV};
 
   D3D12_DESCRIPTOR_HEAP_DESC d = {};
   d.Type           = tid[typeId];
   d.NumDescriptors = UINT(size);
   d.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+  if(typeId==2)
+    d.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 
   ID3D12DescriptorHeap* ret = nullptr;
   HRESULT hr = device->device->CreateDescriptorHeap(&d, ::uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&ret));
@@ -68,6 +71,14 @@ DxDescriptorAllocator::Allocation DxDescriptorAllocator::alloc(size_t count, boo
   uint32_t id        = (smp ? 1 : 0);
   auto&    allocator = (smp ? allocatorSmp : allocatorRes);
   auto     ret = allocator.alloc(count, 1, id, id, false);
+  return ret;
+  }
+
+DxDescriptorAllocator::Allocation DxDescriptorAllocator::allocHost(size_t count) {
+  if(count==0)
+    return Allocation();
+  auto&    allocator = (false ? allocatorSmp : allocatorRes);
+  auto     ret = allocator.alloc(count, 1, 2, 2, false);
   return ret;
   }
 

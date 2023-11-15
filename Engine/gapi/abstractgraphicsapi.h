@@ -336,6 +336,9 @@ namespace Tempest {
       AccessOp      store      = AccessOp::Discard;
     };
 
+  struct Uninitialized_t{};
+  static constexpr auto Uninitialized = Uninitialized_t();
+
   class AbstractGraphicsApi {
     protected:
       AbstractGraphicsApi() =default;

@@ -51,6 +51,24 @@ void DxBuffer::update(const void* data, size_t off, size_t size) {
   updateByStaging(pstage.handler,data,off,0,size);
   }
 
+void DxBuffer::fill(uint32_t data, size_t off, size_t size) {
+  auto& dx = *dev;
+
+  D3D12_HEAP_PROPERTIES prop = {};
+  ID3D12Resource&       ret  = *impl;
+  ret.GetHeapProperties(&prop,nullptr);
+
+  if(prop.Type==D3D12_HEAP_TYPE_UPLOAD) {
+    dx.dataMgr().waitFor(this); // write-after-write case
+    fillByMapped(*this,data,off,size);
+    return;
+    }
+
+  auto stage = dx.dataMgr().allocStagingMemory(nullptr,size,MemUsage::TransferSrc,BufferHeap::Upload);
+  Detail::DSharedPtr<DxBuffer*> pstage(new Detail::DxBuffer(std::move(stage)));
+  fillByStaging(pstage.handler,data,off,0,size);
+  }
+
 void DxBuffer::read(void* data, size_t off, size_t size) {
   auto& dx = *dev;
 
@@ -129,6 +147,33 @@ void DxBuffer::updateByMapped(DxBuffer& stage, const void* data, size_t off, siz
   dxAssert(stage.impl->Map(0,nullptr,&mapped));
   mapped = reinterpret_cast<uint8_t*>(mapped)+off;
   std::memcpy(mapped, data, size);
+  stage.impl->Unmap(0,&rgn);
+  }
+
+void DxBuffer::fillByStaging(DxBuffer* stage, uint32_t data, size_t offDst, size_t offSrc, size_t size) {
+  auto& dx = *dev;
+
+  Detail::DSharedPtr<Buffer*> pbuf(this);
+  Detail::DSharedPtr<Buffer*> pstage(stage);
+
+  auto cmd = dx.dataMgr().get();
+  cmd->begin();
+  cmd->hold(pbuf); // NOTE: DxBuffer may be deleted, before copy is finished
+  cmd->hold(pstage);
+  cmd->copy(*this, offDst, *stage, offSrc, size);
+  cmd->end();
+
+  fillByMapped(*stage,data,offSrc,size);
+  dx.dataMgr().waitFor(this); // write-after-write case
+  dx.dataMgr().submit(std::move(cmd));
+  }
+
+void DxBuffer::fillByMapped(DxBuffer& stage, uint32_t data, size_t off, size_t size) {
+  D3D12_RANGE rgn    = {off,size};
+  void*       mapped = nullptr;
+  dxAssert(stage.impl->Map(0,nullptr,&mapped));
+  mapped = reinterpret_cast<uint8_t*>(mapped)+off;
+  std::fill_n(reinterpret_cast<uint32_t*>(mapped), size/sizeof(uint32_t), data);
   stage.impl->Unmap(0,&rgn);
   }
 

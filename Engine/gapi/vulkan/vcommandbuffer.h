@@ -80,6 +80,8 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void copy(AbstractGraphicsApi::Texture& dest, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Buffer&  src, size_t offset);
     void copy(AbstractGraphicsApi::Buffer&  dest, size_t offsetDest, const AbstractGraphicsApi::Buffer& src, size_t offsetSrc, size_t size);
     void copy(AbstractGraphicsApi::Buffer&  dest, size_t offsetDest, const void* src, size_t size);
+    void fill(AbstractGraphicsApi::Texture& dest, uint32_t val);
+    void fill(AbstractGraphicsApi::Buffer&  dest, size_t offsetDest, uint32_t val, size_t size);
 
     void copyNative(AbstractGraphicsApi::Buffer&        dst, size_t offset,
                     const AbstractGraphicsApi::Texture& src, size_t width, size_t height, size_t mip);

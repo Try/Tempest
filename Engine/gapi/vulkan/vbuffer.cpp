@@ -89,6 +89,31 @@ void VBuffer::read(void* out, size_t off, size_t size) {
   stage.read(out,0,size);
   }
 
+void VBuffer::fill(uint32_t data, size_t off, size_t size) {
+  auto& dx = *alloc->device();
+
+  if(T_LIKELY(page.page->hostVisible)) {
+    dx.dataMgr().waitFor(this); // write-after-write case
+    alloc->fill(*this,data,off,size);
+    return;
+    }
+
+  if(off%4==0 && size%4==0) {
+    Detail::DSharedPtr<Buffer*> pBuf(this);
+
+    auto cmd = dx.dataMgr().get();
+    cmd->begin(true);
+    cmd->hold(pBuf); // NOTE: VBuffer may be deleted, before copy is finished
+    cmd->fill(*this, off, data, size);
+    cmd->end();
+
+    dx.dataMgr().waitFor(this); // write-after-write case
+    dx.dataMgr().submit(std::move(cmd));
+    return;
+    }
+  assert(false);
+  }
+
 bool VBuffer::isHostVisible() const {
   return page.page->hostVisible;
   }

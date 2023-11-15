@@ -210,18 +210,24 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
     }
 
   if(flg!=flgOrig && flgOrig!=BufferHeap::Device) {
-    DxBuffer                    base = dx.allocator.alloc(nullptr,size,usage,flg);
-    Detail::DSharedPtr<Buffer*> buf(new DxBufferWithStaging(std::move(base),flgOrig));
+    DxBuffer                      base = dx.allocator.alloc(nullptr,size,usage,flg);
+    Detail::DSharedPtr<DxBuffer*> buf(new DxBufferWithStaging(std::move(base),flgOrig));
     if(mem!=nullptr)
       buf.handler->update(mem,0,size);
-    return buf;
+    else if((usage&MemUsage::Initialized)==MemUsage::Initialized)
+      buf.handler->fill(0x0,0,size);
+    return PBuffer(buf.handler);
     }
 
-  DxBuffer base = dx.allocator.alloc(nullptr,size,usage,flg);
-  Detail::DSharedPtr<Buffer*> buf(new Detail::DxBuffer(std::move(base)));
+  DxBuffer                      base = dx.allocator.alloc(nullptr,size,usage,flg);
+  Detail::DSharedPtr<DxBuffer*> buf(new Detail::DxBuffer(std::move(base)));
+  if(mem==nullptr && (usage&MemUsage::Initialized)==MemUsage::Initialized) {
+    buf.handler->fill(0x0,0,size);
+    return PBuffer(buf.handler);
+    }
   if(mem!=nullptr)
     buf.handler->update(mem,0,size);
-  return buf;
+  return PBuffer(buf.handler);
   }
 
 AbstractGraphicsApi::Desc* DirectX12Api::createDescriptors(AbstractGraphicsApi::Device*, PipelineLay& layP) {
@@ -347,7 +353,14 @@ AbstractGraphicsApi::PTexture DirectX12Api::createStorage(AbstractGraphicsApi::D
   Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
 
   Detail::DxTexture buf=dx.allocator.alloc(w,h,1,mipCnt,frm,true);
-  Detail::DSharedPtr<DxTexture*> pbuf(new Detail::DxTexture(std::move(buf)));
+  Detail::DSharedPtr<Texture*> pbuf(new Detail::DxTexture(std::move(buf)));
+
+  auto cmd = dx.dataMgr().get();
+  cmd->begin();
+  cmd->hold(pbuf);
+  cmd->fill(*pbuf.handler,0);
+  cmd->end();
+  dx.dataMgr().submit(std::move(cmd));
 
   return PTexture(pbuf.handler);
   }
@@ -422,7 +435,7 @@ void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::C
   Detail::DxCommandBuffer& bx = *reinterpret_cast<Detail::DxCommandBuffer*>(cmd);
   ID3D12CommandList* cmdList[] = { bx.get() };
 
-  dx.waitData();
+  dx.waitData(); // NOTE: not needed, resource bariers should be enough
   impl->submit(d,cmdList,1,doneCpu);
   }
 

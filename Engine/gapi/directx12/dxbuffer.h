@@ -19,6 +19,7 @@ class DxBuffer : public AbstractGraphicsApi::Buffer {
 
     DxBuffer& operator=(DxBuffer&& other);
 
+    void  fill  (uint32_t    data, size_t off, size_t size);
     void  update(const void* data, size_t off, size_t size) override;
     void  read  (      void* data, size_t off, size_t size) override;
 
@@ -35,6 +36,9 @@ class DxBuffer : public AbstractGraphicsApi::Buffer {
   protected:
     void  updateByStaging(DxBuffer* stage, const void* data, size_t offDst, size_t offSrc, size_t size);
     void  updateByMapped (DxBuffer& stage, const void* data, size_t off, size_t size);
+
+    void  fillByStaging  (DxBuffer* stage, uint32_t data, size_t offDst, size_t offSrc, size_t size);
+    void  fillByMapped   (DxBuffer& stage, uint32_t data, size_t off, size_t size);
 
     void  readFromStaging(DxBuffer& stage, void* data, size_t off, size_t size);
     void  readFromMapped (DxBuffer& stage, void* data, size_t off, size_t size);

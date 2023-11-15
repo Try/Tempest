@@ -31,6 +31,7 @@ class DxDescriptorAllocator {
     using Allocation=typename Tempest::Detail::DeviceAllocator<Provider>::Allocation;
 
     Allocation alloc(size_t count, bool smp);
+    Allocation allocHost(size_t count);
     void       free (Allocation& page);
 
     ID3D12DescriptorHeap*       heapof(const Allocation& a);

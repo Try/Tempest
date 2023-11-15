@@ -16,8 +16,9 @@ class VBuffer : public AbstractGraphicsApi::Buffer {
 
     VBuffer& operator=(VBuffer&& other);
 
-    void update  (const void* data, size_t off, size_t size) override;
-    void read    (      void* data, size_t off, size_t size) override;
+    void fill  (uint32_t    data, size_t off, size_t size);
+    void update(const void* data, size_t off, size_t size) override;
+    void read  (      void* data, size_t off, size_t size) override;
 
     bool                   isHostVisible() const;
 

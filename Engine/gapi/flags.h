@@ -5,15 +5,16 @@
 namespace Tempest {
 
 enum class MemUsage : uint16_t {
-  TransferSrc  =1<<0,
-  TransferDst  =1<<1,
-  UniformBuffer=1<<2,
-  VertexBuffer =1<<3,
-  IndexBuffer  =1<<4,
-  StorageBuffer=1<<5,
-  ScratchBuffer=1<<6,
-  AsStorage    =1<<7,
-  Indirect     =1<<8,
+  Initialized  =1<<0,
+  TransferSrc  =1<<1,
+  TransferDst  =1<<2,
+  UniformBuffer=1<<3,
+  VertexBuffer =1<<4,
+  IndexBuffer  =1<<5,
+  StorageBuffer=1<<6,
+  ScratchBuffer=1<<7,
+  AsStorage    =1<<8,
+  Indirect     =1<<9,
   };
 
 inline MemUsage operator | (MemUsage a,const MemUsage& b) {

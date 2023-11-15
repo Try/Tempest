@@ -138,7 +138,7 @@ void SsboDyn() {
 
     const size_t eltCount = 4096+100;
 
-    auto ssbo = device.ssbo(nullptr,eltCount*sizeof(T));
+    auto ssbo = device.ssbo(Uninitialized,eltCount*sizeof(T));
     for(size_t i=0; i<eltCount; ++i) {
       T val = T(i*i);
       ssbo.update(&val,i*sizeof(T),sizeof(T));
@@ -176,7 +176,7 @@ void SsboCopy() {
 
     auto bpp  = Pixmap::bppForFormat  (frm);
     auto ccnt = Pixmap::componentCount(frm);
-    auto dst  = device.ssbo(nullptr, src.w()*src.h()*bpp);
+    auto dst  = device.ssbo(Uninitialized, src.w()*src.h()*bpp);
 
     auto cmd = device.commandBuffer();
     {
@@ -226,8 +226,8 @@ void ArrayLength() {
     auto desc = device.descriptors(pso);
 
     auto src  = device.attachment(TextureFormat::RGBA8,4,4);
-    auto dst0 = device.ssbo(nullptr, 6*sizeof(uint32_t));
-    auto dst1 = device.ssbo(nullptr, 1*sizeof(uint32_t));
+    auto dst0 = device.ssbo(Uninitialized, 6*sizeof(uint32_t));
+    auto dst1 = device.ssbo(Uninitialized, 1*sizeof(uint32_t));
 
     desc.set(0, dst0);
     desc.set(1, dst1);
@@ -701,9 +701,9 @@ void SSBOReadOnly(bool useUbo) {
     Device      device(api);
 
     Vec4 data = {1,2,3,4};
-    auto ssbo = device.ssbo(&data,  sizeof(data));
+    auto ssbo = device.ssbo(&data,        sizeof(data));
     auto ubo  = device.ubo (data);
-    auto out  = device.ssbo(nullptr,sizeof(data));
+    auto out  = device.ssbo(Uninitialized,sizeof(data));
 
     auto cs   = device.shader("shader/ssbo_read.comp.sprv");
     auto pso  = device.pipeline(cs);
@@ -752,8 +752,8 @@ void UnboundSsbo() {
       data[i].w = float(i)*4.f+3.f;
       }
 
-    auto ssbo = device.ssbo(data.data(), sizeof(data[0])*data.size());
-    auto out  = device.ssbo(nullptr,     sizeof(data[0])*data.size());
+    auto ssbo = device.ssbo(data.data(),   sizeof(data[0])*data.size());
+    auto out  = device.ssbo(Uninitialized, sizeof(data[0])*data.size());
 
     auto cs  = device.shader("shader/ssbo_read.comp.sprv");
     auto pso = device.pipeline(cs);
@@ -842,8 +842,8 @@ void Compute() {
 
     Vec4 inputCpu[3] = {Vec4(0,1,2,3),Vec4(4,5,6,7),Vec4(8,9,10,11)};
 
-    auto input  = device.ssbo(inputCpu,sizeof(inputCpu));
-    auto output = device.ssbo(nullptr, sizeof(inputCpu));
+    auto input  = device.ssbo(inputCpu,      sizeof(inputCpu));
+    auto output = device.ssbo(Uninitialized, sizeof(inputCpu));
 
     auto cs     = device.shader("shader/simple_test.comp.sprv");
     auto pso    = device.pipeline(cs);
@@ -997,14 +997,14 @@ void SsboWrite() {
     auto pso    = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
 
     auto tex    = device.attachment(TextureFormat::RGBA8,32,32);
-    auto vsOut  = device.ssbo(nullptr, sizeof(Vec4)*3);
+    auto vsOut  = device.ssbo(Uninitialized, sizeof(Vec4)*3);
     auto ubo    = device.descriptors(pso.layout());
     ubo.set(0,vsOut);
 
     // setup compute pipeline
     auto cs     = device.shader("shader/ssbo_write_verify.comp.sprv");
     auto pso2   = device.pipeline(cs);
-    auto csOut  = device.ssbo(nullptr, sizeof(Vec4)*3);
+    auto csOut  = device.ssbo(Uninitialized, sizeof(Vec4)*3);
 
     auto ubo2   = device.descriptors(pso2.layout());
     ubo2.set(0,vsOut);
@@ -1144,7 +1144,7 @@ void PushRemapping() {
     Push inputCpu;
 
     auto input  = device.ubo (inputCpu);
-    auto output = device.ssbo(nullptr, sizeof(Tempest::Vec4));
+    auto output = device.ssbo(Uninitialized, sizeof(Tempest::Vec4));
 
     auto cs     = device.shader("shader/push_constant.comp.sprv");
     auto pso    = device.pipeline(cs);
@@ -1817,9 +1817,9 @@ void MeshComputePrototype(const char* outImg) {
     VkDrawIndexedIndirectCommand ix[2] = {};
     auto indirect = device.ssbo(ix,sizeof(ix));
 
-    auto var  = device.ssbo(nullptr, 4*16*1024);      // big buffer for meshlet data
-    auto flat = device.ssbo(nullptr, var.byteSize()); // double buffer
-    auto mesh = device.ssbo(nullptr, 4*256);          // buffer meshlet descriptors
+    auto var  = device.ssbo(Uninitialized, 4*16*1024);      // big buffer for meshlet data
+    auto flat = device.ssbo(Uninitialized, var.byteSize()); // double buffer
+    auto mesh = device.ssbo(Uninitialized, 4*256);          // buffer meshlet descriptors
 
     const uint32_t msz[4] = {0,0,1,1};
     mesh.update(&msz,0,sizeof(msz));

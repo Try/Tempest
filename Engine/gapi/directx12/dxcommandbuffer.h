@@ -76,6 +76,8 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void copy(AbstractGraphicsApi::Buffer&  dest, size_t offsetDest, const AbstractGraphicsApi::Buffer& src, size_t offsetSrc, size_t size);
     void copy(AbstractGraphicsApi::Texture& dest, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Buffer&  src, size_t offset);
 
+    void fill(AbstractGraphicsApi::Texture& dest, uint32_t val);
+
     void buildBlas(AbstractGraphicsApi::Buffer& bbo, AbstractGraphicsApi::BlasBuildCtx& rtctx, AbstractGraphicsApi::Buffer& scratch);
     void buildTlas(AbstractGraphicsApi::Buffer& tbo, AbstractGraphicsApi::Buffer& instances, uint32_t numInstances,
                    AbstractGraphicsApi::Buffer& scratch);
@@ -106,6 +108,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     struct Blit;
     struct MipMaps;
     struct CopyBuf;
+    struct FillUAV;
     Stage*                            stageResources = nullptr;
 
     void prepareDraw(size_t voffset, size_t firstInstance);

@@ -51,6 +51,7 @@ class VAllocator {
     void     free(Allocation& page);
     void     free(VTexture& buf);
 
+    bool     fill  (VBuffer& dest, uint32_t    mem, size_t offset, size_t size);
     bool     update(VBuffer& dest, const void *mem, size_t offset, size_t size);
     bool     read  (VBuffer& src,        void *mem, size_t offset, size_t size);
 

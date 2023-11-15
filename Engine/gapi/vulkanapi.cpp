@@ -119,8 +119,14 @@ AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device
     }
 
   VBuffer buf = dx.allocator.alloc(nullptr, size, usage|MemUsage::TransferDst|MemUsage::TransferSrc, BufferHeap::Device);
-  if(mem==nullptr)
+  if(mem==nullptr && (usage&MemUsage::Initialized)==MemUsage::Initialized) {
+    DSharedPtr<VBuffer*> pbuf(new VBuffer(std::move(buf)));
+    pbuf.handler->fill(0x0,0,size);
+    return PBuffer(pbuf.handler);
+    }
+  if(mem==nullptr) {
     return PBuffer(new VBuffer(std::move(buf)));
+    }
 
   DSharedPtr<Buffer*> pbuf(new VBuffer(std::move(buf)));
   pbuf.handler->update(mem,0,size);
@@ -195,6 +201,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createStorage(Device* d,
   auto cmd = dx.dataMgr().get();
   cmd->begin();
   cmd->barrier(*pbuf.handler,ResourceAccess::None,ResourceAccess::UavReadWriteAll,uint32_t(-1));
+  cmd->fill(*pbuf.handler, 0);
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
 
@@ -212,6 +219,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createStorage(Device* d,
   auto cmd = dx.dataMgr().get();
   cmd->begin();
   cmd->barrier(*pbuf.handler,ResourceAccess::None,ResourceAccess::UavReadWriteAll,uint32_t(-1));
+  cmd->fill(*pbuf.handler, 0);
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
 
@@ -293,7 +301,7 @@ void VulkanApi::submit(Device *d, CommandBuffer* cmd, Fence *sync) {
   Detail::VCommandBuffer& cx    = *reinterpret_cast<Detail::VCommandBuffer*>(cmd);
   auto*                   fence =  reinterpret_cast<Detail::VFence*>(sync);
 
-  dx.dataMgr().wait();
+  dx.dataMgr().wait(); // NOTE: not needed, resource bariers should be enough
   dx.submit(cx,fence);
   }
 

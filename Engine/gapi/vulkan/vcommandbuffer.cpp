@@ -568,21 +568,50 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest
   }
 
 void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest, const void* src, size_t size) {
-  auto&  dst    = reinterpret_cast<VBuffer&>(dstBuf);
-  auto   srcBuf = reinterpret_cast<const uint8_t*>(src);
+  auto& dst    = reinterpret_cast<VBuffer&>(dstBuf);
+  auto  srcBuf = reinterpret_cast<const uint8_t*>(src);
 
+  resState.onTranferUsage(NonUniqResId::I_None, dst.nonUniqId, dst.isHostVisible());
   resState.flush(*this);
 
-  size_t maxSz  = 0x10000;
+  size_t maxSz = 0x10000;
   while(size>maxSz) {
     vkCmdUpdateBuffer(impl,dst.impl,offsetDest,maxSz,srcBuf);
     offsetDest += maxSz;
     srcBuf     += maxSz;
     size       -= maxSz;
     }
+  vkCmdUpdateBuffer(impl,dst.impl,offsetDest,size,srcBuf);
+  }
+
+void VCommandBuffer::fill(AbstractGraphicsApi::Texture& dstTex, uint32_t val) {
+  auto& dst = reinterpret_cast<VTexture&>(dstTex);
+
+  resState.onTranferUsage(NonUniqResId::I_None, dst.nonUniqId, false);
+  resState.flush(*this);
+
+  VkClearColorValue v = {};
+  v.uint32[0] = val;
+  v.uint32[1] = val;
+  v.uint32[2] = val;
+  v.uint32[3] = val;
+
+  VkImageSubresourceRange rgn = {};
+  rgn.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+  rgn.baseArrayLayer = 0;
+  rgn.baseMipLevel   = 0;
+  rgn.levelCount     = VK_REMAINING_MIP_LEVELS;
+  rgn.layerCount     = VK_REMAINING_ARRAY_LAYERS;
+  vkCmdClearColorImage(impl, dst.impl, VK_IMAGE_LAYOUT_GENERAL, &v, 1, &rgn);
+  }
+
+void VCommandBuffer::fill(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest, uint32_t val, size_t size) {
+  auto& dst = reinterpret_cast<VBuffer&>(dstBuf);
+
   resState.onTranferUsage(NonUniqResId::I_None, dst.nonUniqId, dst.isHostVisible());
   resState.flush(*this);
-  vkCmdUpdateBuffer(impl,dst.impl,offsetDest,size,srcBuf);
+
+  vkCmdFillBuffer(impl,dst.impl,offsetDest,size,val);
   }
 
 void VCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, size_t height, size_t mip,
@@ -1113,3 +1142,4 @@ void VMeshCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
   }
 
 #endif
+
