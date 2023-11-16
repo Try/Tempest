@@ -424,10 +424,10 @@ AbstractGraphicsApi::CommandBuffer* DirectX12Api::createCommandBuffer(Device* d)
 
 void DirectX12Api::present(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Swapchain* sw) {
   Detail::DxDevice&    dx = *reinterpret_cast<Detail::DxDevice*>(d);
-  Detail::DxSwapchain* sx = reinterpret_cast<Detail::DxSwapchain*>(sw);
+  Detail::DxSwapchain& sx = *reinterpret_cast<Detail::DxSwapchain*>(sw);
 
   std::lock_guard<SpinLock> guard(dx.syncCmdQueue);
-  sx->queuePresent();
+  sx.queuePresent();
   }
 
 void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::CommandBuffer* cmd, AbstractGraphicsApi::Fence* doneCpu) {
@@ -435,7 +435,6 @@ void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::C
   Detail::DxCommandBuffer& bx = *reinterpret_cast<Detail::DxCommandBuffer*>(cmd);
   ID3D12CommandList* cmdList[] = { bx.get() };
 
-  dx.waitData(); // NOTE: not needed, resource bariers should be enough
   impl->submit(d,cmdList,1,doneCpu);
   }
 

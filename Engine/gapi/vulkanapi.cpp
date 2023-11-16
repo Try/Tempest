@@ -300,8 +300,6 @@ void VulkanApi::submit(Device *d, CommandBuffer* cmd, Fence *sync) {
   Detail::VDevice&        dx    = *reinterpret_cast<Detail::VDevice*>(d);
   Detail::VCommandBuffer& cx    = *reinterpret_cast<Detail::VCommandBuffer*>(cmd);
   auto*                   fence =  reinterpret_cast<Detail::VFence*>(sync);
-
-  dx.dataMgr().wait(); // NOTE: not needed, resource bariers should be enough
   dx.submit(cx,fence);
   }
 
