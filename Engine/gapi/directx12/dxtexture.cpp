@@ -12,8 +12,8 @@ using namespace Tempest::Detail;
 DxTexture::DxTexture() {
   }
 
-DxTexture::DxTexture(ComPtr<ID3D12Resource>&& b, DXGI_FORMAT frm, NonUniqResId nonUniqId, UINT mips, UINT sliceCnt)
-  :impl(std::move(b)), format(frm), nonUniqId(nonUniqId), mips(mips), sliceCnt(sliceCnt) {
+DxTexture::DxTexture(ComPtr<ID3D12Resource>&& b, DXGI_FORMAT frm, NonUniqResId nonUniqId, UINT mips, UINT sliceCnt, bool filtrable)
+  :impl(std::move(b)), format(frm), nonUniqId(nonUniqId), mips(mips), sliceCnt(sliceCnt), filtrable(filtrable) {
   }
 
 DxTexture::DxTexture(DxTexture&& other)

@@ -32,6 +32,9 @@ class VulkanInstance {
       size_t   bufferImageGranularity = 0;
       size_t   accelerationStructureScratchOffsetAlignment = 0;
 
+      uint64_t filteredLinearFormat = 0;
+      bool     hasFilteredFormat(TextureFormat f) const;
+
       bool     hasMemRq2          = false;
       bool     hasDedicatedAlloc  = false;
       bool     hasSync2           = false;

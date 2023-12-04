@@ -68,6 +68,13 @@ TEST(DirectX12Api,ArrayLength) {
 #endif
   }
 
+TEST(DirectX12Api,NonSampledTexture) {
+#if defined(_MSC_VER)
+  // NOTE[textureLod]: "Sampling non-float textures is not supported in HLSL SM < 6.7."
+  GapiTestCommon::NonSampledTexture<DirectX12Api>("DirectX12Api_NonSampledTexture.png");
+#endif
+  }
+
 TEST(DirectX12Api,Shader) {
 #if defined(_MSC_VER)
   GapiTestCommon::Shader<DirectX12Api>();

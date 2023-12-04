@@ -147,7 +147,12 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* t, const Sam
 
   VkDescriptorImageInfo imageInfo = {};
   if(lay.handler->lay[id].cls==ShaderReflection::Texture) {
-    imageInfo.sampler   = device.allocator.updateSampler(smp);
+    auto sx = smp;
+    if(!tex.isFilterable) {
+      sx.setFiltration(Filter::Nearest);
+      sx.anisotropic = false;
+      }
+    imageInfo.sampler   = device.allocator.updateSampler(sx);
     imageInfo.imageView = tex.view(smp.mapping,mipLevel);
     } else {
     if(mipLevel==uint32_t(-1))
@@ -263,9 +268,12 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t c
   SmallArray<VkDescriptorImageInfo,16> imageInfo(cnt);
   for(size_t i=0; i<cnt; ++i) {
     VTexture& tex = *reinterpret_cast<VTexture*>(t[i]);
+    auto sx = smp;
+    if(!tex.isFilterable)
+      sx.setFiltration(Filter::Nearest);
     imageInfo[i].imageLayout = toWriteLayout(tex);
     imageInfo[i].imageView   = tex.view(smp.mapping,uint32_t(-1));
-    imageInfo[i].sampler     = device.allocator.updateSampler(smp);
+    imageInfo[i].sampler     = device.allocator.updateSampler(sx);
     // TODO: support mutable textures in bindings
     assert(tex.nonUniqId==0);
     }

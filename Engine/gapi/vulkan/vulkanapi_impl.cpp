@@ -37,6 +37,11 @@ T max(T t, Args... args) {
   return *std::max_element(std::begin(ax), std::end(ax));
   }
 
+bool VulkanInstance::VkProp::hasFilteredFormat(TextureFormat f) const {
+  uint64_t  m = uint64_t(1) << uint64_t(f);
+  return (filteredLinearFormat&m)!=0;
+  }
+
 VulkanInstance::VulkanInstance(bool validation)
   :validation(validation) {
   std::initializer_list<const char*> validationLayers={};
@@ -218,8 +223,9 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
   VkFormatFeatureFlags imageRqFlags    = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT|VK_FORMAT_FEATURE_BLIT_DST_BIT|VK_FORMAT_FEATURE_BLIT_SRC_BIT;
   VkFormatFeatureFlags imageRqFlagsBC  = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
   VkFormatFeatureFlags attachRqFlags   = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT|VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
-  VkFormatFeatureFlags depthAttflags   = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
-  VkFormatFeatureFlags storageAttflags = VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
+  VkFormatFeatureFlags depthAttFlags   = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  VkFormatFeatureFlags storageAttFlags = VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
+  VkFormatFeatureFlags atomicFlags     = VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT;
 
   auto ext = extensionsList(physicalDevice);
   if(checkForExt(ext,VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME))
@@ -476,7 +482,7 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
       break;
     }
 
-  uint64_t smpFormat=0, attFormat=0, dattFormat=0, storFormat=0, atomFormat=0;
+  uint64_t smpFormat=0, attFormat=0, dattFormat=0, storFormat=0, atomFormat=0, filteredLinearFormat=0;
   for(uint32_t i=0;i<TextureFormat::Last;++i){
     VkFormat f = Detail::nativeFormat(TextureFormat(i));
 
@@ -494,21 +500,27 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
     if((frm.optimalTilingFeatures & attachRqFlags)==attachRqFlags){
       attFormat |= (1ull<<i);
       }
-    if((frm.optimalTilingFeatures & depthAttflags)==depthAttflags){
+    if((frm.optimalTilingFeatures & depthAttFlags)==depthAttFlags){
       dattFormat |= (1ull<<i);
       }
-    if((frm.optimalTilingFeatures & storageAttflags)==storageAttflags){
+    if((frm.optimalTilingFeatures & storageAttFlags)==storageAttFlags){
       storFormat |= (1ull<<i);
       }
+    if((frm.optimalTilingFeatures & atomicFlags)==atomicFlags){
+      atomFormat |= (1ull<<i);
+      }
+    if((frm.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)==VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT){
+      filteredLinearFormat |= (1ull<<i);
+      }
     }
-  // https://github.com/KhronosGroup/Vulkan-Guide/blob/main/chapters/atomics.adoc
-  atomFormat |= (1ull<<TextureFormat::R32U); // With Vulkan 1.0 and no extensions, an application is allowed to use 32-bit int type for atomics
 
   props.setSamplerFormats(smpFormat);
   props.setAttachFormats (attFormat);
   props.setDepthFormats  (dattFormat);
   props.setStorageFormats(storFormat);
   props.setAtomicFormats (atomFormat & storFormat);
+
+  props.filteredLinearFormat = filteredLinearFormat;
   }
 
 VkBool32 VulkanInstance::debugReportCallback(VkDebugReportFlagsEXT      flags,

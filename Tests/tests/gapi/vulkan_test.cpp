@@ -222,6 +222,12 @@ TEST(VulkanApi,ArrayedSsbo) {
 #endif
   }
 
+TEST(VulkanApi,NonSampledTexture) {
+#if !defined(__OSX__)
+  GapiTestCommon::NonSampledTexture<VulkanApi>("VulkanApi_NonSampledTexture.png");
+#endif
+  }
+
 TEST(VulkanApi,Bindless) {
 #if !defined(__OSX__)
   GapiTestCommon::Bindless<VulkanApi>("VulkanApi_Bindless.png");

@@ -18,6 +18,7 @@ VTexture::VTexture(VTexture&& other) {
   std::swap(page,           other.page);
   std::swap(isStorageImage, other.isStorageImage);
   std::swap(is3D,           other.is3D);
+  std::swap(isFilterable,   other.isFilterable);
   std::swap(extViews,       other.extViews);
   }
 

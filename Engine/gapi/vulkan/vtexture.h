@@ -38,6 +38,7 @@ class VTexture : public AbstractGraphicsApi::Texture {
     VAllocator::Allocation page           = {};
     bool                   isStorageImage = false;
     bool                   is3D           = false;
+    bool                   isFilterable   = false;
 
   protected:
     void createViews (VkDevice device);

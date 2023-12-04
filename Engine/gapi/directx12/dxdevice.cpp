@@ -139,8 +139,12 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
 
     if(d.Support1 & D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE &&
        d.Support1 & D3D12_FORMAT_SUPPORT1_SHADER_GATHER &&
-       //d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE1D  &&
        d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE2D ) {
+      smpBit |= uint64_t(1) << uint64_t(i);
+      }
+    if(d.Support1 & D3D12_FORMAT_SUPPORT1_SHADER_LOAD &&
+       d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE2D ) {
+      // texelFetch only
       smpBit |= uint64_t(1) << uint64_t(i);
       }
     if(d.Support1 & D3D12_FORMAT_SUPPORT1_RENDER_TARGET &&

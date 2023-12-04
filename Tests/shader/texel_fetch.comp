@@ -1,0 +1,12 @@
+#version 440
+
+#extension GL_EXT_samplerless_texture_functions : require
+
+layout(local_size_x = 1) in;
+
+layout(binding = 0) uniform usampler2D ret;
+
+void main() {
+  //textureLod(ret, vec2(0,0), 0);
+  texelFetch(ret, ivec2(0,0), 0);
+  }

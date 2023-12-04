@@ -223,8 +223,20 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** tex, size_
       continue;
     auto& t = *reinterpret_cast<DxTexture*>(tex[i]);
     placeInHeap(device, prm.rgnType, descPtr, heapOffset + i*descSize, t, smp.mapping, mipLevel);
-    if(l.hasSampler())
-      placeInHeap(device, prm.rgnType, smpPtr, heapOffsetSmp + i*smpSize, smp);
+    if(l.hasSampler()) {
+      auto sx = smp;
+      if(t.filtrable) {
+        /*
+         * https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_format_support1
+         * If the device supports the format as a resource (1D, 2D, 3D, or cube map)
+         * but doesn't support this option, the resource can still use the Sample method
+         * but must use only the point filtering sampler state to perform the sample.
+         */
+        sx.setFiltration(Filter::Nearest);
+        sx.anisotropic = false;
+        }
+      placeInHeap(device, prm.rgnType, smpPtr, heapOffsetSmp + i*smpSize, sx);
+      }
     }
   }
 

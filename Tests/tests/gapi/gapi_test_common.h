@@ -1403,6 +1403,40 @@ void ArrayedSsbo(const char* outImg) {
   }
 
 template<class GraphicsApi>
+void NonSampledTexture(const char* outImg) {
+  using namespace Tempest;
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto input  = device.image2d(TextureFormat::R32U, 1, 1);
+
+    auto cs     = device.shader("shader/texel_fetch.comp.sprv");
+    auto pso    = device.pipeline(cs);
+
+    auto ubo = device.descriptors(pso.layout());
+    ubo.set(0,input);
+
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setUniforms(pso,ubo);
+      enc.dispatch(1,1,1);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void Bindless(const char* outImg) {
   using namespace Tempest;
   try {

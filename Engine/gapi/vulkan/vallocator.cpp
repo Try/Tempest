@@ -287,6 +287,7 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t d,
   ret.mipCnt         = mip;
   ret.isStorageImage = imageStore;
   ret.is3D           = (imageInfo.imageType==VK_IMAGE_TYPE_3D);
+  ret.isFilterable   = (provider.device->props.hasFilteredFormat(frm));
   ret.createViews(dev);
   return ret;
   }

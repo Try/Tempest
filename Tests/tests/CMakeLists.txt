@@ -76,6 +76,7 @@ compile_shader(image_store_test.comp)
 compile_shader(ssbo_read.comp)
 compile_shader(overlap_test.comp)
 compile_shader(varying_test.frag)
+compile_shader(texel_fetch.comp)
 
 compile_shader(bindless.comp)
 compile_shader(bindless2.comp)
