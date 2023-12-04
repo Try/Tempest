@@ -235,8 +235,9 @@ VTexture VAllocator::alloc(const Pixmap& pm, uint32_t mip, VkFormat format) {
     throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
     }
 
-  ret.format = imageInfo.format;
-  ret.mipCnt = mip;
+  ret.format       = imageInfo.format;
+  ret.mipCnt       = mip;
+  ret.isFilterable = (provider.device->props.hasFilteredFormat(pm.format()));
   ret.createViews(dev);
   return ret;
   }
