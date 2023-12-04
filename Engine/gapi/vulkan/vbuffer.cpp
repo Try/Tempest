@@ -103,7 +103,7 @@ void VBuffer::fill(uint32_t data, size_t off, size_t size) {
 
     auto cmd = dx.dataMgr().get();
     cmd->begin(true);
-    cmd->hold(pBuf); // NOTE: VBuffer may be deleted, before copy is finished
+    cmd->hold(pBuf); // NOTE: VBuffer may be deleted, before fill is finished
     cmd->fill(*this, off, data, size);
     cmd->end();
 

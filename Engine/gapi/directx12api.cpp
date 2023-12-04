@@ -352,7 +352,7 @@ AbstractGraphicsApi::PTexture DirectX12Api::createStorage(AbstractGraphicsApi::D
                                                           uint32_t mipCnt, TextureFormat frm) {
   Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
 
-  Detail::DxTexture buf=dx.allocator.alloc(w,h,1,mipCnt,frm,true);
+  Detail::DxTexture buf = dx.allocator.alloc(w,h,1,mipCnt,frm,true);
   Detail::DSharedPtr<Texture*> pbuf(new Detail::DxTexture(std::move(buf)));
 
   auto cmd = dx.dataMgr().get();
@@ -369,8 +369,15 @@ AbstractGraphicsApi::PTexture DirectX12Api::createStorage(Device* d, const uint3
                                                           uint32_t mipCnt, TextureFormat frm) {
   Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
 
-  Detail::DxTexture buf=dx.allocator.alloc(w,h,depth,mipCnt,frm,true);
-  Detail::DSharedPtr<DxTexture*> pbuf(new Detail::DxTexture(std::move(buf)));
+  Detail::DxTexture buf = dx.allocator.alloc(w,h,depth,mipCnt,frm,true);
+  Detail::DSharedPtr<Texture*> pbuf(new Detail::DxTexture(std::move(buf)));
+
+  auto cmd = dx.dataMgr().get();
+  cmd->begin();
+  cmd->hold(pbuf);
+  cmd->fill(*pbuf.handler,0);
+  cmd->end();
+  dx.dataMgr().submit(std::move(cmd));
 
   return PTexture(pbuf.handler);
   }
@@ -431,10 +438,8 @@ void DirectX12Api::present(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::
   }
 
 void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::CommandBuffer* cmd, AbstractGraphicsApi::Fence* doneCpu) {
-  Detail::DxDevice&        dx = *reinterpret_cast<Detail::DxDevice*>(d);
   Detail::DxCommandBuffer& bx = *reinterpret_cast<Detail::DxCommandBuffer*>(cmd);
   ID3D12CommandList* cmdList[] = { bx.get() };
-
   impl->submit(d,cmdList,1,doneCpu);
   }
 

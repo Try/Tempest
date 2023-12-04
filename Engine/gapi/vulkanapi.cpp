@@ -202,6 +202,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createStorage(Device* d,
   cmd->begin();
   cmd->barrier(*pbuf.handler,ResourceAccess::None,ResourceAccess::UavReadWriteAll,uint32_t(-1));
   cmd->fill(*pbuf.handler, 0);
+  cmd->hold(pbuf);
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
 
@@ -220,6 +221,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createStorage(Device* d,
   cmd->begin();
   cmd->barrier(*pbuf.handler,ResourceAccess::None,ResourceAccess::UavReadWriteAll,uint32_t(-1));
   cmd->fill(*pbuf.handler, 0);
+  cmd->hold(pbuf);
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
 
