@@ -49,6 +49,12 @@ TEST(MetalApi,ArrayLength) {
 #endif
   }
 
+TEST(MetalApi,NonSampledTexture) {
+#if defined(__OSX__)
+  GapiTestCommon::NonSampledTexture<MetalApi>("MetalApi_NonSampledTexture.png");
+#endif
+  }
+
 TEST(MetalApi,Shader) {
 #if defined(__OSX__)
   GapiTestCommon::Shader<MetalApi>();

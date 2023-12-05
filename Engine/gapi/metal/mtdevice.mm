@@ -115,7 +115,7 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev, u
 
   static const TextureFormat ds[]  = {TextureFormat::Depth16, TextureFormat::Depth32F};
 
-  uint64_t smpBit = 0, attBit = 0, dsBit = 0, storBit = 0;
+  uint64_t smpBit = 0, attBit = 0, dsBit = 0, storBit = 0, atomBit = 0;
   for(auto& i:smp)
     smpBit |= uint64_t(1) << uint64_t(i);
   for(auto& i:att)
@@ -173,10 +173,24 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev, u
 #endif
   }
 
+  if(dev.supportsFamily(MTL::GPUFamilyMetal3)) {
+    // TODO: spirv-cross support
+    if(dev.supportsFamily(MTL::GPUFamilyApple6) ||
+       dev.supportsFamily(MTL::GPUFamilyApple7) ||
+       dev.supportsFamily(MTL::GPUFamilyApple8) ||
+       dev.supportsFamily(MTL::GPUFamilyMac2)) {
+      //atomBit  |= uint64_t(1) << TextureFormat::R32U;
+      }
+    if(dev.supportsFamily(MTL::GPUFamilyApple8)) {
+      //atomBit  |= uint64_t(1) << TextureFormat::RG32U;
+      }
+    }
+
   prop.setSamplerFormats(smpBit);
   prop.setAttachFormats (attBit);
   prop.setDepthFormats  (dsBit);
   prop.setStorageFormats(storBit);
+  prop.setAtomicFormats (atomBit);
 
   prop.tex2d.maxSize = 8092;
   prop.tex3d.maxSize = 2048;
