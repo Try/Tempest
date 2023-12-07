@@ -1,6 +1,4 @@
 #include "meshconverter.h"
-#include <iostream>
-#include <ostream>
 
 MeshConverter::MeshConverter(libspirv::MutableBytecode& code):code(code) {
   }
@@ -206,8 +204,8 @@ void MeshConverter::emitComp(libspirv::MutableBytecode& comp) {
       }
     if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBuiltIn) {
       if(i[3]==spv::BuiltInPrimitivePointIndicesEXT ||
-         i[3]==spv::BuiltInPrimitiveLineIndicesEXT ||
-         i[3]==spv::BuiltInPrimitiveTriangleIndicesEXT) {
+          i[3]==spv::BuiltInPrimitiveLineIndicesEXT ||
+          i[3]==spv::BuiltInPrimitiveTriangleIndicesEXT) {
         continue;
         }
       }
@@ -222,10 +220,10 @@ void MeshConverter::emitComp(libspirv::MutableBytecode& comp) {
       gen.insert(i.op(),&i[1],i.length()-1);
       if(std::string_view(reinterpret_cast<const char*>(&i[2])).find("gl_")==0) {
         if(i[1]!=gl_NumWorkGroups &&
-           i[1]!=gl_WorkGroupSize &&
-           i[1]!=gl_WorkGroupID &&
-           i[1]!=gl_LocalInvocationID &&
-           i[1]!=gl_GlobalInvocationID) {
+            i[1]!=gl_WorkGroupSize &&
+            i[1]!=gl_WorkGroupID &&
+            i[1]!=gl_LocalInvocationID &&
+            i[1]!=gl_GlobalInvocationID) {
           auto ix = comp.fromOffset(off);
           uint32_t gl = (*ix)[2];
           reinterpret_cast<char*>(&gl)[1] = '1';
@@ -446,6 +444,14 @@ void MeshConverter::emitConstants(libspirv::MutableBytecode& comp) {
     const uint32_t constI = comp.OpConstant(fn,uint_t,i);
     constants.push_back(constI);
     }
+
+  mGrow  = constants[0];
+  mVar   = constants[1];
+
+  mTaskC = constants[0];
+  mMeshC = constants[1];
+  mIter  = constants[2];
+  mDesc  = constants[3];
   }
 
 void MeshConverter::emitEngSsbo(libspirv::MutableBytecode& comp, spv::ExecutionModel emode) {
@@ -463,7 +469,7 @@ void MeshConverter::emitEngSsbo(libspirv::MutableBytecode& comp, spv::ExecutionM
   const uint32_t EngineInternal0_t            = comp.OpTypeStruct (fn, { DrawIndexedIndirectCommand }); // indirects
   const uint32_t _ptr_Storage_EngineInternal0 = comp.OpTypePointer(fn,spv::StorageClassStorageBuffer, EngineInternal0_t);
 
-  const uint32_t EngineInternal1_t            = comp.OpTypeStruct (fn, {uint_t, uint_t, _runtimearr_desc}); // descritors
+  const uint32_t EngineInternal1_t            = comp.OpTypeStruct (fn, {uint_t, uint_t, uint_t, _runtimearr_desc}); // descritors
   const uint32_t _ptr_Storage_EngineInternal1 = comp.OpTypePointer(fn,spv::StorageClassStorageBuffer, EngineInternal1_t);
 
   const uint32_t EngineInternal2_t            = comp.OpTypeStruct (fn, {uint_t, _runtimearr_uint}); // heap
@@ -509,9 +515,10 @@ void MeshConverter::emitEngSsbo(libspirv::MutableBytecode& comp, spv::ExecutionM
   fn.insert(spv::OpDecorate,       {vDecriptors,          spv::DecorationDescriptorSet, 1});
   fn.insert(spv::OpDecorate,       {vDecriptors,          spv::DecorationBinding, 1});
   fn.insert(spv::OpDecorate,       {EngineInternal1_t,    spv::DecorationBlock});
-  fn.insert(spv::OpMemberDecorate, {EngineInternal1_t, 0, spv::DecorationOffset, 0});
-  fn.insert(spv::OpMemberDecorate, {EngineInternal1_t, 1, spv::DecorationOffset, 4});
-  fn.insert(spv::OpMemberDecorate, {EngineInternal1_t, 2, spv::DecorationOffset, 8});
+  fn.insert(spv::OpMemberDecorate, {EngineInternal1_t, 0, spv::DecorationOffset,  0});
+  fn.insert(spv::OpMemberDecorate, {EngineInternal1_t, 1, spv::DecorationOffset,  4});
+  fn.insert(spv::OpMemberDecorate, {EngineInternal1_t, 2, spv::DecorationOffset,  8});
+  fn.insert(spv::OpMemberDecorate, {EngineInternal1_t, 3, spv::DecorationOffset, 12});
 
   fn.insert(spv::OpDecorate,       {vScratch,             spv::DecorationDescriptorSet, 1});
   fn.insert(spv::OpDecorate,       {vScratch,             spv::DecorationBinding, 2});
@@ -530,7 +537,7 @@ void MeshConverter::emitEngSsbo(libspirv::MutableBytecode& comp, spv::ExecutionM
   if(code.findExecutionModel()==spv::ExecutionModelMeshEXT) {
     fn.insert(spv::OpMemberName, Descriptor, 2, "indSz");
     } else {
-    fn.insert(spv::OpMemberName, Descriptor, 2, "dispathSz");
+    fn.insert(spv::OpMemberName, Descriptor, 2, "dispatchSz");
     }
 
   fn.insert(spv::OpName,       DrawIndexedIndirectCommand,    "DrawIndexedIndirectCommand");
@@ -541,9 +548,9 @@ void MeshConverter::emitEngSsbo(libspirv::MutableBytecode& comp, spv::ExecutionM
     fn.insert(spv::OpMemberName, DrawIndexedIndirectCommand, 3, "instanceCount");
     fn.insert(spv::OpMemberName, DrawIndexedIndirectCommand, 4, "firstIndex");
     } else {
-    fn.insert(spv::OpMemberName, DrawIndexedIndirectCommand, 2, "dispathX");
-    fn.insert(spv::OpMemberName, DrawIndexedIndirectCommand, 3, "dispathY");
-    fn.insert(spv::OpMemberName, DrawIndexedIndirectCommand, 4, "dispathZ");
+    fn.insert(spv::OpMemberName, DrawIndexedIndirectCommand, 2, "dispatchX");
+    fn.insert(spv::OpMemberName, DrawIndexedIndirectCommand, 3, "dispatchY");
+    fn.insert(spv::OpMemberName, DrawIndexedIndirectCommand, 4, "dispatchZ");
     }
   fn.insert(spv::OpMemberName, DrawIndexedIndirectCommand, 5, "vertexOffset");
   fn.insert(spv::OpMemberName, DrawIndexedIndirectCommand, 6, "firstInstance");
@@ -553,9 +560,10 @@ void MeshConverter::emitEngSsbo(libspirv::MutableBytecode& comp, spv::ExecutionM
   fn.insert(spv::OpMemberName, EngineInternal0_t, 0, "indirect");
 
   fn.insert(spv::OpName,       EngineInternal1_t,    "EngineInternal1");
-  fn.insert(spv::OpMemberName, EngineInternal1_t, 0, "grow");
-  fn.insert(spv::OpMemberName, EngineInternal1_t, 1, "grow2");
-  fn.insert(spv::OpMemberName, EngineInternal1_t, 2, "desc");
+  fn.insert(spv::OpMemberName, EngineInternal1_t, 0, "taskletCnt");
+  fn.insert(spv::OpMemberName, EngineInternal1_t, 1, "meshletCnt");
+  fn.insert(spv::OpMemberName, EngineInternal1_t, 2, "iterator");
+  fn.insert(spv::OpMemberName, EngineInternal1_t, 3, "desc");
 
   fn.insert(spv::OpName,       EngineInternal2_t,    "EngineInternal2");
   fn.insert(spv::OpMemberName, EngineInternal2_t, 0, "grow");
@@ -602,7 +610,7 @@ void MeshConverter::emitEmitMeshTasks(libspirv::MutableBytecode& comp, uint32_t 
       return;
     auto tid = (*ids[len-1].type)[1];
     comp.OpTypePointer(fn, spv::StorageClassWorkgroup, tid);
-    });
+  });
 
   const uint32_t plSize    = typeSizeOf(taskPayloadType)/sizeof(uint32_t);
   const uint32_t const0    = constants[0];
@@ -627,7 +635,7 @@ void MeshConverter::emitEmitMeshTasks(libspirv::MutableBytecode& comp, uint32_t 
   fn.insert(spv::OpLoad, {uint_t, rgThreadId, gl_LocalInvocationIndex});
 
   // gl_LocalInvocationIndex!=0
-  {
+    {
     const uint32_t cond0 = comp.fetchAddBound();
     fn.insert(spv::OpINotEqual, {bool_t, cond0, rgThreadId, const0});
 
@@ -639,10 +647,10 @@ void MeshConverter::emitEmitMeshTasks(libspirv::MutableBytecode& comp, uint32_t 
     fn.insert(spv::OpReturn,            {});
     //fn.insert(spv::OpBranch, {condBlockEnd});
     fn.insert(spv::OpLabel,  {condBlockEnd});
-  }
+    }
 
   const uint32_t ptrVarDest = comp.fetchAddBound();
-  fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, ptrVarDest, vScratch, const0}); //&EngineInternal2::grow
+  fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, ptrVarDest, vScratch, mGrow}); //&EngineInternal2::grow
 
   const uint32_t rgTmp0 = comp.fetchAddBound();
   fn.insert(spv::OpAtomicIAdd, {uint_t, rgTmp0, ptrVarDest, const1/*scope*/, const0/*semantices*/, allocSize});
@@ -658,7 +666,7 @@ void MeshConverter::emitEmitMeshTasks(libspirv::MutableBytecode& comp, uint32_t 
     const uint32_t rDst   = comp.fetchAddBound();
     fn.insert(spv::OpIAdd,        {uint_t, rDst, rgTmp0, constants[seq]});
     fn.insert(spv::OpLoad,        {uint_t, rgX, szV});
-    fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, wgXptr, vScratch, const1, rDst});
+    fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, wgXptr, vScratch, mVar, rDst});
     fn.insert(spv::OpStore,       {wgXptr, rgX});
     seq++;
     }
@@ -667,13 +675,13 @@ void MeshConverter::emitEmitMeshTasks(libspirv::MutableBytecode& comp, uint32_t 
     if(!code.isBasicTypeDecl(ids[len-1].type->op()))
       return;
 
-   // at += memberId
+    // at += memberId
     const uint32_t rDst = comp.fetchAddBound();
     fn.insert(spv::OpIAdd, {uint_t, rDst, rgTmp0, constants[seq]});
     ++seq;
     // &EngineInternal2.var[dst]
     const uint32_t ptrHeap = comp.fetchAddBound();
-    fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, ptrHeap, vScratch, const1, rDst});
+    fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, ptrHeap, vScratch, mVar, rDst});
 
     const uint32_t varPtr = comp.fetchAddBound();
     uint32_t chain[255] = {_ptr_Workgroup_uint, varPtr, taskPayload};
@@ -695,7 +703,7 @@ void MeshConverter::emitEmitMeshTasks(libspirv::MutableBytecode& comp, uint32_t 
       } else {
       fn.insert(spv::OpStore,   {ptrHeap, valP});
       }
-    });
+  });
 
   // drawId
   const uint32_t drawId   = comp.fetchAddBound();
@@ -705,18 +713,18 @@ void MeshConverter::emitEmitMeshTasks(libspirv::MutableBytecode& comp, uint32_t 
 
   // vDecriptors
   const uint32_t ptrDescDest = comp.fetchAddBound();
-  fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, ptrDescDest, vDecriptors, const0}); //&EngineInternal1::grow
+  fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, ptrDescDest, vDecriptors, mTaskC}); //&EngineInternal1::taskletCnt
   const uint32_t rgTmp2 = comp.fetchAddBound();
   fn.insert(spv::OpAtomicIAdd, {uint_t, rgTmp2, ptrDescDest, const1/*scope*/, const0/*semantices*/, const1});
 
   const uint32_t descDestDr = comp.fetchAddBound();
-  fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, descDestDr, vDecriptors, const2, rgTmp2, const0}); //&EngineInternal1::desc[].drawId
+  fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, descDestDr,  vDecriptors, mDesc, rgTmp2, const0}); //&EngineInternal1::desc[].drawId
   fn.insert(spv::OpStore, {descDestDr, rgDrawId});
   const uint32_t descDestInd = comp.fetchAddBound();
-  fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, descDestInd, vDecriptors, const2, rgTmp2, const1}); //&EngineInternal1::desc[].ptr
+  fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, descDestInd, vDecriptors, mDesc, rgTmp2, const1}); //&EngineInternal1::desc[].ptr
   fn.insert(spv::OpStore, {descDestInd, rgTmp0});
   const uint32_t descDestSz = comp.fetchAddBound();
-  fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, descDestSz, vDecriptors, const2, rgTmp2, const2}); //&EngineInternal1::desc[].indSz
+  fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, descDestSz,  vDecriptors, mDesc, rgTmp2, const2}); //&EngineInternal1::desc[].dispatchSz
   fn.insert(spv::OpStore, {descDestSz, allocSize});
 
   fn.insert(spv::OpReturn,      {});
@@ -790,7 +798,7 @@ void MeshConverter::emitSetMeshOutputs(libspirv::MutableBytecode& comp, uint32_t
   fn.insert(spv::OpLoad, {uint_t, rgDrawId, drawId});
 
   // gl_LocalInvocationIndex==0
-  {
+    {
     const uint32_t cond0 = comp.fetchAddBound();
     fn.insert(spv::OpIEqual, {bool_t, cond0, rgThreadId, const0});
 
@@ -802,7 +810,7 @@ void MeshConverter::emitSetMeshOutputs(libspirv::MutableBytecode& comp, uint32_t
     // fn.insert(spv::OpReturn,            {});
 
     const uint32_t ptrVarDest = comp.fetchAddBound();
-    fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, ptrVarDest, vScratch, const0}); //&EngineInternal2::grow
+    fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, ptrVarDest, vScratch, mGrow}); //&EngineInternal2::grow
 
     const uint32_t rgTmp0 = comp.fetchAddBound();
     fn.insert(spv::OpAtomicIAdd, {uint_t, rgTmp0, ptrVarDest, const1/*scope*/, const0/*semantices*/, rgAllocSize});
@@ -811,7 +819,7 @@ void MeshConverter::emitSetMeshOutputs(libspirv::MutableBytecode& comp, uint32_t
 
     fn.insert(spv::OpBranch, {condBlockEnd});
     fn.insert(spv::OpLabel,  {condBlockEnd});
-  }
+    }
 
   fn.insert(spv::OpMemoryBarrier,  {const1, const264});         // memoryBarrierShared() // needed?
   fn.insert(spv::OpControlBarrier, {const2, const2, const264}); // barrier()
@@ -882,18 +890,18 @@ void MeshConverter::emitSetMeshOutputs(libspirv::MutableBytecode& comp, uint32_t
 
     // vDecriptors
     const uint32_t ptrDescDest = comp.fetchAddBound();
-    fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, ptrDescDest, vDecriptors, const0}); //&EngineInternal1::grow
+    fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, ptrDescDest, vDecriptors, mMeshC}); //&EngineInternal1::meshletCnt
     const uint32_t rgTmp2 = comp.fetchAddBound();
     fn.insert(spv::OpAtomicIAdd, {uint_t, rgTmp2, ptrDescDest, const1/*scope*/, const0/*semantices*/, const1});
 
     const uint32_t descDestDr = comp.fetchAddBound();
-    fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, descDestDr, vDecriptors, const2, rgTmp2, const0}); //&EngineInternal1::desc[].drawId
+    fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, descDestDr,  vDecriptors, mDesc, rgTmp2, const0}); //&EngineInternal1::desc[].drawId
     fn.insert(spv::OpStore, {descDestDr, rgDrawId});
     const uint32_t descDestInd = comp.fetchAddBound();
-    fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, descDestInd, vDecriptors, const2, rgTmp2, const1}); //&EngineInternal1::desc[].ptr
+    fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, descDestInd, vDecriptors, mDesc, rgTmp2, const1}); //&EngineInternal1::desc[].ptr
     fn.insert(spv::OpStore, {descDestInd, rgTmp0});
     const uint32_t descDestSz = comp.fetchAddBound();
-    fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, descDestSz, vDecriptors, const2, rgTmp2, const2}); //&EngineInternal1::desc[].indSz
+    fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, descDestSz,  vDecriptors, mDesc, rgTmp2, const2}); //&EngineInternal1::desc[].indSz
     fn.insert(spv::OpStore, {descDestSz, rgIboSize});
 
     fn.insert(spv::OpBranch, {condBlockEnd});
@@ -972,7 +980,7 @@ void MeshConverter::emitTailStore(libspirv::MutableBytecode& comp, uint32_t engT
 
         // &EngineInternal2.var[dst]
         const uint32_t ptrHeap = comp.fetchAddBound();
-        fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, ptrHeap, vScratch, const1, rDst});
+        fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, ptrHeap, vScratch, mVar, rDst});
 
         // NOTE: ids is pointer to array of X, we need only X
         const uint32_t varPtr = comp.fetchAddBound();
@@ -1026,7 +1034,7 @@ void MeshConverter::emitPayoadLoad(libspirv::MutableBytecode& comp, uint32_t eng
       return;
     auto tid = (*ids[len-1].type)[1];
     comp.OpTypePointer(fn, spv::StorageClassWorkgroup, tid);
-    });
+  });
 
   // Constants
   const uint32_t const0 = constants[0];
@@ -1051,7 +1059,7 @@ void MeshConverter::emitPayoadLoad(libspirv::MutableBytecode& comp, uint32_t eng
 
     // &EngineInternal2.var[dst]
     const uint32_t ptrHeap = comp.fetchAddBound();
-    fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, ptrHeap, vScratch, const1, rDst});
+    fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, ptrHeap, vScratch, mVar, rDst});
 
     const uint32_t varPtr = comp.fetchAddBound();
     uint32_t chain[255] = {_ptr_Workgroup_uint, varPtr, taskPayload};
@@ -1075,7 +1083,7 @@ void MeshConverter::emitPayoadLoad(libspirv::MutableBytecode& comp, uint32_t eng
       } else {
       fn.insert(spv::OpStore,   {varPtr, valP});
       }
-    });
+  });
 
   fn.insert(spv::OpReturn,      {});
   fn.insert(spv::OpFunctionEnd, {});
@@ -1118,27 +1126,27 @@ void MeshConverter::emitEngMain(libspirv::MutableBytecode& comp, uint32_t engMai
   }
 
 void MeshConverter::emitVboStore(libspirv::MutableBytecode& comp, libspirv::MutableBytecode::Iterator& gen,
-                                  const libspirv::Bytecode::OpCode& op, uint32_t achain) {
+                                 const libspirv::Bytecode::OpCode& op, uint32_t achain) {
   if(options.deferredMeshShading)
     return;
 
   const auto val = op[2];
 
-  // Types
+          // Types
   auto fn = comp.findSectionEnd(libspirv::Bytecode::S_Types);
   const uint32_t uint_t            = comp.OpTypeInt(fn, 32,false);
   const uint32_t float_t           = comp.OpTypeFloat(fn, 32);
   const uint32_t _ptr_Storage_uint = comp.OpTypePointer(fn, spv::StorageClassStorageBuffer, uint_t);
   const uint32_t _ptr_Priate_uint  = comp.OpTypePointer(fn, spv::StorageClassPrivate,       uint_t);
 
-  // Constants
+          // Constants
   const uint32_t const0            = constants[0];
   const uint32_t const1            = constants[1];
   const uint32_t const2            = constants[2];
   const uint32_t const3            = constants[3];
   const uint32_t constVertSz       = constants[varCount];
 
-  // Function
+          // Function
   const auto& chain = *code.fromOffset(achain);
   uint32_t clen = chain.length();
 
@@ -1148,7 +1156,7 @@ void MeshConverter::emitVboStore(libspirv::MutableBytecode& comp, libspirv::Muta
   lchain[0] = _ptr_Storage_uint;
   // lchain[1] = comp.fetchAddBound();
   lchain[2] = vScratch;
-  lchain[3] = const1;
+  lchain[3] = mVar;
 
   gen = comp.end();
   auto regPVboBase = comp.fetchAddBound();
@@ -1218,27 +1226,27 @@ void MeshConverter::emitVboStore(libspirv::MutableBytecode& comp, libspirv::Muta
       } else {
       gen.insert(spv::OpStore, {lchain[1], rg2});
       }
-    });
+  });
   }
 
 void MeshConverter::emitIboStore(libspirv::MutableBytecode& comp, libspirv::MutableBytecode::Iterator& gen,
-                                  const libspirv::Bytecode::OpCode& op, uint32_t achain) {
+                                 const libspirv::Bytecode::OpCode& op, uint32_t achain) {
   const auto triplet = op[2];
 
-  // Types
+          // Types
   auto fn = comp.findSectionEnd(libspirv::Bytecode::S_Types);
   const uint32_t uint_t             = comp.OpTypeInt(fn, 32,false);
   const uint32_t _ptr_Storage_uint  = comp.OpTypePointer(fn, spv::StorageClassStorageBuffer, uint_t);
   const uint32_t _ptr_Priate_uint   = comp.OpTypePointer(fn, spv::StorageClassPrivate,       uint_t);
 
-  // Constants
+          // Constants
   const uint32_t const0             = constants[0];
   const uint32_t const1             = constants[1];
   const uint32_t const2             = constants[2];
   const uint32_t const3             = constants[3];
   const uint32_t constVertSz        = constants[varCount];
 
-  // Function
+          // Function
   const auto& chain = *code.fromOffset(achain);
   uint32_t nchain[32] = {};
   uint32_t clen = chain.length();
@@ -1253,7 +1261,7 @@ void MeshConverter::emitIboStore(libspirv::MutableBytecode& comp, libspirv::Muta
   auto rg0 = comp.fetchAddBound();
   gen.insert(spv::OpIMul, {uint_t, rg0, const3, chain[4]});
 
-  // triangles only for now
+          // triangles only for now
   for(size_t i=0; i<3; ++i) {
     auto r1 = comp.fetchAddBound();
     gen.insert(spv::OpIAdd, {uint_t, r1, regPIboBase, rg0});
@@ -1264,7 +1272,7 @@ void MeshConverter::emitIboStore(libspirv::MutableBytecode& comp, libspirv::Muta
 
     nchain[1] = comp.fetchAddBound();
     nchain[2] = vScratch;
-    nchain[3] = const1;
+    nchain[3] = mVar;
     nchain[4] = regPIbo;
     gen.insert(spv::OpAccessChain, nchain, 5);
 
@@ -1401,76 +1409,76 @@ void MeshConverter::emitVert(libspirv::MutableBytecode& vert) {
   std::unordered_map<uint32_t,uint32_t> typeRemap;
   for(auto& i:varying) {
     code.traverseType(i.second.type, [&](const libspirv::Bytecode::AccessChain* ids, uint32_t len){
-      const auto&    op = *ids[len-1].type;
-      const uint32_t id = op[1];
-      if(typeRemap.find(id)!=typeRemap.end())
-        return;
+        const auto&    op = *ids[len-1].type;
+        const uint32_t id = op[1];
+        if(typeRemap.find(id)!=typeRemap.end())
+          return;
 
-      switch(op.op()) {
-        case spv::OpTypeVoid:
-          typeRemap[id] = vert.OpTypeVoid(fn);
-          break;
-        case spv::OpTypeBool:
-          typeRemap[id] = vert.OpTypeBool(fn);
-          break;
-        case spv::OpTypeInt:
-          typeRemap[id] = vert.OpTypeInt(fn, op[2], op[3]);
-          break;
-        case spv::OpTypeFloat:
-          typeRemap[id] = vert.OpTypeFloat(fn, op[2]);
-          break;
-        case spv::OpTypeVector:{
-          uint32_t elt = typeRemap[op[2]];
-          typeRemap[id] = vert.OpTypeVector(fn, elt, op[3]);
-          break;
+        switch(op.op()) {
+          case spv::OpTypeVoid:
+            typeRemap[id] = vert.OpTypeVoid(fn);
+            break;
+          case spv::OpTypeBool:
+            typeRemap[id] = vert.OpTypeBool(fn);
+            break;
+          case spv::OpTypeInt:
+            typeRemap[id] = vert.OpTypeInt(fn, op[2], op[3]);
+            break;
+          case spv::OpTypeFloat:
+            typeRemap[id] = vert.OpTypeFloat(fn, op[2]);
+            break;
+          case spv::OpTypeVector:{
+            uint32_t elt = typeRemap[op[2]];
+            typeRemap[id] = vert.OpTypeVector(fn, elt, op[3]);
+            break;
+            }
+          case spv::OpTypeMatrix:{
+            uint32_t elt = typeRemap[op[2]];
+            typeRemap[id] = vert.OpTypeMatrix(fn, elt, op[3]);
+            break;
+            }
+          case spv::OpTypeArray:{
+            uint32_t csize = 1;
+            for(auto& i:code)
+              if(i.op()==spv::OpConstant && i[2]==op[3]) {
+                csize = i[3];
+                break;
+                }
+            uint32_t uint_t = vert.OpTypeInt(fn, 32, false);
+            uint32_t elt    = typeRemap[op[2]];
+            uint32_t sz     = vert.OpConstant(fn, uint_t, csize);
+            typeRemap[id]   = vert.OpTypeArray(fn, elt, sz);
+            break;
+            }
+          case spv::OpTypeRuntimeArray:{
+            uint32_t elt = typeRemap[op[2]];
+            typeRemap[id] = vert.OpTypeRuntimeArray(fn, elt);
+            break;
+            }
+          case spv::OpTypeStruct:{
+            std::vector<uint32_t> idx(op.length()-2);
+            for(size_t i=0; i<idx.size(); ++i)
+              idx[i] = typeRemap[op[2+i]];
+            uint32_t ix = vert.OpTypeStruct(fn, idx.data(), idx.size());
+            typeRemap[id] = ix;
+            break;
+            }
+          case spv::OpTypePointer:{
+            uint32_t elt = typeRemap[op[3]];
+            for(auto& i:vert)
+              if(i.op()==spv::OpTypeArray && i[1]==elt) {
+                // remove arrayness
+                elt = i[2];
+                break;
+                }
+            assert(spv::StorageClass(op[2])==spv::StorageClassOutput);
+            uint32_t ix  = vert.OpTypePointer(fn, spv::StorageClassOutput, elt);
+            typeRemap[id] = ix;
+            break;
+            }
+          default:
+            assert(false);
           }
-        case spv::OpTypeMatrix:{
-          uint32_t elt = typeRemap[op[2]];
-          typeRemap[id] = vert.OpTypeMatrix(fn, elt, op[3]);
-          break;
-          }
-        case spv::OpTypeArray:{
-          uint32_t csize = 1;
-          for(auto& i:code)
-            if(i.op()==spv::OpConstant && i[2]==op[3]) {
-              csize = i[3];
-              break;
-              }
-          uint32_t uint_t = vert.OpTypeInt(fn, 32, false);
-          uint32_t elt    = typeRemap[op[2]];
-          uint32_t sz     = vert.OpConstant(fn, uint_t, csize);
-          typeRemap[id]   = vert.OpTypeArray(fn, elt, sz);
-          break;
-          }
-        case spv::OpTypeRuntimeArray:{
-          uint32_t elt = typeRemap[op[2]];
-          typeRemap[id] = vert.OpTypeRuntimeArray(fn, elt);
-          break;
-          }
-        case spv::OpTypeStruct:{
-          std::vector<uint32_t> idx(op.length()-2);
-          for(size_t i=0; i<idx.size(); ++i)
-            idx[i] = typeRemap[op[2+i]];
-          uint32_t ix = vert.OpTypeStruct(fn, idx.data(), idx.size());
-          typeRemap[id] = ix;
-          break;
-          }
-        case spv::OpTypePointer:{
-          uint32_t elt = typeRemap[op[3]];
-          for(auto& i:vert)
-            if(i.op()==spv::OpTypeArray && i[1]==elt) {
-              // remove arrayness
-              elt = i[2];
-              break;
-              }
-          assert(spv::StorageClass(op[2])==spv::StorageClassOutput);
-          uint32_t ix  = vert.OpTypePointer(fn, spv::StorageClassOutput, elt);
-          typeRemap[id] = ix;
-          break;
-          }
-        default:
-          assert(false);
-        }
       }, libspirv::Bytecode::T_PostOrder);
     }
 
@@ -1487,13 +1495,13 @@ void MeshConverter::emitVert(libspirv::MutableBytecode& vert) {
     i.second.vsVariable = var;
     }
 
-  {
-  fn = vert.findOpEntryPoint(spv::ExecutionModelVertex,"main");
-  for(auto& i:varying) {
-    fn.append(i.second.vsVariable);
+    {
+    fn = vert.findOpEntryPoint(spv::ExecutionModelVertex,"main");
+    for(auto& i:varying) {
+      fn.append(i.second.vsVariable);
+      }
+    fn = vert.end();
     }
-  fn = vert.end();
-  }
 
   emitConstants(vert);
   fn = vert.end();
@@ -1501,81 +1509,81 @@ void MeshConverter::emitVert(libspirv::MutableBytecode& vert) {
   fn.insert(spv::OpFunction,         {void_t, main, spv::FunctionControlMaskNone, func_t});
   fn.insert(spv::OpLabel,            {lblMain});
   {
-  fn.insert(spv::OpLoad, {int_t, rg_VertexIndex, gl_VertexIndex});
+    fn.insert(spv::OpLoad, {int_t, rg_VertexIndex, gl_VertexIndex});
 
-  uint32_t seq = 0;
-  for(auto& i:varying) {
-    uint32_t varId = i.second.vsVariable;
-    uint32_t type  = i.second.type;
-    code.traverseType(type,[&](const libspirv::MutableBytecode::AccessChain* ids, uint32_t len) {
-      if(!code.isBasicTypeDecl(ids[len-1].type->op()))
-        return;
-      if(len<2 || ids[1].index!=0)
-        return; // [max_vertex] arrayness
+    uint32_t seq = 0;
+    for(auto& i:varying) {
+      uint32_t varId = i.second.vsVariable;
+      uint32_t type  = i.second.type;
+      code.traverseType(type,[&](const libspirv::MutableBytecode::AccessChain* ids, uint32_t len) {
+        if(!code.isBasicTypeDecl(ids[len-1].type->op()))
+          return;
+        if(len<2 || ids[1].index!=0)
+          return; // [max_vertex] arrayness
 
-      const uint32_t ptrR = vert.fetchAddBound();
-      const uint32_t valR = vert.fetchAddBound();
-      const uint32_t rDst = vert.fetchAddBound();
-      fn.insert(spv::OpIAdd,        {uint_t, rDst, rg_VertexIndex, constants[seq]});
-      fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, ptrR, vScratch, constants[1], rDst});
-      fn.insert(spv::OpLoad,        {uint_t, valR, ptrR});
+        const uint32_t ptrR = vert.fetchAddBound();
+        const uint32_t valR = vert.fetchAddBound();
+        const uint32_t rDst = vert.fetchAddBound();
+        fn.insert(spv::OpIAdd,        {uint_t, rDst, rg_VertexIndex, constants[seq]});
+        fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, ptrR, vScratch, constants[1], rDst});
+        fn.insert(spv::OpLoad,        {uint_t, valR, ptrR});
 
-      const uint32_t ptrL  = vert.fetchAddBound();
-      const uint32_t rCast = vert.fetchAddBound();
-      // NOTE: ids is pointer to array of T, we need only T
-      const uint32_t ptrVar = vert.fetchAddBound();
-      uint32_t chain[255] = {_ptr_Output_float, ptrL, varId};
-      uint32_t chainSz    = 3;
-      for(uint32_t i=2; i+1<len; ++i) {
-        chain[chainSz] = constants[ids[i].index];
-        ++chainSz;
-        }
+        const uint32_t ptrL  = vert.fetchAddBound();
+        const uint32_t rCast = vert.fetchAddBound();
+        // NOTE: ids is pointer to array of T, we need only T
+        const uint32_t ptrVar = vert.fetchAddBound();
+        uint32_t chain[255] = {_ptr_Output_float, ptrL, varId};
+        uint32_t chainSz    = 3;
+        for(uint32_t i=2; i+1<len; ++i) {
+          chain[chainSz] = constants[ids[i].index];
+          ++chainSz;
+          }
 
-      // TODO: bool, maybe signed int
-      if(ids[len-1].type->op()==spv::OpTypeFloat) {
-        chain[0] = _ptr_Output_float;
-        fn.insert(spv::OpAccessChain, chain, chainSz);
-        fn.insert(spv::OpBitcast,     {float_t,  rCast, valR});
-        fn.insert(spv::OpStore,       {ptrL, rCast});
-        } else {
-        chain[0] = _ptr_Output_uint;
-        fn.insert(spv::OpLoad,  {uint_t, valR, ptrVar});
-        fn.insert(spv::OpStore, {ptrL,   valR});
-        }
-      ++seq;
+                // TODO: bool, maybe signed int
+        if(ids[len-1].type->op()==spv::OpTypeFloat) {
+          chain[0] = _ptr_Output_float;
+          fn.insert(spv::OpAccessChain, chain, chainSz);
+          fn.insert(spv::OpBitcast,     {float_t,  rCast, valR});
+          fn.insert(spv::OpStore,       {ptrL, rCast});
+          } else {
+          chain[0] = _ptr_Output_uint;
+          fn.insert(spv::OpLoad,  {uint_t, valR, ptrVar});
+          fn.insert(spv::OpStore, {ptrL,   valR});
+          }
+        ++seq;
       });
-    }
+      }
   }
 
-  fn.insert(spv::OpReturn,           {});
-  fn.insert(spv::OpFunctionEnd,      {});
+  fn.insert(spv::OpReturn,      {});
+  fn.insert(spv::OpFunctionEnd, {});
 
   {
-  auto fn = vert.findSectionEnd(libspirv::Bytecode::S_Annotations);
-  for(auto& i:varying) {
-    uint32_t varId = i.second.vsVariable;
-    uint32_t loc   = i.second.location;
-    if(loc==uint32_t(-1))
-      continue;
-    fn.insert(spv::OpDecorate, {varId, spv::DecorationLocation, loc});
-    }
-  fn.insert(spv::OpDecorate, {typeRemap[gl_MeshPerVertexEXT], spv::DecorationBlock});
-  for(auto& i:code) {
-    if(i.op()==spv::OpMemberDecorate && i[1]==gl_MeshPerVertexEXT && i[3]==spv::DecorationBuiltIn) {
-      fn.insert(spv::OpMemberDecorate, {typeRemap[i[1]], i[2], i[3], i[4]});
+    auto fn = vert.findSectionEnd(libspirv::Bytecode::S_Annotations);
+    for(auto& i:varying) {
+      uint32_t varId = i.second.vsVariable;
+      uint32_t loc   = i.second.location;
+      if(loc==uint32_t(-1))
+        continue;
+      fn.insert(spv::OpDecorate, {varId, spv::DecorationLocation, loc});
       }
-    }
-
-  fn = vert.findSectionEnd(libspirv::Bytecode::S_Debug);
-  for(auto& i:code) {
-    if(i.op()==spv::OpMemberName && i[1]==gl_MeshPerVertexEXT) {
-      auto prevPos = vert.toOffset(*fn);
-      fn.insert(spv::OpMemberName, &i[1], i.length()-1);
-
-      auto prev = vert.fromOffset(prevPos);
-      prev.set(1, typeRemap[i[1]]);
+    fn.insert(spv::OpDecorate, {typeRemap[gl_MeshPerVertexEXT], spv::DecorationBlock});
+    for(auto& i:code) {
+      if(i.op()==spv::OpMemberDecorate && i[1]==gl_MeshPerVertexEXT && i[3]==spv::DecorationBuiltIn) {
+        fn.insert(spv::OpMemberDecorate, {typeRemap[i[1]], i[2], i[3], i[4]});
+        }
       }
-    }
+
+    fn = vert.findSectionEnd(libspirv::Bytecode::S_Debug);
+    for(auto& i:code) {
+      if(i.op()==spv::OpMemberName && i[1]==gl_MeshPerVertexEXT) {
+        auto prevPos = vert.toOffset(*fn);
+        fn.insert(spv::OpMemberName, &i[1], i.length()-1);
+
+        auto prev = vert.fromOffset(prevPos);
+        prev.set(1, typeRemap[i[1]]);
+        }
+      }
   }
   }
 
@@ -1811,7 +1819,7 @@ void MeshConverter::emitMVert(libspirv::MutableBytecode& comp) {
     it.insert(spv::OpVariable, {_ptr_Input_int, gl_VertexIndex, spv::StorageClassInput});
     }
 
-  // compyte variables
+  // compute variables
   if(gl_VertexIndex!=0) {
     const uint32_t rg_VertexIndexI = vert.fetchAddBound();
     const uint32_t rg_VertexIndexU = vert.fetchAddBound();

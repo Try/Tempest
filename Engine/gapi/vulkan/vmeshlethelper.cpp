@@ -128,7 +128,7 @@ void VMeshletHelper::bindVS(VkCommandBuffer impl, VkPipelineLayout lay) {
 void VMeshletHelper::drawIndirect(VkCommandBuffer impl, uint32_t drawId) {
   assert(drawId<IndirectCmdCount);
   uint32_t off = drawId*indirectOffset + 2*sizeof(uint32_t);
-  // vkCmdDrawIndexedIndirect(impl, indirect.impl, off, 1, 0);
+  vkCmdDrawIndexedIndirect(impl, indirect.impl, off, 1, 0);
   // vkCmdDrawIndexed(impl, 3, 1, 0, 0, 0);
   }
 

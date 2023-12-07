@@ -30,44 +30,42 @@ layout(binding = 0, std430) restrict buffer EngineInternal0
 
 layout(binding = 1, std430) restrict buffer EngineInternal1
 {
-  uint       grow;
-  uint       grow2;
+  uint       taskletCnt;
+  uint       meshletCnt;
+  uint       iterator;
   Descriptor desc[];
 } mesh;
 
 layout(binding = 2, std430) restrict buffer EngineInternal2
 {
-  uint    grow;
-  uint    heap[];
+  uint       grow;
+  uint       heap[];
 } var;
 
 layout(push_constant, std430) uniform UboPush {
-  uint indirectRate;
-  uint indirectCmdCount;
+  uint       indirectRate;
+  uint       indirectCmdCount;
   };
 
 shared uint workId;
 shared uint iboOffset;
 
 void main() {
-  const uint total = atomicAdd(mesh.grow, 0);
+  const uint first = mesh.taskletCnt;
+  const uint total = mesh.meshletCnt;
 
   while(true) {
     [[branch]]
-    if(gl_LocalInvocationIndex==0) {
-      uint at = atomicAdd(mesh.grow2, 1);
-      if(at==total)
-        atomicExchange(mesh.grow, 0);
-      workId = at;
-      }
+    if(gl_LocalInvocationIndex==0)
+      workId = atomicAdd(mesh.iterator, 1);
     barrier();
 
     const uint at = workId;
     [[branch]]
     if(at>=total)
-      return;
+      break;
 
-    const Descriptor d = mesh.desc[at];
+    const Descriptor d = mesh.desc[at+first];
     if(gl_LocalInvocationIndex==0) {
       uint idx = d.drawId*indirectRate;
       iboOffset = atomicAdd(indirect[idx].indexCount, d.indSz) + indirect[idx].firstIndex;
@@ -77,6 +75,17 @@ void main() {
     [[loop]]
     for(uint i=gl_LocalInvocationIndex; i<d.indSz; i+=gl_WorkGroupSize.x) {
       var.heap[iboOffset+i] = var.heap[d.ptr+i];
+      }
+    }
+
+  if(gl_LocalInvocationIndex==0) {
+    const uint maxGroups = (gl_NumWorkGroups.x * gl_NumWorkGroups.y * gl_NumWorkGroups.z);
+    if(workId+1 == total+maxGroups) {
+      // cleanup
+      mesh.taskletCnt = 0;
+      mesh.meshletCnt = 0;
+      mesh.iterator   = 0;
+      var.grow      = 0;
       }
     }
   }
