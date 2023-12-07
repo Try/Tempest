@@ -129,7 +129,6 @@ void VMeshletHelper::drawIndirect(VkCommandBuffer impl, uint32_t drawId) {
   assert(drawId<IndirectCmdCount);
   uint32_t off = drawId*indirectOffset + 2*sizeof(uint32_t);
   vkCmdDrawIndexedIndirect(impl, indirect.impl, off, 1, 0);
-  // vkCmdDrawIndexed(impl, 3, 1, 0, 0, 0);
   }
 
 void VMeshletHelper::initRP(VkCommandBuffer impl) {
@@ -161,6 +160,29 @@ void VMeshletHelper::initRP(VkCommandBuffer impl) {
     uint32_t zero = 0;
     scratch.update(&zero, 0, 4);
     }
+  }
+
+void VMeshletHelper::taskEpiloguePass(VkCommandBuffer impl, uint32_t meshCallsCount) {
+  if(meshCallsCount==0)
+    return;
+  currentTaskLayout = VK_NULL_HANDLE;
+
+  struct Push {
+    uint32_t indirectRate;
+    uint32_t indirectCmdCount;
+    } push;
+  push.indirectRate     = 2;
+  push.indirectCmdCount = meshCallsCount;
+
+  // prefix summ pass
+  barrier(impl, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+  vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,taskPostPass.handler->impl);
+  vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_COMPUTE, taskPostPass.handler->pipelineLayout,
+                          0, 1,&compSet, 0,nullptr);
+  vkCmdPushConstants(impl,taskPostPass.handler->pipelineLayout,VK_SHADER_STAGE_COMPUTE_BIT,0,sizeof(push),&push);
+  vkCmdDispatch(impl, 1,1,1);
   }
 
 void VMeshletHelper::sortPass(VkCommandBuffer impl, uint32_t meshCallsCount) {
@@ -204,21 +226,27 @@ void VMeshletHelper::sortPass(VkCommandBuffer impl, uint32_t meshCallsCount) {
           VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
   }
 
-void VMeshletHelper::firstDraw(VkCommandBuffer impl) {
-  // wait for draw
-  barrier(impl,
-          VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT | VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
-          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
-  }
+void VMeshletHelper::drawCompute(VkCommandBuffer task, VkCommandBuffer mesh, uint32_t taskId, uint32_t drawId, size_t x, size_t y, size_t z) {
+  if(taskId==0 && currentTaskLayout!=VK_NULL_HANDLE) {
+    // wait for previous render-pass
+    barrier(task,
+            VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT | VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
+            VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+    }
+  if(drawId==0) {
+    // wait for previous render-pass or task
+    barrier(mesh,
+            VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT | VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT,
+            VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
+    }
 
-void VMeshletHelper::drawCompute(VkCommandBuffer task, VkCommandBuffer mesh, uint32_t drawId, size_t x, size_t y, size_t z) {
-  if(drawId==0)
-    firstDraw(mesh);
-
+  assert(drawId<IndirectCmdCount);
+  const uint32_t dynOffset = drawId*indirectOffset;
   if(currentTaskLayout!=VK_NULL_HANDLE) {
-    uint32_t dynOffset = drawId*indirectOffset;
     vkCmdBindDescriptorSets(task, VK_PIPELINE_BIND_POINT_COMPUTE,
                             currentTaskLayout, 1,
                             1,&engSet,
@@ -229,9 +257,11 @@ void VMeshletHelper::drawCompute(VkCommandBuffer task, VkCommandBuffer mesh, uin
                             currentMeshLayout, 1,
                             1,&engSet,
                             1,&dynOffset);
-    // vkCmdDispatchIndirect(mesh, indirect.impl, dynOffset);
+
+    uint32_t off = dynOffset + 2*sizeof(uint32_t);
+    vkCmdDispatchIndirect(mesh, indirect.impl, off);
+    //vkCmdDispatch(mesh, uint32_t(2700), uint32_t(1), uint32_t(1));
     } else {
-    uint32_t dynOffset = drawId*indirectOffset;
     vkCmdBindDescriptorSets(mesh, VK_PIPELINE_BIND_POINT_COMPUTE,
                             currentMeshLayout, 1,
                             1,&engSet,
@@ -386,6 +416,10 @@ void VMeshletHelper::initShaders(VDevice& device) {
   auto initCs = DSharedPtr<VShader*>(new VShader(device,mesh_init_comp_sprv,sizeof(mesh_init_comp_sprv)));
   initLay = DSharedPtr<VPipelineLay*> (new VPipelineLay (device,&initCs.handler->lay));
   init    = DSharedPtr<VCompPipeline*>(new VCompPipeline(device,*initLay.handler,*initCs.handler));
+
+  auto taskPostPassCs = DSharedPtr<VShader*>(new VShader(device,task_post_pass_comp_sprv,sizeof(task_post_pass_comp_sprv)));
+  taskPostPassLay  = DSharedPtr<VPipelineLay*> (new VPipelineLay (device,&taskPostPassCs.handler->lay));
+  taskPostPass     = DSharedPtr<VCompPipeline*>(new VCompPipeline(device,*taskPostPassLay.handler,*taskPostPassCs.handler));
 
   auto prefixSumCs = DSharedPtr<VShader*>(new VShader(device,mesh_prefix_pass_comp_sprv,sizeof(mesh_prefix_pass_comp_sprv)));
   prefixSumLay  = DSharedPtr<VPipelineLay*> (new VPipelineLay (device,&prefixSumCs.handler->lay));

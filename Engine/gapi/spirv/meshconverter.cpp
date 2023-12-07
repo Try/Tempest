@@ -635,7 +635,7 @@ void MeshConverter::emitEmitMeshTasks(libspirv::MutableBytecode& comp, uint32_t 
   fn.insert(spv::OpLoad, {uint_t, rgThreadId, gl_LocalInvocationIndex});
 
   // gl_LocalInvocationIndex!=0
-    {
+  {
     const uint32_t cond0 = comp.fetchAddBound();
     fn.insert(spv::OpINotEqual, {bool_t, cond0, rgThreadId, const0});
 
@@ -647,7 +647,7 @@ void MeshConverter::emitEmitMeshTasks(libspirv::MutableBytecode& comp, uint32_t 
     fn.insert(spv::OpReturn,            {});
     //fn.insert(spv::OpBranch, {condBlockEnd});
     fn.insert(spv::OpLabel,  {condBlockEnd});
-    }
+  }
 
   const uint32_t ptrVarDest = comp.fetchAddBound();
   fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, ptrVarDest, vScratch, mGrow}); //&EngineInternal2::grow
@@ -656,7 +656,8 @@ void MeshConverter::emitEmitMeshTasks(libspirv::MutableBytecode& comp, uint32_t 
   fn.insert(spv::OpAtomicIAdd, {uint_t, rgTmp0, ptrVarDest, const1/*scope*/, const0/*semantices*/, allocSize});
   fn.insert(spv::OpStore, {vTmp, rgTmp0});
 
-  uint32_t seq = 0;
+  uint32_t seq       = 0;
+  uint32_t dispathSz = comp.fetchAddBound();
   // dispatch size
   const uint32_t szArr[] = {szX, szY, szZ};
   for(int i=0; i<3; ++i) {
@@ -669,6 +670,13 @@ void MeshConverter::emitEmitMeshTasks(libspirv::MutableBytecode& comp, uint32_t 
     fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, wgXptr, vScratch, mVar, rDst});
     fn.insert(spv::OpStore,       {wgXptr, rgX});
     seq++;
+    if(i==0) {
+      dispathSz = rgX;
+      } else {
+      uint32_t mulR = comp.fetchAddBound();
+      fn.insert(spv::OpIMul, {uint_t, mulR, dispathSz, rgX});
+      dispathSz = mulR;
+      }
     }
   // taskPayload
   code.traverseType(taskPayloadType,[&](const libspirv::MutableBytecode::AccessChain* ids, uint32_t len) {
@@ -710,6 +718,12 @@ void MeshConverter::emitEmitMeshTasks(libspirv::MutableBytecode& comp, uint32_t 
   const uint32_t rgDrawId = comp.fetchAddBound();
   fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, drawId, vIndirectCmd, const0, const0}); //&EngineInternal0::indirect.drawId
   fn.insert(spv::OpLoad, {uint_t, rgDrawId, drawId});
+
+  // vIndirectCmd[i].indexCountSrc += N;
+  const uint32_t ptrCmdDest = comp.fetchAddBound();
+  const uint32_t rgTmp1     = comp.fetchAddBound();
+  fn.insert(spv::OpAccessChain, {_ptr_Storage_uint, ptrCmdDest, vIndirectCmd, const0, const1}); //&EngineInternal0::indirect.indexCountSrc
+  fn.insert(spv::OpAtomicIAdd, {uint_t, rgTmp1, ptrCmdDest, const1/*scope*/, const0/*semantices*/, dispathSz});
 
   // vDecriptors
   const uint32_t ptrDescDest = comp.fetchAddBound();

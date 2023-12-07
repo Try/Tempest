@@ -51,7 +51,7 @@ shared uint workId;
 shared uint iboOffset;
 
 void main() {
-  const uint first = mesh.taskletCnt;
+  const uint first = 0;//mesh.taskletCnt;
   const uint total = mesh.meshletCnt;
 
   while(true) {
@@ -85,7 +85,7 @@ void main() {
       mesh.taskletCnt = 0;
       mesh.meshletCnt = 0;
       mesh.iterator   = 0;
-      var.grow      = 0;
+      var.grow        = 0;
       }
     }
   }

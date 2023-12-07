@@ -48,9 +48,9 @@ class VMeshletHelper {
 
     void initRP(VkCommandBuffer impl);
 
-    void firstDraw(VkCommandBuffer impl);
-    void drawCompute(VkCommandBuffer task, VkCommandBuffer mesh, uint32_t drawId, size_t x, size_t y, size_t z);
+    void drawCompute(VkCommandBuffer task, VkCommandBuffer mesh, uint32_t taskId, uint32_t drawId, size_t x, size_t y, size_t z);
     void drawIndirect(VkCommandBuffer impl, uint32_t drawId);
+    void taskEpiloguePass(VkCommandBuffer impl, uint32_t meshCallsCount);
     void sortPass(VkCommandBuffer impl, uint32_t meshCallsCount);
 
     VkDescriptorSetLayout lay() const { return engLay; }
@@ -92,6 +92,9 @@ class VMeshletHelper {
 
     DSharedPtr<VPipelineLay*>  initLay;
     DSharedPtr<VCompPipeline*> init;
+
+    DSharedPtr<VPipelineLay*>  taskPostPassLay;
+    DSharedPtr<VCompPipeline*> taskPostPass;
 
     DSharedPtr<VPipelineLay*>  prefixSumLay;
     DSharedPtr<VCompPipeline*> prefixSum;

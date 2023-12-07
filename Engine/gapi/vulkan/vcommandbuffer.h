@@ -150,7 +150,8 @@ class VMeshCommandBuffer:public VCommandBuffer {
   private:
     VkCommandBuffer                         cbTask         = nullptr;
     VkCommandBuffer                         cbMesh         = nullptr;
-    size_t                                  meshIndirectId = 0;
+    uint32_t                                taskIndirectId = 0;
+    uint32_t                                meshIndirectId = 0;
 
   friend class VMeshletHelper;
   };
