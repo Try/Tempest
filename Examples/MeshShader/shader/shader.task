@@ -2,15 +2,21 @@
 
 #extension GL_EXT_mesh_shader : require
 
-layout(local_size_x = 1) in;
+layout(local_size_x = 32) in;
 
 struct Payload {
-  int dummy;
+  uint firstMeshlet;
   };
 
 taskPayloadSharedEXT Payload payload;
 
+layout(push_constant, std430) uniform UboPush {
+  mat4 mvp;
+  uint meshletCount;
+  };
+
 void main() {
-  payload.dummy = 0;
-  EmitMeshTasksEXT(1, 1, 1);
+  uint firstMeshlet = 32*uint(gl_WorkGroupID.x);
+  payload.firstMeshlet = firstMeshlet;
+  EmitMeshTasksEXT(min(32, meshletCount-firstMeshlet), 1, 1);
   }

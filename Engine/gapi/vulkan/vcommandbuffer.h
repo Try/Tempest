@@ -9,7 +9,6 @@
 #include "vswapchain.h"
 
 #include "../utility/smallarray.h"
-#include "../utility/dptr.h"
 
 namespace Tempest {
 namespace Detail {
@@ -109,8 +108,8 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     template<class T>
     void finalizeImageBarrier(T& bx, const AbstractGraphicsApi::BarrierDesc& desc);
 
-    void pushChunk();
-    void newChunk();
+    virtual void pushChunk();
+    virtual void newChunk();
 
     void bindVbo(const VBuffer& vbo, size_t stride);
 
@@ -121,7 +120,6 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     VDevice&                                device;
     VCommandPool                            pool;
     VkCommandBuffer                         impl=nullptr;
-    VkCommandBuffer                         cbHelper=nullptr;
 
     ResourceState                           resState;
     std::shared_ptr<VFramebufferMap::RenderPass> pass;
@@ -134,7 +132,6 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     size_t                                  vboStride       = 0;
     VkPipelineLayout                        pipelineLayout  = VK_NULL_HANDLE;
 
-    size_t                                  meshIndirectId  = 0;
     bool                                    isDbgRegion = false;
   };
 
@@ -142,11 +139,19 @@ class VMeshCommandBuffer:public VCommandBuffer {
   public:
     using VCommandBuffer::VCommandBuffer;
 
+    void pushChunk() override;
+
     void setPipeline(AbstractGraphicsApi::Pipeline& p) override;
     void setBytes   (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;
     void setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc &u) override;
 
     void dispatchMesh(size_t x, size_t y, size_t z) override;
+
+  private:
+    VkCommandBuffer                         cbTask         = nullptr;
+    VkCommandBuffer                         cbMesh         = nullptr;
+    size_t                                  meshIndirectId = 0;
+
   friend class VMeshletHelper;
   };
 

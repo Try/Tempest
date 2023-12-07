@@ -43,13 +43,13 @@ class VMeshletHelper {
     explicit VMeshletHelper(VDevice& dev);
     ~VMeshletHelper();
 
-    void bindCS(VkCommandBuffer impl, VkPipelineLayout lay);
+    void bindCS(VkCommandBuffer impl, VkPipelineLayout task, VkPipelineLayout mesh);
     void bindVS(VkCommandBuffer impl, VkPipelineLayout lay);
 
     void initRP(VkCommandBuffer impl);
 
     void firstDraw(VkCommandBuffer impl);
-    void drawCompute(VkCommandBuffer impl, uint32_t drawId, size_t x, size_t y, size_t z);
+    void drawCompute(VkCommandBuffer task, VkCommandBuffer mesh, uint32_t drawId, size_t x, size_t y, size_t z);
     void drawIndirect(VkCommandBuffer impl, uint32_t drawId);
     void sortPass(VkCommandBuffer impl, uint32_t meshCallsCount);
 
@@ -84,7 +84,9 @@ class VMeshletHelper {
     VkDescriptorSet            drawPool = VK_NULL_HANDLE;
     VkDescriptorSet            drawSet  = VK_NULL_HANDLE;
 
-    VkPipelineLayout           currentCsLayout = VK_NULL_HANDLE;
+    VkPipelineLayout           currentTaskLayout = VK_NULL_HANDLE;
+    VkPipelineLayout           currentMeshLayout = VK_NULL_HANDLE;
+
     uint32_t                   indirectRate    = 1;
     uint32_t                   indirectOffset  = 0;
 

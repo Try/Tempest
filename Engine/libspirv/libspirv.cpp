@@ -497,8 +497,8 @@ uint32_t MutableBytecode::OpTypeFunction(Iterator& typesEnd, uint32_t idRet, std
   for(auto it=begin(); it!=typesEnd; ++it) {
     auto& i = *it;
     if(i.op()==spv::OpTypeFunction && i[2]==idRet && i.len==(3+args.size())) {
-
-      //return i[1];
+      if(std::memcmp(&i[3], args.begin(), args.size()*sizeof(uint32_t))==0)
+        return i[1];
       }
     }
 

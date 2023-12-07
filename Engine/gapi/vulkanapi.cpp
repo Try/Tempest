@@ -92,7 +92,10 @@ AbstractGraphicsApi::PShader VulkanApi::createShader(AbstractGraphicsApi::Device
   Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
   if(dx->props.meshlets.meshShaderEmulated) {
     libspirv::Bytecode code(reinterpret_cast<const uint32_t*>(source),src_size/4);
-    if(code.findExecutionModel()==spv::ExecutionModelMeshEXT) {
+    if(code.findExecutionModel()==spv::ExecutionModelTaskEXT) {
+      return PShader(new Detail::VTaskShaderEmulated(*dx,source,src_size));
+      }
+    else if(code.findExecutionModel()==spv::ExecutionModelMeshEXT) {
       return PShader(new Detail::VMeshShaderEmulated(*dx,source,src_size));
       }
     }

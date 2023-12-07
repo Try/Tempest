@@ -23,9 +23,15 @@ const vec3 debugColors[MAX_DEBUG_COLORS] = {
 layout(local_size_x = 64) in;
 layout(triangles, max_vertices = 64, max_primitives = 64) out;
 
+struct Payload {
+  uint firstMeshlet;
+  };
+
+// taskPayloadSharedEXT Payload payload;
 
 layout(push_constant, std430) uniform PushConstant {
   mat4 mvp;
+  uint meshletCount;
   } push;
 layout(std430, binding = 0) readonly buffer Vbo { float vertices[];   };
 layout(std430, binding = 1) readonly buffer Ibo { uint  primitives[]; };
@@ -36,14 +42,15 @@ out gl_MeshPerVertexEXT {
   } gl_MeshVerticesEXT[];
 layout(location = 0) out vec4 outColor[];
 
+uint meshletId = gl_WorkGroupID.x;// + payload.firstMeshlet;
 
 vec3 vertex(uint id) {
-  id += gl_WorkGroupID.x * MaxVert;
+  id += meshletId * MaxVert;
   return vec3(vertices[id*3+0], vertices[id*3+1], vertices[id*3+2]);
   }
 
 uvec3 primitive(uint id) {
-  id += gl_WorkGroupID.x * MaxPrim;
+  id += meshletId * MaxPrim;
   uint  bits = primitives[id];
   uvec3 prim;
   prim.x = ((bits >>  0) & 0xFF);
@@ -53,7 +60,7 @@ uvec3 primitive(uint id) {
   }
 
 uvec2 meshlet() {
-  uint id   = gl_WorkGroupID.x * MaxPrim;
+  uint id   = meshletId * MaxPrim;
   uint bits = primitives[id];
 
   uvec2 m;

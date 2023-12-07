@@ -16,6 +16,35 @@ static void debugLog(const char* file, const uint32_t* spv, size_t len) {
   f.write(reinterpret_cast<const char*>(spv),len*4);
   }
 
+VTaskShaderEmulated::VTaskShaderEmulated(VDevice& device, const void* source, size_t src_size)
+  :VShader(device) {
+  if(src_size%4!=0)
+    throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
+  fetchBindings(reinterpret_cast<const uint32_t*>(source),src_size/4);
+
+  libspirv::MutableBytecode code{reinterpret_cast<const uint32_t*>(source),src_size/4};
+  assert(code.findExecutionModel()==spv::ExecutionModelTaskEXT);
+
+  MeshConverter conv(code);
+  conv.exec();
+
+  auto& comp = conv.computeShader();
+  // debugLog("mesh_conv.comp.spv", comp.opcodes(), comp.size());
+  // std::system("spirv-cross.exe -V .\\mesh_conv.comp.spv");
+  // std::system("spirv-val.exe      .\\mesh_conv.comp.spv");
+
+  VkShaderModuleCreateInfo createInfo = {};
+  createInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+  createInfo.codeSize = comp.size()*4u;
+  createInfo.pCode    = comp.opcodes();
+  if(vkCreateShaderModule(device.device.impl,&createInfo,nullptr,&compPass)!=VK_SUCCESS)
+    throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
+  }
+
+VTaskShaderEmulated::~VTaskShaderEmulated() {
+  vkDestroyShaderModule(device,compPass,nullptr);
+  }
+
 VMeshShaderEmulated::VMeshShaderEmulated(VDevice& device, const void *source, size_t src_size)
   :VShader(device) {
   if(src_size%4!=0)
@@ -27,6 +56,7 @@ VMeshShaderEmulated::VMeshShaderEmulated(VDevice& device, const void *source, si
 
   MeshConverter conv(code);
   // conv.options.deferredMeshShading = true;
+  // conv.options.varyingInSharedMem  = true;
   conv.exec();
 
   //debugLog("mesh_orig.mesh.spv", reinterpret_cast<const uint32_t*>(source),src_size/4);

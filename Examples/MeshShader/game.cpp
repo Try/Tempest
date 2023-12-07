@@ -111,10 +111,17 @@ void Game::render(){
     ret.mul(viewMatrix());
     ret.mul(objMatrix());
 
+    struct Push {
+      Matrix4x4 mvp;
+      uint32_t  meshletCount = 0;
+      } push;
+    push.mvp          = ret;
+    push.meshletCount = mesh.meshletCount;
+
     {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{swapchain[swapchain.currentImage()],Vec4(0),Tempest::Preserve}}, {zbuffer, 1.f, Tempest::Preserve});
-      enc.setUniforms(pso,desc,&ret,sizeof(ret));
+      enc.setUniforms(pso,desc,&push,sizeof(push));
       /*
       enc.setViewport(0,0,256,256);
       if(useVertex) {
@@ -122,13 +129,13 @@ void Game::render(){
         } else {
         enc.dispatchMesh(mesh.meshletCount);
         }
-
       enc.setViewport(256,0,256,256);
       */
       if(useVertex) {
         enc.draw(mesh.vbo, mesh.ibo);
         } else {
         enc.dispatchMesh(mesh.meshletCount);
+        // enc.dispatchMeshThreads(mesh.meshletCount);
         }
 
       enc.setViewport(0,0,w(),h());
@@ -175,11 +182,13 @@ void Game::onShaderType(size_t type) {
 
     pso = device.pipeline(Topology::Triangles, rs, vert, frag);
     } else {
-    auto sh   = AppShader::get("shader.mesh.sprv");
+    auto sh   = AppShader::get("shader.task.sprv");
+    auto task = device.shader(sh.data, sh.len);
+    sh        = AppShader::get("shader.mesh.sprv");
     auto mesh = device.shader(sh.data, sh.len);
     sh        = AppShader::get("shader.frag.sprv");
     auto frag = device.shader(sh.data, sh.len);
-    pso = device.pipeline(Topology::Triangles, rs, mesh, frag);
+    pso = device.pipeline(Topology::Triangles, rs, /*task,*/ mesh, frag);
     }
 
   desc = device.descriptors(pso);

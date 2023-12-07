@@ -49,6 +49,9 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     static VkPipelineLayout initLayout(VDevice& dev, const VPipelineLay& uboLay, bool isMeshCompPass);
     static VkPipelineLayout initLayout(VDevice& dev, const VPipelineLay& uboLay, VkDescriptorSetLayout lay, bool isMeshCompPass);
 
+    VkPipeline         taskPipeline() const;
+    VkPipelineLayout   taskPipelineLayout() const;
+
     VkPipeline         meshPipeline() const;
     VkPipelineLayout   meshPipelineLayout() const;
 
@@ -79,8 +82,11 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     IVec3                                  wgSize = {};
     bool                                   runtimeSized = false;
 
-    VkPipelineLayout                       pipelineLayoutMs = VK_NULL_HANDLE;
-    VkPipeline                             meshCompuePipeline = VK_NULL_HANDLE;
+    struct MeshEmulation {
+      VkPipelineLayout                     pipelineLayout = VK_NULL_HANDLE;
+      VkPipeline                           compuePipeline = VK_NULL_HANDLE;
+      };
+    MeshEmulation                          ms, ts;
 
     SpinLock                               sync;
     std::vector<InstRp>                    instRp;

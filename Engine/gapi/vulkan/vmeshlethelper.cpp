@@ -112,8 +112,9 @@ void VMeshletHelper::cleanup() {
     vkDestroyDescriptorPool(dev.device.impl, drawPool, nullptr);
   }
 
-void VMeshletHelper::bindCS(VkCommandBuffer impl, VkPipelineLayout lay) {
-  currentCsLayout = lay;
+void VMeshletHelper::bindCS(VkCommandBuffer impl, VkPipelineLayout task, VkPipelineLayout mesh) {
+  currentTaskLayout = task;
+  currentMeshLayout = mesh;
   }
 
 void VMeshletHelper::bindVS(VkCommandBuffer impl, VkPipelineLayout lay) {
@@ -165,7 +166,7 @@ void VMeshletHelper::initRP(VkCommandBuffer impl) {
 void VMeshletHelper::sortPass(VkCommandBuffer impl, uint32_t meshCallsCount) {
   if(meshCallsCount==0)
     return;
-  currentCsLayout = VK_NULL_HANDLE;
+  currentMeshLayout = VK_NULL_HANDLE;
 
   struct Push {
     uint32_t indirectRate;
@@ -212,15 +213,31 @@ void VMeshletHelper::firstDraw(VkCommandBuffer impl) {
           VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
   }
 
-void VMeshletHelper::drawCompute(VkCommandBuffer impl, uint32_t drawId, size_t x, size_t y, size_t z) {
+void VMeshletHelper::drawCompute(VkCommandBuffer task, VkCommandBuffer mesh, uint32_t drawId, size_t x, size_t y, size_t z) {
   if(drawId==0)
-    firstDraw(impl);
-  uint32_t dynOffset = drawId*indirectOffset;
-  vkCmdBindDescriptorSets(impl, VK_PIPELINE_BIND_POINT_COMPUTE,
-                          currentCsLayout, 1,
-                          1,&engSet,
-                          1,&dynOffset);
-  vkCmdDispatch(impl, uint32_t(x), uint32_t(y), uint32_t(z));
+    firstDraw(mesh);
+
+  if(currentTaskLayout!=VK_NULL_HANDLE) {
+    uint32_t dynOffset = drawId*indirectOffset;
+    vkCmdBindDescriptorSets(task, VK_PIPELINE_BIND_POINT_COMPUTE,
+                            currentTaskLayout, 1,
+                            1,&engSet,
+                            1,&dynOffset);
+    vkCmdDispatch(task, uint32_t(x), uint32_t(y), uint32_t(z));
+
+    vkCmdBindDescriptorSets(mesh, VK_PIPELINE_BIND_POINT_COMPUTE,
+                            currentMeshLayout, 1,
+                            1,&engSet,
+                            1,&dynOffset);
+    // vkCmdDispatchIndirect(mesh, indirect.impl, dynOffset);
+    } else {
+    uint32_t dynOffset = drawId*indirectOffset;
+    vkCmdBindDescriptorSets(mesh, VK_PIPELINE_BIND_POINT_COMPUTE,
+                            currentMeshLayout, 1,
+                            1,&engSet,
+                            1,&dynOffset);
+    vkCmdDispatch(mesh, uint32_t(x), uint32_t(y), uint32_t(z));
+    }
   }
 
 void VMeshletHelper::barrier(VkCommandBuffer      impl,

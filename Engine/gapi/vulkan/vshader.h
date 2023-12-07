@@ -19,7 +19,7 @@ class VShader:public AbstractGraphicsApi::Shader {
 
     using Binding = ShaderReflection::Binding;
 
-    VkShaderModule                   impl;
+    VkShaderModule                   impl = VK_NULL_HANDLE;
     std::vector<Decl::ComponentType> vdecl;
     std::vector<Binding>             lay;
     ShaderReflection::Stage          stage = ShaderReflection::Stage::Compute;

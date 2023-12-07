@@ -27,6 +27,7 @@ out gl_PerVertex {
 
 layout(push_constant, std430) uniform PushConstant {
   mat4 mvp;
+  uint meshletCount;
   } push;
 // layout(std430, binding = 0) readonly buffer Vbo { vec3 vertices[]; };
 // layout(std430, binding = 1) readonly buffer Ibo { uint indices []; };

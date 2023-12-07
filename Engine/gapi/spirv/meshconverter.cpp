@@ -211,6 +211,9 @@ void MeshConverter::emitComp(libspirv::MutableBytecode& comp) {
         continue;
         }
       }
+    if(i.op()==spv::OpDecorate && i[2]==spv::DecorationLocation) {
+      continue;
+      }
     if(i.op()==spv::OpMemberDecorate && i[3]==spv::DecorationBuiltIn) {
       continue;
       }
