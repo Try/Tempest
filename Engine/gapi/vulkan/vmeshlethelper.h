@@ -43,7 +43,7 @@ class VMeshletHelper {
     explicit VMeshletHelper(VDevice& dev);
     ~VMeshletHelper();
 
-    void bindCS(VkCommandBuffer impl, VkPipelineLayout task, VkPipelineLayout mesh);
+    void bindCS(VkPipelineLayout task, VkPipelineLayout mesh);
     void bindVS(VkCommandBuffer impl, VkPipelineLayout lay);
 
     void initRP(VkCommandBuffer impl);

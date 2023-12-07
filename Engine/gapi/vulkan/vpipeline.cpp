@@ -80,11 +80,13 @@ VPipeline::VPipeline(VDevice& device, const RenderState& st, Topology tp,
 
     if(auto ms=findShader(ShaderReflection::Stage::Task)) {
       if(device.props.meshlets.meshShaderEmulated) {
+        device.allocMeshletHelper();
+
         this->ts.pipelineLayout = initLayout(device,ulay,true);
 
         VkComputePipelineCreateInfo info = {};
         info.sType        = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-        info.flags        = VK_PIPELINE_CREATE_DISPATCH_BASE;
+        info.flags        = 0;
         info.stage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         info.stage.stage  = VK_SHADER_STAGE_COMPUTE_BIT;
         info.stage.module = reinterpret_cast<const VTaskShaderEmulated*>(ms)->compPass;
@@ -106,7 +108,7 @@ VPipeline::VPipeline(VDevice& device, const RenderState& st, Topology tp,
 
         VkComputePipelineCreateInfo info = {};
         info.sType        = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-        info.flags        = VK_PIPELINE_CREATE_DISPATCH_BASE;
+        info.flags        = 0;
         info.stage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         info.stage.stage  = VK_SHADER_STAGE_COMPUTE_BIT;
         info.stage.module = reinterpret_cast<const VMeshShaderEmulated*>(ms)->compPass;
@@ -254,6 +256,7 @@ VkPipelineLayout VPipeline::initLayout(VDevice& dev, const VPipelineLay& uboLay,
           pushStageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
           }
         } else {
+        pushStageFlags &= ~VK_SHADER_STAGE_TASK_BIT_EXT;
         pushStageFlags &= ~VK_SHADER_STAGE_MESH_BIT_EXT;
         pushStageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
         }
@@ -281,18 +284,22 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   VkPipelineShaderStageCreateInfo shaderStages[5] = {};
   size_t                          stagesCnt       = 0;
   for(size_t i=0; i<5; ++i) {
-    if(shaders[i].handler!=nullptr) {
-      VkPipelineShaderStageCreateInfo& sh = shaderStages[stagesCnt];
-      sh.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-      sh.stage  = nativeFormat(shaders[i].handler->stage);
-      sh.module = shaders[i].handler->impl;
-      sh.pName  = "main";
-      if(auto ms = dynamic_cast<const VMeshShaderEmulated*>(shaders[i].handler)) {
-        sh.stage  = VK_SHADER_STAGE_VERTEX_BIT;
-        sh.module = ms->impl;
-        }
-      stagesCnt++;
+    if(shaders[i].handler==nullptr)
+      continue;
+
+    if(auto ts = dynamic_cast<const VTaskShaderEmulated*>(shaders[i].handler))
+      continue;
+
+    VkPipelineShaderStageCreateInfo& sh = shaderStages[stagesCnt];
+    sh.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    sh.stage  = nativeFormat(shaders[i].handler->stage);
+    sh.module = shaders[i].handler->impl;
+    sh.pName  = "main";
+    if(auto ms = dynamic_cast<const VMeshShaderEmulated*>(shaders[i].handler)) {
+      sh.stage  = VK_SHADER_STAGE_VERTEX_BIT;
+      sh.module = ms->impl;
       }
+    stagesCnt++;
     }
 
   const bool useTesselation = (findShader(ShaderReflection::Stage::Evaluate)!=nullptr ||
@@ -344,7 +351,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   viewportState.pScissors     = nullptr;
 
   VkPipelineRasterizationStateCreateInfo rasterizer = {};
-  rasterizer.sType                   = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+  rasterizer.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
   rasterizer.pNext                   = nullptr;
   rasterizer.flags                   = 0;
   rasterizer.rasterizerDiscardEnable = st.isRasterDiscardEnabled() ? VK_TRUE : VK_FALSE;

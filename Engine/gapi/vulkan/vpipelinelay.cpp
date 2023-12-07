@@ -119,7 +119,8 @@ VkDescriptorSetLayout VPipelineLay::createDescLayout(const std::vector<uint32_t>
     b.descriptorCount = e.runtimeSized ? runtimeArrays[i] : e.arraySize;
     b.descriptorType  = nativeFormat(e.cls);
     b.stageFlags      = nativeFormat(e.stage);
-    if((b.stageFlags&VK_SHADER_STAGE_MESH_BIT_EXT)==VK_SHADER_STAGE_MESH_BIT_EXT && dev.props.meshlets.meshShaderEmulated) {
+    if(dev.props.meshlets.meshShaderEmulated && (b.stageFlags&(VK_SHADER_STAGE_TASK_BIT_EXT | VK_SHADER_STAGE_MESH_BIT_EXT))!=0) {
+      b.stageFlags &= ~VK_SHADER_STAGE_TASK_BIT_EXT;
       b.stageFlags &= ~VK_SHADER_STAGE_MESH_BIT_EXT;
       b.stageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
       b.stageFlags |= VK_SHADER_STAGE_COMPUTE_BIT;

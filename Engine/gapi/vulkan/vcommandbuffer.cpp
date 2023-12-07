@@ -1066,7 +1066,7 @@ void VCommandBuffer::addDependency(VSwapchain& s, size_t imgId) {
 
 void VMeshCommandBuffer::pushChunk() {
   if(cbTask!=nullptr) {
-    vkAssert(vkEndCommandBuffer(cbMesh));
+    vkAssert(vkEndCommandBuffer(cbTask));
     Chunk ch;
     ch.impl = cbTask;
     chunks.push(ch);
@@ -1093,6 +1093,9 @@ void VMeshCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
 
   auto& ms = *device.meshHelper;
 
+  if(cbTask==VK_NULL_HANDLE && cbMesh==VK_NULL_HANDLE)
+    meshIndirectId = 0;
+
   if(cbTask==VK_NULL_HANDLE && px.taskPipeline()!=VK_NULL_HANDLE) {
     VkCommandBufferAllocateInfo allocInfo = {};
     allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -1109,8 +1112,6 @@ void VMeshCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
     }
 
   if(cbMesh==VK_NULL_HANDLE) {
-    meshIndirectId = 0;
-
     VkCommandBufferAllocateInfo allocInfo = {};
     allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool        = pool.impl;
@@ -1123,13 +1124,17 @@ void VMeshCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
     beginInfo.flags            = 0;
     beginInfo.pInheritanceInfo = nullptr;
     vkAssert(vkBeginCommandBuffer(cbMesh,&beginInfo));
-
-    ms.initRP(cbMesh);
     }
 
+  if(meshIndirectId==0)
+    ms.initRP(cbTask!=VK_NULL_HANDLE ? cbTask : cbMesh);
+
+  if(px.taskPipeline()!=VK_NULL_HANDLE)
+    vkCmdBindPipeline(cbTask,VK_PIPELINE_BIND_POINT_COMPUTE,px.taskPipeline());
   vkCmdBindPipeline(cbMesh,VK_PIPELINE_BIND_POINT_COMPUTE,px.meshPipeline());
-  ms.bindCS(cbMesh,px.taskPipelineLayout(),px.meshPipelineLayout());
-  ms.bindVS(impl,  px.pipelineLayout);
+
+  ms.bindCS(px.taskPipelineLayout(), px.meshPipelineLayout());
+  ms.bindVS(impl, px.pipelineLayout);
   }
 
 void VMeshCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) {
@@ -1138,6 +1143,9 @@ void VMeshCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, const void* 
   VPipeline& px = reinterpret_cast<VPipeline&>(p);
   if(px.meshPipeline()==VK_NULL_HANDLE)
     return;
+
+  if(px.taskPipeline()!=VK_NULL_HANDLE)
+    vkCmdPushConstants(cbTask, px.taskPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, uint32_t(size), data);
   vkCmdPushConstants(cbMesh, px.meshPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, uint32_t(size), data);
   }
 
@@ -1149,6 +1157,12 @@ void VMeshCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractG
     return;
 
   VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
+  if(px.taskPipeline()!=VK_NULL_HANDLE) {
+    vkCmdBindDescriptorSets(cbTask,VK_PIPELINE_BIND_POINT_COMPUTE,
+                            px.taskPipelineLayout(),0,
+                            1,&ux.impl,
+                            0,nullptr);
+    }
   vkCmdBindDescriptorSets(cbMesh,VK_PIPELINE_BIND_POINT_COMPUTE,
                           px.meshPipelineLayout(),0,
                           1,&ux.impl,
