@@ -91,9 +91,6 @@ static Tempest::Point mousePos(NSEvent* e, bool& inWindow) {
   NSPoint p   = e.locationInWindow;
   NSPoint px  = mousePos(p, wnd, inWindow);
 
-  //NSRect  fr  = [wnd contentRectForFrameRect:[wnd frame]];
-  //p = [wnd convertPointFromScreen:p];
-
   px.x += err.x;
   px.y += err.y;
 
@@ -229,7 +226,7 @@ static SystemApi::Window* createWindow(Tempest::Window *owner,
       [wnd miniaturize:wnd];
       break;
     case SystemApi::Maximized:
-      [wnd setFrame:[[NSScreen mainScreen] visibleFrame] display:YES];
+      [wnd setFrame:[[wnd screen] visibleFrame] display:YES];
       break;
     case SystemApi::FullScreen:
       [wnd toggleFullScreen:wnd];
@@ -353,7 +350,6 @@ void MacOSApi::implSetCursorPosition(SystemApi::Window *w, int x, int y) {
   NSWindow* wnd = reinterpret_cast<NSWindow*>(w);
   NSPoint   to  = {CGFloat(x),CGFloat(y)};
 
-  //auto vf = [[NSScreen mainScreen] visibleFrame];
   auto vf = [wnd.screen frame];
   auto p  = mouseGlobalPos(to, wnd);
   p = [wnd convertPointToScreen:p];

@@ -63,9 +63,9 @@ struct MtSwapchain::Impl {
     }
   };
 
-static float backingScaleFactor() {
+static float backingScaleFactor(SysWindow* w) {
 #if defined(__OSX__)
-  return [NSScreen mainScreen].backingScaleFactor;
+  return [w screen].backingScaleFactor;
 #elif defined(__IOS__)
   return [UIScreen mainScreen].scale;
 #endif
@@ -110,7 +110,7 @@ MtSwapchain::MtSwapchain(MtDevice& dev, SystemApi::Window *w)
 #endif
 
   CAMetalLayer* lay = pimpl->metalLayer();
-  const float dpi = backingScaleFactor();
+  const float dpi = backingScaleFactor(pimpl->wnd);
     
   lay.device = id<MTLDevice>(dev.impl.get());
     
@@ -136,11 +136,9 @@ void MtSwapchain::reset() {
   // https://developer.apple.com/documentation/quartzcore/cametallayer?language=objc
   CAMetalLayer* lay = pimpl->metalLayer();
   auto wrect = windowRect(pimpl->wnd);
-  auto lrect = lay.frame;
-  if(wrect.size.width!=lrect.size.width || wrect.size.height!=lrect.size.height) {
-    lay.drawableSize = wrect.size;
-    sz = {int(wrect.size.width), int(wrect.size.height)};
-    }
+  // auto lrect = lay.frame;
+  lay.drawableSize = wrect.size;
+  sz       = {int(wrect.size.width), int(wrect.size.height)};
   imgCount = uint32_t(lay.maximumDrawableCount);
 
   @autoreleasepool {
