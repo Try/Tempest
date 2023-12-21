@@ -273,10 +273,12 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev, u
     prop.meshlets.maxGroupSize = prop.compute.maxGroupSize;
     }
 #else
-  if(dev.supportsFamily(MTL::GPUFamilyMetal3)) {
-    //prop.meshlets.taskShader = true;
-    //prop.meshlets.meshShader = true;
-    prop.meshlets.maxGroups = prop.compute.maxGroups;
+  if(dev.supportsFamily(MTL::GPUFamilyMetal3) &&
+     dev.supportsFamily(MTL::GPUFamilyApple7)) {
+    // NOTE: need to disallow MTL::GPUFamilyMac2 - low limits make it usless
+    prop.meshlets.taskShader   = true;
+    prop.meshlets.meshShader   = true;
+    prop.meshlets.maxGroups    = prop.compute.maxGroups;
     prop.meshlets.maxGroupSize = prop.compute.maxGroupSize;
     }
 #endif
