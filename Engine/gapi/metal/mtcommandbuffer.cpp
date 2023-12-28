@@ -126,28 +126,30 @@ void MtCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size
   // nop
   }
 
-void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MTL::RenderPassDescriptor* desc) {
+void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MTL::RenderPassDescriptor* desc) { 
   if(encDraw!=nullptr && e!=E_Draw) {
+    if(isDbgRegion) {
+      encDraw->popDebugGroup();
+      isDbgRegion = false;
+      }
     encDraw->endEncoding();
     encDraw = NsPtr<MTL::RenderCommandEncoder>();
     }
   if(encComp!=nullptr && e!=E_Comp) {
+    if(isDbgRegion) {
+      encComp->popDebugGroup();
+      isDbgRegion = false;
+      }
     encComp->endEncoding();
     encComp = NsPtr<MTL::ComputeCommandEncoder>();
     }
   if(encBlit!=nullptr && e!=E_Blit) {
+    if(isDbgRegion) {
+      encBlit->popDebugGroup();
+      isDbgRegion = false;
+      }
     encBlit->endEncoding();
     encBlit = NsPtr<MTL::BlitCommandEncoder>();
-    }
-
-  if(isDbgRegion) {
-    if(encDraw!=nullptr)
-      encDraw->popDebugGroup();
-    if(encComp!=nullptr)
-      encComp->popDebugGroup();
-    if(encBlit!=nullptr)
-      encBlit->popDebugGroup();
-    isDbgRegion = false;
     }
 
   switch(e) {
@@ -156,6 +158,10 @@ void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MTL::RenderPassDesc
       }
     case E_Draw: {
       if(encDraw!=nullptr) {
+        if(isDbgRegion) {
+          encBlit->popDebugGroup();
+          isDbgRegion = false;
+          }
         encDraw->endEncoding();
         encDraw = NsPtr<MTL::RenderCommandEncoder>();
         }
@@ -257,6 +263,8 @@ void MtCommandBuffer::setDebugMarker(std::string_view tag) {
     auto str = NsPtr<NS::String>(NS::String::string(buf,NS::UTF8StringEncoding));
     str->retain();
     enc->pushDebugGroup(str.get());
+    if(enc->label()==nullptr)
+      enc->setLabel(str.get());
     isDbgRegion = true;
     }
   }
@@ -388,27 +396,28 @@ void MtCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u) {
   }
 
 void MtCommandBuffer::implSetAlux(MtDescriptorArray& u) {
+  auto& lay = *curLay;
   uint32_t bufSz[MtShader::MSL_BUFFER_LENGTH_SIZE] = {};
 
   if(u.bufferSizeBuffer!=ShaderReflection::None) {
     if(u.bufferSizeBuffer & ShaderReflection::Task) {
-      u.fillBufferSizeBuffer(bufSz, ShaderReflection::Task);
+      u.fillBufferSizeBuffer(bufSz, ShaderReflection::Task, lay);
       encDraw->setObjectBytes(bufSz, sizeof(bufSz), MtShader::MSL_BUFFER_LENGTH);
       }
     if(u.bufferSizeBuffer & ShaderReflection::Mesh) {
-      u.fillBufferSizeBuffer(bufSz, ShaderReflection::Mesh);
+      u.fillBufferSizeBuffer(bufSz, ShaderReflection::Mesh, lay);
       encDraw->setMeshBytes(bufSz, sizeof(bufSz), MtShader::MSL_BUFFER_LENGTH);
       }
     if(u.bufferSizeBuffer & ShaderReflection::Vertex) {
-      u.fillBufferSizeBuffer(bufSz, ShaderReflection::Vertex);
+      u.fillBufferSizeBuffer(bufSz, ShaderReflection::Vertex, lay);
       encDraw->setVertexBytes(bufSz, sizeof(bufSz), MtShader::MSL_BUFFER_LENGTH);
       }
     if(u.bufferSizeBuffer & ShaderReflection::Fragment) {
-      u.fillBufferSizeBuffer(bufSz, ShaderReflection::Fragment);
+      u.fillBufferSizeBuffer(bufSz, ShaderReflection::Fragment, lay);
       encDraw->setFragmentBytes(bufSz, sizeof(bufSz), MtShader::MSL_BUFFER_LENGTH);
       }
     if(u.bufferSizeBuffer & ShaderReflection::Compute) {
-      u.fillBufferSizeBuffer(bufSz, ShaderReflection::Compute);
+      u.fillBufferSizeBuffer(bufSz, ShaderReflection::Compute, lay);
       encComp->setBytes(bufSz, sizeof(bufSz), MtShader::MSL_BUFFER_LENGTH);
       }
     }
