@@ -104,9 +104,9 @@ void MtDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** buf, size_t
   d.argsBuf.update(addr.get(), 0, cnt*sizeof(spvBufferDescriptor));
   }
 
-void MtDescriptorArray::fillBufferSizeBuffer(uint32_t* ret, ShaderReflection::Stage stage) {
-  auto& lx  = lay.handler->lay;
-  auto& mtl = lay.handler->bind;
+void MtDescriptorArray::fillBufferSizeBuffer(uint32_t* ret, ShaderReflection::Stage stage, const MtPipelineLay& lay) {
+  auto& lx  = lay.lay;
+  auto& mtl = lay.bind;
   for(size_t i=0; i<lx.size(); ++i) {
     if(lx[i].cls==ShaderReflection::SsboR ||
        lx[i].cls==ShaderReflection::SsboRW) {

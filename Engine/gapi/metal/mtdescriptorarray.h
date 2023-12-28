@@ -26,7 +26,7 @@ class MtDescriptorArray : public AbstractGraphicsApi::Desc {
     void set    (size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler& smp, uint32_t mipLevel) override;
     void set    (size_t id, AbstractGraphicsApi::Buffer**  buf, size_t cnt) override;
 
-    void fillBufferSizeBuffer(uint32_t* ret, ShaderReflection::Stage stage);
+    void fillBufferSizeBuffer(uint32_t* ret, ShaderReflection::Stage stage, const MtPipelineLay& lay);
     void useResource(MTL::ComputeCommandEncoder& cmd);
     void useResource(MTL::RenderCommandEncoder&  cmd);
 
