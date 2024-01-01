@@ -178,11 +178,28 @@ void VMeshletHelper::taskEpiloguePass(VkCommandBuffer impl, uint32_t meshCallsCo
   barrier(impl, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
           VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
           VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
-  vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,taskPostPass.handler->impl);
-  vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_COMPUTE, taskPostPass.handler->pipelineLayout,
+  vkCmdBindPipeline(impl, VK_PIPELINE_BIND_POINT_COMPUTE, taskPostPass.handler->impl);
+  vkCmdBindDescriptorSets(impl, VK_PIPELINE_BIND_POINT_COMPUTE, taskPostPass.handler->pipelineLayout,
                           0, 1,&compSet, 0,nullptr);
   vkCmdPushConstants(impl,taskPostPass.handler->pipelineLayout,VK_SHADER_STAGE_COMPUTE_BIT,0,sizeof(push),&push);
   vkCmdDispatch(impl, 1,1,1);
+
+  // lut pass
+  barrier(impl,
+          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+  vkCmdBindPipeline(impl, VK_PIPELINE_BIND_POINT_COMPUTE, taskLutPass.handler->impl);
+  vkCmdBindDescriptorSets(impl, VK_PIPELINE_BIND_POINT_COMPUTE, taskLutPass.handler->pipelineLayout,
+                          0, 1,&compSet, 0,nullptr);
+  vkCmdDispatch(impl, 1024,1,1); // persistent(almost) threads
+
+  // ready for mesh
+  barrier(impl,
+          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
+          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,
+          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_INDIRECT_COMMAND_READ_BIT);
   }
 
 void VMeshletHelper::sortPass(VkCommandBuffer impl, uint32_t meshCallsCount) {
@@ -420,6 +437,10 @@ void VMeshletHelper::initShaders(VDevice& device) {
   auto taskPostPassCs = DSharedPtr<VShader*>(new VShader(device,task_post_pass_comp_sprv,sizeof(task_post_pass_comp_sprv)));
   taskPostPassLay  = DSharedPtr<VPipelineLay*> (new VPipelineLay (device,&taskPostPassCs.handler->lay));
   taskPostPass     = DSharedPtr<VCompPipeline*>(new VCompPipeline(device,*taskPostPassLay.handler,*taskPostPassCs.handler));
+
+  auto taskLutPassCs = DSharedPtr<VShader*>(new VShader(device,task_lut_pass_comp_sprv,sizeof(task_lut_pass_comp_sprv)));
+  taskLutPassLay  = DSharedPtr<VPipelineLay*> (new VPipelineLay (device,&taskLutPassCs.handler->lay));
+  taskLutPass     = DSharedPtr<VCompPipeline*>(new VCompPipeline(device,*taskLutPassLay.handler,*taskLutPassCs.handler));
 
   auto prefixSumCs = DSharedPtr<VShader*>(new VShader(device,mesh_prefix_pass_comp_sprv,sizeof(mesh_prefix_pass_comp_sprv)));
   prefixSumLay  = DSharedPtr<VPipelineLay*> (new VPipelineLay (device,&prefixSumCs.handler->lay));

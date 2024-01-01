@@ -369,19 +369,18 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
     vkGetPhysicalDeviceFeatures2  (physicalDevice, &features);
     vkGetPhysicalDeviceProperties2(physicalDevice, &properties);
 
-    props.hasSync2                  = (sync2.synchronization2==VK_TRUE);
-    props.hasDynRendering           = (dynRendering.dynamicRendering==VK_TRUE);
-    props.hasDeviceAddress          = (bdaFeatures.bufferDeviceAddress==VK_TRUE);
-    props.raytracing.rayQuery       = (rayQueryFeatures.rayQuery==VK_TRUE);
-    props.meshlets.taskShader       = (meshFeatures.taskShader==VK_TRUE);
-    props.meshlets.meshShader       = (meshFeatures.meshShader==VK_TRUE);
-    // props.meshlets.meshShader       = false;
-    props.meshlets.maxGroups.x      = meshProperties.maxMeshWorkGroupCount[0];
-    props.meshlets.maxGroups.y      = meshProperties.maxMeshWorkGroupCount[1];
-    props.meshlets.maxGroups.z      = meshProperties.maxMeshWorkGroupCount[2];
-    props.meshlets.maxGroupSize.x   = meshProperties.maxMeshWorkGroupSize[0];
-    props.meshlets.maxGroupSize.y   = meshProperties.maxMeshWorkGroupSize[1];
-    props.meshlets.maxGroupSize.z   = meshProperties.maxMeshWorkGroupSize[2];
+    props.hasSync2                = (sync2.synchronization2==VK_TRUE);
+    props.hasDynRendering         = (dynRendering.dynamicRendering==VK_TRUE);
+    props.hasDeviceAddress        = (bdaFeatures.bufferDeviceAddress==VK_TRUE);
+    props.raytracing.rayQuery     = (rayQueryFeatures.rayQuery==VK_TRUE);
+    props.meshlets.taskShader     = (meshFeatures.taskShader==VK_TRUE);
+    props.meshlets.meshShader     = (meshFeatures.meshShader==VK_TRUE);
+    props.meshlets.maxGroups.x    = meshProperties.maxMeshWorkGroupCount[0];
+    props.meshlets.maxGroups.y    = meshProperties.maxMeshWorkGroupCount[1];
+    props.meshlets.maxGroups.z    = meshProperties.maxMeshWorkGroupCount[2];
+    props.meshlets.maxGroupSize.x = meshProperties.maxMeshWorkGroupSize[0];
+    props.meshlets.maxGroupSize.y = meshProperties.maxMeshWorkGroupSize[1];
+    props.meshlets.maxGroupSize.z = meshProperties.maxMeshWorkGroupSize[2];
 
     props.accelerationStructureScratchOffsetAlignment = asProperties.minAccelerationStructureScratchOffsetAlignment;
 

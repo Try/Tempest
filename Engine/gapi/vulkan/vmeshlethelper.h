@@ -96,6 +96,9 @@ class VMeshletHelper {
     DSharedPtr<VPipelineLay*>  taskPostPassLay;
     DSharedPtr<VCompPipeline*> taskPostPass;
 
+    DSharedPtr<VPipelineLay*>  taskLutPassLay;
+    DSharedPtr<VCompPipeline*> taskLutPass;
+
     DSharedPtr<VPipelineLay*>  prefixSumLay;
     DSharedPtr<VCompPipeline*> prefixSum;
 

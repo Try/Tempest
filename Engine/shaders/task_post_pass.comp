@@ -14,13 +14,13 @@ struct Descriptor
 struct DrawIndexedIndirectCommand
 {
   uint drawId;
-  uint indexCountSrc;
+  uint meshCountSrc;
   uint dispatchX;
   uint dispatchY;
   uint dispatchZ;
   int  vertexOffset;
-  uint firstInstance;
-  uint padding0;
+  uint lutIterator;
+  uint lutPtr;
 };
 
 layout(binding = 0, std430) restrict buffer EngineInternal0
@@ -57,13 +57,13 @@ void main() {
   [[loop]]
   for(uint i=b; i<e; ++i) {
     uint idx = i*indirectRate;
-    uint src = indirect[idx].indexCountSrc;
+    uint src = indirect[idx].meshCountSrc;
 
-    indirect[idx].indexCountSrc  = 0;
-    indirect[idx].dispatchX      = src;
-    indirect[idx].dispatchY      = 1;
-    indirect[idx].dispatchZ      = 1;
+    indirect[idx].meshCountSrc = 0;
+    indirect[idx].dispatchX    = src;
+    indirect[idx].dispatchY    = 1;
+    indirect[idx].dispatchZ    = 1;
+    indirect[idx].lutPtr       = atomicAdd(var.grow, src);
     }
-
   // mesh.meshletCnt = mesh.taskletCnt;
   }

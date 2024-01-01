@@ -20,7 +20,7 @@ struct DrawIndexedIndirectCommand
   uint firstIndex;    // prefix sum
   int  vertexOffset;  // can be abused to offset into var_buffer
   uint firstInstance; // caps: should be zero
-  uint padding0;
+  uint lutPtr;
 };
 
 layout(binding = 0, std430) restrict buffer EngineInternal0
@@ -41,16 +41,21 @@ layout(binding = 2, std430) restrict buffer EngineInternal2
   uint heap[];
 } var;
 
-shared uint partialSummIbo[gl_WorkGroupSize.x];
-
 layout(push_constant, std430) uniform UboPush {
   uint indirectRate;
   uint indirectCmdCount;
   };
 
 void main() {
-  uint index = gl_LocalInvocationID.x;
+  uint index = gl_GlobalInvocationID.x;
   if(index>=indirect.length())
     return;
-  indirect[index].drawId = index/indirectRate;
+  indirect[index].drawId        = index/indirectRate;
+  indirect[index].indexCountSrc = 0;
+  indirect[index].indexCount    = 0;
+  indirect[index].instanceCount = 0;
+  indirect[index].firstIndex    = 0;
+  indirect[index].vertexOffset  = 0;
+  indirect[index].firstInstance = 0;
+  indirect[index].lutPtr        = 0;
   }

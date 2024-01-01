@@ -122,20 +122,20 @@ void Game::render(){
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{swapchain[swapchain.currentImage()],Vec4(0),Tempest::Preserve}}, {zbuffer, 1.f, Tempest::Preserve});
       enc.setUniforms(pso,desc,&push,sizeof(push));
+
       /*
       enc.setViewport(0,0,256,256);
       if(useVertex) {
         enc.draw(mesh.vbo, mesh.ibo);
         } else {
-        enc.dispatchMesh(mesh.meshletCount);
+        enc.dispatchMeshThreads(mesh.meshletCount);
         }
       enc.setViewport(256,0,256,256);
       */
       if(useVertex) {
         enc.draw(mesh.vbo, mesh.ibo);
         } else {
-        enc.dispatchMesh(mesh.meshletCount);
-        // enc.dispatchMeshThreads(mesh.meshletCount);
+        enc.dispatchMeshThreads(mesh.meshletCount);
         }
 
       enc.setViewport(0,0,w(),h());
@@ -188,7 +188,7 @@ void Game::onShaderType(size_t type) {
     auto mesh = device.shader(sh.data, sh.len);
     sh        = AppShader::get("shader.frag.sprv");
     auto frag = device.shader(sh.data, sh.len);
-    pso = device.pipeline(Topology::Triangles, rs, /*task,*/ mesh, frag);
+    pso = device.pipeline(Topology::Triangles, rs, task, mesh, frag);
     }
 
   desc = device.descriptors(pso);

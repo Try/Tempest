@@ -20,7 +20,7 @@ struct DrawIndexedIndirectCommand
   uint firstIndex;    // prefix sum
   int  vertexOffset;  // can be abused to offset into var_buffer
   uint firstInstance; // caps: should be zero
-  uint padding0;
+  uint lutPtr;
 };
 
 layout(binding = 0, std430) restrict buffer EngineInternal0
@@ -88,7 +88,7 @@ void main() {
     indirect[idx].firstIndex    = firstIndex;
     indirect[idx].vertexOffset  = 0;
     indirect[idx].firstInstance = 0;
-    indirect[idx].padding0      = 0;
+    indirect[idx].lutPtr        = 0;
     }
 
   barrier();

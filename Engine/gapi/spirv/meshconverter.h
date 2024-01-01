@@ -72,6 +72,8 @@ class MeshConverter {
   uint32_t taskPayload                    = 0;
   uint32_t taskPayloadType                = 0;
 
+  uint32_t usr_WorkGroupID                = 0;
+
   uint32_t vIndirectCmd                   = 0;
   uint32_t vDecriptors                    = 0;
   uint32_t vScratch                       = 0;
@@ -93,4 +95,7 @@ class MeshConverter {
   uint32_t                              mIter  = 0;
   uint32_t                              mDesc  = 0;
   uint32_t                              mVar   = 0;
+
+  bool                                  remapWg = false;
   };
+

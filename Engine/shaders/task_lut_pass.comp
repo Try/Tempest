@@ -8,19 +8,19 @@ struct Descriptor
 {
   uint drawId;
   uint ptr;
-  uint indSz;
+  uint dispatchSz;
 };
 
 struct DrawIndexedIndirectCommand
 {
   uint drawId;
-  uint indexCountSrc;
-  uint indexCount;
-  uint instanceCount;
-  uint firstIndex;    // prefix sum
-  int  vertexOffset;  // can be abused to offset into var_buffer
-  uint firstInstance; // caps: should be zero
-  uint padding0;
+  uint meshCountSrc;
+  uint dispatchX;
+  uint dispatchY;
+  uint dispatchZ;
+  int  vertexOffset;
+  uint lutIterator;
+  uint lutPtr;
 };
 
 layout(binding = 0, std430) restrict buffer EngineInternal0
@@ -48,11 +48,11 @@ layout(push_constant, std430) uniform UboPush {
   };
 
 shared uint workId;
-shared uint iboOffset;
+shared uint lutOffset;
 
 void main() {
-  const uint first = 0; //mesh.taskletCnt;
-  const uint total = mesh.meshletCnt;
+  const uint first = 0;
+  const uint total = mesh.taskletCnt;
 
   while(true) {
     [[branch]]
@@ -67,14 +67,16 @@ void main() {
 
     const Descriptor d = mesh.desc[at+first];
     if(gl_LocalInvocationIndex==0) {
-      uint idx = d.drawId*indirectRate;
-      iboOffset = atomicAdd(indirect[idx].indexCount, d.indSz) + indirect[idx].firstIndex;
+      uint idx      = d.drawId*indirectRate;
+      uint meshlets = atomicAdd(indirect[idx].lutIterator, d.dispatchSz);
+      lutOffset     = meshlets + indirect[idx].lutPtr;
       }
     barrier();
 
     [[loop]]
-    for(uint i=gl_LocalInvocationIndex; i<d.indSz; i+=gl_WorkGroupSize.x) {
-      var.heap[iboOffset+i] = var.heap[d.ptr+i];
+    for(uint i=gl_LocalInvocationIndex; i<d.dispatchSz; i+=gl_WorkGroupSize.x) {
+      const uint usrWorkGroup = d.ptr!=0 ? i : 0;
+      var.heap[lutOffset+i] = (usrWorkGroup << 16u) | (d.ptr & 0xFFFF);
       }
     }
 
@@ -83,9 +85,7 @@ void main() {
     if(workId+1 == total+maxGroups) {
       // cleanup
       mesh.taskletCnt = 0;
-      mesh.meshletCnt = 0;
       mesh.iterator   = 0;
-      var.grow        = 0;
       }
     }
   }
