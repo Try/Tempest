@@ -14,10 +14,6 @@ class VCompPipeline;
 
 class VMeshletHelper {
   private:
-    struct IndirectCommand {
-      uint32_t indexCount;
-      };
-
     struct DrawIndexedIndirectCommand {
       uint32_t drawId;
       uint32_t indexCountSrc;
@@ -26,7 +22,7 @@ class VMeshletHelper {
       uint32_t firstIndex;    // prefix sum
       int32_t  vertexOffset;  // can be abused to offset into var_buffer
       uint32_t firstInstance; // caps: should be zero
-      uint32_t vboOffset;     // prefix sum
+      uint32_t lutPtr;        // pointer to task-payload
       };
 
   public:
@@ -36,9 +32,7 @@ class VMeshletHelper {
       PipelinewordsCount = 32*1024*1024,
       PipelineMemorySize = PipelinewordsCount*4,
       MeshletsMemorySize = MeshletsMaxCount*3*4,
-
-      IndirectScratchSize = IndirectCmdCount*sizeof(IndirectCommand),
-      IndirectMemorySize  = IndirectCmdCount*sizeof(VkDrawIndexedIndirectCommand),
+      IndirectMemorySize = IndirectCmdCount*sizeof(DrawIndexedIndirectCommand),
       };
     explicit VMeshletHelper(VDevice& dev);
     ~VMeshletHelper();

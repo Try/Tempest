@@ -1074,6 +1074,7 @@ void VMeshCommandBuffer::pushChunk() {
     ch.impl = cbTask;
     chunks.push(ch);
     cbTask = nullptr;
+    taskIndirectId = 0;
     }
   if(cbMesh!=nullptr) {
     auto& ms = *device.meshHelper;
@@ -1084,6 +1085,7 @@ void VMeshCommandBuffer::pushChunk() {
     ch.impl = cbMesh;
     chunks.push(ch);
     cbMesh = nullptr;
+    meshIndirectId = 0;
     }
   VCommandBuffer::pushChunk();
   }
@@ -1095,11 +1097,6 @@ void VMeshCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
     return;
 
   auto& ms = *device.meshHelper;
-
-  if(cbTask==VK_NULL_HANDLE && cbMesh==VK_NULL_HANDLE) {
-    taskIndirectId = 0;
-    meshIndirectId = 0;
-    }
 
   if(cbTask==VK_NULL_HANDLE && px.taskPipeline()!=VK_NULL_HANDLE) {
     VkCommandBufferAllocateInfo allocInfo = {};

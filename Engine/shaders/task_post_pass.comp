@@ -48,6 +48,11 @@ layout(push_constant, std430) uniform UboPush {
   };
 
 void main() {
+  if(var.grow==0) {
+    var.grow = 1; // zero is reserved as null-value
+    }
+  barrier();
+
   uint index = gl_LocalInvocationID.x;
   uint len   = indirectCmdCount;
 

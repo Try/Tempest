@@ -78,7 +78,7 @@ void main() {
   for(uint i=b; i<e; ++i) {
     uint idx        = i*indirectRate;
     uint indexCount = indirect[idx].indexCountSrc;
-    uint firstIndex = grow + prefixIbo;
+    uint firstIndex = indexCount>0 ? grow + prefixIbo : 0;
     uint inst       = indexCount>0 ? 1 : 0;
 
     prefixIbo += indexCount;

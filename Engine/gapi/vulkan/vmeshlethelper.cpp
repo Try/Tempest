@@ -56,7 +56,7 @@ VMeshletHelper::VMeshletHelper(VDevice& dev) : dev(dev) {
       uint32_t indirectRate;
       uint32_t indirectCmdCount;
       } push;
-    push.indirectRate     = 2;
+    push.indirectRate     = indirectRate;
     push.indirectCmdCount = 0;
 
     auto c = dev.dataMgr().get();
@@ -126,7 +126,7 @@ void VMeshletHelper::bindVS(VkCommandBuffer impl, VkPipelineLayout lay) {
   }
 
 void VMeshletHelper::drawIndirect(VkCommandBuffer impl, uint32_t drawId) {
-  assert(drawId<IndirectCmdCount);
+  assert(drawId*indirectRate < IndirectCmdCount);
   uint32_t off = drawId*indirectOffset + 2*sizeof(uint32_t);
   vkCmdDrawIndexedIndirect(impl, indirect.impl, off, 1, 0);
   }
@@ -171,10 +171,10 @@ void VMeshletHelper::taskEpiloguePass(VkCommandBuffer impl, uint32_t meshCallsCo
     uint32_t indirectRate;
     uint32_t indirectCmdCount;
     } push;
-  push.indirectRate     = 2;
+  push.indirectRate     = indirectRate;
   push.indirectCmdCount = meshCallsCount;
 
-  // prefix summ pass
+  // post-process pass
   barrier(impl, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
           VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
           VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
@@ -211,7 +211,7 @@ void VMeshletHelper::sortPass(VkCommandBuffer impl, uint32_t meshCallsCount) {
     uint32_t indirectRate;
     uint32_t indirectCmdCount;
     } push;
-  push.indirectRate     = 2;
+  push.indirectRate     = indirectRate;
   push.indirectCmdCount = meshCallsCount;
 
   // prefix summ pass

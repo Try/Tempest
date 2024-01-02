@@ -65,9 +65,13 @@ void main() {
     if(at>=total)
       break;
 
-    const Descriptor d = mesh.desc[at+first];
+    const Descriptor d   = mesh.desc[at+first];
+    const uint       idx = d.drawId*indirectRate;
+    if(indirect[idx].lutPtr==0) {
+      continue;
+      }
+
     if(gl_LocalInvocationIndex==0) {
-      uint idx      = d.drawId*indirectRate;
       uint meshlets = atomicAdd(indirect[idx].lutIterator, d.dispatchSz);
       lutOffset     = meshlets + indirect[idx].lutPtr;
       }
@@ -75,8 +79,8 @@ void main() {
 
     [[loop]]
     for(uint i=gl_LocalInvocationIndex; i<d.dispatchSz; i+=gl_WorkGroupSize.x) {
-      const uint usrWorkGroup = d.ptr!=0 ? i : 0;
-      var.heap[lutOffset+i] = (usrWorkGroup << 16u) | (d.ptr & 0xFFFF);
+      const uint usrWorkGroup = i;
+      var.heap[lutOffset+i] = (usrWorkGroup << 20u) | (d.ptr & 0xFFFFF);
       }
     }
 

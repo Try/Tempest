@@ -1131,11 +1131,11 @@ void MeshConverter::emitPayoadLoad(libspirv::MutableBytecode& comp, uint32_t eng
     });
 
   // Constants
-  const uint32_t const0    = constants[0];
-  const uint32_t const1    = constants[1];
-  const uint32_t const7    = constants[7];
-  const uint32_t const16   = comp.OpConstant(fn, uint_t, 16);
-  const uint32_t constFFFF = comp.OpConstant(fn, uint_t, 0xFFFF);
+  const uint32_t const0     = constants[0];
+  const uint32_t const1     = constants[1];
+  const uint32_t const7     = constants[7];
+  const uint32_t const20    = comp.OpConstant(fn, uint_t, 20);
+  const uint32_t constFFFFF = comp.OpConstant(fn, uint_t, 0xFFFFF);
 
   // Function
   fn = comp.end();
@@ -1187,13 +1187,13 @@ void MeshConverter::emitPayoadLoad(libspirv::MutableBytecode& comp, uint32_t eng
   uint32_t rAt = comp.fetchAddBound();
   {
     // firstTask_lutPtr
-    fn.insert(spv::OpBitwiseAnd, {uint_t, rAt, firstTask_lutPtr, constFFFF});
+    fn.insert(spv::OpBitwiseAnd, {uint_t, rAt, firstTask_lutPtr, constFFFFF});
   }
 
   if(usr_WorkGroupID!=0) {
     // firstTask_lutPtr
     uint32_t rWg0 = comp.fetchAddBound();
-    fn.insert(spv::OpShiftRightLogical, {uint_t, rWg0, firstTask_lutPtr, const16});
+    fn.insert(spv::OpShiftRightLogical, {uint_t, rWg0, firstTask_lutPtr, const20});
 
     const uint32_t ptrWgId = comp.fetchAddBound();
     fn.insert(spv::OpAccessChain, {_ptr_Input_uint, ptrWgId, gl_WorkGroupID, const0});
