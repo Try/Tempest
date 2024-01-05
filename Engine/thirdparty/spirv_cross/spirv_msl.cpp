@@ -191,13 +191,19 @@ bool CompilerMSL::is_msl_resource_binding_used(ExecutionModel model, uint32_t de
 
 bool CompilerMSL::is_var_runtime_size_array(const SPIRVariable &var) const
 {
-	return is_runtime_size_array(get_variable_data_type(var)) && get_resource_array_size(var.self) == 0;
+	auto& type = get_variable_data_type(var);
+	return is_runtime_size_array(type) && get_resource_array_size(type, var.self) == 0;
 }
 
-// Returns the size of the array of resources used by the variable with the specified id.
-// The returned value is retrieved from the resource binding added using add_msl_resource_binding().
-uint32_t CompilerMSL::get_resource_array_size(uint32_t id) const
+// Returns the size of the array of resources used by the variable with the specified type and id.
+// The size is first retrieved from the type, but in the case of runtime array sizing,
+// the size is retrieved from the resource binding added using add_msl_resource_binding().
+uint32_t CompilerMSL::get_resource_array_size(const SPIRType &type, uint32_t id) const
 {
+	uint32_t array_size = to_array_size_literal(type);
+	if (array_size) 
+		return array_size;
+
 	StageSetBinding tuple = { get_entry_point().model, get_decoration(id, DecorationDescriptorSet),
 		                      get_decoration(id, DecorationBinding) };
 	auto itr = resource_bindings.find(tuple);
@@ -1436,7 +1442,8 @@ void CompilerMSL::emit_entry_point_declarations()
 			statement(get_argument_address_space(var), " ", type_to_glsl(buffer_type), "* ",
 			          to_restrict(var.self, true), name, "[] =");
 			begin_scope();
-			for (uint32_t i = 0; i < to_array_size_literal(type); ++i)
+			uint32_t array_size = get_resource_array_size(type, var.self);
+			for (uint32_t i = 0; i < array_size; ++i)
 				statement(name, "_", i, ",");
 			end_scope_decl();
 			statement_no_indent("");
@@ -12741,7 +12748,7 @@ string CompilerMSL::member_attribute_qualifier(const SPIRType &type, uint32_t in
 		}
 	}
 
-	// Mesh function inputs
+	// Mesh function outputs
 	if (execution.model == ExecutionModelMeshEXT)
 	{
 		if (is_builtin)
@@ -12770,9 +12777,40 @@ string CompilerMSL::member_attribute_qualifier(const SPIRType &type, uint32_t in
 			}
 		}
 
-		string loc_qual = member_location_attribute_qualifier(type, index);
-		if (!loc_qual.empty())
-			return join(" [[", loc_qual, "]]");
+		string quals;
+		quals = member_location_attribute_qualifier(type, index);
+		if (has_member_decoration(type.self, index, DecorationFlat))
+		{
+			if (!quals.empty())
+				quals += ", ";
+			quals += "flat";
+		}
+		else if (has_member_decoration(type.self, index, DecorationCentroid))
+		{
+			if (!quals.empty())
+				quals += ", ";
+			if (has_member_decoration(type.self, index, DecorationNoPerspective))
+				quals += "centroid_no_perspective";
+			else
+				quals += "centroid_perspective";
+		}
+		else if (has_member_decoration(type.self, index, DecorationSample))
+		{
+			if (!quals.empty())
+				quals += ", ";
+			if (has_member_decoration(type.self, index, DecorationNoPerspective))
+				quals += "sample_no_perspective";
+			else
+				quals += "sample_perspective";
+		}
+		else if (has_member_decoration(type.self, index, DecorationNoPerspective))
+		{
+			if (!quals.empty())
+				quals += ", ";
+			quals += "center_no_perspective";
+		}
+		if (!quals.empty())
+			return join(" [[", quals, "]]");
 		return "";
 	}
 
@@ -13758,11 +13796,6 @@ void CompilerMSL::entry_point_args_discrete_descriptors(string &ep_args)
 				if (type.array.size() > 1)
 					SPIRV_CROSS_THROW("Arrays of arrays of buffers are not supported.");
 
-				// Metal doesn't directly support this, so we must expand the
-				// array. We'll declare a local array to hold these elements
-				// later.
-				uint32_t array_size = to_array_size_literal(type);
-
 				is_using_builtin_array = true;
 				if (is_var_runtime_size_array(var))
 				{
@@ -13790,6 +13823,7 @@ void CompilerMSL::entry_point_args_discrete_descriptors(string &ep_args)
 				}
 				else
 				{
+					uint32_t array_size = get_resource_array_size(type, var_id);
 					for (uint32_t i = 0; i < array_size; ++i)
 					{
 						if (!ep_args.empty())
@@ -15771,10 +15805,7 @@ std::string CompilerMSL::sampler_type(const SPIRType &type, uint32_t id)
 
 		// Arrays of samplers in MSL must be declared with a special array<T, N> syntax ala C++11 std::array.
 		// If we have a runtime array, it could be a variable-count descriptor set binding.
-		uint32_t array_size = to_array_size_literal(type);
-		if (array_size == 0)
-			array_size = get_resource_array_size(id);
-
+		uint32_t array_size = get_resource_array_size(type, id);
 		if (array_size == 0)
 		{
 			add_spv_func_and_recompile(SPVFuncImplVariableDescriptor);
@@ -15824,10 +15855,7 @@ string CompilerMSL::image_type_glsl(const SPIRType &type, uint32_t id)
 
 		// Arrays of images in MSL must be declared with a special array<T, N> syntax ala C++11 std::array.
 		// If we have a runtime array, it could be a variable-count descriptor set binding.
-		uint32_t array_size = to_array_size_literal(type);
-		if (array_size == 0)
-			array_size = get_resource_array_size(id);
-
+		uint32_t array_size = get_resource_array_size(type, id);
 		if (array_size == 0)
 		{
 			add_spv_func_and_recompile(SPVFuncImplVariableDescriptor);
@@ -18768,11 +18796,10 @@ void CompilerMSL::emit_mesh_entry_point()
 
 void CompilerMSL::emit_mesh_tasks(SPIRBlock &block)
 {
+	// GLSL: Once this instruction is called, the workgroup must be terminated immediately, and the mesh shaders are launched.
+	// TODO: find relieble and clean of terminating shader.
 	statement("spvMpg.set_threadgroups_per_grid(uint3(", to_unpacked_expression(block.mesh.groups[0]), ", ",
 	          to_unpacked_expression(block.mesh.groups[1]), ", ", to_unpacked_expression(block.mesh.groups[2]), "));");
-	// GLSL: Once this instruction is called, the workgroup is terminated immediately, and the mesh shaders are launched.
-	// TODO: better way (relieble) of terminating shader.
-	statement("return;");
 }
 
 string CompilerMSL::additional_fixed_sample_mask_str() const
