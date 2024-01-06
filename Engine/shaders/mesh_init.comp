@@ -30,8 +30,9 @@ layout(binding = 0, std430) restrict buffer EngineInternal0
 
 layout(binding = 1, std430) restrict buffer EngineInternal1
 {
+  uint       taskletCnt;
+  uint       meshletCnt;
   uint       grow;
-  uint       grow2;
   Descriptor desc[];
 } mesh;
 
@@ -58,4 +59,12 @@ void main() {
   indirect[index].vertexOffset  = 0;
   indirect[index].firstInstance = 0;
   indirect[index].lutPtr        = 0;
+
+  if(index==0) {
+    mesh.taskletCnt = 0;
+    mesh.meshletCnt = 0;
+    mesh.grow       = 0;
+
+    var.grow        = 0;
+    }
   }

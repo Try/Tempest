@@ -1067,7 +1067,14 @@ void VCommandBuffer::addDependency(VSwapchain& s, size_t imgId) {
 void VMeshCommandBuffer::pushChunk() {
   if(cbTask!=nullptr) {
     auto& ms = *device.meshHelper;
+    device.vkCmdDebugMarkerEnd(cbTask);
+
+    VkDebugMarkerMarkerInfoEXT info = {};
+    info.sType       = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
+    info.pMarkerName = "task-shader-lut";
+    device.vkCmdDebugMarkerBegin(cbTask, &info);
     ms.taskEpiloguePass(cbTask,uint32_t(meshIndirectId));
+    device.vkCmdDebugMarkerEnd(cbTask);
 
     vkAssert(vkEndCommandBuffer(cbTask));
     Chunk ch;
@@ -1078,7 +1085,14 @@ void VMeshCommandBuffer::pushChunk() {
     }
   if(cbMesh!=nullptr) {
     auto& ms = *device.meshHelper;
+    device.vkCmdDebugMarkerEnd(cbMesh);
+
+    VkDebugMarkerMarkerInfoEXT info = {};
+    info.sType       = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
+    info.pMarkerName = "mesh-shader-sort";
+    device.vkCmdDebugMarkerBegin(cbMesh, &info);
     ms.sortPass(cbMesh,uint32_t(meshIndirectId));
+    device.vkCmdDebugMarkerEnd(cbMesh);
 
     vkAssert(vkEndCommandBuffer(cbMesh));
     Chunk ch;
@@ -1111,6 +1125,11 @@ void VMeshCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
     beginInfo.flags            = 0;
     beginInfo.pInheritanceInfo = nullptr;
     vkAssert(vkBeginCommandBuffer(cbTask,&beginInfo));
+
+    VkDebugMarkerMarkerInfoEXT info = {};
+    info.sType       = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
+    info.pMarkerName = "task-shader-emulated";
+    device.vkCmdDebugMarkerBegin(cbTask, &info);
     }
 
   if(cbMesh==VK_NULL_HANDLE) {
@@ -1126,6 +1145,11 @@ void VMeshCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
     beginInfo.flags            = 0;
     beginInfo.pInheritanceInfo = nullptr;
     vkAssert(vkBeginCommandBuffer(cbMesh,&beginInfo));
+
+    VkDebugMarkerMarkerInfoEXT info = {};
+    info.sType       = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
+    info.pMarkerName = "mesh-shader-emulated";
+    device.vkCmdDebugMarkerBegin(cbMesh, &info);
     }
 
   if(meshIndirectId==0)

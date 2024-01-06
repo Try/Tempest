@@ -418,6 +418,15 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     vkCmdDebugMarkerBegin = PFN_vkCmdDebugMarkerBeginEXT(vkGetDeviceProcAddr(device.impl,"vkCmdDebugMarkerBeginEXT"));
     vkCmdDebugMarkerEnd   = PFN_vkCmdDebugMarkerEndEXT  (vkGetDeviceProcAddr(device.impl,"vkCmdDebugMarkerEndEXT"));
     }
+
+  if(vkCmdDebugMarkerBegin==nullptr || vkCmdDebugMarkerEnd==nullptr) {
+    struct Dummy {
+      static void vkCmdDebugMarkerBegin(VkCommandBuffer, const VkDebugMarkerMarkerInfoEXT*){}
+      static void vkCmdDebugMarkerEnd(VkCommandBuffer){}
+      };
+    vkCmdDebugMarkerBegin = Dummy::vkCmdDebugMarkerBegin;
+    vkCmdDebugMarkerEnd   = Dummy::vkCmdDebugMarkerEnd;
+    }
   }
 
 VDevice::MemIndex VDevice::memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const {

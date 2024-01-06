@@ -85,7 +85,7 @@ void main() {
       mesh.taskletCnt = 0;
       mesh.meshletCnt = 0;
       mesh.iterator   = 0;
-      var.grow        = 0;
+      var.grow        = 1;
       }
     }
   }

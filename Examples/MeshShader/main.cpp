@@ -8,17 +8,17 @@
 
 #include "game.h"
 
-std::unique_ptr<Tempest::AbstractGraphicsApi> mkApi(const char* av) {
+std::unique_ptr<Tempest::AbstractGraphicsApi> mkApi(const char* av, Tempest::ApiFlags flags) {
 #if defined(__WINDOWS__) && defined(_MSC_VER)
   if(std::strcmp(av,"-dx12")==0)
-    return std::unique_ptr<Tempest::AbstractGraphicsApi>(new Tempest::DirectX12Api{Tempest::ApiFlags::Validation});
+    return std::unique_ptr<Tempest::AbstractGraphicsApi>(new Tempest::DirectX12Api{flags});
 #endif
 #if defined(__OSX__)
   (void)av;
-  return std::unique_ptr<Tempest::AbstractGraphicsApi>(new Tempest::MetalApi{Tempest::ApiFlags::Validation});
+  return std::unique_ptr<Tempest::AbstractGraphicsApi>(new Tempest::MetalApi{flags});
 #else
   (void)av;
-  return std::unique_ptr<Tempest::AbstractGraphicsApi>(new Tempest::VulkanApi{Tempest::ApiFlags::Validation});
+  return std::unique_ptr<Tempest::AbstractGraphicsApi>(new Tempest::VulkanApi{flags});
 #endif
   }
 
@@ -28,7 +28,7 @@ int main(int argc, const char** argv) {
   const bool emulated = false;
 
   const char* msDev = nullptr;
-  auto api = mkApi(argc>1 ? argv[1] : "");
+  auto api = mkApi(argc>1 ? argv[1] : "", Tempest::ApiFlags::Validation);
   auto dev = api->devices();
   for(auto& i:dev)
     if(i.meshlets.meshShader!=emulated && i.meshlets.meshShaderEmulated==emulated) {

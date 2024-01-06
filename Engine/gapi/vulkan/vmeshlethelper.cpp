@@ -30,6 +30,9 @@ VMeshletHelper::VMeshletHelper(VDevice& dev) : dev(dev) {
     indirectOffset = sizeof(DrawIndexedIndirectCommand);
     }
 
+  maxPersistentTask = 256;
+  maxPersistentMesh = 1024;
+
   try {
     initShaders(dev);
 
@@ -62,13 +65,6 @@ VMeshletHelper::VMeshletHelper(VDevice& dev) : dev(dev) {
     auto c = dev.dataMgr().get();
     auto& cmd = reinterpret_cast<VMeshCommandBuffer&>(*c.get());
     cmd.begin();
-    // drawcall-related parts should be set to zeros.
-    vkCmdFillBuffer(cmd.impl, indirect.impl, 0, VK_WHOLE_SIZE, 0);
-    // meshlet counters
-    vkCmdFillBuffer(cmd.impl, meshlets.impl, 0, sizeof(uint32_t)*2, 0);
-    // heap counters
-    vkCmdFillBuffer(cmd.impl, scratch.impl,  0, sizeof(uint32_t)*2, 0);
-
     vkCmdBindPipeline(cmd.impl,VK_PIPELINE_BIND_POINT_COMPUTE,init.handler->impl);
     vkCmdBindDescriptorSets(cmd.impl,VK_PIPELINE_BIND_POINT_COMPUTE, init.handler->pipelineLayout,
                             0, 1,&compSet, 0,nullptr);
@@ -78,7 +74,7 @@ VMeshletHelper::VMeshletHelper(VDevice& dev) : dev(dev) {
     vkCmdDispatch(cmd.impl, (IndirectCmdCount+sz-1)/sz,1,1); // one threadgroup for prefix pass
 
     barrier(cmd.impl,
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
             VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT);
@@ -192,7 +188,7 @@ void VMeshletHelper::taskEpiloguePass(VkCommandBuffer impl, uint32_t meshCallsCo
   vkCmdBindPipeline(impl, VK_PIPELINE_BIND_POINT_COMPUTE, taskLutPass.handler->impl);
   vkCmdBindDescriptorSets(impl, VK_PIPELINE_BIND_POINT_COMPUTE, taskLutPass.handler->pipelineLayout,
                           0, 1,&compSet, 0,nullptr);
-  vkCmdDispatch(impl, 1024,1,1); // persistent(almost) threads
+  vkCmdDispatch(impl, maxPersistentTask,1,1); // persistent(almost) threads
 
   // ready for mesh
   barrier(impl,
@@ -233,7 +229,7 @@ void VMeshletHelper::sortPass(VkCommandBuffer impl, uint32_t meshCallsCount) {
   vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,compactage.handler->impl);
   vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_COMPUTE, compactage.handler->pipelineLayout,
                           0, 1,&compSet, 0,nullptr);
-  vkCmdDispatch(impl, 1024,1,1); // persistent(almost) threads
+  vkCmdDispatch(impl, maxPersistentMesh,1,1); // persistent(almost) threads
 
   // ready for draw
   barrier(impl,

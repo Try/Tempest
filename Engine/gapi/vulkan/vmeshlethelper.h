@@ -81,8 +81,11 @@ class VMeshletHelper {
     VkPipelineLayout           currentTaskLayout = VK_NULL_HANDLE;
     VkPipelineLayout           currentMeshLayout = VK_NULL_HANDLE;
 
-    uint32_t                   indirectRate    = 1;
-    uint32_t                   indirectOffset  = 0;
+    uint32_t                   indirectRate      = 1;
+    uint32_t                   indirectOffset    = 0;
+
+    uint32_t                   maxPersistentTask = 256;
+    uint32_t                   maxPersistentMesh = 1024;
 
     DSharedPtr<VPipelineLay*>  initLay;
     DSharedPtr<VCompPipeline*> init;
