@@ -211,7 +211,7 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
   resDesc.Format             = Detail::nativeFormat(frm);
   resDesc.Width              = w;
   resDesc.Height             = h;
-  resDesc.DepthOrArraySize   = d;
+  resDesc.DepthOrArraySize   = std::max<uint32_t>(d, 1);
   if(isDepthFormat(frm)) {
     state                    = D3D12_RESOURCE_STATE_DEPTH_READ;
     resDesc.Flags            = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
@@ -231,7 +231,7 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
     }
   resDesc.SampleDesc.Count   = 1;
   resDesc.SampleDesc.Quality = 0;
-  resDesc.Dimension          = d<=1 ? D3D12_RESOURCE_DIMENSION_TEXTURE2D : D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+  resDesc.Dimension          = d==0 ? D3D12_RESOURCE_DIMENSION_TEXTURE2D : D3D12_RESOURCE_DIMENSION_TEXTURE3D;
 
   D3D12_HEAP_PROPERTIES heapProp={};
   heapProp.Type                 = D3D12_HEAP_TYPE_DEFAULT;
@@ -260,7 +260,7 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
     }
   const auto nonUniqId  = (imageStore) ?  nextId() : NonUniqResId::I_None;
   const bool filterable = (ds.Support1 & D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE);
-  return DxTexture(std::move(ret),resDesc.Format,nonUniqId,resDesc.MipLevels,UINT(d),filterable);
+  return DxTexture(std::move(ret),resDesc.Format,nonUniqId,resDesc.MipLevels,resDesc.DepthOrArraySize,filterable);
   }
 
 void DxAllocator::free(Allocation& page) {

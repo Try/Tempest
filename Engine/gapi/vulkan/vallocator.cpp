@@ -249,10 +249,10 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t d,
 
   VkImageCreateInfo imageInfo = {};
   imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-  imageInfo.imageType     = d<=1 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
+  imageInfo.imageType     = d==0 ? VK_IMAGE_TYPE_2D : VK_IMAGE_TYPE_3D;
   imageInfo.extent.width  = w;
   imageInfo.extent.height = h;
-  imageInfo.extent.depth  = d;
+  imageInfo.extent.depth  = std::max<uint32_t>(d,1);
   imageInfo.mipLevels     = mip;
   imageInfo.arrayLayers   = 1;
   imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;

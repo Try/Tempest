@@ -187,7 +187,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
                                                        TextureFormat frm) {
   Detail::VDevice* dx = reinterpret_cast<Detail::VDevice*>(d);
   
-  Detail::VTexture buf=dx->allocator.alloc(w,h,1,mipCnt,frm,false);
+  Detail::VTexture buf=dx->allocator.alloc(w,h,0,mipCnt,frm,false);
   Detail::DSharedPtr<Detail::VTexture*> pbuf(new Detail::VTextureWithFbo(std::move(buf)));
 
   return PTexture(pbuf.handler);
@@ -198,7 +198,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createStorage(Device* d,
                                                        TextureFormat frm) {
   Detail::VDevice& dx = *reinterpret_cast<Detail::VDevice*>(d);
 
-  Detail::VTexture buf=dx.allocator.alloc(w,h,1,mipCnt,frm,true);
+  Detail::VTexture buf=dx.allocator.alloc(w,h,0,mipCnt,frm,true);
   Detail::DSharedPtr<Texture*> pbuf(new Detail::VTexture(std::move(buf)));
 
   auto cmd = dx.dataMgr().get();

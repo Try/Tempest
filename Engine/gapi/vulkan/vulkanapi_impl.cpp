@@ -233,7 +233,7 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
   if(checkForExt(ext,VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME))
     props.hasDedicatedAlloc = true;
   if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME))
-    props.hasSync2 = true;
+    ;//props.hasSync2 = true;
   if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME))
     props.hasDeviceAddress = true;
   if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_SPIRV_1_4_EXTENSION_NAME)) {
@@ -384,7 +384,8 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
 
     props.accelerationStructureScratchOffsetAlignment = asProperties.minAccelerationStructureScratchOffsetAlignment;
 
-    if(!props.meshlets.meshShader && props.hasSpirv_1_4 && false) {
+    //props.meshlets.meshShader = false;
+    if(!props.meshlets.meshShader && props.hasSpirv_1_4 && true) {
       props.meshlets.meshShaderEmulated = true;
       if(props.meshlets.meshShaderEmulated) {
         props.meshlets.maxGroups.x      = devP.limits.maxComputeWorkGroupCount[0];
