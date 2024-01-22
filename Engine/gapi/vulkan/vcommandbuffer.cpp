@@ -97,6 +97,10 @@ static void toStage(VDevice& dev, VkPipelineStageFlags2KHR& stage, VkAccessFlagB
     ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
     acc |= VK_ACCESS_UNIFORM_READ_BIT;
     }
+  if((rs&ResourceAccess::Indirect)==ResourceAccess::Indirect) {
+    ret |= VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
+    acc |= VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
+    }
 
   if(dev.props.raytracing.rayQuery) {
     if((rs&ResourceAccess::RtAsRead)==ResourceAccess::RtAsRead) {
@@ -497,8 +501,26 @@ void VCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_t
   vkCmdDrawIndexed    (impl, uint32_t(isize), uint32_t(instanceCount), uint32_t(ioffset), int32_t(voffset), uint32_t(firstInstance));
   }
 
+void VCommandBuffer::drawIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) {
+  const VBuffer& ind = reinterpret_cast<const VBuffer&>(indirect);
+
+  // block future writers
+  resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Graphics);
+  //resState.flush(*this);
+  vkCmdDrawIndirect(impl, ind.impl, VkDeviceSize(offset), 1, 0);
+  }
+
 void VCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
   device.vkCmdDrawMeshTasks(impl, uint32_t(x), uint32_t(y), uint32_t(z));
+  }
+
+void VCommandBuffer::dispatchMeshIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) {
+  const VBuffer& ind = reinterpret_cast<const VBuffer&>(indirect);
+
+  // block future writers
+  resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Graphics);
+  //resState.flush(*this);
+  device.vkCmdDrawMeshTasksIndirect(impl, ind.impl, VkDeviceSize(offset), 1, 0);
   }
 
 void VCommandBuffer::bindVbo(const VBuffer& vbo, size_t stride) {

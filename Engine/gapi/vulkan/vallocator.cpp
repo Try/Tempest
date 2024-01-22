@@ -129,7 +129,7 @@ VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferHe
   if(MemUsage::UniformBuffer==(usage & MemUsage::UniformBuffer))
     createInfo.usage |= (VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
   if(MemUsage::StorageBuffer==(usage & MemUsage::StorageBuffer))
-    createInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    createInfo.usage |= (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT);
 
   if(provider.device->props.raytracing.rayQuery) {
     if(MemUsage::StorageBuffer==(usage & MemUsage::StorageBuffer)) {

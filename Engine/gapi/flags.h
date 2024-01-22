@@ -46,18 +46,19 @@ enum class ResourceAccess : uint32_t {
   DepthAttach      = 1 << 6,
   DepthReadOnly    = 1 << 7,
 
-  Index            = 1 << 8,
-  Vertex           = 1 << 9,
-  Uniform          = 1 << 10,
+  Indirect         = 1 << 8,
+  Index            = 1 << 9,
+  Vertex           = 1 << 10,
+  Uniform          = 1 << 11,
 
-  UavReadComp      = 1 << 11,
-  UavWriteComp     = 1 << 12,
+  UavReadComp      = 1 << 12,
+  UavWriteComp     = 1 << 13,
 
-  UavReadGr        = 1 << 13,
-  UavWriteGr       = 1 << 14,
+  UavReadGr        = 1 << 14,
+  UavWriteGr       = 1 << 15,
 
-  RtAsRead         = 1 << 15,
-  RtAsWrite        = 1 << 16,
+  RtAsRead         = 1 << 16,
+  RtAsWrite        = 1 << 17,
 
   TransferSrcDst   = (TransferSrc    | TransferDst),
   UavReadWriteComp = (UavReadComp    | UavWriteComp),
@@ -65,7 +66,7 @@ enum class ResourceAccess : uint32_t {
   UavReadWriteAll  = (UavReadWriteGr | UavReadWriteComp),
 
   UavRead = (TransferSrc | Index | Vertex | Uniform | UavReadComp | UavReadGr | RtAsRead),
-  AnyRead = (UavRead | Sampler | DepthReadOnly),
+  AnyRead = (Indirect | UavRead | Sampler | DepthReadOnly),
   };
 
 inline ResourceAccess operator | (ResourceAccess a,const ResourceAccess& b) {

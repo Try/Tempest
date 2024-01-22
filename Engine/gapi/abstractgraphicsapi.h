@@ -352,6 +352,11 @@ namespace Tempest {
           DeviceType type=DeviceType::Unknown;
 
           struct {
+            bool firstVertex   = false;
+            bool firstInstance = false;
+            } indirect;
+
+          struct {
             size_t maxAttribs  = 16;
             size_t maxRange    = 2047;
             } vbo;
@@ -573,8 +578,13 @@ namespace Tempest {
         virtual void drawIndexed (const Buffer& vbo, size_t stride, size_t voffset,
                                   const Buffer& ibo, Detail::IndexClass cls, size_t ioffset, size_t isize,
                                   size_t firstInstance, size_t instanceCount) = 0;
-        virtual void dispatch    (size_t x, size_t y, size_t z) = 0;
+
+        virtual void drawIndirect(const Buffer& indirect, size_t offset);
+
         virtual void dispatchMesh(size_t x, size_t y, size_t z);
+        virtual void dispatchMeshIndirect(const Buffer& indirect, size_t offset);
+
+        virtual void dispatch(size_t x, size_t y, size_t z) = 0;
         };
 
       using PBuffer       = Detail::DSharedPtr<Buffer*>;
@@ -627,7 +637,7 @@ namespace Tempest {
       virtual void       present  (Device *d, Swapchain* sw)=0;
       virtual void       submit   (Device *d, CommandBuffer*  cmd, Fence* fence)=0;
 
-      virtual void       getCaps  (Device *d,Props& caps)=0;
+      virtual void       getCaps  (Device *d, Props& caps)=0;
 
     friend class Tempest::Device;
     };

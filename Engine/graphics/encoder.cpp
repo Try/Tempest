@@ -148,10 +148,26 @@ void Encoder<Tempest::CommandBuffer>::implDraw(const Detail::VideoBuffer &vbo, s
   impl->drawIndexed(*vbo.impl.handler,stride,0,*ibo.impl.handler,icls,offset,size, firstInstance,instanceCount);
   }
 
+void Encoder<Tempest::CommandBuffer>::drawIndirect(const StorageBuffer& indirect, size_t offset) {
+  if(state.stage!=Rendering)
+    throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
+  if(offset%4 != 0)
+    throw std::system_error(Tempest::GraphicsErrc::InvalidStorageBuffer); //TODO: error code
+  impl->drawIndirect(*indirect.impl.impl.handler, offset);
+  }
+
 void Encoder<Tempest::CommandBuffer>::dispatchMesh(size_t x, size_t y, size_t z) {
   if(state.stage!=Rendering)
     throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
   impl->dispatchMesh(x,y,z);
+  }
+
+void Encoder<Tempest::CommandBuffer>::dispatchMeshIndirect(const StorageBuffer& indirect, size_t offset) {
+  if(state.stage!=Rendering)
+    throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
+  if(offset%4 != 0)
+    throw std::system_error(Tempest::GraphicsErrc::InvalidStorageBuffer);
+  impl->dispatchMeshIndirect(*indirect.impl.impl.handler, offset);
   }
 
 void Encoder<Tempest::CommandBuffer>::dispatchMeshThreads(size_t x, size_t y, size_t z) {

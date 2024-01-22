@@ -86,6 +86,8 @@ void ResourceState::onUavUsage(const Usage& u, PipelineStage st, bool host) {
       uavSrcBarrier = uavSrcBarrier | rd[p] | wr[p];
       uavDstBarrier = uavDstBarrier | rd[st] | wr[st];
 
+      uavDstBarrier = uavDstBarrier | ResourceAccess::Indirect;
+
       uavRead [st].depend[p] = NonUniqResId::I_None;
       uavWrite[st].depend[p] = NonUniqResId::I_None;
       }

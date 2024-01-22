@@ -69,7 +69,11 @@ class Encoder<Tempest::CommandBuffer> {
     template<class T,class I>
     void draw(const VertexBuffer<T>& vbo,const IndexBuffer<I>& ibo,size_t offset,size_t count,size_t firstInstance,size_t instanceCount)
          { implDraw(vbo.impl,sizeof(T),ibo.impl,Detail::indexCls<I>(),offset,count,firstInstance,instanceCount); }
+
+    void drawIndirect(const StorageBuffer& indirect, size_t offset);
+
     void dispatchMesh(size_t x, size_t y=1, size_t z=1);
+    void dispatchMeshIndirect(const StorageBuffer& indirect, size_t offset);
     void dispatchMeshThreads(size_t x, size_t y=1, size_t z=1);
     void dispatchMeshThreads(Size sz);
 

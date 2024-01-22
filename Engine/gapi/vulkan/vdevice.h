@@ -371,6 +371,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     PFN_vkCmdBuildAccelerationStructuresKHR     vkCmdBuildAccelerationStructures     = nullptr;
 
     PFN_vkCmdDrawMeshTasksEXT                   vkCmdDrawMeshTasks = nullptr;
+    PFN_vkCmdDrawMeshTasksIndirectEXT           vkCmdDrawMeshTasksIndirect = nullptr;
 
     PFN_vkCmdDebugMarkerBeginEXT                vkCmdDebugMarkerBegin = nullptr;
     PFN_vkCmdDebugMarkerEndEXT                  vkCmdDebugMarkerEnd   = nullptr;
