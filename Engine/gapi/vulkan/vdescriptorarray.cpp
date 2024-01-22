@@ -84,9 +84,7 @@ VkDescriptorPool VDescriptorArray::allocPool(const VPipelineLay& lay) {
     auto     cls = lay.lay[i].cls;
     uint32_t cnt = lay.lay[i].arraySize;
     if(lay.lay[i].runtimeSized)
-      cnt = runtimeArrays[i];
-    if(cnt==0)
-      continue;
+      cnt = std::max<uint32_t>(1, runtimeArrays[i]);
     switch(cls) {
       case ShaderReflection::Ubo:     addPoolSize(poolSize,pSize,cnt,VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);             break;
       case ShaderReflection::Texture: addPoolSize(poolSize,pSize,cnt,VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);     break;
@@ -367,7 +365,7 @@ bool VDescriptorArray::isRuntimeSized() const {
   }
 
 void VDescriptorArray::addPoolSize(VkDescriptorPoolSize *p, size_t &sz, uint32_t cnt, VkDescriptorType elt) {
-  for(size_t i=0;i<sz;++i){
+  for(size_t i=0; i<sz; ++i){
     if(p[i].type==elt) {
       p[i].descriptorCount += cnt;
       return;

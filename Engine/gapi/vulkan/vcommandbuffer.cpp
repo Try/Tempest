@@ -401,7 +401,7 @@ void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
   VPipeline& px   = reinterpret_cast<VPipeline&>(p);
   curDrawPipeline = &px;
   vboStride       = px.defaultStride;
-  pipelineLayout  = px.pipelineLayout;
+  pipelineLayout  = px.pipelineLayout; // if `px` is runtime-sized, we still need a dummy layout for push-constants
 
   VkPipeline v    = device.props.hasDynRendering ? px.instance(passDyn,pipelineLayout,vboStride)
                                                  : px.instance(pass,   pipelineLayout,vboStride);

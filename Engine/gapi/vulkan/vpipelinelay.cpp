@@ -117,6 +117,7 @@ VkDescriptorSetLayout VPipelineLay::createDescLayout(const std::vector<uint32_t>
 
     b.binding         = e.layout;
     b.descriptorCount = e.runtimeSized ? runtimeArrays[i] : e.arraySize;
+    b.descriptorCount = std::max<uint32_t>(1, b.descriptorCount); // WA for VUID-VkGraphicsPipelineCreateInfo-layout-07988
     b.descriptorType  = nativeFormat(e.cls);
     b.stageFlags      = nativeFormat(e.stage);
     if(dev.props.meshlets.meshShaderEmulated && (b.stageFlags&(VK_SHADER_STAGE_TASK_BIT_EXT | VK_SHADER_STAGE_MESH_BIT_EXT))!=0) {
