@@ -35,7 +35,7 @@ class EventDispatcher final {
   private:
     std::shared_ptr<Widget::Ref> implDispatch(Tempest::Widget &w, Tempest::MouseEvent& event);
     std::shared_ptr<Widget::Ref> implDispatch(Tempest::Widget &w, Tempest::FocusEvent& event);
-    void                         implMouseWhell(Widget &w, MouseEvent &event);
+    void                         implMouseWheel(Widget &w, MouseEvent &event);
 
     bool                         implShortcut(Tempest::Widget &w, Tempest::KeyEvent& event);
     std::shared_ptr<Widget::Ref> implDispatch(Tempest::Widget &w, Tempest::KeyEvent&   event);

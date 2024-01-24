@@ -136,11 +136,11 @@ void EventDispatcher::dispatchMouseWheel(Widget& wnd, MouseEvent &e) {
   for(auto i:overlays) {
     if(!i->bind(wnd))
       continue;
-    implMouseWhell(*i,e1);
+    implMouseWheel(*i,e1);
     if(e.isAccepted())
       return;
     }
-  implMouseWhell(wnd,e1);
+  implMouseWheel(wnd,e1);
   }
 
 void EventDispatcher::dispatchKeyDown(Widget &wnd, KeyEvent &e, uint32_t scancode) {
@@ -319,7 +319,7 @@ std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget& root, FocusEv
   return nullptr;
   }
 
-void EventDispatcher::implMouseWhell(Widget& w,MouseEvent &event) {
+void EventDispatcher::implMouseWheel(Widget& w,MouseEvent &event) {
   if(!w.isVisible()) {
     event.ignore();
     return;
@@ -338,7 +338,7 @@ void EventDispatcher::implMouseWhell(Widget& w,MouseEvent &event) {
                     event.mouseID,
                     event.type());
       if(it.owner!=nullptr) {
-        implMouseWhell(*i,ex);
+        implMouseWheel(*i,ex);
         if(ex.isAccepted()) {
           event.accept();
           return;
