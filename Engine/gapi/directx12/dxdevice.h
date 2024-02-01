@@ -333,6 +333,8 @@ class DxDevice : public AbstractGraphicsApi::Device {
     SpinLock                    syncCmdQueue;
     ComPtr<ID3D12CommandQueue>  cmdQueue;
 
+    ComPtr<ID3D12CommandSignature> drawIndirectSgn;
+
     DxAllocator                 allocator;
     DxDescriptorAllocator       descAlloc;
 

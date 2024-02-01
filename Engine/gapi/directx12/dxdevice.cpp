@@ -52,6 +52,18 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
   queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
   dxAssert(device->CreateCommandQueue(&queueDesc, uuid<ID3D12CommandQueue>(), reinterpret_cast<void**>(&cmdQueue)));
 
+  {
+  D3D12_INDIRECT_ARGUMENT_DESC args[1] = {};
+  args[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;
+
+  D3D12_COMMAND_SIGNATURE_DESC desc = {};
+  desc.ByteStride       = sizeof(D3D12_DRAW_ARGUMENTS);
+  desc.NumArgumentDescs = 1;
+  desc.pArgumentDescs   = args;
+
+  dxAssert(device->CreateCommandSignature(&desc, nullptr, uuid<ID3D12CommandSignature>(), reinterpret_cast<void**>(&drawIndirectSgn)));
+  }
+
   allocator.setDevice(*this);
   descAlloc.setDevice(*this);
 
@@ -219,7 +231,7 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
 
   D3D12_FEATURE_DATA_D3D12_OPTIONS feature0 = {};
   if(SUCCEEDED(dev.CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &feature0, sizeof(feature0)))) {
-    prop.descriptors.nonUniformIndexing = true;  // SM5.1
+    prop.descriptors.nonUniformIndexing = true;  // SM5.1, mandatory in DX12
     switch(feature0.ResourceBindingTier) {
       case D3D12_RESOURCE_BINDING_TIER_1:
         prop.descriptors.maxSamplers = 16;

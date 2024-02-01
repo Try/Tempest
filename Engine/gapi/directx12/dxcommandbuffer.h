@@ -64,6 +64,9 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void drawIndexed (const AbstractGraphicsApi::Buffer& vbo, size_t stride, size_t voffset,
                       const AbstractGraphicsApi::Buffer& ibo, Detail::IndexClass cls, size_t ioffset, size_t isize,
                       size_t firstInstance, size_t instanceCount) override;
+
+    void drawIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) override;
+
     void dispatchMesh(size_t x, size_t y, size_t z) override;
     void dispatch    (size_t x, size_t y, size_t z) override;
 

@@ -37,36 +37,63 @@ static D3D12_RENDER_PASS_ENDING_ACCESS_TYPE mkStoreOp(const AccessOp op) {
   return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS;
   }
 
-static D3D12_RESOURCE_STATES nativeFormat(ResourceAccess f) {
+static D3D12_RESOURCE_STATES nativeFormat(ResourceAccess rs) {
   uint32_t st = 0;
 
-  if(f==ResourceAccess::None)
+  if(rs==ResourceAccess::None)
     return D3D12_RESOURCE_STATE_COMMON;
 
-  if((f&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
+  if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
     st |= D3D12_RESOURCE_STATE_COPY_SOURCE;
-  if((f&ResourceAccess::TransferDst)==ResourceAccess::TransferDst)
+  if((rs&ResourceAccess::TransferDst)==ResourceAccess::TransferDst)
     st |= D3D12_RESOURCE_STATE_COPY_DEST;
+  if((rs&ResourceAccess::TransferHost)==ResourceAccess::TransferHost)
+    st |= D3D12_RESOURCE_STATE_COPY_SOURCE;
 
-  if((f&ResourceAccess::Sampler)==ResourceAccess::Sampler)
+  if((rs&ResourceAccess::Present)==ResourceAccess::Present)
+    st |= D3D12_RESOURCE_STATE_COMMON;
+
+  if((rs&ResourceAccess::Sampler)==ResourceAccess::Sampler)
     st |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-
-  if((f&ResourceAccess::ColorAttach)==ResourceAccess::ColorAttach)
+  if((rs&ResourceAccess::ColorAttach)==ResourceAccess::ColorAttach)
     st |= D3D12_RESOURCE_STATE_RENDER_TARGET;
-  if((f&ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach)
+  if((rs&ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach)
     st |= D3D12_RESOURCE_STATE_DEPTH_WRITE;
-  if((f&ResourceAccess::DepthReadOnly)==ResourceAccess::DepthReadOnly)
+  if((rs&ResourceAccess::DepthReadOnly)==ResourceAccess::DepthReadOnly)
     st |= D3D12_RESOURCE_STATE_DEPTH_READ;
 
-  if((f&ResourceAccess::Vertex)==ResourceAccess::Vertex)
+  if((rs&ResourceAccess::Vertex)==ResourceAccess::Vertex)
     st |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-  if((f&ResourceAccess::Index)==ResourceAccess::Index)
+  if((rs&ResourceAccess::Index)==ResourceAccess::Index)
     st |= D3D12_RESOURCE_STATE_INDEX_BUFFER;
-  if((f&ResourceAccess::Uniform)==ResourceAccess::Uniform)
+  if((rs&ResourceAccess::Uniform)==ResourceAccess::Uniform)
     st |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+  if((rs&ResourceAccess::Indirect)==ResourceAccess::Indirect)
+    st |= D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
 
-  if((f&ResourceAccess::UavReadWriteAll)!=ResourceAccess::None)
+  if(true) {
+    if((rs&ResourceAccess::RtAsRead)==ResourceAccess::RtAsRead) {
+      st |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+      }
+    if((rs&ResourceAccess::RtAsWrite)==ResourceAccess::RtAsWrite) {
+      st |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+      }
+    }
+
+  // memory barriers
+  if((rs&ResourceAccess::UavReadGr)==ResourceAccess::UavReadGr) {
     st |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    }
+  if((rs&ResourceAccess::UavWriteGr)==ResourceAccess::UavWriteGr) {
+    st |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    }
+
+  if((rs&ResourceAccess::UavReadComp)==ResourceAccess::UavReadComp) {
+    st |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    }
+  if((rs&ResourceAccess::UavWriteComp)==ResourceAccess::UavWriteComp) {
+    st |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    }
 
   return D3D12_RESOURCE_STATES(st);
   }
@@ -640,6 +667,16 @@ void DxCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_
   impl->IASetIndexBuffer(&iview);
 
   impl->DrawIndexedInstanced(UINT(isize),UINT(instanceCount),UINT(ioffset),INT(voffset),UINT(firstInstance));
+  }
+
+void DxCommandBuffer::drawIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) {
+  const DxBuffer& ind  = reinterpret_cast<const DxBuffer&>(indirect);
+  auto&           sign = dev.drawIndirectSgn.get();
+
+  // block future writers
+  resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Graphics);
+  //resState.flush(*this);
+  impl->ExecuteIndirect(sign, 1, ind.impl.get(), UINT64(offset), nullptr, 0);
   }
 
 void DxCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
