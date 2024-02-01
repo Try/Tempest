@@ -313,6 +313,11 @@ void MtCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_
                                  ioffset*mul,instanceCount,voffset,firstInstance);
   }
 
+void MtCommandBuffer::drawIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) {
+  auto& ind = reinterpret_cast<const MtBuffer&>(indirect);
+  encDraw->drawPrimitives(topology, ind.impl.get(), offset);
+  }
+
 void MtCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
   // NOTE: for taskless pipeline `localSize` must be zero
   encDraw->drawMeshThreadgroups(MTL::Size(x,y,z), localSize, localSizeMesh);

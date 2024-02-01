@@ -56,6 +56,7 @@ void MtDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** tex, size_
 
   std::unique_ptr<uint8_t[]> addr(new uint8_t[bufSz]);
   d.args.reserve(cnt);
+  d.args.clear();
   for(size_t i=0; i<cnt; ++i) {
     auto* ptr = reinterpret_cast<MTL::ResourceID*>(addr.get());
     if(tex[i]==nullptr) {
@@ -91,6 +92,7 @@ void MtDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** buf, size_t
 
   std::unique_ptr<spvBufferDescriptor[]> addr(new spvBufferDescriptor[cnt]);
   d.args.reserve(cnt);
+  d.args.clear();
   for(size_t i=0; i<cnt; ++i) {
     if(buf[i]==nullptr) {
       addr[i].ptr = 0;
