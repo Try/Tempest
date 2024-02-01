@@ -7589,20 +7589,23 @@ void CompilerMSL::emit_custom_functions()
 			statement("");
 			break;
 
-		case SPVFuncImplVariableDescriptorArray:
-			statement("template<typename T>");
-			statement("struct spvDescriptorArray");
-			begin_scope();
-			statement("spvDescriptorArray(const device spvDescriptor<T>* ptr) : ptr(ptr)");
-			begin_scope();
-			end_scope();
-			statement("const device T& operator [] (size_t i) const");
-			begin_scope();
-			statement("return ptr[i].value;");
-			end_scope();
-			statement("const device spvDescriptor<T>* ptr;");
-			end_scope_decl();
-			statement("");
+    case SPVFuncImplVariableDescriptorArray:
+      statement("template<typename T>");
+      statement("struct spvDescriptor;");
+      statement("");
+      statement("template<typename T>");
+      statement("struct spvDescriptorArray");
+      begin_scope();
+      statement("spvDescriptorArray(const device spvDescriptor<T>* ptr) : ptr(ptr)");
+      begin_scope();
+      end_scope();
+      statement("const device T& operator [] (size_t i) const");
+      begin_scope();
+      statement("return ptr[i].value;");
+      end_scope();
+      statement("const device spvDescriptor<T>* ptr;");
+      end_scope_decl();
+      statement("");
 
 			if (msl_options.runtime_array_rich_descriptor &&
 			    spv_function_implementations.count(SPVFuncImplVariableSizedDescriptor) != 0)
@@ -13812,6 +13815,7 @@ void CompilerMSL::entry_point_args_discrete_descriptors(string &ep_args)
 					}
 					else
 					{
+            add_spv_func_and_recompile(SPVFuncImplVariableDescriptor);
 						ep_args += "const device spvDescriptor<" + get_argument_address_space(var) + " " +
 						           type_to_glsl(type) + "*>* ";
 					}
