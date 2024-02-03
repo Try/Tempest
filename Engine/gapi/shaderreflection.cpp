@@ -5,16 +5,26 @@
 #include <algorithm>
 #include <libspirv/libspirv.h>
 
-#include "thirdparty/spirv_cross/spirv_common.hpp"
+//#include "thirdparty/spirv_cross/spirv_common.hpp"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+static const spirv_cross::SPIRType& typeFromVariable(const spirv_cross::Compiler& comp, spirv_cross::VariableID i) {
+  auto& ret = comp.get_type_from_variable(i);
+  if(ret.pointer) {
+    auto& base = comp.get_type(ret.parent_type);
+    return base;
+    }
+  return ret;
+  }
+
 static bool isRuntimeSized(const spirv_cross::SPIRType& t) {
   if(t.array.empty())
     return false;
-  // OpTypeRuntimeArray ?
-  // NOTE: in spirv there is no dedicated decoration or something to identify runtime array
+  if(t.op==spv::OpTypeRuntimeArray)
+    return true;
+  // NOTE: unused runtime array has size of 1
   return (!t.array.empty() && t.array[0]<=1);
   }
 
@@ -84,7 +94,7 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
 
   spirv_cross::ShaderResources resources = comp.get_shader_resources();
   for(auto &resource : resources.sampled_images) {
-    auto&    t       = comp.get_type_from_variable(resource.id);
+    auto&    t       = typeFromVariable(comp, resource.id);
     unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);
     Binding b;
     b.layout       = binding;
@@ -96,7 +106,7 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     lay.push_back(b);
     }
   for(auto &resource : resources.separate_images) {
-    auto&    t       = comp.get_type_from_variable(resource.id);
+    auto&    t       = typeFromVariable(comp, resource.id);
     unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);
     Binding b;
     b.layout       = binding;
@@ -108,7 +118,7 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     lay.push_back(b);
     }
   for(auto &resource : resources.separate_samplers) {
-    auto&    t       = comp.get_type_from_variable(resource.id);
+    auto&    t       = typeFromVariable(comp, resource.id);
     unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);
     Binding b;
     b.layout       = binding;
@@ -120,7 +130,7 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     lay.push_back(b);
     }
   for(auto &resource : resources.uniform_buffers) {
-    auto&    t       = comp.get_type_from_variable(resource.id);
+    auto&    t       = typeFromVariable(comp, resource.id);
     unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);
     auto     sz      = declaredSize(comp,t);
     Binding b;
@@ -134,7 +144,7 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     lay.push_back(b);
     }
   for(auto &resource : resources.storage_buffers) {
-    auto&    t        = comp.get_type_from_variable(resource.id);
+    auto&    t        = typeFromVariable(comp, resource.id);
     unsigned binding  = comp.get_decoration(resource.id, spv::DecorationBinding);
     auto     readonly = comp.get_buffer_block_flags(resource.id);
     auto     sz       = declaredSize(comp,t);
@@ -149,8 +159,8 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     lay.push_back(b);
     }
   for(auto &resource : resources.storage_images) {
-    auto&    t        = comp.get_type_from_variable(resource.id);
-    unsigned binding  = comp.get_decoration(resource.id, spv::DecorationBinding);
+    auto&    t       = typeFromVariable(comp, resource.id);
+    unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);
     Binding b;
     b.layout       = binding;
     b.cls          = ImgRW; // (readonly.get(spv::DecorationNonWritable) ? UniformsLayout::ImgR : UniformsLayout::ImgRW);
@@ -161,20 +171,20 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     lay.push_back(b);
     }
   for(auto &resource : resources.acceleration_structures) {
-    auto&    t        = comp.get_type_from_variable(resource.id);
-    unsigned binding  = comp.get_decoration(resource.id, spv::DecorationBinding);
+    auto&    t       = typeFromVariable(comp, resource.id);
+    unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);
     Binding b;
     b.layout       = binding;
     b.cls          = Tlas;
     b.stage        = s;
-    b.arraySize    = arraySize(t);
     b.runtimeSized = isRuntimeSized(t);
+    b.arraySize    = arraySize(t);
     b.spvId        = resource.id;
     lay.push_back(b);
     }
   for(auto &resource : resources.push_constant_buffers) {
+    auto&    t       = typeFromVariable(comp, resource.id);
     unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);
-    auto&    t       = comp.get_type_from_variable(resource.id);
     auto     sz      = declaredSize(comp,t);
 
     Binding b;
@@ -249,8 +259,9 @@ void ShaderReflection::merge(std::vector<Binding>& ret,
         for(auto& r:ret)
           if(r.layout==u.layout) {
             r.stage         = Stage(r.stage | u.stage);
-            r.byteSize      = std::max(r.byteSize, u.byteSize);
-            r.byteSize      = std::max(r.byteSize, u.mslSize);
+            r.byteSize      = std::max(r.byteSize,  u.byteSize);
+            r.byteSize      = std::max(r.byteSize,  u.mslSize);
+            r.arraySize     = std::max(r.arraySize, u.arraySize);
             r.runtimeSized |= u.runtimeSized;
             ins     = true;
             break;

@@ -226,6 +226,7 @@ inline StorageBuffer Device::ssbo(BufferHeap ht, const void* data, size_t size) 
   static const auto usageBits = MemUsage::VertexBuffer  | MemUsage::IndexBuffer   |
                                 MemUsage::UniformBuffer | MemUsage::StorageBuffer |
                                 MemUsage::TransferSrc   | MemUsage::TransferDst   |
+                                MemUsage::Indirect      |
                                 MemUsage::Initialized;
   Detail::VideoBuffer v = createVideoBuffer(data,size,usageBits,ht);
   return StorageBuffer(std::move(v));
@@ -239,7 +240,8 @@ inline StorageBuffer Device::ssbo(BufferHeap ht, Uninitialized_t tag, size_t siz
 
   static const auto usageBits = MemUsage::VertexBuffer  | MemUsage::IndexBuffer   |
                                 MemUsage::UniformBuffer | MemUsage::StorageBuffer |
-                                MemUsage::TransferSrc   | MemUsage::TransferDst;
+                                MemUsage::TransferSrc   | MemUsage::TransferDst   |
+                                MemUsage::Indirect;
   Detail::VideoBuffer v = createVideoBuffer(nullptr,size,usageBits,ht);
   return StorageBuffer(std::move(v));
   }
