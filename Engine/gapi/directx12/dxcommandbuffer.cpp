@@ -490,7 +490,7 @@ void DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize
   impl->RSSetScissorRects(1, &sr);
   }
 
-void Tempest::Detail::DxCommandBuffer::endRendering() {
+void DxCommandBuffer::endRendering() {
   impl->EndRenderPass();
   }
 
@@ -681,6 +681,16 @@ void DxCommandBuffer::drawIndirect(const AbstractGraphicsApi::Buffer& indirect, 
 
 void DxCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
   impl->DispatchMesh(UINT(x),UINT(y),UINT(z));
+  }
+
+void DxCommandBuffer::dispatchMeshIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) {
+  const DxBuffer& ind  = reinterpret_cast<const DxBuffer&>(indirect);
+  auto&           sign = dev.drawMeshIndirectSgn.get();
+
+  // block future writers
+  resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Graphics);
+
+  impl->ExecuteIndirect(sign, 1, ind.impl.get(), UINT64(offset), nullptr, 0);
   }
 
 void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest, const AbstractGraphicsApi::Buffer& srcBuf, size_t offsetSrc, size_t size) {

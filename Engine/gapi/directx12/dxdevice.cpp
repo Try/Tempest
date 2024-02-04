@@ -53,15 +53,17 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
   dxAssert(device->CreateCommandQueue(&queueDesc, uuid<ID3D12CommandQueue>(), reinterpret_cast<void**>(&cmdQueue)));
 
   {
-  D3D12_INDIRECT_ARGUMENT_DESC args[1] = {};
-  args[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;
+    D3D12_INDIRECT_ARGUMENT_DESC arg = {};
+    D3D12_COMMAND_SIGNATURE_DESC desc = {};
+    desc.ByteStride       = sizeof(D3D12_DRAW_ARGUMENTS);
+    desc.NumArgumentDescs = 1;
+    desc.pArgumentDescs   = &arg;
 
-  D3D12_COMMAND_SIGNATURE_DESC desc = {};
-  desc.ByteStride       = sizeof(D3D12_DRAW_ARGUMENTS);
-  desc.NumArgumentDescs = 1;
-  desc.pArgumentDescs   = args;
+    arg.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;
+    dxAssert(device->CreateCommandSignature(&desc, nullptr, uuid<ID3D12CommandSignature>(), reinterpret_cast<void**>(&drawIndirectSgn)));
 
-  dxAssert(device->CreateCommandSignature(&desc, nullptr, uuid<ID3D12CommandSignature>(), reinterpret_cast<void**>(&drawIndirectSgn)));
+    arg.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
+    dxAssert(device->CreateCommandSignature(&desc, nullptr, uuid<ID3D12CommandSignature>(), reinterpret_cast<void**>(&drawMeshIndirectSgn)));
   }
 
   allocator.setDevice(*this);
