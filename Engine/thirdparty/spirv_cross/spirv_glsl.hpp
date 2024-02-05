@@ -438,7 +438,7 @@ protected:
 	virtual void emit_struct_member(const SPIRType &type, uint32_t member_type_id, uint32_t index,
 	                                const std::string &qualifier = "", uint32_t base_offset = 0);
 	virtual void emit_struct_padding_target(const SPIRType &type);
-	virtual std::string image_type_glsl(const SPIRType &type, uint32_t id = 0);
+	virtual std::string image_type_glsl(const SPIRType &type, uint32_t id = 0, bool member = false);
 	std::string constant_expression(const SPIRConstant &c,
 	                                bool inside_block_like_struct_scope = false,
 	                                bool inside_struct_scope = false);
@@ -570,7 +570,7 @@ protected:
 	uint32_t to_array_size_literal(const SPIRType &type, uint32_t index) const;
 	uint32_t to_array_size_literal(const SPIRType &type) const;
 	virtual std::string variable_decl(const SPIRVariable &variable); // Threadgroup arrays can't have a wrapper type
-	virtual std::string variable_decl_function_local(SPIRVariable &variable);
+	std::string variable_decl_function_local(SPIRVariable &variable);
 
 	void add_local_variable_name(uint32_t id);
 	void add_resource_name(uint32_t id);
@@ -833,7 +833,9 @@ protected:
 	bool buffer_is_packing_standard(const SPIRType &type, BufferPackingStandard packing,
 	                                uint32_t *failed_index = nullptr, uint32_t start_offset = 0,
 	                                uint32_t end_offset = ~(0u));
-	std::string buffer_to_packing_standard(const SPIRType &type, bool support_std430_without_scalar_layout);
+	std::string buffer_to_packing_standard(const SPIRType &type,
+	                                       bool support_std430_without_scalar_layout,
+	                                       bool support_enhanced_layouts);
 
 	uint32_t type_to_packed_base_size(const SPIRType &type, BufferPackingStandard packing);
 	uint32_t type_to_packed_alignment(const SPIRType &type, const Bitset &flags, BufferPackingStandard packing);
