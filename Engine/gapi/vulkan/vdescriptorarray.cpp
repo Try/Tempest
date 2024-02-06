@@ -153,8 +153,6 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* t, const Sam
     imageInfo.sampler   = device.allocator.updateSampler(sx);
     imageInfo.imageView = tex.view(smp.mapping,mipLevel);
     } else {
-    if(mipLevel==uint32_t(-1))
-      mipLevel = 0;
     imageInfo.imageView = tex.view(ComponentMapping(),mipLevel);
     }
   imageInfo.imageLayout = toWriteLayout(tex);

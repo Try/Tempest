@@ -195,6 +195,20 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     b.spvId    = resource.id;
     lay.push_back(b);
     }
+
+  bool canHaveRuntimeArrays = false;
+  auto& ext = comp.get_declared_extensions();
+  for(auto& i:ext)
+    if(i=="SPV_EXT_descriptor_indexing")
+      canHaveRuntimeArrays = true;
+
+  if(!canHaveRuntimeArrays) {
+    // WA for GLSL bug: https://github.com/KhronosGroup/GLSL/issues/231
+    for(auto& i:lay) {
+      i.runtimeSized = false;
+      i.arraySize    = std::max(1u, i.arraySize);
+      }
+    }
   }
 
 ShaderReflection::Stage ShaderReflection::getExecutionModel(spirv_cross::Compiler& comp) {
