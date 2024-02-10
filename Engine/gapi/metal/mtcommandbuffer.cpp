@@ -323,6 +323,11 @@ void MtCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
   encDraw->drawMeshThreadgroups(MTL::Size(x,y,z), localSize, localSizeMesh);
   }
 
+void MtCommandBuffer::dispatchMeshIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) {
+  auto& ind = reinterpret_cast<const MtBuffer&>(indirect);
+  encDraw->drawMeshThreadgroups(ind.impl.get(), offset, localSize, localSizeMesh);
+  }
+
 void MtCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
   encComp->dispatchThreadgroups(MTL::Size(x,y,z), localSize);
   }

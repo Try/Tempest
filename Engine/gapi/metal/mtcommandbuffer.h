@@ -59,6 +59,8 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     void drawIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) override;
 
     void dispatchMesh(size_t x, size_t y, size_t z) override;
+    void dispatchMeshIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) override;
+
     void dispatch    (size_t x, size_t y, size_t z) override;
 
     void barrier       (const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) override;
