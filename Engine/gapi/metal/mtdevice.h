@@ -9,6 +9,7 @@
 #include <Foundation/Foundation.hpp>
 
 #include "../utility/compiller_hints.h"
+#include "gapi/shaderreflection.h"
 #include "mtsamplercache.h"
 #include "nsptr.h"
 
@@ -216,6 +217,27 @@ inline MTL::AccelerationStructureInstanceOptions nativeFormat(RtInstanceFlags f)
   if((f & RtInstanceFlags::CullFlip)==RtInstanceFlags::CullFlip)
     ret |= MTL::AccelerationStructureInstanceOptionTriangleFrontFacingWindingCounterClockwise;
   return ret;
+  }
+
+inline MTL::RenderStages nativeFormat(ShaderReflection::Stage st) {
+  uint32_t stageFlags = 0;
+  if(st&ShaderReflection::Compute)
+    stageFlags |= 0;
+  if(st&ShaderReflection::Vertex)
+    stageFlags |= MTL::RenderStageVertex;
+  if(st&ShaderReflection::Control)
+    stageFlags |= 0;
+  if(st&ShaderReflection::Evaluate)
+    stageFlags |= 0;
+  if(st&ShaderReflection::Geometry)
+    stageFlags |= 0;
+  if(st&ShaderReflection::Fragment)
+    stageFlags |= MTL::RenderStageFragment;
+  if(st&ShaderReflection::Task)
+    stageFlags |=  MTL::RenderStageObject;
+  if(st&ShaderReflection::Mesh)
+    stageFlags |=  MTL::RenderStageMesh;
+  return MTL::RenderStages(stageFlags);
   }
 
 class MtDevice : public AbstractGraphicsApi::Device {

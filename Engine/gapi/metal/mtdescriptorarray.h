@@ -51,6 +51,11 @@ class MtDescriptorArray : public AbstractGraphicsApi::Desc {
   private:
     template<class Enc>
     void implUseResource(Enc&  cmd);
+
+    void implUseResource(MTL::ComputeCommandEncoder& cmd,
+                         const MTL::Resource* const resources[], NS::UInteger count, MTL::ResourceUsage usage, MTL::RenderStages stages);
+    void implUseResource(MTL::RenderCommandEncoder& cmd,
+                         const MTL::Resource* const resources[], NS::UInteger count, MTL::ResourceUsage usage, MTL::RenderStages stages);
   };
 
 }

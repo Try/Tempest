@@ -156,14 +156,29 @@ void MtDescriptorArray::implUseResource(Enc&  cmd) {
   auto& mtl = lay.handler->bind;
   for(size_t i=0; i<lx.size(); ++i) {
     if(lx[i].cls==ShaderReflection::Tlas) {
-      auto& blas = desc[i].tlas->blas;
-      cmd.useResources(blas.data(), blas.size(), MTL::ResourceUsageRead);
+      auto& blas   = desc[i].tlas->blas;
+      auto  stages = nativeFormat(lx[i].stage);
+      implUseResource(cmd, blas.data(), blas.size(), MTL::ResourceUsageRead, stages);
       }
     if(lx[i].runtimeSized) {
-      auto& args = desc[i].args;
-      cmd.useResources(args.data(), args.size(), MTL::ResourceUsageRead | MTL::ResourceUsageSample);
+      auto& args  = desc[i].args;
+      auto  stages = nativeFormat(lx[i].stage);
+      implUseResource(cmd, args.data(), args.size(), MTL::ResourceUsageRead | MTL::ResourceUsageSample, stages);
       }
     }
+  }
+
+void MtDescriptorArray::implUseResource(MTL::ComputeCommandEncoder& cmd,
+                                        const MTL::Resource* const resources[], NS::UInteger count,
+                                        MTL::ResourceUsage usage, MTL::RenderStages stages) {
+  (void)stages;
+  cmd.useResources(resources, count, usage);
+  }
+
+void MtDescriptorArray::implUseResource(MTL::RenderCommandEncoder& cmd,
+                                        const MTL::Resource* const resources[], NS::UInteger count,
+                                        MTL::ResourceUsage usage, MTL::RenderStages stages) {
+  cmd.useResources(resources, count, usage, stages);
   }
 
 #endif
