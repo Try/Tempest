@@ -116,10 +116,13 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     struct FillUAV;
     Stage*                            stageResources = nullptr;
 
+    std::unordered_set<ID3D12Resource*> indirectCmd;
+
     void prepareDraw(size_t voffset, size_t firstInstance);
     void clearStage();
     void pushStage(Stage* cmd);
     void implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompute);
+    void restoreIndirect();
   };
 
 }
