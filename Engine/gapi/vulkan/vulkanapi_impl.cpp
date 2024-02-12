@@ -385,7 +385,7 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
     props.accelerationStructureScratchOffsetAlignment = asProperties.minAccelerationStructureScratchOffsetAlignment;
 
     //props.meshlets.meshShader = false;
-    if(!props.meshlets.meshShader && props.hasSpirv_1_4 && true) {
+    if(!props.meshlets.meshShader && props.hasSpirv_1_4 && false) {
       props.meshlets.meshShaderEmulated = true;
       if(props.meshlets.meshShaderEmulated) {
         props.meshlets.maxGroups.x      = devP.limits.maxComputeWorkGroupCount[0];
