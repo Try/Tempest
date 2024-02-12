@@ -126,6 +126,8 @@ void EventDispatcher::dispatchMouseMove(Widget& wnd, MouseEvent &e) {
   }
 
 void EventDispatcher::dispatchMouseWheel(Widget& wnd, MouseEvent &e) {
+  if(e.delta==0)
+    return;
   MouseEvent e1( e.x,
                  e.y,
                  e.button,
