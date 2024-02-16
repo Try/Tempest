@@ -28,6 +28,13 @@ void MtDescriptorArray::set(size_t id, const Sampler& smp) {
   }
 
 void MtDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer *buf, size_t offset) {
+  if(T_UNLIKELY(buf==nullptr)) {
+    desc[id].val    = nullptr;
+    desc[id].offset = offset;
+    desc[id].length = 0;
+    return;
+    }
+
   auto& b = *reinterpret_cast<MtBuffer*>(buf);
   desc[id].val    = b.impl.get();
   desc[id].offset = offset;

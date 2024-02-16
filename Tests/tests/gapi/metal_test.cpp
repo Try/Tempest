@@ -43,6 +43,12 @@ TEST(MetalApi,SsboCopy) {
 #endif
   }
 
+TEST(MetalApi,SsboEmpty) {
+#if defined(__OSX__)
+  GapiTestCommon::SsboEmpty<MetalApi>();
+#endif
+  }
+
 TEST(MetalApi,ArrayLength) {
 #if defined(__OSX__)
   GapiTestCommon::ArrayLength<MetalApi>();

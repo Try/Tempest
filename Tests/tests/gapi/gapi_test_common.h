@@ -180,6 +180,17 @@ void SsboEmpty() {
     desc.set(1,ssbo);
     desc.set(2,ret);
 
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setUniforms(pso, desc);
+      enc.dispatch(1);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
     uint32_t result[2] = {};
     device.readBytes(ret, result, sizeof(result));
 
