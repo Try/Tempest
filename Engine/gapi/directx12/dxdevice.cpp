@@ -62,8 +62,10 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
     arg.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;
     dxAssert(device->CreateCommandSignature(&desc, nullptr, uuid<ID3D12CommandSignature>(), reinterpret_cast<void**>(&drawIndirectSgn)));
 
-    arg.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
-    dxAssert(device->CreateCommandSignature(&desc, nullptr, uuid<ID3D12CommandSignature>(), reinterpret_cast<void**>(&drawMeshIndirectSgn)));
+    if(props.meshlets.meshShader) {
+      arg.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
+      dxAssert(device->CreateCommandSignature(&desc, nullptr, uuid<ID3D12CommandSignature>(), reinterpret_cast<void**>(&drawMeshIndirectSgn)));
+      }
   }
 
   allocator.setDevice(*this);
