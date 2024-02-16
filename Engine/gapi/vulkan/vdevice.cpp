@@ -462,6 +462,16 @@ VDevice::MemIndex VDevice::memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFl
   return ret;
   }
 
+VBuffer& VDevice::dummySsbo() {
+  // NOTE: null desriptor is part of VK_EXT_robustness2
+  std::lock_guard<std::mutex> guard(syncSsbo);
+  if(dummySsboVal.impl==VK_NULL_HANDLE) {
+    // in principle 1 byte is also fine
+    dummySsboVal = allocator.alloc(nullptr, sizeof(uint32_t), MemUsage::StorageBuffer, BufferHeap::Device);
+    }
+  return dummySsboVal;
+  }
+
 void VDevice::allocMeshletHelper() {
   std::unique_lock<std::mutex> guard(meshSync);
   if(meshHelper==nullptr)

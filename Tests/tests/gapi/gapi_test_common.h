@@ -162,6 +162,37 @@ void SsboDyn() {
     }
   }
 
+template<class GraphicsApi>
+void SsboEmpty() {
+  using namespace Tempest;
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto cs   = device.shader("shader/ssbo_zero_length.comp.sprv");
+    auto pso  = device.pipeline(cs);
+
+    auto desc = device.descriptors(pso);
+
+    auto ssbo = device.ssbo(Uninitialized, 0);
+    auto ret  = device.ssbo(Uninitialized, sizeof(uint32_t)*2);
+    desc.set(0,ssbo);
+    desc.set(1,ssbo);
+    desc.set(2,ret);
+
+    uint32_t result[2] = {};
+    device.readBytes(ret, result, sizeof(result));
+
+    EXPECT_EQ(result[0], 0);
+    EXPECT_EQ(result[1], 0);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+  
 template<class GraphicsApi, Tempest::TextureFormat frm, class iType>
 void SsboCopy() {
   using namespace Tempest;

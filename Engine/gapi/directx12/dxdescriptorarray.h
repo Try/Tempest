@@ -55,7 +55,7 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
     void placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE_TYPE rgn, const D3D12_CPU_DESCRIPTOR_HANDLE& at,
                      UINT64 heapOffset, const Sampler& smp);
     void placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE_TYPE rgn, const D3D12_CPU_DESCRIPTOR_HANDLE& at,
-                     UINT64 heapOffset, DxBuffer& buf, uint64_t bufOffset, uint64_t byteSize);
+                     UINT64 heapOffset, DxBuffer* buf, uint64_t bufOffset, uint64_t byteSize);
     void placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE_TYPE rgn, const D3D12_CPU_DESCRIPTOR_HANDLE& at,
                      UINT64 heapOffset, DxAccelerationStructure& as);
 

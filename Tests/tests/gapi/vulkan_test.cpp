@@ -44,6 +44,12 @@ TEST(VulkanApi,SsboDyn) {
 #endif
   }
 
+TEST(VulkanApi,SsboEmpty) {
+#if !defined(__OSX__)
+  GapiTestCommon::SsboEmpty<VulkanApi>();
+#endif
+  }
+
 TEST(VulkanApi,SsboCopy) {
 #if !defined(__OSX__)
   GapiTestCommon::SsboCopy<VulkanApi,TextureFormat::RGBA8,uint8_t>();

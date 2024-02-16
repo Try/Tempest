@@ -118,7 +118,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer* b, size_t of
   auto&  device     = *lay.handler->dev.device;
   auto&  allocator  = lay.handler->dev.descAlloc;
 
-  auto&  buf        = *reinterpret_cast<DxBuffer*>(b);
+  auto*  buf        = reinterpret_cast<DxBuffer*>(b);
   auto&  prm        = lay.handler->prm[id];
   auto&  l          = lay.handler->lay[id];
 
@@ -278,7 +278,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** b, size_t c
   for(size_t i=0; i<cnt; ++i) {
     if(b[i]==nullptr)
       continue;
-    auto& buf = *reinterpret_cast<DxBuffer*>(b[i]);
+    auto* buf = reinterpret_cast<DxBuffer*>(b[i]);
     placeInHeap(device, prm.rgnType, descPtr, heapOffset + i*descSize, buf, 0, lay.handler->lay[id].byteSize);
     }
   }
@@ -455,7 +455,7 @@ void DxDescriptorArray::reflushSet() {
           auto* b = reinterpret_cast<DxBuffer*>(arr[i]);
           if(b==nullptr)
             continue;
-          placeInHeap(device, prm.rgnType, descPtr, heapOffset + i*descSize, *b, offset, l.byteSize);
+          placeInHeap(device, prm.rgnType, descPtr, heapOffset + i*descSize, b, offset, l.byteSize);
           }
         break;
         }
@@ -570,7 +570,7 @@ void DxDescriptorArray::placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE
   }
 
 void DxDescriptorArray::placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE_TYPE rgn,
-                                    const D3D12_CPU_DESCRIPTOR_HANDLE& at, UINT64 heapOffset, DxBuffer& buf,
+                                    const D3D12_CPU_DESCRIPTOR_HANDLE& at, UINT64 heapOffset, DxBuffer* buf,
                                     uint64_t bufOffset, uint64_t byteSize) {
   if(rgn==D3D12_DESCRIPTOR_RANGE_TYPE_UAV) {
     D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
@@ -579,12 +579,14 @@ void DxDescriptorArray::placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE
     desc.Buffer.FirstElement = UINT(bufOffset/4);
     desc.Buffer.NumElements  = UINT((byteSize+3)/4); // UAV size is required to be 4-byte aligned.
     desc.Buffer.Flags        = D3D12_BUFFER_UAV_FLAG_RAW;
-    if(desc.Buffer.NumElements==0)
-      desc.Buffer.NumElements = UINT(buf.appSize-bufOffset+3)/4;
+    if(desc.Buffer.NumElements==0 && buf!=nullptr)
+      desc.Buffer.NumElements = UINT(buf->appSize-bufOffset+3)/4;
 
     auto gpu = at;
     gpu.ptr += heapOffset;
-    device.CreateUnorderedAccessView(buf.impl.get(),nullptr,&desc,gpu);
+    if(buf!=nullptr)
+      device.CreateUnorderedAccessView(buf->impl.get(),nullptr,&desc,gpu); else
+      device.CreateUnorderedAccessView(nullptr,nullptr,&desc,gpu);
     }
   else if(rgn==D3D12_DESCRIPTOR_RANGE_TYPE_SRV) {
     D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
@@ -594,19 +596,21 @@ void DxDescriptorArray::placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE
     desc.Buffer.FirstElement     = UINT(bufOffset/4);
     desc.Buffer.NumElements      = UINT((byteSize+3)/4); // SRV size is required to be 4-byte aligned.
     desc.Buffer.Flags            = D3D12_BUFFER_SRV_FLAG_RAW;
-    if(desc.Buffer.NumElements==0)
-      desc.Buffer.NumElements = UINT(buf.appSize-bufOffset+3)/4;
+    if(desc.Buffer.NumElements==0 && buf!=nullptr)
+      desc.Buffer.NumElements = UINT(buf->appSize-bufOffset+3)/4;
 
     auto gpu = at;
     gpu.ptr += heapOffset;
-    device.CreateShaderResourceView(buf.impl.get(),&desc,gpu);
+    if(buf!=nullptr)
+      device.CreateShaderResourceView(buf->impl.get(),&desc,gpu); else
+      device.CreateShaderResourceView(nullptr,&desc,gpu);
     }
   else {
     D3D12_CONSTANT_BUFFER_VIEW_DESC desc = {};
-    desc.BufferLocation = buf.impl->GetGPUVirtualAddress() + bufOffset;
+    desc.BufferLocation = buf->impl->GetGPUVirtualAddress() + bufOffset;
     desc.SizeInBytes    = UINT(byteSize);
     if(desc.SizeInBytes==0)
-      desc.SizeInBytes = UINT(buf.sizeInBytes-bufOffset);
+      desc.SizeInBytes = UINT(buf->sizeInBytes-bufOffset);
     desc.SizeInBytes = ((desc.SizeInBytes+255)/256)*256; // CB size is required to be 256-byte aligned.
 
     auto gpu = at;

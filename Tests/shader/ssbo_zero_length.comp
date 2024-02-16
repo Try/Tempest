@@ -1,0 +1,18 @@
+#version 440
+
+layout(binding = 0, std140) readonly buffer Read {
+  uint val[];
+  } read;
+
+layout(binding = 1, std140) buffer ReadWrite {
+  uint val[];
+  } write;
+
+layout(binding = 2, std140) buffer Output {
+  uint result[];
+  };
+
+void main() {
+  result[0] = read .val.length();
+  result[1] = write.val.length();
+  }

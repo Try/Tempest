@@ -4,6 +4,7 @@
 #include <Tempest/RenderState>
 #include <Tempest/AccelerationStructure>
 #include <stdexcept>
+#include "gapi/vulkan/vbuffer.h"
 #include "vulkan_sdk.h"
 
 #include "vallocator.h"
@@ -386,11 +387,16 @@ class VDevice : public AbstractGraphicsApi::Device {
     using DataMgr = UploadEngine<VDevice,VCommandBuffer,VFence,VBuffer>;
     DataMgr&                dataMgr() const { return *data; }
 
+    VBuffer&                dummySsbo();
+
     void                    allocMeshletHelper();
 
   private:
     VkPhysicalDeviceMemoryProperties memoryProperties;
     std::unique_ptr<DataMgr>         data;
+
+    std::mutex              syncSsbo;
+    VBuffer                 dummySsboVal;
 
     void                    waitIdleSync(Queue* q, size_t n);
 

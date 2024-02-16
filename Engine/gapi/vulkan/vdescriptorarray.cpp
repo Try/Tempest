@@ -180,10 +180,12 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer* b, s
     reallocSet(id, 0);
     }
 
+  //NOTE1: use of null-handle is not allowed, unless VK_EXT_robustness2
+  //NOTE2: sizeof 1 is to make spec happy, and will cause problems, with GL_EXT_shader_explicit_arithmetic_types_int8
   VkDescriptorBufferInfo bufferInfo = {};
-  bufferInfo.buffer = buf->impl;
+  bufferInfo.buffer = buf!=nullptr ? buf->impl : device.dummySsbo().impl;
   bufferInfo.offset = offset;
-  bufferInfo.range  = slot.byteSize;
+  bufferInfo.range  = buf!=nullptr ? slot.byteSize : 1;
 
   VkWriteDescriptorSet descriptorWrite = {};
   descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -197,7 +199,7 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer* b, s
   vkUpdateDescriptorSets(dev, 1, &descriptorWrite, 0, nullptr);
 
   uav[id].buf     = b;
-  uavUsage.durty |= (buf->nonUniqId!=0);
+  uavUsage.durty |= (buf!=nullptr && buf->nonUniqId!=0);
   }
 
 void VDescriptorArray::set(size_t id, const Sampler& smp) {

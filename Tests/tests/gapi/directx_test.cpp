@@ -46,6 +46,12 @@ TEST(DirectX12Api,SsboDyn) {
 #endif
   }
 
+TEST(DirectX12Api,SsboEmpty) {
+#if defined(_MSC_VER)
+  GapiTestCommon::SsboEmpty<DirectX12Api>();
+#endif
+  }
+
 TEST(DirectX12Api,SsboCopy) {
 #if defined(_MSC_VER)
   // TODO: test more formats
