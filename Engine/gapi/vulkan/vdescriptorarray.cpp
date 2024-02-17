@@ -180,12 +180,18 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer* b, s
     reallocSet(id, 0);
     }
 
-  //NOTE1: use of null-handle is not allowed, unless VK_EXT_robustness2
-  //NOTE2: sizeof 1 is to make spec happy, and will cause problems, with GL_EXT_shader_explicit_arithmetic_types_int8
   VkDescriptorBufferInfo bufferInfo = {};
-  bufferInfo.buffer = buf!=nullptr ? buf->impl : device.dummySsbo().impl;
+  bufferInfo.buffer = buf!=nullptr ? buf->impl : VK_NULL_HANDLE;
   bufferInfo.offset = offset;
-  bufferInfo.range  = buf!=nullptr ? slot.byteSize : 1;
+  bufferInfo.range  = buf!=nullptr ? slot.byteSize : VK_WHOLE_SIZE;
+
+  if(!device.props.hasRobustness2 && buf==nullptr) {
+    //NOTE1: use of null-handle is not allowed, unless VK_EXT_robustness2
+    //NOTE2: sizeof 1 is rouned up in shader; and sizeof 0 is illegal but harmless(hepefully)
+    bufferInfo.buffer = device.dummySsbo().impl;
+    bufferInfo.offset = offset;
+    bufferInfo.range  = 0;
+    }
 
   VkWriteDescriptorSet descriptorWrite = {};
   descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -309,21 +315,17 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** b, size_t cn
   if(cnt==0)
     return;
 
-  VkBuffer nonNull = VK_NULL_HANDLE;
-  for(size_t i=0; i<cnt; ++i)
-    if(b[i]!=nullptr) {
-      // The Vulkan spec states: If the nullDescriptor feature is not enabled, buffer must not be VK_NULL_HANDLE
-      VBuffer* buf = reinterpret_cast<VBuffer*>(b[i]);
-      nonNull = buf->impl;
-      break;
-      }
-
   SmallArray<VkDescriptorBufferInfo,32> bufInfo(cnt);
   for(size_t i=0; i<cnt; ++i) {
     VBuffer* buf = reinterpret_cast<VBuffer*>(b[i]);
-    bufInfo[i].buffer = buf ? buf->impl : nonNull;
+    bufInfo[i].buffer = buf!=nullptr ? buf->impl : VK_NULL_HANDLE;
     bufInfo[i].offset = 0;
     bufInfo[i].range  = VK_WHOLE_SIZE;
+    if(!device.props.hasRobustness2 && buf==nullptr) {
+      bufInfo[i].buffer = device.dummySsbo().impl;
+      bufInfo[i].offset = 0;
+      bufInfo[i].range  = 0;
+      }
     // assert(buf->nonUniqId==0);
     }
 

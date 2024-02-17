@@ -10,8 +10,6 @@
 
 #include <Tempest/Log>
 #include <Tempest/Platform>
-#include <thread>
-#include <set>
 #include <cstring>
 #include <array>
 
@@ -267,6 +265,9 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
   if(props.hasBarycentrics) {
     rqExt.push_back(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME);
     }
+  if(props.hasRobustness2) {
+    rqExt.push_back(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME);
+    }
 
   VkPhysicalDeviceFeatures supportedFeatures={};
   vkGetPhysicalDeviceFeatures(pdev,&supportedFeatures);
@@ -320,6 +321,9 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR barycentricsFeatures = {};
     barycentricsFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR;
 
+    VkPhysicalDeviceRobustness2FeaturesEXT robustness2Features = {};
+    robustness2Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT;
+
     if(props.hasSync2) {
       sync2.pNext = features.pNext;
       features.pNext = &sync2;
@@ -352,6 +356,10 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
       barycentricsFeatures.pNext = features.pNext;
       features.pNext = &barycentricsFeatures;
       }
+    if(props.hasRobustness2) {
+      robustness2Features.pNext = features.pNext;
+      features.pNext = &robustness2Features;
+      }
 
     auto vkGetPhysicalDeviceFeatures2 = PFN_vkGetPhysicalDeviceFeatures2(vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2KHR"));
 
@@ -362,6 +370,9 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     asFeatures.accelerationStructureIndirectBuild = VK_FALSE;
     asFeatures.accelerationStructureHostCommands  = VK_FALSE;
     asFeatures.descriptorBindingAccelerationStructureUpdateAfterBind = VK_FALSE;
+
+    robustness2Features.robustBufferAccess2 = VK_FALSE;
+    robustness2Features.robustImageAccess2 = VK_FALSE;
 
     createInfo.pNext            = &features;
     createInfo.pEnabledFeatures = nullptr;

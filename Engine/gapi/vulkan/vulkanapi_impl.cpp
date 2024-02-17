@@ -257,6 +257,9 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
   if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME)) {
     props.hasBarycentrics = true;
     }
+  if(hasDeviceFeatures2 && checkForExt(ext,VK_EXT_ROBUSTNESS_2_EXTENSION_NAME)) {
+    props.hasRobustness2 = true;
+    }
   if(checkForExt(ext,VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
     props.hasDebugMarker = true;
     }
@@ -325,6 +328,9 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
     VkPhysicalDeviceDescriptorIndexingProperties indexingProps = {};
     indexingProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES;
 
+    VkPhysicalDeviceRobustness2PropertiesEXT rebustness2Props = {};
+    rebustness2Props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_PROPERTIES_EXT;
+
     if(props.hasSync2) {
       sync2.pNext = features.pNext;
       features.pNext = &sync2;
@@ -361,6 +367,10 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
 
       indexingProps.pNext = properties.pNext;
       properties.pNext = &indexingProps;
+      }
+    if(props.hasRobustness2) {
+      rebustness2Props.pNext = properties.pNext;
+      properties.pNext = &rebustness2Props;
       }
 
     auto vkGetPhysicalDeviceFeatures2   = PFN_vkGetPhysicalDeviceFeatures2  (vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2KHR"));
@@ -540,6 +550,12 @@ VkBool32 VulkanInstance::debugReportCallback(VkDebugReportFlagsEXT      flags,
     // bug?
     return VK_FALSE;
     }
+  if(location==3578306442) {
+    // The Vulkan spec states: If range is not equal to VK_WHOLE_SIZE, range must be greater than 0
+    // can't workaround this without VK_EXT_robustness2
+    return VK_FALSE;
+    }
+
   Log::e(pMessage," object=",object,", type=",objectType," th:",std::this_thread::get_id());
   return VK_FALSE;
   }
