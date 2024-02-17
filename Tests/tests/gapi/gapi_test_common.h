@@ -191,7 +191,7 @@ void SsboEmpty() {
     device.submit(cmd,sync);
     sync.wait();
 
-    uint32_t result[2] = {};
+    uint32_t result[2] = {uint32_t(-1), uint32_t(-1)};
     device.readBytes(ret, result, sizeof(result));
 
     EXPECT_EQ(result[0], 0);
