@@ -9,9 +9,11 @@
 #include <thread>
 #include <chrono>
 
+#include "utility/spinlock.h"
 #include "builtin_fonts.h"
 
 using namespace Tempest;
+using namespace Tempest::Detail;
 
 struct Application::Impl : SystemApi::AppCallBack {
   std::vector<Timer*> timer;
@@ -19,6 +21,25 @@ struct Application::Impl : SystemApi::AppCallBack {
 
   const Style*        style=nullptr;
   Font                font;
+
+  SpinLock            fontSync;
+  Font                fontDef;
+
+  Font& defaultFont() {
+    std::lock_guard<SpinLock> guard(fontSync);
+    if(!fontDef.isEmpty())
+      return fontDef;
+    auto regular = AppFonts::get("Roboto-Regular.ttf");
+    auto bold    = AppFonts::get("Roboto-Bold.ttf");
+    auto italic  = AppFonts::get("Roboto-Italic.ttf");
+    auto bItalic = AppFonts::get("Roboto-BoldItalic.ttf");
+
+    fontDef = Font(FontElement(regular.data, regular.len),
+                   FontElement(bold.data, bold.len),
+                   FontElement(italic.data, italic.len),
+                   FontElement(bItalic.data, bItalic.len));
+    return fontDef;
+    }
 
   void addTimer(Timer& t){
     timer.push_back(&t);
@@ -118,16 +139,7 @@ const Font& Application::font() {
   }
 
 const Font& Application::defaultFont() {
-  auto regular = AppFonts::get("Roboto-Regular.ttf");
-  auto bold    = AppFonts::get("Roboto-Bold.ttf");
-  auto italic  = AppFonts::get("Roboto-Italic.ttf");
-  auto bItalic = AppFonts::get("Roboto-BoldItalic.ttf");
-
-  static auto font = Font(FontElement(regular.data, regular.len),
-                          FontElement(bold.data, bold.len),
-                          FontElement(italic.data, italic.len),
-                          FontElement(bItalic.data, bItalic.len));
-  return font;
+  return impl.defaultFont();
   }
 
 void Application::implAddTimer(Timer &t) {

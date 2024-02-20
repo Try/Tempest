@@ -194,7 +194,7 @@ void MeshConverter::emitComp(libspirv::MutableBytecode& comp) {
 
       uint32_t cnt = 5;
       for(size_t r=5; r<i.length(); ++r) {
-        uint32_t id = i[r];
+        uint32_t id = i[uint16_t(r)];
         if(id==gl_PrimitiveTriangleIndicesEXT)
           continue;
         if(!options.varyingInSharedMem && varying.find(id)!=varying.end())
@@ -643,10 +643,8 @@ void MeshConverter::emitEmitMeshTasks(libspirv::MutableBytecode& comp, uint32_t 
   const uint32_t void_t               = comp.OpTypeVoid(fn);
   const uint32_t bool_t               = comp.OpTypeBool(fn);
   const uint32_t uint_t               = comp.OpTypeInt(fn, 32, false);
-  const uint32_t float_t              = comp.OpTypeFloat(fn, 32);
   const uint32_t _ptr_Storage_uint    = comp.OpTypePointer(fn, spv::StorageClassStorageBuffer, uint_t);
   const uint32_t _ptr_Workgroup_uint  = comp.OpTypePointer(fn, spv::StorageClassWorkgroup, uint_t);
-  const uint32_t _ptr_Workgroup_float = comp.OpTypePointer(fn, spv::StorageClassWorkgroup, float_t);
   const uint32_t _ptr_Function_uint   = comp.OpTypePointer(fn, spv::StorageClassFunction, uint_t);
   const uint32_t func_void_uuu        = comp.OpTypeFunction(fn,void_t,{_ptr_Function_uint, _ptr_Function_uint, _ptr_Function_uint});
 
@@ -661,7 +659,6 @@ void MeshConverter::emitEmitMeshTasks(libspirv::MutableBytecode& comp, uint32_t 
   const uint32_t const0    = constants[0];
   const uint32_t const1    = constants[1];
   const uint32_t const2    = constants[2];
-  const uint32_t const6    = constants[6];
   const uint32_t allocSize = comp.OpConstant(fn, uint_t, plSize + 3);
   const uint32_t const264  = comp.OpConstant(fn, uint_t, 264);
 
@@ -847,7 +844,6 @@ void MeshConverter::emitSetMeshOutputs(libspirv::MutableBytecode& comp, uint32_t
   const uint32_t const3              = comp.OpConstant(fn,uint_t,3);
   const uint32_t constVertSz         = comp.OpConstant(fn,uint_t,varCount);
   const uint32_t const264            = comp.OpConstant(fn,uint_t,264);
-  const uint32_t constMax            = comp.OpConstant(fn,uint_t,uint16_t(-1));
 
   // Function
   fn = comp.end();
@@ -1026,8 +1022,6 @@ void MeshConverter::emitTailStore(libspirv::MutableBytecode& comp, uint32_t engT
 
   // Constants
   const uint32_t constWgSize = comp.OpConstant(fn, uint_t, wgSize);
-  const uint32_t const0      = constants[0];
-  const uint32_t const1      = constants[1];
   const uint32_t constVertSz = constants[varCount];
 
   // Function
@@ -1114,12 +1108,10 @@ void MeshConverter::emitPayoadLoad(libspirv::MutableBytecode& comp, uint32_t eng
   const uint32_t void_t               = comp.OpTypeVoid(fn);
   const uint32_t uint_t               = comp.OpTypeInt(fn,32,false);
   const uint32_t bool_t               = comp.OpTypeBool(fn);
-  const uint32_t float_t              = comp.OpTypeFloat(fn,32);
   const uint32_t uvec3_t              = comp.OpTypeVector(fn,uint_t,3);
   const uint32_t func_void            = comp.OpTypeFunction(fn,void_t,{});
   const uint32_t _ptr_Storage_uint    = comp.OpTypePointer(fn, spv::StorageClassStorageBuffer, uint_t);
   const uint32_t _ptr_Workgroup_uint  = comp.OpTypePointer(fn, spv::StorageClassWorkgroup, uint_t);
-  const uint32_t _ptr_Workgroup_float = comp.OpTypePointer(fn, spv::StorageClassWorkgroup, float_t);
   const uint32_t _ptr_Input_uint      = comp.OpTypePointer(fn, spv::StorageClassInput, uint_t);
   const uint32_t _ptr_Private_uint    = comp.OpTypePointer(fn, spv::StorageClassPrivate, uint_t);
 
@@ -1132,7 +1124,6 @@ void MeshConverter::emitPayoadLoad(libspirv::MutableBytecode& comp, uint32_t eng
 
   // Constants
   const uint32_t const0     = constants[0];
-  const uint32_t const1     = constants[1];
   const uint32_t const7     = constants[7];
   const uint32_t const20    = comp.OpConstant(fn, uint_t, 20);
   const uint32_t constFFFFF = comp.OpConstant(fn, uint_t, 0xFFFFF);
@@ -1317,15 +1308,9 @@ void MeshConverter::emitVboStore(libspirv::MutableBytecode& comp, libspirv::Muta
   // Types
   auto fn = comp.findSectionEnd(libspirv::Bytecode::S_Types);
   const uint32_t uint_t            = comp.OpTypeInt(fn, 32,false);
-  const uint32_t float_t           = comp.OpTypeFloat(fn, 32);
   const uint32_t _ptr_Storage_uint = comp.OpTypePointer(fn, spv::StorageClassStorageBuffer, uint_t);
-  const uint32_t _ptr_Priate_uint  = comp.OpTypePointer(fn, spv::StorageClassPrivate,       uint_t);
 
   // Constants
-  const uint32_t const0            = constants[0];
-  const uint32_t const1            = constants[1];
-  const uint32_t const2            = constants[2];
-  const uint32_t const3            = constants[3];
   const uint32_t constVertSz       = constants[varCount];
 
   // Function
@@ -1357,7 +1342,7 @@ void MeshConverter::emitVboStore(libspirv::MutableBytecode& comp, libspirv::Muta
   uint32_t idx = varying[variable].writeOffset;
 
   for(size_t i=5; i<clen; ++i) {
-    uint32_t ix = chain[i];
+    uint32_t ix = chain[uint16_t(i)];
 
     auto b = code.findSection   (libspirv::Bytecode::S_Types);
     auto e = code.findSectionEnd(libspirv::Bytecode::S_Types);
@@ -1419,7 +1404,6 @@ void MeshConverter::emitIboStore(libspirv::MutableBytecode& comp, libspirv::Muta
   auto fn = comp.findSectionEnd(libspirv::Bytecode::S_Types);
   const uint32_t uint_t             = comp.OpTypeInt(fn, 32,false);
   const uint32_t _ptr_Storage_uint  = comp.OpTypePointer(fn, spv::StorageClassStorageBuffer, uint_t);
-  const uint32_t _ptr_Priate_uint   = comp.OpTypePointer(fn, spv::StorageClassPrivate,       uint_t);
 
   // Constants
   const uint32_t const0             = constants[0];
@@ -1640,7 +1624,7 @@ void MeshConverter::emitVert(libspirv::MutableBytecode& vert) {
         case spv::OpTypeStruct:{
           std::vector<uint32_t> idx(op.length()-2);
           for(size_t i=0; i<idx.size(); ++i)
-            idx[i] = typeRemap[op[2+i]];
+            idx[i] = typeRemap[op[uint16_t(2+i)]];
           uint32_t ix = vert.OpTypeStruct(fn, idx.data(), idx.size());
           typeRemap[id] = ix;
           break;
@@ -1830,7 +1814,7 @@ void MeshConverter::emitMVert(libspirv::MutableBytecode& comp) {
 
       uint32_t cnt = 5;
       for(size_t r=5; r<i.length(); ++r) {
-        uint32_t id = i[r];
+        uint32_t id = i[uint16_t(r)];
         if(id==gl_PrimitiveTriangleIndicesEXT)
           continue;
         if(varying.find(id)!=varying.end())
