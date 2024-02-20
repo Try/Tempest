@@ -152,7 +152,7 @@ void Game::render(){
     float tx = 0;
     for(auto i:frameTime)
       tx += i;
-    setWindowTitle(("FPS = " + std::to_string(1000.f/std::max<float>(1, tx))).c_str());
+    setWindowTitle(("FPS = " + std::to_string((1000.f*std::extent<decltype(frameTime)>())/std::max<float>(1, tx))).c_str());
     time = t;
     }
   catch(const Tempest::SwapchainSuboptimal&) {
