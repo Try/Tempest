@@ -81,7 +81,8 @@ Application::Application() {
   }
 
 Application::~Application(){
-  impl.font = Font();
+  impl.fontDef = Font();
+  impl.font    = Font();
   }
 
 void Application::sleep(uint32_t msecIn) {
