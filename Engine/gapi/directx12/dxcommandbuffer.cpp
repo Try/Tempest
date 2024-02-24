@@ -10,12 +10,22 @@
 #include "dxpipeline.h"
 #include "dxaccelerationstructure.h"
 
-#include "guid.h"
+// #include <pix3.h>
+// #include <WinPixEventRuntime/pix3.h>
 
-#include <cassert>
+#include "guid.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
+
+static void beginEvent(ID3D12GraphicsCommandList& cmd, uint32_t meta, const wchar_t* buf) {
+  // NOTE: pix is too uch trouble to integrate
+  cmd.BeginEvent(meta, buf, wcslen(buf)*sizeof(wchar_t));
+  }
+
+static void endEvent(ID3D12GraphicsCommandList& cmd) {
+  cmd.EndEvent();
+  }
 
 static D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE mkLoadOp(const AccessOp op) {
   switch(op) {
@@ -391,6 +401,10 @@ void DxCommandBuffer::begin() {
   }
 
 void DxCommandBuffer::end() {
+  if(isDbgRegion) {
+    endEvent(*impl);
+    isDbgRegion = false;
+    }
   resState.finalize(*this);
 
   dxAssert(impl->Close());
@@ -514,6 +528,21 @@ void DxCommandBuffer::setScissor(const Rect& r) {
   sr.right  = LONG(r.x+r.w);
   sr.bottom = LONG(r.y+r.h);
   impl->RSSetScissorRects(1, &sr);
+  }
+
+void DxCommandBuffer::setDebugMarker(std::string_view tag) {
+  if(isDbgRegion) {
+    endEvent(*impl);
+    isDbgRegion = false;
+    }
+
+  if(!tag.empty()) {
+    wchar_t buf[128] = {};
+    for(size_t i=0; i<127 && i<tag.size(); ++i)
+      buf[i] = tag[i];
+    beginEvent(*impl, 0x0, buf);
+    isDbgRegion = true;
+    }
   }
 
 void DxCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {

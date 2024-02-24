@@ -49,6 +49,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void setViewport (const Rect& r) override;
     void setScissor  (const Rect& r) override;
+    void setDebugMarker(std::string_view tag) override;
 
     void setPipeline (AbstractGraphicsApi::Pipeline& p) override;
     void setBytes    (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;
@@ -104,6 +105,8 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     ResourceState                      resState;
     RpState                            state = NoRecording;
+
+    bool                               isDbgRegion = false;
 
     struct Stage {
       virtual ~Stage() = default;
