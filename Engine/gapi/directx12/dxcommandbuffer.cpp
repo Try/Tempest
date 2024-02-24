@@ -19,8 +19,8 @@ using namespace Tempest;
 using namespace Tempest::Detail;
 
 static void beginEvent(ID3D12GraphicsCommandList& cmd, uint32_t meta, const wchar_t* buf) {
-  // NOTE: pix is too uch trouble to integrate
-  cmd.BeginEvent(meta, buf, wcslen(buf)*sizeof(wchar_t));
+  // NOTE: pix is too much trouble to integrate
+  cmd.BeginEvent(meta, buf, std::wcslen(buf)*sizeof(wchar_t));
   }
 
 static void endEvent(ID3D12GraphicsCommandList& cmd) {

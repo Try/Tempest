@@ -60,7 +60,7 @@ struct DirectX12Api::Impl {
       adapter->GetDesc1(&desc);
       if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
         continue;
-      if(lstrcmpW(desc.Description,L"Microsoft Basic Render Driver")==0)
+      if(std::wcscmp(desc.Description,L"Microsoft Basic Render Driver")==0)
         continue;
 
       ComPtr<ID3D12Device> tmpDev;
