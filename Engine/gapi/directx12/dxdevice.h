@@ -310,6 +310,8 @@ class DxDevice : public AbstractGraphicsApi::Device {
                                                     D3D_ROOT_SIGNATURE_VERSION Version,
                                                     ID3DBlob** ppBlob,
                                                     ID3DBlob** ppErrorBlob) = nullptr;
+
+      HRESULT (WINAPI *DxcCreateInstance)(REFCLSID rclsid, REFIID riid, LPVOID* ppv) = nullptr;
       };
 
     DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi);

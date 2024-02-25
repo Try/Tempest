@@ -27,6 +27,7 @@ using namespace Tempest::Detail;
 struct DirectX12Api::Impl {
   Impl(bool validation) {
     CoInitialize(nullptr);
+    dxil_dll  = LoadLibraryA("dxil.dll");
     d3d12_dll = LoadLibraryA("d3d12.dll");
     initApi(dllApi);
 
@@ -64,7 +65,7 @@ struct DirectX12Api::Impl {
         continue;
 
       ComPtr<ID3D12Device> tmpDev;
-      if(FAILED(dllApi.D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_11_0, uuid<ID3D12Device>(),
+      if(FAILED(dllApi.D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_12_0, uuid<ID3D12Device>(),
                                          reinterpret_cast<void**>(&tmpDev))))
         continue;
 
@@ -123,17 +124,24 @@ struct DirectX12Api::Impl {
   void initApi(DxDevice::ApiEntry& a) {
     if(d3d12_dll==nullptr)
       return;
-    getProcAddress(a.D3D12CreateDevice,          "D3D12CreateDevice");
-    getProcAddress(a.D3D12GetDebugInterface,     "D3D12GetDebugInterface");
-    getProcAddress(a.D3D12SerializeRootSignature,"D3D12SerializeRootSignature");
+    getProcAddress(d3d12_dll, a.D3D12CreateDevice,          "D3D12CreateDevice");
+    getProcAddress(d3d12_dll, a.D3D12GetDebugInterface,     "D3D12GetDebugInterface");
+    getProcAddress(d3d12_dll, a.D3D12SerializeRootSignature,"D3D12SerializeRootSignature");
+
+    getProcAddress(dxil_dll,  a.DxcCreateInstance,"DxcCreateInstance");
     }
 
   template<class T>
-  void getProcAddress(T& t, const char* name) {
-    t = reinterpret_cast<T>(GetProcAddress(d3d12_dll,name));
+  void getProcAddress(HMODULE module, T& t, const char* name) {
+    if(module==nullptr) {
+      t = nullptr;
+      return;
+      }
+    t = reinterpret_cast<T>(GetProcAddress(module,name));
     }
 
   HMODULE                d3d12_dll = nullptr;
+  HMODULE                dxil_dll  = nullptr;
   DxDevice::ApiEntry     dllApi;
 
   ComPtr<ID3D12Debug>    D3D12DebugController;

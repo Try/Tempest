@@ -28,16 +28,24 @@ if(IOS)
   set(TEMPEST_BUILD_SHARED OFF)
 endif()
 
+# This warning only occurs in CMake 3.24 or greater.
+# https://cmake.org/cmake/help/latest/policy/CMP0135.html#cmp0135
+if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24")
+  cmake_policy(SET CMP0135 NEW)
+endif()
+
+# Utils
+function(target_append_redist_file target_name src_path)
+  add_custom_command(
+      TARGET ${PROJECT_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND}
+      -E copy_if_different "${src_path}"
+      "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${target_name}")
+endfunction()
+
 option(TEMPEST_BUILD_AUDIO "Build openal sound support" ON)
 
 ### The Library
-# avoid cmake link_directories issue
-if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
-  link_directories("$ENV{VULKAN_SDK}/lib")
-else()
-  link_directories("$ENV{VULKAN_SDK}/Lib32")
-endif()
-
 if(TEMPEST_BUILD_SHARED)
   add_library(${PROJECT_NAME} SHARED)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -56,11 +64,6 @@ endif()
 
 if(APPLE)
   add_definitions(-D_LARGEFILE64_SOURCE)
-endif()
-
-### Platforms
-if(WIN32)
-  find_package(D3D12)
 endif()
 
 ### zlib
@@ -123,6 +126,13 @@ if(TEMPEST_BUILD_VULKAN)
   add_definitions(-DTEMPEST_BUILD_VULKAN)
   add_definitions(-DVULKAN_HPP_NO_EXCEPTIONS)
   add_definitions(-DVULKAN_HPP_NO_SMART_HANDLE)
+
+  if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
+    target_link_directories(${PROJECT_NAME} PRIVATE "$ENV{VULKAN_SDK}/lib")
+  else()
+    target_link_directories(${PROJECT_NAME} PRIVATE "$ENV{VULKAN_SDK}/Lib32")
+  endif()
+
   target_include_directories(${PROJECT_NAME} PRIVATE "$ENV{VULKAN_SDK}/include")
   if(WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE vulkan-1)
@@ -134,11 +144,25 @@ endif()
 ### Directx12
 if(WIN32 AND TEMPEST_BUILD_DIRECTX12)
   add_definitions(-DTEMPEST_BUILD_DIRECTX12)
-  target_link_libraries(${PROJECT_NAME} PRIVATE dxcompiler dxgi)
-  find_package(directx-dxc CONFIG)
-  if(directx-dxc_FOUND) 
-    target_link_libraries(${PROJECT_NAME} PRIVATE Microsoft::DirectXShaderCompiler)
+
+  include(FetchContent)
+  FetchContent_Declare(DirectXShaderCompiler
+      URL "https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.7.2212.1/dxc_2023_03_01.zip"
+      URL_HASH SHA256=E4E8CB7326FF7E8A791ACDA6DFB0CB78CC96309098BFDB0AB1E465DC29162422)
+  FetchContent_MakeAvailable(DirectXShaderCompiler)
+
+  if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
+    set(TARGET_ARCH "x64")
+  else()
+    set(TARGET_ARCH "x86")
   endif()
+
+  #message("directxshadercompiler_SOURCE_DIR = ${directxshadercompiler_SOURCE_DIR}")
+  target_include_directories(${PROJECT_NAME} PRIVATE "${directxshadercompiler_SOURCE_DIR}/inc")
+  target_link_directories(${PROJECT_NAME} PRIVATE "${directxshadercompiler_SOURCE_DIR}/lib/${TARGET_ARCH}")
+  target_link_libraries(${PROJECT_NAME} PRIVATE dxcompiler dxgi)
+  target_append_redist_file("dxcompiler.dll" "${directxshadercompiler_SOURCE_DIR}/bin/${TARGET_ARCH}/dxcompiler.dll")
+  target_append_redist_file("dxil.dll"       "${directxshadercompiler_SOURCE_DIR}/bin/${TARGET_ARCH}/dxil.dll")
 endif()
 
 ### Metal

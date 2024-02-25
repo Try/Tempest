@@ -13,6 +13,7 @@
 #include "thirdparty/spirv_cross/spirv_hlsl.hpp"
 #include "thirdparty/spirv_cross/spirv_msl.hpp"
 
+#include "dxdevice.h"
 #include "guid.h"
 
 using namespace Tempest;
@@ -180,14 +181,12 @@ D3D12_SHADER_BYTECODE DxShader::bytecode() const {
   }
 
 HRESULT DxShader::compile(ComPtr<ID3DBlob>& shader, const char* hlsl, size_t len, spv::ExecutionModel exec, uint32_t sm) const {
-  char tg[32] = {};
-  return compileDXC(shader,hlsl,len,target(exec,sm,tg));
-  }
-
-HRESULT DxShader::compileDXC(ComPtr<ID3DBlob>& shader, const char* hlsl, size_t len, const char* target) const {
+  char target[32] = {};
+  ::target(exec,sm,target);
   ComPtr<IDxcCompiler3> compiler;
 
   HRESULT hr = S_OK;
+  //hr = dx.dllApi.DxcCreateInstance(CLSID_DxcCompiler, uuid<IDxcCompiler3>(), reinterpret_cast<void**>(&compiler.get()));
   hr = DxcCreateInstance(CLSID_DxcCompiler, uuid<IDxcCompiler3>(), reinterpret_cast<void**>(&compiler.get()));
   if(FAILED(hr))
     return hr;
@@ -201,10 +200,12 @@ HRESULT DxShader::compileDXC(ComPtr<ID3DBlob>& shader, const char* hlsl, size_t 
     L"main",
     L"-T",
     targetW,
-    L"-Qstrip_reflect",
-    L"-res-may-alias"
+    L"-res-may-alias",
+    L"-Wno-ambig-lit-shift", // bitextract in spirv-cross
 #if !defined(NDEBUG)
-    // DXC_ARG_DEBUG,
+    DXC_ARG_DEBUG,
+#else
+    L"-Qstrip_reflect",
 #endif
     };
   uint32_t argc = _countof(argv);

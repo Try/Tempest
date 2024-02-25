@@ -3,6 +3,7 @@
 #include <dxgi1_6.h>
 #include <dxcapi.h>
 #include <d3d12.h>
+#include <dxcapi.h>
 
 namespace Tempest {
 namespace Detail {
