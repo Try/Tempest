@@ -1,7 +1,6 @@
 #if defined(TEMPEST_BUILD_DIRECTX12)
 
 #include <Tempest/Log>
-#include <iostream>
 
 #include "guid.h"
 #include "dxdevice.h"
@@ -43,6 +42,12 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
     pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
     pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
     pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, false);
+    }
+
+  ComPtr<ID3D12InfoQueue1> pInfoQueue1;
+  if(SUCCEEDED(device->QueryInterface(uuid<ID3D12InfoQueue1>(),reinterpret_cast<void**>(&pInfoQueue1)))) {
+    // NOTE: not supported in DX yet
+    pInfoQueue1->RegisterMessageCallback(DxDevice::debugReportCallback, D3D12_MESSAGE_CALLBACK_FLAG_NONE, nullptr, nullptr);
     }
 
   DXGI_ADAPTER_DESC desc={};
@@ -298,6 +303,14 @@ void DxDevice::submit(DxCommandBuffer& cmdBuffer, DxFence* sync) {
   ID3D12CommandList* cmd[] = {cmdBuffer.get()};
   cmdQueue->ExecuteCommandLists(1, cmd);
   sync->signal(*cmdQueue);
+  }
+
+void DxDevice::debugReportCallback(
+    D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID ID,
+    LPCSTR pMessage, void* pContext) {
+  (void)pContext;
+  //Log::e(pMessage," object=",object,", type=",objectType," th:",std::this_thread::get_id());
+  Log::e(pMessage," th:",std::this_thread::get_id());
   }
 
 #endif

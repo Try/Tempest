@@ -349,6 +349,12 @@ class DxDevice : public AbstractGraphicsApi::Device {
     DSharedPtr<DxCompPipeline*> copyS;
 
   private:
+    static void debugReportCallback(D3D12_MESSAGE_CATEGORY Category,
+                                  D3D12_MESSAGE_SEVERITY Severity,
+                                  D3D12_MESSAGE_ID ID,
+                                  LPCSTR pDescription,
+                                  void* pContext);
+
     ComPtr<ID3D12Fence>         idleFence;
     HANDLE                      idleEvent=nullptr;
 
