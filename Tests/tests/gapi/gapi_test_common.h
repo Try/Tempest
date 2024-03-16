@@ -279,7 +279,7 @@ void ArrayLength() {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{src,Vec4(0),Tempest::Preserve}});
       enc.setUniforms(pso, desc);
-      enc.draw(6);
+      enc.draw(nullptr, 0,6);
     }
 
     auto sync = device.fence();
@@ -454,7 +454,7 @@ void GeomBasic(const char* outImg) {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
       enc.setUniforms(pso);
-      enc.draw(1);
+      enc.draw(nullptr, 0, 1);
     }
 
     auto sync = device.fence();

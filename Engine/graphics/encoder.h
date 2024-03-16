@@ -46,28 +46,44 @@ class Encoder<Tempest::CommandBuffer> {
 
     void setDebugMarker(std::string_view tag);
 
-    void draw(const size_t vertexCount) { implDraw(vertexCount,0,1); }
-    void draw(const size_t vertexCount, size_t firstInstance, size_t instanceCount) { implDraw(vertexCount,firstInstance,instanceCount); }
+    // non-indexed + empty vbo
+    void draw(std::nullptr_t vbo, size_t offset, size_t count) { implDraw({},0,offset,count,0,1); }
+    void draw(std::nullptr_t vbo, size_t offset, size_t count, size_t firstInstance, size_t instanceCount) { implDraw({},0,offset,count,firstInstance,instanceCount); }
 
+    // non-indexed
     template<class T>
     void draw(const VertexBuffer<T>& vbo) { implDraw(vbo.impl,sizeof(T),0,vbo.size(),0,1); }
 
     template<class T>
-    void draw(const VertexBuffer<T>& vbo,size_t offset,size_t count) { implDraw(vbo.impl,sizeof(T),offset,count,0,1); }
+    void draw(const VertexBuffer<T>& vbo, size_t offset, size_t count) { implDraw(vbo.impl,sizeof(T),offset,count,0,1); }
 
     template<class T>
-    void draw(const VertexBuffer<T>& vbo,size_t offset,size_t count,size_t firstInstance,size_t instanceCount) { implDraw(vbo.impl,sizeof(T),offset,count,firstInstance,instanceCount); }
+    void draw(const VertexBuffer<T>& vbo, size_t offset, size_t count, size_t firstInstance, size_t instanceCount) { implDraw(vbo.impl,sizeof(T),offset,count,firstInstance,instanceCount); }
 
+    // indexed + empty vbo
+    template<class I>
+    void draw(std::nullptr_t vbo, const IndexBuffer<I>& ibo)
+      { implDraw({},0,ibo.impl,Detail::indexCls<I>(),0,ibo.size(),0,1); }
+
+    template<class I>
+    void draw(std::nullptr_t vbo, const IndexBuffer<I>& ibo, size_t offset, size_t count)
+      { implDraw({},0,ibo.impl,Detail::indexCls<I>(),offset,count,0,1); }
+
+    template<class I>
+    void draw(std::nullptr_t vbo, const IndexBuffer<I>& ibo, size_t offset, size_t count, size_t firstInstance, size_t instanceCount)
+      { implDraw({},0,ibo.impl,Detail::indexCls<I>(),offset,count,firstInstance,instanceCount); }
+
+    // indexed
     template<class T,class I>
-    void draw(const VertexBuffer<T>& vbo,const IndexBuffer<I>& ibo)
+    void draw(const VertexBuffer<T>& vbo, const IndexBuffer<I>& ibo)
          { implDraw(vbo.impl,sizeof(T),ibo.impl,Detail::indexCls<I>(),0,ibo.size(),0,1); }
 
     template<class T,class I>
-    void draw(const VertexBuffer<T>& vbo,const IndexBuffer<I>& ibo,size_t offset,size_t count)
+    void draw(const VertexBuffer<T>& vbo, const IndexBuffer<I>& ibo, size_t offset, size_t count)
          { implDraw(vbo.impl,sizeof(T),ibo.impl,Detail::indexCls<I>(),offset,count,0,1); }
 
     template<class T,class I>
-    void draw(const VertexBuffer<T>& vbo,const IndexBuffer<I>& ibo,size_t offset,size_t count,size_t firstInstance,size_t instanceCount)
+    void draw(const VertexBuffer<T>& vbo, const IndexBuffer<I>& ibo, size_t offset, size_t count, size_t firstInstance, size_t instanceCount)
          { implDraw(vbo.impl,sizeof(T),ibo.impl,Detail::indexCls<I>(),offset,count,firstInstance,instanceCount); }
 
     void drawIndirect(const StorageBuffer& indirect, size_t offset);
@@ -105,7 +121,6 @@ class Encoder<Tempest::CommandBuffer> {
     State                               state;
 
     void         implSetFramebuffer(const AttachmentDesc* rt, size_t rtSize, const AttachmentDesc* zs);
-    void         implDraw(size_t size, size_t firstInstance, size_t instanceCount);
     void         implDraw(const Detail::VideoBuffer& vbo, size_t stride, size_t offset, size_t size, size_t firstInstance, size_t instanceCount);
     void         implDraw(const Detail::VideoBuffer& vbo, size_t stride, const Detail::VideoBuffer &ibo, Detail::IndexClass index,
                           size_t offset, size_t size, size_t firstInstance, size_t instanceCount);

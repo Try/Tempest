@@ -49,11 +49,10 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     void setScissor (const Rect& r) override;
     void setDebugMarker(std::string_view tag) override;
 
-    void draw        (size_t vsize, size_t firstInstance, size_t instanceCount) override;
-    void draw        (const AbstractGraphicsApi::Buffer& vbo, size_t stride, size_t voffset,size_t vertexCount,
+    void draw        (const AbstractGraphicsApi::Buffer* vbo, size_t stride, size_t voffset,size_t vertexCount,
                       size_t firstInstance, size_t instanceCount) override;
-    void drawIndexed (const AbstractGraphicsApi::Buffer& vbo, size_t stride, size_t voffset,
-                      const AbstractGraphicsApi::Buffer &ibo, Detail::IndexClass cls,
+    void drawIndexed (const AbstractGraphicsApi::Buffer* vbo, size_t stride, size_t voffset,
+                      const AbstractGraphicsApi::Buffer& ibo, Detail::IndexClass cls,
                       size_t ioffset, size_t isize, size_t firstInstance, size_t instanceCount) override;
 
     void drawIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) override;

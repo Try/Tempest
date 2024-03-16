@@ -63,9 +63,8 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void setBytes   (AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) override;
     void setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc &u) override;
 
-    void draw       (size_t vsize, size_t firstInstance, size_t instanceCount) override;
-    void draw       (const AbstractGraphicsApi::Buffer& vbo, size_t stride, size_t voffset, size_t vsize, size_t firstInstance, size_t instanceCount) override;
-    void drawIndexed(const AbstractGraphicsApi::Buffer& vbo, size_t stride, size_t voffset,
+    void draw       (const AbstractGraphicsApi::Buffer* vbo, size_t stride, size_t voffset, size_t vsize, size_t firstInstance, size_t instanceCount) override;
+    void drawIndexed(const AbstractGraphicsApi::Buffer* vbo, size_t stride, size_t voffset,
                      const AbstractGraphicsApi::Buffer& ibo, Detail::IndexClass cls,
                      size_t ioffset, size_t isize, size_t firstInstance, size_t instanceCount) override;
 

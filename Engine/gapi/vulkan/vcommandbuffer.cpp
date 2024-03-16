@@ -480,23 +480,23 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractG
                           0,nullptr);
   }
 
-void VCommandBuffer::draw(size_t vsize, size_t firstInstance, size_t instanceCount) {
-  vkCmdDraw(impl, uint32_t(vsize), uint32_t(instanceCount), 0, uint32_t(firstInstance));
-  }
-
-void VCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t stride, size_t voffset, size_t vsize,
+void VCommandBuffer::draw(const AbstractGraphicsApi::Buffer* ivbo, size_t stride, size_t voffset, size_t vsize,
                           size_t firstInstance, size_t instanceCount) {
-  const VBuffer& vbo=reinterpret_cast<const VBuffer&>(ivbo);
-  bindVbo(vbo,stride);
+  const VBuffer* vbo=reinterpret_cast<const VBuffer*>(ivbo);
+  if(T_LIKELY(vbo!=nullptr)) {
+    bindVbo(*vbo,stride);
+    }
   vkCmdDraw(impl, uint32_t(vsize), uint32_t(instanceCount), uint32_t(voffset), uint32_t(firstInstance));
   }
 
-void VCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_t stride, size_t voffset,
+void VCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer* ivbo, size_t stride, size_t voffset,
                                  const AbstractGraphicsApi::Buffer& iibo, Detail::IndexClass cls,
                                  size_t ioffset, size_t isize, size_t firstInstance, size_t instanceCount) {
-  const VBuffer& vbo = reinterpret_cast<const VBuffer&>(ivbo);
+  const VBuffer* vbo = reinterpret_cast<const VBuffer*>(ivbo);
   const VBuffer& ibo = reinterpret_cast<const VBuffer&>(iibo);
-  bindVbo(vbo,stride);
+  if(T_LIKELY(vbo!=nullptr)) {
+    bindVbo(*vbo,stride);
+    }
   vkCmdBindIndexBuffer(impl, ibo.impl, 0, nativeFormat(cls));
   vkCmdDrawIndexed    (impl, uint32_t(isize), uint32_t(instanceCount), uint32_t(ioffset), int32_t(voffset), uint32_t(firstInstance));
   }

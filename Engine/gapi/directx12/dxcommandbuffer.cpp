@@ -677,35 +677,34 @@ void DxCommandBuffer::prepareDraw(size_t voffset, size_t firstInstance) {
     }
   }
 
-void DxCommandBuffer::draw(size_t vertexCount, size_t firstInstance, size_t instanceCount) {
-  prepareDraw(0, firstInstance);
-  impl->DrawInstanced(UINT(vertexCount),UINT(instanceCount),UINT(0),UINT(firstInstance));
-  }
-
-void DxCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t stride, size_t offset, size_t vertexCount,
+void DxCommandBuffer::draw(const AbstractGraphicsApi::Buffer* ivbo, size_t stride, size_t offset, size_t vertexCount,
                            size_t firstInstance, size_t instanceCount) {
   prepareDraw(offset, firstInstance);
-  const DxBuffer& vbo = reinterpret_cast<const DxBuffer&>(ivbo);
-  D3D12_VERTEX_BUFFER_VIEW view;
-  view.BufferLocation = vbo.impl.get()->GetGPUVirtualAddress();
-  view.SizeInBytes    = vbo.sizeInBytes;
-  view.StrideInBytes  = UINT(stride);
-  impl->IASetVertexBuffers(0,1,&view);
+  const DxBuffer* vbo = reinterpret_cast<const DxBuffer*>(ivbo);
+  if(T_LIKELY(vbo!=nullptr)) {
+    D3D12_VERTEX_BUFFER_VIEW view;
+    view.BufferLocation = vbo->impl.get()->GetGPUVirtualAddress();
+    view.SizeInBytes    = vbo->sizeInBytes;
+    view.StrideInBytes  = UINT(stride);
+    impl->IASetVertexBuffers(0,1,&view);
+    }
   impl->DrawInstanced(UINT(vertexCount),UINT(instanceCount),UINT(offset),UINT(firstInstance));
   }
 
-void DxCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_t stride, size_t voffset,
+void DxCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer* ivbo, size_t stride, size_t voffset,
                                   const AbstractGraphicsApi::Buffer& iibo, Detail::IndexClass cls, size_t ioffset, size_t isize,
                                   size_t firstInstance, size_t instanceCount) {
   prepareDraw(voffset, firstInstance);
-  const DxBuffer& vbo = reinterpret_cast<const DxBuffer&>(ivbo);
+  const DxBuffer* vbo = reinterpret_cast<const DxBuffer*>(ivbo);
   const DxBuffer& ibo = reinterpret_cast<const DxBuffer&>(iibo);
 
-  D3D12_VERTEX_BUFFER_VIEW view;
-  view.BufferLocation = vbo.impl.get()->GetGPUVirtualAddress();
-  view.SizeInBytes    = vbo.sizeInBytes;
-  view.StrideInBytes  = UINT(stride);
-  impl->IASetVertexBuffers(0,1,&view);
+  if(T_LIKELY(vbo!=nullptr)) {
+    D3D12_VERTEX_BUFFER_VIEW view;
+    view.BufferLocation = vbo->impl.get()->GetGPUVirtualAddress();
+    view.SizeInBytes    = vbo->sizeInBytes;
+    view.StrideInBytes  = UINT(stride);
+    impl->IASetVertexBuffers(0,1,&view);
+    }
 
   D3D12_INDEX_BUFFER_VIEW iview;
   iview.BufferLocation = ibo.impl.get()->GetGPUVirtualAddress();

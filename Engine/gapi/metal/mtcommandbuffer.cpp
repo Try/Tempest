@@ -269,13 +269,9 @@ void MtCommandBuffer::setDebugMarker(std::string_view tag) {
     }
   }
 
-void MtCommandBuffer::draw(size_t vsize, size_t firstInstance, size_t instanceCount) {
-  encDraw->drawPrimitives(topology,0,vsize,instanceCount,firstInstance);
-  }
-
-void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t stride, size_t offset, size_t vertexCount,
+void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer* ivbo, size_t stride, size_t offset, size_t vertexCount,
                            size_t firstInstance, size_t instanceCount) {
-  auto& vbo = reinterpret_cast<const MtBuffer&>(ivbo);
+  auto* vbo = reinterpret_cast<const MtBuffer*>(ivbo);
 
   if(T_UNLIKELY(stride!=vboStride)) {
     auto& px   = *curDrawPipeline;
@@ -283,7 +279,9 @@ void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t strid
     encDraw->setRenderPipelineState(&inst);
     }
 
-  encDraw->setVertexBuffer(vbo.impl.get(),0,curVboId);
+  if(T_LIKELY(vbo!=nullptr)) {
+    encDraw->setVertexBuffer(vbo->impl.get(),0,curVboId);
+    }
 
   if(!isTesselation) {
     encDraw->drawPrimitives(topology,offset,vertexCount,instanceCount,firstInstance);
@@ -294,10 +292,10 @@ void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer& ivbo, size_t strid
     }
   }
 
-void MtCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_t stride, size_t voffset,
+void MtCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer* ivbo, size_t stride, size_t voffset,
                                   const AbstractGraphicsApi::Buffer& iibo, Detail::IndexClass icls, size_t ioffset, size_t isize,
                                   size_t firstInstance, size_t instanceCount) {
-  auto&    vbo     = reinterpret_cast<const MtBuffer&>(ivbo);
+  auto*    vbo     = reinterpret_cast<const MtBuffer*>(ivbo);
   auto&    ibo     = reinterpret_cast<const MtBuffer&>(iibo);
   auto     iboType = nativeFormat(icls);
   uint32_t mul     = sizeofIndex(icls);
@@ -308,7 +306,9 @@ void MtCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer& ivbo, size_
     encDraw->setRenderPipelineState(&inst);
     }
 
-  encDraw->setVertexBuffer(vbo.impl.get(),0,curVboId);
+  if(T_LIKELY(vbo!=nullptr)) {
+    encDraw->setVertexBuffer(vbo->impl.get(),0,curVboId);
+    }
   encDraw->drawIndexedPrimitives(topology,isize,iboType,ibo.impl.get(),
                                  ioffset*mul,instanceCount,voffset,firstInstance);
   }
