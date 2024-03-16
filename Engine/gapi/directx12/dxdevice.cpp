@@ -29,6 +29,8 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
       D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE,
       // blit shader uses no vbo
       D3D12_MESSAGE_ID_CREATEINPUTLAYOUT_EMPTY_LAYOUT,
+      // debug markers without pix
+      D3D12_MESSAGE_ID_CORRUPTED_PARAMETER2,
       };
     D3D12_INFO_QUEUE_FILTER filter = {};
     filter.DenyList.NumSeverities = _countof(severities);
