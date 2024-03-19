@@ -202,7 +202,7 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
       for(int y=0; y<4; ++y)
         objInstance.transform.matrix[x][y] = inst[i].mat.at(y,x);
     objInstance.instanceCustomIndex                    = inst[i].id;
-    objInstance.mask                                   = 0xFF;
+    objInstance.mask                                   = inst[i].mask;
     objInstance.instanceShaderBindingTableRecordOffset = 0;
     objInstance.flags                                  = nativeFormat(inst[i].flags);
     objInstance.accelerationStructureReference         = blas->toDeviceAddress(dx);

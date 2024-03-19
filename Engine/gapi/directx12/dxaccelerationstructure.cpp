@@ -119,7 +119,7 @@ DxTopAccelerationStructure::DxTopAccelerationStructure(DxDevice& dx, const RtIns
       for(int y=0; y<4; ++y)
         objInstance.Transform[x][y] = inst[i].mat.at(y,x);
     objInstance.InstanceID                          = inst[i].id;
-    objInstance.InstanceMask                        = 0xFF;
+    objInstance.InstanceMask                        = inst[i].mask;
     objInstance.InstanceContributionToHitGroupIndex = 0;
     objInstance.Flags                               = nativeFormat(inst[i].flags);
     objInstance.AccelerationStructure               = blas->impl.impl->GetGPUVirtualAddress();

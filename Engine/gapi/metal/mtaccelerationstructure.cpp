@@ -113,7 +113,7 @@ MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtIns
       for(int y=0; y<3; ++y)
         obj.transformationMatrix[x][y]  = inst[i].mat.at(x,y);
     obj.options                         = nativeFormat(inst[i].flags);
-    obj.mask                            = 0xFF;
+    obj.mask                            = inst[i].mask;
     obj.intersectionFunctionTableOffset = 0;
     obj.accelerationStructureIndex      = uint32_t(i);
     obj.userID                          = inst[i].id;

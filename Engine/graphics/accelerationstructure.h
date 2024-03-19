@@ -33,7 +33,8 @@ inline RtInstanceFlags operator & (RtInstanceFlags a, RtInstanceFlags b){
 class RtInstance {
   public:
   Tempest::Matrix4x4           mat   = Matrix4x4::mkIdentity();
-  uint32_t                     id    = 0;
+  uint32_t                     id    = 0; // 24bit
+  uint8_t                      mask  = 0xFF;
   RtInstanceFlags              flags = RtInstanceFlags::Opaque;
   const AccelerationStructure* blas  = nullptr;
   };
