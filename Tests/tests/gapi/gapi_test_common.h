@@ -1614,7 +1614,7 @@ void Blas() {
     auto vbo  = device.vbo(vboData3,3);
     auto ibo  = device.ibo(iboData,3);
     auto blas = device.blas(vbo,ibo);
-    auto tlas = device.tlas({{Matrix4x4::mkIdentity(), 0, Tempest::RtInstanceFlags::Opaque, &blas}});
+    auto tlas = device.tlas({{Matrix4x4::mkIdentity(), 0, 0xFF, Tempest::RtInstanceFlags::Opaque,&blas}});
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
@@ -1674,7 +1674,7 @@ void RayQuery(const char* outImg) {
 
     auto m = Matrix4x4::mkIdentity();
     m.translate(-1,1,0);
-    auto tlas = device.tlas({{m,0,Tempest::RtInstanceFlags::Opaque,&blas}});
+    auto tlas = device.tlas({{m,0,0xFF,Tempest::RtInstanceFlags::Opaque,&blas}});
 
     auto fsq  = device.vbo<Vertex>({{-1,-1},{ 1,-1},{ 1, 1}, {-1,-1},{ 1, 1},{-1, 1}});
     auto vert = device.shader("shader/simple_test.vert.sprv");
@@ -1731,7 +1731,7 @@ void RayQueryFace(const char* outImg) {
 
     auto m = Matrix4x4::mkIdentity();
     m.translate(-1,1,0);
-    auto tlas = device.tlas({{m,0,Tempest::RtInstanceFlags::Opaque,&blas}});
+    auto tlas = device.tlas({{m,0,0xFF,Tempest::RtInstanceFlags::Opaque,&blas}});
 
     auto fsq  = device.vbo<Vertex>({{-1,-1},{ 1,-1},{ 1, 1}, {-1,-1},{ 1, 1},{-1, 1}});
     auto vert = device.shader("shader/simple_test.vert.sprv");
