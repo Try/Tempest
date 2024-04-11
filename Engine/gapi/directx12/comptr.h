@@ -22,6 +22,11 @@ class ComPtr final {
     T& operator *  () { return *p; }
     T*& get() { return p; }
     T*  get() const { return p; }
+    T*  release() {
+      auto ret = p;
+      p = nullptr;
+      return ret;
+      }
 
   private:
     T* p=nullptr;

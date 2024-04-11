@@ -199,9 +199,6 @@ ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& 
   ComPtr<ID3D12PipelineState> ret;
   auto err = device.device->CreateGraphicsPipelineState(&psoDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&ret.get()));
   if(FAILED(err)) {
-    for(auto& i:modules)
-      if(i.handler!=nullptr)
-        ;//i.handler->disasm();
     dxAssert(err);
     }
   return ret;

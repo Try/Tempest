@@ -89,6 +89,11 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     ID3D12GraphicsCommandList* get() { return impl.get(); }
 
+    struct Chunk {
+      ID3D12GraphicsCommandList6* impl = nullptr;
+      };
+    Detail::SmallList<Chunk,32>        chunks;
+
   private:
     DxDevice&                          dev;
     ComPtr<ID3D12CommandAllocator>     pool;
@@ -119,6 +124,9 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     Stage*                            stageResources = nullptr;
 
     std::unordered_set<ID3D12Resource*> indirectCmd;
+
+    void pushChunk();
+    void newChunk();
 
     void prepareDraw(size_t voffset, size_t firstInstance);
     void clearStage();

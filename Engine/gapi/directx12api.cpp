@@ -445,10 +445,14 @@ void DirectX12Api::present(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::
   sx.queuePresent();
   }
 
-void DirectX12Api::submit(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::CommandBuffer* cmd, AbstractGraphicsApi::Fence* doneCpu) {
-  Detail::DxCommandBuffer& bx = *reinterpret_cast<Detail::DxCommandBuffer*>(cmd);
-  ID3D12CommandList* cmdList[] = { bx.get() };
-  impl->submit(d,cmdList,1,doneCpu);
+void DirectX12Api::submit(AbstractGraphicsApi::Device* d,
+                          AbstractGraphicsApi::CommandBuffer* cx,
+                          AbstractGraphicsApi::Fence* doneCpu) {
+  auto& dx   = *reinterpret_cast<Detail::DxDevice*>(d);
+  auto& sync = *reinterpret_cast<Detail::DxFence*>(doneCpu);
+  auto& cmd  = *reinterpret_cast<Detail::DxCommandBuffer*>(cx);
+
+  dx.submit(cmd, &sync);
   }
 
 void DirectX12Api::getCaps(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Props& caps) {

@@ -20,7 +20,7 @@ using namespace Tempest::Detail;
 
 static void beginEvent(ID3D12GraphicsCommandList& cmd, uint32_t meta, const wchar_t* buf) {
   // NOTE: pix is too much trouble to integrate
-  cmd.BeginEvent(meta, buf, std::wcslen(buf)*sizeof(wchar_t));
+  cmd.BeginEvent(meta, buf, UINT(std::wcslen(buf)*sizeof(wchar_t)));
   }
 
 static void endEvent(ID3D12GraphicsCommandList& cmd) {
@@ -375,18 +375,20 @@ struct DxCommandBuffer::FillUAV : Stage {
 
 DxCommandBuffer::DxCommandBuffer(DxDevice& d)
   : dev(d) {
-  D3D12_COMMAND_LIST_TYPE type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-  dxAssert(d.device->CreateCommandAllocator(type,
+  dxAssert(d.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
                                             uuid<ID3D12CommandAllocator>(),
                                             reinterpret_cast<void**>(&pool)));
-
-  dxAssert(d.device->CreateCommandList(0, type, pool.get(), nullptr,
-                                       uuid<ID3D12GraphicsCommandList6>(), reinterpret_cast<void**>(&impl)));
-  impl->Close();
   }
 
 DxCommandBuffer::~DxCommandBuffer() {
   clearStage();
+  auto node = chunks.begin();
+  for(size_t i=0; i<chunks.size(); ++i) {
+    auto cmd = node->val[i%chunks.chunkSize].impl;
+    dxAssert(cmd->Release());
+    if(i+1==chunks.chunkSize)
+      node = node->next;
+    }
   }
 
 void DxCommandBuffer::begin(bool transfer) {
@@ -394,6 +396,10 @@ void DxCommandBuffer::begin(bool transfer) {
   state = Idle;
   if(transfer)
     resState.clearReaders();
+
+  if(impl.get()==nullptr) {
+    newChunk();
+    }
   }
 
 void DxCommandBuffer::begin() {
@@ -406,19 +412,32 @@ void DxCommandBuffer::end() {
     isDbgRegion = false;
     }
   resState.finalize(*this);
-
-  dxAssert(impl->Close());
   state     = NoRecording;
   resetDone = false;
-  curHeaps  = DxDescriptorArray::CbState{};
+
+  pushChunk();
   }
 
 void DxCommandBuffer::reset() {
   if(resetDone)
     return;
   clearStage();
+
   dxAssert(pool->Reset());
-  dxAssert(impl->Reset(pool.get(),nullptr));
+  SmallArray<ID3D12CommandList*,MaxCmdChunks> flat(chunks.size());
+  auto node = chunks.begin();
+  if(chunks.size()>0) {
+    impl = ComPtr<ID3D12GraphicsCommandList6>(node->val[0].impl);
+    dxAssert(impl->Reset(pool.get(),nullptr));
+    }
+  for(size_t i=1; i<chunks.size(); ++i) {
+    auto cmd = node->val[i%chunks.chunkSize].impl;
+    cmd->Release();
+    // dxAssert(cmd->Reset(pool.get(),nullptr));
+    if(i+1==chunks.chunkSize)
+      node = node->next;
+    }
+  chunks.clear();
   resetDone   = true;
   }
 
@@ -431,6 +450,10 @@ void DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize
                                      AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) {
   resState.joinWriters(PipelineStage::S_Graphics);
   resState.setRenderpass(*this,desc,descSize,frm,att,sw,imgId);
+
+  if(state!=Idle) {
+    newChunk();
+    }
 
   D3D12_RENDER_PASS_RENDER_TARGET_DESC view[MaxFramebufferAttachments] = {};
   UINT                                 viewSz = 0;
@@ -858,6 +881,25 @@ void DxCommandBuffer::buildTlas(AbstractGraphicsApi::Buffer& tbo,
   resState.onUavUsage(NonUniqResId::I_None, reinterpret_cast<DxBuffer&>(tbo).nonUniqId, PipelineStage::S_RtAs);
   resState.flush(*this);
   impl->BuildRaytracingAccelerationStructure(&desc,0,nullptr);
+  }
+
+void DxCommandBuffer::pushChunk() {
+  if(impl.get()!=nullptr) {
+    dxAssert(impl->Close());
+    Chunk ch;
+    ch.impl = impl.release();
+    chunks.push(ch);
+
+    impl = nullptr;
+    curHeaps = DxDescriptorArray::CbState{};
+    }
+  }
+
+void DxCommandBuffer::newChunk() {
+  pushChunk();
+
+  dxAssert(dev.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, pool.get(), nullptr,
+                                         uuid<ID3D12GraphicsCommandList6>(), reinterpret_cast<void**>(&impl)));
   }
 
 void DxCommandBuffer::clearStage() {

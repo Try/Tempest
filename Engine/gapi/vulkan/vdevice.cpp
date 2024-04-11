@@ -534,7 +534,7 @@ void VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
       wait2[i].stageMask   = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
       wait2[i].deviceIndex = 0;
       }
-    SmallArray<VkCommandBufferSubmitInfoKHR,64> flat(cmd.chunks.size());
+    SmallArray<VkCommandBufferSubmitInfoKHR,MaxCmdChunks> flat(cmd.chunks.size());
     auto node = cmd.chunks.begin();
     for(size_t i=0; i<cmd.chunks.size(); ++i) {
       flat[i].sType         = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO_KHR;
@@ -560,7 +560,7 @@ void VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
       waitStages[i] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
       }
 
-    SmallArray<VkCommandBuffer,64> flat(cmd.chunks.size());
+    SmallArray<VkCommandBuffer,MaxCmdChunks> flat(cmd.chunks.size());
     auto node = cmd.chunks.begin();
     for(size_t i=0; i<cmd.chunks.size(); ++i) {
       flat[i] = node->val[i%cmd.chunks.chunkSize].impl;

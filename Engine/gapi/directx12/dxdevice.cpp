@@ -296,12 +296,20 @@ void Detail::DxDevice::waitIdle() {
   dxAssert(idleFence->Signal(DxFence::Waiting));
   }
 
-void DxDevice::submit(DxCommandBuffer& cmdBuffer, DxFence* sync) {
+void DxDevice::submit(DxCommandBuffer& cmd, DxFence* sync) {
   sync->reset();
 
+  const size_t                                 size = cmd.chunks.size();
+  SmallArray<ID3D12CommandList*, MaxCmdChunks> flat(size);
+  auto node = cmd.chunks.begin();
+  for(size_t i=0; i<size; ++i) {
+    flat[i] = node->val[i%cmd.chunks.chunkSize].impl;
+    if(i+1==cmd.chunks.chunkSize)
+      node = node->next;
+    }
+
   std::lock_guard<SpinLock> guard(syncCmdQueue);
-  ID3D12CommandList* cmd[] = {cmdBuffer.get()};
-  cmdQueue->ExecuteCommandLists(1, cmd);
+  cmdQueue->ExecuteCommandLists(UINT(size), flat.get());
   sync->signal(*cmdQueue);
   }
 

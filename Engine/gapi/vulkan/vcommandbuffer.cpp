@@ -187,10 +187,14 @@ VCommandBuffer::VCommandBuffer(VDevice& device, VkCommandPoolCreateFlags flags)
   }
 
 VCommandBuffer::~VCommandBuffer() {
+  if(impl!=nullptr) {
+    vkFreeCommandBuffers(device.device.impl,pool.impl,1,&impl);
+    }
+
   if(chunks.size()==0)
     return;
 
-  SmallArray<VkCommandBuffer,64> flat(chunks.size());
+  SmallArray<VkCommandBuffer,MaxCmdChunks> flat(chunks.size());
   auto node = chunks.begin();
   for(size_t i=0; i<chunks.size(); ++i) {
     flat[i] = node->val[i%chunks.chunkSize].impl;
@@ -203,7 +207,7 @@ VCommandBuffer::~VCommandBuffer() {
 void VCommandBuffer::reset() {
   vkAssert(vkResetCommandPool(device.device.impl,pool.impl,0));
 
-  SmallArray<VkCommandBuffer,64> flat(chunks.size());
+  SmallArray<VkCommandBuffer,MaxCmdChunks> flat(chunks.size());
   auto node = chunks.begin();
   if(chunks.size()>0) {
     impl = node->val[0].impl;
