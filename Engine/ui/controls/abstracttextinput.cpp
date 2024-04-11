@@ -186,7 +186,7 @@ void AbstractTextInput::keyEventImpl(KeyEvent& e) {
   else if(e.key==Event::K_Delete || e.key==Event::K_Back) {
     if(selE<selS)
       std::swap(selE,selS);
-    TextModel::Cursor start = selS, end = selE;
+    TextModel::Cursor end = selE;
     if(selS==selE)
       end = textM.advance(selS, e.key==Event::K_Delete ? 1 : -1);
     if(textM.isValid(end)) {
