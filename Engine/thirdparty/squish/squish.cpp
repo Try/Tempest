@@ -187,7 +187,7 @@ void CompressImage( u8 const* rgba, int width, int height, void* blocks, int fla
 	}
 }
 
-void DecompressImage( u8* rgba, int width, int height, void const* blocks, int flags )
+void _DecompressImage( u8* rgba, int width, int height, void const* blocks, int flags )
 {
 	// fix any bad flags
 	flags = FixFlags( flags );

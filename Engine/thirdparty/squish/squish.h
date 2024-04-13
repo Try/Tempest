@@ -237,7 +237,7 @@ void CompressImage( u8 const* rgba, int width, int height, void* blocks, int fla
 
 	Internally this function calls squish::Decompress for each block.
 */
-void DecompressImage( u8* rgba, int width, int height, void const* blocks, int flags );
+void _DecompressImage( u8* rgba, int width, int height, void const* blocks, int flags );
 
 // -----------------------------------------------------------------------------
 
