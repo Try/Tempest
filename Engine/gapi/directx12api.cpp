@@ -109,18 +109,6 @@ struct DirectX12Api::Impl {
     return new DxDevice(*adapter,dllApi);
     }
 
-  void submit(AbstractGraphicsApi::Device* d,
-              ID3D12CommandList** cmd, size_t count,
-              AbstractGraphicsApi::Fence* doneCpu){
-    Detail::DxDevice& dx   = *reinterpret_cast<Detail::DxDevice*>(d);
-    Detail::DxFence&  fcpu = *reinterpret_cast<Detail::DxFence*>(doneCpu);
-
-    std::lock_guard<SpinLock> guard(dx.syncCmdQueue);
-    fcpu.reset();
-    dx.cmdQueue->ExecuteCommandLists(UINT(count), cmd);
-    fcpu.signal(*dx.cmdQueue);
-    }
-
   void initApi(DxDevice::ApiEntry& a) {
     if(d3d12_dll==nullptr)
       return;
