@@ -1,0 +1,11 @@
+#version 450
+
+layout (binding=0, r32ui) uniform uimage2D image;
+
+void main() {
+  ivec2 index = ivec2(gl_GlobalInvocationID.xy);
+  vec3  color = vec3(index, 0.0) / vec3(128,128,0);
+
+  uint bits = packUnorm4x8(vec4(color,1.0));
+  imageAtomicMax(image, index, bits);
+  }

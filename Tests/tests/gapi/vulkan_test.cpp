@@ -153,6 +153,12 @@ TEST(VulkanApi,ComputeImage) {
 #endif
   }
 
+TEST(VulkanApi,AtomicImage) {
+#if !defined(__OSX__)
+  GapiTestCommon::AtomicImage<VulkanApi>("VulkanApi_AtomicImage.png");
+#endif
+  }
+
 TEST(VulkanApi,DispathToDraw) {
 #if !defined(__OSX__)
   GapiTestSync::DispathToDraw<VulkanApi>("VulkanApi_DispathToDraw.png");

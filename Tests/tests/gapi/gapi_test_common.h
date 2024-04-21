@@ -953,6 +953,43 @@ void ComputeImage(const char* outImage) {
     }
   }
 
+template<class GraphicsApi>
+void AtomicImage(const char* outImage) {
+  using namespace Tempest;
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto img = device.image2d(TextureFormat::R32U,128,128,false);
+    auto pso = device.pipeline(device.shader("shader/image_atomic_test.comp.sprv"));
+
+    auto ubo = device.descriptors(pso.layout());
+    ubo.set(0,img);
+
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setUniforms(pso,ubo);
+      enc.dispatch(img.w(),img.h(),1);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    auto pm = device.readPixels(img);
+    auto rgb = Pixmap(pm.w(), pm.h(), TextureFormat::RGBA8);
+    std::memcpy(rgb.data(), pm.data(), pm.w()*pm.h()*sizeof(uint32_t));
+    rgb.save(outImage);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
 template<class GraphicsApi, Tempest::TextureFormat format>
 void MipMaps(const char* outImage) {
   using namespace Tempest;
