@@ -29,6 +29,12 @@ static NsPtr<MTL::Device> mkDevice(std::string_view name) {
   return NsPtr<MTL::Device>(nullptr);
   }
 
+static uint32_t languageVersion() {
+  auto opt = NsPtr<MTL::CompileOptions>::init();
+  // clamp version to hight-most tested in engine
+  return std::min<uint32_t>(MTL::LanguageVersion3_1, opt->languageVersion());
+  }
+
 MtDevice::MtDevice(std::string_view name, bool validation)
   : impl(mkDevice(name)), samplers(*impl), validation(validation) {
   if(impl.get()==nullptr)
@@ -38,7 +44,10 @@ MtDevice::MtDevice(std::string_view name, bool validation)
   if(queue.get()==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
-  deductProps(prop,*impl,mslVersion);
+  mslVersion = languageVersion();
+  // mslVersion = spirv_cross::CompilerMSL::Options::make_msl_version(2,2); //testing
+  ui32align  = impl->minimumLinearTextureAlignmentForPixelFormat(MTL::PixelFormatR32Uint);
+  deductProps(prop,*impl);
   }
 
 MtDevice::~MtDevice() {
@@ -72,7 +81,7 @@ void MtDevice::handleError(NS::Error *err) {
   throw DeviceLostException();
   }
 
-void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev, uint32_t& mslVersion) {
+void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
   int32_t majorVersion = 0, minorVersion = 0;
   if([[NSProcessInfo processInfo] respondsToSelector:@selector(operatingSystemVersion)]) {
     NSOperatingSystemVersion ver = [[NSProcessInfo processInfo] operatingSystemVersion];
@@ -84,13 +93,6 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev, u
   if(dev.hasUnifiedMemory())
     prop.type = DeviceType::Integrated; else
     prop.type = DeviceType::Discrete;
-
-  mslVersion = spirv_cross::CompilerMSL::Options::make_msl_version(2,0);
-#ifdef __OSX__
-  if(dev.supportsFeatureSet(MTL::FeatureSet_macOS_GPUFamily1_v3)){
-    mslVersion = spirv_cross::CompilerMSL::Options::make_msl_version(2,2);
-    }
-#endif
 
   // https://developer.apple.com/metal/Metal-Feature-Set-Tables.pdf
   static const TextureFormat smp[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
@@ -173,17 +175,10 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev, u
 #endif
   }
 
-  if(dev.supportsFamily(MTL::GPUFamilyMetal3)) {
-    // TODO: spirv-cross support
-    if(dev.supportsFamily(MTL::GPUFamilyApple6) ||
-       dev.supportsFamily(MTL::GPUFamilyApple7) ||
-       dev.supportsFamily(MTL::GPUFamilyApple8) ||
-       dev.supportsFamily(MTL::GPUFamilyMac2)) {
-      //atomBit  |= uint64_t(1) << TextureFormat::R32U;
-      }
-    if(dev.supportsFamily(MTL::GPUFamilyApple8)) {
-      //atomBit  |= uint64_t(1) << TextureFormat::RG32U;
-      }
+  const uint32_t mslVersion = languageVersion();
+  // native or emulated
+  if(mslVersion>=spirv_cross::CompilerMSL::Options::make_msl_version(3,1)) {
+    atomBit  |= uint64_t(1) << TextureFormat::R32U;
     }
 
   prop.setSamplerFormats(smpBit);
@@ -240,6 +235,7 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev, u
   prop.storeAndAtomicVs = false;
   prop.storeAndAtomicFs = false;
 #else
+
   if(mslVersion>=spirv_cross::CompilerMSL::Options::make_msl_version(2,2)) {
     // 2.1 for buffers
     // 2.2 for images
@@ -284,4 +280,13 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev, u
 #endif
   }
 
+bool MtDevice::useNativeImageAtomic() const {
+  uint32_t v3_1 = spirv_cross::CompilerMSL::Options::make_msl_version(3,1,0);
+  return mslVersion>=v3_1;
+  }
+
+uint32_t MtDevice::linearImageAlignment() const {
+  return ui32align;
+  }
 #endif
+

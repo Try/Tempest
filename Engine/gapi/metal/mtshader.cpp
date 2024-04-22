@@ -41,6 +41,12 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
       optMSL.runtime_array_rich_descriptor = true;
       }
 
+    if(!dev.useNativeImageAtomic()) {
+      const uint32_t align = dev.linearImageAlignment();
+      optMSL.r32ui_linear_texture_alignment = align;
+      optMSL.r32ui_alignment_constant_id    = 0;
+      }
+
     for(auto& cap:comp.get_declared_capabilities()) {
       switch(cap) {
         case spv::CapabilityRayQueryKHR: {
@@ -138,7 +144,7 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
   if(err!=nullptr) {
 #if !defined(NDEBUG)
     const char* e = err->localizedDescription()->utf8String();
-    Log::d("cros-compile error: \"",e,"\"");
+    Log::d("cros-compile error: \"",e,"\"\n");
     Log::d(msl);
 #endif
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
@@ -150,7 +156,10 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
 
   auto main = NsPtr<NS::String>(NS::String::string("main0",NS::UTF8StringEncoding));
   main->retain();
-  impl = NsPtr<MTL::Function>(library->newFunction(main.get()));
+
+  auto cvar = NsPtr<MTL::FunctionConstantValues>::init();
+  //cvar->setConstantValues();
+  impl = NsPtr<MTL::Function>(library->newFunction(main.get(), cvar.get(), &err));
   }
 
 MtShader::~MtShader() {

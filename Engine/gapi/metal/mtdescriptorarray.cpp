@@ -20,6 +20,9 @@ void MtDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture *tex, const 
   auto& t = *reinterpret_cast<MtTexture*>(tex);
   desc[id].val     = &t.view(smp.mapping,mipLevel);
   desc[id].sampler = &dev.samplers.get(smp);
+  if(t.linearMem!=nullptr)
+    desc[id].valAtom = t.linearMem.get(); else
+    desc[id].valAtom = nullptr;
   }
 
 void MtDescriptorArray::set(size_t id, const Sampler& smp) {

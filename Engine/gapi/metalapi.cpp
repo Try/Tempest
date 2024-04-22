@@ -44,8 +44,7 @@ std::vector<AbstractGraphicsApi::Props> MetalApi::devices() const {
   try {
     std::vector<AbstractGraphicsApi::Props> p(dev->count());
     for(size_t i=0; i<p.size(); ++i) {
-      uint32_t mslVer = 0;
-      MtDevice::deductProps(p[i],*reinterpret_cast<MTL::Device*>(dev->object(i)),mslVer);
+      MtDevice::deductProps(p[i],*reinterpret_cast<MTL::Device*>(dev->object(i)));
       }
     dev->release();
     return p;

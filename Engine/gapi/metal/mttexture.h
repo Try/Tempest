@@ -26,6 +26,7 @@ class MtTexture : public Tempest::AbstractGraphicsApi::Texture {
     MTL::Texture&       view(ComponentMapping m, uint32_t mipLevel);
 
     MtDevice&           dev;
+    NsPtr<MTL::Buffer>  linearMem;
     NsPtr<MTL::Texture> impl;
     const uint32_t      mipCnt = 0;
 

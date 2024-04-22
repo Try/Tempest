@@ -249,6 +249,9 @@ class MtDevice : public AbstractGraphicsApi::Device {
     void onFinish();
     void waitIdle() override;
 
+    bool     useNativeImageAtomic() const;
+    uint32_t linearImageAlignment() const;
+
     static void handleError(NS::Error* err);
 
     NsPtr<MTL::Device>         impl;
@@ -262,8 +265,9 @@ class MtDevice : public AbstractGraphicsApi::Device {
     MtSamplerCache             samplers;
     bool                       validation = false;
     uint32_t                   mslVersion = 0;
+    uint32_t                   ui32align = 0;
 
-    static void deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev, uint32_t& mslVersion);
+    static void deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev);
   };
 
 inline void mtAssert(void* obj, NS::Error* err) {

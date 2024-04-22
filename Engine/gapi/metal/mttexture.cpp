@@ -27,12 +27,18 @@ static MTL::TextureSwizzle swizzle(ComponentSwizzle cs, MTL::TextureSwizzle def)
   return def;
   }
 
+static uint32_t alignedSize(uint32_t w, uint32_t h, uint32_t a) {
+  return ((w*sizeof(uint32_t)+a-1) & ~(a-1)) * (h);
+  }
+
 MtTexture::MtTexture(MtDevice& d, const uint32_t w, const uint32_t h, const uint32_t depth,
                      uint32_t mipCnt, TextureFormat frm, bool storageTex)
   :dev(d), mipCnt(mipCnt) {
   MTL::TextureUsage usage = MTL::TextureUsageRenderTarget | MTL::TextureUsageShaderRead;
   if(storageTex)
     usage |= MTL::TextureUsageShaderWrite;
+  if(d.prop.hasAtomicFormat(frm) && d.useNativeImageAtomic())
+    usage |= MTL::TextureUsageShaderAtomic;
   impl = alloc(frm,w,h,depth,mipCnt,MTL::StorageModePrivate,usage);
   }
 
@@ -99,13 +105,22 @@ NsPtr<MTL::Texture> MtTexture::alloc(TextureFormat frm,
   if(desc==nullptr)
     throw std::system_error(GraphicsErrc::OutOfHostMemory);
 
+  const bool linear = ((umode & MTL::TextureUsageShaderWrite) && dev.prop.hasAtomicFormat(frm) && !dev.useNativeImageAtomic());
+  if(linear) {
+    const uint32_t align   = dev.linearImageAlignment();
+    const uint32_t memSize = alignedSize(w,h,align);
+    linearMem = NsPtr<MTL::Buffer>(dev.impl->newBuffer(memSize,MTL::ResourceStorageModePrivate));
+    if(linearMem==nullptr)
+      throw std::system_error(GraphicsErrc::OutOfVideoMemory);
+    }
+
   desc->setTextureType(d==1 ? MTL::TextureType2D : MTL::TextureType3D);
   desc->setPixelFormat(nativeFormat(frm));
   desc->setWidth(w);
   desc->setHeight(h);
   desc->setDepth(d);
   desc->setMipmapLevelCount(mips);
-  desc->setCpuCacheMode(MTL::CPUCacheModeWriteCombined);
+  desc->setCpuCacheMode(MTL::CPUCacheModeDefaultCache);
   desc->setStorageMode(smode);
   desc->setUsage(umode);
   desc->setAllowGPUOptimizedContents(true);
@@ -117,7 +132,14 @@ NsPtr<MTL::Texture> MtTexture::alloc(TextureFormat frm,
   sw.alpha = MTL::TextureSwizzleAlpha;
   desc->setSwizzle(sw);
 
-  auto ret = NsPtr<MTL::Texture>(dev.impl->newTexture(desc.get()));
+  NsPtr<MTL::Texture> ret;
+  if(linear) {
+    const uint32_t align = dev.linearImageAlignment();
+    const uint32_t bpr   = alignedSize(w,1,align);
+    ret = NsPtr<MTL::Texture>(linearMem->newTexture(desc.get(), 0, bpr));
+    } else {
+    ret = NsPtr<MTL::Texture>(dev.impl->newTexture(desc.get()));
+    }
   if(ret==nullptr)
     throw std::system_error(GraphicsErrc::OutOfVideoMemory);
   return ret;

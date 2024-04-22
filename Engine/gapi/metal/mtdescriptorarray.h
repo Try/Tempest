@@ -32,6 +32,7 @@ class MtDescriptorArray : public AbstractGraphicsApi::Desc {
 
     struct Desc {
       void*              val     = nullptr;
+      void*              valAtom = nullptr;
       MTL::SamplerState* sampler = nullptr;
       size_t             offset  = 0;
       size_t             length  = 0;
