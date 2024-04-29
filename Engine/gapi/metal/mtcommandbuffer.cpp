@@ -388,11 +388,13 @@ void MtCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u) {
         break;
       case ShaderReflection::Texture:
       case ShaderReflection::Image:
-      case ShaderReflection::ImgR:
-      case ShaderReflection::ImgRW:
         if(l.runtimeSized)
           setBindless(mtl[i], d.desc[i].argsBuf.impl.get(), d.desc[i].args.size()); else
           setTexture(mtl[i], reinterpret_cast<MTL::Texture*>(d.desc[i].val), d.desc[i].sampler);
+        break;
+      case ShaderReflection::ImgR:
+      case ShaderReflection::ImgRW:
+        setImage(mtl[i], reinterpret_cast<MTL::Texture*>(d.desc[i].val), reinterpret_cast<MTL::Buffer*>(d.desc[i].valAtom));
         break;
       case ShaderReflection::Sampler:
         setTexture(mtl[i],nullptr,d.desc[i].sampler);
@@ -476,6 +478,33 @@ void MtCommandBuffer::setTexture(const MtPipelineLay::MTLBind& mtl, MTL::Texture
     encComp->setTexture(tex,mtl.bindCs);
   if(mtl.bindCsSmp!=uint32_t(-1))
     encComp->setSamplerState(ss,mtl.bindCsSmp);
+  }
+
+void MtCommandBuffer::setImage(const MtPipelineLay::MTLBind& mtl, MTL::Texture* tex, MTL::Buffer* atom) {
+  if(mtl.bindTs!=uint32_t(-1))
+    encDraw->setObjectTexture(tex,mtl.bindTs);
+  if(mtl.bindTsSmp!=uint32_t(-1))
+    encDraw->setObjectBuffer(atom,0,mtl.bindTsSmp);
+
+  if(mtl.bindMs!=uint32_t(-1))
+    encDraw->setMeshTexture(tex,mtl.bindMs);
+  if(mtl.bindMsSmp!=uint32_t(-1))
+    encDraw->setMeshBuffer(atom,0,mtl.bindMsSmp);
+
+  if(mtl.bindVs!=uint32_t(-1))
+    encDraw->setVertexTexture(tex,mtl.bindVs);
+  if(mtl.bindVsSmp!=uint32_t(-1))
+    encDraw->setVertexBuffer(atom,0,mtl.bindVsSmp);
+
+  if(mtl.bindFs!=uint32_t(-1))
+    encDraw->setFragmentTexture(tex,mtl.bindFs);
+  if(mtl.bindFsSmp!=uint32_t(-1))
+    encDraw->setFragmentBuffer(atom,0,mtl.bindFsSmp);
+
+  if(mtl.bindCs!=uint32_t(-1))
+    encComp->setTexture(tex,mtl.bindCs);
+  if(mtl.bindCsSmp!=uint32_t(-1))
+    encComp->setBuffer(atom,0,mtl.bindCsSmp);
   }
 
 void MtCommandBuffer::setTlas(const MtPipelineLay::MTLBind& mtl, MTL::AccelerationStructure* as) {

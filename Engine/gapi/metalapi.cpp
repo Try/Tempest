@@ -57,7 +57,7 @@ std::vector<AbstractGraphicsApi::Props> MetalApi::devices() const {
   std::vector<AbstractGraphicsApi::Props> p(1);
   auto     dev    = NsPtr<MTL::Device>(MTL::CreateSystemDefaultDevice());
   uint32_t mslVer = 0;
-  MtDevice::deductProps(p[0],*dev,mslVer);
+  MtDevice::deductProps(p[0],*dev);
   return p;
 #endif
   }

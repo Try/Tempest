@@ -175,11 +175,8 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
 #endif
   }
 
-  const uint32_t mslVersion = languageVersion();
-  // native or emulated
-  if(mslVersion>=spirv_cross::CompilerMSL::Options::make_msl_version(3,1)) {
-    atomBit  |= uint64_t(1) << TextureFormat::R32U;
-    }
+  // native or emulated; no extra formats yet
+  atomBit  |= uint64_t(1) << TextureFormat::R32U;
 
   prop.setSamplerFormats(smpBit);
   prop.setAttachFormats (attBit);
@@ -236,6 +233,7 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
   prop.storeAndAtomicFs = false;
 #else
 
+  const uint32_t mslVersion = languageVersion();
   if(mslVersion>=spirv_cross::CompilerMSL::Options::make_msl_version(2,2)) {
     // 2.1 for buffers
     // 2.2 for images
