@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <cstdint>
+#include <functional>
 
 namespace Tempest {
 
@@ -58,6 +59,9 @@ class SystemApi {
     static void     addOverlay (UiOverlay* ui);
     static void     takeOverlay(UiOverlay* ui);
 
+    static void     setAudioDeviceChangedCallback( std::function<void()> callback );
+    static void     callAudioDeviceChangedCallback( );
+
   protected:
     struct AppCallBack {
       virtual ~AppCallBack()=default;
@@ -103,6 +107,8 @@ class SystemApi {
     static void      dispatchFocus     (Tempest::Window& cb, FocusEvent& e);
 
     static SystemApi& inst();
+
+    static inline std::function<void()> audioDeviceChangedCallback = []{};
 
   private:
     static bool       isRunning();

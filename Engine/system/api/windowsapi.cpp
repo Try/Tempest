@@ -15,6 +15,7 @@
 #include <vector>
 
 #include <windows.h>
+#include <mmdeviceapi.h>
 
 using namespace Tempest;
 
@@ -66,6 +67,101 @@ static Event::MouseButton toButton( UINT msg, const unsigned long long wParam ){
 
   return Event::ButtonNone;
   }
+
+class Tempest::AudioDeviceChangedListener : public IMMNotificationClient {
+ public:
+  AudioDeviceChangedListener() {
+    HRESULT ihr = CoInitialize(NULL);
+
+    if (SUCCEEDED(ihr)) {
+      // Create the device enumerator
+      HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL,
+                                      CLSCTX_ALL, __uuidof(IMMDeviceEnumerator),
+                                      (void**)&pEnumerator);
+      if (SUCCEEDED(hr)) {
+        // Register for device change notifications
+        hr = pEnumerator->RegisterEndpointNotificationCallback(this);
+      } else {
+        CoUninitialize();
+      }
+    }
+  }
+
+  ~AudioDeviceChangedListener() {
+    if (pEnumerator) {
+      pEnumerator->UnregisterEndpointNotificationCallback(this);
+      pEnumerator->Release();
+      pEnumerator = nullptr;
+      CoUninitialize();
+    }
+  }
+
+    // IUnknown methods -- AddRef, Release, and QueryInterface
+    ULONG STDMETHODCALLTYPE AddRef() {
+      return InterlockedIncrement(&refCounter);
+    }
+
+    ULONG STDMETHODCALLTYPE Release() {
+      ULONG ulRef = InterlockedDecrement(&refCounter);
+      if (0 == ulRef) {
+        delete this;
+      }
+      return ulRef;
+    }
+
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, VOID** ppvInterface) {
+      // TODO: code fails to build - interface method necessary??
+      // if (IID_IUnknown == riid)
+      // {
+      //     AddRef();
+      //     *ppvInterface = (IUnknown*)this;
+      // }
+      ///* else if (__uuidof(IMMNotificationClient) == riid)
+      // {
+      //     AddRef();
+      //     *ppvInterface = (IMMNotificationClient*)this;
+      // }*/
+      // else
+      // {
+      //     *ppvInterface = NULL;
+      //     return E_NOINTERFACE;
+      // }
+      return S_OK;
+    }
+
+    // Callback methods for device-event notifications.
+    HRESULT STDMETHODCALLTYPE OnDefaultDeviceChanged(EDataFlow flow, ERole role,
+                                                     LPCWSTR pwstrDeviceId) {
+      // check role multimeda, because a single switch triggers multiple roles
+      if (role == ERole::eMultimedia) {
+          SystemApi::callAudioDeviceChangedCallback();
+      }
+
+      return S_OK;
+    }
+
+    HRESULT STDMETHODCALLTYPE OnDeviceAdded(LPCWSTR pwstrDeviceId) {
+      return S_OK;
+    };
+
+    HRESULT STDMETHODCALLTYPE OnDeviceRemoved(LPCWSTR pwstrDeviceId) {
+      return S_OK;
+    }
+
+    HRESULT STDMETHODCALLTYPE OnDeviceStateChanged(LPCWSTR pwstrDeviceId,
+                                                   DWORD dwNewState) {
+      return S_OK;
+    }
+
+    HRESULT STDMETHODCALLTYPE OnPropertyValueChanged(LPCWSTR pwstrDeviceId,
+                                                     const PROPERTYKEY key) {
+      return S_OK;
+    }
+
+   private:
+    LONG refCounter{0};
+    IMMDeviceEnumerator* pEnumerator{nullptr};
+  };
 
 WindowsApi::WindowsApi() {
   static const TranslateKeyPair k[] = {
@@ -127,7 +223,16 @@ WindowsApi::WindowsApi() {
 
   if(RegisterClassExW(&winClass)==0)
     throw std::system_error(Tempest::SystemErrc::InvalidWindowClass);
+
+    audioDeviceListener = std::make_unique<Tempest::AudioDeviceChangedListener>();
+
   }
+
+WindowsApi::~WindowsApi()
+{
+    // destructor needed in compilation unit where audioDeviceListener is defined to compile with
+    // unique ptr of incomplete type AudioDeviceListener
+}
 
 SystemApi::Window *WindowsApi::implCreateWindow(Tempest::Window *owner, uint32_t width, uint32_t height, ShowMode sm) {
   RECT wr = {0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};

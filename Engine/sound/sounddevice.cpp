@@ -13,6 +13,8 @@
 #include <Tempest/SoundEffect>
 #include <Tempest/Except>
 
+#include "system/systemapi.h"
+
 #include <vector>
 #include <mutex>
 
@@ -35,6 +37,19 @@ struct SoundDevice::Device {
   Device() {
     gLogLevel = LogLevel::Error;
     dev = alcOpenDevice(nullptr);
+    
+    // notify SystemAPI that we want notifications when the audio default device changes
+    SystemApi::setAudioDeviceChangedCallback([this] {
+       std::thread delayDeviceReopen([this] {
+        // the call to alcReopenDeviceSOFT must not happen inside the
+        // OnDefaultDeviceChanged callback! therefore execution is delayed in
+        // a thread
+        alcReopenDeviceSOFT(dev, nullptr, nullptr);
+        });
+      delayDeviceReopen.detach();
+      }
+    );
+
     if(dev==nullptr)
       throw std::system_error(Tempest::SoundErrc::NoDevice);
     // dummy context for buffers
