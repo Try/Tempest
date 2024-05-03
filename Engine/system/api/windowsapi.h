@@ -4,9 +4,12 @@
 
 namespace Tempest {
 
+class AudioDeviceChangedListener;
+
 class WindowsApi final : SystemApi {
   private:
     WindowsApi();
+    ~WindowsApi();
 
     Window*  implCreateWindow(Tempest::Window* owner, uint32_t width, uint32_t height, ShowMode sm);
     Window*  implCreateWindow(Tempest::Window *owner, uint32_t width, uint32_t height) override;
@@ -29,6 +32,8 @@ class WindowsApi final : SystemApi {
 
     static long long windowProc(void* hWnd, uint32_t msg, const unsigned long long wParam, const long long lParam);
     static void handleKeyEvent(Tempest::Window* cb, uint32_t msg, const unsigned long long wParam, const long long lParam);
+
+    std::unique_ptr<AudioDeviceChangedListener> audioDeviceListener;
 
   friend class SystemApi;
   };

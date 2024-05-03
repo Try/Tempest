@@ -30,7 +30,7 @@ SystemApi::SystemApi() {
   }
 
 void SystemApi::implSetWindowTitle(Window *w, const char *utf8) {
-  // TODO
+  // TO
   }
 
 void SystemApi::setupKeyTranslate(const TranslateKeyPair k[], uint16_t funcCount ) {
@@ -64,6 +64,16 @@ void SystemApi::addOverlay(UiOverlay* ui) {
 
 void SystemApi::takeOverlay(UiOverlay* ui) {
   dispatcher.takeOverlay(ui);
+  }
+
+void SystemApi::setAudioDeviceChangedCallback( std::function<void()> callback ) {
+  audioDeviceChangedCallback = callback;
+  }
+
+void SystemApi::callAudioDeviceChangedCallback() {
+  if(audioDeviceChangedCallback) {
+    audioDeviceChangedCallback();
+    }
   }
 
 uint16_t SystemApi::translateKey(uint64_t scancode) {
@@ -205,4 +215,3 @@ void SystemApi::setCursorPosition(SystemApi::Window *w, int x, int y) {
 void SystemApi::showCursor(SystemApi::Window *w, CursorShape show) {
   return inst().implShowCursor(w,show);
   }
-
