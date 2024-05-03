@@ -17,6 +17,7 @@
 
 #include <vector>
 #include <mutex>
+#include <thread>
 
 using namespace Tempest;
 
