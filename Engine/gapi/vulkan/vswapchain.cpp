@@ -10,6 +10,16 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+static VkResult VKAPI_CALL vkxRevertFence(VkDevice device, VkFence* pFence) {
+  // HACK: revert fence state to signaled
+  VkFenceCreateInfo fenceInfo = {};
+  fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+  fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+  vkDestroyFence(device, *pFence, nullptr);
+  return vkCreateFence(device,&fenceInfo,nullptr,pFence);
+  }
+
 VSwapchain::FenceList::FenceList(VkDevice dev, uint32_t cnt)
   :dev(dev), size(0) {
   acquire.reset(new VkFence[cnt]);
@@ -306,8 +316,12 @@ void VSwapchain::acquireNextImage(const bool ignoreSuboptimal) {
   if(ignoreSuboptimal && code==VK_SUBOPTIMAL_KHR)
     code = VK_SUCCESS;
 
-  if(code==VK_ERROR_OUT_OF_DATE_KHR)
+  if(code==VK_ERROR_OUT_OF_DATE_KHR) {
+    auto rc = vkxRevertFence(device.device.impl, &f);
+    if(rc!=VK_SUCCESS)
+      std::terminate(); // unrevocable
     throw DeviceLostException();
+    }
   if(code==VK_SUBOPTIMAL_KHR)
     throw SwapchainSuboptimal();
   if(code!=VK_SUCCESS)
