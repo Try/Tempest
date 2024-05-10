@@ -15,8 +15,15 @@ class IDevice;
 class SoundDevice final {
   public:
     SoundDevice ();
+    SoundDevice (std::string_view name);
     SoundDevice (const SoundDevice&) = delete;
     ~SoundDevice();
+
+    struct Props {
+      char name[256] = {};
+      };
+
+    static std::vector<Props> devices();
 
     SoundDevice& operator = ( const SoundDevice& s) = delete;
 
@@ -48,7 +55,7 @@ class SoundDevice final {
     static void                         setThreadContext();
 
     static std::shared_ptr<Device>      device();
-    static std::shared_ptr<Device>      implDevice();
+    static std::shared_ptr<Device>      implDevice(const char* name);
 
   friend class Sound;
   friend class SoundEffect;

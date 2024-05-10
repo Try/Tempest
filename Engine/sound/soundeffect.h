@@ -4,7 +4,6 @@
 #include <Tempest/Vec>
 
 #include <cstdint>
-#include <array>
 
 namespace Tempest {
 

@@ -6,15 +6,18 @@
 #include <AL/alc.h>
 #include <AL/alext.h>
 
-//#include "thirdparty/openal-soft/core/logging.h"
+// private ext
+#define AL_STOP_SOURCES_ON_DISCONNECT_SOFT       0x19AB
 
 #include <Tempest/File>
 #include <Tempest/Sound>
 #include <Tempest/SoundEffect>
 #include <Tempest/Except>
+#include <Tempest/Log>
 
 #include <vector>
 #include <mutex>
+#include <cstring>
 
 using namespace Tempest;
 
@@ -32,15 +35,18 @@ struct SoundDevice::Data {
   };
 
 struct SoundDevice::Device {
-  Device() {
+  Device(const char* deviceName) {
     gLogLevel = LogLevel::Error;
-    dev = alcOpenDevice(nullptr);
+    // gLogLevel = LogLevel::Trace;
+    dev = alcOpenDevice(deviceName);
     if(dev==nullptr)
       throw std::system_error(Tempest::SoundErrc::NoDevice);
     // dummy context for buffers
     ctx = alcCreateContext(dev,nullptr);
-    if(ctx==nullptr)
+    if(ctx==nullptr) {
+      alcCloseDevice(dev);
       throw std::system_error(Tempest::SoundErrc::NoDevice);
+      }
     }
   ~Device(){
     alcDestroyContext(ctx);
@@ -51,7 +57,10 @@ struct SoundDevice::Device {
   ALCcontext* ctx = nullptr;
   };
 
-SoundDevice::SoundDevice():data( new Data() ) {
+SoundDevice::SoundDevice():SoundDevice("") {
+  }
+
+SoundDevice::SoundDevice(std::string_view name):data(new Data()) {
   data->dev = device();
 
   data->context = alcCreateContext(data->dev->dev,nullptr);
@@ -59,7 +68,24 @@ SoundDevice::SoundDevice():data( new Data() ) {
     throw std::system_error(Tempest::SoundErrc::NoDevice);
 
   alcSetThreadContext(data->context);
+
+  ALenum e[] = {AL_EVENT_TYPE_DISCONNECTED_SOFT};
+  alEventControlSOFT(1, e, true);
+
+  alEventCallbackSOFT([](ALenum eventType, ALuint object, ALuint param,
+                         ALsizei length, const ALchar *message,
+                         void *userParam) {
+    auto& data = *reinterpret_cast<const Data*>(userParam);
+    alcReopenDeviceSOFT(data.dev->dev, nullptr, nullptr);
+    /*
+    auto s    = alcReopenDeviceSOFT(data.dev->dev, nullptr, nullptr);
+    auto name = alcGetString(data.dev->dev, ALC_ALL_DEVICES_SPECIFIER);
+    Log::d("reopen sound device: ", name, " ret: ", (s ? "true" : "false"));
+    */
+    }, data.get());
+
   alDistanceModel(AL_LINEAR_DISTANCE);
+  alDisable(AL_STOP_SOURCES_ON_DISCONNECT_SOFT);
   // TODO: api
   alListenerf(AL_METERS_PER_UNIT, 100.f);
   process();
@@ -69,6 +95,21 @@ SoundDevice::SoundDevice():data( new Data() ) {
 SoundDevice::~SoundDevice() {
   if(data->context)
     alcDestroyContext(data->context);
+  }
+
+std::vector<SoundDevice::Props> SoundDevice::devices() {
+  alcSetThreadContext(nullptr);
+  const char* devices = alcGetString(NULL, ALC_ALL_DEVICES_SPECIFIER);
+
+  std::vector<SoundDevice::Props> ret;
+  while(devices!=nullptr && devices[0]!='\0') {
+    Props dev;
+    std::strncpy(dev.name, devices, sizeof(dev.name));
+    ret.push_back(dev);
+    devices += std::strlen(devices) + 1;
+    }
+
+  return ret;
   }
 
 SoundEffect SoundDevice::load(const char *fname) {
@@ -146,15 +187,15 @@ void SoundDevice::setThreadContext() {
 std::shared_ptr<SoundDevice::Device> SoundDevice::device() {
   static std::mutex sync;
   std::lock_guard<std::mutex> guard(sync);
-  return implDevice();
+  return implDevice(nullptr);
   }
 
-std::shared_ptr<SoundDevice::Device> SoundDevice::implDevice() {
+std::shared_ptr<SoundDevice::Device> SoundDevice::implDevice(const char* name) {
   static std::weak_ptr<SoundDevice::Device> val;
   if(auto v = val.lock()){
     return v;
     }
-  auto vx = std::make_shared<Device>();
+  auto vx = std::make_shared<Device>(name);
   val = vx;
   return vx;
   }

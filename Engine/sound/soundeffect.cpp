@@ -10,9 +10,6 @@
 #include <Tempest/Except>
 #include <Tempest/Log>
 
-#include <thread>
-#include <atomic>
-
 using namespace Tempest;
 
 struct SoundEffect::Impl {
