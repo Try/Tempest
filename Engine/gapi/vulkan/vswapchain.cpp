@@ -17,7 +17,27 @@ static VkResult VKAPI_CALL vkxRevertFence(VkDevice device, VkFence* pFence) {
   fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
   vkDestroyFence(device, *pFence, nullptr);
+  *pFence = VK_NULL_HANDLE;
   return vkCreateFence(device,&fenceInfo,nullptr,pFence);
+  }
+
+static VkResult vkAcquireNextImageDBG(
+    VkDevice                                    device,
+    VkSwapchainKHR                              swapchain,
+    uint64_t                                    timeout,
+    VkSemaphore                                 semaphore,
+    VkFence                                     fence,
+    uint32_t*                                   pImageIndex) {
+#if 1
+  return  vkAcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, pImageIndex);
+#else
+  static std::atomic_uint32_t cnt = {};
+  auto id = cnt.fetch_add(1);
+  if(id==0)
+    return VK_ERROR_OUT_OF_DATE_KHR;
+
+  return  vkAcquireNextImageKHR(device, swapchain, timeout, semaphore, fence, pImageIndex);
+#endif
   }
 
 VSwapchain::FenceList::FenceList(VkDevice dev, uint32_t cnt)
@@ -66,15 +86,12 @@ VSwapchain::VSwapchain(VDevice &device, SystemApi::Window* hwnd)
   :device(device), hwnd(hwnd) {
   try {
     surface = device.createSurface(hwnd);
-
-    auto     support  = device.querySwapChainSupport(surface);
-    uint32_t imgCount = findImageCount(support);
-    createSwapchain(device,support,SystemApi::windowClientRect(hwnd),imgCount);
     }
   catch(...) {
     cleanup();
     throw;
     }
+  createSwapchain(device);
   }
 
 VSwapchain::~VSwapchain() {
@@ -123,20 +140,7 @@ void VSwapchain::cleanupSurface() noexcept {
 
 void VSwapchain::reset() {
   cleanupSwapchain();
-
-  Rect rect = SystemApi::windowClientRect(hwnd);
-  if(rect.isEmpty())
-    return;
-
-  try {
-    auto     support  = device.querySwapChainSupport(surface);
-    uint32_t imgCount = findImageCount(support);
-    createSwapchain(device,support,rect,imgCount);
-    }
-  catch(...) {
-    cleanupSwapchain();
-    throw;
-    }
+  createSwapchain(device);
   }
 
 void VSwapchain::cleanup() noexcept {
@@ -144,7 +148,34 @@ void VSwapchain::cleanup() noexcept {
   cleanupSurface();
   }
 
-void VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& swapChainSupport,
+void VSwapchain::createSwapchain(VDevice& device) {
+  for(uint32_t attempt=0; ; ++attempt) {
+    if(attempt>1) {
+      // Window keep changing due to external factor (user resize, KDE animations, etc) - slow down now
+      std::this_thread::yield();
+      }
+    Rect rect = SystemApi::windowClientRect(hwnd);
+    if(rect.isEmpty())
+      return;
+
+    try {
+      auto     support  = device.querySwapChainSupport(surface);
+      uint32_t imgCount = findImageCount(support);
+      auto     code     = createSwapchain(device,support,rect,imgCount);
+      if(code==VK_ERROR_OUT_OF_DATE_KHR || code==VK_SUBOPTIMAL_KHR) {
+        cleanupSwapchain();
+        continue;
+        }
+      break;
+      }
+    catch(...) {
+      cleanupSwapchain();
+      throw;
+      }
+    }
+  }
+
+VkResult VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& swapChainSupport,
                                  const Rect& rect, uint32_t imgCount) {
   VkBool32 support=false;
   vkGetPhysicalDeviceSurfaceSupportKHR(device.physicalDevice,device.presentQueue->family,surface,&support);
@@ -197,7 +228,8 @@ void VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& swapCh
     vkAssert(vkCreateSemaphore(device.device.impl,&info,nullptr,&i.present));
     }
   fence = FenceList(device.device.impl,uint32_t(views.size()));
-  acquireNextImage();
+
+  return implAcquireNextImage();
   }
 
 void VSwapchain::createImageViews(VDevice &device) {
@@ -293,7 +325,7 @@ uint32_t VSwapchain::findImageCount(const SwapChainSupport& support) const {
   return imageCount;
   }
 
-void VSwapchain::acquireNextImage(const bool ignoreSuboptimal) {
+VkResult VSwapchain::implAcquireNextImage() {
   size_t sId = 0;
   for(size_t i=0; i<sync.size(); ++i)
     if(sync[i].imgId==imgIndex) {
@@ -307,29 +339,37 @@ void VSwapchain::acquireNextImage(const bool ignoreSuboptimal) {
   vkResetFences(device.device.impl,1,&f);
 
   uint32_t id   = uint32_t(-1);
-  VkResult code = vkAcquireNextImageKHR(device.device.impl,
+  VkResult code = vkAcquireNextImageDBG(device.device.impl,
                                         swapChain,
                                         std::numeric_limits<uint64_t>::max(),
                                         slot.acquire,
                                         f,
                                         &id);
-  if(ignoreSuboptimal && code==VK_SUBOPTIMAL_KHR)
-    code = VK_SUCCESS;
 
   if(code==VK_ERROR_OUT_OF_DATE_KHR) {
     auto rc = vkxRevertFence(device.device.impl, &f);
     if(rc!=VK_SUCCESS)
-      std::terminate(); // unrevocable
-    throw DeviceLostException();
+      std::terminate(); // unrecoverable
+    return code;
     }
-  if(code==VK_SUBOPTIMAL_KHR)
-    throw SwapchainSuboptimal();
+
   if(code!=VK_SUCCESS)
     vkAssert(code);
 
   imgIndex   = id;
   slot.imgId = id;
   slot.state = S_Pending;
+  return code;
+  }
+
+void VSwapchain::acquireNextImage() {
+  VkResult code = implAcquireNextImage();
+
+  if(code==VK_ERROR_OUT_OF_DATE_KHR || code==VK_SUBOPTIMAL_KHR)
+    throw SwapchainSuboptimal();
+
+  if(code!=VK_SUCCESS)
+    vkAssert(code);
   }
 
 uint32_t VSwapchain::currentBackBufferIndex() {
@@ -390,7 +430,7 @@ void VSwapchain::present() {
     }
   Detail::vkAssert(code);
 
-  acquireNextImage(false);
+  acquireNextImage();
   }
 
 #endif
