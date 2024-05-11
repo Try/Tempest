@@ -2,6 +2,7 @@
 
 #include <Tempest/Vec>
 
+#include <vector>
 #include <memory>
 #include <mutex>
 
