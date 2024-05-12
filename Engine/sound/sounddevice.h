@@ -47,16 +47,14 @@ class SoundDevice final {
   private:
     struct Data;
     struct Device;
-
-    void* context();
+    struct BufferContext;
+    struct PhysicalDeviceList;
 
     std::unique_ptr<Data> data;
 
+    void*                               context();
     static std::unique_lock<std::mutex> globalLock();
     static void                         setThreadContext();
-
-    static std::shared_ptr<Device>      device();
-    static std::shared_ptr<Device>      implDevice(const char* name);
 
   friend class Sound;
   friend class SoundEffect;

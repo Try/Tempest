@@ -35,33 +35,65 @@ struct SoundDevice::Data {
   };
 
 struct SoundDevice::Device {
-  Device(const char* deviceName) {
+  Device(std::string_view deviceNameSV) {
+    std::string deviceName = std::string(deviceNameSV);
+
     gLogLevel = LogLevel::Error;
     // gLogLevel = LogLevel::Trace;
-    dev = alcOpenDevice(deviceName);
+    dev = alcOpenDevice(deviceName.c_str());
     if(dev==nullptr)
       throw std::system_error(Tempest::SoundErrc::NoDevice);
-    // dummy context for buffers
-    ctx = alcCreateContext(dev,nullptr);
-    if(ctx==nullptr) {
-      alcCloseDevice(dev);
-      throw std::system_error(Tempest::SoundErrc::NoDevice);
-      }
     }
   ~Device(){
-    alcDestroyContext(ctx);
     alcCloseDevice(dev);
     }
 
   ALCdevice*  dev = nullptr;
-  ALCcontext* ctx = nullptr;
+  };
+
+struct SoundDevice::BufferContext {
+  BufferContext(const std::shared_ptr<SoundDevice::Device>& dev):dev(dev) {
+    ctx = alcCreateContext(dev->dev,nullptr);
+    if(ctx==nullptr)
+      throw std::system_error(Tempest::SoundErrc::NoDevice);
+    }
+  ~BufferContext() {
+    alcDestroyContext(ctx);
+    }
+
+  std::shared_ptr<SoundDevice::Device> dev;
+  ALCcontext*                          ctx = nullptr;
+  };
+
+struct SoundDevice::PhysicalDeviceList {
+  std::mutex                         sync;
+  std::weak_ptr<SoundDevice::Device> val;
+  BufferContext                      buf; // dummy context for buffers
+
+  static PhysicalDeviceList& inst() {
+    static PhysicalDeviceList list;
+    return list;
+    }
+
+  PhysicalDeviceList():buf(device("")) {
+    }
+
+  std::shared_ptr<SoundDevice::Device> device(std::string_view name) {
+    std::lock_guard<std::mutex> guard(sync);
+    if(auto v = val.lock()){
+      return v;
+      }
+    auto vx = std::make_shared<Device>(name);
+    val = vx;
+    return vx;
+    }
   };
 
 SoundDevice::SoundDevice():SoundDevice("") {
   }
 
 SoundDevice::SoundDevice(std::string_view name):data(new Data()) {
-  data->dev = device();
+  data->dev = PhysicalDeviceList::inst().device(name);
 
   data->context = alcCreateContext(data->dev->dev,nullptr);
   if(data->context==nullptr)
@@ -180,24 +212,8 @@ std::unique_lock<std::mutex> SoundDevice::globalLock() {
   }
 
 void SoundDevice::setThreadContext() {
-  auto d = device();
-  alcSetThreadContext(d->ctx);
-  }
-
-std::shared_ptr<SoundDevice::Device> SoundDevice::device() {
-  static std::mutex sync;
-  std::lock_guard<std::mutex> guard(sync);
-  return implDevice(nullptr);
-  }
-
-std::shared_ptr<SoundDevice::Device> SoundDevice::implDevice(const char* name) {
-  static std::weak_ptr<SoundDevice::Device> val;
-  if(auto v = val.lock()){
-    return v;
-    }
-  auto vx = std::make_shared<Device>(name);
-  val = vx;
-  return vx;
+  auto& d = PhysicalDeviceList::inst().buf;
+  alcSetThreadContext(d.ctx);
   }
 
 #endif

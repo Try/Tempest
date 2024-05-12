@@ -40,25 +40,26 @@ struct SoundEffect::Impl {
 
   Impl(SoundDevice &dev, std::unique_ptr<SoundProducer> &&psrc)
     :dev(&dev), data(nullptr), producer(std::move(psrc)) {
-    ALCcontext*    ctx = context();
-    SoundProducer& src = *producer;
+    SoundProducer& src  = *producer;
+    ALsizei        freq = src.frequency;
+    ALenum         frm  = src.channels==2 ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16;
 
-    ALsizei        freq    = src.frequency;
-    ALenum         frm     = src.channels==2 ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16;
-
-    alcSetThreadContext(ctx);
-
-    auto guard = SoundDevice::globalLock();
-    alGenSources(1, &source);
+    SoundDevice::setThreadContext();
+    alGenBuffers(1, &stream);
+    alBufferCallbackSOFT(stream, frm, freq, bufferCallback, this);
     if(alGetError()!=AL_NO_ERROR) {
       alcSetThreadContext(nullptr);
       throw std::bad_alloc();
       }
 
-    alGenBuffers(1, &stream);
-    alBufferCallbackSOFT(stream, frm, freq, bufferCallback, this);
+    ALCcontext* ctx = context();
+    alcSetThreadContext(ctx);
+
+    auto guard = SoundDevice::globalLock();
+    alGenSources(1, &source);
     if(alGetError()!=AL_NO_ERROR) {
-      alDeleteSources(1, &source);
+      SoundDevice::setThreadContext();
+      alDeleteBuffers(1, &stream);
       alcSetThreadContext(nullptr);
       throw std::bad_alloc();
       }
