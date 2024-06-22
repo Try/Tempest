@@ -11,12 +11,21 @@
 #define HAS_BUILTIN(x) (0)
 #endif
 
+#ifdef __has_cpp_attribute
+#define HAS_ATTRIBUTE __has_cpp_attribute
+#else
+#define HAS_ATTRIBUTE(x) (0)
+#endif
+
 #ifdef __GNUC__
 #define force_inline [[gnu::always_inline]] inline
+#define NOINLINE [[gnu::noinline]]
 #elif defined(_MSC_VER)
 #define force_inline __forceinline
+#define NOINLINE __declspec(noinline)
 #else
 #define force_inline inline
+#define NOINLINE
 #endif
 
 /* Unlike the likely attribute, ASSUME requires the condition to be true or
@@ -33,7 +42,18 @@
 #elif HAS_BUILTIN(__builtin_unreachable)
 #define ASSUME(x) do { if(x) break; __builtin_unreachable(); } while(0)
 #else
-#define ASSUME(x) ((void)0)
+#define ASSUME(x) (static_cast<void>(0))
+#endif
+
+/* This shouldn't be needed since unknown attributes are ignored, but older
+ * versions of GCC choke on the attribute syntax in certain situations.
+ */
+#if HAS_ATTRIBUTE(likely)
+#define LIKELY [[likely]]
+#define UNLIKELY [[unlikely]]
+#else
+#define LIKELY
+#define UNLIKELY
 #endif
 
 namespace al {

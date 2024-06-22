@@ -1,6 +1,8 @@
 #ifndef INTRUSIVE_PTR_H
 #define INTRUSIVE_PTR_H
 
+#include <atomic>
+#include <cstddef>
 #include <utility>
 
 #include "atomic.h"
@@ -11,14 +13,14 @@ namespace al {
 
 template<typename T>
 class intrusive_ref {
-    RefCount mRef{1u};
+    std::atomic<unsigned int> mRef{1u};
 
 public:
     unsigned int add_ref() noexcept { return IncrementRef(mRef); }
     unsigned int dec_ref() noexcept
     {
         auto ref = DecrementRef(mRef);
-        if(ref == 0) [[unlikely]]
+        if(ref == 0) UNLIKELY
             delete static_cast<T*>(this);
         return ref;
     }
@@ -60,6 +62,9 @@ public:
     explicit intrusive_ptr(T *ptr) noexcept : mPtr{ptr} { }
     ~intrusive_ptr() { if(mPtr) mPtr->dec_ref(); }
 
+    /* NOLINTBEGIN(bugprone-unhandled-self-assignment)
+     * Self-assignment is handled properly here.
+     */
     intrusive_ptr& operator=(const intrusive_ptr &rhs) noexcept
     {
         static_assert(noexcept(std::declval<T*>()->dec_ref()), "dec_ref must be noexcept");
@@ -69,9 +74,10 @@ public:
         mPtr = rhs.mPtr;
         return *this;
     }
+    /* NOLINTEND(bugprone-unhandled-self-assignment) */
     intrusive_ptr& operator=(intrusive_ptr&& rhs) noexcept
     {
-        if(&rhs != this) [[likely]]
+        if(&rhs != this) LIKELY
         {
             if(mPtr) mPtr->dec_ref();
             mPtr = std::exchange(rhs.mPtr, nullptr);
@@ -81,9 +87,9 @@ public:
 
     explicit operator bool() const noexcept { return mPtr != nullptr; }
 
-    T& operator*() const noexcept { return *mPtr; }
-    T* operator->() const noexcept { return mPtr; }
-    T* get() const noexcept { return mPtr; }
+    [[nodiscard]] auto operator*() const noexcept -> T& { return *mPtr; }
+    [[nodiscard]] auto operator->() const noexcept -> T* { return mPtr; }
+    [[nodiscard]] auto get() const noexcept -> T* { return mPtr; }
 
     void reset(T *ptr=nullptr) noexcept
     {
@@ -97,23 +103,6 @@ public:
     void swap(intrusive_ptr &rhs) noexcept { std::swap(mPtr, rhs.mPtr); }
     void swap(intrusive_ptr&& rhs) noexcept { std::swap(mPtr, rhs.mPtr); }
 };
-
-#define AL_DECL_OP(op)                                                        \
-template<typename T>                                                          \
-inline bool operator op(const intrusive_ptr<T> &lhs, const T *rhs) noexcept   \
-{ return lhs.get() op rhs; }                                                  \
-template<typename T>                                                          \
-inline bool operator op(const T *lhs, const intrusive_ptr<T> &rhs) noexcept   \
-{ return lhs op rhs.get(); }
-
-AL_DECL_OP(==)
-AL_DECL_OP(!=)
-AL_DECL_OP(<=)
-AL_DECL_OP(>=)
-AL_DECL_OP(<)
-AL_DECL_OP(>)
-
-#undef AL_DECL_OP
 
 } // namespace al
 

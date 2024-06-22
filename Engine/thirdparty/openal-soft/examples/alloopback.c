@@ -29,6 +29,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 
 #define SDL_MAIN_HANDLED
 #include "SDL.h"
@@ -118,7 +119,7 @@ static ALuint CreateSineWave(void)
     alGenBuffers(1, &buffer);
     alBufferData(buffer, AL_FORMAT_MONO16, data, sizeof(data), 44100);
 
-    /* Check if an error occured, and clean up if so. */
+    /* Check if an error occurred, and clean up if so. */
     err = alGetError();
     if(err != AL_NO_ERROR)
     {

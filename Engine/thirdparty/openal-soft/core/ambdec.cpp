@@ -8,12 +8,13 @@
 #include <cstdarg>
 #include <cstddef>
 #include <cstdio>
+#include <filesystem>
+#include <fstream>
 #include <iterator>
 #include <sstream>
 #include <string>
 
 #include "albit.h"
-#include "alfstream.h"
 #include "alspan.h"
 #include "opthelpers.h"
 
@@ -42,32 +43,34 @@ enum class ReaderScope {
     HFMatrix,
 };
 
-#ifdef __USE_MINGW_ANSI_STDIO
-[[gnu::format(gnu_printf,2,3)]]
+#ifdef __MINGW32__
+[[gnu::format(__MINGW_PRINTF_FORMAT,2,3)]]
 #else
 [[gnu::format(printf,2,3)]]
 #endif
-al::optional<std::string> make_error(size_t linenum, const char *fmt, ...)
+std::optional<std::string> make_error(size_t linenum, const char *fmt, ...)
 {
-    al::optional<std::string> ret;
+    std::optional<std::string> ret;
     auto &str = ret.emplace();
 
     str.resize(256);
-    int printed{std::snprintf(const_cast<char*>(str.data()), str.length(), "Line %zu: ", linenum)};
+    int printed{std::snprintf(str.data(), str.length(), "Line %zu: ", linenum)};
     if(printed < 0) printed = 0;
     auto plen = std::min(static_cast<size_t>(printed), str.length());
 
+    /* NOLINTBEGIN(*-array-to-pointer-decay) */
     std::va_list args, args2;
     va_start(args, fmt);
     va_copy(args2, args);
     const int msglen{std::vsnprintf(&str[plen], str.size()-plen, fmt, args)};
-    if(msglen >= 0 && static_cast<size_t>(msglen) >= str.size()-plen) [[unlikely]]
+    if(msglen >= 0 && static_cast<size_t>(msglen) >= str.size()-plen)
     {
         str.resize(static_cast<size_t>(msglen) + plen + 1u);
         std::vsnprintf(&str[plen], str.size()-plen, fmt, args2);
     }
     va_end(args2);
     va_end(args);
+    /* NOLINTEND(*-array-to-pointer-decay) */
 
     return ret;
 }
@@ -77,9 +80,9 @@ al::optional<std::string> make_error(size_t linenum, const char *fmt, ...)
 AmbDecConf::~AmbDecConf() = default;
 
 
-al::optional<std::string> AmbDecConf::load(const char *fname) noexcept
+std::optional<std::string> AmbDecConf::load(const char *fname) noexcept
 {
-    al::ifstream f{fname};
+    std::ifstream f{std::filesystem::u8path(fname)};
     if(!f.is_open())
         return std::string("Failed to open file \"")+fname+"\"";
 
@@ -111,7 +114,7 @@ al::optional<std::string> AmbDecConf::load(const char *fname) noexcept
         {
             if(command == "add_spkr")
             {
-                if(speaker_pos == NumSpeakers)
+                if(speaker_pos == Speakers.size())
                     return make_error(linenum, "Too many speakers specified");
 
                 AmbDecConf::SpeakerConf &spkr = Speakers[speaker_pos++];
@@ -127,7 +130,7 @@ al::optional<std::string> AmbDecConf::load(const char *fname) noexcept
         else if(scope == ReaderScope::LFMatrix || scope == ReaderScope::HFMatrix)
         {
             auto &gains = (scope == ReaderScope::LFMatrix) ? LFOrderGain : HFOrderGain;
-            auto *matrix = (scope == ReaderScope::LFMatrix) ? LFMatrix : HFMatrix;
+            auto matrix = (scope == ReaderScope::LFMatrix) ? LFMatrix : HFMatrix;
             auto &pos = (scope == ReaderScope::LFMatrix) ? lfmatrix_pos : hfmatrix_pos;
 
             if(command == "order_gain")
@@ -139,13 +142,13 @@ al::optional<std::string> AmbDecConf::load(const char *fname) noexcept
                 {
                     --toread;
                     istr >> value;
-                    if(curgain < al::size(gains))
+                    if(curgain < std::size(gains))
                         gains[curgain++] = value;
                 }
             }
             else if(command == "add_row")
             {
-                if(pos == NumSpeakers)
+                if(pos == Speakers.size())
                     return make_error(linenum, "Too many matrix rows specified");
 
                 unsigned int mask{ChanMask};
@@ -205,12 +208,13 @@ al::optional<std::string> AmbDecConf::load(const char *fname) noexcept
         }
         else if(command == "/dec/speakers")
         {
-            if(NumSpeakers)
+            if(!Speakers.empty())
                 return make_error(linenum, "Duplicate speakers");
-            istr >> NumSpeakers;
-            if(!NumSpeakers)
-                return make_error(linenum, "Invalid speakers: %zu", NumSpeakers);
-            Speakers = std::make_unique<SpeakerConf[]>(NumSpeakers);
+            size_t numspeakers{};
+            istr >> numspeakers;
+            if(!numspeakers)
+                return make_error(linenum, "Invalid speakers: %zu", numspeakers);
+            Speakers.resize(numspeakers);
         }
         else if(command == "/dec/coeff_scale")
         {
@@ -243,22 +247,22 @@ al::optional<std::string> AmbDecConf::load(const char *fname) noexcept
         }
         else if(command == "/speakers/{")
         {
-            if(!NumSpeakers)
+            if(Speakers.empty())
                 return make_error(linenum, "Speakers defined without a count");
             scope = ReaderScope::Speakers;
         }
         else if(command == "/lfmatrix/{" || command == "/hfmatrix/{" || command == "/matrix/{")
         {
-            if(!NumSpeakers)
+            if(Speakers.empty())
                 return make_error(linenum, "Matrix defined without a speaker count");
             if(!ChanMask)
                 return make_error(linenum, "Matrix defined without a channel mask");
 
-            if(!Matrix)
+            if(Matrix.empty())
             {
-                Matrix = std::make_unique<CoeffArray[]>(NumSpeakers * FreqBands);
-                LFMatrix = Matrix.get();
-                HFMatrix = LFMatrix + NumSpeakers*(FreqBands-1);
+                Matrix.resize(Speakers.size() * FreqBands);
+                LFMatrix = al::span{Matrix}.first(Speakers.size());
+                HFMatrix = al::span{Matrix}.subspan(Speakers.size()*(FreqBands-1));
             }
 
             if(FreqBands == 1)
@@ -285,13 +289,13 @@ al::optional<std::string> AmbDecConf::load(const char *fname) noexcept
             if(!is_at_end(buffer, endpos))
                 return make_error(linenum, "Extra junk on end: %s", buffer.substr(endpos).c_str());
 
-            if(speaker_pos < NumSpeakers || hfmatrix_pos < NumSpeakers
-                || (FreqBands == 2 && lfmatrix_pos < NumSpeakers))
+            if(speaker_pos < Speakers.size() || hfmatrix_pos < Speakers.size()
+                || (FreqBands == 2 && lfmatrix_pos < Speakers.size()))
                 return make_error(linenum, "Incomplete decoder definition");
             if(CoeffScale == AmbDecScale::Unset)
                 return make_error(linenum, "No coefficient scaling defined");
 
-            return al::nullopt;
+            return std::nullopt;
         }
         else
             return make_error(linenum, "Unexpected command: %s", command.c_str());

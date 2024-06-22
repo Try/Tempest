@@ -1,19 +1,17 @@
 
 #include "config.h"
 
+#include <optional>
 #include <stdexcept>
 
 #include "AL/al.h"
 #include "AL/efx.h"
 
-#include "alc/effects/base.h"
-#include "aloptional.h"
-#include "core/logging.h"
 #include "effects.h"
 
 #ifdef ALSOFT_EAX
 #include <cassert>
-#include "alnumeric.h"
+#include "al/eax/effect.h"
 #include "al/eax/exception.h"
 #include "al/eax/utils.h"
 #endif // ALSOFT_EAX
@@ -27,16 +25,16 @@ static_assert(FlangerMaxDelay >= AL_FLANGER_MAX_DELAY, "Flanger max delay too sm
 static_assert(AL_CHORUS_WAVEFORM_SINUSOID == AL_FLANGER_WAVEFORM_SINUSOID, "Chorus/Flanger waveform value mismatch");
 static_assert(AL_CHORUS_WAVEFORM_TRIANGLE == AL_FLANGER_WAVEFORM_TRIANGLE, "Chorus/Flanger waveform value mismatch");
 
-inline al::optional<ChorusWaveform> WaveformFromEnum(ALenum type)
+constexpr std::optional<ChorusWaveform> WaveformFromEnum(ALenum type) noexcept
 {
     switch(type)
     {
     case AL_CHORUS_WAVEFORM_SINUSOID: return ChorusWaveform::Sinusoid;
     case AL_CHORUS_WAVEFORM_TRIANGLE: return ChorusWaveform::Triangle;
     }
-    return al::nullopt;
+    return std::nullopt;
 }
-inline ALenum EnumFromWaveform(ChorusWaveform type)
+constexpr ALenum EnumFromWaveform(ChorusWaveform type)
 {
     switch(type)
     {
@@ -46,13 +44,41 @@ inline ALenum EnumFromWaveform(ChorusWaveform type)
     throw std::runtime_error{"Invalid chorus waveform: "+std::to_string(static_cast<int>(type))};
 }
 
-void Chorus_setParami(EffectProps *props, ALenum param, int val)
+constexpr EffectProps genDefaultChorusProps() noexcept
+{
+    ChorusProps props{};
+    props.Waveform = WaveformFromEnum(AL_CHORUS_DEFAULT_WAVEFORM).value();
+    props.Phase = AL_CHORUS_DEFAULT_PHASE;
+    props.Rate = AL_CHORUS_DEFAULT_RATE;
+    props.Depth = AL_CHORUS_DEFAULT_DEPTH;
+    props.Feedback = AL_CHORUS_DEFAULT_FEEDBACK;
+    props.Delay = AL_CHORUS_DEFAULT_DELAY;
+    return props;
+}
+
+constexpr EffectProps genDefaultFlangerProps() noexcept
+{
+    ChorusProps props{};
+    props.Waveform = WaveformFromEnum(AL_FLANGER_DEFAULT_WAVEFORM).value();
+    props.Phase = AL_FLANGER_DEFAULT_PHASE;
+    props.Rate = AL_FLANGER_DEFAULT_RATE;
+    props.Depth = AL_FLANGER_DEFAULT_DEPTH;
+    props.Feedback = AL_FLANGER_DEFAULT_FEEDBACK;
+    props.Delay = AL_FLANGER_DEFAULT_DELAY;
+    return props;
+}
+
+} // namespace
+
+const EffectProps ChorusEffectProps{genDefaultChorusProps()};
+
+void ChorusEffectHandler::SetParami(ChorusProps &props, ALenum param, int val)
 {
     switch(param)
     {
     case AL_CHORUS_WAVEFORM:
         if(auto formopt = WaveformFromEnum(val))
-            props->Chorus.Waveform = *formopt;
+            props.Waveform = *formopt;
         else
             throw effect_exception{AL_INVALID_VALUE, "Invalid chorus waveform: 0x%04x", val};
         break;
@@ -60,115 +86,89 @@ void Chorus_setParami(EffectProps *props, ALenum param, int val)
     case AL_CHORUS_PHASE:
         if(!(val >= AL_CHORUS_MIN_PHASE && val <= AL_CHORUS_MAX_PHASE))
             throw effect_exception{AL_INVALID_VALUE, "Chorus phase out of range: %d", val};
-        props->Chorus.Phase = val;
+        props.Phase = val;
         break;
 
     default:
         throw effect_exception{AL_INVALID_ENUM, "Invalid chorus integer property 0x%04x", param};
     }
 }
-void Chorus_setParamiv(EffectProps *props, ALenum param, const int *vals)
-{ Chorus_setParami(props, param, vals[0]); }
-void Chorus_setParamf(EffectProps *props, ALenum param, float val)
+void ChorusEffectHandler::SetParamiv(ChorusProps &props, ALenum param, const int *vals)
+{ SetParami(props, param, *vals); }
+void ChorusEffectHandler::SetParamf(ChorusProps &props, ALenum param, float val)
 {
     switch(param)
     {
     case AL_CHORUS_RATE:
         if(!(val >= AL_CHORUS_MIN_RATE && val <= AL_CHORUS_MAX_RATE))
             throw effect_exception{AL_INVALID_VALUE, "Chorus rate out of range: %f", val};
-        props->Chorus.Rate = val;
+        props.Rate = val;
         break;
 
     case AL_CHORUS_DEPTH:
         if(!(val >= AL_CHORUS_MIN_DEPTH && val <= AL_CHORUS_MAX_DEPTH))
             throw effect_exception{AL_INVALID_VALUE, "Chorus depth out of range: %f", val};
-        props->Chorus.Depth = val;
+        props.Depth = val;
         break;
 
     case AL_CHORUS_FEEDBACK:
         if(!(val >= AL_CHORUS_MIN_FEEDBACK && val <= AL_CHORUS_MAX_FEEDBACK))
             throw effect_exception{AL_INVALID_VALUE, "Chorus feedback out of range: %f", val};
-        props->Chorus.Feedback = val;
+        props.Feedback = val;
         break;
 
     case AL_CHORUS_DELAY:
         if(!(val >= AL_CHORUS_MIN_DELAY && val <= AL_CHORUS_MAX_DELAY))
             throw effect_exception{AL_INVALID_VALUE, "Chorus delay out of range: %f", val};
-        props->Chorus.Delay = val;
+        props.Delay = val;
         break;
 
     default:
         throw effect_exception{AL_INVALID_ENUM, "Invalid chorus float property 0x%04x", param};
     }
 }
-void Chorus_setParamfv(EffectProps *props, ALenum param, const float *vals)
-{ Chorus_setParamf(props, param, vals[0]); }
+void ChorusEffectHandler::SetParamfv(ChorusProps &props, ALenum param, const float *vals)
+{ SetParamf(props, param, *vals); }
 
-void Chorus_getParami(const EffectProps *props, ALenum param, int *val)
+void ChorusEffectHandler::GetParami(const ChorusProps &props, ALenum param, int *val)
 {
     switch(param)
     {
-    case AL_CHORUS_WAVEFORM:
-        *val = EnumFromWaveform(props->Chorus.Waveform);
-        break;
-
-    case AL_CHORUS_PHASE:
-        *val = props->Chorus.Phase;
-        break;
+    case AL_CHORUS_WAVEFORM: *val = EnumFromWaveform(props.Waveform); break;
+    case AL_CHORUS_PHASE: *val = props.Phase; break;
 
     default:
         throw effect_exception{AL_INVALID_ENUM, "Invalid chorus integer property 0x%04x", param};
     }
 }
-void Chorus_getParamiv(const EffectProps *props, ALenum param, int *vals)
-{ Chorus_getParami(props, param, vals); }
-void Chorus_getParamf(const EffectProps *props, ALenum param, float *val)
+void ChorusEffectHandler::GetParamiv(const ChorusProps &props, ALenum param, int *vals)
+{ GetParami(props, param, vals); }
+void ChorusEffectHandler::GetParamf(const ChorusProps &props, ALenum param, float *val)
 {
     switch(param)
     {
-    case AL_CHORUS_RATE:
-        *val = props->Chorus.Rate;
-        break;
-
-    case AL_CHORUS_DEPTH:
-        *val = props->Chorus.Depth;
-        break;
-
-    case AL_CHORUS_FEEDBACK:
-        *val = props->Chorus.Feedback;
-        break;
-
-    case AL_CHORUS_DELAY:
-        *val = props->Chorus.Delay;
-        break;
+    case AL_CHORUS_RATE: *val = props.Rate; break;
+    case AL_CHORUS_DEPTH: *val = props.Depth; break;
+    case AL_CHORUS_FEEDBACK: *val = props.Feedback; break;
+    case AL_CHORUS_DELAY: *val = props.Delay; break;
 
     default:
         throw effect_exception{AL_INVALID_ENUM, "Invalid chorus float property 0x%04x", param};
     }
 }
-void Chorus_getParamfv(const EffectProps *props, ALenum param, float *vals)
-{ Chorus_getParamf(props, param, vals); }
-
-EffectProps genDefaultChorusProps() noexcept
-{
-    EffectProps props{};
-    props.Chorus.Waveform = *WaveformFromEnum(AL_CHORUS_DEFAULT_WAVEFORM);
-    props.Chorus.Phase = AL_CHORUS_DEFAULT_PHASE;
-    props.Chorus.Rate = AL_CHORUS_DEFAULT_RATE;
-    props.Chorus.Depth = AL_CHORUS_DEFAULT_DEPTH;
-    props.Chorus.Feedback = AL_CHORUS_DEFAULT_FEEDBACK;
-    props.Chorus.Delay = AL_CHORUS_DEFAULT_DELAY;
-    return props;
-}
+void ChorusEffectHandler::GetParamfv(const ChorusProps &props, ALenum param, float *vals)
+{ GetParamf(props, param, vals); }
 
 
-void Flanger_setParami(EffectProps *props, ALenum param, int val)
+const EffectProps FlangerEffectProps{genDefaultFlangerProps()};
+
+void FlangerEffectHandler::SetParami(ChorusProps &props, ALenum param, int val)
 {
     switch(param)
     {
     case AL_FLANGER_WAVEFORM:
         if(auto formopt = WaveformFromEnum(val))
-            props->Chorus.Waveform = *formopt;
+            props.Waveform = *formopt;
         else
             throw effect_exception{AL_INVALID_VALUE, "Invalid flanger waveform: 0x%04x", val};
         break;
@@ -176,139 +176,86 @@ void Flanger_setParami(EffectProps *props, ALenum param, int val)
     case AL_FLANGER_PHASE:
         if(!(val >= AL_FLANGER_MIN_PHASE && val <= AL_FLANGER_MAX_PHASE))
             throw effect_exception{AL_INVALID_VALUE, "Flanger phase out of range: %d", val};
-        props->Chorus.Phase = val;
+        props.Phase = val;
         break;
 
     default:
         throw effect_exception{AL_INVALID_ENUM, "Invalid flanger integer property 0x%04x", param};
     }
 }
-void Flanger_setParamiv(EffectProps *props, ALenum param, const int *vals)
-{ Flanger_setParami(props, param, vals[0]); }
-void Flanger_setParamf(EffectProps *props, ALenum param, float val)
+void FlangerEffectHandler::SetParamiv(ChorusProps &props, ALenum param, const int *vals)
+{ SetParami(props, param, *vals); }
+void FlangerEffectHandler::SetParamf(ChorusProps &props, ALenum param, float val)
 {
     switch(param)
     {
     case AL_FLANGER_RATE:
         if(!(val >= AL_FLANGER_MIN_RATE && val <= AL_FLANGER_MAX_RATE))
             throw effect_exception{AL_INVALID_VALUE, "Flanger rate out of range: %f", val};
-        props->Chorus.Rate = val;
+        props.Rate = val;
         break;
 
     case AL_FLANGER_DEPTH:
         if(!(val >= AL_FLANGER_MIN_DEPTH && val <= AL_FLANGER_MAX_DEPTH))
             throw effect_exception{AL_INVALID_VALUE, "Flanger depth out of range: %f", val};
-        props->Chorus.Depth = val;
+        props.Depth = val;
         break;
 
     case AL_FLANGER_FEEDBACK:
         if(!(val >= AL_FLANGER_MIN_FEEDBACK && val <= AL_FLANGER_MAX_FEEDBACK))
             throw effect_exception{AL_INVALID_VALUE, "Flanger feedback out of range: %f", val};
-        props->Chorus.Feedback = val;
+        props.Feedback = val;
         break;
 
     case AL_FLANGER_DELAY:
         if(!(val >= AL_FLANGER_MIN_DELAY && val <= AL_FLANGER_MAX_DELAY))
             throw effect_exception{AL_INVALID_VALUE, "Flanger delay out of range: %f", val};
-        props->Chorus.Delay = val;
+        props.Delay = val;
         break;
 
     default:
         throw effect_exception{AL_INVALID_ENUM, "Invalid flanger float property 0x%04x", param};
     }
 }
-void Flanger_setParamfv(EffectProps *props, ALenum param, const float *vals)
-{ Flanger_setParamf(props, param, vals[0]); }
+void FlangerEffectHandler::SetParamfv(ChorusProps &props, ALenum param, const float *vals)
+{ SetParamf(props, param, *vals); }
 
-void Flanger_getParami(const EffectProps *props, ALenum param, int *val)
+void FlangerEffectHandler::GetParami(const ChorusProps &props, ALenum param, int *val)
 {
     switch(param)
     {
-    case AL_FLANGER_WAVEFORM:
-        *val = EnumFromWaveform(props->Chorus.Waveform);
-        break;
-
-    case AL_FLANGER_PHASE:
-        *val = props->Chorus.Phase;
-        break;
+    case AL_FLANGER_WAVEFORM: *val = EnumFromWaveform(props.Waveform); break;
+    case AL_FLANGER_PHASE: *val = props.Phase; break;
 
     default:
         throw effect_exception{AL_INVALID_ENUM, "Invalid flanger integer property 0x%04x", param};
     }
 }
-void Flanger_getParamiv(const EffectProps *props, ALenum param, int *vals)
-{ Flanger_getParami(props, param, vals); }
-void Flanger_getParamf(const EffectProps *props, ALenum param, float *val)
+void FlangerEffectHandler::GetParamiv(const ChorusProps &props, ALenum param, int *vals)
+{ GetParami(props, param, vals); }
+void FlangerEffectHandler::GetParamf(const ChorusProps &props, ALenum param, float *val)
 {
     switch(param)
     {
-    case AL_FLANGER_RATE:
-        *val = props->Chorus.Rate;
-        break;
-
-    case AL_FLANGER_DEPTH:
-        *val = props->Chorus.Depth;
-        break;
-
-    case AL_FLANGER_FEEDBACK:
-        *val = props->Chorus.Feedback;
-        break;
-
-    case AL_FLANGER_DELAY:
-        *val = props->Chorus.Delay;
-        break;
+    case AL_FLANGER_RATE: *val = props.Rate; break;
+    case AL_FLANGER_DEPTH: *val = props.Depth; break;
+    case AL_FLANGER_FEEDBACK: *val = props.Feedback; break;
+    case AL_FLANGER_DELAY: *val = props.Delay; break;
 
     default:
         throw effect_exception{AL_INVALID_ENUM, "Invalid flanger float property 0x%04x", param};
     }
 }
-void Flanger_getParamfv(const EffectProps *props, ALenum param, float *vals)
-{ Flanger_getParamf(props, param, vals); }
-
-EffectProps genDefaultFlangerProps() noexcept
-{
-    EffectProps props{};
-    props.Chorus.Waveform = *WaveformFromEnum(AL_FLANGER_DEFAULT_WAVEFORM);
-    props.Chorus.Phase = AL_FLANGER_DEFAULT_PHASE;
-    props.Chorus.Rate = AL_FLANGER_DEFAULT_RATE;
-    props.Chorus.Depth = AL_FLANGER_DEFAULT_DEPTH;
-    props.Chorus.Feedback = AL_FLANGER_DEFAULT_FEEDBACK;
-    props.Chorus.Delay = AL_FLANGER_DEFAULT_DELAY;
-    return props;
-}
-
-} // namespace
-
-DEFINE_ALEFFECT_VTABLE(Chorus);
-
-const EffectProps ChorusEffectProps{genDefaultChorusProps()};
-
-DEFINE_ALEFFECT_VTABLE(Flanger);
-
-const EffectProps FlangerEffectProps{genDefaultFlangerProps()};
+void FlangerEffectHandler::GetParamfv(const ChorusProps &props, ALenum param, float *vals)
+{ GetParamf(props, param, vals); }
 
 
 #ifdef ALSOFT_EAX
 namespace {
 
-class EaxChorusEffectException : public EaxException {
-public:
-    explicit EaxChorusEffectException(const char* message)
-        : EaxException{"EAX_CHORUS_EFFECT", message}
-    {}
-}; // EaxChorusEffectException
-
-class EaxFlangerEffectException : public EaxException {
-public:
-    explicit EaxFlangerEffectException(const char* message)
-        : EaxException{"EAX_FLANGER_EFFECT", message}
-    {}
-}; // EaxFlangerEffectException
-
-struct EaxChorusTraits
-{
-    using Exception = EaxChorusEffectException;
-    using Props = EAXCHORUSPROPERTIES;
+struct EaxChorusTraits {
+    using EaxProps = EAXCHORUSPROPERTIES;
+    using Committer = EaxChorusCommitter;
 
     static constexpr auto efx_effect() { return AL_EFFECT_CHORUS; }
 
@@ -362,12 +309,18 @@ struct EaxChorusTraits
     static constexpr auto efx_default_depth() { return AL_CHORUS_DEFAULT_DEPTH; }
     static constexpr auto efx_default_feedback() { return AL_CHORUS_DEFAULT_FEEDBACK; }
     static constexpr auto efx_default_delay() { return AL_CHORUS_DEFAULT_DELAY; }
+
+    static ChorusWaveform eax_waveform(unsigned long type)
+    {
+        if(type == EAX_CHORUS_SINUSOID) return ChorusWaveform::Sinusoid;
+        if(type == EAX_CHORUS_TRIANGLE) return ChorusWaveform::Triangle;
+        return ChorusWaveform::Sinusoid;
+    }
 }; // EaxChorusTraits
 
-struct EaxFlangerTraits
-{
-    using Exception = EaxFlangerEffectException;
-    using Props = EAXFLANGERPROPERTIES;
+struct EaxFlangerTraits {
+    using EaxProps = EAXFLANGERPROPERTIES;
+    using Committer = EaxFlangerCommitter;
 
     static constexpr auto efx_effect() { return AL_EFFECT_FLANGER; }
 
@@ -421,23 +374,22 @@ struct EaxFlangerTraits
     static constexpr auto efx_default_depth() { return AL_FLANGER_DEFAULT_DEPTH; }
     static constexpr auto efx_default_feedback() { return AL_FLANGER_DEFAULT_FEEDBACK; }
     static constexpr auto efx_default_delay() { return AL_FLANGER_DEFAULT_DELAY; }
+
+    static ChorusWaveform eax_waveform(unsigned long type)
+    {
+        if(type == EAX_FLANGER_SINUSOID) return ChorusWaveform::Sinusoid;
+        if(type == EAX_FLANGER_TRIANGLE) return ChorusWaveform::Triangle;
+        return ChorusWaveform::Sinusoid;
+    }
 }; // EaxFlangerTraits
 
 template<typename TTraits>
-class EaxChorusFlangerEffect final : public EaxEffect4<typename TTraits::Exception, typename TTraits::Props> {
-public:
+struct ChorusFlangerEffect {
     using Traits = TTraits;
-    using Base = EaxEffect4<typename Traits::Exception, typename Traits::Props>;
-    using typename Base::Exception;
-    using typename Base::Props;
-    using typename Base::State;
-    using Base::defer;
+    using EaxProps = typename Traits::EaxProps;
+    using Committer = typename Traits::Committer;
+    using Exception = typename Committer::Exception;
 
-    EaxChorusFlangerEffect(int eax_version)
-        : Base{Traits::efx_effect(), eax_version}
-    {}
-
-private:
     struct WaveformValidator {
         void operator()(unsigned long ulWaveform) const
         {
@@ -505,7 +457,7 @@ private:
     }; // DelayValidator
 
     struct AllValidator {
-        void operator()(const Props& all) const
+        void operator()(const EaxProps& all) const
         {
             WaveformValidator{}(all.ulWaveform);
             PhaseValidator{}(all.lPhase);
@@ -516,219 +468,179 @@ private:
         }
     }; // AllValidator
 
-    void set_defaults(Props& props) override
+public:
+    static void SetDefaults(EaxEffectProps &props)
     {
-        props.ulWaveform = Traits::eax_default_waveform();
-        props.lPhase = Traits::eax_default_phase();
-        props.flRate = Traits::eax_default_rate();
-        props.flDepth = Traits::eax_default_depth();
-        props.flFeedback = Traits::eax_default_feedback();
-        props.flDelay = Traits::eax_default_delay();
+        auto&& all = props.emplace<EaxProps>();
+        all.ulWaveform = Traits::eax_default_waveform();
+        all.lPhase = Traits::eax_default_phase();
+        all.flRate = Traits::eax_default_rate();
+        all.flDepth = Traits::eax_default_depth();
+        all.flFeedback = Traits::eax_default_feedback();
+        all.flDelay = Traits::eax_default_delay();
     }
 
-    void set_efx_waveform()
-    {
-        const auto waveform = clamp(
-            static_cast<ALint>(Base::props_.ulWaveform),
-            Traits::efx_min_waveform(),
-            Traits::efx_max_waveform());
-        const auto efx_waveform = WaveformFromEnum(waveform);
-        assert(efx_waveform.has_value());
-        Base::al_effect_props_.Chorus.Waveform = *efx_waveform;
-    }
 
-    void set_efx_phase() noexcept
-    {
-        Base::al_effect_props_.Chorus.Phase = clamp(
-            static_cast<ALint>(Base::props_.lPhase),
-            Traits::efx_min_phase(),
-            Traits::efx_max_phase());
-    }
-
-    void set_efx_rate() noexcept
-    {
-        Base::al_effect_props_.Chorus.Rate = clamp(
-            Base::props_.flRate,
-            Traits::efx_min_rate(),
-            Traits::efx_max_rate());
-    }
-
-    void set_efx_depth() noexcept
-    {
-        Base::al_effect_props_.Chorus.Depth = clamp(
-            Base::props_.flDepth,
-            Traits::efx_min_depth(),
-            Traits::efx_max_depth());
-    }
-
-    void set_efx_feedback() noexcept
-    {
-        Base::al_effect_props_.Chorus.Feedback = clamp(
-            Base::props_.flFeedback,
-            Traits::efx_min_feedback(),
-            Traits::efx_max_feedback());
-    }
-
-    void set_efx_delay() noexcept
-    {
-        Base::al_effect_props_.Chorus.Delay = clamp(
-            Base::props_.flDelay,
-            Traits::efx_min_delay(),
-            Traits::efx_max_delay());
-    }
-
-    void set_efx_defaults() override
-    {
-        set_efx_waveform();
-        set_efx_phase();
-        set_efx_rate();
-        set_efx_depth();
-        set_efx_feedback();
-        set_efx_delay();
-    }
-
-    void get(const EaxCall& call, const Props& props) override
+    static void Get(const EaxCall &call, const EaxProps &all)
     {
         switch(call.get_property_id())
         {
-            case Traits::eax_none_param_id():
-                break;
-
-            case Traits::eax_allparameters_param_id():
-                call.template set_value<Exception>(props);
-                break;
-
-            case Traits::eax_waveform_param_id():
-                call.template set_value<Exception>(props.ulWaveform);
-                break;
-
-            case Traits::eax_phase_param_id():
-                call.template set_value<Exception>(props.lPhase);
-                break;
-
-            case Traits::eax_rate_param_id():
-                call.template set_value<Exception>(props.flRate);
-                break;
-
-            case Traits::eax_depth_param_id():
-                call.template set_value<Exception>(props.flDepth);
-                break;
-
-            case Traits::eax_feedback_param_id():
-                call.template set_value<Exception>(props.flFeedback);
-                break;
-
-            case Traits::eax_delay_param_id():
-                call.template set_value<Exception>(props.flDelay);
-                break;
-
-            default:
-                Base::fail_unknown_property_id();
+        case Traits::eax_none_param_id():
+            break;
+        case Traits::eax_allparameters_param_id():
+            call.template set_value<Exception>(all);
+            break;
+        case Traits::eax_waveform_param_id():
+            call.template set_value<Exception>(all.ulWaveform);
+            break;
+        case Traits::eax_phase_param_id():
+            call.template set_value<Exception>(all.lPhase);
+            break;
+        case Traits::eax_rate_param_id():
+            call.template set_value<Exception>(all.flRate);
+            break;
+        case Traits::eax_depth_param_id():
+            call.template set_value<Exception>(all.flDepth);
+            break;
+        case Traits::eax_feedback_param_id():
+            call.template set_value<Exception>(all.flFeedback);
+            break;
+        case Traits::eax_delay_param_id():
+            call.template set_value<Exception>(all.flDelay);
+            break;
+        default:
+            Committer::fail_unknown_property_id();
         }
     }
 
-    void set(const EaxCall& call, Props& props) override
+    static void Set(const EaxCall &call, EaxProps &all)
     {
         switch(call.get_property_id())
         {
-            case Traits::eax_none_param_id():
-                break;
-
-            case Traits::eax_allparameters_param_id():
-                Base::template defer<AllValidator>(call, props);
-                break;
-
-            case Traits::eax_waveform_param_id():
-                Base::template defer<WaveformValidator>(call, props.ulWaveform);
-                break;
-
-            case Traits::eax_phase_param_id():
-                Base::template defer<PhaseValidator>(call, props.lPhase);
-                break;
-
-            case Traits::eax_rate_param_id():
-                Base::template defer<RateValidator>(call, props.flRate);
-                break;
-
-            case Traits::eax_depth_param_id():
-                Base::template defer<DepthValidator>(call, props.flDepth);
-                break;
-
-            case Traits::eax_feedback_param_id():
-                Base::template defer<FeedbackValidator>(call, props.flFeedback);
-                break;
-
-            case Traits::eax_delay_param_id():
-                Base::template defer<DelayValidator>(call, props.flDelay);
-                break;
-
-            default:
-                Base::fail_unknown_property_id();
+        case Traits::eax_none_param_id():
+            break;
+        case Traits::eax_allparameters_param_id():
+            Committer::template defer<AllValidator>(call, all);
+            break;
+        case Traits::eax_waveform_param_id():
+            Committer::template defer<WaveformValidator>(call, all.ulWaveform);
+            break;
+        case Traits::eax_phase_param_id():
+            Committer::template defer<PhaseValidator>(call, all.lPhase);
+            break;
+        case Traits::eax_rate_param_id():
+            Committer::template defer<RateValidator>(call, all.flRate);
+            break;
+        case Traits::eax_depth_param_id():
+            Committer::template defer<DepthValidator>(call, all.flDepth);
+            break;
+        case Traits::eax_feedback_param_id():
+            Committer::template defer<FeedbackValidator>(call, all.flFeedback);
+            break;
+        case Traits::eax_delay_param_id():
+            Committer::template defer<DelayValidator>(call, all.flDelay);
+            break;
+        default:
+            Committer::fail_unknown_property_id();
         }
     }
 
-    bool commit_props(const Props& props) override
+    static bool Commit(const EaxProps &props, EaxEffectProps &props_, ChorusProps &al_props_)
     {
-        auto is_dirty = false;
+        if(auto *cur = std::get_if<EaxProps>(&props_); cur && *cur == props)
+            return false;
 
-        if (Base::props_.ulWaveform != props.ulWaveform)
-        {
-            is_dirty = true;
-            set_efx_waveform();
-        }
+        props_ = props;
 
-        if (Base::props_.lPhase != props.lPhase)
-        {
-            is_dirty = true;
-            set_efx_phase();
-        }
+        al_props_.Waveform = Traits::eax_waveform(props.ulWaveform);
+        al_props_.Phase = static_cast<int>(props.lPhase);
+        al_props_.Rate = props.flRate;
+        al_props_.Depth = props.flDepth;
+        al_props_.Feedback = props.flFeedback;
+        al_props_.Delay = props.flDelay;
 
-        if (Base::props_.flRate != props.flRate)
-        {
-            is_dirty = true;
-            set_efx_rate();
-        }
-
-        if (Base::props_.flDepth != props.flDepth)
-        {
-            is_dirty = true;
-            set_efx_depth();
-        }
-
-        if (Base::props_.flFeedback != props.flFeedback)
-        {
-            is_dirty = true;
-            set_efx_feedback();
-        }
-
-        if (Base::props_.flDelay != props.flDelay)
-        {
-            is_dirty = true;
-            set_efx_delay();
-        }
-
-        return is_dirty;
+        return true;
     }
 }; // EaxChorusFlangerEffect
 
-template<typename TTraits>
-EaxEffectUPtr eax_create_eax_chorus_flanger_effect(int eax_version)
-{
-    return eax_create_eax4_effect<EaxChorusFlangerEffect<TTraits>>(eax_version);
-}
+
+using ChorusCommitter = EaxCommitter<EaxChorusCommitter>;
+using FlangerCommitter = EaxCommitter<EaxFlangerCommitter>;
 
 } // namespace
 
-// ==========================================================================
-
-EaxEffectUPtr eax_create_eax_chorus_effect(int eax_version)
+template<>
+struct ChorusCommitter::Exception : public EaxException
 {
-    return eax_create_eax_chorus_flanger_effect<EaxChorusTraits>(eax_version);
+    explicit Exception(const char *message) : EaxException{"EAX_CHORUS_EFFECT", message}
+    { }
+};
+
+template<>
+[[noreturn]] void ChorusCommitter::fail(const char *message)
+{
+    throw Exception{message};
 }
 
-EaxEffectUPtr eax_create_eax_flanger_effect(int eax_version)
+bool EaxChorusCommitter::commit(const EAXCHORUSPROPERTIES &props)
 {
-    return eax_create_eax_chorus_flanger_effect<EaxFlangerTraits>(eax_version);
+    using Committer = ChorusFlangerEffect<EaxChorusTraits>;
+    return Committer::Commit(props, mEaxProps, mAlProps.emplace<ChorusProps>());
+}
+
+void EaxChorusCommitter::SetDefaults(EaxEffectProps &props)
+{
+    using Committer = ChorusFlangerEffect<EaxChorusTraits>;
+    Committer::SetDefaults(props);
+}
+
+void EaxChorusCommitter::Get(const EaxCall &call, const EAXCHORUSPROPERTIES &props)
+{
+    using Committer = ChorusFlangerEffect<EaxChorusTraits>;
+    Committer::Get(call, props);
+}
+
+void EaxChorusCommitter::Set(const EaxCall &call, EAXCHORUSPROPERTIES &props)
+{
+    using Committer = ChorusFlangerEffect<EaxChorusTraits>;
+    Committer::Set(call, props);
+}
+
+template<>
+struct FlangerCommitter::Exception : public EaxException
+{
+    explicit Exception(const char *message) : EaxException{"EAX_FLANGER_EFFECT", message}
+    { }
+};
+
+template<>
+[[noreturn]] void FlangerCommitter::fail(const char *message)
+{
+    throw Exception{message};
+}
+
+bool EaxFlangerCommitter::commit(const EAXFLANGERPROPERTIES &props)
+{
+    using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
+    return Committer::Commit(props, mEaxProps, mAlProps.emplace<ChorusProps>());
+}
+
+void EaxFlangerCommitter::SetDefaults(EaxEffectProps &props)
+{
+    using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
+    Committer::SetDefaults(props);
+}
+
+void EaxFlangerCommitter::Get(const EaxCall &call, const EAXFLANGERPROPERTIES &props)
+{
+    using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
+    Committer::Get(call, props);
+}
+
+void EaxFlangerCommitter::Set(const EaxCall &call, EAXFLANGERPROPERTIES &props)
+{
+    using Committer = ChorusFlangerEffect<EaxFlangerTraits>;
+    Committer::Set(call, props);
 }
 
 #endif // ALSOFT_EAX

@@ -5,13 +5,12 @@
 #include <atomic>
 #include <bitset>
 #include <chrono>
+#include <cstddef>
 #include <memory>
-#include <stddef.h>
+#include <optional>
 #include <string>
 
-#include "albyte.h"
 #include "almalloc.h"
-#include "aloptional.h"
 #include "alspan.h"
 #include "bufferline.h"
 #include "buffer_storage.h"
@@ -33,7 +32,7 @@ enum class DistanceModel : unsigned char;
 using uint = unsigned int;
 
 
-#define MAX_SENDS  6
+inline constexpr size_t MaxSendCount{6};
 
 
 enum class SpatializeMode : unsigned char {
@@ -49,10 +48,7 @@ enum class DirectMode : unsigned char {
 };
 
 
-/* Maximum number of extra source samples that may need to be loaded, for
- * resampling or conversion purposes.
- */
-constexpr uint MaxPostVoiceLoad{MaxResamplerEdge + DecoderBase::sMaxPadding};
+inline constexpr uint MaxPitch{10};
 
 
 enum {
@@ -69,26 +65,29 @@ struct DirectParams {
 
     NfcFilter NFCtrlFilter;
 
-    struct {
-        HrtfFilter Old;
-        HrtfFilter Target;
-        alignas(16) std::array<float,HrtfHistoryLength> History;
-    } Hrtf;
+    struct HrtfParams {
+        HrtfFilter Old{};
+        HrtfFilter Target{};
+        alignas(16) std::array<float,HrtfHistoryLength> History{};
+    };
+    HrtfParams Hrtf;
 
-    struct {
-        std::array<float,MAX_OUTPUT_CHANNELS> Current;
-        std::array<float,MAX_OUTPUT_CHANNELS> Target;
-    } Gains;
+    struct GainParams {
+        std::array<float,MaxOutputChannels> Current{};
+        std::array<float,MaxOutputChannels> Target{};
+    };
+    GainParams Gains;
 };
 
 struct SendParams {
     BiquadFilter LowPass;
     BiquadFilter HighPass;
 
-    struct {
-        std::array<float,MaxAmbiChannels> Current;
-        std::array<float,MaxAmbiChannels> Target;
-    } Gains;
+    struct GainParams {
+        std::array<float,MaxAmbiChannels> Current{};
+        std::array<float,MaxAmbiChannels> Target{};
+    };
+    GainParams Gains;
 };
 
 
@@ -98,11 +97,12 @@ struct VoiceBufferItem {
     CallbackType mCallback{nullptr};
     void *mUserData{nullptr};
 
+    uint mBlockAlign{0u};
     uint mSampleLen{0u};
     uint mLoopStart{0u};
     uint mLoopEnd{0u};
 
-    al::byte *mSamples{nullptr};
+    al::span<std::byte> mSamples{};
 };
 
 
@@ -141,15 +141,18 @@ struct VoiceProps {
 
     float Radius;
     float EnhWidth;
+    float Panning;
 
     /** Direct filter and auxiliary send info. */
-    struct {
+    struct DirectData {
         float Gain;
         float GainHF;
         float HFReference;
         float GainLF;
         float LFReference;
-    } Direct;
+    };
+    DirectData Direct;
+
     struct SendData {
         EffectSlot *Slot;
         float Gain;
@@ -157,13 +160,12 @@ struct VoiceProps {
         float HFReference;
         float GainLF;
         float LFReference;
-    } Send[MAX_SENDS];
+    };
+    std::array<SendData,MaxSendCount> Send;
 };
 
 struct VoicePropsItem : public VoiceProps {
     std::atomic<VoicePropsItem*> next{nullptr};
-
-    DEF_NEWDEL(VoicePropsItem)
 };
 
 enum : uint {
@@ -188,7 +190,7 @@ struct Voice {
 
     std::atomic<VoicePropsItem*> mUpdate{nullptr};
 
-    VoiceProps mProps;
+    VoiceProps mProps{};
 
     std::atomic<uint> mSourceID{0u};
     std::atomic<State> mPlayState{Stopped};
@@ -198,29 +200,30 @@ struct Voice {
      * Source offset in samples, relative to the currently playing buffer, NOT
      * the whole queue.
      */
-    std::atomic<int> mPosition;
+    std::atomic<int> mPosition{};
     /** Fractional (fixed-point) offset to the next sample. */
-    std::atomic<uint> mPositionFrac;
+    std::atomic<uint> mPositionFrac{};
 
     /* Current buffer queue item being played. */
-    std::atomic<VoiceBufferItem*> mCurrentBuffer;
+    std::atomic<VoiceBufferItem*> mCurrentBuffer{};
 
     /* Buffer queue item to loop to at end of queue (will be NULL for non-
      * looping voices).
      */
-    std::atomic<VoiceBufferItem*> mLoopBuffer;
+    std::atomic<VoiceBufferItem*> mLoopBuffer{};
 
     std::chrono::nanoseconds mStartTime{};
 
     /* Properties for the attached buffer(s). */
-    FmtChannels mFmtChannels;
-    FmtType mFmtType;
-    uint mFrequency;
-    uint mFrameStep; /**< In steps of the sample type size. */
-    uint mFrameSize; /**< In bytes. */
-    AmbiLayout mAmbiLayout;
-    AmbiScaling mAmbiScaling;
-    uint mAmbiOrder;
+    FmtChannels mFmtChannels{};
+    FmtType mFmtType{};
+    uint mFrequency{};
+    uint mFrameStep{}; /**< In steps of the sample type size. */
+    uint mBytesPerBlock{}; /**< Or for PCM formats, BytesPerFrame. */
+    uint mSamplesPerBlock{}; /**< Always 1 for PCM formats. */
+    AmbiLayout mAmbiLayout{};
+    AmbiScaling mAmbiScaling{};
+    uint mAmbiOrder{};
 
     std::unique_ptr<DecoderBase> mDecoder;
     uint mDecoderPadding{};
@@ -228,19 +231,20 @@ struct Voice {
     /** Current target parameters used for mixing. */
     uint mStep{0};
 
-    ResamplerFunc mResampler;
+    ResamplerFunc mResampler{};
 
-    InterpState mResampleState;
+    InterpState mResampleState{};
 
     std::bitset<VoiceFlagCount> mFlags{};
-    uint mNumCallbackSamples{0};
+    uint mNumCallbackBlocks{0};
+    uint mCallbackBlockBase{0};
 
     struct TargetData {
-        int FilterType;
+        int FilterType{};
         al::span<FloatBufferLine> Buffer;
     };
     TargetData mDirect;
-    std::array<TargetData,MAX_SENDS> mSend;
+    std::array<TargetData,MaxSendCount> mSend;
 
     /* The first MaxResamplerPadding/2 elements are the sample history from the
      * previous mix, with an additional MaxResamplerPadding/2 elements that are
@@ -251,11 +255,11 @@ struct Voice {
     al::vector<HistoryLine,16> mPrevSamples{2};
 
     struct ChannelData {
-        float mAmbiHFScale, mAmbiLFScale;
+        float mAmbiHFScale{}, mAmbiLFScale{};
         BandSplitter mAmbiSplitter;
 
         DirectParams mDryParams;
-        std::array<SendParams,MAX_SENDS> mWetParams;
+        std::array<SendParams,MaxSendCount> mWetParams;
     };
     al::vector<ChannelData> mChans{2};
 
@@ -270,11 +274,9 @@ struct Voice {
 
     void prepare(DeviceBase *device);
 
-    static void InitMixer(al::optional<std::string> resampler);
-
-    DEF_NEWDEL(Voice)
+    static void InitMixer(std::optional<std::string> resopt);
 };
 
-extern Resampler ResamplerDefault;
+inline Resampler ResamplerDefault{Resampler::Gaussian};
 
 #endif /* CORE_VOICE_H */
