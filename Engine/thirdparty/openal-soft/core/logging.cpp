@@ -92,6 +92,9 @@ try {
     case LogLevel::Trace: prefix = al::span{"[ALSOFT] (II) "}.first<14>(); break;
     }
 
+    if(level>gLogLevel)
+      return;
+
     std::vector<char> dynmsg;
     std::array<char,256> stcmsg{};
 

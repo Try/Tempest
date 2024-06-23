@@ -53,8 +53,10 @@ class SoundDevice final {
     std::unique_ptr<Data> data;
 
     void*                               context();
+    void*                               bufferContext();
+    static void*                        bufferContextSt();
+
     static std::unique_lock<std::mutex> globalLock();
-    static void                         setThreadContext();
 
   friend class Sound;
   friend class SoundEffect;

@@ -1,13 +1,12 @@
-#include "sound.h"
-
 #if defined(TEMPEST_BUILD_AUDIO)
+
+#include "sound.h"
+#include "sounddevice.h"
 
 #include <Tempest/IDevice>
 #include <Tempest/MemReader>
 #include <Tempest/File>
 #include <Tempest/Except>
-
-#include "sounddevice.h"
 
 #include <vector>
 #include <cstring>
@@ -16,8 +15,6 @@
 #include <AL/alc.h>
 #include <AL/al.h>
 #include <AL/alext.h>
-
-//#include <emmintrin.h>
 
 using namespace Tempest;
 
@@ -63,20 +60,18 @@ const int32_t Sound::indexTable[] = {
   };
 
 Sound::Data::~Data() {
-  SoundDevice::setThreadContext();
-  alDeleteBuffers(1,&buffer);
-  alcSetThreadContext(nullptr);
+  auto ctx = reinterpret_cast<ALCcontext*>(SoundDevice::bufferContextSt());
+  alDeleteBuffersDirect(ctx, 1,&buffer);
   }
 
 uint64_t Sound::Data::timeLength() const {
-  int size=0,fr=0,bits=0,channels=0;
+  int size=0, fr=0, bits=0, channels=0;
 
-  SoundDevice::setThreadContext();
-  alGetBufferi(buffer, AL_SIZE,      &size);
-  alGetBufferi(buffer, AL_BITS,      &bits);
-  alGetBufferi(buffer, AL_CHANNELS,  &channels);
-  alGetBufferi(buffer, AL_FREQUENCY, &fr);
-  alcSetThreadContext(nullptr);
+  auto ctx = reinterpret_cast<ALCcontext*>(SoundDevice::bufferContextSt());
+  alGetBufferiDirect(ctx, buffer, AL_SIZE,      &size);
+  alGetBufferiDirect(ctx, buffer, AL_BITS,      &bits);
+  alGetBufferiDirect(ctx, buffer, AL_CHANNELS,  &channels);
+  alGetBufferiDirect(ctx, buffer, AL_FREQUENCY, &fr);
 
   if(channels<=0 || fr<=0)
     return 0;
@@ -113,22 +108,19 @@ Sound::Sound(IDevice& f) {
 
 void Sound::initData(const char* bytes, int format, size_t size, size_t rate) {
   auto guard = SoundDevice::globalLock(); // for alGetError
-  SoundDevice::setThreadContext();
+  auto ctx = reinterpret_cast<ALCcontext*>(SoundDevice::bufferContextSt());
 
   uint32_t b = 0;
-  alGenBuffers(1,&b);
-  if(alGetError()!=AL_NO_ERROR) {
-    alcSetThreadContext(nullptr);
+  alGenBuffersDirect(ctx, 1,&b);
+  if(alGetErrorDirect(ctx)!=AL_NO_ERROR) {
     throw std::bad_alloc();
     }
 
-  alBufferData(b, format, bytes, int(size), int(rate));
-  if(alGetError()!=AL_NO_ERROR) {
-    alDeleteBuffers(1, &b);
-    alcSetThreadContext(nullptr);
+  alBufferDataDirect(ctx, b, format, bytes, int(size), int(rate));
+  if(alGetErrorDirect(ctx)!=AL_NO_ERROR) {
+    alDeleteBuffersDirect(ctx, 1, &b);
     throw std::bad_alloc();
     }
-  alcSetThreadContext(nullptr);
 
   auto d = std::make_shared<Data>();
   d->buffer = b;

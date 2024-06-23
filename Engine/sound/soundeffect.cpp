@@ -25,64 +25,55 @@ struct SoundEffect::Impl {
     if(data==nullptr)
       return;
     ALCcontext* ctx = context();
-    alcSetThreadContext(ctx);
 
-    auto guard = SoundDevice::globalLock();
-    alGenSources(1, &source);
-    alSourcei(source, AL_BUFFER, data->buffer);
-    alSourcei(source, AL_SOURCE_SPATIALIZE_SOFT, AL_TRUE);
-    if(alGetError()!=AL_NO_ERROR) {
-      alcSetThreadContext(nullptr);
+    auto guard = SoundDevice::globalLock(); // for alGetError
+    alGenSourcesDirect(ctx, 1, &source);
+    alSourceiDirect(ctx, source, AL_BUFFER, data->buffer);
+    alSourceiDirect(ctx, source, AL_SOURCE_SPATIALIZE_SOFT, AL_TRUE);
+    if(alGetErrorDirect(ctx)!=AL_NO_ERROR)
       throw std::bad_alloc();
-      }
-    alcSetThreadContext(nullptr);
     }
 
   Impl(SoundDevice &dev, std::unique_ptr<SoundProducer> &&psrc)
     :dev(&dev), data(nullptr), producer(std::move(psrc)) {
-    SoundProducer& src  = *producer;
-    ALsizei        freq = src.frequency;
-    ALenum         frm  = src.channels==2 ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16;
+    SoundProducer& src    = *producer;
+    ALsizei        freq   = src.frequency;
+    ALenum         frm    = src.channels==2 ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16;
+    ALCcontext*    ctx    = reinterpret_cast<ALCcontext*>(dev.context());
+    ALCcontext*    bufCtx = reinterpret_cast<ALCcontext*>(dev.bufferContext());
 
-    SoundDevice::setThreadContext();
-    alGenBuffers(1, &stream);
+    auto guard = SoundDevice::globalLock(); // for alGetError
+    alGenBuffersDirect(bufCtx, 1, &stream);
+    alcSetThreadContext(bufCtx);
     alBufferCallbackSOFT(stream, frm, freq, bufferCallback, this);
-    if(alGetError()!=AL_NO_ERROR) {
-      alcSetThreadContext(nullptr);
-      throw std::bad_alloc();
-      }
-
-    ALCcontext* ctx = context();
-    alcSetThreadContext(ctx);
-
-    auto guard = SoundDevice::globalLock();
-    alGenSources(1, &source);
-    if(alGetError()!=AL_NO_ERROR) {
-      SoundDevice::setThreadContext();
-      alDeleteBuffers(1, &stream);
-      alcSetThreadContext(nullptr);
-      throw std::bad_alloc();
-      }
-
-    alSourcei(source, AL_BUFFER, stream);
-    alSourcef(source, AL_REFERENCE_DISTANCE, 0);
     alcSetThreadContext(nullptr);
+    if(alGetErrorDirect(bufCtx)!=AL_NO_ERROR) {
+      throw std::bad_alloc();
+      }
+
+    alGenSourcesDirect(ctx, 1, &source);
+    if(alGetErrorDirect(ctx)!=AL_NO_ERROR) {
+      alDeleteBuffersDirect(bufCtx, 1, &stream);
+      throw std::bad_alloc();
+      }
+
+    alSourceiDirect(ctx, source, AL_BUFFER, stream);
+    alSourcefDirect(ctx, source, AL_REFERENCE_DISTANCE, 0);
     }
 
   ~Impl() {
     if(source==0)
       return;
-    auto* ctx = context();
-    alcSetThreadContext(ctx);
+    auto* ctx    = reinterpret_cast<ALCcontext*>(dev->context());
+    auto* bufCtx = reinterpret_cast<ALCcontext*>(dev->bufferContext());
 
-    alSourcePausev(1,&source);
-    alDeleteSources(1, &source);
+    alSourcePausevDirect(ctx, 1, &source);
+    alDeleteSourcesDirect(ctx, 1, &source);
     if(stream!=0)
-      alDeleteBuffers(1, &stream);
-    alcSetThreadContext(nullptr);
+      alDeleteBuffersDirect(bufCtx, 1, &stream);
     }
 
-  static ALsizei bufferCallback(ALvoid *userptr, ALvoid *sampledata, ALsizei numbytes) {
+  static ALsizei bufferCallback(ALvoid *userptr, ALvoid *sampledata, ALsizei numbytes) noexcept {
     auto& self = *reinterpret_cast<Impl*>(userptr);
     self.renderSound(reinterpret_cast<int16_t*>(sampledata), numbytes/(sizeof(int16_t)*2));
     return numbytes;
@@ -139,18 +130,14 @@ void SoundEffect::play() {
   if(impl->source==0)
     return;
   ALCcontext* ctx = impl->context();
-  alcSetThreadContext(ctx);
-  alSourcePlayv(1,&impl->source);
-  alcSetThreadContext(nullptr);
+  alSourcePlayvDirect(ctx, 1, &impl->source);
   }
 
 void SoundEffect::pause() {
   if(impl->source==0)
     return;
   ALCcontext* ctx = impl->context();
-  alcSetThreadContext(ctx);
-  alSourcePausev(1,&impl->source);
-  alcSetThreadContext(nullptr);
+  alSourcePausevDirect(ctx, 1, &impl->source);
   }
 
 bool SoundEffect::isEmpty() const {
@@ -162,9 +149,7 @@ bool SoundEffect::isFinished() const {
     return true;
   int32_t state=0;
   ALCcontext* ctx = impl->context();
-  alcSetThreadContext(ctx);
-  alGetSourceiv(impl->source,AL_SOURCE_STATE,&state);
-  alcSetThreadContext(nullptr);
+  alGetSourceivDirect(ctx, impl->source, AL_SOURCE_STATE, &state);
   return state==AL_STOPPED || state==AL_INITIAL;
   }
 
@@ -179,9 +164,7 @@ uint64_t Tempest::SoundEffect::currentTime() const {
     return 0;
   float result=0;
   ALCcontext* ctx = impl->context();
-  alcSetThreadContext(ctx);
-  alGetSourcefv(impl->source, AL_SEC_OFFSET, &result);
-  alcSetThreadContext(nullptr);
+  alGetSourcefvDirect(ctx, impl->source, AL_SEC_OFFSET, &result);
   return uint64_t(result*1000);
   }
 
@@ -190,9 +173,7 @@ void SoundEffect::setPosition(const Vec3& p) {
   if(impl->source==0)
     return;
   ALCcontext* ctx = impl->context();
-  alcSetThreadContext(ctx);
-  alSourcefv(impl->source, AL_POSITION, v);
-  alcSetThreadContext(nullptr);
+  alSourcefvDirect(ctx, impl->source, AL_POSITION, v);
   }
 
 void SoundEffect::setPosition(float x, float y, float z) {
@@ -200,9 +181,7 @@ void SoundEffect::setPosition(float x, float y, float z) {
   if(impl->source==0)
     return;
   ALCcontext* ctx = impl->context();
-  alcSetThreadContext(ctx);
-  alSourcefv(impl->source, AL_POSITION, p);
-  alcSetThreadContext(nullptr);
+  alSourcefvDirect(ctx, impl->source, AL_POSITION, p);
   }
 
 Vec3 SoundEffect::position() const {
@@ -210,9 +189,7 @@ Vec3 SoundEffect::position() const {
   if(impl->source==0)
     return Vec3();
   ALCcontext* ctx = impl->context();
-  alcSetThreadContext(ctx);
-  alGetSourcefv(impl->source,AL_POSITION,v);
-  alcSetThreadContext(nullptr);
+  alGetSourcefvDirect(ctx, impl->source, AL_POSITION, v);
   return Vec3(v[0],v[1],v[2]);
   }
 
@@ -232,18 +209,14 @@ void SoundEffect::setMaxDistance(float dist) {
   if(impl->source==0)
     return;
   ALCcontext* ctx = impl->context();
-  alcSetThreadContext(ctx);
-  alSourcefv(impl->source, AL_MAX_DISTANCE, &dist);
-  alcSetThreadContext(nullptr);
+  alSourcefvDirect(ctx, impl->source, AL_MAX_DISTANCE, &dist);
   }
 
 void SoundEffect::setVolume(float val) {
   if(impl->source==0)
     return;
   ALCcontext* ctx = impl->context();
-  alcSetThreadContext(ctx);
-  alSourcefv(impl->source, AL_GAIN, &val);
-  alcSetThreadContext(nullptr);
+  alSourcefvDirect(ctx, impl->source, AL_GAIN, &val);
   }
 
 float SoundEffect::volume() const {
@@ -251,9 +224,7 @@ float SoundEffect::volume() const {
     return 0;
   float val=0;
   ALCcontext* ctx = impl->context();
-  alcSetThreadContext(ctx);
-  alGetSourcefv(impl->source, AL_GAIN, &val);
-  alcSetThreadContext(nullptr);
+  alGetSourcefvDirect(ctx, impl->source, AL_GAIN, &val);
   return val;
   }
 
