@@ -102,20 +102,17 @@ SoundDevice::SoundDevice(std::string_view name):data(new Data()) {
 
   alcSetThreadContext(data->context);
 
-  ALenum e[] = {AL_EVENT_TYPE_DISCONNECTED_SOFT};
-  alEventControlSOFT(1, e, true);
+  {
+    ALenum e[] = {AL_EVENT_TYPE_DISCONNECTED_SOFT};
+    alEventControlSOFT(1, e, true);
 
-  alEventCallbackSOFT([](ALenum eventType, ALuint object, ALuint param,
-                         ALsizei length, const ALchar *message,
-                         void *userParam) {
-    auto& data = *reinterpret_cast<const Data*>(userParam);
-    alcReopenDeviceSOFT(data.dev->dev, nullptr, nullptr);
-    /*
-    auto s    = alcReopenDeviceSOFT(data.dev->dev, nullptr, nullptr);
-    auto name = alcGetString(data.dev->dev, ALC_ALL_DEVICES_SPECIFIER);
-    Log::d("reopen sound device: ", name, " ret: ", (s ? "true" : "false"));
-    */
-    }, data.get());
+    alEventCallbackSOFT([](ALenum eventType, ALuint object, ALuint param,
+                           ALsizei length, const ALchar *message,
+                           void *userParam) noexcept {
+      auto& data = *reinterpret_cast<const Data*>(userParam);
+      alcReopenDeviceSOFT(data.dev->dev, nullptr, nullptr);
+      }, data.get());
+  }
 
   alDistanceModelDirect(data->context, AL_LINEAR_DISTANCE);
   alDisableDirect(data->context, AL_STOP_SOURCES_ON_DISCONNECT_SOFT);
