@@ -61,6 +61,7 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     void dispatchMeshIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) override;
 
     void dispatch    (size_t x, size_t y, size_t z) override;
+    void dispatchIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) override;
 
     void barrier       (const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) override;
     void generateMipmap(AbstractGraphicsApi::Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;

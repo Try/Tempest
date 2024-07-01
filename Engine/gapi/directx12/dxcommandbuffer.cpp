@@ -590,6 +590,31 @@ void DxCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
   impl->Dispatch(UINT(x),UINT(y),UINT(z));
   }
 
+void DxCommandBuffer::dispatchIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) {
+  const DxBuffer& ind = reinterpret_cast<const DxBuffer&>(indirect);
+  auto& sign = dev.dispatchIndirectSgn.get();
+
+  curUniforms->ssboBarriers(resState, PipelineStage::S_Compute);
+
+  // block future writers
+  resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Compute);
+  resState.flush(*this);
+
+  if (indirectCmd.find(ind.impl.get()) == indirectCmd.end()) {
+    indirectCmd.insert(ind.impl.get());
+
+    D3D12_RESOURCE_BARRIER barrier;
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    barrier.Transition.pResource = ind.impl.get();
+    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
+    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
+    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    impl->ResourceBarrier(1, &barrier);
+    }
+  impl->ExecuteIndirect(sign, 1, ind.impl.get(), UINT64(offset), nullptr, 0);
+  }
+
 void DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p) {
   DxPipeline& px = reinterpret_cast<DxPipeline&>(p);
   pushBaseInstanceId = px.pushBaseInstanceId;

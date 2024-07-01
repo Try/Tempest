@@ -337,6 +337,7 @@ class DxDevice : public AbstractGraphicsApi::Device {
 
     ComPtr<ID3D12CommandSignature> drawIndirectSgn;
     ComPtr<ID3D12CommandSignature> drawMeshIndirectSgn;
+    ComPtr<ID3D12CommandSignature> dispatchIndirectSgn;
 
     DxAllocator                 allocator;
     DxDescriptorAllocator       descAlloc;
