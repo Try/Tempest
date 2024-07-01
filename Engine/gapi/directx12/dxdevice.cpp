@@ -12,6 +12,27 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+void Tempest::Detail::dxAssert(HRESULT code, DxDevice& dx) {
+  if(code!=DXGI_ERROR_DEVICE_REMOVED && code!=DXGI_ERROR_DEVICE_RESET) {
+    dxAssert(code);
+    return;
+    }
+
+  ID3D12Device& device = *dx.device;
+
+  ComPtr<ID3D12DeviceRemovedExtendedData> pDred;
+  if(device.QueryInterface(uuid<ID3D12DeviceRemovedExtendedData>(), reinterpret_cast<void**>(pDred.get()))>=0) {
+    D3D12_DRED_PAGE_FAULT_OUTPUT pageFault = {};
+    if(pDred->GetPageFaultAllocationOutput(&pageFault)>=0) {
+      char message[128] = {};
+      std::snprintf(message, sizeof(message), "page fault at %llx", pageFault.PageFaultVA);
+      throw DeviceLostException(message);
+      }
+    }
+
+  throw DeviceLostException();
+  }
+
 DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
   :dllApi(dllApi) {
   dxAssert(dllApi.D3D12CreateDevice(&adapter, D3D_FEATURE_LEVEL_11_0, uuid<ID3D12Device>(), reinterpret_cast<void**>(&device)));
@@ -48,6 +69,14 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
   if(SUCCEEDED(device->QueryInterface(uuid<ID3D12InfoQueue1>(),reinterpret_cast<void**>(&pInfoQueue1)))) {
     // NOTE: not supported in DX yet
     pInfoQueue1->RegisterMessageCallback(DxDevice::debugReportCallback, D3D12_MESSAGE_CALLBACK_FLAG_NONE, nullptr, nullptr);
+    }
+
+  if(dllApi.D3D12GetDebugInterface!=nullptr) {
+    ComPtr<ID3D12DeviceRemovedExtendedDataSettings> dredSettings;
+    dllApi.D3D12GetDebugInterface(uuid<ID3D12DeviceRemovedExtendedDataSettings>(), reinterpret_cast<void**>(&dredSettings.get()));
+
+    if(dredSettings.get()!=nullptr)
+      dredSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
     }
 
   DXGI_ADAPTER_DESC desc={};
@@ -290,10 +319,10 @@ void DxDevice::waitData() {
 
 void Detail::DxDevice::waitIdle() {
   std::lock_guard<SpinLock> guard(syncCmdQueue);
-  dxAssert(cmdQueue->Signal(idleFence.get(),DxFence::Ready));
-  dxAssert(idleFence->SetEventOnCompletion(DxFence::Ready,idleEvent));
+  dxAssert(cmdQueue->Signal(idleFence.get(),DxFence::Ready), *this);
+  dxAssert(idleFence->SetEventOnCompletion(DxFence::Ready,idleEvent), *this);
   WaitForSingleObjectEx(idleEvent, INFINITE, FALSE);
-  dxAssert(idleFence->Signal(DxFence::Waiting));
+  dxAssert(idleFence->Signal(DxFence::Waiting), *this);
   }
 
 void DxDevice::submit(DxCommandBuffer& cmd, DxFence* sync) {

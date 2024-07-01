@@ -4,23 +4,33 @@
 
 namespace Tempest {
 
-class DeviceLostException : std::exception {
-  const char* what() const noexcept override { return "device is lost"; }
+class DeviceLostException : public std::exception {
+  public:
+    DeviceLostException() = default;
+    DeviceLostException(std::string_view message):message(std::string(message)){}
+    const char* what() const noexcept override;
+
+  private:
+    std::string message;
   };
 
-class DeviceHangException : DeviceLostException {
+class DeviceHangException : public DeviceLostException {
+  public:
   const char* what() const noexcept override { return "hit gpu timeout"; }
   };
 
-class SwapchainSuboptimal : std::exception {
+class SwapchainSuboptimal : public std::exception {
+  public:
   const char* what() const noexcept override { return "swapchain no longer matches the surface properties"; }
   };
 
-class IncompleteFboException : std::exception {
+class IncompleteFboException : public  std::exception {
+  public:
   const char* what() const noexcept override { return "inconsistent framebuffer dimensions"; }
   };
 
-class ConcurentRecordingException : std::exception {
+class ConcurentRecordingException : public  std::exception {
+  public:
   const char* what() const noexcept override { return "the command buffer is already in recording state"; }
   };
 

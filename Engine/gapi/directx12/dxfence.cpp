@@ -8,7 +8,7 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-DxFence::DxFence(DxDevice& dev) {
+DxFence::DxFence(DxDevice& dev) : device(dev) {
   dxAssert(dev.device->CreateFence(Ready, D3D12_FENCE_FLAG_NONE,
                                    uuid<ID3D12Fence>(),
                                    reinterpret_cast<void**>(&impl)));
@@ -44,7 +44,7 @@ bool DxFence::waitValue(UINT64 val, DWORD timeout) {
     return true;
   if(ret==WAIT_TIMEOUT)
     return false;
-  dxAssert(GetLastError());
+  dxAssert(GetLastError(), device);
   return false;
   }
 
@@ -58,7 +58,7 @@ void DxFence::signal(ID3D12CommandQueue& queue) {
   }
 
 void DxFence::signal(ID3D12CommandQueue& queue, UINT64 val) {
-  dxAssert(queue.Signal(impl.get(),val));
+  dxAssert(queue.Signal(impl.get(),val), device);
   }
 
 #endif

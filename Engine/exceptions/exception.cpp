@@ -2,6 +2,12 @@
 
 using namespace Tempest;
 
+const char* DeviceLostException::what() const noexcept {
+  if(message.empty())
+    return "device is lost";
+  return message.c_str();
+  }
+
 const char *SystemErrCategory::name() const noexcept {
   return "Tempest.SystemApi.Error";
   }

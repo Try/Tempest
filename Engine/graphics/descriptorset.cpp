@@ -80,7 +80,7 @@ void DescriptorSet::set(size_t layoutBind, const std::vector<const StorageBuffer
 void DescriptorSet::set(size_t layoutBind, const Texture2d* const * tex, size_t count) {
   Detail::SmallArray<AbstractGraphicsApi::Texture*,32> arr(count);
   for(size_t i=0; i<count; ++i)
-    arr[i] = tex[i]->impl.handler;
+    arr[i] = tex[i] ? tex[i]->impl.handler : nullptr;
   impl.handler->set(layoutBind,arr.get(),count,Sampler::nearest(),uint32_t(-1));
   }
 

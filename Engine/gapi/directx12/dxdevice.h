@@ -26,7 +26,7 @@ namespace Detail {
 
 class DxCompPipeline;
 
-inline void dxAssert(HRESULT code){
+inline void dxAssert(HRESULT code) {
   if(T_LIKELY(code==S_OK))
     return;
 
@@ -63,6 +63,8 @@ inline void dxAssert(HRESULT code){
       throw std::runtime_error("undefined directx error("+std::to_string(code)+")"); //TODO
     }
   }
+
+void dxAssert(HRESULT code, DxDevice& device);
 
 inline DXGI_FORMAT nativeFormat(TextureFormat f) {
   switch(f) {
@@ -309,7 +311,6 @@ class DxDevice : public AbstractGraphicsApi::Device {
                                                     D3D_ROOT_SIGNATURE_VERSION Version,
                                                     ID3DBlob** ppBlob,
                                                     ID3DBlob** ppErrorBlob) = nullptr;
-
       HRESULT (WINAPI *DxcCreateInstance)(REFCLSID rclsid, REFIID riid, LPVOID* ppv) = nullptr;
       };
 

@@ -28,6 +28,7 @@ class DxFence : public AbstractGraphicsApi::Fence {
     void signal(ID3D12CommandQueue& queue,UINT64 val);
 
     ComPtr<ID3D12Fence> impl;
+    DxDevice&           device;
     HANDLE              event=nullptr;
   };
 
