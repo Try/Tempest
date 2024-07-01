@@ -7,7 +7,6 @@
 #include "guid.h"
 
 #include <Tempest/Pixmap>
-#include <iostream>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -59,10 +58,16 @@ DxAllocator::Provider::DeviceMemory DxAllocator::Provider::alloc(size_t size, ui
     heapDesc.Flags          |= D3D12_HEAP_FLAG_ALLOW_SHADER_ATOMICS;
     }
   else if(bufferHeap==BufferHeap::Upload) {
-    heapDesc.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
+    // heapDesc.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
+    heapDesc.Properties.Type                 = D3D12_HEAP_TYPE_CUSTOM;
+    heapDesc.Properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_WRITE_COMBINE;
+    heapDesc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;
     }
   else if(bufferHeap==BufferHeap::Readback) {
-    heapDesc.Properties.Type = D3D12_HEAP_TYPE_READBACK;
+    // heapDesc.Properties.Type = D3D12_HEAP_TYPE_READBACK;
+    heapDesc.Properties.Type                 = D3D12_HEAP_TYPE_CUSTOM;
+    heapDesc.Properties.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_WRITE_BACK;
+    heapDesc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_L0;
     }
 
   ID3D12Heap* ret = nullptr;
@@ -125,7 +130,8 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t size, MemUsage usage, Buffer
 
   D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COMMON;
   if(bufFlg==BufferHeap::Upload) {
-    state = D3D12_RESOURCE_STATE_GENERIC_READ;
+    // state = D3D12_RESOURCE_STATE_GENERIC_READ;
+    state = D3D12_RESOURCE_STATE_COMMON;
     }
   else if(bufFlg==BufferHeap::Readback) {
     state = D3D12_RESOURCE_STATE_COPY_DEST;
@@ -138,6 +144,9 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t size, MemUsage usage, Buffer
   if(MemUsage::AsStorage==(usage&MemUsage::AsStorage)) {
     resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     state         |= D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
+    }
+  if(MemUsage::Indirect==(usage&MemUsage::Indirect)) {
+    resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
   if(MemUsage::ScratchBuffer==(usage&MemUsage::ScratchBuffer)) {
     resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;

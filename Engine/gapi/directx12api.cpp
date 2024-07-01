@@ -193,26 +193,11 @@ AbstractGraphicsApi::Fence* DirectX12Api::createFence(AbstractGraphicsApi::Devic
 AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Device* d, const void* mem, size_t size,
                                                         MemUsage usage, BufferHeap flg) {
   DxDevice& dx = *reinterpret_cast<DxDevice*>(d);
-
-  const BufferHeap flgOrig = flg;
-  if(MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer))
-   flg = BufferHeap::Device;
-
   usage = usage|MemUsage::TransferSrc|MemUsage::TransferDst;
 
   if(flg==BufferHeap::Upload) {
     DxBuffer buf=dx.allocator.alloc(mem,size,usage,BufferHeap::Upload);
     return PBuffer(new DxBuffer(std::move(buf)));
-    }
-
-  if(flg!=flgOrig && flgOrig!=BufferHeap::Device) {
-    DxBuffer                      base = dx.allocator.alloc(nullptr,size,usage,flg);
-    Detail::DSharedPtr<DxBuffer*> buf(new DxBufferWithStaging(std::move(base),flgOrig));
-    if(mem!=nullptr)
-      buf.handler->update(mem,0,size);
-    else if((usage&MemUsage::Initialized)==MemUsage::Initialized)
-      buf.handler->fill(0x0,0,size);
-    return PBuffer(buf.handler);
     }
 
   DxBuffer                      base = dx.allocator.alloc(nullptr,size,usage,flg);

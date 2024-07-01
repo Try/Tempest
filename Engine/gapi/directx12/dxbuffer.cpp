@@ -2,7 +2,6 @@
 
 #include "dxbuffer.h"
 #include "dxdevice.h"
-#include <cassert>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -40,7 +39,7 @@ void DxBuffer::update(const void* data, size_t off, size_t size) {
   ID3D12Resource&       ret  = *impl;
   ret.GetHeapProperties(&prop,nullptr);
 
-  if(prop.Type==D3D12_HEAP_TYPE_UPLOAD) {
+  if(prop.Type==D3D12_HEAP_TYPE_UPLOAD || prop.Type==D3D12_HEAP_TYPE_CUSTOM) {
     dx.dataMgr().waitFor(this); // write-after-write case
     updateByMapped(*this,data,off,size);
     return;
@@ -58,7 +57,7 @@ void DxBuffer::fill(uint32_t data, size_t off, size_t size) {
   ID3D12Resource&       ret  = *impl;
   ret.GetHeapProperties(&prop,nullptr);
 
-  if(prop.Type==D3D12_HEAP_TYPE_UPLOAD) {
+  if(prop.Type==D3D12_HEAP_TYPE_UPLOAD || prop.Type==D3D12_HEAP_TYPE_CUSTOM) {
     dx.dataMgr().waitFor(this); // write-after-write case
     fillByMapped(*this,data,off,size);
     return;
@@ -76,7 +75,7 @@ void DxBuffer::read(void* data, size_t off, size_t size) {
   ID3D12Resource&       ret  = *impl;
   ret.GetHeapProperties(&prop,nullptr);
 
-  if(prop.Type==D3D12_HEAP_TYPE_READBACK) {
+  if(prop.Type==D3D12_HEAP_TYPE_READBACK || prop.Type==D3D12_HEAP_TYPE_CUSTOM) {
     dx.dataMgr().waitFor(this); // write-after-write case
     readFromMapped(*this,data,off,size);
     return;
@@ -197,31 +196,6 @@ void DxBuffer::readFromMapped(DxBuffer& stage, void* data, size_t off, size_t si
   mapped = reinterpret_cast<uint8_t*>(mapped)+off;
   std::memcpy(data,mapped,size);
   stage.impl->Unmap(0,nullptr);
-  }
-
-
-DxBufferWithStaging::DxBufferWithStaging(DxBuffer&& base, BufferHeap stagingHeap)
-  :DxBuffer(std::move(base)) {
-  if(stagingHeap==BufferHeap::Readback) {
-    auto  stage = dev->dataMgr().allocStagingMemory(nullptr,sizeInBytes,MemUsage::TransferDst,BufferHeap::Readback);
-    stagingR = Detail::DSharedPtr<DxBuffer*>(new Detail::DxBuffer(std::move(stage)));
-    }
-  if(stagingHeap==BufferHeap::Upload) {
-    auto  stage = dev->dataMgr().allocStagingMemory(nullptr,sizeInBytes,MemUsage::TransferSrc,BufferHeap::Upload);
-    stagingU = Detail::DSharedPtr<DxBuffer*>(new Detail::DxBuffer(std::move(stage)));
-    }
-  }
-
-void DxBufferWithStaging::update(const void* data, size_t off, size_t size) {
-  if(stagingU.handler==nullptr)
-    return DxBuffer::update(data,off,size);
-  updateByStaging(stagingU.handler,data,off,off,size);
-  }
-
-void DxBufferWithStaging::read(void* data, size_t off, size_t size) {
-  if(stagingR.handler==nullptr)
-    return DxBuffer::read(data,off,size);
-  readFromStaging(*stagingR.handler,data,off,size);
   }
 
 #endif

@@ -44,18 +44,6 @@ class DxBuffer : public AbstractGraphicsApi::Buffer {
     void  readFromMapped (DxBuffer& stage, void* data, size_t off, size_t size);
   };
 
-class DxBufferWithStaging : public DxBuffer {
-  public:
-    DxBufferWithStaging(DxBuffer&& base, BufferHeap stagingHeap);
-
-    void  update(const void* data, size_t off, size_t size) override;
-    void  read  (      void* data, size_t off, size_t size) override;
-
-  private:
-    Detail::DSharedPtr<DxBuffer*> stagingU = {};
-    Detail::DSharedPtr<DxBuffer*> stagingR = {};
-  };
-
 }
 }
 
