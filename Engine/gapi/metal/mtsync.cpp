@@ -3,6 +3,7 @@
 #include "mtsync.h"
 
 #include <Tempest/Except>
+#include <Tempest/Log>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -39,11 +40,24 @@ void MtSync::reset() {
   cv.notify_all();
   }
 
-void MtSync::reset(MTL::CommandBufferStatus err, NS::Error* desc) {
+void MtSync::reset(MTL::CommandBufferStatus err, MTL::CommandBufferError errC, NS::Error* desc) {
   std::unique_lock<std::mutex> guard(sync);
-  status = err;
-  auto str = desc->debugDescription()->cString(NS::UTF8StringEncoding);
-  (void)str; // TODO: rich error reporting
+  errorCategory = errC;
+  status        = err;
+  errorStr      = desc->description()->cString(NS::UTF8StringEncoding);
+
+  errorLog.clear();
+  if(auto at = desc->userInfo()->object(MTL::CommandBufferEncoderInfoErrorKey)) {
+    auto info = reinterpret_cast<NS::Array*>(at);
+    for(size_t i=0; i<info->count(); ++i) {
+      auto ix  = reinterpret_cast<MTL::CommandBufferEncoderInfo*>(info->object(i));
+      auto str = ix->debugDescription()->cString(NS::UTF8StringEncoding);
+      if(!errorLog.empty())
+        errorLog += "\n";
+      errorLog += str;
+      }
+    }
+
   hasWait.store(false);
   cv.notify_all();
   }
@@ -54,8 +68,11 @@ void MtSync::signal() {
   }
 
 void MtSync::propogateError() {
-  if(status==MTL::CommandBufferStatusError)
-    throw DeviceLostException();
+  if(status!=MTL::CommandBufferStatusError)
+    return;
+  if(errorCategory==MTL::CommandBufferErrorTimeout)
+    throw DeviceHangException();
+  throw DeviceLostException(errorStr, errorLog);
   }
 
 #endif
