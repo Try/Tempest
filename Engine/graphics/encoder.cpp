@@ -198,6 +198,12 @@ void Encoder<Tempest::CommandBuffer>::dispatchThreads(Size sz) {
   dispatchThreads(size_t(sz.w), size_t(sz.h), 1);
   }
 
+void Encoder<CommandBuffer>::dispatchIndirect(const StorageBuffer& indirect, size_t offset) {
+  if (offset % 4 != 0)
+    throw std::system_error(Tempest::GraphicsErrc::InvalidStorageBuffer);
+  impl->dispatchIndirect(*indirect.impl.impl.handler, offset);
+  }
+
 void Encoder<CommandBuffer>::setFramebuffer(std::initializer_list<AttachmentDesc> rd, AttachmentDesc zd) {
   implSetFramebuffer(rd.begin(),rd.size(),&zd);
   }
