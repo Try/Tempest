@@ -600,19 +600,11 @@ void DxCommandBuffer::dispatchIndirect(const AbstractGraphicsApi::Buffer& indire
   resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Compute);
   resState.flush(*this);
 
-  if (indirectCmd.find(ind.impl.get()) == indirectCmd.end()) {
-    indirectCmd.insert(ind.impl.get());
+  issueExplicitCommonToIndirectStateTransition(ind.impl.get());
 
-    D3D12_RESOURCE_BARRIER barrier;
-    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-    barrier.Transition.pResource = ind.impl.get();
-    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
-    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-    impl->ResourceBarrier(1, &barrier);
-    }
   impl->ExecuteIndirect(sign, 1, ind.impl.get(), UINT64(offset), nullptr, 0);
+
+  issueExplicitIndirectToCommonStateTransition(ind.impl.get());
   }
 
 void DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p) {
@@ -642,14 +634,7 @@ void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompu
 
 void DxCommandBuffer::restoreIndirect() {
   for(auto& i:indirectCmd) {
-    D3D12_RESOURCE_BARRIER barrier;
-    barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-    barrier.Transition.pResource   = i;
-    barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_COMMON;
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
-    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-    impl->ResourceBarrier(1, &barrier);
+      issueExplicitIndirectToCommonStateTransition(i);
     }
   indirectCmd.clear();
   }
@@ -773,16 +758,9 @@ void DxCommandBuffer::drawIndirect(const AbstractGraphicsApi::Buffer& indirect, 
 
   if(true && indirectCmd.find(ind.impl.get())==indirectCmd.end()) {
     indirectCmd.insert(ind.impl.get());
-
-    D3D12_RESOURCE_BARRIER barrier;
-    barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-    barrier.Transition.pResource   = ind.impl.get();
-    barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
-    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-    impl->ResourceBarrier(1, &barrier);
+    issueExplicitCommonToIndirectStateTransition(ind.impl.get());
     }
+
   impl->ExecuteIndirect(sign, 1, ind.impl.get(), UINT64(offset), nullptr, 0);
   }
 
@@ -799,15 +777,7 @@ void DxCommandBuffer::dispatchMeshIndirect(const AbstractGraphicsApi::Buffer& in
 
   if(true && indirectCmd.find(ind.impl.get())==indirectCmd.end()) {
     indirectCmd.insert(ind.impl.get());
-
-    D3D12_RESOURCE_BARRIER barrier;
-    barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-    barrier.Transition.pResource   = ind.impl.get();
-    barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COMMON;
-    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-    impl->ResourceBarrier(1, &barrier);
+    issueExplicitCommonToIndirectStateTransition(ind.impl.get());
     }
   impl->ExecuteIndirect(sign, 1, ind.impl.get(), UINT64(offset), nullptr, 0);
   }
@@ -1010,6 +980,28 @@ void DxCommandBuffer::copyNative(AbstractGraphicsApi::Buffer& dstBuf, size_t off
   dstLoc.PlacedFootprint  = foot;
 
   impl->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, nullptr);
+  }
+
+void DxCommandBuffer::issueExplicitResourceStateTransition(ID3D12Resource* buf, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter)
+{
+  D3D12_RESOURCE_BARRIER barrier;
+  barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+  barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+  barrier.Transition.pResource = buf;
+  barrier.Transition.StateAfter = stateAfter;
+  barrier.Transition.StateBefore = stateBefore;
+  barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+  impl->ResourceBarrier(1, &barrier);
+  }
+
+void DxCommandBuffer::issueExplicitCommonToIndirectStateTransition(ID3D12Resource* buf)
+{
+  issueExplicitResourceStateTransition(buf, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT);
+  }
+
+void DxCommandBuffer::issueExplicitIndirectToCommonStateTransition(ID3D12Resource* buf)
+{
+  issueExplicitResourceStateTransition(buf, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT, D3D12_RESOURCE_STATE_COMMON);
   }
 
 #endif

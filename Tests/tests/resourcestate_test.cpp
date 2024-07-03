@@ -96,6 +96,7 @@ struct TestCommandBuffer : Tempest::AbstractGraphicsApi::CommandBuffer {
   void drawIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) override {}
 
   void dispatch    (size_t x, size_t y, size_t z) override {}
+  void dispatchIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) override {}
   };
 
 void TestCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
@@ -168,6 +169,18 @@ TEST(main, ResourceStateBlas) {
   rs.flush(cmd);
 
   rs.onUavUsage(NonUniqResId(0x1), NonUniqResId::I_None, PipelineStage::S_Compute);
+  rs.flush(cmd);
+  }
+
+TEST(main, ResourceStateIndirect) {
+  TestCommandBuffer cmd;
+
+  ResourceState rs;
+
+  rs.onUavUsage(NonUniqResId::I_None, NonUniqResId(0x1), PipelineStage::S_Compute);
+  rs.flush(cmd);
+
+  rs.onUavUsage(NonUniqResId(0x1), NonUniqResId::I_None, PipelineStage::S_Indirect);
   rs.flush(cmd);
   }
 
