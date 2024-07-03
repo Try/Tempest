@@ -464,7 +464,7 @@ void VCommandBuffer::dispatchIndirect(const AbstractGraphicsApi::Buffer& indirec
 
   curUniforms->ssboBarriers(resState, PipelineStage::S_Compute);
   // block future writers
-  resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Compute);
+  resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
   resState.flush(*this);
 
   vkCmdDispatchIndirect(impl, ind.impl, VkDeviceSize(offset));
@@ -520,7 +520,7 @@ void VCommandBuffer::drawIndirect(const AbstractGraphicsApi::Buffer& indirect, s
   const VBuffer& ind = reinterpret_cast<const VBuffer&>(indirect);
 
   // block future writers
-  resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Graphics);
+  resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
   //resState.flush(*this);
   vkCmdDrawIndirect(impl, ind.impl, VkDeviceSize(offset), 1, 0);
   }
@@ -533,7 +533,7 @@ void VCommandBuffer::dispatchMeshIndirect(const AbstractGraphicsApi::Buffer& ind
   const VBuffer& ind = reinterpret_cast<const VBuffer&>(indirect);
 
   // block future writers
-  resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Graphics);
+  resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
   //resState.flush(*this);
   device.vkCmdDrawMeshTasksIndirect(impl, ind.impl, VkDeviceSize(offset), 1, 0);
   }

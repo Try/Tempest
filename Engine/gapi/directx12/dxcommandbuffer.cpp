@@ -597,7 +597,7 @@ void DxCommandBuffer::dispatchIndirect(const AbstractGraphicsApi::Buffer& indire
   curUniforms->ssboBarriers(resState, PipelineStage::S_Compute);
 
   // block future writers
-  resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Compute);
+  resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
   resState.flush(*this);
 
   issueExplicitCommonToIndirectStateTransition(ind.impl.get());
@@ -753,7 +753,7 @@ void DxCommandBuffer::drawIndirect(const AbstractGraphicsApi::Buffer& indirect, 
   auto&           sign = dev.drawIndirectSgn.get();
 
   // block future writers
-  resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Graphics);
+  resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
   //resState.flush(*this);
 
   if(true && indirectCmd.find(ind.impl.get())==indirectCmd.end()) {
@@ -773,7 +773,7 @@ void DxCommandBuffer::dispatchMeshIndirect(const AbstractGraphicsApi::Buffer& in
   auto&           sign = dev.drawMeshIndirectSgn.get();
 
   // block future writers
-  resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Graphics);
+  resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
 
   if(true && indirectCmd.find(ind.impl.get())==indirectCmd.end()) {
     indirectCmd.insert(ind.impl.get());
