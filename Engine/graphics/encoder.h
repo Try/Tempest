@@ -98,8 +98,6 @@ class Encoder<Tempest::CommandBuffer> {
     void dispatchThreads(size_t x, size_t y=1, size_t z=1);
     void dispatchThreads(Size sz);
 
-    
-
     void copy(const Attachment& src, uint32_t mip, StorageBuffer& dest, size_t offset);
     void copy(const Texture2d&  src, uint32_t mip, StorageBuffer& dest, size_t offset);
 
