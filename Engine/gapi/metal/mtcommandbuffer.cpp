@@ -67,10 +67,7 @@ void MtCommandBuffer::reset() {
   auto pool = NsPtr<NS::AutoreleasePool>::init();
   auto desc = NsPtr<MTL::CommandBufferDescriptor>::init();
   desc->setRetainedReferences(false);
-
-  if(device.validation) {
-    desc->setErrorOptions(MTL::CommandBufferErrorOptionEncoderExecutionStatus);
-    }
+  desc->setErrorOptions(MTL::CommandBufferErrorOptionEncoderExecutionStatus);
 
   impl = NsPtr<MTL::CommandBuffer>(device.queue->commandBuffer(desc.get()));
   impl->retain();
@@ -126,7 +123,7 @@ void MtCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size
   // nop
   }
 
-void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MTL::RenderPassDescriptor* desc) { 
+void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MTL::RenderPassDescriptor* desc) {
   if(encDraw!=nullptr && e!=E_Draw) {
     if(isDbgRegion) {
       encDraw->popDebugGroup();
@@ -184,10 +181,12 @@ void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MTL::RenderPassDesc
       break;
       }
     }
+  implSetDebugLabel();
   }
 
 void MtCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline &p) {
   setEncoder(E_Comp,nullptr);
+
   auto& px = reinterpret_cast<MtCompPipeline&>(p);
   encComp->setComputePipelineState(px.impl.get());
   curLay    = px.lay.handler;
@@ -240,6 +239,8 @@ void MtCommandBuffer::setScissor(const Rect& r) {
   }
 
 void MtCommandBuffer::setDebugMarker(std::string_view tag) {
+  activeLabel = tag;
+
   MTL::CommandEncoder* enc = nullptr;
   if(encDraw!=nullptr)
     enc = encDraw.get();
@@ -248,8 +249,9 @@ void MtCommandBuffer::setDebugMarker(std::string_view tag) {
   if(encBlit!=nullptr)
     enc = encBlit.get();
 
-  if(enc==nullptr)
+  if(enc==nullptr) {
     return;
+    }
 
   if(isDbgRegion) {
     enc->popDebugGroup();
@@ -262,11 +264,37 @@ void MtCommandBuffer::setDebugMarker(std::string_view tag) {
     std::snprintf(buf, sizeof(buf), "%.*s", int(tag.size()), tag.data());
     auto str = NsPtr<NS::String>(NS::String::string(buf,NS::UTF8StringEncoding));
     str->retain();
+
     enc->pushDebugGroup(str.get());
-    if(enc->label()==nullptr)
-      enc->setLabel(str.get());
     isDbgRegion = true;
     }
+  }
+
+void MtCommandBuffer::implSetDebugLabel() {
+  if(activeLabel.empty())
+    return;
+
+  MTL::CommandEncoder* enc = nullptr;
+  if(encDraw!=nullptr)
+    enc = encDraw.get();
+  if(encComp!=nullptr)
+    enc = encComp.get();
+  if(encBlit!=nullptr)
+    enc = encBlit.get();
+
+  if(enc==nullptr) {
+    return;
+    }
+
+  auto pool = NsPtr<NS::AutoreleasePool>::init();
+  char buf[128] = {};
+  std::snprintf(buf, sizeof(buf), "%s", activeLabel.c_str());
+  if(enc->label()!=nullptr) {
+    std::snprintf(buf, sizeof(buf), "%s & %s", enc->label()->cString(NS::UTF8StringEncoding), activeLabel.c_str());
+    }
+  auto str = NsPtr<NS::String>(NS::String::string(buf,NS::UTF8StringEncoding));
+  str->retain();
+  enc->setLabel(str.get());
   }
 
 void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer* ivbo, size_t stride, size_t offset, size_t vertexCount,

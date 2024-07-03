@@ -144,12 +144,12 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
   library = NsPtr<MTL::Library>(dev.impl->newLibrary(str.get(), opt.get(), &err));
 
   if(err!=nullptr) {
-#if !defined(NDEBUG)
     const char* e = err->localizedDescription()->utf8String();
+#if !defined(NDEBUG)
     Log::d("cros-compile error: \"",e,"\"\n");
     Log::d(msl);
 #endif
-    throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
+    throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule, e);
     }
 
   if(stage==ShaderReflection::Stage::Vertex) {

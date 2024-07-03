@@ -44,9 +44,7 @@ struct SoundEffect::Impl {
 
     auto guard = SoundDevice::globalLock(); // for alGetError
     alGenBuffersDirect(bufCtx, 1, &stream);
-    alcSetThreadContext(bufCtx);
-    alBufferCallbackSOFT(stream, frm, freq, bufferCallback, this);
-    alcSetThreadContext(nullptr);
+    alBufferCallbackDirectSOFT(ctx, stream, frm, freq, bufferCallback, this);
     if(alGetErrorDirect(bufCtx)!=AL_NO_ERROR) {
       throw std::bad_alloc();
       }

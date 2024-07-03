@@ -8,10 +8,13 @@ class DeviceLostException : public std::exception {
   public:
     DeviceLostException() = default;
     DeviceLostException(std::string_view message):message(std::string(message)){}
+    DeviceLostException(std::string_view message, std::string log):message(std::string(message)), extLog(std::move(log)){}
     const char* what() const noexcept override;
+    const char* log() const { return extLog.c_str(); }
 
   private:
     std::string message;
+    std::string extLog;
   };
 
 class DeviceHangException : public DeviceLostException {

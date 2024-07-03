@@ -8,7 +8,6 @@
 #include <Tempest/File>
 #include <Tempest/Except>
 
-#include <vector>
 #include <cstring>
 #include <algorithm>
 

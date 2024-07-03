@@ -87,6 +87,8 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
 
     void setBindless(const MtPipelineLay::MTLBind& mtl, MTL::Buffer* b, size_t numRes);
 
+    void implSetDebugLabel();
+
     MtDevice&                         device;
     NsPtr<MTL::CommandBuffer>         impl;
 
@@ -106,6 +108,7 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
 
     uint32_t                          maxTotalThreadsPerThreadgroup = 0;
     bool                              isDbgRegion = false;
+    std::string                       activeLabel;
 
   friend class Tempest::MetalApi;
   };

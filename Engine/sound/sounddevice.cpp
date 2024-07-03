@@ -100,18 +100,19 @@ SoundDevice::SoundDevice(std::string_view name):data(new Data()) {
   if(data->context==nullptr)
     throw std::system_error(Tempest::SoundErrc::NoDevice);
 
-  alcSetThreadContext(data->context);
-
   {
     ALenum e[] = {AL_EVENT_TYPE_DISCONNECTED_SOFT};
-    alEventControlSOFT(1, e, true);
+    alEventControlDirectSOFT(data->context, 1, e, true);
 
-    alEventCallbackSOFT([](ALenum eventType, ALuint object, ALuint param,
-                           ALsizei length, const ALchar *message,
-                           void *userParam) noexcept {
-      auto& data = *reinterpret_cast<const Data*>(userParam);
-      alcReopenDeviceSOFT(data.dev->dev, nullptr, nullptr);
-      }, data.get());
+    alEventCallbackDirectSOFT(data->context,
+        [](ALenum eventType, ALuint object, ALuint param,
+           ALsizei length, const ALchar *message,
+           void *userParam) noexcept {
+          auto& data = *reinterpret_cast<const Data*>(userParam);
+          alcReopenDeviceSOFT(data.dev->dev, nullptr, nullptr);
+        }, data.get());
+  }
+
   }
 
   alDistanceModelDirect(data->context, AL_LINEAR_DISTANCE);
