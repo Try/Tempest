@@ -113,14 +113,12 @@ SoundDevice::SoundDevice(std::string_view name):data(new Data()) {
         }, data.get());
   }
 
-  }
 
   alDistanceModelDirect(data->context, AL_LINEAR_DISTANCE);
   alDisableDirect(data->context, AL_STOP_SOURCES_ON_DISCONNECT_SOFT);
   // TODO: api
   alListenerfDirect(data->context, AL_METERS_PER_UNIT, 100.f);
   process();
-  alcSetThreadContext(nullptr);
   }
 
 SoundDevice::~SoundDevice() {
