@@ -29,10 +29,10 @@ static NsPtr<MTL::Device> mkDevice(std::string_view name) {
   return NsPtr<MTL::Device>(nullptr);
   }
 
-static uint32_t languageVersion() {
+static MTL::LanguageVersion languageVersion() {
   auto opt = NsPtr<MTL::CompileOptions>::init();
   // clamp version to hight-most tested in engine
-  return std::min<uint32_t>(MTL::LanguageVersion3_1, opt->languageVersion());
+  return std::min<MTL::LanguageVersion>(MTL::LanguageVersion3_1, opt->languageVersion());
   }
 
 MtDevice::MtDevice(std::string_view name, bool validation)
@@ -45,7 +45,7 @@ MtDevice::MtDevice(std::string_view name, bool validation)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
   mslVersion = languageVersion();
-  // mslVersion = spirv_cross::CompilerMSL::Options::make_msl_version(2,2); //testing
+  // mslVersion = MTL::LanguageVersion2_2; //testing
   ui32align  = impl->minimumLinearTextureAlignmentForPixelFormat(MTL::PixelFormatR32Uint);
   deductProps(prop,*impl);
   }
@@ -234,7 +234,7 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
 #else
 
   const uint32_t mslVersion = languageVersion();
-  if(mslVersion>=spirv_cross::CompilerMSL::Options::make_msl_version(2,2)) {
+  if(mslVersion>=MTL::LanguageVersion2_2) {
     // 2.1 for buffers
     // 2.2 for images
     prop.storeAndAtomicVs = true;
@@ -279,8 +279,7 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
   }
 
 bool MtDevice::useNativeImageAtomic() const {
-  uint32_t v3_1 = spirv_cross::CompilerMSL::Options::make_msl_version(3,1,0);
-  return mslVersion>=v3_1;
+  return mslVersion>=MTL::LanguageVersion3_1;
   }
 
 uint32_t MtDevice::linearImageAlignment() const {

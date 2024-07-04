@@ -43,15 +43,26 @@ struct SoundEffect::Impl {
     ALCcontext*    bufCtx = reinterpret_cast<ALCcontext*>(dev.bufferContext());
 
     auto guard = SoundDevice::globalLock(); // for alGetError
+#if 0
+    alGenBuffersHost(1, &stream);
+#else
     alGenBuffersDirect(bufCtx, 1, &stream);
-    alBufferCallbackDirectSOFT(ctx, stream, frm, freq, bufferCallback, this);
+    alcSetThreadContext(bufCtx);
+    alBufferCallbackSOFT(stream, frm, freq, bufferCallback, this);
+    alcSetThreadContext(nullptr);
+#endif
+    alBufferCallbackDirectSOFT(bufCtx, stream, frm, freq, bufferCallback, this);
     if(alGetErrorDirect(bufCtx)!=AL_NO_ERROR) {
       throw std::bad_alloc();
       }
 
     alGenSourcesDirect(ctx, 1, &source);
     if(alGetErrorDirect(ctx)!=AL_NO_ERROR) {
+#if 0
+      alDeleteBuffersHost(1, &stream);
+#else
       alDeleteBuffersDirect(bufCtx, 1, &stream);
+#endif
       throw std::bad_alloc();
       }
 
@@ -67,8 +78,13 @@ struct SoundEffect::Impl {
 
     alSourcePausevDirect(ctx, 1, &source);
     alDeleteSourcesDirect(ctx, 1, &source);
-    if(stream!=0)
+    if(stream!=0) {
+#if 0
+      alDeleteBuffersHost(1, &stream);
+#else
       alDeleteBuffersDirect(bufCtx, 1, &stream);
+#endif
+      }
     }
 
   static ALsizei bufferCallback(ALvoid *userptr, ALvoid *sampledata, ALsizei numbytes) noexcept {

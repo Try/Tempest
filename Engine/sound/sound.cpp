@@ -59,8 +59,12 @@ const int32_t Sound::indexTable[] = {
   };
 
 Sound::Data::~Data() {
+#if 0
+  alDeleteBuffersHost(1, &buffer);
+#else
   auto ctx = reinterpret_cast<ALCcontext*>(SoundDevice::bufferContextSt());
   alDeleteBuffersDirect(ctx, 1,&buffer);
+#endif
   }
 
 uint64_t Sound::Data::timeLength() const {
@@ -106,6 +110,22 @@ Sound::Sound(IDevice& f) {
   }
 
 void Sound::initData(const char* bytes, int format, size_t size, size_t rate) {
+#if 0
+  uint32_t b = 0;
+  if(alGenBuffersHost(1, &b)!=AL_NO_ERROR) {
+    throw std::bad_alloc();
+    }
+
+  if(alBufferDataHost(b, format, bytes, int(size), int(rate))!=AL_NO_ERROR) {
+    alDeleteBuffersHost(1, &b);
+    throw std::bad_alloc();
+    }
+
+  auto d = std::make_shared<Data>();
+  d->buffer = b;
+  data      = d;
+#else
+
   auto guard = SoundDevice::globalLock(); // for alGetError
   auto ctx = reinterpret_cast<ALCcontext*>(SoundDevice::bufferContextSt());
 
@@ -124,6 +144,7 @@ void Sound::initData(const char* bytes, int format, size_t size, size_t rate) {
   auto d = std::make_shared<Data>();
   d->buffer = b;
   data      = d;
+#endif
   }
 
 bool Sound::isEmpty() const {
