@@ -45,6 +45,8 @@ static std::string toString(ResourceAccess rs) {
     text << "RtAsRead | ";
   if((rs & ResourceAccess::RtAsWrite)==ResourceAccess::RtAsWrite)
     text << "RtAsWrite | ";
+  if ((rs & ResourceAccess::Indirect) == ResourceAccess::Indirect)
+    text << "Indirect | ";
 
 
   auto ret = text.str();
@@ -183,6 +185,19 @@ TEST(main, ResourceStateIndirect) {
   rs.onUavUsage(NonUniqResId(0x1), NonUniqResId::I_None, PipelineStage::S_Indirect);
   rs.flush(cmd);
   }
+
+TEST(main, ResourceStateIndirectAndUAV) {
+    TestCommandBuffer cmd;
+
+    ResourceState rs;
+
+    rs.onUavUsage(NonUniqResId::I_None, NonUniqResId(0x1), PipelineStage::S_Compute);
+    rs.flush(cmd);
+
+    rs.onUavUsage(NonUniqResId(0x1), NonUniqResId::I_None, PipelineStage::S_Compute);
+    rs.onUavUsage(NonUniqResId(0x1), NonUniqResId::I_None, PipelineStage::S_Indirect);
+    rs.flush(cmd);
+}
 
 
 
