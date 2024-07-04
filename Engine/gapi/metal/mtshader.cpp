@@ -14,6 +14,12 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+static uint32_t spvVersion(MTL::LanguageVersion v) {
+  const uint32_t major = v >> 16u;
+  const uint32_t minor = v & 0xFFFF;
+  return spirv_cross::CompilerMSL::Options::make_msl_version(major,minor,0);
+  }
+
 MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
   if(srcSize%4!=0)
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
@@ -35,7 +41,7 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
     fetchBindings(reinterpret_cast<const uint32_t*>(source),srcSize/4);
 
     spirv_cross::CompilerMSL comp(reinterpret_cast<const uint32_t*>(source),srcSize/4);
-    optMSL.msl_version = dev.mslVersion;
+    optMSL.msl_version = spvVersion(dev.mslVersion);
     if(dev.prop.descriptors.nonUniformIndexing) {
       optMSL.argument_buffers_tier = spirv_cross::CompilerMSL::Options::ArgumentBuffersTier::Tier2;
       optMSL.runtime_array_rich_descriptor = true;

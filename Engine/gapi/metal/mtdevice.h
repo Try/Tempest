@@ -264,8 +264,8 @@ class MtDevice : public AbstractGraphicsApi::Device {
     AbstractGraphicsApi::Props prop;
     MtSamplerCache             samplers;
     bool                       validation = false;
-    uint32_t                   mslVersion = 0;
-    uint32_t                   ui32align = 0;
+    MTL::LanguageVersion       mslVersion = MTL::LanguageVersion2_0;
+    uint32_t                   ui32align  = 0;
 
     static void deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev);
   };
