@@ -186,7 +186,7 @@ TEST(main, ResourceStateIndirect) {
   rs.flush(cmd);
   }
 
-TEST(main, ResourceStateIndirectAndUAV) {
+TEST(main, ResourceStateIndirectAndUAVWithSubsequentWriteAccess) {
     TestCommandBuffer cmd;
 
     ResourceState rs;
@@ -196,6 +196,9 @@ TEST(main, ResourceStateIndirectAndUAV) {
 
     rs.onUavUsage(NonUniqResId(0x1), NonUniqResId::I_None, PipelineStage::S_Compute);
     rs.onUavUsage(NonUniqResId(0x1), NonUniqResId::I_None, PipelineStage::S_Indirect);
+    rs.flush(cmd);
+
+    rs.onUavUsage(NonUniqResId::I_None, NonUniqResId(0x1), PipelineStage::S_Compute);
     rs.flush(cmd);
 }
 

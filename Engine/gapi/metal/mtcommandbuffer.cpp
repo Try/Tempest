@@ -362,7 +362,7 @@ void MtCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
 
 void MtCommandBuffer::dispatchIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) {
   auto& ind = reinterpret_cast<const MtBuffer&>(indirect);
-  encDraw->dispatchThreadgroups(ind.impl.get(), offset, localSize);
+  encComp->dispatchThreadgroups(ind.impl.get(), offset, localSize);
   }
 
 void MtCommandBuffer::implSetBytes(const void* bytes, size_t sz) {
