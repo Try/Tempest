@@ -585,6 +585,7 @@ namespace Tempest {
         virtual void dispatchMeshIndirect(const Buffer& indirect, size_t offset);
 
         virtual void dispatch(size_t x, size_t y, size_t z) = 0;
+        virtual void dispatchIndirect(const Buffer& indirect, size_t offset) = 0;
         };
 
       using PBuffer       = Detail::DSharedPtr<Buffer*>;

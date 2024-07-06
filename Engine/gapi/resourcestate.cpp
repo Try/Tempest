@@ -75,8 +75,8 @@ void ResourceState::onUavUsage(NonUniqResId read, NonUniqResId write, PipelineSt
   }
 
 void ResourceState::onUavUsage(const Usage& u, PipelineStage st, bool host) {
-  const ResourceAccess rd[PipelineStage::S_Count] = {ResourceAccess::TransferSrc, ResourceAccess::RtAsRead,  ResourceAccess::UavReadComp,  ResourceAccess::UavReadGr};
-  const ResourceAccess wr[PipelineStage::S_Count] = {ResourceAccess::TransferDst, ResourceAccess::RtAsWrite, ResourceAccess::UavWriteComp, ResourceAccess::UavWriteGr};
+  const ResourceAccess rd[PipelineStage::S_Count] = {ResourceAccess::TransferSrc, ResourceAccess::RtAsRead,  ResourceAccess::UavReadComp,  ResourceAccess::UavReadGr, ResourceAccess::Indirect};
+  const ResourceAccess wr[PipelineStage::S_Count] = {ResourceAccess::TransferDst, ResourceAccess::RtAsWrite, ResourceAccess::UavWriteComp, ResourceAccess::UavWriteGr, ResourceAccess::None};
   const ResourceAccess hv = (host ? ResourceAccess::TransferHost : ResourceAccess::None);
 
   for(PipelineStage p = PipelineStage::S_First; p<PipelineStage::S_Count; p = PipelineStage(p+1)) {
@@ -85,8 +85,6 @@ void ResourceState::onUavUsage(const Usage& u, PipelineStage st, bool host) {
       // WaW, RaW barrier - execution+cache
       uavSrcBarrier = uavSrcBarrier | rd[p] | wr[p];
       uavDstBarrier = uavDstBarrier | rd[st] | wr[st];
-
-      uavDstBarrier = uavDstBarrier | ResourceAccess::Indirect;
 
       uavRead [st].depend[p] = NonUniqResId::I_None;
       uavWrite[st].depend[p] = NonUniqResId::I_None;

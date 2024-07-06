@@ -360,6 +360,11 @@ void MtCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
   encComp->dispatchThreadgroups(MTL::Size(x,y,z), localSize);
   }
 
+void MtCommandBuffer::dispatchIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) {
+  auto& ind = reinterpret_cast<const MtBuffer&>(indirect);
+  encComp->dispatchThreadgroups(ind.impl.get(), offset, localSize);
+  }
+
 void MtCommandBuffer::implSetBytes(const void* bytes, size_t sz) {
   auto& mtl = curLay->bindPush;
   auto& l   = curLay->pb;

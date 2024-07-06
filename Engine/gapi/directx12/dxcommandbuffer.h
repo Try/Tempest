@@ -71,6 +71,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void dispatchMeshIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) override;
 
     void dispatch    (size_t x, size_t y, size_t z) override;
+    void dispatchIndirect (const AbstractGraphicsApi::Buffer& indirect, size_t offset) override;
 
     void barrier     (const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) override;
 
@@ -133,6 +134,10 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void pushStage(Stage* cmd);
     void implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompute);
     void restoreIndirect();
+
+    void issueExplicitResourceStateTransition(ID3D12Resource* buf, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter);
+    void issueExplicitCommonToIndirectStateTransition(ID3D12Resource* buf);
+    void issueExplicitIndirectToCommonStateTransition(ID3D12Resource* buf);
   };
 
 }

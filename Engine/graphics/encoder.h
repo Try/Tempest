@@ -94,6 +94,7 @@ class Encoder<Tempest::CommandBuffer> {
     void dispatchMeshThreads(Size sz);
 
     void dispatch(size_t x, size_t y=1, size_t z=1);
+    void dispatchIndirect(const StorageBuffer& indirect, size_t offset);
     void dispatchThreads(size_t x, size_t y=1, size_t z=1);
     void dispatchThreads(Size sz);
 
