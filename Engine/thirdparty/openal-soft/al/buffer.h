@@ -5,6 +5,7 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <mutex>
 #include <string_view>
 #include <utility>
 
@@ -50,6 +51,9 @@ struct ALbuffer : public BufferStorage {
     /* Self ID */
     ALuint id{0};
 
+    static auto AquireHostBufferLock()  -> std::unique_lock<std::mutex>;
+    static auto AquireBufferLock(ALCdevice *device, ALuint id) -> std::unique_lock<std::mutex>;
+    static auto LookupBuffer(ALCdevice *device, ALuint id) noexcept -> ALbuffer*;
     static void SetName(ALCcontext *context, ALuint id, std::string_view name);
 
     DISABLE_ALLOC

@@ -50,6 +50,7 @@ struct SoundDevice::Device {
   ALCdevice*  dev = nullptr;
   };
 
+#if 0
 struct SoundDevice::BufferContext {
   BufferContext(const std::shared_ptr<SoundDevice::Device>& dev):dev(dev) {
     ctx = alcCreateContext(dev->dev,nullptr);
@@ -63,18 +64,25 @@ struct SoundDevice::BufferContext {
   std::shared_ptr<SoundDevice::Device> dev;
   ALCcontext*                          ctx = nullptr;
   };
+#endif
 
 struct SoundDevice::PhysicalDeviceList {
   std::mutex                         sync;
   std::weak_ptr<SoundDevice::Device> val;
+#if 0
   BufferContext                      buf; // dummy context for buffers
+#endif
 
   static PhysicalDeviceList& inst() {
     static PhysicalDeviceList list;
     return list;
     }
 
-  PhysicalDeviceList():buf(device("")) {
+  PhysicalDeviceList()
+#if 0
+      : buf(device(""))
+#endif
+    {
     }
 
   ~PhysicalDeviceList(){}
@@ -113,6 +121,54 @@ SoundDevice::SoundDevice(std::string_view name):data(new Data()) {
         }, data.get());
   }
 
+  {
+  alcSetThreadContext(data->context);
+  ALenum e[] = {ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT, ALC_EVENT_TYPE_DEVICE_ADDED_SOFT, ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT};
+  alcEventControlSOFT(3, e, true);
+  alcEventCallbackSOFT([](ALCenum eventType, ALCenum deviceType,
+                          ALCdevice *device, ALCsizei length,
+                          const ALCchar *message, void *userParam) noexcept {
+    auto& data = *reinterpret_cast<const Data*>(userParam);
+    if(deviceType!=ALC_PLAYBACK_DEVICE_SOFT)
+      return;
+    switch (eventType) {
+      case ALC_EVENT_TYPE_DEFAULT_DEVICE_CHANGED_SOFT: {
+        break;
+        /*
+        std::thread th([userParam]() {
+          auto& data = *reinterpret_cast<const Data*>(userParam);
+          auto s     = alcReopenDeviceSOFT(data.dev->dev, nullptr, nullptr);
+          auto name  = alcGetString(data.dev->dev, ALC_ALL_DEVICES_SPECIFIER);
+          Log::d("reopen sound device: ", name, " ret: ", (s ? "true" : "false"));
+          });
+        th.detach();
+        */
+
+        auto& data = *reinterpret_cast<const Data*>(userParam);
+        auto s     = alcReopenDeviceSOFT(data.dev->dev, nullptr, nullptr);
+        auto name  = alcGetString(data.dev->dev, ALC_ALL_DEVICES_SPECIFIER);
+        Log::d("reopen sound device: ", name, " ret: ", (s ? "true" : "false"));
+
+        //alcReopenDeviceSOFT(data.dev->dev, nullptr, nullptr);
+        break;
+        }
+      case ALC_EVENT_TYPE_DEVICE_ADDED_SOFT:
+        Log::d("reopen sound device: ");
+        break;
+      case ALC_EVENT_TYPE_DEVICE_REMOVED_SOFT:
+      case AL_EVENT_TYPE_DISCONNECTED_SOFT:
+        break;
+      default:
+        break;
+      }
+    /*
+    auto s    = alcReopenDeviceSOFT(data.dev->dev, nullptr, nullptr);
+    auto name = alcGetString(data.dev->dev, ALC_ALL_DEVICES_SPECIFIER);
+    Log::d("reopen sound device: ", name, " ret: ", (s ? "true" : "false"));
+    */
+    }, data.get());
+  alcSetThreadContext(nullptr);
+  }
 
   alDistanceModelDirect(data->context, AL_LINEAR_DISTANCE);
   alDisableDirect(data->context, AL_STOP_SOURCES_ON_DISCONNECT_SOFT);
@@ -194,6 +250,7 @@ void* SoundDevice::context() {
   return data->context;
   }
 
+#if 0
 void* SoundDevice::bufferContext() {
   auto& d = PhysicalDeviceList::inst().buf;
   return d.ctx;
@@ -203,6 +260,7 @@ void* SoundDevice::bufferContextSt() {
   auto& d = PhysicalDeviceList::inst().buf;
   return d.ctx;
   }
+#endif
 
 std::unique_lock<std::mutex> SoundDevice::globalLock() {
   static std::mutex gil;

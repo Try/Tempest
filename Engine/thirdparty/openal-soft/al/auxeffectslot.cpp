@@ -124,17 +124,14 @@ inline auto LookupEffect(ALCdevice *device, ALuint id) noexcept -> ALeffect*
     return al::to_address(sublist.Effects->begin() + slidx);
 }
 
+inline auto AquireBufferLock(ALCdevice *device, ALuint id) ->  std::unique_lock<std::mutex>
+{
+  return ALbuffer::AquireBufferLock(device, id);
+};
+
 inline auto LookupBuffer(ALCdevice *device, ALuint id) noexcept -> ALbuffer*
 {
-    const size_t lidx{(id-1) >> 6};
-    const ALuint slidx{(id-1) & 0x3f};
-
-    if(lidx >= device->BufferList.size()) UNLIKELY
-        return nullptr;
-    BufferSubList &sublist = device->BufferList[lidx];
-    if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
-        return nullptr;
-    return al::to_address(sublist.Buffers->begin() + slidx);
+    return ALbuffer::LookupBuffer(device, id);
 }
 
 
@@ -570,7 +567,7 @@ try {
             al::intrusive_ptr<EffectState> state{factory->create()};
 
             ALCdevice *device{context->mALDevice.get()};
-            auto bufferlock = std::unique_lock{device->BufferLock};
+            auto bufferlock = AquireBufferLock(device, static_cast<ALuint>(value));
             ALbuffer *buffer{};
             if(value)
             {
@@ -606,7 +603,7 @@ try {
         else
         {
             ALCdevice *device{context->mALDevice.get()};
-            auto bufferlock = std::unique_lock{device->BufferLock};
+            auto bufferlock = AquireBufferLock(device, static_cast<ALuint>(value));
             ALbuffer *buffer{};
             if(value)
             {

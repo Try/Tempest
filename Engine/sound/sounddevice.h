@@ -53,8 +53,10 @@ class SoundDevice final {
     std::unique_ptr<Data> data;
 
     void*                               context();
+#if 0
     void*                               bufferContext();
     static void*                        bufferContextSt();
+#endif
 
     static std::unique_lock<std::mutex> globalLock();
 

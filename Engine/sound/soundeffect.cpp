@@ -40,25 +40,25 @@ struct SoundEffect::Impl {
     ALsizei        freq   = src.frequency;
     ALenum         frm    = src.channels==2 ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16;
     ALCcontext*    ctx    = reinterpret_cast<ALCcontext*>(dev.context());
-    ALCcontext*    bufCtx = reinterpret_cast<ALCcontext*>(dev.bufferContext());
 
     auto guard = SoundDevice::globalLock(); // for alGetError
-#if 0
+#if 1
     alGenBuffersHost(1, &stream);
 #else
+    ALCcontext*    bufCtx = reinterpret_cast<ALCcontext*>(dev.bufferContext());
     alGenBuffersDirect(bufCtx, 1, &stream);
     alcSetThreadContext(bufCtx);
     alBufferCallbackSOFT(stream, frm, freq, bufferCallback, this);
     alcSetThreadContext(nullptr);
 #endif
-    alBufferCallbackDirectSOFT(bufCtx, stream, frm, freq, bufferCallback, this);
-    if(alGetErrorDirect(bufCtx)!=AL_NO_ERROR) {
+    alBufferCallbackDirectSOFT(ctx, stream, frm, freq, bufferCallback, this);
+    if(alGetErrorDirect(ctx)!=AL_NO_ERROR) {
       throw std::bad_alloc();
       }
 
     alGenSourcesDirect(ctx, 1, &source);
     if(alGetErrorDirect(ctx)!=AL_NO_ERROR) {
-#if 0
+#if 1
       alDeleteBuffersHost(1, &stream);
 #else
       alDeleteBuffersDirect(bufCtx, 1, &stream);
@@ -74,14 +74,14 @@ struct SoundEffect::Impl {
     if(source==0)
       return;
     auto* ctx    = reinterpret_cast<ALCcontext*>(dev->context());
-    auto* bufCtx = reinterpret_cast<ALCcontext*>(dev->bufferContext());
 
     alSourcePausevDirect(ctx, 1, &source);
     alDeleteSourcesDirect(ctx, 1, &source);
     if(stream!=0) {
-#if 0
+#if 1
       alDeleteBuffersHost(1, &stream);
 #else
+      auto* bufCtx = reinterpret_cast<ALCcontext*>(dev->bufferContext());
       alDeleteBuffersDirect(bufCtx, 1, &stream);
 #endif
       }
