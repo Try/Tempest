@@ -275,6 +275,7 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
       addDependency(*reinterpret_cast<VSwapchain*>(sw[i]),imgId[i]);
     }
 
+  resState.joinWriters(PipelineStage::S_Indirect);
   resState.joinWriters(PipelineStage::S_Graphics);
   resState.setRenderpass(*this,desc,descSize,frm,att,sw,imgId);
 

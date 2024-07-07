@@ -448,6 +448,7 @@ bool DxCommandBuffer::isRecording() const {
 void DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize, uint32_t w, uint32_t h,
                                      const TextureFormat* frm, AbstractGraphicsApi::Texture** att,
                                      AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) {
+  resState.joinWriters(PipelineStage::S_Indirect);
   resState.joinWriters(PipelineStage::S_Graphics);
   resState.setRenderpass(*this,desc,descSize,frm,att,sw,imgId);
 
@@ -621,7 +622,7 @@ void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompu
 
 void DxCommandBuffer::restoreIndirect() {
   for(auto i:indirectCmd) {
-    barrier(*i, ResourceAccess::Indirect, ResourceAccess::UavReadWriteAll);
+    barrier(*i, ResourceAccess::Indirect, ResourceAccess::None); // to common state
     }
   indirectCmd.clear();
   }

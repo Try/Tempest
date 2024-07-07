@@ -95,13 +95,13 @@ inline NonUniqResId operator & (NonUniqResId a,const NonUniqResId& b) {
 
 enum PipelineStage : uint8_t {
   S_Transfer,
+  S_Indirect,
   S_RtAs,
   S_Compute,
   S_Graphics,
-  S_Indirect,
 
   S_First = S_Transfer,
-  S_Count = S_Indirect+1,
+  S_Count = S_Graphics+1,
   };
 
 }
