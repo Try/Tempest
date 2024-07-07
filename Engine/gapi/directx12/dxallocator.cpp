@@ -129,17 +129,9 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t size, MemUsage usage, Buffer
     }
 
   D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COMMON;
-  if(bufFlg==BufferHeap::Upload) {
-    // state = D3D12_RESOURCE_STATE_GENERIC_READ;
-    state = D3D12_RESOURCE_STATE_COMMON;
-    }
-  else if(bufFlg==BufferHeap::Readback) {
-    state = D3D12_RESOURCE_STATE_COPY_DEST;
-    }
-
   if(MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer)) {
     resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-    //state         |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    // state = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     }
   if(MemUsage::AsStorage==(usage&MemUsage::AsStorage)) {
     resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
@@ -147,6 +139,7 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t size, MemUsage usage, Buffer
     }
   if(MemUsage::Indirect==(usage&MemUsage::Indirect)) {
     resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+    // state          = D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT | D3D12_RESOURCE_STATE_GENERIC_READ | D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     }
   if(MemUsage::ScratchBuffer==(usage&MemUsage::ScratchBuffer)) {
     resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
