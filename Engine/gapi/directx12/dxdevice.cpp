@@ -91,15 +91,17 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
   {
     D3D12_INDIRECT_ARGUMENT_DESC arg = {};
     D3D12_COMMAND_SIGNATURE_DESC desc = {};
-    desc.ByteStride       = sizeof(D3D12_DRAW_ARGUMENTS);
-    desc.NumArgumentDescs = 1;
     desc.pArgumentDescs   = &arg;
 
-    arg.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;
+    desc.ByteStride       = sizeof(D3D12_DRAW_ARGUMENTS);
+    desc.NumArgumentDescs = 1;
+    arg.Type              = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;
     dxAssert(device->CreateCommandSignature(&desc, nullptr, uuid<ID3D12CommandSignature>(), reinterpret_cast<void**>(&drawIndirectSgn)));
 
     if(props.meshlets.meshShader) {
-      arg.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
+      desc.ByteStride       = sizeof(D3D12_DISPATCH_MESH_ARGUMENTS);
+      desc.NumArgumentDescs = 1;
+      arg.Type              = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
       dxAssert(device->CreateCommandSignature(&desc, nullptr, uuid<ID3D12CommandSignature>(), reinterpret_cast<void**>(&drawMeshIndirectSgn)));
       }
 

@@ -528,7 +528,7 @@ namespace Tempest {
         void ssboBarriers(Detail::ResourceState&,PipelineStage){}
         };
       struct BarrierDesc {
-        Buffer*        buffer    = nullptr;
+        const Buffer*  buffer    = nullptr;
         Texture*       texture   = nullptr;
         Swapchain*     swapchain = nullptr;
         uint32_t       swId      = 0;
@@ -550,6 +550,7 @@ namespace Tempest {
 
         virtual void barrier(const BarrierDesc* desc, size_t cnt) = 0;
         virtual void barrier(Texture& tex, ResourceAccess prev, ResourceAccess next, uint32_t mipId);
+        virtual void barrier(const Buffer&  buf, ResourceAccess prev, ResourceAccess next);
 
         virtual void generateMipmap(Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) = 0;
         virtual void copy(Buffer& dest, size_t offset, Texture& src, uint32_t width, uint32_t height, uint32_t mip) = 0;

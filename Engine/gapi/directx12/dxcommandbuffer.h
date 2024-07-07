@@ -124,7 +124,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     struct FillUAV;
     Stage*                            stageResources = nullptr;
 
-    std::unordered_set<ID3D12Resource*> indirectCmd;
+    std::unordered_set<const AbstractGraphicsApi::Buffer*> indirectCmd;
 
     void pushChunk();
     void newChunk();
@@ -134,10 +134,6 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void pushStage(Stage* cmd);
     void implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompute);
     void restoreIndirect();
-
-    void issueExplicitResourceStateTransition(ID3D12Resource* buf, D3D12_RESOURCE_STATES stateBefore, D3D12_RESOURCE_STATES stateAfter);
-    void issueExplicitCommonToIndirectStateTransition(ID3D12Resource* buf);
-    void issueExplicitIndirectToCommonStateTransition(ID3D12Resource* buf);
   };
 
 }

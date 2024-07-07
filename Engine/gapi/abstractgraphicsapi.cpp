@@ -83,6 +83,15 @@ void AbstractGraphicsApi::CommandBuffer::barrier(Texture& tex, ResourceAccess pr
   barrier(&b,1);
   }
 
+void AbstractGraphicsApi::CommandBuffer::barrier(const Buffer& buf, ResourceAccess prev, ResourceAccess next) {
+  AbstractGraphicsApi::BarrierDesc b;
+  b.buffer   = &buf;
+  b.prev     = prev;
+  b.next     = next;
+  b.discard  = (prev==ResourceAccess::None);
+  barrier(&b,1);
+  }
+
 void AbstractGraphicsApi::CommandBuffer::begin(bool tranfer) {
   begin();
   }

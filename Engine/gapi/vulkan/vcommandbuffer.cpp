@@ -173,7 +173,7 @@ static VkImage toVkResource(const AbstractGraphicsApi::BarrierDesc& b) {
     }
 
   if(b.buffer!=nullptr) {
-    VBuffer& buf = *reinterpret_cast<VBuffer*>(b.buffer);
+    auto& buf = *reinterpret_cast<const VBuffer*>(b.buffer);
     return buf.impl;
     }
 
@@ -880,7 +880,7 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
       bx.sType                 = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR;
       bx.srcQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
       bx.dstQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
-      bx.buffer                = reinterpret_cast<VBuffer&>(*b.buffer).impl;
+      bx.buffer                = reinterpret_cast<const VBuffer&>(*b.buffer).impl;
       bx.offset                = 0;
       bx.size                  = VK_WHOLE_SIZE;
 
