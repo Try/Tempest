@@ -117,7 +117,7 @@ if(TEMPEST_BUILD_AUDIO)
     target_compile_options(OpenAL PRIVATE -Wno-nullability-completeness)
   endif()
   if(NOT MSVC)
-    target_compile_options(OpenAL PRIVATE -Wno-attributes -Wno-conversion -Wno-switch -Wno-stringop-overflow)
+    target_compile_options(OpenAL PRIVATE -Wno-attributes -Wno-conversion -Wno-switch -Wno-stringop-overflow -Wno-unused-but-set-variable)
   endif()
 endif()
 
