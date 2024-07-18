@@ -2041,4 +2041,50 @@ void MeshComputePrototype(const char* outImg) {
       throw;
     }
   }
+
+template<class GraphicsApi>
+void DispathIndirect() {
+  using namespace Tempest;
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    Vec4 inputCpu[3] = {Vec4(0,1,2,3),Vec4(4,5,6,7),Vec4(8,9,10,11)};
+
+    auto input  = device.ssbo(inputCpu,      sizeof(inputCpu));
+    auto output = device.ssbo(Uninitialized, sizeof(inputCpu));
+
+    auto cs     = device.shader("shader/simple_test.comp.sprv");
+    auto pso    = device.pipeline(cs);
+
+    auto ubo    = device.descriptors(pso.layout());
+    ubo.set(0,input);
+    ubo.set(1,output);
+
+    IVec3 argCpu = {3, 1, 1};
+    auto  arg    = device.ssbo(&argCpu, sizeof(argCpu));
+    auto  cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setUniforms(pso,ubo);
+      enc.dispatchIndirect(arg, 0);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    Vec4 outputCpu[3] = {};
+    device.readBytes(output,outputCpu,sizeof(outputCpu));
+
+    for(size_t i=0; i<3; ++i)
+      EXPECT_EQ(outputCpu[i],inputCpu[i]);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
 }

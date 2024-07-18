@@ -131,6 +131,7 @@ TEST(main, ResourceStateJoin) {
     rs.onUavUsage(NonUniqResId::I_None, NonUniqResId(0x1), PipelineStage::S_Compute);
     rs.flush(cmd);
 
+    rs.joinWriters(PipelineStage::S_Indirect);
     rs.joinWriters(PipelineStage::S_Graphics);
     rs.flush(cmd);
   }
@@ -139,10 +140,12 @@ TEST(main, ResourceStateJoin) {
     rs.onUavUsage(NonUniqResId::I_None, NonUniqResId(0x1), PipelineStage::S_RtAs);
     rs.flush(cmd);
 
+    rs.joinWriters(PipelineStage::S_Indirect);
     rs.joinWriters(PipelineStage::S_Graphics);
     rs.flush(cmd);
     rs.onUavUsage(NonUniqResId(0x1), NonUniqResId::I_None, PipelineStage::S_Graphics);
 
+    rs.joinWriters(PipelineStage::S_Indirect);
     rs.joinWriters(PipelineStage::S_Graphics);
     rs.flush(cmd);
   }
@@ -187,20 +190,20 @@ TEST(main, ResourceStateIndirect) {
   }
 
 TEST(main, ResourceStateIndirectAndUAVWithSubsequentWriteAccess) {
-    TestCommandBuffer cmd;
+  TestCommandBuffer cmd;
 
-    ResourceState rs;
+  ResourceState rs;
 
-    rs.onUavUsage(NonUniqResId::I_None, NonUniqResId(0x1), PipelineStage::S_Compute);
-    rs.flush(cmd);
+  rs.onUavUsage(NonUniqResId::I_None, NonUniqResId(0x1), PipelineStage::S_Compute);
+  rs.flush(cmd);
 
-    rs.onUavUsage(NonUniqResId(0x1), NonUniqResId::I_None, PipelineStage::S_Compute);
-    rs.onUavUsage(NonUniqResId(0x1), NonUniqResId::I_None, PipelineStage::S_Indirect);
-    rs.flush(cmd);
+  rs.onUavUsage(NonUniqResId(0x1), NonUniqResId::I_None, PipelineStage::S_Compute);
+  rs.onUavUsage(NonUniqResId(0x1), NonUniqResId::I_None, PipelineStage::S_Indirect);
+  rs.flush(cmd);
 
-    rs.onUavUsage(NonUniqResId::I_None, NonUniqResId(0x1), PipelineStage::S_Compute);
-    rs.flush(cmd);
-}
+  rs.onUavUsage(NonUniqResId::I_None, NonUniqResId(0x1), PipelineStage::S_Compute);
+  rs.flush(cmd);
+  }
 
 
 

@@ -293,3 +293,9 @@ TEST(VulkanApi,DISABLED_MeshComputePrototype) {
   GapiTestCommon::MeshComputePrototype<VulkanApi>("VulkanApi_MeshComputePrototype.png");
 #endif
   }
+
+TEST(VulkanApi,DispathIndirect) {
+#if !defined(__OSX__)
+  GapiTestCommon::DispathIndirect<VulkanApi>();
+#endif
+  }

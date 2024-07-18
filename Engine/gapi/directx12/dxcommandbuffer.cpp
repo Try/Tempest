@@ -592,7 +592,17 @@ void DxCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
   }
 
 void DxCommandBuffer::dispatchIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) {
-    throw std::runtime_error("dispatch indirect is not implemented for dx12");
+  const DxBuffer& ind  = reinterpret_cast<const DxBuffer&>(indirect);
+  auto&           sign = dev.dispatchIndirectSgn.get();
+
+  curUniforms->ssboBarriers(resState, PipelineStage::S_Compute);
+  // block future writers
+  resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
+  resState.flush(*this);
+
+  barrier(indirect, ResourceAccess::UavReadWriteAll, ResourceAccess::Indirect);
+  impl->ExecuteIndirect(sign, 1, ind.impl.get(), UINT64(offset), nullptr, 0);
+  barrier(indirect, ResourceAccess::Indirect, ResourceAccess::UavReadWriteAll);
   }
 
 void DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p) {

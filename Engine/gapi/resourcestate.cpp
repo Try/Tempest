@@ -54,6 +54,13 @@ void ResourceState::setLayout(AbstractGraphicsApi::Texture& a, ResourceAccess la
   img.outdated = true;
   }
 
+void ResourceState::setLayout(AbstractGraphicsApi::Buffer& a, ResourceAccess lay) {
+  ResourceAccess def = ResourceAccess::UavReadWriteAll;
+  BufState&      buf = findBuf(&a,def);
+  buf.next     = lay;
+  buf.outdated = true;
+  }
+
 void ResourceState::forceLayout(AbstractGraphicsApi::Texture& img) {
   for(auto& i:imgState) {
     if(i.sw==nullptr && i.id==0 && i.img==&img) {
@@ -115,6 +122,7 @@ void ResourceState::onUavUsage(const Usage& u, PipelineStage st, bool host) {
 void ResourceState::joinWriters(PipelineStage st) {
   ResourceState::Usage u = {NonUniqResId(-1), NonUniqResId::I_None, false};
   onUavUsage(u, st);
+  // uavDstBarrier = uavDstBarrier | ResourceAccess::Indirect;
   }
 
 void ResourceState::clearReaders() {
@@ -211,6 +219,20 @@ ResourceState::ImgState& ResourceState::findImg(AbstractGraphicsApi::Texture* im
   s.outdated = false;
   imgState.push_back(s);
   return imgState.back();
+  }
+
+ResourceState::BufState& ResourceState::findBuf(AbstractGraphicsApi::Buffer* buf, ResourceAccess def) {
+  for(auto& i:bufState) {
+    if(i.buf==buf)
+      return i;
+    }
+  BufState s={};
+  s.buf      = buf;
+  s.last     = def;
+  s.next     = ResourceAccess::UavRead;
+  s.outdated = false;
+  bufState.push_back(s);
+  return bufState.back();
   }
 
 void ResourceState::emitBarriers(AbstractGraphicsApi::CommandBuffer& cmd, AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {

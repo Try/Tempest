@@ -241,3 +241,9 @@ TEST(MetalApi,DISABLED_MeshShader) {
   GapiTestCommon::MeshShader<MetalApi>("MetalApi_MeshShader.png");
 #endif
   }
+
+TEST(MetalApi,DispathIndirect) {
+#if defined(__OSX__)
+  GapiTestCommon::DispathIndirect<MetalApi>();
+#endif
+  }

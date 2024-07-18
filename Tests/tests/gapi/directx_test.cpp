@@ -278,6 +278,12 @@ TEST(DirectX12Api,MeshShader) {
 #endif
   }
 
+TEST(DirectX12Api,DispathIndirect) {
+#if defined(_MSC_VER)
+  GapiTestCommon::DispathIndirect<DirectX12Api>();
+#endif
+  }
+
 TEST(DirectX12Api,SpirvDefect_Link) {
 #if defined(_MSC_VER)
   using namespace Tempest;
