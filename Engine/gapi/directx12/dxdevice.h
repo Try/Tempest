@@ -53,7 +53,7 @@ inline void dxAssert(HRESULT code) {
       throw DeviceHangException();
 
     case E_NOINTERFACE:
-      throw DeviceLostException();
+      throw DeviceLostException("no such directx interface");
 
     case E_NOTIMPL:
     case E_INVALIDARG:
@@ -301,6 +301,7 @@ class DxPipeline;
 
 class DxDevice : public AbstractGraphicsApi::Device {
   public:
+    static const D3D_FEATURE_LEVEL preferredFeatureLevel = D3D_FEATURE_LEVEL_12_0;
     struct ApiEntry {
       HRESULT (WINAPI *D3D12CreateDevice)(IUnknown* pAdapter,
                                           D3D_FEATURE_LEVEL MinimumFeatureLevel,
@@ -314,6 +315,10 @@ class DxDevice : public AbstractGraphicsApi::Device {
       HRESULT (WINAPI *DxcCreateInstance)(REFCLSID rclsid, REFIID riid, LPVOID* ppv) = nullptr;
       };
 
+    struct DxProps : AbstractGraphicsApi::Props {
+      bool enhancedBarriers = false;
+      };
+
     DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi);
     ~DxDevice() override;
 
@@ -322,15 +327,15 @@ class DxDevice : public AbstractGraphicsApi::Device {
     void         waitData();
     void         waitIdle() override;
 
-    static void  getProp(IDXGIAdapter1& adapter, ID3D12Device& dev, AbstractGraphicsApi::Props& prop);
-    static void  getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGraphicsApi::Props& prop);
+    static void  getProp(IDXGIAdapter1& adapter, ID3D12Device& dev, DxProps& prop);
+    static void  getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, DxProps& prop);
     void         submit(DxCommandBuffer& cmd, DxFence* sync);
 
     DataMgr&     dataMgr() { return *data; }
 
     ApiEntry                    dllApi;
 
-    AbstractGraphicsApi::Props  props;
+    DxProps                     props;
     ComPtr<ID3D12Device>        device;
     SpinLock                    syncCmdQueue;
     ComPtr<ID3D12CommandQueue>  cmdQueue;

@@ -47,6 +47,125 @@ static D3D12_RENDER_PASS_ENDING_ACCESS_TYPE mkStoreOp(const AccessOp op) {
   return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS;
   }
 
+static void toStage(DxDevice& dev, D3D12_BARRIER_SYNC& stage, D3D12_BARRIER_ACCESS& access, ResourceAccess rs, bool isSrc) {
+  uint32_t ret = 0;
+  uint32_t acc = 0;
+  if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc) {
+    ret |= D3D12_BARRIER_SYNC_COPY;
+    acc |= D3D12_BARRIER_ACCESS_COPY_SOURCE;
+    }
+  if((rs&ResourceAccess::TransferDst)==ResourceAccess::TransferDst) {
+    ret |= D3D12_BARRIER_SYNC_COPY;
+    acc |= D3D12_BARRIER_ACCESS_COPY_DEST;
+    }
+  if((rs&ResourceAccess::TransferHost)==ResourceAccess::TransferHost) {
+    //ret |= VK_PIPELINE_STAGE_HOST_BIT;
+    //acc |= VK_ACCESS_HOST_READ_BIT;
+    }
+
+  if((rs&ResourceAccess::Present)==ResourceAccess::Present) {
+    // ret |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    // acc |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+    }
+
+  if((rs&ResourceAccess::Sampler)==ResourceAccess::Sampler) {
+    ret |= D3D12_BARRIER_SYNC_ALL;
+    acc |= D3D12_BARRIER_ACCESS_SHADER_RESOURCE;
+    }
+  if((rs&ResourceAccess::ColorAttach)==ResourceAccess::ColorAttach) {
+    ret |= D3D12_BARRIER_SYNC_RENDER_TARGET;
+    acc |= D3D12_BARRIER_ACCESS_RENDER_TARGET;
+    }
+  if((rs&ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach) {
+    ret |= D3D12_BARRIER_SYNC_DEPTH_STENCIL;
+    acc |= (D3D12_BARRIER_ACCESS_DEPTH_STENCIL_READ | D3D12_BARRIER_ACCESS_DEPTH_STENCIL_WRITE);
+    }
+  if((rs&ResourceAccess::DepthReadOnly)==ResourceAccess::DepthReadOnly) {
+    ret |= D3D12_BARRIER_SYNC_ALL;
+    acc |= D3D12_BARRIER_ACCESS_DEPTH_STENCIL_READ;
+    }
+
+  if((rs&ResourceAccess::Index)==ResourceAccess::Index) {
+    ret |= D3D12_BARRIER_SYNC_INPUT_ASSEMBLER;
+    acc |= D3D12_BARRIER_ACCESS_INDEX_BUFFER;
+    }
+  if((rs&ResourceAccess::Vertex)==ResourceAccess::Vertex) {
+    ret |= D3D12_BARRIER_SYNC_INPUT_ASSEMBLER;
+    acc |= D3D12_BARRIER_ACCESS_VERTEX_BUFFER;
+    }
+  if((rs&ResourceAccess::Uniform)==ResourceAccess::Uniform) {
+    ret |= D3D12_BARRIER_SYNC_ALL;
+    acc |= D3D12_BARRIER_ACCESS_CONSTANT_BUFFER;
+    }
+  if((rs&ResourceAccess::Indirect)==ResourceAccess::Indirect) {
+    ret |= D3D12_BARRIER_SYNC_PREDICATION;
+    acc |= D3D12_BARRIER_ACCESS_PREDICATION;
+    }
+
+  if(dev.props.raytracing.rayQuery) {
+    if((rs&ResourceAccess::RtAsRead)==ResourceAccess::RtAsRead) {
+      ret |= D3D12_BARRIER_SYNC_ALL;
+      acc |= D3D12_BARRIER_ACCESS_RAYTRACING_ACCELERATION_STRUCTURE_READ;
+      }
+    if((rs&ResourceAccess::RtAsWrite)==ResourceAccess::RtAsWrite) {
+      ret |= D3D12_BARRIER_SYNC_BUILD_RAYTRACING_ACCELERATION_STRUCTURE;
+      acc |= D3D12_BARRIER_ACCESS_RAYTRACING_ACCELERATION_STRUCTURE_WRITE;
+      }
+    }
+
+  // memory barriers
+  if((rs&ResourceAccess::UavReadGr)==ResourceAccess::UavReadGr) {
+    ret |= D3D12_BARRIER_SYNC_DRAW;
+    acc |= D3D12_BARRIER_ACCESS_UNORDERED_ACCESS;
+    }
+  if((rs&ResourceAccess::UavWriteGr)==ResourceAccess::UavWriteGr) {
+    ret |= D3D12_BARRIER_SYNC_DRAW;
+    acc |= D3D12_BARRIER_ACCESS_UNORDERED_ACCESS;
+    }
+
+  if((rs&ResourceAccess::UavReadComp)==ResourceAccess::UavReadComp) {
+    ret |= D3D12_BARRIER_SYNC_COMPUTE_SHADING;
+    acc |= D3D12_BARRIER_ACCESS_UNORDERED_ACCESS;
+    }
+  if((rs&ResourceAccess::UavWriteComp)==ResourceAccess::UavWriteComp) {
+    ret |= D3D12_BARRIER_SYNC_COMPUTE_SHADING;
+    acc |= D3D12_BARRIER_ACCESS_UNORDERED_ACCESS;
+    }
+
+  if(isSrc && ret==0) {
+    // wait for nothing: asset uploading case
+    ret = D3D12_BARRIER_SYNC_NONE;
+    acc = D3D12_BARRIER_ACCESS_NO_ACCESS;
+    }
+
+  stage  = D3D12_BARRIER_SYNC  (ret);
+  access = D3D12_BARRIER_ACCESS(acc);
+  }
+
+static D3D12_BARRIER_LAYOUT toLayout(ResourceAccess rs) {
+  if(rs==ResourceAccess::None)
+    return D3D12_BARRIER_LAYOUT_UNDEFINED;
+
+  if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
+    return D3D12_BARRIER_LAYOUT_COPY_SOURCE;
+  if((rs&ResourceAccess::TransferDst)==ResourceAccess::TransferDst)
+    return D3D12_BARRIER_LAYOUT_COPY_DEST;
+
+  if((rs&ResourceAccess::Present)==ResourceAccess::Present)
+    return D3D12_BARRIER_LAYOUT_PRESENT;
+
+  if((rs&ResourceAccess::Sampler)==ResourceAccess::Sampler)
+    return D3D12_BARRIER_LAYOUT_SHADER_RESOURCE;
+  if((rs&ResourceAccess::ColorAttach)==ResourceAccess::ColorAttach)
+    return D3D12_BARRIER_LAYOUT_RENDER_TARGET;
+  if((rs&ResourceAccess::DepthReadOnly)==ResourceAccess::DepthReadOnly)
+    return D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_READ;
+  if((rs&ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach)
+    return D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_WRITE;// | D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_READ;
+
+  return D3D12_BARRIER_LAYOUT_UNORDERED_ACCESS;
+  }
+
 static D3D12_RESOURCE_STATES nativeFormat(ResourceAccess rs) {
   uint32_t st = 0;
 
@@ -598,11 +717,11 @@ void DxCommandBuffer::dispatchIndirect(const AbstractGraphicsApi::Buffer& indire
   curUniforms->ssboBarriers(resState, PipelineStage::S_Compute);
   // block future writers
   resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
+  if(!dev.props.enhancedBarriers)
+    resState.setLayout(indirect, ResourceAccess::Indirect);
   resState.flush(*this);
 
-  barrier(indirect, ResourceAccess::UavReadWriteAll, ResourceAccess::Indirect);
   impl->ExecuteIndirect(sign, 1, ind.impl.get(), UINT64(offset), nullptr, 0);
-  barrier(indirect, ResourceAccess::Indirect, ResourceAccess::UavReadWriteAll);
   }
 
 void DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p) {
@@ -637,13 +756,92 @@ void DxCommandBuffer::restoreIndirect() {
   indirectCmd.clear();
   }
 
+void DxCommandBuffer::enhancedBarrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
+  D3D12_BUFFER_BARRIER      bufBarrier[MaxBarriers] = {};
+  uint32_t                  bufCount = 0;
+  D3D12_TEXTURE_BARRIER     imgBarrier[MaxBarriers] = {};
+  uint32_t                  imgCount = 0;
+  D3D12_GLOBAL_BARRIER      memBarrier = {};
+  uint32_t                  memCount  = 0;
+
+  for(size_t i=0; i<cnt; ++i) {
+    auto& b  = desc[i];
+
+    if(b.buffer==nullptr && b.texture==nullptr && b.swapchain==nullptr) {
+      D3D12_BARRIER_SYNC   srcStageMask  = D3D12_BARRIER_SYNC_NONE;
+      D3D12_BARRIER_ACCESS srcAccessMask = D3D12_BARRIER_ACCESS_COMMON;
+      D3D12_BARRIER_SYNC   dstStageMask  = D3D12_BARRIER_SYNC_NONE;
+      D3D12_BARRIER_ACCESS dstAccessMask = D3D12_BARRIER_ACCESS_COMMON;
+      toStage(dev, srcStageMask, srcAccessMask, b.prev, true);
+      toStage(dev, dstStageMask, dstAccessMask, b.next, false);
+
+      memBarrier.SyncBefore   |= srcStageMask;
+      memBarrier.AccessBefore |= srcAccessMask;
+      memBarrier.SyncAfter    |= dstStageMask;
+      memBarrier.AccessAfter  |= dstAccessMask;
+      memCount = 1;
+      }
+    else if(b.buffer!=nullptr) {
+      auto& bx = bufBarrier[bufCount];
+      ++bufCount;
+
+      toStage(dev, bx.SyncBefore, bx.AccessBefore, b.prev, true);
+      toStage(dev, bx.SyncAfter,  bx.AccessAfter,  b.next, false);
+      bx.pResource = toDxResource(b);
+      bx.Offset    = 0;
+      bx.Size      = UINT64_MAX;
+      } else {
+      auto& bx = imgBarrier[imgCount];
+      ++imgCount;
+
+      toStage(dev, bx.SyncBefore, bx.AccessBefore, b.prev, true);
+      toStage(dev, bx.SyncAfter,  bx.AccessAfter,  b.next, false);
+
+      bx.LayoutBefore = toLayout(b.prev);
+      bx.LayoutAfter  = toLayout(b.next);
+      bx.pResource    = toDxResource(b);
+      bx.Subresources.IndexOrFirstMipLevel = (b.mip==uint32_t(-1) ?  D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES : b.mip);
+      bx.Flags        = D3D12_TEXTURE_BARRIER_FLAG_NONE;
+      //finalizeImageBarrier(bx,b);
+      }
+    }
+
+  D3D12_BARRIER_GROUP gBuffer = {D3D12_BARRIER_TYPE_BUFFER, bufCount};
+  gBuffer.pBufferBarriers = bufBarrier;
+
+  D3D12_BARRIER_GROUP gTexture = {D3D12_BARRIER_TYPE_TEXTURE, imgCount};
+  gTexture.pTextureBarriers = imgBarrier;
+
+  D3D12_BARRIER_GROUP gGlobal = {D3D12_BARRIER_TYPE_GLOBAL, memCount};
+  gGlobal.pGlobalBarriers = &memBarrier;
+
+  D3D12_BARRIER_GROUP barrier[3]; uint32_t num = 0;
+  if(gBuffer.NumBarriers>0) {
+    barrier[num] = gBuffer;
+    ++num;
+    }
+  if(gTexture.NumBarriers>0) {
+    barrier[num] = gTexture;
+    ++num;
+    }
+  if(gGlobal.NumBarriers>0) {
+    barrier[num] = gGlobal;
+    ++num;
+    }
+
+  ComPtr<ID3D12GraphicsCommandList7> cmd7;
+  impl->QueryInterface(uuid<ID3D12GraphicsCommandList7>(), reinterpret_cast<void**>(&cmd7));
+  cmd7->Barrier(num, barrier);
+  }
+
 void DxCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
+  if(dev.props.enhancedBarriers) {
+    enhancedBarrier(desc, cnt);
+    return;
+    }
+
   D3D12_RESOURCE_BARRIER rb[MaxBarriers];
   uint32_t               rbCount = 0;
-
-  //D3D12_BARRIER_GROUP bar;
-  //impl->Barrier(1, &bar);
-
   for(size_t i=0; i<cnt; ++i) {
     auto& b = desc[i];
     D3D12_RESOURCE_BARRIER& barrier = rb[rbCount];
@@ -904,6 +1102,8 @@ void DxCommandBuffer::newChunk() {
 
   dxAssert(dev.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, pool.get(), nullptr,
                                          uuid<ID3D12GraphicsCommandList6>(), reinterpret_cast<void**>(&impl)));
+  //dxAssert(dev.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, pool.get(), nullptr,
+  //                                       _uuidof(ID3D12GraphicsCommandList7), reinterpret_cast<void**>(&impl)));
   }
 
 void DxCommandBuffer::clearStage() {

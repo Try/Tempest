@@ -54,7 +54,7 @@ void ResourceState::setLayout(AbstractGraphicsApi::Texture& a, ResourceAccess la
   img.outdated = true;
   }
 
-void ResourceState::setLayout(AbstractGraphicsApi::Buffer& a, ResourceAccess lay) {
+void ResourceState::setLayout(const AbstractGraphicsApi::Buffer& a, ResourceAccess lay) {
   ResourceAccess def = ResourceAccess::UavReadWriteAll;
   BufState&      buf = findBuf(&a,def);
   buf.next     = lay;
@@ -156,6 +156,23 @@ void ResourceState::flush(AbstractGraphicsApi::CommandBuffer& cmd) {
       }
     }
 
+  for(auto& i:bufState) {
+    if(!i.outdated)
+      continue;
+    auto& b = barrier[barrierCnt];
+    b.buffer    = i.buf;
+    b.prev      = i.last;
+    b.next      = i.next;
+    ++barrierCnt;
+
+    i.last     = i.next;
+    i.outdated = false;
+    if(barrierCnt==MaxBarriers) {
+      emitBarriers(cmd,barrier,barrierCnt);
+      barrierCnt = 0;
+      }
+    }
+
   if(uavSrcBarrier!=ResourceAccess::None) {
     auto& b = barrier[barrierCnt];
     b.buffer = nullptr;
@@ -173,7 +190,7 @@ void ResourceState::finalize(AbstractGraphicsApi::CommandBuffer& cmd) {
     joinWriters(p);
     }
 
-  if(imgState.size()==0 && uavSrcBarrier==ResourceAccess::None)
+  if(imgState.size()==0 && bufState.size()==0 && uavSrcBarrier==ResourceAccess::None)
     return; // early-out
 
   for(auto& i:imgState) {
@@ -182,9 +199,17 @@ void ResourceState::finalize(AbstractGraphicsApi::CommandBuffer& cmd) {
     i.next     = ResourceAccess::Present;
     i.outdated = true;
     }
+  for(auto& i:bufState) {
+    if(i.buf==nullptr)
+      continue;
+    i.next     = ResourceAccess::UavReadWriteAll;
+    i.outdated = true;
+    }
   flush(cmd);
   imgState.reserve(imgState.size());
   imgState.clear();
+  bufState.reserve(bufState.size());
+  bufState.clear();
   uavSrcBarrier = ResourceAccess::None;
   uavDstBarrier = ResourceAccess::None;
 
@@ -221,7 +246,7 @@ ResourceState::ImgState& ResourceState::findImg(AbstractGraphicsApi::Texture* im
   return imgState.back();
   }
 
-ResourceState::BufState& ResourceState::findBuf(AbstractGraphicsApi::Buffer* buf, ResourceAccess def) {
+ResourceState::BufState& ResourceState::findBuf(const AbstractGraphicsApi::Buffer* buf, ResourceAccess def) {
   for(auto& i:bufState) {
     if(i.buf==buf)
       return i;

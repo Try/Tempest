@@ -70,10 +70,10 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void dispatchMesh(size_t x, size_t y, size_t z) override;
     void dispatchMeshIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) override;
 
-    void dispatch    (size_t x, size_t y, size_t z) override;
-    void dispatchIndirect (const AbstractGraphicsApi::Buffer& indirect, size_t offset) override;
+    void dispatch(size_t x, size_t y, size_t z) override;
+    void dispatchIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) override;
 
-    void barrier     (const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) override;
+    void barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) override;
 
     void copy(AbstractGraphicsApi::Buffer& dst, size_t offset, AbstractGraphicsApi::Texture& src, uint32_t width, uint32_t height, uint32_t mip) override;
     void generateMipmap(AbstractGraphicsApi::Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
@@ -134,6 +134,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void pushStage(Stage* cmd);
     void implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompute);
     void restoreIndirect();
+    void enhancedBarrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt);
   };
 
 }

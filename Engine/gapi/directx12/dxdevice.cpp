@@ -35,7 +35,7 @@ void Tempest::Detail::dxAssert(HRESULT code, DxDevice& dx) {
 
 DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
   :dllApi(dllApi) {
-  dxAssert(dllApi.D3D12CreateDevice(&adapter, D3D_FEATURE_LEVEL_11_0, uuid<ID3D12Device>(), reinterpret_cast<void**>(&device)));
+  dxAssert(dllApi.D3D12CreateDevice(&adapter, preferredFeatureLevel, uuid<ID3D12Device>(), reinterpret_cast<void**>(&device)));
 
   ComPtr<ID3D12InfoQueue> pInfoQueue;
   if(SUCCEEDED(device->QueryInterface(uuid<ID3D12InfoQueue>(),reinterpret_cast<void**>(&pInfoQueue)))) {
@@ -155,13 +155,13 @@ DxDevice::~DxDevice() {
   CloseHandle(idleEvent);
   }
 
-void DxDevice::getProp(IDXGIAdapter1& adapter, ID3D12Device& dev, AbstractGraphicsApi::Props& prop) {
+void DxDevice::getProp(IDXGIAdapter1& adapter, ID3D12Device& dev, DxProps& prop) {
   DXGI_ADAPTER_DESC1 desc={};
   adapter.GetDesc1(&desc);
   return getProp(desc,dev,prop);
   }
 
-void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGraphicsApi::Props& prop) {
+void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, DxProps& prop) {
   for(size_t i=0;i<sizeof(prop.name);++i)  {
     WCHAR c = desc.Description[i];
     if(c==0)
@@ -316,6 +316,12 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, AbstractGrap
     prop.meshlets.maxGroupSize.x = 128;
     prop.meshlets.maxGroupSize.y = 128;
     prop.meshlets.maxGroupSize.z = 128;
+    }
+
+  D3D12_FEATURE_DATA_D3D12_OPTIONS12 options12 = {};
+  if(SUCCEEDED(dev.CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS12, &options12, sizeof(options12)))) {
+    // TODO
+    // prop.enhancedBarriers = options12.EnhancedBarriersSupported;
     }
   }
 

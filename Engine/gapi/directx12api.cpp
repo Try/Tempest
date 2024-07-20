@@ -65,12 +65,16 @@ struct DirectX12Api::Impl {
         continue;
 
       ComPtr<ID3D12Device> tmpDev;
-      if(FAILED(dllApi.D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_12_0, uuid<ID3D12Device>(),
+      if(FAILED(dllApi.D3D12CreateDevice(adapter.get(), DxDevice::preferredFeatureLevel, uuid<ID3D12Device>(),
                                          reinterpret_cast<void**>(&tmpDev))))
         continue;
 
-      AbstractGraphicsApi::Props props={};
+      DxDevice::DxProps props={};
       DxDevice::getProp(desc,*tmpDev,props);
+
+      if(!props.enhancedBarriers)
+        continue;
+
       d.push_back(props);
       }
 
@@ -93,11 +97,11 @@ struct DirectX12Api::Impl {
         continue;
 
       ComPtr<ID3D12Device> tmpDev;
-      if(FAILED(dllApi.D3D12CreateDevice(adapter.get(), D3D_FEATURE_LEVEL_11_0, uuid<ID3D12Device>(),
+      if(FAILED(dllApi.D3D12CreateDevice(adapter.get(), DxDevice::preferredFeatureLevel, uuid<ID3D12Device>(),
                                          reinterpret_cast<void**>(&tmpDev))))
         continue;
 
-      AbstractGraphicsApi::Props props={};
+      DxDevice::DxProps props={};
       DxDevice::getProp(desc,*tmpDev,props);
       if(!gpuName.empty() && gpuName!=props.name)
         continue;
