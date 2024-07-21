@@ -203,15 +203,28 @@ static TempestWindow* mainWindow = nullptr;
 
 
 @interface ViewController:UIViewController{}
+-(id)init;
 @end
 
-@implementation ViewController
+@implementation ViewController {
+  bool fullScreen;
+  }
+
+-(id)init {
+  fullScreen = true;
+  return self;
+  }
+
 - (void)viewDidLoad {
-  [self prefersStatusBarHidden];
+  self.extendedLayoutIncludesOpaqueBars = YES;
+  //self.modalPresentationStyle = UIModalPresentationFullScreen;
+  //[self setNeedsStatusBarAppearanceUpdate];
+  //self.navigationController.isNavigationBarHidden = YES;
+  //[self.navigationController setNavigationBarHidden: YES animated:YES];
   }
 
 - (BOOL)prefersStatusBarHidden {
-  return YES;
+  return self->fullScreen ? YES : NO;
   }
 
 - (BOOL) shouldAutorotate {
@@ -225,6 +238,16 @@ static TempestWindow* mainWindow = nullptr;
 
 -(UIInterfaceOrientationMask)supportedInterfaceOrientations {
   return UIInterfaceOrientationMaskAll;
+  }
+
+-(bool)setAsFullscreen: (bool)fullScreen {
+  self->fullScreen = fullScreen;
+  [self setNeedsStatusBarAppearanceUpdate];
+  return true;
+  }
+
+-(bool)isFullscreen {
+  return [self prefersStatusBarHidden];
   }
 @end
 
@@ -240,11 +263,10 @@ static bool isApplicationActive = false;
   (void)launchOptions;
 
   CGRect frame = [ [ UIScreen mainScreen ] bounds ];
-  TempestWindow *window = [ [ TempestWindow alloc ] initWithFrame: frame];
+  TempestWindow  * window = [ [ TempestWindow alloc ] initWithFrame: frame];
   window.contentScaleFactor = [UIScreen mainScreen].scale;
   window.rootViewController = [ViewController new];
   window.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-
   window.backgroundColor = [ UIColor blackColor ];
 
   window->owner = nullptr;
@@ -394,11 +416,15 @@ Tempest::Rect iOSApi::implWindowClientRect(Window* w) {
   }
 
 bool iOSApi::implSetAsFullscreen(Window* w, bool fullScreen) {
-  return false;
+  auto wx = reinterpret_cast<TempestWindow*>(w);
+  ViewController* ctrl = reinterpret_cast<ViewController*>(wx.rootViewController);
+  return [ctrl setAsFullscreen: fullScreen];
   }
 
 bool iOSApi::implIsFullscreen(Window* w) {
-  return false;
+  auto wx = reinterpret_cast<TempestWindow*>(w);
+  ViewController* ctrl = reinterpret_cast<ViewController*>(wx.rootViewController);
+  return [ctrl isFullscreen];
   }
 
 void iOSApi::implSetCursorPosition(Window* w, int x, int y) {
