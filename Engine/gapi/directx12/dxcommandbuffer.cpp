@@ -64,8 +64,8 @@ static void toStage(DxDevice& dev, D3D12_BARRIER_SYNC& stage, D3D12_BARRIER_ACCE
     }
 
   if((rs&ResourceAccess::Present)==ResourceAccess::Present) {
-    // ret |= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    // acc |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+    ret |= D3D12_BARRIER_SYNC_NONE;
+    acc |= D3D12_BARRIER_ACCESS_COMMON;
     }
 
   if((rs&ResourceAccess::Sampler)==ResourceAccess::Sampler) {
@@ -78,7 +78,7 @@ static void toStage(DxDevice& dev, D3D12_BARRIER_SYNC& stage, D3D12_BARRIER_ACCE
     }
   if((rs&ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach) {
     ret |= D3D12_BARRIER_SYNC_DEPTH_STENCIL;
-    acc |= (D3D12_BARRIER_ACCESS_DEPTH_STENCIL_READ | D3D12_BARRIER_ACCESS_DEPTH_STENCIL_WRITE);
+    acc |= D3D12_BARRIER_ACCESS_DEPTH_STENCIL_WRITE;
     }
   if((rs&ResourceAccess::DepthReadOnly)==ResourceAccess::DepthReadOnly) {
     ret |= D3D12_BARRIER_SYNC_ALL;
@@ -135,6 +135,10 @@ static void toStage(DxDevice& dev, D3D12_BARRIER_SYNC& stage, D3D12_BARRIER_ACCE
   if(isSrc && ret==0) {
     // wait for nothing: asset uploading case
     ret = D3D12_BARRIER_SYNC_NONE;
+    acc = D3D12_BARRIER_ACCESS_NO_ACCESS;
+    }
+
+  if(ret==D3D12_BARRIER_SYNC_NONE) {
     acc = D3D12_BARRIER_ACCESS_NO_ACCESS;
     }
 
@@ -790,7 +794,8 @@ void DxCommandBuffer::enhancedBarrier(const AbstractGraphicsApi::BarrierDesc* de
       bx.pResource = toDxResource(b);
       bx.Offset    = 0;
       bx.Size      = UINT64_MAX;
-      } else {
+      }
+    else {
       auto& bx = imgBarrier[imgCount];
       ++imgCount;
 
@@ -804,6 +809,16 @@ void DxCommandBuffer::enhancedBarrier(const AbstractGraphicsApi::BarrierDesc* de
       bx.Flags        = D3D12_TEXTURE_BARRIER_FLAG_NONE;
       //finalizeImageBarrier(bx,b);
       }
+    }
+
+  for(size_t i=0; i<imgCount; ++i) {
+    auto& bx = imgBarrier[i];
+    if(bx.LayoutBefore!=D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_READ && bx.LayoutAfter!=D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_READ)
+      continue;
+    if((bx.AccessBefore&D3D12_BARRIER_ACCESS_DEPTH_STENCIL_WRITE)!=0)
+      Log::e("");
+    if((bx.AccessAfter&D3D12_BARRIER_ACCESS_DEPTH_STENCIL_WRITE)!=0)
+      Log::e("");
     }
 
   D3D12_BARRIER_GROUP gBuffer = {D3D12_BARRIER_TYPE_BUFFER, bufCount};

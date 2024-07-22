@@ -169,7 +169,7 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t size, MemUsage usage, Buffer
 DxTexture DxAllocator::alloc(const Pixmap& pm, uint32_t mip, DXGI_FORMAT format) {
   ComPtr<ID3D12Resource> ret;
 
-  D3D12_RESOURCE_DESC resDesc = {};
+  D3D12_RESOURCE_DESC1 resDesc = {};
   resDesc.MipLevels          = mip;
   resDesc.Format             = format;
   resDesc.Width              = pm.w();
@@ -184,6 +184,7 @@ DxTexture DxAllocator::alloc(const Pixmap& pm, uint32_t mip, DXGI_FORMAT format)
     // for mip-maps generator
     resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
     }
+  resDesc.SamplerFeedbackMipRegion = {};
 
   D3D12_HEAP_PROPERTIES heapProp={};
   heapProp.Type                 = D3D12_HEAP_TYPE_DEFAULT;
@@ -192,23 +193,41 @@ DxTexture DxAllocator::alloc(const Pixmap& pm, uint32_t mip, DXGI_FORMAT format)
   heapProp.CreationNodeMask     = 1;
   heapProp.VisibleNodeMask      = 1;
 
-  dxAssert(device->CreateCommittedResource(
-             &heapProp,
-             D3D12_HEAP_FLAG_NONE,
-             &resDesc,
-             D3D12_RESOURCE_STATE_COPY_DEST,
-             nullptr,
-             uuid<ID3D12Resource>(),
-             reinterpret_cast<void**>(&ret)
-             ));
+  if(owner->props.enhancedBarriers) {
+    ComPtr<ID3D12Device10> dev10;
+    //device->QueryInterface(uuid<ID3D12Device10>(), reinterpret_cast<void**>(&dev10));
+    device->QueryInterface(_uuidof(ID3D12Device10), reinterpret_cast<void**>(&dev10));
+    dxAssert(dev10->CreateCommittedResource3(
+        &heapProp,
+        D3D12_HEAP_FLAG_NONE,
+        &resDesc,
+        D3D12_BARRIER_LAYOUT_COPY_DEST,
+        nullptr,
+        nullptr,
+        0, nullptr,
+        uuid<ID3D12Resource>(),
+        reinterpret_cast<void**>(&ret)
+        ));
+    } else {
+    dxAssert(device->CreateCommittedResource(
+        &heapProp,
+        D3D12_HEAP_FLAG_NONE,
+        reinterpret_cast<const D3D12_RESOURCE_DESC*>(&resDesc),
+        D3D12_RESOURCE_STATE_COPY_DEST,
+        nullptr,
+        uuid<ID3D12Resource>(),
+        reinterpret_cast<void**>(&ret)
+        ));
+    }
   return DxTexture(std::move(ret),resDesc.Format,NonUniqResId::I_None,resDesc.MipLevels,1,true);
   }
 
 DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t d, const uint32_t mip, TextureFormat frm, bool imageStore) {
-  D3D12_RESOURCE_STATES state = D3D12_RESOURCE_STATE_COMMON;
-  D3D12_CLEAR_VALUE     clr   = {};
+  D3D12_RESOURCE_STATES state  = D3D12_RESOURCE_STATE_COMMON;
+  D3D12_BARRIER_LAYOUT  layout = D3D12_BARRIER_LAYOUT_COMMON;
+  D3D12_CLEAR_VALUE     clr    = {};
 
-  D3D12_RESOURCE_DESC resDesc = {};
+  D3D12_RESOURCE_DESC1 resDesc = {}; // binary compatible with D3D12_RESOURCE_DESC, so it's OK
   resDesc.MipLevels          = mip;
   resDesc.Format             = Detail::nativeFormat(frm);
   resDesc.Width              = w;
@@ -216,11 +235,13 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
   resDesc.DepthOrArraySize   = std::max<uint32_t>(d, 1);
   if(isDepthFormat(frm)) {
     state                    = D3D12_RESOURCE_STATE_DEPTH_READ;
+    layout                   = D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_READ;
     resDesc.Flags            = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
     clr.DepthStencil.Depth   = 1.f;
     clr.DepthStencil.Stencil = 0;
     } else {
     state                    = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    layout                   = D3D12_BARRIER_LAYOUT_SHADER_RESOURCE;
     resDesc.Flags            = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
     clr.Color[0] = 0.f;
     clr.Color[1] = 0.f;
@@ -229,11 +250,13 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
     }
   if(imageStore) {
     state          = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    layout         = D3D12_BARRIER_LAYOUT_UNORDERED_ACCESS;
     resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
   resDesc.SampleDesc.Count   = 1;
   resDesc.SampleDesc.Quality = 0;
   resDesc.Dimension          = d==0 ? D3D12_RESOURCE_DIMENSION_TEXTURE2D : D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+  resDesc.SamplerFeedbackMipRegion = {};
 
   D3D12_HEAP_PROPERTIES heapProp={};
   heapProp.Type                 = D3D12_HEAP_TYPE_DEFAULT;
@@ -245,15 +268,33 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
   clr.Format = resDesc.Format;
 
   ComPtr<ID3D12Resource> ret;
-  dxAssert(device->CreateCommittedResource(
-             &heapProp,
-             D3D12_HEAP_FLAG_NONE,
-             &resDesc,
-             state,
-             &clr,
-             uuid<ID3D12Resource>(),
-             reinterpret_cast<void**>(&ret)
-             ));
+  if(owner->props.enhancedBarriers) {
+    ComPtr<ID3D12Device10> dev10;
+    //device->QueryInterface(uuid<ID3D12Device10>(), reinterpret_cast<void**>(&dev10));
+    device->QueryInterface(_uuidof(ID3D12Device10), reinterpret_cast<void**>(&dev10));
+
+    dxAssert(dev10->CreateCommittedResource3(
+        &heapProp,
+        D3D12_HEAP_FLAG_NONE,
+        &resDesc,
+        layout,
+        &clr,
+        nullptr,
+        0, nullptr,
+        uuid<ID3D12Resource>(),
+        reinterpret_cast<void**>(&ret)
+        ));
+    } else {
+    dxAssert(device->CreateCommittedResource(
+               &heapProp,
+               D3D12_HEAP_FLAG_NONE,
+               reinterpret_cast<const D3D12_RESOURCE_DESC*>(&resDesc),
+               state,
+               &clr,
+               uuid<ID3D12Resource>(),
+               reinterpret_cast<void**>(&ret)
+               ));
+    }
 
   D3D12_FEATURE_DATA_FORMAT_SUPPORT ds = {};
   ds.Format = resDesc.Format;

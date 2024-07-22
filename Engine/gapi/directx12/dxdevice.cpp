@@ -51,6 +51,8 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
       D3D12_MESSAGE_ID_CREATEINPUTLAYOUT_EMPTY_LAYOUT,
       // debug markers without pix
       D3D12_MESSAGE_ID_CORRUPTED_PARAMETER2,
+      // staging buffer (vulkan style)
+      D3D12_MESSAGE_ID_WRITE_COMBINE_PERFORMANCE_WARNING
       };
     D3D12_INFO_QUEUE_FILTER filter = {};
     filter.DenyList.NumSeverities = _countof(severities);
