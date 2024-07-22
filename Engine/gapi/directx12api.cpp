@@ -72,8 +72,8 @@ struct DirectX12Api::Impl {
       DxDevice::DxProps props={};
       DxDevice::getProp(desc,*tmpDev,props);
 
-      if(!props.enhancedBarriers)
-        continue;
+      // if(!props.enhancedBarriers)
+      //   continue;
 
       d.push_back(props);
       }
