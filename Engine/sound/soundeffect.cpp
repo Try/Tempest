@@ -42,15 +42,7 @@ struct SoundEffect::Impl {
     ALCcontext*    ctx    = reinterpret_cast<ALCcontext*>(dev.context());
 
     auto guard = SoundDevice::globalLock(); // for alGetError
-#if 1
-    alGenBuffersHost(1, &stream);
-#else
-    ALCcontext*    bufCtx = reinterpret_cast<ALCcontext*>(dev.bufferContext());
-    alGenBuffersDirect(bufCtx, 1, &stream);
-    alcSetThreadContext(bufCtx);
-    alBufferCallbackSOFT(stream, frm, freq, bufferCallback, this);
-    alcSetThreadContext(nullptr);
-#endif
+    alGenBuffersDirect(ctx, 1, &stream);
     alBufferCallbackDirectSOFT(ctx, stream, frm, freq, bufferCallback, this);
     if(alGetErrorDirect(ctx)!=AL_NO_ERROR) {
       throw std::bad_alloc();
@@ -58,11 +50,7 @@ struct SoundEffect::Impl {
 
     alGenSourcesDirect(ctx, 1, &source);
     if(alGetErrorDirect(ctx)!=AL_NO_ERROR) {
-#if 1
-      alDeleteBuffersHost(1, &stream);
-#else
-      alDeleteBuffersDirect(bufCtx, 1, &stream);
-#endif
+      alDeleteBuffersDirect(ctx, 1, &stream);
       throw std::bad_alloc();
       }
 
@@ -78,12 +66,7 @@ struct SoundEffect::Impl {
     alSourcePausevDirect(ctx, 1, &source);
     alDeleteSourcesDirect(ctx, 1, &source);
     if(stream!=0) {
-#if 1
-      alDeleteBuffersHost(1, &stream);
-#else
-      auto* bufCtx = reinterpret_cast<ALCcontext*>(dev->bufferContext());
-      alDeleteBuffersDirect(bufCtx, 1, &stream);
-#endif
+      alDeleteBuffersDirect(ctx, 1, &stream);
       }
     }
 

@@ -60,7 +60,7 @@ const int32_t Sound::indexTable[] = {
 
 Sound::Data::~Data() {
 #if 1
-  alDeleteBuffersHost(1, &buffer);
+  alDeleteBuffersDirect(nullptr, 1, &buffer);
 #else
   auto ctx = reinterpret_cast<ALCcontext*>(SoundDevice::bufferContextSt());
   alDeleteBuffersDirect(ctx, 1,&buffer);
@@ -71,10 +71,10 @@ uint64_t Sound::Data::timeLength() const {
   ALint size=0, fr=0, bits=0, channels=0;
 
 #if 1
-  alGetBufferiHost(buffer, AL_SIZE,      &size);
-  alGetBufferiHost(buffer, AL_BITS,      &bits);
-  alGetBufferiHost(buffer, AL_CHANNELS,  &channels);
-  alGetBufferiHost(buffer, AL_FREQUENCY, &fr);
+  alGetBufferiDirect(nullptr, buffer, AL_SIZE,      &size);
+  alGetBufferiDirect(nullptr, buffer, AL_BITS,      &bits);
+  alGetBufferiDirect(nullptr, buffer, AL_CHANNELS,  &channels);
+  alGetBufferiDirect(nullptr, buffer, AL_FREQUENCY, &fr);
 #else
   auto ctx = reinterpret_cast<ALCcontext*>(SoundDevice::bufferContextSt());
   alGetBufferiDirect(ctx, buffer, AL_SIZE,      &size);
@@ -118,6 +118,20 @@ Sound::Sound(IDevice& f) {
 
 void Sound::initData(const char* bytes, int format, size_t size, size_t rate) {
 #if 1
+  uint32_t b = 0;
+  if(alGenBuffersDirect(nullptr, 1, &b)!=AL_NO_ERROR) {
+    throw std::bad_alloc();
+    }
+
+  if(alBufferDataDirect(nullptr, b, format, bytes, int(size), int(rate))!=AL_NO_ERROR) {
+    alDeleteBuffersDirect(nullptr, 1, &b);
+    throw std::bad_alloc();
+    }
+
+  auto d = std::make_shared<Data>();
+  d->buffer = b;
+  data      = d;
+#elif 0
   uint32_t b = 0;
   if(alGenBuffersHost(1, &b)!=AL_NO_ERROR) {
     throw std::bad_alloc();

@@ -815,14 +815,17 @@ inline ALsource *LookupSource(ALCcontext *context, ALuint id) noexcept
     return al::to_address(sublist.Sources->begin() + slidx);
 }
 
-auto AquireBufferLock = [](ALCdevice *device, auto id) ->  std::unique_lock<std::mutex>
-{
-    return ALbuffer::AquireBufferLock(device, ALuint(id));
-};
-
 auto LookupBuffer = [](ALCdevice *device, auto id) noexcept -> ALbuffer*
 {
-    return ALbuffer::LookupBuffer(device, ALuint(id));
+    const auto lidx{(id-1) >> 6};
+    const auto slidx{(id-1) & 0x3f};
+
+    if(lidx >= device->BufferList.size()) UNLIKELY
+        return nullptr;
+    BufferSubList &sublist = device->BufferList[static_cast<size_t>(lidx)];
+    if(sublist.FreeMask & (1_u64 << slidx)) UNLIKELY
+        return nullptr;
+    return al::to_address(sublist.Buffers->begin() + static_cast<size_t>(slidx));
 };
 
 auto LookupFilter = [](ALCdevice *device, auto id) noexcept -> ALfilter*
@@ -1609,7 +1612,7 @@ NOINLINE void SetProperty(ALsource *const Source, ALCcontext *const Context, con
             if(values[0])
             {
                 using UT = std::make_unsigned_t<T>;
-                auto buflock = AquireBufferLock(device, static_cast<UT>(values[0]));
+                std::lock_guard<std::mutex> buflock{device->BufferLock};
                 ALbuffer *buffer{LookupBuffer(device, static_cast<UT>(values[0]))};
                 if(!buffer)
                     throw al::context_error{AL_INVALID_VALUE, "Invalid buffer ID %s",
@@ -3485,7 +3488,6 @@ try {
         if(BufferFmt) break;
     }
 
-    std::unique_lock<std::mutex> hostBuflock = ALbuffer::AquireHostBufferLock();
     std::unique_lock<std::mutex> buflock{device->BufferLock};
     const auto bids = al::span{buffers, static_cast<ALuint>(nb)};
     const size_t NewListStart{source->mQueue.size()};

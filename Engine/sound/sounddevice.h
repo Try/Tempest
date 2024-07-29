@@ -47,13 +47,13 @@ class SoundDevice final {
   private:
     struct Data;
     struct Device;
-    struct BufferContext;
     struct PhysicalDeviceList;
 
     std::unique_ptr<Data> data;
 
     void*                               context();
 #if 0
+    struct BufferContext;
     void*                               bufferContext();
     static void*                        bufferContextSt();
 #endif

@@ -964,22 +964,22 @@ void AL_APIENTRY alSourcePausevDirect(ALCcontext *context, ALsizei n, const ALui
 void AL_APIENTRY alSourceQueueBuffersDirect(ALCcontext *context, ALuint source, ALsizei nb, const ALuint *buffers) AL_API_NOEXCEPT;
 void AL_APIENTRY alSourceUnqueueBuffersDirect(ALCcontext *context, ALuint source, ALsizei nb, ALuint *buffers) AL_API_NOEXCEPT;
 
-void AL_APIENTRY alGenBuffersDirect(ALCcontext *context, ALsizei n, ALuint *buffers) AL_API_NOEXCEPT;
-void AL_APIENTRY alDeleteBuffersDirect(ALCcontext *context, ALsizei n, const ALuint *buffers) AL_API_NOEXCEPT;
+ALenum AL_APIENTRY alGenBuffersDirect(ALCcontext *context, ALsizei n, ALuint *buffers) AL_API_NOEXCEPT;
+ALenum AL_APIENTRY alDeleteBuffersDirect(ALCcontext *context, ALsizei n, const ALuint *buffers) AL_API_NOEXCEPT;
 ALboolean AL_APIENTRY alIsBufferDirect(ALCcontext *context, ALuint buffer) AL_API_NOEXCEPT;
-void AL_APIENTRY alBufferDataDirect(ALCcontext *context, ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei samplerate) AL_API_NOEXCEPT;
-void AL_APIENTRY alBufferfDirect(ALCcontext *context, ALuint buffer, ALenum param, ALfloat value) AL_API_NOEXCEPT;
-void AL_APIENTRY alBuffer3fDirect(ALCcontext *context, ALuint buffer, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT;
-void AL_APIENTRY alBufferfvDirect(ALCcontext *context, ALuint buffer, ALenum param, const ALfloat *values) AL_API_NOEXCEPT;
-void AL_APIENTRY alBufferiDirect(ALCcontext *context, ALuint buffer, ALenum param, ALint value) AL_API_NOEXCEPT;
-void AL_APIENTRY alBuffer3iDirect(ALCcontext *context, ALuint buffer, ALenum param, ALint value1, ALint value2, ALint value3) AL_API_NOEXCEPT;
-void AL_APIENTRY alBufferivDirect(ALCcontext *context, ALuint buffer, ALenum param, const ALint *values) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetBufferfDirect(ALCcontext *context, ALuint buffer, ALenum param, ALfloat *value) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetBuffer3fDirect(ALCcontext *context, ALuint buffer, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetBufferfvDirect(ALCcontext *context, ALuint buffer, ALenum param, ALfloat *values) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetBufferiDirect(ALCcontext *context, ALuint buffer, ALenum param, ALint *value) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetBuffer3iDirect(ALCcontext *context, ALuint buffer, ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT;
-void AL_APIENTRY alGetBufferivDirect(ALCcontext *context, ALuint buffer, ALenum param, ALint *values) AL_API_NOEXCEPT;
+ALenum AL_APIENTRY alBufferDataDirect(ALCcontext *context, ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei samplerate) AL_API_NOEXCEPT;
+ALenum AL_APIENTRY alBufferfDirect(ALCcontext *context, ALuint buffer, ALenum param, ALfloat value) AL_API_NOEXCEPT;
+ALenum AL_APIENTRY alBuffer3fDirect(ALCcontext *context, ALuint buffer, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT;
+ALenum AL_APIENTRY alBufferfvDirect(ALCcontext *context, ALuint buffer, ALenum param, const ALfloat *values) AL_API_NOEXCEPT;
+ALenum AL_APIENTRY alBufferiDirect(ALCcontext *context, ALuint buffer, ALenum param, ALint value) AL_API_NOEXCEPT;
+ALenum AL_APIENTRY alBuffer3iDirect(ALCcontext *context, ALuint buffer, ALenum param, ALint value1, ALint value2, ALint value3) AL_API_NOEXCEPT;
+ALenum AL_APIENTRY alBufferivDirect(ALCcontext *context, ALuint buffer, ALenum param, const ALint *values) AL_API_NOEXCEPT;
+ALenum AL_APIENTRY alGetBufferfDirect(ALCcontext *context, ALuint buffer, ALenum param, ALfloat *value) AL_API_NOEXCEPT;
+ALenum AL_APIENTRY alGetBuffer3fDirect(ALCcontext *context, ALuint buffer, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT;
+ALenum AL_APIENTRY alGetBufferfvDirect(ALCcontext *context, ALuint buffer, ALenum param, ALfloat *values) AL_API_NOEXCEPT;
+ALenum AL_APIENTRY alGetBufferiDirect(ALCcontext *context, ALuint buffer, ALenum param, ALint *value) AL_API_NOEXCEPT;
+ALenum AL_APIENTRY alGetBuffer3iDirect(ALCcontext *context, ALuint buffer, ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT;
+ALenum AL_APIENTRY alGetBufferivDirect(ALCcontext *context, ALuint buffer, ALenum param, ALint *values) AL_API_NOEXCEPT;
 
 void AL_APIENTRY alGenEffectsDirect(ALCcontext *context, ALsizei n, ALuint *effects) AL_API_NOEXCEPT;
 void AL_APIENTRY alDeleteEffectsDirect(ALCcontext *context, ALsizei n, const ALuint *effects) AL_API_NOEXCEPT;
@@ -1068,30 +1068,6 @@ ALenum AL_APIENTRY EAXSetDirect(ALCcontext *context, const struct _GUID *propert
 ALenum AL_APIENTRY EAXGetDirect(ALCcontext *context, const struct _GUID *property_set_id, ALuint property_id, ALuint source_id, ALvoid *value, ALuint value_size) AL_API_NOEXCEPT;
 ALboolean AL_APIENTRY EAXSetBufferModeDirect(ALCcontext *context, ALsizei n, const ALuint *buffers, ALint value) AL_API_NOEXCEPT;
 ALenum AL_APIENTRY EAXGetBufferModeDirect(ALCcontext *context, ALuint buffer, ALint *pReserved) AL_API_NOEXCEPT;
-#endif
-#endif
-
-#ifndef AL_SOFT_host_buffer
-#define AL_SOFT_host_buffer
-// TODO
-#ifdef AL_ALEXT_PROTOTYPES
-ALenum AL_APIENTRY alGenBuffersHost(ALsizei n, ALuint *buffers) AL_API_NOEXCEPT;
-ALenum AL_APIENTRY alDeleteBuffersHost(ALsizei n, const ALuint *buffers) AL_API_NOEXCEPT;
-ALboolean AL_APIENTRY alIsBufferHost(ALuint buffer) AL_API_NOEXCEPT;
-ALenum AL_APIENTRY alBufferDataHost(ALuint buffer, ALenum format, const ALvoid *data, ALsizei size, ALsizei samplerate) AL_API_NOEXCEPT;
-ALenum AL_APIENTRY alBufferfHost(ALuint buffer, ALenum param, ALfloat value) AL_API_NOEXCEPT;
-ALenum AL_APIENTRY alBuffer3fHost(ALuint buffer, ALenum param, ALfloat value1, ALfloat value2, ALfloat value3) AL_API_NOEXCEPT;
-ALenum AL_APIENTRY alBufferfvHost(ALuint buffer, ALenum param, const ALfloat *values) AL_API_NOEXCEPT;
-ALenum AL_APIENTRY alBufferiHost(ALuint buffer, ALenum param, ALint value) AL_API_NOEXCEPT;
-ALenum AL_APIENTRY alBuffer3iHost(ALuint buffer, ALenum param, ALint value1, ALint value2, ALint value3) AL_API_NOEXCEPT;
-ALenum AL_APIENTRY alBufferivHost(ALuint buffer, ALenum param, const ALint *values) AL_API_NOEXCEPT;
-ALenum AL_APIENTRY alGetBufferfHost(ALuint buffer, ALenum param, ALfloat *value) AL_API_NOEXCEPT;
-ALenum AL_APIENTRY alGetBuffer3fHost(ALuint buffer, ALenum param, ALfloat *value1, ALfloat *value2, ALfloat *value3) AL_API_NOEXCEPT;
-ALenum AL_APIENTRY alGetBufferfvHost(ALuint buffer, ALenum param, ALfloat *values) AL_API_NOEXCEPT;
-ALenum AL_APIENTRY alGetBufferiHost(ALuint buffer, ALenum param, ALint *value) AL_API_NOEXCEPT;
-ALenum AL_APIENTRY alGetBuffer3iHost(ALuint buffer, ALenum param, ALint *value1, ALint *value2, ALint *value3) AL_API_NOEXCEPT;
-ALenum AL_APIENTRY alGetBufferivHost(ALuint buffer, ALenum param, ALint *values) AL_API_NOEXCEPT;
-
 #endif
 #endif
 

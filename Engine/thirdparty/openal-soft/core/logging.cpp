@@ -79,6 +79,8 @@ void al_set_log_callback(LogCallbackFunc callback, void *userptr)
 
 void al_print(LogLevel level, const char *fmt, ...) noexcept
 try {
+    if(gLogLevel < level)
+      return;
     /* Kind of ugly since string literals are const char arrays with a size
      * that includes the null terminator, which we want to exclude from the
      * span.

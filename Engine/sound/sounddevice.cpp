@@ -1,6 +1,6 @@
-#include "sounddevice.h"
-
 #if defined(TEMPEST_BUILD_AUDIO)
+
+#include "sounddevice.h"
 
 #include <AL/al.h>
 #include <AL/alc.h>
