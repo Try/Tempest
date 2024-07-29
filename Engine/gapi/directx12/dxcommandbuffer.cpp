@@ -116,7 +116,7 @@ static void toStage(DxDevice& dev, D3D12_BARRIER_SYNC& stage, D3D12_BARRIER_ACCE
   // memory barriers
   if((rs&ResourceAccess::UavReadGr)==ResourceAccess::UavReadGr) {
     ret |= D3D12_BARRIER_SYNC_DRAW;
-    acc |= D3D12_BARRIER_ACCESS_UNORDERED_ACCESS;
+    acc |= D3D12_BARRIER_ACCESS_UNORDERED_ACCESS | D3D12_BARRIER_ACCESS_CONSTANT_BUFFER;
     }
   if((rs&ResourceAccess::UavWriteGr)==ResourceAccess::UavWriteGr) {
     ret |= D3D12_BARRIER_SYNC_DRAW;
@@ -125,7 +125,7 @@ static void toStage(DxDevice& dev, D3D12_BARRIER_SYNC& stage, D3D12_BARRIER_ACCE
 
   if((rs&ResourceAccess::UavReadComp)==ResourceAccess::UavReadComp) {
     ret |= D3D12_BARRIER_SYNC_COMPUTE_SHADING;
-    acc |= D3D12_BARRIER_ACCESS_UNORDERED_ACCESS;
+    acc |= D3D12_BARRIER_ACCESS_UNORDERED_ACCESS | D3D12_BARRIER_ACCESS_CONSTANT_BUFFER;
     }
   if((rs&ResourceAccess::UavWriteComp)==ResourceAccess::UavWriteComp) {
     ret |= D3D12_BARRIER_SYNC_COMPUTE_SHADING;
