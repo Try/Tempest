@@ -322,8 +322,7 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, DxProps& pro
 
   D3D12_FEATURE_DATA_D3D12_OPTIONS12 options12 = {};
   if(SUCCEEDED(dev.CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS12, &options12, sizeof(options12)))) {
-    // TODO
-    // prop.enhancedBarriers = options12.EnhancedBarriersSupported;
+    prop.enhancedBarriers = options12.EnhancedBarriersSupported;
     }
   }
 

@@ -165,7 +165,7 @@ static D3D12_BARRIER_LAYOUT toLayout(ResourceAccess rs) {
   if((rs&ResourceAccess::DepthReadOnly)==ResourceAccess::DepthReadOnly)
     return D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_READ;
   if((rs&ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach)
-    return D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_WRITE;// | D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_READ;
+    return D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_WRITE;
 
   return D3D12_BARRIER_LAYOUT_UNORDERED_ACCESS;
   }
@@ -582,6 +582,7 @@ void DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize
   D3D12_RENDER_PASS_RENDER_TARGET_DESC view[MaxFramebufferAttachments] = {};
   UINT                                 viewSz = 0;
   D3D12_RENDER_PASS_DEPTH_STENCIL_DESC zdesc  = {};
+  D3D12_RENDER_PASS_FLAGS              flags  = D3D12_RENDER_PASS_FLAG_ALLOW_UAV_WRITES; //D3D12_RENDER_PASS_FLAG_NONE;
   zdesc.DepthBeginningAccess.Type   = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS;
   zdesc.DepthEndingAccess.Type      = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS;
   zdesc.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS;
@@ -604,7 +605,11 @@ void DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize
     else {
       auto& t = *reinterpret_cast<DxTextureWithRT*>(att[i]);
       fboLayout.DSVFormat = nativeFormat(frm[i]);
-      zdesc.cpuDescriptor = t.handle;
+      zdesc.cpuDescriptor = (dx.load==AccessOp::Readonly ? t.handleR : t.handle);
+      if(dx.load==AccessOp::Readonly) {
+        const uint32_t D3D12_RENDER_PASS_FLAG_BIND_READ_ONLY_DEPTH = 0x8; // headers?
+        flags = D3D12_RENDER_PASS_FLAGS(flags | D3D12_RENDER_PASS_FLAG_BIND_READ_ONLY_DEPTH);
+        }
       }
 
     if(desc[i].zbuffer!=nullptr) {
@@ -628,9 +633,9 @@ void DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize
     fboLayout.DSVFormat = DXGI_FORMAT_UNKNOWN;
 
   if(zdesc.DepthBeginningAccess.Type==D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS) {
-    impl->BeginRenderPass(viewSz, view, nullptr, D3D12_RENDER_PASS_FLAG_NONE);
+    impl->BeginRenderPass(viewSz, view, nullptr, flags);
     } else {
-    impl->BeginRenderPass(viewSz, view, &zdesc,  D3D12_RENDER_PASS_FLAG_NONE);
+    impl->BeginRenderPass(viewSz, view, &zdesc,  flags);
     }
   state = RenderPass;
 

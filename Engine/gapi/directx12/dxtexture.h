@@ -36,6 +36,7 @@ class DxTextureWithRT : public DxTexture {
 
     ComPtr<ID3D12DescriptorHeap> heap;
     D3D12_CPU_DESCRIPTOR_HANDLE  handle;
+    D3D12_CPU_DESCRIPTOR_HANDLE  handleR;
   };
 
 }

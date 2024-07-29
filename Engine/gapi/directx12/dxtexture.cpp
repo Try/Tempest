@@ -343,14 +343,27 @@ DxTextureWithRT::DxTextureWithRT(DxDevice& dev, DxTexture&& base)
 
   D3D12_DESCRIPTOR_HEAP_DESC desc = {};
   desc.Type           = nativeIsDepthFormat(format) ? D3D12_DESCRIPTOR_HEAP_TYPE_DSV : D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-  desc.NumDescriptors = 1;
+  desc.NumDescriptors = nativeIsDepthFormat(format) ? 2 : 1;
   desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
   dxAssert(device.CreateDescriptorHeap(&desc, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&heap)));
 
   handle = heap->GetCPUDescriptorHandleForHeapStart();
-  if(nativeIsDepthFormat(format))
-    device.CreateDepthStencilView(impl.get(), nullptr, handle); else
+  if(nativeIsDepthFormat(format)) {
+    const auto dsvHeapInc = dev.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+    device.CreateDepthStencilView(impl.get(), nullptr, handle);
+
+    handleR      = heap->GetCPUDescriptorHandleForHeapStart();
+    handleR.ptr += dsvHeapInc;
+
+    D3D12_DEPTH_STENCIL_VIEW_DESC dsv = {};
+    dsv.Format             = format;
+    dsv.ViewDimension      = D3D12_DSV_DIMENSION_TEXTURE2D;
+    dsv.Flags              = D3D12_DSV_FLAG_READ_ONLY_DEPTH;
+    dsv.Texture2D.MipSlice = 0;
+    device.CreateDepthStencilView(impl.get(), &dsv, handleR);
+    } else {
     device.CreateRenderTargetView(impl.get(), nullptr, handle);
+    }
   }
 
 #endif
