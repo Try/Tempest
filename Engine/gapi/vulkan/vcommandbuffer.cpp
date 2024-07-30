@@ -42,7 +42,7 @@ static VkAttachmentStoreOp mkStoreOp(const AccessOp op) {
     case AccessOp::Clear:
       return VK_ATTACHMENT_STORE_OP_STORE;
     case AccessOp::Readonly:
-      return VK_ATTACHMENT_STORE_OP_STORE;
+      return VK_ATTACHMENT_STORE_OP_NONE; // dynamic-rendering guaranties store_op_none
     }
   return VK_ATTACHMENT_STORE_OP_DONT_CARE;
   }

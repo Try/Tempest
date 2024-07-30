@@ -45,6 +45,7 @@ class VulkanInstance {
       bool     hasSpirv_1_4       = false;
       bool     hasDebugMarker     = false;
       bool     hasRobustness2     = false;
+      bool     hasStoreOpNone     = false;
       };
 
     static bool checkForExt(const std::vector<VkExtensionProperties>& list, const char* name);

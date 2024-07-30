@@ -261,6 +261,9 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
   if(props.hasRobustness2) {
     rqExt.push_back(VK_EXT_ROBUSTNESS_2_EXTENSION_NAME);
     }
+  if(props.hasStoreOpNone) {
+    rqExt.push_back(VK_EXT_LOAD_STORE_OP_NONE_EXTENSION_NAME);
+    }
 
   VkPhysicalDeviceFeatures supportedFeatures={};
   vkGetPhysicalDeviceFeatures(pdev,&supportedFeatures);
@@ -352,6 +355,9 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     if(props.hasRobustness2) {
       robustness2Features.pNext = features.pNext;
       features.pNext = &robustness2Features;
+      }
+    if(props.hasStoreOpNone) {
+      // no feature bits
       }
 
     auto vkGetPhysicalDeviceFeatures2 = PFN_vkGetPhysicalDeviceFeatures2(vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2KHR"));

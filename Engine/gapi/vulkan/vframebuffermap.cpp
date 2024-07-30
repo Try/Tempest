@@ -173,7 +173,7 @@ VkRenderPass VFramebufferMap::mkRenderPass(const Desc* desc, size_t attCount) {
       a.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     if(x.load == AccessOp::Readonly) {
       a.loadOp  = VK_ATTACHMENT_LOAD_OP_LOAD;
-      a.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+      a.storeOp = dev.props.hasStoreOpNone ? VK_ATTACHMENT_STORE_OP_NONE_EXT : VK_ATTACHMENT_STORE_OP_STORE;
       }
 
     // Stencil is not implemented
