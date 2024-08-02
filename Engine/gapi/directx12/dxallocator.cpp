@@ -125,6 +125,12 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t size, MemUsage usage, Buffer
 
   if(MemUsage::UniformBuffer==(usage&MemUsage::UniformBuffer) && resDesc.Width%256!=0) {
     // CB size is required to be 256-byte aligned.
+    // https://learn.microsoft.com/en-us/windows/win32/direct3d12/creating-descriptors#constant-buffer-view
+    resDesc.Width += 256-resDesc.Width%256;
+    }
+
+  if(MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer) && resDesc.Width%256!=0) {
+    // 'readonly buffer' in glsl, expressed as D3D12_CONSTANT_BUFFER_VIEW_DESC, not as UAV
     resDesc.Width += 256-resDesc.Width%256;
     }
 
