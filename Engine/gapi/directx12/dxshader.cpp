@@ -103,6 +103,8 @@ DxShader::DxShader(const void *source, const size_t src_size) {
       optGLSL.vertex.flip_vert_y = true;
     optHLSL.shader_model = calcShaderModel(comp);
     optHLSL.support_nonzero_base_vertex_base_instance = has_baseVertex_baseInstance;
+    optHLSL.point_size_compat = true;
+
     comp.set_hlsl_options  (optHLSL);
     comp.set_common_options(optGLSL);
     comp.set_hlsl_aux_buffer_binding(spirv_cross::HLSL_AUX_BINDING_BASE_VERTEX_INSTANCE, HLSL_BASE_VERTEX_INSTANCE, 0);

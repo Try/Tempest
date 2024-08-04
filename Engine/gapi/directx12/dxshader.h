@@ -30,6 +30,7 @@ class DxShader:public AbstractGraphicsApi::Shader {
     std::vector<Binding>             lay;
     ShaderReflection::Stage          stage = ShaderReflection::Stage::Compute;
     bool                             has_baseVertex_baseInstance = false;
+    bool                             has_NumworkGroups = false;
 
     struct Comp {
       IVec3 wgSize;
