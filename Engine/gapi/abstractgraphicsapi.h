@@ -289,6 +289,27 @@ namespace Tempest {
   class ZBuffer;
   class RtInstance;
 
+  struct DispatchIndirectCommand {
+    uint32_t x = 0;
+    uint32_t y = 0;
+    uint32_t z = 0;
+    };
+
+  struct DrawIndirectCommand {
+    uint32_t vertexCount   = 0;
+    uint32_t instanceCount = 0;
+    uint32_t firstVertex   = 0;
+    uint32_t firstInstance = 0;
+    };
+
+  struct DrawIndexedIndirectCommand {
+    uint32_t indexCount    = 0;
+    uint32_t instanceCount = 0;
+    uint32_t firstIndex    = 0;
+    int32_t  vertexOffset  = 0;
+    uint32_t firstInstance = 0;
+    };
+
   enum class AccessOp : uint8_t {
     Discard,
     Preserve,
