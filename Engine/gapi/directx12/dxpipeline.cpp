@@ -183,14 +183,26 @@ ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& 
   psoDesc.SampleMask            = UINT_MAX;
   psoDesc.SampleDesc.Quality    = 0;
   psoDesc.SampleDesc.Count      = 1;
-  psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-  if(topology==D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST ||
-     topology==D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP ||
-     topology==D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ ||
-     topology==D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ)
-    psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE; else
-    psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-
+  switch(topology) {
+    case D3D_PRIMITIVE_TOPOLOGY_POINTLIST:
+      psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+      break;
+    case D3D_PRIMITIVE_TOPOLOGY_LINELIST:
+    case D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ:
+    case D3D_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ:
+    case D3D_PRIMITIVE_TOPOLOGY_LINESTRIP:
+      psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+      break;
+    case D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST:
+    case D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP:
+    case D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ:
+    case D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ:
+      psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+      break;
+    case D3D_PRIMITIVE_TOPOLOGY_UNDEFINED:
+    default:
+      assert(0);
+    }
   psoDesc.DSVFormat = frm.DSVFormat;
   psoDesc.NumRenderTargets = frm.NumRenderTargets;
   for(uint8_t i=0;i<frm.NumRenderTargets;++i)
