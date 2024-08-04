@@ -759,10 +759,12 @@ void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompu
   }
 
 void DxCommandBuffer::restoreIndirect() {
+  /*
   for(auto i:indirectCmd) {
     barrier(*i, ResourceAccess::Indirect, ResourceAccess::None); // to common state
     }
   indirectCmd.clear();
+  */
   }
 
 void DxCommandBuffer::enhancedBarrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
@@ -866,9 +868,22 @@ void DxCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size
     auto& b = desc[i];
     D3D12_RESOURCE_BARRIER& barrier = rb[rbCount];
     if(b.buffer==nullptr && b.texture==nullptr && b.swapchain==nullptr) {
-      barrier.Type                    = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-      barrier.Flags                   = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-      barrier.UAV.pResource           = nullptr;
+      /* HACK:
+       * 1: use UAV barrier to sync random access from compute-like shaders (and graphics side effects)
+       * 2: use aliasing barrier to force all-to-all execution dependency with cache-flush (out of spec behaviour)
+       * 3: ideally we need Enhanced-Barrier. This code is used only as fallback
+       */
+      const ResourceAccess mask = ResourceAccess(~uint32_t(ResourceAccess::UavReadWriteAll));
+      if((b.prev & mask)==ResourceAccess::None && (b.next & mask)==ResourceAccess::None) {
+        barrier.Type                     = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+        barrier.Flags                    = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+        barrier.UAV.pResource            = nullptr;
+        } else {
+        barrier.Type                     = D3D12_RESOURCE_BARRIER_TYPE_ALIASING;
+        barrier.Flags                    = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+        barrier.Aliasing.pResourceBefore = nullptr;
+        barrier.Aliasing.pResourceAfter  = nullptr;
+        }
       }
     else if(b.buffer!=nullptr) {
       barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -979,12 +994,13 @@ void DxCommandBuffer::drawIndirect(const AbstractGraphicsApi::Buffer& indirect, 
   // block future writers
   resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
   //resState.flush(*this);
-
-  if(indirectCmd.find(&ind)==indirectCmd.end()) {
+  /*
+  if(!dev.props.enhancedBarriers && indirectCmd.find(&ind)==indirectCmd.end()) {
     indirectCmd.insert(&ind);
     // UNORDERED_ACCESS to INDIRECT_ARGUMENT (the UMD can assume the UAV writes occurred before the Render Pass)
     barrier(indirect, ResourceAccess::UavReadWriteAll, ResourceAccess::Indirect);
     }
+  */
 
   impl->ExecuteIndirect(sign, 1, ind.impl.get(), UINT64(offset), nullptr, 0);
   }
@@ -999,19 +1015,21 @@ void DxCommandBuffer::dispatchMeshIndirect(const AbstractGraphicsApi::Buffer& in
 
   // block future writers
   resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
-  //resState.setLayout(indirect, ResourceAccess::Indirect);
 
-  if(indirectCmd.find(&ind)==indirectCmd.end()) {
+  /*
+  if(!dev.props.enhancedBarriers && indirectCmd.find(&ind)==indirectCmd.end()) {
     indirectCmd.insert(&ind);
     // UNORDERED_ACCESS to INDIRECT_ARGUMENT (the UMD can assume the UAV writes occurred before the Render Pass)
     barrier(indirect, ResourceAccess::UavReadWriteAll, ResourceAccess::Indirect);
     }
+  */
   impl->ExecuteIndirect(sign, 1, ind.impl.get(), UINT64(offset), nullptr, 0);
   }
 
 void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest, const AbstractGraphicsApi::Buffer& srcBuf, size_t offsetSrc, size_t size) {
   auto& dst = reinterpret_cast<DxBuffer&>(dstBuf);
   auto& src = reinterpret_cast<const DxBuffer&>(srcBuf);
+  // barrier(dstBuf, ResourceAccess::UavRead, ResourceAccess::TransferDst);
   impl->CopyBufferRegion(dst.impl.get(),offsetDest,src.impl.get(),offsetSrc,size);
   }
 
