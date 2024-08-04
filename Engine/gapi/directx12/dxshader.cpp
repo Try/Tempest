@@ -88,6 +88,9 @@ DxShader::DxShader(const void *source, const size_t src_size) {
       if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBuiltIn && i[3]==spv::BuiltInBaseVertex) {
         has_baseVertex_baseInstance = true;
         }
+      if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBuiltIn && i[3]==spv::BuiltInNumWorkgroups) {
+        has_NumworkGroups = true;
+        }
       if(stage==ShaderReflection::Compute||
          stage==ShaderReflection::Task || stage==ShaderReflection::Mesh) {
         if(i.op()==spv::OpExecutionMode && i[2]==spv::ExecutionModeLocalSize) {

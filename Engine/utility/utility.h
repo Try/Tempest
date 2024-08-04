@@ -274,7 +274,10 @@ using Vec2   = BasicPoint<float,2>;
 using Vec3   = BasicPoint<float,3>;
 using Vec4   = BasicPoint<float,4>;
 
+using IVec1  = BasicPoint<int32_t,1>;
+using IVec2  = BasicPoint<int32_t,2>;
 using IVec3  = BasicPoint<int32_t,3>;
+using IVec4  = BasicPoint<int32_t,3>;
 
 using Size   = BasicSize<int>;
 using Rect   = BasicRect<int>;
