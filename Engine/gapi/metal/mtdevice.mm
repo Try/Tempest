@@ -208,14 +208,15 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
   // in fact there is no limit, just recomendation to submit less than 4kb of data
   prop.push.maxRange = 256;
 
-  prop.compute.maxGroupSize.x = 512;
-  prop.compute.maxGroupSize.y = 512;
-  prop.compute.maxGroupSize.z = 512;
-  if(dev.supportsFamily(MTL::GPUFamilyApple4)) {
-    prop.compute.maxGroupSize.x = 1024;
-    prop.compute.maxGroupSize.y = 1024;
-    prop.compute.maxGroupSize.z = 1024;
-    }
+  const auto maxGroupSize = dev.maxThreadsPerThreadgroup();
+  prop.compute.maxGroupSize.x = maxGroupSize.width;
+  prop.compute.maxGroupSize.y = maxGroupSize.height;
+  prop.compute.maxGroupSize.z = maxGroupSize.depth;
+  prop.compute.maxInvocations = std::max(std::max(
+                                           prop.compute.maxGroupSize.x,
+                                           prop.compute.maxGroupSize.y),
+                                           prop.compute.maxGroupSize.z);
+  prop.compute.maxSharedMemory = dev.maxThreadgroupMemoryLength();
 
   prop.anisotropy    = true;
   prop.maxAnisotropy = 16;
