@@ -146,7 +146,7 @@ void EventDispatcher::dispatchMouseWheel(Widget& wnd, MouseEvent &e) {
   }
 
 void EventDispatcher::dispatchKeyDown(Widget &wnd, KeyEvent &e, uint32_t scancode) {
-  auto& k = keyUp[scancode];
+  auto k = keyUp[scancode];
   if(auto w = lock(k)) {
     KeyEvent e1(e.key,e.code,mkModifier(),Event::KeyRepeat);
     w->widget->keyRepeatEvent(e1);
@@ -162,6 +162,7 @@ void EventDispatcher::dispatchKeyDown(Widget &wnd, KeyEvent &e, uint32_t scancod
     if(implShortcut(*i,e1))
       return;
     k = implDispatch(*i,e1);
+    keyUp[scancode] = k;
     if(!k.expired())
       return;
     }
@@ -169,6 +170,7 @@ void EventDispatcher::dispatchKeyDown(Widget &wnd, KeyEvent &e, uint32_t scancod
   if(implShortcut(wnd,e1))
     return;
   k = implDispatch(wnd,e1);
+  keyUp[scancode] = k;
   }
 
 void EventDispatcher::dispatchKeyUp(Widget &/*wnd*/, KeyEvent &e, uint32_t scancode) {
