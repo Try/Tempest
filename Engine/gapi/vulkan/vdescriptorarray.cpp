@@ -268,6 +268,11 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t c
   if(cnt==0)
     return;
 
+  if(!l.runtimeSized) {
+    // GLSL compiller issue: bindless array might be demote to bindfull one
+    cnt = std::min<uint32_t>(l.arraySize, cnt);
+    }
+
   // 16 is non-bindless limit
   SmallArray<VkDescriptorImageInfo,16> imageInfo(cnt);
   for(size_t i=0; i<cnt; ++i) {
@@ -314,6 +319,11 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** b, size_t cn
 
   if(cnt==0)
     return;
+
+  if(!l.runtimeSized) {
+    // GLSL compiller issue: bindless array might be demote to bindfull one
+    cnt = std::min<uint32_t>(l.arraySize, cnt);
+    }
 
   SmallArray<VkDescriptorBufferInfo,32> bufInfo(cnt);
   for(size_t i=0; i<cnt; ++i) {
