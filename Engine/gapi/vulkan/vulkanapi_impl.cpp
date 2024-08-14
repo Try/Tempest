@@ -470,9 +470,11 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
   props.compute.maxGroups.y = devP.limits.maxComputeWorkGroupCount[1];
   props.compute.maxGroups.z = devP.limits.maxComputeWorkGroupCount[2];
 
-  props.compute.maxGroupSize.x = devP.limits.maxComputeWorkGroupSize[0];
-  props.compute.maxGroupSize.y = devP.limits.maxComputeWorkGroupSize[1];
-  props.compute.maxGroupSize.z = devP.limits.maxComputeWorkGroupSize[2];
+  props.compute.maxGroupSize.x  = devP.limits.maxComputeWorkGroupSize[0];
+  props.compute.maxGroupSize.y  = devP.limits.maxComputeWorkGroupSize[1];
+  props.compute.maxGroupSize.z  = devP.limits.maxComputeWorkGroupSize[2];
+  props.compute.maxInvocations  = devP.limits.maxComputeWorkGroupInvocations;
+  props.compute.maxSharedMemory = devP.limits.maxComputeSharedMemorySize;
 
   props.tex2d.maxSize = devP.limits.maxImageDimension2D;
   props.tex3d.maxSize = devP.limits.maxImageDimension3D;

@@ -265,9 +265,11 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, DxProps& pro
   prop.compute.maxGroups.y    = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
   prop.compute.maxGroups.z    = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
 
-  prop.compute.maxGroupSize.x = D3D12_CS_THREAD_GROUP_MAX_X;
-  prop.compute.maxGroupSize.y = D3D12_CS_THREAD_GROUP_MAX_Y;
-  prop.compute.maxGroupSize.z = D3D12_CS_THREAD_GROUP_MAX_Z;
+  prop.compute.maxGroupSize.x  = D3D12_CS_THREAD_GROUP_MAX_X;
+  prop.compute.maxGroupSize.y  = D3D12_CS_THREAD_GROUP_MAX_Y;
+  prop.compute.maxGroupSize.z  = D3D12_CS_THREAD_GROUP_MAX_Z;
+  prop.compute.maxInvocations  = D3D12_CS_THREAD_GROUP_MAX_THREADS_PER_GROUP;
+  prop.compute.maxSharedMemory = D3D12_CS_TGSM_REGISTER_COUNT*4; // not well documented, assume that this is shared memory
 
   if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) {
     prop.type = DeviceType::Cpu;

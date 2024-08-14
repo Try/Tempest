@@ -406,8 +406,10 @@ namespace Tempest {
             } mrt;
 
           struct {
-            BasicPoint<int,3> maxGroups    = {65535,65535,65535};
-            BasicPoint<int,3> maxGroupSize = {128,128,64};
+            BasicPoint<int,3> maxGroups       = {65535,65535,65535};
+            BasicPoint<int,3> maxGroupSize    = {128,128,64};
+            int               maxInvocations  = 128;
+            size_t            maxSharedMemory = 16*1024;
             } compute;
 
           struct {
