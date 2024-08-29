@@ -15,6 +15,7 @@ class StorageImage final {
 
     int           w()        const { return tImpl.w();        }
     int           h()        const { return tImpl.h();        }
+    int           d()        const { return tImpl.texD;       }
     Size          size()     const { return tImpl.size();     }
     bool          isEmpty()  const { return tImpl.isEmpty();  }
     TextureFormat format()   const { return tImpl.format();   }

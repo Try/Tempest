@@ -9,6 +9,7 @@ class Device;
 class DescriptorSet;
 template<class T>
 class Encoder;
+class StorageImage;
 
 class CommandBuffer;
 
@@ -28,16 +29,18 @@ class Texture2d final {
     uint32_t      mipCount() const;
 
   private:
-    Texture2d(Tempest::Device& dev,AbstractGraphicsApi::PTexture&& impl,uint32_t w,uint32_t h,TextureFormat frm);
+    Texture2d(Tempest::Device& dev,AbstractGraphicsApi::PTexture&& impl, uint32_t w, uint32_t h, uint32_t d, TextureFormat frm);
 
     Detail::DSharedPtr<AbstractGraphicsApi::Texture*> impl;
     int                                               texW=0;
     int                                               texH=0;
+    int                                               texD=0;
     TextureFormat                                     frm=Undefined;
 
   friend class Tempest::Device;
   friend class Tempest::DescriptorSet;
   friend class Encoder<Tempest::CommandBuffer>;
+  friend class Tempest::StorageImage;
 
   template<class T>
   friend class Tempest::Detail::ResourcePtr;
