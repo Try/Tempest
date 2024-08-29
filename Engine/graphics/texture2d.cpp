@@ -10,7 +10,7 @@ Texture2d::Texture2d(Device &, AbstractGraphicsApi::PTexture&& impl, uint32_t w,
   }
 
 Texture2d::Texture2d(Texture2d&& other)
-  :impl(std::move(other.impl)), texW(other.texW), texH(other.texH), frm(other.frm) {
+    :impl(std::move(other.impl)), texW(other.texW), texH(other.texH), texD(other.texD), frm(other.frm) {
   other.texW = 0;
   other.texH = 0;
   other.texD = 0;

@@ -29,7 +29,7 @@ class Texture2d final {
     uint32_t      mipCount() const;
 
   private:
-    Texture2d(Tempest::Device& dev,AbstractGraphicsApi::PTexture&& impl, uint32_t w, uint32_t h, uint32_t d, TextureFormat frm);
+    Texture2d(Tempest::Device& dev, AbstractGraphicsApi::PTexture&& impl, uint32_t w, uint32_t h, uint32_t d, TextureFormat frm);
 
     Detail::DSharedPtr<AbstractGraphicsApi::Texture*> impl;
     int                                               texW=0;
