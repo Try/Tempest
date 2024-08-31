@@ -225,7 +225,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** tex, size_
     placeInHeap(device, prm.rgnType, descPtr, heapOffset + i*descSize, t, smp.mapping, mipLevel);
     if(l.hasSampler()) {
       auto sx = smp;
-      if(t.filtrable) {
+      if(t.isFilterable) {
         /*
          * https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_format_support1
          * If the device supports the format as a resource (1D, 2D, 3D, or cube map)
@@ -494,7 +494,7 @@ void DxDescriptorArray::placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE
       mipLevel = 0;
     D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
     desc.Format             = t.format;
-    if(t.sliceCnt>1) {
+    if(t.is3D) {
       desc.ViewDimension      = D3D12_UAV_DIMENSION_TEXTURE3D;
       desc.Texture3D.MipSlice = mipLevel;
       desc.Texture3D.WSize    = t.sliceCnt;
@@ -512,7 +512,7 @@ void DxDescriptorArray::placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE
     srvDesc.Format                  = nativeSrvFormat(t.format);
     if(t.sliceCnt>1) {
       srvDesc.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE3D;
-      srvDesc.Texture3D.MipLevels     = t.mips;
+      srvDesc.Texture3D.MipLevels     = t.mipCnt;
       //srvDesc.Texture3D.WSize         = t.sliceCnt;
       if(mipLevel!=uint32_t(-1)) {
         srvDesc.Texture3D.MostDetailedMip = mipLevel;
@@ -520,7 +520,7 @@ void DxDescriptorArray::placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE
         }
       } else {
       srvDesc.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE2D;
-      srvDesc.Texture2D.MipLevels     = t.mips;
+      srvDesc.Texture2D.MipLevels     = t.mipCnt;
       if(mipLevel!=uint32_t(-1)) {
         srvDesc.Texture2D.MostDetailedMip = mipLevel;
         srvDesc.Texture2D.MipLevels       = 1;

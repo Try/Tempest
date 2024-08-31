@@ -12,12 +12,15 @@ using namespace Tempest::Detail;
 DxTexture::DxTexture() {
   }
 
-DxTexture::DxTexture(ComPtr<ID3D12Resource>&& b, DXGI_FORMAT frm, NonUniqResId nonUniqId, UINT mips, UINT sliceCnt, bool filtrable)
-  :impl(std::move(b)), format(frm), nonUniqId(nonUniqId), mips(mips), sliceCnt(sliceCnt), filtrable(filtrable) {
+DxTexture::DxTexture(ComPtr<ID3D12Resource>&& b, DXGI_FORMAT frm, NonUniqResId nonUniqId,
+                     UINT mipCnt, UINT sliceCnt, bool is3D, bool isFilterable)
+  : impl(std::move(b)), format(frm), nonUniqId(nonUniqId),
+    mipCnt(mipCnt), sliceCnt(sliceCnt), is3D(is3D), isFilterable(isFilterable) {
   }
 
 DxTexture::DxTexture(DxTexture&& other)
-  :impl(std::move(other.impl)), format(other.format), nonUniqId(other.nonUniqId), mips(other.mips), sliceCnt(other.sliceCnt) {
+  : impl(std::move(other.impl)), format(other.format), nonUniqId(other.nonUniqId),
+    mipCnt(other.mipCnt), sliceCnt(other.sliceCnt), is3D(other.is3D), isFilterable(other.isFilterable) {
   }
 
 UINT DxTexture::bitCount() const {

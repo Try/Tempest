@@ -14,20 +14,22 @@ class DxDevice;
 class DxTexture : public AbstractGraphicsApi::Texture {
   public:
     DxTexture();
-    DxTexture(ComPtr<ID3D12Resource>&& b, DXGI_FORMAT frm, NonUniqResId nonUniqId, UINT mips, UINT sliceCnt, bool filtrable);
+    DxTexture(ComPtr<ID3D12Resource>&& b, DXGI_FORMAT frm, NonUniqResId nonUniqId,
+              UINT mipCnt, UINT sliceCnt, bool is3D, bool isFilterable);
     DxTexture(DxTexture&& other);
 
-    uint32_t mipCount() const override { return mips; }
+    uint32_t mipCount() const override { return mipCnt; }
 
     UINT     bitCount() const;
     UINT     bytePerBlockCount() const;
 
     ComPtr<ID3D12Resource> impl;
-    DXGI_FORMAT            format    = DXGI_FORMAT_UNKNOWN;
-    NonUniqResId           nonUniqId = NonUniqResId::I_None;
-    UINT                   mips      = 1;
-    UINT                   sliceCnt  = 1;
-    bool                   filtrable = false;
+    DXGI_FORMAT            format       = DXGI_FORMAT_UNKNOWN;
+    NonUniqResId           nonUniqId    = NonUniqResId::I_None;
+    UINT                   mipCnt       = 1;
+    UINT                   sliceCnt     = 1;
+    bool                   is3D         = false;
+    bool                   isFilterable = false;
   };
 
 class DxTextureWithRT : public DxTexture {
