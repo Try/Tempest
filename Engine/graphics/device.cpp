@@ -204,7 +204,7 @@ StorageImage Device::image3d(TextureFormat frm, const uint32_t w, const uint32_t
   if(w>devProps.tex3d.maxSize || h>devProps.tex3d.maxSize || d>devProps.tex3d.maxSize)
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat, formatName(frm));
   uint32_t mipCnt = mips ? mipCount(w,h,d) : 1;
-  Texture2d t(*this,api.createStorage(dev,w,h,d,mipCnt,frm),w,h,1,frm);
+  Texture2d t(*this,api.createStorage(dev,w,h,d,mipCnt,frm),w,h,d,frm);
   return StorageImage(std::move(t));
   }
 
