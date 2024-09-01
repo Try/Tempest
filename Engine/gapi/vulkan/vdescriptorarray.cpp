@@ -143,17 +143,18 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* t, const Sam
     reallocSet(id, 0);
     }
 
+  auto& lx = lay.handler->lay[id];
   VkDescriptorImageInfo imageInfo = {};
-  if(lay.handler->lay[id].cls==ShaderReflection::Texture) {
+  if(lx.cls==ShaderReflection::Texture) {
     auto sx = smp;
     if(!tex.isFilterable) {
       sx.setFiltration(Filter::Nearest);
       sx.anisotropic = false;
       }
     imageInfo.sampler   = device.allocator.updateSampler(sx);
-    imageInfo.imageView = tex.view(smp.mapping,mipLevel);
+    imageInfo.imageView = tex.view(smp.mapping,mipLevel,lx.is3DImage);
     } else {
-    imageInfo.imageView = tex.view(ComponentMapping(),mipLevel);
+    imageInfo.imageView = tex.view(ComponentMapping(),mipLevel,lx.is3DImage);
     }
   imageInfo.imageLayout = toWriteLayout(tex);
 
@@ -162,7 +163,7 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture* t, const Sam
   descriptorWrite.dstSet          = impl;
   descriptorWrite.dstBinding      = uint32_t(id);
   descriptorWrite.dstArrayElement = 0;
-  descriptorWrite.descriptorType  = nativeFormat(lay.handler->lay[id].cls);
+  descriptorWrite.descriptorType  = nativeFormat(lx.cls);
   descriptorWrite.descriptorCount = 1;
   descriptorWrite.pImageInfo      = &imageInfo;
 
@@ -281,7 +282,7 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t c
     if(!tex.isFilterable)
       sx.setFiltration(Filter::Nearest);
     imageInfo[i].imageLayout = toWriteLayout(tex);
-    imageInfo[i].imageView   = tex.view(smp.mapping,uint32_t(-1));
+    imageInfo[i].imageView   = tex.view(smp.mapping,uint32_t(-1),l.is3DImage);
     imageInfo[i].sampler     = device.allocator.updateSampler(sx);
     // TODO: support mutable textures in bindings
     assert(tex.nonUniqId==0);
@@ -322,7 +323,7 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** b, size_t cn
 
   if(!l.runtimeSized) {
     // GLSL compiller issue: bindless array might be demote to bindfull one
-    cnt = std::min<uint32_t>(l.arraySize, cnt);
+    cnt = std::min<uint32_t>(l.arraySize, uint32_t(cnt));
     }
 
   SmallArray<VkDescriptorBufferInfo,32> bufInfo(cnt);

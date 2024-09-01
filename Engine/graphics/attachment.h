@@ -1,16 +1,14 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
+#include <Tempest/Swapchain>
 #include <Tempest/Texture2d>
 
 namespace Tempest {
 
-class Device;
-class CommandBuffer;
-class Texture2d;
-class Swapchain;
+template<class T> T textureCast(Attachment& s);
+template<class T> T textureCast(const Attachment& s);
 
-//! attachment 2d texture class
 class Attachment final {
   public:
     Attachment()=default;
@@ -22,9 +20,6 @@ class Attachment final {
     int              h() const;
     Size             size() const;
     bool             isEmpty() const;
-
-    friend       Texture2d& textureCast(Attachment& a);
-    friend const Texture2d& textureCast(const Attachment& a);
 
   private:
     Attachment(Texture2d&& t):tImpl(std::move(t)){}
@@ -39,20 +34,28 @@ class Attachment final {
 
   friend class Tempest::Device;
   friend class Tempest::Swapchain;
-  friend class Tempest::DescriptorSet;
   friend class Encoder<Tempest::CommandBuffer>;
 
-  template<class T>
-  friend class Tempest::Detail::ResourcePtr;
+  template<class T> friend T textureCast(Attachment& a);
+  template<class T> friend T textureCast(const Attachment& a);
   };
 
-inline Texture2d& textureCast(Attachment& a) {
+template<>
+inline Texture2d& textureCast<Texture2d&>(Attachment& a) {
   if(a.sImpl.swapchain)
     throw std::bad_cast();
   return a.tImpl;
   }
 
-inline const Texture2d& textureCast(const Attachment& a) {
+template<>
+inline const Texture2d& textureCast<const Texture2d&>(Attachment& a) {
+  if(a.sImpl.swapchain)
+    throw std::bad_cast();
+  return a.tImpl;
+  }
+
+template<>
+inline const Texture2d& textureCast<const Texture2d&>(const Attachment& a) {
   if(a.sImpl.swapchain)
     throw std::bad_cast();
   return a.tImpl;

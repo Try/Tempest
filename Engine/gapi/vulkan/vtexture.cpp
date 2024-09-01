@@ -27,26 +27,28 @@ VTexture::~VTexture() {
     alloc->free(*this);
   }
 
-VkImageView VTexture::view(const ComponentMapping& m, uint32_t mipLevel) {
+VkImageView VTexture::view(const ComponentMapping& m, uint32_t mipLevel, bool is3D) {
   VkDevice dev = alloc->device()->device.impl;
 
   if(m.r==ComponentSwizzle::Identity &&
      m.g==ComponentSwizzle::Identity &&
      m.b==ComponentSwizzle::Identity &&
      m.a==ComponentSwizzle::Identity &&
-     (mipLevel==uint32_t(-1) || mipCnt==1)) {
+     (mipLevel==uint32_t(-1) || mipCnt==1) &&
+     this->is3D==is3D) {
     return imgView;
     }
 
   std::lock_guard<Detail::SpinLock> guard(syncViews);
   for(auto& i:extViews) {
-    if(i.m==m && i.mip==mipLevel)
+    if(i.m==m && i.mip==mipLevel && i.is3D==is3D)
       return i.v;
     }
   View v;
-  createView(v.v,dev,format,&m,mipLevel);
-  v.m   = m;
-  v.mip = mipLevel;
+  createView(v.v,dev,format,&m,mipLevel,is3D);
+  v.m    = m;
+  v.mip  = mipLevel;
+  v.is3D = is3D;
   try {
     extViews.push_back(v);
     }
@@ -58,11 +60,11 @@ VkImageView VTexture::view(const ComponentMapping& m, uint32_t mipLevel) {
   }
 
 VkImageView VTexture::fboView(uint32_t mip) {
-  return view(ComponentMapping(),mip);
+  return view(ComponentMapping(),mip,false);
   }
 
 void VTexture::createViews(VkDevice device) {
-  createView(imgView, device, format, nullptr, uint32_t(-1));
+  createView(imgView, device, format, nullptr, uint32_t(-1),is3D);
   }
 
 void VTexture::destroyViews(VkDevice device) {
@@ -72,7 +74,7 @@ void VTexture::destroyViews(VkDevice device) {
   }
 
 void VTexture::createView(VkImageView& ret, VkDevice device, VkFormat format,
-                          const ComponentMapping* cmap, uint32_t mipLevel) {
+                          const ComponentMapping* cmap, uint32_t mipLevel, bool is3D) {
   VkImageViewCreateInfo viewInfo = {};
   viewInfo.sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   viewInfo.image    = impl;
@@ -107,7 +109,6 @@ void VTexture::createView(VkImageView& ret, VkDevice device, VkFormat format,
 
 VTextureWithFbo::VTextureWithFbo(VTexture&& base)
   :VTexture(std::move(base)) {
-
   }
 
 VTextureWithFbo::~VTextureWithFbo() {

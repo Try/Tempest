@@ -264,6 +264,11 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
   if(props.hasStoreOpNone) {
     rqExt.push_back(VK_EXT_LOAD_STORE_OP_NONE_EXTENSION_NAME);
     }
+  if(props.hasMaintenance1) {
+    rqExt.push_back(VK_KHR_MAINTENANCE_1_EXTENSION_NAME);
+    //rqExt.push_back(VK_EXT_IMAGE_2D_VIEW_OF_3D_EXTENSION_NAME);
+    }
+
 
   VkPhysicalDeviceFeatures supportedFeatures={};
   vkGetPhysicalDeviceFeatures(pdev,&supportedFeatures);

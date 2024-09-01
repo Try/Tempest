@@ -3,6 +3,7 @@
 #include <Tempest/Attachment>
 #include <Tempest/ZBuffer>
 #include <Tempest/Texture2d>
+#include <Tempest/StorageBuffer>
 #include <cassert>
 
 #include "utility/compiller_hints.h"
@@ -280,7 +281,7 @@ void Encoder<CommandBuffer>::copy(const Attachment& src, uint32_t mip, StorageBu
   if(offset%4!=0)
     throw std::system_error(Tempest::GraphicsErrc::InvalidStorageBuffer);
   uint32_t w = src.w(), h = src.h();
-  auto& tx = *textureCast(src).impl.handler;
+  auto& tx = *textureCast<const Texture2d&>(src).impl.handler;
   impl->copy(*dest.impl.impl.handler,offset,tx,w,h,mip);
   }
 
@@ -294,6 +295,6 @@ void Encoder<CommandBuffer>::copy(const Texture2d& src, uint32_t mip, StorageBuf
 
 void Encoder<CommandBuffer>::generateMipmaps(Attachment& tex) {
   uint32_t w = tex.w(), h = tex.h();
-  impl->generateMipmap(*textureCast(tex).impl.handler,w,h,mipCount(w,h));
+  impl->generateMipmap(*textureCast<Texture2d&>(tex).impl.handler,w,h,mipCount(w,h));
   }
 

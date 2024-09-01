@@ -2,9 +2,6 @@
 
 #include <Tempest/AbstractGraphicsApi>
 #include <Tempest/UniformBuffer>
-#include <Tempest/VertexBuffer>
-#include <Tempest/IndexBuffer>
-#include <Tempest/StorageBuffer>
 #include <Tempest/Except>
 
 namespace Tempest {
@@ -12,7 +9,7 @@ namespace Tempest {
 class Device;
 class CommandBuffer;
 class Texture2d;
-class Attachment;
+class StorageBuffer;
 class StorageImage;
 class AccelerationStructure;
 

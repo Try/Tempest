@@ -11,17 +11,16 @@
 #include <Tempest/DescriptorSet>
 #include <Tempest/VertexBuffer>
 #include <Tempest/IndexBuffer>
+#include <Tempest/UniformBuffer>
 #include <Tempest/StorageBuffer>
 #include <Tempest/StorageImage>
 #include <Tempest/AccelerationStructure>
 #include <Tempest/Builtin>
 #include <Tempest/Swapchain>
-#include <Tempest/UniformBuffer>
 #include <Tempest/Except>
 
 #include "videobuffer.h"
 
-#include <memory>
 #include <vector>
 
 namespace Tempest {

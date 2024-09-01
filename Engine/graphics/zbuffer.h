@@ -5,11 +5,9 @@
 
 namespace Tempest {
 
-class Device;
-class CommandBuffer;
-class Texture2d;
+template<class T> T textureCast(ZBuffer& s);
+template<class T> T textureCast(const ZBuffer& s);
 
-//! attachment 2d texture class
 class ZBuffer final {
   public:
     ZBuffer()=default;
@@ -22,9 +20,6 @@ class ZBuffer final {
     Size             size()    const { return tImpl.size();    }
     bool             isEmpty() const { return tImpl.isEmpty(); }
 
-    friend       Texture2d& textureCast(ZBuffer& a);
-    friend const Texture2d& textureCast(const ZBuffer& a);
-
   private:
     ZBuffer(Texture2d&& t, bool sampleFormat):tImpl(std::move(t)), sampleFormat(sampleFormat) {}
 
@@ -36,16 +31,28 @@ class ZBuffer final {
   friend class Encoder<Tempest::CommandBuffer>;
 
   template<class T>
-  friend class Tempest::Detail::ResourcePtr;
+  friend T textureCast(ZBuffer& s);
+
+  template<class T>
+  friend T textureCast(const ZBuffer& s);
   };
 
-inline Texture2d& textureCast(ZBuffer& a) {
+template<>
+inline Texture2d& textureCast<Texture2d&>(ZBuffer& a) {
   if(!a.sampleFormat)
     throw std::bad_cast();
   return a.tImpl;
   }
 
-inline const Texture2d& textureCast(const ZBuffer& a) {
+template<>
+inline const Texture2d& textureCast<const Texture2d&>(ZBuffer& a) {
+  if(!a.sampleFormat)
+    throw std::bad_cast();
+  return a.tImpl;
+  }
+
+template<>
+inline const Texture2d& textureCast<const Texture2d&>(const ZBuffer& a) {
   if(!a.sampleFormat)
     throw std::bad_cast();
   return a.tImpl;

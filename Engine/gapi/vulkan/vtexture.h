@@ -24,7 +24,7 @@ class VTexture : public AbstractGraphicsApi::Texture {
 
     VTexture& operator=(const VTexture& other)=delete;
 
-    VkImageView view(const ComponentMapping& m, uint32_t mipLevel);
+    VkImageView view(const ComponentMapping& m, uint32_t mipLevel, bool is3D);
     VkImageView fboView(uint32_t mip);
     uint32_t    mipCount() const override { return mipCnt; }
 
@@ -44,11 +44,12 @@ class VTexture : public AbstractGraphicsApi::Texture {
     void createViews (VkDevice device);
     void destroyViews(VkDevice device);
     void createView  (VkImageView& ret, VkDevice device, VkFormat format,
-                      const ComponentMapping* cmap, uint32_t mipLevel);
+                    const ComponentMapping* cmap, uint32_t mipLevel, bool is3D);
 
     struct View {
       ComponentMapping m;
-      uint32_t         mip = uint32_t(0);
+      uint32_t         mip  = uint32_t(0);
+      bool             is3D = false;
       VkImageView      v;
       };
     Detail::SpinLock  syncViews;

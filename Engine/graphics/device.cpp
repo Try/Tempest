@@ -204,7 +204,7 @@ StorageImage Device::image3d(TextureFormat frm, const uint32_t w, const uint32_t
   if(w>devProps.tex3d.maxSize || h>devProps.tex3d.maxSize || d>devProps.tex3d.maxSize)
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat, formatName(frm));
   uint32_t mipCnt = mips ? mipCount(w,h,d) : 1;
-  Texture2d t(*this,api.createStorage(dev,w,h,d,mipCnt,frm),w,h,d,frm);
+  Texture2d t(*this,api.createStorage(dev,w,h,d,mipCnt,frm),w,h,1,frm);
   return StorageImage(std::move(t));
   }
 
@@ -269,7 +269,7 @@ Pixmap Device::readPixels(const Texture2d &t, uint32_t mip) {
 
 Pixmap Device::readPixels(const Attachment& t, uint32_t mip) {
   Pixmap pm;
-  auto& tx = textureCast(t);
+  auto& tx = textureCast<const Texture2d&>(t);
   uint32_t w = t.w();
   uint32_t h = t.h();
   for(uint32_t i=0; i<mip; ++i) {

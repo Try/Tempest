@@ -37,6 +37,12 @@ static uint32_t arraySize(const spirv_cross::SPIRType& t) {
   return cnt;
   }
 
+static bool is3dImage(const spirv_cross::SPIRType& t) {
+  if(t.op!=spv::OpTypeImage)
+    return false;
+  return t.image.dim==spv::Dim3D;
+  }
+
 static uint32_t declaredSize(spirv_cross::Compiler& comp, const spirv_cross::SPIRType& t) {
   // Offsets can be declared out of order, so we need to deduce the actual size
   // based on last member instead.
@@ -103,6 +109,7 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     b.spvId        = resource.id;
     b.runtimeSized = isRuntimeSized(t);
     b.arraySize    = arraySize(t);
+    b.is3DImage    = is3dImage(t);
     lay.push_back(b);
     }
   for(auto &resource : resources.separate_images) {
@@ -115,6 +122,7 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     b.spvId        = resource.id;
     b.runtimeSized = isRuntimeSized(t);
     b.arraySize    = arraySize(t);
+    b.is3DImage    = is3dImage(t);
     lay.push_back(b);
     }
   for(auto &resource : resources.separate_samplers) {
@@ -168,6 +176,7 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     b.runtimeSized = isRuntimeSized(t);
     b.arraySize    = arraySize(t);
     b.spvId        = resource.id;
+    b.is3DImage    = is3dImage(t);
     lay.push_back(b);
     }
   for(auto &resource : resources.acceleration_structures) {

@@ -1,8 +1,10 @@
 #include "descriptorset.h"
 
 #include <Tempest/Device>
-#include <Tempest/UniformBuffer>
 #include <Tempest/AccelerationStructure>
+#include <Tempest/UniformBuffer>
+#include <Tempest/StorageBuffer>
+#include <Tempest/StorageImage>
 
 #include "utility/smallarray.h"
 
@@ -40,8 +42,9 @@ void DescriptorSet::set(size_t layoutBind, const Texture2d &tex, const Sampler& 
   }
 
 void DescriptorSet::set(size_t layoutBind, const Attachment& tex, const Sampler& smp) {
-  if(tex.tImpl.impl.handler)
-    impl.handler->set(layoutBind,tex.tImpl.impl.handler,smp,uint32_t(-1)); else
+  auto& val = textureCast<const Texture2d&>(tex);
+  if(val.impl.handler)
+    impl.handler->set(layoutBind,val.impl.handler,smp,uint32_t(-1)); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
   }
 

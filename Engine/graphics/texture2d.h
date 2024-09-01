@@ -24,18 +24,18 @@ class Texture2d final {
     int           w() const { return texW; }
     int           h() const { return texH; }
     Size          size() const { return Size(texW,texH); }
-    bool          isEmpty() const { return texW<=0 || texH<=0; }
-    TextureFormat format() const { return frm; }
+    bool          isEmpty()  const { return texW<=0 || texH<=0 || texD<=0; }
+    TextureFormat format()   const { return frm; }
     uint32_t      mipCount() const;
 
   private:
     Texture2d(Tempest::Device& dev, AbstractGraphicsApi::PTexture&& impl, uint32_t w, uint32_t h, uint32_t d, TextureFormat frm);
 
     Detail::DSharedPtr<AbstractGraphicsApi::Texture*> impl;
-    int                                               texW=0;
-    int                                               texH=0;
-    int                                               texD=0;
-    TextureFormat                                     frm=Undefined;
+    TextureFormat                                     frm  = Undefined;
+    int                                               texW = 0;
+    int                                               texH = 0;
+    int                                               texD = 0;
 
   friend class Tempest::Device;
   friend class Tempest::DescriptorSet;

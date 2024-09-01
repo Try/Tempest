@@ -45,6 +45,7 @@ class ShaderReflection final {
       Class           cls          = Ubo;
       Stage           stage        = None;
       bool            runtimeSized = false;
+      bool            is3DImage    = false;
       uint32_t        arraySize    = 0;
       uint64_t        byteSize     = 0;
 

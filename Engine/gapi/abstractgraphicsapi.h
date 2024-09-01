@@ -287,6 +287,7 @@ namespace Tempest {
 
   class Attachment;
   class ZBuffer;
+  class StorageImage;
   class RtInstance;
 
   struct DispatchIndirectCommand {
