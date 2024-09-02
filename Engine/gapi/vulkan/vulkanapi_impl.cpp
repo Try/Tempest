@@ -266,6 +266,9 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
   if(checkForExt(ext,VK_EXT_LOAD_STORE_OP_NONE_EXTENSION_NAME)) {
     props.hasStoreOpNone = true;
     }
+  if(checkForExt(ext,VK_KHR_MAINTENANCE_1_EXTENSION_NAME)) {
+    props.hasMaintenance1 = true;
+    }
 
   VkPhysicalDeviceProperties devP={};
   vkGetPhysicalDeviceProperties(physicalDevice,&devP);
