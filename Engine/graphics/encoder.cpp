@@ -196,7 +196,7 @@ void Encoder<Tempest::CommandBuffer>::dispatchThreads(size_t x, size_t y, size_t
   }
 
 void Encoder<Tempest::CommandBuffer>::dispatchThreads(Size sz) {
-  dispatchThreads(size_t(sz.w), size_t(sz.h), 1);
+  dispatchThreads(size_t(sz.w), size_t(sz.h), 1u);
   }
 
 void Encoder<CommandBuffer>::dispatchIndirect(const StorageBuffer& indirect, size_t offset) {

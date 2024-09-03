@@ -444,15 +444,15 @@ struct DxCommandBuffer::FillUAV : Stage {
   FillUAV(DxDevice& dev, DxTexture& image, uint32_t val)
     :dst(image), val(val) {
     auto& allocator = dev.descAlloc;
-    gpu = allocator.alloc    (dst.mips, false);
-    cpu = allocator.allocHost(dst.mips);
+    gpu = allocator.alloc    (dst.mipCnt, false);
+    cpu = allocator.allocHost(dst.mipCnt);
 
     hSize = dev.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-    for(uint32_t i=0; i<dst.mips; ++i) {
+    for(uint32_t i=0; i<dst.mipCnt; ++i) {
       D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
       uint32_t mipLevel = 0;
       desc.Format = dst.format;
-      if(dst.sliceCnt>1) {
+      if(dst.is3D) {
         desc.ViewDimension      = D3D12_UAV_DIMENSION_TEXTURE3D;
         desc.Texture3D.MipSlice = mipLevel;
         desc.Texture3D.WSize    = dst.sliceCnt;
@@ -481,7 +481,7 @@ struct DxCommandBuffer::FillUAV : Stage {
     cmd.impl->SetDescriptorHeaps(1, cmd.curHeaps.heaps);
 
     UINT val4[] = {val,val,val,val};
-    for(uint32_t i=0; i<dst.mips; ++i) {
+    for(uint32_t i=0; i<dst.mipCnt; ++i) {
       auto g = allocator.gpuHandle(gpu);
       auto c = allocator.handle(cpu);
       g.ptr += hSize*i;

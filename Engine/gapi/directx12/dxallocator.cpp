@@ -317,6 +317,7 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
     }
   const auto nonUniqId  = (imageStore) ?  nextId() : NonUniqResId::I_None;
   const bool filterable = (ds.Support1 & D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE);
+  return DxTexture(std::move(ret),resDesc.Format,nonUniqId,resDesc.MipLevels,resDesc.DepthOrArraySize,true,filterable);
   }
 
 void DxAllocator::free(Allocation& page) {
