@@ -1,9 +1,7 @@
 #include "shaderanalyzer.h"
 
 #include <sstream>
-#include <string>
 #include <iostream>
-#include <unordered_set>
 
 std::string ShaderAnalyzer::toStr(ShaderAnalyzer::AccessBits b) {
   if(b==AC_All)
@@ -335,7 +333,7 @@ void ShaderAnalyzer::analyzeFunc(const uint32_t functionCurrent, const libspirv:
       case spv::OpFunction:
         break;
       case spv::OpFunctionParameter: {
-        uint32_t arg = calee[prm+4];
+        uint32_t arg = uint32_t(calee[prm+4]);
         auto& l = registers[i[2]]; // reg
         auto  r = registers[arg];  // input ptr
         // copy pointer info
@@ -398,7 +396,7 @@ void ShaderAnalyzer::analyzeBlock(const uint32_t functionCurrent, const libspirv
           auto  access = (AC_Cond | acExt | v.v.access);
           log("   OpBranchConditional ", toStr(access));
           if((access & (AC_Shared|AC_Output|AC_UAV))!=AC_None) {
-            auto& c = control[code.toOffset(i)];
+            auto& c = control[uint32_t(code.toOffset(i))];
             c.skipFromVs = true;
             }
           if(b[2]!=b[3]) {

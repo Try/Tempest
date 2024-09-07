@@ -3,6 +3,7 @@
 #include "libspirv/libspirv.h"
 
 #include <unordered_map>
+#include <string>
 
 class ShaderAnalyzer {
   public:
