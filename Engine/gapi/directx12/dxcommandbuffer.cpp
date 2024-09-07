@@ -86,11 +86,13 @@ static void toStage(DxDevice& dev, D3D12_BARRIER_SYNC& stage, D3D12_BARRIER_ACCE
     }
 
   if((rs&ResourceAccess::Index)==ResourceAccess::Index) {
-    ret |= D3D12_BARRIER_SYNC_INPUT_ASSEMBLER;
+    // ret |= D3D12_BARRIER_SYNC_INPUT_ASSEMBLER;
+    ret |= D3D12_BARRIER_SYNC_INDEX_INPUT;
     acc |= D3D12_BARRIER_ACCESS_INDEX_BUFFER;
     }
   if((rs&ResourceAccess::Vertex)==ResourceAccess::Vertex) {
-    ret |= D3D12_BARRIER_SYNC_INPUT_ASSEMBLER;
+    // ret |= D3D12_BARRIER_SYNC_INPUT_ASSEMBLER;
+    ret |= D3D12_BARRIER_SYNC_INDEX_INPUT;
     acc |= D3D12_BARRIER_ACCESS_VERTEX_BUFFER;
     }
   if((rs&ResourceAccess::Uniform)==ResourceAccess::Uniform) {
