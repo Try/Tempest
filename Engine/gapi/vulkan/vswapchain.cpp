@@ -353,7 +353,7 @@ VkResult VSwapchain::implAcquireNextImage() {
     return code;
     }
 
-  if(code!=VK_SUCCESS)
+  if(code!=VK_SUCCESS && code!=VK_SUBOPTIMAL_KHR)
     vkAssert(code);
 
   imgIndex   = id;
