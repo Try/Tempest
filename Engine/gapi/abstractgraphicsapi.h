@@ -510,7 +510,6 @@ namespace Tempest {
         virtual IVec3 workGroupSize() const = 0;
         };
       struct Shader:Shared   {};
-      struct Uniforms        {};
       struct PipelineLay:Shared {
         virtual ~PipelineLay()=default;
         virtual size_t descriptorsCount() = 0;
@@ -532,9 +531,7 @@ namespace Tempest {
         Detail::IndexClass icls    = Detail::IndexClass::i32;
         };
       struct BlasBuildCtx {};
-      struct AccelerationStructure:Shared {
-
-        };
+      struct AccelerationStructure:Shared {};
       struct Desc:NoCopy   {
         virtual ~Desc()=default;
         virtual void set    (size_t id, AbstractGraphicsApi::Texture* tex, const Sampler& smp, uint32_t mipLevel)=0;
