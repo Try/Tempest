@@ -102,6 +102,12 @@ TEST(MetalApi,Draw) {
 #endif
   }
 
+TEST(MetalApi,DepthWrite) {
+#if defined(__OSX__)
+  GapiTestCommon::DepthWrite<MetalApi>("MetalApi_DepthWrite.png");
+#endif
+  }
+
 TEST(MetalApi,InstanceIndex) {
 #if defined(__OSX__)
   GapiTestCommon::InstanceIndex<MetalApi>("MetalApi_InstanceIndex.png");
