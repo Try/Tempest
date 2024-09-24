@@ -190,7 +190,8 @@ bool PixmapCodecPng::save(ODevice& f, const char* ext, const uint8_t* data,
       colorType = PNG_COLOR_TYPE_RGB;
       break;
       }
-    case TextureFormat::R16:{
+    case TextureFormat::R16:
+    case TextureFormat::Depth16:{
       bpp       = 2;
       bitDepth  = 16;
       colorType = PNG_COLOR_TYPE_GRAY;

@@ -80,6 +80,9 @@ compile_shader(overlap_test.comp)
 compile_shader(varying_test.frag)
 compile_shader(texel_fetch.comp)
 
+compile_shader(depth_write_test.vert)
+compile_shader(depth_only.frag)
+
 compile_shader(bindless.comp)
 compile_shader(bindless2.comp)
 compile_shader(array_texture.comp)

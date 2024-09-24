@@ -409,6 +409,11 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   depthStencil.depthCompareOp        = nativeFormat(st.zTestMode());
   depthStencil.depthBoundsTestEnable = VK_FALSE;
   depthStencil.stencilTestEnable     = VK_FALSE;
+  if(depthStencil.depthWriteEnable==VK_TRUE && depthStencil.depthTestEnable==VK_FALSE) {
+    // Spec: Depth writes are always disabled when depthTestEnable is VK_FALSE.
+    depthStencil.depthTestEnable = VK_TRUE;
+    depthStencil.depthCompareOp  = VK_COMPARE_OP_ALWAYS;
+    }
 
   VkPipelineTessellationStateCreateInfo tesselation = {};
   tesselation.sType                 = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;

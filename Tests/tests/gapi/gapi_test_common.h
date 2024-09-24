@@ -683,6 +683,58 @@ void Viewport(const char* outImage) {
   }
 
 template<class GraphicsApi>
+void DepthWrite(const char* outImage) {
+  using namespace Tempest;
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto rs    = RenderState();
+    rs.setZTestMode(Tempest::RenderState::ZTestMode::Always);
+    rs.setZWriteEnabled(true);
+
+    auto vert  = device.shader("shader/depth_write_test.vert.sprv");
+    auto frag  = device.shader("shader/depth_only.frag.sprv");
+    auto pso   = device.pipeline(Topology::Triangles,rs,vert,frag);
+
+    auto depth = device.zbuffer(TextureFormat::Depth16,150,150);
+
+    auto cmd   = device.commandBuffer();
+    {
+      float depthDst = 0;
+      auto enc = cmd.startEncoding(device);
+      enc.setFramebuffer({}, {depth, 0.5,Tempest::Preserve});
+
+      depthDst = 0.25f;
+      enc.setUniforms(pso, &depthDst, sizeof(depthDst));
+      enc.setViewport(0,0,50,50);
+      enc.draw(nullptr, 0, 3);
+
+      depthDst = 0.8f;
+      enc.setUniforms(pso, &depthDst, sizeof(depthDst));
+      enc.setViewport(100,100,50,50);
+      enc.draw(nullptr, 0, 3);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    auto pm = device.readPixels(textureCast<Texture2d&>(depth));
+    pm.save(outImage);
+
+    auto ptr = reinterpret_cast<const uint16_t*>(pm.data());
+    EXPECT_EQ(ptr[0],               uint16_t(0.25f*65535+0.5));
+    EXPECT_EQ(ptr[pm.w()*pm.h()-1], uint16_t( 0.8f*65535+0.5));
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void Uniforms(const char* outImage, bool useUbo) {
   using namespace Tempest;
 
@@ -926,8 +978,11 @@ void ComputeImage(const char* outImage) {
     GraphicsApi api{ApiFlags::Validation};
     Device      device(api);
 
-    auto img = device.image2d(TextureFormat::RGBA8,128,128,false);
+    //auto img = device.image2d(TextureFormat::RGBA8,128,128,false);
+    auto img = device.image3d(TextureFormat::RGBA8,128,128,1,false);
     auto pso = device.pipeline(device.shader("shader/image_store_test.comp.sprv"));
+
+    auto& t = textureCast<const Texture2d&>(img); (void)t;
 
     auto ubo = device.descriptors(pso.layout());
     ubo.set(0,img);
@@ -943,8 +998,8 @@ void ComputeImage(const char* outImage) {
     device.submit(cmd,sync);
     sync.wait();
 
-    auto pm = device.readPixels(img);
-    pm.save(outImage);
+    //auto pm = device.readPixels(img);
+    //pm.save(outImage);
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
@@ -2048,7 +2103,9 @@ void DispathIndirect() {
 
   try {
     GraphicsApi api{ApiFlags::Validation};
-    Device      device(api);
+    //const char* dev = "Intel(R) UHD Graphics";
+    const char* dev = "NVIDIA GeForce RTX 3070 Laptop GPU";
+    Device      device(api, dev);
 
     Vec4 inputCpu[3] = {Vec4(0,1,2,3),Vec4(4,5,6,7),Vec4(8,9,10,11)};
 

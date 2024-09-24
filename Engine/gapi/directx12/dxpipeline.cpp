@@ -163,6 +163,27 @@ D3D12_RASTERIZER_DESC DxPipeline::getRaster(const RenderState& st) const {
   return rd;
   }
 
+D3D12_DEPTH_STENCIL_DESC DxPipeline::getDepth(const RenderState& st) const {
+  D3D12_DEPTH_STENCIL_DESC1 ds1 = getDepth1(st);
+  D3D12_DEPTH_STENCIL_DESC  ds  = {};
+  std::memcpy(&ds, &ds1, sizeof(ds)); //binary compatible
+  return ds;
+  }
+
+D3D12_DEPTH_STENCIL_DESC1 DxPipeline::getDepth1(const RenderState& st) const {
+  D3D12_DEPTH_STENCIL_DESC1 ds = {};
+  ds.DepthEnable    = rState.zTestMode()!=RenderState::ZTestMode::Always ? TRUE : FALSE;
+  ds.DepthWriteMask = rState.isZWriteEnabled() ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
+  ds.DepthFunc      = nativeFormat(rState.zTestMode());
+  ds.StencilEnable  = FALSE;
+  if(ds.DepthWriteMask!=D3D12_DEPTH_WRITE_MASK_ZERO && ds.DepthEnable==FALSE) {
+    // Testing: DX seem to behave same as Vulkan, while been undocumented
+    ds.DepthEnable = TRUE;
+    ds.DepthFunc   = D3D12_COMPARISON_FUNC_ALWAYS;
+    }
+  return ds;
+  }
+
 ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& frm) {
   D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
   psoDesc.InputLayout     = { vsInput.get(), UINT(declSize) };
@@ -173,16 +194,17 @@ ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& 
   if(auto sh = findShader(ShaderReflection::Fragment))
     psoDesc.PS = sh->bytecode();
 
-  psoDesc.RasterizerState = getRaster(rState);
-  psoDesc.BlendState      = getBlend (rState);
-  psoDesc.DepthStencilState.DepthEnable    = rState.zTestMode()!=RenderState::ZTestMode::Always ? TRUE : FALSE;
-  psoDesc.DepthStencilState.DepthWriteMask = rState.isZWriteEnabled() ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
-  psoDesc.DepthStencilState.DepthFunc      = nativeFormat(rState.zTestMode());
-  psoDesc.DepthStencilState.StencilEnable  = FALSE;
+  psoDesc.RasterizerState    = getRaster(rState);
+  psoDesc.BlendState         = getBlend (rState);
+  psoDesc.DepthStencilState  = getDepth(rState);
+  psoDesc.SampleMask         = UINT_MAX;
+  psoDesc.SampleDesc.Quality = 0;
+  psoDesc.SampleDesc.Count   = 1;
+  psoDesc.DSVFormat = frm.DSVFormat;
+  psoDesc.NumRenderTargets = frm.NumRenderTargets;
+  for(uint8_t i=0;i<frm.NumRenderTargets;++i)
+    psoDesc.RTVFormats[i] = frm.RTVFormats[i];
 
-  psoDesc.SampleMask            = UINT_MAX;
-  psoDesc.SampleDesc.Quality    = 0;
-  psoDesc.SampleDesc.Count      = 1;
   switch(topology) {
     case D3D_PRIMITIVE_TOPOLOGY_POINTLIST:
       psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
@@ -203,10 +225,6 @@ ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& 
     default:
       assert(0);
     }
-  psoDesc.DSVFormat = frm.DSVFormat;
-  psoDesc.NumRenderTargets = frm.NumRenderTargets;
-  for(uint8_t i=0;i<frm.NumRenderTargets;++i)
-    psoDesc.RTVFormats[i] = frm.RTVFormats[i];
 
   ComPtr<ID3D12PipelineState> ret;
   auto err = device.device->CreateGraphicsPipelineState(&psoDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&ret.get()));
@@ -237,13 +255,11 @@ ComPtr<ID3D12PipelineState> DxPipeline::initMeshPipeline(const DxFboLayout& frm)
   //int x = offsetof(D3DX12_MESH_SHADER_PIPELINE_STATE_DESC, D3DX12_MESH_SHADER_PIPELINE_STATE_DESC::RasterizerState)      - 4;
   //int y = offsetof(D3DX12_MESH_SHADER_PIPELINE_STATE_DESC, D3DX12_MESH_SHADER_PIPELINE_STATE_DESC::SampleMask) - 4;
 
-  psoDesc.BlendState      = getBlend (rState);
-  psoDesc.SampleMask      = UINT_MAX;
-  psoDesc.RasterizerState = getRaster(rState);
-  psoDesc.DepthStencilState.DepthEnable    = rState.zTestMode()!=RenderState::ZTestMode::Always ? TRUE : FALSE;
-  psoDesc.DepthStencilState.DepthWriteMask = rState.isZWriteEnabled() ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
-  psoDesc.DepthStencilState.DepthFunc      = nativeFormat(rState.zTestMode());
-  psoDesc.DepthStencilState.StencilEnable  = FALSE;
+  psoDesc.BlendState        = getBlend (rState);
+  psoDesc.SampleMask        = UINT_MAX;
+  psoDesc.RasterizerState   = getRaster(rState);
+  psoDesc.DepthStencilState = getDepth1(rState);
+
   psoDesc.RTVFormats.NumRenderTargets = frm.NumRenderTargets;
   for(uint8_t i=0;i<frm.NumRenderTargets;++i)
     psoDesc.RTVFormats.RTFormats[i] = frm.RTVFormats[i];

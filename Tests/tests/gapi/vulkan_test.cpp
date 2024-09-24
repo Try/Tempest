@@ -103,6 +103,12 @@ TEST(VulkanApi,Draw) {
 #endif
   }
 
+TEST(VulkanApi,DepthWrite) {
+#if !defined(__OSX__)
+  GapiTestCommon::DepthWrite<VulkanApi>("VulkanApi_DepthWrite.png");
+#endif
+  }
+
 TEST(VulkanApi,InstanceIndex) {
 #if !defined(__OSX__)
   GapiTestCommon::InstanceIndex<VulkanApi>("VulkanApi_InstanceIndex.png");

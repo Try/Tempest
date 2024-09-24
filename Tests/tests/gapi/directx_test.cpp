@@ -122,6 +122,12 @@ TEST(DirectX12Api,Draw) {
 #endif
   }
 
+TEST(DirectX12Api,DepthWrite) {
+#if defined(_MSC_VER)
+  GapiTestCommon::DepthWrite<DirectX12Api>("DirectX12Api_DepthWrite.png");
+#endif
+  }
+
 TEST(DirectX12Api,InstanceIndex) {
 #if defined(_MSC_VER)
   GapiTestCommon::InstanceIndex<DirectX12Api>("DirectX12Api_InstanceIndex.png");
