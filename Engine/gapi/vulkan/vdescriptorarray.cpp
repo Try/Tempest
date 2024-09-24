@@ -271,7 +271,7 @@ void VDescriptorArray::set(size_t id, AbstractGraphicsApi::Texture** t, size_t c
 
   if(!l.runtimeSized) {
     // GLSL compiller issue: bindless array might be demote to bindfull one
-    cnt = std::min<uint32_t>(l.arraySize, cnt);
+    cnt = std::min<uint32_t>(l.arraySize, uint32_t(cnt));
     }
 
   // 16 is non-bindless limit

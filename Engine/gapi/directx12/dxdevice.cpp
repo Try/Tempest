@@ -242,7 +242,7 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, DxProps& pro
   prop.setAtomicFormats (atomBit);
 
   // TODO: buffer limits
-  //prop.vbo.maxRange    = ;
+  //prop.vbo.maxStride    = ;
 
   prop.ssbo.offsetAlign = 256;
   //prop.ssbo.maxRange    = size_t(prop.limits.maxStorageBufferRange);
@@ -270,6 +270,9 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, DxProps& pro
   prop.compute.maxGroupSize.z  = D3D12_CS_THREAD_GROUP_MAX_Z;
   prop.compute.maxInvocations  = D3D12_CS_THREAD_GROUP_MAX_THREADS_PER_GROUP;
   prop.compute.maxSharedMemory = D3D12_CS_TGSM_REGISTER_COUNT*4; // not well documented, assume that this is shared memory
+
+  prop.tex2d.maxSize = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+  prop.tex3d.maxSize = D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
 
   if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) {
     prop.type = DeviceType::Cpu;

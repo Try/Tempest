@@ -447,7 +447,7 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
   std::memcpy(props.name,devP.deviceName,sizeof(props.name));
 
   props.vbo.maxAttribs    = size_t(devP.limits.maxVertexInputAttributes);
-  props.vbo.maxRange      = size_t(devP.limits.maxVertexInputBindingStride);
+  props.vbo.maxStride     = size_t(devP.limits.maxVertexInputBindingStride);
 
   props.ibo.maxValue      = size_t(devP.limits.maxDrawIndexedIndexValue);
 

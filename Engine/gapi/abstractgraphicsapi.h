@@ -381,7 +381,7 @@ namespace Tempest {
 
           struct {
             size_t maxAttribs  = 16;
-            size_t maxRange    = 2047;
+            size_t maxStride   = 2047;
             } vbo;
 
           struct {
