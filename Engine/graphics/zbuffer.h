@@ -21,10 +21,10 @@ class ZBuffer final {
     bool             isEmpty() const { return tImpl.isEmpty(); }
 
   private:
-    ZBuffer(Texture2d&& t, bool sampleFormat):tImpl(std::move(t)), sampleFormat(sampleFormat) {}
+    ZBuffer(Texture2d&& t, bool nonSampleFormat):tImpl(std::move(t)), nonSampleFormat(nonSampleFormat) {}
 
     Texture2d tImpl;
-    bool      sampleFormat=false;
+    bool      nonSampleFormat=false;
 
   friend class Tempest::Device;
   friend class Tempest::DescriptorSet;
@@ -39,21 +39,21 @@ class ZBuffer final {
 
 template<>
 inline Texture2d& textureCast<Texture2d&>(ZBuffer& a) {
-  if(!a.sampleFormat)
+  if(a.nonSampleFormat)
     throw std::bad_cast();
   return a.tImpl;
   }
 
 template<>
 inline const Texture2d& textureCast<const Texture2d&>(ZBuffer& a) {
-  if(!a.sampleFormat)
+  if(a.nonSampleFormat)
     throw std::bad_cast();
   return a.tImpl;
   }
 
 template<>
 inline const Texture2d& textureCast<const Texture2d&>(const ZBuffer& a) {
-  if(!a.sampleFormat)
+  if(a.nonSampleFormat)
     throw std::bad_cast();
   return a.tImpl;
   }

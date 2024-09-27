@@ -141,7 +141,7 @@ ZBuffer Device::zbuffer(TextureFormat frm, const uint32_t w, const uint32_t h) {
   if(w>devProps.tex2d.maxSize || h>devProps.tex2d.maxSize)
     throw std::system_error(Tempest::GraphicsErrc::TooLargeTexture, std::to_string(std::max(w,h)));
   Texture2d t(*this,api.createTexture(dev,w,h,1,frm),w,h,1,frm);
-  return ZBuffer(std::move(t),devProps.hasSamplerFormat(frm));
+  return ZBuffer(std::move(t),!devProps.hasSamplerFormat(frm));
   }
 
 Texture2d Device::texture(const Pixmap &pm, const bool mips) {
