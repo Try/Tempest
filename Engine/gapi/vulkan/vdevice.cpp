@@ -325,6 +325,9 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     VkPhysicalDeviceRobustness2FeaturesEXT robustness2Features = {};
     robustness2Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT;
 
+    VkPhysicalDeviceVulkanMemoryModelFeatures memoryFeatures = {};
+    memoryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES;
+
     if(props.hasSync2) {
       sync2.pNext = features.pNext;
       features.pNext = &sync2;
@@ -363,6 +366,10 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
       }
     if(props.hasStoreOpNone) {
       // no feature bits
+      }
+    if(props.memoryModel) {
+      memoryFeatures.pNext = features.pNext;
+      features.pNext = &memoryFeatures;
       }
 
     auto vkGetPhysicalDeviceFeatures2 = PFN_vkGetPhysicalDeviceFeatures2(vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2KHR"));

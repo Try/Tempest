@@ -371,8 +371,8 @@ namespace Tempest {
 
       class Props {
         public:
-          char       name[256]={};
-          DeviceType type=DeviceType::Unknown;
+          char       name[256] = {};
+          DeviceType type = DeviceType::Unknown;
 
           struct {
             bool firstVertex   = false;
@@ -443,11 +443,14 @@ namespace Tempest {
 
           bool     anisotropy        = false;
           float    maxAnisotropy     = 1.0f;
+
           bool     tesselationShader = false;
           bool     geometryShader    = false;
 
           bool     storeAndAtomicVs  = false;
           bool     storeAndAtomicFs  = false;
+
+          bool     memoryModel       = false;
 
           bool     hasSamplerFormat(TextureFormat f) const;
           bool     hasAttachFormat (TextureFormat f) const;

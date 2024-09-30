@@ -269,6 +269,9 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
   if(checkForExt(ext,VK_KHR_MAINTENANCE_1_EXTENSION_NAME)) {
     props.hasMaintenance1 = true;
     }
+  if(checkForExt(ext,VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME)) {
+    props.memoryModel = true;
+    }
 
   VkPhysicalDeviceProperties devP={};
   vkGetPhysicalDeviceProperties(physicalDevice,&devP);
@@ -337,6 +340,9 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
     VkPhysicalDeviceRobustness2PropertiesEXT rebustness2Props = {};
     rebustness2Props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_PROPERTIES_EXT;
 
+    VkPhysicalDeviceVulkanMemoryModelFeatures memoryFeatures = {};
+    memoryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES;
+
     if(props.hasSync2) {
       sync2.pNext = features.pNext;
       features.pNext = &sync2;
@@ -377,6 +383,10 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
     if(props.hasRobustness2) {
       rebustness2Props.pNext = properties.pNext;
       properties.pNext = &rebustness2Props;
+      }
+    if(props.memoryModel) {
+      memoryFeatures.pNext = features.pNext;
+      features.pNext = &memoryFeatures;
       }
 
     auto vkGetPhysicalDeviceFeatures2   = PFN_vkGetPhysicalDeviceFeatures2  (vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2KHR"));
@@ -441,6 +451,10 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
       props.descriptors.maxStorage = max(props.descriptors.maxStorage,
                                          asProperties.maxDescriptorSetAccelerationStructures,
                                          asProperties.maxPerStageDescriptorAccelerationStructures);
+      }
+
+    if(memoryFeatures.vulkanMemoryModel!=VK_FALSE) {
+      props.memoryModel = true;
       }
     }
 
