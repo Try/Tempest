@@ -11,6 +11,7 @@ using namespace Tempest;
 using namespace Tempest::Detail;
 
 static NsPtr<MTL::Device> mkDevice(std::string_view name) {
+  Log::d("DBG: ",__func__," ",__LINE__);
   if(name.empty())
     return NsPtr<MTL::Device>(MTL::CreateSystemDefaultDevice());
 #if defined(__OSX__)
@@ -37,6 +38,7 @@ static MTL::LanguageVersion languageVersion() {
 
 MtDevice::MtDevice(std::string_view name, bool validation)
   : impl(mkDevice(name)), samplers(*impl), validation(validation) {
+  Log::d("DBG: ",__func__," ",__LINE__);
   if(impl.get()==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
