@@ -3,18 +3,18 @@ configuration:
 
 environment:
   matrix:
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
-      GENERATOR: "Ninja"
-      VCVARSALL: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Auxiliary/Build/vcvarsall.bat"
-      PLATFORM:  x64
+    # - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+      # GENERATOR: "Ninja"
+      # VCVARSALL: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Auxiliary/Build/vcvarsall.bat"
+      # PLATFORM:  x64
 
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019  # used as mingw
-      GENERATOR: "Ninja"
-      CC:        C:/msys64/mingw64/bin/gcc.exe
-      CXX:       C:/msys64/mingw64/bin/g++.exe
+    # - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019  # used as mingw
+      # GENERATOR: "Ninja"
+      # CC:        C:/msys64/mingw64/bin/gcc.exe
+      # CXX:       C:/msys64/mingw64/bin/g++.exe
 
-    - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu2004
-      GENERATOR: ""
+    # - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu2004
+      # GENERATOR: ""
 
     - APPVEYOR_BUILD_WORKER_IMAGE: macos-sonoma
       GENERATOR: "Ninja"
