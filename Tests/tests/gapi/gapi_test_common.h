@@ -43,12 +43,8 @@ void Vbo() {
   using namespace Tempest;
 
   try {
-    Log::d("DBG: ",__func__," ",__LINE__);
     GraphicsApi api{ApiFlags::Validation};
-    Log::d("DBG: ",__func__," ",__LINE__);
-    Log::d("DBG: ",__func__," ",__LINE__, " ", api.devices().size());
     Device      device(api);
-    Log::d("DBG: ",__func__," ",__LINE__);
 
     auto vbo = device.vbo(vboData,3);
     Log::d("DBG: ",__func__," ",__LINE__);
