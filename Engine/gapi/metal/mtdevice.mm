@@ -43,19 +43,16 @@ MtDevice::MtDevice(std::string_view name, bool validation)
 
   if(std::strcmp(impl->name()->utf8String(), "Apple Paravirtual device")==0)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice, "Apple Paravirtual device is not supported");
-
   Log::d("DBG: ",__func__," ",__LINE__);
+
   queue = NsPtr<MTL::CommandQueue>(impl->newCommandQueue());
   if(queue.get()==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
-  Log::d("DBG: ",__func__," ",__LINE__);
 
   mslVersion = languageVersion();
-  Log::d("DBG: ",__func__," ",__LINE__);
   // mslVersion = MTL::LanguageVersion2_2; //testing
   ui32align  = impl->minimumLinearTextureAlignmentForPixelFormat(MTL::PixelFormatR32Uint);
   deductProps(prop,*impl);
-  Log::d("DBG: ",__func__," ",__LINE__);
   }
 
 MtDevice::~MtDevice() {
