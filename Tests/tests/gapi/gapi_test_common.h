@@ -46,6 +46,7 @@ void Vbo() {
     Log::d("DBG: ",__func__," ",__LINE__);
     GraphicsApi api{ApiFlags::Validation};
     Log::d("DBG: ",__func__," ",__LINE__);
+    Log::d("DBG: ",__func__," ",__LINE__, " ", api.devices().size());
     Device      device(api);
     Log::d("DBG: ",__func__," ",__LINE__);
 
