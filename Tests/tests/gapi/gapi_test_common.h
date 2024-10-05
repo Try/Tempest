@@ -47,9 +47,7 @@ void Vbo() {
     Device      device(api);
 
     auto vbo = device.vbo(vboData,3);
-    Log::d("DBG: ",__func__," ",__LINE__);
     auto ibo = device.ibo(iboData,3);
-    Log::d("DBG: ",__func__," ",__LINE__);
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)

@@ -37,13 +37,11 @@ static MTL::LanguageVersion languageVersion() {
 
 MtDevice::MtDevice(std::string_view name, bool validation)
   : impl(mkDevice(name)), samplers(*impl), validation(validation) {
-  Log::d("DBG: ",__func__," ",__LINE__, " ", impl->name()->utf8String());
   if(impl.get()==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
   if(std::strcmp(impl->name()->utf8String(), "Apple Paravirtual device")==0)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice, "Apple Paravirtual device is not supported");
-  Log::d("DBG: ",__func__," ",__LINE__);
 
   queue = NsPtr<MTL::CommandQueue>(impl->newCommandQueue());
   if(queue.get()==nullptr)
