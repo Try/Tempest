@@ -259,7 +259,10 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, DxProps& pro
   prop.storeAndAtomicVs  = true;
   prop.storeAndAtomicFs  = true;
 
-  prop.mrt.maxColorAttachments = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT;
+  prop.render.maxColorAttachments  = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT;
+  prop.render.maxViewportSize.w    = D3D12_VIEWPORT_BOUNDS_MAX;
+  prop.render.maxViewportSize.h    = D3D12_VIEWPORT_BOUNDS_MAX;
+  prop.render.maxClipCullDistances = D3D12_CLIP_OR_CULL_DISTANCE_COUNT;
 
   prop.compute.maxGroups.x    = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;
   prop.compute.maxGroups.y    = D3D12_CS_DISPATCH_MAX_THREAD_GROUPS_PER_DIMENSION;

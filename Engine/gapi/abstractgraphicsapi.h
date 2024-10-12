@@ -403,8 +403,10 @@ namespace Tempest {
             } push;
 
           struct {
-            size_t maxColorAttachments = 1;
-            } mrt;
+            size_t maxColorAttachments  = 1;
+            size_t maxClipCullDistances = 0; // 0 = no support; at least 4 otherwise
+            Size   maxViewportSize      = {4096, 4096};
+            } render;
 
           struct {
             BasicPoint<int,3> maxGroups       = {65535,65535,65535};

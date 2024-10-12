@@ -32,6 +32,12 @@ static const std::initializer_list<const char*> validationLayersLunarg = {
   };
 
 template<class T, class ... Args>
+T min(T t, Args... args) {
+  T ax[] = {t, args...};
+  return *std::min_element(std::begin(ax), std::end(ax));
+  }
+
+template<class T, class ... Args>
 T max(T t, Args... args) {
   T ax[] = {t, args...};
   return *std::max_element(std::begin(ax), std::end(ax));
@@ -269,6 +275,9 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
   if(checkForExt(ext,VK_KHR_MAINTENANCE_1_EXTENSION_NAME)) {
     props.hasMaintenance1 = true;
     }
+  if(checkForExt(ext,VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME)) {
+    props.hasDescriptorBuff = true;
+    }
   if(checkForExt(ext,VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME)) {
     props.memoryModel = true;
     }
@@ -481,7 +490,10 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
   props.storeAndAtomicVs  = supportedFeatures.vertexPipelineStoresAndAtomics;
   props.storeAndAtomicFs  = supportedFeatures.fragmentStoresAndAtomics;
 
-  props.mrt.maxColorAttachments = devP.limits.maxColorAttachments;
+  props.render.maxColorAttachments  = devP.limits.maxColorAttachments;
+  props.render.maxViewportSize.w    = devP.limits.maxViewportDimensions[0];
+  props.render.maxViewportSize.h    = devP.limits.maxViewportDimensions[1];
+  props.render.maxClipCullDistances = min(devP.limits.maxCombinedClipAndCullDistances, devP.limits.maxClipDistances, devP.limits.maxCullDistances);
 
   props.compute.maxGroups.x = devP.limits.maxComputeWorkGroupCount[0];
   props.compute.maxGroups.y = devP.limits.maxComputeWorkGroupCount[1];

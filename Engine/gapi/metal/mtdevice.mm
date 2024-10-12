@@ -193,9 +193,12 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
     prop.tex2d.maxSize = 16384;
     }
 
-  prop.mrt.maxColorAttachments = 4;
+  prop.render.maxColorAttachments = 4;
   if(dev.supportsFamily(MTL::GPUFamilyApple2))
-    prop.mrt.maxColorAttachments = 8;
+    prop.render.maxColorAttachments = 8;
+  props.render.maxViewportSize.w    = 8192;
+  props.render.maxViewportSize.h    = 8192;
+  props.render.maxClipCullDistances = 8;
 
   // https://developer.apple.com/documentation/metal/mtlrendercommandencoder/1515829-setvertexbuffer?language=objc
   prop.vbo.maxAttribs = 31;
