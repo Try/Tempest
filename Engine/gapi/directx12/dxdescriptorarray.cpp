@@ -153,7 +153,7 @@ void DxDescriptorArray::set(size_t id, const Sampler& smp) {
   placeInHeap(device, prm.rgnType, smpPtr, heapOffsetSmp, smp);
   }
 
-void DxDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure* t) {
+void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::AccelerationStructure* t) {
   auto& device     = *lay.handler->dev.device;
   auto& allocator  = lay.handler->dev.descAlloc;
   auto& tlas       = *reinterpret_cast<DxAccelerationStructure*>(t);

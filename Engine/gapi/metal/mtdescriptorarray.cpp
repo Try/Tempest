@@ -44,7 +44,7 @@ void MtDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer *buf, size_t 
   desc[id].length = b.size - offset;
   }
 
-void MtDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure* a) {
+void MtDescriptorArray::set(size_t id, AbstractGraphicsApi::AccelerationStructure* a) {
   auto& as = *reinterpret_cast<MtTopAccelerationStructure*>(a);
   desc[id].val  = as.impl.get();
   desc[id].tlas = &as;

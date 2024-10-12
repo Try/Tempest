@@ -226,7 +226,7 @@ void VDescriptorArray::set(size_t id, const Sampler& smp) {
   vkUpdateDescriptorSets(dev, 1, &descriptorWrite, 0, nullptr);
   }
 
-void VDescriptorArray::setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) {
+void VDescriptorArray::set(size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) {
   VkDevice                dev    = device.device.impl;
   VAccelerationStructure* memory = reinterpret_cast<VAccelerationStructure*>(tlas);
 

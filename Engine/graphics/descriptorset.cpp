@@ -96,7 +96,7 @@ void DescriptorSet::set(size_t layoutBind, const StorageBuffer* const* buf, size
 
 void DescriptorSet::set(size_t layoutBind, const AccelerationStructure& tlas) {
   if(tlas.impl.handler)
-    impl.handler->setTlas(layoutBind,tlas.impl.handler); else
+    impl.handler->set(layoutBind,tlas.impl.handler); else
     throw std::system_error(Tempest::GraphicsErrc::InvalidAccelerationStructure);
   }
 
