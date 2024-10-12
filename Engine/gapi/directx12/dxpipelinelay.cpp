@@ -57,6 +57,11 @@ size_t DxPipelineLay::descriptorsCount() {
   return lay.size();
   }
 
+size_t DxPipelineLay::sizeOfBuffer(size_t layoutBind, size_t arraylen) const {
+  auto& l = lay[layoutBind];
+  return l.byteSize + l.varByteSize*arraylen;
+  }
+
 void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection::PushBlock& pb,
                          bool has_baseVertex_baseInstance) {
   auto&      device   = *dev.device;

@@ -66,6 +66,11 @@ size_t VPipelineLay::descriptorsCount() {
   return lay.size();
   }
 
+size_t VPipelineLay::sizeOfBuffer(size_t layoutBind, size_t arraylen) const {
+  auto& l = lay[layoutBind];
+  return l.byteSize + l.varByteSize*arraylen;
+  }
+
 VPipelineLay::DedicatedLay VPipelineLay::create(const std::vector<uint32_t>& runtimeArrays) {
   std::lock_guard<Detail::SpinLock> guard(syncLay);
 

@@ -1,12 +1,6 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include "../utility/dptr.h"
-#include "../utility/spinlock.h"
-
-#include <cstdint>
-#include <vector>
-#include <memory>
 
 namespace Tempest {
 
@@ -16,6 +10,8 @@ class PipelineLayout final {
   public:
     PipelineLayout(PipelineLayout&& other)=default;
     PipelineLayout& operator = (PipelineLayout&& other)=default;
+
+    size_t sizeOfBuffer(size_t layoutBind, size_t arraylen = 0) const;
 
   private:
     PipelineLayout()=default;

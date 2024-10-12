@@ -21,7 +21,10 @@ class ComputePipeline final {
     ComputePipeline& operator = (ComputePipeline&& other);
 
     bool isEmpty() const { return impl.handler==nullptr; }
-    IVec3 workGroupSize() const;
+
+    IVec3  workGroupSize() const;
+    size_t sizeOfBuffer(size_t layoutBind, size_t arraylen = 0) const;
+
     const PipelineLayout& layout() const { return ulay; }
 
   private:

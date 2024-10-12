@@ -48,6 +48,7 @@ class ShaderReflection final {
       bool            is3DImage    = false;
       uint32_t        arraySize    = 0;
       uint64_t        byteSize     = 0;
+      uint64_t        varByteSize  = 0;
 
       bool            hasSampler() const { return cls==Texture || cls==Sampler; }
 

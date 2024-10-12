@@ -44,6 +44,7 @@ static bool is3dImage(const spirv_cross::SPIRType& t) {
   }
 
 static uint32_t declaredSize(spirv_cross::Compiler& comp, const spirv_cross::SPIRType& t) {
+  assert(t.basetype==spirv_cross::SPIRType::Struct);
   // Offsets can be declared out of order, so we need to deduce the actual size
   // based on last member instead.
   uint32_t member_index = 0;
@@ -56,11 +57,22 @@ static uint32_t declaredSize(spirv_cross::Compiler& comp, const spirv_cross::SPI
       }
     }
 
-  // GLSL: There can only be one array of variable size per SSBO and it has to be the bottommost variable in the block definition.
   size_t size = comp.get_declared_struct_member_size(t, member_index);
   if(size==0)
-    return 0; // runtime sized tail
+    return uint32_t(highest_offset); // runtime sized tail
   return uint32_t(highest_offset + size);
+  }
+
+static uint32_t declaredVarSize(spirv_cross::Compiler& comp, const spirv_cross::SPIRType& t) {
+  for(uint32_t i = 0; i < uint32_t(t.member_types.size()); i++) {
+    // GLSL: There can only be one array of variable size per SSBO.
+    auto &type = comp.get_type(t.member_types[i]);
+    if(type.op!=spv::OpTypeRuntimeArray)
+      continue;
+    const uint32_t sz = comp.type_struct_member_array_stride(t, i);
+    return sz;
+    }
+  return 0;
   }
 
 void ShaderReflection::getVertexDecl(std::vector<Decl::ComponentType>& data, spirv_cross::Compiler& comp) {
@@ -163,6 +175,7 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     b.runtimeSized = isRuntimeSized(t);
     b.arraySize    = arraySize(t);
     b.byteSize     = sz;
+    b.varByteSize  = declaredVarSize(comp, t);
     b.spvId        = resource.id;
     lay.push_back(b);
     }

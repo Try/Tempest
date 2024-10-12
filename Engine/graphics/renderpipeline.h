@@ -21,6 +21,9 @@ class RenderPipeline final {
     RenderPipeline& operator = (RenderPipeline&& other);
 
     bool isEmpty() const { return impl.handler==nullptr; }
+
+    size_t sizeOfBuffer(size_t layoutBind, size_t arraylen = 0) const;
+
     const PipelineLayout& layout() const { return ulay; }
 
   private:

@@ -14,3 +14,7 @@ RenderPipeline &RenderPipeline::operator =(RenderPipeline&& other) {
   impl = std::move(other.impl);
   return *this;
   }
+
+size_t RenderPipeline::sizeOfBuffer(size_t layoutBind, size_t arraylen) const {
+  return ulay.sizeOfBuffer(layoutBind, arraylen);
+  }

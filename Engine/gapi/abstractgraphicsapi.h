@@ -516,6 +516,7 @@ namespace Tempest {
       struct PipelineLay:Shared {
         virtual ~PipelineLay()=default;
         virtual size_t descriptorsCount() = 0;
+        virtual size_t sizeOfBuffer(size_t layoutBind, size_t arraylen) const = 0;
         };
       struct Buffer:Shared   {
         virtual ~Buffer()=default;
@@ -537,18 +538,21 @@ namespace Tempest {
       struct AccelerationStructure:Shared {};
       struct Desc:NoCopy   {
         virtual ~Desc()=default;
-        virtual void set    (size_t id, AbstractGraphicsApi::Texture* tex, const Sampler& smp, uint32_t mipLevel)=0;
-        virtual void set    (size_t id, const Sampler& smp)=0;
-        virtual void set    (size_t id, AbstractGraphicsApi::Buffer*  buf, size_t offset)=0;
-        virtual void setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure*) {}
-        virtual void set    (size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler& smp, uint32_t mipLevel);
-        virtual void set    (size_t id, AbstractGraphicsApi::Buffer**  buf, size_t cnt);
+        virtual void set    (size_t id, AbstractGraphicsApi::Texture* tex, const Sampler& smp, uint32_t mipLevel) = 0;
+        virtual void set    (size_t id, const Sampler& smp) = 0;
+        virtual void set    (size_t id, AbstractGraphicsApi::Buffer*  buf, size_t offset) = 0;
+        virtual void setTlas(size_t id, AbstractGraphicsApi::AccelerationStructure*) = 0;
+        virtual void set    (size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler& smp, uint32_t mipLevel) = 0;
+        virtual void set    (size_t id, AbstractGraphicsApi::Buffer**  buf, size_t cnt) = 0;
         virtual void ssboBarriers(Detail::ResourceState& res, PipelineStage st);
         };
       struct EmptyDesc : Desc {
         void set(size_t, AbstractGraphicsApi::Texture*, const Sampler&, uint32_t){}
         void set(size_t, AbstractGraphicsApi::Buffer*,  size_t){}
         void set(size_t, const Sampler& smp){}
+        void setTlas(size_t, AbstractGraphicsApi::AccelerationStructure*){}
+        void set(size_t, AbstractGraphicsApi::Texture**, size_t, const Sampler&, uint32_t){}
+        void set(size_t, AbstractGraphicsApi::Buffer**, size_t){}
         void ssboBarriers(Detail::ResourceState&,PipelineStage){}
         };
       struct BarrierDesc {

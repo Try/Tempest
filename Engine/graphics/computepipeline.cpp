@@ -20,3 +20,7 @@ IVec3 ComputePipeline::workGroupSize() const {
     return IVec3();
   return impl.handler->workGroupSize();
   }
+
+size_t ComputePipeline::sizeOfBuffer(size_t layoutBind, size_t arraylen) const {
+  return ulay.sizeOfBuffer(layoutBind, arraylen);
+  }
