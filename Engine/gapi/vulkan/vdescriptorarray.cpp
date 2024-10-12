@@ -184,7 +184,7 @@ void VDescriptorArray::set(size_t id, Tempest::AbstractGraphicsApi::Buffer* b, s
   VkDescriptorBufferInfo bufferInfo = {};
   bufferInfo.buffer = buf!=nullptr ? buf->impl : VK_NULL_HANDLE;
   bufferInfo.offset = offset;
-  bufferInfo.range  = buf!=nullptr ? slot.byteSize : VK_WHOLE_SIZE;
+  bufferInfo.range  = (buf!=nullptr && slot.varByteSize==0) ? slot.byteSize : VK_WHOLE_SIZE;
 
   if(!device.props.hasRobustness2 && buf==nullptr) {
     //NOTE1: use of null-handle is not allowed, unless VK_EXT_robustness2

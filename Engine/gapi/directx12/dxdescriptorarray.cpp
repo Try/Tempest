@@ -131,7 +131,7 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer* b, size_t of
     runtimeArrays[id].offset = offset;
     }
 
-  placeInHeap(device, prm.rgnType, descPtr, heapOffset, buf, offset, l.byteSize);
+  placeInHeap(device, prm.rgnType, descPtr, heapOffset, buf, offset, l.varByteSize==0 ? l.byteSize : 0);
 
   uav[id].buf    = b;
   uavUsage.durty = true;
@@ -279,7 +279,8 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** b, size_t c
     if(b[i]==nullptr)
       continue;
     auto* buf = reinterpret_cast<DxBuffer*>(b[i]);
-    placeInHeap(device, prm.rgnType, descPtr, heapOffset + i*descSize, buf, 0, lay.handler->lay[id].byteSize);
+    auto& l   = lay.handler->lay[id];
+    placeInHeap(device, prm.rgnType, descPtr, heapOffset + i*descSize, buf, 0, buf->appSize);
     }
   }
 
