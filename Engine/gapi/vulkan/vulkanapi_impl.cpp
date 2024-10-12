@@ -275,9 +275,6 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
   if(checkForExt(ext,VK_KHR_MAINTENANCE_1_EXTENSION_NAME)) {
     props.hasMaintenance1 = true;
     }
-  if(checkForExt(ext,VK_EXT_DESCRIPTOR_BUFFER_EXTENSION_NAME)) {
-    props.hasDescriptorBuff = true;
-    }
   if(checkForExt(ext,VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME)) {
     props.memoryModel = true;
     }
