@@ -579,7 +579,8 @@ struct SPIRType : IVariant
 		ControlPointArray,
 		Interpolant,
 		Char,
-		Meshlet
+		// MSL specific type, that is used by 'object'(analog of 'task' from glsl) shader.
+		MeshGridProperties
 	};
 
 	// Scalar/vector/matrix support.
@@ -1121,6 +1122,9 @@ struct SPIRVariable : IVariant
 	bool loop_variable = false;
 	// Set to true while we're inside the for loop.
 	bool loop_variable_enable = false;
+
+	// Used to find global LUTs
+	bool is_written_to = false;
 
 	SPIRFunction::Parameter *parameter = nullptr;
 
@@ -1668,6 +1672,8 @@ enum ExtendedDecorations
 	// class that is convertible to the standard matrix type, to work around the
 	// lack of constructors in the 'threadgroup' address space.
 	SPIRVCrossDecorationWorkgroupStruct,
+
+	SPIRVCrossDecorationOverlappingBinding,
 
 	SPIRVCrossDecorationCount
 };

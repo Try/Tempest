@@ -93,6 +93,97 @@ bool Compiler::variable_storage_is_aliased(const SPIRVariable &v)
 	return !is_restrict && (ssbo || image || counter || buffer_reference);
 }
 
+bool Compiler::block_is_control_dependent(const SPIRBlock &block)
+{
+	for (auto &i : block.ops)
+	{
+		auto ops = stream(i);
+		auto op = static_cast<Op>(i.op);
+
+		switch (op)
+		{
+		case OpFunctionCall:
+		{
+			uint32_t func = ops[2];
+			if (function_is_control_dependent(get<SPIRFunction>(func)))
+				return true;
+			break;
+		}
+
+		// Derivatives
+		case OpDPdx:
+		case OpDPdxCoarse:
+		case OpDPdxFine:
+		case OpDPdy:
+		case OpDPdyCoarse:
+		case OpDPdyFine:
+		case OpFwidth:
+		case OpFwidthCoarse:
+		case OpFwidthFine:
+
+		// Anything implicit LOD
+		case OpImageSampleImplicitLod:
+		case OpImageSampleDrefImplicitLod:
+		case OpImageSampleProjImplicitLod:
+		case OpImageSampleProjDrefImplicitLod:
+		case OpImageSparseSampleImplicitLod:
+		case OpImageSparseSampleDrefImplicitLod:
+		case OpImageSparseSampleProjImplicitLod:
+		case OpImageSparseSampleProjDrefImplicitLod:
+		case OpImageQueryLod:
+		case OpImageDrefGather:
+		case OpImageGather:
+		case OpImageSparseDrefGather:
+		case OpImageSparseGather:
+
+		// Anything subgroups
+		case OpGroupNonUniformElect:
+		case OpGroupNonUniformAll:
+		case OpGroupNonUniformAny:
+		case OpGroupNonUniformAllEqual:
+		case OpGroupNonUniformBroadcast:
+		case OpGroupNonUniformBroadcastFirst:
+		case OpGroupNonUniformBallot:
+		case OpGroupNonUniformInverseBallot:
+		case OpGroupNonUniformBallotBitExtract:
+		case OpGroupNonUniformBallotBitCount:
+		case OpGroupNonUniformBallotFindLSB:
+		case OpGroupNonUniformBallotFindMSB:
+		case OpGroupNonUniformShuffle:
+		case OpGroupNonUniformShuffleXor:
+		case OpGroupNonUniformShuffleUp:
+		case OpGroupNonUniformShuffleDown:
+		case OpGroupNonUniformIAdd:
+		case OpGroupNonUniformFAdd:
+		case OpGroupNonUniformIMul:
+		case OpGroupNonUniformFMul:
+		case OpGroupNonUniformSMin:
+		case OpGroupNonUniformUMin:
+		case OpGroupNonUniformFMin:
+		case OpGroupNonUniformSMax:
+		case OpGroupNonUniformUMax:
+		case OpGroupNonUniformFMax:
+		case OpGroupNonUniformBitwiseAnd:
+		case OpGroupNonUniformBitwiseOr:
+		case OpGroupNonUniformBitwiseXor:
+		case OpGroupNonUniformLogicalAnd:
+		case OpGroupNonUniformLogicalOr:
+		case OpGroupNonUniformLogicalXor:
+		case OpGroupNonUniformQuadBroadcast:
+		case OpGroupNonUniformQuadSwap:
+
+		// Control barriers
+		case OpControlBarrier:
+			return true;
+
+		default:
+			break;
+		}
+	}
+
+	return false;
+}
+
 bool Compiler::block_is_pure(const SPIRBlock &block)
 {
 	// This is a global side effect of the function.
@@ -247,16 +338,19 @@ string Compiler::to_name(uint32_t id, bool allow_alias) const
 bool Compiler::function_is_pure(const SPIRFunction &func)
 {
 	for (auto block : func.blocks)
-	{
 		if (!block_is_pure(get<SPIRBlock>(block)))
-		{
-			//fprintf(stderr, "Function %s is impure!\n", to_name(func.self).c_str());
 			return false;
-		}
-	}
 
-	//fprintf(stderr, "Function %s is pure!\n", to_name(func.self).c_str());
 	return true;
+}
+
+bool Compiler::function_is_control_dependent(const SPIRFunction &func)
+{
+	for (auto block : func.blocks)
+		if (block_is_control_dependent(get<SPIRBlock>(block)))
+			return true;
+
+	return false;
 }
 
 void Compiler::register_global_read_dependencies(const SPIRBlock &block, uint32_t id)
@@ -1227,7 +1321,7 @@ const SPIRType &Compiler::get_pointee_type(uint32_t type_id) const
 
 uint32_t Compiler::get_variable_data_type_id(const SPIRVariable &var) const
 {
-	if (var.phi_variable)
+	if (var.phi_variable || var.storage == spv::StorageClass::StorageClassAtomicCounter)
 		return var.basetype;
 	return get_pointee_type_id(var.basetype);
 }
@@ -1754,6 +1848,11 @@ const SmallVector<SPIRBlock::Case> &Compiler::get_case_list(const SPIRBlock &blo
 	if (const auto *constant = maybe_get<SPIRConstant>(block.condition))
 	{
 		const auto &type = get<SPIRType>(constant->constant_type);
+		width = type.width;
+	}
+	else if (const auto *op = maybe_get<SPIRConstantOp>(block.condition))
+	{
+		const auto &type = get<SPIRType>(op->basetype);
 		width = type.width;
 	}
 	else if (const auto *var = maybe_get<SPIRVariable>(block.condition))
@@ -3335,13 +3434,11 @@ bool Compiler::AnalyzeVariableScopeAccessHandler::handle_terminator(const SPIRBl
 bool Compiler::AnalyzeVariableScopeAccessHandler::handle(spv::Op op, const uint32_t *args, uint32_t length)
 {
 	// Keep track of the types of temporaries, so we can hoist them out as necessary.
-	uint32_t result_type, result_id;
+	uint32_t result_type = 0, result_id = 0;
 	if (compiler.instruction_to_result_type(result_type, result_id, op, args, length))
 	{
 		// For some opcodes, we will need to override the result id.
 		// If we need to hoist the temporary, the temporary type is the input, not the result.
-		// FIXME: This will likely break with OpCopyObject + hoisting, but we'll have to
-		// solve it if we ever get there ...
 		if (op == OpConvertUToAccelerationStructureKHR)
 		{
 			auto itr = result_id_to_type.find(args[2]);
@@ -3450,6 +3547,13 @@ bool Compiler::AnalyzeVariableScopeAccessHandler::handle(spv::Op op, const uint3
 
 	case OpCopyObject:
 	{
+		// OpCopyObject copies the underlying non-pointer type, 
+		// so any temp variable should be declared using the underlying type.
+		// If the type is a pointer, get its base type and overwrite the result type mapping.
+		auto &type = compiler.get<SPIRType>(result_type);
+		if (type.pointer)
+			result_id_to_type[result_id] = type.parent_type;
+
 		if (length < 3)
 			return false;
 
@@ -3731,6 +3835,14 @@ void Compiler::find_function_local_luts(SPIRFunction &entry, const AnalyzeVariab
 		auto &var = get<SPIRVariable>(accessed_var.first);
 		auto &type = expression_type(accessed_var.first);
 
+		// First check if there are writes to the variable. Later, if there are none, we'll
+		// reconsider it as globally accessed LUT.
+		if (!var.is_written_to)
+		{
+			var.is_written_to = handler.complete_write_variables_to_block.count(var.self) != 0 ||
+			                    handler.partial_write_variables_to_block.count(var.self) != 0;
+		}
+
 		// Only consider function local variables here.
 		// If we only have a single function in our CFG, private storage is also fine,
 		// since it behaves like a function local variable.
@@ -3755,8 +3867,7 @@ void Compiler::find_function_local_luts(SPIRFunction &entry, const AnalyzeVariab
 			static_constant_expression = var.initializer;
 
 			// There can be no stores to this variable, we have now proved we have a LUT.
-			if (handler.complete_write_variables_to_block.count(var.self) != 0 ||
-			    handler.partial_write_variables_to_block.count(var.self) != 0)
+			if (var.is_written_to)
 				continue;
 		}
 		else
@@ -4423,11 +4534,9 @@ bool Compiler::ActiveBuiltinHandler::handle(spv::Op opcode, const uint32_t *args
 		for (uint32_t i = 0; i < count; i++)
 		{
 			// Pointers
+			// PtrAccessChain functions more like a pointer offset. Type remains the same.
 			if (opcode == OpPtrAccessChain && i == 0)
-			{
-				type = &compiler.get<SPIRType>(type->parent_type);
 				continue;
-			}
 
 			// Arrays
 			if (!type->array.empty())
@@ -4612,6 +4721,29 @@ void Compiler::build_function_control_flow_graphs_and_analyze()
 				for (auto loop_variable : b.loop_variables)
 					get<SPIRVariable>(loop_variable).loop_variable = false;
 				b.loop_variables.clear();
+			}
+		}
+	}
+
+	// Find LUTs which are not function local. Only consider this case if the CFG is multi-function,
+	// otherwise we treat Private as Function trivially.
+	// Needs to be analyzed from the outside since we have to block the LUT optimization if at least
+	// one function writes to it.
+	if (!single_function)
+	{
+		for (auto &id : global_variables)
+		{
+			auto &var = get<SPIRVariable>(id);
+			auto &type = get_variable_data_type(var);
+
+			if (is_array(type) && var.storage == StorageClassPrivate &&
+			    var.initializer && !var.is_written_to &&
+			    ir.ids[var.initializer].get_type() == TypeConstant)
+			{
+				get<SPIRConstant>(var.initializer).is_used_as_lut = true;
+				var.static_expression = var.initializer;
+				var.statically_assigned = true;
+				var.remapped_variable = true;
 			}
 		}
 	}

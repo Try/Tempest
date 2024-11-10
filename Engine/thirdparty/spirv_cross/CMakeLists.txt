@@ -28,6 +28,9 @@ if (${CMAKE_VERSION} VERSION_GREATER "3.0.1")
 	cmake_policy(SET CMP0048 NEW)
 endif()
 
+# Avoid error on Android NDK 27+'s CMake files
+cmake_policy(SET CMP0057 NEW)
+
 project(SPIRV-Cross LANGUAGES CXX C)
 enable_testing()
 
@@ -243,7 +246,7 @@ set(spirv-cross-util-sources
 		${CMAKE_CURRENT_SOURCE_DIR}/spirv_cross_util.hpp)
 
 set(spirv-cross-abi-major 0)
-set(spirv-cross-abi-minor 59)
+set(spirv-cross-abi-minor 64)
 set(spirv-cross-abi-patch 0)
 set(SPIRV_CROSS_VERSION ${spirv-cross-abi-major}.${spirv-cross-abi-minor}.${spirv-cross-abi-patch})
 
