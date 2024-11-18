@@ -202,6 +202,9 @@ uint32_t CompilerMSL::get_resource_array_size(const SPIRType &type, uint32_t id)
 {
 	uint32_t array_size = to_array_size_literal(type);
 
+	if (id == 0)
+		return array_size;
+
 	// If we have argument buffers, we need to honor the ABI by using the correct array size
 	// from the layout. Only use shader declared size if we're not using argument buffers.
 	uint32_t desc_set = get_decoration(id, DecorationDescriptorSet);
@@ -13060,7 +13063,11 @@ string CompilerMSL::member_attribute_qualifier(const SPIRType &type, uint32_t in
 			{
 				if (!quals.empty())
 					quals += ", ";
-				if (has_member_decoration(type.self, index, DecorationNoPerspective) || builtin == BuiltInBaryCoordNoPerspKHR)
+
+				if (builtin == BuiltInBaryCoordNoPerspKHR || builtin == BuiltInBaryCoordKHR)
+					SPIRV_CROSS_THROW("Centroid interpolation not supported for barycentrics in MSL.");
+
+				if (has_member_decoration(type.self, index, DecorationNoPerspective))
 					quals += "centroid_no_perspective";
 				else
 					quals += "centroid_perspective";
@@ -13069,7 +13076,11 @@ string CompilerMSL::member_attribute_qualifier(const SPIRType &type, uint32_t in
 			{
 				if (!quals.empty())
 					quals += ", ";
-				if (has_member_decoration(type.self, index, DecorationNoPerspective) || builtin == BuiltInBaryCoordNoPerspKHR)
+
+				if (builtin == BuiltInBaryCoordNoPerspKHR || builtin == BuiltInBaryCoordKHR)
+					SPIRV_CROSS_THROW("Sample interpolation not supported for barycentrics in MSL.");
+
+				if (has_member_decoration(type.self, index, DecorationNoPerspective))
 					quals += "sample_no_perspective";
 				else
 					quals += "sample_perspective";
@@ -18793,6 +18804,7 @@ void CompilerMSL::analyze_argument_buffers()
 
 		uint32_t member_index = 0;
 		uint32_t next_arg_buff_index = 0;
+		uint32_t prev_was_scalar_on_array_offset = 0;
 		for (auto &resource : resources)
 		{
 			auto &var = *resource.var;
@@ -18805,7 +18817,9 @@ void CompilerMSL::analyze_argument_buffers()
 			// member_index and next_arg_buff_index are incremented when padding members are added.
 			if (msl_options.pad_argument_buffer_resources && resource.plane == 0 && resource.overlapping_var_id == 0)
 			{
-				auto rez_bind = get_argument_buffer_resource(desc_set, next_arg_buff_index);
+				auto rez_bind = get_argument_buffer_resource(desc_set, next_arg_buff_index - prev_was_scalar_on_array_offset);
+				rez_bind.count -= prev_was_scalar_on_array_offset;
+
 				while (resource.index > next_arg_buff_index)
 				{
 					switch (rez_bind.basetype)
@@ -18844,12 +18858,19 @@ void CompilerMSL::analyze_argument_buffers()
 
 					// After padding, retrieve the resource again. It will either be more padding, or the actual resource.
 					rez_bind = get_argument_buffer_resource(desc_set, next_arg_buff_index);
+					prev_was_scalar_on_array_offset = 0;
 				}
 
+				uint32_t count = rez_bind.count;
+
+				// If the current resource is an array in the descriptor, but is a scalar
+				// in the shader, only the first element will be consumed. The next pass
+				// will add a padding member to consume the remaining array elements.
+				if (count > 1 && type.array.empty())
+					count = prev_was_scalar_on_array_offset = 1;
+
 				// Adjust the number of slots consumed by current member itself.
-				// Use the count value from the app, instead of the shader, in case the
-				// shader is only accessing part, or even one element, of the array.
-				next_arg_buff_index += resource.plane_count * rez_bind.count;
+				next_arg_buff_index += resource.plane_count * count;
 			}
 
 			string mbr_name = ensure_valid_name(resource.name, "m");
@@ -19194,7 +19215,7 @@ void CompilerMSL::emit_mesh_outputs()
 	end_scope();
 	statement("spvMesh.set_primitive_count(spvMeshSizes.y);");
 
-	statement("const uint spvThreadCount = (gl_WorkGroupSize.x * gl_WorkGroupSize.y * gl_WorkGroupSize.z);");
+	statement("const uint spvThreadCount [[maybe_unused]] = (gl_WorkGroupSize.x * gl_WorkGroupSize.y * gl_WorkGroupSize.z);");
 
 	if (mesh_out_per_vertex != 0)
 	{
@@ -19219,7 +19240,7 @@ void CompilerMSL::emit_mesh_outputs()
 			uint32_t orig_id = get_extended_member_decoration(type_vert.self, index, SPIRVCrossDecorationInterfaceMemberIndex);
 
 			// Clip/cull distances are special-case
-			if (orig_id == (~0u))
+			if (orig_var == 0 && orig_id == (~0u))
 				continue;
 
 			auto &orig = get<SPIRVariable>(orig_var);
