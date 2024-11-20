@@ -32,7 +32,11 @@ class Sound final {
 
     struct Data {
       ~Data();
-      uint32_t buffer = 0;
+      uint32_t                frequency = 0;
+      int32_t                 format    = 0;
+      uint32_t                byteSize  = 0;
+      std::unique_ptr<char[]> ptr;
+
       uint64_t timeLength() const;
       };
     std::shared_ptr<Data> data;

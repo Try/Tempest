@@ -18,30 +18,41 @@ struct SoundEffect::Impl {
     BUFSZ   = 4096
     };
 
-  Impl()=default;
+  Impl() = default;
 
   Impl(SoundDevice &dev, const Sound &src)
-    :dev(&dev), data(src.data) {
+      :dev(&dev), data(src.data) {
     if(data==nullptr)
       return;
-    ALCcontext* ctx = context();
+    ALCcontext* ctx  = context();
+    ALsizei     freq = src.data->frequency;
+    ALenum      frm  = src.data->format;
+    void*       data = src.data->ptr.get();
+    ALsizei     size = src.data->byteSize;
 
-    auto guard = SoundDevice::globalLock(); // for alGetError
-    alGenSourcesDirect(ctx, 1, &source);
-    alSourceiDirect(ctx, source, AL_BUFFER, data->buffer);
-    alSourceiDirect(ctx, source, AL_SOURCE_SPATIALIZE_SOFT, AL_TRUE);
-    if(alGetErrorDirect(ctx)!=AL_NO_ERROR)
+    alGenBuffersDirect(ctx, 1, &stream);
+    alBufferDataStaticDirect(ctx, stream, frm, data, size, freq);
+    if(alGetErrorDirect(ctx)!=AL_NO_ERROR) {
       throw std::bad_alloc();
+      }
+
+    alGenSourcesDirect(ctx, 1, &source);
+    if(alGetErrorDirect(ctx)!=AL_NO_ERROR) {
+      alDeleteBuffersDirect(ctx, 1, &stream);
+      throw std::bad_alloc();
+      }
+
+    alSourceiDirect(ctx, source, AL_BUFFER, stream);
+    alSourcefDirect(ctx, source, AL_REFERENCE_DISTANCE, 0);
     }
 
   Impl(SoundDevice &dev, std::unique_ptr<SoundProducer> &&psrc)
     :dev(&dev), data(nullptr), producer(std::move(psrc)) {
-    SoundProducer& src    = *producer;
-    ALsizei        freq   = src.frequency;
-    ALenum         frm    = src.channels==2 ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16;
-    ALCcontext*    ctx    = reinterpret_cast<ALCcontext*>(dev.context());
+    SoundProducer& src  = *producer;
+    ALsizei        freq = src.frequency;
+    ALenum         frm  = src.channels==2 ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16;
+    ALCcontext*    ctx  = reinterpret_cast<ALCcontext*>(dev.context());
 
-    auto guard = SoundDevice::globalLock(); // for alGetError
     alGenBuffersDirect(ctx, 1, &stream);
     alBufferCallbackDirectSOFT(ctx, stream, frm, freq, bufferCallback, this);
     if(alGetErrorDirect(ctx)!=AL_NO_ERROR) {
@@ -61,8 +72,8 @@ struct SoundEffect::Impl {
   ~Impl() {
     if(source==0)
       return;
-    auto* ctx    = reinterpret_cast<ALCcontext*>(dev->context());
 
+    auto* ctx = reinterpret_cast<ALCcontext*>(dev->context());
     alSourcePausevDirect(ctx, 1, &source);
     alDeleteSourcesDirect(ctx, 1, &source);
     if(stream!=0) {

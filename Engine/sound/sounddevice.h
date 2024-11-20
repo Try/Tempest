@@ -4,7 +4,6 @@
 
 #include <vector>
 #include <memory>
-#include <mutex>
 
 namespace Tempest {
 
@@ -51,14 +50,7 @@ class SoundDevice final {
 
     std::unique_ptr<Data> data;
 
-    void*                               context();
-#if 0
-    struct BufferContext;
-    void*                               bufferContext();
-    static void*                        bufferContextSt();
-#endif
-
-    static std::unique_lock<std::mutex> globalLock();
+    void*  context();
 
   friend class Sound;
   friend class SoundEffect;

@@ -250,22 +250,4 @@ void* SoundDevice::context() {
   return data->context;
   }
 
-#if 0
-void* SoundDevice::bufferContext() {
-  auto& d = PhysicalDeviceList::inst().buf;
-  return d.ctx;
-  }
-
-void* SoundDevice::bufferContextSt() {
-  auto& d = PhysicalDeviceList::inst().buf;
-  return d.ctx;
-  }
-#endif
-
-std::unique_lock<std::mutex> SoundDevice::globalLock() {
-  static std::mutex gil;
-  std::unique_lock<std::mutex> g(gil);
-  return g;
-  }
-
 #endif

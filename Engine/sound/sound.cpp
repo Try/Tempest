@@ -8,6 +8,7 @@
 #include <Tempest/File>
 #include <Tempest/Except>
 
+#include <cassert>
 #include <cstring>
 #include <algorithm>
 
@@ -16,6 +17,34 @@
 #include <AL/alext.h>
 
 using namespace Tempest;
+
+static uint8_t channelsCount(int frm) {
+  switch (frm) {
+    case AL_FORMAT_MONO8:
+    case AL_FORMAT_MONO16:
+      return 1;
+    case AL_FORMAT_STEREO8:
+    case AL_FORMAT_STEREO16:
+      return 2;
+    default:
+      assert(0);
+    }
+  return 0;
+  }
+
+static uint8_t bitrate(int frm) {
+  switch (frm) {
+    case AL_FORMAT_MONO8:
+    case AL_FORMAT_STEREO8:
+      return 8;
+    case AL_FORMAT_MONO16:
+    case AL_FORMAT_STEREO16:
+      return 16;
+    default:
+      assert(0);
+    }
+  return 0;
+  }
 
 struct Sound::Header final {
   char     id[4];
@@ -58,30 +87,14 @@ const int32_t Sound::indexTable[] = {
   -1, -1, -1, -1, 2, 4, 6, 8
   };
 
-Sound::Data::~Data() {
-#if 1
-  alDeleteBuffersDirect(nullptr, 1, &buffer);
-#else
-  auto ctx = reinterpret_cast<ALCcontext*>(SoundDevice::bufferContextSt());
-  alDeleteBuffersDirect(ctx, 1,&buffer);
-#endif
-  }
+Sound::Data::~Data() {}
 
 uint64_t Sound::Data::timeLength() const {
   ALint size=0, fr=0, bits=0, channels=0;
-
-#if 1
-  alGetBufferiDirect(nullptr, buffer, AL_SIZE,      &size);
-  alGetBufferiDirect(nullptr, buffer, AL_BITS,      &bits);
-  alGetBufferiDirect(nullptr, buffer, AL_CHANNELS,  &channels);
-  alGetBufferiDirect(nullptr, buffer, AL_FREQUENCY, &fr);
-#else
-  auto ctx = reinterpret_cast<ALCcontext*>(SoundDevice::bufferContextSt());
-  alGetBufferiDirect(ctx, buffer, AL_SIZE,      &size);
-  alGetBufferiDirect(ctx, buffer, AL_BITS,      &bits);
-  alGetBufferiDirect(ctx, buffer, AL_CHANNELS,  &channels);
-  alGetBufferiDirect(ctx, buffer, AL_FREQUENCY, &fr);
-#endif
+  size     = byteSize;
+  fr       = frequency;
+  bits     = bitrate(format);
+  channels = channelsCount(format);
 
   if(channels<=0 || fr<=0)
     return 0;
@@ -117,55 +130,13 @@ Sound::Sound(IDevice& f) {
   }
 
 void Sound::initData(const char* bytes, int format, size_t size, size_t rate) {
-#if 1
-  uint32_t b = 0;
-  if(alGenBuffersDirect(nullptr, 1, &b)!=AL_NO_ERROR) {
-    throw std::bad_alloc();
-    }
-
-  if(alBufferDataDirect(nullptr, b, format, bytes, int(size), int(rate))!=AL_NO_ERROR) {
-    alDeleteBuffersDirect(nullptr, 1, &b);
-    throw std::bad_alloc();
-    }
-
   auto d = std::make_shared<Data>();
-  d->buffer = b;
+  d->ptr.reset(new char[size]);
+  d->byteSize  = size;
+  d->frequency = rate;
+  d->format    = format;
+  std::memcpy(d->ptr.get(), bytes, size);
   data      = d;
-#elif 0
-  uint32_t b = 0;
-  if(alGenBuffersHost(1, &b)!=AL_NO_ERROR) {
-    throw std::bad_alloc();
-    }
-
-  if(alBufferDataHost(b, format, bytes, int(size), int(rate))!=AL_NO_ERROR) {
-    alDeleteBuffersHost(1, &b);
-    throw std::bad_alloc();
-    }
-
-  auto d = std::make_shared<Data>();
-  d->buffer = b;
-  data      = d;
-#else
-
-  auto guard = SoundDevice::globalLock(); // for alGetError
-  auto ctx = reinterpret_cast<ALCcontext*>(SoundDevice::bufferContextSt());
-
-  uint32_t b = 0;
-  alGenBuffersDirect(ctx, 1,&b);
-  if(alGetErrorDirect(ctx)!=AL_NO_ERROR) {
-    throw std::bad_alloc();
-    }
-
-  alBufferDataDirect(ctx, b, format, bytes, int(size), int(rate));
-  if(alGetErrorDirect(ctx)!=AL_NO_ERROR) {
-    alDeleteBuffersDirect(ctx, 1, &b);
-    throw std::bad_alloc();
-    }
-
-  auto d = std::make_shared<Data>();
-  d->buffer = b;
-  data      = d;
-#endif
   }
 
 bool Sound::isEmpty() const {
