@@ -318,7 +318,7 @@ Pixmap::Pixmap(const char* path) {
   impl.reset(new Impl(f));
   }
 
-Pixmap::Pixmap(const std::string &path) {
+Pixmap::Pixmap(std::string_view path) {
   RFile f(path);
   impl.reset(new Impl(f));
   }
@@ -328,7 +328,7 @@ Pixmap::Pixmap(const char16_t *path) {
   impl.reset(new Impl(f));
   }
 
-Pixmap::Pixmap(const std::u16string &path) {
+Pixmap::Pixmap(std::u16string_view path) {
   RFile f(path);
   impl.reset(new Impl(f));
   }

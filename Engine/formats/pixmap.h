@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <string>
+#include <string_view>
 
 #include <Tempest/AbstractGraphicsApi>
 
@@ -15,11 +15,11 @@ class Pixmap final {
     Pixmap();
     Pixmap(const Pixmap& src, TextureFormat conv);
     Pixmap(uint32_t w, uint32_t h, TextureFormat frm);
-    Pixmap(const char* path);
-    Pixmap(const std::string& path);
-    Pixmap(const char16_t* path);
-    Pixmap(const std::u16string& path);
-    Pixmap(IDevice& input);
+    Pixmap(const char*         path);
+    Pixmap(std::string_view    path);
+    Pixmap(const char16_t*     path);
+    Pixmap(std::u16string_view path);
+    Pixmap(IDevice&            input);
 
     Pixmap(const Pixmap& src);
     Pixmap(Pixmap&& p);
@@ -29,7 +29,7 @@ class Pixmap final {
     ~Pixmap();
 
     void        save(const char* path, const char* ext=nullptr) const;
-    void        save(ODevice&    fout, const char *ext=nullptr) const;
+    void        save(ODevice&    fout, const char* ext=nullptr) const;
 
     uint32_t    w()   const;
     uint32_t    h()   const;
