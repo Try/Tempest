@@ -2,16 +2,16 @@
 
 #include <Tempest/IDevice>
 #include <Tempest/Platform>
-#include <string>
+#include <string_view>
 
 namespace Tempest {
 
 class RFile : public Tempest::IDevice {
   public:
-    explicit RFile(const char*     path);
-    explicit RFile(const std::string& path);
-    explicit RFile(const char16_t* path);
-    explicit RFile(const std::u16string& path);
+    explicit RFile(const char*         path);
+    explicit RFile(std::string_view    path);
+    explicit RFile(const char16_t*     path);
+    explicit RFile(std::u16string_view path);
     RFile(RFile&& other);
     ~RFile() override;
 
