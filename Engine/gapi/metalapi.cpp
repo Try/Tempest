@@ -66,10 +66,6 @@ AbstractGraphicsApi::Device* MetalApi::createDevice(std::string_view gpuName) {
   return new MtDevice(gpuName,validation);
   }
 
-void MetalApi::destroy(AbstractGraphicsApi::Device *d) {
-  delete d;
-  }
-
 AbstractGraphicsApi::Swapchain *MetalApi::createSwapchain(SystemApi::Window *w,
                                                           AbstractGraphicsApi::Device* d) {
   auto& dev = *reinterpret_cast<MtDevice*>(d);

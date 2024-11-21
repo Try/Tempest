@@ -17,7 +17,6 @@ class VulkanApi : public AbstractGraphicsApi {
 
   protected:
     Device*        createDevice(std::string_view gpuName) override;
-    void           destroy(Device* d) override;
 
     Swapchain*     createSwapchain(SystemApi::Window* w, Device *d) override;
 

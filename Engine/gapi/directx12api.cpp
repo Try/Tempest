@@ -155,10 +155,6 @@ AbstractGraphicsApi::Device* DirectX12Api::createDevice(std::string_view gpuName
   return impl->createDevice(gpuName);
   }
 
-void DirectX12Api::destroy(AbstractGraphicsApi::Device* d) {
-  delete d;
-  }
-
 AbstractGraphicsApi::Swapchain* DirectX12Api::createSwapchain(SystemApi::Window* w, AbstractGraphicsApi::Device* d) {
   auto* dx = reinterpret_cast<Detail::DxDevice*>(d);
   return new Detail::DxSwapchain(*dx,*impl->DXGIFactory,w);

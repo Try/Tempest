@@ -55,7 +55,7 @@ Device::Impl::Impl(AbstractGraphicsApi& api, DeviceType type)
   }
 
 Device::Impl::~Impl() {
-  api.destroy(dev);
+  delete dev;
   }
 
 Device::Device(AbstractGraphicsApi& api)

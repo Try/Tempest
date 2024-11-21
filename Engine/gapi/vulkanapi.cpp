@@ -46,11 +46,6 @@ AbstractGraphicsApi::Device *VulkanApi::createDevice(std::string_view gpuName) {
   return new VDevice(*impl,gpuName);
   }
 
-void VulkanApi::destroy(AbstractGraphicsApi::Device *d) {
-  Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
-  delete dx;
-  }
-
 AbstractGraphicsApi::Swapchain *VulkanApi::createSwapchain(SystemApi::Window *w,AbstractGraphicsApi::Device *d) {
   Detail::VDevice* dx   = reinterpret_cast<Detail::VDevice*>(d);
   return new Detail::VSwapchain(*dx,w);

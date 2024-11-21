@@ -630,7 +630,6 @@ namespace Tempest {
 
     protected:
       virtual Device*    createDevice(std::string_view gpuName) = 0;
-      virtual void       destroy(Device* d) = 0;
 
       virtual Swapchain* createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d) = 0;
 
