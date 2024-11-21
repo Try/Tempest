@@ -8,6 +8,7 @@
 #include <Tempest/Pixmap>
 #include <Tempest/Except>
 
+#include <string>
 #include <cassert>
 
 using namespace Tempest;
