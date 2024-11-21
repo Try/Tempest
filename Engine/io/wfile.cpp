@@ -2,6 +2,7 @@
 
 #include <Tempest/Except>
 #include <Tempest/TextCodec>
+#include "utility/smallarray.h"
 
 #ifdef __WINDOWS__
 #include <windows.h>
@@ -9,26 +10,40 @@
 #include <cstdio>
 #endif
 
-#include <stdexcept>
+#include <cstring>
+#include <system_error>
 
 using namespace Tempest;
 
 WFile::WFile(const char *name) {
 #ifdef __WINDOWS__
   std::wstring path;
-  const int len=MultiByteToWideChar(CP_UTF8,0,name,-1,nullptr,0);
+  const int len = MultiByteToWideChar(CP_UTF8,0,name,-1,nullptr,0);
   if(len>1){
     path.resize(size_t(len-1));
     MultiByteToWideChar(CP_UTF8,0,name,-1,&path[0],int(path.size()));
     }
-  handle=implOpen(path.c_str());
+  handle = implOpen(path.c_str());
 #else
-  handle=implOpen(name);
+  handle = implOpen(name);
 #endif
   }
 
-WFile::WFile(const std::string &path)
-  :WFile(path.c_str()){
+WFile::WFile(std::string_view name) {
+#ifdef __WINDOWS__
+  std::wstring path;
+  const int len = MultiByteToWideChar(CP_UTF8,0,name.data(),int(name.size())+1,nullptr,0);
+  if(len>1){
+    path.resize(size_t(len-1));
+    MultiByteToWideChar(CP_UTF8,0,name.data(),int(name.size())+1,&path[0],int(path.size()));
+    }
+  handle = implOpen(path.c_str());
+#else
+  Detail::SmallArray<char,256> path(name.size()+1);
+  std::memcpy(path.get(), name.data(), name.size()*sizeof(char));
+  path[name.size()] = '\0';
+  handle = implOpen(path.get());
+#endif
   }
 
 WFile::WFile(const char16_t *path) {
@@ -39,8 +54,15 @@ WFile::WFile(const char16_t *path) {
 #endif
   }
 
-WFile::WFile(const std::u16string &path)
-  :WFile(path.c_str()){
+WFile::WFile(std::u16string_view name) {
+#ifdef __WINDOWS__
+  Detail::SmallArray<wchar_t,256> path(name.size()+1);
+  std::memcpy(path.get(), name.data(), name.size()*sizeof(wchar_t));
+  path[name.size()] = '\0';
+  handle = implOpen(path.get());
+#else
+  handle = implOpen(TextCodec::toUtf8(name).c_str());
+#endif
   }
 
 WFile::WFile(WFile &&other)

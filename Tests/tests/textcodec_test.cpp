@@ -5,8 +5,6 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock-matchers.h>
 
-#include <cstring>
-
 using namespace testing;
 using namespace Tempest;
 

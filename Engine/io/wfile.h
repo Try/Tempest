@@ -2,16 +2,16 @@
 
 #include <Tempest/ODevice>
 #include <Tempest/Platform>
-#include <string>
+#include <string_view>
 
 namespace Tempest {
 
 class WFile : public Tempest::ODevice {
   public:
-    explicit WFile(const char*     path);
-    explicit WFile(const std::string& path);
-    explicit WFile(const char16_t* path);
-    explicit WFile(const std::u16string& path);
+    explicit WFile(const char*         path);
+    explicit WFile(std::string_view    path);
+    explicit WFile(const char16_t*     path);
+    explicit WFile(std::u16string_view path);
     WFile(WFile&& other);
     ~WFile() override;
 
