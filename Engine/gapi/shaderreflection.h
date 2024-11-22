@@ -75,6 +75,8 @@ class ShaderReflection final {
                         const std::vector<Binding>* sh[],
                         size_t count);
 
+    static size_t  sizeOfBuffer(const Binding& bind, size_t arraylen);
+
   private:
     static void finalize(std::vector<Binding>& p);
     static size_t mslSizeOf(const spirv_cross::SPIRType& type, spirv_cross::Compiler& comp);
