@@ -24,7 +24,7 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
                   bool has_baseVertex_baseInstance);
 
     size_t descriptorsCount() override;
-    size_t sizeOfBuffer(size_t layoutBind, size_t arraylen) const override;
+    size_t sizeofBuffer(size_t layoutBind, size_t arraylen) const override;
 
     bool   isRuntimeSized() const { return runtimeSized; }
 

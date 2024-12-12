@@ -75,7 +75,7 @@ class ShaderReflection final {
                         const std::vector<Binding>* sh[],
                         size_t count);
 
-    static size_t  sizeOfBuffer(const Binding& bind, size_t arraylen);
+    static size_t  sizeofBuffer(const Binding& bind, size_t arraylen);
 
   private:
     static void finalize(std::vector<Binding>& p);

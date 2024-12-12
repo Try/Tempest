@@ -312,7 +312,7 @@ void ShaderReflection::merge(std::vector<Binding>& ret,
   finalize(ret);
   }
 
-size_t ShaderReflection::sizeOfBuffer(const Binding& bind, size_t arraylen) {
+size_t ShaderReflection::sizeofBuffer(const Binding& bind, size_t arraylen) {
   if(bind.byteSize==size_t(-1))
     return bind.varByteSize*arraylen;
   return bind.byteSize + bind.varByteSize*arraylen;

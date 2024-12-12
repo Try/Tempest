@@ -11,7 +11,7 @@ class PipelineLayout final {
     PipelineLayout(PipelineLayout&& other)=default;
     PipelineLayout& operator = (PipelineLayout&& other)=default;
 
-    size_t sizeOfBuffer(size_t layoutBind, size_t arraylen = 0) const;
+    size_t sizeofBuffer(size_t layoutBind, size_t arraylen = 0) const;
 
   private:
     PipelineLayout()=default;

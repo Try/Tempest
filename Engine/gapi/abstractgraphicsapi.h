@@ -518,7 +518,7 @@ namespace Tempest {
       struct PipelineLay:Shared {
         virtual ~PipelineLay()=default;
         virtual size_t descriptorsCount() = 0;
-        virtual size_t sizeOfBuffer(size_t layoutBind, size_t arraylen) const = 0;
+        virtual size_t sizeofBuffer(size_t layoutBind, size_t arraylen) const = 0;
         };
       struct Buffer:Shared   {
         virtual ~Buffer()=default;

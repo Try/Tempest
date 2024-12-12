@@ -15,6 +15,6 @@ RenderPipeline &RenderPipeline::operator =(RenderPipeline&& other) {
   return *this;
   }
 
-size_t RenderPipeline::sizeOfBuffer(size_t layoutBind, size_t arraylen) const {
-  return ulay.sizeOfBuffer(layoutBind, arraylen);
+size_t RenderPipeline::sizeofBuffer(size_t layoutBind, size_t arraylen) const {
+  return ulay.sizeofBuffer(layoutBind, arraylen);
   }

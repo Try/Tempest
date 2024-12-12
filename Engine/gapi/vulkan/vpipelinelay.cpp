@@ -66,8 +66,8 @@ size_t VPipelineLay::descriptorsCount() {
   return lay.size();
   }
 
-size_t VPipelineLay::sizeOfBuffer(size_t layoutBind, size_t arraylen) const {
-  return ShaderReflection::sizeOfBuffer(lay[layoutBind], arraylen);
+size_t VPipelineLay::sizeofBuffer(size_t layoutBind, size_t arraylen) const {
+  return ShaderReflection::sizeofBuffer(lay[layoutBind], arraylen);
   }
 
 VPipelineLay::DedicatedLay VPipelineLay::create(const std::vector<uint32_t>& runtimeArrays) {

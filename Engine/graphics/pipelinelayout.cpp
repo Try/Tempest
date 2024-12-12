@@ -6,6 +6,6 @@ PipelineLayout::PipelineLayout(Detail::DSharedPtr<AbstractGraphicsApi::PipelineL
   :impl(std::move(impl)) {
   }
 
-size_t PipelineLayout::sizeOfBuffer(size_t layoutBind, size_t arraylen) const {
-  return impl.handler->sizeOfBuffer(layoutBind, arraylen);
+size_t PipelineLayout::sizeofBuffer(size_t layoutBind, size_t arraylen) const {
+  return impl.handler->sizeofBuffer(layoutBind, arraylen);
   }

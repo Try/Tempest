@@ -35,7 +35,7 @@ class VPipelineLay : public AbstractGraphicsApi::PipelineLay {
       };
 
     size_t                descriptorsCount() override;
-    size_t                sizeOfBuffer(size_t layoutBind, size_t arraylen) const override;
+    size_t                sizeofBuffer(size_t layoutBind, size_t arraylen) const override;
 
     DedicatedLay          create(const std::vector<uint32_t>& runtimeArrays);
 

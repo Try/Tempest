@@ -57,8 +57,8 @@ size_t DxPipelineLay::descriptorsCount() {
   return lay.size();
   }
 
-size_t DxPipelineLay::sizeOfBuffer(size_t layoutBind, size_t arraylen) const {
-  return ShaderReflection::sizeOfBuffer(lay[layoutBind], arraylen);
+size_t DxPipelineLay::sizeofBuffer(size_t layoutBind, size_t arraylen) const {
+  return ShaderReflection::sizeofBuffer(lay[layoutBind], arraylen);
   }
 
 void DxPipelineLay::init(const std::vector<Binding>& lay, const ShaderReflection::PushBlock& pb,
