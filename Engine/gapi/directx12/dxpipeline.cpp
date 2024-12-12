@@ -163,15 +163,20 @@ D3D12_RASTERIZER_DESC DxPipeline::getRaster(const RenderState& st) const {
   return rd;
   }
 
-D3D12_DEPTH_STENCIL_DESC DxPipeline::getDepth(const RenderState& st) const {
-  D3D12_DEPTH_STENCIL_DESC1 ds1 = getDepth1(st);
+D3D12_DEPTH_STENCIL_DESC DxPipeline::getDepth(const RenderState& st, DXGI_FORMAT depthFrm) const {
+  D3D12_DEPTH_STENCIL_DESC1 ds1 = getDepth1(st, depthFrm);
   D3D12_DEPTH_STENCIL_DESC  ds  = {};
-  std::memcpy(&ds, &ds1, sizeof(ds)); //binary compatible
+  std::memcpy(&ds, &ds1, sizeof(ds)); // binary compatible
   return ds;
   }
 
-D3D12_DEPTH_STENCIL_DESC1 DxPipeline::getDepth1(const RenderState& st) const {
+D3D12_DEPTH_STENCIL_DESC1 DxPipeline::getDepth1(const RenderState& st, DXGI_FORMAT depthFrm) const {
   D3D12_DEPTH_STENCIL_DESC1 ds = {};
+  if(depthFrm==DXGI_FORMAT_UNKNOWN) {
+    ds.DepthEnable = FALSE;
+    return ds;
+    }
+
   ds.DepthEnable    = rState.zTestMode()!=RenderState::ZTestMode::Always ? TRUE : FALSE;
   ds.DepthWriteMask = rState.isZWriteEnabled() ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
   ds.DepthFunc      = nativeFormat(rState.zTestMode());
@@ -196,12 +201,12 @@ ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& 
 
   psoDesc.RasterizerState    = getRaster(rState);
   psoDesc.BlendState         = getBlend (rState);
-  psoDesc.DepthStencilState  = getDepth(rState);
+  psoDesc.DepthStencilState  = getDepth (rState, frm.DSVFormat);
   psoDesc.SampleMask         = UINT_MAX;
   psoDesc.SampleDesc.Quality = 0;
   psoDesc.SampleDesc.Count   = 1;
-  psoDesc.DSVFormat = frm.DSVFormat;
-  psoDesc.NumRenderTargets = frm.NumRenderTargets;
+  psoDesc.DSVFormat          = frm.DSVFormat;
+  psoDesc.NumRenderTargets   = frm.NumRenderTargets;
   for(uint8_t i=0;i<frm.NumRenderTargets;++i)
     psoDesc.RTVFormats[i] = frm.RTVFormats[i];
 
@@ -258,12 +263,12 @@ ComPtr<ID3D12PipelineState> DxPipeline::initMeshPipeline(const DxFboLayout& frm)
   psoDesc.BlendState        = getBlend (rState);
   psoDesc.SampleMask        = UINT_MAX;
   psoDesc.RasterizerState   = getRaster(rState);
-  psoDesc.DepthStencilState = getDepth1(rState);
+  psoDesc.DepthStencilState = getDepth1(rState, frm.DSVFormat);
 
+  psoDesc.DSVFormat = frm.DSVFormat;
   psoDesc.RTVFormats.NumRenderTargets = frm.NumRenderTargets;
   for(uint8_t i=0;i<frm.NumRenderTargets;++i)
     psoDesc.RTVFormats.RTFormats[i] = frm.RTVFormats[i];
-  psoDesc.DSVFormat = frm.DSVFormat;
   psoDesc.SampleDesc.Quality    = 0;
   psoDesc.SampleDesc.Count      = 1;
 

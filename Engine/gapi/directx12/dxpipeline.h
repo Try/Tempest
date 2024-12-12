@@ -57,8 +57,8 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
     const DxShader*             findShader(ShaderReflection::Stage sh) const;
     D3D12_BLEND_DESC            getBlend(const RenderState &st) const;
     D3D12_RASTERIZER_DESC       getRaster(const RenderState &st) const;
-    D3D12_DEPTH_STENCIL_DESC    getDepth(const RenderState &st) const;
-    D3D12_DEPTH_STENCIL_DESC1   getDepth1(const RenderState &st) const;
+    D3D12_DEPTH_STENCIL_DESC    getDepth(const RenderState &st, DXGI_FORMAT depthFrm) const;
+    D3D12_DEPTH_STENCIL_DESC1   getDepth1(const RenderState &st, DXGI_FORMAT depthFrm) const;
     ComPtr<ID3D12PipelineState> initGraphicsPipeline(const DxFboLayout& frm);
     ComPtr<ID3D12PipelineState> initMeshPipeline(const DxFboLayout& frm);
   };
