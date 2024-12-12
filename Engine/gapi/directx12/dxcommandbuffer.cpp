@@ -5,7 +5,6 @@
 #include "dxtexture.h"
 #include "dxdevice.h"
 #include "dxswapchain.h"
-#include "dxdescriptorarray.h"
 #include "dxfbolayout.h"
 #include "dxpipeline.h"
 #include "dxaccelerationstructure.h"
@@ -875,7 +874,7 @@ void DxCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size
        * 2: use aliasing barrier to force all-to-all execution dependency with cache-flush (out of spec behaviour)
        * 3: ideally we need Enhanced-Barrier. This code is used only as fallback
        */
-      const ResourceAccess mask = ResourceAccess(~uint32_t(ResourceAccess::UavReadWriteAll));
+      const ResourceAccess mask = ResourceAccess(~uint32_t(ResourceAccess::UavWriteGr | ResourceAccess::UavWriteComp));
       if((b.prev & mask)==ResourceAccess::None && (b.next & mask)==ResourceAccess::None) {
         barrier.Type                     = D3D12_RESOURCE_BARRIER_TYPE_UAV;
         barrier.Flags                    = D3D12_RESOURCE_BARRIER_FLAG_NONE;
