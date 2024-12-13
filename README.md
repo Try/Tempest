@@ -5,7 +5,7 @@
 Crossplatform 3d engine.
 (work in progress)
 
-Tempest is an open-source, simple, cross-platform graphics engine written in modern C++14.  
+Tempest is an open-source, simple, cross-platform graphics engine written in modern C++17.  
 Main idea behind this engine is to provide a low-level GPU-programming concepts, like Ubo, Vbo, Ssbo, in convenient C++ packaging, with RAII, types and templates. 
 
 ### Features
