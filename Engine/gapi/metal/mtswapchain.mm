@@ -115,7 +115,10 @@ MtSwapchain::MtSwapchain(MtDevice& dev, SystemApi::Window *w)
   lay.device = id<MTLDevice>(dev.impl.get());
     
   [lay setContentsScale:dpi];
-  //lay.maximumDrawableCount      = 2;
+#if defined(__IOS__)
+  // Swapchain takes too much memory on 2GB iPhone
+  lay.maximumDrawableCount      = 2;
+#endif
   lay.pixelFormat               = MTLPixelFormatBGRA8Unorm;
   lay.allowsNextDrawableTimeout = NO;
   lay.framebufferOnly           = NO;
@@ -130,7 +133,6 @@ MtSwapchain::~MtSwapchain() {
 
 void MtSwapchain::reset() {
   dev.waitIdle(); // pending commands
-
   std::lock_guard<SpinLock> guard(sync);
 
   // https://developer.apple.com/documentation/quartzcore/cametallayer?language=objc
@@ -141,11 +143,11 @@ void MtSwapchain::reset() {
   sz       = {int(wrect.size.width), int(wrect.size.height)};
   imgCount = uint32_t(lay.maximumDrawableCount);
 
-  @autoreleasepool {
-    img.resize(imgCount);
-    for(size_t i=0; i<imgCount; ++i)
-      img[i].tex = mkTexture();
-    }
+  img.resize(imgCount);
+  for(size_t i=0; i<imgCount; ++i)
+    img[i].tex = nullptr;
+  for(size_t i=0; i<imgCount; ++i)
+    img[i].tex = mkTexture();
 
   currentImg = 0;
   }
@@ -160,16 +162,22 @@ void MtSwapchain::present() {
   CA::MetalLayer* lay      = reinterpret_cast<CA::MetalLayer*>(pimpl->metalLayer());
   uint32_t        i        = currentImg;
   auto            drawable = lay->nextDrawable();
+  if(drawable==nullptr)
+    throw SwapchainSuboptimal();
   
   std::lock_guard<SpinLock> guard(sync);
-  auto cmd = dev.queue->commandBuffer();
-  auto enc = cmd->blitCommandEncoder();
-  auto dr  = drawable->texture();
-
+  auto dr = drawable->texture();
   if(dr->width()!=img[i].tex->width() || dr->height()!=img[i].tex->height()) {
-    enc->endEncoding();
     throw SwapchainSuboptimal();
     }
+  
+  auto desc = NsPtr<MTL::CommandBufferDescriptor>::init();
+  //desc->setRetainedReferences(true);
+  desc->setErrorOptions(MTL::CommandBufferErrorOptionEncoderExecutionStatus);
+  
+  auto cmd = dev.queue->commandBuffer(desc.get());
+  auto enc = cmd->blitCommandEncoder();
+  
   enc->copyFromTexture(img[i].tex.get(), 0, 0,
                        dr, 0, 0,
                        1, 1);
@@ -185,8 +193,12 @@ void MtSwapchain::present() {
        s==MTL::CommandBufferStatusScheduled)
       return;
 
-    if(s!=MTL::CommandBufferStatusCompleted)
+    if(s!=MTL::CommandBufferStatusCompleted) {
       Log::e("swapchain fatal error");
+      dev.onFinish();
+      dev.waitIdle();
+      return;
+      }
 
     dev.onFinish();
     });
@@ -196,6 +208,7 @@ void MtSwapchain::present() {
   }
 
 NsPtr<MTL::Texture> MtSwapchain::mkTexture() {
+  auto pool = NsPtr<NS::AutoreleasePool>::init();
   auto desc = NsPtr<MTL::TextureDescriptor>::init();
   if(desc==nullptr)
     throw std::system_error(GraphicsErrc::OutOfVideoMemory);
