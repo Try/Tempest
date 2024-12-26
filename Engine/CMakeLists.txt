@@ -122,6 +122,9 @@ if(TEMPEST_BUILD_AUDIO)
   if(NOT MSVC AND NOT APPLE)
     target_compile_options(OpenAL PRIVATE -Wno-stringop-overflow)
   endif()
+  if(MSVC)
+    target_compile_options(OpenAL PRIVATE /wd4060)
+  endif()
 endif()
 
 ### Vulkan
