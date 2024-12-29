@@ -43,6 +43,8 @@ std::u16string TextCodec::toUtf16(std::string_view inS) {
   for(size_t i=0; i<inS.size();) {
     uint32_t cp = 0;
     size_t   l  = Detail::utf8ToCodepoint(&s[i],cp);
+    if(l==0)
+      throw std::range_error("invalid utf-8"); // similar to stl
 
     if(cp > 0xFFFF)
       sz+=2; else

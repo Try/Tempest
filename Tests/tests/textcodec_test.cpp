@@ -56,3 +56,8 @@ TEST(main,TextCodec_UTF8_4) {
 
   TextCodec_Base(u8,u16);
   }
+
+TEST(main,TextCodec_UTF8_invalid) {
+  std::string u8 = "\340\214\244\276m\177\000\000\200\002\000\000h\001\000";
+  EXPECT_ANY_THROW(TextCodec::toUtf16(u8));
+  }
