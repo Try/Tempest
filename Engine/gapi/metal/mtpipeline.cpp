@@ -2,6 +2,8 @@
 
 #include "mtpipeline.h"
 
+#include <Tempest/Log>
+
 #include "mtdevice.h"
 #include "mtshader.h"
 #include "mtfbolayout.h"
@@ -226,7 +228,13 @@ MtCompPipeline::MtCompPipeline(MtDevice &device, const MtPipelineLay& lay, const
 
   NS::Error* error = nullptr;
   impl = NsPtr<MTL::ComputePipelineState>(device.impl->newComputePipelineState(desc.get(), MTL::PipelineOptionNone, nullptr, &error));
-  mtAssert(impl.get(),error);
+  if(error!=nullptr) {
+    const char* e = error->localizedDescription()->utf8String();
+#if !defined(NDEBUG)
+    Log::d("NSError: \"",e,"\"");
+#endif
+    throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule, "\""+sh.dbg.source + "\": " + e);
+    }
   }
 
 IVec3 MtCompPipeline::workGroupSize() const {

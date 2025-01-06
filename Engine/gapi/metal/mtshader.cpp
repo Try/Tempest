@@ -158,8 +158,8 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule, e);
     }
 
-  if(stage==ShaderReflection::Stage::Vertex) {
-    // Log::d(msl);
+  if(stage==ShaderReflection::Stage::Mesh) {
+    Log::d(msl);
     }
 
   auto main = NsPtr<NS::String>(NS::String::string("main0",NS::UTF8StringEncoding));
@@ -191,6 +191,21 @@ void MtShader::fetchBindings(const uint32_t *source, size_t size) {
         this->comp.localSize.depth  = i[5];
         }
       }
+    }
+  for(auto& i:code) {
+    if(i.op()!=spv::OpSource)
+      continue;
+    uint32_t src = i.length()>3 ? i[3] : 0;
+    if(src==0)
+      continue;
+
+    for(auto& r:code) {
+      if(r.op()==spv::OpString && r[1]==src) {
+        dbg.source = reinterpret_cast<const char*>(&r[2]);
+        break;
+        }
+      }
+    break;
     }
   }
 
