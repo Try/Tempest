@@ -385,6 +385,9 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     robustness2Features.robustBufferAccess2 = VK_FALSE;
     robustness2Features.robustImageAccess2 = VK_FALSE;
 
+    meshFeatures.multiviewMeshShader                    = VK_FALSE; // requires VkPhysicalDeviceMultiviewFeaturesKHR::multiview
+    meshFeatures.primitiveFragmentShadingRateMeshShader = VK_FALSE; // requires vrs
+
     createInfo.pNext            = &features;
     createInfo.pEnabledFeatures = nullptr;
     if(vkCreateDevice(pdev, &createInfo, nullptr, &device.impl)!=VK_SUCCESS)
