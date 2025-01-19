@@ -4,6 +4,7 @@
 *build-*-debug/
 *build-*-release/
 *build-*/
+*build/
 CMakeLists.txt.user*
 
 # Compiled Object files

@@ -71,6 +71,9 @@ add_subdirectory("thirdparty/zlib" EXCLUDE_FROM_ALL)
 set(ZLIB_LIBRARY zlibstatic)
 set(ZLIB_INCLUDE_DIR "thirdparty/zlib")
 target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/zlib")
+if(NOT MSVC)
+  target_compile_options(zlibstatic PRIVATE -Wno-deprecated-non-prototype)
+endif()
 
 ### libpng16
 set(PNG_SHARED                 OFF CACHE INTERNAL "")
@@ -119,7 +122,7 @@ if(TEMPEST_BUILD_AUDIO)
   if(NOT MSVC)
     target_compile_options(OpenAL PRIVATE -Wno-attributes -Wno-conversion -Wno-switch -Wno-unused-but-set-variable)
   endif()
-  if(NOT MSVC AND NOT APPLE)
+  if(NOT MSVC AND NOT APPLE AND NOT ${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
     target_compile_options(OpenAL PRIVATE -Wno-stringop-overflow)
   endif()
   if(MSVC)
@@ -194,6 +197,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE spirv-cross-msl)
 ### squish
 add_subdirectory("thirdparty/squish" EXCLUDE_FROM_ALL)
 target_link_libraries(${PROJECT_NAME} PRIVATE squish-tempest)
+set_target_properties(squish-tempest PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
 ### Font
 set(GEN_FONTS_HEADER "${PROJECT_BINARY_DIR}/builtin_fonts.h")
