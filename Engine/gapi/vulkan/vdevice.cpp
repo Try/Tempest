@@ -525,16 +525,16 @@ void VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
   for(auto& s:cmd.swapchainSync) {
     if(s->state!=Detail::VSwapchain::S_Pending)
       continue;
-    s->state = Detail::VSwapchain::S_Draw0;
+    s->state = Detail::VSwapchain::S_Aquired;
     ++waitCnt;
     }
 
   SmallArray<VkSemaphore, 32> wait(waitCnt);
   size_t                      waitId  = 0;
   for(auto& s:cmd.swapchainSync) {
-    if(s->state!=Detail::VSwapchain::S_Draw0)
+    if(s->state!=Detail::VSwapchain::S_Aquired)
       continue;
-    s->state = Detail::VSwapchain::S_Draw1;
+    s->state = Detail::VSwapchain::S_Draw;
     wait[waitId] = s->acquire;
     ++waitId;
     }

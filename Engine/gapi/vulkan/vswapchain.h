@@ -42,37 +42,62 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     enum SyncState : uint8_t {
       S_Idle,
       S_Pending,
-      S_Draw0,
-      S_Draw1,
+      S_Aquired,
+      S_Draw,
       };
 
     struct Sync {
       SyncState   state   = S_Idle;
       uint32_t    imgId   = uint32_t(-1);
       VkSemaphore acquire = VK_NULL_HANDLE;
-      VkSemaphore present = VK_NULL_HANDLE;
       };
     std::vector<Sync>        sync;
 
   private:
-    struct FenceList {
-      FenceList() = default;
-      FenceList(VkDevice dev, uint32_t cnt);
-      FenceList(FenceList&& oth);
-      FenceList& operator = (FenceList&& oth);
-      ~FenceList();
+    class FenceList {
+      public:
+        FenceList() = default;
+        FenceList(VkDevice dev, uint32_t cnt);
+        FenceList(FenceList&& oth);
+        FenceList& operator = (FenceList&& oth);
+        ~FenceList();
 
-      VkDevice                   dev = VK_NULL_HANDLE;
-      std::unique_ptr<VkFence[]> acquire;
-      uint32_t                   size = 0;
+        void waitAll();
+        VkFence& operator[](size_t i) { return data[i]; }
+
+      private:
+        VkDevice                   dev = VK_NULL_HANDLE;
+        std::unique_ptr<VkFence[]> data;
+        uint32_t                   size = 0;
       };
-    FenceList                fence;
+
+    class SemaphoreList {
+      public:
+        SemaphoreList() = default;
+        SemaphoreList(VkDevice dev, uint32_t cnt);
+        SemaphoreList(SemaphoreList&& oth);
+        SemaphoreList& operator = (SemaphoreList&& oth);
+        ~SemaphoreList();
+
+        VkSemaphore& operator[](size_t i) { return data[i]; }
+
+      private:
+        VkDevice                       dev = VK_NULL_HANDLE;
+        std::unique_ptr<VkSemaphore[]> data;
+        uint32_t                       size = 0;
+      };
+
+    FenceList                aquireFence;
+    SemaphoreList            aquireSem;
+    FenceList                presentFence;
+    SemaphoreList            presentSem;
 
     VDevice&                 device;
     SystemApi::Window*       hwnd     = nullptr;
     VkSurfaceKHR             surface  = VK_NULL_HANDLE;
 
     uint32_t                 imgIndex = 0;
+    uint32_t                 frameId  = 0;
 
     VkFormat                 swapChainImageFormat = VK_FORMAT_UNDEFINED;
     VkExtent2D               swapChainExtent = {};

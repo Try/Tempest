@@ -40,25 +40,26 @@ static VkResult vkAcquireNextImageDBG(
 #endif
   }
 
+
 VSwapchain::FenceList::FenceList(VkDevice dev, uint32_t cnt)
   :dev(dev), size(0) {
-  acquire.reset(new VkFence[cnt]);
+  data.reset(new VkFence[cnt]);
   for(uint32_t i=0; i<cnt; ++i)
-    acquire [i] = VK_NULL_HANDLE;
+    data[i] = VK_NULL_HANDLE;
 
   try {
-    VkFenceCreateInfo fenceInfo = {};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    VkFenceCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
     for(uint32_t i=0; i<cnt; ++i) {
-      vkAssert(vkCreateFence(dev,&fenceInfo,nullptr,&acquire [i]));
+      vkAssert(vkCreateFence(dev,&info,nullptr,&data[i]));
       ++size;
       }
     }
   catch(...) {
     for(uint32_t i=0; i<cnt; ++i) {
-      if(acquire[i]!=VK_NULL_HANDLE)
-        vkDestroyFence(dev,acquire[i],nullptr);
+      if(data[i]!=VK_NULL_HANDLE)
+        vkDestroyFence(dev,data[i],nullptr);
       }
     throw;
     }
@@ -66,20 +67,67 @@ VSwapchain::FenceList::FenceList(VkDevice dev, uint32_t cnt)
 
 VSwapchain::FenceList::FenceList(VSwapchain::FenceList&& oth)
   :dev(oth.dev), size(oth.size) {
-  acquire   = std::move(oth.acquire);
+  data     = std::move(oth.data);
   oth.size = 0;
   }
 
 VSwapchain::FenceList& VSwapchain::FenceList::operator =(VSwapchain::FenceList&& oth) {
-  std::swap(dev,     oth.dev);
-  std::swap(acquire, oth.acquire);
-  std::swap(size,    oth.size);
+  std::swap(dev,  oth.dev);
+  std::swap(data, oth.data);
+  std::swap(size, oth.size);
   return *this;
   }
 
 VSwapchain::FenceList::~FenceList() {
   for(uint32_t i=0; i<size; ++i)
-    vkDestroyFence(dev,acquire[i],nullptr);
+    vkDestroyFence(dev,data[i],nullptr);
+  }
+
+void VSwapchain::FenceList::waitAll() {
+  vkWaitForFences(dev, size, data.get(), VK_TRUE,std::numeric_limits<uint64_t>::max());
+  }
+
+
+VSwapchain::SemaphoreList::SemaphoreList(VkDevice dev, uint32_t cnt)
+  :dev(dev), size(0) {
+  data.reset(new VkSemaphore[cnt]);
+  for(uint32_t i=0; i<cnt; ++i)
+    data[i] = VK_NULL_HANDLE;
+
+  try {
+    VkSemaphoreCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    info.flags = 0;
+    for(uint32_t i=0; i<cnt; ++i) {
+      vkAssert(vkCreateSemaphore(dev,&info,nullptr,&data[i]));
+      ++size;
+      }
+    }
+  catch(...) {
+    for(uint32_t i=0; i<cnt; ++i) {
+      if(data[i]!=VK_NULL_HANDLE)
+        vkDestroySemaphore(dev,data[i],nullptr);
+      }
+    throw;
+    }
+  }
+
+VSwapchain::SemaphoreList::SemaphoreList(VSwapchain::SemaphoreList&& oth)
+  :dev(oth.dev), size(oth.size) {
+  data     = std::move(oth.data);
+  oth.size = 0;
+  }
+
+VSwapchain::SemaphoreList& VSwapchain::SemaphoreList::operator =(VSwapchain::SemaphoreList&& oth) {
+  std::swap(dev,  oth.dev);
+  std::swap(data, oth.data);
+  std::swap(size, oth.size);
+  return *this;
+  }
+
+VSwapchain::SemaphoreList::~SemaphoreList() {
+  for(uint32_t i=0; i<size; ++i)
+    vkDestroySemaphore(dev,data[i],nullptr);
   }
 
 VSwapchain::VSwapchain(VDevice &device, SystemApi::Window* hwnd)
@@ -100,11 +148,14 @@ VSwapchain::~VSwapchain() {
 
 void VSwapchain::cleanupSwapchain() noexcept {
   // aquire is not a 'true' queue operation - have to wait explicitly on it
-  vkWaitForFences(device.device.impl,fence.size,fence.acquire.get(), VK_TRUE,std::numeric_limits<uint64_t>::max());
+  aquireFence.waitAll();
   // wait for vkQueuePresent to finish, so we can delete semaphores
   // NOTE: maybe update to VK_KHR_present_wait ?
   device.presentQueue->waitIdle();
-  fence = FenceList();
+  aquireFence  = FenceList();
+  presentFence = FenceList();
+  aquireSem    = SemaphoreList();
+  presentSem   = SemaphoreList();
 
   for(auto imageView : views)
     if(map!=nullptr && imageView!=VK_NULL_HANDLE)
@@ -114,13 +165,6 @@ void VSwapchain::cleanupSwapchain() noexcept {
     if(imageView!=VK_NULL_HANDLE)
       vkDestroyImageView(device.device.impl,imageView,nullptr);
   views.clear();
-
-  for(auto& s : sync) {
-    if(s.acquire!=VK_NULL_HANDLE)
-      vkDestroySemaphore(device.device.impl,s.acquire,nullptr);
-    if(s.present!=VK_NULL_HANDLE)
-      vkDestroySemaphore(device.device.impl,s.present,nullptr);
-    }
   sync.clear();
 
   images.clear();
@@ -219,15 +263,12 @@ VkResult VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& sw
 
   createImageViews(device);
 
-  VkSemaphoreCreateInfo info = {};
-  info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-  info.flags = 0;
   sync.resize(views.size());
-  for(auto& i:sync) {
-    vkAssert(vkCreateSemaphore(device.device.impl,&info,nullptr,&i.acquire));
-    vkAssert(vkCreateSemaphore(device.device.impl,&info,nullptr,&i.present));
-    }
-  fence = FenceList(device.device.impl,uint32_t(views.size()));
+
+  aquireFence  = FenceList(device.device.impl, uint32_t(views.size()));
+  presentFence = FenceList(device.device.impl, uint32_t(views.size()));
+  presentSem   = SemaphoreList(device.device.impl, uint32_t(views.size()));
+  aquireSem    = SemaphoreList(device.device.impl, uint32_t(views.size()));
 
   return implAcquireNextImage();
   }
@@ -325,43 +366,6 @@ uint32_t VSwapchain::findImageCount(const SwapChainSupport& support) const {
   return imageCount;
   }
 
-VkResult VSwapchain::implAcquireNextImage() {
-  size_t sId = 0;
-  for(size_t i=0; i<sync.size(); ++i)
-    if(sync[i].imgId==imgIndex) {
-      sId = i;
-      break;
-      }
-  auto&    slot = sync[sId];
-  auto&    f    = fence.acquire[sId];
-
-  vkWaitForFences(device.device.impl,1,&f,VK_TRUE,std::numeric_limits<uint64_t>::max());
-  vkResetFences(device.device.impl,1,&f);
-
-  uint32_t id   = uint32_t(-1);
-  VkResult code = vkAcquireNextImageDBG(device.device.impl,
-                                        swapChain,
-                                        std::numeric_limits<uint64_t>::max(),
-                                        slot.acquire,
-                                        f,
-                                        &id);
-
-  if(code==VK_ERROR_OUT_OF_DATE_KHR) {
-    auto rc = vkxRevertFence(device.device.impl, &f);
-    if(rc!=VK_SUCCESS)
-      std::terminate(); // unrecoverable
-    return code;
-    }
-
-  if(code!=VK_SUCCESS && code!=VK_SUBOPTIMAL_KHR)
-    vkAssert(code);
-
-  imgIndex   = id;
-  slot.imgId = id;
-  slot.state = S_Pending;
-  return code;
-  }
-
 void VSwapchain::acquireNextImage() {
   VkResult code = implAcquireNextImage();
 
@@ -376,19 +380,56 @@ uint32_t VSwapchain::currentBackBufferIndex() {
   return imgIndex;
   }
 
-void VSwapchain::present() {
-  size_t sId = 0;
-  for(size_t i=0; i<sync.size(); ++i)
-    if(sync[i].imgId==imgIndex) {
-      sId = i;
-      break;
-      }
+VkResult VSwapchain::implAcquireNextImage() {
+  auto     dev  = device.device.impl;
+  auto&    slot = sync[frameId];
 
-  auto& slot = sync[sId];
+  vkWaitForFences(dev, 1, &aquireFence[frameId], VK_TRUE, std::numeric_limits<uint64_t>::max());
+  vkResetFences(dev, 1, &aquireFence[frameId]);
+
+  // We need to wait for any command-buffer that may reference aquireSem[] in the past
+  vkWaitForFences(dev, 1, &presentFence[frameId], VK_TRUE, std::numeric_limits<uint64_t>::max());
+  vkResetFences(dev, 1, &presentFence[frameId]);
+
+  uint32_t id   = uint32_t(-1);
+  VkResult code = vkAcquireNextImageDBG(device.device.impl,
+                                        swapChain,
+                                        std::numeric_limits<uint64_t>::max(),
+                                        aquireSem[frameId],
+                                        aquireFence[frameId],
+                                        &id);
+
+  if(code==VK_ERROR_OUT_OF_DATE_KHR) {
+    auto rc = vkxRevertFence(device.device.impl, &aquireFence[frameId]);
+    if(rc!=VK_SUCCESS)
+      std::terminate(); // unrecoverable
+    return code;
+    }
+
+  if(code!=VK_SUCCESS && code!=VK_SUBOPTIMAL_KHR)
+    vkAssert(code);
+
+  imgIndex     = id;
+  slot.state   = S_Pending;
+  slot.imgId   = id;
+  slot.acquire = aquireSem[frameId];
+
+  return code;
+  }
+
+void VSwapchain::present() {
+  auto& slot = sync[frameId];
+  auto& pf   = presentFence[frameId];
+  auto  ps   = presentSem  [frameId];
+  if(slot.state==S_Pending) {
+    // empty frame with no command buffer. TODO: test
+    ps = aquireSem[frameId];
+    }
+
   if(device.vkQueueSubmit2!=nullptr) {
     VkSemaphoreSubmitInfoKHR signal = {};
     signal.sType     = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
-    signal.semaphore = slot.present;
+    signal.semaphore = ps;
     signal.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR;
 
     VkSubmitInfo2KHR submitInfo = {};
@@ -396,25 +437,27 @@ void VSwapchain::present() {
     submitInfo.signalSemaphoreInfoCount = 1;
     submitInfo.pSignalSemaphoreInfos    = &signal;
 
-    device.graphicsQueue->submit(1, &submitInfo, VK_NULL_HANDLE, device.vkQueueSubmit2);
+    device.graphicsQueue->submit(1, &submitInfo, pf, device.vkQueueSubmit2);
     } else {
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores    = &slot.present;
-    device.graphicsQueue->submit(1, &submitInfo, VK_NULL_HANDLE);
+    submitInfo.pSignalSemaphores    = &ps;
+    device.graphicsQueue->submit(1, &submitInfo, pf);
     }
 
   VkPresentInfoKHR presentInfo = {};
   presentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
   presentInfo.waitSemaphoreCount = 1;
-  presentInfo.pWaitSemaphores    = &slot.present;
+  presentInfo.pWaitSemaphores    = &ps;
   presentInfo.swapchainCount     = 1;
   presentInfo.pSwapchains        = &swapChain;
   presentInfo.pImageIndices      = &imgIndex;
 
-  slot.imgId = uint32_t(-1);
-  slot.state = S_Idle;
+  frameId      = (frameId + 1)%images.size();
+  slot.state   = S_Idle;
+  slot.imgId   = uint32_t(-1);
+  slot.acquire = VK_NULL_HANDLE;
 
   auto tx = Application::tickCount();
   VkResult code = device.presentQueue->present(presentInfo);
@@ -428,6 +471,7 @@ void VSwapchain::present() {
     // strftime(str, sizeof(str), "%H:%M.%S", localtime(&t));
     // Log::i(str," : vkQueuePresentKHR[",imgIndex,"] = ", tx);
     }
+  //Log::i("vkQueuePresentKHR[",imgIndex,"] = ", tx);
   Detail::vkAssert(code);
 
   acquireNextImage();
