@@ -32,7 +32,7 @@ install:
       $env:LD_LIBRARY_PATH = "$env:VULKAN_SDK/lib"
       Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/$VK_SDK/linux/vulkansdk-linux-x86_64-$VK_SDK.tar.xz -OutFile VulkanSDK.tar.xz
       mkdir VulkanSDK
-      tar -xzf VulkanSDK.tar.xz -C ./VulkanSDK
+      tar -xJf VulkanSDK.tar.xz -C ./VulkanSDK
       }
 
     if($IsWindows) {
