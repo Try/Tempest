@@ -1,6 +1,7 @@
 #pragma once
 
 #include <system_error>
+#include <typeinfo>
 
 namespace Tempest {
 
