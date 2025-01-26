@@ -2,6 +2,8 @@
 
 #include <Tempest/AbstractGraphicsApi>
 #include <Tempest/Texture2d>
+#include <Tempest/Except>
+
 #include "../utility/dptr.h"
 
 namespace Tempest {
@@ -43,21 +45,21 @@ class StorageImage final {
 template<>
 inline Texture2d& textureCast<Texture2d&>(StorageImage& s) {
   if(s.d()>1)
-    throw std::bad_cast();
+    throw BadTextureCastException("Cannot cast 3D storage-image to Texture2d");
   return s.tImpl;
   }
 
 template<>
 inline const Texture2d& textureCast<const Texture2d&>(StorageImage& s) {
   if(s.d()>1)
-    throw std::bad_cast();
+    throw BadTextureCastException("Cannot cast 3D storage-image to Texture2d");
   return s.tImpl;
   }
 
 template<>
 inline const Texture2d& textureCast<const Texture2d&>(const StorageImage& s) {
   if(s.d()>1)
-    throw std::bad_cast();
+    throw BadTextureCastException("Cannot cast 3D storage-image to Texture2d");
   return s.tImpl;
   }
 }

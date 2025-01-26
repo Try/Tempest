@@ -2,6 +2,7 @@
 
 #include <Tempest/AbstractGraphicsApi>
 #include <Tempest/Texture2d>
+#include <Tempest/Except>
 
 namespace Tempest {
 
@@ -39,22 +40,31 @@ class ZBuffer final {
 
 template<>
 inline Texture2d& textureCast<Texture2d&>(ZBuffer& a) {
-  if(a.nonSampleFormat)
-    throw std::bad_cast();
+  if(a.nonSampleFormat) {
+    char buf[256] = {};
+    std::snprintf(buf, sizeof(buf), "Format \"%s\" is not sampling capable", Tempest::formatName(a.tImpl.format()));
+    throw BadTextureCastException(buf);
+    }
   return a.tImpl;
   }
 
 template<>
 inline const Texture2d& textureCast<const Texture2d&>(ZBuffer& a) {
-  if(a.nonSampleFormat)
-    throw std::bad_cast();
+  if(a.nonSampleFormat) {
+    char buf[256] = {};
+    std::snprintf(buf, sizeof(buf), "Format \"%s\" is not sampling capable", Tempest::formatName(a.tImpl.format()));
+    throw BadTextureCastException(buf);
+    }
   return a.tImpl;
   }
 
 template<>
 inline const Texture2d& textureCast<const Texture2d&>(const ZBuffer& a) {
-  if(a.nonSampleFormat)
-    throw std::bad_cast();
+  if(a.nonSampleFormat) {
+    char buf[256] = {};
+    std::snprintf(buf, sizeof(buf), "Format \"%s\" is not sampling capable", Tempest::formatName(a.tImpl.format()));
+    throw BadTextureCastException(buf);
+    }
   return a.tImpl;
   }
 }

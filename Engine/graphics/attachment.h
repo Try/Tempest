@@ -3,6 +3,7 @@
 #include <Tempest/AbstractGraphicsApi>
 #include <Tempest/Swapchain>
 #include <Tempest/Texture2d>
+#include <Tempest/Except>
 
 namespace Tempest {
 
@@ -43,21 +44,21 @@ class Attachment final {
 template<>
 inline Texture2d& textureCast<Texture2d&>(Attachment& a) {
   if(a.sImpl.swapchain)
-    throw std::bad_cast();
+    throw BadTextureCastException("Cannot cast swapchain image to Texture2d");
   return a.tImpl;
   }
 
 template<>
 inline const Texture2d& textureCast<const Texture2d&>(Attachment& a) {
   if(a.sImpl.swapchain)
-    throw std::bad_cast();
+    throw BadTextureCastException("Cannot cast swapchain image to Texture2d");
   return a.tImpl;
   }
 
 template<>
 inline const Texture2d& textureCast<const Texture2d&>(const Attachment& a) {
   if(a.sImpl.swapchain)
-    throw std::bad_cast();
+    throw BadTextureCastException("Cannot cast swapchain image to Texture2d");
   return a.tImpl;
   }
 }

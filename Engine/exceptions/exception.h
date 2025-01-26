@@ -37,6 +37,14 @@ class ConcurentRecordingException : public  std::exception {
   const char* what() const noexcept override { return "the command buffer is already in recording state"; }
   };
 
+class BadTextureCastException : public  std::bad_cast {
+  public:
+    BadTextureCastException(std::string message):message(std::move(message)) {}
+    const char* what() const noexcept override { return message.c_str(); }
+  private:
+    std::string message;
+  };
+
 enum class SystemErrc {
   InvalidWindowClass   = 0,
   UnableToCreateWindow = 1,

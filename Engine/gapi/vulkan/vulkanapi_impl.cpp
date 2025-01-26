@@ -533,11 +533,18 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
       if((frm.optimalTilingFeatures & imageRqFlagsBC)==imageRqFlagsBC){
         smpFormat |= (1ull<<i);
         }
-      } else {
+      }
+    else if(isDepthFormat(TextureFormat(i))) {
       if((frm.optimalTilingFeatures & imageRqFlags)==imageRqFlags){
         smpFormat |= (1ull<<i);
         }
       }
+    else {
+      if((frm.optimalTilingFeatures & imageRqFlags)==imageRqFlags){
+        smpFormat |= (1ull<<i);
+        }
+      }
+
     if((frm.optimalTilingFeatures & attachRqFlags)==attachRqFlags){
       attFormat |= (1ull<<i);
       }
