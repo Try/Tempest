@@ -709,6 +709,10 @@ void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, u
   auto& src = reinterpret_cast<VTexture&>(srcTex);
   auto& dst = reinterpret_cast<VTexture&>(dstTex);
 
+  // blit is not guarantied by spec for depth
+  assert(!nativeIsDepthFormat(src.format));
+  assert(!nativeIsDepthFormat(dst.format));
+
   // Check if image format supports linear blitting
   VkFormatProperties formatProperties;
   vkGetPhysicalDeviceFormatProperties(device.physicalDevice, src.format, &formatProperties);
