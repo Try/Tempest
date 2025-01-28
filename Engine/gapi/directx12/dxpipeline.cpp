@@ -78,20 +78,20 @@ DxPipeline::DxPipeline(DxDevice& device,
   pushBaseInstanceId = ulay.pushBaseInstanceId;
 
   if(auto vert = findShader(ShaderReflection::Vertex)) {
-    declSize = UINT(vert->vdecl.size());
+    declSize = UINT(vert->vert.decl.size());
     vsInput.reset(new D3D12_INPUT_ELEMENT_DESC[declSize]);
     uint32_t offset=0;
     for(size_t i=0;i<declSize;++i){
       auto& loc=vsInput[i];
       loc.SemanticName         = "TEXCOORD"; // spirv cross compiles everything as TEXCOORD
       loc.SemanticIndex        = UINT(i);
-      loc.Format               = nativeFormat(vert->vdecl[i]);
+      loc.Format               = nativeFormat(vert->vert.decl[i]);
       loc.InputSlot            = 0;
       loc.AlignedByteOffset    = offset;
       loc.InputSlotClass       = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
       loc.InstanceDataStepRate = 0;
 
-      offset += uint32_t(Decl::size(vert->vdecl[i]));
+      offset += uint32_t(Decl::size(vert->vert.decl[i]));
       }
     }
   }
@@ -284,9 +284,6 @@ ComPtr<ID3D12PipelineState> DxPipeline::initMeshPipeline(const DxFboLayout& frm)
 
   auto err = dev->CreatePipelineState(&streamDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&ret.get()));
   if(FAILED(err)) {
-    for(auto& i:modules)
-      if(i.handler!=nullptr)
-        ;//i.handler->disasm();
     dxAssert(err);
     }
   return ret;

@@ -55,9 +55,9 @@ VPipeline::VPipeline(VDevice& device, const RenderState& st, Topology tp,
         modules[i] = Detail::DSharedPtr<const VShader*>{sh[i]};
 
     if(auto vert=findShader(ShaderReflection::Stage::Vertex)) {
-      declSize = vert->vdecl.size();
+      declSize = vert->vert.decl.size();
       decl.reset(new Decl::ComponentType[declSize]);
-      std::memcpy(decl.get(),vert->vdecl.data(),declSize*sizeof(Decl::ComponentType));
+      std::memcpy(decl.get(), vert->vert.decl.data(), declSize*sizeof(Decl::ComponentType));
       defaultStride = 0;
       for(size_t i=0;i<declSize;++i){
         defaultStride += uint32_t(Decl::size(decl[i]));

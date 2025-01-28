@@ -224,7 +224,7 @@ AbstractGraphicsApi::PPipelineLay DirectX12Api::createPipelineLayout(Device* d, 
       continue;
     auto* s = reinterpret_cast<const Detail::DxShader*>(sh[i]);
     lay[i] = &s->lay;
-    has_baseVertex_baseInstance |= s->has_baseVertex_baseInstance;
+    has_baseVertex_baseInstance |= s->vert.has_baseVertex_baseInstance;
     }
   auto& dx = *reinterpret_cast<Detail::DxDevice*>(d);
   return PPipelineLay(new Detail::DxPipelineLay(dx,lay,count,has_baseVertex_baseInstance));

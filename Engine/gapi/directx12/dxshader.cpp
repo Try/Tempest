@@ -65,10 +65,8 @@ static int calcShaderModel(const spirv_cross::CompilerHLSL& comp) {
   return shader_model;
   }
 
-DxShader::DxShader(const void *source, const size_t src_size) {
-  if(src_size%4!=0)
-    throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
-
+DxShader::DxShader(const void *source, const size_t src_size)
+  : Shader(source, src_size){
   spirv_cross::CompilerHLSL::Options optHLSL;
 
   spirv_cross::CompilerGLSL::Options optGLSL;
@@ -80,32 +78,12 @@ DxShader::DxShader(const void *source, const size_t src_size) {
   try {
     libspirv::Bytecode code(reinterpret_cast<const uint32_t*>(source),src_size/4);
     exec = code.findExecutionModel();
-    stage = ShaderReflection::getExecutionModel(exec);
-    for(auto& i:code) {
-      if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBuiltIn && i[3]==spv::BuiltInInstanceIndex) {
-        has_baseVertex_baseInstance = true;
-        }
-      if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBuiltIn && i[3]==spv::BuiltInBaseVertex) {
-        has_baseVertex_baseInstance = true;
-        }
-      if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBuiltIn && i[3]==spv::BuiltInNumWorkgroups) {
-        has_NumworkGroups = true;
-        }
-      if(stage==ShaderReflection::Compute||
-         stage==ShaderReflection::Task || stage==ShaderReflection::Mesh) {
-        if(i.op()==spv::OpExecutionMode && i[2]==spv::ExecutionModeLocalSize) {
-          this->comp.wgSize.x = i[3];
-          this->comp.wgSize.y = i[4];
-          this->comp.wgSize.z = i[5];
-          }
-        }
-      }
 
     spirv_cross::CompilerHLSL comp(reinterpret_cast<const uint32_t*>(source),src_size/4);
     if(stage==ShaderReflection::Stage::Vertex || stage==ShaderReflection::Stage::Mesh)
       optGLSL.vertex.flip_vert_y = true;
     optHLSL.shader_model = calcShaderModel(comp);
-    optHLSL.support_nonzero_base_vertex_base_instance = has_baseVertex_baseInstance;
+    optHLSL.support_nonzero_base_vertex_base_instance = vert.has_baseVertex_baseInstance;
     optHLSL.point_size_compat = true;
 
     comp.set_hlsl_options  (optHLSL);
@@ -119,9 +97,6 @@ DxShader::DxShader(const void *source, const size_t src_size) {
     push_binding.cbv.register_binding = HLSL_PUSH;
     push_binding.cbv.register_space = 0;
     comp.add_hlsl_resource_binding(push_binding);
-
-    ShaderReflection::getVertexDecl(vdecl,comp);
-    ShaderReflection::getBindings(lay,comp);
 
     for(auto& i:lay)
       if(i.runtimeSized) {
