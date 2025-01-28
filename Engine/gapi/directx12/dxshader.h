@@ -13,7 +13,7 @@ namespace Detail {
 
 class DxDevice;
 
-class DxShader : public Shader {
+class DxShader : public Detail::Shader {
   public:
     DxShader(const void* source, const size_t src_size);
     ~DxShader();

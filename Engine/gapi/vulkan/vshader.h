@@ -11,7 +11,7 @@ namespace Detail {
 
 class VDevice;
 
-class VShader : public Shader {
+class VShader : public Detail::Shader {
   public:
     VShader(VDevice& device, const void* source, size_t src_size);
     explicit VShader(VDevice& device);

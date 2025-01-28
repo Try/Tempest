@@ -20,10 +20,8 @@ static uint32_t spvVersion(MTL::LanguageVersion v) {
   return spirv_cross::CompilerMSL::Options::make_msl_version(major,minor,0);
   }
 
-MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
-  if(srcSize%4!=0)
-    throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
-
+MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize)
+  : Shader(source, srcSize) {
   auto pool = NsPtr<NS::AutoreleasePool>::init();
   spirv_cross::CompilerMSL::Options optMSL;
 #if defined(__OSX__)
@@ -38,8 +36,6 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
 
   std::string msl;
   try {
-    fetchBindings(reinterpret_cast<const uint32_t*>(source),srcSize/4);
-
     spirv_cross::CompilerMSL comp(reinterpret_cast<const uint32_t*>(source),srcSize/4);
     optMSL.msl_version = spvVersion(dev.mslVersion);
     if(dev.prop.descriptors.nonUniformIndexing) {
@@ -106,25 +102,6 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
         }
       }
     lay.resize(nsize);
-
-    if(comp.get_execution_model()==spv::ExecutionModelTessellationEvaluation) {
-      auto& exec = comp.get_execution_mode_bitset();
-      if(exec.get(spv::ExecutionModeTriangles)) {
-
-        }
-
-      if(exec.get(spv::ExecutionModeVertexOrderCw))
-        tese.winding = MTL::WindingClockwise;
-      else if(exec.get(spv::ExecutionModeVertexOrderCcw))
-        tese.winding = MTL::WindingCounterClockwise;
-
-      if(exec.get(spv::ExecutionModeSpacingEqual))
-        tese.partition = MTL::TessellationPartitionModeInteger;
-      else if(exec.get(spv::ExecutionModeSpacingFractionalEven))
-        tese.partition = MTL::TessellationPartitionModeFractionalEven;
-      else if(exec.get(spv::ExecutionModeSpacingFractionalOdd))
-        tese.partition = MTL::TessellationPartitionModeFractionalOdd;
-      }
     }
   catch(const std::bad_alloc&) {
     throw;
@@ -171,42 +148,6 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize) {
   }
 
 MtShader::~MtShader() {
-  }
-
-void MtShader::fetchBindings(const uint32_t *source, size_t size) {
-  // TODO: remove spirv-corss?
-  spirv_cross::Compiler comp(source, size);
-  ShaderReflection::getVertexDecl(vdecl,comp);
-  ShaderReflection::getBindings(lay,comp);
-
-  libspirv::Bytecode code(source, size);
-  stage = ShaderReflection::getExecutionModel(code);
-  if(stage==ShaderReflection::Compute || stage==ShaderReflection::Task || stage==ShaderReflection::Mesh) {
-    for(auto& i:code) {
-      if(i.op()!=spv::OpExecutionMode)
-        continue;
-      if(i[2]==spv::ExecutionModeLocalSize) {
-        this->comp.localSize.width  = i[3];
-        this->comp.localSize.height = i[4];
-        this->comp.localSize.depth  = i[5];
-        }
-      }
-    }
-  for(auto& i:code) {
-    if(i.op()!=spv::OpSource)
-      continue;
-    uint32_t src = i.length()>3 ? i[3] : 0;
-    if(src==0)
-      continue;
-
-    for(auto& r:code) {
-      if(r.op()==spv::OpString && r[1]==src) {
-        dbg.source = reinterpret_cast<const char*>(&r[2]);
-        break;
-        }
-      }
-    break;
-    }
   }
 
 #endif

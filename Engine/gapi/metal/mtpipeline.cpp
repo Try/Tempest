@@ -12,6 +12,10 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+static MTL::Size toMtlSize(const Tempest::IVec3 s) {
+  return MTL::Size(s.x,s.y,s.z);
+  }
+
 MtPipeline::MtPipeline(MtDevice &d, Topology tp,
                        const RenderState &rs,
                        const MtPipelineLay& lay,
@@ -129,16 +133,14 @@ const MtShader* MtPipeline::findShader(ShaderReflection::Stage sh) const {
 
 void MtPipeline::mkVertexPso(const MtPipelineLay& lay) {
   auto vert = findShader(ShaderReflection::Vertex);
-  auto tesc = findShader(ShaderReflection::Control);
-  auto tese = findShader(ShaderReflection::Evaluate);
   auto frag = findShader(ShaderReflection::Fragment);
 
   size_t offset = 0;
   vboIndex = lay.vboIndex;
   vdesc = NsPtr<MTL::VertexDescriptor>::init();
   vdesc->retain();
-  for(size_t i=0; i<vert->vdecl.size(); ++i) {
-    const auto& v = vert->vdecl[i];
+  for(size_t i=0; i<vert->vert.decl.size(); ++i) {
+    const auto& v = vert->vert.decl[i];
     vdesc->attributes()->object(i)->setBufferIndex(vboIndex);
     vdesc->attributes()->object(i)->setOffset(offset);
     vdesc->attributes()->object(i)->setFormat(nativeFormat(v));
@@ -156,21 +158,7 @@ void MtPipeline::mkVertexPso(const MtPipelineLay& lay) {
   pdesc->setVertexFunction(vert->impl.get());
   pdesc->setFragmentFunction(frag->impl.get());
   pdesc->setRasterizationEnabled(!rs.isRasterDiscardEnabled()); // TODO: test it
-
-  if(tesc!=nullptr && tese!=nullptr) {
-    pdesc->setMaxTessellationFactor(16);
-    pdesc->setTessellationFactorScaleEnabled(false);
-    pdesc->setTessellationFactorStepFunction(MTL::TessellationFactorStepFunctionConstant);
-    pdesc->setTessellationOutputWindingOrder(tese->tese.winding);
-    pdesc->setTessellationPartitionMode(tese->tese.partition);
-    pdesc->setVertexFunction(tese->impl.get());
-
-    vdesc->layouts()->object(lay.vboIndex)->setStepFunction(MTL::VertexStepFunctionPerPatch);
-    pdesc->setVertexDescriptor(vdesc.get());
-    isTesselation = true;
-    } else {
-    pdesc->setVertexDescriptor(vdesc.get());
-    }
+  pdesc->setVertexDescriptor(vdesc.get());
   }
 
 void MtPipeline::mkMeshPso(const MtPipelineLay& lay) {
@@ -179,11 +167,11 @@ void MtPipeline::mkMeshPso(const MtPipelineLay& lay) {
   auto frag = findShader(ShaderReflection::Fragment);
 
   if(task!=nullptr) {
-    localSize     = task->comp.localSize;
-    localSizeMesh = mesh->comp.localSize;
+    localSize     = toMtlSize(task->comp.wgSize);
+    localSizeMesh = toMtlSize(mesh->comp.wgSize);
     } else {
     localSize     = MTL::Size(0,0,0);
-    localSizeMesh = mesh->comp.localSize;
+    localSizeMesh = toMtlSize(mesh->comp.wgSize);
     }
 
   mdesc = NsPtr<MTL::MeshRenderPipelineDescriptor>::init();
@@ -208,7 +196,7 @@ void MtPipeline::mkMeshPso(const MtPipelineLay& lay) {
 
 MtCompPipeline::MtCompPipeline(MtDevice &device, const MtPipelineLay& lay, const MtShader &sh)
   :lay(&lay) {
-  localSize = sh.comp.localSize;
+  localSize = toMtlSize(sh.comp.wgSize);
   auto desc = NsPtr<MTL::ComputePipelineDescriptor>::init();
   desc->setComputeFunction(sh.impl.get());
   desc->setThreadGroupSizeIsMultipleOfThreadExecutionWidth(false); // it seems no way to guess correct with value
