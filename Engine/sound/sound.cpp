@@ -132,8 +132,8 @@ Sound::Sound(IDevice& f) {
 void Sound::initData(const char* bytes, int format, size_t size, size_t rate) {
   auto d = std::make_shared<Data>();
   d->ptr.reset(new char[size]);
-  d->byteSize  = size;
-  d->frequency = rate;
+  d->byteSize  = uint32_t(size);
+  d->frequency = uint32_t(rate);
   d->format    = format;
   std::memcpy(d->ptr.get(), bytes, size);
   data      = d;

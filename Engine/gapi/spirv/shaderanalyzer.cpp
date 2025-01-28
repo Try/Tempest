@@ -333,7 +333,7 @@ void ShaderAnalyzer::analyzeFunc(const uint32_t functionCurrent, const libspirv:
       case spv::OpFunction:
         break;
       case spv::OpFunctionParameter: {
-        uint32_t arg = uint32_t(calee[prm+4]);
+        uint32_t arg = calee[uint16_t(prm+4)];
         auto& l = registers[i[2]]; // reg
         auto  r = registers[arg];  // input ptr
         // copy pointer info
