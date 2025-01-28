@@ -287,7 +287,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
     if(shaders[i].handler==nullptr)
       continue;
 
-    if(auto ts = dynamic_cast<const VTaskShaderEmulated*>(shaders[i].handler))
+    if(nullptr != dynamic_cast<const VTaskShaderEmulated*>(shaders[i].handler))
       continue;
 
     VkPipelineShaderStageCreateInfo& sh = shaderStages[stagesCnt];
@@ -454,7 +454,9 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
     }
 
   VkPipeline graphicsPipeline=VK_NULL_HANDLE;
-  vkAssert(vkCreateGraphicsPipelines(device,VK_NULL_HANDLE,1,&pipelineInfo,nullptr,&graphicsPipeline));
+  const auto err = vkCreateGraphicsPipelines(device,VK_NULL_HANDLE,1,&pipelineInfo,nullptr,&graphicsPipeline);
+  if(err!=VK_SUCCESS)
+    throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
   return graphicsPipeline;
   }
 
@@ -482,7 +484,9 @@ VCompPipeline::VCompPipeline(VDevice& dev, const VPipelineLay& ulay, const VShad
     info.layout       = pipelineLayout;
     if(ulay.runtimeSized)
       info.flags = VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT;
-    vkAssert(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &info, nullptr, &impl));
+    const auto err = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &info, nullptr, &impl);
+    if(err!=VK_SUCCESS)
+      throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
   catch(...) {
     vkDestroyPipelineLayout(device,pipelineLayout,nullptr);
@@ -522,7 +526,9 @@ VkPipeline VCompPipeline::instance(VkPipelineLayout pLay) {
     info.flags              = VK_PIPELINE_CREATE_DERIVATIVE_BIT;
     info.basePipelineHandle = impl;
     info.basePipelineIndex  = -1;
-    vkAssert(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &info, nullptr, &val));
+    const auto err = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &info, nullptr, &val);
+    if(err!=VK_SUCCESS)
+      throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
 
     inst.emplace_back(pLay,val);
     }

@@ -132,19 +132,12 @@ DxShader::DxShader(const void *source, const size_t src_size)
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
 
-  if(false) {
-    spirv_cross::CompilerMSL comp(reinterpret_cast<const uint32_t*>(source),src_size/4);
-    comp.set_common_options(optGLSL);
-    auto glsl = comp.compile();
-    Log::d(glsl);
-    }
-
   HRESULT hr = compile(shader,hlsl.c_str(),hlsl.size(),exec,optHLSL.shader_model);
   if(hr!=S_OK) {
 #if !defined(NDEBUG)
     Log::d(hlsl);
 #endif
-    throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
+    throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule, "\"" + dbg.source + "\"");
     }
 
   if(stage==ShaderReflection::Stage::Compute) {

@@ -232,9 +232,9 @@ ComPtr<ID3D12PipelineState> DxPipeline::initGraphicsPipeline(const DxFboLayout& 
     }
 
   ComPtr<ID3D12PipelineState> ret;
-  auto err = device.device->CreateGraphicsPipelineState(&psoDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&ret.get()));
+  const auto err = device.device->CreateGraphicsPipelineState(&psoDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&ret.get()));
   if(FAILED(err)) {
-    dxAssert(err);
+    throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
   return ret;
   }
@@ -282,9 +282,9 @@ ComPtr<ID3D12PipelineState> DxPipeline::initMeshPipeline(const DxFboLayout& frm)
   ComPtr<ID3D12Device2> dev;
   device.device->QueryInterface(uuid<ID3D12Device2>(), reinterpret_cast<void**>(&dev));
 
-  auto err = dev->CreatePipelineState(&streamDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&ret.get()));
+  const auto err = dev->CreatePipelineState(&streamDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&ret.get()));
   if(FAILED(err)) {
-    dxAssert(err);
+    throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
     }
   return ret;
   }
@@ -301,7 +301,10 @@ DxCompPipeline::DxCompPipeline(DxDevice& device, const DxPipelineLay& ulay, DxSh
   psoDesc.pRootSignature = sign.get();
   psoDesc.CS             = comp.bytecode();
 
-  dxAssert(device.device->CreateComputePipelineState(&psoDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&impl)));
+  const auto err = device.device->CreateComputePipelineState(&psoDesc, uuid<ID3D12PipelineState>(), reinterpret_cast<void**>(&impl));
+  if(FAILED(err)) {
+    throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule, "\"" + comp.dbg.source + "\"");
+    }
   }
 
 IVec3 DxCompPipeline::workGroupSize() const {
