@@ -20,26 +20,26 @@ void Shader::fetchBindings(const uint32_t* source, const size_t size){
 
   libspirv::Bytecode code(source, size);
   stage = ShaderReflection::getExecutionModel(code);
-  if(stage==ShaderReflection::Compute || stage==ShaderReflection::Task || stage==ShaderReflection::Mesh) {
-    for(auto& i:code) {
-      if(i.op()!=spv::OpExecutionMode)
-        continue;
+
+  for(auto& i:code) {
+    if(i.op()==spv::OpExecutionMode) {
       if(i[2]==spv::ExecutionModeLocalSize) {
         comp.wgSize.x = i[3];
         comp.wgSize.y = i[4];
         comp.wgSize.z = i[5];
         }
-      if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBuiltIn && i[3]==spv::BuiltInInstanceIndex) {
-        vert.has_baseVertex_baseInstance = true;
-        }
-      if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBuiltIn && i[3]==spv::BuiltInBaseVertex) {
-        vert.has_baseVertex_baseInstance = true;
-        }
-      if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBuiltIn && i[3]==spv::BuiltInNumWorkgroups) {
-        comp.has_NumworkGroups = true;
-        }
+      }
+    if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBuiltIn && i[3]==spv::BuiltInInstanceIndex) {
+      vert.has_baseVertex_baseInstance = true;
+      }
+    if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBuiltIn && i[3]==spv::BuiltInBaseVertex) {
+      vert.has_baseVertex_baseInstance = true;
+      }
+    if(i.op()==spv::OpDecorate && i[2]==spv::DecorationBuiltIn && i[3]==spv::BuiltInNumWorkgroups) {
+      comp.has_NumworkGroups = true;
       }
     }
+
   for(auto& i:code) {
     if(i.op()!=spv::OpSource)
       continue;
