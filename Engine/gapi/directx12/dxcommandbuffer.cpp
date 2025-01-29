@@ -46,7 +46,7 @@ static D3D12_RENDER_PASS_ENDING_ACCESS_TYPE mkStoreOp(const AccessOp op) {
   return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS;
   }
 
-static void toStage(DxDevice& dev, D3D12_BARRIER_SYNC& stage, D3D12_BARRIER_ACCESS& access, ResourceAccess rs, bool isSrc) {
+static void toStage(DxDevice& dev, D3D12_BARRIER_SYNC& stage, D3D12_BARRIER_ACCESS& access, ResourceAccess rs, bool isSrc, bool isTex) {
   uint32_t ret = 0;
   uint32_t acc = 0;
   if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc) {
@@ -131,6 +131,14 @@ static void toStage(DxDevice& dev, D3D12_BARRIER_SYNC& stage, D3D12_BARRIER_ACCE
   if((rs&ResourceAccess::UavWriteComp)==ResourceAccess::UavWriteComp) {
     ret |= D3D12_BARRIER_SYNC_COMPUTE_SHADING;
     acc |= D3D12_BARRIER_ACCESS_UNORDERED_ACCESS;
+    }
+
+  const D3D12_BARRIER_ACCESS maskTex = D3D12_BARRIER_ACCESS_RENDER_TARGET | D3D12_BARRIER_ACCESS_UNORDERED_ACCESS |
+                                       D3D12_BARRIER_ACCESS_DEPTH_STENCIL_WRITE | D3D12_BARRIER_ACCESS_DEPTH_STENCIL_READ |
+                                       D3D12_BARRIER_ACCESS_SHADER_RESOURCE;
+
+  if(isTex) {
+    acc &= maskTex;
     }
 
   if(isSrc && ret==0) {
@@ -784,8 +792,8 @@ void DxCommandBuffer::enhancedBarrier(const AbstractGraphicsApi::BarrierDesc* de
       D3D12_BARRIER_ACCESS srcAccessMask = D3D12_BARRIER_ACCESS_COMMON;
       D3D12_BARRIER_SYNC   dstStageMask  = D3D12_BARRIER_SYNC_NONE;
       D3D12_BARRIER_ACCESS dstAccessMask = D3D12_BARRIER_ACCESS_COMMON;
-      toStage(dev, srcStageMask, srcAccessMask, b.prev, true);
-      toStage(dev, dstStageMask, dstAccessMask, b.next, false);
+      toStage(dev, srcStageMask, srcAccessMask, b.prev, true,  false);
+      toStage(dev, dstStageMask, dstAccessMask, b.next, false, false);
 
       memBarrier.SyncBefore   |= srcStageMask;
       memBarrier.AccessBefore |= srcAccessMask;
@@ -797,8 +805,8 @@ void DxCommandBuffer::enhancedBarrier(const AbstractGraphicsApi::BarrierDesc* de
       auto& bx = bufBarrier[bufCount];
       ++bufCount;
 
-      toStage(dev, bx.SyncBefore, bx.AccessBefore, b.prev, true);
-      toStage(dev, bx.SyncAfter,  bx.AccessAfter,  b.next, false);
+      toStage(dev, bx.SyncBefore, bx.AccessBefore, b.prev, true,  false);
+      toStage(dev, bx.SyncAfter,  bx.AccessAfter,  b.next, false, false);
       bx.pResource = toDxResource(b);
       bx.Offset    = 0;
       bx.Size      = UINT64_MAX;
@@ -807,8 +815,8 @@ void DxCommandBuffer::enhancedBarrier(const AbstractGraphicsApi::BarrierDesc* de
       auto& bx = imgBarrier[imgCount];
       ++imgCount;
 
-      toStage(dev, bx.SyncBefore, bx.AccessBefore, b.prev, true);
-      toStage(dev, bx.SyncAfter,  bx.AccessAfter,  b.next, false);
+      toStage(dev, bx.SyncBefore, bx.AccessBefore, b.prev, true,  true);
+      toStage(dev, bx.SyncAfter,  bx.AccessAfter,  b.next, false, true);
 
       bx.LayoutBefore = toLayout(b.prev);
       bx.LayoutAfter  = toLayout(b.next);
