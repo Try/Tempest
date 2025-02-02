@@ -9,6 +9,7 @@
 #include <Tempest/ZBuffer>
 #include <Tempest/Texture2d>
 #include <Tempest/DescriptorSet>
+#include <Tempest/DescriptorArray>
 #include <Tempest/VertexBuffer>
 #include <Tempest/IndexBuffer>
 #include <Tempest/UniformBuffer>
@@ -118,6 +119,13 @@ class Device {
     StorageBuffer         ssbo(const std::vector<T>& arr) {
       return ssbo(BufferHeap::Device,arr.data(),arr.size()*sizeof(T));
       }
+
+    DescriptorArray       descriptors(const std::vector<const StorageBuffer*>& buf);
+    DescriptorArray       descriptors(const StorageBuffer* const *buf, size_t size);
+    DescriptorArray       descriptors(const std::vector<const Texture2d*>& tex);
+    DescriptorArray       descriptors(const Texture2d* const *tex, size_t size);
+    DescriptorArray       descriptors(const std::vector<const Texture2d*>& tex, const Sampler& smp);
+    DescriptorArray       descriptors(const Texture2d* const *tex, size_t size, const Sampler& smp);
 
     DescriptorSet         descriptors(const RenderPipeline&  pso) { return descriptors(pso.layout()); }
     DescriptorSet         descriptors(const ComputePipeline& pso) { return descriptors(pso.layout()); }

@@ -118,6 +118,42 @@ Shader Device::shader(const void *source, const size_t length) {
   return f;
   }
 
+DescriptorArray Device::descriptors(const std::vector<const StorageBuffer *> &buf) {
+  return descriptors(buf.data(), buf.size());
+  }
+
+DescriptorArray Device::descriptors(const StorageBuffer * const *buf, size_t size) {
+  Detail::SmallArray<AbstractGraphicsApi::Buffer*,32> arr(size);
+  for(size_t i=0; i<size; ++i)
+    arr[i] = buf[i] ? buf[i]->impl.impl.handler : nullptr;
+  DescriptorArray d(*this,api.createDescriptors(dev, arr.get(), size));
+  return d;
+  }
+
+DescriptorArray Device::descriptors(const std::vector<const Texture2d *> &tex) {
+  return descriptors(tex.data(), tex.size());
+  }
+
+DescriptorArray Device::descriptors(const Texture2d * const *tex, size_t size) {
+  Detail::SmallArray<AbstractGraphicsApi::Texture*,32> arr(size);
+  for(size_t i=0; i<size; ++i)
+    arr[i] = tex[i] ? tex[i]->impl.handler : nullptr;
+  DescriptorArray d(*this,api.createDescriptors(dev, arr.get(), size, 0));
+  return d;
+  }
+
+DescriptorArray Device::descriptors(const std::vector<const Texture2d *> &tex, const Sampler &smp) {
+  return descriptors(tex.data(), tex.size(), smp);
+  }
+
+DescriptorArray Device::descriptors(const Texture2d * const *tex, size_t size, const Sampler &smp) {
+  Detail::SmallArray<AbstractGraphicsApi::Texture*,32> arr(size);
+  for(size_t i=0; i<size; ++i)
+    arr[i] = tex[i] ? tex[i]->impl.handler : nullptr;
+  DescriptorArray d(*this,api.createDescriptors(dev, arr.get(), size, 0, smp));
+  return d;
+  }
+
 Swapchain Device::swapchain(SystemApi::Window* w) const {
   return Swapchain(api.createSwapchain(w,impl.dev));
   }

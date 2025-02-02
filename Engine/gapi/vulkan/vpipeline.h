@@ -7,6 +7,7 @@
 #include "../utility/dptr.h"
 #include "../utility/spinlock.h"
 #include "gapi/shaderreflection.h"
+#include "vbindlesscache.h"
 #include "vframebuffermap.h"
 #include "vshader.h"
 #include "vulkan_sdk.h"
@@ -110,11 +111,11 @@ class VCompPipeline : public AbstractGraphicsApi::CompPipeline {
     ~VCompPipeline();
 
     struct Inst {
-      Inst(VkDescriptorSetLayout dLay, VkPipelineLayout val):val(val),dLay(dLay){}
+      Inst(VkPipelineLayout dLay, VkPipeline val):val(val),dLay(dLay){}
       Inst(Inst&&)=default;
       Inst& operator = (Inst&&)=default;
 
-      bool                  isCompatible(VkDescriptorSetLayout dLay) const;
+      bool                  isCompatible(VkPipelineLayout dLay) const;
 
       VkPipeline            val;
       VkPipelineLayout      dLay;
@@ -124,6 +125,8 @@ class VCompPipeline : public AbstractGraphicsApi::CompPipeline {
     bool               isRuntimeSized() const { return runtimeSized; }
 
     VkPipeline         instance(VkPipelineLayout pLay);
+
+    const VPipelineLay&layout() const { return *lay.handler; }
 
     VkPipelineLayout   pipelineLayout = VK_NULL_HANDLE;
     VkPipeline         impl           = VK_NULL_HANDLE;

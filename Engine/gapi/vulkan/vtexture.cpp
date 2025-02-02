@@ -23,8 +23,10 @@ VTexture::VTexture(VTexture&& other) {
   }
 
 VTexture::~VTexture() {
-  if(alloc!=nullptr)
+  if(alloc!=nullptr) {
+    alloc->device()->bindless.notifyDestroy(this);
     alloc->free(*this);
+    }
   }
 
 VkImageView VTexture::view(const ComponentMapping& m, uint32_t mipLevel, bool is3D) {

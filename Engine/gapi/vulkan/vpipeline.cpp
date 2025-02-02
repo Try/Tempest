@@ -461,7 +461,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   }
 
 
-bool VCompPipeline::Inst::isCompatible(VkDescriptorSetLayout lay) const {
+bool VCompPipeline::Inst::isCompatible(VkPipelineLayout lay) const {
   return dLay==lay;
   }
 
@@ -508,8 +508,10 @@ IVec3 VCompPipeline::workGroupSize() const {
   }
 
 VkPipeline VCompPipeline::instance(VkPipelineLayout pLay) {
-  std::lock_guard<SpinLock> guard(sync);
+  if(!runtimeSized)
+    return impl;
 
+  std::lock_guard<SpinLock> guard(sync);
   for(auto& i:inst)
     if(i.isCompatible(pLay))
       return i.val;

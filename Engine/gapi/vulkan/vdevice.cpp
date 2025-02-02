@@ -37,8 +37,59 @@ VDevice::autoDevice::~autoDevice() {
   vkDestroyDevice(impl,nullptr);
   }
 
+
+VDevice::ArrayLayout::ArrayLayout(VDevice& dev, VkDescriptorType type)
+  : dev(dev.device.impl) {
+  VkDescriptorBindingFlags flag = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT;
+
+  VkDescriptorSetLayoutBinding bx = {};
+  bx.binding         = 0;
+  bx.descriptorType  = type;
+  bx.stageFlags      = 0; //VK_SHADER_STAGE_ALL;
+  switch(type) {
+    case VK_DESCRIPTOR_TYPE_SAMPLER:
+      bx.descriptorCount = dev.props.descriptors.maxSamplers;
+    case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+    case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+      bx.descriptorCount = dev.props.descriptors.maxTexture;
+      break;
+    case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+      bx.descriptorCount = dev.props.descriptors.maxStorage;
+      break;
+    default:
+      assert(0);
+    }
+
+  VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlags = {};
+  bindingFlags.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+  bindingFlags.bindingCount  = 1;
+  bindingFlags.pBindingFlags = &flag;
+
+  VkDescriptorSetLayoutCreateInfo info={};
+  info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+  info.pNext        = nullptr;
+  info.flags        = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+  info.bindingCount = 1;
+  info.pBindings    = &bx;
+  info.pNext        = &bindingFlags;
+
+  vkAssert(vkCreateDescriptorSetLayout(dev.device.impl,&info,nullptr,&impl));
+  }
+
+VDevice::ArrayLayout::~ArrayLayout() {
+  if(impl!=VK_NULL_HANDLE)
+    vkDestroyDescriptorSetLayout(dev, impl, nullptr);
+  }
+
+VDevice::ArrayLayout& VDevice::ArrayLayout::operator=(ArrayLayout &&a) {
+  std::swap(dev,  a.dev);
+  std::swap(impl, a.impl);
+  return *this;
+  }
+
 VDevice::VDevice(VulkanInstance &api, std::string_view gpuName)
-  :instance(api.instance), fboMap(*this) {
+  :instance(api.instance), fboMap(*this), bindless(*this) {
   uint32_t deviceCount = 0;
   vkEnumeratePhysicalDevices(api.instance, &deviceCount, nullptr);
 
@@ -495,6 +546,34 @@ VBuffer& VDevice::dummySsbo() {
     dummySsboVal = allocator.alloc(nullptr, sizeof(uint32_t), MemUsage::StorageBuffer, BufferHeap::Device);
     }
   return dummySsboVal;
+  }
+
+const VDevice::ArrayLayout& VDevice::bindlessArrayLayout(VkDescriptorType type) {
+  ArrayLayout* ret = nullptr;
+  switch(type) {
+    case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+      ret = &layTexSmp;
+      break;
+    case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+      ret = &layTex;
+      break;
+    case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+      ret = &layImg;
+      break;
+    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+      ret = &layBuf;
+      break;
+    case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
+      break;
+    default:
+      break;
+    }
+  assert(ret!=nullptr);
+
+  std::lock_guard<std::mutex> guard(syncLay);
+  if(ret->impl==VK_NULL_HANDLE)
+    *ret = ArrayLayout(*this, type);
+  return *ret;
   }
 
 void VDevice::allocMeshletHelper() {

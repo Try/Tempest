@@ -92,6 +92,7 @@ namespace Tempest {
 
   enum  : uint8_t {
     MaxFramebufferAttachments = 8+1,
+    MaxBindings = 32,
     MaxBarriers = 64,
     MaxCmdChunks = 64,
     };
@@ -538,6 +539,7 @@ namespace Tempest {
         };
       struct BlasBuildCtx {};
       struct AccelerationStructure:Shared {};
+      struct DescArray:NoCopy {};
       struct Desc:NoCopy   {
         virtual ~Desc()=default;
         virtual void set(size_t id, AbstractGraphicsApi::Texture* tex, const Sampler& smp, uint32_t mipLevel) = 0;
@@ -595,10 +597,15 @@ namespace Tempest {
         virtual void setComputePipeline(CompPipeline& p)=0;
 
         virtual void setBytes   (Pipeline &p, const void* data, size_t size)=0;
-        virtual void setUniforms(Pipeline& p,Desc& u)=0;
+        virtual void setUniforms(Pipeline& p, Desc& u)=0;
 
         virtual void setBytes   (CompPipeline &p, const void* data, size_t size)=0;
-        virtual void setUniforms(CompPipeline& p,Desc& u)=0;
+        virtual void setUniforms(CompPipeline& p, Desc& u)=0;
+
+        virtual void setBinding (size_t id, Texture *tex, const Sampler& smp, uint32_t mipLevel);
+        virtual void setBinding (size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset);
+        virtual void setBinding (size_t id, AbstractGraphicsApi::DescArray* arr);
+        virtual void setBinding (size_t id, const Sampler& smp);
 
         virtual void setViewport(const Rect& r)=0;
         virtual void setScissor (const Rect& r)=0;
@@ -651,6 +658,9 @@ namespace Tempest {
                          createCommandBuffer(Device* d)=0;
 
       virtual Desc*      createDescriptors(Device* d,PipelineLay& layP)=0;
+      virtual DescArray* createDescriptors(Device* d, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel);
+      virtual DescArray* createDescriptors(Device* d, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler& smp);
+      virtual DescArray* createDescriptors(Device* d, AbstractGraphicsApi::Buffer**  buf, size_t cnt);
 
       virtual PBuffer    createBuffer (Device* d, const void* mem, size_t size, MemUsage usage, BufferHeap flg) = 0;
       virtual PTexture   createTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mips) = 0;

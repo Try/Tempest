@@ -126,6 +126,32 @@ void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p) {
     }
   }
 
+void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const StorageImage& tex, const Sampler& smp, uint32_t mipLevel) {
+  impl->setBinding(id, tex.tImpl.impl.handler, smp, mipLevel);
+  }
+
+void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const DescriptorArray& arr) {
+  impl->setBinding(id, arr.impl.handler);
+  }
+
+void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const Sampler &smp) {
+  // NOTE: separable samplers do not support mappings in native api
+  assert(smp.mapping==ComponentMapping());
+  impl->setBinding(id, smp);
+  }
+
+void Encoder<Tempest::CommandBuffer>::setPipeline(const ComputePipeline& p) {
+  if(state.stage==Rendering)
+    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
+  assert(p.impl.handler);
+  if(state.curCompute!=p.impl.handler) {
+    impl->setComputePipeline(*p.impl.handler);
+    state.curCompute  = p.impl.handler;
+    state.curPipeline = nullptr;
+    state.stage       = Compute;
+    }
+  }
+
 void Encoder<Tempest::CommandBuffer>::implDraw(const Detail::VideoBuffer& vbo, size_t stride, size_t offset, size_t size, size_t firstInstance, size_t instanceCount) {
   if(state.stage!=Rendering)
     throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
@@ -297,4 +323,3 @@ void Encoder<CommandBuffer>::generateMipmaps(Attachment& tex) {
   uint32_t w = tex.w(), h = tex.h();
   impl->generateMipmap(*textureCast<Texture2d&>(tex).impl.handler,w,h,mipCount(w,h));
   }
-

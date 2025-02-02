@@ -241,6 +241,7 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
 VTopAccelerationStructure::~VTopAccelerationStructure() {
   auto device = owner.device.impl;
   owner.vkDestroyAccelerationStructure(device,impl,nullptr);
+  owner.bindless.notifyDestroy(this);
   }
 
 #endif

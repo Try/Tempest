@@ -96,6 +96,22 @@ void AbstractGraphicsApi::CommandBuffer::begin(bool tranfer) {
   begin();
   }
 
+void AbstractGraphicsApi::CommandBuffer::setBinding(size_t id, Texture *tex, const Sampler &smp, uint32_t mipLevel) {
+  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
+  }
+
+void AbstractGraphicsApi::CommandBuffer::setBinding(size_t id, Buffer *buf, size_t offset) {
+  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
+  }
+
+void AbstractGraphicsApi::CommandBuffer::setBinding(size_t id, DescArray *arr) {
+  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
+  }
+
+void AbstractGraphicsApi::CommandBuffer::setBinding(size_t id, const Sampler &smp) {
+  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
+  }
+
 void AbstractGraphicsApi::CommandBuffer::setDebugMarker(std::string_view tag) {
   (void)tag;
   }
@@ -119,4 +135,16 @@ AbstractGraphicsApi::AccelerationStructure*
 
 void AbstractGraphicsApi::Desc::ssboBarriers(Detail::ResourceState&, PipelineStage) {
   // NOP by default
+  }
+
+AbstractGraphicsApi::DescArray* AbstractGraphicsApi::createDescriptors(Device *d, Texture **tex, size_t cnt, uint32_t mipLevel) {
+  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
+  }
+
+AbstractGraphicsApi::DescArray *AbstractGraphicsApi::createDescriptors(Device *d, Buffer **buf, size_t cnt) {
+  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
+  }
+
+AbstractGraphicsApi::DescArray *AbstractGraphicsApi::createDescriptors(Device *d, Texture **tex, size_t cnt, uint32_t mipLevel, const Sampler &smp) {
+  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }

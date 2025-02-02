@@ -70,6 +70,10 @@ size_t VPipelineLay::sizeofBuffer(size_t layoutBind, size_t arraylen) const {
   return ShaderReflection::sizeofBuffer(lay[layoutBind], arraylen);
   }
 
+bool VPipelineLay::isUpdateAfterBind() const {
+  return runtimeSized;
+  }
+
 VPipelineLay::DedicatedLay VPipelineLay::create(const std::vector<uint32_t>& runtimeArrays) {
   std::lock_guard<Detail::SpinLock> guard(syncLay);
 

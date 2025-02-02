@@ -446,4 +446,120 @@ void VDescriptorArray::reallocSet(size_t id, uint32_t oldRuntimeSz) {
     vkDestroyDescriptorPool(dev,prevPool,nullptr);
   }
 
+///////////
+
+VDescriptorArray2::VDescriptorArray2(VDevice &dev, AbstractGraphicsApi::Texture **tex, size_t cnt, uint32_t mipLevel, const Sampler &smp)
+  : dev(dev), cnt(cnt) {
+  const auto& lay = dev.bindlessArrayLayout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+  alloc(lay.impl, dev, cnt);
+  populate(dev, tex, cnt, mipLevel, &smp);
+  }
+
+VDescriptorArray2::VDescriptorArray2(VDevice &dev, AbstractGraphicsApi::Texture **tex, size_t cnt, uint32_t mipLevel)
+  : dev(dev), cnt(cnt) {
+  const auto& lay = dev.bindlessArrayLayout(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
+  alloc(lay.impl, dev, cnt);
+  populate(dev, tex, cnt, mipLevel, nullptr);
+  }
+
+VDescriptorArray2::VDescriptorArray2(VDevice &dev, AbstractGraphicsApi::Buffer **buf, size_t cnt)
+  : dev(dev), cnt(cnt) {
+  const auto& lay = dev.bindlessArrayLayout(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+  alloc(lay.impl, dev, cnt);
+  populate(dev, buf, cnt);
+  }
+
+VDescriptorArray2::~VDescriptorArray2() {
+  dev.bindless.notifyDestroy(this);
+  if(pool!=VK_NULL_HANDLE)
+    vkDestroyDescriptorPool(dev.device.impl, pool, nullptr);
+  }
+
+size_t VDescriptorArray2::size() const {
+  return cnt;
+  }
+
+void VDescriptorArray2::alloc(VkDescriptorSetLayout lay, VDevice &dev, size_t cnt) {
+  VkDescriptorPoolSize       poolSize = {};
+  poolSize.type            = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+  poolSize.descriptorCount = uint32_t(cnt);
+
+  VkDescriptorPoolCreateInfo poolInfo = {};
+  poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+  poolInfo.maxSets       = 1;
+  poolInfo.flags         = 0; // VK_DESCRIPTOR_POOL_CREATE_HOST_ONLY_BIT_EXT;
+  poolInfo.poolSizeCount = 1;
+  poolInfo.pPoolSizes    = &poolSize;
+  poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
+  vkAssert(vkCreateDescriptorPool(dev.device.impl, &poolInfo, nullptr, &pool));
+
+  uint32_t cnt32 = uint32_t(cnt);
+  VkDescriptorSetVariableDescriptorCountAllocateInfo vinfo = {};
+  vinfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
+  vinfo.descriptorSetCount = 1;
+  vinfo.pDescriptorCounts  = &cnt32;
+
+  VkDescriptorSetAllocateInfo allocInfo = {};
+  allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+  allocInfo.pNext              = &vinfo;
+  allocInfo.descriptorPool     = pool;
+  allocInfo.descriptorSetCount = 1;
+  allocInfo.pSetLayouts        = &lay;
+  vkAssert(vkAllocateDescriptorSets(dev.device.impl,&allocInfo,&dset));
+  }
+
+void VDescriptorArray2::populate(VDevice &dev, AbstractGraphicsApi::Texture **t, size_t cnt, uint32_t mipLevel, const Sampler* smp) {
+  const bool is3DImage = false;
+
+  // 16 is non-bindless limit
+  SmallArray<VkDescriptorImageInfo,16> imageInfo(cnt);
+  for(size_t i=0; i<cnt; ++i) {
+    VTexture& tex = *reinterpret_cast<VTexture*>(t[i]);
+    imageInfo[i].imageLayout = toWriteLayout(tex);
+    imageInfo[i].imageView   = tex.view(ComponentMapping(), uint32_t(-1), is3DImage);
+    imageInfo[i].sampler     = smp!=nullptr ? dev.allocator.updateSampler(*smp) : VK_NULL_HANDLE;
+    // TODO: support mutable textures in bindless
+    assert(tex.nonUniqId==0);
+    }
+
+  VkWriteDescriptorSet descriptorWrite = {};
+  descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  descriptorWrite.dstSet          = dset;
+  descriptorWrite.dstBinding      = 0;
+  descriptorWrite.dstArrayElement = 0;
+  descriptorWrite.descriptorType  = smp!=nullptr ? VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER : VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+  descriptorWrite.descriptorCount = uint32_t(cnt);
+  descriptorWrite.pImageInfo      = imageInfo.get();
+
+  vkUpdateDescriptorSets(dev.device.impl, 1, &descriptorWrite, 0, nullptr);
+  }
+
+void VDescriptorArray2::populate(VDevice &dev, AbstractGraphicsApi::Buffer **b, size_t cnt) {
+  // 16 is non-bindless limit
+  SmallArray<VkDescriptorBufferInfo,16> bufInfo(cnt);
+  for(size_t i=0; i<cnt; ++i) {
+    VBuffer* buf = reinterpret_cast<VBuffer*>(b[i]);
+    bufInfo[i].buffer = buf!=nullptr ? buf->impl : VK_NULL_HANDLE;
+    bufInfo[i].offset = 0;
+    bufInfo[i].range  = VK_WHOLE_SIZE;
+    if(!dev.props.hasRobustness2 && buf==nullptr) {
+      bufInfo[i].buffer = dev.dummySsbo().impl;
+      bufInfo[i].offset = 0;
+      bufInfo[i].range  = 0;
+      }
+    // assert(buf->nonUniqId==0);
+    }
+
+  VkWriteDescriptorSet descriptorWrite = {};
+  descriptorWrite.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  descriptorWrite.dstSet          = dset;
+  descriptorWrite.dstBinding      = uint32_t(0);
+  descriptorWrite.dstArrayElement = 0;
+  descriptorWrite.descriptorType  = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  descriptorWrite.descriptorCount = uint32_t(cnt);
+  descriptorWrite.pBufferInfo     = bufInfo.get();
+
+  vkUpdateDescriptorSets(dev.device.impl, 1, &descriptorWrite, 0, nullptr);
+  }
+
 #endif

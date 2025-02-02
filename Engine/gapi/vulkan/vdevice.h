@@ -13,6 +13,7 @@
 #include "vfence.h"
 #include "vulkanapi_impl.h"
 #include "vframebuffermap.h"
+#include "vbindlesscache.h"
 #include "exceptions/exception.h"
 #include "utility/compiller_hints.h"
 #include "gapi/shaderreflection.h"
@@ -336,6 +337,17 @@ class VDevice : public AbstractGraphicsApi::Device {
       bool     hostVisible = false;
       };
 
+    struct ArrayLayout final {
+      ArrayLayout() = default;
+      ArrayLayout(VDevice &dev, VkDescriptorType type);
+      ~ArrayLayout();
+
+      ArrayLayout& operator=(ArrayLayout&& a);
+
+      VkDevice              dev  = VK_NULL_HANDLE;
+      VkDescriptorSetLayout impl = VK_NULL_HANDLE;
+      };
+
     VkInstance              instance       = nullptr;
     VkPhysicalDevice        physicalDevice = nullptr;
     autoDevice              device;
@@ -348,6 +360,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     VAllocator              allocator;
 
     VFramebufferMap         fboMap;
+    VBindlessCache          bindless;
 
     std::mutex                      meshSync;
     std::unique_ptr<VMeshletHelper> meshHelper;
@@ -389,6 +402,8 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     VBuffer&                dummySsbo();
 
+    const ArrayLayout&      bindlessArrayLayout(VkDescriptorType type);
+
     void                    allocMeshletHelper();
 
   private:
@@ -397,6 +412,10 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     std::mutex              syncSsbo;
     VBuffer                 dummySsboVal;
+
+    std::mutex              syncLay;
+    ArrayLayout             layTex, layImg, layBuf;
+    ArrayLayout             layTexSmp;
 
     void                    waitIdleSync(Queue* q, size_t n);
 

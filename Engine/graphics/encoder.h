@@ -3,6 +3,9 @@
 #include <Tempest/CommandBuffer>
 #include <Tempest/RenderPipeline>
 #include <Tempest/ComputePipeline>
+#include <Tempest/StorageImage>
+#include <Tempest/DescriptorArray>
+
 #include <Tempest/DescriptorSet>
 
 namespace Tempest {
@@ -37,6 +40,11 @@ class Encoder<Tempest::CommandBuffer> {
     void setUniforms(const ComputePipeline& p, const void* data, size_t sz);
     void setUniforms(const ComputePipeline& p, const DescriptorSet &ubo);
     void setUniforms(const ComputePipeline& p);
+
+    void setBinding(size_t id, const StorageImage&    tex, const Sampler& smp = Sampler::anisotrophy(), uint32_t mipLevel = uint32_t(-1));
+    void setBinding(size_t id, const DescriptorArray& arr);
+    void setBinding(size_t id, const Sampler&         smp);
+    void setPipeline(const ComputePipeline& p);
 
     void setViewport(int x,int y,int w,int h);
     void setViewport(const Rect& vp);

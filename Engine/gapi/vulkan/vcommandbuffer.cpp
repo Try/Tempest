@@ -449,13 +449,16 @@ void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
   state = Compute;
   auto& px = reinterpret_cast<VCompPipeline&>(p);
 
-  pipelineLayout = px.pipelineLayout;
+  bindings.durty  = true;
+  curCompPipeline = &px;
+  pipelineLayout  = px.pipelineLayout;
   if(!px.isRuntimeSized())
     vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,px.impl);
   }
 
 void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
-  curUniforms->ssboBarriers(resState,PipelineStage::S_Compute);
+  bindUniforms();
+  if(curUniforms) curUniforms->ssboBarriers(resState,PipelineStage::S_Compute);
   resState.flush(*this);
   vkCmdDispatch(impl,uint32_t(x),uint32_t(y),uint32_t(z));
   }
@@ -494,6 +497,58 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractG
   vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_COMPUTE,
                           pipelineLayout,0,1,&ux.impl,
                           0,nullptr);
+  }
+
+void VCommandBuffer::bindUniforms() {
+  if(curUniforms!=nullptr)
+    return; // legacy compat
+
+  if(!bindings.durty)
+    return;
+  bindings.durty = false;
+
+  auto& pso  = *curCompPipeline;
+  auto  dset = device.bindless.inst(pso, bindings);
+  auto  pLay = dset.pLay;
+  if(!pso.isRuntimeSized()) {
+    pLay = pso.pipelineLayout;
+    }
+
+  vkCmdBindDescriptorSets(impl, VK_PIPELINE_BIND_POINT_COMPUTE,
+                          pLay, 0, 1,
+                          &dset.set, 0, nullptr);
+  if(pLay!=pipelineLayout) {
+    pipelineLayout = pLay;
+    auto inst = pso.instance(pipelineLayout);
+    vkCmdBindPipeline(impl, VK_PIPELINE_BIND_POINT_COMPUTE, inst);
+    }
+  }
+
+void VCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Texture *tex, const Sampler &smp, uint32_t mipLevel) {
+  bindings.data  [id] = tex;
+  bindings.smp   [id] = smp;
+  bindings.offset[id] = mipLevel;
+  bindings.durty      = true;
+  bindings.array      = bindings.array & ~(1u << id);
+  }
+
+void VCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Buffer *buf, size_t offset) {
+  bindings.data  [id] = buf;
+  bindings.offset[id] = uint32_t(offset);
+  bindings.durty      = true;
+  bindings.array      = bindings.array & ~(1u << id);
+  }
+
+void VCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::DescArray *arr) {
+  bindings.data[id] = arr;
+  bindings.durty    = true;
+  bindings.array    = bindings.array | (1u << id);
+  }
+
+void VCommandBuffer::setBinding(size_t id, const Sampler &smp) {
+  bindings.smp[id] = smp;
+  bindings.durty   = true;
+  bindings.array   = bindings.array & ~(1u << id);
   }
 
 void VCommandBuffer::draw(const AbstractGraphicsApi::Buffer* ivbo, size_t stride, size_t voffset, size_t vsize,
