@@ -10,6 +10,25 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+bool VPipelineLay::LayoutDesc::operator ==(const LayoutDesc &other) const {
+  if(std::memcmp(bindings, other.bindings, sizeof(bindings))!=0)
+    return false;
+  if(std::memcmp(count, other.count, sizeof(count))!=0)
+    return false;
+  if(runtime!=other.runtime || array!=other.array || active!=other.active)
+    return false;
+  return true;
+  }
+
+bool VPipelineLay::LayoutDesc::operator != (const LayoutDesc& other) const {
+  return !(*this==other);
+  }
+
+bool VPipelineLay::LayoutDesc::isUpdateAfterBind() const {
+  return runtime!=0 || array!=0;
+  }
+
+
 VPipelineLay::VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Binding>* sh)
   : VPipelineLay(dev,&sh,1) {
   }
@@ -18,6 +37,7 @@ VPipelineLay::VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Bin
   : dev(dev) {
   ShaderReflection::merge(lay, pb, sh, cnt);
   adjustSsboBindings();
+  setupLayout(layout, sh, cnt);
 
   bool needMsHelper = false;
   if(dev.props.meshlets.meshShaderEmulated) {
@@ -185,6 +205,27 @@ void VPipelineLay::adjustSsboBindings() {
       }
     if(i.runtimeSized) {
       runtimeSized = true;
+      }
+    }
+  }
+
+void VPipelineLay::setupLayout(LayoutDesc& lx, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt) {
+  std::fill(std::begin(lx.bindings), std::end(lx.bindings), ShaderReflection::Count);
+
+  for(size_t i=0; i<cnt; ++i) {
+    if(sh[i]==nullptr)
+      continue;
+    auto& bind = *sh[i];
+    for(auto& e:bind) {
+      lx.bindings[e.layout] = e.cls;
+      lx.count   [e.layout] = std::max(lx.count[e.layout] , e.arraySize);
+      lx.stage   [e.layout] = ShaderReflection::Stage(e.stage | lx.stage[e.layout]);
+
+      if(e.runtimeSized)
+        lx.runtime |= (1u << e.layout);
+      if(e.runtimeSized || e.arraySize>1)
+        lx.array   |= (1u << e.layout);
+      lx.active |= (1u << e.layout);
       }
     }
   }

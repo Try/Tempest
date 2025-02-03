@@ -3,14 +3,14 @@
 #include <Tempest/AbstractGraphicsApi>
 #include <Tempest/RenderState>
 #include <vector>
-
-#include "../utility/dptr.h"
-#include "../utility/spinlock.h"
-#include "gapi/shaderreflection.h"
-#include "vbindlesscache.h"
-#include "vframebuffermap.h"
-#include "vshader.h"
 #include "vulkan_sdk.h"
+
+#include "gapi/vulkan/vbindlesscache.h"
+#include "gapi/vulkan/vframebuffermap.h"
+#include "gapi/vulkan/vshader.h"
+#include "gapi/shaderreflection.h"
+#include "utility/dptr.h"
+#include "utility/spinlock.h"
 
 namespace Tempest {
 namespace Detail {
@@ -41,6 +41,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     uint32_t           pushSize       = 0;
     uint32_t           defaultStride  = 0;
 
+    const VPipelineLay&layout() const { return *lay.handler; }
     VkPipeline         instance(const std::shared_ptr<VFramebufferMap::RenderPass>& lay, VkPipelineLayout pLay, size_t stride);
     VkPipeline         instance(const VkPipelineRenderingCreateInfoKHR& info, VkPipelineLayout pLay, size_t stride);
 
@@ -75,6 +76,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
       };
 
     VkDevice                               device=nullptr;
+    Detail::DSharedPtr<const VPipelineLay*>lay;
     Tempest::RenderState                   st;
     size_t                                 declSize=0;
     DSharedPtr<const VShader*>             modules[5] = {};

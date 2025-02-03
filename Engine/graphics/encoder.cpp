@@ -130,6 +130,10 @@ void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const StorageImage& 
   impl->setBinding(id, tex.tImpl.impl.handler, smp, mipLevel);
   }
 
+void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const StorageBuffer& buf, size_t offset) {
+  impl->setBinding(id, buf.impl.impl.handler, offset);
+  }
+
 void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const DescriptorArray& arr) {
   impl->setBinding(id, arr.impl.handler);
   }

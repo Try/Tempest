@@ -123,6 +123,8 @@ DescriptorArray Device::descriptors(const std::vector<const StorageBuffer *> &bu
   }
 
 DescriptorArray Device::descriptors(const StorageBuffer * const *buf, size_t size) {
+  if(!devProps.descriptors.nonUniformIndexing)
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension, "nonUniformIndexing");
   Detail::SmallArray<AbstractGraphicsApi::Buffer*,32> arr(size);
   for(size_t i=0; i<size; ++i)
     arr[i] = buf[i] ? buf[i]->impl.impl.handler : nullptr;
@@ -135,6 +137,8 @@ DescriptorArray Device::descriptors(const std::vector<const Texture2d *> &tex) {
   }
 
 DescriptorArray Device::descriptors(const Texture2d * const *tex, size_t size) {
+  if(!devProps.descriptors.nonUniformIndexing)
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension, "nonUniformIndexing");
   Detail::SmallArray<AbstractGraphicsApi::Texture*,32> arr(size);
   for(size_t i=0; i<size; ++i)
     arr[i] = tex[i] ? tex[i]->impl.handler : nullptr;
@@ -147,6 +151,8 @@ DescriptorArray Device::descriptors(const std::vector<const Texture2d *> &tex, c
   }
 
 DescriptorArray Device::descriptors(const Texture2d * const *tex, size_t size, const Sampler &smp) {
+  if(!devProps.descriptors.nonUniformIndexing)
+    throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension, "nonUniformIndexing");
   Detail::SmallArray<AbstractGraphicsApi::Texture*,32> arr(size);
   for(size_t i=0; i<size; ++i)
     arr[i] = tex[i] ? tex[i]->impl.handler : nullptr;

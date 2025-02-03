@@ -183,7 +183,7 @@ static VkImage toVkResource(const AbstractGraphicsApi::BarrierDesc& b) {
 
 
 VCommandBuffer::VCommandBuffer(VDevice& device, VkCommandPoolCreateFlags flags)
-  :device(device), pool(device,flags) {
+  :device(device), pool(device,flags), pushDescriptors(device) {
   }
 
 VCommandBuffer::~VCommandBuffer() {
@@ -223,6 +223,8 @@ void VCommandBuffer::reset() {
 
   swapchainSync.reserve(swapchainSync.size());
   swapchainSync.clear();
+
+  pushDescriptors.reset();
   }
 
 void VCommandBuffer::begin(bool tranfer) {
@@ -457,7 +459,7 @@ void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
   }
 
 void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
-  bindUniforms();
+  bindUniforms(VK_PIPELINE_BIND_POINT_COMPUTE);
   if(curUniforms) curUniforms->ssboBarriers(resState,PipelineStage::S_Compute);
   resState.flush(*this);
   vkCmdDispatch(impl,uint32_t(x),uint32_t(y),uint32_t(z));
@@ -499,7 +501,7 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractG
                           0,nullptr);
   }
 
-void VCommandBuffer::bindUniforms() {
+void VCommandBuffer::bindUniforms(VkPipelineBindPoint bindPoint) {
   if(curUniforms!=nullptr)
     return; // legacy compat
 
@@ -508,19 +510,26 @@ void VCommandBuffer::bindUniforms() {
   bindings.durty = false;
 
   auto& pso  = *curCompPipeline;
-  auto  dset = device.bindless.inst(pso, bindings);
-  auto  pLay = dset.pLay;
-  if(!pso.isRuntimeSized()) {
-    pLay = pso.pipelineLayout;
+  //auto& pso  = *curDrawPipeline;
+  auto& lay  = pso.layout();
+  auto  pLay = pso.pipelineLayout;
+  if(lay.layout.isUpdateAfterBind()) {
+    auto dset = device.bindless.inst(pso, bindings);
+    pLay = dset.pLay;
+    vkCmdBindDescriptorSets(impl, bindPoint,
+                            pLay, 0, 1,
+                            &dset.set, 0, nullptr);
+    } else {
+    auto dset = pushDescriptors.push(pso, bindings);
+    vkCmdBindDescriptorSets(impl, bindPoint,
+                            pLay, 0, 1,
+                            &dset, 0, nullptr);
     }
 
-  vkCmdBindDescriptorSets(impl, VK_PIPELINE_BIND_POINT_COMPUTE,
-                          pLay, 0, 1,
-                          &dset.set, 0, nullptr);
   if(pLay!=pipelineLayout) {
     pipelineLayout = pLay;
     auto inst = pso.instance(pipelineLayout);
-    vkCmdBindPipeline(impl, VK_PIPELINE_BIND_POINT_COMPUTE, inst);
+    vkCmdBindPipeline(impl, bindPoint, inst);
     }
   }
 
@@ -582,6 +591,7 @@ void VCommandBuffer::drawIndirect(const AbstractGraphicsApi::Buffer& indirect, s
   }
 
 void VCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
+  bindUniforms(VK_PIPELINE_BIND_POINT_GRAPHICS);
   device.vkCmdDrawMeshTasks(impl, uint32_t(x), uint32_t(y), uint32_t(z));
   }
 

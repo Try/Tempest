@@ -49,6 +49,7 @@ VDevice::ArrayLayout::ArrayLayout(VDevice& dev, VkDescriptorType type)
   switch(type) {
     case VK_DESCRIPTOR_TYPE_SAMPLER:
       bx.descriptorCount = dev.props.descriptors.maxSamplers;
+      break;
     case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
     case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
       bx.descriptorCount = dev.props.descriptors.maxTexture;
@@ -89,7 +90,7 @@ VDevice::ArrayLayout& VDevice::ArrayLayout::operator=(ArrayLayout &&a) {
   }
 
 VDevice::VDevice(VulkanInstance &api, std::string_view gpuName)
-  :instance(api.instance), fboMap(*this), bindless(*this) {
+  :instance(api.instance), fboMap(*this), setLayouts(*this), bindless(*this) {
   uint32_t deviceCount = 0;
   vkEnumeratePhysicalDevices(api.instance, &deviceCount, nullptr);
 

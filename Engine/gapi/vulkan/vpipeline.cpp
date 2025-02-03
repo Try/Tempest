@@ -76,6 +76,7 @@ VPipeline::VPipeline(VDevice& device, const RenderState& st, Topology tp,
       wgSize = mesh->comp.wgSize;
       }
 
+    lay            = Detail::DSharedPtr<const VPipelineLay*>{&ulay};
     pipelineLayout = initLayout(device,ulay,false);
 
     if(auto ms=findShader(ShaderReflection::Stage::Task)) {

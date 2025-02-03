@@ -42,6 +42,7 @@ class Encoder<Tempest::CommandBuffer> {
     void setUniforms(const ComputePipeline& p);
 
     void setBinding(size_t id, const StorageImage&    tex, const Sampler& smp = Sampler::anisotrophy(), uint32_t mipLevel = uint32_t(-1));
+    void setBinding(size_t id, const StorageBuffer&   buf, size_t offset = 0);
     void setBinding(size_t id, const DescriptorArray& arr);
     void setBinding(size_t id, const Sampler&         smp);
     void setPipeline(const ComputePipeline& p);

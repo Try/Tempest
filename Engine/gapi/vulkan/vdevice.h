@@ -4,20 +4,22 @@
 #include <Tempest/RenderState>
 #include <Tempest/AccelerationStructure>
 #include <stdexcept>
-#include "gapi/vulkan/vbuffer.h"
 #include "vulkan_sdk.h"
 
-#include "vallocator.h"
-#include "vcommandbuffer.h"
-#include "vswapchain.h"
-#include "vfence.h"
-#include "vulkanapi_impl.h"
-#include "vframebuffermap.h"
-#include "vbindlesscache.h"
-#include "exceptions/exception.h"
-#include "utility/compiller_hints.h"
+#include "gapi/vulkan/vallocator.h"
+#include "gapi/vulkan/vcommandbuffer.h"
+#include "gapi/vulkan/vswapchain.h"
+#include "gapi/vulkan/vfence.h"
+#include "gapi/vulkan/vframebuffermap.h"
+#include "gapi/vulkan/vbuffer.h"
+#include "gapi/vulkan/vbindlesscache.h"
+#include "gapi/vulkan/vpushdescriptor.h"
+#include "gapi/vulkan/vsetlayoutcache.h"
 #include "gapi/shaderreflection.h"
 #include "gapi/uploadengine.h"
+#include "exceptions/exception.h"
+#include "utility/compiller_hints.h"
+#include "vulkanapi_impl.h"
 
 namespace Tempest {
 namespace Detail {
@@ -360,6 +362,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     VAllocator              allocator;
 
     VFramebufferMap         fboMap;
+    VSetLayoutCache         setLayouts;
     VBindlessCache          bindless;
 
     std::mutex                      meshSync;

@@ -3,11 +3,12 @@
 #include <Tempest/AbstractGraphicsApi>
 #include "vulkan_sdk.h"
 
+#include "gapi/vulkan/vcommandpool.h"
+#include "gapi/vulkan/vframebuffermap.h"
+#include "gapi/vulkan/vbindlesscache.h"
+#include "gapi/vulkan/vpushdescriptor.h"
+#include "gapi/vulkan/vswapchain.h"
 #include "gapi/resourcestate.h"
-#include "vcommandpool.h"
-#include "vframebuffermap.h"
-#include "vbindlesscache.h"
-#include "vswapchain.h"
 
 #include "../utility/smallarray.h"
 
@@ -124,7 +125,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     virtual void newChunk();
 
     void bindVbo(const VBuffer& vbo, size_t stride);
-    void bindUniforms();
+    void bindUniforms(VkPipelineBindPoint bindPoint);
 
     struct PipelineInfo:VkPipelineRenderingCreateInfoKHR {
       VkFormat colorFrm[MaxFramebufferAttachments];
@@ -143,6 +144,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     PipelineInfo                            passDyn = {};
 
     Bindings                                bindings;
+    VPushDescriptor                         pushDescriptors;
 
     RpState                                 state           = NoRecording;
     VPipeline*                              curDrawPipeline = nullptr;
