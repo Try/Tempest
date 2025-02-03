@@ -217,6 +217,8 @@ void VPipelineLay::setupLayout(LayoutDesc& lx, const std::vector<ShaderReflectio
       continue;
     auto& bind = *sh[i];
     for(auto& e:bind) {
+      if(e.cls==ShaderReflection::Push)
+        continue;
       lx.bindings[e.layout] = e.cls;
       lx.count   [e.layout] = std::max(lx.count[e.layout] , e.arraySize);
       lx.stage   [e.layout] = ShaderReflection::Stage(e.stage | lx.stage[e.layout]);

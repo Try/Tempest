@@ -47,8 +47,6 @@ class VBindlessCache {
     using PushBlock  = ShaderReflection::PushBlock;
     using LayoutDesc = VPipelineLay::LayoutDesc;
 
-    Inst inst(const VPipeline&     pso, const Bindings& binding);
-    Inst inst(const VCompPipeline& pso, const Bindings& binding);
     Inst inst(const PushBlock &pb, const LayoutDesc& layout, const Bindings& binding);
 
     void notifyDestroy(const AbstractGraphicsApi::NoCopy* res);

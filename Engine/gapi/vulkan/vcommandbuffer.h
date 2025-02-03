@@ -125,7 +125,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     virtual void newChunk();
 
     void bindVbo(const VBuffer& vbo, size_t stride);
-    void bindUniforms(VkPipelineBindPoint bindPoint);
+    void bindUniforms(const VkPipelineBindPoint bindPoint);
 
     struct PipelineInfo:VkPipelineRenderingCreateInfoKHR {
       VkFormat colorFrm[MaxFramebufferAttachments];

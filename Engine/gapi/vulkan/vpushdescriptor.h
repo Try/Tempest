@@ -20,9 +20,7 @@ class VPushDescriptor {
     ~VPushDescriptor();
     void reset();
 
-    VkDescriptorSet push(const VPipeline&     pso, const Bindings& binding);
-    VkDescriptorSet push(const VCompPipeline& pso, const Bindings& binding);
-    VkDescriptorSet push(const LayoutDesc&    lay, const Bindings& binding);
+    VkDescriptorSet push(const PushBlock &pb, const LayoutDesc& lay, const Bindings& binding);
 
     static void     write(VDevice &dev, VkWriteDescriptorSet &wx, WriteInfo &infoW, uint32_t dstBinding,
                           ShaderReflection::Class cls, AbstractGraphicsApi::NoCopy *data, uint32_t offset, const Sampler &smp);

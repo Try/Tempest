@@ -224,6 +224,8 @@ void VCommandBuffer::reset() {
   swapchainSync.reserve(swapchainSync.size());
   swapchainSync.clear();
 
+  curUniforms = nullptr;
+  bindings = Bindings();
   pushDescriptors.reset();
   }
 
@@ -501,7 +503,7 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractG
                           0,nullptr);
   }
 
-void VCommandBuffer::bindUniforms(VkPipelineBindPoint bindPoint) {
+void VCommandBuffer::bindUniforms(const VkPipelineBindPoint bindPoint) {
   if(curUniforms!=nullptr)
     return; // legacy compat
 
@@ -509,26 +511,45 @@ void VCommandBuffer::bindUniforms(VkPipelineBindPoint bindPoint) {
     return;
   bindings.durty = false;
 
-  auto& pso  = *curCompPipeline;
-  //auto& pso  = *curDrawPipeline;
-  auto& lay  = pso.layout();
-  auto  pLay = pso.pipelineLayout;
-  if(lay.layout.isUpdateAfterBind()) {
-    auto dset = device.bindless.inst(pso, bindings);
+  const VPipelineLay* lay  = nullptr;
+  VkPipelineLayout    pLay = VK_NULL_HANDLE;
+  switch(bindPoint) {
+    case VK_PIPELINE_BIND_POINT_GRAPHICS:
+      lay  = &curDrawPipeline->layout();
+      pLay = curDrawPipeline->pipelineLayout;
+      break;
+    case VK_PIPELINE_BIND_POINT_COMPUTE:
+      lay  = &curCompPipeline->layout();
+      pLay = curCompPipeline->pipelineLayout;
+      break;
+    default:
+      break;
+    }
+
+  if(lay->layout.isUpdateAfterBind()) {
+    auto dset = device.bindless.inst(lay->pb, lay->layout, bindings);
     pLay = dset.pLay;
     vkCmdBindDescriptorSets(impl, bindPoint,
                             pLay, 0, 1,
                             &dset.set, 0, nullptr);
     } else {
-    auto dset = pushDescriptors.push(pso, bindings);
+    auto dset = pushDescriptors.push(lay->pb, lay->layout, bindings);
     vkCmdBindDescriptorSets(impl, bindPoint,
                             pLay, 0, 1,
                             &dset, 0, nullptr);
     }
 
-  if(pLay!=pipelineLayout) {
+  if(pLay!=pipelineLayout && bindPoint==VK_PIPELINE_BIND_POINT_GRAPHICS) {
     pipelineLayout = pLay;
-    auto inst = pso.instance(pipelineLayout);
+    auto& pso  = *curDrawPipeline;
+    auto  inst = device.props.hasDynRendering ? pso.instance(passDyn,pipelineLayout,vboStride)
+                                              : pso.instance(pass,   pipelineLayout,vboStride);
+    vkCmdBindPipeline(impl, bindPoint, inst);
+    }
+  else if(pLay!=pipelineLayout && bindPoint==VK_PIPELINE_BIND_POINT_COMPUTE) {
+    pipelineLayout = pLay;
+    auto& pso  = *curCompPipeline;
+    auto  inst = pso.instance(pipelineLayout);
     vkCmdBindPipeline(impl, bindPoint, inst);
     }
   }

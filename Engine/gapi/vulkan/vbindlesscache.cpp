@@ -67,16 +67,6 @@ void VBindlessCache::notifyDestroy(const AbstractGraphicsApi::NoCopy *res) {
     }
   }
 
-VBindlessCache::Inst VBindlessCache::inst(const VPipeline& pso, const Bindings& binding) {
-  auto& lay = pso.layout();
-  return inst(lay.pb, lay.layout, binding);
-  }
-
-VBindlessCache::Inst VBindlessCache::inst(const VCompPipeline& pso, const Bindings &binding) {
-  auto& lay = pso.layout();
-  return inst(lay.pb, lay.layout, binding);
-  }
-
 VBindlessCache::Inst VBindlessCache::inst(const PushBlock& pb, const LayoutDesc& layout, const Bindings &binding) {
   auto lx = layout;
   for(uint32_t mask = lx.runtime; mask!=0;) {

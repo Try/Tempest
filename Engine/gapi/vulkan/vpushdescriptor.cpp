@@ -138,17 +138,7 @@ VkDescriptorSet VPushDescriptor::allocSet(const LayoutDesc& lx) {
   return allocSet(lt.lay);
   }
 
-VkDescriptorSet VPushDescriptor::push(const VPipeline &pso, const Bindings &binding) {
-  auto& lay = pso.layout();
-  return push(lay.layout, binding);
-  }
-
-VkDescriptorSet VPushDescriptor::push(const VCompPipeline &pso, const Bindings &binding) {
-  auto& lay = pso.layout();
-  return push(lay.layout, binding);
-  }
-
-VkDescriptorSet VPushDescriptor::push(const LayoutDesc& layout, const Bindings& binding) {
+VkDescriptorSet VPushDescriptor::push(const PushBlock& pb, const LayoutDesc& layout, const Bindings& binding) {
   auto set = allocSet(layout);
 
   WriteInfo              winfo[MaxBindings] = {};
