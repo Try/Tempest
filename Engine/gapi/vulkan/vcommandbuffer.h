@@ -125,14 +125,17 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     virtual void newChunk();
 
     void bindVbo(const VBuffer& vbo, size_t stride);
-    void bindUniforms(const VkPipelineBindPoint bindPoint);
+    void bindUniforms(const PipelineStage st);
+    void handleSync(const VPipelineLay::LayoutDesc& lay, const VPipelineLay::SyncDesc& sync, PipelineStage st);
 
     struct PipelineInfo:VkPipelineRenderingCreateInfoKHR {
       VkFormat colorFrm[MaxFramebufferAttachments];
       };
 
     struct Bindings : VBindlessCache::Bindings {
-      bool durty = false;
+      NonUniqResId read  = NonUniqResId::I_None;
+      NonUniqResId write = NonUniqResId::I_None;
+      bool         durty = false;
       };
 
     VDevice&                                device;

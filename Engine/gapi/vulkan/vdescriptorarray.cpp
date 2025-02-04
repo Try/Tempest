@@ -31,7 +31,7 @@ VDescriptorArray::VDescriptorArray(VDevice& device, VPipelineLay& vlay)
       runtimeArrays[i] = lx.arraySize;
       }
     } else {
-    std::lock_guard<Detail::SpinLock> guard(vlay.sync);
+    std::lock_guard<Detail::SpinLock> guard(vlay.syncPool);
     for(auto& i:vlay.pool) {
       if(i.freeCount==0)
         continue;
@@ -64,7 +64,7 @@ VDescriptorArray::~VDescriptorArray() {
     vkDestroyDescriptorPool(dev,dedicatedPool,nullptr);
     } else {
     Detail::VPipelineLay* layImpl = lay.handler;
-    std::lock_guard<Detail::SpinLock> guard(layImpl->sync);
+    std::lock_guard<Detail::SpinLock> guard(layImpl->syncPool);
 
     vkFreeDescriptorSets(dev,pool->impl,1,&impl);
     pool->freeCount++;

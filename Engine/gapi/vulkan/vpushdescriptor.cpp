@@ -83,7 +83,7 @@ VPushDescriptor::Pool::Pool(VDevice &dev) {
 
   VkDescriptorPoolCreateInfo poolInfo = {};
   poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-  poolInfo.maxSets       = 1;
+  poolInfo.maxSets       = std::max(maxResources, maxSamplers);
   poolInfo.flags         = 0;
   poolInfo.poolSizeCount = uint32_t(pSize);
   poolInfo.pPoolSizes    = poolSize;

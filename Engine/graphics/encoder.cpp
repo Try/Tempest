@@ -126,15 +126,39 @@ void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p) {
     }
   }
 
+void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const Texture2d& tex, const Sampler& smp) {
+  if(!tex.impl.handler)
+    throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
+  impl->setBinding(id, tex.impl.handler, smp, uint32_t(-1));
+  }
+
+void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const Attachment& tex, const Sampler& smp) {
+  if(!tex.tImpl.impl.handler)
+    throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
+  impl->setBinding(id, tex.tImpl.impl.handler, smp, uint32_t(-1));
+  }
+
+void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const ZBuffer& tex, const Sampler& smp) {
+  if(!tex.tImpl.impl.handler)
+    throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
+  impl->setBinding(id, tex.tImpl.impl.handler, smp, uint32_t(-1));
+  }
+
 void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const StorageImage& tex, const Sampler& smp, uint32_t mipLevel) {
+  if(!tex.tImpl.impl.handler)
+    throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
   impl->setBinding(id, tex.tImpl.impl.handler, smp, mipLevel);
   }
 
 void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const StorageBuffer& buf, size_t offset) {
+  if(buf.impl.impl.handler==nullptr && offset!=0)
+    throw std::system_error(Tempest::GraphicsErrc::InvalidUniformBuffer);
   impl->setBinding(id, buf.impl.impl.handler, offset);
   }
 
 void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const DescriptorArray& arr) {
+  if(arr.impl.handler==nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::InvalidUniformBuffer); //TODO: proper exception
   impl->setBinding(id, arr.impl.handler);
   }
 

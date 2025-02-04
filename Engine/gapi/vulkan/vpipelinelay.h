@@ -43,6 +43,11 @@ class VPipelineLay : public AbstractGraphicsApi::PipelineLay {
       bool isUpdateAfterBind() const;
       };
 
+    struct SyncDesc {
+      uint32_t                read  = 0;
+      uint32_t                write = 0;
+      };
+
     struct DedicatedLay {
       VkDescriptorSetLayout dLay = VK_NULL_HANDLE;
       VkPipelineLayout      pLay = VK_NULL_HANDLE;
@@ -56,6 +61,8 @@ class VPipelineLay : public AbstractGraphicsApi::PipelineLay {
 
     VDevice&                    dev;
     LayoutDesc                  layout;
+    SyncDesc                    sync;
+
     VkDescriptorSetLayout       impl     = VK_NULL_HANDLE;
     VkDescriptorSetLayout       msHelper = VK_NULL_HANDLE;
 
@@ -78,7 +85,7 @@ class VPipelineLay : public AbstractGraphicsApi::PipelineLay {
       std::vector<uint32_t> runtimeArrays;
       };
 
-    Detail::SpinLock sync;
+    Detail::SpinLock syncPool;
     std::list<Pool>  pool;
 
     Detail::SpinLock  syncLay;
@@ -88,7 +95,7 @@ class VPipelineLay : public AbstractGraphicsApi::PipelineLay {
     VkDescriptorSetLayout createMsHelper() const;
 
     void                  adjustSsboBindings();
-    void                  setupLayout(LayoutDesc &lx, const std::vector<ShaderReflection::Binding> *sh[], size_t cnt);
+    void                  setupLayout(LayoutDesc &lx, SyncDesc& sync, const std::vector<ShaderReflection::Binding> *sh[], size_t cnt);
 
   friend class VDescriptorArray;
   };

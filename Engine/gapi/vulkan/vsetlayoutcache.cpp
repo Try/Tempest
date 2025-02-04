@@ -1,14 +1,13 @@
-#include "gapi/vulkan/vdevice.h"
 #if defined(TEMPEST_BUILD_VULKAN)
 
 #include "vsetlayoutcache.h"
+#include "gapi/vulkan/vdevice.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
 
 VSetLayoutCache::VSetLayoutCache(VDevice& dev)
   :dev(dev) {
-
   }
 
 VSetLayoutCache::~VSetLayoutCache() {

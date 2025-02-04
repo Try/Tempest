@@ -283,6 +283,9 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
   resState.joinWriters(PipelineStage::S_Graphics);
   resState.setRenderpass(*this,desc,descSize,frm,att,sw,imgId);
 
+  bindings.read  = NonUniqResId::I_None;
+  bindings.write = NonUniqResId::I_None;
+
   if(state!=Idle) {
     newChunk();
     }
@@ -402,6 +405,8 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
   }
 
 void VCommandBuffer::endRendering() {
+  resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Graphics);
+
   if(device.props.hasDynRendering) {
     device.vkCmdEndRenderingKHR(impl);
     } else {
@@ -461,16 +466,20 @@ void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
   }
 
 void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
-  bindUniforms(VK_PIPELINE_BIND_POINT_COMPUTE);
-  if(curUniforms) curUniforms->ssboBarriers(resState,PipelineStage::S_Compute);
+  if(curUniforms) curUniforms->ssboBarriers(resState, PipelineStage::S_Compute);
+
+  bindUniforms(PipelineStage::S_Compute);
+  resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Compute);
   resState.flush(*this);
   vkCmdDispatch(impl,uint32_t(x),uint32_t(y),uint32_t(z));
   }
 
 void VCommandBuffer::dispatchIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) {
   const VBuffer& ind = reinterpret_cast<const VBuffer&>(indirect);
+  if(curUniforms) curUniforms->ssboBarriers(resState, PipelineStage::S_Compute);
 
-  curUniforms->ssboBarriers(resState, PipelineStage::S_Compute);
+  bindUniforms(PipelineStage::S_Compute);
+  resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Compute);
   // block future writers
   resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
   resState.flush(*this);
@@ -503,7 +512,48 @@ void VCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractG
                           0,nullptr);
   }
 
-void VCommandBuffer::bindUniforms(const VkPipelineBindPoint bindPoint) {
+void VCommandBuffer::handleSync(const VPipelineLay::LayoutDesc& lay, const VPipelineLay::SyncDesc& sync, PipelineStage st) {
+  if(st!=PipelineStage::S_Graphics) {
+    bindings.read  = NonUniqResId::I_None;
+    bindings.write = NonUniqResId::I_None;
+    }
+
+  for(size_t i=0; i<MaxBindings; ++i) {
+    NonUniqResId nonUniqId = NonUniqResId::I_None;
+    auto         data      = bindings.data[i];
+    switch(lay.bindings[i]) {
+      case ShaderReflection::Texture:
+      case ShaderReflection::Image:
+      case ShaderReflection::ImgR:
+      case ShaderReflection::ImgRW: {
+        nonUniqId = reinterpret_cast<VTexture*>(data)->nonUniqId;
+        break;
+        }
+      case ShaderReflection::Ubo:
+      case ShaderReflection::SsboR:
+      case ShaderReflection::SsboRW: {
+        nonUniqId = reinterpret_cast<VBuffer*>(data)->nonUniqId;
+        break;
+        }
+      case ShaderReflection::Tlas: {
+        //NOTE: Tlas tracking is not really implemented
+        nonUniqId = reinterpret_cast<VAccelerationStructure*>(data)->data.nonUniqId;
+        break;
+        }
+      case ShaderReflection::Sampler:
+      case ShaderReflection::Push:
+      case ShaderReflection::Count:
+        break;
+      }
+
+    if(sync.read & (1u<<i))
+      bindings.read |= nonUniqId;
+    if(sync.write & (1u<<i))
+      bindings.write |= nonUniqId;
+    }
+  }
+
+void VCommandBuffer::bindUniforms(const PipelineStage st) {
   if(curUniforms!=nullptr)
     return; // legacy compat
 
@@ -511,20 +561,25 @@ void VCommandBuffer::bindUniforms(const VkPipelineBindPoint bindPoint) {
     return;
   bindings.durty = false;
 
-  const VPipelineLay* lay  = nullptr;
-  VkPipelineLayout    pLay = VK_NULL_HANDLE;
-  switch(bindPoint) {
-    case VK_PIPELINE_BIND_POINT_GRAPHICS:
-      lay  = &curDrawPipeline->layout();
-      pLay = curDrawPipeline->pipelineLayout;
+  const VPipelineLay* lay       = nullptr;
+  VkPipelineLayout    pLay      = VK_NULL_HANDLE;
+  VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+  switch(st) {
+    case PipelineStage::S_Graphics:
+      lay       = &curDrawPipeline->layout();
+      pLay      = curDrawPipeline->pipelineLayout;
+      bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
       break;
-    case VK_PIPELINE_BIND_POINT_COMPUTE:
-      lay  = &curCompPipeline->layout();
-      pLay = curCompPipeline->pipelineLayout;
+    case PipelineStage::S_Compute:
+      lay       = &curCompPipeline->layout();
+      pLay      = curCompPipeline->pipelineLayout;
+      bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
       break;
     default:
       break;
     }
+
+  handleSync(lay->layout, lay->sync, st);
 
   if(lay->layout.isUpdateAfterBind()) {
     auto dset = device.bindless.inst(lay->pb, lay->layout, bindings);
@@ -539,14 +594,14 @@ void VCommandBuffer::bindUniforms(const VkPipelineBindPoint bindPoint) {
                             &dset, 0, nullptr);
     }
 
-  if(pLay!=pipelineLayout && bindPoint==VK_PIPELINE_BIND_POINT_GRAPHICS) {
+  if(pLay!=pipelineLayout && st==PipelineStage::S_Graphics) {
     pipelineLayout = pLay;
     auto& pso  = *curDrawPipeline;
     auto  inst = device.props.hasDynRendering ? pso.instance(passDyn,pipelineLayout,vboStride)
                                               : pso.instance(pass,   pipelineLayout,vboStride);
     vkCmdBindPipeline(impl, bindPoint, inst);
     }
-  else if(pLay!=pipelineLayout && bindPoint==VK_PIPELINE_BIND_POINT_COMPUTE) {
+  else if(pLay!=pipelineLayout && st==PipelineStage::S_Compute) {
     pipelineLayout = pLay;
     auto& pso  = *curCompPipeline;
     auto  inst = pso.instance(pipelineLayout);
@@ -555,6 +610,8 @@ void VCommandBuffer::bindUniforms(const VkPipelineBindPoint bindPoint) {
   }
 
 void VCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Texture *tex, const Sampler &smp, uint32_t mipLevel) {
+  curUniforms = nullptr; // legacy compat
+
   bindings.data  [id] = tex;
   bindings.smp   [id] = smp;
   bindings.offset[id] = mipLevel;
@@ -563,6 +620,8 @@ void VCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Texture *tex, co
   }
 
 void VCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Buffer *buf, size_t offset) {
+  curUniforms = nullptr; // legacy compat
+
   bindings.data  [id] = buf;
   bindings.offset[id] = uint32_t(offset);
   bindings.durty      = true;
@@ -570,12 +629,16 @@ void VCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Buffer *buf, siz
   }
 
 void VCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::DescArray *arr) {
+  curUniforms = nullptr; // legacy compat
+
   bindings.data[id] = arr;
   bindings.durty    = true;
   bindings.array    = bindings.array | (1u << id);
   }
 
 void VCommandBuffer::setBinding(size_t id, const Sampler &smp) {
+  curUniforms = nullptr; // legacy compat
+
   bindings.smp[id] = smp;
   bindings.durty   = true;
   bindings.array   = bindings.array & ~(1u << id);
@@ -587,6 +650,7 @@ void VCommandBuffer::draw(const AbstractGraphicsApi::Buffer* ivbo, size_t stride
   if(T_LIKELY(vbo!=nullptr)) {
     bindVbo(*vbo,stride);
     }
+  bindUniforms(PipelineStage::S_Graphics);
   vkCmdDraw(impl, uint32_t(vsize), uint32_t(instanceCount), uint32_t(voffset), uint32_t(firstInstance));
   }
 
@@ -599,6 +663,7 @@ void VCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer* ivbo, size_t
     bindVbo(*vbo,stride);
     }
   vkCmdBindIndexBuffer(impl, ibo.impl, 0, nativeFormat(cls));
+  bindUniforms(PipelineStage::S_Graphics);
   vkCmdDrawIndexed    (impl, uint32_t(isize), uint32_t(instanceCount), uint32_t(ioffset), int32_t(voffset), uint32_t(firstInstance));
   }
 
@@ -607,12 +672,13 @@ void VCommandBuffer::drawIndirect(const AbstractGraphicsApi::Buffer& indirect, s
 
   // block future writers
   resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
+  bindUniforms(PipelineStage::S_Graphics);
   //resState.flush(*this);
   vkCmdDrawIndirect(impl, ind.impl, VkDeviceSize(offset), 1, 0);
   }
 
 void VCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
-  bindUniforms(VK_PIPELINE_BIND_POINT_GRAPHICS);
+  bindUniforms(PipelineStage::S_Graphics);
   device.vkCmdDrawMeshTasks(impl, uint32_t(x), uint32_t(y), uint32_t(z));
   }
 
