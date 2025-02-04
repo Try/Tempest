@@ -108,6 +108,10 @@ void AbstractGraphicsApi::CommandBuffer::setBinding(size_t id, DescArray *arr) {
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }
 
+void AbstractGraphicsApi::CommandBuffer::setBinding(size_t id, AccelerationStructure* tlas) {
+  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
+  }
+
 void AbstractGraphicsApi::CommandBuffer::setBinding(size_t id, const Sampler &smp) {
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }

@@ -5,6 +5,7 @@
 #include <Tempest/ComputePipeline>
 #include <Tempest/StorageImage>
 #include <Tempest/DescriptorArray>
+#include <Tempest/AccelerationStructure>
 
 #include <Tempest/DescriptorSet>
 
@@ -48,6 +49,7 @@ class Encoder<Tempest::CommandBuffer> {
     void setBinding(size_t id, const StorageBuffer&   buf, size_t offset = 0);
     void setBinding(size_t id, const DescriptorArray& arr);
     void setBinding(size_t id, const Sampler&         smp);
+    void setBinding(size_t id, const AccelerationStructure& tlas);
     void setPipeline(const ComputePipeline& p);
 
     void setViewport(int x,int y,int w,int h);

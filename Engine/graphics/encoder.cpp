@@ -168,6 +168,12 @@ void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const Sampler &smp) 
   impl->setBinding(id, smp);
   }
 
+void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const AccelerationStructure& tlas) {
+  if(tlas.impl.handler)
+    impl->setBinding(id, tlas.impl.handler); else
+    throw std::system_error(Tempest::GraphicsErrc::InvalidAccelerationStructure);
+  }
+
 void Encoder<Tempest::CommandBuffer>::setPipeline(const ComputePipeline& p) {
   if(state.stage==Rendering)
     throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);

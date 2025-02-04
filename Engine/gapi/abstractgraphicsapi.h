@@ -603,8 +603,9 @@ namespace Tempest {
         virtual void setUniforms(CompPipeline& p, Desc& u)=0;
 
         virtual void setBinding (size_t id, Texture *tex, const Sampler& smp, uint32_t mipLevel);
-        virtual void setBinding (size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset);
-        virtual void setBinding (size_t id, AbstractGraphicsApi::DescArray* arr);
+        virtual void setBinding (size_t id, Buffer* buf, size_t offset);
+        virtual void setBinding (size_t id, DescArray* arr);
+        virtual void setBinding (size_t id, AccelerationStructure* tlas);
         virtual void setBinding (size_t id, const Sampler& smp);
 
         virtual void setViewport(const Rect& r)=0;

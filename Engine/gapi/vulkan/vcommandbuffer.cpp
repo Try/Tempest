@@ -636,6 +636,14 @@ void VCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::DescArray *arr) 
   bindings.array    = bindings.array | (1u << id);
   }
 
+void VCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) {
+  curUniforms = nullptr; // legacy compat
+
+  bindings.data[id] = tlas;
+  bindings.durty    = true;
+  bindings.array    = bindings.array & ~(1u << id);
+  }
+
 void VCommandBuffer::setBinding(size_t id, const Sampler &smp) {
   curUniforms = nullptr; // legacy compat
 

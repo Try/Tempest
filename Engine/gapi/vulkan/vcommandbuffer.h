@@ -69,6 +69,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void setBinding (size_t id, AbstractGraphicsApi::Texture*   tex, const Sampler& smp, uint32_t mipLevel) override;
     void setBinding (size_t id, AbstractGraphicsApi::Buffer*    buf, size_t offset) override;
     void setBinding (size_t id, AbstractGraphicsApi::DescArray* arr) override;
+    void setBinding (size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) override;
     void setBinding (size_t id, const Sampler& smp) override;
 
     void draw       (const AbstractGraphicsApi::Buffer* vbo, size_t stride, size_t voffset, size_t vsize, size_t firstInstance, size_t instanceCount) override;
