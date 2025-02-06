@@ -11,6 +11,8 @@ class DescriptorArray {
     ~DescriptorArray();
     DescriptorArray& operator=(DescriptorArray&&);
 
+    bool isEmpty() const { return impl.handler==nullptr; }
+
   private:
     DescriptorArray(Device& dev, AbstractGraphicsApi::DescArray* desc);
 

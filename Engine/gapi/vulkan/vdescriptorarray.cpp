@@ -509,7 +509,7 @@ void VDescriptorArray2::alloc(VkDescriptorSetLayout lay, VDevice &dev, size_t cn
   }
 
 void VDescriptorArray2::populate(VDevice &dev, AbstractGraphicsApi::Texture **t, size_t cnt, uint32_t mipLevel, const Sampler* smp) {
-  const bool is3DImage = false;
+  const bool is3DImage = false; //TODO
 
   // 16 is non-bindless limit
   SmallArray<VkDescriptorImageInfo,16> imageInfo(cnt);

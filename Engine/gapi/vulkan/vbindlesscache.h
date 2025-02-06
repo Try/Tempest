@@ -60,10 +60,11 @@ class VBindlessCache {
       };
 
     struct DSet {
-      Bindings         bindings;
+      VkDescriptorSetLayout lay = VK_NULL_HANDLE;
+      Bindings              bindings;
 
-      VkDescriptorPool pool = VK_NULL_HANDLE;
-      VkDescriptorSet  set  = VK_NULL_HANDLE;
+      VkDescriptorPool      pool = VK_NULL_HANDLE;
+      VkDescriptorSet       set  = VK_NULL_HANDLE;
       };
 
     PLayout          findPsoLayout(const ShaderReflection::PushBlock &pb, VkDescriptorSetLayout lay);

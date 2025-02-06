@@ -156,6 +156,12 @@ void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const StorageBuffer&
   impl->setBinding(id, buf.impl.impl.handler, offset);
   }
 
+void Encoder<Tempest::CommandBuffer>::implBindBuffer(size_t id, const Detail::VideoBuffer& buf) {
+  if(buf.impl.handler==nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::InvalidUniformBuffer);
+  impl->setBinding(id, buf.impl.handler, 0);
+  }
+
 void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const DescriptorArray& arr) {
   if(arr.impl.handler==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::InvalidUniformBuffer); //TODO: proper exception

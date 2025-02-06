@@ -50,6 +50,8 @@ class Encoder<Tempest::CommandBuffer> {
     void setBinding(size_t id, const DescriptorArray& arr);
     void setBinding(size_t id, const Sampler&         smp);
     void setBinding(size_t id, const AccelerationStructure& tlas);
+    template<class T>
+    void setBinding(size_t id, const UniformBuffer<T>& buf) { implBindBuffer(id, buf.impl); }
     void setPipeline(const ComputePipeline& p);
 
     void setViewport(int x,int y,int w,int h);
@@ -139,6 +141,7 @@ class Encoder<Tempest::CommandBuffer> {
     void         implDraw(const Detail::VideoBuffer& vbo, size_t stride, size_t offset, size_t size, size_t firstInstance, size_t instanceCount);
     void         implDraw(const Detail::VideoBuffer& vbo, size_t stride, const Detail::VideoBuffer &ibo, Detail::IndexClass index,
                           size_t offset, size_t size, size_t firstInstance, size_t instanceCount);
+    void         implBindBuffer(size_t id, const Detail::VideoBuffer& buf);
 
   friend class CommandBuffer;
   };

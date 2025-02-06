@@ -695,6 +695,7 @@ void VCommandBuffer::dispatchMeshIndirect(const AbstractGraphicsApi::Buffer& ind
 
   // block future writers
   resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
+  bindUniforms(PipelineStage::S_Graphics);
   //resState.flush(*this);
   device.vkCmdDrawMeshTasksIndirect(impl, ind.impl, VkDeviceSize(offset), 1, 0);
   }

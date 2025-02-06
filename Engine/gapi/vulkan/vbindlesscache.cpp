@@ -85,7 +85,7 @@ VBindlessCache::Inst VBindlessCache::inst(const PushBlock& pb, const LayoutDesc&
 
   std::lock_guard<std::mutex> guard(syncDesc);
   for(auto& i:descriptors) {
-    if(i.bindings!=binding)
+    if(i.lay!=lt.lay || i.bindings!=binding)
       continue;
     ret.set = i.set;
     return ret;
@@ -93,6 +93,7 @@ VBindlessCache::Inst VBindlessCache::inst(const PushBlock& pb, const LayoutDesc&
 
   auto& desc = descriptors.emplace_back();
   try {
+    desc.lay      = lt.lay;
     desc.bindings = binding;
     desc.pool     = allocPool(lx);
     desc.set      = allocDescSet(desc.pool, lt.lay);
@@ -229,8 +230,10 @@ void VBindlessCache::initDescriptorSet(VkDescriptorSet dset, const Bindings &bin
   uint32_t               cntWr = 0;
 
   for(size_t i=0; i<MaxBindings; ++i) {
-    VkCopyDescriptorSet& cx = cpy[cntCpy];
+    if((l.active & (1u << i))==0)
+      continue;
 
+    VkCopyDescriptorSet& cx = cpy[cntCpy];
     if((binding.array & (1u << i))!=0) {
       // assert((l.runtime & (1u << i))!=0);
       auto arr = reinterpret_cast<const VDescriptorArray2*>(binding.data[i]);
