@@ -189,10 +189,7 @@ void VectorImage::Mesh::update(Device& dev, const VectorImage& src, BufferHeap h
     ux.size  = b.size;
 
     auto& p = src.pipelineOf(dev,b);
-    if(ux.desc.isEmpty() || ux.pipeline!=&p){
-      ux.desc     = dev.descriptors(p.layout());
-      ux.pipeline = &p;
-      }
+    ux.pipeline = &p;
 
     if(T_LIKELY(b.hasImg)) {
       if(b.tex.brush) {
@@ -210,9 +207,12 @@ void VectorImage::Mesh::update(Device& dev, const VectorImage& src, BufferHeap h
           }
         s.uClamp = b.tex.clamp;
         s.vClamp = b.tex.clamp;
-        ux.desc.set(0,b.tex.brush,s);
+        ux.smp     = s;
+        ux.texture = b.tex.brush;
         } else {
-        ux.desc.set(0,b.tex.sprite.pageRawData(dev)); //TODO: oom
+        auto& tex = b.tex.sprite.pageRawData(dev); //TODO: oom
+        ux.texture = TexPtr(tex);
+        ux.smp     = Sampler::bilinear();
         ux.sprite = b.tex.sprite;
         }
       }
@@ -224,7 +224,10 @@ void VectorImage::Mesh::draw(Encoder<CommandBuffer>& cmd) const {
     auto& b = blocks[i];
     if(b.size==0)
       continue;
-    cmd.setUniforms(*b.pipeline,b.desc);
+
+    if(b.texture)
+      cmd.setBinding(0, b.texture, b.smp);
+    cmd.setPipeline(*b.pipeline);
     cmd.draw(vbo,b.begin,b.size);
     }
   }

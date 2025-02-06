@@ -67,7 +67,7 @@ void VBindlessCache::notifyDestroy(const AbstractGraphicsApi::NoCopy *res) {
     }
   }
 
-VBindlessCache::Inst VBindlessCache::inst(const PushBlock& pb, const LayoutDesc& layout, const Bindings &binding) {
+VBindlessCache::Inst VBindlessCache::inst(const PushBlock& pb, const LayoutDesc& layout, const Bindings& binding) {
   auto lx = layout;
   for(uint32_t mask = lx.runtime; mask!=0;) {
     const int i = std::countr_zero(mask);
