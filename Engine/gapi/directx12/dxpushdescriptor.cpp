@@ -4,8 +4,7 @@
 
 #include "gapi/directx12/dxdevice.h"
 #include "gapi/directx12/dxtexture.h"
-
-#include <bit>
+#include "gapi/directx12/dxbuffer.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -128,13 +127,13 @@ DxPushDescriptor::DescSet DxPushDescriptor::push(const PushBlock &pb, const Layo
     if(((1u << i) & lay.active)==0)
       continue;
 
+    write(dev, res, smp, lay.bindings[i], binding.data[i], binding.offset[i], binding.smp[i]);
+
     if(lay.bindings[i]!=ShaderReflection::Sampler)
       res.ptr += dev.dalloc->resSize;
 
     if(lay.bindings[i]==ShaderReflection::Sampler || lay.bindings[i]==ShaderReflection::Texture)
       smp.ptr += dev.dalloc->smpSize;
-
-    write(dev, res, smp, lay.bindings[i], binding.data[i], binding.offset[i], binding.smp[i]);
     }
 
   DescSet ret = {};
@@ -152,9 +151,9 @@ DxPushDescriptor::DescSet DxPushDescriptor::push(const PushBlock &pb, const Layo
 
 void DxPushDescriptor::setHeap(ID3D12GraphicsCommandList& enc, DxDescriptorArray::CbState& state) {
   enum {
-    HEAP_RES          = DxPipelineLay::HEAP_RES,
-    HEAP_SMP          = DxPipelineLay::HEAP_SMP,
-    HEAP_MAX          = DxPipelineLay::HEAP_MAX,
+    HEAP_RES = DxPipelineLay::HEAP_RES,
+    HEAP_SMP = DxPipelineLay::HEAP_SMP,
+    HEAP_MAX = DxPipelineLay::HEAP_MAX,
     };
 
   ID3D12DescriptorHeap* heaps[HEAP_MAX] = {};
@@ -172,20 +171,23 @@ void DxPushDescriptor::setHeap(ID3D12GraphicsCommandList& enc, DxDescriptorArray
     }
   }
 
-void DxPushDescriptor::setRootTable(ID3D12GraphicsCommandList& enc, const DescSet& set, bool isCompute) {
+void DxPushDescriptor::setRootTable(ID3D12GraphicsCommandList& enc, const DescSet& set, const PipelineStage st) {
   uint32_t id = 0;
   if(set.res.ptr!=0) {
-    if(isCompute)
-      enc.SetComputeRootDescriptorTable (id, set.res); else
-      enc.SetGraphicsRootDescriptorTable(id, set.res);
+    setRootDescriptorTable(enc, st, id, set.res);
     ++id;
     }
   if(set.smp.ptr!=0) {
-    if(isCompute)
-      enc.SetComputeRootDescriptorTable (id, set.smp); else
-      enc.SetGraphicsRootDescriptorTable(id, set.smp);
+    setRootDescriptorTable(enc, st, id, set.smp);
     ++id;
     }
+  }
+
+void DxPushDescriptor::setRootDescriptorTable(ID3D12GraphicsCommandList& enc, const PipelineStage st,
+                                              UINT RootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE BaseDescriptor) {
+  if(st==S_Compute)
+    enc.SetComputeRootDescriptorTable (RootParameterIndex, BaseDescriptor); else
+    enc.SetGraphicsRootDescriptorTable(RootParameterIndex, BaseDescriptor);
   }
 
 void DxPushDescriptor::write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, D3D12_CPU_DESCRIPTOR_HANDLE s,
@@ -193,8 +195,6 @@ void DxPushDescriptor::write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, D3D
   auto& device = *dev.device;
 
   switch(cls) {
-    case ShaderReflection::Ubo:
-      break;
     case ShaderReflection::Sampler:
       write(dev, s, smp);
       break;
@@ -251,9 +251,47 @@ void DxPushDescriptor::write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, D3D
       device.CreateUnorderedAccessView(tex->impl.get(), nullptr, &desc, res);
       break;
       }
-    case ShaderReflection::SsboR:
-    case ShaderReflection::SsboRW:
-    case ShaderReflection::Tlas:
+    case ShaderReflection::Ubo:
+    case ShaderReflection::SsboR: {
+      auto* buf  = reinterpret_cast<DxBuffer*>(data);
+      UINT  size = buf!=nullptr ? buf->appSize : 0;
+
+      D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+      desc.Format                  = DXGI_FORMAT_R32_TYPELESS;
+      desc.ViewDimension           = D3D12_SRV_DIMENSION_BUFFER;
+      desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+      desc.Buffer.FirstElement     = UINT(offset/4);
+      desc.Buffer.NumElements      = UINT((size+3)/4); // SRV size is required to be 4-byte aligned.
+      desc.Buffer.Flags            = D3D12_BUFFER_SRV_FLAG_RAW;
+      if(desc.Buffer.NumElements==0 && buf!=nullptr)
+        desc.Buffer.NumElements = UINT(buf->appSize-offset+3)/4;
+
+      if(buf!=nullptr)
+        device.CreateShaderResourceView(buf->impl.get(), &desc, res); else
+        device.CreateShaderResourceView(nullptr, &desc, res);
+      break;
+      }
+    case ShaderReflection::SsboRW: {
+      auto* buf  = reinterpret_cast<DxBuffer*>(data);
+      UINT  size = buf!=nullptr ? buf->appSize : 0;
+
+      D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+      desc.Format              = DXGI_FORMAT_R32_TYPELESS;
+      desc.ViewDimension       = D3D12_UAV_DIMENSION_BUFFER;
+      desc.Buffer.FirstElement = UINT(offset/4);
+      desc.Buffer.NumElements  = UINT((size+3)/4); // UAV size is required to be 4-byte aligned.
+      desc.Buffer.Flags        = D3D12_BUFFER_UAV_FLAG_RAW;
+      if(desc.Buffer.NumElements==0 && buf!=nullptr)
+        desc.Buffer.NumElements = UINT(buf->appSize-offset+3)/4;
+
+      if(buf!=nullptr)
+        device.CreateUnorderedAccessView(buf->impl.get(), nullptr, &desc, res); else
+        device.CreateUnorderedAccessView(nullptr, nullptr, &desc, res);
+      break;
+      }
+    case ShaderReflection::Tlas:{
+      break;
+      }
     case ShaderReflection::Push:
     case ShaderReflection::Count:
       break;

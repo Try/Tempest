@@ -18,6 +18,7 @@ class DxShader;
 
 class DxPipeline : public AbstractGraphicsApi::Pipeline {
   public:
+    DxPipeline() = delete;
     DxPipeline(DxDevice &device,
                const RenderState &st, Topology tp, const DxPipelineLay& ulay,
                const DxShader*const* shaders, size_t cnt);
@@ -32,6 +33,7 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
       };
 
     ComPtr<ID3D12RootSignature> sign;
+    const DxPipelineLay&        layout;
 
     D3D_PRIMITIVE_TOPOLOGY      topology           = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
     size_t                      pushConstantId     = 0;
@@ -65,7 +67,7 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
 
 class DxCompPipeline : public AbstractGraphicsApi::CompPipeline {
   public:
-    DxCompPipeline()=default;
+    DxCompPipeline() = delete;
     DxCompPipeline(DxDevice &device,
                    const DxPipelineLay& ulay,
                    DxShader& comp);

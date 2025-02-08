@@ -63,10 +63,10 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void setUniforms (AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc& u) override;
 
     void setBinding (size_t id, AbstractGraphicsApi::Texture *tex, const Sampler& smp, uint32_t mipLevel) override;
-    void setBinding (size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset);
-    void setBinding (size_t id, AbstractGraphicsApi::DescArray* arr);
-    void setBinding (size_t id, AbstractGraphicsApi::AccelerationStructure* tlas);
-    void setBinding (size_t id, const Sampler& smp);
+    void setBinding (size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset) override;
+    void setBinding (size_t id, AbstractGraphicsApi::DescArray* arr) override;
+    void setBinding (size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) override;
+    void setBinding (size_t id, const Sampler& smp) override;
 
     void draw        (const AbstractGraphicsApi::Buffer* vbo,
                       size_t stride, size_t offset, size_t vertexCount, size_t firstInstance, size_t instanceCount) override;

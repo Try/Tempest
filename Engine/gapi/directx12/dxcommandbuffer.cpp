@@ -827,11 +827,10 @@ void DxCommandBuffer::implSetUniforms(const PipelineStage st) {
   const DxPipelineLay* lay = nullptr;
   switch(st) {
     case PipelineStage::S_Graphics:
-      // TODO
-      // lay       = &curDrawPipeline->layout;
+      lay = &curDrawPipeline->layout;
       break;
     case PipelineStage::S_Compute:
-      lay       = &curCompPipeline->layout;
+      lay = &curCompPipeline->layout;
       break;
     default:
       break;
@@ -839,7 +838,7 @@ void DxCommandBuffer::implSetUniforms(const PipelineStage st) {
 
   const auto dset = pushDescriptors.push(lay->pb, lay->layout, bindings);
   pushDescriptors.setHeap(*impl, curHeaps);
-  pushDescriptors.setRootTable(*impl, dset, st==PipelineStage::S_Compute);
+  pushDescriptors.setRootTable(*impl, dset, st);
   }
 
 void DxCommandBuffer::restoreIndirect() {
@@ -1044,6 +1043,8 @@ void DxCommandBuffer::draw(const AbstractGraphicsApi::Buffer* ivbo, size_t strid
     view.StrideInBytes  = UINT(stride);
     impl->IASetVertexBuffers(0,1,&view);
     }
+
+  implSetUniforms(PipelineStage::S_Graphics);
   impl->DrawInstanced(UINT(vertexCount),UINT(instanceCount),UINT(offset),UINT(firstInstance));
   }
 
@@ -1068,6 +1069,7 @@ void DxCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer* ivbo, size_
   iview.Format         = nativeFormat(cls);
   impl->IASetIndexBuffer(&iview);
 
+  implSetUniforms(PipelineStage::S_Graphics);
   impl->DrawIndexedInstanced(UINT(isize),UINT(instanceCount),UINT(ioffset),INT(voffset),UINT(firstInstance));
   }
 
@@ -1077,6 +1079,7 @@ void DxCommandBuffer::drawIndirect(const AbstractGraphicsApi::Buffer& indirect, 
 
   // block future writers
   resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
+  implSetUniforms(PipelineStage::S_Graphics);
   //resState.flush(*this);
   /*
   if(!dev.props.enhancedBarriers && indirectCmd.find(&ind)==indirectCmd.end()) {
@@ -1090,6 +1093,7 @@ void DxCommandBuffer::drawIndirect(const AbstractGraphicsApi::Buffer& indirect, 
   }
 
 void DxCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
+  implSetUniforms(PipelineStage::S_Graphics);
   impl->DispatchMesh(UINT(x),UINT(y),UINT(z));
   }
 
@@ -1099,6 +1103,7 @@ void DxCommandBuffer::dispatchMeshIndirect(const AbstractGraphicsApi::Buffer& in
 
   // block future writers
   resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
+  implSetUniforms(PipelineStage::S_Graphics);
 
   /*
   if(!dev.props.enhancedBarriers && indirectCmd.find(&ind)==indirectCmd.end()) {

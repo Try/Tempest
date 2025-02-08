@@ -62,7 +62,7 @@ struct D3DX12_MESH_SHADER_PIPELINE_STATE_DESC {
 DxPipeline::DxPipeline(DxDevice& device,
                        const RenderState& st, Topology tp, const DxPipelineLay& ulay,
                        const DxShader*const* sh, size_t count)
-  : sign(ulay.impl.get()), device(device), rState(st) {
+  : sign(ulay.impl.get()), layout(ulay), device(device), rState(st) {
   sign.get()->AddRef();
   for(size_t i=0; i<count; ++i)
     if(sh[i]!=nullptr)
