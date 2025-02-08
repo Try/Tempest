@@ -11,10 +11,10 @@ class VCompPipeline;
 
 class VPushDescriptor {
   public:
-    using Bindings   = VBindlessCache::Bindings;
+    using Bindings   = Detail::Bindings;
     using WriteInfo  = VBindlessCache::WriteInfo;
     using PushBlock  = ShaderReflection::PushBlock;
-    using LayoutDesc = VPipelineLay::LayoutDesc;
+    using LayoutDesc = ShaderReflection::LayoutDesc;
 
     VPushDescriptor(VDevice& dev);
     ~VPushDescriptor();

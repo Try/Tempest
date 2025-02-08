@@ -27,26 +27,9 @@ class VPipelineLay : public AbstractGraphicsApi::PipelineLay {
     VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt);
     ~VPipelineLay();
 
-    using Binding = ShaderReflection::Binding;
-
-    struct LayoutDesc {
-      ShaderReflection::Class bindings[MaxBindings] = {};
-      ShaderReflection::Stage stage   [MaxBindings] = {};
-      uint32_t                count   [MaxBindings] = {};
-      uint32_t                runtime = 0;
-      uint32_t                array   = 0;
-      uint32_t                active  = 0;
-
-      bool operator == (const LayoutDesc& other) const;
-      bool operator != (const LayoutDesc& other) const;
-
-      bool isUpdateAfterBind() const;
-      };
-
-    struct SyncDesc {
-      uint32_t                read  = 0;
-      uint32_t                write = 0;
-      };
+    using Binding    = ShaderReflection::Binding;
+    using LayoutDesc = ShaderReflection::LayoutDesc;
+    using SyncDesc   = ShaderReflection::SyncDesc;
 
     struct DedicatedLay {
       VkDescriptorSetLayout dLay = VK_NULL_HANDLE;

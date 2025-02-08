@@ -506,7 +506,7 @@ struct DxCommandBuffer::FillUAV : Stage {
   };
 
 DxCommandBuffer::DxCommandBuffer(DxDevice& d)
-  : dev(d) {
+  : dev(d), pushDescriptors(d) {
   dxAssert(d.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
                                             uuid<ID3D12CommandAllocator>(),
                                             reinterpret_cast<void**>(&pool)));
@@ -570,6 +570,7 @@ void DxCommandBuffer::reset() {
       node = node->next;
     }
   chunks.clear();
+  pushDescriptors.reset();
   resetDone   = true;
   }
 
@@ -709,6 +710,7 @@ void DxCommandBuffer::setDebugMarker(std::string_view tag) {
 void DxCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
   state = Compute;
   auto& px = reinterpret_cast<DxCompPipeline&>(p);
+  curCompPipeline = &px;
   impl->SetPipelineState(px.impl.get());
   impl->SetComputeRootSignature(px.sign.get());
   }
@@ -722,8 +724,54 @@ void DxCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& /*p*/, Abst
   implSetUniforms(u,true);
   }
 
+void DxCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Texture* tex, const Sampler& smp, uint32_t mipLevel) {
+  curUniforms = nullptr; // legacy compat
+
+  bindings.data  [id] = tex;
+  bindings.smp   [id] = smp;
+  bindings.offset[id] = mipLevel;
+  bindings.durty      = true;
+  bindings.array      = bindings.array & ~(1u << id);
+  }
+
+void DxCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset) {
+  curUniforms = nullptr; // legacy compat
+
+  bindings.data  [id] = buf;
+  bindings.offset[id] = uint32_t(offset);
+  bindings.durty      = true;
+  bindings.array      = bindings.array & ~(1u << id);
+  }
+
+void DxCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::DescArray* arr) {
+  curUniforms = nullptr; // legacy compat
+
+  bindings.data[id] = arr;
+  bindings.durty    = true;
+  bindings.array    = bindings.array | (1u << id);
+  }
+
+void DxCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) {
+  curUniforms = nullptr; // legacy compat
+
+  bindings.data[id] = tlas;
+  bindings.durty    = true;
+  bindings.array    = bindings.array & ~(1u << id);
+  }
+
+void DxCommandBuffer::setBinding(size_t id, const Sampler& smp) {
+  curUniforms = nullptr; // legacy compat
+
+  bindings.smp[id] = smp;
+  bindings.durty   = true;
+  bindings.array   = bindings.array & ~(1u << id);
+  }
+
 void DxCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
-  curUniforms->ssboBarriers(resState,PipelineStage::S_Compute);
+  if(curUniforms) curUniforms->ssboBarriers(resState,PipelineStage::S_Compute);
+
+  implSetUniforms(PipelineStage::S_Compute);
+  resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Compute);
   resState.flush(*this);
   impl->Dispatch(UINT(x),UINT(y),UINT(z));
   }
@@ -745,6 +793,7 @@ void DxCommandBuffer::dispatchIndirect(const AbstractGraphicsApi::Buffer& indire
 void DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p) {
   DxPipeline& px = reinterpret_cast<DxPipeline&>(p);
   pushBaseInstanceId = px.pushBaseInstanceId;
+  curDrawPipeline = &px;
 
   impl->SetPipelineState(&px.instance(fboLayout));
   impl->SetGraphicsRootSignature(px.sign.get());
@@ -765,6 +814,32 @@ void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompu
   DxDescriptorArray& ux = reinterpret_cast<DxDescriptorArray&>(u);
   curUniforms = &ux;
   ux.bind(*impl, curHeaps, isCompute);
+  }
+
+void DxCommandBuffer::implSetUniforms(const PipelineStage st) {
+  if(curUniforms!=nullptr)
+    return; // legacy compat
+
+  if(!bindings.durty)
+    return;
+  bindings.durty = false;
+
+  const DxPipelineLay* lay = nullptr;
+  switch(st) {
+    case PipelineStage::S_Graphics:
+      // TODO
+      // lay       = &curDrawPipeline->layout;
+      break;
+    case PipelineStage::S_Compute:
+      lay       = &curCompPipeline->layout;
+      break;
+    default:
+      break;
+    }
+
+  const auto dset = pushDescriptors.push(lay->pb, lay->layout, bindings);
+  pushDescriptors.setHeap(*impl, curHeaps);
+  pushDescriptors.setRootTable(*impl, dset, st==PipelineStage::S_Compute);
   }
 
 void DxCommandBuffer::restoreIndirect() {

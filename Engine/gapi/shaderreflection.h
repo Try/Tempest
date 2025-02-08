@@ -58,6 +58,25 @@ class ShaderReflection final {
       uint64_t        mslSize     = 0;
       };
 
+    struct LayoutDesc {
+      ShaderReflection::Class bindings[MaxBindings] = {};
+      ShaderReflection::Stage stage   [MaxBindings] = {};
+      uint32_t                count   [MaxBindings] = {};
+      uint32_t                runtime = 0;
+      uint32_t                array   = 0;
+      uint32_t                active  = 0;
+
+      bool operator == (const LayoutDesc& other) const;
+      bool operator != (const LayoutDesc& other) const;
+
+      bool isUpdateAfterBind() const;
+      };
+
+    struct SyncDesc {
+      uint32_t read  = 0;
+      uint32_t write = 0;
+      };
+
     struct PushBlock {
       Stage    stage = None;
       uint64_t size  = 0;

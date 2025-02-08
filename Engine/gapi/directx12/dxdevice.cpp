@@ -114,6 +114,7 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
 
   allocator.setDevice(*this);
   descAlloc.setDevice(*this);
+  dalloc.reset(new DxHeapAllocator(*this));
 
   dxAssert(device->CreateFence(DxFence::Waiting, D3D12_FENCE_FLAG_NONE,
                                uuid<ID3D12Fence>(),

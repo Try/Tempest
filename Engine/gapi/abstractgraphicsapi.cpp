@@ -152,3 +152,26 @@ AbstractGraphicsApi::DescArray *AbstractGraphicsApi::createDescriptors(Device *d
 AbstractGraphicsApi::DescArray *AbstractGraphicsApi::createDescriptors(Device *d, Texture **tex, size_t cnt, uint32_t mipLevel, const Sampler &smp) {
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }
+
+bool Detail::Bindings::operator ==(const Bindings &other) const {
+  for(size_t i=0; i<MaxBindings; ++i) {
+    if(data[i]!=other.data[i])
+      return false;
+    if(smp[i]!=other.smp[i])
+      return false;
+    if(offset[i]!=other.offset[i])
+      return false;
+    }
+  return array==other.array;
+  }
+
+bool Detail::Bindings::operator !=(const Bindings &other) const {
+  return !(*this==other);
+  }
+
+bool Detail::Bindings::contains(const AbstractGraphicsApi::NoCopy* res) const {
+  for(size_t i=0; i<MaxBindings; ++i)
+    if(data[i]==res)
+      return true;
+  return false;
+  }

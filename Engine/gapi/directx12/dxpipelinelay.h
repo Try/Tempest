@@ -23,6 +23,10 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
     DxPipelineLay(DxDevice& device, const std::vector<ShaderReflection::Binding>* sh[], size_t cnt,
                   bool has_baseVertex_baseInstance);
 
+    using Binding    = ShaderReflection::Binding;
+    using LayoutDesc = ShaderReflection::LayoutDesc;
+    using SyncDesc   = ShaderReflection::SyncDesc;
+
     size_t descriptorsCount() override;
     size_t sizeofBuffer(size_t layoutBind, size_t arraylen) const override;
 
@@ -62,6 +66,11 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
     std::vector<Param>          prm;
     std::vector<Binding>        lay;
 
+    LayoutDesc                  layout;
+    ShaderReflection::PushBlock pb;
+
+    SyncDesc                    sync;
+
     ComPtr<ID3D12RootSignature> impl;
     DxDevice&                   dev;
 
@@ -78,7 +87,9 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
 
     void init(const std::vector<Binding>& lay, const ShaderReflection::PushBlock& pb, bool has_baseVertex_baseInstance);
     void add (const ShaderReflection::Binding& b, D3D12_DESCRIPTOR_RANGE_TYPE type, std::vector<Parameter>& root);
+
     void adjustSsboBindings();
+    void setupLayout(LayoutDesc &lx, SyncDesc& sync, const std::vector<ShaderReflection::Binding> *sh[], size_t cnt);
   };
 
 }

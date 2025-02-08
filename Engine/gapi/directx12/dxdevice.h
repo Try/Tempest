@@ -10,13 +10,14 @@
 
 #include "gapi/directx12/comptr.h"
 #include "gapi/directx12/dxcommandbuffer.h"
-#include "exceptions/exception.h"
 #include "gapi/directx12/dxdescriptorallocator.h"
+#include "gapi/directx12/dxheapallocator.h"
+#include "gapi/uploadengine.h"
+#include "exceptions/exception.h"
 #include "utility/spinlock.h"
 #include "utility/compiller_hints.h"
 #include "dxallocator.h"
 #include "dxfence.h"
-#include "gapi/uploadengine.h"
 
 namespace Tempest {
 
@@ -346,6 +347,7 @@ class DxDevice : public AbstractGraphicsApi::Device {
 
     DxAllocator                 allocator;
     DxDescriptorAllocator       descAlloc;
+    std::unique_ptr<DxHeapAllocator> dalloc;
 
     DSharedPtr<DxPipelineLay*>  blitLayout;
     DSharedPtr<DxPipeline*>     blit;

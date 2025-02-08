@@ -13,30 +13,6 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-bool VBindlessCache::Bindings::operator ==(const Bindings &other) const {
-  for(size_t i=0; i<MaxBindings; ++i) {
-    if(data[i]!=other.data[i])
-      return false;
-    if(smp[i]!=other.smp[i])
-      return false;
-    if(offset[i]!=other.offset[i])
-      return false;
-    }
-  return array==other.array;
-  }
-
-bool VBindlessCache::Bindings::operator !=(const Bindings &other) const {
-  return !(*this==other);
-  }
-
-bool VBindlessCache::Bindings::contains(const AbstractGraphicsApi::NoCopy* res) const {
-  for(size_t i=0; i<MaxBindings; ++i)
-    if(data[i]==res)
-      return true;
-  return false;
-  }
-
-
 VBindlessCache::VBindlessCache(VDevice& dev)
   : dev(dev) {
   }

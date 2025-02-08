@@ -51,6 +51,9 @@ DxPipelineLay::DxPipelineLay(DxDevice& dev, const std::vector<ShaderReflection::
       runtimeSized = true;
   init(lay,pb,has_baseVertex_baseInstance);
   adjustSsboBindings();
+
+  setupLayout(layout, sync, sh, cnt);
+  this->pb = pb;
   }
 
 size_t DxPipelineLay::descriptorsCount() {
@@ -301,6 +304,37 @@ void DxPipelineLay::adjustSsboBindings() {
   for(auto& i:lay)
     if(i.byteSize==0)
       ;//i.size = VK_WHOLE_SIZE; // TODO?
+  }
+
+void DxPipelineLay::setupLayout(LayoutDesc& lx, SyncDesc& sync,
+                                const std::vector<ShaderReflection::Binding>* sh[], size_t cnt) {
+  //FIXME: copy-paste from vulkan
+  std::fill(std::begin(lx.bindings), std::end(lx.bindings), ShaderReflection::Count);
+
+  for(size_t i=0; i<cnt; ++i) {
+    if(sh[i]==nullptr)
+      continue;
+    auto& bind = *sh[i];
+    for(auto& e:bind) {
+      if(e.cls==ShaderReflection::Push)
+        continue;
+      const uint32_t id = (1u << e.layout);
+
+      lx.bindings[e.layout] = e.cls;
+      lx.count   [e.layout] = std::max(lx.count[e.layout] , e.arraySize);
+      lx.stage   [e.layout] = ShaderReflection::Stage(e.stage | lx.stage[e.layout]);
+
+      if(e.runtimeSized)
+        lx.runtime |= id;
+      if(e.runtimeSized || e.arraySize>1)
+        lx.array   |= id;
+      lx.active |= id;
+
+      sync.read |= id;
+      if(e.cls==ShaderReflection::ImgRW || e.cls==ShaderReflection::SsboRW)
+        sync.write |= id;
+      }
+    }
   }
 
 #endif

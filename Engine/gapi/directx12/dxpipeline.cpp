@@ -291,7 +291,7 @@ ComPtr<ID3D12PipelineState> DxPipeline::initMeshPipeline(const DxFboLayout& frm)
 
 
 DxCompPipeline::DxCompPipeline(DxDevice& device, const DxPipelineLay& ulay, DxShader& comp)
-  : sign(ulay.impl.get()) {
+  : sign(ulay.impl.get()), layout(ulay) {
   sign.get()->AddRef();
 
   wgSize         = comp.comp.wgSize;

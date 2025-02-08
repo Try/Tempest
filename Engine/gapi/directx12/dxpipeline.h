@@ -75,6 +75,7 @@ class DxCompPipeline : public AbstractGraphicsApi::CompPipeline {
     ComPtr<ID3D12RootSignature> sign;
     ComPtr<ID3D12PipelineState> impl;
     IVec3                       wgSize;
+    const DxPipelineLay&        layout;
     size_t                      pushConstantId = 0;
   };
 

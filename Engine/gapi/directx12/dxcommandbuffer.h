@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "comptr.h"
+#include "gapi/directx12/dxpushdescriptor.h"
 #include "gapi/resourcestate.h"
 #include "dxdescriptorarray.h"
 #include "dxfbolayout.h"
@@ -19,6 +20,8 @@ namespace Detail {
 class DxDevice;
 class DxBuffer;
 class DxTexture;
+class DxPipeline;
+class DxCompPipeline;
 
 class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
   public:
@@ -59,6 +62,12 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void setBytes    (AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) override;
     void setUniforms (AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc& u) override;
 
+    void setBinding (size_t id, AbstractGraphicsApi::Texture *tex, const Sampler& smp, uint32_t mipLevel) override;
+    void setBinding (size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset);
+    void setBinding (size_t id, AbstractGraphicsApi::DescArray* arr);
+    void setBinding (size_t id, AbstractGraphicsApi::AccelerationStructure* tlas);
+    void setBinding (size_t id, const Sampler& smp);
+
     void draw        (const AbstractGraphicsApi::Buffer* vbo,
                       size_t stride, size_t offset, size_t vertexCount, size_t firstInstance, size_t instanceCount) override;
     void drawIndexed (const AbstractGraphicsApi::Buffer* vbo, size_t stride, size_t voffset,
@@ -96,6 +105,12 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     Detail::SmallList<Chunk,32>        chunks;
 
   private:
+    struct Bindings : Detail::Bindings {
+      NonUniqResId read  = NonUniqResId::I_None;
+      NonUniqResId write = NonUniqResId::I_None;
+      bool         durty = false;
+      };
+
     DxDevice&                          dev;
     ComPtr<ID3D12CommandAllocator>     pool;
     ComPtr<ID3D12GraphicsCommandList6> impl;
@@ -103,8 +118,12 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     DxFboLayout                        fboLayout;
 
-    AbstractGraphicsApi::Desc*         curUniforms  = nullptr;
+    DxPipeline*                        curDrawPipeline = nullptr;
+    DxCompPipeline*                    curCompPipeline = nullptr;
+    AbstractGraphicsApi::Desc*         curUniforms     = nullptr;
     DxDescriptorArray::CbState         curHeaps;
+    Bindings                           bindings;
+    DxPushDescriptor                   pushDescriptors;
 
     uint32_t                           pushBaseInstanceId = -1;
 
@@ -133,6 +152,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void clearStage();
     void pushStage(Stage* cmd);
     void implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompute);
+    void implSetUniforms(const PipelineStage st);
     void restoreIndirect();
     void enhancedBarrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt);
   };

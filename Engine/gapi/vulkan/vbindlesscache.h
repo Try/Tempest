@@ -20,18 +20,6 @@ class VBindlessCache {
     VBindlessCache(VDevice& dev);
     ~VBindlessCache();
 
-    struct Bindings {
-      AbstractGraphicsApi::NoCopy* data  [MaxBindings] = {};
-      Sampler                      smp   [MaxBindings] = {};
-      uint32_t                     offset[MaxBindings] = {}; // ssbo offset or texture mip-level
-      uint32_t                     array               = {};
-
-      bool operator == (const Bindings& other) const;
-      bool operator != (const Bindings& other) const;
-
-      bool contains(const AbstractGraphicsApi::NoCopy* res) const;
-      };
-
     union WriteInfo {
       VkDescriptorImageInfo                        image;
       VkDescriptorBufferInfo                       buffer;

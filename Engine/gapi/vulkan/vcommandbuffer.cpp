@@ -468,7 +468,7 @@ void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
 void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
   if(curUniforms) curUniforms->ssboBarriers(resState, PipelineStage::S_Compute);
 
-  bindUniforms(PipelineStage::S_Compute);
+  implSetUniforms(PipelineStage::S_Compute);
   resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Compute);
   resState.flush(*this);
   vkCmdDispatch(impl,uint32_t(x),uint32_t(y),uint32_t(z));
@@ -478,7 +478,7 @@ void VCommandBuffer::dispatchIndirect(const AbstractGraphicsApi::Buffer& indirec
   const VBuffer& ind = reinterpret_cast<const VBuffer&>(indirect);
   if(curUniforms) curUniforms->ssboBarriers(resState, PipelineStage::S_Compute);
 
-  bindUniforms(PipelineStage::S_Compute);
+  implSetUniforms(PipelineStage::S_Compute);
   resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Compute);
   // block future writers
   resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
@@ -553,7 +553,7 @@ void VCommandBuffer::handleSync(const VPipelineLay::LayoutDesc& lay, const VPipe
     }
   }
 
-void VCommandBuffer::bindUniforms(const PipelineStage st) {
+void VCommandBuffer::implSetUniforms(const PipelineStage st) {
   if(curUniforms!=nullptr)
     return; // legacy compat
 
@@ -658,7 +658,7 @@ void VCommandBuffer::draw(const AbstractGraphicsApi::Buffer* ivbo, size_t stride
   if(T_LIKELY(vbo!=nullptr)) {
     bindVbo(*vbo,stride);
     }
-  bindUniforms(PipelineStage::S_Graphics);
+  implSetUniforms(PipelineStage::S_Graphics);
   vkCmdDraw(impl, uint32_t(vsize), uint32_t(instanceCount), uint32_t(voffset), uint32_t(firstInstance));
   }
 
@@ -671,7 +671,7 @@ void VCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer* ivbo, size_t
     bindVbo(*vbo,stride);
     }
   vkCmdBindIndexBuffer(impl, ibo.impl, 0, nativeFormat(cls));
-  bindUniforms(PipelineStage::S_Graphics);
+  implSetUniforms(PipelineStage::S_Graphics);
   vkCmdDrawIndexed    (impl, uint32_t(isize), uint32_t(instanceCount), uint32_t(ioffset), int32_t(voffset), uint32_t(firstInstance));
   }
 
@@ -680,13 +680,13 @@ void VCommandBuffer::drawIndirect(const AbstractGraphicsApi::Buffer& indirect, s
 
   // block future writers
   resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
-  bindUniforms(PipelineStage::S_Graphics);
+  implSetUniforms(PipelineStage::S_Graphics);
   //resState.flush(*this);
   vkCmdDrawIndirect(impl, ind.impl, VkDeviceSize(offset), 1, 0);
   }
 
 void VCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
-  bindUniforms(PipelineStage::S_Graphics);
+  implSetUniforms(PipelineStage::S_Graphics);
   device.vkCmdDrawMeshTasks(impl, uint32_t(x), uint32_t(y), uint32_t(z));
   }
 
@@ -695,7 +695,7 @@ void VCommandBuffer::dispatchMeshIndirect(const AbstractGraphicsApi::Buffer& ind
 
   // block future writers
   resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
-  bindUniforms(PipelineStage::S_Graphics);
+  implSetUniforms(PipelineStage::S_Graphics);
   //resState.flush(*this);
   device.vkCmdDrawMeshTasksIndirect(impl, ind.impl, VkDeviceSize(offset), 1, 0);
   }
