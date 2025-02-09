@@ -79,4 +79,19 @@ class DxDescriptorArray : public AbstractGraphicsApi::Desc {
     std::vector<DynBinding>       runtimeArrays;
   };
 
+class DxDescriptorArray2 : public AbstractGraphicsApi::DescArray {
+  public:
+    DxDescriptorArray2(DxDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler& smp);
+    DxDescriptorArray2(DxDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel);
+    DxDescriptorArray2(DxDevice& dev, AbstractGraphicsApi::Buffer**  buf, size_t cnt);
+    ~DxDescriptorArray2();
+
+    size_t size() const;
+    auto   handle() const -> D3D12_GPU_DESCRIPTOR_HANDLE;
+
+  private:
+    DxDevice& dev;
+    uint32_t  dPtr = 0;
+    size_t    cnt  = 0;
+  };
 }}

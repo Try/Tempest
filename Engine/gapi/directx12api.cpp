@@ -216,6 +216,21 @@ AbstractGraphicsApi::Desc* DirectX12Api::createDescriptors(AbstractGraphicsApi::
   return new DxDescriptorArray(u);
   }
 
+AbstractGraphicsApi::DescArray* DirectX12Api::createDescriptors(Device* d, Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler& smp) {
+  Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
+  return new Detail::DxDescriptorArray2(dx, tex, cnt, mipLevel, smp);
+  }
+
+AbstractGraphicsApi::DescArray* DirectX12Api::createDescriptors(Device* d, Texture** tex, size_t cnt, uint32_t mipLevel) {
+  Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
+  return new Detail::DxDescriptorArray2(dx, tex, cnt, mipLevel);
+  }
+
+AbstractGraphicsApi::DescArray* DirectX12Api::createDescriptors(Device* d, Buffer** buf, size_t cnt) {
+  Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
+  return new Detail::DxDescriptorArray2(dx, buf, cnt);
+  }
+
 AbstractGraphicsApi::PPipelineLay DirectX12Api::createPipelineLayout(Device* d, const Shader*const* sh, size_t count) {
   const std::vector<Detail::ShaderReflection::Binding>* lay[5] = {};
   bool has_baseVertex_baseInstance = false;

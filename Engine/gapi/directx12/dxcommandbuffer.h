@@ -151,8 +151,11 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void prepareDraw(size_t voffset, size_t firstInstance);
     void clearStage();
     void pushStage(Stage* cmd);
+
     void implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompute);
     void implSetUniforms(const PipelineStage st);
+    void handleSync(const DxPipelineLay::LayoutDesc& lay, const DxPipelineLay::SyncDesc& sync, PipelineStage st);
+
     void restoreIndirect();
     void enhancedBarrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt);
   };

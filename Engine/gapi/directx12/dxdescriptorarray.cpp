@@ -279,7 +279,6 @@ void DxDescriptorArray::set(size_t id, AbstractGraphicsApi::Buffer** b, size_t c
     if(b[i]==nullptr)
       continue;
     auto* buf = reinterpret_cast<DxBuffer*>(b[i]);
-    auto& l   = lay.handler->lay[id];
     placeInHeap(device, prm.rgnType, descPtr, heapOffset + i*descSize, buf, 0, buf->appSize);
     }
   }
@@ -633,4 +632,53 @@ void DxDescriptorArray::placeInHeap(ID3D12Device& device, D3D12_DESCRIPTOR_RANGE
   device.CreateShaderResourceView(nullptr,&desc,gpu);
   }
 
+
+DxDescriptorArray2::DxDescriptorArray2(DxDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler& smp)
+  : dev(dev), cnt(cnt) {
+  dPtr = dev.dalloc->alloc(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, uint32_t(cnt));
+
+  for(size_t i=0; i<cnt; ++i) {
+    auto res = dev.dalloc->res;
+    res.ptr += (dPtr + i)*dev.dalloc->resSize;
+    DxPushDescriptor::write(dev, res, D3D12_CPU_DESCRIPTOR_HANDLE(), ShaderReflection::Image, tex[i], mipLevel, smp);
+    }
+  }
+
+DxDescriptorArray2::DxDescriptorArray2(DxDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel)
+  : dev(dev), cnt(cnt) {
+  dPtr = dev.dalloc->alloc(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, uint32_t(cnt));
+
+  for(size_t i=0; i<cnt; ++i) {
+    auto res = dev.dalloc->res;
+    res.ptr += (dPtr + i)*dev.dalloc->resSize;
+    DxPushDescriptor::write(dev, res, D3D12_CPU_DESCRIPTOR_HANDLE(), ShaderReflection::Image, tex[i], 0, Sampler::nearest());
+    }
+  }
+
+DxDescriptorArray2::DxDescriptorArray2(DxDevice& dev, AbstractGraphicsApi::Buffer** buf, size_t cnt)
+  : dev(dev), cnt(cnt) {
+  dPtr = dev.dalloc->alloc(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, uint32_t(cnt));
+
+  for(size_t i=0; i<cnt; ++i) {
+    auto res = dev.dalloc->res;
+    res.ptr += (dPtr + i)*dev.dalloc->resSize;
+    DxPushDescriptor::write(dev, res, D3D12_CPU_DESCRIPTOR_HANDLE(), ShaderReflection::SsboRW, buf[i], 0, Sampler::nearest());
+    }
+  }
+
+DxDescriptorArray2::~DxDescriptorArray2() {
+  dev.dalloc->free(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, dPtr, uint32_t(cnt));
+  }
+
+size_t DxDescriptorArray2::size() const {
+  return cnt;
+  }
+
+D3D12_GPU_DESCRIPTOR_HANDLE DxDescriptorArray2::handle() const {
+  auto res = dev.dalloc->gres;
+  res.ptr += dPtr*dev.dalloc->resSize;
+  return res;
+  }
+
 #endif
+

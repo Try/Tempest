@@ -585,6 +585,9 @@ void DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize
   resState.joinWriters(PipelineStage::S_Graphics);
   resState.setRenderpass(*this,desc,descSize,frm,att,sw,imgId);
 
+  bindings.read  = NonUniqResId::I_None;
+  bindings.write = NonUniqResId::I_None;
+
   if(state!=Idle) {
     newChunk();
     }
@@ -667,6 +670,8 @@ void DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize
   }
 
 void DxCommandBuffer::endRendering() {
+  resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Graphics);
+
   impl->EndRenderPass();
   restoreIndirect();
   }
@@ -780,7 +785,10 @@ void DxCommandBuffer::dispatchIndirect(const AbstractGraphicsApi::Buffer& indire
   const DxBuffer& ind  = reinterpret_cast<const DxBuffer&>(indirect);
   auto&           sign = dev.dispatchIndirectSgn.get();
 
-  curUniforms->ssboBarriers(resState, PipelineStage::S_Compute);
+  if(curUniforms) curUniforms->ssboBarriers(resState, PipelineStage::S_Compute);
+
+  implSetUniforms(PipelineStage::S_Compute);
+  resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Compute);
   // block future writers
   resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
   if(!dev.props.enhancedBarriers)
@@ -816,6 +824,47 @@ void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompu
   ux.bind(*impl, curHeaps, isCompute);
   }
 
+void DxCommandBuffer::handleSync(const DxPipelineLay::LayoutDesc& lay, const DxPipelineLay::SyncDesc& sync, PipelineStage st) {
+  if(st!=PipelineStage::S_Graphics) {
+    bindings.read  = NonUniqResId::I_None;
+    bindings.write = NonUniqResId::I_None;
+    }
+
+  for(size_t i=0; i<MaxBindings; ++i) {
+    NonUniqResId nonUniqId = NonUniqResId::I_None;
+    auto         data      = bindings.data[i];
+    switch(lay.bindings[i]) {
+      case ShaderReflection::Texture:
+      case ShaderReflection::Image:
+      case ShaderReflection::ImgR:
+      case ShaderReflection::ImgRW: {
+        nonUniqId = reinterpret_cast<DxTexture*>(data)->nonUniqId;
+        break;
+        }
+      case ShaderReflection::Ubo:
+      case ShaderReflection::SsboR:
+      case ShaderReflection::SsboRW: {
+        nonUniqId = reinterpret_cast<DxBuffer*>(data)->nonUniqId;
+        break;
+        }
+      case ShaderReflection::Tlas: {
+        //NOTE: Tlas tracking is not really implemented
+        nonUniqId = reinterpret_cast<DxAccelerationStructure*>(data)->impl.nonUniqId;
+        break;
+        }
+      case ShaderReflection::Sampler:
+      case ShaderReflection::Push:
+      case ShaderReflection::Count:
+        break;
+      }
+
+    if(sync.read & (1u<<i))
+      bindings.read |= nonUniqId;
+    if(sync.write & (1u<<i))
+      bindings.write |= nonUniqId;
+    }
+  }
+
 void DxCommandBuffer::implSetUniforms(const PipelineStage st) {
   if(curUniforms!=nullptr)
     return; // legacy compat
@@ -836,9 +885,11 @@ void DxCommandBuffer::implSetUniforms(const PipelineStage st) {
       break;
     }
 
+  handleSync(lay->layout, lay->sync, st);
+
   const auto dset = pushDescriptors.push(lay->pb, lay->layout, bindings);
   pushDescriptors.setHeap(*impl, curHeaps);
-  pushDescriptors.setRootTable(*impl, dset, st);
+  pushDescriptors.setRootTable(*impl, dset, lay->layout, bindings, st);
   }
 
 void DxCommandBuffer::restoreIndirect() {

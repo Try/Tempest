@@ -1,3 +1,4 @@
+#include "gapi/directx12/dxaccelerationstructure.h"
 #if defined(TEMPEST_BUILD_DIRECTX12)
 
 #include "dxpushdescriptor.h"
@@ -12,6 +13,8 @@ using namespace Tempest::Detail;
 static std::pair<uint32_t, uint32_t> numResources(const ShaderReflection::LayoutDesc& lay) {
   std::pair<uint32_t, uint32_t> ret;
   for(size_t i=0; i<MaxBindings; ++i) {
+    if(((1u << i) & lay.array)!=0)
+      continue;
     switch(lay.bindings[i]) {
       case ShaderReflection::Sampler:
         ret.second++;
@@ -93,7 +96,7 @@ void DxPushDescriptor::reset() {
   smpPool.clear();
   }
 
-template<enum D3D12_DESCRIPTOR_HEAP_TYPE T>
+template<D3D12_DESCRIPTOR_HEAP_TYPE T>
 uint32_t DxPushDescriptor::alloc(std::vector<Pool<T>>& pool, const uint32_t sz, const uint32_t step) {
   if(pool.empty())
     pool.emplace_back(dev, step);
@@ -126,6 +129,8 @@ DxPushDescriptor::DescSet DxPushDescriptor::push(const PushBlock &pb, const Layo
   for(size_t i=0; i<MaxBindings; ++i) {
     if(((1u << i) & lay.active)==0)
       continue;
+    if(((1u << i) & lay.array)!=0)
+      continue;
 
     write(dev, res, smp, lay.bindings[i], binding.data[i], binding.offset[i], binding.smp[i]);
 
@@ -153,25 +158,20 @@ void DxPushDescriptor::setHeap(ID3D12GraphicsCommandList& enc, DxDescriptorArray
   enum {
     HEAP_RES = DxPipelineLay::HEAP_RES,
     HEAP_SMP = DxPipelineLay::HEAP_SMP,
-    HEAP_MAX = DxPipelineLay::HEAP_MAX,
     };
 
-  ID3D12DescriptorHeap* heaps[HEAP_MAX] = {};
+  ID3D12DescriptorHeap* heaps[2] = {};
   heaps[HEAP_RES] = dev.dalloc->resHeap.get();
   heaps[HEAP_SMP] = dev.dalloc->smpHeap.get();
 
   if(state.heaps[HEAP_RES]!=heaps[HEAP_RES] || state.heaps[HEAP_SMP]!=heaps[HEAP_SMP]) {
     state.heaps[HEAP_RES] = heaps[HEAP_RES];
     state.heaps[HEAP_SMP] = heaps[HEAP_SMP];
-
-    const uint8_t cnt = (heaps[HEAP_SMP]==nullptr ? 1 : 2);
-    if(heaps[HEAP_RES]==nullptr)
-      heaps[HEAP_RES] = heaps[HEAP_SMP];
-    enc.SetDescriptorHeaps(cnt, heaps);
+    enc.SetDescriptorHeaps(2, heaps);
     }
   }
 
-void DxPushDescriptor::setRootTable(ID3D12GraphicsCommandList& enc, const DescSet& set, const PipelineStage st) {
+void DxPushDescriptor::setRootTable(ID3D12GraphicsCommandList& enc, const DescSet& set, const LayoutDesc& lay, const Bindings& binding, const PipelineStage st) {
   uint32_t id = 0;
   if(set.res.ptr!=0) {
     setRootDescriptorTable(enc, st, id, set.res);
@@ -179,6 +179,15 @@ void DxPushDescriptor::setRootTable(ID3D12GraphicsCommandList& enc, const DescSe
     }
   if(set.smp.ptr!=0) {
     setRootDescriptorTable(enc, st, id, set.smp);
+    ++id;
+    }
+
+  for(size_t i=0; i<MaxBindings; ++i) {
+    if(((1u << i) & lay.array)==0)
+      continue;
+
+    auto* a = reinterpret_cast<const DxDescriptorArray2*>(binding.data[i]);
+    setRootDescriptorTable(enc, st, id, a->handle());
     ++id;
     }
   }
@@ -289,7 +298,16 @@ void DxPushDescriptor::write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, D3D
         device.CreateUnorderedAccessView(nullptr, nullptr, &desc, res);
       break;
       }
-    case ShaderReflection::Tlas:{
+    case ShaderReflection::Tlas: {
+      auto* tlas = reinterpret_cast<DxAccelerationStructure*>(data);
+
+      D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+      desc.Format                  = DXGI_FORMAT_UNKNOWN;
+      desc.ViewDimension           = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
+      desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+      desc.RaytracingAccelerationStructure.Location = tlas->impl.impl->GetGPUVirtualAddress();
+
+      device.CreateShaderResourceView(nullptr, &desc, res);
       break;
       }
     case ShaderReflection::Push:

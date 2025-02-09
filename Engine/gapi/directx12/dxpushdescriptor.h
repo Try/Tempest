@@ -30,7 +30,8 @@ class DxPushDescriptor {
 
     DescSet push(const PushBlock &pb, const LayoutDesc& lay, const Bindings& binding);
     void    setHeap(ID3D12GraphicsCommandList& enc, DxDescriptorArray::CbState& state);
-    void    setRootTable(ID3D12GraphicsCommandList& enc, const DescSet& set, const PipelineStage st);
+    void    setRootTable(ID3D12GraphicsCommandList& enc, const DescSet& set,
+                         const LayoutDesc& lay, const Bindings& binding, const PipelineStage st);
 
     static  void write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, D3D12_CPU_DESCRIPTOR_HANDLE s,
                        ShaderReflection::Class cls, AbstractGraphicsApi::NoCopy* data, uint32_t offset, const Sampler& smp);
@@ -44,7 +45,7 @@ class DxPushDescriptor {
       SMP_ALLOC_SZ = MaxBindings,
       };
 
-    template<enum D3D12_DESCRIPTOR_HEAP_TYPE>
+    template<D3D12_DESCRIPTOR_HEAP_TYPE T>
     struct Pool {
       Pool(DxDevice& dev, uint32_t size);
 
@@ -52,7 +53,7 @@ class DxPushDescriptor {
       uint32_t                   alloc = 0;
       };
 
-    template<enum D3D12_DESCRIPTOR_HEAP_TYPE T>
+    template<D3D12_DESCRIPTOR_HEAP_TYPE T>
     uint32_t                     alloc(std::vector<Pool<T>>& resPool, const uint32_t sz, const uint32_t step);
     std::pair<uint32_t,uint32_t> alloc(const LayoutDesc& lay, uint32_t numRes, uint32_t numSmp);
 
