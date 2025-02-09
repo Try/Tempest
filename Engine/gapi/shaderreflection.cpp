@@ -10,6 +10,7 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+
 static const spirv_cross::SPIRType& typeFromVariable(const spirv_cross::Compiler& comp, spirv_cross::VariableID i) {
   auto& ret = comp.get_type_from_variable(i);
   if(ret.pointer) {
@@ -74,6 +75,30 @@ static uint32_t declaredVarSize(spirv_cross::Compiler& comp, const spirv_cross::
     }
   return 0;
   }
+
+
+bool ShaderReflection::LayoutDesc::operator ==(const LayoutDesc &other) const {
+  if(std::memcmp(bindings, other.bindings, sizeof(bindings))!=0)
+    return false;
+  if(std::memcmp(count, other.count, sizeof(count))!=0)
+    return false;
+  if(runtime!=other.runtime || array!=other.array || active!=other.active)
+    return false;
+  return true;
+  }
+
+bool ShaderReflection::LayoutDesc::operator != (const LayoutDesc& other) const {
+  return !(*this==other);
+  }
+
+bool ShaderReflection::LayoutDesc::isUpdateAfterBind() const {
+  return runtime!=0 || array!=0;
+  }
+
+size_t ShaderReflection::LayoutDesc::sizeofBuffer(size_t id, size_t arraylen) const {
+  return bufferSz[id] + bufferEl[id]*arraylen;
+  }
+
 
 void ShaderReflection::getVertexDecl(std::vector<Decl::ComponentType>& data, spirv_cross::Compiler& comp) {
   if(comp.get_execution_model()!=spv::ExecutionModelVertex)

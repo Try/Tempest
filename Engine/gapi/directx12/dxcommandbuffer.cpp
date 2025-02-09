@@ -1302,11 +1302,49 @@ void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
                                      uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
   if(mipLevels==1)
     return;
-
+/*
   resState.flush(*this);
+  Detail::Bindings prev = static_cast<Detail::Bindings&>(bindings);
 
-  std::unique_ptr<MipMaps> dx(new MipMaps(dev,reinterpret_cast<DxTexture&>(img),texWidth,texHeight,mipLevels));
-  pushStage(dx.release());
+  auto& shader = *dev.blit.handler;
+  impl->SetPipelineState(&shader.instance(reinterpret_cast<DxTexture&>(img).format));
+  impl->SetGraphicsRootSignature(shader.sign.get());
+  impl->IASetPrimitiveTopology(shader.topology);
+  impl->IASetVertexBuffers(0,0,nullptr);
+
+  D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle  = rtvHeap->GetCPUDescriptorHandleForHeapStart();
+  auto                        rtvHeapInc = dev.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+
+  uint32_t w = texWidth;
+  uint32_t h = texHeight;
+  resState.setLayout(img, ResourceAccess::ColorAttach);
+  for(uint32_t i=1; i<mipLevels; ++i) {
+    const int dstW = (w==1 ? 1 : w/2);
+    const int dstH = (h==1 ? 1 : h/2);
+
+    barrier(img,ResourceAccess::ColorAttach,ResourceAccess::Sampler,i-1);
+    impl->OMSetRenderTargets(1, &rtvHandle, TRUE, nullptr);
+
+    setViewport(Rect(0, 0, dstW, dstH));
+    setScissor(Rect(0, 0, dstW, dstH));
+
+    setBinding(0, &img, Sampler::bilinear(), i-1);
+    implSetUniforms(S_Graphics);
+
+    impl->DrawInstanced(6,1,0,0);
+
+    w             = dstW;
+    h             = dstH;
+    rtvHandle.ptr+= rtvHeapInc;
+    }
+  barrier(img, ResourceAccess::ColorAttach, ResourceAccess::Sampler, mipLevels-1);
+
+  static_cast<Detail::Bindings&>(bindings) = prev;
+  bindings.durty = true;
+  */
+  // std::unique_ptr<MipMaps> dx(new MipMaps(dev,reinterpret_cast<DxTexture&>(img),texWidth,texHeight,mipLevels));
+  // pushStage(dx.release());
   }
 
 void DxCommandBuffer::copyNative(AbstractGraphicsApi::Buffer& dstBuf, size_t offset,

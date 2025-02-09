@@ -51,6 +51,7 @@ class ShaderReflection final {
       uint64_t        varByteSize  = 0;
 
       bool            hasSampler() const { return cls==Texture || cls==Sampler; }
+      bool            isArray()    const { return runtimeSized || arraySize>1;  } //NOTE: array with sizeof 1 is not an array
 
       spirv_cross::ID spvId;
       uint32_t        mslBinding  = uint32_t(-1);
@@ -62,6 +63,8 @@ class ShaderReflection final {
       ShaderReflection::Class bindings[MaxBindings] = {};
       ShaderReflection::Stage stage   [MaxBindings] = {};
       uint32_t                count   [MaxBindings] = {};
+      uint32_t                bufferSz[MaxBindings] = {}; // fixed part
+      uint32_t                bufferEl[MaxBindings] = {}; // variable array
       uint32_t                runtime = 0;
       uint32_t                array   = 0;
       uint32_t                active  = 0;
@@ -69,7 +72,8 @@ class ShaderReflection final {
       bool operator == (const LayoutDesc& other) const;
       bool operator != (const LayoutDesc& other) const;
 
-      bool isUpdateAfterBind() const;
+      bool   isUpdateAfterBind() const;
+      size_t sizeofBuffer(size_t id, size_t arraylen) const;
       };
 
     struct SyncDesc {

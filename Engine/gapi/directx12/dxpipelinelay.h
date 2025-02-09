@@ -83,13 +83,13 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
 
     bool                        runtimeSized = false;
 
-    uint32_t findBinding(const std::vector<D3D12_ROOT_PARAMETER>& except) const;
-
+    void init(const LayoutDesc& lay, const ShaderReflection::PushBlock& pb, bool has_baseVertex_baseInstance);
     void init(const std::vector<Binding>& lay, const ShaderReflection::PushBlock& pb, bool has_baseVertex_baseInstance);
     void add (const ShaderReflection::Binding& b, D3D12_DESCRIPTOR_RANGE_TYPE type, std::vector<Parameter>& root);
 
     void adjustSsboBindings();
-    void setupLayout(LayoutDesc &lx, SyncDesc& sync, const std::vector<ShaderReflection::Binding> *sh[], size_t cnt);
+    void setupLayout(ShaderReflection::PushBlock& pb, LayoutDesc &lx, SyncDesc& sync,
+                     const std::vector<ShaderReflection::Binding> *sh[], size_t cnt);
   };
 
 }

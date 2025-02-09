@@ -99,7 +99,7 @@ DxShader::DxShader(const void *source, const size_t src_size)
     comp.add_hlsl_resource_binding(push_binding);
 
     for(auto& i:lay)
-      if(i.runtimeSized) {
+      if(i.isArray()) {
         spirv_cross::HLSLResourceBinding bindless = {};
         bindless.stage    = exec;
         bindless.desc_set = 0;

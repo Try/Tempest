@@ -91,7 +91,7 @@ class DxDescriptorArray2 : public AbstractGraphicsApi::DescArray {
 
   private:
     DxDevice& dev;
-    uint32_t  dPtr = 0;
-    size_t    cnt  = 0;
+    uint32_t  dPtr  = 0;
+    size_t    cnt   = 0;
   };
 }}

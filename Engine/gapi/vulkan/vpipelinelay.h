@@ -78,7 +78,7 @@ class VPipelineLay : public AbstractGraphicsApi::PipelineLay {
     VkDescriptorSetLayout createMsHelper() const;
 
     void                  adjustSsboBindings();
-    void                  setupLayout(LayoutDesc &lx, SyncDesc& sync, const std::vector<ShaderReflection::Binding> *sh[], size_t cnt);
+    void                  setupLayout(ShaderReflection::PushBlock& pb, LayoutDesc &lx, SyncDesc& sync, const std::vector<ShaderReflection::Binding> *sh[], size_t cnt);
 
   friend class VDescriptorArray;
   };
