@@ -44,20 +44,17 @@ void DispathToDraw(const char* outImage) {
     auto fs     = device.shader("shader/comp_test.frag.sprv");
     auto psoG   = device.pipeline(Topology::Triangles,RenderState(),vs,fs);
 
-    auto uboCs  = device.descriptors(psoC.layout());
-    uboCs.set(0,ssbo);
-
-    auto uboFs  = device.descriptors(psoG.layout());
-    uboFs.set(0,ssbo);
-
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setUniforms(psoC,uboCs);
+      enc.setFramebuffer({});
+      enc.setBinding(0, ssbo);
+      enc.setPipeline(psoC);
       enc.dispatch(4,1,1);
 
       enc.setFramebuffer({{tex,Vec4(0,0,0,0),Tempest::Preserve}});
-      enc.setUniforms(psoG,uboFs);
+      enc.setBinding(0, ssbo);
+      enc.setPipeline(psoG);
       enc.draw(vbo,ibo);
     }
 
@@ -95,19 +92,19 @@ void DrawToDispath() {
     auto fs     = device.shader("shader/simple_test.frag.sprv");
     auto psoG   = device.pipeline(Topology::Triangles,RenderState(),vs,fs);
 
-    auto uboCs  = device.descriptors(psoC.layout());
-    uboCs.set(0,tex);
-    uboCs.set(1,ssbo);
-
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
-      enc.setUniforms(psoG);
+      enc.setBinding(0, tex);
+      enc.setBinding(1, ssbo);
+      enc.setPipeline(psoG);
       enc.draw(vbo,ibo);
 
       enc.setFramebuffer({});
-      enc.setUniforms(psoC,uboCs);
+      enc.setBinding(0, tex);
+      enc.setBinding(1, ssbo);
+      enc.setPipeline(psoC);
       enc.dispatch(tex.w(),tex.h(),1);
     }
 

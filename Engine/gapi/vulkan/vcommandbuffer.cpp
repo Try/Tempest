@@ -521,6 +521,8 @@ void VCommandBuffer::handleSync(const VPipelineLay::LayoutDesc& lay, const VPipe
   for(size_t i=0; i<MaxBindings; ++i) {
     NonUniqResId nonUniqId = NonUniqResId::I_None;
     auto         data      = bindings.data[i];
+    if(data==nullptr)
+      continue;
     switch(lay.bindings[i]) {
       case ShaderReflection::Texture:
       case ShaderReflection::Image:

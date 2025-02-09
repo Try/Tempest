@@ -352,101 +352,6 @@ struct DxCommandBuffer::MipMaps : Stage {
   std::vector<DxDescriptorArray> desc;
   };
 
-struct DxCommandBuffer::CopyBuf : Stage {
-  CopyBuf(DxDevice& dev,
-          DxBuffer& dst, size_t offset,
-          DxTexture& src, size_t width, size_t height, size_t mip)
-    :dst(dst), offset(offset), src(src), width(width), height(height), mip(int32_t(mip)), desc(*dev.copyLayout.handler) {
-    }
-
-  void exec(DxCommandBuffer& cmd) override {
-    struct PushUbo {
-      int32_t mip     = 0;
-      int32_t bitCnt  = 8;
-      int32_t compCnt = 4;
-      } push;
-    push.mip = mip;
-
-    auto&  prog    = shader(cmd,push.bitCnt,push.compCnt);
-    size_t outSize = (width*height*(push.compCnt*push.bitCnt/8) + sizeof(uint32_t)-1)/sizeof(uint32_t);
-
-    desc.set(0,&src,Sampler::nearest(),0);
-    desc.set(1,&dst,0);
-
-    cmd.setComputePipeline(prog);
-    cmd.setUniforms(prog,desc);
-    cmd.setBytes(prog,&push,sizeof(push));
-    const size_t maxWG = 65535;
-    cmd.dispatch(std::min(outSize,maxWG),(outSize+maxWG-1)%maxWG,1u);
-    }
-
-  DxCompPipeline& shader(DxCommandBuffer& cmd, int32_t& bitCnt, int32_t& compCnt) {
-    auto& dev = cmd.dev;
-    switch(src.format) {
-      case DXGI_FORMAT_R8_TYPELESS:
-      case DXGI_FORMAT_R8_UNORM:
-      case DXGI_FORMAT_R8_UINT:
-      case DXGI_FORMAT_R8_SNORM:
-      case DXGI_FORMAT_R8_SINT:
-        bitCnt  = 8;
-        compCnt = 1;
-        return *dev.copyS.handler;
-      case DXGI_FORMAT_R8G8_TYPELESS:
-      case DXGI_FORMAT_R8G8_UNORM:
-      case DXGI_FORMAT_R8G8_UINT:
-      case DXGI_FORMAT_R8G8_SNORM:
-      case DXGI_FORMAT_R8G8_SINT:
-        bitCnt  = 8;
-        compCnt = 2;
-        return *dev.copyS.handler;
-      case DXGI_FORMAT_R8G8B8A8_TYPELESS:
-      case DXGI_FORMAT_R8G8B8A8_UNORM:
-      case DXGI_FORMAT_R8G8B8A8_UINT:
-      case DXGI_FORMAT_R8G8B8A8_SNORM:
-      case DXGI_FORMAT_R8G8B8A8_SINT:
-        bitCnt  = 8;
-        compCnt = 4;
-        return *dev.copy.handler;
-      case DXGI_FORMAT_R16_TYPELESS:
-      case DXGI_FORMAT_R16_UNORM:
-      case DXGI_FORMAT_R16_UINT:
-      case DXGI_FORMAT_R16_SNORM:
-      case DXGI_FORMAT_R16_SINT:
-        bitCnt  = 16;
-        compCnt = 1;
-        return *dev.copyS.handler;
-      case DXGI_FORMAT_R16G16_TYPELESS:
-      case DXGI_FORMAT_R16G16_UNORM:
-      case DXGI_FORMAT_R16G16_UINT:
-      case DXGI_FORMAT_R16G16_SNORM:
-      case DXGI_FORMAT_R16G16_SINT:
-        bitCnt  = 16;
-        compCnt = 2;
-        return *dev.copyS.handler;
-      case DXGI_FORMAT_R16G16B16A16_TYPELESS:
-      case DXGI_FORMAT_R16G16B16A16_UNORM:
-      case DXGI_FORMAT_R16G16B16A16_UINT:
-      case DXGI_FORMAT_R16G16B16A16_SNORM:
-      case DXGI_FORMAT_R16G16B16A16_SINT:
-        bitCnt  = 16;
-        compCnt = 4;
-        return *dev.copyS.handler;
-      default:
-        dxAssert(E_NOTIMPL);
-      }
-    return *dev.copy.handler;
-    }
-
-  DxBuffer&         dst;
-  const size_t      offset = 0;
-  DxTexture&        src;
-  const size_t      width  = 0;
-  const size_t      height = 0;
-  const int32_t     mip    = 0;
-
-  DxDescriptorArray desc;
-  };
-
 struct DxCommandBuffer::FillUAV : Stage {
   using Allocation = DxDescriptorAllocator::Allocation;
 
@@ -713,9 +618,11 @@ void DxCommandBuffer::setDebugMarker(std::string_view tag) {
   }
 
 void DxCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
-  state = Compute;
   auto& px = reinterpret_cast<DxCompPipeline&>(p);
   curCompPipeline = &px;
+  bindings.durty  = true;
+
+  state = Compute;
   impl->SetPipelineState(px.impl.get());
   impl->SetComputeRootSignature(px.sign.get());
   }
@@ -799,9 +706,11 @@ void DxCommandBuffer::dispatchIndirect(const AbstractGraphicsApi::Buffer& indire
   }
 
 void DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p) {
-  DxPipeline& px = reinterpret_cast<DxPipeline&>(p);
+  DxPipeline& px     = reinterpret_cast<DxPipeline&>(p);
+
+  bindings.durty     = true;
   pushBaseInstanceId = px.pushBaseInstanceId;
-  curDrawPipeline = &px;
+  curDrawPipeline    = &px;
 
   impl->SetPipelineState(&px.instance(fboLayout));
   impl->SetGraphicsRootSignature(px.sign.get());
@@ -833,6 +742,8 @@ void DxCommandBuffer::handleSync(const DxPipelineLay::LayoutDesc& lay, const DxP
   for(size_t i=0; i<MaxBindings; ++i) {
     NonUniqResId nonUniqId = NonUniqResId::I_None;
     auto         data      = bindings.data[i];
+    if(data==nullptr)
+      continue;
     switch(lay.bindings[i]) {
       case ShaderReflection::Texture:
       case ShaderReflection::Image:
@@ -1067,8 +978,80 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer&  dstBuf, size_t offset,
     return;
     }
 
-  std::unique_ptr<CopyBuf> dx(new CopyBuf(dev,dst,offset,src,width,height,mip));
-  pushStage(dx.release());
+  // shader emulation
+  // TODO: restore bindings, pipeline state
+  struct PushUbo {
+    int32_t mip     = 0;
+    int32_t bitCnt  = 8;
+    int32_t compCnt = 4;
+    } push;
+  push.mip = mip;
+
+  auto&  prog    = copyShader(src.format, push.bitCnt, push.compCnt);
+  size_t outSize = (width*height*(push.compCnt*push.bitCnt/8) + sizeof(uint32_t)-1)/sizeof(uint32_t);
+
+  this->setBinding(0, &src, Sampler::nearest(), 0);
+  this->setBinding(1, &dst, 0);
+  this->setComputePipeline(prog);
+  this->setBytes(prog,&push,sizeof(push));
+  const size_t maxWG = 65535;
+  this->dispatch(std::min(outSize,maxWG),(outSize+maxWG-1)%maxWG,1u);
+  }
+
+DxCompPipeline& DxCommandBuffer::copyShader(DXGI_FORMAT format, int32_t& bitCnt, int32_t& compCnt) {
+  switch(format) {
+    case DXGI_FORMAT_R8_TYPELESS:
+    case DXGI_FORMAT_R8_UNORM:
+    case DXGI_FORMAT_R8_UINT:
+    case DXGI_FORMAT_R8_SNORM:
+    case DXGI_FORMAT_R8_SINT:
+      bitCnt  = 8;
+      compCnt = 1;
+      return *dev.copyS.handler;
+    case DXGI_FORMAT_R8G8_TYPELESS:
+    case DXGI_FORMAT_R8G8_UNORM:
+    case DXGI_FORMAT_R8G8_UINT:
+    case DXGI_FORMAT_R8G8_SNORM:
+    case DXGI_FORMAT_R8G8_SINT:
+      bitCnt  = 8;
+      compCnt = 2;
+      return *dev.copyS.handler;
+    case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+    case DXGI_FORMAT_R8G8B8A8_UNORM:
+    case DXGI_FORMAT_R8G8B8A8_UINT:
+    case DXGI_FORMAT_R8G8B8A8_SNORM:
+    case DXGI_FORMAT_R8G8B8A8_SINT:
+      bitCnt  = 8;
+      compCnt = 4;
+      return *dev.copy.handler;
+    case DXGI_FORMAT_R16_TYPELESS:
+    case DXGI_FORMAT_R16_UNORM:
+    case DXGI_FORMAT_R16_UINT:
+    case DXGI_FORMAT_R16_SNORM:
+    case DXGI_FORMAT_R16_SINT:
+      bitCnt  = 16;
+      compCnt = 1;
+      return *dev.copyS.handler;
+    case DXGI_FORMAT_R16G16_TYPELESS:
+    case DXGI_FORMAT_R16G16_UNORM:
+    case DXGI_FORMAT_R16G16_UINT:
+    case DXGI_FORMAT_R16G16_SNORM:
+    case DXGI_FORMAT_R16G16_SINT:
+      bitCnt  = 16;
+      compCnt = 2;
+      return *dev.copyS.handler;
+    case DXGI_FORMAT_R16G16B16A16_TYPELESS:
+    case DXGI_FORMAT_R16G16B16A16_UNORM:
+    case DXGI_FORMAT_R16G16B16A16_UINT:
+    case DXGI_FORMAT_R16G16B16A16_SNORM:
+    case DXGI_FORMAT_R16G16B16A16_SINT:
+      bitCnt  = 16;
+      compCnt = 4;
+      return *dev.copyS.handler;
+    default:
+      dxAssert(E_NOTIMPL);
+    }
+  return *dev.copy.handler;
   }
 
 void DxCommandBuffer::prepareDraw(size_t voffset, size_t firstInstance) {

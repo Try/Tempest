@@ -139,7 +139,6 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
       };
     struct Blit;
     struct MipMaps;
-    struct CopyBuf;
     struct FillUAV;
     Stage*                            stageResources = nullptr;
 
@@ -158,6 +157,8 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void restoreIndirect();
     void enhancedBarrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt);
+
+    DxCompPipeline& copyShader(DXGI_FORMAT format, int32_t& bitCnt, int32_t& compCnt);
   };
 
 }
