@@ -142,7 +142,7 @@ DescriptorArray Device::descriptors(const Texture2d * const *tex, size_t size) {
   Detail::SmallArray<AbstractGraphicsApi::Texture*,32> arr(size);
   for(size_t i=0; i<size; ++i)
     arr[i] = tex[i] ? tex[i]->impl.handler : nullptr;
-  DescriptorArray d(*this,api.createDescriptors(dev, arr.get(), size, 0));
+  DescriptorArray d(*this,api.createDescriptors(dev, arr.get(), size, uint32_t(-1)));
   return d;
   }
 
@@ -156,7 +156,7 @@ DescriptorArray Device::descriptors(const Texture2d * const *tex, size_t size, c
   Detail::SmallArray<AbstractGraphicsApi::Texture*,32> arr(size);
   for(size_t i=0; i<size; ++i)
     arr[i] = tex[i] ? tex[i]->impl.handler : nullptr;
-  DescriptorArray d(*this,api.createDescriptors(dev, arr.get(), size, 0, smp));
+  DescriptorArray d(*this,api.createDescriptors(dev, arr.get(), size, uint32_t(-1), smp));
   return d;
   }
 

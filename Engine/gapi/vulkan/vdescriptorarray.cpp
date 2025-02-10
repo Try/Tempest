@@ -516,7 +516,7 @@ void VDescriptorArray2::populate(VDevice &dev, AbstractGraphicsApi::Texture **t,
   for(size_t i=0; i<cnt; ++i) {
     VTexture& tex = *reinterpret_cast<VTexture*>(t[i]);
     imageInfo[i].imageLayout = toWriteLayout(tex);
-    imageInfo[i].imageView   = tex.view(ComponentMapping(), uint32_t(-1), is3DImage);
+    imageInfo[i].imageView   = tex.view(ComponentMapping(), mipLevel, is3DImage);
     imageInfo[i].sampler     = smp!=nullptr ? dev.allocator.updateSampler(*smp) : VK_NULL_HANDLE;
     // TODO: support mutable textures in bindless
     assert(tex.nonUniqId==0);

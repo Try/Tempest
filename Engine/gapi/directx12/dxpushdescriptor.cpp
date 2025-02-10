@@ -210,6 +210,7 @@ void DxPushDescriptor::write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, D3D
       write(dev, s, smp);
       break;
     case ShaderReflection::Image:
+    case ShaderReflection::ImgR:
     case ShaderReflection::Texture: {
       auto*    tex       = reinterpret_cast<DxTexture*>(data);
       uint32_t mipLevel  = offset;
@@ -236,11 +237,22 @@ void DxPushDescriptor::write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, D3D
         }
 
       device.CreateShaderResourceView(tex->impl.get(), &desc, res);
-      if(cls==ShaderReflection::Texture)
-        write(dev, s, smp);
+      if(cls==ShaderReflection::Texture) {
+        auto sx = smp;
+        if(!tex->isFilterable) {
+          /*
+           * https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_format_support1
+           * If the device supports the format as a resource (1D, 2D, 3D, or cube map)
+           * but doesn't support this option, the resource can still use the Sample method
+           * but must use only the point filtering sampler state to perform the sample.
+           */
+          sx.setFiltration(Filter::Nearest);
+          sx.anisotropic = false;
+          }
+        write(dev, s, sx);
+        }
       break;
       }
-    case ShaderReflection::ImgR:
     case ShaderReflection::ImgRW: {
       auto*    tex       = reinterpret_cast<DxTexture*>(data);
       uint32_t mipLevel  = offset;
@@ -264,7 +276,7 @@ void DxPushDescriptor::write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, D3D
       }
     case ShaderReflection::Ubo: {
       auto* buf  = reinterpret_cast<DxBuffer*>(data);
-      UINT  size = buf!=nullptr ? buf->appSize : 0;
+      UINT  size = buf->appSize;
 
       D3D12_CONSTANT_BUFFER_VIEW_DESC desc = {};
       desc.BufferLocation = buf->impl->GetGPUVirtualAddress() + offset;
