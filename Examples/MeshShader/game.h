@@ -51,7 +51,6 @@ class Game : public Tempest::Window {
   Tempest::VectorImage::Mesh  surfaceMesh[MaxFramesInFlight];
 
   Tempest::RenderPipeline     pso;
-  Tempest::DescriptorSet      desc;
   Mesh                        mesh;
   bool                        useVertex = false;
 

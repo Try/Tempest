@@ -172,18 +172,16 @@ void SsboEmpty() {
     auto cs   = device.shader("shader/ssbo_zero_length.comp.sprv");
     auto pso  = device.pipeline(cs);
 
-    auto desc = device.descriptors(pso);
-
     auto ssbo = device.ssbo(Uninitialized, 0);
     auto ret  = device.ssbo(Uninitialized, sizeof(uint32_t)*2);
-    desc.set(0,ssbo);
-    desc.set(1,ssbo);
-    desc.set(2,ret);
 
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setUniforms(pso, desc);
+      enc.setBinding(0, ssbo);
+      enc.setBinding(1, ssbo);
+      enc.setBinding(2, ret );
+      enc.setPipeline(pso);
       enc.dispatch(1);
     }
 
@@ -265,20 +263,18 @@ void ArrayLength() {
     auto vert = device.shader("shader/array_length.vert.sprv");
     auto frag = device.shader("shader/array_length.frag.sprv");
     auto pso  = device.pipeline(Topology::Triangles, RenderState(), vert, frag);
-    auto desc = device.descriptors(pso);
 
     auto src  = device.attachment(TextureFormat::RGBA8,4,4);
     auto dst0 = device.ssbo(Uninitialized, 6*sizeof(uint32_t));
     auto dst1 = device.ssbo(Uninitialized, 1*sizeof(uint32_t));
 
-    desc.set(0, dst0);
-    desc.set(1, dst1);
-
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{src,Vec4(0),Tempest::Preserve}});
-      enc.setUniforms(pso, desc);
+      enc.setBinding(0, dst0);
+      enc.setBinding(1, dst1);
+      enc.setPipeline(pso);
       enc.draw(nullptr, 0,6);
     }
 
@@ -760,16 +756,14 @@ void Uniforms(const char* outImage, bool useUbo) {
     auto pso  = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
 
     auto tex  = device.attachment(TextureFormat::RGBA8,128,128);
-    auto desc = device.descriptors(pso);
-    if(useUbo)
-      desc.set(2,ubo); else
-      desc.set(2,ssbo);
-
     auto cmd  = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
-      enc.setUniforms(pso,desc);
+      if(useUbo)
+        enc.setBinding(2, ubo); else
+        enc.setBinding(2, ssbo);
+      enc.setPipeline(pso);
       enc.draw(vbo,ibo);
     }
 
@@ -802,16 +796,14 @@ void SSBOReadOnly(bool useUbo) {
     auto cs   = device.shader("shader/ssbo_read.comp.sprv");
     auto pso  = device.pipeline(cs);
 
-    auto desc = device.descriptors(pso);
-    if(useUbo)
-      desc.set(0,ubo); else
-      desc.set(0,ssbo);
-    desc.set(1,out);
-
     auto cmd  = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setUniforms(pso,desc);
+      if(useUbo)
+        enc.setBinding(0,ubo); else
+        enc.setBinding(0,ssbo);
+      enc.setBinding(1,out);
+      enc.setPipeline(pso);
       enc.dispatch(1,1,1);
     }
 
@@ -852,14 +844,12 @@ void UnboundSsbo() {
     auto cs  = device.shader("shader/ssbo_read.comp.sprv");
     auto pso = device.pipeline(cs);
 
-    auto desc = device.descriptors(pso);
-    desc.set(0,ssbo);
-    desc.set(1,out);
-
-    auto cmd  = device.commandBuffer();
+    auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setUniforms(pso,desc);
+      enc.setBinding(0, ssbo);
+      enc.setBinding(1, out);
+      enc.setPipeline(pso);
       enc.dispatch(data.size(),1,1);
     }
 
@@ -900,13 +890,11 @@ void SsboOverlap() {
     auto cs     = device.shader("shader/overlap_test.comp.sprv");
     auto pso    = device.pipeline(cs);
 
-    auto ubo    = device.descriptors(pso.layout());
-    ubo.set(0,ssbo);
-
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setUniforms(pso,ubo);
+      enc.setBinding(0, ssbo);
+      enc.setPipeline(pso);
       enc.dispatch(1);
     }
 
@@ -942,14 +930,12 @@ void Compute() {
     auto cs     = device.shader("shader/simple_test.comp.sprv");
     auto pso    = device.pipeline(cs);
 
-    auto ubo    = device.descriptors(pso.layout());
-    ubo.set(0,input);
-    ubo.set(1,output);
-
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setUniforms(pso,ubo);
+      enc.setBinding(0, input);
+      enc.setBinding(1, output);
+      enc.setPipeline(pso);
       enc.dispatch(3,1,1);
     }
 
@@ -979,18 +965,16 @@ void ComputeImage(const char* outImage) {
     Device      device(api);
 
     //auto img = device.image2d(TextureFormat::RGBA8,128,128,false);
-    auto img = device.image3d(TextureFormat::RGBA8,128,128,1,false);
-    auto pso = device.pipeline(device.shader("shader/image_store_test.comp.sprv"));
+    auto  img = device.image3d(TextureFormat::RGBA8,128,128,1,false);
+    auto  pso = device.pipeline(device.shader("shader/image_store_test.comp.sprv"));
 
-    auto& t = textureCast<const Texture2d&>(img); (void)t;
-
-    auto ubo = device.descriptors(pso.layout());
-    ubo.set(0,img);
+    auto& t   = textureCast<const Texture2d&>(img); (void)t;
 
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setUniforms(pso,ubo);
+      enc.setBinding(0, img);
+      enc.setPipeline(pso);
       enc.dispatch(img.w(),img.h(),1);
     }
 
@@ -1019,13 +1003,11 @@ void AtomicImage(const char* outImage) {
     auto img = device.image2d(TextureFormat::R32U,128,128,false);
     auto pso = device.pipeline(device.shader("shader/image_atomic_test.comp.sprv"));
 
-    auto ubo = device.descriptors(pso.layout());
-    ubo.set(0,img);
-
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setUniforms(pso,ubo);
+      enc.setBinding(0, img);
+      enc.setPipeline(pso);
       enc.dispatch(img.w(),img.h(),1);
     }
 
@@ -1132,27 +1114,24 @@ void SsboWrite() {
 
     auto tex    = device.attachment(TextureFormat::RGBA8,32,32);
     auto vsOut  = device.ssbo(Uninitialized, sizeof(Vec4)*3);
-    auto ubo    = device.descriptors(pso.layout());
-    ubo.set(0,vsOut);
 
     // setup compute pipeline
     auto cs     = device.shader("shader/ssbo_write_verify.comp.sprv");
     auto pso2   = device.pipeline(cs);
     auto csOut  = device.ssbo(Uninitialized, sizeof(Vec4)*3);
 
-    auto ubo2   = device.descriptors(pso2.layout());
-    ubo2.set(0,vsOut);
-    ubo2.set(1,csOut);
-
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
-      enc.setUniforms(pso,ubo);
+      enc.setBinding(0,vsOut);
+      enc.setPipeline(pso);
       enc.draw(vbo,ibo);
 
       enc.setFramebuffer({});
-      enc.setUniforms(pso2,ubo2);
+      enc.setBinding(0, vsOut);
+      enc.setBinding(1, csOut);
+      enc.setPipeline(pso2);
       enc.dispatch(3,1,1);
     }
 
@@ -1203,17 +1182,14 @@ void ComponentSwizzle() {
     auto pso    = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
     auto tex    = device.texture(pm,false);
 
-    DescriptorSet ubo[4];
-    for(int i=0; i<4; ++i) {
-      ubo[i] = device.descriptors(pso.layout());
-
+    auto makeSampler = [](enum ComponentSwizzle c) {
       Sampler smp = Sampler::nearest();
-      smp.mapping.r = Tempest::ComponentSwizzle(int(ComponentSwizzle::R) + i);
+      smp.mapping.r = c;
       smp.mapping.g = smp.mapping.r;
       smp.mapping.b = smp.mapping.r;
       smp.mapping.a = smp.mapping.r;
-      ubo[i].set(0,tex,smp);
-      }
+      return smp;
+      };
 
     auto fbo    = device.attachment(TextureFormat::RGBA8,2,2,false);
     auto cmd    = device.commandBuffer();
@@ -1221,19 +1197,23 @@ void ComponentSwizzle() {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{fbo,Vec4(0,0,0,0),Tempest::Preserve}});
 
-      enc.setUniforms(pso,ubo[0]);
+      enc.setBinding(0, tex, makeSampler(ComponentSwizzle::R));
+      enc.setPipeline(pso);
       enc.setScissor(0,0,1,1);
       enc.draw(vbo);
 
-      enc.setUniforms(pso,ubo[1]);
+      enc.setBinding(0, tex, makeSampler(ComponentSwizzle::G));
+      enc.setPipeline(pso);
       enc.setScissor(1,0,1,1);
       enc.draw(vbo);
 
-      enc.setUniforms(pso,ubo[2]);
+      enc.setBinding(0, tex, makeSampler(ComponentSwizzle::B));
+      enc.setPipeline(pso);
       enc.setScissor(0,1,1,1);
       enc.draw(vbo);
 
-      enc.setUniforms(pso,ubo[3]);
+      enc.setBinding(0, tex, makeSampler(ComponentSwizzle::A));
+      enc.setPipeline(pso);
       enc.setScissor(1,1,1,1);
       enc.draw(vbo);
     }
@@ -1283,15 +1263,13 @@ void PushRemapping() {
     auto cs     = device.shader("shader/push_constant.comp.sprv");
     auto pso    = device.pipeline(cs);
 
-    auto ubo = device.descriptors(pso.layout());
-    ubo.set(0,input);
-    ubo.set(1,output);
-
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setUniforms(pso,ubo,&inputCpu,sizeof(inputCpu));
-      enc.dispatch(1,1,1);
+      enc.setBinding(0, input);
+      enc.setBinding(1, output);
+      enc.setUniforms(pso, &inputCpu, sizeof(inputCpu));
+      enc.dispatch(1);
     }
 
     auto sync = device.fence();
@@ -1326,16 +1304,14 @@ void PushRemappingGr(const char* outImage) {
     auto vert = device.shader("shader/push_test.vert.sprv");
     auto frag = device.shader("shader/push_test.frag.sprv");
     auto pso  = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
-    auto desc = device.descriptors(pso);
-    desc.set(0,ssbo);
 
     auto tex  = device.attachment(Tempest::RGBA8,128,128);
-
     auto cmd  = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
-      enc.setUniforms(pso,desc,&push,sizeof(push));
+      enc.setBinding(0, ssbo);
+      enc.setUniforms(pso, &push, sizeof(push));
       enc.draw(vbo,ibo, 0,ibo.size());
     }
 
@@ -1405,14 +1381,13 @@ void ArrayedTextures(const char* outImg) {
     for(size_t i=0; i<tex.size(); ++i)
       ptex[i] = &tex[i];
 
-    auto desc = device.descriptors(pso);
-    desc.set(0,ret);
-    desc.set(1,ptex);
-
+    auto arr = device.descriptors(ptex, Sampler::nearest());
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setUniforms(pso,desc);
+      enc.setBinding(0, ret);
+      enc.setBinding(1, arr);
+      enc.setPipeline(pso);
       enc.dispatch(ret.w(),ret.h(),1);
     }
 
@@ -1450,22 +1425,21 @@ void ArrayedImages(const char* outImg) {
     auto ret = device.image2d(TextureFormat::RGBA8,128,128,false);
 
     std::vector<Tempest::Texture2d> tex(2);
-    tex[0] = device.texture("assets/gapi/tst-rgba.png");
-    tex[1] = device.texture("assets/gapi/tst-dxt5.dds");
+    tex[0] = device.texture("assets/gapi/tst-rgba.png", true);
+    tex[1] = device.texture("assets/gapi/tst-dxt5.dds", false);
 
     std::vector<const Tempest::Texture2d*> ptex(tex.size());
     for(size_t i=0; i<tex.size(); ++i)
       ptex[i] = &tex[i];
-
-    auto desc = device.descriptors(pso);
-    desc.set(0,ret);
-    desc.set(1,ptex);
-    desc.set(2,Sampler::bilinear());
+    auto arr = device.descriptors(ptex);
 
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setUniforms(pso,desc);
+      enc.setBinding(0, ret);
+      enc.setBinding(1, arr);
+      enc.setBinding(2, Sampler::bilinear());
+      enc.setUniforms(pso);
       enc.dispatch(ret.w(),ret.h(),1);
     }
 
@@ -1510,15 +1484,14 @@ void ArrayedSsbo(const char* outImg) {
     std::vector<const Tempest::StorageBuffer*> pbuf(buf.size());
     for(size_t i=0; i<buf.size(); ++i)
       pbuf[i] = &buf[i];
-
-    auto desc = device.descriptors(pso);
-    desc.set(0,ret);
-    desc.set(1,pbuf);
+    auto arr = device.descriptors(pbuf);
 
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setUniforms(pso,desc);
+      enc.setBinding(0, ret);
+      enc.setBinding(1, arr);
+      enc.setPipeline(pso);
       enc.dispatch(ret.w(),ret.h(),1);
     }
 
@@ -1549,13 +1522,11 @@ void NonSampledTexture(const char* outImg) {
     auto cs     = device.shader("shader/texel_fetch.comp.sprv");
     auto pso    = device.pipeline(cs);
 
-    auto ubo = device.descriptors(pso.layout());
-    ubo.set(0,input);
-
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setUniforms(pso,ubo);
+      enc.setBinding(0, input);
+      enc.setPipeline(pso);
       enc.dispatch(1,1,1);
     }
 
@@ -1598,14 +1569,15 @@ void Bindless(const char* outImg) {
     for(size_t i=0; i<tex.size(); ++i)
       ptex[i] = &tex[i];
 
-    auto desc = device.descriptors(pso);
-    desc.set(0,ptex);
-    desc.set(1,ret);
+    auto dtex = device.descriptors(ptex);
 
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setUniforms(pso,desc);
+      enc.setBinding(0, dtex);
+      enc.setBinding(1, Sampler::trillinear());
+      enc.setBinding(2, ret);
+      enc.setPipeline(pso);
       enc.dispatch(ret.w(),ret.h(),1);
     }
 
@@ -1660,16 +1632,16 @@ void Bindless2(const char* outImg) {
     for(size_t i=0; i<buf.size(); ++i)
       pbuf[i] = &buf[i];
 
-    auto desc = device.descriptors(pso);
-    desc.set(0,ptex);
-    desc.set(1,ptex);
-    desc.set(2,pbuf);
-    desc.set(3,ret);
-
-    auto cmd = device.commandBuffer();
+    auto dtex = device.descriptors(ptex);
+    auto dbuf = device.descriptors(pbuf);
+    auto cmd  = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setUniforms(pso,desc);
+      enc.setBinding(0, dtex);
+      enc.setBinding(1, dtex);
+      enc.setBinding(2, dbuf);
+      enc.setBinding(3, ret);
+      enc.setPipeline(pso);
       enc.dispatch(ret.w(),ret.h(),1);
     }
 
@@ -1773,15 +1745,13 @@ void RayQuery(const char* outImg) {
     auto frag = device.shader("shader/ray_test.frag.sprv");
     auto pso  = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
 
-    auto ubo  = device.descriptors(pso);
-    ubo.set(0, tlas);
-
     auto tex = device.attachment(TextureFormat::RGBA8,128,128);
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
-      enc.setUniforms(pso,ubo);
+      enc.setBinding(0, tlas);
+      enc.setPipeline(pso);
       enc.draw(fsq);
     }
     auto sync = device.fence();
@@ -1830,15 +1800,13 @@ void RayQueryFace(const char* outImg) {
     auto frag = device.shader("shader/ray_test_face.frag.sprv");
     auto pso  = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
 
-    auto ubo  = device.descriptors(pso);
-    ubo.set(0, tlas);
-
     auto tex = device.attachment(TextureFormat::RGBA8,128,128);
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
-      enc.setUniforms(pso,ubo);
+      enc.setBinding(0, tlas);
+      enc.setPipeline(pso);
       enc.draw(fsq);
     }
     auto sync = device.fence();
@@ -2115,16 +2083,15 @@ void DispathIndirect() {
     auto cs     = device.shader("shader/simple_test.comp.sprv");
     auto pso    = device.pipeline(cs);
 
-    auto ubo    = device.descriptors(pso.layout());
-    ubo.set(0,input);
-    ubo.set(1,output);
-
     IVec3 argCpu = {3, 1, 1};
     auto  arg    = device.ssbo(&argCpu, sizeof(argCpu));
+
     auto  cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setUniforms(pso,ubo);
+      enc.setBinding(0, input);
+      enc.setBinding(1, output);
+      enc.setPipeline(pso);
       enc.dispatchIndirect(arg, 0);
     }
 

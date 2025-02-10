@@ -187,7 +187,9 @@ void DxPushDescriptor::setRootTable(ID3D12GraphicsCommandList& enc, const DescSe
       continue;
 
     auto* a = reinterpret_cast<const DxDescriptorArray2*>(binding.data[i]);
-    setRootDescriptorTable(enc, st, id, a->handle());
+    if(lay.bindings[i]==ShaderReflection::SsboRW)
+      setRootDescriptorTable(enc, st, id, a->handleRW()); else
+      setRootDescriptorTable(enc, st, id, a->handleR());
     ++id;
     }
   }
@@ -260,7 +262,20 @@ void DxPushDescriptor::write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, D3D
       device.CreateUnorderedAccessView(tex->impl.get(), nullptr, &desc, res);
       break;
       }
-    case ShaderReflection::Ubo:
+    case ShaderReflection::Ubo: {
+      auto* buf  = reinterpret_cast<DxBuffer*>(data);
+      UINT  size = buf!=nullptr ? buf->appSize : 0;
+
+      D3D12_CONSTANT_BUFFER_VIEW_DESC desc = {};
+      desc.BufferLocation = buf->impl->GetGPUVirtualAddress() + offset;
+      desc.SizeInBytes    = UINT(size);
+      if(desc.SizeInBytes==0)
+        desc.SizeInBytes = UINT(buf->sizeInBytes - offset);
+      desc.SizeInBytes = ((desc.SizeInBytes+255)/256)*256; // CB size is required to be 256-byte aligned.
+
+      device.CreateConstantBufferView(&desc, res);
+      break;
+      }
     case ShaderReflection::SsboR: {
       auto* buf  = reinterpret_cast<DxBuffer*>(data);
       UINT  size = buf!=nullptr ? buf->appSize : 0;

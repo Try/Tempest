@@ -170,7 +170,7 @@ void DxPipelineLay::init(const LayoutDesc& lay, const ShaderReflection::PushBloc
       if(((1u << i) & lay.array)==0)
         continue;
       D3D12_DESCRIPTOR_RANGE rx = {};
-      rx.RangeType          = ::nativeFormat(lay.bindings[i]);
+      rx.RangeType                         = ::nativeFormat(lay.bindings[i]);
       rx.NumDescriptors                    = -1;
       rx.BaseShaderRegister                = 0;
       rx.RegisterSpace                     = UINT(i+1);
@@ -210,7 +210,7 @@ void DxPipelineLay::init(const LayoutDesc& lay, const ShaderReflection::PushBloc
     D3D12_ROOT_PARAMETER prmPush = {};
     prmPush.ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
     prmPush.ShaderVisibility         = ::nativeFormat(pb.stage);
-    prmPush.Constants.ShaderRegister = DxShader::HLSL_PUSH; //findBinding(rootPrm);
+    prmPush.Constants.ShaderRegister = DxShader::HLSL_PUSH;
     prmPush.Constants.RegisterSpace  = 0;
     prmPush.Constants.Num32BitValues = UINT((pb.size+3)/4);
     pushConstantId = uint32_t(rootPrm.size());
@@ -221,7 +221,7 @@ void DxPipelineLay::init(const LayoutDesc& lay, const ShaderReflection::PushBloc
     D3D12_ROOT_PARAMETER prmPush = {};
     prmPush.ParameterType            = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
     prmPush.ShaderVisibility         = D3D12_SHADER_VISIBILITY_VERTEX;
-    prmPush.Constants.ShaderRegister = DxShader::HLSL_BASE_VERTEX_INSTANCE; //findBinding(rootPrm);
+    prmPush.Constants.ShaderRegister = DxShader::HLSL_BASE_VERTEX_INSTANCE;
     prmPush.Constants.RegisterSpace  = 0;
     prmPush.Constants.Num32BitValues = 2u;
     pushBaseInstanceId = uint32_t(rootPrm.size());

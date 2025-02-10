@@ -121,7 +121,6 @@ void Game::render(){
     {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{swapchain[swapchain.currentImage()],Vec4(0),Tempest::Preserve}}, {zbuffer, 1.f, Tempest::Preserve});
-      enc.setUniforms(pso,desc,&push,sizeof(push));
 
       /*
       enc.setViewport(0,0,256,256);
@@ -133,8 +132,12 @@ void Game::render(){
       enc.setViewport(256,0,256,256);
       */
       if(useVertex) {
+        enc.setUniforms(pso,&push,sizeof(push));
         enc.draw(mesh.vbo, mesh.ibo);
         } else {
+        enc.setBinding(0, mesh.vbo);
+        enc.setBinding(1, mesh.ibo8);
+        enc.setUniforms(pso,&push,sizeof(push));
         enc.dispatchMeshThreads(mesh.meshletCount);
         }
 
@@ -190,12 +193,6 @@ void Game::onShaderType(size_t type) {
     auto frag = device.shader(sh.data, sh.len);
     pso = device.pipeline(Topology::Triangles, rs, task, mesh, frag);
     }
-
-  desc = device.descriptors(pso);
-  if(!useVertex) {
-    desc.set(0, mesh.vbo);
-    desc.set(1, mesh.ibo8);
-    }
   }
 
 void Game::onAsset(size_t type) {
@@ -210,11 +207,6 @@ void Game::onAsset(size_t type) {
     case 2:
       mesh = Mesh(device, "assets/cylinder.obj");
       break;
-    }
-
-  if(!useVertex && !desc.isEmpty()) {
-    desc.set(0, mesh.vbo);
-    desc.set(1, mesh.ibo8);
     }
   }
 

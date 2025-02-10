@@ -66,6 +66,8 @@ uint32_t DxHeapAllocator::alloc(D3D12_DESCRIPTOR_HEAP_TYPE heap, uint32_t num) {
   }
 
 void DxHeapAllocator::free(D3D12_DESCRIPTOR_HEAP_TYPE heap, uint32_t ptr, uint32_t num) {
+  if(ptr==0xFFFFFFFF || num==0)
+    return;
   free(allocator[heap], ptr, num);
   }
 

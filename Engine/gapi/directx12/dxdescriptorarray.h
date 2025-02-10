@@ -87,11 +87,15 @@ class DxDescriptorArray2 : public AbstractGraphicsApi::DescArray {
     ~DxDescriptorArray2();
 
     size_t size() const;
-    auto   handle() const -> D3D12_GPU_DESCRIPTOR_HANDLE;
+    auto   handleR()  const -> D3D12_GPU_DESCRIPTOR_HANDLE;
+    auto   handleRW() const -> D3D12_GPU_DESCRIPTOR_HANDLE;
 
   private:
+    void   clear();
+
     DxDevice& dev;
-    uint32_t  dPtr  = 0;
+    uint32_t  dPtrR  = 0xFFFFFFFF;
+    uint32_t  dPtrRW = 0xFFFFFFFF;
     size_t    cnt   = 0;
   };
 }}
