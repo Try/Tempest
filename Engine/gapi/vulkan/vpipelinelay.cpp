@@ -23,41 +23,16 @@ VPipelineLay::VPipelineLay(VDevice& dev, const std::vector<ShaderReflection::Bin
   ShaderReflection::merge(lay, pb, sh, cnt);
   adjustSsboBindings();
 
-  bool needMsHelper = false;
-  if(dev.props.meshlets.meshShaderEmulated) {
-    for(size_t i=0; i<cnt; ++i) {
-      if(sh[i]==nullptr)
-        continue;
-      for(auto& r:*sh[i])
-        if(r.stage==ShaderReflection::Mesh) {
-          needMsHelper = true;
-          break;
-          }
-      }
-    }
-
   // TODO: avoid creating dummy impl for bindless
   std::vector<uint32_t> runtimeArrays;
   if(runtimeSized)
     runtimeArrays.resize(lay.size());
   impl = createDescLayout(runtimeArrays);
-
-  if(needMsHelper) {
-    try {
-      msHelper = createMsHelper();
-      }
-    catch(...) {
-      vkDestroyDescriptorSetLayout(dev.device.impl,impl,nullptr);
-      throw;
-      }
-    }
   }
 
 VPipelineLay::~VPipelineLay() {
   for(auto& i:pool)
     vkDestroyDescriptorPool(dev.device.impl,i.impl,nullptr);
-  if(msHelper!=VK_NULL_HANDLE)
-    vkDestroyDescriptorSetLayout(dev.device.impl,msHelper,nullptr);
   vkDestroyDescriptorSetLayout(dev.device.impl,impl,nullptr);
 
   for(auto& i:dedicatedLay) {
@@ -94,7 +69,7 @@ VPipelineLay::DedicatedLay VPipelineLay::create(const std::vector<uint32_t>& run
     throw std::bad_alloc();
     }
 
-  ret.pLay = VPipeline::initLayout(dev, *this, ret.dLay, false);
+  ret.pLay = VPipeline::initLayout(dev, *this, ret.dLay);
   if(ret.pLay==VK_NULL_HANDLE) {
     vkDestroyDescriptorSetLayout(dev.device.impl,ret.dLay,nullptr);
     throw std::bad_alloc();
@@ -132,12 +107,6 @@ VkDescriptorSetLayout VPipelineLay::createDescLayout(const std::vector<uint32_t>
     b.descriptorCount = std::max<uint32_t>(1, b.descriptorCount); // WA for VUID-VkGraphicsPipelineCreateInfo-layout-07988
     b.descriptorType  = nativeFormat(e.cls);
     b.stageFlags      = nativeFormat(e.stage);
-    if(dev.props.meshlets.meshShaderEmulated && (b.stageFlags&(VK_SHADER_STAGE_TASK_BIT_EXT | VK_SHADER_STAGE_MESH_BIT_EXT))!=0) {
-      b.stageFlags &= ~VK_SHADER_STAGE_TASK_BIT_EXT;
-      b.stageFlags &= ~VK_SHADER_STAGE_MESH_BIT_EXT;
-      b.stageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
-      b.stageFlags |= VK_SHADER_STAGE_COMPUTE_BIT;
-      }
     ++count;
     }
 

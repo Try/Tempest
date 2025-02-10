@@ -47,7 +47,6 @@ class VPipelineLay : public AbstractGraphicsApi::PipelineLay {
     SyncDesc                    sync;
 
     VkDescriptorSetLayout       impl     = VK_NULL_HANDLE;
-    VkDescriptorSetLayout       msHelper = VK_NULL_HANDLE;
 
     std::vector<Binding>        lay;
     ShaderReflection::PushBlock pb;

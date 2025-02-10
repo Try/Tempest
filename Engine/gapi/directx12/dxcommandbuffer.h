@@ -55,12 +55,10 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void setDebugMarker(std::string_view tag) override;
 
     void setPipeline (AbstractGraphicsApi::Pipeline& p) override;
-    void setBytes    (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;
-    void setUniforms (AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc& u) override;
-
     void setComputePipeline(AbstractGraphicsApi::CompPipeline& p) override;
+
+    void setBytes    (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;
     void setBytes    (AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) override;
-    void setUniforms (AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc& u) override;
 
     void setBinding (size_t id, AbstractGraphicsApi::Texture *tex, const Sampler& smp, uint32_t mipLevel) override;
     void setBinding (size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset) override;

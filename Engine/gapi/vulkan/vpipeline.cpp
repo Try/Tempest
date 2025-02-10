@@ -5,8 +5,6 @@
 #include "vdevice.h"
 #include "vshader.h"
 #include "vpipelinelay.h"
-#include "vmeshshaderemulated.h"
-#include "vmeshlethelper.h"
 
 #include <Tempest/PipelineLayout>
 #include <Tempest/RenderState>
@@ -77,51 +75,7 @@ VPipeline::VPipeline(VDevice& device, const RenderState& st, Topology tp,
       }
 
     lay            = Detail::DSharedPtr<const VPipelineLay*>{&ulay};
-    pipelineLayout = initLayout(device,ulay,false);
-
-    if(auto ms=findShader(ShaderReflection::Stage::Task)) {
-      if(device.props.meshlets.meshShaderEmulated) {
-        device.allocMeshletHelper();
-
-        this->ts.pipelineLayout = initLayout(device,ulay,true);
-
-        VkComputePipelineCreateInfo info = {};
-        info.sType        = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-        info.flags        = 0;
-        info.stage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        info.stage.stage  = VK_SHADER_STAGE_COMPUTE_BIT;
-        info.stage.module = reinterpret_cast<const VTaskShaderEmulated*>(ms)->compPass;
-        info.stage.pName  = "main";
-        info.layout       = this->ts.pipelineLayout;
-        vkAssert(vkCreateComputePipelines(device.device.impl, VK_NULL_HANDLE, 1, &info, nullptr, &this->ts.compuePipeline));
-
-        // cancel native task shading
-        pushStageFlags &= ~VK_SHADER_STAGE_TASK_BIT_EXT;
-        pushStageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
-        }
-      }
-
-    if(auto ms=findShader(ShaderReflection::Stage::Mesh)) {
-      if(device.props.meshlets.meshShaderEmulated) {
-        device.allocMeshletHelper();
-
-        this->ms.pipelineLayout = initLayout(device,ulay,true);
-
-        VkComputePipelineCreateInfo info = {};
-        info.sType        = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-        info.flags        = 0;
-        info.stage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        info.stage.stage  = VK_SHADER_STAGE_COMPUTE_BIT;
-        info.stage.module = reinterpret_cast<const VMeshShaderEmulated*>(ms)->compPass;
-        info.stage.pName  = "main";
-        info.layout       = this->ms.pipelineLayout;
-        vkAssert(vkCreateComputePipelines(device.device.impl, VK_NULL_HANDLE, 1, &info, nullptr, &this->ms.compuePipeline));
-
-        // cancel native mesh shading
-        pushStageFlags &= ~VK_SHADER_STAGE_MESH_BIT_EXT;
-        pushStageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
-        }
-      }
+    pipelineLayout = initLayout(device,ulay);
     }
   catch(...) {
     cleanup();
@@ -179,22 +133,6 @@ IVec3 VPipeline::workGroupSize() const {
   return wgSize;
   }
 
-VkPipeline VPipeline::taskPipeline() const {
-  return ts.compuePipeline;
-  }
-
-VkPipelineLayout VPipeline::taskPipelineLayout() const {
-  return ts.pipelineLayout;
-  }
-
-VkPipeline VPipeline::meshPipeline() const {
-  return ms.compuePipeline;
-  }
-
-VkPipelineLayout VPipeline::meshPipelineLayout() const {
-  return ms.pipelineLayout;
-  }
-
 const VShader* VPipeline::findShader(ShaderReflection::Stage sh) const {
   for(auto& i:modules)
     if(i.handler!=nullptr && i.handler->stage==sh) {
@@ -204,16 +142,6 @@ const VShader* VPipeline::findShader(ShaderReflection::Stage sh) const {
   }
 
 void VPipeline::cleanup() {
-  if(ts.pipelineLayout!=VK_NULL_HANDLE)
-    vkDestroyPipelineLayout(device,ts.pipelineLayout,nullptr);
-  if(ts.compuePipeline!=VK_NULL_HANDLE)
-    vkDestroyPipeline(device,ts.compuePipeline,nullptr);
-
-  if(ms.pipelineLayout!=VK_NULL_HANDLE)
-    vkDestroyPipelineLayout(device,ms.pipelineLayout,nullptr);
-  if(ms.compuePipeline!=VK_NULL_HANDLE)
-    vkDestroyPipeline(device,ms.compuePipeline,nullptr);
-
   if(pipelineLayout!=VK_NULL_HANDLE)
     vkDestroyPipelineLayout(device,pipelineLayout,nullptr);
   for(auto& i:instRp)
@@ -222,12 +150,11 @@ void VPipeline::cleanup() {
     vkDestroyPipeline(device,i.val,nullptr);
   }
 
-VkPipelineLayout VPipeline::initLayout(VDevice& dev, const VPipelineLay& uboLay, bool isMeshCompPass) {
-  return initLayout(dev, uboLay, uboLay.impl, isMeshCompPass);
+VkPipelineLayout VPipeline::initLayout(VDevice& dev, const VPipelineLay& uboLay) {
+  return initLayout(dev, uboLay, uboLay.impl);
   }
 
-VkPipelineLayout VPipeline::initLayout(VDevice& dev, const VPipelineLay& uboLay,
-                                       VkDescriptorSetLayout lay, bool isMeshCompPass) {
+VkPipelineLayout VPipeline::initLayout(VDevice& dev, const VPipelineLay& uboLay, VkDescriptorSetLayout lay) {
   VkPushConstantRange push = {};
 
   VkDescriptorSetLayout pSetLayouts[4] = {lay};
@@ -238,31 +165,8 @@ VkPipelineLayout VPipeline::initLayout(VDevice& dev, const VPipelineLay& uboLay,
   pipelineLayoutInfo.setLayoutCount         = 1;
   pipelineLayoutInfo.pushConstantRangeCount = 0;
 
-  if(uboLay.msHelper!=VK_NULL_HANDLE) {
-    if(isMeshCompPass) {
-      auto& ms = *dev.meshHelper.get();
-      pSetLayouts[pipelineLayoutInfo.setLayoutCount] = ms.lay();
-      pipelineLayoutInfo.setLayoutCount++;
-      } else {
-      pSetLayouts[pipelineLayoutInfo.setLayoutCount] = uboLay.msHelper;
-      pipelineLayoutInfo.setLayoutCount++;
-      }
-    }
-
   if(uboLay.pb.size>0) {
-    VkShaderStageFlags pushStageFlags = nativeFormat(uboLay.pb.stage);
-    if(uboLay.msHelper!=VK_NULL_HANDLE) {
-      if(isMeshCompPass) {
-        if((pushStageFlags&VK_SHADER_STAGE_MESH_BIT_EXT)==VK_SHADER_STAGE_MESH_BIT_EXT) {
-          pushStageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-          }
-        } else {
-        pushStageFlags &= ~VK_SHADER_STAGE_TASK_BIT_EXT;
-        pushStageFlags &= ~VK_SHADER_STAGE_MESH_BIT_EXT;
-        pushStageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
-        }
-      }
-    push.stageFlags = pushStageFlags;
+    push.stageFlags = nativeFormat(uboLay.pb.stage);
     push.offset     = 0;
     push.size       = uint32_t(uboLay.pb.size);
 
@@ -288,18 +192,11 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
     if(shaders[i].handler==nullptr)
       continue;
 
-    if(nullptr != dynamic_cast<const VTaskShaderEmulated*>(shaders[i].handler))
-      continue;
-
     VkPipelineShaderStageCreateInfo& sh = shaderStages[stagesCnt];
     sh.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     sh.stage  = nativeFormat(shaders[i].handler->stage);
     sh.module = shaders[i].handler->impl;
     sh.pName  = "main";
-    if(auto ms = dynamic_cast<const VMeshShaderEmulated*>(shaders[i].handler)) {
-      sh.stage  = VK_SHADER_STAGE_VERTEX_BIT;
-      sh.module = ms->impl;
-      }
     stagesCnt++;
     }
 
@@ -469,7 +366,7 @@ bool VCompPipeline::Inst::isCompatible(VkPipelineLayout lay) const {
 
 VCompPipeline::VCompPipeline(VDevice& dev, const VPipelineLay& ulay, const VShader& comp)
   :dev(dev), device(dev.device.impl), wgSize(comp.comp.wgSize), runtimeSized(ulay.runtimeSized)  {
-  pipelineLayout = VPipeline::initLayout(dev,ulay,false);
+  pipelineLayout = VPipeline::initLayout(dev,ulay);
   pushSize       = uint32_t(ulay.pb.size);
 
   shader = Detail::DSharedPtr<const VShader*>{&comp};

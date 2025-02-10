@@ -59,12 +59,10 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void setDebugMarker(std::string_view tag) override;
 
     void setPipeline(AbstractGraphicsApi::Pipeline& p) override;
-    void setBytes   (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;
-    void setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc &u) override;
-
     void setComputePipeline(AbstractGraphicsApi::CompPipeline& p) override;
+
+    void setBytes   (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;
     void setBytes   (AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) override;
-    void setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc &u) override;
 
     void setBinding (size_t id, AbstractGraphicsApi::Texture*   tex, const Sampler& smp, uint32_t mipLevel) override;
     void setBinding (size_t id, AbstractGraphicsApi::Buffer*    buf, size_t offset) override;
@@ -159,27 +157,6 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     VkPipelineLayout                        pipelineLayout  = VK_NULL_HANDLE;
 
     bool                                    isDbgRegion = false;
-  };
-
-class VMeshCommandBuffer:public VCommandBuffer {
-  public:
-    using VCommandBuffer::VCommandBuffer;
-
-    void pushChunk() override;
-
-    void setPipeline(AbstractGraphicsApi::Pipeline& p) override;
-    void setBytes   (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;
-    void setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc &u) override;
-
-    void dispatchMesh(size_t x, size_t y, size_t z) override;
-
-  private:
-    VkCommandBuffer                         cbTask         = nullptr;
-    VkCommandBuffer                         cbMesh         = nullptr;
-    uint32_t                                taskIndirectId = 0;
-    uint32_t                                meshIndirectId = 0;
-
-  friend class VMeshletHelper;
   };
 
 }}

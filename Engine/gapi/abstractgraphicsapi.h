@@ -438,7 +438,6 @@ namespace Tempest {
           struct {
             bool              taskShader         = false;
             bool              meshShader         = false;
-            bool              meshShaderEmulated = false;
 
             BasicPoint<int,3> maxGroups          = {65535,65535,65535};
             BasicPoint<int,3> maxGroupSize       = {128,128,64};

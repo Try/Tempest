@@ -26,7 +26,6 @@ namespace Detail {
 
 class VFence;
 class VTexture;
-class VMeshletHelper;
 
 inline void vkAssert(VkResult code){
   if(T_LIKELY(code==VkResult::VK_SUCCESS))
@@ -365,9 +364,6 @@ class VDevice : public AbstractGraphicsApi::Device {
     VSetLayoutCache         setLayouts;
     VBindlessCache          bindless;
 
-    std::mutex                      meshSync;
-    std::unique_ptr<VMeshletHelper> meshHelper;
-
     VkProps                 props={};
 
     PFN_vkGetBufferMemoryRequirements2KHR vkGetBufferMemoryRequirements2 = nullptr;
@@ -406,8 +402,6 @@ class VDevice : public AbstractGraphicsApi::Device {
     VBuffer&                dummySsbo();
 
     const ArrayLayout&      bindlessArrayLayout(VkDescriptorType type);
-
-    void                    allocMeshletHelper();
 
   private:
     VkPhysicalDeviceMemoryProperties memoryProperties;

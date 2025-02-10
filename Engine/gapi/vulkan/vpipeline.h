@@ -48,14 +48,8 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     IVec3              workGroupSize() const override;
     bool               isRuntimeSized() const { return runtimeSized; }
 
-    static VkPipelineLayout initLayout(VDevice& dev, const VPipelineLay& uboLay, bool isMeshCompPass);
-    static VkPipelineLayout initLayout(VDevice& dev, const VPipelineLay& uboLay, VkDescriptorSetLayout lay, bool isMeshCompPass);
-
-    VkPipeline         taskPipeline() const;
-    VkPipelineLayout   taskPipelineLayout() const;
-
-    VkPipeline         meshPipeline() const;
-    VkPipelineLayout   meshPipelineLayout() const;
+    static VkPipelineLayout initLayout(VDevice& dev, const VPipelineLay& uboLay);
+    static VkPipelineLayout initLayout(VDevice& dev, const VPipelineLay& uboLay, VkDescriptorSetLayout lay);
 
   private:
     struct InstRp : Inst {
@@ -84,12 +78,6 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     Topology                               tp = Topology::Triangles;
     IVec3                                  wgSize = {};
     bool                                   runtimeSized = false;
-
-    struct MeshEmulation {
-      VkPipelineLayout                     pipelineLayout = VK_NULL_HANDLE;
-      VkPipeline                           compuePipeline = VK_NULL_HANDLE;
-      };
-    MeshEmulation                          ms, ts;
 
     SpinLock                               sync;
     std::vector<InstRp>                    instRp;

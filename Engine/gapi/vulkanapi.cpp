@@ -8,7 +8,6 @@
 #include "vulkan/vbuffer.h"
 #include "vulkan/vshader.h"
 #include "vulkan/vfence.h"
-#include "vulkan/vmeshshaderemulated.h"
 #include "vulkan/vcommandbuffer.h"
 #include "vulkan/vdescriptorarray.h"
 #include "vulkan/vpipelinelay.h"
@@ -85,15 +84,6 @@ AbstractGraphicsApi::PCompPipeline VulkanApi::createComputePipeline(AbstractGrap
 
 AbstractGraphicsApi::PShader VulkanApi::createShader(AbstractGraphicsApi::Device *d, const void* source, size_t src_size) {
   Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
-  if(dx->props.meshlets.meshShaderEmulated) {
-    libspirv::Bytecode code(reinterpret_cast<const uint32_t*>(source),src_size/4);
-    if(code.findExecutionModel()==spv::ExecutionModelTaskEXT) {
-      return PShader(new Detail::VTaskShaderEmulated(*dx,source,src_size));
-      }
-    else if(code.findExecutionModel()==spv::ExecutionModelMeshEXT) {
-      return PShader(new Detail::VMeshShaderEmulated(*dx,source,src_size));
-      }
-    }
   return PShader(new Detail::VShader(*dx,source,src_size));
   }
 
@@ -299,10 +289,6 @@ AbstractGraphicsApi::Desc* VulkanApi::createDescriptors(AbstractGraphicsApi::Dev
 
 AbstractGraphicsApi::CommandBuffer* VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device* d) {
   Detail::VDevice* dx=reinterpret_cast<Detail::VDevice*>(d);
-  if(dx->props.meshlets.meshShaderEmulated) {
-    // CB with meshlet emulation support
-    return new Detail::VMeshCommandBuffer(*dx);
-    }
   return new Detail::VCommandBuffer(*dx);
   }
 

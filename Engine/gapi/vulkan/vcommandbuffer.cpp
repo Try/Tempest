@@ -13,7 +13,6 @@
 #include "vswapchain.h"
 #include "vtexture.h"
 #include "vframebuffermap.h"
-#include "vmeshlethelper.h"
 #include "vaccelerationstructure.h"
 
 using namespace Tempest;
@@ -433,27 +432,6 @@ void VCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, const void* data
   vkCmdPushConstants(impl, px.pipelineLayout, px.pushStageFlags, 0, uint32_t(size), data);
   }
 
-void VCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline &p, AbstractGraphicsApi::Desc &u) {
-  VPipeline&        px=reinterpret_cast<VPipeline&>(p);
-  VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
-  curUniforms = &ux;
-  ux.ssboBarriers(resState,PipelineStage::S_Graphics);
-
-  const auto lay = (ux.pipelineLayout() ? ux.pipelineLayout() : px.pipelineLayout);
-  if(T_UNLIKELY(pipelineLayout!=lay)) {
-    pipelineLayout = lay;
-
-    auto&      px = *curDrawPipeline;
-    VkPipeline v  = device.props.hasDynRendering ? px.instance(passDyn,pipelineLayout,vboStride)
-                                                 : px.instance(pass,   pipelineLayout,vboStride);
-    vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v);
-    }
-
-  vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          pipelineLayout,0,1,&ux.impl,
-                          0,nullptr);
-  }
-
 void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
   state = Compute;
   auto& px = reinterpret_cast<VCompPipeline&>(p);
@@ -491,25 +469,6 @@ void VCommandBuffer::setBytes(AbstractGraphicsApi::CompPipeline& p, const void* 
   VCompPipeline& px=reinterpret_cast<VCompPipeline&>(p);
   assert(size<=px.pushSize);
   vkCmdPushConstants(impl, px.pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, uint32_t(size), data);
-  }
-
-void VCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc& u) {
-  VCompPipeline&    px=reinterpret_cast<VCompPipeline&>(p);
-  VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
-  curUniforms = &ux;
-  // ssboBarriers are per-dispatch
-
-  const auto lay = (ux.pipelineLayout() ? ux.pipelineLayout() : px.pipelineLayout);
-  if(T_UNLIKELY(pipelineLayout!=lay)) {
-    pipelineLayout = lay;
-    auto pso = px.instance(pipelineLayout);
-    // no need to restore old pso - it was also runtime-based
-    vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_COMPUTE,pso);
-    }
-
-  vkCmdBindDescriptorSets(impl,VK_PIPELINE_BIND_POINT_COMPUTE,
-                          pipelineLayout,0,1,&ux.impl,
-                          0,nullptr);
   }
 
 void VCommandBuffer::handleSync(const VPipelineLay::LayoutDesc& lay, const VPipelineLay::SyncDesc& sync, PipelineStage st) {
@@ -1266,151 +1225,6 @@ void VCommandBuffer::addDependency(VSwapchain& s, size_t imgId) {
       return;
   assert(sc!=nullptr);
   swapchainSync.push_back(sc);
-  }
-
-
-void VMeshCommandBuffer::pushChunk() {
-  if(cbTask!=nullptr) {
-    auto& ms = *device.meshHelper;
-    device.vkCmdDebugMarkerEnd(cbTask);
-
-    VkDebugMarkerMarkerInfoEXT info = {};
-    info.sType       = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
-    info.pMarkerName = "task-shader-lut";
-    device.vkCmdDebugMarkerBegin(cbTask, &info);
-    ms.taskEpiloguePass(cbTask,uint32_t(meshIndirectId));
-    device.vkCmdDebugMarkerEnd(cbTask);
-
-    vkAssert(vkEndCommandBuffer(cbTask));
-    Chunk ch;
-    ch.impl = cbTask;
-    chunks.push(ch);
-    cbTask = nullptr;
-    taskIndirectId = 0;
-    }
-  if(cbMesh!=nullptr) {
-    auto& ms = *device.meshHelper;
-    device.vkCmdDebugMarkerEnd(cbMesh);
-
-    VkDebugMarkerMarkerInfoEXT info = {};
-    info.sType       = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
-    info.pMarkerName = "mesh-shader-sort";
-    device.vkCmdDebugMarkerBegin(cbMesh, &info);
-    ms.sortPass(cbMesh,uint32_t(meshIndirectId));
-    device.vkCmdDebugMarkerEnd(cbMesh);
-
-    vkAssert(vkEndCommandBuffer(cbMesh));
-    Chunk ch;
-    ch.impl = cbMesh;
-    chunks.push(ch);
-    cbMesh = nullptr;
-    meshIndirectId = 0;
-    }
-  VCommandBuffer::pushChunk();
-  }
-
-void VMeshCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
-  VPipeline& px = reinterpret_cast<VPipeline&>(p);
-  VCommandBuffer::setPipeline(px);
-  if(px.meshPipeline()==VK_NULL_HANDLE)
-    return;
-
-  auto& ms = *device.meshHelper;
-
-  if(cbTask==VK_NULL_HANDLE && px.taskPipeline()!=VK_NULL_HANDLE) {
-    VkCommandBufferAllocateInfo allocInfo = {};
-    allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool        = pool.impl;
-    allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = 1;
-    vkAssert(vkAllocateCommandBuffers(device.device.impl,&allocInfo,&cbTask));
-
-    VkCommandBufferBeginInfo beginInfo = {};
-    beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags            = 0;
-    beginInfo.pInheritanceInfo = nullptr;
-    vkAssert(vkBeginCommandBuffer(cbTask,&beginInfo));
-
-    VkDebugMarkerMarkerInfoEXT info = {};
-    info.sType       = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
-    info.pMarkerName = "task-shader-emulated";
-    device.vkCmdDebugMarkerBegin(cbTask, &info);
-    }
-
-  if(cbMesh==VK_NULL_HANDLE) {
-    VkCommandBufferAllocateInfo allocInfo = {};
-    allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool        = pool.impl;
-    allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = 1;
-    vkAssert(vkAllocateCommandBuffers(device.device.impl,&allocInfo,&cbMesh));
-
-    VkCommandBufferBeginInfo beginInfo = {};
-    beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags            = 0;
-    beginInfo.pInheritanceInfo = nullptr;
-    vkAssert(vkBeginCommandBuffer(cbMesh,&beginInfo));
-
-    VkDebugMarkerMarkerInfoEXT info = {};
-    info.sType       = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT;
-    info.pMarkerName = "mesh-shader-emulated";
-    device.vkCmdDebugMarkerBegin(cbMesh, &info);
-    }
-
-  if(meshIndirectId==0)
-    ms.initRP(cbTask!=VK_NULL_HANDLE ? cbTask : cbMesh);
-
-  if(px.taskPipeline()!=VK_NULL_HANDLE)
-    vkCmdBindPipeline(cbTask,VK_PIPELINE_BIND_POINT_COMPUTE,px.taskPipeline());
-  vkCmdBindPipeline(cbMesh,VK_PIPELINE_BIND_POINT_COMPUTE,px.meshPipeline());
-
-  ms.bindCS(px.taskPipelineLayout(), px.meshPipelineLayout());
-  ms.bindVS(impl, px.pipelineLayout);
-  }
-
-void VMeshCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) {
-  VCommandBuffer::setBytes(p,data,size);
-
-  VPipeline& px = reinterpret_cast<VPipeline&>(p);
-  if(px.meshPipeline()==VK_NULL_HANDLE)
-    return;
-
-  if(px.taskPipeline()!=VK_NULL_HANDLE)
-    vkCmdPushConstants(cbTask, px.taskPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, uint32_t(size), data);
-  vkCmdPushConstants(cbMesh, px.meshPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, uint32_t(size), data);
-  }
-
-void VMeshCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc& u) {
-  VCommandBuffer::setUniforms(p,u);
-
-  VPipeline& px = reinterpret_cast<VPipeline&>(p);
-  if(px.meshPipeline()==VK_NULL_HANDLE)
-    return;
-
-  VDescriptorArray& ux=reinterpret_cast<VDescriptorArray&>(u);
-  if(px.taskPipeline()!=VK_NULL_HANDLE) {
-    vkCmdBindDescriptorSets(cbTask,VK_PIPELINE_BIND_POINT_COMPUTE,
-                            px.taskPipelineLayout(),0,
-                            1,&ux.impl,
-                            0,nullptr);
-    }
-  vkCmdBindDescriptorSets(cbMesh,VK_PIPELINE_BIND_POINT_COMPUTE,
-                          px.meshPipelineLayout(),0,
-                          1,&ux.impl,
-                          0,nullptr);
-  }
-
-void VMeshCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
-  VPipeline& px = reinterpret_cast<VPipeline&>(*curDrawPipeline);
-  if(px.meshPipeline()==VK_NULL_HANDLE)
-    return;
-
-  auto& ms = *device.meshHelper;
-  ms.drawCompute(cbTask, cbMesh, taskIndirectId, meshIndirectId, x,y,z);
-  ms.drawIndirect(impl, meshIndirectId);
-  ++meshIndirectId;
-  if(px.taskPipeline()!=VK_NULL_HANDLE)
-    ++taskIndirectId;
   }
 
 #endif

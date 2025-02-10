@@ -632,10 +632,6 @@ void DxCommandBuffer::setBytes(AbstractGraphicsApi::CompPipeline& p, const void*
   impl->SetComputeRoot32BitConstants(UINT(px.pushConstantId),UINT(size/4),data,0);
   }
 
-void DxCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline& /*p*/, AbstractGraphicsApi::Desc& u) {
-  implSetUniforms(u,true);
-  }
-
 void DxCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Texture* tex, const Sampler& smp, uint32_t mipLevel) {
   curUniforms = nullptr; // legacy compat
 
@@ -720,11 +716,6 @@ void DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p) {
 void DxCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) {
   auto& px = reinterpret_cast<DxPipeline&>(p);
   impl->SetGraphicsRoot32BitConstants(UINT(px.pushConstantId),UINT(size/4),data,0);
-  }
-
-void DxCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline& /*p*/, AbstractGraphicsApi::Desc& u) {
-  u.ssboBarriers(resState,PipelineStage::S_Graphics);
-  implSetUniforms(u,false);
   }
 
 void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompute) {

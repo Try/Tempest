@@ -419,17 +419,6 @@ void VulkanInstance::devicePropsShort(VkPhysicalDevice physicalDevice, VkProp& p
     props.accelerationStructureScratchOffsetAlignment = asProperties.minAccelerationStructureScratchOffsetAlignment;
 
     //props.meshlets.meshShader = false;
-    if(!props.meshlets.meshShader && props.hasSpirv_1_4 && false) {
-      props.meshlets.meshShaderEmulated = true;
-      if(props.meshlets.meshShaderEmulated) {
-        props.meshlets.maxGroups.x      = devP.limits.maxComputeWorkGroupCount[0];
-        props.meshlets.maxGroups.y      = devP.limits.maxComputeWorkGroupCount[1];
-        props.meshlets.maxGroups.z      = devP.limits.maxComputeWorkGroupCount[2];
-        props.meshlets.maxGroupSize.x   = devP.limits.maxComputeWorkGroupSize [0];
-        props.meshlets.maxGroupSize.y   = devP.limits.maxComputeWorkGroupSize [1];
-        props.meshlets.maxGroupSize.z   = devP.limits.maxComputeWorkGroupSize [2];
-        }
-      }
 
     if(indexingFeatures.runtimeDescriptorArray!=VK_FALSE) {
       // NOTE1: no UBO support - won't do

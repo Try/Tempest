@@ -5,7 +5,6 @@
 #include "vcommandbuffer.h"
 #include "vfence.h"
 #include "vswapchain.h"
-#include "vmeshlethelper.h"
 #include "system/api/x11api.h"
 
 #include <Tempest/Log>
@@ -575,12 +574,6 @@ const VDevice::ArrayLayout& VDevice::bindlessArrayLayout(VkDescriptorType type) 
   if(ret->impl==VK_NULL_HANDLE)
     *ret = ArrayLayout(*this, type);
   return *ret;
-  }
-
-void VDevice::allocMeshletHelper() {
-  std::unique_lock<std::mutex> guard(meshSync);
-  if(meshHelper==nullptr)
-    meshHelper.reset(new VMeshletHelper(*this));
   }
 
 void VDevice::waitIdle() {

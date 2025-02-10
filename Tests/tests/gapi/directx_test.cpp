@@ -310,7 +310,7 @@ TEST(DirectX12Api,SpirvDefect_Link) {
     {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
-      enc.setUniforms(pso);
+      enc.setPipeline(pso);
       enc.draw(vbo,ibo);
     }
 
