@@ -3,6 +3,7 @@
 #include <Tempest/AbstractGraphicsApi>
 #include <Metal/Metal.hpp>
 
+#include "gapi/shaderreflection.h"
 #include "nsptr.h"
 
 namespace Tempest {
@@ -41,11 +42,23 @@ class MtTopAccelerationStructure : public AbstractGraphicsApi::AccelerationStruc
     MtTopAccelerationStructure(MtDevice& owner, const RtInstance* inst, AccelerationStructure* const * as, size_t asSize);
     ~MtTopAccelerationStructure();
 
+    void useResource(MTL::RenderCommandEncoder&  cmd, ShaderReflection::Stage st);
+    void useResource(MTL::ComputeCommandEncoder& cmd, ShaderReflection::Stage st);
+
     MtDevice&                         owner;
     NsPtr<MTL::AccelerationStructure> impl;
     NsPtr<MTL::Buffer>                instances;
 
     std::vector<MTL::Resource*>       blas;
+
+  private:
+    template<class Enc>
+    void implUseResource(Enc& cmd, ShaderReflection::Stage st);
+
+    void implUseResource(MTL::ComputeCommandEncoder& cmd,
+                         const MTL::Resource* const resources[], NS::UInteger count, MTL::ResourceUsage usage, MTL::RenderStages stages);
+    void implUseResource(MTL::RenderCommandEncoder& cmd,
+                         const MTL::Resource* const resources[], NS::UInteger count, MTL::ResourceUsage usage, MTL::RenderStages stages);
   };
 }
 }

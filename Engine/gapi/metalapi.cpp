@@ -170,6 +170,22 @@ AbstractGraphicsApi::AccelerationStructure* MetalApi::createTopAccelerationStruc
   return new MtTopAccelerationStructure(dev,inst,as,size);
   }
 
+AbstractGraphicsApi::DescArray* MetalApi::createDescriptors(Device* d, Texture** tex, size_t cnt, uint32_t mipLevel) {
+  auto& dev = *reinterpret_cast<MtDevice*>(d);
+  return new MtDescriptorArray2(dev,tex,cnt,mipLevel);
+  }
+
+AbstractGraphicsApi::DescArray* MetalApi::createDescriptors(Device* d, Texture** tex, size_t cnt, uint32_t mipLevel,
+                                                            const Sampler& smp) {
+  auto& dev = *reinterpret_cast<MtDevice*>(d);
+  return new MtDescriptorArray2(dev,tex,cnt,mipLevel,smp);
+  }
+
+AbstractGraphicsApi::DescArray* MetalApi::createDescriptors(Device* d, Buffer** buf, size_t cnt) {
+  auto& dev = *reinterpret_cast<MtDevice*>(d);
+  return new MtDescriptorArray2(dev,buf,cnt);
+  }
+
 void MetalApi::readPixels(AbstractGraphicsApi::Device*,
                           Pixmap& out, const AbstractGraphicsApi::PTexture t,
                           TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip, bool storageImg) {
@@ -180,13 +196,6 @@ void MetalApi::readPixels(AbstractGraphicsApi::Device*,
 void MetalApi::readBytes(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Buffer *buf,
                          void *out, size_t size) {
   buf->read(out,0,size);
-  }
-
-AbstractGraphicsApi::Desc *MetalApi::createDescriptors(AbstractGraphicsApi::Device* d,
-                                                       AbstractGraphicsApi::PipelineLay& layP) {
-  auto& dev = *reinterpret_cast<MtDevice*>(d);
-  auto& lay = reinterpret_cast<MtPipelineLay&>(layP);
-  return new MtDescriptorArray(dev,lay);
   }
 
 AbstractGraphicsApi::PPipelineLay MetalApi::createPipelineLayout(AbstractGraphicsApi::Device*,
@@ -251,4 +260,3 @@ void MetalApi::getCaps(AbstractGraphicsApi::Device *d, AbstractGraphicsApi::Prop
   }
 
 #endif
-

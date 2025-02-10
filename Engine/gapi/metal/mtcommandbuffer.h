@@ -17,6 +17,7 @@ namespace Detail {
 class MtDevice;
 class MtBuffer;
 class MtPipeline;
+class MtCompPipeline;
 class MtDescriptorArray;
 
 class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
@@ -38,6 +39,12 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
 
     void setPipeline(AbstractGraphicsApi::Pipeline& p) override;
     void setComputePipeline(AbstractGraphicsApi::CompPipeline& p) override;
+
+    void setBinding (size_t id, AbstractGraphicsApi::Texture *tex, const Sampler& smp, uint32_t mipLevel) override;
+    void setBinding (size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset) override;
+    void setBinding (size_t id, AbstractGraphicsApi::DescArray* arr) override;
+    void setBinding (size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) override;
+    void setBinding (size_t id, const Sampler& smp) override;
 
     void setBytes   (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;
     void setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc& u) override;
@@ -75,10 +82,21 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
       E_Comp,
       E_Blit,
       };
+
+    struct Bindings : Detail::Bindings {
+      NonUniqResId read  = NonUniqResId::I_None;
+      NonUniqResId write = NonUniqResId::I_None;
+      bool         durty = false;
+      };
+
     void setEncoder(EncType e, MTL::RenderPassDescriptor* desc);
     void implSetBytes   (const void* bytes, size_t sz);
     void implSetUniforms(AbstractGraphicsApi::Desc& u);
     void implSetAlux    (MtDescriptorArray& u);
+
+    void implSetUniforms(const PipelineStage st);
+    void implSetAlux    (const PipelineStage st);
+    void fillBufferSizeBuffer(uint32_t* ret, ShaderReflection::Stage stage);
 
     void setBuffer (const MtPipelineLay::MTLBind& mtl, MTL::Buffer* b, size_t offset);
     void setTexture(const MtPipelineLay::MTLBind& mtl, MTL::Texture* t, MTL::SamplerState* ss);
@@ -97,14 +115,17 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     NsPtr<MTL::BlitCommandEncoder>    encBlit;
 
     MtFboLayout                       curFbo;
+
+    Bindings                          bindings;
     MtPipeline*                       curDrawPipeline = nullptr;
+    MtCompPipeline*                   curCompPipeline = nullptr;
+
     size_t                            vboStride       = 0;
     const MtPipelineLay*              curLay          = nullptr;
     uint32_t                          curVboId        = 0;
     MTL::Size                         localSize       = {};
     MTL::Size                         localSizeMesh   = {};
     MTL::PrimitiveType                topology        = MTL::PrimitiveTypePoint;
-    bool                              isTesselation   = false;
 
     uint32_t                          maxTotalThreadsPerThreadgroup = 0;
     bool                              isDbgRegion = false;

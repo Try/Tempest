@@ -11,7 +11,10 @@ class MtShader;
 
 class MtPipelineLay : public AbstractGraphicsApi::PipelineLay {
   public:
-    using Binding = ShaderReflection::Binding;
+    using Binding    = ShaderReflection::Binding;
+    using PushBlock  = ShaderReflection::PushBlock;
+    using LayoutDesc = ShaderReflection::LayoutDesc;
+    using SyncDesc   = ShaderReflection::SyncDesc;
 
     static constexpr const ShaderReflection::Stage vertMask
       = ShaderReflection::Stage(ShaderReflection::Vertex|ShaderReflection::Control|ShaderReflection::Evaluate|ShaderReflection::Geometry);
@@ -42,10 +45,12 @@ class MtPipelineLay : public AbstractGraphicsApi::PipelineLay {
     size_t sizeofBuffer(size_t layoutBind, size_t arraylen) const override;
 
     void adjustSsboBindings();
+    void setupLayout(PushBlock& pb, LayoutDesc &lx, SyncDesc& sync, const std::vector<Binding> *sh[], size_t cnt);
 
     std::vector<Binding>          lay;
     std::vector<MTLBind>          bind;
 
+    ShaderReflection::LayoutDesc  layout;
     ShaderReflection::PushBlock   pb;
     MTLBind                       bindPush;
 

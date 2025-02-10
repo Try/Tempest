@@ -141,15 +141,7 @@ void AbstractGraphicsApi::Desc::ssboBarriers(Detail::ResourceState&, PipelineSta
   // NOP by default
   }
 
-AbstractGraphicsApi::DescArray* AbstractGraphicsApi::createDescriptors(Device *d, Texture **tex, size_t cnt, uint32_t mipLevel) {
-  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
-  }
-
-AbstractGraphicsApi::DescArray *AbstractGraphicsApi::createDescriptors(Device *d, Buffer **buf, size_t cnt) {
-  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
-  }
-
-AbstractGraphicsApi::DescArray *AbstractGraphicsApi::createDescriptors(Device *d, Texture **tex, size_t cnt, uint32_t mipLevel, const Sampler &smp) {
+AbstractGraphicsApi::Desc* AbstractGraphicsApi::createDescriptors(Device* d, PipelineLay& layP) {
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }
 

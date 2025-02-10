@@ -1,8 +1,8 @@
-#include "gapi/directx12/dxaccelerationstructure.h"
 #if defined(TEMPEST_BUILD_DIRECTX12)
 
 #include "dxpushdescriptor.h"
 
+#include "gapi/directx12/dxaccelerationstructure.h"
 #include "gapi/directx12/dxdevice.h"
 #include "gapi/directx12/dxtexture.h"
 #include "gapi/directx12/dxbuffer.h"

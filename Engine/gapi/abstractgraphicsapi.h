@@ -658,10 +658,11 @@ namespace Tempest {
       virtual CommandBuffer*
                          createCommandBuffer(Device* d)=0;
 
-      virtual Desc*      createDescriptors(Device* d,PipelineLay& layP)=0;
-      virtual DescArray* createDescriptors(Device* d, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel);
-      virtual DescArray* createDescriptors(Device* d, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler& smp);
-      virtual DescArray* createDescriptors(Device* d, AbstractGraphicsApi::Buffer**  buf, size_t cnt);
+      virtual Desc*      createDescriptors(Device* d, PipelineLay& layP);
+
+      virtual DescArray* createDescriptors(Device* d, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel) = 0;
+      virtual DescArray* createDescriptors(Device* d, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler& smp) = 0;
+      virtual DescArray* createDescriptors(Device* d, AbstractGraphicsApi::Buffer**  buf, size_t cnt) = 0;
 
       virtual PBuffer    createBuffer (Device* d, const void* mem, size_t size, MemUsage usage, BufferHeap flg) = 0;
       virtual PTexture   createTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mips) = 0;

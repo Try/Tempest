@@ -9,6 +9,7 @@
 #include "mtdescriptorarray.h"
 #include "mttexture.h"
 #include "mtswapchain.h"
+#include "mtaccelerationstructure.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -131,6 +132,7 @@ void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MTL::RenderPassDesc
       }
     encDraw->endEncoding();
     encDraw = NsPtr<MTL::RenderCommandEncoder>();
+    bindings.durty = true;
     }
   if(encComp!=nullptr && e!=E_Comp) {
     if(isDbgRegion) {
@@ -139,6 +141,7 @@ void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MTL::RenderPassDesc
       }
     encComp->endEncoding();
     encComp = NsPtr<MTL::ComputeCommandEncoder>();
+    bindings.durty = true;
     }
   if(encBlit!=nullptr && e!=E_Blit) {
     if(isDbgRegion) {
@@ -147,6 +150,7 @@ void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MTL::RenderPassDesc
       }
     encBlit->endEncoding();
     encBlit = NsPtr<MTL::BlitCommandEncoder>();
+    bindings.durty = true;
     }
 
   switch(e) {
@@ -189,9 +193,197 @@ void MtCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline &p) {
 
   auto& px = reinterpret_cast<MtCompPipeline&>(p);
   encComp->setComputePipelineState(px.impl.get());
-  curLay    = px.lay.handler;
-  localSize = px.localSize;
+  curCompPipeline = &px;
+  curLay          = px.lay.handler;
+  localSize       = px.localSize;
   maxTotalThreadsPerThreadgroup = uint32_t(px.impl->maxTotalThreadsPerThreadgroup());
+  bindings.durty = true;
+  }
+
+void MtCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Texture* tex, const Sampler& smp, uint32_t mipLevel) {
+  bindings.data  [id] = tex;
+  bindings.smp   [id] = smp;
+  bindings.offset[id] = mipLevel;
+  bindings.durty      = true;
+  bindings.array      = bindings.array & ~(1u << id);
+  }
+
+void MtCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset) {
+  bindings.data  [id] = buf;
+  bindings.offset[id] = uint32_t(offset);
+  bindings.durty      = true;
+  bindings.array      = bindings.array & ~(1u << id);
+  }
+
+void MtCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::DescArray* arr) {
+  bindings.data[id] = arr;
+  bindings.durty    = true;
+  bindings.array    = bindings.array | (1u << id);
+  }
+
+void MtCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) {
+  bindings.data[id] = tlas;
+  bindings.durty    = true;
+  bindings.array    = bindings.array & ~(1u << id);
+  }
+
+void MtCommandBuffer::setBinding(size_t id, const Sampler& smp) {
+  bindings.smp[id] = smp;
+  bindings.durty   = true;
+  bindings.array   = bindings.array & ~(1u << id);
+  }
+
+void MtCommandBuffer::implSetUniforms(const PipelineStage st) {
+  if(!bindings.durty)
+    return;
+  bindings.durty = false;
+
+  auto& lay = curLay->lay;
+  auto& mtl = curLay->bind;
+
+  for(size_t i=0; i<lay.size(); ++i) {
+    auto& l = lay[i];
+    if(l.stage==0)
+      continue;
+    auto  data   = bindings.data  [l.layout];
+    auto  offset = bindings.offset[l.layout];
+    auto& smp    = bindings.smp   [l.layout];
+
+    switch(l.cls) {
+      case ShaderReflection::Push:
+      case ShaderReflection::Count:
+        break;
+      case ShaderReflection::Ubo:
+      case ShaderReflection::SsboR:
+      case ShaderReflection::SsboRW: {
+        if(l.isArray()) {
+          auto arr = reinterpret_cast<MtDescriptorArray2*>(data);
+          if(encComp!=nullptr)
+            arr->useResource(*encComp, ShaderReflection::Compute);
+          else if(encDraw!=nullptr)
+            arr->useResource(*encDraw, l.stage);
+          setBindless(mtl[i], &arr->data(), arr->size());
+          }
+        else if(T_LIKELY(data!=nullptr)) {
+          auto buf  = reinterpret_cast<MtBuffer*>(data);
+          setBuffer(mtl[i], buf->impl.get(), offset);
+          } else {
+          setBuffer(mtl[i], nullptr, 0);
+          }
+        break;
+        }
+      case ShaderReflection::Texture:
+      case ShaderReflection::Image: {
+        if(l.isArray()) {
+          auto arr = reinterpret_cast<MtDescriptorArray2*>(data);
+          if(encComp!=nullptr)
+            arr->useResource(*encComp, ShaderReflection::Compute);
+          else if(encDraw!=nullptr)
+            arr->useResource(*encDraw, l.stage);
+          setBindless(mtl[i], &arr->data(), arr->size());
+          } else {
+          auto* sx  = &device.samplers.get(smp);
+          auto& tex = reinterpret_cast<MtTexture*>(data)->view(smp.mapping, offset);
+          setTexture(mtl[i], &tex, sx);
+          }
+        break;
+        }
+      case ShaderReflection::ImgR:
+      case ShaderReflection::ImgRW: {
+        auto* tex  = reinterpret_cast<MtTexture*>(data);
+        auto& view = tex->view(ComponentMapping(), offset);
+        setImage(mtl[i], &view, tex->linearMem.get()); //FIXME: mip-mapping for linear ssbo
+        break;
+        }
+      case ShaderReflection::Sampler: {
+        auto sx  = &device.samplers.get(smp);
+        setTexture(mtl[i], nullptr, sx);
+        break;
+        }
+      case ShaderReflection::Tlas: {
+        auto tlas = reinterpret_cast<MtTopAccelerationStructure*>(data);
+        if(encComp!=nullptr)
+          tlas->useResource(*encComp, ShaderReflection::Compute);
+        else if(encDraw!=nullptr)
+          tlas->useResource(*encDraw, l.stage);
+        setTlas(mtl[i], tlas->impl.get());
+        break;
+        }
+      }
+    }
+  implSetAlux(st);
+  }
+
+void MtCommandBuffer::implSetAlux(const PipelineStage st) {
+  const auto& lay              = *curLay;
+  const auto  bufferSizeBuffer = lay.bufferSizeBuffer;
+
+  if(bufferSizeBuffer==ShaderReflection::None)
+    return;
+
+  uint32_t bufSz[MtShader::MSL_BUFFER_LENGTH_SIZE] = {};
+
+  if(bufferSizeBuffer & ShaderReflection::Task) {
+    fillBufferSizeBuffer(bufSz, ShaderReflection::Task);
+    encDraw->setObjectBytes(bufSz, sizeof(bufSz), MtShader::MSL_BUFFER_LENGTH);
+    }
+  if(bufferSizeBuffer & ShaderReflection::Mesh) {
+    fillBufferSizeBuffer(bufSz, ShaderReflection::Mesh);
+    encDraw->setMeshBytes(bufSz, sizeof(bufSz), MtShader::MSL_BUFFER_LENGTH);
+    }
+  if(bufferSizeBuffer & ShaderReflection::Vertex) {
+    fillBufferSizeBuffer(bufSz, ShaderReflection::Vertex);
+    encDraw->setVertexBytes(bufSz, sizeof(bufSz), MtShader::MSL_BUFFER_LENGTH);
+    }
+  if(bufferSizeBuffer & ShaderReflection::Fragment) {
+    fillBufferSizeBuffer(bufSz, ShaderReflection::Fragment);
+    encDraw->setFragmentBytes(bufSz, sizeof(bufSz), MtShader::MSL_BUFFER_LENGTH);
+    }
+  if(bufferSizeBuffer & ShaderReflection::Compute) {
+    fillBufferSizeBuffer(bufSz, ShaderReflection::Compute);
+    encComp->setBytes(bufSz, sizeof(bufSz), MtShader::MSL_BUFFER_LENGTH);
+    }
+  }
+
+void MtCommandBuffer::fillBufferSizeBuffer(uint32_t* ret, ShaderReflection::Stage stage) {
+  const auto& lay = *curLay;
+  auto& lx  = lay.lay;
+  auto& mtl = lay.bind;
+  for(size_t i=0; i<lx.size(); ++i) {
+    if(lx[i].cls!=ShaderReflection::SsboR && lx[i].cls!=ShaderReflection::SsboRW)
+      continue;
+    if(bindings.array & (1u << lx[i].layout))
+      continue;
+
+    uint32_t at = uint32_t(-1);
+    switch(stage) {
+      case ShaderReflection::None:
+      case ShaderReflection::Control:
+      case ShaderReflection::Evaluate:
+      case ShaderReflection::Geometry:
+        break;
+      case ShaderReflection::Task:
+        at = mtl[i].bindTs;
+        break;
+      case ShaderReflection::Mesh:
+        at = mtl[i].bindMs;
+        break;
+      case ShaderReflection::Vertex:
+        at = mtl[i].bindVs;
+        break;
+      case ShaderReflection::Fragment:
+        at = mtl[i].bindFs;
+        break;
+      case ShaderReflection::Compute:
+        at = mtl[i].bindCs;
+        break;
+      }
+    if(at==uint32_t(-1))
+      continue;
+
+    auto* data = reinterpret_cast<const MtBuffer*>(bindings.data[i]);
+    ret[at] = data!=nullptr ? uint32_t(data->size - bindings.offset[i]) : 0;
+    }
   }
 
 void MtCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline&,
@@ -295,6 +487,11 @@ void MtCommandBuffer::implSetDebugLabel() {
   auto str = NsPtr<NS::String>(NS::String::string(buf,NS::UTF8StringEncoding));
   str->retain();
   enc->setLabel(str.get());
+
+  if(isDbgRegion)
+    enc->popDebugGroup();
+  enc->pushDebugGroup(str.get());
+  isDbgRegion = true;
   }
 
 void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer* ivbo, size_t stride, size_t offset, size_t vertexCount,
@@ -311,13 +508,8 @@ void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer* ivbo, size_t strid
     encDraw->setVertexBuffer(vbo->impl.get(),0,curVboId);
     }
 
-  if(!isTesselation) {
-    encDraw->drawPrimitives(topology,offset,vertexCount,instanceCount,firstInstance);
-    } else {
-    encDraw->setTriangleFillMode(MTL::TriangleFillModeLines);  // debug
-    encDraw->setTessellationFactorBuffer(nullptr,0,0);
-    encDraw->drawPatches(3, offset, vertexCount, nullptr, 0, instanceCount, firstInstance);
-    }
+  implSetUniforms(S_Graphics);
+  encDraw->drawPrimitives(topology,offset,vertexCount,instanceCount,firstInstance);
   }
 
 void MtCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer* ivbo, size_t stride, size_t voffset,
@@ -337,30 +529,36 @@ void MtCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer* ivbo, size_
   if(T_LIKELY(vbo!=nullptr)) {
     encDraw->setVertexBuffer(vbo->impl.get(),0,curVboId);
     }
+  implSetUniforms(S_Graphics);
   encDraw->drawIndexedPrimitives(topology,isize,iboType,ibo.impl.get(),
                                  ioffset*mul,instanceCount,voffset,firstInstance);
   }
 
 void MtCommandBuffer::drawIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) {
+  implSetUniforms(S_Graphics);
   auto& ind = reinterpret_cast<const MtBuffer&>(indirect);
   encDraw->drawPrimitives(topology, ind.impl.get(), offset);
   }
 
 void MtCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
+  implSetUniforms(S_Graphics);
   // NOTE: for taskless pipeline `localSize` must be zero
   encDraw->drawMeshThreadgroups(MTL::Size(x,y,z), localSize, localSizeMesh);
   }
 
 void MtCommandBuffer::dispatchMeshIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) {
+  implSetUniforms(S_Graphics);
   auto& ind = reinterpret_cast<const MtBuffer&>(indirect);
   encDraw->drawMeshThreadgroups(ind.impl.get(), offset, localSize, localSizeMesh);
   }
 
 void MtCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
+  implSetUniforms(S_Compute);
   encComp->dispatchThreadgroups(MTL::Size(x,y,z), localSize);
   }
 
 void MtCommandBuffer::dispatchIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) {
+  implSetUniforms(S_Compute);
   auto& ind = reinterpret_cast<const MtBuffer&>(indirect);
   encComp->dispatchThreadgroups(ind.impl.get(), offset, localSize);
   }
@@ -618,13 +816,14 @@ void MtCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
   encDraw->setCullMode(px.cullMode);
 
   topology        = px.topology;
-  isTesselation   = px.isTesselation;
   curDrawPipeline = &px;
   vboStride       = px.defaultStride;
   curLay          = px.lay.handler;
   curVboId        = px.lay.handler->vboIndex;
   localSize       = px.localSize;
   localSizeMesh   = px.localSizeMesh;
+
+  bindings.durty  = true;
   }
 
 void MtCommandBuffer::copy(AbstractGraphicsApi::Buffer& dest, size_t offset,
