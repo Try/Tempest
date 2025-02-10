@@ -81,10 +81,7 @@ struct TestCommandBuffer : Tempest::AbstractGraphicsApi::CommandBuffer {
   void setComputePipeline(AbstractGraphicsApi::CompPipeline& p) override {}
 
   void setBytes   (AbstractGraphicsApi::Pipeline &p, const void* data, size_t size) override {}
-  void setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc& u) override {}
-
   void setBytes   (AbstractGraphicsApi::CompPipeline &p, const void* data, size_t size) override {}
-  void setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc& u) override {}
 
   void setViewport(const Rect& r) override {}
   void setScissor (const Rect& r) override {}

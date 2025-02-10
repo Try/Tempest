@@ -597,10 +597,7 @@ namespace Tempest {
         virtual void setComputePipeline(CompPipeline& p)=0;
 
         virtual void setBytes   (Pipeline &p, const void* data, size_t size)=0;
-        virtual void setUniforms(Pipeline& p, Desc& u)=0;
-
         virtual void setBytes   (CompPipeline &p, const void* data, size_t size)=0;
-        virtual void setUniforms(CompPipeline& p, Desc& u)=0;
 
         virtual void setBinding (size_t id, Texture *tex, const Sampler& smp, uint32_t mipLevel);
         virtual void setBinding (size_t id, Buffer* buf, size_t offset);

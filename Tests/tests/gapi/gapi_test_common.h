@@ -350,7 +350,7 @@ void PsoInconsistentVaryings() {
     {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
-      enc.setUniforms(pso); // late linkpakage
+      enc.setPipeline(pso); // late linkpakage
     }
 
     }
@@ -405,7 +405,7 @@ void TesselationBasic(const char* outImg) {
     {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{tex,Vec4(0,0,0,1),Tempest::Preserve}});
-      enc.setUniforms(pso);
+      enc.setPipeline(pso);
       enc.draw(vbo);
     }
 
@@ -449,7 +449,7 @@ void GeomBasic(const char* outImg) {
     {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
-      enc.setUniforms(pso);
+      enc.setPipeline(pso);
       enc.draw(nullptr, 0, 1);
     }
 
@@ -523,7 +523,7 @@ void Draw(const char* outImage) {
     {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
-      enc.setUniforms(pso);
+      enc.setPipeline(pso);
       enc.draw(vbo,ibo);
     }
 
@@ -589,7 +589,7 @@ void InstanceIndex(const char* outImage) {
     {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
-      enc.setUniforms(pso);
+      enc.setPipeline(pso);
       enc.draw(vbo,ibo, 0,ibo.size(), 123,1);
     }
 
@@ -655,7 +655,7 @@ void Viewport(const char* outImage) {
     {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
-      enc.setUniforms(pso);
+      enc.setPipeline(pso);
 
       enc.setViewport(-50,25,100,100);
       enc.draw(vbo,ibo);
@@ -1049,7 +1049,7 @@ void MipMaps(const char* outImage) {
     {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
-      enc.setUniforms(pso);
+      enc.setPipeline(pso);
       enc.draw(vbo,ibo);
       enc.setFramebuffer({});
       enc.generateMipmaps(tex);
@@ -1439,7 +1439,7 @@ void ArrayedImages(const char* outImg) {
       enc.setBinding(0, ret);
       enc.setBinding(1, arr);
       enc.setBinding(2, Sampler::bilinear());
-      enc.setUniforms(pso);
+      enc.setPipeline(pso);
       enc.dispatch(ret.w(),ret.h(),1);
     }
 
@@ -1850,15 +1850,13 @@ void MeshShader(const char* outImg) {
     auto frag = device.shader("shader/simple_test.frag.sprv");
     auto pso  = device.pipeline(RenderState(),task,mesh,frag);
 
-    auto ubo  = device.descriptors(pso);
-    ubo.set(0, vbo);
-
     auto tex = device.attachment(TextureFormat::RGBA8,128,128);
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
-      enc.setUniforms(pso,ubo);
+      enc.setBinding(0, vbo);
+      enc.setPipeline(pso);
       enc.dispatchMesh(1);
     }
     auto sync = device.fence();
@@ -1897,15 +1895,13 @@ void MeshShaderEmulated(const char* outImg) {
     auto frag = device.shader("shader/simple_test.frag.sprv");
     auto pso  = device.pipeline(RenderState(),Tempest::Shader(),mesh,frag);
 
-    auto ubo  = device.descriptors(pso);
-    ubo.set(0, vbo);
-
     auto tex = device.attachment(TextureFormat::RGBA8,128,128);
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
-      enc.setUniforms(pso,ubo);
+      enc.setBinding(0, vbo);
+      enc.setPipeline(pso);
       enc.dispatchMesh(1);
     }
     auto sync = device.fence();
@@ -1963,50 +1959,40 @@ void MeshComputePrototype(const char* outImg) {
     auto shaderMs = device.shader("shader/simple_test.mesh.comp.sprv");
     auto psoMs    = device.pipeline(shaderMs);
 
-    auto ubo0  = device.descriptors(psoMs);
-    ubo0.set(0,  vbo);
-    ubo0.set(B_Indirect, indirect);
-    ubo0.set(B_Meshlet,  mesh);
-    ubo0.set(B_Var,      var);
-
-    auto ubo1  = device.descriptors(psoMs);
-    ubo1.set(0,  vbo);
-    ubo1.set(B_Indirect, indirect);
-    ubo1.set(B_Meshlet,  mesh);
-    ubo1.set(B_Var,      var);
-
     auto shSum  = device.shader("shader/mesh_prefix_sum.comp.sprv");
     auto psoSum = device.pipeline(shSum);
-    auto uboSum = device.descriptors(psoSum);
-    uboSum.set(0, indirect);
-    uboSum.set(1, mesh);
-    uboSum.set(2, var);
 
     auto shCompactage  = device.shader("shader/mesh_compactage.comp.sprv");
     auto psoCompactage = device.pipeline(shCompactage);
-    auto uboCompactage = device.descriptors(psoCompactage);
-    uboCompactage.set(1,          flat);
-    uboCompactage.set(B_Indirect, indirect);
-    uboCompactage.set(B_Meshlet,  mesh);
-    uboCompactage.set(B_Var,      var);
 
     auto cmd = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
       uint32_t id = 0;
-      enc.setUniforms(psoMs,ubo0,&id,sizeof(id));
+      enc.setBinding(0,          vbo);
+      enc.setBinding(B_Indirect, indirect);
+      enc.setBinding(B_Meshlet,  mesh);
+      enc.setBinding(B_Var,      var);
+      enc.setUniforms(psoMs, &id, sizeof(id));
       enc.dispatch(3, 1,1);
       id = 1;
-      enc.setUniforms(psoMs,ubo1,&id,sizeof(id));
+      enc.setUniforms(psoMs,&id,sizeof(id));
       enc.dispatch(2, 1,1);
       // ^ 3+2 meshlets
 
       // prefix summ pass
-      enc.setUniforms(psoSum,uboSum);
+      enc.setBinding(0, indirect);
+      enc.setBinding(1, mesh);
+      enc.setBinding(2, var);
+      enc.setPipeline(psoSum);
       enc.dispatch(1,1,1);
 
       // should be dispatch-indirect
-      enc.setUniforms(psoCompactage,uboCompactage);
+      enc.setBinding(1,          flat);
+      enc.setBinding(B_Indirect, indirect);
+      enc.setBinding(B_Meshlet,  mesh);
+      enc.setBinding(B_Var,      var);
+      enc.setPipeline(psoCompactage);
       enc.dispatch(5,1,1);
       // should be draw-indirect at the end
     }

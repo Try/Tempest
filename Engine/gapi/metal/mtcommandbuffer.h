@@ -47,10 +47,7 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     void setBinding (size_t id, const Sampler& smp) override;
 
     void setBytes   (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;
-    void setUniforms(AbstractGraphicsApi::Pipeline& p, AbstractGraphicsApi::Desc& u) override;
-
     void setBytes   (AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) override;
-    void setUniforms(AbstractGraphicsApi::CompPipeline& p, AbstractGraphicsApi::Desc& u) override;
 
     void setViewport(const Rect& r) override;
     void setScissor (const Rect& r) override;
@@ -84,15 +81,11 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
       };
 
     struct Bindings : Detail::Bindings {
-      NonUniqResId read  = NonUniqResId::I_None;
-      NonUniqResId write = NonUniqResId::I_None;
-      bool         durty = false;
+      bool durty = false;
       };
 
     void setEncoder(EncType e, MTL::RenderPassDescriptor* desc);
     void implSetBytes   (const void* bytes, size_t sz);
-    void implSetUniforms(AbstractGraphicsApi::Desc& u);
-    void implSetAlux    (MtDescriptorArray& u);
 
     void implSetUniforms(const PipelineStage st);
     void implSetAlux    (const PipelineStage st);

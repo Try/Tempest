@@ -45,12 +45,10 @@ class MtPipelineLay : public AbstractGraphicsApi::PipelineLay {
     size_t sizeofBuffer(size_t layoutBind, size_t arraylen) const override;
 
     void adjustSsboBindings();
-    void setupLayout(PushBlock& pb, LayoutDesc &lx, SyncDesc& sync, const std::vector<Binding> *sh[], size_t cnt);
 
     std::vector<Binding>          lay;
     std::vector<MTLBind>          bind;
 
-    ShaderReflection::LayoutDesc  layout;
     ShaderReflection::PushBlock   pb;
     MTLBind                       bindPush;
 

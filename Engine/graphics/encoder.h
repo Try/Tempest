@@ -32,15 +32,11 @@ class Encoder<Tempest::CommandBuffer> {
     void setFramebuffer(std::initializer_list<AttachmentDesc> rd);
     void setFramebuffer(std::initializer_list<AttachmentDesc> rd, AttachmentDesc zd);
 
-    void setUniforms(const RenderPipeline& p, const DescriptorSet &ubo, const void* data, size_t sz);
-    void setUniforms(const RenderPipeline& p, const void* data, size_t sz);
-    void setUniforms(const RenderPipeline& p, const DescriptorSet &ubo);
-    void setUniforms(const RenderPipeline& p);
+    void setPipeline(const RenderPipeline&  p);
+    void setPipeline(const ComputePipeline& p);
 
-    void setUniforms(const ComputePipeline& p, const DescriptorSet &ubo, const void* data, size_t sz);
+    void setUniforms(const RenderPipeline& p,  const void* data, size_t sz);
     void setUniforms(const ComputePipeline& p, const void* data, size_t sz);
-    void setUniforms(const ComputePipeline& p, const DescriptorSet &ubo);
-    void setUniforms(const ComputePipeline& p);
 
     void setBinding(size_t id, const Texture2d&       tex, const Sampler& smp = Sampler::anisotrophy());
     void setBinding(size_t id, const Attachment&      tex, const Sampler& smp = Sampler::anisotrophy());
@@ -53,9 +49,6 @@ class Encoder<Tempest::CommandBuffer> {
     template<class T>
     void setBinding(size_t id, const UniformBuffer<T>& buf) { implBindBuffer(id, buf.impl); }
     void setBinding(size_t id, const Detail::ResourcePtr<Texture2d>& tex, const Sampler& smp = Sampler::anisotrophy());
-
-    void setPipeline(const RenderPipeline&  p);
-    void setPipeline(const ComputePipeline& p);
 
     void setViewport(int x,int y,int w,int h);
     void setViewport(const Rect& vp);

@@ -391,19 +391,9 @@ void MtCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline&,
   implSetBytes(data,size);
   }
 
-void MtCommandBuffer::setUniforms(AbstractGraphicsApi::Pipeline&,
-                                  AbstractGraphicsApi::Desc &u) {
-  implSetUniforms(u);
-  }
-
 void MtCommandBuffer::setBytes(AbstractGraphicsApi::CompPipeline&,
                                const void *data, size_t size) {
   implSetBytes(data,size);
-  }
-
-void MtCommandBuffer::setUniforms(AbstractGraphicsApi::CompPipeline&,
-                                  AbstractGraphicsApi::Desc &u) {
-  implSetUniforms(u);
   }
 
 void MtCommandBuffer::setViewport(const Rect &r) {
@@ -589,80 +579,6 @@ void MtCommandBuffer::implSetBytes(const void* bytes, size_t sz) {
     }
   if(mtl.bindCs!=uint32_t(-1)) {
     encComp->setBytes(bytes,sz,mtl.bindCs);
-    }
-  }
-
-void MtCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u) {
-  auto& d   = reinterpret_cast<MtDescriptorArray&>(u);
-  auto& lay = curLay->lay;
-  auto& mtl = curLay->bind;
-
-  if(encComp!=nullptr)
-    d.useResource(*encComp);
-  if(encDraw!=nullptr)
-    d.useResource(*encDraw);
-
-  for(size_t i=0; i<lay.size(); ++i) {
-    auto& l = lay[i];
-    if(l.stage==0)
-      continue;
-    switch(l.cls) {
-      case ShaderReflection::Push:
-      case ShaderReflection::Count:
-        break;
-      case ShaderReflection::Ubo:
-      case ShaderReflection::SsboR:
-      case ShaderReflection::SsboRW:
-        if(l.runtimeSized)
-          setBindless(mtl[i], d.desc[i].argsBuf.impl.get(), d.desc[i].args.size()); else
-          setBuffer(mtl[i], reinterpret_cast<MTL::Buffer*>(d.desc[i].val), d.desc[i].offset);
-        break;
-      case ShaderReflection::Texture:
-      case ShaderReflection::Image:
-        if(l.runtimeSized)
-          setBindless(mtl[i], d.desc[i].argsBuf.impl.get(), d.desc[i].args.size()); else
-          setTexture(mtl[i], reinterpret_cast<MTL::Texture*>(d.desc[i].val), d.desc[i].sampler);
-        break;
-      case ShaderReflection::ImgR:
-      case ShaderReflection::ImgRW:
-        setImage(mtl[i], reinterpret_cast<MTL::Texture*>(d.desc[i].val), reinterpret_cast<MTL::Buffer*>(d.desc[i].valAtom));
-        break;
-      case ShaderReflection::Sampler:
-        setTexture(mtl[i],nullptr,d.desc[i].sampler);
-        break;
-      case ShaderReflection::Tlas:
-        setTlas(mtl[i],reinterpret_cast<MTL::AccelerationStructure*>(d.desc[i].val));
-        break;
-      }
-    }
-  implSetAlux(d);
-  }
-
-void MtCommandBuffer::implSetAlux(MtDescriptorArray& u) {
-  auto& lay = *curLay;
-  uint32_t bufSz[MtShader::MSL_BUFFER_LENGTH_SIZE] = {};
-
-  if(u.bufferSizeBuffer!=ShaderReflection::None) {
-    if(u.bufferSizeBuffer & ShaderReflection::Task) {
-      u.fillBufferSizeBuffer(bufSz, ShaderReflection::Task, lay);
-      encDraw->setObjectBytes(bufSz, sizeof(bufSz), MtShader::MSL_BUFFER_LENGTH);
-      }
-    if(u.bufferSizeBuffer & ShaderReflection::Mesh) {
-      u.fillBufferSizeBuffer(bufSz, ShaderReflection::Mesh, lay);
-      encDraw->setMeshBytes(bufSz, sizeof(bufSz), MtShader::MSL_BUFFER_LENGTH);
-      }
-    if(u.bufferSizeBuffer & ShaderReflection::Vertex) {
-      u.fillBufferSizeBuffer(bufSz, ShaderReflection::Vertex, lay);
-      encDraw->setVertexBytes(bufSz, sizeof(bufSz), MtShader::MSL_BUFFER_LENGTH);
-      }
-    if(u.bufferSizeBuffer & ShaderReflection::Fragment) {
-      u.fillBufferSizeBuffer(bufSz, ShaderReflection::Fragment, lay);
-      encDraw->setFragmentBytes(bufSz, sizeof(bufSz), MtShader::MSL_BUFFER_LENGTH);
-      }
-    if(u.bufferSizeBuffer & ShaderReflection::Compute) {
-      u.fillBufferSizeBuffer(bufSz, ShaderReflection::Compute, lay);
-      encComp->setBytes(bufSz, sizeof(bufSz), MtShader::MSL_BUFFER_LENGTH);
-      }
     }
   }
 

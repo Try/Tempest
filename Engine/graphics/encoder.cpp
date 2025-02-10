@@ -66,64 +66,15 @@ void Encoder<Tempest::CommandBuffer>::setDebugMarker(std::string_view tag) {
   impl->setDebugMarker(tag);
   }
 
-void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const DescriptorSet &ubo, const void* data, size_t sz) {
-  setUniforms(p);
-  if(sz>0)
-    impl->setBytes(*p.impl.handler,data,sz);
-  if(ubo.impl.handler!=&DescriptorSet::emptyDesc)
-    impl->setUniforms(*p.impl.handler,*ubo.impl.handler);
-  }
-
 void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const void* data, size_t sz) {
-  setUniforms(p);
+  setPipeline(p);
   if(sz>0)
     impl->setBytes(*p.impl.handler,data,sz);
-  }
-
-void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const DescriptorSet &ubo) {
-  setUniforms(p);
-  if(ubo.impl.handler!=&DescriptorSet::emptyDesc)
-    impl->setUniforms(*p.impl.handler,*ubo.impl.handler);
-  }
-
-void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline &p) {
-  if(state.stage!=Rendering)
-    throw std::system_error(Tempest::GraphicsErrc::DrawCallWithoutFbo);
-  assert(p.impl.handler);
-  if(state.curPipeline!=p.impl.handler) {
-    impl->setPipeline(*p.impl.handler);
-    state.curPipeline = p.impl.handler;
-    }
-  }
-
-void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p, const DescriptorSet &ubo, const void* data, size_t sz) {
-  setUniforms(p);
-  impl->setBytes(*p.impl.handler,data,sz);
-  if(ubo.impl.handler!=&DescriptorSet::emptyDesc)
-    impl->setUniforms(*p.impl.handler,*ubo.impl.handler);
   }
 
 void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p, const void* data, size_t sz) {
-  setUniforms(p);
+  setPipeline(p);
   impl->setBytes(*p.impl.handler,data,sz);
-  }
-
-void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p, const DescriptorSet &ubo) {
-  setUniforms(p);
-  if(ubo.impl.handler!=&DescriptorSet::emptyDesc)
-    impl->setUniforms(*p.impl.handler,*ubo.impl.handler);
-  }
-
-void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p) {
-  if(state.stage==Rendering)
-    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
-  assert(p.impl.handler);
-  if(state.curCompute!=p.impl.handler) {
-    impl->setComputePipeline(*p.impl.handler);
-    state.curCompute  = p.impl.handler;
-    state.curPipeline = nullptr;
-    state.stage       = Compute;
-    }
   }
 
 void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const Texture2d& tex, const Sampler& smp) {

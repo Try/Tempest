@@ -405,10 +405,3 @@ Detail::VideoBuffer Device::createVideoBuffer(const void *data, size_t size, Mem
   Detail::VideoBuffer buf(api.createBuffer(dev,data,size,usage,flg), size);
   return  buf;
   }
-
-DescriptorSet Device::descriptors(const PipelineLayout &ulay) {
-  if(ulay.impl.handler==nullptr || ulay.impl.handler->descriptorsCount()==0)
-    return DescriptorSet(nullptr);
-  DescriptorSet ubo(api.createDescriptors(dev,*ulay.impl.handler));
-  return ubo;
-  }

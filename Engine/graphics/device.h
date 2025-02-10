@@ -127,10 +127,6 @@ class Device {
     DescriptorArray       descriptors(const std::vector<const Texture2d*>& tex, const Sampler& smp);
     DescriptorArray       descriptors(const Texture2d* const *tex, size_t size, const Sampler& smp);
 
-    DescriptorSet         descriptors(const RenderPipeline&  pso) { return descriptors(pso.layout()); }
-    DescriptorSet         descriptors(const ComputePipeline& pso) { return descriptors(pso.layout()); }
-    DescriptorSet         descriptors(const PipelineLayout&  lay);
-
     Texture2d             texture    (const Pixmap& pm, const bool mips = true);
     Attachment            attachment (TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips = false);
     ZBuffer               zbuffer    (TextureFormat frm, const uint32_t w, const uint32_t h);
