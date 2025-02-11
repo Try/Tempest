@@ -12,31 +12,31 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-MtDescriptorArray2::MtDescriptorArray2(MtDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt,
-                                       uint32_t mipLevel, const Sampler& smp)
+MtDescriptorArray::MtDescriptorArray(MtDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt,
+                                     uint32_t mipLevel, const Sampler& smp)
   : cnt(cnt) {
   fillBuffer(dev, tex, cnt, mipLevel, &smp);
   }
 
-MtDescriptorArray2::MtDescriptorArray2(MtDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel)
+MtDescriptorArray::MtDescriptorArray(MtDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel)
   : cnt(cnt) {
   fillBuffer(dev, tex, cnt, mipLevel, nullptr);
   }
 
-MtDescriptorArray2::MtDescriptorArray2(MtDevice& dev, AbstractGraphicsApi::Buffer** buf, size_t cnt)
+MtDescriptorArray::MtDescriptorArray(MtDevice& dev, AbstractGraphicsApi::Buffer** buf, size_t cnt)
   : cnt(cnt) {
   fillBuffer(dev, buf, cnt);
   }
 
-MtDescriptorArray2::~MtDescriptorArray2() {
+MtDescriptorArray::~MtDescriptorArray() {
   }
 
-size_t MtDescriptorArray2::size() const {
+size_t MtDescriptorArray::size() const {
   return cnt;
   }
 
-void MtDescriptorArray2::fillBuffer(MtDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt,
-                                    uint32_t mipLevel, const Sampler* smp) {
+void MtDescriptorArray::fillBuffer(MtDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt,
+                                   uint32_t mipLevel, const Sampler* smp) {
   const bool combined = false;
 
   size_t shift = 0;
@@ -75,7 +75,7 @@ void MtDescriptorArray2::fillBuffer(MtDevice& dev, AbstractGraphicsApi::Texture*
   argsBuf.update(addr.get(), 0, bufSz);
   }
 
-void MtDescriptorArray2::fillBuffer(MtDevice& dev, AbstractGraphicsApi::Buffer** buf, size_t cnt) {
+void MtDescriptorArray::fillBuffer(MtDevice& dev, AbstractGraphicsApi::Buffer** buf, size_t cnt) {
   struct spvBufferDescriptor {
     uint64_t ptr;
     uint32_t len;
@@ -99,31 +99,31 @@ void MtDescriptorArray2::fillBuffer(MtDevice& dev, AbstractGraphicsApi::Buffer**
   argsBuf.update(addr.get(), 0, cnt*sizeof(spvBufferDescriptor));
   }
 
-void MtDescriptorArray2::useResource(MTL::ComputeCommandEncoder& cmd, ShaderReflection::Stage st) {
+void MtDescriptorArray::useResource(MTL::ComputeCommandEncoder& cmd, ShaderReflection::Stage st) {
   implUseResource(cmd, st);
   }
 
-void MtDescriptorArray2::useResource(MTL::RenderCommandEncoder& cmd, ShaderReflection::Stage st) {
+void MtDescriptorArray::useResource(MTL::RenderCommandEncoder& cmd, ShaderReflection::Stage st) {
   implUseResource(cmd, st);
   }
 
 template<class Enc>
-void MtDescriptorArray2::implUseResource(Enc& cmd, ShaderReflection::Stage st) {
+void MtDescriptorArray::implUseResource(Enc& cmd, ShaderReflection::Stage st) {
   auto stages = nativeFormat(st);
   //TODO: UsageWrite
   implUseResource(cmd, args.data(), args.size(), MTL::ResourceUsageRead | MTL::ResourceUsageSample, stages);
   }
 
-void MtDescriptorArray2::implUseResource(MTL::ComputeCommandEncoder& cmd,
-                                         const MTL::Resource* const resources[], NS::UInteger count,
-                                         MTL::ResourceUsage usage, MTL::RenderStages stages) {
+void MtDescriptorArray::implUseResource(MTL::ComputeCommandEncoder& cmd,
+                                        const MTL::Resource* const resources[], NS::UInteger count,
+                                        MTL::ResourceUsage usage, MTL::RenderStages stages) {
   (void)stages;
   cmd.useResources(resources, count, usage);
   }
 
-void MtDescriptorArray2::implUseResource(MTL::RenderCommandEncoder& cmd,
-                                         const MTL::Resource* const resources[], NS::UInteger count,
-                                         MTL::ResourceUsage usage, MTL::RenderStages stages) {
+void MtDescriptorArray::implUseResource(MTL::RenderCommandEncoder& cmd,
+                                        const MTL::Resource* const resources[], NS::UInteger count,
+                                        MTL::ResourceUsage usage, MTL::RenderStages stages) {
   cmd.useResources(resources, count, usage, stages);
   }
 

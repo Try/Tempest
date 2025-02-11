@@ -268,7 +268,7 @@ void MtCommandBuffer::implSetUniforms(const PipelineStage st) {
       case ShaderReflection::SsboR:
       case ShaderReflection::SsboRW: {
         if(l.isArray()) {
-          auto arr = reinterpret_cast<MtDescriptorArray2*>(data);
+          auto arr = reinterpret_cast<MtDescriptorArray*>(data);
           if(encComp!=nullptr)
             arr->useResource(*encComp, ShaderReflection::Compute);
           else if(encDraw!=nullptr)
@@ -286,7 +286,7 @@ void MtCommandBuffer::implSetUniforms(const PipelineStage st) {
       case ShaderReflection::Texture:
       case ShaderReflection::Image: {
         if(l.isArray()) {
-          auto arr = reinterpret_cast<MtDescriptorArray2*>(data);
+          auto arr = reinterpret_cast<MtDescriptorArray*>(data);
           if(encComp!=nullptr)
             arr->useResource(*encComp, ShaderReflection::Compute);
           else if(encDraw!=nullptr)

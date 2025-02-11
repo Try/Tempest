@@ -11,14 +11,13 @@ namespace Tempest {
 namespace Detail {
 
 class MtDevice;
-class MtTopAccelerationStructure;
 
-class MtDescriptorArray2 : public AbstractGraphicsApi::DescArray {
+class MtDescriptorArray : public AbstractGraphicsApi::DescArray {
   public:
-    MtDescriptorArray2(MtDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler& smp);
-    MtDescriptorArray2(MtDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel);
-    MtDescriptorArray2(MtDevice& dev, AbstractGraphicsApi::Buffer**  buf, size_t cnt);
-    ~MtDescriptorArray2();
+    MtDescriptorArray(MtDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler& smp);
+    MtDescriptorArray(MtDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel);
+    MtDescriptorArray(MtDevice& dev, AbstractGraphicsApi::Buffer**  buf, size_t cnt);
+    ~MtDescriptorArray();
 
     size_t       size() const;
     MTL::Buffer& data() { return *argsBuf.impl.get(); }

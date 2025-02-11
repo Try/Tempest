@@ -172,18 +172,18 @@ AbstractGraphicsApi::AccelerationStructure* MetalApi::createTopAccelerationStruc
 
 AbstractGraphicsApi::DescArray* MetalApi::createDescriptors(Device* d, Texture** tex, size_t cnt, uint32_t mipLevel) {
   auto& dev = *reinterpret_cast<MtDevice*>(d);
-  return new MtDescriptorArray2(dev,tex,cnt,mipLevel);
+  return new MtDescriptorArray(dev,tex,cnt,mipLevel);
   }
 
 AbstractGraphicsApi::DescArray* MetalApi::createDescriptors(Device* d, Texture** tex, size_t cnt, uint32_t mipLevel,
                                                             const Sampler& smp) {
   auto& dev = *reinterpret_cast<MtDevice*>(d);
-  return new MtDescriptorArray2(dev,tex,cnt,mipLevel,smp);
+  return new MtDescriptorArray(dev,tex,cnt,mipLevel,smp);
   }
 
 AbstractGraphicsApi::DescArray* MetalApi::createDescriptors(Device* d, Buffer** buf, size_t cnt) {
   auto& dev = *reinterpret_cast<MtDevice*>(d);
-  return new MtDescriptorArray2(dev,buf,cnt);
+  return new MtDescriptorArray(dev,buf,cnt);
   }
 
 void MetalApi::readPixels(AbstractGraphicsApi::Device*,
