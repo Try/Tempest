@@ -96,23 +96,7 @@ void AbstractGraphicsApi::CommandBuffer::begin(bool tranfer) {
   begin();
   }
 
-void AbstractGraphicsApi::CommandBuffer::setBinding(size_t id, Texture *tex, const Sampler &smp, uint32_t mipLevel) {
-  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
-  }
-
-void AbstractGraphicsApi::CommandBuffer::setBinding(size_t id, Buffer *buf, size_t offset) {
-  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
-  }
-
-void AbstractGraphicsApi::CommandBuffer::setBinding(size_t id, DescArray *arr) {
-  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
-  }
-
-void AbstractGraphicsApi::CommandBuffer::setBinding(size_t id, AccelerationStructure* tlas) {
-  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
-  }
-
-void AbstractGraphicsApi::CommandBuffer::setBinding(size_t id, const Sampler &smp) {
+void AbstractGraphicsApi::CommandBuffer::setPushData(const void* data, size_t size) {
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }
 
@@ -134,14 +118,6 @@ AbstractGraphicsApi::AccelerationStructure* AbstractGraphicsApi::createBottomAcc
 
 AbstractGraphicsApi::AccelerationStructure*
   AbstractGraphicsApi::createTopAccelerationStruct(Device* d, const RtInstance* geom, AccelerationStructure*const* as, size_t geomSize) {
-  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
-  }
-
-void AbstractGraphicsApi::Desc::ssboBarriers(Detail::ResourceState&, PipelineStage) {
-  // NOP by default
-  }
-
-AbstractGraphicsApi::Desc* AbstractGraphicsApi::createDescriptors(Device* d, PipelineLay& layP) {
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }
 

@@ -193,8 +193,8 @@ void VPipelineLay::setupLayout(ShaderReflection::PushBlock& pb, LayoutDesc& lx, 
       if(e.cls==ShaderReflection::ImgRW || e.cls==ShaderReflection::SsboRW)
         sync.write |= id;
 
-      lx.bufferSz[e.layout] = std::max<uint32_t>(lx.bufferSz[e.layout], e.byteSize);
-      lx.bufferEl[e.layout] = std::max<uint32_t>(lx.bufferEl[e.layout], e.varByteSize);
+      lx.bufferSz[e.layout] = std::max<uint32_t>(lx.bufferSz[e.layout], uint32_t(e.byteSize));
+      lx.bufferEl[e.layout] = std::max<uint32_t>(lx.bufferEl[e.layout], uint32_t(e.varByteSize));
       }
     }
   }

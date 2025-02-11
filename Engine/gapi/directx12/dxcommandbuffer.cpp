@@ -299,13 +299,14 @@ struct DxCommandBuffer::MipMaps : Stage {
     sr.right  = LONG(dstW);
     sr.bottom = LONG(dstH);
     impl.RSSetScissorRects(1, &sr);
-
+/*
     desc.emplace_back(*dev.blitLayout.handler);
     DxDescriptorArray& ubo = this->desc.back();
     ubo.set(0,&img,Sampler::bilinear(),srcMip);
     cmd.implSetUniforms(ubo,false);
 
     impl.DrawInstanced(6,1,0,0);
+    */
     }
 
   void exec(DxCommandBuffer& cmd) override {
@@ -619,22 +620,26 @@ void DxCommandBuffer::setDebugMarker(std::string_view tag) {
 
 void DxCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
   auto& px = reinterpret_cast<DxCompPipeline&>(p);
-  curCompPipeline = &px;
+
   bindings.durty  = true;
+  pushData.durty  = true;
+  pushConstantId  = px.pushConstantId;
+
+  curCompPipeline = &px;
 
   state = Compute;
   impl->SetPipelineState(px.impl.get());
   impl->SetComputeRootSignature(px.sign.get());
   }
 
-void DxCommandBuffer::setBytes(AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) {
-  auto& px = reinterpret_cast<DxCompPipeline&>(p);
-  impl->SetComputeRoot32BitConstants(UINT(px.pushConstantId),UINT(size/4),data,0);
+void DxCommandBuffer::setPushData(const void* data, size_t size) {
+  pushData.size = uint8_t(size);
+  std::memcpy(pushData.data, data, size);
+
+  pushData.durty = true;
   }
 
 void DxCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Texture* tex, const Sampler& smp, uint32_t mipLevel) {
-  curUniforms = nullptr; // legacy compat
-
   bindings.data  [id] = tex;
   bindings.smp   [id] = smp;
   bindings.offset[id] = mipLevel;
@@ -643,8 +648,6 @@ void DxCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Texture* tex, c
   }
 
 void DxCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset) {
-  curUniforms = nullptr; // legacy compat
-
   bindings.data  [id] = buf;
   bindings.offset[id] = uint32_t(offset);
   bindings.durty      = true;
@@ -652,33 +655,26 @@ void DxCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Buffer* buf, si
   }
 
 void DxCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::DescArray* arr) {
-  curUniforms = nullptr; // legacy compat
-
   bindings.data[id] = arr;
   bindings.durty    = true;
   bindings.array    = bindings.array | (1u << id);
   }
 
 void DxCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) {
-  curUniforms = nullptr; // legacy compat
-
   bindings.data[id] = tlas;
   bindings.durty    = true;
   bindings.array    = bindings.array & ~(1u << id);
   }
 
 void DxCommandBuffer::setBinding(size_t id, const Sampler& smp) {
-  curUniforms = nullptr; // legacy compat
-
   bindings.smp[id] = smp;
   bindings.durty   = true;
   bindings.array   = bindings.array & ~(1u << id);
   }
 
 void DxCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
-  if(curUniforms) curUniforms->ssboBarriers(resState,PipelineStage::S_Compute);
-
   implSetUniforms(PipelineStage::S_Compute);
+  implSetPushData(PipelineStage::S_Compute);
   resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Compute);
   resState.flush(*this);
   impl->Dispatch(UINT(x),UINT(y),UINT(z));
@@ -688,9 +684,8 @@ void DxCommandBuffer::dispatchIndirect(const AbstractGraphicsApi::Buffer& indire
   const DxBuffer& ind  = reinterpret_cast<const DxBuffer&>(indirect);
   auto&           sign = dev.dispatchIndirectSgn.get();
 
-  if(curUniforms) curUniforms->ssboBarriers(resState, PipelineStage::S_Compute);
-
   implSetUniforms(PipelineStage::S_Compute);
+  implSetPushData(PipelineStage::S_Compute);
   resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Compute);
   // block future writers
   resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
@@ -705,23 +700,14 @@ void DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p) {
   DxPipeline& px     = reinterpret_cast<DxPipeline&>(p);
 
   bindings.durty     = true;
+  pushData.durty     = true;
   pushBaseInstanceId = px.pushBaseInstanceId;
+  pushConstantId     = px.pushConstantId;
   curDrawPipeline    = &px;
 
   impl->SetPipelineState(&px.instance(fboLayout));
   impl->SetGraphicsRootSignature(px.sign.get());
   impl->IASetPrimitiveTopology(px.topology);
-  }
-
-void DxCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) {
-  auto& px = reinterpret_cast<DxPipeline&>(p);
-  impl->SetGraphicsRoot32BitConstants(UINT(px.pushConstantId),UINT(size/4),data,0);
-  }
-
-void DxCommandBuffer::implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompute) {
-  DxDescriptorArray& ux = reinterpret_cast<DxDescriptorArray&>(u);
-  curUniforms = &ux;
-  ux.bind(*impl, curHeaps, isCompute);
   }
 
 void DxCommandBuffer::handleSync(const DxPipelineLay::LayoutDesc& lay, const DxPipelineLay::SyncDesc& sync, PipelineStage st) {
@@ -768,9 +754,6 @@ void DxCommandBuffer::handleSync(const DxPipelineLay::LayoutDesc& lay, const DxP
   }
 
 void DxCommandBuffer::implSetUniforms(const PipelineStage st) {
-  if(curUniforms!=nullptr)
-    return; // legacy compat
-
   if(!bindings.durty)
     return;
   bindings.durty = false;
@@ -792,6 +775,34 @@ void DxCommandBuffer::implSetUniforms(const PipelineStage st) {
   const auto dset = pushDescriptors.push(lay->pb, lay->layout, bindings);
   pushDescriptors.setHeap(*impl, curHeaps);
   pushDescriptors.setRootTable(*impl, dset, lay->layout, bindings, st);
+  }
+
+void DxCommandBuffer::implSetPushData(const PipelineStage st) {
+  if(!pushData.durty)
+    return;
+  pushData.durty = false;
+
+  const DxPipelineLay* lay  = nullptr;
+  switch(st) {
+    case PipelineStage::S_Graphics:
+      lay = &curDrawPipeline->layout;
+      break;
+    case PipelineStage::S_Compute:
+      lay = &curCompPipeline->layout;
+      break;
+    default:
+      break;
+    }
+
+  if(lay->pb.size==0)
+    return;
+
+  assert(lay->pb.size<=pushData.size);
+
+  const uint32_t size = uint32_t(lay->pb.size);
+  if(st==S_Graphics)
+    impl->SetGraphicsRoot32BitConstants(pushConstantId, UINT(size/4), pushData.data, 0); else
+    impl->SetComputeRoot32BitConstants(pushConstantId, UINT(size/4), pushData.data, 0);
   }
 
 void DxCommandBuffer::restoreIndirect() {
@@ -984,7 +995,7 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer&  dstBuf, size_t offset,
   this->setBinding(0, &src, Sampler::nearest(), 0);
   this->setBinding(1, &dst, 0);
   this->setComputePipeline(prog);
-  this->setBytes(prog,&push,sizeof(push));
+  this->setPushData(&push, sizeof(push));
   const size_t maxWG = 65535;
   this->dispatch(std::min(outSize,maxWG),(outSize+maxWG-1)%maxWG,1u);
   }
@@ -1059,7 +1070,6 @@ void DxCommandBuffer::prepareDraw(size_t voffset, size_t firstInstance) {
 
 void DxCommandBuffer::draw(const AbstractGraphicsApi::Buffer* ivbo, size_t stride, size_t offset, size_t vertexCount,
                            size_t firstInstance, size_t instanceCount) {
-  prepareDraw(offset, firstInstance);
   const DxBuffer* vbo = reinterpret_cast<const DxBuffer*>(ivbo);
   if(T_LIKELY(vbo!=nullptr)) {
     D3D12_VERTEX_BUFFER_VIEW view;
@@ -1070,13 +1080,14 @@ void DxCommandBuffer::draw(const AbstractGraphicsApi::Buffer* ivbo, size_t strid
     }
 
   implSetUniforms(PipelineStage::S_Graphics);
+  implSetPushData(PipelineStage::S_Graphics);
+  prepareDraw(offset, firstInstance);
   impl->DrawInstanced(UINT(vertexCount),UINT(instanceCount),UINT(offset),UINT(firstInstance));
   }
 
 void DxCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer* ivbo, size_t stride, size_t voffset,
                                   const AbstractGraphicsApi::Buffer& iibo, Detail::IndexClass cls, size_t ioffset, size_t isize,
                                   size_t firstInstance, size_t instanceCount) {
-  prepareDraw(voffset, firstInstance);
   const DxBuffer* vbo = reinterpret_cast<const DxBuffer*>(ivbo);
   const DxBuffer& ibo = reinterpret_cast<const DxBuffer&>(iibo);
 
@@ -1095,6 +1106,8 @@ void DxCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer* ivbo, size_
   impl->IASetIndexBuffer(&iview);
 
   implSetUniforms(PipelineStage::S_Graphics);
+  implSetPushData(PipelineStage::S_Graphics);
+  prepareDraw(voffset, firstInstance);
   impl->DrawIndexedInstanced(UINT(isize),UINT(instanceCount),UINT(ioffset),INT(voffset),UINT(firstInstance));
   }
 
@@ -1105,6 +1118,7 @@ void DxCommandBuffer::drawIndirect(const AbstractGraphicsApi::Buffer& indirect, 
   // block future writers
   resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
   implSetUniforms(PipelineStage::S_Graphics);
+  implSetPushData(PipelineStage::S_Graphics);
   //resState.flush(*this);
   /*
   if(!dev.props.enhancedBarriers && indirectCmd.find(&ind)==indirectCmd.end()) {
@@ -1119,6 +1133,7 @@ void DxCommandBuffer::drawIndirect(const AbstractGraphicsApi::Buffer& indirect, 
 
 void DxCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
   implSetUniforms(PipelineStage::S_Graphics);
+  implSetPushData(PipelineStage::S_Graphics);
   impl->DispatchMesh(UINT(x),UINT(y),UINT(z));
   }
 
@@ -1129,6 +1144,7 @@ void DxCommandBuffer::dispatchMeshIndirect(const AbstractGraphicsApi::Buffer& in
   // block future writers
   resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
   implSetUniforms(PipelineStage::S_Graphics);
+  implSetPushData(PipelineStage::S_Graphics);
 
   /*
   if(!dev.props.enhancedBarriers && indirectCmd.find(&ind)==indirectCmd.end()) {

@@ -80,8 +80,12 @@ struct TestCommandBuffer : Tempest::AbstractGraphicsApi::CommandBuffer {
   void setPipeline(AbstractGraphicsApi::Pipeline& p) override {}
   void setComputePipeline(AbstractGraphicsApi::CompPipeline& p) override {}
 
-  void setBytes   (AbstractGraphicsApi::Pipeline &p, const void* data, size_t size) override {}
-  void setBytes   (AbstractGraphicsApi::CompPipeline &p, const void* data, size_t size) override {}
+  void setPushData(const void* data, size_t size) override {}
+  void setBinding (size_t id, AbstractGraphicsApi::Texture *tex, const Sampler& smp, uint32_t mipLevel) override {}
+  void setBinding (size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset) override {}
+  void setBinding (size_t id, AbstractGraphicsApi::DescArray* arr) override {}
+  void setBinding (size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) override {}
+  void setBinding (size_t id, const Sampler& smp) override {}
 
   void setViewport(const Rect& r) override {}
   void setScissor (const Rect& r) override {}

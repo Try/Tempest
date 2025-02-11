@@ -702,12 +702,14 @@ void DepthWrite(const char* outImage) {
       enc.setFramebuffer({}, {depth, 0.5,Tempest::Preserve});
 
       depthDst = 0.25f;
-      enc.setUniforms(pso, &depthDst, sizeof(depthDst));
+      enc.setPushData(&depthDst, sizeof(depthDst));
+      enc.setPipeline(pso);
       enc.setViewport(0,0,50,50);
       enc.draw(nullptr, 0, 3);
 
       depthDst = 0.8f;
-      enc.setUniforms(pso, &depthDst, sizeof(depthDst));
+      enc.setPushData(&depthDst, sizeof(depthDst));
+      enc.setPipeline(pso);
       enc.setViewport(100,100,50,50);
       enc.draw(nullptr, 0, 3);
     }
@@ -1268,7 +1270,8 @@ void PushRemapping() {
       auto enc = cmd.startEncoding(device);
       enc.setBinding(0, input);
       enc.setBinding(1, output);
-      enc.setUniforms(pso, &inputCpu, sizeof(inputCpu));
+      enc.setPushData(&inputCpu, sizeof(inputCpu));
+      enc.setPipeline(pso);
       enc.dispatch(1);
     }
 
@@ -1311,7 +1314,8 @@ void PushRemappingGr(const char* outImage) {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
       enc.setBinding(0, ssbo);
-      enc.setUniforms(pso, &push, sizeof(push));
+      enc.setPushData(&push, sizeof(push));
+      enc.setPipeline(pso);
       enc.draw(vbo,ibo, 0,ibo.size());
     }
 
@@ -1928,10 +1932,12 @@ void MeshComputePrototype(const char* outImg) {
       enc.setBinding(B_Indirect, indirect);
       enc.setBinding(B_Meshlet,  mesh);
       enc.setBinding(B_Var,      var);
-      enc.setUniforms(psoMs, &id, sizeof(id));
+      enc.setPushData(&id, sizeof(id));
+      enc.setPipeline(psoMs);
       enc.dispatch(3, 1,1);
       id = 1;
-      enc.setUniforms(psoMs,&id,sizeof(id));
+      enc.setPushData(&id,sizeof(id));
+      enc.setPipeline(psoMs);
       enc.dispatch(2, 1,1);
       // ^ 3+2 meshlets
 

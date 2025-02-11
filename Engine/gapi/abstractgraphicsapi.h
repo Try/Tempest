@@ -539,25 +539,6 @@ namespace Tempest {
       struct BlasBuildCtx {};
       struct AccelerationStructure:Shared {};
       struct DescArray:NoCopy {};
-      struct Desc:NoCopy   {
-        virtual ~Desc()=default;
-        virtual void set(size_t id, AbstractGraphicsApi::Texture* tex, const Sampler& smp, uint32_t mipLevel) = 0;
-        virtual void set(size_t id, const Sampler& smp) = 0;
-        virtual void set(size_t id, AbstractGraphicsApi::Buffer*  buf, size_t offset) = 0;
-        virtual void set(size_t id, AbstractGraphicsApi::AccelerationStructure*) = 0;
-        virtual void set(size_t id, AbstractGraphicsApi::Texture** tex, size_t cnt, const Sampler& smp, uint32_t mipLevel) = 0;
-        virtual void set(size_t id, AbstractGraphicsApi::Buffer**  buf, size_t cnt) = 0;
-        virtual void ssboBarriers(Detail::ResourceState& res, PipelineStage st);
-        };
-      struct EmptyDesc : Desc {
-        void set(size_t, AbstractGraphicsApi::Texture*, const Sampler&, uint32_t){}
-        void set(size_t, AbstractGraphicsApi::Buffer*,  size_t){}
-        void set(size_t, const Sampler& smp){}
-        void set(size_t, AbstractGraphicsApi::AccelerationStructure*){}
-        void set(size_t, AbstractGraphicsApi::Texture**, size_t, const Sampler&, uint32_t){}
-        void set(size_t, AbstractGraphicsApi::Buffer**, size_t){}
-        void ssboBarriers(Detail::ResourceState&,PipelineStage){}
-        };
       struct BarrierDesc {
         const Buffer*  buffer    = nullptr;
         Texture*       texture   = nullptr;
@@ -595,14 +576,12 @@ namespace Tempest {
         virtual void setPipeline(Pipeline& p)=0;
         virtual void setComputePipeline(CompPipeline& p)=0;
 
-        virtual void setBytes   (Pipeline &p, const void* data, size_t size)=0;
-        virtual void setBytes   (CompPipeline &p, const void* data, size_t size)=0;
-
-        virtual void setBinding (size_t id, Texture *tex, const Sampler& smp, uint32_t mipLevel);
-        virtual void setBinding (size_t id, Buffer* buf, size_t offset);
-        virtual void setBinding (size_t id, DescArray* arr);
-        virtual void setBinding (size_t id, AccelerationStructure* tlas);
-        virtual void setBinding (size_t id, const Sampler& smp);
+        virtual void setPushData(const void* data, size_t size);
+        virtual void setBinding (size_t id, Texture *tex, const Sampler& smp, uint32_t mipLevel) = 0;
+        virtual void setBinding (size_t id, Buffer* buf, size_t offset) = 0;
+        virtual void setBinding (size_t id, DescArray* arr) = 0;
+        virtual void setBinding (size_t id, AccelerationStructure* tlas) = 0;
+        virtual void setBinding (size_t id, const Sampler& smp) = 0;
 
         virtual void setViewport(const Rect& r)=0;
         virtual void setScissor (const Rect& r)=0;
@@ -653,8 +632,6 @@ namespace Tempest {
 
       virtual CommandBuffer*
                          createCommandBuffer(Device* d)=0;
-
-      virtual Desc*      createDescriptors(Device* d, PipelineLay& layP);
 
       virtual DescArray* createDescriptors(Device* d, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel) = 0;
       virtual DescArray* createDescriptors(Device* d, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler& smp) = 0;

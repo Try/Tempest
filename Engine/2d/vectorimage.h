@@ -2,7 +2,6 @@
 
 #include <Tempest/PaintDevice>
 #include <Tempest/VertexBuffer>
-#include <Tempest/DescriptorSet>
 #include <Tempest/Rect>
 #include <Tempest/Sprite>
 

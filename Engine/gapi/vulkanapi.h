@@ -32,7 +32,6 @@ class VulkanApi : public AbstractGraphicsApi {
     DescArray*     createDescriptors(Device* d, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler& smp) override;
     DescArray*     createDescriptors(Device* d, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel) override;
     DescArray*     createDescriptors(Device* d, AbstractGraphicsApi::Buffer**  buf, size_t cnt) override;
-    Desc*          createDescriptors(Device* d, PipelineLay& layP) override;
 
     Fence*         createFence(Device *d) override;
 

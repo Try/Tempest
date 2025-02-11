@@ -8,7 +8,6 @@
 #include <Tempest/Attachment>
 #include <Tempest/ZBuffer>
 #include <Tempest/Texture2d>
-#include <Tempest/DescriptorSet>
 #include <Tempest/DescriptorArray>
 #include <Tempest/VertexBuffer>
 #include <Tempest/IndexBuffer>

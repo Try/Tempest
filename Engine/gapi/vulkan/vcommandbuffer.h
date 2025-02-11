@@ -61,9 +61,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void setPipeline(AbstractGraphicsApi::Pipeline& p) override;
     void setComputePipeline(AbstractGraphicsApi::CompPipeline& p) override;
 
-    void setBytes   (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;
-    void setBytes   (AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) override;
-
+    void setPushData(const void* data, size_t size) override;
     void setBinding (size_t id, AbstractGraphicsApi::Texture*   tex, const Sampler& smp, uint32_t mipLevel) override;
     void setBinding (size_t id, AbstractGraphicsApi::Buffer*    buf, size_t offset) override;
     void setBinding (size_t id, AbstractGraphicsApi::DescArray* arr) override;
@@ -120,15 +118,22 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     template<class T>
     void finalizeImageBarrier(T& bx, const AbstractGraphicsApi::BarrierDesc& desc);
 
-    virtual void pushChunk();
-    virtual void newChunk();
+    void pushChunk();
+    void newChunk();
 
     void bindVbo(const VBuffer& vbo, size_t stride);
     void implSetUniforms(const PipelineStage st);
+    void implSetPushData(const PipelineStage st);
     void handleSync(const VPipelineLay::LayoutDesc& lay, const VPipelineLay::SyncDesc& sync, PipelineStage st);
 
     struct PipelineInfo:VkPipelineRenderingCreateInfoKHR {
       VkFormat colorFrm[MaxFramebufferAttachments];
+      };
+
+    struct Push {
+      uint8_t            data[256] = {};
+      uint8_t            size      = 0;
+      bool               durty     = false;
       };
 
     struct Bindings : Detail::Bindings {
@@ -145,13 +150,13 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     std::shared_ptr<VFramebufferMap::RenderPass> pass;
     PipelineInfo                            passDyn = {};
 
+    Push                                    pushData;
     Bindings                                bindings;
     VPushDescriptor                         pushDescriptors;
 
     RpState                                 state           = NoRecording;
     VPipeline*                              curDrawPipeline = nullptr;
     VCompPipeline*                          curCompPipeline = nullptr;
-    AbstractGraphicsApi::Desc*              curUniforms     = nullptr;
     VkBuffer                                curVbo          = VK_NULL_HANDLE;
     size_t                                  vboStride       = 0;
     VkPipelineLayout                        pipelineLayout  = VK_NULL_HANDLE;

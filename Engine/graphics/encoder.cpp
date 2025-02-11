@@ -66,15 +66,8 @@ void Encoder<Tempest::CommandBuffer>::setDebugMarker(std::string_view tag) {
   impl->setDebugMarker(tag);
   }
 
-void Encoder<Tempest::CommandBuffer>::setUniforms(const RenderPipeline& p, const void* data, size_t sz) {
-  setPipeline(p);
-  if(sz>0)
-    impl->setBytes(*p.impl.handler,data,sz);
-  }
-
-void Encoder<Tempest::CommandBuffer>::setUniforms(const ComputePipeline& p, const void* data, size_t sz) {
-  setPipeline(p);
-  impl->setBytes(*p.impl.handler,data,sz);
+void Encoder<Tempest::CommandBuffer>::setPushData(const void* data, size_t size) {
+  impl->setPushData(data, size);
   }
 
 void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const Texture2d& tex, const Sampler& smp) {

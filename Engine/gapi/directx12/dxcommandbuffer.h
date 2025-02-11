@@ -57,9 +57,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void setPipeline (AbstractGraphicsApi::Pipeline& p) override;
     void setComputePipeline(AbstractGraphicsApi::CompPipeline& p) override;
 
-    void setBytes    (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;
-    void setBytes    (AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) override;
-
+    void setPushData(const void* data, size_t size) override;
     void setBinding (size_t id, AbstractGraphicsApi::Texture *tex, const Sampler& smp, uint32_t mipLevel) override;
     void setBinding (size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset) override;
     void setBinding (size_t id, AbstractGraphicsApi::DescArray* arr) override;
@@ -103,6 +101,12 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     Detail::SmallList<Chunk,32>        chunks;
 
   private:
+    struct Push {
+      uint8_t            data[256] = {};
+      uint8_t            size      = 0;
+      bool               durty     = false;
+      };
+
     struct Bindings : Detail::Bindings {
       NonUniqResId read  = NonUniqResId::I_None;
       NonUniqResId write = NonUniqResId::I_None;
@@ -115,17 +119,18 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     bool                               resetDone=false;
 
     DxFboLayout                        fboLayout;
-
-    DxPipeline*                        curDrawPipeline = nullptr;
-    DxCompPipeline*                    curCompPipeline = nullptr;
-    AbstractGraphicsApi::Desc*         curUniforms     = nullptr;
+    ResourceState                      resState;
     DxDescriptorArray::CbState         curHeaps;
+
+    Push                               pushData;
     Bindings                           bindings;
     DxPushDescriptor                   pushDescriptors;
 
+    DxPipeline*                        curDrawPipeline = nullptr;
+    DxCompPipeline*                    curCompPipeline = nullptr;
     uint32_t                           pushBaseInstanceId = -1;
+    uint32_t                           pushConstantId     = -1;
 
-    ResourceState                      resState;
     RpState                            state = NoRecording;
 
     bool                               isDbgRegion = false;
@@ -149,8 +154,8 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void clearStage();
     void pushStage(Stage* cmd);
 
-    void implSetUniforms(AbstractGraphicsApi::Desc& u, bool isCompute);
     void implSetUniforms(const PipelineStage st);
+    void implSetPushData(const PipelineStage st);
     void handleSync(const DxPipelineLay::LayoutDesc& lay, const DxPipelineLay::SyncDesc& sync, PipelineStage st);
 
     void restoreIndirect();

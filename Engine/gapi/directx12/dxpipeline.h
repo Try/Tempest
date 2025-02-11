@@ -36,7 +36,7 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
     const DxPipelineLay&        layout;
 
     D3D_PRIMITIVE_TOPOLOGY      topology           = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
-    size_t                      pushConstantId     = 0;
+    uint32_t                    pushConstantId     = 0;
     uint32_t                    pushBaseInstanceId = 0;
 
     ID3D12PipelineState&        instance(DXGI_FORMAT  frm);
@@ -78,7 +78,7 @@ class DxCompPipeline : public AbstractGraphicsApi::CompPipeline {
     ComPtr<ID3D12PipelineState> impl;
     IVec3                       wgSize;
     const DxPipelineLay&        layout;
-    size_t                      pushConstantId = 0;
+    uint32_t                    pushConstantId = 0;
   };
 
 }}

@@ -5,9 +5,8 @@
 #include <Tempest/ComputePipeline>
 #include <Tempest/StorageImage>
 #include <Tempest/DescriptorArray>
+#include <Tempest/UniformBuffer>
 #include <Tempest/AccelerationStructure>
-
-#include <Tempest/DescriptorSet>
 
 namespace Tempest {
 
@@ -35,8 +34,9 @@ class Encoder<Tempest::CommandBuffer> {
     void setPipeline(const RenderPipeline&  p);
     void setPipeline(const ComputePipeline& p);
 
-    void setUniforms(const RenderPipeline& p,  const void* data, size_t sz);
-    void setUniforms(const ComputePipeline& p, const void* data, size_t sz);
+    template<class T>
+    void setPushData(const T& data) { setPushData(&data, sizeof(data)); }
+    void setPushData(const void* data, size_t size);
 
     void setBinding(size_t id, const Texture2d&       tex, const Sampler& smp = Sampler::anisotrophy());
     void setBinding(size_t id, const Attachment&      tex, const Sampler& smp = Sampler::anisotrophy());

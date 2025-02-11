@@ -1,6 +1,6 @@
-#include "vulkanapi.h"
-
 #if defined(TEMPEST_BUILD_VULKAN)
+
+#include "vulkanapi.h"
 
 #include "vulkan/vdevice.h"
 #include "vulkan/vswapchain.h"
@@ -279,12 +279,6 @@ AbstractGraphicsApi::DescArray *VulkanApi::createDescriptors(Device* d, Texture*
 AbstractGraphicsApi::DescArray *VulkanApi::createDescriptors(Device *d, Buffer **buf, size_t cnt) {
   auto& dx = *reinterpret_cast<Detail::VDevice*>(d);
   return new Detail::VDescriptorArray2(dx, buf, cnt);
-  }
-
-AbstractGraphicsApi::Desc* VulkanApi::createDescriptors(AbstractGraphicsApi::Device* d, PipelineLay& ulayImpl) {
-  auto& dx = *reinterpret_cast<Detail::VDevice*>(d);
-  auto& ul = reinterpret_cast<Detail::VPipelineLay&>(ulayImpl);
-  return new Detail::VDescriptorArray(dx,ul);
   }
 
 AbstractGraphicsApi::CommandBuffer* VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device* d) {
