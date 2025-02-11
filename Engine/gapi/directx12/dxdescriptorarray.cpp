@@ -13,34 +13,6 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-static int swizzle(ComponentSwizzle cs, int def) {
-  switch(cs) {
-    case ComponentSwizzle::Identity:
-      return def;
-    case ComponentSwizzle::R:
-      return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0;
-    case ComponentSwizzle::G:
-      return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1;
-    case ComponentSwizzle::B:
-      return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2;
-    case ComponentSwizzle::A:
-      return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3;
-    //case ComponentSwizzle::One:
-    //  return D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1;
-    }
-  return def;
-  }
-
-static UINT compMapping(ComponentMapping mapping) {
-  // Describe and create a SRV for the texture.
-  int mapv[4] = { swizzle(mapping.r,0),
-                  swizzle(mapping.g,1),
-                  swizzle(mapping.b,2),
-                  swizzle(mapping.a,3) };
-  return D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(mapv[0],mapv[1],mapv[2],mapv[3]);
-  }
-
-
 DxDescriptorArray2::DxDescriptorArray2(DxDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel)
   : DxDescriptorArray2(dev, tex, cnt, mipLevel, nullptr) {
   }
@@ -124,7 +96,7 @@ D3D12_GPU_DESCRIPTOR_HANDLE DxDescriptorArray2::handleS() const {
 void DxDescriptorArray2::clear() {
   dev.dalloc->free(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, dPtrR,  uint32_t(cnt));
   dev.dalloc->free(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, dPtrRW, uint32_t(cnt));
-  dev.dalloc->free(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, dPtrS,  uint32_t(cnt));
+  dev.dalloc->free(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,     dPtrS,  uint32_t(cnt));
   }
 
 #endif
