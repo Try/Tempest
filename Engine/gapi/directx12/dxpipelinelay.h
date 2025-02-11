@@ -8,9 +8,6 @@
 #include "gapi/shaderreflection.h"
 
 namespace Tempest {
-
-class PipelineLayout;
-
 namespace Detail {
 
 class DxDescriptorArray;
