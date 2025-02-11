@@ -43,6 +43,7 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
     ID3D12PipelineState&        instance(const DxFboLayout& frm);
 
     IVec3                       workGroupSize() const override;
+    size_t                      sizeofBuffer(size_t id, size_t arraylen) const override;
 
   private:
     DxDevice&                   device;
@@ -72,7 +73,8 @@ class DxCompPipeline : public AbstractGraphicsApi::CompPipeline {
                    const DxPipelineLay& ulay,
                    DxShader& comp);
 
-    IVec3                       workGroupSize() const;
+    IVec3                       workGroupSize() const override;
+    size_t                      sizeofBuffer(size_t id, size_t arraylen) const override;
 
     ComPtr<ID3D12RootSignature> sign;
     ComPtr<ID3D12PipelineState> impl;

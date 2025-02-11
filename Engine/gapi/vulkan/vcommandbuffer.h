@@ -123,7 +123,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void bindVbo(const VBuffer& vbo, size_t stride);
     void implSetUniforms(const PipelineStage st);
     void implSetPushData(const PipelineStage st);
-    void handleSync(const VPipelineLay::LayoutDesc& lay, const VPipelineLay::SyncDesc& sync, PipelineStage st);
+    void handleSync(const ShaderReflection::LayoutDesc& lay, const ShaderReflection::SyncDesc& sync, PipelineStage st);
 
     struct PipelineInfo:VkPipelineRenderingCreateInfoKHR {
       VkFormat colorFrm[MaxFramebufferAttachments];

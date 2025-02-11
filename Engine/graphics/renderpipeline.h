@@ -1,15 +1,16 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include <Tempest/PipelineLayout>
 
 #include "../utility/dptr.h"
+
+#include "pipelinelayout.h"
 
 namespace Tempest {
 
 class Device;
 class CommandBuffer;
-class PipelineLayout;
+
 template<class T>
 class Encoder;
 
@@ -24,8 +25,6 @@ class RenderPipeline final {
 
     size_t sizeofBuffer(size_t layoutBind, size_t arraylen = 0) const;
 
-    const PipelineLayout& layout() const { return ulay; }
-
   private:
     RenderPipeline(Detail::DSharedPtr<AbstractGraphicsApi::Pipeline*>&&    p,
                    Detail::DSharedPtr<AbstractGraphicsApi::PipelineLay*>&& lay);
@@ -34,7 +33,6 @@ class RenderPipeline final {
     Detail::DSharedPtr<AbstractGraphicsApi::Pipeline*> impl;
 
   friend class Tempest::Device;
-  friend class Tempest::CommandBuffer;
   friend class Tempest::Encoder<Tempest::CommandBuffer>;
 
   template<class T>

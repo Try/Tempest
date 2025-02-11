@@ -2,7 +2,6 @@
 #include "utility/smallarray.h"
 
 #include <Tempest/Fence>
-#include <Tempest/PipelineLayout>
 #include <Tempest/UniformBuffer>
 #include <Tempest/File>
 #include <Tempest/Pixmap>

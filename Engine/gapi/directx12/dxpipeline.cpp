@@ -125,6 +125,10 @@ IVec3 DxPipeline::workGroupSize() const {
   return wgSize;
   }
 
+size_t DxPipeline::sizeofBuffer(size_t id, size_t arraylen) const {
+  return layout.layout.sizeofBuffer(id, arraylen);
+  }
+
 const DxShader* DxPipeline::findShader(ShaderReflection::Stage sh) const {
   for(auto& i:modules)
     if(i.handler!=nullptr && i.handler->stage==sh)
@@ -311,5 +315,10 @@ IVec3 DxCompPipeline::workGroupSize() const {
   return wgSize;
   }
 
+size_t DxCompPipeline::sizeofBuffer(size_t id, size_t arraylen) const {
+  return layout.layout.sizeofBuffer(id, arraylen);
+  }
+
 #endif
+
 

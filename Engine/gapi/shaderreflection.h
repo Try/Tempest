@@ -100,6 +100,8 @@ class ShaderReflection final {
 
     static size_t  sizeofBuffer(const Binding& bind, size_t arraylen);
 
+    static void    setupLayout(PushBlock& pb, LayoutDesc& lx, SyncDesc& sync,
+                               const std::vector<Binding>* sh[], size_t cnt);
   private:
     static void finalize(std::vector<Binding>& p);
     static size_t mslSizeOf(const spirv_cross::SPIRType& type, spirv_cross::Compiler& comp);

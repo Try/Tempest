@@ -18,7 +18,6 @@
 
 #include <Tempest/Pixmap>
 #include <Tempest/Log>
-#include <Tempest/PipelineLayout>
 #include <Tempest/Application>
 
 #include <libspirv/libspirv.h>
@@ -51,6 +50,9 @@ AbstractGraphicsApi::Swapchain *VulkanApi::createSwapchain(SystemApi::Window *w,
   }
 
 AbstractGraphicsApi::PPipelineLay VulkanApi::createPipelineLayout(Device* d, const Shader*const* sh, size_t count) {
+  //static VPipeline dummy;
+  //return dummy;
+
   const std::vector<Detail::ShaderReflection::Binding>* lay[5] = {};
   for(size_t i=0; i<count; ++i) {
     if(sh[i]==nullptr)
@@ -59,27 +61,24 @@ AbstractGraphicsApi::PPipelineLay VulkanApi::createPipelineLayout(Device* d, con
     lay[i] = &s->lay;
     }
   auto& dx = *reinterpret_cast<Detail::VDevice*>(d);
-  return PPipelineLay(new Detail::VPipelineLay(dx,lay,count));
+  return PPipelineLay(new Detail::VPipelineLay());
   }
 
 AbstractGraphicsApi::PPipeline VulkanApi::createPipeline(AbstractGraphicsApi::Device *d,
-                                                         const RenderState &st, Topology tp, const PipelineLay& ulayImpl,
+                                                         const RenderState &st, Topology tp, const PipelineLay&,
                                                          const Shader*const* sh, size_t cnt) {
-  auto* dx   = reinterpret_cast<Detail::VDevice*>(d);
-  auto& ul   = reinterpret_cast<const Detail::VPipelineLay&>(ulayImpl);
+  auto* dx = reinterpret_cast<Detail::VDevice*>(d);
   const Detail::VShader* shader[5] = {};
   for(size_t i=0; i<cnt; ++i)
     shader[i] = reinterpret_cast<const Detail::VShader*>(sh[i]);
-  return PPipeline(new Detail::VPipeline(*dx,st,tp,ul,shader,cnt));
+  return PPipeline(new Detail::VPipeline(*dx,tp,st,shader,cnt));
   }
 
 AbstractGraphicsApi::PCompPipeline VulkanApi::createComputePipeline(AbstractGraphicsApi::Device* d,
-                                                                const AbstractGraphicsApi::PipelineLay& ulayImpl,
-                                                                AbstractGraphicsApi::Shader* shader) {
-  auto*   dx = reinterpret_cast<Detail::VDevice*>(d);
-  auto&   ul = reinterpret_cast<const Detail::VPipelineLay&>(ulayImpl);
-
-  return PCompPipeline(new Detail::VCompPipeline(*dx,ul,*reinterpret_cast<Detail::VShader*>(shader)));
+                                                                    const AbstractGraphicsApi::PipelineLay&,
+                                                                    AbstractGraphicsApi::Shader* shader) {
+  auto* dx = reinterpret_cast<Detail::VDevice*>(d);
+  return PCompPipeline(new Detail::VCompPipeline(*dx,*reinterpret_cast<Detail::VShader*>(shader)));
   }
 
 AbstractGraphicsApi::PShader VulkanApi::createShader(AbstractGraphicsApi::Device *d, const void* source, size_t src_size) {
@@ -268,17 +267,17 @@ void VulkanApi::readBytes(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Buf
 
 AbstractGraphicsApi::DescArray *VulkanApi::createDescriptors(Device *d, Texture **tex, size_t cnt, uint32_t mipLevel, const Sampler &smp) {
   auto& dx = *reinterpret_cast<Detail::VDevice*>(d);
-  return new Detail::VDescriptorArray2(dx, tex, cnt, mipLevel, smp);
+  return new Detail::VDescriptorArray(dx, tex, cnt, mipLevel, smp);
   }
 
 AbstractGraphicsApi::DescArray *VulkanApi::createDescriptors(Device* d, Texture** tex, size_t cnt, uint32_t mipLevel) {
   auto& dx = *reinterpret_cast<Detail::VDevice*>(d);
-  return new Detail::VDescriptorArray2(dx, tex, cnt, mipLevel);
+  return new Detail::VDescriptorArray(dx, tex, cnt, mipLevel);
   }
 
 AbstractGraphicsApi::DescArray *VulkanApi::createDescriptors(Device *d, Buffer **buf, size_t cnt) {
   auto& dx = *reinterpret_cast<Detail::VDevice*>(d);
-  return new Detail::VDescriptorArray2(dx, buf, cnt);
+  return new Detail::VDescriptorArray(dx, buf, cnt);
   }
 
 AbstractGraphicsApi::CommandBuffer* VulkanApi::createCommandBuffer(AbstractGraphicsApi::Device* d) {

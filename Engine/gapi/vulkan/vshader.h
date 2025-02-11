@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include <Tempest/PipelineLayout>
 
 #include "gapi/shader.h"
 #include "vulkan_sdk.h"
@@ -11,7 +10,7 @@ namespace Detail {
 
 class VDevice;
 
-class VShader : public Detail::Shader {
+class VShader : public Tempest::Detail::Shader {
   public:
     VShader(VDevice& device, const void* source, size_t src_size);
     explicit VShader(VDevice& device);

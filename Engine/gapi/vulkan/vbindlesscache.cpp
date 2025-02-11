@@ -23,9 +23,6 @@ VBindlessCache::~VBindlessCache() {
     // should be deleted already
     // vkDestroyDescriptorPool(dev.device.impl, i.pool, nullptr);
     }
-
-  for(auto& i:pLayouts)
-    vkDestroyPipelineLayout(dev.device.impl, i.pLay, nullptr);
   }
 
 void VBindlessCache::notifyDestroy(const AbstractGraphicsApi::NoCopy *res) {
@@ -48,20 +45,17 @@ VBindlessCache::Inst VBindlessCache::inst(const PushBlock& pb, const LayoutDesc&
   for(uint32_t mask = lx.runtime; mask!=0;) {
     const int i = std::countr_zero(mask);
     mask ^= (1u << i);
-    auto* a = reinterpret_cast<const VDescriptorArray2*>(binding.data[i]);
+    auto* a = reinterpret_cast<const VDescriptorArray*>(binding.data[i]);
     lx.count[i] = uint32_t(a->size());
     }
 
-  auto dLay = dev.setLayouts.findLayout(lx);
-  auto px = findPsoLayout(pb, dLay);
-
   Inst ret;
-  ret.dLay = dLay;
-  ret.pLay = px.pLay;
+  ret.dLay = dev.setLayouts.findLayout(lx);
+  ret.pLay = dev.psoLayouts.findLayout(pb, ret.dLay);
 
   std::lock_guard<std::mutex> guard(syncDesc);
   for(auto& i:descriptors) {
-    if(i.dLay!=dLay || i.bindings!=binding)
+    if(i.dLay!=ret.dLay || i.bindings!=binding)
       continue;
     ret.set = i.set;
     return ret;
@@ -69,10 +63,10 @@ VBindlessCache::Inst VBindlessCache::inst(const PushBlock& pb, const LayoutDesc&
 
   auto& desc = descriptors.emplace_back();
   try {
-    desc.dLay     = dLay;
+    desc.dLay     = ret.dLay;
     desc.bindings = binding;
     desc.pool     = allocPool(lx);
-    desc.set      = allocDescSet(desc.pool, dLay);
+    desc.set      = allocDescSet(desc.pool, ret.dLay);
     initDescriptorSet(desc.set, binding, lx);
     }
   catch(...) {
@@ -83,46 +77,6 @@ VBindlessCache::Inst VBindlessCache::inst(const PushBlock& pb, const LayoutDesc&
     }
 
   ret.set  = desc.set;
-  ret.dLay = dLay;
-  ret.pLay = px.pLay;
-  return ret;
-  }
-
-VBindlessCache::PLayout VBindlessCache::findPsoLayout(const ShaderReflection::PushBlock& pb, VkDescriptorSetLayout lay) {
-  std::lock_guard<std::mutex> guard(syncPLay);
-
-  const auto stageFlags = nativeFormat(pb.stage);
-  for(auto& i:pLayouts)
-    if(i.lay==lay && i.pushStage==stageFlags && i.pushSize==pb.size)
-      return i;
-
-  VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
-  pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-  pipelineLayoutInfo.pSetLayouts            = &lay;
-  pipelineLayoutInfo.setLayoutCount         = 1;
-  pipelineLayoutInfo.pushConstantRangeCount = 0;
-
-  VkPushConstantRange push = {};
-  if(pb.size>0) {
-    push.stageFlags = nativeFormat(pb.stage);
-    push.offset     = 0;
-    push.size       = uint32_t(pb.size);
-
-    pipelineLayoutInfo.pPushConstantRanges    = &push;
-    pipelineLayoutInfo.pushConstantRangeCount = 1;
-    }
-
-  auto& ret = pLayouts.emplace_back();
-  ret.lay       = lay;
-  ret.pushStage = stageFlags;
-  ret.pushSize  = uint32_t(pb.size);
-  try {
-    vkAssert(vkCreatePipelineLayout(dev.device.impl, &pipelineLayoutInfo, nullptr, &ret.pLay));
-    }
-  catch(...) {
-    pLayouts.pop_back();
-    throw;
-    }
   return ret;
   }
 
@@ -212,7 +166,7 @@ void VBindlessCache::initDescriptorSet(VkDescriptorSet dset, const Bindings &bin
     VkCopyDescriptorSet& cx = cpy[cntCpy];
     if((binding.array & (1u << i))!=0) {
       // assert((l.runtime & (1u << i))!=0);
-      auto arr = reinterpret_cast<const VDescriptorArray2*>(binding.data[i]);
+      auto arr = reinterpret_cast<const VDescriptorArray*>(binding.data[i]);
       cx.sType           = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
       cx.pNext           = nullptr;
       cx.srcSet          = arr->set();

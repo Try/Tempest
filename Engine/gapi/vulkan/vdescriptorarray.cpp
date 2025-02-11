@@ -1,15 +1,10 @@
 #if defined(TEMPEST_BUILD_VULKAN)
-
 #include "vbuffer.h"
-
-#include <Tempest/PipelineLayout>
 
 #include "vdevice.h"
 #include "vdescriptorarray.h"
 #include "vtexture.h"
 #include "vaccelerationstructure.h"
-
-#include "utility/smallarray.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -23,38 +18,38 @@ static VkImageLayout toWriteLayout(VTexture& tex) {
   }
 
 
-VDescriptorArray2::VDescriptorArray2(VDevice &dev, AbstractGraphicsApi::Texture **tex, size_t cnt, uint32_t mipLevel, const Sampler &smp)
+VDescriptorArray::VDescriptorArray(VDevice &dev, AbstractGraphicsApi::Texture **tex, size_t cnt, uint32_t mipLevel, const Sampler &smp)
   : dev(dev), cnt(cnt) {
   const auto& lay = dev.bindlessArrayLayout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
   alloc(lay.impl, dev, cnt);
   populate(dev, tex, cnt, mipLevel, &smp);
   }
 
-VDescriptorArray2::VDescriptorArray2(VDevice &dev, AbstractGraphicsApi::Texture **tex, size_t cnt, uint32_t mipLevel)
+VDescriptorArray::VDescriptorArray(VDevice &dev, AbstractGraphicsApi::Texture **tex, size_t cnt, uint32_t mipLevel)
   : dev(dev), cnt(cnt) {
   const auto& lay = dev.bindlessArrayLayout(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
   alloc(lay.impl, dev, cnt);
   populate(dev, tex, cnt, mipLevel, nullptr);
   }
 
-VDescriptorArray2::VDescriptorArray2(VDevice &dev, AbstractGraphicsApi::Buffer **buf, size_t cnt)
+VDescriptorArray::VDescriptorArray(VDevice &dev, AbstractGraphicsApi::Buffer **buf, size_t cnt)
   : dev(dev), cnt(cnt) {
   const auto& lay = dev.bindlessArrayLayout(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
   alloc(lay.impl, dev, cnt);
   populate(dev, buf, cnt);
   }
 
-VDescriptorArray2::~VDescriptorArray2() {
+VDescriptorArray::~VDescriptorArray() {
   dev.bindless.notifyDestroy(this);
   if(pool!=VK_NULL_HANDLE)
     vkDestroyDescriptorPool(dev.device.impl, pool, nullptr);
   }
 
-size_t VDescriptorArray2::size() const {
+size_t VDescriptorArray::size() const {
   return cnt;
   }
 
-void VDescriptorArray2::alloc(VkDescriptorSetLayout lay, VDevice &dev, size_t cnt) {
+void VDescriptorArray::alloc(VkDescriptorSetLayout lay, VDevice &dev, size_t cnt) {
   VkDescriptorPoolSize       poolSize = {};
   poolSize.type            = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
   poolSize.descriptorCount = uint32_t(cnt);
@@ -83,7 +78,7 @@ void VDescriptorArray2::alloc(VkDescriptorSetLayout lay, VDevice &dev, size_t cn
   vkAssert(vkAllocateDescriptorSets(dev.device.impl,&allocInfo,&dset));
   }
 
-void VDescriptorArray2::populate(VDevice &dev, AbstractGraphicsApi::Texture **t, size_t cnt, uint32_t mipLevel, const Sampler* smp) {
+void VDescriptorArray::populate(VDevice &dev, AbstractGraphicsApi::Texture **t, size_t cnt, uint32_t mipLevel, const Sampler* smp) {
   const bool is3DImage = false; //TODO
 
   // 16 is non-bindless limit
@@ -109,7 +104,7 @@ void VDescriptorArray2::populate(VDevice &dev, AbstractGraphicsApi::Texture **t,
   vkUpdateDescriptorSets(dev.device.impl, 1, &descriptorWrite, 0, nullptr);
   }
 
-void VDescriptorArray2::populate(VDevice &dev, AbstractGraphicsApi::Buffer **b, size_t cnt) {
+void VDescriptorArray::populate(VDevice &dev, AbstractGraphicsApi::Buffer **b, size_t cnt) {
   // 16 is non-bindless limit
   SmallArray<VkDescriptorBufferInfo,16> bufInfo(cnt);
   for(size_t i=0; i<cnt; ++i) {

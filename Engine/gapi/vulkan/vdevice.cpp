@@ -89,7 +89,7 @@ VDevice::ArrayLayout& VDevice::ArrayLayout::operator=(ArrayLayout &&a) {
   }
 
 VDevice::VDevice(VulkanInstance &api, std::string_view gpuName)
-  :instance(api.instance), fboMap(*this), setLayouts(*this), bindless(*this) {
+  :instance(api.instance), fboMap(*this), setLayouts(*this), psoLayouts(*this), bindless(*this) {
   uint32_t deviceCount = 0;
   vkEnumeratePhysicalDevices(api.instance, &deviceCount, nullptr);
 

@@ -1,9 +1,9 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include <Tempest/PipelineLayout>
 
 #include "../utility/dptr.h"
+#include "pipelinelayout.h"
 
 namespace Tempest {
 
@@ -24,8 +24,6 @@ class ComputePipeline final {
 
     IVec3  workGroupSize() const;
     size_t sizeofBuffer(size_t layoutBind, size_t arraylen = 0) const;
-
-    const PipelineLayout& layout() const { return ulay; }
 
   private:
     ComputePipeline(Detail::DSharedPtr<AbstractGraphicsApi::CompPipeline*>&& p,

@@ -213,17 +213,17 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
 
 AbstractGraphicsApi::DescArray* DirectX12Api::createDescriptors(Device* d, Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler& smp) {
   Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
-  return new Detail::DxDescriptorArray2(dx, tex, cnt, mipLevel, &smp);
+  return new Detail::DxDescriptorArray(dx, tex, cnt, mipLevel, &smp);
   }
 
 AbstractGraphicsApi::DescArray* DirectX12Api::createDescriptors(Device* d, Texture** tex, size_t cnt, uint32_t mipLevel) {
   Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
-  return new Detail::DxDescriptorArray2(dx, tex, cnt, mipLevel);
+  return new Detail::DxDescriptorArray(dx, tex, cnt, mipLevel);
   }
 
 AbstractGraphicsApi::DescArray* DirectX12Api::createDescriptors(Device* d, Buffer** buf, size_t cnt) {
   Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
-  return new Detail::DxDescriptorArray2(dx, buf, cnt);
+  return new Detail::DxDescriptorArray(dx, buf, cnt);
   }
 
 AbstractGraphicsApi::PPipelineLay DirectX12Api::createPipelineLayout(Device* d, const Shader*const* sh, size_t count) {

@@ -5,13 +5,12 @@
 #include "vulkan_sdk.h"
 
 #include "gapi/abstractgraphicsapi.h"
-#include "gapi/vulkan/vpipelinelay.h"
+#include "gapi/shaderreflection.h"
 
 namespace Tempest {
 namespace Detail {
 
 class VDevice;
-class VPipelineLay;
 class VPipeline;
 class VCompPipeline;
 
@@ -33,20 +32,13 @@ class VBindlessCache {
       };
 
     using PushBlock  = ShaderReflection::PushBlock;
-    using LayoutDesc = VPipelineLay::LayoutDesc;
+    using LayoutDesc = ShaderReflection::LayoutDesc;
 
     Inst inst(const PushBlock &pb, const LayoutDesc& layout, const Bindings& binding);
 
     void notifyDestroy(const AbstractGraphicsApi::NoCopy* res);
 
   private:
-    struct PLayout {
-      VkShaderStageFlags    pushStage = 0;
-      uint32_t              pushSize  = 0;
-      VkDescriptorSetLayout lay       = VK_NULL_HANDLE;
-      VkPipelineLayout      pLay      = VK_NULL_HANDLE;
-      };
-
     struct DSet {
       VkDescriptorSetLayout dLay = VK_NULL_HANDLE;
       Bindings              bindings;
@@ -55,8 +47,6 @@ class VBindlessCache {
       VkDescriptorSet       set  = VK_NULL_HANDLE;
       };
 
-    PLayout          findPsoLayout(const ShaderReflection::PushBlock &pb, VkDescriptorSetLayout lay);
-
     void             addPoolSize(VkDescriptorPoolSize *p, size_t &sz, uint32_t cnt, VkDescriptorType elt);
     VkDescriptorPool allocPool(const LayoutDesc &l);
     VkDescriptorSet  allocDescSet(VkDescriptorPool pool, VkDescriptorSetLayout lay);
@@ -64,10 +54,6 @@ class VBindlessCache {
     void             initDescriptorSet(VkDescriptorSet set, const Bindings& binding, const LayoutDesc &lx);
 
     VDevice&             dev;
-
-    std::mutex           syncPLay;
-    std::vector<PLayout> pLayouts;
-
     std::mutex           syncDesc;
     std::vector<DSet>    descriptors;
   };

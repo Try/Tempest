@@ -12,12 +12,12 @@ class DxTexture;
 class DxBuffer;
 class DxAccelerationStructure;
 
-class DxDescriptorArray2 : public AbstractGraphicsApi::DescArray {
+class DxDescriptorArray : public AbstractGraphicsApi::DescArray {
   public:
-    DxDescriptorArray2(DxDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler* smp);
-    DxDescriptorArray2(DxDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel);
-    DxDescriptorArray2(DxDevice& dev, AbstractGraphicsApi::Buffer**  buf, size_t cnt);
-    ~DxDescriptorArray2();
+    DxDescriptorArray(DxDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler* smp);
+    DxDescriptorArray(DxDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel);
+    DxDescriptorArray(DxDevice& dev, AbstractGraphicsApi::Buffer**  buf, size_t cnt);
+    ~DxDescriptorArray();
 
     size_t size() const;
     auto   handleR()  const -> D3D12_GPU_DESCRIPTOR_HANDLE;

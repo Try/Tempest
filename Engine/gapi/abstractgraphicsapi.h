@@ -509,16 +509,15 @@ namespace Tempest {
         virtual uint32_t      mipCount() const = 0;
         };
       struct Pipeline:Shared {
-        virtual IVec3 workGroupSize() const = 0;
+        virtual IVec3  workGroupSize() const = 0;
+        virtual size_t sizeofBuffer(size_t id, size_t arraylen) const = 0;
         };
       struct CompPipeline:Shared {
-        virtual IVec3 workGroupSize() const = 0;
+        virtual IVec3  workGroupSize() const = 0;
+        virtual size_t sizeofBuffer(size_t id, size_t arraylen) const = 0;
         };
       struct Shader:Shared   {};
-      struct PipelineLay:Shared {
-        virtual ~PipelineLay()=default;
-        virtual size_t sizeofBuffer(size_t layoutBind, size_t arraylen) const = 0;
-        };
+      struct PipelineLay:Shared {}; //TODO: remove
       struct Buffer:Shared   {
         virtual ~Buffer()=default;
         virtual void  update  (const void* data, size_t off, size_t size)=0;

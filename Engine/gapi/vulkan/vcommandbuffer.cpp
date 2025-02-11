@@ -458,7 +458,7 @@ void VCommandBuffer::setPushData(const void* data, size_t size) {
   pushData.durty = true;
   }
 
-void VCommandBuffer::handleSync(const VPipelineLay::LayoutDesc& lay, const VPipelineLay::SyncDesc& sync, PipelineStage st) {
+void VCommandBuffer::handleSync(const ShaderReflection::LayoutDesc& lay, const ShaderReflection::SyncDesc& sync, PipelineStage st) {
   if(st!=PipelineStage::S_Graphics) {
     bindings.read  = NonUniqResId::I_None;
     bindings.write = NonUniqResId::I_None;
@@ -506,17 +506,28 @@ void VCommandBuffer::implSetUniforms(const PipelineStage st) {
     return;
   bindings.durty = false;
 
-  const VPipelineLay* lay       = nullptr;
+  using PushBlock  = ShaderReflection::PushBlock;
+  using LayoutDesc = ShaderReflection::LayoutDesc;
+  using SyncDesc   = ShaderReflection::SyncDesc;
+
+  const LayoutDesc*   lay       = nullptr;
+  const SyncDesc*     sync      = nullptr;
+  const PushBlock*    pb        = nullptr;
+
   VkPipelineLayout    pLay      = VK_NULL_HANDLE;
   VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_MAX_ENUM;
   switch(st) {
     case PipelineStage::S_Graphics:
-      lay       = &curDrawPipeline->layout();
+      lay       = &curDrawPipeline->layout;
+      sync      = &curDrawPipeline->sync;
+      pb        = &curDrawPipeline->pb;
       pLay      = curDrawPipeline->pipelineLayout;
       bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
       break;
     case PipelineStage::S_Compute:
-      lay       = &curCompPipeline->layout();
+      lay       = &curCompPipeline->layout;
+      sync      = &curCompPipeline->sync;
+      pb        = &curCompPipeline->pb;
       pLay      = curCompPipeline->pipelineLayout;
       bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
       break;
@@ -524,16 +535,16 @@ void VCommandBuffer::implSetUniforms(const PipelineStage st) {
       break;
     }
 
-  handleSync(lay->layout, lay->sync, st);
+  handleSync(*lay, *sync, st);
 
-  if(lay->layout.isUpdateAfterBind()) {
-    auto dset = device.bindless.inst(lay->pb, lay->layout, bindings);
+  if(lay->isUpdateAfterBind()) {
+    auto dset = device.bindless.inst(*pb, *lay, bindings);
     pLay = dset.pLay;
     vkCmdBindDescriptorSets(impl, bindPoint,
                             pLay, 0, 1,
                             &dset.set, 0, nullptr);
     } else {
-    auto dset = pushDescriptors.push(lay->pb, lay->layout, bindings);
+    auto dset = pushDescriptors.push(*pb, *lay, bindings);
     vkCmdBindDescriptorSets(impl, bindPoint,
                             pLay, 0, 1,
                             &dset, 0, nullptr);
@@ -561,24 +572,24 @@ void VCommandBuffer::implSetPushData(const PipelineStage st) {
     return;
   pushData.durty = false;
 
-  const VPipelineLay* lay  = nullptr;
+  const ShaderReflection::PushBlock* pb = nullptr;
   switch(st) {
     case PipelineStage::S_Graphics:
-      lay = &curDrawPipeline->layout();
+      pb = &curDrawPipeline->pb;
       break;
     case PipelineStage::S_Compute:
-      lay = &curCompPipeline->layout();
+      pb = &curCompPipeline->pb;
       break;
     default:
       break;
     }
 
-  if(lay->pb.size==0)
+  if(pb->size==0)
     return;
 
-  assert(lay->pb.size<=pushData.size);
-  auto stages = nativeFormat(lay->pb.stage);
-  vkCmdPushConstants(impl, pipelineLayout, stages, 0, uint32_t(lay->pb.size), pushData.data);
+  assert(pb->size<=pushData.size);
+  auto stages = nativeFormat(pb->stage);
+  vkCmdPushConstants(impl, pipelineLayout, stages, 0, uint32_t(pb->size), pushData.data);
   }
 
 void VCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Texture *tex, const Sampler &smp, uint32_t mipLevel) {

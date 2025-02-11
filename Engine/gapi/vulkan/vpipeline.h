@@ -5,7 +5,6 @@
 #include <vector>
 #include "vulkan_sdk.h"
 
-#include "gapi/vulkan/vbindlesscache.h"
 #include "gapi/vulkan/vframebuffermap.h"
 #include "gapi/vulkan/vshader.h"
 #include "gapi/shaderreflection.h"
@@ -16,13 +15,11 @@ namespace Tempest {
 namespace Detail {
 
 class VDevice;
-class VPipelineLay;
 
 class VPipeline : public AbstractGraphicsApi::Pipeline {
   public:
     VPipeline();
-    VPipeline(VDevice &device, const RenderState &st, Topology tp, const VPipelineLay& ulay,
-              const VShader** sh, size_t count);
+    VPipeline(VDevice &device, Topology tp, const RenderState &st, const VShader** sh, size_t count);
     VPipeline(VPipeline&& other) = delete;
     ~VPipeline();
 
@@ -36,18 +33,23 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
       size_t           stride;
       };
 
-    VkPipelineLayout   pipelineLayout = VK_NULL_HANDLE;
-    VkShaderStageFlags pushStageFlags = 0;
-    uint32_t           pushSize       = 0;
-    uint32_t           defaultStride  = 0;
+    using Binding    = ShaderReflection::Binding;
+    using PushBlock  = ShaderReflection::PushBlock;
+    using LayoutDesc = ShaderReflection::LayoutDesc;
+    using SyncDesc   = ShaderReflection::SyncDesc;
 
-    const VPipelineLay&layout() const { return *lay.handler; }
+    PushBlock             pb;
+    LayoutDesc            layout;
+    SyncDesc              sync;
+
+    VkPipelineLayout      pipelineLayout = VK_NULL_HANDLE;
+    uint32_t              defaultStride  = 0;
+
     VkPipeline         instance(const std::shared_ptr<VFramebufferMap::RenderPass>& lay, VkPipelineLayout pLay, size_t stride);
     VkPipeline         instance(const VkPipelineRenderingCreateInfoKHR& info, VkPipelineLayout pLay, size_t stride);
 
     IVec3              workGroupSize() const override;
-
-    static VkPipelineLayout initLayout(VDevice& dev, const VPipelineLay& uboLay);
+    size_t             sizeofBuffer(size_t id, size_t arraylen) const override;
 
   private:
     struct InstRp : Inst {
@@ -67,16 +69,15 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
       bool                             isCompatible(const VkPipelineRenderingCreateInfoKHR& dr, VkPipelineLayout pLay, size_t stride) const;
       };
 
-    VkDevice                               device=nullptr;
-    Detail::DSharedPtr<const VPipelineLay*>lay;
+    VkDevice                               device = nullptr;
+    Topology                               tp = Topology::Triangles;
     Tempest::RenderState                   st;
     size_t                                 declSize=0;
     DSharedPtr<const VShader*>             modules[5] = {};
     std::unique_ptr<Decl::ComponentType[]> decl;
-    Topology                               tp = Topology::Triangles;
     IVec3                                  wgSize = {};
 
-    SpinLock                               sync;
+    SpinLock                               syncInst;
     std::vector<InstRp>                    instRp;
     std::vector<InstDr>                    instDr;
 
@@ -93,17 +94,26 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
 
 class VCompPipeline : public AbstractGraphicsApi::CompPipeline {
   public:
-    VCompPipeline(VDevice &device, const VPipelineLay& ulay, const VShader& comp);
+    VCompPipeline(VDevice &device, const VShader& comp);
     VCompPipeline(VCompPipeline&& other) = delete;
     ~VCompPipeline();
 
     IVec3              workGroupSize() const;
-    VkPipeline         instance(VkPipelineLayout pLay);
-    const VPipelineLay&layout() const { return *lay.handler; }
+    size_t             sizeofBuffer(size_t id, size_t arraylen) const override;
 
-    VkPipelineLayout   pipelineLayout = VK_NULL_HANDLE;
-    VkPipeline         impl           = VK_NULL_HANDLE;
-    uint32_t           pushSize       = 0;
+    VkPipeline         instance(VkPipelineLayout pLay);
+
+    using Binding    = ShaderReflection::Binding;
+    using PushBlock  = ShaderReflection::PushBlock;
+    using LayoutDesc = ShaderReflection::LayoutDesc;
+    using SyncDesc   = ShaderReflection::SyncDesc;
+
+    PushBlock            pb;
+    LayoutDesc           layout;
+    SyncDesc             sync;
+
+    VkPipelineLayout      pipelineLayout = VK_NULL_HANDLE;
+    VkPipeline            impl           = VK_NULL_HANDLE;
 
   private:
     struct Inst {
@@ -117,14 +127,12 @@ class VCompPipeline : public AbstractGraphicsApi::CompPipeline {
       VkPipelineLayout      dLay;
       };
 
-    VDevice&           dev;
-    VkDevice           device = nullptr;
+    VDevice&           device;
     IVec3              wgSize;
 
-    Detail::DSharedPtr<const VShader*>      shader;
-    Detail::DSharedPtr<const VPipelineLay*> lay;
+    Detail::DSharedPtr<const VShader*> shader;
 
-    SpinLock           sync;
+    SpinLock           syncInst;
     std::vector<Inst>  inst;
   };
 }}

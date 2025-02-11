@@ -169,7 +169,7 @@ void DxPushDescriptor::setRootTable(ID3D12GraphicsCommandList& enc, const DescSe
     if(((1u << i) & lay.array)==0)
       continue;
 
-    auto* a = reinterpret_cast<const DxDescriptorArray2*>(binding.data[i]);
+    auto* a = reinterpret_cast<const DxDescriptorArray*>(binding.data[i]);
     if(lay.bindings[i]==ShaderReflection::SsboRW)
       setRootDescriptorTable(enc, st, id, a->handleRW()); else
       setRootDescriptorTable(enc, st, id, a->handleR());

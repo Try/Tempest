@@ -11,8 +11,6 @@ class PipelineLayout final {
     PipelineLayout(PipelineLayout&& other)=default;
     PipelineLayout& operator = (PipelineLayout&& other)=default;
 
-    size_t sizeofBuffer(size_t layoutBind, size_t arraylen = 0) const;
-
   private:
     PipelineLayout()=default;
     PipelineLayout(Detail::DSharedPtr<AbstractGraphicsApi::PipelineLay*>&& lay);

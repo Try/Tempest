@@ -15,6 +15,7 @@
 #include "gapi/vulkan/vbindlesscache.h"
 #include "gapi/vulkan/vpushdescriptor.h"
 #include "gapi/vulkan/vsetlayoutcache.h"
+#include "gapi/vulkan/vpsolayoutcache.h"
 #include "gapi/shaderreflection.h"
 #include "gapi/uploadengine.h"
 #include "exceptions/exception.h"
@@ -362,6 +363,7 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     VFramebufferMap         fboMap;
     VSetLayoutCache         setLayouts;
+    VPsoLayoutCache         psoLayouts;
     VBindlessCache          bindless;
 
     VkProps                 props={};

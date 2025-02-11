@@ -1,23 +1,20 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include "utility/smallarray.h"
-#include "gapi/resourcestate.h"
-#include "vpipelinelay.h"
 
 #include "vulkan_sdk.h"
 
 namespace Tempest {
 namespace Detail {
 
-class VPipelineLay;
+class VDevice;
 
-class VDescriptorArray2 : public AbstractGraphicsApi::DescArray {
+class VDescriptorArray : public AbstractGraphicsApi::DescArray {
   public:
-    VDescriptorArray2(VDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler& smp);
-    VDescriptorArray2(VDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel);
-    VDescriptorArray2(VDevice& dev, AbstractGraphicsApi::Buffer**  buf, size_t cnt);
-    ~VDescriptorArray2();
+    VDescriptorArray(VDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler& smp);
+    VDescriptorArray(VDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel);
+    VDescriptorArray(VDevice& dev, AbstractGraphicsApi::Buffer**  buf, size_t cnt);
+    ~VDescriptorArray();
 
     size_t size() const;
     auto   set() const -> VkDescriptorSet { return dset; }

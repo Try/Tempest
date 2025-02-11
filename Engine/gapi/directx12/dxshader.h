@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include <Tempest/PipelineLayout>
 
 #include "gapi/shader.h"
 #include "gapi/directx12/comptr.h"
@@ -11,9 +10,7 @@
 namespace Tempest {
 namespace Detail {
 
-class DxDevice;
-
-class DxShader : public Detail::Shader {
+class DxShader : public Tempest::Detail::Shader {
   public:
     DxShader(const void* source, const size_t src_size);
     ~DxShader();
