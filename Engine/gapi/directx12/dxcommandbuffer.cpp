@@ -277,12 +277,12 @@ struct DxCommandBuffer::MipMaps : Stage {
       dev.device->CreateRenderTargetView(image.impl.get(), &view, rtvHandle);
       rtvHandle.ptr+=rtvHeapInc;
       }
-    desc.reserve(mipLevels);
+    //desc.reserve(mipLevels);
     }
 
   void blit(DxCommandBuffer& cmd, uint32_t srcMip, uint32_t dstW, uint32_t dstH) {
     auto& impl = *cmd.impl;
-    auto& dev  = cmd.dev;
+    //auto& dev  = cmd.dev;
 
     D3D12_VIEWPORT vp={};
     vp.TopLeftX = float(0.f);
@@ -350,7 +350,6 @@ struct DxCommandBuffer::MipMaps : Stage {
   uint32_t                       mipLevels;
 
   ComPtr<ID3D12DescriptorHeap>   rtvHeap;
-  std::vector<DxDescriptorArray> desc;
   };
 
 struct DxCommandBuffer::FillUAV : Stage {
@@ -391,9 +390,9 @@ struct DxCommandBuffer::FillUAV : Stage {
     cmd.resState.onTranferUsage(NonUniqResId::I_None, dst.nonUniqId, false);
     cmd.resState.flush(cmd);
 
-    cmd.curHeaps.heaps[0] = allocator.heapof(gpu);
-    cmd.curHeaps.heaps[1] = nullptr;
-    cmd.impl->SetDescriptorHeaps(1, cmd.curHeaps.heaps);
+    cmd.curHeaps[0] = allocator.heapof(gpu);
+    cmd.curHeaps[1] = nullptr;
+    cmd.impl->SetDescriptorHeaps(1, cmd.curHeaps);
 
     UINT val4[] = {val,val,val,val};
     for(uint32_t i=0; i<dst.mipCnt; ++i) {
@@ -753,6 +752,18 @@ void DxCommandBuffer::handleSync(const DxPipelineLay::LayoutDesc& lay, const DxP
     }
   }
 
+void DxCommandBuffer::setupHeaps() {
+  ID3D12DescriptorHeap* heaps[2] = {};
+  heaps[0] = dev.dalloc->resHeap.get();
+  heaps[1] = dev.dalloc->smpHeap.get();
+
+  if(curHeaps[0]!=heaps[0] || curHeaps[1]!=heaps[1]) {
+    curHeaps[0] = heaps[0];
+    curHeaps[1] = heaps[1];
+    impl->SetDescriptorHeaps(2, heaps);
+    }
+  }
+
 void DxCommandBuffer::implSetUniforms(const PipelineStage st) {
   if(!bindings.durty)
     return;
@@ -773,7 +784,7 @@ void DxCommandBuffer::implSetUniforms(const PipelineStage st) {
   handleSync(lay->layout, lay->sync, st);
 
   const auto dset = pushDescriptors.push(lay->pb, lay->layout, bindings);
-  pushDescriptors.setHeap(*impl, curHeaps);
+  setupHeaps();
   pushDescriptors.setRootTable(*impl, dset, lay->layout, bindings, st);
   }
 
@@ -1260,8 +1271,9 @@ void DxCommandBuffer::pushChunk() {
     ch.impl = impl.release();
     chunks.push(ch);
 
-    impl = nullptr;
-    curHeaps = DxDescriptorArray::CbState{};
+    impl        = nullptr;
+    curHeaps[0] = nullptr;
+    curHeaps[1] = nullptr;
     }
   }
 

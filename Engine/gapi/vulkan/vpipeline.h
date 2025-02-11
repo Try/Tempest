@@ -46,10 +46,8 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     VkPipeline         instance(const VkPipelineRenderingCreateInfoKHR& info, VkPipelineLayout pLay, size_t stride);
 
     IVec3              workGroupSize() const override;
-    bool               isRuntimeSized() const { return runtimeSized; }
 
     static VkPipelineLayout initLayout(VDevice& dev, const VPipelineLay& uboLay);
-    static VkPipelineLayout initLayout(VDevice& dev, const VPipelineLay& uboLay, VkDescriptorSetLayout lay);
 
   private:
     struct InstRp : Inst {
@@ -77,7 +75,6 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     std::unique_ptr<Decl::ComponentType[]> decl;
     Topology                               tp = Topology::Triangles;
     IVec3                                  wgSize = {};
-    bool                                   runtimeSized = false;
 
     SpinLock                               sync;
     std::vector<InstRp>                    instRp;
@@ -100,6 +97,15 @@ class VCompPipeline : public AbstractGraphicsApi::CompPipeline {
     VCompPipeline(VCompPipeline&& other) = delete;
     ~VCompPipeline();
 
+    IVec3              workGroupSize() const;
+    VkPipeline         instance(VkPipelineLayout pLay);
+    const VPipelineLay&layout() const { return *lay.handler; }
+
+    VkPipelineLayout   pipelineLayout = VK_NULL_HANDLE;
+    VkPipeline         impl           = VK_NULL_HANDLE;
+    uint32_t           pushSize       = 0;
+
+  private:
     struct Inst {
       Inst(VkPipelineLayout dLay, VkPipeline val):val(val),dLay(dLay){}
       Inst(Inst&&)=default;
@@ -111,22 +117,9 @@ class VCompPipeline : public AbstractGraphicsApi::CompPipeline {
       VkPipelineLayout      dLay;
       };
 
-    IVec3              workGroupSize() const;
-    bool               isRuntimeSized() const { return runtimeSized; }
-
-    VkPipeline         instance(VkPipelineLayout pLay);
-
-    const VPipelineLay&layout() const { return *lay.handler; }
-
-    VkPipelineLayout   pipelineLayout = VK_NULL_HANDLE;
-    VkPipeline         impl           = VK_NULL_HANDLE;
-    uint32_t           pushSize       = 0;
-
-  private:
     VDevice&           dev;
-    VkDevice           device         = nullptr;
+    VkDevice           device = nullptr;
     IVec3              wgSize;
-    bool               runtimeSized   = false;
 
     Detail::DSharedPtr<const VShader*>      shader;
     Detail::DSharedPtr<const VPipelineLay*> lay;

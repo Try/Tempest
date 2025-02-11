@@ -46,7 +46,7 @@ VPipeline::VPipeline(){
 VPipeline::VPipeline(VDevice& device, const RenderState& st, Topology tp,
                      const VPipelineLay& ulay,
                      const VShader** sh, size_t count)
-  : device(device.device.impl), st(st), tp(tp), runtimeSized(ulay.runtimeSized)  {
+  : device(device.device.impl), st(st), tp(tp) {
   try {
     for(size_t i=0; i<count; ++i)
       if(sh[i]!=nullptr)
@@ -151,13 +151,9 @@ void VPipeline::cleanup() {
   }
 
 VkPipelineLayout VPipeline::initLayout(VDevice& dev, const VPipelineLay& uboLay) {
-  return initLayout(dev, uboLay, uboLay.impl);
-  }
-
-VkPipelineLayout VPipeline::initLayout(VDevice& dev, const VPipelineLay& uboLay, VkDescriptorSetLayout lay) {
   VkPushConstantRange push = {};
 
-  VkDescriptorSetLayout pSetLayouts[4] = {lay};
+  VkDescriptorSetLayout pSetLayouts[4] = {uboLay.dLay};
 
   VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
   pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -365,7 +361,7 @@ bool VCompPipeline::Inst::isCompatible(VkPipelineLayout lay) const {
 
 
 VCompPipeline::VCompPipeline(VDevice& dev, const VPipelineLay& ulay, const VShader& comp)
-  :dev(dev), device(dev.device.impl), wgSize(comp.comp.wgSize), runtimeSized(ulay.runtimeSized)  {
+  :dev(dev), device(dev.device.impl), wgSize(comp.comp.wgSize) {
   pipelineLayout = VPipeline::initLayout(dev,ulay);
   pushSize       = uint32_t(ulay.pb.size);
 
@@ -380,7 +376,7 @@ VCompPipeline::VCompPipeline(VDevice& dev, const VPipelineLay& ulay, const VShad
     info.stage.module = comp.impl;
     info.stage.pName  = "main";
     info.layout       = pipelineLayout;
-    if(ulay.runtimeSized)
+    if(ulay.layout.isUpdateAfterBind())
       info.flags = VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT;
     const auto err = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &info, nullptr, &impl);
     if(err!=VK_SUCCESS)
@@ -406,7 +402,7 @@ IVec3 VCompPipeline::workGroupSize() const {
   }
 
 VkPipeline VCompPipeline::instance(VkPipelineLayout pLay) {
-  if(!runtimeSized)
+  if(!lay.handler->layout.isUpdateAfterBind())
     return impl;
 
   std::lock_guard<SpinLock> guard(sync);

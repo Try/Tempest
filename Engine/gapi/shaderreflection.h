@@ -47,8 +47,8 @@ class ShaderReflection final {
       bool            runtimeSized = false;
       bool            is3DImage    = false;
       uint32_t        arraySize    = 0;
-      uint64_t        byteSize     = 0;
-      uint64_t        varByteSize  = 0;
+      uint32_t        byteSize     = 0;
+      uint32_t        varByteSize  = 0;
 
       bool            hasSampler() const { return cls==Texture || cls==Sampler; }
       bool            isArray()    const { return runtimeSized || arraySize>1;  } //NOTE: array with sizeof 1 is not an array
@@ -56,7 +56,7 @@ class ShaderReflection final {
       spirv_cross::ID spvId;
       uint32_t        mslBinding  = uint32_t(-1);
       uint32_t        mslBinding2 = uint32_t(-1);
-      uint64_t        mslSize     = 0;
+      uint32_t        mslSize     = 0;
       };
 
     struct LayoutDesc {
@@ -83,7 +83,7 @@ class ShaderReflection final {
 
     struct PushBlock {
       Stage    stage = None;
-      uint64_t size  = 0;
+      uint32_t size  = 0;
       };
 
     static void   getVertexDecl(std::vector<Decl::ComponentType>& data, spirv_cross::Compiler& comp);

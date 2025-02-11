@@ -42,19 +42,29 @@ static UINT compMapping(ComponentMapping mapping) {
 
 
 DxDescriptorArray2::DxDescriptorArray2(DxDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel)
-  : DxDescriptorArray2(dev, tex, cnt, mipLevel, Sampler::nearest()) {
+  : DxDescriptorArray2(dev, tex, cnt, mipLevel, nullptr) {
   }
 
-DxDescriptorArray2::DxDescriptorArray2(DxDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler& smp)
+DxDescriptorArray2::DxDescriptorArray2(DxDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler* sampler)
   : dev(dev), cnt(cnt) {
   //NOTE: no bindless storage image
   try {
+    auto sx = sampler!=nullptr ? *sampler : Sampler::nearest();
     dPtrR = dev.dalloc->alloc(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, uint32_t(cnt));
 
     for(size_t i=0; i<cnt; ++i) {
       auto res = dev.dalloc->res;
       res.ptr += (dPtrR + i)*dev.dalloc->resSize;
-      DxPushDescriptor::write(dev, res, D3D12_CPU_DESCRIPTOR_HANDLE(), ShaderReflection::Image, tex[i], mipLevel, smp);
+      DxPushDescriptor::write(dev, res, D3D12_CPU_DESCRIPTOR_HANDLE(), ShaderReflection::Image, tex[i], mipLevel, sx);
+      }
+
+    if(sampler!=nullptr) {
+      dPtrS = dev.dalloc->alloc(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, uint32_t(cnt));
+      for(size_t i=0; i<cnt; ++i) {
+        auto smp = dev.dalloc->smp;
+        smp.ptr += (dPtrS + i)*dev.dalloc->smpSize;
+        DxPushDescriptor::write(dev, D3D12_CPU_DESCRIPTOR_HANDLE(), smp, ShaderReflection::Sampler, nullptr, mipLevel, sx);
+        }
       }
     }
   catch(...) {
@@ -105,9 +115,16 @@ D3D12_GPU_DESCRIPTOR_HANDLE DxDescriptorArray2::handleR() const {
   return res;
   }
 
+D3D12_GPU_DESCRIPTOR_HANDLE DxDescriptorArray2::handleS() const {
+  auto res = dev.dalloc->gsmp;
+  res.ptr += dPtrS*dev.dalloc->smpSize;
+  return res;
+  }
+
 void DxDescriptorArray2::clear() {
   dev.dalloc->free(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, dPtrR,  uint32_t(cnt));
   dev.dalloc->free(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, dPtrRW, uint32_t(cnt));
+  dev.dalloc->free(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, dPtrS,  uint32_t(cnt));
   }
 
 #endif

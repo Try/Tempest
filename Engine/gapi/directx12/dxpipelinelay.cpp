@@ -107,8 +107,8 @@ void DxPipelineLay::setupLayout(ShaderReflection::PushBlock& pb, LayoutDesc& lx,
       if(e.cls==ShaderReflection::ImgRW || e.cls==ShaderReflection::SsboRW)
         sync.write |= id;
 
-      lx.bufferSz[e.layout] = std::max<uint32_t>(lx.bufferSz[e.layout], e.byteSize);
-      lx.bufferEl[e.layout] = std::max<uint32_t>(lx.bufferEl[e.layout], e.varByteSize);
+      lx.bufferSz[e.layout] = std::max<uint32_t>(lx.bufferSz[e.layout], uint32_t(e.byteSize));
+      lx.bufferEl[e.layout] = std::max<uint32_t>(lx.bufferEl[e.layout], uint32_t(e.varByteSize));
       }
     }
   }
@@ -176,6 +176,10 @@ void DxPipelineLay::init(const LayoutDesc& lay, const ShaderReflection::PushBloc
       rx.RegisterSpace                     = UINT(i+1);
       rx.OffsetInDescriptorsFromTableStart = 0;
       rgn.push_back(rx);
+      if(lay.bindings[i]==ShaderReflection::Texture) {
+        rx.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+        rgn.push_back(rx);
+        }
       }
   }
   const size_t numArr = rgn.size() - arrBg;
@@ -252,10 +256,6 @@ void DxPipelineLay::init(const LayoutDesc& lay, const ShaderReflection::PushBloc
     }
   dxAssert(device.CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(),
                                       uuid<ID3D12RootSignature>(), reinterpret_cast<void**>(&impl)));
-  }
-
-size_t DxPipelineLay::descriptorsCount() {
-  return lay.size();
   }
 
 size_t DxPipelineLay::sizeofBuffer(size_t layoutBind, size_t arraylen) const {

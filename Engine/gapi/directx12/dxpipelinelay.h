@@ -27,12 +27,7 @@ class DxPipelineLay : public AbstractGraphicsApi::PipelineLay {
     using LayoutDesc = ShaderReflection::LayoutDesc;
     using SyncDesc   = ShaderReflection::SyncDesc;
 
-    size_t descriptorsCount() override;
     size_t sizeofBuffer(size_t layoutBind, size_t arraylen) const override;
-
-    bool   isRuntimeSized() const { return runtimeSized; }
-
-    using Binding = ShaderReflection::Binding;
 
     enum {
       HEAP_RES = 0,

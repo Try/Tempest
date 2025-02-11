@@ -110,7 +110,7 @@ uint32_t DxPushDescriptor::alloc(std::vector<Pool<T>>& pool, const uint32_t sz, 
   return ptr;
   }
 
-std::pair<uint32_t, uint32_t> DxPushDescriptor::alloc(const LayoutDesc& lay, uint32_t numRes, uint32_t numSmp) {
+std::pair<uint32_t, uint32_t> DxPushDescriptor::alloc(uint32_t numRes, uint32_t numSmp) {
   auto rptr = alloc<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>(resPool, numRes, RES_ALLOC_SZ);
   auto sptr = alloc<D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER>    (smpPool, numSmp, SMP_ALLOC_SZ);
   return std::make_pair(rptr, sptr);
@@ -118,7 +118,7 @@ std::pair<uint32_t, uint32_t> DxPushDescriptor::alloc(const LayoutDesc& lay, uin
 
 DxPushDescriptor::DescSet DxPushDescriptor::push(const PushBlock &pb, const LayoutDesc& lay, const Bindings& binding) {
   const auto sz  = numResources(lay);
-  const auto ptr = alloc(lay, sz.first, sz.second);
+  const auto ptr = alloc(sz.first, sz.second);
 
   auto res = dev.dalloc->res;
   res.ptr += ptr.first*dev.dalloc->resSize;
@@ -154,23 +154,6 @@ DxPushDescriptor::DescSet DxPushDescriptor::push(const PushBlock &pb, const Layo
   return ret;
   }
 
-void DxPushDescriptor::setHeap(ID3D12GraphicsCommandList& enc, DxDescriptorArray::CbState& state) {
-  enum {
-    HEAP_RES = DxPipelineLay::HEAP_RES,
-    HEAP_SMP = DxPipelineLay::HEAP_SMP,
-    };
-
-  ID3D12DescriptorHeap* heaps[2] = {};
-  heaps[HEAP_RES] = dev.dalloc->resHeap.get();
-  heaps[HEAP_SMP] = dev.dalloc->smpHeap.get();
-
-  if(state.heaps[HEAP_RES]!=heaps[HEAP_RES] || state.heaps[HEAP_SMP]!=heaps[HEAP_SMP]) {
-    state.heaps[HEAP_RES] = heaps[HEAP_RES];
-    state.heaps[HEAP_SMP] = heaps[HEAP_SMP];
-    enc.SetDescriptorHeaps(2, heaps);
-    }
-  }
-
 void DxPushDescriptor::setRootTable(ID3D12GraphicsCommandList& enc, const DescSet& set, const LayoutDesc& lay, const Bindings& binding, const PipelineStage st) {
   uint32_t id = 0;
   if(set.res.ptr!=0) {
@@ -191,6 +174,11 @@ void DxPushDescriptor::setRootTable(ID3D12GraphicsCommandList& enc, const DescSe
       setRootDescriptorTable(enc, st, id, a->handleRW()); else
       setRootDescriptorTable(enc, st, id, a->handleR());
     ++id;
+
+    if(lay.bindings[i]==ShaderReflection::Texture) {
+      setRootDescriptorTable(enc, st, id, a->handleS());
+      ++id;
+      }
     }
   }
 

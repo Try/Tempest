@@ -15,12 +15,12 @@ VSetLayoutCache::~VSetLayoutCache() {
     vkDestroyDescriptorSetLayout(dev.device.impl, i.lay, nullptr);
   }
 
-VSetLayoutCache::Layout VSetLayoutCache::findLayout(const LayoutDesc &l) {
+VkDescriptorSetLayout VSetLayoutCache::findLayout(const ShaderReflection::LayoutDesc& l) {
   std::lock_guard<std::mutex> guard(syncLay);
   for(auto& i:layouts) {
     if(i.desc!=l)
       continue;
-    return i;
+    return i.lay;
     }
 
   Layout& ret = layouts.emplace_back();
@@ -69,7 +69,7 @@ VSetLayoutCache::Layout VSetLayoutCache::findLayout(const LayoutDesc &l) {
     layouts.pop_back();
     throw;
     }
-  return ret;
+  return ret.lay;
   }
 
 #endif

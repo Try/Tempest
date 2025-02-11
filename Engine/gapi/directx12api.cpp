@@ -213,7 +213,7 @@ AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Dev
 
 AbstractGraphicsApi::DescArray* DirectX12Api::createDescriptors(Device* d, Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler& smp) {
   Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
-  return new Detail::DxDescriptorArray2(dx, tex, cnt, mipLevel, smp);
+  return new Detail::DxDescriptorArray2(dx, tex, cnt, mipLevel, &smp);
   }
 
 AbstractGraphicsApi::DescArray* DirectX12Api::createDescriptors(Device* d, Texture** tex, size_t cnt, uint32_t mipLevel) {

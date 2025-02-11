@@ -4,12 +4,14 @@
 #include <d3d12.h>
 #include <vector>
 
-#include "comptr.h"
+#include "gapi/directx12/comptr.h"
+#include "gapi/directx12/dxpushdescriptor.h"
+#include "gapi/directx12/dxdescriptorarray.h"
+#include "gapi/directx12/dxfbolayout.h"
+#include "gapi/directx12/dxpipelinelay.h"
 #include "gapi/directx12/dxpushdescriptor.h"
 #include "gapi/resourcestate.h"
-#include "dxdescriptorarray.h"
-#include "dxfbolayout.h"
-#include "dxpipelinelay.h"
+#include "utility/smallarray.h"
 
 namespace Tempest {
 
@@ -120,14 +122,14 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     DxFboLayout                        fboLayout;
     ResourceState                      resState;
-    DxDescriptorArray::CbState         curHeaps;
 
+    ID3D12DescriptorHeap*              curHeaps[2] = {};
     Push                               pushData;
     Bindings                           bindings;
     DxPushDescriptor                   pushDescriptors;
 
-    DxPipeline*                        curDrawPipeline = nullptr;
-    DxCompPipeline*                    curCompPipeline = nullptr;
+    DxPipeline*                        curDrawPipeline    = nullptr;
+    DxCompPipeline*                    curCompPipeline    = nullptr;
     uint32_t                           pushBaseInstanceId = -1;
     uint32_t                           pushConstantId     = -1;
 
@@ -154,6 +156,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void clearStage();
     void pushStage(Stage* cmd);
 
+    void setupHeaps();
     void implSetUniforms(const PipelineStage st);
     void implSetPushData(const PipelineStage st);
     void handleSync(const DxPipelineLay::LayoutDesc& lay, const DxPipelineLay::SyncDesc& sync, PipelineStage st);

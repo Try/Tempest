@@ -72,8 +72,10 @@ VPushDescriptor::Pool::Pool(VDevice &dev) {
         break;
         }
       case ShaderReflection::Tlas: {
-        sz.type            = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-        sz.descriptorCount = 16; // conservative limit
+        if(dev.props.raytracing.rayQuery) {
+          sz.type            = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+          sz.descriptorCount = 16; // conservative limit
+          }
         break;
         }
       case ShaderReflection::Push:    break;
@@ -135,7 +137,7 @@ VkDescriptorSet VPushDescriptor::allocSet(const VkDescriptorSetLayout dLayout) {
 
 VkDescriptorSet VPushDescriptor::allocSet(const LayoutDesc& lx) {
   auto lt = dev.setLayouts.findLayout(lx);
-  return allocSet(lt.lay);
+  return allocSet(lt);
   }
 
 VkDescriptorSet VPushDescriptor::push(const PushBlock& pb, const LayoutDesc& layout, const Bindings& binding) {

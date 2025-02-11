@@ -16,16 +16,16 @@ class VSetLayoutCache {
     VSetLayoutCache(VDevice& dev);
     ~VSetLayoutCache();
 
-    using LayoutDesc = VPipelineLay::LayoutDesc;
+    VkDescriptorSetLayout findLayout(const ShaderReflection::LayoutDesc &l);
+
+  private:
+    using LayoutDesc = ShaderReflection::LayoutDesc;
 
     struct Layout {
       LayoutDesc            desc;
       VkDescriptorSetLayout lay;
       };
 
-    VSetLayoutCache::Layout findLayout(const LayoutDesc &l);
-
-  private:
     VDevice&             dev;
     std::mutex           syncLay;
     std::vector<Layout>  layouts;

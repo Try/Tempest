@@ -338,7 +338,7 @@ void ShaderReflection::merge(std::vector<Binding>& ret,
   }
 
 size_t ShaderReflection::sizeofBuffer(const Binding& bind, size_t arraylen) {
-  if(bind.byteSize==size_t(-1))
+  if(bind.byteSize==uint32_t(-1))
     return bind.varByteSize*arraylen;
   return bind.byteSize + bind.varByteSize*arraylen;
   }
@@ -357,8 +357,8 @@ void ShaderReflection::finalize(std::vector<Binding>& ret) {
       }
   }
 
-size_t Tempest::Detail::ShaderReflection::mslSizeOf(const spirv_cross::ID& spvId,
-                                                    spirv_cross::Compiler& comp) {
+size_t ShaderReflection::mslSizeOf(const spirv_cross::ID& spvId,
+                                   spirv_cross::Compiler& comp) {
   auto& t = comp.get_type_from_variable(spvId);
   return mslSizeOf(t,comp);
   }

@@ -28,7 +28,7 @@ class VBindlessCache {
 
     struct Inst {
       VkDescriptorSet       set  = VK_NULL_HANDLE;
-      VkDescriptorSetLayout lay  = VK_NULL_HANDLE;
+      VkDescriptorSetLayout dLay = VK_NULL_HANDLE;
       VkPipelineLayout      pLay = VK_NULL_HANDLE;
       };
 
@@ -48,7 +48,7 @@ class VBindlessCache {
       };
 
     struct DSet {
-      VkDescriptorSetLayout lay = VK_NULL_HANDLE;
+      VkDescriptorSetLayout dLay = VK_NULL_HANDLE;
       Bindings              bindings;
 
       VkDescriptorPool      pool = VK_NULL_HANDLE;

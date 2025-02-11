@@ -41,7 +41,6 @@ class MtPipelineLay : public AbstractGraphicsApi::PipelineLay {
 
     MtPipelineLay(const std::vector<Binding> **sh, size_t cnt, ShaderReflection::Stage bufferSizeBuffer);
 
-    size_t descriptorsCount() override;
     size_t sizeofBuffer(size_t layoutBind, size_t arraylen) const override;
 
     void adjustSsboBindings();

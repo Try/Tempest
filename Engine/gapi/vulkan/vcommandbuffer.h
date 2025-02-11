@@ -18,7 +18,6 @@ namespace Detail {
 class VDevice;
 class VCommandPool;
 
-class VDescriptorArray;
 class VPipeline;
 class VCompPipeline;
 class VBuffer;

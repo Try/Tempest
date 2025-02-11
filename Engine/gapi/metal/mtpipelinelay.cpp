@@ -81,10 +81,6 @@ MtPipelineLay::MtPipelineLay(const std::vector<Binding>** sh, size_t cnt, Shader
       }
   }
 
-size_t MtPipelineLay::descriptorsCount() {
-  return lay.size();
-  }
-
 size_t MtPipelineLay::sizeofBuffer(size_t layoutBind, size_t arraylen) const {
   return ShaderReflection::sizeofBuffer(lay[layoutBind], arraylen);
   }

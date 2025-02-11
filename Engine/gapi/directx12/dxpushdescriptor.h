@@ -28,8 +28,9 @@ class DxPushDescriptor {
     ~DxPushDescriptor();
     void reset();
 
+    std::pair<uint32_t,uint32_t> alloc(uint32_t numRes, uint32_t numSmp);
+
     DescSet push(const PushBlock &pb, const LayoutDesc& lay, const Bindings& binding);
-    void    setHeap(ID3D12GraphicsCommandList& enc, DxDescriptorArray::CbState& state);
     void    setRootTable(ID3D12GraphicsCommandList& enc, const DescSet& set,
                          const LayoutDesc& lay, const Bindings& binding, const PipelineStage st);
 
@@ -55,7 +56,6 @@ class DxPushDescriptor {
 
     template<D3D12_DESCRIPTOR_HEAP_TYPE T>
     uint32_t                     alloc(std::vector<Pool<T>>& resPool, const uint32_t sz, const uint32_t step);
-    std::pair<uint32_t,uint32_t> alloc(const LayoutDesc& lay, uint32_t numRes, uint32_t numSmp);
 
     void setRootDescriptorTable(ID3D12GraphicsCommandList& enc, const PipelineStage st, UINT RootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE BaseDescriptor);
 

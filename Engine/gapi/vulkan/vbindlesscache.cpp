@@ -52,16 +52,16 @@ VBindlessCache::Inst VBindlessCache::inst(const PushBlock& pb, const LayoutDesc&
     lx.count[i] = uint32_t(a->size());
     }
 
-  auto lt = dev.setLayouts.findLayout(lx);
-  auto px = findPsoLayout(pb, lt.lay);
+  auto dLay = dev.setLayouts.findLayout(lx);
+  auto px = findPsoLayout(pb, dLay);
 
   Inst ret;
-  ret.lay  = lt.lay;
+  ret.dLay = dLay;
   ret.pLay = px.pLay;
 
   std::lock_guard<std::mutex> guard(syncDesc);
   for(auto& i:descriptors) {
-    if(i.lay!=lt.lay || i.bindings!=binding)
+    if(i.dLay!=dLay || i.bindings!=binding)
       continue;
     ret.set = i.set;
     return ret;
@@ -69,10 +69,10 @@ VBindlessCache::Inst VBindlessCache::inst(const PushBlock& pb, const LayoutDesc&
 
   auto& desc = descriptors.emplace_back();
   try {
-    desc.lay      = lt.lay;
+    desc.dLay     = dLay;
     desc.bindings = binding;
     desc.pool     = allocPool(lx);
-    desc.set      = allocDescSet(desc.pool, lt.lay);
+    desc.set      = allocDescSet(desc.pool, dLay);
     initDescriptorSet(desc.set, binding, lx);
     }
   catch(...) {
@@ -83,7 +83,7 @@ VBindlessCache::Inst VBindlessCache::inst(const PushBlock& pb, const LayoutDesc&
     }
 
   ret.set  = desc.set;
-  ret.lay  = lt.lay;
+  ret.dLay = dLay;
   ret.pLay = px.pLay;
   return ret;
   }

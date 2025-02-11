@@ -1636,12 +1636,13 @@ void Bindless2(const char* outImg) {
     for(size_t i=0; i<buf.size(); ++i)
       pbuf[i] = &buf[i];
 
-    auto dtex = device.descriptors(ptex);
-    auto dbuf = device.descriptors(pbuf);
-    auto cmd  = device.commandBuffer();
+    auto dtex  = device.descriptors(ptex);
+    auto dtex2 = device.descriptors(ptex, Sampler::nearest()); // combined image-sampler
+    auto dbuf  = device.descriptors(pbuf);
+    auto cmd   = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
-      enc.setBinding(0, dtex);
+      enc.setBinding(0, dtex2);
       enc.setBinding(1, dtex);
       enc.setBinding(2, dbuf);
       enc.setBinding(3, ret);
