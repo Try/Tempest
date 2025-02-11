@@ -43,8 +43,6 @@ class MtPipelineLay : public AbstractGraphicsApi::PipelineLay {
 
     size_t sizeofBuffer(size_t layoutBind, size_t arraylen) const override;
 
-    void adjustSsboBindings();
-
     std::vector<Binding>          lay;
     std::vector<MTLBind>          bind;
 
@@ -53,7 +51,6 @@ class MtPipelineLay : public AbstractGraphicsApi::PipelineLay {
 
     uint32_t                      vboIndex = 0;
     ShaderReflection::Stage       bufferSizeBuffer = ShaderReflection::Stage::None;
-    bool                          hasSSBO = false;
   };
 
 }

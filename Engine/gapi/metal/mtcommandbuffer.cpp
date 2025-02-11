@@ -133,6 +133,7 @@ void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MTL::RenderPassDesc
     encDraw->endEncoding();
     encDraw = NsPtr<MTL::RenderCommandEncoder>();
     bindings.durty = true;
+    pushData.durty = true;
     }
   if(encComp!=nullptr && e!=E_Comp) {
     if(isDbgRegion) {
@@ -142,6 +143,7 @@ void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MTL::RenderPassDesc
     encComp->endEncoding();
     encComp = NsPtr<MTL::ComputeCommandEncoder>();
     bindings.durty = true;
+    pushData.durty = true;
     }
   if(encBlit!=nullptr && e!=E_Blit) {
     if(isDbgRegion) {
@@ -151,6 +153,7 @@ void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MTL::RenderPassDesc
     encBlit->endEncoding();
     encBlit = NsPtr<MTL::BlitCommandEncoder>();
     bindings.durty = true;
+    pushData.durty = true;
     }
 
   switch(e) {
@@ -198,6 +201,14 @@ void MtCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline &p) {
   localSize       = px.localSize;
   maxTotalThreadsPerThreadgroup = uint32_t(px.impl->maxTotalThreadsPerThreadgroup());
   bindings.durty = true;
+  pushData.durty = true;
+  }
+
+void MtCommandBuffer::setPushData(const void* data, size_t size) {
+  pushData.size = uint8_t(size);
+  std::memcpy(pushData.data, data, size);
+
+  pushData.durty = true;
   }
 
 void MtCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Texture* tex, const Sampler& smp, uint32_t mipLevel) {
@@ -345,6 +356,37 @@ void MtCommandBuffer::implSetAlux(const PipelineStage st) {
     }
   }
 
+void MtCommandBuffer::implSetPushData(const PipelineStage st) {
+  if(!pushData.durty)
+    return;
+  pushData.durty = false;
+
+  auto& mtl = curLay->bindPush;
+  auto& l   = curLay->pb;
+
+  if(l.stage==0)
+    return;
+
+  const uint32_t sz = l.size; // spirv-size, actual size can be bigger
+  assert(sz<=pushData.size);
+
+  if(mtl.bindTs!=uint32_t(-1)) {
+    encDraw->setObjectBytes(pushData.data, mtl.mslPushSize, mtl.bindTs);
+    }
+  if(mtl.bindMs!=uint32_t(-1)) {
+    encDraw->setMeshBytes(pushData.data, mtl.mslPushSize, mtl.bindMs);
+    }
+  if(mtl.bindVs!=uint32_t(-1)) {
+    encDraw->setVertexBytes(pushData.data, mtl.mslPushSize, mtl.bindVs);
+    }
+  if(mtl.bindFs!=uint32_t(-1)) {
+    encDraw->setFragmentBytes(pushData.data, mtl.mslPushSize, mtl.bindFs);
+    }
+  if(mtl.bindCs!=uint32_t(-1)) {
+    encComp->setBytes(pushData.data, mtl.mslPushSize, mtl.bindCs);
+    }
+  }
+
 void MtCommandBuffer::fillBufferSizeBuffer(uint32_t* ret, ShaderReflection::Stage stage) {
   const auto& lay = *curLay;
   auto& lx  = lay.lay;
@@ -384,16 +426,6 @@ void MtCommandBuffer::fillBufferSizeBuffer(uint32_t* ret, ShaderReflection::Stag
     auto* data = reinterpret_cast<const MtBuffer*>(bindings.data[i]);
     ret[at] = data!=nullptr ? uint32_t(data->size - bindings.offset[i]) : 0;
     }
-  }
-
-void MtCommandBuffer::setBytes(AbstractGraphicsApi::Pipeline&,
-                               const void *data, size_t size) {
-  implSetBytes(data,size);
-  }
-
-void MtCommandBuffer::setBytes(AbstractGraphicsApi::CompPipeline&,
-                               const void *data, size_t size) {
-  implSetBytes(data,size);
   }
 
 void MtCommandBuffer::setViewport(const Rect &r) {
@@ -499,6 +531,7 @@ void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer* ivbo, size_t strid
     }
 
   implSetUniforms(S_Graphics);
+  implSetPushData(S_Graphics);
   encDraw->drawPrimitives(topology,offset,vertexCount,instanceCount,firstInstance);
   }
 
@@ -520,30 +553,35 @@ void MtCommandBuffer::drawIndexed(const AbstractGraphicsApi::Buffer* ivbo, size_
     encDraw->setVertexBuffer(vbo->impl.get(),0,curVboId);
     }
   implSetUniforms(S_Graphics);
+  implSetPushData(S_Graphics);
   encDraw->drawIndexedPrimitives(topology,isize,iboType,ibo.impl.get(),
                                  ioffset*mul,instanceCount,voffset,firstInstance);
   }
 
 void MtCommandBuffer::drawIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) {
   implSetUniforms(S_Graphics);
+  implSetPushData(S_Graphics);
   auto& ind = reinterpret_cast<const MtBuffer&>(indirect);
   encDraw->drawPrimitives(topology, ind.impl.get(), offset);
   }
 
 void MtCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
   implSetUniforms(S_Graphics);
+  implSetPushData(S_Graphics);
   // NOTE: for taskless pipeline `localSize` must be zero
   encDraw->drawMeshThreadgroups(MTL::Size(x,y,z), localSize, localSizeMesh);
   }
 
 void MtCommandBuffer::dispatchMeshIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) {
   implSetUniforms(S_Graphics);
+  implSetPushData(S_Graphics);
   auto& ind = reinterpret_cast<const MtBuffer&>(indirect);
   encDraw->drawMeshThreadgroups(ind.impl.get(), offset, localSize, localSizeMesh);
   }
 
 void MtCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
   implSetUniforms(S_Compute);
+  implSetPushData(S_Compute);
   encComp->dispatchThreadgroups(MTL::Size(x,y,z), localSize);
   }
 
@@ -551,35 +589,6 @@ void MtCommandBuffer::dispatchIndirect(const AbstractGraphicsApi::Buffer& indire
   implSetUniforms(S_Compute);
   auto& ind = reinterpret_cast<const MtBuffer&>(indirect);
   encComp->dispatchThreadgroups(ind.impl.get(), offset, localSize);
-  }
-
-void MtCommandBuffer::implSetBytes(const void* bytes, size_t sz) {
-  auto& mtl = curLay->bindPush;
-  auto& l   = curLay->pb;
-
-  if(l.stage==0)
-    return;
-  char tmp[256] = {};
-  if(sz!=l.size) {
-    std::memcpy(tmp,bytes,sz);
-    bytes = tmp;
-    sz    = l.size;
-    }
-  if(mtl.bindTs!=uint32_t(-1)) {
-    encDraw->setObjectBytes(bytes,sz,mtl.bindTs);
-    }
-  if(mtl.bindMs!=uint32_t(-1)) {
-    encDraw->setMeshBytes(bytes,sz,mtl.bindMs);
-    }
-  if(mtl.bindVs!=uint32_t(-1)) {
-    encDraw->setVertexBytes(bytes,sz,mtl.bindVs);
-    }
-  if(mtl.bindFs!=uint32_t(-1)) {
-    encDraw->setFragmentBytes(bytes,sz,mtl.bindFs);
-    }
-  if(mtl.bindCs!=uint32_t(-1)) {
-    encComp->setBytes(bytes,sz,mtl.bindCs);
-    }
   }
 
 void MtCommandBuffer::setBuffer(const MtPipelineLay::MTLBind& mtl, MTL::Buffer* buf, size_t offset) {
@@ -740,6 +749,7 @@ void MtCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
   localSizeMesh   = px.localSizeMesh;
 
   bindings.durty  = true;
+  pushData.durty  = true;
   }
 
 void MtCommandBuffer::copy(AbstractGraphicsApi::Buffer& dest, size_t offset,

@@ -72,13 +72,6 @@ MtPipelineLay::MtPipelineLay(const std::vector<Binding>** sh, size_t cnt, Shader
   for(auto& i:lay)
     if(i.byteSize==0)
       i.byteSize = 0; // TODO: ???
-  for(auto& i:lay)
-    if(i.cls==ShaderReflection::SsboR  ||
-       i.cls==ShaderReflection::SsboRW ||
-       i.cls==ShaderReflection::ImgR   ||
-       i.cls==ShaderReflection::ImgRW ) {
-      hasSSBO = true;
-      }
   }
 
 size_t MtPipelineLay::sizeofBuffer(size_t layoutBind, size_t arraylen) const {

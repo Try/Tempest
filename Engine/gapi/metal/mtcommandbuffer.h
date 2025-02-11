@@ -40,14 +40,12 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     void setPipeline(AbstractGraphicsApi::Pipeline& p) override;
     void setComputePipeline(AbstractGraphicsApi::CompPipeline& p) override;
 
+    void setPushData(const void* data, size_t size) override;
     void setBinding (size_t id, AbstractGraphicsApi::Texture *tex, const Sampler& smp, uint32_t mipLevel) override;
     void setBinding (size_t id, AbstractGraphicsApi::Buffer* buf, size_t offset) override;
     void setBinding (size_t id, AbstractGraphicsApi::DescArray* arr) override;
     void setBinding (size_t id, AbstractGraphicsApi::AccelerationStructure* tlas) override;
     void setBinding (size_t id, const Sampler& smp) override;
-
-    void setBytes   (AbstractGraphicsApi::Pipeline& p, const void* data, size_t size) override;
-    void setBytes   (AbstractGraphicsApi::CompPipeline& p, const void* data, size_t size) override;
 
     void setViewport(const Rect& r) override;
     void setScissor (const Rect& r) override;
@@ -80,15 +78,21 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
       E_Blit,
       };
 
+    struct Push {
+      uint8_t            data[256] = {};
+      uint8_t            size      = 0;
+      bool               durty     = false;
+      };
+
     struct Bindings : Detail::Bindings {
       bool durty = false;
       };
 
     void setEncoder(EncType e, MTL::RenderPassDescriptor* desc);
-    void implSetBytes   (const void* bytes, size_t sz);
 
     void implSetUniforms(const PipelineStage st);
     void implSetAlux    (const PipelineStage st);
+    void implSetPushData(const PipelineStage st);
     void fillBufferSizeBuffer(uint32_t* ret, ShaderReflection::Stage stage);
 
     void setBuffer (const MtPipelineLay::MTLBind& mtl, MTL::Buffer* b, size_t offset);
@@ -108,8 +112,9 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     NsPtr<MTL::BlitCommandEncoder>    encBlit;
 
     MtFboLayout                       curFbo;
-
+    Push                              pushData;
     Bindings                          bindings;
+
     MtPipeline*                       curDrawPipeline = nullptr;
     MtCompPipeline*                   curCompPipeline = nullptr;
 

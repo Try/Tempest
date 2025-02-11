@@ -312,7 +312,6 @@ void ShaderReflection::merge(std::vector<Binding>& ret,
       if(u.cls==Push) {
         pb.stage = Stage(pb.stage | u.stage);
         pb.size  = std::max(pb.size, u.byteSize);
-        pb.size  = std::max(pb.size, u.mslSize);
         continue;
         }
       {
@@ -321,7 +320,7 @@ void ShaderReflection::merge(std::vector<Binding>& ret,
           if(r.layout==u.layout) {
             r.stage         = Stage(r.stage | u.stage);
             r.byteSize      = std::max(r.byteSize,  u.byteSize);
-            r.byteSize      = std::max(r.byteSize,  u.mslSize);
+            // r.byteSize      = std::max(r.byteSize,  u.mslSize);
             r.arraySize     = std::max(r.arraySize, u.arraySize);
             r.runtimeSized |= u.runtimeSized;
             ins     = true;
