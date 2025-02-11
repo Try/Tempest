@@ -25,7 +25,8 @@ class MtPipeline : public AbstractGraphicsApi::Pipeline {
                const MtShader*const* sh, size_t cnt);
     ~MtPipeline();
 
-    IVec3 workGroupSize() const override;
+    IVec3  workGroupSize() const override;
+    size_t sizeofBuffer(size_t id, size_t arraylen) const override;
 
     struct Inst {
       NsPtr<MTL::RenderPipelineState> pso;
@@ -71,7 +72,8 @@ class MtCompPipeline : public AbstractGraphicsApi::CompPipeline {
   public:
     MtCompPipeline(MtDevice &d, const MtPipelineLay& lay, const MtShader& sh);
 
-    IVec3 workGroupSize() const;
+    IVec3  workGroupSize() const override;
+    size_t sizeofBuffer(size_t id, size_t arraylen) const override;
 
     NsPtr<MTL::ComputePipelineState> impl;
     DSharedPtr<const MtPipelineLay*> lay;

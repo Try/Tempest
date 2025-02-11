@@ -76,6 +76,10 @@ IVec3 MtPipeline::workGroupSize() const {
   return IVec3(int(localSizeMesh.width), int(localSizeMesh.height), int(localSizeMesh.depth));
   }
 
+size_t MtPipeline::sizeofBuffer(size_t id, size_t arraylen) const {
+  return ShaderReflection::sizeofBuffer(lay.handler->lay[id], arraylen);
+  }
+
 MTL::RenderPipelineState& MtPipeline::inst(const MtFboLayout& lay, size_t stride) {
   std::lock_guard<SpinLock> guard(sync);
 
@@ -229,4 +233,9 @@ IVec3 MtCompPipeline::workGroupSize() const {
   return IVec3{int(localSize.width),int(localSize.height),int(localSize.depth)};
   }
 
+size_t MtCompPipeline::sizeofBuffer(size_t id, size_t arraylen) const {
+  return ShaderReflection::sizeofBuffer(lay.handler->lay[id], arraylen);
+  }
+
 #endif
+

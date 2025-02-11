@@ -68,14 +68,6 @@ MtPipelineLay::MtPipelineLay(const std::vector<Binding>** sh, size_t cnt, Shader
       break;
     vboIndex++;
     }
-
-  for(auto& i:lay)
-    if(i.byteSize==0)
-      i.byteSize = 0; // TODO: ???
-  }
-
-size_t MtPipelineLay::sizeofBuffer(size_t layoutBind, size_t arraylen) const {
-  return ShaderReflection::sizeofBuffer(lay[layoutBind], arraylen);
   }
 
 #endif

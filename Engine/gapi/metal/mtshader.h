@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include <Tempest/PipelineLayout>
 
 #include "gapi/shader.h"
 
