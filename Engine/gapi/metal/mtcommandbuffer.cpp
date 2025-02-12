@@ -211,9 +211,11 @@ void MtCommandBuffer::setPushData(const void* data, size_t size) {
   pushData.durty = true;
   }
 
-void MtCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Texture* tex, const Sampler& smp, uint32_t mipLevel) {
+void MtCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Texture* tex, uint32_t mipLevel,
+                                 const ComponentMapping& map, const Sampler& smp) {
   bindings.data  [id] = tex;
   bindings.smp   [id] = smp;
+  bindings.map   [id] = map;
   bindings.offset[id] = mipLevel;
   bindings.durty      = true;
   bindings.array      = bindings.array & ~(1u << id);
@@ -259,6 +261,7 @@ void MtCommandBuffer::implSetUniforms(const PipelineStage st) {
     auto  data   = bindings.data  [l.layout];
     auto  offset = bindings.offset[l.layout];
     auto& smp    = bindings.smp   [l.layout];
+    auto& map    = bindings.map   [l.layout];
 
     switch(l.cls) {
       case ShaderReflection::Push:
@@ -294,7 +297,7 @@ void MtCommandBuffer::implSetUniforms(const PipelineStage st) {
           setBindless(mtl[i], &arr->data(), arr->size());
           } else {
           auto* sx  = &device.samplers.get(smp);
-          auto& tex = reinterpret_cast<MtTexture*>(data)->view(smp.mapping, offset);
+          auto& tex = reinterpret_cast<MtTexture*>(data)->view(map, offset);
           setTexture(mtl[i], &tex, sx);
           }
         break;

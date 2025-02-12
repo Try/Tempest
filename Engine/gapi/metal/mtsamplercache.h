@@ -16,7 +16,7 @@ class MtSamplerCache {
     MtSamplerCache(MTL::Device& dev);
     ~MtSamplerCache();
 
-    MTL::SamplerState& get(Sampler src, bool argBuffers=false);
+    MTL::SamplerState& get(const Sampler& src, bool argBuffers=false);
 
   private:
     NsPtr<MTL::SamplerState> mkSampler(const Sampler& src, bool argBuffers);

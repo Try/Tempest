@@ -575,7 +575,7 @@ namespace Tempest {
         virtual void setComputePipeline(CompPipeline& p)=0;
 
         virtual void setPushData(const void* data, size_t size);
-        virtual void setBinding (size_t id, Texture *tex, const Sampler& smp, uint32_t mipLevel) = 0;
+        virtual void setBinding (size_t id, Texture *tex, uint32_t mipLevel, const ComponentMapping& m, const Sampler& smp) = 0;
         virtual void setBinding (size_t id, Buffer* buf, size_t offset) = 0;
         virtual void setBinding (size_t id, DescArray* arr) = 0;
         virtual void setBinding (size_t id, AccelerationStructure* tlas) = 0;
@@ -660,6 +660,7 @@ namespace Detail {
   struct Bindings {
     AbstractGraphicsApi::NoCopy* data  [MaxBindings] = {};
     Sampler                      smp   [MaxBindings] = {};
+    ComponentMapping             map   [MaxBindings] = {};
     uint32_t                     offset[MaxBindings] = {}; // ssbo offset or texture mip-level
     uint32_t                     array               = {};
 

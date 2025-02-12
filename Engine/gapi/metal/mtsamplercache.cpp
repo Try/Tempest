@@ -42,8 +42,7 @@ MtSamplerCache::MtSamplerCache(MTL::Device& dev)
 MtSamplerCache::~MtSamplerCache() {
   }
 
-MTL::SamplerState& MtSamplerCache::get(Tempest::Sampler src, bool argBuffers) {
-  src.mapping = ComponentMapping(); // handled in imageview
+MTL::SamplerState& MtSamplerCache::get(const Tempest::Sampler& src, bool argBuffers) {
   static const Tempest::Sampler defSrc;
   if(src==defSrc)
     return *def;

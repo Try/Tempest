@@ -57,7 +57,7 @@ void MtDescriptorArray::fillBuffer(MtDevice& dev, AbstractGraphicsApi::Texture**
       ptr[i] = MTL::ResourceID{0};
       continue;
       }
-    const auto mapping = smp!=nullptr ? smp->mapping : ComponentMapping();
+    const auto mapping = ComponentMapping();
     auto& t    = *reinterpret_cast<MtTexture*>(tex[i]);
     auto& view = t.view(mapping,mipLevel);
     ptr[i]     = view.gpuResourceID();

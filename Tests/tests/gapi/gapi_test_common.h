@@ -1184,13 +1184,13 @@ void ComponentSwizzle() {
     auto pso    = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
     auto tex    = device.texture(pm,false);
 
-    auto makeSampler = [](enum ComponentSwizzle c) {
-      Sampler smp = Sampler::nearest();
-      smp.mapping.r = c;
-      smp.mapping.g = smp.mapping.r;
-      smp.mapping.b = smp.mapping.r;
-      smp.mapping.a = smp.mapping.r;
-      return smp;
+    auto makeMapping = [](enum ComponentSwizzle c) {
+      ComponentMapping mapping;
+      mapping.r = c;
+      mapping.g = c;
+      mapping.b = c;
+      mapping.a = c;
+      return mapping;
       };
 
     auto fbo    = device.attachment(TextureFormat::RGBA8,2,2,false);
@@ -1199,22 +1199,22 @@ void ComponentSwizzle() {
       auto enc = cmd.startEncoding(device);
       enc.setFramebuffer({{fbo,Vec4(0,0,0,0),Tempest::Preserve}});
 
-      enc.setBinding(0, tex, makeSampler(ComponentSwizzle::R));
+      enc.setBinding(0, tex, makeMapping(ComponentSwizzle::R), Sampler::nearest());
       enc.setPipeline(pso);
       enc.setScissor(0,0,1,1);
       enc.draw(vbo);
 
-      enc.setBinding(0, tex, makeSampler(ComponentSwizzle::G));
+      enc.setBinding(0, tex, makeMapping(ComponentSwizzle::G), Sampler::nearest());
       enc.setPipeline(pso);
       enc.setScissor(1,0,1,1);
       enc.draw(vbo);
 
-      enc.setBinding(0, tex, makeSampler(ComponentSwizzle::B));
+      enc.setBinding(0, tex, makeMapping(ComponentSwizzle::B), Sampler::nearest());
       enc.setPipeline(pso);
       enc.setScissor(0,1,1,1);
       enc.draw(vbo);
 
-      enc.setBinding(0, tex, makeSampler(ComponentSwizzle::A));
+      enc.setBinding(0, tex, makeMapping(ComponentSwizzle::A), Sampler::nearest());
       enc.setPipeline(pso);
       enc.setScissor(1,1,1,1);
       enc.draw(vbo);

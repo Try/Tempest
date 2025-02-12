@@ -73,25 +73,31 @@ void Encoder<Tempest::CommandBuffer>::setPushData(const void* data, size_t size)
 void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const Texture2d& tex, const Sampler& smp) {
   if(!tex.impl.handler)
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
-  impl->setBinding(id, tex.impl.handler, smp, uint32_t(-1));
+  impl->setBinding(id, tex.impl.handler, uint32_t(-1), ComponentMapping(), smp);
+  }
+
+void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const Texture2d& tex, const ComponentMapping& m, const Sampler& smp) {
+  if(!tex.impl.handler)
+    throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
+  impl->setBinding(id, tex.impl.handler, uint32_t(-1), m, smp);
   }
 
 void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const Attachment& tex, const Sampler& smp) {
   if(!tex.tImpl.impl.handler)
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
-  impl->setBinding(id, tex.tImpl.impl.handler, smp, uint32_t(-1));
+  impl->setBinding(id, tex.tImpl.impl.handler, uint32_t(-1), ComponentMapping(), smp);
   }
 
 void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const ZBuffer& tex, const Sampler& smp) {
   if(!tex.tImpl.impl.handler)
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
-  impl->setBinding(id, tex.tImpl.impl.handler, smp, uint32_t(-1));
+  impl->setBinding(id, tex.tImpl.impl.handler, uint32_t(-1), ComponentMapping(), smp);
   }
 
 void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const StorageImage& tex, const Sampler& smp, uint32_t mipLevel) {
   if(!tex.tImpl.impl.handler)
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
-  impl->setBinding(id, tex.tImpl.impl.handler, smp, mipLevel);
+  impl->setBinding(id, tex.tImpl.impl.handler, mipLevel, ComponentMapping(), smp);
   }
 
 void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const StorageBuffer& buf, size_t offset) {
@@ -103,7 +109,7 @@ void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const StorageBuffer&
 void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const Detail::ResourcePtr<Texture2d>& tex, const Sampler& smp) {
   if(!tex.impl.handler)
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
-  impl->setBinding(id, tex.impl.handler, smp, uint32_t(-1));
+  impl->setBinding(id, tex.impl.handler, uint32_t(-1), ComponentMapping(), smp);
   }
 
 void Encoder<Tempest::CommandBuffer>::implBindBuffer(size_t id, const Detail::VideoBuffer& buf) {
@@ -119,8 +125,6 @@ void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const DescriptorArra
   }
 
 void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const Sampler &smp) {
-  // NOTE: separable samplers do not support mappings in native api
-  assert(smp.mapping==ComponentMapping());
   impl->setBinding(id, smp);
   }
 
