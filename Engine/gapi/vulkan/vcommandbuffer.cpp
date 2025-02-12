@@ -592,9 +592,10 @@ void VCommandBuffer::implSetPushData(const PipelineStage st) {
   vkCmdPushConstants(impl, pipelineLayout, stages, 0, uint32_t(pb->size), pushData.data);
   }
 
-void VCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Texture *tex, const Sampler &smp, uint32_t mipLevel) {
+void VCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Texture *tex, uint32_t mipLevel, const ComponentMapping& map, const Sampler &smp) {
   bindings.data  [id] = tex;
   bindings.smp   [id] = smp;
+  bindings.map   [id] = map;
   bindings.offset[id] = mipLevel;
   bindings.durty      = true;
   bindings.array      = bindings.array & ~(1u << id);

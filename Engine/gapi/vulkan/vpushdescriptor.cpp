@@ -151,7 +151,7 @@ VkDescriptorSet VPushDescriptor::push(const PushBlock& pb, const LayoutDesc& lay
     auto  cls = layout.bindings[i];
     auto& wx  = wr[cntWr];
     VPushDescriptor::write(dev, wx, winfo[cntWr], uint32_t(i), cls,
-                           binding.data[i], binding.offset[i], binding.smp[i]);
+                           binding.data[i], binding.offset[i], binding.map[i], binding.smp[i]);
     wx.dstSet = set;
     if(wx.descriptorCount>0)
       ++cntWr;
@@ -162,7 +162,8 @@ VkDescriptorSet VPushDescriptor::push(const PushBlock& pb, const LayoutDesc& lay
   }
 
 void VPushDescriptor::write(VDevice& dev, VkWriteDescriptorSet& wx, WriteInfo& infoW, uint32_t dstBinding,
-                            ShaderReflection::Class cls, AbstractGraphicsApi::NoCopy* data, uint32_t offset, const Sampler& smp) {
+                            ShaderReflection::Class cls, AbstractGraphicsApi::NoCopy* data, uint32_t offset,
+                            const ComponentMapping& mapping, const Sampler& smp) {
   switch(cls) {
     case ShaderReflection::Ubo:
     case ShaderReflection::SsboR:
@@ -208,9 +209,9 @@ void VPushDescriptor::write(VDevice& dev, VkWriteDescriptorSet& wx, WriteInfo& i
           sx.anisotropic = false;
           }
         info.sampler   = dev.allocator.updateSampler(sx);
-        info.imageView = tex->view(sx.mapping, mipLevel, is3DImage);
+        info.imageView = tex->view(mapping, mipLevel, is3DImage);
         } else {
-        info.imageView = tex->view(ComponentMapping(), mipLevel, is3DImage);
+        info.imageView = tex->view(mapping, mipLevel, is3DImage);
         }
       info.imageLayout = toWriteLayout(*tex);
 

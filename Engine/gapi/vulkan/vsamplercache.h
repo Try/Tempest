@@ -17,7 +17,7 @@ class VSamplerCache final {
     VSamplerCache();
     ~VSamplerCache();
 
-    VkSampler get(Sampler s);
+    VkSampler get(const Sampler& s);
     void      setDevice(VDevice &dev);
 
   private:

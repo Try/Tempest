@@ -106,10 +106,10 @@ void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const StorageBuffer&
   impl->setBinding(id, buf.impl.impl.handler, offset);
   }
 
-void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const Detail::ResourcePtr<Texture2d>& tex, const Sampler& smp) {
+void Encoder<Tempest::CommandBuffer>::setBinding(size_t id, const Detail::ResourcePtr<Texture2d>& tex, const ComponentMapping& m, const Sampler& smp) {
   if(!tex.impl.handler)
     throw std::system_error(Tempest::GraphicsErrc::InvalidTexture);
-  impl->setBinding(id, tex.impl.handler, uint32_t(-1), ComponentMapping(), smp);
+  impl->setBinding(id, tex.impl.handler, uint32_t(-1), m, smp);
   }
 
 void Encoder<Tempest::CommandBuffer>::implBindBuffer(size_t id, const Detail::VideoBuffer& buf) {

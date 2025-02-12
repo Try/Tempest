@@ -29,6 +29,7 @@ class VectorImage : public Tempest::PaintDevice {
           const RenderPipeline* pipeline = nullptr;
           Sampler               smp;
           TexPtr                texture;
+          TextureFormat         format = TextureFormat::R8;
           // strong reference to sprite
           Sprite                sprite;
           };

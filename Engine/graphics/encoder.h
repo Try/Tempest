@@ -51,7 +51,7 @@ class Encoder<Tempest::CommandBuffer> {
     void setBinding(size_t id, const AccelerationStructure& tlas);
     template<class T>
     void setBinding(size_t id, const UniformBuffer<T>& buf) { implBindBuffer(id, buf.impl); }
-    void setBinding(size_t id, const Detail::ResourcePtr<Texture2d>& tex, const Sampler& smp = Sampler::anisotrophy());
+    void setBinding(size_t id, const Detail::ResourcePtr<Texture2d>& tex, const ComponentMapping& m = ComponentMapping(), const Sampler& smp = Sampler::anisotrophy());
 
     void setViewport(int x,int y,int w,int h);
     void setViewport(const Rect& vp);

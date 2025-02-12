@@ -182,7 +182,7 @@ void VBindlessCache::initDescriptorSet(VkDescriptorSet dset, const Bindings &bin
       }
 
     VPushDescriptor::write(dev, wr[cntWr], winfo[cntWr], uint32_t(i), l.bindings[i],
-                           binding.data[i], binding.offset[i], binding.smp[i]);
+                           binding.data[i], binding.offset[i], binding.map[i], binding.smp[i]);
 
     VkWriteDescriptorSet& wx = wr[cntWr];
     wx.dstSet = dset;

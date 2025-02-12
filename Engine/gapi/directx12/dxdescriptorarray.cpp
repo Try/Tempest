@@ -19,13 +19,12 @@ DxDescriptorArray::DxDescriptorArray(DxDevice& dev, AbstractGraphicsApi::Texture
   : dev(dev), cnt(cnt) {
   //NOTE: no bindless storage image
   try {
-    auto sx = sampler!=nullptr ? *sampler : Sampler::nearest();
     dPtrR = dev.dalloc->alloc(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, uint32_t(cnt));
 
     for(size_t i=0; i<cnt; ++i) {
       auto res = dev.dalloc->res;
       res.ptr += (dPtrR + i)*dev.dalloc->resSize;
-      DxPushDescriptor::write(dev, res, D3D12_CPU_DESCRIPTOR_HANDLE(), ShaderReflection::Image, tex[i], mipLevel, sx);
+      DxPushDescriptor::write(dev, res, D3D12_CPU_DESCRIPTOR_HANDLE(), ShaderReflection::Image, tex[i], mipLevel, ComponentMapping(), Sampler::nearest());
       }
 
     if(sampler!=nullptr) {
@@ -33,7 +32,7 @@ DxDescriptorArray::DxDescriptorArray(DxDevice& dev, AbstractGraphicsApi::Texture
       for(size_t i=0; i<cnt; ++i) {
         auto smp = dev.dalloc->smp;
         smp.ptr += (dPtrS + i)*dev.dalloc->smpSize;
-        DxPushDescriptor::write(dev, D3D12_CPU_DESCRIPTOR_HANDLE(), smp, ShaderReflection::Sampler, nullptr, mipLevel, sx);
+        DxPushDescriptor::write(dev, D3D12_CPU_DESCRIPTOR_HANDLE(), smp, ShaderReflection::Sampler, nullptr, mipLevel, ComponentMapping(), *sampler);
         }
       }
     }
@@ -52,11 +51,11 @@ DxDescriptorArray::DxDescriptorArray(DxDevice& dev, AbstractGraphicsApi::Buffer*
     for(size_t i=0; i<cnt; ++i) {
       auto res = dev.dalloc->res;
       res.ptr += (dPtrRW + i)*dev.dalloc->resSize;
-      DxPushDescriptor::write(dev, res, D3D12_CPU_DESCRIPTOR_HANDLE(), ShaderReflection::SsboRW, buf[i], 0, Sampler::nearest());
+      DxPushDescriptor::write(dev, res, D3D12_CPU_DESCRIPTOR_HANDLE(), ShaderReflection::SsboRW, buf[i], 0, ComponentMapping(), Sampler::nearest());
 
       res = dev.dalloc->res;
       res.ptr += (dPtrR  + i)*dev.dalloc->resSize;
-      DxPushDescriptor::write(dev, res, D3D12_CPU_DESCRIPTOR_HANDLE(), ShaderReflection::SsboR, buf[i], 0, Sampler::nearest());
+      DxPushDescriptor::write(dev, res, D3D12_CPU_DESCRIPTOR_HANDLE(), ShaderReflection::SsboR, buf[i], 0, ComponentMapping(), Sampler::nearest());
       }
     }
   catch(...) {

@@ -225,7 +225,6 @@ namespace Tempest {
     ClampMode        wClamp    = ClampMode::Repeat;
 
     bool             anisotropic = true;
-    ComponentMapping mapping;
 
     static const Sampler& anisotrophy();
     static const Sampler& bilinear();

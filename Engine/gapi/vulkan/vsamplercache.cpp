@@ -25,9 +25,7 @@ void VSamplerCache::setDevice(VDevice &dev) {
   smpDefault    = alloc(Sampler());
   }
 
-VkSampler VSamplerCache::get(Sampler s) {
-  s.mapping = ComponentMapping();
-
+VkSampler VSamplerCache::get(const Sampler& s) {
   static const Sampler def;
   if(def==s)
     return smpDefault;

@@ -132,7 +132,7 @@ DxPushDescriptor::DescSet DxPushDescriptor::push(const PushBlock &pb, const Layo
     if(((1u << i) & lay.array)!=0)
       continue;
 
-    write(dev, res, smp, lay.bindings[i], binding.data[i], binding.offset[i], binding.smp[i]);
+    write(dev, res, smp, lay.bindings[i], binding.data[i], binding.offset[i], binding.map[i], binding.smp[i]);
 
     if(lay.bindings[i]!=ShaderReflection::Sampler)
       res.ptr += dev.dalloc->resSize;
@@ -190,7 +190,8 @@ void DxPushDescriptor::setRootDescriptorTable(ID3D12GraphicsCommandList& enc, co
   }
 
 void DxPushDescriptor::write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, D3D12_CPU_DESCRIPTOR_HANDLE s,
-                             ShaderReflection::Class cls, AbstractGraphicsApi::NoCopy* data, uint32_t offset, const Sampler& smp) {
+                             ShaderReflection::Class cls, AbstractGraphicsApi::NoCopy* data, uint32_t offset,
+                             const ComponentMapping& mapping, const Sampler& smp) {
   auto& device = *dev.device;
 
   switch(cls) {
@@ -205,7 +206,7 @@ void DxPushDescriptor::write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, D3D
       bool     is3DImage = tex->is3D; // TODO: cast 3d to 2d, based on dest descriptor
 
       D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
-      desc.Shader4ComponentMapping = compMapping(smp.mapping);
+      desc.Shader4ComponentMapping = compMapping(mapping);
       desc.Format                  = nativeSrvFormat(tex->format);
       if(is3DImage) {
         desc.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE3D;

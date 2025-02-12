@@ -192,28 +192,19 @@ void VectorImage::Mesh::update(Device& dev, const VectorImage& src, BufferHeap h
     ux.pipeline = &p;
 
     if(T_LIKELY(b.hasImg)) {
+      Sampler s = Sampler::bilinear();
       if(b.tex.brush) {
-        Sampler s;
-        if(T_UNLIKELY(b.tex.frm==TextureFormat::R8 || b.tex.frm==TextureFormat::R16 || b.tex.frm==TextureFormat::R32F)) {
-          s.mapping.r = ComponentSwizzle::R;
-          s.mapping.g = ComponentSwizzle::R;
-          s.mapping.b = ComponentSwizzle::R;
-          }
-        else if(T_UNLIKELY(b.tex.frm==TextureFormat::RG8 || b.tex.frm==TextureFormat::RG16 || b.tex.frm==TextureFormat::RG32F)) {
-          s.mapping.r = ComponentSwizzle::R;
-          s.mapping.g = ComponentSwizzle::R;
-          s.mapping.b = ComponentSwizzle::R;
-          s.mapping.a = ComponentSwizzle::G;
-          }
-        s.uClamp = b.tex.clamp;
-        s.vClamp = b.tex.clamp;
+        s.uClamp   = b.tex.clamp;
+        s.vClamp   = b.tex.clamp;
         ux.smp     = s;
+        ux.format  = b.tex.frm;
         ux.texture = b.tex.brush;
         } else {
         auto& tex = b.tex.sprite.pageRawData(dev); //TODO: oom
         ux.texture = TexPtr(tex);
-        ux.smp     = Sampler::bilinear();
-        ux.sprite = b.tex.sprite;
+        ux.smp     = s;
+        ux.format  = tex.format();
+        ux.sprite  = b.tex.sprite;
         }
       }
     }
@@ -225,8 +216,21 @@ void VectorImage::Mesh::draw(Encoder<CommandBuffer>& cmd) const {
     if(b.size==0)
       continue;
 
-    if(b.texture)
-      cmd.setBinding(0, b.texture, b.smp);
+    if(b.texture) {
+      ComponentMapping mapping;
+      if(T_UNLIKELY(b.format==TextureFormat::R8 || b.format==TextureFormat::R16 || b.format==TextureFormat::R32F)) {
+        mapping.r = ComponentSwizzle::R;
+        mapping.g = ComponentSwizzle::R;
+        mapping.b = ComponentSwizzle::R;
+        }
+      else if(T_UNLIKELY(b.format==TextureFormat::RG8 || b.format==TextureFormat::RG16 || b.format==TextureFormat::RG32F)) {
+        mapping.r = ComponentSwizzle::R;
+        mapping.g = ComponentSwizzle::R;
+        mapping.b = ComponentSwizzle::R;
+        mapping.a = ComponentSwizzle::G;
+        }
+      cmd.setBinding(0, b.texture, mapping, b.smp);
+      }
     cmd.setPipeline(*b.pipeline);
     cmd.draw(vbo,b.begin,b.size);
     }

@@ -35,7 +35,8 @@ class DxPushDescriptor {
                          const LayoutDesc& lay, const Bindings& binding, const PipelineStage st);
 
     static  void write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, D3D12_CPU_DESCRIPTOR_HANDLE s,
-                       ShaderReflection::Class cls, AbstractGraphicsApi::NoCopy* data, uint32_t offset, const Sampler& smp);
+                       ShaderReflection::Class cls, AbstractGraphicsApi::NoCopy* data, uint32_t offset,
+                       const ComponentMapping& map, const Sampler& smp);
     static  void write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, const Sampler& smp);
 
   private:

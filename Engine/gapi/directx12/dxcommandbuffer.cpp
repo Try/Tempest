@@ -638,9 +638,10 @@ void DxCommandBuffer::setPushData(const void* data, size_t size) {
   pushData.durty = true;
   }
 
-void DxCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Texture* tex, const Sampler& smp, uint32_t mipLevel) {
+void DxCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Texture* tex, uint32_t mipLevel, const ComponentMapping& map, const Sampler& smp) {
   bindings.data  [id] = tex;
   bindings.smp   [id] = smp;
+  bindings.map   [id] = map;
   bindings.offset[id] = mipLevel;
   bindings.durty      = true;
   bindings.array      = bindings.array & ~(1u << id);
@@ -1003,7 +1004,7 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer&  dstBuf, size_t offset,
   auto&  prog    = copyShader(src.format, push.bitCnt, push.compCnt);
   size_t outSize = (width*height*(push.compCnt*push.bitCnt/8) + sizeof(uint32_t)-1)/sizeof(uint32_t);
 
-  this->setBinding(0, &src, Sampler::nearest(), 0);
+  this->setBinding(0, &src, 0, ComponentMapping(), Sampler::nearest());
   this->setBinding(1, &dst, 0);
   this->setComputePipeline(prog);
   this->setPushData(&push, sizeof(push));
