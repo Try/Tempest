@@ -103,6 +103,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     Detail::SmallList<Chunk,32>        chunks;
 
   private:
+    struct InternalShaderGuard;
     struct Push {
       uint8_t            data[256] = {};
       uint8_t            size      = 0;
@@ -128,6 +129,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     Bindings                           bindings;
     DxPushDescriptor                   pushDescriptors;
     DxDescriptorAllocator::Allocation  cpuDescriptors;
+    DxDescriptorAllocator::Allocation  rtvDescriptors;
 
     DxPipeline*                        curDrawPipeline    = nullptr;
     DxCompPipeline*                    curCompPipeline    = nullptr;
@@ -138,23 +140,12 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     bool                               isDbgRegion = false;
 
-    struct Stage {
-      virtual ~Stage() = default;
-      virtual void exec(DxCommandBuffer& cmd) = 0;
-      Stage* next = nullptr;
-      };
-    struct Blit;
-    struct MipMaps;
-    Stage*                            stageResources = nullptr;
-
     std::unordered_set<const AbstractGraphicsApi::Buffer*> indirectCmd;
 
     void pushChunk();
     void newChunk();
 
     void prepareDraw(size_t voffset, size_t firstInstance);
-    void clearStage();
-    void pushStage(Stage* cmd);
 
     void setupHeaps();
     void implSetUniforms(const PipelineStage st);
@@ -165,6 +156,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void enhancedBarrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt);
 
     D3D12_CPU_DESCRIPTOR_HANDLE ensureCpuDescriptors(uint32_t num);
+    D3D12_CPU_DESCRIPTOR_HANDLE ensureRtvDescriptors(uint32_t num);
 
     DxCompPipeline& copyShader(DXGI_FORMAT format, int32_t& bitCnt, int32_t& compCnt);
   };

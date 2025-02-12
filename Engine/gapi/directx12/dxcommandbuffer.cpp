@@ -255,101 +255,37 @@ static ID3D12Resource* toDxResource(const AbstractGraphicsApi::BarrierDesc& b) {
   return s.views[b.swId].get();
   }
 
+struct DxCommandBuffer::InternalShaderGuard {
+  InternalShaderGuard(DxCommandBuffer& owner) : cmd(owner) {
+    pushData        = cmd.pushData;
+    bindings        = reinterpret_cast<Detail::Bindings&>(cmd.bindings);
+    curDrawPipeline = cmd.curDrawPipeline;
+    curCompPipeline = cmd.curCompPipeline;
+    }
 
-struct DxCommandBuffer::MipMaps : Stage {
-  MipMaps(DxDevice& dev, DxTexture& image, uint32_t texW, uint32_t texH, uint32_t mipLevels)
-    :img(image),texW(texW),texH(texH),mipLevels(mipLevels) {
-    // descriptor heap
-    D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-    rtvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-    rtvHeapDesc.NumDescriptors = UINT(mipLevels-1);
-    rtvHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    dxAssert(dev.device->CreateDescriptorHeap(&rtvHeapDesc, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&rtvHeap)));
+  ~InternalShaderGuard() {
+    cmd.pushData = pushData;
+    cmd.pushData.durty = true;
 
-    auto                        rtvHeapInc = dev.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle  = rtvHeap->GetCPUDescriptorHandleForHeapStart();
+    reinterpret_cast<Detail::Bindings&>(cmd.bindings) = bindings;
+    cmd.bindings.durty = true;
 
-    D3D12_RENDER_TARGET_VIEW_DESC view = {};
-    view.Format             = image.format;
-    view.ViewDimension      = D3D12_RTV_DIMENSION_TEXTURE2D;
-    for(uint32_t i=1; i<mipLevels; ++i) {
-      view.Texture2D.MipSlice = UINT(i); //destMip
-      dev.device->CreateRenderTargetView(image.impl.get(), &view, rtvHandle);
-      rtvHandle.ptr+=rtvHeapInc;
+    if(curCompPipeline!=nullptr)
+      cmd.setComputePipeline(*curCompPipeline);
+    else if(curDrawPipeline!=nullptr)
+      cmd.setPipeline(*curDrawPipeline);
+    else {
+      cmd.curDrawPipeline = nullptr;
+      cmd.curCompPipeline = nullptr;
       }
-    //desc.reserve(mipLevels);
     }
 
-  void blit(DxCommandBuffer& cmd, uint32_t srcMip, uint32_t dstW, uint32_t dstH) {
-    auto& impl = *cmd.impl;
-    //auto& dev  = cmd.dev;
+  DxCommandBuffer& cmd;
+  Push             pushData;
+  Detail::Bindings bindings;
 
-    D3D12_VIEWPORT vp={};
-    vp.TopLeftX = float(0.f);
-    vp.TopLeftY = float(0.f);
-    vp.Width    = float(dstW);
-    vp.Height   = float(dstH);
-    vp.MinDepth = 0.f;
-    vp.MaxDepth = 1.f;
-    impl.RSSetViewports(1, &vp);
-
-    D3D12_RECT sr={};
-    sr.left   = 0;
-    sr.top    = 0;
-    sr.right  = LONG(dstW);
-    sr.bottom = LONG(dstH);
-    impl.RSSetScissorRects(1, &sr);
-/*
-    desc.emplace_back(*dev.blitLayout.handler);
-    DxDescriptorArray& ubo = this->desc.back();
-    ubo.set(0,&img,Sampler::bilinear(),srcMip);
-    cmd.implSetUniforms(ubo,false);
-
-    impl.DrawInstanced(6,1,0,0);
-    */
-    }
-
-  void exec(DxCommandBuffer& cmd) override {
-    auto& impl = *cmd.impl;
-    auto& dev  = cmd.dev;
-
-    int32_t w = int32_t(texW);
-    int32_t h = int32_t(texH);
-
-    auto& shader = *dev.blit.handler;
-    impl.SetPipelineState(&shader.instance(img.format));
-    impl.SetGraphicsRootSignature(shader.sign.get());
-    impl.IASetPrimitiveTopology(shader.topology);
-
-    impl.IASetVertexBuffers(0,0,nullptr);
-
-    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle  = rtvHeap->GetCPUDescriptorHandleForHeapStart();
-    auto                        rtvHeapInc = dev.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
-    auto& resState = cmd.resState;
-    resState.setLayout(img,ResourceAccess::ColorAttach);
-    resState.flush(cmd);
-    for(uint32_t i=1; i<mipLevels; ++i) {
-      const int mw = (w==1 ? 1 : w/2);
-      const int mh = (h==1 ? 1 : h/2);
-
-      cmd.barrier(img,ResourceAccess::ColorAttach,ResourceAccess::Sampler,i-1);
-      impl.OMSetRenderTargets(1, &rtvHandle, TRUE, nullptr);
-      blit(cmd,i-1,mw,mh);
-
-      w             = mw;
-      h             = mh;
-      rtvHandle.ptr+= rtvHeapInc;
-      }
-    cmd.barrier(img, ResourceAccess::ColorAttach, ResourceAccess::Sampler, mipLevels-1);
-    }
-
-  DxTexture&                     img;
-  uint32_t                       texW;
-  uint32_t                       texH;
-  uint32_t                       mipLevels;
-
-  ComPtr<ID3D12DescriptorHeap>   rtvHeap;
+  DxPipeline*      curDrawPipeline    = nullptr;
+  DxCompPipeline*  curCompPipeline    = nullptr;
   };
 
 DxCommandBuffer::DxCommandBuffer(DxDevice& d)
@@ -360,7 +296,9 @@ DxCommandBuffer::DxCommandBuffer(DxDevice& d)
   }
 
 DxCommandBuffer::~DxCommandBuffer() {
-  clearStage();
+  dev.descAlloc.free(cpuDescriptors);
+  dev.descAlloc.free(rtvDescriptors);
+
   auto node = chunks.begin();
   for(size_t i=0; i<chunks.size(); ++i) {
     auto cmd = node->val[i%chunks.chunkSize].impl;
@@ -400,7 +338,6 @@ void DxCommandBuffer::end() {
 void DxCommandBuffer::reset() {
   if(resetDone)
     return;
-  clearStage();
 
   dxAssert(pool->Reset());
   SmallArray<ID3D12CommandList*,MaxCmdChunks> flat(chunks.size());
@@ -638,7 +575,7 @@ void DxCommandBuffer::dispatchIndirect(const AbstractGraphicsApi::Buffer& indire
   impl->ExecuteIndirect(sign, 1, ind.impl.get(), UINT64(offset), nullptr, 0);
   }
 
-void DxCommandBuffer::setPipeline(Tempest::AbstractGraphicsApi::Pipeline& p) {
+void DxCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
   DxPipeline& px     = reinterpret_cast<DxPipeline&>(p);
 
   bindings.durty     = true;
@@ -865,6 +802,16 @@ D3D12_CPU_DESCRIPTOR_HANDLE DxCommandBuffer::ensureCpuDescriptors(uint32_t num) 
     }
   //NOTE: cpu descriptors in DX are reusable
   return dev.descAlloc.handle(cpuDescriptors);
+  }
+
+D3D12_CPU_DESCRIPTOR_HANDLE DxCommandBuffer::ensureRtvDescriptors(uint32_t num) {
+  const uint32_t MaxDesc = 64;
+  assert(num<=MaxDesc);
+  if(rtvDescriptors.size==0) {
+    rtvDescriptors = dev.descAlloc.allocRtv(MaxDesc);
+    }
+  //NOTE: cpu descriptors in DX are reusable
+  return dev.descAlloc.handle(rtvDescriptors);
   }
 
 void DxCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
@@ -1204,9 +1151,6 @@ void DxCommandBuffer::fill(AbstractGraphicsApi::Texture& dstTex, uint32_t val) {
     c.ptr += hSize*i;
     impl->ClearUnorderedAccessViewUint(g, c, dst.impl.get(), val4, 0, nullptr);
     }
-
-  //std::unique_ptr<FillUAV> dx(new FillUAV(dev,reinterpret_cast<DxTexture&>(dstTex),val));
-  //pushStage(dx.release());
   }
 
 void DxCommandBuffer::buildBlas(AbstractGraphicsApi::Buffer& bbo, AbstractGraphicsApi::BlasBuildCtx& rtctx, AbstractGraphicsApi::Buffer& scratch) {
@@ -1278,67 +1222,60 @@ void DxCommandBuffer::newChunk() {
   //                                       _uuidof(ID3D12GraphicsCommandList7), reinterpret_cast<void**>(&impl)));
   }
 
-void DxCommandBuffer::clearStage() {
-  while(stageResources!=nullptr) {
-    auto s = stageResources;
-    stageResources = stageResources->next;
-    delete s;
-    }
-  }
-
-void DxCommandBuffer::pushStage(DxCommandBuffer::Stage* cmd) {
-  cmd->next = stageResources;
-  stageResources = cmd;
-  stageResources->exec(*this);
-  }
-
-void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
+void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& dstTex,
                                      uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
   if(mipLevels==1)
     return;
-/*
+
+  const auto rtvSize   = dev.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+  auto&      dst       = reinterpret_cast<DxTexture&>(dstTex);
+  auto       rtv       = ensureRtvDescriptors(dst.mipCnt);
+
+  for(uint32_t i=1; i<mipLevels; ++i) {
+    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtv;
+    rtvHandle.ptr += i*rtvSize;
+
+    D3D12_RENDER_TARGET_VIEW_DESC view = {};
+    view.Format             = dst.format;
+    view.ViewDimension      = D3D12_RTV_DIMENSION_TEXTURE2D;
+    view.Texture2D.MipSlice = UINT(i); //destMip
+    dev.device->CreateRenderTargetView(dst.impl.get(), &view, rtvHandle);
+    }
+
+  InternalShaderGuard guard(*this);
+
   resState.flush(*this);
-  Detail::Bindings prev = static_cast<Detail::Bindings&>(bindings);
-
-  auto& shader = *dev.blit.handler;
-  impl->SetPipelineState(&shader.instance(reinterpret_cast<DxTexture&>(img).format));
-  impl->SetGraphicsRootSignature(shader.sign.get());
-  impl->IASetPrimitiveTopology(shader.topology);
+  fboLayout = DxFboLayout();
+  fboLayout.RTVFormats[0]    = dst.format;
+  fboLayout.NumRenderTargets = 1;
+  setPipeline(*dev.blit.handler);
   impl->IASetVertexBuffers(0,0,nullptr);
-
-  D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle  = rtvHeap->GetCPUDescriptorHandleForHeapStart();
-  auto                        rtvHeapInc = dev.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
 
   uint32_t w = texWidth;
   uint32_t h = texHeight;
-  resState.setLayout(img, ResourceAccess::ColorAttach);
+  barrier(dst, ResourceAccess::Sampler, ResourceAccess::ColorAttach, uint32_t(-1));
   for(uint32_t i=1; i<mipLevels; ++i) {
+    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtv;
+    rtvHandle.ptr += i*rtvSize;
+
     const int dstW = (w==1 ? 1 : w/2);
     const int dstH = (h==1 ? 1 : h/2);
 
-    barrier(img,ResourceAccess::ColorAttach,ResourceAccess::Sampler,i-1);
+    barrier(dst, ResourceAccess::ColorAttach, ResourceAccess::Sampler, i-1);
     impl->OMSetRenderTargets(1, &rtvHandle, TRUE, nullptr);
 
     setViewport(Rect(0, 0, dstW, dstH));
     setScissor(Rect(0, 0, dstW, dstH));
 
-    setBinding(0, &img, Sampler::bilinear(), i-1);
+    setBinding(0, &dst, i-1, ComponentMapping(), Sampler::bilinear());
     implSetUniforms(S_Graphics);
 
     impl->DrawInstanced(6,1,0,0);
 
-    w             = dstW;
-    h             = dstH;
-    rtvHandle.ptr+= rtvHeapInc;
+    w = dstW;
+    h = dstH;
     }
-  barrier(img, ResourceAccess::ColorAttach, ResourceAccess::Sampler, mipLevels-1);
-
-  static_cast<Detail::Bindings&>(bindings) = prev;
-  bindings.durty = true;
-  */
-  // std::unique_ptr<MipMaps> dx(new MipMaps(dev,reinterpret_cast<DxTexture&>(img),texWidth,texHeight,mipLevels));
-  // pushStage(dx.release());
+  barrier(dst, ResourceAccess::ColorAttach, ResourceAccess::Sampler, mipLevels-1);
   }
 
 void DxCommandBuffer::copyNative(AbstractGraphicsApi::Buffer& dstBuf, size_t offset,

@@ -52,9 +52,17 @@ void DxDescriptorAllocator::setDevice(DxDevice& device) {
 
   auto& dx = *device.device.get();
   descSize = dx.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-  smpSize  = dx.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+  rtvSize  = dx.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
   allocatorRes.setDefaultPageSize(64);
+  }
+
+DxDescriptorAllocator::Allocation DxDescriptorAllocator::allocRtv(size_t count) {
+  if(count==0)
+    return Allocation();
+  const auto tid = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+  auto ret = allocatorRes.alloc(count, 1, tid, tid, true);
+  return ret;
   }
 
 DxDescriptorAllocator::Allocation DxDescriptorAllocator::allocHost(size_t count) {
@@ -84,24 +92,10 @@ D3D12_CPU_DESCRIPTOR_HANDLE DxDescriptorAllocator::handle(const Allocation& a) {
   if(a.page->memory!=nullptr)
     ptr = a.page->memory->GetCPUDescriptorHandleForHeapStart();
 
-  if(a.page->heapId==0)
-    ptr.ptr += a.offset*descSize; else
-    ptr.ptr += a.offset*smpSize;
-
-  return ptr;
-  }
-
-D3D12_GPU_DESCRIPTOR_HANDLE DxDescriptorAllocator::gpuHandle(const Allocation& a) {
-  D3D12_GPU_DESCRIPTOR_HANDLE ptr = {};
-  if(a.page==nullptr)
-    return ptr;
-
-  if(a.page->memory!=nullptr)
-    ptr = a.page->memory->GetGPUDescriptorHandleForHeapStart();
-
-  if(a.page->heapId==0)
-    ptr.ptr += a.offset*descSize; else
-    ptr.ptr += a.offset*smpSize;
+  if(a.page->heapId==D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+    ptr.ptr += a.offset*descSize;
+  else if(a.page->heapId==D3D12_DESCRIPTOR_HEAP_TYPE_RTV)
+    ptr.ptr += a.offset*rtvSize;
 
   return ptr;
   }

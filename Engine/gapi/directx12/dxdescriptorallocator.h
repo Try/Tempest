@@ -31,21 +31,18 @@ class DxDescriptorAllocator {
     using Allocation=typename Tempest::Detail::DeviceAllocator<Provider>::Allocation;
 
     Allocation allocHost(size_t count);
+    Allocation allocRtv (size_t count);
     void       free (Allocation& page);
 
     ID3D12DescriptorHeap*       heapof(const Allocation& a);
     D3D12_CPU_DESCRIPTOR_HANDLE handle(const Allocation& a);
-    D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle(const Allocation& a);
 
   private:
     Provider                          providerRes;
     Detail::DeviceAllocator<Provider> allocatorRes{providerRes};
 
-    // Provider                          providerSmp;
-    // Detail::DeviceAllocator<Provider> allocatorSmp{providerSmp};
-
     uint32_t                          descSize = 1;
-    uint32_t                          smpSize  = 1;
+    uint32_t                          rtvSize  = 1;
   };
 
 }
