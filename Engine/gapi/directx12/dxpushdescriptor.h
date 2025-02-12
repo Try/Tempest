@@ -2,8 +2,7 @@
 
 #include "gapi/abstractgraphicsapi.h"
 #include "gapi/shaderreflection.h"
-
-#include "gapi/directx12/dxdescriptorarray.h"
+#include "gapi/directx12/dxdescriptorallocator.h"
 
 #include <d3d12.h>
 
@@ -28,6 +27,7 @@ class DxPushDescriptor {
     ~DxPushDescriptor();
     void reset();
 
+    uint32_t                     alloc(uint32_t numRes);
     std::pair<uint32_t,uint32_t> alloc(uint32_t numRes, uint32_t numSmp);
 
     DescSet push(const PushBlock &pb, const LayoutDesc& lay, const Bindings& binding);

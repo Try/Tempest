@@ -23,16 +23,10 @@ DxDescriptorAllocator::Provider::DeviceMemory DxDescriptorAllocator::Provider::a
     last = nullptr;
     }
 
-  static const D3D12_DESCRIPTOR_HEAP_TYPE tid[3] = {D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-                                                    D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
-                                                    D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV};
-
   D3D12_DESCRIPTOR_HEAP_DESC d = {};
-  d.Type           = tid[typeId];
+  d.Type           = D3D12_DESCRIPTOR_HEAP_TYPE(typeId);
   d.NumDescriptors = UINT(size);
-  d.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-  if(typeId==2)
-    d.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+  d.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 
   ID3D12DescriptorHeap* ret = nullptr;
   HRESULT hr = device->device->CreateDescriptorHeap(&d, ::uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&ret));
@@ -55,37 +49,25 @@ DxDescriptorAllocator::DxDescriptorAllocator() {
 
 void DxDescriptorAllocator::setDevice(DxDevice& device) {
   providerRes.device = &device;
-  providerSmp.device = &device;
 
   auto& dx = *device.device.get();
   descSize = dx.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
   smpSize  = dx.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
 
-  allocatorRes.setDefaultPageSize(65535); // 1'000'000 is allowed to preallocate, but 65k is fine
-  allocatorSmp.setDefaultPageSize( 2048);
-  }
-
-DxDescriptorAllocator::Allocation DxDescriptorAllocator::alloc(size_t count, bool smp) {
-  if(count==0)
-    return Allocation();
-  uint32_t id        = (smp ? 1 : 0);
-  auto&    allocator = (smp ? allocatorSmp : allocatorRes);
-  auto     ret = allocator.alloc(count, 1, id, id, false);
-  return ret;
+  allocatorRes.setDefaultPageSize(64);
   }
 
 DxDescriptorAllocator::Allocation DxDescriptorAllocator::allocHost(size_t count) {
   if(count==0)
     return Allocation();
-  auto&    allocator = (false ? allocatorSmp : allocatorRes);
-  auto     ret = allocator.alloc(count, 1, 2, 2, false);
+  const auto tid = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+  auto ret = allocatorRes.alloc(count, 1, tid, tid, true);
   return ret;
   }
 
 void DxDescriptorAllocator::free(Allocation& page) {
   if(page.page!=nullptr) {
-    bool  smp       = (page.page->heapId==1);
-    auto& allocator = (smp ? allocatorSmp : allocatorRes);
+    auto& allocator = allocatorRes;
     allocator.free(page);
     }
   }

@@ -352,64 +352,6 @@ struct DxCommandBuffer::MipMaps : Stage {
   ComPtr<ID3D12DescriptorHeap>   rtvHeap;
   };
 
-struct DxCommandBuffer::FillUAV : Stage {
-  using Allocation = DxDescriptorAllocator::Allocation;
-
-  FillUAV(DxDevice& dev, DxTexture& image, uint32_t val)
-    :dst(image), val(val) {
-    auto& allocator = dev.descAlloc;
-    gpu = allocator.alloc    (dst.mipCnt, false);
-    cpu = allocator.allocHost(dst.mipCnt);
-
-    hSize = dev.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-    for(uint32_t i=0; i<dst.mipCnt; ++i) {
-      D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
-      uint32_t mipLevel = 0;
-      desc.Format = dst.format;
-      if(dst.is3D) {
-        desc.ViewDimension      = D3D12_UAV_DIMENSION_TEXTURE3D;
-        desc.Texture3D.MipSlice = mipLevel;
-        desc.Texture3D.WSize    = dst.sliceCnt;
-        } else {
-        desc.ViewDimension      = D3D12_UAV_DIMENSION_TEXTURE2D;
-        desc.Texture2D.MipSlice = mipLevel;
-        }
-
-      auto g = allocator.handle(gpu);
-      auto c = allocator.handle(cpu);
-      g.ptr += hSize*i;
-      c.ptr += hSize*i;
-      dev.device->CreateUnorderedAccessView(dst.impl.get(),nullptr,&desc,g);
-      dev.device->CreateUnorderedAccessView(dst.impl.get(),nullptr,&desc,c);
-      }
-    }
-
-  void exec(DxCommandBuffer& cmd) override {
-    auto& allocator = cmd.dev.descAlloc;
-
-    cmd.resState.onTranferUsage(NonUniqResId::I_None, dst.nonUniqId, false);
-    cmd.resState.flush(cmd);
-
-    cmd.curHeaps[0] = allocator.heapof(gpu);
-    cmd.curHeaps[1] = nullptr;
-    cmd.impl->SetDescriptorHeaps(1, cmd.curHeaps);
-
-    UINT val4[] = {val,val,val,val};
-    for(uint32_t i=0; i<dst.mipCnt; ++i) {
-      auto g = allocator.gpuHandle(gpu);
-      auto c = allocator.handle(cpu);
-      g.ptr += hSize*i;
-      c.ptr += hSize*i;
-      cmd.impl->ClearUnorderedAccessViewUint(g, c, dst.impl.get(), val4, 0, nullptr);
-      }
-    }
-
-  DxTexture&                     dst;
-  uint32_t                       val = 0;
-  UINT                           hSize = 0;
-  Allocation                     cpu, gpu;
-  };
-
 DxCommandBuffer::DxCommandBuffer(DxDevice& d)
   : dev(d), pushDescriptors(d) {
   dxAssert(d.device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
@@ -915,6 +857,16 @@ void DxCommandBuffer::enhancedBarrier(const AbstractGraphicsApi::BarrierDesc* de
   cmd7->Barrier(num, barrier);
   }
 
+D3D12_CPU_DESCRIPTOR_HANDLE DxCommandBuffer::ensureCpuDescriptors(uint32_t num) {
+  const uint32_t MaxDesc = 64;
+  assert(num<=MaxDesc);
+  if(cpuDescriptors.size==0) {
+    cpuDescriptors = dev.descAlloc.allocHost(MaxDesc);
+    }
+  //NOTE: cpu descriptors in DX are reusable
+  return dev.descAlloc.handle(cpuDescriptors);
+  }
+
 void DxCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
   if(dev.props.enhancedBarriers) {
     enhancedBarrier(desc, cnt);
@@ -1214,8 +1166,47 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, s
   }
 
 void DxCommandBuffer::fill(AbstractGraphicsApi::Texture& dstTex, uint32_t val) {
-  std::unique_ptr<FillUAV> dx(new FillUAV(dev,reinterpret_cast<DxTexture&>(dstTex),val));
-  pushStage(dx.release());
+  const auto hSize     = dev.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+  auto&      dst       = reinterpret_cast<DxTexture&>(dstTex);
+  auto       gpu       = pushDescriptors.alloc(dst.mipCnt,0).first;
+  auto       cpu       = ensureCpuDescriptors(dst.mipCnt);
+
+  resState.onTranferUsage(NonUniqResId::I_None, dst.nonUniqId, false);
+  resState.flush(*this);
+  setupHeaps();
+
+  for(uint32_t i=0; i<dst.mipCnt; ++i) {
+    D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+    uint32_t mipLevel = 0;
+    desc.Format = dst.format;
+    if(dst.is3D) {
+      desc.ViewDimension      = D3D12_UAV_DIMENSION_TEXTURE3D;
+      desc.Texture3D.MipSlice = mipLevel;
+      desc.Texture3D.WSize    = dst.sliceCnt;
+      } else {
+      desc.ViewDimension      = D3D12_UAV_DIMENSION_TEXTURE2D;
+      desc.Texture2D.MipSlice = mipLevel;
+      }
+
+    auto g = dev.dalloc->handle(gpu);
+    auto c = cpu;
+    g.ptr += hSize*i;
+    c.ptr += hSize*i;
+    dev.device->CreateUnorderedAccessView(dst.impl.get(),nullptr,&desc,g);
+    dev.device->CreateUnorderedAccessView(dst.impl.get(),nullptr,&desc,c);
+    }
+
+  UINT val4[] = {val,val,val,val};
+  for(uint32_t i=0; i<dst.mipCnt; ++i) {
+    auto g = dev.dalloc->gpuHandle(gpu);
+    auto c = cpu;
+    g.ptr += hSize*i;
+    c.ptr += hSize*i;
+    impl->ClearUnorderedAccessViewUint(g, c, dst.impl.get(), val4, 0, nullptr);
+    }
+
+  //std::unique_ptr<FillUAV> dx(new FillUAV(dev,reinterpret_cast<DxTexture&>(dstTex),val));
+  //pushStage(dx.release());
   }
 
 void DxCommandBuffer::buildBlas(AbstractGraphicsApi::Buffer& bbo, AbstractGraphicsApi::BlasBuildCtx& rtctx, AbstractGraphicsApi::Buffer& scratch) {

@@ -30,7 +30,6 @@ class DxDescriptorAllocator {
 
     using Allocation=typename Tempest::Detail::DeviceAllocator<Provider>::Allocation;
 
-    Allocation alloc(size_t count, bool smp);
     Allocation allocHost(size_t count);
     void       free (Allocation& page);
 
@@ -42,8 +41,8 @@ class DxDescriptorAllocator {
     Provider                          providerRes;
     Detail::DeviceAllocator<Provider> allocatorRes{providerRes};
 
-    Provider                          providerSmp;
-    Detail::DeviceAllocator<Provider> allocatorSmp{providerSmp};
+    // Provider                          providerSmp;
+    // Detail::DeviceAllocator<Provider> allocatorSmp{providerSmp};
 
     uint32_t                          descSize = 1;
     uint32_t                          smpSize  = 1;

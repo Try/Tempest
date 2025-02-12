@@ -116,6 +116,10 @@ std::pair<uint32_t, uint32_t> DxPushDescriptor::alloc(uint32_t numRes, uint32_t 
   return std::make_pair(rptr, sptr);
   }
 
+uint32_t DxPushDescriptor::alloc(uint32_t numRes) {
+  return alloc<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>(resPool, numRes, RES_ALLOC_SZ);
+  }
+
 DxPushDescriptor::DescSet DxPushDescriptor::push(const PushBlock &pb, const LayoutDesc& lay, const Bindings& binding) {
   const auto sz  = numResources(lay);
   const auto ptr = alloc(sz.first, sz.second);

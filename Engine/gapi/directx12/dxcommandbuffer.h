@@ -127,6 +127,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     Push                               pushData;
     Bindings                           bindings;
     DxPushDescriptor                   pushDescriptors;
+    DxDescriptorAllocator::Allocation  cpuDescriptors;
 
     DxPipeline*                        curDrawPipeline    = nullptr;
     DxCompPipeline*                    curCompPipeline    = nullptr;
@@ -144,7 +145,6 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
       };
     struct Blit;
     struct MipMaps;
-    struct FillUAV;
     Stage*                            stageResources = nullptr;
 
     std::unordered_set<const AbstractGraphicsApi::Buffer*> indirectCmd;
@@ -163,6 +163,8 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     void restoreIndirect();
     void enhancedBarrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt);
+
+    D3D12_CPU_DESCRIPTOR_HANDLE ensureCpuDescriptors(uint32_t num);
 
     DxCompPipeline& copyShader(DXGI_FORMAT format, int32_t& bitCnt, int32_t& compCnt);
   };

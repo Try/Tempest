@@ -71,6 +71,18 @@ void DxHeapAllocator::free(D3D12_DESCRIPTOR_HEAP_TYPE heap, uint32_t ptr, uint32
   free(allocator[heap], ptr, num);
   }
 
+D3D12_CPU_DESCRIPTOR_HANDLE DxHeapAllocator::handle(uint32_t ptr) const {
+  auto ret = res;
+  ret.ptr += ptr*resSize;
+  return ret;
+  }
+
+D3D12_GPU_DESCRIPTOR_HANDLE DxHeapAllocator::gpuHandle(uint32_t ptr) const {
+  auto ret = gres;
+  ret.ptr += ptr*resSize;
+  return ret;
+  }
+
 uint32_t DxHeapAllocator::alloc(Allocator& heap, uint32_t num) {
   std::lock_guard<std::mutex> guard(heap.sync);
 

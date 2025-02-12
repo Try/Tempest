@@ -20,6 +20,9 @@ class DxHeapAllocator {
     uint32_t alloc(D3D12_DESCRIPTOR_HEAP_TYPE heap, uint32_t num);
     void     free (D3D12_DESCRIPTOR_HEAP_TYPE heap, uint32_t ptr, uint32_t num);
 
+    D3D12_CPU_DESCRIPTOR_HANDLE handle(uint32_t ptr) const;
+    D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle(uint32_t ptr) const;
+
     UINT resSize = 0;
     UINT smpSize = 0;
 
