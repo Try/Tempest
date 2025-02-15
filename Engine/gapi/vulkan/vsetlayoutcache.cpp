@@ -6,6 +6,18 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+static bool compare(const ShaderReflection::LayoutDesc& a, const ShaderReflection::LayoutDesc& b) {
+  if(std::memcmp(a.bindings, b.bindings, sizeof(a.bindings))!=0)
+    return false;
+  if(std::memcmp(a.stage, b.stage, sizeof(a.stage))!=0)
+    return false;
+  if(std::memcmp(a.count, b.count, sizeof(a.count))!=0)
+    return false;
+  if(a.runtime!=b.runtime || a.array!=b.array || a.active!=b.active)
+    return false;
+  return true;
+  }
+
 VSetLayoutCache::VSetLayoutCache(VDevice& dev)
   :dev(dev) {
   }
@@ -18,7 +30,7 @@ VSetLayoutCache::~VSetLayoutCache() {
 VkDescriptorSetLayout VSetLayoutCache::findLayout(const ShaderReflection::LayoutDesc& l) {
   std::lock_guard<std::mutex> guard(syncLay);
   for(auto& i:layouts) {
-    if(i.desc!=l)
+    if(!compare(i.desc,l))
       continue;
     return i.lay;
     }

@@ -77,20 +77,6 @@ static uint32_t declaredVarSize(spirv_cross::Compiler& comp, const spirv_cross::
   }
 
 
-bool ShaderReflection::LayoutDesc::operator ==(const LayoutDesc &other) const {
-  if(std::memcmp(bindings, other.bindings, sizeof(bindings))!=0)
-    return false;
-  if(std::memcmp(count, other.count, sizeof(count))!=0)
-    return false;
-  if(runtime!=other.runtime || array!=other.array || active!=other.active)
-    return false;
-  return true;
-  }
-
-bool ShaderReflection::LayoutDesc::operator != (const LayoutDesc& other) const {
-  return !(*this==other);
-  }
-
 bool ShaderReflection::LayoutDesc::isUpdateAfterBind() const {
   return runtime!=0 || array!=0;
   }

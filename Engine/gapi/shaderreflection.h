@@ -69,9 +69,6 @@ class ShaderReflection final {
       uint32_t                array   = 0;
       uint32_t                active  = 0;
 
-      bool operator == (const LayoutDesc& other) const;
-      bool operator != (const LayoutDesc& other) const;
-
       bool   isUpdateAfterBind() const;
       size_t sizeofBuffer(size_t id, size_t arraylen) const;
       };
