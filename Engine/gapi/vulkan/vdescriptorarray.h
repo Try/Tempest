@@ -2,6 +2,7 @@
 
 #include <Tempest/AbstractGraphicsApi>
 
+#include "gapi/shaderreflection.h"
 #include "vulkan_sdk.h"
 
 namespace Tempest {
@@ -20,9 +21,9 @@ class VDescriptorArray : public AbstractGraphicsApi::DescArray {
     auto   set() const -> VkDescriptorSet { return dset; }
 
   private:
-    void alloc(VkDescriptorSetLayout lay, VDevice& dev, size_t cnt);
-    void populate(Tempest::Detail::VDevice &dev, AbstractGraphicsApi::Texture **tex, size_t cnt, uint32_t mipLevel, const Sampler *smp);
-    void populate(Tempest::Detail::VDevice &dev, AbstractGraphicsApi::Buffer  **buf, size_t cnt);
+    void alloc(VkDescriptorSetLayout lay, VDevice& dev, ShaderReflection::Class cls, size_t cnt);
+    void populate(VDevice &dev, AbstractGraphicsApi::Texture **tex, size_t cnt, uint32_t mipLevel, const Sampler *smp);
+    void populate(VDevice &dev, AbstractGraphicsApi::Buffer  **buf, size_t cnt);
 
     VDevice&         dev;
     size_t           cnt  = 0;

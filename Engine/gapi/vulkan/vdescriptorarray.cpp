@@ -24,7 +24,7 @@ VDescriptorArray::VDescriptorArray(VDevice &dev, AbstractGraphicsApi::Texture **
   const uint32_t cntRound = dev.roundUpDescriptorCount(ShaderReflection::Texture, cnt);
 
   const auto lay = dev.bindlessArrayLayout(ShaderReflection::Texture, cntRound);
-  alloc(lay, dev, cntRound);
+  alloc(lay, dev, ShaderReflection::Texture, cntRound);
   populate(dev, tex, cnt, mipLevel, &smp);
   }
 
@@ -34,7 +34,7 @@ VDescriptorArray::VDescriptorArray(VDevice &dev, AbstractGraphicsApi::Texture **
   const uint32_t cntRound = dev.roundUpDescriptorCount(ShaderReflection::Image, cnt);
 
   const auto lay = dev.bindlessArrayLayout(ShaderReflection::Image, cntRound);
-  alloc(lay, dev, cntRound);
+  alloc(lay, dev, ShaderReflection::Image, cntRound);
   populate(dev, tex, cnt, mipLevel, nullptr);
   }
 
@@ -44,7 +44,7 @@ VDescriptorArray::VDescriptorArray(VDevice &dev, AbstractGraphicsApi::Buffer **b
   const uint32_t cntRound = dev.roundUpDescriptorCount(ShaderReflection::SsboRW, cnt);
 
   const auto lay = dev.bindlessArrayLayout(ShaderReflection::SsboRW, cntRound);
-  alloc(lay, dev, cntRound);
+  alloc(lay, dev, ShaderReflection::SsboRW, cntRound);
   populate(dev, buf, cnt);
   }
 
@@ -58,9 +58,9 @@ size_t VDescriptorArray::size() const {
   return cnt;
   }
 
-void VDescriptorArray::alloc(VkDescriptorSetLayout lay, VDevice &dev, size_t cnt) {
+void VDescriptorArray::alloc(VkDescriptorSetLayout lay, VDevice &dev, ShaderReflection::Class cls, size_t cnt) {
   VkDescriptorPoolSize       poolSize = {};
-  poolSize.type            = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+  poolSize.type            = nativeFormat(cls);
   poolSize.descriptorCount = uint32_t(cnt);
 
   VkDescriptorPoolCreateInfo poolInfo = {};
