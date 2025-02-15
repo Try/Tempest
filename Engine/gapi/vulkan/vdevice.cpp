@@ -21,6 +21,7 @@
 #  include <X11/Xlib.h>
 #  include <vulkan/vulkan_xlib.h>
 #  undef Always
+#  undef None
 #else
 #  error "WSI is not implemented on this platform"
 #endif
@@ -497,11 +498,7 @@ VBuffer& VDevice::dummySsbo() {
   return dummySsboVal;
   }
 
-VkDescriptorSetLayout VDevice::bindlessArrayLayout(ShaderReflection::Class cls, size_t cnt) {
-  // WA for Intel linux-drivers. They have bugs with VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT
-  // Details: https://github.com/Try/OpenGothic/issues/741
-
-  // Roundup a little, to avoid spamming of layouts
+uint32_t VDevice::roundUpDescriptorCount(ShaderReflection::Class cls, size_t cnt) {
   uint32_t cntRound = 0;
   if(cnt<64)
     cntRound = 64;
@@ -537,10 +534,17 @@ VkDescriptorSetLayout VDevice::bindlessArrayLayout(ShaderReflection::Class cls, 
       break;
     }
 
+  return cntRound;
+  }
+
+VkDescriptorSetLayout VDevice::bindlessArrayLayout(ShaderReflection::Class cls, size_t cnt) {
+  // WA for Intel linux-drivers. They have bugs with VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT
+  // Details: https://github.com/Try/OpenGothic/issues/741
+
   ShaderReflection::LayoutDesc lx;
   lx.bindings[0] = cls;
-  lx.stage[0]    = ShaderReflection::None; // all
-  lx.count[0]    = cntRound;
+  lx.stage[0]    = ShaderReflection::None;
+  lx.count[0]    = cnt;
   lx.runtime     = 0x1;
   lx.array       = 0x1;
   lx.active      = 0x1;

@@ -42,7 +42,7 @@ inline void vkAssert(VkResult code){
       throw DeviceLostException();
 
     default:
-      throw std::runtime_error("Engine internal error. VkResult=" + std::to_string(code)); //TODO
+      throw std::runtime_error("Engine internal error. VkResult=" + std::to_string(code));
     }
   }
 
@@ -392,6 +392,7 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     VBuffer&                dummySsbo();
 
+    uint32_t                roundUpDescriptorCount(ShaderReflection::Class cls, size_t cnt);
     VkDescriptorSetLayout   bindlessArrayLayout(ShaderReflection::Class cls, size_t cnt);
 
   private:

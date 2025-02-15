@@ -20,22 +20,31 @@ static VkImageLayout toWriteLayout(VTexture& tex) {
 
 VDescriptorArray::VDescriptorArray(VDevice &dev, AbstractGraphicsApi::Texture **tex, size_t cnt, uint32_t mipLevel, const Sampler &smp)
   : dev(dev), cnt(cnt) {
-  const auto lay = dev.bindlessArrayLayout(ShaderReflection::Texture, cnt);
-  alloc(lay, dev, cnt);
+  // Roundup a little, to avoid spamming of layouts
+  const uint32_t cntRound = dev.roundUpDescriptorCount(ShaderReflection::Texture, cnt);
+
+  const auto lay = dev.bindlessArrayLayout(ShaderReflection::Texture, cntRound);
+  alloc(lay, dev, cntRound);
   populate(dev, tex, cnt, mipLevel, &smp);
   }
 
 VDescriptorArray::VDescriptorArray(VDevice &dev, AbstractGraphicsApi::Texture **tex, size_t cnt, uint32_t mipLevel)
   : dev(dev), cnt(cnt) {
-  const auto lay = dev.bindlessArrayLayout(ShaderReflection::Image, cnt);
-  alloc(lay, dev, cnt);
+  // Roundup a little, to avoid spamming of layouts
+  const uint32_t cntRound = dev.roundUpDescriptorCount(ShaderReflection::Image, cnt);
+
+  const auto lay = dev.bindlessArrayLayout(ShaderReflection::Image, cntRound);
+  alloc(lay, dev, cntRound);
   populate(dev, tex, cnt, mipLevel, nullptr);
   }
 
 VDescriptorArray::VDescriptorArray(VDevice &dev, AbstractGraphicsApi::Buffer **buf, size_t cnt)
   : dev(dev), cnt(cnt) {
-  const auto lay = dev.bindlessArrayLayout(ShaderReflection::SsboRW, cnt);
-  alloc(lay, dev, cnt);
+  // Roundup a little, to avoid spamming of layouts
+  const uint32_t cntRound = dev.roundUpDescriptorCount(ShaderReflection::SsboRW, cnt);
+
+  const auto lay = dev.bindlessArrayLayout(ShaderReflection::SsboRW, cntRound);
+  alloc(lay, dev, cntRound);
   populate(dev, buf, cnt);
   }
 
