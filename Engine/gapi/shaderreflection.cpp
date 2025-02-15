@@ -131,8 +131,7 @@ void ShaderReflection::getVertexDecl(std::vector<Decl::ComponentType>& data, spi
     }
   }
 
-void ShaderReflection::getBindings(std::vector<Binding>&  lay,
-                                   spirv_cross::Compiler& comp) {
+void ShaderReflection::getBindings(std::vector<Binding>& lay, spirv_cross::Compiler& comp, const uint32_t* source, const size_t size) {
   const Stage s = getExecutionModel(comp);
 
   spirv_cross::ShaderResources resources = comp.get_shader_resources();
@@ -243,19 +242,43 @@ void ShaderReflection::getBindings(std::vector<Binding>&  lay,
     lay.push_back(b);
     }
 
-  bool canHaveRuntimeArrays = false;
-  auto& ext = comp.get_declared_extensions();
-  for(auto& i:ext)
-    if(i=="SPV_EXT_descriptor_indexing")
-      canHaveRuntimeArrays = true;
+  if(lay.size()==0)
+    return;
 
-  if(!canHaveRuntimeArrays) {
+  const bool arrayWa = hasRuntimeArrays(lay) && !canHaveRuntimeArrays(comp, source, size);
+  if(arrayWa) {
     // WA for GLSL bug: https://github.com/KhronosGroup/GLSL/issues/231
     for(auto& i:lay) {
       i.runtimeSized = false;
       i.arraySize    = std::max(1u, i.arraySize);
       }
     }
+  }
+
+bool ShaderReflection::canHaveRuntimeArrays(spirv_cross::Compiler& comp, const uint32_t* source, const size_t size) {
+  auto& ext = comp.get_declared_extensions();
+  for(auto& i:ext)
+    if(i=="SPV_EXT_descriptor_indexing")
+      return true;
+
+  libspirv::Bytecode code(source, size);
+  for(auto& i:code) {
+    if(i.op()==spv::OpSourceExtension) {
+      std::string_view str = reinterpret_cast<const char*>(&i[1]);
+      if(str=="GL_EXT_nonuniform_qualifier") {
+        return true;
+        }
+      }
+    }
+  return false;
+  }
+
+bool ShaderReflection::hasRuntimeArrays(const std::vector<Binding>& lay) {
+  for(auto& i:lay) {
+    if(i.runtimeSized || i.arraySize>1)
+      return true;
+    }
+  return false;
   }
 
 ShaderReflection::Stage ShaderReflection::getExecutionModel(spirv_cross::Compiler& comp) {

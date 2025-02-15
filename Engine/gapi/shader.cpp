@@ -16,7 +16,7 @@ void Shader::fetchBindings(const uint32_t* source, const size_t size){
   // TODO: remove spirv-corss?
   spirv_cross::Compiler compiler(source, size);
   ShaderReflection::getVertexDecl(vert.decl,compiler);
-  ShaderReflection::getBindings(lay,compiler);
+  ShaderReflection::getBindings(lay,compiler,source,size);
 
   libspirv::Bytecode code(source, size);
   stage = ShaderReflection::getExecutionModel(code);

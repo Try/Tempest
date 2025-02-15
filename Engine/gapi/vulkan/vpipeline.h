@@ -98,7 +98,7 @@ class VCompPipeline : public AbstractGraphicsApi::CompPipeline {
     VCompPipeline(VCompPipeline&& other) = delete;
     ~VCompPipeline();
 
-    IVec3              workGroupSize() const;
+    IVec3              workGroupSize() const override;
     size_t             sizeofBuffer(size_t id, size_t arraylen) const override;
 
     VkPipeline         instance(VkPipelineLayout pLay);

@@ -87,7 +87,7 @@ class ShaderReflection final {
       };
 
     static void   getVertexDecl(std::vector<Decl::ComponentType>& data, spirv_cross::Compiler& comp);
-    static void   getBindings(std::vector<Binding>& b, spirv_cross::Compiler& comp);
+    static void   getBindings(std::vector<Binding>& b, spirv_cross::Compiler& comp, const uint32_t* source, const size_t size);
     static Stage  getExecutionModel(spirv_cross::Compiler& comp);
     static Stage  getExecutionModel(libspirv::Bytecode& comp);
     static Stage  getExecutionModel(spv::ExecutionModel m);
@@ -105,6 +105,8 @@ class ShaderReflection final {
   private:
     static void finalize(std::vector<Binding>& p);
     static size_t mslSizeOf(const spirv_cross::SPIRType& type, spirv_cross::Compiler& comp);
+    static bool hasRuntimeArrays(const std::vector<Binding>& lay);
+    static bool canHaveRuntimeArrays(spirv_cross::Compiler& comp, const uint32_t* source, const size_t size);
   };
 
 }
