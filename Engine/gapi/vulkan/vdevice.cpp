@@ -37,57 +37,6 @@ VDevice::autoDevice::~autoDevice() {
   }
 
 
-VDevice::ArrayLayout::ArrayLayout(VDevice& dev, VkDescriptorType type)
-  : dev(dev.device.impl) {
-  VkDescriptorBindingFlags flag = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT;
-
-  VkDescriptorSetLayoutBinding bx = {};
-  bx.binding         = 0;
-  bx.descriptorType  = type;
-  bx.stageFlags      = 0; //VK_SHADER_STAGE_ALL;
-  switch(type) {
-    case VK_DESCRIPTOR_TYPE_SAMPLER:
-      bx.descriptorCount = dev.props.descriptors.maxSamplers;
-      break;
-    case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-    case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-      bx.descriptorCount = dev.props.descriptors.maxTexture;
-      break;
-    case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-      bx.descriptorCount = dev.props.descriptors.maxStorage;
-      break;
-    default:
-      assert(0);
-    }
-
-  VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlags = {};
-  bindingFlags.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
-  bindingFlags.bindingCount  = 1;
-  bindingFlags.pBindingFlags = &flag;
-
-  VkDescriptorSetLayoutCreateInfo info={};
-  info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  info.pNext        = nullptr;
-  info.flags        = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
-  info.bindingCount = 1;
-  info.pBindings    = &bx;
-  info.pNext        = &bindingFlags;
-
-  vkAssert(vkCreateDescriptorSetLayout(dev.device.impl,&info,nullptr,&impl));
-  }
-
-VDevice::ArrayLayout::~ArrayLayout() {
-  if(impl!=VK_NULL_HANDLE)
-    vkDestroyDescriptorSetLayout(dev, impl, nullptr);
-  }
-
-VDevice::ArrayLayout& VDevice::ArrayLayout::operator=(ArrayLayout &&a) {
-  std::swap(dev,  a.dev);
-  std::swap(impl, a.impl);
-  return *this;
-  }
-
 VDevice::VDevice(VulkanInstance &api, std::string_view gpuName)
   :instance(api.instance), fboMap(*this), setLayouts(*this), psoLayouts(*this), bindless(*this) {
   uint32_t deviceCount = 0;
@@ -548,32 +497,55 @@ VBuffer& VDevice::dummySsbo() {
   return dummySsboVal;
   }
 
-const VDevice::ArrayLayout& VDevice::bindlessArrayLayout(VkDescriptorType type) {
-  ArrayLayout* ret = nullptr;
-  switch(type) {
-    case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-      ret = &layTexSmp;
+VkDescriptorSetLayout VDevice::bindlessArrayLayout(ShaderReflection::Class cls, size_t cnt) {
+  // WA for Intel linux-drivers. They have bugs with VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT
+  // Details: https://github.com/Try/OpenGothic/issues/741
+
+  // Roundup a little, to avoid spamming of layouts
+  uint32_t cntRound = 0;
+  if(cnt<64)
+    cntRound = 64;
+  else if(cnt<128)
+    cntRound = 128;
+  else if(cnt<256)
+    cntRound = 256;
+  else if(cnt<512)
+    cntRound = 512;
+  else if(cnt<1024)
+    cntRound = 1024;
+  else
+    cntRound = uint32_t((cnt+2048-1)/2048)*2048;
+
+  switch(cls) {
+    case ShaderReflection::Texture:
+    case ShaderReflection::Image:
+    case ShaderReflection::ImgR:
+    case ShaderReflection::ImgRW:
+      cntRound = std::min(cntRound, props.descriptors.maxTexture);
       break;
-    case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-      ret = &layTex;
+    case ShaderReflection::Sampler:
+      cntRound = std::min(cntRound, props.descriptors.maxSamplers);
       break;
-    case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-      ret = &layImg;
+    case ShaderReflection::SsboR:
+    case ShaderReflection::SsboRW:
+    case ShaderReflection::Tlas:
+      cntRound = std::min(cntRound, props.descriptors.maxStorage);
       break;
-    case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-      ret = &layBuf;
-      break;
-    case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
-      break;
-    default:
+    case ShaderReflection::Ubo:
+    case ShaderReflection::Push:
+    case ShaderReflection::Count:
       break;
     }
-  assert(ret!=nullptr);
 
-  std::lock_guard<std::mutex> guard(syncLay);
-  if(ret->impl==VK_NULL_HANDLE)
-    *ret = ArrayLayout(*this, type);
-  return *ret;
+  ShaderReflection::LayoutDesc lx;
+  lx.bindings[0] = cls;
+  lx.stage[0]    = ShaderReflection::None; // all
+  lx.count[0]    = cntRound;
+  lx.runtime     = 0x1;
+  lx.array       = 0x1;
+  lx.active      = 0x1;
+
+  return setLayouts.findLayout(lx);
   }
 
 void VDevice::waitIdle() {

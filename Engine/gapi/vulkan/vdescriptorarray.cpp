@@ -20,22 +20,22 @@ static VkImageLayout toWriteLayout(VTexture& tex) {
 
 VDescriptorArray::VDescriptorArray(VDevice &dev, AbstractGraphicsApi::Texture **tex, size_t cnt, uint32_t mipLevel, const Sampler &smp)
   : dev(dev), cnt(cnt) {
-  const auto& lay = dev.bindlessArrayLayout(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-  alloc(lay.impl, dev, cnt);
+  const auto lay = dev.bindlessArrayLayout(ShaderReflection::Texture, cnt);
+  alloc(lay, dev, cnt);
   populate(dev, tex, cnt, mipLevel, &smp);
   }
 
 VDescriptorArray::VDescriptorArray(VDevice &dev, AbstractGraphicsApi::Texture **tex, size_t cnt, uint32_t mipLevel)
   : dev(dev), cnt(cnt) {
-  const auto& lay = dev.bindlessArrayLayout(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
-  alloc(lay.impl, dev, cnt);
+  const auto lay = dev.bindlessArrayLayout(ShaderReflection::Image, cnt);
+  alloc(lay, dev, cnt);
   populate(dev, tex, cnt, mipLevel, nullptr);
   }
 
 VDescriptorArray::VDescriptorArray(VDevice &dev, AbstractGraphicsApi::Buffer **buf, size_t cnt)
   : dev(dev), cnt(cnt) {
-  const auto& lay = dev.bindlessArrayLayout(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-  alloc(lay.impl, dev, cnt);
+  const auto lay = dev.bindlessArrayLayout(ShaderReflection::SsboRW, cnt);
+  alloc(lay, dev, cnt);
   populate(dev, buf, cnt);
   }
 
@@ -63,15 +63,9 @@ void VDescriptorArray::alloc(VkDescriptorSetLayout lay, VDevice &dev, size_t cnt
   poolInfo.flags         = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
   vkAssert(vkCreateDescriptorPool(dev.device.impl, &poolInfo, nullptr, &pool));
 
-  uint32_t cnt32 = uint32_t(cnt);
-  VkDescriptorSetVariableDescriptorCountAllocateInfo vinfo = {};
-  vinfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
-  vinfo.descriptorSetCount = 1;
-  vinfo.pDescriptorCounts  = &cnt32;
-
   VkDescriptorSetAllocateInfo allocInfo = {};
   allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-  allocInfo.pNext              = &vinfo;
+  //allocInfo.pNext              = &vinfo;
   allocInfo.descriptorPool     = pool;
   allocInfo.descriptorSetCount = 1;
   allocInfo.pSetLayouts        = &lay;

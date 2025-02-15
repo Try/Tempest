@@ -58,10 +58,10 @@ inline void dxAssert(HRESULT code) {
 
     case E_NOTIMPL:
     case E_INVALIDARG:
-      throw std::runtime_error("engine internal error");
+      throw std::runtime_error("Engine internal error");
 
     default:
-      throw std::runtime_error("undefined directx error("+std::to_string(code)+")"); //TODO
+      throw std::runtime_error("Engine internal error. HRESULT=" + std::to_string(code));
     }
   }
 

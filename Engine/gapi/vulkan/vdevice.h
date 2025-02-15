@@ -4,6 +4,7 @@
 #include <Tempest/RenderState>
 #include <Tempest/AccelerationStructure>
 #include <stdexcept>
+#include <string>
 #include "vulkan_sdk.h"
 
 #include "gapi/vulkan/vallocator.h"
@@ -16,7 +17,6 @@
 #include "gapi/vulkan/vpushdescriptor.h"
 #include "gapi/vulkan/vsetlayoutcache.h"
 #include "gapi/vulkan/vpsolayoutcache.h"
-#include "gapi/shaderreflection.h"
 #include "gapi/uploadengine.h"
 #include "exceptions/exception.h"
 #include "utility/compiller_hints.h"
@@ -42,7 +42,7 @@ inline void vkAssert(VkResult code){
       throw DeviceLostException();
 
     default:
-      throw std::runtime_error("engine internal error"); //TODO
+      throw std::runtime_error("Engine internal error. VkResult=" + std::to_string(code)); //TODO
     }
   }
 
@@ -339,17 +339,6 @@ class VDevice : public AbstractGraphicsApi::Device {
       bool     hostVisible = false;
       };
 
-    struct ArrayLayout final {
-      ArrayLayout() = default;
-      ArrayLayout(VDevice &dev, VkDescriptorType type);
-      ~ArrayLayout();
-
-      ArrayLayout& operator=(ArrayLayout&& a);
-
-      VkDevice              dev  = VK_NULL_HANDLE;
-      VkDescriptorSetLayout impl = VK_NULL_HANDLE;
-      };
-
     VkInstance              instance       = nullptr;
     VkPhysicalDevice        physicalDevice = nullptr;
     autoDevice              device;
@@ -403,7 +392,7 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     VBuffer&                dummySsbo();
 
-    const ArrayLayout&      bindlessArrayLayout(VkDescriptorType type);
+    VkDescriptorSetLayout   bindlessArrayLayout(ShaderReflection::Class cls, size_t cnt);
 
   private:
     VkPhysicalDeviceMemoryProperties memoryProperties;
@@ -411,10 +400,6 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     std::mutex              syncSsbo;
     VBuffer                 dummySsboVal;
-
-    std::mutex              syncLay;
-    ArrayLayout             layTex, layImg, layBuf;
-    ArrayLayout             layTexSmp;
 
     void                    waitIdleSync(Queue* q, size_t n);
 
