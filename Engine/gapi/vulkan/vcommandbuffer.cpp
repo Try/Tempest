@@ -416,6 +416,8 @@ void VCommandBuffer::endRendering() {
 
 void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
   VPipeline& px   = reinterpret_cast<VPipeline&>(p);
+
+  bindings.durty  = true;
   curDrawPipeline = &px;
   vboStride       = px.defaultStride;
   pipelineLayout  = VK_NULL_HANDLE; // clear until draw
@@ -681,17 +683,15 @@ void VCommandBuffer::dispatchMeshIndirect(const AbstractGraphicsApi::Buffer& ind
 
 void VCommandBuffer::bindVbo(const VBuffer& vbo, size_t stride) {
   if(curVbo!=vbo.impl) {
-    if(T_UNLIKELY(vboStride!=stride)) {
-      auto& px = *curDrawPipeline;
-      vboStride = stride;
-      VkPipeline v  = device.props.hasDynRendering ? px.instance(passDyn,pipelineLayout,vboStride)
-                                                   : px.instance(pass,   pipelineLayout,vboStride);
-      vkCmdBindPipeline(impl,VK_PIPELINE_BIND_POINT_GRAPHICS,v);
-      }
     VkBuffer     buffers[1] = {vbo.impl};
     VkDeviceSize offsets[1] = {0};
     vkCmdBindVertexBuffers(impl, 0, 1, buffers, offsets);
     curVbo = vbo.impl;
+    }
+  if(T_UNLIKELY(vboStride!=stride)) {
+    vboStride      = stride;
+    bindings.durty = true;
+    pipelineLayout = VK_NULL_HANDLE; // maybe need to rebuild pso
     }
   }
 
