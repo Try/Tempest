@@ -198,12 +198,12 @@ void Mesh::packMeshlets(std::vector<Vertex>& vbo, std::vector<uint8_t>& ibo8, co
       for(auto i=b.first; i!=b.second; ++i) {
         if(used[i->second])
           continue;
-        prim = i->second;
+        prim = uint32_t(i->second);
         if(!active.addTriangle(shp.mesh, prim))
           break;
         used[prim] = true;
         }
-      firstVert = r+1;
+      firstVert = uint32_t(r+1);
       }
 
     if(prim==uint32_t(-1) && (active.primSz>OptPrim && !tightPacking)) {
@@ -215,8 +215,8 @@ void Mesh::packMeshlets(std::vector<Vertex>& vbo, std::vector<uint8_t>& ibo8, co
       for(size_t i=firstUnused; i<used.size(); ++i) {
         if(used[i])
           continue;
-        firstUnused = i;
-        prim        = i;
+        firstUnused = uint32_t(i);
+        prim        = uint32_t(i);
         break;
         }
       }
@@ -274,7 +274,7 @@ std::vector<uint32_t> Mesh::flattenIbo(const std::vector<uint8_t>& ibo8) const {
   std::vector<uint32_t> ibo((ibo8.size()*3)/4);
 
   for(size_t i8=0, i32=0; i8<ibo8.size(); i8+=MaxPrim*4, i32+=MaxPrim*3) {
-    uint32_t off = (i8/(MaxPrim*4)) * (MaxVert);
+    uint32_t off = uint32_t(i8/(MaxPrim*4)) * (MaxVert);
     for(size_t r=0; r<MaxPrim; ++r) {
       ibo[i32 + r*3 + 0] = ibo8[i8 + r*4 + 0] + off;
       ibo[i32 + r*3 + 1] = ibo8[i8 + r*4 + 1] + off;

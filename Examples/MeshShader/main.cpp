@@ -25,24 +25,17 @@ std::unique_ptr<Tempest::AbstractGraphicsApi> mkApi(const char* av, Tempest::Api
 int main(int argc, const char** argv) {
   Tempest::Application app;
 
-  const bool emulated = false;
-
   const char* msDev = nullptr;
   auto api = mkApi(argc>1 ? argv[1] : "", Tempest::ApiFlags::Validation);
   auto dev = api->devices();
   for(auto& i:dev)
-    if(i.meshlets.meshShader!=emulated && i.meshlets.meshShaderEmulated==emulated) {
-      msDev = i.name;
-      }
-  for(auto& i:dev)
-    if(i.meshlets.meshShader!=emulated && i.meshlets.meshShaderEmulated==emulated && i.type==Tempest::DeviceType::Discrete) {
+    if(i.meshlets.meshShader) {
       msDev = i.name;
       }
   if(msDev==nullptr)
     return 0;
 
-  Tempest::Log::i(msDev);
-  Tempest::Log::i(emulated ? "mesh-shader-emulated" : "GL_EXT_mesh_shader");
+  Tempest::Log::i("GL_EXT_mesh_shader");
 
   app.setFont(Tempest::Application::defaultFont());
 

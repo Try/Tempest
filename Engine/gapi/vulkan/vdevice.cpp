@@ -544,7 +544,7 @@ VkDescriptorSetLayout VDevice::bindlessArrayLayout(ShaderReflection::Class cls, 
   ShaderReflection::LayoutDesc lx;
   lx.bindings[0] = cls;
   lx.stage[0]    = ShaderReflection::None;
-  lx.count[0]    = cnt;
+  lx.count[0]    = uint32_t(cnt);
   lx.runtime     = 0x1;
   lx.array       = 0x1;
   lx.active      = 0x1;

@@ -6,7 +6,6 @@
 #include <Tempest/VulkanApi>
 #include <Tempest/Device>
 #include <Tempest/VertexBuffer>
-#include <Tempest/DescriptorSet>
 #include <Tempest/UniformBuffer>
 #include <Tempest/VectorImage>
 #include <Tempest/Event>

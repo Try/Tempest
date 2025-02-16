@@ -132,12 +132,14 @@ void Game::render(){
       enc.setViewport(256,0,256,256);
       */
       if(useVertex) {
-        enc.setUniforms(pso,&push,sizeof(push));
+        enc.setPushData(&push,sizeof(push));
+        enc.setPipeline(pso);
         enc.draw(mesh.vbo, mesh.ibo);
         } else {
         enc.setBinding(0, mesh.vbo);
         enc.setBinding(1, mesh.ibo8);
-        enc.setUniforms(pso,&push,sizeof(push));
+        enc.setPushData(&push,sizeof(push));
+        enc.setPipeline(pso);
         enc.dispatchMeshThreads(mesh.meshletCount);
         }
 
@@ -149,7 +151,7 @@ void Game::render(){
     device.present(swapchain);
 
     auto t = Application::tickCount();
-    frameTime[fpsId++] = t-time;
+    frameTime[fpsId++] = float(t-time);
     fpsId = (fpsId+1)%std::extent<decltype(frameTime)>();
 
     float tx = 0;
