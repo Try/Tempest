@@ -231,6 +231,24 @@ namespace Tempest {
     static const Sampler& trillinear();
     static const Sampler& nearest();
 
+    static Sampler bilinear(ClampMode c) {
+      auto s = bilinear();
+      s.setClamping(c);
+      return s;
+      }
+
+    static Sampler trillinear(ClampMode c) {
+      auto s = trillinear();
+      s.setClamping(c);
+      return s;
+      }
+
+    static Sampler nearest(ClampMode c) {
+      auto s = nearest();
+      s.setClamping(c);
+      return s;
+      }
+
     void setClamping(ClampMode c){
       uClamp = c;
       vClamp = c;
