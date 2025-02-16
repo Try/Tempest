@@ -44,6 +44,8 @@ VkDescriptorSetLayout VSetLayoutCache::findLayout(const ShaderReflection::Layout
   for(size_t i=0; i<MaxBindings; ++i) {
     if(l.bindings[i]==ShaderReflection::Count)
       continue;
+    if((l.active & (1u << i))==0)
+      continue;
 
     auto& b = bind[count];
     if((l.runtime & (1u << i))!=0)
