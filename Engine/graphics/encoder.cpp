@@ -215,6 +215,10 @@ void Encoder<CommandBuffer>::dispatch(size_t x, size_t y, size_t z) {
   impl->dispatch(x,y,z);
   }
 
+void Encoder<CommandBuffer>::dispatch(Size sz) {
+  dispatch(size_t(sz.w), size_t(sz.h), 1u);
+  }
+
 void Encoder<Tempest::CommandBuffer>::dispatchThreads(size_t x, size_t y, size_t z) {
   if(state.stage==Rendering)
     throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);

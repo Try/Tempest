@@ -234,7 +234,7 @@ StorageImage Device::image2d(TextureFormat frm, const uint32_t w, const uint32_t
   if(!devProps.hasStorageFormat(frm))
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat, formatName(frm));
   if(w>devProps.tex2d.maxSize || h>devProps.tex2d.maxSize)
-    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat, formatName(frm));
+    throw std::system_error(Tempest::GraphicsErrc::TooLargeTexture, std::to_string(std::max(w,h)));
   uint32_t mipCnt = mips ? mipCount(w,h) : 1;
   Texture2d t(*this,api.createStorage(dev,w,h,mipCnt,frm),w,h,1,frm);
   return StorageImage(std::move(t));
@@ -244,10 +244,28 @@ StorageImage Device::image3d(TextureFormat frm, const uint32_t w, const uint32_t
   if(!devProps.hasStorageFormat(frm))
     throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat, formatName(frm));
   if(w>devProps.tex3d.maxSize || h>devProps.tex3d.maxSize || d>devProps.tex3d.maxSize)
-    throw std::system_error(Tempest::GraphicsErrc::UnsupportedTextureFormat, formatName(frm));
+    throw std::system_error(Tempest::GraphicsErrc::TooLargeTexture, std::to_string(std::max(w,std::max(h,d))));
   uint32_t mipCnt = mips ? mipCount(w,h,d) : 1;
   Texture2d t(*this,api.createStorage(dev,w,h,d,mipCnt,frm),w,h,d,frm);
   return StorageImage(std::move(t));
+  }
+
+Attachment Device::attachment(TextureFormat frm, const Size sz, const bool mips) {
+  if(sz.w<0 || sz.h<0)
+    throw std::system_error(Tempest::GraphicsErrc::TooLargeTexture, std::to_string(std::min(sz.w,sz.h)));
+  return attachment(frm,sz.w,sz.h,mips);
+  }
+
+StorageImage Tempest::Device::image2d(TextureFormat frm, const Size sz, const bool mips) {
+  if(sz.w<0 || sz.h<0)
+    throw std::system_error(Tempest::GraphicsErrc::TooLargeTexture, std::to_string(std::min(sz.w,sz.h)));
+  return image2d(frm,sz.w,sz.h,mips);
+  }
+
+ZBuffer Device::zbuffer(TextureFormat frm, const Size sz) {
+  if(sz.w<0 || sz.h<0)
+    throw std::system_error(Tempest::GraphicsErrc::TooLargeTexture, std::to_string(std::min(sz.w,sz.h)));
+  return zbuffer(frm,sz.w,sz.h);
   }
 
 AccelerationStructure Device::blas(const std::vector<RtGeometry>& geom) {
@@ -404,3 +422,4 @@ Detail::VideoBuffer Device::createVideoBuffer(const void *data, size_t size, Mem
   Detail::VideoBuffer buf(api.createBuffer(dev,data,size,usage,flg), size);
   return  buf;
   }
+

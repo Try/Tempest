@@ -132,6 +132,10 @@ class Device {
     StorageImage          image2d    (TextureFormat frm, const uint32_t w, const uint32_t h, const bool mips = false);
     StorageImage          image3d    (TextureFormat frm, const uint32_t w, const uint32_t h, const uint32_t d, const bool mips = false);
 
+    Attachment            attachment (TextureFormat frm, const Size sz, const bool mips = false);
+    ZBuffer               zbuffer    (TextureFormat frm, const Size sz);
+    StorageImage          image2d    (TextureFormat frm, const Size sz, const bool mips = false);
+
     AccelerationStructure blas(const std::vector<RtGeometry>& geom);
     AccelerationStructure blas(std::initializer_list<RtGeometry> geom);
     AccelerationStructure blas(const RtGeometry* geom, size_t geomSize);
