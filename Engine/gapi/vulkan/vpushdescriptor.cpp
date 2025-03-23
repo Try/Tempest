@@ -3,7 +3,6 @@
 
 #include "gapi/vulkan/vaccelerationstructure.h"
 #include "gapi/vulkan/vtexture.h"
-#include "gapi/vulkan/vpipelinelay.h"
 #include "gapi/vulkan/vpipeline.h"
 #include "vdevice.h"
 
@@ -19,78 +18,7 @@ static VkImageLayout toWriteLayout(VTexture& tex) {
   }
 
 VPushDescriptor::Pool::Pool(VDevice &dev) {
-  VkDescriptorPoolSize poolSize[int(ShaderReflection::Class::Count)] = {};
-  size_t               pSize   = 0;
-
-  VkPhysicalDeviceProperties prop={};
-  vkGetPhysicalDeviceProperties(dev.physicalDevice, &prop);
-
-  const uint32_t maxResources = 8096;
-  const uint32_t maxSamplers  = 1024;
-
-  for(size_t i=0; i<ShaderReflection::Class::Count; ++i) {
-    if(i==ShaderReflection::Push)
-      continue;
-    if(i==ShaderReflection::Tlas && !dev.props.raytracing.rayQuery)
-      continue;
-    auto& sz = poolSize[pSize];
-    ++pSize;
-
-    switch(ShaderReflection::Class(i)) {
-      case ShaderReflection::Ubo: {
-        sz.type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        sz.descriptorCount = std::min(prop.limits.maxDescriptorSetUniformBuffers, maxResources);
-        break;
-        }
-      case ShaderReflection::Texture: {
-        sz.type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        sz.descriptorCount = std::min(prop.limits.maxDescriptorSetSampledImages, maxResources);
-        sz.descriptorCount = std::min(prop.limits.maxDescriptorSetSamplers, sz.descriptorCount);
-        sz.descriptorCount = std::min(maxSamplers, sz.descriptorCount);
-        break;
-        }
-      case ShaderReflection::Image: {
-        sz.type            = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        sz.descriptorCount = std::min(prop.limits.maxDescriptorSetSampledImages, maxResources);
-        break;
-        }
-      case ShaderReflection::Sampler: {
-        sz.type            = VK_DESCRIPTOR_TYPE_SAMPLER;
-        sz.descriptorCount = std::min(prop.limits.maxDescriptorSetSamplers, maxSamplers);
-        break;
-        }
-      case ShaderReflection::SsboR:
-      case ShaderReflection::SsboRW: {
-        sz.type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        sz.descriptorCount = std::min(prop.limits.maxDescriptorSetStorageBuffers, maxResources);
-        break;
-        }
-      case ShaderReflection::ImgR:
-      case ShaderReflection::ImgRW: {
-        sz.type            = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-        sz.descriptorCount = std::min(prop.limits.maxDescriptorSetStorageImages, maxResources);
-        break;
-        }
-      case ShaderReflection::Tlas: {
-        if(dev.props.raytracing.rayQuery) {
-          sz.type            = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-          sz.descriptorCount = 16; // conservative limit
-          }
-        break;
-        }
-      case ShaderReflection::Push:    break;
-      case ShaderReflection::Count:   break;
-      }
-    }
-
-  VkDescriptorPoolCreateInfo poolInfo = {};
-  poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-  poolInfo.maxSets       = std::max(maxResources, maxSamplers);
-  poolInfo.flags         = 0;
-  poolInfo.poolSizeCount = uint32_t(pSize);
-  poolInfo.pPoolSizes    = poolSize;
-
-  vkAssert(vkCreateDescriptorPool(dev.device.impl, &poolInfo, nullptr, &impl));
+  impl = dev.descPool.allocPool();
   }
 
 
@@ -104,10 +32,8 @@ VPushDescriptor::~VPushDescriptor() {
 
 void VPushDescriptor::reset() {
   pool.reserve(pool.size());
-  for(auto& i:pool) {
-    //TODO: reset and cache it globally
-    vkDestroyDescriptorPool(dev.device.impl, i.impl, nullptr);
-    }
+  for(auto& i:pool)
+    dev.descPool.freePool(i.impl);
   pool.clear();
   }
 

@@ -39,7 +39,7 @@ VDevice::autoDevice::~autoDevice() {
 
 
 VDevice::VDevice(VulkanInstance &api, std::string_view gpuName)
-  :instance(api.instance), fboMap(*this), setLayouts(*this), psoLayouts(*this), bindless(*this) {
+  :instance(api.instance), fboMap(*this), setLayouts(*this), psoLayouts(*this), descPool(*this), bindless(*this) {
   uint32_t deviceCount = 0;
   vkEnumeratePhysicalDevices(api.instance, &deviceCount, nullptr);
 
@@ -73,6 +73,7 @@ void VDevice::implInit(VulkanInstance &api, VkPhysicalDevice pdev) {
 
   physicalDevice = pdev;
   allocator.setDevice(*this);
+  descPool.setupLimits(api);
   data.reset(new DataMgr(*this));
   }
 
