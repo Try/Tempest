@@ -62,8 +62,6 @@ class VTextureWithFbo : public VTexture {
   public:
     VTextureWithFbo(VTexture&& base);
     ~VTextureWithFbo();
-
-    VFramebufferMap* map = nullptr;
   };
 
 }}

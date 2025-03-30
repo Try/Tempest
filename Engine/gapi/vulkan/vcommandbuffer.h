@@ -113,6 +113,8 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
   protected:
     void addDependency(VSwapchain& s, size_t imgId);
     void vkCmdPipelineBarrier2(VkCommandBuffer impl, const VkDependencyInfoKHR* info);
+    void vkCmdBeginRenderingKHR(VkCommandBuffer impl, const VkRenderingInfo* info);
+    void vkCmdEndRenderingKHR(VkCommandBuffer impl);
 
     template<class T>
     void finalizeImageBarrier(T& bx, const AbstractGraphicsApi::BarrierDesc& desc);
@@ -146,7 +148,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     VkCommandBuffer                         impl=nullptr;
 
     ResourceState                           resState;
-    std::shared_ptr<VFramebufferMap::RenderPass> pass;
+    std::shared_ptr<VFramebufferMap::RenderPass> passRp;
     PipelineInfo                            passDyn = {};
 
     Push                                    pushData;

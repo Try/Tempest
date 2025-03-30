@@ -18,19 +18,24 @@ class VFramebufferMap {
     VFramebufferMap(VDevice& dev);
     ~VFramebufferMap();
 
-    struct Desc {
-      AccessOp      load  = AccessOp::Discard;
-      AccessOp      store = AccessOp::Discard;
-      VkFormat      frm   = VK_FORMAT_UNDEFINED;
+    struct RenderPassDesc {
+      RenderPassDesc() = default;
+      RenderPassDesc(const VkRenderingInfo& info, const VkPipelineRenderingCreateInfoKHR& fbo);
+
+      bool operator == (const RenderPassDesc& other) const;
+
+      VkFormat            attachmentFormats[MaxFramebufferAttachments] = {};
+      VkAttachmentLoadOp  loadOp[MaxFramebufferAttachments] = {};
+      VkAttachmentStoreOp storeOp[MaxFramebufferAttachments] = {};
+      uint32_t            numAttachments = 0;
       };
 
     struct RenderPass {
-      VkRenderPass   pass = VK_NULL_HANDLE;
+      VkRenderPass    pass = VK_NULL_HANDLE;
+      RenderPassDesc  desc;
 
-      Desc           desc[MaxFramebufferAttachments];
-      uint8_t        descSize = 0;
-      bool           isCompatible(const RenderPass& other) const;
-      bool           isSame(const Desc* d, size_t cnt) const;
+      bool            isCompatible(const RenderPass& other) const;
+      bool            isSame(const RenderPassDesc& other) const;
       };
 
     struct Fbo {
@@ -39,22 +44,19 @@ class VFramebufferMap {
 
       VkImageView    view[MaxFramebufferAttachments] = {};
       uint8_t        descSize = 0;
-      bool           isSame(const Desc* d, const VkImageView* view, size_t cnt) const;
+
+      bool           isSame(const VkImageView* attach, size_t attCount, const RenderPassDesc& desc) const;
       bool           hasImg(VkImageView v) const;
       };
 
-    std::shared_ptr<Fbo> find(const AttachmentDesc* desc, size_t descSize,
-                              AbstractGraphicsApi::Texture** cl,
-                              AbstractGraphicsApi::Swapchain** sw, const uint32_t* imageId,
-                              uint32_t w, uint32_t h);
+    std::shared_ptr<Fbo> find(const VkRenderingInfo* info, const VkPipelineRenderingCreateInfoKHR* fbo);
     void                 notifyDestroy(VkImageView img);
 
   private:
-    std::shared_ptr<RenderPass> findRenderpass(const Desc* desc, size_t cnt);
-
-    Fbo                mkFbo(const Desc* desc, const VkImageView* view, size_t attCount, uint32_t w, uint32_t h);
-    VkRenderPass       mkRenderPass (const Desc* desc, size_t cnt);
-    VkFramebuffer      mkFramebuffer(const VkImageView* view, size_t cnt, uint32_t w, uint32_t h, VkRenderPass rp);
+    std::shared_ptr<RenderPass> findRenderpass(const VkRenderingInfo* info, const VkPipelineRenderingCreateInfoKHR* fbo);
+    Fbo                mkFbo(const VkRenderingInfo* info, const VkPipelineRenderingCreateInfoKHR* fbo, const VkImageView* attach, size_t attCount);
+    VkRenderPass       mkRenderPass(const VkRenderingInfo* info, const VkPipelineRenderingCreateInfoKHR* fbo);
+    VkFramebuffer      mkFramebuffer(const VkImageView* view, size_t cnt, VkExtent2D size, VkRenderPass rp);
 
     VDevice&           dev;
 

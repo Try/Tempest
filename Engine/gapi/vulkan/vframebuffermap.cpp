@@ -8,26 +8,49 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-bool VFramebufferMap::RenderPass::isCompatible(const RenderPass& other) const {
-  if(descSize!=other.descSize)
+VFramebufferMap::RenderPassDesc::RenderPassDesc(const VkRenderingInfo& info, const VkPipelineRenderingCreateInfoKHR& fbo) {
+  for(uint8_t i=0; i<info.colorAttachmentCount; ++i) {
+    attachmentFormats[i] = fbo.pColorAttachmentFormats[i];
+    loadOp[i]            = info.pColorAttachments[i].loadOp;
+    storeOp[i]           = info.pColorAttachments[i].storeOp;
+    }
+  if(info.pDepthAttachment!=nullptr) {
+    const auto i = info.colorAttachmentCount;
+    attachmentFormats[i] = fbo.depthAttachmentFormat;
+    loadOp[i]            = info.pDepthAttachment->loadOp;
+    storeOp[i]           = info.pDepthAttachment->storeOp;
+    }
+  numAttachments = info.colorAttachmentCount +(info.pDepthAttachment!=nullptr ? 1 : 0);
+  }
+
+bool VFramebufferMap::RenderPassDesc::operator ==(const RenderPassDesc& other) const {
+  if(numAttachments!=other.numAttachments)
     return false;
-  for(size_t i=0; i<descSize; ++i)
-    if(desc[i].frm!=other.desc[i].frm)
+  return std::memcmp(attachmentFormats, other.attachmentFormats, numAttachments*sizeof(attachmentFormats[0]))==0 &&
+         std::memcmp(loadOp,  other.loadOp,  numAttachments*sizeof(loadOp[0]))==0 &&
+         std::memcmp(storeOp, other.storeOp, numAttachments*sizeof(storeOp[0]))==0;
+  }
+
+bool VFramebufferMap::RenderPass::isCompatible(const RenderPass& other) const {
+  if(desc.numAttachments!=other.desc.numAttachments)
+    return false;
+
+  for(uint32_t i=0; i<desc.numAttachments; ++i) {
+    if(desc.attachmentFormats[i]!=other.desc.attachmentFormats[i])
       return false;
+    }
+
   return true;
   }
 
-bool VFramebufferMap::RenderPass::isSame(const Desc* d, size_t cnt) const {
-  return
-      descSize==cnt &&
-      std::memcmp(desc,d,cnt*sizeof(Desc))==0;
+bool VFramebufferMap::RenderPass::isSame(const RenderPassDesc& other) const {
+  return desc==other;
   }
 
-bool VFramebufferMap::Fbo::isSame(const Desc* d, const VkImageView* v, size_t cnt) const {
-  return
-      descSize==cnt &&
-      std::memcmp(pass->desc,d,cnt*sizeof(Desc))==0 &&
-      std::memcmp(view,v,cnt*sizeof(VkImageView))==0;
+bool VFramebufferMap::Fbo::isSame(const VkImageView* attach, size_t attCount, const RenderPassDesc& desc) const {
+  if(descSize!=attCount)
+    return false;
+  return std::memcmp(view, attach, attCount*sizeof(VkImageView))==0 && pass->desc==desc;
   }
 
 bool VFramebufferMap::Fbo::hasImg(VkImageView v) const {
@@ -73,47 +96,25 @@ void VFramebufferMap::notifyDestroy(VkImageView img) {
     }
   }
 
-std::shared_ptr<VFramebufferMap::Fbo> VFramebufferMap::find(const AttachmentDesc* desc, size_t descSize,
-                                                            AbstractGraphicsApi::Texture** att, AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId,
-                                                            uint32_t w, uint32_t h) {
-  Desc        dx  [MaxFramebufferAttachments];
-  VkImageView view[MaxFramebufferAttachments] = {};
-
-  for(size_t i=0; i<descSize; ++i) {
-    auto& d = dx[i];
-
-    d.load  = desc[i].load;
-    d.store = desc[i].store;
-
-    if(sw[i]!=nullptr) {
-      auto& sx = *reinterpret_cast<VSwapchain*>(sw[i]);
-      view[i] = sx.views[imgId[i]];
-      d.frm   = sx.format();
-      } else {
-      auto& tx = *reinterpret_cast<VTexture*>(att[i]);
-      view[i] = tx.fboView(0);
-      d.frm = tx.format;
-      }
+std::shared_ptr<VFramebufferMap::Fbo> VFramebufferMap::find(const VkRenderingInfo* info, const VkPipelineRenderingCreateInfoKHR* fbo) {
+  VkImageView attach[MaxFramebufferAttachments] = {};
+  for(uint8_t i=0; i<info->colorAttachmentCount; ++i) {
+    attach[i] = info->pColorAttachments[i].imageView;
     }
+  if(info->pDepthAttachment!=nullptr) {
+    const uint32_t i = info->colorAttachmentCount;
+    attach[i] = info->pDepthAttachment->imageView;
+    }
+  const uint32_t attCount = info->colorAttachmentCount + (info->pDepthAttachment!=nullptr ? 1 : 0);
 
+  RenderPassDesc desc(*info, *fbo);
   std::lock_guard<std::mutex> guard(syncFbo);
   for(auto& i:val)
-    if(i->isSame(dx,view,descSize))
+    if(i->isSame(attach, attCount, desc))
       return i;
-
-  for(size_t i=0; i<descSize; ++i) {
-    if(sw[i]!=nullptr) {
-      auto& s = *reinterpret_cast<VSwapchain*>(sw[i]);
-      s.map = this;
-      } else {
-      auto& t = *reinterpret_cast<VTextureWithFbo*>(att[i]);
-      t.map = this;
-      }
-    }
-
   val.push_back(std::make_shared<Fbo>());
   try {
-    *val.back() = mkFbo(dx,view,descSize,w,h);
+    *val.back() = mkFbo(info, fbo, attach, attCount);
     }
   catch(...) {
     val.pop_back();
@@ -122,117 +123,108 @@ std::shared_ptr<VFramebufferMap::Fbo> VFramebufferMap::find(const AttachmentDesc
   return val.back();
   }
 
-VFramebufferMap::Fbo VFramebufferMap::mkFbo(const Desc* desc, const VkImageView* view, size_t attCount, uint32_t w, uint32_t h) {
+VFramebufferMap::Fbo VFramebufferMap::mkFbo(const VkRenderingInfo* info, const VkPipelineRenderingCreateInfoKHR* fbo, const VkImageView* attach, size_t attCount) {
   Fbo ret = {};
-  ret.pass = findRenderpass(desc,attCount);
-  ret.fbo  = mkFramebuffer(view,attCount,w,h,ret.pass->pass);
+  ret.pass = findRenderpass(info, fbo);
+  ret.fbo  = mkFramebuffer(attach, attCount, info->renderArea.extent, ret.pass->pass);
 
-  std::memcpy(ret.view,view,attCount*sizeof(VkImageView));
+  std::memcpy(ret.view, attach, attCount*sizeof(VkImageView));
   ret.descSize = uint8_t(attCount);
   return ret;
   }
 
-std::shared_ptr<VFramebufferMap::RenderPass> VFramebufferMap::findRenderpass(const Desc* desc, size_t cnt) {
+std::shared_ptr<VFramebufferMap::RenderPass> VFramebufferMap::findRenderpass(const VkRenderingInfo* info, const VkPipelineRenderingCreateInfoKHR* fbo) {
+  RenderPassDesc desc(*info, *fbo);
   std::lock_guard<std::mutex> guard(syncRp);
   for(auto& i:rp)
-    if(i->isSame(desc,cnt))
+    if(i->isSame(desc))
       return i;
   auto ret = std::make_shared<RenderPass>();
   rp.push_back(ret);
   try {
-    ret->pass = mkRenderPass(desc,cnt);
+    ret->pass = mkRenderPass(info, fbo);
     }
   catch(...) {
     rp.pop_back();
     throw;
     }
-  ret->descSize = uint8_t(cnt);
-  std::memcpy(ret->desc,desc,cnt*sizeof(Desc));
+  ret->desc = desc;
   return ret;
   }
 
-VkRenderPass VFramebufferMap::mkRenderPass(const Desc* desc, size_t attCount) {
+VkRenderPass VFramebufferMap::mkRenderPass(const VkRenderingInfo* info, const VkPipelineRenderingCreateInfoKHR* fbo) {
   VkAttachmentDescription attach[MaxFramebufferAttachments] = {};
-  VkAttachmentReference   ref[MaxFramebufferAttachments]    = {};
-  VkAttachmentReference   zs                                = {};
 
-  VkSubpassDescription subpass    = {};
-  subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
-  subpass.pColorAttachments       = ref;
-  subpass.pDepthStencilAttachment = nullptr;
-  subpass.colorAttachmentCount    = 0;
-  for(uint8_t i=0; i<attCount; ++i) {
+  for(uint8_t i=0; i<info->colorAttachmentCount; ++i) {
     VkAttachmentDescription& a = attach[i];
-    a.format  = desc[i].frm;
-    a.samples = VK_SAMPLE_COUNT_1_BIT;
 
-    const Desc& x = desc[i];
-    a.loadOp  = (x.load ==AccessOp::Preserve) ? VK_ATTACHMENT_LOAD_OP_LOAD   : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    a.storeOp = (x.store==AccessOp::Preserve) ? VK_ATTACHMENT_STORE_OP_STORE : VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    if(x.load == AccessOp::Clear)
-      a.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    if(x.load == AccessOp::Readonly) {
-      a.loadOp  = VK_ATTACHMENT_LOAD_OP_LOAD;
-      a.storeOp = dev.props.hasStoreOpNone ? VK_ATTACHMENT_STORE_OP_NONE_EXT : VK_ATTACHMENT_STORE_OP_STORE;
-      }
+    a.format         = fbo->pColorAttachmentFormats[i];
+    a.samples        = VK_SAMPLE_COUNT_1_BIT;
+    a.loadOp         = info->pColorAttachments[i].loadOp;
+    a.storeOp        = info->pColorAttachments[i].storeOp;
+    a.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    a.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
+    const bool init = (a.loadOp==VK_ATTACHMENT_LOAD_OP_LOAD);
+    a.initialLayout  = init  ? info->pColorAttachments[i].imageLayout : VK_IMAGE_LAYOUT_UNDEFINED;
+    a.finalLayout    = info->pColorAttachments[i].imageLayout;
+    }
+
+  if(info->pDepthAttachment!=nullptr) {
+    VkAttachmentDescription& a = attach[info->colorAttachmentCount];
+
+    a.format         = fbo->depthAttachmentFormat;
+    a.samples        = VK_SAMPLE_COUNT_1_BIT;
+    a.loadOp         = info->pDepthAttachment->loadOp;
+    a.storeOp        = info->pDepthAttachment->storeOp;
     // Stencil is not implemented
     a.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     a.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
     const bool init = (a.loadOp==VK_ATTACHMENT_LOAD_OP_LOAD);
-    // Note: finalLayout must not be VK_IMAGE_LAYOUT_UNDEFINED or VK_IMAGE_LAYOUT_PREINITIALIZED
-    // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkAttachmentDescription-finalLayout-00843
-    if(Detail::nativeIsDepthFormat(a.format)) {
-      a.initialLayout = init  ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
-      a.finalLayout   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-      if(x.load == AccessOp::Readonly) {
-        a.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-        a.finalLayout   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-        }
-      } else {
-      a.initialLayout = init  ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_UNDEFINED;
-      a.finalLayout   = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-      }
-
-    if(Detail::nativeIsDepthFormat(a.format)) {
-      VkAttachmentReference& r = zs;
-      r.attachment = i;
-      if(x.load != AccessOp::Readonly)
-        r.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL; else
-        r.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-      subpass.pDepthStencilAttachment = &r;
-      } else {
-      VkAttachmentReference& r = ref[subpass.colorAttachmentCount];
-      r.attachment = i;
-      r.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-      subpass.colorAttachmentCount++;
-      }
+    a.initialLayout  = init  ? info->pDepthAttachment->imageLayout : VK_IMAGE_LAYOUT_UNDEFINED;
+    a.finalLayout    = info->pDepthAttachment->imageLayout;
     }
+
+  VkAttachmentReference   ref[MaxFramebufferAttachments] = {};
+  VkAttachmentReference   zs                             = {};
+  for(uint8_t i=0; i<info->colorAttachmentCount; ++i) {
+    ref[i].attachment = i;
+    ref[i].layout     = attach[i].finalLayout;
+    }
+  if(info->pDepthAttachment!=nullptr) {
+    zs.attachment = info->colorAttachmentCount;
+    zs.layout     = attach[info->colorAttachmentCount].finalLayout;
+    }
+
+  VkSubpassDescription subpass    = {};
+  subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
+  subpass.colorAttachmentCount    = info->colorAttachmentCount;
+  subpass.pColorAttachments       = ref;
+  subpass.pDepthStencilAttachment = (info->pDepthAttachment!=nullptr) ? &zs : nullptr;
 
   VkRenderPassCreateInfo renderPassInfo = {};
   renderPassInfo.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-  renderPassInfo.attachmentCount = uint32_t(attCount);
+  renderPassInfo.attachmentCount = info->colorAttachmentCount + (info->pDepthAttachment!=nullptr ? 1 : 0);
   renderPassInfo.pAttachments    = attach;
   renderPassInfo.subpassCount    = 1;
   renderPassInfo.pSubpasses      = &subpass;
   renderPassInfo.dependencyCount = 0;
   renderPassInfo.pDependencies   = nullptr;
 
-  VkRenderPass ret=VK_NULL_HANDLE;
+  VkRenderPass ret = VK_NULL_HANDLE;
   vkAssert(vkCreateRenderPass(dev.device.impl,&renderPassInfo,nullptr,&ret));
   return ret;
   }
 
-VkFramebuffer VFramebufferMap::mkFramebuffer(const VkImageView* attach, size_t attCount, uint32_t w, uint32_t h, VkRenderPass rp) {
+VkFramebuffer VFramebufferMap::mkFramebuffer(const VkImageView* attach, size_t attCount, VkExtent2D size, VkRenderPass rp) {
   VkFramebufferCreateInfo crt={};
   crt.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
   crt.renderPass      = rp;
   crt.pAttachments    = attach;
   crt.attachmentCount = uint32_t(attCount);
-  crt.width           = w;
-  crt.height          = h;
+  crt.width           = size.width;
+  crt.height          = size.height;
   crt.layers          = 1;
 
   VkFramebuffer ret=VK_NULL_HANDLE;
@@ -241,3 +233,4 @@ VkFramebuffer VFramebufferMap::mkFramebuffer(const VkImageView* attach, size_t a
   }
 
 #endif
+

@@ -289,7 +289,7 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
     newChunk();
     }
 
-  if(device.props.hasDynRendering) {
+  {
     VkRenderingAttachmentInfoKHR colorAtt[MaxFramebufferAttachments] = {};
     VkRenderingAttachmentInfoKHR depthAtt = {};
 
@@ -336,7 +336,7 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
       if(isDepthFormat(frm[i])) {
         if(desc[i].load==AccessOp::Readonly)
           att.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL; else
-          att.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+          att.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         info.pDepthAttachment = &att;
         passDyn.depthAttachmentFormat = imageFormat;
         auto& clr = att.clearValue;
@@ -360,57 +360,19 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
       att.storeOp            = mkStoreOp(desc[i].store);
       }
     passDyn.colorAttachmentCount = info.colorAttachmentCount;
-
-    device.vkCmdBeginRenderingKHR(impl,&info);
-    } else {
-    auto fbo = device.fboMap.find(desc,descSize, att,sw,imgId,width,height);
-    auto fb  = fbo.get();
-    pass = fbo->pass;
-
-    VkClearValue clr[MaxFramebufferAttachments];
-    for(size_t i=0; i<descSize; ++i) {
-      if(isDepthFormat(frm[i])) {
-        clr[i].depthStencil.depth = desc[i].clear.x;
-        } else {
-        clr[i].color.float32[0]   = desc[i].clear.x;
-        clr[i].color.float32[1]   = desc[i].clear.y;
-        clr[i].color.float32[2]   = desc[i].clear.z;
-        clr[i].color.float32[3]   = desc[i].clear.w;
-        }
-      }
-
-    VkRenderPassBeginInfo info = {};
-    info.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    info.renderPass        = fb->pass->pass;
-    info.framebuffer       = fb->fbo;
-    info.renderArea.offset = {0, 0};
-    info.renderArea.extent = {width,height};
-
-    info.clearValueCount   = uint32_t(descSize);
-    info.pClearValues      = clr;
-
-    vkCmdBeginRenderPass(impl, &info, VK_SUBPASS_CONTENTS_INLINE);
-    }
+    vkCmdBeginRenderingKHR(impl,&info);
+  }
   state = RenderPass;
 
   // setup dynamic state
   // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#pipelines-dynamic-state
   setViewport(Rect(0,0,int32_t(width),int32_t(height)));
-
-  VkRect2D scissor = {};
-  scissor.offset = {0, 0};
-  scissor.extent = {width, height};
-  vkCmdSetScissor(impl,0,1,&scissor);
+  setScissor (Rect(0,0,int32_t(width),int32_t(height)));
   }
 
 void VCommandBuffer::endRendering() {
+  vkCmdEndRenderingKHR(impl);
   resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Graphics);
-
-  if(device.props.hasDynRendering) {
-    device.vkCmdEndRenderingKHR(impl);
-    } else {
-    vkCmdEndRenderPass(impl);
-    }
   state = PostRenderPass;
   }
 
@@ -555,8 +517,8 @@ void VCommandBuffer::implSetUniforms(const PipelineStage st) {
   if(pLay!=pipelineLayout && st==PipelineStage::S_Graphics) {
     pipelineLayout = pLay;
     auto& pso  = *curDrawPipeline;
-    auto  inst = device.props.hasDynRendering ? pso.instance(passDyn,pipelineLayout,vboStride)
-                                              : pso.instance(pass,   pipelineLayout,vboStride);
+    auto  rp   = (passRp!=nullptr ? passRp->pass : VK_NULL_HANDLE);
+    auto  inst = pso.instance(passDyn, rp, pipelineLayout, vboStride);
     vkCmdBindPipeline(impl, bindPoint, inst);
     pushData.durty = true;
     }
@@ -1167,6 +1129,45 @@ void VCommandBuffer::vkCmdPipelineBarrier2(VkCommandBuffer impl, const VkDepende
                        memCount,memBarrier,
                        bufCount,bufBarrier,
                        imgCount,imgBarrier);
+  }
+
+void VCommandBuffer::vkCmdBeginRenderingKHR(VkCommandBuffer impl, const VkRenderingInfo* info) {
+  if(device.props.hasDynRendering) {
+    device.vkCmdBeginRenderingKHR(impl,info);
+    return;
+    }
+
+  auto fbo = device.fboMap.find(info, &passDyn);
+  auto fb  = fbo.get();
+  passRp   = fbo->pass;
+
+  VkClearValue clr[MaxFramebufferAttachments];
+  for(size_t i=0; i<info->colorAttachmentCount; ++i) {
+    clr[i].color = info->pColorAttachments[i].clearValue.color;
+    }
+  if(info->pDepthAttachment!=nullptr) {
+    const uint32_t i = info->colorAttachmentCount;
+    clr[i].depthStencil = info->pDepthAttachment->clearValue.depthStencil;
+    }
+
+  VkRenderPassBeginInfo rinfo = {};
+  rinfo.sType       = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+  rinfo.renderPass  = fb->pass->pass;
+  rinfo.framebuffer = fb->fbo;
+  rinfo.renderArea  = info->renderArea;
+
+  rinfo.clearValueCount   = info->colorAttachmentCount + (info->pDepthAttachment!=nullptr ? 1 : 0);
+  rinfo.pClearValues      = clr;
+
+  vkCmdBeginRenderPass(impl, &rinfo, VK_SUBPASS_CONTENTS_INLINE);
+  }
+
+void VCommandBuffer::vkCmdEndRenderingKHR(VkCommandBuffer impl) {
+  if(device.props.hasDynRendering) {
+    device.vkCmdEndRenderingKHR(impl);
+    } else {
+    vkCmdEndRenderPass(impl);
+    }
   }
 
 void VCommandBuffer::pushChunk() {

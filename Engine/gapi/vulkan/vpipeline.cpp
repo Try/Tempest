@@ -86,28 +86,7 @@ VPipeline::~VPipeline() {
   cleanup();
   }
 
-VkPipeline VPipeline::instance(const std::shared_ptr<VFramebufferMap::RenderPass>& pass, VkPipelineLayout pLay, size_t stride) {
-  std::lock_guard<SpinLock> guard(syncInst);
-
-  for(auto& i:instRp)
-    if(i.isCompatible(pass,pLay,stride))
-      return i.val;
-  VkPipeline val = VK_NULL_HANDLE;
-  try {
-    val = initGraphicsPipeline(device,pLay,pass.get(),nullptr,st,
-                               decl.get(),declSize,stride,
-                               tp,modules);
-    instRp.emplace_back(pass,pLay,stride,val);
-    }
-  catch(...) {
-    if(val!=VK_NULL_HANDLE)
-      vkDestroyPipeline(device,val,nullptr);
-    throw;
-    }
-  return instRp.back().val;
-  }
-
-VkPipeline VPipeline::instance(const VkPipelineRenderingCreateInfoKHR& info, VkPipelineLayout pLay, size_t stride) {
+VkPipeline VPipeline::instance(const VkPipelineRenderingCreateInfoKHR& info, VkRenderPass pass, VkPipelineLayout pLay, size_t stride) {
   std::lock_guard<SpinLock> guard(syncInst);
 
   for(auto& i:instDr)
@@ -115,7 +94,7 @@ VkPipeline VPipeline::instance(const VkPipelineRenderingCreateInfoKHR& info, VkP
       return i.val;
   VkPipeline val = VK_NULL_HANDLE;
   try {
-    val = initGraphicsPipeline(device,pLay,nullptr,&info,st,
+    val = initGraphicsPipeline(device,pLay,pass,&info,st,
                                decl.get(),declSize,stride,
                                tp,modules);
     instDr.emplace_back(info,pLay,stride,val);
@@ -151,8 +130,8 @@ void VPipeline::cleanup() {
     vkDestroyPipeline(device,i.val,nullptr);
   }
 
-VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
-                                           const VFramebufferMap::RenderPass* rpLay,
+VkPipeline VPipeline::initGraphicsPipeline(VkDevice device,
+                                           VkPipelineLayout layout, const VkRenderPass rpass,
                                            const VkPipelineRenderingCreateInfoKHR* dynLay,
                                            const RenderState &st,
                                            const Decl::ComponentType *decl, size_t declSize,
@@ -243,9 +222,9 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   VkPipelineColorBlendAttachmentState blendAtt[MaxFramebufferAttachments] = {};
   uint32_t                            blendAttCount = 0;
   {
-  const size_t size = rpLay!=nullptr ? rpLay->descSize : dynLay->colorAttachmentCount;
+  const size_t size = dynLay->colorAttachmentCount;
   for(size_t i=0; i<size; ++i) {
-    const VkFormat frm = rpLay!=nullptr ? rpLay->desc[i].frm : dynLay->pColorAttachmentFormats[i];
+    const VkFormat frm = dynLay->pColorAttachmentFormats[i];
     if(nativeIsDepthFormat(frm))
       continue;
     auto& a = blendAtt[i];
@@ -314,8 +293,8 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device, VkPipelineLayout lay
   pipelineInfo.subpass             = 0;
   pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE; // TODO: dummy default pso
 
-  if(rpLay!=nullptr)
-    pipelineInfo.renderPass = rpLay->pass; else
+  if(rpass!=VK_NULL_HANDLE)
+    pipelineInfo.renderPass = rpass; else
     pipelineInfo.pNext      = dynLay;
 
   if(useTesselation) {

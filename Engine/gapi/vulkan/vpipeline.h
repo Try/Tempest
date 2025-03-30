@@ -45,8 +45,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     VkPipelineLayout      pipelineLayout = VK_NULL_HANDLE;
     uint32_t              defaultStride  = 0;
 
-    VkPipeline         instance(const std::shared_ptr<VFramebufferMap::RenderPass>& lay, VkPipelineLayout pLay, size_t stride);
-    VkPipeline         instance(const VkPipelineRenderingCreateInfoKHR& info, VkPipelineLayout pLay, size_t stride);
+    VkPipeline         instance(const VkPipelineRenderingCreateInfoKHR& info, VkRenderPass pass, VkPipelineLayout pLay, size_t stride);
 
     IVec3              workGroupSize() const override;
     size_t             sizeofBuffer(size_t id, size_t arraylen) const override;
@@ -85,7 +84,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     void                                   cleanup();
 
     VkPipeline                   initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
-                                                      const VFramebufferMap::RenderPass* rpLay, const VkPipelineRenderingCreateInfoKHR* dynLay, const RenderState &st,
+                                                      const VkRenderPass rpass, const VkPipelineRenderingCreateInfoKHR* dynLay, const RenderState &st,
                                                       const Decl::ComponentType *decl, size_t declSize, size_t stride,
                                                       Topology tp,
                                                       const DSharedPtr<const VShader*>* shaders);

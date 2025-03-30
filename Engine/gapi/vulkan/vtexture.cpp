@@ -114,11 +114,9 @@ VTextureWithFbo::VTextureWithFbo(VTexture&& base)
   }
 
 VTextureWithFbo::~VTextureWithFbo() {
-  if(map!=nullptr) {
-    map->notifyDestroy(imgView);
-    for(auto& i:extViews)
-      map->notifyDestroy(i.v);
-    }
+  auto dev = alloc->device();
+  if(!dev->props.hasDynRendering)
+    dev->fboMap.notifyDestroy(imgView);
   }
 
 #endif
