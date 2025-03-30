@@ -1,4 +1,3 @@
-
 #include "windowsapi.h"
 
 #ifdef __WINDOWS__
@@ -12,9 +11,9 @@
 #include <atomic>
 #include <unordered_set>
 #include <thread>
-#include <vector>
 
 #include <windows.h>
+#include <shellscalingapi.h>
 
 using namespace Tempest;
 
@@ -40,6 +39,10 @@ static int getY_LPARAM(LPARAM lp) {
 
 static WORD get_Button_WPARAM(WPARAM lp) {
   return ((DWORD_PTR(lp)) >> 16) & 0xffff;
+  }
+
+static float dpiToUiScale(UINT dpi){
+  return float(dpi) / float(USER_DEFAULT_SCREEN_DPI);
   }
 
 static Event::MouseButton toButton( UINT msg, const unsigned long long wParam ){
@@ -103,6 +106,12 @@ WindowsApi::WindowsApi() {
     };
 
   setupKeyTranslate(k,24);
+
+  if(auto ptr = GetProcAddress(LoadLibraryA("User32"), "SetProcessDpiAwarenessContext")) {
+    using Fn = WINBOOL WINAPI(*)(DPI_AWARENESS_CONTEXT value);
+    auto SetProcessDpiAwarenessContext = reinterpret_cast<Fn>(ptr);
+    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
+    }
 
   struct Private {
     static LRESULT CALLBACK wProc(HWND hWnd,UINT msg,const WPARAM wParam,const LPARAM lParam ){
@@ -272,10 +281,23 @@ bool WindowsApi::implIsFullscreen(SystemApi::Window *w) {
   return ULONG(GetWindowLongPtr(hwnd, GWL_STYLE)) & WS_POPUP;
   }
 
-void WindowsApi::implSetWindowTitle(Window* w, const char* utf8) {
+void WindowsApi::implSetWindowTitle(SystemApi::Window* w, const char* utf8) {
   auto utf16 = TextCodec::toUtf16(utf8);
   HWND hwnd = HWND(w);
   SetWindowTextW(hwnd, reinterpret_cast<const wchar_t*>(utf16.c_str()));
+  }
+
+float WindowsApi::implUiScale(SystemApi::Window* w) {
+  static auto ptr = GetProcAddress(LoadLibraryA("User32"), "GetDpiForWindow");
+  if(ptr==nullptr)
+    return 1;
+
+  using Fn = UINT WINAPI(*)(HWND value);
+  auto GetDpiForWindow = reinterpret_cast<Fn>(ptr);
+  UINT dpi = GetDpiForWindow(HWND(w));
+  if(dpi==0)
+    dpi = USER_DEFAULT_SCREEN_DPI;
+  return dpiToUiScale(dpi);
   }
 
 void WindowsApi::implSetCursorPosition(SystemApi::Window *w, int x, int y) {
@@ -454,6 +476,14 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
         SystemApi::dispatchResize(*cb,e);
         }
       break;
+
+    case WM_DPICHANGED: {
+      const UINT  dpi     = HIWORD(wParam);
+      const float uiScale = dpiToUiScale(dpi);
+      Tempest::SizeEvent e(cb->w(), cb->h());
+      SystemApi::dispatchResize(*cb,e);
+      break;
+      }
 
     case WM_SETCURSOR:
       if(IsIconic(hWnd)) {

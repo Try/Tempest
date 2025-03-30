@@ -467,6 +467,8 @@ void Widget::setCursorShape(CursorShape cs) {
     Widget* root=implTrieRoot(this);
     if(auto w = dynamic_cast<Window*>(root))
       w->implShowCursor(cs);
+    if(auto w = dynamic_cast<UiOverlay*>(root))
+      w->implShowCursor(cs);
     }
   }
 

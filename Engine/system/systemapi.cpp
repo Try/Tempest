@@ -29,6 +29,11 @@ SystemApi::Data SystemApi::m;
 SystemApi::SystemApi() {
   }
 
+float SystemApi::implUiScale(Window* w) {
+  // default to 1.0, on platforms without hidpi implementation
+  return 1;
+  }
+
 void SystemApi::implSetWindowTitle(Window *w, const char *utf8) {
   // TODO
   }
@@ -206,3 +211,6 @@ void SystemApi::showCursor(SystemApi::Window *w, CursorShape show) {
   return inst().implShowCursor(w,show);
   }
 
+float SystemApi::uiScale(Window* w) {
+  return inst().implUiScale(w);
+  }

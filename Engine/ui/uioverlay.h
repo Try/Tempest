@@ -21,6 +21,7 @@ class UiOverlay : public Tempest::Widget {
     Window* owner=nullptr;
 
   friend class EventDispatcher;
+  friend class Widget;
   };
 
 }

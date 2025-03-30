@@ -19,6 +19,7 @@ class WindowsApi final : SystemApi {
     bool     implIsFullscreen(SystemApi::Window *w) override;
 
     void     implSetWindowTitle(SystemApi::Window *w, const char* utf8) override;
+    float    implUiScale(SystemApi::Window *w) override;
 
     void     implSetCursorPosition(SystemApi::Window *w, int x, int y) override;
     void     implShowCursor(SystemApi::Window *w, CursorShape show) override;
