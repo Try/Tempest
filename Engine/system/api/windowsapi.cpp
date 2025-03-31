@@ -5,8 +5,7 @@
 #include <Tempest/Event>
 #include <Tempest/Except>
 #include <Tempest/TextCodec>
-
-#include "system/eventdispatcher.h"
+#include <Tempest/Window>
 
 #include <atomic>
 #include <unordered_set>
@@ -108,9 +107,10 @@ WindowsApi::WindowsApi() {
   setupKeyTranslate(k,24);
 
   if(auto ptr = GetProcAddress(LoadLibraryA("User32"), "SetProcessDpiAwarenessContext")) {
-    using Fn = WINBOOL WINAPI(*)(DPI_AWARENESS_CONTEXT value);
+    using Fn = BOOL (WINAPI *)(DPI_AWARENESS_CONTEXT value);
     auto SetProcessDpiAwarenessContext = reinterpret_cast<Fn>(ptr);
-    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
+    //SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
+    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     }
 
   struct Private {
@@ -292,7 +292,7 @@ float WindowsApi::implUiScale(SystemApi::Window* w) {
   if(ptr==nullptr)
     return 1;
 
-  using Fn = UINT WINAPI(*)(HWND value);
+  using Fn = UINT (WINAPI *)(HWND value);
   auto GetDpiForWindow = reinterpret_cast<Fn>(ptr);
   UINT dpi = GetDpiForWindow(HWND(w));
   if(dpi==0)
