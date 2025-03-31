@@ -377,6 +377,12 @@ void MacOSApi::implSetWindowTitle(Window* w, const char* utf8) {
   [str release];
   }
 
+float MacOSApi::implUiScale(SystemApi::Window* w) {
+  NSWindow* wnd = reinterpret_cast<NSWindow*>(w);
+  double scaleFactor = [wnd backingScaleFactor];
+  return float(scaleFactor);
+  }
+
 bool MacOSApi::implIsRunning() {
   return ::isRunning.load();
   }

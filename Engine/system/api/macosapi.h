@@ -32,6 +32,7 @@ class MacOSApi final: SystemApi {
     void     implShowCursor(SystemApi::Window *w, CursorShape show) override;
 
     void     implSetWindowTitle(SystemApi::Window *w, const char* utf8) override;
+    float    implUiScale(SystemApi::Window* w) override;
 
     bool     implIsRunning() override;
     int      implExec(AppCallBack& cb) override;
