@@ -56,7 +56,7 @@ During development various issues of Vulkan stack been found, reported and some 
 #### Contribution 
 
 * - [x] MSL: task and mesh shader support  
-https://github.com/KhronosGroup/SPIRV-Cross/pull/2402
+https://github.com/KhronosGroup/SPIRV-Cross/pull/2402  
 https://github.com/KhronosGroup/SPIRV-Cross/pull/2400
 
 * - [x] MSL: add ray-cull mask  
@@ -66,7 +66,7 @@ https://github.com/KhronosGroup/SPIRV-Cross/pull/2241
 https://github.com/KhronosGroup/Vulkan-ValidationLayers/pull/4219
 
 * - [x] MSL: runtime array over argument buffers  
-https://github.com/KhronosGroup/SPIRV-Cross/pull/2179
+https://github.com/KhronosGroup/SPIRV-Cross/pull/2179  
 https://github.com/KhronosGroup/SPIRV-Cross/pull/2184
 
 * - [x] MSL: fix mutability for rayQueryEXT parameters  
