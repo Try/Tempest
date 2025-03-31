@@ -54,6 +54,14 @@ pm.save(outImg);
 During development various issues of Vulkan stack been found, reported and some were fixed. 
 
 #### Contribution 
+
+* - [x] MSL: task and mesh shader support  
+https://github.com/KhronosGroup/SPIRV-Cross/pull/2402
+https://github.com/KhronosGroup/SPIRV-Cross/pull/2400
+
+* - [x] MSL: add ray-cull mask  
+https://github.com/KhronosGroup/SPIRV-Cross/pull/2241
+
 * - [x] State tracking of VkCopyDescriptorSet for KHR-acceleration-structure  
 https://github.com/KhronosGroup/Vulkan-ValidationLayers/pull/4219
 
@@ -87,7 +95,16 @@ https://github.com/nothings/stb/pull/835
 
 #### Issues
 
-* - [x] [HLSL] SPIRV_Cross_VertexInfo is not relieble  
+* - [x] MSL: fix extraction of global variables, in case of atomics  
+https://github.com/KhronosGroup/SPIRV-Cross/pull/2203
+
+* - [x] MSL: fix mutability for rayQueryEXT parameters  
+https://github.com/KhronosGroup/SPIRV-Cross/pull/2201
+
+* - [x] HLSL: Fix unroll, when storing to pointer to array  
+https://github.com/KhronosGroup/SPIRV-Cross/pull/2205
+
+* - [x] HLSL: SPIRV_Cross_VertexInfo is not relieble  
 https://github.com/KhronosGroup/SPIRV-Cross/issues/2032
 
 * - [x] HLSL: link error: Signatures between stages are incompatible  
