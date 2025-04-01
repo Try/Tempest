@@ -109,8 +109,8 @@ WindowsApi::WindowsApi() {
   if(auto ptr = GetProcAddress(LoadLibraryA("User32"), "SetProcessDpiAwarenessContext")) {
     using Fn = BOOL (WINAPI *)(DPI_AWARENESS_CONTEXT value);
     auto SetProcessDpiAwarenessContext = reinterpret_cast<Fn>(ptr);
-    //SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
-    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+    SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
+    // SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     }
 
   struct Private {
