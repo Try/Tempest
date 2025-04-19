@@ -203,8 +203,15 @@ MtCompPipeline::MtCompPipeline(MtDevice &device, const MtPipelineLay& lay, const
   localSize = toMtlSize(sh.comp.wgSize);
   auto desc = NsPtr<MTL::ComputePipelineDescriptor>::init();
   desc->setComputeFunction(sh.impl.get());
-  desc->setThreadGroupSizeIsMultipleOfThreadExecutionWidth(false); // it seems no way to guess correct with value
   desc->setMaxTotalThreadsPerThreadgroup(localSize.width*localSize.height*localSize.depth);
+  desc->setThreadGroupSizeIsMultipleOfThreadExecutionWidth(false);
+  //desc->setThreadGroupSizeIsMultipleOfThreadExecutionWidth(desc->maxTotalThreadsPerThreadgroup()%32==0); // it seems no way to guess correct with value
+
+  if(const char* name = sh.dbgShortName()){
+    auto str = NsPtr<NS::String>(NS::String::string(name,NS::UTF8StringEncoding));
+    str->retain();
+    desc->setLabel(str.get());
+    }
 
   for(size_t i=0; i<lay.lay.size(); ++i) {
     auto& l = lay.lay[i];
