@@ -56,3 +56,10 @@ void Shader::fetchBindings(const uint32_t* source, const size_t size){
     break;
     }
   }
+
+const char* Shader::dbgShortName() const {
+  const auto at = dbg.source.find_last_of('/');
+  if(at==std::string::npos)
+    return dbg.source.c_str();
+  return dbg.source.c_str() + at + 1;
+  }

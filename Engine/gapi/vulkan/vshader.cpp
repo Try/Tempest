@@ -15,6 +15,12 @@ VShader::VShader(VDevice& device, const void *source, size_t src_size)
 
   if(vkCreateShaderModule(device.device.impl,&createInfo,nullptr,&impl)!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule, "\"" + dbg.source + "\"");
+
+  VkDebugMarkerObjectNameInfoEXT nameInfo = {VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT};
+  nameInfo.objectType   = VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT;
+  nameInfo.object       = impl;
+  nameInfo.pObjectName  = this->dbgShortName();
+  device.vkDebugMarkerSetObjectName(device.device.impl, &nameInfo);
   }
 
 VShader::VShader(VDevice& device)
@@ -25,6 +31,5 @@ VShader::~VShader() {
   if(impl!=VK_NULL_HANDLE)
     vkDestroyShaderModule(device,impl,nullptr);
   }
-
 
 #endif

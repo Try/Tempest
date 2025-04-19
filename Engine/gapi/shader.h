@@ -17,6 +17,8 @@ class Shader : public AbstractGraphicsApi::Shader {
     void fetchBindings(const uint32_t* source, const size_t size);
 
   public:
+    const char* dbgShortName() const;
+
     struct Vert {
       std::vector<Decl::ComponentType> decl;
 

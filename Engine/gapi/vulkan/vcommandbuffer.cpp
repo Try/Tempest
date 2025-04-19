@@ -682,7 +682,7 @@ void VCommandBuffer::setDebugMarker(std::string_view tag) {
     isDbgRegion = false;
     }
 
-  if(device.vkCmdDebugMarkerBegin!=nullptr && !tag.empty()) {
+  if(!tag.empty()) {
     char buf[128] = {};
     std::snprintf(buf, sizeof(buf), "%.*s", int(tag.size()), tag.data());
     VkDebugMarkerMarkerInfoEXT info = {};

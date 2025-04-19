@@ -337,6 +337,12 @@ VCompPipeline::VCompPipeline(VDevice& device, const VShader& comp)
     const auto err = vkCreateComputePipelines(dev, VK_NULL_HANDLE, 1, &info, nullptr, &impl);
     if(err!=VK_SUCCESS)
       throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
+
+    VkDebugMarkerObjectNameInfoEXT nameInfo = {VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT};
+    nameInfo.objectType   = VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT;
+    nameInfo.object       = impl;
+    nameInfo.pObjectName  = comp.dbgShortName();
+    device.vkDebugMarkerSetObjectName(device.device.impl, &nameInfo);
     }
   catch(...) {
     vkDestroyPipelineLayout(dev,pipelineLayout,nullptr);

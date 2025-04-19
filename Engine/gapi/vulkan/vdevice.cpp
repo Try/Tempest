@@ -182,6 +182,16 @@ bool VDevice::checkForExt(const std::vector<VkExtensionProperties>& list, const 
   return VulkanInstance::checkForExt(list,name);
   }
 
+template<class R, class ... Args>
+void dummyIfNull(R (*&fn)(Args...a)) {
+  struct Dummy {
+    static R fn(Args...a) { return R(); }
+    };
+
+  if(fn==nullptr)
+    fn = Dummy::fn;
+  }
+
 VDevice::SwapChainSupport VDevice::querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface) {
   SwapChainSupport details;
   vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
@@ -270,7 +280,9 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     rqExt.push_back(VK_KHR_MAINTENANCE_1_EXTENSION_NAME);
     //rqExt.push_back(VK_EXT_IMAGE_2D_VIEW_OF_3D_EXTENSION_NAME);
     }
-
+  if(props.hasDebugMarker) {
+    rqExt.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+    }
 
   VkPhysicalDeviceFeatures supportedFeatures={};
   vkGetPhysicalDeviceFeatures(pdev,&supportedFeatures);
@@ -443,18 +455,13 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
     }
 
   if(props.hasDebugMarker) {
-    vkCmdDebugMarkerBegin = PFN_vkCmdDebugMarkerBeginEXT(vkGetDeviceProcAddr(device.impl,"vkCmdDebugMarkerBeginEXT"));
-    vkCmdDebugMarkerEnd   = PFN_vkCmdDebugMarkerEndEXT  (vkGetDeviceProcAddr(device.impl,"vkCmdDebugMarkerEndEXT"));
+    vkCmdDebugMarkerBegin      = PFN_vkCmdDebugMarkerBeginEXT     (vkGetDeviceProcAddr(device.impl,"vkCmdDebugMarkerBeginEXT"));
+    vkCmdDebugMarkerEnd        = PFN_vkCmdDebugMarkerEndEXT       (vkGetDeviceProcAddr(device.impl,"vkCmdDebugMarkerEndEXT"));
+    vkDebugMarkerSetObjectName = PFN_vkDebugMarkerSetObjectNameEXT(vkGetDeviceProcAddr(device.impl,"vkDebugMarkerSetObjectNameEXT"));
     }
-
-  if(vkCmdDebugMarkerBegin==nullptr || vkCmdDebugMarkerEnd==nullptr) {
-    struct Dummy {
-      static void vkCmdDebugMarkerBegin(VkCommandBuffer, const VkDebugMarkerMarkerInfoEXT*){}
-      static void vkCmdDebugMarkerEnd(VkCommandBuffer){}
-      };
-    vkCmdDebugMarkerBegin = Dummy::vkCmdDebugMarkerBegin;
-    vkCmdDebugMarkerEnd   = Dummy::vkCmdDebugMarkerEnd;
-    }
+  dummyIfNull(vkCmdDebugMarkerBegin);
+  dummyIfNull(vkCmdDebugMarkerEnd);
+  dummyIfNull(vkDebugMarkerSetObjectName);
   }
 
 VDevice::MemIndex VDevice::memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const {
