@@ -478,8 +478,6 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
       break;
 
     case WM_DPICHANGED: {
-      const UINT  dpi     = HIWORD(wParam);
-      const float uiScale = dpiToUiScale(dpi);
       Tempest::SizeEvent e(cb->w(), cb->h());
       SystemApi::dispatchResize(*cb,e);
       break;
