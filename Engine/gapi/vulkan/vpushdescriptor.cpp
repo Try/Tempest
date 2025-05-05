@@ -127,6 +127,9 @@ void VPushDescriptor::write(VDevice& dev, VkWriteDescriptorSet& wx, WriteInfo& i
       uint32_t mipLevel  = offset;
       bool     is3DImage = tex->is3D; // TODO: cast 3d to 2d, based on dest descriptor
 
+      if((cls==ShaderReflection::ImgR || cls==ShaderReflection::ImgRW) && mipLevel==uint32_t(-1))
+        mipLevel = 0;
+
       VkDescriptorImageInfo& info = infoW.image;
       if(cls==ShaderReflection::Texture) {
         auto sx = smp;
