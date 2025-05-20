@@ -6,14 +6,8 @@
 #include "api/iosapi.h"
 #include "eventdispatcher.h"
 
-#include "exceptions/exception.h"
-
 #include <Tempest/Event>
 #include <Tempest/Window>
-
-#include <thread>
-#include <unordered_set>
-#include <atomic>
 
 using namespace Tempest;
 
