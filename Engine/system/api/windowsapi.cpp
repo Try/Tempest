@@ -364,8 +364,13 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
 
   switch( msg ) {
     case WM_PAINT:{
-      if(!IsIconic(hWnd))
-        SystemApi::dispatchRender(*cb);
+      if(!IsIconic(hWnd)) {
+        // Avoid rendering event in zero area window
+        RECT rectWindow = {};
+        GetClientRect(hWnd, &rectWindow);
+        if(rectWindow.left!=rectWindow.right && rectWindow.top!=rectWindow.bottom)
+          SystemApi::dispatchRender(*cb);
+        }
       return DefWindowProc( hWnd, msg, wParam, lParam );
       }
 
