@@ -9,7 +9,10 @@ class X11Api final: SystemApi {
     static void* display();
 
   private:
+    struct Private;
+
     X11Api();
+    ~X11Api();
 
     Window*  implCreateWindow(Tempest::Window *owner, uint32_t width, uint32_t height) override;
     Window*  implCreateWindow(Tempest::Window *owner, ShowMode sm) override;
@@ -31,6 +34,8 @@ class X11Api final: SystemApi {
     bool     implIsRunning() override;
 
     void     alignGeometry(Window *w, Tempest::Window& owner);
+
+    std::unique_ptr<Private> impl;
 
   friend class SystemApi;
   };

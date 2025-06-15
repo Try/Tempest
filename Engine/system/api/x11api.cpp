@@ -7,7 +7,6 @@
 #include <Tempest/Log>
 
 #include <atomic>
-#include <stdexcept>
 #include <cstring>
 #include <thread>
 #include <unordered_map>
@@ -52,9 +51,6 @@ static std::atomic_bool isExit{0};
 static int              activeCursorChange = 0;
 static XIM              xim = 0;
 
-static std::unordered_map<SystemApi::Window*,Tempest::Window*> windows;
-static std::unordered_set<SystemApi::Window*> fullscreenWindows;
-
 static Atom& WM_DELETE_WINDOW(){
   static Atom w  = XInternAtom( dpy, "WM_DELETE_WINDOW", 0);
   return w;
@@ -80,7 +76,9 @@ static Atom& _NET_WM_STATE_FULLSCREEN(){
   return w;
   }
 
-static bool nativeIsFullscreen(HWND& w) {
+static bool nativeIsFullscreen(SystemApi::Window *iw) {
+  HWND w(iw);
+
   Atom actualType;
   int actualFormat;
   unsigned long numItems, bytesAfter;
@@ -132,6 +130,62 @@ static void maximizeWindow(HWND& w) {
   XSync(dpy,False);
   }
 
+struct WPayload {
+  Tempest::Window* owner = nullptr;
+  XIC              xic   = nullptr;
+  bool             fullscreen = false;
+  };
+
+struct X11Api::Private {
+  std::unordered_map<SystemApi::Window*,WPayload> windows;
+
+  void onCreateWindow(SystemApi::Window* w, Tempest::Window *owner) {
+    WPayload p;
+    p.owner = owner;
+    windows[w] = p;
+    }
+
+  void onDestroyWindow(SystemApi::Window* w){
+    if(auto p = findWindow(w)) {
+      XDestroyIC(p->xic);
+      }
+    windows.erase(w); //NOTE: X11 can send events to dead window
+    }
+
+  void setXIC(SystemApi::Window* w, XIC xic) {
+    if(auto p = findWindow(w)) {
+      p->xic = xic;
+      }
+    }
+
+  XIC xicOf(SystemApi::Window* w) {
+    if(auto p = findWindow(w)) {
+      return p->xic;
+      }
+    return nullptr;
+    }
+
+  WPayload* findWindow(SystemApi::Window* w) {
+    auto it = windows.find(w);
+    if(it==windows.end())
+      return nullptr;
+    return &it->second;
+    }
+
+  void trackFullscreen(SystemApi::Window *w) {
+    if(auto p = findWindow(w)) {
+      p->fullscreen = nativeIsFullscreen(w);
+      }
+    }
+
+  bool isFullscreen(SystemApi::Window *w) {
+    if(auto p = findWindow(w)) {
+      return p->fullscreen;
+      }
+    return false;
+    }
+  };
+
 X11Api::X11Api() {
   static const TranslateKeyPair k[] = {
     { XK_Control_L, Event::K_LControl },
@@ -168,6 +222,8 @@ X11Api::X11Api() {
     };
   setupKeyTranslate(k,24);
 
+  impl.reset(new Private());
+
   XInitThreads();
   dpy = XOpenDisplay(nullptr);
 
@@ -184,6 +240,10 @@ X11Api::X11Api() {
     XSetLocaleModifiers("@im=none");
     xim = XOpenIM(dpy, 0, 0, 0);
     }
+  }
+
+X11Api::~X11Api() {
+  impl.reset();
   }
 
 void* X11Api::display() {
@@ -233,7 +293,7 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, 
   XFree(vi);
 
   auto ret = reinterpret_cast<SystemApi::Window*>(win.ptr());
-  windows[ret] = owner;
+  impl->onCreateWindow(ret, owner);
   XMapWindow(dpy, win);
   XSync(dpy,False);
 
@@ -245,12 +305,10 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, 
                       XNFocusWindow,  win,
                       NULL);
   XSetICFocus(xic);
+  impl->setXIC(ret, xic);
 
-  if(owner!=nullptr) {
+  if(owner!=nullptr)
     alignGeometry(win.ptr(),*owner);
-    if(nativeIsFullscreen(win))
-      fullscreenWindows.insert(win.ptr());
-    }
   return ret;
   }
 
@@ -282,13 +340,12 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, SystemApi::S
       implSetAsFullscreen(hwnd,true);
       break;
     }
-  
+  impl->trackFullscreen(hwnd);
   return hwnd;
   }
 
 void X11Api::implDestroyWindow(SystemApi::Window *w) {
-  windows.erase(w); //NOTE: X11 can send events to dead window
-  fullscreenWindows.erase(w);
+  impl->onDestroyWindow(w);
   XDestroyWindow(dpy, HWND(w));
   }
 
@@ -312,7 +369,7 @@ bool X11Api::implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) {
   }
 
 bool X11Api::implIsFullscreen(SystemApi::Window *w) {
-  return fullscreenWindows.find(w) != fullscreenWindows.end();
+  return impl->isFullscreen(w);
   }
 
 void X11Api::implSetWindowTitle(SystemApi::Window *w, const char *utf8) {
@@ -409,10 +466,10 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
     XNextEvent(dpy, &xev);
 
     HWND hWnd = xev.xclient.window;
-    auto it = windows.find(hWnd.ptr());
-    if(it==windows.end() || it->second==nullptr)
+    auto it = impl->findWindow(hWnd.ptr());
+    if(it==nullptr)
       return;
-    Tempest::Window& cb = *it->second; //TODO: validation
+    Tempest::Window& cb = *it->owner;
     switch( xev.type ) {
       case ClientMessage: {
         if(xev.xclient.data.l[0] == long(WM_DELETE_WINDOW())){
@@ -429,11 +486,7 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
         break;
         }
       case PropertyNotify:{
-        if(nativeIsFullscreen(hWnd)) {
-          fullscreenWindows.insert(hWnd.ptr());
-          } else {
-          fullscreenWindows.erase(hWnd.ptr());
-          }
+        impl->trackFullscreen(hWnd.ptr());
         break;
         }
       case MappingNotify:
@@ -492,13 +545,8 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
       case KeyPress:
       case KeyRelease: {
         KeySym ksym = XLookupKeysym(&xev.xkey,0);
+        XIC    xic  = impl->xicOf(hWnd.ptr());
 
-        // NOTE: it's not optimal to recreate xic on every button, but it's good engough
-        XIC xic = XCreateIC(xim,
-                            XNInputStyle,   XIMPreeditNothing | XIMStatusNothing,
-                            XNClientWindow, xev.xclient.window,
-                            XNFocusWindow,  xev.xclient.window,
-                            nullptr);
         char txt[64]={};
         if(xic!=nullptr) {
           XEvent xev2 = xev;
@@ -509,7 +557,6 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
             txt[0] = '\0';
             }
           // XLookupString(&xev.xkey, txt, sizeof(txt)-1, ksym, nullptr );
-          XDestroyIC(xic);
           }
 
         auto u16 = TextCodec::toUtf16(txt); // TODO: remove dynamic allocation
@@ -540,10 +587,10 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
     } else {
     if(cb.onTimer()==0)
       std::this_thread::yield();
-    for(auto& i:windows) {
-      if(i.second==nullptr)
+    for(auto& i:impl->windows) {
+      if(i.second.owner==nullptr)
         continue;
-      SystemApi::dispatchRender(*i.second);
+      SystemApi::dispatchRender(*i.second.owner);
       }
     }
   }
