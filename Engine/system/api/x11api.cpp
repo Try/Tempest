@@ -10,7 +10,6 @@
 #include <cstring>
 #include <thread>
 #include <unordered_map>
-#include <unordered_set>
 
 #include <X11/X.h>
 #include <X11/Xlib.h>
@@ -120,12 +119,12 @@ static Event::MouseButton toButton( XButtonEvent& msg ){
   return Event::ButtonNone;
   }
 
-static void maximizeWindow(HWND& w) {
+static void maximizeWindow(SystemApi::Window* w) {
   Atom a[2];
   a[0] = _NET_WM_STATE_MAXIMIZED_HORZ();
   a[1] = _NET_WM_STATE_MAXIMIZED_VERT();
 
-  XChangeProperty ( dpy, w, _NET_WM_STATE(),
+  XChangeProperty ( dpy, HWND(w), _NET_WM_STATE(),
     XA_ATOM, 32, PropModeReplace, (unsigned char*)a, 2);
   XSync(dpy,False);
   }
@@ -284,6 +283,9 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, 
   HWND win = XCreateWindow( dpy, root, 0, 0, w, h,
                             0, vi->depth, InputOutput, vi->visual,
                             CWColormap | CWEventMask, &swa );
+  if(win==0)
+    return nullptr;
+
   Atom prot[] = {WM_DELETE_WINDOW()};
   XSetWMProtocols(dpy, win, prot, 1);
 
@@ -317,9 +319,11 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, SystemApi::S
     return nullptr;
 
   Screen* s = DefaultScreenOfDisplay(dpy);
+  if(s==nullptr)
+    return nullptr;
+
   int width = s->width;
   int height = s->height;
-  
   SystemApi::Window* hwnd = nullptr;
 
   switch(sm) {
@@ -331,16 +335,23 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, SystemApi::S
       hwnd = implCreateWindow(owner,800, 600);
       break;
     case Minimized:
-    case Maximized:
       // TODO
       hwnd = implCreateWindow(owner,width, height);
       break;
+    case Maximized:
+      // TODO
+      hwnd = implCreateWindow(owner,width, height);
+      if(hwnd!=nullptr)
+        maximizeWindow(hwnd);
+      break;
     case FullScreen:
       hwnd = implCreateWindow(owner,width, height);
-      implSetAsFullscreen(hwnd,true);
+      if(hwnd!=nullptr)
+        implSetAsFullscreen(hwnd,true);
       break;
     }
-  impl->trackFullscreen(hwnd);
+  if(hwnd!=nullptr)
+    impl->trackFullscreen(hwnd);
   return hwnd;
   }
 
@@ -350,21 +361,23 @@ void X11Api::implDestroyWindow(SystemApi::Window *w) {
   }
 
 bool X11Api::implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) {
+  // https://specifications.freedesktop.org/wm-spec/1.3/ar01s05.html#idm45164785855248
+  const int _NET_WM_STATE_REMOVE = 0;
+  const int _NET_WM_STATE_ADD    = 1;
+
   XEvent e = {};
   e.xclient.type         = ClientMessage;
   e.xclient.window       = HWND(w);
   e.xclient.message_type = _NET_WM_STATE();
   e.xclient.format       = 32;
-  e.xclient.data.l[0]    = 2;    // _NET_WM_STATE_TOGGLE
+  e.xclient.data.l[0]    = fullScreen ? _NET_WM_STATE_ADD : _NET_WM_STATE_REMOVE;
   e.xclient.data.l[1]    = _NET_WM_STATE_FULLSCREEN();
   e.xclient.data.l[2]    = 0;    // no second property to toggle
-  
-  if(fullScreen)
-    e.xclient.data.l[3]  = 1;
-  else
-    e.xclient.data.l[3]  = 0;
+  e.xclient.data.l[3]    = 0;
 
   XSendEvent(dpy, DefaultRootWindow(dpy), False, SubstructureRedirectMask | SubstructureNotifyMask, &e);
+  XSync(dpy, False);
+  impl->trackFullscreen(w);
   return true;
   }
 
@@ -531,7 +544,7 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
           // FIXME: mouse behave crazy in OpenGothic
           activeCursorChange = 0;
           break;
-        }
+          }
         MouseEvent e( xev.xmotion.x,
                       xev.xmotion.y,
                       Event::ButtonNone,
