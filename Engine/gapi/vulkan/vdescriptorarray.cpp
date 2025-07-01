@@ -87,6 +87,10 @@ void VDescriptorArray::populate(VDevice &dev, AbstractGraphicsApi::Texture **t, 
   // 16 is non-bindless limit
   SmallArray<VkDescriptorImageInfo,16> imageInfo(cnt);
   for(size_t i=0; i<cnt; ++i) {
+    if(t[i]==nullptr) {
+      imageInfo[i] = VkDescriptorImageInfo{};
+      continue;
+      }
     VTexture& tex = *reinterpret_cast<VTexture*>(t[i]);
     imageInfo[i].imageLayout = toWriteLayout(tex);
     imageInfo[i].imageView   = tex.view(ComponentMapping(), mipLevel, is3DImage);
