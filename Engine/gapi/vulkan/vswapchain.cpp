@@ -420,13 +420,13 @@ VkResult VSwapchain::implAcquireNextImage() {
 void VSwapchain::present() {
   auto& slot = sync[frameId];
   auto& pf   = presentFence[frameId];
-  auto  ps   = presentSem  [frameId];
+  auto  ps   = presentSem  [imgIndex];
   if(slot.state==S_Pending) {
     // empty frame with no command buffer. TODO: test
     ps = aquireSem[frameId];
     }
 
-  if(device.vkQueueSubmit2!=nullptr) {
+  if(false && device.vkQueueSubmit2!=nullptr) {
     VkSemaphoreSubmitInfoKHR signal = {};
     signal.sType     = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
     signal.semaphore = ps;
