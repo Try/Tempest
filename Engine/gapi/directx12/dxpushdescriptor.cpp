@@ -205,7 +205,9 @@ void DxPushDescriptor::write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, D3D
     case ShaderReflection::Image:
     case ShaderReflection::ImgR:
     case ShaderReflection::Texture: {
-      auto*    tex       = reinterpret_cast<DxTexture*>(data);
+      auto* tex = reinterpret_cast<DxTexture*>(data);
+      if(tex==nullptr)
+        return;
       uint32_t mipLevel  = offset;
       bool     is3DImage = tex->is3D; // TODO: cast 3d to 2d, based on dest descriptor
 
@@ -247,7 +249,9 @@ void DxPushDescriptor::write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, D3D
       break;
       }
     case ShaderReflection::ImgRW: {
-      auto*    tex       = reinterpret_cast<DxTexture*>(data);
+      auto* tex = reinterpret_cast<DxTexture*>(data);
+      if(tex==nullptr)
+        return;
       uint32_t mipLevel  = offset;
       bool     is3DImage = tex->is3D; // TODO: cast 3d to 2d, based on dest descriptor
 
