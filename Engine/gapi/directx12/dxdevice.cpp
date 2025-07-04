@@ -169,8 +169,9 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, DxProps& pro
     WCHAR c = desc.Description[i];
     if(c==0)
       break;
-    if(('0'<=c && c<='9') || ('a'<=c && c<='z') || ('A'<=c && c<='Z') ||
-       c=='(' || c==')' || c=='_' || c=='[' || c==']' || c=='{' || c=='}' || c==' ')
+    if(('0'<=c && c<='9') || ('a'<=c && c<='z') || ('A'<=c && c<='Z') || c==' ' ||
+       c=='(' || c==')' || c=='[' || c==']' || c=='{' || c=='}' ||
+       c=='_' || c=='.' || c=='-' || c=='+')
       prop.name[i] = char(c); else
       prop.name[i] = '?';
     }
@@ -339,7 +340,7 @@ void DxDevice::waitData() {
   data->wait();
   }
 
-void Detail::DxDevice::waitIdle() {
+void DxDevice::waitIdle() {
   std::lock_guard<SpinLock> guard(syncCmdQueue);
   dxAssert(cmdQueue->Signal(idleFence.get(),DxFence::Ready), *this);
   dxAssert(idleFence->SetEventOnCompletion(DxFence::Ready,idleEvent), *this);

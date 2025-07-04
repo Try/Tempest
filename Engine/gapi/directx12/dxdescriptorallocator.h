@@ -28,7 +28,7 @@ class DxDescriptorAllocator {
       };
     void       setDevice(DxDevice& device);
 
-    using Allocation=typename Tempest::Detail::DeviceAllocator<Provider>::Allocation;
+    using Allocation = typename Tempest::Detail::DeviceAllocator<Provider>::Allocation;
 
     Allocation allocHost(size_t count);
     Allocation allocRtv (size_t count);
