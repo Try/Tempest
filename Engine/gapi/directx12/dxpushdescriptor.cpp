@@ -183,8 +183,9 @@ void DxPushDescriptor::write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, D3D
 
       const uint32_t mipLevel  = offset;
       const bool     is3DImage = tex->is3D; // TODO: cast 3d to 2d, based on dest descriptor
+      const bool     isUAV     = false;
 
-      auto view = tex->view(dev, mapping, mipLevel, is3DImage);
+      auto view = tex->view(dev, mapping, mipLevel, is3DImage, isUAV);
       device.CopyDescriptorsSimple(1, res, view, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
       if(cls==ShaderReflection::Texture) {
@@ -207,23 +208,12 @@ void DxPushDescriptor::write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, D3D
       auto* tex = reinterpret_cast<DxTexture*>(data);
       if(tex==nullptr)
         return;
-      uint32_t mipLevel  = offset;
-      bool     is3DImage = tex->is3D; // TODO: cast 3d to 2d, based on dest descriptor
+      const uint32_t mipLevel  = offset;
+      const bool     is3DImage = tex->is3D; // TODO: cast 3d to 2d, based on dest descriptor
+      const bool     isUAV     = true;
 
-      if(mipLevel==uint32_t(-1))
-        mipLevel = 0;
-      D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
-      desc.Format             = tex->format;
-      if(is3DImage) {
-        desc.ViewDimension      = D3D12_UAV_DIMENSION_TEXTURE3D;
-        desc.Texture3D.MipSlice = mipLevel;
-        desc.Texture3D.WSize    = tex->sliceCnt;
-        } else {
-        desc.ViewDimension      = D3D12_UAV_DIMENSION_TEXTURE2D;
-        desc.Texture2D.MipSlice = mipLevel;
-        }
-
-      device.CreateUnorderedAccessView(tex->impl.get(), nullptr, &desc, res);
+      auto view = tex->view(dev, mapping, mipLevel, is3DImage, isUAV);
+      device.CopyDescriptorsSimple(1, res, view, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
       break;
       }
     case ShaderReflection::Ubo: {

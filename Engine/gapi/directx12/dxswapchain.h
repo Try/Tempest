@@ -6,6 +6,7 @@
 #include <d3d12.h>
 
 #include "dxfence.h"
+#include "gapi/directx12/dxdescriptorallocator.h"
 #include "gapi/directx12/comptr.h"
 
 namespace Tempest {
@@ -32,26 +33,25 @@ class DxSwapchain : public AbstractGraphicsApi::Swapchain {
     void                     queuePresent();
 
     DXGI_FORMAT              format() const { return frm; }
+    auto                     handle(size_t i) const -> D3D12_CPU_DESCRIPTOR_HANDLE;
 
-    ComPtr<IDXGISwapChain3>                        impl;
-    std::unique_ptr<ComPtr<ID3D12Resource>[]>      views;
-    ComPtr<ID3D12DescriptorHeap>                   rtvHeap;
-    std::unique_ptr<D3D12_CPU_DESCRIPTOR_HANDLE[]> handles;
+    ComPtr<IDXGISwapChain3>                   impl;
+    std::unique_ptr<ComPtr<ID3D12Resource>[]> views;
+    DxDescriptorAllocator::Allocation         rtvHeap;
 
   private:
     void               initImages();
 
-    DxDevice&          dev;
-    DxFence            fence;
-
-    uint32_t           currImg=0;
-    uint32_t           imgW=0, imgH=0;
-    uint32_t           imgCount=3;
-    DXGI_FORMAT        frm = DXGI_FORMAT_B8G8R8A8_UNORM;
-
-    UINT64             frameCounter = 0;
-
+    DxDevice&               dev;
+    DxFence                 fence;
     ComPtr<IDXGISwapChain1> swapChain;
+
+    uint32_t                currImg      = 0;
+    uint32_t                imgW         = 0;
+    uint32_t                imgH         = 0;
+    uint32_t                imgCount     = 3;
+    DXGI_FORMAT             frm          = DXGI_FORMAT_B8G8R8A8_UNORM;
+    UINT64                  frameCounter = 0;
   };
 
 }}

@@ -389,7 +389,7 @@ void DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize
     auto& rdesc = view[viewSz];
     if(sw[i]!=nullptr) {
       auto& t                      = *reinterpret_cast<DxSwapchain*>(sw[i]);
-      rdesc.cpuDescriptor          = t.handles[imgId[i]];
+      rdesc.cpuDescriptor          = t.handle(imgId[i]);
       fboLayout.RTVFormats[viewSz] = t.format();
       ++viewSz;
       }

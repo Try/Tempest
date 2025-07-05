@@ -21,7 +21,7 @@ class DxTexture : public AbstractGraphicsApi::Texture {
     ~DxTexture();
     DxTexture& operator=(const DxTexture& other) = delete;
 
-    auto     view(DxDevice& dev, const ComponentMapping& m, uint32_t mipLevel, bool is3D) -> D3D12_CPU_DESCRIPTOR_HANDLE;
+    auto     view(DxDevice& dev, const ComponentMapping& m, uint32_t mipLevel, bool is3D, bool isUAV) -> D3D12_CPU_DESCRIPTOR_HANDLE;
     uint32_t mipCount() const override { return mipCnt; }
 
     UINT     bitCount() const;
@@ -38,12 +38,14 @@ class DxTexture : public AbstractGraphicsApi::Texture {
 
   private:
     void createView(D3D12_CPU_DESCRIPTOR_HANDLE ret, DxDevice& dev, DXGI_FORMAT format,
-                     const ComponentMapping* cmap, uint32_t mipLevel, bool is3D);
+                     const ComponentMapping* cmap, uint32_t mipLevel, bool is3D, bool isUAV);
+    void createUAV(D3D12_CPU_DESCRIPTOR_HANDLE ret, DxDevice& dev, DXGI_FORMAT format, uint32_t mipLevel, bool is3D);
 
     struct View {
       ComponentMapping                  m;
-      uint32_t                          mip  = uint32_t(0);
-      bool                              is3D = false;
+      uint32_t                          mip   = uint32_t(0);
+      bool                              is3D  = false;
+      bool                              isUAV = false;
       DxDescriptorAllocator::Allocation v;
       };
     Detail::SpinLock  syncViews;
@@ -55,10 +57,11 @@ class DxTexture : public AbstractGraphicsApi::Texture {
 class DxTextureWithRT : public DxTexture {
   public:
     DxTextureWithRT(DxDevice& dev, DxTexture&& base);
+    ~DxTextureWithRT();
 
-    ComPtr<ID3D12DescriptorHeap> heap;
-    D3D12_CPU_DESCRIPTOR_HANDLE  handle;
-    D3D12_CPU_DESCRIPTOR_HANDLE  handleR;
+    DxDescriptorAllocator::Allocation fboDescr;
+    D3D12_CPU_DESCRIPTOR_HANDLE       handle;
+    D3D12_CPU_DESCRIPTOR_HANDLE       handleR;
   };
 
 }

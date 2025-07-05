@@ -48,7 +48,7 @@ DxTexture::DxTexture(DxDevice& dev, ComPtr<ID3D12Resource>&& b, DXGI_FORMAT frm,
   if(true) {
     // SRV seem to be allowed for any format, with some caveats around depth/stencil
     imgView = dev.descAlloc.allocHost(1);
-    createView(dev.descAlloc.handle(imgView),dev,format,nullptr,uint32_t(-1),is3D);
+    createView(dev.descAlloc.handle(imgView),dev,format,nullptr,uint32_t(-1),is3D,false);
     }
   }
 
@@ -74,13 +74,13 @@ DxTexture::~DxTexture() {
     device->descAlloc.free(i.v);
   }
 
-D3D12_CPU_DESCRIPTOR_HANDLE DxTexture::view(DxDevice& dev, const ComponentMapping& m, uint32_t mipLevel, bool is3D) {
+D3D12_CPU_DESCRIPTOR_HANDLE DxTexture::view(DxDevice& dev, const ComponentMapping& m, uint32_t mipLevel, bool is3D, bool isUAV) {
   if(m.r==ComponentSwizzle::Identity &&
      m.g==ComponentSwizzle::Identity &&
      m.b==ComponentSwizzle::Identity &&
      m.a==ComponentSwizzle::Identity &&
      (mipLevel==uint32_t(-1) || mipCnt==1) &&
-     this->is3D==is3D) {
+     this->is3D==is3D && false==isUAV) {
     return device->descAlloc.handle(imgView);
     }
 
@@ -92,10 +92,11 @@ D3D12_CPU_DESCRIPTOR_HANDLE DxTexture::view(DxDevice& dev, const ComponentMappin
 
   View v;
   v.v = dev.descAlloc.allocHost(1);
-  createView(dev.descAlloc.handle(v.v),dev,format,&m,mipLevel,is3D);
-  v.m    = m;
-  v.mip  = mipLevel;
-  v.is3D = is3D;
+  createView(dev.descAlloc.handle(v.v),dev,format,&m,mipLevel,is3D,isUAV);
+  v.m     = m;
+  v.mip   = mipLevel;
+  v.is3D  = is3D;
+  v.isUAV = isUAV;
   try {
     extViews.push_back(v);
     }
@@ -107,9 +108,13 @@ D3D12_CPU_DESCRIPTOR_HANDLE DxTexture::view(DxDevice& dev, const ComponentMappin
   }
 
 void DxTexture::createView(D3D12_CPU_DESCRIPTOR_HANDLE ret, DxDevice& dev, DXGI_FORMAT format,
-                           const ComponentMapping* cmap, uint32_t mipLevel, bool is3D) {
-  ID3D12Device& device = *dev.device;
+                           const ComponentMapping* cmap, uint32_t mipLevel, bool is3D, bool isUAV) {
+  if(isUAV) {
+    createUAV(ret, dev, format, mipLevel, is3D);
+    return;
+    }
 
+  ID3D12Device& device = *dev.device;
   D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
   desc.Shader4ComponentMapping = cmap!=nullptr ? compMapping(*cmap) : D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
   desc.Format                  = nativeSrvFormat(format);
@@ -131,6 +136,25 @@ void DxTexture::createView(D3D12_CPU_DESCRIPTOR_HANDLE ret, DxDevice& dev, DXGI_
     }
 
   device.CreateShaderResourceView(impl.get(), &desc, ret);
+  }
+
+void DxTexture::createUAV(D3D12_CPU_DESCRIPTOR_HANDLE ret, DxDevice& dev, DXGI_FORMAT format, uint32_t mipLevel, bool is3D) {
+  ID3D12Device& device = *dev.device;
+  if(mipLevel==uint32_t(-1))
+    mipLevel = 0;
+
+  D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+  desc.Format = format;
+  if(is3D) {
+    desc.ViewDimension      = D3D12_UAV_DIMENSION_TEXTURE3D;
+    desc.Texture3D.MipSlice = mipLevel;
+    desc.Texture3D.WSize    = sliceCnt;
+    } else {
+    desc.ViewDimension      = D3D12_UAV_DIMENSION_TEXTURE2D;
+    desc.Texture2D.MipSlice = mipLevel;
+    }
+
+  device.CreateUnorderedAccessView(impl.get(), nullptr, &desc, ret);
   }
 
 UINT DxTexture::bitCount() const {
@@ -454,29 +478,34 @@ DxTextureWithRT::DxTextureWithRT(DxDevice& dev, DxTexture&& base)
   :DxTexture(std::move(base)) {
   auto& device = *dev.device;
 
-  D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-  desc.Type           = nativeIsDepthFormat(format) ? D3D12_DESCRIPTOR_HEAP_TYPE_DSV : D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-  desc.NumDescriptors = nativeIsDepthFormat(format) ? 2 : 1;
-  desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-  dxAssert(device.CreateDescriptorHeap(&desc, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&heap)));
-
-  handle = heap->GetCPUDescriptorHandleForHeapStart();
   if(nativeIsDepthFormat(format)) {
     const auto dsvHeapInc = dev.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-    device.CreateDepthStencilView(impl.get(), nullptr, handle);
-
-    handleR      = heap->GetCPUDescriptorHandleForHeapStart();
-    handleR.ptr += dsvHeapInc;
 
     D3D12_DEPTH_STENCIL_VIEW_DESC dsv = {};
     dsv.Format             = format;
     dsv.ViewDimension      = D3D12_DSV_DIMENSION_TEXTURE2D;
     dsv.Flags              = D3D12_DSV_FLAG_READ_ONLY_DEPTH;
     dsv.Texture2D.MipSlice = 0;
-    device.CreateDepthStencilView(impl.get(), &dsv, handleR);
+
+    fboDescr = dev.descAlloc.allocDsv(2);
+    handle  = dev.descAlloc.handle(fboDescr);
+    handleR = handle;
+    handleR.ptr += dsvHeapInc;
+
+    device.CreateDepthStencilView(impl.get(), nullptr, handle);
+    device.CreateDepthStencilView(impl.get(), &dsv,    handleR);
     } else {
+    fboDescr = dev.descAlloc.allocRtv(1);
+    handle = dev.descAlloc.handle(fboDescr);
+
     device.CreateRenderTargetView(impl.get(), nullptr, handle);
     }
+  }
+
+DxTextureWithRT::~DxTextureWithRT() {
+  if(device==nullptr)
+    return;
+  device->descAlloc.free(fboDescr);
   }
 
 #endif

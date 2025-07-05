@@ -44,21 +44,14 @@ DxSwapchain::DxSwapchain(DxDevice& dev, IDXGIFactory4& dxgi, SystemApi::Window* 
   dxAssert(dxgi.MakeWindowAssociation(HWND(hwnd), DXGI_MWA_NO_ALT_ENTER));
   dxAssert(swapChain->QueryInterface(uuid<IDXGISwapChain3>(), reinterpret_cast<void**>(&impl)));
 
-  // descriptor heap
-  D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-  rtvHeapDesc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-  rtvHeapDesc.NumDescriptors = imgCount;
-  rtvHeapDesc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-  dxAssert(device.CreateDescriptorHeap(&rtvHeapDesc, uuid<ID3D12DescriptorHeap>(), reinterpret_cast<void**>(&rtvHeap)));
-
-  // frame resources.
-  views  .reset(new ComPtr<ID3D12Resource>[imgCount]);
-  handles.reset(new D3D12_CPU_DESCRIPTOR_HANDLE[imgCount]);
+  rtvHeap = dev.descAlloc.allocRtv(imgCount);
+  views.reset(new ComPtr<ID3D12Resource>[imgCount]);
 
   initImages();
   }
 
 DxSwapchain::~DxSwapchain() {
+  dev.descAlloc.free(rtvHeap);
   }
 
 void DxSwapchain::reset() {
@@ -87,20 +80,23 @@ void DxSwapchain::queuePresent() {
   dxAssert(impl->Present(vsunc, 0));
 
   ++frameCounter;
-  dev.cmdQueue->Signal(fence.impl.get(),frameCounter);
+  dev.cmdQueue->Signal(fence.impl.get(), frameCounter);
   }
 
 void DxSwapchain::initImages() {
   auto& device  = *dev.device;
-  auto  eltSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+  auto  rtvSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-  D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtvHeap->GetCPUDescriptorHandleForHeapStart();
+  D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = dev.descAlloc.handle(rtvHeap);
   for(uint32_t i=0; i<imgCount; i++) {
     dxAssert(swapChain->GetBuffer(i, uuid<ID3D12Resource>(), reinterpret_cast<void**>(&views[i])));
     device.CreateRenderTargetView(views[i].get(), nullptr, rtvHandle);
-    handles[i] = rtvHandle;
-    rtvHandle.ptr += eltSize;
+    rtvHandle.ptr += rtvSize;
     }
+  }
+
+D3D12_CPU_DESCRIPTOR_HANDLE DxSwapchain::handle(size_t i) const {
+  return dev.descAlloc.handle(rtvHeap, i);
   }
 
 #endif

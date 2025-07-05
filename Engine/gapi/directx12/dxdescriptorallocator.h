@@ -32,10 +32,11 @@ class DxDescriptorAllocator {
 
     Allocation allocHost(size_t count);
     Allocation allocRtv (size_t count);
+    Allocation allocDsv (size_t count);
     void       free (Allocation& page);
 
     ID3D12DescriptorHeap*       heapof(const Allocation& a);
-    D3D12_CPU_DESCRIPTOR_HANDLE handle(const Allocation& a);
+    D3D12_CPU_DESCRIPTOR_HANDLE handle(const Allocation& a, size_t offset = 0);
 
   private:
     Provider                          providerRes;
@@ -43,6 +44,7 @@ class DxDescriptorAllocator {
 
     uint32_t                          descSize = 1;
     uint32_t                          rtvSize  = 1;
+    uint32_t                          dsvSize  = 1;
   };
 
 }
