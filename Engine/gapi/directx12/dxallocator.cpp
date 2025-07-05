@@ -225,15 +225,8 @@ DxTexture DxAllocator::alloc(const Pixmap& pm, uint32_t mip, DXGI_FORMAT format)
         reinterpret_cast<void**>(&ret)
         ));
     }
-  D3D12_FEATURE_DATA_FORMAT_SUPPORT ds = {};
-  ds.Format = resDesc.Format;
-  if(SUCCEEDED(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &ds, sizeof(ds)))) {
-    // nop
-    }
-
   const auto nonUniqId  = NonUniqResId::I_None;
-  const bool filterable = (ds.Support1 & D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE);
-  return DxTexture(std::move(ret),resDesc.Format,nonUniqId,resDesc.MipLevels,1,false,filterable);
+  return DxTexture(*owner,std::move(ret),resDesc.Format,nonUniqId,resDesc.MipLevels,1,false);
   }
 
 DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t d, const uint32_t mip, TextureFormat frm, bool imageStore) {
@@ -310,14 +303,8 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
                ));
     }
 
-  D3D12_FEATURE_DATA_FORMAT_SUPPORT ds = {};
-  ds.Format = resDesc.Format;
-  if(SUCCEEDED(device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &ds, sizeof(ds)))) {
-    // nop
-    }
   const auto nonUniqId  = (imageStore) ?  nextId() : NonUniqResId::I_None;
-  const bool filterable = (ds.Support1 & D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE);
-  return DxTexture(std::move(ret),resDesc.Format,nonUniqId,resDesc.MipLevels,resDesc.DepthOrArraySize,d!=0,filterable);
+  return DxTexture(*owner,std::move(ret),resDesc.Format,nonUniqId,resDesc.MipLevels,resDesc.DepthOrArraySize,d!=0);
   }
 
 void DxAllocator::free(Allocation& page) {

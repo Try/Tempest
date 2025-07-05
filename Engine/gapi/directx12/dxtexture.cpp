@@ -9,18 +9,128 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-DxTexture::DxTexture() {
+static int swizzle(ComponentSwizzle cs, int def) {
+  switch(cs) {
+    case ComponentSwizzle::Identity:
+      return def;
+    case ComponentSwizzle::R:
+      return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0;
+    case ComponentSwizzle::G:
+      return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1;
+    case ComponentSwizzle::B:
+      return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2;
+    case ComponentSwizzle::A:
+      return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3;
+      //case ComponentSwizzle::One:
+      //  return D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1;
+    }
+  return def;
   }
 
-DxTexture::DxTexture(ComPtr<ID3D12Resource>&& b, DXGI_FORMAT frm, NonUniqResId nonUniqId,
-                     UINT mipCnt, UINT sliceCnt, bool is3D, bool isFilterable)
-  : impl(std::move(b)), format(frm), nonUniqId(nonUniqId),
-    mipCnt(mipCnt), sliceCnt(sliceCnt), is3D(is3D), isFilterable(isFilterable) {
+static UINT compMapping(ComponentMapping mapping) {
+  // Describe and create a SRV for the texture.
+  int mapv[4] = { swizzle(mapping.r,0),
+                  swizzle(mapping.g,1),
+                  swizzle(mapping.b,2),
+                  swizzle(mapping.a,3) };
+  return D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(mapv[0],mapv[1],mapv[2],mapv[3]);
   }
 
-DxTexture::DxTexture(DxTexture&& other)
-  : impl(std::move(other.impl)), format(other.format), nonUniqId(other.nonUniqId),
-    mipCnt(other.mipCnt), sliceCnt(other.sliceCnt), is3D(other.is3D), isFilterable(other.isFilterable) {
+DxTexture::DxTexture(DxDevice& dev, ComPtr<ID3D12Resource>&& b, DXGI_FORMAT frm, NonUniqResId nonUniqId,
+                     UINT mipCnt, UINT sliceCnt, bool is3D)
+  : device(&dev), impl(std::move(b)), format(frm), nonUniqId(nonUniqId),
+    mipCnt(mipCnt), sliceCnt(sliceCnt), is3D(is3D), isFilterable(false) {
+  D3D12_FEATURE_DATA_FORMAT_SUPPORT ds = {};
+  ds.Format = frm;
+  if(SUCCEEDED(device->device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &ds, sizeof(ds)))) {
+    isFilterable = (ds.Support1 & D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE);
+    }
+  if(true) {
+    // SRV seem to be allowed for any format, with some caveats around depth/stencil
+    imgView = dev.descAlloc.allocHost(1);
+    createView(dev.descAlloc.handle(imgView),dev,format,nullptr,uint32_t(-1),is3D);
+    }
+  }
+
+DxTexture::DxTexture(DxTexture&& other) {
+  std::swap(device,       other.device);
+  std::swap(impl,         other.impl);
+  std::swap(format,       other.format);
+  std::swap(nonUniqId,    other.nonUniqId);
+  std::swap(mipCnt,       other.mipCnt);
+  std::swap(sliceCnt,     other.sliceCnt);
+  std::swap(is3D,         other.is3D);
+  std::swap(isFilterable, other.isFilterable);
+
+  std::swap(extViews,     other.extViews);
+  std::swap(imgView,      other.imgView);
+  }
+
+DxTexture::~DxTexture() {
+  if(device==nullptr)
+    return;
+  device->descAlloc.free(imgView);
+  for(auto& i:extViews)
+    device->descAlloc.free(i.v);
+  }
+
+D3D12_CPU_DESCRIPTOR_HANDLE DxTexture::view(DxDevice& dev, const ComponentMapping& m, uint32_t mipLevel, bool is3D) {
+  if(m.r==ComponentSwizzle::Identity &&
+     m.g==ComponentSwizzle::Identity &&
+     m.b==ComponentSwizzle::Identity &&
+     m.a==ComponentSwizzle::Identity &&
+     (mipLevel==uint32_t(-1) || mipCnt==1) &&
+     this->is3D==is3D) {
+    return device->descAlloc.handle(imgView);
+    }
+
+  std::lock_guard<Detail::SpinLock> guard(syncViews);
+  for(auto& i:extViews) {
+    if(i.m==m && i.mip==mipLevel && i.is3D==is3D)
+      return device->descAlloc.handle(i.v);
+    }
+
+  View v;
+  v.v = dev.descAlloc.allocHost(1);
+  createView(dev.descAlloc.handle(v.v),dev,format,&m,mipLevel,is3D);
+  v.m    = m;
+  v.mip  = mipLevel;
+  v.is3D = is3D;
+  try {
+    extViews.push_back(v);
+    }
+  catch (...) {
+    device->descAlloc.free(v.v);
+    throw;
+    }
+  return device->descAlloc.handle(v.v);
+  }
+
+void DxTexture::createView(D3D12_CPU_DESCRIPTOR_HANDLE ret, DxDevice& dev, DXGI_FORMAT format,
+                           const ComponentMapping* cmap, uint32_t mipLevel, bool is3D) {
+  ID3D12Device& device = *dev.device;
+
+  D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+  desc.Shader4ComponentMapping = cmap!=nullptr ? compMapping(*cmap) : D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+  desc.Format                  = nativeSrvFormat(format);
+  if(is3D) {
+    desc.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE3D;
+    desc.Texture3D.MipLevels     = mipCnt;
+    //desc.Texture3D.WSize         = t.sliceCnt;
+    if(mipLevel!=uint32_t(-1)) {
+      desc.Texture3D.MostDetailedMip = mipLevel;
+      desc.Texture3D.MipLevels       = 1;
+      }
+    } else {
+    desc.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE2D;
+    desc.Texture2D.MipLevels     = mipCnt;
+    if(mipLevel!=uint32_t(-1)) {
+      desc.Texture2D.MostDetailedMip = mipLevel;
+      desc.Texture2D.MipLevels       = 1;
+      }
+    }
+
+  device.CreateShaderResourceView(impl.get(), &desc, ret);
   }
 
 UINT DxTexture::bitCount() const {

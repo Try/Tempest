@@ -40,34 +40,6 @@ static std::pair<uint32_t, uint32_t> numResources(const ShaderReflection::Layout
   return ret;
   }
 
-static int swizzle(ComponentSwizzle cs, int def) {
-  switch(cs) {
-    case ComponentSwizzle::Identity:
-      return def;
-    case ComponentSwizzle::R:
-      return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0;
-    case ComponentSwizzle::G:
-      return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1;
-    case ComponentSwizzle::B:
-      return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2;
-    case ComponentSwizzle::A:
-      return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_3;
-    //case ComponentSwizzle::One:
-    //  return D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1;
-    }
-  return def;
-  }
-
-static UINT compMapping(ComponentMapping mapping) {
-  // Describe and create a SRV for the texture.
-  int mapv[4] = { swizzle(mapping.r,0),
-                  swizzle(mapping.g,1),
-                  swizzle(mapping.b,2),
-                  swizzle(mapping.a,3) };
-  return D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(mapv[0],mapv[1],mapv[2],mapv[3]);
-  }
-
-
 template<enum D3D12_DESCRIPTOR_HEAP_TYPE HeapType>
 DxPushDescriptor::Pool<HeapType>::Pool(DxDevice& dev, uint32_t size) {
   dPtr  = dev.dalloc->alloc(HeapType, size);
@@ -208,30 +180,13 @@ void DxPushDescriptor::write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, D3D
       auto* tex = reinterpret_cast<DxTexture*>(data);
       if(tex==nullptr)
         return;
-      uint32_t mipLevel  = offset;
-      bool     is3DImage = tex->is3D; // TODO: cast 3d to 2d, based on dest descriptor
 
-      D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
-      desc.Shader4ComponentMapping = compMapping(mapping);
-      desc.Format                  = nativeSrvFormat(tex->format);
-      if(is3DImage) {
-        desc.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE3D;
-        desc.Texture3D.MipLevels     = tex->mipCnt;
-        //desc.Texture3D.WSize         = t.sliceCnt;
-        if(mipLevel!=uint32_t(-1)) {
-          desc.Texture3D.MostDetailedMip = mipLevel;
-          desc.Texture3D.MipLevels       = 1;
-          }
-        } else {
-        desc.ViewDimension           = D3D12_SRV_DIMENSION_TEXTURE2D;
-        desc.Texture2D.MipLevels     = tex->mipCnt;
-        if(mipLevel!=uint32_t(-1)) {
-          desc.Texture2D.MostDetailedMip = mipLevel;
-          desc.Texture2D.MipLevels       = 1;
-          }
-        }
+      const uint32_t mipLevel  = offset;
+      const bool     is3DImage = tex->is3D; // TODO: cast 3d to 2d, based on dest descriptor
 
-      device.CreateShaderResourceView(tex->impl.get(), &desc, res);
+      auto view = tex->view(dev, mapping, mipLevel, is3DImage);
+      device.CopyDescriptorsSimple(1, res, view, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
       if(cls==ShaderReflection::Texture) {
         auto sx = smp;
         if(!tex->isFilterable) {
