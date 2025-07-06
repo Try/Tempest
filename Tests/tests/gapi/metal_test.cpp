@@ -224,6 +224,12 @@ TEST(MetalApi,Bindless2) {
 #endif
   }
 
+TEST(MetalApi,UnusedDescriptor) {
+#if defined(__OSX__)
+  GapiTestCommon::UnusedDescriptor<MetalApi>("MetalApi_UnusedDescriptor.png");
+#endif
+  }
+
 TEST(MetalApi,Blas) {
 #if defined(__OSX__)
   GapiTestCommon::Blas<MetalApi>();
