@@ -42,8 +42,8 @@ class MtTopAccelerationStructure : public AbstractGraphicsApi::AccelerationStruc
     MtTopAccelerationStructure(MtDevice& owner, const RtInstance* inst, AccelerationStructure* const * as, size_t asSize);
     ~MtTopAccelerationStructure();
 
-    void useResource(MTL::RenderCommandEncoder&  cmd, ShaderReflection::Stage st);
-    void useResource(MTL::ComputeCommandEncoder& cmd, ShaderReflection::Stage st);
+    void useResource(MTL::RenderCommandEncoder&  cmd, ShaderReflection::Stage st) const;
+    void useResource(MTL::ComputeCommandEncoder& cmd, ShaderReflection::Stage st) const;
 
     MtDevice&                         owner;
     NsPtr<MTL::AccelerationStructure> impl;
@@ -53,12 +53,12 @@ class MtTopAccelerationStructure : public AbstractGraphicsApi::AccelerationStruc
 
   private:
     template<class Enc>
-    void implUseResource(Enc& cmd, ShaderReflection::Stage st);
+    void implUseResource(Enc& cmd, ShaderReflection::Stage st) const;
 
     void implUseResource(MTL::ComputeCommandEncoder& cmd,
-                         const MTL::Resource* const resources[], NS::UInteger count, MTL::ResourceUsage usage, MTL::RenderStages stages);
+                         const MTL::Resource* const resources[], NS::UInteger count, MTL::ResourceUsage usage, MTL::RenderStages stages) const;
     void implUseResource(MTL::RenderCommandEncoder& cmd,
-                         const MTL::Resource* const resources[], NS::UInteger count, MTL::ResourceUsage usage, MTL::RenderStages stages);
+                         const MTL::Resource* const resources[], NS::UInteger count, MTL::ResourceUsage usage, MTL::RenderStages stages) const;
   };
 }
 }

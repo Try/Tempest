@@ -134,6 +134,7 @@ void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MTL::RenderPassDesc
     encDraw = NsPtr<MTL::RenderCommandEncoder>();
     bindings.durty = true;
     pushData.durty = true;
+    clearUseResource();
     }
   if(encComp!=nullptr && e!=E_Comp) {
     if(isDbgRegion) {
@@ -144,6 +145,7 @@ void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MTL::RenderPassDesc
     encComp = NsPtr<MTL::ComputeCommandEncoder>();
     bindings.durty = true;
     pushData.durty = true;
+    clearUseResource();
     }
   if(encBlit!=nullptr && e!=E_Blit) {
     if(isDbgRegion) {
@@ -154,6 +156,7 @@ void MtCommandBuffer::setEncoder(MtCommandBuffer::EncType e, MTL::RenderPassDesc
     encBlit = NsPtr<MTL::BlitCommandEncoder>();
     bindings.durty = true;
     pushData.durty = true;
+    clearUseResource();
     }
 
   switch(e) {
@@ -271,12 +274,9 @@ void MtCommandBuffer::implSetUniforms(const PipelineStage st) {
       case ShaderReflection::SsboR:
       case ShaderReflection::SsboRW: {
         if(l.isArray()) {
-          auto arr = reinterpret_cast<MtDescriptorArray*>(data);
-          if(encComp!=nullptr)
-            arr->useResource(*encComp, ShaderReflection::Compute);
-          else if(encDraw!=nullptr)
-            arr->useResource(*encDraw, l.stage);
-          setBindless(mtl[i], &arr->data(), arr->size());
+          auto& arr = *reinterpret_cast<MtDescriptorArray*>(data);
+          useResource(arr, l.stage);
+          setBindless(mtl[i], &arr.data(), arr.size());
           }
         else if(T_LIKELY(data!=nullptr)) {
           auto buf  = reinterpret_cast<MtBuffer*>(data);
@@ -289,12 +289,9 @@ void MtCommandBuffer::implSetUniforms(const PipelineStage st) {
       case ShaderReflection::Texture:
       case ShaderReflection::Image: {
         if(l.isArray()) {
-          auto arr = reinterpret_cast<MtDescriptorArray*>(data);
-          if(encComp!=nullptr)
-            arr->useResource(*encComp, ShaderReflection::Compute);
-          else if(encDraw!=nullptr)
-            arr->useResource(*encDraw, l.stage);
-          setBindless(mtl[i], &arr->data(), arr->size());
+          auto& arr = *reinterpret_cast<MtDescriptorArray*>(data);
+          useResource(arr, l.stage);
+          setBindless(mtl[i], &arr.data(), arr.size());
           } else {
           auto* sx  = &device.samplers.get(smp);
           auto& tex = reinterpret_cast<MtTexture*>(data)->view(map, offset);
@@ -315,12 +312,9 @@ void MtCommandBuffer::implSetUniforms(const PipelineStage st) {
         break;
         }
       case ShaderReflection::Tlas: {
-        auto tlas = reinterpret_cast<MtTopAccelerationStructure*>(data);
-        if(encComp!=nullptr)
-          tlas->useResource(*encComp, ShaderReflection::Compute);
-        else if(encDraw!=nullptr)
-          tlas->useResource(*encDraw, l.stage);
-        setTlas(mtl[i], tlas->impl.get());
+        auto& tlas = *reinterpret_cast<MtTopAccelerationStructure*>(data);
+        useResource(tlas, l.stage);
+        setTlas(mtl[i], tlas.impl.get());
         break;
         }
       }
@@ -517,6 +511,37 @@ void MtCommandBuffer::implSetDebugLabel() {
     enc->popDebugGroup();
   enc->pushDebugGroup(str.get());
   isDbgRegion = true;
+  }
+
+bool MtCommandBuffer::useResource(const MtDescriptorArray& arr, ShaderReflection::Stage stage) {
+  for(auto i:usedResources)
+    if(i==&arr)
+      return true;
+
+  if(encComp!=nullptr)
+    arr.useResource(*encComp, ShaderReflection::Compute);
+  else if(encDraw!=nullptr)
+    arr.useResource(*encDraw, stage);
+  usedResources.push_back(&arr);
+  return false;
+  }
+
+bool MtCommandBuffer::useResource(const MtTopAccelerationStructure& tlas, ShaderReflection::Stage stage) {
+  for(auto i:usedResources)
+    if(i==&tlas)
+      return true;
+
+  if(encComp!=nullptr)
+    tlas.useResource(*encComp, ShaderReflection::Compute);
+  else if(encDraw!=nullptr)
+    tlas.useResource(*encDraw, stage);
+  usedResources.push_back(&tlas);
+  return false;
+  }
+
+void MtCommandBuffer::clearUseResource() {
+  usedResources.reserve(usedResources.capacity());
+  usedResources.clear();
   }
 
 void MtCommandBuffer::draw(const AbstractGraphicsApi::Buffer* ivbo, size_t stride, size_t offset, size_t vertexCount,

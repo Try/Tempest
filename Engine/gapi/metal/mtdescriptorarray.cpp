@@ -99,16 +99,16 @@ void MtDescriptorArray::fillBuffer(MtDevice& dev, AbstractGraphicsApi::Buffer** 
   argsBuf.update(addr.get(), 0, cnt*sizeof(spvBufferDescriptor));
   }
 
-void MtDescriptorArray::useResource(MTL::ComputeCommandEncoder& cmd, ShaderReflection::Stage st) {
+void MtDescriptorArray::useResource(MTL::ComputeCommandEncoder& cmd, ShaderReflection::Stage st) const {
   implUseResource(cmd, st);
   }
 
-void MtDescriptorArray::useResource(MTL::RenderCommandEncoder& cmd, ShaderReflection::Stage st) {
+void MtDescriptorArray::useResource(MTL::RenderCommandEncoder& cmd, ShaderReflection::Stage st) const {
   implUseResource(cmd, st);
   }
 
 template<class Enc>
-void MtDescriptorArray::implUseResource(Enc& cmd, ShaderReflection::Stage st) {
+void MtDescriptorArray::implUseResource(Enc& cmd, ShaderReflection::Stage st) const {
   auto stages = nativeFormat(st);
   //TODO: UsageWrite
   implUseResource(cmd, args.data(), args.size(), MTL::ResourceUsageRead | MTL::ResourceUsageSample, stages);
@@ -116,14 +116,14 @@ void MtDescriptorArray::implUseResource(Enc& cmd, ShaderReflection::Stage st) {
 
 void MtDescriptorArray::implUseResource(MTL::ComputeCommandEncoder& cmd,
                                         const MTL::Resource* const resources[], NS::UInteger count,
-                                        MTL::ResourceUsage usage, MTL::RenderStages stages) {
+                                        MTL::ResourceUsage usage, MTL::RenderStages stages) const {
   (void)stages;
   cmd.useResources(resources, count, usage);
   }
 
 void MtDescriptorArray::implUseResource(MTL::RenderCommandEncoder& cmd,
                                         const MTL::Resource* const resources[], NS::UInteger count,
-                                        MTL::ResourceUsage usage, MTL::RenderStages stages) {
+                                        MTL::ResourceUsage usage, MTL::RenderStages stages) const {
   cmd.useResources(resources, count, usage, stages);
   }
 

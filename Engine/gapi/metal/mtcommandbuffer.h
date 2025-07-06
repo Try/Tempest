@@ -19,6 +19,7 @@ class MtBuffer;
 class MtPipeline;
 class MtCompPipeline;
 class MtDescriptorArray;
+class MtTopAccelerationStructure;
 
 class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
   public:
@@ -104,12 +105,18 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
 
     void implSetDebugLabel();
 
+    bool useResource(const MtDescriptorArray& arr, ShaderReflection::Stage stage);
+    bool useResource(const MtTopAccelerationStructure& tlas, ShaderReflection::Stage stage);
+    void clearUseResource();
+
     MtDevice&                         device;
     NsPtr<MTL::CommandBuffer>         impl;
 
     NsPtr<MTL::RenderCommandEncoder>  encDraw;
     NsPtr<MTL::ComputeCommandEncoder> encComp;
     NsPtr<MTL::BlitCommandEncoder>    encBlit;
+
+    std::vector<const void*>          usedResources;
 
     MtFboLayout                       curFbo;
     Push                              pushData;

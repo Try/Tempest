@@ -163,30 +163,30 @@ MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtIns
 MtTopAccelerationStructure::~MtTopAccelerationStructure() {
   }
 
-void MtTopAccelerationStructure::useResource(MTL::RenderCommandEncoder& cmd, ShaderReflection::Stage st) {
+void MtTopAccelerationStructure::useResource(MTL::RenderCommandEncoder& cmd, ShaderReflection::Stage st) const {
   implUseResource(cmd, st);
   }
 
-void MtTopAccelerationStructure::useResource(MTL::ComputeCommandEncoder& cmd, ShaderReflection::Stage st) {
+void MtTopAccelerationStructure::useResource(MTL::ComputeCommandEncoder& cmd, ShaderReflection::Stage st) const {
   implUseResource(cmd, st);
   }
 
 template<class Enc>
-void MtTopAccelerationStructure::implUseResource(Enc& cmd, ShaderReflection::Stage st) {
+void MtTopAccelerationStructure::implUseResource(Enc& cmd, ShaderReflection::Stage st) const {
   auto  stages = nativeFormat(st);
   implUseResource(cmd, blas.data(), blas.size(), MTL::ResourceUsageRead, stages);
   }
 
 void MtTopAccelerationStructure::implUseResource(MTL::ComputeCommandEncoder& cmd,
                                                  const MTL::Resource* const resources[], NS::UInteger count,
-                                                 MTL::ResourceUsage usage, MTL::RenderStages stages) {
+                                                 MTL::ResourceUsage usage, MTL::RenderStages stages) const {
   (void)stages;
   cmd.useResources(resources, count, usage);
   }
 
 void MtTopAccelerationStructure::implUseResource(MTL::RenderCommandEncoder& cmd,
                                                  const MTL::Resource* const resources[], NS::UInteger count,
-                                                 MTL::ResourceUsage usage, MTL::RenderStages stages) {
+                                                 MTL::ResourceUsage usage, MTL::RenderStages stages) const {
   cmd.useResources(resources, count, usage, stages);
   }
 
