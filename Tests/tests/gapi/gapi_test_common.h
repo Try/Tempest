@@ -1722,8 +1722,8 @@ void UnusedDescriptor(const char* outImg) {
       device.submit(cmd,sync);
       sync.wait();
 
-      //auto pm = device.readPixels(ret);
-      //pm.save(outImg);
+      auto pm = device.readPixels(ret);
+      pm.save(outImg);
     }
   catch(std::system_error& e) {
       if(e.code()==Tempest::GraphicsErrc::NoDevice)
