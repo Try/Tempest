@@ -42,9 +42,9 @@ class DxDescriptorAllocator {
     Provider                          providerRes;
     Detail::DeviceAllocator<Provider> allocatorRes{providerRes};
 
-    uint32_t                          descSize = 1;
-    uint32_t                          rtvSize  = 1;
-    uint32_t                          dsvSize  = 1;
+    uint32_t                          resSize = 1;
+    uint32_t                          rtvSize = 1;
+    uint32_t                          dsvSize = 1;
   };
 
 }

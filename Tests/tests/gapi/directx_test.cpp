@@ -254,6 +254,12 @@ TEST(DirectX12Api,Bindless2) {
 #endif
   }
 
+TEST(DirectX12Api,UnusedDescriptor) {
+#if defined(_MSC_VER)
+  GapiTestCommon::UnusedDescriptor<DirectX12Api>("DirectX12Api_UnusedDescriptor.png");
+#endif
+  }
+
 TEST(DirectX12Api,Blas) {
 #if defined(_MSC_VER)
   GapiTestCommon::Blas<DirectX12Api>();

@@ -85,6 +85,7 @@ compile_shader(depth_only.frag)
 
 compile_shader(bindless.comp)
 compile_shader(bindless2.comp)
+compile_shader(bindless_unused.comp)
 compile_shader(array_texture.comp)
 compile_shader(array_image.comp)
 compile_shader(array_ssbo.comp)

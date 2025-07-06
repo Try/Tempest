@@ -51,9 +51,9 @@ void DxDescriptorAllocator::setDevice(DxDevice& device) {
   providerRes.device = &device;
 
   auto& dx = *device.device.get();
-  descSize = dx.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-  rtvSize  = dx.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-  dsvSize  = dx.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+  resSize = dx.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+  rtvSize = dx.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+  dsvSize = dx.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 
   allocatorRes.setDefaultPageSize(64);
   }
@@ -105,7 +105,7 @@ D3D12_CPU_DESCRIPTOR_HANDLE DxDescriptorAllocator::handle(const Allocation& a, s
 
   switch (a.page->heapId) {
     case D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV:
-      ptr.ptr += offset*descSize;
+      ptr.ptr += offset*resSize;
       break;
     case D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER:
       assert(0); // not in use

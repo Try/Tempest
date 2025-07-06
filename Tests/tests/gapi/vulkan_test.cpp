@@ -258,6 +258,12 @@ TEST(VulkanApi,Bindless2) {
 #endif
   }
 
+TEST(VulkanApi,UnusedDescriptor) {
+#if !defined(__OSX__)
+  GapiTestCommon::UnusedDescriptor<VulkanApi>("VulkanApi_UnusedDescriptor.png");
+#endif
+  }
+
 TEST(VulkanApi,Blas) {
 #if !defined(__OSX__)
   GapiTestCommon::Blas<VulkanApi>();

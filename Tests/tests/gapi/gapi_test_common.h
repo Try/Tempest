@@ -1665,6 +1665,74 @@ void Bindless2(const char* outImg) {
   }
 
 template<class GraphicsApi>
+void UnusedDescriptor(const char* outImg) {
+  using namespace Tempest;
+  try {
+      const char* devName = nullptr;
+
+      GraphicsApi api{ApiFlags::Validation};
+      auto dev = api.devices();
+      for(auto& i:dev)
+        if(i.descriptors.nonUniformIndexing)
+          devName = i.name;
+      if(devName==nullptr)
+        return;
+
+      Device device(api,devName);
+
+      auto cs  = device.shader("shader/bindless_unused.comp.sprv");
+      auto pso = device.pipeline(cs);
+      auto ret = device.image2d(TextureFormat::RGBA8,128,128,false);
+
+      std::vector<Tempest::Texture2d> tex(2);
+      tex[0] = device.texture("assets/gapi/tst-rgba.png");
+      tex[1] = device.texture("assets/gapi/tst-dxt5.dds");
+
+      std::vector<Tempest::StorageBuffer> buf(3);
+      buf[0] = device.ssbo<Vec4>({Vec4(1,0,0,1)});
+      buf[1] = device.ssbo<Vec4>({Vec4(0,1,0,1)});
+      buf[2] = device.ssbo<Vec4>({Vec4(0,0,1,1)});
+
+      std::vector<const Tempest::Texture2d*> ptex(3);
+      ptex[0] = &tex[0];
+      ptex[1] = nullptr; //NOTE: engine doesn't quite support null-descriptors, so null means unused
+      ptex[2] = &tex[1];
+
+      std::vector<const Tempest::StorageBuffer*> pbuf(4);
+      pbuf[0] = &buf[0];
+      pbuf[1] = nullptr;
+      pbuf[2] = &buf[1];
+      pbuf[3] = &buf[2];
+
+      auto dtex  = device.descriptors(ptex);
+      auto dtex2 = device.descriptors(ptex, Sampler::nearest()); // combined image-sampler
+      auto dbuf  = device.descriptors(pbuf);
+      auto cmd   = device.commandBuffer();
+      {
+        auto enc = cmd.startEncoding(device);
+        enc.setBinding(0, dtex2);
+        enc.setBinding(1, dtex);
+        enc.setBinding(2, dbuf);
+        enc.setBinding(3, ret);
+        enc.setPipeline(pso);
+        enc.dispatch(ret.w(),ret.h(),1);
+      }
+
+      auto sync = device.fence();
+      device.submit(cmd,sync);
+      sync.wait();
+
+      //auto pm = device.readPixels(ret);
+      //pm.save(outImg);
+    }
+  catch(std::system_error& e) {
+      if(e.code()==Tempest::GraphicsErrc::NoDevice)
+        Log::d("Skipping graphics testcase: ", e.what()); else
+        throw;
+    }
+  }
+
+template<class GraphicsApi>
 void Blas() {
   using namespace Tempest;
 

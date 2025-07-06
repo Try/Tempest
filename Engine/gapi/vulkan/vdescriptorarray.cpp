@@ -87,16 +87,12 @@ void VDescriptorArray::populate(VDevice &dev, AbstractGraphicsApi::Texture **t, 
   // 16 is non-bindless limit
   SmallArray<VkDescriptorImageInfo,16> imageInfo(cnt);
   for(size_t i=0; i<cnt; ++i) {
-    if(t[i]==nullptr) {
-      imageInfo[i] = VkDescriptorImageInfo{};
-      continue;
-      }
-    VTexture& tex = *reinterpret_cast<VTexture*>(t[i]);
-    imageInfo[i].imageLayout = toWriteLayout(tex);
-    imageInfo[i].imageView   = tex.view(ComponentMapping(), mipLevel, is3DImage);
+    VTexture* tex = reinterpret_cast<VTexture*>(t[i]);
+    imageInfo[i].imageLayout = tex!=nullptr ? toWriteLayout(*tex) : VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo[i].imageView   = tex!=nullptr ? tex->view(ComponentMapping(), mipLevel, is3DImage) : VK_NULL_HANDLE;
     imageInfo[i].sampler     = smp!=nullptr ? dev.allocator.updateSampler(*smp) : VK_NULL_HANDLE;
     // TODO: support mutable textures in bindless
-    assert(tex.nonUniqId==0);
+    assert(tex==nullptr || tex->nonUniqId==0);
     }
 
   VkWriteDescriptorSet descriptorWrite = {};
