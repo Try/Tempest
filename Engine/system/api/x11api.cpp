@@ -18,6 +18,7 @@
 #include <X11/Xos.h>
 #include <X11/keysymdef.h>
 #include <X11/Xutil.h>
+#include <X11/Xresource.h>
 #undef CursorShape
 
 struct HWND final {
@@ -224,6 +225,7 @@ X11Api::X11Api() {
   impl.reset(new Private());
 
   XInitThreads();
+  XrmInitialize();
   dpy = XOpenDisplay(nullptr);
 
   if(dpy != nullptr)
@@ -383,6 +385,53 @@ bool X11Api::implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) {
 
 bool X11Api::implIsFullscreen(SystemApi::Window *w) {
   return impl->isFullscreen(w);
+  }
+
+float X11Api::implUiScale(SystemApi::Window *w) {
+#if 1
+  // no working implementation yet
+  return 1.0;
+#elif 0
+  const Screen* screen = DefaultScreenOfDisplay(dpy);
+  if(screen==nullptr)
+    return 1;
+
+  const float mm_per_inc = 25.4f;
+  const float xscale = float(screen->width *mm_per_inc) / float(screen->mwidth);
+  const float yscale = float(screen->height*mm_per_inc) / float(screen->mheight);
+
+  Log::d(screen->width, " ", screen->mwidth);
+  return std::min(xscale, yscale) / 96.f;
+#else
+  // Based on GLFW getSystemContentScale
+
+  // Start by assuming the default X11 DPI
+  // NOTE: Some desktop environments (KDE) may remove the Xft.dpi field when it
+  //       would be set to 96, so assume that is the case if we cannot find it
+  float dpi = 96.f;
+
+  // NOTE: Basing the scale on Xft.dpi where available should provide the most
+  //       consistent user experience (matches Qt, Gtk, etc), although not
+  //       always the most accurate one
+  const char* rms = XResourceManagerString(dpy);
+  if(rms!=nullptr) {
+    XrmDatabase db = XrmGetStringDatabase(rms);
+    if(db!=nullptr) {
+      XrmValue value;
+      char* type = NULL;
+
+      if(XrmGetResource(db, "Xft.dpi", "Xft.Dpi", &type, &value)) {
+        if(type && strcmp(type, "String") == 0) {
+          dpi = std::atof(value.addr);
+          }
+        }
+
+      XrmDestroyDatabase(db);
+      }
+    }
+
+  return dpi/96.f;
+#endif
   }
 
 void X11Api::implSetWindowTitle(SystemApi::Window *w, const char *utf8) {
