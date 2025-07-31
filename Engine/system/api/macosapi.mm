@@ -374,7 +374,8 @@ void MacOSApi::implSetWindowTitle(Window* w, const char* utf8) {
   NSWindow* wnd = reinterpret_cast<NSWindow*>(w);
   NSString* str = [NSString stringWithUTF8String:utf8];
   [wnd setTitle: str];
-  [str release];
+  // apparently setTtile doesn't increnent ref-counter
+  // [str release];
   }
 
 float MacOSApi::implUiScale(SystemApi::Window* w) {
