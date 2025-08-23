@@ -166,7 +166,9 @@ void MtTexture::readPixels(Pixmap& out, TextureFormat frm, const uint32_t w, con
   auto pool = NsPtr<NS::AutoreleasePool>::init();
   auto cmd  = dev.queue->commandBuffer();
   auto enc  = cmd->blitCommandEncoder();
-  enc->copyFromTexture(impl.get(),0,mip,stage.get(),0,0,1,1);
+  enc->copyFromTexture(impl.get(),0,mip,MTL::Origin(),
+                       MTL::Size(w,h,1),
+                       stage.get(),0,0,MTL::Origin());
   if(opt==MTL::StorageModeManaged)
     enc->synchronizeResource(stage.get());
   enc->endEncoding();

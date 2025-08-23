@@ -151,6 +151,12 @@ TEST(MetalApi,AtomicImage) {
 #endif
   }
 
+TEST(MetalApi,AtomicImage3D) {
+#if defined(__OSX__)
+  GapiTestCommon::AtomicImage3D<MetalApi>("MetalApi_AtomicImage3D.png");
+#endif
+  }
+
 TEST(MetalApi,MipMaps) {
 #if defined(__OSX__)
   GapiTestCommon::MipMaps<MetalApi,TextureFormat::RGBA8>  ("MetalApi_MipMaps_RGBA8.png");
