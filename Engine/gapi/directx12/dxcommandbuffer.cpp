@@ -1317,25 +1317,29 @@ void DxCommandBuffer::copyNative(AbstractGraphicsApi::Buffer& dstBuf, size_t off
   const UINT pitchBase = UINT(wBlk)*bpb;
   const UINT pitch     = ((pitchBase+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
 
-  D3D12_PLACED_SUBRESOURCE_FOOTPRINT foot = {};
-  foot.Offset             = offset;
-  foot.Footprint.Format   = src.format;
-  foot.Footprint.Width    = UINT(width);
-  foot.Footprint.Height   = UINT(height);
-  foot.Footprint.Depth    = 1;
-  foot.Footprint.RowPitch = pitch;
+  D3D12_PLACED_SUBRESOURCE_FOOTPRINT dstFoot = {};
+  dstFoot.Offset             = offset;
+  dstFoot.Footprint.Format   = src.format;
+  dstFoot.Footprint.Width    = UINT(width);
+  dstFoot.Footprint.Height   = UINT(height);
+  dstFoot.Footprint.Depth    = 1;
+  dstFoot.Footprint.RowPitch = pitch;
+
+  D3D12_TEXTURE_COPY_LOCATION dstLoc = {};
+  dstLoc.pResource        = dst.impl.get();
+  dstLoc.Type             = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+  dstLoc.PlacedFootprint  = dstFoot;
 
   D3D12_TEXTURE_COPY_LOCATION srcLoc = {};
   srcLoc.pResource        = src.impl.get();
   srcLoc.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
   srcLoc.SubresourceIndex = UINT(mip);
 
-  D3D12_TEXTURE_COPY_LOCATION dstLoc = {};
-  dstLoc.pResource        = dst.impl.get();
-  dstLoc.Type             = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-  dstLoc.PlacedFootprint  = foot;
-
-  impl->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, nullptr);
+  D3D12_BOX srcBox = {};
+  srcBox.right  = UINT(width);
+  srcBox.bottom = UINT(height);
+  srcBox.back   = 1;
+  impl->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, &srcBox);
   }
 
 #endif

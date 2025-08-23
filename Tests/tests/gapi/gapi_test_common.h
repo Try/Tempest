@@ -1029,6 +1029,41 @@ void AtomicImage(const char* outImage) {
     }
   }
 
+template<class GraphicsApi>
+void AtomicImage3D(const char* outImage) {
+  using namespace Tempest;
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto img = device.image3d(TextureFormat::R32U,128,128,2,false);
+    auto pso = device.pipeline(device.shader("shader/image_atomic3d_test.comp.sprv"));
+
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setBinding(0, img);
+      enc.setPipeline(pso);
+      enc.dispatch(img.w(),img.h(),img.d());
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    auto pm = device.readPixels(img);
+    auto rgb = Pixmap(pm.w(), pm.h(), TextureFormat::RGBA8);
+    std::memcpy(rgb.data(), pm.data(), pm.w()*pm.h()*sizeof(uint32_t));
+    rgb.save(outImage);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
 template<class GraphicsApi, Tempest::TextureFormat format>
 void MipMaps(const char* outImage) {
   using namespace Tempest;

@@ -165,6 +165,12 @@ TEST(DirectX12Api,AtomicImage) {
 #endif
   }
 
+TEST(DirectX12Api,AtomicImage3D) {
+#if defined(_MSC_VER)
+  GapiTestCommon::AtomicImage3D<DirectX12Api>("DirectX12Api_AtomicImage3D.png");
+#endif
+  }
+
 TEST(DirectX12Api,DispathToDraw) {
 #if defined(_MSC_VER)
   GapiTestSync::DispathToDraw<DirectX12Api>("DirectX12Api_DispathToDraw.png");
