@@ -142,13 +142,13 @@ AbstractGraphicsApi::PTexture MetalApi::createTexture(AbstractGraphicsApi::Devic
 AbstractGraphicsApi::PTexture MetalApi::createTexture(AbstractGraphicsApi::Device *d,
                                                       const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) {
   auto& dev = *reinterpret_cast<MtDevice*>(d);
-  return PTexture(new MtTexture(dev,w,h,1,mips,frm,false));
+  return PTexture(new MtTexture(dev,w,h,0,mips,frm,false));
   }
 
 AbstractGraphicsApi::PTexture MetalApi::createStorage(AbstractGraphicsApi::Device *d,
                                                       const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) {
   auto& dev = *reinterpret_cast<MtDevice*>(d);
-  return PTexture(new MtTexture(dev,w,h,1,mips,frm,true));
+  return PTexture(new MtTexture(dev,w,h,0,mips,frm,true));
   }
 
 AbstractGraphicsApi::PTexture MetalApi::createStorage(Device* d,

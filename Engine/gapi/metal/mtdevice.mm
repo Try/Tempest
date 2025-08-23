@@ -130,6 +130,28 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
   for(auto& i:ds)
     dsBit  |= uint64_t(1) << uint64_t(i);
 
+  // https://developer.apple.com/documentation/metal/mtlreadwritetexturetier/tier2?language=objc
+  // You can check an individual GPU’s support for this feature by inspecting its `readWriteTextureSupport`
+  switch(dev.readWriteTextureSupport()) {
+    case MTL::ReadWriteTextureTier2:
+      //32 bit
+      storBit |= uint64_t(1) << TextureFormat::RGBA32F;
+      storBit |= uint64_t(1) << TextureFormat::RGBA32U;
+      // 16 bit
+      storBit |= uint64_t(1) << TextureFormat::RGBA16F;
+      // 8 bit
+      storBit |= uint64_t(1) << TextureFormat::R8;
+      [[fallthrough]];
+    case MTL::ReadWriteTextureTier1:
+      //32 bit
+      storBit |= uint64_t(1) << TextureFormat::R32F;
+      storBit |= uint64_t(1) << TextureFormat::R32U;
+      [[fallthrough]];
+    case MTL::ReadWriteTextureTierNone:
+      break;
+    }
+
+
   if(dev.supportsBCTextureCompression()) {
     static const TextureFormat bc[] = {TextureFormat::DXT1, TextureFormat::DXT3, TextureFormat::DXT5};
     for(auto& i:bc)

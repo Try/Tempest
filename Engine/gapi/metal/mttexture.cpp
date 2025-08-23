@@ -50,8 +50,8 @@ MtTexture::MtTexture(MtDevice& dev, const Pixmap& pm, uint32_t mipCnt, TextureFo
 #else
   const MTL::StorageMode smode = MTL::StorageModeManaged;
 #endif
-  NsPtr<MTL::Texture> stage = alloc(frm,pm.w(),pm.h(),1,smip,smode,MTL::TextureUsageShaderRead);
-  impl = alloc(frm,pm.w(),pm.h(),1,mipCnt,MTL::StorageModePrivate,MTL::TextureUsageShaderRead);
+  NsPtr<MTL::Texture> stage = alloc(frm,pm.w(),pm.h(),0,smip,smode,MTL::TextureUsageShaderRead);
+  impl = alloc(frm,pm.w(),pm.h(),0,mipCnt,MTL::StorageModePrivate,MTL::TextureUsageShaderRead);
 
   if(isCompressedFormat(frm))
     createCompressedTexture(*stage,pm,frm,mipCnt); else
@@ -114,11 +114,11 @@ NsPtr<MTL::Texture> MtTexture::alloc(TextureFormat frm,
       throw std::system_error(GraphicsErrc::OutOfVideoMemory);
     }
 
-  desc->setTextureType(d==1 ? MTL::TextureType2D : MTL::TextureType3D);
+  desc->setTextureType((d==0 || linear) ? MTL::TextureType2D : MTL::TextureType3D);
   desc->setPixelFormat(nativeFormat(frm));
   desc->setWidth(w);
   desc->setHeight(h);
-  desc->setDepth(d);
+  desc->setDepth(d==0 ? 1 : d);
   desc->setMipmapLevelCount(mips);
   desc->setCpuCacheMode(MTL::CPUCacheModeDefaultCache);
   desc->setStorageMode(smode);
@@ -162,7 +162,7 @@ void MtTexture::readPixels(Pixmap& out, TextureFormat frm, const uint32_t w, con
   opt = MTL::StorageModeManaged;
 #endif
 
-  NsPtr<MTL::Texture> stage = alloc(frm,w,h,1,1,opt,MTL::TextureUsageShaderRead);
+  NsPtr<MTL::Texture> stage = alloc(frm,w,h,0,1,opt,MTL::TextureUsageShaderRead);
   auto pool = NsPtr<NS::AutoreleasePool>::init();
   auto cmd  = dev.queue->commandBuffer();
   auto enc  = cmd->blitCommandEncoder();
