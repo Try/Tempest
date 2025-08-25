@@ -2,7 +2,7 @@
 //
 // Metal/MTLEvent.hpp
 //
-// Copyright 2020-2023 Apple Inc.
+// Copyright 2020-2024 Apple Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -51,14 +51,18 @@ public:
     dispatch_queue_t                  dispatchQueue() const;
 };
 
-using SharedEventNotificationBlock = void (^)(SharedEvent* pEvent, std::uint64_t value);
+using SharedEventNotificationBlock = void (^)(class SharedEvent* pEvent, std::uint64_t value);
+using SharedEventNotificationFunction = std::function<void(class SharedEvent* pEvent, std::uint64_t value)>;
 
 class SharedEvent : public NS::Referencing<SharedEvent, Event>
 {
 public:
     void                     notifyListener(const class SharedEventListener* listener, uint64_t value, const MTL::SharedEventNotificationBlock block);
+    void                     notifyListener(const class SharedEventListener* listener, uint64_t value, const MTL::SharedEventNotificationFunction& function);
 
     class SharedEventHandle* newSharedEventHandle();
+
+    bool                     waitUntilSignaledValue(uint64_t value, uint64_t milliseconds);
 
     uint64_t                 signaledValue() const;
     void                     setSignaledValue(uint64_t signaledValue);
@@ -123,10 +127,24 @@ _MTL_INLINE void MTL::SharedEvent::notifyListener(const MTL::SharedEventListener
     Object::sendMessage<void>(this, _MTL_PRIVATE_SEL(notifyListener_atValue_block_), listener, value, block);
 }
 
+_MTL_INLINE void MTL::SharedEvent::notifyListener(const class SharedEventListener* listener, uint64_t value, const MTL::SharedEventNotificationFunction& function)
+{
+    __block MTL::SharedEventNotificationFunction callback = function;
+    notifyListener(listener, value, ^void(class SharedEvent* pEvent, std::uint64_t value){
+        callback(pEvent, value);
+    });
+}
+
 // method: newSharedEventHandle
 _MTL_INLINE MTL::SharedEventHandle* MTL::SharedEvent::newSharedEventHandle()
 {
     return Object::sendMessage<MTL::SharedEventHandle*>(this, _MTL_PRIVATE_SEL(newSharedEventHandle));
+}
+
+// method: waitUntilSignaledValue:timeoutMS:
+_MTL_INLINE bool MTL::SharedEvent::waitUntilSignaledValue(uint64_t value, uint64_t milliseconds)
+{
+    return Object::sendMessage<bool>(this, _MTL_PRIVATE_SEL(waitUntilSignaledValue_timeoutMS_), value, milliseconds);
 }
 
 // property: signaledValue
