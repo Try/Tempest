@@ -1,6 +1,5 @@
 #pragma once
 
-#include <sstream>
 #include <mutex>
 #include <cstdint>
 #include <thread>
