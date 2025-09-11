@@ -19,7 +19,7 @@
 # and license in png.h
 
 cmake_minimum_required(VERSION 3.15)
-cmake_policy(VERSION 3.1)
+cmake_policy(VERSION 3.15)
 
 project(libpng C ASM)
 enable_testing()
