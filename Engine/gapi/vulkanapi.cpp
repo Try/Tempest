@@ -251,7 +251,7 @@ AbstractGraphicsApi::Device* VulkanApi::createDevice(std::string_view gpuName) {
 
 AbstractGraphicsApi::Swapchain *VulkanApi::createSwapchain(SystemApi::Window *w, AbstractGraphicsApi::Device *d) {
   Detail::VDevice* dx   = reinterpret_cast<Detail::VDevice*>(d);
-  return new Detail::VSwapchain(*dx,w);
+  return new Detail::VSwapchain(*dx, w);
   }
 
 AbstractGraphicsApi::PPipelineLay VulkanApi::createPipelineLayout(Device*, const Shader*const*, size_t) {

@@ -370,7 +370,6 @@ class VDevice : public AbstractGraphicsApi::Device {
     static void             deviceProps(VkInstance instance, const bool hasDeviceFeatures2, VkPhysicalDevice physicalDevice, VkProps& props);
     static void             deviceQueueProps(VkPhysicalDevice device, VkProps& props);
 
-    VkSurfaceKHR            createSurface(void* hwnd);
     SwapChainSupport        querySwapChainSupport(VkSurfaceKHR surface) { return querySwapChainSupport(physicalDevice,surface); }
     MemIndex                memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const;
 

@@ -17,6 +17,8 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     ~VSwapchain() override;
     VSwapchain& operator=(VSwapchain&& other) = delete;
 
+    static bool checkPresentSupport(VkPhysicalDevice device, uint32_t queueFamilyIndex);
+
     struct SwapChainSupport final {
       VkSurfaceCapabilitiesKHR        capabilities={};
       std::vector<VkSurfaceFormatKHR> formats;
@@ -106,6 +108,7 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     void                     cleanupSurface() noexcept;
     void                     cleanup() noexcept;
 
+    VkSurfaceKHR             createSurface(VkInstance instance, void* hwnd);
     void                     createSwapchain(VDevice& device);
     VkResult                 createSwapchain(VDevice& device, const SwapChainSupport& support, const Rect& rect, uint32_t imgCount);
     void                     createImageViews(VDevice &device);

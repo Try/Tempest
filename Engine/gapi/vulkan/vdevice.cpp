@@ -6,28 +6,9 @@
 #include "vfence.h"
 #include "vswapchain.h"
 
-#if defined(__UNIX__)
-#include "system/api/x11api.h"
-#endif
-
 #include <Tempest/Log>
-#include <Tempest/Platform>
 #include <cstring>
 #include <array>
-
-#if defined(__WINDOWS__)
-#  define VK_USE_PLATFORM_WIN32_KHR
-#  include <windows.h>
-#  include <vulkan/vulkan_win32.h>
-#elif defined(__UNIX__)
-#  define VK_USE_PLATFORM_XLIB_KHR
-#  include <X11/Xlib.h>
-#  include <vulkan/vulkan_xlib.h>
-#  undef Always
-#  undef None
-#else
-#  error "WSI is not implemented on this platform"
-#endif
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -370,299 +351,6 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
   dummyIfNull(vkCmdDebugMarkerBegin);
   dummyIfNull(vkCmdDebugMarkerEnd);
   dummyIfNull(vkDebugMarkerSetObjectName);
-  }
-
-std::vector<VkExtensionProperties> VDevice::extensionsList(VkPhysicalDevice dev) {
-  uint32_t extensionCount;
-  vkEnumerateDeviceExtensionProperties(dev, nullptr, &extensionCount, nullptr);
-
-  std::vector<VkExtensionProperties> ext(extensionCount);
-  vkEnumerateDeviceExtensionProperties(dev, nullptr, &extensionCount, ext.data());
-
-  return ext;
-  }
-
-VkSurfaceKHR VDevice::createSurface(void* hwnd) {
-  if(hwnd==nullptr)
-    return VK_NULL_HANDLE;
-  VkSurfaceKHR ret = VK_NULL_HANDLE;
-#ifdef __WINDOWS__
-  VkWin32SurfaceCreateInfoKHR createInfo={};
-  createInfo.sType     = VkStructureType::VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-  createInfo.hinstance = GetModuleHandleA(nullptr);
-  createInfo.hwnd      = HWND(hwnd);
-  if(vkCreateWin32SurfaceKHR(instance,&createInfo,nullptr,&ret)!=VK_SUCCESS)
-    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
-#elif defined(__UNIX__)
-  VkXlibSurfaceCreateInfoKHR createInfo = {};
-  createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-  createInfo.dpy    = reinterpret_cast<Display*>(X11Api::display());
-  createInfo.window = ::Window(hwnd);
-  if(vkCreateXlibSurfaceKHR(instance, &createInfo, nullptr, &ret)!=VK_SUCCESS)
-    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
-#else
-#warning "wsi for vulkan not implemented on this platform"
-#endif
-  return ret;
-  }
-
-void VDevice::deviceQueueProps(VkPhysicalDevice device, VkProps& props) {
-  uint32_t queueFamilyCount = 0;
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-
-  std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
-
-  uint32_t graphics  = uint32_t(-1);
-  uint32_t present   = uint32_t(-1);
-  uint32_t universal = uint32_t(-1);
-
-  for(uint32_t i=0;i<queueFamilyCount;++i) {
-    const auto& queueFamily = queueFamilies[i];
-    if(queueFamily.queueCount<=0)
-      continue;
-
-    static const VkQueueFlags rqFlag = (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
-
-    const bool graphicsSupport = ((queueFamily.queueFlags & rqFlag)==rqFlag);
-#if defined(__WINDOWS__)
-    const bool presentSupport = vkGetPhysicalDeviceWin32PresentationSupportKHR(device,i)!=VK_FALSE;
-#elif defined(__UNIX__)
-    bool presentSupport = false;
-    if(auto dpy = reinterpret_cast<Display*>(X11Api::display())){
-      auto screen   = DefaultScreen(dpy);
-      auto visualId = XVisualIDFromVisual(DefaultVisual(dpy,screen));
-      presentSupport = vkGetPhysicalDeviceXlibPresentationSupportKHR(device,i,dpy,visualId)!=VK_FALSE;
-      }
-#else
-#warning "wsi for vulkan not implemented on this platform"
-#endif
-
-    if(graphicsSupport)
-      graphics = i;
-    if(presentSupport)
-      present = i;
-    if(presentSupport && graphicsSupport)
-      universal = i;
-    }
-
-  if(universal!=uint32_t(-1)) {
-    graphics = universal;
-    present  = universal;
-    }
-
-  props.graphicsFamily = graphics;
-  props.presentFamily  = present;
-  }
-
-VDevice::SwapChainSupport VDevice::querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface) {
-  SwapChainSupport details;
-  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
-
-  uint32_t formatCount = 0;
-  vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
-  details.formats.resize(formatCount);
-  vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
-
-  uint32_t presentModeCount = 0;
-  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
-  details.presentModes.resize(presentModeCount);
-  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
-
-  return details;
-  }
-
-VDevice::MemIndex VDevice::memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const {
-  for(size_t i=0; i<memoryProperties.memoryTypeCount; ++i) {
-    auto bit = (uint32_t(1) << i);
-    if((typeBits & bit)==0)
-      continue;
-    if(memoryProperties.memoryTypes[i].propertyFlags==props) {
-      MemIndex ret;
-      ret.typeId      = uint32_t(i);
-      // avoid bufferImageGranularity shenanigans
-      ret.heapId      = (tiling==VK_IMAGE_TILING_OPTIMAL && this->props.bufferImageGranularity>1) ? ret.typeId*2+1 : ret.typeId*2+0;
-      ret.hostVisible = (memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-      return ret;
-      }
-    }
-  for(size_t i=0; i<memoryProperties.memoryTypeCount; ++i) {
-    auto bit = (uint32_t(1) << i);
-    if((typeBits & bit)==0)
-      continue;
-    if((memoryProperties.memoryTypes[i].propertyFlags & props)==props) {
-      MemIndex ret;
-      ret.typeId = uint32_t(i);
-      // avoid bufferImageGranularity shenanigans
-      ret.heapId      = (tiling==VK_IMAGE_TILING_OPTIMAL && this->props.bufferImageGranularity>1) ? ret.typeId*2+1 : ret.typeId*2+0;
-      ret.hostVisible = (memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-      return ret;
-      }
-    }
-  MemIndex ret;
-  ret.typeId = uint32_t(-1);
-  return ret;
-  }
-
-VBuffer& VDevice::dummySsbo() {
-  // NOTE: null desriptor is part of VK_EXT_robustness2
-  std::lock_guard<std::mutex> guard(syncSsbo);
-  if(dummySsboVal.impl==VK_NULL_HANDLE) {
-    // in principle 1 byte is also fine
-    dummySsboVal = allocator.alloc(nullptr, sizeof(uint32_t), MemUsage::StorageBuffer, BufferHeap::Device);
-    }
-  return dummySsboVal;
-  }
-
-uint32_t VDevice::roundUpDescriptorCount(ShaderReflection::Class cls, size_t cnt) {
-  uint32_t cntRound = 0;
-  if(cnt<64)
-    cntRound = 64;
-  else if(cnt<128)
-    cntRound = 128;
-  else if(cnt<256)
-    cntRound = 256;
-  else if(cnt<512)
-    cntRound = 512;
-  else if(cnt<1024)
-    cntRound = 1024;
-  else
-    cntRound = uint32_t((cnt+2048-1)/2048)*2048;
-
-  switch(cls) {
-    case ShaderReflection::Texture:
-    case ShaderReflection::Image:
-    case ShaderReflection::ImgR:
-    case ShaderReflection::ImgRW:
-      cntRound = std::min(cntRound, props.descriptors.maxTexture);
-      break;
-    case ShaderReflection::Sampler:
-      cntRound = std::min(cntRound, props.descriptors.maxSamplers);
-      break;
-    case ShaderReflection::SsboR:
-    case ShaderReflection::SsboRW:
-    case ShaderReflection::Tlas:
-      cntRound = std::min(cntRound, props.descriptors.maxStorage);
-      break;
-    case ShaderReflection::Ubo:
-    case ShaderReflection::Push:
-    case ShaderReflection::Count:
-      break;
-    }
-
-  return cntRound;
-  }
-
-VkDescriptorSetLayout VDevice::bindlessArrayLayout(ShaderReflection::Class cls, size_t cnt) {
-  // WA for Intel linux-drivers. They have bugs with VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT
-  // Details: https://github.com/Try/OpenGothic/issues/741
-
-  ShaderReflection::LayoutDesc lx;
-  lx.bindings[0] = cls;
-  lx.stage[0]    = ShaderReflection::None;
-  lx.count[0]    = uint32_t(cnt);
-  lx.runtime     = 0x1;
-  lx.array       = 0x1;
-  lx.active      = 0x1;
-
-  return setLayouts.findLayout(lx);
-  }
-
-void VDevice::waitIdle() {
-  waitIdleSync(queues,sizeof(queues)/sizeof(queues[0]));
-  }
-
-void VDevice::waitIdleSync(VDevice::Queue* q, size_t n) {
-  if(n==0) {
-    vkDeviceWaitIdle(device.impl);
-    return;
-    }
-  if(q->impl!=nullptr) {
-    std::lock_guard<std::mutex> guard(q->sync);
-    waitIdleSync(q+1,n-1);
-    } else {
-    waitIdleSync(q+1,n-1);
-    }
-  }
-
-void VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
-  size_t waitCnt = 0;
-  for(auto& s:cmd.swapchainSync) {
-    if(s->state!=Detail::VSwapchain::S_Pending)
-      continue;
-    s->state = Detail::VSwapchain::S_Aquired;
-    ++waitCnt;
-    }
-
-  SmallArray<VkSemaphore, 32> wait(waitCnt);
-  size_t                      waitId  = 0;
-  for(auto& s:cmd.swapchainSync) {
-    if(s->state!=Detail::VSwapchain::S_Aquired)
-      continue;
-    s->state = Detail::VSwapchain::S_Draw;
-    wait[waitId] = s->acquire;
-    ++waitId;
-    }
-
-  VkFence fence = VK_NULL_HANDLE;
-  if(sync!=nullptr) {
-    sync->reset();
-    fence = sync->impl;
-    }
-
-  if(vkQueueSubmit2!=nullptr) {
-    SmallArray<VkSemaphoreSubmitInfoKHR, 32> wait2(waitCnt);
-    for(size_t i=0; i<waitCnt; ++i) {
-      wait2[i].sType       = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
-      wait2[i].pNext       = nullptr;
-      wait2[i].semaphore   = wait[i];
-      wait2[i].value       = 0;
-      wait2[i].stageMask   = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-      wait2[i].deviceIndex = 0;
-      }
-    SmallArray<VkCommandBufferSubmitInfoKHR,MaxCmdChunks> flat(cmd.chunks.size());
-    auto node = cmd.chunks.begin();
-    for(size_t i=0; i<cmd.chunks.size(); ++i) {
-      flat[i].sType         = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO_KHR;
-      flat[i].pNext         = nullptr;
-      flat[i].commandBuffer = node->val[i%cmd.chunks.chunkSize].impl;
-      flat[i].deviceMask    = 0;
-      if(i+1==cmd.chunks.chunkSize)
-        node = node->next;
-      }
-
-    VkSubmitInfo2KHR submitInfo = {};
-    submitInfo.sType                  = VK_STRUCTURE_TYPE_SUBMIT_INFO_2_KHR;
-    submitInfo.commandBufferInfoCount = uint32_t(cmd.chunks.size());
-    submitInfo.pCommandBufferInfos    = flat.get();
-    submitInfo.waitSemaphoreInfoCount = uint32_t(waitCnt);
-    submitInfo.pWaitSemaphoreInfos    = wait2.get();
-
-    graphicsQueue->submit(1,&submitInfo,fence,vkQueueSubmit2);
-    } else {
-    SmallArray<VkPipelineStageFlags, 32> waitStages(waitCnt);
-    for(size_t i=0; i<waitCnt; ++i) {
-      // NOTE: our sw images are draw-only
-      waitStages[i] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-      }
-
-    SmallArray<VkCommandBuffer,MaxCmdChunks> flat(cmd.chunks.size());
-    auto node = cmd.chunks.begin();
-    for(size_t i=0; i<cmd.chunks.size(); ++i) {
-      flat[i] = node->val[i%cmd.chunks.chunkSize].impl;
-      if(i+1==cmd.chunks.chunkSize)
-        node = node->next;
-      }
-    VkSubmitInfo submitInfo = {};
-    submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = uint32_t(cmd.chunks.size());
-    submitInfo.pCommandBuffers    = flat.get();
-    submitInfo.waitSemaphoreCount = uint32_t(waitCnt);
-    submitInfo.pWaitSemaphores    = wait.get();
-    submitInfo.pWaitDstStageMask  = waitStages.get();
-
-    graphicsQueue->submit(1,&submitInfo,fence);
-    }
   }
 
 void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, VkPhysicalDevice physicalDevice, VkProps& props) {
@@ -1015,5 +703,263 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
 
   props.filteredLinearFormat = filteredLinearFormat;
   }
+
+std::vector<VkExtensionProperties> VDevice::extensionsList(VkPhysicalDevice dev) {
+  uint32_t extensionCount;
+  vkEnumerateDeviceExtensionProperties(dev, nullptr, &extensionCount, nullptr);
+
+  std::vector<VkExtensionProperties> ext(extensionCount);
+  vkEnumerateDeviceExtensionProperties(dev, nullptr, &extensionCount, ext.data());
+  return ext;
+  }
+
+void VDevice::deviceQueueProps(VkPhysicalDevice device, VkProps& props) {
+  uint32_t queueFamilyCount = 0;
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+  std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+  uint32_t graphics  = uint32_t(-1);
+  uint32_t present   = uint32_t(-1);
+  uint32_t universal = uint32_t(-1);
+
+  for(uint32_t i=0; i<queueFamilyCount; ++i) {
+    const auto& queueFamily = queueFamilies[i];
+    if(queueFamily.queueCount<=0)
+      continue;
+
+    static const VkQueueFlags rqFlag = (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
+
+    const bool graphicsSupport = ((queueFamily.queueFlags & rqFlag)==rqFlag);
+    const bool presentSupport  = VSwapchain::checkPresentSupport(device, i);
+
+    if(graphicsSupport)
+      graphics = i;
+    if(presentSupport)
+      present = i;
+    if(presentSupport && graphicsSupport)
+      universal = i;
+    }
+
+  if(universal!=uint32_t(-1)) {
+    graphics = universal;
+    present  = universal;
+    }
+
+  props.graphicsFamily = graphics;
+  props.presentFamily  = present;
+  }
+
+VDevice::SwapChainSupport VDevice::querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface) {
+  SwapChainSupport details;
+  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+
+  uint32_t formatCount = 0;
+  vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+  details.formats.resize(formatCount);
+  vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
+
+  uint32_t presentModeCount = 0;
+  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+  details.presentModes.resize(presentModeCount);
+  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
+
+  return details;
+  }
+
+VDevice::MemIndex VDevice::memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const {
+  for(size_t i=0; i<memoryProperties.memoryTypeCount; ++i) {
+    auto bit = (uint32_t(1) << i);
+    if((typeBits & bit)==0)
+      continue;
+    if(memoryProperties.memoryTypes[i].propertyFlags==props) {
+      MemIndex ret;
+      ret.typeId      = uint32_t(i);
+      // avoid bufferImageGranularity shenanigans
+      ret.heapId      = (tiling==VK_IMAGE_TILING_OPTIMAL && this->props.bufferImageGranularity>1) ? ret.typeId*2+1 : ret.typeId*2+0;
+      ret.hostVisible = (memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+      return ret;
+      }
+    }
+  for(size_t i=0; i<memoryProperties.memoryTypeCount; ++i) {
+    auto bit = (uint32_t(1) << i);
+    if((typeBits & bit)==0)
+      continue;
+    if((memoryProperties.memoryTypes[i].propertyFlags & props)==props) {
+      MemIndex ret;
+      ret.typeId = uint32_t(i);
+      // avoid bufferImageGranularity shenanigans
+      ret.heapId      = (tiling==VK_IMAGE_TILING_OPTIMAL && this->props.bufferImageGranularity>1) ? ret.typeId*2+1 : ret.typeId*2+0;
+      ret.hostVisible = (memoryProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+      return ret;
+      }
+    }
+  MemIndex ret;
+  ret.typeId = uint32_t(-1);
+  return ret;
+  }
+
+VBuffer& VDevice::dummySsbo() {
+  // NOTE: null desriptor is part of VK_EXT_robustness2
+  std::lock_guard<std::mutex> guard(syncSsbo);
+  if(dummySsboVal.impl==VK_NULL_HANDLE) {
+    // in principle 1 byte is also fine
+    dummySsboVal = allocator.alloc(nullptr, sizeof(uint32_t), MemUsage::StorageBuffer, BufferHeap::Device);
+    }
+  return dummySsboVal;
+  }
+
+uint32_t VDevice::roundUpDescriptorCount(ShaderReflection::Class cls, size_t cnt) {
+  uint32_t cntRound = 0;
+  if(cnt<64)
+    cntRound = 64;
+  else if(cnt<128)
+    cntRound = 128;
+  else if(cnt<256)
+    cntRound = 256;
+  else if(cnt<512)
+    cntRound = 512;
+  else if(cnt<1024)
+    cntRound = 1024;
+  else
+    cntRound = uint32_t((cnt+2048-1)/2048)*2048;
+
+  switch(cls) {
+    case ShaderReflection::Texture:
+    case ShaderReflection::Image:
+    case ShaderReflection::ImgR:
+    case ShaderReflection::ImgRW:
+      cntRound = std::min(cntRound, props.descriptors.maxTexture);
+      break;
+    case ShaderReflection::Sampler:
+      cntRound = std::min(cntRound, props.descriptors.maxSamplers);
+      break;
+    case ShaderReflection::SsboR:
+    case ShaderReflection::SsboRW:
+    case ShaderReflection::Tlas:
+      cntRound = std::min(cntRound, props.descriptors.maxStorage);
+      break;
+    case ShaderReflection::Ubo:
+    case ShaderReflection::Push:
+    case ShaderReflection::Count:
+      break;
+    }
+
+  return cntRound;
+  }
+
+VkDescriptorSetLayout VDevice::bindlessArrayLayout(ShaderReflection::Class cls, size_t cnt) {
+  // WA for Intel linux-drivers. They have bugs with VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT
+  // Details: https://github.com/Try/OpenGothic/issues/741
+
+  ShaderReflection::LayoutDesc lx;
+  lx.bindings[0] = cls;
+  lx.stage[0]    = ShaderReflection::None;
+  lx.count[0]    = uint32_t(cnt);
+  lx.runtime     = 0x1;
+  lx.array       = 0x1;
+  lx.active      = 0x1;
+
+  return setLayouts.findLayout(lx);
+  }
+
+void VDevice::waitIdle() {
+  waitIdleSync(queues,sizeof(queues)/sizeof(queues[0]));
+  }
+
+void VDevice::waitIdleSync(VDevice::Queue* q, size_t n) {
+  if(n==0) {
+    vkDeviceWaitIdle(device.impl);
+    return;
+    }
+  if(q->impl!=nullptr) {
+    std::lock_guard<std::mutex> guard(q->sync);
+    waitIdleSync(q+1,n-1);
+    } else {
+    waitIdleSync(q+1,n-1);
+    }
+  }
+
+void VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
+  size_t waitCnt = 0;
+  for(auto& s:cmd.swapchainSync) {
+    if(s->state!=Detail::VSwapchain::S_Pending)
+      continue;
+    s->state = Detail::VSwapchain::S_Aquired;
+    ++waitCnt;
+    }
+
+  SmallArray<VkSemaphore, 32> wait(waitCnt);
+  size_t                      waitId  = 0;
+  for(auto& s:cmd.swapchainSync) {
+    if(s->state!=Detail::VSwapchain::S_Aquired)
+      continue;
+    s->state = Detail::VSwapchain::S_Draw;
+    wait[waitId] = s->acquire;
+    ++waitId;
+    }
+
+  VkFence fence = VK_NULL_HANDLE;
+  if(sync!=nullptr) {
+    sync->reset();
+    fence = sync->impl;
+    }
+
+  if(vkQueueSubmit2!=nullptr) {
+    SmallArray<VkSemaphoreSubmitInfoKHR, 32> wait2(waitCnt);
+    for(size_t i=0; i<waitCnt; ++i) {
+      wait2[i].sType       = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR;
+      wait2[i].pNext       = nullptr;
+      wait2[i].semaphore   = wait[i];
+      wait2[i].value       = 0;
+      wait2[i].stageMask   = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+      wait2[i].deviceIndex = 0;
+      }
+    SmallArray<VkCommandBufferSubmitInfoKHR,MaxCmdChunks> flat(cmd.chunks.size());
+    auto node = cmd.chunks.begin();
+    for(size_t i=0; i<cmd.chunks.size(); ++i) {
+      flat[i].sType         = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO_KHR;
+      flat[i].pNext         = nullptr;
+      flat[i].commandBuffer = node->val[i%cmd.chunks.chunkSize].impl;
+      flat[i].deviceMask    = 0;
+      if(i+1==cmd.chunks.chunkSize)
+        node = node->next;
+      }
+
+    VkSubmitInfo2KHR submitInfo = {};
+    submitInfo.sType                  = VK_STRUCTURE_TYPE_SUBMIT_INFO_2_KHR;
+    submitInfo.commandBufferInfoCount = uint32_t(cmd.chunks.size());
+    submitInfo.pCommandBufferInfos    = flat.get();
+    submitInfo.waitSemaphoreInfoCount = uint32_t(waitCnt);
+    submitInfo.pWaitSemaphoreInfos    = wait2.get();
+
+    graphicsQueue->submit(1,&submitInfo,fence,vkQueueSubmit2);
+    } else {
+    SmallArray<VkPipelineStageFlags, 32> waitStages(waitCnt);
+    for(size_t i=0; i<waitCnt; ++i) {
+      // NOTE: our sw images are draw-only
+      waitStages[i] = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+      }
+
+    SmallArray<VkCommandBuffer,MaxCmdChunks> flat(cmd.chunks.size());
+    auto node = cmd.chunks.begin();
+    for(size_t i=0; i<cmd.chunks.size(); ++i) {
+      flat[i] = node->val[i%cmd.chunks.chunkSize].impl;
+      if(i+1==cmd.chunks.chunkSize)
+        node = node->next;
+      }
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = uint32_t(cmd.chunks.size());
+    submitInfo.pCommandBuffers    = flat.get();
+    submitInfo.waitSemaphoreCount = uint32_t(waitCnt);
+    submitInfo.pWaitSemaphores    = wait.get();
+    submitInfo.pWaitDstStageMask  = waitStages.get();
+
+    graphicsQueue->submit(1,&submitInfo,fence);
+    }
+  }
+
 
 #endif

@@ -4,8 +4,27 @@
 
 #include <Tempest/Application>
 #include <Tempest/SystemApi>
+#include <Tempest/Platform>
 
 #include "vdevice.h"
+
+#if defined(__UNIX__)
+#include "system/api/x11api.h"
+#endif
+
+#if defined(__WINDOWS__)
+#  define VK_USE_PLATFORM_WIN32_KHR
+#  include <windows.h>
+#  include <vulkan/vulkan_win32.h>
+#elif defined(__UNIX__)
+#  define VK_USE_PLATFORM_XLIB_KHR
+#  include <X11/Xlib.h>
+#  include <vulkan/vulkan_xlib.h>
+#  undef Always
+#  undef None
+#else
+#  error "WSI is not implemented on this platform"
+#endif
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -133,7 +152,7 @@ VSwapchain::SemaphoreList::~SemaphoreList() {
 VSwapchain::VSwapchain(VDevice &device, SystemApi::Window* hwnd)
   :device(device), hwnd(hwnd) {
   try {
-    surface = device.createSurface(hwnd);
+    surface = createSurface(device.instance, hwnd);
     }
   catch(...) {
     cleanup();
@@ -144,6 +163,22 @@ VSwapchain::VSwapchain(VDevice &device, SystemApi::Window* hwnd)
 
 VSwapchain::~VSwapchain() {
   cleanup();
+  }
+
+bool VSwapchain::checkPresentSupport(VkPhysicalDevice device, uint32_t queueFamilyIndex) {
+#if defined(__WINDOWS__)
+  const bool presentSupport = vkGetPhysicalDeviceWin32PresentationSupportKHR(device, queueFamilyIndex)!=VK_FALSE;
+#elif defined(__UNIX__)
+  bool presentSupport = false;
+  if(auto dpy = reinterpret_cast<Display*>(X11Api::display())){
+    auto screen   = DefaultScreen(dpy);
+    auto visualId = XVisualIDFromVisual(DefaultVisual(dpy,screen));
+    presentSupport = vkGetPhysicalDeviceXlibPresentationSupportKHR(device,queueFamilyIndex,dpy,visualId)!=VK_FALSE;
+    }
+#else
+#warning "wsi for vulkan not implemented on this platform"
+#endif
+  return presentSupport;
   }
 
 void VSwapchain::cleanupSwapchain() noexcept {
@@ -192,6 +227,30 @@ void VSwapchain::cleanup() noexcept {
   cleanupSurface();
   }
 
+VkSurfaceKHR VSwapchain::createSurface(VkInstance instance, void* hwnd) {
+  if(hwnd==nullptr)
+    return VK_NULL_HANDLE;
+  VkSurfaceKHR ret = VK_NULL_HANDLE;
+#ifdef __WINDOWS__
+  VkWin32SurfaceCreateInfoKHR createInfo={};
+  createInfo.sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+  createInfo.hinstance = GetModuleHandleA(nullptr);
+  createInfo.hwnd      = HWND(hwnd);
+  if(vkCreateWin32SurfaceKHR(instance,&createInfo,nullptr,&ret)!=VK_SUCCESS)
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+#elif defined(__UNIX__)
+  VkXlibSurfaceCreateInfoKHR createInfo = {};
+  createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+  createInfo.dpy    = reinterpret_cast<Display*>(X11Api::display());
+  createInfo.window = ::Window(hwnd);
+  if(vkCreateXlibSurfaceKHR(instance, &createInfo, nullptr, &ret)!=VK_SUCCESS)
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+#else
+#warning "wsi for vulkan not implemented on this platform"
+#endif
+  return ret;
+  }
+
 void VSwapchain::createSwapchain(VDevice& device) {
   for(uint32_t attempt=0; ; ++attempt) {
     if(attempt>1) {
@@ -220,7 +279,7 @@ void VSwapchain::createSwapchain(VDevice& device) {
   }
 
 VkResult VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& swapChainSupport,
-                                 const Rect& rect, uint32_t imgCount) {
+                                     const Rect& rect, uint32_t imgCount) {
   VkBool32 support=false;
   vkGetPhysicalDeviceSurfaceSupportKHR(device.physicalDevice,device.presentQueue->family,surface,&support);
   if(!support)
