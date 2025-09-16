@@ -370,7 +370,7 @@ void DxDevice::debugReportCallback(
     LPCSTR pMessage, void* pContext) {
   (void)pContext;
   //Log::e(pMessage," object=",object,", type=",objectType," th:",std::this_thread::get_id());
-  Log::e(pMessage," th:",std::this_thread::get_id());
+  Log::e("DirectX12: ", pMessage," th:",std::this_thread::get_id());
   }
 
 #endif

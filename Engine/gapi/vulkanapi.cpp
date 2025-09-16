@@ -159,8 +159,13 @@ struct Tempest::VulkanApi::Impl {
       /* Register the callback */
       VkResult result = vkCreateDebugReportCallbackEXT(instance, &callbackCreateInfo, nullptr, &callback);
       if(result!=VK_SUCCESS)
-        Log::e("unable to setup validation callback");
+        Log::e("VulkanApi: unable to setup validation callback");
       }
+    }
+
+  ~Impl() {
+    if(callback!=VK_NULL_HANDLE && vkDestroyDebugReportCallbackEXT!=nullptr)
+      vkDestroyDebugReportCallbackEXT(instance, callback, nullptr);
     }
 
   bool checkDeviceExtensionSupport(VkPhysicalDevice device) const {
@@ -520,7 +525,7 @@ VkBool32 VulkanApi::Impl::debugReportCallback(VkDebugReportFlagsEXT      flags,
     return VK_FALSE;
     }
 
-  Log::e(pMessage," object=",object,", type=",objectType," th:",std::this_thread::get_id());
+  Log::e("VulkanApi: ", pMessage," object=",object,", type=",objectType," th:",std::this_thread::get_id());
   return VK_FALSE;
   }
 
