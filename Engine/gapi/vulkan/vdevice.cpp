@@ -44,9 +44,15 @@ T max(T t, Args... args) {
   return *std::max_element(std::begin(ax), std::end(ax));
   }
 
-static const std::initializer_list<const char*> requiredExtensions = {
-  VK_KHR_SWAPCHAIN_EXTENSION_NAME
-  };
+template<class R, class ... Args>
+void dummyIfNull(R (*&fn)(Args...a)) {
+  struct Dummy {
+    static R fn(Args...a) { return R(); }
+    };
+
+  if(fn==nullptr)
+    fn = Dummy::fn;
+  }
 
 static bool extensionSupport(const std::vector<VkExtensionProperties>& list, const char* name) {
   for(auto& r:list)
@@ -55,30 +61,10 @@ static bool extensionSupport(const std::vector<VkExtensionProperties>& list, con
   return false;
   }
 
-static std::vector<VkExtensionProperties> extensionsList(VkPhysicalDevice dev) {
-  uint32_t extensionCount;
-  vkEnumerateDeviceExtensionProperties(dev, nullptr, &extensionCount, nullptr);
 
-  std::vector<VkExtensionProperties> ext(extensionCount);
-  vkEnumerateDeviceExtensionProperties(dev, nullptr, &extensionCount, ext.data());
-
-  return ext;
-  }
-
-static bool hasDeviceFeatures2(VkInstance instance) {
-  uint32_t extensionCount;
-  vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-
-  std::vector<VkExtensionProperties> ext(extensionCount);
-  vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, ext.data());
-
-  if(extensionSupport(ext, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {
-    return true;
-    }
-  return false;
-  }
-
-
+const std::initializer_list<const char*> VDevice::requiredExtensions = {
+  VK_KHR_SWAPCHAIN_EXTENSION_NAME
+  };
 
 VDevice::autoDevice::~autoDevice() {
   vkDestroyDevice(impl,nullptr);
@@ -90,35 +76,31 @@ bool VDevice::VkProps::hasFilteredFormat(TextureFormat f) const {
   }
 
 
-VDevice::VDevice(VkInstance instance, std::string_view gpuName)
-  :instance(instance), hasDeviceFeatures2(::hasDeviceFeatures2(instance)),
+void VDevice::Queue::waitIdle() {
+  std::lock_guard<std::mutex> guard(sync);
+  vkAssert(vkQueueWaitIdle(impl));
+  }
+
+void VDevice::Queue::submit(uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence) {
+  std::lock_guard<std::mutex> guard(sync);
+  vkAssert(vkQueueSubmit(impl,submitCount,pSubmits,fence));
+  }
+
+void VDevice::Queue::submit(uint32_t submitCount, const VkSubmitInfo2KHR* pSubmits, VkFence fence, PFN_vkQueueSubmit2KHR vkQueueSubmit2) {
+  std::lock_guard<std::mutex> guard(sync);
+  vkAssert(vkQueueSubmit2(impl,submitCount,pSubmits,fence));
+  }
+
+VkResult VDevice::Queue::present(VkPresentInfoKHR& presentInfo) {
+  std::lock_guard<std::mutex> guard(sync);
+  return vkQueuePresentKHR(impl,&presentInfo);
+  }
+
+
+VDevice::VDevice(VkInstance instance, const bool hasDeviceFeatures2, VkPhysicalDevice pdev)
+  :instance(instance), hasDeviceFeatures2(hasDeviceFeatures2),
     fboMap(*this), setLayouts(*this), psoLayouts(*this), descPool(*this), bindless(*this) {
-  uint32_t deviceCount = 0;
-  vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
-
-  if(deviceCount==0)
-    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
-
-  std::vector<VkPhysicalDevice> devices(deviceCount);
-  vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
-
-  for(const auto& device:devices) {
-    if(isDeviceSuitable(device,gpuName)) {
-      implInit(device);
-      return;
-      }
-    }
-
-  throw std::system_error(Tempest::GraphicsErrc::NoDevice);
-  }
-
-VDevice::~VDevice(){
-  vkDeviceWaitIdle(device.impl);
-  data.reset();
-  }
-
-void VDevice::implInit(VkPhysicalDevice pdev) {
-  deviceProps(instance, pdev, props);
+  deviceProps(instance, hasDeviceFeatures2, pdev, props);
   deviceQueueProps(pdev, props);
 
   createLogicalDevice(pdev);
@@ -130,135 +112,16 @@ void VDevice::implInit(VkPhysicalDevice pdev) {
   data.reset(new DataMgr(*this));
   }
 
-VkSurfaceKHR VDevice::createSurface(void* hwnd) {
-  if(hwnd==nullptr)
-    return VK_NULL_HANDLE;
-  VkSurfaceKHR ret = VK_NULL_HANDLE;
-#ifdef __WINDOWS__
-  VkWin32SurfaceCreateInfoKHR createInfo={};
-  createInfo.sType     = VkStructureType::VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-  createInfo.hinstance = GetModuleHandleA(nullptr);
-  createInfo.hwnd      = HWND(hwnd);
-  if(vkCreateWin32SurfaceKHR(instance,&createInfo,nullptr,&ret)!=VK_SUCCESS)
-    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
-#elif defined(__UNIX__)
-  VkXlibSurfaceCreateInfoKHR createInfo = {};
-  createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-  createInfo.dpy    = reinterpret_cast<Display*>(X11Api::display());
-  createInfo.window = ::Window(hwnd);
-  if(vkCreateXlibSurfaceKHR(instance, &createInfo, nullptr, &ret)!=VK_SUCCESS)
-    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
-#else
-#warning "wsi for vulkan not implemented on this platform"
-#endif
-  return ret;
-  }
-
-bool VDevice::isDeviceSuitable(VkPhysicalDevice device, std::string_view gpuName) {
-  if(!gpuName.empty()) {
-    VkPhysicalDeviceProperties prop={};
-    vkGetPhysicalDeviceProperties(device,&prop);
-    if(gpuName!=prop.deviceName)
-      return false;
-    }
-  VkProps prop = {};
-  deviceQueueProps(device, prop);
-  bool extensionsSupported = checkDeviceExtensionSupport(device);
-  return extensionsSupported && prop.graphicsFamily!=uint32_t(-1);
-  }
-
-void VDevice::deviceQueueProps(VkPhysicalDevice device, VkProps& prop) {
-  uint32_t queueFamilyCount = 0;
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-
-  std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
-
-  uint32_t graphics  = uint32_t(-1);
-  uint32_t present   = uint32_t(-1);
-  uint32_t universal = uint32_t(-1);
-
-  for(uint32_t i=0;i<queueFamilyCount;++i) {
-    const auto& queueFamily = queueFamilies[i];
-    if(queueFamily.queueCount<=0)
-      continue;
-
-    static const VkQueueFlags rqFlag = (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
-
-    const bool graphicsSupport = ((queueFamily.queueFlags & rqFlag)==rqFlag);
-#if defined(__WINDOWS__)
-    const bool presentSupport = vkGetPhysicalDeviceWin32PresentationSupportKHR(device,i)!=VK_FALSE;
-#elif defined(__UNIX__)
-    bool presentSupport = false;
-    if(auto dpy = reinterpret_cast<Display*>(X11Api::display())){
-      auto screen   = DefaultScreen(dpy);
-      auto visualId = XVisualIDFromVisual(DefaultVisual(dpy,screen));
-      presentSupport = vkGetPhysicalDeviceXlibPresentationSupportKHR(device,i,dpy,visualId)!=VK_FALSE;
-      }
-#else
-#warning "wsi for vulkan not implemented on this platform"
-#endif
-
-    if(graphicsSupport)
-      graphics = i;
-    if(presentSupport)
-      present = i;
-    if(presentSupport && graphicsSupport)
-      universal = i;
-    }
-
-  if(universal!=uint32_t(-1)) {
-    graphics = universal;
-    present  = universal;
-    }
-
-  prop.graphicsFamily = graphics;
-  prop.presentFamily  = present;
-  }
-
-bool VDevice::checkDeviceExtensionSupport(VkPhysicalDevice device) {
-  auto ext = extensionsList(device);
-
-  for(auto& i:requiredExtensions) {
-    if(!extensionSupport(ext,i))
-      return false;
-    }
-
-  return true;
-  }
-
-template<class R, class ... Args>
-void dummyIfNull(R (*&fn)(Args...a)) {
-  struct Dummy {
-    static R fn(Args...a) { return R(); }
-    };
-
-  if(fn==nullptr)
-    fn = Dummy::fn;
-  }
-
-VDevice::SwapChainSupport VDevice::querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface) {
-  SwapChainSupport details;
-  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
-
-  uint32_t formatCount = 0;
-  vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
-  details.formats.resize(formatCount);
-  vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
-
-  uint32_t presentModeCount = 0;
-  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
-  details.presentModes.resize(presentModeCount);
-  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
-
-  return details;
+VDevice::~VDevice(){
+  vkDeviceWaitIdle(device.impl);
+  data.reset();
   }
 
 void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
   std::array<uint32_t,2>  uniqueQueueFamilies = {props.graphicsFamily, props.presentFamily};
   float                   queuePriority       = 1.0f;
   size_t                  queueCnt            = 0;
-  VkDeviceQueueCreateInfo qinfo[3]={};
+  VkDeviceQueueCreateInfo qinfo[3]            = {};
   for(size_t i=0;i<uniqueQueueFamilies.size();++i) {
     auto&    q      = queues[queueCnt];
     uint32_t family = uniqueQueueFamilies[i];
@@ -509,6 +372,106 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
   dummyIfNull(vkDebugMarkerSetObjectName);
   }
 
+std::vector<VkExtensionProperties> VDevice::extensionsList(VkPhysicalDevice dev) {
+  uint32_t extensionCount;
+  vkEnumerateDeviceExtensionProperties(dev, nullptr, &extensionCount, nullptr);
+
+  std::vector<VkExtensionProperties> ext(extensionCount);
+  vkEnumerateDeviceExtensionProperties(dev, nullptr, &extensionCount, ext.data());
+
+  return ext;
+  }
+
+VkSurfaceKHR VDevice::createSurface(void* hwnd) {
+  if(hwnd==nullptr)
+    return VK_NULL_HANDLE;
+  VkSurfaceKHR ret = VK_NULL_HANDLE;
+#ifdef __WINDOWS__
+  VkWin32SurfaceCreateInfoKHR createInfo={};
+  createInfo.sType     = VkStructureType::VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+  createInfo.hinstance = GetModuleHandleA(nullptr);
+  createInfo.hwnd      = HWND(hwnd);
+  if(vkCreateWin32SurfaceKHR(instance,&createInfo,nullptr,&ret)!=VK_SUCCESS)
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+#elif defined(__UNIX__)
+  VkXlibSurfaceCreateInfoKHR createInfo = {};
+  createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+  createInfo.dpy    = reinterpret_cast<Display*>(X11Api::display());
+  createInfo.window = ::Window(hwnd);
+  if(vkCreateXlibSurfaceKHR(instance, &createInfo, nullptr, &ret)!=VK_SUCCESS)
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+#else
+#warning "wsi for vulkan not implemented on this platform"
+#endif
+  return ret;
+  }
+
+void VDevice::deviceQueueProps(VkPhysicalDevice device, VkProps& props) {
+  uint32_t queueFamilyCount = 0;
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
+
+  std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+  vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+
+  uint32_t graphics  = uint32_t(-1);
+  uint32_t present   = uint32_t(-1);
+  uint32_t universal = uint32_t(-1);
+
+  for(uint32_t i=0;i<queueFamilyCount;++i) {
+    const auto& queueFamily = queueFamilies[i];
+    if(queueFamily.queueCount<=0)
+      continue;
+
+    static const VkQueueFlags rqFlag = (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
+
+    const bool graphicsSupport = ((queueFamily.queueFlags & rqFlag)==rqFlag);
+#if defined(__WINDOWS__)
+    const bool presentSupport = vkGetPhysicalDeviceWin32PresentationSupportKHR(device,i)!=VK_FALSE;
+#elif defined(__UNIX__)
+    bool presentSupport = false;
+    if(auto dpy = reinterpret_cast<Display*>(X11Api::display())){
+      auto screen   = DefaultScreen(dpy);
+      auto visualId = XVisualIDFromVisual(DefaultVisual(dpy,screen));
+      presentSupport = vkGetPhysicalDeviceXlibPresentationSupportKHR(device,i,dpy,visualId)!=VK_FALSE;
+      }
+#else
+#warning "wsi for vulkan not implemented on this platform"
+#endif
+
+    if(graphicsSupport)
+      graphics = i;
+    if(presentSupport)
+      present = i;
+    if(presentSupport && graphicsSupport)
+      universal = i;
+    }
+
+  if(universal!=uint32_t(-1)) {
+    graphics = universal;
+    present  = universal;
+    }
+
+  props.graphicsFamily = graphics;
+  props.presentFamily  = present;
+  }
+
+VDevice::SwapChainSupport VDevice::querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface) {
+  SwapChainSupport details;
+  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+
+  uint32_t formatCount = 0;
+  vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+  details.formats.resize(formatCount);
+  vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
+
+  uint32_t presentModeCount = 0;
+  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+  details.presentModes.resize(presentModeCount);
+  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
+
+  return details;
+  }
+
 VDevice::MemIndex VDevice::memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const {
   for(size_t i=0; i<memoryProperties.memoryTypeCount; ++i) {
     auto bit = (uint32_t(1) << i);
@@ -702,24 +665,7 @@ void VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
     }
   }
 
-void VDevice::deviceProps(VkInstance instance, VkPhysicalDevice physicalDevice, VkProps& c) {
-  devicePropsShort(instance, physicalDevice, c);
-
-  VkPhysicalDeviceMeshShaderPropertiesEXT propMesh = {};
-  propMesh.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT;
-
-  VkPhysicalDeviceProperties prop={};
-  vkGetPhysicalDeviceProperties(physicalDevice,&prop);
-  c.nonCoherentAtomSize = size_t(prop.limits.nonCoherentAtomSize);
-  if(c.nonCoherentAtomSize==0)
-    c.nonCoherentAtomSize=1;
-
-  c.bufferImageGranularity = size_t(prop.limits.bufferImageGranularity);
-  if(c.bufferImageGranularity==0)
-    c.bufferImageGranularity=1;
-  }
-
-void VDevice::devicePropsShort(VkInstance instance, VkPhysicalDevice physicalDevice, VkProps& props) {
+void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, VkPhysicalDevice physicalDevice, VkProps& props) {
   /*
    * formats support table: https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#features-required-format-support
    *   sampled image must also have transfer bits by spec.
@@ -732,9 +678,7 @@ void VDevice::devicePropsShort(VkInstance instance, VkPhysicalDevice physicalDev
   VkFormatFeatureFlags storageAttFlags = VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
   VkFormatFeatureFlags atomicFlags     = VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT;
 
-  const bool hasDeviceFeatures2 = ::hasDeviceFeatures2(instance);
-  const auto ext                = extensionsList(physicalDevice);
-
+  const auto ext = extensionsList(physicalDevice);
   if(extensionSupport(ext,VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME))
     props.hasMemRq2 = true;
   if(extensionSupport(ext,VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME))
@@ -780,11 +724,21 @@ void VDevice::devicePropsShort(VkInstance instance, VkPhysicalDevice physicalDev
     props.memoryModel = true;
     }
 
-  VkPhysicalDeviceProperties devP={};
-  vkGetPhysicalDeviceProperties(physicalDevice,&devP);
+  VkPhysicalDeviceProperties prop = {};
+  vkGetPhysicalDeviceProperties(physicalDevice, &prop);
+  props.nonCoherentAtomSize = size_t(prop.limits.nonCoherentAtomSize);
+  if(props.nonCoherentAtomSize==0)
+    props.nonCoherentAtomSize=1;
 
-  VkPhysicalDeviceFeatures supportedFeatures={};
-  vkGetPhysicalDeviceFeatures(physicalDevice,&supportedFeatures);
+  props.bufferImageGranularity = size_t(prop.limits.bufferImageGranularity);
+  if(props.bufferImageGranularity==0)
+    props.bufferImageGranularity=1;
+
+  VkPhysicalDeviceProperties devP = {};
+  vkGetPhysicalDeviceProperties(physicalDevice, &devP);
+
+  VkPhysicalDeviceFeatures supportedFeatures = {};
+  vkGetPhysicalDeviceFeatures(physicalDevice, &supportedFeatures);
 
   VkPhysicalDeviceFeatures deviceFeatures = {};
   deviceFeatures.samplerAnisotropy    = supportedFeatures.samplerAnisotropy;
@@ -1060,26 +1014,6 @@ void VDevice::devicePropsShort(VkInstance instance, VkPhysicalDevice physicalDev
   props.setAtomicFormats (atomFormat & storFormat);
 
   props.filteredLinearFormat = filteredLinearFormat;
-  }
-
-void VDevice::Queue::waitIdle() {
-  std::lock_guard<std::mutex> guard(sync);
-  vkAssert(vkQueueWaitIdle(impl));
-  }
-
-void VDevice::Queue::submit(uint32_t submitCount, const VkSubmitInfo* pSubmits, VkFence fence) {
-  std::lock_guard<std::mutex> guard(sync);
-  vkAssert(vkQueueSubmit(impl,submitCount,pSubmits,fence));
-  }
-
-void VDevice::Queue::submit(uint32_t submitCount, const VkSubmitInfo2KHR* pSubmits, VkFence fence, PFN_vkQueueSubmit2KHR vkQueueSubmit2) {
-  std::lock_guard<std::mutex> guard(sync);
-  vkAssert(vkQueueSubmit2(impl,submitCount,pSubmits,fence));
-  }
-
-VkResult VDevice::Queue::present(VkPresentInfoKHR& presentInfo) {
-  std::lock_guard<std::mutex> guard(sync);
-  return vkQueuePresentKHR(impl,&presentInfo);
   }
 
 #endif

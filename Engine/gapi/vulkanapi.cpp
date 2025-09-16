@@ -125,6 +125,7 @@ struct Tempest::VulkanApi::Impl {
     auto ext = instExtensionsList();
     if(extensionSupport(ext, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {
       rqExt.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+      hasDeviceFeatures2 = true;
       }
 
     createInfo.enabledExtensionCount   = uint32_t(rqExt.size());
@@ -162,6 +163,20 @@ struct Tempest::VulkanApi::Impl {
       }
     }
 
+  bool checkDeviceExtensionSupport(VkPhysicalDevice device) const {
+    auto ext = VDevice::extensionsList(device);
+    for(auto& i:VDevice::requiredExtensions) {
+      if(!extensionSupport(ext,i))
+        return false;
+      }
+    return true;
+    }
+
+  bool isDeviceSuitable(VkPhysicalDevice device, const VDevice::VkProps props) const {
+    bool extensionsSupported = checkDeviceExtensionSupport(device);
+    return extensionsSupported && props.graphicsFamily!=uint32_t(-1);
+    }
+
   static VkBool32 debugReportCallback(VkDebugReportFlagsEXT      flags,
                                       VkDebugReportObjectTypeEXT objectType,
                                       uint64_t                   object,
@@ -171,8 +186,9 @@ struct Tempest::VulkanApi::Impl {
                                       const char                *pMessage,
                                       void                      *pUserData);
 
-  VkInstance       instance   = VK_NULL_HANDLE;
-  bool             validation = false;
+  VkInstance                          instance   = VK_NULL_HANDLE;
+  bool                                validation = false;
+  bool                                hasDeviceFeatures2 = false;
 
   VkDebugReportCallbackEXT            callback   = VK_NULL_HANDLE;
   PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT = nullptr;
@@ -197,20 +213,43 @@ std::vector<AbstractGraphicsApi::Props> VulkanApi::devices() const {
   std::vector<VkPhysicalDevice> devices(deviceCount);
   vkEnumeratePhysicalDevices(impl->instance, &deviceCount, devices.data());
 
-  devList.resize(devices.size());
-  for(size_t i=0; i<devList.size(); ++i) {
-    VDevice::VkProps prop = {};
-    VDevice::devicePropsShort(impl->instance, devices[i], prop);
-    devList[i] = static_cast<Tempest::AbstractGraphicsApi::Props&>(prop);
+  devList.reserve(devices.size());
+  for(auto device : devices) {
+    VDevice::VkProps props = {};
+    VDevice::deviceProps(impl->instance, impl->hasDeviceFeatures2, device, props);
+    VDevice::deviceQueueProps(device, props);
+    if(!impl->isDeviceSuitable(device, props))
+      continue;
+    devList.push_back(static_cast<Tempest::AbstractGraphicsApi::Props&>(props));
     }
   return devList;
   }
 
-AbstractGraphicsApi::Device *VulkanApi::createDevice(std::string_view gpuName) {
-  return new VDevice(impl->instance, gpuName);
+AbstractGraphicsApi::Device* VulkanApi::createDevice(std::string_view gpuName) {
+  uint32_t deviceCount = 0;
+  vkEnumeratePhysicalDevices(impl->instance, &deviceCount, nullptr);
+
+  if(deviceCount==0)
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+
+  std::vector<VkPhysicalDevice> devices(deviceCount);
+  vkEnumeratePhysicalDevices(impl->instance, &deviceCount, devices.data());
+
+  for(const auto& device:devices) {
+    VDevice::VkProps props = {};
+    VDevice::deviceProps(impl->instance, impl->hasDeviceFeatures2, device, props);
+    if(!gpuName.empty() && gpuName!=props.name)
+      continue;
+    VDevice::deviceQueueProps(device, props);
+    if(!impl->isDeviceSuitable(device, props))
+      continue;
+    return new VDevice(impl->instance, impl->hasDeviceFeatures2, device);
+    }
+
+  throw std::system_error(Tempest::GraphicsErrc::NoDevice);
   }
 
-AbstractGraphicsApi::Swapchain *VulkanApi::createSwapchain(SystemApi::Window *w,AbstractGraphicsApi::Device *d) {
+AbstractGraphicsApi::Swapchain *VulkanApi::createSwapchain(SystemApi::Window *w, AbstractGraphicsApi::Device *d) {
   Detail::VDevice* dx   = reinterpret_cast<Detail::VDevice*>(d);
   return new Detail::VSwapchain(*dx,w);
   }

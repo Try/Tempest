@@ -312,7 +312,7 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     using SwapChainSupport = VSwapchain::SwapChainSupport;
 
-    VDevice(VkInstance instance, std::string_view gpuName);
+    VDevice(VkInstance instance, const bool hasDeviceFeatures2, VkPhysicalDevice pdevice);
     ~VDevice() override;
 
     struct autoDevice {
@@ -365,8 +365,10 @@ class VDevice : public AbstractGraphicsApi::Device {
     void                    waitIdle() override;
     void                    submit(VCommandBuffer& cmd, VFence* sync);
 
-    static void             deviceProps(VkInstance instance, VkPhysicalDevice physicalDevice, VkProps& c);
-    static void             devicePropsShort(VkInstance instance, VkPhysicalDevice physicalDevice, VkProps& props);
+    static std::vector<VkExtensionProperties> extensionsList(VkPhysicalDevice dev);
+
+    static void             deviceProps(VkInstance instance, const bool hasDeviceFeatures2, VkPhysicalDevice physicalDevice, VkProps& props);
+    static void             deviceQueueProps(VkPhysicalDevice device, VkProps& props);
 
     VkSurfaceKHR            createSurface(void* hwnd);
     SwapChainSupport        querySwapChainSupport(VkSurfaceKHR surface) { return querySwapChainSupport(physicalDevice,surface); }
@@ -424,6 +426,8 @@ class VDevice : public AbstractGraphicsApi::Device {
     PFN_vkCmdDebugMarkerEndEXT                  vkCmdDebugMarkerEnd        = nullptr;
     PFN_vkDebugMarkerSetObjectNameEXT           vkDebugMarkerSetObjectName = nullptr;
 
+    static const std::initializer_list<const char*> requiredExtensions;
+
   private:
     VkPhysicalDeviceMemoryProperties memoryProperties;
     std::unique_ptr<DataMgr>         data;
@@ -431,15 +435,11 @@ class VDevice : public AbstractGraphicsApi::Device {
     std::mutex              syncSsbo;
     VBuffer                 dummySsboVal;
 
-    void                    implInit(VkPhysicalDevice pdev);
     void                    createLogicalDevice(VkPhysicalDevice pdev);
 
     void                    waitIdleSync(Queue* q, size_t n);
 
     void                    pickPhysicalDevice();
-    bool                    isDeviceSuitable(VkPhysicalDevice device, std::string_view gpuName);
-    void                    deviceQueueProps(VkPhysicalDevice device, VkProps& prop);
-    bool                    checkDeviceExtensionSupport(VkPhysicalDevice device);
 
     SwapChainSupport        querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface);
   };
