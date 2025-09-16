@@ -16,7 +16,7 @@ class VPoolCache {
     VPoolCache(VDevice& dev);
     ~VPoolCache();
 
-    void setupLimits(VulkanInstance& api);
+    void setupLimits();
 
     VkDescriptorPool allocPool();
     void             freePool(VkDescriptorPool p);

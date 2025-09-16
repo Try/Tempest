@@ -5,7 +5,10 @@
 #include "vcommandbuffer.h"
 #include "vfence.h"
 #include "vswapchain.h"
+
+#if defined(__UNIX__)
 #include "system/api/x11api.h"
+#endif
 
 #include <Tempest/Log>
 #include <Tempest/Platform>
@@ -62,6 +65,19 @@ static std::vector<VkExtensionProperties> extensionsList(VkPhysicalDevice dev) {
   return ext;
   }
 
+static bool hasDeviceFeatures2(VkInstance instance) {
+  uint32_t extensionCount;
+  vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+
+  std::vector<VkExtensionProperties> ext(extensionCount);
+  vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, ext.data());
+
+  if(checkForExt(ext, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {
+    return true;
+    }
+  return false;
+  }
+
 
 
 VDevice::autoDevice::~autoDevice() {
@@ -74,20 +90,21 @@ bool VDevice::VkProps::hasFilteredFormat(TextureFormat f) const {
   }
 
 
-VDevice::VDevice(VulkanInstance &api, std::string_view gpuName)
-  :instance(api.instance), fboMap(*this), setLayouts(*this), psoLayouts(*this), descPool(*this), bindless(*this) {
+VDevice::VDevice(VkInstance instance, std::string_view gpuName)
+  :instance(instance), hasDeviceFeatures2(::hasDeviceFeatures2(instance)),
+    fboMap(*this), setLayouts(*this), psoLayouts(*this), descPool(*this), bindless(*this) {
   uint32_t deviceCount = 0;
-  vkEnumeratePhysicalDevices(api.instance, &deviceCount, nullptr);
+  vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 
   if(deviceCount==0)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
   std::vector<VkPhysicalDevice> devices(deviceCount);
-  vkEnumeratePhysicalDevices(api.instance, &deviceCount, devices.data());
+  vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
   for(const auto& device:devices) {
     if(isDeviceSuitable(device,gpuName)) {
-      implInit(api,device);
+      implInit(device);
       return;
       }
     }
@@ -100,16 +117,16 @@ VDevice::~VDevice(){
   data.reset();
   }
 
-void VDevice::implInit(VulkanInstance &api, VkPhysicalDevice pdev) {
-  deviceProps(api, pdev, props);
+void VDevice::implInit(VkPhysicalDevice pdev) {
+  deviceProps(instance, pdev, props);
   deviceQueueProps(pdev, props);
 
-  createLogicalDevice(api,pdev);
-  vkGetPhysicalDeviceMemoryProperties(pdev,&memoryProperties);
+  createLogicalDevice(pdev);
+  vkGetPhysicalDeviceMemoryProperties(pdev, &memoryProperties);
 
   physicalDevice = pdev;
   allocator.setDevice(*this);
-  descPool.setupLimits(api);
+  descPool.setupLimits();
   data.reset(new DataMgr(*this));
   }
 
@@ -237,7 +254,7 @@ VDevice::SwapChainSupport VDevice::querySwapChainSupport(VkPhysicalDevice device
   return details;
   }
 
-void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
+void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
   std::array<uint32_t,2>  uniqueQueueFamilies = {props.graphicsFamily, props.presentFamily};
   float                   queuePriority       = 1.0f;
   size_t                  queueCnt            = 0;
@@ -335,7 +352,7 @@ void VDevice::createLogicalDevice(VulkanInstance &api, VkPhysicalDevice pdev) {
   createInfo.enabledExtensionCount   = static_cast<uint32_t>(rqExt.size());
   createInfo.ppEnabledExtensionNames = rqExt.data();
 
-  if(api.hasDeviceFeatures2) {
+  if(hasDeviceFeatures2) {
     VkPhysicalDeviceFeatures2 features = {};
     features.sType    = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2_KHR;
     features.features = deviceFeatures;
@@ -685,8 +702,8 @@ void VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
     }
   }
 
-void VDevice::deviceProps(const VulkanInstance& api, VkPhysicalDevice physicalDevice, VkProps& c) {
-  devicePropsShort(api, physicalDevice, c);
+void VDevice::deviceProps(VkInstance instance, VkPhysicalDevice physicalDevice, VkProps& c) {
+  devicePropsShort(instance, physicalDevice, c);
 
   VkPhysicalDeviceMeshShaderPropertiesEXT propMesh = {};
   propMesh.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT;
@@ -702,7 +719,7 @@ void VDevice::deviceProps(const VulkanInstance& api, VkPhysicalDevice physicalDe
     c.bufferImageGranularity=1;
   }
 
-void VDevice::devicePropsShort(const VulkanInstance& api, VkPhysicalDevice physicalDevice, VkProps& props) {
+void VDevice::devicePropsShort(VkInstance instance, VkPhysicalDevice physicalDevice, VkProps& props) {
   /*
    * formats support table: https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#features-required-format-support
    *   sampled image must also have transfer bits by spec.
@@ -715,7 +732,7 @@ void VDevice::devicePropsShort(const VulkanInstance& api, VkPhysicalDevice physi
   VkFormatFeatureFlags storageAttFlags = VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
   VkFormatFeatureFlags atomicFlags     = VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT;
 
-  const bool hasDeviceFeatures2 = api.hasDeviceFeatures2;
+  const bool hasDeviceFeatures2 = ::hasDeviceFeatures2(instance);
   const auto ext                = extensionsList(physicalDevice);
 
   if(checkForExt(ext,VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME))
@@ -879,8 +896,8 @@ void VDevice::devicePropsShort(const VulkanInstance& api, VkPhysicalDevice physi
       features.pNext = &memoryFeatures;
       }
 
-    auto vkGetPhysicalDeviceFeatures2   = PFN_vkGetPhysicalDeviceFeatures2  (vkGetInstanceProcAddr(api.instance, "vkGetPhysicalDeviceFeatures2KHR"));
-    auto vkGetPhysicalDeviceProperties2 = PFN_vkGetPhysicalDeviceProperties2(vkGetInstanceProcAddr(api.instance, "vkGetPhysicalDeviceProperties2KHR"));
+    auto vkGetPhysicalDeviceFeatures2   = PFN_vkGetPhysicalDeviceFeatures2  (vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceFeatures2KHR"));
+    auto vkGetPhysicalDeviceProperties2 = PFN_vkGetPhysicalDeviceProperties2(vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceProperties2KHR"));
 
     vkGetPhysicalDeviceFeatures2  (physicalDevice, &features);
     vkGetPhysicalDeviceProperties2(physicalDevice, &properties);

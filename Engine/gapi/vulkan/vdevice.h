@@ -21,7 +21,6 @@
 #include "gapi/uploadengine.h"
 #include "exceptions/exception.h"
 #include "utility/compiller_hints.h"
-#include "vulkanapi_impl.h"
 
 namespace Tempest {
 namespace Detail {
@@ -313,7 +312,7 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     using SwapChainSupport = VSwapchain::SwapChainSupport;
 
-    VDevice(VulkanInstance& api, std::string_view gpuName);
+    VDevice(VkInstance instance, std::string_view gpuName);
     ~VDevice() override;
 
     struct autoDevice {
@@ -366,8 +365,8 @@ class VDevice : public AbstractGraphicsApi::Device {
     void                    waitIdle() override;
     void                    submit(VCommandBuffer& cmd, VFence* sync);
 
-    static void             deviceProps(const VulkanInstance& api, VkPhysicalDevice physicalDevice, VkProps& c);
-    static void             devicePropsShort(const VulkanInstance& api, VkPhysicalDevice physicalDevice, VkProps& props);
+    static void             deviceProps(VkInstance instance, VkPhysicalDevice physicalDevice, VkProps& c);
+    static void             devicePropsShort(VkInstance instance, VkPhysicalDevice physicalDevice, VkProps& props);
 
     VkSurfaceKHR            createSurface(void* hwnd);
     SwapChainSupport        querySwapChainSupport(VkSurfaceKHR surface) { return querySwapChainSupport(physicalDevice,surface); }
@@ -381,8 +380,9 @@ class VDevice : public AbstractGraphicsApi::Device {
     uint32_t                roundUpDescriptorCount(ShaderReflection::Class cls, size_t cnt);
     VkDescriptorSetLayout   bindlessArrayLayout(ShaderReflection::Class cls, size_t cnt);
 
-    VkInstance              instance       = nullptr;
-    VkPhysicalDevice        physicalDevice = nullptr;
+    VkInstance              instance           = nullptr;
+    VkPhysicalDevice        physicalDevice     = nullptr;
+    const bool              hasDeviceFeatures2 = false;
     autoDevice              device;
 
     Queue                   queues[3];
@@ -431,7 +431,9 @@ class VDevice : public AbstractGraphicsApi::Device {
     std::mutex              syncSsbo;
     VBuffer                 dummySsboVal;
 
-    void                    implInit(VulkanInstance& api, VkPhysicalDevice pdev);
+    void                    implInit(VkPhysicalDevice pdev);
+    void                    createLogicalDevice(VkPhysicalDevice pdev);
+
     void                    waitIdleSync(Queue* q, size_t n);
 
     void                    pickPhysicalDevice();
@@ -440,8 +442,6 @@ class VDevice : public AbstractGraphicsApi::Device {
     bool                    checkDeviceExtensionSupport(VkPhysicalDevice device);
 
     SwapChainSupport        querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface);
-
-    void                    createLogicalDevice(VulkanInstance& api, VkPhysicalDevice pdev);
   };
 
 }}

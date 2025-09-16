@@ -16,8 +16,8 @@ VPoolCache::~VPoolCache() {
     vkDestroyDescriptorPool(dev.device.impl, i, nullptr);
   }
 
-void VPoolCache::setupLimits(VulkanInstance& api) {
-  if(api.hasDeviceFeatures2) {
+void VPoolCache::setupLimits() {
+  if(dev.hasDeviceFeatures2) {
     VkPhysicalDeviceAccelerationStructurePropertiesKHR rtas = {};
     rtas.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR;
 
@@ -25,7 +25,7 @@ void VPoolCache::setupLimits(VulkanInstance& api) {
     properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
     properties.pNext = &rtas;
 
-    auto vkGetPhysicalDeviceProperties2 = PFN_vkGetPhysicalDeviceProperties2(vkGetInstanceProcAddr(api.instance,"vkGetPhysicalDeviceProperties2KHR"));
+    auto vkGetPhysicalDeviceProperties2 = PFN_vkGetPhysicalDeviceProperties2(vkGetInstanceProcAddr(dev.instance,"vkGetPhysicalDeviceProperties2KHR"));
     vkGetPhysicalDeviceProperties2(dev.physicalDevice, &properties);
 
     limits   = properties.properties.limits;
