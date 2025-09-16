@@ -14,8 +14,6 @@
 #include "vulkan/vtexture.h"
 #include "vulkan/vaccelerationstructure.h"
 
-#include "shaderreflection.h"
-
 #include <Tempest/Pixmap>
 #include <Tempest/Log>
 #include <Tempest/Application>
@@ -42,10 +40,10 @@ static const std::initializer_list<const char*> validationLayersLunarg = {
   "VK_LAYER_LUNARG_core_validation"
   };
 
-static bool layerSupport(const std::vector<VkLayerProperties>& sup, const std::initializer_list<const char*> dest) {
+static bool layerSupport(const std::vector<VkLayerProperties>& list, const std::initializer_list<const char*> dest) {
   for(auto& i:dest) {
     bool found=false;
-    for(auto& r:sup)
+    for(auto& r:list)
       if(std::strcmp(r.layerName,i)==0) {
         found = true;
         break;
@@ -56,7 +54,7 @@ static bool layerSupport(const std::vector<VkLayerProperties>& sup, const std::i
   return true;
   }
 
-static bool checkForExt(const std::vector<VkExtensionProperties>& list, const char* name) {
+static bool extensionSupport(const std::vector<VkExtensionProperties>& list, const char* name) {
   for(auto& r:list)
     if(std::strcmp(name,r.extensionName)==0)
       return true;
@@ -89,6 +87,7 @@ static std::vector<VkExtensionProperties> instExtensionsList() {
 
   return ext;
   }
+
 
 struct Tempest::VulkanApi::Impl {
   Impl(bool validation)
@@ -124,9 +123,8 @@ struct Tempest::VulkanApi::Impl {
       };
 
     auto ext = instExtensionsList();
-    if(checkForExt(ext,VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {
+    if(extensionSupport(ext, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {
       rqExt.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-      hasDeviceFeatures2 = true;
       }
 
     createInfo.enabledExtensionCount   = uint32_t(rqExt.size());
@@ -173,13 +171,13 @@ struct Tempest::VulkanApi::Impl {
                                       const char                *pMessage,
                                       void                      *pUserData);
 
-  VkInstance       instance           = VK_NULL_HANDLE;
-  bool             hasDeviceFeatures2 = false;
-  bool             validation         = false;
+  VkInstance       instance   = VK_NULL_HANDLE;
+  bool             validation = false;
 
   VkDebugReportCallbackEXT            callback   = VK_NULL_HANDLE;
   PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT = nullptr;
   };
+
 
 VulkanApi::VulkanApi(ApiFlags f) {
   impl.reset(new Impl(ApiFlags::Validation==(f&ApiFlags::Validation)));

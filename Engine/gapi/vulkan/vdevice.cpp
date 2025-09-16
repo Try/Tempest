@@ -48,7 +48,7 @@ static const std::initializer_list<const char*> requiredExtensions = {
   VK_KHR_SWAPCHAIN_EXTENSION_NAME
   };
 
-static bool checkForExt(const std::vector<VkExtensionProperties>& list, const char* name) {
+static bool extensionSupport(const std::vector<VkExtensionProperties>& list, const char* name) {
   for(auto& r:list)
     if(std::strcmp(name,r.extensionName)==0)
       return true;
@@ -72,7 +72,7 @@ static bool hasDeviceFeatures2(VkInstance instance) {
   std::vector<VkExtensionProperties> ext(extensionCount);
   vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, ext.data());
 
-  if(checkForExt(ext, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {
+  if(extensionSupport(ext, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {
     return true;
     }
   return false;
@@ -220,7 +220,7 @@ bool VDevice::checkDeviceExtensionSupport(VkPhysicalDevice device) {
   auto ext = extensionsList(device);
 
   for(auto& i:requiredExtensions) {
-    if(!checkForExt(ext,i))
+    if(!extensionSupport(ext,i))
       return false;
     }
 
@@ -735,48 +735,48 @@ void VDevice::devicePropsShort(VkInstance instance, VkPhysicalDevice physicalDev
   const bool hasDeviceFeatures2 = ::hasDeviceFeatures2(instance);
   const auto ext                = extensionsList(physicalDevice);
 
-  if(checkForExt(ext,VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME))
+  if(extensionSupport(ext,VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME))
     props.hasMemRq2 = true;
-  if(checkForExt(ext,VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME))
+  if(extensionSupport(ext,VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME))
     props.hasDedicatedAlloc = true;
-  if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME))
+  if(hasDeviceFeatures2 && extensionSupport(ext,VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME))
     props.hasSync2 = true;
-  if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME))
+  if(hasDeviceFeatures2 && extensionSupport(ext,VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME))
     props.hasDeviceAddress = true;
-  if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_SPIRV_1_4_EXTENSION_NAME)) {
+  if(hasDeviceFeatures2 && extensionSupport(ext,VK_KHR_SPIRV_1_4_EXTENSION_NAME)) {
     props.hasSpirv_1_4 = true;
     }
   if(hasDeviceFeatures2 &&
-     checkForExt(ext,VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME) &&
-     checkForExt(ext,VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME) &&
-     checkForExt(ext,VK_KHR_RAY_QUERY_EXTENSION_NAME)) {
+     extensionSupport(ext,VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME) &&
+     extensionSupport(ext,VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME) &&
+     extensionSupport(ext,VK_KHR_RAY_QUERY_EXTENSION_NAME)) {
     props.raytracing.rayQuery = true;
     }
-  if(hasDeviceFeatures2 && checkForExt(ext,VK_EXT_MESH_SHADER_EXTENSION_NAME)) {
+  if(hasDeviceFeatures2 && extensionSupport(ext,VK_EXT_MESH_SHADER_EXTENSION_NAME)) {
     props.meshlets.meshShader = true;
     }
-  if(hasDeviceFeatures2 && checkForExt(ext,VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME)) {
+  if(hasDeviceFeatures2 && extensionSupport(ext,VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME)) {
     props.hasDescIndexing = true;
     }
-  if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)) {
+  if(hasDeviceFeatures2 && extensionSupport(ext,VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)) {
     props.hasDynRendering = true;
     }
-  if(hasDeviceFeatures2 && checkForExt(ext,VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME)) {
+  if(hasDeviceFeatures2 && extensionSupport(ext,VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME)) {
     props.hasBarycentrics = true;
     }
-  if(hasDeviceFeatures2 && checkForExt(ext,VK_EXT_ROBUSTNESS_2_EXTENSION_NAME)) {
+  if(hasDeviceFeatures2 && extensionSupport(ext,VK_EXT_ROBUSTNESS_2_EXTENSION_NAME)) {
     props.hasRobustness2 = true;
     }
-  if(checkForExt(ext,VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
+  if(extensionSupport(ext,VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
     props.hasDebugMarker = true;
     }
-  if(checkForExt(ext,VK_EXT_LOAD_STORE_OP_NONE_EXTENSION_NAME)) {
+  if(extensionSupport(ext,VK_EXT_LOAD_STORE_OP_NONE_EXTENSION_NAME)) {
     props.hasStoreOpNone = true;
     }
-  if(checkForExt(ext,VK_KHR_MAINTENANCE_1_EXTENSION_NAME)) {
+  if(extensionSupport(ext,VK_KHR_MAINTENANCE_1_EXTENSION_NAME)) {
     props.hasMaintenance1 = true;
     }
-  if(checkForExt(ext,VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME)) {
+  if(extensionSupport(ext,VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME)) {
     props.memoryModel = true;
     }
 
