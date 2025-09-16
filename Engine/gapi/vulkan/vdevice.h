@@ -311,8 +311,6 @@ class VDevice : public AbstractGraphicsApi::Device {
     using BufPtr = Detail::DSharedPtr<VBuffer*>;
     using TexPtr = Detail::DSharedPtr<VTexture*>;
 
-    using VkProps = Detail::VulkanInstance::VkProp;
-
     using SwapChainSupport = VSwapchain::SwapChainSupport;
 
     VDevice(VulkanInstance& api, std::string_view gpuName);
@@ -321,6 +319,31 @@ class VDevice : public AbstractGraphicsApi::Device {
     struct autoDevice {
       VkDevice impl = nullptr;
       ~autoDevice();
+      };
+
+    struct VkProps : Tempest::AbstractGraphicsApi::Props {
+      uint32_t graphicsFamily = uint32_t(-1);
+      uint32_t presentFamily  = uint32_t(-1);
+
+      size_t   nonCoherentAtomSize = 0;
+      size_t   bufferImageGranularity = 0;
+      size_t   accelerationStructureScratchOffsetAlignment = 0;
+
+      uint64_t filteredLinearFormat = 0;
+      bool     hasFilteredFormat(TextureFormat f) const;
+
+      bool     hasMemRq2          = false;
+      bool     hasDedicatedAlloc  = false;
+      bool     hasSync2           = false;
+      bool     hasDeviceAddress   = false;
+      bool     hasDynRendering    = false;
+      bool     hasDescIndexing    = false;
+      bool     hasBarycentrics    = false;
+      bool     hasSpirv_1_4       = false;
+      bool     hasDebugMarker     = false;
+      bool     hasRobustness2     = false;
+      bool     hasStoreOpNone     = false;
+      bool     hasMaintenance1    = false;
       };
 
     struct Queue final {
@@ -339,6 +362,24 @@ class VDevice : public AbstractGraphicsApi::Device {
       uint32_t typeId      = 0;
       bool     hostVisible = false;
       };
+
+    void                    waitIdle() override;
+    void                    submit(VCommandBuffer& cmd, VFence* sync);
+
+    static void             deviceProps(const VulkanInstance& api, VkPhysicalDevice physicalDevice, VkProps& c);
+    static void             devicePropsShort(const VulkanInstance& api, VkPhysicalDevice physicalDevice, VkProps& props);
+
+    VkSurfaceKHR            createSurface(void* hwnd);
+    SwapChainSupport        querySwapChainSupport(VkSurfaceKHR surface) { return querySwapChainSupport(physicalDevice,surface); }
+    MemIndex                memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const;
+
+    using DataMgr = UploadEngine<VDevice,VCommandBuffer,VFence,VBuffer>;
+    DataMgr&                dataMgr() const { return *data; }
+
+    VBuffer&                dummySsbo();
+
+    uint32_t                roundUpDescriptorCount(ShaderReflection::Class cls, size_t cnt);
+    VkDescriptorSetLayout   bindlessArrayLayout(ShaderReflection::Class cls, size_t cnt);
 
     VkInstance              instance       = nullptr;
     VkPhysicalDevice        physicalDevice = nullptr;
@@ -383,21 +424,6 @@ class VDevice : public AbstractGraphicsApi::Device {
     PFN_vkCmdDebugMarkerEndEXT                  vkCmdDebugMarkerEnd        = nullptr;
     PFN_vkDebugMarkerSetObjectNameEXT           vkDebugMarkerSetObjectName = nullptr;
 
-    void                    waitIdle() override;
-    void                    submit(VCommandBuffer& cmd, VFence* sync);
-
-    VkSurfaceKHR            createSurface(void* hwnd);
-    SwapChainSupport        querySwapChainSupport(VkSurfaceKHR surface) { return querySwapChainSupport(physicalDevice,surface); }
-    MemIndex                memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const;
-
-    using DataMgr = UploadEngine<VDevice,VCommandBuffer,VFence,VBuffer>;
-    DataMgr&                dataMgr() const { return *data; }
-
-    VBuffer&                dummySsbo();
-
-    uint32_t                roundUpDescriptorCount(ShaderReflection::Class cls, size_t cnt);
-    VkDescriptorSetLayout   bindlessArrayLayout(ShaderReflection::Class cls, size_t cnt);
-
   private:
     VkPhysicalDeviceMemoryProperties memoryProperties;
     std::unique_ptr<DataMgr>         data;
@@ -405,15 +431,14 @@ class VDevice : public AbstractGraphicsApi::Device {
     std::mutex              syncSsbo;
     VBuffer                 dummySsboVal;
 
+    void                    implInit(VulkanInstance& api, VkPhysicalDevice pdev);
     void                    waitIdleSync(Queue* q, size_t n);
 
-    void                    implInit(VulkanInstance& api, VkPhysicalDevice pdev);
     void                    pickPhysicalDevice();
     bool                    isDeviceSuitable(VkPhysicalDevice device, std::string_view gpuName);
-    void                    deviceQueueProps(VulkanInstance::VkProp& prop, VkPhysicalDevice device);
+    void                    deviceQueueProps(VkPhysicalDevice device, VkProps& prop);
     bool                    checkDeviceExtensionSupport(VkPhysicalDevice device);
-    auto                    extensionsList(VkPhysicalDevice device) -> std::vector<VkExtensionProperties>;
-    bool                    checkForExt(const std::vector<VkExtensionProperties>& list,const char* name);
+
     SwapChainSupport        querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface);
 
     void                    createLogicalDevice(VulkanInstance& api, VkPhysicalDevice pdev);
