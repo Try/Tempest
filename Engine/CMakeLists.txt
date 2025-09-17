@@ -24,10 +24,6 @@ else()
   option(TEMPEST_BUILD_METAL       "Build metal support"     OFF)
 endif()
 
-if(IOS)
-  set(TEMPEST_BUILD_SHARED OFF)
-endif()
-
 # This warning only occurs in CMake 3.24 or greater.
 # https://cmake.org/cmake/help/latest/policy/CMP0135.html#cmp0135
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24")
@@ -53,12 +49,20 @@ else()
   add_library(${PROJECT_NAME} STATIC)
 endif()
 
+### Target platform
+if(WIN32)
+  add_definitions(-DNOMINMAX)
+endif()
+
+if(IOS)
+  set(TEMPEST_BUILD_SHARED OFF)
+endif()
+
 ### Compilers
 if(MSVC)
   add_definitions(-D_USE_MATH_DEFINES)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
-  add_definitions(-DNOMINMAX)
   add_compile_options(/FS)
 endif()
 

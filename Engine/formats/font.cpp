@@ -7,7 +7,6 @@
 #include "../utility/utf8_helper.h"
 #include "thirdparty/stb_truetype.h"
 
-#include <unordered_map>
 #include <bitset>
 #include <algorithm>
 

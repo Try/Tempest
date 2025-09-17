@@ -5,8 +5,6 @@ environment:
   matrix:
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019  # used as mingw
       GENERATOR: "Ninja"
-      CC:        C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin/gcc.exe
-      CXX:       C:/mingw-w64/x86_64-8.1.0-posix-seh-rt_v6-rev0/mingw64/bin/g++.exe
 
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
       GENERATOR: "Ninja"
@@ -72,7 +70,7 @@ before_build:
     mkdir build
 
     if($IsWindows) {
-      $env:PATH += ";C:/msys64/mingw64/bin;C:/Qt/Tools/QtCreator/bin"
+      $env:PATH += ";C:/msys64/mingw64/bin"
       }
 
 build_script:
@@ -82,9 +80,9 @@ build_script:
 
   - cd Tests/tests
   - cmd: if NOT "%VCVARSALL%" == "" call "%VCVARSALL%" %PLATFORM%
-  - cmd: cmake -H. -B../../build -G "%GENERATOR%" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_SH=CMAKE_SH-NOTFOUND
+  - cmd: cmake -H. -B../../build -G "%GENERATOR%" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_C_COMPILER=gcc -DCMAKE_C_COMPILER=g++ -DCMAKE_SH=CMAKE_SH-NOTFOUND
   - sh:  cmake -H. -B../../build                  -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo
-  - ps:  $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+  #- ps:  $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
   - cmake --build ../../build --target TempestTests
 
 test_script:
