@@ -3,7 +3,7 @@ configuration:
 
 environment:
   matrix:
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017  # used as mingw
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019  # used as mingw
       GENERATOR: "Ninja"
       CC:         C:/msys64/mingw64/bin/gcc.exe
       CXX:        C:/msys64/mingw64/bin/g++.exe
@@ -58,7 +58,7 @@ install:
       Invoke-WebRequest -Uri https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-windows-x64-Release.zip -OutFile glslang-master.zip
       7z x glslang-master.zip
       cd ..
-      $env:PATH += ";$env:APPVEYOR_BUILD_FOLDER\glslang\bin"
+      $env:PATH += ";C:/msys64/mingw64/bin;$env:APPVEYOR_BUILD_FOLDER\glslang\bin"
       }
 
     if($IsMacOS) {
@@ -77,8 +77,8 @@ before_build:
 
 build_script:
   - cmake --version
-  - cmd: if "%GENERATOR%" == "MinGW Makefiles" gcc --version
-  - cmd: if "%GENERATOR%" == "MinGW Makefiles" g++ --version
+  - cmd: gcc --version
+  - cmd: g++ --version
 
   - cd Tests/tests
   - cmd: if NOT "%VCVARSALL%" == "" call "%VCVARSALL%" %PLATFORM%
