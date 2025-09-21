@@ -3,7 +3,7 @@ configuration:
 
 environment:
   matrix:
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019  # used as mingw
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017  # used as mingw
       GENERATOR: "Ninja"
       CC:         C:/msys64/mingw64/bin/gcc.exe
       CXX:        C:/msys64/mingw64/bin/g++.exe
@@ -90,7 +90,7 @@ build_script:
 test_script:
 - ps: >-
     if($IsWindows) {
-      $env:PATH += ";C:/msys64/mingw64/bin;C:/Qt/Tools/QtCreator/bin"
+      $env:PATH += ";C:/msys64/mingw64/bin"
       cd $env:APPVEYOR_BUILD_FOLDER\build\testsuite
       # Download vulkan-1.dll
       $VULKAN_RUNTIME_URL = "https://sdk.lunarg.com/sdk/download/$VK_SDK/windows/vulkan-runtime-components.zip?Human=true"
