@@ -65,6 +65,11 @@ install:
       brew install glslang
       }
 
+    if($IsWindows) {
+      # cmake4 failing to recognize MinGW, as c++ compiller
+      choco install cmake --version 3.16.2 --force
+      }
+
 before_build:
 - ps: >-
     git submodule -q update --init --recursive
@@ -77,11 +82,11 @@ before_build:
 
 build_script:
   - cmake --version
-  - cmd: gcc --version
-  - cmd: g++ --version
+  - gcc   --version
+  - g++   --version
 
   - cd Tests/tests
-  - ps:  $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+  # - ps:  $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
   - cmd: if NOT "%VCVARSALL%" == "" call "%VCVARSALL%" %PLATFORM%
   - cmd: cmake -H. -B../../build -G "%GENERATOR%" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_SH=CMAKE_SH-NOTFOUND -DCMAKE_POLICY_VERSION_MINIMUM=3.5
   - sh:  cmake -H. -B../../build                  -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo
