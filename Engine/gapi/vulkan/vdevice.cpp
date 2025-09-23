@@ -354,18 +354,6 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
   }
 
 void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, VkPhysicalDevice physicalDevice, VkProps& props) {
-  /*
-   * formats support table: https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#features-required-format-support
-   *   sampled image must also have transfer bits by spec.
-   *   mipmap generation, in engine, implemented by blit-shaders.
-   */
-  VkFormatFeatureFlags imageRqFlags    = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT|VK_FORMAT_FEATURE_TRANSFER_SRC_BIT|VK_FORMAT_FEATURE_TRANSFER_DST_BIT;
-  VkFormatFeatureFlags mipmapsFlags    = VK_FORMAT_FEATURE_BLIT_DST_BIT|VK_FORMAT_FEATURE_BLIT_SRC_BIT;
-  VkFormatFeatureFlags attachRqFlags   = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT|VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT|VK_FORMAT_FEATURE_BLIT_DST_BIT|VK_FORMAT_FEATURE_BLIT_SRC_BIT;
-  VkFormatFeatureFlags depthAttFlags   = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
-  VkFormatFeatureFlags storageAttFlags = VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
-  VkFormatFeatureFlags atomicFlags     = VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT;
-
   const auto ext = extensionsList(physicalDevice);
   if(extensionSupport(ext,VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME))
     props.hasMemRq2 = true;
@@ -655,12 +643,28 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
       break;
     }
 
+  deviceFormatProps(physicalDevice, props);
+  }
+
+void VDevice::deviceFormatProps(VkPhysicalDevice device, VkProps& props) {
+  /*
+   * formats support table: https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#features-required-format-support
+   *   sampled image must also have transfer bits by spec.
+   *   mipmap generation, in engine, implemented by blit-shaders.
+   */
+  VkFormatFeatureFlags imageRqFlags    = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT|VK_FORMAT_FEATURE_TRANSFER_SRC_BIT|VK_FORMAT_FEATURE_TRANSFER_DST_BIT;
+  VkFormatFeatureFlags mipmapsFlags    = VK_FORMAT_FEATURE_BLIT_DST_BIT|VK_FORMAT_FEATURE_BLIT_SRC_BIT;
+  VkFormatFeatureFlags attachRqFlags   = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT|VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
+  VkFormatFeatureFlags depthAttFlags   = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+  VkFormatFeatureFlags storageAttFlags = VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT;
+  VkFormatFeatureFlags atomicFlags     = VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT;
+
   uint64_t smpFormat=0, attFormat=0, dattFormat=0, storFormat=0, atomFormat=0, filteredLinearFormat=0;
   for(uint32_t i=0;i<TextureFormat::Last;++i){
     VkFormat f = Detail::nativeFormat(TextureFormat(i));
 
     VkFormatProperties frm={};
-    vkGetPhysicalDeviceFormatProperties(physicalDevice,f,&frm);
+    vkGetPhysicalDeviceFormatProperties(device,f,&frm);
     if(isDepthFormat(TextureFormat(i))) {
       if((frm.optimalTilingFeatures & imageRqFlags)==imageRqFlags){
         smpFormat |= (1ull<<i);

@@ -368,6 +368,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     static std::vector<VkExtensionProperties> extensionsList(VkPhysicalDevice dev);
 
     static void             deviceProps(VkInstance instance, const bool hasDeviceFeatures2, VkPhysicalDevice physicalDevice, VkProps& props);
+    static void             deviceFormatProps(VkPhysicalDevice device, VkProps& props);
     static void             deviceQueueProps(VkPhysicalDevice device, VkProps& props);
 
     SwapChainSupport        querySwapChainSupport(VkSurfaceKHR surface) { return querySwapChainSupport(physicalDevice,surface); }

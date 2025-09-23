@@ -10,7 +10,6 @@
 
 #include <Tempest/Pixmap>
 #include <Tempest/Log>
-#include <thread>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -257,15 +256,26 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t d,
   imageInfo.arrayLayers   = 1;
   imageInfo.tiling        = VK_IMAGE_TILING_OPTIMAL;
   imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  imageInfo.usage         = isDepthFormat(frm) ?
-        (VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT|VK_IMAGE_USAGE_SAMPLED_BIT|VK_IMAGE_USAGE_TRANSFER_SRC_BIT) :
-        (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT|VK_IMAGE_USAGE_SAMPLED_BIT|VK_IMAGE_USAGE_TRANSFER_SRC_BIT|VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+  imageInfo.usage         = 0;
   imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
   imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
   imageInfo.format        = nativeFormat(frm);
 
-  if(imageStore)
+  if(provider.device->props.hasSamplerFormat(frm)) {
+    imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+    // Formats that are required to support VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT
+    // must also support VK_FORMAT_FEATURE_TRANSFER_SRC_BIT and VK_FORMAT_FEATURE_TRANSFER_DST_BIT.
+    imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    }
+  if(provider.device->props.hasAttachFormat(frm)) {
+    imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    }
+  if(provider.device->props.hasDepthFormat(frm)) {
+    imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    }
+  if(imageStore) {
     imageInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+    }
 
   vkAssert(vkCreateImage(dev, &imageInfo, nullptr, &ret.impl));
 
