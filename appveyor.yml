@@ -87,7 +87,7 @@ build_script:
   - g++   --version
 
   - cd Tests/tests
-  # - ps:  $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+  - ps:  $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
   - cmd: if NOT "%VCVARSALL%" == "" call "%VCVARSALL%" %PLATFORM%
   - cmd: cmake -H. -B../../build -G "%GENERATOR%" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_SH=CMAKE_SH-NOTFOUND -DCMAKE_POLICY_VERSION_MINIMUM=3.5
   - sh:  cmake -H. -B../../build                  -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo
