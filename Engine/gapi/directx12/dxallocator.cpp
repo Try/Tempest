@@ -240,30 +240,39 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
   resDesc.Width              = w;
   resDesc.Height             = h;
   resDesc.DepthOrArraySize   = std::max<uint32_t>(d, 1);
-  if(isDepthFormat(frm)) {
-    state                    = D3D12_RESOURCE_STATE_DEPTH_READ;
-    layout                   = D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_READ;
-    resDesc.Flags            = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-    clr.DepthStencil.Depth   = 1.f;
-    clr.DepthStencil.Stencil = 0;
-    } else {
-    state                    = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-    layout                   = D3D12_BARRIER_LAYOUT_SHADER_RESOURCE;
-    resDesc.Flags            = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+  resDesc.Flags              = D3D12_RESOURCE_FLAG_NONE;
+  resDesc.SampleDesc.Count   = 1;
+  resDesc.SampleDesc.Quality = 0;
+  resDesc.Dimension          = d==0 ? D3D12_RESOURCE_DIMENSION_TEXTURE2D : D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+  resDesc.SamplerFeedbackMipRegion = {};
+
+  if(provider.device->props.hasSamplerFormat(frm)) {
+    state  = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    layout = D3D12_BARRIER_LAYOUT_SHADER_RESOURCE;
+    }
+  if(provider.device->props.hasAttachFormat(frm)) {
+    resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+    state        = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    layout       = D3D12_BARRIER_LAYOUT_SHADER_RESOURCE;
     clr.Color[0] = 0.f;
     clr.Color[1] = 0.f;
     clr.Color[2] = 0.f;
     clr.Color[3] = 0.f;
+    }
+  if(provider.device->props.hasDepthFormat(frm)) {
+    resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+    state                    = D3D12_RESOURCE_STATE_DEPTH_READ;
+    layout                   = D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_READ;
+    clr.DepthStencil.Depth   = 1.f;
+    clr.DepthStencil.Stencil = 0;
     }
   if(imageStore) {
     state          = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     layout         = D3D12_BARRIER_LAYOUT_UNORDERED_ACCESS;
     resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
-  resDesc.SampleDesc.Count   = 1;
-  resDesc.SampleDesc.Quality = 0;
-  resDesc.Dimension          = d==0 ? D3D12_RESOURCE_DIMENSION_TEXTURE2D : D3D12_RESOURCE_DIMENSION_TEXTURE3D;
-  resDesc.SamplerFeedbackMipRegion = {};
 
   D3D12_HEAP_PROPERTIES heapProp={};
   heapProp.Type                 = D3D12_HEAP_TYPE_DEFAULT;

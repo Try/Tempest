@@ -274,6 +274,8 @@ VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t d,
     imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     }
   if(imageStore) {
+    // NOTE: some storage formats are not sample-capable, such as R64_UINT.
+    // leaving them as gray area for now.
     imageInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
     }
 
