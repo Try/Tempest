@@ -68,6 +68,7 @@ install:
 before_build:
 - ps: >-
     git submodule -q update --init --recursive
+
     mkdir build
 
 build_script:
