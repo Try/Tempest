@@ -594,6 +594,8 @@ void MtCommandBuffer::drawIndirect(const AbstractGraphicsApi::Buffer& indirect, 
   }
 
 void MtCommandBuffer::dispatchMesh(size_t x, size_t y, size_t z) {
+  if(x==0 || y==0 || z==0)
+    return; // validation warning
   implSetUniforms(S_Graphics);
   implSetPushData(S_Graphics);
   // NOTE: for taskless pipeline `localSize` must be zero
@@ -608,6 +610,8 @@ void MtCommandBuffer::dispatchMeshIndirect(const AbstractGraphicsApi::Buffer& in
   }
 
 void MtCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
+  if(x==0 || y==0 || z==0)
+    return; // validation warning
   implSetUniforms(S_Compute);
   implSetPushData(S_Compute);
   encComp->dispatchThreadgroups(MTL::Size(x,y,z), localSize);
