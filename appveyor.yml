@@ -10,8 +10,8 @@ environment:
 
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019  # used as mingw
       GENERATOR: "Ninja"
-      CC:        C:/msys64/mingw64/bin/gcc.exe
-      CXX:       C:/msys64/mingw64/bin/g++.exe
+      CC:        C:/ProgramData/mingw64/mingw64/bin/gcc.exe
+      CXX:       C:/ProgramData/mingw64/mingw64/bin/g++.exe
 
     - APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu2004
       GENERATOR: ""
@@ -74,13 +74,13 @@ before_build:
 build_script:
   - ps: >-
       if($IsWindows) {
-        $env:PATH += ";C:/msys64/mingw64/bin"
+        $env:PATH += ";C:/ProgramData/mingw64/mingw64/bin"
         }
       if($IsWindows) {
         # cmake4 failing to recognize MinGW, as c++ compiller
         # choco install cmake --version 3.16.2 --force
         # choco install ninja --version 1.11.1 --force
-        # choco install msys --version 14.2.0 --force
+        choco install mingw --version 14.2.0 --force
         }
   - cmake --version
   - gcc   --version
@@ -90,7 +90,7 @@ build_script:
   - cmd: if NOT "%VCVARSALL%" == "" call "%VCVARSALL%" %PLATFORM%
   - cmd: cmake -H. -B../../build -G "%GENERATOR%" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_SH=CMAKE_SH-NOTFOUND
   - sh:  cmake -H. -B../../build                  -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo
-  - ps:  $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+  # - ps:  $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
   - cmake --build ../../build --target TempestTests
 
 test_script:
