@@ -39,7 +39,7 @@ install:
       # Vulkan SDK
       $env:VULKAN_SDK = "C:/VulkanSDK/$VK_SDK"
       Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/$VK_SDK/windows/VulkanSDK-$VK_SDK-Installer.exe -OutFile VulkanSDK.exe
-      ./VulkanSDK.exe /S --accept-licenses --default-answer --confirm-command install
+      ./VulkanSDK.exe --accept-licenses --default-answer --confirm-command install 1>$null
       }
 
     if($IsLinux) {
