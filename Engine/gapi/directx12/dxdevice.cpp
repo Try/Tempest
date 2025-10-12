@@ -210,7 +210,8 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, DxProps& pro
       smpBit |= uint64_t(1) << uint64_t(i);
       }
     if(d.Support1 & D3D12_FORMAT_SUPPORT1_RENDER_TARGET &&
-       d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE2D) {
+       d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE2D&&
+       !nativeIsDepthFormat(d.Format)) {
       attBit |= uint64_t(1) << uint64_t(i);
       }
     if(d.Support1 & D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL &&
@@ -221,7 +222,8 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, DxProps& pro
        d.Support2 & D3D12_FORMAT_SUPPORT2_UAV_TYPED_STORE &&
        d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE1D &&
        d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE2D &&
-       d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE3D) {
+       d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE3D &&
+       !nativeIsDepthFormat(d.Format)) {
       storBit |= uint64_t(1) << uint64_t(i);
       }
     if(d.Support2 & D3D12_FORMAT_SUPPORT2_UAV_ATOMIC_ADD &&
@@ -231,7 +233,8 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, DxProps& pro
        d.Support2 & D3D12_FORMAT_SUPPORT2_UAV_ATOMIC_UNSIGNED_MIN_OR_MAX &&
        d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE1D &&
        d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE2D &&
-       d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE3D) {
+       d.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE3D &&
+       !nativeIsDepthFormat(d.Format)) {
       atomBit |= uint64_t(1) << uint64_t(i);
       }
     }
