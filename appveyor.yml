@@ -8,7 +8,7 @@ environment:
       VCVARSALL: "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Auxiliary/Build/vcvarsall.bat"
       PLATFORM:  x64
 
-    - APPVEYOR_BUILD_WORKER_IMAGE: Previous Visual Studio 2019  # used as mingw
+    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019  # used as mingw
       GENERATOR: "Ninja"
       CC:        C:/msys64/mingw64/bin/gcc.exe
       CXX:       C:/msys64/mingw64/bin/g++.exe
@@ -75,6 +75,12 @@ build_script:
   - ps: >-
       if($IsWindows) {
         $env:PATH += ";C:/msys64/mingw64/bin"
+        }
+      if($IsWindows) {
+        # cmake4 failing to recognize MinGW, as c++ compiller
+        # choco install cmake --version 3.16.2 --force
+        # choco install ninja --version 1.11.1 --force
+        choco install msys --version 14.2.0 --force
         }
   - cmake --version
   - gcc   --version
