@@ -165,7 +165,7 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t size, MemUsage usage, Buffer
     }
 
   if( MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer) ||
-      MemUsage::TransferDst  ==(usage&MemUsage::TransferDst) ||
+      MemUsage::Transfer     ==(usage&MemUsage::Transfer) ||
       MemUsage::AsStorage    ==(usage&MemUsage::AsStorage)) {
     ret.nonUniqId = nextId();
     }

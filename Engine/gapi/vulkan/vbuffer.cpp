@@ -53,7 +53,7 @@ void VBuffer::update(const void* data, size_t off, size_t size) {
     return;
     }
 
-  auto stage = dx.dataMgr().allocStagingMemory(data,size,MemUsage::TransferSrc,BufferHeap::Upload);
+  auto stage = dx.dataMgr().allocStagingMemory(data,size,MemUsage::Transfer,BufferHeap::Upload);
 
   Detail::DSharedPtr<Buffer*> pStage(new Detail::VBuffer(std::move(stage)));
   Detail::DSharedPtr<Buffer*> pBuf  (this);
@@ -78,7 +78,7 @@ void VBuffer::read(void* out, size_t off, size_t size) {
     return;
     }
 
-  auto  stage = dx.dataMgr().allocStagingMemory(nullptr,size,MemUsage::TransferDst,BufferHeap::Readback);
+  auto  stage = dx.dataMgr().allocStagingMemory(nullptr,size,MemUsage::Transfer,BufferHeap::Readback);
 
   auto cmd = dx.dataMgr().get();
   cmd->begin(true);

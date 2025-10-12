@@ -206,7 +206,7 @@ inline VertexBuffer<T> Device::vbo(BufferHeap ht, const T* arr, size_t arrSize) 
   //if(sizeof(T)*arrSize>devProps.vbo.maxRange)
   //  throw std::system_error(Tempest::GraphicsErrc::TooLargeBuffer);
 
-  static const auto   usageBits = MemUsage::VertexBuffer | MemUsage::StorageBuffer | MemUsage::TransferDst;
+  static const auto   usageBits = MemUsage::VertexBuffer | MemUsage::StorageBuffer | MemUsage::Transfer;
   Detail::VideoBuffer data      = createVideoBuffer(arr,arrSize*sizeof(T),usageBits,ht);
   VertexBuffer<T> vbo(std::move(data),arrSize);
   return vbo;
@@ -217,7 +217,7 @@ inline IndexBuffer<T> Device::ibo(BufferHeap ht, const T* arr, size_t arrSize) {
   if(arrSize==0)
     return IndexBuffer<T>();
 
-  static const auto   usageBits = MemUsage::IndexBuffer | MemUsage::StorageBuffer | MemUsage::TransferDst;
+  static const auto   usageBits = MemUsage::IndexBuffer | MemUsage::StorageBuffer | MemUsage::Transfer;
   Detail::VideoBuffer data      = createVideoBuffer(arr,arrSize*sizeof(T),usageBits,ht);
   IndexBuffer<T>    ibo(std::move(data),arrSize);
   return ibo;
@@ -229,10 +229,8 @@ inline StorageBuffer Device::ssbo(BufferHeap ht, const void* data, size_t size) 
   if(size>devProps.ssbo.maxRange)
     throw std::system_error(Tempest::GraphicsErrc::TooLargeBuffer);
 
-  static const auto usageBits = MemUsage::VertexBuffer  | MemUsage::IndexBuffer   |
-                                MemUsage::UniformBuffer | MemUsage::StorageBuffer |
-                                MemUsage::TransferSrc   | MemUsage::TransferDst   |
-                                MemUsage::Indirect      |
+  static const auto usageBits = MemUsage::UniformBuffer | MemUsage::StorageBuffer | MemUsage::Transfer |
+                                MemUsage::VertexBuffer  | MemUsage::IndexBuffer   | MemUsage::Indirect |
                                 MemUsage::Initialized;
   Detail::VideoBuffer v = createVideoBuffer(data,size,usageBits,ht);
   return StorageBuffer(std::move(v));
@@ -244,10 +242,8 @@ inline StorageBuffer Device::ssbo(BufferHeap ht, Uninitialized_t tag, size_t siz
   if(size>devProps.ssbo.maxRange)
     throw std::system_error(Tempest::GraphicsErrc::TooLargeBuffer);
 
-  static const auto usageBits = MemUsage::VertexBuffer  | MemUsage::IndexBuffer   |
-                                MemUsage::UniformBuffer | MemUsage::StorageBuffer |
-                                MemUsage::TransferSrc   | MemUsage::TransferDst   |
-                                MemUsage::Indirect;
+  static const auto usageBits = MemUsage::UniformBuffer | MemUsage::StorageBuffer | MemUsage::Transfer |
+                                MemUsage::VertexBuffer  | MemUsage::IndexBuffer   | MemUsage::Indirect;
   Detail::VideoBuffer v = createVideoBuffer(nullptr,size,usageBits,ht);
   return StorageBuffer(std::move(v));
   }
@@ -257,7 +253,8 @@ inline UniformBuffer<T> Device::implUbo(BufferHeap ht, const void* mem) {
   if(sizeof(T)>devProps.ubo.maxRange)
     throw std::system_error(Tempest::GraphicsErrc::TooLargeBuffer);
 
-  Detail::VideoBuffer data = createVideoBuffer(mem,sizeof(T),MemUsage::UniformBuffer,ht);
+  static const auto usageBits = MemUsage::UniformBuffer | MemUsage::StorageBuffer | MemUsage::Transfer;
+  Detail::VideoBuffer data = createVideoBuffer(mem,sizeof(T),usageBits,ht);
   UniformBuffer<T> ubo(std::move(data));
   return ubo;
   }

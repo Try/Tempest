@@ -104,8 +104,7 @@ DxTopAccelerationStructure::DxTopAccelerationStructure(DxDevice& dx, const RtIns
 
   Detail::DSharedPtr<AbstractGraphicsApi::Buffer*> pBuf;
   if(asSize>0) {
-    DxBuffer buf = dx.allocator.alloc(nullptr,asSize*sizeof(D3D12_RAYTRACING_INSTANCE_DESC),
-                                      MemUsage::TransferDst | MemUsage::StorageBuffer,BufferHeap::Device);
+    DxBuffer buf = dx.allocator.alloc(nullptr, asSize*sizeof(D3D12_RAYTRACING_INSTANCE_DESC), MemUsage::StorageBuffer | MemUsage::Transfer, BufferHeap::Device);
 
     pBuf = Detail::DSharedPtr<AbstractGraphicsApi::Buffer*>(new Detail::DxBuffer(std::move(buf)));
     }
@@ -138,7 +137,7 @@ DxTopAccelerationStructure::DxTopAccelerationStructure(DxDevice& dx, const RtIns
   if(buildSizesInfo.ResultDataMaxSizeInBytes<=0)
     throw std::system_error(GraphicsErrc::UnsupportedExtension);
 
-  auto  scratch = dx.dataMgr().allocStagingMemory(nullptr,buildSizesInfo.ScratchDataSizeInBytes,MemUsage::ScratchBuffer,BufferHeap::Device);
+  auto  scratch = dx.dataMgr().allocStagingMemory(nullptr, buildSizesInfo.ScratchDataSizeInBytes, MemUsage::ScratchBuffer, BufferHeap::Device);
   impl = dx.allocator.alloc(nullptr, buildSizesInfo.ResultDataMaxSizeInBytes, MemUsage::AsStorage, BufferHeap::Device);
 
   DSharedPtr<AbstractGraphicsApi::AccelerationStructure*> pThis(this);

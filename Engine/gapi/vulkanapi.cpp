@@ -296,16 +296,16 @@ AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device
   Detail::VDevice& dx = *reinterpret_cast<Detail::VDevice*>(d);
 
   if(flg==BufferHeap::Upload) {
-    VBuffer buf = dx.allocator.alloc(mem, size, usage|MemUsage::TransferSrc, BufferHeap::Upload);
+    VBuffer buf = dx.allocator.alloc(mem, size, usage, BufferHeap::Upload);
     return PBuffer(new VBuffer(std::move(buf)));
     }
 
   if(flg==BufferHeap::Readback) {
-    VBuffer buf = dx.allocator.alloc(mem, size, usage|MemUsage::TransferDst, BufferHeap::Readback);
+    VBuffer buf = dx.allocator.alloc(mem, size, usage, BufferHeap::Readback);
     return PBuffer(new VBuffer(std::move(buf)));
     }
 
-  VBuffer buf = dx.allocator.alloc(nullptr, size, usage|MemUsage::TransferDst|MemUsage::TransferSrc, BufferHeap::Device);
+  VBuffer buf = dx.allocator.alloc(nullptr, size, usage, BufferHeap::Device);
   if(mem==nullptr && (usage&MemUsage::Initialized)==MemUsage::Initialized) {
     DSharedPtr<VBuffer*> pbuf(new VBuffer(std::move(buf)));
     pbuf.handler->fill(0x0,0,size);
@@ -326,7 +326,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   const uint32_t   size   = uint32_t(p.dataSize());
   VkFormat         format = Detail::nativeFormat(frm);
 
-  Detail::VBuffer  stage  = dx.allocator.alloc(p.data(),size,MemUsage::TransferSrc,BufferHeap::Upload);
+  Detail::VBuffer  stage  = dx.allocator.alloc(p.data(),size,MemUsage::Transfer,BufferHeap::Upload);
   Detail::VTexture buf    = dx.allocator.alloc(p,mipCnt,format);
 
   Detail::DSharedPtr<Buffer*>  pstage(new Detail::VBuffer (std::move(stage)));
@@ -434,7 +434,7 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
   Size            bsz    = Pixmap::blockCount(frm,w,h);
 
   const size_t    size   = bsz.w*bsz.h*bpb;
-  Detail::VBuffer stage  = dx.allocator.alloc(nullptr, size, MemUsage::TransferDst, BufferHeap::Readback);
+  Detail::VBuffer stage  = dx.allocator.alloc(nullptr, size, MemUsage::Transfer, BufferHeap::Readback);
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();

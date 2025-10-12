@@ -45,7 +45,7 @@ void DxBuffer::update(const void* data, size_t off, size_t size) {
     return;
     }
 
-  auto stage = dx.dataMgr().allocStagingMemory(nullptr,size,MemUsage::TransferSrc,BufferHeap::Upload);
+  auto stage = dx.dataMgr().allocStagingMemory(nullptr, size, MemUsage::Transfer, BufferHeap::Upload);
   Detail::DSharedPtr<DxBuffer*> pstage(new Detail::DxBuffer(std::move(stage)));
   updateByStaging(pstage.handler,data,off,0,size);
   }
@@ -63,7 +63,7 @@ void DxBuffer::fill(uint32_t data, size_t off, size_t size) {
     return;
     }
 
-  auto stage = dx.dataMgr().allocStagingMemory(nullptr,size,MemUsage::TransferSrc,BufferHeap::Upload);
+  auto stage = dx.dataMgr().allocStagingMemory(nullptr, size, MemUsage::Transfer, BufferHeap::Upload);
   Detail::DSharedPtr<DxBuffer*> pstage(new Detail::DxBuffer(std::move(stage)));
   fillByStaging(pstage.handler,data,off,0,size);
   }
@@ -81,7 +81,7 @@ void DxBuffer::read(void* data, size_t off, size_t size) {
     return;
     }
 
-  auto stage = dx.dataMgr().allocStagingMemory(nullptr,size,MemUsage::TransferDst,BufferHeap::Readback);
+  auto stage = dx.dataMgr().allocStagingMemory(nullptr, size, MemUsage::Transfer, BufferHeap::Readback);
   auto cmd = dx.dataMgr().get();
   cmd->begin();
   cmd->copy(stage,0, *this,off,size);

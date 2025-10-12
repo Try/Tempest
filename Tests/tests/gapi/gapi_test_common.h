@@ -966,8 +966,8 @@ void ComputeImage(const char* outImage) {
     GraphicsApi api{ApiFlags::Validation};
     Device      device(api);
 
-    //auto img = device.image2d(TextureFormat::RGBA8,128,128,false);
-    auto  img = device.image3d(TextureFormat::RGBA8,128,128,1,false);
+    auto img = device.image2d(TextureFormat::RGBA8,128,128,false);
+    // auto  img = device.image3d(TextureFormat::RGBA8,128,128,1,false);
     auto  pso = device.pipeline(device.shader("shader/image_store_test.comp.sprv"));
 
     auto& t   = textureCast<const Texture2d&>(img); (void)t;

@@ -190,7 +190,7 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
 
   Detail::DSharedPtr<AbstractGraphicsApi::Buffer*> pBuf;
   if(asSize>0) {
-    VBuffer buf = dx.allocator.alloc(nullptr,asSize*sizeof(VkAccelerationStructureInstanceKHR),MemUsage::TransferDst | MemUsage::StorageBuffer,BufferHeap::Upload);
+    VBuffer buf = dx.allocator.alloc(nullptr, asSize*sizeof(VkAccelerationStructureInstanceKHR), MemUsage::StorageBuffer | MemUsage::Transfer, BufferHeap::Upload);
     pBuf = Detail::DSharedPtr<AbstractGraphicsApi::Buffer*>(new Detail::VBuffer(std::move(buf)));
     }
 
@@ -210,7 +210,7 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
     pBuf.handler->update(&objInstance, i*sizeof(objInstance), sizeof(objInstance));
     }
 
-  auto  scratch = dx.dataMgr().allocStagingMemory(nullptr,buildSizesInfo.buildScratchSize,MemUsage::ScratchBuffer,BufferHeap::Device);
+  auto  scratch = dx.dataMgr().allocStagingMemory(nullptr, buildSizesInfo.buildScratchSize, MemUsage::ScratchBuffer, BufferHeap::Device);
   DSharedPtr<AbstractGraphicsApi::Buffer*> pScratch(new VBuffer(std::move(scratch)));
 
   VkAccelerationStructureCreateInfoKHR createInfo = {};

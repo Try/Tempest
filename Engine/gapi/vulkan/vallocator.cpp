@@ -102,9 +102,9 @@ static size_t LCM(size_t n1, size_t n2)  {
 VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferHeap bufHeap) {
   VBuffer ret;
   ret.alloc = this;
-  if( MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer) ||
-      MemUsage::TransferDst  ==(usage&MemUsage::TransferDst) ||
-      MemUsage::AsStorage    ==(usage&MemUsage::AsStorage)) {
+  if(MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer) ||
+     MemUsage::Transfer     ==(usage&MemUsage::Transfer) ||
+     MemUsage::AsStorage    ==(usage&MemUsage::AsStorage)) {
     ret.nonUniqId = nextId();
     }
 
@@ -117,10 +117,8 @@ VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferHe
   createInfo.queueFamilyIndexCount = 0;
   createInfo.pQueueFamilyIndices   = nullptr;
 
-  if(MemUsage::TransferSrc==(usage & MemUsage::TransferSrc))
-    createInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-  if(MemUsage::TransferDst==(usage & MemUsage::TransferDst))
-    createInfo.usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+  if(MemUsage::Transfer==(usage & MemUsage::Transfer))
+    createInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
   if(MemUsage::VertexBuffer==(usage & MemUsage::VertexBuffer))
     createInfo.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
   if(MemUsage::IndexBuffer==(usage & MemUsage::IndexBuffer))
@@ -178,6 +176,8 @@ VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferHe
     props[0] = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
   else if(bufHeap==BufferHeap::Readback)
     props[0] = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+  else
+    propsCnt = 0;
 
   for(uint8_t i=0; i<propsCnt; ++i) {
     auto p = VkMemoryPropertyFlagBits(props[i]);
