@@ -995,6 +995,42 @@ void ComputeImage(const char* outImage) {
   }
 
 template<class GraphicsApi>
+void ComputeImage3dAs2d(const char* outImage) {
+  using namespace Tempest;
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    // auto img = device.image2d(TextureFormat::RGBA8,128,128,false);
+    auto img = device.image3d(TextureFormat::RGBA8,128,128,1,false);
+    auto  pso = device.pipeline(device.shader("shader/image_store_test.comp.sprv"));
+
+    auto& t   = textureCast<const Texture2d&>(img); (void)t;
+
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setBinding(0, img);
+      enc.setPipeline(pso);
+      enc.dispatch(img.w(),img.h(),1);
+    }
+
+    auto sync = device.fence();
+    device.submit(cmd,sync);
+    sync.wait();
+
+    //auto pm = device.readPixels(img);
+    //pm.save(outImage);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void AtomicImage(const char* outImage) {
   using namespace Tempest;
 

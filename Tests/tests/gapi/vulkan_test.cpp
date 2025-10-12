@@ -159,6 +159,12 @@ TEST(VulkanApi,ComputeImage) {
 #endif
   }
 
+TEST(VulkanApi,DISABLED_ComputeImage3dAs2d) {
+#if !defined(__OSX__)
+  GapiTestCommon::ComputeImage3dAs2d<VulkanApi>("VulkanApi_ComputeImage3dAs2d.png");
+#endif
+  }
+
 TEST(VulkanApi,AtomicImage) {
 #if !defined(__OSX__)
   GapiTestCommon::AtomicImage<VulkanApi>("VulkanApi_AtomicImage.png");
