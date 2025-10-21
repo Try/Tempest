@@ -110,20 +110,22 @@ AbstractGraphicsApi::PBuffer MetalApi::createBuffer(AbstractGraphicsApi::Device 
 
   MTL::ResourceOptions opt = 0;
   // https://developer.apple.com/library/archive/documentation/3DDrawing/Conceptual/MTLBestPracticesGuide/ResourceOptions.html#//apple_ref/doc/uid/TP40016642-CH17-SW1
+  // https://developer.apple.com/documentation/metal/choosing-a-resource-storage-mode-for-intel-and-amd-gpus?language=objc
   switch(flg) {
     case BufferHeap::Device:
       opt |= MTL::ResourceStorageModePrivate;
       break;
-    case BufferHeap::Upload:
-#ifndef __IOS__
-      if(size>PAGE_SIZE)
-        opt |= MTL::ResourceStorageModeManaged; else
+    case BufferHeap::Upload: {
+      if(dx.impl->hasUnifiedMemory()) {
+        // Shared resources are only available on systems with integrated graphics,
+        // such as Apple silicon and integrated GPUs on Intel-based Mac computers
         opt |= MTL::ResourceStorageModeShared;
-#else
-      opt |= MTL::ResourceStorageModeShared;
-#endif
+        } else {
+        opt |= MTL::ResourceStorageModeManaged;
+        }
       opt |= MTL::ResourceCPUCacheModeWriteCombined;
       break;
+      }
     case BufferHeap::Readback:
       opt |= MTL::ResourceStorageModeManaged;
       opt |= MTL::ResourceCPUCacheModeDefaultCache;
