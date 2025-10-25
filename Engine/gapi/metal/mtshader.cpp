@@ -43,6 +43,11 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize)
       optMSL.runtime_array_rich_descriptor = true;
       }
 
+    if(dev.mslVersion>=MTL::LanguageVersion2_0) {
+      // can relay on threadgroup_barrier(mem_flags::mem_texture) instead
+      optMSL.readwrite_texture_fences = false;
+      }
+
     if(!dev.useNativeImageAtomic()) {
       const uint32_t align = dev.linearImageAlignment();
       optMSL.r32ui_linear_texture_alignment = align;
