@@ -46,7 +46,7 @@ static D3D12_RENDER_PASS_ENDING_ACCESS_TYPE mkStoreOp(const AccessOp op) {
   return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS;
   }
 
-static void toStage(DxDevice& dev, D3D12_BARRIER_SYNC& stage, D3D12_BARRIER_ACCESS& access, ResourceAccess rs, bool isSrc, bool isTex) {
+static void toStage(DxDevice& dev, D3D12_BARRIER_SYNC& stage, D3D12_BARRIER_ACCESS& access, const ResourceAccess rs, bool isSrc, bool isTex) {
   uint32_t ret = 0;
   uint32_t acc = 0;
   if((rs&ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc) {

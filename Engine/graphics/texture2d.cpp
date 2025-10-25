@@ -6,11 +6,11 @@
 using namespace Tempest;
 
 Texture2d::Texture2d(Device&, AbstractGraphicsApi::PTexture&& impl, uint32_t w, uint32_t h, uint32_t d, TextureFormat frm)
-    :impl(std::move(impl)),texW(int(w)),texH(int(h)),texD(int(d)),frm(frm) {
+    :impl(std::move(impl)),frm(frm),texW(int(w)),texH(int(h)),texD(int(d)) {
   }
 
 Texture2d::Texture2d(Texture2d&& other)
-    :impl(std::move(other.impl)), texW(other.texW), texH(other.texH), texD(other.texD), frm(other.frm) {
+    :impl(std::move(other.impl)), frm(other.frm), texW(other.texW), texH(other.texH), texD(other.texD) {
   other.texW = 0;
   other.texH = 0;
   other.texD = 0;
