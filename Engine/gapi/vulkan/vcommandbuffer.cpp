@@ -226,7 +226,7 @@ void VCommandBuffer::reset() {
   pushDescriptors.reset();
   }
 
-void VCommandBuffer::begin(bool tranfer) {
+void VCommandBuffer::begin(SyncHint hint) {
   state  = Idle;
   curVbo = VK_NULL_HANDLE;
   pushData.size  = 0;
@@ -234,7 +234,7 @@ void VCommandBuffer::begin(bool tranfer) {
   if(chunks.size()>0)
     reset();
 
-  if(tranfer)
+  if(hint==Detail::SyncHint::NoPendingReads)
     resState.clearReaders();
 
   if(impl==nullptr) {
@@ -249,7 +249,7 @@ void VCommandBuffer::begin(bool tranfer) {
   }
 
 void VCommandBuffer::begin() {
-  begin(false);
+  begin(SyncHint::None);
   }
 
 void VCommandBuffer::end() {
@@ -974,6 +974,7 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
       toStage(device, srcStageMask, srcAccessMask, b.prev, true);
       toStage(device, dstStageMask, dstAccessMask, b.next, false);
 
+      //TODO: memory barrier per src-stage for better overlap
       memBarrier.sType          = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2_KHR;
       memBarrier.srcStageMask  |= srcStageMask;
       memBarrier.srcAccessMask |= srcAccessMask;
@@ -993,7 +994,8 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
 
       toStage(device, bx.srcStageMask, bx.srcAccessMask, b.prev, true);
       toStage(device, bx.dstStageMask, bx.dstAccessMask, b.next, false);
-      } else {
+      }
+    else {
       auto& bx = imgBarrier[imgCount];
       ++imgCount;
 

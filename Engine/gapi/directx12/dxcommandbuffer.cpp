@@ -308,10 +308,10 @@ DxCommandBuffer::~DxCommandBuffer() {
     }
   }
 
-void DxCommandBuffer::begin(bool transfer) {
+void DxCommandBuffer::begin(SyncHint hint) {
   reset();
   state = Idle;
-  if(transfer)
+  if(hint==SyncHint::NoPendingReads)
     resState.clearReaders();
 
   if(impl.get()==nullptr) {
@@ -320,7 +320,7 @@ void DxCommandBuffer::begin(bool transfer) {
   }
 
 void DxCommandBuffer::begin() {
-  begin(false);
+  begin(SyncHint::None);
   }
 
 void DxCommandBuffer::end() {

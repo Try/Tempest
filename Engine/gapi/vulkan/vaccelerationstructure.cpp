@@ -111,8 +111,8 @@ VAccelerationStructure::VAccelerationStructure(VDevice& dx, const AbstractGraphi
   DSharedPtr<AbstractGraphicsApi::AccelerationStructure*> pThis(this);
 
   auto& mgr = dx.dataMgr();
-  auto  cmd = dx.dataMgr().get();
-  cmd->begin(true);
+  auto  cmd = mgr.get();
+  cmd->begin(SyncHint::NoPendingReads);
   for(size_t i=0; i<size; ++i) {
     DSharedPtr<const AbstractGraphicsApi::Buffer*> vbo(geom[i].vbo);
     DSharedPtr<const AbstractGraphicsApi::Buffer*> ibo(geom[i].ibo);
@@ -227,14 +227,13 @@ VTopAccelerationStructure::VTopAccelerationStructure(VDevice& dx, const RtInstan
   DSharedPtr<AbstractGraphicsApi::AccelerationStructure*> pThis(this);
 
   auto cmd = dx.dataMgr().get();
-  cmd->begin();
+  cmd->begin(SyncHint::NoPendingReads);
   cmd->hold(pScratch);
   cmd->hold(pBuf);
   cmd->hold(pThis);
   cmd->buildTlas(impl,data,*pBuf.handler,uint32_t(asSize),*pScratch.handler);
   cmd->end();
 
-  // dx.dataMgr().waitFor(this);
   dx.dataMgr().submit(std::move(cmd));
   }
 

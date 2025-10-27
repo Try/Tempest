@@ -92,7 +92,7 @@ void AbstractGraphicsApi::CommandBuffer::barrier(const Buffer& buf, ResourceAcce
   barrier(&b,1);
   }
 
-void AbstractGraphicsApi::CommandBuffer::begin(bool tranfer) {
+void AbstractGraphicsApi::CommandBuffer::begin(Detail::SyncHint) {
   begin();
   }
 

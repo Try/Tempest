@@ -453,7 +453,6 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
     }
   cmd->end();
 
-  dx.dataMgr().waitFor(&tx);
   dx.dataMgr().submitAndWait(std::move(cmd));
 
   out = Pixmap(w,h,frm);

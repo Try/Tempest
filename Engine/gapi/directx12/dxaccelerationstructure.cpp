@@ -78,7 +78,7 @@ DxAccelerationStructure::DxAccelerationStructure(DxDevice& dx, const AbstractGra
 
   auto& mgr = dx.dataMgr();
   auto  cmd = dx.dataMgr().get();
-  cmd->begin(true);
+  cmd->begin(SyncHint::NoPendingReads);
   for(size_t i=0; i<size; ++i) {
     DSharedPtr<const AbstractGraphicsApi::Buffer*> vbo(geom[i].vbo);
     DSharedPtr<const AbstractGraphicsApi::Buffer*> ibo(geom[i].ibo);
@@ -144,8 +144,8 @@ DxTopAccelerationStructure::DxTopAccelerationStructure(DxDevice& dx, const RtIns
   DSharedPtr<AbstractGraphicsApi::Buffer*> pScratch(new DxBuffer(std::move(scratch)));
 
   auto& mgr = dx.dataMgr();
-  auto  cmd = dx.dataMgr().get();
-  cmd->begin(true);
+  auto  cmd = mgr.get();
+  cmd->begin(SyncHint::NoPendingReads);
   cmd->hold(pScratch);
   cmd->hold(pBuf);
   cmd->hold(pThis);

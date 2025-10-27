@@ -325,7 +325,6 @@ class DxDevice : public AbstractGraphicsApi::Device {
 
     using DataMgr = UploadEngine<DxDevice,DxCommandBuffer,DxFence,DxBuffer>;
 
-    void         waitData();
     void         waitIdle() override;
 
     static void  getProp(IDXGIAdapter1& adapter, ID3D12Device& dev, DxProps& prop);

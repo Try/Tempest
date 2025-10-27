@@ -338,10 +338,6 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, DxProps& pro
     }
   }
 
-void DxDevice::waitData() {
-  data->wait();
-  }
-
 void DxDevice::waitIdle() {
   std::lock_guard<SpinLock> guard(syncCmdQueue);
   dxAssert(cmdQueue->Signal(idleFence.get(),DxFence::Ready), *this);

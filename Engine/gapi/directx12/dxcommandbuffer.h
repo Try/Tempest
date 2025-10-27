@@ -38,7 +38,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     using AbstractGraphicsApi::CommandBuffer::barrier;
 
-    void begin(bool transfer) override;
+    void begin(SyncHint hint) override;
     void begin() override;
     void end()   override;
     void reset() override;

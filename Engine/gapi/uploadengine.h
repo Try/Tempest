@@ -90,15 +90,14 @@ class UploadEngine final {
     std::unique_ptr<Commands> get();
     void                      submit(std::unique_ptr<Commands>&& cmd);
     void                      submitAndWait(std::unique_ptr<Commands>&& cmd);
-    void                      wait();
-    void                      waitFor(const AbstractGraphicsApi::Shared* s);
 
     Buffer                    allocStagingMemory(const void* data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap heap);
     Buffer                    allocStagingMemory(const void* data, size_t size, MemUsage usage, BufferHeap heap);
 
   private:
-    Device&                   device;
+    void                      wait();
 
+    Device&                   device;
     SpinLock                  sync;
     std::vector<std::unique_ptr<Commands>> cmd;
     bool                      hasWaits {false};
@@ -135,17 +134,6 @@ void UploadEngine<Device,CommandBuffer,Fence,Buffer>::wait() {
   for(auto& i:cmd)
     i->wait();
   hasWaits = false;
-  }
-
-template<class Device, class CommandBuffer, class Fence, class Buffer>
-void UploadEngine<Device,CommandBuffer,Fence,Buffer>::waitFor(const AbstractGraphicsApi::Shared* s) {
-  std::lock_guard<SpinLock> guard(sync);
-  if(!hasWaits)
-    return;
-  bool waitAll = true;
-  for(auto& i:cmd)
-    waitAll &= i->waitFor(s);
-  hasWaits = !waitAll;
   }
 
 template<class Device, class CommandBuffer, class Fence, class Buffer>

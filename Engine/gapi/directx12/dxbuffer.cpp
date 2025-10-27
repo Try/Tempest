@@ -40,7 +40,6 @@ void DxBuffer::update(const void* data, size_t off, size_t size) {
   ret.GetHeapProperties(&prop,nullptr);
 
   if(prop.Type==D3D12_HEAP_TYPE_UPLOAD || prop.Type==D3D12_HEAP_TYPE_CUSTOM) {
-    dx.dataMgr().waitFor(this); // write-after-write case
     updateByMapped(*this,data,off,size);
     return;
     }
@@ -58,7 +57,6 @@ void DxBuffer::fill(uint32_t data, size_t off, size_t size) {
   ret.GetHeapProperties(&prop,nullptr);
 
   if(prop.Type==D3D12_HEAP_TYPE_UPLOAD || prop.Type==D3D12_HEAP_TYPE_CUSTOM) {
-    dx.dataMgr().waitFor(this); // write-after-write case
     fillByMapped(*this,data,off,size);
     return;
     }
@@ -76,17 +74,15 @@ void DxBuffer::read(void* data, size_t off, size_t size) {
   ret.GetHeapProperties(&prop,nullptr);
 
   if(prop.Type==D3D12_HEAP_TYPE_READBACK || prop.Type==D3D12_HEAP_TYPE_CUSTOM) {
-    dx.dataMgr().waitFor(this); // write-after-write case
     readFromMapped(*this,data,off,size);
     return;
     }
 
   auto stage = dx.dataMgr().allocStagingMemory(nullptr, size, MemUsage::Transfer, BufferHeap::Readback);
   auto cmd = dx.dataMgr().get();
-  cmd->begin();
+  cmd->begin(SyncHint::NoPendingReads);
   cmd->copy(stage,0, *this,off,size);
   cmd->end();
-  dx.dataMgr().waitFor(this);
   dx.dataMgr().submitAndWait(std::move(cmd));
   readFromMapped(stage,data,0,size);
   }
@@ -129,14 +125,13 @@ void DxBuffer::updateByStaging(DxBuffer* stage, const void* data, size_t offDst,
   Detail::DSharedPtr<Buffer*> pstage(stage);
 
   auto cmd = dx.dataMgr().get();
-  cmd->begin();
+  cmd->begin(SyncHint::NoPendingReads);
   cmd->hold(pbuf); // NOTE: DxBuffer may be deleted, before copy is finished
   cmd->hold(pstage);
   cmd->copy(*this, offDst, *stage, offSrc, size);
   cmd->end();
 
   updateByMapped(*stage,data,offSrc,size);
-  dx.dataMgr().waitFor(this); // write-after-write case
   dx.dataMgr().submit(std::move(cmd));
   }
 
@@ -156,14 +151,13 @@ void DxBuffer::fillByStaging(DxBuffer* stage, uint32_t data, size_t offDst, size
   Detail::DSharedPtr<Buffer*> pstage(stage);
 
   auto cmd = dx.dataMgr().get();
-  cmd->begin();
+  cmd->begin(SyncHint::NoPendingReads);
   cmd->hold(pbuf); // NOTE: DxBuffer may be deleted, before copy is finished
   cmd->hold(pstage);
   cmd->copy(*this, offDst, *stage, offSrc, size);
   cmd->end();
 
   fillByMapped(*stage,data,offSrc,size);
-  dx.dataMgr().waitFor(this); // write-after-write case
   dx.dataMgr().submit(std::move(cmd));
   }
 
@@ -180,10 +174,9 @@ void DxBuffer::readFromStaging(DxBuffer& stage, void* data, size_t off, size_t s
   auto& dx = *dev;
 
   auto cmd = dx.dataMgr().get();
-  cmd->begin();
+  cmd->begin(SyncHint::NoPendingReads);
   cmd->copy(stage,off, *this,off,size);
   cmd->end();
-  dx.dataMgr().waitFor(this);
   dx.dataMgr().submitAndWait(std::move(cmd));
 
   readFromMapped(stage,data,off,size);
