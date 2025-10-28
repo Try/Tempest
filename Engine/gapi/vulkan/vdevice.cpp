@@ -591,7 +591,7 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
 
   props.ibo.maxValue      = size_t(devP.limits.maxDrawIndexedIndexValue);
 
-  props.ssbo.offsetAlign  = size_t(devP.limits.minUniformBufferOffsetAlignment);
+  props.ssbo.offsetAlign  = size_t(devP.limits.minStorageBufferOffsetAlignment);
   props.ssbo.maxRange     = size_t(devP.limits.maxStorageBufferRange);
 
   props.ubo.offsetAlign   = size_t(devP.limits.minUniformBufferOffsetAlignment);
