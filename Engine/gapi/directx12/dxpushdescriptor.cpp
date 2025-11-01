@@ -218,21 +218,18 @@ void DxPushDescriptor::write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, D3D
       }
     case ShaderReflection::Ubo: {
       auto* buf  = reinterpret_cast<DxBuffer*>(data);
-      UINT  size = buf->appSize;
+      UINT  size = buf->appSize-offset;
 
       D3D12_CONSTANT_BUFFER_VIEW_DESC desc = {};
       desc.BufferLocation = buf->impl->GetGPUVirtualAddress() + offset;
-      desc.SizeInBytes    = UINT(size);
-      if(desc.SizeInBytes==0)
-        desc.SizeInBytes = UINT(buf->sizeInBytes - offset);
-      desc.SizeInBytes = ((desc.SizeInBytes+255)/256)*256; // CB size is required to be 256-byte aligned.
+      desc.SizeInBytes    = UINT((size+255)/256)*256; // CB size is required to be 256-byte aligned.
 
       device.CreateConstantBufferView(&desc, res);
       break;
       }
     case ShaderReflection::SsboR: {
       auto* buf  = reinterpret_cast<DxBuffer*>(data);
-      UINT  size = buf!=nullptr ? buf->appSize : 0;
+      UINT  size = buf!=nullptr ? (buf->appSize-offset) : 0;
 
       D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
       desc.Format                  = DXGI_FORMAT_R32_TYPELESS;
@@ -241,8 +238,6 @@ void DxPushDescriptor::write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, D3D
       desc.Buffer.FirstElement     = UINT(offset/4);
       desc.Buffer.NumElements      = UINT((size+3)/4); // SRV size is required to be 4-byte aligned.
       desc.Buffer.Flags            = D3D12_BUFFER_SRV_FLAG_RAW;
-      if(desc.Buffer.NumElements==0 && buf!=nullptr)
-        desc.Buffer.NumElements = UINT(buf->appSize-offset+3)/4;
 
       if(buf!=nullptr)
         device.CreateShaderResourceView(buf->impl.get(), &desc, res); else
@@ -251,7 +246,7 @@ void DxPushDescriptor::write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, D3D
       }
     case ShaderReflection::SsboRW: {
       auto* buf  = reinterpret_cast<DxBuffer*>(data);
-      UINT  size = buf!=nullptr ? buf->appSize : 0;
+      UINT  size = buf!=nullptr ? (buf->appSize-offset) : 0;
 
       D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
       desc.Format              = DXGI_FORMAT_R32_TYPELESS;
@@ -259,8 +254,6 @@ void DxPushDescriptor::write(DxDevice& dev, D3D12_CPU_DESCRIPTOR_HANDLE res, D3D
       desc.Buffer.FirstElement = UINT(offset/4);
       desc.Buffer.NumElements  = UINT((size+3)/4); // UAV size is required to be 4-byte aligned.
       desc.Buffer.Flags        = D3D12_BUFFER_UAV_FLAG_RAW;
-      if(desc.Buffer.NumElements==0 && buf!=nullptr)
-        desc.Buffer.NumElements = UINT(buf->appSize-offset+3)/4;
 
       if(buf!=nullptr)
         device.CreateUnorderedAccessView(buf->impl.get(), nullptr, &desc, res); else
