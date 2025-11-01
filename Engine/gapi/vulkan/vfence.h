@@ -8,6 +8,14 @@ namespace Detail {
 
 class VDevice;
 
+struct VTimepoint {
+  VTimepoint(VkFence f, uint32_t id):fence(f), id(id) {}
+
+  VkFence  fence  = VK_NULL_HANDLE;
+  uint32_t id     = 0;
+  VkResult status = VK_SUCCESS;
+  };
+
 class VFence : public AbstractGraphicsApi::Fence {
   public:
     VFence(VDevice& dev);
@@ -15,12 +23,10 @@ class VFence : public AbstractGraphicsApi::Fence {
 
     void wait() override;
     bool wait(uint64_t time) override;
-    void reset() override;
+    void reset();
 
-    VkFence impl=VK_NULL_HANDLE;
-
-  private:
-    VkDevice device=nullptr;
+    std::weak_ptr<VTimepoint> timepoint;
+    VDevice*                  device = nullptr;
   };
 
 }}

@@ -52,18 +52,9 @@ class TransferCmd : public CmdBuffer {
       holdRes.clear();
       return true;
       }
-    void wait()           {
+    void wait() {
       fence.wait();
       holdRes.clear();
-      }
-
-    bool waitFor(const AbstractGraphicsApi::Shared* s) {
-      for(auto& i:holdRes)
-        if(i.handler==s) {
-          wait();
-          return true;
-          }
-      return false;
       }
 
     void reset() {

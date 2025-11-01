@@ -362,6 +362,12 @@ class VDevice : public AbstractGraphicsApi::Device {
       bool     hostVisible = false;
       };
 
+    static const uint32_t MaxFences = 32;
+    struct Timeline{
+      std::mutex                  sync;
+      std::shared_ptr<VTimepoint> timepoint[MaxFences];
+      };
+
     void                    waitIdle() override;
     void                    submit(VCommandBuffer& cmd, VFence* sync);
 
@@ -382,6 +388,11 @@ class VDevice : public AbstractGraphicsApi::Device {
     uint32_t                roundUpDescriptorCount(ShaderReflection::Class cls, size_t cnt);
     VkDescriptorSetLayout   bindlessArrayLayout(ShaderReflection::Class cls, size_t cnt);
 
+    std::shared_ptr<VTimepoint> findAvailableFence();
+    void                        waitAny(uint64_t timeout);
+    std::shared_ptr<VTimepoint> aquireFence();
+    VkResult                    waitFence(VTimepoint& t, uint64_t time);
+
     VkInstance              instance           = nullptr;
     VkPhysicalDevice        physicalDevice     = nullptr;
     const bool              hasDeviceFeatures2 = false;
@@ -390,6 +401,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     Queue                   queues[3];
     Queue*                  graphicsQueue = nullptr;
     Queue*                  presentQueue  = nullptr;
+    Timeline                timeline;
 
     std::mutex              allocSync;
     VAllocator              allocator;

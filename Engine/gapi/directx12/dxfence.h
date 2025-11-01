@@ -20,7 +20,7 @@ class DxFence : public AbstractGraphicsApi::Fence {
 
     void wait() override;
     bool wait(uint64_t timeout) override;
-    void reset() override;
+    void reset();
 
     bool waitValue(UINT64 val, DWORD timeout = INFINITE);
 

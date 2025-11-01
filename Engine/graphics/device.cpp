@@ -357,7 +357,7 @@ void Device::readBytes(const StorageBuffer& ssbo, void* out, size_t size) {
   }
 
 Fence Device::fence() {
-  Fence f(*this,api.createFence(dev));
+  Fence f(api.createFence(dev));
   return f;
   }
 

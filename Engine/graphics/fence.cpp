@@ -3,8 +3,8 @@
 
 using namespace Tempest;
 
-Fence::Fence(Device& dev, AbstractGraphicsApi::Fence *impl)
-  :dev(&dev),impl(impl) {
+Fence::Fence(AbstractGraphicsApi::Fence *impl)
+  :impl(impl) {
   }
 
 Fence::~Fence() {
@@ -17,8 +17,4 @@ void Fence::wait() {
 
 bool Fence::wait(uint64_t time) {
   return impl.handler->wait(time);
-  }
-
-void Fence::reset() {
-  impl.handler->reset();
   }

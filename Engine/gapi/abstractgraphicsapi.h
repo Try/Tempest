@@ -517,7 +517,7 @@ namespace Tempest {
         virtual ~Fence()=default;
         virtual void wait() = 0;
         virtual bool wait(uint64_t time) = 0;
-        virtual void reset() = 0;
+        //virtual void reset() = 0;
         };
       struct Swapchain:NoCopy {
         virtual ~Swapchain()=default;

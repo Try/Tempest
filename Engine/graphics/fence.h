@@ -16,12 +16,10 @@ class Fence final {
 
     void wait();
     bool wait(uint64_t time);
-    void reset();
 
   private:
-    Fence(Tempest::Device& dev,AbstractGraphicsApi::Fence* f);
+    Fence(AbstractGraphicsApi::Fence* f);
 
-    Tempest::Device*                          dev=nullptr;
     Detail::DPtr<AbstractGraphicsApi::Fence*> impl;
 
   friend class Tempest::Device;
