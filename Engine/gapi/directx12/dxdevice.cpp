@@ -371,7 +371,7 @@ std::shared_ptr<DxTimepoint> DxDevice::findAvailableFence() {
   return nullptr;
   }
 
-void DxDevice::waitAny(uint64_t timeout) {
+void DxDevice::waitAny() {
   HANDLE   fences[MaxFences] = {};
   uint32_t num = 0;
 
@@ -382,9 +382,7 @@ void DxDevice::waitAny(uint64_t timeout) {
     ++num;
     }
 
-  if(timeout>INFINITE)
-    timeout = INFINITE;
-  DWORD ret = WaitForMultipleObjectsEx(num, fences, FALSE, DWORD(timeout), FALSE);
+  DWORD ret = WaitForMultipleObjectsEx(num, fences, FALSE, INFINITE, FALSE);
   if(ret==WAIT_TIMEOUT)
     return;
   if(WAIT_OBJECT_0<=ret && ret<WAIT_OBJECT_0+num)
@@ -411,7 +409,7 @@ std::shared_ptr<DxTimepoint> DxDevice::aquireFence() {
     }
 
   //pool is full - wait on one of the fences and reuse it
-  waitAny(std::numeric_limits<uint64_t>::max());
+  waitAny();
   return findAvailableFence();
   }
 

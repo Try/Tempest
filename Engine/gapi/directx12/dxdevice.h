@@ -334,7 +334,7 @@ class DxDevice : public AbstractGraphicsApi::Device {
     void         waitIdle() override;
 
     std::shared_ptr<DxTimepoint> findAvailableFence();
-    void                         waitAny(uint64_t timeout);
+    void                         waitAny();
     std::shared_ptr<DxTimepoint> aquireFence();
     HRESULT                      waitFence(DxTimepoint& t, uint64_t time);
 
