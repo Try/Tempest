@@ -10,7 +10,6 @@
 #include "vulkan/vfence.h"
 #include "vulkan/vcommandbuffer.h"
 #include "vulkan/vdescriptorarray.h"
-#include "vulkan/vpipelinelay.h"
 #include "vulkan/vtexture.h"
 #include "vulkan/vaccelerationstructure.h"
 
@@ -261,7 +260,7 @@ AbstractGraphicsApi::Swapchain *VulkanApi::createSwapchain(SystemApi::Window *w,
 
 AbstractGraphicsApi::PPipelineLay VulkanApi::createPipelineLayout(Device*, const Shader*const*, size_t) {
   //TODO: remove pipeline layouts
-  return PPipelineLay(new Detail::VPipelineLay());
+  return PPipelineLay(new AbstractGraphicsApi::PipelineLay());
   }
 
 AbstractGraphicsApi::PPipeline VulkanApi::createPipeline(AbstractGraphicsApi::Device *d,

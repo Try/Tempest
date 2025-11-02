@@ -25,7 +25,6 @@
 namespace Tempest {
 namespace Detail {
 
-class VFence;
 class VTexture;
 
 inline void vkAssert(VkResult code){
