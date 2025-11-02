@@ -50,6 +50,7 @@ class Device {
 
     void                  waitIdle();
 
+    [[nodiscard]]
     Fence                 submit(const CommandBuffer& cmd);
     void                  submit(const CommandBuffer& cmd, Fence& fdone);
     void                  present(Swapchain& sw);

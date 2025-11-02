@@ -11,7 +11,7 @@ void VTimepoint::wait() {
 
 bool VTimepoint::wait(uint64_t time) {
   VkResult res = device->waitFence(*this, time);
-  if(res==VK_TIMEOUT || res==VK_NOT_READY)
+  if(res==VK_NOT_READY)
     return false;
   vkAssert(res);
   return true;
@@ -32,7 +32,7 @@ void VFence::wait() {
 bool VFence::wait(uint64_t time) {
   if(auto t = timepoint.lock()) {
     VkResult res = device->waitFence(*t, time);
-    if(res==VK_TIMEOUT || res==VK_NOT_READY)
+    if(res==VK_NOT_READY)
       return false;
     vkAssert(res);
     return true;

@@ -903,7 +903,7 @@ void VDevice::waitAny(uint64_t timeout) {
   uint32_t num = 0;
 
   for(auto& i:timeline.timepoint) {
-    if(i==nullptr)
+    if(i==nullptr || i->status==VK_SUCCESS)
       continue;
     fences[num] = i->fence;
     ++num;
@@ -968,7 +968,7 @@ VkResult VDevice::waitFence(VTimepoint& t, uint64_t timeout) {
       t.status = vkGetFenceStatus(device.impl, t.fence);
       if(t.status<=0 && t.status!=VK_NOT_READY)
         return t.status;
-      return VK_TIMEOUT;
+      return VK_NOT_READY;
       }
   }
 
@@ -991,7 +991,7 @@ VkResult VDevice::waitFence(VTimepoint& t, uint64_t timeout) {
 
     auto now = Application::tickCount();
     if(now-start > timeout)
-      return VK_TIMEOUT;
+      return VK_NOT_READY;
     timeout -= (now-start);
     }
   }
