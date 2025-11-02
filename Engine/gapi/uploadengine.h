@@ -26,7 +26,7 @@ class TransferCmd : public CmdBuffer {
     using ResPtr  = Detail::DSharedPtr<const AbstractGraphicsApi::Shared*>;
 
     template<class Device>
-    TransferCmd(Device& dev):CmdBuffer(dev), fence(dev) {
+    TransferCmd(Device& dev):CmdBuffer(dev) {
       holdRes.reserve(4);
       }
 

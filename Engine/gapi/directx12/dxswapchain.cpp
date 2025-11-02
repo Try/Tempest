@@ -8,8 +8,11 @@ using namespace Tempest;
 using namespace Tempest::Detail;
 
 DxSwapchain::DxSwapchain(DxDevice& dev, IDXGIFactory4& dxgi, SystemApi::Window* hwnd)
-  :dev(dev), fence(dev) {
+  :dev(dev) {
   auto& device = *dev.device;
+
+  dxAssert(device.CreateFence(0, D3D12_FENCE_FLAG_NONE, uuid<ID3D12Fence>(), reinterpret_cast<void**>(&fence)));
+  idleEvent = DxEvent(false);
 
   auto rect = SystemApi::windowClientRect(hwnd);
   imgW = uint32_t(rect.w);
@@ -55,7 +58,14 @@ DxSwapchain::~DxSwapchain() {
   }
 
 void DxSwapchain::reset() {
-  fence.waitValue(frameCounter); //wait for all pending frame to be finizhed
+  //wait for all pending frame to be finizhed
+  if(frameCounter>0) {
+    std::lock_guard<SpinLock> guard(dev.syncCmdQueue);
+    dxAssert(dev.cmdQueue->Signal(fence.get(), frameCounter), dev);
+    dxAssert(fence->SetEventOnCompletion(frameCounter, idleEvent.hevt), dev);
+    dxAssert(WaitForSingleObjectEx(idleEvent.hevt, INFINITE, FALSE), dev);
+    ResetEvent(idleEvent.hevt);
+    }
 
   for(uint32_t i=0; i<imgCount; ++i) {
     views[i] = nullptr;
@@ -80,7 +90,7 @@ void DxSwapchain::queuePresent() {
   dxAssert(impl->Present(vsunc, 0));
 
   ++frameCounter;
-  dev.cmdQueue->Signal(fence.impl.get(), frameCounter);
+  dev.cmdQueue->Signal(fence.get(), frameCounter);
   }
 
 void DxSwapchain::initImages() {

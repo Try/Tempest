@@ -286,9 +286,8 @@ AbstractGraphicsApi::PShader VulkanApi::createShader(AbstractGraphicsApi::Device
   return PShader(new Detail::VShader(*dx,source,src_size));
   }
 
-AbstractGraphicsApi::Fence *VulkanApi::createFence(AbstractGraphicsApi::Device *d) {
-  Detail::VDevice* dx =reinterpret_cast<Detail::VDevice*>(d);
-  return new Detail::VFence(*dx);
+AbstractGraphicsApi::Fence *VulkanApi::createFence(AbstractGraphicsApi::Device*) {
+  return new Detail::VFence();
   }
 
 AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device *d, const void *mem, size_t size,

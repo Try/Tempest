@@ -363,7 +363,7 @@ class VDevice : public AbstractGraphicsApi::Device {
       };
 
     static const uint32_t MaxFences = 32;
-    struct Timeline{
+    struct Timeline final {
       std::mutex                  sync;
       std::shared_ptr<VTimepoint> timepoint[MaxFences];
       };
@@ -391,7 +391,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     std::shared_ptr<VTimepoint> findAvailableFence();
     void                        waitAny(uint64_t timeout);
     std::shared_ptr<VTimepoint> aquireFence();
-    VkResult                    waitFence(VTimepoint& t, uint64_t time);
+    VkResult                    waitFence(VTimepoint& t, uint64_t timeout);
 
     VkInstance              instance           = nullptr;
     VkPhysicalDevice        physicalDevice     = nullptr;

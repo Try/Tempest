@@ -959,12 +959,12 @@ std::shared_ptr<VTimepoint> VDevice::aquireFence() {
   return findAvailableFence();
   }
 
-VkResult VDevice::waitFence(VTimepoint& t, uint64_t time) {
+VkResult VDevice::waitFence(VTimepoint& t, uint64_t timeout) {
   {
     std::lock_guard<std::mutex> guard(timeline.sync);
     if(t.fence==VK_NULL_HANDLE || t.status==VK_SUCCESS)
       return VK_SUCCESS;
-    if(time==0) {
+    if(timeout==0) {
       t.status = vkGetFenceStatus(device.impl, t.fence);
       if(t.status<=0 && t.status!=VK_NOT_READY)
         return t.status;
@@ -976,8 +976,8 @@ VkResult VDevice::waitFence(VTimepoint& t, uint64_t time) {
   while(true) {
     static const uint64_t toNano = uint64_t(1000*1000);
     uint64_t vkTime = 0;
-    if(time < std::numeric_limits<uint64_t>::max()/toNano) {
-      vkTime = time*toNano; // millis to nano convertion
+    if(timeout < std::numeric_limits<uint64_t>::max()/toNano) {
+      vkTime = timeout*toNano; // millis to nano convertion
       } else {
       vkTime = std::numeric_limits<uint64_t>::max();
       }
@@ -990,9 +990,9 @@ VkResult VDevice::waitFence(VTimepoint& t, uint64_t time) {
       return t.status;
 
     auto now = Application::tickCount();
-    if(now-start > time)
+    if(now-start > timeout)
       return VK_TIMEOUT;
-    time -= (now-start);
+    timeout -= (now-start);
     }
   }
 

@@ -5,8 +5,8 @@
 #include <dxgi1_6.h>
 #include <d3d12.h>
 
-#include "dxfence.h"
 #include "gapi/directx12/dxdescriptorallocator.h"
+#include "gapi/directx12/dxevent.h"
 #include "gapi/directx12/comptr.h"
 
 namespace Tempest {
@@ -43,7 +43,8 @@ class DxSwapchain : public AbstractGraphicsApi::Swapchain {
     void               initImages();
 
     DxDevice&               dev;
-    DxFence                 fence;
+    ComPtr<ID3D12Fence>     fence;
+    DxEvent                 idleEvent;
     ComPtr<IDXGISwapChain1> swapChain;
 
     uint32_t                currImg      = 0;

@@ -320,12 +320,23 @@ class DxDevice : public AbstractGraphicsApi::Device {
       bool enhancedBarriers = false;
       };
 
+    static const uint32_t MaxFences = 32;
+    struct Timeline final {
+      std::mutex                   sync;
+      std::shared_ptr<DxTimepoint> timepoint[MaxFences];
+      };
+
     DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi);
     ~DxDevice() override;
 
     using DataMgr = UploadEngine<DxDevice,DxCommandBuffer,DxFence,DxBuffer>;
 
     void         waitIdle() override;
+
+    std::shared_ptr<DxTimepoint> findAvailableFence();
+    void                         waitAny(uint64_t timeout);
+    std::shared_ptr<DxTimepoint> aquireFence();
+    HRESULT                      waitFence(DxTimepoint& t, uint64_t time);
 
     static void  getProp(IDXGIAdapter1& adapter, ID3D12Device& dev, DxProps& prop);
     static void  getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, DxProps& prop);
@@ -339,6 +350,9 @@ class DxDevice : public AbstractGraphicsApi::Device {
     ComPtr<ID3D12Device>        device;
     SpinLock                    syncCmdQueue;
     ComPtr<ID3D12CommandQueue>  cmdQueue;
+    ComPtr<ID3D12Fence>         cmdFence;
+    Timeline                    timeline;
+    uint64_t                    cmdProgress = 0;
 
     ComPtr<ID3D12CommandSignature> drawIndirectSgn;
     ComPtr<ID3D12CommandSignature> drawMeshIndirectSgn;
@@ -362,7 +376,6 @@ class DxDevice : public AbstractGraphicsApi::Device {
                                   LPCSTR pDescription,
                                   void* pContext);
 
-    ComPtr<ID3D12Fence>         idleFence;
     HANDLE                      idleEvent=nullptr;
 
     std::unique_ptr<DataMgr>    data;

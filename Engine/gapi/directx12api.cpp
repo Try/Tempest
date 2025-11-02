@@ -185,9 +185,8 @@ AbstractGraphicsApi::PShader DirectX12Api::createShader(AbstractGraphicsApi::Dev
   return PShader(new Detail::DxShader(source,src_size));
   }
 
-AbstractGraphicsApi::Fence* DirectX12Api::createFence(AbstractGraphicsApi::Device* d) {
-  Detail::DxDevice* dx = reinterpret_cast<Detail::DxDevice*>(d);
-  return new DxFence(*dx);
+AbstractGraphicsApi::Fence* DirectX12Api::createFence(AbstractGraphicsApi::Device*) {
+  return new DxFence();
   }
 
 AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Device* d, const void* mem, size_t size,

@@ -8,57 +8,27 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-DxFence::DxFence(DxDevice& dev) : device(dev) {
-  dxAssert(dev.device->CreateFence(Ready, D3D12_FENCE_FLAG_NONE,
-                                   uuid<ID3D12Fence>(),
-                                   reinterpret_cast<void**>(&impl)));
-  event = CreateEvent(nullptr, TRUE, TRUE, nullptr);
-  if(event == nullptr)
-    throw std::bad_alloc();
+DxFence::DxFence() {
   }
 
 DxFence::~DxFence() {
-  if(event!=nullptr)
-    CloseHandle(event);
   }
 
 void DxFence::wait() {
-  waitValue(Ready);
+  if(auto t = timepoint.lock()) {
+    dxAssert(device->waitFence(*t, std::numeric_limits<uint64_t>::max()));
+    }
   }
 
 bool DxFence::wait(uint64_t timeout) {
-  if(timeout>INFINITE)
-    timeout = INFINITE;
-  return waitValue(Ready,DWORD(timeout));
-  }
-
-bool DxFence::waitValue(UINT64 val, DWORD timeout) {
-  UINT64 v = impl->GetCompletedValue();
-  if(val==v)
+  if(auto t = timepoint.lock()) {
+    HRESULT res = device->waitFence(*t, timeout);
+    if(res==WAIT_TIMEOUT)
+      return false;
+    dxAssert(res);
     return true;
-  if(timeout==0)
-    return false;
-  dxAssert(impl->SetEventOnCompletion(val,event));
-  DWORD ret = WaitForSingleObjectEx(event, timeout, FALSE);
-  if(ret==WAIT_OBJECT_0)
-    return true;
-  if(ret==WAIT_TIMEOUT)
-    return false;
-  dxAssert(GetLastError(), device);
-  return false;
-  }
-
-void DxFence::reset() {
-  ResetEvent(event);
-  dxAssert(impl->Signal(Waiting));
-  }
-
-void DxFence::signal(ID3D12CommandQueue& queue) {
-  signal(queue,DxFence::Ready);
-  }
-
-void DxFence::signal(ID3D12CommandQueue& queue, UINT64 val) {
-  dxAssert(queue.Signal(impl.get(),val), device);
+    }
+  return true;
   }
 
 #endif

@@ -5,7 +5,7 @@
 
 using namespace Tempest::Detail;
 
-VFence::VFence(VDevice &device) : device(&device) {
+VFence::VFence() {
   }
 
 VFence::~VFence() {
@@ -26,10 +26,6 @@ bool VFence::wait(uint64_t time) {
     return true;
     }
   return true;
-  }
-
-void VFence::reset() {  
-  //vkAssert(vkResetFences(device,1,&impl));
   }
 
 #endif

@@ -52,7 +52,9 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
       // debug markers without pix
       D3D12_MESSAGE_ID_CORRUPTED_PARAMETER2,
       // staging buffer (vulkan style)
-      D3D12_MESSAGE_ID_WRITE_COMBINE_PERFORMANCE_WARNING
+      D3D12_MESSAGE_ID_WRITE_COMBINE_PERFORMANCE_WARNING,
+      // swapchain internal warning on W11/NVdida
+      D3D12_MESSAGE_ID(1424),
       };
     D3D12_INFO_QUEUE_FILTER filter = {};
     filter.DenyList.NumSeverities = _countof(severities);
@@ -64,7 +66,7 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
 
     pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, true);
     pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
-    pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, false);
+    pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
     }
 
   ComPtr<ID3D12InfoQueue1> pInfoQueue1;
@@ -80,6 +82,9 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
     if(dredSettings.get()!=nullptr)
       dredSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
     }
+
+  dxAssert(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, uuid<ID3D12Fence>(), reinterpret_cast<void**>(&cmdFence)));
+  idleEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 
   DXGI_ADAPTER_DESC desc={};
   adapter.GetDesc(&desc);
@@ -115,11 +120,6 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
   allocator.setDevice(*this);
   descAlloc.setDevice(*this);
   dalloc.reset(new DxHeapAllocator(*this));
-
-  dxAssert(device->CreateFence(DxFence::Waiting, D3D12_FENCE_FLAG_NONE,
-                               uuid<ID3D12Fence>(),
-                               reinterpret_cast<void**>(&idleFence)));
-  idleEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 
   static bool internalShaders = true;
 
@@ -340,15 +340,98 @@ void DxDevice::getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, DxProps& pro
 
 void DxDevice::waitIdle() {
   std::lock_guard<SpinLock> guard(syncCmdQueue);
-  dxAssert(cmdQueue->Signal(idleFence.get(),DxFence::Ready), *this);
-  dxAssert(idleFence->SetEventOnCompletion(DxFence::Ready,idleEvent), *this);
-  WaitForSingleObjectEx(idleEvent, INFINITE, FALSE);
-  dxAssert(idleFence->Signal(DxFence::Waiting), *this);
+  ++cmdProgress;
+  assert(cmdProgress>0);
+  dxAssert(cmdQueue->Signal(cmdFence.get(), cmdProgress), *this);
+  dxAssert(cmdFence->SetEventOnCompletion(cmdProgress, idleEvent), *this);
+  dxAssert(WaitForSingleObjectEx(idleEvent, INFINITE, FALSE), *this);
+  }
+
+std::shared_ptr<DxTimepoint> DxDevice::findAvailableFence() {
+  const UINT64 v = cmdFence->GetCompletedValue();
+  for(int pass=0; pass<2; ++pass) {
+    for(uint32_t id=0; id<MaxFences; ++id) {
+      auto& i = timeline.timepoint[id];
+      if(i==nullptr)
+        continue;
+      if(i->signalValue>v)
+        continue;
+      if(i.use_count()>1 && pass==0)
+        continue;
+      if(i.use_count()>1) {
+        auto event = std::move(i->event);
+        //NOTE: application may still hold references to `i`
+        i->event = DxEvent();
+        i = std::make_shared<DxTimepoint>(std::move(event));
+        }
+      dxAssert(ResetEvent(i->event.hevt) ? S_OK : DXGI_ERROR_DEVICE_REMOVED);
+      return i;
+      }
+    }
+  return nullptr;
+  }
+
+void DxDevice::waitAny(uint64_t timeout) {
+  HANDLE   fences[MaxFences] = {};
+  uint32_t num = 0;
+
+  for(auto& i:timeline.timepoint) {
+    if(i==nullptr)
+      continue;
+    fences[num] = i->event.hevt;
+    ++num;
+    }
+
+  if(timeout>INFINITE)
+    timeout = INFINITE;
+  DWORD ret = WaitForMultipleObjectsEx(num, fences, FALSE, DWORD(timeout), FALSE);
+  if(ret==WAIT_TIMEOUT)
+    return;
+  if(WAIT_OBJECT_0<=ret && ret<WAIT_OBJECT_0+num)
+    return;
+  dxAssert(ret);
+  }
+
+std::shared_ptr<DxTimepoint> DxDevice::aquireFence() {
+  std::lock_guard<std::mutex> guard(timeline.sync);
+
+  // reuse signalled fences
+  auto f = findAvailableFence();
+  if(f!=nullptr)
+    return f;
+
+  // allocate one and add to the pool
+  for(uint32_t id=0; id<MaxFences; ++id) {
+    auto& i = timeline.timepoint[id];
+    if(i!=nullptr)
+      continue;
+
+    i = std::make_shared<DxTimepoint>(DxEvent(false));
+    return i;
+    }
+
+  //pool is full - wait on one of the fences and reuse it
+  waitAny(std::numeric_limits<uint64_t>::max());
+  return findAvailableFence();
+  }
+
+HRESULT DxDevice::waitFence(DxTimepoint& t, uint64_t timeout) {
+  UINT64 v = cmdFence->GetCompletedValue();
+  if(v>=t.signalValue)
+    return S_OK;
+  if(timeout==0)
+    return WAIT_TIMEOUT;
+  if(timeout>INFINITE)
+    timeout = INFINITE;
+  DWORD ret = WaitForSingleObjectEx(t.event.hevt, DWORD(timeout), FALSE);
+  if(ret==WAIT_OBJECT_0)
+    return S_OK;
+  if(ret==WAIT_TIMEOUT)
+    return ret;
+  return ret;
   }
 
 void DxDevice::submit(DxCommandBuffer& cmd, DxFence* sync) {
-  sync->reset();
-
   const size_t                                 size = cmd.chunks.size();
   SmallArray<ID3D12CommandList*, MaxCmdChunks> flat(size);
   auto node = cmd.chunks.begin();
@@ -358,9 +441,22 @@ void DxDevice::submit(DxCommandBuffer& cmd, DxFence* sync) {
       node = node->next;
     }
 
-  std::lock_guard<SpinLock> guard(syncCmdQueue);
+  auto pfence = aquireFence();
+
+  std::lock_guard<std::mutex> guard1(timeline.sync);
+  std::lock_guard<SpinLock>   guard2(syncCmdQueue);
+
+  ResetEvent(pfence->event.hevt);
   cmdQueue->ExecuteCommandLists(UINT(size), flat.get());
-  sync->signal(*cmdQueue);
+  ++cmdProgress;
+  dxAssert(cmdQueue->Signal(cmdFence.get(), cmdProgress));
+  dxAssert(cmdFence->SetEventOnCompletion(cmdProgress, pfence->event.hevt));
+
+  pfence->signalValue = cmdProgress;
+  if(sync!=nullptr) {
+    sync->device    = this;
+    sync->timepoint = pfence;
+    }
   }
 
 void DxDevice::debugReportCallback(

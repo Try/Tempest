@@ -2,34 +2,31 @@
 
 #include <Tempest/AbstractGraphicsApi>
 #include <d3d12.h>
-#include "comptr.h"
+#include "gapi/directx12/comptr.h"
+#include "gapi/directx12/dxevent.h"
 
 namespace Tempest {
 namespace Detail {
 
 class DxDevice;
 
+struct DxTimepoint {
+  DxTimepoint(DxEvent f):event(std::move(f)) {}
+
+  DxEvent  event;
+  uint64_t signalValue = 0;
+  };
+
 class DxFence : public AbstractGraphicsApi::Fence {
   public:
-    enum State : uint64_t {
-      Waiting = 0,
-      Ready   = 1
-      };
-    DxFence(DxDevice& dev);
+    DxFence();
     ~DxFence() override;
 
     void wait() override;
     bool wait(uint64_t timeout) override;
-    void reset();
 
-    bool waitValue(UINT64 val, DWORD timeout = INFINITE);
-
-    void signal(ID3D12CommandQueue& queue);
-    void signal(ID3D12CommandQueue& queue,UINT64 val);
-
-    ComPtr<ID3D12Fence> impl;
-    DxDevice&           device;
-    HANDLE              event=nullptr;
+    DxDevice*                  device = nullptr;
+    std::weak_ptr<DxTimepoint> timepoint;
   };
 
 }}

@@ -18,12 +18,11 @@ struct VTimepoint {
 
 class VFence : public AbstractGraphicsApi::Fence {
   public:
-    VFence(VDevice& dev);
+    VFence();
     ~VFence() override;
 
     void wait() override;
     bool wait(uint64_t time) override;
-    void reset();
 
     std::weak_ptr<VTimepoint> timepoint;
     VDevice*                  device = nullptr;
