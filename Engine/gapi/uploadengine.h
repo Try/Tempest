@@ -133,7 +133,7 @@ void UploadEngine<Device,CommandBuffer,Buffer>::wait() {
 
 template<class Device, class CommandBuffer, class Buffer>
 void UploadEngine<Device,CommandBuffer,Buffer>::submit(std::unique_ptr<Commands>&& cmd) {
-  cmd->fence = device.submit(*cmd, nullptr);
+  cmd->fence = device.submit(*cmd);
 
   std::lock_guard<SpinLock> guard(sync);
   this->cmd.push_back(std::move(cmd));
@@ -142,7 +142,7 @@ void UploadEngine<Device,CommandBuffer,Buffer>::submit(std::unique_ptr<Commands>
 
 template<class Device, class CommandBuffer, class Buffer>
 void UploadEngine<Device,CommandBuffer,Buffer>::submitAndWait(std::unique_ptr<Commands>&& cmd) {
-  auto ptr = device.submit(*cmd, nullptr);
+  auto ptr = device.submit(*cmd);
   if(ptr!=nullptr)
     ptr->wait();
   cmd->reset();

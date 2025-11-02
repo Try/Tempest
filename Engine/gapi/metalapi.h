@@ -26,8 +26,6 @@ class MetalApi : public AbstractGraphicsApi {
 
     PShader        createShader(Device *d, const void* source, size_t src_size) override;
 
-    Fence*         createFence(Device *d) override;
-
     PBuffer        createBuffer (Device* d, const void *mem, size_t size, MemUsage usage, BufferHeap flg) override;
     PTexture       createTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mips) override;
     PTexture       createTexture(Device* d, const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) override;
@@ -47,11 +45,10 @@ class MetalApi : public AbstractGraphicsApi {
 
     CommandBuffer* createCommandBuffer(Device* d) override;
 
-    void           present  (Device *d, Swapchain* sw) override;
-    void           submit   (Device *d, CommandBuffer*  cmd, Fence* doneCpu) override;
-    std::shared_ptr<AbstractGraphicsApi::Fence> submit(Device *d, CommandBuffer* cmd) override;
+    void           present(Device *d, Swapchain* sw) override;
+    auto           submit (Device *d, CommandBuffer* cmd) -> std::shared_ptr<AbstractGraphicsApi::Fence> override;
 
-    void           getCaps  (Device *d, Props& caps) override;
+    void           getCaps(Device *d, Props& caps) override;
 
   private:
     bool           validation = false;

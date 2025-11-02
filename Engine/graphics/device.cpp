@@ -83,10 +83,6 @@ Fence Device::submit(const CommandBuffer &cmd) {
   return Fence(fn);
   }
 
-void Device::submit(const CommandBuffer &cmd, Fence &fdone) {
-  api.submit(dev,cmd.impl.handler,fdone.impl.handler);
-  }
-
 void Device::present(Swapchain& sw) {
   api.present(dev,sw.impl.handler);
   }
@@ -355,11 +351,6 @@ Pixmap Device::readPixels(const StorageImage& t, uint32_t mip) {
 
 void Device::readBytes(const StorageBuffer& ssbo, void* out, size_t size) {
   api.readBytes(dev,ssbo.impl.impl.handler,out,size);
-  }
-
-Fence Device::fence() {
-  Fence f(api.createFence(dev));
-  return f;
   }
 
 ComputePipeline Device::pipeline(const Shader& comp) {

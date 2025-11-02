@@ -646,9 +646,6 @@ namespace Tempest {
                                                   Shader* shader)=0;
 
       virtual PShader    createShader(Device *d,const void* source,size_t src_size)=0;
-
-      virtual Fence*     createFence(Device *d)=0;
-
       virtual CommandBuffer*
                          createCommandBuffer(Device* d)=0;
 
@@ -669,11 +666,10 @@ namespace Tempest {
                                        TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip, bool storageImg) = 0;
       virtual void       readBytes    (Device* d, Buffer* buf, void* out, size_t size) = 0;
 
-      virtual void       present  (Device *d, Swapchain* sw)=0;
-      virtual void       submit   (Device *d, CommandBuffer* cmd, Fence* fence)=0;
-      virtual std::shared_ptr<AbstractGraphicsApi::Fence> submit(Device *d, CommandBuffer* cmd);
+      virtual void       present(Device *d, Swapchain* sw) = 0;
+      virtual auto       submit (Device *d, CommandBuffer* cmd) -> std::shared_ptr<AbstractGraphicsApi::Fence> = 0;
 
-      virtual void       getCaps  (Device *d, Props& caps)=0;
+      virtual void       getCaps(Device *d, Props& caps)=0;
 
     friend class Tempest::Device;
     };

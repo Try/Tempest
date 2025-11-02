@@ -41,8 +41,7 @@ auto cmd  = device.commandBuffer();
   enc.draw(vbo,ibo);
 }
 
-auto sync = device.fence();
-device.submit(cmd,sync);
+auto sync = device.submit(cmd,sync);
 sync.wait();
 
 // save image to file

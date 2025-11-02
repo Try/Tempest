@@ -364,12 +364,12 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     static const uint32_t MaxFences = 32;
     struct Timeline final {
-      std::mutex                  sync;
-      std::shared_ptr<VTimepoint> timepoint[MaxFences];
+      std::mutex              sync;
+      std::shared_ptr<VFence> timepoint[MaxFences];
       };
 
     void                    waitIdle() override;
-    std::shared_ptr<VTimepoint> submit(VCommandBuffer& cmd, VFence* sync);
+    std::shared_ptr<VFence> submit(VCommandBuffer& cmd);
 
     static std::vector<VkExtensionProperties> extensionsList(VkPhysicalDevice dev);
 
@@ -388,10 +388,10 @@ class VDevice : public AbstractGraphicsApi::Device {
     uint32_t                roundUpDescriptorCount(ShaderReflection::Class cls, size_t cnt);
     VkDescriptorSetLayout   bindlessArrayLayout(ShaderReflection::Class cls, size_t cnt);
 
-    std::shared_ptr<VTimepoint> findAvailableFence();
-    void                        waitAny(uint64_t timeout);
-    std::shared_ptr<VTimepoint> aquireFence();
-    VkResult                    waitFence(VTimepoint& t, uint64_t timeout);
+    std::shared_ptr<VFence> findAvailableFence();
+    void                    waitAny(uint64_t timeout);
+    std::shared_ptr<VFence> aquireFence();
+    VkResult                waitFence(VFence& t, uint64_t timeout);
 
     VkInstance              instance           = nullptr;
     VkPhysicalDevice        physicalDevice     = nullptr;

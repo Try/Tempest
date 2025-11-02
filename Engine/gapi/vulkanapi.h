@@ -33,8 +33,6 @@ class VulkanApi : public AbstractGraphicsApi {
     DescArray*     createDescriptors(Device* d, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel) override;
     DescArray*     createDescriptors(Device* d, AbstractGraphicsApi::Buffer**  buf, size_t cnt) override;
 
-    Fence*         createFence(Device *d) override;
-
     PBuffer        createBuffer (Device* d, const void *mem, size_t size, MemUsage usage, BufferHeap flg) override;
     PTexture       createTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mips) override;
     PTexture       createTexture(Device* d, const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) override;
@@ -51,8 +49,6 @@ class VulkanApi : public AbstractGraphicsApi {
     CommandBuffer* createCommandBuffer(Device* d) override;
 
     void           present(Device *d, Swapchain* sw) override;
-
-    void           submit (Device *d, CommandBuffer* cmd, Fence* sync) override;
     auto           submit(Device *d, CommandBuffer* cmd) -> std::shared_ptr<AbstractGraphicsApi::Fence> override;
 
     void           getCaps(Device *d, Props& props) override;

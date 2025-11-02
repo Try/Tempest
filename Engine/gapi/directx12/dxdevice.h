@@ -332,7 +332,7 @@ class DxDevice : public AbstractGraphicsApi::Device {
     using DataMgr = UploadEngine<DxDevice,DxCommandBuffer,DxBuffer>;
 
     void         waitIdle() override;
-    std::shared_ptr<DxTimepoint> submit(DxCommandBuffer& cmd, DxFence* sync);
+    std::shared_ptr<DxTimepoint> submit(DxCommandBuffer& cmd);
 
     std::shared_ptr<DxTimepoint> findAvailableFence();
     void                         waitAny();

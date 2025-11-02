@@ -30,8 +30,7 @@ class PainterTest : public ::testing::Test {
         mesh.draw(enc);
       }
 
-      auto sync = device.fence();
-      device.submit(cmd,sync);
+      auto sync = device.submit(cmd);
       sync.wait();
       }
 

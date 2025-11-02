@@ -2,7 +2,6 @@
 
 #include <Tempest/Device>
 #include <Tempest/Except>
-#include <Tempest/Fence>
 #include <Tempest/Pixmap>
 #include <Tempest/Log>
 #include <Tempest/Matrix4x4>
@@ -185,8 +184,7 @@ void SsboEmpty() {
       enc.dispatch(1);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     uint32_t result[2] = {uint32_t(-1), uint32_t(-1)};
@@ -277,8 +275,7 @@ void ArrayLength() {
       enc.draw(nullptr, 0,6);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     uint32_t sz = 0;
@@ -408,8 +405,7 @@ void TesselationBasic(const char* outImg) {
       enc.draw(vbo);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     auto pm = device.readPixels(tex);
@@ -452,8 +448,7 @@ void GeomBasic(const char* outImg) {
       enc.draw(nullptr, 0, 1);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     auto pm = device.readPixels(tex);
@@ -482,8 +477,7 @@ void Fbo(const char* outImg) {
       enc.setFramebuffer({{tex,Vec4(0,0,1,1),Tempest::Preserve}});
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     auto pm = device.readPixels(tex);
@@ -526,8 +520,7 @@ void Draw(const char* outImage) {
       enc.draw(vbo,ibo);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     auto pm = device.readPixels(tex);
@@ -592,8 +585,7 @@ void InstanceIndex(const char* outImage) {
       enc.draw(vbo,ibo, 0,ibo.size(), 123,1);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     auto pm = device.readPixels(tex);
@@ -663,8 +655,7 @@ void Viewport(const char* outImage) {
       enc.draw(vbo,ibo);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     auto pm = device.readPixels(tex);
@@ -713,8 +704,7 @@ void DepthWrite(const char* outImage) {
       enc.draw(nullptr, 0, 3);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     auto pm = device.readPixels(textureCast<Texture2d&>(depth));
@@ -768,8 +758,7 @@ void Uniforms(const char* outImage, bool useUbo) {
       enc.draw(vbo,ibo);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     auto pm = device.readPixels(tex);
@@ -808,8 +797,7 @@ void SSBOReadOnly(bool useUbo) {
       enc.dispatch(1,1,1);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     Vec4 ret = {};
@@ -854,8 +842,7 @@ void UnboundSsbo() {
       enc.dispatch(data.size(),1,1);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     std::vector<Vec4> ret(data.size());
@@ -899,8 +886,7 @@ void SsboOverlap() {
       enc.dispatch(1);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     Buf output;
@@ -978,8 +964,7 @@ void ComputeImage(const char* outImage) {
       enc.dispatch(img.w(),img.h(),1);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     //auto pm = device.readPixels(img);
@@ -1014,8 +999,7 @@ void ComputeImage3dAs2d(const char* outImage) {
       enc.dispatch(img.w(),img.h(),1);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     //auto pm = device.readPixels(img);
@@ -1047,8 +1031,7 @@ void AtomicImage(const char* outImage) {
       enc.dispatch(img.w(),img.h(),1);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     auto pm = device.readPixels(img);
@@ -1082,8 +1065,7 @@ void AtomicImage3D(const char* outImage) {
       enc.dispatch(img.w(),img.h(),img.d());
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     auto pm = device.readPixels(img);
@@ -1114,7 +1096,6 @@ void MipMaps(const char* outImage) {
     auto pso  = device.pipeline(Topology::Triangles,RenderState(),vert,frag);
 
     auto tex  = device.attachment(format,128,128,true);
-    auto sync = device.fence();
 
     auto cmd = device.commandBuffer();
     {
@@ -1125,7 +1106,8 @@ void MipMaps(const char* outImage) {
       enc.setFramebuffer({});
       enc.generateMipmaps(tex);
     }
-    device.submit(cmd,sync);
+
+    auto sync = device.submit(cmd);
     sync.wait();
 
     auto pm = device.readPixels(tex,1);
@@ -1206,8 +1188,7 @@ void SsboWrite() {
       enc.dispatch(3,1,1);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     Vec4 outputCpu[3] = {};
@@ -1289,8 +1270,7 @@ void ComponentSwizzle() {
       enc.draw(vbo);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     {
@@ -1344,8 +1324,7 @@ void PushRemapping() {
       enc.dispatch(1);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     Vec4 outputCpu = {};
@@ -1388,8 +1367,7 @@ void PushRemappingGr(const char* outImage) {
       enc.draw(vbo,ibo, 0,ibo.size());
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     auto pm = device.readPixels(tex);
@@ -1464,8 +1442,7 @@ void ArrayedTextures(const char* outImg) {
       enc.dispatch(ret.w(),ret.h(),1);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     auto pm = device.readPixels(ret);
@@ -1516,8 +1493,7 @@ void ArrayedImages(const char* outImg) {
       enc.dispatch(ret.w(),ret.h(),1);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     auto pm = device.readPixels(ret);
@@ -1568,8 +1544,7 @@ void ArrayedSsbo(const char* outImg) {
       enc.dispatch(ret.w(),ret.h(),1);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     auto pm = device.readPixels(ret);
@@ -1603,8 +1578,7 @@ void NonSampledTexture(const char* outImg) {
       enc.dispatch(1,1,1);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
     }
   catch(std::system_error& e) {
@@ -1654,8 +1628,7 @@ void Bindless(const char* outImg) {
       enc.dispatch(ret.w(),ret.h(),1);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     auto pm = device.readPixels(ret);
@@ -1719,8 +1692,7 @@ void Bindless2(const char* outImg) {
       enc.dispatch(ret.w(),ret.h(),1);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     auto pm = device.readPixels(ret);
@@ -1787,8 +1759,7 @@ void UnusedDescriptor(const char* outImg) {
         enc.dispatch(ret.w(),ret.h(),1);
       }
 
-      auto sync = device.fence();
-      device.submit(cmd,sync);
+      auto sync = device.submit(cmd);
       sync.wait();
 
       auto pm = device.readPixels(ret);
@@ -1896,8 +1867,7 @@ void RayQuery(const char* outImg) {
       enc.setPipeline(pso);
       enc.draw(fsq);
     }
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     auto pm = device.readPixels(tex);
@@ -1951,8 +1921,7 @@ void RayQueryFace(const char* outImg) {
       enc.setPipeline(pso);
       enc.draw(fsq);
     }
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     auto pm = device.readPixels(tex);
@@ -2001,8 +1970,7 @@ void MeshShader(const char* outImg) {
       enc.setPipeline(pso);
       enc.dispatchMesh(1);
     }
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     auto pm = device.readPixels(tex);
@@ -2095,8 +2063,7 @@ void MeshComputePrototype(const char* outImg) {
       enc.dispatch(5,1,1);
       // should be draw-indirect at the end
     }
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     std::vector<uint32_t> meshCpu(mesh.byteSize()/4);
@@ -2180,8 +2147,7 @@ void DispathIndirect() {
       enc.dispatchIndirect(arg, 0);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     Vec4 outputCpu[3] = {};

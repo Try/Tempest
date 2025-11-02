@@ -58,8 +58,7 @@ void DispathToDraw(const char* outImage) {
       enc.draw(vbo,ibo);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     auto pm = device.readPixels(tex);
@@ -108,8 +107,7 @@ void DrawToDispath() {
       enc.dispatch(tex.w(),tex.h(),1);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     std::vector<Vec4> pm(tex.w()*tex.h());

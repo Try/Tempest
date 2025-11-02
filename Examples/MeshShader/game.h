@@ -54,7 +54,7 @@ class Game : public Tempest::Window {
   bool                        useVertex = false;
 
   Tempest::CommandBuffer      commands[MaxFramesInFlight];
-  std::vector<Tempest::Fence> fence;
+  Tempest::Fence              fence[MaxFramesInFlight];
   uint8_t                     cmdId = 0;
 
   Tempest::Point              mpos;

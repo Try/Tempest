@@ -185,10 +185,6 @@ AbstractGraphicsApi::PShader DirectX12Api::createShader(AbstractGraphicsApi::Dev
   return PShader(new Detail::DxShader(source,src_size));
   }
 
-AbstractGraphicsApi::Fence* DirectX12Api::createFence(AbstractGraphicsApi::Device*) {
-  return new DxFence();
-  }
-
 AbstractGraphicsApi::PBuffer DirectX12Api::createBuffer(AbstractGraphicsApi::Device* d, const void* mem, size_t size,
                                                         MemUsage usage, BufferHeap flg) {
   DxDevice& dx = *reinterpret_cast<DxDevice*>(d);
@@ -426,21 +422,11 @@ void DirectX12Api::present(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::
   sx.queuePresent();
   }
 
-void DirectX12Api::submit(AbstractGraphicsApi::Device* d,
-                          AbstractGraphicsApi::CommandBuffer* cx,
-                          AbstractGraphicsApi::Fence* doneCpu) {
-  auto& dx   = *reinterpret_cast<Detail::DxDevice*>(d);
-  auto& sync = *reinterpret_cast<Detail::DxFence*>(doneCpu);
-  auto& cmd  = *reinterpret_cast<Detail::DxCommandBuffer*>(cx);
-
-  dx.submit(cmd, &sync);
-  }
-
 std::shared_ptr<AbstractGraphicsApi::Fence> DirectX12Api::submit(Device* d, CommandBuffer* cx) {
   auto& dx   = *reinterpret_cast<Detail::DxDevice*>(d);
   auto& cmd  = *reinterpret_cast<Detail::DxCommandBuffer*>(cx);
 
-  return dx.submit(cmd, nullptr);
+  return dx.submit(cmd);
   }
 
 void DirectX12Api::getCaps(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Props& caps) {

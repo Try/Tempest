@@ -429,7 +429,7 @@ HRESULT DxDevice::waitFence(DxTimepoint& t, uint64_t timeout) {
   return ret;
   }
 
-std::shared_ptr<DxTimepoint> DxDevice::submit(DxCommandBuffer& cmd, DxFence* sync) {
+std::shared_ptr<DxTimepoint> DxDevice::submit(DxCommandBuffer& cmd) {
   const size_t                                 size = cmd.chunks.size();
   SmallArray<ID3D12CommandList*, MaxCmdChunks> flat(size);
   auto node = cmd.chunks.begin();
@@ -453,10 +453,6 @@ std::shared_ptr<DxTimepoint> DxDevice::submit(DxCommandBuffer& cmd, DxFence* syn
   dxAssert(cmdFence->SetEventOnCompletion(cmdProgress, pfence->event.hevt));
 
   pfence->signalValue = cmdProgress;
-  if(sync!=nullptr) {
-    sync->device    = this;
-    sync->timepoint = pfence;
-    }
   return pfence;
   }
 

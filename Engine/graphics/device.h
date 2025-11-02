@@ -52,7 +52,6 @@ class Device {
 
     [[nodiscard]]
     Fence                 submit(const CommandBuffer& cmd);
-    void                  submit(const CommandBuffer& cmd, Fence& fdone);
     void                  present(Swapchain& sw);
 
     Swapchain             swapchain(SystemApi::Window* w) const;
@@ -161,10 +160,7 @@ class Device {
     RenderPipeline        pipeline(const RenderState& st, const Shader &ts, const Shader &ms, const Shader &fs);
 
     ComputePipeline       pipeline(const Shader &comp);
-
-    Fence                 fence();
     CommandBuffer         commandBuffer();
-
     const Builtin&        builtin() const;
 
   private:

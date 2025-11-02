@@ -875,7 +875,7 @@ VkDescriptorSetLayout VDevice::bindlessArrayLayout(ShaderReflection::Class cls, 
   return setLayouts.findLayout(lx);
   }
 
-std::shared_ptr<VTimepoint> VDevice::findAvailableFence() {
+std::shared_ptr<VFence> VDevice::findAvailableFence() {
   for(int pass=0; pass<2; ++pass) {
     for(uint32_t id=0; id<MaxFences; ++id) {
       auto& i = timeline.timepoint[id];
@@ -889,7 +889,7 @@ std::shared_ptr<VTimepoint> VDevice::findAvailableFence() {
         auto fence = i->fence;
         //NOTE: application may still hold references to `i`
         i->fence = VK_NULL_HANDLE;
-        i = std::make_shared<VTimepoint>(this, fence, id);
+        i = std::make_shared<VFence>(this, fence, id);
         }
       vkAssert(vkResetFences(device.impl, 1, &i->fence));
       return i;
@@ -923,7 +923,7 @@ void VDevice::waitAny(uint64_t timeout) {
     }
   }
 
-std::shared_ptr<VTimepoint> VDevice::aquireFence() {
+std::shared_ptr<VFence> VDevice::aquireFence() {
   std::lock_guard<std::mutex> guard(timeline.sync);
 
   // reuse signalled fences
@@ -944,7 +944,7 @@ std::shared_ptr<VTimepoint> VDevice::aquireFence() {
       fenceInfo.flags = 0;
       vkAssert(vkCreateFence(device.impl,&fenceInfo,nullptr,&fence));
 
-      i = std::make_shared<VTimepoint>(this, fence, uint32_t(id));
+      i = std::make_shared<VFence>(this, fence, uint32_t(id));
       return i;
       }
     catch(...) {
@@ -959,7 +959,7 @@ std::shared_ptr<VTimepoint> VDevice::aquireFence() {
   return findAvailableFence();
   }
 
-VkResult VDevice::waitFence(VTimepoint& t, uint64_t timeout) {
+VkResult VDevice::waitFence(VFence& t, uint64_t timeout) {
   {
     std::lock_guard<std::mutex> guard(timeline.sync);
     if(t.fence==VK_NULL_HANDLE || t.status==VK_SUCCESS)
@@ -1013,7 +1013,7 @@ void VDevice::waitIdleSync(VDevice::Queue* q, size_t n) {
     }
   }
 
-std::shared_ptr<VTimepoint> VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
+std::shared_ptr<VFence> VDevice::submit(VCommandBuffer& cmd) {
   size_t waitCnt = 0;
   for(auto& s:cmd.swapchainSync) {
     if(s->state!=Detail::VSwapchain::S_Pending)
@@ -1037,10 +1037,6 @@ std::shared_ptr<VTimepoint> VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
     throw DeviceLostException();
 
   VkFence fence = pfence->fence;
-  if(sync!=nullptr) {
-    sync->timepoint = pfence;
-    sync->device    = this;
-    }
 
   if(vkQueueSubmit2!=nullptr) {
     SmallArray<VkSemaphoreSubmitInfoKHR, 32> wait2(waitCnt);

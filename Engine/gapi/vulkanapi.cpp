@@ -286,10 +286,6 @@ AbstractGraphicsApi::PShader VulkanApi::createShader(AbstractGraphicsApi::Device
   return PShader(new Detail::VShader(*dx,source,src_size));
   }
 
-AbstractGraphicsApi::Fence *VulkanApi::createFence(AbstractGraphicsApi::Device*) {
-  return new Detail::VFence();
-  }
-
 AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device *d, const void *mem, size_t size,
                                                      MemUsage usage, BufferHeap flg) {
   Detail::VDevice& dx = *reinterpret_cast<Detail::VDevice*>(d);
@@ -491,15 +487,8 @@ void VulkanApi::present(Device*, Swapchain *sw) {
 std::shared_ptr<AbstractGraphicsApi::Fence> VulkanApi::submit(Device *d, CommandBuffer* cmd) {
   Detail::VDevice&        dx = *reinterpret_cast<Detail::VDevice*>(d);
   Detail::VCommandBuffer& cx = *reinterpret_cast<Detail::VCommandBuffer*>(cmd);
-  auto fn = dx.submit(cx,nullptr);
+  auto fn = dx.submit(cx);
   return fn;
-  }
-
-void VulkanApi::submit(Device *d, CommandBuffer* cmd, Fence *sync) {
-  Detail::VDevice&        dx    = *reinterpret_cast<Detail::VDevice*>(d);
-  Detail::VCommandBuffer& cx    = *reinterpret_cast<Detail::VCommandBuffer*>(cmd);
-  auto*                   fence =  reinterpret_cast<Detail::VFence*>(sync);
-  dx.submit(cx,fence);
   }
 
 void VulkanApi::getCaps(Device *d, Props& props) {

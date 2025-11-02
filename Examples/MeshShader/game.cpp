@@ -13,8 +13,6 @@ using namespace Tempest;
 
 Game::Game(Device& device)
   : Window(Maximized), device(device), swapchain(device,hwnd()), texAtlass(device) {
-  for(uint8_t i=0;i<MaxFramesInFlight;++i)
-    fence.emplace_back(device.fence());
   resetSwapchain();
   setupUi();
 
@@ -147,7 +145,7 @@ void Game::render(){
       surfaceMesh[cmdId].draw(enc);
     }
 
-    device.submit(cmd,sync);
+    sync = device.submit(cmd);
     device.present(swapchain);
 
     auto t = Application::tickCount();

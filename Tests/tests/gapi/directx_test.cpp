@@ -332,8 +332,7 @@ TEST(DirectX12Api,SpirvDefect_Link) {
       enc.draw(vbo,ibo);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
     }
   catch(std::system_error& e) {
