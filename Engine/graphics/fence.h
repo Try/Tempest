@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include "../utility/dptr.h"
 
 namespace Tempest {
 
@@ -18,11 +17,9 @@ class Fence final {
     bool wait(uint64_t time);
 
   private:
-    Fence(AbstractGraphicsApi::Fence* f);
     Fence(std::shared_ptr<AbstractGraphicsApi::Fence>& f);
 
-    Detail::DPtr<AbstractGraphicsApi::Fence*> impl;
-    std::weak_ptr<AbstractGraphicsApi::Fence> impl2;
+    std::weak_ptr<AbstractGraphicsApi::Fence> impl;
 
   friend class Tempest::Device;
   };

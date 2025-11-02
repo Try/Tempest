@@ -347,7 +347,7 @@ void DxDevice::waitIdle() {
   dxAssert(WaitForSingleObjectEx(idleEvent, INFINITE, FALSE), *this);
   }
 
-std::shared_ptr<DxTimepoint> DxDevice::findAvailableFence() {
+std::shared_ptr<DxFence> DxDevice::findAvailableFence() {
   const UINT64 v = cmdFence->GetCompletedValue();
   for(int pass=0; pass<2; ++pass) {
     for(uint32_t id=0; id<MaxFences; ++id) {
@@ -362,7 +362,7 @@ std::shared_ptr<DxTimepoint> DxDevice::findAvailableFence() {
         auto event = std::move(i->event);
         //NOTE: application may still hold references to `i`
         i->event = DxEvent();
-        i = std::make_shared<DxTimepoint>(this, std::move(event));
+        i = std::make_shared<DxFence>(this, std::move(event));
         }
       dxAssert(ResetEvent(i->event.hevt) ? S_OK : DXGI_ERROR_DEVICE_REMOVED);
       return i;
@@ -375,8 +375,11 @@ void DxDevice::waitAny() {
   HANDLE   fences[MaxFences] = {};
   uint32_t num = 0;
 
+  UINT64 v = cmdFence->GetCompletedValue();
   for(auto& i:timeline.timepoint) {
     if(i==nullptr)
+      continue;
+    if(i->signalValue<=v)
       continue;
     fences[num] = i->event.hevt;
     ++num;
@@ -390,7 +393,7 @@ void DxDevice::waitAny() {
   dxAssert(ret);
   }
 
-std::shared_ptr<DxTimepoint> DxDevice::aquireFence() {
+std::shared_ptr<DxFence> DxDevice::aquireFence() {
   std::lock_guard<std::mutex> guard(timeline.sync);
 
   // reuse signalled fences
@@ -404,7 +407,7 @@ std::shared_ptr<DxTimepoint> DxDevice::aquireFence() {
     if(i!=nullptr)
       continue;
 
-    i = std::make_shared<DxTimepoint>(this, DxEvent(false));
+    i = std::make_shared<DxFence>(this, DxEvent(false));
     return i;
     }
 
@@ -413,7 +416,7 @@ std::shared_ptr<DxTimepoint> DxDevice::aquireFence() {
   return findAvailableFence();
   }
 
-HRESULT DxDevice::waitFence(DxTimepoint& t, uint64_t timeout) {
+HRESULT DxDevice::waitFence(DxFence& t, uint64_t timeout) {
   UINT64 v = cmdFence->GetCompletedValue();
   if(v>=t.signalValue)
     return S_OK;
@@ -429,7 +432,7 @@ HRESULT DxDevice::waitFence(DxTimepoint& t, uint64_t timeout) {
   return ret;
   }
 
-std::shared_ptr<DxTimepoint> DxDevice::submit(DxCommandBuffer& cmd) {
+std::shared_ptr<DxFence> DxDevice::submit(DxCommandBuffer& cmd) {
   const size_t                                 size = cmd.chunks.size();
   SmallArray<ID3D12CommandList*, MaxCmdChunks> flat(size);
   auto node = cmd.chunks.begin();

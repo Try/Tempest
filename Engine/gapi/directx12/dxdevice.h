@@ -322,8 +322,8 @@ class DxDevice : public AbstractGraphicsApi::Device {
 
     static const uint32_t MaxFences = 32;
     struct Timeline final {
-      std::mutex                   sync;
-      std::shared_ptr<DxTimepoint> timepoint[MaxFences];
+      std::mutex               sync;
+      std::shared_ptr<DxFence> timepoint[MaxFences];
       };
 
     DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi);
@@ -332,12 +332,12 @@ class DxDevice : public AbstractGraphicsApi::Device {
     using DataMgr = UploadEngine<DxDevice,DxCommandBuffer,DxBuffer>;
 
     void         waitIdle() override;
-    std::shared_ptr<DxTimepoint> submit(DxCommandBuffer& cmd);
+    std::shared_ptr<DxFence> submit(DxCommandBuffer& cmd);
 
-    std::shared_ptr<DxTimepoint> findAvailableFence();
-    void                         waitAny();
-    std::shared_ptr<DxTimepoint> aquireFence();
-    HRESULT                      waitFence(DxTimepoint& t, uint64_t time);
+    std::shared_ptr<DxFence> findAvailableFence();
+    void                     waitAny();
+    std::shared_ptr<DxFence> aquireFence();
+    HRESULT                  waitFence(DxFence& t, uint64_t time);
 
     static void  getProp(IDXGIAdapter1& adapter, ID3D12Device& dev, DxProps& prop);
     static void  getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, DxProps& prop);
