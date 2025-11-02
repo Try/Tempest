@@ -50,10 +50,11 @@ class DirectX12Api : public AbstractGraphicsApi {
 
     CommandBuffer* createCommandBuffer(Device* d) override;
 
-    void           present  (Device *d, Swapchain* sw) override;
-    void           submit   (Device *d, CommandBuffer* cmd,  Fence* doneCpu) override;
+    void           present(Device *d, Swapchain* sw) override;
+    void           submit (Device *d, CommandBuffer* cmd,  Fence* doneCpu) override;
+    auto           submit (Device *d, CommandBuffer* cmd) -> std::shared_ptr<AbstractGraphicsApi::Fence> override;
 
-    void           getCaps  (Device *d,Props& caps) override;
+    void           getCaps(Device *d,Props& caps) override;
 
   private:
     struct Impl;

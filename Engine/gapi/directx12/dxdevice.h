@@ -329,9 +329,10 @@ class DxDevice : public AbstractGraphicsApi::Device {
     DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi);
     ~DxDevice() override;
 
-    using DataMgr = UploadEngine<DxDevice,DxCommandBuffer,DxFence,DxBuffer>;
+    using DataMgr = UploadEngine<DxDevice,DxCommandBuffer,DxBuffer>;
 
     void         waitIdle() override;
+    std::shared_ptr<DxTimepoint> submit(DxCommandBuffer& cmd, DxFence* sync);
 
     std::shared_ptr<DxTimepoint> findAvailableFence();
     void                         waitAny();
@@ -340,7 +341,6 @@ class DxDevice : public AbstractGraphicsApi::Device {
 
     static void  getProp(IDXGIAdapter1& adapter, ID3D12Device& dev, DxProps& prop);
     static void  getProp(DXGI_ADAPTER_DESC1& desc, ID3D12Device& dev, DxProps& prop);
-    void         submit(DxCommandBuffer& cmd, DxFence* sync);
 
     DataMgr&     dataMgr() { return *data; }
 

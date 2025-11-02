@@ -488,6 +488,13 @@ void VulkanApi::present(Device*, Swapchain *sw) {
   sx->present();
   }
 
+std::shared_ptr<AbstractGraphicsApi::Fence> VulkanApi::submit(Device *d, CommandBuffer* cmd) {
+  Detail::VDevice&        dx = *reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VCommandBuffer& cx = *reinterpret_cast<Detail::VCommandBuffer*>(cmd);
+  auto fn = dx.submit(cx,nullptr);
+  return fn;
+  }
+
 void VulkanApi::submit(Device *d, CommandBuffer* cmd, Fence *sync) {
   Detail::VDevice&        dx    = *reinterpret_cast<Detail::VDevice*>(d);
   Detail::VCommandBuffer& cx    = *reinterpret_cast<Detail::VCommandBuffer*>(cmd);

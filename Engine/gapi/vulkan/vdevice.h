@@ -369,7 +369,7 @@ class VDevice : public AbstractGraphicsApi::Device {
       };
 
     void                    waitIdle() override;
-    void                    submit(VCommandBuffer& cmd, VFence* sync);
+    std::shared_ptr<VTimepoint> submit(VCommandBuffer& cmd, VFence* sync);
 
     static std::vector<VkExtensionProperties> extensionsList(VkPhysicalDevice dev);
 
@@ -380,7 +380,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     SwapChainSupport        querySwapChainSupport(VkSurfaceKHR surface) { return querySwapChainSupport(physicalDevice,surface); }
     MemIndex                memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const;
 
-    using DataMgr = UploadEngine<VDevice,VCommandBuffer,VFence,VBuffer>;
+    using DataMgr = UploadEngine<VDevice,VCommandBuffer,VBuffer>;
     DataMgr&                dataMgr() const { return *data; }
 
     VBuffer&                dummySsbo();

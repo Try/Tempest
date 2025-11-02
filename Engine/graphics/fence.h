@@ -19,8 +19,10 @@ class Fence final {
 
   private:
     Fence(AbstractGraphicsApi::Fence* f);
+    Fence(std::shared_ptr<AbstractGraphicsApi::Fence>& f);
 
     Detail::DPtr<AbstractGraphicsApi::Fence*> impl;
+    std::weak_ptr<AbstractGraphicsApi::Fence> impl2;
 
   friend class Tempest::Device;
   };

@@ -50,11 +50,12 @@ class VulkanApi : public AbstractGraphicsApi {
 
     CommandBuffer* createCommandBuffer(Device* d) override;
 
-    void           present  (Device *d, Swapchain* sw) override;
+    void           present(Device *d, Swapchain* sw) override;
 
-    void           submit   (Device *d, CommandBuffer* cmd, Fence* sync) override;
+    void           submit (Device *d, CommandBuffer* cmd, Fence* sync) override;
+    auto           submit(Device *d, CommandBuffer* cmd) -> std::shared_ptr<AbstractGraphicsApi::Fence> override;
 
-    void           getCaps  (Device *d, Props& props) override;
+    void           getCaps(Device *d, Props& props) override;
 
   private:
     struct Impl;

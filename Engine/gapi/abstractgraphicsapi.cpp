@@ -143,3 +143,7 @@ bool Detail::Bindings::contains(const AbstractGraphicsApi::NoCopy* res) const {
       return true;
   return false;
   }
+
+std::shared_ptr<AbstractGraphicsApi::Fence> AbstractGraphicsApi::submit(Device* d, CommandBuffer* cmd)  {
+  throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
+  }

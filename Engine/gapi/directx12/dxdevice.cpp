@@ -362,7 +362,7 @@ std::shared_ptr<DxTimepoint> DxDevice::findAvailableFence() {
         auto event = std::move(i->event);
         //NOTE: application may still hold references to `i`
         i->event = DxEvent();
-        i = std::make_shared<DxTimepoint>(std::move(event));
+        i = std::make_shared<DxTimepoint>(this, std::move(event));
         }
       dxAssert(ResetEvent(i->event.hevt) ? S_OK : DXGI_ERROR_DEVICE_REMOVED);
       return i;
@@ -404,7 +404,7 @@ std::shared_ptr<DxTimepoint> DxDevice::aquireFence() {
     if(i!=nullptr)
       continue;
 
-    i = std::make_shared<DxTimepoint>(DxEvent(false));
+    i = std::make_shared<DxTimepoint>(this, DxEvent(false));
     return i;
     }
 
@@ -429,7 +429,7 @@ HRESULT DxDevice::waitFence(DxTimepoint& t, uint64_t timeout) {
   return ret;
   }
 
-void DxDevice::submit(DxCommandBuffer& cmd, DxFence* sync) {
+std::shared_ptr<DxTimepoint> DxDevice::submit(DxCommandBuffer& cmd, DxFence* sync) {
   const size_t                                 size = cmd.chunks.size();
   SmallArray<ID3D12CommandList*, MaxCmdChunks> flat(size);
   auto node = cmd.chunks.begin();
@@ -440,6 +440,8 @@ void DxDevice::submit(DxCommandBuffer& cmd, DxFence* sync) {
     }
 
   auto pfence = aquireFence();
+  if(pfence==nullptr)
+    throw DeviceLostException();
 
   std::lock_guard<std::mutex> guard1(timeline.sync);
   std::lock_guard<SpinLock>   guard2(syncCmdQueue);
@@ -455,6 +457,7 @@ void DxDevice::submit(DxCommandBuffer& cmd, DxFence* sync) {
     sync->device    = this;
     sync->timepoint = pfence;
     }
+  return pfence;
   }
 
 void DxDevice::debugReportCallback(

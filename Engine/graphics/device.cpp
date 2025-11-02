@@ -78,8 +78,9 @@ void Device::waitIdle() {
   impl.dev->waitIdle();
   }
 
-void Device::submit(const CommandBuffer &cmd) {
-  api.submit(dev,cmd.impl.handler,nullptr);
+Fence Device::submit(const CommandBuffer &cmd) {
+  auto fn = api.submit(dev,cmd.impl.handler);
+  return Fence(fn);
   }
 
 void Device::submit(const CommandBuffer &cmd, Fence &fdone) {

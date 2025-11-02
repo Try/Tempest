@@ -436,6 +436,13 @@ void DirectX12Api::submit(AbstractGraphicsApi::Device* d,
   dx.submit(cmd, &sync);
   }
 
+std::shared_ptr<AbstractGraphicsApi::Fence> DirectX12Api::submit(Device* d, CommandBuffer* cx) {
+  auto& dx   = *reinterpret_cast<Detail::DxDevice*>(d);
+  auto& cmd  = *reinterpret_cast<Detail::DxCommandBuffer*>(cx);
+
+  return dx.submit(cmd, nullptr);
+  }
+
 void DirectX12Api::getCaps(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Props& caps) {
   Detail::DxDevice& dx = *reinterpret_cast<Detail::DxDevice*>(d);
   caps = dx.props;

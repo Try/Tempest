@@ -5,6 +5,18 @@
 
 using namespace Tempest::Detail;
 
+void VTimepoint::wait() {
+  vkAssert(device->waitFence(*this, std::numeric_limits<uint64_t>::max()));
+  }
+
+bool VTimepoint::wait(uint64_t time) {
+  VkResult res = device->waitFence(*this, time);
+  if(res==VK_TIMEOUT || res==VK_NOT_READY)
+    return false;
+  vkAssert(res);
+  return true;
+  }
+
 VFence::VFence() {
   }
 

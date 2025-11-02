@@ -517,7 +517,6 @@ namespace Tempest {
         virtual ~Fence()=default;
         virtual void wait() = 0;
         virtual bool wait(uint64_t time) = 0;
-        //virtual void reset() = 0;
         };
       struct Swapchain:NoCopy {
         virtual ~Swapchain()=default;
@@ -671,7 +670,8 @@ namespace Tempest {
       virtual void       readBytes    (Device* d, Buffer* buf, void* out, size_t size) = 0;
 
       virtual void       present  (Device *d, Swapchain* sw)=0;
-      virtual void       submit   (Device *d, CommandBuffer*  cmd, Fence* fence)=0;
+      virtual void       submit   (Device *d, CommandBuffer* cmd, Fence* fence)=0;
+      virtual std::shared_ptr<AbstractGraphicsApi::Fence> submit(Device *d, CommandBuffer* cmd);
 
       virtual void       getCaps  (Device *d, Props& caps)=0;
 

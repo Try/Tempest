@@ -889,7 +889,7 @@ std::shared_ptr<VTimepoint> VDevice::findAvailableFence() {
         auto fence = i->fence;
         //NOTE: application may still hold references to `i`
         i->fence = VK_NULL_HANDLE;
-        i = std::make_shared<VTimepoint>(fence, id);
+        i = std::make_shared<VTimepoint>(this, fence, id);
         }
       vkAssert(vkResetFences(device.impl, 1, &i->fence));
       return i;
@@ -944,7 +944,7 @@ std::shared_ptr<VTimepoint> VDevice::aquireFence() {
       fenceInfo.flags = 0;
       vkAssert(vkCreateFence(device.impl,&fenceInfo,nullptr,&fence));
 
-      i = std::make_shared<VTimepoint>(fence, uint32_t(id));
+      i = std::make_shared<VTimepoint>(this, fence, uint32_t(id));
       return i;
       }
     catch(...) {
@@ -1013,7 +1013,7 @@ void VDevice::waitIdleSync(VDevice::Queue* q, size_t n) {
     }
   }
 
-void VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
+std::shared_ptr<VTimepoint> VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
   size_t waitCnt = 0;
   for(auto& s:cmd.swapchainSync) {
     if(s->state!=Detail::VSwapchain::S_Pending)
@@ -1032,8 +1032,11 @@ void VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
     ++waitId;
     }
 
-  auto    pfence = aquireFence();
-  VkFence fence  = pfence->fence;
+  auto pfence = aquireFence();
+  if(pfence==nullptr)
+    throw DeviceLostException();
+
+  VkFence fence = pfence->fence;
   if(sync!=nullptr) {
     sync->timepoint = pfence;
     sync->device    = this;
@@ -1096,6 +1099,7 @@ void VDevice::submit(VCommandBuffer& cmd, VFence* sync) {
     pfence->status = VK_NOT_READY;
     graphicsQueue->submit(1,&submitInfo,fence);
     }
+  return pfence;
   }
 
 

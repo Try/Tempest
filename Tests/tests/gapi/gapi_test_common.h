@@ -941,8 +941,7 @@ void Compute() {
       enc.dispatch(3,1,1);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     Vec4 outputCpu[3] = {};

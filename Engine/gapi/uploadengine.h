@@ -7,7 +7,6 @@
 #include <cstdlib>
 #include <cstdint>
 #include <mutex>
-#include <atomic>
 #include <vector>
 
 #include "utility/spinlock.h"
@@ -16,7 +15,7 @@ namespace Tempest {
 
 namespace Detail {
 
-template<class CmdBuffer, class Fence>
+template<class CmdBuffer>
 class TransferCmd : public CmdBuffer {
   public:
     using BufPtr  = Detail::DSharedPtr<AbstractGraphicsApi::Buffer*>;
@@ -24,6 +23,7 @@ class TransferCmd : public CmdBuffer {
     using TexPtr  = Detail::DSharedPtr<AbstractGraphicsApi::Texture*>;
     using AsPtr   = Detail::DSharedPtr<AbstractGraphicsApi::AccelerationStructure*>;
     using ResPtr  = Detail::DSharedPtr<const AbstractGraphicsApi::Shared*>;
+    using Fence   = std::weak_ptr<AbstractGraphicsApi::Fence>;
 
     template<class Device>
     TransferCmd(Device& dev):CmdBuffer(dev) {
@@ -47,13 +47,17 @@ class TransferCmd : public CmdBuffer {
       }
 
     bool wait(uint64_t t) {
-      if(!fence.wait(t))
-        return false;
+      if(auto f = fence.lock()) {
+        if(!f->wait(t))
+          return false;
+        }
       holdRes.clear();
       return true;
       }
+
     void wait() {
-      fence.wait();
+      if(auto f = fence.lock())
+        f->wait();
       holdRes.clear();
       }
 
@@ -68,7 +72,7 @@ class TransferCmd : public CmdBuffer {
     std::vector<ResPtr> holdRes;
   };
 
-template<class Device, class CommandBuffer, class Fence, class Buffer>
+template<class Device, class CommandBuffer, class Buffer>
 class UploadEngine final {
   public:
     UploadEngine(Device& dev):device(dev){}
@@ -76,7 +80,7 @@ class UploadEngine final {
       wait();
       }
 
-    using Commands = TransferCmd<CommandBuffer,Fence>;
+    using Commands = TransferCmd<CommandBuffer>;
 
     std::unique_ptr<Commands> get();
     void                      submit(std::unique_ptr<Commands>&& cmd);
@@ -94,8 +98,8 @@ class UploadEngine final {
     bool                      hasWaits {false};
   };
 
-template<class Device, class CommandBuffer, class Fence, class Buffer>
-auto UploadEngine<Device,CommandBuffer,Fence,Buffer>::get() -> std::unique_ptr<Commands> {
+template<class Device, class CommandBuffer, class Buffer>
+auto UploadEngine<Device,CommandBuffer,Buffer>::get() -> std::unique_ptr<Commands> {
   {
   std::lock_guard<SpinLock> guard(sync);
   if(!hasWaits && cmd.size()>0) {
@@ -117,8 +121,8 @@ auto UploadEngine<Device,CommandBuffer,Fence,Buffer>::get() -> std::unique_ptr<C
   return std::unique_ptr<Commands>{new Commands(device)};
   }
 
-template<class Device, class CommandBuffer, class Fence, class Buffer>
-void UploadEngine<Device,CommandBuffer,Fence,Buffer>::wait() {
+template<class Device, class CommandBuffer, class Buffer>
+void UploadEngine<Device,CommandBuffer,Buffer>::wait() {
   std::lock_guard<SpinLock> guard(sync);
   if(!hasWaits)
     return;
@@ -127,27 +131,28 @@ void UploadEngine<Device,CommandBuffer,Fence,Buffer>::wait() {
   hasWaits = false;
   }
 
-template<class Device, class CommandBuffer, class Fence, class Buffer>
-void UploadEngine<Device,CommandBuffer,Fence,Buffer>::submit(std::unique_ptr<Commands>&& cmd) {
-  device.submit(*cmd,&cmd->fence);
+template<class Device, class CommandBuffer, class Buffer>
+void UploadEngine<Device,CommandBuffer,Buffer>::submit(std::unique_ptr<Commands>&& cmd) {
+  cmd->fence = device.submit(*cmd, nullptr);
 
   std::lock_guard<SpinLock> guard(sync);
   this->cmd.push_back(std::move(cmd));
   hasWaits = true;
   }
 
-template<class Device, class CommandBuffer, class Fence, class Buffer>
-void UploadEngine<Device,CommandBuffer,Fence,Buffer>::submitAndWait(std::unique_ptr<Commands>&& cmd) {
-  device.submit(*cmd,&cmd->fence);
-  cmd->fence.wait();
+template<class Device, class CommandBuffer, class Buffer>
+void UploadEngine<Device,CommandBuffer,Buffer>::submitAndWait(std::unique_ptr<Commands>&& cmd) {
+  auto ptr = device.submit(*cmd, nullptr);
+  if(ptr!=nullptr)
+    ptr->wait();
   cmd->reset();
 
   std::lock_guard<SpinLock> guard(sync);
   this->cmd.push_back(std::move(cmd));
   }
 
-template<class Device, class CommandBuffer, class Fence, class Buffer>
-Buffer UploadEngine<Device, CommandBuffer, Fence,Buffer>::allocStagingMemory(const void* data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap heap) {
+template<class Device, class CommandBuffer, class Buffer>
+Buffer UploadEngine<Device,CommandBuffer,Buffer>::allocStagingMemory(const void* data, size_t count, size_t size, size_t alignedSz, MemUsage usage, BufferHeap heap) {
   try {
     return device.allocator.alloc(data,count,size,alignedSz,usage,heap);
     }
@@ -160,8 +165,8 @@ Buffer UploadEngine<Device, CommandBuffer, Fence,Buffer>::allocStagingMemory(con
     }
   }
 
-template<class Device, class CommandBuffer, class Fence, class Buffer>
-Buffer UploadEngine<Device, CommandBuffer, Fence,Buffer>::allocStagingMemory(const void* data, size_t size, MemUsage usage, BufferHeap heap) {
+template<class Device, class CommandBuffer, class Buffer>
+Buffer UploadEngine<Device,CommandBuffer,Buffer>::allocStagingMemory(const void* data, size_t size, MemUsage usage, BufferHeap heap) {
   try {
     return device.allocator.alloc(data,size,usage,heap);
     }

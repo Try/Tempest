@@ -3,10 +3,22 @@
 #include "dxfence.h"
 
 #include "dxdevice.h"
-#include "guid.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
+
+void DxTimepoint::wait() {
+  dxAssert(device->waitFence(*this, std::numeric_limits<uint64_t>::max()));
+  }
+
+bool DxTimepoint::wait(uint64_t timeout) {
+  HRESULT res = device->waitFence(*this, timeout);
+  if(res==WAIT_TIMEOUT)
+    return false;
+  dxAssert(res);
+  return true;
+  }
+
 
 DxFence::DxFence() {
   }
@@ -32,3 +44,4 @@ bool DxFence::wait(uint64_t timeout) {
   }
 
 #endif
+

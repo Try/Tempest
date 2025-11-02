@@ -7,14 +7,28 @@ Fence::Fence(AbstractGraphicsApi::Fence *impl)
   :impl(impl) {
   }
 
+Fence::Fence(std::shared_ptr<AbstractGraphicsApi::Fence>& f)
+  : impl2(f) {
+  }
+
 Fence::~Fence() {
   delete impl.handler;
   }
 
 void Fence::wait() {
-  impl.handler->wait();
+  if(auto ptr = impl2.lock()) {
+    ptr->wait();
+    return;
+    }
+  if(impl.handler!=nullptr)
+    impl.handler->wait();
   }
 
 bool Fence::wait(uint64_t time) {
-  return impl.handler->wait(time);
+  if(auto ptr = impl2.lock()) {
+    return ptr->wait(time);
+    }
+  if(impl.handler!=nullptr)
+    return impl.handler->wait(time);
+  return true;
   }
