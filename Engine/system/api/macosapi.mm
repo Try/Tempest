@@ -198,8 +198,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef /*displayLink*/,
   }
 
 - (void)dispatchRenderer{
-  Detail::ImplMacOSApi::onDisplayLink(owner);
   hasPendingFrame.store(false);
+  Detail::ImplMacOSApi::onDisplayLink(owner);
   }
 @end
 

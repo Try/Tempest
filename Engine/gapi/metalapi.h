@@ -49,6 +49,7 @@ class MetalApi : public AbstractGraphicsApi {
 
     void           present  (Device *d, Swapchain* sw) override;
     void           submit   (Device *d, CommandBuffer*  cmd, Fence* doneCpu) override;
+    std::shared_ptr<AbstractGraphicsApi::Fence> submit(Device *d, CommandBuffer* cmd) override;
 
     void           getCaps  (Device *d, Props& caps) override;
 

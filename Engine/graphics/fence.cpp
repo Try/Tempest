@@ -12,6 +12,9 @@ Fence::Fence(std::shared_ptr<AbstractGraphicsApi::Fence>& f)
   }
 
 Fence::~Fence() {
+  if(auto ptr = impl2.lock()) {
+    ptr->wait();
+    }
   delete impl.handler;
   }
 

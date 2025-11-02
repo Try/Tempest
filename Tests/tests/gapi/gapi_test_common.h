@@ -226,8 +226,7 @@ void SsboCopy() {
       enc.copy(src,0,dst,0);
     }
 
-    auto sync = device.fence();
-    device.submit(cmd,sync);
+    auto sync = device.submit(cmd);
     sync.wait();
 
     std::vector<iType> dstCpu(src.w()*src.h()*ccnt);

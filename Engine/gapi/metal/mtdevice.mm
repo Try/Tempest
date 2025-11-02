@@ -80,15 +80,16 @@ std::shared_ptr<MtTimepoint> MtDevice::findAvailableFence() {
       auto& i = timeline.timepoint[id];
       if(i==nullptr)
         continue;
-      if(!i->isFinalStatus())
+      //NOTE: do not evict fences with errors
+      if(i->status.load()!=MTL::CommandBufferStatusCompleted)
         continue;
       if(i.use_count()>1 && pass==0)
         continue;
       if(i.use_count()>1) {
         //NOTE: application may still hold references to `i`
-        i = std::make_shared<MtTimepoint>();
+        i = std::make_shared<MtTimepoint>(this);
         }
-      *i = MtTimepoint();
+      i->clear();
       return i;
       }
     }
@@ -116,7 +117,7 @@ std::shared_ptr<MtTimepoint> MtDevice::aquireFence() {
     auto& i = timeline.timepoint[id];
     if(i!=nullptr)
       continue;
-    i = std::make_shared<MtTimepoint>();
+    i = std::make_shared<MtTimepoint>(this);
     return i;
     }
 
@@ -126,38 +127,59 @@ std::shared_ptr<MtTimepoint> MtDevice::aquireFence() {
   }
 
 MTL::CommandBufferStatus MtDevice::waitFence(MtTimepoint& t, uint64_t timeout) {
-  auto timeout_time = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout);
+  //assert(t.status.is_lock_free());
+
+  if(t.isFinalStatus())
+    return t.status.load();
+
+  if(timeout==std::numeric_limits<uint64_t>::max()) {
+    std::unique_lock<std::mutex> guard(timeline.sync);
+    timeline.cond.wait(guard, [&](){
+      return t.isFinalStatus();
+      });
+    return t.status.load();
+    }
 
   std::unique_lock<std::mutex> guard(timeline.sync);
-  while(true) {
-    if(t.isFinalStatus() || timeout==0)
-      return t.status;
-    if(timeout==std::numeric_limits<uint64_t>::max())
-      timeline.cond.wait(guard);
-    else if(timeline.cond.wait_until(guard, timeout_time)==std::cv_status::timeout)
-      return MTL::CommandBufferStatusNotEnqueued;
-    return t.status;
-    }
-  return MTL::CommandBufferStatusNotEnqueued;
+  timeline.cond.wait_for(guard, std::chrono::milliseconds(timeout+16), [&](){
+    return t.isFinalStatus();
+    });
+  return t.status.load();
   }
 
 void MtDevice::signalFence(MtTimepoint& t, MTL::CommandBufferStatus st, MTL::CommandBufferError err, NS::Error* desc) {
-  std::lock_guard<std::mutex> guard(timeline.sync);
-  t.status   = st;
-  t.error    = err;
-  if(st==MTL::CommandBufferStatusError) {
-    t.errorStr = desc->description()->cString(NS::UTF8StringEncoding);
-    t.errorLog.clear();
+  if(st==MTL::CommandBufferStatusNotEnqueued ||
+     st==MTL::CommandBufferStatusEnqueued ||
+     st==MTL::CommandBufferStatusCommitted)
+    return;
 
-    if(auto at = desc->userInfo()->object(MTL::CommandBufferEncoderInfoErrorKey)) {
-      auto info = reinterpret_cast<NS::Array*>(at);
-      for(size_t i=0; i<info->count(); ++i) {
-        auto ix  = reinterpret_cast<MTL::CommandBufferEncoderInfo*>(info->object(i));
-        auto str = ix->debugDescription()->cString(NS::UTF8StringEncoding);
-        if(!t.errorLog.empty())
-          t.errorLog += "\n";
-        t.errorLog += str;
+  if(st==MTL::CommandBufferStatusCompleted) {
+    t.status.store(st);
+    timeline.cond.notify_all();
+    return;
+    }
+
+  std::lock_guard<std::mutex> guard(timeline.sync);
+  t.status = st;
+  t.error  = err;
+  if(st==MTL::CommandBufferStatusError) {
+    try {
+      t.errorStr = desc->description()->cString(NS::UTF8StringEncoding);
+      t.errorLog.clear();
+
+      if(auto at = desc->userInfo()->object(MTL::CommandBufferEncoderInfoErrorKey)) {
+        auto info = reinterpret_cast<NS::Array*>(at);
+        for(size_t i=0; i<info->count(); ++i) {
+          auto ix  = reinterpret_cast<MTL::CommandBufferEncoderInfo*>(info->object(i));
+          auto str = ix->debugDescription()->cString(NS::UTF8StringEncoding);
+          if(!t.errorLog.empty())
+            t.errorLog += "\n";
+          t.errorLog += str;
+          }
         }
+      }
+    catch(...) {
+      // fail to coller error string. Oh well...
       }
     }
   timeline.cond.notify_all();

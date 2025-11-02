@@ -238,24 +238,42 @@ void MetalApi::submit(AbstractGraphicsApi::Device *d,
   auto& cx = *reinterpret_cast<MtCommandBuffer*>(pcmd);
 
   auto pfence = dx->aquireFence();
+  if(pfence==nullptr)
+    throw DeviceLostException();
+
   fence->device    = dx;
   fence->timepoint = pfence;
 
   MTL::CommandBuffer& cmd = *cx.impl;
   dx->onSubmit();
   cmd.addCompletedHandler(^(MTL::CommandBuffer* c){
-    MTL::CommandBufferStatus s = c->status();
-    if(s==MTL::CommandBufferStatusNotEnqueued ||
-       s==MTL::CommandBufferStatusEnqueued ||
-       s==MTL::CommandBufferStatusCommitted ||
-       s==MTL::CommandBufferStatusScheduled)
-      return;
-
-    dx->onFinish();
+    const MTL::CommandBufferStatus s = c->status();
     if(auto f = fence->timepoint.lock())
       dx->signalFence(*f, s, MTL::CommandBufferError(c->error()->code()), c->error());
+    if(s==MTL::CommandBufferStatusCompleted || s==MTL::CommandBufferStatusError)
+      dx->onFinish();
     });
   cmd.commit();
+  }
+
+std::shared_ptr<AbstractGraphicsApi::Fence> MetalApi::submit(Device* d, CommandBuffer* c) {
+  auto* dx = reinterpret_cast<MtDevice*>(d);
+  auto& cx = *reinterpret_cast<MtCommandBuffer*>(c);
+
+  auto pfence = dx->aquireFence();
+  if(pfence==nullptr)
+    throw DeviceLostException();
+
+  MTL::CommandBuffer& cmd = *cx.impl;
+  dx->onSubmit();
+  cmd.addCompletedHandler(^(MTL::CommandBuffer* c){
+    const MTL::CommandBufferStatus s = c->status();
+    dx->signalFence(*pfence, s, MTL::CommandBufferError(c->error()->code()), c->error());
+    if(s==MTL::CommandBufferStatusCompleted || s==MTL::CommandBufferStatusError)
+      dx->onFinish();
+    });
+  cmd.commit();
+  return pfence;
   }
 
 void MetalApi::getCaps(AbstractGraphicsApi::Device *d, AbstractGraphicsApi::Props &caps) {
