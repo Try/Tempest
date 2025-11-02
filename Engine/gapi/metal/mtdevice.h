@@ -248,9 +248,9 @@ class MtDevice : public AbstractGraphicsApi::Device {
 
     static const uint32_t MaxFences = 32;
     struct Timeline final {
-      std::condition_variable      cond;
-      std::mutex                   sync;
-      std::shared_ptr<MtTimepoint> timepoint[MaxFences];
+      std::condition_variable  cond;
+      std::mutex               sync;
+      std::shared_ptr<MtFence> timepoint[MaxFences];
       };
 
     bool     useNativeImageAtomic() const;
@@ -260,11 +260,11 @@ class MtDevice : public AbstractGraphicsApi::Device {
     void     onFinish();
     void     waitIdle() override;
 
-    std::shared_ptr<MtTimepoint> findAvailableFence();
-    void                         waitAny(std::unique_lock<std::mutex>& guard);
-    std::shared_ptr<MtTimepoint> aquireFence();
-    MTL::CommandBufferStatus     waitFence(MtTimepoint& t, uint64_t timeout);
-    void                         signalFence(MtTimepoint& t, MTL::CommandBufferStatus st, MTL::CommandBufferError errC, NS::Error* desc);
+    std::shared_ptr<MtFence> findAvailableFence();
+    void                     waitAny(std::unique_lock<std::mutex>& guard);
+    std::shared_ptr<MtFence> aquireFence();
+    MTL::CommandBufferStatus waitFence(MtFence& t, uint64_t timeout);
+    void                     signalFence(MtFence& t, MTL::CommandBufferStatus st, MTL::CommandBufferError errC, NS::Error* desc);
 
     static void handleError(NS::Error* err);
 

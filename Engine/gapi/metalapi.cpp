@@ -100,10 +100,6 @@ AbstractGraphicsApi::PShader MetalApi::createShader(AbstractGraphicsApi::Device 
   return PShader(new MtShader(dx,source,src_size));
   }
 
-AbstractGraphicsApi::Fence *MetalApi::createFence(AbstractGraphicsApi::Device*) {
-  return new MtSync();
-  }
-
 AbstractGraphicsApi::PBuffer MetalApi::createBuffer(AbstractGraphicsApi::Device *d, const void *mem, size_t size,
                                                     MemUsage usage, BufferHeap flg) {
   auto& dx = *reinterpret_cast<MtDevice*>(d);
@@ -227,33 +223,6 @@ AbstractGraphicsApi::CommandBuffer *MetalApi::createCommandBuffer(AbstractGraphi
 void MetalApi::present(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Swapchain *sw) {
   auto& s   = *reinterpret_cast<MtSwapchain*>(sw);
   s.present();
-  }
-
-void MetalApi::submit(AbstractGraphicsApi::Device *d,
-                      AbstractGraphicsApi::CommandBuffer* pcmd,
-                      AbstractGraphicsApi::Fence* doneCpu) {
-  auto* fence = reinterpret_cast<MtSync*>(doneCpu);
-
-  auto* dx = reinterpret_cast<MtDevice*>(d);
-  auto& cx = *reinterpret_cast<MtCommandBuffer*>(pcmd);
-
-  auto pfence = dx->aquireFence();
-  if(pfence==nullptr)
-    throw DeviceLostException();
-
-  fence->device    = dx;
-  fence->timepoint = pfence;
-
-  MTL::CommandBuffer& cmd = *cx.impl;
-  dx->onSubmit();
-  cmd.addCompletedHandler(^(MTL::CommandBuffer* c){
-    const MTL::CommandBufferStatus s = c->status();
-    if(auto f = fence->timepoint.lock())
-      dx->signalFence(*f, s, MTL::CommandBufferError(c->error()->code()), c->error());
-    if(s==MTL::CommandBufferStatusCompleted || s==MTL::CommandBufferStatusError)
-      dx->onFinish();
-    });
-  cmd.commit();
   }
 
 std::shared_ptr<AbstractGraphicsApi::Fence> MetalApi::submit(Device* d, CommandBuffer* c) {

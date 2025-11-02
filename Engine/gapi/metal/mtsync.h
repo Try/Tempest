@@ -11,8 +11,8 @@ namespace Detail {
 
 class MtDevice;
 
-struct MtTimepoint : public AbstractGraphicsApi::Fence {
-  MtTimepoint(MtDevice* device):device(device) {}
+struct MtFence : public AbstractGraphicsApi::Fence {
+  MtFence(MtDevice* device):device(device) {}
 
   MtDevice*                device = nullptr;
   std::atomic<MTL::CommandBufferStatus> status;
@@ -23,26 +23,10 @@ struct MtTimepoint : public AbstractGraphicsApi::Fence {
 
   void                     wait() override;
   bool                     wait(uint64_t time) override;
-  void                     propogateError(const MtTimepoint& t);
+  void                     propogateError();
 
   bool                     isFinalStatus() const;
   void                     clear();
   };
-
-class MtSync : public AbstractGraphicsApi::Fence {
-  public:
-    MtSync();
-    ~MtSync();
-
-    MtDevice*                  device = nullptr;
-    std::weak_ptr<MtTimepoint> timepoint;
-
-    void wait() override;
-    bool wait(uint64_t time) override;
-
-  private:
-    void propogateError(const MtTimepoint& t);
-  };
-
 }
 }

@@ -74,7 +74,7 @@ void MtDevice::waitIdle() {
     });
   }
 
-std::shared_ptr<MtTimepoint> MtDevice::findAvailableFence() {
+std::shared_ptr<MtFence> MtDevice::findAvailableFence() {
   for(int pass=0; pass<2; ++pass) {
     for(uint32_t id=0; id<MaxFences; ++id) {
       auto& i = timeline.timepoint[id];
@@ -87,7 +87,7 @@ std::shared_ptr<MtTimepoint> MtDevice::findAvailableFence() {
         continue;
       if(i.use_count()>1) {
         //NOTE: application may still hold references to `i`
-        i = std::make_shared<MtTimepoint>(this);
+        i = std::make_shared<MtFence>(this);
         }
       i->clear();
       return i;
@@ -105,7 +105,7 @@ void MtDevice::waitAny(std::unique_lock<std::mutex>& guard) {
     }
   }
 
-std::shared_ptr<MtTimepoint> MtDevice::aquireFence() {
+std::shared_ptr<MtFence> MtDevice::aquireFence() {
   std::unique_lock<std::mutex> guard(timeline.sync);
 
   // reuse signalled fences
@@ -117,7 +117,7 @@ std::shared_ptr<MtTimepoint> MtDevice::aquireFence() {
     auto& i = timeline.timepoint[id];
     if(i!=nullptr)
       continue;
-    i = std::make_shared<MtTimepoint>(this);
+    i = std::make_shared<MtFence>(this);
     return i;
     }
 
@@ -126,9 +126,8 @@ std::shared_ptr<MtTimepoint> MtDevice::aquireFence() {
   return findAvailableFence();
   }
 
-MTL::CommandBufferStatus MtDevice::waitFence(MtTimepoint& t, uint64_t timeout) {
+MTL::CommandBufferStatus MtDevice::waitFence(MtFence& t, uint64_t timeout) {
   //assert(t.status.is_lock_free());
-
   if(t.isFinalStatus())
     return t.status.load();
 
@@ -141,13 +140,13 @@ MTL::CommandBufferStatus MtDevice::waitFence(MtTimepoint& t, uint64_t timeout) {
     }
 
   std::unique_lock<std::mutex> guard(timeline.sync);
-  timeline.cond.wait_for(guard, std::chrono::milliseconds(timeout+16), [&](){
+  timeline.cond.wait_for(guard, std::chrono::milliseconds(timeout), [&](){
     return t.isFinalStatus();
     });
   return t.status.load();
   }
 
-void MtDevice::signalFence(MtTimepoint& t, MTL::CommandBufferStatus st, MTL::CommandBufferError err, NS::Error* desc) {
+void MtDevice::signalFence(MtFence& t, MTL::CommandBufferStatus st, MTL::CommandBufferError err, NS::Error* desc) {
   if(st==MTL::CommandBufferStatusNotEnqueued ||
      st==MTL::CommandBufferStatusEnqueued ||
      st==MTL::CommandBufferStatusCommitted)
