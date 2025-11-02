@@ -232,11 +232,14 @@ void MetalApi::present(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Swapch
 void MetalApi::submit(AbstractGraphicsApi::Device *d,
                       AbstractGraphicsApi::CommandBuffer* pcmd,
                       AbstractGraphicsApi::Fence* doneCpu) {
-  auto& fence = *reinterpret_cast<MtSync*>(doneCpu);
-  fence.signal();
+  auto* fence = reinterpret_cast<MtSync*>(doneCpu);
 
   auto* dx = reinterpret_cast<MtDevice*>(d);
   auto& cx = *reinterpret_cast<MtCommandBuffer*>(pcmd);
+
+  auto pfence = dx->aquireFence();
+  fence->device    = dx;
+  fence->timepoint = pfence;
 
   MTL::CommandBuffer& cmd = *cx.impl;
   dx->onSubmit();
@@ -248,10 +251,9 @@ void MetalApi::submit(AbstractGraphicsApi::Device *d,
        s==MTL::CommandBufferStatusScheduled)
       return;
 
-    if(s==MTL::CommandBufferStatusCompleted)
-      fence.reset(); else
-      fence.reset(s, MTL::CommandBufferError(c->error()->code()), c->error());
     dx->onFinish();
+    if(auto f = fence->timepoint.lock())
+      dx->signalFence(*f, s, MTL::CommandBufferError(c->error()->code()), c->error());
     });
   cmd.commit();
   }

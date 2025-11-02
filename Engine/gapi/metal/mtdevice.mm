@@ -74,6 +74,95 @@ void MtDevice::waitIdle() {
     });
   }
 
+std::shared_ptr<MtTimepoint> MtDevice::findAvailableFence() {
+  for(int pass=0; pass<2; ++pass) {
+    for(uint32_t id=0; id<MaxFences; ++id) {
+      auto& i = timeline.timepoint[id];
+      if(i==nullptr)
+        continue;
+      if(!i->isFinalStatus())
+        continue;
+      if(i.use_count()>1 && pass==0)
+        continue;
+      if(i.use_count()>1) {
+        //NOTE: application may still hold references to `i`
+        i = std::make_shared<MtTimepoint>();
+        }
+      *i = MtTimepoint();
+      return i;
+      }
+    }
+  return nullptr;
+  }
+
+void MtDevice::waitAny(std::unique_lock<std::mutex>& guard) {
+  while(true) {
+    timeline.cond.wait(guard);
+    for(auto& i:timeline.timepoint)
+      if(i->isFinalStatus())
+        return;
+    }
+  }
+
+std::shared_ptr<MtTimepoint> MtDevice::aquireFence() {
+  std::unique_lock<std::mutex> guard(timeline.sync);
+
+  // reuse signalled fences
+  auto f = findAvailableFence();
+  if(f!=nullptr)
+    return f;
+  // allocate one and add to the pool
+  for(uint32_t id=0; id<MaxFences; ++id) {
+    auto& i = timeline.timepoint[id];
+    if(i!=nullptr)
+      continue;
+    i = std::make_shared<MtTimepoint>();
+    return i;
+    }
+
+  //pool is full - wait on one of the fences and reuse it
+  waitAny(guard);
+  return findAvailableFence();
+  }
+
+MTL::CommandBufferStatus MtDevice::waitFence(MtTimepoint& t, uint64_t timeout) {
+  auto timeout_time = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout);
+
+  std::unique_lock<std::mutex> guard(timeline.sync);
+  while(true) {
+    if(t.isFinalStatus() || timeout==0)
+      return t.status;
+    if(timeout==std::numeric_limits<uint64_t>::max())
+      timeline.cond.wait(guard);
+    else if(timeline.cond.wait_until(guard, timeout_time)==std::cv_status::timeout)
+      return MTL::CommandBufferStatusNotEnqueued;
+    return t.status;
+    }
+  return MTL::CommandBufferStatusNotEnqueued;
+  }
+
+void MtDevice::signalFence(MtTimepoint& t, MTL::CommandBufferStatus st, MTL::CommandBufferError err, NS::Error* desc) {
+  std::lock_guard<std::mutex> guard(timeline.sync);
+  t.status   = st;
+  t.error    = err;
+  if(st==MTL::CommandBufferStatusError) {
+    t.errorStr = desc->description()->cString(NS::UTF8StringEncoding);
+    t.errorLog.clear();
+
+    if(auto at = desc->userInfo()->object(MTL::CommandBufferEncoderInfoErrorKey)) {
+      auto info = reinterpret_cast<NS::Array*>(at);
+      for(size_t i=0; i<info->count(); ++i) {
+        auto ix  = reinterpret_cast<MTL::CommandBufferEncoderInfo*>(info->object(i));
+        auto str = ix->debugDescription()->cString(NS::UTF8StringEncoding);
+        if(!t.errorLog.empty())
+          t.errorLog += "\n";
+        t.errorLog += str;
+        }
+      }
+    }
+  timeline.cond.notify_all();
+  }
+
 void MtDevice::handleError(NS::Error *err) {
   if(err==nullptr)
     return;

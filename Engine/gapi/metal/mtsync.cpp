@@ -2,11 +2,17 @@
 
 #include "mtsync.h"
 
+#include "gapi/metal/mtdevice.h"
+
 #include <Tempest/Except>
 #include <Tempest/Log>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
+
+bool MtTimepoint::isFinalStatus() const {
+  return status==MTL::CommandBufferStatusCompleted || status==MTL::CommandBufferStatusError;
+  }
 
 MtSync::MtSync() {
   }
@@ -15,64 +21,31 @@ MtSync::~MtSync() {
   }
 
 void MtSync::wait() {
-  if(!hasWait.load()) {
-    propogateError();
-    return;
+  if(auto t = timepoint.lock()) {
+    MTL::CommandBufferStatus res = device->waitFence(*t, std::numeric_limits<uint64_t>::max());
+    if(res!=MTL::CommandBufferStatusCompleted && res!=MTL::CommandBufferStatusError)
+      return;
+    propogateError(*t);
     }
-  std::unique_lock<std::mutex> guard(sync);
-  cv.wait(guard,[this](){ return !hasWait.load(); });
-  propogateError();
   }
 
 bool MtSync::wait(uint64_t time) {
-  if(!hasWait.load()) {
-    propogateError();
+  if(auto t = timepoint.lock()) {
+    MTL::CommandBufferStatus res = device->waitFence(*t, time);
+    if(res!=MTL::CommandBufferStatusCompleted && res!=MTL::CommandBufferStatusError)
+      return false;
+    propogateError(*t);
     return true;
     }
-  std::unique_lock<std::mutex> guard(sync);
-  const bool ret = cv.wait_for(guard,std::chrono::milliseconds(time),[this](){ return !hasWait.load(); });
-  propogateError();
-  return ret;
+  return true;
   }
 
-void MtSync::reset() {
-  hasWait.store(false);
-  cv.notify_all();
-  }
-
-void MtSync::reset(MTL::CommandBufferStatus err, MTL::CommandBufferError errC, NS::Error* desc) {
-  std::unique_lock<std::mutex> guard(sync);
-  errorCategory = errC;
-  status        = err;
-  errorStr      = desc->description()->cString(NS::UTF8StringEncoding);
-
-  errorLog.clear();
-  if(auto at = desc->userInfo()->object(MTL::CommandBufferEncoderInfoErrorKey)) {
-    auto info = reinterpret_cast<NS::Array*>(at);
-    for(size_t i=0; i<info->count(); ++i) {
-      auto ix  = reinterpret_cast<MTL::CommandBufferEncoderInfo*>(info->object(i));
-      auto str = ix->debugDescription()->cString(NS::UTF8StringEncoding);
-      if(!errorLog.empty())
-        errorLog += "\n";
-      errorLog += str;
-      }
-    }
-
-  hasWait.store(false);
-  cv.notify_all();
-  }
-
-void MtSync::signal() {
-  hasWait.store(true);
-  cv.notify_all();
-  }
-
-void MtSync::propogateError() {
-  if(status!=MTL::CommandBufferStatusError)
+void MtSync::propogateError(const MtTimepoint& t) {
+  if(t.status!=MTL::CommandBufferStatusError)
     return;
-  if(errorCategory==MTL::CommandBufferErrorTimeout)
+  if(t.error==MTL::CommandBufferErrorTimeout)
     throw DeviceHangException();
-  throw DeviceLostException(errorStr, errorLog);
+  throw DeviceLostException(t.errorStr, t.errorLog);
   }
 
 #endif

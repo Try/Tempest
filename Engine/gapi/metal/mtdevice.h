@@ -10,7 +10,8 @@
 
 #include "../utility/compiller_hints.h"
 #include "gapi/shaderreflection.h"
-#include "mtsamplercache.h"
+#include "gapi/metal/mtsync.h"
+#include "gapi/metal/mtsamplercache.h"
 #include "nsptr.h"
 
 class MTLDevice;
@@ -245,12 +246,25 @@ class MtDevice : public AbstractGraphicsApi::Device {
     MtDevice(std::string_view name, bool validation);
     ~MtDevice();
 
-    void onSubmit();
-    void onFinish();
-    void waitIdle() override;
+    static const uint32_t MaxFences = 32;
+    struct Timeline final {
+      std::condition_variable      cond;
+      std::mutex                   sync;
+      std::shared_ptr<MtTimepoint> timepoint[MaxFences];
+      };
 
     bool     useNativeImageAtomic() const;
     uint32_t linearImageAlignment() const;
+
+    void     onSubmit();
+    void     onFinish();
+    void     waitIdle() override;
+
+    std::shared_ptr<MtTimepoint> findAvailableFence();
+    void                         waitAny(std::unique_lock<std::mutex>& guard);
+    std::shared_ptr<MtTimepoint> aquireFence();
+    MTL::CommandBufferStatus     waitFence(MtTimepoint& t, uint64_t timeout);
+    void                         signalFence(MtTimepoint& t, MTL::CommandBufferStatus st, MTL::CommandBufferError errC, NS::Error* desc);
 
     static void handleError(NS::Error* err);
 
@@ -260,6 +274,8 @@ class MtDevice : public AbstractGraphicsApi::Device {
     std::condition_variable    devIdleCv;
     std::mutex                 devIdleSync;
     std::atomic_uint32_t       devCmdBuf{0};
+
+    Timeline                   timeline;
 
     AbstractGraphicsApi::Props prop;
     MtSamplerCache             samplers;
