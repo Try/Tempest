@@ -17,13 +17,11 @@ class VulkanApi : public AbstractGraphicsApi {
 
   protected:
     Device*        createDevice(std::string_view gpuName) override;
-
     Swapchain*     createSwapchain(SystemApi::Window* w, Device *d) override;
 
     PPipeline      createPipeline(Device* d, const RenderState &st, Topology tp,
                                   const Shader*const* sh, size_t cnt) override;
     PCompPipeline  createComputePipeline(Device* d, Shader* sh) override;
-
     PShader        createShader(AbstractGraphicsApi::Device *d, const void* source, size_t src_size) override;
 
     DescArray*     createDescriptors(Device* d, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler& smp) override;

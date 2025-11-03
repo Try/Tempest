@@ -17,13 +17,11 @@ class DirectX12Api : public AbstractGraphicsApi {
 
   protected:
     Device*        createDevice(std::string_view gpuName) override;
-
     Swapchain*     createSwapchain(SystemApi::Window* w, Device *d) override;
 
     PPipeline      createPipeline(Device* d, const RenderState &st, Topology tp,
                                   const Shader*const* shaders, size_t count) override;
     PCompPipeline  createComputePipeline(Device* d, Shader* sh) override;
-
     PShader        createShader(Device *d, const void* source, size_t src_size) override;
 
     PBuffer        createBuffer (Device* d, const void *mem, size_t size, MemUsage usage, BufferHeap flg) override;

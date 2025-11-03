@@ -258,13 +258,7 @@ AbstractGraphicsApi::Swapchain *VulkanApi::createSwapchain(SystemApi::Window *w,
   return new Detail::VSwapchain(*dx, w);
   }
 
-AbstractGraphicsApi::PPipelineLay VulkanApi::createPipelineLayout(Device*, const Shader*const*, size_t) {
-  //TODO: remove pipeline layouts
-  return PPipelineLay(new AbstractGraphicsApi::PipelineLay());
-  }
-
-AbstractGraphicsApi::PPipeline VulkanApi::createPipeline(AbstractGraphicsApi::Device *d,
-                                                         const RenderState &st, Topology tp, const PipelineLay&,
+AbstractGraphicsApi::PPipeline VulkanApi::createPipeline(AbstractGraphicsApi::Device *d, const RenderState &st, Topology tp,
                                                          const Shader*const* sh, size_t cnt) {
   auto* dx = reinterpret_cast<Detail::VDevice*>(d);
   const Detail::VShader* shader[5] = {};
@@ -273,9 +267,7 @@ AbstractGraphicsApi::PPipeline VulkanApi::createPipeline(AbstractGraphicsApi::De
   return PPipeline(new Detail::VPipeline(*dx,tp,st,shader,cnt));
   }
 
-AbstractGraphicsApi::PCompPipeline VulkanApi::createComputePipeline(AbstractGraphicsApi::Device* d,
-                                                                    const AbstractGraphicsApi::PipelineLay&,
-                                                                    AbstractGraphicsApi::Shader* shader) {
+AbstractGraphicsApi::PCompPipeline VulkanApi::createComputePipeline(AbstractGraphicsApi::Device* d, AbstractGraphicsApi::Shader* shader) {
   auto* dx = reinterpret_cast<Detail::VDevice*>(d);
   return PCompPipeline(new Detail::VCompPipeline(*dx,*reinterpret_cast<Detail::VShader*>(shader)));
   }
