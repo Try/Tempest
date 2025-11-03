@@ -18,7 +18,6 @@ class VDevice;
 
 class VPipeline : public AbstractGraphicsApi::Pipeline {
   public:
-    VPipeline();
     VPipeline(VDevice &device, Topology tp, const RenderState &st, const VShader** sh, size_t count);
     VPipeline(VPipeline&& other) = delete;
     ~VPipeline();
@@ -38,12 +37,12 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     using LayoutDesc = ShaderReflection::LayoutDesc;
     using SyncDesc   = ShaderReflection::SyncDesc;
 
-    PushBlock             pb;
-    LayoutDesc            layout;
-    SyncDesc              sync;
+    PushBlock          pb;
+    LayoutDesc         layout;
+    SyncDesc           sync;
 
-    VkPipelineLayout      pipelineLayout = VK_NULL_HANDLE;
-    uint32_t              defaultStride  = 0;
+    VkPipelineLayout   pipelineLayout = VK_NULL_HANDLE;
+    uint32_t           defaultStride  = 0;
 
     VkPipeline         instance(const VkPipelineRenderingCreateInfoKHR& info, VkRenderPass pass, VkPipelineLayout pLay, size_t stride);
 
@@ -68,7 +67,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
       bool                             isCompatible(const VkPipelineRenderingCreateInfoKHR& dr, VkPipelineLayout pLay, size_t stride) const;
       };
 
-    VkDevice                               device = nullptr;
+    VDevice&                               device;
     Topology                               tp = Topology::Triangles;
     Tempest::RenderState                   st;
     size_t                                 declSize=0;
@@ -83,7 +82,7 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
     const VShader*                         findShader(ShaderReflection::Stage sh) const;
     void                                   cleanup();
 
-    VkPipeline                   initGraphicsPipeline(VkDevice device, VkPipelineLayout layout,
+    VkPipeline                   initGraphicsPipeline(VDevice& device, VkPipelineLayout layout,
                                                       const VkRenderPass rpass, const VkPipelineRenderingCreateInfoKHR* dynLay, const RenderState &st,
                                                       const Decl::ComponentType *decl, size_t declSize, size_t stride,
                                                       Topology tp,
@@ -111,8 +110,8 @@ class VCompPipeline : public AbstractGraphicsApi::CompPipeline {
     LayoutDesc           layout;
     SyncDesc             sync;
 
-    VkPipelineLayout      pipelineLayout = VK_NULL_HANDLE;
-    VkPipeline            impl           = VK_NULL_HANDLE;
+    VkPipelineLayout     pipelineLayout = VK_NULL_HANDLE;
+    VkPipeline           impl           = VK_NULL_HANDLE;
 
   private:
     struct Inst {

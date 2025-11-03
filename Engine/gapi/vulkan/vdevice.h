@@ -323,6 +323,8 @@ class VDevice : public AbstractGraphicsApi::Device {
       uint32_t graphicsFamily = uint32_t(-1);
       uint32_t presentFamily  = uint32_t(-1);
 
+      uint32_t vendorID = 0;
+
       size_t   nonCoherentAtomSize = 0;
       size_t   bufferImageGranularity = 0;
       size_t   accelerationStructureScratchOffsetAlignment = 0;
@@ -383,6 +385,8 @@ class VDevice : public AbstractGraphicsApi::Device {
     DataMgr&                dataMgr() const { return *data; }
 
     VBuffer&                dummySsbo();
+
+    std::unique_lock<std::mutex> compilerLock();
 
     uint32_t                roundUpDescriptorCount(ShaderReflection::Class cls, size_t cnt);
     VkDescriptorSetLayout   bindlessArrayLayout(ShaderReflection::Class cls, size_t cnt);

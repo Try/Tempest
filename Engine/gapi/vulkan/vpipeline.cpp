@@ -38,11 +38,8 @@ bool VPipeline::InstDr::isCompatible(const VkPipelineRenderingCreateInfoKHR& dr,
   }
 
 
-VPipeline::VPipeline(){
-  }
-
 VPipeline::VPipeline(VDevice& device, Topology tp, const RenderState& st, const VShader** sh, size_t count)
-  : device(device.device.impl), tp(tp), st(st) {
+  : device(device), tp(tp), st(st) {
   try {
     const std::vector<Detail::ShaderReflection::Binding>* bindings[5] = {};
     for(size_t i=0; i<count; ++i) {
@@ -101,7 +98,7 @@ VkPipeline VPipeline::instance(const VkPipelineRenderingCreateInfoKHR& info, VkR
     }
   catch(...) {
     if(val!=VK_NULL_HANDLE)
-      vkDestroyPipeline(device,val,nullptr);
+      vkDestroyPipeline(device.device.impl,val,nullptr);
     throw;
     }
   return instDr.back().val;
@@ -125,12 +122,12 @@ const VShader* VPipeline::findShader(ShaderReflection::Stage sh) const {
 
 void VPipeline::cleanup() {
   for(auto& i:instRp)
-    vkDestroyPipeline(device,i.val,nullptr);
+    vkDestroyPipeline(device.device.impl,i.val,nullptr);
   for(auto& i:instDr)
-    vkDestroyPipeline(device,i.val,nullptr);
+    vkDestroyPipeline(device.device.impl,i.val,nullptr);
   }
 
-VkPipeline VPipeline::initGraphicsPipeline(VkDevice device,
+VkPipeline VPipeline::initGraphicsPipeline(VDevice& device,
                                            VkPipelineLayout layout, const VkRenderPass rpass,
                                            const VkPipelineRenderingCreateInfoKHR* dynLay,
                                            const RenderState &st,
@@ -302,8 +299,9 @@ VkPipeline VPipeline::initGraphicsPipeline(VkDevice device,
     // rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
     }
 
+  auto sync = device.compilerLock();
   VkPipeline graphicsPipeline=VK_NULL_HANDLE;
-  const auto err = vkCreateGraphicsPipelines(device,VK_NULL_HANDLE,1,&pipelineInfo,nullptr,&graphicsPipeline);
+  const auto err = vkCreateGraphicsPipelines(device.device.impl,VK_NULL_HANDLE,1,&pipelineInfo,nullptr,&graphicsPipeline);
   if(err!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
   return graphicsPipeline;
@@ -325,6 +323,8 @@ VCompPipeline::VCompPipeline(VDevice& device, const VShader& comp)
 
   VkDevice dev = device.device.impl;
   try {  
+    auto sync = device.compilerLock();
+
     VkComputePipelineCreateInfo info = {};
     info.sType        = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     info.stage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -379,6 +379,8 @@ VkPipeline VCompPipeline::instance(VkPipelineLayout pLay) {
   VkDevice   dev = device.device.impl;
   VkPipeline val = VK_NULL_HANDLE;
   try {
+    auto sync = device.compilerLock();
+
     VkComputePipelineCreateInfo info = {};
     info.sType              = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     info.stage.sType        = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
