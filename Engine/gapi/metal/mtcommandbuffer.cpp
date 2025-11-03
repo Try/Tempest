@@ -200,7 +200,7 @@ void MtCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline &p) {
   auto& px = reinterpret_cast<MtCompPipeline&>(p);
   encComp->setComputePipelineState(px.impl.get());
   curCompPipeline = &px;
-  curLay          = px.lay.handler;
+  curLay          = &px.lay;
   localSize       = px.localSize;
   maxTotalThreadsPerThreadgroup = uint32_t(px.impl->maxTotalThreadsPerThreadgroup());
   bindings.durty = true;
@@ -776,8 +776,8 @@ void MtCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline &p) {
   topology        = px.topology;
   curDrawPipeline = &px;
   vboStride       = px.defaultStride;
-  curLay          = px.lay.handler;
-  curVboId        = px.lay.handler->vboIndex;
+  curLay          = &px.lay;
+  curVboId        = px.lay.vboIndex;
   localSize       = px.localSize;
   localSizeMesh   = px.localSizeMesh;
 

@@ -6,6 +6,7 @@
 #include <Tempest/Log>
 #include <Tempest/Matrix4x4>
 #include <Tempest/Vec>
+#include <Tempest/Fence>
 
 #include <gtest/gtest.h>
 #include <gmock/gmock-matchers.h>

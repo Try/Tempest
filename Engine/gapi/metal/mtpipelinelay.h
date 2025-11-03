@@ -39,7 +39,8 @@ class MtPipelineLay : public AbstractGraphicsApi::PipelineLay {
       uint32_t mslPushSize = 0;
       };
 
-    MtPipelineLay(const std::vector<Binding> **sh, size_t cnt, ShaderReflection::Stage bufferSizeBuffer);
+    MtPipelineLay(const MtShader* sh);
+    MtPipelineLay(const MtShader*const* sh, size_t cnt);
 
     std::vector<Binding>          lay;
     std::vector<MTLBind>          bind;

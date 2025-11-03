@@ -7,15 +7,31 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-MtPipelineLay::MtPipelineLay(const std::vector<Binding>** sh, size_t cnt, ShaderReflection::Stage bufferSizeBuffer)
-  : bufferSizeBuffer(bufferSizeBuffer) {
-  ShaderReflection::merge(lay,pb,sh,cnt);
-  bind.resize(lay.size());
+MtPipelineLay::MtPipelineLay(const MtShader* sh)
+  :MtPipelineLay(&sh, 1){
+  }
 
+MtPipelineLay::MtPipelineLay(const MtShader*const* sh, size_t cnt) {
+  const std::vector<Detail::ShaderReflection::Binding>* lx[5] = {};
   for(size_t i=0; i<cnt; ++i) {
     if(sh[i]==nullptr)
       continue;
-    for(auto& b:*sh[i]) {
+    auto* s = reinterpret_cast<const MtShader*>(sh[i]);
+    lx[i] = &sh[i]->lay;
+    }
+
+  ShaderReflection::merge(lay,pb,lx,cnt);
+  bind.resize(lay.size());
+
+  bufferSizeBuffer = ShaderReflection::None;
+  for(size_t i=0; i<cnt; ++i) {
+    auto* s = reinterpret_cast<const MtShader*>(sh[i]);
+    if(s==nullptr)
+      continue;
+    if(s->bufferSizeBuffer) {
+      bufferSizeBuffer = ShaderReflection::Stage(bufferSizeBuffer | s->stage);
+      }
+    for(auto& b:s->lay) {
       auto& bx = (b.cls==ShaderReflection::Push) ? bindPush : bind[b.layout];
       if((b.stage & vertMask)!=0) {
         bx.bindVs    = b.mslBinding;

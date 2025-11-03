@@ -16,11 +16,9 @@ static MTL::Size toMtlSize(const Tempest::IVec3 s) {
   return MTL::Size(s.x,s.y,s.z);
   }
 
-MtPipeline::MtPipeline(MtDevice &d, Topology tp,
-                       const RenderState &rs,
-                       const MtPipelineLay& lay,
+MtPipeline::MtPipeline(MtDevice &d, Topology tp, const RenderState &rs,
                        const MtShader* const * sh, size_t count)
-  :lay(&lay), device(d), rs(rs) {
+  :lay(sh, count), device(d), rs(rs) {
   for(size_t i=0; i<count; ++i)
     if(sh[i]!=nullptr)
       modules[i] = Detail::DSharedPtr<const MtShader*>{sh[i]};
@@ -77,7 +75,7 @@ IVec3 MtPipeline::workGroupSize() const {
   }
 
 size_t MtPipeline::sizeofBuffer(size_t id, size_t arraylen) const {
-  return ShaderReflection::sizeofBuffer(lay.handler->lay[id], arraylen);
+  return ShaderReflection::sizeofBuffer(lay.lay[id], arraylen);
   }
 
 MTL::RenderPipelineState& MtPipeline::inst(const MtFboLayout& lay, size_t stride) {
@@ -198,8 +196,8 @@ void MtPipeline::mkMeshPso(const MtPipelineLay& lay) {
   }
 
 
-MtCompPipeline::MtCompPipeline(MtDevice &device, const MtPipelineLay& lay, const MtShader &sh)
-  :lay(&lay) {
+MtCompPipeline::MtCompPipeline(MtDevice &device, const MtShader &sh)
+  :lay(&sh) {
   localSize = toMtlSize(sh.comp.wgSize);
   auto desc = NsPtr<MTL::ComputePipelineDescriptor>::init();
   desc->setComputeFunction(sh.impl.get());
@@ -241,7 +239,7 @@ IVec3 MtCompPipeline::workGroupSize() const {
   }
 
 size_t MtCompPipeline::sizeofBuffer(size_t id, size_t arraylen) const {
-  return ShaderReflection::sizeofBuffer(lay.handler->lay[id], arraylen);
+  return ShaderReflection::sizeofBuffer(lay.lay[id], arraylen);
   }
 
 #endif

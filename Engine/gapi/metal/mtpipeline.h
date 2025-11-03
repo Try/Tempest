@@ -5,10 +5,11 @@
 #include <Metal/Metal.hpp>
 #include <list>
 
-#include "utility/spinlock.h"
-#include "mtfbolayout.h"
-#include "mtshader.h"
+#include "gapi/metal/mtpipelinelay.h"
+#include "gapi/metal/mtfbolayout.h"
+#include "gapi/metal/mtshader.h"
 #include "gapi/shaderreflection.h"
+#include "utility/spinlock.h"
 #include "nsptr.h"
 
 namespace Tempest {
@@ -17,25 +18,19 @@ namespace Detail {
 class MtDevice;
 class MtShader;
 class MtFboLayout;
-class MtPipelineLay;
 
 class MtPipeline : public AbstractGraphicsApi::Pipeline {
   public:
-    MtPipeline(MtDevice &d, Topology tp, const Tempest::RenderState& rs, const MtPipelineLay& lay,
+    MtPipeline(MtDevice &d, Topology tp, const Tempest::RenderState& rs,
                const MtShader*const* sh, size_t cnt);
     ~MtPipeline();
 
     IVec3  workGroupSize() const override;
     size_t sizeofBuffer(size_t id, size_t arraylen) const override;
 
-    struct Inst {
-      NsPtr<MTL::RenderPipelineState> pso;
-      size_t                          stride=0;
-      MtFboLayout                     fbo;
-      };
     MTL::RenderPipelineState& inst(const MtFboLayout &lay, size_t stride);
 
-    DSharedPtr<const MtPipelineLay*>  lay;
+    MtPipelineLay                     lay;
 
     NsPtr<MTL::DepthStencilState>     depthStZ;
     NsPtr<MTL::DepthStencilState>     depthStNoZ;
@@ -49,6 +44,12 @@ class MtPipeline : public AbstractGraphicsApi::Pipeline {
     MTL::Size                         localSizeMesh = {};
 
   private:
+    struct Inst {
+      NsPtr<MTL::RenderPipelineState> pso;
+      size_t                          stride=0;
+      MtFboLayout                     fbo;
+      };
+
     const MtShader*                      findShader(ShaderReflection::Stage sh) const;
     void                                 mkVertexPso(const MtPipelineLay& lay);
     void                                 mkMeshPso(const MtPipelineLay& lay);
@@ -70,13 +71,13 @@ class MtPipeline : public AbstractGraphicsApi::Pipeline {
 
 class MtCompPipeline : public AbstractGraphicsApi::CompPipeline {
   public:
-    MtCompPipeline(MtDevice &d, const MtPipelineLay& lay, const MtShader& sh);
+    MtCompPipeline(MtDevice &d, const MtShader& sh);
 
     IVec3  workGroupSize() const override;
     size_t sizeofBuffer(size_t id, size_t arraylen) const override;
 
     NsPtr<MTL::ComputePipelineState> impl;
-    DSharedPtr<const MtPipelineLay*> lay;
+    MtPipelineLay                    lay;
     MTL::Size                        localSize = {};
   };
 
