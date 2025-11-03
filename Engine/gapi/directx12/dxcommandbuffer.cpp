@@ -649,23 +649,34 @@ void DxCommandBuffer::implSetUniforms(const PipelineStage st) {
     return;
   bindings.durty = false;
 
-  const DxPipelineLay* lay = nullptr;
+  using PushBlock  = ShaderReflection::PushBlock;
+  using LayoutDesc = ShaderReflection::LayoutDesc;
+  using SyncDesc   = ShaderReflection::SyncDesc;
+
+  const LayoutDesc* lay  = nullptr;
+  const SyncDesc*   sync = nullptr;
+  const PushBlock*  pb   = nullptr;
+
   switch(st) {
     case PipelineStage::S_Graphics:
-      lay = &curDrawPipeline->layout;
+      lay  = &curDrawPipeline->layout;
+      sync = &curDrawPipeline->sync;
+      pb   = &curDrawPipeline->pb;
       break;
     case PipelineStage::S_Compute:
-      lay = &curCompPipeline->layout;
+      lay  = &curCompPipeline->layout;
+      sync = &curCompPipeline->sync;
+      pb   = &curCompPipeline->pb;
       break;
     default:
       break;
     }
 
-  handleSync(lay->layout, lay->sync, st);
+  handleSync(*lay, *sync, st);
 
-  const auto dset = pushDescriptors.push(lay->pb, lay->layout, bindings);
+  const auto dset = pushDescriptors.push(*pb, *lay, bindings);
   setupHeaps();
-  pushDescriptors.setRootTable(*impl, dset, lay->layout, bindings, st);
+  pushDescriptors.setRootTable(*impl, dset, *lay, bindings, st);
   }
 
 void DxCommandBuffer::implSetPushData(const PipelineStage st) {
@@ -673,24 +684,29 @@ void DxCommandBuffer::implSetPushData(const PipelineStage st) {
     return;
   pushData.durty = false;
 
-  const DxPipelineLay* lay  = nullptr;
+  using PushBlock  = ShaderReflection::PushBlock;
+  using LayoutDesc = ShaderReflection::LayoutDesc;
+  using SyncDesc   = ShaderReflection::SyncDesc;
+
+  const PushBlock* pb = nullptr;
+
   switch(st) {
     case PipelineStage::S_Graphics:
-      lay = &curDrawPipeline->layout;
+      pb   = &curDrawPipeline->pb;
       break;
     case PipelineStage::S_Compute:
-      lay = &curCompPipeline->layout;
+      pb   = &curCompPipeline->pb;
       break;
     default:
       break;
     }
 
-  if(lay->pb.size==0)
+  if(pb->size==0)
     return;
 
-  assert(lay->pb.size<=pushData.size);
+  assert(pb->size<=pushData.size);
 
-  const uint32_t size = uint32_t(lay->pb.size);
+  const uint32_t size = uint32_t(pb->size);
   if(st==S_Graphics)
     impl->SetGraphicsRoot32BitConstants(pushConstantId, UINT(size/4), pushData.data, 0); else
     impl->SetComputeRoot32BitConstants(pushConstantId, UINT(size/4), pushData.data, 0);

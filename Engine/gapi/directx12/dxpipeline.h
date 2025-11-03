@@ -19,10 +19,29 @@ class DxShader;
 class DxPipeline : public AbstractGraphicsApi::Pipeline {
   public:
     DxPipeline() = delete;
-    DxPipeline(DxDevice &device,
-               const RenderState &st, Topology tp, const DxPipelineLay& ulay,
-               const DxShader*const* shaders, size_t cnt);
+    DxPipeline(DxDevice &device, const RenderState &st, Topology tp, const DxShader*const* shaders, size_t cnt);
 
+    using Binding    = ShaderReflection::Binding;
+    using PushBlock  = ShaderReflection::PushBlock;
+    using LayoutDesc = ShaderReflection::LayoutDesc;
+    using SyncDesc   = ShaderReflection::SyncDesc;
+
+    IVec3                       workGroupSize() const override;
+    size_t                      sizeofBuffer(size_t id, size_t arraylen) const override;
+
+    ID3D12PipelineState&        instance(DXGI_FORMAT  frm);
+    ID3D12PipelineState&        instance(const DxFboLayout& frm);
+
+    PushBlock                   pb;
+    LayoutDesc                  layout;
+    SyncDesc                    sync;
+
+    ComPtr<ID3D12RootSignature> sign;
+    D3D_PRIMITIVE_TOPOLOGY      topology           = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+    uint32_t                    pushConstantId     = 0;
+    uint32_t                    pushBaseInstanceId = 0;
+
+  private:
     struct Inst final {
       Inst() = default;
       Inst(Inst&&)=default;
@@ -32,20 +51,6 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
       ComPtr<ID3D12PipelineState> impl;
       };
 
-    ComPtr<ID3D12RootSignature> sign;
-    const DxPipelineLay&        layout;
-
-    D3D_PRIMITIVE_TOPOLOGY      topology           = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
-    uint32_t                    pushConstantId     = 0;
-    uint32_t                    pushBaseInstanceId = 0;
-
-    ID3D12PipelineState&        instance(DXGI_FORMAT  frm);
-    ID3D12PipelineState&        instance(const DxFboLayout& frm);
-
-    IVec3                       workGroupSize() const override;
-    size_t                      sizeofBuffer(size_t id, size_t arraylen) const override;
-
-  private:
     DxDevice&                   device;
     DSharedPtr<const DxShader*> modules[5] = {};
     IVec3                       wgSize = {};
@@ -54,8 +59,8 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
     RenderState                 rState;
     std::unique_ptr<D3D12_INPUT_ELEMENT_DESC[]> vsInput;
 
+    SpinLock                    syncInst;
     std::vector<Inst>           inst;
-    SpinLock                    sync;
 
     const DxShader*             findShader(ShaderReflection::Stage sh) const;
     D3D12_BLEND_DESC            getBlend(const RenderState &st) const;
@@ -69,17 +74,23 @@ class DxPipeline : public AbstractGraphicsApi::Pipeline {
 class DxCompPipeline : public AbstractGraphicsApi::CompPipeline {
   public:
     DxCompPipeline() = delete;
-    DxCompPipeline(DxDevice &device,
-                   const DxPipelineLay& ulay,
-                   DxShader& comp);
+    DxCompPipeline(DxDevice &device, DxShader& comp);
+
+    using Binding    = ShaderReflection::Binding;
+    using PushBlock  = ShaderReflection::PushBlock;
+    using LayoutDesc = ShaderReflection::LayoutDesc;
+    using SyncDesc   = ShaderReflection::SyncDesc;
 
     IVec3                       workGroupSize() const override;
     size_t                      sizeofBuffer(size_t id, size_t arraylen) const override;
 
+    PushBlock                   pb;
+    LayoutDesc                  layout;
+    SyncDesc                    sync;
+
     ComPtr<ID3D12RootSignature> sign;
     ComPtr<ID3D12PipelineState> impl;
     IVec3                       wgSize;
-    const DxPipelineLay&        layout;
     uint32_t                    pushConstantId = 0;
   };
 

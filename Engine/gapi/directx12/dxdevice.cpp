@@ -133,18 +133,16 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
     auto blitFs = DSharedPtr<DxShader*>(new DxShader(blit_frag_sprv,sizeof(blit_frag_sprv)));
 
     DxShader* blitSh[2] = {blitVs.handler, blitFs.handler};
-    blitLayout  = DSharedPtr<DxPipelineLay*>(new DxPipelineLay(*this,&blitFs.handler->lay));
-    blit        = DSharedPtr<DxPipeline*>   (new DxPipeline   (*this,st,Triangles,*blitLayout.handler,blitSh,2));
+    blit        = DSharedPtr<DxPipeline*>   (new DxPipeline   (*this,st,Triangles,blitSh,2));
     }
 
     {
     auto copyCs = DSharedPtr<DxShader*>(new DxShader(copy_comp_sprv,sizeof(copy_comp_sprv)));
-    copyLayout  = DSharedPtr<DxPipelineLay*> (new DxPipelineLay(*this,&copyCs.handler->lay));
-    copy        = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*copyLayout.handler,*copyCs.handler));
+    copy        = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*copyCs.handler));
     }
     {
     auto copyCs = DSharedPtr<DxShader*>(new DxShader(copy_s_comp_sprv,sizeof(copy_s_comp_sprv)));
-    copyS       = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*copyLayout.handler,*copyCs.handler));
+    copyS       = DSharedPtr<DxCompPipeline*>(new DxCompPipeline(*this,*copyCs.handler));
     }
     }
 
@@ -153,7 +151,6 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
 
 DxDevice::~DxDevice() {
   blit       = DSharedPtr<DxPipeline*>();
-  blitLayout = DSharedPtr<DxPipelineLay*>();
   data.reset();
   CloseHandle(idleEvent);
   }

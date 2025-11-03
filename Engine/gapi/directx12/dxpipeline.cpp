@@ -59,11 +59,35 @@ struct D3DX12_MESH_SHADER_PIPELINE_STATE_DESC {
   D3D12_VIEW_INSTANCING_DESC    ViewInstancingDesc = {};
   };
 
-DxPipeline::DxPipeline(DxDevice& device,
-                       const RenderState& st, Topology tp, const DxPipelineLay& ulay,
-                       const DxShader*const* sh, size_t count)
-  : sign(ulay.impl.get()), layout(ulay), device(device), rState(st) {
+static DxPipelineLay createPipelineLayout(Detail::DxDevice& dx, const DxShader*const* sh, size_t count) {
+  const std::vector<Detail::ShaderReflection::Binding>* lay[5] = {};
+  bool has_baseVertex_baseInstance = false;
+  for(size_t i=0; i<count; ++i) {
+    if(sh[i]==nullptr)
+      continue;
+    lay[i] = &sh[i]->lay;
+    has_baseVertex_baseInstance |= sh[i]->vert.has_baseVertex_baseInstance;
+    }
+  return Detail::DxPipelineLay(dx,lay,count,has_baseVertex_baseInstance);
+  }
+
+static DxPipelineLay createPipelineLayout(Detail::DxDevice& dx, const DxShader& sh) {
+  const DxShader* sv[] = {&sh};
+  return createPipelineLayout(dx, sv, 1);
+  }
+
+DxPipeline::DxPipeline(DxDevice& device, const RenderState& st, Topology tp, const DxShader*const* sh, size_t count)
+  : device(device), rState(st) {
+  auto dxLay = createPipelineLayout(device, sh, count);
+  sign = std::move(dxLay.impl);
   sign.get()->AddRef();
+
+  pb                 = dxLay.pb;
+  layout             = dxLay.layout;
+  sync               = dxLay.sync;
+  pushConstantId     = dxLay.pushConstantId;
+  pushBaseInstanceId = dxLay.pushBaseInstanceId;
+
   for(size_t i=0; i<count; ++i)
     if(sh[i]!=nullptr)
       modules[i] = Detail::DSharedPtr<const DxShader*>{sh[i]};
@@ -74,8 +98,6 @@ DxPipeline::DxPipeline(DxDevice& device,
       topology = D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST; else
       topology = D3D_PRIMITIVE_TOPOLOGY_2_CONTROL_POINT_PATCHLIST;
     }
-  pushConstantId     = ulay.pushConstantId;
-  pushBaseInstanceId = ulay.pushBaseInstanceId;
 
   if(auto vert = findShader(ShaderReflection::Vertex)) {
     declSize = UINT(vert->vert.decl.size());
@@ -104,7 +126,7 @@ ID3D12PipelineState& DxPipeline::instance(DXGI_FORMAT frm) {
   }
 
 ID3D12PipelineState& DxPipeline::instance(const DxFboLayout& frm) {
-  std::lock_guard<SpinLock> guard(sync);
+  std::lock_guard<SpinLock> guard(syncInst);
 
   for(auto& i:inst) {
     if(i.lay.equals(frm))
@@ -126,7 +148,7 @@ IVec3 DxPipeline::workGroupSize() const {
   }
 
 size_t DxPipeline::sizeofBuffer(size_t id, size_t arraylen) const {
-  return layout.layout.sizeofBuffer(id, arraylen);
+  return layout.sizeofBuffer(id, arraylen);
   }
 
 const DxShader* DxPipeline::findShader(ShaderReflection::Stage sh) const {
@@ -294,12 +316,16 @@ ComPtr<ID3D12PipelineState> DxPipeline::initMeshPipeline(const DxFboLayout& frm)
   }
 
 
-DxCompPipeline::DxCompPipeline(DxDevice& device, const DxPipelineLay& ulay, DxShader& comp)
-  : sign(ulay.impl.get()), layout(ulay) {
+DxCompPipeline::DxCompPipeline(DxDevice& device, DxShader& comp) {
+  auto dxLay = createPipelineLayout(device, comp);
+  sign = std::move(dxLay.impl);
   sign.get()->AddRef();
 
+  pb             = dxLay.pb;
+  layout         = dxLay.layout;
+  sync           = dxLay.sync;
   wgSize         = comp.comp.wgSize;
-  pushConstantId = ulay.pushConstantId;
+  pushConstantId = dxLay.pushConstantId;
 
   D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
   psoDesc.pRootSignature = sign.get();
@@ -316,7 +342,7 @@ IVec3 DxCompPipeline::workGroupSize() const {
   }
 
 size_t DxCompPipeline::sizeofBuffer(size_t id, size_t arraylen) const {
-  return layout.layout.sizeofBuffer(id, arraylen);
+  return layout.sizeofBuffer(id, arraylen);
   }
 
 #endif

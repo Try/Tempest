@@ -161,23 +161,20 @@ AbstractGraphicsApi::Swapchain* DirectX12Api::createSwapchain(SystemApi::Window*
   }
 
 AbstractGraphicsApi::PPipeline DirectX12Api::createPipeline(AbstractGraphicsApi::Device* d, const RenderState& st,
-                                                            Topology tp, const PipelineLay& ulayImpl,
+                                                            Topology tp, const PipelineLay& /*ulayImpl*/,
                                                             const Shader*const*sh, size_t cnt) {
-  auto* dx   = reinterpret_cast<Detail::DxDevice*>(d);
-  auto& ul   = reinterpret_cast<const Detail::DxPipelineLay&>(ulayImpl);
+  auto* dx = reinterpret_cast<Detail::DxDevice*>(d);
   const Detail::DxShader* shader[5] = {};
   for(size_t i=0; i<cnt; ++i)
     shader[i] = reinterpret_cast<const Detail::DxShader*>(sh[i]);
-  return PPipeline(new Detail::DxPipeline(*dx,st,tp,ul,shader,cnt));
+  return PPipeline(new Detail::DxPipeline(*dx,st,tp,shader,cnt));
   }
 
 AbstractGraphicsApi::PCompPipeline DirectX12Api::createComputePipeline(AbstractGraphicsApi::Device* d,
-                                                                       const AbstractGraphicsApi::PipelineLay& ulayImpl,
+                                                                       const AbstractGraphicsApi::PipelineLay& /*ulayImpl*/,
                                                                        AbstractGraphicsApi::Shader* shader) {
-  auto*   dx = reinterpret_cast<Detail::DxDevice*>(d);
-  auto&   ul = reinterpret_cast<const Detail::DxPipelineLay&>(ulayImpl);
-
-  return PCompPipeline(new Detail::DxCompPipeline(*dx,ul,*reinterpret_cast<Detail::DxShader*>(shader)));
+  auto* dx = reinterpret_cast<Detail::DxDevice*>(d);
+  return PCompPipeline(new Detail::DxCompPipeline(*dx,*reinterpret_cast<Detail::DxShader*>(shader)));
   }
 
 AbstractGraphicsApi::PShader DirectX12Api::createShader(AbstractGraphicsApi::Device*,

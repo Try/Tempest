@@ -362,10 +362,7 @@ class DxDevice : public AbstractGraphicsApi::Device {
     DxDescriptorAllocator       descAlloc;
     std::unique_ptr<DxHeapAllocator> dalloc;
 
-    DSharedPtr<DxPipelineLay*>  blitLayout;
     DSharedPtr<DxPipeline*>     blit;
-
-    DSharedPtr<DxPipelineLay*>  copyLayout;
     DSharedPtr<DxCompPipeline*> copy;
     DSharedPtr<DxCompPipeline*> copyS;
 
