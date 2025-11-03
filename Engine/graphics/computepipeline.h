@@ -3,13 +3,11 @@
 #include <Tempest/AbstractGraphicsApi>
 
 #include "../utility/dptr.h"
-#include "pipelinelayout.h"
 
 namespace Tempest {
 
 class Device;
 class CommandBuffer;
-class PipelineLayout;
 template<class T>
 class Encoder;
 
@@ -26,10 +24,7 @@ class ComputePipeline final {
     size_t sizeofBuffer(size_t layoutBind, size_t arraylen = 0) const;
 
   private:
-    ComputePipeline(Detail::DSharedPtr<AbstractGraphicsApi::CompPipeline*>&& p,
-                    Detail::DSharedPtr<AbstractGraphicsApi::PipelineLay*>&&  lay);
-
-    PipelineLayout                                         ulay;
+    ComputePipeline(Detail::DSharedPtr<AbstractGraphicsApi::CompPipeline*>&& p);
     Detail::DSharedPtr<AbstractGraphicsApi::CompPipeline*> impl;
 
   friend class Tempest::Device;

@@ -75,7 +75,6 @@ AbstractGraphicsApi::Swapchain *MetalApi::createSwapchain(SystemApi::Window *w,
 AbstractGraphicsApi::PPipeline MetalApi::createPipeline(AbstractGraphicsApi::Device *d,
                                                         const RenderState &st,
                                                         Topology tp,
-                                                        const AbstractGraphicsApi::PipelineLay &,
                                                         const AbstractGraphicsApi::Shader*const* sh,
                                                         size_t cnt) {
   auto& dx = *reinterpret_cast<MtDevice*>(d);
@@ -86,7 +85,6 @@ AbstractGraphicsApi::PPipeline MetalApi::createPipeline(AbstractGraphicsApi::Dev
   }
 
 AbstractGraphicsApi::PCompPipeline MetalApi::createComputePipeline(AbstractGraphicsApi::Device *d,
-                                                                   const AbstractGraphicsApi::PipelineLay&,
                                                                    AbstractGraphicsApi::Shader *cs) {
   auto& dx = *reinterpret_cast<MtDevice*>(d);
   auto& cx = *reinterpret_cast<const MtShader*>(cs);
@@ -192,33 +190,6 @@ void MetalApi::readPixels(AbstractGraphicsApi::Device*,
 void MetalApi::readBytes(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Buffer *buf,
                          void *out, size_t size) {
   buf->read(out,0,size);
-  }
-
-AbstractGraphicsApi::PPipelineLay MetalApi::createPipelineLayout(AbstractGraphicsApi::Device*,
-                                                                 const AbstractGraphicsApi::Shader*const*sh,
-                                                                 size_t cnt) {
-  /*
-  auto bufferSizeBuffer = ShaderReflection::None;
-  const std::vector<Detail::ShaderReflection::Binding>* lay[5] = {};
-
-  for(size_t i=0; i<cnt; ++i) {
-    if(sh[i]==nullptr)
-      continue;
-    auto* s = reinterpret_cast<const MtShader*>(sh[i]);
-    lay[i] = &s->lay;
-    if(s->bufferSizeBuffer) {
-      bufferSizeBuffer = ShaderReflection::Stage(bufferSizeBuffer | s->stage);
-      }
-    }
-  */
-  const MtShader* sv[5] = {};
-  for(size_t i=0; i<cnt; ++i) {
-    if(sh[i]==nullptr)
-      continue;
-    sv[i] = reinterpret_cast<const MtShader*>(sh[i]);
-    }
-
-  return PPipelineLay(new MtPipelineLay(sv,cnt));
   }
 
 AbstractGraphicsApi::CommandBuffer *MetalApi::createCommandBuffer(AbstractGraphicsApi::Device *d) {

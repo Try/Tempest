@@ -356,10 +356,8 @@ void Device::readBytes(const StorageBuffer& ssbo, void* out, size_t size) {
 ComputePipeline Device::pipeline(const Shader& comp) {
   if(!comp.impl)
     return ComputePipeline();
-
-  auto ulay = api.createPipelineLayout(dev,&comp.impl.handler,1);
-  auto pipe = api.createComputePipeline(dev,*ulay.handler,comp.impl.handler);
-  ComputePipeline f(std::move(pipe),std::move(ulay));
+  auto pipe = api.createComputePipeline(dev,comp.impl.handler);
+  ComputePipeline f(std::move(pipe));
   return f;
   }
 
@@ -383,9 +381,8 @@ RenderPipeline Device::implPipeline(const RenderState &st, const Shader* sh[], T
   for(size_t i=0; i<5; ++i)
     shv[i] = sh[i]!=nullptr ? sh[i]->impl.handler : nullptr;
 
-  auto ulay = api.createPipelineLayout(dev,shv,5);
-  auto pipe = api.createPipeline(dev,st,tp,*ulay.handler,shv,5);
-  RenderPipeline f(std::move(pipe),std::move(ulay));
+  auto pipe = api.createPipeline(dev,st,tp,shv,5);
+  RenderPipeline f(std::move(pipe));
   return f;
   }
 
@@ -395,9 +392,8 @@ RenderPipeline Device::pipeline(const RenderState& st, const Shader& ts, const S
   for(size_t i=0; i<3; ++i)
     shv[i] = sh[i]!=nullptr ? sh[i]->impl.handler : nullptr;
 
-  auto ulay = api.createPipelineLayout(dev,shv,3);
-  auto pipe = api.createPipeline(dev,st,Topology::Triangles,*ulay.handler,shv,3);
-  RenderPipeline f(std::move(pipe),std::move(ulay));
+  auto pipe = api.createPipeline(dev,st,Topology::Triangles,shv,3);
+  RenderPipeline f(std::move(pipe));
   return f;
   }
 

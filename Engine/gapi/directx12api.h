@@ -20,12 +20,9 @@ class DirectX12Api : public AbstractGraphicsApi {
 
     Swapchain*     createSwapchain(SystemApi::Window* w, Device *d) override;
 
-    PPipelineLay   createPipelineLayout(Device *d, const Shader*const* sh, size_t count) override;
-    PPipeline      createPipeline(Device* d, const RenderState &st, Topology tp, const PipelineLay& ulayImpl,
+    PPipeline      createPipeline(Device* d, const RenderState &st, Topology tp,
                                   const Shader*const* shaders, size_t count) override;
-    PCompPipeline  createComputePipeline(Device* d,
-                                         const PipelineLay &ulayImpl,
-                                         Shader* sh) override;
+    PCompPipeline  createComputePipeline(Device* d, Shader* sh) override;
 
     PShader        createShader(Device *d, const void* source, size_t src_size) override;
 

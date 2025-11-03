@@ -15,7 +15,6 @@
 #include "flags.h"
 
 namespace Tempest {
-  class PipelineLayout;
   class Pixmap;
   class Color;
   class RenderState;
@@ -626,7 +625,6 @@ namespace Tempest {
       using PPipeline     = Detail::DSharedPtr<Pipeline*>;
       using PCompPipeline = Detail::DSharedPtr<CompPipeline*>;
       using PShader       = Detail::DSharedPtr<Shader*>;
-      using PPipelineLay  = Detail::DSharedPtr<PipelineLay*>;
 
       virtual std::vector<Props> devices() const = 0;
 
@@ -635,15 +633,9 @@ namespace Tempest {
 
       virtual Swapchain* createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d) = 0;
 
-      virtual PPipelineLay
-                         createPipelineLayout(Device *d, const Shader* const* sh, size_t count) = 0;
+      virtual PPipeline  createPipeline(Device* d, const RenderState &st, Topology tp, const Shader* const* sh, size_t cnt)=0;
 
-      virtual PPipeline  createPipeline(Device* d, const RenderState &st, Topology tp,
-                                        const PipelineLay &ulayImpl, const Shader* const* sh, size_t cnt)=0;
-
-      virtual PCompPipeline createComputePipeline(Device* d,
-                                                  const PipelineLay &ulayImpl,
-                                                  Shader* shader)=0;
+      virtual PCompPipeline createComputePipeline(Device* d, Shader* shader)=0;
 
       virtual PShader    createShader(Device *d,const void* source,size_t src_size)=0;
       virtual CommandBuffer*

@@ -4,8 +4,6 @@
 
 #include "../utility/dptr.h"
 
-#include "pipelinelayout.h"
-
 namespace Tempest {
 
 class Device;
@@ -26,10 +24,8 @@ class RenderPipeline final {
     size_t sizeofBuffer(size_t layoutBind, size_t arraylen = 0) const;
 
   private:
-    RenderPipeline(Detail::DSharedPtr<AbstractGraphicsApi::Pipeline*>&&    p,
-                   Detail::DSharedPtr<AbstractGraphicsApi::PipelineLay*>&& lay);
+    RenderPipeline(Detail::DSharedPtr<AbstractGraphicsApi::Pipeline*>&& p);
 
-    PipelineLayout                                     ulay;
     Detail::DSharedPtr<AbstractGraphicsApi::Pipeline*> impl;
 
   friend class Tempest::Device;

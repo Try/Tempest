@@ -26,17 +26,12 @@
 namespace Tempest {
 
 class Fence;
-
 class CommandPool;
-class RFile;
-
-class Pixmap;
-
 class DescriptorSet;
-class PipelineLayout;
-
-class Color;
 class RenderState;
+class RFile;
+class Pixmap;
+class Color;
 
 class Device {
   public:

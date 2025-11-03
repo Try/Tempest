@@ -13,17 +13,11 @@ class MetalApi : public AbstractGraphicsApi {
 
   protected:
     Device*        createDevice(std::string_view gpuName) override;
-
     Swapchain*     createSwapchain(SystemApi::Window* w, Device *d) override;
 
-    PPipelineLay   createPipelineLayout(Device *d, const Shader*const* sh, size_t cnt) override;
-    PPipeline      createPipeline(Device* d, const RenderState &st,
-                                  Topology tp, const PipelineLay& ulayImpl,
+    PPipeline      createPipeline(Device* d, const RenderState &st, Topology tp,
                                   const Shader*const* sh, size_t cnt) override;
-    PCompPipeline  createComputePipeline(Device* d,
-                                         const PipelineLay &ulayImpl,
-                                         Shader* sh) override;
-
+    PCompPipeline  createComputePipeline(Device* d, Shader* sh) override;
     PShader        createShader(Device *d, const void* source, size_t src_size) override;
 
     PBuffer        createBuffer (Device* d, const void *mem, size_t size, MemUsage usage, BufferHeap flg) override;
