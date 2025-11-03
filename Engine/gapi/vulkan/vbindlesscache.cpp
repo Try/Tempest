@@ -6,7 +6,6 @@
 
 #include "gapi/vulkan/vdescriptorarray.h"
 #include "gapi/vulkan/vdevice.h"
-#include "gapi/vulkan/vpipelinelay.h"
 #include "gapi/vulkan/vpipeline.h"
 #include "gapi/vulkan/vtexture.h"
 
