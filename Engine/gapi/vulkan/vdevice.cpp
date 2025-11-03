@@ -612,6 +612,11 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
   props.maxAnisotropy     = devP.limits.maxSamplerAnisotropy;
   props.tesselationShader = supportedFeatures.tessellationShader;
   props.geometryShader    = supportedFeatures.geometryShader;
+  if(props.vendorID==0x5143) {
+    // QCom
+    props.tesselationShader = false;
+    props.geometryShader    = false;
+    }
 
   props.storeAndAtomicVs  = supportedFeatures.vertexPipelineStoresAndAtomics;
   props.storeAndAtomicFs  = supportedFeatures.fragmentStoresAndAtomics;
