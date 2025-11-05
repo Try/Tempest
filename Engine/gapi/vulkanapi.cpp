@@ -509,6 +509,11 @@ VkBool32 VulkanApi::Impl::debugReportCallback(VkDebugReportFlagsEXT      flags,
     // can't workaround this without VK_EXT_robustness2
     return VK_FALSE;
     }
+  if(location==3820618282) {
+    // The Validation Layers hit a timeout waiting for fence state to update
+    // Very anoying during game debuging!
+    return VK_FALSE;
+    }
 
   Log::e("VulkanApi: ", pMessage," object=",object,", type=",objectType," th:",std::this_thread::get_id());
   return VK_FALSE;

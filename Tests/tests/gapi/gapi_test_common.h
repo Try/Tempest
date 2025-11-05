@@ -2124,9 +2124,7 @@ void DispathIndirect() {
 
   try {
     GraphicsApi api{ApiFlags::Validation};
-    //const char* dev = "Intel(R) UHD Graphics";
-    const char* dev = "NVIDIA GeForce RTX 3070 Laptop GPU";
-    Device      device(api, dev);
+    Device      device(api);
 
     Vec4 inputCpu[3] = {Vec4(0,1,2,3),Vec4(4,5,6,7),Vec4(8,9,10,11)};
 
