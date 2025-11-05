@@ -386,8 +386,6 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     VBuffer&                dummySsbo();
 
-    std::unique_lock<std::mutex> compilerLock();
-
     uint32_t                roundUpDescriptorCount(ShaderReflection::Class cls, size_t cnt);
     VkDescriptorSetLayout   bindlessArrayLayout(ShaderReflection::Class cls, size_t cnt);
 

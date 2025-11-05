@@ -613,7 +613,8 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
   props.tesselationShader = supportedFeatures.tessellationShader;
   props.geometryShader    = supportedFeatures.geometryShader;
   if(props.vendorID==0x5143) {
-    // QCom
+    // QCom issue with tesselation
+    // reported here: https://github.com/Try/OpenGothic/issues/827
     props.tesselationShader = false;
     props.geometryShader    = false;
     }
@@ -826,18 +827,6 @@ VBuffer& VDevice::dummySsbo() {
     dummySsboVal = allocator.alloc(nullptr, sizeof(uint32_t), MemUsage::StorageBuffer, BufferHeap::Device);
     }
   return dummySsboVal;
-  }
-
-std::unique_lock<std::mutex> VDevice::compilerLock() {
-  if(props.vendorID==0x5143) {
-    //WA for QCom drivers
-    static std::atomic_bool once = {};
-    if(once.exchange(true)==false)
-      Log::d("VulkanApi: Enable workaround for driver crash on QCom");
-    static std::mutex sync;
-    return std::unique_lock<std::mutex>(sync);
-    }
-  return std::unique_lock<std::mutex>();
   }
 
 uint32_t VDevice::roundUpDescriptorCount(ShaderReflection::Class cls, size_t cnt) {

@@ -299,7 +299,6 @@ VkPipeline VPipeline::initGraphicsPipeline(VDevice& device,
     // rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
     }
 
-  auto sync = device.compilerLock();
   VkPipeline graphicsPipeline=VK_NULL_HANDLE;
   const auto err = vkCreateGraphicsPipelines(device.device.impl,VK_NULL_HANDLE,1,&pipelineInfo,nullptr,&graphicsPipeline);
   if(err!=VK_SUCCESS)
@@ -322,9 +321,7 @@ VCompPipeline::VCompPipeline(VDevice& device, const VShader& comp)
   shader         = Detail::DSharedPtr<const VShader*>{&comp};
 
   VkDevice dev = device.device.impl;
-  try {  
-    auto sync = device.compilerLock();
-
+  try {
     VkComputePipelineCreateInfo info = {};
     info.sType        = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     info.stage.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -379,8 +376,6 @@ VkPipeline VCompPipeline::instance(VkPipelineLayout pLay) {
   VkDevice   dev = device.device.impl;
   VkPipeline val = VK_NULL_HANDLE;
   try {
-    auto sync = device.compilerLock();
-
     VkComputePipelineCreateInfo info = {};
     info.sType              = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     info.stage.sType        = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
