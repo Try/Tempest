@@ -391,8 +391,6 @@ void DxDevice::waitAny() {
   }
 
 std::shared_ptr<DxFence> DxDevice::aquireFence() {
-  std::lock_guard<std::mutex> guard(timeline.sync);
-
   // reuse signalled fences
   auto f = findAvailableFence();
   if(f!=nullptr)
@@ -439,12 +437,12 @@ std::shared_ptr<DxFence> DxDevice::submit(DxCommandBuffer& cmd) {
       node = node->next;
     }
 
+  std::lock_guard<std::mutex> guard1(timeline.sync);
+  std::lock_guard<SpinLock>   guard2(syncCmdQueue);
+
   auto pfence = aquireFence();
   if(pfence==nullptr)
     throw DeviceLostException();
-
-  std::lock_guard<std::mutex> guard1(timeline.sync);
-  std::lock_guard<SpinLock>   guard2(syncCmdQueue);
 
   ResetEvent(pfence->event.hevt);
   cmdQueue->ExecuteCommandLists(UINT(size), flat.get());

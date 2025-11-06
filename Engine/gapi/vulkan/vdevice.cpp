@@ -900,6 +900,7 @@ std::shared_ptr<VFence> VDevice::findAvailableFence() {
         i = std::make_shared<VFence>(this, fence, id);
         }
       vkAssert(vkResetFences(device.impl, 1, &i->fence));
+      i->status = VK_NOT_READY;
       return i;
       }
     }
@@ -932,8 +933,7 @@ void VDevice::waitAny(uint64_t timeout) {
   }
 
 std::shared_ptr<VFence> VDevice::aquireFence() {
-  std::lock_guard<std::mutex> guard(timeline.sync);
-
+  // std::lock_guard<std::mutex> guard(timeline.sync);
   // reuse signalled fences
   auto f = findAvailableFence();
   if(f!=nullptr)
@@ -953,6 +953,7 @@ std::shared_ptr<VFence> VDevice::aquireFence() {
       vkAssert(vkCreateFence(device.impl,&fenceInfo,nullptr,&fence));
 
       i = std::make_shared<VFence>(this, fence, uint32_t(id));
+      i->status = VK_NOT_READY;
       return i;
       }
     catch(...) {
@@ -980,7 +981,13 @@ VkResult VDevice::waitFence(VFence& t, uint64_t timeout) {
       }
   }
 
-  auto start = Application::tickCount();
+  auto tickCount = []() {
+    auto now = std::chrono::steady_clock::now();
+    auto ms = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
+    return uint64_t(ms.time_since_epoch().count())-uint64_t(INT64_MIN);
+    };
+
+  auto start = tickCount();
   while(true) {
     static const uint64_t toNano = uint64_t(1000*1000);
     uint64_t vkTime = 0;
@@ -997,7 +1004,7 @@ VkResult VDevice::waitFence(VFence& t, uint64_t timeout) {
     if(t.status<0 && t.status!=VK_NOT_READY)
       return t.status;
 
-    auto now = Application::tickCount();
+    auto now = tickCount();
     if(now-start > timeout)
       return VK_NOT_READY;
     timeout -= (now-start);
@@ -1040,6 +1047,7 @@ std::shared_ptr<VFence> VDevice::submit(VCommandBuffer& cmd) {
     ++waitId;
     }
 
+  std::lock_guard<std::mutex> guard(timeline.sync);
   auto pfence = aquireFence();
   if(pfence==nullptr)
     throw DeviceLostException();
@@ -1074,8 +1082,6 @@ std::shared_ptr<VFence> VDevice::submit(VCommandBuffer& cmd) {
     submitInfo.waitSemaphoreInfoCount = uint32_t(waitCnt);
     submitInfo.pWaitSemaphoreInfos    = wait2.get();
 
-    std::lock_guard<std::mutex> guard(timeline.sync);
-    pfence->status = VK_NOT_READY;
     graphicsQueue->submit(1,&submitInfo,fence,vkQueueSubmit2);
     } else {
     SmallArray<VkPipelineStageFlags, 32> waitStages(waitCnt);
@@ -1099,8 +1105,6 @@ std::shared_ptr<VFence> VDevice::submit(VCommandBuffer& cmd) {
     submitInfo.pWaitSemaphores    = wait.get();
     submitInfo.pWaitDstStageMask  = waitStages.get();
 
-    std::lock_guard<std::mutex> guard(timeline.sync);
-    pfence->status = VK_NOT_READY;
     graphicsQueue->submit(1,&submitInfo,fence);
     }
   return pfence;
