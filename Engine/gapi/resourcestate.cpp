@@ -76,9 +76,9 @@ void ResourceState::onTranferUsage(NonUniqResId read, NonUniqResId write, bool h
   onUavUsage(u, PipelineStage::S_Transfer, host);
   }
 
-void ResourceState::onUavUsage(NonUniqResId read, NonUniqResId write, PipelineStage st) {
+void ResourceState::onUavUsage(NonUniqResId read, NonUniqResId write, PipelineStage st, bool host) {
   ResourceState::Usage u = {read, write, false};
-  onUavUsage(u, st, false);
+  onUavUsage(u, st, host);
   }
 
 void ResourceState::onUavUsage(const Usage& u, PipelineStage st, bool host) {
@@ -107,10 +107,10 @@ void ResourceState::onUavUsage(const Usage& u, PipelineStage st, bool host) {
     else {
       // RaR - no barrier needed
       }
+    }
 
-    if(host) {
-      uavDstBarrier = uavDstBarrier | hv;
-      }
+  if(host) {
+    uavDstBarrier = uavDstBarrier | hv;
     }
 
   for(PipelineStage p = PipelineStage::S_First; p<PipelineStage::S_Count; p = PipelineStage(p+1)) {

@@ -140,6 +140,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     struct Bindings : Detail::Bindings {
       NonUniqResId read  = NonUniqResId::I_None;
       NonUniqResId write = NonUniqResId::I_None;
+      bool         host  = false;
       bool         durty = false;
       };
 

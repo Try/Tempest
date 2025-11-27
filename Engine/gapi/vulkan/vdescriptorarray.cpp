@@ -83,6 +83,7 @@ void VDescriptorArray::alloc(VkDescriptorSetLayout lay, VDevice &dev, ShaderRefl
 
 void VDescriptorArray::populate(VDevice &dev, AbstractGraphicsApi::Texture **t, size_t cnt, uint32_t mipLevel, const Sampler* smp) {
   const bool is3DImage = false; //TODO
+  nonUniqId = NonUniqResId::I_None;
 
   // 16 is non-bindless limit
   SmallArray<VkDescriptorImageInfo,16> imageInfo(cnt);
@@ -93,6 +94,8 @@ void VDescriptorArray::populate(VDevice &dev, AbstractGraphicsApi::Texture **t, 
     imageInfo[i].sampler     = smp!=nullptr ? dev.allocator.updateSampler(*smp) : VK_NULL_HANDLE;
     // TODO: support mutable textures in bindless
     assert(tex==nullptr || tex->nonUniqId==0);
+    if(tex!=nullptr)
+      nonUniqId |= tex->nonUniqId;
     }
 
   VkWriteDescriptorSet descriptorWrite = {};
@@ -108,6 +111,7 @@ void VDescriptorArray::populate(VDevice &dev, AbstractGraphicsApi::Texture **t, 
   }
 
 void VDescriptorArray::populate(VDevice &dev, AbstractGraphicsApi::Buffer **b, size_t cnt) {
+  nonUniqId = NonUniqResId::I_None;
   // 16 is non-bindless limit
   SmallArray<VkDescriptorBufferInfo,16> bufInfo(cnt);
   for(size_t i=0; i<cnt; ++i) {
@@ -121,6 +125,8 @@ void VDescriptorArray::populate(VDevice &dev, AbstractGraphicsApi::Buffer **b, s
       bufInfo[i].range  = 0;
       }
     // assert(buf->nonUniqId==0);
+    if(buf!=nullptr)
+      nonUniqId |= buf->nonUniqId;
     }
 
   VkWriteDescriptorSet descriptorWrite = {};

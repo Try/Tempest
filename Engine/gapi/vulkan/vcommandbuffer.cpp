@@ -284,6 +284,7 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
 
   bindings.read  = NonUniqResId::I_None;
   bindings.write = NonUniqResId::I_None;
+  bindings.host  = false;
 
   if(state!=Idle) {
     newChunk();
@@ -397,7 +398,7 @@ void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
 void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
   implSetUniforms(PipelineStage::S_Compute);
   implSetPushData(PipelineStage::S_Compute);
-  resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Compute);
+  resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Compute, bindings.host);
   resState.flush(*this);
   vkCmdDispatch(impl,uint32_t(x),uint32_t(y),uint32_t(z));
   }
@@ -407,7 +408,7 @@ void VCommandBuffer::dispatchIndirect(const AbstractGraphicsApi::Buffer& indirec
 
   implSetUniforms(PipelineStage::S_Compute);
   implSetPushData(PipelineStage::S_Compute);
-  resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Compute);
+  resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Compute, bindings.host);
   // block future writers
   resState.onUavUsage(ind.nonUniqId, NonUniqResId::I_None, PipelineStage::S_Indirect);
   resState.flush(*this);
@@ -426,6 +427,7 @@ void VCommandBuffer::handleSync(const ShaderReflection::LayoutDesc& lay, const S
   if(st!=PipelineStage::S_Graphics) {
     bindings.read  = NonUniqResId::I_None;
     bindings.write = NonUniqResId::I_None;
+    bindings.host  = false;
     }
 
   for(size_t i=0; i<MaxBindings; ++i) {
@@ -438,17 +440,29 @@ void VCommandBuffer::handleSync(const ShaderReflection::LayoutDesc& lay, const S
       case ShaderReflection::Image:
       case ShaderReflection::ImgR:
       case ShaderReflection::ImgRW: {
-        nonUniqId = reinterpret_cast<VTexture*>(data)->nonUniqId;
+        if((bindings.array & (1u << i))!=0) {
+          nonUniqId = reinterpret_cast<VDescriptorArray*>(data)->nonUniqId;
+          } else {
+          nonUniqId = reinterpret_cast<VTexture*>(data)->nonUniqId;
+          }
         break;
         }
       case ShaderReflection::Ubo:
       case ShaderReflection::SsboR:
       case ShaderReflection::SsboRW: {
-        nonUniqId = reinterpret_cast<VBuffer*>(data)->nonUniqId;
+        if((bindings.array & (1u << i))!=0) {
+          nonUniqId = reinterpret_cast<VDescriptorArray*>(data)->nonUniqId;
+          } else {
+          auto buf = reinterpret_cast<VBuffer*>(data);
+          nonUniqId = buf->nonUniqId;
+          if(lay.bindings[i]==ShaderReflection::SsboRW)
+            bindings.host |= buf->isHostVisible();
+          }
         break;
         }
       case ShaderReflection::Tlas: {
         //NOTE: Tlas tracking is not really implemented
+        assert((bindings.array & (1u << i))==0);
         nonUniqId = reinterpret_cast<VAccelerationStructure*>(data)->data.nonUniqId;
         break;
         }

@@ -26,7 +26,7 @@ class ResourceState {
     void setLayout  (const AbstractGraphicsApi::Buffer& a, ResourceAccess lay);
 
     void onTranferUsage(NonUniqResId read, NonUniqResId write, bool host);
-    void onUavUsage    (NonUniqResId read, NonUniqResId write, PipelineStage st);
+    void onUavUsage    (NonUniqResId read, NonUniqResId write, PipelineStage st, bool host = false);
     void onUavUsage    (const ResourceState::Usage& uavUsage, PipelineStage st, bool host = false);
     void forceLayout   (AbstractGraphicsApi::Texture&   a);
 

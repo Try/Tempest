@@ -20,6 +20,8 @@ class VDescriptorArray : public AbstractGraphicsApi::DescArray {
     size_t size() const;
     auto   set() const -> VkDescriptorSet { return dset; }
 
+    NonUniqResId     nonUniqId = NonUniqResId::I_None;
+
   private:
     void alloc(VkDescriptorSetLayout lay, VDevice& dev, ShaderReflection::Class cls, size_t cnt);
     void populate(VDevice &dev, AbstractGraphicsApi::Texture **tex, size_t cnt, uint32_t mipLevel, const Sampler *smp);
