@@ -66,6 +66,11 @@ static void toStage(VDevice& dev, VkPipelineStageFlags2KHR& stage, VkAccessFlagB
     acc |= VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
     }
 
+  if((rs&ResourceAccess::Default)==ResourceAccess::Default) {
+    ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    acc |= VK_ACCESS_SHADER_READ_BIT;
+    }
+
   if((rs&ResourceAccess::Sampler)==ResourceAccess::Sampler) {
     ret |= VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
     acc |= VK_ACCESS_SHADER_READ_BIT;
@@ -140,7 +145,7 @@ static void toStage(VDevice& dev, VkPipelineStageFlags2KHR& stage, VkAccessFlagB
   access = VkAccessFlagBits2KHR(acc);
   }
 
-static VkImageLayout toLayout(ResourceAccess rs) {
+static VkImageLayout toLayout(ResourceAccess rs, const VTexture* texture) {
   if(rs==ResourceAccess::None)
     return VK_IMAGE_LAYOUT_UNDEFINED;
 
@@ -148,7 +153,15 @@ static VkImageLayout toLayout(ResourceAccess rs) {
     return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
   if((rs&ResourceAccess::TransferDst)==ResourceAccess::TransferDst)
     return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-
+  if((rs&ResourceAccess::Default)==ResourceAccess::Default) {
+    if(texture==nullptr)
+      return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    if(nativeIsDepthFormat(texture->format))
+      return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    if(texture->isStorageImage)
+      return VK_IMAGE_LAYOUT_GENERAL;
+    return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
   if((rs&ResourceAccess::Present)==ResourceAccess::Present)
     return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
@@ -741,6 +754,9 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest
 void VCommandBuffer::fill(AbstractGraphicsApi::Texture& dstTex, uint32_t val) {
   auto& dst = reinterpret_cast<VTexture&>(dstTex);
 
+  if(dst.isStorageImage)
+    resState.setLayout(dst,ResourceAccess::Default); else
+    resState.setLayout(dst,ResourceAccess::TransferDst);
   resState.onTranferUsage(NonUniqResId::I_None, dst.nonUniqId, false);
   resState.flush(*this);
 
@@ -757,6 +773,9 @@ void VCommandBuffer::fill(AbstractGraphicsApi::Texture& dstTex, uint32_t val) {
   rgn.levelCount     = VK_REMAINING_MIP_LEVELS;
   rgn.layerCount     = VK_REMAINING_ARRAY_LAYERS;
   vkCmdClearColorImage(impl, dst.impl, VK_IMAGE_LAYOUT_GENERAL, &v, 1, &rgn);
+
+  if(!dst.isStorageImage)
+    resState.setLayout(dst,ResourceAccess::Default);
   }
 
 void VCommandBuffer::fill(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest, uint32_t val, size_t size) {
@@ -777,7 +796,7 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, si
   region.bufferOffset      = offset;
   region.bufferRowLength   = 0;
   region.bufferImageHeight = 0;
-  region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  region.imageSubresource.aspectMask = nativeIsDepthFormat(dst.format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
   region.imageSubresource.mipLevel = uint32_t(mip);
   region.imageSubresource.baseArrayLayer = 0;
   region.imageSubresource.layerCount = 1;
@@ -786,23 +805,32 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, si
       uint32_t(width),
       uint32_t(height),
       1
-  };
+      };
 
-  resState.onTranferUsage(NonUniqResId::I_None, dst.nonUniqId, false);
+  if(!dst.isStorageImage)
+    resState.setLayout(dst,ResourceAccess::TransferDst);
+  resState.onTranferUsage(src.nonUniqId, dst.nonUniqId, false);
   resState.flush(*this);
-  vkCmdCopyBufferToImage(impl, src.impl, dst.impl, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+  const VkImageLayout layout = dst.isStorageImage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+  vkCmdCopyBufferToImage(impl, src.impl, dst.impl, layout, 1, &region);
+
+  if(nativeIsDepthFormat(dst.format))
+    resState.setLayout(dst,ResourceAccess::DepthReadOnly);
+  else if(!dst.isStorageImage)
+    resState.setLayout(dst,ResourceAccess::Sampler);
   }
 
-void VCommandBuffer::copyNative(AbstractGraphicsApi::Buffer&        dst, size_t offset,
-                                const AbstractGraphicsApi::Texture& src, size_t width, size_t height, size_t mip) {
-  auto& nSrc = reinterpret_cast<const VTexture&>(src);
-  auto& nDst = reinterpret_cast<VBuffer&>(dst);
+void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offset,
+                          AbstractGraphicsApi::Texture& srcTex, uint32_t width, uint32_t height, uint32_t mip) {
+  auto& dst = reinterpret_cast<VBuffer&>(dstBuf);
+  auto& src = reinterpret_cast<VTexture&>(srcTex);
 
   VkBufferImageCopy region={};
   region.bufferOffset      = offset;
   region.bufferRowLength   = 0;
   region.bufferImageHeight = 0;
-  region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  region.imageSubresource.aspectMask = nativeIsDepthFormat(src.format) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
   region.imageSubresource.mipLevel = uint32_t(mip);
   region.imageSubresource.baseArrayLayer = 0;
   region.imageSubresource.layerCount = 1;
@@ -811,13 +839,20 @@ void VCommandBuffer::copyNative(AbstractGraphicsApi::Buffer&        dst, size_t 
       uint32_t(width),
       uint32_t(height),
       1
-  };
+      };
 
-  if(nativeIsDepthFormat(nSrc.format))
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+  if(!src.isStorageImage)
+    resState.setLayout(src,ResourceAccess::TransferSrc);
+  resState.onTranferUsage(src.nonUniqId, dst.nonUniqId, dst.isHostVisible());
+  resState.flush(*this);
 
-  VkImageLayout layout =  nSrc.isStorageImage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-  vkCmdCopyImageToBuffer(impl, nSrc.impl, layout, nDst.impl, 1, &region);
+  const VkImageLayout layout = src.isStorageImage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+  vkCmdCopyImageToBuffer(impl, src.impl, layout, dst.impl, 1, &region);
+
+  if(nativeIsDepthFormat(src.format))
+    resState.setLayout(src,ResourceAccess::DepthReadOnly);
+  else if(!src.isStorageImage)
+    resState.setLayout(src,ResourceAccess::Sampler);
   }
 
 void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, uint32_t srcH, uint32_t srcMip,
@@ -917,19 +952,6 @@ void VCommandBuffer::buildTlas(VkAccelerationStructureKHR dest,
   device.vkCmdBuildAccelerationStructures(impl, 1, &buildGeometryInfo, &pbuildRangeInfo);
   }
 
-void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offset,
-                          AbstractGraphicsApi::Texture& srcTex, uint32_t width, uint32_t height, uint32_t mip) {
-  auto& dst = reinterpret_cast<VBuffer&>(dstBuf);
-  auto& src = reinterpret_cast<const VTexture&>(srcTex);
-  if(!src.isStorageImage)
-    resState.setLayout(srcTex,ResourceAccess::TransferSrc);
-  resState.onTranferUsage(dst.nonUniqId, src.nonUniqId, dst.isHostVisible());
-  resState.flush(*this);
-  copyNative(dst,offset, src,width,height,mip);
-  if(!src.isStorageImage)
-    resState.setLayout(srcTex,ResourceAccess::Sampler);
-  }
-
 void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
                                     uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) {
   if(mipLevels==1)
@@ -962,9 +984,12 @@ void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
     h = mh;
     }
   barrier(img,ResourceAccess::TransferDst, ResourceAccess::TransferSrc, mipLevels-1);
-  barrier(img,ResourceAccess::TransferSrc, ResourceAccess::Sampler,     uint32_t(-1));
-  resState.setLayout(img,ResourceAccess::Sampler);
-  resState.forceLayout(img);
+  barrier(img,ResourceAccess::TransferSrc, ResourceAccess::Default,     uint32_t(-1));
+  resState.forceLayout(img,ResourceAccess::Default);
+  }
+
+void VCommandBuffer::discard(AbstractGraphicsApi::Texture& tex) {
+  resState.forceLayout(tex,ResourceAccess::None);
   }
 
 void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
@@ -1010,6 +1035,7 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
       toStage(device, bx.dstStageMask, bx.dstAccessMask, b.next, false);
       }
     else {
+      auto* tx = reinterpret_cast<VTexture*>(b.texture);
       auto& bx = imgBarrier[imgCount];
       ++imgCount;
 
@@ -1021,8 +1047,8 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_
       toStage(device, bx.srcStageMask, bx.srcAccessMask, b.prev, true);
       toStage(device, bx.dstStageMask, bx.dstAccessMask, b.next, false);
 
-      bx.oldLayout             = toLayout(b.prev);
-      bx.newLayout             = toLayout(b.next);
+      bx.oldLayout             = toLayout(b.prev, tx);
+      bx.newLayout             = toLayout(b.next, tx);
       finalizeImageBarrier(bx,b);
       }
     }

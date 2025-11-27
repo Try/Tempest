@@ -34,30 +34,32 @@ enum class BufferHeap : uint8_t {
 // TODO: move away from public header
 enum class ResourceAccess : uint32_t {
   None             = 0,
-  TransferSrc      = 1 << 0,
-  TransferDst      = 1 << 1,
-  TransferHost     = 1 << 2,
-
+  // layouts
+  Default          = 1 << 0,
+  TransferSrc      = 1 << 1,
+  TransferDst      = 1 << 2,
   Present          = 1 << 3,
 
-  Sampler          = 1 << 4,
-  ColorAttach      = 1 << 5,
-  DepthAttach      = 1 << 6,
-  DepthReadOnly    = 1 << 7,
+  TransferHost     = 1 << 4,
+  Sampler          = 1 << 5,
+  ColorAttach      = 1 << 6,
+  DepthAttach      = 1 << 7,
+  DepthReadOnly    = 1 << 8,
 
-  Indirect         = 1 << 8,
-  Index            = 1 << 9,
-  Vertex           = 1 << 10,
-  Uniform          = 1 << 11,
+  // stages
+  Indirect         = 1 << 9,
+  Index            = 1 << 10,
+  Vertex           = 1 << 11,
+  Uniform          = 1 << 12,
 
-  UavReadComp      = 1 << 12,
-  UavWriteComp     = 1 << 13,
+  UavReadComp      = 1 << 13,
+  UavWriteComp     = 1 << 14,
 
-  UavReadGr        = 1 << 14,
-  UavWriteGr       = 1 << 15,
+  UavReadGr        = 1 << 15,
+  UavWriteGr       = 1 << 16,
 
-  RtAsRead         = 1 << 16,
-  RtAsWrite        = 1 << 17,
+  RtAsRead         = 1 << 17,
+  RtAsWrite        = 1 << 18,
 
   TransferSrcDst   = (TransferSrc    | TransferDst),
   UavReadWriteComp = (UavReadComp    | UavWriteComp),
@@ -65,7 +67,7 @@ enum class ResourceAccess : uint32_t {
   UavReadWriteAll  = (UavReadWriteGr | UavReadWriteComp),
 
   UavRead = (TransferSrc | Index | Vertex | Uniform | UavReadComp | UavReadGr | RtAsRead),
-  AnyRead = (Indirect | UavRead | Sampler | DepthReadOnly),
+  // AnyRead = (Indirect | UavRead | Sampler | DepthReadOnly),
   };
 
 inline ResourceAccess operator | (ResourceAccess a,const ResourceAccess& b) {

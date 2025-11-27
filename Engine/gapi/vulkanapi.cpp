@@ -322,9 +322,9 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   cmd->begin();
   cmd->hold(pstage);
   cmd->hold(pbuf);
+  cmd->discard(*pbuf.handler);
 
   if(isCompressedFormat(frm)) {
-    cmd->barrier(*pbuf.handler, ResourceAccess::None, ResourceAccess::TransferDst, uint32_t(-1));
     size_t blockSize  = Pixmap::blockSizeForFormat(frm);
     size_t bufferSize = 0;
 
@@ -337,12 +337,8 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
       w = std::max<uint32_t>(1,w/2);
       h = std::max<uint32_t>(1,h/2);
       }
-
-    cmd->barrier(*pbuf.handler, ResourceAccess::TransferDst, ResourceAccess::Sampler, uint32_t(-1));
     } else {
-    cmd->barrier(*pbuf.handler, ResourceAccess::None, ResourceAccess::TransferDst, uint32_t(-1));
     cmd->copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
-    cmd->barrier(*pbuf.handler, ResourceAccess::TransferDst, ResourceAccess::Sampler, uint32_t(-1));
     if(mipCnt>1)
       cmd->generateMipmap(*pbuf.handler, p.w(), p.h(), mipCnt);
     }
@@ -366,14 +362,14 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
 AbstractGraphicsApi::PTexture VulkanApi::createStorage(Device* d,
                                                        const uint32_t w, const uint32_t h, uint32_t mipCnt,
                                                        TextureFormat frm) {
-  Detail::VDevice& dx = *reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VDevice& dx  = *reinterpret_cast<Detail::VDevice*>(d);
 
-  Detail::VTexture buf=dx.allocator.alloc(w,h,0,mipCnt,frm,true);
+  Detail::VTexture buf = dx.allocator.alloc(w,h,0,mipCnt,frm,true);
   Detail::DSharedPtr<Texture*> pbuf(new Detail::VTexture(std::move(buf)));
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
-  cmd->barrier(*pbuf.handler,ResourceAccess::None,ResourceAccess::UavReadWriteAll,uint32_t(-1));
+  cmd->discard(*pbuf.handler);
   cmd->fill(*pbuf.handler, 0);
   cmd->hold(pbuf);
   cmd->end();
@@ -392,7 +388,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createStorage(Device* d,
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
-  cmd->barrier(*pbuf.handler,ResourceAccess::None,ResourceAccess::UavReadWriteAll,uint32_t(-1));
+  cmd->discard(*pbuf.handler);
   cmd->fill(*pbuf.handler, 0);
   cmd->hold(pbuf);
   cmd->end();
@@ -424,19 +420,7 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
-  if(storageImg) {
-    cmd->copyNative(stage,0, tx,w,h,mip);
-    }
-  else if(isDepthFormat(frm)) {
-    cmd->barrier(tx,ResourceAccess::DepthReadOnly,ResourceAccess::TransferSrc,uint32_t(-1));
-    cmd->copyNative(stage,0, tx,w,h,mip);
-    cmd->barrier(tx,ResourceAccess::TransferSrc,ResourceAccess::DepthReadOnly,uint32_t(-1));
-    }
-  else {
-    cmd->barrier(tx,ResourceAccess::Sampler,ResourceAccess::TransferSrc,uint32_t(-1));
-    cmd->copyNative(stage,0, tx,w,h,mip);
-    cmd->barrier(tx,ResourceAccess::TransferSrc,ResourceAccess::Sampler,uint32_t(-1));
-    }
+  cmd->copy(stage,0, tx,w,h,mip);
   cmd->end();
 
   dx.dataMgr().submitAndWait(std::move(cmd));

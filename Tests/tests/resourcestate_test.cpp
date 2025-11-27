@@ -13,14 +13,16 @@ using namespace Tempest::Detail;
 
 static std::string toString(ResourceAccess rs) {
   std::stringstream text;
+  if((rs & ResourceAccess::Default)==ResourceAccess::Default)
+    text << "Default | ";
   if((rs & ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
     text << "TransferSrc | ";
   if((rs & ResourceAccess::TransferDst)==ResourceAccess::TransferDst)
     text << "TransferDst | ";
-  if((rs & ResourceAccess::TransferHost)==ResourceAccess::TransferHost)
-    text << "TransferHost | ";
   if((rs & ResourceAccess::Present)==ResourceAccess::Present)
     text << "Present | ";
+  if((rs & ResourceAccess::TransferHost)==ResourceAccess::TransferHost)
+    text << "TransferHost | ";
   if((rs & ResourceAccess::Sampler)==ResourceAccess::Sampler)
     text << "Sampler | ";
   if((rs & ResourceAccess::ColorAttach)==ResourceAccess::ColorAttach)
@@ -119,7 +121,7 @@ TEST(main, ResourceStateBasic) {
   ResourceState rs;
   rs.setLayout(t, ResourceAccess::ColorAttach, true);
   rs.flush(cmd);
-  rs.setLayout(t, ResourceAccess::Sampler, false);
+  rs.setLayout(t, ResourceAccess::Default, false);
   rs.flush(cmd);
   }
 

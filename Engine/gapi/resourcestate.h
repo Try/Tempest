@@ -28,7 +28,7 @@ class ResourceState {
     void onTranferUsage(NonUniqResId read, NonUniqResId write, bool host);
     void onUavUsage    (NonUniqResId read, NonUniqResId write, PipelineStage st, bool host = false);
     void onUavUsage    (const ResourceState::Usage& uavUsage, PipelineStage st, bool host = false);
-    void forceLayout   (AbstractGraphicsApi::Texture&   a);
+    void forceLayout   (AbstractGraphicsApi::Texture&   a, ResourceAccess lay);
 
     void joinWriters(PipelineStage st);
     void clearReaders();
@@ -56,7 +56,7 @@ class ResourceState {
       };
 
     void      fillReads();
-    ImgState& findImg(AbstractGraphicsApi::Texture* img, AbstractGraphicsApi::Swapchain* sw, uint32_t id, ResourceAccess def, bool discard);
+    ImgState& findImg(AbstractGraphicsApi::Texture* img, AbstractGraphicsApi::Swapchain* sw, uint32_t id, bool discard);
     BufState& findBuf(const AbstractGraphicsApi::Buffer*  buf, ResourceAccess def);
     void      emitBarriers(AbstractGraphicsApi::CommandBuffer& cmd, AbstractGraphicsApi::BarrierDesc* desc, size_t cnt);
 

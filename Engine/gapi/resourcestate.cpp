@@ -28,47 +28,41 @@ void ResourceState::setRenderpass(AbstractGraphicsApi::CommandBuffer& cmd,
       continue;
     const bool discard = desc[i].store!=AccessOp::Preserve;
     if(isDepthFormat(frm[i]))
-      setLayout(*att[i],ResourceAccess::DepthReadOnly,discard);
+      setLayout(*att[i],ResourceAccess::Default,discard);
     else if(frm[i]==TextureFormat::Undefined)
-      setLayout(*sw[i],imgId[i],ResourceAccess::ColorAttach,discard); // execution barrier
+      setLayout(*sw[i],imgId[i],ResourceAccess::Default,discard);
     else
-      setLayout(*att[i],ResourceAccess::Sampler,discard);
+      setLayout(*att[i],ResourceAccess::Default,discard);
     }
   }
 
 void ResourceState::setLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id, ResourceAccess lay, bool discard) {
-  ImgState& img   = findImg(nullptr,&s,id,ResourceAccess::Present,discard);
+  ImgState& img   = findImg(nullptr,&s,id,discard);
   img.next     = lay;
   img.discard  = discard;
-  img.outdated = true;
+  img.outdated = (img.next!=img.last);
   }
 
 void ResourceState::setLayout(AbstractGraphicsApi::Texture& a, ResourceAccess lay, bool discard) {
-  ResourceAccess def = ResourceAccess::Sampler;
-  if(lay==ResourceAccess::DepthAttach)
-    def = ResourceAccess::DepthReadOnly;
-
-  ImgState& img = findImg(&a,nullptr,0,def,discard);
+  ImgState& img = findImg(&a,nullptr,0,discard);
   img.next     = lay;
   img.discard  = discard;
-  img.outdated = true;
+  img.outdated = (img.next!=img.last);
   }
 
 void ResourceState::setLayout(const AbstractGraphicsApi::Buffer& a, ResourceAccess lay) {
   ResourceAccess def = ResourceAccess::UavReadWriteAll;
   BufState&      buf = findBuf(&a,def);
   buf.next     = lay;
-  buf.outdated = true;
+  buf.outdated = (buf.next!=buf.last);
   }
 
-void ResourceState::forceLayout(AbstractGraphicsApi::Texture& img) {
-  for(auto& i:imgState) {
-    if(i.sw==nullptr && i.id==0 && i.img==&img) {
-      i.last     = i.next;
-      i.outdated = false;
-      return;
-      }
-    }
+void ResourceState::forceLayout(AbstractGraphicsApi::Texture& a, ResourceAccess lay) {
+  ImgState& img = findImg(&a,nullptr,0,false);
+  img.last     = lay;
+  img.next     = lay;
+  img.discard  = false;
+  img.outdated = false;
   }
 
 void ResourceState::onTranferUsage(NonUniqResId read, NonUniqResId write, bool host) {
@@ -194,15 +188,13 @@ void ResourceState::finalize(AbstractGraphicsApi::CommandBuffer& cmd) {
     return; // early-out
 
   for(auto& i:imgState) {
-    if(i.sw==nullptr)
-      continue;
-    i.next     = ResourceAccess::Present;
-    i.outdated = true;
+    i.next     = ResourceAccess::Default;
+    i.outdated = (i.next!=i.last);
     }
   for(auto& i:bufState) {
     if(i.buf==nullptr)
       continue;
-    i.next     = ResourceAccess::UavReadWriteAll;
+    i.next     = ResourceAccess::UavReadWriteAll; //fixme: buffer-layout is DX only hack
     i.outdated = true;
     }
   flush(cmd);
@@ -227,8 +219,7 @@ void ResourceState::fillReads() {
       r = NonUniqResId(-1);
   }
 
-ResourceState::ImgState& ResourceState::findImg(AbstractGraphicsApi::Texture* img, AbstractGraphicsApi::Swapchain* sw, uint32_t id,
-                                                ResourceAccess def, bool discard) {
+ResourceState::ImgState& ResourceState::findImg(AbstractGraphicsApi::Texture* img, AbstractGraphicsApi::Swapchain* sw, uint32_t id, bool discard) {
   auto nativeImg = img;
   for(auto& i:imgState) {
     if(i.sw==sw && i.id==id && i.img==nativeImg)
@@ -238,8 +229,8 @@ ResourceState::ImgState& ResourceState::findImg(AbstractGraphicsApi::Texture* im
   s.sw       = sw;
   s.id       = id;
   s.img      = img;
-  s.last     = def;
-  s.next     = ResourceAccess::Sampler;
+  s.last     = ResourceAccess::Default;
+  s.next     = ResourceAccess::Default;
   s.discard  = discard;
   s.outdated = false;
   imgState.push_back(s);

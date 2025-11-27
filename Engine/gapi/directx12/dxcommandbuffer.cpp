@@ -61,6 +61,10 @@ static void toStage(DxDevice& dev, D3D12_BARRIER_SYNC& stage, D3D12_BARRIER_ACCE
     //ret |= VK_PIPELINE_STAGE_HOST_BIT;
     //acc |= VK_ACCESS_HOST_READ_BIT;
     }
+  if((rs&ResourceAccess::Default)==ResourceAccess::Default) {
+    ret |= D3D12_BARRIER_SYNC_ALL;
+    acc |= D3D12_BARRIER_ACCESS_SHADER_RESOURCE;
+    }
 
   if((rs&ResourceAccess::Present)==ResourceAccess::Present) {
     ret |= D3D12_BARRIER_SYNC_NONE;
@@ -1269,7 +1273,7 @@ void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& dstTex,
 
   uint32_t w = texWidth;
   uint32_t h = texHeight;
-  barrier(dst, ResourceAccess::Sampler, ResourceAccess::ColorAttach, uint32_t(-1));
+  barrier(dst, ResourceAccess::Default, ResourceAccess::ColorAttach, uint32_t(-1));
   for(uint32_t i=1; i<mipLevels; ++i) {
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtv;
     rtvHandle.ptr += i*rtvSize;
