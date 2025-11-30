@@ -312,7 +312,7 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
                ));
     }
 
-  const auto nonUniqId  = (imageStore) ? nextId() : NonUniqResId::I_None;
+  const auto nonUniqId = nextId();
   auto ret = DxTexture(*owner,std::move(tex),resDesc.Format,nonUniqId,resDesc.MipLevels,resDesc.DepthOrArraySize,d!=0);
   ret.isStorageImage = imageStore;
   return ret;
