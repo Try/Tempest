@@ -564,10 +564,15 @@ namespace Tempest {
         uint32_t       swId      = 0;
         uint32_t       mip       = 0;
 
-        ResourceAccess prev      = ResourceAccess::None;
-        ResourceAccess next      = ResourceAccess::None;
+        ResourceLayout prev      = ResourceLayout::None;
+        ResourceLayout next      = ResourceLayout::None;
         bool           discard   = false;
         };
+      struct SyncDesc {
+        SyncStage prev = SyncStage::None;
+        SyncStage next = SyncStage::None;
+        };
+
       struct CommandBuffer:NoCopy {
         virtual ~CommandBuffer()=default;
 
@@ -578,8 +583,8 @@ namespace Tempest {
                                     AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) = 0;
         virtual void endRendering() = 0;
 
-        virtual void barrier(const BarrierDesc* desc, size_t cnt) = 0;
-        virtual void barrier(Texture& tex, ResourceAccess prev, ResourceAccess next, uint32_t mipId);
+        virtual void barrier(const SyncDesc& sync, const BarrierDesc* desc, size_t cnt) = 0;
+        virtual void barrier(Texture& tex, SyncStage at, ResourceLayout prev, ResourceLayout next, uint32_t mipId);
 
         virtual void generateMipmap(Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) = 0;
         virtual void copy(Buffer& dest, size_t offset, Texture& src, uint32_t width, uint32_t height, uint32_t mip) = 0;

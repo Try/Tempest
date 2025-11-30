@@ -11,45 +11,20 @@ using namespace testing;
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-static std::string toString(ResourceAccess rs) {
+static std::string toString(ResourceLayout rs) {
   std::stringstream text;
-  if((rs & ResourceAccess::Default)==ResourceAccess::Default)
+  if(rs==ResourceLayout::Default)
     text << "Default | ";
-  if((rs & ResourceAccess::TransferSrc)==ResourceAccess::TransferSrc)
+  if(rs==ResourceLayout::TransferSrc)
     text << "TransferSrc | ";
-  if((rs & ResourceAccess::TransferDst)==ResourceAccess::TransferDst)
+  if(rs==ResourceLayout::TransferDst)
     text << "TransferDst | ";
-  if((rs & ResourceAccess::Present)==ResourceAccess::Present)
-    text << "Present | ";
-  if((rs & ResourceAccess::TransferHost)==ResourceAccess::TransferHost)
-    text << "TransferHost | ";
-  if((rs & ResourceAccess::Sampler)==ResourceAccess::Sampler)
-    text << "Sampler | ";
-  if((rs & ResourceAccess::ColorAttach)==ResourceAccess::ColorAttach)
+  if(rs==ResourceLayout::ColorAttach)
     text << "ColorAttach | ";
-  if((rs & ResourceAccess::DepthAttach)==ResourceAccess::DepthAttach)
+  if(rs==ResourceLayout::DepthAttach)
     text << "DepthAttach | ";
-  if((rs & ResourceAccess::Index)==ResourceAccess::Index)
-    text << "Index | ";
-  if((rs & ResourceAccess::Vertex)==ResourceAccess::Vertex)
-    text << "Vertex | ";
-  if((rs & ResourceAccess::Uniform)==ResourceAccess::Uniform)
-    text << "Uniform | ";
-  if((rs & ResourceAccess::UavReadComp)==ResourceAccess::UavReadComp)
-    text << "UavReadComp | ";
-  if((rs & ResourceAccess::UavWriteComp)==ResourceAccess::UavWriteComp)
-    text << "UavWriteComp | ";
-  if((rs & ResourceAccess::UavReadGr)==ResourceAccess::UavReadGr)
-    text << "UavReadGr | ";
-  if((rs & ResourceAccess::UavWriteGr)==ResourceAccess::UavWriteGr)
-    text << "UavWriteGr | ";
-  if((rs & ResourceAccess::RtAsRead)==ResourceAccess::RtAsRead)
-    text << "RtAsRead | ";
-  if((rs & ResourceAccess::RtAsWrite)==ResourceAccess::RtAsWrite)
-    text << "RtAsWrite | ";
-  if ((rs & ResourceAccess::Indirect) == ResourceAccess::Indirect)
+  if(rs==ResourceLayout::Indirect)
     text << "Indirect | ";
-
 
   auto ret = text.str();
   if(ret.rfind(" | ")==ret.size()-3)
@@ -69,7 +44,7 @@ struct TestCommandBuffer : Tempest::AbstractGraphicsApi::CommandBuffer {
                       AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) override {}
   void endRendering() override {}
 
-  void barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) override;
+  void barrier(const AbstractGraphicsApi::SyncDesc& d, const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) override;
 
   void generateMipmap(AbstractGraphicsApi::Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override {}
   void copy(AbstractGraphicsApi::Buffer& dest, size_t offset, AbstractGraphicsApi::Texture& src, uint32_t width, uint32_t height, uint32_t mip) override {}
@@ -104,7 +79,7 @@ struct TestCommandBuffer : Tempest::AbstractGraphicsApi::CommandBuffer {
   void dispatchIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) override {}
   };
 
-void TestCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
+void TestCommandBuffer::barrier(const AbstractGraphicsApi::SyncDesc& d, const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
   for(size_t i=0; i<cnt; ++i) {
     auto& d    = desc[i];
     auto  prev = toString(d.prev);
@@ -119,9 +94,9 @@ TEST(main, ResourceStateBasic) {
   TestCommandBuffer cmd;
 
   ResourceState rs;
-  rs.setLayout(t, ResourceAccess::ColorAttach, true);
+  rs.setLayout(t, ResourceLayout::ColorAttach, true);
   rs.flush(cmd);
-  rs.setLayout(t, ResourceAccess::Default, false);
+  rs.setLayout(t, ResourceLayout::Default, false);
   rs.flush(cmd);
   }
 

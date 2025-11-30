@@ -184,6 +184,11 @@ TEST(DirectX12Api,DispathToDraw) {
 #endif
   }
 
+TEST(DirectX12Api,MipMapsAuto) {
+#if defined(_MSC_VER)
+  GapiTestCommon::MipMapsAuto<DirectX12Api>();
+#endif
+  }
 
 TEST(DirectX12Api,MipMaps) {
 #if defined(_MSC_VER)

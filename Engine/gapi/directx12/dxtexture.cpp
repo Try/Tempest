@@ -39,7 +39,7 @@ static UINT compMapping(ComponentMapping mapping) {
 DxTexture::DxTexture(DxDevice& dev, ComPtr<ID3D12Resource>&& b, DXGI_FORMAT frm, NonUniqResId nonUniqId,
                      UINT mipCnt, UINT sliceCnt, bool is3D)
   : device(&dev), impl(std::move(b)), format(frm), nonUniqId(nonUniqId),
-    mipCnt(mipCnt), sliceCnt(sliceCnt), is3D(is3D), isFilterable(false) {
+    mipCnt(mipCnt), sliceCnt(sliceCnt), is3D(is3D), isFilterable(false), isStorageImage(false) {
   D3D12_FEATURE_DATA_FORMAT_SUPPORT ds = {};
   ds.Format = frm;
   if(SUCCEEDED(device->device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &ds, sizeof(ds)))) {
@@ -53,17 +53,18 @@ DxTexture::DxTexture(DxDevice& dev, ComPtr<ID3D12Resource>&& b, DXGI_FORMAT frm,
   }
 
 DxTexture::DxTexture(DxTexture&& other) {
-  std::swap(device,       other.device);
-  std::swap(impl,         other.impl);
-  std::swap(format,       other.format);
-  std::swap(nonUniqId,    other.nonUniqId);
-  std::swap(mipCnt,       other.mipCnt);
-  std::swap(sliceCnt,     other.sliceCnt);
-  std::swap(is3D,         other.is3D);
-  std::swap(isFilterable, other.isFilterable);
+  std::swap(device,         other.device);
+  std::swap(impl,           other.impl);
+  std::swap(format,         other.format);
+  std::swap(nonUniqId,      other.nonUniqId);
+  std::swap(mipCnt,         other.mipCnt);
+  std::swap(sliceCnt,       other.sliceCnt);
+  std::swap(is3D,           other.is3D);
+  std::swap(isFilterable,   other.isFilterable);
+  std::swap(isStorageImage, other.isStorageImage);
 
-  std::swap(extViews,     other.extViews);
-  std::swap(imgView,      other.imgView);
+  std::swap(extViews,       other.extViews);
+  std::swap(imgView,        other.imgView);
   }
 
 DxTexture::~DxTexture() {

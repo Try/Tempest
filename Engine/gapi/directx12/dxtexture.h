@@ -27,14 +27,15 @@ class DxTexture : public AbstractGraphicsApi::Texture {
     UINT     bitCount() const;
     UINT     bytePerBlockCount() const;
 
-    DxDevice*              device       = nullptr;
+    DxDevice*              device         = nullptr;
     ComPtr<ID3D12Resource> impl;
-    DXGI_FORMAT            format       = DXGI_FORMAT_UNKNOWN;
-    NonUniqResId           nonUniqId    = NonUniqResId::I_None;
-    UINT                   mipCnt       = 1;
-    UINT                   sliceCnt     = 1;
-    bool                   is3D         = false;
-    bool                   isFilterable = false;
+    DXGI_FORMAT            format         = DXGI_FORMAT_UNKNOWN;
+    NonUniqResId           nonUniqId      = NonUniqResId::I_None;
+    UINT                   mipCnt         = 1;
+    UINT                   sliceCnt       = 1;
+    bool                   is3D           = false;
+    bool                   isFilterable   = false;
+    bool                   isStorageImage = false;
 
   private:
     void createView(D3D12_CPU_DESCRIPTOR_HANDLE ret, DxDevice& dev, DXGI_FORMAT format,

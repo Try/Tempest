@@ -307,19 +307,19 @@ AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device
   }
 
 AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Device *d, const Pixmap &p, TextureFormat frm, uint32_t mipCnt) {
-  Detail::VDevice& dx     = *reinterpret_cast<Detail::VDevice*>(d);
+  VDevice&       dx     = *reinterpret_cast<VDevice*>(d);
 
-  const uint32_t   size   = uint32_t(p.dataSize());
-  VkFormat         format = Detail::nativeFormat(frm);
+  const uint32_t size   = uint32_t(p.dataSize());
+  VkFormat       format = Detail::nativeFormat(frm);
 
-  Detail::VBuffer  stage  = dx.allocator.alloc(p.data(),size,MemUsage::Transfer,BufferHeap::Upload);
-  Detail::VTexture buf    = dx.allocator.alloc(p,mipCnt,format);
+  VBuffer        stage  = dx.allocator.alloc(p.data(),size,MemUsage::Transfer,BufferHeap::Upload);
+  VTexture       buf    = dx.allocator.alloc(p,mipCnt,format);
 
-  Detail::DSharedPtr<Buffer*>  pstage(new Detail::VBuffer (std::move(stage)));
-  Detail::DSharedPtr<Texture*> pbuf  (new Detail::VTexture(std::move(buf)));
+  DSharedPtr<Buffer*>  pstage(new VBuffer (std::move(stage)));
+  DSharedPtr<Texture*> pbuf  (new VTexture(std::move(buf)));
 
   auto cmd = dx.dataMgr().get();
-  cmd->begin();
+  cmd->begin(SyncHint::NoPendingReads);
   cmd->hold(pstage);
   cmd->hold(pbuf);
   cmd->discard(*pbuf.handler);
@@ -368,7 +368,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createStorage(Device* d,
   Detail::DSharedPtr<Texture*> pbuf(new Detail::VTexture(std::move(buf)));
 
   auto cmd = dx.dataMgr().get();
-  cmd->begin();
+  cmd->begin(SyncHint::NoPendingReads);
   cmd->discard(*pbuf.handler);
   cmd->fill(*pbuf.handler, 0);
   cmd->hold(pbuf);
@@ -419,7 +419,7 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
   Detail::VBuffer stage  = dx.allocator.alloc(nullptr, size, MemUsage::Transfer, BufferHeap::Readback);
 
   auto cmd = dx.dataMgr().get();
-  cmd->begin();
+  cmd->begin(SyncHint::NoPendingReads);
   cmd->copy(stage,0, tx,w,h,mip);
   cmd->end();
 

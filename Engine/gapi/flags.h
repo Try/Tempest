@@ -32,50 +32,50 @@ enum class BufferHeap : uint8_t {
   };
 
 // TODO: move away from public header
-enum class ResourceAccess : uint32_t {
-  None             = 0,
-  // layouts
-  Default          = 1 << 0,
-  TransferSrc      = 1 << 1,
-  TransferDst      = 1 << 2,
-  Present          = 1 << 3,
+enum class ResourceLayout : uint32_t {
+  None          = 0,
 
-  TransferHost     = 1 << 4,
-  Sampler          = 1 << 5,
-  ColorAttach      = 1 << 6,
-  DepthAttach      = 1 << 7,
-  DepthReadOnly    = 1 << 8,
+  Default       = 1,
+  TransferSrc   = 2,
+  TransferDst   = 3,
 
-  // stages
-  Indirect         = 1 << 9,
-  Index            = 1 << 10,
-  Vertex           = 1 << 11,
-  Uniform          = 1 << 12,
+  ColorAttach   = 4,
+  DepthAttach   = 5,
+  DepthReadOnly = 6,
 
-  UavReadComp      = 1 << 13,
-  UavWriteComp     = 1 << 14,
-
-  UavReadGr        = 1 << 15,
-  UavWriteGr       = 1 << 16,
-
-  RtAsRead         = 1 << 17,
-  RtAsWrite        = 1 << 18,
-
-  TransferSrcDst   = (TransferSrc    | TransferDst),
-  UavReadWriteComp = (UavReadComp    | UavWriteComp),
-  UavReadWriteGr   = (UavReadGr      | UavWriteGr  ),
-  UavReadWriteAll  = (UavReadWriteGr | UavReadWriteComp),
-
-  UavRead = (TransferSrc | Index | Vertex | Uniform | UavReadComp | UavReadGr | RtAsRead),
-  // AnyRead = (Indirect | UavRead | Sampler | DepthReadOnly),
+  Indirect      = 7,
   };
 
-inline ResourceAccess operator | (ResourceAccess a,const ResourceAccess& b) {
-  return ResourceAccess(uint32_t(a)|uint32_t(b));
+enum class SyncStage : uint32_t {
+  None          = 0,
+
+  TransferSrc   = 1 << 0,
+  TransferDst   = 1 << 1,
+  TransferHost  = 1 << 2,
+  Indirect      = 1 << 3,
+
+  GraphicsRead  = 1 << 4,
+  GraphicsWrite = 1 << 5,
+  GraphicsDraw  = 1 << 6,
+  GraphicsDepth = 1 << 7,
+
+  ComputeRead   = 1 << 8,
+  ComputeWrite  = 1 << 9,
+  RtAsRead      = 1 << 10,
+  RtAsWrite     = 1 << 11,
+
+  Transfer      = (TransferSrc  | TransferDst),
+  Graphics      = (GraphicsRead | GraphicsWrite | GraphicsDraw | GraphicsDepth),
+
+  AllRead       = (TransferSrc | Indirect | ComputeRead | GraphicsRead | RtAsRead),
+  };
+
+inline SyncStage operator | (SyncStage a, const SyncStage& b) {
+  return SyncStage(uint32_t(a)|uint32_t(b));
   }
 
-inline ResourceAccess operator & (ResourceAccess a,const ResourceAccess& b) {
-  return ResourceAccess(uint32_t(a)&uint32_t(b));
+inline SyncStage operator & (SyncStage a, const SyncStage& b) {
+  return SyncStage(uint32_t(a)&uint32_t(b));
   }
 
 enum NonUniqResId : uint32_t {

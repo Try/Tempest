@@ -314,6 +314,8 @@ class DxDevice : public AbstractGraphicsApi::Device {
                                                     ID3DBlob** ppBlob,
                                                     ID3DBlob** ppErrorBlob) = nullptr;
       HRESULT (WINAPI *DxcCreateInstance)(REFCLSID rclsid, REFIID riid, LPVOID* ppv) = nullptr;
+
+      HRESULT (WINAPI *DXGIGetDebugInterface1)(UINT Flags, REFIID riid, void **pDebug) = nullptr;
       };
 
     struct DxProps : AbstractGraphicsApi::Props {

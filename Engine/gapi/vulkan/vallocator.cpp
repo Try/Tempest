@@ -244,7 +244,7 @@ VTexture VAllocator::alloc(const Pixmap& pm, uint32_t mip, VkFormat format) {
 VTexture VAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t d, const uint32_t mip, TextureFormat frm, bool imageStore) {
   VTexture ret;
   ret.alloc     = this;
-  ret.nonUniqId = (imageStore) ?  nextId() : NonUniqResId::I_None;
+  ret.nonUniqId = nextId();
 
   VkImageCreateInfo imageInfo = {};
   imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;

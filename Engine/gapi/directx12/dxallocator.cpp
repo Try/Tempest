@@ -247,13 +247,13 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
   resDesc.SamplerFeedbackMipRegion = {};
 
   if(provider.device->props.hasSamplerFormat(frm)) {
-    state  = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    state  = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
     layout = D3D12_BARRIER_LAYOUT_SHADER_RESOURCE;
     }
   if(provider.device->props.hasAttachFormat(frm)) {
     resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 
-    state        = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE|D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+    state        = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
     layout       = D3D12_BARRIER_LAYOUT_SHADER_RESOURCE;
     clr.Color[0] = 0.f;
     clr.Color[1] = 0.f;
@@ -263,8 +263,8 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
   if(provider.device->props.hasDepthFormat(frm)) {
     resDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
-    state                    = D3D12_RESOURCE_STATE_DEPTH_READ;
-    layout                   = D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_READ;
+    state                    = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+    layout                   = D3D12_BARRIER_LAYOUT_SHADER_RESOURCE;
     clr.DepthStencil.Depth   = 1.f;
     clr.DepthStencil.Stencil = 0;
     }
@@ -283,7 +283,7 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
 
   clr.Format = resDesc.Format;
 
-  ComPtr<ID3D12Resource> ret;
+  ComPtr<ID3D12Resource> tex;
   if(owner->props.enhancedBarriers) {
     ComPtr<ID3D12Device10> dev10;
     //device->QueryInterface(uuid<ID3D12Device10>(), reinterpret_cast<void**>(&dev10));
@@ -298,7 +298,7 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
         nullptr,
         0, nullptr,
         uuid<ID3D12Resource>(),
-        reinterpret_cast<void**>(&ret)
+        reinterpret_cast<void**>(&tex)
         ));
     } else {
     dxAssert(device->CreateCommittedResource(
@@ -308,12 +308,14 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
                state,
                &clr,
                uuid<ID3D12Resource>(),
-               reinterpret_cast<void**>(&ret)
+               reinterpret_cast<void**>(&tex)
                ));
     }
 
-  const auto nonUniqId  = (imageStore) ?  nextId() : NonUniqResId::I_None;
-  return DxTexture(*owner,std::move(ret),resDesc.Format,nonUniqId,resDesc.MipLevels,resDesc.DepthOrArraySize,d!=0);
+  const auto nonUniqId  = (imageStore) ? nextId() : NonUniqResId::I_None;
+  auto ret = DxTexture(*owner,std::move(tex),resDesc.Format,nonUniqId,resDesc.MipLevels,resDesc.DepthOrArraySize,d!=0);
+  ret.isStorageImage = imageStore;
+  return ret;
   }
 
 void DxAllocator::free(Allocation& page) {

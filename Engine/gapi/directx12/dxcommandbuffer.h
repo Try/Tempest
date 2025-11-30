@@ -80,14 +80,16 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void dispatch(size_t x, size_t y, size_t z) override;
     void dispatchIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) override;
 
-    void barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) override;
+    void barrier(const AbstractGraphicsApi::SyncDesc& sync, const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) override;
+    void forceLayout(AbstractGraphicsApi::Texture& t, ResourceLayout lay);
 
-    void copy(AbstractGraphicsApi::Buffer& dst, size_t offset, AbstractGraphicsApi::Texture& src, uint32_t width, uint32_t height, uint32_t mip) override;
     void generateMipmap(AbstractGraphicsApi::Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
 
-    void copyNative(AbstractGraphicsApi::Buffer& dest, size_t offset, const AbstractGraphicsApi::Texture& src, uint32_t width, uint32_t height, uint32_t mip);
+    void copy(AbstractGraphicsApi::Buffer& dst, size_t offset, AbstractGraphicsApi::Texture& src, uint32_t width, uint32_t height, uint32_t mip) override;
+    void copy(AbstractGraphicsApi::Buffer& dst, size_t offset, AbstractGraphicsApi::Texture& src, uint32_t width, uint32_t height, uint32_t mip, bool checkPitch);
     void copy(AbstractGraphicsApi::Buffer&  dest, size_t offsetDest, const AbstractGraphicsApi::Buffer& src, size_t offsetSrc, size_t size);
     void copy(AbstractGraphicsApi::Texture& dest, size_t width, size_t height, size_t mip, const AbstractGraphicsApi::Buffer&  src, size_t offset);
+    void copyNative(AbstractGraphicsApi::Buffer& dest, size_t offset, const AbstractGraphicsApi::Texture& src, uint32_t width, uint32_t height, uint32_t mip);
 
     void fill(AbstractGraphicsApi::Texture& dest, uint32_t val);
 
@@ -153,7 +155,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void handleSync(const DxPipelineLay::LayoutDesc& lay, const DxPipelineLay::SyncDesc& sync, PipelineStage st);
 
     void restoreIndirect();
-    void enhancedBarrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt);
+    void enhancedBarrier(const AbstractGraphicsApi::SyncDesc& sync, const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt);
 
     D3D12_CPU_DESCRIPTOR_HANDLE ensureCpuDescriptors(uint32_t num);
     D3D12_CPU_DESCRIPTOR_HANDLE ensureRtvDescriptors(uint32_t num);

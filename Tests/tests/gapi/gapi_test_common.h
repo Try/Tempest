@@ -1081,6 +1081,24 @@ void AtomicImage3D(const char* outImage) {
     }
   }
 
+template<class GraphicsApi>
+void MipMapsAuto() {
+  using namespace Tempest;
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto t = device.texture("assets/gapi/tst-rgba.png", true);
+    (void)t;
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
 template<class GraphicsApi, Tempest::TextureFormat format>
 void MipMaps(const char* outImage) {
   using namespace Tempest;

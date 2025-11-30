@@ -184,6 +184,12 @@ TEST(VulkanApi,DispathToDraw) {
 #endif
   }
 
+TEST(VulkanApi,MipMapsAuto) {
+#if !defined(__OSX__)
+  GapiTestCommon::MipMapsAuto<VulkanApi>();
+#endif
+  }
+
 TEST(VulkanApi,MipMaps) {
 #if !defined(__OSX__)
   GapiTestCommon::MipMaps<VulkanApi,TextureFormat::RGBA8>  ("VulkanApi_MipMaps_RGBA8.png");

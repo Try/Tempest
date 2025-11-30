@@ -2,6 +2,7 @@
 
 #if defined(TEMPEST_BUILD_DIRECTX12)
 #include <dxgi1_6.h>
+#include <dxgidebug.h>
 #include <d3d12.h>
 
 #include "directx12/guid.h"
@@ -49,11 +50,20 @@ struct DirectX12Api::Impl {
   ~Impl(){
     }
 
-  std::vector<Props> devices() {
-    std::vector<Props> d;
-    if(dllApi.D3D12CreateDevice==nullptr)
-      return d;
+  void initApi(DxDevice::ApiEntry& a) {
+    if(d3d12_dll==nullptr)
+      return;
+    getProcAddress(d3d12_dll, a.D3D12CreateDevice,          "D3D12CreateDevice");
+    getProcAddress(d3d12_dll, a.D3D12GetDebugInterface,     "D3D12GetDebugInterface");
+    getProcAddress(d3d12_dll, a.D3D12SerializeRootSignature,"D3D12SerializeRootSignature");
 
+    getProcAddress(dxil_dll,  a.DxcCreateInstance,"DxcCreateInstance");
+    }
+
+  template<class Func>
+  void enumAdapters(Func func) {
+    if(dllApi.D3D12CreateDevice==nullptr)
+      return;
     auto& dxgi = *DXGIFactory;
     ComPtr<IDXGIAdapter1> adapter;
     for(UINT i = 0; DXGI_ERROR_NOT_FOUND != dxgi.EnumAdapters1(i, &adapter.get()); ++i) {
@@ -72,11 +82,23 @@ struct DirectX12Api::Impl {
       DxDevice::DxProps props={};
       DxDevice::getProp(desc,*tmpDev,props);
 
+      //NOTE: legacy-barriers are imposible to map to RHI, so they are mostly aliasing barriers everywhere
       // if(!props.enhancedBarriers)
       //   continue;
 
-      d.push_back(props);
+      if(func(adapter, props))
+        break;
       }
+    }
+
+  std::vector<Props> devices() {
+    std::vector<Props> d;
+
+    ComPtr<IDXGIAdapter1> adapter;
+    enumAdapters([&](ComPtr<IDXGIAdapter1>&, const DxDevice::DxProps& props){
+      d.push_back(props);
+      return false;
+      });
 
     return d;
     }
@@ -85,42 +107,16 @@ struct DirectX12Api::Impl {
     if(dllApi.D3D12CreateDevice==nullptr)
       throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
-    auto& dxgi = *DXGIFactory;
-
     ComPtr<IDXGIAdapter1> adapter;
-    for(UINT i = 0; DXGI_ERROR_NOT_FOUND != dxgi.EnumAdapters1(i, &adapter.get()); ++i) {
-      DXGI_ADAPTER_DESC1 desc={};
-      adapter->GetDesc1(&desc);
-      if(desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-        continue;
-      if(lstrcmpW(desc.Description,L"Microsoft Basic Render Driver")==0)
-        continue;
-
-      ComPtr<ID3D12Device> tmpDev;
-      if(FAILED(dllApi.D3D12CreateDevice(adapter.get(), DxDevice::preferredFeatureLevel, uuid<ID3D12Device>(),
-                                         reinterpret_cast<void**>(&tmpDev))))
-        continue;
-
-      DxDevice::DxProps props={};
-      DxDevice::getProp(desc,*tmpDev,props);
+    enumAdapters([&](ComPtr<IDXGIAdapter1>& a, const DxDevice::DxProps& props){
       if(!gpuName.empty() && gpuName!=props.name)
-        continue;
-      break;
-      }
-
+        return false;
+      adapter = std::move(a);
+      return true;
+      });
     if(adapter.get()==nullptr)
       throw std::system_error(Tempest::GraphicsErrc::NoDevice);
     return new DxDevice(*adapter,dllApi);
-    }
-
-  void initApi(DxDevice::ApiEntry& a) {
-    if(d3d12_dll==nullptr)
-      return;
-    getProcAddress(d3d12_dll, a.D3D12CreateDevice,          "D3D12CreateDevice");
-    getProcAddress(d3d12_dll, a.D3D12GetDebugInterface,     "D3D12GetDebugInterface");
-    getProcAddress(d3d12_dll, a.D3D12SerializeRootSignature,"D3D12SerializeRootSignature");
-
-    getProcAddress(dxil_dll,  a.DxcCreateInstance,"DxcCreateInstance");
     }
 
   template<class T>
@@ -144,7 +140,14 @@ DirectX12Api::DirectX12Api(ApiFlags f) {
   impl.reset(new Impl(ApiFlags::Validation==(f&ApiFlags::Validation)));
   }
 
-DirectX12Api::~DirectX12Api(){
+DirectX12Api::~DirectX12Api() {
+  /*
+  IDXGIDebug1* dbg = nullptr;
+  if(SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dbg)))) {
+    dbg->ReportLiveObjects(DXGI_DEBUG_ALL_GUID(), DXGI_DEBUG_RLO_SUMMARY);
+    dbg->Release();
+    }
+    */
   }
 
 std::vector<AbstractGraphicsApi::Props> DirectX12Api::devices() const {
@@ -234,12 +237,12 @@ AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixma
   Detail::DSharedPtr<Texture*> pbuf  (new Detail::DxTexture(std::move(buf)));
 
   auto cmd = dx.dataMgr().get();
-  cmd->begin();
+  cmd->begin(SyncHint::NoPendingReads);
   cmd->hold(pbuf);
   cmd->hold(pstage); // preserve stage buffer, until gpu side copy is finished
 
+  cmd->forceLayout(*pbuf.handler, ResourceLayout::TransferDst);
   cmd->copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
-  cmd->barrier(*pbuf.handler, ResourceAccess::TransferDst, ResourceAccess::Sampler, uint32_t(-1));
   if(mipCnt>1)
     cmd->generateMipmap(*pbuf.handler, p.w(), p.h(), mipCnt);
   cmd->end();
@@ -275,13 +278,15 @@ AbstractGraphicsApi::PTexture DirectX12Api::createCompressedTexture(Device* d, c
   reinterpret_cast<Detail::DxBuffer*>(pstage.handler)->uploadS3TC(reinterpret_cast<const uint8_t*>(p.data()),p.w(),p.h(),mipCnt,blockSize);
 
   auto cmd = dx.dataMgr().get();
-  cmd->begin();
+  cmd->begin(SyncHint::NoPendingReads);
   cmd->hold(pbuf);
   cmd->hold(pstage); // preserve stage buffer, until gpu side copy is finished
 
   stageBufferSize = 0;
   w = p.w();
   h = p.h();
+
+  cmd->forceLayout(*pbuf.handler, ResourceLayout::TransferDst);
   for(uint32_t i=0; i<mipCnt; i++) {
     UINT wBlk = (w+3)/4;
     UINT hBlk = (h+3)/4;
@@ -298,7 +303,6 @@ AbstractGraphicsApi::PTexture DirectX12Api::createCompressedTexture(Device* d, c
     h = std::max<uint32_t>(4,h/2);
     }
 
-  cmd->barrier(*pbuf.handler, ResourceAccess::TransferDst, ResourceAccess::Sampler, uint32_t(-1));
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
   return PTexture(pbuf.handler);
@@ -321,7 +325,7 @@ AbstractGraphicsApi::PTexture DirectX12Api::createStorage(AbstractGraphicsApi::D
   Detail::DSharedPtr<Texture*> pbuf(new Detail::DxTexture(std::move(buf)));
 
   auto cmd = dx.dataMgr().get();
-  cmd->begin();
+  cmd->begin(SyncHint::NoPendingReads);
   cmd->hold(pbuf);
   cmd->fill(*pbuf.handler,0);
   cmd->end();
@@ -338,9 +342,9 @@ AbstractGraphicsApi::PTexture DirectX12Api::createStorage(Device* d, const uint3
   Detail::DSharedPtr<Texture*> pbuf(new Detail::DxTexture(std::move(buf)));
 
   auto cmd = dx.dataMgr().get();
-  cmd->begin();
+  cmd->begin(SyncHint::NoPendingReads);
   cmd->hold(pbuf);
-  cmd->fill(*pbuf.handler,0);
+  cmd->fill(*pbuf.handler, 0);
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
 
@@ -368,15 +372,10 @@ void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t,
   uint32_t         row    = bsz.w*uint32_t(bpb);
   const uint32_t   pith   = ((row+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
   Detail::DxBuffer stage  = dx.allocator.alloc(nullptr, bsz.h*pith, MemUsage::Transfer, BufferHeap::Readback);
-  ResourceAccess   defLay = storageImg ? (ResourceAccess::UavReadGr | ResourceAccess::UavReadComp) : ResourceAccess::Sampler;
-  if(isDepthFormat(frm))
-    defLay = ResourceAccess::DepthReadOnly;
 
   auto cmd = dx.dataMgr().get();
-  cmd->begin();
-  cmd->barrier(tx,defLay,ResourceAccess::TransferSrc,mip);
-  cmd->copyNative(stage,0, tx,w,h,mip);
-  cmd->barrier(tx,ResourceAccess::TransferSrc,defLay,mip);
+  cmd->begin(SyncHint::NoPendingReads);
+  cmd->copy(stage,0, tx,w,h,mip, false);
   cmd->end();
   dx.dataMgr().submitAndWait(std::move(cmd));
 

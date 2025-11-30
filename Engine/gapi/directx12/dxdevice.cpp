@@ -150,10 +150,11 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
   }
 
 DxDevice::~DxDevice() {
-  blit       = DSharedPtr<DxPipeline*>();
   data.reset();
+  blit = DSharedPtr<DxPipeline*>();
   CloseHandle(idleEvent);
   }
+
 
 void DxDevice::getProp(IDXGIAdapter1& adapter, ID3D12Device& dev, DxProps& prop) {
   DXGI_ADAPTER_DESC1 desc={};
