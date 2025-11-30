@@ -120,7 +120,7 @@ void MtCommandBuffer::endRendering() {
   setEncoder(E_None,nullptr);
   }
 
-void MtCommandBuffer::barrier(const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
+void MtCommandBuffer::barrier(const AbstractGraphicsApi::SyncDesc&, const AbstractGraphicsApi::BarrierDesc*, size_t) {
   // nop
   }
 
