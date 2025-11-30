@@ -208,37 +208,13 @@ static D3D12_RESOURCE_STATES toResourceState(ResourceLayout rs, const DxTexture*
   return D3D12_RESOURCE_STATE_COMMON;
   }
 
-static D3D12_RESOURCE_STATES toResourceState(ResourceLayout rs, const DxBuffer* buffer) {
-  if(rs==ResourceLayout::None)
-    return D3D12_RESOURCE_STATE_COMMON;
-
-  if(rs==ResourceLayout::TransferSrc)
-    return D3D12_RESOURCE_STATE_COPY_SOURCE;
-  if(rs==ResourceLayout::TransferDst)
-    return D3D12_RESOURCE_STATE_COPY_DEST;
-  if(rs==ResourceLayout::Default) {
-    // maybe use D3D12_RESOURCE_STATE_GENERIC_READ for buffers?
-    return D3D12_RESOURCE_STATE_COMMON;
-    }
-
-  if(rs==ResourceLayout::Indirect)
-    return D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
-
-  return D3D12_RESOURCE_STATE_COMMON;
-  }
-
 static ID3D12Resource* toDxResource(const AbstractGraphicsApi::BarrierDesc& b) {
   if(b.texture!=nullptr) {
-    DxTexture& t = *reinterpret_cast<DxTexture*>(b.texture);
+    auto& t = *reinterpret_cast<const DxTexture*>(b.texture);
     return t.impl.get();
     }
 
-  if(b.buffer!=nullptr) {
-    auto& buf = *reinterpret_cast<const DxBuffer*>(b.buffer);
-    return buf.impl.get();
-    }
-
-  DxSwapchain& s = *reinterpret_cast<DxSwapchain*>(b.swapchain);
+  auto& s = *reinterpret_cast<const DxSwapchain*>(b.swapchain);
   return s.views[b.swId].get();
   }
 
@@ -462,9 +438,7 @@ void DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize
 
 void DxCommandBuffer::endRendering() {
   resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Graphics);
-
   impl->EndRenderPass();
-  restoreIndirect();
   }
 
 void DxCommandBuffer::setViewport(const Rect& r) {
@@ -712,15 +686,6 @@ void DxCommandBuffer::implSetPushData(const PipelineStage st) {
     impl->SetComputeRoot32BitConstants(pushConstantId, UINT(size/4), pushData.data, 0);
   }
 
-void DxCommandBuffer::restoreIndirect() {
-  /*
-  for(auto i:indirectCmd) {
-    barrier(*i, ResourceAccess::Indirect, ResourceAccess::None); // to common state
-    }
-  indirectCmd.clear();
-  */
-  }
-
 void DxCommandBuffer::enhancedBarrier(const AbstractGraphicsApi::SyncDesc& sync, const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
   D3D12_BUFFER_BARRIER      bufBarrier[MaxBarriers] = {};
   uint32_t                  bufCount = 0;
@@ -743,35 +708,18 @@ void DxCommandBuffer::enhancedBarrier(const AbstractGraphicsApi::SyncDesc& sync,
     memBarrier.SyncAfter    = dstStageMask;
     memBarrier.AccessAfter  = dstAccessMask;
 
-    //memBarrier.SyncBefore   = D3D12_BARRIER_SYNC_ALL_SHADING;
-    //memBarrier.AccessBefore   = D3D12_BARRIER_SYNC_ALL_SHADING;
     memCount = 1;
     }
 
   for(size_t i=0; i<cnt; ++i) {
     auto& b  = desc[i];
 
-    if(b.buffer!=nullptr) {
-      auto& bx = bufBarrier[bufCount];
-      ++bufCount;
-
-      bx.SyncBefore   = memBarrier.SyncBefore;
-      bx.AccessBefore = memBarrier.AccessBefore;
-      bx.SyncAfter    = memBarrier.SyncAfter;
-      bx.AccessAfter  = memBarrier.AccessAfter;
-      bx.pResource    = toDxResource(b);
-      bx.Offset       = 0;
-      bx.Size         = UINT64_MAX;
-
-      if(bx.SyncBefore==D3D12_BARRIER_SYNC_NONE)
-        bx.AccessBefore = D3D12_BARRIER_ACCESS_NO_ACCESS;
-      }
-    else if(b.texture!=nullptr || b.swapchain!=nullptr) {
+    if(b.texture!=nullptr || b.swapchain!=nullptr) {
       auto& bx = imgBarrier[imgCount];
       ++imgCount;
 
-      bx.LayoutBefore = toLayout(bx.SyncBefore, bx.AccessBefore, b.prev, reinterpret_cast<DxTexture*>(b.texture));
-      bx.LayoutAfter  = toLayout(bx.SyncAfter,  bx.AccessAfter,  b.next, reinterpret_cast<DxTexture*>(b.texture));
+      bx.LayoutBefore = toLayout(bx.SyncBefore, bx.AccessBefore, b.prev, reinterpret_cast<const DxTexture*>(b.texture));
+      bx.LayoutAfter  = toLayout(bx.SyncAfter,  bx.AccessAfter,  b.next, reinterpret_cast<const DxTexture*>(b.texture));
 
       bx.pResource    = toDxResource(b);
       bx.Subresources.IndexOrFirstMipLevel = (b.mip==uint32_t(-1) ?  D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES : b.mip);
@@ -781,6 +729,8 @@ void DxCommandBuffer::enhancedBarrier(const AbstractGraphicsApi::SyncDesc& sync,
         bx.AccessBefore = D3D12_BARRIER_ACCESS_NO_ACCESS;
       if(bx.SyncAfter==D3D12_BARRIER_SYNC_NONE)
         bx.AccessAfter = D3D12_BARRIER_ACCESS_NO_ACCESS;
+      if(b.discard && bx.SyncBefore==D3D12_BARRIER_SYNC_NONE)
+        bx.LayoutBefore = D3D12_BARRIER_LAYOUT_UNDEFINED;
       }
     else {
       assert(0);
@@ -870,23 +820,10 @@ void DxCommandBuffer::barrier(const AbstractGraphicsApi::SyncDesc& sync, const A
   if(sync.prev!=SyncStage::None && sync.next!=SyncStage::None) {
     D3D12_RESOURCE_BARRIER& barrier = rb[rbCount];
     /* HACK:
-     * 1: use UAV barrier to sync random access from compute-like shaders (and graphics side effects)
-     * 2: use aliasing barrier to force all-to-all execution dependency with cache-flush (out of spec behaviour)
+     * 1: use aliasing barrier to force all-to-all execution dependency with cache-flush (out of spec behaviour)
+     * 2: even in compue-only workload, UAV barrier is not enough, if buffer is utilized as SRV+CBV+UAV in the same time
      * 3: ideally we need Enhanced-Barrier. This code is used only as fallback
      */
-    /*
-    const SyncStage mask = SyncStage(~uint32_t(SyncStage::GraphicsWrite | SyncStage::ComputeWrite));
-    if((sync.prev & mask)==SyncStage::None && (sync.next & mask)==SyncStage::None) {
-      barrier.Type                     = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-      barrier.Flags                    = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-      barrier.UAV.pResource            = nullptr;
-      } else {
-      barrier.Type                     = D3D12_RESOURCE_BARRIER_TYPE_ALIASING;
-      barrier.Flags                    = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-      barrier.Aliasing.pResourceBefore = nullptr;
-      barrier.Aliasing.pResourceAfter  = nullptr;
-      }
-    */
     barrier.Type                     = D3D12_RESOURCE_BARRIER_TYPE_ALIASING;
     barrier.Flags                    = D3D12_RESOURCE_BARRIER_FLAG_NONE;
     barrier.Aliasing.pResourceBefore = nullptr;
@@ -897,25 +834,12 @@ void DxCommandBuffer::barrier(const AbstractGraphicsApi::SyncDesc& sync, const A
   for(size_t i=0; i<cnt; ++i) {
     auto& b = desc[i];
     D3D12_RESOURCE_BARRIER& barrier = rb[rbCount];
-    if(b.buffer!=nullptr) {
+    if(b.texture==nullptr || b.swapchain==nullptr) {
       barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
       barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
       barrier.Transition.pResource   = toDxResource(b);
-      barrier.Transition.StateBefore = toResourceState(b.prev, reinterpret_cast<const DxBuffer*>(b.buffer));
-      barrier.Transition.StateAfter  = toResourceState(b.next, reinterpret_cast<const DxBuffer*>(b.buffer));
-      barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-      if(barrier.Transition.StateBefore==barrier.Transition.StateAfter) {
-        barrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-        barrier.Flags         = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        barrier.UAV.pResource = toDxResource(b);
-        }
-      }
-    else if(b.texture==nullptr || b.swapchain==nullptr) {
-      barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-      barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-      barrier.Transition.pResource   = toDxResource(b);
-      barrier.Transition.StateBefore = toResourceState(b.prev, reinterpret_cast<DxTexture*>(b.texture));
-      barrier.Transition.StateAfter  = toResourceState(b.next, reinterpret_cast<DxTexture*>(b.texture));
+      barrier.Transition.StateBefore = toResourceState(b.prev, reinterpret_cast<const DxTexture*>(b.texture));
+      barrier.Transition.StateAfter  = toResourceState(b.next, reinterpret_cast<const DxTexture*>(b.texture));
       barrier.Transition.Subresource = (b.mip==uint32_t(-1) ?  D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES : b.mip);
       if(barrier.Transition.StateBefore==barrier.Transition.StateAfter)
         continue;

@@ -50,20 +50,11 @@ class ResourceState {
       bool                            outdated = false;
       };
 
-    struct BufState {
-      const AbstractGraphicsApi::Buffer* buf      = nullptr;
-      ResourceLayout                     last     = ResourceLayout::None;
-      ResourceLayout                     next     = ResourceLayout::None;
-      bool                               outdated = false;
-      };
-
     void      fillReads();
     ImgState& findImg(AbstractGraphicsApi::Texture* img, AbstractGraphicsApi::Swapchain* sw, uint32_t id, bool discard);
-    BufState& findBuf(const AbstractGraphicsApi::Buffer* buf);
     void      emitBarriers(AbstractGraphicsApi::CommandBuffer& cmd, AbstractGraphicsApi::SyncDesc& d, AbstractGraphicsApi::BarrierDesc* desc, size_t cnt);
 
     std::vector<ImgState> imgState;
-    std::vector<BufState> bufState;
 
     struct Stage {
       NonUniqResId depend[PipelineStage::S_Count];

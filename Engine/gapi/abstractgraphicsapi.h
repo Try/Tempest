@@ -558,15 +558,14 @@ namespace Tempest {
       struct AccelerationStructure:Shared {};
       struct DescArray:NoCopy {};
       struct BarrierDesc {
-        const Buffer*  buffer    = nullptr;
-        Texture*       texture   = nullptr;
-        Swapchain*     swapchain = nullptr;
-        uint32_t       swId      = 0;
-        uint32_t       mip       = 0;
+        const Texture*   texture   = nullptr;
+        const Swapchain* swapchain = nullptr;
+        uint32_t         swId      = 0;
+        uint32_t         mip       = 0;
 
-        ResourceLayout prev      = ResourceLayout::None;
-        ResourceLayout next      = ResourceLayout::None;
-        bool           discard   = false;
+        ResourceLayout   prev      = ResourceLayout::None;
+        ResourceLayout   next      = ResourceLayout::None;
+        bool             discard   = false;
         };
       struct SyncDesc {
         SyncStage prev = SyncStage::None;

@@ -23,8 +23,6 @@ static std::string toString(ResourceLayout rs) {
     text << "ColorAttach | ";
   if(rs==ResourceLayout::DepthAttach)
     text << "DepthAttach | ";
-  if(rs==ResourceLayout::Indirect)
-    text << "Indirect | ";
 
   auto ret = text.str();
   if(ret.rfind(" | ")==ret.size()-3)

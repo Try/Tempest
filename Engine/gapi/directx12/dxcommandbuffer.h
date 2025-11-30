@@ -142,8 +142,6 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
 
     bool                               isDbgRegion = false;
 
-    std::unordered_set<const AbstractGraphicsApi::Buffer*> indirectCmd;
-
     void pushChunk();
     void newChunk();
 
@@ -154,7 +152,6 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void implSetPushData(const PipelineStage st);
     void handleSync(const DxPipelineLay::LayoutDesc& lay, const DxPipelineLay::SyncDesc& sync, PipelineStage st);
 
-    void restoreIndirect();
     void enhancedBarrier(const AbstractGraphicsApi::SyncDesc& sync, const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt);
 
     D3D12_CPU_DESCRIPTOR_HANDLE ensureCpuDescriptors(uint32_t num);

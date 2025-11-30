@@ -145,16 +145,11 @@ static VkImageLayout toLayout(ResourceLayout rs, const VTexture* texture) {
 
 static VkImage toVkResource(const AbstractGraphicsApi::BarrierDesc& b) {
   if(b.texture!=nullptr) {
-    VTexture& t = *reinterpret_cast<VTexture*>(b.texture);
+    auto& t = *reinterpret_cast<const VTexture*>(b.texture);
     return t.impl;
     }
 
-  if(b.buffer!=nullptr) {
-    auto& buf = *reinterpret_cast<const VBuffer*>(b.buffer);
-    return buf.impl;
-    }
-
-  VSwapchain& s = *reinterpret_cast<VSwapchain*>(b.swapchain);
+  auto& s = *reinterpret_cast<const VSwapchain*>(b.swapchain);
   return s.images[b.swId];
   }
 
@@ -1001,21 +996,8 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::SyncDesc& s, const Abstr
   for(size_t i=0; i<cnt; ++i) {
     auto& b  = desc[i];
 
-    if(b.buffer!=nullptr) {
-      auto& bx = bufBarrier[bufCount];
-      ++bufCount;
-
-      bx.sType                 = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-      bx.srcQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
-      bx.dstQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
-      bx.buffer                = reinterpret_cast<const VBuffer&>(*b.buffer).impl;
-      bx.offset                = 0;
-      bx.size                  = VK_WHOLE_SIZE;
-      bx.srcAccessMask         = srcAccessMask;
-      bx.dstAccessMask         = dstAccessMask;
-      }
-    else if(b.texture==nullptr || b.swapchain==nullptr) {
-      auto* tx = reinterpret_cast<VTexture*>(b.texture);
+    if(b.texture==nullptr || b.swapchain==nullptr) {
+      auto* tx = reinterpret_cast<const VTexture*>(b.texture);
       auto& bx = imgBarrier[imgCount];
       ++imgCount;
 
@@ -1113,11 +1095,11 @@ template<class T>
 void VCommandBuffer::finalizeImageBarrier(T& bx, const AbstractGraphicsApi::BarrierDesc& b) {
   VkFormat nativeFormat = VK_FORMAT_UNDEFINED;
   if(b.texture!=nullptr) {
-    VTexture& t   = *reinterpret_cast<VTexture*>  (b.texture);
-    nativeFormat  = t.format;
+    auto& t = *reinterpret_cast<const VTexture*>(b.texture);
+    nativeFormat = t.format;
     } else {
-    VSwapchain& s = *reinterpret_cast<VSwapchain*>(b.swapchain);
-    nativeFormat  = s.format();
+    auto& s = *reinterpret_cast<const VSwapchain*>(b.swapchain);
+    nativeFormat = s.format();
     }
 
   bx.subresourceRange.baseMipLevel   = b.mip==uint32_t(-1) ? 0 : b.mip;

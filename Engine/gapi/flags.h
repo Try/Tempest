@@ -34,16 +34,14 @@ enum class BufferHeap : uint8_t {
 // TODO: move away from public header
 enum class ResourceLayout : uint32_t {
   None          = 0,
-
   Default       = 1,
+
   TransferSrc   = 2,
   TransferDst   = 3,
 
   ColorAttach   = 4,
   DepthAttach   = 5,
   DepthReadOnly = 6,
-
-  Indirect      = 7,
   };
 
 enum class SyncStage : uint32_t {

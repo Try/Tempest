@@ -36,7 +36,7 @@ void ResourceState::setRenderpass(AbstractGraphicsApi::CommandBuffer& cmd,
   }
 
 void ResourceState::setLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id, ResourceLayout lay, bool discard) {
-  ImgState& img   = findImg(nullptr,&s,id,discard);
+  ImgState& img = findImg(nullptr,&s,id,discard);
   img.next     = lay;
   img.discard  = discard;
   img.outdated = (img.next!=img.last);
@@ -140,24 +140,18 @@ void ResourceState::finalize(AbstractGraphicsApi::CommandBuffer& cmd) {
     joinWriters(p);
     }
 
-  if(imgState.size()==0 && bufState.size()==0 && uavSrcBarrier==SyncStage::None)
+  if(imgState.size()==0 && uavSrcBarrier==SyncStage::None) {
+    fillReads();
     return; // early-out
+    }
 
   for(auto& i:imgState) {
     i.next     = ResourceLayout::Default;
     i.outdated = (i.next!=i.last);
     }
-  for(auto& i:bufState) {
-    if(i.buf==nullptr)
-      continue;
-    i.next     = ResourceLayout::Default; //fixme: buffer-layout is DX only hack
-    i.outdated = true;
-    }
   flush(cmd);
   imgState.reserve(imgState.size());
   imgState.clear();
-  bufState.reserve(bufState.size());
-  bufState.clear();
   uavSrcBarrier = SyncStage::None;
   uavDstBarrier = SyncStage::None;
 
@@ -193,20 +187,6 @@ ResourceState::ImgState& ResourceState::findImg(AbstractGraphicsApi::Texture* im
   return imgState.back();
   }
 
-ResourceState::BufState& ResourceState::findBuf(const AbstractGraphicsApi::Buffer* buf) {
-  for(auto& i:bufState) {
-    if(i.buf==buf)
-      return i;
-    }
-  BufState s={};
-  s.buf      = buf;
-  s.last     = ResourceLayout::Default;
-  s.next     = ResourceLayout::Default;
-  s.outdated = false;
-  bufState.push_back(s);
-  return bufState.back();
-  }
-
 void ResourceState::flush(AbstractGraphicsApi::CommandBuffer& cmd) {
   AbstractGraphicsApi::BarrierDesc barrier[MaxBarriers];
   uint8_t                          barrierCnt = 0;
@@ -230,23 +210,6 @@ void ResourceState::flush(AbstractGraphicsApi::CommandBuffer& cmd) {
     b.prev      = i.last;
     b.next      = i.next;
     b.discard   = i.discard;
-    ++barrierCnt;
-
-    i.last     = i.next;
-    i.outdated = false;
-    if(barrierCnt==MaxBarriers) {
-      emitBarriers(cmd,d,barrier,barrierCnt);
-      barrierCnt = 0;
-      }
-    }
-
-  for(auto& i:bufState) {
-    if(!i.outdated)
-      continue;
-    auto& b = barrier[barrierCnt];
-    b.buffer    = i.buf;
-    b.prev      = i.last;
-    b.next      = i.next;
     ++barrierCnt;
 
     i.last     = i.next;
