@@ -338,7 +338,7 @@ void DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize
     NonUniqResId nonUniqId = NonUniqResId::I_None;
     if(sw[i] != nullptr) {
       //auto& t = *reinterpret_cast<DxSwapchain*>(sw[i]);
-      nonUniqId = NonUniqResId(0x0); //FIXME
+      nonUniqId = NonUniqResId(0x1); //FIXME
       }
     else if (desc[i].attachment != nullptr) {
       auto& t = *reinterpret_cast<DxTexture*>(att[i]);
