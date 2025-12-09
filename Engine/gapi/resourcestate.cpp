@@ -14,8 +14,8 @@ void ResourceState::setRenderpass(AbstractGraphicsApi::CommandBuffer& cmd,
   for(size_t i=0; i<descSize; ++i) {
     const bool discard = desc[i].load!=AccessOp::Preserve;
     if(isDepthFormat(frm[i]) && desc[i].load==AccessOp::Readonly)
-      setLayout(*att[i],ResourceLayout::DepthReadOnly,discard);
-    if(isDepthFormat(frm[i]))
+      setLayout(*att[i],ResourceLayout::DepthReadOnly,false);
+    else if(isDepthFormat(frm[i]))
       setLayout(*att[i],ResourceLayout::DepthAttach,discard);
     else if(frm[i]==TextureFormat::Undefined)
       setLayout(*sw[i],imgId[i],ResourceLayout::ColorAttach,discard);
@@ -26,8 +26,10 @@ void ResourceState::setRenderpass(AbstractGraphicsApi::CommandBuffer& cmd,
   flush(cmd);
   for(size_t i=0; i<descSize; ++i) {
     const bool discard = desc[i].store!=AccessOp::Preserve;
-    if(isDepthFormat(frm[i]))
-      setLayout(*att[i],ResourceLayout::Default,discard);
+    if(isDepthFormat(frm[i]) && desc[i].load==AccessOp::Readonly)
+      setLayout(*att[i],ResourceLayout::Default,false);
+    else if(isDepthFormat(frm[i]))
+      setLayout(*att[i],ResourceLayout::Default,false);
     else if(frm[i]==TextureFormat::Undefined)
       setLayout(*sw[i],imgId[i],ResourceLayout::Default,discard);
     else
