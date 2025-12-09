@@ -47,8 +47,6 @@ class ResourceState {
       ResourceLayout                  last     = ResourceLayout::None;
       ResourceLayout                  next     = ResourceLayout::None;
       bool                            discard  = false;
-
-      bool                            outdated = false;
       };
 
     void      fillReads();

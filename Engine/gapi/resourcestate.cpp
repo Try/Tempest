@@ -41,33 +41,29 @@ void ResourceState::setLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id, Re
   ImgState& img = findImg(nullptr,&s,id,discard);
   img.next     = lay;
   img.discard  = discard;
-  img.outdated = (img.next!=img.last);
   }
 
 void ResourceState::setLayout(AbstractGraphicsApi::Texture& a, ResourceLayout lay, uint32_t mip, bool discard) {
   if(mip!=AllMips) {
     ImgState& img = findImg(&a,nullptr,mip,discard);
-    img.next     = lay;
-    img.discard  = discard;
-    img.outdated = (img.next!=img.last);
+    img.next    = lay;
+    img.discard = discard;
     return;
     }
 
   for(uint32_t i=0, numMip = a.mipCount(); i<numMip; ++i) {
     ImgState& img = findImg(&a,nullptr,i,discard);
-    img.next     = lay;
-    img.discard  = discard;
-    img.outdated = (img.next!=img.last);
+    img.next    = lay;
+    img.discard = discard;
     }
   }
 
 void ResourceState::forceLayout(AbstractGraphicsApi::Texture& a, ResourceLayout lay) {
   for(uint32_t i=0, numMip = a.mipCount(); i<numMip; ++i) {
     ImgState& img = findImg(&a,nullptr,i,false);
-    img.last     = lay;
-    img.next     = lay;
-    img.discard  = false;
-    img.outdated = false;
+    img.last    = lay;
+    img.next    = lay;
+    img.discard = false;
     }
   }
 
@@ -160,8 +156,7 @@ void ResourceState::finalize(AbstractGraphicsApi::CommandBuffer& cmd) {
     }
 
   for(auto& i:imgState) {
-    i.next     = ResourceLayout::Default;
-    i.outdated = (i.next!=i.last);
+    i.next = ResourceLayout::Default;
     }
   flush(cmd);
   imgState.reserve(imgState.size());
@@ -189,14 +184,13 @@ ResourceState::ImgState& ResourceState::findImg(AbstractGraphicsApi::Texture* im
     if(i.sw==sw && i.id==id && i.img==nativeImg)
       return i;
     }
-  ImgState s={};
-  s.sw       = sw;
-  s.id       = id;
-  s.img      = img;
-  s.last     = ResourceLayout::Default;
-  s.next     = ResourceLayout::Default;
-  s.discard  = discard;
-  s.outdated = false;
+  ImgState s = {};
+  s.sw      = sw;
+  s.id      = id;
+  s.img     = img;
+  s.last    = ResourceLayout::Default;
+  s.next    = ResourceLayout::Default;
+  s.discard = discard;
   imgState.push_back(s);
   return imgState.back();
   }
@@ -214,7 +208,7 @@ void ResourceState::flush(AbstractGraphicsApi::CommandBuffer& cmd) {
     }
 
   for(auto& i:imgState) {
-    if(!i.outdated)
+    if(i.next==i.last)
       continue;
     auto& b = barrier[barrierCnt];
     b.swapchain = i.sw;
@@ -227,12 +221,15 @@ void ResourceState::flush(AbstractGraphicsApi::CommandBuffer& cmd) {
     ++barrierCnt;
 
     i.last     = i.next;
-    i.outdated = false;
     if(barrierCnt==MaxBarriers) {
       emitBarriers(cmd,d,barrier,barrierCnt);
       barrierCnt = 0;
       }
     }
+
+  std::erase_if(imgState, [](const ImgState& img) {
+    return img.last==ResourceLayout::Default;
+    });
 
   emitBarriers(cmd,d,barrier,barrierCnt);
   }
