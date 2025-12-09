@@ -37,8 +37,6 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     VCommandBuffer(VDevice &device, VkCommandPoolCreateFlags flags=VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
     ~VCommandBuffer();
 
-    using AbstractGraphicsApi::CommandBuffer::barrier;
-
     void reset() override;
 
     void begin(SyncHint hint) override;

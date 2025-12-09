@@ -714,27 +714,22 @@ void DxCommandBuffer::enhancedBarrier(const AbstractGraphicsApi::SyncDesc& sync,
   for(size_t i=0; i<cnt; ++i) {
     auto& b  = desc[i];
 
-    if(b.texture!=nullptr || b.swapchain!=nullptr) {
-      auto& bx = imgBarrier[imgCount];
-      ++imgCount;
+    auto& bx = imgBarrier[imgCount];
+    ++imgCount;
 
-      bx.LayoutBefore = toLayout(bx.SyncBefore, bx.AccessBefore, b.prev, reinterpret_cast<const DxTexture*>(b.texture));
-      bx.LayoutAfter  = toLayout(bx.SyncAfter,  bx.AccessAfter,  b.next, reinterpret_cast<const DxTexture*>(b.texture));
+    bx.LayoutBefore = toLayout(bx.SyncBefore, bx.AccessBefore, b.prev, reinterpret_cast<const DxTexture*>(b.texture));
+    bx.LayoutAfter  = toLayout(bx.SyncAfter,  bx.AccessAfter,  b.next, reinterpret_cast<const DxTexture*>(b.texture));
 
-      bx.pResource    = toDxResource(b);
-      bx.Subresources.IndexOrFirstMipLevel = (b.mip==uint32_t(-1) ?  D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES : b.mip);
-      bx.Flags        = D3D12_TEXTURE_BARRIER_FLAG_NONE;
+    bx.pResource    = toDxResource(b);
+    bx.Subresources.IndexOrFirstMipLevel = (b.mip==uint32_t(-1) ?  D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES : b.mip);
+    bx.Flags        = D3D12_TEXTURE_BARRIER_FLAG_NONE;
 
-      if(bx.SyncBefore==D3D12_BARRIER_SYNC_NONE)
-        bx.AccessBefore = D3D12_BARRIER_ACCESS_NO_ACCESS;
-      if(bx.SyncAfter==D3D12_BARRIER_SYNC_NONE)
-        bx.AccessAfter = D3D12_BARRIER_ACCESS_NO_ACCESS;
-      if(b.discard && bx.SyncBefore==D3D12_BARRIER_SYNC_NONE)
-        bx.LayoutBefore = D3D12_BARRIER_LAYOUT_UNDEFINED;
-      }
-    else {
-      assert(0);
-      }
+    if(bx.SyncBefore==D3D12_BARRIER_SYNC_NONE)
+      bx.AccessBefore = D3D12_BARRIER_ACCESS_NO_ACCESS;
+    if(bx.SyncAfter==D3D12_BARRIER_SYNC_NONE)
+      bx.AccessAfter = D3D12_BARRIER_ACCESS_NO_ACCESS;
+    if(b.discard && bx.SyncBefore==D3D12_BARRIER_SYNC_NONE)
+      bx.LayoutBefore = D3D12_BARRIER_LAYOUT_UNDEFINED;
     }
 
   const uint32_t accMask  = D3D12_BARRIER_ACCESS_RENDER_TARGET | D3D12_BARRIER_ACCESS_DEPTH_STENCIL_WRITE | D3D12_BARRIER_ACCESS_DEPTH_STENCIL_READ;
@@ -745,17 +740,6 @@ void DxCommandBuffer::enhancedBarrier(const AbstractGraphicsApi::SyncDesc& sync,
   memBarrier.AccessAfter  = D3D12_BARRIER_ACCESS(memBarrier.AccessAfter  & (~accMask ));
   if(memBarrier.SyncBefore==D3D12_BARRIER_SYNC_NONE || memBarrier.SyncAfter==D3D12_BARRIER_SYNC_NONE) {
     memCount = 0;
-    }
-
-  // debug
-  for(size_t i=0; i<imgCount; ++i) {
-    auto& bx = imgBarrier[i];
-    if(bx.LayoutBefore!=D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_READ && bx.LayoutAfter!=D3D12_BARRIER_LAYOUT_DEPTH_STENCIL_READ)
-      continue;
-    if((bx.AccessBefore&D3D12_BARRIER_ACCESS_DEPTH_STENCIL_WRITE)!=0)
-      Log::e("");
-    if((bx.AccessAfter&D3D12_BARRIER_ACCESS_DEPTH_STENCIL_WRITE)!=0)
-      Log::e("");
     }
 
   D3D12_BARRIER_GROUP gBuffer = {D3D12_BARRIER_TYPE_BUFFER, bufCount};
@@ -834,19 +818,14 @@ void DxCommandBuffer::barrier(const AbstractGraphicsApi::SyncDesc& sync, const A
   for(size_t i=0; i<cnt; ++i) {
     auto& b = desc[i];
     D3D12_RESOURCE_BARRIER& barrier = rb[rbCount];
-    if(b.texture==nullptr || b.swapchain==nullptr) {
-      barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-      barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-      barrier.Transition.pResource   = toDxResource(b);
-      barrier.Transition.StateBefore = toResourceState(b.prev, reinterpret_cast<const DxTexture*>(b.texture));
-      barrier.Transition.StateAfter  = toResourceState(b.next, reinterpret_cast<const DxTexture*>(b.texture));
-      barrier.Transition.Subresource = (b.mip==uint32_t(-1) ?  D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES : b.mip);
-      if(barrier.Transition.StateBefore==barrier.Transition.StateAfter)
-        continue;
-      }
-    else {
-      assert(0);
-      }
+    barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    barrier.Transition.pResource   = toDxResource(b);
+    barrier.Transition.StateBefore = toResourceState(b.prev, reinterpret_cast<const DxTexture*>(b.texture));
+    barrier.Transition.StateAfter  = toResourceState(b.next, reinterpret_cast<const DxTexture*>(b.texture));
+    barrier.Transition.Subresource = (b.mip==uint32_t(-1) ?  D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES : b.mip);
+    if(barrier.Transition.StateBefore==barrier.Transition.StateAfter)
+      continue;
     ++rbCount;
     }
 
@@ -873,12 +852,12 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer&  dstBuf, size_t offset,
   const UINT pitch     = ((pitchBase+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
 
   if((pitch==pitchBase || !checkPitch) && (offset%D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)==0) {
-    resState.setLayout(src, ResourceLayout::TransferSrc);
+    resState.setLayout(src, ResourceLayout::TransferSrc, mip, false);
     resState.onTranferUsage(src.nonUniqId, dst.nonUniqId, false);
     resState.flush(*this);
 
     copyNative(dstBuf,offset, srcTex,width,height,mip);
-    resState.setLayout(src, ResourceLayout::Default);
+    resState.setLayout(src, ResourceLayout::Default, 0);
     return;
     }
 
@@ -1166,12 +1145,12 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, s
   srcLoc.PlacedFootprint  = foot;
 
   resState.onTranferUsage(src.nonUniqId, dst.nonUniqId, false);
-  resState.setLayout(dst, ResourceLayout::TransferDst);
+  resState.setLayout(dst, ResourceLayout::TransferDst, uint32_t(mip), true);
   resState.flush(*this);
 
   impl->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, nullptr);
 
-  resState.setLayout(dst, ResourceLayout::Default);
+  resState.setLayout(dst, ResourceLayout::Default, uint32_t(mip));
   }
 
 void DxCommandBuffer::fill(AbstractGraphicsApi::Texture& dstTex, uint32_t val) {
@@ -1317,10 +1296,6 @@ void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& dstTex,
   uint32_t w = texWidth;
   uint32_t h = texHeight;
 
-  resState.onTranferUsage(img.nonUniqId, img.nonUniqId, false);
-  resState.setLayout(img, ResourceLayout::ColorAttach);
-  resState.flush(*this);
-
   for(uint32_t i=1; i<mipLevels; ++i) {
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtv;
     rtvHandle.ptr += i*rtvSize;
@@ -1328,7 +1303,12 @@ void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& dstTex,
     const int dstW = (w==1 ? 1 : w/2);
     const int dstH = (h==1 ? 1 : h/2);
 
-    barrier(img, SyncStage::GraphicsDraw | SyncStage::GraphicsRead, ResourceLayout::ColorAttach, ResourceLayout::Default, i-1);
+    resState.onDrawUsage(img.nonUniqId, AccessOp::Preserve);
+    resState.setLayout(img, ResourceLayout::ColorAttach, i+0);
+    resState.onUavUsage(img.nonUniqId, NonUniqResId::I_None, S_Graphics, false);
+    resState.setLayout(img, ResourceLayout::Default,     i-1);
+    resState.flush(*this);
+
     impl->OMSetRenderTargets(1, &rtvHandle, TRUE, nullptr);
 
     setViewport(Rect(0, 0, dstW, dstH));
@@ -1342,8 +1322,6 @@ void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& dstTex,
     w = dstW;
     h = dstH;
     }
-  barrier(img, SyncStage::AllRead | SyncStage::GraphicsDraw, ResourceLayout::ColorAttach, ResourceLayout::Default, mipLevels-1);
-  resState.forceLayout(img, ResourceLayout::Default);
   }
 
 #endif

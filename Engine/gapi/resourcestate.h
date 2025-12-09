@@ -10,6 +10,8 @@ class ResourceState {
   public:
     ResourceState();
 
+    static constexpr const uint32_t AllMips = 0xFFFFFFFF;
+
     struct Usage {
       NonUniqResId read  = NonUniqResId::I_None;
       NonUniqResId write = NonUniqResId::I_None;
@@ -23,7 +25,7 @@ class ResourceState {
                        AbstractGraphicsApi::Texture** att,
                        AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId);
     void setLayout  (AbstractGraphicsApi::Swapchain& s, uint32_t id, ResourceLayout lay, bool discard);
-    void setLayout  (AbstractGraphicsApi::Texture&   a, ResourceLayout lay, bool discard = false);
+    void setLayout  (AbstractGraphicsApi::Texture&   a, ResourceLayout lay, uint32_t mip, bool discard = false);
 
     void onTranferUsage(NonUniqResId read, NonUniqResId write, bool host);
     void onDrawUsage   (NonUniqResId id, AccessOp loadOp);
@@ -39,8 +41,8 @@ class ResourceState {
   private:
     struct ImgState {
       AbstractGraphicsApi::Swapchain* sw       = nullptr;
-      uint32_t                        id       = 0;
       AbstractGraphicsApi::Texture*   img      = nullptr;
+      uint32_t                        id       = 0; // mip or image-id in swapchain
 
       ResourceLayout                  last     = ResourceLayout::None;
       ResourceLayout                  next     = ResourceLayout::None;

@@ -73,20 +73,6 @@ bool AbstractGraphicsApi::Props::hasAtomicFormat(TextureFormat f) const {
   return (atomFormat&m)!=0;
   }
 
-void AbstractGraphicsApi::CommandBuffer::barrier(Texture& tex, SyncStage at, ResourceLayout prev, ResourceLayout next, uint32_t mipId) {
-  SyncDesc d;
-  d.next = at;
-  d.prev = at;
-
-  AbstractGraphicsApi::BarrierDesc b;
-  b.texture  = &tex;
-  b.prev     = prev;
-  b.next     = next;
-  b.mip      = mipId;
-  b.discard  = (prev==ResourceLayout::None);
-  barrier(d,&b,1);
-  }
-
 void AbstractGraphicsApi::CommandBuffer::begin(Detail::SyncHint) {
   begin();
   }

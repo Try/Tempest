@@ -14,26 +14,26 @@ void ResourceState::setRenderpass(AbstractGraphicsApi::CommandBuffer& cmd,
   for(size_t i=0; i<descSize; ++i) {
     const bool discard = desc[i].load!=AccessOp::Preserve;
     if(isDepthFormat(frm[i]) && desc[i].load==AccessOp::Readonly)
-      setLayout(*att[i],ResourceLayout::DepthReadOnly,false);
+      setLayout(*att[i],ResourceLayout::DepthReadOnly,0,false);
     else if(isDepthFormat(frm[i]))
-      setLayout(*att[i],ResourceLayout::DepthAttach,discard);
+      setLayout(*att[i],ResourceLayout::DepthAttach,0,discard);
     else if(frm[i]==TextureFormat::Undefined)
       setLayout(*sw[i],imgId[i],ResourceLayout::ColorAttach,discard);
     else {
-      setLayout(*att[i],ResourceLayout::ColorAttach,discard);
+      setLayout(*att[i],ResourceLayout::ColorAttach,0,discard);
       }
     }
   flush(cmd);
   for(size_t i=0; i<descSize; ++i) {
     const bool discard = desc[i].store!=AccessOp::Preserve;
     if(isDepthFormat(frm[i]) && desc[i].load==AccessOp::Readonly)
-      setLayout(*att[i],ResourceLayout::Default,false);
+      setLayout(*att[i],ResourceLayout::Default,0,false);
     else if(isDepthFormat(frm[i]))
-      setLayout(*att[i],ResourceLayout::Default,false);
+      setLayout(*att[i],ResourceLayout::Default,0,false);
     else if(frm[i]==TextureFormat::Undefined)
       setLayout(*sw[i],imgId[i],ResourceLayout::Default,discard);
     else
-      setLayout(*att[i],ResourceLayout::Default,discard);
+      setLayout(*att[i],ResourceLayout::Default,0,discard);
     }
   }
 
@@ -44,19 +44,31 @@ void ResourceState::setLayout(AbstractGraphicsApi::Swapchain& s, uint32_t id, Re
   img.outdated = (img.next!=img.last);
   }
 
-void ResourceState::setLayout(AbstractGraphicsApi::Texture& a, ResourceLayout lay, bool discard) {
-  ImgState& img = findImg(&a,nullptr,0,discard);
-  img.next     = lay;
-  img.discard  = discard;
-  img.outdated = (img.next!=img.last);
+void ResourceState::setLayout(AbstractGraphicsApi::Texture& a, ResourceLayout lay, uint32_t mip, bool discard) {
+  if(mip!=AllMips) {
+    ImgState& img = findImg(&a,nullptr,mip,discard);
+    img.next     = lay;
+    img.discard  = discard;
+    img.outdated = (img.next!=img.last);
+    return;
+    }
+
+  for(uint32_t i=0, numMip = a.mipCount(); i<numMip; ++i) {
+    ImgState& img = findImg(&a,nullptr,i,discard);
+    img.next     = lay;
+    img.discard  = discard;
+    img.outdated = (img.next!=img.last);
+    }
   }
 
 void ResourceState::forceLayout(AbstractGraphicsApi::Texture& a, ResourceLayout lay) {
-  ImgState& img = findImg(&a,nullptr,0,false);
-  img.last     = lay;
-  img.next     = lay;
-  img.discard  = false;
-  img.outdated = false;
+  for(uint32_t i=0, numMip = a.mipCount(); i<numMip; ++i) {
+    ImgState& img = findImg(&a,nullptr,i,false);
+    img.last     = lay;
+    img.next     = lay;
+    img.discard  = false;
+    img.outdated = false;
+    }
   }
 
 void ResourceState::onTranferUsage(NonUniqResId read, NonUniqResId write, bool host) {
@@ -206,9 +218,9 @@ void ResourceState::flush(AbstractGraphicsApi::CommandBuffer& cmd) {
       continue;
     auto& b = barrier[barrierCnt];
     b.swapchain = i.sw;
-    b.swId      = i.id;
+    b.swId      = i.sw!=nullptr ? i.id : uint32_t(-1);
     b.texture   = i.img;
-    b.mip       = uint32_t(-1);
+    b.mip       = i.img!=nullptr ? i.id : uint32_t(-1);
     b.prev      = i.last;
     b.next      = i.next;
     b.discard   = i.discard;
@@ -229,11 +241,7 @@ void ResourceState::emitBarriers(AbstractGraphicsApi::CommandBuffer& cmd, Abstra
   if(cnt==0 && d.next==SyncStage::None)
     return;
   std::sort(desc,desc+cnt,[](const AbstractGraphicsApi::BarrierDesc& l, const AbstractGraphicsApi::BarrierDesc& r) {
-    if(l.prev<r.prev)
-      return true;
-    if(l.prev>r.prev)
-      return false;
-    return l.next<r.next;
+    return std::tie(l.texture, l.mip, l.swapchain, l.swId) < std::tie(r.texture, r.mip, r.swapchain, r.swId);
     });
   cmd.barrier(d,desc,cnt);
   }

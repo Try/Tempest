@@ -275,25 +275,25 @@ AbstractGraphicsApi::PTexture DirectX12Api::createCompressedTexture(Device* d, c
   Detail::DxBuffer  stage  = dx.allocator.alloc(nullptr,stageBufferSize,MemUsage::Transfer,BufferHeap::Upload);
   Detail::DxTexture buf    = dx.allocator.alloc(p,mipCnt,format);
   Detail::DSharedPtr<Buffer*>  pstage(new Detail::DxBuffer (std::move(stage)));
-  Detail::DSharedPtr<Texture*> pbuf  (new Detail::DxTexture(std::move(buf)));
+  Detail::DSharedPtr<Texture*> ptex  (new Detail::DxTexture(std::move(buf)));
 
   reinterpret_cast<Detail::DxBuffer*>(pstage.handler)->uploadS3TC(reinterpret_cast<const uint8_t*>(p.data()),p.w(),p.h(),mipCnt,blockSize);
 
   auto cmd = dx.dataMgr().get();
   cmd->begin(SyncHint::NoPendingReads);
-  cmd->hold(pbuf);
+  cmd->hold(ptex);
   cmd->hold(pstage); // preserve stage buffer, until gpu side copy is finished
 
   stageBufferSize = 0;
   w = p.w();
   h = p.h();
 
-  cmd->forceLayout(*pbuf.handler, ResourceLayout::TransferDst);
+  cmd->forceLayout(*ptex.handler, ResourceLayout::TransferDst);
   for(uint32_t i=0; i<mipCnt; i++) {
     UINT wBlk = (w+3)/4;
     UINT hBlk = (h+3)/4;
 
-    cmd->copy(*pbuf.handler,w,h,i,*pstage.handler,stageBufferSize);
+    cmd->copy(*ptex.handler,w,h,i,*pstage.handler,stageBufferSize);
 
     UINT pitch = wBlk*blockSize;
     pitch = alignTo(pitch,D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
@@ -307,7 +307,10 @@ AbstractGraphicsApi::PTexture DirectX12Api::createCompressedTexture(Device* d, c
 
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
-  return PTexture(pbuf.handler);
+
+  reinterpret_cast<DxTexture*>(ptex.handler)->nonUniqId = NonUniqResId::I_None;
+
+  return PTexture(ptex.handler);
   }
 
 AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const uint32_t w, const uint32_t h, uint32_t mipCnt, TextureFormat frm) {

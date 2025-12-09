@@ -264,12 +264,8 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
       //auto& t = *reinterpret_cast<VSwapchain*>(sw[i]);
       nonUniqId = NonUniqResId(0x1); //FIXME: track swapchain for real
       }
-    else if (desc[i].attachment != nullptr) {
-      auto& t = *reinterpret_cast<VTexture*>(att[i]);
-      nonUniqId = t.nonUniqId;
-      }
     else {
-      auto &t = *reinterpret_cast<VTexture*>(att[i]);
+      auto& t = *reinterpret_cast<VTexture*>(att[i]);
       nonUniqId = t.nonUniqId;
       }
     resState.onDrawUsage(nonUniqId, desc[i].load);
@@ -312,11 +308,6 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
         auto& t = *reinterpret_cast<VSwapchain*>(sw[i]);
         imageView   = t.views[imgId[i]];
         imageFormat = t.format();
-        }
-      else if (desc[i].attachment != nullptr) {
-        auto& t = *reinterpret_cast<VTexture*>(att[i]);
-        imageView   = t.imgView;
-        imageFormat = t.format;
         }
       else {
         auto &t = *reinterpret_cast<VTexture*>(att[i]);
@@ -367,6 +358,7 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
 
 void VCommandBuffer::endRendering() {
   vkCmdEndRenderingKHR(impl);
+
   resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Graphics);
   state = PostRenderPass;
   }
@@ -735,10 +727,10 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest
 void VCommandBuffer::fill(AbstractGraphicsApi::Texture& dstTex, uint32_t val) {
   auto& dst = reinterpret_cast<VTexture&>(dstTex);
 
-  assert(dst.nonUniqId!=NonUniqResId::I_None);
+  assert(dst.nonUniqId != NonUniqResId::I_None);
 
   const auto resLay = dst.isStorageImage ? ResourceLayout::Default : ResourceLayout::TransferDst;
-  resState.setLayout(dst, resLay);
+  resState.setLayout(dst, resLay, ResourceState::AllMips, true);
   resState.onTranferUsage(NonUniqResId::I_None, dst.nonUniqId, false);
   resState.flush(*this);
 
@@ -757,7 +749,7 @@ void VCommandBuffer::fill(AbstractGraphicsApi::Texture& dstTex, uint32_t val) {
   vkCmdClearColorImage(impl, dst.impl, VK_IMAGE_LAYOUT_GENERAL, &v, 1, &rgn);
 
   if(!dst.isStorageImage)
-    resState.setLayout(dst, ResourceLayout::Default);
+    resState.setLayout(dst, ResourceLayout::Default, ResourceState::AllMips);
   }
 
 void VCommandBuffer::fill(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest, uint32_t val, size_t size) {
@@ -774,7 +766,7 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, si
   auto& src = reinterpret_cast<const VBuffer&>(srcBuf);
   auto& dst = reinterpret_cast<VTexture&>(dstTex);
 
-  assert(dst.nonUniqId!=NonUniqResId::I_None);
+  assert(dst.nonUniqId != NonUniqResId::I_None);
 
   VkBufferImageCopy region = {};
   region.bufferOffset      = offset;
@@ -792,7 +784,7 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, si
       };
 
   const auto resLay = dst.isStorageImage ? ResourceLayout::Default : ResourceLayout::TransferDst;
-  resState.setLayout(dst, resLay);
+  resState.setLayout(dst, resLay, uint32_t(mip), true);
   resState.onTranferUsage(src.nonUniqId, dst.nonUniqId, false);
   resState.flush(*this);
 
@@ -800,7 +792,7 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, si
   vkCmdCopyBufferToImage(impl, src.impl, dst.impl, layout, 1, &region);
 
   if(!dst.isStorageImage)
-    resState.setLayout(dst, ResourceLayout::Default);
+    resState.setLayout(dst, ResourceLayout::Default, uint32_t(mip));
   }
 
 void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offset,
@@ -824,17 +816,15 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offset,
       };
 
   if(!src.isStorageImage)
-    resState.setLayout(src, ResourceLayout::TransferSrc);
+    resState.setLayout(src, ResourceLayout::TransferSrc, mip);
   resState.onTranferUsage(src.nonUniqId, dst.nonUniqId, dst.isHostVisible());
   resState.flush(*this);
 
   const VkImageLayout layout = src.isStorageImage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
   vkCmdCopyImageToBuffer(impl, src.impl, layout, dst.impl, 1, &region);
 
-  if(nativeIsDepthFormat(src.format))
-    resState.setLayout(src, ResourceLayout::DepthReadOnly);
-  else if(!src.isStorageImage)
-    resState.setLayout(src, ResourceLayout::Default);
+  if(!src.isStorageImage)
+    resState.setLayout(src, ResourceLayout::Default, mip);
   }
 
 void VCommandBuffer::blit(AbstractGraphicsApi::Texture& srcTex, uint32_t srcW, uint32_t srcH, uint32_t srcMip,
@@ -952,24 +942,22 @@ void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
   int32_t w = int32_t(texWidth);
   int32_t h = int32_t(texHeight);
 
-  resState.onTranferUsage(image.nonUniqId, image.nonUniqId, false);
-  resState.setLayout(img, ResourceLayout::TransferDst);
-  resState.flush(*this);
-
   for(uint32_t i=1; i<mipLevels; ++i) {
     const int mw = (w==1 ? 1 : w/2);
     const int mh = (h==1 ? 1 : h/2);
 
-    barrier(img, SyncStage::Transfer, ResourceLayout::TransferDst, ResourceLayout::TransferSrc,i-1);
+    resState.onTranferUsage(image.nonUniqId, image.nonUniqId, false);
+    resState.setLayout(img, ResourceLayout::TransferDst, i+0, true);
+    resState.setLayout(img, ResourceLayout::TransferSrc, i-1);
+    resState.flush(*this);
+
     blit(img,  w, h, i-1,
          img, mw,mh, i);
 
     w = mw;
     h = mh;
     }
-  barrier(img, SyncStage::Transfer, ResourceLayout::TransferDst, ResourceLayout::TransferSrc, mipLevels-1);
-  barrier(img, SyncStage::Transfer, ResourceLayout::TransferSrc, ResourceLayout::Default,     uint32_t(-1));
-  resState.forceLayout(img,ResourceLayout::Default);
+  resState.setLayout(img, ResourceLayout::Default, ResourceState::AllMips);
   }
 
 void VCommandBuffer::discard(AbstractGraphicsApi::Texture& tex) {
@@ -999,26 +987,43 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::SyncDesc& s, const Abstr
     }
 
   for(size_t i=0; i<cnt; ++i) {
-    auto& b  = desc[i];
+    auto& b = desc[i];
 
-    if(b.texture==nullptr || b.swapchain==nullptr) {
-      auto* tx = reinterpret_cast<const VTexture*>(b.texture);
-      auto& bx = imgBarrier[imgCount];
-      ++imgCount;
+    auto* tx = reinterpret_cast<const VTexture*>(b.texture);
+    auto& bx = imgBarrier[imgCount];
+    auto* pr = imgCount>0 ? &imgBarrier[imgCount-1] : nullptr;
+    ++imgCount;
 
-      bx.sType                 = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-      bx.srcQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
-      bx.dstQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
-      bx.image                 = toVkResource(b);
-      bx.srcAccessMask         = srcAccessMask;
-      bx.dstAccessMask         = dstAccessMask;
-      bx.oldLayout             = toLayout(b.prev, tx);
-      bx.newLayout             = toLayout(b.next, tx);
-      finalizeImageBarrier(bx,b);
+    bx.sType                 = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    bx.srcQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
+    bx.dstQueueFamilyIndex   = VK_QUEUE_FAMILY_IGNORED;
+    bx.image                 = toVkResource(b);
+    bx.srcAccessMask         = srcAccessMask;
+    bx.dstAccessMask         = dstAccessMask;
+    bx.oldLayout             = toLayout(b.prev, tx);
+    bx.newLayout             = toLayout(b.next, tx);
+    finalizeImageBarrier(bx,b);
+
+    if(bx.oldLayout==bx.newLayout) {
+      --imgCount;
+      continue;
       }
-    else {
-      // null resource
-      assert(0);
+
+    // merge consecutive barriers for same resource and different mips
+    if(pr!=nullptr && pr->image==bx.image &&
+       pr->oldLayout==bx.oldLayout && pr->newLayout==bx.newLayout &&
+       pr->subresourceRange.levelCount!=VK_REMAINING_MIP_LEVELS &&
+       bx.subresourceRange.levelCount!=VK_REMAINING_MIP_LEVELS &&
+       pr->subresourceRange.baseMipLevel+pr->subresourceRange.levelCount == bx.subresourceRange.baseMipLevel) {
+      auto tmp = *pr;
+      tmp.subresourceRange.baseMipLevel = bx.subresourceRange.baseMipLevel;
+      tmp.subresourceRange.levelCount   = bx.subresourceRange.levelCount;
+      if(std::memcmp(&tmp, &bx, sizeof(tmp))==0) {
+        pr->subresourceRange.levelCount += bx.subresourceRange.levelCount;
+        pr->srcAccessMask |= srcAccessMask;
+        pr->dstAccessMask |= dstAccessMask;
+        --imgCount;
+        }
       }
     }
 

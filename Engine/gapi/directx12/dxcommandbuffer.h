@@ -36,8 +36,6 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     explicit DxCommandBuffer(DxDevice& d);
     ~DxCommandBuffer();
 
-    using AbstractGraphicsApi::CommandBuffer::barrier;
-
     void begin(SyncHint hint) override;
     void begin() override;
     void end()   override;
