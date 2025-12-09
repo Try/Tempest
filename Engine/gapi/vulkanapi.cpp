@@ -313,16 +313,16 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   VkFormat       format = Detail::nativeFormat(frm);
 
   VBuffer        stage  = dx.allocator.alloc(p.data(),size,MemUsage::Transfer,BufferHeap::Upload);
-  VTexture       buf    = dx.allocator.alloc(p,mipCnt,format);
+  VTexture       tex    = dx.allocator.alloc(p,mipCnt,format);
 
   DSharedPtr<Buffer*>  pstage(new VBuffer (std::move(stage)));
-  DSharedPtr<Texture*> pbuf  (new VTexture(std::move(buf)));
+  DSharedPtr<Texture*> ptex  (new VTexture(std::move(tex)));
 
   auto cmd = dx.dataMgr().get();
   cmd->begin(SyncHint::NoPendingReads);
   cmd->hold(pstage);
-  cmd->hold(pbuf);
-  cmd->discard(*pbuf.handler);
+  cmd->hold(ptex);
+  cmd->discard(*ptex.handler);
 
   if(isCompressedFormat(frm)) {
     size_t blockSize  = Pixmap::blockSizeForFormat(frm);
@@ -330,7 +330,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
 
     uint32_t w = uint32_t(p.w()), h = uint32_t(p.h());
     for(uint32_t i=0; i<mipCnt; i++){
-      cmd->copy(*pbuf.handler,w,h,i,*pstage.handler,bufferSize);
+      cmd->copy(*ptex.handler,w,h,i,*pstage.handler,bufferSize);
 
       Size bsz   = Pixmap::blockCount(frm,w,h);
       bufferSize += bsz.w*bsz.h*blockSize;
@@ -338,14 +338,16 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
       h = std::max<uint32_t>(1,h/2);
       }
     } else {
-    cmd->copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
+    cmd->copy(*ptex.handler,p.w(),p.h(),0,*pstage.handler,0);
     if(mipCnt>1)
-      cmd->generateMipmap(*pbuf.handler, p.w(), p.h(), mipCnt);
+      cmd->generateMipmap(*ptex.handler, p.w(), p.h(), mipCnt);
     }
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
 
-  return PTexture(pbuf.handler);
+  reinterpret_cast<VTexture*>(ptex.handler)->nonUniqId = NonUniqResId::I_None;
+
+  return PTexture(ptex.handler);
   }
 
 AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Device *d,

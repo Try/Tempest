@@ -36,12 +36,12 @@ static UINT compMapping(ComponentMapping mapping) {
   return D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(mapv[0],mapv[1],mapv[2],mapv[3]);
   }
 
-DxTexture::DxTexture(DxDevice& dev, ComPtr<ID3D12Resource>&& b, DXGI_FORMAT frm, NonUniqResId nonUniqId,
-                     UINT mipCnt, UINT sliceCnt, bool is3D)
-  : device(&dev), impl(std::move(b)), format(frm), nonUniqId(nonUniqId),
-    mipCnt(mipCnt), sliceCnt(sliceCnt), is3D(is3D), isFilterable(false), isStorageImage(false) {
+DxTexture::DxTexture(DxDevice& dev, ComPtr<ID3D12Resource>&& b, const D3D12_RESOURCE_DESC1& desc)
+  : device(&dev), impl(std::move(b)),
+    format(desc.Format), mipCnt(desc.MipLevels), sliceCnt(desc.DepthOrArraySize),
+    is3D(desc.Dimension==D3D12_RESOURCE_DIMENSION_TEXTURE3D) {
   D3D12_FEATURE_DATA_FORMAT_SUPPORT ds = {};
-  ds.Format = frm;
+  ds.Format = desc.Format;
   if(SUCCEEDED(device->device->CheckFeatureSupport(D3D12_FEATURE_FORMAT_SUPPORT, &ds, sizeof(ds)))) {
     isFilterable = (ds.Support1 & D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE);
     }

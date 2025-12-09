@@ -15,8 +15,7 @@ class DxDevice;
 
 class DxTexture : public AbstractGraphicsApi::Texture {
   public:
-    DxTexture(DxDevice& dev, ComPtr<ID3D12Resource>&& b, DXGI_FORMAT frm, NonUniqResId nonUniqId,
-              UINT mipCnt, UINT sliceCnt, bool is3D);
+    DxTexture(DxDevice& dev, ComPtr<ID3D12Resource>&& b, const D3D12_RESOURCE_DESC1& desc);
     DxTexture(DxTexture&& other);
     ~DxTexture();
     DxTexture& operator=(const DxTexture& other) = delete;

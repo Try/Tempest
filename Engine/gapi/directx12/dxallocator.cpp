@@ -173,7 +173,7 @@ DxBuffer DxAllocator::alloc(const void* mem, size_t size, MemUsage usage, Buffer
   }
 
 DxTexture DxAllocator::alloc(const Pixmap& pm, uint32_t mip, DXGI_FORMAT format) {
-  ComPtr<ID3D12Resource> ret;
+  ComPtr<ID3D12Resource> tex;
 
   D3D12_RESOURCE_DESC1 resDesc = {};
   resDesc.MipLevels          = mip;
@@ -212,7 +212,7 @@ DxTexture DxAllocator::alloc(const Pixmap& pm, uint32_t mip, DXGI_FORMAT format)
         nullptr,
         0, nullptr,
         uuid<ID3D12Resource>(),
-        reinterpret_cast<void**>(&ret)
+        reinterpret_cast<void**>(&tex)
         ));
     } else {
     dxAssert(device->CreateCommittedResource(
@@ -222,11 +222,15 @@ DxTexture DxAllocator::alloc(const Pixmap& pm, uint32_t mip, DXGI_FORMAT format)
         D3D12_RESOURCE_STATE_COPY_DEST,
         nullptr,
         uuid<ID3D12Resource>(),
-        reinterpret_cast<void**>(&ret)
+        reinterpret_cast<void**>(&tex)
         ));
     }
-  const auto nonUniqId  = NonUniqResId::I_None;
-  return DxTexture(*owner,std::move(ret),resDesc.Format,nonUniqId,resDesc.MipLevels,1,false);
+
+  auto ret = DxTexture(*owner,std::move(tex),resDesc);
+  ret.nonUniqId      = nextId();
+  ret.isStorageImage = false;
+  ret.is3D           = false;
+  return ret;
   }
 
 DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t d, const uint32_t mip, TextureFormat frm, bool imageStore) {
@@ -312,8 +316,8 @@ DxTexture DxAllocator::alloc(const uint32_t w, const uint32_t h, const uint32_t 
                ));
     }
 
-  const auto nonUniqId = nextId();
-  auto ret = DxTexture(*owner,std::move(tex),resDesc.Format,nonUniqId,resDesc.MipLevels,resDesc.DepthOrArraySize,d!=0);
+  auto ret = DxTexture(*owner,std::move(tex),resDesc);
+  ret.nonUniqId      = nextId();
   ret.isStorageImage = imageStore;
   return ret;
   }

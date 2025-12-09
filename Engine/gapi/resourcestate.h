@@ -24,7 +24,6 @@ class ResourceState {
                        AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId);
     void setLayout  (AbstractGraphicsApi::Swapchain& s, uint32_t id, ResourceLayout lay, bool discard);
     void setLayout  (AbstractGraphicsApi::Texture&   a, ResourceLayout lay, bool discard = false);
-    //void setLayout  (const AbstractGraphicsApi::Buffer& a, ResourceLayout lay);
 
     void onTranferUsage(NonUniqResId read, NonUniqResId write, bool host);
     void onDrawUsage   (NonUniqResId id, AccessOp loadOp);

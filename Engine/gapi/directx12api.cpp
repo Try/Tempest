@@ -226,7 +226,7 @@ AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixma
   uint32_t          row    = p.w()*p.bpp();
   const uint32_t    pith   = ((row+D3D12_TEXTURE_DATA_PITCH_ALIGNMENT-1)/D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)*D3D12_TEXTURE_DATA_PITCH_ALIGNMENT;
   Detail::DxBuffer  stage  = dx.allocator.alloc(nullptr, p.h()*pith, MemUsage::Transfer, BufferHeap::Upload);
-  Detail::DxTexture buf    = dx.allocator.alloc(p, mipCnt, format);
+  Detail::DxTexture tex    = dx.allocator.alloc(p, mipCnt, format);
 
   for(uint32_t y=0; y<p.h(); ++y) {
     auto px = reinterpret_cast<const uint8_t*>(p.data());
@@ -234,20 +234,22 @@ AbstractGraphicsApi::PTexture DirectX12Api::createTexture(Device* d, const Pixma
     }
 
   Detail::DSharedPtr<Buffer*>  pstage(new Detail::DxBuffer (std::move(stage)));
-  Detail::DSharedPtr<Texture*> pbuf  (new Detail::DxTexture(std::move(buf)));
+  Detail::DSharedPtr<Texture*> ptex  (new Detail::DxTexture(std::move(tex)));
 
   auto cmd = dx.dataMgr().get();
   cmd->begin(SyncHint::NoPendingReads);
-  cmd->hold(pbuf);
+  cmd->hold(ptex);
   cmd->hold(pstage); // preserve stage buffer, until gpu side copy is finished
 
-  cmd->forceLayout(*pbuf.handler, ResourceLayout::TransferDst);
-  cmd->copy(*pbuf.handler,p.w(),p.h(),0,*pstage.handler,0);
+  cmd->forceLayout(*ptex.handler, ResourceLayout::TransferDst);
+  cmd->copy(*ptex.handler,p.w(),p.h(),0,*pstage.handler,0);
   if(mipCnt>1)
-    cmd->generateMipmap(*pbuf.handler, p.w(), p.h(), mipCnt);
+    cmd->generateMipmap(*ptex.handler, p.w(), p.h(), mipCnt);
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
-  return PTexture(pbuf.handler);
+  reinterpret_cast<DxTexture*>(ptex.handler)->nonUniqId = NonUniqResId::I_None;
+
+  return PTexture(ptex.handler);
   }
 
 AbstractGraphicsApi::PTexture DirectX12Api::createCompressedTexture(Device* d, const Pixmap& p, TextureFormat frm, uint32_t mipCnt) {

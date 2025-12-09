@@ -1135,6 +1135,8 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, s
   auto& dst = reinterpret_cast<DxTexture&>(dstTex);
   auto& src = reinterpret_cast<const DxBuffer&>(srcBuf);
 
+  assert(dst.nonUniqId != NonUniqResId::I_None);
+
   D3D12_PLACED_SUBRESOURCE_FOOTPRINT foot = {};
   foot.Offset             = offset;
   foot.Footprint.Format   = dst.format;
@@ -1291,6 +1293,8 @@ void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& dstTex,
   auto&      img       = reinterpret_cast<DxTexture&>(dstTex);
   auto       rtv       = ensureRtvDescriptors(img.mipCnt);
 
+  assert(img.nonUniqId != NonUniqResId::I_None);
+
   for(uint32_t i=1; i<mipLevels; ++i) {
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = rtv;
     rtvHandle.ptr += i*rtvSize;
@@ -1313,7 +1317,7 @@ void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& dstTex,
   uint32_t w = texWidth;
   uint32_t h = texHeight;
 
-  resState.onTranferUsage(NonUniqResId::I_None, img.nonUniqId, false);
+  resState.onTranferUsage(img.nonUniqId, img.nonUniqId, false);
   resState.setLayout(img, ResourceLayout::ColorAttach);
   resState.flush(*this);
 

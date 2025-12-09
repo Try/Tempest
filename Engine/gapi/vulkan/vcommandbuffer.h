@@ -93,9 +93,6 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void fill(AbstractGraphicsApi::Texture& dest, uint32_t val);
     void fill(AbstractGraphicsApi::Buffer&  dest, size_t offsetDest, uint32_t val, size_t size);
 
-    void blit(AbstractGraphicsApi::Texture& src, uint32_t srcW, uint32_t srcH, uint32_t srcMip,
-              AbstractGraphicsApi::Texture& dst, uint32_t dstW, uint32_t dstH, uint32_t dstMip);
-
     void buildBlas(VkAccelerationStructureKHR dest, AbstractGraphicsApi::Buffer& bbo,
                    AbstractGraphicsApi::BlasBuildCtx& ctx, AbstractGraphicsApi::Buffer& scratch);
 
@@ -114,6 +111,9 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void vkCmdPipelineBarrier2(VkCommandBuffer impl, const VkDependencyInfoKHR* info);
     void vkCmdBeginRenderingKHR(VkCommandBuffer impl, const VkRenderingInfo* info);
     void vkCmdEndRenderingKHR(VkCommandBuffer impl);
+
+    void blit(AbstractGraphicsApi::Texture& src, uint32_t srcW, uint32_t srcH, uint32_t srcMip,
+              AbstractGraphicsApi::Texture& dst, uint32_t dstW, uint32_t dstH, uint32_t dstMip);
 
     template<class T>
     void finalizeImageBarrier(T& bx, const AbstractGraphicsApi::BarrierDesc& desc);

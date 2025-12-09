@@ -101,7 +101,9 @@ static size_t LCM(size_t n1, size_t n2)  {
 
 VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferHeap bufHeap) {
   VBuffer ret;
-  ret.alloc = this;
+  ret.alloc     = this;
+  // ret.nonUniqId = nextId();
+
   if(MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer) ||
      MemUsage::Transfer     ==(usage&MemUsage::Transfer) ||
      MemUsage::AsStorage    ==(usage&MemUsage::AsStorage)) {
@@ -201,6 +203,7 @@ VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferHe
 VTexture VAllocator::alloc(const Pixmap& pm, uint32_t mip, VkFormat format) {
   VTexture ret;
   ret.alloc     = this;
+  ret.nonUniqId = nextId();
 
   VkImageCreateInfo imageInfo = {};
   imageInfo.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;

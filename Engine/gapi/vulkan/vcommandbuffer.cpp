@@ -735,6 +735,8 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Buffer& dstBuf, size_t offsetDest
 void VCommandBuffer::fill(AbstractGraphicsApi::Texture& dstTex, uint32_t val) {
   auto& dst = reinterpret_cast<VTexture&>(dstTex);
 
+  assert(dst.nonUniqId!=NonUniqResId::I_None);
+
   const auto resLay = dst.isStorageImage ? ResourceLayout::Default : ResourceLayout::TransferDst;
   resState.setLayout(dst, resLay);
   resState.onTranferUsage(NonUniqResId::I_None, dst.nonUniqId, false);
@@ -771,6 +773,8 @@ void VCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, si
                           const AbstractGraphicsApi::Buffer& srcBuf, size_t offset) {
   auto& src = reinterpret_cast<const VBuffer&>(srcBuf);
   auto& dst = reinterpret_cast<VTexture&>(dstTex);
+
+  assert(dst.nonUniqId!=NonUniqResId::I_None);
 
   VkBufferImageCopy region = {};
   region.bufferOffset      = offset;
@@ -936,6 +940,7 @@ void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
     return;
 
   auto& image = reinterpret_cast<VTexture&>(img);
+  assert(image.nonUniqId!=NonUniqResId::I_None);
 
   // Check if image format supports linear blitting
   VkFormatProperties formatProperties;
@@ -947,7 +952,7 @@ void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
   int32_t w = int32_t(texWidth);
   int32_t h = int32_t(texHeight);
 
-  resState.onTranferUsage(NonUniqResId::I_None, image.nonUniqId, false);
+  resState.onTranferUsage(image.nonUniqId, image.nonUniqId, false);
   resState.setLayout(img, ResourceLayout::TransferDst);
   resState.flush(*this);
 
