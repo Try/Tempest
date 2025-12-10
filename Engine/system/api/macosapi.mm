@@ -91,8 +91,9 @@ static Tempest::Point mousePos(NSEvent* e, bool& inWindow) {
   NSPoint p   = e.locationInWindow;
   NSPoint px  = mousePos(p, wnd, inWindow);
 
-  px.x += err.x;
-  px.y += err.y;
+  //NOTE: error correctness doesn't seem to be needed
+  //px.x += err.x;
+  //px.y += err.y;
 
   err.x = std::fmod(px.x,1.0);
   err.y = std::fmod(px.y,1.0);
