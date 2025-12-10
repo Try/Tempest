@@ -78,10 +78,13 @@ static void toStage(VDevice& dev, VkPipelineStageFlags& stage, VkAccessFlags& ac
   if((rs&SyncStage::GraphicsRead)==SyncStage::GraphicsRead) {
     ret |= VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
     acc |= VK_ACCESS_SHADER_READ_BIT;
+    acc |= VK_ACCESS_INDEX_READ_BIT;
+    acc |= VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
     }
   if((rs&SyncStage::GraphicsWrite)==SyncStage::GraphicsWrite) {
     ret |= VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
     acc |= VK_ACCESS_SHADER_WRITE_BIT;
+    // acc |= VK_ACCESS_INPUT_ATTACHMENT_READ_BIT; // not a use-case
     }
 
   if((rs&SyncStage::GraphicsDraw)==SyncStage::GraphicsDraw) {
