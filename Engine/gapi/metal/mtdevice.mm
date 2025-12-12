@@ -80,8 +80,7 @@ std::shared_ptr<MtFence> MtDevice::findAvailableFence() {
       auto& i = timeline.timepoint[id];
       if(i==nullptr)
         continue;
-      //NOTE: do not evict fences with errors
-      if(i->status.load()!=MTL::CommandBufferStatusCompleted)
+      if(!i->isFinalStatus())
         continue;
       if(i.use_count()>1 && pass==0)
         continue;
