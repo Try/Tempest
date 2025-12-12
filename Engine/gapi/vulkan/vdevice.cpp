@@ -963,7 +963,6 @@ std::shared_ptr<VFence> VDevice::aquireFence() {
       }
     }
 
-  //pool is full - wait on one of the fences and reuse it
   waitAny(std::numeric_limits<uint64_t>::max());
   return findAvailableFence();
   }

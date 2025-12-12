@@ -19,7 +19,7 @@ class Fence final {
   private:
     Fence(std::shared_ptr<AbstractGraphicsApi::Fence>& f);
 
-    std::weak_ptr<AbstractGraphicsApi::Fence> impl;
+    std::shared_ptr<AbstractGraphicsApi::Fence> impl;
 
   friend class Tempest::Device;
   };
