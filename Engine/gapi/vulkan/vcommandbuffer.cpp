@@ -69,6 +69,7 @@ static void toStage(VDevice& dev, VkPipelineStageFlags& stage, VkAccessFlags& ac
   if((rs&SyncStage::ComputeRead)==SyncStage::ComputeRead) {
     ret |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
     acc |= VK_ACCESS_SHADER_READ_BIT;
+    acc |= VK_ACCESS_UNIFORM_READ_BIT;
     }
   if((rs&SyncStage::ComputeWrite)==SyncStage::ComputeWrite) {
     ret |= VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
