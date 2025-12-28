@@ -253,6 +253,12 @@ class MtDevice : public AbstractGraphicsApi::Device {
       std::shared_ptr<MtFence> timepoint[MaxFences];
       };
 
+    struct Props : AbstractGraphicsApi::Props {
+      MTL::LanguageVersion mslVersion = MTL::LanguageVersion2_0;
+      bool                 transposedRtMatrix = false;
+      uint32_t             ui32align = 0;
+      };
+
     bool     useNativeImageAtomic() const;
     uint32_t linearImageAlignment() const;
 
@@ -277,11 +283,9 @@ class MtDevice : public AbstractGraphicsApi::Device {
 
     Timeline                   timeline;
 
-    AbstractGraphicsApi::Props prop;
+    Props                      prop;
     MtSamplerCache             samplers;
     bool                       validation = false;
-    MTL::LanguageVersion       mslVersion = MTL::LanguageVersion2_0;
-    uint32_t                   ui32align  = 0;
 
     static void deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev);
   };

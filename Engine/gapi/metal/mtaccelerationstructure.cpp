@@ -142,6 +142,11 @@ MtTopAccelerationStructure::MtTopAccelerationStructure(MtDevice& dx, const RtIns
   desc->setInstancedAccelerationStructures(asArray.get());
   desc->setInstanceDescriptorType(MTL::AccelerationStructureInstanceDescriptorTypeUserID);
 
+  if(dx.prop.transposedRtMatrix && false) {
+    //TODO: vulkan/dx-like matrices
+    desc->setInstanceTransformationMatrixLayout(MTL::MatrixLayoutRowMajor);
+    }
+
   auto sz = dx.impl->accelerationStructureSizes(desc.get());
   impl = NsPtr<MTL::AccelerationStructure>(dx.impl->newAccelerationStructure(sz.accelerationStructureSize));
   if(impl==nullptr)

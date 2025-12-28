@@ -37,13 +37,13 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize)
   std::string msl;
   try {
     spirv_cross::CompilerMSL comp(reinterpret_cast<const uint32_t*>(source),srcSize/4);
-    optMSL.msl_version = spvVersion(dev.mslVersion);
+    optMSL.msl_version = spvVersion(dev.prop.mslVersion);
     if(dev.prop.descriptors.nonUniformIndexing) {
       optMSL.argument_buffers_tier = spirv_cross::CompilerMSL::Options::ArgumentBuffersTier::Tier2;
       optMSL.runtime_array_rich_descriptor = true;
       }
 
-    if(dev.mslVersion>=MTL::LanguageVersion2_0) {
+    if(dev.prop.mslVersion>=MTL::LanguageVersion2_0) {
       // can relay on threadgroup_barrier(mem_flags::mem_texture) instead
       optMSL.readwrite_texture_fences = false;
       }

@@ -47,9 +47,19 @@ MtDevice::MtDevice(std::string_view name, bool validation)
   if(queue.get()==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
-  mslVersion = languageVersion();
-  // mslVersion = MTL::LanguageVersion2_2; //testing
-  ui32align  = impl->minimumLinearTextureAlignmentForPixelFormat(MTL::PixelFormatR32Uint);
+  int32_t majorVersion = 0, minorVersion = 0;
+  if([[NSProcessInfo processInfo] respondsToSelector:@selector(operatingSystemVersion)]) {
+    NSOperatingSystemVersion ver = [[NSProcessInfo processInfo] operatingSystemVersion];
+    majorVersion = int32_t(ver.majorVersion);
+    minorVersion = int32_t(ver.minorVersion);
+    }
+  prop.mslVersion = languageVersion();
+  // prop.mslVersion = MTL::LanguageVersion2_2; //testing
+  prop.ui32align  = impl->minimumLinearTextureAlignmentForPixelFormat(MTL::PixelFormatR32Uint);
+  if(majorVersion>=18) {
+    // https://developer.apple.com/documentation/metal/mtlinstanceaccelerationstructuredescriptor/instancetransformationmatrixlayout?language=objc
+    prop.transposedRtMatrix = true;
+    }
   deductProps(prop,*impl);
   }
 
@@ -417,11 +427,10 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
   }
 
 bool MtDevice::useNativeImageAtomic() const {
-  return mslVersion>=MTL::LanguageVersion3_1;
+  return prop.mslVersion>=MTL::LanguageVersion3_1;
   }
 
 uint32_t MtDevice::linearImageAlignment() const {
-  return ui32align;
+  return prop.ui32align;
   }
 #endif
-
