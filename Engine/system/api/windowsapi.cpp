@@ -305,6 +305,14 @@ void WindowsApi::implSetCursorPosition(SystemApi::Window *w, int x, int y) {
   POINT pt   = {x,y};
   ClientToScreen(hwnd, &pt);
   SetCursorPos(pt.x, pt.y);
+  // discard mouse-move messages, as those are irrelevant now
+  while(true) {
+    MSG msg = {};
+    int ret = PeekMessage(&msg, nullptr, WM_MOUSEMOVE, WM_MOUSEMOVE, PM_REMOVE | PM_NOYIELD);
+    if(ret<=0)
+      break;
+    continue;
+    }
   }
 
 static void SetCursor(CursorShape show) {
