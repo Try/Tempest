@@ -369,7 +369,7 @@ void Matrix4x4::rotate(float degrees, float x, float y, float z){
       }
   }
 
-  std::memcpy(m,re,sizeof(re));
+  std::memcpy(&m[0][0], &re[0][0], sizeof(re));
   }
 
 void Matrix4x4::rotateOX( float angle ){
