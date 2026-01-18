@@ -218,7 +218,7 @@ ALbuffer *AllocBuffer() noexcept
     return buffer;
 }
 
-void FreeBuffer(ALCdevice *device, ALbuffer *buffer)
+void FreeBuffer(ALCdevice *device [[maybe_unused]], ALbuffer *buffer)
 {
 #ifdef ALSOFT_EAX
     eax_x_ram_clear(device, *buffer);
