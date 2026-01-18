@@ -20,6 +20,8 @@
 
 namespace {
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winline"
 constexpr std::optional<VMorpherPhenome> PhenomeFromEnum(ALenum val) noexcept
 {
 #define HANDLE_PHENOME(x) case AL_VOCAL_MORPHER_PHONEME_ ## x:                \
@@ -110,6 +112,7 @@ constexpr std::optional<VMorpherWaveform> WaveformFromEmum(ALenum value) noexcep
     }
     return std::nullopt;
 }
+#pragma GCC diagnostic pop
 constexpr ALenum EnumFromWaveform(VMorpherWaveform type)
 {
     switch(type)
@@ -140,6 +143,8 @@ const EffectProps VmorpherEffectProps{genDefaultProps()};
 
 void VmorpherEffectHandler::SetParami(VmorpherProps &props, ALenum param, int val)
 {
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Winline"
     switch(param)
     {
     case AL_VOCAL_MORPHER_PHONEMEA:
@@ -179,6 +184,7 @@ void VmorpherEffectHandler::SetParami(VmorpherProps &props, ALenum param, int va
         throw effect_exception{AL_INVALID_ENUM, "Invalid vocal morpher integer property 0x%04x",
             param};
     }
+    #pragma GCC diagnostic pop
 }
 void VmorpherEffectHandler::SetParamiv(VmorpherProps&, ALenum param, const int*)
 {
