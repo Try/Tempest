@@ -1467,7 +1467,14 @@ struct PFFFT_Setup {
     pffft_transform_t transform{};
 
     float *twiddle{}; /* N/4 elements */
+    /* Suppress warning about ignored alignment attributes when using v4sf.
+     * The underlying storage is properly allocated with V4sfAlignVal
+     * alignment.
+     */
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wignored-attributes"
     al::span<v4sf> e; /* N/4*3 elements */
+    #pragma GCC diagnostic pop
 
     alignas(V4sfAlignment) std::byte end;
 };
