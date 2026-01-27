@@ -16,6 +16,11 @@
 #  define VK_USE_PLATFORM_WIN32_KHR
 #  include <windows.h>
 #  include <vulkan/vulkan_win32.h>
+#elif defined(__ANDROID__)
+#  define VK_USE_PLATFORM_ANDROID_KHR
+#  include <android/native_window.h>
+#  include <vulkan/vulkan_android.h>
+extern "C" ANativeWindow* tempest_android_get_native_window();
 #elif defined(__UNIX__)
 #  define VK_USE_PLATFORM_XLIB_KHR
 #  include <X11/Xlib.h>
@@ -168,6 +173,9 @@ VSwapchain::~VSwapchain() {
 bool VSwapchain::checkPresentSupport(VkPhysicalDevice device, uint32_t queueFamilyIndex) {
 #if defined(__WINDOWS__)
   const bool presentSupport = vkGetPhysicalDeviceWin32PresentationSupportKHR(device, queueFamilyIndex)!=VK_FALSE;
+#elif defined(__ANDROID__)
+  // Android always supports presentation if Vulkan is available
+  const bool presentSupport = true;
 #elif defined(__UNIX__)
   bool presentSupport = false;
   if(auto dpy = reinterpret_cast<Display*>(X11Api::display())){
@@ -177,6 +185,7 @@ bool VSwapchain::checkPresentSupport(VkPhysicalDevice device, uint32_t queueFami
     }
 #else
 #warning "wsi for vulkan not implemented on this platform"
+  const bool presentSupport = false;
 #endif
   return presentSupport;
   }
@@ -237,6 +246,15 @@ VkSurfaceKHR VSwapchain::createSurface(VkInstance instance, void* hwnd) {
   createInfo.hinstance = GetModuleHandleA(nullptr);
   createInfo.hwnd      = HWND(hwnd);
   if(vkCreateWin32SurfaceKHR(instance,&createInfo,nullptr,&ret)!=VK_SUCCESS)
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+#elif defined(__ANDROID__)
+  ANativeWindow* window = tempest_android_get_native_window();
+  if(window==nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+  VkAndroidSurfaceCreateInfoKHR createInfo = {};
+  createInfo.sType  = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
+  createInfo.window = window;
+  if(vkCreateAndroidSurfaceKHR(instance, &createInfo, nullptr, &ret)!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 #elif defined(__UNIX__)
   VkXlibSurfaceCreateInfoKHR createInfo = {};
