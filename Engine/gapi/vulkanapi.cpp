@@ -22,11 +22,14 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-#define VK_KHR_WIN32_SURFACE_EXTENSION_NAME "VK_KHR_win32_surface"
-#define VK_KHR_XLIB_SURFACE_EXTENSION_NAME  "VK_KHR_xlib_surface"
+#define VK_KHR_WIN32_SURFACE_EXTENSION_NAME   "VK_KHR_win32_surface"
+#define VK_KHR_XLIB_SURFACE_EXTENSION_NAME    "VK_KHR_xlib_surface"
+#define VK_KHR_ANDROID_SURFACE_EXTENSION_NAME "VK_KHR_android_surface"
 
 #if defined(__WINDOWS__)
 #define SURFACE_EXTENSION_NAME VK_KHR_WIN32_SURFACE_EXTENSION_NAME
+#elif defined(__ANDROID__)
+#define SURFACE_EXTENSION_NAME VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
 #elif defined(__UNIX__)
 #define SURFACE_EXTENSION_NAME VK_KHR_XLIB_SURFACE_EXTENSION_NAME
 #endif
