@@ -11,6 +11,8 @@
 #include <android/input.h>
 #include <android/looper.h>
 #include <android/log.h>
+#include <android/keycodes.h>
+#include <jni.h>
 
 #include <Tempest/Window>
 #include <Tempest/Event>
@@ -103,6 +105,19 @@ static std::atomic_bool     g_isRunning{false};
 static std::atomic_bool     g_isActive{false};
 static std::atomic_bool     g_hasWindow{false};
 
+// Gamepad state tracking
+struct GamepadState {
+  float leftStickX  = 0.0f;
+  float leftStickY  = 0.0f;
+  float rightStickX = 0.0f;
+  float rightStickY = 0.0f;
+  float leftTrigger  = 0.0f;
+  float rightTrigger = 0.0f;
+  bool  connected   = false;
+};
+
+static GamepadState g_gamepad;
+
 // Event queue for cross-thread communication
 struct AppEvent {
   enum Type {
@@ -114,7 +129,8 @@ struct AppEvent {
     KeyDown,
     KeyUp,
     Focus,
-    Close
+    Close,
+    GamepadAxis
   };
   Type type = None;
 
@@ -123,11 +139,71 @@ struct AppEvent {
     struct { int x, y, pointerId; } touch;
     struct { uint32_t keyCode; } key;
     struct { bool gained; } focus;
+    struct { float lx, ly, rx, ry, lt, rt; } gamepad;
   } data;
 };
 
 static std::mutex              g_eventMutex;
 static std::queue<AppEvent>    g_eventQueue;
+
+// Enable immersive fullscreen mode (hide navigation bar)
+static void enableImmersiveMode() {
+  if (g_app == nullptr || g_app->activity == nullptr)
+    return;
+
+  JNIEnv* env = nullptr;
+  g_app->activity->vm->AttachCurrentThread(&env, nullptr);
+  if (env == nullptr)
+    return;
+
+  jclass activityClass = env->GetObjectClass(g_app->activity->clazz);
+  if (activityClass == nullptr) {
+    g_app->activity->vm->DetachCurrentThread();
+    return;
+  }
+
+  // Get the window
+  jmethodID getWindow = env->GetMethodID(activityClass, "getWindow", "()Landroid/view/Window;");
+  if (getWindow == nullptr) {
+    g_app->activity->vm->DetachCurrentThread();
+    return;
+  }
+  jobject window = env->CallObjectMethod(g_app->activity->clazz, getWindow);
+  if (window == nullptr) {
+    g_app->activity->vm->DetachCurrentThread();
+    return;
+  }
+
+  // Get the decor view
+  jclass windowClass = env->GetObjectClass(window);
+  jmethodID getDecorView = env->GetMethodID(windowClass, "getDecorView", "()Landroid/view/View;");
+  if (getDecorView == nullptr) {
+    g_app->activity->vm->DetachCurrentThread();
+    return;
+  }
+  jobject decorView = env->CallObjectMethod(window, getDecorView);
+  if (decorView == nullptr) {
+    g_app->activity->vm->DetachCurrentThread();
+    return;
+  }
+
+  // Set system UI visibility flags for immersive mode
+  jclass viewClass = env->GetObjectClass(decorView);
+  jmethodID setSystemUiVisibility = env->GetMethodID(viewClass, "setSystemUiVisibility", "(I)V");
+  if (setSystemUiVisibility != nullptr) {
+    // SYSTEM_UI_FLAG_FULLSCREEN = 0x00000004
+    // SYSTEM_UI_FLAG_HIDE_NAVIGATION = 0x00000002
+    // SYSTEM_UI_FLAG_IMMERSIVE_STICKY = 0x00001000
+    // SYSTEM_UI_FLAG_LAYOUT_STABLE = 0x00000100
+    // SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION = 0x00000200
+    // SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN = 0x00000400
+    const int flags = 0x00000004 | 0x00000002 | 0x00001000 | 0x00000100 | 0x00000200 | 0x00000400;
+    env->CallVoidMethod(decorView, setSystemUiVisibility, flags);
+    LOGI("Immersive mode enabled");
+  }
+
+  g_app->activity->vm->DetachCurrentThread();
+}
 
 static void pushEvent(const AppEvent& evt) {
   std::lock_guard<std::mutex> lock(g_eventMutex);
@@ -149,6 +225,7 @@ static void onAppCmd(struct android_app* app, int32_t cmd) {
     case APP_CMD_INIT_WINDOW:
       if (app->window != nullptr) {
         g_hasWindow.store(true);
+        enableImmersiveMode();  // Enable immersive fullscreen mode
         if (g_mainWindow != nullptr) {
           g_mainWindow->nativeWindow = app->window;
           g_mainWindow->width  = ANativeWindow_getWidth(app->window);
@@ -174,6 +251,7 @@ static void onAppCmd(struct android_app* app, int32_t cmd) {
 
     case APP_CMD_GAINED_FOCUS:
       g_isActive.store(true);
+      enableImmersiveMode();  // Re-enable immersive mode when focus is gained
       {
         AppEvent evt;
         evt.type = AppEvent::Focus;
@@ -200,6 +278,7 @@ static void onAppCmd(struct android_app* app, int32_t cmd) {
 
     case APP_CMD_RESUME:
       g_isActive.store(true);
+      enableImmersiveMode();  // Re-enable immersive mode on resume
       LOGI("App resumed");
       break;
 
@@ -256,8 +335,77 @@ static int32_t onInputEvent(struct android_app* app, AInputEvent* event) {
     return 0;
 
   int32_t eventType = AInputEvent_getType(event);
+  int32_t source = AInputEvent_getSource(event);
 
   if (eventType == AINPUT_EVENT_TYPE_MOTION) {
+    // Check if this is gamepad/joystick input
+    if ((source & AINPUT_SOURCE_JOYSTICK) == AINPUT_SOURCE_JOYSTICK ||
+        (source & AINPUT_SOURCE_GAMEPAD) == AINPUT_SOURCE_GAMEPAD) {
+      // Read analog stick values
+      float lx = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_X, 0);
+      float ly = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_Y, 0);
+      float rx = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_Z, 0);
+      float ry = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_RZ, 0);
+      float lt = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_LTRIGGER, 0);
+      float rt = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_RTRIGGER, 0);
+
+      // Some controllers use HAT axes for D-pad
+      float hatX = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_HAT_X, 0);
+      float hatY = AMotionEvent_getAxisValue(event, AMOTION_EVENT_AXIS_HAT_Y, 0);
+
+      // Apply deadzone (0.15)
+      auto applyDeadzone = [](float v) -> float {
+        const float deadzone = 0.15f;
+        if (std::abs(v) < deadzone) return 0.0f;
+        return v;
+      };
+
+      lx = applyDeadzone(lx);
+      ly = applyDeadzone(ly);
+      rx = applyDeadzone(rx);
+      ry = applyDeadzone(ry);
+
+      // Update global state
+      g_gamepad.leftStickX  = lx;
+      g_gamepad.leftStickY  = ly;
+      g_gamepad.rightStickX = rx;
+      g_gamepad.rightStickY = ry;
+      g_gamepad.leftTrigger  = lt;
+      g_gamepad.rightTrigger = rt;
+      g_gamepad.connected   = true;
+
+      // Push gamepad axis event
+      AppEvent evt;
+      evt.type = AppEvent::GamepadAxis;
+      evt.data.gamepad.lx = lx;
+      evt.data.gamepad.ly = ly;
+      evt.data.gamepad.rx = rx;
+      evt.data.gamepad.ry = ry;
+      evt.data.gamepad.lt = lt;
+      evt.data.gamepad.rt = rt;
+      pushEvent(evt);
+
+      // Generate D-pad key events from HAT
+      static float lastHatX = 0, lastHatY = 0;
+      if (hatX != lastHatX) {
+        if (lastHatX < -0.5f) { AppEvent e; e.type = AppEvent::KeyUp; e.data.key.keyCode = AKEYCODE_DPAD_LEFT; pushEvent(e); }
+        if (lastHatX > 0.5f)  { AppEvent e; e.type = AppEvent::KeyUp; e.data.key.keyCode = AKEYCODE_DPAD_RIGHT; pushEvent(e); }
+        if (hatX < -0.5f) { AppEvent e; e.type = AppEvent::KeyDown; e.data.key.keyCode = AKEYCODE_DPAD_LEFT; pushEvent(e); }
+        if (hatX > 0.5f)  { AppEvent e; e.type = AppEvent::KeyDown; e.data.key.keyCode = AKEYCODE_DPAD_RIGHT; pushEvent(e); }
+        lastHatX = hatX;
+      }
+      if (hatY != lastHatY) {
+        if (lastHatY < -0.5f) { AppEvent e; e.type = AppEvent::KeyUp; e.data.key.keyCode = AKEYCODE_DPAD_UP; pushEvent(e); }
+        if (lastHatY > 0.5f)  { AppEvent e; e.type = AppEvent::KeyUp; e.data.key.keyCode = AKEYCODE_DPAD_DOWN; pushEvent(e); }
+        if (hatY < -0.5f) { AppEvent e; e.type = AppEvent::KeyDown; e.data.key.keyCode = AKEYCODE_DPAD_UP; pushEvent(e); }
+        if (hatY > 0.5f)  { AppEvent e; e.type = AppEvent::KeyDown; e.data.key.keyCode = AKEYCODE_DPAD_DOWN; pushEvent(e); }
+        lastHatY = hatY;
+      }
+
+      return 1;
+    }
+
+    // Touch input
     int32_t action = AMotionEvent_getAction(event);
     int32_t actionMasked = action & AMOTION_EVENT_ACTION_MASK;
     int32_t pointerIndex = (action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
@@ -324,16 +472,9 @@ static int32_t onInputEvent(struct android_app* app, AInputEvent* event) {
     int32_t action  = AKeyEvent_getAction(event);
     int32_t keyCode = AKeyEvent_getKeyCode(event);
 
-    // Handle back button
-    if (keyCode == AKEYCODE_BACK) {
-      if (action == AKEY_EVENT_ACTION_UP) {
-        // Could dispatch as Escape key or handle app exit
-        AppEvent evt;
-        evt.type = AppEvent::KeyUp;
-        evt.data.key.keyCode = keyCode;
-        pushEvent(evt);
-      }
-      return 1;
+    // Mark gamepad as connected if we get gamepad button input
+    if ((source & AINPUT_SOURCE_GAMEPAD) == AINPUT_SOURCE_GAMEPAD) {
+      g_gamepad.connected = true;
     }
 
     AppEvent evt;
@@ -371,7 +512,52 @@ static SystemApi::Window* createWindow(Tempest::Window* owner, uint32_t w, uint3
 }
 
 AndroidApi::AndroidApi() {
-  // Initialization is done via android_main
+  // Setup key translation table for Android keycodes
+  static const TranslateKeyPair k[] = {
+    { AKEYCODE_CTRL_LEFT,    Event::K_LControl },
+    { AKEYCODE_CTRL_RIGHT,   Event::K_RControl },
+
+    { AKEYCODE_SHIFT_LEFT,   Event::K_LShift   },
+    { AKEYCODE_SHIFT_RIGHT,  Event::K_RShift   },
+
+    { AKEYCODE_ALT_LEFT,     Event::K_LAlt     },
+    { AKEYCODE_ALT_RIGHT,    Event::K_RAlt     },
+
+    { AKEYCODE_DPAD_LEFT,    Event::K_Left     },
+    { AKEYCODE_DPAD_RIGHT,   Event::K_Right    },
+    { AKEYCODE_DPAD_UP,      Event::K_Up       },
+    { AKEYCODE_DPAD_DOWN,    Event::K_Down     },
+
+    { AKEYCODE_ESCAPE,       Event::K_ESCAPE   },
+    { AKEYCODE_BACK,         Event::K_ESCAPE   },  // Android back button as escape
+    { AKEYCODE_DEL,          Event::K_Back     },  // Android DEL is backspace
+    { AKEYCODE_TAB,          Event::K_Tab      },
+    { AKEYCODE_FORWARD_DEL,  Event::K_Delete   },
+    { AKEYCODE_INSERT,       Event::K_Insert   },
+    { AKEYCODE_MOVE_HOME,    Event::K_Home     },
+    { AKEYCODE_MOVE_END,     Event::K_End      },
+    { AKEYCODE_BREAK,        Event::K_Pause    },
+    { AKEYCODE_ENTER,        Event::K_Return   },
+    { AKEYCODE_SPACE,        Event::K_Space    },
+    { AKEYCODE_CAPS_LOCK,    Event::K_CapsLock },
+
+    // Gamepad buttons
+    { AKEYCODE_BUTTON_A,      Event::K_Return   },  // A = confirm/action
+    { AKEYCODE_BUTTON_B,      Event::K_ESCAPE   },  // B = back/cancel
+    { AKEYCODE_BUTTON_X,      Event::K_Space    },  // X = jump
+    { AKEYCODE_BUTTON_Y,      Event::K_Tab      },  // Y = inventory
+    { AKEYCODE_BUTTON_L1,     Event::K_Q        },  // L1 = prev weapon
+    { AKEYCODE_BUTTON_R1,     Event::K_E        },  // R1 = next weapon
+    { AKEYCODE_BUTTON_START,  Event::K_ESCAPE   },  // Start = menu
+    { AKEYCODE_BUTTON_SELECT, Event::K_Tab      },  // Select = inventory
+
+    { AKEYCODE_F1,           Event::K_F1       },
+    { AKEYCODE_0,            Event::K_0        },
+    { AKEYCODE_A,            Event::K_A        },
+
+    { 0,                     Event::K_NoKey    }
+    };
+  setupKeyTranslate(k, 32);
 }
 
 SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, uint32_t width, uint32_t height) {
@@ -508,16 +694,16 @@ void AndroidApi::implProcessEvents(AppCallBack& cb) {
       }
 
       case AppEvent::KeyDown: {
-        // Map Android key codes to Tempest key codes
-        KeyEvent e(static_cast<Event::KeyType>(evt.data.key.keyCode),
-                   evt.data.key.keyCode, Event::M_NoModifier, Event::KeyDown);
+        // Map Android key codes to Tempest key codes using the translation table
+        auto key = Event::KeyType(translateKey(evt.data.key.keyCode));
+        KeyEvent e(key, evt.data.key.keyCode, Event::M_NoModifier, Event::KeyDown);
         AndroidApi::dispatchKeyDown(wnd, e, evt.data.key.keyCode);
         break;
       }
 
       case AppEvent::KeyUp: {
-        KeyEvent e(static_cast<Event::KeyType>(evt.data.key.keyCode),
-                   evt.data.key.keyCode, Event::M_NoModifier, Event::KeyUp);
+        auto key = Event::KeyType(translateKey(evt.data.key.keyCode));
+        KeyEvent e(key, evt.data.key.keyCode, Event::M_NoModifier, Event::KeyUp);
         AndroidApi::dispatchKeyUp(wnd, e, evt.data.key.keyCode);
         break;
       }
