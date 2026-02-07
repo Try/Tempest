@@ -50,7 +50,8 @@ class Event {
       ButtonRight,
       ButtonMid,
       ButtonBack,
-      ButtonForward
+      ButtonForward,
+      ButtonLast
       };
 
     enum KeyType : uint8_t {
