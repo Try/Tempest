@@ -712,8 +712,8 @@ if(PNG_STATIC)
   target_include_directories(png_static
                              SYSTEM
                              INTERFACE "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/libpng${PNGLIB_ABI_VERSION}>")
-  target_link_libraries(png_static
-                        PUBLIC ${PNG_LINK_LIBRARIES})
+  #target_link_libraries(png_static
+  #                      PUBLIC ${PNG_LINK_LIBRARIES})
 endif()
 
 if(PNG_FRAMEWORK AND NOT APPLE)
