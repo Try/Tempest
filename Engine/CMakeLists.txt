@@ -70,17 +70,19 @@ if(APPLE)
   add_definitions(-D_LARGEFILE64_SOURCE)
 endif()
 
-### zlib
+### zlib 1.3.1
+set(ZLIB_ROOT           "${PROJECT_SOURCE_DIR}/thirdparty/zlib")
 set(ZLIB_BUILD_EXAMPLES OFF CACHE INTERNAL "")
 set(ZLIB_LIBRARY        zlibstatic)
-set(ZLIB_INCLUDE_DIR    "thirdparty/zlib")
+set(ZLIB_INCLUDE_DIR    "${PROJECT_SOURCE_DIR}/thirdparty/zlib")
 add_subdirectory("thirdparty/zlib" EXCLUDE_FROM_ALL)
 target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/zlib")
 if(NOT MSVC)
   target_compile_options(zlibstatic PRIVATE -Wno-deprecated-non-prototype)
 endif()
+target_link_libraries(${PROJECT_NAME} PRIVATE zlibstatic)
 
-### libpng16
+### libpng 1.6.54
 set(PNG_SHARED                 OFF CACHE INTERNAL "")
 set(PNG_STATIC                 ON  CACHE INTERNAL "")
 set(PNG_TESTS                  OFF CACHE INTERNAL "")
@@ -89,9 +91,9 @@ set(SKIP_INSTALL_ALL           ON  CACHE INTERNAL "")
 set(PNG_HARDWARE_OPTIMIZATIONS OFF CACHE INTERNAL "")
 add_definitions(-DPNG_ARM_NEON_OPT=0)
 add_subdirectory("thirdparty/libpng" EXCLUDE_FROM_ALL)
-target_include_directories(png_static PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-target_include_directories(png_static PRIVATE "thirdparty/zlib")
-target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/libpng")
+target_include_directories(png_static PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/zlib")
+target_include_directories(png_static PRIVATE "${PROJECT_SOURCE_DIR}/thirdparty/zlib")
+#target_include_directories(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/thirdparty/libpng")
 target_link_libraries(${PROJECT_NAME} PRIVATE png_static)
 
 ### stb
