@@ -933,7 +933,6 @@ void VDevice::waitAny(uint64_t timeout) {
   }
 
 std::shared_ptr<VFence> VDevice::aquireFence() {
-  // std::lock_guard<std::mutex> guard(timeline.sync);
   // reuse signalled fences
   auto f = findAvailableFence();
   if(f!=nullptr)
@@ -963,6 +962,8 @@ std::shared_ptr<VFence> VDevice::aquireFence() {
       }
     }
 
+  // pool is full - wait on one of the fences and reuse it
+  // NOTE: always valid, since GPU is not allowed to wait on CPU
   waitAny(std::numeric_limits<uint64_t>::max());
   return findAvailableFence();
   }
