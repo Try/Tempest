@@ -72,9 +72,10 @@ endif()
 
 ### zlib 1.3.1
 set(ZLIB_ROOT           "${PROJECT_SOURCE_DIR}/thirdparty/zlib")
-set(ZLIB_BUILD_EXAMPLES OFF CACHE INTERNAL "")
-set(ZLIB_LIBRARY        zlibstatic)
 set(ZLIB_INCLUDE_DIR    "${PROJECT_SOURCE_DIR}/thirdparty/zlib")
+set(ZLIB_LIBRARY        "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/zlib/libzlibstatic.a")
+#set(ZLIB_LIBRARY        zlibstatic)
+set(ZLIB_BUILD_EXAMPLES OFF CACHE INTERNAL "")
 add_subdirectory("thirdparty/zlib" EXCLUDE_FROM_ALL)
 target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/zlib")
 if(NOT MSVC)
@@ -82,7 +83,7 @@ if(NOT MSVC)
 endif()
 target_link_libraries(${PROJECT_NAME} PRIVATE zlibstatic)
 
-### libpng 1.6.54
+### libpng 1.6.55
 set(PNG_SHARED                 OFF CACHE INTERNAL "")
 set(PNG_STATIC                 ON  CACHE INTERNAL "")
 set(PNG_TESTS                  OFF CACHE INTERNAL "")
