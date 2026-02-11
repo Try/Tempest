@@ -95,6 +95,7 @@ add_definitions(-DPNG_ARM_NEON_OPT=0)
 add_subdirectory("thirdparty/libpng" EXCLUDE_FROM_ALL)
 target_include_directories(png_static PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/zlib")
 target_include_directories(png_static PRIVATE "${PROJECT_SOURCE_DIR}/thirdparty/zlib")
+target_include_directories(png_static PRIVATE "${PROJECT_BINARY_DIR}/thirdparty/zlib")
 #target_include_directories(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/thirdparty/libpng")
 target_link_libraries(${PROJECT_NAME} PRIVATE png_static)
 
