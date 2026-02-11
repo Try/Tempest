@@ -84,19 +84,13 @@ endif()
 target_link_libraries(${PROJECT_NAME} PRIVATE zlibstatic)
 
 ### libpng 1.6.55
-set(PNG_SHARED                 OFF CACHE INTERNAL "")
-set(PNG_STATIC                 ON  CACHE INTERNAL "")
-set(PNG_TESTS                  OFF CACHE INTERNAL "")
-set(PNG_BUILD_ZLIB             OFF CACHE INTERNAL "")
-set(SKIP_INSTALL_ALL           ON  CACHE INTERNAL "")
-set(PNG_HARDWARE_OPTIMIZATIONS OFF CACHE INTERNAL "")
-set(PNG_LIBCONF_HEADER_PREBUILT "${PROJECT_BINARY_DIR}/thirdparty/libpng/scripts/pnglibconf.h.prebuilt")
 add_definitions(-DPNG_ARM_NEON_OPT=0)
 add_subdirectory("thirdparty/libpng" EXCLUDE_FROM_ALL)
+target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/libpng/libpng")
+target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/libpng")
 target_include_directories(png_static PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/zlib")
 target_include_directories(png_static PRIVATE "${PROJECT_SOURCE_DIR}/thirdparty/zlib")
 target_include_directories(png_static PRIVATE "${PROJECT_BINARY_DIR}/thirdparty/zlib")
-#target_include_directories(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/thirdparty/libpng")
 target_link_libraries(${PROJECT_NAME} PRIVATE png_static)
 
 ### stb

@@ -1,0 +1,39 @@
+libpng 1.6.54 - January 12, 2026
+================================
+
+This is a public release of libpng, intended for use in production code.
+
+
+Files available for download
+----------------------------
+
+Source files:
+
+ * libpng-1.6.54.tar.xz (LZMA-compressed, recommended)
+ * libpng-1.6.54.tar.gz (deflate-compressed)
+ * lpng1654.7z (LZMA-compressed)
+ * lpng1654.zip (deflate-compressed)
+
+Other information:
+
+ * README.md
+ * LICENSE.md
+ * AUTHORS.md
+ * TRADEMARK.md
+
+
+Changes from version 1.6.53 to version 1.6.54
+---------------------------------------------
+
+ * Fixed CVE-2026-22695 (medium severity):
+   Heap buffer over-read in `png_image_read_direct_scaled.
+   (Reported and fixed by Petr Simecek.)
+ * Fixed CVE-2026-22801 (medium severity):
+   Integer truncation causing heap buffer over-read in `png_image_write_*`.
+ * Implemented various improvements in oss-fuzz.
+   (Contributed by Philippe Antoine.)
+
+Send comments/corrections/commendations to png-mng-implement at lists.sf.net.
+Subscription is required; visit
+https://lists.sourceforge.net/lists/listinfo/png-mng-implement
+to subscribe.
