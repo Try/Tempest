@@ -208,3 +208,7 @@ void SystemApi::showCursor(SystemApi::Window *w, CursorShape show) {
 float SystemApi::uiScale(Window* w) {
   return inst().implUiScale(w);
   }
+
+SystemApi::ClipboardData SystemApi::clipboardData(SystemApi::Window *w) {
+  return SystemApi::inst().implClipboardData(w);
+}
