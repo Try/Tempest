@@ -91,6 +91,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/libpng")
 target_include_directories(png_static PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/zlib")
 target_include_directories(png_static PRIVATE "${PROJECT_SOURCE_DIR}/thirdparty/zlib")
 target_include_directories(png_static PRIVATE "${PROJECT_BINARY_DIR}/thirdparty/zlib")
+target_link_libraries(png_static PRIVATE zlibstatic)
 target_link_libraries(${PROJECT_NAME} PRIVATE png_static)
 
 ### stb
