@@ -71,10 +71,7 @@ if(APPLE)
 endif()
 
 ### zlib 1.3.1
-#set(ZLIB_ROOT            "${PROJECT_SOURCE_DIR}/thirdparty/zlib;${PROJECT_BINARY_DIR}/thirdparty/zlib")
-#set(ZLIB_INCLUDE_DIR     "${PROJECT_SOURCE_DIR}/thirdparty/zlib")
-#set(ZLIB_USE_STATIC_LIBS ON CACHE INTERNAL "")
-set(ZLIB_LIBRARY        zlibstatic)
+#set(ZLIB_LIBRARY        zlibstatic)
 set(ZLIB_BUILD_EXAMPLES OFF CACHE INTERNAL "")
 add_subdirectory("thirdparty/zlib" EXCLUDE_FROM_ALL)
 target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/zlib")
