@@ -440,9 +440,16 @@ void X11Api::implSetWindowTitle(SystemApi::Window *w, const char *utf8) {
   }
 
 void X11Api::implSetCursorPosition(SystemApi::Window *w, int x, int y) {
-  activeCursorChange = 1;
+  // activeCursorChange = 1;
   XWarpPointer(dpy, None, HWND(w), 0, 0, 0, 0, x, y);
   XFlush(dpy);
+
+  // remove mouse evennts generated in between previous MotionNotify and XWarpPointer
+  XEvent evt = {};
+  while(XCheckMaskEvent(dpy, PointerMotionMask, &evt)) {
+    (void)evt;
+    // Log::d("");
+    }
   }
 
 void X11Api::implShowCursor(SystemApi::Window *w, CursorShape show) {
