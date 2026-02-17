@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <cstdint>
+#include <vector>
 
 namespace Tempest {
 
@@ -39,6 +40,16 @@ class SystemApi {
       uint16_t result;
       };
 
+    enum class ClipboardDataType : uint8_t {
+      Unknown,
+      Text,
+      };
+
+    struct ClipboardData {
+      ClipboardDataType type = ClipboardDataType::Unknown;
+      std::vector<uint8_t> data;
+      };
+
     virtual ~SystemApi()=default;
     static Window*  createWindow(Tempest::Window* owner, uint32_t width, uint32_t height);
     static Window*  createWindow(Tempest::Window* owner, ShowMode sm);
@@ -58,6 +69,7 @@ class SystemApi {
 
     static void     addOverlay (UiOverlay* ui);
     static void     takeOverlay(UiOverlay* ui);
+    static ClipboardData clipboardData(SystemApi::Window *w);
 
   protected:
     struct AppCallBack {
@@ -86,6 +98,8 @@ class SystemApi {
     virtual void     implProcessEvents(AppCallBack& cb) = 0;
 
     virtual void     implSetWindowTitle(SystemApi::Window *w, const char* utf8) = 0;
+
+    virtual ClipboardData implClipboardData(SystemApi::Window *w) { return ClipboardData(); };
 
     static void      setCursorPosition(SystemApi::Window *w, int x, int y);
     static void      showCursor(SystemApi::Window *w, CursorShape c);
