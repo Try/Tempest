@@ -45,14 +45,15 @@ class EventDispatcher final {
 
     std::shared_ptr<Widget::Ref> lock(std::weak_ptr<Widget::Ref>& w);
 
-    Widget*                      customRoot=nullptr;
-    std::weak_ptr<Widget::Ref>   mouseUp;
+    Widget*                      customRoot = nullptr;
+    std::weak_ptr<Widget::Ref>   mouseUp[Event::MouseButton::ButtonLast];
     std::weak_ptr<Widget::Ref>   mouseLast;
     std::weak_ptr<Widget::Ref>   mouseOver;
 
     std::weak_ptr<Widget::Ref>   focusLast;
 
     std::vector<UiOverlay*>      overlays;
+    Event::MouseButton           mouseLastBtn  = Event::MouseButton::ButtonNone;
     uint64_t                     mouseLastTime = 0;
     uint64_t                     mouseEvCount  = 0;
 
