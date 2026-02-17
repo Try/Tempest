@@ -9,6 +9,16 @@
 
 namespace Tempest {
 
+struct GamepadState {
+  float leftStickX   = 0.0f;
+  float leftStickY   = 0.0f;
+  float rightStickX  = 0.0f;
+  float rightStickY  = 0.0f;
+  float leftTrigger  = 0.0f;
+  float rightTrigger = 0.0f;
+  bool  connected    = false;
+};
+
 class SizeEvent;
 class MouseEvent;
 class KeyEvent;
@@ -59,6 +69,8 @@ class SystemApi {
     static void     addOverlay (UiOverlay* ui);
     static void     takeOverlay(UiOverlay* ui);
 
+    static GamepadState gamepadState();
+
   protected:
     struct AppCallBack {
       virtual ~AppCallBack()=default;
@@ -80,6 +92,8 @@ class SystemApi {
     virtual void     implShowCursor(SystemApi::Window *w, CursorShape show) = 0;
 
     virtual float    implUiScale(SystemApi::Window* w);
+
+    virtual GamepadState implGamepadState();
 
     virtual bool     implIsRunning() = 0;
     virtual int      implExec(AppCallBack& cb) = 0;

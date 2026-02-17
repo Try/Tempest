@@ -16,6 +16,11 @@
 #  define VK_USE_PLATFORM_WIN32_KHR
 #  include <windows.h>
 #  include <vulkan/vulkan_win32.h>
+#elif defined(__ANDROID__)
+#  define VK_USE_PLATFORM_ANDROID_KHR
+#  include <android/native_window.h>
+#  include <vulkan/vulkan_android.h>
+extern "C" ANativeWindow* tempest_android_get_native_window();
 #elif defined(__UNIX__)
 #  define VK_USE_PLATFORM_XLIB_KHR
 #  include <X11/Xlib.h>
@@ -168,6 +173,9 @@ VSwapchain::~VSwapchain() {
 bool VSwapchain::checkPresentSupport(VkPhysicalDevice device, uint32_t queueFamilyIndex) {
 #if defined(__WINDOWS__)
   const bool presentSupport = vkGetPhysicalDeviceWin32PresentationSupportKHR(device, queueFamilyIndex)!=VK_FALSE;
+#elif defined(__ANDROID__)
+  // Android always supports presentation if Vulkan is available
+  const bool presentSupport = true;
 #elif defined(__UNIX__)
   bool presentSupport = false;
   if(auto dpy = reinterpret_cast<Display*>(X11Api::display())){
@@ -177,6 +185,7 @@ bool VSwapchain::checkPresentSupport(VkPhysicalDevice device, uint32_t queueFami
     }
 #else
 #warning "wsi for vulkan not implemented on this platform"
+  const bool presentSupport = false;
 #endif
   return presentSupport;
   }
@@ -218,8 +227,14 @@ void VSwapchain::cleanupSurface() noexcept {
   }
 
 void VSwapchain::reset() {
+  Tempest::Log::i("VSwapchain::reset() called - possible screen rotation detected");
+  Rect rect = SystemApi::windowClientRect(hwnd);
+  Tempest::Log::i("Window client rect: ", rect.w, "x", rect.h);
+
   cleanupSwapchain();
   createSwapchain(device);
+
+  Tempest::Log::i("VSwapchain::reset() completed - swapchain recreated");
   }
 
 void VSwapchain::cleanup() noexcept {
@@ -237,6 +252,15 @@ VkSurfaceKHR VSwapchain::createSurface(VkInstance instance, void* hwnd) {
   createInfo.hinstance = GetModuleHandleA(nullptr);
   createInfo.hwnd      = HWND(hwnd);
   if(vkCreateWin32SurfaceKHR(instance,&createInfo,nullptr,&ret)!=VK_SUCCESS)
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+#elif defined(__ANDROID__)
+  ANativeWindow* window = tempest_android_get_native_window();
+  if(window==nullptr)
+    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+  VkAndroidSurfaceCreateInfoKHR createInfo = {};
+  createInfo.sType  = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
+  createInfo.window = window;
+  if(vkCreateAndroidSurfaceKHR(instance, &createInfo, nullptr, &ret)!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 #elif defined(__UNIX__)
   VkXlibSurfaceCreateInfoKHR createInfo = {};
@@ -309,7 +333,51 @@ VkResult VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& sw
     createInfo.imageSharingMode      = VK_SHARING_MODE_EXCLUSIVE;
     }
 
-  createInfo.preTransform   = swapChainSupport.capabilities.currentTransform;
+  // Determine the correct transform based on window dimensions for Android
+  VkSurfaceTransformFlagBitsKHR selectedTransform = swapChainSupport.capabilities.currentTransform;
+
+#if defined(__ANDROID__)
+  // On Android, manually determine transform from window dimensions if driver doesn't report correctly
+  bool isLandscape = (extent.width > extent.height);
+
+  // Check if currentTransform makes sense for current orientation
+  bool needManualTransform = false;
+  if(isLandscape) {
+    // For landscape, we expect either IDENTITY or ROTATE_270
+    if(swapChainSupport.capabilities.currentTransform != VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR &&
+       swapChainSupport.capabilities.currentTransform != VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR) {
+      needManualTransform = true;
+    }
+  } else {
+    // For portrait, we expect ROTATE_90 or ROTATE_180
+    if(swapChainSupport.capabilities.currentTransform != VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR &&
+       swapChainSupport.capabilities.currentTransform != VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR) {
+      needManualTransform = true;
+    }
+  }
+
+  if(needManualTransform && (swapChainSupport.capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)) {
+    selectedTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+    Tempest::Log::i("Android rotation fix: Using manual IDENTITY transform for ", isLandscape ? "landscape" : "portrait");
+  }
+#endif
+
+  createInfo.preTransform = selectedTransform;
+
+  // Log the final transform being used
+  const char* transformName = "UNKNOWN";
+  switch(selectedTransform) {
+    case VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR:           transformName = "IDENTITY (0°)"; break;
+    case VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR:          transformName = "ROTATE_90 (90°)"; break;
+    case VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR:         transformName = "ROTATE_180 (180°)"; break;
+    case VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR:         transformName = "ROTATE_270 (270°)"; break;
+    case VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_BIT_KHR:  transformName = "HORIZONTAL_MIRROR"; break;
+    case VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90_BIT_KHR: transformName = "HORIZONTAL_MIRROR_ROTATE_90"; break;
+    case VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_180_BIT_KHR: transformName = "HORIZONTAL_MIRROR_ROTATE_180"; break;
+    case VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270_BIT_KHR: transformName = "HORIZONTAL_MIRROR_ROTATE_270"; break;
+    case VK_SURFACE_TRANSFORM_INHERIT_BIT_KHR:             transformName = "INHERIT"; break;
+  }
+  Tempest::Log::i("Vulkan surface preTransform: ", transformName, " (", uint32_t(selectedTransform), ")");
   createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
   createInfo.presentMode    = presentMode;
   createInfo.clipped        = VK_FALSE;
@@ -319,6 +387,8 @@ VkResult VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& sw
 
   swapChainImageFormat = surfaceFormat.format;
   swapChainExtent      = extent;
+
+  Tempest::Log::i("VSwapchain: swapChainExtent set to ", extent.width, "x", extent.height);
 
   createImageViews(device);
 
@@ -428,11 +498,22 @@ uint32_t VSwapchain::findImageCount(const SwapChainSupport& support) const {
 void VSwapchain::acquireNextImage() {
   VkResult code = implAcquireNextImage();
 
-  if(code==VK_ERROR_OUT_OF_DATE_KHR || code==VK_SUBOPTIMAL_KHR)
+  if(code==VK_ERROR_OUT_OF_DATE_KHR) {
+    Tempest::Log::i("VSwapchain::acquireNextImage: OUT_OF_DATE - rotation likely occurred");
     throw SwapchainSuboptimal();
-
+  }
+#if defined(__ANDROID__)
+  // On Android, ignore SUBOPTIMAL to avoid constant swapchain recreation
+  if(code!=VK_SUCCESS && code!=VK_SUBOPTIMAL_KHR)
+    vkAssert(code);
+#else
+  if(code==VK_SUBOPTIMAL_KHR) {
+    Tempest::Log::i("VSwapchain::acquireNextImage: SUBOPTIMAL - rotation change detected");
+    throw SwapchainSuboptimal();
+  }
   if(code!=VK_SUCCESS)
     vkAssert(code);
+#endif
   }
 
 uint32_t VSwapchain::currentBackBufferIndex() {
@@ -520,8 +601,21 @@ void VSwapchain::present() {
 
   auto tx = Application::tickCount();
   VkResult code = device.presentQueue->present(presentInfo);
-  if(code==VK_ERROR_OUT_OF_DATE_KHR || code==VK_SUBOPTIMAL_KHR)
+  if(code==VK_ERROR_OUT_OF_DATE_KHR) {
+    Tempest::Log::i("VSwapchain::present: OUT_OF_DATE - rotation detected during present");
     throw SwapchainSuboptimal();
+  }
+#if defined(__ANDROID__)
+  // On Android, ignore SUBOPTIMAL to avoid constant swapchain recreation
+  if(code!=VK_SUCCESS && code!=VK_SUBOPTIMAL_KHR)
+    Detail::vkAssert(code);
+#else
+  if(code==VK_SUBOPTIMAL_KHR) {
+    Tempest::Log::i("VSwapchain::present: SUBOPTIMAL - rotation change during present");
+    throw SwapchainSuboptimal();
+  }
+  Detail::vkAssert(code);
+#endif
   tx = Application::tickCount()-tx;
   if(tx > 2) {
     // std::chrono::system_clock::time_point p = std::chrono::system_clock::now();
@@ -530,8 +624,6 @@ void VSwapchain::present() {
     // strftime(str, sizeof(str), "%H:%M.%S", localtime(&t));
     // Log::i(str," : vkQueuePresentKHR[",imgIndex,"] = ", tx);
     }
-  //Log::i("vkQueuePresentKHR[",imgIndex,"] = ", tx);
-  Detail::vkAssert(code);
 
   acquireNextImage();
   }
