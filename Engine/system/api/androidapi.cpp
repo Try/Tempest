@@ -105,18 +105,12 @@ static std::atomic_bool     g_isRunning{false};
 static std::atomic_bool     g_isActive{false};
 static std::atomic_bool     g_hasWindow{false};
 
-// Gamepad state tracking
-struct GamepadState {
-  float leftStickX  = 0.0f;
-  float leftStickY  = 0.0f;
-  float rightStickX = 0.0f;
-  float rightStickY = 0.0f;
-  float leftTrigger  = 0.0f;
-  float rightTrigger = 0.0f;
-  bool  connected   = false;
-};
-
+// Gamepad state tracking (uses struct from SystemApi)
 static GamepadState g_gamepad;
+
+GamepadState AndroidApi::implGamepadState() {
+  return g_gamepad;
+}
 
 // Event queue for cross-thread communication
 struct AppEvent {
@@ -767,6 +761,16 @@ extern "C" ANativeWindow* tempest_android_get_native_window() {
 
 extern "C" struct android_app* tempest_android_get_app() {
   return g_app;
+}
+
+// The application entry point - calls user's main() after setup
+int main(int argc, const char** argv);
+
+extern "C" void android_main(struct android_app* app) {
+  tempest_android_main(app);
+
+  const char* argv[] = {"app", nullptr};
+  main(1, argv);
 }
 
 #endif // __ANDROID__

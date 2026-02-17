@@ -211,3 +211,12 @@ void SystemApi::showCursor(SystemApi::Window *w, CursorShape show) {
 float SystemApi::uiScale(Window* w) {
   return inst().implUiScale(w);
   }
+
+GamepadState SystemApi::gamepadState() {
+  return inst().implGamepadState();
+  }
+
+GamepadState SystemApi::implGamepadState() {
+  // Default implementation returns disconnected gamepad
+  return GamepadState{};
+  }

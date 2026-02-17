@@ -29,6 +29,8 @@ class AndroidApi final: SystemApi {
 
     void     implSetWindowTitle(SystemApi::Window *w, const char* utf8) override;
 
+    GamepadState implGamepadState() override;
+
   friend class SystemApi;
   };
 
