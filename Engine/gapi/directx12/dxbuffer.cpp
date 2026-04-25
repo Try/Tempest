@@ -125,7 +125,7 @@ void DxBuffer::updateByStaging(DxBuffer* stage, const void* data, size_t offDst,
   Detail::DSharedPtr<Buffer*> pstage(stage);
 
   auto cmd = dx.dataMgr().get();
-  cmd->begin(SyncHint::NoPendingReads);
+  cmd->begin();
   cmd->hold(pbuf); // NOTE: DxBuffer may be deleted, before copy is finished
   cmd->hold(pstage);
   cmd->copy(*this, offDst, *stage, offSrc, size);
@@ -151,7 +151,7 @@ void DxBuffer::fillByStaging(DxBuffer* stage, uint32_t data, size_t offDst, size
   Detail::DSharedPtr<Buffer*> pstage(stage);
 
   auto cmd = dx.dataMgr().get();
-  cmd->begin(SyncHint::NoPendingReads);
+  cmd->begin();
   cmd->hold(pbuf); // NOTE: DxBuffer may be deleted, before copy is finished
   cmd->hold(pstage);
   cmd->copy(*this, offDst, *stage, offSrc, size);

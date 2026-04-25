@@ -57,7 +57,9 @@ void VBuffer::update(const void* data, size_t off, size_t size) {
   Detail::DSharedPtr<Buffer*> pBuf  (this);
 
   auto cmd = dx.dataMgr().get();
-  cmd->begin(SyncHint::NoPendingReads);
+  //NOTE: update after initialization
+  //cmd->begin(SyncHint::NoPendingReads);
+  cmd->begin();
   cmd->hold(pBuf); // NOTE: VBuffer may be deleted, before copy is finished
   cmd->hold(pStage);
   cmd->copy(*this, off, *pStage.handler, 0, size);

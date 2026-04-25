@@ -93,13 +93,13 @@ void ResourceState::onUavUsage(const Usage& u, PipelineStage st, bool host) {
   for(PipelineStage p = PipelineStage::S_First; p<PipelineStage::S_Count; p = PipelineStage(p+1)) {
     if((uavWrite[st].depend[p] & u.write)!=0) {
       // WaW - execution+cache
-      uavSrcBarrier = uavSrcBarrier | rd[p] | wr[p];
+      uavSrcBarrier = uavSrcBarrier | rd[p]  | wr[p];
       uavDstBarrier = uavDstBarrier | rd[st] | wr[st];
 
       uavRead [st].depend[p] = NonUniqResId::I_None;
       uavWrite[st].depend[p] = NonUniqResId::I_None;
       }
-    if((uavWrite[st].depend[p] & u.read)!=0) {
+    else if((uavWrite[st].depend[p] & u.read)!=0) {
       // RaW barrier - execution+cache
       uavSrcBarrier = uavSrcBarrier | rd[p] | wr[p];
       uavDstBarrier = uavDstBarrier | rd[st];
@@ -134,7 +134,7 @@ void ResourceState::onUavUsage(const Usage& u, PipelineStage st, bool host) {
   }
 
 void ResourceState::joinWriters(PipelineStage st) {
-  ResourceState::Usage u = {NonUniqResId(-1), NonUniqResId::I_None, false};
+  ResourceState::Usage u = {NonUniqResId::I_All, NonUniqResId::I_None, false};
   u.speculative = true;
   onUavUsage(u, st);
   }
@@ -175,7 +175,7 @@ void ResourceState::fillReads() {
   // assume that previous command buffer may read anything
   for(auto& i:uavRead)
     for(auto& r:i.depend)
-      r = NonUniqResId(-1);
+      r = NonUniqResId::I_All;
   }
 
 ResourceState::ImgState& ResourceState::findImg(AbstractGraphicsApi::Texture* img, AbstractGraphicsApi::Swapchain* sw, uint32_t id, bool discard) {
@@ -212,7 +212,7 @@ void ResourceState::flush(AbstractGraphicsApi::CommandBuffer& cmd) {
       continue;
     auto& b = barrier[barrierCnt];
     b.swapchain = i.sw;
-    b.swId      = i.sw!=nullptr ? i.id : uint32_t(-1);
+    b.swId      = i.sw!=nullptr  ? i.id : uint32_t(-1);
     b.texture   = i.img;
     b.mip       = i.img!=nullptr ? i.id : uint32_t(-1);
     b.prev      = i.last;
@@ -220,7 +220,7 @@ void ResourceState::flush(AbstractGraphicsApi::CommandBuffer& cmd) {
     b.discard   = i.discard;
     ++barrierCnt;
 
-    i.last     = i.next;
+    i.last      = i.next;
     if(barrierCnt==MaxBarriers) {
       emitBarriers(cmd,d,barrier,barrierCnt);
       barrierCnt = 0;

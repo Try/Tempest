@@ -40,13 +40,13 @@ class ResourceState {
 
   private:
     struct ImgState {
-      AbstractGraphicsApi::Swapchain* sw       = nullptr;
-      AbstractGraphicsApi::Texture*   img      = nullptr;
-      uint32_t                        id       = 0; // mip or image-id in swapchain
+      AbstractGraphicsApi::Swapchain* sw      = nullptr;
+      AbstractGraphicsApi::Texture*   img     = nullptr;
+      uint32_t                        id      = 0; // mip or image-id in swapchain
 
-      ResourceLayout                  last     = ResourceLayout::None;
-      ResourceLayout                  next     = ResourceLayout::None;
-      bool                            discard  = false;
+      ResourceLayout                  last    = ResourceLayout::None;
+      ResourceLayout                  next    = ResourceLayout::None;
+      bool                            discard = false;
       };
 
     void      fillReads();

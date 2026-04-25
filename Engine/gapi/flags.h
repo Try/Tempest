@@ -78,6 +78,7 @@ inline SyncStage operator & (SyncStage a, const SyncStage& b) {
 
 enum NonUniqResId : uint32_t {
   I_None = 0x0,
+  I_All  = 0xFFFFFFFF,
   };
 
 inline NonUniqResId operator | (NonUniqResId a,const NonUniqResId& b) {

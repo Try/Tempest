@@ -54,7 +54,7 @@ static void toStage(VDevice& dev, VkPipelineStageFlags& stage, VkAccessFlags& ac
     }
   if((rs&SyncStage::TransferDst)==SyncStage::TransferDst) {
     ret |= VK_PIPELINE_STAGE_TRANSFER_BIT;
-    acc |= VK_ACCESS_TRANSFER_WRITE_BIT;
+    acc |= VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
     }
   if((rs&SyncStage::TransferHost)==SyncStage::TransferHost) {
     ret |= VK_PIPELINE_STAGE_HOST_BIT;
@@ -965,8 +965,20 @@ void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
   resState.setLayout(img, ResourceLayout::Default, ResourceState::AllMips);
   }
 
-void VCommandBuffer::discard(AbstractGraphicsApi::Texture& tex) {
-  resState.forceLayout(tex,ResourceLayout::None);
+void VCommandBuffer::bless(AbstractGraphicsApi::Texture& img, ResourceLayout layout) {
+  AbstractGraphicsApi::BarrierDesc desc = {};
+  desc.texture = &reinterpret_cast<VTexture&>(img);
+  desc.mip     = 0xFFFFFFFF;
+  desc.prev    = ResourceLayout::None;
+  desc.next    = layout;
+  desc.discard = true;
+
+  AbstractGraphicsApi::SyncDesc sync;
+  sync.prev = SyncStage::None;
+  sync.next = SyncStage::TransferDst; // resource expected to be initialized by transfer command
+  barrier(sync, &desc, 1);
+
+  resState.forceLayout(img, layout);
   }
 
 void VCommandBuffer::barrier(const AbstractGraphicsApi::SyncDesc& s, const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {

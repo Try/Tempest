@@ -78,7 +78,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void dispatch    (size_t x, size_t y, size_t z) override;
     void dispatchIndirect(const AbstractGraphicsApi::Buffer& indirect, size_t offset) override;
 
-    void discard(AbstractGraphicsApi::Texture& tex);
+    void bless(AbstractGraphicsApi::Texture& tex, ResourceLayout layout);
     void barrier(const AbstractGraphicsApi::SyncDesc& s, const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) override;
 
     void generateMipmap(AbstractGraphicsApi::Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;

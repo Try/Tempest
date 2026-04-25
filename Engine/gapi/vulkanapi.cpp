@@ -293,9 +293,16 @@ AbstractGraphicsApi::PBuffer VulkanApi::createBuffer(AbstractGraphicsApi::Device
 
   VBuffer buf = dx.allocator.alloc(nullptr, size, usage, BufferHeap::Device);
   if(mem==nullptr && (usage&MemUsage::Initialized)==MemUsage::Initialized) {
-    DSharedPtr<VBuffer*> pbuf(new VBuffer(std::move(buf)));
-    pbuf.handler->fill(0x0,0,size);
-    return PBuffer(pbuf.handler);
+    auto pBuf = PBuffer(new VBuffer(std::move(buf)));
+
+    auto cmd = dx.dataMgr().get();
+    cmd->begin(SyncHint::NoPendingReads);
+    cmd->hold(pBuf); // NOTE: VBuffer might be deleted, before fill is finished
+    cmd->fill(*pBuf.handler, 0, 0x0, size);
+    cmd->end();
+
+    dx.dataMgr().submit(std::move(cmd));
+    return pBuf;
     }
   if(mem==nullptr) {
     return PBuffer(new VBuffer(std::move(buf)));
@@ -322,7 +329,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   cmd->begin(SyncHint::NoPendingReads);
   cmd->hold(pstage);
   cmd->hold(ptex);
-  cmd->discard(*ptex.handler);
+  cmd->bless(*ptex.handler, ResourceLayout::TransferDst);
 
   if(isCompressedFormat(frm)) {
     size_t blockSize  = Pixmap::blockSizeForFormat(frm);
@@ -365,38 +372,38 @@ AbstractGraphicsApi::PTexture VulkanApi::createStorage(Device* d,
                                                        const uint32_t w, const uint32_t h, uint32_t mipCnt,
                                                        TextureFormat frm) {
   Detail::VDevice& dx  = *reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VTexture tex = dx.allocator.alloc(w,h,0,mipCnt,frm,true);
 
-  Detail::VTexture buf = dx.allocator.alloc(w,h,0,mipCnt,frm,true);
-  Detail::DSharedPtr<Texture*> pbuf(new Detail::VTexture(std::move(buf)));
+  Detail::DSharedPtr<Texture*> ptex(new Detail::VTexture(std::move(tex)));
 
   auto cmd = dx.dataMgr().get();
   cmd->begin(SyncHint::NoPendingReads);
-  cmd->discard(*pbuf.handler);
-  cmd->fill(*pbuf.handler, 0);
-  cmd->hold(pbuf);
+  cmd->hold(ptex);
+  cmd->bless(*ptex.handler, ResourceLayout::Default);
+  cmd->fill(*ptex.handler, 0);
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
 
-  return PTexture(pbuf.handler);
+  return PTexture(ptex.handler);
   }
 
 AbstractGraphicsApi::PTexture VulkanApi::createStorage(Device* d,
                                                        const uint32_t w, const uint32_t h, const uint32_t depth, uint32_t mipCnt,
                                                        TextureFormat frm) {
-  Detail::VDevice& dx = *reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VDevice& dx  = *reinterpret_cast<Detail::VDevice*>(d);
+  Detail::VTexture tex = dx.allocator.alloc(w,h,depth,mipCnt,frm,true);
 
-  Detail::VTexture buf=dx.allocator.alloc(w,h,depth,mipCnt,frm,true);
-  Detail::DSharedPtr<Texture*> pbuf(new Detail::VTexture(std::move(buf)));
+  Detail::DSharedPtr<Texture*> ptex(new Detail::VTexture(std::move(tex)));
 
   auto cmd = dx.dataMgr().get();
   cmd->begin();
-  cmd->discard(*pbuf.handler);
-  cmd->fill(*pbuf.handler, 0);
-  cmd->hold(pbuf);
+  cmd->hold(ptex);
+  cmd->bless(*ptex.handler, ResourceLayout::Default);
+  cmd->fill(*ptex.handler, 0);
   cmd->end();
   dx.dataMgr().submit(std::move(cmd));
 
-  return PTexture(pbuf.handler);
+  return PTexture(ptex.handler);
   }
 
 AbstractGraphicsApi::AccelerationStructure* VulkanApi::createBottomAccelerationStruct(Device* d, const RtGeometry* geom, size_t size) {
@@ -421,7 +428,8 @@ void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PT
   Detail::VBuffer stage  = dx.allocator.alloc(nullptr, size, MemUsage::Transfer, BufferHeap::Readback);
 
   auto cmd = dx.dataMgr().get();
-  cmd->begin(SyncHint::NoPendingReads);
+  // cmd->begin(SyncHint::NoPendingReads);
+  cmd->begin();
   cmd->copy(stage,0, tx,w,h,mip);
   cmd->end();
 
