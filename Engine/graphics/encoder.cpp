@@ -307,7 +307,7 @@ void Tempest::Encoder<Tempest::CommandBuffer>::implSetFramebuffer(const Attachme
 
   impl->beginRendering(desc,rtSize+(zd ? 1 : 0),w,h,
                        frm,att,sw,imgId);
-  state.stage      = Rendering;
+  state.stage       = Rendering;
   state.curPipeline = nullptr;
   }
 

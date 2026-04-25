@@ -11,6 +11,41 @@ using namespace testing;
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+static std::string toString(SyncStage ss) {
+  std::stringstream text;
+  if((ss & SyncStage::TransferSrc)!=SyncStage::None)
+    text << "TransferSrc | ";
+  if((ss & SyncStage::TransferDst)!=SyncStage::None)
+    text << "TransferDst | ";
+  if((ss & SyncStage::TransferHost)!=SyncStage::None)
+    text << "TransferHost | ";
+  if((ss & SyncStage::Indirect)!=SyncStage::None)
+    text << "Indirect | ";
+  if((ss & SyncStage::GraphicsRead)!=SyncStage::None)
+    text << "GraphicsRead | ";
+  if((ss & SyncStage::GraphicsWrite)!=SyncStage::None)
+    text << "GraphicsWrite | ";
+  if((ss & SyncStage::GraphicsDraw)!=SyncStage::None)
+    text << "GraphicsDraw | ";
+  if((ss & SyncStage::GraphicsDepth)!=SyncStage::None)
+    text << "GraphicsDepth | ";
+  if((ss & SyncStage::ComputeRead)!=SyncStage::None)
+    text << "ComputeRead | ";
+  if((ss & SyncStage::ComputeWrite)!=SyncStage::None)
+    text << "ComputeWrite | ";
+  if((ss & SyncStage::RtAsRead)!=SyncStage::None)
+    text << "RtAsRead | ";
+  if((ss & SyncStage::RtAsWrite)!=SyncStage::None)
+    text << "RtAsWrite | ";
+
+  auto ret = text.str();
+  if(ret.rfind(" | ")==ret.size()-3)
+    ret.resize(ret.size()-3);
+  if(ret.empty())
+    return "SyncStage::None";
+  return ret;
+  }
+
 static std::string toString(ResourceLayout rs) {
   std::stringstream text;
   if(rs==ResourceLayout::Default)
@@ -78,12 +113,17 @@ struct TestCommandBuffer : Tempest::AbstractGraphicsApi::CommandBuffer {
   };
 
 void TestCommandBuffer::barrier(const AbstractGraphicsApi::SyncDesc& d, const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
+  Log::d("---");
   for(size_t i=0; i<cnt; ++i) {
     auto& d    = desc[i];
     auto  prev = toString(d.prev);
     if(d.discard)
       prev = "Discard";
-    Log::d("barrier {", prev, " -> ", toString(d.next), "}");
+    Log::d("transition {", prev, " -> ", toString(d.next), "}");
+    }
+
+  if(d.next!=SyncStage::None) {
+    Log::d("barrier {", toString(d.prev), " -> ", toString(d.next), "}");
     }
   }
 
@@ -92,9 +132,9 @@ TEST(main, ResourceStateBasic) {
   TestCommandBuffer cmd;
 
   ResourceState rs;
-  rs.setLayout(t, ResourceLayout::ColorAttach, true);
+  rs.setLayout(t, ResourceLayout::ColorAttach, 0, true);
   rs.flush(cmd);
-  rs.setLayout(t, ResourceLayout::Default, false);
+  rs.setLayout(t, ResourceLayout::Default, 0, false);
   rs.flush(cmd);
   }
 
@@ -181,5 +221,22 @@ TEST(main, ResourceStateIndirectAndUAVWithSubsequentWriteAccess) {
   rs.flush(cmd);
   }
 
+TEST(main, ResourceDrawAfterDraw) {
+  TestTexture       t;
+  TestCommandBuffer cmd;
+
+  ResourceState rs;
+  rs.onDrawUsage(NonUniqResId(0x1), AccessOp::Clear);
+  rs.setLayout(t, ResourceLayout::ColorAttach, 0, true);
+  rs.flush(cmd);
+  rs.setLayout(t, ResourceLayout::Default, 0);
+
+  rs.onDrawUsage(NonUniqResId(0x1), AccessOp::Clear);
+  rs.setLayout(t, ResourceLayout::ColorAttach, 0);
+  rs.flush(cmd);
+  rs.setLayout(t, ResourceLayout::Default, 0);
+
+  rs.finalize(cmd);
+  }
 
 

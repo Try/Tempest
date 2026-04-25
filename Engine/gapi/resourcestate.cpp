@@ -77,7 +77,7 @@ void ResourceState::onDrawUsage(NonUniqResId id, AccessOp loadOp) {
   if(loadOp==AccessOp::Readonly)
     u.read  = id; else
     u.write = id;
-  onUavUsage(u, PipelineStage::S_Graphics, false);
+  onUavUsage(u, PipelineStage::S_Draw, false);
   }
 
 void ResourceState::onUavUsage(NonUniqResId read, NonUniqResId write, PipelineStage st, bool host) {
@@ -85,32 +85,42 @@ void ResourceState::onUavUsage(NonUniqResId read, NonUniqResId write, PipelineSt
   onUavUsage(u, st, host);
   }
 
-void ResourceState::onUavUsage(const Usage& u, PipelineStage st, bool host) {
-  const SyncStage rd[PipelineStage::S_Count] = {SyncStage::TransferSrc, SyncStage::Indirect, SyncStage::RtAsRead,  SyncStage::ComputeRead,  SyncStage::GraphicsRead };
-  const SyncStage wr[PipelineStage::S_Count] = {SyncStage::TransferDst, SyncStage::None,     SyncStage::RtAsWrite, SyncStage::ComputeWrite, SyncStage::GraphicsWrite};
-  const SyncStage hv = (host ? SyncStage::TransferHost : SyncStage::None);
+static SyncStage toSyncStage(PipelineStage s, bool read) {
+  const auto GraphicsFbo = (SyncStage::GraphicsDraw | SyncStage::GraphicsDepth);
+  switch(s) {
+    case S_Transfer: return read ? SyncStage::TransferSrc  : SyncStage::TransferDst;
+    case S_Indirect: return read ? SyncStage::Indirect     : SyncStage::None;
+    case S_RtAs:     return read ? SyncStage::RtAsRead     : SyncStage::RtAsWrite;
+    case S_Compute:  return read ? SyncStage::ComputeRead  : SyncStage::ComputeWrite;
+    case S_Graphics: return read ? SyncStage::GraphicsRead : SyncStage::GraphicsWrite;
+    case S_Draw:     return read ? GraphicsFbo : GraphicsFbo;
+    case S_Count:    return SyncStage::None;
+    }
+  return SyncStage::None;
+  }
 
+void ResourceState::onUavUsage(const Usage& u, PipelineStage st, bool host) {
   for(PipelineStage p = PipelineStage::S_First; p<PipelineStage::S_Count; p = PipelineStage(p+1)) {
     if((uavWrite[st].depend[p] & u.write)!=0) {
       // WaW - execution+cache
-      uavSrcBarrier = uavSrcBarrier | rd[p]  | wr[p];
-      uavDstBarrier = uavDstBarrier | rd[st] | wr[st];
+      uavSrcBarrier = uavSrcBarrier | toSyncStage(p,  true) | toSyncStage(p,  false);
+      uavDstBarrier = uavDstBarrier | toSyncStage(st, true) | toSyncStage(st, false);
 
       uavRead [st].depend[p] = NonUniqResId::I_None;
       uavWrite[st].depend[p] = NonUniqResId::I_None;
       }
     else if((uavWrite[st].depend[p] & u.read)!=0) {
       // RaW barrier - execution+cache
-      uavSrcBarrier = uavSrcBarrier | rd[p] | wr[p];
-      uavDstBarrier = uavDstBarrier | rd[st];
+      uavSrcBarrier = uavSrcBarrier | toSyncStage(p,  true) | toSyncStage(p,  false);
+      uavDstBarrier = uavDstBarrier | toSyncStage(st, true);
 
       uavRead [st].depend[p] = NonUniqResId::I_None;
       uavWrite[st].depend[p] = NonUniqResId::I_None;
       }
     else if((uavRead[st].depend[p] & u.write)!=0) {
       // WaR barrier - only exec barrier
-      uavSrcBarrier = uavSrcBarrier | rd[p];
-      uavDstBarrier = uavDstBarrier | wr[st];
+      uavSrcBarrier = uavSrcBarrier | toSyncStage(p,  true);
+      uavDstBarrier = uavDstBarrier | toSyncStage(st, false);
 
       uavRead [st].depend[p] = NonUniqResId::I_None;
       uavWrite[st].depend[p] = NonUniqResId::I_None;
@@ -121,7 +131,7 @@ void ResourceState::onUavUsage(const Usage& u, PipelineStage st, bool host) {
     }
 
   if(host) {
-    uavDstBarrier = uavDstBarrier | hv;
+    uavDstBarrier = uavDstBarrier | SyncStage::TransferHost;
     }
 
   if(u.speculative)

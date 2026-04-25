@@ -259,11 +259,10 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
 
   resState.joinWriters(PipelineStage::S_Indirect);
   resState.joinWriters(PipelineStage::S_Graphics);
+  resState.joinWriters(PipelineStage::S_Draw);
   // resState.flush(*this); //debug
 
   for(size_t i=0; i<descSize; ++i) {
-    if(desc[i].load==AccessOp::Readonly)
-      continue;
     NonUniqResId nonUniqId = NonUniqResId::I_None;
     if(sw[i] != nullptr) {
       //auto& t = *reinterpret_cast<VSwapchain*>(sw[i]);
@@ -316,7 +315,7 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
         }
       else {
         auto &t = *reinterpret_cast<VTexture*>(att[i]);
-        imageView   = t.imgView;
+        imageView   = t.fboView(0);
         imageFormat = t.format;
         }
 
