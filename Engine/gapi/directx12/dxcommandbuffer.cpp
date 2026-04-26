@@ -1139,7 +1139,7 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Texture& dstTex, size_t width, s
 void DxCommandBuffer::fill(AbstractGraphicsApi::Texture& dstTex, uint32_t val) {
   const auto hSize     = dev.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
   auto&      dst       = reinterpret_cast<DxTexture&>(dstTex);
-  auto       gpu       = pushDescriptors.alloc(dst.mipCnt,0).first;
+  auto       gpu       = pushDescriptors.alloc(dst.mipCnt);
   auto       cpu       = ensureCpuDescriptors(dst.mipCnt);
 
   resState.onTranferUsage(NonUniqResId::I_None, dst.nonUniqId, false);
@@ -1175,6 +1175,33 @@ void DxCommandBuffer::fill(AbstractGraphicsApi::Texture& dstTex, uint32_t val) {
     c.ptr += hSize*i;
     impl->ClearUnorderedAccessViewUint(g, c, dst.impl.get(), val4, 0, nullptr);
     }
+  }
+
+void DxCommandBuffer::fill(AbstractGraphicsApi::Buffer& dstBuf, size_t offset, uint32_t val, size_t size) {
+  const auto hSize     = dev.device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+  auto&      dst       = reinterpret_cast<DxBuffer&>(dstBuf);
+  auto       gpu       = pushDescriptors.alloc(1);
+  auto       cpu       = ensureCpuDescriptors(1);
+
+  resState.onTranferUsage(NonUniqResId::I_None, dst.nonUniqId, false);
+  resState.flush(*this);
+  setupHeaps();
+
+  D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+  desc.Format              = DXGI_FORMAT_R32_TYPELESS;
+  desc.ViewDimension       = D3D12_UAV_DIMENSION_BUFFER;
+  desc.Buffer.FirstElement = UINT(offset/4);
+  desc.Buffer.NumElements  = UINT((size+3)/4); // UAV size is required to be 4-byte aligned.
+  desc.Buffer.Flags        = D3D12_BUFFER_UAV_FLAG_RAW;
+
+  auto g = dev.dalloc->handle(gpu);
+  auto c = cpu;
+
+  dev.device->CreateUnorderedAccessView(dst.impl.get(),nullptr,&desc,g);
+  dev.device->CreateUnorderedAccessView(dst.impl.get(),nullptr,&desc,c);
+
+  UINT val4[] = {val,val,val,val};
+  impl->ClearUnorderedAccessViewUint(dev.dalloc->gpuHandle(gpu), c, dst.impl.get(), val4, 0, nullptr);
   }
 
 void DxCommandBuffer::buildBlas(AbstractGraphicsApi::Buffer& bbo, AbstractGraphicsApi::BlasBuildCtx& rtctx, AbstractGraphicsApi::Buffer& scratch) {

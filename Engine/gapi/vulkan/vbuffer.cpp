@@ -42,7 +42,7 @@ void VBuffer::update(const void* data, size_t off, size_t size) {
     Detail::DSharedPtr<Buffer*> pBuf(this);
 
     auto cmd = dx.dataMgr().get();
-    cmd->begin(SyncHint::NoPendingReads);
+    cmd->begin();
     cmd->hold(pBuf); // NOTE: VBuffer may be deleted, before copy is finished
     cmd->copy(*this, off, data, size);
     cmd->end();
@@ -52,6 +52,7 @@ void VBuffer::update(const void* data, size_t off, size_t size) {
     }
 
   auto stage = dx.dataMgr().allocStagingMemory(data,size,MemUsage::Transfer,BufferHeap::Upload);
+  stage.nonUniqId = NonUniqResId::I_None;
 
   Detail::DSharedPtr<Buffer*> pStage(new Detail::VBuffer(std::move(stage)));
   Detail::DSharedPtr<Buffer*> pBuf  (this);
@@ -75,9 +76,10 @@ void VBuffer::read(void* out, size_t off, size_t size) {
     }
 
   auto stage = dx.dataMgr().allocStagingMemory(nullptr,size,MemUsage::Transfer,BufferHeap::Readback);
+  stage.nonUniqId = NonUniqResId::I_None;
 
   auto cmd = dx.dataMgr().get();
-  cmd->begin(SyncHint::NoPendingReads);
+  cmd->begin();
   cmd->copy(stage,0, *this,off,size);
   cmd->end();
 

@@ -37,9 +37,6 @@ class DxBuffer : public AbstractGraphicsApi::Buffer {
     void  updateByStaging(DxBuffer* stage, const void* data, size_t offDst, size_t offSrc, size_t size);
     void  updateByMapped (DxBuffer& stage, const void* data, size_t off, size_t size);
 
-    void  fillByStaging  (DxBuffer* stage, uint32_t data, size_t offDst, size_t offSrc, size_t size);
-    void  fillByMapped   (DxBuffer& stage, uint32_t data, size_t off, size_t size);
-
     void  readFromStaging(DxBuffer& stage, void* data, size_t off, size_t size);
     void  readFromMapped (DxBuffer& stage, void* data, size_t off, size_t size);
   };

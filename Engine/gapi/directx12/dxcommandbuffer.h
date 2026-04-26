@@ -86,6 +86,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void copyNative(AbstractGraphicsApi::Buffer& dest, size_t offset, const AbstractGraphicsApi::Texture& src, uint32_t width, uint32_t height, uint32_t mip);
 
     void fill(AbstractGraphicsApi::Texture& dest, uint32_t val);
+    void fill(AbstractGraphicsApi::Buffer&  dest, size_t offsetDest, uint32_t val, size_t size);
 
     void buildBlas(AbstractGraphicsApi::Buffer& bbo, AbstractGraphicsApi::BlasBuildCtx& rtctx, AbstractGraphicsApi::Buffer& scratch);
     void buildTlas(AbstractGraphicsApi::Buffer& tbo, AbstractGraphicsApi::Buffer& instances, uint32_t numInstances,
