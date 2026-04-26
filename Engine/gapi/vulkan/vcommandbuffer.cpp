@@ -255,13 +255,6 @@ bool VCommandBuffer::isRecording() const {
   return state!=NoRecording;
   }
 
-void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
-                                    uint32_t width, uint32_t height,
-                                    const TextureFormat* frm,
-                                    AbstractGraphicsApi::Texture** att,
-                                    AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) {
-  }
-
 void VCommandBuffer::beginRendering(const FrameBufferDesc& fbo, size_t fboSize, uint32_t width, uint32_t height) {
   for(size_t i=0; i<fboSize; ++i) {
     if(fbo.sw[i]!=nullptr)

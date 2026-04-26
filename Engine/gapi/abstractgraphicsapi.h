@@ -577,12 +577,7 @@ namespace Tempest {
       struct CommandBuffer:NoCopy {
         virtual ~CommandBuffer()=default;
 
-        virtual void beginRendering(const AttachmentDesc* desc, size_t descSize,
-                                    uint32_t w, uint32_t h,
-                                    const TextureFormat* frm,
-                                    AbstractGraphicsApi::Texture** att,
-                                    AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) = 0;
-        virtual void beginRendering(const Detail::FrameBufferDesc& fbo, size_t fboSize, uint32_t w, uint32_t h);
+        virtual void beginRendering(const Detail::FrameBufferDesc& fbo, size_t fboSize, uint32_t w, uint32_t h) = 0;
         virtual void endRendering() = 0;
 
         virtual void barrier(const SyncDesc& sync, const BarrierDesc* desc, size_t cnt) = 0;

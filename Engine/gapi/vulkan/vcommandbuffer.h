@@ -44,11 +44,6 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     void end() override;
     bool isRecording() const override;
 
-    void beginRendering(const AttachmentDesc* desc, size_t descSize,
-                        uint32_t w, uint32_t h,
-                        const TextureFormat* frm,
-                        AbstractGraphicsApi::Texture** att,
-                        AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) override;
     void beginRendering(const Detail::FrameBufferDesc& fbo, size_t fboSize, uint32_t w, uint32_t h) override;
     void endRendering() override;
 

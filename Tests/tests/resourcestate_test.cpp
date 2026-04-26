@@ -70,11 +70,7 @@ struct TestTexture : Tempest::AbstractGraphicsApi::Texture {
   };
 
 struct TestCommandBuffer : Tempest::AbstractGraphicsApi::CommandBuffer {
-  void beginRendering(const AttachmentDesc* desc, size_t descSize,
-                      uint32_t w, uint32_t h,
-                      const TextureFormat* frm,
-                      AbstractGraphicsApi::Texture** att,
-                      AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) override {}
+  void beginRendering(const FrameBufferDesc& fbo, size_t fboSize, uint32_t width, uint32_t height) override {}
   void endRendering() override {}
 
   void barrier(const AbstractGraphicsApi::SyncDesc& d, const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) override;

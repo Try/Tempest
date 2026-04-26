@@ -73,12 +73,6 @@ bool AbstractGraphicsApi::Props::hasAtomicFormat(TextureFormat f) const {
   return (atomFormat&m)!=0;
   }
 
-void AbstractGraphicsApi::CommandBuffer::beginRendering(const Detail::FrameBufferDesc& f, size_t fboSize, uint32_t w, uint32_t h) {
-  //TODO: remove
-  auto fbo = f;
-  beginRendering(fbo.desc, fboSize, w, h, fbo.frm, fbo.att, fbo.sw, fbo.imgId);
-  }
-
 void AbstractGraphicsApi::CommandBuffer::begin(Detail::SyncHint) {
   begin();
   }

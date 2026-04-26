@@ -74,35 +74,32 @@ void MtCommandBuffer::reset() {
   impl->retain();
   }
 
-void MtCommandBuffer::beginRendering(const AttachmentDesc* d, size_t descSize,
-                                     uint32_t width, uint32_t height, const TextureFormat* frm,
-                                     AbstractGraphicsApi::Texture** att,
-                                     AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) {
+void MtCommandBuffer::beginRendering(const FrameBufferDesc& fbo, size_t fboSize, uint32_t width, uint32_t height) {
   curFbo.depthFormat = MTL::PixelFormatInvalid;
   curFbo.numColors   = 0;
 
   auto pool = NsPtr<NS::AutoreleasePool>::init();
   auto desc = NsPtr<MTL::RenderPassDescriptor>::init();
-  for(size_t i=0; i<descSize; ++i) {
-    auto& dx = d[i];
+  for(size_t i=0; i<fboSize; ++i) {
+    auto& dx = fbo.desc[i];
     if(dx.zbuffer!=nullptr) {
-      auto& t = *reinterpret_cast<MtTexture*>(att[i]);
+      auto& t = *reinterpret_cast<MtTexture*>(fbo.att[i]);
       desc->depthAttachment()->setTexture    (t.impl.get());
       desc->depthAttachment()->setLoadAction (mkLoadOp (dx.load));
       desc->depthAttachment()->setStoreAction(mkStoreOp(dx.store));
       desc->depthAttachment()->setClearDepth (dx.clear.x);
-      curFbo.depthFormat = nativeFormat(frm[i]);
+      curFbo.depthFormat = nativeFormat(fbo.frm[i]);
       continue;
       }
     auto clr = desc->colorAttachments()->object(i);
-    if(sw[i]!=nullptr) {
-      auto& s = *reinterpret_cast<MtSwapchain*>(sw[i]);
-      clr->setTexture(s.img[imgId[i]].tex.get());
+    if(fbo.sw[i]!=nullptr) {
+      auto& s = *reinterpret_cast<MtSwapchain*>(fbo.sw[i]);
+      clr->setTexture(s.img[fbo.imgId[i]].tex.get());
       curFbo.colorFormat[curFbo.numColors] = s.format();
       } else {
-      auto& t = *reinterpret_cast<MtTexture*>(att[i]);
+      auto& t = *reinterpret_cast<MtTexture*>(fbo.att[i]);
       clr->setTexture(t.impl.get());
-      curFbo.colorFormat[curFbo.numColors] = nativeFormat(frm[i]);
+      curFbo.colorFormat[curFbo.numColors] = nativeFormat(fbo.frm[i]);
       }
     clr->setLoadAction (mkLoadOp (dx.load));
     clr->setStoreAction(mkStoreOp(dx.store));
