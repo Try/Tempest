@@ -17,10 +17,11 @@ class MtTexture : public Tempest::AbstractGraphicsApi::Texture {
     MtTexture(MtDevice &d, const Pixmap& pm, uint32_t mips, TextureFormat frm);
     ~MtTexture();
 
-    uint32_t mipCount() const override;
+    NonUniqResId syncId() const override { return NonUniqResId::I_None; }
+    uint32_t     mipCount() const override;
+
     void     readPixels(Pixmap& out, TextureFormat frm,
                         const uint32_t w, const uint32_t h, uint32_t mip);
-
     uint32_t bitCount();
 
     MTL::Texture&       view(ComponentMapping m, uint32_t mipLevel);
