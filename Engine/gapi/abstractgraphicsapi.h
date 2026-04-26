@@ -528,7 +528,7 @@ namespace Tempest {
         };
       struct Texture:Shared  {
         virtual uint32_t      mipCount() const = 0;
-        virtual NonUniqResId  syncId() const;
+        virtual NonUniqResId  syncId() const = 0;
         };
       struct Pipeline:Shared {
         virtual IVec3  workGroupSize() const = 0;

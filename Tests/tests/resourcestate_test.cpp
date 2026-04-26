@@ -66,7 +66,8 @@ static std::string toString(ResourceLayout rs) {
   }
 
 struct TestTexture : Tempest::AbstractGraphicsApi::Texture {
-  uint32_t mipCount() const override { return 1; }
+  uint32_t      mipCount() const override { return 1; }
+  NonUniqResId  syncId()   const override { return NonUniqResId(0x1); }
   };
 
 struct TestCommandBuffer : Tempest::AbstractGraphicsApi::CommandBuffer {
@@ -221,16 +222,22 @@ TEST(main, ResourceDrawAfterDraw) {
   TestTexture       t;
   TestCommandBuffer cmd;
 
-  ResourceState rs;
-  rs.onUavUsage(NonUniqResId::I_None, NonUniqResId(0x1), S_Draw);
-  rs.setLayout(t, ResourceLayout::ColorAttach, 0, true);
-  rs.flush(cmd);
-  rs.setLayout(t, ResourceLayout::Default, 0);
+  FrameBufferDesc fbo = {};
+  fbo.att [0] = &t;
+  fbo.frm [0] = TextureFormat::RGBA8;
+  fbo.desc[0].load  = AccessOp::Clear;
+  fbo.desc[0].store = AccessOp::Preserve;
 
-  rs.onUavUsage(NonUniqResId::I_None, NonUniqResId(0x1), S_Draw);
-  rs.setLayout(t, ResourceLayout::ColorAttach, 0);
+  ResourceState rs;
+  rs.beginRendering(cmd, fbo);
   rs.flush(cmd);
-  rs.setLayout(t, ResourceLayout::Default, 0);
+  rs.endRendering(cmd);
+
+  fbo.desc[0].load  = AccessOp::Preserve;
+  fbo.desc[0].store = AccessOp::Preserve;
+  rs.beginRendering(cmd, fbo);
+  rs.flush(cmd);
+  rs.endRendering(cmd);
 
   rs.finalize(cmd);
   }

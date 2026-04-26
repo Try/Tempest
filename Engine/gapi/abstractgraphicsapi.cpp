@@ -129,10 +129,6 @@ std::shared_ptr<AbstractGraphicsApi::Fence> AbstractGraphicsApi::submit(Device* 
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }
 
-NonUniqResId AbstractGraphicsApi::Texture::syncId() const {
-  return NonUniqResId::I_None;
-  }
-
 NonUniqResId AbstractGraphicsApi::Swapchain::syncId() const {
   return NonUniqResId(0x1);
   }
