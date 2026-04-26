@@ -241,6 +241,14 @@ void VCommandBuffer::end() {
   state = NoRecording;
 
   pushChunk();
+
+  auto node = chunks.begin();
+  for(size_t i=0; i<chunks.size(); ++i) {
+    auto cmd = node->val[i%chunks.chunkSize].impl;
+    vkAssert(vkEndCommandBuffer(cmd));
+    if(i+1==chunks.chunkSize)
+      node = node->next;
+    }
   }
 
 bool VCommandBuffer::isRecording() const {
@@ -252,29 +260,18 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
                                     const TextureFormat* frm,
                                     AbstractGraphicsApi::Texture** att,
                                     AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) {
-  for(size_t i=0; i<descSize; ++i) {
-    if(sw[i]!=nullptr)
-      addDependency(*reinterpret_cast<VSwapchain*>(sw[i]),imgId[i]);
-    }
+  }
 
-  resState.joinWriters(PipelineStage::S_Indirect);
-  resState.joinWriters(PipelineStage::S_Graphics);
-  resState.joinWriters(PipelineStage::S_Draw);
-  // resState.flush(*this); //debug
-
-  for(size_t i=0; i<descSize; ++i) {
-    NonUniqResId nonUniqId = NonUniqResId::I_None;
-    if(sw[i] != nullptr) {
-      //auto& t = *reinterpret_cast<VSwapchain*>(sw[i]);
-      nonUniqId = NonUniqResId(0x1); //FIXME: track swapchain for real
-      }
-    else {
-      auto& t = *reinterpret_cast<VTexture*>(att[i]);
-      nonUniqId = t.nonUniqId;
-      }
-    resState.onDrawUsage(nonUniqId, desc[i].load);
+void VCommandBuffer::beginRendering(const FrameBufferDesc& fbo, size_t fboSize, uint32_t width, uint32_t height) {
+  for(size_t i=0; i<fboSize; ++i) {
+    if(fbo.sw[i]!=nullptr)
+      addDependency(*reinterpret_cast<VSwapchain*>(fbo.sw[i]), fbo.imgId[i]);
     }
-  resState.setRenderpass(*this,desc,descSize,frm,att,sw,imgId);
+  resState.beginRendering(*this,fbo);
+  if(state==Idle) {
+    // flush right before end of the render-pass, otherwise
+    resState.flush(*this);
+    }
 
   bindings.read  = NonUniqResId::I_None;
   bindings.write = NonUniqResId::I_None;
@@ -307,47 +304,47 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
 
     VkImageView imageView   = VK_NULL_HANDLE;
     VkFormat    imageFormat = VK_FORMAT_UNDEFINED;
-    for(size_t i=0; i<descSize; ++i) {
-      if(sw[i] != nullptr) {
-        auto& t = *reinterpret_cast<VSwapchain*>(sw[i]);
-        imageView   = t.views[imgId[i]];
+    for(size_t i=0; i<fboSize; ++i) {
+      if(fbo.sw[i] != nullptr) {
+        auto& t = *reinterpret_cast<VSwapchain*>(fbo.sw[i]);
+        imageView   = t.views[fbo.imgId[i]];
         imageFormat = t.format();
         }
       else {
-        auto &t = *reinterpret_cast<VTexture*>(att[i]);
+        auto &t = *reinterpret_cast<VTexture*>(fbo.att[i]);
         imageView   = t.fboView(0);
         imageFormat = t.format;
         }
 
-      auto& att = isDepthFormat(frm[i]) ? depthAtt : colorAtt[info.colorAttachmentCount];
+      auto& att = isDepthFormat(fbo.frm[i]) ? depthAtt : colorAtt[info.colorAttachmentCount];
       att.sType     = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
       att.imageView = imageView;
 
-      if(isDepthFormat(frm[i])) {
-        if(desc[i].load==AccessOp::Readonly)
+      if(isDepthFormat(fbo.frm[i])) {
+        if(fbo.desc[i].load==AccessOp::Readonly)
           att.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL; else
           att.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         info.pDepthAttachment = &att;
         passDyn.depthAttachmentFormat = imageFormat;
         auto& clr = att.clearValue;
-        clr.depthStencil.depth = desc[i].clear.x;
+        clr.depthStencil.depth = fbo.desc[i].clear.x;
         } else {
         passDyn.colorFrm[info.colorAttachmentCount] = imageFormat;
         ++info.colorAttachmentCount;
 
         att.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         auto& clr = att.clearValue;
-        clr.color.float32[0] = desc[i].clear.x;
-        clr.color.float32[1] = desc[i].clear.y;
-        clr.color.float32[2] = desc[i].clear.z;
-        clr.color.float32[3] = desc[i].clear.w;
+        clr.color.float32[0] = fbo.desc[i].clear.x;
+        clr.color.float32[1] = fbo.desc[i].clear.y;
+        clr.color.float32[2] = fbo.desc[i].clear.z;
+        clr.color.float32[3] = fbo.desc[i].clear.w;
         }
 
       att.resolveMode        = VK_RESOLVE_MODE_NONE;
       att.resolveImageView   = VK_NULL_HANDLE;
       att.resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-      att.loadOp             = mkLoadOp(desc[i].load);
-      att.storeOp            = mkStoreOp(desc[i].store);
+      att.loadOp             = mkLoadOp(fbo.desc[i].load);
+      att.storeOp            = mkStoreOp(fbo.desc[i].store);
       }
     passDyn.colorAttachmentCount = info.colorAttachmentCount;
     vkCmdBeginRenderingKHR(impl,&info);
@@ -362,9 +359,11 @@ void VCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize,
 
 void VCommandBuffer::endRendering() {
   vkCmdEndRenderingKHR(impl);
+  resState.flush(*this);
+  resState.endRendering(*this);
 
-  resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Graphics);
   state = PostRenderPass;
+  resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Graphics);
   }
 
 void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
@@ -750,7 +749,9 @@ void VCommandBuffer::fill(AbstractGraphicsApi::Texture& dstTex, uint32_t val) {
   rgn.baseMipLevel   = 0;
   rgn.levelCount     = VK_REMAINING_MIP_LEVELS;
   rgn.layerCount     = VK_REMAINING_ARRAY_LAYERS;
-  vkCmdClearColorImage(impl, dst.impl, VK_IMAGE_LAYOUT_GENERAL, &v, 1, &rgn);
+
+  const VkImageLayout layout = dst.isStorageImage ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+  vkCmdClearColorImage(impl, dst.impl, layout, &v, 1, &rgn);
 
   if(!dst.isStorageImage)
     resState.setLayout(dst, ResourceLayout::Default, ResourceState::AllMips);
@@ -1043,7 +1044,30 @@ void VCommandBuffer::barrier(const AbstractGraphicsApi::SyncDesc& s, const Abstr
       }
     }
 
-  vkCmdPipelineBarrier(impl, srcStageMask, dstStageMask, VkDependencyFlags(0),
+  auto cmd = impl;
+  if(state==RenderPass) {
+    if(chunks.size()==0) {
+      VkCommandBuffer cmdBuf = nullptr;
+      VkCommandBufferAllocateInfo allocInfo = {};
+      allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+      allocInfo.commandPool        = pool.impl;
+      allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+      allocInfo.commandBufferCount = 1;
+      vkAssert(vkAllocateCommandBuffers(device.device.impl,&allocInfo,&cmdBuf));
+
+      VkCommandBufferBeginInfo beginInfo = {};
+      beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+      beginInfo.flags            = 0;
+      beginInfo.pInheritanceInfo = nullptr;
+      vkAssert(vkBeginCommandBuffer(cmdBuf,&beginInfo));
+
+      Chunk ch;
+      ch.impl = cmdBuf;
+      chunks.push(ch);
+      }
+    cmd = chunks.last().impl;
+    }
+  vkCmdPipelineBarrier(cmd, srcStageMask, dstStageMask, VkDependencyFlags(0),
                        memCount, &memBarrier, bufCount, bufBarrier, imgCount, imgBarrier);
   }
 
@@ -1088,7 +1112,6 @@ void VCommandBuffer::vkCmdEndRenderingKHR(VkCommandBuffer impl) {
 
 void VCommandBuffer::pushChunk() {
   if(impl!=nullptr) {
-    vkAssert(vkEndCommandBuffer(impl));
     Chunk ch;
     ch.impl = impl;
     chunks.push(ch);
@@ -1112,7 +1135,7 @@ void VCommandBuffer::newChunk() {
   beginInfo.pInheritanceInfo = nullptr;
   vkAssert(vkBeginCommandBuffer(impl,&beginInfo));
 
-  curVbo = VK_NULL_HANDLE;
+  curVbo         = VK_NULL_HANDLE;
   pushData.durty = true;
   bindings.durty = true;
   }

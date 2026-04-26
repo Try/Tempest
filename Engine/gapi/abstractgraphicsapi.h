@@ -5,7 +5,6 @@
 #include <Tempest/Matrix4x4>
 #include <Tempest/Vec>
 
-#include <initializer_list>
 #include <memory>
 #include <atomic>
 #include <vector>
@@ -304,7 +303,8 @@ namespace Tempest {
       NoPendingReads,
       };
 
-    class ResourceState;
+    class  ResourceState;
+    struct FrameBufferDesc;
     }
 
   class Attachment;
@@ -521,12 +521,14 @@ namespace Tempest {
         virtual ~Swapchain()=default;
         virtual void          reset()=0;
         virtual uint32_t      currentBackBufferIndex()=0;
+        virtual NonUniqResId  syncId() const;
         virtual uint32_t      imageCount() const=0;
         virtual uint32_t      w() const=0;
         virtual uint32_t      h() const=0;
         };
       struct Texture:Shared  {
         virtual uint32_t      mipCount() const = 0;
+        virtual NonUniqResId  syncId() const;
         };
       struct Pipeline:Shared {
         virtual IVec3  workGroupSize() const = 0;
@@ -580,6 +582,7 @@ namespace Tempest {
                                     const TextureFormat* frm,
                                     AbstractGraphicsApi::Texture** att,
                                     AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) = 0;
+        virtual void beginRendering(const Detail::FrameBufferDesc& fbo, size_t fboSize, uint32_t w, uint32_t h);
         virtual void endRendering() = 0;
 
         virtual void barrier(const SyncDesc& sync, const BarrierDesc* desc, size_t cnt) = 0;
@@ -681,5 +684,14 @@ namespace Detail {
 
     bool contains(const AbstractGraphicsApi::NoCopy* res) const;
     };
+
+  struct FrameBufferDesc {
+    TextureFormat                   frm  [MaxFramebufferAttachments+1] = {};
+    AttachmentDesc                  desc [MaxFramebufferAttachments+1] = {};
+    AbstractGraphicsApi::Texture*   att  [MaxFramebufferAttachments+1] = {};
+    AbstractGraphicsApi::Swapchain* sw   [MaxFramebufferAttachments+1] = {};
+    uint32_t                        imgId[MaxFramebufferAttachments+1] = {};
+    };
+
   };
 }

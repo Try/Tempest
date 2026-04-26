@@ -330,6 +330,7 @@ AbstractGraphicsApi::PTexture VulkanApi::createTexture(AbstractGraphicsApi::Devi
   cmd->hold(pstage);
   cmd->hold(ptex);
   cmd->bless(*ptex.handler, ResourceLayout::TransferDst);
+  // cmd->discard(*ptex.handler);
 
   if(isCompressedFormat(frm)) {
     size_t blockSize  = Pixmap::blockSizeForFormat(frm);

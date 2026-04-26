@@ -7,33 +7,37 @@ ResourceState::ResourceState() {
   fillReads();
   }
 
-void ResourceState::setRenderpass(AbstractGraphicsApi::CommandBuffer& cmd,
-                                  const AttachmentDesc* desc, size_t descSize,
-                                  const TextureFormat* frm, AbstractGraphicsApi::Texture** att,
-                                  AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) {
-  for(size_t i=0; i<descSize; ++i) {
-    const bool discard = desc[i].load!=AccessOp::Preserve;
-    if(isDepthFormat(frm[i]) && desc[i].load==AccessOp::Readonly)
-      setLayout(*att[i],ResourceLayout::DepthReadOnly,0,false);
-    else if(isDepthFormat(frm[i]))
-      setLayout(*att[i],ResourceLayout::DepthAttach,0,discard);
-    else if(frm[i]==TextureFormat::Undefined)
-      setLayout(*sw[i],imgId[i],ResourceLayout::ColorAttach,discard);
-    else {
-      setLayout(*att[i],ResourceLayout::ColorAttach,0,discard);
-      }
-    }
-  flush(cmd);
-  for(size_t i=0; i<descSize; ++i) {
-    const bool discard = desc[i].store!=AccessOp::Preserve;
-    if(isDepthFormat(frm[i]) && desc[i].load==AccessOp::Readonly)
-      setLayout(*att[i],ResourceLayout::Default,0,false);
-    else if(isDepthFormat(frm[i]))
-      setLayout(*att[i],ResourceLayout::Default,0,false);
-    else if(frm[i]==TextureFormat::Undefined)
-      setLayout(*sw[i],imgId[i],ResourceLayout::Default,discard);
+void ResourceState::beginRendering(AbstractGraphicsApi::CommandBuffer& cmd, const Detail::FrameBufferDesc& desc) {
+  fbo = desc;
+  for(size_t i=0;; ++i) {
+    if(fbo.att[i]==nullptr && fbo.sw[i]==nullptr)
+      break;
+    const bool discard = fbo.desc[i].load!=AccessOp::Preserve;
+    if(isDepthFormat(fbo.frm[i]) && fbo.desc[i].load==AccessOp::Readonly)
+      setLayout(*fbo.att[i],ResourceLayout::DepthReadOnly,0,false);
+    else if(isDepthFormat(fbo.frm[i]))
+      setLayout(*fbo.att[i],ResourceLayout::DepthAttach,0,discard);
+    else if(fbo.frm[i]==TextureFormat::Undefined)
+      setLayout(*fbo.sw[i],fbo.imgId[i],ResourceLayout::ColorAttach,discard);
     else
-      setLayout(*att[i],ResourceLayout::Default,0,discard);
+      setLayout(*fbo.att[i],ResourceLayout::ColorAttach,0,discard);
+    }
+  }
+
+void ResourceState::endRendering(AbstractGraphicsApi::CommandBuffer& cmd) {
+  for(size_t i=0;; ++i) {
+    if(fbo.att[i]==nullptr && fbo.sw[i]==nullptr)
+      break;
+
+    const bool discard = fbo.desc[i].store!=AccessOp::Preserve;
+    if(isDepthFormat(fbo.frm[i]) && fbo.desc[i].load==AccessOp::Readonly)
+      setLayout(*fbo.att[i],ResourceLayout::Default,0,false);
+    else if(isDepthFormat(fbo.frm[i]))
+      setLayout(*fbo.att[i],ResourceLayout::Default,0,false);
+    else if(fbo.frm[i]==TextureFormat::Undefined)
+      setLayout(*fbo.sw[i],fbo.imgId[i],ResourceLayout::Default,discard);
+    else
+      setLayout(*fbo.att[i],ResourceLayout::Default,0,discard);
     }
   }
 
@@ -70,14 +74,6 @@ void ResourceState::forceLayout(AbstractGraphicsApi::Texture& a, ResourceLayout 
 void ResourceState::onTranferUsage(NonUniqResId read, NonUniqResId write, bool host) {
   ResourceState::Usage u = {read, write, false};
   onUavUsage(u, PipelineStage::S_Transfer, host);
-  }
-
-void ResourceState::onDrawUsage(NonUniqResId id, AccessOp loadOp) {
-  ResourceState::Usage u = {};
-  if(loadOp==AccessOp::Readonly)
-    u.read  = id; else
-    u.write = id;
-  onUavUsage(u, PipelineStage::S_Draw, false);
   }
 
 void ResourceState::onUavUsage(NonUniqResId read, NonUniqResId write, PipelineStage st, bool host) {
@@ -208,6 +204,37 @@ ResourceState::ImgState& ResourceState::findImg(AbstractGraphicsApi::Texture* im
 void ResourceState::flush(AbstractGraphicsApi::CommandBuffer& cmd) {
   AbstractGraphicsApi::BarrierDesc barrier[MaxBarriers];
   uint8_t                          barrierCnt = 0;
+
+  for(auto& i:imgState) {
+    const auto nonUniqId = (i.sw!=nullptr) ? i.sw->syncId() : i.img->syncId();
+
+    if(i.next==ResourceLayout::ColorAttach || i.next==ResourceLayout::DepthAttach) {
+      /* Use cases:
+       *   read/idle -> draw, will act as WaR barrier
+       *   draw      -> draw, is WaW barrier
+       */
+      onUavUsage(NonUniqResId::I_None, nonUniqId, S_Draw);
+      }
+    else if(i.last==ResourceLayout::ColorAttach || i.last==ResourceLayout::DepthAttach) {
+      /* Use cases:
+       *   draw -> read, will act as RaW barrier
+       */
+      onUavUsage(nonUniqId, NonUniqResId::I_None, S_Draw);
+      }
+
+    /*
+    if(i.last!=i.next) {
+      if(i.next==ResourceLayout::TransferSrc || i.next==ResourceLayout::TransferDst) {
+        // transition from something -> transfer is write opration in Vulkan
+        onUavUsage(NonUniqResId::I_None, nonUniqId, S_Transfer);
+        }
+      else if(i.last==ResourceLayout::TransferSrc || i.last==ResourceLayout::TransferDst) {
+        // transition from transfer -> else is write opration in Vulkan
+        onUavUsage(NonUniqResId::I_None, nonUniqId, S_Transfer);
+        }
+      }
+    */
+    }
 
   AbstractGraphicsApi::SyncDesc d;
   if(uavDstBarrier!=SyncStage::None) {

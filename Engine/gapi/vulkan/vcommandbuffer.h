@@ -49,6 +49,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
                         const TextureFormat* frm,
                         AbstractGraphicsApi::Texture** att,
                         AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) override;
+    void beginRendering(const Detail::FrameBufferDesc& fbo, size_t fboSize, uint32_t w, uint32_t h) override;
     void endRendering() override;
 
     void setViewport(const Rect& r) override;

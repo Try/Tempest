@@ -329,29 +329,15 @@ bool DxCommandBuffer::isRecording() const {
 void DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize, uint32_t w, uint32_t h,
                                      const TextureFormat* frm, AbstractGraphicsApi::Texture** att,
                                      AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) {
+  }
+
+void DxCommandBuffer::beginRendering(const FrameBufferDesc& fbo, size_t fboSize, uint32_t width, uint32_t height) {
   resState.joinWriters(PipelineStage::S_Indirect);
   resState.joinWriters(PipelineStage::S_Graphics);
   // resState.flush(*this); //debug
 
-  for(size_t i=0; i<descSize; ++i) {
-    if(desc[i].load==AccessOp::Readonly)
-      continue;
-    NonUniqResId nonUniqId = NonUniqResId::I_None;
-    if(sw[i] != nullptr) {
-      //auto& t = *reinterpret_cast<DxSwapchain*>(sw[i]);
-      nonUniqId = NonUniqResId(0x1); //FIXME
-      }
-    else if (desc[i].attachment != nullptr) {
-      auto& t = *reinterpret_cast<DxTexture*>(att[i]);
-      nonUniqId = t.nonUniqId;
-      }
-    else {
-      auto &t = *reinterpret_cast<DxTexture*>(att[i]);
-      nonUniqId = t.nonUniqId;
-      }
-    resState.onDrawUsage(nonUniqId, desc[i].load);
-    }
-  resState.setRenderpass(*this,desc,descSize,frm,att,sw,imgId);
+  resState.beginRendering(*this, fbo);
+  resState.flush(*this); //DX12 doesn't properly support multiple recordable commandbuffers in the same time
 
   bindings.read  = NonUniqResId::I_None;
   bindings.write = NonUniqResId::I_None;
@@ -368,24 +354,24 @@ void DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize
   zdesc.DepthEndingAccess.Type      = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS;
   zdesc.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS;
   zdesc.StencilEndingAccess.Type    = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS;
-  for(size_t i=0; i<descSize; ++i) {
-    auto& dx    = desc[i];
+  for(size_t i=0; i<fboSize; ++i) {
+    auto& dx    = fbo.desc[i];
     auto& rdesc = view[viewSz];
-    if(sw[i]!=nullptr) {
-      auto& t                      = *reinterpret_cast<DxSwapchain*>(sw[i]);
-      rdesc.cpuDescriptor          = t.handle(imgId[i]);
+    if(fbo.sw[i]!=nullptr) {
+      auto& t                      = *reinterpret_cast<DxSwapchain*>(fbo.sw[i]);
+      rdesc.cpuDescriptor          = t.handle(fbo.imgId[i]);
       fboLayout.RTVFormats[viewSz] = t.format();
       ++viewSz;
       }
-    else if(desc[i].attachment!=nullptr) {
-      auto& t                      = *reinterpret_cast<DxTextureWithRT*>(att[i]);
+    else if(fbo.desc[i].attachment!=nullptr) {
+      auto& t                      = *reinterpret_cast<DxTextureWithRT*>(fbo.att[i]);
       rdesc.cpuDescriptor          = t.handle;
-      fboLayout.RTVFormats[viewSz] = nativeFormat(frm[i]);
+      fboLayout.RTVFormats[viewSz] = nativeFormat(fbo.frm[i]);
       ++viewSz;
       }
     else {
-      auto& t = *reinterpret_cast<DxTextureWithRT*>(att[i]);
-      fboLayout.DSVFormat = nativeFormat(frm[i]);
+      auto& t = *reinterpret_cast<DxTextureWithRT*>(fbo.att[i]);
+      fboLayout.DSVFormat = nativeFormat(fbo.frm[i]);
       zdesc.cpuDescriptor = (dx.load==AccessOp::Readonly ? t.handleR : t.handle);
       if(dx.load==AccessOp::Readonly) {
         const uint32_t D3D12_RENDER_PASS_FLAG_BIND_READ_ONLY_DEPTH = 0x8; // headers?
@@ -393,7 +379,7 @@ void DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize
         }
       }
 
-    if(desc[i].zbuffer!=nullptr) {
+    if(fbo.desc[i].zbuffer!=nullptr) {
       zdesc.DepthBeginningAccess.Type                                = mkLoadOp(dx.load);
       zdesc.DepthEndingAccess.Type                                   = mkStoreOp(dx.store);
       zdesc.DepthBeginningAccess.Clear.ClearValue.Format             = DXGI_FORMAT_D32_FLOAT;
@@ -423,8 +409,8 @@ void DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize
   D3D12_VIEWPORT vp={};
   vp.TopLeftX = float(0.f);
   vp.TopLeftY = float(0.f);
-  vp.Width    = float(w);
-  vp.Height   = float(h);
+  vp.Width    = float(width);
+  vp.Height   = float(height);
   vp.MinDepth = 0.f;
   vp.MaxDepth = 1.f;
   impl->RSSetViewports(1, &vp);
@@ -432,12 +418,13 @@ void DxCommandBuffer::beginRendering(const AttachmentDesc* desc, size_t descSize
   D3D12_RECT sr={};
   sr.left   = 0;
   sr.top    = 0;
-  sr.right  = LONG(w);
-  sr.bottom = LONG(h);
+  sr.right  = LONG(width);
+  sr.bottom = LONG(height);
   impl->RSSetScissorRects(1, &sr);
   }
 
 void DxCommandBuffer::endRendering() {
+  resState.endRendering(*this);
   resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Graphics);
   impl->EndRenderPass();
   }
@@ -1304,7 +1291,7 @@ void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& dstTex,
     const int dstW = (w==1 ? 1 : w/2);
     const int dstH = (h==1 ? 1 : h/2);
 
-    resState.onDrawUsage(img.nonUniqId, AccessOp::Preserve);
+    resState.onUavUsage(NonUniqResId::I_None, img.nonUniqId, S_Draw);
     resState.setLayout(img, ResourceLayout::ColorAttach, i+0);
     resState.onUavUsage(img.nonUniqId, NonUniqResId::I_None, S_Graphics, false);
     resState.setLayout(img, ResourceLayout::Default,     i-1);

@@ -266,8 +266,7 @@ void Tempest::Encoder<Tempest::CommandBuffer>::implSetFramebuffer(const Attachme
   if((rtSize+(zd ? 1 : 0)) > MaxFramebufferAttachments)
     throw IncompleteFboException();
 
-  TextureFormat frm[MaxFramebufferAttachments+1] = {};
-  uint32_t      w, h;
+  uint32_t w, h;
   if(T_UNLIKELY(rtSize==0)) {
     w = uint32_t(zd->zbuffer->w());
     h = uint32_t(zd->zbuffer->h());
@@ -276,37 +275,30 @@ void Tempest::Encoder<Tempest::CommandBuffer>::implSetFramebuffer(const Attachme
     h = uint32_t(rt[0].attachment->h());
     }
 
-  AttachmentDesc                  desc [MaxFramebufferAttachments] = {};
-  AbstractGraphicsApi::Texture*   att  [MaxFramebufferAttachments] = {};
-  AbstractGraphicsApi::Swapchain* sw   [MaxFramebufferAttachments] = {};
-  uint32_t                        imgId[MaxFramebufferAttachments] = {};
-
+  Detail::FrameBufferDesc fbo;
   for(size_t i=0; i<rtSize; ++i) {
     Attachment* ax = rt[i].attachment;
     if(ax->w()!=int(w) || ax->h()!=int(h))
       throw IncompleteFboException();
-
-    desc[i] = rt[i];
+    fbo.desc[i] = rt[i];
     if(ax->sImpl.swapchain!=nullptr) {
-      frm[i]   = TextureFormat::Undefined;
-      sw[i]    = ax->sImpl.swapchain;
-      imgId[i] = ax->sImpl.id;
+      fbo.frm[i]   = TextureFormat::Undefined;
+      fbo.sw[i]    = ax->sImpl.swapchain;
+      fbo.imgId[i] = ax->sImpl.id;
       } else {
-      frm[i]   = ax->tImpl.frm;
-      att[i]   = ax->tImpl.impl.handler;
+      fbo.frm[i]   = ax->tImpl.frm;
+      fbo.att[i]   = ax->tImpl.impl.handler;
       }
     }
-
   if(zd!=nullptr) {
     if(zd->zbuffer->w()!=int(w) || zd->zbuffer->h()!=int(h))
       throw IncompleteFboException();
-    desc[rtSize] = *zd;
-    frm [rtSize] = zd->zbuffer->tImpl.frm;
-    att [rtSize] = zd->zbuffer->tImpl.impl.handler;
+    fbo.desc[rtSize] = *zd;
+    fbo.frm [rtSize] = zd->zbuffer->tImpl.frm;
+    fbo.att [rtSize] = zd->zbuffer->tImpl.impl.handler;
     }
 
-  impl->beginRendering(desc,rtSize+(zd ? 1 : 0),w,h,
-                       frm,att,sw,imgId);
+  impl->beginRendering(fbo, rtSize+(zd ? 1 : 0), w, h);
   state.stage       = Rendering;
   state.curPipeline = nullptr;
   }

@@ -19,16 +19,13 @@ class ResourceState {
       bool         speculative = false;
       };
 
-    void setRenderpass(AbstractGraphicsApi::CommandBuffer& cmd,
-                       const AttachmentDesc* desc, size_t descSize,
-                       const TextureFormat* frm,
-                       AbstractGraphicsApi::Texture** att,
-                       AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId);
+    void beginRendering(AbstractGraphicsApi::CommandBuffer& cmd, const Detail::FrameBufferDesc& desc);
+    void endRendering  (AbstractGraphicsApi::CommandBuffer& cmd);
+
     void setLayout  (AbstractGraphicsApi::Swapchain& s, uint32_t id, ResourceLayout lay, bool discard);
     void setLayout  (AbstractGraphicsApi::Texture&   a, ResourceLayout lay, uint32_t mip, bool discard = false);
 
     void onTranferUsage(NonUniqResId read, NonUniqResId write, bool host);
-    void onDrawUsage   (NonUniqResId id, AccessOp loadOp);
     void onUavUsage    (NonUniqResId read, NonUniqResId write, PipelineStage st, bool host = false);
     void onUavUsage    (const ResourceState::Usage& uavUsage, PipelineStage st, bool host = false);
     void forceLayout   (AbstractGraphicsApi::Texture&   a, ResourceLayout lay);
@@ -53,7 +50,8 @@ class ResourceState {
     ImgState& findImg(AbstractGraphicsApi::Texture* img, AbstractGraphicsApi::Swapchain* sw, uint32_t id, bool discard);
     void      emitBarriers(AbstractGraphicsApi::CommandBuffer& cmd, AbstractGraphicsApi::SyncDesc& d, AbstractGraphicsApi::BarrierDesc* desc, size_t cnt);
 
-    std::vector<ImgState> imgState;
+    Detail::FrameBufferDesc fbo;
+    std::vector<ImgState>   imgState;
 
     struct Stage {
       NonUniqResId depend[PipelineStage::S_Count];

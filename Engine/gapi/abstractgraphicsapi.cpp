@@ -73,6 +73,12 @@ bool AbstractGraphicsApi::Props::hasAtomicFormat(TextureFormat f) const {
   return (atomFormat&m)!=0;
   }
 
+void AbstractGraphicsApi::CommandBuffer::beginRendering(const Detail::FrameBufferDesc& f, size_t fboSize, uint32_t w, uint32_t h) {
+  //TODO: remove
+  auto fbo = f;
+  beginRendering(fbo.desc, fboSize, w, h, fbo.frm, fbo.att, fbo.sw, fbo.imgId);
+  }
+
 void AbstractGraphicsApi::CommandBuffer::begin(Detail::SyncHint) {
   begin();
   }
@@ -127,4 +133,12 @@ bool Detail::Bindings::contains(const AbstractGraphicsApi::NoCopy* res) const {
 
 std::shared_ptr<AbstractGraphicsApi::Fence> AbstractGraphicsApi::submit(Device* d, CommandBuffer* cmd)  {
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
+  }
+
+NonUniqResId AbstractGraphicsApi::Texture::syncId() const {
+  return NonUniqResId::I_None;
+  }
+
+NonUniqResId AbstractGraphicsApi::Swapchain::syncId() const {
+  return NonUniqResId(0x1);
   }

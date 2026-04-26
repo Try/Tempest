@@ -226,12 +226,12 @@ TEST(main, ResourceDrawAfterDraw) {
   TestCommandBuffer cmd;
 
   ResourceState rs;
-  rs.onDrawUsage(NonUniqResId(0x1), AccessOp::Clear);
+  rs.onUavUsage(NonUniqResId::I_None, NonUniqResId(0x1), S_Draw);
   rs.setLayout(t, ResourceLayout::ColorAttach, 0, true);
   rs.flush(cmd);
   rs.setLayout(t, ResourceLayout::Default, 0);
 
-  rs.onDrawUsage(NonUniqResId(0x1), AccessOp::Clear);
+  rs.onUavUsage(NonUniqResId::I_None, NonUniqResId(0x1), S_Draw);
   rs.setLayout(t, ResourceLayout::ColorAttach, 0);
   rs.flush(cmd);
   rs.setLayout(t, ResourceLayout::Default, 0);

@@ -24,9 +24,10 @@ class VTexture : public AbstractGraphicsApi::Texture {
 
     VTexture& operator=(const VTexture& other)=delete;
 
-    VkImageView view(const ComponentMapping& m, uint32_t mipLevel, bool is3D);
-    VkImageView fboView(uint32_t mip);
-    uint32_t    mipCount() const override { return mipCnt; }
+    VkImageView  view(const ComponentMapping& m, uint32_t mipLevel, bool is3D);
+    VkImageView  fboView(uint32_t mip);
+    uint32_t     mipCount() const override { return mipCnt; }
+    NonUniqResId syncId() const override { return nonUniqId; }
 
     VkImage                impl      = VK_NULL_HANDLE;
     VkImageView            imgView   = VK_NULL_HANDLE;

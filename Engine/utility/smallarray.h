@@ -71,6 +71,17 @@ namespace Detail {
         ++allSz;
         }
 
+      T& last() {
+        auto*  nx = &root;
+        size_t n  = allSz-1;
+        while(true) {
+          if(n < chunkSize)
+            return nx->val[n];
+          n  -= chunkSize;
+          nx =  nx->next;
+          }
+        }
+
       const size_t size() const { return allSz; }
       const Node* begin() { return &root; }
 

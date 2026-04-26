@@ -48,6 +48,7 @@ class DxCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
                         const TextureFormat* frm,
                         AbstractGraphicsApi::Texture** att,
                         AbstractGraphicsApi::Swapchain** sw, const uint32_t* imgId) override;
+    void beginRendering(const FrameBufferDesc& fbo, size_t fboSize, uint32_t width, uint32_t height) override;
     void endRendering() override;
 
     void setViewport (const Rect& r) override;

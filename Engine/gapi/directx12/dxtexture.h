@@ -20,8 +20,9 @@ class DxTexture : public AbstractGraphicsApi::Texture {
     ~DxTexture();
     DxTexture& operator=(const DxTexture& other) = delete;
 
-    auto     view(DxDevice& dev, const ComponentMapping& m, uint32_t mipLevel, bool is3D, bool isUAV) -> D3D12_CPU_DESCRIPTOR_HANDLE;
-    uint32_t mipCount() const override { return mipCnt; }
+    auto         view(DxDevice& dev, const ComponentMapping& m, uint32_t mipLevel, bool is3D, bool isUAV) -> D3D12_CPU_DESCRIPTOR_HANDLE;
+    uint32_t     mipCount() const override { return mipCnt; }
+    NonUniqResId syncId() const override { return nonUniqId; }
 
     UINT     bitCount() const;
     UINT     bytePerBlockCount() const;
