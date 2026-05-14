@@ -16,6 +16,8 @@
 #include <AL/al.h>
 #include <AL/alext.h>
 
+#include <minivorbis/minivorbis.h>
+
 using namespace Tempest;
 
 static uint8_t channelsCount(int frm) {
@@ -139,6 +141,15 @@ void Sound::initData(const char* bytes, int format, size_t size, size_t rate) {
   data      = d;
   }
 
+void Sound::initData(std::unique_ptr<char[]> buf, int format, size_t size, size_t rate) {
+  auto d = std::make_shared<Data>();
+  d->ptr = std::move(buf);
+  d->byteSize  = uint32_t(size);
+  d->frequency = uint32_t(rate);
+  d->format    = format;
+  data = d;
+  }
+
 bool Sound::isEmpty() const {
   return data==nullptr;
   }
@@ -149,75 +160,121 @@ uint64_t Sound::timeLength() const {
   return 0;
   }
 
-void Sound::implLoad(IDevice &f) {
-  auto& mem = f;
+void Sound::implLoad(IDevice& fin) {
+  char sign[4] = {};
+  if(fin.read(sign, 4)!=4)
+    throw std::runtime_error("Invalid sound file");
 
-  WAVEHeader header={};
-  FmtChunk   fmt={};
-  size_t     dataSize=0;
-  std::unique_ptr<char[]> data = readWAVFull(mem,header,fmt,dataSize);
+  if(std::memcmp("OggS",sign,4)==0) {
+    implLoadOgg(fin);
+    return;
+    }
 
-  int format=0;
-  if(data) {
-    switch(fmt.bitsPerSample) {
-      case 4:
-        decodeAdPcm(fmt,reinterpret_cast<uint8_t*>(data.get()),uint32_t(dataSize),uint32_t(-1));
-        return;
-      case 8:
-        format = (fmt.channels==1) ? AL_FORMAT_MONO8  : AL_FORMAT_STEREO8;
-        break;
-      case 16:
-        format = (fmt.channels==1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16;
-        break;
-      default:
-        return;
-      }
+  if(std::memcmp("RIFF",sign,4)==0) {
+    WAVEHeader header={{'R','I','F','F'}};
+    if(fin.read(reinterpret_cast<uint8_t*>(&header)+4,sizeof(WAVEHeader)-4)!=sizeof(WAVEHeader)-4)
+      throw std::runtime_error("Invalid sound file");
 
-    initData(data.get(),format,dataSize,fmt.samplesPerSec);
+    if(std::memcmp("WAVE",header.wave,4)!=0)
+      throw std::runtime_error("Invalid sound file");
+
+    implLoadWav(fin, header);
+    return;
     }
   }
 
-std::unique_ptr<char[]> Sound::readWAVFull(IDevice &f, WAVEHeader& header, FmtChunk& fmt, size_t& dataSize) {
+void Sound::implLoadWav(IDevice& fin, const WAVEHeader& header) {
+  FmtChunk                fmt = {};
+  size_t                  dataSize = 0;
   std::unique_ptr<char[]> buffer;
-
-  if(f.read(&header,sizeof(WAVEHeader))!=sizeof(WAVEHeader))
-    return nullptr;
-
-  if(std::memcmp("RIFF",header.riff,4)!=0 ||
-     std::memcmp("WAVE",header.wave,4)!=0)
-    return nullptr;
 
   while(true){
     Header head={};
-    if(f.read(&head,sizeof(head))!=sizeof(head))
+    if(fin.read(&head,sizeof(head))!=sizeof(head))
       break;
 
     if(head.is("data")){
       buffer.reset(new char[head.size]);
-      if(f.read(buffer.get(),head.size)!=head.size){
-        buffer.reset();
-        return nullptr;
+      if(fin.read(buffer.get(),head.size)!=head.size){
+        throw std::runtime_error("Invalid sound file");
         }
       dataSize = head.size;
       }
     else if(head.is("fmt ")){
       size_t sz=std::min<size_t>(head.size,sizeof(fmt));
-      if(f.read(&fmt,sz)!=sz)
-        return nullptr;
+      if(fin.read(&fmt,sz)!=sz)
+        throw std::runtime_error("Invalid sound file");
       size_t remain = head.size-sz;
-      if(f.seek(remain)!=remain)
-        return nullptr;
+      if(fin.seek(remain)!=remain)
+        throw std::runtime_error("Invalid sound file");
       }
-    else if(f.seek(head.size)!=head.size)
-      return nullptr;
+    else if(fin.seek(head.size)!=head.size)
+      throw std::runtime_error("Invalid sound file");
 
-    if(head.size%2!=0 && f.seek(1)!=1)
-      return nullptr;
+    if(head.size%2!=0 && fin.seek(1)!=1)
+      throw std::runtime_error("Invalid sound file");
     }
-  return buffer;
+
+  int format = 0;
+  switch(fmt.bitsPerSample) {
+    case 4:
+      decodeAdPcm(fmt,reinterpret_cast<uint8_t*>(data.get()),uint32_t(dataSize),uint32_t(-1));
+      return;
+    case 8:
+      format = (fmt.channels==1) ? AL_FORMAT_MONO8  : AL_FORMAT_STEREO8;
+      initData(std::move(buffer),format,dataSize,fmt.samplesPerSec);
+      return;
+    case 16:
+      format = (fmt.channels==1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16;
+      initData(std::move(buffer),format,dataSize,fmt.samplesPerSec);
+      return;
+    }
+
+  throw std::runtime_error("Invalid sound file bitrate");
   }
 
-void Sound::decodeAdPcm(const FmtChunk& fmt,const uint8_t* src,uint32_t dataSize,uint32_t maxSamples) {
+void Sound::implLoadOgg(IDevice& fin) {
+  //fin.unget(sizeof(WAVEHeader)); //HACK
+
+  ov_callbacks callback = {};
+  callback.read_func = [](void *ptr, size_t size, size_t nmemb, void *src) -> size_t {
+    auto& f = *reinterpret_cast<IDevice*>(src);
+    return f.read(ptr, size*nmemb);
+    };
+
+  OggVorbis_File vorbis = {};
+  char sgn[] = "OggS";
+
+  std::vector<char> data;
+  vorbis_info info = {};
+  try {
+    if(ov_open_callbacks(&fin, &vorbis, sgn, 4, callback) != 0) {
+      throw std::runtime_error("Invalid sound(ogg) file");
+      }
+    info = *ov_info(&vorbis, -1);
+
+    while(true) {
+      int section = 0;
+      char buf[16*1024];
+      long bytes = ov_read(&vorbis, buf, sizeof(buf), 0, 2, 1, &section);
+      if(bytes<0)
+        throw std::runtime_error("Invalid sound(ogg) file");
+      if(bytes==0)
+        break;
+      data.insert(data.end(), buf, buf+bytes);
+      }
+    ov_clear(&vorbis);
+    }
+  catch(...) {
+    ov_clear(&vorbis);
+    throw;
+    }
+
+  int format = (info.channels==1) ? AL_FORMAT_MONO16  : AL_FORMAT_STEREO16;
+  initData(data.data(),format,data.size(),info.rate);
+  }
+
+void Sound::decodeAdPcm(const FmtChunk& fmt, const uint8_t* src, uint32_t dataSize, uint32_t maxSamples) {
   if(fmt.blockAlign==0)
     return;
 

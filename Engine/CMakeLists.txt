@@ -96,6 +96,13 @@ add_definitions(-DSTB_IMAGE_IMPLEMENTATION)
 add_definitions(-DSTB_TRUETYPE_IMPLEMENTATION)
 add_definitions(-DSTB_IMAGE_WRITE_IMPLEMENTATION)
 
+### minivorbis
+if(TEMPEST_BUILD_AUDIO)
+  add_subdirectory("thirdparty/minivorbis" EXCLUDE_FROM_ALL)
+  target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/minivorbis/")
+  target_link_libraries(${PROJECT_NAME} PRIVATE minivorbis)
+endif()
+
 ### OpenAl
 if(TEMPEST_BUILD_AUDIO)
   add_definitions(-DTEMPEST_BUILD_AUDIO)
