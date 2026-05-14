@@ -16,6 +16,7 @@
 #include <AL/al.h>
 #include <AL/alext.h>
 
+#include <stdint.h> // used by minivorbis
 #include <minivorbis/minivorbis.h>
 
 using namespace Tempest;
@@ -218,7 +219,7 @@ void Sound::implLoadWav(IDevice& fin, const WAVEHeader& header) {
   int format = 0;
   switch(fmt.bitsPerSample) {
     case 4:
-      decodeAdPcm(fmt,reinterpret_cast<uint8_t*>(data.get()),uint32_t(dataSize),uint32_t(-1));
+      decodeAdPcm(fmt,reinterpret_cast<uint8_t*>(buffer.get()),uint32_t(dataSize),uint32_t(-1));
       return;
     case 8:
       format = (fmt.channels==1) ? AL_FORMAT_MONO8  : AL_FORMAT_STEREO8;
@@ -230,12 +231,10 @@ void Sound::implLoadWav(IDevice& fin, const WAVEHeader& header) {
       return;
     }
 
-  throw std::runtime_error("Invalid sound file bitrate");
+  throw std::runtime_error("Invalid sound(wav) file bitrate");
   }
 
 void Sound::implLoadOgg(IDevice& fin) {
-  //fin.unget(sizeof(WAVEHeader)); //HACK
-
   ov_callbacks callback = {};
   callback.read_func = [](void *ptr, size_t size, size_t nmemb, void *src) -> size_t {
     auto& f = *reinterpret_cast<IDevice*>(src);
