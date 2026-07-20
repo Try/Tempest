@@ -81,11 +81,18 @@ void EventDispatcher::dispatchMouseUp(Widget& /*wnd*/, MouseEvent &e) {
   }
 
 void EventDispatcher::dispatchMouseMove(Widget& wnd, MouseEvent &e) {
-  if(auto w = lock(mouseUp[e.button])) {
+  auto btn = Event::ButtonNone;
+  for(uint8_t i=0; i<Event::ButtonLast; ++i)
+    if(!mouseUp[i].expired()) {
+      btn = Event::MouseButton(i);
+      break;
+      }
+
+  if(auto w = lock(mouseUp[btn])) {
     auto p = e.pos() - w->widget->mapToRoot(Point());
     MouseEvent e0( p.x,
                    p.y,
-                   Event::ButtonNone,
+                   btn,
                    mkModifier(),
                    e.delta,
                    e.mouseID,
@@ -95,25 +102,25 @@ void EventDispatcher::dispatchMouseMove(Widget& wnd, MouseEvent &e) {
       return;
     }
 
-  if(auto w = lock(mouseUp[e.button])) {
+  if(auto w = lock(mouseUp[btn])) {
     auto p = e.pos() - w->widget->mapToRoot(Point());
     MouseEvent e1( p.x,
                    p.y,
-                   Event::ButtonNone,
+                   btn,
                    e.modifier,
                    e.delta,
                    e.mouseID,
                    Event::MouseMove  );
     w->widget->mouseMoveEvent(e1);
     if(e.isAccepted()) {
-      implSetMouseOver(mouseUp[e.button].lock(),e);
+      implSetMouseOver(mouseUp[btn].lock(),e);
       return;
       }
     }
 
   MouseEvent e1( e.x,
                  e.y,
-                 Event::ButtonNone,
+                 e.button,
                  mkModifier(),
                  e.delta,
                  e.mouseID,
