@@ -4,7 +4,14 @@ project(Tempest)
 
 set(CMAKE_CXX_STANDARD 20)
 
+# CHANGE: Include GNUInstallDirs to support standard multilib paths (e.g., lib vs lib64)
+include(GNUInstallDirs)
+
 option(TEMPEST_BUILD_SHARED "Build shared Tempest." ON)
+# CHANGE: Add options to allow packagers to use system libraries instead of bundled ones
+option(TEMPEST_USE_SYSTEM_ZLIB "Use system-installed zlib instead of bundled version" OFF)
+option(TEMPEST_USE_SYSTEM_LIBPNG "Use system-installed libpng instead of bundled version" OFF)
+option(TEMPEST_USE_SYSTEM_SQUISH "Use system-installed squish instead of bundled version" OFF)
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
@@ -71,27 +78,47 @@ if(APPLE)
 endif()
 
 ### zlib
-set(ZLIB_BUILD_EXAMPLES OFF CACHE INTERNAL "")
-set(ZLIB_LIBRARY        zlibstatic)
-set(ZLIB_INCLUDE_DIR    "thirdparty/zlib")
-add_subdirectory("thirdparty/zlib" EXCLUDE_FROM_ALL)
-target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/zlib")
-if(NOT MSVC)
-  target_compile_options(zlibstatic PRIVATE -Wno-deprecated-non-prototype)
+# CHANGE: Allow using system zlib via find_package
+if(TEMPEST_USE_SYSTEM_ZLIB)
+  find_package(ZLIB REQUIRED)
+  if(NOT TARGET zlibstatic)
+    add_library(zlibstatic INTERFACE IMPORTED)
+    target_link_libraries(zlibstatic INTERFACE ZLIB::ZLIB)
+  endif()
+else()
+  set(ZLIB_BUILD_EXAMPLES OFF CACHE INTERNAL "")
+  set(ZLIB_LIBRARY        zlibstatic)
+  set(ZLIB_INCLUDE_DIR    "thirdparty/zlib")
+  add_subdirectory("thirdparty/zlib" EXCLUDE_FROM_ALL)
+  target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/zlib")
+  if(NOT MSVC)
+    target_compile_options(zlibstatic PRIVATE -Wno-deprecated-non-prototype)
+  endif()
 endif()
 
 ### libpng16
-set(PNG_SHARED                 OFF CACHE INTERNAL "")
-set(PNG_STATIC                 ON  CACHE INTERNAL "")
-set(PNG_TESTS                  OFF CACHE INTERNAL "")
-set(PNG_BUILD_ZLIB             OFF CACHE INTERNAL "")
-set(SKIP_INSTALL_ALL           ON  CACHE INTERNAL "")
-set(PNG_HARDWARE_OPTIMIZATIONS OFF CACHE INTERNAL "")
-add_definitions(-DPNG_ARM_NEON_OPT=0)
-add_subdirectory("thirdparty/libpng" EXCLUDE_FROM_ALL)
-target_include_directories(png_static PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-target_include_directories(png_static PRIVATE "thirdparty/zlib")
-target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/libpng")
+# CHANGE: Allow using system libpng via find_package
+if(TEMPEST_USE_SYSTEM_LIBPNG)
+  find_package(PNG REQUIRED)
+  if(NOT TARGET png_static)
+    add_library(png_static INTERFACE IMPORTED)
+    target_link_libraries(png_static INTERFACE PNG::PNG)
+  endif()
+else()
+  set(PNG_SHARED                 OFF CACHE INTERNAL "")
+  set(PNG_STATIC                 ON  CACHE INTERNAL "")
+  set(PNG_TESTS                  OFF CACHE INTERNAL "")
+  set(PNG_BUILD_ZLIB             OFF CACHE INTERNAL "")
+  set(SKIP_INSTALL_ALL           ON  CACHE INTERNAL "")
+  set(PNG_HARDWARE_OPTIMIZATIONS OFF CACHE INTERNAL "")
+  add_definitions(-DPNG_ARM_NEON_OPT=0)
+  add_subdirectory("thirdparty/libpng" EXCLUDE_FROM_ALL)
+  target_include_directories(png_static PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+  target_include_directories(png_static PRIVATE "thirdparty/zlib")
+  target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/libpng")
+endif()
+
+# CHANGE: Moved this outside the if/else block so it links correctly for both system and bundled versions
 target_link_libraries(${PROJECT_NAME} PRIVATE png_static)
 
 ### stb
@@ -141,18 +168,9 @@ if(TEMPEST_BUILD_VULKAN)
   add_definitions(-DVULKAN_HPP_NO_EXCEPTIONS)
   add_definitions(-DVULKAN_HPP_NO_SMART_HANDLE)
 
-  if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
-    target_link_directories(${PROJECT_NAME} PRIVATE "$ENV{VULKAN_SDK}/lib")
-  else()
-    target_link_directories(${PROJECT_NAME} PRIVATE "$ENV{VULKAN_SDK}/Lib32")
-  endif()
-
-  target_include_directories(${PROJECT_NAME} PRIVATE "$ENV{VULKAN_SDK}/include")
-  if(WIN32)
-    target_link_libraries(${PROJECT_NAME} PRIVATE vulkan-1)
-  else()
-    target_link_libraries(${PROJECT_NAME} PRIVATE vulkan)
-  endif()
+  # CHANGE: Replaced fragile $ENV{VULKAN_SDK} path logic with standard CMake find_package
+  find_package(Vulkan REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PUBLIC Vulkan::Vulkan)
 endif()
 
 ### Directx12
@@ -200,9 +218,21 @@ target_link_libraries(${PROJECT_NAME} PRIVATE spirv-cross-hlsl)
 target_link_libraries(${PROJECT_NAME} PRIVATE spirv-cross-msl)
 
 ### squish
-add_subdirectory("thirdparty/squish" EXCLUDE_FROM_ALL)
+# CHANGE: Allow using system squish via find_path/find_library
+if(TEMPEST_USE_SYSTEM_SQUISH)
+  find_path(SQUISH_INCLUDE_DIR NAMES squish.h REQUIRED)
+  find_library(SQUISH_LIBRARY NAMES squish REQUIRED)
+
+  if(NOT TARGET squish-tempest)
+    add_library(squish-tempest INTERFACE IMPORTED)
+    target_include_directories(squish-tempest INTERFACE ${SQUISH_INCLUDE_DIR})
+    target_link_libraries(squish-tempest INTERFACE ${SQUISH_LIBRARY})
+  endif()
+else()
+  add_subdirectory("thirdparty/squish" EXCLUDE_FROM_ALL)
+  set_target_properties(squish-tempest PROPERTIES CXX_VISIBILITY_PRESET hidden)
+endif()
 target_link_libraries(${PROJECT_NAME} PRIVATE squish-tempest)
-set_target_properties(squish-tempest PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
 ### Font
 set(GEN_FONTS_HEADER "${PROJECT_BINARY_DIR}/builtin_fonts.h")
@@ -219,7 +249,9 @@ file(GLOB SHADER_SOURCES
   "${PROJECT_SOURCE_DIR}/shaders/*.comp")
 
 # GLSL to SPIRV compiler
-find_program(GLSLANGVALIDATOR glslangValidator "/opt/homebrew/bin")
+# CHANGE: Removed hardcoded "/opt/homebrew/bin" fallback to rely on system PATH
+# CHANGE: Removed REQUIRED flag from find_program to maintain compatibility with CMake 3.16
+find_program(GLSLANGVALIDATOR glslangValidator)
 if(NOT GLSLANGVALIDATOR)
   message(FATAL_ERROR "glslangValidator required")
 endif()
@@ -331,7 +363,8 @@ endif()
 
 install(
     TARGETS ${PROJECT_NAME}
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-    PUBLIC_HEADER DESTINATION include/${PROJECT_NAME}
+    # CHANGE: Use GNUInstallDirs variables for correct multilib support (lib vs lib64)
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}
     )
