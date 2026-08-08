@@ -17,6 +17,8 @@ class VSamplerCache final {
     VSamplerCache();
     ~VSamplerCache();
 
+    static VkSamplerCreateInfo createInfo(const VDevice& dev, const Sampler& s);
+
     VkSampler get(const Sampler& s);
     void      setDevice(VDevice &dev);
 
@@ -29,11 +31,8 @@ class VSamplerCache final {
     SpinLock           sync;
     std::vector<Entry> chunks;
 
-    VkDevice           device        = nullptr;
-    VkSampler          smpDefault    = VK_NULL_HANDLE;
-
-    bool               anisotropy    = false;
-    float              maxAnisotropy = 1.f;
+    VDevice*           device     = nullptr;
+    VkSampler          smpDefault = VK_NULL_HANDLE;
 
     VkSampler          alloc(const Sampler& s);
   };

@@ -27,6 +27,7 @@ VBuffer& VBuffer::operator=(VBuffer&& other) {
   std::swap(nonUniqId, other.nonUniqId);
   std::swap(alloc,     other.alloc);
   std::swap(page,      other.page);
+  std::swap(userSize,  other.userSize);
   return *this;
   }
 

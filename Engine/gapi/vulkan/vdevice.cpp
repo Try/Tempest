@@ -3,6 +3,7 @@
 #include "vdevice.h"
 
 #include "vcommandbuffer.h"
+#include "vdescriptorheap.h"
 #include "vfence.h"
 #include "vswapchain.h"
 
@@ -91,6 +92,8 @@ VDevice::VDevice(VkInstance instance, const bool hasDeviceFeatures2, VkPhysicalD
   physicalDevice = pdev;
   allocator.setDevice(*this);
   descPool.setupLimits();
+  if(props.hasDescriptorHeap)
+    descHeap.setDevice(*this);
   data.reset(new DataMgr(*this));
   }
 
@@ -176,8 +179,14 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
     rqExt.push_back(VK_KHR_MAINTENANCE_1_EXTENSION_NAME);
     //rqExt.push_back(VK_EXT_IMAGE_2D_VIEW_OF_3D_EXTENSION_NAME);
     }
+  if(props.hasMaintenance5) {
+    rqExt.push_back(VK_KHR_MAINTENANCE_5_EXTENSION_NAME);
+    }
   if(props.hasDebugMarker) {
     rqExt.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+    }
+  if(props.hasDescriptorHeap) {
+    rqExt.push_back(VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME);
     }
 
   VkPhysicalDeviceFeatures supportedFeatures={};
@@ -238,6 +247,9 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
     VkPhysicalDeviceVulkanMemoryModelFeatures memoryFeatures = {};
     memoryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES;
 
+    VkPhysicalDeviceDescriptorHeapFeaturesEXT dheapFeatures = {};
+    dheapFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_FEATURES_EXT;
+
     if(props.hasSync2) {
       sync2.pNext = features.pNext;
       features.pNext = &sync2;
@@ -280,6 +292,10 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
     if(props.memoryModel) {
       memoryFeatures.pNext = features.pNext;
       features.pNext = &memoryFeatures;
+      }
+    if(props.hasDescriptorHeap) {
+      dheapFeatures.pNext = features.pNext;
+      features.pNext = &dheapFeatures;
       }
 
     auto vkGetPhysicalDeviceFeatures2 = PFN_vkGetPhysicalDeviceFeatures2(vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2KHR"));
@@ -358,6 +374,11 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
   dummyIfNull(vkCmdDebugMarkerBegin);
   dummyIfNull(vkCmdDebugMarkerEnd);
   dummyIfNull(vkDebugMarkerSetObjectName);
+
+  if(props.hasDescriptorHeap) {
+    vkWriteResourceDescriptorsEXT = PFN_vkWriteResourceDescriptorsEXT(vkGetDeviceProcAddr(device.impl,"vkWriteResourceDescriptorsEXT"));
+    vkWriteSamplerDescriptorsEXT  = PFN_vkWriteSamplerDescriptorsEXT(vkGetDeviceProcAddr(device.impl,"vkWriteSamplerDescriptorsEXT"));
+    }
   }
 
 void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, VkPhysicalDevice physicalDevice, VkProps& props) {
@@ -403,8 +424,16 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
   if(extensionSupport(ext,VK_KHR_MAINTENANCE_1_EXTENSION_NAME)) {
     props.hasMaintenance1 = true;
     }
+  if(extensionSupport(ext,VK_KHR_MAINTENANCE_5_EXTENSION_NAME)) {
+    props.hasMaintenance5 = true;
+    }
   if(extensionSupport(ext,VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME)) {
     props.memoryModel = true;
+    }
+  if(extensionSupport(ext,VK_KHR_MAINTENANCE_5_EXTENSION_NAME) &&
+     extensionSupport(ext,VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME) &&
+     extensionSupport(ext,VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME)) {
+    props.hasDescriptorHeap = true;
     }
 
   VkPhysicalDeviceProperties prop = {};
@@ -489,6 +518,12 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
     VkPhysicalDeviceVulkanMemoryModelFeatures memoryFeatures = {};
     memoryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES;
 
+    VkPhysicalDeviceDescriptorHeapFeaturesEXT dheapFeatures = {};
+    dheapFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_FEATURES_EXT;
+
+    VkPhysicalDeviceDescriptorHeapPropertiesEXT dheapProps = {};
+    dheapProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_PROPERTIES_EXT;
+
     if(props.hasSync2) {
       sync2.pNext = features.pNext;
       features.pNext = &sync2;
@@ -533,6 +568,13 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
     if(props.memoryModel) {
       memoryFeatures.pNext = features.pNext;
       features.pNext = &memoryFeatures;
+      }
+    if(props.hasDescriptorHeap) {
+      dheapFeatures.pNext = features.pNext;
+      features.pNext = &dheapFeatures;
+
+      dheapProps.pNext = properties.pNext;
+      properties.pNext = &dheapProps;
       }
 
     auto vkGetPhysicalDeviceFeatures2   = PFN_vkGetPhysicalDeviceFeatures2  (vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceFeatures2KHR"));
@@ -590,6 +632,17 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
 
     if(memoryFeatures.vulkanMemoryModel!=VK_FALSE) {
       props.memoryModel = true;
+      }
+
+    if(props.hasDescriptorHeap) {
+      props.resourceDescriptorSize = std::max(dheapProps.bufferDescriptorSize, dheapProps.imageDescriptorSize);
+      props.samplerDescriptorSize  = dheapProps.samplerDescriptorSize;
+
+      props.resourceHeapReserve = dheapProps.minResourceHeapReservedRange;
+      props.samplerHeapReserve  = dheapProps.minSamplerHeapReservedRange;
+
+      props.resourceHeapMaxSize = dheapProps.maxResourceHeapSize;
+      props.samplerHeapMaxSize  = dheapProps.maxSamplerHeapSize;
       }
     }
 

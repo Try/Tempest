@@ -29,6 +29,8 @@ class VTexture : public AbstractGraphicsApi::Texture {
     uint32_t     mipCount() const override { return mipCnt; }
     NonUniqResId syncId() const override { return nonUniqId; }
 
+    VkImageViewCreateInfo createInfo(const ComponentMapping* cmap, uint32_t mipLevel, bool is3D) const;
+
     VkImage                impl      = VK_NULL_HANDLE;
     VkImageView            imgView   = VK_NULL_HANDLE;
     VkFormat               format    = VK_FORMAT_UNDEFINED;

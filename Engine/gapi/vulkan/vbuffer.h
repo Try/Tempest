@@ -23,12 +23,15 @@ class VBuffer : public AbstractGraphicsApi::Buffer {
     bool                   isHostVisible() const;
 
     VkDeviceAddress        toDeviceAddress(VDevice& owner) const;
+    size_t                 size() const { return userSize; }
+
     VkBuffer               impl      = VK_NULL_HANDLE;
     NonUniqResId           nonUniqId = NonUniqResId::I_None;
 
   private:
-    VAllocator*            alloc=nullptr;
-    VAllocator::Allocation page={};
+    VAllocator*            alloc = nullptr;
+    VAllocator::Allocation page  = {};
+    size_t                 userSize = 0;
 
   friend class VAllocator;
   };

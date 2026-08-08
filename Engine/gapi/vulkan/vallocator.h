@@ -55,6 +55,9 @@ class VAllocator {
     bool     update(VBuffer& dest, const void *mem, size_t offset, size_t size);
     bool     read  (VBuffer& src,        void *mem, size_t offset, size_t size);
 
+    uint8_t* mapDescriptorHeap(VBuffer& heap);
+    void     unmapDescriptorHeap(VBuffer& heap);
+
     VkSampler updateSampler(const Sampler& s);
 
   private:

@@ -21,6 +21,7 @@
 #include "gapi/uploadengine.h"
 #include "exceptions/exception.h"
 #include "utility/compiller_hints.h"
+#include "vdescriptorheap.h"
 
 namespace Tempest {
 namespace Detail {
@@ -332,6 +333,15 @@ class VDevice : public AbstractGraphicsApi::Device {
       uint64_t filteredLinearFormat = 0;
       bool     hasFilteredFormat(TextureFormat f) const;
 
+      size_t   resourceDescriptorSize = 0;
+      size_t   samplerDescriptorSize  = 0;
+
+      size_t   resourceHeapReserve = 0;
+      size_t   samplerHeapReserve  = 0;
+
+      size_t   resourceHeapMaxSize = 0;
+      size_t   samplerHeapMaxSize  = 0;
+
       bool     hasMemRq2          = false;
       bool     hasDedicatedAlloc  = false;
       bool     hasSync2           = false;
@@ -344,6 +354,8 @@ class VDevice : public AbstractGraphicsApi::Device {
       bool     hasRobustness2     = false;
       bool     hasStoreOpNone     = false;
       bool     hasMaintenance1    = false;
+      bool     hasMaintenance5    = false;
+      bool     hasDescriptorHeap  = false;
       };
 
     struct Queue final {
@@ -412,6 +424,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     VPsoLayoutCache         psoLayouts;
     VPoolCache              descPool;
     VBindlessCache          bindless;
+    VDescriptorHeap         descHeap;
 
     VkProps                 props={};
 
@@ -438,6 +451,9 @@ class VDevice : public AbstractGraphicsApi::Device {
     PFN_vkCmdDebugMarkerBeginEXT                vkCmdDebugMarkerBegin      = nullptr;
     PFN_vkCmdDebugMarkerEndEXT                  vkCmdDebugMarkerEnd        = nullptr;
     PFN_vkDebugMarkerSetObjectNameEXT           vkDebugMarkerSetObjectName = nullptr;
+
+    PFN_vkWriteResourceDescriptorsEXT vkWriteResourceDescriptorsEXT = nullptr;
+    PFN_vkWriteSamplerDescriptorsEXT  vkWriteSamplerDescriptorsEXT = nullptr;
 
     static const std::initializer_list<const char*> requiredExtensions;
 
