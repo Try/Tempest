@@ -384,6 +384,14 @@ void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
   bindings.durty  = true;
   curCompPipeline = &px;
   pipelineLayout  = VK_NULL_HANDLE; // clear until dispatch
+
+  if(device.props.hasDescriptorHeap) {
+    auto& pso  = *curCompPipeline;
+    auto  inst = pso.instance(VK_NULL_HANDLE);
+    vkCmdBindPipeline(impl, VK_PIPELINE_BIND_POINT_COMPUTE, inst);
+    pushData.durty = true; //TODO: fine check for layout compatibility
+    bindings.durty = true;
+    }
   }
 
 void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
@@ -593,8 +601,18 @@ void VCommandBuffer::implSetPushData(const PipelineStage st) {
     return;
 
   assert(pb->size<=pushData.size);
-  auto stages = nativeFormat(pb->stage);
-  vkCmdPushConstants(impl, pipelineLayout, stages, 0, uint32_t(pb->size), pushData.data);
+  if(device.props.hasDescriptorHeap) {
+    auto vkCmdPushDataEXT = device.vkCmdPushDataEXT;
+
+    VkPushDataInfoEXT pushDataInfo = {VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT};
+    pushDataInfo.offset       = 0;
+    pushDataInfo.data.address = pushData.data;
+    pushDataInfo.data.size    = sizeof(pushData.data);
+    vkCmdPushDataEXT(impl, &pushDataInfo);
+    } else {
+    auto stages = nativeFormat(pb->stage);
+    vkCmdPushConstants(impl, pipelineLayout, stages, 0, uint32_t(pb->size), pushData.data);
+    }
   }
 
 void VCommandBuffer::setBinding(size_t id, AbstractGraphicsApi::Texture *tex, uint32_t mipLevel, const ComponentMapping& map, const Sampler &smp) {

@@ -3,7 +3,6 @@
 
 #include "gapi/vulkan/vaccelerationstructure.h"
 #include "gapi/vulkan/vtexture.h"
-#include "gapi/vulkan/vpipeline.h"
 #include "vdevice.h"
 
 using namespace Tempest;

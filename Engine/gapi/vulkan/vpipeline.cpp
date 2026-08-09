@@ -134,12 +134,12 @@ VkPipeline VPipeline::initGraphicsPipeline(VDevice& device,
                                            const Decl::ComponentType *decl, size_t declSize,
                                            size_t stride, Topology tp,
                                            const DSharedPtr<const VShader*>* shaders) {
-  SmallArray<VkDescriptorSetAndBindingMappingEXT, MaxBindings> mappings(this->layout.size()+1);
-  VkShaderDescriptorSetAndBindingMappingInfoEXT info { VK_STRUCTURE_TYPE_SHADER_DESCRIPTOR_SET_AND_BINDING_MAPPING_INFO_EXT};
+  SmallArray<VkDescriptorSetAndBindingMappingEXT, MaxBindings> mappings(this->layout.size());
+  VkShaderDescriptorSetAndBindingMappingInfoEXT mappingInfo { VK_STRUCTURE_TYPE_SHADER_DESCRIPTOR_SET_AND_BINDING_MAPPING_INFO_EXT};
   if(device.props.hasDescriptorHeap) {
-    info.mappingCount = uint32_t(this->layout.size());
-    info.pMappings    = mappings.get();
-    initPushMappings(info, mappings.get());
+    mappingInfo.mappingCount = uint32_t(this->layout.size());
+    mappingInfo.pMappings    = mappings.get();
+    initPushMappings(device, mappingInfo, mappings.get(), pb, this->layout);
     }
 
   VkPipelineShaderStageCreateInfo shaderStages[5] = {};
@@ -154,8 +154,8 @@ VkPipeline VPipeline::initGraphicsPipeline(VDevice& device,
     sh.module = shaders[i].handler->impl;
     sh.pName  = "main";
     if(device.props.hasDescriptorHeap) {
-      info.pNext = sh.pNext;
-      sh.pNext   = &info;
+      mappingInfo.pNext = sh.pNext;
+      sh.pNext          = &mappingInfo;
       }
     stagesCnt++;
     }
@@ -328,9 +328,8 @@ VkPipeline VPipeline::initGraphicsPipeline(VDevice& device,
   return graphicsPipeline;
   }
 
-void VPipeline::initPushMappings(VkShaderDescriptorSetAndBindingMappingInfoEXT& info, VkDescriptorSetAndBindingMappingEXT* mappings) const {
-  auto& lay = this->layout;
-
+void VPipeline::initPushMappings(VDevice& device, VkShaderDescriptorSetAndBindingMappingInfoEXT& info, VkDescriptorSetAndBindingMappingEXT* mappings,
+                                 const PushBlock& pb, const LayoutDesc& lay) {
   auto nativeFormat = [](ShaderReflection::Class cls) {
     switch (cls) {
       case ShaderReflection::Ubo:     return VK_SPIRV_RESOURCE_TYPE_UNIFORM_BUFFER_BIT_EXT;
@@ -374,18 +373,6 @@ void VPipeline::initPushMappings(VkShaderDescriptorSetAndBindingMappingInfoEXT& 
     m.sourceData.pushIndex.pushOffset = descOff;
     descOff += sizeof(uint32_t);
     }
-
-  if(false && pb.size>0) {
-    // push-constants are not documented?!
-    auto& m = mappings[mappingId]; ++mappingId;
-    m.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_AND_BINDING_MAPPING_EXT;
-    m.descriptorSet = 0;
-    m.firstBinding  = 0;
-    m.bindingCount  = 1;
-    m.resourceMask  = 0x0;
-    m.source        = VK_DESCRIPTOR_MAPPING_SOURCE_PUSH_DATA_EXT;
-    m.sourceData.pushDataOffset = 0;
-    }
   }
 
 
@@ -399,7 +386,17 @@ VCompPipeline::VCompPipeline(VDevice& device, const VShader& comp)
   const std::vector<Detail::ShaderReflection::Binding>* bindings = &comp.lay;
   ShaderReflection::setupLayout(pb, layout, sync, &bindings, 1);
 
-  pipelineLayout = device.psoLayouts.findLayout(pb, layout);
+  SmallArray<VkDescriptorSetAndBindingMappingEXT, MaxBindings> mappings(this->layout.size());
+  VkShaderDescriptorSetAndBindingMappingInfoEXT mappingInfo { VK_STRUCTURE_TYPE_SHADER_DESCRIPTOR_SET_AND_BINDING_MAPPING_INFO_EXT};
+  if(device.props.hasDescriptorHeap) {
+    mappingInfo.mappingCount = uint32_t(this->layout.size());
+    mappingInfo.pMappings    = mappings.get();
+    VPipeline::initPushMappings(device, mappingInfo, mappings.get(), pb, this->layout);
+    }
+  VkPipelineCreateFlags2CreateInfo createFlags2{VK_STRUCTURE_TYPE_PIPELINE_CREATE_FLAGS_2_CREATE_INFO};
+  createFlags2.flags = VK_PIPELINE_CREATE_2_DESCRIPTOR_HEAP_BIT_EXT;
+
+  pipelineLayout = device.props.hasDescriptorHeap ? VK_NULL_HANDLE : device.psoLayouts.findLayout(pb, layout);
   shader         = Detail::DSharedPtr<const VShader*>{&comp};
 
   VkDevice dev = device.device.impl;
@@ -411,8 +408,16 @@ VCompPipeline::VCompPipeline(VDevice& device, const VShader& comp)
     info.stage.module = comp.impl;
     info.stage.pName  = "main";
     info.layout       = pipelineLayout;
-    if(layout.isUpdateAfterBind())
+    if(layout.isUpdateAfterBind() && !device.props.hasDescriptorHeap) {
       info.flags = VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT;
+      }
+    if(device.props.hasDescriptorHeap) {
+      mappingInfo.pNext = info.stage.pNext;
+      info.stage.pNext  = &mappingInfo;
+
+      createFlags2.pNext = info.pNext;
+      info.pNext         = &createFlags2;
+      }
     const auto err = vkCreateComputePipelines(dev, VK_NULL_HANDLE, 1, &info, nullptr, &impl);
     if(err!=VK_SUCCESS)
       throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
@@ -449,6 +454,9 @@ size_t VCompPipeline::sizeofBuffer(size_t id, size_t arraylen) const {
 VkPipeline VCompPipeline::instance(VkPipelineLayout pLay) {
   if(!layout.isUpdateAfterBind())
     return impl;
+
+  if(device.props.hasDescriptorHeap)
+    return impl; // no need to spam variants for heap-based pipelines
 
   std::lock_guard<SpinLock> guard(syncInst);
   for(auto& i:inst)
