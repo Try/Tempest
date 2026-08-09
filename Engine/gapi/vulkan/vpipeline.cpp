@@ -134,6 +134,14 @@ VkPipeline VPipeline::initGraphicsPipeline(VDevice& device,
                                            const Decl::ComponentType *decl, size_t declSize,
                                            size_t stride, Topology tp,
                                            const DSharedPtr<const VShader*>* shaders) {
+  SmallArray<VkDescriptorSetAndBindingMappingEXT, MaxBindings> mappings(this->layout.size()+1);
+  VkShaderDescriptorSetAndBindingMappingInfoEXT info { VK_STRUCTURE_TYPE_SHADER_DESCRIPTOR_SET_AND_BINDING_MAPPING_INFO_EXT};
+  if(device.props.hasDescriptorHeap) {
+    info.mappingCount = uint32_t(this->layout.size());
+    info.pMappings    = mappings.get();
+    initPushMappings(info, mappings.get());
+    }
+
   VkPipelineShaderStageCreateInfo shaderStages[5] = {};
   size_t                          stagesCnt       = 0;
   for(size_t i=0; i<5; ++i) {
@@ -145,6 +153,10 @@ VkPipeline VPipeline::initGraphicsPipeline(VDevice& device,
     sh.stage  = nativeFormat(shaders[i].handler->stage);
     sh.module = shaders[i].handler->impl;
     sh.pName  = "main";
+    if(device.props.hasDescriptorHeap) {
+      info.pNext = sh.pNext;
+      sh.pNext   = &info;
+      }
     stagesCnt++;
     }
 
@@ -274,6 +286,9 @@ VkPipeline VPipeline::initGraphicsPipeline(VDevice& device,
   dynamic.pDynamicStates    = dySt;
   dynamic.dynamicStateCount = 2;
 
+  VkPipelineCreateFlags2CreateInfo createFlags2{VK_STRUCTURE_TYPE_PIPELINE_CREATE_FLAGS_2_CREATE_INFO};
+  createFlags2.flags = VK_PIPELINE_CREATE_2_DESCRIPTOR_HEAP_BIT_EXT;
+
   VkGraphicsPipelineCreateInfo pipelineInfo = {};
   pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
   pipelineInfo.stageCount          = uint32_t(stagesCnt);
@@ -290,20 +305,92 @@ VkPipeline VPipeline::initGraphicsPipeline(VDevice& device,
   pipelineInfo.subpass             = 0;
   pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE; // TODO: dummy default pso
 
-  if(rpass!=VK_NULL_HANDLE)
-    pipelineInfo.renderPass = rpass; else
+  if(rpass!=VK_NULL_HANDLE) {
+    pipelineInfo.renderPass = rpass;
+    } else {
     pipelineInfo.pNext      = dynLay;
+    }
+
+  if(device.props.hasDescriptorHeap) {
+    createFlags2.pNext = pipelineInfo.pNext;
+    pipelineInfo.pNext = &createFlags2;
+    }
 
   if(useTesselation) {
     pipelineInfo.pTessellationState = &tesselation;
     // rasterizer.polygonMode = VK_POLYGON_MODE_LINE;
     }
 
-  VkPipeline graphicsPipeline=VK_NULL_HANDLE;
+  VkPipeline graphicsPipeline = VK_NULL_HANDLE;
   const auto err = vkCreateGraphicsPipelines(device.device.impl,VK_NULL_HANDLE,1,&pipelineInfo,nullptr,&graphicsPipeline);
   if(err!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::InvalidShaderModule);
   return graphicsPipeline;
+  }
+
+void VPipeline::initPushMappings(VkShaderDescriptorSetAndBindingMappingInfoEXT& info, VkDescriptorSetAndBindingMappingEXT* mappings) const {
+  auto& lay = this->layout;
+
+  auto nativeFormat = [](ShaderReflection::Class cls) {
+    switch (cls) {
+      case ShaderReflection::Ubo:     return VK_SPIRV_RESOURCE_TYPE_UNIFORM_BUFFER_BIT_EXT;
+      case ShaderReflection::Texture: return VK_SPIRV_RESOURCE_TYPE_COMBINED_SAMPLED_IMAGE_BIT_EXT;
+      case ShaderReflection::Image:   return VK_SPIRV_RESOURCE_TYPE_SAMPLED_IMAGE_BIT_EXT;
+      case ShaderReflection::Sampler: return VK_SPIRV_RESOURCE_TYPE_SAMPLER_BIT_EXT;
+      case ShaderReflection::SsboR:   return VK_SPIRV_RESOURCE_TYPE_READ_ONLY_STORAGE_BUFFER_BIT_EXT;
+      case ShaderReflection::SsboRW:  return VK_SPIRV_RESOURCE_TYPE_READ_WRITE_STORAGE_BUFFER_BIT_EXT;
+      case ShaderReflection::ImgR:    return VK_SPIRV_RESOURCE_TYPE_READ_ONLY_IMAGE_BIT_EXT;
+      case ShaderReflection::ImgRW:   return VK_SPIRV_RESOURCE_TYPE_READ_WRITE_IMAGE_BIT_EXT;
+      case ShaderReflection::Tlas:    return VK_SPIRV_RESOURCE_TYPE_ACCELERATION_STRUCTURE_BIT_EXT;
+      case ShaderReflection::Push:
+      case ShaderReflection::Count:
+        return VK_SPIRV_RESOURCE_TYPE_ALL_EXT;
+      }
+    return VK_SPIRV_RESOURCE_TYPE_ALL_EXT;
+    };
+
+  size_t   mappingId = 0;
+  uint32_t descOff   = pb.size;
+  assert(descOff%4==0); //NOTE: must be multiple of 4
+  for(size_t i=0; i<MaxBindings; ++i) {
+    if(((1u << i) & lay.active)==0)
+      continue;
+    auto& m = mappings[mappingId]; ++mappingId;
+    m.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_AND_BINDING_MAPPING_EXT;
+    m.descriptorSet = 0;
+    m.firstBinding  = uint32_t(i);
+    m.bindingCount  = 1;
+    m.resourceMask  = nativeFormat(lay.bindings[i]);
+    m.source        = VK_DESCRIPTOR_MAPPING_SOURCE_HEAP_WITH_PUSH_INDEX_EXT;
+
+    m.sourceData.pushIndex.heapIndexStride        = device.props.resourceDescriptorSize;
+    m.sourceData.pushIndex.heapArrayStride        = device.props.resourceDescriptorSize;
+    m.sourceData.pushIndex.samplerHeapIndexStride = device.props.samplerDescriptorSize;
+    m.sourceData.pushIndex.samplerHeapArrayStride = device.props.samplerDescriptorSize;
+
+    if(lay.bindings[i]==ShaderReflection::Texture) {
+      m.sourceData.pushIndex.useCombinedImageSamplerIndex = VK_TRUE;
+      m.sourceData.pushIndex.pushOffset                   = descOff;
+      descOff += sizeof(uint32_t);
+      }
+    else {
+
+      m.sourceData.pushIndex.pushOffset = descOff;
+      descOff += sizeof(uint32_t);
+      }
+    }
+
+  if(false && pb.size>0) {
+    // push-constants are not documented?!
+    auto& m = mappings[mappingId]; ++mappingId;
+    m.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_AND_BINDING_MAPPING_EXT;
+    m.descriptorSet = 0;
+    m.firstBinding  = 0;
+    m.bindingCount  = 1;
+    m.resourceMask  = 0x0;
+    m.source        = VK_DESCRIPTOR_MAPPING_SOURCE_PUSH_DATA_EXT;
+    m.sourceData.pushDataOffset = 0;
+    }
   }
 
 

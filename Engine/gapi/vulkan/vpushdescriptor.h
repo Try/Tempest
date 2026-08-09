@@ -20,11 +20,7 @@ class VPushDescriptor {
     ~VPushDescriptor();
     void reset();
 
-    struct DescSet {
-      uint64_t res = {};
-      uint64_t smp = {};
-      };
-    DescSet         pushHeap(const PushBlock& pb, const LayoutDesc& lay, const Bindings& binding);
+    void            pushHeap(uint32_t* indices, const PushBlock& pb, const LayoutDesc& lay, const Bindings& binding);
     VkDescriptorSet push(const PushBlock &pb, const LayoutDesc& lay, const Bindings& binding);
 
     static void     write(VDevice &dev, VkWriteDescriptorSet &wx, WriteInfo &infoW, uint32_t dstBinding,

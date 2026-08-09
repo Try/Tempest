@@ -133,9 +133,9 @@ std::pair<uint32_t, uint32_t> VPushDescriptor::allocHeap(uint32_t numRes, uint32
   return std::make_pair(rptr, sptr);
   }
 
-VPushDescriptor::DescSet VPushDescriptor::pushHeap(const PushBlock& pb, const LayoutDesc& lay, const Bindings& binding) {
+void VPushDescriptor::pushHeap(uint32_t* indices, const PushBlock& pb, const LayoutDesc& lay, const Bindings& binding) {
   const auto sz  = numResources(lay);
-  const auto ptr = allocHeap(sz.first, sz.second);
+  auto       ptr = allocHeap(sz.first, sz.second);
 
   const auto resSize = dev.props.resourceDescriptorSize;
   const auto smpSize = dev.props.samplerDescriptorSize;
@@ -154,24 +154,25 @@ VPushDescriptor::DescSet VPushDescriptor::pushHeap(const PushBlock& pb, const La
 
     VPushDescriptor::write(dev, res, smp, lay.bindings[i], binding.data[i], binding.offset[i], binding.map[i], binding.smp[i]);
 
-    if(lay.bindings[i]!=ShaderReflection::Sampler)
+    if(lay.bindings[i]!=ShaderReflection::Sampler && lay.bindings[i]!=ShaderReflection::Texture) {
+      indices[0] = ptr.first; ++indices;
       res += resSize;
-
-    if(lay.bindings[i]==ShaderReflection::Sampler || lay.bindings[i]==ShaderReflection::Texture)
+      ptr.first += 1;
+      }
+    if(lay.bindings[i]==ShaderReflection::Texture) {
+      indices[0] = (ptr.first & 0xFFFFF) | (ptr.second << 20);
+      res += resSize;
       smp += smpSize;
+      ptr.first  += 1;
+      ptr.second += 1;
+      ++indices;
+      }
+    if(lay.bindings[i]==ShaderReflection::Sampler) {
+      indices[0] = ptr.second; ++indices;
+      smp += smpSize;
+      ptr.second += 1;
+      }
     }
-
-  DescSet ret = {};
-  if(sz.first!=0) {
-    ret.res = dev.descHeap.resources.toDeviceAddress(dev);
-    ret.res += ptr.first*resSize;
-    }
-  if(sz.second!=0) {
-    ret.smp = dev.descHeap.samplers.toDeviceAddress(dev);
-    ret.smp += ptr.second*smpSize;
-    }
-
-  return ret;
   }
 
 VkDescriptorSet VPushDescriptor::push(const PushBlock& pb, const LayoutDesc& lay, const Bindings& binding) {

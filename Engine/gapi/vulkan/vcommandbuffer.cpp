@@ -366,6 +366,15 @@ void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
   curDrawPipeline = &px;
   vboStride       = px.defaultStride;
   pipelineLayout  = VK_NULL_HANDLE; // clear until draw
+
+  if(device.props.hasDescriptorHeap) {
+    auto& pso  = *curDrawPipeline;
+    auto  rp   = (passRp!=nullptr ? passRp->pass : VK_NULL_HANDLE);
+    auto  inst = pso.instance(passDyn, rp, VK_NULL_HANDLE, vboStride);
+    vkCmdBindPipeline(impl, VK_PIPELINE_BIND_POINT_GRAPHICS, inst);
+    pushData.durty = true; //TODO: fine check for layout compatibility
+    bindings.durty = true;
+    }
   }
 
 void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
@@ -497,13 +506,49 @@ void VCommandBuffer::implSetUniforms(const PipelineStage st) {
 
   handleSync(*lay, *sync, st);
 
+  if(device.props.hasDescriptorHeap) {
+    auto vkCmdPushDataEXT = device.vkCmdPushDataEXT;
+    auto vkCmdBindResourceHeapEXT = device.vkCmdBindResourceHeapEXT;
+    auto vkCmdBindSamplerHeapEXT  = device.vkCmdBindSamplerHeapEXT;
+
+    auto index = reinterpret_cast<uint32_t*>(pushData.data + pb->size);
+    pushDescriptors.pushHeap(index, *pb, *lay, bindings);
+
+    {
+    VkBindHeapInfoEXT info = {VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT};
+    info.heapRange.address   = device.descHeap.resources.toDeviceAddress(device);
+    info.heapRange.size      = device.descHeap.resources.size();
+    info.reservedRangeOffset = info.heapRange.size - device.props.resourceHeapReserve;
+    info.reservedRangeSize   = device.props.resourceHeapReserve;
+    vkCmdBindResourceHeapEXT(impl, &info);
+    }
+
+    {
+    VkBindHeapInfoEXT info = {VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT};
+    info.heapRange.address   = device.descHeap.samplers.toDeviceAddress(device);
+    info.heapRange.size      = device.descHeap.samplers.size();
+    info.reservedRangeOffset = info.heapRange.size - device.props.samplerHeapReserve;
+    info.reservedRangeSize   = device.props.samplerHeapReserve;
+    vkCmdBindSamplerHeapEXT(impl, &info);
+    }
+
+    VkPushDataInfoEXT pushDataInfo = {VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT};
+    pushDataInfo.offset       = 0;
+    pushDataInfo.data.address = pushData.data;
+    pushDataInfo.data.size    = sizeof(pushData.data);
+    vkCmdPushDataEXT(impl, &pushDataInfo);
+    pushData.durty = false; //combined push
+    return;
+    }
+
   if(lay->isUpdateAfterBind()) {
     auto dset = device.bindless.inst(*pb, *lay, bindings);
     pLay = dset.pLay;
     vkCmdBindDescriptorSets(impl, bindPoint,
                             pLay, 0, 1,
                             &dset.set, 0, nullptr);
-    } else {
+    }
+  else {
     auto dset = pushDescriptors.push(*pb, *lay, bindings);
     vkCmdBindDescriptorSets(impl, bindPoint,
                             pLay, 0, 1,

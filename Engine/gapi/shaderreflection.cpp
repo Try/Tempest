@@ -5,7 +5,11 @@
 #include <algorithm>
 #include <libspirv/libspirv.h>
 
-//#include "thirdparty/spirv_cross/spirv_common.hpp"
+#if defined(__cpp_lib_bitops)
+#include <bit>
+#else
+#include <bitset>
+#endif
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -83,6 +87,14 @@ bool ShaderReflection::LayoutDesc::isUpdateAfterBind() const {
 
 size_t ShaderReflection::LayoutDesc::sizeofBuffer(size_t id, size_t arraylen) const {
   return bufferSz[id] + bufferEl[id]*arraylen;
+  }
+
+size_t ShaderReflection::LayoutDesc::size() const {
+#if defined(__cpp_lib_bitops)
+  return std::popcount(active);
+#else
+  return std::bitset<sizeof(active)*8>(active).size();
+#endif
   }
 
 

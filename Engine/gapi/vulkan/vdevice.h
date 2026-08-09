@@ -333,8 +333,8 @@ class VDevice : public AbstractGraphicsApi::Device {
       uint64_t filteredLinearFormat = 0;
       bool     hasFilteredFormat(TextureFormat f) const;
 
-      size_t   resourceDescriptorSize = 0;
-      size_t   samplerDescriptorSize  = 0;
+      uint32_t resourceDescriptorSize = 0;
+      uint32_t samplerDescriptorSize  = 0;
 
       size_t   resourceHeapReserve = 0;
       size_t   samplerHeapReserve  = 0;
@@ -454,6 +454,9 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     PFN_vkWriteResourceDescriptorsEXT vkWriteResourceDescriptorsEXT = nullptr;
     PFN_vkWriteSamplerDescriptorsEXT  vkWriteSamplerDescriptorsEXT = nullptr;
+    PFN_vkCmdPushDataEXT              vkCmdPushDataEXT = nullptr;
+    PFN_vkCmdBindResourceHeapEXT      vkCmdBindResourceHeapEXT = nullptr;
+    PFN_vkCmdBindSamplerHeapEXT       vkCmdBindSamplerHeapEXT = nullptr;
 
     static const std::initializer_list<const char*> requiredExtensions;
 

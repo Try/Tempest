@@ -378,6 +378,9 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
   if(props.hasDescriptorHeap) {
     vkWriteResourceDescriptorsEXT = PFN_vkWriteResourceDescriptorsEXT(vkGetDeviceProcAddr(device.impl,"vkWriteResourceDescriptorsEXT"));
     vkWriteSamplerDescriptorsEXT  = PFN_vkWriteSamplerDescriptorsEXT(vkGetDeviceProcAddr(device.impl,"vkWriteSamplerDescriptorsEXT"));
+    vkCmdPushDataEXT              = PFN_vkCmdPushDataEXT(vkGetDeviceProcAddr(device.impl,"vkCmdPushDataEXT"));
+    vkCmdBindResourceHeapEXT      = PFN_vkCmdBindResourceHeapEXT(vkGetDeviceProcAddr(device.impl,"vkCmdBindResourceHeapEXT"));
+    vkCmdBindSamplerHeapEXT       = PFN_vkCmdBindSamplerHeapEXT(vkGetDeviceProcAddr(device.impl,"vkCmdBindSamplerHeapEXT"));
     }
   }
 
