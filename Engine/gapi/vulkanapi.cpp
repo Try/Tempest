@@ -247,8 +247,6 @@ AbstractGraphicsApi::Device* VulkanApi::createDevice(std::string_view gpuName) {
     VDevice::deviceQueueProps(device, props);
     if(!impl->isDeviceSuitable(device, props))
       continue;
-    if(!props.hasDescriptorHeap)
-      continue;
     return new VDevice(impl->instance, impl->hasDeviceFeatures2, device);
     }
 
