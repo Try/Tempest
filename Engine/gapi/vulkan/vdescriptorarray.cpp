@@ -141,4 +141,62 @@ void VDescriptorArray::populate(VDevice &dev, AbstractGraphicsApi::Buffer **b, s
   vkUpdateDescriptorSets(dev.device.impl, 1, &descriptorWrite, 0, nullptr);
   }
 
+
+VDescriptorHeapArray::VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel)
+  : VDescriptorHeapArray(dev, tex, cnt, mipLevel, nullptr){
+  }
+
+VDescriptorHeapArray::VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler* sampler)
+  : dev(dev), cnt(cnt) {
+  //NOTE: no bindless storage image
+  try {
+    dPtrR = dev.descHeap.alloc(HEAP_TYPE_CBV_SRV_UAV, cnt);
+
+    for(size_t i=0; i<cnt; ++i) {
+      auto res = dev.descHeap.resourcesPtr;
+      res += (dPtrR + i)*dev.props.resourceDescriptorSize;
+      VPushDescriptor::write(dev, res, nullptr, ShaderReflection::Image, tex[i], mipLevel, ComponentMapping(), Sampler::nearest());
+      }
+
+    if(sampler!=nullptr) {
+      dPtrS = dev.descHeap.alloc(HEAP_TYPE_SAMPLER, uint32_t(cnt));
+      for(size_t i=0; i<cnt; ++i) {
+        auto smp = dev.descHeap.samplersPtr;
+        smp += (dPtrS + i)*dev.props.samplerDescriptorSize;
+        VPushDescriptor::write(dev, nullptr, smp, ShaderReflection::Sampler, nullptr, mipLevel, ComponentMapping(), *sampler);
+        }
+      }
+    }
+  catch(...) {
+    clear();
+    throw;
+    }
+  }
+
+VDescriptorHeapArray::VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Buffer** buf, size_t cnt)
+  : dev(dev), cnt(cnt) {
+  try {
+    dPtrR = dev.descHeap.alloc(HEAP_TYPE_CBV_SRV_UAV, uint32_t(cnt));
+
+    for(size_t i=0; i<cnt; ++i) {
+      auto res = dev.descHeap.resourcesPtr;
+      res += (dPtrR + i)*dev.props.resourceDescriptorSize;
+      VPushDescriptor::write(dev, res, nullptr, ShaderReflection::SsboR, buf[i], 0, ComponentMapping(), Sampler::nearest());
+      }
+    }
+  catch(...) {
+    clear();
+    throw;
+    }
+  }
+
+VDescriptorHeapArray::~VDescriptorHeapArray() {
+  clear();
+  }
+
+void VDescriptorHeapArray::clear() {
+  dev.descHeap.free(HEAP_TYPE_CBV_SRV_UAV, dPtrR, uint32_t(cnt));
+  dev.descHeap.free(HEAP_TYPE_SAMPLER,     dPtrS, uint32_t(cnt));
+  }
+
 #endif

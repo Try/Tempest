@@ -330,7 +330,7 @@ VkPipeline VPipeline::initGraphicsPipeline(VDevice& device,
 
 void VPipeline::initPushMappings(VDevice& device, VkShaderDescriptorSetAndBindingMappingInfoEXT& info, VkDescriptorSetAndBindingMappingEXT* mappings,
                                  const PushBlock& pb, const LayoutDesc& lay) {
-  auto nativeFormat = [](ShaderReflection::Class cls) {
+  auto nativeFormat = [](ShaderReflection::Class cls) -> VkSpirvResourceTypeFlagsEXT {
     switch (cls) {
       case ShaderReflection::Ubo:     return VK_SPIRV_RESOURCE_TYPE_UNIFORM_BUFFER_BIT_EXT;
       case ShaderReflection::Texture: return VK_SPIRV_RESOURCE_TYPE_COMBINED_SAMPLED_IMAGE_BIT_EXT;
@@ -373,6 +373,7 @@ void VPipeline::initPushMappings(VDevice& device, VkShaderDescriptorSetAndBindin
     m.sourceData.pushIndex.pushOffset = descOff;
     descOff += sizeof(uint32_t);
     }
+  info.mappingCount = mappingId;
   }
 
 

@@ -435,7 +435,8 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
     }
   if(extensionSupport(ext,VK_KHR_MAINTENANCE_5_EXTENSION_NAME) &&
      extensionSupport(ext,VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME) &&
-     extensionSupport(ext,VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME)) {
+     extensionSupport(ext,VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME) &&
+     extensionSupport(ext,VK_EXT_ROBUSTNESS_2_EXTENSION_NAME)) {
     props.hasDescriptorHeap = true;
     }
 

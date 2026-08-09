@@ -202,11 +202,13 @@ void ShaderReflection::getBindings(std::vector<Binding>& lay, spirv_cross::Compi
     lay.push_back(b);
     }
   for(auto &resource : resources.storage_images) {
-    auto&    t       = typeFromVariable(comp, resource.id);
-    unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);
+    auto&    t        = typeFromVariable(comp, resource.id);
+    unsigned binding  = comp.get_decoration(resource.id, spv::DecorationBinding);
+    unsigned readonly = comp.get_decoration(resource.id, spv::DecorationNonWritable);
+
     Binding b;
     b.layout       = binding;
-    b.cls          = ImgRW; // (readonly.get(spv::DecorationNonWritable) ? UniformsLayout::ImgR : UniformsLayout::ImgRW);
+    b.cls          = readonly ? ImgR : ImgRW;
     b.stage        = s;
     b.runtimeSized = isRuntimeSized(t);
     b.arraySize    = arraySize(t);

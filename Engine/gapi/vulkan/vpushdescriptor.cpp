@@ -3,7 +3,8 @@
 
 #include "gapi/vulkan/vaccelerationstructure.h"
 #include "gapi/vulkan/vtexture.h"
-#include "vdevice.h"
+#include "gapi/vulkan/vdescriptorarray.h"
+#include "gapi/vulkan/vdevice.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -148,8 +149,20 @@ void VPushDescriptor::pushHeap(uint32_t* indices, const PushBlock& pb, const Lay
   for(size_t i=0; i<MaxBindings; ++i) {
     if(((1u << i) & lay.active)==0)
       continue;
-    if(((1u << i) & lay.array)!=0)
+    if(((1u << i) & lay.array)!=0) {
+      const auto data = reinterpret_cast<VDescriptorHeapArray*>(binding.data[i]);
+      if(lay.bindings[i]==ShaderReflection::Texture) {
+        indices[0] = (data->handleR() & 0xFFFFF) | (data->handleS() << 20);
+        }
+      else if(lay.bindings[i]==ShaderReflection::Sampler) {
+        indices[0] = data->handleS();
+        }
+      else {
+        indices[0] = data->handleR();
+        }
+      ++indices;
       continue;
+      }
 
     VPushDescriptor::write(dev, res, smp, lay.bindings[i], binding.data[i], binding.offset[i], binding.map[i], binding.smp[i]);
 
@@ -340,7 +353,8 @@ void VPushDescriptor::write(VDevice& dev, void* resPtr, void* smpPtr, ShaderRefl
       info.address = buf!=nullptr ? buf->toDeviceAddress(dev) + offset : 0;
       info.size    = buf!=nullptr ? buf->size() - offset : 0;
 
-      res.data.pAddressRange = &info;
+      //NOTE1: assume VK_EXT_robustness2, for sake of null descriptor
+      res.data.pAddressRange = buf!=nullptr ? &info : nullptr;
 
       VkHostAddressRangeEXT dest = {resPtr, dev.props.resourceDescriptorSize};
       vkWriteResourceDescriptorsEXT(dev.device.impl, 1, &res, &dest);
@@ -350,6 +364,8 @@ void VPushDescriptor::write(VDevice& dev, void* resPtr, void* smpPtr, ShaderRefl
     case ShaderReflection::Image:
     case ShaderReflection::ImgR:
     case ShaderReflection::ImgRW:{
+      if(data==nullptr)
+        return;
       auto*    tex       = reinterpret_cast<VTexture*>(data);
       uint32_t mipLevel  = offset;
       bool     is3DImage = tex->is3D; // TODO: cast 3d to 2d, based on dest descriptor
