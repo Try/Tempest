@@ -309,9 +309,6 @@ void VPushDescriptor::write(VDevice& dev, void* resPtr, void* smpPtr, ShaderRefl
       res.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
       break;
     case ShaderReflection::Texture:
-      // res.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-      res.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-      break;
     case ShaderReflection::Image:
       res.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
       break;
@@ -374,7 +371,16 @@ void VPushDescriptor::write(VDevice& dev, void* resPtr, void* smpPtr, ShaderRefl
       break;
       }
     case ShaderReflection::Tlas: {
-      assert(0);
+      auto* tlas = reinterpret_cast<VAccelerationStructure*>(data);
+
+      VkDeviceAddressRangeEXT info = {};
+      info.address = tlas!=nullptr ? tlas->toDeviceAddress(dev) : 0;
+      info.size    = 0; //buf!=nullptr  ? buf->size() : 0;
+
+      res.data.pAddressRange = &info;
+
+      VkHostAddressRangeEXT dest = {resPtr, dev.props.resourceDescriptorSize};
+      vkWriteResourceDescriptorsEXT(dev.device.impl, 1, &res, &dest);
       break;
       }
     case ShaderReflection::Sampler:

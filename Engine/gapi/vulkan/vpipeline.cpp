@@ -368,16 +368,11 @@ void VPipeline::initPushMappings(VkShaderDescriptorSetAndBindingMappingInfoEXT& 
     m.sourceData.pushIndex.samplerHeapIndexStride = device.props.samplerDescriptorSize;
     m.sourceData.pushIndex.samplerHeapArrayStride = device.props.samplerDescriptorSize;
 
-    if(lay.bindings[i]==ShaderReflection::Texture) {
+    if(lay.bindings[i]==ShaderReflection::Texture)
       m.sourceData.pushIndex.useCombinedImageSamplerIndex = VK_TRUE;
-      m.sourceData.pushIndex.pushOffset                   = descOff;
-      descOff += sizeof(uint32_t);
-      }
-    else {
 
-      m.sourceData.pushIndex.pushOffset = descOff;
-      descOff += sizeof(uint32_t);
-      }
+    m.sourceData.pushIndex.pushOffset = descOff;
+    descOff += sizeof(uint32_t);
     }
 
   if(false && pb.size>0) {
