@@ -43,6 +43,8 @@ class VDescriptorHeapArray : public AbstractGraphicsApi::DescArray {
     uint32_t handleR()  const { return dPtrR; }
     uint32_t handleS()  const { return dPtrS; }
 
+    NonUniqResId nonUniqId = NonUniqResId::I_None;
+
   private:
     void     clear();
 

@@ -33,17 +33,60 @@ VDescriptorHeap::VDescriptorHeap() {
   }
 
 VDescriptorHeap::~VDescriptorHeap() {
-  if(dev==nullptr)
-    return;
-  for(auto& i:allocator)
-    if(i.memory!=nullptr)
-      dev->allocator.unmapDescriptorHeap(*i.memory);
   }
 
 void VDescriptorHeap::setDevice(VDevice& dx) {
   dev = &dx;
   allocator[0].rgn.reserve(1024);
   allocator[1].rgn.reserve(1024);
+  }
+
+VDescriptorHeap::Allocation VDescriptorHeap::alloc(AbstractGraphicsApi::Buffer** buf, size_t cnt) {
+  std::lock_guard<std::recursive_mutex> guard(allocator[HEAP_TYPE_CBV_SRV_UAV].sync);
+
+  auto& props = dev->props;
+  auto  alloc = this->alloc(HEAP_TYPE_CBV_SRV_UAV, cnt);
+  auto  dPtrR = alloc.ptr;
+
+  for(size_t i=0; i<cnt; ++i) {
+    auto res = alloc.hptr;
+    res += (dPtrR + i)*props.resourceDescriptorSize;
+    VPushDescriptor::write(*dev, res, nullptr, ShaderReflection::SsboR, buf[i], 0, ComponentMapping(), Sampler::nearest());
+    }
+
+  return alloc;
+  }
+
+VDescriptorHeap::Allocation VDescriptorHeap::alloc(AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel) {
+  std::lock_guard<std::recursive_mutex> guard(allocator[HEAP_TYPE_CBV_SRV_UAV].sync);
+
+  auto& props = dev->props;
+  auto  alloc = this->alloc(HEAP_TYPE_CBV_SRV_UAV, cnt);
+  auto  dPtrR = alloc.ptr;
+
+  for(size_t i=0; i<cnt; ++i) {
+    auto res = alloc.hptr;
+    res += (dPtrR + i)*props.resourceDescriptorSize;
+    VPushDescriptor::write(*dev, res, nullptr, ShaderReflection::Image, tex[i], mipLevel, ComponentMapping(), Sampler::nearest());
+    }
+
+  return alloc;
+  }
+
+VDescriptorHeap::Allocation VDescriptorHeap::alloc(const Sampler& sampler, size_t cnt) {
+  std::lock_guard<std::recursive_mutex> guard(allocator[HEAP_TYPE_SAMPLER].sync);
+
+  auto& props = dev->props;
+  auto  alloc = this->alloc(HEAP_TYPE_SAMPLER, cnt);
+  auto  dPtrS = alloc.ptr;
+
+  for(size_t i=0; i<cnt; ++i) {
+    auto smp = alloc.hptr;
+    smp += (dPtrS + i)*props.samplerDescriptorSize;
+    VPushDescriptor::write(*dev, nullptr, smp, ShaderReflection::Sampler, nullptr, 0, ComponentMapping(), sampler);
+    }
+
+  return alloc;
   }
 
 VDescriptorHeap::Allocation VDescriptorHeap::alloc(HeapType heapType, uint32_t num) {
@@ -65,7 +108,7 @@ void VDescriptorHeap::flush() {
   }
 
 VDescriptorHeap::Allocation VDescriptorHeap::alloc(Allocator& heap, HeapType heapType, uint32_t num) {
-  std::lock_guard<std::mutex> guard(heap.sync);
+  std::lock_guard<std::recursive_mutex> guard(heap.sync);
 
   for(size_t i=0; i<heap.rgn.size(); ++i) {
     auto& r = heap.rgn[i];
@@ -74,6 +117,8 @@ VDescriptorHeap::Allocation VDescriptorHeap::alloc(Allocator& heap, HeapType hea
 
     uint32_t ret = r.begin;
     r.begin += num;
+    if(r.begin==r.end)
+      heap.rgn.erase(heap.rgn.begin() + i);
     return Allocation{ret, heap.ptr, heap.memory};
     }
 
@@ -82,14 +127,12 @@ VDescriptorHeap::Allocation VDescriptorHeap::alloc(Allocator& heap, HeapType hea
   auto  reserve = (heapType==HEAP_TYPE_CBV_SRV_UAV) ? props.resourceHeapReserve    : props.samplerHeapReserve;
   auto  maxSize = (heapType==HEAP_TYPE_CBV_SRV_UAV) ? props.resourceHeapMaxSize    : props.samplerHeapMaxSize;
   auto  elSize  = (heapType==HEAP_TYPE_CBV_SRV_UAV) ? props.resourceDescriptorSize : props.samplerDescriptorSize;
-  auto  prevNum = (heap.memory ? heap.memory->size() : 0) / elSize;
+  auto  prevNum = (heap.memory ? (heap.memory->size()-reserve) : 0) / elSize;
 
   auto size = (heap.memory ? heap.memory->size() : reserve) + num*elSize;
   if(size > maxSize)
     throw std::bad_alloc();
-  size = std::min(std::max(nextPot(size), 4096u), maxSize);
-
-  heap.rgn.push_back(Range{uint32_t(prevNum), uint32_t(prevNum)});
+  size = std::min(std::max(nextPot(size), 16*1024u), maxSize);
 
   auto buf   = dev->allocator.alloc(nullptr, size, MemUsage::Descriptor, BufferHeap::Upload);
   auto pnext = std::make_shared<VHeap>(std::move(buf));
@@ -101,15 +144,18 @@ VDescriptorHeap::Allocation VDescriptorHeap::alloc(Allocator& heap, HeapType hea
     std::memcpy(ptr, heap.ptr, heap.memory->size()-reserve);
     }
 
+  Range rgn;
+  rgn.begin = prevNum + num;
+  rgn.end   = uint32_t(size-reserve)/elSize;
+
+  heap.rgn.push_back(rgn);
   heap.memory = pnext;
   heap.ptr    = ptr;
-  heap.rgn.back().begin = uint32_t(prevNum + num);
-  heap.rgn.back().end   = uint32_t(size-reserve)/elSize;
   return Allocation{uint32_t(prevNum), heap.ptr, heap.memory};
   }
 
 void VDescriptorHeap::free(Allocator& heap, uint32_t ptr, uint32_t num) {
-  std::lock_guard<std::mutex> guard(heap.sync);
+  std::lock_guard<std::recursive_mutex> guard(heap.sync);
 
   size_t i = 0;
   for(; i+1<heap.rgn.size(); ++i) {

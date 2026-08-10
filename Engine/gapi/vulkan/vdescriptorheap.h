@@ -29,6 +29,9 @@ class VDescriptorHeap {
       std::shared_ptr<VBuffer> memory;
       };
 
+    Allocation alloc(AbstractGraphicsApi::Buffer**  buf, size_t cnt);
+    Allocation alloc(AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel);
+    Allocation alloc(const Sampler& smp, size_t cnt);
     Allocation alloc(HeapType heap, uint32_t num);
     void       free (HeapType heap, uint32_t ptr, uint32_t num);
     void       flush();
@@ -40,7 +43,7 @@ class VDescriptorHeap {
       };
 
     struct Allocator {
-      std::mutex               sync;
+      std::recursive_mutex     sync;
       std::vector<Range>       rgn;
       std::shared_ptr<VBuffer> memory;
       uint8_t*                 ptr = nullptr;

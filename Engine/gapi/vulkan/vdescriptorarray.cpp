@@ -150,23 +150,19 @@ VDescriptorHeapArray::VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Te
   : dev(dev), cnt(cnt) {
   //NOTE: no bindless storage image
   try {
-    auto alloc = dev.descHeap.alloc(HEAP_TYPE_CBV_SRV_UAV, cnt);
+    auto alloc = dev.descHeap.alloc(tex, cnt, mipLevel);
     dPtrR = alloc.ptr;
 
-    for(size_t i=0; i<cnt; ++i) {
-      auto res = alloc.hptr;
-      res += (dPtrR + i)*dev.props.resourceDescriptorSize;
-      VPushDescriptor::write(dev, res, nullptr, ShaderReflection::Image, tex[i], mipLevel, ComponentMapping(), Sampler::nearest());
+    if(sampler!=nullptr) {
+      auto smpAlloc = dev.descHeap.alloc(*sampler, uint32_t(cnt));
+      dPtrS = smpAlloc.ptr;
       }
 
-    if(sampler!=nullptr) {
-      auto smpAlloc = dev.descHeap.alloc(HEAP_TYPE_SAMPLER, uint32_t(cnt));
-      dPtrS = smpAlloc.ptr;
-      for(size_t i=0; i<cnt; ++i) {
-        auto smp = smpAlloc.hptr;
-        smp += (dPtrS + i)*dev.props.samplerDescriptorSize;
-        VPushDescriptor::write(dev, nullptr, smp, ShaderReflection::Sampler, nullptr, mipLevel, ComponentMapping(), *sampler);
-        }
+    nonUniqId = NonUniqResId::I_None;
+    for(size_t i=0; i<cnt; ++i) {
+      auto* bx = reinterpret_cast<VTexture*>(tex[i]);
+      if(bx!=nullptr)
+        nonUniqId |= bx->nonUniqId;
       }
     }
   catch(...) {
@@ -178,13 +174,14 @@ VDescriptorHeapArray::VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Te
 VDescriptorHeapArray::VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Buffer** buf, size_t cnt)
   : dev(dev), cnt(cnt) {
   try {
-    auto alloc = dev.descHeap.alloc(HEAP_TYPE_CBV_SRV_UAV, cnt);
+    auto alloc = dev.descHeap.alloc(buf, cnt);
     dPtrR = alloc.ptr;
 
+    nonUniqId = NonUniqResId::I_None;
     for(size_t i=0; i<cnt; ++i) {
-      auto res = alloc.hptr;
-      res += (dPtrR + i)*dev.props.resourceDescriptorSize;
-      VPushDescriptor::write(dev, res, nullptr, ShaderReflection::SsboR, buf[i], 0, ComponentMapping(), Sampler::nearest());
+      auto* bx = reinterpret_cast<VBuffer*>(buf[i]);
+      if(bx!=nullptr)
+        nonUniqId |= bx->nonUniqId;
       }
     }
   catch(...) {
