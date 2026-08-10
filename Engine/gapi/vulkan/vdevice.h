@@ -336,11 +336,11 @@ class VDevice : public AbstractGraphicsApi::Device {
       uint32_t resourceDescriptorSize = 0;
       uint32_t samplerDescriptorSize  = 0;
 
-      size_t   resourceHeapReserve = 0;
-      size_t   samplerHeapReserve  = 0;
+      uint32_t resourceHeapReserve = 0;
+      uint32_t samplerHeapReserve  = 0;
 
-      size_t   resourceHeapMaxSize = 0;
-      size_t   samplerHeapMaxSize  = 0;
+      uint32_t resourceHeapMaxSize = 0;
+      uint32_t samplerHeapMaxSize  = 0;
 
       bool     hasMemRq2          = false;
       bool     hasDedicatedAlloc  = false;

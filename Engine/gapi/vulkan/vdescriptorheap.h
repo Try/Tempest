@@ -16,19 +16,22 @@ class VDescriptorHeap {
 
     void setDevice(VDevice& dev);
 
-    struct Allocation {
-      uint32_t ptr = 0;
+    struct VHeap : VBuffer {
+      VHeap(VBuffer&&);
+      ~VHeap();
+
+      uint8_t* hptr = nullptr;
       };
 
-    uint32_t alloc(HeapType heap, uint32_t num);
-    void     free (HeapType heap, uint32_t ptr, uint32_t num);
+    struct Allocation {
+      uint32_t                 ptr  = 0;
+      uint8_t*                 hptr = nullptr;
+      std::shared_ptr<VBuffer> memory;
+      };
 
-    //NOTE: temporarly public
-    VBuffer resources;
-    VBuffer samplers;
-
-    uint8_t* resourcesPtr = nullptr;
-    uint8_t* samplersPtr  = nullptr;
+    Allocation alloc(HeapType heap, uint32_t num);
+    void       free (HeapType heap, uint32_t ptr, uint32_t num);
+    void       flush();
 
   private:
     struct Range {
@@ -37,12 +40,14 @@ class VDescriptorHeap {
       };
 
     struct Allocator {
-      std::mutex         sync;
-      std::vector<Range> rgn;
+      std::mutex               sync;
+      std::vector<Range>       rgn;
+      std::shared_ptr<VBuffer> memory;
+      uint8_t*                 ptr = nullptr;
       };
 
-    uint32_t alloc(Allocator& heap, uint32_t num);
-    void     free (Allocator& heap, uint32_t ptr, uint32_t num);
+    Allocation alloc(Allocator& heap, HeapType heapType, uint32_t num);
+    void       free (Allocator& heap, uint32_t ptr, uint32_t num);
 
     VDevice*  dev = nullptr;
     Allocator allocator[2];

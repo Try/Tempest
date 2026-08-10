@@ -54,8 +54,11 @@ VPushDescriptor::Pool<DESCRIPTOR_POOL>::Pool(VDevice &dev) {
 
 template<HeapType T>
 VPushDescriptor::Pool<T>::Pool(VDevice &dev, uint32_t size) {
-  dPtr  = dev.descHeap.alloc(T, size);
-  alloc = 0;
+  auto mem = dev.descHeap.alloc(T, size);
+  dPtr    = mem.ptr;
+  heapMem = mem.memory;
+  hostPtr = mem.hptr;
+  alloc   = 0;
   }
 
 VPushDescriptor::VPushDescriptor(VDevice &dev)
@@ -140,10 +143,10 @@ void VPushDescriptor::pushHeap(uint32_t* indices, const PushBlock& pb, const Lay
   const auto resSize = dev.props.resourceDescriptorSize;
   const auto smpSize = dev.props.samplerDescriptorSize;
 
-  auto res = dev.descHeap.resourcesPtr;
+  auto res = resPool.empty() ? nullptr : resPool.back().hostPtr;
   res += ptr.first*resSize;
 
-  auto smp = dev.descHeap.samplersPtr;
+  auto smp = smpPool.empty() ? nullptr : smpPool.back().hostPtr;
   smp += ptr.second*smpSize;
 
   for(size_t i=0; i<MaxBindings; ++i) {
@@ -184,6 +187,36 @@ void VPushDescriptor::pushHeap(uint32_t* indices, const PushBlock& pb, const Lay
       smp += smpSize;
       ptr.second += 1;
       }
+    }
+  }
+
+void VPushDescriptor::bindHeap(VkCommandBuffer cmd) {
+  //NOTE: might be a problem with bindless-only draws
+  auto res = resPool.empty() ? nullptr : resPool.back().heapMem.get();
+  auto smp = smpPool.empty() ? nullptr : smpPool.back().heapMem.get();
+
+  auto vkCmdBindResourceHeapEXT = dev.vkCmdBindResourceHeapEXT;
+  auto vkCmdBindSamplerHeapEXT  = dev.vkCmdBindSamplerHeapEXT;
+
+  if(res!=nullptr) {
+    auto& resources = *res;
+
+    VkBindHeapInfoEXT info = {VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT};
+    info.heapRange.address   = resources.toDeviceAddress(dev);
+    info.heapRange.size      = resources.size();
+    info.reservedRangeOffset = info.heapRange.size - dev.props.resourceHeapReserve;
+    info.reservedRangeSize   = dev.props.resourceHeapReserve;
+    vkCmdBindResourceHeapEXT(cmd, &info);
+    }
+  if(smp!=nullptr) {
+    auto& samplers = *smp;
+
+    VkBindHeapInfoEXT info = {VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT};
+    info.heapRange.address   = samplers.toDeviceAddress(dev);
+    info.heapRange.size      = samplers.size();
+    info.reservedRangeOffset = info.heapRange.size - dev.props.samplerHeapReserve;
+    info.reservedRangeSize   = dev.props.samplerHeapReserve;
+    vkCmdBindSamplerHeapEXT(cmd, &info);
     }
   }
 

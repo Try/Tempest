@@ -8,6 +8,7 @@ namespace Detail {
 class VDevice;
 class VPipeline;
 class VCompPipeline;
+class VBuffer;
 
 class VPushDescriptor {
   public:
@@ -21,6 +22,7 @@ class VPushDescriptor {
     void reset();
 
     void            pushHeap(uint32_t* indices, const PushBlock& pb, const LayoutDesc& lay, const Bindings& binding);
+    void            bindHeap(VkCommandBuffer cmd);
     VkDescriptorSet push(const PushBlock &pb, const LayoutDesc& lay, const Bindings& binding);
 
     static void     write(VDevice &dev, VkWriteDescriptorSet &wx, WriteInfo &infoW, uint32_t dstBinding,
@@ -40,8 +42,10 @@ class VPushDescriptor {
     struct Pool {
       Pool(VDevice& dev, uint32_t size);
 
-      uint32_t                   dPtr  = 0;
-      uint32_t                   alloc = 0;
+      std::shared_ptr<VBuffer>   heapMem;
+      uint8_t*                   hostPtr = nullptr;
+      uint32_t                   dPtr    = 0;
+      uint32_t                   alloc   = 0;
       };
 
     template<>

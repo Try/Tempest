@@ -516,29 +516,10 @@ void VCommandBuffer::implSetUniforms(const PipelineStage st) {
 
   if(device.props.hasDescriptorHeap) {
     auto vkCmdPushDataEXT = device.vkCmdPushDataEXT;
-    auto vkCmdBindResourceHeapEXT = device.vkCmdBindResourceHeapEXT;
-    auto vkCmdBindSamplerHeapEXT  = device.vkCmdBindSamplerHeapEXT;
 
     auto index = reinterpret_cast<uint32_t*>(pushData.data + pb->size);
     pushDescriptors.pushHeap(index, *pb, *lay, bindings);
-
-    {
-    VkBindHeapInfoEXT info = {VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT};
-    info.heapRange.address   = device.descHeap.resources.toDeviceAddress(device);
-    info.heapRange.size      = device.descHeap.resources.size();
-    info.reservedRangeOffset = info.heapRange.size - device.props.resourceHeapReserve;
-    info.reservedRangeSize   = device.props.resourceHeapReserve;
-    vkCmdBindResourceHeapEXT(impl, &info);
-    }
-
-    {
-    VkBindHeapInfoEXT info = {VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT};
-    info.heapRange.address   = device.descHeap.samplers.toDeviceAddress(device);
-    info.heapRange.size      = device.descHeap.samplers.size();
-    info.reservedRangeOffset = info.heapRange.size - device.props.samplerHeapReserve;
-    info.reservedRangeSize   = device.props.samplerHeapReserve;
-    vkCmdBindSamplerHeapEXT(impl, &info);
-    }
+    pushDescriptors.bindHeap(impl);
 
     VkPushDataInfoEXT pushDataInfo = {VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT};
     pushDataInfo.offset       = 0;

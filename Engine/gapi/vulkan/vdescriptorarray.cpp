@@ -150,18 +150,20 @@ VDescriptorHeapArray::VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Te
   : dev(dev), cnt(cnt) {
   //NOTE: no bindless storage image
   try {
-    dPtrR = dev.descHeap.alloc(HEAP_TYPE_CBV_SRV_UAV, cnt);
+    auto alloc = dev.descHeap.alloc(HEAP_TYPE_CBV_SRV_UAV, cnt);
+    dPtrR = alloc.ptr;
 
     for(size_t i=0; i<cnt; ++i) {
-      auto res = dev.descHeap.resourcesPtr;
+      auto res = alloc.hptr;
       res += (dPtrR + i)*dev.props.resourceDescriptorSize;
       VPushDescriptor::write(dev, res, nullptr, ShaderReflection::Image, tex[i], mipLevel, ComponentMapping(), Sampler::nearest());
       }
 
     if(sampler!=nullptr) {
-      dPtrS = dev.descHeap.alloc(HEAP_TYPE_SAMPLER, uint32_t(cnt));
+      auto smpAlloc = dev.descHeap.alloc(HEAP_TYPE_SAMPLER, uint32_t(cnt));
+      dPtrS = smpAlloc.ptr;
       for(size_t i=0; i<cnt; ++i) {
-        auto smp = dev.descHeap.samplersPtr;
+        auto smp = smpAlloc.hptr;
         smp += (dPtrS + i)*dev.props.samplerDescriptorSize;
         VPushDescriptor::write(dev, nullptr, smp, ShaderReflection::Sampler, nullptr, mipLevel, ComponentMapping(), *sampler);
         }
@@ -176,10 +178,11 @@ VDescriptorHeapArray::VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Te
 VDescriptorHeapArray::VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Buffer** buf, size_t cnt)
   : dev(dev), cnt(cnt) {
   try {
-    dPtrR = dev.descHeap.alloc(HEAP_TYPE_CBV_SRV_UAV, uint32_t(cnt));
+    auto alloc = dev.descHeap.alloc(HEAP_TYPE_CBV_SRV_UAV, cnt);
+    dPtrR = alloc.ptr;
 
     for(size_t i=0; i<cnt; ++i) {
-      auto res = dev.descHeap.resourcesPtr;
+      auto res = alloc.hptr;
       res += (dPtrR + i)*dev.props.resourceDescriptorSize;
       VPushDescriptor::write(dev, res, nullptr, ShaderReflection::SsboR, buf[i], 0, ComponentMapping(), Sampler::nearest());
       }

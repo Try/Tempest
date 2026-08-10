@@ -28,6 +28,10 @@ class VBuffer : public AbstractGraphicsApi::Buffer {
     VkBuffer               impl      = VK_NULL_HANDLE;
     NonUniqResId           nonUniqId = NonUniqResId::I_None;
 
+  protected:
+    uint8_t*               mapDescriptorHeap();
+    void                   unmapDescriptorHeap();
+
   private:
     VAllocator*            alloc = nullptr;
     VAllocator::Allocation page  = {};

@@ -57,6 +57,7 @@ class VAllocator {
 
     uint8_t* mapDescriptorHeap(VBuffer& heap);
     void     unmapDescriptorHeap(VBuffer& heap);
+    void     flushDescriptorHeap(VBuffer& heap);
 
     VkSampler updateSampler(const Sampler& s);
 

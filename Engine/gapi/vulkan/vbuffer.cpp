@@ -122,4 +122,13 @@ VkDeviceAddress VBuffer::toDeviceAddress(VDevice& owner) const {
   return owner.vkGetBufferDeviceAddress(owner.device.impl, &bufferDeviceAddressInfo);
   }
 
+uint8_t* VBuffer::mapDescriptorHeap() {
+  return alloc ? alloc->mapDescriptorHeap(*this) : nullptr;
+  }
+
+void VBuffer::unmapDescriptorHeap() {
+  if(alloc!=nullptr)
+    alloc->unmapDescriptorHeap(*this);
+  }
+
 #endif

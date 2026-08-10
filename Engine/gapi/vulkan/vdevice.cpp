@@ -639,14 +639,14 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
       }
 
     if(props.hasDescriptorHeap) {
-      props.resourceDescriptorSize = std::max(dheapProps.bufferDescriptorSize, dheapProps.imageDescriptorSize);
-      props.samplerDescriptorSize  = dheapProps.samplerDescriptorSize;
+      props.resourceDescriptorSize = uint32_t(std::max(dheapProps.bufferDescriptorSize, dheapProps.imageDescriptorSize));
+      props.samplerDescriptorSize  = uint32_t(dheapProps.samplerDescriptorSize);
 
-      props.resourceHeapReserve = dheapProps.minResourceHeapReservedRange;
-      props.samplerHeapReserve  = dheapProps.minSamplerHeapReservedRange;
+      props.resourceHeapReserve = uint32_t(dheapProps.minResourceHeapReservedRange);
+      props.samplerHeapReserve  = uint32_t(dheapProps.minSamplerHeapReservedRange);
 
-      props.resourceHeapMaxSize = dheapProps.maxResourceHeapSize;
-      props.samplerHeapMaxSize  = dheapProps.maxSamplerHeapSize;
+      props.resourceHeapMaxSize = uint32_t(dheapProps.maxResourceHeapSize);
+      props.samplerHeapMaxSize  = uint32_t(dheapProps.maxSamplerHeapSize);
       }
     }
 
@@ -1086,6 +1086,8 @@ void VDevice::waitIdleSync(VDevice::Queue* q, size_t n) {
   }
 
 std::shared_ptr<VFence> VDevice::submit(VCommandBuffer& cmd) {
+  descHeap.flush(); // flush descriptor memory
+
   size_t waitCnt = 0;
   for(auto& s:cmd.swapchainSync) {
     if(s->state!=Detail::VSwapchain::S_Pending)

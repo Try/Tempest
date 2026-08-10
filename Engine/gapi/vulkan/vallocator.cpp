@@ -518,6 +518,23 @@ void VAllocator::unmapDescriptorHeap(VBuffer& src) {
   vkUnmapMemory(dev, src.page.page->memory);
   }
 
+void VAllocator::flushDescriptorHeap(VBuffer& src) {
+  if(src.page.page==nullptr)
+    return;
+  auto& page = src.page;
+
+  VkMappedMemoryRange rgn={};
+  rgn.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+  rgn.memory = page.page->memory;
+  rgn.offset = page.offset;
+  rgn.size   = page.size;
+  size_t shift = 0;
+  alignRange(rgn,provider.device->props.nonCoherentAtomSize,shift);
+
+  std::lock_guard<std::mutex> g(page.page->mmapSync);
+  vkFlushMappedMemoryRanges(dev,1,&rgn);
+  }
+
 VkSampler VAllocator::updateSampler(const Tempest::Sampler &s) {
   return samplers.get(s);
   }
