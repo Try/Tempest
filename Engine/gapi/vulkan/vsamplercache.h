@@ -11,6 +11,7 @@ namespace Tempest {
 namespace Detail {
 
 class VDevice;
+class VBuffer;
 
 class VSamplerCache final {
   public:
@@ -22,11 +23,19 @@ class VSamplerCache final {
     VkSampler get(const Sampler& s);
     void      setDevice(VDevice &dev);
 
+    uint32_t  getHeap(const Sampler& s);
+    void      bindHeap(VkCommandBuffer buf);
+
   private:
     struct Entry {
       Sampler   smp;
       VkSampler sampler=VK_NULL_HANDLE;
       };
+
+    struct VHeap;
+
+    VkSampler alloc(const Sampler& s);
+    void      setupHeap();
 
     SpinLock           sync;
     std::vector<Entry> chunks;
@@ -34,7 +43,8 @@ class VSamplerCache final {
     VDevice*           device     = nullptr;
     VkSampler          smpDefault = VK_NULL_HANDLE;
 
-    VkSampler          alloc(const Sampler& s);
+    std::shared_ptr<VHeap> samplersHeap;
+    std::vector<Sampler>   heapChunks;
   };
 
 }}

@@ -59,12 +59,9 @@ class VAllocator {
     void     unmapDescriptorHeap(VBuffer& heap);
     void     flushDescriptorHeap(VBuffer& heap);
 
-    VkSampler updateSampler(const Sampler& s);
-
   private:
     VkDevice                          dev=nullptr;
     Provider                          provider;
-    VSamplerCache                     samplers;
     Detail::DeviceAllocator<Provider> allocator{provider};
 
     void getMemoryRequirements   (MemRequirements& out, VkBuffer buf);

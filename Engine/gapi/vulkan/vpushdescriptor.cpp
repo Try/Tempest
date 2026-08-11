@@ -141,13 +141,9 @@ void VPushDescriptor::pushHeap(uint32_t* indices, const PushBlock& pb, const Lay
   auto       ptr = allocHeap(sz.first, sz.second);
 
   const auto resSize = dev.props.resourceDescriptorSize;
-  const auto smpSize = dev.props.samplerDescriptorSize;
 
   auto res = resPool.empty() ? nullptr : resPool.back().hostPtr;
   res += ptr.first*resSize;
-
-  auto smp = smpPool.empty() ? nullptr : smpPool.back().hostPtr;
-  smp += ptr.second*smpSize;
 
   for(size_t i=0; i<MaxBindings; ++i) {
     if(((1u << i) & lay.active)==0)
@@ -167,7 +163,7 @@ void VPushDescriptor::pushHeap(uint32_t* indices, const PushBlock& pb, const Lay
       continue;
       }
 
-    VPushDescriptor::write(dev, res, smp, lay.bindings[i], binding.data[i], binding.offset[i], binding.map[i], binding.smp[i]);
+    VPushDescriptor::write(dev, res, nullptr, lay.bindings[i], binding.data[i], binding.offset[i], binding.map[i], binding.smp[i]);
 
     if(lay.bindings[i]!=ShaderReflection::Sampler && lay.bindings[i]!=ShaderReflection::Texture) {
       indices[0] = ptr.first; ++indices;
@@ -175,29 +171,25 @@ void VPushDescriptor::pushHeap(uint32_t* indices, const PushBlock& pb, const Lay
       ptr.first += 1;
       }
     if(lay.bindings[i]==ShaderReflection::Texture) {
-      indices[0] = (ptr.first & 0xFFFFF) | (ptr.second << 20);
+      const auto smpId = dev.samplers.getHeap(binding.smp[i]);
+      indices[0] = (ptr.first & 0xFFFFF) | (smpId << 20);
       res += resSize;
-      smp += smpSize;
       ptr.first  += 1;
       ptr.second += 1;
       ++indices;
       }
     if(lay.bindings[i]==ShaderReflection::Sampler) {
-      indices[0] = ptr.second; ++indices;
-      smp += smpSize;
+      indices[0] = dev.samplers.getHeap(binding.smp[i]); ++indices;
       ptr.second += 1;
       }
     }
   }
 
 void VPushDescriptor::bindHeap(VkCommandBuffer cmd) {
+  auto vkCmdBindResourceHeapEXT = dev.vkCmdBindResourceHeapEXT;
+
   //NOTE: might be a problem with bindless-only draws
   auto res = resPool.empty() ? nullptr : resPool.back().heapMem.get();
-  auto smp = smpPool.empty() ? nullptr : smpPool.back().heapMem.get();
-
-  auto vkCmdBindResourceHeapEXT = dev.vkCmdBindResourceHeapEXT;
-  auto vkCmdBindSamplerHeapEXT  = dev.vkCmdBindSamplerHeapEXT;
-
   if(res!=nullptr) {
     auto& resources = *res;
 
@@ -207,16 +199,6 @@ void VPushDescriptor::bindHeap(VkCommandBuffer cmd) {
     info.reservedRangeOffset = info.heapRange.size - dev.props.resourceHeapReserve;
     info.reservedRangeSize   = dev.props.resourceHeapReserve;
     vkCmdBindResourceHeapEXT(cmd, &info);
-    }
-  if(smp!=nullptr) {
-    auto& samplers = *smp;
-
-    VkBindHeapInfoEXT info = {VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT};
-    info.heapRange.address   = samplers.toDeviceAddress(dev);
-    info.heapRange.size      = samplers.size();
-    info.reservedRangeOffset = info.heapRange.size - dev.props.samplerHeapReserve;
-    info.reservedRangeSize   = dev.props.samplerHeapReserve;
-    vkCmdBindSamplerHeapEXT(cmd, &info);
     }
   }
 
@@ -291,7 +273,7 @@ void VPushDescriptor::write(VDevice& dev, VkWriteDescriptorSet& wx, WriteInfo& i
           sx.setFiltration(Filter::Nearest);
           sx.anisotropic = false;
           }
-        info.sampler   = dev.allocator.updateSampler(sx);
+        info.sampler   = dev.samplers.get(sx);
         info.imageView = tex->view(mapping, mipLevel, is3DImage);
         } else {
         info.imageView = tex->view(mapping, mipLevel, is3DImage);
@@ -309,7 +291,7 @@ void VPushDescriptor::write(VDevice& dev, VkWriteDescriptorSet& wx, WriteInfo& i
       }
     case ShaderReflection::Sampler: {
       VkDescriptorImageInfo& info = infoW.image;
-      info.sampler = dev.allocator.updateSampler(smp);
+      info.sampler = dev.samplers.get(smp);
 
       wx.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
       wx.dstSet          = VK_NULL_HANDLE;
@@ -346,7 +328,6 @@ void VPushDescriptor::write(VDevice& dev, VkWriteDescriptorSet& wx, WriteInfo& i
 void VPushDescriptor::write(VDevice& dev, void* resPtr, void* smpPtr, ShaderReflection::Class cls,
                             AbstractGraphicsApi::NoCopy* data, uint32_t offset, const ComponentMapping& mapping, const Sampler& smp) {
   auto vkWriteResourceDescriptorsEXT = dev.vkWriteResourceDescriptorsEXT;
-  auto vkWriteSamplerDescriptorsEXT  = dev.vkWriteSamplerDescriptorsEXT;
 
   VkResourceDescriptorInfoEXT res = {VK_STRUCTURE_TYPE_RESOURCE_DESCRIPTOR_INFO_EXT};
   switch(cls) {
@@ -435,13 +416,6 @@ void VPushDescriptor::write(VDevice& dev, void* resPtr, void* smpPtr, ShaderRefl
     case ShaderReflection::Push:
     case ShaderReflection::Count:
       break;
-    }
-
-  if(cls==ShaderReflection::Sampler || cls==ShaderReflection::Texture) {
-    VkSamplerCreateInfo info = VSamplerCache::createInfo(dev, smp);
-
-    VkHostAddressRangeEXT dest = {smpPtr, dev.props.samplerDescriptorSize};
-    vkWriteSamplerDescriptorsEXT(dev.device.impl, 1, &info, &dest);
     }
   }
 

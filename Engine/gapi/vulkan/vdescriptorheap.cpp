@@ -73,22 +73,6 @@ VDescriptorHeap::Allocation VDescriptorHeap::alloc(AbstractGraphicsApi::Texture*
   return alloc;
   }
 
-VDescriptorHeap::Allocation VDescriptorHeap::alloc(const Sampler& sampler, size_t cnt) {
-  std::lock_guard<std::recursive_mutex> guard(allocator[HEAP_TYPE_SAMPLER].sync);
-
-  auto& props = dev->props;
-  auto  alloc = this->alloc(HEAP_TYPE_SAMPLER, cnt);
-  auto  dPtrS = alloc.ptr;
-
-  for(size_t i=0; i<cnt; ++i) {
-    auto smp = alloc.hptr;
-    smp += (dPtrS + i)*props.samplerDescriptorSize;
-    VPushDescriptor::write(*dev, nullptr, smp, ShaderReflection::Sampler, nullptr, 0, ComponentMapping(), sampler);
-    }
-
-  return alloc;
-  }
-
 VDescriptorHeap::Allocation VDescriptorHeap::alloc(HeapType heapType, uint32_t num) {
   return alloc(allocator[heapType], heapType, num);
   }

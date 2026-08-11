@@ -7,6 +7,16 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+struct VSamplerCache::VHeap : VBuffer {
+  VHeap(VBuffer&& v):VBuffer(std::move(v)) {
+    hptr = this->mapDescriptorHeap();
+    }
+  ~VHeap() {
+    unmapDescriptorHeap();
+    }
+  uint8_t* hptr = nullptr;
+  };
+
 VSamplerCache::VSamplerCache(){
   }
 
@@ -49,7 +59,11 @@ VkSamplerCreateInfo VSamplerCache::createInfo(const VDevice& dev, const Sampler&
 
 void VSamplerCache::setDevice(VDevice &dev) {
   device     = &dev;
-  smpDefault = alloc(Sampler());
+  if(dev.props.hasDescriptorHeap) {
+    setupHeap();
+    } else {
+    smpDefault = alloc(Sampler());
+    }
   }
 
 VkSampler VSamplerCache::get(const Sampler& s) {
@@ -75,12 +89,71 @@ VkSampler VSamplerCache::get(const Sampler& s) {
   return b.sampler;
   }
 
+uint32_t VSamplerCache::getHeap(const Sampler& s) {
+  static const Sampler def;
+  if(def==s)
+    return 0;
+
+  std::lock_guard<SpinLock> guard(sync);
+  for(size_t i=0; i<heapChunks.size(); ++i) {
+    if(heapChunks[i]==s)
+      return uint32_t(i);
+    }
+
+  auto maxSamplers = (samplersHeap->size() - device->props.samplerHeapReserve)/device->props.samplerDescriptorSize;
+  if(heapChunks.size()>=maxSamplers)
+    throw std::bad_alloc();
+
+  auto vkWriteSamplerDescriptorsEXT = device->vkWriteSamplerDescriptorsEXT;
+
+  const auto ptr = samplersHeap->hptr + heapChunks.size()*device->props.samplerDescriptorSize;
+  VkSamplerCreateInfo   info = VSamplerCache::createInfo(*device, s);
+  VkHostAddressRangeEXT dest = {ptr, device->props.samplerDescriptorSize};
+  vkAssert(vkWriteSamplerDescriptorsEXT(device->device.impl, 1, &info, &dest));
+
+  heapChunks.emplace_back(s);
+  return uint32_t(heapChunks.size()-1);
+  }
+
+void VSamplerCache::bindHeap(VkCommandBuffer cmd) {
+  if(samplersHeap==nullptr || samplersHeap->hptr==nullptr)
+    return;
+
+  //NOTE: might be a problem with bindless-only draws
+  auto& samplers = *samplersHeap;
+
+  auto vkCmdBindSamplerHeapEXT  = device->vkCmdBindSamplerHeapEXT;
+
+  VkBindHeapInfoEXT info = {VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT};
+  info.heapRange.address   = samplers.toDeviceAddress(*device);
+  info.heapRange.size      = samplers.size();
+  info.reservedRangeOffset = info.heapRange.size - device->props.samplerHeapReserve;
+  info.reservedRangeSize   = device->props.samplerHeapReserve;
+  vkCmdBindSamplerHeapEXT(cmd, &info);
+  }
+
 VkSampler VSamplerCache::alloc(const Sampler &s) {
   VkSampler           sampler = VK_NULL_HANDLE;
   VkSamplerCreateInfo info    = createInfo(*device, s);
 
   vkAssert(vkCreateSampler(device->device.impl, &info, nullptr, &sampler));
   return sampler;
+  }
+
+void VSamplerCache::setupHeap() {
+  auto vkWriteSamplerDescriptorsEXT = device->vkWriteSamplerDescriptorsEXT;
+
+  const auto& props   = device->props;
+  const auto  maxSize = props.samplerHeapMaxSize;
+
+  auto buf     = device->allocator.alloc(nullptr, maxSize, MemUsage::Descriptor, BufferHeap::Upload);
+  samplersHeap = std::make_shared<VHeap>(std::move(buf));
+
+  VkSamplerCreateInfo   info = VSamplerCache::createInfo(*device, Sampler());
+  VkHostAddressRangeEXT dest = {samplersHeap->hptr, props.samplerDescriptorSize};
+  vkAssert(vkWriteSamplerDescriptorsEXT(device->device.impl, 1, &info, &dest));
+
+  heapChunks.push_back(Sampler());
   }
 
 #endif

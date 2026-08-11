@@ -91,7 +91,7 @@ void VDescriptorArray::populate(VDevice &dev, AbstractGraphicsApi::Texture **t, 
     VTexture* tex = reinterpret_cast<VTexture*>(t[i]);
     imageInfo[i].imageLayout = tex!=nullptr ? toWriteLayout(*tex) : VK_IMAGE_LAYOUT_UNDEFINED;
     imageInfo[i].imageView   = tex!=nullptr ? tex->view(ComponentMapping(), mipLevel, is3DImage) : VK_NULL_HANDLE;
-    imageInfo[i].sampler     = smp!=nullptr ? dev.allocator.updateSampler(*smp) : VK_NULL_HANDLE;
+    imageInfo[i].sampler     = smp!=nullptr ? dev.samplers.get(*smp) : VK_NULL_HANDLE;
     // TODO: support mutable textures in bindless
     assert(tex==nullptr || tex->nonUniqId==0);
     if(tex!=nullptr)
@@ -154,8 +154,7 @@ VDescriptorHeapArray::VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Te
     dPtrR = alloc.ptr;
 
     if(sampler!=nullptr) {
-      auto smpAlloc = dev.descHeap.alloc(*sampler, uint32_t(cnt));
-      dPtrS = smpAlloc.ptr;
+      dPtrS = dev.samplers.getHeap(*sampler);
       }
 
     nonUniqId = NonUniqResId::I_None;
@@ -172,7 +171,7 @@ VDescriptorHeapArray::VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Te
   }
 
 VDescriptorHeapArray::VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Buffer** buf, size_t cnt)
-  : dev(dev), cnt(cnt) {
+  : dev(dev), cnt(uint32_t(cnt)) {
   try {
     auto alloc = dev.descHeap.alloc(buf, cnt);
     dPtrR = alloc.ptr;
@@ -196,7 +195,6 @@ VDescriptorHeapArray::~VDescriptorHeapArray() {
 
 void VDescriptorHeapArray::clear() {
   dev.descHeap.free(HEAP_TYPE_CBV_SRV_UAV, dPtrR, uint32_t(cnt));
-  dev.descHeap.free(HEAP_TYPE_SAMPLER,     dPtrS, uint32_t(cnt));
   }
 
 #endif

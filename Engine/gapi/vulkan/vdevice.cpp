@@ -94,6 +94,7 @@ VDevice::VDevice(VkInstance instance, const bool hasDeviceFeatures2, VkPhysicalD
   descPool.setupLimits();
   if(props.hasDescriptorHeap)
     descHeap.setDevice(*this);
+  samplers.setDevice(*this);
   data.reset(new DataMgr(*this));
   }
 

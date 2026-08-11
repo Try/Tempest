@@ -30,7 +30,6 @@ VAllocator::~VAllocator() {
 void VAllocator::setDevice(VDevice &d) {
   dev             = d.device.impl;
   provider.device = &d;
-  samplers.setDevice(d);
   }
 
 VDevice* VAllocator::device() {
@@ -533,10 +532,6 @@ void VAllocator::flushDescriptorHeap(VBuffer& src) {
 
   std::lock_guard<std::mutex> g(page.page->mmapSync);
   vkFlushMappedMemoryRanges(dev,1,&rgn);
-  }
-
-VkSampler VAllocator::updateSampler(const Tempest::Sampler &s) {
-  return samplers.get(s);
   }
 
 bool VAllocator::commit(VkDeviceMemory dmem, std::mutex &mmapSync, VkBuffer dest, size_t pageOffset, const void* mem, size_t size) {

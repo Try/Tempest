@@ -520,6 +520,7 @@ void VCommandBuffer::implSetUniforms(const PipelineStage st) {
     auto index = reinterpret_cast<uint32_t*>(pushData.data + pb->size);
     pushDescriptors.pushHeap(index, *pb, *lay, bindings);
     pushDescriptors.bindHeap(impl);
+    device.samplers.bindHeap(impl);
 
     VkPushDataInfoEXT pushDataInfo = {VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT};
     pushDataInfo.offset       = 0;

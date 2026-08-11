@@ -425,6 +425,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     VPoolCache              descPool;
     VBindlessCache          bindless;
     VDescriptorHeap         descHeap;
+    VSamplerCache           samplers;
 
     VkProps                 props={};
 
