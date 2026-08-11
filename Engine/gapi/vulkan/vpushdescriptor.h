@@ -55,7 +55,6 @@ class VPushDescriptor {
       };
 
     using ResPool  = Pool<HEAP_TYPE_CBV_SRV_UAV>;
-    using SmpPool  = Pool<HEAP_TYPE_SAMPLER>;
     using DescPool = Pool<DESCRIPTOR_POOL>;
 
     VkDescriptorSet allocSet(const VkDescriptorSetLayout dLayout);
@@ -63,11 +62,9 @@ class VPushDescriptor {
 
     template<HeapType T>
     uint32_t                      allocHeap(std::vector<Pool<T>>& pool, const uint32_t sz, const uint32_t step);
-    std::pair<uint32_t, uint32_t> allocHeap(uint32_t numRes, uint32_t numSmp);
 
     std::vector<DescPool> descPool;
     std::vector<ResPool>  resPool;
-    std::vector<SmpPool>  smpPool;
   };
 
 }

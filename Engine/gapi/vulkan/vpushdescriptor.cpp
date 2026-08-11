@@ -54,7 +54,7 @@ VPushDescriptor::Pool<DESCRIPTOR_POOL>::Pool(VDevice &dev) {
 
 template<HeapType T>
 VPushDescriptor::Pool<T>::Pool(VDevice &dev, uint32_t size) {
-  auto mem = dev.descHeap.alloc(T, size);
+  auto mem = dev.descHeap.alloc(size);
   dPtr    = mem.ptr;
   heapMem = mem.memory;
   hostPtr = mem.hptr;
@@ -76,15 +76,10 @@ void VPushDescriptor::reset() {
   descPool.clear();
 
   resPool.reserve(resPool.size());
-  smpPool.reserve(smpPool.size());
   for(auto& i:resPool) {
-    dev.descHeap.free(HEAP_TYPE_CBV_SRV_UAV, i.dPtr, RES_ALLOC_SZ);
-    }
-  for(auto& i:smpPool) {
-    dev.descHeap.free(HEAP_TYPE_SAMPLER, i.dPtr, SMP_ALLOC_SZ);
+    dev.descHeap.free(i.dPtr, RES_ALLOC_SZ);
     }
   resPool.clear();
-  smpPool.clear();
   }
 
 VkDescriptorSet VPushDescriptor::allocSet(const VkDescriptorSetLayout dLayout) {
@@ -130,20 +125,14 @@ uint32_t VPushDescriptor::allocHeap(std::vector<Pool<T>>& pool, const uint32_t s
   return ptr;
   }
 
-std::pair<uint32_t, uint32_t> VPushDescriptor::allocHeap(uint32_t numRes, uint32_t numSmp) {
-  auto rptr = allocHeap<HEAP_TYPE_CBV_SRV_UAV>(resPool, numRes, RES_ALLOC_SZ);
-  auto sptr = allocHeap<HEAP_TYPE_SAMPLER>    (smpPool, numSmp, SMP_ALLOC_SZ);
-  return std::make_pair(rptr, sptr);
-  }
-
 void VPushDescriptor::pushHeap(uint32_t* indices, const PushBlock& pb, const LayoutDesc& lay, const Bindings& binding) {
   const auto sz  = numResources(lay);
-  auto       ptr = allocHeap(sz.first, sz.second);
+  auto       ptr = allocHeap<HEAP_TYPE_CBV_SRV_UAV>(resPool, sz.first, RES_ALLOC_SZ);
 
   const auto resSize = dev.props.resourceDescriptorSize;
 
   auto res = resPool.empty() ? nullptr : resPool.back().hostPtr;
-  res += ptr.first*resSize;
+  res += ptr*resSize;
 
   for(size_t i=0; i<MaxBindings; ++i) {
     if(((1u << i) & lay.active)==0)
@@ -166,21 +155,19 @@ void VPushDescriptor::pushHeap(uint32_t* indices, const PushBlock& pb, const Lay
     VPushDescriptor::write(dev, res, nullptr, lay.bindings[i], binding.data[i], binding.offset[i], binding.map[i], binding.smp[i]);
 
     if(lay.bindings[i]!=ShaderReflection::Sampler && lay.bindings[i]!=ShaderReflection::Texture) {
-      indices[0] = ptr.first; ++indices;
+      indices[0] = ptr; ++indices;
       res += resSize;
-      ptr.first += 1;
+      ptr += 1;
       }
     if(lay.bindings[i]==ShaderReflection::Texture) {
       const auto smpId = dev.samplers.getHeap(binding.smp[i]);
-      indices[0] = (ptr.first & 0xFFFFF) | (smpId << 20);
+      indices[0] = (ptr & 0xFFFFF) | (smpId << 20);
       res += resSize;
-      ptr.first  += 1;
-      ptr.second += 1;
+      ptr += 1;
       ++indices;
       }
     if(lay.bindings[i]==ShaderReflection::Sampler) {
       indices[0] = dev.samplers.getHeap(binding.smp[i]); ++indices;
-      ptr.second += 1;
       }
     }
   }
@@ -196,7 +183,7 @@ void VPushDescriptor::bindHeap(VkCommandBuffer cmd) {
     VkBindHeapInfoEXT info = {VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT};
     info.heapRange.address   = resources.toDeviceAddress(dev);
     info.heapRange.size      = resources.size();
-    info.reservedRangeOffset = info.heapRange.size - dev.props.resourceHeapReserve;
+    info.reservedRangeOffset = 0;
     info.reservedRangeSize   = dev.props.resourceHeapReserve;
     vkCmdBindResourceHeapEXT(cmd, &info);
     }

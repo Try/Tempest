@@ -194,7 +194,7 @@ VDescriptorHeapArray::~VDescriptorHeapArray() {
   }
 
 void VDescriptorHeapArray::clear() {
-  dev.descHeap.free(HEAP_TYPE_CBV_SRV_UAV, dPtrR, uint32_t(cnt));
+  dev.descHeap.free(dPtrR, uint32_t(cnt));
   }
 
 #endif
