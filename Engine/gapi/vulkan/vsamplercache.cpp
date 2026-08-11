@@ -89,7 +89,7 @@ VkSampler VSamplerCache::get(const Sampler& s) {
   return b.sampler;
   }
 
-uint32_t VSamplerCache::getHeap(const Sampler& s) {
+uint32_t VSamplerCache::getH(const Sampler& s) {
   static const Sampler def;
   if(def==s)
     return 0;
@@ -115,7 +115,11 @@ uint32_t VSamplerCache::getHeap(const Sampler& s) {
   return uint32_t(heapChunks.size()-1);
   }
 
-void VSamplerCache::bindHeap(VkCommandBuffer cmd) {
+std::shared_ptr<VBuffer> VSamplerCache::getHeap() const {
+  return samplersHeap;
+  }
+
+void VSamplerCache::bindHeap(VkCommandBuffer cmd, const VBuffer& buf) {
   if(samplersHeap==nullptr || samplersHeap->hptr==nullptr)
     return;
 

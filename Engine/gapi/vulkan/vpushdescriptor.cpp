@@ -48,12 +48,11 @@ static std::pair<uint32_t, uint32_t> numResources(const ShaderReflection::Layout
   }
 
 
-VPushDescriptor::Pool<DESCRIPTOR_POOL>::Pool(VDevice &dev) {
+VPushDescriptor::DescPool::DescPool(VDevice &dev) {
   impl = dev.descPool.allocPool();
   }
 
-template<HeapType T>
-VPushDescriptor::Pool<T>::Pool(VDevice &dev, uint32_t size) {
+VPushDescriptor::ResPool::ResPool(VDevice &dev, uint32_t size) {
   auto mem = dev.descHeap.alloc(size);
   dPtr    = mem.ptr;
   heapMem = mem.memory;
@@ -80,6 +79,15 @@ void VPushDescriptor::reset() {
     dev.descHeap.free(i.dPtr, RES_ALLOC_SZ);
     }
   resPool.clear();
+  smpPool.clear();
+
+  lastResHeap = nullptr;
+  lastSmpHeap = nullptr;
+  }
+
+void VPushDescriptor::onNextCmdChunk() {
+  lastResHeap = nullptr;
+  lastSmpHeap = nullptr;
   }
 
 VkDescriptorSet VPushDescriptor::allocSet(const VkDescriptorSetLayout dLayout) {
@@ -111,23 +119,24 @@ VkDescriptorSet VPushDescriptor::allocSet(const LayoutDesc& lay) {
   return allocSet(lt);
   }
 
-template<HeapType T>
-uint32_t VPushDescriptor::allocHeap(std::vector<Pool<T>>& pool, const uint32_t sz, const uint32_t step) {
-  if(pool.empty())
-    pool.emplace_back(dev, step);
+uint32_t VPushDescriptor::allocHeap(VkCommandBuffer cmd, const uint32_t sz, const uint32_t step) {
+  if(resPool.empty()) {
+    resPool.emplace_back(dev, step);
+    }
 
-  if((step-pool.back().alloc) < sz)
-    pool.emplace_back(dev, step);
+  if((step-resPool.back().alloc) < sz) {
+    resPool.emplace_back(dev, step);
+    }
 
-  auto& px = pool.back();
+  auto& px = resPool.back();
   const uint32_t ptr = px.dPtr + px.alloc;
   px.alloc += sz;
   return ptr;
   }
 
-void VPushDescriptor::pushHeap(uint32_t* indices, const PushBlock& pb, const LayoutDesc& lay, const Bindings& binding) {
+void VPushDescriptor::pushHeap(VkCommandBuffer cmd, uint32_t* indices, const PushBlock& pb, const LayoutDesc& lay, const Bindings& binding) {
   const auto sz  = numResources(lay);
-  auto       ptr = allocHeap<HEAP_TYPE_CBV_SRV_UAV>(resPool, sz.first, RES_ALLOC_SZ);
+  auto       ptr = allocHeap(cmd, sz.first, RES_ALLOC_SZ);
 
   const auto resSize = dev.props.resourceDescriptorSize;
 
@@ -160,25 +169,27 @@ void VPushDescriptor::pushHeap(uint32_t* indices, const PushBlock& pb, const Lay
       ptr += 1;
       }
     if(lay.bindings[i]==ShaderReflection::Texture) {
-      const auto smpId = dev.samplers.getHeap(binding.smp[i]);
+      const auto smpId = dev.samplers.getH(binding.smp[i]);
       indices[0] = (ptr & 0xFFFFF) | (smpId << 20);
       res += resSize;
       ptr += 1;
       ++indices;
       }
     if(lay.bindings[i]==ShaderReflection::Sampler) {
-      indices[0] = dev.samplers.getHeap(binding.smp[i]); ++indices;
+      indices[0] = dev.samplers.getH(binding.smp[i]); ++indices;
       }
     }
+
+  bindHeap(cmd, sz.first>0, sz.second>0);
   }
 
-void VPushDescriptor::bindHeap(VkCommandBuffer cmd) {
+void VPushDescriptor::bindHeap(VkCommandBuffer cmd, bool res, bool smp) {
   auto vkCmdBindResourceHeapEXT = dev.vkCmdBindResourceHeapEXT;
 
-  //NOTE: might be a problem with bindless-only draws
-  auto res = resPool.empty() ? nullptr : resPool.back().heapMem.get();
-  if(res!=nullptr) {
-    auto& resources = *res;
+  auto resMem = resPool.back().heapMem.get();
+  if(res && resMem!=nullptr && lastResHeap!=resMem) {
+    lastResHeap = resMem;
+    auto& resources = *resMem;
 
     VkBindHeapInfoEXT info = {VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT};
     info.heapRange.address   = resources.toDeviceAddress(dev);
@@ -186,6 +197,15 @@ void VPushDescriptor::bindHeap(VkCommandBuffer cmd) {
     info.reservedRangeOffset = 0;
     info.reservedRangeSize   = dev.props.resourceHeapReserve;
     vkCmdBindResourceHeapEXT(cmd, &info);
+    }
+
+  if(smp) {
+    auto heap = dev.samplers.getHeap();
+    if(heap.get()!=lastSmpHeap) {
+      lastSmpHeap = heap.get();
+      smpPool.push_back(heap);
+      dev.samplers.bindHeap(cmd, *heap);
+      }
     }
   }
 

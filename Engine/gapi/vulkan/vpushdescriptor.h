@@ -21,8 +21,9 @@ class VPushDescriptor {
     ~VPushDescriptor();
     void reset();
 
-    void            pushHeap(uint32_t* indices, const PushBlock& pb, const LayoutDesc& lay, const Bindings& binding);
-    void            bindHeap(VkCommandBuffer cmd);
+    void            onNextCmdChunk();
+
+    void            pushHeap(VkCommandBuffer cmd, uint32_t* indices, const PushBlock& pb, const LayoutDesc& lay, const Bindings& binding);
     VkDescriptorSet push(const PushBlock &pb, const LayoutDesc& lay, const Bindings& binding);
 
     static void     write(VDevice &dev, VkWriteDescriptorSet &wx, WriteInfo &infoW, uint32_t dstBinding,
@@ -38,9 +39,8 @@ class VPushDescriptor {
       SMP_ALLOC_SZ = MaxBindings,
       };
 
-    template<HeapType T>
-    struct Pool {
-      Pool(VDevice& dev, uint32_t size);
+    struct ResPool {
+      ResPool(VDevice& dev, uint32_t size);
 
       std::shared_ptr<VBuffer>   heapMem;
       uint8_t*                   hostPtr = nullptr;
@@ -48,23 +48,23 @@ class VPushDescriptor {
       uint32_t                   alloc   = 0;
       };
 
-    template<>
-    struct Pool<DESCRIPTOR_POOL> {
-      Pool(VDevice& dev);
+    struct DescPool {
+      DescPool(VDevice& dev);
       VkDescriptorPool impl = VK_NULL_HANDLE;
       };
 
-    using ResPool  = Pool<HEAP_TYPE_CBV_SRV_UAV>;
-    using DescPool = Pool<DESCRIPTOR_POOL>;
-
     VkDescriptorSet allocSet(const VkDescriptorSetLayout dLayout);
     VkDescriptorSet allocSet(const LayoutDesc& layout);
+    uint32_t        allocHeap(VkCommandBuffer cmd, const uint32_t sz, const uint32_t step);
 
-    template<HeapType T>
-    uint32_t                      allocHeap(std::vector<Pool<T>>& pool, const uint32_t sz, const uint32_t step);
+    void            bindHeap(VkCommandBuffer cmd, bool res, bool smp);
 
     std::vector<DescPool> descPool;
     std::vector<ResPool>  resPool;
+    std::vector<std::shared_ptr<VBuffer>> smpPool;
+
+    VBuffer* lastResHeap = nullptr;
+    VBuffer* lastSmpHeap = nullptr;
   };
 
 }

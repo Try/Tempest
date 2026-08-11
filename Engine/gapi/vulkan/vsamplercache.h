@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Tempest/Texture2d>
-#include <mutex>
 #include <vector>
 
 #include "vulkan_sdk.h"
@@ -23,8 +22,9 @@ class VSamplerCache final {
     VkSampler get(const Sampler& s);
     void      setDevice(VDevice &dev);
 
-    uint32_t  getHeap(const Sampler& s);
-    void      bindHeap(VkCommandBuffer buf);
+    uint32_t  getH(const Sampler& s);
+    auto      getHeap() const -> std::shared_ptr<VBuffer>;
+    void      bindHeap(VkCommandBuffer cmd, const VBuffer& buf);
 
   private:
     struct Entry {

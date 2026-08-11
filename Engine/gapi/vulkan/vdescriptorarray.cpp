@@ -154,7 +154,7 @@ VDescriptorHeapArray::VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Te
     dPtrR = alloc.ptr;
 
     if(sampler!=nullptr) {
-      dPtrS = dev.samplers.getHeap(*sampler);
+      dPtrS = dev.samplers.getH(*sampler);
       }
 
     nonUniqId = NonUniqResId::I_None;

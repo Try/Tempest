@@ -518,9 +518,7 @@ void VCommandBuffer::implSetUniforms(const PipelineStage st) {
     auto vkCmdPushDataEXT = device.vkCmdPushDataEXT;
 
     auto index = reinterpret_cast<uint32_t*>(pushData.data + pb->size);
-    pushDescriptors.pushHeap(index, *pb, *lay, bindings);
-    pushDescriptors.bindHeap(impl);
-    device.samplers.bindHeap(impl);
+    pushDescriptors.pushHeap(impl, index, *pb, *lay, bindings);
 
     VkPushDataInfoEXT pushDataInfo = {VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT};
     pushDataInfo.offset       = 0;
@@ -1176,6 +1174,7 @@ void VCommandBuffer::newChunk() {
   curVbo         = VK_NULL_HANDLE;
   pushData.durty = true;
   bindings.durty = true;
+  pushDescriptors.onNextCmdChunk();
   }
 
 template<class T>

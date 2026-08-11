@@ -109,7 +109,7 @@ VDescriptorHeap::Allocation VDescriptorHeap::alloc(uint32_t num) {
   if(size > maxSize)
     throw std::bad_alloc();
 
-  size = std::min(std::max(nextPot(size), 16*1024u), maxSize);
+  size = std::min(std::max(nextPot(size), 4*1024u), maxSize);
   auto buf  = dev->allocator.alloc(nullptr, size, MemUsage::Descriptor, BufferHeap::Upload);
   auto next = std::make_shared<VHeap>(std::move(buf));
 
