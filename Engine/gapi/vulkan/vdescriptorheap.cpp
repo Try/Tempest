@@ -123,7 +123,9 @@ VDescriptorHeap::Allocation VDescriptorHeap::alloc(uint32_t num) {
     return Allocation{uint32_t(reserve/elSize), memory->hptr, memory};
     }
 
+  dev->allocator.flushDescriptorHeap(*memory);
   std::memcpy(next->hptr+reserve, memory->hptr+reserve, memory->size()-reserve);
+
   Range& rg = rgn.emplace_back();
   rg.begin = prevSize + allocSize;
   rg.end   = uint32_t(next->size());

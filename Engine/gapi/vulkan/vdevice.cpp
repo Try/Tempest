@@ -1087,7 +1087,9 @@ void VDevice::waitIdleSync(VDevice::Queue* q, size_t n) {
   }
 
 std::shared_ptr<VFence> VDevice::submit(VCommandBuffer& cmd) {
-  descHeap.flush(); // flush descriptor memory
+  // flush descriptor memory
+  descHeap.flush();
+  samplers.flush();
 
   size_t waitCnt = 0;
   for(auto& s:cmd.swapchainSync) {

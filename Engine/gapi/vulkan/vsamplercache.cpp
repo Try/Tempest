@@ -136,6 +136,11 @@ void VSamplerCache::bindHeap(VkCommandBuffer cmd, const VBuffer& buf) {
   vkCmdBindSamplerHeapEXT(cmd, &info);
   }
 
+void VSamplerCache::flush() {
+  if(samplersHeap!=nullptr)
+    device->allocator.flushDescriptorHeap(*samplersHeap);
+  }
+
 VkSampler VSamplerCache::alloc(const Sampler &s) {
   VkSampler           sampler = VK_NULL_HANDLE;
   VkSamplerCreateInfo info    = createInfo(*device, s);
