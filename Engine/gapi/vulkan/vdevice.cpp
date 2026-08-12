@@ -616,7 +616,7 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
         (indexingFeatures.descriptorBindingStorageBufferUpdateAfterBind==VK_TRUE);
       }
 
-    if(indexingFeatures.runtimeDescriptorArray!=VK_FALSE) {
+    if(indexingFeatures.runtimeDescriptorArray!=VK_FALSE && !props.hasDescriptorHeap) {
       props.descriptors.maxSamplers = std::max(indexingProps.maxDescriptorSetUpdateAfterBindSamplers,
                                                indexingProps.maxPerStageDescriptorUpdateAfterBindSamplers);
 
@@ -648,6 +648,13 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
 
       props.resourceHeapMaxSize = uint32_t(dheapProps.maxResourceHeapSize);
       props.samplerHeapMaxSize  = uint32_t(dheapProps.maxSamplerHeapSize);
+
+      props.push.maxRange = dheapProps.maxPushDataSize - MaxBindings*sizeof(uint32_t);
+
+      const auto maxRes = (props.resourceHeapMaxSize - props.resourceHeapReserve)/props.resourceDescriptorSize;
+      props.descriptors.maxSamplers = (props.samplerHeapMaxSize  - props.samplerHeapReserve )/props.samplerDescriptorSize;
+      props.descriptors.maxStorage  = maxRes/2;
+      props.descriptors.maxTexture  = maxRes/2;
       }
     }
 
@@ -664,7 +671,9 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
   props.ubo.offsetAlign   = size_t(devP.limits.minUniformBufferOffsetAlignment);
   props.ubo.maxRange      = size_t(devP.limits.maxUniformBufferRange);
 
-  props.push.maxRange     = size_t(devP.limits.maxPushConstantsSize);
+  if(!props.hasDescriptorHeap) {
+    props.push.maxRange = size_t(devP.limits.maxPushConstantsSize);
+    }
 
   props.anisotropy        = supportedFeatures.samplerAnisotropy;
   props.maxAnisotropy     = devP.limits.maxSamplerAnisotropy;

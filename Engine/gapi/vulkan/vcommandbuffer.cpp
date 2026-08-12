@@ -362,36 +362,48 @@ void VCommandBuffer::endRendering() {
 void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
   VPipeline& px   = reinterpret_cast<VPipeline&>(p);
 
+  if(device.props.hasDescriptorHeap) {
+    const auto prevPushSize = curDrawPipeline ? curDrawPipeline->pb.size : 0;
+
+    auto rp   = (passRp!=nullptr ? passRp->pass : VK_NULL_HANDLE);
+    auto inst = px.instance(passDyn, rp, VK_NULL_HANDLE, px.defaultStride);
+    vkCmdBindPipeline(impl, VK_PIPELINE_BIND_POINT_GRAPHICS, inst);
+
+    pushData.durty  = pushData.durty || px.pb.size!=prevPushSize;
+    bindings.durty  = bindings.durty || px.pb.size!=prevPushSize;
+    curDrawPipeline = &px;
+    vboStride       = px.defaultStride;
+    pipelineLayout  = VK_NULL_HANDLE;
+    return;
+    }
+
   bindings.durty  = true;
   curDrawPipeline = &px;
   vboStride       = px.defaultStride;
   pipelineLayout  = VK_NULL_HANDLE; // clear until draw
-
-  if(device.props.hasDescriptorHeap) {
-    auto& pso  = *curDrawPipeline;
-    auto  rp   = (passRp!=nullptr ? passRp->pass : VK_NULL_HANDLE);
-    auto  inst = pso.instance(passDyn, rp, VK_NULL_HANDLE, vboStride);
-    vkCmdBindPipeline(impl, VK_PIPELINE_BIND_POINT_GRAPHICS, inst);
-    pushData.durty = true; //TODO: fine check for layout compatibility
-    bindings.durty = true;
-    }
   }
 
 void VCommandBuffer::setComputePipeline(AbstractGraphicsApi::CompPipeline& p) {
   state = Compute;
   auto& px = reinterpret_cast<VCompPipeline&>(p);
 
+  if(device.props.hasDescriptorHeap) {
+    const auto prevPushSize = curCompPipeline ? curCompPipeline->pb.size : 0;
+
+    auto inst = px.instance(VK_NULL_HANDLE);
+    vkCmdBindPipeline(impl, VK_PIPELINE_BIND_POINT_COMPUTE, inst);
+
+    pushData.durty  = pushData.durty || px.pb.size!=prevPushSize;
+    bindings.durty  = bindings.durty || px.pb.size!=prevPushSize;
+    bindings.durty  = true;
+    curCompPipeline = &px;
+    pipelineLayout  = VK_NULL_HANDLE;
+    return;
+    }
+
   bindings.durty  = true;
   curCompPipeline = &px;
   pipelineLayout  = VK_NULL_HANDLE; // clear until dispatch
-
-  if(device.props.hasDescriptorHeap) {
-    auto& pso  = *curCompPipeline;
-    auto  inst = pso.instance(VK_NULL_HANDLE);
-    vkCmdBindPipeline(impl, VK_PIPELINE_BIND_POINT_COMPUTE, inst);
-    pushData.durty = true; //TODO: fine check for layout compatibility
-    bindings.durty = true;
-    }
   }
 
 void VCommandBuffer::dispatch(size_t x, size_t y, size_t z) {
@@ -515,17 +527,19 @@ void VCommandBuffer::implSetUniforms(const PipelineStage st) {
   handleSync(*lay, *sync, st);
 
   if(device.props.hasDescriptorHeap) {
+    if(lay->active==0)
+      return;
+
     auto vkCmdPushDataEXT = device.vkCmdPushDataEXT;
 
-    auto index = reinterpret_cast<uint32_t*>(pushData.data + pb->size);
-    pushDescriptors.pushHeap(impl, index, *pb, *lay, bindings);
+    uint32_t heapIndices[MaxBindings] = {};
+    pushDescriptors.pushHeap(impl, heapIndices, *pb, *lay, bindings);
 
     VkPushDataInfoEXT pushDataInfo = {VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT};
-    pushDataInfo.offset       = 0;
-    pushDataInfo.data.address = pushData.data;
-    pushDataInfo.data.size    = sizeof(pushData.data);
+    pushDataInfo.offset       = pb->size;
+    pushDataInfo.data.address = heapIndices;
+    pushDataInfo.data.size    = sizeof(uint32_t)*lay->size();
     vkCmdPushDataEXT(impl, &pushDataInfo);
-    pushData.durty = false; //combined push
     return;
     }
 
@@ -587,7 +601,7 @@ void VCommandBuffer::implSetPushData(const PipelineStage st) {
     VkPushDataInfoEXT pushDataInfo = {VK_STRUCTURE_TYPE_PUSH_DATA_INFO_EXT};
     pushDataInfo.offset       = 0;
     pushDataInfo.data.address = pushData.data;
-    pushDataInfo.data.size    = sizeof(pushData.data);
+    pushDataInfo.data.size    = uint32_t(pb->size);
     vkCmdPushDataEXT(impl, &pushDataInfo);
     } else {
     auto stages = nativeFormat(pb->stage);
