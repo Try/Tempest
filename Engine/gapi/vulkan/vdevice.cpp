@@ -651,6 +651,7 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
 
       props.push.maxRange = dheapProps.maxPushDataSize - MaxBindings*sizeof(uint32_t);
 
+      // should engine present lower or upper bound for resources?
       const auto maxRes = (props.resourceHeapMaxSize - props.resourceHeapReserve)/props.resourceDescriptorSize;
       props.descriptors.maxSamplers = (props.samplerHeapMaxSize  - props.samplerHeapReserve )/props.samplerDescriptorSize;
       props.descriptors.maxStorage  = maxRes/2;
