@@ -33,4 +33,25 @@ class VDescriptorArray : public AbstractGraphicsApi::DescArray {
     VkDescriptorSet  dset = VK_NULL_HANDLE;
   };
 
+class VDescriptorHeapArray : public AbstractGraphicsApi::DescArray {
+  public:
+    VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler* smp);
+    VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel);
+    VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Buffer**  buf, size_t cnt);
+    ~VDescriptorHeapArray();
+
+    uint32_t handleR()  const { return dPtrR; }
+    uint32_t handleS()  const { return dPtrS; }
+
+    NonUniqResId nonUniqId = NonUniqResId::I_None;
+
+  private:
+    void     clear();
+
+    VDevice& dev;
+    uint32_t dPtrR = 0xFFFFFFFF;
+    uint32_t dPtrS = 0xFFFFFFFF;
+    uint32_t cnt   = 0;
+  };
+
 }}

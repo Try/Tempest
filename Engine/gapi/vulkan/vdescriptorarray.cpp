@@ -91,7 +91,7 @@ void VDescriptorArray::populate(VDevice &dev, AbstractGraphicsApi::Texture **t, 
     VTexture* tex = reinterpret_cast<VTexture*>(t[i]);
     imageInfo[i].imageLayout = tex!=nullptr ? toWriteLayout(*tex) : VK_IMAGE_LAYOUT_UNDEFINED;
     imageInfo[i].imageView   = tex!=nullptr ? tex->view(ComponentMapping(), mipLevel, is3DImage) : VK_NULL_HANDLE;
-    imageInfo[i].sampler     = smp!=nullptr ? dev.allocator.updateSampler(*smp) : VK_NULL_HANDLE;
+    imageInfo[i].sampler     = smp!=nullptr ? dev.samplers.get(*smp) : VK_NULL_HANDLE;
     // TODO: support mutable textures in bindless
     assert(tex==nullptr || tex->nonUniqId==0);
     if(tex!=nullptr)
@@ -139,6 +139,62 @@ void VDescriptorArray::populate(VDevice &dev, AbstractGraphicsApi::Buffer **b, s
   descriptorWrite.pBufferInfo     = bufInfo.get();
 
   vkUpdateDescriptorSets(dev.device.impl, 1, &descriptorWrite, 0, nullptr);
+  }
+
+
+VDescriptorHeapArray::VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel)
+  : VDescriptorHeapArray(dev, tex, cnt, mipLevel, nullptr){
+  }
+
+VDescriptorHeapArray::VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler* sampler)
+  : dev(dev), cnt(uint32_t(cnt)) {
+  //NOTE: no bindless storage image
+  try {
+    auto alloc = dev.resHeap.alloc(tex, cnt, mipLevel);
+    dPtrR = alloc.ptr;
+
+    if(sampler!=nullptr) {
+      dPtrS = dev.samplers.getH(*sampler);
+      }
+
+    nonUniqId = NonUniqResId::I_None;
+    for(size_t i=0; i<cnt; ++i) {
+      auto* bx = reinterpret_cast<VTexture*>(tex[i]);
+      if(bx!=nullptr)
+        nonUniqId |= bx->nonUniqId;
+      }
+    }
+  catch(...) {
+    clear();
+    throw;
+    }
+  }
+
+VDescriptorHeapArray::VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Buffer** buf, size_t cnt)
+  : dev(dev), cnt(uint32_t(cnt)) {
+  try {
+    auto alloc = dev.resHeap.alloc(buf, cnt);
+    dPtrR = alloc.ptr;
+
+    nonUniqId = NonUniqResId::I_None;
+    for(size_t i=0; i<cnt; ++i) {
+      auto* bx = reinterpret_cast<VBuffer*>(buf[i]);
+      if(bx!=nullptr)
+        nonUniqId |= bx->nonUniqId;
+      }
+    }
+  catch(...) {
+    clear();
+    throw;
+    }
+  }
+
+VDescriptorHeapArray::~VDescriptorHeapArray() {
+  clear();
+  }
+
+void VDescriptorHeapArray::clear() {
+  dev.resHeap.free(dPtrR, uint32_t(cnt));
   }
 
 #endif

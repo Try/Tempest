@@ -3,6 +3,7 @@
 #include "vdevice.h"
 
 #include "vcommandbuffer.h"
+#include "vresourceheap.h"
 #include "vfence.h"
 #include "vswapchain.h"
 
@@ -91,6 +92,9 @@ VDevice::VDevice(VkInstance instance, const bool hasDeviceFeatures2, VkPhysicalD
   physicalDevice = pdev;
   allocator.setDevice(*this);
   descPool.setupLimits();
+  if(props.hasDescriptorHeap)
+    resHeap.setDevice(*this);
+  samplers.setDevice(*this);
   data.reset(new DataMgr(*this));
   }
 
@@ -176,8 +180,14 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
     rqExt.push_back(VK_KHR_MAINTENANCE_1_EXTENSION_NAME);
     //rqExt.push_back(VK_EXT_IMAGE_2D_VIEW_OF_3D_EXTENSION_NAME);
     }
+  if(props.hasMaintenance5) {
+    rqExt.push_back(VK_KHR_MAINTENANCE_5_EXTENSION_NAME);
+    }
   if(props.hasDebugMarker) {
     rqExt.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+    }
+  if(props.hasDescriptorHeap) {
+    rqExt.push_back(VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME);
     }
 
   VkPhysicalDeviceFeatures supportedFeatures={};
@@ -238,6 +248,9 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
     VkPhysicalDeviceVulkanMemoryModelFeatures memoryFeatures = {};
     memoryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES;
 
+    VkPhysicalDeviceDescriptorHeapFeaturesEXT dheapFeatures = {};
+    dheapFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_FEATURES_EXT;
+
     if(props.hasSync2) {
       sync2.pNext = features.pNext;
       features.pNext = &sync2;
@@ -280,6 +293,10 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
     if(props.memoryModel) {
       memoryFeatures.pNext = features.pNext;
       features.pNext = &memoryFeatures;
+      }
+    if(props.hasDescriptorHeap) {
+      dheapFeatures.pNext = features.pNext;
+      features.pNext = &dheapFeatures;
       }
 
     auto vkGetPhysicalDeviceFeatures2 = PFN_vkGetPhysicalDeviceFeatures2(vkGetInstanceProcAddr(instance,"vkGetPhysicalDeviceFeatures2KHR"));
@@ -358,6 +375,14 @@ void VDevice::createLogicalDevice(VkPhysicalDevice pdev) {
   dummyIfNull(vkCmdDebugMarkerBegin);
   dummyIfNull(vkCmdDebugMarkerEnd);
   dummyIfNull(vkDebugMarkerSetObjectName);
+
+  if(props.hasDescriptorHeap) {
+    vkWriteResourceDescriptorsEXT = PFN_vkWriteResourceDescriptorsEXT(vkGetDeviceProcAddr(device.impl,"vkWriteResourceDescriptorsEXT"));
+    vkWriteSamplerDescriptorsEXT  = PFN_vkWriteSamplerDescriptorsEXT(vkGetDeviceProcAddr(device.impl,"vkWriteSamplerDescriptorsEXT"));
+    vkCmdPushDataEXT              = PFN_vkCmdPushDataEXT(vkGetDeviceProcAddr(device.impl,"vkCmdPushDataEXT"));
+    vkCmdBindResourceHeapEXT      = PFN_vkCmdBindResourceHeapEXT(vkGetDeviceProcAddr(device.impl,"vkCmdBindResourceHeapEXT"));
+    vkCmdBindSamplerHeapEXT       = PFN_vkCmdBindSamplerHeapEXT(vkGetDeviceProcAddr(device.impl,"vkCmdBindSamplerHeapEXT"));
+    }
   }
 
 void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, VkPhysicalDevice physicalDevice, VkProps& props) {
@@ -403,8 +428,20 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
   if(extensionSupport(ext,VK_KHR_MAINTENANCE_1_EXTENSION_NAME)) {
     props.hasMaintenance1 = true;
     }
+  if(extensionSupport(ext,VK_KHR_MAINTENANCE_5_EXTENSION_NAME)) {
+    props.hasMaintenance5 = true;
+    }
   if(extensionSupport(ext,VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME)) {
     props.memoryModel = true;
+    }
+  if(extensionSupport(ext,VK_KHR_MAINTENANCE_5_EXTENSION_NAME) &&
+     extensionSupport(ext,VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME) &&
+     extensionSupport(ext,VK_EXT_DESCRIPTOR_HEAP_EXTENSION_NAME) &&
+     extensionSupport(ext,VK_EXT_ROBUSTNESS_2_EXTENSION_NAME)) {
+#if 0
+    // Crashes with NSight
+    props.hasDescriptorHeap = true;
+#endif
     }
 
   VkPhysicalDeviceProperties prop = {};
@@ -489,6 +526,12 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
     VkPhysicalDeviceVulkanMemoryModelFeatures memoryFeatures = {};
     memoryFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES;
 
+    VkPhysicalDeviceDescriptorHeapFeaturesEXT dheapFeatures = {};
+    dheapFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_FEATURES_EXT;
+
+    VkPhysicalDeviceDescriptorHeapPropertiesEXT dheapProps = {};
+    dheapProps.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_HEAP_PROPERTIES_EXT;
+
     if(props.hasSync2) {
       sync2.pNext = features.pNext;
       features.pNext = &sync2;
@@ -534,6 +577,13 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
       memoryFeatures.pNext = features.pNext;
       features.pNext = &memoryFeatures;
       }
+    if(props.hasDescriptorHeap) {
+      dheapFeatures.pNext = features.pNext;
+      features.pNext = &dheapFeatures;
+
+      dheapProps.pNext = properties.pNext;
+      properties.pNext = &dheapProps;
+      }
 
     auto vkGetPhysicalDeviceFeatures2   = PFN_vkGetPhysicalDeviceFeatures2  (vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceFeatures2KHR"));
     auto vkGetPhysicalDeviceProperties2 = PFN_vkGetPhysicalDeviceProperties2(vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceProperties2KHR"));
@@ -569,7 +619,7 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
         (indexingFeatures.descriptorBindingStorageBufferUpdateAfterBind==VK_TRUE);
       }
 
-    if(indexingFeatures.runtimeDescriptorArray!=VK_FALSE) {
+    if(indexingFeatures.runtimeDescriptorArray!=VK_FALSE && !props.hasDescriptorHeap) {
       props.descriptors.maxSamplers = std::max(indexingProps.maxDescriptorSetUpdateAfterBindSamplers,
                                                indexingProps.maxPerStageDescriptorUpdateAfterBindSamplers);
 
@@ -591,6 +641,25 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
     if(memoryFeatures.vulkanMemoryModel!=VK_FALSE) {
       props.memoryModel = true;
       }
+
+    if(props.hasDescriptorHeap) {
+      props.resourceDescriptorSize = uint32_t(std::max(dheapProps.bufferDescriptorSize, dheapProps.imageDescriptorSize));
+      props.samplerDescriptorSize  = uint32_t(dheapProps.samplerDescriptorSize);
+
+      props.resourceHeapReserve = uint32_t(dheapProps.minResourceHeapReservedRange);
+      props.samplerHeapReserve  = uint32_t(dheapProps.minSamplerHeapReservedRange);
+
+      props.resourceHeapMaxSize = uint32_t(dheapProps.maxResourceHeapSize);
+      props.samplerHeapMaxSize  = uint32_t(dheapProps.maxSamplerHeapSize);
+
+      props.push.maxRange = dheapProps.maxPushDataSize - MaxBindings*sizeof(uint32_t);
+
+      // should engine present lower or upper bound for resources?
+      const auto maxRes = (props.resourceHeapMaxSize - props.resourceHeapReserve)/props.resourceDescriptorSize;
+      props.descriptors.maxSamplers = (props.samplerHeapMaxSize  - props.samplerHeapReserve )/props.samplerDescriptorSize;
+      props.descriptors.maxStorage  = maxRes/2;
+      props.descriptors.maxTexture  = maxRes/2;
+      }
     }
 
   std::memcpy(props.name,devP.deviceName,sizeof(props.name));
@@ -606,7 +675,9 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
   props.ubo.offsetAlign   = size_t(devP.limits.minUniformBufferOffsetAlignment);
   props.ubo.maxRange      = size_t(devP.limits.maxUniformBufferRange);
 
-  props.push.maxRange     = size_t(devP.limits.maxPushConstantsSize);
+  if(!props.hasDescriptorHeap) {
+    props.push.maxRange = size_t(devP.limits.maxPushConstantsSize);
+    }
 
   props.anisotropy        = supportedFeatures.samplerAnisotropy;
   props.maxAnisotropy     = devP.limits.maxSamplerAnisotropy;
@@ -1029,6 +1100,10 @@ void VDevice::waitIdleSync(VDevice::Queue* q, size_t n) {
   }
 
 std::shared_ptr<VFence> VDevice::submit(VCommandBuffer& cmd) {
+  // flush descriptor memory
+  resHeap.flush();
+  samplers.flush();
+
   size_t waitCnt = 0;
   for(auto& s:cmd.swapchainSync) {
     if(s->state!=Detail::VSwapchain::S_Pending)

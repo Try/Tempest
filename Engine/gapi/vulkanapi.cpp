@@ -447,16 +447,22 @@ void VulkanApi::readBytes(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Buf
 
 AbstractGraphicsApi::DescArray *VulkanApi::createDescriptors(Device *d, Texture **tex, size_t cnt, uint32_t mipLevel, const Sampler &smp) {
   auto& dx = *reinterpret_cast<Detail::VDevice*>(d);
+  if(dx.props.hasDescriptorHeap)
+    return new Detail::VDescriptorHeapArray(dx, tex, cnt, mipLevel, &smp);
   return new Detail::VDescriptorArray(dx, tex, cnt, mipLevel, smp);
   }
 
 AbstractGraphicsApi::DescArray *VulkanApi::createDescriptors(Device* d, Texture** tex, size_t cnt, uint32_t mipLevel) {
   auto& dx = *reinterpret_cast<Detail::VDevice*>(d);
+  if(dx.props.hasDescriptorHeap)
+    return new Detail::VDescriptorHeapArray(dx, tex, cnt, mipLevel);
   return new Detail::VDescriptorArray(dx, tex, cnt, mipLevel);
   }
 
 AbstractGraphicsApi::DescArray *VulkanApi::createDescriptors(Device *d, Buffer **buf, size_t cnt) {
   auto& dx = *reinterpret_cast<Detail::VDevice*>(d);
+  if(dx.props.hasDescriptorHeap)
+    return new Detail::VDescriptorHeapArray(dx, buf, cnt);
   return new Detail::VDescriptorArray(dx, buf, cnt);
   }
 

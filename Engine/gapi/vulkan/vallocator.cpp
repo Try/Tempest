@@ -30,7 +30,6 @@ VAllocator::~VAllocator() {
 void VAllocator::setDevice(VDevice &d) {
   dev             = d.device.impl;
   provider.device = &d;
-  samplers.setDevice(d);
   }
 
 VDevice* VAllocator::device() {
@@ -101,7 +100,8 @@ static size_t LCM(size_t n1, size_t n2)  {
 
 VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferHeap bufHeap) {
   VBuffer ret;
-  ret.alloc     = this;
+  ret.alloc    = this;
+  ret.userSize = size;
   // ret.nonUniqId = nextId();
 
   if(MemUsage::StorageBuffer==(usage&MemUsage::StorageBuffer) ||
@@ -129,6 +129,8 @@ VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferHe
     createInfo.usage |= (VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
   if(MemUsage::StorageBuffer==(usage & MemUsage::StorageBuffer))
     createInfo.usage |= (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT);
+  if(MemUsage::Descriptor==(usage & MemUsage::Descriptor))
+    createInfo.usage |= (VK_BUFFER_USAGE_DESCRIPTOR_HEAP_BIT_EXT);
 
   if(provider.device->props.raytracing.rayQuery) {
     if(MemUsage::StorageBuffer==(usage & MemUsage::StorageBuffer)) {
@@ -158,6 +160,14 @@ VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferHe
   if(MemUsage::ScratchBuffer==(usage & MemUsage::ScratchBuffer)) {
     memRq.alignment = std::max(memRq.alignment,
                                provider.device->props.accelerationStructureScratchOffsetAlignment);
+    }
+  if(MemUsage::Descriptor==(usage & MemUsage::Descriptor)) {
+    memRq.dedicated   = true;
+    memRq.dedicatedRq = true;
+
+    auto& props = provider.device->props;
+    memRq.alignment = std::max<size_t>(memRq.alignment, props.resourceDescriptorSize);
+    memRq.alignment = std::max<size_t>(memRq.alignment, props.samplerDescriptorSize);
     }
 
   uint32_t props[2] = {};
@@ -325,7 +335,7 @@ void VAllocator::free(VTexture &buf) {
     allocator.free(buf.page);
   }
 
-void VAllocator::getMemoryRequirements(MemRequirements& out,VkBuffer buf) {
+void VAllocator::getMemoryRequirements(MemRequirements& out, VkBuffer buf) {
   if(provider.device->props.hasMemRq2) {
     VkBufferMemoryRequirementsInfo2KHR bufInfo = {};
     bufInfo.sType  = VK_STRUCTURE_TYPE_BUFFER_MEMORY_REQUIREMENTS_INFO_2_KHR;
@@ -487,8 +497,45 @@ bool VAllocator::read(VBuffer &src, void *mem, size_t offset, size_t size) {
   return true;
   }
 
-VkSampler VAllocator::updateSampler(const Tempest::Sampler &s) {
-  return samplers.get(s);
+uint8_t* VAllocator::mapDescriptorHeap(VBuffer& src) {
+  auto& page = src.page;
+  void* data = nullptr;
+
+  VkMappedMemoryRange rgn={};
+  rgn.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+  rgn.memory = page.page->memory;
+  rgn.offset = page.offset;
+  rgn.size   = page.size;
+  size_t shift = 0;
+  alignRange(rgn,provider.device->props.nonCoherentAtomSize,shift);
+
+  std::lock_guard<std::mutex> g(page.page->mmapSync);
+  if(vkMapMemory(dev,page.page->memory,rgn.offset,rgn.size,0,&data)!=VK_SUCCESS)
+    return nullptr;
+  return reinterpret_cast<uint8_t*>(data);
+  }
+
+void VAllocator::unmapDescriptorHeap(VBuffer& src) {
+  if(src.page.page==nullptr)
+    return;
+  vkUnmapMemory(dev, src.page.page->memory);
+  }
+
+void VAllocator::flushDescriptorHeap(VBuffer& src) {
+  if(src.page.page==nullptr)
+    return;
+  auto& page = src.page;
+
+  VkMappedMemoryRange rgn={};
+  rgn.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+  rgn.memory = page.page->memory;
+  rgn.offset = page.offset;
+  rgn.size   = page.size;
+  size_t shift = 0;
+  alignRange(rgn,provider.device->props.nonCoherentAtomSize,shift);
+
+  std::lock_guard<std::mutex> g(page.page->mmapSync);
+  vkFlushMappedMemoryRanges(dev,1,&rgn);
   }
 
 bool VAllocator::commit(VkDeviceMemory dmem, std::mutex &mmapSync, VkBuffer dest, size_t pageOffset, const void* mem, size_t size) {

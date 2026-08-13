@@ -87,6 +87,11 @@ class VPipeline : public AbstractGraphicsApi::Pipeline {
                                                       const Decl::ComponentType *decl, size_t declSize, size_t stride,
                                                       Topology tp,
                                                       const DSharedPtr<const VShader*>* shaders);
+
+    static void initPushMappings(VDevice& device,
+                                 VkShaderDescriptorSetAndBindingMappingInfoEXT& info, VkDescriptorSetAndBindingMappingEXT* mappings,
+                                 const PushBlock& pb, const LayoutDesc& layout);
+
   friend class VCompPipeline;
   };
 

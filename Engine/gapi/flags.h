@@ -14,6 +14,7 @@ enum class MemUsage : uint16_t {
   ScratchBuffer = 1<<6,
   AsStorage     = 1<<7,
   Indirect      = 1<<8,
+  Descriptor    = 1<<9,
   };
 
 inline MemUsage operator | (MemUsage a,const MemUsage& b) {

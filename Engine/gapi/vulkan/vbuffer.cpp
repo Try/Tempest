@@ -27,6 +27,7 @@ VBuffer& VBuffer::operator=(VBuffer&& other) {
   std::swap(nonUniqId, other.nonUniqId);
   std::swap(alloc,     other.alloc);
   std::swap(page,      other.page);
+  std::swap(userSize,  other.userSize);
   return *this;
   }
 
@@ -119,6 +120,20 @@ VkDeviceAddress VBuffer::toDeviceAddress(VDevice& owner) const {
   bufferDeviceAddressInfo.sType  = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
   bufferDeviceAddressInfo.buffer = impl;
   return owner.vkGetBufferDeviceAddress(owner.device.impl, &bufferDeviceAddressInfo);
+  }
+
+uint8_t* VBuffer::mapDescriptorHeap() {
+  return alloc ? alloc->mapDescriptorHeap(*this) : nullptr;
+  }
+
+void VBuffer::unmapDescriptorHeap() {
+  if(alloc!=nullptr)
+    alloc->unmapDescriptorHeap(*this);
+  }
+
+void VBuffer::flushDescriptorHeap() {
+  if(alloc!=nullptr)
+    alloc->flushDescriptorHeap(*this);
   }
 
 #endif

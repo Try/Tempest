@@ -71,6 +71,7 @@ class ShaderReflection final {
 
       bool   isUpdateAfterBind() const;
       size_t sizeofBuffer(size_t id, size_t arraylen) const;
+      size_t size() const;
       };
 
     struct SyncDesc {

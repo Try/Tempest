@@ -5,7 +5,11 @@
 #include <algorithm>
 #include <libspirv/libspirv.h>
 
-//#include "thirdparty/spirv_cross/spirv_common.hpp"
+#if defined(__cpp_lib_bitops)
+#include <bit>
+#else
+#include <bitset>
+#endif
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -83,6 +87,14 @@ bool ShaderReflection::LayoutDesc::isUpdateAfterBind() const {
 
 size_t ShaderReflection::LayoutDesc::sizeofBuffer(size_t id, size_t arraylen) const {
   return bufferSz[id] + bufferEl[id]*arraylen;
+  }
+
+size_t ShaderReflection::LayoutDesc::size() const {
+#if defined(__cpp_lib_bitops)
+  return std::popcount(active);
+#else
+  return std::bitset<sizeof(active)*8>(active).size();
+#endif
   }
 
 
@@ -190,11 +202,13 @@ void ShaderReflection::getBindings(std::vector<Binding>& lay, spirv_cross::Compi
     lay.push_back(b);
     }
   for(auto &resource : resources.storage_images) {
-    auto&    t       = typeFromVariable(comp, resource.id);
-    unsigned binding = comp.get_decoration(resource.id, spv::DecorationBinding);
+    auto&    t        = typeFromVariable(comp, resource.id);
+    unsigned binding  = comp.get_decoration(resource.id, spv::DecorationBinding);
+    unsigned readonly = comp.get_decoration(resource.id, spv::DecorationNonWritable);
+
     Binding b;
     b.layout       = binding;
-    b.cls          = ImgRW; // (readonly.get(spv::DecorationNonWritable) ? UniformsLayout::ImgR : UniformsLayout::ImgRW);
+    b.cls          = readonly ? ImgR : ImgRW;
     b.stage        = s;
     b.runtimeSized = isRuntimeSized(t);
     b.arraySize    = arraySize(t);

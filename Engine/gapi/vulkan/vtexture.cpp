@@ -77,6 +77,11 @@ void VTexture::destroyViews(VkDevice device) {
 
 void VTexture::createView(VkImageView& ret, VkDevice device, VkFormat format,
                           const ComponentMapping* cmap, uint32_t mipLevel, bool is3D) {
+  VkImageViewCreateInfo viewInfo = createInfo(cmap, mipLevel, is3D);
+  vkAssert(vkCreateImageView(device, &viewInfo, nullptr, &ret));
+  }
+
+VkImageViewCreateInfo VTexture::createInfo(const ComponentMapping* cmap, uint32_t mipLevel, bool is3D) const {
   VkImageViewCreateInfo viewInfo = {};
   viewInfo.sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   viewInfo.image    = impl;
@@ -105,8 +110,7 @@ void VTexture::createView(VkImageView& ret, VkDevice device, VkFormat format,
   viewInfo.subresourceRange.levelCount     = (mipLevel==uint32_t(-1) ? mipCnt :        1);
   viewInfo.subresourceRange.baseArrayLayer = 0;
   viewInfo.subresourceRange.layerCount     = 1;
-
-  vkAssert(vkCreateImageView(device, &viewInfo, nullptr, &ret));
+  return viewInfo;
   }
 
 VTextureWithFbo::VTextureWithFbo(VTexture&& base)
