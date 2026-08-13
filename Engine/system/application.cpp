@@ -86,7 +86,7 @@ Application::~Application(){
   }
 
 void Application::sleep(uint32_t msecIn) {
-  const auto     start         = std::chrono::high_resolution_clock::now();
+  const auto     start         = std::chrono::steady_clock::now();
   const auto     wtime         = std::chrono::milliseconds(msecIn);
   const uint32_t wtGranularity = 5;
 
@@ -95,7 +95,7 @@ void Application::sleep(uint32_t msecIn) {
     }
   // spin lock
   while(true) {
-    auto ms = (std::chrono::high_resolution_clock::now() - start);
+    auto ms = (std::chrono::steady_clock::now() - start);
     if(ms>=wtime)
       break;
     }
