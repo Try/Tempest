@@ -20,20 +20,13 @@ class VResourceHeap {
       uint32_t ptr = 0;
       };
 
-    struct VHeap : VBuffer {
-      VHeap(VBuffer&& v);
-      ~VHeap();
-
-      uint8_t* hptr = nullptr;
-      };
-
     Allocation alloc(AbstractGraphicsApi::Buffer**  buf, size_t cnt);
     Allocation alloc(AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel);
     Allocation alloc(uint32_t num);
     void       free (uint32_t ptr, uint32_t num);
     void       flush();
 
-    std::shared_ptr<VHeap> currentMemory() const;
+    std::shared_ptr<VDescriptorHeap> currentMemory() const;
 
   private:
 
@@ -44,8 +37,8 @@ class VResourceHeap {
 
     VDevice*  dev = nullptr;
 
-    std::recursive_mutex   sync;
-    std::shared_ptr<VHeap> memory;
+    mutable std::recursive_mutex     sync;
+    std::shared_ptr<VDescriptorHeap> memory;
     std::vector<Range>     rgn;
   };
 

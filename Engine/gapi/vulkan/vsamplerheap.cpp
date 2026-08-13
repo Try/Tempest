@@ -7,15 +7,17 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-struct VSamplerHeap::VHeap : VBuffer {
-  VHeap(VBuffer&& v):VBuffer(std::move(v)) {
-    hptr = this->mapDescriptorHeap();
-    }
-  ~VHeap() {
-    unmapDescriptorHeap();
-    }
-  uint8_t* hptr = nullptr;
-  };
+static uint32_t nextPot(uint32_t x) {
+  x--;
+  x |= x >> 1;
+  x |= x >> 2;
+  x |= x >> 4;
+  x |= x >> 8;
+  x |= x >> 16;
+  x++;
+  return x;
+  }
+
 
 VSamplerHeap::VSamplerHeap(){
   }
@@ -60,14 +62,15 @@ VkSamplerCreateInfo VSamplerHeap::createInfo(const VDevice& dev, const Sampler& 
 void VSamplerHeap::setDevice(VDevice &dev) {
   device     = &dev;
   if(dev.props.hasDescriptorHeap) {
-    setupHeap();
+    allocHeap(Sampler()); // allocate default sampler
     } else {
     smpDefault = alloc(Sampler());
     }
   }
 
 std::shared_ptr<VBuffer> VSamplerHeap::currentMemory() const {
-  return samplersHeap;
+  std::lock_guard<SpinLock> guard(sync);
+  return memory;
   }
 
 VkSampler VSamplerHeap::get(const Sampler& s) {
@@ -95,74 +98,77 @@ VkSampler VSamplerHeap::get(const Sampler& s) {
 
 uint32_t VSamplerHeap::getH(const Sampler& s) {
   static const Sampler def;
-  if(def==s)
-    return 0;
+  if(def==s) {
+    auto& props  = device->props;
+    auto  elSize = props.samplerDescriptorSize;
+    auto  offset = ((props.samplerHeapReserve + elSize - 1) / elSize);
+    return offset;
+    }
+  return allocHeap(s);
+  }
+
+uint32_t VSamplerHeap::allocHeap(const Sampler& s) {
+  auto& props    = device->props;
+  auto  maxSize  = props.samplerHeapMaxSize;
+  auto  elSize   = props.samplerDescriptorSize;
+  auto  offset   = ((props.samplerHeapReserve + elSize - 1) / elSize);
+  auto  reserve  = offset * elSize;
 
   std::lock_guard<SpinLock> guard(sync);
   for(size_t i=0; i<heapChunks.size(); ++i) {
     if(heapChunks[i]==s)
-      return uint32_t(i);
+      return uint32_t(offset + i);
     }
 
-  auto maxSamplers = (samplersHeap->size() - device->props.samplerHeapReserve)/device->props.samplerDescriptorSize;
-  if(heapChunks.size()>=maxSamplers)
+  auto  dstSize  = reserve + heapChunks.size()*elSize + elSize;
+  if(memory!=nullptr && dstSize < memory->size()) {
+    const auto ptr = memory->hptr + reserve + heapChunks.size()*elSize;
+    alloc(ptr, s);
+    heapChunks.emplace_back(s);
+    return uint32_t(offset + heapChunks.size()-1);
+    }
+
+  //auto  prevSize = uint32_t(memory ? memory->size() : 0);
+  auto  size     = uint32_t(memory ? memory->size() : reserve) + elSize;
+  if(size > maxSize)
     throw std::bad_alloc();
 
-  auto vkWriteSamplerDescriptorsEXT = device->vkWriteSamplerDescriptorsEXT;
+  size = std::min(std::max(nextPot(size), 4*1024u), maxSize);
+  auto buf  = device->allocator.alloc(nullptr, size, MemUsage::Descriptor, BufferHeap::Upload);
+  auto next = std::make_shared<VDescriptorHeap>(std::move(buf));
 
-  const auto ptr = samplersHeap->hptr + heapChunks.size()*device->props.samplerDescriptorSize;
-  VkSamplerCreateInfo   info = VSamplerHeap::createInfo(*device, s);
-  VkHostAddressRangeEXT dest = {ptr, device->props.samplerDescriptorSize};
-  vkAssert(vkWriteSamplerDescriptorsEXT(device->device.impl, 1, &info, &dest));
+  if(memory!=nullptr) {
+    std::memcpy(next->hptr + reserve, memory->hptr + reserve, memory->size() - reserve);
+    }
 
+  const auto ptr = next->hptr + reserve + heapChunks.size()*elSize;
+  alloc(ptr, s);
   heapChunks.emplace_back(s);
-  return uint32_t(heapChunks.size()-1);
-  }
 
-void VSamplerHeap::bindHeap(VkCommandBuffer cmd, const VBuffer& buf) {
-  if(samplersHeap==nullptr || samplersHeap->hptr==nullptr)
-    return;
-
-  //NOTE: might be a problem with bindless-only draws
-  auto& samplers = *samplersHeap;
-
-  auto vkCmdBindSamplerHeapEXT  = device->vkCmdBindSamplerHeapEXT;
-
-  VkBindHeapInfoEXT info = {VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT};
-  info.heapRange.address   = samplers.toDeviceAddress(*device);
-  info.heapRange.size      = samplers.size();
-  info.reservedRangeOffset = info.heapRange.size - device->props.samplerHeapReserve;
-  info.reservedRangeSize   = device->props.samplerHeapReserve;
-  vkCmdBindSamplerHeapEXT(cmd, &info);
+  memory = next;
+  return uint32_t(offset + heapChunks.size()-1);
   }
 
 void VSamplerHeap::flush() {
-  if(samplersHeap!=nullptr)
-    device->allocator.flushDescriptorHeap(*samplersHeap);
+  std::lock_guard<SpinLock> guard(sync);
+  if(memory!=nullptr)
+    device->allocator.flushDescriptorHeap(*memory);
   }
 
 VkSampler VSamplerHeap::alloc(const Sampler &s) {
-  VkSampler           sampler = VK_NULL_HANDLE;
-  VkSamplerCreateInfo info    = createInfo(*device, s);
+  VkSamplerCreateInfo info = createInfo(*device, s);
 
+  VkSampler sampler = VK_NULL_HANDLE;
   vkAssert(vkCreateSampler(device->device.impl, &info, nullptr, &sampler));
   return sampler;
   }
 
-void VSamplerHeap::setupHeap() {
+void VSamplerHeap::alloc(void* ptr, const Sampler& s) {
   auto vkWriteSamplerDescriptorsEXT = device->vkWriteSamplerDescriptorsEXT;
 
-  const auto& props   = device->props;
-  const auto  maxSize = props.samplerHeapMaxSize;
-
-  auto buf     = device->allocator.alloc(nullptr, maxSize, MemUsage::Descriptor, BufferHeap::Upload);
-  samplersHeap = std::make_shared<VHeap>(std::move(buf));
-
-  VkSamplerCreateInfo   info = VSamplerHeap::createInfo(*device, Sampler());
-  VkHostAddressRangeEXT dest = {samplersHeap->hptr, props.samplerDescriptorSize};
+  VkSamplerCreateInfo   info = VSamplerHeap::createInfo(*device, s);
+  VkHostAddressRangeEXT dest = {ptr, device->props.samplerDescriptorSize};
   vkAssert(vkWriteSamplerDescriptorsEXT(device->device.impl, 1, &info, &dest));
-
-  heapChunks.push_back(Sampler());
   }
 
 #endif

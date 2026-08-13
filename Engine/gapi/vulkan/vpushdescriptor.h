@@ -29,8 +29,8 @@ class VPushDescriptor {
     static void     write(VDevice &dev, VkWriteDescriptorSet &wx, WriteInfo &infoW, uint32_t dstBinding,
                           ShaderReflection::Class cls, AbstractGraphicsApi::NoCopy *data, uint32_t offset, const ComponentMapping& mapping, const Sampler &smp);
 
-    static void     write(VDevice &dev, void* resPtr, void* smpPtr,
-                          ShaderReflection::Class cls, AbstractGraphicsApi::NoCopy *data, uint32_t offset, const ComponentMapping& mapping, const Sampler &smp);
+    static void     write(VDevice &dev, void* resPtr,
+                          ShaderReflection::Class cls, AbstractGraphicsApi::NoCopy *data, uint32_t offset, const ComponentMapping& mapping);
   private:
     VDevice& dev;
 

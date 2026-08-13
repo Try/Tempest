@@ -40,4 +40,15 @@ class VBuffer : public AbstractGraphicsApi::Buffer {
   friend class VAllocator;
   };
 
+struct VDescriptorHeap : VBuffer {
+  VDescriptorHeap(VBuffer&& v):VBuffer(std::move(v)) {
+    hptr = this->mapDescriptorHeap();
+    }
+  ~VDescriptorHeap() {
+    unmapDescriptorHeap();
+    }
+  uint8_t*        hptr = nullptr;
+  // VkDeviceAddress dptr = {};
+  };
+
 }}

@@ -140,7 +140,6 @@ void VPushDescriptor::pushHeap(VkCommandBuffer cmd, uint32_t* indices, const Pus
   const auto resSize = dev.props.resourceDescriptorSize;
 
   auto mem = sz.first>0  ? dev.resHeap.currentMemory()  : nullptr;
-  auto smp = sz.second>0 ? dev.samplers.currentMemory() : nullptr;
 
   auto res = mem==nullptr ? nullptr : mem->hptr;
   res += ptr*resSize;
@@ -162,7 +161,7 @@ void VPushDescriptor::pushHeap(VkCommandBuffer cmd, uint32_t* indices, const Pus
       continue;
       }
 
-    VPushDescriptor::write(dev, res, nullptr, lay.bindings[i], binding.data[i], binding.offset[i], binding.map[i], binding.smp[i]);
+    VPushDescriptor::write(dev, res, lay.bindings[i], binding.data[i], binding.offset[i], binding.map[i]);
 
     if(lay.bindings[i]!=ShaderReflection::Sampler && lay.bindings[i]!=ShaderReflection::Texture) {
       indices[0] = ptr; ++indices;
@@ -181,6 +180,7 @@ void VPushDescriptor::pushHeap(VkCommandBuffer cmd, uint32_t* indices, const Pus
       }
     }
 
+  auto smp = sz.second>0 ? dev.samplers.currentMemory() : nullptr;
   bindHeap(cmd, mem, smp);
   }
 

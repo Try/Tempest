@@ -3,8 +3,10 @@
 #include <Tempest/Texture2d>
 #include <vector>
 
-#include "vulkan_sdk.h"
+#include "gapi/vulkan/vbuffer.h"
 #include "utility/spinlock.h"
+
+#include "vulkan_sdk.h"
 
 namespace Tempest {
 namespace Detail {
@@ -24,7 +26,6 @@ class VSamplerHeap final {
 
     uint32_t  getH(const Sampler& s);
     auto      currentMemory() const -> std::shared_ptr<VBuffer>;
-    void      bindHeap(VkCommandBuffer cmd, const VBuffer& buf);
     void      flush();
 
   private:
@@ -33,18 +34,17 @@ class VSamplerHeap final {
       VkSampler sampler=VK_NULL_HANDLE;
       };
 
-    struct VHeap;
-
     VkSampler alloc(const Sampler& s);
-    void      setupHeap();
+    uint32_t  allocHeap(const Sampler& s);
+    void      alloc(void* pheap, const Sampler& s);
 
-    SpinLock           sync;
+    mutable SpinLock   sync;
     std::vector<Entry> chunks;
 
     VDevice*           device     = nullptr;
     VkSampler          smpDefault = VK_NULL_HANDLE;
 
-    std::shared_ptr<VHeap> samplersHeap;
+    std::shared_ptr<VDescriptorHeap> memory;
     std::vector<Sampler>   heapChunks;
   };
 

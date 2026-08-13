@@ -19,15 +19,6 @@ static uint32_t nextPot(uint32_t x) {
   }
 
 
-VResourceHeap::VHeap::VHeap(VBuffer&& v) :VBuffer(std::move(v)) {
-  hptr = this->mapDescriptorHeap();
-  }
-
-VResourceHeap::VHeap::~VHeap() {
-  this->unmapDescriptorHeap();
-  }
-
-
 VResourceHeap::VResourceHeap() {
   }
 
@@ -43,13 +34,13 @@ VResourceHeap::Allocation VResourceHeap::alloc(AbstractGraphicsApi::Buffer** buf
   std::lock_guard<std::recursive_mutex> guard(sync);
 
   auto& props = dev->props;
-  auto  alloc = this->alloc(cnt);
+  auto  alloc = this->alloc(uint32_t(cnt));
   auto  dPtrR = alloc.ptr;
   auto  hPtrR = memory==nullptr ? nullptr : memory->hptr;
 
   for(size_t i=0; i<cnt; ++i) {
     auto res = hPtrR + (dPtrR + i)*props.resourceDescriptorSize;
-    VPushDescriptor::write(*dev, res, nullptr, ShaderReflection::SsboR, buf[i], 0, ComponentMapping(), Sampler::nearest());
+    VPushDescriptor::write(*dev, res, ShaderReflection::SsboR, buf[i], 0, ComponentMapping());
     }
 
   return alloc;
@@ -59,13 +50,13 @@ VResourceHeap::Allocation VResourceHeap::alloc(AbstractGraphicsApi::Texture** te
   std::lock_guard<std::recursive_mutex> guard(sync);
 
   auto& props = dev->props;
-  auto  alloc = this->alloc(cnt);
+  auto  alloc = this->alloc(uint32_t(cnt));
   auto  dPtrR = alloc.ptr;
   auto  hPtrR = memory==nullptr ? nullptr : memory->hptr;
 
   for(size_t i=0; i<cnt; ++i) {
     auto res = hPtrR + (dPtrR + i)*props.resourceDescriptorSize;
-    VPushDescriptor::write(*dev, res, nullptr, ShaderReflection::Image, tex[i], mipLevel, ComponentMapping(), Sampler::nearest());
+    VPushDescriptor::write(*dev, res, ShaderReflection::Image, tex[i], mipLevel, ComponentMapping());
     }
 
   return alloc;
@@ -74,11 +65,13 @@ VResourceHeap::Allocation VResourceHeap::alloc(AbstractGraphicsApi::Texture** te
 void VResourceHeap::flush() {
   if(dev==nullptr)
     return;
+  std::lock_guard<std::recursive_mutex> guard(sync);
   if(memory!=nullptr)
     dev->allocator.flushDescriptorHeap(*memory);
   }
 
-std::shared_ptr<VResourceHeap::VHeap> VResourceHeap::currentMemory() const {
+std::shared_ptr<VDescriptorHeap> VResourceHeap::currentMemory() const {
+  std::lock_guard<std::recursive_mutex> guard(sync);
   return memory;
   }
 
@@ -116,7 +109,8 @@ VResourceHeap::Allocation VResourceHeap::alloc(uint32_t num) {
   size = std::min(std::max(nextPot(size), 1024*1024u), maxSize);
 #endif
   auto buf  = dev->allocator.alloc(nullptr, size, MemUsage::Descriptor, BufferHeap::Upload);
-  auto next = std::make_shared<VHeap>(std::move(buf));
+  auto next = std::make_shared<VDescriptorHeap>(std::move(buf));
+  // DSharedPtr<Buffer*> pbuf(new VBuffer(std::move(buf)));
 
   if(memory==nullptr) {
     Range rg;
