@@ -77,7 +77,7 @@ void VPushDescriptor::reset() {
     dev.resHeap.free(i.dPtr, RES_ALLOC_SZ);
     }
   resPool.clear();
-  smpPool.clear();
+  memHeap.clear();
 
   lastResHeap = nullptr;
   lastSmpHeap = nullptr;
@@ -139,10 +139,11 @@ void VPushDescriptor::pushHeap(VkCommandBuffer cmd, uint32_t* indices, const Pus
 
   const auto resSize = dev.props.resourceDescriptorSize;
 
-  auto mem = dev.resHeap.currentMemory();
+  auto mem = sz.first>0  ? dev.resHeap.currentMemory()  : nullptr;
+  auto smp = sz.second>0 ? dev.samplers.currentMemory() : nullptr;
+
   auto res = mem==nullptr ? nullptr : mem->hptr;
   res += ptr*resSize;
-
   for(size_t i=0; i<MaxBindings; ++i) {
     if(((1u << i) & lay.active)==0)
       continue;
@@ -180,18 +181,17 @@ void VPushDescriptor::pushHeap(VkCommandBuffer cmd, uint32_t* indices, const Pus
       }
     }
 
-  bindHeap(cmd, sz.first>0, sz.second>0, mem);
+  bindHeap(cmd, mem, smp);
   }
 
-void VPushDescriptor::bindHeap(VkCommandBuffer cmd, bool res, bool smp, std::shared_ptr<VBuffer> resHeap) {
+void VPushDescriptor::bindHeap(VkCommandBuffer cmd, const std::shared_ptr<VBuffer>& res, const std::shared_ptr<VBuffer>& smp) {
   auto vkCmdBindResourceHeapEXT = dev.vkCmdBindResourceHeapEXT;
 
-  auto resMem = resHeap.get();
-  if(res && resMem!=nullptr && lastResHeap!=resMem) {
-    lastResHeap = resMem;
-    auto& resources = *resHeap;
-    resHeaps.push_back(resHeap);
+  if(res!=nullptr && lastResHeap!=res.get()) {
+    lastResHeap = res.get();
+    memHeap.push_back(res);
 
+    auto& resources = *lastResHeap;
     VkBindHeapInfoEXT info = {VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT};
     info.heapRange.address   = resources.toDeviceAddress(dev);
     info.heapRange.size      = resources.size();
@@ -200,13 +200,10 @@ void VPushDescriptor::bindHeap(VkCommandBuffer cmd, bool res, bool smp, std::sha
     vkCmdBindResourceHeapEXT(cmd, &info);
     }
 
-  if(smp) {
-    auto heap = dev.samplers.getHeap();
-    if(heap.get()!=lastSmpHeap) {
-      lastSmpHeap = heap.get();
-      smpPool.push_back(heap);
-      dev.samplers.bindHeap(cmd, *heap);
-      }
+  if(smp!=nullptr && lastSmpHeap!=smp.get()) {
+    lastSmpHeap = smp.get();
+    memHeap.push_back(smp);
+    dev.samplers.bindHeap(cmd, *lastSmpHeap);
     }
   }
 

@@ -66,6 +66,10 @@ void VSamplerHeap::setDevice(VDevice &dev) {
     }
   }
 
+std::shared_ptr<VBuffer> VSamplerHeap::currentMemory() const {
+  return samplersHeap;
+  }
+
 VkSampler VSamplerHeap::get(const Sampler& s) {
   static const Sampler def;
   if(def==s)
@@ -113,10 +117,6 @@ uint32_t VSamplerHeap::getH(const Sampler& s) {
 
   heapChunks.emplace_back(s);
   return uint32_t(heapChunks.size()-1);
-  }
-
-std::shared_ptr<VBuffer> VSamplerHeap::getHeap() const {
-  return samplersHeap;
   }
 
 void VSamplerHeap::bindHeap(VkCommandBuffer cmd, const VBuffer& buf) {

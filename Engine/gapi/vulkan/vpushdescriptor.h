@@ -55,11 +55,11 @@ class VPushDescriptor {
     VkDescriptorSet allocSet(const LayoutDesc& layout);
     uint32_t        allocHeap(VkCommandBuffer cmd, const uint32_t sz, const uint32_t step);
 
-    void            bindHeap(VkCommandBuffer cmd, bool res, bool smp, std::shared_ptr<VBuffer> resHeap);
+    void            bindHeap(VkCommandBuffer cmd, const std::shared_ptr<VBuffer>& res, const std::shared_ptr<VBuffer>& smp);
 
     std::vector<DescPool> descPool;
     std::vector<ResPool>  resPool;
-    std::vector<std::shared_ptr<VBuffer>> resHeaps, smpPool;
+    std::vector<std::shared_ptr<VBuffer>> memHeap;
 
     VBuffer* lastResHeap = nullptr;
     VBuffer* lastSmpHeap = nullptr;

@@ -23,7 +23,7 @@ class VSamplerHeap final {
     void      setDevice(VDevice &dev);
 
     uint32_t  getH(const Sampler& s);
-    auto      getHeap() const -> std::shared_ptr<VBuffer>;
+    auto      currentMemory() const -> std::shared_ptr<VBuffer>;
     void      bindHeap(VkCommandBuffer cmd, const VBuffer& buf);
     void      flush();
 
