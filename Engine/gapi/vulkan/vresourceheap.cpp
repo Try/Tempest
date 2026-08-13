@@ -1,6 +1,6 @@
 #if defined(TEMPEST_BUILD_VULKAN)
 
-#include "vdescriptorheap.h"
+#include "vresourceheap.h"
 
 #include "vdevice.h"
 
@@ -19,27 +19,27 @@ static uint32_t nextPot(uint32_t x) {
   }
 
 
-VDescriptorHeap::VHeap::VHeap(VBuffer&& v) :VBuffer(std::move(v)) {
+VResourceHeap::VHeap::VHeap(VBuffer&& v) :VBuffer(std::move(v)) {
   hptr = this->mapDescriptorHeap();
   }
 
-VDescriptorHeap::VHeap::~VHeap() {
+VResourceHeap::VHeap::~VHeap() {
   this->unmapDescriptorHeap();
   }
 
 
-VDescriptorHeap::VDescriptorHeap() {
+VResourceHeap::VResourceHeap() {
   }
 
-VDescriptorHeap::~VDescriptorHeap() {
+VResourceHeap::~VResourceHeap() {
   }
 
-void VDescriptorHeap::setDevice(VDevice& dx) {
+void VResourceHeap::setDevice(VDevice& dx) {
   dev = &dx;
   rgn.reserve(1024);
   }
 
-VDescriptorHeap::Allocation VDescriptorHeap::alloc(AbstractGraphicsApi::Buffer** buf, size_t cnt) {
+VResourceHeap::Allocation VResourceHeap::alloc(AbstractGraphicsApi::Buffer** buf, size_t cnt) {
   std::lock_guard<std::recursive_mutex> guard(sync);
 
   auto& props = dev->props;
@@ -55,7 +55,7 @@ VDescriptorHeap::Allocation VDescriptorHeap::alloc(AbstractGraphicsApi::Buffer**
   return alloc;
   }
 
-VDescriptorHeap::Allocation VDescriptorHeap::alloc(AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel) {
+VResourceHeap::Allocation VResourceHeap::alloc(AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel) {
   std::lock_guard<std::recursive_mutex> guard(sync);
 
   auto& props = dev->props;
@@ -71,18 +71,18 @@ VDescriptorHeap::Allocation VDescriptorHeap::alloc(AbstractGraphicsApi::Texture*
   return alloc;
   }
 
-void VDescriptorHeap::flush() {
+void VResourceHeap::flush() {
   if(dev==nullptr)
     return;
   if(memory!=nullptr)
     dev->allocator.flushDescriptorHeap(*memory);
   }
 
-std::shared_ptr<VDescriptorHeap::VHeap> VDescriptorHeap::currentMemory() const {
+std::shared_ptr<VResourceHeap::VHeap> VResourceHeap::currentMemory() const {
   return memory;
   }
 
-VDescriptorHeap::Allocation VDescriptorHeap::alloc(uint32_t num) {
+VResourceHeap::Allocation VResourceHeap::alloc(uint32_t num) {
   std::lock_guard<std::recursive_mutex> guard(sync);
 
   auto& props   = dev->props;
@@ -139,7 +139,7 @@ VDescriptorHeap::Allocation VDescriptorHeap::alloc(uint32_t num) {
   return Allocation{uint32_t(prevSize/elSize)};
   }
 
-void VDescriptorHeap::free(uint32_t ptr, uint32_t num) {
+void VResourceHeap::free(uint32_t ptr, uint32_t num) {
   if(ptr==0xFFFFFFFF || num==0)
     return;
 

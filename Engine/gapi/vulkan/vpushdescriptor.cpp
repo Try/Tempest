@@ -53,7 +53,7 @@ VPushDescriptor::DescPool::DescPool(VDevice &dev) {
   }
 
 VPushDescriptor::ResPool::ResPool(VDevice &dev, uint32_t size) {
-  auto mem = dev.descHeap.alloc(size);
+  auto mem = dev.resHeap.alloc(size);
   dPtr  = mem.ptr;
   alloc = 0;
   }
@@ -74,7 +74,7 @@ void VPushDescriptor::reset() {
 
   resPool.reserve(resPool.size());
   for(auto& i:resPool) {
-    dev.descHeap.free(i.dPtr, RES_ALLOC_SZ);
+    dev.resHeap.free(i.dPtr, RES_ALLOC_SZ);
     }
   resPool.clear();
   smpPool.clear();
@@ -139,7 +139,7 @@ void VPushDescriptor::pushHeap(VkCommandBuffer cmd, uint32_t* indices, const Pus
 
   const auto resSize = dev.props.resourceDescriptorSize;
 
-  auto mem = dev.descHeap.currentMemory();
+  auto mem = dev.resHeap.currentMemory();
   auto res = mem==nullptr ? nullptr : mem->hptr;
   res += ptr*resSize;
 

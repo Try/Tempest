@@ -150,7 +150,7 @@ VDescriptorHeapArray::VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Te
   : dev(dev), cnt(cnt) {
   //NOTE: no bindless storage image
   try {
-    auto alloc = dev.descHeap.alloc(tex, cnt, mipLevel);
+    auto alloc = dev.resHeap.alloc(tex, cnt, mipLevel);
     dPtrR = alloc.ptr;
 
     if(sampler!=nullptr) {
@@ -173,7 +173,7 @@ VDescriptorHeapArray::VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Te
 VDescriptorHeapArray::VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Buffer** buf, size_t cnt)
   : dev(dev), cnt(uint32_t(cnt)) {
   try {
-    auto alloc = dev.descHeap.alloc(buf, cnt);
+    auto alloc = dev.resHeap.alloc(buf, cnt);
     dPtrR = alloc.ptr;
 
     nonUniqId = NonUniqResId::I_None;
@@ -194,7 +194,7 @@ VDescriptorHeapArray::~VDescriptorHeapArray() {
   }
 
 void VDescriptorHeapArray::clear() {
-  dev.descHeap.free(dPtrR, uint32_t(cnt));
+  dev.resHeap.free(dPtrR, uint32_t(cnt));
   }
 
 #endif

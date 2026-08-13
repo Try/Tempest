@@ -9,10 +9,10 @@ namespace Detail {
 
 class VDevice;
 
-class VDescriptorHeap {
+class VResourceHeap {
   public:
-    VDescriptorHeap();
-    ~VDescriptorHeap();
+    VResourceHeap();
+    ~VResourceHeap();
 
     void setDevice(VDevice& dev);
 

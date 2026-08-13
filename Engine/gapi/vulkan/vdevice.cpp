@@ -3,7 +3,7 @@
 #include "vdevice.h"
 
 #include "vcommandbuffer.h"
-#include "vdescriptorheap.h"
+#include "vresourceheap.h"
 #include "vfence.h"
 #include "vswapchain.h"
 
@@ -93,7 +93,7 @@ VDevice::VDevice(VkInstance instance, const bool hasDeviceFeatures2, VkPhysicalD
   allocator.setDevice(*this);
   descPool.setupLimits();
   if(props.hasDescriptorHeap)
-    descHeap.setDevice(*this);
+    resHeap.setDevice(*this);
   samplers.setDevice(*this);
   data.reset(new DataMgr(*this));
   }
@@ -1098,7 +1098,7 @@ void VDevice::waitIdleSync(VDevice::Queue* q, size_t n) {
 
 std::shared_ptr<VFence> VDevice::submit(VCommandBuffer& cmd) {
   // flush descriptor memory
-  descHeap.flush();
+  resHeap.flush();
   samplers.flush();
 
   size_t waitCnt = 0;

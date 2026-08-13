@@ -18,7 +18,7 @@
 #include "gapi/vulkan/vsetlayoutcache.h"
 #include "gapi/vulkan/vpoolcache.h"
 #include "gapi/vulkan/vpsolayoutcache.h"
-#include "gapi/vulkan/vdescriptorheap.h"
+#include "gapi/vulkan/vresourceheap.h"
 #include "gapi/vulkan/vsamplerheap.h"
 #include "gapi/uploadengine.h"
 #include "exceptions/exception.h"
@@ -425,7 +425,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     VPsoLayoutCache         psoLayouts;
     VPoolCache              descPool;
     VBindlessCache          bindless;
-    VDescriptorHeap         descHeap;
+    VResourceHeap           resHeap;
     VSamplerHeap            samplers;
 
     VkProps                 props={};
