@@ -1,13 +1,13 @@
 #if defined(TEMPEST_BUILD_VULKAN)
 
-#include "vsamplercache.h"
+#include "vsamplerheap.h"
 
 #include "vdevice.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-struct VSamplerCache::VHeap : VBuffer {
+struct VSamplerHeap::VHeap : VBuffer {
   VHeap(VBuffer&& v):VBuffer(std::move(v)) {
     hptr = this->mapDescriptorHeap();
     }
@@ -17,17 +17,17 @@ struct VSamplerCache::VHeap : VBuffer {
   uint8_t* hptr = nullptr;
   };
 
-VSamplerCache::VSamplerCache(){
+VSamplerHeap::VSamplerHeap(){
   }
 
-VSamplerCache::~VSamplerCache() {
+VSamplerHeap::~VSamplerHeap() {
   if(smpDefault!=VK_NULL_HANDLE)
     vkDestroySampler(device->device.impl,smpDefault,nullptr);
   for(auto& i:chunks)
     vkDestroySampler(device->device.impl,i.sampler,nullptr);
   }
 
-VkSamplerCreateInfo VSamplerCache::createInfo(const VDevice& dev, const Sampler& s) {
+VkSamplerCreateInfo VSamplerHeap::createInfo(const VDevice& dev, const Sampler& s) {
   VkSamplerCreateInfo samplerInfo = {};
   samplerInfo.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 
@@ -57,7 +57,7 @@ VkSamplerCreateInfo VSamplerCache::createInfo(const VDevice& dev, const Sampler&
   return samplerInfo;
   }
 
-void VSamplerCache::setDevice(VDevice &dev) {
+void VSamplerHeap::setDevice(VDevice &dev) {
   device     = &dev;
   if(dev.props.hasDescriptorHeap) {
     setupHeap();
@@ -66,7 +66,7 @@ void VSamplerCache::setDevice(VDevice &dev) {
     }
   }
 
-VkSampler VSamplerCache::get(const Sampler& s) {
+VkSampler VSamplerHeap::get(const Sampler& s) {
   static const Sampler def;
   if(def==s)
     return smpDefault;
@@ -89,7 +89,7 @@ VkSampler VSamplerCache::get(const Sampler& s) {
   return b.sampler;
   }
 
-uint32_t VSamplerCache::getH(const Sampler& s) {
+uint32_t VSamplerHeap::getH(const Sampler& s) {
   static const Sampler def;
   if(def==s)
     return 0;
@@ -107,7 +107,7 @@ uint32_t VSamplerCache::getH(const Sampler& s) {
   auto vkWriteSamplerDescriptorsEXT = device->vkWriteSamplerDescriptorsEXT;
 
   const auto ptr = samplersHeap->hptr + heapChunks.size()*device->props.samplerDescriptorSize;
-  VkSamplerCreateInfo   info = VSamplerCache::createInfo(*device, s);
+  VkSamplerCreateInfo   info = VSamplerHeap::createInfo(*device, s);
   VkHostAddressRangeEXT dest = {ptr, device->props.samplerDescriptorSize};
   vkAssert(vkWriteSamplerDescriptorsEXT(device->device.impl, 1, &info, &dest));
 
@@ -115,11 +115,11 @@ uint32_t VSamplerCache::getH(const Sampler& s) {
   return uint32_t(heapChunks.size()-1);
   }
 
-std::shared_ptr<VBuffer> VSamplerCache::getHeap() const {
+std::shared_ptr<VBuffer> VSamplerHeap::getHeap() const {
   return samplersHeap;
   }
 
-void VSamplerCache::bindHeap(VkCommandBuffer cmd, const VBuffer& buf) {
+void VSamplerHeap::bindHeap(VkCommandBuffer cmd, const VBuffer& buf) {
   if(samplersHeap==nullptr || samplersHeap->hptr==nullptr)
     return;
 
@@ -136,12 +136,12 @@ void VSamplerCache::bindHeap(VkCommandBuffer cmd, const VBuffer& buf) {
   vkCmdBindSamplerHeapEXT(cmd, &info);
   }
 
-void VSamplerCache::flush() {
+void VSamplerHeap::flush() {
   if(samplersHeap!=nullptr)
     device->allocator.flushDescriptorHeap(*samplersHeap);
   }
 
-VkSampler VSamplerCache::alloc(const Sampler &s) {
+VkSampler VSamplerHeap::alloc(const Sampler &s) {
   VkSampler           sampler = VK_NULL_HANDLE;
   VkSamplerCreateInfo info    = createInfo(*device, s);
 
@@ -149,7 +149,7 @@ VkSampler VSamplerCache::alloc(const Sampler &s) {
   return sampler;
   }
 
-void VSamplerCache::setupHeap() {
+void VSamplerHeap::setupHeap() {
   auto vkWriteSamplerDescriptorsEXT = device->vkWriteSamplerDescriptorsEXT;
 
   const auto& props   = device->props;
@@ -158,7 +158,7 @@ void VSamplerCache::setupHeap() {
   auto buf     = device->allocator.alloc(nullptr, maxSize, MemUsage::Descriptor, BufferHeap::Upload);
   samplersHeap = std::make_shared<VHeap>(std::move(buf));
 
-  VkSamplerCreateInfo   info = VSamplerCache::createInfo(*device, Sampler());
+  VkSamplerCreateInfo   info = VSamplerHeap::createInfo(*device, Sampler());
   VkHostAddressRangeEXT dest = {samplersHeap->hptr, props.samplerDescriptorSize};
   vkAssert(vkWriteSamplerDescriptorsEXT(device->device.impl, 1, &info, &dest));
 

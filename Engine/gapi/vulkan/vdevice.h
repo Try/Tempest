@@ -18,10 +18,11 @@
 #include "gapi/vulkan/vsetlayoutcache.h"
 #include "gapi/vulkan/vpoolcache.h"
 #include "gapi/vulkan/vpsolayoutcache.h"
+#include "gapi/vulkan/vdescriptorheap.h"
+#include "gapi/vulkan/vsamplerheap.h"
 #include "gapi/uploadengine.h"
 #include "exceptions/exception.h"
 #include "utility/compiller_hints.h"
-#include "vdescriptorheap.h"
 
 namespace Tempest {
 namespace Detail {
@@ -425,7 +426,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     VPoolCache              descPool;
     VBindlessCache          bindless;
     VDescriptorHeap         descHeap;
-    VSamplerCache           samplers;
+    VSamplerHeap            samplers;
 
     VkProps                 props={};
 

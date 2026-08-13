@@ -12,10 +12,10 @@ namespace Detail {
 class VDevice;
 class VBuffer;
 
-class VSamplerCache final {
+class VSamplerHeap final {
   public:
-    VSamplerCache();
-    ~VSamplerCache();
+    VSamplerHeap();
+    ~VSamplerHeap();
 
     static VkSamplerCreateInfo createInfo(const VDevice& dev, const Sampler& s);
 

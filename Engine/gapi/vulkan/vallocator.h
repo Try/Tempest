@@ -3,7 +3,6 @@
 #include <Tempest/AbstractGraphicsApi>
 #include "vulkan_sdk.h"
 #include "gapi/deviceallocator.h"
-#include "vsamplercache.h"
 
 namespace Tempest {
 namespace Detail {
@@ -29,11 +28,11 @@ class VAllocator {
       };
 
     struct MemRequirements {
-      size_t               size;
-      size_t               alignment;
-      uint32_t             memoryTypeBits;
-      bool                 dedicated;
-      bool                 dedicatedRq;
+      size_t   size;
+      size_t   alignment;
+      uint32_t memoryTypeBits;
+      bool     dedicated;
+      bool     dedicatedRq;
       };
 
   public:
