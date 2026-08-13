@@ -20,6 +20,7 @@ class ZBuffer final {
     int              h()       const { return tImpl.h();       }
     Size             size()    const { return tImpl.size();    }
     bool             isEmpty() const { return tImpl.isEmpty(); }
+    TextureFormat    format()  const { return tImpl.format();  }
 
   private:
     ZBuffer(Texture2d&& t, bool nonSampleFormat):tImpl(std::move(t)), nonSampleFormat(nonSampleFormat) {}
