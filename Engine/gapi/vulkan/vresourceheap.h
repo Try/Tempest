@@ -3,6 +3,7 @@
 #include "vulkan_sdk.h"
 
 #include "vbuffer.h"
+#include "utility/spinlock.h"
 
 namespace Tempest {
 namespace Detail {
@@ -26,20 +27,21 @@ class VResourceHeap {
     void       free (uint32_t ptr, uint32_t num);
     void       flush();
 
-    std::shared_ptr<VDescriptorHeap> currentMemory() const;
+    auto       currentMemory() const -> DSharedPtr<VDescriptorHeap*>;
 
   private:
-
     struct Range {
       uint32_t begin = 0;
       uint32_t end   = 0;
       };
 
+    Allocation implAlloc(uint32_t num);
+
     VDevice*  dev = nullptr;
 
-    mutable std::recursive_mutex     sync;
-    std::shared_ptr<VDescriptorHeap> memory;
-    std::vector<Range>     rgn;
+    mutable SpinLock             sync;
+    DSharedPtr<VDescriptorHeap*> memory;
+    std::vector<Range>           rgn;
   };
 
 }

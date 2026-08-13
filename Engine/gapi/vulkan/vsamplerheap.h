@@ -25,7 +25,7 @@ class VSamplerHeap final {
     void      setDevice(VDevice &dev);
 
     uint32_t  getH(const Sampler& s);
-    auto      currentMemory() const -> std::shared_ptr<VBuffer>;
+    auto      currentMemory() const -> DSharedPtr<VDescriptorHeap*>;
     void      flush();
 
   private:
@@ -44,8 +44,8 @@ class VSamplerHeap final {
     VDevice*           device     = nullptr;
     VkSampler          smpDefault = VK_NULL_HANDLE;
 
-    std::shared_ptr<VDescriptorHeap> memory;
-    std::vector<Sampler>   heapChunks;
+    DSharedPtr<VDescriptorHeap*> memory;
+    std::vector<Sampler>         heapChunks;
   };
 
 }}

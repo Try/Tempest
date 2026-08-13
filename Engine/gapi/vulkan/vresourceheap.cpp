@@ -31,12 +31,12 @@ void VResourceHeap::setDevice(VDevice& dx) {
   }
 
 VResourceHeap::Allocation VResourceHeap::alloc(AbstractGraphicsApi::Buffer** buf, size_t cnt) {
-  std::lock_guard<std::recursive_mutex> guard(sync);
+  std::lock_guard<SpinLock> guard(sync);
 
   auto& props = dev->props;
-  auto  alloc = this->alloc(uint32_t(cnt));
+  auto  alloc = implAlloc(uint32_t(cnt));
   auto  dPtrR = alloc.ptr;
-  auto  hPtrR = memory==nullptr ? nullptr : memory->hptr;
+  auto  hPtrR = memory ? memory.handler->hptr : nullptr;
 
   for(size_t i=0; i<cnt; ++i) {
     auto res = hPtrR + (dPtrR + i)*props.resourceDescriptorSize;
@@ -47,12 +47,12 @@ VResourceHeap::Allocation VResourceHeap::alloc(AbstractGraphicsApi::Buffer** buf
   }
 
 VResourceHeap::Allocation VResourceHeap::alloc(AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel) {
-  std::lock_guard<std::recursive_mutex> guard(sync);
+  std::lock_guard<SpinLock> guard(sync);
 
   auto& props = dev->props;
-  auto  alloc = this->alloc(uint32_t(cnt));
+  auto  alloc = implAlloc(uint32_t(cnt));
   auto  dPtrR = alloc.ptr;
-  auto  hPtrR = memory==nullptr ? nullptr : memory->hptr;
+  auto  hPtrR = memory ? memory.handler->hptr : nullptr;
 
   for(size_t i=0; i<cnt; ++i) {
     auto res = hPtrR + (dPtrR + i)*props.resourceDescriptorSize;
@@ -62,22 +62,25 @@ VResourceHeap::Allocation VResourceHeap::alloc(AbstractGraphicsApi::Texture** te
   return alloc;
   }
 
+VResourceHeap::Allocation VResourceHeap::alloc(uint32_t num) {
+  std::lock_guard<SpinLock> guard(sync);
+  return implAlloc(num);
+  }
+
 void VResourceHeap::flush() {
   if(dev==nullptr)
     return;
-  std::lock_guard<std::recursive_mutex> guard(sync);
-  if(memory!=nullptr)
-    dev->allocator.flushDescriptorHeap(*memory);
+  std::lock_guard<SpinLock> guard(sync);
+  if(memory)
+    memory.handler->flush();
   }
 
-std::shared_ptr<VDescriptorHeap> VResourceHeap::currentMemory() const {
-  std::lock_guard<std::recursive_mutex> guard(sync);
+DSharedPtr<VDescriptorHeap*> VResourceHeap::currentMemory() const {
+  std::lock_guard<SpinLock> guard(sync);
   return memory;
   }
 
-VResourceHeap::Allocation VResourceHeap::alloc(uint32_t num) {
-  std::lock_guard<std::recursive_mutex> guard(sync);
-
+VResourceHeap::Allocation VResourceHeap::implAlloc(uint32_t num) {
   auto& props   = dev->props;
   auto  maxSize = props.resourceHeapMaxSize;
   auto  elSize  = props.resourceDescriptorSize;
@@ -98,8 +101,8 @@ VResourceHeap::Allocation VResourceHeap::alloc(uint32_t num) {
     }
 
   // realloc heap
-  auto prevSize = uint32_t(memory ? memory->size() : 0);
-  auto size     = uint32_t(memory ? memory->size() : reserve) + allocSize;
+  auto prevSize = uint32_t(memory ? memory.handler->size() : 0);
+  auto size     = uint32_t(memory ? memory.handler->size() : reserve) + allocSize;
   if(size > maxSize)
     throw std::bad_alloc();
 
@@ -109,10 +112,9 @@ VResourceHeap::Allocation VResourceHeap::alloc(uint32_t num) {
   size = std::min(std::max(nextPot(size), 1024*1024u), maxSize);
 #endif
   auto buf  = dev->allocator.alloc(nullptr, size, MemUsage::Descriptor, BufferHeap::Upload);
-  auto next = std::make_shared<VDescriptorHeap>(std::move(buf));
-  // DSharedPtr<Buffer*> pbuf(new VBuffer(std::move(buf)));
+  auto next = DSharedPtr<VDescriptorHeap*>(new VDescriptorHeap(std::move(buf)));
 
-  if(memory==nullptr) {
+  if(!memory) {
     Range rg;
     rg.begin = reserve + allocSize;
     rg.end   = size;
@@ -123,12 +125,12 @@ VResourceHeap::Allocation VResourceHeap::alloc(uint32_t num) {
     return Allocation{uint32_t(reserve/elSize)};
     }
 
-  dev->allocator.flushDescriptorHeap(*memory);
-  std::memcpy(next->hptr+reserve, memory->hptr+reserve, memory->size()-reserve);
+  memory.handler->flush();
+  std::memcpy(next.handler->hptr+reserve, memory.handler->hptr+reserve, memory.handler->size()-reserve);
 
   Range& rg = rgn.emplace_back();
   rg.begin = prevSize + allocSize;
-  rg.end   = uint32_t(next->size());
+  rg.end   = uint32_t(next.handler->size());
   memory = next;
   return Allocation{uint32_t(prevSize/elSize)};
   }
@@ -137,7 +139,7 @@ void VResourceHeap::free(uint32_t ptr, uint32_t num) {
   if(ptr==0xFFFFFFFF || num==0)
     return;
 
-  std::lock_guard<std::recursive_mutex> guard(sync);
+  std::lock_guard<SpinLock> guard(sync);
 
   auto elSize = dev->props.resourceDescriptorSize;
   ptr *= elSize;

@@ -139,9 +139,9 @@ void VPushDescriptor::pushHeap(VkCommandBuffer cmd, uint32_t* indices, const Pus
 
   const auto resSize = dev.props.resourceDescriptorSize;
 
-  auto mem = sz.first>0  ? dev.resHeap.currentMemory()  : nullptr;
+  auto mem = sz.first>0 ? dev.resHeap.currentMemory()  : DSharedPtr<VDescriptorHeap*>();
 
-  auto res = mem==nullptr ? nullptr : mem->hptr;
+  auto res = mem ? mem.handler->hptr : nullptr;
   res += ptr*resSize;
   for(size_t i=0; i<MaxBindings; ++i) {
     if(((1u << i) & lay.active)==0)
@@ -180,15 +180,16 @@ void VPushDescriptor::pushHeap(VkCommandBuffer cmd, uint32_t* indices, const Pus
       }
     }
 
-  auto smp = sz.second>0 ? dev.samplers.currentMemory() : nullptr;
+  auto smp = sz.second>0 ? dev.samplers.currentMemory() : DSharedPtr<VDescriptorHeap*>();
   bindHeap(cmd, mem, smp);
   }
 
-void VPushDescriptor::bindHeap(VkCommandBuffer cmd, const std::shared_ptr<VBuffer>& res, const std::shared_ptr<VBuffer>& smp) {
+void VPushDescriptor::bindHeap(VkCommandBuffer cmd, const DSharedPtr<VDescriptorHeap*>& res, const DSharedPtr<VDescriptorHeap*>& smp) {
   auto vkCmdBindResourceHeapEXT = dev.vkCmdBindResourceHeapEXT;
+  auto vkCmdBindSamplerHeapEXT  = dev.vkCmdBindSamplerHeapEXT;
 
-  if(res!=nullptr && lastResHeap!=res.get()) {
-    lastResHeap = res.get();
+  if(res && lastResHeap!=res.handler) {
+    lastResHeap = res.handler;
     memHeap.push_back(res);
 
     auto& resources = *lastResHeap;
@@ -200,10 +201,17 @@ void VPushDescriptor::bindHeap(VkCommandBuffer cmd, const std::shared_ptr<VBuffe
     vkCmdBindResourceHeapEXT(cmd, &info);
     }
 
-  if(smp!=nullptr && lastSmpHeap!=smp.get()) {
-    lastSmpHeap = smp.get();
+  if(smp && lastSmpHeap!=smp.handler) {
+    lastSmpHeap = smp.handler;
     memHeap.push_back(smp);
-    dev.samplers.bindHeap(cmd, *lastSmpHeap);
+
+    auto& samplers = *lastSmpHeap;
+    VkBindHeapInfoEXT info = {VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT};
+    info.heapRange.address   = samplers.toDeviceAddress(dev);
+    info.heapRange.size      = samplers.size();
+    info.reservedRangeOffset = 0;
+    info.reservedRangeSize   = dev.props.samplerHeapReserve;
+    vkCmdBindSamplerHeapEXT(cmd, &info);
     }
   }
 
@@ -330,8 +338,8 @@ void VPushDescriptor::write(VDevice& dev, VkWriteDescriptorSet& wx, WriteInfo& i
     }
   }
 
-void VPushDescriptor::write(VDevice& dev, void* resPtr, void* smpPtr, ShaderReflection::Class cls,
-                            AbstractGraphicsApi::NoCopy* data, uint32_t offset, const ComponentMapping& mapping, const Sampler& smp) {
+void VPushDescriptor::write(VDevice& dev, void* resPtr, ShaderReflection::Class cls,
+                            AbstractGraphicsApi::NoCopy* data, uint32_t offset, const ComponentMapping& mapping) {
   auto vkWriteResourceDescriptorsEXT = dev.vkWriteResourceDescriptorsEXT;
 
   VkResourceDescriptorInfoEXT res = {VK_STRUCTURE_TYPE_RESOURCE_DESCRIPTOR_INFO_EXT};

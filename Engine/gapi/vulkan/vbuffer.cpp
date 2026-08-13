@@ -131,4 +131,9 @@ void VBuffer::unmapDescriptorHeap() {
     alloc->unmapDescriptorHeap(*this);
   }
 
+void VBuffer::flushDescriptorHeap() {
+  if(alloc!=nullptr)
+    alloc->flushDescriptorHeap(*this);
+  }
+
 #endif

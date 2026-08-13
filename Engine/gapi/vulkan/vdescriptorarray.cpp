@@ -147,7 +147,7 @@ VDescriptorHeapArray::VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Te
   }
 
 VDescriptorHeapArray::VDescriptorHeapArray(VDevice& dev, AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel, const Sampler* sampler)
-  : dev(dev), cnt(cnt) {
+  : dev(dev), cnt(uint32_t(cnt)) {
   //NOTE: no bindless storage image
   try {
     auto alloc = dev.resHeap.alloc(tex, cnt, mipLevel);

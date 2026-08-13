@@ -373,7 +373,7 @@ void VPipeline::initPushMappings(VDevice& device, VkShaderDescriptorSetAndBindin
     m.sourceData.pushIndex.pushOffset = descOff;
     descOff += sizeof(uint32_t);
     }
-  info.mappingCount = mappingId;
+  info.mappingCount = uint32_t(mappingId);
   }
 
 

@@ -9,6 +9,7 @@ class VDevice;
 class VPipeline;
 class VCompPipeline;
 class VBuffer;
+class VDescriptorHeap;
 
 class VPushDescriptor {
   public:
@@ -55,14 +56,14 @@ class VPushDescriptor {
     VkDescriptorSet allocSet(const LayoutDesc& layout);
     uint32_t        allocHeap(VkCommandBuffer cmd, const uint32_t sz, const uint32_t step);
 
-    void            bindHeap(VkCommandBuffer cmd, const std::shared_ptr<VBuffer>& res, const std::shared_ptr<VBuffer>& smp);
+    void            bindHeap(VkCommandBuffer cmd, const DSharedPtr<VDescriptorHeap*>& res, const DSharedPtr<VDescriptorHeap*>& smp);
 
     std::vector<DescPool> descPool;
     std::vector<ResPool>  resPool;
-    std::vector<std::shared_ptr<VBuffer>> memHeap;
+    std::vector<DSharedPtr<VDescriptorHeap*>> memHeap;
 
-    VBuffer* lastResHeap = nullptr;
-    VBuffer* lastSmpHeap = nullptr;
+    VDescriptorHeap* lastResHeap = nullptr;
+    VDescriptorHeap* lastSmpHeap = nullptr;
   };
 
 }

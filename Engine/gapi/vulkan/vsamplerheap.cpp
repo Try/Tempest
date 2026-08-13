@@ -68,7 +68,7 @@ void VSamplerHeap::setDevice(VDevice &dev) {
     }
   }
 
-std::shared_ptr<VBuffer> VSamplerHeap::currentMemory() const {
+DSharedPtr<VDescriptorHeap*> VSamplerHeap::currentMemory() const {
   std::lock_guard<SpinLock> guard(sync);
   return memory;
   }
@@ -121,27 +121,28 @@ uint32_t VSamplerHeap::allocHeap(const Sampler& s) {
     }
 
   auto  dstSize  = reserve + heapChunks.size()*elSize + elSize;
-  if(memory!=nullptr && dstSize < memory->size()) {
-    const auto ptr = memory->hptr + reserve + heapChunks.size()*elSize;
+  if(memory.handler!=nullptr && dstSize < memory.handler->size()) {
+    const auto ptr = memory.handler->hptr + reserve + heapChunks.size()*elSize;
     alloc(ptr, s);
     heapChunks.emplace_back(s);
     return uint32_t(offset + heapChunks.size()-1);
     }
 
   //auto  prevSize = uint32_t(memory ? memory->size() : 0);
-  auto  size     = uint32_t(memory ? memory->size() : reserve) + elSize;
+  auto  size     = uint32_t(memory ? memory.handler->size() : reserve) + elSize;
   if(size > maxSize)
     throw std::bad_alloc();
 
   size = std::min(std::max(nextPot(size), 4*1024u), maxSize);
   auto buf  = device->allocator.alloc(nullptr, size, MemUsage::Descriptor, BufferHeap::Upload);
-  auto next = std::make_shared<VDescriptorHeap>(std::move(buf));
+  auto next = DSharedPtr<VDescriptorHeap*>(new VDescriptorHeap(std::move(buf)));
 
-  if(memory!=nullptr) {
-    std::memcpy(next->hptr + reserve, memory->hptr + reserve, memory->size() - reserve);
+  if(memory) {
+    memory.handler->flush();
+    std::memcpy(next.handler->hptr + reserve, memory.handler->hptr + reserve, memory.handler->size() - reserve);
     }
 
-  const auto ptr = next->hptr + reserve + heapChunks.size()*elSize;
+  const auto ptr = next.handler->hptr + reserve + heapChunks.size()*elSize;
   alloc(ptr, s);
   heapChunks.emplace_back(s);
 
@@ -151,8 +152,8 @@ uint32_t VSamplerHeap::allocHeap(const Sampler& s) {
 
 void VSamplerHeap::flush() {
   std::lock_guard<SpinLock> guard(sync);
-  if(memory!=nullptr)
-    device->allocator.flushDescriptorHeap(*memory);
+  if(memory.handler!=nullptr)
+    memory.handler->flush();
   }
 
 VkSampler VSamplerHeap::alloc(const Sampler &s) {
