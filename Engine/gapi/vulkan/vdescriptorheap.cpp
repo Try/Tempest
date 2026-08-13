@@ -19,17 +19,14 @@ static uint32_t nextPot(uint32_t x) {
   }
 
 
-struct VDescriptorHeap::VHeap : VBuffer {
-  VHeap(VBuffer&& v)  :VBuffer(std::move(v)) {
-    hptr = this->mapDescriptorHeap();
-    }
+VDescriptorHeap::VHeap::VHeap(VBuffer&& v) :VBuffer(std::move(v)) {
+  hptr = this->mapDescriptorHeap();
+  }
 
-  ~VHeap() {
-    unmapDescriptorHeap();
-    }
+VDescriptorHeap::VHeap::~VHeap() {
+  this->unmapDescriptorHeap();
+  }
 
-  uint8_t* hptr = nullptr;
-  };
 
 VDescriptorHeap::VDescriptorHeap() {
   }
@@ -48,10 +45,10 @@ VDescriptorHeap::Allocation VDescriptorHeap::alloc(AbstractGraphicsApi::Buffer**
   auto& props = dev->props;
   auto  alloc = this->alloc(cnt);
   auto  dPtrR = alloc.ptr;
+  auto  hPtrR = memory==nullptr ? nullptr : memory->hptr;
 
   for(size_t i=0; i<cnt; ++i) {
-    auto res = alloc.hptr;
-    res += (dPtrR + i)*props.resourceDescriptorSize;
+    auto res = hPtrR + (dPtrR + i)*props.resourceDescriptorSize;
     VPushDescriptor::write(*dev, res, nullptr, ShaderReflection::SsboR, buf[i], 0, ComponentMapping(), Sampler::nearest());
     }
 
@@ -64,10 +61,10 @@ VDescriptorHeap::Allocation VDescriptorHeap::alloc(AbstractGraphicsApi::Texture*
   auto& props = dev->props;
   auto  alloc = this->alloc(cnt);
   auto  dPtrR = alloc.ptr;
+  auto  hPtrR = memory==nullptr ? nullptr : memory->hptr;
 
   for(size_t i=0; i<cnt; ++i) {
-    auto res = alloc.hptr;
-    res += (dPtrR + i)*props.resourceDescriptorSize;
+    auto res = hPtrR + (dPtrR + i)*props.resourceDescriptorSize;
     VPushDescriptor::write(*dev, res, nullptr, ShaderReflection::Image, tex[i], mipLevel, ComponentMapping(), Sampler::nearest());
     }
 
@@ -79,6 +76,10 @@ void VDescriptorHeap::flush() {
     return;
   if(memory!=nullptr)
     dev->allocator.flushDescriptorHeap(*memory);
+  }
+
+std::shared_ptr<VDescriptorHeap::VHeap> VDescriptorHeap::currentMemory() const {
+  return memory;
   }
 
 VDescriptorHeap::Allocation VDescriptorHeap::alloc(uint32_t num) {
@@ -100,7 +101,7 @@ VDescriptorHeap::Allocation VDescriptorHeap::alloc(uint32_t num) {
     r.begin += allocSize;
     if(r.begin==r.end)
       rgn.erase(rgn.begin() + i);
-    return Allocation{ret/elSize, memory->hptr, memory};
+    return Allocation{ret/elSize};
     }
 
   // realloc heap
@@ -109,7 +110,11 @@ VDescriptorHeap::Allocation VDescriptorHeap::alloc(uint32_t num) {
   if(size > maxSize)
     throw std::bad_alloc();
 
+#if 1
   size = std::min(std::max(nextPot(size), 4*1024u), maxSize);
+#else
+  size = std::min(std::max(nextPot(size), 1024*1024u), maxSize);
+#endif
   auto buf  = dev->allocator.alloc(nullptr, size, MemUsage::Descriptor, BufferHeap::Upload);
   auto next = std::make_shared<VHeap>(std::move(buf));
 
@@ -120,7 +125,8 @@ VDescriptorHeap::Allocation VDescriptorHeap::alloc(uint32_t num) {
 
     rgn.push_back(rg);
     memory = next;
-    return Allocation{uint32_t(reserve/elSize), memory->hptr, memory};
+    // std::memset(next->hptr, 0xDEADBEEF, next->size());
+    return Allocation{uint32_t(reserve/elSize)};
     }
 
   dev->allocator.flushDescriptorHeap(*memory);
@@ -130,7 +136,7 @@ VDescriptorHeap::Allocation VDescriptorHeap::alloc(uint32_t num) {
   rg.begin = prevSize + allocSize;
   rg.end   = uint32_t(next->size());
   memory = next;
-  return Allocation{uint32_t(prevSize/elSize), memory->hptr, memory};
+  return Allocation{uint32_t(prevSize/elSize)};
   }
 
 void VDescriptorHeap::free(uint32_t ptr, uint32_t num) {

@@ -54,10 +54,8 @@ VPushDescriptor::DescPool::DescPool(VDevice &dev) {
 
 VPushDescriptor::ResPool::ResPool(VDevice &dev, uint32_t size) {
   auto mem = dev.descHeap.alloc(size);
-  dPtr    = mem.ptr;
-  heapMem = mem.memory;
-  hostPtr = mem.hptr;
-  alloc   = 0;
+  dPtr  = mem.ptr;
+  alloc = 0;
   }
 
 VPushDescriptor::VPushDescriptor(VDevice &dev)
@@ -128,6 +126,7 @@ uint32_t VPushDescriptor::allocHeap(VkCommandBuffer cmd, const uint32_t sz, cons
     resPool.emplace_back(dev, step);
     }
 
+  // FIXME: pool-allocation might be outdated
   auto& px = resPool.back();
   const uint32_t ptr = px.dPtr + px.alloc;
   px.alloc += sz;
@@ -140,7 +139,8 @@ void VPushDescriptor::pushHeap(VkCommandBuffer cmd, uint32_t* indices, const Pus
 
   const auto resSize = dev.props.resourceDescriptorSize;
 
-  auto res = resPool.empty() ? nullptr : resPool.back().hostPtr;
+  auto mem = dev.descHeap.currentMemory();
+  auto res = mem==nullptr ? nullptr : mem->hptr;
   res += ptr*resSize;
 
   for(size_t i=0; i<MaxBindings; ++i) {
@@ -180,16 +180,17 @@ void VPushDescriptor::pushHeap(VkCommandBuffer cmd, uint32_t* indices, const Pus
       }
     }
 
-  bindHeap(cmd, sz.first>0, sz.second>0);
+  bindHeap(cmd, sz.first>0, sz.second>0, mem);
   }
 
-void VPushDescriptor::bindHeap(VkCommandBuffer cmd, bool res, bool smp) {
+void VPushDescriptor::bindHeap(VkCommandBuffer cmd, bool res, bool smp, std::shared_ptr<VBuffer> resHeap) {
   auto vkCmdBindResourceHeapEXT = dev.vkCmdBindResourceHeapEXT;
 
-  auto resMem = resPool.back().heapMem.get();
+  auto resMem = resHeap.get();
   if(res && resMem!=nullptr && lastResHeap!=resMem) {
     lastResHeap = resMem;
-    auto& resources = *resMem;
+    auto& resources = *resHeap;
+    resHeaps.push_back(resHeap);
 
     VkBindHeapInfoEXT info = {VK_STRUCTURE_TYPE_BIND_HEAP_INFO_EXT};
     info.heapRange.address   = resources.toDeviceAddress(dev);
@@ -378,7 +379,7 @@ void VPushDescriptor::write(VDevice& dev, void* resPtr, void* smpPtr, ShaderRefl
       res.data.pAddressRange = buf!=nullptr ? &info : nullptr;
 
       VkHostAddressRangeEXT dest = {resPtr, dev.props.resourceDescriptorSize};
-      vkWriteResourceDescriptorsEXT(dev.device.impl, 1, &res, &dest);
+      vkAssert(vkWriteResourceDescriptorsEXT(dev.device.impl, 1, &res, &dest));
       break;
       }
     case ShaderReflection::Texture:
@@ -403,7 +404,7 @@ void VPushDescriptor::write(VDevice& dev, void* resPtr, void* smpPtr, ShaderRefl
       res.data.pImage = &info;
 
       VkHostAddressRangeEXT dest = {resPtr, dev.props.resourceDescriptorSize};
-      vkWriteResourceDescriptorsEXT(dev.device.impl, 1, &res, &dest);
+      vkAssert(vkWriteResourceDescriptorsEXT(dev.device.impl, 1, &res, &dest));
       break;
       }
     case ShaderReflection::Tlas: {
@@ -416,7 +417,7 @@ void VPushDescriptor::write(VDevice& dev, void* resPtr, void* smpPtr, ShaderRefl
       res.data.pAddressRange = &info;
 
       VkHostAddressRangeEXT dest = {resPtr, dev.props.resourceDescriptorSize};
-      vkWriteResourceDescriptorsEXT(dev.device.impl, 1, &res, &dest);
+      vkAssert(vkWriteResourceDescriptorsEXT(dev.device.impl, 1, &res, &dest));
       break;
       }
     case ShaderReflection::Sampler:

@@ -42,10 +42,8 @@ class VPushDescriptor {
     struct ResPool {
       ResPool(VDevice& dev, uint32_t size);
 
-      std::shared_ptr<VBuffer>   heapMem;
-      uint8_t*                   hostPtr = nullptr;
-      uint32_t                   dPtr    = 0;
-      uint32_t                   alloc   = 0;
+      uint32_t dPtr  = 0;
+      uint32_t alloc = 0;
       };
 
     struct DescPool {
@@ -57,11 +55,11 @@ class VPushDescriptor {
     VkDescriptorSet allocSet(const LayoutDesc& layout);
     uint32_t        allocHeap(VkCommandBuffer cmd, const uint32_t sz, const uint32_t step);
 
-    void            bindHeap(VkCommandBuffer cmd, bool res, bool smp);
+    void            bindHeap(VkCommandBuffer cmd, bool res, bool smp, std::shared_ptr<VBuffer> resHeap);
 
     std::vector<DescPool> descPool;
     std::vector<ResPool>  resPool;
-    std::vector<std::shared_ptr<VBuffer>> smpPool;
+    std::vector<std::shared_ptr<VBuffer>> resHeaps, smpPool;
 
     VBuffer* lastResHeap = nullptr;
     VBuffer* lastSmpHeap = nullptr;

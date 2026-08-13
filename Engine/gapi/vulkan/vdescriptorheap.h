@@ -17,9 +17,14 @@ class VDescriptorHeap {
     void setDevice(VDevice& dev);
 
     struct Allocation {
-      uint32_t                 ptr  = 0;
-      uint8_t*                 hptr = nullptr;
-      std::shared_ptr<VBuffer> memory;
+      uint32_t ptr = 0;
+      };
+
+    struct VHeap : VBuffer {
+      VHeap(VBuffer&& v);
+      ~VHeap();
+
+      uint8_t* hptr = nullptr;
       };
 
     Allocation alloc(AbstractGraphicsApi::Buffer**  buf, size_t cnt);
@@ -28,8 +33,9 @@ class VDescriptorHeap {
     void       free (uint32_t ptr, uint32_t num);
     void       flush();
 
+    std::shared_ptr<VHeap> currentMemory() const;
+
   private:
-    struct VHeap;
 
     struct Range {
       uint32_t begin = 0;
