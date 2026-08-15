@@ -1,0 +1,119 @@
+name: Build
+
+on: [push, pull_request]
+
+env:
+  VK_SDK: '1.4.304.0'
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows (MSVC 2022)
+            os: windows-latest
+            generator: "Ninja"
+            use_msvc: true
+            use_mingw: false
+
+          - name: Windows (MinGW)
+            os: windows-latest
+            generator: "Ninja"
+            use_msvc: false
+            use_mingw: true
+
+          - name: Ubuntu (Linux)
+            os: ubuntu-latest
+            generator: "Ninja"
+            use_msvc: false
+            use_mingw: false
+
+          - name: macOS
+            os: macos-14
+            generator: "Ninja"
+            use_msvc: false
+            use_mingw: false
+
+    steps:
+      # Checkout
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # System dependencies for Linux
+      - name: Install Linux Dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get --yes install libvulkan-dev libasound2-dev libx11-dev libxcursor-dev ninja-build
+
+      # Set up MinGW Toolchain on Windows if needed
+      - name: Set up MinGW
+        if: matrix.use_mingw
+        uses: egor-tisin/setup-mingw@v2
+        with:
+          platform: x64
+
+      # Set up MSVC environment variables
+      - name: Set up MSVC Developer Command Prompt
+        if: matrix.use_msvc
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      # Install Vulkan SDK
+      - name: Setup Vulkan SDK
+        uses: herumi/setup-vulkan-sdk@v1
+        with:
+          vulkan-version: ${{ env.VK_SDK }}
+
+      # Install glslang compiler
+      - name: Install glslang (Linux/Windows)
+        if: runner.os != 'macOS'
+        shell: pwsh
+        run: |
+          if ("${{ runner.os }}" -eq "Windows") {
+            Invoke-WebRequest -Uri https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-windows-x64-Release.zip -OutFile glslang-master.zip
+            } 
+          else if ("${{ runner.os }}" -eq "Linux") {
+            Invoke-WebRequest -Uri https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip -OutFile glslang-master.zip
+            }
+          Expand-Archive -Path glslang-master.zip -DestinationPath ./
+          echo "${{ github.workspace }}/glslang/bin" >> $env:GITHUB_PATH
+
+      - name: Install glslang (macOS)
+        if: runner.os == 'macOS'
+        run: brew install glslang ninja
+
+      # Configure and Build Project
+      - name: Configure and Build
+        run: |
+          cmake --version
+          ninja --version
+          cmake -HTests/tests -Bbuild -G "${{ matrix.generator }}" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_SH=CMAKE_SH-NOTFOUND
+          cmake --build build --target TempestTests
+
+      # Run Test Suite
+      - name: Run Tests (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:PATH = "$env:VULKAN_SDK/Bin;" + $env:PATH
+          cd build/testsuite
+          ./TempestTests.exe
+
+      - name: Run Tests (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          cd build/testsuite
+          ./TempestTests
+
+      - name: Run Tests (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cd build/testsuite
+          lldb -o run -o quit -- ./TempestTests
