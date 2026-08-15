@@ -75,6 +75,14 @@ jobs:
             echo "VULKAN_SDK=C:/VulkanSDK/$env:VK_SDK" >> $env:GITHUB_ENV
             }
           elseif ("${{ runner.os }}" -eq "Linux") {
+            Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/$VK_SDK/linux/vulkansdk-linux-x86_64-$VK_SDK.tar.xz -OutFile VulkanSDK.tar.xz
+            mkdir VulkanSDK
+            tar -xJf VulkanSDK.tar.xz -C ./VulkanSDK
+
+            $env:VULKAN_SDK = "{{ github.workspace }}/VulkanSDK/$env:VK_SDK/x86_64"
+            echo "VULKAN_SDK={{ github.workspace }}/VulkanSDK/$env:VK_SDK/x86_64" >> $env:GITHUB_ENV
+            echo "VK_LAYER_PATH=$env:VULKAN_SDK/etc/vulkan/explicit_layers.d" >> $env:GITHUB_ENV
+            echo "LD_LIBRARY_PATH=$env:VULKAN_SDK/lib" >> $env:GITHUB_ENV
             }
 
       # Install glslang compiler
