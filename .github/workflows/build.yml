@@ -129,19 +129,19 @@ jobs:
 
       # Run Test Suite
       - name: Run Tests
-         shell: pwsh
-         run: |
-           cd build/testsuite
+        shell: pwsh
+        run: |
+          cd build/testsuite
 
-           if ("${{ matrix.use_msvc }}" -eq "true") {
-             ./TempestTests.exe
-             }
-           elseif ("${{ matrix.use_mingw }}" -eq "true") {
-             gdb -batch -ex "run" -ex "bt" -ex "quit `$_exitcode" --args ./TempestTests.exe
-             }
-           elseif ("${{ runner.os }}" -eq "Linux") {
-             gdb -batch -ex "run" -ex "bt" -ex "quit `$_exitcode" ./TempestTests
-             }
-           elseif ("${{ runner.os }}" -eq "macOS") {
-             lldb -o run -o bt -o quit -- ./TempestTests
-             }
+          if ("${{ matrix.use_msvc }}" -eq "true") {
+            ./TempestTests.exe
+            }
+          elseif ("${{ matrix.use_mingw }}" -eq "true") {
+            gdb -batch -ex "run" -ex "bt" -ex "quit `$_exitcode" --args ./TempestTests.exe
+            }
+          elseif ("${{ runner.os }}" -eq "Linux") {
+            gdb -batch -ex "run" -ex "bt" -ex "quit `$_exitcode" ./TempestTests
+            }
+          elseif ("${{ runner.os }}" -eq "macOS") {
+            lldb -o run -o bt -o quit -- ./TempestTests
+            }
