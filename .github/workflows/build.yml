@@ -87,7 +87,7 @@ jobs:
           if ("${{ runner.os }}" -eq "Windows") {
             Invoke-WebRequest -Uri https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-windows-x64-Release.zip -OutFile glslang-master.zip
             } 
-          elif ("${{ runner.os }}" -eq "Linux") {
+          elseif ("${{ runner.os }}" -eq "Linux") {
             Invoke-WebRequest -Uri https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip -OutFile glslang-master.zip
             }
           Expand-Archive -Path glslang-master.zip -DestinationPath ./
