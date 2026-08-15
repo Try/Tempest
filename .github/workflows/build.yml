@@ -73,10 +73,11 @@ jobs:
           arch: x64
 
       # Install Vulkan SDK
-      - name: Setup Vulkan SDK
-        uses: humbletim/setup-vulkan-sdk@v1
-        with:
-          vulkan-version: ${{ env.VK_SDK }}
+      # - name: Setup Vulkan SDK
+      #   uses: humbletim/setup-vulkan-sdk@v1
+      #   with:
+      #     vulkan-version: ${{ env.VK_SDK }}
+      #     vulkan-components: Vulkan-Headers, Vulkan-Loader
 
       # Install glslang compiler
       - name: Install glslang (Linux/Windows)
