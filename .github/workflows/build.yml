@@ -62,7 +62,6 @@ jobs:
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-cmake
             mingw-w64-x86_64-ninja
-            mingw-w64-x86_64-vulkan-devel
 
       # Install VulkanSDK
       - name: Install VulkanSDK (Linux/Windows)
@@ -79,10 +78,15 @@ jobs:
             mkdir VulkanSDK
             tar -xJf VulkanSDK.tar.xz -C ./VulkanSDK
 
-            $env:VULKAN_SDK = "{{ github.workspace }}/VulkanSDK/$env:VK_SDK/x86_64"
-            echo "VULKAN_SDK={{ github.workspace }}/VulkanSDK/$env:VK_SDK/x86_64" >> $env:GITHUB_ENV
-            echo "VK_LAYER_PATH=$env:VULKAN_SDK/etc/vulkan/explicit_layers.d" >> $env:GITHUB_ENV
-            echo "LD_LIBRARY_PATH=$env:VULKAN_SDK/lib" >> $env:GITHUB_ENV
+            # Correctly assign the environment variables for the current PowerShell step execution context
+            $env:VULKAN_SDK      = "${{ github.workspace }}/VulkanSDK/${{ env.VK_SDK }}/x86_64"
+            $env:VK_LAYER_PATH   = "$env:VULKAN_SDK/etc/vulkan/explicit_layers.d"
+            $env:LD_LIBRARY_PATH = "$env:VULKAN_SDK/lib"
+
+            # Persist them into the global GITHUB_ENV file so future workflow steps can read them too
+            echo "VULKAN_SDK=$env:VULKAN_SDK" >> $env:GITHUB_ENV
+            echo "VK_LAYER_PATH=$env:VK_LAYER_PATH" >> $env:GITHUB_ENV
+            echo "LD_LIBRARY_PATH=$env:LD_LIBRARY_PATH" >> $env:GITHUB_ENV
             }
 
       # Install glslang compiler
@@ -123,19 +127,27 @@ jobs:
           cmake --build build --target TempestTests
 
       # Run Test Suite
-      - name: Run Tests (Windows)
-        if: runner.os == 'Windows'
+      - name: Run Tests (Windows - MSVC)
+        if: matrix.use_msvc
         shell: pwsh
         run: |
           $env:PATH = "$env:VULKAN_SDK/Bin;" + $env:PATH
           cd build/testsuite
           ./TempestTests.exe
 
+      - name: Run Tests (Windows - MinGW)
+        if: matrix.use_mingw
+        shell: pwsh
+        run: |
+          $env:PATH = "$env:VULKAN_SDK/Bin;" + $env:PATH
+          cd build/testsuite
+          gdb -batch -ex "run" -ex "bt" --args ./TempestTests.exe
+
       - name: Run Tests (Linux)
         if: runner.os == 'Linux'
         run: |
           cd build/testsuite
-          ./TempestTests
+          gdb -batch -ex "run" -ex "bt" ./TempestTests
 
       - name: Run Tests (macOS)
         if: runner.os == 'macOS'
