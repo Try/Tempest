@@ -72,13 +72,12 @@ jobs:
           arch: x64
 
       # Install VulkanSDK
-      - name: Install glslang (Linux/Windows)
+      - name: Install VulkanSDK (Linux/Windows)
         if: runner.os != 'macOS'
         shell: pwsh
         run: |
           if ("${{ runner.os }}" -eq "Windows") {
-            echo "C:/VulkanSDK/$env:VK_SDK" >> $env:GITHUB_PATH
-            echo "https://sdk.lunarg.com/sdk/download/$env:VK_SDK/windows/vulkansdk-windows-X64-$env:VK_SDK.exe"
+            echo "${{ github.workspace }}/VulkanSDK/$env:VK_SDK" >> $env:GITHUB_PATH
             Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/$env:VK_SDK/windows/vulkansdk-windows-X64-$env:VK_SDK.exe" -OutFile VulkanSDK.exe
             ./VulkanSDK.exe --accept-licenses --default-answer --confirm-command install 1>$null
             }
