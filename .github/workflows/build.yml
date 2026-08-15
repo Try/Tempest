@@ -75,7 +75,7 @@ jobs:
             echo "VULKAN_SDK=C:/VulkanSDK/$env:VK_SDK" >> $env:GITHUB_ENV
             }
           elseif ("${{ runner.os }}" -eq "Linux") {
-            Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/$VK_SDK/linux/vulkansdk-linux-x86_64-$VK_SDK.tar.xz -OutFile VulkanSDK.tar.xz
+            Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/$env:VK_SDK/linux/vulkansdk-linux-x86_64-$env:VK_SDK.tar.xz -OutFile VulkanSDK.tar.xz
             mkdir VulkanSDK
             tar -xJf VulkanSDK.tar.xz -C ./VulkanSDK
 
