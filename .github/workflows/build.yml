@@ -141,13 +141,13 @@ jobs:
         run: |
           $env:PATH = "$env:VULKAN_SDK/Bin;" + $env:PATH
           cd build/testsuite
-          gdb -batch -ex "run" -ex "bt" --args ./TempestTests.exe
+          gdb -batch -ex "run" -ex "bt" -ex "quit \$_exitcode" --args ./TempestTests.exe
 
       - name: Run Tests (Linux)
         if: runner.os == 'Linux'
         run: |
           cd build/testsuite
-          gdb -batch -ex "run" -ex "bt" ./TempestTests
+          gdb -batch -ex "run" -ex "bt" -ex "quit \$_exitcode" ./TempestTests
 
       - name: Run Tests (macOS)
         if: runner.os == 'macOS'

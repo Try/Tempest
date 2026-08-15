@@ -2023,7 +2023,7 @@ void MeshComputePrototype(const char* outImg) {
   };
 
   try {
-    const char* msDev = nullptr;
+    std::string_view msDev = "";
 
     GraphicsApi api{ApiFlags::Validation};
 
