@@ -49,7 +49,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get --yes install glslang-tools libvulkan-dev libasound2-dev libx11-dev libxcursor-dev ninja-build
+          sudo apt-get --yes install libvulkan-dev libasound2-dev libx11-dev libxcursor-dev ninja-build
 
       # Set up MinGW Toolchain on Windows if needed
       - name: Set up MinGW
@@ -62,7 +62,6 @@ jobs:
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-cmake
             mingw-w64-x86_64-ninja
-            mingw-w64-x86_64-glslang
             mingw-w64-x86_64-vulkan-devel
 
       # Set up MSVC environment variables
@@ -77,11 +76,10 @@ jobs:
         if: runner.os != 'macOS'
         shell: pwsh
         run: |
-          mkdir glslang
-          cd glslang
           if ("${{ runner.os }}" -eq "Windows") {
             echo "C:/VulkanSDK/$env:VK_SDK" >> $env:GITHUB_PATH
-            Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/$env:VK_SDK/windows/VulkanSDK-$env:VK_SDK-Installer.exe -OutFile VulkanSDK.exe
+            echo "https://sdk.lunarg.com/sdk/download/$env:VK_SDK/windows/VulkanSDK-$env:VK_SDK-Installer.exe"
+            Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/$env:VK_SDK/windows/VulkanSDK-$env:VK_SDK-Installer.exe" -OutFile VulkanSDK.exe
             ./VulkanSDK.exe --accept-licenses --default-answer --confirm-command install 1>$null
             }
           elseif ("${{ runner.os }}" -eq "Linux") {
