@@ -1,6 +1,6 @@
 ![Tempest Logo](icon.png)
 =
-[![Build status](https://ci.appveyor.com/api/projects/status/github/Try/Tempest?svg=true)](https://ci.appveyor.com/project/Try/Tempest)
+[![Build status](https://img.shields.io/github/actions/workflow/status/Try/Tempest/build.yml?branch=master)](https://github.com/Try/Tempest/actions?query=build.yml?query=branch%3Amaster)
 
 Crossplatform 3d engine.
 (work in progress)
