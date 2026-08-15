@@ -72,26 +72,19 @@ jobs:
         with:
           arch: x64
 
-      # Install Vulkan SDK
-      # - name: Setup Vulkan SDK
-      #   uses: humbletim/setup-vulkan-sdk@v1
-      #   with:
-      #     vulkan-version: ${{ env.VK_SDK }}
-      #     vulkan-components: Vulkan-Headers, Vulkan-Loader
-
       # Install glslang compiler
-      - name: Install glslang (Linux/Windows)
-        if: runner.os != 'macOS'
-        shell: pwsh
-        run: |
-          if ("${{ runner.os }}" -eq "Windows") {
-            Invoke-WebRequest -Uri https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-windows-x64-Release.zip -OutFile glslang-master.zip
-            } 
-          elseif ("${{ runner.os }}" -eq "Linux") {
-            Invoke-WebRequest -Uri https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip -OutFile glslang-master.zip
-            }
-          Expand-Archive -Path glslang-master.zip -DestinationPath ./
-          echo "${{ github.workspace }}/glslang/bin" >> $env:GITHUB_PATH
+      # - name: Install glslang (Linux/Windows)
+      #   if: runner.os != 'macOS'
+      #   shell: pwsh
+      #   run: |
+      #     if ("${{ runner.os }}" -eq "Windows") {
+      #       Invoke-WebRequest -Uri https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-windows-x64-Release.zip -OutFile glslang-master.zip
+      #       }
+      #     elseif ("${{ runner.os }}" -eq "Linux") {
+      #       Invoke-WebRequest -Uri https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip -OutFile glslang-master.zip
+      #       }
+      #     Expand-Archive -Path glslang-master.zip -DestinationPath ./
+      #     echo "${{ github.workspace }}/glslang/bin" >> $env:GITHUB_PATH
 
       - name: Install glslang (macOS)
         if: runner.os == 'macOS'
