@@ -54,9 +54,16 @@ jobs:
       # Set up MinGW Toolchain on Windows if needed
       - name: Set up MinGW
         if: matrix.use_mingw
-        uses: egor-tisin/setup-mingw@v2
+        uses: msys2/setup-msys2@v2
         with:
-          platform: x64
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-glslang
+            mingw-w64-x86_64-vulkan-devel
 
       # Set up MSVC environment variables
       - name: Set up MSVC Developer Command Prompt
@@ -67,7 +74,7 @@ jobs:
 
       # Install Vulkan SDK
       - name: Setup Vulkan SDK
-        uses: herumi/setup-vulkan-sdk@v1
+        uses: humbletim/setup-vulkan-sdk@v1
         with:
           vulkan-version: ${{ env.VK_SDK }}
 
