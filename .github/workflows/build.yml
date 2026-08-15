@@ -72,11 +72,8 @@ jobs:
           if ("${{ runner.os }}" -eq "Windows") {
             Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/$env:VK_SDK/windows/vulkansdk-windows-X64-$env:VK_SDK.exe" -OutFile VulkanSDK.exe
             ./VulkanSDK.exe --accept-licenses --default-answer --confirm-command install 1>$null
-
-            $env:VULKAN_SDK = "C:/VulkanSDK/$VK_SDK"
             }
           elseif ("${{ runner.os }}" -eq "Linux") {
-
             }
 
       # Install glslang compiler
@@ -112,6 +109,17 @@ jobs:
         run: |
           cmake --version
           ninja --version
+
+          if ("${{ runner.os }}" -eq "Windows") {
+            ls "C:\VulkanSDK\$env:VK_SDK"
+            $env:VULKAN_SDK = "C:/VulkanSDK/$VK_SDK"
+            }
+          elseif ("${{ runner.os }}" -eq "Linux") {
+            $env:VULKAN_SDK      = "${{ github.workspace }}/VulkanSDK/$VK_SDK/x86_64"
+            $env:VK_LAYER_PATH   = "$env:VULKAN_SDK/etc/vulkan/explicit_layers.d"
+            $env:LD_LIBRARY_PATH = "$env:VULKAN_SDK/lib"
+            }
+
           cmake -HTests/tests -Bbuild -G "${{ matrix.generator }}" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_SH=CMAKE_SH-NOTFOUND
           cmake --build build --target TempestTests
 
