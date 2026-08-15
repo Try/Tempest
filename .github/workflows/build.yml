@@ -49,7 +49,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get --yes install libvulkan-dev libasound2-dev libx11-dev libxcursor-dev ninja-build
+          sudo apt-get --yes install libvulkan-dev libasound2-dev libx11-dev libxcursor-dev ninja-build gdb
 
       # Set up MinGW Toolchain on Windows if needed
       - name: Set up MinGW
