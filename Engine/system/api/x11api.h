@@ -2,6 +2,8 @@
 
 #include "system/systemapi.h"
 
+typedef union _XEvent XEvent;
+
 namespace Tempest {
 
 class X11Api final: SystemApi {
@@ -34,9 +36,13 @@ class X11Api final: SystemApi {
     void     implProcessEvents(AppCallBack& cb) override;
     bool     implIsRunning() override;
 
+    void     dispatchEvent(XEvent &xev);
     void     alignGeometry(Window *w, Tempest::Window& owner);
 
     std::unique_ptr<Private> impl;
+    SystemApi::ClipboardData clipboard;
+
+    SystemApi::ClipboardData implClipboardData(SystemApi::Window *w) override;
 
   friend class SystemApi;
   };
