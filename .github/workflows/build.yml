@@ -153,4 +153,4 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           cd build/testsuite
-          lldb -o run -o quit -- ./TempestTests
+          lldb -o run -o bt -o quit -- ./TempestTests
