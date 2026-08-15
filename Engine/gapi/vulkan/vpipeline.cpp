@@ -71,7 +71,7 @@ VPipeline::VPipeline(VDevice& device, Topology tp, const RenderState& st, const 
       wgSize = mesh->comp.wgSize;
       }
 
-    pipelineLayout = device.psoLayouts.findLayout(pb, layout);
+    pipelineLayout = device.props.hasDescriptorHeap ? VK_NULL_HANDLE : device.psoLayouts.findLayout(pb, layout);
     }
   catch(...) {
     cleanup();

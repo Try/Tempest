@@ -17,7 +17,7 @@ VBuffer::~VBuffer() {
   if(impl!=VK_NULL_HANDLE)
     vkDestroyBuffer(alloc->device()->device.impl,impl,nullptr);
   if(alloc!=nullptr) {
-    alloc->device()->bindless.notifyDestroy(this);
+    alloc->device()->descPool.notifyDestroy(this);
     alloc->free(page);
     }
   }

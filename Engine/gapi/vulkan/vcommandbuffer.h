@@ -5,10 +5,10 @@
 
 #include "gapi/vulkan/vcommandpool.h"
 #include "gapi/vulkan/vframebuffermap.h"
-#include "gapi/vulkan/vbindlesscache.h"
 #include "gapi/vulkan/vpushdescriptor.h"
 #include "gapi/vulkan/vswapchain.h"
 #include "gapi/resourcestate.h"
+#include "gapi/shaderreflection.h"
 
 #include "../utility/smallarray.h"
 

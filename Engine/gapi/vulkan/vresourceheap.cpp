@@ -31,10 +31,10 @@ void VResourceHeap::setDevice(VDevice& dx) {
   }
 
 VResourceHeap::Allocation VResourceHeap::alloc(AbstractGraphicsApi::Buffer** buf, size_t cnt) {
-  std::lock_guard<SpinLock> guard(sync);
+  std::unique_lock<std::shared_mutex> guard(sync);
 
   auto& props = dev->props;
-  auto  alloc = implAlloc(uint32_t(cnt));
+  auto  alloc = implAlloc(uint32_t(cnt), true);
   auto  dPtrR = alloc.ptr;
   auto  hPtrR = memory ? memory.handler->hptr : nullptr;
 
@@ -47,10 +47,10 @@ VResourceHeap::Allocation VResourceHeap::alloc(AbstractGraphicsApi::Buffer** buf
   }
 
 VResourceHeap::Allocation VResourceHeap::alloc(AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel) {
-  std::lock_guard<SpinLock> guard(sync);
+  std::unique_lock<std::shared_mutex> guard(sync);
 
   auto& props = dev->props;
-  auto  alloc = implAlloc(uint32_t(cnt));
+  auto  alloc = implAlloc(uint32_t(cnt), true);
   auto  dPtrR = alloc.ptr;
   auto  hPtrR = memory ? memory.handler->hptr : nullptr;
 
@@ -63,24 +63,30 @@ VResourceHeap::Allocation VResourceHeap::alloc(AbstractGraphicsApi::Texture** te
   }
 
 VResourceHeap::Allocation VResourceHeap::alloc(uint32_t num) {
-  std::lock_guard<SpinLock> guard(sync);
-  return implAlloc(num);
+  {
+    std::shared_lock<std::shared_mutex> guard(sync);
+    auto ret = implAlloc(num, false);
+    if(ret.ptr!=uint32_t(-1))
+      return ret;
+  }
+  std::unique_lock<std::shared_mutex> guard(sync);
+  return implAlloc(num, true);
   }
 
 void VResourceHeap::flush() {
   if(dev==nullptr)
     return;
-  std::lock_guard<SpinLock> guard(sync);
+  std::shared_lock<std::shared_mutex> guard(sync);
   if(memory)
     memory.handler->flush();
   }
 
 DSharedPtr<VDescriptorHeap*> VResourceHeap::currentMemory() const {
-  std::lock_guard<SpinLock> guard(sync);
+  std::shared_lock<std::shared_mutex> guard(sync);
   return memory;
   }
 
-VResourceHeap::Allocation VResourceHeap::implAlloc(uint32_t num) {
+VResourceHeap::Allocation VResourceHeap::implAlloc(uint32_t num, bool allowRealloc) {
   auto& props   = dev->props;
   auto  maxSize = props.resourceHeapMaxSize;
   auto  elSize  = props.resourceDescriptorSize;
@@ -99,6 +105,9 @@ VResourceHeap::Allocation VResourceHeap::implAlloc(uint32_t num) {
       rgn.erase(rgn.begin() + i);
     return Allocation{ret/elSize};
     }
+
+  if(!allowRealloc)
+    return Allocation{uint32_t(-1)};
 
   // realloc heap
   auto prevSize = uint32_t(memory ? memory.handler->size() : 0);
@@ -139,7 +148,7 @@ void VResourceHeap::free(uint32_t ptr, uint32_t num) {
   if(ptr==0xFFFFFFFF || num==0)
     return;
 
-  std::lock_guard<SpinLock> guard(sync);
+  std::shared_lock<std::shared_mutex> guard(sync);
 
   auto elSize = dev->props.resourceDescriptorSize;
   ptr *= elSize;

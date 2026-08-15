@@ -24,7 +24,7 @@ VTexture::VTexture(VTexture&& other) {
 
 VTexture::~VTexture() {
   if(alloc!=nullptr) {
-    alloc->device()->bindless.notifyDestroy(this);
+    alloc->device()->descPool.notifyDestroy(this);
     alloc->free(*this);
     }
   }

@@ -13,7 +13,6 @@
 #include "gapi/vulkan/vfence.h"
 #include "gapi/vulkan/vframebuffermap.h"
 #include "gapi/vulkan/vbuffer.h"
-#include "gapi/vulkan/vbindlesscache.h"
 #include "gapi/vulkan/vpushdescriptor.h"
 #include "gapi/vulkan/vsetlayoutcache.h"
 #include "gapi/vulkan/vpoolcache.h"
@@ -421,14 +420,15 @@ class VDevice : public AbstractGraphicsApi::Device {
     VAllocator              allocator;
 
     VFramebufferMap         fboMap;
+
     VSetLayoutCache         setLayouts;
     VPsoLayoutCache         psoLayouts;
     VPoolCache              descPool;
-    VBindlessCache          bindless;
+
     VResourceHeap           resHeap;
     VSamplerHeap            samplers;
 
-    VkProps                 props={};
+    VkProps                 props = {};
 
     PFN_vkGetBufferMemoryRequirements2KHR vkGetBufferMemoryRequirements2 = nullptr;
     PFN_vkGetImageMemoryRequirements2KHR  vkGetImageMemoryRequirements2  = nullptr;

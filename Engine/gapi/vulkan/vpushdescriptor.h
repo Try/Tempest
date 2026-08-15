@@ -1,6 +1,8 @@
 #pragma once
 
-#include "vbindlesscache.h"
+#include "vulkan_sdk.h"
+#include "gapi/shaderreflection.h"
+#include <cstdint>
 
 namespace Tempest {
 namespace Detail {
@@ -14,9 +16,13 @@ class VDescriptorHeap;
 class VPushDescriptor {
   public:
     using Bindings   = Detail::Bindings;
-    using WriteInfo  = VBindlessCache::WriteInfo;
     using PushBlock  = ShaderReflection::PushBlock;
     using LayoutDesc = ShaderReflection::LayoutDesc;
+    union WriteInfo {
+      VkDescriptorImageInfo                        image;
+      VkDescriptorBufferInfo                       buffer;
+      VkWriteDescriptorSetAccelerationStructureKHR tlas;
+      };
 
     VPushDescriptor(VDevice& dev);
     ~VPushDescriptor();

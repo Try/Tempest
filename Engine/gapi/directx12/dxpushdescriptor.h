@@ -14,7 +14,6 @@ class DxDevice;
 class DxPushDescriptor {
   public:
     using Bindings   = Detail::Bindings;
-    // using WriteInfo  = VBindlessCache::WriteInfo;
     using PushBlock  = ShaderReflection::PushBlock;
     using LayoutDesc = ShaderReflection::LayoutDesc;
 

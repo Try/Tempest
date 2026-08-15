@@ -544,13 +544,12 @@ void VCommandBuffer::implSetUniforms(const PipelineStage st) {
     }
 
   if(lay->isUpdateAfterBind()) {
-    auto dset = device.bindless.inst(*pb, *lay, bindings);
+    auto dset = device.descPool.allocBindless(*pb, *lay, bindings);
     pLay = dset.pLay;
     vkCmdBindDescriptorSets(impl, bindPoint,
                             pLay, 0, 1,
                             &dset.set, 0, nullptr);
-    }
-  else {
+    } else {
     auto dset = pushDescriptors.push(*pb, *lay, bindings);
     vkCmdBindDescriptorSets(impl, bindPoint,
                             pLay, 0, 1,

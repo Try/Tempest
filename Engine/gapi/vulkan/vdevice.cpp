@@ -82,7 +82,7 @@ VkResult VDevice::Queue::present(VkPresentInfoKHR& presentInfo) {
 
 VDevice::VDevice(VkInstance instance, const bool hasDeviceFeatures2, VkPhysicalDevice pdev)
   :instance(instance), hasDeviceFeatures2(hasDeviceFeatures2),
-    fboMap(*this), setLayouts(*this), psoLayouts(*this), descPool(*this), bindless(*this) {
+    fboMap(*this), setLayouts(*this), psoLayouts(*this), descPool(*this) {
   deviceProps(instance, hasDeviceFeatures2, pdev, props);
   deviceQueueProps(pdev, props);
 

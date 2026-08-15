@@ -49,7 +49,7 @@ VDescriptorArray::VDescriptorArray(VDevice &dev, AbstractGraphicsApi::Buffer **b
   }
 
 VDescriptorArray::~VDescriptorArray() {
-  dev.bindless.notifyDestroy(this);
+  dev.descPool.notifyDestroy(this);
   if(pool!=VK_NULL_HANDLE)
     vkDestroyDescriptorPool(dev.device.impl, pool, nullptr);
   }
