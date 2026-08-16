@@ -9,15 +9,6 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-static VkImageLayout toWriteLayout(VTexture& tex) {
-  if(nativeIsDepthFormat(tex.format))
-    return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-  if(tex.isStorageImage)
-    return VK_IMAGE_LAYOUT_GENERAL;
-  return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  }
-
-
 VPushDescriptor::DescPool::DescPool(VDevice &dev) {
   impl = dev.descPool.allocPool();
   }
@@ -244,16 +235,14 @@ void VPushDescriptor::write(VDevice& dev, VkWriteDescriptorSet& wx, WriteInfo& i
       auto*    tex       = reinterpret_cast<VTexture*>(data);
       uint32_t mipLevel  = offset;
       bool     is3DImage = tex->is3D; // TODO: cast 3d to 2d, based on dest descriptor
-
-      if((cls==ShaderReflection::ImgR || cls==ShaderReflection::ImgRW) && mipLevel==uint32_t(-1))
-        mipLevel = 0;
+      bool     isUAV     = (cls==ShaderReflection::ImgR || cls==ShaderReflection::ImgRW);
 
       VkDescriptorImageInfo& info = infoW.image;
       if(cls==ShaderReflection::Texture) {
         info.sampler = dev.samplers.get(smp, tex);
         }
-      info.imageView   = tex->view(mapping, mipLevel, is3DImage);
-      info.imageLayout = toWriteLayout(*tex);
+      info.imageView   = tex->view(mapping, mipLevel, is3DImage, isUAV);
+      info.imageLayout = tex->defaultLayout();
 
       wx.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
       wx.dstSet          = VK_NULL_HANDLE;
@@ -358,11 +347,9 @@ void VPushDescriptor::write(VDevice& dev, void* resPtr, ShaderReflection::Class 
       auto*    tex       = reinterpret_cast<VTexture*>(data);
       uint32_t mipLevel  = offset;
       bool     is3DImage = tex->is3D; // TODO: cast 3d to 2d, based on dest descriptor
+      bool     isUAV     = (cls==ShaderReflection::ImgR || cls==ShaderReflection::ImgRW);
 
-      if((cls==ShaderReflection::ImgR || cls==ShaderReflection::ImgRW) && mipLevel==uint32_t(-1))
-        mipLevel = 0;
-
-      tex->descriptor(resPtr, mapping, mipLevel, is3DImage);
+      tex->descriptor(resPtr, mapping, mipLevel, is3DImage, isUAV);
       break;
       }
     case ShaderReflection::Tlas: {

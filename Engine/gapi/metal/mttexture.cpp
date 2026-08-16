@@ -384,7 +384,7 @@ MTL::Texture& MtTexture::view(ComponentMapping m, uint32_t mipLevel) {
   sw.blue  = swizzle(m.b, MTL::TextureSwizzleBlue);
   sw.alpha = swizzle(m.a, MTL::TextureSwizzleAlpha);
 
-  auto levels = NS::Range(0, impl->mipmapLevelCount());
+  auto levels = NS::Range(0, impl->mipmapLevelCount()); //TODO: handle storage-image single mip here
   if(mipLevel!=uint32_t(-1)) {
     levels = NS::Range(mipLevel,1);
     }

@@ -8,14 +8,6 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-static VkImageLayout toDefaultLayout(VTexture& tex) {
-  if(nativeIsDepthFormat(tex.format))
-    return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-  if(tex.isStorageImage)
-    return VK_IMAGE_LAYOUT_GENERAL;
-  return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  }
-
 VTexture::VTexture(VTexture&& other) {
   std::swap(impl,           other.impl);
   std::swap(imgView,        other.imgView);
@@ -38,8 +30,11 @@ VTexture::~VTexture() {
     }
   }
 
-VkImageView VTexture::view(const ComponentMapping& m, uint32_t mipLevel, bool is3D) {
+VkImageView VTexture::view(const ComponentMapping& m, uint32_t mipLevel, bool is3D, bool isUAV) {
   VkDevice dev = alloc->device()->device.impl;
+
+  if(isUAV && mipLevel==uint32_t(-1))
+    mipLevel = 0;
 
   if(m.r==ComponentSwizzle::Identity &&
      m.g==ComponentSwizzle::Identity &&
@@ -70,9 +65,12 @@ VkImageView VTexture::view(const ComponentMapping& m, uint32_t mipLevel, bool is
   return v.v;
   }
 
-void VTexture::descriptor(void* dest, const ComponentMapping& m, uint32_t mipLevel, bool is3D) {
+void VTexture::descriptor(void* dest, const ComponentMapping& m, uint32_t mipLevel, bool is3D, bool isUAV) {
   VDevice& dev = *alloc->device();
   auto vkWriteResourceDescriptorsEXT = dev.vkWriteResourceDescriptorsEXT;
+
+  if(isUAV && mipLevel==uint32_t(-1))
+    mipLevel = 0;
 
   std::lock_guard<Detail::SpinLock> guard(syncViews);
   for(size_t i=0; i<extViews.size(); ++i) {
@@ -97,7 +95,7 @@ void VTexture::descriptor(void* dest, const ComponentMapping& m, uint32_t mipLev
 
   VkImageDescriptorInfoEXT info = {VK_STRUCTURE_TYPE_IMAGE_DESCRIPTOR_INFO_EXT};
   info.pView  = &view;
-  info.layout = toDefaultLayout(*this);
+  info.layout = defaultLayout();
 
   VkResourceDescriptorInfoEXT res = {VK_STRUCTURE_TYPE_RESOURCE_DESCRIPTOR_INFO_EXT};
   res.type        = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
@@ -117,7 +115,7 @@ void VTexture::descriptor(void* dest, const ComponentMapping& m, uint32_t mipLev
   }
 
 VkImageView VTexture::fboView(uint32_t mip) {
-  return view(ComponentMapping(),mip,false);
+  return view(ComponentMapping(),mip,false,false);
   }
 
 void VTexture::createViews(VkDevice device) {
@@ -166,6 +164,14 @@ VkImageViewCreateInfo VTexture::createInfo(const ComponentMapping* cmap, uint32_
   viewInfo.subresourceRange.baseArrayLayer = 0;
   viewInfo.subresourceRange.layerCount     = 1;
   return viewInfo;
+  }
+
+VkImageLayout VTexture::defaultLayout() const {
+  if(nativeIsDepthFormat(format))
+    return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+  if(isStorageImage)
+    return VK_IMAGE_LAYOUT_GENERAL;
+  return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
   }
 
 VTextureWithFbo::VTextureWithFbo(VTexture&& base)

@@ -76,6 +76,9 @@ DxTexture::~DxTexture() {
   }
 
 D3D12_CPU_DESCRIPTOR_HANDLE DxTexture::view(DxDevice& dev, const ComponentMapping& m, uint32_t mipLevel, bool is3D, bool isUAV) {
+  if(isUAV && mipLevel==uint32_t(-1))
+    mipLevel = 0;
+
   if(m.r==ComponentSwizzle::Identity &&
      m.g==ComponentSwizzle::Identity &&
      m.b==ComponentSwizzle::Identity &&

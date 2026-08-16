@@ -9,15 +9,6 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-static VkImageLayout toWriteLayout(VTexture& tex) {
-  if(nativeIsDepthFormat(tex.format))
-    return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-  if(tex.isStorageImage)
-    return VK_IMAGE_LAYOUT_GENERAL;
-  return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-  }
-
-
 VDescriptorArray::VDescriptorArray(VDevice &dev, AbstractGraphicsApi::Texture **tex, size_t cnt, uint32_t mipLevel, const Sampler &smp)
   : dev(dev), cnt(cnt) {
   // Roundup a little, to avoid spamming of layouts
@@ -89,8 +80,8 @@ void VDescriptorArray::populate(VDevice &dev, AbstractGraphicsApi::Texture **t, 
   SmallArray<VkDescriptorImageInfo,16> imageInfo(cnt);
   for(size_t i=0; i<cnt; ++i) {
     VTexture* tex = reinterpret_cast<VTexture*>(t[i]);
-    imageInfo[i].imageLayout = tex!=nullptr ? toWriteLayout(*tex) : VK_IMAGE_LAYOUT_UNDEFINED;
-    imageInfo[i].imageView   = tex!=nullptr ? tex->view(ComponentMapping(), mipLevel, is3DImage) : VK_NULL_HANDLE;
+    imageInfo[i].imageLayout = tex!=nullptr ? tex->defaultLayout() : VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo[i].imageView   = tex!=nullptr ? tex->view(ComponentMapping(), mipLevel, is3DImage, false) : VK_NULL_HANDLE;
     imageInfo[i].sampler     = smp!=nullptr ? dev.samplers.get(*smp) : VK_NULL_HANDLE;
     // TODO: support mutable textures in bindless
     assert(tex==nullptr || tex->nonUniqId==0);
