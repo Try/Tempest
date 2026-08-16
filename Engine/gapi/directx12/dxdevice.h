@@ -11,7 +11,6 @@
 #include "gapi/directx12/comptr.h"
 #include "gapi/directx12/dxcommandbuffer.h"
 #include "gapi/directx12/dxdescriptorallocator.h"
-#include "gapi/directx12/dxheapallocator.h"
 #include "gapi/uploadengine.h"
 #include "exceptions/exception.h"
 #include "utility/spinlock.h"
@@ -362,7 +361,6 @@ class DxDevice : public AbstractGraphicsApi::Device {
 
     DxAllocator                 allocator;
     DxDescriptorAllocator       descAlloc;
-    std::unique_ptr<DxHeapAllocator> dalloc;
 
     DSharedPtr<DxPipeline*>     blit;
     DSharedPtr<DxCompPipeline*> copy;

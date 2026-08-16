@@ -97,7 +97,7 @@ void DxSwapchain::initImages() {
   auto& device  = *dev.device;
   auto  rtvSize = device.GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-  D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = dev.descAlloc.handle(rtvHeap);
+  D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = dev.descAlloc.handleCpu(rtvHeap);
   for(uint32_t i=0; i<imgCount; i++) {
     dxAssert(swapChain->GetBuffer(i, uuid<ID3D12Resource>(), reinterpret_cast<void**>(&views[i])));
     device.CreateRenderTargetView(views[i].get(), nullptr, rtvHandle);
@@ -106,7 +106,7 @@ void DxSwapchain::initImages() {
   }
 
 D3D12_CPU_DESCRIPTOR_HANDLE DxSwapchain::handle(size_t i) const {
-  return dev.descAlloc.handle(rtvHeap, i);
+  return dev.descAlloc.handleCpu(rtvHeap, i);
   }
 
 #endif

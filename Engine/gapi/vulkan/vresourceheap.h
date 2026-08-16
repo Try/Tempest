@@ -2,9 +2,9 @@
 
 #include "vulkan_sdk.h"
 
-#include "vbuffer.h"
-
-#include <shared_mutex>
+#include "gapi/descriptorallocator.h"
+#include "gapi/vulkan/vbuffer.h"
+#include "utility/spinlock.h"
 
 namespace Tempest {
 namespace Detail {
@@ -31,18 +31,23 @@ class VResourceHeap {
     auto       currentMemory() const -> DSharedPtr<VDescriptorHeap*>;
 
   private:
-    struct Range {
-      uint32_t begin = 0;
-      uint32_t end   = 0;
+    struct Provider {
+      VDevice*                     dev = nullptr;
+
+      mutable SpinLock             sync;
+      DSharedPtr<VDescriptorHeap*> memory;
+
+      uint32_t                     elementSize = 0;
+      uint32_t                     reserveSize = 0;
+      uint32_t                     maxSize     = 0;
+
+      uint32_t size() const { return memory.handler!=nullptr ? uint32_t(memory.handler->size()) : 0; }
+      void     realloc(uint32_t size);
+      void     flush();
       };
 
-    Allocation implAlloc(uint32_t num, bool allowRealloc);
-
-    VDevice*  dev = nullptr;
-
-    mutable std::shared_mutex    sync;
-    DSharedPtr<VDescriptorHeap*> memory;
-    std::vector<Range>           rgn;
+    Provider                      provider;
+    DescriptorAllocator<Provider> allocator;
   };
 
 }

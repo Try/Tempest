@@ -48,7 +48,7 @@ DxTexture::DxTexture(DxDevice& dev, ComPtr<ID3D12Resource>&& b, const D3D12_RESO
   if(true) {
     // SRV seem to be allowed for any format, with some caveats around depth/stencil
     imgView = dev.descAlloc.allocHost(1);
-    createView(dev.descAlloc.handle(imgView),dev,format,nullptr,uint32_t(-1),is3D,false);
+    createView(dev.descAlloc.handleCpu(imgView),dev,format,nullptr,uint32_t(-1),is3D,false);
     }
   }
 
@@ -85,18 +85,18 @@ D3D12_CPU_DESCRIPTOR_HANDLE DxTexture::view(DxDevice& dev, const ComponentMappin
      m.a==ComponentSwizzle::Identity &&
      (mipLevel==uint32_t(-1) || mipCnt==1) &&
      this->is3D==is3D && false==isUAV) {
-    return device->descAlloc.handle(imgView);
+    return device->descAlloc.handleCpu(imgView);
     }
 
   std::lock_guard<Detail::SpinLock> guard(syncViews);
   for(auto& i:extViews) {
     if(i.m==m && i.mip==mipLevel && i.is3D==is3D)
-      return device->descAlloc.handle(i.v);
+      return device->descAlloc.handleCpu(i.v);
     }
 
   View v;
   v.v = dev.descAlloc.allocHost(1);
-  createView(dev.descAlloc.handle(v.v),dev,format,&m,mipLevel,is3D,isUAV);
+  createView(dev.descAlloc.handleCpu(v.v),dev,format,&m,mipLevel,is3D,isUAV);
   v.m     = m;
   v.mip   = mipLevel;
   v.is3D  = is3D;
@@ -108,7 +108,7 @@ D3D12_CPU_DESCRIPTOR_HANDLE DxTexture::view(DxDevice& dev, const ComponentMappin
     device->descAlloc.free(v.v);
     throw;
     }
-  return device->descAlloc.handle(v.v);
+  return device->descAlloc.handleCpu(v.v);
   }
 
 void DxTexture::createView(D3D12_CPU_DESCRIPTOR_HANDLE ret, DxDevice& dev, DXGI_FORMAT format,
@@ -492,7 +492,7 @@ DxTextureWithRT::DxTextureWithRT(DxDevice& dev, DxTexture&& base)
     dsv.Texture2D.MipSlice = 0;
 
     fboDescr = dev.descAlloc.allocDsv(2);
-    handle  = dev.descAlloc.handle(fboDescr);
+    handle  = dev.descAlloc.handleCpu(fboDescr);
     handleR = handle;
     handleR.ptr += dsvHeapInc;
 
@@ -500,7 +500,7 @@ DxTextureWithRT::DxTextureWithRT(DxDevice& dev, DxTexture&& base)
     device.CreateDepthStencilView(impl.get(), &dsv,    handleR);
     } else {
     fboDescr = dev.descAlloc.allocRtv(1);
-    handle = dev.descAlloc.handle(fboDescr);
+    handle = dev.descAlloc.handleCpu(fboDescr);
 
     device.CreateRenderTargetView(impl.get(), nullptr, handle);
     }

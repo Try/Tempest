@@ -119,7 +119,6 @@ DxDevice::DxDevice(IDXGIAdapter1& adapter, const ApiEntry& dllApi)
 
   allocator.setDevice(*this);
   descAlloc.setDevice(*this);
-  dalloc.reset(new DxHeapAllocator(*this));
 
   static bool internalShaders = true;
 

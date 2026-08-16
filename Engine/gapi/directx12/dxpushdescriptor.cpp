@@ -12,7 +12,7 @@ using namespace Tempest::Detail;
 
 template<enum D3D12_DESCRIPTOR_HEAP_TYPE HeapType>
 DxPushDescriptor::Pool<HeapType>::Pool(DxDevice& dev, uint32_t size) {
-  dPtr  = dev.dalloc->alloc(HeapType, size);
+  dPtr  = dev.descAlloc.alloc(HeapType, size);
   alloc = 0;
   }
 
@@ -29,10 +29,10 @@ void DxPushDescriptor::reset() {
   resPool.reserve(resPool.size());
   smpPool.reserve(smpPool.size());
   for(auto& i:resPool) {
-    dev.dalloc->free(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, i.dPtr, RES_ALLOC_SZ);
+    dev.descAlloc.free(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, i.dPtr, RES_ALLOC_SZ);
     }
   for(auto& i:smpPool) {
-    dev.dalloc->free(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, i.dPtr, SMP_ALLOC_SZ);
+    dev.descAlloc.free(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, i.dPtr, SMP_ALLOC_SZ);
     }
   resPool.clear();
   smpPool.clear();
@@ -67,11 +67,8 @@ DxPushDescriptor::DescSet DxPushDescriptor::push(const PushBlock &pb, const Layo
   const auto numSmp = lay.numSamplers();
   const auto ptr    = alloc(numRes, numSmp);
 
-  auto res = dev.dalloc->res;
-  res.ptr += ptr.first*dev.dalloc->resSize;
-
-  auto smp = dev.dalloc->smp;
-  smp.ptr += ptr.second*dev.dalloc->smpSize;
+  auto res = dev.descAlloc.handleCpu(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, ptr.first);
+  auto smp = dev.descAlloc.handleCpu(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, ptr.second);
 
   for(size_t i=0; i<MaxBindings; ++i) {
     if(((1u << i) & lay.active)==0)
@@ -82,20 +79,18 @@ DxPushDescriptor::DescSet DxPushDescriptor::push(const PushBlock &pb, const Layo
     DxPushDescriptor::write(dev, res, smp, lay.bindings[i], binding.data[i], binding.offset[i], binding.map[i], binding.smp[i]);
 
     if(lay.bindings[i]!=ShaderReflection::Sampler)
-      res.ptr += dev.dalloc->resSize;
+      res.ptr += dev.descAlloc.resSize;
 
     if(lay.bindings[i]==ShaderReflection::Sampler || lay.bindings[i]==ShaderReflection::Texture)
-      smp.ptr += dev.dalloc->smpSize;
+      smp.ptr += dev.descAlloc.smpSize;
     }
 
   DescSet ret = {};
   if(numRes!=0) {
-    ret.res = dev.dalloc->gres;
-    ret.res.ptr += ptr.first*dev.dalloc->resSize;
+    ret.res = dev.descAlloc.handleGpu(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, ptr.first);
     }
   if(numSmp!=0) {
-    ret.smp = dev.dalloc->gsmp;
-    ret.smp.ptr += ptr.second*dev.dalloc->smpSize;
+    ret.smp = dev.descAlloc.handleGpu(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, ptr.second);
     }
 
   return ret;
