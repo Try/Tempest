@@ -65,13 +65,17 @@ class ShaderReflection final {
       uint32_t                count   [MaxBindings] = {};
       uint32_t                bufferSz[MaxBindings] = {}; // fixed part
       uint32_t                bufferEl[MaxBindings] = {}; // variable array
-      uint32_t                runtime = 0;
-      uint32_t                array   = 0;
-      uint32_t                active  = 0;
+      uint32_t                runtime   = 0;
+      uint32_t                array     = 0;
+      uint32_t                active    = 0;
+      uint32_t                resources = 0;
+      uint32_t                samplers  = 0;
 
-      bool   isUpdateAfterBind() const;
-      size_t sizeofBuffer(size_t id, size_t arraylen) const;
-      size_t size() const;
+      bool     isUpdateAfterBind() const;
+      size_t   sizeofBuffer(size_t id, size_t arraylen) const;
+      size_t   size() const;
+      uint32_t numResources() const;
+      uint32_t numSamplers() const;
       };
 
     struct SyncDesc {

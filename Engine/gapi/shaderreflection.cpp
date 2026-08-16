@@ -80,6 +80,13 @@ static uint32_t declaredVarSize(spirv_cross::Compiler& comp, const spirv_cross::
   return 0;
   }
 
+static uint32_t bitCount(uint32_t b) {
+#if defined(__cpp_lib_bitops)
+  return std::popcount(b);
+#else
+  return std::bitset<sizeof(b)*8>(b).size();
+#endif
+  }
 
 bool ShaderReflection::LayoutDesc::isUpdateAfterBind() const {
   return runtime!=0 || array!=0;
@@ -90,11 +97,15 @@ size_t ShaderReflection::LayoutDesc::sizeofBuffer(size_t id, size_t arraylen) co
   }
 
 size_t ShaderReflection::LayoutDesc::size() const {
-#if defined(__cpp_lib_bitops)
-  return std::popcount(active);
-#else
-  return std::bitset<sizeof(active)*8>(active).size();
-#endif
+  return bitCount(active);
+  }
+
+uint32_t ShaderReflection::LayoutDesc::numResources() const {
+  return bitCount(resources & (~array));
+  }
+
+uint32_t ShaderReflection::LayoutDesc::numSamplers() const {
+  return bitCount(samplers & (~array));
   }
 
 
@@ -435,6 +446,11 @@ void ShaderReflection::setupLayout(PushBlock& pb, LayoutDesc& lx, SyncDesc& sync
       if(e.runtimeSized || e.arraySize>1)
         lx.array   |= id;
       lx.active |= id;
+
+      if(e.cls!=ShaderReflection::Sampler)
+        lx.resources |= id;
+      if(e.cls==ShaderReflection::Sampler || e.cls==ShaderReflection::Texture)
+        lx.samplers |= id;
 
       sync.read |= id;
       if(e.cls==ShaderReflection::ImgRW || e.cls==ShaderReflection::SsboRW)

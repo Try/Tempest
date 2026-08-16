@@ -17,36 +17,6 @@ static VkImageLayout toWriteLayout(VTexture& tex) {
   return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
   }
 
-static std::pair<uint32_t, uint32_t> numResources(const ShaderReflection::LayoutDesc& lay) {
-  std::pair<uint32_t, uint32_t> ret;
-  for(size_t i=0; i<MaxBindings; ++i) {
-    if(((1u << i) & lay.array)!=0)
-      continue;
-    switch(lay.bindings[i]) {
-      case ShaderReflection::Sampler:
-        ret.second++;
-        break;
-      case ShaderReflection::Texture:
-        ret.first++;
-        ret.second++;
-        break;
-      case ShaderReflection::Ubo:
-      case ShaderReflection::Image:
-      case ShaderReflection::SsboR:
-      case ShaderReflection::SsboRW:
-      case ShaderReflection::ImgR:
-      case ShaderReflection::ImgRW:
-      case ShaderReflection::Tlas:
-        ret.first++;
-        break;
-      case ShaderReflection::Push:
-      case ShaderReflection::Count:
-        break;
-      }
-    }
-  return ret;
-  }
-
 
 VPushDescriptor::DescPool::DescPool(VDevice &dev) {
   impl = dev.descPool.allocPool();
@@ -134,12 +104,11 @@ uint32_t VPushDescriptor::allocHeap(VkCommandBuffer cmd, const uint32_t sz, cons
   }
 
 void VPushDescriptor::pushHeap(VkCommandBuffer cmd, uint32_t* indices, const PushBlock& pb, const LayoutDesc& lay, const Bindings& binding) {
-  const auto sz  = numResources(lay);
-  auto       ptr = allocHeap(cmd, sz.first, RES_ALLOC_SZ);
-
   const auto resSize = dev.props.resourceDescriptorSize;
 
-  auto mem = sz.first>0 ? dev.resHeap.currentMemory()  : DSharedPtr<VDescriptorHeap*>();
+  const auto numRes = lay.numResources();
+  auto       ptr    = allocHeap(cmd, numRes, RES_ALLOC_SZ);
+  auto       mem    = numRes>0 ? dev.resHeap.currentMemory() : DSharedPtr<VDescriptorHeap*>();
 
   auto res = mem ? mem.handler->hptr : nullptr;
   res += ptr*resSize;
@@ -180,7 +149,7 @@ void VPushDescriptor::pushHeap(VkCommandBuffer cmd, uint32_t* indices, const Pus
       }
     }
 
-  auto smp = sz.second>0 ? dev.samplers.currentMemory() : DSharedPtr<VDescriptorHeap*>();
+  auto smp = lay.numSamplers()>0 ? dev.samplers.currentMemory() : DSharedPtr<VDescriptorHeap*>();
   bindHeap(cmd, mem, smp);
   }
 
@@ -281,11 +250,9 @@ void VPushDescriptor::write(VDevice& dev, VkWriteDescriptorSet& wx, WriteInfo& i
 
       VkDescriptorImageInfo& info = infoW.image;
       if(cls==ShaderReflection::Texture) {
-        info.sampler   = dev.samplers.get(smp, tex);
-        info.imageView = tex->view(mapping, mipLevel, is3DImage);
-        } else {
-        info.imageView = tex->view(mapping, mipLevel, is3DImage);
+        info.sampler = dev.samplers.get(smp, tex);
         }
+      info.imageView   = tex->view(mapping, mipLevel, is3DImage);
       info.imageLayout = toWriteLayout(*tex);
 
       wx.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -395,8 +362,7 @@ void VPushDescriptor::write(VDevice& dev, void* resPtr, ShaderReflection::Class 
       if((cls==ShaderReflection::ImgR || cls==ShaderReflection::ImgRW) && mipLevel==uint32_t(-1))
         mipLevel = 0;
 
-      const void* viewH = tex->viewH(mapping, mipLevel, is3DImage);
-      std::memcpy(resPtr, viewH, dev.props.resourceDescriptorSize);
+      tex->descriptor(resPtr, mapping, mipLevel, is3DImage);
       break;
       }
     case ShaderReflection::Tlas: {

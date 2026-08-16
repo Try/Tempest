@@ -10,36 +10,6 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-static std::pair<uint32_t, uint32_t> numResources(const ShaderReflection::LayoutDesc& lay) {
-  std::pair<uint32_t, uint32_t> ret;
-  for(size_t i=0; i<MaxBindings; ++i) {
-    if(((1u << i) & lay.array)!=0)
-      continue;
-    switch(lay.bindings[i]) {
-      case ShaderReflection::Sampler:
-        ret.second++;
-        break;
-      case ShaderReflection::Texture:
-        ret.first++;
-        ret.second++;
-        break;
-      case ShaderReflection::Ubo:
-      case ShaderReflection::Image:
-      case ShaderReflection::SsboR:
-      case ShaderReflection::SsboRW:
-      case ShaderReflection::ImgR:
-      case ShaderReflection::ImgRW:
-      case ShaderReflection::Tlas:
-        ret.first++;
-        break;
-      case ShaderReflection::Push:
-      case ShaderReflection::Count:
-        break;
-      }
-    }
-  return ret;
-  }
-
 template<enum D3D12_DESCRIPTOR_HEAP_TYPE HeapType>
 DxPushDescriptor::Pool<HeapType>::Pool(DxDevice& dev, uint32_t size) {
   dPtr  = dev.dalloc->alloc(HeapType, size);
@@ -93,8 +63,9 @@ uint32_t DxPushDescriptor::alloc(uint32_t numRes) {
   }
 
 DxPushDescriptor::DescSet DxPushDescriptor::push(const PushBlock &pb, const LayoutDesc& lay, const Bindings& binding) {
-  const auto sz  = numResources(lay);
-  const auto ptr = alloc(sz.first, sz.second);
+  const auto numRes = lay.numResources();
+  const auto numSmp = lay.numSamplers();
+  const auto ptr    = alloc(numRes, numSmp);
 
   auto res = dev.dalloc->res;
   res.ptr += ptr.first*dev.dalloc->resSize;
@@ -108,7 +79,7 @@ DxPushDescriptor::DescSet DxPushDescriptor::push(const PushBlock &pb, const Layo
     if(((1u << i) & lay.array)!=0)
       continue;
 
-    write(dev, res, smp, lay.bindings[i], binding.data[i], binding.offset[i], binding.map[i], binding.smp[i]);
+    DxPushDescriptor::write(dev, res, smp, lay.bindings[i], binding.data[i], binding.offset[i], binding.map[i], binding.smp[i]);
 
     if(lay.bindings[i]!=ShaderReflection::Sampler)
       res.ptr += dev.dalloc->resSize;
@@ -118,11 +89,11 @@ DxPushDescriptor::DescSet DxPushDescriptor::push(const PushBlock &pb, const Layo
     }
 
   DescSet ret = {};
-  if(sz.first!=0) {
+  if(numRes!=0) {
     ret.res = dev.dalloc->gres;
     ret.res.ptr += ptr.first*dev.dalloc->resSize;
     }
-  if(sz.second!=0) {
+  if(numSmp!=0) {
     ret.smp = dev.dalloc->gsmp;
     ret.smp.ptr += ptr.second*dev.dalloc->smpSize;
     }
