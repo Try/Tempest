@@ -53,6 +53,21 @@ void VPoolCache::setupLimits() {
     }
   }
 
+void VPoolCache::notifyDestroy(const AbstractGraphicsApi::NoCopy* res) {
+  std::lock_guard<std::mutex> guard(sync);
+
+  for(size_t i=0; i<descriptors.size();) {
+    auto& d = descriptors[i];
+    if(!d.bindings.contains(res)) {
+      ++i;
+      continue;
+      }
+    vkDestroyDescriptorPool(dev.device.impl, d.pool, nullptr);
+    d = std::move(descriptors.back());
+    descriptors.pop_back();
+    }
+  }
+
 VkDescriptorPool VPoolCache::allocPool() {
   {
     std::lock_guard<std::mutex> guard(sync);
@@ -149,21 +164,6 @@ void VPoolCache::freePool(VkDescriptorPool p) {
     }
   catch(...) {
     vkDestroyDescriptorPool(dev.device.impl, p, nullptr);
-    }
-  }
-
-void VPoolCache::notifyDestroy(const AbstractGraphicsApi::NoCopy* res) {
-  std::lock_guard<std::mutex> guard(sync);
-
-  for(size_t i=0; i<descriptors.size();) {
-    auto& d = descriptors[i];
-    if(!d.bindings.contains(res)) {
-      ++i;
-      continue;
-      }
-    vkDestroyDescriptorPool(dev.device.impl, d.pool, nullptr);
-    d = std::move(descriptors.back());
-    descriptors.pop_back();
     }
   }
 

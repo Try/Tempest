@@ -24,10 +24,11 @@ class VTexture : public AbstractGraphicsApi::Texture {
 
     VTexture& operator=(const VTexture& other)=delete;
 
-    VkImageView  view(const ComponentMapping& m, uint32_t mipLevel, bool is3D);
-    VkImageView  fboView(uint32_t mip);
-    uint32_t     mipCount() const override { return mipCnt; }
-    NonUniqResId syncId() const override { return nonUniqId; }
+    VkImageView    view(const ComponentMapping& m, uint32_t mipLevel, bool is3D);
+    void           descriptor(void* dest, const ComponentMapping& m, uint32_t mipLevel, bool is3D);
+    VkImageView    fboView(uint32_t mip);
+    uint32_t       mipCount() const override { return mipCnt; }
+    NonUniqResId   syncId() const override { return nonUniqId; }
 
     VkImageViewCreateInfo createInfo(const ComponentMapping* cmap, uint32_t mipLevel, bool is3D) const;
 
@@ -51,12 +52,13 @@ class VTexture : public AbstractGraphicsApi::Texture {
 
     struct View {
       ComponentMapping m;
-      uint32_t         mip  = uint32_t(0);
-      bool             is3D = false;
+      uint32_t         mip   = uint32_t(0);
+      bool             is3D  = false;
       VkImageView      v;
       };
-    Detail::SpinLock  syncViews;
-    std::vector<View> extViews;
+    Detail::SpinLock     syncViews;
+    std::vector<View>    extViews;
+    std::vector<uint8_t> extDescr;
 
     friend class VAllocator;
   };

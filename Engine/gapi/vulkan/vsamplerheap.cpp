@@ -3,6 +3,7 @@
 #include "vsamplerheap.h"
 
 #include "vdevice.h"
+#include "vtexture.h"
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -96,6 +97,15 @@ VkSampler VSamplerHeap::get(const Sampler& s) {
   return b.sampler;
   }
 
+VkSampler VSamplerHeap::get(const Sampler& s, const VTexture* tex) {
+  auto sx = s;
+  if(!tex->isFilterable) {
+    sx.setFiltration(Filter::Nearest);
+    sx.anisotropic = false;
+    }
+  return get(sx);
+  }
+
 uint32_t VSamplerHeap::getH(const Sampler& s) {
   static const Sampler def;
   if(def==s) {
@@ -105,6 +115,15 @@ uint32_t VSamplerHeap::getH(const Sampler& s) {
     return offset;
     }
   return allocHeap(s);
+  }
+
+uint32_t VSamplerHeap::getH(const Sampler& s, const VTexture* tex) {
+  auto sx = s;
+  if(!tex->isFilterable) {
+    sx.setFiltration(Filter::Nearest);
+    sx.anisotropic = false;
+    }
+  return getH(sx);
   }
 
 uint32_t VSamplerHeap::allocHeap(const Sampler& s) {

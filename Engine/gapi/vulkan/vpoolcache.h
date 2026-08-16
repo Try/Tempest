@@ -27,13 +27,12 @@ class VPoolCache {
       };
 
     void             setupLimits();
+    void             notifyDestroy(const AbstractGraphicsApi::NoCopy* res);
 
     VkDescriptorPool allocPool();
     void             freePool(VkDescriptorPool p);
 
     Inst             allocBindless(const PushBlock &pb, const LayoutDesc& layout, const Bindings& binding);
-
-    void notifyDestroy(const AbstractGraphicsApi::NoCopy* res);
 
   private:
     static constexpr const size_t MaxCache = 2;

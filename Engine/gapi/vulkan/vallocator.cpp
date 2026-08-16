@@ -168,6 +168,7 @@ VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferHe
     auto& props = provider.device->props;
     memRq.alignment = std::max<size_t>(memRq.alignment, props.resourceDescriptorSize);
     memRq.alignment = std::max<size_t>(memRq.alignment, props.samplerDescriptorSize);
+    memRq.alignment = std::max<size_t>(memRq.alignment, props.heapAlignment);
     }
 
   uint32_t props[2] = {};

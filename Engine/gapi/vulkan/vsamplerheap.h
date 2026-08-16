@@ -22,9 +22,11 @@ class VSamplerHeap final {
     static VkSamplerCreateInfo createInfo(const VDevice& dev, const Sampler& s);
 
     VkSampler get(const Sampler& s);
+    VkSampler get(const Sampler& s, const VTexture* tex);
     void      setDevice(VDevice &dev);
 
     uint32_t  getH(const Sampler& s);
+    uint32_t  getH(const Sampler& s, const VTexture* tex);
     auto      currentMemory() const -> DSharedPtr<VDescriptorHeap*>;
     void      flush();
 

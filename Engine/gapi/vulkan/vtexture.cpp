@@ -8,6 +8,14 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+static VkImageLayout toDefaultLayout(VTexture& tex) {
+  if(nativeIsDepthFormat(tex.format))
+    return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+  if(tex.isStorageImage)
+    return VK_IMAGE_LAYOUT_GENERAL;
+  return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  }
+
 VTexture::VTexture(VTexture&& other) {
   std::swap(impl,           other.impl);
   std::swap(imgView,        other.imgView);
@@ -20,6 +28,7 @@ VTexture::VTexture(VTexture&& other) {
   std::swap(is3D,           other.is3D);
   std::swap(isFilterable,   other.isFilterable);
   std::swap(extViews,       other.extViews);
+  std::swap(extDescr,       other.extDescr);
   }
 
 VTexture::~VTexture() {
@@ -59,6 +68,52 @@ VkImageView VTexture::view(const ComponentMapping& m, uint32_t mipLevel, bool is
     throw;
     }
   return v.v;
+  }
+
+void VTexture::descriptor(void* dest, const ComponentMapping& m, uint32_t mipLevel, bool is3D) {
+  VDevice& dev = *alloc->device();
+  auto vkWriteResourceDescriptorsEXT = dev.vkWriteResourceDescriptorsEXT;
+
+  std::lock_guard<Detail::SpinLock> guard(syncViews);
+  for(size_t i=0; i<extViews.size(); ++i) {
+    auto& v = extViews[i];
+    if(v.m==m && v.mip==mipLevel && v.is3D==is3D && v.v==VK_NULL_HANDLE) {
+      auto ptr = extDescr.data() + i*dev.props.resourceDescriptorSize;
+      std::memcpy(dest, ptr, dev.props.resourceDescriptorSize);
+      return;
+      }
+    }
+
+  const size_t prevSzDescr = extDescr.size();
+
+  View v;
+  v.m     = m;
+  v.mip   = mipLevel;
+  v.is3D  = is3D;
+  v.v     = VK_NULL_HANDLE;
+  extDescr.resize((extViews.size() + 1) * dev.props.resourceDescriptorSize);
+
+  VkImageViewCreateInfo view = createInfo(&m, mipLevel, is3D);
+
+  VkImageDescriptorInfoEXT info = {VK_STRUCTURE_TYPE_IMAGE_DESCRIPTOR_INFO_EXT};
+  info.pView  = &view;
+  info.layout = toDefaultLayout(*this);
+
+  VkResourceDescriptorInfoEXT res = {VK_STRUCTURE_TYPE_RESOURCE_DESCRIPTOR_INFO_EXT};
+  res.type        = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+  res.data.pImage = &info;
+
+  VkHostAddressRangeEXT host = {extDescr.data() + prevSzDescr, dev.props.resourceDescriptorSize};
+  vkAssert(vkWriteResourceDescriptorsEXT(dev.device.impl, 1, &res, &host));
+  try {
+    extViews.push_back(v);
+    }
+  catch (...) {
+    //leave decriptor memory as-is - not a problem
+    throw;
+    }
+  auto ptr = extDescr.data()+prevSzDescr;
+  std::memcpy(dest, ptr, dev.props.resourceDescriptorSize);
   }
 
 VkImageView VTexture::fboView(uint32_t mip) {

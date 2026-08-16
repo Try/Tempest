@@ -659,6 +659,8 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
       props.descriptors.maxSamplers = (props.samplerHeapMaxSize  - props.samplerHeapReserve )/props.samplerDescriptorSize;
       props.descriptors.maxStorage  = maxRes/2;
       props.descriptors.maxTexture  = maxRes/2;
+
+      props.heapAlignment = uint32_t(std::max(dheapProps.resourceHeapAlignment, dheapProps.samplerHeapAlignment));
       }
     }
 

@@ -169,7 +169,7 @@ void VPushDescriptor::pushHeap(VkCommandBuffer cmd, uint32_t* indices, const Pus
       ptr += 1;
       }
     if(lay.bindings[i]==ShaderReflection::Texture) {
-      const auto smpId = dev.samplers.getH(binding.smp[i]);
+      const auto smpId = dev.samplers.getH(binding.smp[i], reinterpret_cast<VTexture*>(binding.data[i]));
       indices[0] = (ptr & 0xFFFFF) | (smpId << 20);
       res += resSize;
       ptr += 1;
@@ -281,12 +281,7 @@ void VPushDescriptor::write(VDevice& dev, VkWriteDescriptorSet& wx, WriteInfo& i
 
       VkDescriptorImageInfo& info = infoW.image;
       if(cls==ShaderReflection::Texture) {
-        auto sx = smp;
-        if(!tex->isFilterable) {
-          sx.setFiltration(Filter::Nearest);
-          sx.anisotropic = false;
-          }
-        info.sampler   = dev.samplers.get(sx);
+        info.sampler   = dev.samplers.get(smp, tex);
         info.imageView = tex->view(mapping, mipLevel, is3DImage);
         } else {
         info.imageView = tex->view(mapping, mipLevel, is3DImage);
@@ -400,16 +395,8 @@ void VPushDescriptor::write(VDevice& dev, void* resPtr, ShaderReflection::Class 
       if((cls==ShaderReflection::ImgR || cls==ShaderReflection::ImgRW) && mipLevel==uint32_t(-1))
         mipLevel = 0;
 
-      VkImageViewCreateInfo view = tex->createInfo(&mapping, mipLevel, is3DImage);
-
-      VkImageDescriptorInfoEXT info = {VK_STRUCTURE_TYPE_IMAGE_DESCRIPTOR_INFO_EXT};
-      info.pView  = &view;
-      info.layout = toWriteLayout(*tex);
-
-      res.data.pImage = &info;
-
-      VkHostAddressRangeEXT dest = {resPtr, dev.props.resourceDescriptorSize};
-      vkAssert(vkWriteResourceDescriptorsEXT(dev.device.impl, 1, &res, &dest));
+      const void* viewH = tex->viewH(mapping, mipLevel, is3DImage);
+      std::memcpy(resPtr, viewH, dev.props.resourceDescriptorSize);
       break;
       }
     case ShaderReflection::Tlas: {

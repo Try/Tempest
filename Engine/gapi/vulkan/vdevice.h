@@ -342,6 +342,8 @@ class VDevice : public AbstractGraphicsApi::Device {
       uint32_t resourceHeapMaxSize = 0;
       uint32_t samplerHeapMaxSize  = 0;
 
+      uint32_t heapAlignment       = 0;
+
       bool     hasMemRq2          = false;
       bool     hasDedicatedAlloc  = false;
       bool     hasSync2           = false;
