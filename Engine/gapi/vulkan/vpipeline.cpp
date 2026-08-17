@@ -337,9 +337,9 @@ void VPipeline::initPushMappings(VDevice& device, VkShaderDescriptorSetAndBindin
       case ShaderReflection::Image:   return VK_SPIRV_RESOURCE_TYPE_SAMPLED_IMAGE_BIT_EXT;
       case ShaderReflection::Sampler: return VK_SPIRV_RESOURCE_TYPE_SAMPLER_BIT_EXT;
       case ShaderReflection::SsboR:   return VK_SPIRV_RESOURCE_TYPE_READ_ONLY_STORAGE_BUFFER_BIT_EXT;
-      case ShaderReflection::SsboRW:  return VK_SPIRV_RESOURCE_TYPE_READ_WRITE_STORAGE_BUFFER_BIT_EXT;
+      case ShaderReflection::SsboRW:  return VK_SPIRV_RESOURCE_TYPE_READ_WRITE_STORAGE_BUFFER_BIT_EXT | VK_SPIRV_RESOURCE_TYPE_READ_ONLY_STORAGE_BUFFER_BIT_EXT;
       case ShaderReflection::ImgR:    return VK_SPIRV_RESOURCE_TYPE_READ_ONLY_IMAGE_BIT_EXT;
-      case ShaderReflection::ImgRW:   return VK_SPIRV_RESOURCE_TYPE_READ_WRITE_IMAGE_BIT_EXT;
+      case ShaderReflection::ImgRW:   return VK_SPIRV_RESOURCE_TYPE_READ_WRITE_IMAGE_BIT_EXT | VK_SPIRV_RESOURCE_TYPE_READ_ONLY_IMAGE_BIT_EXT;
       case ShaderReflection::Tlas:    return VK_SPIRV_RESOURCE_TYPE_ACCELERATION_STRUCTURE_BIT_EXT;
       case ShaderReflection::Push:
       case ShaderReflection::Count:
