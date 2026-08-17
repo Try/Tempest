@@ -54,3 +54,29 @@ TEST(main, DescriptorAllocator2) {
   memory.free(a2, 6);
   memory.free(a1, 20);
   }
+
+TEST(main, DescriptorAllocator3) {
+  {
+    TestDevice device;
+    DescriptorAllocator<TestDevice> memory(device);
+
+    auto a0 = memory.alloc(10);
+    auto a1 = memory.alloc(10);
+    auto a2 = memory.alloc(10);
+
+    memory.free(a0, 10);
+    memory.free(a2, 10);
+    memory.free(a1, 10);
+
+    EXPECT_NO_THROW(auto big = memory.alloc(30));
+  }
+  {
+    TestDevice device;
+    DescriptorAllocator<TestDevice> memory(device);
+
+    auto a0 = memory.alloc(10);
+    auto a1 = memory.alloc(10);
+    memory.free(a0, 10);
+    EXPECT_NO_THROW(memory.free(a1, 10));
+  }
+  }
