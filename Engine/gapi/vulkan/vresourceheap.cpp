@@ -32,27 +32,27 @@ void VResourceHeap::Provider::flush() {
   }
 
 
-VResourceHeap::VResourceHeap() : allocator(provider) {
+VResourceHeap::VResourceHeap()  {
   }
 
 VResourceHeap::~VResourceHeap() {
   }
 
 void VResourceHeap::setDevice(VDevice& dx) {
-  provider.dev         = &dx;
-  provider.elementSize = dx.props.resourceDescriptorSize;
-  provider.reserveSize = dx.props.resourceHeapReserve;
-  provider.maxSize     = dx.props.resourceHeapMaxSize;
+  providerRes.dev         = &dx;
+  providerRes.elementSize = dx.props.resourceDescriptorSize;
+  providerRes.reserveSize = dx.props.resourceHeapReserve;
+  providerRes.maxSize     = dx.props.resourceHeapMaxSize;
   }
 
 VResourceHeap::Allocation VResourceHeap::alloc(AbstractGraphicsApi::Buffer** buf, size_t cnt) {
-  auto ret = allocator.alloc(uint32_t(cnt), [&](auto alloc) {
+  auto ret = allocatorRes.alloc(uint32_t(cnt), [&](auto alloc) {
     auto  dPtrR = alloc.ptr;
-    auto  hPtrR = provider.memory ? provider.memory.handler->hptr : nullptr;
+    auto  hPtrR = providerRes.memory ? providerRes.memory.handler->hptr : nullptr;
 
     for(size_t i=0; i<cnt; ++i) {
-      auto res = hPtrR + (dPtrR + i)*provider.elementSize;
-      VPushDescriptor::write(*provider.dev, res, ShaderReflection::SsboR, buf[i], 0, ComponentMapping());
+      auto res = hPtrR + (dPtrR + i)*providerRes.elementSize;
+      VPushDescriptor::write(*providerRes.dev, res, ShaderReflection::SsboR, buf[i], 0, ComponentMapping());
       }
     });
 
@@ -60,13 +60,13 @@ VResourceHeap::Allocation VResourceHeap::alloc(AbstractGraphicsApi::Buffer** buf
   }
 
 VResourceHeap::Allocation VResourceHeap::alloc(AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel) {
-  auto ret = allocator.alloc(uint32_t(cnt), [&](auto alloc) {
+  auto ret = allocatorRes.alloc(uint32_t(cnt), [&](auto alloc) {
     auto  dPtrR = alloc.ptr;
-    auto  hPtrR = provider.memory ? provider.memory.handler->hptr : nullptr;
+    auto  hPtrR = providerRes.memory ? providerRes.memory.handler->hptr : nullptr;
 
     for(size_t i=0; i<cnt; ++i) {
-      auto res = hPtrR + (dPtrR + i)*provider.elementSize;
-      VPushDescriptor::write(*provider.dev, res, ShaderReflection::Image, tex[i], mipLevel, ComponentMapping());
+      auto res = hPtrR + (dPtrR + i)*providerRes.elementSize;
+      VPushDescriptor::write(*providerRes.dev, res, ShaderReflection::Image, tex[i], mipLevel, ComponentMapping());
       }
     });
 
@@ -74,23 +74,23 @@ VResourceHeap::Allocation VResourceHeap::alloc(AbstractGraphicsApi::Texture** te
   }
 
 VResourceHeap::Allocation VResourceHeap::alloc(uint32_t num) {
-  auto ret = allocator.alloc(uint32_t(num));
+  auto ret = allocatorRes.alloc(uint32_t(num));
   return Allocation(ret.ptr);
   }
 
 void VResourceHeap::flush() {
-  if(provider.dev==nullptr)
+  if(providerRes.dev==nullptr)
     return;
-  allocator.flush();
+  allocatorRes.flush();
   }
 
 DSharedPtr<VDescriptorHeap*> VResourceHeap::currentMemory() const {
-  std::lock_guard<SpinLock> guard(provider.sync);
-  return provider.memory;
+  std::lock_guard<SpinLock> guard(providerRes.sync);
+  return providerRes.memory;
   }
 
 void VResourceHeap::free(uint32_t ptr, uint32_t num) {
-  allocator.free(ptr, num);
+  allocatorRes.free(ptr, num);
   return;
   }
 

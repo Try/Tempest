@@ -46,8 +46,8 @@ class VResourceHeap {
       void     flush();
       };
 
-    Provider                      provider;
-    DescriptorAllocator<Provider> allocator;
+    Provider                      providerRes;
+    DescriptorAllocator<Provider> allocatorRes {providerRes};
   };
 
 }

@@ -594,7 +594,7 @@ void DxCommandBuffer::handleSync(const DxPipelineLay::LayoutDesc& lay, const DxP
   }
 
 void DxCommandBuffer::setupHeaps() {
-  ID3D12DescriptorHeap* heaps[2] = {}; size_t sz = 0;
+  ID3D12DescriptorHeap* heaps[2] = {}; uint32_t sz = 0;
   if(auto res = dev.descAlloc.currentMemory(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)) {
     heaps[sz] = res;
     ++sz;

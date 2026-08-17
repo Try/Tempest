@@ -20,18 +20,13 @@ class DescriptorAllocator {
 
     Allocation alloc(uint32_t num) {
       std::lock_guard<SpinLock> guard(sync);
-      auto ret = rawAlloc(num);
-      if(ret.ptr==0xFFFFFFFF)
-        throw std::bad_alloc();
-      return ret;
+      return rawAlloc(num);
       }
 
     template<class Func>
     Allocation alloc(uint32_t num, Func f) {
       std::lock_guard<SpinLock> guard(sync);
       auto ret = rawAlloc(num);
-      if(ret.ptr==0xFFFFFFFF)
-        throw std::bad_alloc();
       f(ret);
       return ret;
       }
@@ -44,23 +39,35 @@ class DescriptorAllocator {
       num *= provider.elementSize;
 
       std::lock_guard<SpinLock> guard(sync);
-      size_t i = 0;
-      for(; i+1<rgn.size(); ++i) {
-        auto& r = rgn[i+1];
-        if(r.end>=ptr)
+      size_t i = rgn.size();
+      for(; i>0;) {
+        --i;
+        auto& r = rgn[i];
+        if(r.end<=ptr)
           break;
         }
 
-      for(; i<rgn.size(); ++i) {
+      if(i==0 && (rgn.empty() || rgn[i].end>ptr)) {
+        Range rx = {ptr, ptr+num};
+        rgn.insert(rgn.begin(), rx);
+        compact(0);
+        return;
+        }
+
+      if(i<rgn.size()) {
         auto& r = rgn[i];
-        if(ptr+num==r.begin) {
-          r.begin -= num;
+        if(r.end==ptr) {
+          r.end += num;
+          return compact(i);
+          }
+        if(i+1<rgn.size() && ptr+num==rgn[i+1].begin) {
+          rgn[i+1].begin = ptr;
           return;
           }
-        if(ptr+num<r.begin) {
-          Range r = {ptr, ptr+num};
-          rgn.insert(rgn.begin() + i, r);
-          return;
+        if(r.end<ptr) {
+          Range rx = {ptr, ptr+num};
+          rgn.insert(rgn.begin() + i + 1, rx);
+          return compact(i + 1);
           }
         }
 
@@ -117,6 +124,17 @@ class DescriptorAllocator {
       rg.begin = allocBeg + allocSize;
       rg.end   = provider.size();
       return Allocation{uint32_t(allocBeg/provider.elementSize)};
+      }
+
+    void compact(size_t i) {
+      if(i+1<rgn.size()) {
+        auto& r0 = rgn[i+0];
+        auto& r1 = rgn[i+1];
+        if(r0.end==r1.begin) {
+          r0.end = r1.end;
+          rgn.erase(rgn.begin() + i + 1);
+          }
+        }
       }
 
     static uint32_t nextPot(uint32_t x) {

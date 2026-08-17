@@ -30,7 +30,7 @@ struct TestDevice {
 
   uint32_t elementSize = 32;
   uint32_t reserveSize = 64;
-  uint32_t maxSize     = 1024;
+  uint32_t maxSize     = 4096;
   };
 
 TEST(main, DescriptorAllocator) {
@@ -38,5 +38,19 @@ TEST(main, DescriptorAllocator) {
   DescriptorAllocator<TestDevice> memory(device);
 
   auto a0 = memory.alloc(23);
+  auto a1 = memory.alloc(27);
   memory.free(a0, 23);
+  memory.free(a1, 27);
+  }
+
+TEST(main, DescriptorAllocator2) {
+  TestDevice device;
+  DescriptorAllocator<TestDevice> memory(device);
+
+  auto a0 = memory.alloc(100);
+  auto a1 = memory.alloc(20);
+  auto a2 = memory.alloc(6);
+  memory.free(a0, 100);
+  memory.free(a2, 6);
+  memory.free(a1, 20);
   }
