@@ -25,10 +25,12 @@ class VResourceHeap {
     Allocation alloc(AbstractGraphicsApi::Buffer**  buf, size_t cnt);
     Allocation alloc(AbstractGraphicsApi::Texture** tex, size_t cnt, uint32_t mipLevel);
     Allocation alloc(uint32_t num);
+    Allocation alloc(const Sampler& s);
     void       free (uint32_t ptr, uint32_t num);
     void       flush();
 
     auto       currentMemory() const -> DSharedPtr<VDescriptorHeap*>;
+    auto       currentMemorySmp() const -> DSharedPtr<VDescriptorHeap*>;
 
   private:
     struct Provider {
@@ -48,6 +50,9 @@ class VResourceHeap {
 
     Provider                      providerRes;
     DescriptorAllocator<Provider> allocatorRes {providerRes};
+
+    Provider                      providerSmp;
+    DescriptorAllocator<Provider> allocatorSmp {providerSmp};
   };
 
 }

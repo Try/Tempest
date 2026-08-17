@@ -14,7 +14,7 @@ VPushDescriptor::DescPool::DescPool(VDevice &dev) {
   }
 
 VPushDescriptor::ResPool::ResPool(VDevice &dev, uint32_t size) {
-  auto mem = dev.resHeap.alloc(size);
+  auto mem = dev.descAlloc.alloc(size);
   dPtr  = mem.ptr;
   alloc = 0;
   }
@@ -35,7 +35,7 @@ void VPushDescriptor::reset() {
 
   resPool.reserve(resPool.size());
   for(auto& i:resPool) {
-    dev.resHeap.free(i.dPtr, RES_ALLOC_SZ);
+    dev.descAlloc.free(i.dPtr, RES_ALLOC_SZ);
     }
   resPool.clear();
   memHeap.clear();
@@ -99,7 +99,7 @@ void VPushDescriptor::pushHeap(VkCommandBuffer cmd, uint32_t* indices, const Pus
 
   const auto numRes = lay.numResources();
   auto       ptr    = allocHeap(cmd, numRes, RES_ALLOC_SZ);
-  auto       mem    = numRes>0 ? dev.resHeap.currentMemory() : DSharedPtr<VDescriptorHeap*>();
+  auto       mem    = numRes>0 ? dev.descAlloc.currentMemory() : DSharedPtr<VDescriptorHeap*>();
 
   auto res = mem ? mem.handler->hptr : nullptr;
   res += ptr*resSize;
@@ -140,7 +140,7 @@ void VPushDescriptor::pushHeap(VkCommandBuffer cmd, uint32_t* indices, const Pus
       }
     }
 
-  auto smp = lay.numSamplers()>0 ? dev.samplers.currentMemory() : DSharedPtr<VDescriptorHeap*>();
+  auto smp = lay.numSamplers()>0 ? dev.descAlloc.currentMemorySmp() : DSharedPtr<VDescriptorHeap*>();
   bindHeap(cmd, mem, smp);
   }
 

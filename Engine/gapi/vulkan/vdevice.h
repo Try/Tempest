@@ -427,7 +427,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     VPsoLayoutCache         psoLayouts;
     VPoolCache              descPool;
 
-    VResourceHeap           resHeap;
+    VResourceHeap           descAlloc;
     VSamplerHeap            samplers;
 
     VkProps                 props = {};

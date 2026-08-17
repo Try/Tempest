@@ -93,7 +93,7 @@ VDevice::VDevice(VkInstance instance, const bool hasDeviceFeatures2, VkPhysicalD
   allocator.setDevice(*this);
   descPool.setupLimits();
   if(props.hasDescriptorHeap)
-    resHeap.setDevice(*this);
+    descAlloc.setDevice(*this);
   samplers.setDevice(*this);
   data.reset(new DataMgr(*this));
   }
@@ -1103,8 +1103,7 @@ void VDevice::waitIdleSync(VDevice::Queue* q, size_t n) {
 
 std::shared_ptr<VFence> VDevice::submit(VCommandBuffer& cmd) {
   // flush descriptor memory
-  resHeap.flush();
-  samplers.flush();
+  descAlloc.flush();
 
   size_t waitCnt = 0;
   for(auto& s:cmd.swapchainSync) {

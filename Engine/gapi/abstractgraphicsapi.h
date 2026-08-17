@@ -667,12 +667,6 @@ namespace Tempest {
     };
 
 namespace Detail {
-  enum HeapType {
-    HEAP_TYPE_CBV_SRV_UAV,
-    HEAP_TYPE_SAMPLER,
-    DESCRIPTOR_POOL,
-    };
-
   struct Bindings {
     AbstractGraphicsApi::NoCopy* data  [MaxBindings] = {};
     Sampler                      smp   [MaxBindings] = {};

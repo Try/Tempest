@@ -43,6 +43,25 @@ void VResourceHeap::setDevice(VDevice& dx) {
   providerRes.elementSize = dx.props.resourceDescriptorSize;
   providerRes.reserveSize = dx.props.resourceHeapReserve;
   providerRes.maxSize     = dx.props.resourceHeapMaxSize;
+
+  providerSmp.dev         = &dx;
+  providerSmp.elementSize = dx.props.samplerDescriptorSize;
+  providerSmp.reserveSize = dx.props.samplerHeapReserve;
+  providerSmp.maxSize     = dx.props.samplerHeapMaxSize;
+  }
+
+VResourceHeap::Allocation VResourceHeap::alloc(const Sampler& s) {
+  auto ret = allocatorSmp.alloc(1, [&](auto alloc) {
+    auto vkWriteSamplerDescriptorsEXT = providerSmp.dev->vkWriteSamplerDescriptorsEXT;
+
+    auto hPtrR = providerSmp.memory ? providerSmp.memory.handler->hptr : nullptr;
+    auto res   = hPtrR + alloc.ptr*providerRes.elementSize;
+
+    VkSamplerCreateInfo   info = VSamplerHeap::createInfo(*providerSmp.dev, s);
+    VkHostAddressRangeEXT dest = {res, providerSmp.elementSize};
+    vkAssert(vkWriteSamplerDescriptorsEXT(providerSmp.dev->device.impl, 1, &info, &dest));
+    });
+  return Allocation(ret.ptr);
   }
 
 VResourceHeap::Allocation VResourceHeap::alloc(AbstractGraphicsApi::Buffer** buf, size_t cnt) {
@@ -82,11 +101,17 @@ void VResourceHeap::flush() {
   if(providerRes.dev==nullptr)
     return;
   allocatorRes.flush();
+  allocatorSmp.flush();
   }
 
 DSharedPtr<VDescriptorHeap*> VResourceHeap::currentMemory() const {
   std::lock_guard<SpinLock> guard(providerRes.sync);
   return providerRes.memory;
+  }
+
+auto VResourceHeap::currentMemorySmp() const -> DSharedPtr<VDescriptorHeap*> {
+  std::lock_guard<SpinLock> guard(providerSmp.sync);
+  return providerSmp.memory;
   }
 
 void VResourceHeap::free(uint32_t ptr, uint32_t num) {

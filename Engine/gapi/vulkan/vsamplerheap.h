@@ -23,31 +23,25 @@ class VSamplerHeap final {
 
     VkSampler get(const Sampler& s);
     VkSampler get(const Sampler& s, const VTexture* tex);
-    void      setDevice(VDevice &dev);
-
     uint32_t  getH(const Sampler& s);
     uint32_t  getH(const Sampler& s, const VTexture* tex);
-    auto      currentMemory() const -> DSharedPtr<VDescriptorHeap*>;
-    void      flush();
+    void      setDevice(VDevice &dev);
 
   private:
     struct Entry {
       Sampler   smp;
-      VkSampler sampler=VK_NULL_HANDLE;
+      VkSampler sampler = VK_NULL_HANDLE;
+      uint64_t  value   = 0;
       };
 
+    uint64_t  implGet(const Sampler& s);
     VkSampler alloc(const Sampler& s);
-    uint32_t  allocHeap(const Sampler& s);
-    void      alloc(void* pheap, const Sampler& s);
 
     mutable SpinLock   sync;
     std::vector<Entry> chunks;
 
     VDevice*           device     = nullptr;
-    VkSampler          smpDefault = VK_NULL_HANDLE;
-
-    DSharedPtr<VDescriptorHeap*> memory;
-    std::vector<Sampler>         heapChunks;
+    uint64_t           smpDefault = VK_NULL_HANDLE;
   };
 
 }}
