@@ -3,7 +3,7 @@
 #include "vdevice.h"
 
 #include "vcommandbuffer.h"
-#include "vresourceheap.h"
+#include "vdescriptorallocator.h"
 #include "vfence.h"
 #include "vswapchain.h"
 
