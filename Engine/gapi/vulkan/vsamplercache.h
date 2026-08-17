@@ -3,7 +3,6 @@
 #include <Tempest/Texture2d>
 #include <vector>
 
-#include "gapi/vulkan/vbuffer.h"
 #include "utility/spinlock.h"
 
 #include "vulkan_sdk.h"
@@ -13,11 +12,12 @@ namespace Detail {
 
 class VDevice;
 class VBuffer;
+class VTexture;
 
-class VSamplerHeap final {
+class VSamplerCache final {
   public:
-    VSamplerHeap();
-    ~VSamplerHeap();
+    VSamplerCache();
+    ~VSamplerCache();
 
     static VkSamplerCreateInfo createInfo(const VDevice& dev, const Sampler& s);
 

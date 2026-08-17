@@ -19,7 +19,7 @@
 #include "gapi/vulkan/vpoolcache.h"
 #include "gapi/vulkan/vpsolayoutcache.h"
 #include "gapi/vulkan/vdescriptorallocator.h"
-#include "gapi/vulkan/vsamplerheap.h"
+#include "gapi/vulkan/vsamplercache.h"
 #include "gapi/uploadengine.h"
 #include "exceptions/exception.h"
 #include "utility/compiller_hints.h"
@@ -429,7 +429,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     VPoolCache              descPool;
 
     VDescriptorAllocator    descAlloc;
-    VSamplerHeap            samplers;
+    VSamplerCache           samplers;
 
     VkProps                 props = {};
 

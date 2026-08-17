@@ -1,6 +1,6 @@
 #if defined(TEMPEST_BUILD_VULKAN)
 
-#include "vsamplerheap.h"
+#include "vsamplercache.h"
 
 #include "vdevice.h"
 #include "vtexture.h"
@@ -8,22 +8,10 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-static uint32_t nextPot(uint32_t x) {
-  x--;
-  x |= x >> 1;
-  x |= x >> 2;
-  x |= x >> 4;
-  x |= x >> 8;
-  x |= x >> 16;
-  x++;
-  return x;
+VSamplerCache::VSamplerCache(){
   }
 
-
-VSamplerHeap::VSamplerHeap(){
-  }
-
-VSamplerHeap::~VSamplerHeap() {
+VSamplerCache::~VSamplerCache() {
   if(device->props.hasDescriptorHeap)
     return; // heap-allocator will clear whole vkBuffer
 
@@ -33,7 +21,7 @@ VSamplerHeap::~VSamplerHeap() {
     vkDestroySampler(device->device.impl,i.sampler,nullptr);
   }
 
-VkSamplerCreateInfo VSamplerHeap::createInfo(const VDevice& dev, const Sampler& s) {
+VkSamplerCreateInfo VSamplerCache::createInfo(const VDevice& dev, const Sampler& s) {
   VkSamplerCreateInfo samplerInfo = {};
   samplerInfo.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 
@@ -63,7 +51,7 @@ VkSamplerCreateInfo VSamplerHeap::createInfo(const VDevice& dev, const Sampler& 
   return samplerInfo;
   }
 
-void VSamplerHeap::setDevice(VDevice &dev) {
+void VSamplerCache::setDevice(VDevice &dev) {
   device = &dev;
 
   if(device->props.hasDescriptorHeap) {
@@ -73,7 +61,7 @@ void VSamplerHeap::setDevice(VDevice &dev) {
     }
   }
 
-uint64_t VSamplerHeap::implGet(const Sampler& s) {
+uint64_t VSamplerCache::implGet(const Sampler& s) {
   static const Sampler def;
   if(def==s)
     return smpDefault;
@@ -100,11 +88,11 @@ uint64_t VSamplerHeap::implGet(const Sampler& s) {
   return b.value;
   }
 
-VkSampler VSamplerHeap::get(const Sampler& s) {
+VkSampler VSamplerCache::get(const Sampler& s) {
   return VkSampler(implGet(s));
   }
 
-VkSampler VSamplerHeap::get(const Sampler& s, const VTexture* tex) {
+VkSampler VSamplerCache::get(const Sampler& s, const VTexture* tex) {
   auto sx = s;
   if(!tex->isFilterable) {
     sx.setFiltration(Filter::Nearest);
@@ -113,11 +101,11 @@ VkSampler VSamplerHeap::get(const Sampler& s, const VTexture* tex) {
   return get(sx);
   }
 
-uint32_t VSamplerHeap::getH(const Sampler& s) {
+uint32_t VSamplerCache::getH(const Sampler& s) {
   return uint32_t(implGet(s));
   }
 
-uint32_t VSamplerHeap::getH(const Sampler& s, const VTexture* tex) {
+uint32_t VSamplerCache::getH(const Sampler& s, const VTexture* tex) {
   auto sx = s;
   if(!tex->isFilterable) {
     sx.setFiltration(Filter::Nearest);
@@ -126,7 +114,7 @@ uint32_t VSamplerHeap::getH(const Sampler& s, const VTexture* tex) {
   return getH(sx);
   }
 
-VkSampler VSamplerHeap::alloc(const Sampler &s) {
+VkSampler VSamplerCache::alloc(const Sampler &s) {
   VkSamplerCreateInfo info = createInfo(*device, s);
 
   VkSampler sampler = VK_NULL_HANDLE;

@@ -57,7 +57,7 @@ VDescriptorAllocator::Allocation VDescriptorAllocator::alloc(const Sampler& s) {
     auto hPtrR = providerSmp.memory ? providerSmp.memory.handler->hptr : nullptr;
     auto res   = hPtrR + alloc.ptr*providerRes.elementSize;
 
-    VkSamplerCreateInfo   info = VSamplerHeap::createInfo(*providerSmp.dev, s);
+    VkSamplerCreateInfo   info = VSamplerCache::createInfo(*providerSmp.dev, s);
     VkHostAddressRangeEXT dest = {res, providerSmp.elementSize};
     vkAssert(vkWriteSamplerDescriptorsEXT(providerSmp.dev->device.impl, 1, &info, &dest));
     });
