@@ -67,7 +67,7 @@ jobs:
         run: |
           if ("${{ runner.os }}" -eq "Windows") {
             Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/$env:VK_SDK/windows/vulkansdk-windows-X64-$env:VK_SDK.exe" -OutFile VulkanSDK.exe
-            ./VulkanSDK.exe --accept-licenses --default-answer --confirm-command install --root "${{ github.workspace }}/VulkanSDK/${{ env.VK_SDK }}" 1>$null
+            ./VulkanSDK.exe --accept-licenses --default-answer --confirm-command install --root "${{ github.workspace }}/VulkanSDK/${{ env.VK_SDK }}/x86_64" 1>$null
             Get-ChildItem -Recurse "${{ github.workspace }}/VulkanSDK" -Directory | Select-Object FullName
             }
           if ("${{ runner.os }}" -eq "Linux") {
