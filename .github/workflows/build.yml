@@ -84,13 +84,10 @@ jobs:
           $env:VK_LAYER_PATH   = "$env:VULKAN_SDK/etc/vulkan/explicit_layers.d"
           $env:LD_LIBRARY_PATH = "$env:VULKAN_SDK/lib"
 
-          echo "VULKAN_SDK=$env:VULKAN_SDK" >> $env:GITHUB_ENV
-          echo "VK_LAYER_PATH=$env:VK_LAYER_PATH" >> $env:GITHUB_ENV
+          echo "VULKAN_SDK=$env:VULKAN_SDK"           >> $env:GITHUB_ENV
+          echo "VK_LAYER_PATH=$env:VK_LAYER_PATH"     >> $env:GITHUB_ENV
           echo "LD_LIBRARY_PATH=$env:LD_LIBRARY_PATH" >> $env:GITHUB_ENV
-
-          if("${{ runner.os }}" -eq "Windows") {
-            echo "$env:VULKAN_SDK/Bin" >> $env:GITHUB_PATH
-            }
+          echo "$env:VULKAN_SDK/Bin"                  >> $env:GITHUB_PATH
 
       # Install glslang
       - name: Install glslang (Linux/Windows)
