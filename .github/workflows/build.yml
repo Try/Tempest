@@ -51,30 +51,35 @@ jobs:
           sudo apt-get update
           sudo apt-get --yes install libvulkan-dev libasound2-dev libx11-dev libxcursor-dev ninja-build gdb
 
-      # Cached  Vulkan SDK
+      # Cached Vulkan SDK
       - name: VulkanSDK (cache)
         id: cache-vulkan
         uses: actions/cache@v5
         if: runner.os != 'macOS'
         with:
-          path: ${{ github.workspace }}/VulkanSDK/${{ env.VK_SDK }}
+          path: ${{ github.workspace }}/VulkanSDK/${{ env.VK_SDK }}/
           key: ${{ runner.os }}-${{ env.VK_SDK }}-v0
 
       # Install VulkanSDK
       - name: Install VulkanSDK (Linux/Windows)
-        if: runner.os != 'macOS'
+        if: runner.os != 'macOS' && steps.cache-vulkan.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
-          if ("${{ runner.os }}" -eq "Windows" -and "${{ steps.cache-vulkan.outputs.cache-hit }}" -ne 'true') {
+          if ("${{ runner.os }}" -eq "Windows") {
             Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/$env:VK_SDK/windows/vulkansdk-windows-X64-$env:VK_SDK.exe" -OutFile VulkanSDK.exe
             ./VulkanSDK.exe --accept-licenses --default-answer --confirm-command install 1>$null
             }
-          if ("${{ runner.os }}" -eq "Linux" -and "${{ steps.cache-vulkan.outputs.cache-hit }}" -ne 'true') {
+          if ("${{ runner.os }}" -eq "Linux") {
             Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/$env:VK_SDK/linux/vulkansdk-linux-x86_64-$env:VK_SDK.tar.xz -OutFile VulkanSDK.tar.xz
-            mkdir VulkanSDK
+            mkdir -p VulkanSDK
             tar -xJf VulkanSDK.tar.xz -C ./VulkanSDK
             }
 
+      # Setup VulkanSDK
+      - name: Setup VulkanSDK (Linux/Windows)
+        if: runner.os != 'macOS'
+        shell: pwsh
+        run: |
           if ("${{ runner.os }}" -eq "Windows") {
             echo "VULKAN_SDK=C:/VulkanSDK/$env:VK_SDK" >> $env:GITHUB_ENV
             echo "$env:VULKAN_SDK/Bin" >> $env:GITHUB_PATH
