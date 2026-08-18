@@ -51,22 +51,36 @@ jobs:
           sudo apt-get update
           sudo apt-get --yes install libvulkan-dev libasound2-dev libx11-dev libxcursor-dev ninja-build gdb
 
+      # Cached Vulkan SDK
+      - name: VulkanSDK (cache)
+        id: cache-vulkan
+        uses: actions/cache@v4
+        if: runner.os != 'macOS'
+        with:
+          path: |
+            ${{ runner.os == 'Windows' && 'C:\VulkanSDK\' || github.workspace }}${{ runner.os == 'Windows' && '' || '/VulkanSDK' }}\${{ env.VK_SDK }}
+          key: ${{ runner.os }}-${{ env.VK_SDK }}-v0
+
       # Install VulkanSDK
       - name: Install VulkanSDK (Linux/Windows)
         if: runner.os != 'macOS'
         shell: pwsh
         run: |
-          if ("${{ runner.os }}" -eq "Windows") {
+          if ("${{ runner.os }}" -eq "Windows" -and "${{ steps.cache-vulkan.outputs.cache-hit }}" -ne 'true') {
             Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/$env:VK_SDK/windows/vulkansdk-windows-X64-$env:VK_SDK.exe" -OutFile VulkanSDK.exe
             ./VulkanSDK.exe --accept-licenses --default-answer --confirm-command install 1>$null
-            echo "VULKAN_SDK=C:/VulkanSDK/$env:VK_SDK" >> $env:GITHUB_ENV
-            echo "$env:VULKAN_SDK/Bin" >> $env:GITHUB_PATH
             }
-          elseif ("${{ runner.os }}" -eq "Linux") {
+          if ("${{ runner.os }}" -eq "Linux" -and "${{ steps.cache-vulkan.outputs.cache-hit }}" -ne 'true') {
             Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/$env:VK_SDK/linux/vulkansdk-linux-x86_64-$env:VK_SDK.tar.xz -OutFile VulkanSDK.tar.xz
             mkdir VulkanSDK
             tar -xJf VulkanSDK.tar.xz -C ./VulkanSDK
+            }
 
+          if ("${{ runner.os }}" -eq "Windows") {
+            echo "VULKAN_SDK=C:/VulkanSDK/$env:VK_SDK" >> $env:GITHUB_ENV
+            echo "$env:VULKAN_SDK/Bin" >> $env:GITHUB_PATH
+            }
+          if ("${{ runner.os }}" -eq "Linux") {
             # Correctly assign the environment variables for the current PowerShell step execution context
             $env:VULKAN_SDK      = "${{ github.workspace }}/VulkanSDK/${{ env.VK_SDK }}/x86_64"
             $env:VK_LAYER_PATH   = "$env:VULKAN_SDK/etc/vulkan/explicit_layers.d"
