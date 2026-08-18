@@ -57,8 +57,7 @@ jobs:
         uses: actions/cache@v5
         if: runner.os != 'macOS'
         with:
-          path: |
-            ${{ runner.os == 'Windows' && 'C:\VulkanSDK\' || github.workspace }}${{ runner.os == 'Windows' && '' || '/VulkanSDK' }}\${{ env.VK_SDK }}
+          path: ${{ github.workspace }}/VulkanSDK/${{ env.VK_SDK }}
           key: ${{ runner.os }}-${{ env.VK_SDK }}-v0
 
       # Install VulkanSDK
