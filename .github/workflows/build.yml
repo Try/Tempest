@@ -68,7 +68,6 @@ jobs:
           if ("${{ runner.os }}" -eq "Windows") {
             Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/$env:VK_SDK/windows/vulkansdk-windows-X64-$env:VK_SDK.exe" -OutFile VulkanSDK.exe
             ./VulkanSDK.exe --accept-licenses --default-answer --confirm-command install --root "${{ github.workspace }}/VulkanSDK/${{ env.VK_SDK }}/x86_64" 1>$null
-            Get-ChildItem -Recurse "${{ github.workspace }}/VulkanSDK" -Directory | Select-Object FullName
             }
           if ("${{ runner.os }}" -eq "Linux") {
             Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/$env:VK_SDK/linux/vulkansdk-linux-x86_64-$env:VK_SDK.tar.xz -OutFile VulkanSDK.tar.xz
@@ -81,27 +80,16 @@ jobs:
         if: runner.os != 'macOS'
         shell: pwsh
         run: |
-          if ("${{ runner.os }}" -eq "Windows") {
-            $env:VULKAN_SDK      = "${{ github.workspace }}/VulkanSDK/${{ env.VK_SDK }}/x86_64"
-            $env:VK_LAYER_PATH   = "$env:VULKAN_SDK/etc/vulkan/explicit_layers.d"
-            $env:LD_LIBRARY_PATH = "$env:VULKAN_SDK/lib"
+          $env:VULKAN_SDK      = "${{ github.workspace }}/VulkanSDK/${{ env.VK_SDK }}/x86_64"
+          $env:VK_LAYER_PATH   = "$env:VULKAN_SDK/etc/vulkan/explicit_layers.d"
+          $env:LD_LIBRARY_PATH = "$env:VULKAN_SDK/lib"
 
-            echo "VULKAN_SDK=$env:VULKAN_SDK" >> $env:GITHUB_ENV
-            echo "VK_LAYER_PATH=$env:VK_LAYER_PATH" >> $env:GITHUB_ENV
-            echo "LD_LIBRARY_PATH=$env:LD_LIBRARY_PATH" >> $env:GITHUB_ENV
+          echo "VULKAN_SDK=$env:VULKAN_SDK" >> $env:GITHUB_ENV
+          echo "VK_LAYER_PATH=$env:VK_LAYER_PATH" >> $env:GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$env:LD_LIBRARY_PATH" >> $env:GITHUB_ENV
 
+          if("${{ runner.os }}" -eq "Windows") {
             echo "$env:VULKAN_SDK/Bin" >> $env:GITHUB_PATH
-            }
-          if ("${{ runner.os }}" -eq "Linux") {
-            # Correctly assign the environment variables for the current PowerShell step execution context
-            $env:VULKAN_SDK      = "${{ github.workspace }}/VulkanSDK/${{ env.VK_SDK }}/x86_64"
-            $env:VK_LAYER_PATH   = "$env:VULKAN_SDK/etc/vulkan/explicit_layers.d"
-            $env:LD_LIBRARY_PATH = "$env:VULKAN_SDK/lib"
-
-            # Persist them into the global GITHUB_ENV file so future workflow steps can read them too
-            echo "VULKAN_SDK=$env:VULKAN_SDK" >> $env:GITHUB_ENV
-            echo "VK_LAYER_PATH=$env:VK_LAYER_PATH" >> $env:GITHUB_ENV
-            echo "LD_LIBRARY_PATH=$env:LD_LIBRARY_PATH" >> $env:GITHUB_ENV
             }
 
       # Install glslang
