@@ -42,16 +42,9 @@ const Color& Label::textColor() const {
   return textCl;
   }
 
-void Label::setText(const char* t) {
+void Label::setText(std::string_view t) {
   updateFont();
   textM.setText(t);
-  invalidateSizeHint();
-  update();
-  }
-
-void Label::setText(const std::string &t) {
-  updateFont();
-  textM.setText(t.c_str());
   invalidateSizeHint();
   update();
   }

@@ -91,15 +91,15 @@ void TextModel::CommandErase::undo(TextModel& subj) {
   }
 
 
-TextModel::TextModel(const char *str)
-  :txt(std::strlen(str)+1){
-  std::memcpy(txt.data(),str,txt.size());
+TextModel::TextModel(std::string_view str)
+  :txt(str.size() + 1){
+  std::memcpy(txt.data(), str.data(), txt.size());
   buildIndex();
   }
 
-void TextModel::setText(const char *str) {
-  txt.resize(std::strlen(str)+1);
-  std::memcpy(txt.data(),str,txt.size());
+void TextModel::setText(std::string_view str) {
+  txt.resize(str.size() + 1);
+  std::memcpy(txt.data(), str.data(), txt.size());
   buildIndex();
   sz.actual=false;
   }

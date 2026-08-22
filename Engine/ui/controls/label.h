@@ -16,8 +16,7 @@ class Label : public Widget {
     void          setTextColor(const Color& c);
     const Color&  textColor() const;
 
-    void          setText(const char*        t);
-    void          setText(const std::string& t);
+    void          setText(std::string_view t);
 
   protected:
     void          paintEvent(Tempest::PaintEvent &e);

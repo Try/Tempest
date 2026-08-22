@@ -14,7 +14,7 @@ class Painter;
 class TextModel final {
   public:
     TextModel()=default;
-    TextModel(const char* text);
+    TextModel(std::string_view text);
 
     class Cursor final {
       private:
@@ -96,7 +96,7 @@ class TextModel final {
         char        prevShort[3]={};
       };
 
-    void        setText(const char* text);
+    void        setText(std::string_view text);
 
     void        insert(const char* txt,Cursor where);
     void        erase  (Cursor s, Cursor e);
