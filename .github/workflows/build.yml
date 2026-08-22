@@ -51,43 +51,12 @@ jobs:
           sudo apt-get update
           sudo apt-get --yes install libvulkan-dev libasound2-dev libx11-dev libxcursor-dev ninja-build gdb
 
-      # Cached Vulkan SDK
-      - name: VulkanSDK (cache)
-        id: cache-vulkan
-        uses: actions/cache@v5
+      # Setup VulkanSDK
+      - uses: ./.github/actions/setup-vulkan
         if: runner.os != 'macOS'
         with:
-          path: ${{ github.workspace }}/VulkanSDK/${{ env.VK_SDK }}/
-          key: ${{ runner.os }}-${{ env.VK_SDK }}-v0
-
-      # Install VulkanSDK
-      - name: Install VulkanSDK (Linux/Windows)
-        if: runner.os != 'macOS' && steps.cache-vulkan.outputs.cache-hit != 'true'
-        shell: pwsh
-        run: |
-          if ("${{ runner.os }}" -eq "Windows") {
-            Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/$env:VK_SDK/windows/vulkansdk-windows-X64-$env:VK_SDK.exe" -OutFile VulkanSDK.exe
-            ./VulkanSDK.exe --accept-licenses --default-answer --confirm-command install --root "${{ github.workspace }}/VulkanSDK/${{ env.VK_SDK }}/x86_64" 1>$null
-            }
-          if ("${{ runner.os }}" -eq "Linux") {
-            Invoke-WebRequest -Uri https://sdk.lunarg.com/sdk/download/$env:VK_SDK/linux/vulkansdk-linux-x86_64-$env:VK_SDK.tar.xz -OutFile VulkanSDK.tar.xz
-            mkdir -p VulkanSDK
-            tar -xJf VulkanSDK.tar.xz -C ./VulkanSDK
-            }
-
-      # Setup VulkanSDK
-      - name: Setup VulkanSDK (Linux/Windows)
-        if: runner.os != 'macOS'
-        shell: pwsh
-        run: |
-          $env:VULKAN_SDK      = "${{ github.workspace }}/VulkanSDK/${{ env.VK_SDK }}/x86_64"
-          $env:VK_LAYER_PATH   = "$env:VULKAN_SDK/etc/vulkan/explicit_layers.d"
-          $env:LD_LIBRARY_PATH = "$env:VULKAN_SDK/lib"
-
-          echo "VULKAN_SDK=$env:VULKAN_SDK"           >> $env:GITHUB_ENV
-          echo "VK_LAYER_PATH=$env:VK_LAYER_PATH"     >> $env:GITHUB_ENV
-          echo "LD_LIBRARY_PATH=$env:LD_LIBRARY_PATH" >> $env:GITHUB_ENV
-          echo "$env:VULKAN_SDK/Bin"                  >> $env:GITHUB_PATH
+          os: ${{ runner.os }}
+          vk-sdk: ${{ env.VK_SDK }}
 
       # Install glslang
       - name: Install glslang (Linux/Windows)
