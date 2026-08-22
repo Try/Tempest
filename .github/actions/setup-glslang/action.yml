@@ -24,5 +24,6 @@ runs:
         echo "${{ github.workspace }}/glslang/bin" >> $env:GITHUB_PATH
 
     - name: Install glslang (macOS)
+      shell: pwsh
       if: inputs.os == 'macOS'
       run: brew install glslang
