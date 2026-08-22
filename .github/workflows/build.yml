@@ -49,35 +49,24 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get --yes install libvulkan-dev libasound2-dev libx11-dev libxcursor-dev ninja-build gdb
+          sudo apt-get --yes install libasound2-dev libx11-dev libxcursor-dev ninja-build gdb
 
-      # Setup VulkanSDK
+      # System dependencies for macOS
+      - name: Install Ninja (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      # Setup Vulkan SDK
       - uses: ./.github/actions/setup-vulkan
         if: runner.os != 'macOS'
         with:
           os: ${{ runner.os }}
           vk-sdk: ${{ env.VK_SDK }}
 
-      # Install glslang
-      - name: Install glslang (Linux/Windows)
-        if: runner.os != 'macOS'
-        shell: pwsh
-        run: |
-          mkdir glslang
-          cd glslang
-          if ("${{ runner.os }}" -eq "Windows") {
-            Invoke-WebRequest -Uri https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-windows-x64-Release.zip -OutFile glslang-master.zip
-            }
-          elseif ("${{ runner.os }}" -eq "Linux") {
-            Invoke-WebRequest -Uri https://github.com/KhronosGroup/glslang/releases/download/master-tot/glslang-master-linux-Release.zip -OutFile glslang-master.zip
-            }
-          Expand-Archive -Path glslang-master.zip -DestinationPath ./
-          cd ../
-          echo "${{ github.workspace }}/glslang/bin" >> $env:GITHUB_PATH
-
-      - name: Install glslang (macOS)
-        if: runner.os == 'macOS'
-        run: brew install glslang ninja
+      # Setup glslang
+      - uses: ./.github/actions/setup-glslang
+        with:
+          os: ${{ runner.os }}
 
       # Set up MSVC environment variables
       - name: Set up MSVC Developer Command Prompt
