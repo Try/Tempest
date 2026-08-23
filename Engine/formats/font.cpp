@@ -441,7 +441,7 @@ Size Font::textSize(std::string_view text) const {
 
 Size Font::textSize(int maxW, std::string_view txt) const {
   Size ret;
-  if(txt==nullptr)
+  if(txt.empty())
     return ret;
 
   const int pSz = int(std::ceil(pixelSize()));
