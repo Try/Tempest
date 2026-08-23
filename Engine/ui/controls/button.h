@@ -27,8 +27,7 @@ class Button : public Widget {
     static constexpr CheckState Checked         =CheckState::Checked;
     static constexpr CheckState PartiallyChecked=CheckState::PartiallyChecked;
 
-    void         setText(const char* text);
-    void         setText(const std::string& text);
+    void         setText(std::string_view text);
     auto         text() -> const TextModel& { return textM; }
 
     void         setFont(const Font& f);

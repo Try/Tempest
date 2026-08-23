@@ -61,7 +61,7 @@ class TextModel final {
 
     class CommandInsert : public Command {
       public:
-        CommandInsert(const char* txt,Cursor where);
+        CommandInsert(std::string_view txt, Cursor where);
         void redo(TextModel &subj) override;
         void undo(TextModel &subj) override;
       private:
@@ -72,7 +72,7 @@ class TextModel final {
 
     class CommandReplace : public Command {
       public:
-        CommandReplace(const char* txt,Cursor beg,Cursor end);
+        CommandReplace(std::string_view txt, Cursor beg, Cursor end);
         void redo(TextModel &subj) override;
         void undo(TextModel &subj) override;
       private:
@@ -86,7 +86,7 @@ class TextModel final {
 
     class CommandErase : public Command {
       public:
-        CommandErase(Cursor beg,Cursor end);
+        CommandErase(Cursor beg, Cursor end);
         void redo(TextModel &subj) override;
         void undo(TextModel &subj) override;
       private:

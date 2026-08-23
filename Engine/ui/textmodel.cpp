@@ -10,14 +10,14 @@
 using namespace Tempest;
 
 
-TextModel::CommandInsert::CommandInsert(const char* txtIn, TextModel::Cursor where)
+TextModel::CommandInsert::CommandInsert(std::string_view txtIn, TextModel::Cursor where)
   : where(where) {
-  size_t l = std::strlen(txtIn);
+  size_t l = txtIn.size();
   if(l<=2) {
     txtShort[0] = txtIn[0];
     txtShort[1] = txtIn[1];
     } else {
-    txt.assign(txtIn,txtIn+l);
+    txt = txtIn;
     }
   }
 
@@ -36,16 +36,16 @@ void TextModel::CommandInsert::undo(TextModel& subj) {
   }
 
 
-TextModel::CommandReplace::CommandReplace(const char* txtIn, TextModel::Cursor beg, TextModel::Cursor e)
+TextModel::CommandReplace::CommandReplace(std::string_view txtIn, TextModel::Cursor beg, TextModel::Cursor e)
   : begin(beg), end(e) {
   if(end.line<begin.line || (end.line==begin.line && end.offset<begin.offset))
     std::swap(begin,end);
-  size_t l = std::strlen(txtIn);
+  size_t l = txtIn.size();
   if(l<=2) {
     txtShort[0] = txtIn[0];
     txtShort[1] = txtIn[1];
     } else {
-    txt.assign(txtIn,txtIn+l);
+    txt = txtIn;
     }
   }
 

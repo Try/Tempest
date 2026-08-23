@@ -38,14 +38,10 @@ void Button::updateFont() {
     textM.setFont(Application::font());
   }
 
-void Button::setText(const char *text) {
+void Button::setText(std::string_view text) {
   textM.setText(text);
   invalidateSizeHint();
   update();
-  }
-
-void Button::setText(const std::string& text) {
-  setText(text.c_str());
   }
 
 void Button::setFont(const Font &f) {
