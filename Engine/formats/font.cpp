@@ -110,9 +110,9 @@ struct FontElement::LetterTable {
 struct FontElement::Impl {
   enum { MIN_BUF_SZ=512 };
 
-  template<class CharT>
-  Impl(const CharT *filename) {
-    if(filename==nullptr)
+  template<class String>
+  Impl(String filename) {
+    if(filename.empty())
       return;
 
     RFile file(filename);
@@ -261,7 +261,7 @@ struct FontElement::Impl {
     try {
       std::lock_guard<std::mutex> guard(syncMap);
       if(fallback==nullptr){
-        fallback.reset(new Impl(Detail::getFallbackFont().c_str()));
+        fallback.reset(new Impl(Detail::getFallbackFont()));
         if(stbtt_InitFont(&fallback->info,fallback->data,0)==0)
           throw std::system_error(Tempest::SystemErrc::UnableToLoadAsset);
         }
@@ -302,33 +302,20 @@ struct FontElement::Impl {
   };
 
 FontElement::FontElement() {
-  static std::shared_ptr<Impl> dummy = std::make_shared<Impl>(static_cast<const char*>(nullptr));
+  static std::shared_ptr<Impl> dummy = std::make_shared<Impl>(std::string_view());
   ptr = dummy;
   }
 
 FontElement::FontElement(std::nullptr_t)
-  :FontElement(){
+  :FontElement() {
   }
 
-template<class CharT>
-FontElement::FontElement(const CharT *file,std::true_type)
+FontElement::FontElement(std::string_view file)
   :ptr(std::make_shared<Impl>(file)) {
   }
 
-FontElement::FontElement(const char *file)
-  :FontElement(file,std::true_type()) {
-  }
-
-FontElement::FontElement(const char16_t *file)
-  :FontElement(file,std::true_type()) {
-  }
-
-FontElement::FontElement(const std::string& file)
-  :FontElement(file.c_str(),std::true_type()) {
-  }
-
-FontElement::FontElement(const std::u16string& file)
-  :FontElement(file.c_str(),std::true_type()) {
+FontElement::FontElement(std::u16string_view file)
+  :ptr(std::make_shared<Impl>(file)) {
   }
 
 FontElement::FontElement(const void* data, size_t size)
@@ -343,8 +330,8 @@ const FontElement::Letter& FontElement::letter(char32_t ch, float size, TextureA
   return ptr->letter(ch,size,&tex);
   }
 
-Size FontElement::textSize(const char *text, float fontSize) const {
-  Utf8Iterator i(text);
+Size FontElement::textSize(std::string_view text, float fontSize) const {
+  Utf8Iterator i(text.data(), text.size());
 
   Size ret;
   int  minY = 0;
@@ -371,28 +358,20 @@ FontElement::Metrics FontElement::metrics(float size) const {
   return ptr->metrics(size);
   }
 
-template<class CharT>
-Font::Font(const CharT *file,std::true_type)
+template<class String>
+Font::Font(String file, std::true_type)
   : fnt{{file,nullptr},{nullptr,nullptr}}{
   fnt[1][0]=fnt[0][0];
   fnt[1][1]=fnt[0][0];
   fnt[0][1]=fnt[0][0];
   }
 
-Font::Font(const char *file)
+Font::Font(std::string_view file)
   : Font(file,std::true_type()){
   }
 
-Font::Font(const std::string &file)
-  : Font(file.c_str(),std::true_type()){
-  }
-
-Font::Font(const char16_t *file)
+Font::Font(std::u16string_view file)
   : Font(file,std::true_type()){
-  }
-
-Font::Font(const std::u16string &file)
-  : Font(file.c_str(),std::true_type()){
   }
 
 Font::Font(const FontElement& regular, const FontElement& bold,
@@ -456,22 +435,18 @@ const Font::Letter &Font::letter(char32_t ch, Painter &p) const {
   return letter(ch,p.ta);
   }
 
-Size Font::textSize(const char *text) const {
+Size Font::textSize(std::string_view text) const {
   return fnt[bold][italic].textSize(text,size);
   }
 
-Size Font::textSize(const std::string &text) const {
-  return textSize(text.c_str());
-  }
-
-Size Font::textSize(int maxW, const char* txt) const {
+Size Font::textSize(int maxW, std::string_view txt) const {
   Size ret;
   if(txt==nullptr)
     return ret;
 
   const int pSz = int(std::ceil(pixelSize()));
 
-  Utf8Iterator i(txt);
+  Utf8Iterator i(txt.data(), txt.size());
   while(i.hasData()) {
     // make next line
     int x = 0;
@@ -493,8 +468,4 @@ Size Font::textSize(int maxW, const char* txt) const {
     ret.h += pSz;
     }
   return ret;
-  }
-
-Size Font::textSize(int maxW, const std::string& text) const {
-  return textSize(maxW,text.c_str());
   }

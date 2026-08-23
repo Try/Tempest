@@ -157,6 +157,7 @@ inline uint8_t utf16ToCodepoint(const uint16_t* str,uint32_t& cp) {
 
 class Utf8Iterator {
   public:
+    Utf8Iterator(std::string_view str):Utf8Iterator(str.data(), str.size()){}
     Utf8Iterator(const char* str):Utf8Iterator(str,str==nullptr ? 0 :  std::strlen(str)){}
     Utf8Iterator(const char* str,size_t len)
       :str(reinterpret_cast<const uint8_t*>(str)),beg(this->str),end(this->str+len){}

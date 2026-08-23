@@ -520,8 +520,8 @@ void Painter::popState() {
     }
   }
 
-void Painter::drawText(int x, int y, const char *txt) {
-  if(txt==nullptr)
+void Painter::drawText(int x, int y, std::string_view txt) {
+  if(txt.empty())
     return;
   auto pb = s.br;
   auto fx = s.fnt;
@@ -552,8 +552,8 @@ void Painter::drawText(int x, int y, const char *txt) {
   setBrush(pb);
   }
 
-void Painter::drawText(int x, int y, const char16_t *txt) {
-  if(txt==nullptr)
+void Painter::drawText(int x, int y, std::u16string_view txt) {
+  if(txt.empty())
     return;
   auto pb = s.br;
   auto fx = s.fnt;
@@ -561,10 +561,10 @@ void Painter::drawText(int x, int y, const char16_t *txt) {
   const float kV = 1.f/s.tr.mat.scaleHintV();
   fx.setPixelSize(fx.pixelSize()*s.tr.mat.scaleHint());
 
-  for(;*txt;++txt) {
-    auto l = s.fnt.letterGeometry(*txt);
+  for(size_t i=0; i<txt.size(); ++i) {
+    auto l = s.fnt.letterGeometry(txt[i]);
     if(!l.size.isEmpty()) {
-      auto& v     = fx.letter(*txt,ta);
+      auto& v     = fx.letter(txt[i],ta);
       float dposX = float(v.dpos.x*kH), dposY = float(v.dpos.y*kV);
       float szX   = float(v.size.w*kH), szY   = float(v.size.h*kV);
 
@@ -577,14 +577,6 @@ void Painter::drawText(int x, int y, const char16_t *txt) {
     }
 
   setBrush(pb);
-  }
-
-void Painter::drawText(int x, int y, const std::string &txt) {
-  return drawText(x,y,txt.c_str());
-  }
-
-void Painter::drawText(int x, int y, const std::u16string &txt) {
-  return drawText(x,y,txt.c_str());
   }
 
 static int calcLineWidth(Utf8Iterator i, Utf8Iterator eol, const Font& fnt, TextureAtlas& ta) {
@@ -601,7 +593,7 @@ static int calcLineWidth(Utf8Iterator i, Utf8Iterator eol, const Font& fnt, Text
   return x;
   }
 
-static int calcTextHeight(const char* txt, const int w, int& l0, const Font& fnt) {
+static int calcTextHeight(std::string_view txt, const int w, int& l0, const Font& fnt) {
   int x = 0,  y=0, cnt = 0;
 
   Utf8Iterator i(txt);
@@ -634,8 +626,8 @@ static int calcTextHeight(const char* txt, const int w, int& l0, const Font& fnt
   return y;
   }
 
-void Painter::drawText(int rx, int ry, int w, int h, const char *txt, AlignFlag flg) {
-  if(txt==nullptr)
+void Painter::drawText(int rx, int ry, int w, int h, std::string_view txt, AlignFlag flg) {
+  if(txt.empty())
     return;
   auto pb = s.br;
   auto fx = s.fnt;
@@ -699,14 +691,6 @@ void Painter::drawText(int rx, int ry, int w, int h, const char *txt, AlignFlag 
   setBrush(pb);
   }
 
-void Painter::drawText(int x, int y, int w, int h, const std::string &txt, AlignFlag flg) {
-  drawText(x,y,w,h,txt.c_str(),flg);
-  }
-
-void Painter::drawText(const Rect& r, const char* txt, AlignFlag flg) {
-  drawText(r.x,r.y,r.w,r.h,txt,flg);
-  }
-
-void Painter::drawText(const Rect& r, const std::string& txt, AlignFlag flg) {
+void Painter::drawText(const Rect& r, std::string_view txt, AlignFlag flg) {
   drawText(r.x,r.y,r.w,r.h,txt,flg);
   }

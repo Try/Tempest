@@ -69,17 +69,10 @@ class Painter {
                        float x1, float y1, float u1, float v1,
                        float x2, float y2, float u2, float v2 );
 
-    void drawText(int x,int y,const char*     txt);
-    void drawText(int x,int y,const char16_t* txt);
-
-    void drawText(int x,int y,const std::string& txt);
-    void drawText(int x,int y,const std::u16string& txt);
-
-    void drawText(int x,int y,int w,int h,const char* txt,AlignFlag flg=NoAlign);
-    void drawText(int x,int y,int w,int h,const std::string& txt,AlignFlag flg=NoAlign);
-
-    void drawText(const Rect& rect,const char* txt,AlignFlag flg=NoAlign);
-    void drawText(const Rect& rect,const std::string& txt,AlignFlag flg=NoAlign);
+    void drawText(int x, int y, std::string_view txt);
+    void drawText(int x, int y, std::u16string_view txt);
+    void drawText(int x, int y, int w, int h, std::string_view txt, AlignFlag flg = NoAlign);
+    void drawText(const Rect& rect, std::string_view txt, AlignFlag flg = NoAlign);
 
   private:
     enum State:uint8_t {
