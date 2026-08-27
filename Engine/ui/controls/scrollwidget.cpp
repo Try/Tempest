@@ -236,11 +236,9 @@ Tempest::Widget &ScrollWidget::centralWidget() {
   }
 
 void ScrollWidget::setLayout(Orientation ori) {
-  layoutBusy=true;
+  ScrollWidget::LayoutLock lock(*this);
   cenLay = new BoxLayout(this,ori);
   cen.setLayout(cenLay);
-  layoutBusy=false;
-  applyLayout();
   }
 
 void ScrollWidget::hideScrollBars() {

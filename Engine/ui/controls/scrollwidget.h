@@ -19,6 +19,16 @@ class ScrollWidget : public Tempest::Widget {
       AlwaysOn
       };
 
+    class LayoutLock {
+      public:
+        LayoutLock(ScrollWidget& owner):owner(owner), prev(owner.layoutBusy) { owner.layoutBusy = true; }
+        ~LayoutLock() { owner.layoutBusy = prev; if(prev==false) owner.applyLayout(); }
+
+      private:
+        ScrollWidget& owner;
+        const bool    prev;
+      };
+
     Widget& centralWidget();
 
     void    setLayout(Tempest::Orientation ori);

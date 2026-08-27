@@ -55,9 +55,11 @@ Widget *Layout::at(size_t i) {
   }
 
 size_t Layout::find(Widget *wx) const {
-  for(size_t i=0;i<w->wx.size();++i)
+  for(size_t i=w->wx.size(); i>0;) {
+    --i;
     if(w->wx[i]==wx)
       return i;
+    }
   return size_t(-1);
   }
 

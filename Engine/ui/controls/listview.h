@@ -33,6 +33,7 @@ class ListView : public Widget {
     void updateView();
 
   private:
+    void implUpdateView();
     void implSetDelegate(ListDelegate* d);
 
     ScrollWidget                   sc;

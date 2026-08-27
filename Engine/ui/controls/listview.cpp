@@ -52,18 +52,24 @@ void ListView::setDefaultItemRole(ListDelegate::Role role) {
   }
 
 void ListView::invalidateView(){
+  ScrollWidget::LayoutLock lock(sc);
   auto& w = sc.centralWidget();
   while(w.widgetsCount()>0) {
     size_t i=w.widgetsCount()-1;
     auto wx = w.takeWidget(&w.widget(i));
     delegate->removeView(wx,i);
     }
-
-  updateView();
+  implUpdateView();
   onItemListChanged();
   }
 
 void ListView::updateView() {
+  ScrollWidget::LayoutLock lock(sc);
+  implUpdateView();
+  onItemListChanged();
+  }
+
+void ListView::implUpdateView() {
   auto&  w      = sc.centralWidget();
   size_t cnt    = delegate->size();
   size_t wcount = w.widgetsCount();
@@ -86,6 +92,4 @@ void ListView::updateView() {
   for(size_t i=wcount;i<cnt;++i){
     w.addWidget(delegate->createView(i,defaultRole));
     }
-
-  onItemListChanged();
   }
