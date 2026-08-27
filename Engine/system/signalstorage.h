@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <stdexcept>
+#include <new>
 #include <cstddef>
 
 namespace Tempest {
