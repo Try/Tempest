@@ -10,7 +10,7 @@ LineEdit::LineEdit() {
   invalidateSizeHint();
   }
 
-void LineEdit::setText(const char *text) {
+void LineEdit::setText(std::string_view text) {
   Utf8Iterator i(text);
   while(i.hasData()) {
     char32_t ch = i.next();
@@ -20,7 +20,7 @@ void LineEdit::setText(const char *text) {
   AbstractTextInput::setText(text);
   }
 
-void LineEdit::filterAndSetText(const char* text) {
+void LineEdit::filterAndSetText(std::string_view text) {
   std::string str;
 
   Utf8Iterator i(text);
@@ -34,7 +34,7 @@ void LineEdit::filterAndSetText(const char* text) {
     for(size_t r=i0;r<i1;++r)
       str.push_back(text[r]);
     }
-  AbstractTextInput::setText(str.c_str());
+  AbstractTextInput::setText(str);
   }
 
 void LineEdit::keyDownEvent(KeyEvent& e) {

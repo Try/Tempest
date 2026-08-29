@@ -6,6 +6,6 @@ TextEdit::TextEdit() {
   setMargins(Margin(4,4,0,0));
   }
 
-void TextEdit::setText(const char *text) {
+void TextEdit::setText(std::string_view text) {
   AbstractTextInput::setText(text);
   }

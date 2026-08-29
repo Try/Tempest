@@ -29,8 +29,7 @@ class AbstractTextInput : public Tempest::Widget {
   protected:
     AbstractTextInput();
 
-    virtual void      setText(const char* text);
-    void              setText(const std::string& text);
+    virtual void      setText(std::string_view text);
     const TextModel&  text() const;
 
     void              setFont(const Font& f);

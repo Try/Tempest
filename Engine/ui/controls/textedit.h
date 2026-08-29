@@ -8,7 +8,7 @@ class TextEdit : public Tempest::AbstractTextInput {
   public:
     TextEdit();
 
-    void  setText(const char* text) override;
+    void  setText(std::string_view text) override;
     using AbstractTextInput::setText;
     using AbstractTextInput::text;
 

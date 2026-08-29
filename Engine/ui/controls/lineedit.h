@@ -8,7 +8,7 @@ class LineEdit : public Tempest::AbstractTextInput {
   public:
     LineEdit();
 
-    void  setText(const char* text) override;
+    void  setText(std::string_view text) override;
     using AbstractTextInput::setText;
     using AbstractTextInput::text;
 
@@ -25,7 +25,7 @@ class LineEdit : public Tempest::AbstractTextInput {
     void keyRepeatEvent(Tempest::KeyEvent &event) override;
 
   private:
-    void filterAndSetText(const char* src);
+    void filterAndSetText(std::string_view src);
   };
 
 }

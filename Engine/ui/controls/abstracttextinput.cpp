@@ -62,16 +62,12 @@ void AbstractTextInput::adjustSelection() {
     selE = textM.clamp(selE);
   }
 
-void AbstractTextInput::setText(const char *text) {
+void AbstractTextInput::setText(std::string_view text) {
   textM.setText(text);
   adjustSelection();
   invalidateSizeHint();
   update();
   onTextChanged(textM);
-  }
-
-void AbstractTextInput::setText(const std::string& text) {
-  setText(text.c_str());
   }
 
 const TextModel& AbstractTextInput::text() const {
