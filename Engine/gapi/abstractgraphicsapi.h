@@ -175,6 +175,22 @@ namespace Tempest {
     return f==TextureFormat::DXT1 || f==TextureFormat::DXT3 || f==TextureFormat::DXT5;
     }
 
+  enum class SpatialScalerColorMode : uint8_t {
+    Perceptual,
+    Linear,
+    HDR,
+    };
+
+  struct SpatialScalerDesc final {
+    TextureFormat          inputFormat  = Undefined;
+    TextureFormat          outputFormat = Undefined;
+    uint32_t               inputWidth   = 0;
+    uint32_t               inputHeight  = 0;
+    uint32_t               outputWidth  = 0;
+    uint32_t               outputHeight = 0;
+    SpatialScalerColorMode colorMode    = SpatialScalerColorMode::Perceptual;
+    };
+
   enum class ComponentSwizzle {
     Identity = 0,
     R,
@@ -560,6 +576,7 @@ namespace Tempest {
         };
       struct BlasBuildCtx {};
       struct AccelerationStructure:Shared {};
+      struct SpatialScaler:NoCopy {};
       struct DescArray:NoCopy {};
       struct BarrierDesc {
         const Texture*   texture   = nullptr;
@@ -620,6 +637,8 @@ namespace Tempest {
 
         virtual void dispatch(size_t x, size_t y, size_t z) = 0;
         virtual void dispatchIndirect(const Buffer& indirect, size_t offset) = 0;
+
+        virtual bool spatialUpscale(SpatialScaler& scaler, Texture& input, Texture& output);
         };
 
       using PBuffer       = Detail::DSharedPtr<Buffer*>;
@@ -655,6 +674,7 @@ namespace Tempest {
 
       virtual AccelerationStructure* createBottomAccelerationStruct(Device* d, const RtGeometry* geom, size_t geomSize);
       virtual AccelerationStructure* createTopAccelerationStruct(Device* d, const RtInstance* geom, AccelerationStructure*const* as, size_t geomSize);
+      virtual SpatialScaler*         createSpatialScaler(Device* d, const SpatialScalerDesc& desc);
 
       virtual void       readPixels   (Device* d, Pixmap& out, const PTexture t,
                                        TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip, bool storageImg) = 0;

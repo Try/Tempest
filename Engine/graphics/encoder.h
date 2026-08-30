@@ -7,6 +7,7 @@
 #include <Tempest/DescriptorArray>
 #include <Tempest/UniformBuffer>
 #include <Tempest/AccelerationStructure>
+#include <Tempest/SpatialScaler>
 
 namespace Tempest {
 
@@ -119,6 +120,8 @@ class Encoder<Tempest::CommandBuffer> {
 
     void generateMipmaps(Attachment& tex);
 
+    bool spatialUpscale(const SpatialScaler& scaler, const Attachment& input, StorageImage& output);
+
   private:
     explicit Encoder(CommandBuffer* ow);
 
@@ -146,5 +149,4 @@ class Encoder<Tempest::CommandBuffer> {
   friend class CommandBuffer;
   };
 }
-
 
