@@ -97,6 +97,11 @@ bool AbstractGraphicsApi::CommandBuffer::spatialUpscale(SpatialScaler&, Texture&
   return false;
   }
 
+bool AbstractGraphicsApi::CommandBuffer::temporalUpscale(TemporalScaler&, Texture&, Texture&,
+                                                         Texture&, Texture&, const TemporalScalerArgs&) {
+  return false;
+  }
+
 AbstractGraphicsApi::AccelerationStructure* AbstractGraphicsApi::createBottomAccelerationStruct(Device* d, const RtGeometry* geom, size_t geomSize) {
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }
@@ -108,6 +113,11 @@ AbstractGraphicsApi::AccelerationStructure*
 
 AbstractGraphicsApi::SpatialScaler*
   AbstractGraphicsApi::createSpatialScaler(Device*, const SpatialScalerDesc&) {
+  return nullptr;
+  }
+
+AbstractGraphicsApi::TemporalScaler*
+  AbstractGraphicsApi::createTemporalScaler(Device*, const TemporalScalerDesc&) {
   return nullptr;
   }
 

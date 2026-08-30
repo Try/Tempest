@@ -263,6 +263,10 @@ SpatialScaler Device::spatialScaler(const SpatialScalerDesc& desc) {
   return SpatialScaler(api.createSpatialScaler(dev,desc));
   }
 
+TemporalScaler Device::temporalScaler(const TemporalScalerDesc& desc) {
+  return TemporalScaler(api.createTemporalScaler(dev,desc));
+  }
+
 ZBuffer Device::zbuffer(TextureFormat frm, const Size sz) {
   if(sz.w<0 || sz.h<0)
     throw std::system_error(Tempest::GraphicsErrc::TooLargeTexture, std::to_string(std::min(sz.w,sz.h)));

@@ -191,6 +191,27 @@ namespace Tempest {
     SpatialScalerColorMode colorMode    = SpatialScalerColorMode::Perceptual;
     };
 
+  struct TemporalScalerDesc final {
+    TextureFormat inputFormat  = Undefined;
+    TextureFormat depthFormat  = Undefined;
+    TextureFormat motionFormat = Undefined;
+    TextureFormat outputFormat = Undefined;
+    uint32_t      inputWidth   = 0;
+    uint32_t      inputHeight  = 0;
+    uint32_t      outputWidth  = 0;
+    uint32_t      outputHeight = 0;
+    bool          autoExposure = true;
+    };
+
+  struct TemporalScalerArgs final {
+    float jitterOffsetX      = 0.f;
+    float jitterOffsetY      = 0.f;
+    float motionVectorScaleX = 1.f;
+    float motionVectorScaleY = 1.f;
+    bool  resetHistory       = false;
+    bool  depthReversed      = false;
+    };
+
   enum class ComponentSwizzle {
     Identity = 0,
     R,
@@ -577,6 +598,7 @@ namespace Tempest {
       struct BlasBuildCtx {};
       struct AccelerationStructure:Shared {};
       struct SpatialScaler:NoCopy {};
+      struct TemporalScaler:NoCopy {};
       struct DescArray:NoCopy {};
       struct BarrierDesc {
         const Texture*   texture   = nullptr;
@@ -639,6 +661,8 @@ namespace Tempest {
         virtual void dispatchIndirect(const Buffer& indirect, size_t offset) = 0;
 
         virtual bool spatialUpscale(SpatialScaler& scaler, Texture& input, Texture& output);
+        virtual bool temporalUpscale(TemporalScaler& scaler, Texture& input, Texture& depth,
+                                     Texture& motion, Texture& output, const TemporalScalerArgs& args);
         };
 
       using PBuffer       = Detail::DSharedPtr<Buffer*>;
@@ -684,6 +708,7 @@ namespace Tempest {
 
       virtual void       getCaps(Device *d, Props& caps)=0;
       virtual SpatialScaler* createSpatialScaler(Device* d, const SpatialScalerDesc& desc);
+      virtual TemporalScaler* createTemporalScaler(Device* d, const TemporalScalerDesc& desc);
 
     friend class Tempest::Device;
     };
