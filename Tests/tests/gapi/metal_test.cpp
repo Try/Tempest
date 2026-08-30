@@ -4,6 +4,8 @@
 #include <Tempest/Fence>
 #include <Tempest/Pixmap>
 #include <Tempest/Log>
+#include <Tempest/Application>
+#include <Tempest/Window>
 
 #include <gtest/gtest.h>
 #include <gmock/gmock-matchers.h>
@@ -94,6 +96,59 @@ bool metalFxTemporalSupported() {
   return false;
 #endif
   }
+
+class MetalSwapchainWindow final : public Window {
+  public:
+    SystemApi::Window* nativeWindow() const { return hwnd(); }
+  };
+
+void swapchainSmoke(MetalApi::SwapchainRenderMode mode) {
+  MetalApi::Options options;
+  options.swapchainRenderMode = mode;
+  MetalApi api(ApiFlags::Validation,options);
+  Device device(api);
+  MetalSwapchainWindow window;
+  window.resize(64,64);
+  Application::processEvents();
+
+  Swapchain swapchain(device,window.nativeWindow());
+  std::vector<Fence> fences;
+  auto renderFrame = [&](const Vec4& clear) {
+    const uint32_t before = swapchain.currentImage();
+    auto command = device.commandBuffer();
+    {
+      auto encoder = command.startEncoding(device);
+      encoder.setFramebuffer({{swapchain[before],clear,Tempest::Preserve}});
+      }
+    fences.emplace_back(device.submit(command));
+    device.present(swapchain);
+    EXPECT_EQ(swapchain.currentImage(),(before+1)%swapchain.imageCount());
+    };
+
+  renderFrame(Vec4(1.f,0.f,0.f,1.f));
+  renderFrame(Vec4(0.f,1.f,0.f,1.f));
+  // Reset while both render and presentation command buffers can still be in
+  // flight. The operation gate and device idle tracking must close this race.
+  swapchain.reset();
+  for(auto& fence:fences)
+    fence.wait();
+  fences.clear();
+
+  window.resize(96,80);
+  Application::processEvents();
+  swapchain.reset();
+  EXPECT_GT(swapchain.w(),0u);
+  EXPECT_GT(swapchain.h(),0u);
+
+  renderFrame(Vec4(0.f,0.f,1.f,1.f));
+  renderFrame(Vec4(0.25f,0.5f,0.75f,1.f));
+  if(mode==MetalApi::SwapchainRenderMode::Direct)
+    EXPECT_THROW(device.present(swapchain),SwapchainSuboptimal);
+  // Leave the final submissions in flight. MtSwapchain destruction must wait
+  // for both CPU presentation setup and GPU completion without using `this`
+  // from a completion handler.
+  }
+
 #endif
 
 }
@@ -451,6 +506,29 @@ TEST(MetalApi,TemporalScaler) {
       Log::d("Skipping MetalFX temporal scaler testcase: ", e.what()); else
       throw;
     }
+#endif
+  }
+
+TEST(MetalApi,SwapchainRenderModeOptions) {
+  MetalApi::Options defaults;
+  EXPECT_EQ(defaults.swapchainRenderMode,MetalApi::SwapchainRenderMode::Copy);
+
+  MetalApi::Options direct;
+  direct.swapchainRenderMode = MetalApi::SwapchainRenderMode::Direct;
+#if defined(__OSX__)
+  EXPECT_NO_THROW(MetalApi(ApiFlags::NoFlags,direct));
+
+  MetalApi::Options invalid;
+  invalid.swapchainRenderMode = static_cast<MetalApi::SwapchainRenderMode>(255);
+  EXPECT_THROW(MetalApi(ApiFlags::NoFlags,invalid),std::invalid_argument);
+#endif
+  }
+
+TEST(MetalApi,SwapchainCopyAndDirectSmoke) {
+#if defined(__OSX__)
+  Application app;
+  swapchainSmoke(MetalApi::SwapchainRenderMode::Copy);
+  swapchainSmoke(MetalApi::SwapchainRenderMode::Direct);
 #endif
   }
 

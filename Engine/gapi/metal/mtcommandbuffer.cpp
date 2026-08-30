@@ -71,6 +71,7 @@ void MtCommandBuffer::end() {
   }
 
 void MtCommandBuffer::reset() {
+  swapchainFrames.clear();
   auto pool = NsPtr<NS::AutoreleasePool>::init();
   auto desc = NsPtr<MTL::CommandBufferDescriptor>::init();
   desc->setRetainedReferences(false);
@@ -100,7 +101,13 @@ void MtCommandBuffer::beginRendering(const FrameBufferDesc& fbo, size_t fboSize,
     auto clr = desc->colorAttachments()->object(i);
     if(fbo.sw[i]!=nullptr) {
       auto& s = *reinterpret_cast<MtSwapchain*>(fbo.sw[i]);
-      clr->setTexture(s.img[fbo.imgId[i]].tex.get());
+      auto frame = s.acquireRenderTarget(fbo.imgId[i]);
+      clr->setTexture(frame->texture.get());
+      bool known = false;
+      for(auto& existing:swapchainFrames)
+        known = known || existing.get()==frame.get();
+      if(!known)
+        swapchainFrames.push_back(std::move(frame));
       curFbo.colorFormat[curFbo.numColors] = s.format();
       } else {
       auto& t = *reinterpret_cast<MtTexture*>(fbo.att[i]);

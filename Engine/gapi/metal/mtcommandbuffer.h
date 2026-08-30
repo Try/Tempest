@@ -3,6 +3,8 @@
 #include <Tempest/AbstractGraphicsApi>
 #include <Metal/Metal.hpp>
 
+#include <memory>
+
 #include "gapi/shaderreflection.h"
 #include "mtfbolayout.h"
 #include "mtpipelinelay.h"
@@ -27,6 +29,7 @@ class MtSpatialScaler;
 #if defined(TEMPEST_BUILD_METALFX_TEMPORAL)
 class MtTemporalScaler;
 #endif
+class MtSwapchainFrame;
 
 class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
   public:
@@ -133,6 +136,7 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     NsPtr<MTL::BlitCommandEncoder>    encBlit;
 
     std::vector<const void*>          usedResources;
+    std::vector<std::shared_ptr<MtSwapchainFrame>> swapchainFrames;
 
     MtFboLayout                       curFbo;
     Push                              pushData;

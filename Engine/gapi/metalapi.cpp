@@ -35,9 +35,13 @@ MetalApi::MetalApi(ApiFlags f)
 
 MetalApi::MetalApi(ApiFlags f, const Options& options)
   :swapchainBufferCount(options.swapchainBufferCount),
-   shaderModuleCacheSize(options.shaderModuleCacheSize) {
+   shaderModuleCacheSize(options.shaderModuleCacheSize),
+   swapchainRenderMode(options.swapchainRenderMode) {
   if(swapchainBufferCount!=0 && swapchainBufferCount!=2 && swapchainBufferCount!=3)
     throw std::invalid_argument("Metal swapchain buffer count must be 0, 2, or 3");
+  if(swapchainRenderMode!=SwapchainRenderMode::Copy &&
+     swapchainRenderMode!=SwapchainRenderMode::Direct)
+    throw std::invalid_argument("Unknown Metal swapchain render mode");
 
   if((f & ApiFlags::Validation)==ApiFlags::Validation) {
     setenv("METAL_DEVICE_WRAPPER_TYPE","1",1);
@@ -95,7 +99,8 @@ AbstractGraphicsApi::Device* MetalApi::createDevice(std::string_view gpuName) {
 AbstractGraphicsApi::Swapchain *MetalApi::createSwapchain(SystemApi::Window *w,
                                                           AbstractGraphicsApi::Device* d) {
   auto& dev = *reinterpret_cast<MtDevice*>(d);
-  return new MtSwapchain(dev,w,swapchainBufferCount);
+  return new MtSwapchain(dev,w,swapchainBufferCount,
+                         swapchainRenderMode==SwapchainRenderMode::Direct);
   }
 
 AbstractGraphicsApi::PPipeline MetalApi::createPipeline(AbstractGraphicsApi::Device *d,
@@ -239,8 +244,11 @@ std::shared_ptr<AbstractGraphicsApi::Fence> MetalApi::submit(Device* d, CommandB
     throw DeviceLostException();
 
   MTL::CommandBuffer& cmd = *cx.impl;
+  auto swapchainFrames = std::make_shared<std::vector<MtSwapchain::Frame>>();
+  swapchainFrames->swap(cx.swapchainFrames);
   dx->onSubmit();
   cmd.addCompletedHandler(^(MTL::CommandBuffer* c){
+    (void)swapchainFrames;
     const MTL::CommandBufferStatus s = c->status();
     dx->signalFence(*pfence, s, MTL::CommandBufferError(c->error()->code()), c->error());
     if(s==MTL::CommandBufferStatusCompleted || s==MTL::CommandBufferStatusError)

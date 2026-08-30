@@ -6,11 +6,17 @@ namespace Tempest {
 
 class MetalApi : public AbstractGraphicsApi {
   public:
+    enum class SwapchainRenderMode:uint8_t {
+      Copy,
+      Direct,
+    };
+
     struct Options {
-      uint32_t swapchainBufferCount = 0;
+      uint32_t            swapchainBufferCount = 0;
       // Maximum number of compiled Metal shader modules kept per device.
       // Zero disables caching.
-      size_t   shaderModuleCacheSize = 0;
+      size_t              shaderModuleCacheSize = 0;
+      SwapchainRenderMode swapchainRenderMode  = SwapchainRenderMode::Copy;
       };
 
     explicit MetalApi(ApiFlags f=ApiFlags::NoFlags);
@@ -55,9 +61,10 @@ class MetalApi : public AbstractGraphicsApi {
     void           getCaps(Device *d, Props& caps) override;
 
   private:
-    bool           validation          = false;
-    uint32_t       swapchainBufferCount = 0;
-    size_t         shaderModuleCacheSize = 0;
+    bool                validation           = false;
+    uint32_t            swapchainBufferCount = 0;
+    size_t              shaderModuleCacheSize = 0;
+    SwapchainRenderMode swapchainRenderMode = SwapchainRenderMode::Copy;
   };
 
 }
