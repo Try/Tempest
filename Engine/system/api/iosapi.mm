@@ -494,9 +494,10 @@ static void detachWindowFromScene(TempestWindow* window) {
     options:(UISceneConnectionOptions *)options {
   (void)application;
   (void)options;
-  UISceneConfiguration* configuration =
-      [UISceneConfiguration configurationWithName:@"Tempest Scene"
-                                      sessionRole:connectingSceneSession.role];
+  UISceneConfiguration* configuration = connectingSceneSession.configuration;
+  if(configuration==nil)
+    configuration = [UISceneConfiguration configurationWithName:nil
+                                                     sessionRole:connectingSceneSession.role];
   configuration.delegateClass = [SceneDelegate class];
   return configuration;
   }
