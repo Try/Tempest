@@ -409,10 +409,10 @@ TEST(TemporalScaler, EncoderForwardsResourcesAndArgsAndEndsRendering) {
   auto* recordedDepth  = dynamic_cast<MockTexture*>(stats.scalerDepth);
   auto* recordedMotion = dynamic_cast<MockTexture*>(stats.scalerMotion);
   auto* recordedOutput = dynamic_cast<MockTexture*>(stats.scalerOutput);
-  ASSERT_NE(recordedInput,nullptr);
-  ASSERT_NE(recordedDepth,nullptr);
-  ASSERT_NE(recordedMotion,nullptr);
-  ASSERT_NE(recordedOutput,nullptr);
+  ASSERT_TRUE(recordedInput!=nullptr);
+  ASSERT_TRUE(recordedDepth!=nullptr);
+  ASSERT_TRUE(recordedMotion!=nullptr);
+  ASSERT_TRUE(recordedOutput!=nullptr);
   EXPECT_EQ(recordedInput->syncId(),NonUniqResId(1));
   EXPECT_EQ(recordedDepth->syncId(),NonUniqResId(2));
   EXPECT_EQ(recordedMotion->syncId(),NonUniqResId(4));

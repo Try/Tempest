@@ -322,7 +322,7 @@ TEST(SpatialScaler, EncoderUsesPublicResources) {
   EXPECT_EQ(stats.scalerEncoded,1);
   EXPECT_EQ(stats.renderingBegun,1);
   EXPECT_EQ(stats.renderingEnded,1);
-  EXPECT_NE(stats.scalerInput,nullptr);
-  EXPECT_NE(stats.scalerOutput,nullptr);
+  EXPECT_TRUE(stats.scalerInput!=nullptr);
+  EXPECT_TRUE(stats.scalerOutput!=nullptr);
   EXPECT_NE(stats.scalerInput,stats.scalerOutput);
   }
