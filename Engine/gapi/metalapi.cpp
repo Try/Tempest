@@ -33,7 +33,8 @@ MetalApi::MetalApi(ApiFlags f)
   }
 
 MetalApi::MetalApi(ApiFlags f, const Options& options)
-  :swapchainBufferCount(options.swapchainBufferCount) {
+  :swapchainBufferCount(options.swapchainBufferCount),
+   shaderModuleCacheSize(options.shaderModuleCacheSize) {
   if(swapchainBufferCount!=0 && swapchainBufferCount!=2 && swapchainBufferCount!=3)
     throw std::invalid_argument("Metal swapchain buffer count must be 0, 2, or 3");
 
@@ -73,7 +74,7 @@ std::vector<AbstractGraphicsApi::Props> MetalApi::devices() const {
   }
 
 AbstractGraphicsApi::Device* MetalApi::createDevice(std::string_view gpuName) {
-  return new MtDevice(gpuName,validation);
+  return new MtDevice(gpuName,validation,shaderModuleCacheSize);
   }
 
 AbstractGraphicsApi::Swapchain *MetalApi::createSwapchain(SystemApi::Window *w,
@@ -103,7 +104,9 @@ AbstractGraphicsApi::PCompPipeline MetalApi::createComputePipeline(AbstractGraph
 
 AbstractGraphicsApi::PShader MetalApi::createShader(AbstractGraphicsApi::Device *d, const void *source, size_t src_size) {
   auto& dx = *reinterpret_cast<MtDevice*>(d);
-  return PShader(new MtShader(dx,source,src_size));
+  return dx.shaderModules.getOrCreate(source,src_size,[&dx,source,src_size]() {
+    return PShader(new MtShader(dx,source,src_size));
+    });
   }
 
 AbstractGraphicsApi::PBuffer MetalApi::createBuffer(AbstractGraphicsApi::Device *d, const void *mem, size_t size,

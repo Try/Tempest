@@ -12,6 +12,7 @@
 #include "gapi/shaderreflection.h"
 #include "gapi/metal/mtsync.h"
 #include "gapi/metal/mtsamplercache.h"
+#include "gapi/metal/mtshadermodulecache.h"
 #include "nsptr.h"
 
 class MTLDevice;
@@ -245,7 +246,7 @@ inline MTL::RenderStages nativeFormat(ShaderReflection::Stage st) {
 
 class MtDevice : public AbstractGraphicsApi::Device {
   public:
-    MtDevice(std::string_view name, bool validation);
+    MtDevice(std::string_view name, bool validation, size_t shaderModuleCacheSize);
     ~MtDevice();
 
     static const uint32_t MaxFences = 32;
@@ -287,6 +288,8 @@ class MtDevice : public AbstractGraphicsApi::Device {
 
     Props                      prop;
     MtSamplerCache             samplers;
+    ShaderModuleCache<AbstractGraphicsApi::PShader>
+                               shaderModules;
     bool                       validation = false;
 
     static void deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev);

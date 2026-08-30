@@ -35,6 +35,35 @@ TEST(MetalApi,SwapchainBufferCountOptions) {
 #endif
   }
 
+TEST(MetalApi,ShaderModuleCacheOptions) {
+#if defined(__OSX__)
+  try {
+    MetalApi::Options options;
+    options.shaderModuleCacheSize = 1;
+    MetalApi api(ApiFlags::Validation,options);
+    Device   device(api);
+
+    auto firstVert  = device.shader("shader/simple_test.vert.sprv");
+    auto secondVert = device.shader("shader/simple_test.vert.sprv");
+    auto frag       = device.shader("shader/simple_test.frag.sprv");
+    auto firstPso   = device.pipeline(Topology::Triangles,RenderState(),firstVert,frag);
+
+    // Loading the vertex shader after eviction also verifies that client-held
+    // shader modules remain valid when the cache drops its own reference.
+    auto thirdVert = device.shader("shader/simple_test.vert.sprv");
+    auto secondPso = device.pipeline(Topology::Triangles,RenderState(),thirdVert,frag);
+    (void)secondVert;
+    (void)firstPso;
+    (void)secondPso;
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+#endif
+  }
+
 TEST(MetalApi,Vbo) {
 #if defined(__OSX__)
   GapiTestCommon::Vbo<MetalApi>();

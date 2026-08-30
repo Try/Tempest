@@ -8,6 +8,9 @@ class MetalApi : public AbstractGraphicsApi {
   public:
     struct Options {
       uint32_t swapchainBufferCount = 0;
+      // Maximum number of compiled Metal shader modules kept per device.
+      // Zero disables caching.
+      size_t   shaderModuleCacheSize = 0;
       };
 
     explicit MetalApi(ApiFlags f=ApiFlags::NoFlags);
@@ -52,6 +55,7 @@ class MetalApi : public AbstractGraphicsApi {
   private:
     bool           validation          = false;
     uint32_t       swapchainBufferCount = 0;
+    size_t         shaderModuleCacheSize = 0;
   };
 
 }

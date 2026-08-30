@@ -35,8 +35,8 @@ static MTL::LanguageVersion languageVersion() {
   return std::min<MTL::LanguageVersion>(MTL::LanguageVersion3_1, opt->languageVersion());
   }
 
-MtDevice::MtDevice(std::string_view name, bool validation)
-  : impl(mkDevice(name)), samplers(*impl), validation(validation) {
+MtDevice::MtDevice(std::string_view name, bool validation, size_t shaderModuleCacheSize)
+  : impl(mkDevice(name)), samplers(*impl), shaderModules(shaderModuleCacheSize), validation(validation) {
   if(impl.get()==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
