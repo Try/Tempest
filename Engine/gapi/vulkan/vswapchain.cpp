@@ -428,8 +428,10 @@ uint32_t VSwapchain::findImageCount(const SwapChainSupport& support) const {
 void VSwapchain::acquireNextImage() {
   VkResult code = implAcquireNextImage();
 
-  if(code==VK_ERROR_OUT_OF_DATE_KHR || code==VK_SUBOPTIMAL_KHR)
-    throw SwapchainSuboptimal();
+  if(code==VK_ERROR_OUT_OF_DATE_KHR || code==VK_SUBOPTIMAL_KHR) {
+    code = VK_SUCCESS;
+    ;//throw SwapchainSuboptimal();
+    }
 
   if(code!=VK_SUCCESS)
     vkAssert(code);
@@ -520,8 +522,10 @@ void VSwapchain::present() {
 
   auto tx = Application::tickCount();
   VkResult code = device.presentQueue->present(presentInfo);
-  if(code==VK_ERROR_OUT_OF_DATE_KHR || code==VK_SUBOPTIMAL_KHR)
-    throw SwapchainSuboptimal();
+  if(code==VK_ERROR_OUT_OF_DATE_KHR || code==VK_SUBOPTIMAL_KHR) {
+    code = VK_SUCCESS;
+    ;//throw SwapchainSuboptimal();
+    }
   tx = Application::tickCount()-tx;
   if(tx > 2) {
     // std::chrono::system_clock::time_point p = std::chrono::system_clock::now();
