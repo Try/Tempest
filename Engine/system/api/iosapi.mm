@@ -47,7 +47,18 @@ static std::atomic_bool isEngineReady{false};
 static std::atomic_bool isApplicationActive{false};
 static uint64_t         lifecycleGeneration   = 0;
 static bool             activationResumePending = false;
-static uint32_t         preferredFrameRate    = 0;
+static bool             idleTimerDisabled     = false;
+
+enum class FrameRateMode : uint8_t {
+  SystemDefault,
+  Fixed,
+  Range,
+  };
+
+static FrameRateMode frameRateMode      = FrameRateMode::SystemDefault;
+static uint32_t      frameRateMinimum   = 0;
+static uint32_t      frameRateMaximum   = 0;
+static uint32_t      frameRatePreferred = 0;
 
 @interface TempestWindow : UIWindow {
   @public Tempest::Window* owner;
@@ -275,15 +286,32 @@ static void applyPreferredFrameRate(CADisplayLink* displayLink) {
   if(displayLink==nil)
     return;
   if(@available(iOS 15.0, *)) {
-    if(preferredFrameRate==0)
-      displayLink.preferredFrameRateRange = CAFrameRateRangeDefault;
-    else
-      displayLink.preferredFrameRateRange =
-          CAFrameRateRangeMake(preferredFrameRate,preferredFrameRate,preferredFrameRate);
+    switch(frameRateMode) {
+      case FrameRateMode::SystemDefault:
+        displayLink.preferredFrameRateRange = CAFrameRateRangeDefault;
+        break;
+      case FrameRateMode::Fixed:
+        displayLink.preferredFrameRateRange =
+            CAFrameRateRangeMake(frameRatePreferred,frameRatePreferred,
+                                 frameRatePreferred);
+        break;
+      case FrameRateMode::Range:
+        displayLink.preferredFrameRateRange =
+            CAFrameRateRangeMake(frameRateMinimum,frameRateMaximum,
+                                 frameRatePreferred);
+        break;
+      }
     }
   else {
-    displayLink.preferredFramesPerSecond = NSInteger(preferredFrameRate);
+    displayLink.preferredFramesPerSecond =
+        frameRateMode==FrameRateMode::SystemDefault ? 0 :
+        NSInteger(frameRatePreferred);
     }
+  }
+
+static void applyIdleTimerPreference() {
+  [UIApplication sharedApplication].idleTimerDisabled =
+      isApplicationActive.load() && idleTimerDisabled ? YES : NO;
   }
 
 static void invalidateDisplayLink(TempestWindow* window) {
@@ -375,6 +403,7 @@ static void detachWindowFromScene(TempestWindow* window) {
     return;
   [NSObject cancelPreviousPerformRequestsWithTarget:self];
   isApplicationActive.store(true);
+  applyIdleTimerPreference();
   if(self.window->displayLink!=nil)
     self.window->displayLink.paused = NO;
   activationResumePending = true;
@@ -391,6 +420,7 @@ static void detachWindowFromScene(TempestWindow* window) {
   activationGeneration = ++lifecycleGeneration;
   activationResumePending = false;
   isApplicationActive.store(false);
+  applyIdleTimerPreference();
   self.window->hasPendingFrame.store(false);
   if(self.window->displayLink!=nil)
     self.window->displayLink.paused = YES;
@@ -403,6 +433,7 @@ static void detachWindowFromScene(TempestWindow* window) {
   activationGeneration = ++lifecycleGeneration;
   activationResumePending = false;
   isApplicationActive.store(false);
+  applyIdleTimerPreference();
   detachWindowFromScene(self.window);
   connected = false;
   self.window = nil;
@@ -423,6 +454,7 @@ static void detachWindowFromScene(TempestWindow* window) {
     activationGeneration = ++lifecycleGeneration;
     activationResumePending = false;
     isApplicationActive.store(false);
+    applyIdleTimerPreference();
     detachWindowFromScene(self.window);
     connected = false;
     }
@@ -467,7 +499,12 @@ static void detachWindowFromScene(TempestWindow* window) {
   activationResumePending = false;
   isApplicationActive.store(false);
   isRunning.store(false);
-  preferredFrameRate = 0;
+  idleTimerDisabled = false;
+  applyIdleTimerPreference();
+  frameRateMode      = FrameRateMode::SystemDefault;
+  frameRateMinimum   = 0;
+  frameRateMaximum   = 0;
+  frameRatePreferred = 0;
   if(mainWindow!=nil) {
     invalidateDisplayLink(mainWindow);
     mainWindow->owner = nullptr;
@@ -540,9 +577,46 @@ void Tempest::iOS::yieldToUIKit() {
 void Tempest::iOS::setPreferredFrameRate(uint32_t framesPerSecond) {
   if(![NSThread isMainThread])
     return;
-  preferredFrameRate = framesPerSecond;
+  frameRateMode      = framesPerSecond==0 ? FrameRateMode::SystemDefault :
+                                               FrameRateMode::Fixed;
+  frameRateMinimum   = framesPerSecond;
+  frameRateMaximum   = framesPerSecond;
+  frameRatePreferred = framesPerSecond;
   if(mainWindow!=nil)
     applyPreferredFrameRate(mainWindow->displayLink);
+  }
+
+void Tempest::iOS::setPreferredFrameRateRange(uint32_t minimumFramesPerSecond,
+                                              uint32_t maximumFramesPerSecond,
+                                              uint32_t preferredFramesPerSecond) {
+  if(![NSThread isMainThread])
+    return;
+  if(maximumFramesPerSecond==0) {
+    setPreferredFrameRate(0);
+    return;
+    }
+  if(minimumFramesPerSecond==0)
+    minimumFramesPerSecond = 1;
+  if(maximumFramesPerSecond<minimumFramesPerSecond)
+    maximumFramesPerSecond = minimumFramesPerSecond;
+  if(preferredFramesPerSecond<minimumFramesPerSecond)
+    preferredFramesPerSecond = minimumFramesPerSecond;
+  if(preferredFramesPerSecond>maximumFramesPerSecond)
+    preferredFramesPerSecond = maximumFramesPerSecond;
+
+  frameRateMode      = FrameRateMode::Range;
+  frameRateMinimum   = minimumFramesPerSecond;
+  frameRateMaximum   = maximumFramesPerSecond;
+  frameRatePreferred = preferredFramesPerSecond;
+  if(mainWindow!=nil)
+    applyPreferredFrameRate(mainWindow->displayLink);
+  }
+
+void Tempest::iOS::setIdleTimerDisabled(bool disabled) {
+  if(![NSThread isMainThread])
+    return;
+  idleTimerDisabled = disabled;
+  applyIdleTimerPreference();
   }
 
 static void drawFrame() {

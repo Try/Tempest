@@ -17,6 +17,17 @@ void yieldToUIKit();
 // cadence selected by the system.
 void setPreferredFrameRate(uint32_t framesPerSecond);
 
+// Request an adaptive display-link range. Values are normalized to
+// minimum <= preferred <= maximum. A zero maximum restores the system
+// default cadence.
+void setPreferredFrameRateRange(uint32_t minimumFramesPerSecond,
+                                uint32_t maximumFramesPerSecond,
+                                uint32_t preferredFramesPerSecond);
+
+// Control the iOS idle timer. The preference survives scene deactivation and
+// is applied again when the scene becomes active.
+void setIdleTimerDisabled(bool disabled);
+
 }
 
 #endif
