@@ -674,7 +674,6 @@ namespace Tempest {
 
       virtual AccelerationStructure* createBottomAccelerationStruct(Device* d, const RtGeometry* geom, size_t geomSize);
       virtual AccelerationStructure* createTopAccelerationStruct(Device* d, const RtInstance* geom, AccelerationStructure*const* as, size_t geomSize);
-      virtual SpatialScaler*         createSpatialScaler(Device* d, const SpatialScalerDesc& desc);
 
       virtual void       readPixels   (Device* d, Pixmap& out, const PTexture t,
                                        TextureFormat frm, const uint32_t w, const uint32_t h, uint32_t mip, bool storageImg) = 0;
@@ -684,6 +683,7 @@ namespace Tempest {
       virtual auto       submit (Device *d, CommandBuffer* cmd) -> std::shared_ptr<AbstractGraphicsApi::Fence> = 0;
 
       virtual void       getCaps(Device *d, Props& caps)=0;
+      virtual SpatialScaler* createSpatialScaler(Device* d, const SpatialScalerDesc& desc);
 
     friend class Tempest::Device;
     };
