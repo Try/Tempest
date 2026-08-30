@@ -19,6 +19,22 @@ TEST(MetalApi,MetalApi) {
 #endif
   }
 
+TEST(MetalApi,SwapchainBufferCountOptions) {
+#if defined(__OSX__)
+  for(uint32_t count : {0u,2u,3u}) {
+    MetalApi::Options options;
+    options.swapchainBufferCount = count;
+    EXPECT_NO_THROW(MetalApi(ApiFlags::NoFlags,options));
+    }
+
+  for(uint32_t count : {1u,4u}) {
+    MetalApi::Options options;
+    options.swapchainBufferCount = count;
+    EXPECT_THROW(MetalApi(ApiFlags::NoFlags,options),std::invalid_argument);
+    }
+#endif
+  }
+
 TEST(MetalApi,Vbo) {
 #if defined(__OSX__)
   GapiTestCommon::Vbo<MetalApi>();

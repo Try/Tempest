@@ -23,10 +23,20 @@
 
 #include <Metal/Metal.hpp>
 
+#include <stdexcept>
+
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-MetalApi::MetalApi(ApiFlags f) {
+MetalApi::MetalApi(ApiFlags f)
+  :MetalApi(f,Options{}) {
+  }
+
+MetalApi::MetalApi(ApiFlags f, const Options& options)
+  :swapchainBufferCount(options.swapchainBufferCount) {
+  if(swapchainBufferCount!=0 && swapchainBufferCount!=2 && swapchainBufferCount!=3)
+    throw std::invalid_argument("Metal swapchain buffer count must be 0, 2, or 3");
+
   if((f & ApiFlags::Validation)==ApiFlags::Validation) {
     setenv("METAL_DEVICE_WRAPPER_TYPE","1",1);
     setenv("METAL_DEBUG_ERROR_MODE",   "5",0);
@@ -69,7 +79,7 @@ AbstractGraphicsApi::Device* MetalApi::createDevice(std::string_view gpuName) {
 AbstractGraphicsApi::Swapchain *MetalApi::createSwapchain(SystemApi::Window *w,
                                                           AbstractGraphicsApi::Device* d) {
   auto& dev = *reinterpret_cast<MtDevice*>(d);
-  return new MtSwapchain(dev,w);
+  return new MtSwapchain(dev,w,swapchainBufferCount);
   }
 
 AbstractGraphicsApi::PPipeline MetalApi::createPipeline(AbstractGraphicsApi::Device *d,

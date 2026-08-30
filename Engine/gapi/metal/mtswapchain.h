@@ -18,7 +18,7 @@ class MtDevice;
 
 class MtSwapchain : public AbstractGraphicsApi::Swapchain {
   public:
-    MtSwapchain(MtDevice& dev, SystemApi::Window* w);
+    MtSwapchain(MtDevice& dev, SystemApi::Window* w, uint32_t bufferCount);
     ~MtSwapchain();
 
     void          reset() override;

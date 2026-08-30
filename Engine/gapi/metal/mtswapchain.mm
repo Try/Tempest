@@ -92,7 +92,7 @@ static CGRect windowRect(UIWindow* wnd) {
 #endif
 
 // note : MoltenVK supports NSView, UIView, CAMetalLayer, so we should align to it
-MtSwapchain::MtSwapchain(MtDevice& dev, SystemApi::Window *w)
+MtSwapchain::MtSwapchain(MtDevice& dev, SystemApi::Window *w, uint32_t bufferCount)
   :dev(dev), pimpl(new Impl()) {
   NSObject* obj = reinterpret_cast<NSObject*>(w);
   if([obj isKindOfClass : [SysWindow class]])
@@ -117,7 +117,10 @@ MtSwapchain::MtSwapchain(MtDevice& dev, SystemApi::Window *w)
   [lay setContentsScale:dpi];
 #if defined(__IOS__)
   // Swapchain takes too much memory on 2GB iPhone
-  lay.maximumDrawableCount      = 2;
+  lay.maximumDrawableCount      = bufferCount==0 ? 2 : bufferCount;
+#elif defined(__OSX__)
+  if(bufferCount!=0)
+    lay.maximumDrawableCount = bufferCount;
 #endif
   lay.pixelFormat               = MTLPixelFormatBGRA8Unorm;
   lay.allowsNextDrawableTimeout = NO;

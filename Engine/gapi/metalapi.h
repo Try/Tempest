@@ -6,7 +6,12 @@ namespace Tempest {
 
 class MetalApi : public AbstractGraphicsApi {
   public:
+    struct Options {
+      uint32_t swapchainBufferCount = 0;
+      };
+
     explicit MetalApi(ApiFlags f=ApiFlags::NoFlags);
+    MetalApi(ApiFlags f, const Options& options);
     ~MetalApi();
 
     std::vector<Props> devices() const override;
@@ -45,7 +50,8 @@ class MetalApi : public AbstractGraphicsApi {
     void           getCaps(Device *d, Props& caps) override;
 
   private:
-    bool           validation = false;
+    bool           validation          = false;
+    uint32_t       swapchainBufferCount = 0;
   };
 
 }
