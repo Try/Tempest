@@ -10,6 +10,12 @@
 #include "mttexture.h"
 #include "mtswapchain.h"
 #include "mtaccelerationstructure.h"
+#if defined(TEMPEST_BUILD_METALFX)
+#include "mtspatialscaler.h"
+#endif
+#if defined(TEMPEST_BUILD_METALFX_TEMPORAL)
+#include "mttemporalscaler.h"
+#endif
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -65,6 +71,7 @@ void MtCommandBuffer::end() {
   }
 
 void MtCommandBuffer::reset() {
+  swapchainFrames.clear();
   auto pool = NsPtr<NS::AutoreleasePool>::init();
   auto desc = NsPtr<MTL::CommandBufferDescriptor>::init();
   desc->setRetainedReferences(false);
@@ -94,7 +101,13 @@ void MtCommandBuffer::beginRendering(const FrameBufferDesc& fbo, size_t fboSize,
     auto clr = desc->colorAttachments()->object(i);
     if(fbo.sw[i]!=nullptr) {
       auto& s = *reinterpret_cast<MtSwapchain*>(fbo.sw[i]);
-      clr->setTexture(s.img[fbo.imgId[i]].tex.get());
+      auto frame = s.acquireRenderTarget(fbo.imgId[i]);
+      clr->setTexture(frame->texture.get());
+      bool known = false;
+      for(auto& existing:swapchainFrames)
+        known = known || existing.get()==frame.get();
+      if(!known)
+        swapchainFrames.push_back(std::move(frame));
       curFbo.colorFormat[curFbo.numColors] = s.format();
       } else {
       auto& t = *reinterpret_cast<MtTexture*>(fbo.att[i]);
@@ -795,5 +808,39 @@ void MtCommandBuffer::copy(AbstractGraphicsApi::Buffer& dest, size_t offset,
                            d.impl.get(),
                            offset, bpp*width,bpp*width*height);
   }
+
+#if defined(TEMPEST_BUILD_METALFX)
+bool MtCommandBuffer::spatialUpscale(AbstractGraphicsApi::SpatialScaler& scaler,
+                                     AbstractGraphicsApi::Texture& input,
+                                     AbstractGraphicsApi::Texture& output) {
+  setEncoder(E_None,nullptr);
+  auto* sx  = dynamic_cast<MtSpatialScaler*>(&scaler);
+  auto* src = dynamic_cast<MtTexture*>(&input);
+  auto* dst = dynamic_cast<MtTexture*>(&output);
+  if(sx==nullptr || src==nullptr || dst==nullptr || !sx->belongsTo(device))
+    return false;
+  return sx->encode(*impl,*src,*dst);
+  }
+#endif
+
+#if defined(TEMPEST_BUILD_METALFX_TEMPORAL)
+bool MtCommandBuffer::temporalUpscale(AbstractGraphicsApi::TemporalScaler& scaler,
+                                      AbstractGraphicsApi::Texture& input,
+                                      AbstractGraphicsApi::Texture& depth,
+                                      AbstractGraphicsApi::Texture& motion,
+                                      AbstractGraphicsApi::Texture& output,
+                                      const TemporalScalerArgs& args) {
+  setEncoder(E_None,nullptr);
+  auto* sx  = dynamic_cast<MtTemporalScaler*>(&scaler);
+  auto* src = dynamic_cast<MtTexture*>(&input);
+  auto* dep = dynamic_cast<MtTexture*>(&depth);
+  auto* mov = dynamic_cast<MtTexture*>(&motion);
+  auto* dst = dynamic_cast<MtTexture*>(&output);
+  if(sx==nullptr || src==nullptr || dep==nullptr || mov==nullptr || dst==nullptr ||
+     !sx->belongsTo(device))
+    return false;
+  return sx->encode(*impl,*src,*dep,*mov,*dst,args);
+  }
+#endif
 
 #endif

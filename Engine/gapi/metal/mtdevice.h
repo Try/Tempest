@@ -4,6 +4,7 @@
 #include <Tempest/AccelerationStructure>
 #include <Tempest/RenderState>
 #include <Tempest/Except>
+#include <Tempest/MetalApi>
 
 #include <Metal/Metal.hpp>
 #include <Foundation/Foundation.hpp>
@@ -12,12 +13,32 @@
 #include "gapi/shaderreflection.h"
 #include "gapi/metal/mtsync.h"
 #include "gapi/metal/mtsamplercache.h"
+#include "gapi/metal/mtshadermodulecache.h"
 #include "nsptr.h"
 
 class MTLDevice;
 
 namespace Tempest {
 namespace Detail {
+
+class MtPrecompiledLibraries;
+
+inline MTL::StorageMode hostVisibleStorageMode(MTL::Device& dev) {
+#ifdef __IOS__
+  // Managed storage is unavailable on iOS. The Simulator can still report
+  // hasUnifiedMemory()==false, so platform support is authoritative here.
+  (void)dev;
+  return MTL::StorageModeShared;
+#else
+  return dev.hasUnifiedMemory() ? MTL::StorageModeShared : MTL::StorageModeManaged;
+#endif
+  }
+
+inline MTL::ResourceOptions hostVisibleResourceOptions(MTL::Device& dev) {
+  return hostVisibleStorageMode(dev)==MTL::StorageModeShared
+           ? MTL::ResourceStorageModeShared
+           : MTL::ResourceStorageModeManaged;
+  }
 
 inline MTL::PixelFormat nativeFormat(TextureFormat frm) {
   switch(frm) {
@@ -74,6 +95,8 @@ inline MTL::PixelFormat nativeFormat(TextureFormat frm) {
       return MTL::PixelFormatRG11B10Float;
     case RGBA16F:
       return MTL::PixelFormatRGBA16Float;
+    case RG16F:
+      return MTL::PixelFormatRG16Float;
     }
   return MTL::PixelFormatInvalid;
   }
@@ -243,7 +266,8 @@ inline MTL::RenderStages nativeFormat(ShaderReflection::Stage st) {
 
 class MtDevice : public AbstractGraphicsApi::Device {
   public:
-    MtDevice(std::string_view name, bool validation);
+    MtDevice(std::string_view name, bool validation,
+             std::shared_ptr<const MetalApi::Options> precompiledOptions = {});
     ~MtDevice();
 
     static const uint32_t MaxFences = 32;
@@ -285,6 +309,10 @@ class MtDevice : public AbstractGraphicsApi::Device {
 
     Props                      prop;
     MtSamplerCache             samplers;
+    std::shared_ptr<const MetalApi::Options> precompiledOptions;
+    ShaderModuleCache<AbstractGraphicsApi::PShader>
+                               shaderModules;
+    std::unique_ptr<MtPrecompiledLibraries> precompiledLibraries;
     bool                       validation = false;
 
     static void deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev);

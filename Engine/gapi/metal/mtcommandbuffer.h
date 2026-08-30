@@ -3,10 +3,13 @@
 #include <Tempest/AbstractGraphicsApi>
 #include <Metal/Metal.hpp>
 
+#include <memory>
+
 #include "gapi/shaderreflection.h"
 #include "mtfbolayout.h"
 #include "mtpipelinelay.h"
 #include "nsptr.h"
+#include "mtmetalfx.h"
 
 namespace Tempest {
 
@@ -20,6 +23,13 @@ class MtPipeline;
 class MtCompPipeline;
 class MtDescriptorArray;
 class MtTopAccelerationStructure;
+#if defined(TEMPEST_BUILD_METALFX)
+class MtSpatialScaler;
+#endif
+#if defined(TEMPEST_BUILD_METALFX_TEMPORAL)
+class MtTemporalScaler;
+#endif
+class MtSwapchainFrame;
 
 class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
   public:
@@ -66,6 +76,19 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     void generateMipmap(AbstractGraphicsApi::Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
     void copy          (AbstractGraphicsApi::Buffer& dst, size_t offset,
                         AbstractGraphicsApi::Texture& src, uint32_t width, uint32_t height, uint32_t mip) override;
+#if defined(TEMPEST_BUILD_METALFX)
+    bool spatialUpscale(AbstractGraphicsApi::SpatialScaler& scaler,
+                        AbstractGraphicsApi::Texture& input,
+                        AbstractGraphicsApi::Texture& output) override;
+#endif
+#if defined(TEMPEST_BUILD_METALFX_TEMPORAL)
+    bool temporalUpscale(AbstractGraphicsApi::TemporalScaler& scaler,
+                         AbstractGraphicsApi::Texture& input,
+                         AbstractGraphicsApi::Texture& depth,
+                         AbstractGraphicsApi::Texture& motion,
+                         AbstractGraphicsApi::Texture& output,
+                         const TemporalScalerArgs& args) override;
+#endif
 
   private:
     enum EncType:uint8_t {
@@ -113,6 +136,7 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     NsPtr<MTL::BlitCommandEncoder>    encBlit;
 
     std::vector<const void*>          usedResources;
+    std::vector<std::shared_ptr<MtSwapchainFrame>> swapchainFrames;
 
     MtFboLayout                       curFbo;
     Push                              pushData;

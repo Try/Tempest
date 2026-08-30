@@ -323,3 +323,31 @@ void Encoder<CommandBuffer>::generateMipmaps(Attachment& tex) {
   uint32_t w = tex.w(), h = tex.h();
   impl->generateMipmap(*textureCast<Texture2d&>(tex).impl.handler,w,h,mipCount(w,h));
   }
+
+bool Encoder<CommandBuffer>::spatialUpscale(const SpatialScaler& scaler, const Attachment& input, StorageImage& output) {
+  if(scaler.isEmpty() || input.isEmpty() || output.isEmpty())
+    return false;
+  if(state.stage==Rendering)
+    impl->endRendering();
+  state = State();
+
+  auto& src = *textureCast<const Texture2d&>(input).impl.handler;
+  auto& dst = *output.tImpl.impl.handler;
+  return impl->spatialUpscale(*scaler.impl.handler,src,dst);
+  }
+
+bool Encoder<CommandBuffer>::temporalUpscale(TemporalScaler& scaler, const Attachment& input,
+                                             const ZBuffer& depth, const Attachment& motion,
+                                             StorageImage& output, const TemporalScalerArgs& args) {
+  if(scaler.isEmpty() || input.isEmpty() || depth.isEmpty() || motion.isEmpty() || output.isEmpty())
+    return false;
+  if(state.stage==Rendering)
+    impl->endRendering();
+  state = State();
+
+  auto& src = *textureCast<const Texture2d&>(input).impl.handler;
+  auto& dep = *textureCast<const Texture2d&>(depth).impl.handler;
+  auto& mov = *textureCast<const Texture2d&>(motion).impl.handler;
+  auto& dst = *textureCast<Texture2d&>(output).impl.handler;
+  return impl->temporalUpscale(*scaler.impl.handler,src,dep,mov,dst,args);
+  }

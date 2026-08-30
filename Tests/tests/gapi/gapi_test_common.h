@@ -562,6 +562,41 @@ void Draw(const char* outImage) {
   }
 
 template<class GraphicsApi>
+void FormatRG16F() {
+  using namespace Tempest;
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    if(!device.properties().hasAttachFormat(TextureFormat::RG16F)) {
+      Log::d("Skipping RG16F testcase: no format support");
+      return;
+      }
+
+    auto tex = device.attachment(TextureFormat::RG16F,4,4);
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setFramebuffer({{tex,Vec4(0.25f,0.5f,0.f,1.f),Tempest::Preserve}});
+    }
+
+    auto sync = device.submit(cmd);
+    sync.wait();
+
+    auto pm = device.readPixels(tex);
+    EXPECT_EQ(pm.format(),TextureFormat::RG16F);
+    EXPECT_EQ(pm.bpp(),4);
+    EXPECT_EQ(pm.dataSize(),64);
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ",e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void InstanceIndex(const char* outImage) {
   using namespace Tempest;
 

@@ -259,6 +259,14 @@ StorageImage Tempest::Device::image2d(TextureFormat frm, const Size sz, const bo
   return image2d(frm,sz.w,sz.h,mips);
   }
 
+SpatialScaler Device::spatialScaler(const SpatialScalerDesc& desc) {
+  return SpatialScaler(api.createSpatialScaler(dev,desc));
+  }
+
+TemporalScaler Device::temporalScaler(const TemporalScalerDesc& desc) {
+  return TemporalScaler(api.createTemporalScaler(dev,desc));
+  }
+
 ZBuffer Device::zbuffer(TextureFormat frm, const Size sz) {
   if(sz.w<0 || sz.h<0)
     throw std::system_error(Tempest::GraphicsErrc::TooLargeTexture, std::to_string(std::min(sz.w,sz.h)));
@@ -410,4 +418,3 @@ Detail::VideoBuffer Device::createVideoBuffer(const void *data, size_t size, Mem
   Detail::VideoBuffer buf(api.createBuffer(dev,data,size,usage,flg), size);
   return  buf;
   }
-

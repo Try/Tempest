@@ -1,6 +1,7 @@
 #if defined(TEMPEST_BUILD_METAL)
 
 #include "mtdevice.h"
+#include "mtprecompiledlibrary.h"
 #include "thirdparty/spirv_cross/spirv_msl.hpp"
 
 #include <Tempest/Log>
@@ -35,8 +36,11 @@ static MTL::LanguageVersion languageVersion() {
   return std::min<MTL::LanguageVersion>(MTL::LanguageVersion3_1, opt->languageVersion());
   }
 
-MtDevice::MtDevice(std::string_view name, bool validation)
-  : impl(mkDevice(name)), samplers(*impl), validation(validation) {
+MtDevice::MtDevice(std::string_view name, bool validation,
+                   std::shared_ptr<const MetalApi::Options> precompiledOptions)
+  : impl(mkDevice(name)), samplers(*impl), precompiledOptions(std::move(precompiledOptions)),
+    shaderModules(this->precompiledOptions!=nullptr ?
+                  this->precompiledOptions->shaderModuleCacheSize : 0), validation(validation) {
   if(impl.get()==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
@@ -61,6 +65,8 @@ MtDevice::MtDevice(std::string_view name, bool validation)
     prop.transposedRtMatrix = true;
     }
   deductProps(prop,*impl);
+  if(this->precompiledOptions!=nullptr && !this->precompiledOptions->precompiledLibraries.empty())
+    precompiledLibraries = std::make_unique<MtPrecompiledLibraries>(*impl,*this->precompiledOptions);
   }
 
 MtDevice::~MtDevice() {
@@ -221,20 +227,20 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
                                       TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
                                       TextureFormat::R32F, TextureFormat::RG32F, TextureFormat::RGBA32F,
                                       TextureFormat::R32U, TextureFormat::RG32U, TextureFormat::RGBA32U,
-                                      TextureFormat::R11G11B10UF, TextureFormat::RGBA16F,
+                                      TextureFormat::R11G11B10UF, TextureFormat::RGBA16F, TextureFormat::RG16F,
                                      };
 
   static const TextureFormat att[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
                                       TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
                                       TextureFormat::R32F, TextureFormat::RG32F, TextureFormat::RGBA32F,
-                                      TextureFormat::R11G11B10UF, TextureFormat::RGBA16F,
+                                      TextureFormat::R11G11B10UF, TextureFormat::RGBA16F, TextureFormat::RG16F,
                                      };
 
   static const TextureFormat sso[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
                                       TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
                                       TextureFormat::R32U, TextureFormat::RG32U, TextureFormat::RGBA32U,
                                       TextureFormat::R32F, TextureFormat::RGBA32F,
-                                      TextureFormat::R11G11B10UF, TextureFormat::RGBA16F,
+                                      TextureFormat::R11G11B10UF, TextureFormat::RGBA16F, TextureFormat::RG16F,
                                      };
 
   static const TextureFormat ds[]  = {TextureFormat::Depth16, TextureFormat::Depth32F};
@@ -258,6 +264,7 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
       storBit |= uint64_t(1) << TextureFormat::RGBA32U;
       // 16 bit
       storBit |= uint64_t(1) << TextureFormat::RGBA16F;
+      storBit |= uint64_t(1) << TextureFormat::RG16F;
       // 8 bit
       storBit |= uint64_t(1) << TextureFormat::R8;
       [[fallthrough]];

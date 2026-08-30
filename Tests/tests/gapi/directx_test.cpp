@@ -122,6 +122,12 @@ TEST(DirectX12Api,Draw) {
 #endif
   }
 
+TEST(DirectX12Api,RG16F) {
+#if defined(_MSC_VER)
+  GapiTestCommon::FormatRG16F<DirectX12Api>();
+#endif
+  }
+
 TEST(DirectX12Api,DepthWrite) {
 #if defined(_MSC_VER)
   GapiTestCommon::DepthWrite<DirectX12Api>("DirectX12Api_DepthWrite.png");

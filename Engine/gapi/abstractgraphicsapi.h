@@ -128,6 +128,7 @@ namespace Tempest {
     DXT5,
     R11G11B10UF,
     RGBA16F,
+    RG16F,
     Last
     };
 
@@ -159,6 +160,7 @@ namespace Tempest {
       case DXT5:        return "DXT5";
       case R11G11B10UF: return "R11G11B10UF";
       case RGBA16F:     return "RGBA16F";
+      case RG16F:       return "RG16F";
       case Last:
         break;
       }
@@ -172,6 +174,43 @@ namespace Tempest {
   inline bool isCompressedFormat(TextureFormat f){
     return f==TextureFormat::DXT1 || f==TextureFormat::DXT3 || f==TextureFormat::DXT5;
     }
+
+  enum class SpatialScalerColorMode : uint8_t {
+    Perceptual,
+    Linear,
+    HDR,
+    };
+
+  struct SpatialScalerDesc final {
+    TextureFormat          inputFormat  = Undefined;
+    TextureFormat          outputFormat = Undefined;
+    uint32_t               inputWidth   = 0;
+    uint32_t               inputHeight  = 0;
+    uint32_t               outputWidth  = 0;
+    uint32_t               outputHeight = 0;
+    SpatialScalerColorMode colorMode    = SpatialScalerColorMode::Perceptual;
+    };
+
+  struct TemporalScalerDesc final {
+    TextureFormat inputFormat  = Undefined;
+    TextureFormat depthFormat  = Undefined;
+    TextureFormat motionFormat = Undefined;
+    TextureFormat outputFormat = Undefined;
+    uint32_t      inputWidth   = 0;
+    uint32_t      inputHeight  = 0;
+    uint32_t      outputWidth  = 0;
+    uint32_t      outputHeight = 0;
+    bool          autoExposure = true;
+    };
+
+  struct TemporalScalerArgs final {
+    float jitterOffsetX      = 0.f;
+    float jitterOffsetY      = 0.f;
+    float motionVectorScaleX = 1.f;
+    float motionVectorScaleY = 1.f;
+    bool  resetHistory       = false;
+    bool  depthReversed      = false;
+    };
 
   enum class ComponentSwizzle {
     Identity = 0,
@@ -558,6 +597,8 @@ namespace Tempest {
         };
       struct BlasBuildCtx {};
       struct AccelerationStructure:Shared {};
+      struct SpatialScaler:NoCopy {};
+      struct TemporalScaler:NoCopy {};
       struct DescArray:NoCopy {};
       struct BarrierDesc {
         const Texture*   texture   = nullptr;
@@ -618,6 +659,10 @@ namespace Tempest {
 
         virtual void dispatch(size_t x, size_t y, size_t z) = 0;
         virtual void dispatchIndirect(const Buffer& indirect, size_t offset) = 0;
+
+        virtual bool spatialUpscale(SpatialScaler& scaler, Texture& input, Texture& output);
+        virtual bool temporalUpscale(TemporalScaler& scaler, Texture& input, Texture& depth,
+                                     Texture& motion, Texture& output, const TemporalScalerArgs& args);
         };
 
       using PBuffer       = Detail::DSharedPtr<Buffer*>;
@@ -662,6 +707,8 @@ namespace Tempest {
       virtual auto       submit (Device *d, CommandBuffer* cmd) -> std::shared_ptr<AbstractGraphicsApi::Fence> = 0;
 
       virtual void       getCaps(Device *d, Props& caps)=0;
+      virtual SpatialScaler* createSpatialScaler(Device* d, const SpatialScalerDesc& desc);
+      virtual TemporalScaler* createTemporalScaler(Device* d, const TemporalScalerDesc& desc);
 
     friend class Tempest::Device;
     };

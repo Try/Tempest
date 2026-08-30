@@ -6,6 +6,7 @@
 #include <Tempest/Except>
 
 #include "mtdevice.h"
+#include "mtprecompiledlibrary.h"
 #include "gapi/shaderreflection.h"
 #include "thirdparty/spirv_cross/spirv_msl.hpp"
 
@@ -20,16 +21,40 @@ static uint32_t spvVersion(MTL::LanguageVersion v) {
   return spirv_cross::CompilerMSL::Options::make_msl_version(major,minor,0);
   }
 
+static MetalApi::PrecompiledShaderStage shaderStage(ShaderReflection::Stage stage) {
+  switch(stage) {
+    case ShaderReflection::Stage::Vertex:   return MetalApi::PrecompiledShaderStage::Vertex;
+    case ShaderReflection::Stage::Control:  return MetalApi::PrecompiledShaderStage::Control;
+    case ShaderReflection::Stage::Evaluate: return MetalApi::PrecompiledShaderStage::Evaluate;
+    case ShaderReflection::Stage::Geometry: return MetalApi::PrecompiledShaderStage::Geometry;
+    case ShaderReflection::Stage::Fragment: return MetalApi::PrecompiledShaderStage::Fragment;
+    case ShaderReflection::Stage::Compute:  return MetalApi::PrecompiledShaderStage::Compute;
+    case ShaderReflection::Stage::Task:     return MetalApi::PrecompiledShaderStage::Task;
+    case ShaderReflection::Stage::Mesh:     return MetalApi::PrecompiledShaderStage::Mesh;
+    case ShaderReflection::Stage::None:     break;
+    }
+  return MetalApi::PrecompiledShaderStage::Compute;
+  }
+
 MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize)
   : Shader(source, srcSize) {
   auto pool = NsPtr<NS::AutoreleasePool>::init();
   spirv_cross::CompilerMSL::Options optMSL;
+  MetalApi::PrecompiledShaderProfile precompiledProfile;
 #if defined(__OSX__)
   optMSL.platform = spirv_cross::CompilerMSL::Options::macOS;
+  precompiledProfile.platform = MetalApi::PrecompiledPlatform::MacOS;
 #else
   optMSL.platform = spirv_cross::CompilerMSL::Options::iOS;
+#if defined(TARGET_OS_SIMULATOR) && TARGET_OS_SIMULATOR
+  precompiledProfile.platform = MetalApi::PrecompiledPlatform::IOSSimulator;
+#else
+  precompiledProfile.platform = MetalApi::PrecompiledPlatform::IOSDevice;
+#endif
 #endif
   optMSL.buffer_size_buffer_index = MSL_BUFFER_LENGTH;
+  precompiledProfile.stage                 = shaderStage(stage);
+  precompiledProfile.bufferSizeBufferIndex = MSL_BUFFER_LENGTH;
 
   spirv_cross::CompilerGLSL::Options optGLSL;
   optGLSL.vertex.flip_vert_y = true;
@@ -48,7 +73,8 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize)
       optMSL.readwrite_texture_fences = false;
       }
 
-    if(!dev.useNativeImageAtomic()) {
+    const bool nativeImageAtomics = dev.useNativeImageAtomic();
+    if(!nativeImageAtomics) {
       const uint32_t align = dev.linearImageAlignment();
       optMSL.r32ui_linear_texture_alignment = align;
       optMSL.r32ui_alignment_constant_id    = 0;
@@ -70,6 +96,14 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize)
           break;
         }
       }
+    precompiledProfile.mslVersion                 = optMSL.msl_version;
+    precompiledProfile.flipVertY                  = optGLSL.vertex.flip_vert_y;
+    precompiledProfile.argumentBuffersTier        = uint8_t(optMSL.argument_buffers_tier);
+    precompiledProfile.runtimeArrayRichDescriptor = optMSL.runtime_array_rich_descriptor;
+    precompiledProfile.readWriteTextureFences     = optMSL.readwrite_texture_fences;
+    precompiledProfile.nativeImageAtomics         = nativeImageAtomics;
+    precompiledProfile.r32uiLinearTextureAlignment= optMSL.r32ui_linear_texture_alignment;
+    precompiledProfile.r32uiAlignmentConstantId   = optMSL.r32ui_alignment_constant_id;
     comp.set_msl_options   (optMSL );
     comp.set_common_options(optGLSL);
 
@@ -124,6 +158,12 @@ MtShader::MtShader(MtDevice& dev, const void* source, size_t srcSize)
     }
 
   //Log::d(msl);
+
+  if(dev.precompiledLibraries!=nullptr) {
+    impl = dev.precompiledLibraries->find(msl,precompiledProfile);
+    if(impl!=nullptr)
+      return;
+    }
 
   auto       opt = NsPtr<MTL::CompileOptions>::init();
   NS::Error* err = nullptr;
