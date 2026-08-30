@@ -261,8 +261,15 @@ struct FontElement::Impl {
     try {
       std::lock_guard<std::mutex> guard(syncMap);
       if(fallback==nullptr){
-        fallback.reset(new Impl(Detail::getFallbackFont()));
-        if(stbtt_InitFont(&fallback->info,fallback->data,0)==0)
+        const std::string path = Detail::getFallbackFont();
+        // Only Windows currently provides a platform fallback path. An empty
+        // Impl has no stb_truetype data, so passing its null buffer to
+        // stbtt_InitFont is undefined behaviour (and crashes on iOS/macOS).
+        if(path.empty())
+          return nullLater();
+        fallback.reset(new Impl(path));
+        if(fallback->data==nullptr || fallback->size==0 ||
+           stbtt_InitFont(&fallback->info,fallback->data,0)==0)
           throw std::system_error(Tempest::SystemErrc::UnableToLoadAsset);
         }
 
