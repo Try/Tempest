@@ -5,7 +5,9 @@
 #include <Tempest/TextCodec>
 #include <Tempest/Except>
 
-#import  <UIKit/UIKit.h>
+#include <cstdio>
+
+#import <Foundation/Foundation.h>
 
 using namespace Tempest;
 
@@ -16,7 +18,12 @@ void* RFile::implOpen(const char *cstr) {
       throw std::system_error(Tempest::SystemErrc::UnableToOpenFile);
     return ret;
     }
-  
+
+  // Relative paths may refer to user-provided files in the process working
+  // directory. Packaged application resources remain the fallback.
+  if(void* ret = fopen(cstr,"rb"))
+    return ret;
+
   @autoreleasepool {
     NSString *dir = [[NSBundle mainBundle] resourcePath];
     std::string full = [dir UTF8String];
