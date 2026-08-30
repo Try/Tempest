@@ -197,6 +197,10 @@ static void drawFrame();
     swapContext();
     }
   }
+
+- (void)touchesCancelled:(NSSet *)touches withEvent:(UIEvent *)ex {
+  [self touchesEnded:touches withEvent:ex];
+  }
 @end
 
 static TempestWindow* mainWindow = nullptr;
@@ -211,7 +215,9 @@ static TempestWindow* mainWindow = nullptr;
   }
 
 -(id)init {
-  fullScreen = true;
+  self = [super init];
+  if(self!=nil)
+    fullScreen = true;
   return self;
   }
 
@@ -318,7 +324,8 @@ static std::atomic_bool isRunning{true};
 static Fiber            mainContext;
 static Fiber            appleContext;
 static Fiber*           currentContext = nullptr;
-alignas(16) static char appleStack[1*1024*1024]={};
+// The engine and its script VM share this manually-swapped stack on iOS.
+alignas(16) static char appleStack[8*1024*1024]={};
 static             void appleMain(void*);
 
 inline static void createAppleSubContext()  {
@@ -398,6 +405,13 @@ SystemApi::Window *iOSApi::implCreateWindow(Tempest::Window *owner, SystemApi::S
   }
 
 void iOSApi::implDestroyWindow(SystemApi::Window *w) {
+  auto wx = reinterpret_cast<TempestWindow*>(w);
+  if(wx==nullptr)
+    return;
+  wx->owner = nullptr;
+  wx->hasPendingFrame.store(false);
+  [wx->displayLink invalidate];
+  wx->displayLink = nil;
   }
 
 void iOSApi::implExit() {
