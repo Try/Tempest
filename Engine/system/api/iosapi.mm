@@ -652,7 +652,10 @@ void iOSApi::implProcessEvents(AppCallBack& cb) {
     return;
     }
   
-  @autoreleasepool {
+  // The engine and UIKit fibers share one OS thread. An Objective-C pool
+  // pushed on the engine fiber can be invalidated while UIKit runs and then
+  // trigger AutoreleasePoolPage::badPop when this stack resumes.
+  {
     auto& wnd   = *mainWindow->owner;
     auto  eType = mainWindow->curentEvent;
     mainWindow->curentEvent = Event::Type::NoEvent;
