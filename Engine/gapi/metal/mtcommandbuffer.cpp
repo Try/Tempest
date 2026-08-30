@@ -10,6 +10,9 @@
 #include "mttexture.h"
 #include "mtswapchain.h"
 #include "mtaccelerationstructure.h"
+#if defined(TEMPEST_BUILD_METALFX)
+#include "mtspatialscaler.h"
+#endif
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -795,5 +798,17 @@ void MtCommandBuffer::copy(AbstractGraphicsApi::Buffer& dest, size_t offset,
                            d.impl.get(),
                            offset, bpp*width,bpp*width*height);
   }
+
+#if defined(TEMPEST_BUILD_METALFX)
+bool MtCommandBuffer::spatialUpscale(AbstractGraphicsApi::SpatialScaler& scaler,
+                                     AbstractGraphicsApi::Texture& input,
+                                     AbstractGraphicsApi::Texture& output) {
+  setEncoder(E_None,nullptr);
+  auto& sx  = reinterpret_cast<MtSpatialScaler&>(scaler);
+  auto& src = reinterpret_cast<MtTexture&>(input);
+  auto& dst = reinterpret_cast<MtTexture&>(output);
+  return sx.encode(*impl,src,dst);
+  }
+#endif
 
 #endif

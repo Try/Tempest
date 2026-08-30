@@ -49,6 +49,13 @@ MetalApi::MetalApi(ApiFlags f, const Options& options)
 MetalApi::~MetalApi() {
   }
 
+#if !defined(TEMPEST_BUILD_METALFX)
+AbstractGraphicsApi::SpatialScaler*
+  MetalApi::createSpatialScaler(AbstractGraphicsApi::Device*, const SpatialScalerDesc&) {
+  return nullptr;
+  }
+#endif
+
 std::vector<AbstractGraphicsApi::Props> MetalApi::devices() const {
 #if defined(__OSX__)
   auto dev = MTL::CopyAllDevices();

@@ -20,6 +20,9 @@ class MtPipeline;
 class MtCompPipeline;
 class MtDescriptorArray;
 class MtTopAccelerationStructure;
+#if defined(TEMPEST_BUILD_METALFX)
+class MtSpatialScaler;
+#endif
 
 class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
   public:
@@ -66,6 +69,11 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     void generateMipmap(AbstractGraphicsApi::Texture& image, uint32_t texWidth, uint32_t texHeight, uint32_t mipLevels) override;
     void copy          (AbstractGraphicsApi::Buffer& dst, size_t offset,
                         AbstractGraphicsApi::Texture& src, uint32_t width, uint32_t height, uint32_t mip) override;
+#if defined(TEMPEST_BUILD_METALFX)
+    bool spatialUpscale(AbstractGraphicsApi::SpatialScaler& scaler,
+                        AbstractGraphicsApi::Texture& input,
+                        AbstractGraphicsApi::Texture& output) override;
+#endif
 
   private:
     enum EncType:uint8_t {
