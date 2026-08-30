@@ -286,20 +286,35 @@ static void applyPreferredFrameRate(CADisplayLink* displayLink) {
   if(displayLink==nil)
     return;
   if(@available(iOS 15.0, *)) {
+    uint32_t screenMaximum = 60;
+    if(mainWindow!=nil && mainWindow.screen!=nil &&
+       mainWindow.screen.maximumFramesPerSecond>0)
+      screenMaximum = uint32_t(mainWindow.screen.maximumFramesPerSecond);
     switch(frameRateMode) {
       case FrameRateMode::SystemDefault:
         displayLink.preferredFrameRateRange = CAFrameRateRangeDefault;
         break;
       case FrameRateMode::Fixed:
+        {
+        const uint32_t rate = frameRatePreferred<screenMaximum ?
+                              frameRatePreferred : screenMaximum;
         displayLink.preferredFrameRateRange =
-            CAFrameRateRangeMake(frameRatePreferred,frameRatePreferred,
-                                 frameRatePreferred);
+            CAFrameRateRangeMake(rate,rate,rate);
         break;
+        }
       case FrameRateMode::Range:
+        {
+        const uint32_t maximum = frameRateMaximum<screenMaximum ?
+                                 frameRateMaximum : screenMaximum;
+        const uint32_t minimum = frameRateMinimum<maximum ?
+                                 frameRateMinimum : maximum;
+        const uint32_t preferred = frameRatePreferred<maximum ?
+                                   (frameRatePreferred>minimum ?
+                                    frameRatePreferred : minimum) : maximum;
         displayLink.preferredFrameRateRange =
-            CAFrameRateRangeMake(frameRateMinimum,frameRateMaximum,
-                                 frameRatePreferred);
+            CAFrameRateRangeMake(minimum,maximum,preferred);
         break;
+        }
       }
     }
   else {
