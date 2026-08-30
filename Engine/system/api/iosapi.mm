@@ -501,13 +501,6 @@ static void detachWindowFromScene(TempestWindow* window) {
   return configuration;
   }
 
-- (UIInterfaceOrientationMask)application:(UIApplication *)application
-  supportedInterfaceOrientationsForWindow:(UIWindow *)window {
-  (void)application;
-  (void)window;
-  return UIInterfaceOrientationMaskAll;
-  }
-
 - (void)applicationWillTerminate:(UIApplication *)application {
   (void)application;
   ++lifecycleGeneration;
