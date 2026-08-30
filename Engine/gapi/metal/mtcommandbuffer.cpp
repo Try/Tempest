@@ -13,6 +13,9 @@
 #if defined(TEMPEST_BUILD_METALFX)
 #include "mtspatialscaler.h"
 #endif
+#if defined(TEMPEST_BUILD_METALFX_TEMPORAL)
+#include "mttemporalscaler.h"
+#endif
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -804,10 +807,32 @@ bool MtCommandBuffer::spatialUpscale(AbstractGraphicsApi::SpatialScaler& scaler,
                                      AbstractGraphicsApi::Texture& input,
                                      AbstractGraphicsApi::Texture& output) {
   setEncoder(E_None,nullptr);
-  auto& sx  = reinterpret_cast<MtSpatialScaler&>(scaler);
-  auto& src = reinterpret_cast<MtTexture&>(input);
-  auto& dst = reinterpret_cast<MtTexture&>(output);
-  return sx.encode(*impl,src,dst);
+  auto* sx  = dynamic_cast<MtSpatialScaler*>(&scaler);
+  auto* src = dynamic_cast<MtTexture*>(&input);
+  auto* dst = dynamic_cast<MtTexture*>(&output);
+  if(sx==nullptr || src==nullptr || dst==nullptr || !sx->belongsTo(device))
+    return false;
+  return sx->encode(*impl,*src,*dst);
+  }
+#endif
+
+#if defined(TEMPEST_BUILD_METALFX_TEMPORAL)
+bool MtCommandBuffer::temporalUpscale(AbstractGraphicsApi::TemporalScaler& scaler,
+                                      AbstractGraphicsApi::Texture& input,
+                                      AbstractGraphicsApi::Texture& depth,
+                                      AbstractGraphicsApi::Texture& motion,
+                                      AbstractGraphicsApi::Texture& output,
+                                      const TemporalScalerArgs& args) {
+  setEncoder(E_None,nullptr);
+  auto* sx  = dynamic_cast<MtTemporalScaler*>(&scaler);
+  auto* src = dynamic_cast<MtTexture*>(&input);
+  auto* dep = dynamic_cast<MtTexture*>(&depth);
+  auto* mov = dynamic_cast<MtTexture*>(&motion);
+  auto* dst = dynamic_cast<MtTexture*>(&output);
+  if(sx==nullptr || src==nullptr || dep==nullptr || mov==nullptr || dst==nullptr ||
+     !sx->belongsTo(device))
+    return false;
+  return sx->encode(*impl,*src,*dep,*mov,*dst,args);
   }
 #endif
 

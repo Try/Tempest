@@ -5,6 +5,8 @@
 #include <Tempest/MetalApi>
 #include <TargetConditionals.h>
 
+#include <mutex>
+
 #include "mtdevice.h"
 #include "mttexture.h"
 
@@ -38,7 +40,8 @@ bool isMetalFxAvailable() {
 
 }
 
-MtSpatialScaler::MtSpatialScaler(MtDevice& device, const SpatialScalerDesc& cfg) {
+MtSpatialScaler::MtSpatialScaler(MtDevice& device, const SpatialScalerDesc& cfg)
+  :owner(&device) {
   const auto inputFormat  = nativeFormat(cfg.inputFormat);
   const auto outputFormat = nativeFormat(cfg.outputFormat);
   if(!isMetalFxAvailable() || inputFormat==MTL::PixelFormatInvalid || outputFormat==MTL::PixelFormatInvalid)
@@ -69,7 +72,10 @@ MtSpatialScaler::MtSpatialScaler(MtDevice& device, const SpatialScalerDesc& cfg)
   }
 
 bool MtSpatialScaler::encode(MTL::CommandBuffer& cmd, MtTexture& input, MtTexture& output) {
+  std::lock_guard<std::mutex> guard(sync);
   if(impl==nullptr || input.impl==nullptr || output.impl==nullptr)
+    return false;
+  if(cmd.device()!=owner->impl.get() || &input.dev!=owner || &output.dev!=owner)
     return false;
   if(output.impl->storageMode()!=MTL::StorageModePrivate)
     return false;
@@ -96,8 +102,10 @@ bool MtSpatialScaler::encode(MTL::CommandBuffer& cmd, MtTexture& input, MtTextur
 
 AbstractGraphicsApi::SpatialScaler*
   MetalApi::createSpatialScaler(AbstractGraphicsApi::Device* device, const SpatialScalerDesc& desc) {
-  auto& dev = *reinterpret_cast<MtDevice*>(device);
-  auto* scaler = new MtSpatialScaler(dev,desc);
+  auto* dev = dynamic_cast<MtDevice*>(device);
+  if(dev==nullptr)
+    return nullptr;
+  auto* scaler = new MtSpatialScaler(*dev,desc);
   if(!scaler->isValid()) {
     delete scaler;
     return nullptr;

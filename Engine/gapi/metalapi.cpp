@@ -20,6 +20,7 @@
 #include "gapi/metal/mtsync.h"
 #include "gapi/metal/mtswapchain.h"
 #include "gapi/metal/mtaccelerationstructure.h"
+#include "gapi/metal/mtmetalfx.h"
 
 #include <Metal/Metal.hpp>
 
@@ -52,6 +53,13 @@ MetalApi::~MetalApi() {
 #if !defined(TEMPEST_BUILD_METALFX)
 AbstractGraphicsApi::SpatialScaler*
   MetalApi::createSpatialScaler(AbstractGraphicsApi::Device*, const SpatialScalerDesc&) {
+  return nullptr;
+  }
+#endif
+
+#if !defined(TEMPEST_BUILD_METALFX_TEMPORAL)
+AbstractGraphicsApi::TemporalScaler*
+  MetalApi::createTemporalScaler(AbstractGraphicsApi::Device*, const TemporalScalerDesc&) {
   return nullptr;
   }
 #endif

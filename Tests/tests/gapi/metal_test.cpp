@@ -8,7 +8,18 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock-matchers.h>
 
+#include <array>
 #include <cmath>
+#include <cstdint>
+#include <limits>
+#include <thread>
+
+#if defined(__OSX__)
+#include "../../../Engine/gapi/metal/mtmetalfx.h"
+#if defined(TEMPEST_METALFX_TEMPORAL_SDK_AVAILABLE)
+#include <dlfcn.h>
+#endif
+#endif
 
 #include "gapi_test_common.h"
 
@@ -25,6 +36,65 @@ float unpackUnsignedFloat(uint32_t value, uint32_t mantissaBits) {
     return std::ldexp(float(mantissa),-14-int(mantissaBits));
   return std::ldexp(1.f+float(mantissa)/float(1u << mantissaBits),int(exponent)-15);
   }
+
+float unpackHalf(uint16_t value) {
+  const uint32_t sign     = value >> 15;
+  const uint32_t exponent = (value >> 10) & 0x1Fu;
+  const uint32_t mantissa = value & 0x3FFu;
+  float ret = 0.f;
+  if(exponent==0)
+    ret = std::ldexp(float(mantissa),-24); else
+  if(exponent==0x1Fu)
+    ret = mantissa==0 ? std::numeric_limits<float>::infinity() :
+                        std::numeric_limits<float>::quiet_NaN(); else
+    ret = std::ldexp(float(0x400u+mantissa),int(exponent)-25);
+  return sign!=0 ? -ret : ret;
+  }
+
+std::array<double,4> averageRgba16F(const Pixmap& image) {
+  std::array<double,4> average = {};
+  const auto* pixels = reinterpret_cast<const uint16_t*>(image.data());
+  const size_t count = size_t(image.w())*image.h();
+  for(size_t i=0; i<count; ++i)
+    for(size_t component=0; component<average.size(); ++component)
+      average[component] += unpackHalf(pixels[i*4+component]);
+  for(auto& component:average)
+    component /= double(count);
+  return average;
+  }
+
+#if defined(__OSX__)
+bool metalFxTemporalSupported() {
+#if defined(TEMPEST_METALFX_TEMPORAL_SDK_AVAILABLE)
+  using CreateDevice = void*       (*)();
+  using LookupClass  = void*       (*)(const char*);
+  using RegisterSel  = const void* (*)(const char*);
+  using SendBool     = bool        (*)(void*,const void*,void*);
+  using SendVoid     = void        (*)(void*,const void*);
+  auto createDevice = reinterpret_cast<CreateDevice>(dlsym(RTLD_DEFAULT,"MTLCreateSystemDefaultDevice"));
+  auto lookupClass  = reinterpret_cast<LookupClass> (dlsym(RTLD_DEFAULT,"objc_lookUpClass"));
+  auto registerSel  = reinterpret_cast<RegisterSel> (dlsym(RTLD_DEFAULT,"sel_registerName"));
+  auto sendBool     = reinterpret_cast<SendBool>    (dlsym(RTLD_DEFAULT,"objc_msgSend"));
+  auto sendVoid     = reinterpret_cast<SendVoid>    (dlsym(RTLD_DEFAULT,"objc_msgSend"));
+  if(createDevice==nullptr || lookupClass==nullptr || registerSel==nullptr ||
+     sendBool==nullptr || sendVoid==nullptr)
+    return false;
+  auto scalerClass = lookupClass("MTLFXTemporalScalerDescriptor");
+  if(scalerClass==nullptr)
+    return false;
+
+  auto device = createDevice();
+  if(device==nullptr)
+    return false;
+
+  const bool supported = sendBool(scalerClass,registerSel("supportsDevice:"),device);
+  sendVoid(device,registerSel("release"));
+  return supported;
+#else
+  return false;
+#endif
+  }
+#endif
 
 }
 
@@ -102,6 +172,24 @@ TEST(MetalApi,SpatialScaler) {
 
     auto input  = device.attachment(desc.inputFormat,desc.inputWidth,desc.inputHeight);
     auto output = device.image2d(desc.outputFormat,desc.outputWidth,desc.outputHeight);
+
+    Device otherDevice(api);
+    auto otherScaler = otherDevice.spatialScaler(desc);
+    auto otherInput  = otherDevice.attachment(desc.inputFormat,desc.inputWidth,desc.inputHeight);
+    auto otherOutput = otherDevice.image2d(desc.outputFormat,desc.outputWidth,desc.outputHeight);
+    ASSERT_FALSE(otherScaler.isEmpty());
+    {
+      auto otherCmd = otherDevice.commandBuffer();
+      auto enc      = otherCmd.startEncoding(otherDevice);
+      EXPECT_FALSE(enc.spatialUpscale(scaler,otherInput,otherOutput));
+    }
+    {
+      auto localCmd = device.commandBuffer();
+      auto enc      = localCmd.startEncoding(device);
+      EXPECT_FALSE(enc.spatialUpscale(scaler,otherInput,otherOutput));
+      EXPECT_FALSE(enc.spatialUpscale(otherScaler,input,output));
+    }
+
     auto cmd    = device.commandBuffer();
     {
       auto enc = cmd.startEncoding(device);
@@ -132,6 +220,235 @@ TEST(MetalApi,SpatialScaler) {
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)
       Log::d("Skipping MetalFX spatial scaler testcase: ", e.what()); else
+      throw;
+    }
+#endif
+  }
+
+TEST(MetalApi,TemporalScalerDescriptorValidation) {
+#if defined(__OSX__)
+  try {
+    MetalApi api;
+    Device   device(api);
+
+    TemporalScalerDesc desc;
+    desc.inputFormat  = TextureFormat::RGBA16F;
+    desc.depthFormat  = TextureFormat::Depth32F;
+    desc.motionFormat = TextureFormat::RG32F;
+    desc.outputFormat = TextureFormat::RGBA16F;
+    desc.inputWidth   = 64;
+    desc.inputHeight  = 64;
+    desc.outputWidth  = 128;
+    desc.outputHeight = 128;
+
+    auto invalid = desc;
+    invalid.inputFormat = TextureFormat::Undefined;
+    EXPECT_TRUE(device.temporalScaler(invalid).isEmpty());
+    invalid = desc;
+    invalid.depthFormat = TextureFormat::Undefined;
+    EXPECT_TRUE(device.temporalScaler(invalid).isEmpty());
+    invalid = desc;
+    invalid.motionFormat = TextureFormat::Undefined;
+    EXPECT_TRUE(device.temporalScaler(invalid).isEmpty());
+    invalid = desc;
+    invalid.outputFormat = TextureFormat::Undefined;
+    EXPECT_TRUE(device.temporalScaler(invalid).isEmpty());
+
+    invalid = desc;
+    invalid.inputWidth = 0;
+    EXPECT_TRUE(device.temporalScaler(invalid).isEmpty());
+    invalid = desc;
+    invalid.inputHeight = 0;
+    EXPECT_TRUE(device.temporalScaler(invalid).isEmpty());
+    invalid = desc;
+    invalid.outputWidth = 0;
+    EXPECT_TRUE(device.temporalScaler(invalid).isEmpty());
+    invalid = desc;
+    invalid.outputHeight = 0;
+    EXPECT_TRUE(device.temporalScaler(invalid).isEmpty());
+
+    invalid = desc;
+    invalid.inputWidth = device.properties().tex2d.maxSize+1;
+    EXPECT_TRUE(device.temporalScaler(invalid).isEmpty());
+    invalid = desc;
+    invalid.outputHeight = device.properties().tex2d.maxSize+1;
+    EXPECT_TRUE(device.temporalScaler(invalid).isEmpty());
+
+    if(metalFxTemporalSupported()) {
+      auto manualExposure = desc;
+      manualExposure.autoExposure = false;
+      EXPECT_FALSE(device.temporalScaler(manualExposure).isEmpty());
+      }
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping MetalFX temporal descriptor testcase: ", e.what()); else
+      throw;
+    }
+#endif
+  }
+
+TEST(MetalApi,TemporalScaler) {
+#if defined(__OSX__)
+  try {
+    MetalApi api{ApiFlags::Validation};
+    Device   device(api);
+
+    TemporalScalerDesc desc;
+    desc.inputFormat  = TextureFormat::RGBA16F;
+    desc.depthFormat  = TextureFormat::Depth32F;
+    desc.motionFormat = TextureFormat::RG32F;
+    desc.outputFormat = TextureFormat::RGBA16F;
+    desc.inputWidth   = 64;
+    desc.inputHeight  = 64;
+    desc.outputWidth  = 128;
+    desc.outputHeight = 128;
+    desc.autoExposure = true;
+
+    if(!metalFxTemporalSupported()) {
+      Log::d("Skipping MetalFX temporal scaler testcase: unsupported device or system");
+      return;
+      }
+    auto scaler = device.temporalScaler(desc);
+    ASSERT_FALSE(scaler.isEmpty());
+
+    auto input       = device.attachment(desc.inputFormat,desc.inputWidth,desc.inputHeight);
+    auto depth       = device.zbuffer(desc.depthFormat,desc.inputWidth,desc.inputHeight);
+    auto motion      = device.attachment(desc.motionFormat,desc.inputWidth,desc.inputHeight);
+    auto output      = device.image2d(desc.outputFormat,desc.outputWidth,desc.outputHeight);
+    auto wrongInput  = device.attachment(desc.inputFormat,desc.inputWidth/2,desc.inputHeight);
+    auto wrongDepth  = device.zbuffer(desc.depthFormat,desc.inputWidth,desc.inputHeight/2);
+    auto wrongMotion = device.attachment(desc.motionFormat,desc.inputWidth/2,desc.inputHeight);
+    auto wrongOutput = device.image2d(desc.outputFormat,desc.outputWidth/2,desc.outputHeight);
+    auto wrongInputFormat  = device.attachment(TextureFormat::R11G11B10UF,desc.inputWidth,desc.inputHeight);
+    auto wrongDepthFormat  = device.zbuffer(TextureFormat::Depth16,desc.inputWidth,desc.inputHeight);
+    auto wrongMotionFormat = device.attachment(TextureFormat::RGBA16F,desc.inputWidth,desc.inputHeight);
+    auto wrongOutputFormat = device.image2d(TextureFormat::R11G11B10UF,desc.outputWidth,desc.outputHeight);
+
+    Device otherDevice(api);
+    auto otherScaler = otherDevice.temporalScaler(desc);
+    auto otherInput  = otherDevice.attachment(desc.inputFormat,desc.inputWidth,desc.inputHeight);
+    auto otherDepth  = otherDevice.zbuffer(desc.depthFormat,desc.inputWidth,desc.inputHeight);
+    auto otherMotion = otherDevice.attachment(desc.motionFormat,desc.inputWidth,desc.inputHeight);
+    auto otherOutput = otherDevice.image2d(desc.outputFormat,desc.outputWidth,desc.outputHeight);
+    ASSERT_FALSE(otherScaler.isEmpty());
+    {
+      auto otherCmd = otherDevice.commandBuffer();
+      auto enc      = otherCmd.startEncoding(otherDevice);
+      EXPECT_FALSE(enc.temporalUpscale(scaler,otherInput,otherDepth,otherMotion,otherOutput,{}));
+    }
+
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      EXPECT_FALSE(enc.temporalUpscale(scaler,wrongInput,depth,motion,output,{}));
+      EXPECT_FALSE(enc.temporalUpscale(scaler,input,wrongDepth,motion,output,{}));
+      EXPECT_FALSE(enc.temporalUpscale(scaler,input,depth,wrongMotion,output,{}));
+      EXPECT_FALSE(enc.temporalUpscale(scaler,input,depth,motion,wrongOutput,{}));
+      EXPECT_FALSE(enc.temporalUpscale(scaler,wrongInputFormat,depth,motion,output,{}));
+      EXPECT_FALSE(enc.temporalUpscale(scaler,input,wrongDepthFormat,motion,output,{}));
+      EXPECT_FALSE(enc.temporalUpscale(scaler,input,depth,wrongMotionFormat,output,{}));
+      EXPECT_FALSE(enc.temporalUpscale(scaler,input,depth,motion,wrongOutputFormat,{}));
+      EXPECT_FALSE(enc.temporalUpscale(scaler,otherInput,otherDepth,otherMotion,otherOutput,{}));
+      EXPECT_FALSE(enc.temporalUpscale(otherScaler,input,depth,motion,output,{}));
+
+      enc.setFramebuffer({{input,Vec4(0.25f,0.5f,0.75f,1.f),Tempest::Preserve},
+                          {motion,Vec4(1.f/float(desc.inputWidth),
+                                      -1.f/float(desc.inputHeight),0.f,0.f),Tempest::Preserve}},
+                         {depth,0.75f,Tempest::Preserve});
+
+      TemporalScalerArgs args;
+      args.jitterOffsetX      = 0.25f;
+      args.jitterOffsetY      = -0.25f;
+      args.motionVectorScaleX = float(desc.inputWidth);
+      args.motionVectorScaleY = float(desc.inputHeight);
+      args.resetHistory       = true;
+      args.depthReversed      = false;
+      EXPECT_TRUE(enc.temporalUpscale(scaler,input,depth,motion,output,args));
+    }
+
+    auto sync = device.submit(cmd);
+    sync.wait();
+    auto result = device.readPixels(output);
+    EXPECT_EQ(result.w(),desc.outputWidth);
+    EXPECT_EQ(result.h(),desc.outputHeight);
+    ASSERT_EQ(result.format(),desc.outputFormat);
+    ASSERT_EQ(result.dataSize(),size_t(desc.outputWidth)*desc.outputHeight*4*sizeof(uint16_t));
+    const auto firstAverage = averageRgba16F(result);
+    for(auto component:firstAverage)
+      EXPECT_TRUE(std::isfinite(component));
+    EXPECT_NEAR(firstAverage[0],0.25,0.12);
+    EXPECT_NEAR(firstAverage[1],0.50,0.12);
+    EXPECT_NEAR(firstAverage[2],0.75,0.12);
+    EXPECT_NEAR(firstAverage[3],1.00,0.08);
+
+    TemporalScalerArgs secondArgs;
+    secondArgs.jitterOffsetX      = -0.125f;
+    secondArgs.jitterOffsetY      = 0.375f;
+    secondArgs.motionVectorScaleX = float(desc.inputWidth);
+    secondArgs.motionVectorScaleY = float(desc.inputHeight);
+    secondArgs.resetHistory       = false;
+    secondArgs.depthReversed      = true;
+    auto secondCmd = device.commandBuffer();
+    {
+      auto enc = secondCmd.startEncoding(device);
+      enc.setFramebuffer({{input,Vec4(0.75f,0.25f,0.5f,1.f),Tempest::Preserve},
+                          {motion,Vec4(-1.f/float(desc.inputWidth),
+                                      1.f/float(desc.inputHeight),0.f,0.f),Tempest::Preserve}},
+                         {depth,0.6f,Tempest::Preserve});
+      EXPECT_TRUE(enc.temporalUpscale(scaler,input,depth,motion,output,secondArgs));
+    }
+    auto secondSync = device.submit(secondCmd);
+    secondSync.wait();
+    auto secondResult = device.readPixels(output);
+    ASSERT_EQ(secondResult.format(),desc.outputFormat);
+    const auto secondAverage = averageRgba16F(secondResult);
+    for(auto component:secondAverage)
+      EXPECT_TRUE(std::isfinite(component));
+    EXPECT_NEAR(secondAverage[0],0.75,0.15);
+    EXPECT_NEAR(secondAverage[1],0.25,0.15);
+    EXPECT_NEAR(secondAverage[2],0.50,0.15);
+    EXPECT_NEAR(secondAverage[3],1.00,0.08);
+
+    std::array<CommandBuffer,2> parallelCmd = {
+      device.commandBuffer(),device.commandBuffer()
+      };
+    std::array<StorageImage,2> parallelOutput = {
+      device.image2d(desc.outputFormat,desc.outputWidth,desc.outputHeight),
+      device.image2d(desc.outputFormat,desc.outputWidth,desc.outputHeight)
+      };
+    std::array<bool,2> encoded = {};
+    std::array<std::thread,2> workers;
+    for(size_t i=0; i<workers.size(); ++i) {
+      workers[i] = std::thread([&,i]() {
+        TemporalScalerArgs args = secondArgs;
+        args.jitterOffsetX = i==0 ? 0.125f : -0.375f;
+        args.jitterOffsetY = i==0 ? -0.25f : 0.25f;
+        args.resetHistory  = true;
+        auto enc = parallelCmd[i].startEncoding(device);
+        encoded[i] = enc.temporalUpscale(scaler,input,depth,motion,parallelOutput[i],args);
+        });
+      }
+    for(auto& worker:workers)
+      worker.join();
+    for(bool value:encoded)
+      ASSERT_TRUE(value);
+    for(auto& parallel:parallelCmd) {
+      auto parallelSync = device.submit(parallel);
+      parallelSync.wait();
+      }
+    for(auto& parallel:parallelOutput) {
+      const auto parallelResult  = device.readPixels(parallel);
+      const auto parallelAverage = averageRgba16F(parallelResult);
+      for(auto component:parallelAverage)
+        EXPECT_TRUE(std::isfinite(component));
+      EXPECT_GT(parallelAverage[0]+parallelAverage[1]+parallelAverage[2],0.5);
+      EXPECT_NEAR(parallelAverage[3],1.0,0.08);
+      }
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping MetalFX temporal scaler testcase: ", e.what()); else
       throw;
     }
 #endif
