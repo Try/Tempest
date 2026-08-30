@@ -8,6 +8,21 @@
 using namespace testing;
 using namespace Tempest;
 
+TEST(main,PixmapFormatRG16F) {
+  EXPECT_EQ(uint8_t(TextureFormat::RGBA16F),25);
+  EXPECT_STREQ(formatName(TextureFormat::RG16F),"RG16F");
+
+  Pixmap pm(3,2,TextureFormat::RG16F);
+  EXPECT_EQ(pm.format(),TextureFormat::RG16F);
+  EXPECT_EQ(pm.bpp(),4);
+  EXPECT_EQ(pm.dataSize(),24);
+  EXPECT_EQ(Pixmap::componentCount(TextureFormat::RG16F),2);
+
+  const auto blocks = Pixmap::blockCount(TextureFormat::RG16F,3,2);
+  EXPECT_EQ(blocks.w,3);
+  EXPECT_EQ(blocks.h,2);
+  }
+
 TEST(main,PixmapIO_0) {
   Pixmap pm("assets/pixmap_io/rgba.png");
   EXPECT_EQ(pm.w(),     256);

@@ -221,20 +221,20 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
                                       TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
                                       TextureFormat::R32F, TextureFormat::RG32F, TextureFormat::RGBA32F,
                                       TextureFormat::R32U, TextureFormat::RG32U, TextureFormat::RGBA32U,
-                                      TextureFormat::R11G11B10UF, TextureFormat::RGBA16F,
+                                      TextureFormat::R11G11B10UF, TextureFormat::RGBA16F, TextureFormat::RG16F,
                                      };
 
   static const TextureFormat att[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
                                       TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
                                       TextureFormat::R32F, TextureFormat::RG32F, TextureFormat::RGBA32F,
-                                      TextureFormat::R11G11B10UF, TextureFormat::RGBA16F,
+                                      TextureFormat::R11G11B10UF, TextureFormat::RGBA16F, TextureFormat::RG16F,
                                      };
 
   static const TextureFormat sso[] = {TextureFormat::R8,   TextureFormat::RG8,   TextureFormat::RGBA8,
                                       TextureFormat::R16,  TextureFormat::RG16,  TextureFormat::RGBA16,
                                       TextureFormat::R32U, TextureFormat::RG32U, TextureFormat::RGBA32U,
                                       TextureFormat::R32F, TextureFormat::RGBA32F,
-                                      TextureFormat::R11G11B10UF, TextureFormat::RGBA16F,
+                                      TextureFormat::R11G11B10UF, TextureFormat::RGBA16F, TextureFormat::RG16F,
                                      };
 
   static const TextureFormat ds[]  = {TextureFormat::Depth16, TextureFormat::Depth32F};
@@ -258,6 +258,7 @@ void MtDevice::deductProps(AbstractGraphicsApi::Props& prop, MTL::Device& dev) {
       storBit |= uint64_t(1) << TextureFormat::RGBA32U;
       // 16 bit
       storBit |= uint64_t(1) << TextureFormat::RGBA16F;
+      storBit |= uint64_t(1) << TextureFormat::RG16F;
       // 8 bit
       storBit |= uint64_t(1) << TextureFormat::R8;
       [[fallthrough]];

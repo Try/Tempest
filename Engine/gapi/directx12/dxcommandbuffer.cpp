@@ -974,6 +974,7 @@ DxCompPipeline& DxCommandBuffer::copyShader(DXGI_FORMAT format, int32_t& bitCnt,
     case DXGI_FORMAT_R16G16_UINT:
     case DXGI_FORMAT_R16G16_SNORM:
     case DXGI_FORMAT_R16G16_SINT:
+    case DXGI_FORMAT_R16G16_FLOAT:
       bitCnt  = 16;
       compCnt = 2;
       return *dev.copyS.handler;
@@ -1340,5 +1341,4 @@ void DxCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& dstTex,
   }
 
 #endif
-
 

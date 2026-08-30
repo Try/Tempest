@@ -64,6 +64,7 @@ ImageValidator::Pixel ImageValidator::at(uint32_t x, uint32_t y) const {
 
     case TextureFormat::R11G11B10UF:
     case TextureFormat::RGBA16F:
+    case TextureFormat::RG16F:
       assert(false);
       break;
     }

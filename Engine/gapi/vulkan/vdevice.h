@@ -102,6 +102,8 @@ inline VkFormat nativeFormat(TextureFormat f) {
       return VK_FORMAT_B10G11R11_UFLOAT_PACK32;
     case TextureFormat::RGBA16F:
       return VK_FORMAT_R16G16B16A16_SFLOAT;
+    case TextureFormat::RG16F:
+      return VK_FORMAT_R16G16_SFLOAT;
     }
   return VK_FORMAT_UNDEFINED;
   }

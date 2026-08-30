@@ -102,6 +102,12 @@ TEST(MetalApi,Draw) {
 #endif
   }
 
+TEST(MetalApi,RG16F) {
+#if defined(__OSX__)
+  GapiTestCommon::FormatRG16F<MetalApi>();
+#endif
+  }
+
 TEST(MetalApi,DepthWrite) {
 #if defined(__OSX__)
   GapiTestCommon::DepthWrite<MetalApi>("MetalApi_DepthWrite.png");
