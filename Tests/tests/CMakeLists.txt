@@ -151,6 +151,14 @@ target_sources(${PROJECT_NAME} PRIVATE
 set(BUILD_SHARED_LIBS ${BUILD_SHARED_MOLTEN_TEMPEST})
 add_subdirectory("${CMAKE_SOURCE_DIR}/../../Engine" build)
 
+if(APPLE AND TEMPEST_BUILD_METAL AND NOT IOS)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE TEMPEST_TEST_METAL_PRECOMPILED=1)
+  target_include_directories(${PROJECT_NAME} PRIVATE
+    "${CMAKE_SOURCE_DIR}/../../Engine"
+    "${CMAKE_SOURCE_DIR}/../../Engine/thirdparty/metal-cpp")
+  target_link_libraries(${PROJECT_NAME} "-framework Metal" "-framework Foundation")
+endif()
+
 if(UNIX)
   target_link_libraries(${PROJECT_NAME} -lpthread)
 endif()

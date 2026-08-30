@@ -1,6 +1,7 @@
 #if defined(TEMPEST_BUILD_METAL)
 
 #include "mtdevice.h"
+#include "mtprecompiledlibrary.h"
 #include "thirdparty/spirv_cross/spirv_msl.hpp"
 
 #include <Tempest/Log>
@@ -35,8 +36,11 @@ static MTL::LanguageVersion languageVersion() {
   return std::min<MTL::LanguageVersion>(MTL::LanguageVersion3_1, opt->languageVersion());
   }
 
-MtDevice::MtDevice(std::string_view name, bool validation, size_t shaderModuleCacheSize)
-  : impl(mkDevice(name)), samplers(*impl), shaderModules(shaderModuleCacheSize), validation(validation) {
+MtDevice::MtDevice(std::string_view name, bool validation,
+                   std::shared_ptr<const MetalApi::Options> precompiledOptions)
+  : impl(mkDevice(name)), samplers(*impl), precompiledOptions(std::move(precompiledOptions)),
+    shaderModules(this->precompiledOptions!=nullptr ?
+                  this->precompiledOptions->shaderModuleCacheSize : 0), validation(validation) {
   if(impl.get()==nullptr)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
@@ -61,6 +65,8 @@ MtDevice::MtDevice(std::string_view name, bool validation, size_t shaderModuleCa
     prop.transposedRtMatrix = true;
     }
   deductProps(prop,*impl);
+  if(this->precompiledOptions!=nullptr && !this->precompiledOptions->precompiledLibraries.empty())
+    precompiledLibraries = std::make_unique<MtPrecompiledLibraries>(*impl,*this->precompiledOptions);
   }
 
 MtDevice::~MtDevice() {
