@@ -76,6 +76,21 @@ static Atom& _NET_WM_STATE_FULLSCREEN(){
   return w;
   }
 
+static Atom& CLIPBOARD(){
+  static Atom w  = XInternAtom( dpy, "CLIPBOARD", 0);
+  return w;
+  }
+
+static Atom& UTF8_STRING(){
+  static Atom w  = XInternAtom( dpy, "UTF8_STRING", 0);
+  return w;
+  }
+
+static Atom& XSEL_DATA(){
+  static Atom w  = XInternAtom( dpy, "XSEL_DATA", 0);
+  return w;
+  }
+
 static bool nativeIsFullscreen(SystemApi::Window *iw) {
   HWND w(iw);
 
@@ -528,129 +543,167 @@ int X11Api::implExec(SystemApi::AppCallBack &cb) {
   return 0;
   }
 
+void X11Api::dispatchEvent(XEvent &xev) {
+  HWND hWnd = xev.xclient.window;
+  auto it = impl->findWindow(hWnd.ptr());
+  if(it==nullptr)
+    return;
+  Tempest::Window& cb = *it->owner;
+  switch( xev.type ) {
+    case ClientMessage: {
+      if(xev.xclient.data.l[0] == long(WM_DELETE_WINDOW())){
+        SystemApi::exit();
+        }
+      break;
+      }
+    case ConfigureNotify: {
+      cb.setPosition(xev.xconfigure.x, xev.xconfigure.y);
+      if(xev.xconfigure.width !=cb.w() || xev.xconfigure.height!=cb.h()) {
+        Tempest::SizeEvent e(xev.xconfigure.width, xev.xconfigure.height);
+        SystemApi::dispatchResize(cb,e);
+        }
+      break;
+      }
+    case PropertyNotify:{
+      impl->trackFullscreen(hWnd.ptr());
+      break;
+      }
+    case MappingNotify:
+      XRefreshKeyboardMapping(&xev.xmapping);
+      break;
+    case ButtonPress:
+    case ButtonRelease: {
+      if(xev.xbutton.button==Button4 || xev.xbutton.button==Button5) {
+        int ticks = 0;
+        if( xev.xbutton.button == Button4 ) {
+          ticks = 120;
+          }
+        else if ( xev.xbutton.button == Button5 ) {
+          ticks = -120;
+          }
+        if(xev.type==ButtonPress) {
+          Tempest::MouseEvent e( xev.xbutton.x,
+                                 xev.xbutton.y,
+                                 Tempest::Event::ButtonNone,
+                                 Event::M_NoModifier,
+                                 ticks,
+                                 0,
+                                 Event::MouseWheel );
+          SystemApi::dispatchMouseWheel(cb, e);
+          }
+        } else {
+        MouseEvent e( xev.xbutton.x,
+                      xev.xbutton.y,
+                      toButton( xev.xbutton ),
+                      Event::M_NoModifier,
+                      0,
+                      0,
+                      xev.type==ButtonPress ? Event::MouseDown : Event::MouseUp );
+        if(xev.type==ButtonPress)
+          SystemApi::dispatchMouseDown(cb, e); else
+          SystemApi::dispatchMouseUp(cb, e);
+        }
+      break;
+      }
+    case MotionNotify: {
+      if(activeCursorChange == 1) {
+        // FIXME: mouse behave crazy in OpenGothic
+        activeCursorChange = 0;
+        break;
+        }
+      MouseEvent e( xev.xmotion.x,
+                    xev.xmotion.y,
+                    Event::ButtonNone,
+                    Event::M_NoModifier,
+                    0,
+                    0,
+                    Event::MouseMove  );
+      SystemApi::dispatchMouseMove(cb, e);
+      break;
+      }
+    case KeyPress:
+    case KeyRelease: {
+      KeySym ksym = XLookupKeysym(&xev.xkey,0);
+      XIC    xic  = impl->xicOf(hWnd.ptr());
+
+      char txt[64]={};
+      if(xic!=nullptr) {
+        XEvent xev2 = xev;
+        xev2.type = KeyPress; // HACK: Their behavior when a client passes a KeyRelease event is undefined.
+        Status status = {};
+        Xutf8LookupString(xic, &xev2.xkey, txt, sizeof(txt)-1, &ksym, &status);
+        if(status == XBufferOverflow) {
+          txt[0] = '\0';
+          }
+        // XLookupString(&xev.xkey, txt, sizeof(txt)-1, ksym, nullptr );
+        }
+
+      auto u16 = TextCodec::toUtf16(txt); // TODO: remove dynamic allocation
+      auto key = SystemApi::translateKey(ksym);
+
+      uint32_t scan = xev.xkey.keycode;
+      // printf("%s\n",txt);
+
+      Atom actual_type;
+        int actual_format;
+        unsigned long nitems, bytes_after;
+        unsigned char* data;
+
+        XGetWindowProperty(dpy, xev.xclient.window,
+                            XSEL_DATA(), 0L, ~0L, False, AnyPropertyType,
+                            &actual_type, &actual_format, &nitems, &bytes_after, &data);
+
+      Tempest::KeyEvent e(Event::KeyType(key),uint32_t(u16.size()>0 ? u16[0] : 0),Event::M_NoModifier,(xev.type==KeyPress) ? Event::KeyDown : Event::KeyUp);
+      if(xev.type==KeyPress)
+        SystemApi::dispatchKeyDown(cb,e,scan); else
+        SystemApi::dispatchKeyUp  (cb,e,scan);
+      break;
+      }
+    case FocusIn: {
+      FocusEvent e(true, Event::UnknownReason);
+      SystemApi::dispatchFocus(cb, e);
+      break;
+      }
+    case FocusOut: {
+      FocusEvent e(false, Event::UnknownReason);
+      SystemApi::dispatchFocus(cb, e);
+      break;
+      }
+    case SelectionNotify: {
+      clipboard.type = SystemApi::ClipboardDataType::Unknown;
+      clipboard.data.clear();
+
+      if (xev.xselection.property != None) {
+        Atom actual_type;
+        int actual_format;
+        unsigned long nitems, bytes_after;
+        unsigned char* data;
+
+        XGetWindowProperty(xev.xselection.display, xev.xselection.requestor,
+                            xev.xselection.property, 0L, ~0L, False, AnyPropertyType,
+                            &actual_type, &actual_format, &nitems, &bytes_after, &data);
+
+        if (actual_type == UTF8_STRING() || actual_type == XA_STRING) {
+          size_t total_bytes = nitems * (actual_format / 8);
+          clipboard.type = SystemApi::ClipboardDataType::Text;
+          clipboard.data.assign(data,data+total_bytes);
+          XFree(data);
+          }
+
+        XDeleteProperty(dpy, xev.xselection.requestor, xev.xselection.property);
+        }
+      break;
+      }
+    }
+  }
+
 void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
   // main message loop
   if(XPending(dpy)>0) {
     XEvent xev={};
     XNextEvent(dpy, &xev);
 
-    HWND hWnd = xev.xclient.window;
-    auto it = impl->findWindow(hWnd.ptr());
-    if(it==nullptr)
-      return;
-    Tempest::Window& cb = *it->owner;
-    switch( xev.type ) {
-      case ClientMessage: {
-        if(xev.xclient.data.l[0] == long(WM_DELETE_WINDOW())){
-          SystemApi::exit();
-          }
-        break;
-        }
-      case ConfigureNotify: {
-        cb.setPosition(xev.xconfigure.x, xev.xconfigure.y);
-        if(xev.xconfigure.width !=cb.w() || xev.xconfigure.height!=cb.h()) {
-          Tempest::SizeEvent e(xev.xconfigure.width, xev.xconfigure.height);
-          SystemApi::dispatchResize(cb,e);
-          }
-        break;
-        }
-      case PropertyNotify:{
-        impl->trackFullscreen(hWnd.ptr());
-        break;
-        }
-      case MappingNotify:
-        XRefreshKeyboardMapping(&xev.xmapping);
-        break;
-      case ButtonPress:
-      case ButtonRelease: {
-        if(xev.xbutton.button==Button4 || xev.xbutton.button==Button5) {
-          int ticks = 0;
-          if( xev.xbutton.button == Button4 ) {
-            ticks = 120;
-            }
-          else if ( xev.xbutton.button == Button5 ) {
-            ticks = -120;
-            }
-          if(xev.type==ButtonPress) {
-            Tempest::MouseEvent e( xev.xbutton.x,
-                                   xev.xbutton.y,
-                                   Tempest::Event::ButtonNone,
-                                   Event::M_NoModifier,
-                                   ticks,
-                                   0,
-                                   Event::MouseWheel );
-            SystemApi::dispatchMouseWheel(cb, e);
-            }
-          } else {
-          MouseEvent e( xev.xbutton.x,
-                        xev.xbutton.y,
-                        toButton( xev.xbutton ),
-                        Event::M_NoModifier,
-                        0,
-                        0,
-                        xev.type==ButtonPress ? Event::MouseDown : Event::MouseUp );
-          if(xev.type==ButtonPress)
-            SystemApi::dispatchMouseDown(cb, e); else
-            SystemApi::dispatchMouseUp(cb, e);
-          }
-        break;
-        }
-      case MotionNotify: {
-        if(activeCursorChange == 1) {
-          // FIXME: mouse behave crazy in OpenGothic
-          activeCursorChange = 0;
-          break;
-          }
-        MouseEvent e( xev.xmotion.x,
-                      xev.xmotion.y,
-                      Event::ButtonNone,
-                      Event::M_NoModifier,
-                      0,
-                      0,
-                      Event::MouseMove  );
-        SystemApi::dispatchMouseMove(cb, e);
-        break;
-        }
-      case KeyPress:
-      case KeyRelease: {
-        KeySym ksym = XLookupKeysym(&xev.xkey,0);
-        XIC    xic  = impl->xicOf(hWnd.ptr());
-
-        char txt[64]={};
-        if(xic!=nullptr) {
-          XEvent xev2 = xev;
-          xev2.type = KeyPress; // HACK: Their behavior when a client passes a KeyRelease event is undefined.
-          Status status = {};
-          Xutf8LookupString(xic, &xev2.xkey, txt, sizeof(txt)-1, &ksym, &status);
-          if(status == XBufferOverflow) {
-            txt[0] = '\0';
-            }
-          // XLookupString(&xev.xkey, txt, sizeof(txt)-1, ksym, nullptr );
-          }
-
-        auto u16 = TextCodec::toUtf16(txt); // TODO: remove dynamic allocation
-        auto key = SystemApi::translateKey(ksym);
-
-        uint32_t scan = xev.xkey.keycode;
-        // printf("%s\n",txt);
-
-        Tempest::KeyEvent e(Event::KeyType(key),uint32_t(u16.size()>0 ? u16[0] : 0),Event::M_NoModifier,(xev.type==KeyPress) ? Event::KeyDown : Event::KeyUp);
-        if(xev.type==KeyPress)
-          SystemApi::dispatchKeyDown(cb,e,scan); else
-          SystemApi::dispatchKeyUp  (cb,e,scan);
-        break;
-        }
-      case FocusIn: {
-        FocusEvent e(true, Event::UnknownReason);
-        SystemApi::dispatchFocus(cb, e);
-        break;
-        }
-      case FocusOut: {
-        FocusEvent e(false, Event::UnknownReason);
-        SystemApi::dispatchFocus(cb, e);
-        break;
-        }
-      }
+    dispatchEvent(xev);
 
     std::this_thread::yield();
     } else {
@@ -663,5 +716,32 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
       }
     }
   }
+
+SystemApi::ClipboardData X11Api::implClipboardData(SystemApi::Window *w) {
+  XConvertSelection(dpy, CLIPBOARD(), UTF8_STRING(), XSEL_DATA(), HWND(w), CurrentTime);
+
+  auto end = std::chrono::high_resolution_clock::now() + std::chrono::seconds(1);
+
+  // waiting for SelectionNotify
+  while(true){
+    if(XPending(dpy)>0) {
+      XEvent xev={};
+      XNextEvent(dpy, &xev);
+
+      dispatchEvent(xev);
+
+      if (xev.type == SelectionNotify) {
+        break;
+        }
+      }
+
+      if(std::chrono::high_resolution_clock::now() > end) {
+        Log::e("X11 clipboard paste timeout");
+        break;
+      }
+    }
+
+  return clipboard;
+}
 
 #endif
