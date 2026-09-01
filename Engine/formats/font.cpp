@@ -267,7 +267,7 @@ struct FontElement::Impl {
         // stbtt_InitFont is undefined behaviour (and crashes on iOS/macOS).
         if(path.empty())
           return nullLater();
-        fallback.reset(new Impl(path));
+        fallback.reset(new Impl(std::string_view(path)));
         if(fallback->data==nullptr || fallback->size==0 ||
            stbtt_InitFont(&fallback->info,fallback->data,0)==0)
           throw std::system_error(Tempest::SystemErrc::UnableToLoadAsset);
