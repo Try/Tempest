@@ -13,6 +13,10 @@ TEST(FontTest, MissingPlatformFallbackIsSafe) {
   // to stb_truetype.
   Size size;
   EXPECT_NO_THROW(size = font.textSize("\xE2\x80\x8B"));
+#ifndef __WINDOWS__
+  // Windows supplies Georgia as a fallback, so its resulting metrics are
+  // font-dependent.
   EXPECT_EQ(size.w,0);
   EXPECT_EQ(size.h,0);
+#endif
   }
