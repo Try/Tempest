@@ -109,6 +109,10 @@ static void drawFrame();
           }
       return -1;
       }
+
+    void clear() {
+      touch.clear();
+      }
     };
   TouchState touch;
   }
@@ -202,6 +206,22 @@ static void drawFrame();
   [self touchesEnded:touches withEvent:ex];
   }
 @end
+
+static void discardPendingEvent(TempestWindow* window) {
+  switch(window->curentEvent) {
+    case Event::Resize:
+      window->event.size.~SizeEvent();
+      break;
+    case Event::MouseDown:
+    case Event::MouseMove:
+    case Event::MouseUp:
+      window->event.mouse.~MouseEvent();
+      break;
+    default:
+      break;
+    }
+  window->curentEvent = Event::NoEvent;
+  }
 
 static TempestWindow* mainWindow = nullptr;
 
@@ -407,6 +427,15 @@ SystemApi::Window *iOSApi::implCreateWindow(Tempest::Window *owner, SystemApi::S
   }
 
 void iOSApi::implDestroyWindow(SystemApi::Window *w) {
+  auto wx = reinterpret_cast<TempestWindow*>(w);
+  if(wx==nullptr)
+    return;
+  wx->owner = nullptr;
+  wx->hasPendingFrame.store(false);
+  [wx->displayLink invalidate];
+  wx->displayLink = nil;
+  discardPendingEvent(wx);
+  wx->touch.clear();
   }
 
 void iOSApi::implExit() {
