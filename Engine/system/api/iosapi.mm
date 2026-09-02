@@ -215,11 +215,14 @@ static TempestWindow* mainWindow = nullptr;
   }
 
 -(id)init {
-  fullScreen = true;
+  self = [super init];
+  if(self!=nil)
+    fullScreen = true;
   return self;
   }
 
 - (void)viewDidLoad {
+  [super viewDidLoad];
   self.extendedLayoutIncludesOpaqueBars = YES;
   //self.modalPresentationStyle = UIModalPresentationFullScreen;
   //[self setNeedsStatusBarAppearanceUpdate];
@@ -244,8 +247,8 @@ static TempestWindow* mainWindow = nullptr;
   return UIInterfaceOrientationMaskAll;
   }
 
--(bool)setAsFullscreen: (bool)fullScreen {
-  self->fullScreen = fullScreen;
+-(bool)setAsFullscreen: (bool)value {
+  self->fullScreen = value;
   [self setNeedsStatusBarAppearanceUpdate];
   return true;
   }
@@ -269,7 +272,9 @@ static bool isApplicationActive = false;
   CGRect frame = [ [ UIScreen mainScreen ] bounds ];
   TempestWindow  * window = [ [ TempestWindow alloc ] initWithFrame: frame];
   window.contentScaleFactor = [UIScreen mainScreen].scale;
-  window.rootViewController = [ViewController new];
+  ViewController* controller = [ViewController new];
+  window.rootViewController = controller;
+  [controller release];
   window.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
   window.backgroundColor = [ UIColor blackColor ];
 
