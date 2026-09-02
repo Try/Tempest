@@ -452,7 +452,10 @@ void iOSApi::implProcessEvents(AppCallBack& cb) {
     return;
     }
   
-  @autoreleasepool {
+  // UIKit already owns an autorelease pool around each event-loop iteration.
+  // A nested processEvents() can let UIKit drain that outer pool before this
+  // fiber frame resumes, so do not push a pool whose lifetime spans callbacks.
+  {
     auto& wnd   = *mainWindow->owner;
     auto  eType = mainWindow->curentEvent;
     mainWindow->curentEvent = Event::Type::NoEvent;
