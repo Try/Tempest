@@ -197,6 +197,10 @@ static void drawFrame();
     swapContext();
     }
   }
+
+- (void)touchesCancelled:(NSSet *)touches withEvent:(UIEvent *)ex {
+  [self touchesEnded:touches withEvent:ex];
+  }
 @end
 
 static TempestWindow* mainWindow = nullptr;
