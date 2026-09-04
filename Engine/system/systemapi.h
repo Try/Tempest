@@ -95,6 +95,8 @@ class SystemApi {
     static void      dispatchMouseDown (Tempest::Window& cb, MouseEvent& e);
     static void      dispatchMouseUp   (Tempest::Window& cb, MouseEvent& e);
     static void      dispatchMouseMove (Tempest::Window& cb, MouseEvent& e);
+    static void      dispatchMouseReevaluate(Tempest::Widget& cb);
+    static void      dispatchMouseReevaluate(Tempest::Widget& cb, Point pos);
     static void      dispatchMouseWheel(Tempest::Window& cb, MouseEvent& e);
 
     static void      dispatchKeyDown   (Tempest::Window& cb, KeyEvent& e, uint32_t scancode);
@@ -117,6 +119,7 @@ class SystemApi {
 
   friend class Tempest::Window;
   friend class Tempest::Application;
+  friend class Tempest::Widget;
   };
 
 }

@@ -2,6 +2,7 @@
 
 #include <Tempest/Layout>
 #include <Tempest/Application>
+#include <Tempest/SystemApi>
 #include <Tempest/UiOverlay>
 #include <Tempest/Window>
 
@@ -227,6 +228,7 @@ Widget& Widget::implAddWidget(Widget *w,size_t at) {
   if(astate.disable>0)
     implDisableSum(w,astate.disable);
   lay->applyLayout();
+  SystemApi::dispatchMouseReevaluate(*implTrieRoot(this));
   update();
   return *w;
   }
@@ -296,6 +298,7 @@ void Widget::setGeometry(const Rect &rect) {
     SizeEvent e(uint32_t(rect.w),uint32_t(rect.h));
     resizeEvent( e );
     }
+  SystemApi::dispatchMouseReevaluate(*implTrieRoot(this));
   }
 
 void Widget::setGeometry(int x, int y, int w, int h) {
@@ -451,6 +454,7 @@ void Widget::setVisible(bool v) {
     w->update();
     w->applyLayout();
     }
+  SystemApi::dispatchMouseReevaluate(*implTrieRoot(this));
   }
 
 bool Widget::isVisible() const {
