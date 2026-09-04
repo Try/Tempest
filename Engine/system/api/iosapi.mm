@@ -428,8 +428,6 @@ SystemApi::Window *iOSApi::implCreateWindow(Tempest::Window *owner, SystemApi::S
 
 void iOSApi::implDestroyWindow(SystemApi::Window *w) {
   auto wx = reinterpret_cast<TempestWindow*>(w);
-  if(wx==nullptr)
-    return;
   wx->owner = nullptr;
   wx->hasPendingFrame.store(false);
   [wx->displayLink invalidate];
