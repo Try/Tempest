@@ -81,6 +81,8 @@ void EventDispatcher::dispatchMouseUp(Widget& /*wnd*/, MouseEvent &e) {
   }
 
 void EventDispatcher::dispatchMouseMove(Widget& wnd, MouseEvent &e) {
+  mouseWindow = &wnd;
+  mousePosition = e.pos();
   auto btn = Event::ButtonNone;
   for(uint8_t i=0; i<Event::ButtonLast; ++i)
     if(!mouseUp[i].expired()) {
@@ -137,6 +139,40 @@ void EventDispatcher::dispatchMouseMove(Widget& wnd, MouseEvent &e) {
   auto wptr = implDispatch(wnd,e1);
   implSetMouseOver(wptr,e1);
   }
+
+void EventDispatcher::dispatchMouseReevaluate(Widget& wnd) {
+  if(mouseWindow!=&wnd)
+    return;
+  dispatchMouseReevaluate(wnd,mousePosition);
+  }
+
+void EventDispatcher::dispatchMouseReevaluate(Widget& wnd, Point pos) {
+  mouseWindow = &wnd;
+  mousePosition = pos;
+  if(focusWindow!=&wnd)
+    return;
+  MouseEvent e(mousePosition.x,
+               mousePosition.y,
+               Event::ButtonNone,
+               Event::M_NoModifier,
+               0,
+               0,
+               Event::MouseMove);
+
+  for(auto i:overlays) {
+    if(!i->bind(wnd))
+      continue;
+    auto wptr = implDispatch(*i,e);
+    if(wptr!=nullptr) {
+      implSetMouseOver(wptr,e,true);
+      return;
+      }
+    }
+
+  auto wptr = implDispatch(wnd,e);
+  implSetMouseOver(wptr,e,true);
+  }
+
 
 void EventDispatcher::dispatchMouseWheel(Widget& wnd, MouseEvent &e) {
   if(e.delta==0)
@@ -216,13 +252,16 @@ void EventDispatcher::dispatchClose(Widget& wnd, CloseEvent& e) {
 
 void EventDispatcher::dispatchFocus(Widget& wnd, FocusEvent& e) {
   if(e.in) {
+    focusWindow = &wnd;
+
     if(auto f = focusLast.lock()) {
       f->widget->setFocus(true);
       }
     focusLast.reset();
+    dispatchMouseReevaluate(wnd);
     return;
     }
-
+  focusWindow = nullptr;
   if(!focusLast.expired())
     return;
 
@@ -414,14 +453,17 @@ std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget &root, KeyEven
   return nullptr;
   }
 
-void EventDispatcher::implSetMouseOver(const std::shared_ptr<Widget::Ref> &wptr,MouseEvent& orig) {
+void EventDispatcher::implSetMouseOver(const std::shared_ptr<Widget::Ref> &wptr,MouseEvent& orig,bool force) {
   auto    widget = wptr==nullptr ? nullptr : wptr->widget;
   Widget* oldW   = nullptr;
   if(auto old = mouseOver.lock())
     oldW = old->widget;
 
-  if(widget==oldW)
+  if(widget==oldW) {
+    if(force)
+      implExcMouseOver(widget,oldW);
     return;
+    }
 
   implExcMouseOver(widget,oldW);
 

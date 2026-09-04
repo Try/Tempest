@@ -276,7 +276,7 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, 
 
   XSetWindowAttributes swa={};
   swa.colormap   = cmap;
-  swa.event_mask = PointerMotionMask | ExposureMask |
+  swa.event_mask = PointerMotionMask | EnterWindowMask | ExposureMask |
                    ButtonPressMask | ButtonReleaseMask |
                    KeyPressMask | KeyReleaseMask |
                    FocusChangeMask | StructureNotifyMask |
@@ -593,6 +593,10 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
             SystemApi::dispatchMouseDown(cb, e); else
             SystemApi::dispatchMouseUp(cb, e);
           }
+        break;
+        }
+      case EnterNotify: {
+        SystemApi::dispatchMouseReevaluate(cb,Point(xev.xcrossing.x,xev.xcrossing.y));
         break;
         }
       case MotionNotify: {
