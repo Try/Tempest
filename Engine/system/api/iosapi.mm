@@ -273,7 +273,7 @@ static bool isApplicationActive = false;
   TempestWindow  * window = [ [ TempestWindow alloc ] initWithFrame: frame];
   window.contentScaleFactor = [UIScreen mainScreen].scale;
   ViewController* controller = [ViewController new];
-  window.rootViewController = controller;
+  [window setRootViewController:controller];
   [controller release];
   window.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
   window.backgroundColor = [ UIColor blackColor ];
