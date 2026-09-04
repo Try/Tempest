@@ -36,6 +36,20 @@ static uintptr_t alignDown(uintptr_t val, uintptr_t align) {
 static void swapContext();
 
 static void drawFrame();
+static void resumeEngineFromUIKit();
+
+@class TempestWindow;
+@class TempestSceneDelegate;
+
+static TempestWindow*        mainWindow          = nil;
+static TempestSceneDelegate* activeSceneDelegate = nil;
+static UIWindowScene* activeWindowScene API_AVAILABLE(ios(13.0)) = nil;
+static std::atomic_bool isRunning{true};
+static std::atomic_bool isEngineReady{false};
+static std::atomic_bool isApplicationActive{false};
+static uint64_t         lifecycleGeneration      = 0;
+static bool             activationResumePending = false;
+static bool             usesSceneLifecycle      = false;
 
 @interface TempestWindow : UIWindow {
   @public Tempest::Window* owner;
@@ -127,21 +141,28 @@ static void drawFrame();
   frame.origin.y      = 0;
   [self.rootViewController.view setFrame: frame];
 
-  if(owner==nullptr)
+  if(owner==nullptr || !isEngineReady.load() || !isApplicationActive.load())
     return;
   
   new (&event.size) SizeEvent(int32_t(frame.size.width*scale), int32_t(frame.size.height*scale));
   curentEvent = Event::Resize;
-  swapContext();
+  activationResumePending = false;
+  resumeEngineFromUIKit();
   }
 
-- (void)drawFrame {
+- (void)drawFrame:(CADisplayLink*)sender {
+  (void)sender;
   hasPendingFrame.store(true);
-  swapContext();
+  if(owner==nullptr || !isEngineReady.load() || !isApplicationActive.load())
+    return;
+  activationResumePending = false;
+  resumeEngineFromUIKit();
   // drawFrame();
   }
 
 - (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)ex {
+  if(owner==nullptr)
+    return;
   const CGFloat scale = self.contentScaleFactor;
   for(UITouch *tx in touches) {
     CGPoint p  = [tx locationInView:self];
@@ -157,11 +178,14 @@ static void drawFrame();
                                   Event::MouseDown
                                   );
     curentEvent = Event::MouseDown;
-    swapContext();
+    activationResumePending = false;
+    resumeEngineFromUIKit();
     }
   }
 
 - (void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)ex {
+  if(owner==nullptr)
+    return;
   const CGFloat scale = self.contentScaleFactor;
   for(UITouch *tx in touches) {
     CGPoint p  = [tx locationInView:self];
@@ -177,11 +201,14 @@ static void drawFrame();
                                   Event::MouseMove
                                   );
     curentEvent = Event::MouseMove;
-    swapContext();
+    activationResumePending = false;
+    resumeEngineFromUIKit();
     }
   }
 
 - (void)touchesEnded:(NSSet *)touches withEvent:(UIEvent *)ex {
+  if(owner==nullptr)
+    return;
   const CGFloat scale = self.contentScaleFactor;
   for(UITouch *tx in touches) {
     CGPoint p  = [tx locationInView:self];
@@ -198,7 +225,8 @@ static void drawFrame();
                                   Event::MouseUp
                                   );
     curentEvent = Event::MouseUp;
-    swapContext();
+    activationResumePending = false;
+    resumeEngineFromUIKit();
     }
   }
 
@@ -222,9 +250,6 @@ static void discardPendingEvent(TempestWindow* window) {
     }
   window->curentEvent = Event::NoEvent;
   }
-
-static TempestWindow* mainWindow = nullptr;
-
 
 @interface ViewController:UIViewController{}
 -(id)init;
@@ -278,34 +303,274 @@ static TempestWindow* mainWindow = nullptr;
   }
 @end
 
-@interface AppDelegate : NSObject <UIApplicationDelegate> {
+static void invalidateDisplayLink(TempestWindow* window) {
+  if(window==nil)
+    return;
+  window->hasPendingFrame.store(false);
+  [window->displayLink invalidate];
+  window->displayLink = nil;
+  isEngineReady.store(false);
+  }
+
+static void createDisplayLink(TempestWindow* window) {
+  if(window==nil || window->owner==nullptr)
+    return;
+  if(window->displayLink==nil) {
+    window->displayLink = [CADisplayLink displayLinkWithTarget:window
+                                                     selector:@selector(drawFrame:)];
+    [window->displayLink addToRunLoop:[NSRunLoop currentRunLoop]
+                              forMode:NSRunLoopCommonModes];
+    }
+  window->displayLink.paused = !isApplicationActive.load();
+  window->hasPendingFrame.store(true);
+  isEngineReady.store(true);
+  }
+
+static bool initializeWindow(TempestWindow* window) {
+  if(window==nil)
+    return false;
+  ViewController* controller = [[ViewController alloc] init];
+  if(controller==nil)
+    return false;
+  [window setRootViewController:controller];
+  [controller release];
+  window.autoresizingMask = UIViewAutoresizingFlexibleWidth |
+                            UIViewAutoresizingFlexibleHeight;
+  window.backgroundColor = [UIColor blackColor];
+  window->owner = nullptr;
+  window->displayLink = nil;
+  window->hasPendingFrame.store(false);
+  window->curentEvent = Event::Type::NoEvent;
+  return true;
+  }
+
+static bool attachWindowToScene(TempestWindow* window, UIWindowScene* windowScene)
+    API_AVAILABLE(ios(13.0)) {
+  if(window==nil || windowScene==nil)
+    return false;
+  if(window.windowScene==nil) {
+    window.windowScene = windowScene;
+    }
+  else if(window.windowScene!=windowScene) {
+    // Tempest exposes one native window and therefore accepts one iOS scene.
+    return false;
+    }
+
+#if defined(__IPHONE_26_0) && \
+    __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_26_0
+  if(@available(iOS 26.0, *)) {
+    window.frame = windowScene.effectiveGeometry.coordinateSpace.bounds;
+    }
+  else
+#endif
+    window.frame = windowScene.coordinateSpace.bounds;
+  window.contentScaleFactor = windowScene.screen.scale;
+  return true;
+  }
+
+static void detachWindowFromScene(TempestWindow* window)
+    API_AVAILABLE(ios(13.0)) {
+  if(window==nil)
+    return;
+  invalidateDisplayLink(window);
+  window.hidden = YES;
+  window.windowScene = nil;
+  }
+
+static void scheduleEngineResume(NSObject* target, SEL selector,
+                                 uint64_t generation) {
+  [[NSRunLoop mainRunLoop]
+      performSelector:selector
+               target:target
+             argument:[NSNumber numberWithUnsignedLongLong:generation]
+                order:0
+                modes:@[NSRunLoopCommonModes]];
+  }
+
+static void cancelEngineResume(NSObject* target) {
+  [[NSRunLoop mainRunLoop] cancelPerformSelectorsWithTarget:target];
+  }
+
+static void activateWindow(NSObject* target, SEL resumeSelector,
+                           uint64_t& generation, TempestWindow* window) {
+  cancelEngineResume(target);
+  isApplicationActive.store(true);
+  createDisplayLink(window);
+  activationResumePending = true;
+  generation = ++lifecycleGeneration;
+  scheduleEngineResume(target,resumeSelector,generation);
+  }
+
+static void deactivateWindow(NSObject* target, uint64_t& generation,
+                             TempestWindow* window) {
+  cancelEngineResume(target);
+  generation = ++lifecycleGeneration;
+  activationResumePending = false;
+  isApplicationActive.store(false);
+  if(window!=nil) {
+    window->hasPendingFrame.store(false);
+    if(window->displayLink!=nil)
+      window->displayLink.paused = YES;
+    }
+  }
+
+static void resumeEngineIfCurrent(NSNumber* scheduledGeneration,
+                                  uint64_t generation,
+                                  TempestWindow* window) {
+  if(!activationResumePending || !isApplicationActive.load() ||
+     scheduledGeneration.unsignedLongLongValue!=generation ||
+     generation!=lifecycleGeneration || window!=mainWindow)
+    return;
+  activationResumePending = false;
+  resumeEngineFromUIKit();
+  }
+
+API_AVAILABLE(ios(13.0))
+@interface TempestSceneDelegate : UIResponder <UIWindowSceneDelegate> {
+  TempestWindow* window;
+  uint64_t       activationGeneration;
+  bool           connected;
+  }
+@property(nonatomic, retain) TempestWindow* window;
+@end
+
+@implementation TempestSceneDelegate
+@synthesize window;
+
+- (void)scene:(UIScene *)scene
+    willConnectToSession:(UISceneSession *)session
+    options:(UISceneConnectionOptions *)connectionOptions {
+  (void)connectionOptions;
+  if(![scene isKindOfClass:[UIWindowScene class]])
+    return;
+
+  auto windowScene = (UIWindowScene*)scene;
+  if(activeSceneDelegate!=nil && activeSceneDelegate!=self) {
+    Log::e("Unable to attach a second iOS scene to the Tempest window");
+    [[UIApplication sharedApplication] requestSceneSessionDestruction:session
+                                                               options:nil
+                                                          errorHandler:nil];
+    return;
+    }
+  if(mainWindow!=nil && !attachWindowToScene(mainWindow,windowScene)) {
+    Log::e("Unable to attach the Tempest window to the iOS scene");
+    [[UIApplication sharedApplication] requestSceneSessionDestruction:session
+                                                               options:nil
+                                                          errorHandler:nil];
+    return;
+    }
+
+  activeSceneDelegate = self;
+  activeWindowScene = windowScene;
+  connected = true;
+  self.window = mainWindow;
+  deactivateWindow(self,activationGeneration,mainWindow);
+  if(self.window!=nil)
+    [self.window makeKeyAndVisible];
+  }
+
+- (void)sceneDidBecomeActive:(UIScene *)scene {
+  if(!connected || activeSceneDelegate!=self || scene!=activeWindowScene)
+    return;
+  activateWindow(self,@selector(resumeEngineIfCurrent:),
+                 activationGeneration,mainWindow);
+  }
+
+- (void)sceneWillResignActive:(UIScene *)scene {
+  if(!connected || activeSceneDelegate!=self || scene!=activeWindowScene)
+    return;
+  deactivateWindow(self,activationGeneration,mainWindow);
+  }
+
+- (void)sceneDidDisconnect:(UIScene *)scene {
+  if(!connected || activeSceneDelegate!=self || scene!=activeWindowScene)
+    return;
+  deactivateWindow(self,activationGeneration,mainWindow);
+  detachWindowFromScene(mainWindow);
+  activeSceneDelegate = nil;
+  activeWindowScene = nil;
+  connected = false;
+  self.window = nil;
+  }
+
+- (void)resumeEngineIfCurrent:(NSNumber*)generation {
+  if(!connected || activeSceneDelegate!=self)
+    return;
+  ::resumeEngineIfCurrent(generation,activationGeneration,self.window);
+  }
+
+- (void)dealloc {
+  if(connected && activeSceneDelegate==self) {
+    deactivateWindow(self,activationGeneration,mainWindow);
+    detachWindowFromScene(mainWindow);
+    activeSceneDelegate = nil;
+    activeWindowScene = nil;
+    connected = false;
+    }
+  else {
+    cancelEngineResume(self);
+    }
+  self.window = nil;
+  [super dealloc];
   }
 @end
 
-static bool isApplicationActive = false;
+@interface AppDelegate : NSObject <UIApplicationDelegate> {
+  uint64_t activationGeneration;
+  bool     legacyWindow;
+  }
+@end
 
 @implementation AppDelegate
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
   (void)application;
   (void)launchOptions;
-
-  CGRect frame = [ [ UIScreen mainScreen ] bounds ];
-  TempestWindow  * window = [ [ TempestWindow alloc ] initWithFrame: frame];
-  window.contentScaleFactor = [UIScreen mainScreen].scale;
-  ViewController* controller = [ViewController new];
-  [window setRootViewController:controller];
-  [controller release];
-  window.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-  window.backgroundColor = [ UIColor blackColor ];
-
-  window->owner = nullptr;
-  window->displayLink = nullptr;
-  window->hasPendingFrame.store(false);
-  window->curentEvent = Event::Type::NoEvent;
-  
-  mainWindow = window;
-  [ window makeKeyAndVisible ]; // possible switch here
+  if(@available(iOS 13.0, *)) {
+    usesSceneLifecycle = [[NSBundle mainBundle]
+        objectForInfoDictionaryKey:@"UIApplicationSceneManifest"]!=nil;
+    }
+  legacyWindow = !usesSceneLifecycle;
   return YES;
+  }
+
+- (void)applicationDidBecomeActive:(UIApplication *)application {
+  (void)application;
+  if(!legacyWindow)
+    return;
+  activateWindow(self,@selector(resumeEngineIfCurrent:),
+                 activationGeneration,mainWindow);
+  }
+
+- (void)applicationWillResignActive:(UIApplication *)application {
+  (void)application;
+  if(!legacyWindow)
+    return;
+  deactivateWindow(self,activationGeneration,mainWindow);
+  }
+
+- (void)resumeEngineIfCurrent:(NSNumber*)generation {
+  if(!legacyWindow)
+    return;
+  ::resumeEngineIfCurrent(generation,activationGeneration,mainWindow);
+  }
+
+- (UISceneConfiguration *)application:(UIApplication *)application
+    configurationForConnectingSceneSession:(UISceneSession *)connectingSceneSession
+    options:(UISceneConnectionOptions *)options API_AVAILABLE(ios(13.0)) {
+  (void)application;
+  (void)options;
+  if(!usesSceneLifecycle) {
+    if(legacyWindow)
+      deactivateWindow(self,activationGeneration,mainWindow);
+    legacyWindow = false;
+    usesSceneLifecycle = true;
+    }
+  UISceneConfiguration* configuration = connectingSceneSession.configuration;
+  if(configuration==nil)
+    configuration = [UISceneConfiguration configurationWithName:nil
+                                                     sessionRole:connectingSceneSession.role];
+  configuration.delegateClass = [TempestSceneDelegate class];
+  return configuration;
   }
 
 - (UIInterfaceOrientationMask)application:(UIApplication *)application
@@ -313,28 +578,27 @@ static bool isApplicationActive = false;
   return UIInterfaceOrientationMaskAll;
   }
 
-- (void)applicationWillResignActive:(UIApplication *)application {
-  (void)application;
-  isApplicationActive = false;
-  swapContext();
-  }
-
-- (void)applicationDidEnterBackground:(UIApplication *)application {
-  (void)application;
-  }
-
-- (void)applicationWillEnterForeground:(UIApplication *)application {
-  (void)application;
-  }
-
-- (void)applicationDidBecomeActive:(UIApplication *)application  {
-  (void)application;
-  isApplicationActive = true;
-  swapContext();
-  }
-
 - (void)applicationWillTerminate:(UIApplication *)application {
   (void)application;
+  cancelEngineResume(self);
+  ++lifecycleGeneration;
+  activationResumePending = false;
+  isApplicationActive.store(false);
+  isEngineReady.store(false);
+  isRunning.store(false);
+  if(mainWindow!=nil) {
+    invalidateDisplayLink(mainWindow);
+    mainWindow->owner = nullptr;
+    discardPendingEvent(mainWindow);
+    mainWindow->touch.clear();
+    if(@available(iOS 13.0, *))
+      mainWindow.windowScene = nil;
+    [mainWindow release];
+    mainWindow = nil;
+    }
+  activeSceneDelegate = nil;
+  if(@available(iOS 13.0, *))
+    activeWindowScene = nil;
   }
 @end
 
@@ -343,12 +607,13 @@ struct Fiber  {
   jmp_buf jmp = {};
   };
 
-static std::atomic_bool isRunning{true};
 static Fiber            mainContext;
 static Fiber            appleContext;
 static Fiber*           currentContext = nullptr;
 alignas(16) static char appleStack[1*1024*1024]={};
-static             void appleMain(void*);
+// createAppleSubContext changes sp before this call. Keep appleMain separate so
+// its locals are allocated below the top of appleStack, not above the buffer.
+__attribute__((noinline)) static void appleMain(void*);
 
 inline static void createAppleSubContext()  {
   if(_setjmp(mainContext.jmp) == 0) {
@@ -384,6 +649,11 @@ inline static void swapContext() {
   std::atomic_thread_fence(std::memory_order_seq_cst);
   }
 
+static void resumeEngineFromUIKit() {
+  if(currentContext==&appleContext)
+    swapContext();
+  }
+
 static void drawFrame() {
   auto cb = (mainWindow->owner);
   @autoreleasepool {
@@ -403,13 +673,67 @@ static void appleMain(void*) {
   }
 
 static SystemApi::Window* createWindow(Tempest::Window *owner, uint32_t w, uint32_t h, SystemApi::ShowMode mode) {
+  (void)w;
+  (void)h;
+  (void)mode;
+
   auto window = mainWindow;
-  
+  if(window!=nil && window->owner!=nullptr)
+    return nullptr;
+
+  if(window==nil) {
+    if(usesSceneLifecycle) {
+      if(@available(iOS 13.0, *)) {
+        if(activeSceneDelegate==nil || activeWindowScene==nil)
+          return nullptr;
+        window = [[TempestWindow alloc] initWithWindowScene:activeWindowScene];
+        }
+      else {
+        return nullptr;
+        }
+      }
+    else {
+      window = [[TempestWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+      }
+
+    if(!initializeWindow(window)) {
+      [window release];
+      return nullptr;
+      }
+
+    if(usesSceneLifecycle) {
+      if(@available(iOS 13.0, *)) {
+        if(!attachWindowToScene(window,activeWindowScene)) {
+          [window release];
+          return nullptr;
+          }
+        }
+      }
+    else {
+      window.contentScaleFactor = [UIScreen mainScreen].scale;
+      }
+    mainWindow = window;
+    }
+  else if(usesSceneLifecycle) {
+    if(@available(iOS 13.0, *)) {
+      if(activeSceneDelegate==nil || activeWindowScene==nil ||
+         !attachWindowToScene(window,activeWindowScene))
+        return nullptr;
+      }
+    else {
+      return nullptr;
+      }
+    }
+
+  if(usesSceneLifecycle) {
+    if(@available(iOS 13.0, *))
+      activeSceneDelegate.window = window;
+    }
+
+  [window makeKeyAndVisible];
+
   window->owner = owner;
-  window->displayLink = [CADisplayLink displayLinkWithTarget:window selector:@selector(drawFrame)];
-  //by adding the display link to the run loop our draw method will be called 60 times per second
-  [window->displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSDefaultRunLoopMode];
-  window->hasPendingFrame.store(true);
+  createDisplayLink(window);
   
   return reinterpret_cast<SystemApi::Window*>(window);
   }
@@ -429,15 +753,16 @@ SystemApi::Window *iOSApi::implCreateWindow(Tempest::Window *owner, SystemApi::S
 void iOSApi::implDestroyWindow(SystemApi::Window *w) {
   auto wx = reinterpret_cast<TempestWindow*>(w);
   wx->owner = nullptr;
-  wx->hasPendingFrame.store(false);
-  [wx->displayLink invalidate];
-  wx->displayLink = nil;
+  invalidateDisplayLink(wx);
   discardPendingEvent(wx);
   wx->touch.clear();
   }
 
 void iOSApi::implExit() {
   ::isRunning.store(false);
+  activationResumePending = false;
+  isEngineReady.store(false);
+  invalidateDisplayLink(mainWindow);
   }
 
 Tempest::Rect iOSApi::implWindowClientRect(Window* w) {
@@ -517,7 +842,7 @@ void iOSApi::implProcessEvents(AppCallBack& cb) {
         break;
         }
       default:
-        if(isApplicationActive && mainWindow->hasPendingFrame.load()) {
+        if(isApplicationActive.load() && mainWindow->hasPendingFrame.load()) {
           mainWindow->hasPendingFrame.store(false);
           iOSApi::dispatchRender(wnd);
           }
