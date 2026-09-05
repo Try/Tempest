@@ -463,7 +463,7 @@ void Widget::setFocus(bool b) {
 
 void Widget::setCursorShape(CursorShape cs) {
   wstate.cursor = cs;
-  if(wstate.moveOver) {
+  if(wstate.moveOver || dynamic_cast<Window*>(this)!=nullptr) {
     Widget* root=implTrieRoot(this);
     if(auto w = dynamic_cast<Window*>(root))
       w->implShowCursor(cs);
