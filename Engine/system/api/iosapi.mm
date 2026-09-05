@@ -35,7 +35,6 @@ static uintptr_t alignDown(uintptr_t val, uintptr_t align) {
 
 static void swapContext();
 
-static void drawFrame();
 static void resumeEngineFromUIKit();
 
 @class TempestWindow;
@@ -157,7 +156,6 @@ static bool             usesSceneLifecycle      = false;
     return;
   activationResumePending = false;
   resumeEngineFromUIKit();
-  // drawFrame();
   }
 
 - (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)ex {
@@ -280,11 +278,6 @@ static void discardPendingEvent(TempestWindow* window) {
   }
 
 - (BOOL) shouldAutorotate {
-  return YES;
-  }
-
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
-  (void)interfaceOrientation;
   return YES;
   }
 
@@ -566,9 +559,6 @@ API_AVAILABLE(ios(13.0))
     usesSceneLifecycle = true;
     }
   UISceneConfiguration* configuration = connectingSceneSession.configuration;
-  if(configuration==nil)
-    configuration = [UISceneConfiguration configurationWithName:nil
-                                                     sessionRole:connectingSceneSession.role];
   configuration.delegateClass = [TempestSceneDelegate class];
   return configuration;
   }
@@ -652,16 +642,6 @@ inline static void swapContext() {
 static void resumeEngineFromUIKit() {
   if(currentContext==&appleContext)
     swapContext();
-  }
-
-static void drawFrame() {
-  auto cb = (mainWindow->owner);
-  @autoreleasepool {
-    if(cb!=nullptr) {
-      mainWindow->hasPendingFrame.store(false);
-      iOSApi::dispatchRender(*cb);
-      }
-    }
   }
 
 static void appleMain(void*) {
