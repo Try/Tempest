@@ -30,7 +30,6 @@ class VSamplerCache final {
   private:
     struct Entry {
       Sampler   smp;
-      VkSampler sampler = VK_NULL_HANDLE;
       uint64_t  value   = 0;
       };
 
