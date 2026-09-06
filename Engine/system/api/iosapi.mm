@@ -135,10 +135,16 @@ static void drawFrame();
   swapContext();
   }
 
-- (void)drawFrame {
+- (void)displayLinkDidFire:(CADisplayLink*)sender {
   hasPendingFrame.store(true);
-  swapContext();
-  // drawFrame();
+
+  TempestWindow* const window = self;
+  // Let UIKit unwind the display-link callback before resuming the engine.
+  dispatch_async(dispatch_get_main_queue(), ^{
+    if(window->owner==nullptr || window->displayLink!=sender)
+      return;
+    swapContext();
+    });
   }
 
 - (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)ex {
@@ -406,7 +412,7 @@ static SystemApi::Window* createWindow(Tempest::Window *owner, uint32_t w, uint3
   auto window = mainWindow;
   
   window->owner = owner;
-  window->displayLink = [CADisplayLink displayLinkWithTarget:window selector:@selector(drawFrame)];
+  window->displayLink = [CADisplayLink displayLinkWithTarget:window selector:@selector(displayLinkDidFire:)];
   //by adding the display link to the run loop our draw method will be called 60 times per second
   [window->displayLink addToRunLoop:[NSRunLoop currentRunLoop] forMode:NSDefaultRunLoopMode];
   window->hasPendingFrame.store(true);
