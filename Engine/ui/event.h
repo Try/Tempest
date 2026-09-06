@@ -70,6 +70,13 @@ class Event {
       K_LAlt,
       K_RAlt,
 
+      K_Insert,
+      K_Delete,
+      K_Home,
+      K_End,
+      K_PageUp,
+      K_PageDown,
+
       K_Left,
       K_Up,
       K_Right,
@@ -77,11 +84,7 @@ class Event {
 
       K_Back,
       K_Tab,
-      K_Delete,
-      K_Insert,
       K_Return,
-      K_Home,
-      K_End,
       K_Pause,
       K_Space,
       K_CapsLock,
