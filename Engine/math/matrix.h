@@ -102,6 +102,12 @@ class Matrix4x4 final {
     bool operator != ( const Matrix4x4& other ) const{
       return std::memcmp(this,&other,sizeof(*this))!=0;
       }
+
+    friend Vec4 operator * (const Matrix4x4& m, Vec4 v) {
+      m.project(v);
+      return v;
+      }
+
   private:
     float m[4][4]={};
   };
