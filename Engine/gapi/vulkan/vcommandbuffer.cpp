@@ -175,7 +175,7 @@ VCommandBuffer::~VCommandBuffer() {
   auto node = chunks.begin();
   for(size_t i=0; i<chunks.size(); ++i) {
     flat[i] = node->val[i%chunks.chunkSize].impl;
-    if(i+1==chunks.chunkSize)
+    if((i+1)%chunks.chunkSize==0)
       node = node->next;
     }
   vkFreeCommandBuffers(device.device.impl,pool.impl,uint32_t(chunks.size()),flat.get());
@@ -193,7 +193,7 @@ void VCommandBuffer::reset() {
   for(size_t i=1; i<chunks.size(); ++i) {
     auto cmd = node->val[i%chunks.chunkSize].impl;
     vkFreeCommandBuffers(device.device.impl,pool.impl,1,&cmd);
-    if(i+1==chunks.chunkSize)
+    if((i+1)%chunks.chunkSize==0)
       node = node->next;
     }
   chunks.clear();
@@ -246,7 +246,7 @@ void VCommandBuffer::end() {
   for(size_t i=0; i<chunks.size(); ++i) {
     auto cmd = node->val[i%chunks.chunkSize].impl;
     vkAssert(vkEndCommandBuffer(cmd));
-    if(i+1==chunks.chunkSize)
+    if((i+1)%chunks.chunkSize==0)
       node = node->next;
     }
   }

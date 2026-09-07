@@ -433,7 +433,7 @@ std::shared_ptr<DxFence> DxDevice::submit(DxCommandBuffer& cmd) {
   auto node = cmd.chunks.begin();
   for(size_t i=0; i<size; ++i) {
     flat[i] = node->val[i%cmd.chunks.chunkSize].impl;
-    if(i+1==cmd.chunks.chunkSize)
+    if((i+1)%cmd.chunks.chunkSize==0)
       node = node->next;
     }
 
