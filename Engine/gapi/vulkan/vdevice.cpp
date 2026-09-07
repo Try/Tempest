@@ -1147,7 +1147,7 @@ std::shared_ptr<VFence> VDevice::submit(VCommandBuffer& cmd) {
       flat[i].pNext         = nullptr;
       flat[i].commandBuffer = node->val[i%cmd.chunks.chunkSize].impl;
       flat[i].deviceMask    = 0;
-      if(i+1==cmd.chunks.chunkSize)
+      if((i+1)%cmd.chunks.chunkSize==0)
         node = node->next;
       }
 
@@ -1170,7 +1170,7 @@ std::shared_ptr<VFence> VDevice::submit(VCommandBuffer& cmd) {
     auto node = cmd.chunks.begin();
     for(size_t i=0; i<cmd.chunks.size(); ++i) {
       flat[i] = node->val[i%cmd.chunks.chunkSize].impl;
-      if(i+1==cmd.chunks.chunkSize)
+      if((i+1)%cmd.chunks.chunkSize==0)
         node = node->next;
       }
     VkSubmitInfo submitInfo = {};

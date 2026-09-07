@@ -56,6 +56,8 @@ namespace Detail {
           delete n;
           n = nx;
           }
+        root.next = nullptr;
+        back = &root;
         backSz = 0;
         allSz  = 0;
         }

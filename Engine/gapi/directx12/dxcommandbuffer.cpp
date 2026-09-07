@@ -267,7 +267,7 @@ DxCommandBuffer::~DxCommandBuffer() {
   for(size_t i=0; i<chunks.size(); ++i) {
     auto cmd = node->val[i%chunks.chunkSize].impl;
     dxAssert(cmd->Release());
-    if(i+1==chunks.chunkSize)
+    if((i+1)%chunks.chunkSize==0)
       node = node->next;
     }
   }
@@ -314,7 +314,7 @@ void DxCommandBuffer::reset() {
     auto cmd = node->val[i%chunks.chunkSize].impl;
     cmd->Release();
     // dxAssert(cmd->Reset(pool.get(),nullptr));
-    if(i+1==chunks.chunkSize)
+    if((i+1)%chunks.chunkSize==0)
       node = node->next;
     }
   chunks.clear();
