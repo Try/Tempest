@@ -40,10 +40,9 @@ static void drawFrame();
 @class TempestWindow;
 
 static TempestWindow* mainWindow = nil;
-static UIWindowScene* windowScene API_AVAILABLE(ios(13.0)) = nil;
+static UIWindowScene* windowScene = nil;
 static std::atomic_bool isRunning{true};
 static bool             isApplicationActive = false;
-static bool             usesSceneLifecycle  = false;
 
 @interface TempestWindow : UIWindow {
   @public Tempest::Window* owner;
@@ -303,8 +302,7 @@ static void createDisplayLink(TempestWindow* window) {
   window->hasPendingFrame.store(true);
   }
 
-static void configureWindowForScene(TempestWindow* window, UIWindowScene* scene)
-    API_AVAILABLE(ios(13.0)) {
+static void configureWindowForScene(TempestWindow* window, UIWindowScene* scene) {
 #if defined(__IPHONE_26_0) && \
     __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_26_0
   if(@available(iOS 26.0, *)) {
@@ -330,7 +328,6 @@ static void deactivateWindow(TempestWindow* window) {
     window->displayLink.paused = YES;
   }
 
-API_AVAILABLE(ios(13.0))
 @interface TempestSceneDelegate : UIResponder <UIWindowSceneDelegate> {
   UIWindow* window;
   }
@@ -383,45 +380,11 @@ API_AVAILABLE(ios(13.0))
 @end
 
 @implementation AppDelegate
-- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
-  (void)application;
-  (void)launchOptions;
-  if(@available(iOS 13.0, *)) {
-    usesSceneLifecycle = [[NSBundle mainBundle]
-        objectForInfoDictionaryKey:@"UIApplicationSceneManifest"]!=nil;
-    }
-  return YES;
-  }
-
-- (void)applicationDidBecomeActive:(UIApplication *)application {
-  (void)application;
-  if(usesSceneLifecycle)
-    return;
-  activateWindow(mainWindow);
-  swapContext();
-  }
-
-- (void)applicationWillResignActive:(UIApplication *)application {
-  (void)application;
-  if(usesSceneLifecycle)
-    return;
-  deactivateWindow(mainWindow);
-  }
-
-- (void)applicationDidEnterBackground:(UIApplication *)application {
-  (void)application;
-  }
-
-- (void)applicationWillEnterForeground:(UIApplication *)application {
-  (void)application;
-  }
-
 - (UISceneConfiguration *)application:(UIApplication *)application
     configurationForConnectingSceneSession:(UISceneSession *)connectingSceneSession
-    options:(UISceneConnectionOptions *)options API_AVAILABLE(ios(13.0)) {
+    options:(UISceneConnectionOptions *)options {
   (void)application;
   (void)options;
-  usesSceneLifecycle = true;
   UISceneConfiguration* configuration = connectingSceneSession.configuration;
   configuration.delegateClass = [TempestSceneDelegate class];
   return configuration;
@@ -508,30 +471,14 @@ static SystemApi::Window* createWindow(Tempest::Window *owner, uint32_t w, uint3
     return nullptr;
 
   if(window==nil) {
-    if(usesSceneLifecycle) {
-      if(@available(iOS 13.0, *)) {
-        if(windowScene==nil)
-          return nullptr;
-        window = [[TempestWindow alloc] initWithWindowScene:windowScene];
-        }
-      else {
-        return nullptr;
-        }
-      }
-    else {
-      window = [[TempestWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
-      }
+    if(windowScene==nil)
+      return nullptr;
+    window = [[TempestWindow alloc] initWithWindowScene:windowScene];
 
     if(window==nil)
       return nullptr;
 
-    if(usesSceneLifecycle) {
-      if(@available(iOS 13.0, *))
-        configureWindowForScene(window,windowScene);
-      }
-    else {
-      window.contentScaleFactor = [UIScreen mainScreen].scale;
-      }
+    configureWindowForScene(window,windowScene);
 
     ViewController* controller = [ViewController new];
     [window setRootViewController:controller];
@@ -546,12 +493,8 @@ static SystemApi::Window* createWindow(Tempest::Window *owner, uint32_t w, uint3
     mainWindow = window;
     }
 
-  if(usesSceneLifecycle) {
-    if(@available(iOS 13.0, *)) {
-      auto delegate = (TempestSceneDelegate*)windowScene.delegate;
-      delegate.window = window;
-      }
-    }
+  auto delegate = (TempestSceneDelegate*)windowScene.delegate;
+  delegate.window = window;
 
   [window makeKeyAndVisible];
 
