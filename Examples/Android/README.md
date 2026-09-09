@@ -15,9 +15,9 @@ adb install -r build/android-example/TempestExample/build/outputs/apk/release/Te
 adb shell am start -n org.tempest.example/android.app.NativeActivity
 ```
 
-Release is the default; select debug with `-DTEMPEST_ANDROID_BUILD_TYPE=Debug` when configuring. Release APKs use the local debug signing key unless distribution signing is configured below.
+Release is the default; select debug with `-DCMAKE_BUILD_TYPE=Debug` when configuring. Release APKs use the local debug signing key unless distribution signing is configured below.
 
-Generation needs only CMake and its build tool. It creates one `build.gradle` and a manifest in the build directory. There is no root/app split, `settings.gradle`, `gradle.properties`, wrapper JAR or wrapper script to maintain. Command-line builds use the installed Gradle; set `TEMPEST_ANDROID_GRADLE_EXECUTABLE` to its executable if discovery fails.
+Generation needs only CMake and its build tool. It creates one `build.gradle` in the build directory and references the application's manifest without copying or rewriting it. There is no root/app split, `settings.gradle`, `gradle.properties`, wrapper JAR or wrapper script to maintain. Command-line builds use the installed Gradle; set `TEMPEST_ANDROID_GRADLE_EXECUTABLE` to its executable if discovery fails.
 
 In Android Studio, import `build/android-example/TempestExample` and select the local Gradle 8.9 installation if prompted. If you prefer a wrapper, generate it in that build directory with `gradle -p build/android-example/TempestExample wrapper --gradle-version 8.9`. Generated files stay out of the source repository. See the [Gradle wrapper documentation](https://docs.gradle.org/current/userguide/gradle_wrapper.html).
 
@@ -27,20 +27,29 @@ Create a separate packaging project with `project(... LANGUAGES NONE)`, include 
 
 The native project builds a shared library and calls `tempest_android_native_target` to retain `ANativeActivity_onCreate` and enable 16 KiB page alignment. Desktop builds do not invoke the packaging function and need no Android tools.
 
-Required arguments: `APPLICATION_ID`, `NATIVE_SOURCE_DIR`, `NATIVE_TARGET`, `LIBRARY_NAME`. The library name must match the target's `OUTPUT_NAME`, without `lib` or `.so`.
+Required arguments: `APPLICATION_ID`, `NATIVE_SOURCE_DIR`, `NATIVE_TARGET`, `MANIFEST`. The application owns `AndroidManifest.xml`, including its label, activity, permissions and device requirements. For NativeActivity, its `android.app.lib_name` metadata must match the native target's `OUTPUT_NAME`, without `lib` or `.so`. Applications can use their own `configure_file` call when they need a manifest template.
 
 Optional configuration:
 
-- `LABEL`, `VERSION_CODE`, `VERSION_NAME`: app metadata.
-- `MANIFEST`: an application-owned manifest for a custom activity, permissions or device requirements.
+- `VERSION_CODE`, `VERSION_NAME`: app version metadata.
 - `JAVA_DIRS`, `RESOURCE_DIRS`, `ASSET_DIRS`: source directories.
 - `DEPENDENCIES`, `CMAKE_ARGUMENTS`, `CPP_FLAGS`, `PROGUARD_FILES`, `NO_COMPRESS`: lists.
-- `SHRINK_RELEASE`, `REPACKAGE`: enable shrinking or force ZIP repackaging for large asset bundles.
-- `ASSET_PROPERTY`: a Gradle property naming an additional asset directory.
+- `SHRINK_RELEASE`: enable Java/resource shrinking.
+- `NATIVE_SYMBOLS`: `NONE` (default), `SYMBOL_TABLE` or `FULL` for a separate release crash-symbol archive. The APK's native libraries remain stripped; this does not select a debug build.
 
-Paths are relative to the packaging CMakeLists.txt. The default activity is `android.app.NativeActivity`; Java sources and JNI keep rules are not injected automatically. Apps using a custom backend must supply its manifest, Java sources and keep rules explicitly. AndroidX apps can pass `-Pandroid.useAndroidX=true` to Gradle or configure it in their user-level Gradle properties.
+Paths are relative to the packaging CMakeLists.txt. Java sources and JNI keep rules are not injected automatically. Apps using a custom backend must supply its manifest, Java sources and keep rules explicitly. AndroidX apps can pass `-Pandroid.useAndroidX=true` to Gradle or configure it in their user-level Gradle properties.
 
-Tool versions and ABIs are `TEMPEST_ANDROID_*` CMake cache settings. Gradle properties `tempestVersionCode` and `tempestVersionName` override versions; `PROPERTY_PREFIX` changes the prefix.
+The helper respects existing CMake Android variables and sets defaults only when needed:
+
+- `CMAKE_ANDROID_API`: native minimum API and Gradle `minSdk`, default 24.
+- `CMAKE_ANDROID_ARCH_ABI`: one ABI per packaging build, default `arm64-v8a`.
+- `CMAKE_ANDROID_NDK`: an explicit NDK directory, passed to Gradle's `ndkPath`. If unset, Gradle uses SDK NDK version `27.0.12077973`.
+- `CMAKE_ANDROID_STL_TYPE`: native C++ runtime, default `c++_static`.
+- `CMAKE_BUILD_TYPE`: `Debug`, `Release`, `RelWithDebInfo` or `MinSizeRel`, default `Release`. Only `Debug` produces a debuggable APK; the other configurations use the release packaging variant.
+
+The packaging project runs on the host; do not set an Android toolchain or `CMAKE_SYSTEM_NAME` there. Gradle selects the NDK toolchain for the separate native project. Its compile and target SDKs are independent of the native minimum API: `TEMPEST_ANDROID_COMPILE_SDK` defaults to 35 and `TEMPEST_ANDROID_TARGET_SDK` defaults to the compile SDK. Gradle-specific AGP, native CMake and build-tools versions remain `TEMPEST_ANDROID_*` settings.
+
+Gradle properties `tempestVersionCode` and `tempestVersionName` override app versions; `PROPERTY_PREFIX` changes the prefix. Assets use normal Gradle packaging without forced repackaging. Native libraries use AGP's default uncompressed packaging, with 16 KiB ELF alignment supplied by the native helper.
 
 ## Distribution signing
 

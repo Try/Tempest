@@ -4,7 +4,6 @@ project(TempestAndroidPackaging LANGUAGES NONE)
 include(../../Engine/cmake/TempestAndroid.cmake)
 tempest_android_application(TempestExample
   APPLICATION_ID org.tempest.example
-  LABEL "Tempest example"
   NATIVE_SOURCE_DIR native
   NATIVE_TARGET TempestExample
-  LIBRARY_NAME tempest-example)
+  MANIFEST AndroidManifest.xml)
