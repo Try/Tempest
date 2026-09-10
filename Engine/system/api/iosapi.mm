@@ -303,13 +303,10 @@ static void createDisplayLink(TempestWindow* window) {
   }
 
 static void configureWindowForScene(TempestWindow* window, UIWindowScene* scene) {
-#if defined(__IPHONE_26_0) && \
-    __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_26_0
   if(@available(iOS 26.0, *)) {
     window.frame = scene.effectiveGeometry.coordinateSpace.bounds;
     }
   else
-#endif
     window.frame = scene.coordinateSpace.bounds;
   window.contentScaleFactor = scene.screen.scale;
   }
