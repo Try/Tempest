@@ -4,6 +4,7 @@
 #include <cstdint>
 
 // A packaging smoke test using the platform activity, independent of Tempest's Android backend.
+// Fold this into Examples/Empty once that backend is available upstream.
 static void draw(ANativeActivity*, ANativeWindow* window) {
   ANativeWindow_setBuffersGeometry(window,0,0,WINDOW_FORMAT_RGBA_8888);
   ANativeWindow_Buffer buffer = {};

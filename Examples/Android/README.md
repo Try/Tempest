@@ -1,89 +1,29 @@
 # Android packaging
 
-This example packages a native CMake target into an APK. It draws a gold rectangle using Android's built-in NativeActivity, without Java sources, game assets or the Tempest Android backend. Events, Vulkan swapchains and controllers are separate work.
+A small NativeActivity packaging example. It will move into `Examples/Empty` when the Android backend is available upstream.
 
-## Build
-
-Install JDK 17, Gradle 8.9, CMake 3.22 or newer, and Ninja. Install Android SDK packages `platforms;android-35`, `build-tools;35.0.0`, `ndk;27.0.12077973` and `cmake;3.22.1`. Set `JAVA_HOME` and `ANDROID_HOME`, and put Gradle on `PATH` or set `GRADLE_HOME` to its installation directory.
-
-From the repository root:
+With JDK 17, Gradle 8.9, Ninja and the Android SDK configured (`ANDROID_HOME`), install SDK 35, build-tools 35.0.0, NDK 27.0.12077973 and CMake 3.22.1. Replace `/path/to/ndk` below with the NDK installation directory.
 
 ```sh
-cmake -S Examples/Android -B build/android-example -G Ninja
+cmake -S Examples/Android -B build/android-example -G Ninja -DCMAKE_TOOLCHAIN_FILE=/path/to/ndk/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-24 -DCMAKE_BUILD_TYPE=Release
 cmake --build build/android-example --target TempestExample-apk
-adb install -r build/android-example/TempestExample/build/outputs/apk/release/TempestExample-release.apk
+adb install -r build/android-example/TempestExample-apk/build/outputs/apk/release/TempestExample-apk-release.apk
 adb shell am start -n org.tempest.example/android.app.NativeActivity
 ```
 
-Release is the default; select debug with `-DCMAKE_BUILD_TYPE=Debug` when configuring. Release APKs use the local debug signing key unless distribution signing is configured below.
+Use `-DCMAKE_BUILD_TYPE=Debug` for a debug APK. Gradle must be on `PATH`, under `GRADLE_HOME`, or selected with `TEMPEST_ANDROID_GRADLE_EXECUTABLE`. Release APKs use the local debug key unless the `TEMPEST_KEYSTORE`, `TEMPEST_KEY_ALIAS`, `TEMPEST_STORE_PASSWORD` and `TEMPEST_KEY_PASSWORD` environment variables are set.
 
-Generation needs only CMake and its build tool. It creates one `build.gradle` in the build directory and references the application's manifest without copying or rewriting it. There is no root/app split, `settings.gradle`, `gradle.properties`, wrapper JAR or wrapper script to maintain. Command-line builds use the installed Gradle; set `TEMPEST_ANDROID_GRADLE_EXECUTABLE` to its executable if discovery fails.
+In an application's existing CMakeLists.txt, after defining its shared-library target and adding Tempest:
 
-In Android Studio, import `build/android-example/TempestExample` and select the local Gradle 8.9 installation if prompted. If you prefer a wrapper, generate it in that build directory with `gradle -p build/android-example/TempestExample wrapper --gradle-version 8.9`. Generated files stay out of the source repository. See the [Gradle wrapper documentation](https://docs.gradle.org/current/userguide/gradle_wrapper.html).
-
-## Use in another application
-
-Create a separate packaging project with `project(... LANGUAGES NONE)`, include `Engine/cmake/TempestAndroid.cmake`, and call `tempest_android_application` as in this example. `NATIVE_SOURCE_DIR` points to the existing native CMake project, not the packaging project. Gradle configures that native project with the NDK, avoiding recursive packaging generation.
-
-The native project builds a shared library and calls `tempest_android_native_target` to retain `ANativeActivity_onCreate` and enable 16 KiB page alignment. Desktop builds do not invoke the packaging function and need no Android tools.
-
-Required arguments: `APPLICATION_ID`, `NATIVE_SOURCE_DIR`, `NATIVE_TARGET`, `MANIFEST`. The application owns `AndroidManifest.xml`, including its label, activity, permissions and device requirements. For NativeActivity, its `android.app.lib_name` metadata must match the native target's `OUTPUT_NAME`, without `lib` or `.so`. Applications can use their own `configure_file` call when they need a manifest template.
-
-Optional configuration:
-
-- `VERSION_CODE`, `VERSION_NAME`: app version metadata.
-- `JAVA_DIRS`, `RESOURCE_DIRS`, `ASSET_DIRS`: source directories.
-- `DEPENDENCIES`, `CMAKE_ARGUMENTS`, `CPP_FLAGS`, `PROGUARD_FILES`, `NO_COMPRESS`: lists.
-- `SHRINK_RELEASE`: enable Java/resource shrinking.
-- `NATIVE_SYMBOLS`: `NONE` (default), `SYMBOL_TABLE` or `FULL` for a separate release crash-symbol archive. The APK's native libraries remain stripped; this does not select a debug build.
-
-Paths are relative to the packaging CMakeLists.txt. Java sources and JNI keep rules are not injected automatically. Apps using a custom backend must supply its manifest, Java sources and keep rules explicitly. AndroidX apps can pass `-Pandroid.useAndroidX=true` to Gradle or configure it in their user-level Gradle properties.
-
-The helper respects existing CMake Android variables and sets defaults only when needed:
-
-- `CMAKE_ANDROID_API`: native minimum API and Gradle `minSdk`, default 24.
-- `CMAKE_ANDROID_ARCH_ABI`: one ABI per packaging build, default `arm64-v8a`.
-- `CMAKE_ANDROID_NDK`: an explicit NDK directory, passed to Gradle's `ndkPath`. If unset, Gradle uses SDK NDK version `27.0.12077973`.
-- `CMAKE_ANDROID_STL_TYPE`: native C++ runtime, default `c++_static`.
-- `CMAKE_BUILD_TYPE`: `Debug`, `Release`, `RelWithDebInfo` or `MinSizeRel`, default `Release`. Only `Debug` produces a debuggable APK; the other configurations use the release packaging variant.
-
-The packaging project runs on the host; do not set an Android toolchain or `CMAKE_SYSTEM_NAME` there. Gradle selects the NDK toolchain for the separate native project. Its compile and target SDKs are independent of the native minimum API: `TEMPEST_ANDROID_COMPILE_SDK` defaults to 35 and `TEMPEST_ANDROID_TARGET_SDK` defaults to the compile SDK. Gradle-specific AGP, native CMake and build-tools versions remain `TEMPEST_ANDROID_*` settings.
-
-Gradle properties `tempestVersionCode` and `tempestVersionName` override app versions; `PROPERTY_PREFIX` changes the prefix. Assets use normal Gradle packaging without forced repackaging. Native libraries use AGP's default uncompressed packaging, with 16 KiB ELF alignment supplied by the native helper.
-
-## Distribution signing
-
-Create a signing key once and reuse it for every update. Keep it outside the repository and back it up securely with its password. With JDK 17's `bin` on `PATH`, this command prompts for the password and certificate details:
-
-```sh
-keytool -genkeypair -v -storetype PKCS12 -keystore /path/to/app-release.p12 -alias release -keyalg RSA -keysize 2048 -validity 10000
+```cmake
+if(ANDROID)
+  add_android_apk(MyGame-apk
+    CODE MyGame
+    PACKAGE_NAME org.example.mygame
+    MANIFEST AndroidManifest.xml)
+endif()
 ```
 
-Set all four environment variables before running the APK build target: `TEMPEST_KEYSTORE` (absolute keystore path), `TEMPEST_KEY_ALIAS`, `TEMPEST_STORE_PASSWORD` and `TEMPEST_KEY_PASSWORD`. For PKCS12, use the same password for both. Gradle reads them at build time; secrets are not written to generated files or the CMake cache. `SIGNING_ENV_PREFIX` changes the `TEMPEST` prefix.
+The application owns the manifest; `.in` templates are also supported. NativeActivity's `android.app.lib_name` must match the library's `OUTPUT_NAME` without `lib` or `.so`. Use `CMAKE_ARGUMENTS` to pass project-specific CMake options into Gradle's native build.
 
-PowerShell, after creating the key:
-
-```powershell
-$env:TEMPEST_KEYSTORE = 'C:/Keys/app-release.p12'
-$env:TEMPEST_KEY_ALIAS = 'release'
-$env:TEMPEST_STORE_PASSWORD = [System.Net.NetworkCredential]::new('', (Read-Host 'Keystore password' -AsSecureString)).Password
-$env:TEMPEST_KEY_PASSWORD = $env:TEMPEST_STORE_PASSWORD
-cmake --build build/android-example --target TempestExample-apk
-$env:TEMPEST_STORE_PASSWORD = $null
-$env:TEMPEST_KEY_PASSWORD = $null
-```
-
-Bash, after creating the key:
-
-```sh
-export TEMPEST_KEYSTORE='/path/to/app-release.p12'
-export TEMPEST_KEY_ALIAS='release'
-read -r -s -p 'Keystore password: ' TEMPEST_STORE_PASSWORD
-echo
-export TEMPEST_STORE_PASSWORD
-export TEMPEST_KEY_PASSWORD="$TEMPEST_STORE_PASSWORD"
-cmake --build build/android-example --target TempestExample-apk
-unset TEMPEST_STORE_PASSWORD TEMPEST_KEY_PASSWORD
-```
-
-Never commit keystores or passwords. A differently signed APK cannot update an existing installation. See Android's [signing guide](https://developer.android.com/studio/publish/app-signing).
+The helper generates one `build.gradle` and points Gradle at this same CMake project. Its inner native build skips packaging generation. The generated directory can also be imported into Android Studio. No separate packaging CMake project or checked-in Gradle wrapper is needed, and desktop builds do not look for Android tools.

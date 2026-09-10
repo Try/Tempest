@@ -36,7 +36,7 @@ android {
 
     defaultConfig {
         applicationId @APPLICATION_ID@
-        minSdk @CMAKE_ANDROID_API@
+        minSdk @MIN_SDK@
         targetSdk @TEMPEST_ANDROID_TARGET_SDK@
         versionCode providers.gradleProperty(propertyPrefix + 'VersionCode').orElse('@APP_VERSION_CODE@').get().toInteger()
         versionName providers.gradleProperty(propertyPrefix + 'VersionName').orElse(@VERSION_NAME@).get()

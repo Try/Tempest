@@ -1,20 +1,5 @@
 include_guard(GLOBAL)
 
-# Apply to the application's shared-library target.
-# Merely including this module never searches for Android or Java tools.
-function(tempest_android_native_target target)
-  if(NOT ANDROID)
-    return()
-  endif()
-  get_target_property(kind ${target} TYPE)
-  if(NOT kind STREQUAL "SHARED_LIBRARY")
-    message(FATAL_ERROR "${target} must be a shared library on Android")
-  endif()
-  target_link_options(${target} PRIVATE
-    "-Wl,-u,ANativeActivity_onCreate"
-    "-Wl,-z,max-page-size=16384")
-endfunction()
-
 function(_tempest_android_quote output value)
   string(REPLACE "\\" "\\\\" value "${value}")
   string(REPLACE "'" "\\'" value "${value}")
@@ -32,35 +17,49 @@ function(_tempest_android_list output)
   set(${output} "[${result}]" PARENT_SCOPE)
 endfunction()
 
-# Call from a separate project(... LANGUAGES NONE), never the native project.
-# Gradle invokes NATIVE_SOURCE_DIR in its own NDK build, without invoking this project.
-function(tempest_android_application name)
+# Call after defining the application's native shared-library target.
+# Including this module alone never searches for Android or Java tools.
+function(add_android_apk name)
   if(NOT name MATCHES "^[A-Za-z][A-Za-z0-9_-]*$")
     message(FATAL_ERROR "Use letters, digits, underscores and hyphens for the packaging target name")
   endif()
   if(CMAKE_VERSION VERSION_LESS 3.22)
     message(FATAL_ERROR "Android project generation requires CMake 3.22 or newer")
   endif()
-  if(ANDROID)
-    message(FATAL_ERROR "Generate Android packaging in a separate host LANGUAGES NONE project")
+  if(NOT ANDROID)
+    message(FATAL_ERROR "add_android_apk requires an Android NDK build")
   endif()
   cmake_parse_arguments(APP "SHRINK_RELEASE"
-    "APPLICATION_ID;NATIVE_SOURCE_DIR;NATIVE_TARGET;MANIFEST;VERSION_CODE;VERSION_NAME;PROPERTY_PREFIX;SIGNING_ENV_PREFIX;NATIVE_SYMBOLS"
+    "PACKAGE_NAME;CODE;MANIFEST;VERSION_CODE;VERSION_NAME;PROPERTY_PREFIX;SIGNING_ENV_PREFIX;NATIVE_SYMBOLS"
     "JAVA_DIRS;RESOURCE_DIRS;ASSET_DIRS;DEPENDENCIES;CMAKE_ARGUMENTS;CPP_FLAGS;PROGUARD_FILES;NO_COMPRESS" ${ARGN})
   if(APP_UNPARSED_ARGUMENTS OR APP_KEYWORDS_MISSING_VALUES)
-    message(FATAL_ERROR "Invalid arguments to tempest_android_application: ${APP_UNPARSED_ARGUMENTS};${APP_KEYWORDS_MISSING_VALUES}")
+    message(FATAL_ERROR "Invalid arguments to add_android_apk: ${APP_UNPARSED_ARGUMENTS};${APP_KEYWORDS_MISSING_VALUES}")
   endif()
-  foreach(required APPLICATION_ID NATIVE_SOURCE_DIR NATIVE_TARGET MANIFEST)
+  foreach(required PACKAGE_NAME CODE MANIFEST)
     if(NOT APP_${required})
-      message(FATAL_ERROR "tempest_android_application requires ${required}")
+      message(FATAL_ERROR "add_android_apk requires ${required}")
     endif()
   endforeach()
+  set(APP_APPLICATION_ID "${APP_PACKAGE_NAME}")
+  set(APP_NATIVE_TARGET "${APP_CODE}")
   if(NOT APP_APPLICATION_ID MATCHES "^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+$")
     message(FATAL_ERROR "Invalid Android application ID: ${APP_APPLICATION_ID}")
   endif()
-  get_filename_component(APP_NATIVE_SOURCE_DIR "${APP_NATIVE_SOURCE_DIR}" REALPATH BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
-  if(APP_NATIVE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR NOT EXISTS "${APP_NATIVE_SOURCE_DIR}/CMakeLists.txt")
-    message(FATAL_ERROR "NATIVE_SOURCE_DIR must name a separate native CMake project")
+  if(NOT TARGET "${APP_CODE}")
+    message(FATAL_ERROR "CODE must name an existing shared-library target")
+  endif()
+  get_target_property(kind "${APP_CODE}" TYPE)
+  get_target_property(imported "${APP_CODE}" IMPORTED)
+  if(NOT kind STREQUAL "SHARED_LIBRARY" OR imported)
+    message(FATAL_ERROR "CODE must name a shared library built by this project")
+  endif()
+  target_link_options(${APP_CODE} PRIVATE
+    "-Wl,-u,ANativeActivity_onCreate"
+    "-Wl,-z,max-page-size=16384")
+
+  # Gradle builds the same CMake project, but must not regenerate its own build.gradle.
+  if(TEMPEST_ANDROID_GRADLE_BUILD)
+    return()
   endif()
   if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     message(FATAL_ERROR "Android packaging requires an out-of-source build")
@@ -70,16 +69,12 @@ function(tempest_android_application name)
     message(FATAL_ERROR "MANIFEST must name an application-owned AndroidManifest.xml")
   endif()
 
-  # These configure the native NDK build as well as its Gradle packaging.
-  # Do not use the host's CMAKE_SYSTEM_VERSION as the Android API level.
-  if(NOT DEFINED CMAKE_ANDROID_API)
-    set(CMAKE_ANDROID_API 24 CACHE STRING "Minimum Android API")
-  endif()
-  if(NOT DEFINED CMAKE_ANDROID_ARCH_ABI)
-    set(CMAKE_ANDROID_ARCH_ABI "arm64-v8a" CACHE STRING "Android ABI")
-  endif()
-  if(NOT DEFINED CMAKE_ANDROID_NDK)
-    set(CMAKE_ANDROID_NDK "" CACHE PATH "Android NDK directory; empty uses the SDK default below")
+  # Use the API, ABI and NDK already selected by the native toolchain.
+  if(DEFINED ANDROID_PLATFORM_LEVEL)
+    # The NDK's default toolchain sets CMAKE_SYSTEM_VERSION to 1, not the API level.
+    set(MIN_SDK "${ANDROID_PLATFORM_LEVEL}")
+  else()
+    set(MIN_SDK "${CMAKE_SYSTEM_VERSION}")
   endif()
   if(NOT DEFINED CMAKE_ANDROID_STL_TYPE)
     set(CMAKE_ANDROID_STL_TYPE "c++_static" CACHE STRING "Android C++ runtime")
@@ -110,24 +105,19 @@ function(tempest_android_application name)
   set(TEMPEST_ANDROID_BUILD_TOOLS "35.0.0" CACHE STRING "Android build tools version")
   set(TEMPEST_ANDROID_CMAKE "3.22.1" CACHE STRING "Android native CMake version")
   set(TEMPEST_ANDROID_AGP "8.7.3" CACHE STRING "Android Gradle plugin version")
-  foreach(api CMAKE_ANDROID_API TEMPEST_ANDROID_COMPILE_SDK TEMPEST_ANDROID_TARGET_SDK)
+  foreach(api MIN_SDK TEMPEST_ANDROID_COMPILE_SDK TEMPEST_ANDROID_TARGET_SDK)
     if(NOT "${${api}}" MATCHES "^[1-9][0-9]*$")
       message(FATAL_ERROR "${api} must be a numeric Android API level")
     endif()
   endforeach()
-  if(CMAKE_ANDROID_API GREATER TEMPEST_ANDROID_TARGET_SDK OR TEMPEST_ANDROID_TARGET_SDK GREATER TEMPEST_ANDROID_COMPILE_SDK)
+  if(MIN_SDK GREATER TEMPEST_ANDROID_TARGET_SDK OR TEMPEST_ANDROID_TARGET_SDK GREATER TEMPEST_ANDROID_COMPILE_SDK)
     message(FATAL_ERROR "Android APIs must satisfy minimum <= target <= compile")
   endif()
-  if(CMAKE_ANDROID_NDK)
-    get_filename_component(ndk "${CMAKE_ANDROID_NDK}" ABSOLUTE BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
-    if(NOT EXISTS "${ndk}/build/cmake/android.toolchain.cmake")
-      message(FATAL_ERROR "CMAKE_ANDROID_NDK must point to an NDK installation")
-    endif()
-    _tempest_android_quote(ndk "${ndk}")
-    set(NDK_CONFIGURATION "ndkPath ${ndk}")
-  else()
-    set(NDK_CONFIGURATION "ndkVersion '27.0.12077973'")
+  if(NOT EXISTS "${CMAKE_ANDROID_NDK}/build/cmake/android.toolchain.cmake")
+    message(FATAL_ERROR "CMAKE_ANDROID_NDK must point to an NDK installation")
   endif()
+  _tempest_android_quote(ndk "${CMAKE_ANDROID_NDK}")
+  set(NDK_CONFIGURATION "ndkPath ${ndk}")
   if(NOT APP_NATIVE_SYMBOLS)
     set(APP_NATIVE_SYMBOLS NONE)
   endif()
@@ -153,6 +143,10 @@ function(tempest_android_application name)
   set(templates "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/android")
   set(output "${CMAKE_CURRENT_BINARY_DIR}/${name}")
   file(MAKE_DIRECTORY "${output}")
+  if(manifest MATCHES "\\.in$")
+    configure_file("${manifest}" "${output}/AndroidManifest.xml" @ONLY)
+    set(manifest "${output}/AndroidManifest.xml")
+  endif()
   foreach(kind JAVA RESOURCE ASSET PROGUARD)
     if(kind STREQUAL "PROGUARD")
       set(list_name PROGUARD_FILES)
@@ -169,10 +163,11 @@ function(tempest_android_application name)
   # AGP also reads the NDK alias when deciding whether to package libc++_shared.so.
   list(PREPEND APP_CMAKE_ARGUMENTS "-DCMAKE_ANDROID_STL_TYPE=${CMAKE_ANDROID_STL_TYPE}"
     "-DANDROID_STL=${CMAKE_ANDROID_STL_TYPE}")
+  list(APPEND APP_CMAKE_ARGUMENTS "-DTEMPEST_ANDROID_GRADLE_BUILD=ON")
   foreach(value APPLICATION_ID VERSION_NAME PROPERTY_PREFIX SIGNING_ENV_PREFIX NATIVE_TARGET NATIVE_SYMBOLS)
     _tempest_android_quote(${value} "${APP_${value}}")
   endforeach()
-  _tempest_android_quote(NATIVE_CMAKE "${APP_NATIVE_SOURCE_DIR}/CMakeLists.txt")
+  _tempest_android_quote(NATIVE_CMAKE "${CMAKE_SOURCE_DIR}/CMakeLists.txt")
   foreach(value JAVA_DIRS RESOURCE_DIRS ASSET_DIRS DEPENDENCIES CMAKE_ARGUMENTS CPP_FLAGS PROGUARD_FILES NO_COMPRESS)
     _tempest_android_list(${value} ${APP_${value}})
   endforeach()
@@ -186,20 +181,20 @@ function(tempest_android_application name)
   _tempest_android_quote(MANIFEST "${manifest}")
   configure_file("${templates}/build.gradle.in" "${output}/build.gradle" @ONLY NEWLINE_STYLE LF)
   find_program(TEMPEST_ANDROID_GRADLE_EXECUTABLE NAMES gradle gradle.bat HINTS "$ENV{GRADLE_HOME}/bin"
-    DOC "Gradle executable used by the APK build target")
+    DOC "Gradle executable used by the APK build target" NO_CMAKE_FIND_ROOT_PATH)
   if(TEMPEST_ANDROID_GRADLE_EXECUTABLE)
-    add_custom_target(${name}-apk
+    add_custom_target(${name}
       COMMAND "${TEMPEST_ANDROID_GRADLE_EXECUTABLE}" -p "${output}" --no-daemon --max-workers=2
         "-Dorg.gradle.jvmargs=-Xmx3g -Dfile.encoding=UTF-8"
         "assemble${variant}" "lint${variant}"
       USES_TERMINAL VERBATIM)
   else()
     # Generation still works for IDE users without a Gradle command on PATH.
-    add_custom_target(${name}-apk
+    add_custom_target(${name}
       COMMAND "${CMAKE_COMMAND}" -E echo "Install Gradle 8.9 and configure TEMPEST_ANDROID_GRADLE_EXECUTABLE, then rerun CMake."
       COMMAND "${CMAKE_COMMAND}" -E false
       VERBATIM)
   endif()
   message(STATUS "Generated Android project: ${output}")
-  message(STATUS "Build APK: cmake --build ${CMAKE_BINARY_DIR} --target ${name}-apk")
+  message(STATUS "Build APK: cmake --build ${CMAKE_BINARY_DIR} --target ${name}")
 endfunction()

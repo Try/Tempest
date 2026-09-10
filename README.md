@@ -51,7 +51,7 @@ pm.save(outImg);
 
 ### Android builds
 
-The [Android packaging example](Examples/Android/README.md) generates a single Gradle build from CMake while keeping the application's native CMake project. It uses Android's built-in NativeActivity; the Tempest Android backend is separate work. Desktop builds do not require Java, the Android SDK or Gradle.
+The [Android packaging example](Examples/Android/README.md) uses `add_android_apk` in the application's existing CMake project to generate a single Gradle build. It uses Android's built-in NativeActivity; the Tempest Android backend is separate work. Desktop builds do not require Java, the Android SDK or Gradle.
 
 ### Ecosystem
 During development various issues of Vulkan stack been found, reported and some were fixed. 
