@@ -148,8 +148,7 @@ static bool             isApplicationActive = false;
   TempestWindow* const window = self;
   // Let UIKit unwind the display-link callback before resuming the engine.
   dispatch_async(dispatch_get_main_queue(), ^{
-    if(window->owner==nullptr || window->displayLink!=sender ||
-       !isApplicationActive)
+    if(window->owner==nullptr || window->displayLink!=sender || !isApplicationActive)
       return;
     swapContext();
     });
@@ -305,9 +304,9 @@ static void createDisplayLink(TempestWindow* window) {
 static void configureWindowForScene(TempestWindow* window, UIWindowScene* scene) {
   if(@available(iOS 26.0, *)) {
     window.frame = scene.effectiveGeometry.coordinateSpace.bounds;
-    }
-  else
+    } else {
     window.frame = scene.coordinateSpace.bounds;
+    }
   window.contentScaleFactor = scene.screen.scale;
   }
 
