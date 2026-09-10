@@ -254,6 +254,13 @@ MacOSApi::MacOSApi() {
     { kVK_Option,        Event::K_LAlt     },
     { kVK_RightOption,   Event::K_RAlt     },
 
+    // { kVK_Insert,        Event::K_Insert   }, // not available on Mac
+    { kVK_ForwardDelete, Event::K_Delete   },
+    { kVK_Home,          Event::K_Home     },
+    { kVK_End,           Event::K_End      },
+    { kVK_PageUp,        Event::K_PageUp   },
+    { kVK_PageDown,      Event::K_PageDown },
+
     { kVK_LeftArrow,     Event::K_Left     },
     { kVK_RightArrow,    Event::K_Right    },
     { kVK_UpArrow,       Event::K_Up       },
@@ -262,11 +269,7 @@ MacOSApi::MacOSApi() {
     { kVK_Escape,        Event::K_ESCAPE   },
     { kVK_Delete,        Event::K_Back     },
     { kVK_Tab,           Event::K_Tab      },
-    { kVK_ForwardDelete, Event::K_Delete   },
-    //{ kVK_Insert,        Event::K_Insert   },
-    { kVK_Home,          Event::K_Home     },
-    { kVK_End,           Event::K_End      },
-    //{ kVK_Pause,         Event::K_Pause    },
+    // { kVK_Pause,         Event::K_Pause    },
     { kVK_Return,        Event::K_Return   },
     { kVK_Space,         Event::K_Space    },
     { kVK_CapsLock,      Event::K_CapsLock },

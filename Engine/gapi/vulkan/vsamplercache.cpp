@@ -18,7 +18,7 @@ VSamplerCache::~VSamplerCache() {
   if(smpDefault!=VK_NULL_HANDLE)
     vkDestroySampler(device->device.impl,smpDefault,nullptr);
   for(auto& i:chunks)
-    vkDestroySampler(device->device.impl,i.sampler,nullptr);
+    vkDestroySampler(device->device.impl,VkSampler(i.value),nullptr);
   }
 
 VkSamplerCreateInfo VSamplerCache::createInfo(const VDevice& dev, const Sampler& s) {
@@ -84,6 +84,7 @@ uint64_t VSamplerCache::implGet(const Sampler& s) {
     }
   catch(...) {
     chunks.pop_back();
+    throw;
     }
   return b.value;
   }
