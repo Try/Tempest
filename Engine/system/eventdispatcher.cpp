@@ -81,8 +81,6 @@ void EventDispatcher::dispatchMouseUp(Widget& /*wnd*/, MouseEvent &e) {
   }
 
 void EventDispatcher::dispatchMouseMove(Widget& wnd, MouseEvent &e) {
-  mouseWindow = &wnd;
-  mousePosition = e.pos();
   auto btn = Event::ButtonNone;
   for(uint8_t i=0; i<Event::ButtonLast; ++i)
     if(!mouseUp[i].expired()) {
@@ -140,19 +138,13 @@ void EventDispatcher::dispatchMouseMove(Widget& wnd, MouseEvent &e) {
   implSetMouseOver(wptr,e1);
   }
 
-void EventDispatcher::dispatchMouseReevaluate(Widget& wnd) {
-  if(mouseWindow!=&wnd)
-    return;
-  dispatchMouseReevaluate(wnd,mousePosition);
-  }
-
-void EventDispatcher::dispatchMouseReevaluate(Widget& wnd, Point pos) {
-  mouseWindow = &wnd;
-  mousePosition = pos;
-  if(focusWindow!=&wnd)
-    return;
-  MouseEvent e(mousePosition.x,
-               mousePosition.y,
+// Triggered on X11 EnterNotify. Unlike dispatchMouseMove, no MotionNotify is guaranteed
+// to follow (e.g. window shown/refocused under an already idle pointer), so the
+// hovered widget and its cursor shape would stay stale until next actual mouse
+// move. Synthesize one MouseMove at reported enter position forcing a widget test.
+void EventDispatcher::dispatchMouseEnter(Widget& wnd, Point pos) {
+  MouseEvent e(pos.x,
+               pos.y,
                Event::ButtonNone,
                Event::M_NoModifier,
                0,
@@ -164,6 +156,9 @@ void EventDispatcher::dispatchMouseReevaluate(Widget& wnd, Point pos) {
       continue;
     auto wptr = implDispatch(*i,e);
     if(wptr!=nullptr) {
+      // force=true: The native cursor may have gone stale while pointer was
+      // outside of the window, even if the hit tested widget is the same as
+      // before. Identity of widget is insufficient  to skip reapplication of it.
       implSetMouseOver(wptr,e,true);
       return;
       }
@@ -172,7 +167,6 @@ void EventDispatcher::dispatchMouseReevaluate(Widget& wnd, Point pos) {
   auto wptr = implDispatch(wnd,e);
   implSetMouseOver(wptr,e,true);
   }
-
 
 void EventDispatcher::dispatchMouseWheel(Widget& wnd, MouseEvent &e) {
   if(e.delta==0)
@@ -252,16 +246,13 @@ void EventDispatcher::dispatchClose(Widget& wnd, CloseEvent& e) {
 
 void EventDispatcher::dispatchFocus(Widget& wnd, FocusEvent& e) {
   if(e.in) {
-    focusWindow = &wnd;
-
     if(auto f = focusLast.lock()) {
       f->widget->setFocus(true);
       }
     focusLast.reset();
-    dispatchMouseReevaluate(wnd);
     return;
     }
-  focusWindow = nullptr;
+
   if(!focusLast.expired())
     return;
 

@@ -599,7 +599,7 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
         break;
         }
       case EnterNotify: {
-        SystemApi::dispatchMouseReevaluate(cb,Point(xev.xcrossing.x,xev.xcrossing.y));
+        SystemApi::dispatchMouseEnter(cb,Point(xev.xcrossing.x,xev.xcrossing.y));
         break;
         }
       case MotionNotify: {

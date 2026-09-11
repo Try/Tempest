@@ -15,8 +15,7 @@ class EventDispatcher final {
     void dispatchMouseDown (Widget& wnd, Tempest::MouseEvent& event);
     void dispatchMouseUp   (Widget& wnd, Tempest::MouseEvent& event);
     void dispatchMouseMove (Widget& wnd, Tempest::MouseEvent& event);
-    void dispatchMouseReevaluate(Widget& wnd);
-    void dispatchMouseReevaluate(Widget& wnd, Point pos);
+    void dispatchMouseEnter(Widget& wnd, Point pos);
     void dispatchMouseWheel(Widget& wnd, Tempest::MouseEvent& event);
 
     void dispatchKeyDown   (Widget& wnd, Tempest::KeyEvent&   event, uint32_t scancode);
@@ -51,9 +50,6 @@ class EventDispatcher final {
     std::weak_ptr<Widget::Ref>   mouseUp[Event::MouseButton::ButtonLast];
     std::weak_ptr<Widget::Ref>   mouseLast;
     std::weak_ptr<Widget::Ref>   mouseOver;
-    Widget*                      mouseWindow = nullptr;
-    Widget*                      focusWindow = nullptr;
-    Point                        mousePosition;
 
     std::weak_ptr<Widget::Ref>   focusLast;
 
