@@ -352,11 +352,11 @@ void VCommandBuffer::beginRendering(const FrameBufferDesc& fbo, size_t fboSize, 
 
 void VCommandBuffer::endRendering() {
   vkCmdEndRenderingKHR(impl);
+  resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Graphics);
   resState.flush(*this);
   resState.endRendering(*this);
 
   state = PostRenderPass;
-  resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Graphics);
   }
 
 void VCommandBuffer::setPipeline(AbstractGraphicsApi::Pipeline& p) {
