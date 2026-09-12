@@ -69,7 +69,7 @@ class AccelerationStructure final {
     bool isEmpty() const;
 
   private:
-    AccelerationStructure(Tempest::Device& dev, AbstractGraphicsApi::AccelerationStructure* impl);
+    AccelerationStructure(Tempest::Device& dev, AbstractGraphicsApi::PRtAs&& impl);
 
     Detail::DSharedPtr<AbstractGraphicsApi::AccelerationStructure*> impl;
 

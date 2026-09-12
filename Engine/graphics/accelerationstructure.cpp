@@ -2,7 +2,7 @@
 
 using namespace Tempest;
 
-AccelerationStructure::AccelerationStructure(Device& dev, AbstractGraphicsApi::AccelerationStructure* impl)
+AccelerationStructure::AccelerationStructure(Device& dev, AbstractGraphicsApi::PRtAs&& impl)
   :impl(std::move(impl)) {
   }
 

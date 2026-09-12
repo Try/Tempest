@@ -52,8 +52,14 @@ D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS DxBlasBuildCtx::buildCmd(Dx
   }
 
 
-DxAccelerationStructure::DxAccelerationStructure(DxDevice& dx, const AbstractGraphicsApi::RtGeometry* geom, size_t size)
+DxAccelerationStructure::DxAccelerationStructure(DxDevice& dx)
   :owner(dx) {
+  }
+
+DxAccelerationStructure::~DxAccelerationStructure() {
+  }
+
+void DxAccelerationStructure::build(const AbstractGraphicsApi::RtGeometry* geom, size_t size) {
   DxBlasBuildCtx ctx;
   for(size_t i=0; i<size; ++i) {
     auto& vbo     = *reinterpret_cast<const DxBuffer*>(geom[i].vbo);
@@ -63,21 +69,21 @@ DxAccelerationStructure::DxAccelerationStructure(DxDevice& dx, const AbstractGra
     auto  iboSz   = geom[i].iboSz;
     auto  ioffset = geom[i].ioffset;
     auto  icls    = geom[i].icls;
-    ctx.pushGeometry(dx, vbo, vboSz, stride, ibo, iboSz, ioffset, icls);
+    ctx.pushGeometry(owner, vbo, vboSz, stride, ibo, iboSz, ioffset, icls);
     }
 
-  const auto buildSizesInfo = ctx.buildSizes(dx);
+  const auto buildSizesInfo = ctx.buildSizes(owner);
   if(buildSizesInfo.ResultDataMaxSizeInBytes<=0)
     throw std::system_error(GraphicsErrc::UnsupportedExtension);
 
-  auto  scratch = dx.dataMgr().allocStagingMemory(nullptr, buildSizesInfo.ScratchDataSizeInBytes, MemUsage::ScratchBuffer, BufferHeap::Device);
+  auto  scratch = owner.dataMgr().allocStagingMemory(nullptr, buildSizesInfo.ScratchDataSizeInBytes, MemUsage::ScratchBuffer, BufferHeap::Device);
   DSharedPtr<AbstractGraphicsApi::Buffer*> pScratch(new DxBuffer(std::move(scratch)));
 
-  impl = dx.allocator.alloc(nullptr, buildSizesInfo.ResultDataMaxSizeInBytes, MemUsage::AsStorage, BufferHeap::Device);
+  impl = owner.allocator.alloc(nullptr, buildSizesInfo.ResultDataMaxSizeInBytes, MemUsage::AsStorage, BufferHeap::Device);
   DSharedPtr<AbstractGraphicsApi::AccelerationStructure*> pThis(this);
 
-  auto& mgr = dx.dataMgr();
-  auto  cmd = dx.dataMgr().get();
+  auto& mgr = owner.dataMgr();
+  auto  cmd = owner.dataMgr().get();
   cmd->begin(SyncHint::NoPendingReads);
   for(size_t i=0; i<size; ++i) {
     DSharedPtr<const AbstractGraphicsApi::Buffer*> vbo(geom[i].vbo);
@@ -93,18 +99,21 @@ DxAccelerationStructure::DxAccelerationStructure(DxDevice& dx, const AbstractGra
   mgr.submit(std::move(cmd));
   }
 
-DxAccelerationStructure::~DxAccelerationStructure() {
+
+DxTopAccelerationStructure::DxTopAccelerationStructure(DxDevice& dx)
+  :owner(dx) {
   }
 
+DxTopAccelerationStructure::~DxTopAccelerationStructure() {
+  }
 
-DxTopAccelerationStructure::DxTopAccelerationStructure(DxDevice& dx, const RtInstance* inst, AccelerationStructure*const* as, size_t asSize)
-  :owner(dx) {
+void DxTopAccelerationStructure::build(const RtInstance* inst, AccelerationStructure* const * as, size_t asSize) {
   ComPtr<ID3D12Device5> m_dxrDevice;
-  dx.device->QueryInterface(uuid<ID3D12Device5>(), reinterpret_cast<void**>(&m_dxrDevice));
+  owner.device->QueryInterface(uuid<ID3D12Device5>(), reinterpret_cast<void**>(&m_dxrDevice));
 
   Detail::DSharedPtr<AbstractGraphicsApi::Buffer*> pBuf;
   if(asSize>0) {
-    DxBuffer buf = dx.allocator.alloc(nullptr, asSize*sizeof(D3D12_RAYTRACING_INSTANCE_DESC), MemUsage::StorageBuffer | MemUsage::Transfer, BufferHeap::Device);
+    DxBuffer buf = owner.allocator.alloc(nullptr, asSize*sizeof(D3D12_RAYTRACING_INSTANCE_DESC), MemUsage::StorageBuffer | MemUsage::Transfer, BufferHeap::Device);
 
     pBuf = Detail::DSharedPtr<AbstractGraphicsApi::Buffer*>(new Detail::DxBuffer(std::move(buf)));
     }
@@ -137,13 +146,13 @@ DxTopAccelerationStructure::DxTopAccelerationStructure(DxDevice& dx, const RtIns
   if(buildSizesInfo.ResultDataMaxSizeInBytes<=0)
     throw std::system_error(GraphicsErrc::UnsupportedExtension);
 
-  auto  scratch = dx.dataMgr().allocStagingMemory(nullptr, buildSizesInfo.ScratchDataSizeInBytes, MemUsage::ScratchBuffer, BufferHeap::Device);
-  impl = dx.allocator.alloc(nullptr, buildSizesInfo.ResultDataMaxSizeInBytes, MemUsage::AsStorage, BufferHeap::Device);
+  auto  scratch = owner.dataMgr().allocStagingMemory(nullptr, buildSizesInfo.ScratchDataSizeInBytes, MemUsage::ScratchBuffer, BufferHeap::Device);
+  impl = owner.allocator.alloc(nullptr, buildSizesInfo.ResultDataMaxSizeInBytes, MemUsage::AsStorage, BufferHeap::Device);
 
   DSharedPtr<AbstractGraphicsApi::AccelerationStructure*> pThis(this);
   DSharedPtr<AbstractGraphicsApi::Buffer*> pScratch(new DxBuffer(std::move(scratch)));
 
-  auto& mgr = dx.dataMgr();
+  auto& mgr = owner.dataMgr();
   auto  cmd = mgr.get();
   cmd->begin(SyncHint::NoPendingReads);
   cmd->hold(pScratch);
@@ -153,9 +162,6 @@ DxTopAccelerationStructure::DxTopAccelerationStructure(DxDevice& dx, const RtIns
   cmd->end();
 
   mgr.submit(std::move(cmd));
-  }
-
-DxTopAccelerationStructure::~DxTopAccelerationStructure() {
   }
 
 #endif

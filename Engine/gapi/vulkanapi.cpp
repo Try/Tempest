@@ -247,6 +247,10 @@ AbstractGraphicsApi::Device* VulkanApi::createDevice(std::string_view gpuName) {
     VDevice::deviceQueueProps(device, props);
     if(!impl->isDeviceSuitable(device, props))
       continue;
+#if 0
+    if(!props.hasDescriptorHeap)
+      continue;
+#endif
     return new VDevice(impl->instance, impl->hasDeviceFeatures2, device);
     }
 
@@ -407,14 +411,20 @@ AbstractGraphicsApi::PTexture VulkanApi::createStorage(Device* d,
   return PTexture(ptex.handler);
   }
 
-AbstractGraphicsApi::AccelerationStructure* VulkanApi::createBottomAccelerationStruct(Device* d, const RtGeometry* geom, size_t size) {
+AbstractGraphicsApi::PRtAs VulkanApi::createBottomAccelerationStruct(Device* d, const RtGeometry* geom, size_t size) {
   auto& dx = *reinterpret_cast<VDevice*>(d);
-  return new VAccelerationStructure(dx, geom, size);
+
+  Detail::DSharedPtr<VAccelerationStructure*> prtas(new VAccelerationStructure(dx));
+  prtas.handler->build(geom, size);
+  return PRtAs(prtas.handler);
   }
 
-AbstractGraphicsApi::AccelerationStructure* VulkanApi::createTopAccelerationStruct(Device* d, const RtInstance* inst, AccelerationStructure*const* as, size_t size) {
+AbstractGraphicsApi::PRtAs VulkanApi::createTopAccelerationStruct(Device* d, const RtInstance* inst, AccelerationStructure*const* as, size_t size) {
   auto& dx = *reinterpret_cast<VDevice*>(d);
-  return new VTopAccelerationStructure(dx, inst, as, size);
+
+  Detail::DSharedPtr<VTopAccelerationStructure*> prtas(new VTopAccelerationStructure(dx));
+  prtas.handler->build(inst, as, size);
+  return PRtAs(prtas.handler);
   }
 
 void VulkanApi::readPixels(AbstractGraphicsApi::Device *d, Pixmap& out, const PTexture t,

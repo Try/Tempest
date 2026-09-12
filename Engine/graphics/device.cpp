@@ -294,7 +294,7 @@ AccelerationStructure Device::blas(const RtGeometry* geom, size_t geomSize) {
     gx.icls    = geom[i].icls;
     }
   auto blas = api.createBottomAccelerationStruct(dev, g.get(), geomSize);
-  return AccelerationStructure(*this,blas);
+  return AccelerationStructure(*this, std::move(blas));
   }
 
 AccelerationStructure Device::tlas(std::initializer_list<RtInstance> geom) {
@@ -315,7 +315,7 @@ AccelerationStructure Device::tlas(const RtInstance* geom, size_t geomSize) {
     ++nonEmptyGeomSize;
     }
   auto tlas = api.createTopAccelerationStruct(dev,geom,as.data(),nonEmptyGeomSize);
-  return AccelerationStructure(*this,tlas);
+  return AccelerationStructure(*this, std::move(tlas));
   }
 
 Pixmap Device::readPixels(const Texture2d &t, uint32_t mip) {

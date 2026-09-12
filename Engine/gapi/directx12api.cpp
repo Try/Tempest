@@ -356,14 +356,20 @@ AbstractGraphicsApi::PTexture DirectX12Api::createStorage(Device* d, const uint3
   return PTexture(pbuf.handler);
   }
 
-AbstractGraphicsApi::AccelerationStructure* DirectX12Api::createBottomAccelerationStruct(Device* d, const RtGeometry* geom, size_t size) {
+AbstractGraphicsApi::PRtAs DirectX12Api::createBottomAccelerationStruct(Device* d, const RtGeometry* geom, size_t size) {
   auto& dx = *reinterpret_cast<DxDevice*>(d);
-  return new DxAccelerationStructure(dx, geom,size);
+
+  Detail::DSharedPtr<DxAccelerationStructure*> prtas(new DxAccelerationStructure(dx));
+  prtas.handler->build(geom, size);
+  return PRtAs(prtas.handler);
   }
 
-AbstractGraphicsApi::AccelerationStructure* DirectX12Api::createTopAccelerationStruct(Device* d, const RtInstance* inst, AccelerationStructure*const* as, size_t geomSize) {
+AbstractGraphicsApi::PRtAs DirectX12Api::createTopAccelerationStruct(Device* d, const RtInstance* inst, AccelerationStructure*const* as, size_t geomSize) {
   auto& dx = *reinterpret_cast<DxDevice*>(d);
-  return new DxTopAccelerationStructure(dx, inst,as,geomSize);
+
+  Detail::DSharedPtr<DxTopAccelerationStructure*> prtas(new DxTopAccelerationStructure(dx));
+  prtas.handler->build(inst, as, geomSize);
+  return PRtAs(prtas.handler);
   }
 
 void DirectX12Api::readPixels(Device* d, Pixmap& out, const PTexture t,

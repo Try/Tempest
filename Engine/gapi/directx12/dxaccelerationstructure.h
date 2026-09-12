@@ -23,8 +23,10 @@ struct DxBlasBuildCtx : AbstractGraphicsApi::BlasBuildCtx {
 
 class DxAccelerationStructure : public AbstractGraphicsApi::AccelerationStructure {
   public:
-    DxAccelerationStructure(DxDevice& owner, const AbstractGraphicsApi::RtGeometry* geom, size_t size);
+    DxAccelerationStructure(DxDevice& owner);
     ~DxAccelerationStructure();
+
+    void build(const AbstractGraphicsApi::RtGeometry* geom, size_t size);
 
     DxDevice& owner;
     DxBuffer  impl;
@@ -32,8 +34,10 @@ class DxAccelerationStructure : public AbstractGraphicsApi::AccelerationStructur
 
 class DxTopAccelerationStructure : public AbstractGraphicsApi::AccelerationStructure {
   public:
-    DxTopAccelerationStructure(DxDevice& owner, const RtInstance* inst, AccelerationStructure* const * as, size_t asSize);
+    DxTopAccelerationStructure(DxDevice& owner);
     ~DxTopAccelerationStructure();
+
+    void build(const RtInstance* inst, AccelerationStructure* const * as, size_t asSize);
 
     DxDevice& owner;
     DxBuffer  impl;

@@ -26,9 +26,10 @@ struct VBlasBuildCtx : AbstractGraphicsApi::BlasBuildCtx {
 
 class VAccelerationStructure : public AbstractGraphicsApi::AccelerationStructure {
   public:
-    VAccelerationStructure(VDevice& owner, const AbstractGraphicsApi::RtGeometry* geom, size_t size);
+    VAccelerationStructure(VDevice& owner);
     ~VAccelerationStructure();
 
+    void                       build(const AbstractGraphicsApi::RtGeometry* geom, size_t size);
     VkDeviceAddress            toDeviceAddress(VDevice& owner) const;
 
     VDevice&                   owner;
@@ -38,8 +39,10 @@ class VAccelerationStructure : public AbstractGraphicsApi::AccelerationStructure
 
 class VTopAccelerationStructure : public AbstractGraphicsApi::AccelerationStructure {
   public:
-    VTopAccelerationStructure(VDevice& owner, const RtInstance* inst, AccelerationStructure* const * as, size_t size);
+    VTopAccelerationStructure(VDevice& owner);
     ~VTopAccelerationStructure();
+
+    void build(const RtInstance* inst, AccelerationStructure* const * as, size_t size);
 
     VDevice&                   owner;
     VkAccelerationStructureKHR impl = VK_NULL_HANDLE;

@@ -146,16 +146,14 @@ AbstractGraphicsApi::PTexture MetalApi::createStorage(Device* d,
   return PTexture(new MtTexture(dev,w,h,depth,mips,frm,true));
   }
 
-AbstractGraphicsApi::AccelerationStructure* MetalApi::createBottomAccelerationStruct(Device* d, const RtGeometry* geom, size_t size) {
+AbstractGraphicsApi::PRtAs MetalApi::createBottomAccelerationStruct(Device* d, const RtGeometry* geom, size_t size) {
   auto& dev = *reinterpret_cast<MtDevice*>(d);
-  // auto& ix  = *reinterpret_cast<MtBuffer*>(ibo);
-  // auto& vx  = *reinterpret_cast<MtBuffer*>(vbo);
-  return new MtAccelerationStructure(dev, geom, size);
+  return PRtAs(new MtAccelerationStructure(dev, geom, size));
   }
 
-AbstractGraphicsApi::AccelerationStructure* MetalApi::createTopAccelerationStruct(Device* d, const RtInstance* inst, AccelerationStructure*const* as, size_t size) {
+AbstractGraphicsApi::PRtAs MetalApi::createTopAccelerationStruct(Device* d, const RtInstance* inst, AccelerationStructure*const* as, size_t size) {
   auto& dev = *reinterpret_cast<MtDevice*>(d);
-  return new MtTopAccelerationStructure(dev,inst,as,size);
+  return PRtAs(new MtTopAccelerationStructure(dev,inst,as,size));
   }
 
 AbstractGraphicsApi::DescArray* MetalApi::createDescriptors(Device* d, Texture** tex, size_t cnt, uint32_t mipLevel) {
