@@ -419,8 +419,8 @@ void DxCommandBuffer::beginRendering(const FrameBufferDesc& fbo, size_t fboSize,
   }
 
 void DxCommandBuffer::endRendering() {
-  resState.endRendering(*this);
   resState.onUavUsage(bindings.read, bindings.write, PipelineStage::S_Graphics);
+  resState.endRendering(*this);
   impl->EndRenderPass();
   }
 
