@@ -71,6 +71,12 @@ struct TestTexture : Tempest::AbstractGraphicsApi::Texture {
   };
 
 struct TestCommandBuffer : Tempest::AbstractGraphicsApi::CommandBuffer {
+  struct Barrier {
+    AbstractGraphicsApi::SyncDesc sync;
+    std::vector<AbstractGraphicsApi::BarrierDesc> images;
+    };
+  std::vector<Barrier> barriers;
+
   void beginRendering(const FrameBufferDesc& fbo, size_t fboSize, uint32_t width, uint32_t height) override {}
   void endRendering() override {}
 
@@ -110,6 +116,7 @@ struct TestCommandBuffer : Tempest::AbstractGraphicsApi::CommandBuffer {
   };
 
 void TestCommandBuffer::barrier(const AbstractGraphicsApi::SyncDesc& d, const AbstractGraphicsApi::BarrierDesc* desc, size_t cnt) {
+  barriers.push_back({d, {desc, desc+cnt}});
   Log::d("---");
   for(size_t i=0; i<cnt; ++i) {
     auto& d    = desc[i];
@@ -240,6 +247,89 @@ TEST(main, ResourceDrawAfterDraw) {
   rs.endRendering(cmd);
 
   rs.finalize(cmd);
+  }
+
+TEST(main, ResourceRenderPassReadsComputeOutput) {
+  TestTexture       t;
+  TestCommandBuffer cmd;
+  ResourceState     rs;
+  rs.clearReaders();
+
+  // The buffer must not alias the attachment's sync ID.
+  // An attachment dependency could otherwise hide the missing graphics read.
+  const auto buffer = NonUniqResId(0x2);
+  rs.onUavUsage(NonUniqResId::I_None, buffer, PipelineStage::S_Compute);
+  rs.flush(cmd);
+  cmd.barriers.clear();
+
+  FrameBufferDesc fbo = {};
+  fbo.att [0] = &t;
+  fbo.frm [0] = TextureFormat::RGBA8;
+  fbo.desc[0].load  = AccessOp::Clear;
+  fbo.desc[0].store = AccessOp::Preserve;
+
+  rs.beginRendering(cmd, fbo);
+  // Vulkan gathers bindings while recording the pass, then flushes into its preceding chunk.
+  rs.onUavUsage(buffer, NonUniqResId::I_None, PipelineStage::S_Graphics);
+  rs.flush(cmd);
+
+  ASSERT_EQ(cmd.barriers.size(), 1u);
+  const auto& barrier = cmd.barriers.front();
+  EXPECT_NE(barrier.sync.prev & SyncStage::ComputeWrite, SyncStage::None);
+  EXPECT_NE(barrier.sync.next & SyncStage::GraphicsRead, SyncStage::None);
+  ASSERT_EQ(barrier.images.size(), 1u);
+  EXPECT_EQ(barrier.images.front().next, ResourceLayout::ColorAttach);
+
+  // The dependency must already be emitted before scheduling the post-pass transition.
+  cmd.barriers.clear();
+  rs.endRendering(cmd);
+  rs.flush(cmd);
+  ASSERT_EQ(cmd.barriers.size(), 1u);
+  EXPECT_EQ(cmd.barriers.front().sync.prev & SyncStage::ComputeWrite, SyncStage::None);
+  ASSERT_EQ(cmd.barriers.front().images.size(), 1u);
+  EXPECT_EQ(cmd.barriers.front().images.front().next, ResourceLayout::Default);
+  }
+
+TEST(main, ResourceRenderPassJoinsComputeOutputBeforeRecording) {
+  TestTexture       t;
+  TestCommandBuffer cmd;
+  ResourceState     rs;
+  rs.clearReaders();
+
+  const auto buffer = NonUniqResId(0x2);
+  rs.onUavUsage(NonUniqResId::I_None, buffer, PipelineStage::S_Compute);
+  rs.flush(cmd);
+  cmd.barriers.clear();
+
+  FrameBufferDesc fbo = {};
+  fbo.att [0] = &t;
+  fbo.frm [0] = TextureFormat::RGBA8;
+  fbo.desc[0].load  = AccessOp::Clear;
+  fbo.desc[0].store = AccessOp::Preserve;
+
+  // DirectX joins writers and flushes before recording the native render pass.
+  rs.joinWriters(PipelineStage::S_Indirect);
+  rs.joinWriters(PipelineStage::S_Graphics);
+  rs.beginRendering(cmd, fbo);
+  rs.flush(cmd);
+  ASSERT_EQ(cmd.barriers.size(), 1u);
+  EXPECT_NE(cmd.barriers.front().sync.prev & SyncStage::ComputeWrite, SyncStage::None);
+  EXPECT_NE(cmd.barriers.front().sync.next & SyncStage::GraphicsRead, SyncStage::None);
+
+  cmd.barriers.clear();
+  rs.onUavUsage(buffer, NonUniqResId::I_None, PipelineStage::S_Graphics);
+  rs.endRendering(cmd);
+  rs.flush(cmd);
+  ASSERT_EQ(cmd.barriers.size(), 1u);
+  EXPECT_EQ(cmd.barriers.front().sync.prev & SyncStage::ComputeWrite, SyncStage::None);
+
+  // Recording the actual read must still protect it from a subsequent compute write.
+  cmd.barriers.clear();
+  rs.onUavUsage(NonUniqResId::I_None, buffer, PipelineStage::S_Compute);
+  rs.flush(cmd);
+  ASSERT_EQ(cmd.barriers.size(), 1u);
+  EXPECT_NE(cmd.barriers.front().sync.prev & SyncStage::GraphicsRead, SyncStage::None);
+  EXPECT_NE(cmd.barriers.front().sync.next & SyncStage::ComputeWrite, SyncStage::None);
   }
 
 
