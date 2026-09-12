@@ -386,11 +386,6 @@ static void deactivateWindow(TempestWindow* window) {
   return configuration;
   }
 
-- (UIInterfaceOrientationMask)application:(UIApplication *)application
-  supportedInterfaceOrientationsForWindow:(UIWindow *)window {
-  return UIInterfaceOrientationMaskAll;
-  }
-
 - (void)applicationWillTerminate:(UIApplication *)application {
   (void)application;
   }
