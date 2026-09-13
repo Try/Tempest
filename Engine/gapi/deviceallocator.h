@@ -157,20 +157,26 @@ struct DeviceAllocator<MemoryProvider>::Page : Block {
     }
 
   Allocation alloc(size_t size,size_t align,MemoryProvider& /*prov*/) noexcept {
-    Block*   b=this;
+    Block* b = this;
+
     while(b!=nullptr) {
       if(size<=b->size) {
-        size_t padding=b->offset%align;
-        if(padding==0)
+        size_t padding = b->offset%align;
+        if(padding==0 && size==b->size) {
           return alloc(*b,size);
+          }
+        if(padding==0) {
+          return alloc(*b,size);
+          }
 
-        padding=align-padding;
+        padding = align-padding;
         if(size+padding==b->size) {
           return alloc(*b,size,padding);
-          } else
-        if(size+padding<b->size){
-          Block* bp=new(std::nothrow) Block();
-          if(bp!=nullptr){
+          }
+
+        if(size+padding < b->size){
+          Block* bp = new(std::nothrow) Block();
+          if(bp!=nullptr) {
             bp->next=b->next;
             b->next =bp;
 
@@ -182,12 +188,12 @@ struct DeviceAllocator<MemoryProvider>::Page : Block {
             }
           }
         }
-      b=b->next;
+      b = b->next;
       }
     return Allocation{};
     }
 
-  Allocation alloc(Block& b,size_t size) noexcept {
+  Allocation alloc(Block& b, size_t size) noexcept {
     Allocation a;
     a.offset=b.offset;
     a.page  =this;
@@ -199,7 +205,7 @@ struct DeviceAllocator<MemoryProvider>::Page : Block {
     return a;
     }
 
-  Allocation alloc(Block& b,size_t size,size_t padding) noexcept {
+  Allocation alloc(Block& b, size_t size, size_t padding) noexcept {
     Allocation a;
     a.offset=b.offset+padding;
     a.page  =this;
