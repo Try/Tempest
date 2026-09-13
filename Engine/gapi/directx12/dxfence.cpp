@@ -15,8 +15,17 @@ bool DxFence::wait(uint64_t timeout) {
   HRESULT res = device->waitFence(*this, timeout);
   if(res==WAIT_TIMEOUT)
     return false;
+  holdRes.clear();
   dxAssert(res);
   return true;
+  }
+
+void DxFence::setPayload(std::vector<ResPtr>&& res) {
+  holdRes = std::move(res);
+  }
+
+void DxFence::clearPayload() {
+  holdRes.clear();
   }
 
 #endif

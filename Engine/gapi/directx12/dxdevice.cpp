@@ -359,6 +359,7 @@ std::shared_ptr<DxFence> DxDevice::findAvailableFence() {
         auto event = std::move(i->event);
         //NOTE: application may still hold references to `i`
         i->event = DxEvent();
+        i->clearPayload();
         i = std::make_shared<DxFence>(this, std::move(event));
         }
       dxAssert(ResetEvent(i->event.hevt) ? S_OK : DXGI_ERROR_DEVICE_REMOVED);
@@ -385,8 +386,10 @@ void DxDevice::waitAny() {
   DWORD ret = WaitForMultipleObjectsEx(num, fences, FALSE, INFINITE, FALSE);
   if(ret==WAIT_TIMEOUT)
     return;
-  if(WAIT_OBJECT_0<=ret && ret<WAIT_OBJECT_0+num)
+  if(WAIT_OBJECT_0<=ret && ret<WAIT_OBJECT_0+num) {
+    timeline.timepoint[ret-WAIT_OBJECT_0]->clearPayload();
     return;
+    }
   dxAssert(ret);
   }
 
@@ -420,10 +423,12 @@ HRESULT DxDevice::waitFence(DxFence& t, uint64_t timeout) {
   if(timeout>INFINITE)
     timeout = INFINITE;
   DWORD ret = WaitForSingleObjectEx(t.event.hevt, DWORD(timeout), FALSE);
+  if(ret==WAIT_TIMEOUT) {
+    return ret;
+    }
+  t.clearPayload();
   if(ret==WAIT_OBJECT_0)
     return S_OK;
-  if(ret==WAIT_TIMEOUT)
-    return ret;
   return ret;
   }
 

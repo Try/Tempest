@@ -23,7 +23,7 @@ class TransferCmd : public CmdBuffer {
     using TexPtr  = Detail::DSharedPtr<AbstractGraphicsApi::Texture*>;
     using AsPtr   = Detail::DSharedPtr<AbstractGraphicsApi::AccelerationStructure*>;
     using ResPtr  = Detail::DSharedPtr<const AbstractGraphicsApi::Shared*>;
-    using Fence   = std::weak_ptr<AbstractGraphicsApi::Fence>;
+    using Fence   = std::shared_ptr<AbstractGraphicsApi::Fence>;
 
     template<class Device>
     TransferCmd(Device& dev):CmdBuffer(dev) {
@@ -47,17 +47,15 @@ class TransferCmd : public CmdBuffer {
       }
 
     bool wait(uint64_t t) {
-      if(auto f = fence.lock()) {
-        if(!f->wait(t))
-          return false;
-        }
+      if(fence!=nullptr && !fence->wait(t))
+        return false;
       holdRes.clear();
       return true;
       }
 
     void wait() {
-      if(auto f = fence.lock())
-        f->wait();
+      if(fence!=nullptr)
+        fence->wait();
       holdRes.clear();
       }
 
@@ -66,10 +64,14 @@ class TransferCmd : public CmdBuffer {
       CmdBuffer::reset();
       }
 
-    Fence               fence;
+    void setFence(Fence f) {
+      fence = f;
+      fence->setPayload(std::move(holdRes));
+      }
 
   private:
     std::vector<ResPtr> holdRes;
+    Fence               fence;
   };
 
 template<class Device, class CommandBuffer, class Buffer>
@@ -95,49 +97,55 @@ class UploadEngine final {
     Device&                   device;
     SpinLock                  sync;
     std::vector<std::unique_ptr<Commands>> cmd;
-    bool                      hasWaits {false};
   };
 
 template<class Device, class CommandBuffer, class Buffer>
 auto UploadEngine<Device,CommandBuffer,Buffer>::get() -> std::unique_ptr<Commands> {
-  {
   std::lock_guard<SpinLock> guard(sync);
-  if(!hasWaits && cmd.size()>0) {
-    auto ret = std::move(cmd.back());
-    cmd.pop_back();
-    if(cmd.size()>4)
-      cmd.resize(4);
-    return ret;
-    }
-  for(size_t i=0; i<cmd.size(); ++i) {
+
+  std::unique_ptr<Commands> ret;
+  size_t                    i = 0;
+  constexpr size_t          minCmd = 4;
+  for(i = 0; i<cmd.size(); ++i) {
     if(cmd[i]->wait(0)) {
       std::swap(cmd[i],cmd.back());
-      auto ret = std::move(cmd.back());
+      ret = std::move(cmd.back());
       cmd.pop_back();
-      return ret;
+      break;
       }
     }
-  }
-  return std::unique_ptr<Commands>{new Commands(device)};
+
+  if(ret==nullptr)
+    return std::unique_ptr<Commands>{new Commands(device)};
+
+  while(i < cmd.size()) {
+    if(cmd.size()<=minCmd)
+      return ret;
+
+    if(cmd[i]->wait(0)) {
+      std::swap(cmd[i],cmd.back());
+      cmd.pop_back();
+      } else {
+      ++i;
+      }
+    }
+
+  return ret;
   }
 
 template<class Device, class CommandBuffer, class Buffer>
 void UploadEngine<Device,CommandBuffer,Buffer>::wait() {
   std::lock_guard<SpinLock> guard(sync);
-  if(!hasWaits)
-    return;
   for(auto& i:cmd)
     i->wait();
-  hasWaits = false;
   }
 
 template<class Device, class CommandBuffer, class Buffer>
 void UploadEngine<Device,CommandBuffer,Buffer>::submit(std::unique_ptr<Commands>&& cmd) {
-  cmd->fence = device.submit(*cmd);
+  cmd->setFence(device.submit(*cmd));
 
   std::lock_guard<SpinLock> guard(sync);
   this->cmd.push_back(std::move(cmd));
-  hasWaits = true;
   }
 
 template<class Device, class CommandBuffer, class Buffer>

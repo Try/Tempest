@@ -17,4 +17,19 @@ bool VFence::wait(uint64_t time) {
   return true;
   }
 
+void VFence::setStatus(VkResult st) {
+  status = st;
+  if(st < 0 || st==VK_SUCCESS || st==VK_TIMEOUT) {
+    holdRes.clear();
+    }
+  }
+
+void VFence::setPayload(std::vector<ResPtr>&& res) {
+  holdRes = std::move(res);
+  }
+
+void VFence::clearPayload() {
+  holdRes.clear();
+  }
+
 #endif

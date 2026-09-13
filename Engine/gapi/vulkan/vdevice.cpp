@@ -970,10 +970,12 @@ std::shared_ptr<VFence> VDevice::findAvailableFence() {
         auto fence = i->fence;
         //NOTE: application may still hold references to `i`
         i->fence = VK_NULL_HANDLE;
+        i->clearPayload();
         i = std::make_shared<VFence>(this, fence, id);
         }
       vkAssert(vkResetFences(device.impl, 1, &i->fence));
       i->status = VK_NOT_READY;
+      i->clearPayload();
       return i;
       }
     }
@@ -1001,7 +1003,8 @@ void VDevice::waitAny(uint64_t timeout) {
     auto& i = timeline.timepoint[id];
     if(i==nullptr)
       continue;
-    i->status = vkGetFenceStatus(device.impl, i->fence);
+    auto st = vkGetFenceStatus(device.impl, i->fence);
+    i->setStatus(st);
     }
   }
 
@@ -1047,9 +1050,10 @@ VkResult VDevice::waitFence(VFence& t, uint64_t timeout) {
     if(t.fence==VK_NULL_HANDLE || t.status==VK_SUCCESS)
       return VK_SUCCESS;
     if(timeout==0) {
-      t.status = vkGetFenceStatus(device.impl, t.fence);
-      if(t.status<=0 && t.status!=VK_NOT_READY)
-        return t.status;
+      const auto st = vkGetFenceStatus(device.impl, t.fence);
+      t.setStatus(st);
+      if(st<=0 && st!=VK_NOT_READY)
+        return st;
       return VK_NOT_READY;
       }
   }
