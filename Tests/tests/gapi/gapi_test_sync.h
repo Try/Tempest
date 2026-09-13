@@ -63,6 +63,15 @@ void DispathToDraw(const char* outImage) {
 
     auto pm = device.readPixels(tex);
     pm.save(outImage);
+
+    ImageValidator val(pm);
+    const float color[4] = {0.25f, 0.5f, 0.75f, 1.f};
+    for(uint32_t y=0; y<pm.h(); ++y)
+      for(uint32_t x=0; x<pm.w(); ++x) {
+        const auto pixel = val.at(x,y);
+        for(uint32_t c=0; c<4; ++c)
+          EXPECT_NEAR(pixel.x[c], x<y ? 0.f : color[c], 0.01f) << "pixel " << x << ", " << y << ", channel " << c;
+        }
     }
   catch(std::system_error& e) {
     if(e.code()==Tempest::GraphicsErrc::NoDevice)

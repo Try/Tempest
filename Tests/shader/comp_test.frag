@@ -9,5 +9,5 @@ layout(binding = 0, std140) readonly buffer Input {
   } ssbo;
 
 void main() {
-  outColor = vec4(0.25,0.5,0.75,1.0);//ssbo.val[int(gl_FragCoord.x)];
+  outColor = ssbo.val[int(gl_FragCoord.x)];
   }
