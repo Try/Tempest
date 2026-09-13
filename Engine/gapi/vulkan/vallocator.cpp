@@ -170,8 +170,8 @@ VBuffer VAllocator::alloc(const void *mem, size_t size, MemUsage usage, BufferHe
     memRq.alignment = std::max<size_t>(memRq.alignment, props.samplerDescriptorSize);
     memRq.alignment = std::max<size_t>(memRq.alignment, props.heapAlignment);
     }
-  if(MemUsage::StorageBuffer==(usage & MemUsage::StorageBuffer)) {
-    //most gpu's use 128-byte cache line
+  if(MemUsage::StorageBuffer==(usage & MemUsage::StorageBuffer) && memRq.size>=128) {
+    // most gpu's use 128-byte cache line
     memRq.alignment = std::max<size_t>(memRq.alignment, 128);
     }
 
