@@ -165,6 +165,12 @@ TEST(DirectX12Api,ComputeImage3dAs2d) {
 #endif
   }
 
+TEST(DirectX12Api,ComputeImageR_RW) {
+#if defined(_MSC_VER)
+  GapiTestCommon::ComputeImageR_RW<DirectX12Api>("DirectX12Api_ComputeImageR_RW.png");
+#endif
+  }
+
 TEST(DirectX12Api,AtomicImage) {
 #if defined(_MSC_VER)
   GapiTestCommon::AtomicImage<DirectX12Api>("DirectX12Api_AtomicImage.png");

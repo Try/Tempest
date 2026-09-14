@@ -3,7 +3,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock-matchers.h>
 
-#include <memory>
+#include <cstdlib>
 
 using namespace testing;
 using namespace Tempest::Detail;

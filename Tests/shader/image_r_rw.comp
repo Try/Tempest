@@ -1,0 +1,11 @@
+#version 440
+
+layout (binding = 0, rgba8) uniform readonly  image2D image0;
+layout (binding = 1, rgba8) uniform writeonly image2D image1;
+
+void main() {
+  ivec2 index = ivec2(gl_GlobalInvocationID.xy);
+  vec3  color = imageLoad(image0, index).rgb;
+
+  imageStore(image1, index, vec4(color, 1.0));
+  }

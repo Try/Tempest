@@ -979,6 +979,37 @@ void ComputeImage(const char* outImage) {
   }
 
 template<class GraphicsApi>
+void ComputeImageR_RW(const char* outImage) {
+  using namespace Tempest;
+
+  try {
+    GraphicsApi api{ApiFlags::Validation};
+    Device      device(api);
+
+    auto  img0 = device.image2d(TextureFormat::RGBA8,32,32,false);
+    auto  img1 = device.image2d(TextureFormat::RGBA8,32,32,false);
+    auto  pso  = device.pipeline(device.shader("shader/image_r_rw.comp.sprv"));
+
+    auto cmd = device.commandBuffer();
+    {
+      auto enc = cmd.startEncoding(device);
+      enc.setBinding(0, img0);
+      enc.setBinding(1, img1);
+      enc.setPipeline(pso);
+      enc.dispatch(img0.w(),img0.h(),1);
+    }
+
+    auto sync = device.submit(cmd);
+    sync.wait();
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping graphics testcase: ", e.what()); else
+      throw;
+    }
+  }
+
+template<class GraphicsApi>
 void ComputeImage3dAs2d(const char* outImage) {
   using namespace Tempest;
 
