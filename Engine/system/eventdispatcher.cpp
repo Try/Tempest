@@ -138,6 +138,36 @@ void EventDispatcher::dispatchMouseMove(Widget& wnd, MouseEvent &e) {
   implSetMouseOver(wptr,e1);
   }
 
+// Triggered on X11 EnterNotify. Unlike dispatchMouseMove, no MotionNotify is guaranteed
+// to follow (e.g. window shown/refocused under an already idle pointer), so the
+// hovered widget and its cursor shape would stay stale until next actual mouse
+// move. Synthesize one MouseMove at reported enter position forcing a widget test.
+void EventDispatcher::dispatchMouseEnter(Widget& wnd, Point pos) {
+  MouseEvent e(pos.x,
+               pos.y,
+               Event::ButtonNone,
+               Event::M_NoModifier,
+               0,
+               0,
+               Event::MouseMove);
+
+  for(auto i:overlays) {
+    if(!i->bind(wnd))
+      continue;
+    auto wptr = implDispatch(*i,e);
+    if(wptr!=nullptr) {
+      // force=true: The native cursor may have gone stale while pointer was
+      // outside of the window, even if the hit tested widget is the same as
+      // before. Identity of widget is insufficient  to skip reapplication of it.
+      implSetMouseOver(wptr,e,true);
+      return;
+      }
+    }
+
+  auto wptr = implDispatch(wnd,e);
+  implSetMouseOver(wptr,e,true);
+  }
+
 void EventDispatcher::dispatchMouseWheel(Widget& wnd, MouseEvent &e) {
   if(e.delta==0)
     return;
@@ -414,14 +444,17 @@ std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget &root, KeyEven
   return nullptr;
   }
 
-void EventDispatcher::implSetMouseOver(const std::shared_ptr<Widget::Ref> &wptr,MouseEvent& orig) {
+void EventDispatcher::implSetMouseOver(const std::shared_ptr<Widget::Ref> &wptr,MouseEvent& orig,bool force) {
   auto    widget = wptr==nullptr ? nullptr : wptr->widget;
   Widget* oldW   = nullptr;
   if(auto old = mouseOver.lock())
     oldW = old->widget;
 
-  if(widget==oldW)
+  if(widget==oldW) {
+    if(force)
+      implExcMouseOver(widget,oldW);
     return;
+    }
 
   implExcMouseOver(widget,oldW);
 

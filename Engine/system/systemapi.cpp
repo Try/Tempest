@@ -128,6 +128,10 @@ void SystemApi::dispatchMouseMove(Tempest::Window &cb, MouseEvent &e) {
   dispatcher.dispatchMouseMove(cb,e);
   }
 
+void SystemApi::dispatchMouseEnter(Tempest::Widget &cb, Point pos) {
+  dispatcher.dispatchMouseEnter(cb,pos);
+  }
+
 void SystemApi::dispatchMouseWheel(Tempest::Window &cb, MouseEvent &e) {
   dispatcher.dispatchMouseWheel(cb,e);
   }
