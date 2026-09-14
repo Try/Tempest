@@ -25,7 +25,7 @@ static D3D12_DESCRIPTOR_RANGE_TYPE nativeFormat(ShaderReflection::Class cls) {
     case ShaderReflection::SsboRW:
       return D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
     case ShaderReflection::ImgR:
-      return D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+      return D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
     case ShaderReflection::ImgRW:
       return D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
     case ShaderReflection::Tlas:
