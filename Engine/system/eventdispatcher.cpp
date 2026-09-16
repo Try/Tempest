@@ -138,10 +138,8 @@ void EventDispatcher::dispatchMouseMove(Widget& wnd, MouseEvent &e) {
   implSetMouseOver(wptr,e1);
   }
 
-// Triggered on X11 EnterNotify. Unlike dispatchMouseMove, no MotionNotify is guaranteed
-// to follow (e.g. window shown/refocused under an already idle pointer), so the
-// hovered widget and its cursor shape would stay stale until next actual mouse
-// move. Synthesize one MouseMove at reported enter position forcing a widget test.
+// X11 EnterNotify provides the pointer position, but no MotionNotify is guaranteed to
+// follow. Synthesize a MouseMove so the hovered widget is evaluated immediately.
 void EventDispatcher::dispatchMouseEnter(Widget& wnd, Point pos) {
   MouseEvent e(pos.x,
                pos.y,
@@ -156,16 +154,13 @@ void EventDispatcher::dispatchMouseEnter(Widget& wnd, Point pos) {
       continue;
     auto wptr = implDispatch(*i,e);
     if(wptr!=nullptr) {
-      // force=true: The native cursor may have gone stale while pointer was
-      // outside of the window, even if the hit tested widget is the same as
-      // before. Identity of widget is insufficient  to skip reapplication of it.
-      implSetMouseOver(wptr,e,true);
+      implSetMouseOver(wptr,e);
       return;
       }
     }
 
   auto wptr = implDispatch(wnd,e);
-  implSetMouseOver(wptr,e,true);
+  implSetMouseOver(wptr,e);
   }
 
 void EventDispatcher::dispatchMouseWheel(Widget& wnd, MouseEvent &e) {
@@ -250,6 +245,8 @@ void EventDispatcher::dispatchFocus(Widget& wnd, FocusEvent& e) {
       f->widget->setFocus(true);
       }
     focusLast.reset();
+    if(auto w = mouseOver.lock())
+      implExcMouseOver(w->widget,w->widget);
     return;
     }
 
@@ -444,17 +441,14 @@ std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget &root, KeyEven
   return nullptr;
   }
 
-void EventDispatcher::implSetMouseOver(const std::shared_ptr<Widget::Ref> &wptr,MouseEvent& orig,bool force) {
+void EventDispatcher::implSetMouseOver(const std::shared_ptr<Widget::Ref> &wptr,MouseEvent& orig) {
   auto    widget = wptr==nullptr ? nullptr : wptr->widget;
   Widget* oldW   = nullptr;
   if(auto old = mouseOver.lock())
     oldW = old->widget;
 
-  if(widget==oldW) {
-    if(force)
-      implExcMouseOver(widget,oldW);
+  if(widget==oldW)
     return;
-    }
 
   implExcMouseOver(widget,oldW);
 
