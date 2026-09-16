@@ -138,31 +138,6 @@ void EventDispatcher::dispatchMouseMove(Widget& wnd, MouseEvent &e) {
   implSetMouseOver(wptr,e1);
   }
 
-// X11 EnterNotify provides the pointer position, but no MotionNotify is guaranteed to
-// follow. Synthesize a MouseMove so the hovered widget is evaluated immediately.
-void EventDispatcher::dispatchMouseEnter(Widget& wnd, Point pos) {
-  MouseEvent e(pos.x,
-               pos.y,
-               Event::ButtonNone,
-               Event::M_NoModifier,
-               0,
-               0,
-               Event::MouseMove);
-
-  for(auto i:overlays) {
-    if(!i->bind(wnd))
-      continue;
-    auto wptr = implDispatch(*i,e);
-    if(wptr!=nullptr) {
-      implSetMouseOver(wptr,e);
-      return;
-      }
-    }
-
-  auto wptr = implDispatch(wnd,e);
-  implSetMouseOver(wptr,e);
-  }
-
 void EventDispatcher::dispatchMouseWheel(Widget& wnd, MouseEvent &e) {
   if(e.delta==0)
     return;
@@ -245,8 +220,17 @@ void EventDispatcher::dispatchFocus(Widget& wnd, FocusEvent& e) {
       f->widget->setFocus(true);
       }
     focusLast.reset();
-    if(auto w = mouseOver.lock())
-      implExcMouseOver(w->widget,w->widget);
+
+    if(auto w = mouseOver.lock()) {
+      auto root = w->widget;
+      while(root->owner()!=nullptr)
+        root = root->owner();
+
+      if(auto r = dynamic_cast<Window*>(root))
+        r->implShowCursor(r->implResolvedCursor());
+      if(auto r = dynamic_cast<UiOverlay*>(root))
+        r->implShowCursor(r->implResolvedCursor());
+      }
     return;
     }
 

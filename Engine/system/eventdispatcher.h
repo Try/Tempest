@@ -15,7 +15,6 @@ class EventDispatcher final {
     void dispatchMouseDown (Widget& wnd, Tempest::MouseEvent& event);
     void dispatchMouseUp   (Widget& wnd, Tempest::MouseEvent& event);
     void dispatchMouseMove (Widget& wnd, Tempest::MouseEvent& event);
-    void dispatchMouseEnter(Widget& wnd, Point pos);
     void dispatchMouseWheel(Widget& wnd, Tempest::MouseEvent& event);
 
     void dispatchKeyDown   (Widget& wnd, Tempest::KeyEvent&   event, uint32_t scancode);

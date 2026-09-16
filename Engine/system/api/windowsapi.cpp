@@ -394,7 +394,7 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
       }
 
     case WM_ACTIVATE:{
-      SetCursor(cb->cursorShape());
+      SetCursor(cb->implResolvedCursor());
       if(wParam==WA_INACTIVE) {
         FocusEvent e(false, Event::UnknownReason);
         SystemApi::dispatchFocus(*cb, e);

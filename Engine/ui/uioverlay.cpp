@@ -47,3 +47,8 @@ void UiOverlay::implShowCursor(CursorShape s) {
     owner->implShowCursor(s);
   }
 
+CursorShape UiOverlay::implResolvedCursor() const {
+  if(owner!=nullptr)
+    return owner->implResolvedCursor();
+  return CursorShape::Arrow;
+  }

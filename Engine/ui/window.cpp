@@ -57,5 +57,6 @@ void Window::setCursorPosition(const Point& p) {
   }
 
 void Window::implShowCursor(CursorShape s) {
+  resolvedCursor = s;
   SystemApi::showCursor(hwnd(),s);
   }
