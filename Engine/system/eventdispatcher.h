@@ -40,7 +40,7 @@ class EventDispatcher final {
 
     bool                         implShortcut(Tempest::Widget &w, Tempest::KeyEvent& event);
     std::shared_ptr<Widget::Ref> implDispatch(Tempest::Widget &w, Tempest::KeyEvent&   event);
-    void                         implSetMouseOver(const std::shared_ptr<Widget::Ref>& s, MouseEvent& orig);
+    void                         implSetMouseOver(const std::shared_ptr<Widget::Ref>& wptr, MouseEvent& orig);
     void                         implExcMouseOver(Widget *w, Widget *old);
     void                         handleModKey(const KeyEvent& e);
 
