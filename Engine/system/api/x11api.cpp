@@ -607,6 +607,7 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
                       0,
                       Event::MouseMove );
         SystemApi::dispatchMouseMove(cb,e);
+        implShowCursor(hWnd.ptr(),SystemApi::cursorShape(cb));
         break;
         }
       case MotionNotify: {

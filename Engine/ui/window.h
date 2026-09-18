@@ -22,7 +22,6 @@ class Window : public Widget {
     ~Window() override;
 
     void setWindowTitle(const char* utf8);
-    CursorShape implResolvedCursor() const { return resolvedCursor; }
 
   protected:
     virtual void render();
@@ -37,12 +36,14 @@ class Window : public Widget {
 
   private:
     void         implShowCursor(CursorShape s);
+    CursorShape  implResolvedCursor() const { return resolvedCursor; }
 
     SystemApi::Window* id=nullptr;
     CursorShape        resolvedCursor=CursorShape::Arrow;
   friend class Widget;
   friend class UiOverlay;
   friend class EventDispatcher;
+  friend class SystemApi;
   };
 
 }

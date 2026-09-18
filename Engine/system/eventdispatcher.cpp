@@ -220,17 +220,6 @@ void EventDispatcher::dispatchFocus(Widget& wnd, FocusEvent& e) {
       f->widget->setFocus(true);
       }
     focusLast.reset();
-
-    if(auto w = mouseOver.lock()) {
-      auto root = w->widget;
-      while(root->owner()!=nullptr)
-        root = root->owner();
-
-      if(auto r = dynamic_cast<Window*>(root))
-        r->implShowCursor(r->implResolvedCursor());
-      if(auto r = dynamic_cast<UiOverlay*>(root))
-        r->implShowCursor(r->implResolvedCursor());
-      }
     return;
     }
 
