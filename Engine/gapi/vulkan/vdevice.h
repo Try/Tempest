@@ -30,10 +30,12 @@ namespace Detail {
 class VTexture;
 
 inline void vkAssert(VkResult code){
-  if(T_LIKELY(code==VkResult::VK_SUCCESS))
+  if(T_LIKELY(code==VK_SUCCESS))
     return;
 
   switch( code ) {
+    case VK_SUBOPTIMAL_KHR:
+      return; // not an error. currently threatened as a hint to VSwapchain
     case VK_ERROR_OUT_OF_DEVICE_MEMORY:
       throw std::system_error(Tempest::GraphicsErrc::OutOfVideoMemory);
     case VK_ERROR_OUT_OF_HOST_MEMORY:
