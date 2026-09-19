@@ -4,6 +4,7 @@
 #include "api/x11api.h"
 #include "api/macosapi.h"
 #include "api/iosapi.h"
+#include "api/androidapi.h"
 #include "eventdispatcher.h"
 
 #include <Tempest/Event>
@@ -98,6 +99,8 @@ uint16_t SystemApi::translateKey(uint64_t scancode) {
 SystemApi& SystemApi::inst() {
  #ifdef __WINDOWS__
   static WindowsApi api;
+#elif defined(__ANDROID__)
+  static AndroidApi api;
 #elif defined(__UNIX__)
   static X11Api api;
 #elif defined(__OSX__)
@@ -140,8 +143,8 @@ void SystemApi::dispatchKeyUp(Tempest::Window &cb, KeyEvent &e, uint32_t scancod
   dispatcher.dispatchKeyUp(cb,e,scancode);
   }
 
-void SystemApi::dispatchResize(Tempest::Window& cb, SizeEvent& e) {
-  dispatcher.dispatchResize(cb,e);
+void SystemApi::dispatchResize(Tempest::Window& cb, SizeEvent& e, bool force) {
+  dispatcher.dispatchResize(cb,e,force);
   }
 
 void SystemApi::dispatchClose(Tempest::Window& cb, CloseEvent& e) {
