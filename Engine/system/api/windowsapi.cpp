@@ -394,6 +394,18 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
       }
 
     case WM_ACTIVATE:{
+      POINT mpos = {};
+      if(wParam==WA_ACTIVE && GetCursorPos(&mpos)) {
+        MouseEvent e( mpos.x,
+                      mpos.y,
+                      Event::ButtonNone,
+                      Event::M_NoModifier,
+                      0,
+                      0,
+                      Event::MouseMove );
+        SystemApi::dispatchMouseMove(*cb, e);
+        }
+
       SetCursor(SystemApi::cursorShape(*cb));
       if(wParam==WA_INACTIVE) {
         FocusEvent e(false, Event::UnknownReason);
