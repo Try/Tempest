@@ -625,9 +625,9 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
                       0,
                       0,
                       Event::MouseMove );
-        SystemApi::dispatchMouseMove(*cb, e);
+        SystemApi::dispatchMouseMove(cb, e);
         }
-      implShowCursor(cb, SystemApi::cursorShape(*cb));
+      implShowCursor(reinterpret_cast<SystemApi::Window*>(dx), SystemApi::cursorShape(cb));
       break;
       }
     case NSEventTypeMouseExited:
