@@ -106,6 +106,28 @@ static Tempest::Point mousePos(NSEvent* e) {
   return mousePos(e,dummy);
   }
 
+static Tempest::Point mousePos(NSWindow* wnd, bool& inWindow) {
+  NSPoint p  = [wnd mouseLocationOutsideOfEventStream];
+  NSPoint px = mousePos(p, wnd, inWindow);
+  return Tempest::Point{int(px.x), int(px.y)};
+  }
+
+static void implShowCursor(SystemApi::Window *w, CursorShape show) {
+  static CursorShape current = CursorShape::Arrow;
+  if(current==show) {
+    // show/hie mechanism is ref couter based on Mac
+    // https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/QuartzDisplayServicesConceptual/Articles/MouseCursor.html
+    return;
+    }
+
+  current = show;
+  if(show==CursorShape::Hidden) {
+    CGDisplayHideCursor(kCGNullDirectDisplay);
+    return;
+    }
+  CGDisplayShowCursor(kCGNullDirectDisplay);
+  }
+
 void Detail::ImplMacOSApi::onDisplayLink(void* hwnd) {
   @autoreleasepool {
     auto cb = reinterpret_cast<Tempest::Window*>(hwnd);
@@ -127,6 +149,20 @@ void Detail::ImplMacOSApi::onDidResize(void* hwnd, void* w) {
 void Detail::ImplMacOSApi::onDidBecomeKey(void* hwnd, void* w) {
   auto      cb  = reinterpret_cast<Tempest::Window*>(hwnd);
   NSWindow* wnd = reinterpret_cast<NSWindow*>(w);
+
+  bool inWindow = true;
+  auto mpos     = mousePos(wnd, inWindow);
+  if(inWindow) {
+    MouseEvent e( mpos.x,
+                  mpos.y,
+                  Event::ButtonNone,
+                  Event::M_NoModifier,
+                  0,
+                  0,
+                  Event::MouseMove );
+    MacOSApi::dispatchMouseMove(*cb, e);
+    }
+  implShowCursor(reinterpret_cast<SystemApi::Window*>(w), MacOSApi::cursorShape(*cb));
 
   FocusEvent e(true, Event::UnknownReason);
   MacOSApi::dispatchFocus(*cb, e);
@@ -367,11 +403,7 @@ void MacOSApi::implSetCursorPosition(SystemApi::Window *w, int x, int y) {
   }
 
 void MacOSApi::implShowCursor(SystemApi::Window *w, CursorShape show) {
-  if(show==CursorShape::Hidden) {
-    CGDisplayHideCursor(kCGNullDirectDisplay);
-    return;
-    }
-  CGDisplayShowCursor(kCGNullDirectDisplay);
+  ::implShowCursor(w, show);
   }
 
 void MacOSApi::implSetWindowTitle(Window* w, const char* utf8) {
@@ -613,23 +645,8 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
       return;
       }
     case NSEventTypeAppKitDefined:
+    case NSEventTypeMouseEntered:
       break;
-    case NSEventTypeMouseEntered: {
-      bool inWindow = false;
-      auto mpos     = mousePos(evt,inWindow);
-      if(inWindow) {
-        MouseEvent e( mpos.x,
-                      mpos.y,
-                      Event::ButtonNone,
-                      Event::M_NoModifier,
-                      0,
-                      0,
-                      Event::MouseMove );
-        SystemApi::dispatchMouseMove(cb, e);
-        }
-      implShowCursor(reinterpret_cast<SystemApi::Window*>(dx), SystemApi::cursorShape(cb));
-      break;
-      }
     case NSEventTypeMouseExited:
       break;
 
