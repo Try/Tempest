@@ -143,8 +143,8 @@ void SystemApi::dispatchKeyUp(Tempest::Window &cb, KeyEvent &e, uint32_t scancod
   dispatcher.dispatchKeyUp(cb,e,scancode);
   }
 
-void SystemApi::dispatchResize(Tempest::Window& cb, SizeEvent& e, bool force) {
-  dispatcher.dispatchResize(cb,e,force);
+void SystemApi::dispatchResize(Tempest::Window& cb, SizeEvent& e) {
+  dispatcher.dispatchResize(cb,e);
   }
 
 void SystemApi::dispatchClose(Tempest::Window& cb, CloseEvent& e) {
@@ -153,6 +153,10 @@ void SystemApi::dispatchClose(Tempest::Window& cb, CloseEvent& e) {
 
 void SystemApi::dispatchFocus(Tempest::Window& cb, FocusEvent& e) {
   dispatcher.dispatchFocus(cb,e);
+  }
+
+void SystemApi::setWindowHandle(Tempest::Window& cb, Window* handle) {
+  cb.id = handle;
   }
 
 bool SystemApi::isRunning() {

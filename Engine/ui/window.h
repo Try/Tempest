@@ -42,6 +42,7 @@ class Window : public Widget {
   friend class Widget;
   friend class UiOverlay;
   friend class EventDispatcher;
+  friend class SystemApi;
   };
 
 }

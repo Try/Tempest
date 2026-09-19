@@ -16,7 +16,7 @@ class Example final : public Tempest::Window {
       }
   };
 
-int main(int, const char**) {
+int main(int, char**) {
   Tempest::Application app;
   Example window;
   return app.exec();

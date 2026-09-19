@@ -100,10 +100,11 @@ class SystemApi {
     static void      dispatchKeyDown   (Tempest::Window& cb, KeyEvent& e, uint32_t scancode);
     static void      dispatchKeyUp     (Tempest::Window& cb, KeyEvent& e, uint32_t scancode);
 
-    static void      dispatchResize    (Tempest::Window& cb, SizeEvent& e, bool force = false);
+    static void      dispatchResize    (Tempest::Window& cb, SizeEvent& e);
     static void      dispatchClose     (Tempest::Window& cb, CloseEvent& e);
 
     static void      dispatchFocus     (Tempest::Window& cb, FocusEvent& e);
+    static void      setWindowHandle   (Tempest::Window& cb, Window* handle);
 
     static SystemApi& inst();
 

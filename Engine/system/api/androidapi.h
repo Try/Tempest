@@ -6,7 +6,11 @@ namespace Tempest {
 
 class AndroidApi final : SystemApi {
   public:
+    using SystemApi::dispatchClose;
+    using SystemApi::dispatchFocus;
     using SystemApi::dispatchRender;
+    using SystemApi::dispatchResize;
+    using SystemApi::setWindowHandle;
 
   private:
     AndroidApi();

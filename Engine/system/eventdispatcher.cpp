@@ -199,10 +199,8 @@ void EventDispatcher::dispatchKeyUp(Widget &/*wnd*/, KeyEvent &e, uint32_t scanc
     }
   }
 
-void EventDispatcher::dispatchResize(Widget& wnd, SizeEvent& e, bool force) {
-  if(force && wnd.w()==int(e.w) && wnd.h()==int(e.h))
-    wnd.resizeEvent(e); else
-    wnd.resize(int(e.w),int(e.h));
+void EventDispatcher::dispatchResize(Widget& wnd, SizeEvent& e) {
+  wnd.resize(int(e.w),int(e.h));
   }
 
 void EventDispatcher::dispatchClose(Widget& wnd, CloseEvent& e) {
