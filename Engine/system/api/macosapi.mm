@@ -601,7 +601,7 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
           break;
           }
         default: break;
-		}
+        }
 
       auto isDown = evt.modifierFlags & flag;
       auto eType  = (isDown ? Event::KeyDown : Event::KeyUp);
@@ -614,7 +614,22 @@ void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
       }
     case NSEventTypeAppKitDefined:
       break;
-    case NSEventTypeMouseEntered:
+    case NSEventTypeMouseEntered: {
+      bool inWindow = false;
+      auto mpos     = mousePos(evt,inWindow);
+      if(inWindow) {
+        MouseEvent e( mpos.x,
+                      mpos.y,
+                      Event::ButtonNone,
+                      Event::M_NoModifier,
+                      0,
+                      0,
+                      Event::MouseMove );
+        SystemApi::dispatchMouseMove(*cb, e);
+        }
+      implShowCursor(cb, SystemApi::cursorShape(*cb));
+      break;
+      }
     case NSEventTypeMouseExited:
       break;
 
