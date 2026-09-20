@@ -12,9 +12,9 @@
 #include <android/native_window.h>
 
 #include <atomic>
+#include <cstdlib>
 #include <dlfcn.h>
 #include <exception>
-#include <mutex>
 #include <thread>
 
 using namespace Tempest;
@@ -181,17 +181,17 @@ void AndroidApi::implSetWindowTitle(SystemApi::Window*, const char*) {
   // TODO: update the activity title through JNI.
   }
 
-static void runMain() {
+static int runMain() {
   Dl_info module = {};
   if(dladdr(reinterpret_cast<void*>(&android_main),&module)==0) {
     Log::e("Unable to locate the application library");
-    return;
+    return EXIT_FAILURE;
     }
   void* self = dlopen(module.dli_fname,RTLD_NOW);
   if(self==nullptr) {
     const char* error = dlerror();
     Log::e("Unable to open the application library: ",error==nullptr ? "unknown error" : error);
-    return;
+    return EXIT_FAILURE;
     }
   using Main = int(*)(int,char**);
   auto entry = reinterpret_cast<Main>(dlsym(self,"main"));
@@ -199,42 +199,27 @@ static void runMain() {
     const char* error = dlerror();
     Log::e("Unable to find the application entry point: ",error==nullptr ? "unknown error" : error);
     dlclose(self);
-    return;
+    return EXIT_FAILURE;
     }
   // NativeActivity owns the library for the duration of android_main.
   dlclose(self);
   char  arg0[] = "app";
   char* argv[] = {arg0,nullptr};
-  entry(1,argv);
+  return entry(1,argv);
   }
 
 extern "C" void android_main(android_app* state) {
-  static std::mutex sync;
-  std::unique_lock<std::mutex> guard(sync,std::defer_lock);
-  bool initialFocus = false;
-  state->userData = &initialFocus;
-  state->onAppCmd = [](android_app* state, int32_t cmd) {
-    if(cmd==APP_CMD_GAINED_FOCUS || cmd==APP_CMD_LOST_FOCUS)
-      *static_cast<bool*>(state->userData) = (cmd==APP_CMD_GAINED_FOCUS);
-    };
-  // Pump the replacement activity while waiting so the UI thread can destroy the previous one.
-  while(!guard.try_lock()) {
-    pollAndroid(state,10);
-    if(state->destroyRequested!=0)
-      return;
+  static std::atomic_flag started = ATOMIC_FLAG_INIT;
+  if(started.test_and_set()) {
+    ANativeActivity_finish(state->activity);
+    while(state->destroyRequested==0)
+      pollAndroid(state,-1);
+    return;
     }
-  state->onAppCmd = nullptr;
-  state->userData = nullptr;
   app = state;
-  // NativeActivity can restart without restarting the process.
-  isExit.store(false);
-  resumed    = (state->activityState==APP_CMD_RESUME);
-  focused    = initialFocus;
-  active     = resumed && focused;
-  hasWindow  = (state->window!=nullptr);
-  fullscreen = true;
+  int result = EXIT_FAILURE;
   try {
-    runMain();
+    result = runMain();
     }
   catch(const std::exception& e) {
     Log::e("Unhandled native exception: ",e.what());
@@ -245,8 +230,8 @@ extern "C" void android_main(android_app* state) {
 
   if(app->destroyRequested==0)
     ANativeActivity_finish(app->activity);
-  while(app->destroyRequested==0)
-    pollAndroid(app,-1);
+  // Re-entering main would reuse application statics from the previous run.
+  std::exit(result);
   }
 
 #endif
