@@ -279,7 +279,7 @@ SystemApi::Window *X11Api::implCreateWindow(Tempest::Window *owner, uint32_t w, 
 
   XSetWindowAttributes swa={};
   swa.colormap   = cmap;
-  swa.event_mask = PointerMotionMask | ExposureMask |
+  swa.event_mask = PointerMotionMask | EnterWindowMask | ExposureMask |
                    ButtonPressMask | ButtonReleaseMask |
                    KeyPressMask | KeyReleaseMask |
                    FocusChangeMask | StructureNotifyMask |
@@ -598,6 +598,28 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
           }
         break;
         }
+      case EnterNotify: {
+        MouseEvent e( xev.xcrossing.x,
+                      xev.xcrossing.y,
+                      Event::ButtonNone,
+                      Event::M_NoModifier,
+                      0,
+                      0,
+                      Event::MouseMove );
+        SystemApi::dispatchMouseMove(cb,e);
+        implShowCursor(hWnd.ptr(),SystemApi::cursorShape(cb));
+        break;
+        }
+      case FocusIn: {
+        FocusEvent e(true, Event::UnknownReason);
+        SystemApi::dispatchFocus(cb, e);
+        break;
+        }
+      case FocusOut: {
+        FocusEvent e(false, Event::UnknownReason);
+        SystemApi::dispatchFocus(cb, e);
+        break;
+        }
       case MotionNotify: {
         if(activeCursorChange == 1) {
           // FIXME: mouse behave crazy in OpenGothic
@@ -641,16 +663,6 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
         if(xev.type==KeyPress)
           SystemApi::dispatchKeyDown(cb,e,scan); else
           SystemApi::dispatchKeyUp  (cb,e,scan);
-        break;
-        }
-      case FocusIn: {
-        FocusEvent e(true, Event::UnknownReason);
-        SystemApi::dispatchFocus(cb, e);
-        break;
-        }
-      case FocusOut: {
-        FocusEvent e(false, Event::UnknownReason);
-        SystemApi::dispatchFocus(cb, e);
         break;
         }
       }

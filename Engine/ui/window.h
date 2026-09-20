@@ -37,11 +37,13 @@ class Window : public Widget {
   private:
     void         implShowCursor(CursorShape s);
 
-    SystemApi::Window* id=nullptr;
+    SystemApi::Window* id             = nullptr;
+    CursorShape        resolvedCursor = CursorShape::Arrow;
 
   friend class Widget;
   friend class UiOverlay;
   friend class EventDispatcher;
+  friend class SystemApi;
   };
 
 }

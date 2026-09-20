@@ -208,6 +208,10 @@ void SystemApi::showCursor(SystemApi::Window *w, CursorShape show) {
   return inst().implShowCursor(w,show);
   }
 
+CursorShape SystemApi::cursorShape(Tempest::Window& cb) {
+  return cb.resolvedCursor;
+  }
+
 float SystemApi::uiScale(Window* w) {
   return inst().implUiScale(w);
   }

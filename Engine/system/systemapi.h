@@ -89,6 +89,7 @@ class SystemApi {
 
     static void      setCursorPosition(SystemApi::Window *w, int x, int y);
     static void      showCursor(SystemApi::Window *w, CursorShape c);
+    static CursorShape cursorShape(Tempest::Window& cb);
 
     static void      dispatchOverlayRender(Tempest::Window &w, Tempest::PaintEvent& e);
     static void      dispatchRender    (Tempest::Window& cb);
