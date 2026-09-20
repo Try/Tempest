@@ -6,8 +6,9 @@ namespace Tempest {
 
 class AndroidApi final : SystemApi {
   private:
-    AndroidApi();
+    AndroidApi() = default;
 
+    static Window* createAndroidWindow(Tempest::Window* owner);
     static void onAppCmd(void* app, int32_t cmd);
     static void pushFocus();
     static void updateWindow();

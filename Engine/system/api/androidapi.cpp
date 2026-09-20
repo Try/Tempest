@@ -14,6 +14,7 @@
 #include <atomic>
 #include <dlfcn.h>
 #include <exception>
+#include <mutex>
 #include <thread>
 
 using namespace Tempest;
@@ -94,29 +95,26 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
     }
   }
 
-static void pollAndroid(int timeout) {
+static void pollAndroid(android_app* state, int timeout) {
   int                  pending = 0;
   android_poll_source* source  = nullptr;
   while(ALooper_pollOnce(timeout,nullptr,&pending,reinterpret_cast<void**>(&source))>=0) {
     if(source!=nullptr)
-      source->process(app,source);
+      source->process(state,source);
     timeout = 0;
     }
   }
 
-static SystemApi::Window* createAndroidWindow(Tempest::Window* owner) {
+SystemApi::Window* AndroidApi::createAndroidWindow(Tempest::Window* owner) {
   if(mainWindow!=nullptr)
     return nullptr;
+  app->onAppCmd = [](android_app* state, int32_t cmd) { onAppCmd(state,cmd); };
   while(!hasWindow && !isExit.load() && app->destroyRequested==0)
-    pollAndroid(-1);
+    pollAndroid(app,-1);
   if(isExit.load() || app->destroyRequested!=0)
     return nullptr;
   mainWindow = owner;
   return reinterpret_cast<SystemApi::Window*>(app->window);
-  }
-
-AndroidApi::AndroidApi() {
-  app->onAppCmd = [](android_app* state, int32_t cmd) { onAppCmd(state,cmd); };
   }
 
 SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, uint32_t, uint32_t) {
@@ -170,7 +168,7 @@ int AndroidApi::implExec(AppCallBack& cb) {
 void AndroidApi::implProcessEvents(AppCallBack& cb) {
   if(isExit.load())
     return;
-  pollAndroid(active && hasWindow ? 0 : -1);
+  pollAndroid(app,active && hasWindow ? 0 : -1);
   if(isExit.load())
     return;
   if(mainWindow!=nullptr && active && hasWindow)
@@ -211,7 +209,30 @@ static void runMain() {
   }
 
 extern "C" void android_main(android_app* state) {
+  static std::mutex sync;
+  std::unique_lock<std::mutex> guard(sync,std::defer_lock);
+  bool initialFocus = false;
+  state->userData = &initialFocus;
+  state->onAppCmd = [](android_app* state, int32_t cmd) {
+    if(cmd==APP_CMD_GAINED_FOCUS || cmd==APP_CMD_LOST_FOCUS)
+      *static_cast<bool*>(state->userData) = (cmd==APP_CMD_GAINED_FOCUS);
+    };
+  // Pump the replacement activity while waiting so the UI thread can destroy the previous one.
+  while(!guard.try_lock()) {
+    pollAndroid(state,10);
+    if(state->destroyRequested!=0)
+      return;
+    }
+  state->onAppCmd = nullptr;
+  state->userData = nullptr;
   app = state;
+  // NativeActivity can restart without restarting the process.
+  isExit.store(false);
+  resumed    = (state->activityState==APP_CMD_RESUME);
+  focused    = initialFocus;
+  active     = resumed && focused;
+  hasWindow  = (state->window!=nullptr);
+  fullscreen = true;
   try {
     runMain();
     }
@@ -225,7 +246,7 @@ extern "C" void android_main(android_app* state) {
   if(app->destroyRequested==0)
     ANativeActivity_finish(app->activity);
   while(app->destroyRequested==0)
-    pollAndroid(-1);
+    pollAndroid(app,-1);
   }
 
 #endif
