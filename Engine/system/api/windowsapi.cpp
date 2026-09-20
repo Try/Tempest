@@ -396,6 +396,8 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
     case WM_ACTIVATE:{
       POINT mpos = {};
       if(wParam==WA_ACTIVE && GetCursorPos(&mpos)) {
+        mpos.x -= cb->x();
+        mpos.y -= cb->y();
         MouseEvent e( mpos.x,
                       mpos.y,
                       Event::ButtonNone,
