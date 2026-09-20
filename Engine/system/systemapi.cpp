@@ -155,10 +155,6 @@ void SystemApi::dispatchFocus(Tempest::Window& cb, FocusEvent& e) {
   dispatcher.dispatchFocus(cb,e);
   }
 
-void SystemApi::setWindowHandle(Tempest::Window& cb, Window* handle) {
-  cb.id = handle;
-  }
-
 bool SystemApi::isRunning() {
   return inst().implIsRunning();
   }

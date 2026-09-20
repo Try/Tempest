@@ -2,6 +2,8 @@
 
 A minimal NativeActivity application using Tempest's Android window backend. It forwards window creation, resize, focus, pause, resume and destruction through Tempest's normal application lifecycle.
 
+Native surface recreation and immersive-mode switching are not implemented yet. The example terminates if Android recreates its drawing surface.
+
 With JDK 17, Gradle 8.9, Ninja and the Android SDK configured (`ANDROID_HOME`), install SDK 35, build-tools 35.0.0, NDK 27.0.12077973 and CMake 3.22.1. Replace `/path/to/ndk` below with the NDK installation directory.
 
 ```sh

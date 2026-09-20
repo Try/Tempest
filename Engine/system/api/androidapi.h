@@ -10,7 +10,7 @@ class AndroidApi final : SystemApi {
 
     static Window* createAndroidWindow(Tempest::Window* owner);
     static void onAppCmd(void* app, int32_t cmd);
-    static void pushFocus();
+    static void updateFocus();
     static void updateWindow();
 
     Window* implCreateWindow(Tempest::Window* owner, uint32_t width, uint32_t height) override;

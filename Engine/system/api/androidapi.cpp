@@ -28,9 +28,8 @@ static bool            resumed    = false;
 static bool            focused    = false;
 static bool            active     = false;
 static bool            hasWindow  = false;
-static bool            fullscreen = true;
 
-void AndroidApi::pushFocus() {
+void AndroidApi::updateFocus() {
   const bool next = resumed && focused;
   if(active==next)
     return;
@@ -49,8 +48,6 @@ void AndroidApi::updateWindow() {
   if(mainWindow==nullptr)
     return;
 
-  auto window = reinterpret_cast<SystemApi::Window*>(app->window);
-  AndroidApi::setWindowHandle(*mainWindow,window);
   SizeEvent event(ANativeWindow_getWidth(app->window),ANativeWindow_getHeight(app->window));
   AndroidApi::dispatchResize(*mainWindow,event);
   }
@@ -58,6 +55,11 @@ void AndroidApi::updateWindow() {
 void AndroidApi::onAppCmd(void*, int32_t cmd) {
   switch(cmd) {
     case APP_CMD_INIT_WINDOW:
+      if(mainWindow!=nullptr) {
+        // TODO: handle native surface recreation in the Vulkan swapchain.
+        Log::e("Android native window recreation is not implemented");
+        std::terminate();
+        }
       updateWindow();
       break;
     case APP_CMD_TERM_WINDOW:
@@ -69,19 +71,19 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
       break;
     case APP_CMD_GAINED_FOCUS:
       focused = true;
-      pushFocus();
+      updateFocus();
       break;
     case APP_CMD_LOST_FOCUS:
       focused = false;
-      pushFocus();
+      updateFocus();
       break;
     case APP_CMD_RESUME:
       resumed = true;
-      pushFocus();
+      updateFocus();
       break;
     case APP_CMD_PAUSE:
       resumed = false;
-      pushFocus();
+      updateFocus();
       break;
     case APP_CMD_DESTROY:
       if(mainWindow!=nullptr) {
@@ -139,13 +141,14 @@ Rect AndroidApi::implWindowClientRect(SystemApi::Window* w) {
   return Rect(0,0,ANativeWindow_getWidth(window),ANativeWindow_getHeight(window));
   }
 
-bool AndroidApi::implSetAsFullscreen(SystemApi::Window*, bool value) {
-  fullscreen = value;
-  return true;
+bool AndroidApi::implSetAsFullscreen(SystemApi::Window*, bool) {
+  // TODO: toggle Android immersive mode.
+  return false;
   }
 
 bool AndroidApi::implIsFullscreen(SystemApi::Window*) {
-  return fullscreen;
+  // TODO: query Android immersive mode.
+  return true;
   }
 
 void AndroidApi::implSetCursorPosition(SystemApi::Window*, int, int) {

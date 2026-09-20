@@ -104,7 +104,6 @@ class SystemApi {
     static void      dispatchClose     (Tempest::Window& cb, CloseEvent& e);
 
     static void      dispatchFocus     (Tempest::Window& cb, FocusEvent& e);
-    static void      setWindowHandle   (Tempest::Window& cb, Window* handle);
 
     static SystemApi& inst();
 
