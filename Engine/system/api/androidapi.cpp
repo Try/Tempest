@@ -20,18 +20,16 @@ using namespace Tempest;
 
 extern "C" void android_main(android_app* state);
 
-namespace {
+static android_app*     app        = nullptr;
+static Tempest::Window* mainWindow = nullptr;
+static std::atomic_bool isExit     = false;
+static bool            resumed    = false;
+static bool            focused    = false;
+static bool            active     = false;
+static bool            hasWindow  = false;
+static bool            fullscreen = true;
 
-android_app*         app        = nullptr;
-Tempest::Window*     mainWindow = nullptr;
-std::atomic_bool     running    = false;
-bool                 resumed    = false;
-bool                 focused    = false;
-bool                 active     = false;
-bool                 hasWindow  = false;
-bool                 fullscreen = true;
-
-void pushFocus() {
+void AndroidApi::pushFocus() {
   const bool next = resumed && focused;
   if(active==next)
     return;
@@ -42,7 +40,7 @@ void pushFocus() {
     }
   }
 
-void updateWindow() {
+void AndroidApi::updateWindow() {
   if(app==nullptr || app->window==nullptr)
     return;
 
@@ -56,7 +54,7 @@ void updateWindow() {
   AndroidApi::dispatchResize(*mainWindow,event);
   }
 
-void onAppCmd(android_app*, int32_t cmd) {
+void AndroidApi::onAppCmd(void*, int32_t cmd) {
   switch(cmd) {
     case APP_CMD_INIT_WINDOW:
       updateWindow();
@@ -89,14 +87,14 @@ void onAppCmd(android_app*, int32_t cmd) {
         CloseEvent event;
         AndroidApi::dispatchClose(*mainWindow,event);
         }
-      running.store(false);
+      isExit.store(true);
       break;
     default:
       break;
     }
   }
 
-void pollAndroid(int timeout) {
+static void pollAndroid(int timeout) {
   int                  pending = 0;
   android_poll_source* source  = nullptr;
   while(ALooper_pollOnce(timeout,nullptr,&pending,reinterpret_cast<void**>(&source))>=0) {
@@ -106,14 +104,19 @@ void pollAndroid(int timeout) {
     }
   }
 
-SystemApi::Window* createAndroidWindow(Tempest::Window* owner) {
+static SystemApi::Window* createAndroidWindow(Tempest::Window* owner) {
+  if(mainWindow!=nullptr)
+    return nullptr;
+  while(!hasWindow && !isExit.load() && app->destroyRequested==0)
+    pollAndroid(-1);
+  if(isExit.load() || app->destroyRequested!=0)
+    return nullptr;
   mainWindow = owner;
   return reinterpret_cast<SystemApi::Window*>(app->window);
   }
 
-}
-
 AndroidApi::AndroidApi() {
+  app->onAppCmd = [](android_app* state, int32_t cmd) { onAppCmd(state,cmd); };
   }
 
 SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, uint32_t, uint32_t) {
@@ -129,7 +132,7 @@ void AndroidApi::implDestroyWindow(SystemApi::Window*) {
   }
 
 void AndroidApi::implExit() {
-  running.store(false);
+  isExit.store(true);
   ALooper_wake(app->looper);
   }
 
@@ -154,75 +157,75 @@ void AndroidApi::implShowCursor(SystemApi::Window*, CursorShape) {
   }
 
 bool AndroidApi::implIsRunning() {
-  return running.load();
+  return !isExit.load();
   }
 
 int AndroidApi::implExec(AppCallBack& cb) {
-  running.store(true);
-  while(running.load()) {
+  while(!isExit.load()) {
     implProcessEvents(cb);
-    if(active && hasWindow) {
-      if(cb.onTimer()==0)
-        std::this_thread::yield();
-      }
     }
   return 0;
   }
 
-void AndroidApi::implProcessEvents(AppCallBack&) {
+void AndroidApi::implProcessEvents(AppCallBack& cb) {
+  if(isExit.load())
+    return;
   pollAndroid(active && hasWindow ? 0 : -1);
+  if(isExit.load())
+    return;
   if(mainWindow!=nullptr && active && hasWindow)
     dispatchRender(*mainWindow);
+  if(active && hasWindow && !isExit.load() && cb.onTimer()==0)
+    std::this_thread::yield();
   }
 
 void AndroidApi::implSetWindowTitle(SystemApi::Window*, const char*) {
   // TODO: update the activity title through JNI.
   }
 
-extern "C" void android_main(android_app* state) {
-  app = state;
-  app->onAppCmd = onAppCmd;
-
-  while(!hasWindow && app->destroyRequested==0)
-    pollAndroid(-1);
-
+static void runMain() {
   Dl_info module = {};
-  void* self = nullptr;
-  if(dladdr(reinterpret_cast<void*>(&android_main),&module)!=0)
-    self = dlopen(module.dli_fname,RTLD_NOW);
+  if(dladdr(reinterpret_cast<void*>(&android_main),&module)==0) {
+    Log::e("Unable to locate the application library");
+    return;
+    }
+  void* self = dlopen(module.dli_fname,RTLD_NOW);
   if(self==nullptr) {
     const char* error = dlerror();
     Log::e("Unable to open the application library: ",error==nullptr ? "unknown error" : error);
+    return;
     }
-  else {
-    using Main = int(*)(int,char**);
-    auto entry = reinterpret_cast<Main>(dlsym(self,"main"));
-    if(entry==nullptr) {
-      const char* error = dlerror();
-      Log::e("Unable to find the application entry point: ",error==nullptr ? "unknown error" : error);
-      }
-    else {
-      char  arg0[] = "app";
-      char* argv[] = {arg0,nullptr};
-      try {
-        if(app->destroyRequested==0)
-          entry(1,argv);
-        }
-      catch(const std::exception& e) {
-        Log::e("Unhandled native exception: ",e.what());
-        }
-      catch(...) {
-        Log::e("Unhandled native exception");
-        }
-      }
+  using Main = int(*)(int,char**);
+  auto entry = reinterpret_cast<Main>(dlsym(self,"main"));
+  if(entry==nullptr) {
+    const char* error = dlerror();
+    Log::e("Unable to find the application entry point: ",error==nullptr ? "unknown error" : error);
     dlclose(self);
+    return;
+    }
+  // NativeActivity owns the library for the duration of android_main.
+  dlclose(self);
+  char  arg0[] = "app";
+  char* argv[] = {arg0,nullptr};
+  entry(1,argv);
+  }
+
+extern "C" void android_main(android_app* state) {
+  app = state;
+  try {
+    runMain();
+    }
+  catch(const std::exception& e) {
+    Log::e("Unhandled native exception: ",e.what());
+    }
+  catch(...) {
+    Log::e("Unhandled native exception");
     }
 
   if(app->destroyRequested==0)
     ANativeActivity_finish(app->activity);
   while(app->destroyRequested==0)
     pollAndroid(-1);
-
   }
 
 #endif

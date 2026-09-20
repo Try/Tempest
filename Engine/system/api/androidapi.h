@@ -5,15 +5,12 @@
 namespace Tempest {
 
 class AndroidApi final : SystemApi {
-  public:
-    using SystemApi::dispatchClose;
-    using SystemApi::dispatchFocus;
-    using SystemApi::dispatchRender;
-    using SystemApi::dispatchResize;
-    using SystemApi::setWindowHandle;
-
   private:
     AndroidApi();
+
+    static void onAppCmd(void* app, int32_t cmd);
+    static void pushFocus();
+    static void updateWindow();
 
     Window* implCreateWindow(Tempest::Window* owner, uint32_t width, uint32_t height) override;
     Window* implCreateWindow(Tempest::Window* owner, ShowMode sm) override;
