@@ -258,8 +258,6 @@ VkSurfaceKHR VSwapchain::createSurface(VkInstance instance, void* hwnd) {
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 #elif defined(__ANDROID__)
   auto window = *reinterpret_cast<ANativeWindow**>(hwnd);
-  if(window==nullptr)
-    return VK_NULL_HANDLE;
   VkAndroidSurfaceCreateInfoKHR createInfo = {};
   createInfo.sType  = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
   createInfo.window = window;
@@ -293,7 +291,7 @@ void VSwapchain::createSwapchain(VDevice& device) {
       auto     support  = device.querySwapChainSupport(surface);
       uint32_t imgCount = findImageCount(support);
       auto     code     = createSwapchain(device,support,rect,imgCount);
-      if(isSwapchainLost(code)) {
+      if(isSwapchainLost(code) || isSurfaceLost(code)) {
         cleanupSwapchain();
 #ifdef __ANDROID__
         cleanupSurface();
@@ -460,21 +458,21 @@ uint32_t VSwapchain::findImageCount(const SwapChainSupport& support) const {
   return imageCount;
   }
 
-bool VSwapchain::isSwapchainLost(VkResult code) const {
+bool VSwapchain::isSurfaceLost(VkResult code) const {
 #ifdef __ANDROID__
-  if(code==VK_ERROR_SURFACE_LOST_KHR)
-    return true;
+  return code==VK_ERROR_SURFACE_LOST_KHR;
+#else
+  (void)code;
+  return false;
 #endif
+  }
+
+bool VSwapchain::isSwapchainLost(VkResult code) const {
   if(code==VK_SUBOPTIMAL_KHR) {
     // WA for issues on some linux distros (https://github.com/Try/OpenGothic/issues/977)
     // probably would have to exclude currentTransform soon due to android
     VkSurfaceCapabilitiesKHR capabilities = {};
-#ifdef __ANDROID__
-    if(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.physicalDevice, surface, &capabilities)==VK_ERROR_SURFACE_LOST_KHR)
-      return true;
-#else
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.physicalDevice, surface, &capabilities);
-#endif
 
     capabilities.currentExtent = findSwapExtent(capabilities, swapChainExtent.width, swapChainExtent.height);
 
@@ -493,7 +491,7 @@ bool VSwapchain::isSwapchainLost(VkResult code) const {
 void VSwapchain::acquireNextImage() {
   VkResult code = implAcquireNextImage();
 
-  if(isSwapchainLost(code))
+  if(isSwapchainLost(code) || isSurfaceLost(code))
     throw SwapchainSuboptimal();
 
   vkAssert(code);
@@ -526,7 +524,7 @@ VkResult VSwapchain::implAcquireNextImage() {
                                         aquireFence[frameId],
                                         &id);
 
-  if(code<0 && isSwapchainLost(code)) {
+  if(code==VK_ERROR_OUT_OF_DATE_KHR || isSurfaceLost(code)) {
     auto rc = vkxRevertFence(device.device.impl, &aquireFence[frameId]);
     if(rc!=VK_SUCCESS)
       std::terminate(); // unrecoverable
@@ -588,7 +586,7 @@ void VSwapchain::present() {
 
   auto tx = Application::tickCount();
   VkResult code = device.presentQueue->present(presentInfo);
-  if(isSwapchainLost(code))
+  if(isSwapchainLost(code) || isSurfaceLost(code))
     throw SwapchainSuboptimal();
   tx = Application::tickCount()-tx;
   if(tx > 2) {

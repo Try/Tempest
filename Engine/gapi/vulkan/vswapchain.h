@@ -127,6 +127,7 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     uint32_t                 findImageCount(const SwapChainSupport& support) const;
 
     bool                     isSwapchainLost(VkResult code) const;
+    bool                     isSurfaceLost(VkResult code) const;
     VkResult                 implAcquireNextImage();
     void                     acquireNextImage();
   };
