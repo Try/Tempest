@@ -112,20 +112,45 @@ static Tempest::Point mousePos(NSWindow* wnd, bool& inWindow) {
   return Tempest::Point{int(px.x), int(px.y)};
   }
 
-static void implShowCursor(SystemApi::Window *w, CursorShape show) {
-  static CursorShape current = CursorShape::Arrow;
-  if(current==show) {
-    // show/hie mechanism is ref couter based on Mac
-    // https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/QuartzDisplayServicesConceptual/Articles/MouseCursor.html
-    return;
+static NSCursor* toNSCursor(CursorShape show) {
+  switch (show) {
+    case CursorShape::Arrow:
+      return [NSCursor arrowCursor];
+    case CursorShape::Hidden:
+      return nullptr;
+    case CursorShape::IBeam:
+      return [NSCursor IBeamCursor];
+    case CursorShape::SizeVer:
+      return [NSCursor resizeUpDownCursor];
+    case CursorShape::SizeHor:
+      return [NSCursor resizeLeftRightCursor];
+    //NOTE: no relevant cursor type on macos
+    case CursorShape::SizeBDiag:
+    case CursorShape::SizeFDiag:
+    case CursorShape::SizeAll:
+      return [NSCursor arrowCursor];
     }
+  return [NSCursor arrowCursor];
+  }
 
-  current = show;
-  if(show==CursorShape::Hidden) {
-    CGDisplayHideCursor(kCGNullDirectDisplay);
-    return;
+static void implShowCursor(SystemApi::Window*, CursorShape show) {
+  static bool hidden = false;
+  NSCursor* cur = toNSCursor(show);
+  if(hidden != (cur==nullptr)) {
+    // show/hide mechanism is ref couter based on Mac
+    // https://developer.apple.com/library/archive/documentation/GraphicsImaging/Conceptual/QuartzDisplayServicesConceptual/Articles/MouseCursor.html
+    hidden = (cur==nullptr);
+    if(hidden) {
+      // CGDisplayHideCursor(kCGNullDirectDisplay);
+      [NSCursor hide];
+      } else {
+      // CGDisplayShowCursor(kCGNullDirectDisplay);
+      [NSCursor unhide];
+      }
     }
-  CGDisplayShowCursor(kCGNullDirectDisplay);
+  if(cur!=nullptr) {
+    [cur set];
+    }
   }
 
 void Detail::ImplMacOSApi::onDisplayLink(void* hwnd) {
