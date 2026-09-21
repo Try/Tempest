@@ -42,6 +42,9 @@ static const uint keyTable[26]={
 
 static std::atomic_bool isRunning{true};
 
+__attribute__((annotate("returns_localized_nsstring")))
+static inline NSString * _Nonnull UnlocalizedString(NSString * _Nonnull s) { return s; }
+
 static Event::MouseButton toButton(NSEventType type) {
   if(type==NSEventTypeLeftMouseDown || type==NSEventTypeLeftMouseUp)
     return Event::ButtonLeft;
@@ -275,7 +278,7 @@ static SystemApi::Window* createWindow(Tempest::Window *owner,
     defer:NO];
 
   [wnd cascadeTopLeftFromPoint:NSMakePoint(20,20)];
-  [wnd setTitle:@"Tempest"];
+  [wnd setTitle:UnlocalizedString(@"Tempest")];
   [wnd makeKeyAndOrderFront:nil];
   [wnd setStyleMask:[wnd styleMask] | flags];
   [wnd setAcceptsMouseMovedEvents: YES];
@@ -300,6 +303,8 @@ static SystemApi::Window* createWindow(Tempest::Window *owner,
 
   [wnd setDelegate: delegate];
   [wnd orderFrontRegardless];
+
+  [delegate release];
 
   return reinterpret_cast<SystemApi::Window*>(wnd);
   }
@@ -349,13 +354,18 @@ MacOSApi::MacOSApi() {
   NSMenuItem * barItem = [NSMenuItem new];
   NSMenu*      menu    = [NSMenu new];
   NSMenuItem*  quit    = [[NSMenuItem alloc]
-                         initWithTitle:@"Quit"
+                         initWithTitle:UnlocalizedString(@"Quit")
                          action:@selector(terminate:)
                          keyEquivalent:@"q"];
   [bar     addItem:barItem];
   [barItem setSubmenu:menu];
   [menu    addItem:quit];
   NSApp.mainMenu = bar;
+
+  [quit release];
+  [menu release];
+  [barItem release];
+  [bar release];
 
   [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
   [NSApp activateIgnoringOtherApps:YES];
@@ -380,10 +390,8 @@ SystemApi::Window *MacOSApi::implCreateWindow(Tempest::Window *owner, SystemApi:
   }
 
 void MacOSApi::implDestroyWindow(SystemApi::Window *w) {
-  NSWindow*              wnd   = reinterpret_cast<NSWindow*>(w);
-  TempestWindowDelegate* deleg = wnd.delegate;
-  [wnd   release];
-  [deleg release];
+  NSWindow* wnd   = reinterpret_cast<NSWindow*>(w);
+  [wnd release];
   }
 
 void MacOSApi::implExit() {
@@ -434,7 +442,9 @@ void MacOSApi::implShowCursor(SystemApi::Window *w, CursorShape show) {
 void MacOSApi::implSetWindowTitle(Window* w, const char* utf8) {
   NSWindow* wnd = reinterpret_cast<NSWindow*>(w);
   NSString* str = [NSString stringWithUTF8String:utf8];
-  [wnd setTitle: str];
+  if(str!=nil)
+    [wnd setTitle: str]; else
+    [wnd setTitle: @""];
   // apparently setTtile doesn't increnent ref-counter
   // [str release];
   }
