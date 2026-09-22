@@ -3,6 +3,10 @@
 #include <Tempest/AbstractGraphicsApi>
 #include "vulkan_sdk.h"
 
+#ifdef __ANDROID__
+struct ANativeWindow;
+#endif
+
 namespace Tempest {
 
 namespace Detail {
@@ -97,6 +101,10 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     VDevice&                 device;
     SystemApi::Window*       hwnd     = nullptr;
     VkSurfaceKHR             surface  = VK_NULL_HANDLE;
+#ifdef __ANDROID__
+    ANativeWindow*           nativeWindow = nullptr;
+    bool                    surfaceLost = false;
+#endif
 
     uint32_t                 imgIndex = 0;
     uint32_t                 frameId  = 0;
@@ -116,10 +124,12 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
 
     VkSurfaceFormatKHR       findSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const;
     VkPresentModeKHR         findSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) const;
+    VkCompositeAlphaFlagBitsKHR findAlphaMode(VkCompositeAlphaFlagsKHR supported) const;
     VkExtent2D               findSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities, uint32_t w, uint32_t h) const;
     uint32_t                 findImageCount(const SwapChainSupport& support) const;
 
     bool                     isSwapchainLost(VkResult code) const;
+    bool                     isSurfaceLost(VkResult code) const;
     VkResult                 implAcquireNextImage();
     void                     acquireNextImage();
   };

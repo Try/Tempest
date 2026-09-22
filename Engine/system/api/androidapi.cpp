@@ -23,6 +23,7 @@ extern "C" void android_main(android_app* state);
 
 static android_app*     app        = nullptr;
 static Tempest::Window* mainWindow = nullptr;
+static ANativeWindow*   nativeWindow = nullptr;
 static std::atomic_bool isExit     = false;
 static bool            resumed    = false;
 static bool            focused    = false;
@@ -48,6 +49,12 @@ void AndroidApi::updateWindow() {
   if(mainWindow==nullptr)
     return;
 
+  if(nativeWindow!=app->window) {
+    ANativeWindow_acquire(app->window);
+    ANativeWindow_release(nativeWindow);
+    nativeWindow = app->window;
+    }
+
   SizeEvent event(ANativeWindow_getWidth(app->window),ANativeWindow_getHeight(app->window));
   AndroidApi::dispatchResize(*mainWindow,event);
   }
@@ -55,11 +62,6 @@ void AndroidApi::updateWindow() {
 void AndroidApi::onAppCmd(void*, int32_t cmd) {
   switch(cmd) {
     case APP_CMD_INIT_WINDOW:
-      if(mainWindow!=nullptr) {
-        // TODO: handle native surface recreation in the Vulkan swapchain.
-        Log::e("Android native window recreation is not implemented");
-        std::terminate();
-        }
       updateWindow();
       break;
     case APP_CMD_TERM_WINDOW:
@@ -116,7 +118,9 @@ SystemApi::Window* AndroidApi::createAndroidWindow(Tempest::Window* owner) {
   if(isExit.load() || app->destroyRequested!=0)
     return nullptr;
   mainWindow = owner;
-  return reinterpret_cast<SystemApi::Window*>(app->window);
+  nativeWindow = app->window;
+  ANativeWindow_acquire(nativeWindow);
+  return reinterpret_cast<SystemApi::Window*>(&nativeWindow);
   }
 
 SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, uint32_t, uint32_t) {
@@ -128,6 +132,8 @@ SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, ShowMode
   }
 
 void AndroidApi::implDestroyWindow(SystemApi::Window*) {
+  ANativeWindow_release(nativeWindow);
+  nativeWindow = nullptr;
   mainWindow = nullptr;
   }
 
@@ -137,7 +143,7 @@ void AndroidApi::implExit() {
   }
 
 Rect AndroidApi::implWindowClientRect(SystemApi::Window* w) {
-  const auto window = reinterpret_cast<ANativeWindow*>(w);
+  const auto window = *reinterpret_cast<ANativeWindow**>(w);
   return Rect(0,0,ANativeWindow_getWidth(window),ANativeWindow_getHeight(window));
   }
 
