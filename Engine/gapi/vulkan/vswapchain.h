@@ -103,6 +103,7 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     VkSurfaceKHR             surface  = VK_NULL_HANDLE;
 #ifdef __ANDROID__
     ANativeWindow*           nativeWindow = nullptr;
+    bool                    surfaceLost = false;
 #endif
 
     uint32_t                 imgIndex = 0;
@@ -123,6 +124,7 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
 
     VkSurfaceFormatKHR       findSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const;
     VkPresentModeKHR         findSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) const;
+    VkCompositeAlphaFlagBitsKHR findAlphaMode(VkCompositeAlphaFlagsKHR supported) const;
     VkExtent2D               findSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities, uint32_t w, uint32_t h) const;
     uint32_t                 findImageCount(const SwapChainSupport& support) const;
 
