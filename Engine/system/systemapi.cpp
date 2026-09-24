@@ -33,6 +33,9 @@ void SystemApi::implSetWindowTitle(Window *w, const char *utf8) {
   // TODO
   }
 
+void SystemApi::implSetAllowedOrientations(Window*, uint8_t) {
+  }
+
 void SystemApi::setupKeyTranslate(const TranslateKeyPair k[], uint16_t funcCount ) {
   m.keys.clear();
   m.a. clear();
@@ -198,6 +201,10 @@ bool SystemApi::isFullscreen(SystemApi::Window *w) {
 
 void SystemApi::setWindowTitle(Window *w, const char *utf8) {
   return inst().implSetWindowTitle(w, utf8);
+  }
+
+void SystemApi::setAllowedOrientations(Window *w, uint8_t orientations) {
+  return inst().implSetAllowedOrientations(w, orientations);
   }
 
 void SystemApi::setCursorPosition(SystemApi::Window *w, int x, int y) {

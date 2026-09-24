@@ -51,6 +51,7 @@ class SystemApi {
     static bool     isFullscreen(SystemApi::Window *w);
 
     static void     setWindowTitle(SystemApi::Window *w, const char* utf8);
+    static void     setAllowedOrientations(SystemApi::Window *w, uint8_t orientations);
     static float    uiScale(SystemApi::Window *w);
 
     static uint16_t translateKey(uint64_t scancode);
@@ -86,6 +87,7 @@ class SystemApi {
     virtual void     implProcessEvents(AppCallBack& cb) = 0;
 
     virtual void     implSetWindowTitle(SystemApi::Window *w, const char* utf8) = 0;
+    virtual void     implSetAllowedOrientations(SystemApi::Window *w, uint8_t orientations);
 
     static void      setCursorPosition(SystemApi::Window *w, int x, int y);
     static void      showCursor(SystemApi::Window *w, CursorShape c);
