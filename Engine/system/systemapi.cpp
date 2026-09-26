@@ -24,6 +24,13 @@ SystemApi::Data SystemApi::m;
 SystemApi::SystemApi() {
   }
 
+void SystemApi::implSetPreferredFrameRateRange(Window*, uint32_t, uint32_t, uint32_t) {
+  }
+
+void SystemApi::setPreferredFrameRateRange(Window *w, uint32_t minimum, uint32_t maximum, uint32_t preferred) {
+  return inst().implSetPreferredFrameRateRange(w,minimum,maximum,preferred);
+  }
+
 float SystemApi::implUiScale(Window* w) {
   // default to 1.0, on platforms without hidpi implementation
   return 1;
