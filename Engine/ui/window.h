@@ -63,4 +63,8 @@ inline Window::Orientation operator | (Window::Orientation a, const Window::Orie
   return Window::Orientation(uint8_t(a)|uint8_t(b));
   }
 
+inline Window::Orientation operator & (Window::Orientation a, const Window::Orientation& b) {
+  return Window::Orientation(uint8_t(a)&uint8_t(b));
+  }
+
 }

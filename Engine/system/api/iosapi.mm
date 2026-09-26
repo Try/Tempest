@@ -15,6 +15,19 @@
 
 using namespace Tempest;
 
+static UIInterfaceOrientationMask nativeFormat(SystemApi::Orientation orientations) {
+  UIInterfaceOrientationMask mask = 0;
+  if(orientations & SystemApi::Portrait)
+    mask |= UIInterfaceOrientationMaskPortrait;
+  if(orientations & SystemApi::PortraitUpsideDown)
+    mask |= UIInterfaceOrientationMaskPortraitUpsideDown;
+  if(orientations & SystemApi::LandscapeLeft)
+    mask |= UIInterfaceOrientationMaskLandscapeLeft;
+  if(orientations & SystemApi::LandscapeRight)
+    mask |= UIInterfaceOrientationMaskLandscapeRight;
+  return mask;
+  }
+
 #if TARGET_CPU_X86_64
 #  define FUNCTION_CALL_ALIGNMENT 16
 #  define SET_STACK_POINTER "movq %0, %%rsp"
@@ -562,16 +575,8 @@ bool iOSApi::implIsFullscreen(Window* w) {
   return [ctrl isFullscreen];
   }
 
-void iOSApi::implSetAllowedOrientations(Window* w, uint8_t orientations) {
-  UIInterfaceOrientationMask mask = 0;
-  if(orientations & Tempest::Window::Portrait)
-    mask |= UIInterfaceOrientationMaskPortrait;
-  if(orientations & Tempest::Window::PortraitUpsideDown)
-    mask |= UIInterfaceOrientationMaskPortraitUpsideDown;
-  if(orientations & Tempest::Window::LandscapeLeft)
-    mask |= UIInterfaceOrientationMaskLandscapeLeft;
-  if(orientations & Tempest::Window::LandscapeRight)
-    mask |= UIInterfaceOrientationMaskLandscapeRight;
+void iOSApi::implSetAllowedOrientations(Window* w, Orientation orientations) {
+  const auto mask = nativeFormat(orientations);
   if(mask==0)
     return;
 

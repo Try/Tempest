@@ -33,7 +33,7 @@ void SystemApi::implSetWindowTitle(Window *w, const char *utf8) {
   // TODO
   }
 
-void SystemApi::implSetAllowedOrientations(Window*, uint8_t) {
+void SystemApi::implSetAllowedOrientations(Window*, Orientation) {
   }
 
 void SystemApi::setupKeyTranslate(const TranslateKeyPair k[], uint16_t funcCount ) {
@@ -203,7 +203,7 @@ void SystemApi::setWindowTitle(Window *w, const char *utf8) {
   return inst().implSetWindowTitle(w, utf8);
   }
 
-void SystemApi::setAllowedOrientations(Window *w, uint8_t orientations) {
+void SystemApi::setAllowedOrientations(Window *w, Orientation orientations) {
   return inst().implSetAllowedOrientations(w, orientations);
   }
 
