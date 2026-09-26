@@ -22,6 +22,9 @@ class MtSwapchain : public AbstractGraphicsApi::Swapchain {
     ~MtSwapchain();
 
     void          reset() override;
+#ifdef __IOS__
+    void          setPreferredFrameRateRange(uint32_t minimum, uint32_t maximum, uint32_t preferred) override;
+#endif
     uint32_t      currentBackBufferIndex() override;
     uint32_t      imageCount() const override;
     uint32_t      w() const override;
