@@ -21,6 +21,15 @@ class Window : public Widget {
     Window( ShowMode sm );
     ~Window() override;
 
+    // Requests a display callback rate, not a guaranteed rendering rate.
+    // Zero restores the system default. Ignored on unsupported platforms.
+    void setPreferredFrameRate(uint32_t fps);
+
+    // Rates are limited to the screen's maximum; minimum and preferred are
+    // clamped to the resulting range. Zero minimum means 1, zero preferred
+    // leaves the choice to the system, and zero maximum restores the default.
+    void setPreferredFrameRateRange(uint32_t minimum, uint32_t maximum, uint32_t preferred = 0);
+
     void setWindowTitle(const char* utf8);
 
   protected:

@@ -56,6 +56,14 @@ void Window::setCursorPosition(const Point& p) {
   SystemApi::setCursorPosition(hwnd(),p.x,p.y);
   }
 
+void Window::setPreferredFrameRate(uint32_t fps) {
+  setPreferredFrameRateRange(fps,fps,fps);
+  }
+
+void Window::setPreferredFrameRateRange(uint32_t minimum, uint32_t maximum, uint32_t preferred) {
+  SystemApi::setPreferredFrameRateRange(hwnd(),minimum,maximum,preferred);
+  }
+
 void Window::implShowCursor(CursorShape s) {
   resolvedCursor = s;
   SystemApi::showCursor(hwnd(),s);

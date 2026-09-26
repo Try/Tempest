@@ -19,6 +19,7 @@ class iOSApi final: SystemApi {
     Rect     implWindowClientRect(SystemApi::Window *w) override;
     bool     implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) override;
     bool     implIsFullscreen(SystemApi::Window *w) override;
+    void     implSetPreferredFrameRateRange(SystemApi::Window *w, uint32_t minimum, uint32_t maximum, uint32_t preferred) override;
 
     void     implSetCursorPosition(SystemApi::Window *w, int x, int y) override;
     void     implShowCursor(SystemApi::Window *w, CursorShape cursor) override;

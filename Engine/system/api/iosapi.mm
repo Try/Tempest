@@ -6,6 +6,7 @@
 #ifdef __IOS__
 
 #import  <UIKit/UIKit.h>
+#include <algorithm>
 #include <string>
 #include <thread>
 #include <TargetConditionals.h>
@@ -615,6 +616,20 @@ void iOSApi::implProcessEvents(AppCallBack& cb) {
 
 void iOSApi::implSetWindowTitle(Window* w, const char* utf8) {
 
+  }
+
+void iOSApi::implSetPreferredFrameRateRange(Window* w, uint32_t minimum, uint32_t maximum, uint32_t preferred) {
+  auto wx = reinterpret_cast<TempestWindow*>(w);
+  if(maximum==0) {
+    wx->displayLink.preferredFrameRateRange = CAFrameRateRangeDefault;
+    return;
+    }
+
+  maximum = std::min(maximum,uint32_t(wx.screen.maximumFramesPerSecond));
+  minimum = std::clamp(minimum,1u,maximum);
+  if(preferred!=0)
+    preferred = std::clamp(preferred,minimum,maximum);
+  wx->displayLink.preferredFrameRateRange = CAFrameRateRangeMake(minimum,maximum,preferred);
   }
 
 #endif
