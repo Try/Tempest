@@ -10,7 +10,13 @@ class Attachment;
 
 class Swapchain final {
   public:
+    using RenderMode = AbstractGraphicsApi::Swapchain::RenderMode;
+    using Options    = AbstractGraphicsApi::Swapchain::Options;
+
     Swapchain(Device& dev, SystemApi::Window* w);
+    // Metal: bufferCount 0 preserves the default, 2/3 selects the drawable pool.
+    // Direct prefers rendering without a copy. Other backends ignore these hints.
+    Swapchain(Device& dev, SystemApi::Window* w, const Options& options);
     Swapchain(Swapchain&&)=default;
     ~Swapchain();
 

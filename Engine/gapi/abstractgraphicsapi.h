@@ -520,6 +520,16 @@ namespace Tempest {
         virtual void setPayload(std::vector<Detail::DSharedPtr<const AbstractGraphicsApi::Shared*>>&&) {}
         };
       struct Swapchain:NoCopy {
+        enum class RenderMode:uint8_t {
+          Copy,
+          Direct,
+          };
+
+        struct Options {
+          uint32_t   bufferCount = 0;
+          RenderMode renderMode  = RenderMode::Copy;
+          };
+
         virtual ~Swapchain()=default;
         virtual void          reset()=0;
         virtual uint32_t      currentBackBufferIndex()=0;
@@ -636,6 +646,7 @@ namespace Tempest {
       virtual Device*    createDevice(std::string_view gpuName) = 0;
 
       virtual Swapchain* createSwapchain(SystemApi::Window* w,AbstractGraphicsApi::Device *d) = 0;
+      virtual Swapchain* createSwapchain(SystemApi::Window* w,Device* d,const Swapchain::Options& options);
 
       virtual PPipeline  createPipeline(Device* d, const RenderState &st, Topology tp, const Shader* const* sh, size_t cnt)=0;
 

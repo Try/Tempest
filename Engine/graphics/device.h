@@ -50,6 +50,7 @@ class Device {
     void                  present(Swapchain& sw);
 
     Swapchain             swapchain(SystemApi::Window* w) const;
+    Swapchain             swapchain(SystemApi::Window* w, const Swapchain::Options& options) const;
 
     Shader                shader(RFile&          file);
     Shader                shader(const char*     filename);

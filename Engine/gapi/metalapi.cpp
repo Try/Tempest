@@ -23,6 +23,8 @@
 
 #include <Metal/Metal.hpp>
 
+#include <stdexcept>
+
 using namespace Tempest;
 using namespace Tempest::Detail;
 
@@ -68,8 +70,17 @@ AbstractGraphicsApi::Device* MetalApi::createDevice(std::string_view gpuName) {
 
 AbstractGraphicsApi::Swapchain *MetalApi::createSwapchain(SystemApi::Window *w,
                                                           AbstractGraphicsApi::Device* d) {
+  return createSwapchain(w,d,Swapchain::Options{});
+  }
+
+AbstractGraphicsApi::Swapchain* MetalApi::createSwapchain(SystemApi::Window* w, Device* d,
+                                                         const Swapchain::Options& options) {
+  if(options.bufferCount!=0 && options.bufferCount!=2 && options.bufferCount!=3)
+    throw std::invalid_argument("Metal swapchain buffer count must be 0, 2, or 3");
+  if(options.renderMode!=Swapchain::RenderMode::Copy && options.renderMode!=Swapchain::RenderMode::Direct)
+    throw std::invalid_argument("Unknown Metal swapchain render mode");
   auto& dev = *reinterpret_cast<MtDevice*>(d);
-  return new MtSwapchain(dev,w);
+  return new MtSwapchain(dev,w,options);
   }
 
 AbstractGraphicsApi::PPipeline MetalApi::createPipeline(AbstractGraphicsApi::Device *d,
@@ -203,8 +214,15 @@ std::shared_ptr<AbstractGraphicsApi::Fence> MetalApi::submit(Device* d, CommandB
     throw DeviceLostException();
 
   MTL::CommandBuffer& cmd = *cx.impl;
+  std::shared_ptr<std::vector<MtSwapchain::Frame>> frames;
+  if(!cx.swapchainFrames.empty()) {
+    frames = std::make_shared<std::vector<MtSwapchain::Frame>>(std::move(cx.swapchainFrames));
+    }
   dx->onSubmit();
   cmd.addCompletedHandler(^(MTL::CommandBuffer* c){
+    // A completed command buffer may itself remain alive until the next frame.
+    if(frames!=nullptr)
+      frames->clear();
     const MTL::CommandBufferStatus s = c->status();
     dx->signalFence(*pfence, s, MTL::CommandBufferError(c->error()->code()), c->error());
     if(s==MTL::CommandBufferStatusCompleted || s==MTL::CommandBufferStatusError)
