@@ -15,6 +15,19 @@
 
 using namespace Tempest;
 
+static UIInterfaceOrientationMask nativeFormat(SystemApi::Orientation orientations) {
+  UIInterfaceOrientationMask mask = 0;
+  if(orientations & SystemApi::Portrait)
+    mask |= UIInterfaceOrientationMaskPortrait;
+  if(orientations & SystemApi::PortraitUpsideDown)
+    mask |= UIInterfaceOrientationMaskPortraitUpsideDown;
+  if(orientations & SystemApi::LandscapeLeft)
+    mask |= UIInterfaceOrientationMaskLandscapeLeft;
+  if(orientations & SystemApi::LandscapeRight)
+    mask |= UIInterfaceOrientationMaskLandscapeRight;
+  return mask;
+  }
+
 #if TARGET_CPU_X86_64
 #  define FUNCTION_CALL_ALIGNMENT 16
 #  define SET_STACK_POINTER "movq %0, %%rsp"
@@ -238,16 +251,20 @@ static void discardPendingEvent(TempestWindow* window) {
 
 @interface ViewController:UIViewController{}
 -(id)init;
+-(void)setAllowedOrientations:(UIInterfaceOrientationMask)mask;
 @end
 
 @implementation ViewController {
   bool fullScreen;
+  UIInterfaceOrientationMask allowedOrientations;
   }
 
 -(id)init {
   self = [super init];
-  if(self!=nil)
+  if(self!=nil) {
     fullScreen = true;
+    allowedOrientations = UIInterfaceOrientationMaskAll;
+    }
   return self;
   }
 
@@ -274,7 +291,19 @@ static void discardPendingEvent(TempestWindow* window) {
   }
 
 -(UIInterfaceOrientationMask)supportedInterfaceOrientations {
-  return UIInterfaceOrientationMaskAll;
+  return allowedOrientations;
+  }
+
+-(void)setAllowedOrientations:(UIInterfaceOrientationMask)mask {
+  if(allowedOrientations==mask)
+    return;
+  allowedOrientations = mask;
+  // Reevaluate on UIKit's stack after the engine yields.
+  dispatch_async(dispatch_get_main_queue(), ^{
+    if(@available(iOS 16.0, *))
+      [self setNeedsUpdateOfSupportedInterfaceOrientations]; else
+      [UIViewController attemptRotationToDeviceOrientation];
+    });
   }
 
 -(bool)setAsFullscreen: (bool)value {
@@ -386,11 +415,6 @@ static void deactivateWindow(TempestWindow* window) {
   return configuration;
   }
 
-- (UIInterfaceOrientationMask)application:(UIApplication *)application
-  supportedInterfaceOrientationsForWindow:(UIWindow *)window {
-  return UIInterfaceOrientationMaskAll;
-  }
-
 - (void)applicationWillTerminate:(UIApplication *)application {
   (void)application;
   }
@@ -492,6 +516,8 @@ static SystemApi::Window* createWindow(Tempest::Window *owner, uint32_t w, uint3
   auto delegate = (TempestSceneDelegate*)windowScene.delegate;
   delegate.window = window;
 
+  auto controller = (ViewController*)window.rootViewController;
+  [controller setAllowedOrientations:UIInterfaceOrientationMaskAll];
   [window makeKeyAndVisible];
 
   window->owner = owner;
@@ -547,6 +573,16 @@ bool iOSApi::implIsFullscreen(Window* w) {
   auto wx = reinterpret_cast<TempestWindow*>(w);
   ViewController* ctrl = reinterpret_cast<ViewController*>(wx.rootViewController);
   return [ctrl isFullscreen];
+  }
+
+void iOSApi::implSetAllowedOrientations(Window* w, Orientation orientations) {
+  const auto mask = nativeFormat(orientations);
+  if(mask==0)
+    return;
+
+  auto wx = reinterpret_cast<TempestWindow*>(w);
+  auto ctrl = (ViewController*)wx.rootViewController;
+  [ctrl setAllowedOrientations:mask];
   }
 
 void iOSApi::implSetCursorPosition(Window* w, int x, int y) {

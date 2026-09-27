@@ -28,6 +28,7 @@ class iOSApi final: SystemApi {
     void     implProcessEvents(AppCallBack& cb) override;
 
     void     implSetWindowTitle(SystemApi::Window *w, const char* utf8) override;
+    void     implSetAllowedOrientations(SystemApi::Window *w, Orientation orientations) override;
 
   friend class SystemApi;
   };

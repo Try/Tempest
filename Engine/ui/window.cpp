@@ -31,6 +31,10 @@ void Window::setWindowTitle(const char* utf8) {
   Tempest::SystemApi::setWindowTitle(hwnd(), utf8);
   }
 
+void Window::setAllowedOrientations(Orientation orientations) {
+  Tempest::SystemApi::setAllowedOrientations(hwnd(), SystemApi::Orientation(orientations));
+  }
+
 void Window::render() {
   }
 
