@@ -843,21 +843,34 @@ void VDevice::deviceQueueProps(VkPhysicalDevice device, VkProps& props) {
   props.presentFamily  = present;
   }
 
-VDevice::SwapChainSupport VDevice::querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface) {
-  SwapChainSupport details;
-  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+VkResult VDevice::querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface, SwapChainSupport& details) {
+  auto code = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+  if(code!=VK_SUCCESS)
+    return code;
 
   uint32_t formatCount = 0;
-  vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+  do {
+    code = vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+    if(code!=VK_SUCCESS)
+      return code;
+    details.formats.resize(formatCount);
+    code = vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
+    } while(code==VK_INCOMPLETE);
+  if(code!=VK_SUCCESS)
+    return code;
   details.formats.resize(formatCount);
-  vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
 
   uint32_t presentModeCount = 0;
-  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
-  details.presentModes.resize(presentModeCount);
-  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
-
-  return details;
+  do {
+    code = vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+    if(code!=VK_SUCCESS)
+      return code;
+    details.presentModes.resize(presentModeCount);
+    code = vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
+    } while(code==VK_INCOMPLETE);
+  if(code==VK_SUCCESS)
+    details.presentModes.resize(presentModeCount);
+  return code;
   }
 
 VDevice::MemIndex VDevice::memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const {

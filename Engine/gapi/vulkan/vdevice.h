@@ -395,7 +395,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     static void             deviceFormatProps(VkPhysicalDevice device, VkProps& props);
     static void             deviceQueueProps(VkPhysicalDevice device, VkProps& props);
 
-    SwapChainSupport        querySwapChainSupport(VkSurfaceKHR surface) { return querySwapChainSupport(physicalDevice,surface); }
+    VkResult                querySwapChainSupport(VkSurfaceKHR surface, SwapChainSupport& support) { return querySwapChainSupport(physicalDevice,surface,support); }
     MemIndex                memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const;
 
     using DataMgr = UploadEngine<VDevice,VCommandBuffer,VBuffer>;
@@ -480,7 +480,7 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     void                    pickPhysicalDevice();
 
-    SwapChainSupport        querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface);
+    VkResult                querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface, SwapChainSupport& support);
   };
 
 }}
