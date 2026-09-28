@@ -4,6 +4,7 @@
 #include <Tempest/Event>
 
 #include <unordered_map>
+#include <map>
 
 namespace Tempest {
 
@@ -33,6 +34,8 @@ class EventDispatcher final {
     void dispatchDestroyWindow(SystemApi::Window* w);
 
   private:
+    using MouseCapture = std::pair<int,Event::MouseButton>;
+
     std::shared_ptr<Widget::Ref> implDispatch(Tempest::Widget &w, Tempest::MouseEvent& event);
     std::shared_ptr<Widget::Ref> implDispatch(Tempest::Widget &w, Tempest::FocusEvent& event);
     void                         implMouseWheel(Widget &w, MouseEvent &event);
@@ -44,9 +47,10 @@ class EventDispatcher final {
     void                         handleModKey(const KeyEvent& e);
 
     std::shared_ptr<Widget::Ref> lock(std::weak_ptr<Widget::Ref>& w);
+    std::shared_ptr<Widget::Ref> lock(const MouseCapture& capture);
 
     Widget*                      customRoot = nullptr;
-    std::weak_ptr<Widget::Ref>   mouseUp[Event::MouseButton::ButtonLast];
+    std::map<MouseCapture,std::weak_ptr<Widget::Ref>> mouseUp;
     std::weak_ptr<Widget::Ref>   mouseLast;
     std::weak_ptr<Widget::Ref>   mouseOver;
 
@@ -54,6 +58,7 @@ class EventDispatcher final {
 
     std::vector<UiOverlay*>      overlays;
     Event::MouseButton           mouseLastBtn  = Event::MouseButton::ButtonNone;
+    int                          mouseLastId   = 0;
     uint64_t                     mouseLastTime = 0;
     uint64_t                     mouseEvCount  = 0;
 
