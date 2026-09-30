@@ -378,20 +378,29 @@ MTL::Texture& MtTexture::view(ComponentMapping m, uint32_t mipLevel) {
       return *i.v;
     }
 
-  MTL::TextureSwizzleChannels sw;
-  sw.red   = swizzle(m.r, MTL::TextureSwizzleRed);
-  sw.green = swizzle(m.g, MTL::TextureSwizzleGreen);
-  sw.blue  = swizzle(m.b, MTL::TextureSwizzleBlue);
-  sw.alpha = swizzle(m.a, MTL::TextureSwizzleAlpha);
-
   auto levels = NS::Range(0, impl->mipmapLevelCount()); //TODO: handle storage-image single mip here
   if(mipLevel!=uint32_t(-1)) {
     levels = NS::Range(mipLevel,1);
     }
 
   View v;
-  v.v   = NsPtr<MTL::Texture>(impl->newTextureView(impl->pixelFormat(),impl->textureType(),
-                              levels,NS::Range(0,impl->arrayLength()),sw));
+  if(m==ComponentMapping()) {
+    v.v = NsPtr<MTL::Texture>(impl->newTextureView(impl->pixelFormat(),impl->textureType(),
+                                                   levels,NS::Range(0,impl->arrayLength())));
+    } else {
+    if(!dev.impl->supportsFamily(MTL::GPUFamilyApple3)) {
+      //NOTE: component swizzle technically requires Metal3
+      throw std::system_error(GraphicsErrc::UnsupportedExtension);
+      }
+    MTL::TextureSwizzleChannels sw;
+    sw.red   = swizzle(m.r, MTL::TextureSwizzleRed);
+    sw.green = swizzle(m.g, MTL::TextureSwizzleGreen);
+    sw.blue  = swizzle(m.b, MTL::TextureSwizzleBlue);
+    sw.alpha = swizzle(m.a, MTL::TextureSwizzleAlpha);
+
+    v.v = NsPtr<MTL::Texture>(impl->newTextureView(impl->pixelFormat(),impl->textureType(),
+                                                   levels,NS::Range(0,impl->arrayLength()),sw));
+    }
   v.m   = m;
   v.mip = mipLevel;
 
