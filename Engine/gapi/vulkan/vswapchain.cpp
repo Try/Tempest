@@ -168,14 +168,15 @@ VSwapchain::~VSwapchain() {
   cleanup();
   }
 
-bool VSwapchain::checkPresentSupport(VkPhysicalDevice device, uint32_t queueFamilyIndex) {
+bool VSwapchain::checkPresentationSupport(VkPhysicalDevice device, uint32_t queueFamilyIndex) {
 #if defined(__WINDOWS__)
   const bool presentSupport = vkGetPhysicalDeviceWin32PresentationSupportKHR(device, queueFamilyIndex)!=VK_FALSE;
+  return presentSupport;
 #elif defined(__ANDROID__)
   // All Android graphics queues support presentation.
   (void)device;
   (void)queueFamilyIndex;
-  const bool presentSupport = true;
+  return true;
 #elif defined(__UNIX__)
   bool presentSupport = false;
   if(auto dpy = reinterpret_cast<Display*>(X11Api::display())){
@@ -183,10 +184,36 @@ bool VSwapchain::checkPresentSupport(VkPhysicalDevice device, uint32_t queueFami
     auto visualId = XVisualIDFromVisual(DefaultVisual(dpy,screen));
     presentSupport = vkGetPhysicalDeviceXlibPresentationSupportKHR(device,queueFamilyIndex,dpy,visualId)!=VK_FALSE;
     }
-#else
-#warning "wsi for vulkan not implemented on this platform"
-#endif
   return presentSupport;
+#else
+# warning "wsi for vulkan not implemented on this platform"
+  return false;
+#endif
+  }
+
+VkResult VSwapchain::createSurface(VkInstance instance, void* hwnd, VkSurfaceKHR* pSurface) {
+#ifdef __WINDOWS__
+  VkWin32SurfaceCreateInfoKHR createInfo={};
+  createInfo.sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+  createInfo.hinstance = GetModuleHandleA(nullptr);
+  createInfo.hwnd      = HWND(hwnd);
+  return vkCreateWin32SurfaceKHR(instance,&createInfo,nullptr,pSurface);
+#elif defined(__ANDROID__)
+  auto window = *reinterpret_cast<ANativeWindow**>(hwnd);
+  VkAndroidSurfaceCreateInfoKHR createInfo = {};
+  createInfo.sType  = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
+  createInfo.window = window;
+  return vkCreateAndroidSurfaceKHR(instance,&createInfo,nullptr,pSurface);
+#elif defined(__UNIX__)
+  VkXlibSurfaceCreateInfoKHR createInfo = {};
+  createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+  createInfo.dpy    = reinterpret_cast<Display*>(X11Api::display());
+  createInfo.window = ::Window(hwnd);
+  return vkCreateXlibSurfaceKHR(instance, &createInfo, nullptr, pSurface);
+#else
+# warning "wsi for vulkan not implemented on this platform"
+  return VK_ERROR_UNKNOWN;
+#endif
   }
 
 void VSwapchain::cleanupSwapchain() noexcept {
@@ -244,38 +271,16 @@ VkSurfaceKHR VSwapchain::createSurface(VkInstance instance, void* hwnd) {
   if(hwnd==nullptr)
     return VK_NULL_HANDLE;
 #ifdef __ANDROID__
-  if(nativeWindow==*reinterpret_cast<ANativeWindow**>(hwnd))
-    return surface;
-  cleanupSurface();
-#else
+  if(nativeWindow!=*reinterpret_cast<ANativeWindow**>(hwnd))
+    cleanupSurface();
+#endif
   if(surface!=VK_NULL_HANDLE)
     return surface;
-#endif
   VkSurfaceKHR ret = VK_NULL_HANDLE;
-#ifdef __WINDOWS__
-  VkWin32SurfaceCreateInfoKHR createInfo={};
-  createInfo.sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-  createInfo.hinstance = GetModuleHandleA(nullptr);
-  createInfo.hwnd      = HWND(hwnd);
-  if(vkCreateWin32SurfaceKHR(instance,&createInfo,nullptr,&ret)!=VK_SUCCESS)
+  if(createSurface(instance, hwnd, &ret)!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
-#elif defined(__ANDROID__)
-  auto window = *reinterpret_cast<ANativeWindow**>(hwnd);
-  VkAndroidSurfaceCreateInfoKHR createInfo = {};
-  createInfo.sType  = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
-  createInfo.window = window;
-  vkAssert(vkCreateAndroidSurfaceKHR(instance,&createInfo,nullptr,&ret));
-  // VkSurfaceKHR retains the native window until cleanupSurface().
+#ifdef __ANDROID__
   nativeWindow = window;
-#elif defined(__UNIX__)
-  VkXlibSurfaceCreateInfoKHR createInfo = {};
-  createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-  createInfo.dpy    = reinterpret_cast<Display*>(X11Api::display());
-  createInfo.window = ::Window(hwnd);
-  if(vkCreateXlibSurfaceKHR(instance, &createInfo, nullptr, &ret)!=VK_SUCCESS)
-    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
-#else
-#warning "wsi for vulkan not implemented on this platform"
 #endif
   return ret;
   }
@@ -292,11 +297,8 @@ void VSwapchain::createSwapchain(VDevice& device) {
 
     try {
       surface = createSurface(device.instance, hwnd);
-      SwapChainSupport support;
-      auto code = device.querySwapChainSupport(surface,support);
-      vkAssert(code);
-      uint32_t imgCount = findImageCount(support);
-      code = createSwapchain(device,support,rect,imgCount);
+      auto     support  = device.querySwapChainSupport(surface);
+      VkResult code     = createSwapchain(device,support,rect);
       if(isSwapchainLost(code)) {
         cleanupSwapchain();
         continue;
@@ -311,8 +313,7 @@ void VSwapchain::createSwapchain(VDevice& device) {
     }
   }
 
-VkResult VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& swapChainSupport,
-                                     const Rect& rect, uint32_t imgCount) {
+VkResult VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& swapChainSupport, const Rect& rect) {
   VkBool32 support=false;
   auto code = vkGetPhysicalDeviceSurfaceSupportKHR(device.physicalDevice,device.presentQueue->family,surface,&support);
   vkAssert(code);
@@ -322,6 +323,8 @@ VkResult VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& sw
   VkSurfaceFormatKHR surfaceFormat = findSwapSurfaceFormat(swapChainSupport.formats);
   VkPresentModeKHR   presentMode   = findSwapPresentMode  (swapChainSupport.presentModes);
   VkExtent2D         extent        = findSwapExtent       (swapChainSupport.capabilities,uint32_t(rect.w),uint32_t(rect.h));
+  auto               alphaMode     = findAlphaMode(swapChainSupport.capabilities.supportedCompositeAlpha);
+  uint32_t           imgCount      = findImageCount       (swapChainSupport);
 
   VkSwapchainCreateInfoKHR createInfo = {};
   createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -344,7 +347,7 @@ VkResult VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& sw
     }
 
   createInfo.preTransform   = swapChainSupport.capabilities.currentTransform;
-  createInfo.compositeAlpha = findAlphaMode(swapChainSupport.capabilities.supportedCompositeAlpha);
+  createInfo.compositeAlpha = alphaMode;
   createInfo.presentMode    = presentMode;
   createInfo.clipped        = VK_FALSE;
 
@@ -370,9 +373,9 @@ VkResult VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& sw
 
 void VSwapchain::createImageViews(VDevice &device) {
   uint32_t imgCount=0;
-  vkGetSwapchainImagesKHR(device.device.impl, swapChain, &imgCount, nullptr);
+  vkAssert(vkGetSwapchainImagesKHR(device.device.impl, swapChain, &imgCount, nullptr));
   images.resize(imgCount);
-  vkGetSwapchainImagesKHR(device.device.impl, swapChain, &imgCount, images.data());
+  vkAssert(vkGetSwapchainImagesKHR(device.device.impl, swapChain, &imgCount, images.data()));
 
   views.resize(images.size());
 
@@ -432,8 +435,14 @@ VkPresentModeKHR VSwapchain::findSwapPresentMode(const std::vector<VkPresentMode
   }
 
 VkCompositeAlphaFlagBitsKHR VSwapchain::findAlphaMode(VkCompositeAlphaFlagsKHR supported) const {
-  for(auto alpha : {VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR, VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
-                   VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR, VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR}) {
+  std::initializer_list<VkCompositeAlphaFlagBitsKHR> modes={
+    VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+    VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
+    VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
+    VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR
+    };
+
+  for(auto alpha : modes) {
     if((supported & alpha)!=0)
       return alpha;
     }
@@ -471,8 +480,8 @@ bool VSwapchain::isSwapchainLost(VkResult code) const {
     // WA for issues on some linux distros (https://github.com/Try/OpenGothic/issues/977)
     // probably would have to exclude currentTransform soon due to android
     VkSurfaceCapabilitiesKHR capabilities = {};
-    auto result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.physicalDevice, surface, &capabilities);
-    vkAssert(result);
+    if(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.physicalDevice, surface, &capabilities)!=VK_SUCCESS)
+      return true;
 
     capabilities.currentExtent = findSwapExtent(capabilities, swapChainExtent.width, swapChainExtent.height);
 

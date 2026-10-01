@@ -28,6 +28,11 @@ class SwapchainSuboptimal : public std::exception {
   const char* what() const noexcept override { return "swapchain no longer matches the surface properties"; }
   };
 
+class SurfaceLost: public std::exception {
+  public:
+  const char* what() const noexcept override { return "surface is no longer valid"; }
+  };
+
 class IncompleteFboException : public  std::exception {
   public:
   const char* what() const noexcept override { return "inconsistent framebuffer dimensions"; }
