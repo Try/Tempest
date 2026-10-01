@@ -6,11 +6,9 @@
 #include <Tempest/VulkanApi>
 #include <Tempest/Window>
 
-#include <optional>
-
 class Example final : public Tempest::Window {
   public:
-    Example(Tempest::Device& device) : device(device) {
+    Example(Tempest::Device& device) : device(device), swapchain(device,hwnd()) {
       }
 
     ~Example() override {
@@ -20,32 +18,25 @@ class Example final : public Tempest::Window {
   private:
     void render() override {
       try {
-        if(!swapchain) {
-          swapchain.emplace(device,hwnd());
-          resetPending = false;
-          }
-        else if(resetPending) {
-          device.waitIdle();
-          swapchain->reset();
-          resetPending = false;
-          }
         fence.wait();
         {
         auto enc = commands.startEncoding(device);
         const float blue = float(Tempest::Application::tickCount()%2000)/2000.f;
-        enc.setFramebuffer({{(*swapchain)[swapchain->currentImage()],Tempest::Vec4(0,0,blue,1),Tempest::Preserve}});
+        enc.setFramebuffer({{swapchain[swapchain.currentImage()],Tempest::Vec4(0,0,blue,1),Tempest::Preserve}});
         }
         fence = device.submit(commands);
-        device.present(*swapchain);
+        device.present(swapchain);
         }
       catch(const Tempest::SwapchainSuboptimal&) {
-        resetPending = true;
+        device.waitIdle();
+        swapchain.reset();
         }
       }
 
     void resizeEvent(Tempest::SizeEvent& event) override {
       Tempest::Log::i("Window resized: ",event.w,"x",event.h);
-      resetPending = true;
+      device.waitIdle();
+      swapchain.reset();
       Tempest::Window::resizeEvent(event);
       }
 
@@ -55,10 +46,9 @@ class Example final : public Tempest::Window {
       }
 
     Tempest::Device&       device;
-    std::optional<Tempest::Swapchain> swapchain;
+    Tempest::Swapchain     swapchain;
     Tempest::CommandBuffer commands;
     Tempest::Fence         fence;
-    bool                   resetPending = false;
   };
 
 int main(int, char**) {
