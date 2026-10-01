@@ -156,6 +156,12 @@ uint32_t MtSwapchain::currentBackBufferIndex() {
   return currentImg;
   }
 
+#ifdef __IOS__
+void MtSwapchain::setPreferredFrameRateRange(uint32_t minimum, uint32_t maximum, uint32_t preferred) {
+  SystemApi::setPreferredFrameRateRange(reinterpret_cast<SystemApi::Window*>(pimpl->wnd),minimum,maximum,preferred);
+  }
+#endif
+
 void MtSwapchain::present() {
   auto pool = NsPtr<NS::AutoreleasePool>::init();
   
