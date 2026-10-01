@@ -1,10 +1,10 @@
 # Android Vulkan window
 
-A minimal NativeActivity application using Tempest's Android window and Vulkan swapchain. The blue background animates while rendering and resumes after switching apps or unlocking the screen.
+A minimal NativeActivity application using Tempest's Android window and Vulkan swapchain. The blue background animates while rendering.
 
 Immersive-mode switching is not implemented yet.
 
-The manifest handles screen, keyboard, navigation and UI-mode configuration changes without recreating the Activity. Vulkan surface loss (`VK_ERROR_SURFACE_LOST_KHR`) is fatal; these flags do not guarantee that Android will preserve the drawing surface.
+The manifest handles screen, keyboard, navigation and UI-mode configuration changes without recreating the Activity. Native-window destruction closes the application, and Vulkan surface loss (`VK_ERROR_SURFACE_LOST_KHR`) is fatal. Android may destroy the window when the application is backgrounded or the screen is locked.
 
 With JDK 17, Gradle 8.9, Ninja and the Android SDK configured (`ANDROID_HOME`), install SDK 35, build-tools 35.0.0, NDK 27.0.12077973 and CMake 3.22.1. Set `VULKAN_SDK` to a host Vulkan SDK installation for current headers and put its `glslangValidator` on `PATH`. Android links the NDK's Vulkan loader. Replace `/path/to/ndk` below with the NDK installation directory.
 

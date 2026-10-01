@@ -23,7 +23,6 @@ extern "C" void android_main(android_app* state);
 
 static android_app*     app        = nullptr;
 static Tempest::Window* mainWindow = nullptr;
-static ANativeWindow*   nativeWindow = nullptr;
 static std::atomic_bool isExit     = false;
 static bool            resumed    = false;
 static bool            focused    = false;
@@ -49,12 +48,6 @@ void AndroidApi::updateWindow() {
   if(mainWindow==nullptr)
     return;
 
-  if(nativeWindow!=app->window) {
-    ANativeWindow_acquire(app->window);
-    ANativeWindow_release(nativeWindow);
-    nativeWindow = app->window;
-    }
-
   SizeEvent event(ANativeWindow_getWidth(app->window),ANativeWindow_getHeight(app->window));
   AndroidApi::dispatchResize(*mainWindow,event);
   }
@@ -63,9 +56,6 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
   switch(cmd) {
     case APP_CMD_INIT_WINDOW:
       updateWindow();
-      break;
-    case APP_CMD_TERM_WINDOW:
-      hasWindow = false;
       break;
     case APP_CMD_WINDOW_RESIZED:
     case APP_CMD_CONFIG_CHANGED:
@@ -87,7 +77,9 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
       resumed = false;
       updateFocus();
       break;
+    case APP_CMD_TERM_WINDOW:
     case APP_CMD_DESTROY:
+      hasWindow = false;
       if(mainWindow!=nullptr) {
         CloseEvent event;
         AndroidApi::dispatchClose(*mainWindow,event);
@@ -105,6 +97,8 @@ static void pollAndroid(android_app* state, int timeout) {
   while(ALooper_pollOnce(timeout,nullptr,&pending,reinterpret_cast<void**>(&source))>=0) {
     if(source!=nullptr)
       source->process(state,source);
+    if(isExit.load())
+      break;
     timeout = 0;
     }
   }
@@ -118,9 +112,8 @@ SystemApi::Window* AndroidApi::createAndroidWindow(Tempest::Window* owner) {
   if(isExit.load() || app->destroyRequested!=0)
     return nullptr;
   mainWindow = owner;
-  nativeWindow = app->window;
-  ANativeWindow_acquire(nativeWindow);
-  return reinterpret_cast<SystemApi::Window*>(&nativeWindow);
+  ANativeWindow_acquire(app->window);
+  return reinterpret_cast<SystemApi::Window*>(app->window);
   }
 
 SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, uint32_t, uint32_t) {
@@ -131,9 +124,8 @@ SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, ShowMode
   return createAndroidWindow(owner);
   }
 
-void AndroidApi::implDestroyWindow(SystemApi::Window*) {
-  ANativeWindow_release(nativeWindow);
-  nativeWindow = nullptr;
+void AndroidApi::implDestroyWindow(SystemApi::Window* w) {
+  ANativeWindow_release(reinterpret_cast<ANativeWindow*>(w));
   mainWindow = nullptr;
   }
 
@@ -143,7 +135,7 @@ void AndroidApi::implExit() {
   }
 
 Rect AndroidApi::implWindowClientRect(SystemApi::Window* w) {
-  const auto window = *reinterpret_cast<ANativeWindow**>(w);
+  const auto window = reinterpret_cast<ANativeWindow*>(w);
   return Rect(0,0,ANativeWindow_getWidth(window),ANativeWindow_getHeight(window));
   }
 
@@ -240,7 +232,8 @@ extern "C" void android_main(android_app* state) {
   if(app->destroyRequested==0)
     ANativeActivity_finish(app->activity);
   // Re-entering main would reuse application statics from the previous run.
-  std::exit(result);
+  // The application has unwound; process-wide destructors can race Android runtime threads.
+  std::_Exit(result);
   }
 
 #endif

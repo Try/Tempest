@@ -3,10 +3,6 @@
 #include <Tempest/AbstractGraphicsApi>
 #include "vulkan_sdk.h"
 
-#ifdef __ANDROID__
-struct ANativeWindow;
-#endif
-
 namespace Tempest {
 
 namespace Detail {
@@ -118,9 +114,6 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     SystemApi::Window*       hwnd      = nullptr;
     VkSurfaceKHR             surface   = VK_NULL_HANDLE;
     VkSwapchainKHR           swapChain = VK_NULL_HANDLE;
-#ifdef __ANDROID__
-    ANativeWindow*           nativeWindow = nullptr;
-#endif
 
     uint32_t                 imgIndex = 0;
     uint32_t                 frameId  = 0;

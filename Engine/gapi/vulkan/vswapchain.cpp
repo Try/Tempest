@@ -262,10 +262,9 @@ VkResult VSwapchain::createSurface(VkInstance instance, void* hwnd, VkSurfaceKHR
   createInfo.hwnd      = HWND(hwnd);
   return vkCreateWin32SurfaceKHR(instance,&createInfo,nullptr,pSurface);
 #elif defined(__ANDROID__)
-  auto window = *reinterpret_cast<ANativeWindow**>(hwnd);
   VkAndroidSurfaceCreateInfoKHR createInfo = {};
   createInfo.sType  = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
-  createInfo.window = window;
+  createInfo.window = reinterpret_cast<ANativeWindow*>(hwnd);
   return vkCreateAndroidSurfaceKHR(instance,&createInfo,nullptr,pSurface);
 #elif defined(__UNIX__)
   VkXlibSurfaceCreateInfoKHR createInfo = {};
@@ -306,17 +305,10 @@ void VSwapchain::cleanupSurface() noexcept {
   if(surface!=VK_NULL_HANDLE)
     vkDestroySurfaceKHR(device.instance,surface,nullptr);
   surface = VK_NULL_HANDLE;
-#ifdef __ANDROID__
-  nativeWindow = nullptr;
-#endif
   }
 
 void VSwapchain::reset() {
   cleanupSwapchain();
-#ifdef __ANDROID__
-  if(nativeWindow!=*reinterpret_cast<ANativeWindow**>(hwnd))
-    cleanupSurface();
-#endif
   createSwapchain(device);
   }
 
@@ -333,9 +325,6 @@ VkSurfaceKHR VSwapchain::createSurface(VkInstance instance, void* hwnd) {
   VkSurfaceKHR ret = VK_NULL_HANDLE;
   if(createSurface(instance, hwnd, &ret)!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
-#ifdef __ANDROID__
-  nativeWindow = window;
-#endif
   return ret;
   }
 
@@ -570,11 +559,6 @@ VkResult VSwapchain::implAcquireNextImage() {
   }
 
 void VSwapchain::present() {
-#ifdef __ANDROID__
-  // Window events may have replaced the surface since the previous frame.
-  if(nativeWindow!=*reinterpret_cast<ANativeWindow**>(hwnd))
-    throw SwapchainSuboptimal();
-#endif
   auto& slot = sync[frameId];
   auto& pf   = presentFence[frameId];
   auto  ps   = presentSem  [imgIndex];
