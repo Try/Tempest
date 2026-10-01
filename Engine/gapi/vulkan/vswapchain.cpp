@@ -153,6 +153,69 @@ VSwapchain::SemaphoreList::~SemaphoreList() {
     vkDestroySemaphore(dev,data[i],nullptr);
   }
 
+VSwapchain::ImageList::ImageList(VDevice& device, VkSwapchainKHR swapChain, VkFormat format)
+  : device(&device) {
+  try {
+    uint32_t imgCount=0;
+    vkAssert(vkGetSwapchainImagesKHR(device.device.impl, swapChain, &imgCount, nullptr));
+    images.resize(imgCount);
+    vkAssert(vkGetSwapchainImagesKHR(device.device.impl, swapChain, &imgCount, images.data()));
+
+    views.resize(images.size());
+
+    for(size_t i=0; i<images.size(); i++) {
+      VkImageViewCreateInfo createInfo = {};
+      createInfo.sType        = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+      createInfo.image        = images[i];
+      createInfo.viewType     = VK_IMAGE_VIEW_TYPE_2D;
+      createInfo.format       = format;
+      createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+      createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+      createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+      createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+      createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+      createInfo.subresourceRange.baseMipLevel   = 0;
+      createInfo.subresourceRange.levelCount     = 1;
+      createInfo.subresourceRange.baseArrayLayer = 0;
+      createInfo.subresourceRange.layerCount     = 1;
+
+      vkAssert(vkCreateImageView(device.device.impl,&createInfo,nullptr,&views[i]));
+      }
+    }
+  catch(...) {
+    cleanup();
+    throw;
+    }
+  }
+
+VSwapchain::ImageList::ImageList(ImageList&& oth) {
+  *this = std::move(oth);
+  }
+
+VSwapchain::ImageList& VSwapchain::ImageList::operator =(ImageList&& oth) {
+  std::swap(views,  oth.views);
+  std::swap(images, oth.images);
+  std::swap(device, oth.device);
+  return *this;
+  }
+
+VSwapchain::ImageList::~ImageList() {
+  if(device==nullptr)
+    return;
+  auto& map = device->fboMap;
+  for(auto imageView : views)
+    if(imageView!=VK_NULL_HANDLE)
+      map.notifyDestroy(imageView);
+  cleanup();
+  }
+
+void VSwapchain::ImageList::cleanup() {
+  for(auto imageView : views)
+    if(imageView!=VK_NULL_HANDLE)
+      vkDestroyImageView(device->device.impl,imageView,nullptr);
+  }
+
+
 VSwapchain::VSwapchain(VDevice &device, SystemApi::Window* hwnd)
   :device(device), hwnd(hwnd) {
   try {
@@ -226,18 +289,9 @@ void VSwapchain::cleanupSwapchain() noexcept {
   presentFence = FenceList();
   aquireSem    = SemaphoreList();
   presentSem   = SemaphoreList();
-
-  for(auto imageView : views)
-    if(map!=nullptr && imageView!=VK_NULL_HANDLE)
-      map->notifyDestroy(imageView);
-  map = nullptr;
-  for(auto imageView : views)
-    if(imageView!=VK_NULL_HANDLE)
-      vkDestroyImageView(device.device.impl,imageView,nullptr);
-  views.clear();
+  imageList    = ImageList();
   sync.clear();
 
-  images.clear();
   if(swapChain!=VK_NULL_HANDLE)
     vkDestroySwapchainKHR(device.device.impl,swapChain,nullptr);
 
@@ -259,6 +313,10 @@ void VSwapchain::cleanupSurface() noexcept {
 
 void VSwapchain::reset() {
   cleanupSwapchain();
+#ifdef __ANDROID__
+  if(nativeWindow!=*reinterpret_cast<ANativeWindow**>(hwnd))
+    cleanupSurface();
+#endif
   createSwapchain(device);
   }
 
@@ -270,10 +328,6 @@ void VSwapchain::cleanup() noexcept {
 VkSurfaceKHR VSwapchain::createSurface(VkInstance instance, void* hwnd) {
   if(hwnd==nullptr)
     return VK_NULL_HANDLE;
-#ifdef __ANDROID__
-  if(nativeWindow!=*reinterpret_cast<ANativeWindow**>(hwnd))
-    cleanupSurface();
-#endif
   if(surface!=VK_NULL_HANDLE)
     return surface;
   VkSurfaceKHR ret = VK_NULL_HANDLE;
@@ -359,45 +413,16 @@ VkResult VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& sw
   swapChainExtent      = extent;
   swapChaincurrentCaps = swapChainSupport.capabilities;
 
-  createImageViews(device);
+  imageList = ImageList(device, swapChain, swapChainImageFormat);
 
-  sync.resize(views.size());
+  sync.resize(imageList.size());
 
-  aquireFence  = FenceList(device.device.impl, uint32_t(views.size()));
-  presentFence = FenceList(device.device.impl, uint32_t(views.size()));
-  presentSem   = SemaphoreList(device.device.impl, uint32_t(views.size()));
-  aquireSem    = SemaphoreList(device.device.impl, uint32_t(views.size()));
+  aquireFence  = FenceList(device.device.impl,     imageList.size());
+  presentFence = FenceList(device.device.impl,     imageList.size());
+  presentSem   = SemaphoreList(device.device.impl, imageList.size());
+  aquireSem    = SemaphoreList(device.device.impl, imageList.size());
 
   return implAcquireNextImage();
-  }
-
-void VSwapchain::createImageViews(VDevice &device) {
-  uint32_t imgCount=0;
-  vkAssert(vkGetSwapchainImagesKHR(device.device.impl, swapChain, &imgCount, nullptr));
-  images.resize(imgCount);
-  vkAssert(vkGetSwapchainImagesKHR(device.device.impl, swapChain, &imgCount, images.data()));
-
-  views.resize(images.size());
-
-  for(size_t i=0; i<images.size(); i++) {
-    VkImageViewCreateInfo createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    createInfo.image = images[i];
-    createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    createInfo.format = swapChainImageFormat;
-    createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-    createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-    createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-    createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-    createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    createInfo.subresourceRange.baseMipLevel   = 0;
-    createInfo.subresourceRange.levelCount     = 1;
-    createInfo.subresourceRange.baseArrayLayer = 0;
-    createInfo.subresourceRange.layerCount     = 1;
-
-    if(vkCreateImageView(device.device.impl,&createInfo,nullptr,&views[i])!=VK_SUCCESS)
-      throw std::system_error(Tempest::GraphicsErrc::NoDevice);
-    }
   }
 
 VkSurfaceFormatKHR VSwapchain::findSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const {
@@ -586,7 +611,7 @@ void VSwapchain::present() {
   presentInfo.pSwapchains        = &swapChain;
   presentInfo.pImageIndices      = &imgIndex;
 
-  frameId      = (frameId + 1)%images.size();
+  frameId      = (frameId + 1)%imageList.size();
   slot.state   = S_Idle;
   slot.imgId   = uint32_t(-1);
   slot.acquire = VK_NULL_HANDLE;
@@ -610,4 +635,3 @@ void VSwapchain::present() {
   }
 
 #endif
-
