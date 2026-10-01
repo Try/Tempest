@@ -196,6 +196,30 @@ TEST_F(PointerDispatch,MouseButtonsAndDoubleClick) {
   EXPECT_EQ(right.events.back().type(),Event::MouseUp);
   }
 
+TEST_F(PointerDispatch,MouseButtonsReverseOrder) {
+  send(Event::MouseDown,0,120,Event::ButtonRight);
+  send(Event::MouseDown,0,20);
+  send(Event::MouseMove,0,180);
+  ASSERT_EQ(left.events.size(),2u);
+  ASSERT_EQ(right.events.size(),1u);
+  EXPECT_EQ(left.events.back().type(),Event::MouseDrag);
+  EXPECT_EQ(left.events.back().button,Event::ButtonLeft);
+  send(Event::MouseUp,0,180);
+  send(Event::MouseUp,0,180,Event::ButtonRight);
+  }
+
+TEST_F(PointerDispatch,RepeatedDownReplacesCapture) {
+  send(Event::MouseDown,0,20);
+  send(Event::MouseDown,0,120);
+  send(Event::MouseMove,0,20);
+  send(Event::MouseUp,0,20);
+  send(Event::MouseUp,0,20);
+  ASSERT_EQ(left.events.size(),1u);
+  ASSERT_EQ(right.events.size(),3u);
+  EXPECT_EQ(right.events[1].type(),Event::MouseDrag);
+  EXPECT_EQ(right.events[2].type(),Event::MouseUp);
+  }
+
 TEST_F(PointerDispatch,UncapturedPointer) {
   send(Event::MouseDown,0,20);
   send(Event::MouseUp,1,120);
@@ -235,6 +259,25 @@ TEST_F(PointerDispatch,NestedReleaseDuringDrag) {
   EXPECT_EQ(left.events.back().type(),Event::MouseUp);
   ASSERT_EQ(right.events.size(),1u);
   EXPECT_EQ(right.events[0].type(),Event::MouseMove);
+  }
+
+TEST_F(PointerDispatch,NestedDownDuringDrag) {
+  left.onDrag = [&](MouseEvent& e) {
+    send(Event::MouseDown,1,120);
+    e.ignore();
+    };
+  send(Event::MouseDown,0,20);
+  send(Event::MouseMove,0,120);
+  ASSERT_EQ(left.events.size(),3u);
+  EXPECT_EQ(left.events.back().type(),Event::MouseMove);
+  EXPECT_EQ(left.events.back().mouseID,0);
+  send(Event::MouseUp,0,120);
+  send(Event::MouseMove,1,20);
+  send(Event::MouseUp,1,20);
+  ASSERT_EQ(right.events.size(),3u);
+  EXPECT_EQ(right.events[1].type(),Event::MouseDrag);
+  EXPECT_EQ(right.events[1].mouseID,1);
+  EXPECT_EQ(right.events[2].type(),Event::MouseUp);
   }
 
 TEST_F(PointerDispatch,NestedDownDuringRelease) {
