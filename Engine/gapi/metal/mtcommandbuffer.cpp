@@ -11,6 +11,8 @@
 #include "mtswapchain.h"
 #include "mtaccelerationstructure.h"
 
+#include <algorithm>
+
 using namespace Tempest;
 using namespace Tempest::Detail;
 
@@ -65,6 +67,7 @@ void MtCommandBuffer::end() {
   }
 
 void MtCommandBuffer::reset() {
+  swapchainFrames.clear();
   auto pool = NsPtr<NS::AutoreleasePool>::init();
   auto desc = NsPtr<MTL::CommandBufferDescriptor>::init();
   desc->setRetainedReferences(false);
@@ -94,7 +97,10 @@ void MtCommandBuffer::beginRendering(const FrameBufferDesc& fbo, size_t fboSize,
     auto clr = desc->colorAttachments()->object(i);
     if(fbo.sw[i]!=nullptr) {
       auto& s = *reinterpret_cast<MtSwapchain*>(fbo.sw[i]);
-      clr->setTexture(s.img[fbo.imgId[i]].tex.get());
+      auto frame = s.acquireFrame(fbo.imgId[i]);
+      clr->setTexture(frame==nullptr ? s.img[fbo.imgId[i]].tex.get() : frame->texture.get());
+      if(frame!=nullptr && std::find(swapchainFrames.begin(),swapchainFrames.end(),frame)==swapchainFrames.end())
+        swapchainFrames.push_back(std::move(frame));
       curFbo.colorFormat[curFbo.numColors] = s.format();
       } else {
       auto& t = *reinterpret_cast<MtTexture*>(fbo.att[i]);

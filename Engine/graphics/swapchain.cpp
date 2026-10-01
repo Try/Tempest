@@ -21,6 +21,10 @@ Swapchain::Swapchain(Device& dev, SystemApi::Window* w) {
   *this = dev.swapchain(w);
   }
 
+Swapchain::Swapchain(Device& dev, SystemApi::Window* w, const Options& options) {
+  *this = dev.swapchain(w,options);
+  }
+
 Swapchain::~Swapchain() {
   delete impl.handler;
   }

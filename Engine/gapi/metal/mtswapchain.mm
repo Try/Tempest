@@ -63,6 +63,17 @@ struct MtSwapchain::Impl {
     }
   };
 
+MtSwapchainFrame::MtSwapchainFrame(MTL::Texture* tex, CA::MetalDrawable* dr)
+  :texture(tex), drawable(dr) {
+  if(tex!=nullptr)
+    tex->retain();
+  if(dr!=nullptr)
+    dr->retain();
+  }
+
+MtSwapchainFrame::~MtSwapchainFrame() {
+  }
+
 static float backingScaleFactor(SysWindow* w) {
 #if defined(__OSX__)
   return [w screen].backingScaleFactor;
@@ -92,8 +103,8 @@ static CGRect windowRect(UIWindow* wnd) {
 #endif
 
 // note : MoltenVK supports NSView, UIView, CAMetalLayer, so we should align to it
-MtSwapchain::MtSwapchain(MtDevice& dev, SystemApi::Window *w)
-  :dev(dev), pimpl(new Impl()) {
+MtSwapchain::MtSwapchain(MtDevice& dev, SystemApi::Window *w, const Options& options)
+  :pimpl(new Impl()), dev(dev), direct(options.renderMode==RenderMode::Direct) {
   NSObject* obj = reinterpret_cast<NSObject*>(w);
   if([obj isKindOfClass : [SysWindow class]])
     pimpl->wnd = reinterpret_cast<SysWindow*>(w);
@@ -117,23 +128,28 @@ MtSwapchain::MtSwapchain(MtDevice& dev, SystemApi::Window *w)
   [lay setContentsScale:dpi];
 #if defined(__IOS__)
   // Swapchain takes too much memory on 2GB iPhone
-  lay.maximumDrawableCount      = 2;
+  lay.maximumDrawableCount      = options.bufferCount==0 ? 2 : options.bufferCount;
+#elif defined(__OSX__)
+  if(options.bufferCount!=0)
+    lay.maximumDrawableCount = options.bufferCount;
 #endif
   lay.pixelFormat               = MTLPixelFormatBGRA8Unorm;
-  lay.allowsNextDrawableTimeout = NO;
+  lay.allowsNextDrawableTimeout = direct ? YES : NO;
   lay.framebufferOnly           = NO;
 
   reset();
   }
 
 MtSwapchain::~MtSwapchain() {
+  dev.waitIdle();
   if(pimpl->view!=nil)
     [pimpl->view release];
   }
 
 void MtSwapchain::reset() {
+  std::lock_guard<std::mutex> guard(sync);
   dev.waitIdle(); // pending commands
-  std::lock_guard<SpinLock> guard(sync);
+  activeFrame.reset();
 
   // https://developer.apple.com/documentation/quartzcore/cametallayer?language=objc
   CAMetalLayer* lay = pimpl->metalLayer();
@@ -146,8 +162,10 @@ void MtSwapchain::reset() {
   img.resize(imgCount);
   for(size_t i=0; i<imgCount; ++i)
     img[i].tex = nullptr;
-  for(size_t i=0; i<imgCount; ++i)
-    img[i].tex = mkTexture();
+  if(!direct) {
+    for(size_t i=0; i<imgCount; ++i)
+      img[i].tex = mkTexture();
+    }
 
   currentImg = 0;
   }
@@ -156,54 +174,75 @@ uint32_t MtSwapchain::currentBackBufferIndex() {
   return currentImg;
   }
 
-void MtSwapchain::present() {
+MtSwapchain::Frame MtSwapchain::acquireFrame(uint32_t image) {
+  // Keep the existing Copy path free of per-frame ownership allocations.
+  if(!direct)
+    return nullptr;
+  std::lock_guard<std::mutex> guard(sync);
+  if(image!=currentImg)
+    throw SwapchainSuboptimal();
+  if(activeFrame!=nullptr)
+    return activeFrame;
+
   auto pool = NsPtr<NS::AutoreleasePool>::init();
+  auto* lay = reinterpret_cast<CA::MetalLayer*>(pimpl->metalLayer());
+  auto* dr  = lay->nextDrawable();
+  if(dr!=nullptr && dr->texture()->width()==size_t(sz.w) && dr->texture()->height()==size_t(sz.h)) {
+    activeFrame = std::make_shared<MtSwapchainFrame>(dr->texture(),dr);
+    } else {
+    // Allocate the private Copy fallback only when drawable acquisition fails.
+    if(img[image].tex==nullptr)
+      img[image].tex = mkTexture();
+    activeFrame = std::make_shared<MtSwapchainFrame>(img[image].tex.get(),nullptr);
+    }
+  return activeFrame;
+  }
+
+void MtSwapchain::present() {
+  std::lock_guard<std::mutex> guard(sync);
+  auto pool = NsPtr<NS::AutoreleasePool>::init();
+  auto frame = activeFrame;
+  if(direct && frame==nullptr)
+    throw SwapchainSuboptimal();
   
   CA::MetalLayer* lay      = reinterpret_cast<CA::MetalLayer*>(pimpl->metalLayer());
   uint32_t        i        = currentImg;
-  auto            drawable = lay->nextDrawable();
+  auto            drawable = frame==nullptr ? nullptr : frame->drawable.get();
+  if(drawable==nullptr)
+    drawable = lay->nextDrawable();
   if(drawable==nullptr)
     throw SwapchainSuboptimal();
   
-  std::lock_guard<SpinLock> guard(sync);
+  auto src = frame==nullptr ? img[i].tex.get() : frame->texture.get();
   auto dr = drawable->texture();
-  if(dr->width()!=img[i].tex->width() || dr->height()!=img[i].tex->height()) {
+  if(dr->width()!=src->width() || dr->height()!=src->height()) {
     throw SwapchainSuboptimal();
     }
   
   auto desc = NsPtr<MTL::CommandBufferDescriptor>::init();
-  //desc->setRetainedReferences(true);
+  desc->setRetainedReferences(true);
   desc->setErrorOptions(MTL::CommandBufferErrorOptionEncoderExecutionStatus);
   
   auto cmd = dev.queue->commandBuffer(desc.get());
-  auto enc = cmd->blitCommandEncoder();
-  
-  enc->copyFromTexture(img[i].tex.get(), 0, 0,
-                       dr, 0, 0,
-                       1, 1);
-  enc->endEncoding();
+  if(src!=dr) {
+    auto enc = cmd->blitCommandEncoder();
+    enc->copyFromTexture(src, 0, 0,
+                         dr, 0, 0,
+                         1, 1);
+    enc->endEncoding();
+    }
   cmd->presentDrawable(drawable);
 
+  auto* device = &dev;
   dev.onSubmit();
   cmd->addCompletedHandler(^(MTL::CommandBuffer* c){
-    MTL::CommandBufferStatus s = c->status();
-    if(s==MTL::CommandBufferStatusNotEnqueued ||
-       s==MTL::CommandBufferStatusEnqueued ||
-       s==MTL::CommandBufferStatusCommitted ||
-       s==MTL::CommandBufferStatusScheduled)
-      return;
-
-    if(s!=MTL::CommandBufferStatusCompleted) {
+    if(c->status()!=MTL::CommandBufferStatusCompleted)
       Log::e("swapchain fatal error");
-      dev.onFinish();
-      dev.waitIdle();
-      return;
-      }
-
-    dev.onFinish();
+    device->onFinish();
     });
   cmd->commit();
 
+  activeFrame.reset();
   nextDrawable();
   }
 

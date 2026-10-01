@@ -14,6 +14,7 @@ class MetalApi : public AbstractGraphicsApi {
   protected:
     Device*        createDevice(std::string_view gpuName) override;
     Swapchain*     createSwapchain(SystemApi::Window* w, Device *d) override;
+    Swapchain*     createSwapchain(SystemApi::Window* w, Device* d, const Swapchain::Options& options) override;
 
     PPipeline      createPipeline(Device* d, const RenderState &st, Topology tp,
                                   const Shader*const* sh, size_t cnt) override;

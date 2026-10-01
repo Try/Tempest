@@ -131,3 +131,8 @@ std::shared_ptr<AbstractGraphicsApi::Fence> AbstractGraphicsApi::submit(Device* 
 NonUniqResId AbstractGraphicsApi::Swapchain::syncId() const {
   return NonUniqResId(0x1);
   }
+
+AbstractGraphicsApi::Swapchain* AbstractGraphicsApi::createSwapchain(SystemApi::Window* w, Device* d,
+                                                                   const Swapchain::Options&) {
+  return createSwapchain(w,d);
+  }

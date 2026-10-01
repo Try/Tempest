@@ -160,6 +160,10 @@ Swapchain Device::swapchain(SystemApi::Window* w) const {
   return Swapchain(api.createSwapchain(w,impl.dev));
   }
 
+Swapchain Device::swapchain(SystemApi::Window* w, const Swapchain::Options& options) const {
+  return Swapchain(api.createSwapchain(w,impl.dev,options));
+  }
+
 const Device::Props& Device::properties() const {
   return devProps;
   }

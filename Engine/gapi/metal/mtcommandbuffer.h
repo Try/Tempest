@@ -20,6 +20,7 @@ class MtPipeline;
 class MtCompPipeline;
 class MtDescriptorArray;
 class MtTopAccelerationStructure;
+struct MtSwapchainFrame;
 
 class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
   public:
@@ -113,6 +114,7 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     NsPtr<MTL::BlitCommandEncoder>    encBlit;
 
     std::vector<const void*>          usedResources;
+    std::vector<std::shared_ptr<MtSwapchainFrame>> swapchainFrames;
 
     MtFboLayout                       curFbo;
     Push                              pushData;
