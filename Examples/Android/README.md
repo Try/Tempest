@@ -1,10 +1,12 @@
-# Android window
+# Android Vulkan window
 
-A minimal NativeActivity application using Tempest's Android window backend. It forwards window creation, resize, focus, pause, resume and destruction through Tempest's normal application lifecycle.
+A minimal NativeActivity application using Tempest's Android window and Vulkan swapchain. The blue background animates while rendering.
 
-Native surface recreation and immersive-mode switching are not implemented yet. The example terminates if Android recreates its drawing surface.
+Immersive-mode switching is not implemented yet.
 
-With JDK 17, Gradle 8.9, Ninja and the Android SDK configured (`ANDROID_HOME`), install SDK 35, build-tools 35.0.0, NDK 27.0.12077973 and CMake 3.22.1. Replace `/path/to/ndk` below with the NDK installation directory.
+The manifest handles screen, keyboard, navigation and UI-mode configuration changes without recreating the Activity. Native-window destruction closes the application, and Vulkan surface loss (`VK_ERROR_SURFACE_LOST_KHR`) is fatal. Android may destroy the window when the application is backgrounded or the screen is locked.
+
+With JDK 17, Gradle 8.9, Ninja and the Android SDK configured (`ANDROID_HOME`), install SDK 35, build-tools 35.0.0, NDK 27.0.12077973 and CMake 3.22.1. Set `VULKAN_SDK` to a host Vulkan SDK installation for current headers and put its `glslangValidator` on `PATH`. Android links the NDK's Vulkan loader. Replace `/path/to/ndk` below with the NDK installation directory.
 
 ```sh
 cmake -S Examples/Android -B build/android-example -G Ninja -DCMAKE_TOOLCHAIN_FILE=/path/to/ndk/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-24 -DCMAKE_BUILD_TYPE=Release

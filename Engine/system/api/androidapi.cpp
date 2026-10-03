@@ -55,15 +55,7 @@ void AndroidApi::updateWindow() {
 void AndroidApi::onAppCmd(void*, int32_t cmd) {
   switch(cmd) {
     case APP_CMD_INIT_WINDOW:
-      if(mainWindow!=nullptr) {
-        // TODO: handle native surface recreation in the Vulkan swapchain.
-        Log::e("Android native window recreation is not implemented");
-        std::terminate();
-        }
       updateWindow();
-      break;
-    case APP_CMD_TERM_WINDOW:
-      hasWindow = false;
       break;
     case APP_CMD_WINDOW_RESIZED:
     case APP_CMD_CONFIG_CHANGED:
@@ -85,7 +77,9 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
       resumed = false;
       updateFocus();
       break;
+    case APP_CMD_TERM_WINDOW:
     case APP_CMD_DESTROY:
+      hasWindow = false;
       if(mainWindow!=nullptr) {
         CloseEvent event;
         AndroidApi::dispatchClose(*mainWindow,event);
@@ -103,6 +97,8 @@ static void pollAndroid(android_app* state, int timeout) {
   while(ALooper_pollOnce(timeout,nullptr,&pending,reinterpret_cast<void**>(&source))>=0) {
     if(source!=nullptr)
       source->process(state,source);
+    if(isExit.load())
+      break;
     timeout = 0;
     }
   }
@@ -116,6 +112,7 @@ SystemApi::Window* AndroidApi::createAndroidWindow(Tempest::Window* owner) {
   if(isExit.load() || app->destroyRequested!=0)
     return nullptr;
   mainWindow = owner;
+  ANativeWindow_acquire(app->window);
   return reinterpret_cast<SystemApi::Window*>(app->window);
   }
 
@@ -127,7 +124,8 @@ SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, ShowMode
   return createAndroidWindow(owner);
   }
 
-void AndroidApi::implDestroyWindow(SystemApi::Window*) {
+void AndroidApi::implDestroyWindow(SystemApi::Window* w) {
+  ANativeWindow_release(reinterpret_cast<ANativeWindow*>(w));
   mainWindow = nullptr;
   }
 
@@ -234,7 +232,8 @@ extern "C" void android_main(android_app* state) {
   if(app->destroyRequested==0)
     ANativeActivity_finish(app->activity);
   // Re-entering main would reuse application statics from the previous run.
-  std::exit(result);
+  // The application has unwound; process-wide destructors can race Android runtime threads.
+  std::_Exit(result);
   }
 
 #endif

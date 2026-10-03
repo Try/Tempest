@@ -155,7 +155,7 @@ static VkImage toVkResource(const AbstractGraphicsApi::BarrierDesc& b) {
     }
 
   auto& s = *reinterpret_cast<const VSwapchain*>(b.swapchain);
-  return s.images[b.swId];
+  return s.image(b.swId);
   }
 
 
@@ -300,7 +300,7 @@ void VCommandBuffer::beginRendering(const FrameBufferDesc& fbo, size_t fboSize, 
     for(size_t i=0; i<fboSize; ++i) {
       if(fbo.sw[i] != nullptr) {
         auto& t = *reinterpret_cast<VSwapchain*>(fbo.sw[i]);
-        imageView   = t.views[fbo.imgId[i]];
+        imageView   = t.view(fbo.imgId[i]);
         imageFormat = t.format();
         }
       else {

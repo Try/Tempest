@@ -16,6 +16,9 @@
 #  define VK_USE_PLATFORM_WIN32_KHR
 #  include <windows.h>
 #  include <vulkan/vulkan_win32.h>
+#elif defined(__ANDROID__)
+#  include <android/native_window.h>
+#  include <vulkan/vulkan_android.h>
 #elif defined(__UNIX__)
 #  define VK_USE_PLATFORM_XLIB_KHR
 #  include <X11/Xlib.h>
@@ -103,7 +106,8 @@ VSwapchain::FenceList::~FenceList() {
   }
 
 void VSwapchain::FenceList::waitAll() {
-  vkWaitForFences(dev, size, data.get(), VK_TRUE,std::numeric_limits<uint64_t>::max());
+  if(size>0)
+    vkWaitForFences(dev, size, data.get(), VK_TRUE,std::numeric_limits<uint64_t>::max());
   }
 
 
@@ -149,25 +153,93 @@ VSwapchain::SemaphoreList::~SemaphoreList() {
     vkDestroySemaphore(dev,data[i],nullptr);
   }
 
-VSwapchain::VSwapchain(VDevice &device, SystemApi::Window* hwnd)
-  :device(device), hwnd(hwnd) {
+VSwapchain::ImageList::ImageList(VDevice& device, VkSwapchainKHR swapChain, VkFormat format)
+  : device(&device) {
   try {
-    surface = createSurface(device.instance, hwnd);
+    uint32_t imgCount=0;
+    vkAssert(vkGetSwapchainImagesKHR(device.device.impl, swapChain, &imgCount, nullptr));
+    images.resize(imgCount);
+    vkAssert(vkGetSwapchainImagesKHR(device.device.impl, swapChain, &imgCount, images.data()));
+
+    views.resize(images.size());
+
+    for(size_t i=0; i<images.size(); i++) {
+      VkImageViewCreateInfo createInfo = {};
+      createInfo.sType        = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+      createInfo.image        = images[i];
+      createInfo.viewType     = VK_IMAGE_VIEW_TYPE_2D;
+      createInfo.format       = format;
+      createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+      createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+      createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+      createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+      createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+      createInfo.subresourceRange.baseMipLevel   = 0;
+      createInfo.subresourceRange.levelCount     = 1;
+      createInfo.subresourceRange.baseArrayLayer = 0;
+      createInfo.subresourceRange.layerCount     = 1;
+
+      vkAssert(vkCreateImageView(device.device.impl,&createInfo,nullptr,&views[i]));
+      }
     }
   catch(...) {
     cleanup();
     throw;
     }
-  createSwapchain(device);
+  }
+
+VSwapchain::ImageList::ImageList(ImageList&& oth) {
+  *this = std::move(oth);
+  }
+
+VSwapchain::ImageList& VSwapchain::ImageList::operator =(ImageList&& oth) {
+  std::swap(views,  oth.views);
+  std::swap(images, oth.images);
+  std::swap(device, oth.device);
+  return *this;
+  }
+
+VSwapchain::ImageList::~ImageList() {
+  if(device==nullptr)
+    return;
+  auto& map = device->fboMap;
+  for(auto imageView : views)
+    if(imageView!=VK_NULL_HANDLE)
+      map.notifyDestroy(imageView);
+  cleanup();
+  }
+
+void VSwapchain::ImageList::cleanup() {
+  for(auto imageView : views)
+    if(imageView!=VK_NULL_HANDLE)
+      vkDestroyImageView(device->device.impl,imageView,nullptr);
+  }
+
+
+VSwapchain::VSwapchain(VDevice &device, SystemApi::Window* hwnd)
+  :device(device), hwnd(hwnd) {
+  try {
+    createSwapchain(device);
+    }
+  catch(...) {
+    cleanup();
+    throw;
+    }
   }
 
 VSwapchain::~VSwapchain() {
   cleanup();
   }
 
-bool VSwapchain::checkPresentSupport(VkPhysicalDevice device, uint32_t queueFamilyIndex) {
+bool VSwapchain::checkPresentationSupport(VkPhysicalDevice device, uint32_t queueFamilyIndex) {
 #if defined(__WINDOWS__)
   const bool presentSupport = vkGetPhysicalDeviceWin32PresentationSupportKHR(device, queueFamilyIndex)!=VK_FALSE;
+  return presentSupport;
+#elif defined(__ANDROID__)
+  // All Android graphics queues support presentation.
+  (void)device;
+  (void)queueFamilyIndex;
+  return true;
 #elif defined(__UNIX__)
   bool presentSupport = false;
   if(auto dpy = reinterpret_cast<Display*>(X11Api::display())){
@@ -175,10 +247,35 @@ bool VSwapchain::checkPresentSupport(VkPhysicalDevice device, uint32_t queueFami
     auto visualId = XVisualIDFromVisual(DefaultVisual(dpy,screen));
     presentSupport = vkGetPhysicalDeviceXlibPresentationSupportKHR(device,queueFamilyIndex,dpy,visualId)!=VK_FALSE;
     }
-#else
-#warning "wsi for vulkan not implemented on this platform"
-#endif
   return presentSupport;
+#else
+# warning "wsi for vulkan not implemented on this platform"
+  return false;
+#endif
+  }
+
+VkResult VSwapchain::createSurface(VkInstance instance, void* hwnd, VkSurfaceKHR* pSurface) {
+#ifdef __WINDOWS__
+  VkWin32SurfaceCreateInfoKHR createInfo={};
+  createInfo.sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+  createInfo.hinstance = GetModuleHandleA(nullptr);
+  createInfo.hwnd      = HWND(hwnd);
+  return vkCreateWin32SurfaceKHR(instance,&createInfo,nullptr,pSurface);
+#elif defined(__ANDROID__)
+  VkAndroidSurfaceCreateInfoKHR createInfo = {};
+  createInfo.sType  = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
+  createInfo.window = reinterpret_cast<ANativeWindow*>(hwnd);
+  return vkCreateAndroidSurfaceKHR(instance,&createInfo,nullptr,pSurface);
+#elif defined(__UNIX__)
+  VkXlibSurfaceCreateInfoKHR createInfo = {};
+  createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+  createInfo.dpy    = reinterpret_cast<Display*>(X11Api::display());
+  createInfo.window = ::Window(hwnd);
+  return vkCreateXlibSurfaceKHR(instance, &createInfo, nullptr, pSurface);
+#else
+# warning "wsi for vulkan not implemented on this platform"
+  return VK_ERROR_UNKNOWN;
+#endif
   }
 
 void VSwapchain::cleanupSwapchain() noexcept {
@@ -191,24 +288,17 @@ void VSwapchain::cleanupSwapchain() noexcept {
   presentFence = FenceList();
   aquireSem    = SemaphoreList();
   presentSem   = SemaphoreList();
-
-  for(auto imageView : views)
-    if(map!=nullptr && imageView!=VK_NULL_HANDLE)
-      map->notifyDestroy(imageView);
-  map = nullptr;
-  for(auto imageView : views)
-    if(imageView!=VK_NULL_HANDLE)
-      vkDestroyImageView(device.device.impl,imageView,nullptr);
-  views.clear();
+  imageList    = ImageList();
   sync.clear();
 
-  images.clear();
   if(swapChain!=VK_NULL_HANDLE)
     vkDestroySwapchainKHR(device.device.impl,swapChain,nullptr);
 
   swapChain            = VK_NULL_HANDLE;
   swapChainImageFormat = VK_FORMAT_UNDEFINED;
   swapChainExtent      = {};
+  imgIndex             = 0;
+  frameId              = 0;
   }
 
 void VSwapchain::cleanupSurface() noexcept {
@@ -230,24 +320,11 @@ void VSwapchain::cleanup() noexcept {
 VkSurfaceKHR VSwapchain::createSurface(VkInstance instance, void* hwnd) {
   if(hwnd==nullptr)
     return VK_NULL_HANDLE;
+  if(surface!=VK_NULL_HANDLE)
+    return surface;
   VkSurfaceKHR ret = VK_NULL_HANDLE;
-#ifdef __WINDOWS__
-  VkWin32SurfaceCreateInfoKHR createInfo={};
-  createInfo.sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-  createInfo.hinstance = GetModuleHandleA(nullptr);
-  createInfo.hwnd      = HWND(hwnd);
-  if(vkCreateWin32SurfaceKHR(instance,&createInfo,nullptr,&ret)!=VK_SUCCESS)
+  if(createSurface(instance, hwnd, &ret)!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
-#elif defined(__UNIX__)
-  VkXlibSurfaceCreateInfoKHR createInfo = {};
-  createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-  createInfo.dpy    = reinterpret_cast<Display*>(X11Api::display());
-  createInfo.window = ::Window(hwnd);
-  if(vkCreateXlibSurfaceKHR(instance, &createInfo, nullptr, &ret)!=VK_SUCCESS)
-    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
-#else
-#warning "wsi for vulkan not implemented on this platform"
-#endif
   return ret;
   }
 
@@ -262,13 +339,14 @@ void VSwapchain::createSwapchain(VDevice& device) {
       return;
 
     try {
+      surface = createSurface(device.instance, hwnd);
       auto     support  = device.querySwapChainSupport(surface);
-      uint32_t imgCount = findImageCount(support);
-      auto     code     = createSwapchain(device,support,rect,imgCount);
+      VkResult code     = createSwapchain(device,support,rect);
       if(isSwapchainLost(code)) {
         cleanupSwapchain();
         continue;
         }
+      vkAssert(code);
       break;
       }
     catch(...) {
@@ -278,16 +356,18 @@ void VSwapchain::createSwapchain(VDevice& device) {
     }
   }
 
-VkResult VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& swapChainSupport,
-                                     const Rect& rect, uint32_t imgCount) {
+VkResult VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& swapChainSupport, const Rect& rect) {
   VkBool32 support=false;
-  vkGetPhysicalDeviceSurfaceSupportKHR(device.physicalDevice,device.presentQueue->family,surface,&support);
+  auto code = vkGetPhysicalDeviceSurfaceSupportKHR(device.physicalDevice,device.presentQueue->family,surface,&support);
+  vkAssert(code);
   if(!support)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 
   VkSurfaceFormatKHR surfaceFormat = findSwapSurfaceFormat(swapChainSupport.formats);
   VkPresentModeKHR   presentMode   = findSwapPresentMode  (swapChainSupport.presentModes);
   VkExtent2D         extent        = findSwapExtent       (swapChainSupport.capabilities,uint32_t(rect.w),uint32_t(rect.h));
+  auto               alphaMode     = findAlphaMode(swapChainSupport.capabilities.supportedCompositeAlpha);
+  uint32_t           imgCount      = findImageCount       (swapChainSupport);
 
   VkSwapchainCreateInfoKHR createInfo = {};
   createInfo.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
@@ -310,56 +390,28 @@ VkResult VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& sw
     }
 
   createInfo.preTransform   = swapChainSupport.capabilities.currentTransform;
-  createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+  createInfo.compositeAlpha = alphaMode;
   createInfo.presentMode    = presentMode;
   createInfo.clipped        = VK_FALSE;
 
-  if(vkCreateSwapchainKHR(device.device.impl, &createInfo, nullptr, &swapChain) != VK_SUCCESS)
-    throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+  code = vkCreateSwapchainKHR(device.device.impl, &createInfo, nullptr, &swapChain);
+  if(code!=VK_SUCCESS)
+    return code;
 
   swapChainImageFormat = surfaceFormat.format;
   swapChainExtent      = extent;
   swapChaincurrentCaps = swapChainSupport.capabilities;
 
-  createImageViews(device);
+  imageList = ImageList(device, swapChain, swapChainImageFormat);
 
-  sync.resize(views.size());
+  sync.resize(imageList.size());
 
-  aquireFence  = FenceList(device.device.impl, uint32_t(views.size()));
-  presentFence = FenceList(device.device.impl, uint32_t(views.size()));
-  presentSem   = SemaphoreList(device.device.impl, uint32_t(views.size()));
-  aquireSem    = SemaphoreList(device.device.impl, uint32_t(views.size()));
+  aquireFence  = FenceList(device.device.impl,     imageList.size());
+  presentFence = FenceList(device.device.impl,     imageList.size());
+  presentSem   = SemaphoreList(device.device.impl, imageList.size());
+  aquireSem    = SemaphoreList(device.device.impl, imageList.size());
 
   return implAcquireNextImage();
-  }
-
-void VSwapchain::createImageViews(VDevice &device) {
-  uint32_t imgCount=0;
-  vkGetSwapchainImagesKHR(device.device.impl, swapChain, &imgCount, nullptr);
-  images.resize(imgCount);
-  vkGetSwapchainImagesKHR(device.device.impl, swapChain, &imgCount, images.data());
-
-  views.resize(images.size());
-
-  for(size_t i=0; i<images.size(); i++) {
-    VkImageViewCreateInfo createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    createInfo.image = images[i];
-    createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    createInfo.format = swapChainImageFormat;
-    createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-    createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-    createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-    createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-    createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    createInfo.subresourceRange.baseMipLevel   = 0;
-    createInfo.subresourceRange.levelCount     = 1;
-    createInfo.subresourceRange.baseArrayLayer = 0;
-    createInfo.subresourceRange.layerCount     = 1;
-
-    if(vkCreateImageView(device.device.impl,&createInfo,nullptr,&views[i])!=VK_SUCCESS)
-      throw std::system_error(Tempest::GraphicsErrc::NoDevice);
-    }
   }
 
 VkSurfaceFormatKHR VSwapchain::findSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const {
@@ -396,6 +448,21 @@ VkPresentModeKHR VSwapchain::findSwapPresentMode(const std::vector<VkPresentMode
   return VK_PRESENT_MODE_FIFO_KHR;
   }
 
+VkCompositeAlphaFlagBitsKHR VSwapchain::findAlphaMode(VkCompositeAlphaFlagsKHR supported) const {
+  std::initializer_list<VkCompositeAlphaFlagBitsKHR> modes={
+    VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+    VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
+    VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
+    VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR
+    };
+
+  for(auto alpha : modes) {
+    if((supported & alpha)!=0)
+      return alpha;
+    }
+  throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+  }
+
 VkExtent2D VSwapchain::findSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities, uint32_t w, uint32_t h) const {
   if(capabilities.currentExtent.width!=std::numeric_limits<uint32_t>::max()) {
     return capabilities.currentExtent;
@@ -427,7 +494,8 @@ bool VSwapchain::isSwapchainLost(VkResult code) const {
     // WA for issues on some linux distros (https://github.com/Try/OpenGothic/issues/977)
     // probably would have to exclude currentTransform soon due to android
     VkSurfaceCapabilitiesKHR capabilities = {};
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.physicalDevice, surface, &capabilities);
+    if(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.physicalDevice, surface, &capabilities)!=VK_SUCCESS)
+      return true;
 
     capabilities.currentExtent = findSwapExtent(capabilities, swapChainExtent.width, swapChainExtent.height);
 
@@ -474,16 +542,13 @@ VkResult VSwapchain::implAcquireNextImage() {
                                         aquireSem[frameId],
                                         aquireFence[frameId],
                                         &id);
-
-  if(code==VK_ERROR_OUT_OF_DATE_KHR) {
+  if(code!=VK_SUCCESS && code!=VK_SUBOPTIMAL_KHR) {
+    // Failed acquisition leaves the fence unsignaled, including on fatal errors.
     auto rc = vkxRevertFence(device.device.impl, &aquireFence[frameId]);
     if(rc!=VK_SUCCESS)
       std::terminate(); // unrecoverable
     return code;
     }
-
-  if(code!=VK_SUCCESS && code!=VK_SUBOPTIMAL_KHR)
-    vkAssert(code);
 
   imgIndex     = id;
   slot.state   = S_Pending;
@@ -530,7 +595,7 @@ void VSwapchain::present() {
   presentInfo.pSwapchains        = &swapChain;
   presentInfo.pImageIndices      = &imgIndex;
 
-  frameId      = (frameId + 1)%images.size();
+  frameId      = (frameId + 1)%imageList.size();
   slot.state   = S_Idle;
   slot.imgId   = uint32_t(-1);
   slot.acquire = VK_NULL_HANDLE;
@@ -554,4 +619,3 @@ void VSwapchain::present() {
   }
 
 #endif
-
