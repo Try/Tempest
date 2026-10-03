@@ -390,6 +390,11 @@ VkResult VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& sw
     }
 
   createInfo.preTransform   = swapChainSupport.capabilities.currentTransform;
+#ifdef __ANDROID__
+  // Applications render in window coordinates, so let Android rotate the presentation.
+  if(swapChainSupport.capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
+    createInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+#endif
   createInfo.compositeAlpha = alphaMode;
   createInfo.presentMode    = presentMode;
   createInfo.clipped        = VK_FALSE;
