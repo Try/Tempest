@@ -10,6 +10,7 @@
 
 #if defined(__UNIX__)
 #include "system/api/x11api.h"
+#include "system/api/waylandapi.h"
 #endif
 
 #if defined(__WINDOWS__)
@@ -20,6 +21,10 @@
 #  include <android/native_window.h>
 #  include <vulkan/vulkan_android.h>
 #elif defined(__UNIX__)
+#  if defined(TEMPEST_BUILD_WAYLAND)
+#    define VK_USE_PLATFORM_WAYLAND_KHR
+#    include <vulkan/vulkan_wayland.h>
+#  endif
 #  define VK_USE_PLATFORM_XLIB_KHR
 #  include <X11/Xlib.h>
 #  include <vulkan/vulkan_xlib.h>
@@ -241,6 +246,11 @@ bool VSwapchain::checkPresentationSupport(VkPhysicalDevice device, uint32_t queu
   (void)queueFamilyIndex;
   return true;
 #elif defined(__UNIX__)
+#if defined(TEMPEST_BUILD_WAYLAND)
+  if(auto dpy = WaylandApi::display()){
+    return vkGetPhysicalDeviceWaylandPresentationSupportKHR(device,queueFamilyIndex,dpy)!=VK_FALSE;
+    }
+#endif
   bool presentSupport = false;
   if(auto dpy = reinterpret_cast<Display*>(X11Api::display())){
     auto screen   = DefaultScreen(dpy);
@@ -267,6 +277,15 @@ VkResult VSwapchain::createSurface(VkInstance instance, void* hwnd, VkSurfaceKHR
   createInfo.window = reinterpret_cast<ANativeWindow*>(hwnd);
   return vkCreateAndroidSurfaceKHR(instance,&createInfo,nullptr,pSurface);
 #elif defined(__UNIX__)
+#if defined(TEMPEST_BUILD_WAYLAND)
+  if(auto dpy = WaylandApi::display()) {
+    VkWaylandSurfaceCreateInfoKHR createInfo = {};
+    createInfo.sType   = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+    createInfo.display = dpy;
+    createInfo.surface = WaylandApi::surface(reinterpret_cast<SystemApi::Window*>(hwnd));
+    return vkCreateWaylandSurfaceKHR(instance, &createInfo, nullptr, pSurface);
+    }
+#endif
   VkXlibSurfaceCreateInfoKHR createInfo = {};
   createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
   createInfo.dpy    = reinterpret_cast<Display*>(X11Api::display());
@@ -602,8 +621,19 @@ void VSwapchain::present() {
   slot.imgId   = uint32_t(-1);
   slot.acquire = VK_NULL_HANDLE;
 
+#if defined(__UNIX__) && defined(TEMPEST_BUILD_WAYLAND)
+  // Frame callback gates render speed (e.g. minimize detect)
+  // needs WSI driver to commit messages -> only request on guaranteed present call
+  WaylandApi::preparePresent(hwnd, imageList.size()-1);
+#endif
+
   auto tx = Application::tickCount();
   VkResult code = device.presentQueue->present(presentInfo);
+#if defined(__UNIX__) && defined(TEMPEST_BUILD_WAYLAND)
+  // failed present may not commit
+  if(code<VK_SUCCESS)
+    WaylandApi::presentFailed(hwnd);
+#endif
   if(isSwapchainLost(code))
     throw SwapchainSuboptimal();
   tx = Application::tickCount()-tx;

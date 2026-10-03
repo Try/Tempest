@@ -19,20 +19,20 @@
 
 #include <libspirv/libspirv.h>
 
+#if defined(__UNIX__)
+#include "system/api/waylandapi.h"
+#endif
+
+#include <cstdlib>
+#include <cstring>
+
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-#define VK_KHR_WIN32_SURFACE_EXTENSION_NAME "VK_KHR_win32_surface"
-#define VK_KHR_XLIB_SURFACE_EXTENSION_NAME  "VK_KHR_xlib_surface"
+#define VK_KHR_WIN32_SURFACE_EXTENSION_NAME   "VK_KHR_win32_surface"
+#define VK_KHR_XLIB_SURFACE_EXTENSION_NAME    "VK_KHR_xlib_surface"
+#define VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME "VK_KHR_wayland_surface"
 #define VK_KHR_ANDROID_SURFACE_EXTENSION_NAME "VK_KHR_android_surface"
-
-#if defined(__WINDOWS__)
-#define SURFACE_EXTENSION_NAME VK_KHR_WIN32_SURFACE_EXTENSION_NAME
-#elif defined(__ANDROID__)
-#define SURFACE_EXTENSION_NAME VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
-#elif defined(__UNIX__)
-#define SURFACE_EXTENSION_NAME VK_KHR_XLIB_SURFACE_EXTENSION_NAME
-#endif
 
 static const std::initializer_list<const char*> validationLayersKHR = {
   "VK_LAYER_KHRONOS_validation"
@@ -90,6 +90,45 @@ static std::vector<VkExtensionProperties> instExtensionsList() {
   return ext;
   }
 
+// surface extension of the window system
+// on linux: wayland, if conditions met, otherwise fallback to X11
+static const char* surfaceExtensionName([[maybe_unused]] const std::vector<VkExtensionProperties>& ext) {
+#if defined(__WINDOWS__)
+  return VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
+#elif defined(__ANDROID__)
+  return VK_KHR_ANDROID_SURFACE_EXTENSION_NAME;
+#elif defined(__UNIX__)
+#if defined(TEMPEST_BUILD_WAYLAND)
+  bool wayland = true;
+
+  // Manual override, e.g. to test the X11 path: TEMPEST_DISABLE_WAYLAND=1
+  const char* disable = std::getenv("TEMPEST_DISABLE_WAYLAND");
+  if(disable!=nullptr && std::strcmp(disable,"1")==0) {
+    Log::i("VulkanApi: Wayland disabled by TEMPEST_DISABLE_WAYLAND=1, using X11");
+    wayland = false;
+    }
+
+  // TODO(wayland): WAYLAND_DISPLAY check: wl_display_connect(nullptr) falls back to "wayland-0",
+  // which may belong to another session of the same user (e.g. X11 session here, Wayland session
+  // on another Virtual Terminal).
+
+  if(wayland && !extensionSupport(ext, VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME)) {
+    Log::i("VulkanApi: ", VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME, " is not supported, using X11");
+    wayland = false;
+    }
+
+  if(wayland) {
+    WaylandApi::request();
+    if(WaylandApi::display()!=nullptr)
+      return VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
+    }
+#endif
+  return VK_KHR_XLIB_SURFACE_EXTENSION_NAME;
+#else
+#error "WSI is not implemented on this platform"
+#endif
+  }
+
 
 struct Tempest::VulkanApi::Impl {
   Impl(bool validation)
@@ -118,13 +157,14 @@ struct Tempest::VulkanApi::Impl {
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
 
+    auto ext = instExtensionsList();
+
     std::vector<const char*> rqExt = {
       VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
       VK_KHR_SURFACE_EXTENSION_NAME,
-      SURFACE_EXTENSION_NAME,
       };
+    rqExt.push_back(surfaceExtensionName(ext));
 
-    auto ext = instExtensionsList();
     if(extensionSupport(ext, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {
       rqExt.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
       hasDeviceFeatures2 = true;
