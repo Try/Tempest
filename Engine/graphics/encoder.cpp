@@ -278,10 +278,14 @@ void Tempest::Encoder<Tempest::CommandBuffer>::implSetFramebuffer(const Attachme
   Detail::FrameBufferDesc fbo;
   for(size_t i=0; i<rtSize; ++i) {
     Attachment* ax = rt[i].attachment;
+    if(ax->isEmpty())
+      throw std::system_error(GraphicsErrc::InvalidTexture);
     if(ax->w()!=int(w) || ax->h()!=int(h))
       throw IncompleteFboException();
     fbo.desc[i] = rt[i];
-    if(ax->sImpl.swapchain!=nullptr) {
+    if(ax->pImpl) {
+      fbo.image[i] = ax->pImpl.handler;
+      } else if(ax->sImpl.swapchain!=nullptr) {
       fbo.frm[i]   = TextureFormat::Undefined;
       fbo.sw[i]    = ax->sImpl.swapchain;
       fbo.imgId[i] = ax->sImpl.id;

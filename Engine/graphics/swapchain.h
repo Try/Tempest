@@ -21,6 +21,10 @@ class Swapchain final {
 
     void                 reset();
 
+    // Acquires an image for one frame. Currently supported by Metal.
+    // Present it after submitting all rendering, or drop it to discard the frame.
+    Attachment           next();
+
     uint32_t             currentImage() const;
     uint32_t             imageCount() const;
     Attachment&          operator[](size_t id);

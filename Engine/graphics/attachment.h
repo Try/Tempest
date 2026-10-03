@@ -13,9 +13,9 @@ template<class T> T textureCast(const Attachment& s);
 class Attachment final {
   public:
     Attachment()=default;
-    Attachment(Attachment&&)=default;
+    Attachment(Attachment&& other);
     ~Attachment()=default;
-    Attachment& operator=(Attachment&&)=default;
+    Attachment& operator=(Attachment&& other);
 
     int              w() const;
     int              h() const;
@@ -25,6 +25,7 @@ class Attachment final {
   private:
     Attachment(Texture2d&& t):tImpl(std::move(t)){}
     Attachment(AbstractGraphicsApi::Swapchain* sw, uint32_t id);
+    Attachment(AbstractGraphicsApi::PSwapchainImage&& image):pImpl(std::move(image)){}
 
     struct SwImage {
       AbstractGraphicsApi::Swapchain* swapchain = nullptr;
@@ -32,6 +33,7 @@ class Attachment final {
       };
     Texture2d tImpl;
     SwImage   sImpl;
+    AbstractGraphicsApi::PSwapchainImage pImpl;
 
   friend class Tempest::Device;
   friend class Tempest::Swapchain;
@@ -43,21 +45,21 @@ class Attachment final {
 
 template<>
 inline Texture2d& textureCast<Texture2d&>(Attachment& a) {
-  if(a.sImpl.swapchain)
+  if(a.sImpl.swapchain || a.pImpl)
     throw BadTextureCastException("Cannot cast swapchain image to Texture2d");
   return a.tImpl;
   }
 
 template<>
 inline const Texture2d& textureCast<const Texture2d&>(Attachment& a) {
-  if(a.sImpl.swapchain)
+  if(a.sImpl.swapchain || a.pImpl)
     throw BadTextureCastException("Cannot cast swapchain image to Texture2d");
   return a.tImpl;
   }
 
 template<>
 inline const Texture2d& textureCast<const Texture2d&>(const Attachment& a) {
-  if(a.sImpl.swapchain)
+  if(a.sImpl.swapchain || a.pImpl)
     throw BadTextureCastException("Cannot cast swapchain image to Texture2d");
   return a.tImpl;
   }

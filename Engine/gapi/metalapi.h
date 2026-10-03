@@ -40,6 +40,7 @@ class MetalApi : public AbstractGraphicsApi {
     CommandBuffer* createCommandBuffer(Device* d) override;
 
     void           present(Device *d, Swapchain* sw) override;
+    void           present(Device *d, SwapchainImage* image) override;
     auto           submit (Device *d, CommandBuffer* cmd) -> std::shared_ptr<AbstractGraphicsApi::Fence> override;
 
     void           getCaps(Device *d, Props& caps) override;

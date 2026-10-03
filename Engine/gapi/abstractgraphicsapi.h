@@ -519,6 +519,15 @@ namespace Tempest {
 
         virtual void setPayload(std::vector<Detail::DSharedPtr<const AbstractGraphicsApi::Shared*>>&&) {}
         };
+      struct SwapchainImage:Shared {
+        SwapchainImage(Device& device, uint32_t w, uint32_t h):device(device),width(w),height(h) {}
+
+        Device&        device;
+        const uint32_t width;
+        const uint32_t height;
+        };
+      using PSwapchainImage = Detail::DSharedPtr<SwapchainImage*>;
+
       struct Swapchain:NoCopy {
         virtual ~Swapchain()=default;
         virtual void          reset()=0;
@@ -527,6 +536,7 @@ namespace Tempest {
         virtual uint32_t      imageCount() const=0;
         virtual uint32_t      w() const=0;
         virtual uint32_t      h() const=0;
+        virtual PSwapchainImage next();
         };
       struct Texture:Shared  {
         virtual uint32_t      mipCount() const = 0;
@@ -663,6 +673,7 @@ namespace Tempest {
       virtual void       readBytes    (Device* d, Buffer* buf, void* out, size_t size) = 0;
 
       virtual void       present(Device *d, Swapchain* sw) = 0;
+      virtual void       present(Device *d, SwapchainImage* image);
       virtual auto       submit (Device *d, CommandBuffer* cmd) -> std::shared_ptr<AbstractGraphicsApi::Fence> = 0;
 
       virtual void       getCaps(Device *d, Props& caps)=0;
@@ -689,6 +700,7 @@ namespace Detail {
     AttachmentDesc                  desc [MaxFramebufferAttachments+1] = {};
     AbstractGraphicsApi::Texture*   att  [MaxFramebufferAttachments+1] = {};
     AbstractGraphicsApi::Swapchain* sw   [MaxFramebufferAttachments+1] = {};
+    AbstractGraphicsApi::SwapchainImage* image[MaxFramebufferAttachments+1] = {};
     uint32_t                        imgId[MaxFramebufferAttachments+1] = {};
     };
 

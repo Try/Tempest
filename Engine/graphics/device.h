@@ -48,6 +48,8 @@ class Device {
     [[nodiscard]]
     Fence                 submit(const CommandBuffer& cmd);
     void                  present(Swapchain& sw);
+    // Consumes an image acquired from Swapchain::next(), including on failure.
+    void                  present(Attachment image);
 
     Swapchain             swapchain(SystemApi::Window* w) const;
 
