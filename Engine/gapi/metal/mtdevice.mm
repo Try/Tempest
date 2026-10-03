@@ -19,6 +19,7 @@ static NsPtr<MTL::Device> mkDevice(std::string_view name) {
     NS::Object*  at = dev->object(i);
     MTL::Device* d  = reinterpret_cast<MTL::Device*>(at);
     if(name==d->name()->utf8String()) {
+      d->retain();
       return NsPtr<MTL::Device>(d);
       }
     }
