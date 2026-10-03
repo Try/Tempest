@@ -1,0 +1,9 @@
+/* Tempest's replacement for the config.h that libwayland's meson build generates.
+ * Only the entries the client sources use; filled in by CMakeLists.txt. */
+#cmakedefine HAVE_SYS_UCRED_H 1
+#cmakedefine HAVE_ACCEPT4 1
+#cmakedefine HAVE_GETTID 1
+
+/* BSD only (struct xucred, FreeBSD's MSG_CMSG_CLOEXEC bug) */
+#define HAVE_XUCRED_CR_PID 0
+#define HAVE_BROKEN_MSG_CMSG_CLOEXEC 0

@@ -32,6 +32,12 @@ else()
   option(TEMPEST_BUILD_METAL       "Build metal support"     OFF)
 endif()
 
+if(UNIX AND NOT APPLE AND NOT ANDROID)
+  option(TEMPEST_BUILD_WAYLAND     "Build wayland support"   ON )
+else()
+  option(TEMPEST_BUILD_WAYLAND     "Build wayland support"   OFF)
+endif()
+
 # This warning only occurs in CMake 3.24 or greater.
 # https://cmake.org/cmake/help/latest/policy/CMP0135.html#cmp0135
 if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.24")
@@ -204,6 +210,14 @@ if(TEMPEST_BUILD_METAL)
   add_definitions(-DTEMPEST_BUILD_METAL)
   add_subdirectory("thirdparty/metal-cpp" EXCLUDE_FROM_ALL)
   target_include_directories(${PROJECT_NAME} PRIVATE "thirdparty/metal-cpp")
+endif()
+
+### Wayland
+if(TEMPEST_BUILD_WAYLAND)
+  add_definitions(-DTEMPEST_BUILD_WAYLAND)
+  add_subdirectory("thirdparty/wayland"           EXCLUDE_FROM_ALL)
+  add_subdirectory("thirdparty/wayland-protocols" EXCLUDE_FROM_ALL)
+  target_link_libraries(${PROJECT_NAME} PRIVATE wayland_protocols xkbcommon)
 endif()
 
 ### Spirv-cross
