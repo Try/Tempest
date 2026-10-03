@@ -29,6 +29,15 @@ static bool            focused    = false;
 static bool            active     = false;
 static bool            hasWindow  = false;
 
+std::string AndroidApi::internalDataPath() {
+  return app->activity->internalDataPath;
+  }
+
+std::string AndroidApi::externalDataPath() {
+  const char* path = app->activity->externalDataPath;
+  return path!=nullptr ? path : "";
+  }
+
 void AndroidApi::updateFocus() {
   const bool next = resumed && focused;
   if(active==next)
