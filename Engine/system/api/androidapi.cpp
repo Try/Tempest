@@ -12,6 +12,7 @@
 #include <android/native_window.h>
 
 #include <atomic>
+#include <cassert>
 #include <cstdlib>
 #include <dlfcn.h>
 #include <exception>
@@ -28,6 +29,17 @@ static bool            resumed    = false;
 static bool            focused    = false;
 static bool            active     = false;
 static bool            hasWindow  = false;
+
+std::filesystem::path AndroidApi::internalDataPath() {
+  assert(app!=nullptr && app->activity!=nullptr);
+  return app->activity->internalDataPath;
+  }
+
+std::filesystem::path AndroidApi::externalDataPath() {
+  assert(app!=nullptr && app->activity!=nullptr);
+  const char* path = app->activity->externalDataPath;
+  return path!=nullptr ? path : "";
+  }
 
 void AndroidApi::updateFocus() {
   const bool next = resumed && focused;
