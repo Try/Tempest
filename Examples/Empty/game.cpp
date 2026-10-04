@@ -17,9 +17,6 @@ Game::Game(Device& device)
   Tempest::Pixmap pm("assets/texture.png");
   //Tempest::Pixmap pm("assets/texture.hdr");
   texture = device.texture(pm);
-
-  for(uint8_t i=0;i<MaxFramesInFlight;++i)
-    fence.emplace_back(device.fence());
   }
 
 Game::~Game() {
@@ -62,7 +59,7 @@ void Game::render(){
     surfaceMesh[cmdId].draw(enc);
     }
 
-    device.submit(cmd,sync);
+    sync = device.submit(cmd);
     device.present(swapchain);
     }
   catch(const Tempest::SwapchainSuboptimal&) {
