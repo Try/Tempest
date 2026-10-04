@@ -1,14 +1,14 @@
 #pragma once
 
 #include <Tempest/SystemApi>
-#include <string>
+#include <filesystem>
 
 namespace Tempest {
 
 class AndroidApi final : SystemApi {
   public:
-    static std::string internalDataPath();
-    static std::string externalDataPath();
+    static std::filesystem::path internalDataPath();
+    static std::filesystem::path externalDataPath();
 
   private:
     AndroidApi() = default;
