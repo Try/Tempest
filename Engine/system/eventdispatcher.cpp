@@ -56,13 +56,7 @@ void EventDispatcher::dispatchMouseDown(Widget& wnd, MouseEvent &e) {
     mouseLastId   = e.mouseID;
     }
 
-  for(auto i=mouseUp.begin(); i!=mouseUp.end(); ++i)
-    if(i->id==e.mouseID && i->button==e.button) {
-      mouseUp.erase(i);
-      break;
-      }
-  if(!btn.expired())
-    mouseUp.push_back({e.button,e.mouseID,btn});
+  reset(e.mouseID, e.button, btn);
 
   if(auto w = btn.lock()) {
     if(w->widget->focusPolicy() & ClickFocus) {
@@ -74,14 +68,7 @@ void EventDispatcher::dispatchMouseDown(Widget& wnd, MouseEvent &e) {
 void EventDispatcher::dispatchMouseUp(Widget& /*wnd*/, MouseEvent &e) {
   ++mouseEvCount;
 
-  std::weak_ptr<Widget::Ref> ptr;
-  for(auto i=mouseUp.begin(); i!=mouseUp.end(); ++i)
-    if(i->id==e.mouseID && i->button==e.button) {
-      ptr = i->ref;
-      mouseUp.erase(i);
-      break;
-      }
-
+  std::weak_ptr<Widget::Ref> ptr = reset(e.mouseID, e.button);
   if(auto w = ptr.lock()) {
     auto p = e.pos() - w->widget->mapToRoot(Point());
     MouseEvent e1( p.x,
@@ -98,8 +85,9 @@ void EventDispatcher::dispatchMouseUp(Widget& /*wnd*/, MouseEvent &e) {
 void EventDispatcher::dispatchMouseMove(Widget& wnd, MouseEvent &e) {
   auto btn = Event::ButtonLast;
   for(auto& i:mouseUp)
-    if(i.id==e.mouseID && i.button<btn && !i.ref.expired())
+    if(i.id==e.mouseID && i.button<btn && !i.ref.expired()) {
       btn = i.button;
+      }
   if(btn==Event::ButtonLast)
     btn = Event::ButtonNone;
 
@@ -541,6 +529,22 @@ std::shared_ptr<Widget::Ref> EventDispatcher::lock(int id, Event::MouseButton bu
     if(i.id==id && i.button==button)
       return lock(i.ref);
   return nullptr;
+  }
+
+std::weak_ptr<Widget::Ref> EventDispatcher::reset(int id, Event::MouseButton button, const std::weak_ptr<Widget::Ref>& w) {
+  for(auto i=mouseUp.begin(); i!=mouseUp.end(); ++i)
+    if(i->id==id && i->button==button) {
+      auto ptr = i->ref;
+      if(w.expired()) {
+        mouseUp.erase(i);
+        } else {
+        i->ref = w;
+        }
+      return ptr.lock();
+      }
+  if(!w.expired())
+    mouseUp.push_back({button,id,w});
+  return {};
   }
 
 Event::Modifier EventDispatcher::mkModifier() const {

@@ -37,7 +37,7 @@ class EventDispatcher final {
     struct MouseCapture {
       Event::MouseButton          button = {};
       int                         id     = 0;
-      std::weak_ptr<Widget::Ref>   ref    = {};
+      std::weak_ptr<Widget::Ref>  ref    = {};
       };
 
     std::shared_ptr<Widget::Ref> implDispatch(Tempest::Widget &w, Tempest::MouseEvent& event);
@@ -52,6 +52,7 @@ class EventDispatcher final {
 
     std::shared_ptr<Widget::Ref> lock(std::weak_ptr<Widget::Ref>& w);
     std::shared_ptr<Widget::Ref> lock(int id, Event::MouseButton button);
+    std::weak_ptr<Widget::Ref>   reset(int id, Event::MouseButton button, const std::weak_ptr<Widget::Ref>& w = {});
 
     Widget*                      customRoot = nullptr;
     std::vector<MouseCapture>    mouseUp;
