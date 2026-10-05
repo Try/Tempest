@@ -385,7 +385,7 @@ VkResult VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& sw
   VkSurfaceFormatKHR surfaceFormat = findSwapSurfaceFormat(swapChainSupport.formats);
   VkPresentModeKHR   presentMode   = findSwapPresentMode  (swapChainSupport.presentModes);
   VkExtent2D         extent        = findSwapExtent       (swapChainSupport.capabilities,uint32_t(rect.w),uint32_t(rect.h));
-  auto               alphaMode     = findAlphaMode(swapChainSupport.capabilities.supportedCompositeAlpha);
+  auto               alphaMode     = findAlphaMode        (swapChainSupport.capabilities.supportedCompositeAlpha);
   uint32_t           imgCount      = findImageCount       (swapChainSupport);
 
   VkSwapchainCreateInfoKHR createInfo = {};
