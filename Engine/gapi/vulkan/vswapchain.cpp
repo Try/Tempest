@@ -251,13 +251,12 @@ bool VSwapchain::checkPresentationSupport(VkPhysicalDevice device, uint32_t queu
     return vkGetPhysicalDeviceWaylandPresentationSupportKHR(device,queueFamilyIndex,dpy)!=VK_FALSE;
     }
 #endif
-  bool presentSupport = false;
   if(auto dpy = reinterpret_cast<Display*>(X11Api::display())){
     auto screen   = DefaultScreen(dpy);
     auto visualId = XVisualIDFromVisual(DefaultVisual(dpy,screen));
-    presentSupport = vkGetPhysicalDeviceXlibPresentationSupportKHR(device,queueFamilyIndex,dpy,visualId)!=VK_FALSE;
+    return vkGetPhysicalDeviceXlibPresentationSupportKHR(device,queueFamilyIndex,dpy,visualId)!=VK_FALSE;
     }
-  return presentSupport;
+  return false;
 #else
 # warning "wsi for vulkan not implemented on this platform"
   return false;
@@ -286,11 +285,14 @@ VkResult VSwapchain::createSurface(VkInstance instance, void* hwnd, VkSurfaceKHR
     return vkCreateWaylandSurfaceKHR(instance, &createInfo, nullptr, pSurface);
     }
 #endif
-  VkXlibSurfaceCreateInfoKHR createInfo = {};
-  createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-  createInfo.dpy    = reinterpret_cast<Display*>(X11Api::display());
-  createInfo.window = ::Window(hwnd);
-  return vkCreateXlibSurfaceKHR(instance, &createInfo, nullptr, pSurface);
+  if(auto dpy = reinterpret_cast<Display*>(X11Api::display())) {
+    VkXlibSurfaceCreateInfoKHR createInfo = {};
+    createInfo.sType  = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+    createInfo.dpy    = dpy;
+    createInfo.window = ::Window(hwnd);
+    return vkCreateXlibSurfaceKHR(instance, &createInfo, nullptr, pSurface);
+    }
+  return VK_ERROR_UNKNOWN;
 #else
 # warning "wsi for vulkan not implemented on this platform"
   return VK_ERROR_UNKNOWN;
