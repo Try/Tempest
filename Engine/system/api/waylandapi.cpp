@@ -351,6 +351,18 @@ const zwp_locked_pointer_v1_listener WaylandApi::Private::zwpLockedPointerV1List
 bool WaylandApi::Private::connect() {
   // True only if Wayland is usable (connected + all required globals); otherwise logs why.
   // Note: ::dpy set in constructor/destructor only!
+
+  // Manual override, e.g. to test the X11 path: TEMPEST_DISABLE_WAYLAND=1
+  const char* disable = std::getenv("TEMPEST_DISABLE_WAYLAND");
+  if(disable!=nullptr && std::strcmp(disable,"1")==0) {
+    Log::i("WaylandApi: Wayland disabled by TEMPEST_DISABLE_WAYLAND=1");
+    return false;
+    }
+
+  // TODO(wayland): WAYLAND_DISPLAY check: wl_display_connect(nullptr) falls back to "wayland-0",
+  // which may belong to another session of the same user (e.g. X11 session here, Wayland session
+  // on another Virtual Terminal).
+
   display = wl_display_connect(nullptr);
   if(!display) {
     const int   err  = errno;

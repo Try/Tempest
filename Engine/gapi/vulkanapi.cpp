@@ -23,9 +23,6 @@
 #include "system/api/waylandapi.h"
 #endif
 
-#include <cstdlib>
-#include <cstring>
-
 using namespace Tempest;
 using namespace Tempest::Detail;
 
@@ -99,28 +96,12 @@ static const char* surfaceExtensionName([[maybe_unused]] const std::vector<VkExt
   return VK_KHR_ANDROID_SURFACE_EXTENSION_NAME;
 #elif defined(__UNIX__)
 #if defined(TEMPEST_BUILD_WAYLAND)
-  bool wayland = true;
-
-  // Manual override, e.g. to test the X11 path: TEMPEST_DISABLE_WAYLAND=1
-  const char* disable = std::getenv("TEMPEST_DISABLE_WAYLAND");
-  if(disable!=nullptr && std::strcmp(disable,"1")==0) {
-    Log::i("VulkanApi: Wayland disabled by TEMPEST_DISABLE_WAYLAND=1, using X11");
-    wayland = false;
-    }
-
-  // TODO(wayland): WAYLAND_DISPLAY check: wl_display_connect(nullptr) falls back to "wayland-0",
-  // which may belong to another session of the same user (e.g. X11 session here, Wayland session
-  // on another Virtual Terminal).
-
-  if(wayland && !extensionSupport(ext, VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME)) {
-    Log::i("VulkanApi: ", VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME, " is not supported, using X11");
-    wayland = false;
-    }
-
-  if(wayland) {
+  if(extensionSupport(ext, VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME)) {
     WaylandApi::request();
     if(WaylandApi::display()!=nullptr)
       return VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
+    } else {
+    Log::i("VulkanApi: ", VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME, " is not supported, using X11");
     }
 #endif
   return VK_KHR_XLIB_SURFACE_EXTENSION_NAME;
