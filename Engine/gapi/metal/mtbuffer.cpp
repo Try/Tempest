@@ -22,7 +22,7 @@ MtBuffer::MtBuffer(MtDevice& dev, const void* data, size_t size, MTL::ResourceOp
     return;
     }
 
-  if(0==(flg & MTL::ResourceStorageModePrivate)) {
+  if(roundSize==size && 0==(flg & MTL::ResourceStorageModePrivate)) {
     impl = NsPtr<MTL::Buffer>(dev.impl->newBuffer(data,roundSize,flg));
     if(impl==nullptr)
       throw std::system_error(GraphicsErrc::OutOfVideoMemory);
