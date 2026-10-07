@@ -212,34 +212,32 @@ struct WaylandApi::Private {
   static const zwp_locked_pointer_v1_listener       zwpLockedPointerV1Listener;
   static const wl_callback_listener                 wlCallbackListener;
 
-  // Connection
+  // Connection and windows
   bool     connect();
   void     disconnect();
   bool     hasRequiredGlobals() const;
-  void     releasePointer();
-  void     setPointerLock(WWindow& w, bool lock);
-  void     releaseKeyboard();
   void     logDisplayError() const;
-
-  // Windows
+  void     handleConnectionError();
   WWindow* createWindow(Tempest::Window* owner, uint32_t width, uint32_t height, SystemApi::ShowMode sm);
   void     destroyWindow(WWindow* w);
-  static void updateState(WWindow& w);
 
   // Input
   static MouseEvent pointerEvent(const WWindow& w, Event::MouseButton button, int delta, Event::Type type);
   bool       isWindowFocused(const WWindow* w) const;
+  void       setPointerLock(WWindow& w, bool lock);
   void       releaseHeldKeys(WWindow& w);
   void       releaseHeldButtons(WWindow& w);
+  void       releasePointer();
+  void       releaseKeyboard();
   KeyEvent   keyEvent(uint32_t keycode, Event::Type type) const;
   void       startKeyRepeat(uint32_t keycode);
   void       processKeyRepeat();
 
   // Event loop
-  void     readEvents();
-  void     handleConnectionError();
-  int      pollTimeout() const;
-  void     renderWindows();
+  void        readEvents();
+  int         pollTimeout() const;
+  static void updateState(WWindow& w);
+  void        renderWindows();
   };
 
 // Helpers
@@ -752,7 +750,7 @@ const wl_callback_listener WaylandApi::Private::wlCallbackListener = {
   .done = onWlCallbackDone,
   };
 
-// Connection
+// Connection and windows
 
 bool WaylandApi::Private::connect() {
   // True only if Wayland is usable (connected + all required globals); otherwise logs why.
@@ -860,45 +858,6 @@ bool WaylandApi::Private::hasRequiredGlobals() const {
   return hasAll;
   }
 
-void WaylandApi::Private::releasePointer() {
-  // release what the app saw pressed while pointer still exists
-  if(pointerFocus!=nullptr)
-    releaseHeldButtons(*pointerFocus);
-  // Objects created from the pointer first.
-  for(auto& w:windows)
-    setPointerLock(*w, false);
-  ioDestroy(relativePointer,   zwp_relative_pointer_v1_destroy);
-  ioDestroy(cursorShapeDevice, wp_cursor_shape_device_v1_destroy);
-  ioDestroy(pointer,           wl_pointer_release);
-  pointerFocus = nullptr;
-  heldButtons.clear();
-  }
-
-void WaylandApi::Private::setPointerLock(WWindow& w, bool lock) {
-  // Mouse-look: Wayland apps can't move the pointer, so while the cursor is hidden it's locked in place and the app
-  // gets relative motion instead (Tempest has no relative-mouse API). Called on every cursor change.
-  // The lock stays requested: the compositor pauses it while the window is unfocused and resumes it by itself.
-  if(lock && w.lockedPointer==nullptr && pointer!=nullptr) {
-    w.lockedPointer = zwp_pointer_constraints_v1_lock_pointer(pointerConstraints, w.surface, pointer, nullptr,
-                                                              ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT);
-    zwp_locked_pointer_v1_add_listener(w.lockedPointer, &zwpLockedPointerV1Listener, &w);
-    }
-  else if(!lock && w.lockedPointer!=nullptr) {
-    ioDestroy(w.lockedPointer, zwp_locked_pointer_v1_destroy);
-    w.pointerLocked = false;
-    }
-  }
-
-void WaylandApi::Private::releaseKeyboard() {
-  // release what the app saw pressed while keyboard still exists
-  if(keyboardFocus!=nullptr)
-    releaseHeldKeys(*keyboardFocus);
-  ioDestroy(keyboard, wl_keyboard_release);
-  keyboardFocus = nullptr;
-  repeatKeycode = 0;
-  heldKeys.clear();
-  }
-
 void WaylandApi::Private::logDisplayError() const {
   const int err = wl_display_get_error(display);
   if(err==EPROTO) {
@@ -911,7 +870,11 @@ void WaylandApi::Private::logDisplayError() const {
     }
   }
 
-// Windows
+void WaylandApi::Private::handleConnectionError() {
+  // connection dead, nothing works anymore, end the app
+  logDisplayError();
+  SystemApi::exit();
+  }
 
 WWindow* WaylandApi::Private::createWindow(Tempest::Window* owner, uint32_t width, uint32_t height, SystemApi::ShowMode sm) {
   // all roles and state requests needed before the first commit
@@ -1000,18 +963,6 @@ void WaylandApi::Private::destroyWindow(WWindow* w) {
   std::erase_if(windows, [w](const std::unique_ptr<WWindow>& p) { return p.get()==w; });
   }
 
-void WaylandApi::Private::updateState(WWindow& w) {
-  // Update things that should change only once per draw, not on every triggered callback (e.g. swapchain resize)
-  const int32_t pw = w.physicalWidth();
-  const int32_t ph = w.physicalHeight();
-  if(pw!=w.dispatchedWidth || ph!=w.dispatchedHeight) {
-    w.dispatchedWidth  = pw;
-    w.dispatchedHeight = ph;
-    SizeEvent e(pw, ph);
-    SystemApi::dispatchResize(*w.owner, e);
-    }
-  }
-
 // Input
 
 MouseEvent WaylandApi::Private::pointerEvent(const WWindow& w, Event::MouseButton button, int delta, Event::Type type) {
@@ -1025,6 +976,21 @@ bool WaylandApi::Private::isWindowFocused(const WWindow* w) const {
   // Window focus = keyboard focus: mouse moves, wheel and presses only reach the focused window.
   // Without a keyboard every window counts as focused (pointer events only come for the one under the pointer).
   return keyboard==nullptr || keyboardFocus==w;
+  }
+
+void WaylandApi::Private::setPointerLock(WWindow& w, bool lock) {
+  // Mouse-look: Wayland apps can't move the pointer, so while the cursor is hidden it's locked in place and the app
+  // gets relative motion instead (Tempest has no relative-mouse API). Called on every cursor change.
+  // The lock stays requested: the compositor pauses it while the window is unfocused and resumes it by itself.
+  if(lock && w.lockedPointer==nullptr && pointer!=nullptr) {
+    w.lockedPointer = zwp_pointer_constraints_v1_lock_pointer(pointerConstraints, w.surface, pointer, nullptr,
+                                                              ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT);
+    zwp_locked_pointer_v1_add_listener(w.lockedPointer, &zwpLockedPointerV1Listener, &w);
+    }
+  else if(!lock && w.lockedPointer!=nullptr) {
+    ioDestroy(w.lockedPointer, zwp_locked_pointer_v1_destroy);
+    w.pointerLocked = false;
+    }
   }
 
 void WaylandApi::Private::releaseHeldKeys(WWindow& w) {
@@ -1048,6 +1014,30 @@ void WaylandApi::Private::releaseHeldButtons(WWindow& w) {
     MouseEvent e = pointerEvent(w, toButton(button), 0, Event::MouseUp);
     SystemApi::dispatchMouseUp(*w.owner, e);
     }
+  }
+
+void WaylandApi::Private::releasePointer() {
+  // release what the app saw pressed while pointer still exists
+  if(pointerFocus!=nullptr)
+    releaseHeldButtons(*pointerFocus);
+  // Objects created from the pointer first.
+  for(auto& w:windows)
+    setPointerLock(*w, false);
+  ioDestroy(relativePointer,   zwp_relative_pointer_v1_destroy);
+  ioDestroy(cursorShapeDevice, wp_cursor_shape_device_v1_destroy);
+  ioDestroy(pointer,           wl_pointer_release);
+  pointerFocus = nullptr;
+  heldButtons.clear();
+  }
+
+void WaylandApi::Private::releaseKeyboard() {
+  // release what the app saw pressed while keyboard still exists
+  if(keyboardFocus!=nullptr)
+    releaseHeldKeys(*keyboardFocus);
+  ioDestroy(keyboard, wl_keyboard_release);
+  keyboardFocus = nullptr;
+  repeatKeycode = 0;
+  heldKeys.clear();
   }
 
 KeyEvent WaylandApi::Private::keyEvent(uint32_t keycode, Event::Type type) const {
@@ -1123,12 +1113,6 @@ void WaylandApi::Private::readEvents() {
     handleConnectionError();
   }
 
-void WaylandApi::Private::handleConnectionError() {
-  // connection dead, nothing works anymore, end the app
-  logDisplayError();
-  SystemApi::exit();
-  }
-
 int WaylandApi::Private::pollTimeout() const {
   // 0 if a window may render; otherwise wait for the compositor (e.g. a frame callback),
   // at most idlePollTimeoutMs, and not beyond the next scheduled key repeat
@@ -1140,6 +1124,18 @@ int WaylandApi::Private::pollTimeout() const {
     timeout = std::clamp(int(untilRepeat.count()), 0, timeout);
     }
   return timeout;
+  }
+
+void WaylandApi::Private::updateState(WWindow& w) {
+  // Update things that should change only once per draw, not on every triggered callback (e.g. swapchain resize)
+  const int32_t pw = w.physicalWidth();
+  const int32_t ph = w.physicalHeight();
+  if(pw!=w.dispatchedWidth || ph!=w.dispatchedHeight) {
+    w.dispatchedWidth  = pw;
+    w.dispatchedHeight = ph;
+    SizeEvent e(pw, ph);
+    SystemApi::dispatchResize(*w.owner, e);
+    }
   }
 
 void WaylandApi::Private::renderWindows() {
