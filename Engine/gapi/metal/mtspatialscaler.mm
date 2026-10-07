@@ -43,6 +43,8 @@ MtSpatialScaler::MtSpatialScaler(MtDevice& device, const SpatialScalerDesc& cfg)
   const auto outputFormat = nativeFormat(cfg.outputFormat);
   if(!isMetalFxAvailable() || inputFormat==MTL::PixelFormatInvalid || outputFormat==MTL::PixelFormatInvalid)
     return;
+  if(!device.prop.hasAttachFormat(cfg.inputFormat) || !device.prop.hasStorageFormat(cfg.outputFormat))
+    return;
   if(cfg.inputWidth==0 || cfg.inputHeight==0 || cfg.outputWidth==0 || cfg.outputHeight==0)
     return;
 

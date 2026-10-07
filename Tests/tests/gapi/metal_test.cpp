@@ -51,6 +51,15 @@ TEST(MetalApi,SpatialScaler) {
     desc.outputHeight = 64;
     desc.colorMode    = SpatialScalerColorMode::HDR;
 
+    for(auto format:{TextureFormat::Undefined,TextureFormat::Depth32F,TextureFormat::DXT1}) {
+      auto invalid = desc;
+      invalid.inputFormat = format;
+      EXPECT_TRUE(device.spatialScaler(invalid).isEmpty());
+      invalid.inputFormat = desc.inputFormat;
+      invalid.outputFormat = format;
+      EXPECT_TRUE(device.spatialScaler(invalid).isEmpty());
+      }
+
     auto scaler = device.spatialScaler(desc);
     if(scaler.isEmpty()) {
       Log::d("Skipping MetalFX spatial scaler testcase: unsupported device or system");
