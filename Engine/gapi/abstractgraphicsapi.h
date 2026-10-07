@@ -173,6 +173,22 @@ namespace Tempest {
     return f==TextureFormat::DXT1 || f==TextureFormat::DXT3 || f==TextureFormat::DXT5;
     }
 
+  enum class SpatialScalerColorMode : uint8_t {
+    Perceptual,
+    Linear,
+    HDR,
+    };
+
+  struct SpatialScalerDesc final {
+    TextureFormat          inputFormat  = Undefined;
+    TextureFormat          outputFormat = Undefined;
+    uint32_t               inputWidth   = 0;
+    uint32_t               inputHeight  = 0;
+    uint32_t               outputWidth  = 0;
+    uint32_t               outputHeight = 0;
+    SpatialScalerColorMode colorMode    = SpatialScalerColorMode::Perceptual;
+    };
+
   enum class ComponentSwizzle {
     Identity = 0,
     R,
@@ -560,6 +576,7 @@ namespace Tempest {
         };
       struct BlasBuildCtx {};
       struct AccelerationStructure:Shared {};
+      struct SpatialScaler:NoCopy {};
       struct DescArray:NoCopy {};
       struct BarrierDesc {
         const Texture*   texture   = nullptr;
@@ -620,6 +637,8 @@ namespace Tempest {
 
         virtual void dispatch(size_t x, size_t y, size_t z) = 0;
         virtual void dispatchIndirect(const Buffer& indirect, size_t offset) = 0;
+
+        virtual bool spatialUpscale(SpatialScaler& scaler, Texture& input, Texture& output);
         };
 
       using PBuffer       = Detail::DSharedPtr<Buffer*>;
@@ -666,6 +685,7 @@ namespace Tempest {
       virtual auto       submit (Device *d, CommandBuffer* cmd) -> std::shared_ptr<AbstractGraphicsApi::Fence> = 0;
 
       virtual void       getCaps(Device *d, Props& caps)=0;
+      virtual SpatialScaler* createSpatialScaler(Device* d, const SpatialScalerDesc& desc);
 
     friend class Tempest::Device;
     };
