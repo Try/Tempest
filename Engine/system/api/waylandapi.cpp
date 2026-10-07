@@ -171,7 +171,7 @@ struct WaylandApi::Private {
   WWindow*                        keyboardFocus          = nullptr; // window with keyboard focus (wl_keyboard.enter/leave)
 
   // Keys (xkb keycodes) and buttons (evdev codes) whose press reached the app. Only their releases are dispatched,
-  // and they're released on focus or device loss (see releaseHeldInput).
+  // and they're released on focus or device loss (see releaseHeldKeys / releaseHeldButtons).
   std::vector<uint32_t>           heldKeys;
   std::vector<uint32_t>           heldButtons;
 
@@ -198,11 +198,9 @@ struct WaylandApi::Private {
 
   WWindow* createWindow(Tempest::Window* owner, uint32_t width, uint32_t height, SystemApi::ShowMode sm);
   void     destroyWindow(WWindow* w);
-  static void applyConfigure(WWindow& w, uint32_t serial);
   static void updateState(WWindow& w);
 
   bool       isWindowFocused(const WWindow* w) const;
-  void       releaseHeldInput(WWindow& w);
   void       releaseHeldKeys(WWindow& w);
   void       releaseHeldButtons(WWindow& w);
   static MouseEvent pointerEvent(const WWindow& w, Event::MouseButton button, int delta, Event::Type type);
@@ -213,7 +211,6 @@ struct WaylandApi::Private {
   int      pollTimeout() const;
   void     readEvents();
   void     handleConnectionError();
-  bool     hasWindowToRender() const;
   void     renderWindows();
 
   // Session listeners (globals and seat devices). 'data' is Private*.
@@ -671,25 +668,6 @@ void WaylandApi::Private::destroyWindow(WWindow* w) {
   std::erase_if(windows, [w](const std::unique_ptr<WWindow>& p) { return p.get()==w; });
   }
 
-void WaylandApi::Private::applyConfigure(WWindow& w, uint32_t serial) {
-  // pending becomes current and is acked
-  if(w.pending.width==0 || w.pending.height==0) {
-    // client decides: app requested size needs conversion to logical (KWin sends
-    // preferred_scale before the first configure).
-    w.pending.width  = std::max(1, int32_t(std::lround(float(w.appRequestedWidth) /w.scale())));
-    w.pending.height = std::max(1, int32_t(std::lround(float(w.appRequestedHeight)/w.scale())));
-    }
-  w.width      = w.pending.width;
-  w.height     = w.pending.height;
-  w.fullscreen = w.pending.fullscreen;
-
-  // Viewport state is double-buffered: it applies with the next commit, which Vulkan does in vkQueuePresent.
-  wp_viewport_set_destination(w.viewport, w.width, w.height);
-
-  xdg_surface_ack_configure(w.xdgSurface, serial);
-  w.configured = true;
-  }
-
 void WaylandApi::Private::updateState(WWindow& w) {
   // Update things that should change only once per draw, not on every triggered callback (e.g. swapchain resize)
   const int32_t pw = w.physicalWidth();
@@ -715,12 +693,6 @@ bool WaylandApi::Private::isWindowFocused(const WWindow* w) const {
   // Window focus = keyboard focus: mouse moves, wheel and presses only reach the focused window.
   // Without a keyboard every window counts as focused (pointer events only come for the one under the pointer).
   return keyboard==nullptr || keyboardFocus==w;
-  }
-
-void WaylandApi::Private::releaseHeldInput(WWindow& w) {
-  // On focus loss the real releases never reach the app, so keys and buttons would stay held (e.g. Alt after Alt+Tab).
-  releaseHeldKeys(w);
-  releaseHeldButtons(w);
   }
 
 void WaylandApi::Private::releaseHeldKeys(WWindow& w) {
@@ -828,19 +800,14 @@ void WaylandApi::Private::handleConnectionError() {
 int WaylandApi::Private::pollTimeout() const {
   // 0 if a window may render; otherwise wait for the compositor (e.g. a frame callback),
   // at most idlePollTimeoutMs, and not beyond the next scheduled key repeat
-  int timeout = hasWindowToRender() ? 0 : idlePollTimeoutMs;
+  const bool canRender = std::any_of(windows.begin(), windows.end(),
+                                     [](const std::unique_ptr<WWindow>& w) { return w->readyToRender(); });
+  int timeout = canRender ? 0 : idlePollTimeoutMs;
   if(repeatKeycode!=0) {
     const auto untilRepeat = std::chrono::ceil<std::chrono::milliseconds>(repeatNext - std::chrono::steady_clock::now());
     timeout = std::clamp(int(untilRepeat.count()), 0, timeout);
     }
   return timeout;
-  }
-
-bool WaylandApi::Private::hasWindowToRender() const {
-  for(auto& w:windows)
-    if(w->readyToRender())
-      return true;
-  return false;
   }
 
 void WaylandApi::Private::renderWindows() {
@@ -1108,7 +1075,9 @@ void WaylandApi::Private::onWlKeyboardLeave(void* data, [[maybe_unused]] wl_keyb
   WWindow* w = self->keyboardFocus;
   if(w==nullptr)
     return;
-  self->releaseHeldInput(*w);
+  // On focus loss the real releases never reach the app, so keys and buttons would stay held (e.g. Alt after Alt+Tab).
+  self->releaseHeldKeys(*w);
+  self->releaseHeldButtons(*w);
   self->keyboardFocus = nullptr;
   if(w->owner==nullptr)
     return;
@@ -1166,12 +1135,27 @@ void WaylandApi::Private::onWlKeyboardRepeatInfo(void* data, [[maybe_unused]] wl
 // Window specific listeners
 
 void WaylandApi::Private::onXdgSurfaceConfigure(void* data, [[maybe_unused]] xdg_surface* xdgSurface, uint32_t serial) {
-  // End of configure sequence (after xdg_toplevel.configure etc.)
-  applyConfigure(*static_cast<WWindow*>(data), serial);
+  // End of configure sequence (after xdg_toplevel.configure etc.): pending becomes current and is acked
+  auto w = static_cast<WWindow*>(data);
+  if(w->pending.width==0 || w->pending.height==0) {
+    // client decides: app requested size needs conversion to logical (KWin sends
+    // preferred_scale before the first configure).
+    w->pending.width  = std::max(1, int32_t(std::lround(float(w->appRequestedWidth) /w->scale())));
+    w->pending.height = std::max(1, int32_t(std::lround(float(w->appRequestedHeight)/w->scale())));
+    }
+  w->width      = w->pending.width;
+  w->height     = w->pending.height;
+  w->fullscreen = w->pending.fullscreen;
+
+  // Viewport state is double-buffered: it applies with the next commit, which Vulkan does in vkQueuePresent.
+  wp_viewport_set_destination(w->viewport, w->width, w->height);
+
+  xdg_surface_ack_configure(w->xdgSurface, serial);
+  w->configured = true;
   }
 
 void WaylandApi::Private::onXdgToplevelConfigure(void* data, [[maybe_unused]] xdg_toplevel* toplevel, int32_t width, int32_t height, wl_array* states) {
-  // Only fills w->pending; it becomes current in applyConfigure.
+  // Only fills w->pending; it becomes current in onXdgSurfaceConfigure.
   auto w = static_cast<WWindow*>(data);
   // Logical size; 0 = client decides, keep the previous size
   if(width>0 && height>0) {
