@@ -208,35 +208,33 @@ struct WaylandApi::Private {
   static const zwp_locked_pointer_v1_listener       zwpLockedPointerV1Listener;
   static const wl_callback_listener                 wlCallbackListener;
 
+  // Helpers
+  template<class T> static void          ioDestroy(T*& obj, void (*destroyFn)(T*));
+  void                                   logDisplayError() const;
+  static Event::MouseButton              toButton(uint32_t button);
+  static wp_cursor_shape_device_v1_shape toCursorShape(CursorShape shape);
+  static MouseEvent                      pointerEvent(const WWindow& w, Event::MouseButton button, int delta, Event::Type type);
+  KeyEvent                               keyEvent(uint32_t keycode, Event::Type type) const;
+  bool                                   isWindowFocused(const WWindow* w) const;
+  void                                   setPointerLock(WWindow& w, bool lock);
+  void                                   releaseHeldKeys(WWindow& w);
+  void                                   releaseHeldButtons(WWindow& w);
+  void                                   releasePointer();
+  void                                   releaseKeyboard();
+  void                                   startKeyRepeat(uint32_t keycode);
+  void                                   processKeyRepeat();
+
   // Connection and windows
-  // Destroys a Wayland/xkb object if it exists and clears the pointer: safe on half-built state and when called twice.
-  template<class T>
-  static void ioDestroy(T*& obj, void (*destroyFn)(T*));
+  bool     hasRequiredGlobals() const;
   bool     connect();
   void     disconnect();
-  bool     hasRequiredGlobals() const;
-  void     logDisplayError() const;
-  void     handleConnectionError();
   WWindow* createWindow(Tempest::Window* owner, uint32_t width, uint32_t height, SystemApi::ShowMode sm);
   void     destroyWindow(WWindow* w);
 
-  // Input
-  static Event::MouseButton              toButton(uint32_t button);
-  static wp_cursor_shape_device_v1_shape toCursorShape(CursorShape shape);
-  static MouseEvent pointerEvent(const WWindow& w, Event::MouseButton button, int delta, Event::Type type);
-  bool       isWindowFocused(const WWindow* w) const;
-  void       setPointerLock(WWindow& w, bool lock);
-  void       releaseHeldKeys(WWindow& w);
-  void       releaseHeldButtons(WWindow& w);
-  void       releasePointer();
-  void       releaseKeyboard();
-  KeyEvent   keyEvent(uint32_t keycode, Event::Type type) const;
-  void       startKeyRepeat(uint32_t keycode);
-  void       processKeyRepeat();
-
   // Event loop
-  void        readEvents();
+  void        handleConnectionError();
   int         pollTimeout() const;
+  void        readEvents();
   static void updateState(WWindow& w);
   void        renderWindows();
   };
@@ -710,14 +708,198 @@ const wl_callback_listener WaylandApi::Private::wlCallbackListener = {
   .done = onWlCallbackDone,
   };
 
-// Connection and windows
+// Helpers
 
 template<class T>
 void WaylandApi::Private::ioDestroy(T*& obj, void (*destroyFn)(T*)) {
+  // Destroys a Wayland/xkb object if it exists and clears the pointer: safe on half-built state and when called twice.
   if(obj==nullptr)
     return;
   destroyFn(obj);
   obj = nullptr;
+  }
+
+void WaylandApi::Private::logDisplayError() const {
+  const int err = wl_display_get_error(display);
+  if(err==EPROTO) {
+    const wl_interface* iface = nullptr;
+    uint32_t            id    = 0;
+    const uint32_t      code  = wl_display_get_protocol_error(display, &iface, &id);
+    Log::e("WaylandApi: protocol error ", code, " on ", (iface!=nullptr ? iface->name : "unknown"), "@", id);
+    } else {
+    Log::e("WaylandApi: connection error: ", std::strerror(err));
+    }
+  }
+
+Event::MouseButton WaylandApi::Private::toButton(uint32_t button) {
+  // wl_pointer.button carries evdev codes.
+  switch(button) {
+    case BTN_LEFT:   return Event::ButtonLeft;
+    case BTN_RIGHT:  return Event::ButtonRight;
+    case BTN_MIDDLE: return Event::ButtonMid;
+    case BTN_SIDE:   return Event::ButtonBack;
+    case BTN_EXTRA:  return Event::ButtonForward;
+    }
+  return Event::ButtonNone;
+  }
+
+wp_cursor_shape_device_v1_shape WaylandApi::Private::toCursorShape(CursorShape shape) {
+  // Hidden is handled by the caller.
+  switch(shape) {
+    case CursorShape::Arrow:
+    case CursorShape::Hidden:    return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_DEFAULT;
+    case CursorShape::IBeam:     return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_TEXT;
+    case CursorShape::SizeVer:   return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NS_RESIZE;
+    case CursorShape::SizeHor:   return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_EW_RESIZE;
+    case CursorShape::SizeBDiag: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NESW_RESIZE; // '/'
+    case CursorShape::SizeFDiag: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NWSE_RESIZE; // '\'
+    case CursorShape::SizeAll:   return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_ALL_SCROLL;  // four arrows; all_resize needs v2
+    }
+  return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_DEFAULT;
+  }
+
+MouseEvent WaylandApi::Private::pointerEvent(const WWindow& w, Event::MouseButton button, int delta, Event::Type type) {
+  // floor: the physical pixel the cursor is in.
+  const int x = int(std::floor(w.cursorX));
+  const int y = int(std::floor(w.cursorY));
+  return MouseEvent(x, y, button, Event::M_NoModifier, delta, 0, type);
+  }
+
+KeyEvent WaylandApi::Private::keyEvent(uint32_t keycode, Event::Type type) const {
+  // keycode: xkb keycode (evdev + 8). key: level-0 keysym of the active layout, so Shift+W stays K_W (like Windows'
+  // virtual keys). code: the typed character, 0 if none (e.g. arrows, dead keys).
+  const xkb_layout_index_t layout = xkb_state_key_get_layout(xkbState, keycode);
+  const xkb_keysym_t*      syms   = nullptr;
+  const int                count  = xkb_keymap_key_get_syms_by_level(xkbKeymap, keycode, layout, 0, &syms);
+  const xkb_keysym_t       sym    = count>0 ? syms[0] : XKB_KEY_NoSymbol;
+  const auto               key    = Event::KeyType(SystemApi::translateKey(sym));
+
+  // Only characters up to U+FFFF (Basic Multilingual Plane): Tempest's text input can't hold more.
+  // Beyond it, nothing is typed (X11 and Windows deliver half a UTF-16 surrogate pair there).
+  const uint32_t utf32 = xkb_state_key_get_utf32(xkbState, keycode);
+  const uint32_t code  = utf32<=0xFFFF ? utf32 : 0;
+  return KeyEvent(key, code, Event::M_NoModifier, type);
+  }
+
+bool WaylandApi::Private::isWindowFocused(const WWindow* w) const {
+  // Window focus = keyboard focus: mouse moves, wheel and presses only reach the focused window.
+  // Without a keyboard every window counts as focused (pointer events only come for the one under the pointer).
+  return keyboard==nullptr || keyboardFocus==w;
+  }
+
+void WaylandApi::Private::setPointerLock(WWindow& w, bool lock) {
+  // Mouse-look: Wayland apps can't move the pointer, so while the cursor is hidden it's locked in place and the app
+  // gets relative motion instead (Tempest has no relative-mouse API). Called on every cursor change.
+  // The lock stays requested: the compositor pauses it while the window is unfocused and resumes it by itself.
+  if(lock && w.lockedPointer==nullptr && pointer!=nullptr) {
+    w.lockedPointer = zwp_pointer_constraints_v1_lock_pointer(pointerConstraints, w.surface, pointer, nullptr,
+                                                              ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT);
+    zwp_locked_pointer_v1_add_listener(w.lockedPointer, &zwpLockedPointerV1Listener, &w);
+    }
+  else if(!lock && w.lockedPointer!=nullptr) {
+    ioDestroy(w.lockedPointer, zwp_locked_pointer_v1_destroy);
+    w.pointerLocked = false;
+    }
+  }
+
+void WaylandApi::Private::releaseHeldKeys(WWindow& w) {
+  repeatKeycode = 0;
+  auto keys = std::move(heldKeys);
+  heldKeys.clear();
+  if(w.owner==nullptr)
+    return;
+  for(uint32_t keycode:keys) {
+    KeyEvent e = keyEvent(keycode, Event::KeyUp);
+    SystemApi::dispatchKeyUp(*w.owner, e, keycode);
+    }
+  }
+
+void WaylandApi::Private::releaseHeldButtons(WWindow& w) {
+  auto buttons = std::move(heldButtons);
+  heldButtons.clear();
+  if(w.owner==nullptr)
+    return;
+  for(uint32_t button:buttons) {
+    MouseEvent e = pointerEvent(w, toButton(button), 0, Event::MouseUp);
+    SystemApi::dispatchMouseUp(*w.owner, e);
+    }
+  }
+
+void WaylandApi::Private::releasePointer() {
+  // release what the app saw pressed while pointer still exists
+  if(pointerFocus!=nullptr)
+    releaseHeldButtons(*pointerFocus);
+  // Objects created from the pointer first.
+  for(auto& w:windows)
+    setPointerLock(*w, false);
+  ioDestroy(relativePointer,   zwp_relative_pointer_v1_destroy);
+  ioDestroy(cursorShapeDevice, wp_cursor_shape_device_v1_destroy);
+  ioDestroy(pointer,           wl_pointer_release);
+  pointerFocus = nullptr;
+  heldButtons.clear();
+  }
+
+void WaylandApi::Private::releaseKeyboard() {
+  // release what the app saw pressed while keyboard still exists
+  if(keyboardFocus!=nullptr)
+    releaseHeldKeys(*keyboardFocus);
+  ioDestroy(keyboard, wl_keyboard_release);
+  keyboardFocus = nullptr;
+  repeatKeycode = 0;
+  heldKeys.clear();
+  }
+
+void WaylandApi::Private::startKeyRepeat(uint32_t keycode) {
+  // Non-repeating keys (modifiers) leave a running repeat alone; a repeating key takes over.
+  if(repeatRate<=0 || !xkb_keymap_key_repeats(xkbKeymap, keycode))
+    return;
+  repeatKeycode = keycode;
+  repeatNext    = std::chrono::steady_clock::now() + std::chrono::milliseconds(repeatDelay);
+  }
+
+void WaylandApi::Private::processKeyRepeat() {
+  if(repeatKeycode==0)
+    return;
+  const auto now      = std::chrono::steady_clock::now();
+  const auto interval = std::chrono::microseconds(std::chrono::seconds(1))/repeatRate;
+  if(now<repeatNext)
+    return;
+  repeatNext += interval;
+  if(repeatNext<=now) // avoid bursts
+    repeatNext = now + interval;
+  KeyEvent e = keyEvent(repeatKeycode, Event::KeyDown);
+  SystemApi::dispatchKeyDown(*keyboardFocus->owner, e, repeatKeycode);
+  }
+
+// Connection and windows
+
+bool WaylandApi::Private::hasRequiredGlobals() const {
+  // No fallbacks yet without fractional-scale, cursor-shape or server-side decorations (e.g. GNOME uses X11 for now).
+  // Pointer constraints + relative pointer: mouse-look, since Wayland clients can't warp the pointer.
+  struct Required {
+    const void*         object;
+    const wl_interface& interface;
+    uint32_t            version;
+    };
+  const Required required[] = {
+    {compositor,             wl_compositor_interface,                   wlCompositorVersion               },
+    {wmBase,                 xdg_wm_base_interface,                     xdgWmBaseVersion                  },
+    {decorationManager,      zxdg_decoration_manager_v1_interface,      zxdgDecorationManagerV1Version    },
+    {viewporter,             wp_viewporter_interface,                   wpViewporterVersion               },
+    {fractionalScaleManager, wp_fractional_scale_manager_v1_interface,  wpFractionalScaleManagerV1Version },
+    {seat,                   wl_seat_interface,                         wlSeatVersion                     },
+    {cursorShapeManager,     wp_cursor_shape_manager_v1_interface,      wpCursorShapeManagerV1Version     },
+    {pointerConstraints,     zwp_pointer_constraints_v1_interface,      zwpPointerConstraintsV1Version    },
+    {relativePointerManager, zwp_relative_pointer_manager_v1_interface, zwpRelativePointerManagerV1Version},
+    };
+  bool hasAll = true;
+  for(auto& r:required) {
+    if(r.object!=nullptr)
+      continue;
+    Log::i("WaylandApi: compositor doesn't offer ", r.interface.name, " version ", r.version, " or newer");
+    hasAll = false;
+    }
+  return hasAll;
   }
 
 bool WaylandApi::Private::connect() {
@@ -795,53 +977,6 @@ void WaylandApi::Private::disconnect() {
   wl_display_flush(display);
   wl_display_disconnect(display);
   display = nullptr;
-  }
-
-bool WaylandApi::Private::hasRequiredGlobals() const {
-  // No fallbacks yet without fractional-scale, cursor-shape or server-side decorations (e.g. GNOME uses X11 for now).
-  // Pointer constraints + relative pointer: mouse-look, since Wayland clients can't warp the pointer.
-  struct Required {
-    const void*         object;
-    const wl_interface& interface;
-    uint32_t            version;
-    };
-  const Required required[] = {
-    {compositor,             wl_compositor_interface,                   wlCompositorVersion               },
-    {wmBase,                 xdg_wm_base_interface,                     xdgWmBaseVersion                  },
-    {decorationManager,      zxdg_decoration_manager_v1_interface,      zxdgDecorationManagerV1Version    },
-    {viewporter,             wp_viewporter_interface,                   wpViewporterVersion               },
-    {fractionalScaleManager, wp_fractional_scale_manager_v1_interface,  wpFractionalScaleManagerV1Version },
-    {seat,                   wl_seat_interface,                         wlSeatVersion                     },
-    {cursorShapeManager,     wp_cursor_shape_manager_v1_interface,      wpCursorShapeManagerV1Version     },
-    {pointerConstraints,     zwp_pointer_constraints_v1_interface,      zwpPointerConstraintsV1Version    },
-    {relativePointerManager, zwp_relative_pointer_manager_v1_interface, zwpRelativePointerManagerV1Version},
-    };
-  bool hasAll = true;
-  for(auto& r:required) {
-    if(r.object!=nullptr)
-      continue;
-    Log::i("WaylandApi: compositor doesn't offer ", r.interface.name, " version ", r.version, " or newer");
-    hasAll = false;
-    }
-  return hasAll;
-  }
-
-void WaylandApi::Private::logDisplayError() const {
-  const int err = wl_display_get_error(display);
-  if(err==EPROTO) {
-    const wl_interface* iface = nullptr;
-    uint32_t            id    = 0;
-    const uint32_t      code  = wl_display_get_protocol_error(display, &iface, &id);
-    Log::e("WaylandApi: protocol error ", code, " on ", (iface!=nullptr ? iface->name : "unknown"), "@", id);
-    } else {
-    Log::e("WaylandApi: connection error: ", std::strerror(err));
-    }
-  }
-
-void WaylandApi::Private::handleConnectionError() {
-  // connection dead, nothing works anymore, end the app
-  logDisplayError();
-  SystemApi::exit();
   }
 
 WWindow* WaylandApi::Private::createWindow(Tempest::Window* owner, uint32_t width, uint32_t height, SystemApi::ShowMode sm) {
@@ -931,149 +1066,26 @@ void WaylandApi::Private::destroyWindow(WWindow* w) {
   std::erase_if(windows, [w](const std::unique_ptr<WWindow>& p) { return p.get()==w; });
   }
 
-// Input
-
-Event::MouseButton WaylandApi::Private::toButton(uint32_t button) {
-  // wl_pointer.button carries evdev codes.
-  switch(button) {
-    case BTN_LEFT:   return Event::ButtonLeft;
-    case BTN_RIGHT:  return Event::ButtonRight;
-    case BTN_MIDDLE: return Event::ButtonMid;
-    case BTN_SIDE:   return Event::ButtonBack;
-    case BTN_EXTRA:  return Event::ButtonForward;
-    }
-  return Event::ButtonNone;
-  }
-
-wp_cursor_shape_device_v1_shape WaylandApi::Private::toCursorShape(CursorShape shape) {
-  // Hidden is handled by the caller.
-  switch(shape) {
-    case CursorShape::Arrow:
-    case CursorShape::Hidden:    return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_DEFAULT;
-    case CursorShape::IBeam:     return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_TEXT;
-    case CursorShape::SizeVer:   return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NS_RESIZE;
-    case CursorShape::SizeHor:   return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_EW_RESIZE;
-    case CursorShape::SizeBDiag: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NESW_RESIZE; // '/'
-    case CursorShape::SizeFDiag: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NWSE_RESIZE; // '\'
-    case CursorShape::SizeAll:   return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_ALL_SCROLL;  // four arrows; all_resize needs v2
-    }
-  return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_DEFAULT;
-  }
-
-MouseEvent WaylandApi::Private::pointerEvent(const WWindow& w, Event::MouseButton button, int delta, Event::Type type) {
-  // floor: the physical pixel the cursor is in.
-  const int x = int(std::floor(w.cursorX));
-  const int y = int(std::floor(w.cursorY));
-  return MouseEvent(x, y, button, Event::M_NoModifier, delta, 0, type);
-  }
-
-bool WaylandApi::Private::isWindowFocused(const WWindow* w) const {
-  // Window focus = keyboard focus: mouse moves, wheel and presses only reach the focused window.
-  // Without a keyboard every window counts as focused (pointer events only come for the one under the pointer).
-  return keyboard==nullptr || keyboardFocus==w;
-  }
-
-void WaylandApi::Private::setPointerLock(WWindow& w, bool lock) {
-  // Mouse-look: Wayland apps can't move the pointer, so while the cursor is hidden it's locked in place and the app
-  // gets relative motion instead (Tempest has no relative-mouse API). Called on every cursor change.
-  // The lock stays requested: the compositor pauses it while the window is unfocused and resumes it by itself.
-  if(lock && w.lockedPointer==nullptr && pointer!=nullptr) {
-    w.lockedPointer = zwp_pointer_constraints_v1_lock_pointer(pointerConstraints, w.surface, pointer, nullptr,
-                                                              ZWP_POINTER_CONSTRAINTS_V1_LIFETIME_PERSISTENT);
-    zwp_locked_pointer_v1_add_listener(w.lockedPointer, &zwpLockedPointerV1Listener, &w);
-    }
-  else if(!lock && w.lockedPointer!=nullptr) {
-    ioDestroy(w.lockedPointer, zwp_locked_pointer_v1_destroy);
-    w.pointerLocked = false;
-    }
-  }
-
-void WaylandApi::Private::releaseHeldKeys(WWindow& w) {
-  repeatKeycode = 0;
-  auto keys = std::move(heldKeys);
-  heldKeys.clear();
-  if(w.owner==nullptr)
-    return;
-  for(uint32_t keycode:keys) {
-    KeyEvent e = keyEvent(keycode, Event::KeyUp);
-    SystemApi::dispatchKeyUp(*w.owner, e, keycode);
-    }
-  }
-
-void WaylandApi::Private::releaseHeldButtons(WWindow& w) {
-  auto buttons = std::move(heldButtons);
-  heldButtons.clear();
-  if(w.owner==nullptr)
-    return;
-  for(uint32_t button:buttons) {
-    MouseEvent e = pointerEvent(w, toButton(button), 0, Event::MouseUp);
-    SystemApi::dispatchMouseUp(*w.owner, e);
-    }
-  }
-
-void WaylandApi::Private::releasePointer() {
-  // release what the app saw pressed while pointer still exists
-  if(pointerFocus!=nullptr)
-    releaseHeldButtons(*pointerFocus);
-  // Objects created from the pointer first.
-  for(auto& w:windows)
-    setPointerLock(*w, false);
-  ioDestroy(relativePointer,   zwp_relative_pointer_v1_destroy);
-  ioDestroy(cursorShapeDevice, wp_cursor_shape_device_v1_destroy);
-  ioDestroy(pointer,           wl_pointer_release);
-  pointerFocus = nullptr;
-  heldButtons.clear();
-  }
-
-void WaylandApi::Private::releaseKeyboard() {
-  // release what the app saw pressed while keyboard still exists
-  if(keyboardFocus!=nullptr)
-    releaseHeldKeys(*keyboardFocus);
-  ioDestroy(keyboard, wl_keyboard_release);
-  keyboardFocus = nullptr;
-  repeatKeycode = 0;
-  heldKeys.clear();
-  }
-
-KeyEvent WaylandApi::Private::keyEvent(uint32_t keycode, Event::Type type) const {
-  // keycode: xkb keycode (evdev + 8). key: level-0 keysym of the active layout, so Shift+W stays K_W (like Windows'
-  // virtual keys). code: the typed character, 0 if none (e.g. arrows, dead keys).
-  const xkb_layout_index_t layout = xkb_state_key_get_layout(xkbState, keycode);
-  const xkb_keysym_t*      syms   = nullptr;
-  const int                count  = xkb_keymap_key_get_syms_by_level(xkbKeymap, keycode, layout, 0, &syms);
-  const xkb_keysym_t       sym    = count>0 ? syms[0] : XKB_KEY_NoSymbol;
-  const auto               key    = Event::KeyType(SystemApi::translateKey(sym));
-
-  // Only characters up to U+FFFF (Basic Multilingual Plane): Tempest's text input can't hold more.
-  // Beyond it, nothing is typed (X11 and Windows deliver half a UTF-16 surrogate pair there).
-  const uint32_t utf32 = xkb_state_key_get_utf32(xkbState, keycode);
-  const uint32_t code  = utf32<=0xFFFF ? utf32 : 0;
-  return KeyEvent(key, code, Event::M_NoModifier, type);
-  }
-
-void WaylandApi::Private::startKeyRepeat(uint32_t keycode) {
-  // Non-repeating keys (modifiers) leave a running repeat alone; a repeating key takes over.
-  if(repeatRate<=0 || !xkb_keymap_key_repeats(xkbKeymap, keycode))
-    return;
-  repeatKeycode = keycode;
-  repeatNext    = std::chrono::steady_clock::now() + std::chrono::milliseconds(repeatDelay);
-  }
-
-void WaylandApi::Private::processKeyRepeat() {
-  if(repeatKeycode==0)
-    return;
-  const auto now      = std::chrono::steady_clock::now();
-  const auto interval = std::chrono::microseconds(std::chrono::seconds(1))/repeatRate;
-  if(now<repeatNext)
-    return;
-  repeatNext += interval;
-  if(repeatNext<=now) // avoid bursts
-    repeatNext = now + interval;
-  KeyEvent e = keyEvent(repeatKeycode, Event::KeyDown);
-  SystemApi::dispatchKeyDown(*keyboardFocus->owner, e, repeatKeycode);
-  }
-
 // Event loop
+
+void WaylandApi::Private::handleConnectionError() {
+  // connection dead, nothing works anymore, end the app
+  logDisplayError();
+  SystemApi::exit();
+  }
+
+int WaylandApi::Private::pollTimeout() const {
+  // 0 if a window may render; otherwise wait for the compositor (e.g. a frame callback),
+  // at most idlePollTimeoutMs, and not beyond the next scheduled key repeat
+  const bool canRender = std::any_of(windows.begin(), windows.end(),
+                                     [](const std::unique_ptr<WWindow>& w) { return w->readyToRender(); });
+  int timeout = canRender ? 0 : idlePollTimeoutMs;
+  if(repeatKeycode!=0) {
+    const auto untilRepeat = std::chrono::ceil<std::chrono::milliseconds>(repeatNext - std::chrono::steady_clock::now());
+    timeout = std::clamp(int(untilRepeat.count()), 0, timeout);
+    }
+  return timeout;
+  }
 
 void WaylandApi::Private::readEvents() {
   // Doesn't block beyond pollTimeout(): Tempest's loop must keep running (timers, rendering).
@@ -1106,19 +1118,6 @@ void WaylandApi::Private::readEvents() {
 
   if(wl_display_dispatch_pending(display)<0)
     handleConnectionError();
-  }
-
-int WaylandApi::Private::pollTimeout() const {
-  // 0 if a window may render; otherwise wait for the compositor (e.g. a frame callback),
-  // at most idlePollTimeoutMs, and not beyond the next scheduled key repeat
-  const bool canRender = std::any_of(windows.begin(), windows.end(),
-                                     [](const std::unique_ptr<WWindow>& w) { return w->readyToRender(); });
-  int timeout = canRender ? 0 : idlePollTimeoutMs;
-  if(repeatKeycode!=0) {
-    const auto untilRepeat = std::chrono::ceil<std::chrono::milliseconds>(repeatNext - std::chrono::steady_clock::now());
-    timeout = std::clamp(int(untilRepeat.count()), 0, timeout);
-    }
-  return timeout;
   }
 
 void WaylandApi::Private::updateState(WWindow& w) {
