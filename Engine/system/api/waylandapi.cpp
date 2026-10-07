@@ -98,6 +98,15 @@ static WWindow* toWWindow(SystemApi::Window* w) {
   return reinterpret_cast<WWindow*>(w);
   }
 
+// Destroys a Wayland/xkb object if it exists and clears the pointer: safe on half-built state and when called twice.
+template<class T>
+static void ioDestroy(T*& obj, void (*destroyFn)(T*)) {
+  if(obj==nullptr)
+    return;
+  destroyFn(obj);
+  obj = nullptr;
+  }
+
 static Event::MouseButton toButton(uint32_t button) {
   // wl_pointer.button carries evdev codes.
   switch(button) {
@@ -391,77 +400,30 @@ void WaylandApi::Private::disconnect() {
   if(!display)
     return;
 
-  // Windows first: xdg_wm_base must not be destroyed while xdg_surfaces exist ('defunct_surfaces' error).
+  // Windows first: xdg_wm_base must not be destroyed while xdg_surfaces exist
   while(!windows.empty())
     destroyWindow(windows.back().get());
 
-  if(relativePointerManager) {
-    zwp_relative_pointer_manager_v1_destroy(relativePointerManager);
-    relativePointerManager = nullptr;
-    }
-
-  if(pointerConstraints) {
-    zwp_pointer_constraints_v1_destroy(pointerConstraints);
-    pointerConstraints = nullptr;
-    }
-
-  if(cursorShapeManager) {
-    wp_cursor_shape_manager_v1_destroy(cursorShapeManager);
-    cursorShapeManager = nullptr;
-    }
-
-  if(fractionalScaleManager) {
-    wp_fractional_scale_manager_v1_destroy(fractionalScaleManager);
-    fractionalScaleManager = nullptr;
-    }
-
-  if(viewporter) {
-    wp_viewporter_destroy(viewporter);
-    viewporter = nullptr;
-    }
-
-  if(decorationManager) {
-    zxdg_decoration_manager_v1_destroy(decorationManager);
-    decorationManager = nullptr;
-    }
-
-  if(wmBase) {
-    xdg_wm_base_destroy(wmBase);
-    wmBase = nullptr;
-    }
+  ioDestroy(relativePointerManager, zwp_relative_pointer_manager_v1_destroy);
+  ioDestroy(pointerConstraints,     zwp_pointer_constraints_v1_destroy);
+  ioDestroy(cursorShapeManager,     wp_cursor_shape_manager_v1_destroy);
+  ioDestroy(fractionalScaleManager, wp_fractional_scale_manager_v1_destroy);
+  ioDestroy(viewporter,             wp_viewporter_destroy);
+  ioDestroy(decorationManager,      zxdg_decoration_manager_v1_destroy);
+  ioDestroy(wmBase,                 xdg_wm_base_destroy);
 
   // Seat devices before the seat
   releaseKeyboard();
   releasePointer();
 
-  if(xkbState) {
-    xkb_state_unref(xkbState);
-    xkbState = nullptr;
-    }
-  if(xkbKeymap) {
-    xkb_keymap_unref(xkbKeymap);
-    xkbKeymap = nullptr;
-    }
-  if(xkbContext) {
-    xkb_context_unref(xkbContext);
-    xkbContext = nullptr;
-    }
+  ioDestroy(xkbState,   xkb_state_unref);
+  ioDestroy(xkbKeymap,  xkb_keymap_unref);
+  ioDestroy(xkbContext, xkb_context_unref);
 
-  if(seat) {
-    static_assert(wlSeatVersion>=WL_SEAT_RELEASE_SINCE_VERSION);
-    wl_seat_release(seat);
-    seat = nullptr;
-    }
-
-  if(compositor) {
-    wl_compositor_destroy(compositor);
-    compositor = nullptr;
-    }
-
-  if(registry) {
-    wl_registry_destroy(registry);
-    registry = nullptr;
-    }
+  static_assert(wlSeatVersion>=WL_SEAT_RELEASE_SINCE_VERSION);
+  ioDestroy(seat,       wl_seat_release);
+  ioDestroy(compositor, wl_compositor_destroy);
+  ioDestroy(registry,   wl_registry_destroy);
 
   wl_display_flush(display);
   wl_display_disconnect(display);
@@ -504,18 +466,9 @@ void WaylandApi::Private::releasePointer() {
   // Objects created from the pointer first.
   for(auto& w:windows)
     setPointerLock(*w, false);
-  if(relativePointer) {
-    zwp_relative_pointer_v1_destroy(relativePointer);
-    relativePointer = nullptr;
-    }
-  if(cursorShapeDevice) {
-    wp_cursor_shape_device_v1_destroy(cursorShapeDevice);
-    cursorShapeDevice = nullptr;
-    }
-  if(pointer) {
-    wl_pointer_release(pointer);
-    pointer = nullptr;
-    }
+  ioDestroy(relativePointer,   zwp_relative_pointer_v1_destroy);
+  ioDestroy(cursorShapeDevice, wp_cursor_shape_device_v1_destroy);
+  ioDestroy(pointer,           wl_pointer_release);
   pointerFocus = nullptr;
   heldButtons.clear();
   }
@@ -530,8 +483,7 @@ void WaylandApi::Private::setPointerLock(WWindow& w, bool lock) {
     zwp_locked_pointer_v1_add_listener(w.lockedPointer, &zwpLockedPointerV1Listener, &w);
     }
   else if(!lock && w.lockedPointer!=nullptr) {
-    zwp_locked_pointer_v1_destroy(w.lockedPointer);
-    w.lockedPointer = nullptr;
+    ioDestroy(w.lockedPointer, zwp_locked_pointer_v1_destroy);
     w.pointerLocked = false;
     }
   }
@@ -540,10 +492,7 @@ void WaylandApi::Private::releaseKeyboard() {
   // release what the app saw pressed while keyboard still exists
   if(keyboardFocus!=nullptr)
     releaseHeldKeys(*keyboardFocus);
-  if(keyboard) {
-    wl_keyboard_release(keyboard);
-    keyboard = nullptr;
-    }
+  ioDestroy(keyboard, wl_keyboard_release);
   keyboardFocus = nullptr;
   repeatKeycode = 0;
   heldKeys.clear();
@@ -639,30 +588,12 @@ void WaylandApi::Private::destroyWindow(WWindow* w) {
     wl_callback_destroy(cb);
   w->frameCallbacks.clear();
   setPointerLock(*w, false); // created for the wl_surface
-  if(w->fractionalScale) {
-    wp_fractional_scale_v1_destroy(w->fractionalScale);
-    w->fractionalScale = nullptr;
-    }
-  if(w->viewport) {
-    wp_viewport_destroy(w->viewport);
-    w->viewport = nullptr;
-    }
-  if(w->decoration) { // before toplevel
-    zxdg_toplevel_decoration_v1_destroy(w->decoration);
-    w->decoration = nullptr;
-    }
-  if(w->toplevel) {
-    xdg_toplevel_destroy(w->toplevel);
-    w->toplevel = nullptr;
-    }
-  if(w->xdgSurface) {
-    xdg_surface_destroy(w->xdgSurface);
-    w->xdgSurface = nullptr;
-    }
-  if(w->surface) {
-    wl_surface_destroy(w->surface);
-    w->surface = nullptr;
-    }
+  ioDestroy(w->fractionalScale, wp_fractional_scale_v1_destroy);
+  ioDestroy(w->viewport,        wp_viewport_destroy);
+  ioDestroy(w->decoration,      zxdg_toplevel_decoration_v1_destroy); // before toplevel
+  ioDestroy(w->toplevel,        xdg_toplevel_destroy);
+  ioDestroy(w->xdgSurface,      xdg_surface_destroy);
+  ioDestroy(w->surface,         wl_surface_destroy);
 
   // After deletion events still queued for its objects are dropped by libwayland
   std::erase_if(windows, [w](const std::unique_ptr<WWindow>& p) { return p.get()==w; });
@@ -1034,10 +965,8 @@ void WaylandApi::Private::onWlKeyboardKeymap(void* data, [[maybe_unused]] wl_key
     return;
     }
 
-  if(self->xkbState)
-    xkb_state_unref(self->xkbState);
-  if(self->xkbKeymap)
-    xkb_keymap_unref(self->xkbKeymap);
+  ioDestroy(self->xkbState,  xkb_state_unref);
+  ioDestroy(self->xkbKeymap, xkb_keymap_unref);
   self->xkbKeymap     = keymap;
   self->xkbState      = state;
   self->repeatKeycode = 0; // keycodes may mean something else in the new keymap
