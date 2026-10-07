@@ -109,15 +109,10 @@ SystemApi& SystemApi::inst() {
 #elif defined(__UNIX__)
   static SystemApi& api = []() -> SystemApi& {
 #if defined(TEMPEST_BUILD_WAYLAND)
-    if(WaylandApi::isRequested()) {
-      static WaylandApi wl;
-      if(wl.isConnected())
-        return wl;
-      Log::i("SystemApi: Wayland is not available, falling back to X11");
-      } else {
-      // only an issue if not intended: e.g. window before gapi
-      Log::i("SystemApi: Wayland not requested, using X11");
-      }
+    static WaylandApi wl;
+    if(wl.isConnected())
+      return wl;
+    Log::i("SystemApi: Wayland is not available, falling back to X11");
 #endif
     static X11Api x11;
     return x11;

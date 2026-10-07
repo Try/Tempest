@@ -19,17 +19,12 @@ class WaylandApi final: SystemApi {
     static void        preparePresent(SystemApi::Window* w, uint32_t maxFramesAhead);
     // sync if vkQueuePresentKHR failed and may not have committed
     static void        presentFailed(SystemApi::Window* w);
-    // Called by VulkanApi, when its conditions for Wayland hold, to request Wayland backend
-    // No effect if called after backend was created
-    static void request();
 
   private:
     struct Private;
 
     WaylandApi();
     ~WaylandApi();
-
-    static bool isRequested();
 
     bool     isConnected() const;
 

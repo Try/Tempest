@@ -38,7 +38,6 @@ using namespace Tempest;
 
 static wl_display*      dpy = nullptr; // non-null while Wayland is the active backend; written only by ctor/dtor of WaylandApi
 static std::atomic_bool isExit{0};
-static std::atomic_bool requested{0};
 
 // Per-window state. The SystemApi::Window* handed to Tempest points to this struct.
 struct WWindow {
@@ -1321,14 +1320,6 @@ void WaylandApi::presentFailed(SystemApi::Window* w) {
     return;
   wl_callback_destroy(ww->frameCallbacks.back());
   ww->frameCallbacks.pop_back();
-  }
-
-void WaylandApi::request() {
-  requested.store(true);
-  }
-
-bool WaylandApi::isRequested() {
-  return requested.load();
   }
 
 bool WaylandApi::isConnected() const {
