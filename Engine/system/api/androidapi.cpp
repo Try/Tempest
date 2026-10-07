@@ -10,6 +10,7 @@
 
 #include <android/native_activity.h>
 #include <android/native_window.h>
+#include <android/input.h>
 
 #include <atomic>
 #include <cassert>
@@ -103,6 +104,49 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
     }
   }
 
+int32_t AndroidApi::onInputEvent(AInputEvent* event) {
+  if(mainWindow==nullptr || isExit.load())
+    return 0;
+  if(AInputEvent_getType(event)!=AINPUT_EVENT_TYPE_MOTION ||
+     (AInputEvent_getSource(event) & AINPUT_SOURCE_TOUCHSCREEN)!=AINPUT_SOURCE_TOUCHSCREEN)
+    return 0;
+
+  const int32_t action = AMotionEvent_getAction(event);
+  const int32_t kind = action & AMOTION_EVENT_ACTION_MASK;
+  Event::Type type;
+  switch(kind) {
+    case AMOTION_EVENT_ACTION_DOWN:
+    case AMOTION_EVENT_ACTION_POINTER_DOWN:
+      type = Event::MouseDown;
+      break;
+    case AMOTION_EVENT_ACTION_UP:
+    case AMOTION_EVENT_ACTION_POINTER_UP:
+    case AMOTION_EVENT_ACTION_CANCEL:
+      type = Event::MouseUp;
+      break;
+    case AMOTION_EVENT_ACTION_MOVE:
+      type = Event::MouseMove;
+      break;
+    default:
+      return 0;
+    }
+
+  const bool all = kind==AMOTION_EVENT_ACTION_MOVE || kind==AMOTION_EVENT_ACTION_CANCEL;
+  const size_t first = all ? 0 : size_t((action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT);
+  const size_t end = all ? AMotionEvent_getPointerCount(event) : first+1;
+  for(size_t i=first; i<end && mainWindow!=nullptr && !isExit.load(); ++i) {
+    MouseEvent mouse(int(AMotionEvent_getX(event,i)), int(AMotionEvent_getY(event,i)),
+                     Event::ButtonLeft, Event::M_NoModifier, 0, AMotionEvent_getPointerId(event,i), type);
+    if(type==Event::MouseDown)
+      dispatchMouseDown(*mainWindow,mouse);
+    else if(type==Event::MouseUp)
+      dispatchMouseUp(*mainWindow,mouse);
+    else
+      dispatchMouseMove(*mainWindow,mouse);
+    }
+  return 1;
+  }
+
 static void pollAndroid(android_app* state, int timeout) {
   int                  pending = 0;
   android_poll_source* source  = nullptr;
@@ -119,6 +163,7 @@ SystemApi::Window* AndroidApi::createAndroidWindow(Tempest::Window* owner) {
   if(mainWindow!=nullptr)
     return nullptr;
   app->onAppCmd = [](android_app* state, int32_t cmd) { onAppCmd(state,cmd); };
+  app->onInputEvent = [](android_app*, AInputEvent* event) { return onInputEvent(event); };
   while(!hasWindow && !isExit.load() && app->destroyRequested==0)
     pollAndroid(app,-1);
   if(isExit.load() || app->destroyRequested!=0)
