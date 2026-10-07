@@ -94,6 +94,10 @@ struct WWindow {
   int32_t physicalHeight() const { return int32_t((int64_t(height)*preferredScale + 60)/120); }
   };
 
+static WWindow* toWWindow(SystemApi::Window* w) {
+  return reinterpret_cast<WWindow*>(w);
+  }
+
 struct WaylandApi::Private {
   wl_display*                     display                = nullptr;
   wl_registry*                    registry               = nullptr;
@@ -157,14 +161,6 @@ struct WaylandApi::Private {
 
   std::vector<std::unique_ptr<WWindow>> windows; // owns the windows; each WWindow keeps its address (handle, listener data)
 
-  // Helpers without state
-  static WWindow*                        toWWindow(SystemApi::Window* w);
-  static Event::MouseButton              toButton(uint32_t button);
-  static wp_cursor_shape_device_v1_shape toCursorShape(CursorShape shape);
-  // Destroys a Wayland/xkb object if it exists and clears the pointer: safe on half-built state and when called twice.
-  template<class T>
-  static void                            ioDestroy(T*& obj, void (*destroyFn)(T*));
-
   // Session listeners (globals and seat devices). 'data' is Private*.
   static void onWlRegistryGlobal(void* data, wl_registry* registry, uint32_t name, const char* interface, uint32_t version);
   static void onXdgWmBasePing(void* data, xdg_wm_base* wmBase, uint32_t serial);
@@ -213,6 +209,9 @@ struct WaylandApi::Private {
   static const wl_callback_listener                 wlCallbackListener;
 
   // Connection and windows
+  // Destroys a Wayland/xkb object if it exists and clears the pointer: safe on half-built state and when called twice.
+  template<class T>
+  static void ioDestroy(T*& obj, void (*destroyFn)(T*));
   bool     connect();
   void     disconnect();
   bool     hasRequiredGlobals() const;
@@ -222,6 +221,8 @@ struct WaylandApi::Private {
   void     destroyWindow(WWindow* w);
 
   // Input
+  static Event::MouseButton              toButton(uint32_t button);
+  static wp_cursor_shape_device_v1_shape toCursorShape(CursorShape shape);
   static MouseEvent pointerEvent(const WWindow& w, Event::MouseButton button, int delta, Event::Type type);
   bool       isWindowFocused(const WWindow* w) const;
   void       setPointerLock(WWindow& w, bool lock);
@@ -239,47 +240,6 @@ struct WaylandApi::Private {
   static void updateState(WWindow& w);
   void        renderWindows();
   };
-
-// Helpers
-
-WWindow* WaylandApi::Private::toWWindow(SystemApi::Window* w) {
-  return reinterpret_cast<WWindow*>(w);
-  }
-
-template<class T>
-void WaylandApi::Private::ioDestroy(T*& obj, void (*destroyFn)(T*)) {
-  if(obj==nullptr)
-    return;
-  destroyFn(obj);
-  obj = nullptr;
-  }
-
-Event::MouseButton WaylandApi::Private::toButton(uint32_t button) {
-  // wl_pointer.button carries evdev codes.
-  switch(button) {
-    case BTN_LEFT:   return Event::ButtonLeft;
-    case BTN_RIGHT:  return Event::ButtonRight;
-    case BTN_MIDDLE: return Event::ButtonMid;
-    case BTN_SIDE:   return Event::ButtonBack;
-    case BTN_EXTRA:  return Event::ButtonForward;
-    }
-  return Event::ButtonNone;
-  }
-
-wp_cursor_shape_device_v1_shape WaylandApi::Private::toCursorShape(CursorShape shape) {
-  // Hidden is handled by the caller.
-  switch(shape) {
-    case CursorShape::Arrow:
-    case CursorShape::Hidden:    return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_DEFAULT;
-    case CursorShape::IBeam:     return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_TEXT;
-    case CursorShape::SizeVer:   return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NS_RESIZE;
-    case CursorShape::SizeHor:   return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_EW_RESIZE;
-    case CursorShape::SizeBDiag: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NESW_RESIZE; // '/'
-    case CursorShape::SizeFDiag: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NWSE_RESIZE; // '\'
-    case CursorShape::SizeAll:   return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_ALL_SCROLL;  // four arrows; all_resize needs v2
-    }
-  return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_DEFAULT;
-  }
 
 // Session listeners
 
@@ -752,6 +712,14 @@ const wl_callback_listener WaylandApi::Private::wlCallbackListener = {
 
 // Connection and windows
 
+template<class T>
+void WaylandApi::Private::ioDestroy(T*& obj, void (*destroyFn)(T*)) {
+  if(obj==nullptr)
+    return;
+  destroyFn(obj);
+  obj = nullptr;
+  }
+
 bool WaylandApi::Private::connect() {
   // True only if Wayland is usable (connected + all required globals); otherwise logs why.
   // Note: ::dpy set in constructor/destructor only!
@@ -964,6 +932,33 @@ void WaylandApi::Private::destroyWindow(WWindow* w) {
   }
 
 // Input
+
+Event::MouseButton WaylandApi::Private::toButton(uint32_t button) {
+  // wl_pointer.button carries evdev codes.
+  switch(button) {
+    case BTN_LEFT:   return Event::ButtonLeft;
+    case BTN_RIGHT:  return Event::ButtonRight;
+    case BTN_MIDDLE: return Event::ButtonMid;
+    case BTN_SIDE:   return Event::ButtonBack;
+    case BTN_EXTRA:  return Event::ButtonForward;
+    }
+  return Event::ButtonNone;
+  }
+
+wp_cursor_shape_device_v1_shape WaylandApi::Private::toCursorShape(CursorShape shape) {
+  // Hidden is handled by the caller.
+  switch(shape) {
+    case CursorShape::Arrow:
+    case CursorShape::Hidden:    return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_DEFAULT;
+    case CursorShape::IBeam:     return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_TEXT;
+    case CursorShape::SizeVer:   return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NS_RESIZE;
+    case CursorShape::SizeHor:   return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_EW_RESIZE;
+    case CursorShape::SizeBDiag: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NESW_RESIZE; // '/'
+    case CursorShape::SizeFDiag: return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_NWSE_RESIZE; // '\'
+    case CursorShape::SizeAll:   return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_ALL_SCROLL;  // four arrows; all_resize needs v2
+    }
+  return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_DEFAULT;
+  }
 
 MouseEvent WaylandApi::Private::pointerEvent(const WWindow& w, Event::MouseButton button, int delta, Event::Type type) {
   // floor: the physical pixel the cursor is in.
@@ -1213,7 +1208,7 @@ wl_display* WaylandApi::display() {
 wl_surface* WaylandApi::surface(SystemApi::Window* w) {
   if(dpy==nullptr || w==nullptr)
     return nullptr;
-  return Private::toWWindow(w)->surface;
+  return toWWindow(w)->surface;
   }
 
 void WaylandApi::preparePresent(SystemApi::Window* w, uint32_t maxFramesAhead) {
@@ -1222,7 +1217,7 @@ void WaylandApi::preparePresent(SystemApi::Window* w, uint32_t maxFramesAhead) {
   // Note: Since this can be called without a Wayland API active, we need to be extra careful
   if(dpy==nullptr || w==nullptr)
     return;
-  auto ww = Private::toWWindow(w);
+  auto ww = toWWindow(w);
   if(ww->maxFramesAhead!=maxFramesAhead) {
     ww->maxFramesAhead = maxFramesAhead;
     Log::i("WaylandApi: up to ", maxFramesAhead, " presents ahead of the compositor");
@@ -1238,7 +1233,7 @@ void WaylandApi::presentFailed(SystemApi::Window* w) {
   // unknown state -> delete to avoid locking render loop
   if(dpy==nullptr || w==nullptr)
     return;
-  auto ww = Private::toWWindow(w);
+  auto ww = toWWindow(w);
   if(ww->frameCallbacks.empty())
     return;
   wl_callback_destroy(ww->frameCallbacks.back());
@@ -1263,7 +1258,7 @@ SystemApi::Window* WaylandApi::implCreateWindow(Tempest::Window* owner, ShowMode
   }
 
 void WaylandApi::implDestroyWindow(SystemApi::Window* w) {
-  impl->destroyWindow(Private::toWWindow(w));
+  impl->destroyWindow(toWWindow(w));
   }
 
 void WaylandApi::implExit() {
@@ -1272,13 +1267,13 @@ void WaylandApi::implExit() {
 
 Rect WaylandApi::implWindowClientRect(SystemApi::Window* w) {
   // Wayland has no global window position.
-  auto ww = Private::toWWindow(w);
+  auto ww = toWWindow(w);
   return Rect(0, 0, ww->physicalWidth(), ww->physicalHeight());
   }
 
 bool WaylandApi::implSetAsFullscreen(SystemApi::Window* w, bool fullScreen) {
   // Only a request: implIsFullscreen() and the size follow with the next configure.
-  auto ww = Private::toWWindow(w);
+  auto ww = toWWindow(w);
   if(fullScreen)
     xdg_toplevel_set_fullscreen(ww->toplevel, nullptr); // nullptr: the compositor picks the output
   else
@@ -1288,21 +1283,21 @@ bool WaylandApi::implSetAsFullscreen(SystemApi::Window* w, bool fullScreen) {
   }
 
 bool WaylandApi::implIsFullscreen(SystemApi::Window* w) {
-  return Private::toWWindow(w)->fullscreen;
+  return toWWindow(w)->fullscreen;
   }
 
 float WaylandApi::implUiScale(SystemApi::Window* w) {
-  return Private::toWWindow(w)->scale();
+  return toWWindow(w)->scale();
   }
 
 void WaylandApi::implSetWindowTitle(SystemApi::Window* w, const char* utf8) {
-  xdg_toplevel_set_title(Private::toWWindow(w)->toplevel, utf8);
+  xdg_toplevel_set_title(toWWindow(w)->toplevel, utf8);
   }
 
 void WaylandApi::implSetCursorPosition(SystemApi::Window* w, int x, int y) {
   // Wayland clients can't move the pointer. While it's locked, the virtual cursor is all the app sees, so setting it is
   // enough (no MouseMove for the jump).
-  auto ww = Private::toWWindow(w);
+  auto ww = toWWindow(w);
   if(!ww->pointerLocked)
     return;
   ww->cursorX = x;
@@ -1314,7 +1309,7 @@ void WaylandApi::implShowCursor(SystemApi::Window* w, CursorShape show) {
   // activates it once the pointer is over the focused window (see Private::setPointerLock).
   // The cursor image needs the enter serial, so it's only set while the pointer is over w; enter and focus changes
   // re-apply it. An unfocused window shows the desktop cursor.
-  auto ww = Private::toWWindow(w);
+  auto ww = toWWindow(w);
   impl->setPointerLock(*ww, show==CursorShape::Hidden);
   if(impl->pointerFocus!=ww)
     return;
