@@ -165,31 +165,6 @@ struct WaylandApi::Private {
   template<class T>
   static void                            ioDestroy(T*& obj, void (*destroyFn)(T*));
 
-  bool     connect();
-  void     disconnect();
-  void     releasePointer();
-  void     setPointerLock(WWindow& w, bool lock);
-  void     releaseKeyboard();
-  bool     hasRequiredGlobals() const;
-  void     logDisplayError() const;
-
-  WWindow* createWindow(Tempest::Window* owner, uint32_t width, uint32_t height, SystemApi::ShowMode sm);
-  void     destroyWindow(WWindow* w);
-  static void updateState(WWindow& w);
-
-  bool       isWindowFocused(const WWindow* w) const;
-  void       releaseHeldKeys(WWindow& w);
-  void       releaseHeldButtons(WWindow& w);
-  static MouseEvent pointerEvent(const WWindow& w, Event::MouseButton button, int delta, Event::Type type);
-  KeyEvent   keyEvent(uint32_t keycode, Event::Type type) const;
-  void       startKeyRepeat(uint32_t keycode);
-  void       processKeyRepeat();
-
-  int      pollTimeout() const;
-  void     readEvents();
-  void     handleConnectionError();
-  void     renderWindows();
-
   // Session listeners (globals and seat devices). 'data' is Private*.
   static void onWlRegistryGlobal(void* data, wl_registry* registry, uint32_t name, const char* interface, uint32_t version);
   static void onXdgWmBasePing(void* data, xdg_wm_base* wmBase, uint32_t serial);
@@ -198,10 +173,10 @@ struct WaylandApi::Private {
   static void onWlPointerLeave(void* data, wl_pointer* pointer, uint32_t serial, wl_surface* surface);
   static void onWlPointerMotion(void* data, wl_pointer* pointer, uint32_t time, wl_fixed_t x, wl_fixed_t y);
   static void onWlPointerButton(void* data, wl_pointer* pointer, uint32_t serial, uint32_t time, uint32_t button, uint32_t state);
+  static void onWlPointerAxisValue120(void* data, wl_pointer* pointer, uint32_t axis, int32_t value120);
   static void onZwpRelativePointerV1RelativeMotion(void* data, zwp_relative_pointer_v1* relativePointer, uint32_t utimeHi,
                                                    uint32_t utimeLo, wl_fixed_t dx, wl_fixed_t dy,
                                                    wl_fixed_t dxUnaccel, wl_fixed_t dyUnaccel);
-  static void onWlPointerAxisValue120(void* data, wl_pointer* pointer, uint32_t axis, int32_t value120);
   static void onWlKeyboardKeymap(void* data, wl_keyboard* keyboard, uint32_t format, int32_t fd, uint32_t size);
   static void onWlKeyboardEnter(void* data, wl_keyboard* keyboard, uint32_t serial, wl_surface* surface, wl_array* keys);
   static void onWlKeyboardLeave(void* data, wl_keyboard* keyboard, uint32_t serial, wl_surface* surface);
@@ -210,6 +185,17 @@ struct WaylandApi::Private {
                                     uint32_t latched, uint32_t locked, uint32_t group);
   static void onWlKeyboardRepeatInfo(void* data, wl_keyboard* keyboard, int32_t rate, int32_t delay);
 
+  // Window specific listeners. 'data' is WWindow*.
+  static void onXdgSurfaceConfigure(void* data, xdg_surface* xdgSurface, uint32_t serial);
+  static void onXdgToplevelConfigure(void* data, xdg_toplevel* toplevel, int32_t width, int32_t height, wl_array* states);
+  static void onXdgToplevelClose    (void* data, xdg_toplevel* toplevel);
+  static void onZxdgToplevelDecorationV1Configure(void* data, zxdg_toplevel_decoration_v1* decoration, uint32_t mode);
+  static void onWpFractionalScaleV1PreferredScale(void* data, wp_fractional_scale_v1* fractionalScale, uint32_t scale);
+  static void onZwpLockedPointerV1Locked  (void* data, zwp_locked_pointer_v1* lockedPointer);
+  static void onZwpLockedPointerV1Unlocked(void* data, zwp_locked_pointer_v1* lockedPointer);
+  static void onWlCallbackDone(void* data, wl_callback* callback, uint32_t time);
+
+  // Listener tables (session)
   static const wl_registry_listener                 wlRegistryListener;
   static const xdg_wm_base_listener                 xdgWmBaseListener;
   static const wl_seat_listener                     wlSeatListener;
@@ -217,23 +203,43 @@ struct WaylandApi::Private {
   static const zwp_relative_pointer_v1_listener     zwpRelativePointerV1Listener;
   static const wl_keyboard_listener                 wlKeyboardListener;
 
-  // Window specific listeners. 'data' is WWindow*.
-  static void onXdgSurfaceConfigure(void* data, xdg_surface* xdgSurface, uint32_t serial);
-  static void onXdgToplevelConfigure(void* data, xdg_toplevel* toplevel, int32_t width, int32_t height, wl_array* states);
-  static void onXdgToplevelClose    (void* data, xdg_toplevel* toplevel);
-  static void onZxdgToplevelDecorationV1Configure(void* data, zxdg_toplevel_decoration_v1* decoration, uint32_t mode);
-  static void onWpFractionalScaleV1PreferredScale(void* data, wp_fractional_scale_v1* fractionalScale, uint32_t scale);
-  static void onWlCallbackDone(void* data, wl_callback* callback, uint32_t time);
-  static void onZwpLockedPointerV1Locked  (void* data, zwp_locked_pointer_v1* lockedPointer);
-  static void onZwpLockedPointerV1Unlocked(void* data, zwp_locked_pointer_v1* lockedPointer);
-
+  // Listener tables (window specific)
   static const wl_surface_listener                  wlSurfaceListener;
   static const xdg_surface_listener                 xdgSurfaceListener;
   static const xdg_toplevel_listener                xdgToplevelListener;
   static const zxdg_toplevel_decoration_v1_listener zxdgToplevelDecorationV1Listener;
   static const wp_fractional_scale_v1_listener      wpFractionalScaleV1Listener;
-  static const wl_callback_listener                 wlCallbackListener;
   static const zwp_locked_pointer_v1_listener       zwpLockedPointerV1Listener;
+  static const wl_callback_listener                 wlCallbackListener;
+
+  // Connection
+  bool     connect();
+  void     disconnect();
+  bool     hasRequiredGlobals() const;
+  void     releasePointer();
+  void     setPointerLock(WWindow& w, bool lock);
+  void     releaseKeyboard();
+  void     logDisplayError() const;
+
+  // Windows
+  WWindow* createWindow(Tempest::Window* owner, uint32_t width, uint32_t height, SystemApi::ShowMode sm);
+  void     destroyWindow(WWindow* w);
+  static void updateState(WWindow& w);
+
+  // Input
+  static MouseEvent pointerEvent(const WWindow& w, Event::MouseButton button, int delta, Event::Type type);
+  bool       isWindowFocused(const WWindow* w) const;
+  void       releaseHeldKeys(WWindow& w);
+  void       releaseHeldButtons(WWindow& w);
+  KeyEvent   keyEvent(uint32_t keycode, Event::Type type) const;
+  void       startKeyRepeat(uint32_t keycode);
+  void       processKeyRepeat();
+
+  // Event loop
+  void     readEvents();
+  void     handleConnectionError();
+  int      pollTimeout() const;
+  void     renderWindows();
   };
 
 // Helpers
@@ -277,9 +283,394 @@ wp_cursor_shape_device_v1_shape WaylandApi::Private::toCursorShape(CursorShape s
   return WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_DEFAULT;
   }
 
+// Session listeners
+
+void WaylandApi::Private::onWlRegistryGlobal(void* data, wl_registry* registry, uint32_t name, const char* interface, uint32_t version) {
+  // Binds exactly the *Version constants; older globals are skipped.
+  WaylandApi::Private* self = static_cast<Private*>(data);
+  if(std::strcmp(interface, wl_compositor_interface.name)==0 && version>=wlCompositorVersion) {
+    self->compositor = static_cast<wl_compositor*>(wl_registry_bind(registry, name, &wl_compositor_interface, wlCompositorVersion));
+    }
+  if(std::strcmp(interface, xdg_wm_base_interface.name)==0 && version>=xdgWmBaseVersion) {
+    static_assert(xdgWmBaseVersion<XDG_TOPLEVEL_CONFIGURE_BOUNDS_SINCE_VERSION,
+                  "xdgToplevelListener needs configure_bounds/wm_capabilities handlers at this version");
+    self->wmBase = static_cast<xdg_wm_base*>(wl_registry_bind(registry, name, &xdg_wm_base_interface, xdgWmBaseVersion));
+    xdg_wm_base_add_listener(self->wmBase, &xdgWmBaseListener, self);
+    }
+  if(std::strcmp(interface, zxdg_decoration_manager_v1_interface.name)==0 && version>=zxdgDecorationManagerV1Version) {
+    self->decorationManager = static_cast<zxdg_decoration_manager_v1*>(
+        wl_registry_bind(registry, name, &zxdg_decoration_manager_v1_interface, zxdgDecorationManagerV1Version));
+    }
+  if(std::strcmp(interface, wp_viewporter_interface.name)==0 && version>=wpViewporterVersion) {
+    self->viewporter = static_cast<wp_viewporter*>(wl_registry_bind(registry, name, &wp_viewporter_interface, wpViewporterVersion));
+    }
+  if(std::strcmp(interface, wp_fractional_scale_manager_v1_interface.name)==0 && version>=wpFractionalScaleManagerV1Version) {
+    self->fractionalScaleManager = static_cast<wp_fractional_scale_manager_v1*>(
+        wl_registry_bind(registry, name, &wp_fractional_scale_manager_v1_interface, wpFractionalScaleManagerV1Version));
+    }
+  if(std::strcmp(interface, wp_cursor_shape_manager_v1_interface.name)==0 && version>=wpCursorShapeManagerV1Version) {
+    self->cursorShapeManager = static_cast<wp_cursor_shape_manager_v1*>(
+        wl_registry_bind(registry, name, &wp_cursor_shape_manager_v1_interface, wpCursorShapeManagerV1Version));
+    }
+  if(std::strcmp(interface, zwp_pointer_constraints_v1_interface.name)==0 && version>=zwpPointerConstraintsV1Version) {
+    self->pointerConstraints = static_cast<zwp_pointer_constraints_v1*>(
+        wl_registry_bind(registry, name, &zwp_pointer_constraints_v1_interface, zwpPointerConstraintsV1Version));
+    }
+  if(std::strcmp(interface, zwp_relative_pointer_manager_v1_interface.name)==0 && version>=zwpRelativePointerManagerV1Version) {
+    self->relativePointerManager = static_cast<zwp_relative_pointer_manager_v1*>(
+        wl_registry_bind(registry, name, &zwp_relative_pointer_manager_v1_interface, zwpRelativePointerManagerV1Version));
+    }
+  if(std::strcmp(interface, wl_seat_interface.name)==0 && version>=wlSeatVersion && self->seat==nullptr) {
+    // Only the first seat: multi-seat setups are rare, and Tempest has a single pointer/keyboard.
+    static_assert(wlSeatVersion<WL_POINTER_AXIS_RELATIVE_DIRECTION_SINCE_VERSION,
+                  "wlPointerListener needs an axis_relative_direction handler at this version");
+    self->seat = static_cast<wl_seat*>(wl_registry_bind(registry, name, &wl_seat_interface, wlSeatVersion));
+    wl_seat_add_listener(self->seat, &wlSeatListener, self);
+    }
+  }
+
+void WaylandApi::Private::onXdgWmBasePing([[maybe_unused]] void* data, xdg_wm_base* wmBase, uint32_t serial) {
+  xdg_wm_base_pong(wmBase, serial);
+  }
+
+void WaylandApi::Private::onWlSeatCapabilities(void* data, wl_seat* seat, uint32_t capabilities) {
+  // Sent after binding and whenever devices come or go: get a device when its capability appears, release it when it goes.
+  static_assert(wlSeatVersion>=WL_POINTER_RELEASE_SINCE_VERSION && wlSeatVersion>=WL_KEYBOARD_RELEASE_SINCE_VERSION);
+  WaylandApi::Private* self = static_cast<Private*>(data);
+
+  // The managers are bound: capabilities arrive after connect()'s roundtrip. Pointer locks follow on the next cursor
+  // change (always on enter).
+  const bool hasPointer = (capabilities & WL_SEAT_CAPABILITY_POINTER)!=0;
+  if(hasPointer && self->pointer==nullptr) {
+    self->pointer = wl_seat_get_pointer(seat);
+    wl_pointer_add_listener(self->pointer, &wlPointerListener, self);
+    self->cursorShapeDevice = wp_cursor_shape_manager_v1_get_pointer(self->cursorShapeManager, self->pointer);
+    self->relativePointer   = zwp_relative_pointer_manager_v1_get_relative_pointer(self->relativePointerManager, self->pointer);
+    zwp_relative_pointer_v1_add_listener(self->relativePointer, &zwpRelativePointerV1Listener, self);
+    }
+  else if(!hasPointer && self->pointer!=nullptr) {
+    self->releasePointer();
+    }
+
+  const bool hasKeyboard = (capabilities & WL_SEAT_CAPABILITY_KEYBOARD)!=0;
+  if(hasKeyboard && self->keyboard==nullptr) {
+    self->keyboard = wl_seat_get_keyboard(seat);
+    wl_keyboard_add_listener(self->keyboard, &wlKeyboardListener, self);
+    }
+  else if(!hasKeyboard && self->keyboard!=nullptr) {
+    self->releaseKeyboard();
+    }
+  }
+
+void WaylandApi::Private::onWlPointerEnter(void* data, [[maybe_unused]] wl_pointer* pointer, uint32_t serial,
+                                           wl_surface* surface, wl_fixed_t x, wl_fixed_t y) {
+  // Like X11's EnterNotify: a move to the entry position, then re-apply the window's cursor (required by Wayland)
+  auto self = static_cast<Private*>(data);
+  if(surface==nullptr)
+    return; // surface was destroyed after compositor sent the event
+  auto w = static_cast<WWindow*>(wl_surface_get_user_data(surface)); // listener data of our wl_surface
+  self->pointerFocus       = w;
+  self->pointerEnterSerial = serial;
+  // logical -> physical
+  w->cursorX               = wl_fixed_to_double(x)*w->scale();
+  w->cursorY               = wl_fixed_to_double(y)*w->scale();
+  if(w->owner==nullptr)
+    return;
+  if(self->isWindowFocused(w)) {
+    MouseEvent e = pointerEvent(*w, Event::ButtonNone, 0, Event::MouseMove);
+    SystemApi::dispatchMouseMove(*w->owner, e);
+    }
+  // Note: unfocused window gets desktop cursor (see implShowCursor)
+  SystemApi::showCursor(reinterpret_cast<SystemApi::Window*>(w), SystemApi::cursorShape(*w->owner));
+  }
+
+void WaylandApi::Private::onWlPointerLeave(void* data, [[maybe_unused]] wl_pointer* pointer, [[maybe_unused]] uint32_t serial,
+                                           [[maybe_unused]] wl_surface* surface) {
+  // 'surface' may be null if it was destroyed meanwhile.
+  static_cast<Private*>(data)->pointerFocus = nullptr;
+  }
+
+void WaylandApi::Private::onWlPointerMotion(void* data, [[maybe_unused]] wl_pointer* pointer, [[maybe_unused]] uint32_t time,
+                                            wl_fixed_t x, wl_fixed_t y) {
+  // While a button is held, coordinates can be outside the window (implicit grab), like on X11. Not sent while locked.
+  auto self = static_cast<Private*>(data);
+  WWindow* w = self->pointerFocus;
+  if(w==nullptr)
+    return;
+  w->cursorX = wl_fixed_to_double(x)*w->scale();
+  w->cursorY = wl_fixed_to_double(y)*w->scale();
+  if(w->owner==nullptr || !self->isWindowFocused(w))
+    return;
+  MouseEvent e = pointerEvent(*w, Event::ButtonNone, 0, Event::MouseMove);
+  SystemApi::dispatchMouseMove(*w->owner, e);
+  }
+
+void WaylandApi::Private::onWlPointerButton(void* data, [[maybe_unused]] wl_pointer* pointer, [[maybe_unused]] uint32_t serial,
+                                            [[maybe_unused]] uint32_t time, uint32_t button, uint32_t state) {
+  // Unknown buttons become ButtonNone, like X11. Releases only for presses the app got (see heldButtons).
+  auto self = static_cast<Private*>(data);
+  WWindow* w = self->pointerFocus;
+  if(w==nullptr || w->owner==nullptr)
+    return;
+
+  if(state==WL_POINTER_BUTTON_STATE_PRESSED) {
+    if(!self->isWindowFocused(w))
+      return;
+    // Focus click filter: the click that only focuses the window must not reach the app. KWin sends
+    // wl_keyboard.enter and that press together, so a press in the same readEvents() batch as the enter is that click.
+    if(self->focusGainedInBatch==w)
+      return;
+    if(std::find(self->heldButtons.begin(), self->heldButtons.end(), button)==self->heldButtons.end())
+      self->heldButtons.push_back(button);
+    MouseEvent e = pointerEvent(*w, toButton(button), 0, Event::MouseDown);
+    SystemApi::dispatchMouseDown(*w->owner, e);
+    } else {
+    if(std::erase(self->heldButtons, button)==0)
+      return;
+    MouseEvent e = pointerEvent(*w, toButton(button), 0, Event::MouseUp);
+    SystemApi::dispatchMouseUp(*w->owner, e);
+    }
+  }
+
+void WaylandApi::Private::onWlPointerAxisValue120(void* data, [[maybe_unused]] wl_pointer* pointer, uint32_t axis, int32_t value120) {
+  // 120 per notch, like Tempest's delta on Windows; Wayland's sign is inverted (positive = down).
+  // Horizontal scrolling is ignored, like on X11.
+  auto self = static_cast<Private*>(data);
+  if(axis!=WL_POINTER_AXIS_VERTICAL_SCROLL)
+    return;
+  if(self->pointerFocus==nullptr || self->pointerFocus->owner==nullptr || !self->isWindowFocused(self->pointerFocus))
+    return;
+  MouseEvent e = pointerEvent(*self->pointerFocus, Event::ButtonNone, -value120, Event::MouseWheel);
+  SystemApi::dispatchMouseWheel(*self->pointerFocus->owner, e);
+  }
+
+void WaylandApi::Private::onZwpRelativePointerV1RelativeMotion(void* data, [[maybe_unused]] zwp_relative_pointer_v1* relativePointer,
+                                                               [[maybe_unused]] uint32_t utimeHi, [[maybe_unused]] uint32_t utimeLo,
+                                                               [[maybe_unused]] wl_fixed_t dx, [[maybe_unused]] wl_fixed_t dy,
+                                                               wl_fixed_t dxUnaccel, wl_fixed_t dyUnaccel) {
+  // Moves virtual cursor while pointer is locked (otherwise wl_pointer.motion has the position). Raw input deltas
+  // clamped to the window like a real cursor.
+  // Note: compositor only activates the lock while focused
+  auto self = static_cast<Private*>(data);
+  WWindow* w = self->pointerFocus;
+  if(w==nullptr || !w->pointerLocked || w->owner==nullptr)
+    return;
+  const double s = w->scale();
+  w->cursorX = std::clamp(w->cursorX + wl_fixed_to_double(dxUnaccel)*s, 0.0, double(std::max(w->physicalWidth() -1, 0)));
+  w->cursorY = std::clamp(w->cursorY + wl_fixed_to_double(dyUnaccel)*s, 0.0, double(std::max(w->physicalHeight()-1, 0)));
+  MouseEvent e = pointerEvent(*w, Event::ButtonNone, 0, Event::MouseMove);
+  SystemApi::dispatchMouseMove(*w->owner, e);
+  }
+
+void WaylandApi::Private::onWlKeyboardKeymap(void* data, [[maybe_unused]] wl_keyboard* keyboard,
+                                             uint32_t format, int32_t fd, uint32_t size) {
+  // Sent on creation and when the keymap changes. On failure the previous keymap stays.
+  // Note: need to close fd manually inside function!
+  auto self = static_cast<Private*>(data);
+  if(format!=WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
+    Log::e("WaylandApi: unsupported keymap format ", format);
+    close(fd);
+    return;
+    }
+
+  // MAP_PRIVATE: required since wl_keyboard v7
+  void* map = mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fd, 0);
+  close(fd);
+  if(map==MAP_FAILED) {
+    Log::e("WaylandApi: can't map the keymap: ", std::strerror(errno));
+    return;
+    }
+  // The text is null-terminated within 'size'; strnlen makes sure we never read beyond the mapping.
+  const char* text   = static_cast<const char*>(map);
+  xkb_keymap* keymap = xkb_keymap_new_from_buffer(self->xkbContext, text, strnlen(text, size),
+                                                  XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
+  munmap(map, size);
+  if(keymap==nullptr) {
+    Log::e("WaylandApi: can't compile the keymap");
+    return;
+    }
+  xkb_state* state = xkb_state_new(keymap);
+  if(state==nullptr) {
+    Log::e("WaylandApi: can't create the keyboard state");
+    xkb_keymap_unref(keymap);
+    return;
+    }
+
+  ioDestroy(self->xkbState,  xkb_state_unref);
+  ioDestroy(self->xkbKeymap, xkb_keymap_unref);
+  self->xkbKeymap     = keymap;
+  self->xkbState      = state;
+  self->repeatKeycode = 0; // keycodes may mean something else in the new keymap
+
+  const char* layout = xkb_keymap_layout_get_name(keymap, 0);
+  Log::i("WaylandApi: keymap loaded, ", xkb_keymap_num_layouts(keymap), " layout(s), first: ", (layout!=nullptr ? layout : "unnamed"));
+  }
+
+void WaylandApi::Private::onWlKeyboardEnter(void* data, [[maybe_unused]] wl_keyboard* keyboard, [[maybe_unused]] uint32_t serial,
+                                            wl_surface* surface, [[maybe_unused]] wl_array* keys) {
+  // Like X11's FocusIn. Keys already held ('keys') are ignored: they aren't in heldKeys, so their releases are dropped.
+  auto self = static_cast<Private*>(data);
+  if(surface==nullptr)
+    return; // the surface was destroyed after the compositor sent the event
+  auto w = static_cast<WWindow*>(wl_surface_get_user_data(surface));
+  self->keyboardFocus      = w;
+  self->focusGainedInBatch = w;
+  if(w->owner==nullptr)
+    return;
+  FocusEvent e(true, Event::UnknownReason);
+  SystemApi::dispatchFocus(*w->owner, e);
+  // Pointer already over the window: like an enter, a move to its position and the app's cursor.
+  if(self->pointerFocus==w) {
+    MouseEvent m = pointerEvent(*w, Event::ButtonNone, 0, Event::MouseMove);
+    SystemApi::dispatchMouseMove(*w->owner, m);
+    SystemApi::showCursor(reinterpret_cast<SystemApi::Window*>(w), SystemApi::cursorShape(*w->owner));
+    }
+  }
+
+void WaylandApi::Private::onWlKeyboardLeave(void* data, [[maybe_unused]] wl_keyboard* keyboard, [[maybe_unused]] uint32_t serial,
+                                            [[maybe_unused]] wl_surface* surface) {
+  // Like X11's FocusOut, but held keys and buttons are released first. 'surface' may be null, so the window comes from
+  // keyboardFocus.
+  auto self = static_cast<Private*>(data);
+  WWindow* w = self->keyboardFocus;
+  if(w==nullptr)
+    return;
+  // On focus loss the real releases never reach the app, so keys and buttons would stay held (e.g. Alt after Alt+Tab).
+  self->releaseHeldKeys(*w);
+  self->releaseHeldButtons(*w);
+  self->keyboardFocus = nullptr;
+  if(w->owner==nullptr)
+    return;
+  FocusEvent e(false, Event::UnknownReason);
+  SystemApi::dispatchFocus(*w->owner, e);
+  if(self->pointerFocus==w)
+    SystemApi::showCursor(reinterpret_cast<SystemApi::Window*>(w), SystemApi::cursorShape(*w->owner));
+  }
+
+void WaylandApi::Private::onWlKeyboardKey(void* data, [[maybe_unused]] wl_keyboard* keyboard, [[maybe_unused]] uint32_t serial,
+                                          [[maybe_unused]] uint32_t time, uint32_t key, uint32_t state) {
+  // xkb keycodes are evdev + 8 (X11's keycodes); also the scancode for the dispatcher.
+  auto self = static_cast<Private*>(data);
+  if(self->keyboardFocus==nullptr || self->keyboardFocus->owner==nullptr)
+    return;
+  if(self->xkbState==nullptr)
+    return; // no keymap compiled
+  // Only releases of keys the app got a press for are dispatched (see heldKeys).
+  const uint32_t keycode = key + 8;
+  if(state==WL_KEYBOARD_KEY_STATE_PRESSED) {
+    if(std::find(self->heldKeys.begin(), self->heldKeys.end(), keycode)==self->heldKeys.end())
+      self->heldKeys.push_back(keycode);
+    KeyEvent e = self->keyEvent(keycode, Event::KeyDown);
+    SystemApi::dispatchKeyDown(*self->keyboardFocus->owner, e, keycode);
+    self->startKeyRepeat(keycode);
+    } else {
+    if(std::erase(self->heldKeys, keycode)==0)
+      return;
+    if(keycode==self->repeatKeycode)
+      self->repeatKeycode = 0;
+    KeyEvent e = self->keyEvent(keycode, Event::KeyUp);
+    SystemApi::dispatchKeyUp(*self->keyboardFocus->owner, e, keycode);
+    }
+  }
+
+void WaylandApi::Private::onWlKeyboardModifiers(void* data, [[maybe_unused]] wl_keyboard* keyboard, [[maybe_unused]] uint32_t serial,
+                                                uint32_t depressed, uint32_t latched, uint32_t locked, uint32_t group) {
+  // Not dispatched: Tempest tracks Shift/Ctrl/Alt from the key events itself. xkb needs them for the text of a key
+  // (Shift, CapsLock) and for the active layout ('group').
+  auto self = static_cast<Private*>(data);
+  if(self->xkbState==nullptr)
+    return; // no keymap compiled
+  xkb_state_update_mask(self->xkbState, depressed, latched, locked, 0, 0, group);
+  }
+
+void WaylandApi::Private::onWlKeyboardRepeatInfo(void* data, [[maybe_unused]] wl_keyboard* keyboard, int32_t rate, int32_t delay) {
+  // The desktop setting; rate 0 = repeat disabled.
+  auto self = static_cast<Private*>(data);
+  self->repeatRate  = rate;
+  self->repeatDelay = delay;
+  if(rate<=0)
+    self->repeatKeycode = 0;
+  }
+
+// Window specific listeners
+
+void WaylandApi::Private::onXdgSurfaceConfigure(void* data, [[maybe_unused]] xdg_surface* xdgSurface, uint32_t serial) {
+  // End of configure sequence (after xdg_toplevel.configure etc.): pending becomes current and is acked
+  auto w = static_cast<WWindow*>(data);
+  if(w->pending.width==0 || w->pending.height==0) {
+    // client decides: app requested size needs conversion to logical (KWin sends
+    // preferred_scale before the first configure).
+    w->pending.width  = std::max(1, int32_t(std::lround(float(w->appRequestedWidth) /w->scale())));
+    w->pending.height = std::max(1, int32_t(std::lround(float(w->appRequestedHeight)/w->scale())));
+    }
+  w->width      = w->pending.width;
+  w->height     = w->pending.height;
+  w->fullscreen = w->pending.fullscreen;
+
+  // Viewport state is double-buffered: it applies with the next commit, which Vulkan does in vkQueuePresent.
+  wp_viewport_set_destination(w->viewport, w->width, w->height);
+
+  xdg_surface_ack_configure(w->xdgSurface, serial);
+  w->configured = true;
+  }
+
+void WaylandApi::Private::onXdgToplevelConfigure(void* data, [[maybe_unused]] xdg_toplevel* toplevel, int32_t width, int32_t height, wl_array* states) {
+  // Only fills w->pending; it becomes current in onXdgSurfaceConfigure.
+  auto w = static_cast<WWindow*>(data);
+  // Logical size; 0 = client decides, keep the previous size
+  if(width>0 && height>0) {
+    w->pending.width  = width;
+    w->pending.height = height;
+    }
+  // 'states': the complete list of xdg_toplevel_state values
+  w->pending.fullscreen = false;
+  auto state = static_cast<const uint32_t*>(states->data);
+  for(size_t i=0; i<states->size/sizeof(uint32_t); ++i) {
+    if(state[i]==XDG_TOPLEVEL_STATE_FULLSCREEN)
+      w->pending.fullscreen = true;
+    }
+  }
+
+void WaylandApi::Private::onXdgToplevelClose(void* data, [[maybe_unused]] xdg_toplevel* toplevel) {
+  // Only a request. Like the Windows backend: the app or an overlay may accept the CloseEvent; otherwise exit.
+  auto w = static_cast<WWindow*>(data);
+  if(w->owner==nullptr)
+    return;
+  CloseEvent e;
+  SystemApi::dispatchClose(*w->owner, e);
+  if(!e.isAccepted())
+    SystemApi::exit();
+  }
+
+void WaylandApi::Private::onZxdgToplevelDecorationV1Configure([[maybe_unused]] void* data, [[maybe_unused]] zxdg_toplevel_decoration_v1* decoration, uint32_t mode) {
+  if(mode==ZXDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE)
+    Log::i("WaylandApi: compositor chose client-side decorations; the window is undecorated");
+  }
+
+void WaylandApi::Private::onWpFractionalScaleV1PreferredScale(void* data, [[maybe_unused]] wp_fractional_scale_v1* fractionalScale, uint32_t scale) {
+  auto w = static_cast<WWindow*>(data);
+  w->preferredScale = scale;
+  }
+
+void WaylandApi::Private::onZwpLockedPointerV1Locked(void* data, [[maybe_unused]] zwp_locked_pointer_v1* lockedPointer) {
+  static_cast<WWindow*>(data)->pointerLocked = true;
+  }
+
+void WaylandApi::Private::onZwpLockedPointerV1Unlocked(void* data, [[maybe_unused]] zwp_locked_pointer_v1* lockedPointer) {
+  // E.g. focus lost; the persistent lock may become active again later.
+  static_cast<WWindow*>(data)->pointerLocked = false;
+  }
+
+void WaylandApi::Private::onWlCallbackDone(void* data, wl_callback* callback, [[maybe_unused]] uint32_t time) {
+  // The compositor has shown the content (all callbacks up to it fire together).
+  auto w = static_cast<WWindow*>(data);
+  std::erase(w->frameCallbacks, callback);
+  wl_callback_destroy(callback);
+  }
+
 // Note: Every event of the bound interface version needs a handler: libwayland aborts on null entry.
 
-// Session listeners
+// Session listener tables
 
 const wl_registry_listener WaylandApi::Private::wlRegistryListener = {
   .global        = onWlRegistryGlobal,
@@ -323,7 +714,7 @@ const wl_keyboard_listener WaylandApi::Private::wlKeyboardListener = {
   .repeat_info = onWlKeyboardRepeatInfo,
   };
 
-// Window specific listeners
+// Window specific listener tables
 
 const wl_surface_listener WaylandApi::Private::wlSurfaceListener = {
   // Outputs and buffer scale hints; the scale comes from wp_fractional_scale_v1.
@@ -350,14 +741,15 @@ const wp_fractional_scale_v1_listener WaylandApi::Private::wpFractionalScaleV1Li
   .preferred_scale = onWpFractionalScaleV1PreferredScale,
   };
 
-// Frame callbacks (wl_surface.frame)
-const wl_callback_listener WaylandApi::Private::wlCallbackListener = {
-  .done = onWlCallbackDone,
-  };
-
 const zwp_locked_pointer_v1_listener WaylandApi::Private::zwpLockedPointerV1Listener = {
   .locked   = onZwpLockedPointerV1Locked,
   .unlocked = onZwpLockedPointerV1Unlocked,
+  };
+
+// Frame callbacks (wl_surface.frame)
+
+const wl_callback_listener WaylandApi::Private::wlCallbackListener = {
+  .done = onWlCallbackDone,
   };
 
 // Connection
@@ -759,391 +1151,6 @@ void WaylandApi::Private::renderWindows() {
     updateState(*w);
     SystemApi::dispatchRender(*w->owner);
     }
-  }
-
-// Session listeners
-
-void WaylandApi::Private::onWlRegistryGlobal(void* data, wl_registry* registry, uint32_t name, const char* interface, uint32_t version) {
-  // Binds exactly the *Version constants; older globals are skipped.
-  WaylandApi::Private* self = static_cast<Private*>(data);
-  if(std::strcmp(interface, wl_compositor_interface.name)==0 && version>=wlCompositorVersion) {
-    self->compositor = static_cast<wl_compositor*>(wl_registry_bind(registry, name, &wl_compositor_interface, wlCompositorVersion));
-    }
-  if(std::strcmp(interface, xdg_wm_base_interface.name)==0 && version>=xdgWmBaseVersion) {
-    static_assert(xdgWmBaseVersion<XDG_TOPLEVEL_CONFIGURE_BOUNDS_SINCE_VERSION,
-                  "xdgToplevelListener needs configure_bounds/wm_capabilities handlers at this version");
-    self->wmBase = static_cast<xdg_wm_base*>(wl_registry_bind(registry, name, &xdg_wm_base_interface, xdgWmBaseVersion));
-    xdg_wm_base_add_listener(self->wmBase, &xdgWmBaseListener, self);
-    }
-  if(std::strcmp(interface, zxdg_decoration_manager_v1_interface.name)==0 && version>=zxdgDecorationManagerV1Version) {
-    self->decorationManager = static_cast<zxdg_decoration_manager_v1*>(
-        wl_registry_bind(registry, name, &zxdg_decoration_manager_v1_interface, zxdgDecorationManagerV1Version));
-    }
-  if(std::strcmp(interface, wp_viewporter_interface.name)==0 && version>=wpViewporterVersion) {
-    self->viewporter = static_cast<wp_viewporter*>(wl_registry_bind(registry, name, &wp_viewporter_interface, wpViewporterVersion));
-    }
-  if(std::strcmp(interface, wp_fractional_scale_manager_v1_interface.name)==0 && version>=wpFractionalScaleManagerV1Version) {
-    self->fractionalScaleManager = static_cast<wp_fractional_scale_manager_v1*>(
-        wl_registry_bind(registry, name, &wp_fractional_scale_manager_v1_interface, wpFractionalScaleManagerV1Version));
-    }
-  if(std::strcmp(interface, wp_cursor_shape_manager_v1_interface.name)==0 && version>=wpCursorShapeManagerV1Version) {
-    self->cursorShapeManager = static_cast<wp_cursor_shape_manager_v1*>(
-        wl_registry_bind(registry, name, &wp_cursor_shape_manager_v1_interface, wpCursorShapeManagerV1Version));
-    }
-  if(std::strcmp(interface, zwp_pointer_constraints_v1_interface.name)==0 && version>=zwpPointerConstraintsV1Version) {
-    self->pointerConstraints = static_cast<zwp_pointer_constraints_v1*>(
-        wl_registry_bind(registry, name, &zwp_pointer_constraints_v1_interface, zwpPointerConstraintsV1Version));
-    }
-  if(std::strcmp(interface, zwp_relative_pointer_manager_v1_interface.name)==0 && version>=zwpRelativePointerManagerV1Version) {
-    self->relativePointerManager = static_cast<zwp_relative_pointer_manager_v1*>(
-        wl_registry_bind(registry, name, &zwp_relative_pointer_manager_v1_interface, zwpRelativePointerManagerV1Version));
-    }
-  if(std::strcmp(interface, wl_seat_interface.name)==0 && version>=wlSeatVersion && self->seat==nullptr) {
-    // Only the first seat: multi-seat setups are rare, and Tempest has a single pointer/keyboard.
-    static_assert(wlSeatVersion<WL_POINTER_AXIS_RELATIVE_DIRECTION_SINCE_VERSION,
-                  "wlPointerListener needs an axis_relative_direction handler at this version");
-    self->seat = static_cast<wl_seat*>(wl_registry_bind(registry, name, &wl_seat_interface, wlSeatVersion));
-    wl_seat_add_listener(self->seat, &wlSeatListener, self);
-    }
-  }
-
-void WaylandApi::Private::onXdgWmBasePing([[maybe_unused]] void* data, xdg_wm_base* wmBase, uint32_t serial) {
-  xdg_wm_base_pong(wmBase, serial);
-  }
-
-void WaylandApi::Private::onWlSeatCapabilities(void* data, wl_seat* seat, uint32_t capabilities) {
-  // Sent after binding and whenever devices come or go: get a device when its capability appears, release it when it goes.
-  static_assert(wlSeatVersion>=WL_POINTER_RELEASE_SINCE_VERSION && wlSeatVersion>=WL_KEYBOARD_RELEASE_SINCE_VERSION);
-  WaylandApi::Private* self = static_cast<Private*>(data);
-
-  // The managers are bound: capabilities arrive after connect()'s roundtrip. Pointer locks follow on the next cursor
-  // change (always on enter).
-  const bool hasPointer = (capabilities & WL_SEAT_CAPABILITY_POINTER)!=0;
-  if(hasPointer && self->pointer==nullptr) {
-    self->pointer = wl_seat_get_pointer(seat);
-    wl_pointer_add_listener(self->pointer, &wlPointerListener, self);
-    self->cursorShapeDevice = wp_cursor_shape_manager_v1_get_pointer(self->cursorShapeManager, self->pointer);
-    self->relativePointer   = zwp_relative_pointer_manager_v1_get_relative_pointer(self->relativePointerManager, self->pointer);
-    zwp_relative_pointer_v1_add_listener(self->relativePointer, &zwpRelativePointerV1Listener, self);
-    }
-  else if(!hasPointer && self->pointer!=nullptr) {
-    self->releasePointer();
-    }
-
-  const bool hasKeyboard = (capabilities & WL_SEAT_CAPABILITY_KEYBOARD)!=0;
-  if(hasKeyboard && self->keyboard==nullptr) {
-    self->keyboard = wl_seat_get_keyboard(seat);
-    wl_keyboard_add_listener(self->keyboard, &wlKeyboardListener, self);
-    }
-  else if(!hasKeyboard && self->keyboard!=nullptr) {
-    self->releaseKeyboard();
-    }
-  }
-
-void WaylandApi::Private::onWlPointerEnter(void* data, [[maybe_unused]] wl_pointer* pointer, uint32_t serial,
-                                           wl_surface* surface, wl_fixed_t x, wl_fixed_t y) {
-  // Like X11's EnterNotify: a move to the entry position, then re-apply the window's cursor (required by Wayland)
-  auto self = static_cast<Private*>(data);
-  if(surface==nullptr)
-    return; // surface was destroyed after compositor sent the event
-  auto w = static_cast<WWindow*>(wl_surface_get_user_data(surface)); // listener data of our wl_surface
-  self->pointerFocus       = w;
-  self->pointerEnterSerial = serial;
-  // logical -> physical
-  w->cursorX               = wl_fixed_to_double(x)*w->scale();
-  w->cursorY               = wl_fixed_to_double(y)*w->scale();
-  if(w->owner==nullptr)
-    return;
-  if(self->isWindowFocused(w)) {
-    MouseEvent e = pointerEvent(*w, Event::ButtonNone, 0, Event::MouseMove);
-    SystemApi::dispatchMouseMove(*w->owner, e);
-    }
-  // Note: unfocused window gets desktop cursor (see implShowCursor)
-  SystemApi::showCursor(reinterpret_cast<SystemApi::Window*>(w), SystemApi::cursorShape(*w->owner));
-  }
-
-void WaylandApi::Private::onWlPointerLeave(void* data, [[maybe_unused]] wl_pointer* pointer, [[maybe_unused]] uint32_t serial,
-                                           [[maybe_unused]] wl_surface* surface) {
-  // 'surface' may be null if it was destroyed meanwhile.
-  static_cast<Private*>(data)->pointerFocus = nullptr;
-  }
-
-void WaylandApi::Private::onWlPointerMotion(void* data, [[maybe_unused]] wl_pointer* pointer, [[maybe_unused]] uint32_t time,
-                                            wl_fixed_t x, wl_fixed_t y) {
-  // While a button is held, coordinates can be outside the window (implicit grab), like on X11. Not sent while locked.
-  auto self = static_cast<Private*>(data);
-  WWindow* w = self->pointerFocus;
-  if(w==nullptr)
-    return;
-  w->cursorX = wl_fixed_to_double(x)*w->scale();
-  w->cursorY = wl_fixed_to_double(y)*w->scale();
-  if(w->owner==nullptr || !self->isWindowFocused(w))
-    return;
-  MouseEvent e = pointerEvent(*w, Event::ButtonNone, 0, Event::MouseMove);
-  SystemApi::dispatchMouseMove(*w->owner, e);
-  }
-
-void WaylandApi::Private::onWlPointerButton(void* data, [[maybe_unused]] wl_pointer* pointer, [[maybe_unused]] uint32_t serial,
-                                            [[maybe_unused]] uint32_t time, uint32_t button, uint32_t state) {
-  // Unknown buttons become ButtonNone, like X11. Releases only for presses the app got (see heldButtons).
-  auto self = static_cast<Private*>(data);
-  WWindow* w = self->pointerFocus;
-  if(w==nullptr || w->owner==nullptr)
-    return;
-
-  if(state==WL_POINTER_BUTTON_STATE_PRESSED) {
-    if(!self->isWindowFocused(w))
-      return;
-    // Focus click filter: the click that only focuses the window must not reach the app. KWin sends
-    // wl_keyboard.enter and that press together, so a press in the same readEvents() batch as the enter is that click.
-    if(self->focusGainedInBatch==w)
-      return;
-    if(std::find(self->heldButtons.begin(), self->heldButtons.end(), button)==self->heldButtons.end())
-      self->heldButtons.push_back(button);
-    MouseEvent e = pointerEvent(*w, toButton(button), 0, Event::MouseDown);
-    SystemApi::dispatchMouseDown(*w->owner, e);
-    } else {
-    if(std::erase(self->heldButtons, button)==0)
-      return;
-    MouseEvent e = pointerEvent(*w, toButton(button), 0, Event::MouseUp);
-    SystemApi::dispatchMouseUp(*w->owner, e);
-    }
-  }
-
-void WaylandApi::Private::onWlPointerAxisValue120(void* data, [[maybe_unused]] wl_pointer* pointer, uint32_t axis, int32_t value120) {
-  // 120 per notch, like Tempest's delta on Windows; Wayland's sign is inverted (positive = down).
-  // Horizontal scrolling is ignored, like on X11.
-  auto self = static_cast<Private*>(data);
-  if(axis!=WL_POINTER_AXIS_VERTICAL_SCROLL)
-    return;
-  if(self->pointerFocus==nullptr || self->pointerFocus->owner==nullptr || !self->isWindowFocused(self->pointerFocus))
-    return;
-  MouseEvent e = pointerEvent(*self->pointerFocus, Event::ButtonNone, -value120, Event::MouseWheel);
-  SystemApi::dispatchMouseWheel(*self->pointerFocus->owner, e);
-  }
-
-void WaylandApi::Private::onZwpRelativePointerV1RelativeMotion(void* data, [[maybe_unused]] zwp_relative_pointer_v1* relativePointer,
-                                                               [[maybe_unused]] uint32_t utimeHi, [[maybe_unused]] uint32_t utimeLo,
-                                                               [[maybe_unused]] wl_fixed_t dx, [[maybe_unused]] wl_fixed_t dy,
-                                                               wl_fixed_t dxUnaccel, wl_fixed_t dyUnaccel) {
-  // Moves virtual cursor while pointer is locked (otherwise wl_pointer.motion has the position). Raw input deltas
-  // clamped to the window like a real cursor.
-  // Note: compositor only activates the lock while focused
-  auto self = static_cast<Private*>(data);
-  WWindow* w = self->pointerFocus;
-  if(w==nullptr || !w->pointerLocked || w->owner==nullptr)
-    return;
-  const double s = w->scale();
-  w->cursorX = std::clamp(w->cursorX + wl_fixed_to_double(dxUnaccel)*s, 0.0, double(std::max(w->physicalWidth() -1, 0)));
-  w->cursorY = std::clamp(w->cursorY + wl_fixed_to_double(dyUnaccel)*s, 0.0, double(std::max(w->physicalHeight()-1, 0)));
-  MouseEvent e = pointerEvent(*w, Event::ButtonNone, 0, Event::MouseMove);
-  SystemApi::dispatchMouseMove(*w->owner, e);
-  }
-
-void WaylandApi::Private::onWlKeyboardKeymap(void* data, [[maybe_unused]] wl_keyboard* keyboard,
-                                             uint32_t format, int32_t fd, uint32_t size) {
-  // Sent on creation and when the keymap changes. On failure the previous keymap stays.
-  // Note: need to close fd manually inside function!
-  auto self = static_cast<Private*>(data);
-  if(format!=WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1) {
-    Log::e("WaylandApi: unsupported keymap format ", format);
-    close(fd);
-    return;
-    }
-
-  // MAP_PRIVATE: required since wl_keyboard v7
-  void* map = mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fd, 0);
-  close(fd);
-  if(map==MAP_FAILED) {
-    Log::e("WaylandApi: can't map the keymap: ", std::strerror(errno));
-    return;
-    }
-  // The text is null-terminated within 'size'; strnlen makes sure we never read beyond the mapping.
-  const char* text   = static_cast<const char*>(map);
-  xkb_keymap* keymap = xkb_keymap_new_from_buffer(self->xkbContext, text, strnlen(text, size),
-                                                  XKB_KEYMAP_FORMAT_TEXT_V1, XKB_KEYMAP_COMPILE_NO_FLAGS);
-  munmap(map, size);
-  if(keymap==nullptr) {
-    Log::e("WaylandApi: can't compile the keymap");
-    return;
-    }
-  xkb_state* state = xkb_state_new(keymap);
-  if(state==nullptr) {
-    Log::e("WaylandApi: can't create the keyboard state");
-    xkb_keymap_unref(keymap);
-    return;
-    }
-
-  ioDestroy(self->xkbState,  xkb_state_unref);
-  ioDestroy(self->xkbKeymap, xkb_keymap_unref);
-  self->xkbKeymap     = keymap;
-  self->xkbState      = state;
-  self->repeatKeycode = 0; // keycodes may mean something else in the new keymap
-
-  const char* layout = xkb_keymap_layout_get_name(keymap, 0);
-  Log::i("WaylandApi: keymap loaded, ", xkb_keymap_num_layouts(keymap), " layout(s), first: ", (layout!=nullptr ? layout : "unnamed"));
-  }
-
-void WaylandApi::Private::onWlKeyboardEnter(void* data, [[maybe_unused]] wl_keyboard* keyboard, [[maybe_unused]] uint32_t serial,
-                                            wl_surface* surface, [[maybe_unused]] wl_array* keys) {
-  // Like X11's FocusIn. Keys already held ('keys') are ignored: they aren't in heldKeys, so their releases are dropped.
-  auto self = static_cast<Private*>(data);
-  if(surface==nullptr)
-    return; // the surface was destroyed after the compositor sent the event
-  auto w = static_cast<WWindow*>(wl_surface_get_user_data(surface));
-  self->keyboardFocus      = w;
-  self->focusGainedInBatch = w;
-  if(w->owner==nullptr)
-    return;
-  FocusEvent e(true, Event::UnknownReason);
-  SystemApi::dispatchFocus(*w->owner, e);
-  // Pointer already over the window: like an enter, a move to its position and the app's cursor.
-  if(self->pointerFocus==w) {
-    MouseEvent m = pointerEvent(*w, Event::ButtonNone, 0, Event::MouseMove);
-    SystemApi::dispatchMouseMove(*w->owner, m);
-    SystemApi::showCursor(reinterpret_cast<SystemApi::Window*>(w), SystemApi::cursorShape(*w->owner));
-    }
-  }
-
-void WaylandApi::Private::onWlKeyboardLeave(void* data, [[maybe_unused]] wl_keyboard* keyboard, [[maybe_unused]] uint32_t serial,
-                                            [[maybe_unused]] wl_surface* surface) {
-  // Like X11's FocusOut, but held keys and buttons are released first. 'surface' may be null, so the window comes from
-  // keyboardFocus.
-  auto self = static_cast<Private*>(data);
-  WWindow* w = self->keyboardFocus;
-  if(w==nullptr)
-    return;
-  // On focus loss the real releases never reach the app, so keys and buttons would stay held (e.g. Alt after Alt+Tab).
-  self->releaseHeldKeys(*w);
-  self->releaseHeldButtons(*w);
-  self->keyboardFocus = nullptr;
-  if(w->owner==nullptr)
-    return;
-  FocusEvent e(false, Event::UnknownReason);
-  SystemApi::dispatchFocus(*w->owner, e);
-  if(self->pointerFocus==w)
-    SystemApi::showCursor(reinterpret_cast<SystemApi::Window*>(w), SystemApi::cursorShape(*w->owner));
-  }
-
-void WaylandApi::Private::onWlKeyboardKey(void* data, [[maybe_unused]] wl_keyboard* keyboard, [[maybe_unused]] uint32_t serial,
-                                          [[maybe_unused]] uint32_t time, uint32_t key, uint32_t state) {
-  // xkb keycodes are evdev + 8 (X11's keycodes); also the scancode for the dispatcher.
-  auto self = static_cast<Private*>(data);
-  if(self->keyboardFocus==nullptr || self->keyboardFocus->owner==nullptr)
-    return;
-  if(self->xkbState==nullptr)
-    return; // no keymap compiled
-  // Only releases of keys the app got a press for are dispatched (see heldKeys).
-  const uint32_t keycode = key + 8;
-  if(state==WL_KEYBOARD_KEY_STATE_PRESSED) {
-    if(std::find(self->heldKeys.begin(), self->heldKeys.end(), keycode)==self->heldKeys.end())
-      self->heldKeys.push_back(keycode);
-    KeyEvent e = self->keyEvent(keycode, Event::KeyDown);
-    SystemApi::dispatchKeyDown(*self->keyboardFocus->owner, e, keycode);
-    self->startKeyRepeat(keycode);
-    } else {
-    if(std::erase(self->heldKeys, keycode)==0)
-      return;
-    if(keycode==self->repeatKeycode)
-      self->repeatKeycode = 0;
-    KeyEvent e = self->keyEvent(keycode, Event::KeyUp);
-    SystemApi::dispatchKeyUp(*self->keyboardFocus->owner, e, keycode);
-    }
-  }
-
-void WaylandApi::Private::onWlKeyboardModifiers(void* data, [[maybe_unused]] wl_keyboard* keyboard, [[maybe_unused]] uint32_t serial,
-                                                uint32_t depressed, uint32_t latched, uint32_t locked, uint32_t group) {
-  // Not dispatched: Tempest tracks Shift/Ctrl/Alt from the key events itself. xkb needs them for the text of a key
-  // (Shift, CapsLock) and for the active layout ('group').
-  auto self = static_cast<Private*>(data);
-  if(self->xkbState==nullptr)
-    return; // no keymap compiled
-  xkb_state_update_mask(self->xkbState, depressed, latched, locked, 0, 0, group);
-  }
-
-void WaylandApi::Private::onWlKeyboardRepeatInfo(void* data, [[maybe_unused]] wl_keyboard* keyboard, int32_t rate, int32_t delay) {
-  // The desktop setting; rate 0 = repeat disabled.
-  auto self = static_cast<Private*>(data);
-  self->repeatRate  = rate;
-  self->repeatDelay = delay;
-  if(rate<=0)
-    self->repeatKeycode = 0;
-  }
-
-// Window specific listeners
-
-void WaylandApi::Private::onXdgSurfaceConfigure(void* data, [[maybe_unused]] xdg_surface* xdgSurface, uint32_t serial) {
-  // End of configure sequence (after xdg_toplevel.configure etc.): pending becomes current and is acked
-  auto w = static_cast<WWindow*>(data);
-  if(w->pending.width==0 || w->pending.height==0) {
-    // client decides: app requested size needs conversion to logical (KWin sends
-    // preferred_scale before the first configure).
-    w->pending.width  = std::max(1, int32_t(std::lround(float(w->appRequestedWidth) /w->scale())));
-    w->pending.height = std::max(1, int32_t(std::lround(float(w->appRequestedHeight)/w->scale())));
-    }
-  w->width      = w->pending.width;
-  w->height     = w->pending.height;
-  w->fullscreen = w->pending.fullscreen;
-
-  // Viewport state is double-buffered: it applies with the next commit, which Vulkan does in vkQueuePresent.
-  wp_viewport_set_destination(w->viewport, w->width, w->height);
-
-  xdg_surface_ack_configure(w->xdgSurface, serial);
-  w->configured = true;
-  }
-
-void WaylandApi::Private::onXdgToplevelConfigure(void* data, [[maybe_unused]] xdg_toplevel* toplevel, int32_t width, int32_t height, wl_array* states) {
-  // Only fills w->pending; it becomes current in onXdgSurfaceConfigure.
-  auto w = static_cast<WWindow*>(data);
-  // Logical size; 0 = client decides, keep the previous size
-  if(width>0 && height>0) {
-    w->pending.width  = width;
-    w->pending.height = height;
-    }
-  // 'states': the complete list of xdg_toplevel_state values
-  w->pending.fullscreen = false;
-  auto state = static_cast<const uint32_t*>(states->data);
-  for(size_t i=0; i<states->size/sizeof(uint32_t); ++i) {
-    if(state[i]==XDG_TOPLEVEL_STATE_FULLSCREEN)
-      w->pending.fullscreen = true;
-    }
-  }
-
-void WaylandApi::Private::onXdgToplevelClose(void* data, [[maybe_unused]] xdg_toplevel* toplevel) {
-  // Only a request. Like the Windows backend: the app or an overlay may accept the CloseEvent; otherwise exit.
-  auto w = static_cast<WWindow*>(data);
-  if(w->owner==nullptr)
-    return;
-  CloseEvent e;
-  SystemApi::dispatchClose(*w->owner, e);
-  if(!e.isAccepted())
-    SystemApi::exit();
-  }
-
-void WaylandApi::Private::onZxdgToplevelDecorationV1Configure([[maybe_unused]] void* data, [[maybe_unused]] zxdg_toplevel_decoration_v1* decoration, uint32_t mode) {
-  if(mode==ZXDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE)
-    Log::i("WaylandApi: compositor chose client-side decorations; the window is undecorated");
-  }
-
-void WaylandApi::Private::onWpFractionalScaleV1PreferredScale(void* data, [[maybe_unused]] wp_fractional_scale_v1* fractionalScale, uint32_t scale) {
-  auto w = static_cast<WWindow*>(data);
-  w->preferredScale = scale;
-  }
-
-void WaylandApi::Private::onZwpLockedPointerV1Locked(void* data, [[maybe_unused]] zwp_locked_pointer_v1* lockedPointer) {
-  static_cast<WWindow*>(data)->pointerLocked = true;
-  }
-
-void WaylandApi::Private::onZwpLockedPointerV1Unlocked(void* data, [[maybe_unused]] zwp_locked_pointer_v1* lockedPointer) {
-  // E.g. focus lost; the persistent lock may become active again later.
-  static_cast<WWindow*>(data)->pointerLocked = false;
-  }
-
-void WaylandApi::Private::onWlCallbackDone(void* data, wl_callback* callback, [[maybe_unused]] uint32_t time) {
-  // The compositor has shown the content (all callbacks up to it fire together).
-  auto w = static_cast<WWindow*>(data);
-  std::erase(w->frameCallbacks, callback);
-  wl_callback_destroy(callback);
   }
 
 // WaylandApi
