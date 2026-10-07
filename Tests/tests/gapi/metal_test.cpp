@@ -8,14 +8,115 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock-matchers.h>
 
+#include <cmath>
+
 #include "gapi_test_common.h"
 
 using namespace testing;
 using namespace Tempest;
 
+#if defined(__OSX__) || defined(__IOS__)
+namespace {
+
+float unpackUnsignedFloat(uint32_t value, uint32_t mantissaBits) {
+  const uint32_t mantissaMask = (1u << mantissaBits)-1u;
+  const uint32_t mantissa     = value & mantissaMask;
+  const uint32_t exponent     = (value >> mantissaBits) & 0x1Fu;
+  if(exponent==0)
+    return std::ldexp(float(mantissa),-14-int(mantissaBits));
+  return std::ldexp(1.f+float(mantissa)/float(1u << mantissaBits),int(exponent)-15);
+  }
+
+}
+#endif
+
 TEST(MetalApi,MetalApi) {
 #if defined(__OSX__)
   GapiTestCommon::init<MetalApi>();
+#endif
+  }
+
+TEST(MetalApi,SpatialScaler) {
+#if defined(__OSX__) || defined(__IOS__)
+  try {
+    MetalApi api{ApiFlags::Validation};
+    Device   device(api);
+
+    SpatialScalerDesc desc;
+    desc.inputFormat  = TextureFormat::R11G11B10UF;
+    desc.outputFormat = TextureFormat::R11G11B10UF;
+    desc.inputWidth   = 32;
+    desc.inputHeight  = 32;
+    desc.outputWidth  = 64;
+    desc.outputHeight = 64;
+    desc.colorMode    = SpatialScalerColorMode::HDR;
+
+    auto scaler = device.spatialScaler(desc);
+    if(scaler.isEmpty()) {
+      Log::d("Skipping MetalFX spatial scaler testcase: unsupported device or system");
+      return;
+      }
+
+    auto input       = device.attachment(desc.inputFormat,desc.inputWidth,desc.inputHeight);
+    auto output      = device.image2d(desc.outputFormat,desc.outputWidth,desc.outputHeight);
+    auto wrongSize   = device.image2d(desc.outputFormat,desc.outputWidth/2,desc.outputHeight);
+    auto wrongFormat = device.image2d(TextureFormat::RGBA8,desc.outputWidth,desc.outputHeight);
+    auto volume      = device.image3d(desc.outputFormat,desc.outputWidth,desc.outputHeight,1);
+    auto pso         = device.pipeline(device.shader("shader/simple_test.comp.sprv"));
+    auto cmd         = device.commandBuffer();
+
+    const Vec4 colors[] = {Vec4(0.25f,0.5f,0.75f,1.f),Vec4(0.75f,0.25f,0.5f,1.f)};
+    for(const auto& color:colors) {
+      auto source = device.ssbo(&color,sizeof(color));
+      auto middle = device.ssbo(Uninitialized,sizeof(color));
+      auto target = device.ssbo(Uninitialized,sizeof(color));
+      {
+        auto enc = cmd.startEncoding(device);
+        enc.setFramebuffer({{input,color,Tempest::Preserve}});
+        EXPECT_FALSE(enc.spatialUpscale(SpatialScaler(),input,output));
+        EXPECT_FALSE(enc.spatialUpscale(scaler,input,wrongSize));
+        EXPECT_FALSE(enc.spatialUpscale(scaler,input,wrongFormat));
+        EXPECT_FALSE(enc.spatialUpscale(scaler,input,volume));
+
+        enc.setBinding(0,source);
+        enc.setBinding(1,middle);
+        enc.setPipeline(pso);
+        enc.dispatch(1);
+
+        EXPECT_TRUE(enc.spatialUpscale(scaler,input,output));
+
+        enc.setBinding(0,middle);
+        enc.setBinding(1,target);
+        enc.setPipeline(pso);
+        enc.dispatch(1);
+      }
+
+      auto sync = device.submit(cmd);
+      sync.wait();
+
+      Vec4 copied;
+      device.readBytes(target,&copied,sizeof(copied));
+      EXPECT_EQ(copied,color);
+
+      auto result = device.readPixels(output);
+      EXPECT_EQ(result.w(),desc.outputWidth);
+      EXPECT_EQ(result.h(),desc.outputHeight);
+      ASSERT_EQ(result.format(),TextureFormat::R11G11B10UF);
+      ASSERT_EQ(result.dataSize(),size_t(desc.outputWidth)*desc.outputHeight*sizeof(uint32_t));
+
+      const auto* pixels = reinterpret_cast<const uint32_t*>(result.data());
+      for(size_t i=0; i<size_t(result.w())*result.h(); ++i) {
+        ASSERT_NEAR(unpackUnsignedFloat(pixels[i]       & 0x7FFu,6),color.x,0.03f);
+        ASSERT_NEAR(unpackUnsignedFloat(pixels[i] >> 11 & 0x7FFu,6),color.y,0.03f);
+        ASSERT_NEAR(unpackUnsignedFloat(pixels[i] >> 22 & 0x3FFu,5),color.z,0.03f);
+        }
+      }
+    }
+  catch(std::system_error& e) {
+    if(e.code()==Tempest::GraphicsErrc::NoDevice)
+      Log::d("Skipping MetalFX spatial scaler testcase: ", e.what()); else
+      throw;
+    }
 #endif
   }
 

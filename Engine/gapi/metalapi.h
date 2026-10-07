@@ -25,6 +25,7 @@ class MetalApi : public AbstractGraphicsApi {
     PTexture       createTexture(Device* d, const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) override;
     PTexture       createStorage(Device* d, const uint32_t w, const uint32_t h, uint32_t mips, TextureFormat frm) override;
     PTexture       createStorage(Device* d, const uint32_t w, const uint32_t h, const uint32_t depth, uint32_t mips, TextureFormat frm) override;
+    SpatialScaler* createSpatialScaler(Device* d, const SpatialScalerDesc& desc) override;
 
     PRtAs          createBottomAccelerationStruct(Device* d, const RtGeometry* geom, size_t size) override;
     PRtAs          createTopAccelerationStruct(Device* d, const RtInstance* inst, AccelerationStructure*const* as, size_t size) override;
