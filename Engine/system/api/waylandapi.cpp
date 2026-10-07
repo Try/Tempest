@@ -1132,10 +1132,8 @@ void WaylandApi::Private::onZwpLockedPointerV1Unlocked(void* data, [[maybe_unuse
 
 void WaylandApi::Private::onWlCallbackDone(void* data, wl_callback* callback, [[maybe_unused]] uint32_t time) {
   // The compositor has shown the content (all callbacks up to it fire together).
-  auto w  = static_cast<WWindow*>(data);
-  auto it = std::find(w->frameCallbacks.begin(), w->frameCallbacks.end(), callback);
-  if(it!=w->frameCallbacks.end())
-    w->frameCallbacks.erase(it);
+  auto w = static_cast<WWindow*>(data);
+  std::erase(w->frameCallbacks, callback);
   wl_callback_destroy(callback);
   }
 
