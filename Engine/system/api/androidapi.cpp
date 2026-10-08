@@ -18,6 +18,7 @@
 #include <dlfcn.h>
 #include <exception>
 #include <thread>
+#include <vector>
 
 using namespace Tempest;
 
@@ -30,6 +31,12 @@ static bool            resumed    = false;
 static bool            focused    = false;
 static bool            active     = false;
 static bool            hasWindow  = false;
+
+struct TouchPoint {
+  int32_t id = -1;
+  Point   pos;
+  };
+static std::vector<TouchPoint> touches;
 
 std::filesystem::path AndroidApi::internalDataPath() {
   assert(app!=nullptr && app->activity!=nullptr);
@@ -104,9 +111,8 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
     }
   }
 
-int32_t AndroidApi::onInputEvent(AInputEvent* event) {
-  if(mainWindow==nullptr || isExit.load())
-    return 0;
+int32_t AndroidApi::onInputEvent(const void* input) {
+  const auto event = static_cast<const AInputEvent*>(input);
   if(AInputEvent_getType(event)!=AINPUT_EVENT_TYPE_MOTION ||
      (AInputEvent_getSource(event) & AINPUT_SOURCE_TOUCHSCREEN)!=AINPUT_SOURCE_TOUCHSCREEN)
     return 0;
@@ -134,15 +140,36 @@ int32_t AndroidApi::onInputEvent(AInputEvent* event) {
   const bool all = kind==AMOTION_EVENT_ACTION_MOVE || kind==AMOTION_EVENT_ACTION_CANCEL;
   const size_t first = all ? 0 : size_t((action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT);
   const size_t end = all ? AMotionEvent_getPointerCount(event) : first+1;
+  if(kind==AMOTION_EVENT_ACTION_DOWN)
+    touches.clear();
   for(size_t i=first; i<end && mainWindow!=nullptr && !isExit.load(); ++i) {
-    MouseEvent mouse(int(AMotionEvent_getX(event,i)), int(AMotionEvent_getY(event,i)),
-                     Event::ButtonLeft, Event::M_NoModifier, 0, AMotionEvent_getPointerId(event,i), type);
+    const int32_t id = AMotionEvent_getPointerId(event,i);
+    const Point pos(int(AMotionEvent_getX(event,i)), int(AMotionEvent_getY(event,i)));
+    size_t slot = 0;
+    while(slot<touches.size() && touches[slot].id!=id)
+      ++slot;
+    if(type==Event::MouseDown && slot==touches.size()) {
+      slot = 0;
+      while(slot<touches.size() && touches[slot].id!=-1)
+        ++slot;
+      if(slot==touches.size())
+        touches.emplace_back();
+      touches[slot].id = id;
+      }
+    if(slot==touches.size())
+      continue;
+    if(type==Event::MouseMove && touches[slot].pos==pos)
+      continue;
+    touches[slot].pos = pos;
+    if(type==Event::MouseUp)
+      touches[slot].id = -1;
+    MouseEvent mouse(pos.x, pos.y, Event::ButtonLeft, Event::M_NoModifier, 0, uint32_t(slot), type);
     if(type==Event::MouseDown)
-      dispatchMouseDown(*mainWindow,mouse);
+      SystemApi::dispatchMouseDown(*mainWindow,mouse);
     else if(type==Event::MouseUp)
-      dispatchMouseUp(*mainWindow,mouse);
+      SystemApi::dispatchMouseUp(*mainWindow,mouse);
     else
-      dispatchMouseMove(*mainWindow,mouse);
+      SystemApi::dispatchMouseMove(*mainWindow,mouse);
     }
   return 1;
   }
@@ -184,6 +211,7 @@ SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, ShowMode
 void AndroidApi::implDestroyWindow(SystemApi::Window* w) {
   ANativeWindow_release(reinterpret_cast<ANativeWindow*>(w));
   mainWindow = nullptr;
+  touches.clear();
   }
 
 void AndroidApi::implExit() {
