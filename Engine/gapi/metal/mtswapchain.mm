@@ -63,6 +63,15 @@ struct MtSwapchain::Impl {
     }
   };
 
+MtSwapchainImage::MtSwapchainImage(MtDevice& device, CA::MetalDrawable* drawable)
+  :SwapchainImage(device,uint32_t(drawable->texture()->width()),uint32_t(drawable->texture()->height())),
+   drawable(drawable) {
+  drawable->retain();
+  }
+
+MtSwapchainImage::~MtSwapchainImage() {
+  }
+
 static float backingScaleFactor(SysWindow* w) {
 #if defined(__OSX__)
   return [w screen].backingScaleFactor;
@@ -93,7 +102,7 @@ static CGRect windowRect(UIWindow* wnd) {
 
 // note : MoltenVK supports NSView, UIView, CAMetalLayer, so we should align to it
 MtSwapchain::MtSwapchain(MtDevice& dev, SystemApi::Window *w)
-  :dev(dev), pimpl(new Impl()) {
+  :pimpl(new Impl()), dev(dev) {
   NSObject* obj = reinterpret_cast<NSObject*>(w);
   if([obj isKindOfClass : [SysWindow class]])
     pimpl->wnd = reinterpret_cast<SysWindow*>(w);
@@ -127,13 +136,14 @@ MtSwapchain::MtSwapchain(MtDevice& dev, SystemApi::Window *w)
   }
 
 MtSwapchain::~MtSwapchain() {
+  dev.waitIdle();
   if(pimpl->view!=nil)
     [pimpl->view release];
   }
 
 void MtSwapchain::reset() {
   dev.waitIdle(); // pending commands
-  std::lock_guard<SpinLock> guard(sync);
+  std::lock_guard<std::mutex> guard(sync);
 
   // https://developer.apple.com/documentation/quartzcore/cametallayer?language=objc
   CAMetalLayer* lay = pimpl->metalLayer();
@@ -146,8 +156,6 @@ void MtSwapchain::reset() {
   img.resize(imgCount);
   for(size_t i=0; i<imgCount; ++i)
     img[i].tex = nullptr;
-  for(size_t i=0; i<imgCount; ++i)
-    img[i].tex = mkTexture();
 
   currentImg = 0;
   }
@@ -156,18 +164,54 @@ uint32_t MtSwapchain::currentBackBufferIndex() {
   return currentImg;
   }
 
+AbstractGraphicsApi::PSwapchainImage MtSwapchain::next() {
+  std::lock_guard<std::mutex> guard(sync);
+  if(sz.w<=0 || sz.h<=0)
+    throw SwapchainSuboptimal();
+  auto pool = NsPtr<NS::AutoreleasePool>::init();
+  auto* layer = reinterpret_cast<CA::MetalLayer*>(pimpl->metalLayer());
+  pimpl->metalLayer().allowsNextDrawableTimeout = YES;
+  auto* drawable = layer->nextDrawable();
+  if(drawable==nullptr || drawable->texture()->width()!=size_t(sz.w) || drawable->texture()->height()!=size_t(sz.h))
+    throw SwapchainSuboptimal();
+  return AbstractGraphicsApi::PSwapchainImage(new MtSwapchainImage(dev,drawable));
+  }
+
+MTL::Texture* MtSwapchain::image(uint32_t id) {
+  // Keep private textures only for callers of the indexed swapchain API.
+  if(img[id].tex==nullptr)
+    img[id].tex = mkTexture();
+  return img[id].tex.get();
+  }
+
+void MtSwapchain::present(MtDevice& device, MtSwapchainImage& image) {
+  auto pool = NsPtr<NS::AutoreleasePool>::init();
+  auto cmd = device.queue->commandBuffer();
+  cmd->presentDrawable(image.drawable.get());
+  auto* dev = &device;
+  dev->onSubmit();
+  cmd->addCompletedHandler(^(MTL::CommandBuffer* c){
+    if(c->status()!=MTL::CommandBufferStatusCompleted)
+      Log::e("swapchain fatal error");
+    dev->onFinish();
+    });
+  cmd->commit();
+  }
+
 void MtSwapchain::present() {
   auto pool = NsPtr<NS::AutoreleasePool>::init();
   
   CA::MetalLayer* lay      = reinterpret_cast<CA::MetalLayer*>(pimpl->metalLayer());
   uint32_t        i        = currentImg;
+  pimpl->metalLayer().allowsNextDrawableTimeout = NO;
   auto            drawable = lay->nextDrawable();
   if(drawable==nullptr)
     throw SwapchainSuboptimal();
   
-  std::lock_guard<SpinLock> guard(sync);
+  std::lock_guard<std::mutex> guard(sync);
+  auto src = image(i);
   auto dr = drawable->texture();
-  if(dr->width()!=img[i].tex->width() || dr->height()!=img[i].tex->height()) {
+  if(dr->width()!=src->width() || dr->height()!=src->height()) {
     throw SwapchainSuboptimal();
     }
   
@@ -178,29 +222,18 @@ void MtSwapchain::present() {
   auto cmd = dev.queue->commandBuffer(desc.get());
   auto enc = cmd->blitCommandEncoder();
   
-  enc->copyFromTexture(img[i].tex.get(), 0, 0,
+  enc->copyFromTexture(src, 0, 0,
                        dr, 0, 0,
                        1, 1);
   enc->endEncoding();
   cmd->presentDrawable(drawable);
 
+  auto* device = &dev;
   dev.onSubmit();
   cmd->addCompletedHandler(^(MTL::CommandBuffer* c){
-    MTL::CommandBufferStatus s = c->status();
-    if(s==MTL::CommandBufferStatusNotEnqueued ||
-       s==MTL::CommandBufferStatusEnqueued ||
-       s==MTL::CommandBufferStatusCommitted ||
-       s==MTL::CommandBufferStatusScheduled)
-      return;
-
-    if(s!=MTL::CommandBufferStatusCompleted) {
+    if(c->status()!=MTL::CommandBufferStatusCompleted)
       Log::e("swapchain fatal error");
-      dev.onFinish();
-      dev.waitIdle();
-      return;
-      }
-
-    dev.onFinish();
+    device->onFinish();
     });
   cmd->commit();
 

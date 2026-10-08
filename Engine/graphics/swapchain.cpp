@@ -44,6 +44,10 @@ void Swapchain::reset() {
   implReset();
   }
 
+Attachment Swapchain::next() {
+  return Attachment(impl.handler->next());
+  }
+
 uint32_t Swapchain::imageCount() const {
   return impl.handler->imageCount();
   }

@@ -10,6 +10,7 @@
 #include "mttexture.h"
 #include "mtswapchain.h"
 #include "mtaccelerationstructure.h"
+#include <QuartzCore/QuartzCore.hpp>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
@@ -65,6 +66,7 @@ void MtCommandBuffer::end() {
   }
 
 void MtCommandBuffer::reset() {
+  swapchainImages.clear();
   auto pool = NsPtr<NS::AutoreleasePool>::init();
   auto desc = NsPtr<MTL::CommandBufferDescriptor>::init();
   desc->setRetainedReferences(false);
@@ -92,9 +94,19 @@ void MtCommandBuffer::beginRendering(const FrameBufferDesc& fbo, size_t fboSize,
       continue;
       }
     auto clr = desc->colorAttachments()->object(i);
-    if(fbo.sw[i]!=nullptr) {
+    if(fbo.image[i]!=nullptr) {
+      auto& image = *static_cast<MtSwapchainImage*>(fbo.image[i]);
+      if(&image.device!=&device)
+        throw std::system_error(GraphicsErrc::InvalidTexture);
+      auto* texture = image.drawable->texture();
+      clr->setTexture(texture);
+      curFbo.colorFormat[curFbo.numColors] = texture->pixelFormat();
+      auto found = std::find_if(swapchainImages.begin(),swapchainImages.end(),[&](const auto& i){ return i.handler==&image; });
+      if(found==swapchainImages.end())
+        swapchainImages.emplace_back(&image);
+      } else if(fbo.sw[i]!=nullptr) {
       auto& s = *reinterpret_cast<MtSwapchain*>(fbo.sw[i]);
-      clr->setTexture(s.img[fbo.imgId[i]].tex.get());
+      clr->setTexture(s.image(fbo.imgId[i]));
       curFbo.colorFormat[curFbo.numColors] = s.format();
       } else {
       auto& t = *reinterpret_cast<MtTexture*>(fbo.att[i]);

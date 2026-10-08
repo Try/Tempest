@@ -87,6 +87,12 @@ void Device::present(Swapchain& sw) {
   api.present(dev,sw.impl.handler);
   }
 
+void Device::present(Attachment image) {
+  if(!image.pImpl || &image.pImpl.handler->device!=dev)
+    throw std::system_error(GraphicsErrc::InvalidTexture);
+  api.present(dev,image.pImpl.handler);
+  }
+
 Shader Device::shader(RFile &file) {
   const size_t fileSize=file.size();
 

@@ -131,3 +131,11 @@ std::shared_ptr<AbstractGraphicsApi::Fence> AbstractGraphicsApi::submit(Device* 
 NonUniqResId AbstractGraphicsApi::Swapchain::syncId() const {
   return NonUniqResId(0x1);
   }
+
+AbstractGraphicsApi::PSwapchainImage AbstractGraphicsApi::Swapchain::next() {
+  throw std::system_error(GraphicsErrc::UnsupportedExtension);
+  }
+
+void AbstractGraphicsApi::present(Device*, SwapchainImage*) {
+  throw std::system_error(GraphicsErrc::UnsupportedExtension);
+  }
