@@ -38,6 +38,28 @@ struct TouchPoint {
   };
 static std::vector<TouchPoint> touches;
 
+static int32_t updateTouch(int32_t id, Point pos, Event::Type type) {
+  size_t slot = 0;
+  while(slot<touches.size() && touches[slot].id!=id)
+    ++slot;
+  if(type==Event::MouseDown && slot==touches.size()) {
+    slot = 0;
+    while(slot<touches.size() && touches[slot].id!=-1)
+      ++slot;
+    if(slot==touches.size())
+      touches.emplace_back();
+    touches[slot].id = id;
+    }
+  if(slot==touches.size())
+    return -1;
+  if(type==Event::MouseMove && touches[slot].pos==pos)
+    return -1;
+  touches[slot].pos = pos;
+  if(type==Event::MouseUp)
+    touches[slot].id = -1;
+  return int32_t(slot);
+  }
+
 std::filesystem::path AndroidApi::internalDataPath() {
   assert(app!=nullptr && app->activity!=nullptr);
   return app->activity->internalDataPath;
@@ -145,24 +167,9 @@ int32_t AndroidApi::onInputEvent(const void* input) {
   for(size_t i=first; i<end && mainWindow!=nullptr && !isExit.load(); ++i) {
     const int32_t id = AMotionEvent_getPointerId(event,i);
     const Point pos(int(AMotionEvent_getX(event,i)), int(AMotionEvent_getY(event,i)));
-    size_t slot = 0;
-    while(slot<touches.size() && touches[slot].id!=id)
-      ++slot;
-    if(type==Event::MouseDown && slot==touches.size()) {
-      slot = 0;
-      while(slot<touches.size() && touches[slot].id!=-1)
-        ++slot;
-      if(slot==touches.size())
-        touches.emplace_back();
-      touches[slot].id = id;
-      }
-    if(slot==touches.size())
+    const int32_t slot = updateTouch(id,pos,type);
+    if(slot<0)
       continue;
-    if(type==Event::MouseMove && touches[slot].pos==pos)
-      continue;
-    touches[slot].pos = pos;
-    if(type==Event::MouseUp)
-      touches[slot].id = -1;
     MouseEvent mouse(pos.x, pos.y, Event::ButtonLeft, Event::M_NoModifier, 0, uint32_t(slot), type);
     if(type==Event::MouseDown)
       SystemApi::dispatchMouseDown(*mainWindow,mouse);
