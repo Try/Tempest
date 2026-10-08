@@ -93,12 +93,21 @@ void AbstractGraphicsApi::CommandBuffer::dispatchMeshIndirect(const Buffer& indi
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }
 
+bool AbstractGraphicsApi::CommandBuffer::spatialUpscale(SpatialScaler&, Texture&, Texture&) {
+  return false;
+  }
+
 AbstractGraphicsApi::PRtAs AbstractGraphicsApi::createBottomAccelerationStruct(Device* d, const RtGeometry* geom, size_t geomSize) {
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
   }
 
 AbstractGraphicsApi::PRtAs AbstractGraphicsApi::createTopAccelerationStruct(Device* d, const RtInstance* geom, AccelerationStructure*const* as, size_t geomSize) {
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
+  }
+
+AbstractGraphicsApi::SpatialScaler*
+  AbstractGraphicsApi::createSpatialScaler(Device*, const SpatialScalerDesc&) {
+  return nullptr;
   }
 
 bool Detail::Bindings::operator ==(const Bindings &other) const {

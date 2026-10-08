@@ -7,6 +7,7 @@
 #include <Tempest/DescriptorArray>
 #include <Tempest/UniformBuffer>
 #include <Tempest/AccelerationStructure>
+#include <Tempest/SpatialScaler>
 
 namespace Tempest {
 
@@ -118,6 +119,11 @@ class Encoder<Tempest::CommandBuffer> {
     void copy(const Texture2d&  src, uint32_t mip, StorageBuffer& dest, size_t offset);
 
     void generateMipmaps(Attachment& tex);
+
+    // Returns false when the scaler or textures are unsupported.
+    // The scaler and textures must belong to this device; encode from one thread at a time.
+    // Keep them alive until the GPU finishes using them.
+    bool spatialUpscale(const SpatialScaler& scaler, const Attachment& input, StorageImage& output);
 
   private:
     explicit Encoder(CommandBuffer* ow);
