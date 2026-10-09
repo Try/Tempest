@@ -36,8 +36,13 @@ class Window : public Widget {
     // app defaults. Has no effect on platforms without orientation support.
     void setAllowedOrientations(Orientation orientations);
 
+    // Insets in window pixel coordinates. Zero on platforms without safe areas.
+    // These do not change the window's size or its widget margins.
+    Margin safeAreaMargins() const;
+
   protected:
     virtual void render();
+    virtual void safeAreaEvent();
     using        Widget::dispatchPaintEvent;
     void         dispatchPaintEvent(VectorImage &e,TextureAtlas &ta);
     void         closeEvent       (Tempest::CloseEvent& event) override;
