@@ -162,9 +162,6 @@ struct WaylandApi::Private {
   // WWindow* if a window gained focus during active readEvents() batch, otherwise nullptr (for focus click filter)
   WWindow*                        focusGainedInBatch     = nullptr;
 
-  // Longest sleep in poll() while no window may render; short enough to keep Tempest's timers accurate.
-  static constexpr int            idlePollTimeoutMs      = 5;
-
   std::vector<std::unique_ptr<WWindow>> windows; // owns the windows; each WWindow keeps its address (handle, listener data)
 
   // Session listeners (globals and seat devices). 'data' is Private*.
@@ -712,7 +709,7 @@ const zwp_locked_pointer_v1_listener WaylandApi::Private::zwpLockedPointerV1List
 
 ////
 ///     HELPERS
-// TODO(wayland): resume here with review
+//
 
 template<class T>
 void WaylandApi::Private::ioDestroy(T*& obj, void (*destroyFn)(T*)) {
@@ -775,7 +772,7 @@ KeyEvent WaylandApi::Private::keyEvent(uint32_t keycode, Event::Type type) const
   const xkb_layout_index_t layout = xkb_state_key_get_layout(xkbState, keycode);
   const xkb_keysym_t*      syms   = nullptr;
   const int                count  = xkb_keymap_key_get_syms_by_level(xkbKeymap, keycode, layout, 0, &syms);
-  const xkb_keysym_t       sym    = count>0 ? syms[0] : XKB_KEY_NoSymbol;
+  const xkb_keysym_t       sym    = count>0 ? syms[0] : XKB_KEY_NoSymbol; // choose first available
   const auto               key    = Event::KeyType(SystemApi::translateKey(sym));
 
   // Only characters up to U+FFFF (Basic Multilingual Plane): Tempest's text input can't hold more.
@@ -808,7 +805,7 @@ void WaylandApi::Private::setPointerLock(WWindow& w, bool lock) {
 
 void WaylandApi::Private::releaseHeldKeys(WWindow& w) {
   repeatKeycode = 0;
-  auto keys = std::move(heldKeys);
+  auto keys = std::move(heldKeys); // save from manipulation
   heldKeys.clear();
   if(w.owner==nullptr)
     return;
@@ -819,7 +816,7 @@ void WaylandApi::Private::releaseHeldKeys(WWindow& w) {
   }
 
 void WaylandApi::Private::releaseHeldButtons(WWindow& w) {
-  auto buttons = std::move(heldButtons);
+  auto buttons = std::move(heldButtons); // save from manipulation
   heldButtons.clear();
   if(w.owner==nullptr)
     return;
@@ -1087,6 +1084,9 @@ void WaylandApi::Private::handleConnectionError() {
 int WaylandApi::Private::pollTimeout() const {
   // 0 if a window may render; otherwise wait for the compositor (e.g. a frame callback),
   // at most idlePollTimeoutMs, and not beyond the next scheduled key repeat
+
+  // Longest sleep in poll() while no window may render; short enough to keep Tempest's timers accurate.
+  constexpr int idlePollTimeoutMs = 5;
   const bool canRender = std::any_of(windows.begin(), windows.end(),
                                      [](const std::unique_ptr<WWindow>& w) { return w->readyToRender(); });
   int timeout = canRender ? 0 : idlePollTimeoutMs;
@@ -1155,7 +1155,7 @@ void WaylandApi::Private::renderWindows() {
 
 ////
 ///     WAYLAND API
-//
+// TODO(wayland): continue final review from here!
 
 WaylandApi::WaylandApi() {
   // Same table as X11: XKB keysyms have the values of X11's keysyms. Letters, digits and F-keys are ranges
