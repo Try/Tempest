@@ -32,9 +32,6 @@
 #include "pointer-constraints-unstable-v1-client-protocol.h"
 #include "relative-pointer-unstable-v1-client-protocol.h"
 
-// useful to silence Wayland listener stubs
-#define IO_WL_STUB_QUIET(Name) .Name = [](auto...) {}
-
 using namespace Tempest;
 
 static wl_display*      dpy = nullptr; // non-null while Wayland is the active backend, written only by constructor/destructor
@@ -218,6 +215,8 @@ struct WaylandApi::Private {
   static const wl_callback_listener                 wlCallbackListener;
 
   // Helpers
+
+  static constexpr auto                  ioIgnore = [](auto...) {}; // useful to silence Wayland listener stubs
   template<class T> static void          ioDestroy(T*& obj, void (*destroyFn)(T*));
   void                                   logDisplayError() const;
   static Event::MouseButton              toButton(uint32_t button);
@@ -645,14 +644,14 @@ void WaylandApi::Private::onWlCallbackDone(void* data, wl_callback* callback, [[
 //
 const wl_registry_listener WaylandApi::Private::wlRegistryListener = {
   .global          = onWlRegistryGlobal,
-  IO_WL_STUB_QUIET(global_remove),
+  .global_remove   = ioIgnore,
   };
 const xdg_wm_base_listener WaylandApi::Private::xdgWmBaseListener = {
   .ping            = onXdgWmBasePing,
   };
 const wl_seat_listener WaylandApi::Private::wlSeatListener = {
   .capabilities    = onWlSeatCapabilities,
-  IO_WL_STUB_QUIET(name),
+  .name            = ioIgnore,
   };
 const wl_pointer_listener WaylandApi::Private::wlPointerListener = {
   .enter           = onWlPointerEnter,
@@ -660,11 +659,11 @@ const wl_pointer_listener WaylandApi::Private::wlPointerListener = {
   .motion          = onWlPointerMotion,
   .button          = onWlPointerButton,
   // TODO(wayland): touchpad scrolling: continuous axis events (axis_source finger) come without axis_value120
-  IO_WL_STUB_QUIET(axis),
-  IO_WL_STUB_QUIET(frame),
-  IO_WL_STUB_QUIET(axis_source),
-  IO_WL_STUB_QUIET(axis_stop),
-  IO_WL_STUB_QUIET(axis_discrete), // not sent since v8 (replaced by axis_value120)
+  .axis            = ioIgnore,
+  .frame           = ioIgnore,
+  .axis_source     = ioIgnore,
+  .axis_stop       = ioIgnore,
+  .axis_discrete   = ioIgnore, // not sent since v8 (replaced by axis_value120)
   .axis_value120   = onWlPointerAxisValue120,
   // axis_relative_direction (only v9+)
   };
@@ -684,31 +683,31 @@ const wl_keyboard_listener WaylandApi::Private::wlKeyboardListener = {
 //
 const wl_surface_listener WaylandApi::Private::wlSurfaceListener = {
   // Outputs and buffer scale hints; the scale comes from wp_fractional_scale_v1.
-  IO_WL_STUB_QUIET(enter),
-  IO_WL_STUB_QUIET(leave),
-  IO_WL_STUB_QUIET(preferred_buffer_scale),
-  IO_WL_STUB_QUIET(preferred_buffer_transform),
+  .enter                      = ioIgnore,
+  .leave                      = ioIgnore,
+  .preferred_buffer_scale     = ioIgnore,
+  .preferred_buffer_transform = ioIgnore,
   };
 const xdg_surface_listener WaylandApi::Private::xdgSurfaceListener = {
-  .configure       = onXdgSurfaceConfigure,
+  .configure                  = onXdgSurfaceConfigure,
   };
 const xdg_toplevel_listener WaylandApi::Private::xdgToplevelListener = {
-  .configure       = onXdgToplevelConfigure,
-  .close           = onXdgToplevelClose,
+  .configure                  = onXdgToplevelConfigure,
+  .close                      = onXdgToplevelClose,
   };
 const zxdg_toplevel_decoration_v1_listener WaylandApi::Private::zxdgToplevelDecorationV1Listener = {
-  .configure       = onZxdgToplevelDecorationV1Configure,
+  .configure                  = onZxdgToplevelDecorationV1Configure,
   };
 const wp_fractional_scale_v1_listener WaylandApi::Private::wpFractionalScaleV1Listener = {
-  .preferred_scale = onWpFractionalScaleV1PreferredScale,
+  .preferred_scale            = onWpFractionalScaleV1PreferredScale,
   };
 const zwp_locked_pointer_v1_listener WaylandApi::Private::zwpLockedPointerV1Listener = {
-  .locked          = onZwpLockedPointerV1Locked,
-  .unlocked        = onZwpLockedPointerV1Unlocked,
+  .locked                     = onZwpLockedPointerV1Locked,
+  .unlocked                   = onZwpLockedPointerV1Unlocked,
   };
   const wl_callback_listener WaylandApi::Private::wlCallbackListener = {
   // Frame callbacks (wl_surface.frame)
-  .done = onWlCallbackDone,
+  .done                       = onWlCallbackDone,
   };
 
 ////
