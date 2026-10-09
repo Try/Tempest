@@ -8,6 +8,7 @@
 #import  <UIKit/UIKit.h>
 #include <string>
 #include <thread>
+#include <cmath>
 #include <TargetConditionals.h>
 
 #include <Tempest/Window>
@@ -249,7 +250,9 @@ static void discardPendingEvent(TempestWindow* window) {
   window->curentEvent = Event::NoEvent;
   }
 
-@interface ViewController:UIViewController{}
+@interface ViewController:UIViewController {
+  @public bool safeAreaChanged;
+  }
 -(id)init;
 -(void)setAllowedOrientations:(UIInterfaceOrientationMask)mask;
 @end
@@ -280,6 +283,12 @@ static void discardPendingEvent(TempestWindow* window) {
   //[self setNeedsStatusBarAppearanceUpdate];
   //self.navigationController.isNavigationBarHidden = YES;
   //[self.navigationController setNavigationBarHidden: YES animated:YES];
+  }
+
+- (void)viewSafeAreaInsetsDidChange {
+  [super viewSafeAreaInsetsDidChange];
+  // Deliver on the engine stack, after UIKit has finished updating the view.
+  safeAreaChanged = true;
   }
 
 - (BOOL)prefersStatusBarHidden {
@@ -574,6 +583,19 @@ bool iOSApi::implSetAsFullscreen(Window* w, bool fullScreen) {
   return [ctrl setAsFullscreen: fullScreen];
   }
 
+Margin iOSApi::implWindowSafeAreaMargins(Window* w) {
+  auto wx = reinterpret_cast<TempestWindow*>(w);
+  const auto insets = wx.rootViewController.view.safeAreaInsets;
+  const auto scale  = wx.contentScaleFactor;
+  return Margin(int(std::ceil(insets.left*scale)), int(std::ceil(insets.right*scale)),
+                int(std::ceil(insets.top*scale)),  int(std::ceil(insets.bottom*scale)));
+  }
+
+float iOSApi::implUiScale(Window* w) {
+  auto wx = reinterpret_cast<TempestWindow*>(w);
+  return float(wx.contentScaleFactor);
+  }
+
 bool iOSApi::implIsFullscreen(Window* w) {
   auto wx = reinterpret_cast<TempestWindow*>(w);
   ViewController* ctrl = reinterpret_cast<ViewController*>(wx.rootViewController);
@@ -643,12 +665,19 @@ void iOSApi::implProcessEvents(AppCallBack& cb) {
           iOSApi::dispatchMouseUp(wnd, evt);
         break;
         }
-      default:
+      default: {
+        auto ctrl = (ViewController*)mainWindow.rootViewController;
+        if(ctrl->safeAreaChanged) {
+          ctrl->safeAreaChanged = false;
+          iOSApi::dispatchSafeArea(wnd);
+          break;
+          }
         if(isApplicationActive && mainWindow->hasPendingFrame.load()) {
           mainWindow->hasPendingFrame.store(false);
           iOSApi::dispatchRender(wnd);
           }
         break;
+        }
       }
     }
   swapContext();

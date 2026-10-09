@@ -3,6 +3,7 @@
 #include <Tempest/Platform>
 #include <Tempest/Rect>
 #include <Tempest/WidgetState>
+#include <Tempest/SizePolicy>
 
 #include <memory>
 #include <cstdint>
@@ -55,6 +56,7 @@ class SystemApi {
     static void     exit();
 
     static Rect     windowClientRect(SystemApi::Window *w);
+    static Margin   windowSafeAreaMargins(SystemApi::Window *w);
 
     static bool     setAsFullscreen(SystemApi::Window *w, bool fullScreen);
     static bool     isFullscreen(SystemApi::Window *w);
@@ -82,6 +84,7 @@ class SystemApi {
     virtual void     implExit() = 0;
 
     virtual Rect     implWindowClientRect(SystemApi::Window *w) = 0;
+    virtual Margin   implWindowSafeAreaMargins(SystemApi::Window *w);
 
     virtual bool     implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) = 0;
     virtual bool     implIsFullscreen(SystemApi::Window *w) = 0;
@@ -113,6 +116,7 @@ class SystemApi {
     static void      dispatchKeyUp     (Tempest::Window& cb, KeyEvent& e, uint32_t scancode);
 
     static void      dispatchResize    (Tempest::Window& cb, SizeEvent& e);
+    static void      dispatchSafeArea  (Tempest::Window& cb);
     static void      dispatchClose     (Tempest::Window& cb, CloseEvent& e);
 
     static void      dispatchFocus     (Tempest::Window& cb, FocusEvent& e);

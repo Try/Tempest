@@ -38,6 +38,13 @@ void Window::setAllowedOrientations(Orientation orientations) {
 void Window::render() {
   }
 
+Margin Window::safeAreaMargins() const {
+  return SystemApi::windowSafeAreaMargins(hwnd());
+  }
+
+void Window::safeAreaEvent() {
+  }
+
 void Window::dispatchPaintEvent(VectorImage &surface,TextureAtlas& ta) {
   surface.clear();
 
