@@ -1126,8 +1126,12 @@ void WaylandApi::Private::readEvents() {
     wl_display_cancel_read(display);
     }
 
-  if(wl_display_dispatch_pending(display)<0)
+  if(wl_display_dispatch_pending(display)<0) {
     handleConnectionError();
+    return;
+    }
+
+  processKeyRepeat(); // synthetic key events
   }
 
 void WaylandApi::Private::updateState(WWindow& w) {
@@ -1155,7 +1159,7 @@ void WaylandApi::Private::renderWindows() {
 
 ////
 ///     WAYLAND API
-// TODO(wayland): continue final review from here!
+//
 
 WaylandApi::WaylandApi() {
   // Same table as X11: XKB keysyms have the values of X11's keysyms. Letters, digits and F-keys are ranges
@@ -1346,7 +1350,6 @@ void WaylandApi::implProcessEvents(SystemApi::AppCallBack& cb) {
   // Unlike X11, handles all pending events and then renders, so a steady stream of events can't starve rendering.
   // readEvents() only waits while no window may render (see pollTimeout()).
   impl->readEvents();
-  impl->processKeyRepeat();
   if(cb.onTimer()==0)
     std::this_thread::yield();
   impl->renderWindows();
