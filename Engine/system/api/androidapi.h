@@ -15,6 +15,8 @@ class AndroidApi final : SystemApi {
 
     static Window* createAndroidWindow(Tempest::Window* owner);
     static void onAppCmd(void* app, int32_t cmd);
+    static int32_t onInputEvent(const void* event);
+    static void dispatchTouches();
     static void updateFocus();
     static void updateWindow();
 
