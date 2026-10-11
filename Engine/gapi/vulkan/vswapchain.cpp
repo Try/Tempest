@@ -624,9 +624,9 @@ void VSwapchain::present() {
   slot.acquire = VK_NULL_HANDLE;
 
 #if defined(__UNIX__) && defined(TEMPEST_BUILD_WAYLAND)
-  // Frame callback gates render speed (e.g. minimize detect)
+  // Frame callback pauses rendering while compositor doesn't show window (e.g. minimized)
   // needs WSI driver to commit messages -> only request on guaranteed present call
-  WaylandApi::preparePresent(hwnd, imageList.size()-1);
+  WaylandApi::preparePresent(hwnd);
 #endif
 
   auto tx = Application::tickCount();

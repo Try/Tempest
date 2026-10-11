@@ -15,9 +15,9 @@ class WaylandApi final: SystemApi {
     static wl_display* display();
     static wl_surface* surface(SystemApi::Window* w);
 
-    // Frame callback gates render speed (e.g. minimize detect)
+    // Frame callback pauses rendering while compositor doesn't show window (e.g. minimized)
     // needs WSI driver (vkQueuePresentKHR) to commit messages -> only request on guaranteed present call
-    static void        preparePresent(SystemApi::Window* w, uint32_t maxFramesAhead);
+    static void        preparePresent(SystemApi::Window* w);
     // sync if vkQueuePresentKHR failed and may not have committed
     static void        presentFailed(SystemApi::Window* w);
 

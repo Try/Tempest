@@ -73,10 +73,12 @@ struct WWindow {
   int32_t  dispatchedWidth  = 0; // physical
   int32_t  dispatchedHeight = 0;
 
-  // One frame callback per present, kept until the compositor has shown it: their number is how many presents it
-  // hasn't shown yet. Rendering pauses at maxFramesAhead (e.g. while minimized). maxFramesAhead comes from the swapchain.
-  std::vector<wl_callback*> frameCallbacks;
-  uint32_t                  maxFramesAhead = 0;
+  // Frame callback of a present the compositor hasn't shown yet, and when it was requested. Rendering pauses while
+  // it's overdue: the compositor doesn't show the window (e.g. minimized). The swapchain paces visible windows.
+  wl_callback*                          frameCallback = nullptr;
+  std::chrono::steady_clock::time_point frameRequestedTimepoint;
+  // Far longer than a refresh of a visible window, short enough that a hidden one stops after a few presents.
+  static constexpr std::chrono::milliseconds frameCallbackTimeout{100};
 
   // Pointer lock for mouse-look, requested while the window's cursor is hidden (see Private::setPointerLock).
   zwp_locked_pointer_v1* lockedPointer = nullptr;
@@ -87,7 +89,8 @@ struct WWindow {
   double                 cursorX       = 0; // physical
   double                 cursorY       = 0;
 
-  bool    readyToRender() const  { return owner!=nullptr && configured && (frameCallbacks.empty() || frameCallbacks.size()<maxFramesAhead); }
+  bool    readyToRender() const  { return owner!=nullptr && configured && !isFrameOverdue(); }
+  bool    isFrameOverdue() const { return frameCallback!=nullptr && std::chrono::steady_clock::now()-frameRequestedTimepoint>frameCallbackTimeout; }
 
   float   scale() const          { return float(preferredScale)/120.f; }
   // Physical size, as Tempest sees it (client rect, resize events, swapchain extent). Rounded half up as fractional-scale
@@ -627,9 +630,9 @@ void WaylandApi::Private::onZwpLockedPointerV1Unlocked(void* data, [[maybe_unuse
   static_cast<WWindow*>(data)->pointerLocked = false;
   }
 void WaylandApi::Private::onWlCallbackDone(void* data, wl_callback* callback, [[maybe_unused]] uint32_t time) {
-  // The compositor has shown the content (all callbacks up to it fire together).
+  // The compositor has shown the content.
   auto w = static_cast<WWindow*>(data);
-  std::erase(w->frameCallbacks, callback);
+  w->frameCallback = nullptr;
   wl_callback_destroy(callback);
   }
 
@@ -1056,9 +1059,7 @@ void WaylandApi::Private::destroyWindow(WWindow* w) {
   if(focusGainedInBatch==w)
     focusGainedInBatch = nullptr;
 
-  for(auto cb:w->frameCallbacks)
-    wl_callback_destroy(cb);
-  w->frameCallbacks.clear();
+  ioDestroy(w->frameCallback, wl_callback_destroy);
   setPointerLock(*w, false); // created for the wl_surface
   ioDestroy(w->fractionalScale, wp_fractional_scale_v1_destroy);
   ioDestroy(w->viewport,        wp_viewport_destroy);
@@ -1147,8 +1148,7 @@ void WaylandApi::Private::updateState(WWindow& w) {
   }
 
 void WaylandApi::Private::renderWindows() {
-  // Skips windows waiting for frame callbacks: nothing is drawn while hidden, and we never present into a FIFO
-  // swapchain the compositor doesn't consume (could block forever).
+  // Skips windows whose frame callback is overdue: nothing is drawn while hidden.
   for(auto& w:windows) {
     if(!w->readyToRender())
       continue;
@@ -1226,21 +1226,19 @@ wl_surface* WaylandApi::surface(SystemApi::Window* w) {
   return toWWindow(w)->surface;
   }
 
-void WaylandApi::preparePresent(SystemApi::Window* w, uint32_t maxFramesAhead) {
+void WaylandApi::preparePresent(SystemApi::Window* w) {
   // The frame request is double-buffered wl_surface state, sent by the driver's commit in vkQueuePresentKHR. Requested
   // here, so every request gets a commit: a render without a present can't leave the window waiting forever.
   // Note: Since this can be called without a Wayland API active, we need to be extra careful
   if(dpy==nullptr || w==nullptr)
     return;
   auto ww = toWWindow(w);
-  if(ww->maxFramesAhead!=maxFramesAhead) {
-    ww->maxFramesAhead = maxFramesAhead;
-    Log::i("WaylandApi: up to ", maxFramesAhead, " presents ahead of the compositor");
-    }
-  // Always a new callback, even if the list is full: one per present keeps the count exact.
-  auto cb = wl_surface_frame(ww->surface);
-  wl_callback_add_listener(cb, &Private::wlCallbackListener, ww);
-  ww->frameCallbacks.push_back(cb);
+  // No new request while callback still pending
+  if(ww->frameCallback!=nullptr)
+    return;
+  ww->frameCallback           = wl_surface_frame(ww->surface);
+  ww->frameRequestedTimepoint = std::chrono::steady_clock::now();
+  wl_callback_add_listener(ww->frameCallback, &Private::wlCallbackListener, ww);
   }
 
 void WaylandApi::presentFailed(SystemApi::Window* w) {
@@ -1248,11 +1246,7 @@ void WaylandApi::presentFailed(SystemApi::Window* w) {
   // unknown state -> delete to avoid locking render loop
   if(dpy==nullptr || w==nullptr)
     return;
-  auto ww = toWWindow(w);
-  if(ww->frameCallbacks.empty())
-    return;
-  wl_callback_destroy(ww->frameCallbacks.back());
-  ww->frameCallbacks.pop_back();
+  Private::ioDestroy(toWWindow(w)->frameCallback, wl_callback_destroy);
   }
 
 bool WaylandApi::isConnected() const {
