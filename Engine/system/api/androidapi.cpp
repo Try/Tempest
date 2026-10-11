@@ -32,7 +32,7 @@ static bool            focused    = false;
 static bool            active     = false;
 static bool            hasWindow  = false;
 
-// Touches are recorded during polling and dispatched afterwards.
+// Touches are recorded during polling and dispatched one per event-processing pass.
 // Modal loops in event handlers poll recursively, so direct dispatch could reorder pointers of one AInputEvent.
 struct TouchPoint {
   int32_t id       = -1;
@@ -196,25 +196,32 @@ int32_t AndroidApi::onInputEvent(const void* input) {
   return 1;
   }
 
-void AndroidApi::dispatchTouches() {
-  // Flags are cleared before each dispatch, since a handler may poll and dispatch recursively
-  for(size_t i=0; i<touches.size() && mainWindow!=nullptr && !isExit.load(); ++i) {
-    if(touches[i].down) {
-      touches[i].down = false;
-      MouseEvent e(touches[i].pressPos.x, touches[i].pressPos.y, Event::ButtonLeft, Event::M_NoModifier, 0, uint32_t(i), Event::MouseDown);
+bool AndroidApi::dispatchTouch() {
+  if(mainWindow==nullptr || isExit.load())
+    return false;
+  // Dispatch a copy: handlers may poll recursively and change touches
+  for(size_t i=0; i<touches.size(); ++i) {
+    auto& t = touches[i];
+    if(t.down) {
+      t.down = false;
+      MouseEvent e(t.pressPos.x, t.pressPos.y, Event::ButtonLeft, Event::M_NoModifier, 0, uint32_t(i), Event::MouseDown);
       SystemApi::dispatchMouseDown(*mainWindow,e);
+      return true;
       }
-    if(touches[i].move && mainWindow!=nullptr) {
-      touches[i].move = false;
-      MouseEvent e(touches[i].pos.x, touches[i].pos.y, Event::ButtonLeft, Event::M_NoModifier, 0, uint32_t(i), Event::MouseMove);
+    if(t.move) {
+      t.move = false;
+      MouseEvent e(t.pos.x, t.pos.y, Event::ButtonLeft, Event::M_NoModifier, 0, uint32_t(i), Event::MouseMove);
       SystemApi::dispatchMouseMove(*mainWindow,e);
+      return true;
       }
-    if(touches[i].up && mainWindow!=nullptr) {
-      touches[i].up = false;
-      MouseEvent e(touches[i].pos.x, touches[i].pos.y, Event::ButtonLeft, Event::M_NoModifier, 0, uint32_t(i), Event::MouseUp);
+    if(t.up) {
+      t.up = false;
+      MouseEvent e(t.pos.x, t.pos.y, Event::ButtonLeft, Event::M_NoModifier, 0, uint32_t(i), Event::MouseUp);
       SystemApi::dispatchMouseUp(*mainWindow,e);
+      return true;
       }
     }
+  return false;
   }
 
 static void pollAndroid(android_app* state, int timeout) {
@@ -297,8 +304,8 @@ int AndroidApi::implExec(AppCallBack& cb) {
 void AndroidApi::implProcessEvents(AppCallBack& cb) {
   if(isExit.load())
     return;
-  pollAndroid(app,active && hasWindow ? 0 : -1);
-  dispatchTouches();
+  if(!dispatchTouch())
+    pollAndroid(app,active && hasWindow ? 0 : -1);
   if(isExit.load())
     return;
   if(mainWindow!=nullptr && active && hasWindow)
