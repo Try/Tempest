@@ -63,6 +63,7 @@ static void pressTouch(int32_t id, Point pos) {
   t         = TouchPoint();
   t.id      = id;
   t.downPos = pos;
+  t.movePos = pos;
   t.down    = true;
   }
 
@@ -81,6 +82,8 @@ static void updateTouch(int32_t id, Point pos, bool release) {
 
 static void releaseAllTouches() {
   for(auto& t:touches) {
+    if(t.id==-1)
+      continue;
     t.id = -1;
     t.up = true;
     }
@@ -311,16 +314,20 @@ void AndroidApi::implProcessEvents(AppCallBack& cb) {
 
   int                  pending = 0;
   android_poll_source* source  = nullptr;
-  if(ALooper_pollOnce(0,nullptr,&pending,reinterpret_cast<void**>(&source))>=0) {
+  const bool          visible = active && hasWindow;
+  if(ALooper_pollOnce(visible ? 0 : -1,nullptr,&pending,reinterpret_cast<void**>(&source))>=0) {
     if (source != nullptr)
       source->process(app, source);
     return;
     }
 
+  if(!visible || isExit.load())
+    return;
+
   if(cb.onTimer()==0)
     std::this_thread::yield();
 
-  if(mainWindow!=nullptr && active && hasWindow)
+  if(mainWindow!=nullptr)
     dispatchRender(*mainWindow);
   }
 
