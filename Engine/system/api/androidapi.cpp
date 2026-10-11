@@ -24,23 +24,31 @@ using namespace Tempest;
 
 extern "C" void android_main(android_app* state);
 
+static int32_t AMotionEvent_getPointerIndex(const AInputEvent* motion_event) {
+  const int32_t action = AMotionEvent_getAction(motion_event);
+  return int32_t((action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT);
+  };
+
+static Tempest::Point AMotionEvent_getXY(const AInputEvent* event, size_t i) {
+  return Point(int(AMotionEvent_getX(event,i)), int(AMotionEvent_getY(event,i)));
+  };
+
 static android_app*     app        = nullptr;
 static Tempest::Window* mainWindow = nullptr;
 static std::atomic_bool isExit     = false;
-static bool            resumed    = false;
-static bool            focused    = false;
-static bool            active     = false;
-static bool            hasWindow  = false;
+static bool             resumed    = false;
+static bool             focused    = false;
+static bool             active     = false;
+static bool             hasWindow  = false;
 
 // Touches are recorded during polling and dispatched one per event-processing pass.
 // Modal loops in event handlers poll recursively, so direct dispatch could reorder pointers of one AInputEvent.
 struct TouchPoint {
-  int32_t id       = -1;
-  Point   pressPos;
-  Point   pos;
-  bool    down     = false;
-  bool    move     = false;
-  bool    up       = false;
+  int32_t id   = -1;
+  bool    down = false;
+  bool    up   = false;
+  Point   downPos;
+  Point   movePos, moveLast;
   };
 static std::vector<TouchPoint> touches;
 
@@ -52,21 +60,17 @@ static void pressTouch(int32_t id, Point pos) {
   if(slot==touches.size())
     touches.emplace_back();
   auto& t = touches[slot];
-  t.id       = id;
-  t.pressPos = pos;
-  t.pos      = pos;
-  t.down     = true;
-  t.move     = false;
+  t         = TouchPoint();
+  t.id      = id;
+  t.downPos = pos;
+  t.down    = true;
   }
 
 static void updateTouch(int32_t id, Point pos, bool release) {
   for(auto& t:touches) {
     if(t.id!=id)
       continue;
-    if(t.pos!=pos) {
-      t.pos  = pos;
-      t.move = !release;
-      }
+    t.movePos = pos;
     if(release) {
       t.id = -1;
       t.up = true;
@@ -75,10 +79,8 @@ static void updateTouch(int32_t id, Point pos, bool release) {
     }
   }
 
-static void releaseTouches() {
+static void releaseAllTouches() {
   for(auto& t:touches) {
-    if(t.id==-1)
-      continue;
     t.id = -1;
     t.up = true;
     }
@@ -163,32 +165,29 @@ int32_t AndroidApi::onInputEvent(const void* input) {
      (AInputEvent_getSource(event) & AINPUT_SOURCE_TOUCHSCREEN)!=AINPUT_SOURCE_TOUCHSCREEN)
     return 0;
 
-  const int32_t action = AMotionEvent_getAction(event);
-  const int32_t kind   = action & AMOTION_EVENT_ACTION_MASK;
-  const size_t  index  = size_t((action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT);
-  auto pointer = [event](size_t i) {
-    return Point(int(AMotionEvent_getX(event,i)), int(AMotionEvent_getY(event,i)));
-    };
+  const int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
+  const int32_t index  = AMotionEvent_getPointerIndex(event);
 
-  switch(kind) {
+
+  switch(action) {
     case AMOTION_EVENT_ACTION_DOWN:
       // A new gesture: release touches whose end was never reported
-      releaseTouches();
-      pressTouch(AMotionEvent_getPointerId(event,index),pointer(index));
+      releaseAllTouches();
+      pressTouch(AMotionEvent_getPointerId(event,index),AMotionEvent_getXY(event, index));
       break;
     case AMOTION_EVENT_ACTION_POINTER_DOWN:
-      pressTouch(AMotionEvent_getPointerId(event,index),pointer(index));
+      pressTouch(AMotionEvent_getPointerId(event,index),AMotionEvent_getXY(event, index));
       break;
     case AMOTION_EVENT_ACTION_UP:
     case AMOTION_EVENT_ACTION_POINTER_UP:
-      updateTouch(AMotionEvent_getPointerId(event,index),pointer(index),true);
+      updateTouch(AMotionEvent_getPointerId(event,index),AMotionEvent_getXY(event, index),true);
       break;
     case AMOTION_EVENT_ACTION_MOVE:
       for(size_t i=0; i<AMotionEvent_getPointerCount(event); ++i)
-        updateTouch(AMotionEvent_getPointerId(event,i),pointer(i),false);
+        updateTouch(AMotionEvent_getPointerId(event,i),AMotionEvent_getXY(event, i),false);
       break;
     case AMOTION_EVENT_ACTION_CANCEL:
-      releaseTouches();
+      releaseAllTouches();
       break;
     default:
       return 0;
@@ -196,28 +195,30 @@ int32_t AndroidApi::onInputEvent(const void* input) {
   return 1;
   }
 
-bool AndroidApi::dispatchTouch() {
+bool AndroidApi::processTouchEvents(AppCallBack& cb) {
   if(mainWindow==nullptr || isExit.load())
     return false;
   // Dispatch a copy: handlers may poll recursively and change touches
   for(size_t i=0; i<touches.size(); ++i) {
     auto& t = touches[i];
     if(t.down) {
-      t.down = false;
-      MouseEvent e(t.pressPos.x, t.pressPos.y, Event::ButtonLeft, Event::M_NoModifier, 0, uint32_t(i), Event::MouseDown);
+      t.down     = false;
+      t.moveLast = t.downPos;
+      MouseEvent e(t.moveLast.x, t.moveLast.y, Event::ButtonLeft, Event::M_NoModifier, 0, int32_t(i), Event::MouseDown);
       SystemApi::dispatchMouseDown(*mainWindow,e);
       return true;
       }
-    if(t.move) {
-      t.move = false;
-      MouseEvent e(t.pos.x, t.pos.y, Event::ButtonLeft, Event::M_NoModifier, 0, uint32_t(i), Event::MouseMove);
-      SystemApi::dispatchMouseMove(*mainWindow,e);
+    if(t.up) {
+      t.up       = false;
+      t.moveLast = t.movePos;
+      MouseEvent e(t.moveLast.x, t.moveLast.y, Event::ButtonLeft, Event::M_NoModifier, 0, int32_t(i), Event::MouseUp);
+      SystemApi::dispatchMouseUp(*mainWindow,e);
       return true;
       }
-    if(t.up) {
-      t.up = false;
-      MouseEvent e(t.pos.x, t.pos.y, Event::ButtonLeft, Event::M_NoModifier, 0, uint32_t(i), Event::MouseUp);
-      SystemApi::dispatchMouseUp(*mainWindow,e);
+    if(t.moveLast!=t.movePos) {
+      t.moveLast = t.movePos;
+      MouseEvent e(t.moveLast.x, t.moveLast.y, Event::ButtonLeft, Event::M_NoModifier, 0, uint32_t(i), Event::MouseMove);
+      SystemApi::dispatchMouseMove(*mainWindow,e);
       return true;
       }
     }
@@ -304,14 +305,23 @@ int AndroidApi::implExec(AppCallBack& cb) {
 void AndroidApi::implProcessEvents(AppCallBack& cb) {
   if(isExit.load())
     return;
-  if(!dispatchTouch())
-    pollAndroid(app,active && hasWindow ? 0 : -1);
-  if(isExit.load())
+
+  if(processTouchEvents(cb))
     return;
+
+  int                  pending = 0;
+  android_poll_source* source  = nullptr;
+  if(ALooper_pollOnce(0,nullptr,&pending,reinterpret_cast<void**>(&source))>=0) {
+    if (source != nullptr)
+      source->process(app, source);
+    return;
+    }
+
+  if(cb.onTimer()==0)
+    std::this_thread::yield();
+
   if(mainWindow!=nullptr && active && hasWindow)
     dispatchRender(*mainWindow);
-  if(active && hasWindow && !isExit.load() && cb.onTimer()==0)
-    std::this_thread::yield();
   }
 
 void AndroidApi::implSetWindowTitle(SystemApi::Window*, const char*) {
