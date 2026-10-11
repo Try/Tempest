@@ -623,19 +623,8 @@ void VSwapchain::present() {
   slot.imgId   = uint32_t(-1);
   slot.acquire = VK_NULL_HANDLE;
 
-#if defined(__UNIX__) && defined(TEMPEST_BUILD_WAYLAND)
-  // Frame callback pauses rendering while compositor doesn't show window (e.g. minimized)
-  // needs WSI driver to commit messages -> only request on guaranteed present call
-  WaylandApi::preparePresent(hwnd);
-#endif
-
   auto tx = Application::tickCount();
   VkResult code = device.presentQueue->present(presentInfo);
-#if defined(__UNIX__) && defined(TEMPEST_BUILD_WAYLAND)
-  // failed present may not commit
-  if(code<VK_SUCCESS)
-    WaylandApi::presentFailed(hwnd);
-#endif
   if(isSwapchainLost(code))
     throw SwapchainSuboptimal();
   tx = Application::tickCount()-tx;

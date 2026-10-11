@@ -11,15 +11,9 @@ namespace Tempest {
 class WaylandApi final: SystemApi {
   public:
     // For Vulkan (vulkanapi.cpp, vswapchain.cpp).
-    // nullptr / no effect if Wayland is not the active backend
+    // nullptr if Wayland is not the active backend
     static wl_display* display();
     static wl_surface* surface(SystemApi::Window* w);
-
-    // Frame callback pauses rendering while compositor doesn't show window (e.g. minimized)
-    // needs WSI driver (vkQueuePresentKHR) to commit messages -> only request on guaranteed present call
-    static void        preparePresent(SystemApi::Window* w);
-    // sync if vkQueuePresentKHR failed and may not have committed
-    static void        presentFailed(SystemApi::Window* w);
 
   private:
     struct Private;

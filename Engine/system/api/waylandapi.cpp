@@ -57,6 +57,7 @@ struct WWindow {
     int32_t width      = 0; // logical; 0 = no size from the compositor yet
     int32_t height     = 0;
     bool    fullscreen = false;
+    bool    suspended  = false;
     } pending;
 
   // Current state
@@ -64,6 +65,7 @@ struct WWindow {
   int32_t  height         = 0;
   uint32_t preferredScale = 120;   // wp_fractional_scale_v1: scale * 120
   bool     fullscreen     = false;
+  bool     suspended      = false; // compositor doesn't repaint the window (e.g. minimized): pause rendering
   bool     configured     = false; // first configure acked; no buffer (= Vulkan present) before that
 
   int32_t  appRequestedWidth  = 0; // physical; used until the compositor sends a size
@@ -72,13 +74,6 @@ struct WWindow {
   // size the app last saw; updateState() dispatches a resize when it differs.
   int32_t  dispatchedWidth  = 0; // physical
   int32_t  dispatchedHeight = 0;
-
-  // Frame callback of a present the compositor hasn't shown yet, and when it was requested. Rendering pauses while
-  // it's overdue: the compositor doesn't show the window (e.g. minimized). The swapchain paces visible windows.
-  wl_callback*                          frameCallback = nullptr;
-  std::chrono::steady_clock::time_point frameRequestedTimepoint;
-  // Far longer than a refresh of a visible window, short enough that a hidden one stops after a few presents.
-  static constexpr std::chrono::milliseconds frameCallbackTimeout{100};
 
   // Pointer lock for mouse-look, requested while the window's cursor is hidden (see Private::setPointerLock).
   zwp_locked_pointer_v1* lockedPointer = nullptr;
@@ -89,8 +84,7 @@ struct WWindow {
   double                 cursorX       = 0; // physical
   double                 cursorY       = 0;
 
-  bool    readyToRender() const  { return owner!=nullptr && configured && !isFrameOverdue(); }
-  bool    isFrameOverdue() const { return frameCallback!=nullptr && std::chrono::steady_clock::now()-frameRequestedTimepoint>frameCallbackTimeout; }
+  bool    readyToRender() const  { return owner!=nullptr && configured && !suspended; }
 
   float   scale() const          { return float(preferredScale)/120.f; }
   // Physical size, as Tempest sees it (client rect, resize events, swapchain extent). Rounded half up as fractional-scale
@@ -125,7 +119,7 @@ struct WaylandApi::Private {
   // Exact versions we need to bind successfully: listeners and requests are written for these
   static constexpr uint32_t wlCompositorVersion                = 6;
   static constexpr uint32_t wlSeatVersion                      = 8; // v8: wl_pointer.axis_value120 (wheel in 1/120 notches)
-  static constexpr uint32_t xdgWmBaseVersion                   = 1;
+  static constexpr uint32_t xdgWmBaseVersion                   = 6; // v6: xdg_toplevel state 'suspended'
   static constexpr uint32_t zxdgDecorationManagerV1Version     = 1;
   static constexpr uint32_t wpViewporterVersion                = 1;
   static constexpr uint32_t wpFractionalScaleManagerV1Version  = 1;
@@ -195,7 +189,6 @@ struct WaylandApi::Private {
   static void onWpFractionalScaleV1PreferredScale(void* data, wp_fractional_scale_v1* fractionalScale, uint32_t scale);
   static void onZwpLockedPointerV1Locked  (void* data, zwp_locked_pointer_v1* lockedPointer);
   static void onZwpLockedPointerV1Unlocked(void* data, zwp_locked_pointer_v1* lockedPointer);
-  static void onWlCallbackDone(void* data, wl_callback* callback, uint32_t time);
 
   // Listener tables (session)
   static const wl_registry_listener                 wlRegistryListener;
@@ -212,7 +205,6 @@ struct WaylandApi::Private {
   static const zxdg_toplevel_decoration_v1_listener zxdgToplevelDecorationV1Listener;
   static const wp_fractional_scale_v1_listener      wpFractionalScaleV1Listener;
   static const zwp_locked_pointer_v1_listener       zwpLockedPointerV1Listener;
-  static const wl_callback_listener                 wlCallbackListener;
 
   // Helpers
 
@@ -260,8 +252,6 @@ void WaylandApi::Private::onWlRegistryGlobal(void* data, wl_registry* registry, 
     self->compositor = static_cast<wl_compositor*>(wl_registry_bind(registry, name, &wl_compositor_interface, wlCompositorVersion));
     }
   if(std::strcmp(interface, xdg_wm_base_interface.name)==0 && version>=xdgWmBaseVersion) {
-    static_assert(xdgWmBaseVersion<XDG_TOPLEVEL_CONFIGURE_BOUNDS_SINCE_VERSION,
-                  "xdgToplevelListener needs configure_bounds/wm_capabilities handlers at this version");
     self->wmBase = static_cast<xdg_wm_base*>(wl_registry_bind(registry, name, &xdg_wm_base_interface, xdgWmBaseVersion));
     xdg_wm_base_add_listener(self->wmBase, &xdgWmBaseListener, self);
     }
@@ -575,6 +565,7 @@ void WaylandApi::Private::onXdgSurfaceConfigure(void* data, [[maybe_unused]] xdg
   w->width      = w->pending.width;
   w->height     = w->pending.height;
   w->fullscreen = w->pending.fullscreen;
+  w->suspended  = w->pending.suspended;
 
   // Viewport state is double-buffered: it applies with the next commit, which Vulkan does in vkQueuePresent.
   wp_viewport_set_destination(w->viewport, w->width, w->height);
@@ -593,10 +584,14 @@ void WaylandApi::Private::onXdgToplevelConfigure(void* data, [[maybe_unused]] xd
     }
   // 'states': the complete list of xdg_toplevel_state values
   w->pending.fullscreen = false;
+  w->pending.suspended  = false;
   auto state = static_cast<const uint32_t*>(states->data);
   for(size_t i=0; i<states->size/sizeof(uint32_t); ++i) {
     if(state[i]==XDG_TOPLEVEL_STATE_FULLSCREEN)
       w->pending.fullscreen = true;
+    static_assert(xdgWmBaseVersion>=XDG_TOPLEVEL_STATE_SUSPENDED_SINCE_VERSION);
+    if(state[i]==XDG_TOPLEVEL_STATE_SUSPENDED)
+      w->pending.suspended = true;
     }
   }
 
@@ -628,12 +623,6 @@ void WaylandApi::Private::onZwpLockedPointerV1Locked(void* data, [[maybe_unused]
 void WaylandApi::Private::onZwpLockedPointerV1Unlocked(void* data, [[maybe_unused]] zwp_locked_pointer_v1* lockedPointer) {
   // E.g. focus lost; the persistent lock may become active again later.
   static_cast<WWindow*>(data)->pointerLocked = false;
-  }
-void WaylandApi::Private::onWlCallbackDone(void* data, wl_callback* callback, [[maybe_unused]] uint32_t time) {
-  // The compositor has shown the content.
-  auto w = static_cast<WWindow*>(data);
-  w->frameCallback = nullptr;
-  wl_callback_destroy(callback);
   }
 
 ////
@@ -694,6 +683,8 @@ const xdg_surface_listener WaylandApi::Private::xdgSurfaceListener = {
 const xdg_toplevel_listener WaylandApi::Private::xdgToplevelListener = {
   .configure                  = onXdgToplevelConfigure,
   .close                      = onXdgToplevelClose,
+  .configure_bounds           = ioIgnore,
+  .wm_capabilities            = ioIgnore,
   };
 const zxdg_toplevel_decoration_v1_listener WaylandApi::Private::zxdgToplevelDecorationV1Listener = {
   .configure                  = onZxdgToplevelDecorationV1Configure,
@@ -704,10 +695,6 @@ const wp_fractional_scale_v1_listener WaylandApi::Private::wpFractionalScaleV1Li
 const zwp_locked_pointer_v1_listener WaylandApi::Private::zwpLockedPointerV1Listener = {
   .locked                     = onZwpLockedPointerV1Locked,
   .unlocked                   = onZwpLockedPointerV1Unlocked,
-  };
-  const wl_callback_listener WaylandApi::Private::wlCallbackListener = {
-  // Frame callbacks (wl_surface.frame)
-  .done                       = onWlCallbackDone,
   };
 
 ////
@@ -1059,7 +1046,6 @@ void WaylandApi::Private::destroyWindow(WWindow* w) {
   if(focusGainedInBatch==w)
     focusGainedInBatch = nullptr;
 
-  ioDestroy(w->frameCallback, wl_callback_destroy);
   setPointerLock(*w, false); // created for the wl_surface
   ioDestroy(w->fractionalScale, wp_fractional_scale_v1_destroy);
   ioDestroy(w->viewport,        wp_viewport_destroy);
@@ -1083,7 +1069,7 @@ void WaylandApi::Private::handleConnectionError() {
   }
 
 int WaylandApi::Private::pollTimeout() const {
-  // 0 if a window may render; otherwise wait for the compositor (e.g. a frame callback),
+  // 0 if a window may render; otherwise wait for the compositor (e.g. a configure that ends 'suspended'),
   // at most idlePollTimeoutMs, and not beyond the next scheduled key repeat
 
   // Longest sleep in poll() while no window may render; short enough to keep Tempest's timers accurate.
@@ -1117,7 +1103,7 @@ void WaylandApi::Private::readEvents() {
   pollfd fd = {};
   fd.fd     = wl_display_get_fd(display);
   fd.events = POLLIN;
-  // Timeout computed after dispatching the queued events: a frame callback among them may let a window render now.
+  // Timeout computed after dispatching the queued events: a configure among them may let a window render now.
   if(poll(&fd, 1, pollTimeout())>0) {
     if(wl_display_read_events(display)<0) {
       handleConnectionError();
@@ -1148,7 +1134,7 @@ void WaylandApi::Private::updateState(WWindow& w) {
   }
 
 void WaylandApi::Private::renderWindows() {
-  // Skips windows whose frame callback is overdue: nothing is drawn while hidden.
+  // Skips suspended windows: nothing is drawn while the compositor doesn't repaint them (e.g. minimized).
   for(auto& w:windows) {
     if(!w->readyToRender())
       continue;
@@ -1224,29 +1210,6 @@ wl_surface* WaylandApi::surface(SystemApi::Window* w) {
   if(dpy==nullptr || w==nullptr)
     return nullptr;
   return toWWindow(w)->surface;
-  }
-
-void WaylandApi::preparePresent(SystemApi::Window* w) {
-  // The frame request is double-buffered wl_surface state, sent by the driver's commit in vkQueuePresentKHR. Requested
-  // here, so every request gets a commit: a render without a present can't leave the window waiting forever.
-  // Note: Since this can be called without a Wayland API active, we need to be extra careful
-  if(dpy==nullptr || w==nullptr)
-    return;
-  auto ww = toWWindow(w);
-  // No new request while callback still pending
-  if(ww->frameCallback!=nullptr)
-    return;
-  ww->frameCallback           = wl_surface_frame(ww->surface);
-  ww->frameRequestedTimepoint = std::chrono::steady_clock::now();
-  wl_callback_add_listener(ww->frameCallback, &Private::wlCallbackListener, ww);
-  }
-
-void WaylandApi::presentFailed(SystemApi::Window* w) {
-  // The driver may have failed before committing the callback
-  // unknown state -> delete to avoid locking render loop
-  if(dpy==nullptr || w==nullptr)
-    return;
-  Private::ioDestroy(toWWindow(w)->frameCallback, wl_callback_destroy);
   }
 
 bool WaylandApi::isConnected() const {
