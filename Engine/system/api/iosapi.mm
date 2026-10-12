@@ -268,6 +268,11 @@ static void discardPendingEvent(TempestWindow* window) {
   return self;
   }
 
+- (void)setView:(UIView*)view {
+  view.multipleTouchEnabled = YES;
+  [super setView:view];
+  }
+
 - (void)viewDidLoad {
   [super viewDidLoad];
   self.extendedLayoutIncludesOpaqueBars = YES;

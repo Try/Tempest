@@ -824,7 +824,7 @@ void VDevice::deviceQueueProps(VkPhysicalDevice device, VkProps& props) {
     static const VkQueueFlags rqFlag = (VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
 
     const bool graphicsSupport = ((queueFamily.queueFlags & rqFlag)==rqFlag);
-    const bool presentSupport  = VSwapchain::checkPresentSupport(device, i);
+    const bool presentSupport  = VSwapchain::checkPresentationSupport(device, i);
 
     if(graphicsSupport)
       graphics = i;
@@ -843,21 +843,34 @@ void VDevice::deviceQueueProps(VkPhysicalDevice device, VkProps& props) {
   props.presentFamily  = present;
   }
 
-VDevice::SwapChainSupport VDevice::querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface) {
-  SwapChainSupport details;
-  vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+VDevice::SwapChainSupport VDevice::querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface) const {
+  SwapChainSupport support;
+  vkAssert(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &support.capabilities));
 
-  uint32_t formatCount = 0;
-  vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
-  details.formats.resize(formatCount);
-  vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
+  // NOTE: SurfaceFormats query either works, or returns error.
+  // Vulkan spec doesn't allow for semi-errors, such as surface-lost
+  while(true) {
+    uint32_t formatCount = 0;
+    vkAssert(vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr));
+    support.formats.resize(formatCount);
+    auto code = vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, support.formats.data());
+    if(code==VK_INCOMPLETE)
+      continue;
+    vkAssert(code);
+    break;
+    }
 
-  uint32_t presentModeCount = 0;
-  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
-  details.presentModes.resize(presentModeCount);
-  vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
-
-  return details;
+  while(true) {
+    uint32_t presentModeCount = 0;
+    vkAssert(vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr));
+    support.presentModes.resize(presentModeCount);
+    auto code = vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, support.presentModes.data());
+    if(code==VK_INCOMPLETE)
+      continue;
+    vkAssert(code);
+    break;
+    }
+  return support;
   }
 
 VDevice::MemIndex VDevice::memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const {

@@ -12,7 +12,7 @@ VSamplerCache::VSamplerCache(){
   }
 
 VSamplerCache::~VSamplerCache() {
-  if(device->props.hasDescriptorHeap)
+  if(device==nullptr || device->props.hasDescriptorHeap)
     return; // heap-allocator will clear whole vkBuffer
 
   if(smpDefault!=VK_NULL_HANDLE)

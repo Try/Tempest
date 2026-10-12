@@ -10,24 +10,95 @@
 
 #include <android/native_activity.h>
 #include <android/native_window.h>
+#include <android/input.h>
 
 #include <atomic>
+#include <cassert>
 #include <cstdlib>
 #include <dlfcn.h>
 #include <exception>
 #include <thread>
+#include <vector>
 
 using namespace Tempest;
 
 extern "C" void android_main(android_app* state);
 
+static int32_t AMotionEvent_getPointerIndex(const AInputEvent* motion_event) {
+  const int32_t action = AMotionEvent_getAction(motion_event);
+  return int32_t((action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK) >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT);
+  };
+
+static Tempest::Point AMotionEvent_getXY(const AInputEvent* event, size_t i) {
+  return Point(int(AMotionEvent_getX(event,i)), int(AMotionEvent_getY(event,i)));
+  };
+
 static android_app*     app        = nullptr;
 static Tempest::Window* mainWindow = nullptr;
 static std::atomic_bool isExit     = false;
-static bool            resumed    = false;
-static bool            focused    = false;
-static bool            active     = false;
-static bool            hasWindow  = false;
+static bool             resumed    = false;
+static bool             focused    = false;
+static bool             active     = false;
+static bool             hasWindow  = false;
+
+// Touches are recorded during polling and dispatched one per event-processing pass.
+// Modal loops in event handlers poll recursively, so direct dispatch could reorder pointers of one AInputEvent.
+struct TouchPoint {
+  int32_t id   = -1;
+  bool    down = false;
+  bool    up   = false;
+  Point   downPos;
+  Point   movePos, moveLast;
+  };
+static std::vector<TouchPoint> touches;
+
+static void pressTouch(int32_t id, Point pos) {
+  size_t slot = 0;
+  // A released slot is reused only after its release is dispatched
+  while(slot<touches.size() && (touches[slot].id!=-1 || touches[slot].up))
+    ++slot;
+  if(slot==touches.size())
+    touches.emplace_back();
+  auto& t = touches[slot];
+  t         = TouchPoint();
+  t.id      = id;
+  t.downPos = pos;
+  t.movePos = pos;
+  t.down    = true;
+  }
+
+static void updateTouch(int32_t id, Point pos, bool release) {
+  for(auto& t:touches) {
+    if(t.id!=id)
+      continue;
+    t.movePos = pos;
+    if(release) {
+      t.id = -1;
+      t.up = true;
+      }
+    return;
+    }
+  }
+
+static void releaseAllTouches() {
+  for(auto& t:touches) {
+    if(t.id==-1)
+      continue;
+    t.id = -1;
+    t.up = true;
+    }
+  }
+
+std::filesystem::path AndroidApi::internalDataPath() {
+  assert(app!=nullptr && app->activity!=nullptr);
+  return app->activity->internalDataPath;
+  }
+
+std::filesystem::path AndroidApi::externalDataPath() {
+  assert(app!=nullptr && app->activity!=nullptr);
+  const char* path = app->activity->externalDataPath;
+  return path!=nullptr ? path : "";
+  }
 
 void AndroidApi::updateFocus() {
   const bool next = resumed && focused;
@@ -55,15 +126,7 @@ void AndroidApi::updateWindow() {
 void AndroidApi::onAppCmd(void*, int32_t cmd) {
   switch(cmd) {
     case APP_CMD_INIT_WINDOW:
-      if(mainWindow!=nullptr) {
-        // TODO: handle native surface recreation in the Vulkan swapchain.
-        Log::e("Android native window recreation is not implemented");
-        std::terminate();
-        }
       updateWindow();
-      break;
-    case APP_CMD_TERM_WINDOW:
-      hasWindow = false;
       break;
     case APP_CMD_WINDOW_RESIZED:
     case APP_CMD_CONFIG_CHANGED:
@@ -85,7 +148,9 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
       resumed = false;
       updateFocus();
       break;
+    case APP_CMD_TERM_WINDOW:
     case APP_CMD_DESTROY:
+      hasWindow = false;
       if(mainWindow!=nullptr) {
         CloseEvent event;
         AndroidApi::dispatchClose(*mainWindow,event);
@@ -97,12 +162,80 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
     }
   }
 
+int32_t AndroidApi::onInputEvent(const void* input) {
+  const auto event = static_cast<const AInputEvent*>(input);
+  if(AInputEvent_getType(event)!=AINPUT_EVENT_TYPE_MOTION ||
+     (AInputEvent_getSource(event) & AINPUT_SOURCE_TOUCHSCREEN)!=AINPUT_SOURCE_TOUCHSCREEN)
+    return 0;
+
+  const int32_t action = AMotionEvent_getAction(event) & AMOTION_EVENT_ACTION_MASK;
+  const int32_t index  = AMotionEvent_getPointerIndex(event);
+
+
+  switch(action) {
+    case AMOTION_EVENT_ACTION_DOWN:
+      // A new gesture: release touches whose end was never reported
+      releaseAllTouches();
+      pressTouch(AMotionEvent_getPointerId(event,index),AMotionEvent_getXY(event, index));
+      break;
+    case AMOTION_EVENT_ACTION_POINTER_DOWN:
+      pressTouch(AMotionEvent_getPointerId(event,index),AMotionEvent_getXY(event, index));
+      break;
+    case AMOTION_EVENT_ACTION_UP:
+    case AMOTION_EVENT_ACTION_POINTER_UP:
+      updateTouch(AMotionEvent_getPointerId(event,index),AMotionEvent_getXY(event, index),true);
+      break;
+    case AMOTION_EVENT_ACTION_MOVE:
+      for(size_t i=0; i<AMotionEvent_getPointerCount(event); ++i)
+        updateTouch(AMotionEvent_getPointerId(event,i),AMotionEvent_getXY(event, i),false);
+      break;
+    case AMOTION_EVENT_ACTION_CANCEL:
+      releaseAllTouches();
+      break;
+    default:
+      return 0;
+    }
+  return 1;
+  }
+
+bool AndroidApi::processTouchEvents(AppCallBack& cb) {
+  if(mainWindow==nullptr || isExit.load())
+    return false;
+  // Dispatch a copy: handlers may poll recursively and change touches
+  for(size_t i=0; i<touches.size(); ++i) {
+    auto& t = touches[i];
+    if(t.down) {
+      t.down     = false;
+      t.moveLast = t.downPos;
+      MouseEvent e(t.moveLast.x, t.moveLast.y, Event::ButtonLeft, Event::M_NoModifier, 0, int32_t(i), Event::MouseDown);
+      SystemApi::dispatchMouseDown(*mainWindow,e);
+      return true;
+      }
+    if(t.up) {
+      t.up       = false;
+      t.moveLast = t.movePos;
+      MouseEvent e(t.moveLast.x, t.moveLast.y, Event::ButtonLeft, Event::M_NoModifier, 0, int32_t(i), Event::MouseUp);
+      SystemApi::dispatchMouseUp(*mainWindow,e);
+      return true;
+      }
+    if(t.moveLast!=t.movePos) {
+      t.moveLast = t.movePos;
+      MouseEvent e(t.moveLast.x, t.moveLast.y, Event::ButtonLeft, Event::M_NoModifier, 0, uint32_t(i), Event::MouseMove);
+      SystemApi::dispatchMouseMove(*mainWindow,e);
+      return true;
+      }
+    }
+  return false;
+  }
+
 static void pollAndroid(android_app* state, int timeout) {
   int                  pending = 0;
   android_poll_source* source  = nullptr;
   while(ALooper_pollOnce(timeout,nullptr,&pending,reinterpret_cast<void**>(&source))>=0) {
     if(source!=nullptr)
       source->process(state,source);
+    if(isExit.load())
+      break;
     timeout = 0;
     }
   }
@@ -111,11 +244,13 @@ SystemApi::Window* AndroidApi::createAndroidWindow(Tempest::Window* owner) {
   if(mainWindow!=nullptr)
     return nullptr;
   app->onAppCmd = [](android_app* state, int32_t cmd) { onAppCmd(state,cmd); };
+  app->onInputEvent = [](android_app*, AInputEvent* event) { return onInputEvent(event); };
   while(!hasWindow && !isExit.load() && app->destroyRequested==0)
     pollAndroid(app,-1);
   if(isExit.load() || app->destroyRequested!=0)
     return nullptr;
   mainWindow = owner;
+  ANativeWindow_acquire(app->window);
   return reinterpret_cast<SystemApi::Window*>(app->window);
   }
 
@@ -127,8 +262,10 @@ SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, ShowMode
   return createAndroidWindow(owner);
   }
 
-void AndroidApi::implDestroyWindow(SystemApi::Window*) {
+void AndroidApi::implDestroyWindow(SystemApi::Window* w) {
+  ANativeWindow_release(reinterpret_cast<ANativeWindow*>(w));
   mainWindow = nullptr;
+  touches.clear();
   }
 
 void AndroidApi::implExit() {
@@ -171,13 +308,27 @@ int AndroidApi::implExec(AppCallBack& cb) {
 void AndroidApi::implProcessEvents(AppCallBack& cb) {
   if(isExit.load())
     return;
-  pollAndroid(app,active && hasWindow ? 0 : -1);
-  if(isExit.load())
+
+  if(processTouchEvents(cb))
     return;
-  if(mainWindow!=nullptr && active && hasWindow)
-    dispatchRender(*mainWindow);
-  if(active && hasWindow && !isExit.load() && cb.onTimer()==0)
+
+  int                  pending = 0;
+  android_poll_source* source  = nullptr;
+  const bool          visible = active && hasWindow;
+  if(ALooper_pollOnce(visible ? 0 : -1,nullptr,&pending,reinterpret_cast<void**>(&source))>=0) {
+    if (source != nullptr)
+      source->process(app, source);
+    return;
+    }
+
+  if(!visible || isExit.load())
+    return;
+
+  if(cb.onTimer()==0)
     std::this_thread::yield();
+
+  if(mainWindow!=nullptr)
+    dispatchRender(*mainWindow);
   }
 
 void AndroidApi::implSetWindowTitle(SystemApi::Window*, const char*) {
@@ -234,7 +385,8 @@ extern "C" void android_main(android_app* state) {
   if(app->destroyRequested==0)
     ANativeActivity_finish(app->activity);
   // Re-entering main would reuse application statics from the previous run.
-  std::exit(result);
+  // The application has unwound; process-wide destructors can race Android runtime threads.
+  std::_Exit(result);
   }
 
 #endif

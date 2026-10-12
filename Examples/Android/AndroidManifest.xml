@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-feature android:name="android.hardware.vulkan.level" android:version="0" android:required="true" />
     <application android:label="Tempest example" android:hasCode="false" android:allowBackup="false"
         android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen">
         <activity android:name="android.app.NativeActivity" android:exported="true"
-            android:configChanges="keyboardHidden|orientation|screenSize">
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|density|uiMode">
             <meta-data android:name="android.app.lib_name" android:value="tempest-example" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -6,9 +6,8 @@ if(NOT ANDROID)
 endif()
 
 set(TEMPEST_BUILD_SHARED OFF CACHE BOOL "" FORCE)
-# Graphics and audio backends are outside this window lifecycle example.
 set(TEMPEST_BUILD_AUDIO OFF CACHE BOOL "" FORCE)
-set(TEMPEST_BUILD_VULKAN OFF CACHE BOOL "" FORCE)
+set(TEMPEST_BUILD_VULKAN ON CACHE BOOL "" FORCE)
 add_subdirectory(../../Engine Engine)
 
 add_library(TempestExample SHARED main.cpp)

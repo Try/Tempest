@@ -1,15 +1,22 @@
 #pragma once
 
 #include <Tempest/SystemApi>
+#include <filesystem>
 
 namespace Tempest {
 
 class AndroidApi final : SystemApi {
+  public:
+    static std::filesystem::path internalDataPath();
+    static std::filesystem::path externalDataPath();
+
   private:
     AndroidApi() = default;
 
     static Window* createAndroidWindow(Tempest::Window* owner);
     static void onAppCmd(void* app, int32_t cmd);
+    static int32_t onInputEvent(const void* event);
+    static bool processTouchEvents(AppCallBack& cb);
     static void updateFocus();
     static void updateWindow();
 

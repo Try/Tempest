@@ -41,6 +41,8 @@ inline void vkAssert(VkResult code){
     case VK_ERROR_OUT_OF_HOST_MEMORY:
       //throw std::system_error(Tempest::GraphicsErrc::OutOfHostMemory);
       throw std::bad_alloc();
+    case VK_ERROR_SURFACE_LOST_KHR:
+      throw SurfaceLost();
     case VK_ERROR_DEVICE_LOST:
       throw DeviceLostException();
 
@@ -395,7 +397,7 @@ class VDevice : public AbstractGraphicsApi::Device {
     static void             deviceFormatProps(VkPhysicalDevice device, VkProps& props);
     static void             deviceQueueProps(VkPhysicalDevice device, VkProps& props);
 
-    SwapChainSupport        querySwapChainSupport(VkSurfaceKHR surface) { return querySwapChainSupport(physicalDevice,surface); }
+    SwapChainSupport        querySwapChainSupport(VkSurfaceKHR surface) const { return querySwapChainSupport(physicalDevice,surface); }
     MemIndex                memoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags props, VkImageTiling tiling) const;
 
     using DataMgr = UploadEngine<VDevice,VCommandBuffer,VBuffer>;
@@ -480,7 +482,7 @@ class VDevice : public AbstractGraphicsApi::Device {
 
     void                    pickPhysicalDevice();
 
-    SwapChainSupport        querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface);
+    SwapChainSupport        querySwapChainSupport(VkPhysicalDevice device, VkSurfaceKHR surface) const;
   };
 
 }}

@@ -48,6 +48,6 @@ class Game : public Tempest::Window {
     Tempest::Texture2d                  texture;
 
     Tempest::CommandBuffer              commands[MaxFramesInFlight];
-    std::vector<Tempest::Fence>         fence;
+    Tempest::Fence                      fence[MaxFramesInFlight];
     uint8_t                             cmdId = 0;
   };
