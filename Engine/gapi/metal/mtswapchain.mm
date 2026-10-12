@@ -164,7 +164,7 @@ uint32_t MtSwapchain::currentBackBufferIndex() {
   return currentImg;
   }
 
-AbstractGraphicsApi::PSwapchainImage MtSwapchain::next() {
+AbstractGraphicsApi::PSwapchainImage MtSwapchain::acquire() {
   std::lock_guard<std::mutex> guard(sync);
   if(sz.w<=0 || sz.h<=0)
     throw SwapchainSuboptimal();

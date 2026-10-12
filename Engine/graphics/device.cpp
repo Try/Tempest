@@ -84,13 +84,14 @@ Fence Device::submit(const CommandBuffer &cmd) {
   }
 
 void Device::present(Swapchain& sw) {
-  api.present(dev,sw.impl.handler);
-  }
-
-void Device::present(Attachment image) {
-  if(!image.pImpl || &image.pImpl.handler->device!=dev)
-    throw std::system_error(GraphicsErrc::InvalidTexture);
-  api.present(dev,image.pImpl.handler);
+  if(sw.acquired.pImpl) {
+    if(&sw.acquired.pImpl.handler->device!=dev)
+      throw std::system_error(GraphicsErrc::InvalidTexture);
+    api.present(dev,sw.acquired.pImpl.handler);
+    sw.acquired = Attachment();
+    } else {
+    api.present(dev,sw.impl.handler);
+    }
   }
 
 Shader Device::shader(RFile &file) {

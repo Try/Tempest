@@ -1,11 +1,12 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
-#include <Tempest/Swapchain>
 #include <Tempest/Texture2d>
 #include <Tempest/Except>
 
 namespace Tempest {
+
+class Swapchain;
 
 template<class T> T textureCast(Attachment& s);
 template<class T> T textureCast(const Attachment& s);

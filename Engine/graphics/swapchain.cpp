@@ -28,6 +28,7 @@ Swapchain::~Swapchain() {
 Swapchain& Swapchain::operator = (Swapchain&& s) {
   std::swap(impl, s.impl);
   std::swap(img,  s.img);
+  std::swap(acquired, s.acquired);
   return *this;
   }
 
@@ -41,11 +42,14 @@ uint32_t Swapchain::h() const {
 
 void Swapchain::reset() {
   impl.handler->reset();
+  acquired = Attachment();
   implReset();
   }
 
-Attachment Swapchain::next() {
-  return Attachment(impl.handler->next());
+Attachment& Swapchain::acquire() {
+  if(acquired.isEmpty())
+    acquired = Attachment(impl.handler->acquire());
+  return acquired;
   }
 
 uint32_t Swapchain::imageCount() const {

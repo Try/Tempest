@@ -536,7 +536,7 @@ namespace Tempest {
         virtual uint32_t      imageCount() const=0;
         virtual uint32_t      w() const=0;
         virtual uint32_t      h() const=0;
-        virtual PSwapchainImage next();
+        virtual PSwapchainImage acquire();
         };
       struct Texture:Shared  {
         virtual uint32_t      mipCount() const = 0;

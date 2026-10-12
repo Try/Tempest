@@ -27,17 +27,13 @@ TEST(MetalApi,DynamicSwapchain) {
     CommandBuffer command;
 
     for(int i=0; i<12; ++i) {
-      auto image = swapchain.next();
+      auto& image = swapchain.acquire();
       EXPECT_FALSE(image.isEmpty());
       EXPECT_EQ(image.w(),int(swapchain.w()));
       EXPECT_EQ(image.h(),int(swapchain.h()));
       EXPECT_THROW(textureCast<Texture2d&>(image),BadTextureCastException);
 
-      Attachment moved(std::move(image));
-      EXPECT_TRUE(image.isEmpty());
-      EXPECT_EQ(image.w(),0);
-      image = std::move(moved);
-      EXPECT_TRUE(moved.isEmpty());
+      EXPECT_EQ(&image,&swapchain.acquire());
 
       {
         auto encoder = command.startEncoding(device);
@@ -45,20 +41,29 @@ TEST(MetalApi,DynamicSwapchain) {
         encoder.setFramebuffer({});
         encoder.setFramebuffer({{image,Preserve,Preserve}});
         }
-      const bool discard = i%3==0;
-      if(discard)
-        image = Attachment();
       auto fence = device.submit(command);
       if(i==5) {
-        const auto size = image.size();
+        fence.wait();
         swapchain.reset();
-        EXPECT_EQ(image.size(),size);
+        continue;
         }
-      if(!discard)
-        device.present(std::move(image));
-      EXPECT_TRUE(image.isEmpty());
-      EXPECT_THROW(device.present(std::move(image)),std::system_error);
+      // An early return after submitting must not acquire another drawable.
+      EXPECT_EQ(&image,&swapchain.acquire());
+      if(i%3==0) {
+        fence.wait();
+        continue;
+        }
+      device.present(swapchain);
       fence.wait();
+      }
+
+    {
+      const auto size = swapchain.acquire().size();
+      auto moved = std::move(swapchain);
+      EXPECT_EQ(moved.acquire().size(),size);
+      swapchain = std::move(moved);
+      EXPECT_EQ(swapchain.acquire().size(),size);
+      swapchain.reset();
       }
 
     // Keep the indexed API working while other backends migrate.
@@ -73,8 +78,6 @@ TEST(MetalApi,DynamicSwapchain) {
     fence.wait();
     device.waitIdle();
 
-    auto offscreen = device.attachment(TextureFormat::RGBA8,16,16);
-    EXPECT_THROW(device.present(std::move(offscreen)),std::system_error);
     {
       auto encoder = command.startEncoding(device);
       Attachment empty;

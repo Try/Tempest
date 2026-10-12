@@ -132,7 +132,7 @@ NonUniqResId AbstractGraphicsApi::Swapchain::syncId() const {
   return NonUniqResId(0x1);
   }
 
-AbstractGraphicsApi::PSwapchainImage AbstractGraphicsApi::Swapchain::next() {
+AbstractGraphicsApi::PSwapchainImage AbstractGraphicsApi::Swapchain::acquire() {
   throw std::system_error(GraphicsErrc::UnsupportedExtension);
   }
 
