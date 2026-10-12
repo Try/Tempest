@@ -51,6 +51,14 @@ static void swapContext();
 
 static void drawFrame();
 
+struct Fiber {
+  jmp_buf jmp = {};
+  };
+
+static Fiber  mainContext;
+static Fiber  appleContext;
+static Fiber* currentContext = nullptr;
+
 @class TempestWindow;
 
 static TempestWindow* mainWindow = nil;
@@ -74,6 +82,7 @@ static bool             isApplicationActive = false;
 
     Event          noEvent;
     SizeEvent      size;
+    DisplayMetricsEvent metrics;
     MouseEvent     mouse;
     KeyEvent       key;
     CloseEvent     close;
@@ -137,6 +146,7 @@ static bool             isApplicationActive = false;
     };
   TouchState touch;
   }
+- (void)dispatchDisplayMetrics;
 @end
 @implementation TempestWindow
 - (void)layoutSubviews {
@@ -153,6 +163,14 @@ static bool             isApplicationActive = false;
   
   new (&event.size) SizeEvent(int32_t(frame.size.width*scale), int32_t(frame.size.height*scale));
   curentEvent = Event::Resize;
+  swapContext();
+  }
+
+- (void)dispatchDisplayMetrics {
+  if(owner==nullptr)
+    return;
+  new (&event.metrics) DisplayMetricsEvent(owner->safeAreaMargins(), float(self.contentScaleFactor));
+  curentEvent = Event::DisplayMetricsChanged;
   swapContext();
   }
 
@@ -239,6 +257,9 @@ static void discardPendingEvent(TempestWindow* window) {
     case Event::Resize:
       window->event.size.~SizeEvent();
       break;
+    case Event::DisplayMetricsChanged:
+      window->event.metrics.~DisplayMetricsEvent();
+      break;
     case Event::MouseDown:
     case Event::MouseMove:
     case Event::MouseUp:
@@ -250,9 +271,7 @@ static void discardPendingEvent(TempestWindow* window) {
   window->curentEvent = Event::NoEvent;
   }
 
-@interface ViewController:UIViewController {
-  @public bool safeAreaChanged;
-  }
+@interface ViewController:UIViewController
 -(id)init;
 -(void)setAllowedOrientations:(UIInterfaceOrientationMask)mask;
 @end
@@ -287,8 +306,18 @@ static void discardPendingEvent(TempestWindow* window) {
 
 - (void)viewSafeAreaInsetsDidChange {
   [super viewSafeAreaInsetsDidChange];
-  // Deliver on the engine stack, after UIKit has finished updating the view.
-  safeAreaChanged = true;
+  auto window = (TempestWindow*)self.view.window;
+  if(window==nil || window->owner==nullptr)
+    return;
+
+  // Setting the root view from the engine can also invoke this callback.
+  if(currentContext==&appleContext) {
+    [window dispatchDisplayMetrics];
+    } else {
+    dispatch_async(dispatch_get_main_queue(), ^{
+      [window dispatchDisplayMetrics];
+      });
+    }
   }
 
 - (BOOL)prefersStatusBarHidden {
@@ -435,13 +464,6 @@ static void deactivateWindow(TempestWindow* window) {
 @end
 
 
-struct Fiber  {
-  jmp_buf jmp = {};
-  };
-
-static Fiber            mainContext;
-static Fiber            appleContext;
-static Fiber*           currentContext = nullptr;
 alignas(16) static char appleStack[1*1024*1024]={};
 // createAppleSubContext changes sp before this call. Keep appleMain separate so
 // its locals are allocated below the top of appleStack, not above the buffer.
@@ -652,6 +674,12 @@ void iOSApi::implProcessEvents(AppCallBack& cb) {
         iOSApi::dispatchResize(wnd, evt);
         break;
         }
+      case Event::DisplayMetricsChanged: {
+        auto evt = mainWindow->event.metrics;
+        mainWindow->event.metrics.~DisplayMetricsEvent();
+        iOSApi::dispatchDisplayMetrics(wnd, evt);
+        break;
+        }
       case Event::MouseDown:
       case Event::MouseMove:
       case Event::MouseUp: {
@@ -666,12 +694,6 @@ void iOSApi::implProcessEvents(AppCallBack& cb) {
         break;
         }
       default: {
-        auto ctrl = (ViewController*)mainWindow.rootViewController;
-        if(ctrl->safeAreaChanged) {
-          ctrl->safeAreaChanged = false;
-          iOSApi::dispatchSafeArea(wnd);
-          break;
-          }
         if(isApplicationActive && mainWindow->hasPendingFrame.load()) {
           mainWindow->hasPendingFrame.store(false);
           iOSApi::dispatchRender(wnd);

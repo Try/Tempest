@@ -42,7 +42,7 @@ Margin Window::safeAreaMargins() const {
   return SystemApi::windowSafeAreaMargins(hwnd());
   }
 
-void Window::safeAreaEvent() {
+void Window::displayMetricsEvent(DisplayMetricsEvent&) {
   }
 
 void Window::dispatchPaintEvent(VectorImage &surface,TextureAtlas& ta) {

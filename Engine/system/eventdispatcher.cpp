@@ -206,6 +206,10 @@ void EventDispatcher::dispatchResize(Widget& wnd, SizeEvent& e) {
   wnd.resize(int(e.w),int(e.h));
   }
 
+void EventDispatcher::dispatchDisplayMetrics(Window& wnd, DisplayMetricsEvent& e) {
+  wnd.displayMetricsEvent(e);
+  }
+
 void EventDispatcher::dispatchClose(Widget& wnd, CloseEvent& e) {
   for(auto i:overlays) {
     if(!i->bind(wnd))

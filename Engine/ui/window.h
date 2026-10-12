@@ -42,7 +42,7 @@ class Window : public Widget {
 
   protected:
     virtual void render();
-    virtual void safeAreaEvent();
+    virtual void displayMetricsEvent(DisplayMetricsEvent& event);
     using        Widget::dispatchPaintEvent;
     void         dispatchPaintEvent(VectorImage &e,TextureAtlas &ta);
     void         closeEvent       (Tempest::CloseEvent& event) override;

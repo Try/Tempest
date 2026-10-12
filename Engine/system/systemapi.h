@@ -11,6 +11,7 @@
 namespace Tempest {
 
 class SizeEvent;
+class DisplayMetricsEvent;
 class MouseEvent;
 class KeyEvent;
 class CloseEvent;
@@ -116,7 +117,7 @@ class SystemApi {
     static void      dispatchKeyUp     (Tempest::Window& cb, KeyEvent& e, uint32_t scancode);
 
     static void      dispatchResize    (Tempest::Window& cb, SizeEvent& e);
-    static void      dispatchSafeArea  (Tempest::Window& cb);
+    static void      dispatchDisplayMetrics(Tempest::Window& cb, DisplayMetricsEvent& e);
     static void      dispatchClose     (Tempest::Window& cb, CloseEvent& e);
 
     static void      dispatchFocus     (Tempest::Window& cb, FocusEvent& e);

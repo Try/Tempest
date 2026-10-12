@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Tempest/Size>
+#include <Tempest/SizePolicy>
 #include <cstdint>
 
 namespace Tempest {
@@ -40,6 +41,7 @@ class Event {
       Close,
       Polish,
       Gesture,
+      DisplayMetricsChanged,
 
       Custom = 512
       };
@@ -233,6 +235,16 @@ class SizeEvent : public Event {
     const uint32_t w, h;
 
     Tempest::Size size() const { return Size(int(w),int(h)); }
+  };
+
+class DisplayMetricsEvent : public Event {
+  public:
+    DisplayMetricsEvent(const Margin& margins, float scale): safeAreaMargins(margins), uiScale(scale) {
+      setType(DisplayMetricsChanged);
+      }
+
+    const Margin safeAreaMargins;
+    const float  uiScale;
   };
 
 /*!
