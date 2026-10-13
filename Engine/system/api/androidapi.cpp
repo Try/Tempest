@@ -130,9 +130,15 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
       updateWindow();
       break;
     case APP_CMD_WINDOW_RESIZED:
-    case APP_CMD_CONFIG_CHANGED:
       updateWindow();
       break;
+    case APP_CMD_CONFIG_CHANGED: {
+      if(mainWindow!=nullptr && app!=nullptr && app->window!=nullptr) {
+        SizeEvent event(ANativeWindow_getWidth(app->window), ANativeWindow_getHeight(app->window));
+        SystemApi::dispatchResize(*mainWindow, event);
+        }
+      break;
+      }
     case APP_CMD_GAINED_FOCUS:
       focused = true;
       updateFocus();
