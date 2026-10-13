@@ -175,11 +175,11 @@ class Event {
     Type type () const{ return etype; }
 
   protected:
-    void setType( Type t ){ etype = t; }
+    Event(Type t):etype(t) {}
 
   private:
-    bool accepted=true;
-    Type etype   =NoEvent;
+    bool       accepted = true;
+    const Type etype    = NoEvent;
   };
 
 class PaintEvent: public Event {
@@ -188,15 +188,13 @@ class PaintEvent: public Event {
       : PaintEvent(p,ta,int(w),int(h)) {
       }
     PaintEvent(PaintDevice & p,TextureAtlas& ta,int32_t w,int32_t h)
-      : dev(p),ta(ta),outW(uint32_t(w)),outH(uint32_t(h)),
+      : Event(Paint),dev(p),ta(ta),outW(uint32_t(w)),outH(uint32_t(h)),
         vp(0,0,w,h) {
-      setType( Paint );
       }
 
     PaintEvent(PaintEvent& parent,int32_t dx,int32_t dy,int32_t x,int32_t y,int32_t w,int32_t h)
-      : dev(parent.dev),ta(parent.ta),outW(parent.outW),outH(parent.outH),
+      : Event(Paint),dev(parent.dev),ta(parent.ta),outW(parent.outW),outH(parent.outH),
         dp(parent.dp.x+dx,parent.dp.y+dy),vp(x,y,w,h){
-      setType( Paint );
       }
 
     PaintDevice& device()  { return dev;  }
@@ -225,11 +223,9 @@ class PaintEvent: public Event {
  */
 class SizeEvent : public Event {
   public:
-    SizeEvent(int w,int h): w(uint32_t(std::max(w,0))), h(uint32_t(std::max(h,0))) {
-      setType( Resize );
+    SizeEvent(int w, int h): Event(Resize), w(uint32_t(std::max(w,0))), h(uint32_t(std::max(h,0))) {
       }
-    SizeEvent(uint32_t w,uint32_t h): w(w), h(h) {
-      setType( Resize );
+    SizeEvent(uint32_t w, uint32_t h): Event(Resize), w(w), h(h) {
       }
 
     const uint32_t w, h;
@@ -252,14 +248,13 @@ class DisplayMetricsEvent : public Event {
  */
 class MouseEvent : public Event {
   public:
-    MouseEvent( int mx = -1, int my = -1,
-                MouseButton b = ButtonNone,
-                Modifier m = M_NoModifier,
-                int mdelta = 0,
-                int mouseID = 0,
-                Type t = MouseMove )
-      :x(mx), y(my), delta(mdelta), button(b), modifier(m), mouseID(mouseID){
-      setType( t );
+    MouseEvent(int mx = -1, int my = -1,
+               MouseButton b = ButtonNone,
+               Modifier m = M_NoModifier,
+               int mdelta = 0,
+               int mouseID = 0,
+               Type t = MouseMove)
+      :Event(t), x(mx), y(my), delta(mdelta), button(b), modifier(m), mouseID(mouseID) {
       }
 
     const int x, y, delta;
@@ -273,14 +268,11 @@ class MouseEvent : public Event {
 
 class KeyEvent: public Event {
   public:
-    KeyEvent(KeyType  k = K_NoKey, Modifier m = M_NoModifier, Type t = KeyDown):key(k),modifier(m){
-      setType( t );
+    KeyEvent(KeyType  k = K_NoKey, Modifier m = M_NoModifier, Type t = KeyDown):Event(t), key(k), modifier(m){
       }
-    KeyEvent(uint32_t k, Modifier m = M_NoModifier, Type t = KeyDown ):key(K_NoKey), code(k), modifier(m){
-      setType( t );
+    KeyEvent(uint32_t k, Modifier m = M_NoModifier, Type t = KeyDown ):Event(t), key(K_NoKey), code(k), modifier(m){
       }
-    KeyEvent(KeyType k, uint32_t k1, Modifier m = M_NoModifier, Type t = KeyDown):key(k), code(k1), modifier(m){
-      setType( t );
+    KeyEvent(KeyType k, uint32_t k1, Modifier m = M_NoModifier, Type t = KeyDown):Event(t), key(k), code(k1), modifier(m){
       }
 
     const KeyType  key      = K_NoKey;
@@ -290,9 +282,7 @@ class KeyEvent: public Event {
 
 class FocusEvent: public Event {
   public:
-    FocusEvent( bool in, FocusReason reason ): in(in), reason(reason) {
-      setType( Focus );
-      }
+    FocusEvent(bool in, FocusReason reason): Event(Focus), in(in), reason(reason) {}
 
     const bool        in;
     const FocusReason reason;
@@ -300,11 +290,11 @@ class FocusEvent: public Event {
 
 class CloseEvent: public Event {
   public:
-    CloseEvent() { setType(Close); }
+    CloseEvent() : Event(Close) {}
   };
 
 class PolishEvent: public Event {
   public:
-    PolishEvent() { setType(Polish); }
+    PolishEvent() : Event(Polish) {}
   };
 }

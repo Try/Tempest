@@ -15,6 +15,8 @@ class AndroidApi final : SystemApi {
 
     static Window* createAndroidWindow(Tempest::Window* owner);
     static void onAppCmd(void* app, int32_t cmd);
+    static int32_t onInputEvent(const void* event);
+    static bool processTouchEvents(AppCallBack& cb);
     static void updateFocus();
     static void updateWindow();
 
@@ -24,6 +26,7 @@ class AndroidApi final : SystemApi {
     void    implExit() override;
 
     Rect implWindowClientRect(SystemApi::Window* w) override;
+    float implUiScale(SystemApi::Window* w) override;
     bool implSetAsFullscreen(SystemApi::Window* w, bool fullScreen) override;
     bool implIsFullscreen(SystemApi::Window* w) override;
 
