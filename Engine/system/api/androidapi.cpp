@@ -11,6 +11,7 @@
 #include <android/native_activity.h>
 #include <android/native_window.h>
 #include <android/input.h>
+#include <android/configuration.h>
 
 #include <atomic>
 #include <cassert>
@@ -129,9 +130,16 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
       updateWindow();
       break;
     case APP_CMD_WINDOW_RESIZED:
-    case APP_CMD_CONFIG_CHANGED:
       updateWindow();
       break;
+    case APP_CMD_CONFIG_CHANGED: {
+      //TODO: dedicated event for dpi/safe-rects
+      if(mainWindow!=nullptr && app!=nullptr && app->window!=nullptr) {
+        SizeEvent event(ANativeWindow_getWidth(app->window), ANativeWindow_getHeight(app->window));
+        SystemApi::dispatchResize(*mainWindow, event);
+        }
+      break;
+      }
     case APP_CMD_GAINED_FOCUS:
       focused = true;
       updateFocus();
@@ -276,6 +284,13 @@ void AndroidApi::implExit() {
 Rect AndroidApi::implWindowClientRect(SystemApi::Window* w) {
   const auto window = reinterpret_cast<ANativeWindow*>(w);
   return Rect(0,0,ANativeWindow_getWidth(window),ANativeWindow_getHeight(window));
+  }
+
+float AndroidApi::implUiScale(SystemApi::Window*) {
+  const auto density = AConfiguration_getDensity(app->config);
+  if(density==ACONFIGURATION_DENSITY_DEFAULT || density==ACONFIGURATION_DENSITY_ANY || density==ACONFIGURATION_DENSITY_NONE)
+    return 1.f;
+  return float(density)/ACONFIGURATION_DENSITY_MEDIUM;
   }
 
 bool AndroidApi::implSetAsFullscreen(SystemApi::Window*, bool) {
