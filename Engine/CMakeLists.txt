@@ -215,7 +215,6 @@ endif()
 ### Wayland
 if(TEMPEST_BUILD_WAYLAND)
   add_definitions(-DTEMPEST_BUILD_WAYLAND)
-  add_subdirectory("thirdparty/wayland"           EXCLUDE_FROM_ALL)
   add_subdirectory("thirdparty/wayland-protocols" EXCLUDE_FROM_ALL)
   target_link_libraries(${PROJECT_NAME} PRIVATE wayland_protocols xkbcommon)
 endif()

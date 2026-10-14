@@ -37,5 +37,5 @@ endforeach()
 
 add_library(wayland_protocols STATIC ${WAYLAND_GEN_SOURCES})
 target_include_directories(wayland_protocols PUBLIC "${WAYLAND_GEN_DIR}")
-target_link_libraries(wayland_protocols PUBLIC wayland_client)
+target_link_libraries(wayland_protocols PUBLIC wayland-client)
 set_target_properties(wayland_protocols PROPERTIES POSITION_INDEPENDENT_CODE ON)
