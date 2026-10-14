@@ -169,7 +169,12 @@ static bool             isApplicationActive = false;
 - (void)dispatchDisplayMetrics {
   if(owner==nullptr)
     return;
-  new (&event.metrics) DisplayMetricsEvent(owner->safeAreaMargins(), float(self.contentScaleFactor));
+
+  const auto scale   = self.contentScaleFactor;
+  const auto insets  = self.rootViewController.view.safeAreaInsets;
+  const auto safeArea =  Margin(int(std::ceil(insets.left*scale)), int(std::ceil(insets.right*scale)),
+                                int(std::ceil(insets.top*scale)),  int(std::ceil(insets.bottom*scale)));
+  new (&event.metrics) DisplayMetricsEvent(safeArea, float(scale));
   curentEvent = Event::DisplayMetricsChanged;
   swapContext();
   }
@@ -603,14 +608,6 @@ bool iOSApi::implSetAsFullscreen(Window* w, bool fullScreen) {
   auto wx = reinterpret_cast<TempestWindow*>(w);
   ViewController* ctrl = reinterpret_cast<ViewController*>(wx.rootViewController);
   return [ctrl setAsFullscreen: fullScreen];
-  }
-
-Margin iOSApi::implWindowSafeAreaMargins(Window* w) {
-  auto wx = reinterpret_cast<TempestWindow*>(w);
-  const auto insets = wx.rootViewController.view.safeAreaInsets;
-  const auto scale  = wx.contentScaleFactor;
-  return Margin(int(std::ceil(insets.left*scale)), int(std::ceil(insets.right*scale)),
-                int(std::ceil(insets.top*scale)),  int(std::ceil(insets.bottom*scale)));
   }
 
 float iOSApi::implUiScale(Window* w) {

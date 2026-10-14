@@ -24,10 +24,6 @@ SystemApi::Data SystemApi::m;
 SystemApi::SystemApi() {
   }
 
-Margin SystemApi::implWindowSafeAreaMargins(Window*) {
-  return Margin();
-  }
-
 float SystemApi::implUiScale(Window* w) {
   // default to 1.0, on platforms without hidpi implementation
   return 1;
@@ -197,10 +193,6 @@ void SystemApi::processEvent(AppCallBack& cb) {
 
 Rect SystemApi::windowClientRect(SystemApi::Window* w) {
   return inst().implWindowClientRect(w);
-  }
-
-Margin SystemApi::windowSafeAreaMargins(SystemApi::Window* w) {
-  return inst().implWindowSafeAreaMargins(w);
   }
 
 bool SystemApi::setAsFullscreen(SystemApi::Window *wx,bool fullScreen) {

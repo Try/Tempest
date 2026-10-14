@@ -206,8 +206,13 @@ void EventDispatcher::dispatchResize(Widget& wnd, SizeEvent& e) {
   wnd.resize(int(e.w),int(e.h));
   }
 
-void EventDispatcher::dispatchDisplayMetrics(Window& wnd, DisplayMetricsEvent& e) {
-  wnd.displayMetricsEvent(e);
+void EventDispatcher::dispatchDisplayMetrics(Widget& wnd, DisplayMetricsEvent& e) {
+  implMetrics(wnd, e);
+  for(auto i:overlays) {
+    if(!i->bind(wnd))
+      continue;
+    implMetrics(*i, e);
+    }
   }
 
 void EventDispatcher::dispatchClose(Widget& wnd, CloseEvent& e) {
@@ -512,6 +517,15 @@ void EventDispatcher::handleModKey(const KeyEvent& e) {
       break;
     default:
       break;
+    }
+  }
+
+void EventDispatcher::implMetrics(Widget& w, DisplayMetricsEvent& event) {
+  w.metricsEvent(event);
+  Widget::Iterator it(&w);
+  for(;it.hasNext();it.next()) {
+    Widget* i=it.get();
+    implMetrics(*i,event);
     }
   }
 

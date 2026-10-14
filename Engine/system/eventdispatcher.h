@@ -22,7 +22,7 @@ class EventDispatcher final {
     void dispatchKeyUp     (Widget& wnd, Tempest::KeyEvent&   event, uint32_t scancode);
 
     void dispatchResize    (Widget& wnd, Tempest::SizeEvent&  event);
-    void dispatchDisplayMetrics(Window& wnd, Tempest::DisplayMetricsEvent& event);
+    void dispatchDisplayMetrics(Widget& wnd, Tempest::DisplayMetricsEvent& event);
     void dispatchClose     (Widget& wnd, Tempest::CloseEvent& event);
 
     void dispatchFocus     (Widget& wnd, Tempest::FocusEvent& event);
@@ -50,6 +50,8 @@ class EventDispatcher final {
     void                         implSetMouseOver(const std::shared_ptr<Widget::Ref>& s, MouseEvent& orig);
     void                         implExcMouseOver(Widget *w, Widget *old);
     void                         handleModKey(const KeyEvent& e);
+
+    void                         implMetrics(Tempest::Widget &w, Tempest::DisplayMetricsEvent& event);
 
     std::shared_ptr<Widget::Ref> lock(std::weak_ptr<Widget::Ref>& w);
     std::shared_ptr<Widget::Ref> lock(int id, Event::MouseButton button);

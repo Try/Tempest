@@ -57,7 +57,6 @@ class SystemApi {
     static void     exit();
 
     static Rect     windowClientRect(SystemApi::Window *w);
-    static Margin   windowSafeAreaMargins(SystemApi::Window *w);
 
     static bool     setAsFullscreen(SystemApi::Window *w, bool fullScreen);
     static bool     isFullscreen(SystemApi::Window *w);
@@ -85,7 +84,6 @@ class SystemApi {
     virtual void     implExit() = 0;
 
     virtual Rect     implWindowClientRect(SystemApi::Window *w) = 0;
-    virtual Margin   implWindowSafeAreaMargins(SystemApi::Window *w);
 
     virtual bool     implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) = 0;
     virtual bool     implIsFullscreen(SystemApi::Window *w) = 0;

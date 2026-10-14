@@ -233,16 +233,6 @@ class SizeEvent : public Event {
     Tempest::Size size() const { return Size(int(w),int(h)); }
   };
 
-class DisplayMetricsEvent : public Event {
-  public:
-    DisplayMetricsEvent(const Margin& margins, float scale): safeAreaMargins(margins), uiScale(scale) {
-      setType(DisplayMetricsChanged);
-      }
-
-    const Margin safeAreaMargins;
-    const float  uiScale;
-  };
-
 /*!
  * \brief The MouseEvent class contains event parameters for mouse and touch events.
  */
@@ -296,5 +286,15 @@ class CloseEvent: public Event {
 class PolishEvent: public Event {
   public:
     PolishEvent() : Event(Polish) {}
+  };
+
+class DisplayMetricsEvent : public Event {
+  public:
+    DisplayMetricsEvent(const Margin& margins, float scale)
+      : Event(DisplayMetricsChanged), safeAreaMargins(margins), uiScale(scale) {
+      }
+
+    const Margin safeAreaMargins;
+    const float  uiScale;
   };
 }
