@@ -12,6 +12,7 @@ namespace Tempest {
     SizeBDiag,
     SizeFDiag,
     SizeAll,
+    Custom,
     };
 
   class WidgetState final {

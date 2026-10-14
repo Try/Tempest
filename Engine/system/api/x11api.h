@@ -29,6 +29,7 @@ class X11Api final: SystemApi {
 
     void     implSetCursorPosition(SystemApi::Window *w, int x, int y) override;
     void     implShowCursor(SystemApi::Window *w, CursorShape show) override;
+    void     implSetCustomCursor(const Tempest::Pixmap& image, int hotX, int hotY) override;
 
     int      implExec(AppCallBack& cb) override;
     void     implProcessEvents(AppCallBack& cb) override;

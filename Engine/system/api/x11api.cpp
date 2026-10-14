@@ -2,6 +2,7 @@
 
 #ifdef __UNIX__
 #include <Tempest/Event>
+#include <Tempest/Pixmap>
 #include <Tempest/TextCodec>
 #include <Tempest/Window>
 #include <Tempest/Log>
@@ -455,10 +456,15 @@ void X11Api::implSetCursorPosition(SystemApi::Window *w, int x, int y) {
     }
   }
 
+static Cursor customCursor = 0;
+
 void X11Api::implShowCursor(SystemApi::Window *w, CursorShape show) {
   HWND hwnd(w);
 
-  if(show==CursorShape::Hidden) {
+  if(show==CursorShape::Custom && customCursor!=0) {
+    XDefineCursor(dpy, hwnd, customCursor);
+    }
+  else if(show==CursorShape::Hidden) {
     Cursor invisibleCursor;
     ::Pixmap bitmapNoData;
     XColor black;
@@ -476,6 +482,7 @@ void X11Api::implShowCursor(SystemApi::Window *w, CursorShape show) {
     switch(show) {
       case CursorShape::Arrow:
       case CursorShape::Hidden:
+      case CursorShape::Custom:
         break;
       case CursorShape::IBeam:
         name = "xterm";
@@ -506,6 +513,38 @@ void X11Api::implShowCursor(SystemApi::Window *w, CursorShape show) {
     }
 
   XSync(dpy, False);
+  }
+
+void X11Api::implSetCustomCursor(const Tempest::Pixmap& image, int hotX, int hotY) {
+  if(customCursor!=0) {
+    XFreeCursor(dpy, customCursor);
+    customCursor = 0;
+    }
+  if(image.isEmpty() || image.format()!=TextureFormat::RGBA8)
+    return;
+
+  XcursorImage* img = XcursorImageCreate(int(image.w()), int(image.h()));
+  if(img==nullptr)
+    return;
+  img->xhot = XcursorDim(hotX);
+  img->yhot = XcursorDim(hotY);
+
+  // Xcursor expects premultiplied ARGB
+  auto src = reinterpret_cast<const uint8_t*>(image.data());
+  for(size_t i=0; i<size_t(image.w())*image.h(); ++i) {
+    const uint32_t a = src[i*4+3];
+    const uint32_t r = src[i*4+0]*a/255;
+    const uint32_t g = src[i*4+1]*a/255;
+    const uint32_t b = src[i*4+2]*a/255;
+    img->pixels[i] = (a<<24) | (r<<16) | (g<<8) | b;
+    }
+  customCursor = XcursorImageLoadCursor(dpy, img);
+  XcursorImageDestroy(img);
+
+  // Cursors are defined per window, so windows showing the old image get the new one
+  for(auto& i:impl->windows)
+    if(i.second.owner!=nullptr && SystemApi::cursorShape(*i.second.owner)==CursorShape::Custom)
+      implShowCursor(i.first, CursorShape::Custom);
   }
 
 Rect X11Api::implWindowClientRect(SystemApi::Window *w) {

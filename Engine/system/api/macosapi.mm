@@ -6,8 +6,11 @@
 #include <AppKit/AppKit.h>
 
 #include <Tempest/Window>
+#include <Tempest/Pixmap>
 #include <Tempest/Log>
 #include <Tempest/TextCodec>
+
+#include <cstring>
 
 using namespace Tempest;
 
@@ -115,6 +118,8 @@ static Tempest::Point mousePos(NSWindow* wnd, bool& inWindow) {
   return Tempest::Point{int(px.x), int(px.y)};
   }
 
+static NSCursor* customCursor = nil;
+
 static NSCursor* toNSCursor(CursorShape show) {
   switch (show) {
     case CursorShape::Arrow:
@@ -132,6 +137,8 @@ static NSCursor* toNSCursor(CursorShape show) {
     case CursorShape::SizeFDiag:
     case CursorShape::SizeAll:
       return [NSCursor arrowCursor];
+    case CursorShape::Custom:
+      return customCursor!=nil ? customCursor : [NSCursor arrowCursor];
     }
   return [NSCursor arrowCursor];
   }
@@ -437,6 +444,46 @@ void MacOSApi::implSetCursorPosition(SystemApi::Window *w, int x, int y) {
 
 void MacOSApi::implShowCursor(SystemApi::Window *w, CursorShape show) {
   ::implShowCursor(w, show);
+  }
+
+static NSCursor* makeCursor(const Pixmap& image, int hotX, int hotY) {
+  if(image.isEmpty() || image.format()!=TextureFormat::RGBA8)
+    return nil;
+
+  const NSInteger w = NSInteger(image.w());
+  const NSInteger h = NSInteger(image.h());
+  NSBitmapImageRep* rep = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:nullptr
+                                                                  pixelsWide:w
+                                                                  pixelsHigh:h
+                                                               bitsPerSample:8
+                                                             samplesPerPixel:4
+                                                                    hasAlpha:YES
+                                                                    isPlanar:NO
+                                                              colorSpaceName:NSDeviceRGBColorSpace
+                                                                bitmapFormat:NSBitmapFormatAlphaNonpremultiplied
+                                                                 bytesPerRow:w*4
+                                                                bitsPerPixel:32];
+  std::memcpy([rep bitmapData], image.data(), size_t(w*h*4));
+
+  // Image pixels are physical; NSCursor sizes and hot spots are in points
+  const CGFloat scale = [[NSScreen mainScreen] backingScaleFactor];
+  NSImage* img = [[NSImage alloc] initWithSize:NSMakeSize(CGFloat(w)/scale, CGFloat(h)/scale)];
+  [img addRepresentation:rep];
+  NSCursor* ret = [[NSCursor alloc] initWithImage:img hotSpot:NSMakePoint(CGFloat(hotX)/scale, CGFloat(hotY)/scale)];
+  [img release];
+  [rep release];
+  return ret;
+  }
+
+void MacOSApi::implSetCustomCursor(const Pixmap& image, int hotX, int hotY) {
+  NSCursor* prev = customCursor;
+  customCursor = makeCursor(image, hotX, hotY);
+  if(prev==nil)
+    return;
+  // Swap an image that is on screen before releasing it
+  if([NSCursor currentCursor]==prev)
+    [(customCursor!=nil ? customCursor : [NSCursor arrowCursor]) set];
+  [prev release];
   }
 
 void MacOSApi::implSetWindowTitle(Window* w, const char* utf8) {

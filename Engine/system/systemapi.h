@@ -10,6 +10,8 @@
 
 namespace Tempest {
 
+class Pixmap;
+
 class SizeEvent;
 class DisplayMetricsEvent;
 class MouseEvent;
@@ -64,6 +66,7 @@ class SystemApi {
     static void     setWindowTitle(SystemApi::Window *w, const char* utf8);
     static void     setAllowedOrientations(SystemApi::Window *w, Orientation orientations);
     static float    uiScale(SystemApi::Window *w);
+    static void     setCustomCursor(const Pixmap& image, int hotX, int hotY);
 
     static uint16_t translateKey(uint64_t scancode);
     static void     setupKeyTranslate(const TranslateKeyPair k[], uint16_t funcCount);
@@ -91,6 +94,7 @@ class SystemApi {
 
     virtual void     implSetCursorPosition(SystemApi::Window *w, int x, int y) = 0;
     virtual void     implShowCursor(SystemApi::Window *w, CursorShape show) = 0;
+    virtual void     implSetCustomCursor(const Pixmap& image, int hotX, int hotY);
 
     virtual float    implUiScale(SystemApi::Window* w);
 

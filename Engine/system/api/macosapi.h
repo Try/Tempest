@@ -30,6 +30,7 @@ class MacOSApi final: SystemApi {
 
     void     implSetCursorPosition(SystemApi::Window *w, int x, int y) override;
     void     implShowCursor(SystemApi::Window *w, CursorShape show) override;
+    void     implSetCustomCursor(const Pixmap& image, int hotX, int hotY) override;
 
     void     implSetWindowTitle(SystemApi::Window *w, const char* utf8) override;
     float    implUiScale(SystemApi::Window* w) override;
