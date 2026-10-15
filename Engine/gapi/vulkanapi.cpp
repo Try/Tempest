@@ -88,7 +88,7 @@ static std::vector<VkExtensionProperties> instExtensionsList() {
   }
 
 // surface extension of the window system
-// on linux: wayland if that backend is active, otherwise X11
+// on linux: wayland unless TEMPEST_DISABLE_WAYLAND=1, the same decision as SystemApi::inst()
 static const char* surfaceExtensionName() {
 #if defined(__WINDOWS__)
   return VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
@@ -96,10 +96,7 @@ static const char* surfaceExtensionName() {
   return VK_KHR_ANDROID_SURFACE_EXTENSION_NAME;
 #elif defined(__UNIX__)
 #if defined(TEMPEST_BUILD_WAYLAND)
-  // Note: if Wayland is usable but Vulkan lacks VK_KHR_wayland_surface, we can't fall back to X11,
-  // because the backend is chosen without asking Vulkan (that would need an API change in WaylandApi).
-  // Instance creation then fails; TEMPEST_DISABLE_WAYLAND=1 forces X11.
-  if(WaylandApi::display()!=nullptr)
+  if(!WaylandApi::isDisabled())
     return VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
 #endif
   return VK_KHR_XLIB_SURFACE_EXTENSION_NAME;

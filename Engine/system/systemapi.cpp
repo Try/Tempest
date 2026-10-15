@@ -109,10 +109,11 @@ SystemApi& SystemApi::inst() {
 #elif defined(__UNIX__)
   static SystemApi& api = []() -> SystemApi& {
 #if defined(TEMPEST_BUILD_WAYLAND)
-    static WaylandApi wl;
-    if(wl.isConnected())
+    if(!WaylandApi::isDisabled()) {
+      static WaylandApi wl;
       return wl;
-    Log::i("SystemApi: Wayland is not available, falling back to X11");
+      }
+    Log::i("SystemApi: Wayland disabled by TEMPEST_DISABLE_WAYLAND=1, using X11");
 #endif
     static X11Api x11;
     return x11;

@@ -15,13 +15,14 @@ class WaylandApi final: SystemApi {
     static wl_display* display();
     static wl_surface* surface(SystemApi::Window* w);
 
+    // TEMPEST_DISABLE_WAYLAND=1: X11 is the backend
+    static bool        isDisabled();
+
   private:
     struct Private;
 
     WaylandApi();
     ~WaylandApi();
-
-    bool     isConnected() const;
 
     Window*  implCreateWindow(Tempest::Window *owner, uint32_t width, uint32_t height) override;
     Window*  implCreateWindow(Tempest::Window *owner, ShowMode sm) override;

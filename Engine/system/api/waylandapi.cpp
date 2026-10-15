@@ -869,7 +869,7 @@ void WaylandApi::Private::processKeyRepeat() {
 //
 
 bool WaylandApi::Private::hasRequiredGlobals() const {
-  // No fallbacks yet without fractional-scale, cursor-shape or server-side decorations (e.g. GNOME uses X11 for now).
+  // No fallbacks yet without fractional-scale, cursor-shape or server-side decorations (e.g. GNOME doesn't work).
   // Pointer constraints + relative pointer: mouse-look, since Wayland clients can't warp the pointer.
   struct Required {
     const void*         object;
@@ -891,22 +891,15 @@ bool WaylandApi::Private::hasRequiredGlobals() const {
   for(auto& r:required) {
     if(r.object!=nullptr)
       continue;
-    Log::i("WaylandApi: compositor doesn't offer ", r.interface.name, " version ", r.version, " or newer");
+    Log::e("WaylandApi: compositor doesn't offer ", r.interface.name, " version ", r.version, " or newer");
     hasAll = false;
     }
   return hasAll;
   }
 
 bool WaylandApi::Private::connect() {
-  // True only if Wayland is usable (connected + all required globals); otherwise logs why.
+  // True only if Wayland is usable (connected + all required globals). Otherwise logs error
   // Note: ::dpy set in constructor/destructor only!
-
-  // Manual override, e.g. to test the X11 path: TEMPEST_DISABLE_WAYLAND=1
-  const char* disable = std::getenv("TEMPEST_DISABLE_WAYLAND");
-  if(disable!=nullptr && std::strcmp(disable,"1")==0) {
-    Log::i("WaylandApi: Wayland disabled by TEMPEST_DISABLE_WAYLAND=1");
-    return false;
-    }
 
   // TODO(wayland): WAYLAND_DISPLAY check: wl_display_connect(nullptr) falls back to "wayland-0",
   // which may belong to another session of the same user (e.g. X11 session here, Wayland session
@@ -916,7 +909,7 @@ bool WaylandApi::Private::connect() {
   if(!display) {
     const int   err  = errno;
     const char* name = std::getenv("WAYLAND_DISPLAY");
-    Log::i("WaylandApi: can't connect to a compositor (WAYLAND_DISPLAY=", (name!=nullptr ? name : "not set"), "): ",
+    Log::e("WaylandApi: can't connect to a compositor (WAYLAND_DISPLAY=", (name!=nullptr ? name : "not set"), "): ",
            std::strerror(err));
     return false;
     }
@@ -924,7 +917,7 @@ bool WaylandApi::Private::connect() {
   // Needed to compile keymap: without it there's no keyboard input
   xkbContext = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
   if(!xkbContext) {
-    Log::i("WaylandApi: xkb_context_new failed");
+    Log::e("WaylandApi: xkb_context_new failed");
     return false;
     }
 
@@ -1189,16 +1182,24 @@ WaylandApi::WaylandApi() {
   setupKeyTranslate(k,24);
 
   impl.reset(new Private());
-  if(impl->connect())
-    dpy = impl->display; // only here does Wayland become active backend
-  else
-    impl->disconnect();  // leave nothing half-connected; SystemApi::inst() falls back to X11
+  if(impl->connect()) {
+    dpy = impl->display; // display() non-null only while connected
+    } else {
+    impl->disconnect();  // leave nothing half-connected
+    Log::e("WaylandApi: Wayland is not usable (use TEMPEST_DISABLE_WAYLAND=1 for X11)");
+    }
   }
 
 WaylandApi::~WaylandApi() {
   dpy = nullptr;
   impl->disconnect();
   impl.reset();
+  }
+
+bool WaylandApi::isDisabled() {
+  // Manual override, e.g. to compare with the X11 backend: TEMPEST_DISABLE_WAYLAND=1
+  const char* disable = std::getenv("TEMPEST_DISABLE_WAYLAND");
+  return disable!=nullptr && std::strcmp(disable,"1")==0;
   }
 
 wl_display* WaylandApi::display() {
@@ -1212,20 +1213,17 @@ wl_surface* WaylandApi::surface(SystemApi::Window* w) {
   return toWWindow(w)->surface;
   }
 
-bool WaylandApi::isConnected() const {
-  // Alternative to display() for checking active Wayland backend
-  // to avoid circular dependency inside SystemApi::inst()
-  // display()->SystemApi::inst()->isConnected()
-  return dpy!=nullptr;
-  }
-
 SystemApi::Window* WaylandApi::implCreateWindow(Tempest::Window* owner, uint32_t width, uint32_t height) {
+  if(dpy==nullptr)
+    return nullptr;
   return reinterpret_cast<SystemApi::Window*>(impl->createWindow(owner,width,height,SystemApi::Normal));
   }
 
 SystemApi::Window* WaylandApi::implCreateWindow(Tempest::Window* owner, ShowMode sm) {
   // 800x600 like the other backends; Maximized/FullScreen get their size from the first configure.
   // Hidden treated as Normal.
+  if(dpy==nullptr)
+    return nullptr;
   return reinterpret_cast<SystemApi::Window*>(impl->createWindow(owner,800,600,sm));
   }
 
