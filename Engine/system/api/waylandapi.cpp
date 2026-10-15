@@ -174,25 +174,7 @@ void WaylandApi::Private::onWlRegistryGlobal(void* data, wl_registry* registry, 
     self->fractionalScaleManager = static_cast<wp_fractional_scale_manager_v1*>(
         wl_registry_bind(registry, name, &wp_fractional_scale_manager_v1_interface, wpFractionalScaleManagerV1Version));
     }
-  // [input] if(std::strcmp(interface, wp_cursor_shape_manager_v1_interface.name)==0 && version>=wpCursorShapeManagerV1Version) {
-    // [input] self->cursorShapeManager = static_cast<wp_cursor_shape_manager_v1*>(
-        // [input] wl_registry_bind(registry, name, &wp_cursor_shape_manager_v1_interface, wpCursorShapeManagerV1Version));
-    // [input] }
-  // [input] if(std::strcmp(interface, zwp_pointer_constraints_v1_interface.name)==0 && version>=zwpPointerConstraintsV1Version) {
-    // [input] self->pointerConstraints = static_cast<zwp_pointer_constraints_v1*>(
-        // [input] wl_registry_bind(registry, name, &zwp_pointer_constraints_v1_interface, zwpPointerConstraintsV1Version));
-    // [input] }
-  // [input] if(std::strcmp(interface, zwp_relative_pointer_manager_v1_interface.name)==0 && version>=zwpRelativePointerManagerV1Version) {
-    // [input] self->relativePointerManager = static_cast<zwp_relative_pointer_manager_v1*>(
-        // [input] wl_registry_bind(registry, name, &zwp_relative_pointer_manager_v1_interface, zwpRelativePointerManagerV1Version));
-    // [input] }
-  // [input] if(std::strcmp(interface, wl_seat_interface.name)==0 && version>=wlSeatVersion && self->seat==nullptr) {
-    // [input] // Only the first seat: multi-seat setups are rare, and Tempest has a single pointer/keyboard.
-    // [input] static_assert(wlSeatVersion<WL_POINTER_AXIS_RELATIVE_DIRECTION_SINCE_VERSION,
-                  // [input] "wlPointerListener needs an axis_relative_direction handler at this version");
-    // [input] self->seat = static_cast<wl_seat*>(wl_registry_bind(registry, name, &wl_seat_interface, wlSeatVersion));
-    // [input] wl_seat_add_listener(self->seat, &wlSeatListener, self);
-    // [input] }
+  // [input]
   }
 
 void WaylandApi::Private::onXdgWmBasePing([[maybe_unused]] void* data, xdg_wm_base* wmBase, uint32_t serial) {
@@ -605,7 +587,7 @@ void WaylandApi::Private::renderWindows() {
 //
 
 WaylandApi::WaylandApi() {
-  // [input] key table + setupKeyTranslate(k,24): see notes/split-removed.md
+  // [input] key table + setupKeyTranslate(k,24)
 
   impl.reset(new Private());
   if(impl->connect()) {
@@ -691,29 +673,11 @@ void WaylandApi::implSetWindowTitle(SystemApi::Window* w, const char* utf8) {
   }
 
 void WaylandApi::implSetCursorPosition([[maybe_unused]] SystemApi::Window* w, [[maybe_unused]] int x, [[maybe_unused]] int y) {
-  // [input] // Wayland clients can't move the pointer. While it's locked, the virtual cursor is all the app sees, so setting it is
-  // [input] // enough (no MouseMove for the jump).
-  // [input] auto ww = toWWindow(w);
-  // [input] if(!ww->pointerLocked)
-    // [input] return;
-  // [input] ww->cursorX = x;
-  // [input] ww->cursorY = y;
+  // [input]
   }
 
 void WaylandApi::implShowCursor([[maybe_unused]] SystemApi::Window* w, [[maybe_unused]] CursorShape show) {
-  // [input] // The pointer lock is requested whenever the cursor is hidden, even with the pointer elsewhere: the compositor
-  // [input] // activates it once the pointer is over the focused window (see Private::setPointerLock).
-  // [input] // The cursor image needs the enter serial, so it's only set while the pointer is over w; enter and focus changes
-  // [input] // re-apply it. An unfocused window shows the desktop cursor.
-  // [input] auto ww = toWWindow(w);
-  // [input] impl->setPointerLock(*ww, show==CursorShape::Hidden);
-  // [input] if(impl->pointerFocus!=ww)
-    // [input] return;
-  // [input] const CursorShape shape = impl->isWindowFocused(ww) ? show : CursorShape::Arrow;
-  // [input] if(shape==CursorShape::Hidden)
-    // [input] wl_pointer_set_cursor(impl->pointer, impl->pointerEnterSerial, nullptr, 0, 0);
-  // [input] else
-    // [input] wp_cursor_shape_device_v1_set_shape(impl->cursorShapeDevice, impl->pointerEnterSerial, Private::toCursorShape(shape));
+  // [input]
   }
 
 bool WaylandApi::implIsRunning() {
