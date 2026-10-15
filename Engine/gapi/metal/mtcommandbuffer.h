@@ -113,6 +113,7 @@ class MtCommandBuffer : public AbstractGraphicsApi::CommandBuffer {
     NsPtr<MTL::BlitCommandEncoder>    encBlit;
 
     std::vector<const void*>          usedResources;
+    std::vector<AbstractGraphicsApi::PSwapchainImage> swapchainImages;
 
     MtFboLayout                       curFbo;
     Push                              pushData;
