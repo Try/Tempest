@@ -96,7 +96,7 @@ struct WaylandApi::Private {
   wp_fractional_scale_manager_v1*  fractionalScaleManager = nullptr;
 
   // Exact versions we need to bind successfully: listeners and requests are written for these
-  static constexpr uint32_t wlCompositorVersion               = 6;
+  static constexpr uint32_t wlCompositorVersion               = 1;
   static constexpr uint32_t xdgWmBaseVersion                  = 6; // v6: xdg_toplevel state 'suspended'
   static constexpr uint32_t zxdgDecorationManagerV1Version    = 1;
   static constexpr uint32_t wpViewporterVersion               = 1;
