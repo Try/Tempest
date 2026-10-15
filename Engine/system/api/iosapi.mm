@@ -563,6 +563,10 @@ static SystemApi::Window* createWindow(Tempest::Window *owner, uint32_t w, uint3
 
   window->owner = owner;
   createDisplayLink(window);
+  // Initial safe-area callbacks can run before the C++ owner is assigned.
+  dispatch_async(dispatch_get_main_queue(), ^{
+    [window dispatchDisplayMetrics];
+    });
   
   return reinterpret_cast<SystemApi::Window*>(window);
   }
