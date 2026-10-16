@@ -56,6 +56,8 @@ class SystemApi {
     static void     destroyWindow(Window* w);
     static void     exit();
 
+    static void     setPreferredFrameRateRange(SystemApi::Window *w, uint32_t minimum, uint32_t maximum, uint32_t preferred);
+
     static Rect     windowClientRect(SystemApi::Window *w);
 
     static bool     setAsFullscreen(SystemApi::Window *w, bool fullScreen);
@@ -92,6 +94,7 @@ class SystemApi {
     virtual void     implShowCursor(SystemApi::Window *w, CursorShape show) = 0;
 
     virtual float    implUiScale(SystemApi::Window* w);
+    virtual void     implSetPreferredFrameRateRange(SystemApi::Window *w, uint32_t minimum, uint32_t maximum, uint32_t preferred);
 
     virtual bool     implIsRunning() = 0;
     virtual int      implExec(AppCallBack& cb) = 0;
