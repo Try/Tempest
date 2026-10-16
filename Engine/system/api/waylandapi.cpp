@@ -33,7 +33,7 @@ static std::atomic_bool isExit{0};
 ///   WINDOW STATE
 //
 
-// Per-window state. The SystemApi::Window* handed to Tempest points to this struct.
+// Per-window state. user data in SystemApi::Window*/wl_surface* handed to Tempest
 struct WWindow {
   Tempest::Window*             owner           = nullptr;
 
@@ -77,7 +77,10 @@ struct WWindow {
   };
 
 static WWindow* toWWindow(SystemApi::Window* w) {
-  return reinterpret_cast<WWindow*>(w);
+  // the wl_surface listener's data (= its user data) is the WWindow, see createWindow()
+  if(w==nullptr)
+    return nullptr;
+  return static_cast<WWindow*>(wl_surface_get_user_data(reinterpret_cast<wl_surface*>(w)));
   }
 
 ////
@@ -133,11 +136,11 @@ struct WaylandApi::Private {
   void                          logDisplayError() const;
 
   // Connection and windows
-  bool     hasRequiredGlobals() const;
-  bool     connect();
-  void     disconnect();
-  WWindow* createWindow(Tempest::Window* owner, uint32_t width, uint32_t height, SystemApi::ShowMode sm);
-  void     destroyWindow(WWindow* w);
+  bool               hasRequiredGlobals() const;
+  bool               connect();
+  void               disconnect();
+  SystemApi::Window* createWindow(Tempest::Window* owner, uint32_t width, uint32_t height, SystemApi::ShowMode sm);
+  void               destroyWindow(WWindow* w);
 
   // Event loop
   void        handleConnectionError();
@@ -412,7 +415,7 @@ void WaylandApi::Private::disconnect() {
   display = nullptr;
   }
 
-WWindow* WaylandApi::Private::createWindow(Tempest::Window* owner, uint32_t width, uint32_t height, SystemApi::ShowMode sm) {
+SystemApi::Window* WaylandApi::Private::createWindow(Tempest::Window* owner, uint32_t width, uint32_t height, SystemApi::ShowMode sm) {
   // all roles and state requests needed before the first commit
   windows.emplace_back(std::make_unique<WWindow>());
   WWindow* win = windows.back().get();
@@ -421,7 +424,7 @@ WWindow* WaylandApi::Private::createWindow(Tempest::Window* owner, uint32_t widt
   win->appRequestedHeight = int32_t(height);
 
   win->surface = wl_compositor_create_surface(compositor);
-  wl_surface_add_listener(win->surface, &wlSurfaceListener, win);
+  wl_surface_add_listener(win->surface, &wlSurfaceListener, win); // also attaches WWindow user data to wl_surface
 
   win->xdgSurface = xdg_wm_base_get_xdg_surface(wmBase, win->surface);
   xdg_surface_add_listener(win->xdgSurface, &xdgSurfaceListener, win);
@@ -461,7 +464,7 @@ WWindow* WaylandApi::Private::createWindow(Tempest::Window* owner, uint32_t widt
   // Window's constructor reads the client rect itself after this returns: no SizeEvent for this size.
   win->dispatchedWidth  = win->physicalWidth();
   win->dispatchedHeight = win->physicalHeight();
-  return win;
+  return reinterpret_cast<SystemApi::Window*>(win->surface); // wl_surface* native handle
   }
 
 void WaylandApi::Private::destroyWindow(WWindow* w) {
@@ -615,16 +618,10 @@ wl_display* WaylandApi::display() {
   return dpy;
   }
 
-wl_surface* WaylandApi::surface(SystemApi::Window* w) {
-  if(dpy==nullptr || w==nullptr)
-    return nullptr;
-  return toWWindow(w)->surface;
-  }
-
 SystemApi::Window* WaylandApi::implCreateWindow(Tempest::Window* owner, uint32_t width, uint32_t height) {
   if(dpy==nullptr)
     return nullptr;
-  return reinterpret_cast<SystemApi::Window*>(impl->createWindow(owner,width,height,SystemApi::Normal));
+  return impl->createWindow(owner,width,height,SystemApi::Normal);
   }
 
 SystemApi::Window* WaylandApi::implCreateWindow(Tempest::Window* owner, ShowMode sm) {
@@ -632,7 +629,7 @@ SystemApi::Window* WaylandApi::implCreateWindow(Tempest::Window* owner, ShowMode
   // Hidden treated as Normal.
   if(dpy==nullptr)
     return nullptr;
-  return reinterpret_cast<SystemApi::Window*>(impl->createWindow(owner,800,600,sm));
+  return impl->createWindow(owner,800,600,sm);
   }
 
 void WaylandApi::implDestroyWindow(SystemApi::Window* w) {

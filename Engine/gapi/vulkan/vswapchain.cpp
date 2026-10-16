@@ -281,7 +281,7 @@ VkResult VSwapchain::createSurface(VkInstance instance, void* hwnd, VkSurfaceKHR
     VkWaylandSurfaceCreateInfoKHR createInfo = {};
     createInfo.sType   = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
     createInfo.display = dpy;
-    createInfo.surface = WaylandApi::surface(reinterpret_cast<SystemApi::Window*>(hwnd));
+    createInfo.surface = reinterpret_cast<wl_surface*>(hwnd);
     return vkCreateWaylandSurfaceKHR(instance, &createInfo, nullptr, pSurface);
     }
 #endif

@@ -4,7 +4,6 @@
 
 // opaque libwayland types
 struct wl_display;
-struct wl_surface;
 
 namespace Tempest {
 
@@ -13,7 +12,6 @@ class WaylandApi final: SystemApi {
     // For Vulkan (vulkanapi.cpp, vswapchain.cpp).
     // nullptr if Wayland is not the active backend
     static wl_display* display();
-    static wl_surface* surface(SystemApi::Window* w);
 
     // TEMPEST_DISABLE_WAYLAND=1: X11 is the backend
     static bool        isDisabled();
