@@ -150,6 +150,10 @@ void SystemApi::dispatchResize(Tempest::Window& cb, SizeEvent& e) {
   dispatcher.dispatchResize(cb,e);
   }
 
+void SystemApi::dispatchDisplayMetrics(Tempest::Window& cb, DisplayMetricsEvent& e) {
+  dispatcher.dispatchDisplayMetrics(cb,e);
+  }
+
 void SystemApi::dispatchClose(Tempest::Window& cb, CloseEvent& e) {
   dispatcher.dispatchClose(cb,e);
   }
