@@ -11,6 +11,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <deque>
 #include <memory>
 #include <thread>
 #include <vector>
@@ -59,6 +60,7 @@ struct WWindow {
   bool     fullscreen     = false;
   bool     suspended      = false; // compositor doesn't repaint the window (e.g. minimized): pause rendering
   bool     configured     = false; // first configure acked; no buffer (= Vulkan present) before that
+  bool     closeQueued    = false; // a Close is in appEvents: further close requests add nothing until it's dispatched
 
   int32_t  appRequestedWidth  = 0; // physical; used until the compositor sends a size
   int32_t  appRequestedHeight = 0;
@@ -82,6 +84,21 @@ static WWindow* toWWindow(SystemApi::Window* w) {
     return nullptr;
   return static_cast<WWindow*>(wl_surface_get_user_data(reinterpret_cast<wl_surface*>(w)));
   }
+
+////
+///   APP EVENTS
+//
+
+// Events for the app/systemAPI. Listeners only record them. implProcessEvents() dispatches one per call
+struct AppEvent {
+  enum Type : uint8_t {
+    Close,
+    };
+  Type     type;
+  WWindow* w;
+  };
+
+static std::deque<AppEvent> appEvents; // in the order the compositor sent them
 
 ////
 ///   SESSION STATE
@@ -134,6 +151,7 @@ struct WaylandApi::Private {
   static constexpr auto         ioIgnore = [](auto...) {}; // useful to silence Wayland listener stubs
   template<class T> static void ioDestroy(T*& obj, void (*destroyFn)(T*));
   void                          logDisplayError() const;
+  static void                   dispatchCloseEvent(WWindow& w);
 
   // Connection and windows
   bool               hasRequiredGlobals() const;
@@ -146,6 +164,7 @@ struct WaylandApi::Private {
   void        handleConnectionError();
   int         pollTimeout() const;
   void        readEvents();
+  static bool dispatchAppEvent();
   static void updateState(WWindow& w);
   void        renderWindows();
   };
@@ -229,14 +248,12 @@ void WaylandApi::Private::onXdgToplevelConfigure(void* data, [[maybe_unused]] xd
   }
 
 void WaylandApi::Private::onXdgToplevelClose(void* data, [[maybe_unused]] xdg_toplevel* toplevel) {
-  // Only a request. Like the Windows backend: the app or an overlay may accept the CloseEvent; otherwise exit.
+  // Only recorded, see dispatchCloseEvent(). Requests before that one is dispatched count as one.
   auto w = static_cast<WWindow*>(data);
-  if(w->owner==nullptr)
+  if(w->closeQueued)
     return;
-  CloseEvent e;
-  SystemApi::dispatchClose(*w->owner, e);
-  if(!e.isAccepted())
-    SystemApi::exit();
+  w->closeQueued = true;
+  appEvents.push_back({AppEvent::Close, w});
   }
 
 void WaylandApi::Private::onZxdgToplevelDecorationV1Configure([[maybe_unused]] void* data, [[maybe_unused]] zxdg_toplevel_decoration_v1* decoration, uint32_t mode) {
@@ -311,6 +328,18 @@ void WaylandApi::Private::logDisplayError() const {
     } else {
     Log::e("WaylandApi: connection error: ", std::strerror(err));
     }
+  }
+
+void WaylandApi::Private::dispatchCloseEvent(WWindow& w) {
+  // Only a request. Like the Windows backend: the app or an overlay may accept the CloseEvent; otherwise exit.
+  // w isn't used after the dispatch: the app may destroy the window while handling it.
+  w.closeQueued = false;
+  if(w.owner==nullptr)
+    return;
+  CloseEvent e;
+  SystemApi::dispatchClose(*w.owner, e);
+  if(!e.isAccepted())
+    SystemApi::exit();
   }
 
 ////
@@ -495,7 +524,8 @@ void WaylandApi::Private::destroyWindow(WWindow* w) {
   ioDestroy(w->xdgSurface,      xdg_surface_destroy);
   ioDestroy(w->surface,         wl_surface_destroy);
 
-  // After deletion events still queued for its objects are dropped by libwayland
+  // Our recorded events for w are dropped here; events still queued for its objects are dropped by libwayland
+  std::erase_if(appEvents, [w](const AppEvent& e) { return e.w==w; });
   std::erase_if(windows, [w](const std::unique_ptr<WWindow>& p) { return p.get()==w; });
   }
 
@@ -561,6 +591,20 @@ void WaylandApi::Private::readEvents() {
     }
 
   // [input] processKeyRepeat(); // synthetic key events
+  }
+
+bool WaylandApi::Private::dispatchAppEvent() {
+  // At most one event. Taken out before dispatching, so a nested event loop continues with the next one.
+  if(appEvents.empty())
+    return false;
+  const AppEvent e = appEvents.front();
+  appEvents.pop_front();
+  switch(e.type) {
+    case AppEvent::Close:
+      dispatchCloseEvent(*e.w);
+      break;
+    }
+  return true;
   }
 
 void WaylandApi::Private::updateState(WWindow& w) {
@@ -689,9 +733,14 @@ int WaylandApi::implExec(SystemApi::AppCallBack& cb) {
   }
 
 void WaylandApi::implProcessEvents(SystemApi::AppCallBack& cb) {
-  // Unlike X11, handles all pending events and then renders, so a steady stream of events can't starve rendering.
-  // readEvents() only waits while no window may render (see pollTimeout()).
+  // Like X11: one app event per call, else timers and rendering. Wayland events are read (all at once, libwayland
+  // can't do less) only when no app event is left; their listeners only record. Configures change state only, so they
+  // can't starve rendering. readEvents() only waits while no window may render (see pollTimeout()).
+  if(impl->dispatchAppEvent())
+    return;
   impl->readEvents();
+  if(impl->dispatchAppEvent())
+    return;
   if(cb.onTimer()==0)
     std::this_thread::yield();
   impl->renderWindows();
