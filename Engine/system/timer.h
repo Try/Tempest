@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Tempest/Signal>
-#include <limits>
 
 namespace Tempest {
 
@@ -14,7 +13,7 @@ class Timer final {
 
     Signal<void()> timeout;
 
-    void     start( uint64_t t );
+    void     start(uint64_t t);
     void     stop();
     uint64_t interval() const { return m.interval; }
 
