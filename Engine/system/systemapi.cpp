@@ -2,6 +2,7 @@
 
 #include "api/windowsapi.h"
 #include "api/x11api.h"
+#include "api/waylandapi.h"
 #include "api/macosapi.h"
 #include "api/iosapi.h"
 #include "api/androidapi.h"
@@ -9,6 +10,7 @@
 
 #include <Tempest/Event>
 #include <Tempest/Window>
+#include <Tempest/Log>
 
 using namespace Tempest;
 
@@ -105,7 +107,17 @@ SystemApi& SystemApi::inst() {
 #elif defined(__ANDROID__)
   static AndroidApi api;
 #elif defined(__UNIX__)
-  static X11Api api;
+  static SystemApi& api = []() -> SystemApi& {
+#if defined(TEMPEST_BUILD_WAYLAND)
+    if(!WaylandApi::isDisabled()) {
+      static WaylandApi wl;
+      return wl;
+      }
+    Log::i("SystemApi: Wayland disabled by TEMPEST_DISABLE_WAYLAND=1, using X11");
+#endif
+    static X11Api x11;
+    return x11;
+    }();
 #elif defined(__OSX__)
   static MacOSApi api;
 #elif defined(__IOS__)
