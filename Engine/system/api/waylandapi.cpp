@@ -91,14 +91,9 @@ static WWindow* toWWindow(SystemApi::Window* w) {
 
 // Events for the app/systemAPI. Listeners only record them. implProcessEvents() dispatches one per call
 struct AppEvent {
-  enum Type : uint8_t {
-    Close,
-    };
-  Type     type;
-  WWindow* w;
+  Tempest::Event::Type type;
+  WWindow*             w;
   };
-
-static std::deque<AppEvent> appEvents; // in the order the compositor sent them
 
 ////
 ///   SESSION STATE
@@ -123,6 +118,7 @@ struct WaylandApi::Private {
   static constexpr uint32_t wpFractionalScaleManagerV1Version = 1;
 
   std::vector<std::unique_ptr<WWindow>> windows; // owns the windows; each WWindow keeps its address (handle, listener data)
+  static inline std::deque<AppEvent>    appEvents; // in the order the compositor sent them
 
   // Session listeners. 'data' is Private*.
   static void onWlRegistryGlobal(void* data, wl_registry* registry, uint32_t name, const char* interface, uint32_t version);
@@ -253,7 +249,7 @@ void WaylandApi::Private::onXdgToplevelClose(void* data, [[maybe_unused]] xdg_to
   if(w->closeQueued)
     return;
   w->closeQueued = true;
-  appEvents.push_back({AppEvent::Close, w});
+  appEvents.push_back({Event::Close, w});
   }
 
 void WaylandApi::Private::onZxdgToplevelDecorationV1Configure([[maybe_unused]] void* data, [[maybe_unused]] zxdg_toplevel_decoration_v1* decoration, uint32_t mode) {
@@ -600,8 +596,10 @@ bool WaylandApi::Private::dispatchAppEvent() {
   const AppEvent e = appEvents.front();
   appEvents.pop_front();
   switch(e.type) {
-    case AppEvent::Close:
+    case Event::Close:
       dispatchCloseEvent(*e.w);
+      break;
+    default:
       break;
     }
   return true;
