@@ -539,7 +539,7 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
 
     HWND hWnd = xev.xclient.window;
     auto it = impl->findWindow(hWnd.ptr());
-    if(it==nullptr)
+    if(it==nullptr || it->owner==nullptr)
       return;
     Tempest::Window& cb = *it->owner;
     switch( xev.type ) {
