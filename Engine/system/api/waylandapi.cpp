@@ -158,8 +158,8 @@ struct WaylandApi::Private {
 
   // Event loop
   void        handleConnectionError();
-  int         pollTimeout() const;
-  void        readEvents();
+  int         pollTimeout(const SystemApi::AppCallBack& cb) const;
+  void        readEvents(const SystemApi::AppCallBack& cb);
   static bool dispatchAppEvent();
   static void updateState(WWindow& w);
   void        renderWindows();
@@ -530,16 +530,18 @@ void WaylandApi::Private::handleConnectionError() {
   SystemApi::exit();
   }
 
-int WaylandApi::Private::pollTimeout() const {
+int WaylandApi::Private::pollTimeout(const SystemApi::AppCallBack& cb) const {
   // 0 if a window may render; otherwise wait for the compositor (e.g. a configure that ends 'suspended'),
-  // at most idlePollTimeoutMs
+  // but not beyond the next timer and at most idlePollTimeoutMs
   // [input] (and not beyond the next scheduled key repeat)
 
-  // Longest sleep in poll() while no window may render; short enough to keep Tempest's timers accurate.
+  // Longest sleep in poll() while no window may render
   constexpr int idlePollTimeoutMs = 5;
   const bool canRender = std::any_of(windows.begin(), windows.end(),
                                      [](const std::unique_ptr<WWindow>& w) { return w->readyToRender(); });
-  int timeout = canRender ? 0 : idlePollTimeoutMs;
+  if(canRender)
+    return 0;
+  int timeout = int(std::min<uint64_t>(cb.timeToTimer(), idlePollTimeoutMs));
   // [input] if(repeatKeycode!=0) {
     // [input] const auto untilRepeat = std::chrono::ceil<std::chrono::milliseconds>(repeatNext - std::chrono::steady_clock::now());
     // [input] timeout = std::clamp(int(untilRepeat.count()), 0, timeout);
@@ -547,7 +549,7 @@ int WaylandApi::Private::pollTimeout() const {
   return timeout;
   }
 
-void WaylandApi::Private::readEvents() {
+void WaylandApi::Private::readEvents(const SystemApi::AppCallBack& cb) {
   // Doesn't block beyond pollTimeout(): Tempest's loop must keep running (timers, rendering).
   // The Vulkan driver reads the same connection on its own queue; prepare_read -> read_events/cancel_read
   // is how several readers share the socket without stealing or blocking each other.
@@ -567,7 +569,7 @@ void WaylandApi::Private::readEvents() {
   fd.fd     = wl_display_get_fd(display);
   fd.events = POLLIN;
   // Timeout computed after dispatching the queued events: a configure among them may let a window render now.
-  if(poll(&fd, 1, pollTimeout())>0) {
+  if(poll(&fd, 1, pollTimeout(cb))>0) {
     if(wl_display_read_events(display)<0) {
       handleConnectionError();
       return;
@@ -725,7 +727,7 @@ void WaylandApi::implProcessEvents(SystemApi::AppCallBack& cb) {
   // can't starve rendering. readEvents() only waits while no window may render (see pollTimeout()).
   if(impl->dispatchAppEvent())
     return;
-  impl->readEvents();
+  impl->readEvents(cb);
   if(impl->dispatchAppEvent())
     return;
   if(cb.onTimer()==0)
