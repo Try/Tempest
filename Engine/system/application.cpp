@@ -75,7 +75,7 @@ struct Application::Impl : SystemApi::AppCallBack {
         continue;
       if(now <= t.m.lastEmit+t.m.interval)
         return 0;
-      ret = std::max(ret, now - (t.m.lastEmit + t.m.interval));
+      ret = std::min(ret, now - (t.m.lastEmit + t.m.interval));
       }
     return ret;
     }
