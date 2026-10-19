@@ -73,9 +73,10 @@ struct Application::Impl : SystemApi::AppCallBack {
       Timer& t = *timer[i];
       if(!t.m.running)
         continue;
-      if(now <= t.m.lastEmit+t.m.interval)
+      const uint64_t due = t.m.lastEmit+t.m.interval;
+      if(now>=due)
         return 0;
-      ret = std::min(ret, now - (t.m.lastEmit + t.m.interval));
+      ret = std::min(ret, due-now);
       }
     return ret;
     }
