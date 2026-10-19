@@ -241,11 +241,21 @@ void WindowsApi::implProcessEvents(SystemApi::AppCallBack& cb) {
     } else {
     if(cb.onTimer()==0)
       std::this_thread::yield();
+    bool rendered = false;
     for(auto& i:windows) {
       HWND             h  = HWND(i);
       Tempest::Window* cb = reinterpret_cast<Tempest::Window*>(GetWindowLongPtr(h,GWLP_USERDATA));
-      if(cb && !IsIconic(h))
+      if(cb && !IsIconic(h)) {
         SystemApi::dispatchRender(*cb);
+        rendered = true;
+        }
+      }
+    // Nothing to draw while minimized: sleep until a message arrives instead of spinning,
+    // waking regularly so timers still fire.
+    if(!rendered) {
+      uint64_t wait = std::min<uint64_t>(cb.timeToTimer(), 16);
+      if(wait>0)
+        MsgWaitForMultipleObjects(0, nullptr, FALSE, wait, QS_ALLINPUT);
       }
     }
   }

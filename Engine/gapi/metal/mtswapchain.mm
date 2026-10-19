@@ -67,7 +67,7 @@ static float backingScaleFactor(SysWindow* w) {
 #if defined(__OSX__)
   return [w screen].backingScaleFactor;
 #elif defined(__IOS__)
-  return [UIScreen mainScreen].scale;
+  return w.contentScaleFactor;
 #endif
   }
 

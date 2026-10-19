@@ -40,7 +40,7 @@ class Window : public Widget {
     virtual void render();
     using        Widget::dispatchPaintEvent;
     void         dispatchPaintEvent(VectorImage &e,TextureAtlas &ta);
-    void         closeEvent       (Tempest::CloseEvent& event) override;
+    void         closeEvent        (Tempest::CloseEvent& event) override;
 
     SystemApi::Window* hwnd() const { return id; }
 

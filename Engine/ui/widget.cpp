@@ -680,3 +680,7 @@ void Widget::closeEvent(CloseEvent& e) {
 
 void Widget::polishEvent(PolishEvent&) {
   }
+
+void Widget::metricsEvent(DisplayMetricsEvent&) {
+  }
+

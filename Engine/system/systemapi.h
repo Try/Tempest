@@ -3,6 +3,7 @@
 #include <Tempest/Platform>
 #include <Tempest/Rect>
 #include <Tempest/WidgetState>
+#include <Tempest/SizePolicy>
 
 #include <memory>
 #include <cstdint>
@@ -10,6 +11,7 @@
 namespace Tempest {
 
 class SizeEvent;
+class DisplayMetricsEvent;
 class MouseEvent;
 class KeyEvent;
 class CloseEvent;
@@ -72,7 +74,8 @@ class SystemApi {
   protected:
     struct AppCallBack {
       virtual ~AppCallBack()=default;
-      virtual uint32_t onTimer()=0;
+      virtual uint32_t onTimer() = 0;
+      virtual uint64_t timeToTimer() const = 0;
       };
 
     SystemApi();
@@ -113,6 +116,7 @@ class SystemApi {
     static void      dispatchKeyUp     (Tempest::Window& cb, KeyEvent& e, uint32_t scancode);
 
     static void      dispatchResize    (Tempest::Window& cb, SizeEvent& e);
+    static void      dispatchDisplayMetrics(Tempest::Window& cb, DisplayMetricsEvent& e);
     static void      dispatchClose     (Tempest::Window& cb, CloseEvent& e);
 
     static void      dispatchFocus     (Tempest::Window& cb, FocusEvent& e);

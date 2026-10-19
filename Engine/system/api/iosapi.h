@@ -17,6 +17,7 @@ class iOSApi final: SystemApi {
     void     implExit() override;
 
     Rect     implWindowClientRect(SystemApi::Window *w) override;
+    float    implUiScale(SystemApi::Window *w) override;
     bool     implSetAsFullscreen(SystemApi::Window *w, bool fullScreen) override;
     bool     implIsFullscreen(SystemApi::Window *w) override;
 
@@ -34,4 +35,3 @@ class iOSApi final: SystemApi {
   };
 
 }
-

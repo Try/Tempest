@@ -145,6 +145,7 @@ class Widget {
     virtual void focusEvent     (Tempest::FocusEvent&  event);
     virtual void closeEvent     (Tempest::CloseEvent&  event);
     virtual void polishEvent    (Tempest::PolishEvent& event);
+    virtual void metricsEvent   (Tempest::DisplayMetricsEvent& event);
 
   private:
     struct Iterator final {
