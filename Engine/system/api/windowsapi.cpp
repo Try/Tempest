@@ -253,7 +253,7 @@ void WindowsApi::implProcessEvents(SystemApi::AppCallBack& cb) {
     // Nothing to draw while minimized: sleep until a message arrives instead of spinning,
     // waking regularly so timers still fire.
     if(!rendered) {
-      uint64_t wait = std::min<uint64_t>(cb.timeTotimer(), 16);
+      uint64_t wait = std::min<uint64_t>(cb.timeToTimer(), 16);
       if(wait>0)
         MsgWaitForMultipleObjects(0, nullptr, FALSE, wait, QS_ALLINPUT);
       }
