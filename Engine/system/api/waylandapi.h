@@ -10,7 +10,7 @@ namespace Tempest {
 class WaylandApi final: SystemApi {
   public:
     // For Vulkan (vulkanapi.cpp, vswapchain.cpp).
-    // nullptr if Wayland is not the active backend
+    // nullptr if Wayland is not the active backend; throws if Wayland is the backend but not usable
     static wl_display* display();
 
     // TEMPEST_DISABLE_WAYLAND=1: X11 is the backend

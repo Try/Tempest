@@ -2,6 +2,7 @@
 
 #if defined(TEMPEST_BUILD_WAYLAND)
 #include <Tempest/Event>
+#include <Tempest/Except>
 #include <Tempest/Window>
 #include <Tempest/Log>
 
@@ -151,7 +152,7 @@ struct WaylandApi::Private {
   // Connection and windows
   bool               hasRequiredGlobals() const;
   bool               connect();
-  void               disconnect();
+                     ~Private();
   SystemApi::Window* createWindow(Tempest::Window* owner, uint32_t width, uint32_t height, SystemApi::ShowMode sm);
   void               destroyWindow(WWindow* w);
 
@@ -399,8 +400,8 @@ bool WaylandApi::Private::connect() {
   return hasRequiredGlobals();
   }
 
-void WaylandApi::Private::disconnect() {
-  // Handles partial state and is safe to call twice (constructor on failure, destructor).
+WaylandApi::Private::~Private() {
+  // Also runs for a half-connected state when the WaylandApi constructor throws.
   // Connection errors are ignored while tearing down.
   if(!display)
     return;
@@ -432,7 +433,6 @@ void WaylandApi::Private::disconnect() {
 
   wl_display_flush(display);
   wl_display_disconnect(display);
-  display = nullptr;
   }
 
 SystemApi::Window* WaylandApi::Private::createWindow(Tempest::Window* owner, uint32_t width, uint32_t height, SystemApi::ShowMode sm) {
@@ -630,18 +630,16 @@ WaylandApi::WaylandApi() {
   // [input] key table + setupKeyTranslate(k,24)
 
   impl.reset(new Private());
-  if(impl->connect()) {
-    dpy = impl->display; // display() non-null only while connected
-    } else {
-    impl->disconnect();  // leave nothing half-connected
+  if(!impl->connect()) {
+    // impl's destructor cleans up the half-connected state
     Log::e("WaylandApi: Wayland is not usable (use TEMPEST_DISABLE_WAYLAND=1 for X11)");
+    throw std::system_error(Tempest::SystemErrc::UnableToConnectDisplay);
     }
+  dpy = impl->display;
   }
 
 WaylandApi::~WaylandApi() {
   dpy = nullptr;
-  impl->disconnect();
-  impl.reset();
   }
 
 bool WaylandApi::isDisabled() {
@@ -656,16 +654,12 @@ wl_display* WaylandApi::display() {
   }
 
 SystemApi::Window* WaylandApi::implCreateWindow(Tempest::Window* owner, uint32_t width, uint32_t height) {
-  if(dpy==nullptr)
-    return nullptr;
   return impl->createWindow(owner,width,height,SystemApi::Normal);
   }
 
 SystemApi::Window* WaylandApi::implCreateWindow(Tempest::Window* owner, ShowMode sm) {
   // 800x600 like the other backends; Maximized/FullScreen get their size from the first configure.
   // Hidden treated as Normal.
-  if(dpy==nullptr)
-    return nullptr;
   return impl->createWindow(owner,800,600,sm);
   }
 
