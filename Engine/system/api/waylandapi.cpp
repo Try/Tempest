@@ -60,7 +60,6 @@ struct WWindow {
   bool     fullscreen     = false;
   bool     suspended      = false; // compositor doesn't repaint the window (e.g. minimized): pause rendering
   bool     configured     = false; // first configure acked; no buffer (= Vulkan present) before that
-  bool     closeQueued    = false; // a Close is in appEvents: further close requests add nothing until it's dispatched
 
   int32_t  appRequestedWidth  = 0; // physical; used until the compositor sends a size
   int32_t  appRequestedHeight = 0;
@@ -244,11 +243,8 @@ void WaylandApi::Private::onXdgToplevelConfigure(void* data, [[maybe_unused]] xd
   }
 
 void WaylandApi::Private::onXdgToplevelClose(void* data, [[maybe_unused]] xdg_toplevel* toplevel) {
-  // Only recorded, see dispatchCloseEvent(). Requests before that one is dispatched count as one.
+  // Only recorded, see dispatchCloseEvent().
   auto w = static_cast<WWindow*>(data);
-  if(w->closeQueued)
-    return;
-  w->closeQueued = true;
   appEvents.push_back({Event::Close, w});
   }
 
@@ -329,7 +325,6 @@ void WaylandApi::Private::logDisplayError() const {
 void WaylandApi::Private::dispatchCloseEvent(WWindow& w) {
   // Only a request. Like the Windows backend: the app or an overlay may accept the CloseEvent; otherwise exit.
   // w isn't used after the dispatch: the app may destroy the window while handling it.
-  w.closeQueued = false;
   if(w.owner==nullptr)
     return;
   CloseEvent e;
