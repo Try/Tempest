@@ -75,7 +75,7 @@ class SystemApi {
     struct AppCallBack {
       virtual ~AppCallBack()=default;
       virtual uint32_t onTimer() = 0;
-      virtual uint64_t timeTotimer() const = 0;
+      virtual uint64_t timeToTimer() const = 0;
       };
 
     SystemApi();
