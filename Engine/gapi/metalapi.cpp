@@ -194,6 +194,11 @@ void MetalApi::present(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Swapch
   s.present();
   }
 
+void MetalApi::present(Device* d, SwapchainImage* image) {
+  auto& device = *static_cast<MtDevice*>(d);
+  MtSwapchain::present(device,*static_cast<MtSwapchainImage*>(image));
+  }
+
 std::shared_ptr<AbstractGraphicsApi::Fence> MetalApi::submit(Device* d, CommandBuffer* c) {
   auto* dx = reinterpret_cast<MtDevice*>(d);
   auto& cx = *reinterpret_cast<MtCommandBuffer*>(c);
@@ -203,10 +208,17 @@ std::shared_ptr<AbstractGraphicsApi::Fence> MetalApi::submit(Device* d, CommandB
     throw DeviceLostException();
 
   MTL::CommandBuffer& cmd = *cx.impl;
+  std::shared_ptr<std::vector<PSwapchainImage>> images;
+  if(!cx.swapchainImages.empty())
+    images = std::make_shared<std::vector<PSwapchainImage>>(std::move(cx.swapchainImages));
   dx->onSubmit();
   cmd.addCompletedHandler(^(MTL::CommandBuffer* c){
+    if(images!=nullptr)
+      images->clear();
     const MTL::CommandBufferStatus s = c->status();
-    dx->signalFence(*pfence, s, MTL::CommandBufferError(c->error()->code()), c->error());
+    auto* error = c->error();
+    auto code = error==nullptr ? MTL::CommandBufferError(0) : MTL::CommandBufferError(error->code());
+    dx->signalFence(*pfence, s, code, error);
     if(s==MTL::CommandBufferStatusCompleted || s==MTL::CommandBufferStatusError)
       dx->onFinish();
     });
