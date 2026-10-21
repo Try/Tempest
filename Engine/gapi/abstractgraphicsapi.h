@@ -522,6 +522,7 @@ namespace Tempest {
       struct Swapchain:NoCopy {
         virtual ~Swapchain()=default;
         virtual void          reset()=0;
+        virtual void          setPreferredFrameRateRange(uint32_t, uint32_t, uint32_t) {}
         virtual uint32_t      currentBackBufferIndex()=0;
         virtual NonUniqResId  syncId() const;
         virtual uint32_t      imageCount() const=0;

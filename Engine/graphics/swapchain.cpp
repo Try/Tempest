@@ -44,6 +44,14 @@ void Swapchain::reset() {
   implReset();
   }
 
+void Swapchain::setPreferredFrameRate(uint32_t fps) {
+  setPreferredFrameRateRange(fps,fps,fps);
+  }
+
+void Swapchain::setPreferredFrameRateRange(uint32_t minimum, uint32_t maximum, uint32_t preferred) {
+  impl.handler->setPreferredFrameRateRange(minimum,maximum,preferred);
+  }
+
 uint32_t Swapchain::imageCount() const {
   return impl.handler->imageCount();
   }
