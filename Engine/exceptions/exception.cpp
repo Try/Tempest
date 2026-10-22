@@ -24,6 +24,8 @@ std::string SystemErrCategory::message(int ev) const {
       return "Unable to load asset";
     case SystemErrc::UnableToSaveAsset:
       return "Unable to save asset";
+    case SystemErrc::UnableToConnectDisplay:
+      return "Unable to connect to the display server";
     }
   return "(unrecognized error)";
   }
