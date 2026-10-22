@@ -101,8 +101,14 @@ static WWindow* toWWindow(SystemApi::Window* w) {
 
 // Events for the app/systemAPI. Listeners only record them. implProcessEvents() dispatches one per call
 struct AppEvent {
-  Tempest::Event::Type type;
-  WWindow*             w;
+  Tempest::Event::Type        type;
+  WWindow*                    w;
+  // Data per type, recorded by the listener
+  Tempest::Event::KeyType     key     = Tempest::Event::K_NoKey;    // KeyDown/KeyUp
+  uint32_t                    code    = 0;                          // KeyDown/KeyUp: typed character
+  uint32_t                    keycode = 0;                          // KeyDown/KeyUp: scancode for the dispatcher
+  Tempest::Event::MouseButton button  = Tempest::Event::ButtonNone; // MouseUp
+  bool                        focusIn = false;                      // Focus
   };
 
 ////
@@ -223,7 +229,7 @@ struct WaylandApi::Private {
   static Event::MouseButton              toButton(uint32_t button);
   static wp_cursor_shape_device_v1_shape toCursorShape(CursorShape shape);
   static MouseEvent                      pointerEvent(const WWindow& w, Event::MouseButton button, int delta, Event::Type type);
-  KeyEvent                               keyEvent(uint32_t keycode, Event::Type type) const;
+  AppEvent                               keyEvent(WWindow& w, uint32_t keycode, Event::Type type) const;
   bool                                   isWindowFocused(const WWindow* w) const;
   void                                   setPointerLock(WWindow& w, bool lock);
   void                                   releaseHeldKeys(WWindow& w);
@@ -233,6 +239,9 @@ struct WaylandApi::Private {
   void                                   startKeyRepeat(uint32_t keycode);
   void                                   processKeyRepeat();
   static void                            dispatchCloseEvent(WWindow& w);
+  static void                            dispatchKeyEvent(const AppEvent& e);
+  static void                            dispatchFocusEvent(const AppEvent& e);
+  static void                            dispatchMouseEvent(const AppEvent& e);
 
   // Connection and windows
   bool               hasRequiredGlobals() const;
@@ -487,12 +496,10 @@ void WaylandApi::Private::onWlKeyboardEnter(void* data, [[maybe_unused]] wl_keyb
   self->focusGainedInBatch = w;
   if(w->owner==nullptr)
     return;
-  FocusEvent e(true, Event::UnknownReason);
-  SystemApi::dispatchFocus(*w->owner, e);
+  appEvents.push_back({.type=Event::Focus, .w=w, .focusIn=true});
   // Pointer already over the window: like an enter, a move to its position and the app's cursor.
   if(self->pointerFocus==w) {
-    MouseEvent m = pointerEvent(*w, Event::ButtonNone, 0, Event::MouseMove);
-    SystemApi::dispatchMouseMove(*w->owner, m);
+    appEvents.push_back({.type=Event::MouseMove, .w=w});
     SystemApi::showCursor(reinterpret_cast<SystemApi::Window*>(w->surface), SystemApi::cursorShape(*w->owner));
     }
   }
@@ -511,8 +518,7 @@ void WaylandApi::Private::onWlKeyboardLeave(void* data, [[maybe_unused]] wl_keyb
   self->keyboardFocus = nullptr;
   if(w->owner==nullptr)
     return;
-  FocusEvent e(false, Event::UnknownReason);
-  SystemApi::dispatchFocus(*w->owner, e);
+  appEvents.push_back({.type=Event::Focus, .w=w, .focusIn=false});
   if(self->pointerFocus==w)
     SystemApi::showCursor(reinterpret_cast<SystemApi::Window*>(w->surface), SystemApi::cursorShape(*w->owner));
   }
@@ -526,20 +532,21 @@ void WaylandApi::Private::onWlKeyboardKey(void* data, [[maybe_unused]] wl_keyboa
   if(self->xkbState==nullptr)
     return; // no keymap compiled
   // Only releases of keys the app got a press for are dispatched (see heldKeys).
+  // heldKeys is updated after recording: if push_back throws, both stay consistent.
   const uint32_t keycode = key + 8;
+  const bool     held    = std::find(self->heldKeys.begin(), self->heldKeys.end(), keycode)!=self->heldKeys.end();
   if(state==WL_KEYBOARD_KEY_STATE_PRESSED) {
-    if(std::find(self->heldKeys.begin(), self->heldKeys.end(), keycode)==self->heldKeys.end())
+    appEvents.push_back(self->keyEvent(*self->keyboardFocus, keycode, Event::KeyDown));
+    if(!held)
       self->heldKeys.push_back(keycode);
-    KeyEvent e = self->keyEvent(keycode, Event::KeyDown);
-    SystemApi::dispatchKeyDown(*self->keyboardFocus->owner, e, keycode);
     self->startKeyRepeat(keycode);
     } else {
-    if(std::erase(self->heldKeys, keycode)==0)
+    if(!held)
       return;
+    appEvents.push_back(self->keyEvent(*self->keyboardFocus, keycode, Event::KeyUp));
+    std::erase(self->heldKeys, keycode);
     if(keycode==self->repeatKeycode)
       self->repeatKeycode = 0;
-    KeyEvent e = self->keyEvent(keycode, Event::KeyUp);
-    SystemApi::dispatchKeyUp(*self->keyboardFocus->owner, e, keycode);
     }
   }
 
@@ -758,9 +765,10 @@ MouseEvent WaylandApi::Private::pointerEvent(const WWindow& w, Event::MouseButto
   return MouseEvent(x, y, button, Event::M_NoModifier, delta, 0, type);
   }
 
-KeyEvent WaylandApi::Private::keyEvent(uint32_t keycode, Event::Type type) const {
+AppEvent WaylandApi::Private::keyEvent(WWindow& w, uint32_t keycode, Event::Type type) const {
   // keycode: xkb keycode (evdev + 8). key: level-0 keysym of the active layout, so Shift+W stays K_W (like Windows'
   // virtual keys). code: the typed character, 0 if none (e.g. arrows, dead keys).
+  // Built when recorded, not when dispatched: later 'modifiers' events change xkbState (Shift released, CapsLock).
   const xkb_layout_index_t layout = xkb_state_key_get_layout(xkbState, keycode);
   const xkb_keysym_t*      syms   = nullptr;
   const int                count  = xkb_keymap_key_get_syms_by_level(xkbKeymap, keycode, layout, 0, &syms);
@@ -771,7 +779,7 @@ KeyEvent WaylandApi::Private::keyEvent(uint32_t keycode, Event::Type type) const
   // Beyond it, nothing is typed (X11 and Windows deliver half a UTF-16 surrogate pair there).
   const uint32_t utf32 = xkb_state_key_get_utf32(xkbState, keycode);
   const uint32_t code  = utf32<=0xFFFF ? utf32 : 0;
-  return KeyEvent(key, code, Event::M_NoModifier, type);
+  return {.type=type, .w=&w, .key=key, .code=code, .keycode=keycode};
   }
 
 bool WaylandApi::Private::isWindowFocused(const WWindow* w) const {
@@ -797,25 +805,15 @@ void WaylandApi::Private::setPointerLock(WWindow& w, bool lock) {
 
 void WaylandApi::Private::releaseHeldKeys(WWindow& w) {
   repeatKeycode = 0;
-  auto keys = std::move(heldKeys); // save from manipulation
+  for(uint32_t keycode:heldKeys)
+    appEvents.push_back(keyEvent(w, keycode, Event::KeyUp));
   heldKeys.clear();
-  if(w.owner==nullptr)
-    return;
-  for(uint32_t keycode:keys) {
-    KeyEvent e = keyEvent(keycode, Event::KeyUp);
-    SystemApi::dispatchKeyUp(*w.owner, e, keycode);
-    }
   }
 
 void WaylandApi::Private::releaseHeldButtons(WWindow& w) {
-  auto buttons = std::move(heldButtons); // save from manipulation
+  for(uint32_t button:heldButtons)
+    appEvents.push_back({.type=Event::MouseUp, .w=&w, .button=toButton(button)});
   heldButtons.clear();
-  if(w.owner==nullptr)
-    return;
-  for(uint32_t button:buttons) {
-    MouseEvent e = pointerEvent(w, toButton(button), 0, Event::MouseUp);
-    SystemApi::dispatchMouseUp(*w.owner, e);
-    }
   }
 
 void WaylandApi::Private::releasePointer() {
@@ -862,8 +860,7 @@ void WaylandApi::Private::processKeyRepeat() {
   repeatNext += interval;
   if(repeatNext<=now) // avoid bursts
     repeatNext = now + interval;
-  KeyEvent e = keyEvent(repeatKeycode, Event::KeyDown);
-  SystemApi::dispatchKeyDown(*keyboardFocus->owner, e, repeatKeycode);
+  appEvents.push_back(keyEvent(*keyboardFocus, repeatKeycode, Event::KeyDown));
   }
 
 void WaylandApi::Private::dispatchCloseEvent(WWindow& w) {
@@ -875,6 +872,40 @@ void WaylandApi::Private::dispatchCloseEvent(WWindow& w) {
   SystemApi::dispatchClose(*w.owner, e);
   if(!e.isAccepted())
     SystemApi::exit();
+  }
+
+void WaylandApi::Private::dispatchKeyEvent(const AppEvent& e) {
+  if(e.w->owner==nullptr)
+    return;
+  KeyEvent k(e.key, e.code, Event::M_NoModifier, e.type);
+  if(e.type==Event::KeyDown)
+    SystemApi::dispatchKeyDown(*e.w->owner, k, e.keycode);
+  else
+    SystemApi::dispatchKeyUp(*e.w->owner, k, e.keycode);
+  }
+
+void WaylandApi::Private::dispatchFocusEvent(const AppEvent& e) {
+  if(e.w->owner==nullptr)
+    return;
+  FocusEvent f(e.focusIn, Event::UnknownReason);
+  SystemApi::dispatchFocus(*e.w->owner, f);
+  }
+
+void WaylandApi::Private::dispatchMouseEvent(const AppEvent& e) {
+  // The position is read now, not when recorded (see WWindow::cursorX).
+  if(e.w->owner==nullptr)
+    return;
+  MouseEvent m = pointerEvent(*e.w, e.button, 0, e.type);
+  switch(e.type) {
+    case Event::MouseMove:
+      SystemApi::dispatchMouseMove(*e.w->owner, m);
+      break;
+    case Event::MouseUp:
+      SystemApi::dispatchMouseUp(*e.w->owner, m);
+      break;
+    default:
+      break;
+    }
   }
 
 ////
@@ -1145,6 +1176,17 @@ bool WaylandApi::Private::dispatchAppEvent() {
   switch(e.type) {
     case Event::Close:
       dispatchCloseEvent(*e.w);
+      break;
+    case Event::KeyDown:
+    case Event::KeyUp:
+      dispatchKeyEvent(e);
+      break;
+    case Event::Focus:
+      dispatchFocusEvent(e);
+      break;
+    case Event::MouseMove:
+    case Event::MouseUp:
+      dispatchMouseEvent(e);
       break;
     default:
       break;
