@@ -524,9 +524,10 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
       }
 
     case WM_SETCURSOR:
-      if(IsIconic(hWnd)) {
-        SetCursor(cb->cursorShape());
-        break;
+      // The window class has no cursor, so restore ours whenever the pointer comes back from the frame or another window
+      if(LOWORD(lParam)==HTCLIENT && !IsIconic(hWnd)) {
+        SetCursor(SystemApi::cursorShape(*cb));
+        return TRUE;
         }
     default:
       return DefWindowProcW(hWnd, msg, wParam, lParam);
