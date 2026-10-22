@@ -62,9 +62,6 @@ struct WWindow {
   bool     suspended      = false; // compositor doesn't repaint the window (e.g. minimized): pause rendering
   bool     configured     = false; // first configure acked; no buffer (= Vulkan present) before that
 
-  int32_t  appRequestedWidth  = 0; // physical; used until the compositor sends a size
-  int32_t  appRequestedHeight = 0;
-
   // size the app last saw; updateState() dispatches a resize when it differs.
   int32_t  dispatchedWidth  = 0; // physical
   int32_t  dispatchedHeight = 0;
@@ -204,19 +201,15 @@ void WaylandApi::Private::onXdgWmBasePing([[maybe_unused]] void* data, xdg_wm_ba
 void WaylandApi::Private::onXdgSurfaceConfigure(void* data, [[maybe_unused]] xdg_surface* xdgSurface, uint32_t serial) {
   // End of configure sequence (after xdg_toplevel.configure etc.): pending becomes current and is acked
   auto w = static_cast<WWindow*>(data);
-  if(w->pending.width==0 || w->pending.height==0) {
-    // pending is 0 only if the compositor never sent a size (first configure)
-    // client decides: app requested size needs conversion to logical (KWin sends preferred_scale before the first configure).
-    w->pending.width  = std::max(1, int32_t(std::lround(float(w->appRequestedWidth) /w->scale())));
-    w->pending.height = std::max(1, int32_t(std::lround(float(w->appRequestedHeight)/w->scale())));
-    }
   w->width      = w->pending.width;
   w->height     = w->pending.height;
   w->fullscreen = w->pending.fullscreen;
   w->suspended  = w->pending.suspended;
 
   // Viewport state is double-buffered: it applies with the next commit, which Vulkan does in vkQueuePresent.
-  wp_viewport_set_destination(w->viewport, w->width, w->height);
+  // Size 0 only if the compositor never sent one (first configure): createWindow() picks the size then.
+  if(w->width>0 && w->height>0)
+    wp_viewport_set_destination(w->viewport, w->width, w->height);
 
   xdg_surface_ack_configure(w->xdgSurface, serial);
   w->configured = true;
@@ -439,9 +432,7 @@ SystemApi::Window* WaylandApi::Private::createWindow(Tempest::Window* owner, uin
   // all roles and state requests needed before the first commit
   windows.emplace_back(std::make_unique<WWindow>());
   WWindow* win = windows.back().get();
-  win->owner              = owner;
-  win->appRequestedWidth  = int32_t(width);
-  win->appRequestedHeight = int32_t(height);
+  win->owner = owner;
 
   win->surface = wl_compositor_create_surface(compositor);
   wl_surface_add_listener(win->surface, &wlSurfaceListener, win); // also attaches WWindow user data to wl_surface
@@ -479,6 +470,18 @@ SystemApi::Window* WaylandApi::Private::createWindow(Tempest::Window* owner, uin
       destroyWindow(win);
       return nullptr;
       }
+    }
+
+  if(win->width==0 || win->height==0) {
+    // The compositor left the size to us: the app's size, physical -> logical
+    // (the scale is known now, KWin sends preferred_scale before the first configure).
+    win->width  = std::max(1, int32_t(std::lround(float(width) /win->scale())));
+    win->height = std::max(1, int32_t(std::lround(float(height)/win->scale())));
+    // Also in pending: later configures without a size keep it.
+    win->pending.width  = win->width;
+    win->pending.height = win->height;
+    // Before the first buffer (Vulkan's first present), so it applies with that commit.
+    wp_viewport_set_destination(win->viewport, win->width, win->height);
     }
 
   // Window's constructor reads the client rect itself after this returns: no SizeEvent for this size.
