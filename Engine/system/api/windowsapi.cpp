@@ -529,10 +529,6 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
         SetCursor(SystemApi::cursorShape(*cb));
         return TRUE;
         }
-      if(IsIconic(hWnd)) {
-        SetCursor(cb->cursorShape());
-        break;
-        }
     default:
       return DefWindowProcW(hWnd, msg, wParam, lParam);
     }
