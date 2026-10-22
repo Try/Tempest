@@ -62,10 +62,6 @@ struct WWindow {
   bool     suspended      = false; // compositor doesn't repaint the window (e.g. minimized): pause rendering
   bool     configured     = false; // first configure acked; no buffer (= Vulkan present) before that
 
-  // size the app last saw; updateState() dispatches a resize when it differs.
-  int32_t  dispatchedWidth  = 0; // physical
-  int32_t  dispatchedHeight = 0;
-
   bool    readyToRender() const  { return owner!=nullptr && configured && !suspended; }
 
   float   scale() const          { return float(preferredScale)/120.f; }
@@ -484,9 +480,6 @@ SystemApi::Window* WaylandApi::Private::createWindow(Tempest::Window* owner, uin
     wp_viewport_set_destination(win->viewport, win->width, win->height);
     }
 
-  // Window's constructor reads the client rect itself after this returns: no SizeEvent for this size.
-  win->dispatchedWidth  = win->physicalWidth();
-  win->dispatchedHeight = win->physicalHeight();
   return reinterpret_cast<SystemApi::Window*>(win->surface); // wl_surface* native handle
   }
 
@@ -609,9 +602,8 @@ void WaylandApi::Private::updateState(WWindow& w) {
   // Update things that should change only once per draw, not on every triggered callback (e.g. swapchain resize)
   const int32_t pw = w.physicalWidth();
   const int32_t ph = w.physicalHeight();
-  if(pw!=w.dispatchedWidth || ph!=w.dispatchedHeight) {
-    w.dispatchedWidth  = pw;
-    w.dispatchedHeight = ph;
+  // The app's size: set from the client rect by Window's constructor, then by each SizeEvent
+  if(pw!=w.owner->w() || ph!=w.owner->h()) {
     SizeEvent e(pw, ph);
     SystemApi::dispatchResize(*w.owner, e);
     }
