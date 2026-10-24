@@ -74,10 +74,14 @@ struct WWindow {
   zwp_locked_pointer_v1* lockedPointer = nullptr;
   bool                   pointerLocked = false;
 
-  // Cursor position. Button and axis events carry none. While pointer is locked, this is a
-  // virtual cursor moved by relative motion.
-  double                 cursorX       = 0; // physical
-  double                 cursorY       = 0;
+  // Pointer position as the compositor last reported it (enter, motion). Recorded into MouseMove events.
+  double                 compositorPointerX = 0; // physical
+  double                 compositorPointerY = 0;
+
+  // Cursor as the app has seen it: set when a MouseMove is dispatched (or by setCursorPosition while locked), read
+  // for buttons and wheel, which carry no position. While the pointer is locked, a virtual cursor moved by relative motion.
+  double                 appCursorX         = 0; // physical
+  double                 appCursorY         = 0;
 
   bool    readyToRender() const  { return owner!=nullptr && configured && !suspended; }
 
@@ -107,7 +111,10 @@ struct AppEvent {
   Tempest::Event::KeyType     key     = Tempest::Event::K_NoKey;    // KeyDown/KeyUp
   uint32_t                    code    = 0;                          // KeyDown/KeyUp: typed character
   uint32_t                    keycode = 0;                          // KeyDown/KeyUp: scancode for the dispatcher
-  Tempest::Event::MouseButton button  = Tempest::Event::ButtonNone; // MouseUp
+  Tempest::Event::MouseButton button  = Tempest::Event::ButtonNone; // MouseDown/MouseUp
+  int                         delta   = 0;                          // MouseWheel
+  double                      x       = 0;                          // MouseMove: physical position
+  double                      y       = 0;
   bool                        focusIn = false;                      // Focus
   };
 
@@ -147,7 +154,7 @@ struct WaylandApi::Private {
   zwp_relative_pointer_v1*        relativePointer        = nullptr; // exists together with 'pointer'
   wl_keyboard*                    keyboard               = nullptr;
 
-  // Pointer state between wl_pointer.enter and leave. Position is in WWindow::cursorX/Y
+  // Pointer state between wl_pointer.enter and leave. Position is in WWindow::compositorPointerX/Y
   WWindow*                        pointerFocus           = nullptr; // window under pointer
   uint32_t                        pointerEnterSerial     = 0;       // serial of latest enter event
 
@@ -349,14 +356,12 @@ void WaylandApi::Private::onWlPointerEnter(void* data, [[maybe_unused]] wl_point
   self->pointerFocus       = w;
   self->pointerEnterSerial = serial;
   // logical -> physical
-  w->cursorX               = wl_fixed_to_double(x)*w->scale();
-  w->cursorY               = wl_fixed_to_double(y)*w->scale();
+  w->compositorPointerX    = wl_fixed_to_double(x)*w->scale();
+  w->compositorPointerY    = wl_fixed_to_double(y)*w->scale();
   if(w->owner==nullptr)
     return;
-  if(self->isWindowFocused(w)) {
-    MouseEvent e = pointerEvent(*w, Event::ButtonNone, 0, Event::MouseMove);
-    SystemApi::dispatchMouseMove(*w->owner, e);
-    }
+  if(self->isWindowFocused(w))
+    appEvents.push_back({.type=Event::MouseMove, .w=w, .x=w->compositorPointerX, .y=w->compositorPointerY});
   // Note: Wayland always requires cursor shape on enter (see implShowCursor)
   SystemApi::showCursor(reinterpret_cast<SystemApi::Window*>(w->surface), SystemApi::cursorShape(*w->owner));
   }
@@ -374,22 +379,23 @@ void WaylandApi::Private::onWlPointerMotion(void* data, [[maybe_unused]] wl_poin
   WWindow* w = self->pointerFocus;
   if(w==nullptr)
     return;
-  w->cursorX = wl_fixed_to_double(x)*w->scale();
-  w->cursorY = wl_fixed_to_double(y)*w->scale();
+  w->compositorPointerX = wl_fixed_to_double(x)*w->scale();
+  w->compositorPointerY = wl_fixed_to_double(y)*w->scale();
   if(w->owner==nullptr || !self->isWindowFocused(w))
     return;
-  MouseEvent e = pointerEvent(*w, Event::ButtonNone, 0, Event::MouseMove);
-  SystemApi::dispatchMouseMove(*w->owner, e);
+  appEvents.push_back({.type=Event::MouseMove, .w=w, .x=w->compositorPointerX, .y=w->compositorPointerY});
   }
 
 void WaylandApi::Private::onWlPointerButton(void* data, [[maybe_unused]] wl_pointer* pointer, [[maybe_unused]] uint32_t serial,
                                             [[maybe_unused]] uint32_t time, uint32_t button, uint32_t state) {
   // Unknown buttons become ButtonNone, like X11. Releases only for presses the app got (see heldButtons).
+  // heldButtons is updated after recording: if push_back throws, both stay consistent.
   auto self = static_cast<Private*>(data);
   WWindow* w = self->pointerFocus;
   if(w==nullptr || w->owner==nullptr)
     return;
 
+  const bool held = std::find(self->heldButtons.begin(), self->heldButtons.end(), button)!=self->heldButtons.end();
   if(state==WL_POINTER_BUTTON_STATE_PRESSED) {
     if(!self->isWindowFocused(w))
       return;
@@ -397,15 +403,14 @@ void WaylandApi::Private::onWlPointerButton(void* data, [[maybe_unused]] wl_poin
     // wl_keyboard.enter and that press together, so a press in the same readEvents() batch as the enter is that click.
     if(self->focusGainedInBatch==w)
       return;
-    if(std::find(self->heldButtons.begin(), self->heldButtons.end(), button)==self->heldButtons.end())
+    appEvents.push_back({.type=Event::MouseDown, .w=w, .button=toButton(button)});
+    if(!held)
       self->heldButtons.push_back(button);
-    MouseEvent e = pointerEvent(*w, toButton(button), 0, Event::MouseDown);
-    SystemApi::dispatchMouseDown(*w->owner, e);
     } else {
-    if(std::erase(self->heldButtons, button)==0)
+    if(!held)
       return;
-    MouseEvent e = pointerEvent(*w, toButton(button), 0, Event::MouseUp);
-    SystemApi::dispatchMouseUp(*w->owner, e);
+    appEvents.push_back({.type=Event::MouseUp, .w=w, .button=toButton(button)});
+    std::erase(self->heldButtons, button);
     }
   }
 
@@ -419,8 +424,7 @@ void WaylandApi::Private::onWlPointerAxisValue120(void* data, [[maybe_unused]] w
   WWindow* w = self->pointerFocus;
   if(w==nullptr || w->owner==nullptr || !self->isWindowFocused(w))
     return;
-  MouseEvent e = pointerEvent(*w, Event::ButtonNone, -value120, Event::MouseWheel);
-  SystemApi::dispatchMouseWheel(*w->owner, e);
+  appEvents.push_back({.type=Event::MouseWheel, .w=w, .delta=-value120});
   }
 
 void WaylandApi::Private::onZwpRelativePointerV1RelativeMotion(void* data, [[maybe_unused]] zwp_relative_pointer_v1* relativePointer,
@@ -435,8 +439,8 @@ void WaylandApi::Private::onZwpRelativePointerV1RelativeMotion(void* data, [[may
   if(w==nullptr || !w->pointerLocked || w->owner==nullptr)
     return;
   const double s = w->scale();
-  w->cursorX = std::clamp(w->cursorX + wl_fixed_to_double(dxUnaccel)*s, 0.0, double(std::max(w->physicalWidth() -1, 0)));
-  w->cursorY = std::clamp(w->cursorY + wl_fixed_to_double(dyUnaccel)*s, 0.0, double(std::max(w->physicalHeight()-1, 0)));
+  w->appCursorX = std::clamp(w->appCursorX + wl_fixed_to_double(dxUnaccel)*s, 0.0, double(std::max(w->physicalWidth() -1, 0)));
+  w->appCursorY = std::clamp(w->appCursorY + wl_fixed_to_double(dyUnaccel)*s, 0.0, double(std::max(w->physicalHeight()-1, 0)));
   MouseEvent e = pointerEvent(*w, Event::ButtonNone, 0, Event::MouseMove);
   SystemApi::dispatchMouseMove(*w->owner, e);
   }
@@ -499,7 +503,7 @@ void WaylandApi::Private::onWlKeyboardEnter(void* data, [[maybe_unused]] wl_keyb
   appEvents.push_back({.type=Event::Focus, .w=w, .focusIn=true});
   // Pointer already over the window: like an enter, a move to its position and the app's cursor.
   if(self->pointerFocus==w) {
-    appEvents.push_back({.type=Event::MouseMove, .w=w});
+    appEvents.push_back({.type=Event::MouseMove, .w=w, .x=w->compositorPointerX, .y=w->compositorPointerY});
     SystemApi::showCursor(reinterpret_cast<SystemApi::Window*>(w->surface), SystemApi::cursorShape(*w->owner));
     }
   }
@@ -760,8 +764,8 @@ wp_cursor_shape_device_v1_shape WaylandApi::Private::toCursorShape(CursorShape s
 
 MouseEvent WaylandApi::Private::pointerEvent(const WWindow& w, Event::MouseButton button, int delta, Event::Type type) {
   // floor: the physical pixel the cursor is in.
-  const int x = int(std::floor(w.cursorX));
-  const int y = int(std::floor(w.cursorY));
+  const int x = int(std::floor(w.appCursorX));
+  const int y = int(std::floor(w.appCursorY));
   return MouseEvent(x, y, button, Event::M_NoModifier, delta, 0, type);
   }
 
@@ -892,16 +896,26 @@ void WaylandApi::Private::dispatchFocusEvent(const AppEvent& e) {
   }
 
 void WaylandApi::Private::dispatchMouseEvent(const AppEvent& e) {
-  // The position is read now, not when recorded (see WWindow::cursorX).
+  // A move updates the app's cursor (see WWindow::appCursorX)
   if(e.w->owner==nullptr)
     return;
-  MouseEvent m = pointerEvent(*e.w, e.button, 0, e.type);
+  if(e.type==Event::MouseMove) {
+    e.w->appCursorX = e.x;
+    e.w->appCursorY = e.y;
+    }
+  MouseEvent m = pointerEvent(*e.w, e.button, e.delta, e.type);
   switch(e.type) {
     case Event::MouseMove:
       SystemApi::dispatchMouseMove(*e.w->owner, m);
       break;
+    case Event::MouseDown:
+      SystemApi::dispatchMouseDown(*e.w->owner, m);
+      break;
     case Event::MouseUp:
       SystemApi::dispatchMouseUp(*e.w->owner, m);
+      break;
+    case Event::MouseWheel:
+      SystemApi::dispatchMouseWheel(*e.w->owner, m);
       break;
     default:
       break;
@@ -1185,7 +1199,9 @@ bool WaylandApi::Private::dispatchAppEvent() {
       dispatchFocusEvent(e);
       break;
     case Event::MouseMove:
+    case Event::MouseDown:
     case Event::MouseUp:
+    case Event::MouseWheel:
       dispatchMouseEvent(e);
       break;
     default:
@@ -1337,8 +1353,8 @@ void WaylandApi::implSetCursorPosition(SystemApi::Window* w, int x, int y) {
   auto ww = toWWindow(w);
   if(!ww->pointerLocked)
     return;
-  ww->cursorX = x;
-  ww->cursorY = y;
+  ww->appCursorX = x;
+  ww->appCursorY = y;
   }
 
 void WaylandApi::implShowCursor(SystemApi::Window* w, CursorShape show) {
