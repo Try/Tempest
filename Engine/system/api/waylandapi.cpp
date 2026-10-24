@@ -178,8 +178,8 @@ struct WaylandApi::Private {
   // Non-zero only while keyboardFocus is set and repeatRate>0.
   std::chrono::steady_clock::time_point repeatNext;                 // when the next repeat is due
 
-  // WWindow* if a window gained focus during active readEvents() batch, otherwise nullptr (for focus click filter)
-  WWindow*                        focusGainedInBatch     = nullptr;
+  // When the last wl_keyboard.enter was read (for the focus click filter)
+  std::chrono::steady_clock::time_point focusInTime;
 
   std::vector<std::unique_ptr<WWindow>> windows; // owns the windows; each WWindow keeps its address (handle, listener data)
   static inline std::deque<AppEvent>    appEvents; // in the order the compositor sent them
@@ -400,9 +400,8 @@ void WaylandApi::Private::onWlPointerButton(void* data, [[maybe_unused]] wl_poin
   if(state==WL_POINTER_BUTTON_STATE_PRESSED) {
     if(!self->isWindowFocused(w))
       return;
-    // Focus click filter: the click that only focuses the window must not reach the app. KWin sends
-    // wl_keyboard.enter and that press together, so a press in the same readEvents() batch as the enter is that click.
-    if(self->focusGainedInBatch==w)
+    // Focus click filter: the click that focuses the window comes right after wl_keyboard.enter and doesn't reach the app.
+    if(std::chrono::steady_clock::now()-self->focusInTime < std::chrono::milliseconds(50))
       return;
     appEvents.push_back({.type=Event::MouseDown, .w=w, .button=toButton(button)});
     if(!held)
@@ -495,8 +494,8 @@ void WaylandApi::Private::onWlKeyboardEnter(void* data, [[maybe_unused]] wl_keyb
   if(surface==nullptr)
     return; // the surface was destroyed after the compositor sent the event
   auto w = static_cast<WWindow*>(wl_surface_get_user_data(surface));
-  self->keyboardFocus      = w;
-  self->focusGainedInBatch = w;
+  self->keyboardFocus = w;
+  self->focusInTime   = std::chrono::steady_clock::now();
   if(w->owner==nullptr)
     return;
   appEvents.push_back({.type=Event::Focus, .w=w, .focusIn=true});
@@ -1103,8 +1102,6 @@ void WaylandApi::Private::destroyWindow(WWindow* w) {
     heldKeys.clear();
     heldButtons.clear();
     }
-  if(focusGainedInBatch==w)
-    focusGainedInBatch = nullptr;
 
   setPointerLock(*w, false); // created for the wl_surface
   ioDestroy(w->fractionalScale, wp_fractional_scale_v1_destroy);
@@ -1151,7 +1148,6 @@ void WaylandApi::Private::readEvents(const SystemApi::AppCallBack& cb) {
   // Doesn't block beyond pollTimeout(): Tempest's loop must keep running (timers, rendering).
   // The Vulkan driver reads the same connection on its own queue; prepare_read -> read_events/cancel_read
   // is how several readers share the socket without stealing or blocking each other.
-  focusGainedInBatch = nullptr; // a new batch (see onWlPointerButton)
   while(wl_display_prepare_read(display)!=0) {
     // Our queue already holds events (e.g. read by the driver): dispatch them before reading more.
     if(wl_display_dispatch_pending(display)<0) {
