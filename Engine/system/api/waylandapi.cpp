@@ -108,14 +108,15 @@ struct AppEvent {
   Tempest::Event::Type        type;
   WWindow*                    w;
   // Data per type, recorded by the listener
-  Tempest::Event::KeyType     key     = Tempest::Event::K_NoKey;    // KeyDown/KeyUp
-  uint32_t                    code    = 0;                          // KeyDown/KeyUp: typed character
-  uint32_t                    keycode = 0;                          // KeyDown/KeyUp: scancode for the dispatcher
-  Tempest::Event::MouseButton button  = Tempest::Event::ButtonNone; // MouseDown/MouseUp
-  int                         delta   = 0;                          // MouseWheel
-  double                      x       = 0;                          // MouseMove: physical position
-  double                      y       = 0;
-  bool                        focusIn = false;                      // Focus
+  Tempest::Event::KeyType     key      = Tempest::Event::K_NoKey;    // KeyDown/KeyUp
+  uint32_t                    code     = 0;                          // KeyDown/KeyUp: typed character
+  uint32_t                    keycode  = 0;                          // KeyDown/KeyUp: scancode for the dispatcher
+  Tempest::Event::MouseButton button   = Tempest::Event::ButtonNone; // MouseDown/MouseUp
+  int                         delta    = 0;                          // MouseWheel
+  double                      x        = 0;                          // MouseMove: physical position, or delta if relative
+  double                      y        = 0;
+  bool                        relative = false;                     // MouseMove: x/y move the virtual cursor (pointer locked)
+  bool                        focusIn  = false;                      // Focus
   };
 
 ////
@@ -431,18 +432,16 @@ void WaylandApi::Private::onZwpRelativePointerV1RelativeMotion(void* data, [[may
                                                                [[maybe_unused]] uint32_t utimeHi, [[maybe_unused]] uint32_t utimeLo,
                                                                [[maybe_unused]] wl_fixed_t dx, [[maybe_unused]] wl_fixed_t dy,
                                                                wl_fixed_t dxUnaccel, wl_fixed_t dyUnaccel) {
-  // Moves virtual cursor while pointer is locked (otherwise wl_pointer.motion has the position). Raw input deltas
-  // clamped to the window like a real cursor.
+  // Moves virtual cursor while pointer is locked (otherwise wl_pointer.motion has the position). Raw input deltas,
+  // added at dispatch (see dispatchMouseEvent).
   // Note: compositor only activates the lock while focused
   auto self = static_cast<Private*>(data);
   WWindow* w = self->pointerFocus;
   if(w==nullptr || !w->pointerLocked || w->owner==nullptr)
     return;
   const double s = w->scale();
-  w->appCursorX = std::clamp(w->appCursorX + wl_fixed_to_double(dxUnaccel)*s, 0.0, double(std::max(w->physicalWidth() -1, 0)));
-  w->appCursorY = std::clamp(w->appCursorY + wl_fixed_to_double(dyUnaccel)*s, 0.0, double(std::max(w->physicalHeight()-1, 0)));
-  MouseEvent e = pointerEvent(*w, Event::ButtonNone, 0, Event::MouseMove);
-  SystemApi::dispatchMouseMove(*w->owner, e);
+  appEvents.push_back({.type=Event::MouseMove, .w=w, .x=wl_fixed_to_double(dxUnaccel)*s, .y=wl_fixed_to_double(dyUnaccel)*s,
+                       .relative=true});
   }
 
 void WaylandApi::Private::onWlKeyboardKeymap(void* data, [[maybe_unused]] wl_keyboard* keyboard,
@@ -896,10 +895,14 @@ void WaylandApi::Private::dispatchFocusEvent(const AppEvent& e) {
   }
 
 void WaylandApi::Private::dispatchMouseEvent(const AppEvent& e) {
-  // A move updates the app's cursor (see WWindow::appCursorX)
+  // A move updates the app's cursor (see WWindow::appCursorX). A relative move adds to where the app last saw it,
+  // incl. its own setCursorPosition (mouse-look recentring), clamped to the window like a real cursor.
   if(e.w->owner==nullptr)
     return;
-  if(e.type==Event::MouseMove) {
+  if(e.type==Event::MouseMove && e.relative) {
+    e.w->appCursorX = std::clamp(e.w->appCursorX + e.x, 0.0, double(std::max(e.w->physicalWidth() -1, 0)));
+    e.w->appCursorY = std::clamp(e.w->appCursorY + e.y, 0.0, double(std::max(e.w->physicalHeight()-1, 0)));
+    } else if(e.type==Event::MouseMove) {
     e.w->appCursorX = e.x;
     e.w->appCursorY = e.y;
     }
