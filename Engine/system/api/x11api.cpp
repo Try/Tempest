@@ -639,6 +639,7 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
       case KeyPress:
       case KeyRelease: {
         KeySym ksym = XLookupKeysym(&xev.xkey,0);
+        KeySym base = ksym; // without modifiers, Xutf8LookupString returns upper-case keysym with shift
         XIC    xic  = impl->xicOf(hWnd.ptr());
 
         char txt[64]={};
@@ -654,7 +655,7 @@ void X11Api::implProcessEvents(SystemApi::AppCallBack &cb) {
           }
 
         auto u16 = TextCodec::toUtf16(txt); // TODO: remove dynamic allocation
-        auto key = SystemApi::translateKey(ksym);
+        auto key = SystemApi::translateKey(base);
 
         uint32_t scan = xev.xkey.keycode;
         // printf("%s\n",txt);
