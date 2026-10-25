@@ -56,6 +56,8 @@ struct Application::Impl : SystemApi::AppCallBack {
     }
 
   uint32_t onTimer() override {
+    if(Application::isRunning())
+      Application::onEventLoop()();
     auto now = Application::tickCount();
     size_t count=0;
     for(timerI=0;timerI<timer.size();++timerI){
@@ -90,6 +92,11 @@ struct Application::Impl : SystemApi::AppCallBack {
   };
 
 Application::Impl Application::impl = {};
+
+Signal<void()>& Application::onEventLoop() {
+  static Signal<void()> signal;
+  return signal;
+  }
 
 Application::Application() {
   }
@@ -131,6 +138,8 @@ bool Application::isRunning() {
 
 void Application::processEvents() {
   SystemApi::processEvent(impl);
+  if(isRunning())
+    onEventLoop()();
   }
 
 void Application::setStyle(const Style* stl) {

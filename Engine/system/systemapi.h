@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Tempest/Platform>
+#include "gamepad.h"
 #include <Tempest/Rect>
 #include <Tempest/WidgetState>
 #include <Tempest/SizePolicy>
@@ -101,6 +102,10 @@ class SystemApi {
     virtual void     implSetWindowTitle(SystemApi::Window *w, const char* utf8) = 0;
     virtual void     implSetAllowedOrientations(SystemApi::Window *w, Orientation orientations);
 
+    virtual std::vector<Gamepad::Device> implGamepadDevices();
+    virtual bool     implGamepadState(Gamepad::DeviceId id, Gamepad::State& out);
+    virtual bool     implPollGamepadEvent(Gamepad::Event& out);
+
     static void      setCursorPosition(SystemApi::Window *w, int x, int y);
     static void      showCursor(SystemApi::Window *w, CursorShape c);
     static CursorShape cursorShape(Tempest::Window& cb);
@@ -133,6 +138,7 @@ class SystemApi {
 
   friend class Tempest::Window;
   friend class Tempest::Application;
+  friend class Tempest::Gamepad;
   };
 
 }

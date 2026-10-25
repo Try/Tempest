@@ -1,4 +1,5 @@
 #include "macosapi.h"
+#include "macosgamepad.h"
 
 #ifdef __OSX__
 
@@ -348,6 +349,7 @@ MacOSApi::MacOSApi() {
 
   setupKeyTranslate(k,20);
 
+  const bool ownsApplication = (NSApp == nil);
   [NSApplication sharedApplication];
 
   NSMenu*      bar     = [NSMenu new];
@@ -368,17 +370,37 @@ MacOSApi::MacOSApi() {
   [bar release];
 
   [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+  // The custom event loop bypasses NSApplication::run and its launch completion.
+  if(ownsApplication)
+    [NSApp finishLaunching];
   [NSApp activateIgnoringOtherApps:YES];
+  gamepads = std::make_unique<Detail::MacOSGamepad>();
+  }
+
+MacOSApi::~MacOSApi() = default;
+
+std::vector<Gamepad::Device> MacOSApi::implGamepadDevices() {
+  return gamepads->devices();
+  }
+
+bool MacOSApi::implGamepadState(Gamepad::DeviceId id, Gamepad::State& out) {
+  return gamepads->state(id, out);
+  }
+
+bool MacOSApi::implPollGamepadEvent(Gamepad::Event& out) {
+  return gamepads->pollEvent(out);
   }
 
 SystemApi::Window *MacOSApi::implCreateWindow(Tempest::Window *owner, uint32_t width, uint32_t height,
                                               SystemApi::ShowMode sm) {
-  return ::createWindow(owner,width,height,
+  auto* window = ::createWindow(owner,width,height,
                         NSWindowStyleMaskTitled |
                         NSWindowStyleMaskClosable |
                         NSWindowStyleMaskMiniaturizable |
                         NSWindowStyleMaskResizable,
                         sm);
+  gamepads->addWindow(window);
+  return window;
   }
 
 SystemApi::Window *MacOSApi::implCreateWindow(Tempest::Window *owner, uint32_t width, uint32_t height) {
@@ -390,6 +412,7 @@ SystemApi::Window *MacOSApi::implCreateWindow(Tempest::Window *owner, SystemApi:
   }
 
 void MacOSApi::implDestroyWindow(SystemApi::Window *w) {
+  gamepads->removeWindow(w);
   NSWindow* wnd   = reinterpret_cast<NSWindow*>(w);
   [wnd release];
   }

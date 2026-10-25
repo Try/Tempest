@@ -226,3 +226,16 @@ CursorShape SystemApi::cursorShape(Tempest::Window& cb) {
 float SystemApi::uiScale(Window* w) {
   return inst().implUiScale(w);
   }
+
+std::vector<Gamepad::Device> SystemApi::implGamepadDevices() {
+  return {};
+  }
+
+bool SystemApi::implGamepadState(Gamepad::DeviceId, Gamepad::State& out) {
+  out = {};
+  return false;
+  }
+
+bool SystemApi::implPollGamepadEvent(Gamepad::Event&) {
+  return false;
+  }
