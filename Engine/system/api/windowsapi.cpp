@@ -253,7 +253,7 @@ void WindowsApi::implProcessEvents(SystemApi::AppCallBack& cb) {
     // Nothing to draw while minimized: sleep until a message arrives instead of spinning,
     // waking regularly so timers still fire.
     if(!rendered) {
-      uint64_t wait = std::min<uint64_t>(cb.timeTotimer(), 16);
+      uint64_t wait = std::min<uint64_t>(cb.timeToTimer(), 16);
       if(wait>0)
         MsgWaitForMultipleObjects(0, nullptr, FALSE, wait, QS_ALLINPUT);
       }
@@ -524,9 +524,10 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
       }
 
     case WM_SETCURSOR:
-      if(IsIconic(hWnd)) {
-        SetCursor(cb->cursorShape());
-        break;
+      // The window class has no cursor, so restore ours whenever the pointer comes back from the frame or another window
+      if(LOWORD(lParam)==HTCLIENT && !IsIconic(hWnd)) {
+        SetCursor(SystemApi::cursorShape(*cb));
+        return TRUE;
         }
     default:
       return DefWindowProcW(hWnd, msg, wParam, lParam);

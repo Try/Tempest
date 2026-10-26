@@ -68,16 +68,17 @@ struct Application::Impl : SystemApi::AppCallBack {
     return uint32_t(count);
     }
 
-  uint64_t timeTotimer() const override {
+  uint64_t timeToTimer() const override {
     auto     now = Application::tickCount();
     uint64_t ret = std::numeric_limits<uint64_t>::max();
     for(size_t i=0; i<timer.size(); ++i) {
       Timer& t = *timer[i];
       if(!t.m.running)
         continue;
-      if(now <= t.m.lastEmit+t.m.interval)
+      const uint64_t due = t.m.lastEmit+t.m.interval;
+      if(now>=due)
         return 0;
-      ret = std::max(ret, now - (t.m.lastEmit + t.m.interval));
+      ret = std::min(ret, due-now);
       }
     return ret;
     }

@@ -463,13 +463,17 @@ void Widget::setFocus(bool b) {
 
 void Widget::setCursorShape(CursorShape cs) {
   wstate.cursor = cs;
-  if(wstate.moveOver) {
-    Widget* root=implTrieRoot(this);
-    if(auto w = dynamic_cast<Window*>(root))
-      w->implShowCursor(cs);
-    if(auto w = dynamic_cast<UiOverlay*>(root))
-      w->implShowCursor(cs);
-    }
+  if(!wstate.moveOver)
+    return;
+  // Owners of the hovered widget are marked as well; only the hovered widget itself decides the shape
+  for(auto i:wx)
+    if(i->wstate.moveOver)
+      return;
+  Widget* root=implTrieRoot(this);
+  if(auto w = dynamic_cast<Window*>(root))
+    w->implShowCursor(cs);
+  if(auto w = dynamic_cast<UiOverlay*>(root))
+    w->implShowCursor(cs);
   }
 
 void Widget::implSetFocus(bool b, Event::FocusReason reason) {

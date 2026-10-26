@@ -19,20 +19,17 @@
 
 #include <libspirv/libspirv.h>
 
+#if defined(__UNIX__)
+#include "system/api/waylandapi.h"
+#endif
+
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-#define VK_KHR_WIN32_SURFACE_EXTENSION_NAME "VK_KHR_win32_surface"
-#define VK_KHR_XLIB_SURFACE_EXTENSION_NAME  "VK_KHR_xlib_surface"
+#define VK_KHR_WIN32_SURFACE_EXTENSION_NAME   "VK_KHR_win32_surface"
+#define VK_KHR_XLIB_SURFACE_EXTENSION_NAME    "VK_KHR_xlib_surface"
+#define VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME "VK_KHR_wayland_surface"
 #define VK_KHR_ANDROID_SURFACE_EXTENSION_NAME "VK_KHR_android_surface"
-
-#if defined(__WINDOWS__)
-#define SURFACE_EXTENSION_NAME VK_KHR_WIN32_SURFACE_EXTENSION_NAME
-#elif defined(__ANDROID__)
-#define SURFACE_EXTENSION_NAME VK_KHR_ANDROID_SURFACE_EXTENSION_NAME
-#elif defined(__UNIX__)
-#define SURFACE_EXTENSION_NAME VK_KHR_XLIB_SURFACE_EXTENSION_NAME
-#endif
 
 static const std::initializer_list<const char*> validationLayersKHR = {
   "VK_LAYER_KHRONOS_validation"
@@ -90,6 +87,24 @@ static std::vector<VkExtensionProperties> instExtensionsList() {
   return ext;
   }
 
+// surface extension of the window system
+// on linux: wayland unless TEMPEST_DISABLE_WAYLAND=1, the same decision as SystemApi::inst()
+static const char* surfaceExtensionName() {
+#if defined(__WINDOWS__)
+  return VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
+#elif defined(__ANDROID__)
+  return VK_KHR_ANDROID_SURFACE_EXTENSION_NAME;
+#elif defined(__UNIX__)
+#if defined(TEMPEST_BUILD_WAYLAND)
+  if(!WaylandApi::isDisabled())
+    return VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME;
+#endif
+  return VK_KHR_XLIB_SURFACE_EXTENSION_NAME;
+#else
+#error "WSI is not implemented on this platform"
+#endif
+  }
+
 
 struct Tempest::VulkanApi::Impl {
   Impl(bool validation)
@@ -121,7 +136,7 @@ struct Tempest::VulkanApi::Impl {
     std::vector<const char*> rqExt = {
       VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
       VK_KHR_SURFACE_EXTENSION_NAME,
-      SURFACE_EXTENSION_NAME,
+      surfaceExtensionName(),
       };
 
     auto ext = instExtensionsList();
