@@ -5,7 +5,6 @@
 namespace Tempest {
 
 namespace Detail {
-class MacOSGamepad;
 class ImplMacOSApi {
   public:
     static void onDisplayLink(void* hwnd);
@@ -18,12 +17,6 @@ class ImplMacOSApi {
 class MacOSApi final: SystemApi {
   private:
     MacOSApi();
-    ~MacOSApi() override;
-
-    std::unique_ptr<Detail::MacOSGamepad> gamepads;
-    std::vector<Gamepad::Device> implGamepadDevices() override;
-    bool implGamepadState(Gamepad::DeviceId id, Gamepad::State& out) override;
-    bool implPollGamepadEvent(Gamepad::Event& out) override;
 
     Window*  implCreateWindow(Tempest::Window* owner, uint32_t width, uint32_t height, ShowMode sm);
     Window*  implCreateWindow(Tempest::Window *owner, uint32_t width, uint32_t height) override;

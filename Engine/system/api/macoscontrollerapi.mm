@@ -1,10 +1,8 @@
-#include "macosgamepad.h"
+#include "macoscontrollerapi.h"
 
 #include <Tempest/Platform>
 
 #ifdef __OSX__
-
-#include "../gamepadstate.h"
 
 #import <AppKit/AppKit.h>
 #import <GameController/GameController.h>
@@ -12,13 +10,14 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <stdexcept>
 
 using namespace Tempest;
 using namespace Tempest::Detail;
 
 namespace {
-using Button = Gamepad::Button;
-using Axis = Gamepad::Axis;
+using Button = GameController::Button;
+using Axis = GameController::Axis;
 
 std::array<GCControllerButtonInput*, size_t(Button::Count)> buttons(GCExtendedGamepad* pad) {
   return {{pad.buttonA, pad.buttonB, pad.buttonX, pad.buttonY,
@@ -32,8 +31,8 @@ std::array<GCControllerAxisInput*, 4> stickAxes(GCExtendedGamepad* pad) {
            pad.rightThumbstick.xAxis, pad.rightThumbstick.yAxis}};
   }
 
-Gamepad::State sample(GCExtendedGamepad* pad) {
-  Gamepad::State state;
+GameController::State sample(GCExtendedGamepad* pad) {
+  GameController::State state;
   auto b = buttons(pad);
   for(size_t i = 0; i < b.size(); ++i)
     if(b[i].isPressed)
@@ -47,26 +46,24 @@ Gamepad::State sample(GCExtendedGamepad* pad) {
   }
 }
 
-struct MacOSGamepad::Impl {
+struct MacOSControllerApi::Impl {
   struct Device {
     GCController* controller;
-    Gamepad::DeviceId id;
+    std::shared_ptr<ControllerState> input;
     };
 
-  GamepadState input;
-  std::vector<Device> controllers;
-  std::vector<void*> windows;
+  std::vector<Device> devices;
   NSMutableArray* observers = [[NSMutableArray alloc] init];
-  bool active = false;
-  bool appActive = NSApp.isActive;
+  bool active = NSApp.isActive;
 
   ~Impl() {
     assert([NSThread isMainThread]);
     for(id observer in observers)
       [[NSNotificationCenter defaultCenter] removeObserver:observer];
     [observers release];
-    for(auto& device : controllers) {
+    for(auto& device : devices) {
       clearHandlers(device.controller);
+      device.input->disconnect();
       [device.controller release];
       }
     }
@@ -81,33 +78,34 @@ struct MacOSGamepad::Impl {
 
   void feedSample(const Device& device) {
     const auto state = sample(device.controller.extendedGamepad);
-    for(size_t i = 0; i < size_t(Button::Count); ++i)
-      input.button(device.id, Button(i), (state.buttons & (uint32_t(1) << i)) != 0);
     for(size_t i = 0; i < size_t(Axis::Count); ++i)
-      input.axis(device.id, Axis(i), state.axes[i]);
+      device.input->axis(Axis(i), state.axes[i]);
+    for(size_t i = 0; i < size_t(Button::Count); ++i) {
+      const auto value = Button(i) == Button::LeftTrigger ? state.axes[size_t(Axis::LeftTrigger)] :
+                         Button(i) == Button::RightTrigger ? state.axes[size_t(Axis::RightTrigger)] : 0.f;
+      device.input->button(Button(i), (state.buttons & (uint32_t(1) << i)) != 0, value);
+      }
     }
 
-  void updateFocus() {
+  void setActive(bool next) {
     assert([NSThread isMainThread]);
-    NSWindow* key = NSApp.keyWindow;
-    const bool next = appActive && key != nil && key.isVisible && !key.isMiniaturized &&
-                      std::find(windows.begin(), windows.end(), static_cast<void*>(key)) != windows.end();
     if(next == active)
       return;
     active = next;
-    input.setActive(active);
-    // Re-arm neutral controls immediately; held controls remain blocked.
-    if(active)
-      for(const auto& device : controllers)
+    for(const auto& device : devices) {
+      // Refresh while inactive, then publish FocusGained after the fresh sample.
+      // Window focus notifications can precede this native recovery notification.
+      if(active)
         feedSample(device);
+      device.input->setActive(active);
+      }
     }
 
-  // Blocks must copy weak_ptr itself; a reference parameter would outlive its caller.
-  void connect(GCController* controller, std::weak_ptr<Impl> weak) {
+  void connect(GCController* controller) {
     assert([NSThread isMainThread]);
     if(controller.extendedGamepad == nil)
       return;
-    for(const auto& device : controllers)
+    for(const auto& device : devices)
       if(device.controller == controller)
         return;
     controller.handlerQueue = dispatch_get_main_queue();
@@ -127,40 +125,36 @@ struct MacOSGamepad::Impl {
     if(pad.rightTrigger != nil)
       axisMask |= uint32_t(1) << size_t(Axis::RightTrigger);
     const char* name = controller.vendorName.UTF8String;
-    const auto id = input.connect(name == nullptr ? "Game controller" : name, buttonMask, axisMask, sample(pad));
-    controllers.push_back({[controller retain], id});
+    auto input = std::make_shared<ControllerState>(name == nullptr ? "Game controller" : name,
+                                                  buttonMask, axisMask, sample(pad), active);
+    devices.push_back({[controller retain], input});
+    // Blocks copy weak_ptr itself, never a reference to a returned stack frame.
+    std::weak_ptr<ControllerState> weak = input;
     for(size_t i = 0; i < b.size(); ++i) {
       b[i].valueChangedHandler = ^(GCControllerButtonInput*, float value, BOOL pressed) {
-        if(auto self = weak.lock()) {
-          // Overflow is triggered by the edge: raw analog state must already
-          // contain this sample so Reset also suppresses the held trigger axis.
-          if(Button(i) == Button::LeftTrigger)
-            self->input.axis(id, Axis::LeftTrigger, value);
-          if(Button(i) == Button::RightTrigger)
-            self->input.axis(id, Axis::RightTrigger, value);
-          self->input.button(id, Button(i), pressed);
-          }
+        if(auto state = weak.lock())
+          state->button(Button(i), pressed, value);
         };
       }
     for(size_t i = 0; i < a.size(); ++i) {
       a[i].valueChangedHandler = ^(GCControllerAxisInput*, float value) {
-        if(auto self = weak.lock())
-          self->input.axis(id, Axis(i), value);
+        if(auto state = weak.lock())
+          state->axis(Axis(i), value);
         };
       }
     }
 
   void disconnect(GCController* controller) {
     assert([NSThread isMainThread]);
-    auto it = std::find_if(controllers.begin(), controllers.end(), [controller](const Device& device) {
+    auto it = std::find_if(devices.begin(), devices.end(), [controller](const Device& device) {
       return device.controller == controller;
       });
-    if(it == controllers.end())
+    if(it == devices.end())
       return;
     clearHandlers(it->controller);
-    input.disconnect(it->id);
+    it->input->disconnect();
     [it->controller release];
-    controllers.erase(it);
+    devices.erase(it);
     }
 
   void observe(const std::shared_ptr<Impl>& self) {
@@ -171,7 +165,7 @@ struct MacOSGamepad::Impl {
         if(auto self = weak.lock()) {
           auto* controller = static_cast<GCController*>(notification.object);
           if([[GCController controllers] containsObject:controller])
-            self->connect(controller, weak);
+            self->connect(controller);
           }
         }];
     [observers addObject:connected];
@@ -181,63 +175,39 @@ struct MacOSGamepad::Impl {
           self->disconnect(static_cast<GCController*>(notification.object));
         }];
     [observers addObject:disconnected];
-    for(NSString* name in @[NSApplicationDidBecomeActiveNotification, NSApplicationWillResignActiveNotification,
-                            NSWindowDidBecomeKeyNotification, NSWindowDidResignKeyNotification,
-                            NSWindowDidMiniaturizeNotification, NSWindowDidDeminiaturizeNotification,
-                            NSWindowWillCloseNotification]) {
+    for(NSString* name in @[NSApplicationDidBecomeActiveNotification, NSApplicationWillResignActiveNotification]) {
       id observer = [center addObserverForName:name object:nil queue:[NSOperationQueue mainQueue]
         usingBlock:^(NSNotification* notification) {
-          if(auto self = weak.lock()) {
-            if([notification.name isEqualToString:NSWindowWillCloseNotification]) {
-              auto window = static_cast<void*>(notification.object);
-              std::erase(self->windows, window);
-              }
-            if([notification.name isEqualToString:NSApplicationWillResignActiveNotification])
-              self->appActive = false;
-            if([notification.name isEqualToString:NSApplicationDidBecomeActiveNotification])
-              self->appActive = true;
-            self->updateFocus();
-            }
+          if(auto self = weak.lock())
+            self->setActive([notification.name isEqualToString:NSApplicationDidBecomeActiveNotification]);
           }];
       [observers addObject:observer];
       }
     for(GCController* controller in [GCController controllers])
-      connect(controller, weak);
+      connect(controller);
     }
   };
 
-MacOSGamepad::MacOSGamepad() : impl(std::make_shared<Impl>()) {
-  assert([NSThread isMainThread]);
+MacOSControllerApi::MacOSControllerApi() {
+  requireMainThread();
+  impl = std::make_shared<Impl>();
   impl->observe(impl);
   }
 
-MacOSGamepad::~MacOSGamepad() = default;
+MacOSControllerApi::~MacOSControllerApi() = default;
 
-void MacOSGamepad::addWindow(void* window) {
-  assert([NSThread isMainThread]);
-  impl->windows.push_back(window);
-  impl->updateFocus();
+void MacOSControllerApi::requireMainThread() {
+  if(![NSThread isMainThread])
+    throw std::logic_error("GameController::controllers must be called on the macOS main thread");
   }
 
-void MacOSGamepad::removeWindow(void* window) {
-  assert([NSThread isMainThread]);
-  std::erase(impl->windows, window);
-  impl->updateFocus();
-  }
-
-std::vector<Gamepad::Device> MacOSGamepad::devices() const {
-  assert([NSThread isMainThread]);
-  return impl->input.devices();
-  }
-
-bool MacOSGamepad::state(Gamepad::DeviceId id, Gamepad::State& out) const {
-  assert([NSThread isMainThread]);
-  return impl->input.state(id, out);
-  }
-
-bool MacOSGamepad::pollEvent(Gamepad::Event& out) {
-  assert([NSThread isMainThread]);
-  return impl->input.pollEvent(out);
+std::vector<std::shared_ptr<ControllerState>> MacOSControllerApi::controllers() const {
+  requireMainThread();
+  std::vector<std::shared_ptr<ControllerState>> result;
+  result.reserve(impl->devices.size());
+  for(const auto& device : impl->devices)
+    result.push_back(device.input);
+  return result;
   }
 
 #endif
