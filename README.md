@@ -58,7 +58,7 @@ The [Android packaging example](Examples/Android/README.md) uses `add_android_ap
 `GameController` provides connection handles, queued button transitions and current
 stick/trigger values. The macOS backend uses GameController independently of
 Tempest windows. Other platforms currently enumerate no controllers.
-See [the API contract and standalone tests](docs/game-controller.md).
+See [the API contract and regression tests](docs/game-controller.md).
 
 ### Ecosystem
 During development various issues of Vulkan stack been found, reported and some were fixed. 

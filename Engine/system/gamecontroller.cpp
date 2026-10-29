@@ -1,25 +1,21 @@
 #include "gamecontroller.h"
 
-#include "api/controllerapi.h"
-#include "controllerstate.h"
+#include "controller/controllerstate.h"
 
 #include <utility>
 
 using namespace Tempest;
 
-GameController::GameController(std::shared_ptr<Detail::ControllerState> impl) : impl(std::move(impl)) {
-  }
-
-std::vector<GameController> GameController::controllers() {
-  return Detail::ControllerApi::controllers();
+GameController::GameController(std::shared_ptr<Impl> impl) : impl(std::move(impl)) {
   }
 
 const GameController::Device& GameController::device() const {
-  return impl->device();
+  static const Device empty;
+  return impl ? impl->device() : empty;
   }
 
 GameController::State GameController::state() const {
-  return impl->state();
+  return impl ? impl->state() : State{};
   }
 
 Vec2 GameController::axis(Stick stick) const {
@@ -34,5 +30,6 @@ Vec2 GameController::axis(Stick stick) const {
 void GameController::pull(const std::function<void(const Event&)>& callback) const {
   // A callback may destroy the handle through which pull was called.
   auto lifetime = impl;
-  lifetime->pull(callback);
+  if(lifetime)
+    lifetime->pull(callback);
   }

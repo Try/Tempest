@@ -1,13 +1,14 @@
 # Game controllers
 
-Include `<Tempest/GameController>`. `GameController::controllers()` returns value
+Include `<Tempest/Application>` and `<Tempest/GameController>`.
+`Application::controllers()` returns value
 handles for the connected extended gamepads. Copies and repeated enumeration of
 one connection share its immutable `device()` metadata, current state and FIFO.
 There is one event consumer per connection, not one subscription per copy.
 Connection IDs are never reused; reconnecting creates a new handle identity.
 
 ```cpp
-auto controllers = Tempest::GameController::controllers();
+auto controllers = Tempest::Application::controllers();
 if(!controllers.empty()) {
   auto controller = controllers.front();
   controller.pull([](const Tempest::GameController::Event& event) {
@@ -27,17 +28,21 @@ filtering. Tempest adds no game dead zone or neutral rearming.
 
 ## Threads and callbacks
 
-On macOS, call `controllers()` on the main thread after `NSApplication` has
+On macOS, call `Application::controllers()` on the main thread after `NSApplication` has
 finished launching, and keep its main run loop running. The backend neither
 creates an application nor requires a Tempest `Window`. A non-Tempest host owns
 its AppKit startup and run loop. A Tempest window still performs its normal
 guarded `finishLaunching` when Tempest owns the application.
 
 Native discovery, observer lifetime and GameController input handlers use the
-main thread. The separate `ControllerApi` registry owns these native objects;
-ordinary window creation does not initialize the controller registry. Public
-handles retain only synchronized C++ connection state and may outlive native
-disconnection or be destroyed on a worker thread.
+main thread. The separate `ControllerApi` registry owns native resources and
+clears each connection's native pointer during disconnection or registry cleanup.
+Ordinary window creation does not initialize this registry. `GameController` is
+a facade over shared synchronized connection state; `Detail::MacosController`
+extends that implementation for native input without a second event queue.
+Handles may outlive native disconnection or be destroyed on a worker thread.
+GameController is weak-linked and enumeration returns no connections when the
+required native API is unavailable.
 
 `state()` and `axis()` may run on any thread and return the latest synchronized
 sample. They never consume queued events. Samples are not tied to a particular
@@ -45,8 +50,9 @@ queued button event or game frame; native input can advance between calls.
 
 `pull(callback)` invokes callbacks synchronously on the calling thread, without
 holding internal locks. The application chooses that thread. Pulls for the same
-connection must be serialized across every copy. Recursive or overlapping pulls
-throw `std::logic_error` before consuming an event. Calls for distinct
+connection must be serialized across every copy, and a callback must not reenter
+`pull` for that connection. The application enforces this requirement; there is
+no runtime rejection of recursive or overlapping pulls. Calls for distinct
 connections are independent. A callback may inspect state or destroy its
 calling handle. If it throws, the exception propagates; the current event has
 been consumed, while untouched events remain queued and a later pull can resume.
@@ -93,33 +99,39 @@ Disconnect clears the snapshot and replaces pending input with
 cannot be displaced by queue overflow or late native callbacks. Stale handles
 remain safe; their metadata persists and `state()`/`axis()` return zero. Copies
 share consumption of the terminal event just as they share button events.
+An empty or moved-from handle instead has device ID zero, an empty name and
+capability masks, zero state/axes, and a no-op `pull`. Its accessors are safe.
 
-## Standalone regression tests
+## Regression tests
 
-The focused project uses the bundled GoogleTest and has no renderer, shader
-compiler, game asset, Tempest window or `SystemApi` dependency:
+The controller regressions are part of the existing `TempestTests` project and
+use its bundled GoogleTest:
 
 ```sh
-cmake -S Tests/controllers -B build-controller-tests -DCMAKE_BUILD_TYPE=RelWithDebInfo
-cmake --build build-controller-tests -j 4
-ctest --test-dir build-controller-tests --output-on-failure
+cmake -S Tests/tests -B build-tests -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build-tests --target TempestTests -j 4
+./build-tests/testsuite/TempestTests --gtest_filter='Controller*'
 ```
 
-`ControllerStateTests` exercises shared handles/queues, short taps, normalized
-snapshots, focus cancellation, per-device overflow, terminal disconnect,
-callback threads, concurrent snapshots, exceptions, recursive/overlapping pulls,
-finite draining and handle destruction from callbacks. On macOS,
-`MacOSControllerTests` invokes the actual installed native handlers on synthetic
-profiles and verifies mapping, retained callback lifetimes, native registry
-cleanup, reconnect identity, worker-thread final handle release and public
-enumeration without a Tempest window. Native tests initialize AppKit and must
-run in a desktop session; they do not establish physical USB/Bluetooth coverage.
+These tests cover shared handles/queues, short taps, normalized snapshots,
+focus cancellation, per-device overflow, terminal disconnect, callback threads,
+concurrent snapshots, exceptions, finite draining, empty/moved-from access and
+handle destruction from callbacks. Cancellation during a callback must replace
+pending edges immediately; a callback exception preserves untouched events.
+The normal test project also builds the renderer and test shaders and requires
+its usual dependencies, including `glslangValidator`.
 
-For compiler-supported sanitizer runs, configure a separate build with matching
-`CMAKE_CXX_FLAGS`, `CMAKE_OBJCXX_FLAGS` and `CMAKE_EXE_LINKER_FLAGS`, using
-`-fsanitize=address,undefined -fno-omit-frame-pointer` or a separate
-`-fsanitize=thread -fno-omit-frame-pointer` build. Run native macOS tests outside
-the Codex command sandbox with its normal permission elevation.
+Local native validation invokes the installed native handlers on synthetic
+profiles, including retained callbacks, focus recovery, reconnect identity,
+registry cleanup and final handle release on a worker. It initializes AppKit
+without a Tempest window and must run in a desktop session. It does not establish
+physical USB/Bluetooth coverage. Native macOS tests in Codex must run outside
+the command sandbox with its normal permission elevation.
+
+Compiler-supported address/undefined-behavior and thread sanitizer runs use
+separate builds. Match sanitizer flags for compiled sources and linking; use
+`-fsanitize=address,undefined -fno-omit-frame-pointer` or, separately,
+`-fsanitize=thread -fno-omit-frame-pointer`.
 
 Only macOS is implemented. Windows, Linux, iOS and Android backends are separate
 work; the current fallback returns no controllers. Future Windows support must

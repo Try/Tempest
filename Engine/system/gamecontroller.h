@@ -8,13 +8,12 @@
 #include <functional>
 #include <memory>
 #include <string>
-#include <vector>
 
 namespace Tempest {
 
-namespace Detail {
 class ControllerApi;
-class ControllerState;
+namespace Detail {
+class MacosController;
 }
 
 class GameController final {
@@ -59,33 +58,21 @@ class GameController final {
       ResetReason reason = ResetReason::None;
       };
 
-    // macOS: call on the main thread, after NSApplication finishes launching,
-    // and keep its main run loop running. No Tempest Window is required.
-    // Copies and repeated enumeration share one connection and event queue.
-    // Other platforms currently return no controllers.
-    static std::vector<GameController> controllers();
-
     const Device& device() const;
-    // Thread-safe latest native sample, including while inactive. Disconnect
-    // clears the sample. No game dead zone or neutral rearming is applied.
     State state() const;
     Vec2  axis(Stick stick) const;
 
-    // Synchronous callbacks on the caller's thread, with no internal lock held.
-    // One serialized consumer per connection, shared by every copy. Recursive
-    // or overlapping pulls throw std::logic_error before consuming an event.
-    // A throwing callback consumes that event; untouched events remain queued.
-    // Each pull delivers at most the queue length observed at entry.
-    // Up to 1024 observed edges are retained. Reset cancels pending input for
-    // this connection; inspect state() and cancel held actions in the game.
-    // Disconnect is terminal and remains observable on stale handles.
+    // Caller-thread callbacks; serialize pulls across copies without reentry.
+    // See docs/game-controller.md for cancellation, capacity and lifetime rules.
     void pull(const std::function<void(const Event&)>& callback) const;
 
   private:
-    explicit GameController(std::shared_ptr<Detail::ControllerState> impl);
-    std::shared_ptr<Detail::ControllerState> impl;
+    struct Impl;
+    explicit GameController(std::shared_ptr<Impl> impl);
+    std::shared_ptr<Impl> impl;
 
-  friend class Detail::ControllerApi;
+  friend class ControllerApi;
+  friend class Detail::MacosController;
   };
 
 }

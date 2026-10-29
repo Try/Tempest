@@ -1,6 +1,7 @@
 #include "controllerapi.h"
 
 #include <Tempest/Platform>
+#include <Tempest/Application>
 
 #ifdef __OSX__
 #include "macoscontrollerapi.h"
@@ -11,19 +12,19 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+std::vector<GameController> Application::controllers() {
+  return ControllerApi::controllers();
+  }
+
 std::vector<GameController> ControllerApi::controllers() {
 #ifdef __OSX__
-  MacOSControllerApi::requireMainThread();
-  static MacOSControllerApi api;
+  MacosControllerApi::requireMainThread();
+  static MacosControllerApi api;
   std::vector<GameController> result;
   for(auto& state : api.controllers())
-    result.push_back(controller(std::move(state)));
+    result.push_back(GameController(std::move(state)));
   return result;
 #else
   return {};
 #endif
-  }
-
-GameController ControllerApi::controller(std::shared_ptr<ControllerState> state) {
-  return GameController(std::move(state));
   }

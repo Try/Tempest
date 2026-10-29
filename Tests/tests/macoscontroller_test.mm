@@ -1,23 +1,25 @@
-// Standalone native target: do not also compile macoscontrollerapi.mm.
-// Synthetic native profiles exercise installed handlers without a Tempest Window.
-#include "../../Engine/system/api/controllerapi.h"
-#include "../../Engine/system/controllerstate.h"
-
+// Local native fixture includes the implementation; do not compile it twice.
 #include <gtest/gtest.h>
 
 #include <array>
+#include <functional>
 #include <future>
+#include <memory>
 #include <optional>
+#include <string>
 #include <thread>
+#include <vector>
+
+#include <Tempest/Vec>
 
 #define private public
-#include "../../Engine/system/api/macoscontrollerapi.h"
+#include "../../Engine/system/gamecontroller.h"
+#include "../../Engine/system/controller/macoscontrollerapi.h"
 #undef private
-#include "../../Engine/system/api/macoscontrollerapi.mm"
+#include "../../Engine/system/controller/macoscontrollerapi.mm"
+#include <Tempest/Application>
 
-using Tempest::Detail::ControllerApi;
-using Tempest::Detail::ControllerState;
-using Tempest::Detail::MacOSControllerApi;
+using Tempest::Detail::MacosControllerApi;
 
 namespace {
 using Pad = Tempest::GameController;
@@ -31,7 +33,7 @@ std::vector<Event> drain(const Pad& controller) {
 
 // This scope ends before callbacks execute, checking weak_ptr capture lifetime.
 __attribute__((noinline))
-void connectFromReturnedFrame(MacOSControllerApi& backend, GCController* controller) {
+void connectFromReturnedFrame(MacosControllerApi& backend, GCController* controller) {
   backend.impl->connect(controller);
   }
 }
@@ -39,17 +41,17 @@ void connectFromReturnedFrame(MacOSControllerApi& backend, GCController* control
 TEST(MacOSController, NativeCallbacksCopiesDisconnectAndLifetime) {
   @autoreleasepool {
     ASSERT_TRUE([NSThread isMainThread]);
-    auto backend = std::make_unique<MacOSControllerApi>();
+    auto backend = std::make_unique<MacosControllerApi>();
     const auto existing = backend->impl->devices;
     for(const auto& device : existing)
-      backend->impl->disconnect(device.controller);
+      backend->impl->disconnect(device->native);
     backend->impl->setActive(true);
     GCController* native = [GCController controllerWithExtendedGamepad];
     connectFromReturnedFrame(*backend, native);
     ASSERT_EQ(backend->controllers().size(), 1u);
     auto state = backend->controllers().front();
-    auto controller = ControllerApi::controller(state);
-    auto enumerated = ControllerApi::controller(backend->controllers().front());
+    auto controller = Tempest::GameController(state);
+    auto enumerated = Tempest::GameController(backend->controllers().front());
     ASSERT_EQ(drain(controller).size(), 1u);
     EXPECT_TRUE(drain(enumerated).empty());
     EXPECT_EQ(&controller.device(), &enumerated.device());
@@ -107,7 +109,7 @@ TEST(MacOSController, NativeCallbacksCopiesDisconnectAndLifetime) {
     ASSERT_EQ(gained.size(), 1u);
     EXPECT_EQ(gained[0].reason, Event::ResetReason::FocusGained);
 
-    for(size_t edge = 0; edge < ControllerState::MaxEvents; ++edge)
+    for(size_t edge = 0; edge < 1024; ++edge)
       inputs[0].valueChangedHandler(inputs[0], edge % 2 == 0 ? 1.f : 0.f, edge % 2 == 0);
     native.extendedGamepad.leftTrigger.valueChangedHandler(native.extendedGamepad.leftTrigger, .9f, YES);
     const auto overflow = drain(controller);
@@ -132,17 +134,19 @@ TEST(MacOSController, NativeCallbacksCopiesDisconnectAndLifetime) {
     EXPECT_EQ(controller.state().buttons, 0u);
     EXPECT_EQ(controller.state().axes, Pad::State{}.axes);
     EXPECT_TRUE(drain(controller).empty());
+    EXPECT_EQ(state->native, nil);
 
     connectFromReturnedFrame(*backend, native);
-    std::optional<Pad> live = ControllerApi::controller(backend->controllers().front());
+    std::optional<Pad> live = Tempest::GameController(backend->controllers().front());
     EXPECT_NE(live->device().id, oldId);
     auto liveButton = Block_copy(inputs[0].valueChangedHandler);
     auto liveAxis = Block_copy(analog[0].valueChangedHandler);
-    std::weak_ptr<MacOSControllerApi::Impl> nativeLifetime = backend->impl;
-    std::weak_ptr<ControllerState> liveState = backend->controllers().front();
+    std::weak_ptr<MacosControllerApi::Impl> nativeLifetime = backend->impl;
+    std::weak_ptr<Tempest::Detail::MacosController> liveState = backend->controllers().front();
     backend.reset();
     EXPECT_TRUE(nativeLifetime.expired());
     EXPECT_FALSE(liveState.expired());
+    EXPECT_EQ(liveState.lock()->native, nil);
     EXPECT_EQ(inputs[0].valueChangedHandler, nil);
     EXPECT_EQ(analog[0].valueChangedHandler, nil);
     oldButton(inputs[0], 0.f, NO);
@@ -167,14 +171,14 @@ TEST(MacOSController, NativeCallbacksCopiesDisconnectAndLifetime) {
 
 TEST(MacOSController, FocusGainRefreshPrecedesResetAfterEarlyWindowFocus) {
   @autoreleasepool {
-    MacOSControllerApi backend;
+    MacosControllerApi backend;
     const auto existing = backend.impl->devices;
     for(const auto& device : existing)
-      backend.impl->disconnect(device.controller);
+      backend.impl->disconnect(device->native);
     backend.impl->setActive(false);
     GCController* native = [GCController controllerWithExtendedGamepad];
     connectFromReturnedFrame(backend, native);
-    auto controller = ControllerApi::controller(backend.controllers().front());
+    auto controller = Tempest::GameController(backend.controllers().front());
     drain(controller);
     auto* pad = native.extendedGamepad;
     [pad.buttonA setValue:1.f];
@@ -217,10 +221,10 @@ TEST(MacOSController, PublicEnumerationNeedsMainThreadButNoTempestWindow) {
   @autoreleasepool {
     [NSApplication sharedApplication];
     [NSApp finishLaunching];
-    // The target links no SystemApi, Application, renderer or Window source.
-    EXPECT_NO_THROW(Pad::controllers());
+    // The target links no SystemApi, application.cpp, renderer or Window source.
+    EXPECT_NO_THROW(Tempest::Application::controllers());
     std::thread worker([] {
-      EXPECT_THROW(Pad::controllers(), std::logic_error);
+      EXPECT_THROW(Tempest::Application::controllers(), std::logic_error);
       });
     worker.join();
     // Pump the host run loop, independently of Tempest window/event APIs.

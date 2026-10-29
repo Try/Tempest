@@ -1,9 +1,11 @@
 #pragma once
 
 #include <Tempest/Signal>
+#include <Tempest/GameController>
 
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 namespace Tempest {
 
@@ -23,6 +25,8 @@ class Application {
     int                 exec();
     static bool         isRunning();
     static void         processEvents();
+    // macOS: main thread, after NSApplication launch, with its run loop running.
+    static std::vector<GameController> controllers();
 
     // UI-thread boundary between native event-processing steps. May re-enter
     // through a modal loop; subscribers must unbind before being destroyed.

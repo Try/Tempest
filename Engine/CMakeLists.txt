@@ -356,7 +356,7 @@ elseif(IOS)
   #NOTE: use -DCMAKE_SYSTEM_NAME=iOS on first configure
   target_link_libraries(${PROJECT_NAME} PRIVATE "-framework UiKit" "-framework Foundation" "-framework QuartzCore" "-framework Metal")
 elseif(APPLE)
-  target_link_libraries(${PROJECT_NAME} PRIVATE "-framework AppKit" "-framework QuartzCore" "-framework Metal" "-framework GameController")
+  target_link_libraries(${PROJECT_NAME} PRIVATE "-framework AppKit" "-framework QuartzCore" "-framework Metal" "-weak_framework GameController")
 elseif(ANDROID)
   target_link_libraries(${PROJECT_NAME} PRIVATE native_app_glue android dl log)
   target_link_options(${PROJECT_NAME} INTERFACE "-Wl,-u,main" "-Wl,--export-dynamic-symbol=main")

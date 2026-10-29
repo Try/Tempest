@@ -7,7 +7,6 @@
 #include <utility>
 
 using namespace Tempest;
-using namespace Tempest::Detail;
 
 namespace {
 constexpr uint32_t buttonMask = (uint32_t(1) << uint32_t(GameController::Button::Count)) - 1;
@@ -29,8 +28,8 @@ float normalized(GameController::Axis axis, float value) {
   }
 }
 
-ControllerState::ControllerState(std::string name, uint32_t buttons, uint32_t axes,
-                                 const State& initial, bool active)
+GameController::Impl::Impl(std::string name, uint32_t buttons, uint32_t axes,
+                           const State& initial, bool active)
   : info{connectionId(), std::move(name), buttons & buttonMask, axes & axisMask}, active(active) {
   current.buttons = initial.buttons & info.supportedButtons;
   for(size_t i = 0; i < initial.axes.size(); ++i)
@@ -39,36 +38,32 @@ ControllerState::ControllerState(std::string name, uint32_t buttons, uint32_t ax
   push({Event::Type::Connected, info.id});
   }
 
-ControllerState::State ControllerState::state() const {
+GameController::State GameController::Impl::state() const {
   std::lock_guard<std::mutex> guard(sync);
   return current;
   }
 
-void ControllerState::pull(const std::function<void(const Event&)>& callback) {
-  std::unique_lock<std::mutex> guard(sync);
-  if(pulling)
-    throw std::logic_error("GameController::pull already in progress for this connection");
-  pulling = true;
-  try {
-    // New input must not keep a game tick inside pull indefinitely.
-    const auto count = events.size();
-    for(size_t i = 0; i < count && !events.empty(); ++i) {
-      const auto event = events.front();
-      events.pop_front();
-      guard.unlock();
-      callback(event);
-      guard.lock();
-      }
-    } catch(...) {
-    if(!guard.owns_lock())
-      guard.lock();
-    pulling = false;
-    throw;
+void GameController::Impl::pull(const std::function<void(const Event&)>& callback) {
+  size_t count;
+  {
+    std::lock_guard<std::mutex> guard(sync);
+    count = events.size();
     }
-  pulling = false;
+  // New input must not keep a game tick inside pull indefinitely.
+  for(size_t i = 0; i < count; ++i) {
+    Event event;
+    {
+      std::lock_guard<std::mutex> guard(sync);
+      if(events.empty())
+        break;
+      event = events.front();
+      events.pop_front();
+      }
+    callback(event);
+    }
   }
 
-void ControllerState::disconnect() {
+void GameController::Impl::disconnect() {
   std::lock_guard<std::mutex> guard(sync);
   if(!connected)
     return;
@@ -79,7 +74,7 @@ void ControllerState::disconnect() {
   push({Event::Type::Disconnected, info.id});
   }
 
-void ControllerState::setActive(bool value) {
+void GameController::Impl::setActive(bool value) {
   std::lock_guard<std::mutex> guard(sync);
   if(!connected || active == value)
     return;
@@ -93,7 +88,7 @@ void ControllerState::setActive(bool value) {
     }
   }
 
-void ControllerState::button(Button button, bool pressed, float value) {
+void GameController::Impl::button(Button button, bool pressed, float value) {
   if(uint32_t(button) >= uint32_t(Button::Count))
     return;
   std::lock_guard<std::mutex> guard(sync);
@@ -115,7 +110,7 @@ void ControllerState::button(Button button, bool pressed, float value) {
     push({pressed ? Event::Type::ButtonDown : Event::Type::ButtonUp, info.id, button});
   }
 
-void ControllerState::axis(Axis axis, float value) {
+void GameController::Impl::axis(Axis axis, float value) {
   if(uint32_t(axis) >= uint32_t(Axis::Count) || !std::isfinite(value))
     return;
   std::lock_guard<std::mutex> guard(sync);
@@ -123,7 +118,7 @@ void ControllerState::axis(Axis axis, float value) {
     current.axes[size_t(axis)] = normalized(axis, value);
   }
 
-void ControllerState::push(const Event& event) {
+void GameController::Impl::push(const Event& event) {
   if(events.size() < MaxEvents) {
     events.push_back(event);
     return;

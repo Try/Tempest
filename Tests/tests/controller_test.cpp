@@ -1,19 +1,26 @@
-#include "../../Engine/system/controllerstate.h"
-#include "../../Engine/system/api/controllerapi.h"
-
 #include <gtest/gtest.h>
 
 #include <atomic>
 #include <cmath>
-#include <future>
 #include <limits>
 #include <optional>
 #include <stdexcept>
 #include <thread>
+#include <array>
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
+
+#include <Tempest/Vec>
+
+// Keep construction and mutation access in this fixture, not the production API.
+#define private public
+#include "../../Engine/system/gamecontroller.h"
+#undef private
+#include "../../Engine/system/controller/controllerstate.h"
 
 using Tempest::GameController;
-using Tempest::Detail::ControllerApi;
-using Tempest::Detail::ControllerState;
 
 namespace {
 using Button = GameController::Button;
@@ -24,6 +31,18 @@ constexpr uint32_t axes = (uint32_t(1) << uint32_t(Axis::Count)) - 1;
 constexpr uint32_t bit(Button value) { return uint32_t(1) << uint32_t(value); }
 constexpr uint32_t bit(Axis value) { return uint32_t(1) << uint32_t(value); }
 
+struct ControllerState final : GameController::Impl {
+  ControllerState(std::string name, uint32_t buttons, uint32_t axes,
+                  const GameController::State& initial, bool active = true)
+    : Impl(std::move(name), buttons, axes, initial, active) {}
+
+  using Impl::MaxEvents;
+  using Impl::disconnect;
+  using Impl::setActive;
+  using Impl::button;
+  using Impl::axis;
+  };
+
 std::vector<Event> drain(const GameController& controller) {
   std::vector<Event> result;
   controller.pull([&](const Event& event) { result.push_back(event); });
@@ -33,7 +52,7 @@ std::vector<Event> drain(const GameController& controller) {
 struct Controller : testing::Test {
   std::shared_ptr<ControllerState> input = std::make_shared<ControllerState>("controller", buttons, axes,
                                                                            GameController::State{});
-  GameController controller = ControllerApi::controller(input);
+  GameController controller = GameController(input);
 
   void SetUp() override {
     const auto events = drain(controller);
@@ -50,7 +69,7 @@ struct Controller : testing::Test {
 
 TEST_F(Controller, CopiesAndEnumerationShareIdentityQueueAndShortTaps) {
   auto copy = controller;
-  auto enumerated = ControllerApi::controller(input);
+  auto enumerated = GameController(input);
   EXPECT_EQ(copy.device().id, enumerated.device().id);
   EXPECT_EQ(&copy.device(), &enumerated.device());
   EXPECT_EQ(controller.device().name, "controller");
@@ -91,7 +110,7 @@ TEST_F(Controller, CallbackRunsOnCallerThreadAndCanReadState) {
   EXPECT_TRUE(drain(controller).empty());
   }
 
-TEST_F(Controller, CallbackExceptionPreservesUntouchedEventsAndUnlocksPull) {
+TEST_F(Controller, CallbackExceptionPreservesUntouchedEvents) {
   button(Button::South, true);
   button(Button::South, false);
   EXPECT_THROW(controller.pull([](const Event&) { throw std::runtime_error("callback"); }), std::runtime_error);
@@ -101,32 +120,89 @@ TEST_F(Controller, CallbackExceptionPreservesUntouchedEventsAndUnlocksPull) {
   EXPECT_TRUE(drain(controller).empty());
   }
 
-TEST_F(Controller, RecursiveAndOverlappingPullsRejectBeforeConsuming) {
+TEST_F(Controller, FocusLossInsideCallbackCancelsRemainingEdges) {
   button(Button::South, true);
   button(Button::South, false);
-  auto copy = controller;
-  size_t calls = 0;
-  controller.pull([&](const Event&) {
-    EXPECT_THROW(copy.pull([](const Event&) {}), std::logic_error);
-    ++calls;
-    });
-  EXPECT_EQ(calls, 2u);
-
   button(Button::East, true);
-  std::promise<void> entered, resume;
-  auto release = resume.get_future();
-  std::thread consumer([&] {
-    copy.pull([&](const Event&) {
-      entered.set_value();
-      release.wait();
-      });
+  std::vector<Event> observed;
+  controller.pull([&](const Event& event) {
+    observed.push_back(event);
+    if(observed.size() == 1)
+      input->setActive(false);
     });
-  entered.get_future().wait();
-  EXPECT_THROW(controller.pull([](const Event&) {}), std::logic_error);
-  resume.set_value();
-  consumer.join();
-  button(Button::East, false);
-  EXPECT_EQ(drain(controller).size(), 1u);
+  ASSERT_EQ(observed.size(), 2u);
+  EXPECT_EQ(observed[0].type, Event::Type::ButtonDown);
+  EXPECT_EQ(observed[1].type, Event::Type::Reset);
+  EXPECT_EQ(observed[1].reason, Event::ResetReason::FocusLost);
+  EXPECT_TRUE(drain(controller).empty());
+  }
+
+TEST_F(Controller, DisconnectInsideCallbackReplacesRemainingEdges) {
+  button(Button::South, true);
+  button(Button::South, false);
+  button(Button::East, true);
+  std::vector<Event> observed;
+  controller.pull([&](const Event& event) {
+    observed.push_back(event);
+    if(observed.size() == 1)
+      input->disconnect();
+    });
+  ASSERT_EQ(observed.size(), 3u);
+  EXPECT_EQ(observed[1].reason, Event::ResetReason::Disconnected);
+  EXPECT_EQ(observed[2].type, Event::Type::Disconnected);
+  EXPECT_EQ(controller.state().buttons, 0u);
+  EXPECT_TRUE(drain(controller).empty());
+  }
+
+TEST_F(Controller, OverflowInsideCallbackCancelsRemainingEdges) {
+  button(Button::South, true);
+  button(Button::South, false);
+  button(Button::East, true);
+  std::vector<Event> observed;
+  controller.pull([&](const Event& event) {
+    observed.push_back(event);
+    if(observed.size() == 1)
+      for(size_t i = 0; i < ControllerState::MaxEvents - 1; ++i)
+        button(Button::South, i % 2 == 0);
+    });
+  ASSERT_EQ(observed.size(), 2u);
+  EXPECT_EQ(observed[1].type, Event::Type::Reset);
+  EXPECT_EQ(observed[1].reason, Event::ResetReason::Overflow);
+  EXPECT_TRUE(drain(controller).empty());
+  }
+
+TEST_F(Controller, CancellationAndThrowPreserveReplacementQueue) {
+  button(Button::South, true);
+  button(Button::South, false);
+  EXPECT_THROW(controller.pull([&](const Event&) {
+    input->disconnect();
+    throw std::runtime_error("callback");
+    }), std::runtime_error);
+  const auto events = drain(controller);
+  ASSERT_EQ(events.size(), 2u);
+  EXPECT_EQ(events[0].reason, Event::ResetReason::Disconnected);
+  EXPECT_EQ(events[1].type, Event::Type::Disconnected);
+  }
+
+TEST_F(Controller, MovedFromAndEmptyHandlesAreSafe) {
+  const auto id = controller.device().id;
+  auto moved = std::move(controller);
+  EXPECT_EQ(moved.device().id, id);
+  EXPECT_EQ(controller.device().id, 0u);
+  EXPECT_TRUE(controller.device().name.empty());
+  EXPECT_EQ(controller.device().supportedButtons, 0u);
+  EXPECT_EQ(controller.device().supportedAxes, 0u);
+  EXPECT_EQ(controller.state().buttons, 0u);
+  EXPECT_EQ(controller.state().axes, GameController::State{}.axes);
+  EXPECT_EQ(controller.axis(GameController::Stick::Left), Tempest::Vec2{});
+  EXPECT_EQ(controller.axis(GameController::Stick::Right), Tempest::Vec2{});
+  controller.pull([](const Event&) { FAIL() << "Moved-from handle delivered an event"; });
+  GameController empty(nullptr);
+  EXPECT_EQ(empty.device().id, 0u);
+  EXPECT_EQ(empty.state().buttons, 0u);
+  EXPECT_EQ(empty.state().axes, GameController::State{}.axes);
+  EXPECT_EQ(empty.axis(GameController::Stick::Left), Tempest::Vec2{});
+  empty.pull([](const Event&) { FAIL() << "Empty handle delivered an event"; });
   }
 
 TEST_F(Controller, PullReturnsWhenCallbacksKeepProducingInput) {
@@ -147,7 +223,7 @@ TEST_F(Controller, PullReturnsWhenCallbacksKeepProducingInput) {
 TEST(ControllerLifetime, CallbackMayDestroyLastHandle) {
   auto input = std::make_shared<ControllerState>("controller", buttons, axes, GameController::State{});
   std::weak_ptr<ControllerState> weak = input;
-  std::optional<GameController> handle = ControllerApi::controller(input);
+  std::optional<GameController> handle = GameController(input);
   input.reset();
   bool called = false;
   handle->pull([&](const Event&) {
@@ -187,7 +263,7 @@ TEST(ControllerCapabilities, InitialRawStateAndUnsupportedControls) {
   initial.axes[size_t(Axis::RightY)] = std::numeric_limits<float>::quiet_NaN();
   auto input = std::make_shared<ControllerState>("limited", bit(Button::South) | 0x80000000u,
                                                 bit(Axis::LeftX) | bit(Axis::RightY) | 0x80000000u, initial);
-  auto controller = ControllerApi::controller(input);
+  auto controller = GameController(input);
   drain(controller);
   EXPECT_EQ(controller.device().supportedButtons, bit(Button::South));
   EXPECT_EQ(controller.device().supportedAxes, bit(Axis::LeftX) | bit(Axis::RightY));
@@ -261,7 +337,7 @@ TEST_F(Controller, FocusRecoveryResetFollowsRefreshedHeldSample) {
 
 TEST_F(Controller, QueueRetains1024EdgesAndOverflowIsIsolated) {
   auto otherInput = std::make_shared<ControllerState>("other", buttons, axes, GameController::State{});
-  auto other = ControllerApi::controller(otherInput);
+  auto other = GameController(otherInput);
   drain(other);
   otherInput->button(Button::East, true, 1.f);
   for(size_t i = 0; i < ControllerState::MaxEvents; ++i)
