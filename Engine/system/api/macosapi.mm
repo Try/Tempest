@@ -348,6 +348,7 @@ MacOSApi::MacOSApi() {
 
   setupKeyTranslate(k,20);
 
+  const bool ownsApplication = (NSApp == nil);
   [NSApplication sharedApplication];
 
   NSMenu*      bar     = [NSMenu new];
@@ -368,6 +369,9 @@ MacOSApi::MacOSApi() {
   [bar release];
 
   [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+  // The custom event loop bypasses NSApplication::run and its launch completion.
+  if(ownsApplication)
+    [NSApp finishLaunching];
   [NSApp activateIgnoringOtherApps:YES];
   }
 
