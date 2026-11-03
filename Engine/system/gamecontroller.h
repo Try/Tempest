@@ -18,9 +18,8 @@ class MacosController;
 
 class GameController final {
   public:
-    using DeviceId = uint64_t;
-
     enum class Button : uint8_t {
+      None = 0,
       South, East, West, North,
       DpadUp, DpadDown, DpadLeft, DpadRight,
       LeftShoulder, RightShoulder, LeftThumb, RightThumb,
@@ -35,9 +34,8 @@ class GameController final {
     enum class Stick : uint8_t { Left, Right };
 
     struct Device {
-      DeviceId    id = 0;
       std::string name;
-      // Bit N describes Button(N) or Axis(N). Missing controls stay zero.
+      // Bit N describes Button(N) or Axis(N). None and missing controls stay zero.
       uint32_t    supportedButtons = 0;
       uint32_t    supportedAxes = 0;
       };
@@ -53,14 +51,16 @@ class GameController final {
       enum class ResetReason : uint8_t { None, FocusLost, Disconnected, Overflow, FocusGained };
 
       Type        type = Type::Reset;
-      DeviceId    device = 0;
-      Button      button = Button::South; // Only meaningful for button events.
+      Button      button = Button::None;
       ResetReason reason = ResetReason::None;
       };
 
     const Device& device() const;
     State state() const;
     Vec2  axis(Stick stick) const;
+
+    bool operator==(const GameController& other) const { return impl == other.impl; }
+    bool operator!=(const GameController& other) const { return impl != other.impl; }
 
     // Caller-thread callbacks; serialize pulls across copies without reentry.
     // See docs/game-controller.md for cancellation, capacity and lifetime rules.

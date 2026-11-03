@@ -15,23 +15,22 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
-namespace {
 using Button = GameController::Button;
 using Axis = GameController::Axis;
 
-std::array<GCControllerButtonInput*, size_t(Button::Count)> buttons(GCExtendedGamepad* pad) {
-  return {{pad.buttonA, pad.buttonB, pad.buttonX, pad.buttonY,
+static std::array<GCControllerButtonInput*, size_t(Button::Count)> buttons(GCExtendedGamepad* pad) {
+  return {{nil, pad.buttonA, pad.buttonB, pad.buttonX, pad.buttonY,
            pad.dpad.up, pad.dpad.down, pad.dpad.left, pad.dpad.right,
            pad.leftShoulder, pad.rightShoulder, pad.leftThumbstickButton, pad.rightThumbstickButton,
            pad.leftTrigger, pad.rightTrigger, pad.buttonMenu, pad.buttonOptions, pad.buttonHome}};
   }
 
-std::array<GCControllerAxisInput*, 4> stickAxes(GCExtendedGamepad* pad) {
+static std::array<GCControllerAxisInput*, 4> stickAxes(GCExtendedGamepad* pad) {
   return {{pad.leftThumbstick.xAxis, pad.leftThumbstick.yAxis,
            pad.rightThumbstick.xAxis, pad.rightThumbstick.yAxis}};
   }
 
-GameController::State sample(GCExtendedGamepad* pad) {
+static GameController::State sample(GCExtendedGamepad* pad) {
   GameController::State state;
   auto b = buttons(pad);
   for(size_t i = 0; i < b.size(); ++i)
@@ -44,10 +43,8 @@ GameController::State sample(GCExtendedGamepad* pad) {
   state.axes[size_t(Axis::RightTrigger)] = pad.rightTrigger.value;
   return state;
   }
-}
 
-namespace {
-uint32_t supportedButtons(GCController* controller) {
+static uint32_t supportedButtons(GCController* controller) {
   uint32_t mask = 0;
   const auto values = buttons(controller.extendedGamepad);
   for(size_t i = 0; i < values.size(); ++i)
@@ -56,7 +53,7 @@ uint32_t supportedButtons(GCController* controller) {
   return mask;
   }
 
-uint32_t supportedAxes(GCController* controller) {
+static uint32_t supportedAxes(GCController* controller) {
   uint32_t mask = 0;
   auto* pad = controller.extendedGamepad;
   const auto values = stickAxes(pad);
@@ -70,11 +67,10 @@ uint32_t supportedAxes(GCController* controller) {
   return mask;
   }
 
-std::string deviceName(GCController* controller) {
+static std::string deviceName(GCController* controller) {
   const char* name = controller.vendorName.UTF8String;
   return name == nullptr ? "Game controller" : name;
   }
-}
 
 MacosController::MacosController(GCController* controller, bool active)
   : GameController::Impl(deviceName(controller), supportedButtons(controller), supportedAxes(controller),

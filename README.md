@@ -56,7 +56,8 @@ The [Android packaging example](Examples/Android/README.md) uses `add_android_ap
 ### Game controllers
 
 `GameController` provides connection handles, queued button transitions and current
-stick/trigger values. The macOS backend uses GameController independently of
+stick/trigger values. Copies and repeated enumeration of one connection compare
+equal and share their event queue. The macOS backend uses GameController independently of
 Tempest windows. Other platforms currently enumerate no controllers.
 See [the API contract and regression tests](docs/game-controller.md).
 

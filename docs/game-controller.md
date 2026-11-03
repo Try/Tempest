@@ -5,7 +5,9 @@ Include `<Tempest/Application>` and `<Tempest/GameController>`.
 handles for the connected extended gamepads. Copies and repeated enumeration of
 one connection share its immutable `device()` metadata, current state and FIFO.
 There is one event consumer per connection, not one subscription per copy.
-Connection IDs are never reused; reconnecting creates a new handle identity.
+Handles compare equal with `==` when they refer to the same connection.
+Disconnect preserves that identity; reconnecting creates a different handle.
+The application owns device selection and any tokens used for deferred work.
 
 ```cpp
 auto controllers = Tempest::Application::controllers();
@@ -20,7 +22,10 @@ if(!controllers.empty()) {
 ```
 
 `device().supportedButtons` and `supportedAxes` distinguish missing optional
-controls from supported controls at zero. Face buttons use position names
+controls from supported controls at zero. Bit N describes `Button(N)` or
+`Axis(N)`. `Button::None` is zero and its bit is always clear; non-button events
+use `None`, while `ButtonDown` and `ButtonUp` identify a real button.
+Face buttons use position names
 South/East/West/North. Stick components are in `[-1, 1]`, with positive Y upward;
 triggers are in `[0, 1]`. Nonfinite native samples are ignored and out-of-range
 values are clamped. These are normalized native values, including framework
@@ -56,11 +61,11 @@ no runtime rejection of recursive or overlapping pulls. Calls for distinct
 connections are independent. A callback may inspect state or destroy its
 calling handle. If it throws, the exception propagates; the current event has
 been consumed, while untouched events remain queued and a later pull can resume.
-One call delivers at most the queue length observed when that call started, so
-continuous native input cannot keep a game tick inside `pull` indefinitely.
+One call continues until the live queue is empty, including events appended
+during a callback. An indefinitely active producer can keep `pull` running.
 
-The backend never forwards controller input through a window event dispatcher
-or subscribes to `Application::onEventLoop()`. An application can choose its own
+The backend never forwards controller input through a window event dispatcher.
+An application can choose its own
 polling and UI delivery points. A synchronous modal loop entered by application
 code needs its own polling strategy; it must not recursively call `pull` on the
 same connection before the outer call returns.
@@ -72,8 +77,8 @@ This retains a press and release that arrive between game frames, within that
 bound. It cannot promise unlimited history or recover input the native API did
 not report.
 
-Overflow discards pending history and publishes `Reset` with reason `Overflow`
-and this connection's ID. The triggering edge is represented by the current
+Overflow discards pending history and publishes `Reset` with reason `Overflow`.
+The triggering edge is represented by the current
 snapshot, rather than a possibly incomplete event sequence. Other controllers'
 queues and states are unaffected.
 
@@ -99,8 +104,9 @@ Disconnect clears the snapshot and replaces pending input with
 cannot be displaced by queue overflow or late native callbacks. Stale handles
 remain safe; their metadata persists and `state()`/`axis()` return zero. Copies
 share consumption of the terminal event just as they share button events.
-An empty or moved-from handle instead has device ID zero, an empty name and
-capability masks, zero state/axes, and a no-op `pull`. Its accessors are safe.
+An empty or moved-from handle instead has an empty name and capability masks,
+zero state/axes, and a no-op `pull`. Its accessors are safe. Two empty handles
+compare equal; an empty handle differs from any connection handle.
 
 ## Regression tests
 
@@ -115,11 +121,26 @@ cmake --build build-tests --target TempestTests -j 4
 
 These tests cover shared handles/queues, short taps, normalized snapshots,
 focus cancellation, per-device overflow, terminal disconnect, callback threads,
-concurrent snapshots, exceptions, finite draining, empty/moved-from access and
+concurrent snapshots, exceptions, callback-added events, the `None` sentinel,
+empty/moved-from access and
 handle destruction from callbacks. Cancellation during a callback must replace
 pending edges immediately; a callback exception preserves untouched events.
 The normal test project also builds the renderer and test shaders and requires
 its usual dependencies, including `glslangValidator`.
+
+On macOS, the same project also registers seven native Timer cases alongside
+`TempestTests`. Run the complete suite with:
+
+```sh
+cmake --build build-tests --target TempestTests TimerNativeTests -j4
+ctest --test-dir build-tests --output-on-failure
+```
+
+The `poll`, `mutation`, `nested`, `reentry`, `exception`, `exit` and `native-exit`
+cases cover native polling, callback-time timer changes, nested loops, reentry,
+exception recovery and stopping callbacks after exit. They need no controller
+hardware, but require a desktop session. In Codex, run native macOS tests outside
+the command sandbox with its normal permission elevation.
 
 Local native validation invokes the installed native handlers on synthetic
 profiles, including retained callbacks, focus recovery, reconnect identity,

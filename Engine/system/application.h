@@ -28,10 +28,6 @@ class Application {
     // macOS: main thread, after NSApplication launch, with its run loop running.
     static std::vector<GameController> controllers();
 
-    // UI-thread boundary between native event-processing steps. May re-enter
-    // through a modal loop; subscribers must unbind before being destroyed.
-    static Signal<void()>& onEventLoop();
-
     static void         setStyle(const Style* stl);
     static const Style& style();
 

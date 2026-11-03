@@ -27,7 +27,11 @@ using Event = Pad::Event;
 
 std::vector<Event> drain(const Pad& controller) {
   std::vector<Event> result;
-  controller.pull([&](const Event& event) { result.push_back(event); });
+  controller.pull([&](const Event& event) {
+    if(event.type != Event::Type::ButtonDown && event.type != Event::Type::ButtonUp)
+      EXPECT_EQ(event.button, Pad::Button::None);
+    result.push_back(event);
+    });
   return result;
   }
 
@@ -54,31 +58,53 @@ TEST(MacOSController, NativeCallbacksCopiesDisconnectAndLifetime) {
     auto enumerated = Tempest::GameController(backend->controllers().front());
     ASSERT_EQ(drain(controller).size(), 1u);
     EXPECT_TRUE(drain(enumerated).empty());
+    EXPECT_EQ(controller, enumerated);
+    EXPECT_FALSE(controller != enumerated);
     EXPECT_EQ(&controller.device(), &enumerated.device());
     EXPECT_EQ(native.handlerQueue, dispatch_get_main_queue());
 
-    const auto inputs = buttons(native.extendedGamepad);
-    size_t supported = 0;
-    for(size_t i = 0; i < inputs.size(); ++i) {
-      if(inputs[i] == nil)
+    auto* pad = native.extendedGamepad;
+    auto* south = pad.buttonA;
+    struct NativeButton { Pad::Button button; GCControllerButtonInput* input; };
+    const NativeButton expected[] = {
+      {Pad::Button::South, pad.buttonA}, {Pad::Button::East, pad.buttonB},
+      {Pad::Button::West, pad.buttonX}, {Pad::Button::North, pad.buttonY},
+      {Pad::Button::DpadUp, pad.dpad.up}, {Pad::Button::DpadDown, pad.dpad.down},
+      {Pad::Button::DpadLeft, pad.dpad.left}, {Pad::Button::DpadRight, pad.dpad.right},
+      {Pad::Button::LeftShoulder, pad.leftShoulder}, {Pad::Button::RightShoulder, pad.rightShoulder},
+      {Pad::Button::LeftThumb, pad.leftThumbstickButton}, {Pad::Button::RightThumb, pad.rightThumbstickButton},
+      {Pad::Button::LeftTrigger, pad.leftTrigger}, {Pad::Button::RightTrigger, pad.rightTrigger},
+      {Pad::Button::Menu, pad.buttonMenu}, {Pad::Button::View, pad.buttonOptions},
+      {Pad::Button::Home, pad.buttonHome}
+      };
+    std::vector<Pad::Button> supported;
+    uint32_t supportedMask = 0;
+    for(const auto& control : expected) {
+      if(control.input == nil)
         continue;
-      ++supported;
-      auto handler = inputs[i].valueChangedHandler;
+      supported.push_back(control.button);
+      supportedMask |= uint32_t(1) << uint32_t(control.button);
+      auto handler = control.input.valueChangedHandler;
       ASSERT_NE(handler, nil);
       // Callback arguments deliberately differ from the unchanged profile.
-      handler(inputs[i], 1.f, YES);
-      handler(inputs[i], 0.f, NO);
+      handler(control.input, 1.f, YES);
+      EXPECT_EQ(controller.state().buttons, uint32_t(1) << uint32_t(control.button));
+      handler(control.input, 0.f, NO);
+      EXPECT_EQ(controller.state().buttons, 0u);
       }
+    EXPECT_EQ(controller.device().supportedButtons, supportedMask);
+    EXPECT_EQ(controller.device().supportedButtons & uint32_t(1), 0u);
     std::thread consumer([copy = controller, supported] {
       const auto caller = std::this_thread::get_id();
       size_t count = 0;
       copy.pull([&](const Event& event) {
         EXPECT_EQ(std::this_thread::get_id(), caller);
         EXPECT_EQ(event.type, count % 2 == 0 ? Event::Type::ButtonDown : Event::Type::ButtonUp);
-        EXPECT_EQ(event.device, copy.device().id);
+        ASSERT_LT(count / 2, supported.size());
+        EXPECT_EQ(event.button, supported[count / 2]);
         ++count;
         });
-      EXPECT_EQ(count, supported * 2);
+      EXPECT_EQ(count, supported.size() * 2);
       EXPECT_EQ(copy.state().buttons, 0u);
       });
     consumer.join();
@@ -98,9 +124,8 @@ TEST(MacOSController, NativeCallbacksCopiesDisconnectAndLifetime) {
     auto focus = drain(controller);
     ASSERT_EQ(focus.size(), 1u);
     EXPECT_EQ(focus[0].reason, Event::ResetReason::FocusLost);
-    EXPECT_EQ(focus[0].device, controller.device().id);
-    inputs[0].valueChangedHandler(inputs[0], 1.f, YES);
-    EXPECT_EQ(controller.state().buttons, uint32_t(1));
+    south.valueChangedHandler(south, 1.f, YES);
+    EXPECT_EQ(controller.state().buttons, uint32_t(1) << uint32_t(Pad::Button::South));
     EXPECT_TRUE(drain(controller).empty());
     [[NSNotificationCenter defaultCenter] postNotificationName:NSApplicationDidBecomeActiveNotification object:nil];
     // Regain samples the real profile (which remains neutral in this fixture).
@@ -110,36 +135,36 @@ TEST(MacOSController, NativeCallbacksCopiesDisconnectAndLifetime) {
     EXPECT_EQ(gained[0].reason, Event::ResetReason::FocusGained);
 
     for(size_t edge = 0; edge < 1024; ++edge)
-      inputs[0].valueChangedHandler(inputs[0], edge % 2 == 0 ? 1.f : 0.f, edge % 2 == 0);
+      south.valueChangedHandler(south, edge % 2 == 0 ? 1.f : 0.f, edge % 2 == 0);
     native.extendedGamepad.leftTrigger.valueChangedHandler(native.extendedGamepad.leftTrigger, .9f, YES);
     const auto overflow = drain(controller);
     ASSERT_EQ(overflow.size(), 1u);
     EXPECT_EQ(overflow[0].reason, Event::ResetReason::Overflow);
-    EXPECT_EQ(overflow[0].device, controller.device().id);
     EXPECT_EQ(controller.state().axes[size_t(Pad::Axis::LeftTrigger)], .9f);
     EXPECT_NE(controller.state().buttons & (uint32_t(1) << uint32_t(Pad::Button::LeftTrigger)), 0u);
 
     // Already copied native callbacks must not resurrect a disconnected handle.
-    auto oldButton = Block_copy(inputs[0].valueChangedHandler);
+    auto oldButton = Block_copy(south.valueChangedHandler);
     auto oldAxis = Block_copy(analog[0].valueChangedHandler);
-    const auto oldId = controller.device().id;
     backend->impl->disconnect(native);
     const auto disconnected = drain(controller);
     ASSERT_EQ(disconnected.size(), 2u);
     EXPECT_EQ(disconnected[0].reason, Event::ResetReason::Disconnected);
     EXPECT_EQ(disconnected[1].type, Event::Type::Disconnected);
     EXPECT_TRUE(backend->controllers().empty());
-    oldButton(inputs[0], 1.f, YES);
+    oldButton(south, 1.f, YES);
     oldAxis(analog[0], 1.f);
     EXPECT_EQ(controller.state().buttons, 0u);
     EXPECT_EQ(controller.state().axes, Pad::State{}.axes);
     EXPECT_TRUE(drain(controller).empty());
     EXPECT_EQ(state->native, nil);
+    EXPECT_EQ(controller, enumerated);
 
     connectFromReturnedFrame(*backend, native);
     std::optional<Pad> live = Tempest::GameController(backend->controllers().front());
-    EXPECT_NE(live->device().id, oldId);
-    auto liveButton = Block_copy(inputs[0].valueChangedHandler);
+    EXPECT_NE(*live, controller);
+    EXPECT_TRUE(*live != controller);
+    auto liveButton = Block_copy(south.valueChangedHandler);
     auto liveAxis = Block_copy(analog[0].valueChangedHandler);
     std::weak_ptr<MacosControllerApi::Impl> nativeLifetime = backend->impl;
     std::weak_ptr<Tempest::Detail::MacosController> liveState = backend->controllers().front();
@@ -147,11 +172,11 @@ TEST(MacOSController, NativeCallbacksCopiesDisconnectAndLifetime) {
     EXPECT_TRUE(nativeLifetime.expired());
     EXPECT_FALSE(liveState.expired());
     EXPECT_EQ(liveState.lock()->native, nil);
-    EXPECT_EQ(inputs[0].valueChangedHandler, nil);
+    EXPECT_EQ(south.valueChangedHandler, nil);
     EXPECT_EQ(analog[0].valueChangedHandler, nil);
-    oldButton(inputs[0], 0.f, NO);
+    oldButton(south, 0.f, NO);
     oldAxis(analog[0], 0.f);
-    liveButton(inputs[0], 1.f, YES);
+    liveButton(south, 1.f, YES);
     liveAxis(analog[0], 1.f);
     EXPECT_EQ(live->state().buttons, 0u);
     EXPECT_EQ(live->state().axes, Pad::State{}.axes);
@@ -205,9 +230,9 @@ TEST(MacOSController, FocusGainRefreshPrecedesResetAfterEarlyWindowFocus) {
     controller.pull([&](const Event& event) {
       EXPECT_EQ(event.type, Event::Type::Reset);
       EXPECT_EQ(event.reason, Event::ResetReason::FocusGained);
-      EXPECT_EQ(event.device, controller.device().id);
+      EXPECT_EQ(event.button, Pad::Button::None);
       const auto refreshed = controller.state();
-      EXPECT_NE(refreshed.buttons & uint32_t(1), 0u);
+      EXPECT_NE(refreshed.buttons & (uint32_t(1) << uint32_t(Pad::Button::South)), 0u);
       EXPECT_EQ(refreshed.axes[size_t(Pad::Axis::LeftX)], .8f);
       EXPECT_EQ(refreshed.axes[size_t(Pad::Axis::RightY)], -.7f);
       EXPECT_EQ(refreshed.axes[size_t(Pad::Axis::LeftTrigger)], .65f);

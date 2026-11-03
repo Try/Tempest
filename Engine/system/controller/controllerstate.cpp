@@ -1,26 +1,14 @@
 #include "controllerstate.h"
 
 #include <algorithm>
-#include <atomic>
 #include <cmath>
-#include <stdexcept>
 #include <utility>
 
 using namespace Tempest;
 
 namespace {
-constexpr uint32_t buttonMask = (uint32_t(1) << uint32_t(GameController::Button::Count)) - 1;
+constexpr uint32_t buttonMask = ((uint32_t(1) << uint32_t(GameController::Button::Count)) - 1) & ~uint32_t(1);
 constexpr uint32_t axisMask   = (uint32_t(1) << uint32_t(GameController::Axis::Count)) - 1;
-
-GameController::DeviceId connectionId() {
-  static std::atomic<GameController::DeviceId> next{1};
-  auto id = next.load();
-  do {
-    if(id == 0)
-      throw std::overflow_error("GameController connection ID exhausted");
-    } while(!next.compare_exchange_weak(id, id + 1));
-  return id;
-  }
 
 float normalized(GameController::Axis axis, float value) {
   const bool trigger = axis == GameController::Axis::LeftTrigger || axis == GameController::Axis::RightTrigger;
@@ -30,12 +18,12 @@ float normalized(GameController::Axis axis, float value) {
 
 GameController::Impl::Impl(std::string name, uint32_t buttons, uint32_t axes,
                            const State& initial, bool active)
-  : info{connectionId(), std::move(name), buttons & buttonMask, axes & axisMask}, active(active) {
+  : info{std::move(name), buttons & buttonMask, axes & axisMask}, active(active) {
   current.buttons = initial.buttons & info.supportedButtons;
   for(size_t i = 0; i < initial.axes.size(); ++i)
     if((info.supportedAxes & (uint32_t(1) << i)) != 0 && std::isfinite(initial.axes[i]))
       current.axes[i] = normalized(Axis(i), initial.axes[i]);
-  push({Event::Type::Connected, info.id});
+  push({Event::Type::Connected});
   }
 
 GameController::State GameController::Impl::state() const {
@@ -44,13 +32,7 @@ GameController::State GameController::Impl::state() const {
   }
 
 void GameController::Impl::pull(const std::function<void(const Event&)>& callback) {
-  size_t count;
-  {
-    std::lock_guard<std::mutex> guard(sync);
-    count = events.size();
-    }
-  // New input must not keep a game tick inside pull indefinitely.
-  for(size_t i = 0; i < count; ++i) {
+  for(;;) {
     Event event;
     {
       std::lock_guard<std::mutex> guard(sync);
@@ -70,8 +52,8 @@ void GameController::Impl::disconnect() {
   connected = false;
   current = {};
   events.clear();
-  push({Event::Type::Reset, info.id, Button::South, Event::ResetReason::Disconnected});
-  push({Event::Type::Disconnected, info.id});
+  push({Event::Type::Reset, Button::None, Event::ResetReason::Disconnected});
+  push({Event::Type::Disconnected});
   }
 
 void GameController::Impl::setActive(bool value) {
@@ -81,15 +63,15 @@ void GameController::Impl::setActive(bool value) {
   active = value;
   if(!active) {
     events.clear();
-    push({Event::Type::Reset, info.id, Button::South, Event::ResetReason::FocusLost});
+    push({Event::Type::Reset, Button::None, Event::ResetReason::FocusLost});
     } else {
     // Native focus recovery refreshes the sample before publishing this barrier.
-    push({Event::Type::Reset, info.id, Button::South, Event::ResetReason::FocusGained});
+    push({Event::Type::Reset, Button::None, Event::ResetReason::FocusGained});
     }
   }
 
 void GameController::Impl::button(Button button, bool pressed, float value) {
-  if(uint32_t(button) >= uint32_t(Button::Count))
+  if(button == Button::None || uint32_t(button) >= uint32_t(Button::Count))
     return;
   std::lock_guard<std::mutex> guard(sync);
   const auto bit = uint32_t(1) << uint32_t(button);
@@ -107,7 +89,7 @@ void GameController::Impl::button(Button button, bool pressed, float value) {
   else
     current.buttons &= ~bit;
   if(active)
-    push({pressed ? Event::Type::ButtonDown : Event::Type::ButtonUp, info.id, button});
+    push({pressed ? Event::Type::ButtonDown : Event::Type::ButtonUp, button});
   }
 
 void GameController::Impl::axis(Axis axis, float value) {
@@ -125,5 +107,5 @@ void GameController::Impl::push(const Event& event) {
     }
   events.clear();
   // The current native snapshot survives loss of history. Rearming is game policy.
-  events.push_back({Event::Type::Reset, info.id, Button::South, Event::ResetReason::Overflow});
+  events.push_back({Event::Type::Reset, Button::None, Event::ResetReason::Overflow});
   }
