@@ -70,4 +70,10 @@ class VTextureWithFbo : public VTexture {
     ~VTextureWithFbo();
   };
 
+class VTextureSwapchain : public VTexture {
+  public:
+    VTextureSwapchain();
+    ~VTextureSwapchain();
+  };
+
 }}

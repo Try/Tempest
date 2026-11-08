@@ -31,8 +31,6 @@ VTexture::~VTexture() {
   }
 
 VkImageView VTexture::view(const ComponentMapping& m, uint32_t mipLevel, bool is3D, bool isUAV) {
-  VkDevice dev = alloc->device()->device.impl;
-
   if(isUAV && mipLevel==uint32_t(-1))
     mipLevel = 0;
 
@@ -46,6 +44,8 @@ VkImageView VTexture::view(const ComponentMapping& m, uint32_t mipLevel, bool is
     }
 
   std::lock_guard<Detail::SpinLock> guard(syncViews);
+  VkDevice dev = alloc->device()->device.impl;
+
   for(auto& i:extViews) {
     if(i.m==m && i.mip==mipLevel && i.is3D==is3D)
       return i.v;
@@ -182,6 +182,12 @@ VTextureWithFbo::~VTextureWithFbo() {
   auto dev = alloc->device();
   if(!dev->props.hasDynRendering)
     dev->fboMap.notifyDestroy(imgView);
+  }
+
+VTextureSwapchain::VTextureSwapchain() {
+  }
+
+VTextureSwapchain::~VTextureSwapchain() {
   }
 
 #endif

@@ -17,6 +17,8 @@ void ResourceState::beginRendering(AbstractGraphicsApi::CommandBuffer& cmd, cons
       setLayout(*fbo.att[i],ResourceLayout::DepthReadOnly,0,false);
     else if(isDepthFormat(fbo.frm[i]))
       setLayout(*fbo.att[i],ResourceLayout::DepthAttach,0,discard);
+    else if(fbo.frm[i]==TextureFormat::Undefined && fbo.att[i]!=nullptr)
+      setLayout(*fbo.att[i],ResourceLayout::ColorAttach,0,discard);
     else if(fbo.frm[i]==TextureFormat::Undefined)
       setLayout(*fbo.sw[i],fbo.imgId[i],ResourceLayout::ColorAttach,discard);
     else
@@ -34,8 +36,10 @@ void ResourceState::endRendering(AbstractGraphicsApi::CommandBuffer& cmd) {
       setLayout(*fbo.att[i],ResourceLayout::Default,0,false);
     else if(isDepthFormat(fbo.frm[i]))
       setLayout(*fbo.att[i],ResourceLayout::Default,0,false);
+    else if(fbo.frm[i]==TextureFormat::Undefined && fbo.att[i]!=nullptr)
+      setLayout(*fbo.att[i],ResourceLayout::Default,0,discard);
     else if(fbo.frm[i]==TextureFormat::Undefined)
-      setLayout(*fbo.sw[i],fbo.imgId[i],ResourceLayout::Default,discard);
+      setLayout(*fbo.sw[i],fbo.imgId[i],ResourceLayout::Default,discard); // deprecated
     else
       setLayout(*fbo.att[i],ResourceLayout::Default,0,discard);
     }

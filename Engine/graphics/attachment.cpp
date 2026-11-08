@@ -7,6 +7,11 @@ Attachment::Attachment(AbstractGraphicsApi::Swapchain* sw, uint32_t id) {
   sImpl.id        = id;
   }
 
+Attachment::Attachment(AbstractGraphicsApi::Swapchain* sw, AbstractGraphicsApi::Texture* img) {
+  sImpl.swapchain = sw;
+  sImpl.img       = img;
+  }
+
 int Attachment::w() const {
   if(sImpl.swapchain)
     return int(sImpl.swapchain->w());

@@ -283,6 +283,7 @@ void Tempest::Encoder<Tempest::CommandBuffer>::implSetFramebuffer(const Attachme
     fbo.desc[i] = rt[i];
     if(ax->sImpl.swapchain!=nullptr) {
       fbo.frm[i]   = TextureFormat::Undefined;
+      fbo.att[i]   = ax->sImpl.img;
       fbo.sw[i]    = ax->sImpl.swapchain;
       fbo.imgId[i] = ax->sImpl.id;
       } else {

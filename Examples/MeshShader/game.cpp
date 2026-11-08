@@ -96,6 +96,8 @@ void Game::render(){
   try {
     static uint64_t time = Application::tickCount();
 
+    auto& backbuf = swapchain.acquire();
+
     cmdId = (cmdId+1)%MaxFramesInFlight;
 
     auto&       sync = fence   [cmdId];
@@ -118,7 +120,8 @@ void Game::render(){
 
     {
       auto enc = cmd.startEncoding(device);
-      enc.setFramebuffer({{swapchain[swapchain.currentImage()],Vec4(0),Tempest::Preserve}}, {zbuffer, 1.f, Tempest::Preserve});
+      // enc.setFramebuffer({{swapchain[swapchain.currentImage()],Vec4(0),Tempest::Preserve}}, {zbuffer, 1.f, Tempest::Preserve});
+      enc.setFramebuffer({{backbuf, Vec4(0), Tempest::Preserve}}, {zbuffer, 1.f, Tempest::Preserve});
 
       /*
       enc.setViewport(0,0,256,256);

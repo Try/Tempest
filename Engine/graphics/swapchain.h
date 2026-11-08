@@ -20,6 +20,7 @@ class Swapchain final {
     uint32_t             h() const;
 
     void                 reset();
+    Attachment&          acquire();
 
     uint32_t             currentImage() const;
     uint32_t             imageCount() const;
@@ -33,6 +34,9 @@ class Swapchain final {
 
     Detail::DPtr<AbstractGraphicsApi::Swapchain*> impl;
     std::unique_ptr<Attachment[]>                 img;
+
+    std::unique_ptr<Attachment[]>                 imgRing;
+    uint32_t                                      imgRingSz = 0;
 
   friend class Device;
   };

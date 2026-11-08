@@ -8,6 +8,7 @@
 #include "gapi/directx12/dxdescriptorallocator.h"
 #include "gapi/directx12/dxevent.h"
 #include "gapi/directx12/comptr.h"
+#include "gapi/directx12/dxtexture.h"
 
 namespace Tempest {
 
@@ -29,6 +30,7 @@ class DxSwapchain : public AbstractGraphicsApi::Swapchain {
     void                     reset() override;
     uint32_t                 imageCount() const override { return imgCount; }
     uint32_t                 currentBackBufferIndex() override;
+    auto                     currentBackBuffer() -> AbstractGraphicsApi::Texture* override;
 
     void                     queuePresent();
 
@@ -46,6 +48,7 @@ class DxSwapchain : public AbstractGraphicsApi::Swapchain {
     ComPtr<ID3D12Fence>     fence;
     DxEvent                 idleEvent;
     ComPtr<IDXGISwapChain1> swapChain;
+    DxTextureSwapchain      currentAtt;
 
     uint32_t                currImg      = 0;
     uint32_t                imgW         = 0;

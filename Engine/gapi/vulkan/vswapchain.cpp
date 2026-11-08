@@ -547,6 +547,14 @@ uint32_t VSwapchain::currentBackBufferIndex() {
   return imgIndex;
   }
 
+AbstractGraphicsApi::Texture* VSwapchain::currentBackBuffer() {
+  currentAtt.impl      = imageList.images[imgIndex];
+  currentAtt.imgView   = imageList.views [imgIndex];
+  currentAtt.format    = format();
+  currentAtt.nonUniqId = NonUniqResId(0x1);
+  return &currentAtt;
+  }
+
 VkResult VSwapchain::implAcquireNextImage() {
   auto     dev  = device.device.impl;
   auto&    slot = sync[frameId];

@@ -131,6 +131,8 @@ static VkImageLayout toLayout(ResourceLayout rs, const VTexture* texture) {
   if(rs==ResourceLayout::Default) {
     if(texture==nullptr)
       return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    if(dynamic_cast<const VTextureSwapchain*>(texture)!=nullptr)
+      return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // remove dynamic-cast?
     if(nativeIsDepthFormat(texture->format))
       return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
     if(texture->isStorageImage)
@@ -257,8 +259,10 @@ bool VCommandBuffer::isRecording() const {
 
 void VCommandBuffer::beginRendering(const FrameBufferDesc& fbo, size_t fboSize, uint32_t width, uint32_t height) {
   for(size_t i=0; i<fboSize; ++i) {
-    if(fbo.sw[i]!=nullptr)
-      addDependency(*reinterpret_cast<VSwapchain*>(fbo.sw[i]), fbo.imgId[i]);
+    if(fbo.sw[i]!=nullptr) {
+      addDependency(*reinterpret_cast<VSwapchain*>(fbo.sw[i]), reinterpret_cast<VTexture*>(fbo.att[i]));
+      // addDependency(*reinterpret_cast<VSwapchain*>(fbo.sw[i]), fbo.imgId[i]);
+      }
     }
   resState.beginRendering(*this,fbo);
   if(state==Idle) {
@@ -298,7 +302,13 @@ void VCommandBuffer::beginRendering(const FrameBufferDesc& fbo, size_t fboSize, 
     VkImageView imageView   = VK_NULL_HANDLE;
     VkFormat    imageFormat = VK_FORMAT_UNDEFINED;
     for(size_t i=0; i<fboSize; ++i) {
-      if(fbo.sw[i] != nullptr) {
+      if(fbo.att[i] != nullptr && fbo.frm[i]==TextureFormat::Undefined) {
+        auto &t = *reinterpret_cast<VTexture*>(fbo.att[i]);
+        imageView   = t.fboView(0);
+        imageFormat = t.format;
+        }
+      else if(fbo.sw[i] != nullptr) {
+        // deprecated
         auto& t = *reinterpret_cast<VSwapchain*>(fbo.sw[i]);
         imageView   = t.view(fbo.imgId[i]);
         imageFormat = t.format();
@@ -1214,6 +1224,16 @@ void VCommandBuffer::finalizeImageBarrier(T& bx, const AbstractGraphicsApi::Barr
 
   if(b.discard)
     bx.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  }
+
+void VCommandBuffer::addDependency(VSwapchain& s, VTexture* img) {
+  for(size_t i=0; i<s.imageCount(); ++i) {
+    if(s.view(i)!=img->imgView)
+      continue;
+    addDependency(s, i);
+    return;
+    }
+  assert(false);
   }
 
 void VCommandBuffer::addDependency(VSwapchain& s, size_t imgId) {

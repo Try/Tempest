@@ -55,6 +55,7 @@ DxTexture::DxTexture(DxDevice& dev, ComPtr<ID3D12Resource>&& b, const D3D12_RESO
 DxTexture::DxTexture(DxTexture&& other) {
   std::swap(device,         other.device);
   std::swap(impl,           other.impl);
+  std::swap(swImpl,         other.swImpl);
   std::swap(format,         other.format);
   std::swap(nonUniqId,      other.nonUniqId);
   std::swap(mipCnt,         other.mipCnt);

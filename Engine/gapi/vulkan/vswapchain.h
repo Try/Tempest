@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
+#include "gapi/vulkan/vtexture.h"
 #include "vulkan_sdk.h"
 
 namespace Tempest {
@@ -25,18 +26,19 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
       std::vector<VkPresentModeKHR>   presentModes;
       };
 
-    VkFormat                 format() const          { return swapChainImageFormat;   }
-    uint32_t                 w()      const override { return swapChainExtent.width;  }
-    uint32_t                 h()      const override { return swapChainExtent.height; }
+    VkFormat                 format() const;
+    uint32_t                 w()      const override;
+    uint32_t                 h()      const override;
 
     void                     reset() override;
-    uint32_t                 imageCount() const override { return uint32_t(imageList.views.size()); }
+    uint32_t                 imageCount() const override;
 
     uint32_t                 currentBackBufferIndex() override;
+    auto                     currentBackBuffer() -> AbstractGraphicsApi::Texture* override;
     void                     present();
 
-    VkImage                  image(size_t i) const { return imageList.images[i]; }
-    VkImageView              view (size_t i) const { return imageList.views[i];  }
+    VkImage                  image(size_t i) const;
+    VkImageView              view (size_t i) const;
 
     enum SyncState : uint8_t {
       S_Idle,
@@ -117,6 +119,7 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
 
     uint32_t                 imgIndex = 0;
     uint32_t                 frameId  = 0;
+    VTextureSwapchain        currentAtt;
 
     VkFormat                 swapChainImageFormat = VK_FORMAT_UNDEFINED;
     VkExtent2D               swapChainExtent = {};
@@ -141,5 +144,17 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     VkResult                 implAcquireNextImage();
     void                     acquireNextImage();
   };
+
+inline VkFormat VSwapchain::format() const          { return swapChainImageFormat;   }
+
+inline uint32_t VSwapchain::w() const { return swapChainExtent.width;  }
+
+inline uint32_t VSwapchain::h() const { return swapChainExtent.height; }
+
+inline uint32_t VSwapchain::imageCount() const { return uint32_t(imageList.views.size()); }
+
+inline VkImage VSwapchain::image(size_t i) const { return imageList.images[i]; }
+
+inline VkImageView VSwapchain::view(size_t i) const { return imageList.views[i];  }
 
 }}

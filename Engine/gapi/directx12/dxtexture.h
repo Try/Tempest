@@ -15,6 +15,7 @@ class DxDevice;
 
 class DxTexture : public AbstractGraphicsApi::Texture {
   public:
+    DxTexture() = default;
     DxTexture(DxDevice& dev, ComPtr<ID3D12Resource>&& b, const D3D12_RESOURCE_DESC1& desc);
     DxTexture(DxTexture&& other);
     ~DxTexture();
@@ -29,6 +30,7 @@ class DxTexture : public AbstractGraphicsApi::Texture {
 
     DxDevice*              device         = nullptr;
     ComPtr<ID3D12Resource> impl;
+    ID3D12Resource*        swImpl         = nullptr;
     DXGI_FORMAT            format         = DXGI_FORMAT_UNKNOWN;
     NonUniqResId           nonUniqId      = NonUniqResId::I_None;
     UINT                   mipCnt         = 1;
@@ -63,6 +65,11 @@ class DxTextureWithRT : public DxTexture {
     DxDescriptorAllocator::Allocation fboDescr;
     D3D12_CPU_DESCRIPTOR_HANDLE       handle;
     D3D12_CPU_DESCRIPTOR_HANDLE       handleR;
+  };
+
+class DxTextureSwapchain: public DxTexture {
+  public:
+    D3D12_CPU_DESCRIPTOR_HANDLE handle = {};
   };
 
 }

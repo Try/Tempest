@@ -519,6 +519,15 @@ namespace Tempest {
 
         virtual void setPayload(std::vector<Detail::DSharedPtr<const AbstractGraphicsApi::Shared*>>&&) {}
         };
+      struct Texture:Shared  {
+        virtual uint32_t      mipCount() const = 0;
+        virtual NonUniqResId  syncId() const = 0;
+        };
+      struct Buffer:Shared   {
+        virtual ~Buffer()=default;
+        virtual void  update  (const void* data, size_t off, size_t size)=0;
+        virtual void  read    (      void* data, size_t off, size_t size)=0;
+        };
       struct Swapchain:NoCopy {
         virtual ~Swapchain()=default;
         virtual void          reset()=0;
@@ -527,10 +536,7 @@ namespace Tempest {
         virtual uint32_t      imageCount() const=0;
         virtual uint32_t      w() const=0;
         virtual uint32_t      h() const=0;
-        };
-      struct Texture:Shared  {
-        virtual uint32_t      mipCount() const = 0;
-        virtual NonUniqResId  syncId() const = 0;
+        virtual Texture*      currentBackBuffer();
         };
       struct Pipeline:Shared {
         virtual IVec3  workGroupSize() const = 0;
@@ -542,11 +548,6 @@ namespace Tempest {
         };
       struct Shader:Shared   {};
       struct PipelineLay:Shared {}; //TODO: remove
-      struct Buffer:Shared   {
-        virtual ~Buffer()=default;
-        virtual void  update  (const void* data, size_t off, size_t size)=0;
-        virtual void  read    (      void* data, size_t off, size_t size)=0;
-        };
 
       struct RtGeometry {
         const Buffer* vbo    = nullptr;

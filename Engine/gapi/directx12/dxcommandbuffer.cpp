@@ -155,6 +155,10 @@ static D3D12_BARRIER_LAYOUT toLayout(D3D12_BARRIER_SYNC& stage, D3D12_BARRIER_AC
       access = D3D12_BARRIER_ACCESS_UNORDERED_ACCESS;
       return D3D12_BARRIER_LAYOUT_UNORDERED_ACCESS;
       }
+    if(texture->swImpl!=nullptr) {
+      // swapchain image
+      return D3D12_BARRIER_LAYOUT_COMMON;
+      }
     stage  = D3D12_BARRIER_SYNC_VERTEX_SHADING | D3D12_BARRIER_SYNC_PIXEL_SHADING | D3D12_BARRIER_SYNC_COMPUTE_SHADING;
     access = D3D12_BARRIER_ACCESS_SHADER_RESOURCE;
     return D3D12_BARRIER_LAYOUT_SHADER_RESOURCE;
@@ -212,6 +216,8 @@ static D3D12_RESOURCE_STATES toResourceState(ResourceLayout rs, const DxTexture*
 static ID3D12Resource* toDxResource(const AbstractGraphicsApi::BarrierDesc& b) {
   if(b.texture!=nullptr) {
     auto& t = *reinterpret_cast<const DxTexture*>(b.texture);
+    if(t.swImpl!=nullptr)
+      return t.swImpl;
     return t.impl.get();
     }
 
@@ -352,10 +358,16 @@ void DxCommandBuffer::beginRendering(const FrameBufferDesc& fbo, size_t fboSize,
   for(size_t i=0; i<fboSize; ++i) {
     auto& dx    = fbo.desc[i];
     auto& rdesc = view[viewSz];
-    if(fbo.sw[i]!=nullptr) {
+    if(false && fbo.sw[i]!=nullptr) {
       auto& t                      = *reinterpret_cast<DxSwapchain*>(fbo.sw[i]);
       rdesc.cpuDescriptor          = t.handle(fbo.imgId[i]);
       fboLayout.RTVFormats[viewSz] = t.format();
+      ++viewSz;
+      }
+    if(fbo.desc[i].attachment!=nullptr && fbo.frm[i]==TextureFormat::Undefined) {
+      auto& t                      = *reinterpret_cast<DxTextureSwapchain*>(fbo.att[i]);
+      rdesc.cpuDescriptor          = t.handle;
+      fboLayout.RTVFormats[viewSz] = t.format;
       ++viewSz;
       }
     else if(fbo.desc[i].attachment!=nullptr) {
