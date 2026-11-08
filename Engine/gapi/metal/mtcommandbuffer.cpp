@@ -92,10 +92,10 @@ void MtCommandBuffer::beginRendering(const FrameBufferDesc& fbo, size_t fboSize,
       continue;
       }
     auto clr = desc->colorAttachments()->object(i);
-    if(fbo.sw[i]!=nullptr) {
-      auto& s = *reinterpret_cast<MtSwapchain*>(fbo.sw[i]);
-      clr->setTexture(s.img[fbo.imgId[i]].tex.get());
-      curFbo.colorFormat[curFbo.numColors] = s.format();
+    if(fbo.frm[i]==TextureFormat::Undefined) {
+      auto& t = *reinterpret_cast<MtTextureSwapcain*>(fbo.att[i]);
+      clr->setTexture(t.swImpl);
+      curFbo.colorFormat[curFbo.numColors] = t.format;
       } else {
       auto& t = *reinterpret_cast<MtTexture*>(fbo.att[i]);
       clr->setTexture(t.impl.get());

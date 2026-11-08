@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
+#include "gapi/metal/mttexture.h"
 #include "utility/spinlock.h"
 #include "nsptr.h"
 
@@ -23,6 +24,7 @@ class MtSwapchain : public AbstractGraphicsApi::Swapchain {
 
     void          reset() override;
     uint32_t      currentBackBufferIndex() override;
+    auto          currentBackBuffer() -> AbstractGraphicsApi::Texture* override;
     uint32_t      imageCount() const override;
     uint32_t      w() const override;
     uint32_t      h() const override;
@@ -43,6 +45,7 @@ class MtSwapchain : public AbstractGraphicsApi::Swapchain {
     SpinLock              sync;
     MtDevice&             dev;
     Tempest::Size         sz;
+    MtTextureSwapcain     currentAtt;
 
     uint32_t              imgCount   = 0;
     uint32_t              currentImg = 0;

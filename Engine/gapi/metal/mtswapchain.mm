@@ -93,7 +93,7 @@ static CGRect windowRect(UIWindow* wnd) {
 
 // note : MoltenVK supports NSView, UIView, CAMetalLayer, so we should align to it
 MtSwapchain::MtSwapchain(MtDevice& dev, SystemApi::Window *w)
-  :dev(dev), pimpl(new Impl()) {
+  : dev(dev), pimpl(new Impl()), currentAtt(dev, *this) {
   NSObject* obj = reinterpret_cast<NSObject*>(w);
   if([obj isKindOfClass : [SysWindow class]])
     pimpl->wnd = reinterpret_cast<SysWindow*>(w);
@@ -154,6 +154,13 @@ void MtSwapchain::reset() {
 
 uint32_t MtSwapchain::currentBackBufferIndex() {
   return currentImg;
+  }
+
+AbstractGraphicsApi::Texture* MtSwapchain::currentBackBuffer() {
+  const auto id = currentImg;
+  currentAtt.swImpl = img[id].tex.get();
+  currentAtt.format = format();
+  return &currentAtt;
   }
 
 void MtSwapchain::present() {

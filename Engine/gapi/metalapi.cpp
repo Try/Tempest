@@ -190,7 +190,7 @@ AbstractGraphicsApi::CommandBuffer *MetalApi::createCommandBuffer(AbstractGraphi
   }
 
 void MetalApi::present(AbstractGraphicsApi::Device*, AbstractGraphicsApi::Swapchain *sw) {
-  auto& s   = *reinterpret_cast<MtSwapchain*>(sw);
+  auto& s = *reinterpret_cast<MtSwapchain*>(sw);
   s.present();
   }
 

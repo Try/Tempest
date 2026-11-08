@@ -9,6 +9,7 @@ namespace Tempest {
 namespace Detail {
 
 class MtDevice;
+class MtSwapchain;
 
 class MtTexture : public Tempest::AbstractGraphicsApi::Texture {
   public:
@@ -31,6 +32,9 @@ class MtTexture : public Tempest::AbstractGraphicsApi::Texture {
     NsPtr<MTL::Texture> impl;
     const uint32_t      mipCnt = 0;
 
+  protected:
+    MtTexture(MtDevice &d, MtSwapchain& sw);
+
   private:
     void createCompressedTexture(MTL::Texture& val, const Pixmap& p, TextureFormat frm, uint32_t mipCnt);
     void createRegularTexture(MTL::Texture& val, const Pixmap& p);
@@ -48,5 +52,12 @@ class MtTexture : public Tempest::AbstractGraphicsApi::Texture {
     std::vector<View> extViews;
   };
 
+class MtTextureSwapcain : public MtTexture {
+  public:
+    MtTextureSwapcain(MtDevice &d, MtSwapchain& sw):MtTexture(d, sw) {}
+
+    MTL::Texture*    swImpl = nullptr;
+    MTL::PixelFormat format = MTL::PixelFormat::PixelFormatInvalid;
+  };
 }
 }

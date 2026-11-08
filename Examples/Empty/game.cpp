@@ -50,11 +50,12 @@ void Game::render(){
 
     sync.wait();
 
+    auto& backbuf = swapchain.acquire();
     dispatchPaintEvent(surface,texAtlass);
 
     {
     auto enc = cmd.startEncoding(device);
-    enc.setFramebuffer({{swapchain[swapchain.currentImage()],Vec4(0,0,1,1),Tempest::Preserve}});
+    enc.setFramebuffer({{backbuf,Vec4(0,0,1,1),Tempest::Preserve}});
     surfaceMesh[cmdId].update(device,surface);
     surfaceMesh[cmdId].draw(enc);
     }
