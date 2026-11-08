@@ -258,12 +258,6 @@ bool VCommandBuffer::isRecording() const {
   }
 
 void VCommandBuffer::beginRendering(const FrameBufferDesc& fbo, size_t fboSize, uint32_t width, uint32_t height) {
-  for(size_t i=0; i<fboSize; ++i) {
-    if(fbo.sw[i]!=nullptr) {
-      addDependency(*reinterpret_cast<VSwapchain*>(fbo.sw[i]), reinterpret_cast<VTexture*>(fbo.att[i]));
-      // addDependency(*reinterpret_cast<VSwapchain*>(fbo.sw[i]), fbo.imgId[i]);
-      }
-    }
   resState.beginRendering(*this,fbo);
   if(state==Idle) {
     // flush right before end of the render-pass, otherwise
@@ -302,12 +296,12 @@ void VCommandBuffer::beginRendering(const FrameBufferDesc& fbo, size_t fboSize, 
     VkImageView imageView   = VK_NULL_HANDLE;
     VkFormat    imageFormat = VK_FORMAT_UNDEFINED;
     for(size_t i=0; i<fboSize; ++i) {
-      if(fbo.att[i] != nullptr && fbo.frm[i]==TextureFormat::Undefined) {
-        auto &t = *reinterpret_cast<VTexture*>(fbo.att[i]);
+      if(fbo.frm[i]==TextureFormat::Undefined) {
+        auto &t = *reinterpret_cast<VTextureSwapchain*>(fbo.att[i]);
         imageView   = t.fboView(0);
         imageFormat = t.format;
-        }
-      else {
+        addDependency(*t.owner, t);
+        } else {
         auto &t = *reinterpret_cast<VTexture*>(fbo.att[i]);
         imageView   = t.fboView(0);
         imageFormat = t.format;
@@ -1220,9 +1214,9 @@ void VCommandBuffer::finalizeImageBarrier(T& bx, const AbstractGraphicsApi::Barr
     bx.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   }
 
-void VCommandBuffer::addDependency(VSwapchain& s, VTexture* img) {
+void VCommandBuffer::addDependency(VSwapchain& s, VTexture& img) {
   for(size_t i=0; i<s.imageCount(); ++i) {
-    if(s.view(i)!=img->imgView)
+    if(s.view(i)!=img.imgView)
       continue;
     addDependency(s, i);
     return;
