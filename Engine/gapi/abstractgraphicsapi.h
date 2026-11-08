@@ -686,11 +686,9 @@ namespace Detail {
     };
 
   struct FrameBufferDesc {
-    TextureFormat                   frm  [MaxFramebufferAttachments+1] = {};
-    AttachmentDesc                  desc [MaxFramebufferAttachments+1] = {};
-    AbstractGraphicsApi::Texture*   att  [MaxFramebufferAttachments+1] = {};
-    AbstractGraphicsApi::Swapchain* sw   [MaxFramebufferAttachments+1] = {};
-    uint32_t                        imgId[MaxFramebufferAttachments+1] = {};
+    TextureFormat                 frm [MaxFramebufferAttachments+1] = {};
+    AttachmentDesc                desc[MaxFramebufferAttachments+1] = {};
+    AbstractGraphicsApi::Texture* att [MaxFramebufferAttachments+1] = {};
     };
 
   };

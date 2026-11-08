@@ -10,7 +10,7 @@ ResourceState::ResourceState() {
 void ResourceState::beginRendering(AbstractGraphicsApi::CommandBuffer& cmd, const Detail::FrameBufferDesc& desc) {
   fbo = desc;
   for(size_t i=0;; ++i) {
-    if(fbo.att[i]==nullptr && fbo.sw[i]==nullptr)
+    if(fbo.att[i]==nullptr)
       break;
     const bool discard = fbo.desc[i].load!=AccessOp::Preserve;
     if(isDepthFormat(fbo.frm[i]) && fbo.desc[i].load==AccessOp::Readonly)
@@ -19,8 +19,6 @@ void ResourceState::beginRendering(AbstractGraphicsApi::CommandBuffer& cmd, cons
       setLayout(*fbo.att[i],ResourceLayout::DepthAttach,0,discard);
     else if(fbo.frm[i]==TextureFormat::Undefined && fbo.att[i]!=nullptr)
       setLayout(*fbo.att[i],ResourceLayout::ColorAttach,0,discard);
-    else if(fbo.frm[i]==TextureFormat::Undefined)
-      setLayout(*fbo.sw[i],fbo.imgId[i],ResourceLayout::ColorAttach,discard);
     else
       setLayout(*fbo.att[i],ResourceLayout::ColorAttach,0,discard);
     }
@@ -28,7 +26,7 @@ void ResourceState::beginRendering(AbstractGraphicsApi::CommandBuffer& cmd, cons
 
 void ResourceState::endRendering(AbstractGraphicsApi::CommandBuffer& cmd) {
   for(size_t i=0;; ++i) {
-    if(fbo.att[i]==nullptr && fbo.sw[i]==nullptr)
+    if(fbo.att[i]==nullptr)
       break;
 
     const bool discard = fbo.desc[i].store!=AccessOp::Preserve;
@@ -38,8 +36,6 @@ void ResourceState::endRendering(AbstractGraphicsApi::CommandBuffer& cmd) {
       setLayout(*fbo.att[i],ResourceLayout::Default,0,false);
     else if(fbo.frm[i]==TextureFormat::Undefined && fbo.att[i]!=nullptr)
       setLayout(*fbo.att[i],ResourceLayout::Default,0,discard);
-    else if(fbo.frm[i]==TextureFormat::Undefined)
-      setLayout(*fbo.sw[i],fbo.imgId[i],ResourceLayout::Default,discard); // deprecated
     else
       setLayout(*fbo.att[i],ResourceLayout::Default,0,discard);
     }
