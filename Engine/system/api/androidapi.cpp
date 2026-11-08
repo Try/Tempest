@@ -40,7 +40,8 @@ static std::atomic_bool isExit     = false;
 static bool             resumed    = false;
 static bool             focused    = false;
 static bool             active     = false;
-static bool             hasWindow  = false;
+// The window handle points here: NativeActivity replaces its ANativeWindow after the activity was hidden
+static ANativeWindow*   window     = nullptr;
 
 // Touches are recorded during polling and dispatched one per event-processing pass.
 // Modal loops in event handlers poll recursively, so direct dispatch could reorder pointers of one AInputEvent.
@@ -116,11 +117,11 @@ void AndroidApi::updateWindow() {
   if(app==nullptr || app->window==nullptr)
     return;
 
-  hasWindow = true;
+  window = app->window;
   if(mainWindow==nullptr)
     return;
 
-  SizeEvent event(ANativeWindow_getWidth(app->window),ANativeWindow_getHeight(app->window));
+  SizeEvent event(ANativeWindow_getWidth(window),ANativeWindow_getHeight(window));
   AndroidApi::dispatchResize(*mainWindow,event);
   }
 
@@ -134,8 +135,8 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
       break;
     case APP_CMD_CONFIG_CHANGED: {
       //TODO: dedicated event for dpi/safe-rects
-      if(mainWindow!=nullptr && app!=nullptr && app->window!=nullptr) {
-        SizeEvent event(ANativeWindow_getWidth(app->window), ANativeWindow_getHeight(app->window));
+      if(mainWindow!=nullptr && window!=nullptr) {
+        SizeEvent event(ANativeWindow_getWidth(window), ANativeWindow_getHeight(window));
         SystemApi::dispatchResize(*mainWindow, event);
         }
       break;
@@ -157,8 +158,15 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
       updateFocus();
       break;
     case APP_CMD_TERM_WINDOW:
+      // The activity is only hidden; the empty size lets the application release its swapchain before Android frees the window
+      window = nullptr;
+      if(mainWindow!=nullptr) {
+        SizeEvent event(0,0);
+        AndroidApi::dispatchResize(*mainWindow,event);
+        }
+      break;
     case APP_CMD_DESTROY:
-      hasWindow = false;
+      window = nullptr;
       if(mainWindow!=nullptr) {
         CloseEvent event;
         AndroidApi::dispatchClose(*mainWindow,event);
@@ -253,13 +261,12 @@ SystemApi::Window* AndroidApi::createAndroidWindow(Tempest::Window* owner) {
     return nullptr;
   app->onAppCmd = [](android_app* state, int32_t cmd) { onAppCmd(state,cmd); };
   app->onInputEvent = [](android_app*, AInputEvent* event) { return onInputEvent(event); };
-  while(!hasWindow && !isExit.load() && app->destroyRequested==0)
+  while(window==nullptr && !isExit.load() && app->destroyRequested==0)
     pollAndroid(app,-1);
   if(isExit.load() || app->destroyRequested!=0)
     return nullptr;
   mainWindow = owner;
-  ANativeWindow_acquire(app->window);
-  return reinterpret_cast<SystemApi::Window*>(app->window);
+  return reinterpret_cast<SystemApi::Window*>(&window);
   }
 
 SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, uint32_t, uint32_t) {
@@ -270,8 +277,7 @@ SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, ShowMode
   return createAndroidWindow(owner);
   }
 
-void AndroidApi::implDestroyWindow(SystemApi::Window* w) {
-  ANativeWindow_release(reinterpret_cast<ANativeWindow*>(w));
+void AndroidApi::implDestroyWindow(SystemApi::Window*) {
   mainWindow = nullptr;
   touches.clear();
   }
@@ -282,8 +288,10 @@ void AndroidApi::implExit() {
   }
 
 Rect AndroidApi::implWindowClientRect(SystemApi::Window* w) {
-  const auto window = reinterpret_cast<ANativeWindow*>(w);
-  return Rect(0,0,ANativeWindow_getWidth(window),ANativeWindow_getHeight(window));
+  const auto wnd = *reinterpret_cast<ANativeWindow* const*>(w);
+  if(wnd==nullptr)
+    return Rect(0,0,0,0);
+  return Rect(0,0,ANativeWindow_getWidth(wnd),ANativeWindow_getHeight(wnd));
   }
 
 float AndroidApi::implUiScale(SystemApi::Window*) {
@@ -329,7 +337,7 @@ void AndroidApi::implProcessEvents(AppCallBack& cb) {
 
   int                  pending = 0;
   android_poll_source* source  = nullptr;
-  const bool          visible = active && hasWindow;
+  const bool          visible = active && window!=nullptr;
   if(ALooper_pollOnce(visible ? 0 : -1,nullptr,&pending,reinterpret_cast<void**>(&source))>=0) {
     if (source != nullptr)
       source->process(app, source);

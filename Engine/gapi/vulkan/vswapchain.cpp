@@ -273,7 +273,7 @@ VkResult VSwapchain::createSurface(VkInstance instance, void* hwnd, VkSurfaceKHR
 #elif defined(__ANDROID__)
   VkAndroidSurfaceCreateInfoKHR createInfo = {};
   createInfo.sType  = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
-  createInfo.window = reinterpret_cast<ANativeWindow*>(hwnd);
+  createInfo.window = *reinterpret_cast<ANativeWindow* const*>(hwnd);
   return vkCreateAndroidSurfaceKHR(instance,&createInfo,nullptr,pSurface);
 #elif defined(__UNIX__)
 #if defined(TEMPEST_BUILD_WAYLAND)
@@ -330,6 +330,11 @@ void VSwapchain::cleanupSurface() noexcept {
 
 void VSwapchain::reset() {
   cleanupSwapchain();
+#if defined(__ANDROID__)
+  // The window is released while the activity is hidden; the next reset creates a surface for the new one
+  if(SystemApi::windowClientRect(hwnd).isEmpty())
+    cleanupSurface();
+#endif
   createSwapchain(device);
   }
 
