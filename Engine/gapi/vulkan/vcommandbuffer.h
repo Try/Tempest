@@ -101,7 +101,7 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     std::vector<VSwapchain::Sync*> swapchainSync;
 
   protected:
-    void addDependency(VSwapchain& s, VTexture* img);
+    void addDependency(VSwapchain& s, VTexture& img);
     void addDependency(VSwapchain& s, size_t imgId);
     void vkCmdPipelineBarrier2(VkCommandBuffer impl, const VkDependencyInfoKHR* info);
     void vkCmdBeginRenderingKHR(VkCommandBuffer impl, const VkRenderingInfo* info);

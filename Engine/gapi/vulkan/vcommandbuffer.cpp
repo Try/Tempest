@@ -307,12 +307,6 @@ void VCommandBuffer::beginRendering(const FrameBufferDesc& fbo, size_t fboSize, 
         imageView   = t.fboView(0);
         imageFormat = t.format;
         }
-      else if(fbo.sw[i] != nullptr) {
-        // deprecated
-        auto& t = *reinterpret_cast<VSwapchain*>(fbo.sw[i]);
-        imageView   = t.view(fbo.imgId[i]);
-        imageFormat = t.format();
-        }
       else {
         auto &t = *reinterpret_cast<VTexture*>(fbo.att[i]);
         imageView   = t.fboView(0);

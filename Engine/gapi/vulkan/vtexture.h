@@ -15,6 +15,7 @@ namespace Detail {
 class VDevice;
 class VBuffer;
 class VFramebufferMap;
+class VSwapchain;
 
 class VTexture : public AbstractGraphicsApi::Texture {
   public:
@@ -74,6 +75,8 @@ class VTextureSwapchain : public VTexture {
   public:
     VTextureSwapchain();
     ~VTextureSwapchain();
+
+    VSwapchain* owner = nullptr;
   };
 
 }}

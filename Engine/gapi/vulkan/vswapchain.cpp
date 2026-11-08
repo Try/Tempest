@@ -552,6 +552,7 @@ AbstractGraphicsApi::Texture* VSwapchain::currentBackBuffer() {
   currentAtt.imgView   = imageList.views [imgIndex];
   currentAtt.format    = format();
   currentAtt.nonUniqId = NonUniqResId(0x1);
+  currentAtt.owner     = this;
   return &currentAtt;
   }
 
