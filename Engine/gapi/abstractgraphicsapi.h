@@ -530,13 +530,10 @@ namespace Tempest {
         };
       struct Swapchain:NoCopy {
         virtual ~Swapchain()=default;
-        virtual void          reset()=0;
-        virtual uint32_t      currentBackBufferIndex()=0;
-        virtual NonUniqResId  syncId() const;
-        virtual uint32_t      imageCount() const=0;
-        virtual uint32_t      w() const=0;
-        virtual uint32_t      h() const=0;
-        virtual Texture*      currentBackBuffer() = 0;
+        virtual void     reset()=0;
+        virtual uint32_t w() const=0;
+        virtual uint32_t h() const=0;
+        virtual Texture* currentBackBuffer() = 0;
         };
       struct Pipeline:Shared {
         virtual IVec3  workGroupSize() const = 0;
@@ -564,8 +561,6 @@ namespace Tempest {
       struct DescArray:NoCopy {};
       struct BarrierDesc {
         const Texture*   texture   = nullptr;
-        const Swapchain* swapchain = nullptr;
-        uint32_t         swId      = 0;
         uint32_t         mip       = 0;
 
         ResourceLayout   prev      = ResourceLayout::None;

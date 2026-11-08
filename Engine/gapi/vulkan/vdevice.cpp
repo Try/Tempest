@@ -1122,22 +1122,13 @@ std::shared_ptr<VFence> VDevice::submit(VCommandBuffer& cmd) {
   // flush descriptor memory
   descAlloc.flush();
 
-  size_t waitCnt = 0;
+  SmallArray<VkSemaphore, 32> wait(cmd.swapchainSync.size());
+  size_t                      waitCnt = 0;
   for(auto& s:cmd.swapchainSync) {
-    if(s->state!=Detail::VSwapchain::S_Pending)
-      continue;
-    s->state = Detail::VSwapchain::S_Aquired;
-    ++waitCnt;
-    }
-
-  SmallArray<VkSemaphore, 32> wait(waitCnt);
-  size_t                      waitId  = 0;
-  for(auto& s:cmd.swapchainSync) {
-    if(s->state!=Detail::VSwapchain::S_Aquired)
-      continue;
-    s->state = Detail::VSwapchain::S_Draw;
-    wait[waitId] = s->acquire;
-    ++waitId;
+    if(auto sem = s->owner->aquireSemaphore()) {
+      wait[waitCnt] = sem;
+      ++waitCnt;
+      }
     }
 
   std::lock_guard<std::mutex> guard(timeline.sync);

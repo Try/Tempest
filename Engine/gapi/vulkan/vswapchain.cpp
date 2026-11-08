@@ -310,7 +310,6 @@ void VSwapchain::cleanupSwapchain() noexcept {
   aquireSem    = SemaphoreList();
   presentSem   = SemaphoreList();
   imageList    = ImageList();
-  sync.clear();
 
   if(swapChain!=VK_NULL_HANDLE)
     vkDestroySwapchainKHR(device.device.impl,swapChain,nullptr);
@@ -427,14 +426,14 @@ VkResult VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& sw
 
   imageList = ImageList(device, swapChain, swapChainImageFormat);
 
-  sync.resize(imageList.size());
-
   aquireFence  = FenceList(device.device.impl,     imageList.size());
   presentFence = FenceList(device.device.impl,     imageList.size());
   presentSem   = SemaphoreList(device.device.impl, imageList.size());
   aquireSem    = SemaphoreList(device.device.impl, imageList.size());
 
-  return implAcquireNextImage();
+  currentSyncState = SyncState::S_Idle;
+
+  return VK_SUCCESS; //implAcquireNextImage();
   }
 
 VkSurfaceFormatKHR VSwapchain::findSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const {
@@ -534,20 +533,14 @@ bool VSwapchain::isSwapchainLost(VkResult code) const {
   return code==VK_ERROR_OUT_OF_DATE_KHR;
   }
 
-void VSwapchain::acquireNextImage() {
-  VkResult code = implAcquireNextImage();
-
-  if(isSwapchainLost(code))
-    throw SwapchainSuboptimal();
-
-  vkAssert(code);
-  }
-
-uint32_t VSwapchain::currentBackBufferIndex() {
-  return imgIndex;
-  }
-
 AbstractGraphicsApi::Texture* VSwapchain::currentBackBuffer() {
+  if(currentSyncState == SyncState::S_Idle) {
+    const VkResult code = implAcquireNextImage();
+    if(isSwapchainLost(code))
+      throw SwapchainSuboptimal();
+    currentSyncState = SyncState::S_Aquired;
+    }
+
   currentAtt.impl      = imageList.images[imgIndex];
   currentAtt.imgView   = imageList.views [imgIndex];
   currentAtt.format    = format();
@@ -556,9 +549,17 @@ AbstractGraphicsApi::Texture* VSwapchain::currentBackBuffer() {
   return &currentAtt;
   }
 
+VkSemaphore VSwapchain::aquireSemaphore() {
+  //NOTE: maybe be awkward syncwise, should have a lock?
+  if(currentSyncState == SyncState::S_Aquired) {
+    currentSyncState = SyncState::S_Draw;
+    return aquireSem[frameId];
+    }
+  return VK_NULL_HANDLE;
+  }
+
 VkResult VSwapchain::implAcquireNextImage() {
-  auto     dev  = device.device.impl;
-  auto&    slot = sync[frameId];
+  auto dev = device.device.impl;
 
   vkWaitForFences(dev, 1, &aquireFence[frameId], VK_TRUE, std::numeric_limits<uint64_t>::max());
   vkResetFences(dev, 1, &aquireFence[frameId]);
@@ -582,19 +583,16 @@ VkResult VSwapchain::implAcquireNextImage() {
     return code;
     }
 
-  imgIndex     = id;
-  slot.state   = S_Pending;
-  slot.imgId   = id;
-  slot.acquire = aquireSem[frameId];
-
+  imgIndex = id;
   return code;
   }
 
 void VSwapchain::present() {
-  auto& slot = sync[frameId];
-  auto& pf   = presentFence[frameId];
-  auto  ps   = presentSem  [imgIndex];
-  if(slot.state==S_Pending) {
+  assert(currentSyncState==Detail::VSwapchain::S_Draw || currentSyncState==S_Pending);
+
+  auto& pf = presentFence[frameId];
+  auto  ps = presentSem  [imgIndex];
+  if(currentSyncState==S_Pending) {
     // empty frame with no command buffer. TODO: test
     ps = aquireSem[frameId];
     }
@@ -627,10 +625,8 @@ void VSwapchain::present() {
   presentInfo.pSwapchains        = &swapChain;
   presentInfo.pImageIndices      = &imgIndex;
 
-  frameId      = (frameId + 1)%imageList.size();
-  slot.state   = S_Idle;
-  slot.imgId   = uint32_t(-1);
-  slot.acquire = VK_NULL_HANDLE;
+  frameId          = (frameId + 1)%imageList.size();
+  currentSyncState = S_Idle;
 
   auto tx = Application::tickCount();
   VkResult code = device.presentQueue->present(presentInfo);
@@ -646,8 +642,6 @@ void VSwapchain::present() {
     }
   //Log::i("vkQueuePresentKHR[",imgIndex,"] = ", tx);
   Detail::vkAssert(code);
-
-  acquireNextImage();
   }
 
 #endif

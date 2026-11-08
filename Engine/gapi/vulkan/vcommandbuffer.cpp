@@ -151,13 +151,8 @@ static VkImageLayout toLayout(ResourceLayout rs, const VTexture* texture) {
   }
 
 static VkImage toVkResource(const AbstractGraphicsApi::BarrierDesc& b) {
-  if(b.texture!=nullptr) {
-    auto& t = *reinterpret_cast<const VTexture*>(b.texture);
-    return t.impl;
-    }
-
-  auto& s = *reinterpret_cast<const VSwapchain*>(b.swapchain);
-  return s.image(b.swId);
+  auto& t = *reinterpret_cast<const VTexture*>(b.texture);
+  return t.impl;
   }
 
 
@@ -300,7 +295,7 @@ void VCommandBuffer::beginRendering(const FrameBufferDesc& fbo, size_t fboSize, 
         auto &t = *reinterpret_cast<VTextureSwapchain*>(fbo.att[i]);
         imageView   = t.fboView(0);
         imageFormat = t.format;
-        addDependency(*t.owner, t);
+        addDependency(t);
         } else {
         auto &t = *reinterpret_cast<VTexture*>(fbo.att[i]);
         imageView   = t.fboView(0);
@@ -1190,14 +1185,8 @@ void VCommandBuffer::newChunk() {
 
 template<class T>
 void VCommandBuffer::finalizeImageBarrier(T& bx, const AbstractGraphicsApi::BarrierDesc& b) {
-  VkFormat nativeFormat = VK_FORMAT_UNDEFINED;
-  if(b.texture!=nullptr) {
-    auto& t = *reinterpret_cast<const VTexture*>(b.texture);
-    nativeFormat = t.format;
-    } else {
-    auto& s = *reinterpret_cast<const VSwapchain*>(b.swapchain);
-    nativeFormat = s.format();
-    }
+  auto&    t            = *reinterpret_cast<const VTexture*>(b.texture);
+  VkFormat nativeFormat = t.format;
 
   bx.subresourceRange.baseMipLevel   = b.mip==uint32_t(-1) ? 0 : b.mip;
   bx.subresourceRange.levelCount     = b.mip==uint32_t(-1) ? VK_REMAINING_MIP_LEVELS : 1;
@@ -1214,29 +1203,11 @@ void VCommandBuffer::finalizeImageBarrier(T& bx, const AbstractGraphicsApi::Barr
     bx.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   }
 
-void VCommandBuffer::addDependency(VSwapchain& s, VTexture& img) {
-  for(size_t i=0; i<s.imageCount(); ++i) {
-    if(s.view(i)!=img.imgView)
-      continue;
-    addDependency(s, i);
-    return;
-    }
-  assert(false);
-  }
-
-void VCommandBuffer::addDependency(VSwapchain& s, size_t imgId) {
-  VSwapchain::Sync* sc = nullptr;
-  for(auto& i:s.sync)
-    if(i.imgId==imgId) {
-      sc = &i;
-      break;
-      }
-
-  for(auto i:swapchainSync)
-    if(i==sc)
+void VCommandBuffer::addDependency(VTextureSwapchain& img) {
+  for(auto& i:swapchainSync)
+    if(i==&img)
       return;
-  assert(sc!=nullptr);
-  swapchainSync.push_back(sc);
+  swapchainSync.push_back(&img);
   }
 
 #endif

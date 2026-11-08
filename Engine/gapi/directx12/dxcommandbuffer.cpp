@@ -214,15 +214,10 @@ static D3D12_RESOURCE_STATES toResourceState(ResourceLayout rs, const DxTexture*
   }
 
 static ID3D12Resource* toDxResource(const AbstractGraphicsApi::BarrierDesc& b) {
-  if(b.texture!=nullptr) {
-    auto& t = *reinterpret_cast<const DxTexture*>(b.texture);
-    if(t.swImpl!=nullptr)
-      return t.swImpl;
-    return t.impl.get();
-    }
-
-  auto& s = *reinterpret_cast<const DxSwapchain*>(b.swapchain);
-  return s.views[b.swId].get();
+  auto& t = *reinterpret_cast<const DxTexture*>(b.texture);
+  if(t.swImpl!=nullptr)
+    return t.swImpl;
+  return t.impl.get();
   }
 
 struct DxCommandBuffer::InternalShaderGuard {

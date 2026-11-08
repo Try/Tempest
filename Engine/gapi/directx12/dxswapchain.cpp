@@ -81,13 +81,9 @@ void DxSwapchain::reset() {
   initImages();
   }
 
-uint32_t DxSwapchain::currentBackBufferIndex() {
-  return impl->GetCurrentBackBufferIndex();
-  }
-
 auto DxSwapchain::currentBackBuffer() -> AbstractGraphicsApi::Texture* {
   const auto imgIndex = impl->GetCurrentBackBufferIndex();
-  //currentAtt.impl      = views[imgIndex].get();
+
   currentAtt.swImpl    = views[imgIndex].get();
   currentAtt.handle    = dev.descAlloc.handleCpu(rtvHeap, imgIndex);
   currentAtt.format    = format();

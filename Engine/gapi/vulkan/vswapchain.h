@@ -29,16 +29,11 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     VkFormat                 format() const;
     uint32_t                 w()      const override;
     uint32_t                 h()      const override;
-
     void                     reset() override;
-    uint32_t                 imageCount() const override;
-
-    uint32_t                 currentBackBufferIndex() override;
     auto                     currentBackBuffer() -> AbstractGraphicsApi::Texture* override;
-    void                     present();
 
-    VkImage                  image(size_t i) const;
-    VkImageView              view (size_t i) const;
+    VkSemaphore              aquireSemaphore();
+    void                     present();
 
     enum SyncState : uint8_t {
       S_Idle,
@@ -46,13 +41,6 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
       S_Aquired,
       S_Draw,
       };
-
-    struct Sync {
-      SyncState   state   = S_Idle;
-      uint32_t    imgId   = uint32_t(-1);
-      VkSemaphore acquire = VK_NULL_HANDLE;
-      };
-    std::vector<Sync>        sync;
 
   private:
     class FenceList {
@@ -120,6 +108,7 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     uint32_t                 imgIndex = 0;
     uint32_t                 frameId  = 0;
     VTextureSwapchain        currentAtt;
+    SyncState                currentSyncState = SyncState::S_Idle;
 
     VkFormat                 swapChainImageFormat = VK_FORMAT_UNDEFINED;
     VkExtent2D               swapChainExtent = {};
@@ -142,7 +131,8 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
 
     bool                     isSwapchainLost(VkResult code) const;
     VkResult                 implAcquireNextImage();
-    void                     acquireNextImage();
+
+  friend class VDevice;
   };
 
 inline VkFormat VSwapchain::format() const          { return swapChainImageFormat;   }
@@ -150,11 +140,5 @@ inline VkFormat VSwapchain::format() const          { return swapChainImageForma
 inline uint32_t VSwapchain::w() const { return swapChainExtent.width;  }
 
 inline uint32_t VSwapchain::h() const { return swapChainExtent.height; }
-
-inline uint32_t VSwapchain::imageCount() const { return uint32_t(imageList.views.size()); }
-
-inline VkImage VSwapchain::image(size_t i) const { return imageList.images[i]; }
-
-inline VkImageView VSwapchain::view(size_t i) const { return imageList.views[i];  }
 
 }}
