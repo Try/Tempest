@@ -273,7 +273,8 @@ VkResult VSwapchain::createSurface(VkInstance instance, void* hwnd, VkSurfaceKHR
 #elif defined(__ANDROID__)
   VkAndroidSurfaceCreateInfoKHR createInfo = {};
   createInfo.sType  = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
-  createInfo.window = reinterpret_cast<ANativeWindow*>(hwnd);
+  // The window handle points to the current ANativeWindow of the activity
+  createInfo.window = *reinterpret_cast<ANativeWindow* const*>(hwnd);
   return vkCreateAndroidSurfaceKHR(instance,&createInfo,nullptr,pSurface);
 #elif defined(__UNIX__)
 #if defined(TEMPEST_BUILD_WAYLAND)
@@ -330,6 +331,10 @@ void VSwapchain::cleanupSurface() noexcept {
 
 void VSwapchain::reset() {
   cleanupSwapchain();
+#if defined(__ANDROID__)
+  // NativeActivity replaces its ANativeWindow after the activity was hidden
+  cleanupSurface();
+#endif
   createSwapchain(device);
   }
 

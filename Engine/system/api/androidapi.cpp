@@ -120,8 +120,9 @@ void AndroidApi::updateWindow() {
   if(mainWindow==nullptr)
     return;
 
+  // A new native window needs a new swapchain, even if its size did not change
   SizeEvent event(ANativeWindow_getWidth(app->window),ANativeWindow_getHeight(app->window));
-  AndroidApi::dispatchResize(*mainWindow,event);
+  AndroidApi::dispatchResize(*mainWindow,event,true);
   }
 
 void AndroidApi::onAppCmd(void*, int32_t cmd) {
@@ -157,6 +158,9 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
       updateFocus();
       break;
     case APP_CMD_TERM_WINDOW:
+      // The activity is only hidden; rendering resumes on the next APP_CMD_INIT_WINDOW
+      hasWindow = false;
+      break;
     case APP_CMD_DESTROY:
       hasWindow = false;
       if(mainWindow!=nullptr) {
@@ -258,8 +262,8 @@ SystemApi::Window* AndroidApi::createAndroidWindow(Tempest::Window* owner) {
   if(isExit.load() || app->destroyRequested!=0)
     return nullptr;
   mainWindow = owner;
-  ANativeWindow_acquire(app->window);
-  return reinterpret_cast<SystemApi::Window*>(app->window);
+  // NativeActivity replaces its ANativeWindow after the activity was hidden; the handle refers to the current one
+  return reinterpret_cast<SystemApi::Window*>(&app->window);
   }
 
 SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, uint32_t, uint32_t) {
@@ -270,8 +274,7 @@ SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, ShowMode
   return createAndroidWindow(owner);
   }
 
-void AndroidApi::implDestroyWindow(SystemApi::Window* w) {
-  ANativeWindow_release(reinterpret_cast<ANativeWindow*>(w));
+void AndroidApi::implDestroyWindow(SystemApi::Window*) {
   mainWindow = nullptr;
   touches.clear();
   }
@@ -282,7 +285,9 @@ void AndroidApi::implExit() {
   }
 
 Rect AndroidApi::implWindowClientRect(SystemApi::Window* w) {
-  const auto window = reinterpret_cast<ANativeWindow*>(w);
+  const auto window = *reinterpret_cast<ANativeWindow* const*>(w);
+  if(window==nullptr)
+    return Rect(0,0,0,0);
   return Rect(0,0,ANativeWindow_getWidth(window),ANativeWindow_getHeight(window));
   }
 
@@ -386,6 +391,9 @@ extern "C" void android_main(android_app* state) {
     return;
     }
   app = state;
+  // The old window's surface is freed on this thread after Android released the window, and that cleanup needs a JNI environment
+  JNIEnv* env = nullptr;
+  app->activity->vm->AttachCurrentThread(&env,nullptr);
   int result = EXIT_FAILURE;
   try {
     result = runMain();

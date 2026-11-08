@@ -158,8 +158,8 @@ void SystemApi::dispatchKeyUp(Tempest::Window &cb, KeyEvent &e, uint32_t scancod
   dispatcher.dispatchKeyUp(cb,e,scancode);
   }
 
-void SystemApi::dispatchResize(Tempest::Window& cb, SizeEvent& e) {
-  dispatcher.dispatchResize(cb,e);
+void SystemApi::dispatchResize(Tempest::Window& cb, SizeEvent& e, bool force) {
+  dispatcher.dispatchResize(cb,e,force);
   }
 
 void SystemApi::dispatchDisplayMetrics(Tempest::Window& cb, DisplayMetricsEvent& e) {

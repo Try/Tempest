@@ -21,7 +21,7 @@ class EventDispatcher final {
     void dispatchKeyDown   (Widget& wnd, Tempest::KeyEvent&   event, uint32_t scancode);
     void dispatchKeyUp     (Widget& wnd, Tempest::KeyEvent&   event, uint32_t scancode);
 
-    void dispatchResize    (Widget& wnd, Tempest::SizeEvent&  event);
+    void dispatchResize    (Widget& wnd, Tempest::SizeEvent&  event, bool force = false);
     void dispatchDisplayMetrics(Widget& wnd, Tempest::DisplayMetricsEvent& event);
     void dispatchClose     (Widget& wnd, Tempest::CloseEvent& event);
 
