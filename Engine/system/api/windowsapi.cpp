@@ -255,7 +255,7 @@ void WindowsApi::implProcessEvents(SystemApi::AppCallBack& cb) {
     if(!rendered) {
       uint64_t wait = std::min<uint64_t>(cb.timeToTimer(), 16);
       if(wait>0)
-        MsgWaitForMultipleObjects(0, nullptr, FALSE, wait, QS_ALLINPUT);
+        MsgWaitForMultipleObjects(0, nullptr, FALSE, DWORD(wait), QS_ALLINPUT);
       }
     }
   }
