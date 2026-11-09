@@ -104,6 +104,7 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     VkSurfaceKHR             surface   = VK_NULL_HANDLE;
     VkSwapchainKHR           swapChain = VK_NULL_HANDLE;
 
+    SpinLock                 sync;
     uint32_t                 imgIndex = 0;
     uint32_t                 frameId  = 0;
     VTextureSwapchain        currentAtt;

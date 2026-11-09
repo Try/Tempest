@@ -550,7 +550,8 @@ AbstractGraphicsApi::Texture* VSwapchain::currentBackBuffer() {
   }
 
 VkSemaphore VSwapchain::aquireSemaphore() {
-  //NOTE: maybe be awkward syncwise, should have a lock?
+  //NOTE: commandbuffer submisson from different threads may cause race here in theory
+  std::lock_guard<SpinLock> guard(sync);
   if(currentSyncState == SyncState::S_Aquired) {
     currentSyncState = SyncState::S_Draw;
     return aquireSem[frameId];

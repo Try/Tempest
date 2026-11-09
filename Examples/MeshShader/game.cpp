@@ -120,7 +120,6 @@ void Game::render(){
 
     {
       auto enc = cmd.startEncoding(device);
-      // enc.setFramebuffer({{swapchain[swapchain.currentImage()],Vec4(0),Tempest::Preserve}}, {zbuffer, 1.f, Tempest::Preserve});
       enc.setFramebuffer({{backbuf, Vec4(0), Tempest::Preserve}}, {zbuffer, 1.f, Tempest::Preserve});
 
       /*

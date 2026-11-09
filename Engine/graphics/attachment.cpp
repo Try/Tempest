@@ -2,11 +2,6 @@
 
 using namespace Tempest;
 
-Attachment::Attachment(AbstractGraphicsApi::Swapchain* sw, uint32_t id) {
-  sImpl.swapchain = sw;
-  sImpl.id        = id;
-  }
-
 Attachment::Attachment(AbstractGraphicsApi::Swapchain* sw, AbstractGraphicsApi::Texture* img) {
   sImpl.swapchain = sw;
   sImpl.img       = img;
