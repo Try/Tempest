@@ -214,8 +214,6 @@ static D3D12_RESOURCE_STATES toResourceState(ResourceLayout rs, const DxTexture*
 
 static ID3D12Resource* toDxResource(const AbstractGraphicsApi::BarrierDesc& b) {
   auto& t = *reinterpret_cast<const DxTexture*>(b.texture);
-  if(t.isSwapchainImage())
-    return t.impl.get();
   return t.impl.get();
   }
 
