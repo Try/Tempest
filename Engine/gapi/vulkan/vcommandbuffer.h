@@ -97,11 +97,11 @@ class VCommandBuffer:public AbstractGraphicsApi::CommandBuffer {
     struct Chunk {
       VkCommandBuffer impl = nullptr;
       };
-    Detail::SmallList<Chunk,32>    chunks;
-    std::vector<VSwapchain::Sync*> swapchainSync;
+    Detail::SmallList<Chunk,32>     chunks;
+    std::vector<VTextureSwapchain*> swapchainSync;
 
   protected:
-    void addDependency(VSwapchain& s, size_t imgId);
+    void addDependency(VTextureSwapchain& img);
     void vkCmdPipelineBarrier2(VkCommandBuffer impl, const VkDependencyInfoKHR* info);
     void vkCmdBeginRenderingKHR(VkCommandBuffer impl, const VkRenderingInfo* info);
     void vkCmdEndRenderingKHR(VkCommandBuffer impl);

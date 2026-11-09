@@ -11,10 +11,8 @@ Swapchain::Swapchain(AbstractGraphicsApi::Swapchain* sw)
   }
 
 void Swapchain::implReset() {
-  size_t cnt = imageCount();
-  img.reset(new Attachment[cnt]);
-  for(uint32_t i=0;i<cnt;++i)
-    img[i] = Attachment(impl.handler,i);
+  imgRingSz = 1;
+  imgRing.reset(new Attachment[imgRingSz]);
   }
 
 Swapchain::Swapchain(Device& dev, SystemApi::Window* w) {
@@ -26,8 +24,9 @@ Swapchain::~Swapchain() {
   }
 
 Swapchain& Swapchain::operator = (Swapchain&& s) {
-  std::swap(impl, s.impl);
-  std::swap(img,  s.img);
+  std::swap(impl,      s.impl);
+  std::swap(imgRing,   s.imgRing);
+  std::swap(imgRingSz, s.imgRingSz);
   return *this;
   }
 
@@ -44,18 +43,8 @@ void Swapchain::reset() {
   implReset();
   }
 
-uint32_t Swapchain::imageCount() const {
-  return impl.handler->imageCount();
-  }
-
-Attachment& Swapchain::operator[](size_t id) {
-  return img[id];
-  }
-
-const Attachment& Swapchain::operator[](size_t id) const {
-  return img[id];
-  }
-
-uint32_t Swapchain::currentImage() const {
-  return impl.handler->currentBackBufferIndex();
+Attachment& Swapchain::acquire() {
+  auto& ret = imgRing[0];
+  ret = Attachment(impl.handler, impl.handler->currentBackBuffer());
+  return ret;
   }

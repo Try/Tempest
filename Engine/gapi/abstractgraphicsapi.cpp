@@ -124,10 +124,6 @@ bool Detail::Bindings::contains(const AbstractGraphicsApi::NoCopy* res) const {
   return false;
   }
 
-std::shared_ptr<AbstractGraphicsApi::Fence> AbstractGraphicsApi::submit(Device* d, CommandBuffer* cmd)  {
+std::shared_ptr<AbstractGraphicsApi::Fence> AbstractGraphicsApi::submit(Device* d, CommandBuffer* cmd) {
   throw std::system_error(Tempest::GraphicsErrc::UnsupportedExtension);
-  }
-
-NonUniqResId AbstractGraphicsApi::Swapchain::syncId() const {
-  return NonUniqResId(0x1);
   }

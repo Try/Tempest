@@ -2,9 +2,9 @@
 
 using namespace Tempest;
 
-Attachment::Attachment(AbstractGraphicsApi::Swapchain* sw, uint32_t id) {
+Attachment::Attachment(AbstractGraphicsApi::Swapchain* sw, AbstractGraphicsApi::Texture* img) {
   sImpl.swapchain = sw;
-  sImpl.id        = id;
+  sImpl.img       = img;
   }
 
 int Attachment::w() const {

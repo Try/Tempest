@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Tempest/AbstractGraphicsApi>
+#include "gapi/vulkan/vtexture.h"
 #include "vulkan_sdk.h"
 
 namespace Tempest {
@@ -25,34 +26,22 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
       std::vector<VkPresentModeKHR>   presentModes;
       };
 
-    VkFormat                 format() const          { return swapChainImageFormat;   }
-    uint32_t                 w()      const override { return swapChainExtent.width;  }
-    uint32_t                 h()      const override { return swapChainExtent.height; }
-
+    VkFormat                 format() const;
+    uint32_t                 w()      const override;
+    uint32_t                 h()      const override;
     void                     reset() override;
-    uint32_t                 imageCount() const override { return uint32_t(imageList.views.size()); }
+    auto                     currentBackBuffer() -> AbstractGraphicsApi::Texture* override;
 
-    uint32_t                 currentBackBufferIndex() override;
+    VkSemaphore              aquireSemaphore();
     void                     present();
 
-    VkImage                  image(size_t i) const { return imageList.images[i]; }
-    VkImageView              view (size_t i) const { return imageList.views[i];  }
-
+  private:
     enum SyncState : uint8_t {
       S_Idle,
-      S_Pending,
       S_Aquired,
       S_Draw,
       };
 
-    struct Sync {
-      SyncState   state   = S_Idle;
-      uint32_t    imgId   = uint32_t(-1);
-      VkSemaphore acquire = VK_NULL_HANDLE;
-      };
-    std::vector<Sync>        sync;
-
-  private:
     class FenceList {
       public:
         FenceList() = default;
@@ -115,8 +104,11 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     VkSurfaceKHR             surface   = VK_NULL_HANDLE;
     VkSwapchainKHR           swapChain = VK_NULL_HANDLE;
 
+    SpinLock                 sync;
     uint32_t                 imgIndex = 0;
     uint32_t                 frameId  = 0;
+    VTextureSwapchain        currentAtt;
+    SyncState                currentSyncState = SyncState::S_Idle;
 
     VkFormat                 swapChainImageFormat = VK_FORMAT_UNDEFINED;
     VkExtent2D               swapChainExtent = {};
@@ -139,7 +131,14 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
 
     bool                     isSwapchainLost(VkResult code) const;
     VkResult                 implAcquireNextImage();
-    void                     acquireNextImage();
+
+  friend class VDevice;
   };
+
+inline VkFormat VSwapchain::format() const          { return swapChainImageFormat;   }
+
+inline uint32_t VSwapchain::w() const { return swapChainExtent.width;  }
+
+inline uint32_t VSwapchain::h() const { return swapChainExtent.height; }
 
 }}

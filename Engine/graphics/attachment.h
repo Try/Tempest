@@ -24,11 +24,11 @@ class Attachment final {
 
   private:
     Attachment(Texture2d&& t):tImpl(std::move(t)){}
-    Attachment(AbstractGraphicsApi::Swapchain* sw, uint32_t id);
+    Attachment(AbstractGraphicsApi::Swapchain* sw, AbstractGraphicsApi::Texture* img);
 
     struct SwImage {
       AbstractGraphicsApi::Swapchain* swapchain = nullptr;
-      uint32_t                        id        = 0;
+      AbstractGraphicsApi::Texture*   img       = nullptr;
       };
     Texture2d tImpl;
     SwImage   sImpl;

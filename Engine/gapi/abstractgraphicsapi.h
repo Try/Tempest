@@ -519,18 +519,21 @@ namespace Tempest {
 
         virtual void setPayload(std::vector<Detail::DSharedPtr<const AbstractGraphicsApi::Shared*>>&&) {}
         };
-      struct Swapchain:NoCopy {
-        virtual ~Swapchain()=default;
-        virtual void          reset()=0;
-        virtual uint32_t      currentBackBufferIndex()=0;
-        virtual NonUniqResId  syncId() const;
-        virtual uint32_t      imageCount() const=0;
-        virtual uint32_t      w() const=0;
-        virtual uint32_t      h() const=0;
-        };
       struct Texture:Shared  {
         virtual uint32_t      mipCount() const = 0;
         virtual NonUniqResId  syncId() const = 0;
+        };
+      struct Buffer:Shared   {
+        virtual ~Buffer()=default;
+        virtual void  update  (const void* data, size_t off, size_t size)=0;
+        virtual void  read    (      void* data, size_t off, size_t size)=0;
+        };
+      struct Swapchain:NoCopy {
+        virtual ~Swapchain()=default;
+        virtual void     reset()=0;
+        virtual uint32_t w() const=0;
+        virtual uint32_t h() const=0;
+        virtual Texture* currentBackBuffer() = 0;
         };
       struct Pipeline:Shared {
         virtual IVec3  workGroupSize() const = 0;
@@ -542,11 +545,6 @@ namespace Tempest {
         };
       struct Shader:Shared   {};
       struct PipelineLay:Shared {}; //TODO: remove
-      struct Buffer:Shared   {
-        virtual ~Buffer()=default;
-        virtual void  update  (const void* data, size_t off, size_t size)=0;
-        virtual void  read    (      void* data, size_t off, size_t size)=0;
-        };
 
       struct RtGeometry {
         const Buffer* vbo    = nullptr;
@@ -563,8 +561,6 @@ namespace Tempest {
       struct DescArray:NoCopy {};
       struct BarrierDesc {
         const Texture*   texture   = nullptr;
-        const Swapchain* swapchain = nullptr;
-        uint32_t         swId      = 0;
         uint32_t         mip       = 0;
 
         ResourceLayout   prev      = ResourceLayout::None;
@@ -685,11 +681,9 @@ namespace Detail {
     };
 
   struct FrameBufferDesc {
-    TextureFormat                   frm  [MaxFramebufferAttachments+1] = {};
-    AttachmentDesc                  desc [MaxFramebufferAttachments+1] = {};
-    AbstractGraphicsApi::Texture*   att  [MaxFramebufferAttachments+1] = {};
-    AbstractGraphicsApi::Swapchain* sw   [MaxFramebufferAttachments+1] = {};
-    uint32_t                        imgId[MaxFramebufferAttachments+1] = {};
+    TextureFormat                 frm [MaxFramebufferAttachments+1] = {};
+    AttachmentDesc                desc[MaxFramebufferAttachments+1] = {};
+    AbstractGraphicsApi::Texture* att [MaxFramebufferAttachments+1] = {};
     };
 
   };

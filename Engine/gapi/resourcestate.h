@@ -22,9 +22,8 @@ class ResourceState {
     void beginRendering(AbstractGraphicsApi::CommandBuffer& cmd, const Detail::FrameBufferDesc& desc);
     void endRendering  (AbstractGraphicsApi::CommandBuffer& cmd);
 
-    void setLayout  (AbstractGraphicsApi::Swapchain& s, uint32_t id, ResourceLayout lay, bool discard);
-    void setLayout  (AbstractGraphicsApi::Texture&   a, ResourceLayout lay, uint32_t mip, bool discard = false);
-    void forceLayout(AbstractGraphicsApi::Texture&   a, ResourceLayout lay);
+    void setLayout  (AbstractGraphicsApi::Texture& a, ResourceLayout lay, uint32_t mip, bool discard = false);
+    void forceLayout(AbstractGraphicsApi::Texture& a, ResourceLayout lay);
 
     void onTranferUsage(NonUniqResId read, NonUniqResId write, bool host);
     void onUavUsage    (NonUniqResId read, NonUniqResId write, PipelineStage st, bool host = false);
@@ -37,9 +36,8 @@ class ResourceState {
 
   private:
     struct ImgState {
-      AbstractGraphicsApi::Swapchain* sw      = nullptr;
       AbstractGraphicsApi::Texture*   img     = nullptr;
-      uint32_t                        id      = 0; // mip or image-id in swapchain
+      uint32_t                        mip     = 0;
 
       ResourceLayout                  last    = ResourceLayout::None;
       ResourceLayout                  next    = ResourceLayout::None;
@@ -47,7 +45,7 @@ class ResourceState {
       };
 
     void      fillReads();
-    ImgState& findImg(AbstractGraphicsApi::Texture* img, AbstractGraphicsApi::Swapchain* sw, uint32_t id, bool discard);
+    ImgState& findImg(AbstractGraphicsApi::Texture* img, uint32_t mip, bool discard);
     void      emitBarriers(AbstractGraphicsApi::CommandBuffer& cmd, AbstractGraphicsApi::SyncDesc& d, AbstractGraphicsApi::BarrierDesc* desc, size_t cnt);
 
     Detail::FrameBufferDesc fbo;

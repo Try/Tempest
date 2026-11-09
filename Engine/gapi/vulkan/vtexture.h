@@ -15,6 +15,7 @@ namespace Detail {
 class VDevice;
 class VBuffer;
 class VFramebufferMap;
+class VSwapchain;
 
 class VTexture : public AbstractGraphicsApi::Texture {
   public:
@@ -23,6 +24,8 @@ class VTexture : public AbstractGraphicsApi::Texture {
     ~VTexture();
 
     VTexture& operator=(const VTexture& other)=delete;
+
+    virtual bool isSwapchainImage() const { return false; }
 
     VkImageView    view(const ComponentMapping& m, uint32_t mipLevel, bool is3D, bool isUAV);
     void           descriptor(void* dest, const ComponentMapping& m, uint32_t mipLevel, bool is3D, bool isUAV);
@@ -68,6 +71,16 @@ class VTextureWithFbo : public VTexture {
   public:
     VTextureWithFbo(VTexture&& base);
     ~VTextureWithFbo();
+  };
+
+class VTextureSwapchain : public VTexture {
+  public:
+    VTextureSwapchain();
+    ~VTextureSwapchain();
+
+    bool isSwapchainImage() const override { return true; }
+
+    VSwapchain* owner = nullptr;
   };
 
 }}

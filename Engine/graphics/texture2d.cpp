@@ -5,7 +5,7 @@
 
 using namespace Tempest;
 
-Texture2d::Texture2d(Device&, AbstractGraphicsApi::PTexture&& impl, uint32_t w, uint32_t h, uint32_t d, TextureFormat frm)
+Texture2d::Texture2d(AbstractGraphicsApi::PTexture&& impl, uint32_t w, uint32_t h, uint32_t d, TextureFormat frm)
     :impl(std::move(impl)),frm(frm),texW(int(w)),texH(int(h)),texD(int(d)) {
   }
 

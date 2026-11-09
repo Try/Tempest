@@ -12,6 +12,7 @@ namespace Tempest {
 namespace Detail {
 
 class DxDevice;
+class DxSwapchain;
 
 class DxTexture : public AbstractGraphicsApi::Texture {
   public:
@@ -19,6 +20,8 @@ class DxTexture : public AbstractGraphicsApi::Texture {
     DxTexture(DxTexture&& other);
     ~DxTexture();
     DxTexture& operator=(const DxTexture& other) = delete;
+
+    virtual bool isSwapchainImage() const { return false; }
 
     auto         view(DxDevice& dev, const ComponentMapping& m, uint32_t mipLevel, bool is3D, bool isUAV) -> D3D12_CPU_DESCRIPTOR_HANDLE;
     uint32_t     mipCount() const override { return mipCnt; }
@@ -36,6 +39,9 @@ class DxTexture : public AbstractGraphicsApi::Texture {
     bool                   is3D           = false;
     bool                   isFilterable   = false;
     bool                   isStorageImage = false;
+
+  protected:
+    DxTexture(DxSwapchain*) {}
 
   private:
     void createView(D3D12_CPU_DESCRIPTOR_HANDLE ret, DxDevice& dev, DXGI_FORMAT format,
@@ -63,6 +69,15 @@ class DxTextureWithRT : public DxTexture {
     DxDescriptorAllocator::Allocation fboDescr;
     D3D12_CPU_DESCRIPTOR_HANDLE       handle;
     D3D12_CPU_DESCRIPTOR_HANDLE       handleR;
+  };
+
+class DxTextureSwapchain: public DxTexture {
+  public:
+    DxTextureSwapchain(DxSwapchain* sw):DxTexture(sw){}
+
+    bool isSwapchainImage() const override { return true; }
+
+    D3D12_CPU_DESCRIPTOR_HANDLE handle = {};
   };
 
 }

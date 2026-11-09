@@ -8,6 +8,7 @@
 #include "gapi/directx12/dxdescriptorallocator.h"
 #include "gapi/directx12/dxevent.h"
 #include "gapi/directx12/comptr.h"
+#include "gapi/directx12/dxtexture.h"
 
 namespace Tempest {
 
@@ -23,31 +24,30 @@ class DxSwapchain : public AbstractGraphicsApi::Swapchain {
     DxSwapchain(DxSwapchain&& other) = delete;
     ~DxSwapchain() override;
 
-    uint32_t                 w()      const override { return imgW; }
-    uint32_t                 h()      const override { return imgH; }
+    uint32_t    w()      const override { return imgW; }
+    uint32_t    h()      const override { return imgH; }
+    void        reset() override;
+    auto        currentBackBuffer() -> AbstractGraphicsApi::Texture* override;
 
-    void                     reset() override;
-    uint32_t                 imageCount() const override { return imgCount; }
-    uint32_t                 currentBackBufferIndex() override;
+    void        queuePresent();
 
-    void                     queuePresent();
-
-    DXGI_FORMAT              format() const { return frm; }
-    auto                     handle(size_t i) const -> D3D12_CPU_DESCRIPTOR_HANDLE;
-
-    ComPtr<IDXGISwapChain3>                   impl;
-    std::unique_ptr<ComPtr<ID3D12Resource>[]> views;
-    DxDescriptorAllocator::Allocation         rtvHeap;
+    DXGI_FORMAT format() const { return frm; }
+    auto        handle(size_t i) const -> D3D12_CPU_DESCRIPTOR_HANDLE;
 
   private:
-    void               initImages();
+    void        initImages();
 
     DxDevice&               dev;
     ComPtr<ID3D12Fence>     fence;
     DxEvent                 idleEvent;
-    ComPtr<IDXGISwapChain1> swapChain;
 
-    uint32_t                currImg      = 0;
+    ComPtr<IDXGISwapChain1> swapChain;
+    ComPtr<IDXGISwapChain3> impl;
+
+    std::unique_ptr<ComPtr<ID3D12Resource>[]> views;
+    DxDescriptorAllocator::Allocation         rtvHeap;
+    DxTextureSwapchain                        currentAtt;
+
     uint32_t                imgW         = 0;
     uint32_t                imgH         = 0;
     uint32_t                imgCount     = 3;

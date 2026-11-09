@@ -31,6 +31,10 @@ static uint32_t alignedSize(uint32_t w, uint32_t h, uint32_t a) {
   return ((w*sizeof(uint32_t)+a-1) & ~(a-1)) * (h);
   }
 
+MtTexture::MtTexture(MtDevice& d, MtSwapchain& sw)
+  : dev(d), mipCnt(1) {
+  }
+
 MtTexture::MtTexture(MtDevice& d, const uint32_t w, const uint32_t h, const uint32_t depth,
                      uint32_t mipCnt, TextureFormat frm, bool storageTex)
   :dev(d), mipCnt(mipCnt) {

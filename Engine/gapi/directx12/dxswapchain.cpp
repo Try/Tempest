@@ -8,7 +8,7 @@ using namespace Tempest;
 using namespace Tempest::Detail;
 
 DxSwapchain::DxSwapchain(DxDevice& dev, IDXGIFactory4& dxgi, SystemApi::Window* hwnd)
-  :dev(dev) {
+  :dev(dev), currentAtt(this) {
   auto& device = *dev.device;
 
   dxAssert(device.CreateFence(0, D3D12_FENCE_FLAG_NONE, uuid<ID3D12Fence>(), reinterpret_cast<void**>(&fence)));
@@ -70,6 +70,7 @@ void DxSwapchain::reset() {
   for(uint32_t i=0; i<imgCount; ++i) {
     views[i] = nullptr;
     }
+  currentAtt.impl = nullptr;
 
   HWND hwnd={};
   dxAssert(impl->GetHwnd(&hwnd));
@@ -81,13 +82,21 @@ void DxSwapchain::reset() {
   initImages();
   }
 
-uint32_t DxSwapchain::currentBackBufferIndex() {
-  return impl->GetCurrentBackBufferIndex();
+auto DxSwapchain::currentBackBuffer() -> AbstractGraphicsApi::Texture* {
+  const auto imgIndex = impl->GetCurrentBackBufferIndex();
+  const auto image    = views[imgIndex].get();
+
+  currentAtt.impl      = ComPtr<ID3D12Resource>(image); image->AddRef();
+  currentAtt.handle    = dev.descAlloc.handleCpu(rtvHeap, imgIndex);
+  currentAtt.format    = format();
+  currentAtt.nonUniqId = NonUniqResId(0x1);
+  return &currentAtt;
   }
 
 void DxSwapchain::queuePresent() {
   static int vsunc = 1;
   dxAssert(impl->Present(vsunc, 0));
+  currentAtt.impl = nullptr;
 
   ++frameCounter;
   dev.cmdQueue->Signal(fence.get(), frameCounter);

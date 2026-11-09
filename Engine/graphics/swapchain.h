@@ -16,15 +16,11 @@ class Swapchain final {
 
     Swapchain& operator = (Swapchain&& s);
 
-    uint32_t             w() const;
-    uint32_t             h() const;
+    uint32_t    w() const;
+    uint32_t    h() const;
 
-    void                 reset();
-
-    uint32_t             currentImage() const;
-    uint32_t             imageCount() const;
-    Attachment&          operator[](size_t id);
-    const Attachment&    operator[](size_t id) const;
+    void        reset();
+    Attachment& acquire();
 
   private:
     Swapchain(AbstractGraphicsApi::Swapchain* sw);
@@ -32,7 +28,9 @@ class Swapchain final {
     void implReset();
 
     Detail::DPtr<AbstractGraphicsApi::Swapchain*> impl;
-    std::unique_ptr<Attachment[]>                 img;
+
+    std::unique_ptr<Attachment[]>                 imgRing;
+    uint32_t                                      imgRingSz = 0;
 
   friend class Device;
   };
