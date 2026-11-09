@@ -433,7 +433,7 @@ VkResult VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& sw
 
   currentSyncState = SyncState::S_Idle;
 
-  return VK_SUCCESS; //implAcquireNextImage();
+  return VK_SUCCESS;
   }
 
 VkSurfaceFormatKHR VSwapchain::findSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const {

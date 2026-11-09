@@ -353,13 +353,13 @@ void DxCommandBuffer::beginRendering(const FrameBufferDesc& fbo, size_t fboSize,
   for(size_t i=0; i<fboSize; ++i) {
     auto& dx    = fbo.desc[i];
     auto& rdesc = view[viewSz];
-    if(fbo.desc[i].attachment!=nullptr && fbo.frm[i]==TextureFormat::Undefined) {
+    if(fbo.frm[i]==TextureFormat::Undefined) {
       auto& t                      = *reinterpret_cast<DxTextureSwapchain*>(fbo.att[i]);
       rdesc.cpuDescriptor          = t.handle;
       fboLayout.RTVFormats[viewSz] = t.format;
       ++viewSz;
       }
-    else if(fbo.desc[i].attachment!=nullptr) {
+    else if(!isDepthFormat(fbo.frm[i])) {
       auto& t                      = *reinterpret_cast<DxTextureWithRT*>(fbo.att[i]);
       rdesc.cpuDescriptor          = t.handle;
       fboLayout.RTVFormats[viewSz] = nativeFormat(fbo.frm[i]);
