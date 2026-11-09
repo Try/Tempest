@@ -21,6 +21,8 @@ class DxTexture : public AbstractGraphicsApi::Texture {
     ~DxTexture();
     DxTexture& operator=(const DxTexture& other) = delete;
 
+    virtual bool isSwapchainImage() const { return false; }
+
     auto         view(DxDevice& dev, const ComponentMapping& m, uint32_t mipLevel, bool is3D, bool isUAV) -> D3D12_CPU_DESCRIPTOR_HANDLE;
     uint32_t     mipCount() const override { return mipCnt; }
     NonUniqResId syncId() const override { return nonUniqId; }
@@ -30,7 +32,6 @@ class DxTexture : public AbstractGraphicsApi::Texture {
 
     DxDevice*              device         = nullptr;
     ComPtr<ID3D12Resource> impl;
-    ID3D12Resource*        swImpl         = nullptr;
     DXGI_FORMAT            format         = DXGI_FORMAT_UNKNOWN;
     NonUniqResId           nonUniqId      = NonUniqResId::I_None;
     UINT                   mipCnt         = 1;
@@ -73,6 +74,9 @@ class DxTextureWithRT : public DxTexture {
 class DxTextureSwapchain: public DxTexture {
   public:
     DxTextureSwapchain(DxSwapchain* sw):DxTexture(sw){}
+
+    bool isSwapchainImage() const override { return true; }
+
     D3D12_CPU_DESCRIPTOR_HANDLE handle = {};
   };
 

@@ -155,8 +155,7 @@ static D3D12_BARRIER_LAYOUT toLayout(D3D12_BARRIER_SYNC& stage, D3D12_BARRIER_AC
       access = D3D12_BARRIER_ACCESS_UNORDERED_ACCESS;
       return D3D12_BARRIER_LAYOUT_UNORDERED_ACCESS;
       }
-    if(texture->swImpl!=nullptr) {
-      // swapchain image
+    if(texture->isSwapchainImage()) {
       return D3D12_BARRIER_LAYOUT_COMMON;
       }
     stage  = D3D12_BARRIER_SYNC_VERTEX_SHADING | D3D12_BARRIER_SYNC_PIXEL_SHADING | D3D12_BARRIER_SYNC_COMPUTE_SHADING;
@@ -215,8 +214,8 @@ static D3D12_RESOURCE_STATES toResourceState(ResourceLayout rs, const DxTexture*
 
 static ID3D12Resource* toDxResource(const AbstractGraphicsApi::BarrierDesc& b) {
   auto& t = *reinterpret_cast<const DxTexture*>(b.texture);
-  if(t.swImpl!=nullptr)
-    return t.swImpl;
+  if(t.isSwapchainImage())
+    return t.impl.get();
   return t.impl.get();
   }
 

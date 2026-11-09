@@ -70,6 +70,7 @@ void DxSwapchain::reset() {
   for(uint32_t i=0; i<imgCount; ++i) {
     views[i] = nullptr;
     }
+  currentAtt.impl = nullptr;
 
   HWND hwnd={};
   dxAssert(impl->GetHwnd(&hwnd));
@@ -83,8 +84,9 @@ void DxSwapchain::reset() {
 
 auto DxSwapchain::currentBackBuffer() -> AbstractGraphicsApi::Texture* {
   const auto imgIndex = impl->GetCurrentBackBufferIndex();
+  const auto image    = views[imgIndex].get();
 
-  currentAtt.swImpl    = views[imgIndex].get();
+  currentAtt.impl      = ComPtr<ID3D12Resource>(image); image->AddRef();
   currentAtt.handle    = dev.descAlloc.handleCpu(rtvHeap, imgIndex);
   currentAtt.format    = format();
   currentAtt.nonUniqId = NonUniqResId(0x1);
@@ -94,6 +96,7 @@ auto DxSwapchain::currentBackBuffer() -> AbstractGraphicsApi::Texture* {
 void DxSwapchain::queuePresent() {
   static int vsunc = 1;
   dxAssert(impl->Present(vsunc, 0));
+  currentAtt.impl = nullptr;
 
   ++frameCounter;
   dev.cmdQueue->Signal(fence.get(), frameCounter);
