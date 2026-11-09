@@ -12,10 +12,10 @@ namespace Tempest {
 namespace Detail {
 
 class DxDevice;
+class DxSwapchain;
 
 class DxTexture : public AbstractGraphicsApi::Texture {
   public:
-    DxTexture() = default;
     DxTexture(DxDevice& dev, ComPtr<ID3D12Resource>&& b, const D3D12_RESOURCE_DESC1& desc);
     DxTexture(DxTexture&& other);
     ~DxTexture();
@@ -38,6 +38,9 @@ class DxTexture : public AbstractGraphicsApi::Texture {
     bool                   is3D           = false;
     bool                   isFilterable   = false;
     bool                   isStorageImage = false;
+
+  protected:
+    DxTexture(DxSwapchain*) {}
 
   private:
     void createView(D3D12_CPU_DESCRIPTOR_HANDLE ret, DxDevice& dev, DXGI_FORMAT format,
@@ -69,6 +72,7 @@ class DxTextureWithRT : public DxTexture {
 
 class DxTextureSwapchain: public DxTexture {
   public:
+    DxTextureSwapchain(DxSwapchain* sw):DxTexture(sw){}
     D3D12_CPU_DESCRIPTOR_HANDLE handle = {};
   };
 

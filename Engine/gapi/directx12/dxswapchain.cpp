@@ -8,7 +8,7 @@ using namespace Tempest;
 using namespace Tempest::Detail;
 
 DxSwapchain::DxSwapchain(DxDevice& dev, IDXGIFactory4& dxgi, SystemApi::Window* hwnd)
-  :dev(dev) {
+  :dev(dev), currentAtt(this) {
   auto& device = *dev.device;
 
   dxAssert(device.CreateFence(0, D3D12_FENCE_FLAG_NONE, uuid<ID3D12Fence>(), reinterpret_cast<void**>(&fence)));
