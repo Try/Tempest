@@ -131,10 +131,10 @@ static VkImageLayout toLayout(ResourceLayout rs, const VTexture* texture) {
   if(rs==ResourceLayout::Default) {
     if(texture==nullptr)
       return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    if(dynamic_cast<const VTextureSwapchain*>(texture)!=nullptr)
-      return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // remove dynamic-cast?
     if(nativeIsDepthFormat(texture->format))
       return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+    if(texture->isSwapchainImage())
+      return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // remove dynamic-cast?
     if(texture->isStorageImage)
       return VK_IMAGE_LAYOUT_GENERAL;
     return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
