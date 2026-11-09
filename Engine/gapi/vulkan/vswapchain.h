@@ -35,13 +35,13 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     VkSemaphore              aquireSemaphore();
     void                     present();
 
+  private:
     enum SyncState : uint8_t {
       S_Idle,
       S_Aquired,
       S_Draw,
       };
 
-  private:
     class FenceList {
       public:
         FenceList() = default;
