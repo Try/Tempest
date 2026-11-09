@@ -133,7 +133,6 @@ MtSwapchain::~MtSwapchain() {
 
 void MtSwapchain::reset() {
   dev.waitIdle(); // pending commands
-  std::lock_guard<SpinLock> guard(sync);
 
   // https://developer.apple.com/documentation/quartzcore/cametallayer?language=objc
   CAMetalLayer* lay = pimpl->metalLayer();
@@ -142,98 +141,33 @@ void MtSwapchain::reset() {
   lay.drawableSize = wrect.size;
   sz       = {int(wrect.size.width), int(wrect.size.height)};
   imgCount = uint32_t(lay.maximumDrawableCount);
-
-  img.resize(imgCount);
-  for(size_t i=0; i<imgCount; ++i)
-    img[i].tex = nullptr;
-  for(size_t i=0; i<imgCount; ++i)
-    img[i].tex = mkTexture();
-
-  currentImg = 0;
   }
 
 AbstractGraphicsApi::Texture* MtSwapchain::currentBackBuffer() {
-  const auto id = currentImg;
-  currentAtt.swImpl = img[id].tex.get();
-  currentAtt.format = format();
+  auto pool = NsPtr<NS::AutoreleasePool>::init();
+
+  CA::MetalLayer* lay      = reinterpret_cast<CA::MetalLayer*>(pimpl->metalLayer());
+  auto            drawable = lay->nextDrawable();
+  if(drawable==nullptr) {
+    throw SwapchainSuboptimal();
+    }
+
+  auto dr = drawable->texture();
+  if(dr->width()!=sz.w || dr->height()!=sz.h) {
+    throw SwapchainSuboptimal();
+    }
+
+  currentDrawable   = NsPtr<CA::MetalDrawable>(drawable->retain());
+  currentAtt.swImpl = dr;
+  currentAtt.format = MTL::PixelFormat(lay->pixelFormat());
   return &currentAtt;
   }
 
 void MtSwapchain::present() {
   auto pool = NsPtr<NS::AutoreleasePool>::init();
-  
-  CA::MetalLayer* lay      = reinterpret_cast<CA::MetalLayer*>(pimpl->metalLayer());
-  uint32_t        i        = currentImg;
-  auto            drawable = lay->nextDrawable();
-  if(drawable==nullptr)
-    throw SwapchainSuboptimal();
-  
-  std::lock_guard<SpinLock> guard(sync);
-  auto dr = drawable->texture();
-  if(dr->width()!=img[i].tex->width() || dr->height()!=img[i].tex->height()) {
-    throw SwapchainSuboptimal();
-    }
-  
-  auto desc = NsPtr<MTL::CommandBufferDescriptor>::init();
-  //desc->setRetainedReferences(true);
-  desc->setErrorOptions(MTL::CommandBufferErrorOptionEncoderExecutionStatus);
-  
-  auto cmd = dev.queue->commandBuffer(desc.get());
-  auto enc = cmd->blitCommandEncoder();
-  
-  enc->copyFromTexture(img[i].tex.get(), 0, 0,
-                       dr, 0, 0,
-                       1, 1);
-  enc->endEncoding();
-  cmd->presentDrawable(drawable);
-
-  dev.onSubmit();
-  cmd->addCompletedHandler(^(MTL::CommandBuffer* c){
-    MTL::CommandBufferStatus s = c->status();
-    if(s==MTL::CommandBufferStatusNotEnqueued ||
-       s==MTL::CommandBufferStatusEnqueued ||
-       s==MTL::CommandBufferStatusCommitted ||
-       s==MTL::CommandBufferStatusScheduled)
-      return;
-
-    if(s!=MTL::CommandBufferStatusCompleted) {
-      Log::e("swapchain fatal error");
-      dev.onFinish();
-      dev.waitIdle();
-      return;
-      }
-
-    dev.onFinish();
-    });
-  cmd->commit();
-
-  nextDrawable();
-  }
-
-NsPtr<MTL::Texture> MtSwapchain::mkTexture() {
-  auto pool = NsPtr<NS::AutoreleasePool>::init();
-  auto desc = NsPtr<MTL::TextureDescriptor>::init();
-  if(desc==nullptr)
-    throw std::system_error(GraphicsErrc::OutOfVideoMemory);
-
-  desc->setTextureType(MTL::TextureType2D);
-  desc->setPixelFormat(MTL::PixelFormatBGRA8Unorm);
-  desc->setWidth(sz.w);
-  desc->setHeight(sz.h);
-  desc->setMipmapLevelCount(1);
-  desc->setCpuCacheMode(MTL::CPUCacheModeDefaultCache);
-  desc->setStorageMode(MTL::StorageModePrivate);
-  desc->setUsage(MTL::TextureUsageRenderTarget);
-  desc->setAllowGPUOptimizedContents(true);
-
-  auto impl = NsPtr<MTL::Texture>(dev.impl->newTexture(desc.get()));
-  if(impl==nullptr)
-    throw std::system_error(GraphicsErrc::OutOfVideoMemory);
-  return impl;
-  }
-
-void MtSwapchain::nextDrawable() {
-  currentImg = (currentImg+1) % img.size();
+  currentDrawable->present();
+  currentDrawable   = nullptr;
+  currentAtt.swImpl = nullptr;
   }
 
 uint32_t MtSwapchain::w() const {

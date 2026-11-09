@@ -30,25 +30,16 @@ class MtSwapchain : public AbstractGraphicsApi::Swapchain {
 
     MTL::PixelFormat format() const;
 
-    struct Image {
-      NsPtr<MTL::Texture> tex;
-      };
-    std::vector<Image>    img;
-
   private:
     struct Impl;
     std::unique_ptr<Impl> pimpl;
 
-    SpinLock              sync;
     MtDevice&             dev;
     Tempest::Size         sz;
     MtTextureSwapcain     currentAtt;
+    NsPtr<CA::MetalDrawable> currentDrawable;
 
     uint32_t              imgCount   = 0;
-    uint32_t              currentImg = 0;
-
-    NsPtr<MTL::Texture>   mkTexture();
-    void                  nextDrawable();
   };
 
 }
