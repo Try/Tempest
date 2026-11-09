@@ -146,6 +146,14 @@ void MtSwapchain::reset() {
 AbstractGraphicsApi::Texture* MtSwapchain::currentBackBuffer() {
   auto pool = NsPtr<NS::AutoreleasePool>::init();
 
+  /*
+  // possible to soft-detect window resize in theory
+  auto wrect = windowRect(pimpl->wnd);
+  if(int(wrect.size.width)!=sz.w || int(wrect.size.height)!=sz.h) {
+    throw SwapchainSuboptimal();
+    }
+  */
+
   CA::MetalLayer* lay      = reinterpret_cast<CA::MetalLayer*>(pimpl->metalLayer());
   auto            drawable = lay->nextDrawable();
   if(drawable==nullptr) {
@@ -165,7 +173,35 @@ AbstractGraphicsApi::Texture* MtSwapchain::currentBackBuffer() {
 
 void MtSwapchain::present() {
   auto pool = NsPtr<NS::AutoreleasePool>::init();
-  currentDrawable->present();
+
+  auto desc = NsPtr<MTL::CommandBufferDescriptor>::init();
+  //desc->setRetainedReferences(true);
+  desc->setErrorOptions(MTL::CommandBufferErrorOptionEncoderExecutionStatus);
+
+  // To avoid presenting a drawable before any work is scheduled ...
+  // call a command buffer's presentDrawable: method instead.
+  // https://developer.apple.com/documentation/metal/mtldrawable/present%28%29?language=objc
+  auto cmd = dev.queue->commandBuffer(desc.get());
+  cmd->presentDrawable(currentDrawable.get());
+  dev.onSubmit();
+  cmd->addCompletedHandler(^(MTL::CommandBuffer* c){
+      MTL::CommandBufferStatus s = c->status();
+      if(s==MTL::CommandBufferStatusNotEnqueued ||
+          s==MTL::CommandBufferStatusEnqueued ||
+          s==MTL::CommandBufferStatusCommitted ||
+          s==MTL::CommandBufferStatusScheduled)
+        return;
+
+      if(s!=MTL::CommandBufferStatusCompleted) {
+        Log::e("swapchain fatal error");
+        dev.onFinish();
+        dev.waitIdle();
+        return;
+      }
+      dev.onFinish();
+    });
+  cmd->commit();
+
   currentDrawable   = nullptr;
   currentAtt.swImpl = nullptr;
   }
