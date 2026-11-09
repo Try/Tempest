@@ -23,13 +23,10 @@ class MtSwapchain : public AbstractGraphicsApi::Swapchain {
     ~MtSwapchain();
 
     void          reset() override;
-    uint32_t      currentBackBufferIndex() override;
     auto          currentBackBuffer() -> AbstractGraphicsApi::Texture* override;
-    uint32_t      imageCount() const override;
     uint32_t      w() const override;
     uint32_t      h() const override;
     void          present();
-    NonUniqResId  syncId() const override { return NonUniqResId::I_None; }
 
     MTL::PixelFormat format() const;
 

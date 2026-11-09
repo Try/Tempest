@@ -152,10 +152,6 @@ void MtSwapchain::reset() {
   currentImg = 0;
   }
 
-uint32_t MtSwapchain::currentBackBufferIndex() {
-  return currentImg;
-  }
-
 AbstractGraphicsApi::Texture* MtSwapchain::currentBackBuffer() {
   const auto id = currentImg;
   currentAtt.swImpl = img[id].tex.get();
@@ -238,10 +234,6 @@ NsPtr<MTL::Texture> MtSwapchain::mkTexture() {
 
 void MtSwapchain::nextDrawable() {
   currentImg = (currentImg+1) % img.size();
-  }
-
-uint32_t MtSwapchain::imageCount() const {
-  return imgCount;
   }
 
 uint32_t MtSwapchain::w() const {
