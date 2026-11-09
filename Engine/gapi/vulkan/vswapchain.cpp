@@ -588,11 +588,11 @@ VkResult VSwapchain::implAcquireNextImage() {
   }
 
 void VSwapchain::present() {
-  assert(currentSyncState==Detail::VSwapchain::S_Draw || currentSyncState==S_Pending);
+  assert(currentSyncState==Detail::VSwapchain::S_Draw || currentSyncState==S_Aquired);
 
   auto& pf = presentFence[frameId];
   auto  ps = presentSem  [imgIndex];
-  if(currentSyncState==S_Pending) {
+  if(currentSyncState==S_Aquired) {
     // empty frame with no command buffer. TODO: test
     ps = aquireSem[frameId];
     }
