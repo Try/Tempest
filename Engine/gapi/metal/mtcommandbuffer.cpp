@@ -82,7 +82,7 @@ void MtCommandBuffer::beginRendering(const FrameBufferDesc& fbo, size_t fboSize,
   auto desc = NsPtr<MTL::RenderPassDescriptor>::init();
   for(size_t i=0; i<fboSize; ++i) {
     auto& dx = fbo.desc[i];
-    if(dx.zbuffer!=nullptr) {
+    if(isDepthFormat(fbo.frm[i])) {
       auto& t = *reinterpret_cast<MtTexture*>(fbo.att[i]);
       desc->depthAttachment()->setTexture    (t.impl.get());
       desc->depthAttachment()->setLoadAction (mkLoadOp (dx.load));
