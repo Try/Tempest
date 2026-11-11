@@ -4,6 +4,8 @@
 #include "gapi/vulkan/vtexture.h"
 #include "vulkan_sdk.h"
 
+struct ANativeWindow;
+
 namespace Tempest {
 
 namespace Detail {
@@ -103,6 +105,12 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     SystemApi::Window*       hwnd      = nullptr;
     VkSurfaceKHR             surface   = VK_NULL_HANDLE;
     VkSwapchainKHR           swapChain = VK_NULL_HANDLE;
+#if defined(__ANDROID__)
+    struct WindowRelease {
+      void operator()(ANativeWindow* w) const noexcept;
+      };
+    std::unique_ptr<ANativeWindow,WindowRelease> window;
+#endif
 
     SpinLock                 sync;
     uint32_t                 imgIndex = 0;
