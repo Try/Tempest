@@ -3,12 +3,16 @@
 #include <Tempest/SystemApi>
 #include <filesystem>
 
+struct ANativeWindow;
+
 namespace Tempest {
 
 class AndroidApi final : SystemApi {
   public:
     static std::filesystem::path internalDataPath();
     static std::filesystem::path externalDataPath();
+    // Current window of the activity, or null while the activity is hidden
+    static ANativeWindow*        nativeWindow(SystemApi::Window* w);
 
   private:
     AndroidApi() = default;

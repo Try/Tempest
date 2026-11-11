@@ -157,6 +157,9 @@ void AndroidApi::onAppCmd(void*, int32_t cmd) {
       updateFocus();
       break;
     case APP_CMD_TERM_WINDOW:
+      // The activity is only hidden. Rendering stops until NativeActivity provides a new window.
+      hasWindow = false;
+      break;
     case APP_CMD_DESTROY:
       hasWindow = false;
       if(mainWindow!=nullptr) {
@@ -258,8 +261,8 @@ SystemApi::Window* AndroidApi::createAndroidWindow(Tempest::Window* owner) {
   if(isExit.load() || app->destroyRequested!=0)
     return nullptr;
   mainWindow = owner;
-  ANativeWindow_acquire(app->window);
-  return reinterpret_cast<SystemApi::Window*>(app->window);
+  // NativeActivity replaces its ANativeWindow while the activity lives; the activity identifies the window
+  return reinterpret_cast<SystemApi::Window*>(app->activity);
   }
 
 SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, uint32_t, uint32_t) {
@@ -270,8 +273,7 @@ SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, ShowMode
   return createAndroidWindow(owner);
   }
 
-void AndroidApi::implDestroyWindow(SystemApi::Window* w) {
-  ANativeWindow_release(reinterpret_cast<ANativeWindow*>(w));
+void AndroidApi::implDestroyWindow(SystemApi::Window*) {
   mainWindow = nullptr;
   touches.clear();
   }
@@ -281,8 +283,15 @@ void AndroidApi::implExit() {
   ALooper_wake(app->looper);
   }
 
+ANativeWindow* AndroidApi::nativeWindow(SystemApi::Window* w) {
+  assert(reinterpret_cast<ANativeActivity*>(w)==app->activity);
+  return app->window;
+  }
+
 Rect AndroidApi::implWindowClientRect(SystemApi::Window* w) {
-  const auto window = reinterpret_cast<ANativeWindow*>(w);
+  const auto window = nativeWindow(w);
+  if(window==nullptr)
+    return Rect();
   return Rect(0,0,ANativeWindow_getWidth(window),ANativeWindow_getHeight(window));
   }
 

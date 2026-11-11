@@ -8,7 +8,9 @@
 
 #include "vdevice.h"
 
-#if defined(__UNIX__)
+#if defined(__ANDROID__)
+#include "system/api/androidapi.h"
+#elif defined(__UNIX__)
 #include "system/api/x11api.h"
 #include "system/api/waylandapi.h"
 #endif
@@ -273,7 +275,7 @@ VkResult VSwapchain::createSurface(VkInstance instance, void* hwnd, VkSurfaceKHR
 #elif defined(__ANDROID__)
   VkAndroidSurfaceCreateInfoKHR createInfo = {};
   createInfo.sType  = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
-  createInfo.window = reinterpret_cast<ANativeWindow*>(hwnd);
+  createInfo.window = AndroidApi::nativeWindow(reinterpret_cast<SystemApi::Window*>(hwnd));
   return vkCreateAndroidSurfaceKHR(instance,&createInfo,nullptr,pSurface);
 #elif defined(__UNIX__)
 #if defined(TEMPEST_BUILD_WAYLAND)
@@ -325,6 +327,11 @@ void VSwapchain::cleanupSurface() noexcept {
   if(surface!=VK_NULL_HANDLE)
     vkDestroySurfaceKHR(device.instance,surface,nullptr);
   surface = VK_NULL_HANDLE;
+#if defined(__ANDROID__)
+  if(window!=nullptr)
+    ANativeWindow_release(window);
+  window = nullptr;
+#endif
   }
 
 void VSwapchain::reset() {
@@ -340,11 +347,21 @@ void VSwapchain::cleanup() noexcept {
 VkSurfaceKHR VSwapchain::createSurface(VkInstance instance, void* hwnd) {
   if(hwnd==nullptr)
     return VK_NULL_HANDLE;
+#if defined(__ANDROID__)
+  // NativeActivity gives a new window after the activity was hidden
+  if(window!=AndroidApi::nativeWindow(this->hwnd))
+    cleanupSurface();
+#endif
   if(surface!=VK_NULL_HANDLE)
     return surface;
   VkSurfaceKHR ret = VK_NULL_HANDLE;
   if(createSurface(instance, hwnd, &ret)!=VK_SUCCESS)
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
+#if defined(__ANDROID__)
+  // The reference keeps the old window alive, so its replacement can't get the same address
+  window = AndroidApi::nativeWindow(this->hwnd);
+  ANativeWindow_acquire(window);
+#endif
   return ret;
   }
 
@@ -535,6 +552,11 @@ bool VSwapchain::isSwapchainLost(VkResult code) const {
 
 AbstractGraphicsApi::Texture* VSwapchain::currentBackBuffer() {
   if(currentSyncState == SyncState::S_Idle) {
+#if defined(__ANDROID__)
+    // Drivers may keep presenting to a window Android has already replaced
+    if(window!=AndroidApi::nativeWindow(hwnd))
+      throw SwapchainSuboptimal();
+#endif
     const VkResult code = implAcquireNextImage();
     if(isSwapchainLost(code))
       throw SwapchainSuboptimal();
