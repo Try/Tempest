@@ -24,13 +24,17 @@ class Swapchain final {
 
   private:
     Swapchain(AbstractGraphicsApi::Swapchain* sw);
-
     void implReset();
+
+    enum {
+      // arbitrary, only to show different address on subsequent calls to `acquire`
+      RingSize = 3,
+      };
 
     Detail::DPtr<AbstractGraphicsApi::Swapchain*> impl;
 
     std::unique_ptr<Attachment[]>                 imgRing;
-    uint32_t                                      imgRingSz = 0;
+    uint16_t                                      imgRingAt = 0;
 
   friend class Device;
   };
