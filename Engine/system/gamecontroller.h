@@ -13,6 +13,7 @@ namespace Tempest {
 
 class ControllerApi;
 namespace Detail {
+struct GameControllerTestAccess;
 class MacosController;
 }
 
@@ -72,6 +73,7 @@ class GameController final {
     std::shared_ptr<Impl> impl;
 
   friend class ControllerApi;
+  friend struct Detail::GameControllerTestAccess;
   friend class Detail::MacosController;
   };
 

@@ -12,13 +12,15 @@
 
 #include <Tempest/Vec>
 
+#include "controller_test_access.h"
+
 #define private public
-#include "../../Engine/system/gamecontroller.h"
 #include "../../Engine/system/controller/macoscontrollerapi.h"
 #undef private
 #include "../../Engine/system/controller/macoscontrollerapi.mm"
 #include <Tempest/Application>
 
+using Tempest::Detail::GameControllerTestAccess;
 using Tempest::Detail::MacosControllerApi;
 
 namespace {
@@ -54,8 +56,8 @@ TEST(MacOSController, NativeCallbacksCopiesDisconnectAndLifetime) {
     connectFromReturnedFrame(*backend, native);
     ASSERT_EQ(backend->controllers().size(), 1u);
     auto state = backend->controllers().front();
-    auto controller = Tempest::GameController(state);
-    auto enumerated = Tempest::GameController(backend->controllers().front());
+    auto controller = GameControllerTestAccess::make(state);
+    auto enumerated = GameControllerTestAccess::make(backend->controllers().front());
     ASSERT_EQ(drain(controller).size(), 1u);
     EXPECT_TRUE(drain(enumerated).empty());
     EXPECT_EQ(controller, enumerated);
@@ -161,7 +163,7 @@ TEST(MacOSController, NativeCallbacksCopiesDisconnectAndLifetime) {
     EXPECT_EQ(controller, enumerated);
 
     connectFromReturnedFrame(*backend, native);
-    std::optional<Pad> live = Tempest::GameController(backend->controllers().front());
+    std::optional<Pad> live = GameControllerTestAccess::make(backend->controllers().front());
     EXPECT_NE(*live, controller);
     EXPECT_TRUE(*live != controller);
     auto liveButton = Block_copy(south.valueChangedHandler);
@@ -203,7 +205,7 @@ TEST(MacOSController, FocusGainRefreshPrecedesResetAfterEarlyWindowFocus) {
     backend.impl->setActive(false);
     GCController* native = [GCController controllerWithExtendedGamepad];
     connectFromReturnedFrame(backend, native);
-    auto controller = Tempest::GameController(backend.controllers().front());
+    auto controller = GameControllerTestAccess::make(backend.controllers().front());
     drain(controller);
     auto* pad = native.extendedGamepad;
     [pad.buttonA setValue:1.f];

@@ -14,13 +14,10 @@
 
 #include <Tempest/Vec>
 
-// Keep construction and mutation access in this fixture, not the production API.
-#define private public
-#include "../../Engine/system/gamecontroller.h"
-#undef private
-#include "../../Engine/system/controller/controllerstate.h"
+#include "controller_test_access.h"
 
 using Tempest::GameController;
+using Tempest::Detail::GameControllerTestAccess;
 
 namespace {
 using Button = GameController::Button;
@@ -31,7 +28,7 @@ constexpr uint32_t axes = (uint32_t(1) << uint32_t(Axis::Count)) - 1;
 constexpr uint32_t bit(Button value) { return uint32_t(1) << uint32_t(value); }
 constexpr uint32_t bit(Axis value) { return uint32_t(1) << uint32_t(value); }
 
-struct ControllerState final : GameController::Impl {
+struct ControllerState final : GameControllerTestAccess::Impl {
   ControllerState(std::string name, uint32_t buttons, uint32_t axes,
                   const GameController::State& initial, bool active = true)
     : Impl(std::move(name), buttons, axes, initial, active) {}
@@ -56,7 +53,7 @@ std::vector<Event> drain(const GameController& controller) {
 struct Controller : testing::Test {
   std::shared_ptr<ControllerState> input = std::make_shared<ControllerState>("controller", buttons, axes,
                                                                            GameController::State{});
-  GameController controller = GameController(input);
+  GameController controller = GameControllerTestAccess::make(input);
 
   void SetUp() override {
     const auto events = drain(controller);
@@ -73,7 +70,7 @@ struct Controller : testing::Test {
 
 TEST_F(Controller, CopiesAndEnumerationShareIdentityQueueAndShortTaps) {
   auto copy = controller;
-  auto enumerated = GameController(input);
+  auto enumerated = GameControllerTestAccess::make(input);
   EXPECT_EQ(copy, enumerated);
   EXPECT_FALSE(copy != enumerated);
   EXPECT_EQ(&copy.device(), &enumerated.device());
@@ -209,7 +206,7 @@ TEST_F(Controller, MovedFromAndEmptyHandlesAreSafe) {
   EXPECT_EQ(controller.axis(GameController::Stick::Left), Tempest::Vec2{});
   EXPECT_EQ(controller.axis(GameController::Stick::Right), Tempest::Vec2{});
   controller.pull([](const Event&) { FAIL() << "Moved-from handle delivered an event"; });
-  GameController empty(nullptr);
+  auto empty = GameControllerTestAccess::make(nullptr);
   EXPECT_EQ(empty, controller);
   EXPECT_EQ(controller, empty);
   EXPECT_FALSE(empty != controller);
@@ -260,7 +257,7 @@ TEST_F(Controller, PullIncludesTerminalEventsAddedByCallback) {
 TEST(ControllerLifetime, CallbackMayDestroyLastHandle) {
   auto input = std::make_shared<ControllerState>("controller", buttons, axes, GameController::State{});
   std::weak_ptr<ControllerState> weak = input;
-  std::optional<GameController> handle = GameController(input);
+  std::optional<GameController> handle = GameControllerTestAccess::make(input);
   input.reset();
   bool called = false;
   handle->pull([&](const Event&) {
@@ -300,7 +297,7 @@ TEST(ControllerCapabilities, InitialRawStateAndUnsupportedControls) {
   initial.axes[size_t(Axis::RightY)] = std::numeric_limits<float>::quiet_NaN();
   auto input = std::make_shared<ControllerState>("limited", bit(Button::South) | 0x80000000u,
                                                 bit(Axis::LeftX) | bit(Axis::RightY) | 0x80000000u, initial);
-  auto controller = GameController(input);
+  auto controller = GameControllerTestAccess::make(input);
   drain(controller);
   EXPECT_EQ(controller.device().supportedButtons, bit(Button::South));
   EXPECT_EQ(controller.device().supportedAxes, bit(Axis::LeftX) | bit(Axis::RightY));
@@ -330,7 +327,7 @@ TEST(ControllerCapabilities, NoneIsNotAControlOrCapability) {
   initial.buttons = bit(Button::None) | bit(Button::Home);
   auto input = std::make_shared<ControllerState>("controller", bit(Button::None) | bit(Button::Home),
                                                 axes, initial);
-  auto controller = GameController(input);
+  auto controller = GameControllerTestAccess::make(input);
   drain(controller);
   EXPECT_EQ(controller.device().supportedButtons, bit(Button::Home));
   EXPECT_EQ(controller.state().buttons, bit(Button::Home));
@@ -393,7 +390,7 @@ TEST_F(Controller, FocusRecoveryResetFollowsRefreshedHeldSample) {
 
 TEST_F(Controller, QueueRetains1024EdgesAndOverflowIsIsolated) {
   auto otherInput = std::make_shared<ControllerState>("other", buttons, axes, GameController::State{});
-  auto other = GameController(otherInput);
+  auto other = GameControllerTestAccess::make(otherInput);
   drain(other);
   otherInput->button(Button::East, true, 1.f);
   for(size_t i = 0; i < ControllerState::MaxEvents; ++i)
@@ -448,7 +445,7 @@ TEST_F(Controller, DisconnectReplacesFullQueueWithTerminalEventAndZerosSnapshot)
   EXPECT_EQ(controller.state().axes, GameController::State{}.axes);
   EXPECT_TRUE(drain(controller).empty());
   auto replacement = std::make_shared<ControllerState>("controller", buttons, axes, GameController::State{});
-  auto reconnected = GameController(replacement);
+  auto reconnected = GameControllerTestAccess::make(replacement);
   EXPECT_NE(reconnected, controller);
   EXPECT_TRUE(reconnected != controller);
   EXPECT_EQ(reconnected.device().name, controller.device().name);
