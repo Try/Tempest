@@ -106,7 +106,10 @@ class VSwapchain : public AbstractGraphicsApi::Swapchain {
     VkSurfaceKHR             surface   = VK_NULL_HANDLE;
     VkSwapchainKHR           swapChain = VK_NULL_HANDLE;
 #if defined(__ANDROID__)
-    ANativeWindow*           window    = nullptr;
+    struct WindowRelease {
+      void operator()(ANativeWindow* w) const noexcept;
+      };
+    std::unique_ptr<ANativeWindow,WindowRelease> window;
 #endif
 
     SpinLock                 sync;

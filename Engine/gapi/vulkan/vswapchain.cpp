@@ -39,6 +39,12 @@
 using namespace Tempest;
 using namespace Tempest::Detail;
 
+#if defined(__ANDROID__)
+void VSwapchain::WindowRelease::operator()(ANativeWindow* w) const noexcept {
+  ANativeWindow_release(w);
+  }
+#endif
+
 static VkResult VKAPI_CALL vkxRevertFence(VkDevice device, VkFence* pFence) {
   // HACK: revert fence state to signaled
   VkFenceCreateInfo fenceInfo = {};
@@ -328,9 +334,7 @@ void VSwapchain::cleanupSurface() noexcept {
     vkDestroySurfaceKHR(device.instance,surface,nullptr);
   surface = VK_NULL_HANDLE;
 #if defined(__ANDROID__)
-  if(window!=nullptr)
-    ANativeWindow_release(window);
-  window = nullptr;
+  window.reset();
 #endif
   }
 
@@ -349,7 +353,7 @@ VkSurfaceKHR VSwapchain::createSurface(VkInstance instance, void* hwnd) {
     return VK_NULL_HANDLE;
 #if defined(__ANDROID__)
   // NativeActivity gives a new window after the activity was hidden
-  if(window!=AndroidApi::nativeWindow(this->hwnd))
+  if(window.get()!=AndroidApi::nativeWindow(this->hwnd))
     cleanupSurface();
 #endif
   if(surface!=VK_NULL_HANDLE)
@@ -359,8 +363,9 @@ VkSurfaceKHR VSwapchain::createSurface(VkInstance instance, void* hwnd) {
     throw std::system_error(Tempest::GraphicsErrc::NoDevice);
 #if defined(__ANDROID__)
   // The reference keeps the old window alive, so its replacement can't get the same address
-  window = AndroidApi::nativeWindow(this->hwnd);
-  ANativeWindow_acquire(window);
+  ANativeWindow* current = AndroidApi::nativeWindow(this->hwnd);
+  ANativeWindow_acquire(current);
+  window.reset(current);
 #endif
   return ret;
   }
@@ -554,7 +559,7 @@ AbstractGraphicsApi::Texture* VSwapchain::currentBackBuffer() {
   if(currentSyncState == SyncState::S_Idle) {
 #if defined(__ANDROID__)
     // Drivers may keep presenting to a window Android has already replaced
-    if(window!=AndroidApi::nativeWindow(hwnd))
+    if(window.get()!=AndroidApi::nativeWindow(hwnd))
       throw SwapchainSuboptimal();
 #endif
     const VkResult code = implAcquireNextImage();

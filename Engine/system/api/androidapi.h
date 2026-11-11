@@ -11,7 +11,7 @@ class AndroidApi final : SystemApi {
   public:
     static std::filesystem::path internalDataPath();
     static std::filesystem::path externalDataPath();
-    // Current window of the activity, or null while the activity is hidden
+    // Current window of the activity, or null while it is hidden or for another activity
     static ANativeWindow*        nativeWindow(SystemApi::Window* w);
 
   private:

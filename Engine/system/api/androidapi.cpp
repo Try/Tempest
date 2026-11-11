@@ -261,8 +261,8 @@ SystemApi::Window* AndroidApi::createAndroidWindow(Tempest::Window* owner) {
   if(isExit.load() || app->destroyRequested!=0)
     return nullptr;
   mainWindow = owner;
-  // NativeActivity replaces its ANativeWindow while the activity lives; the activity identifies the window
-  return reinterpret_cast<SystemApi::Window*>(app->activity);
+  // NativeActivity replaces its ANativeWindow while the activity lives; the activity object identifies the window
+  return reinterpret_cast<SystemApi::Window*>(app->activity->clazz);
   }
 
 SystemApi::Window* AndroidApi::implCreateWindow(Tempest::Window* owner, uint32_t, uint32_t) {
@@ -284,7 +284,8 @@ void AndroidApi::implExit() {
   }
 
 ANativeWindow* AndroidApi::nativeWindow(SystemApi::Window* w) {
-  assert(reinterpret_cast<ANativeActivity*>(w)==app->activity);
+  if(reinterpret_cast<jobject>(w)!=app->activity->clazz)
+    return nullptr;
   return app->window;
   }
 
