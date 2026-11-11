@@ -85,6 +85,7 @@ Fence Device::submit(const CommandBuffer &cmd) {
 
 void Device::present(Swapchain& sw) {
   api.present(dev,sw.impl.handler);
+  sw.imgRingAt = (sw.imgRingAt + 1)%Swapchain::RingSize;
   }
 
 Shader Device::shader(RFile &file) {
