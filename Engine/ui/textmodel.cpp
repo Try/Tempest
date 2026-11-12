@@ -239,7 +239,7 @@ void TextModel::paint(Painter &p, const Font& fnt, const Color& color, int fx, i
       return;
       }
     if(ch=='\n'){
-      x =  0;
+      x =  float(fx);
       y += fnt.pixelSize();
       continue;
       }
