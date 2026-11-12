@@ -1,0 +1,260 @@
+// Local native fixture includes the implementation; do not compile it twice.
+#include <gtest/gtest.h>
+
+#include <array>
+#include <functional>
+#include <future>
+#include <memory>
+#include <optional>
+#include <string>
+#include <thread>
+#include <vector>
+
+#include <Tempest/Vec>
+
+#include "controller_test_access.h"
+
+#define private public
+#include "../../Engine/system/controller/macoscontrollerapi.h"
+#undef private
+#include "../../Engine/system/controller/macoscontrollerapi.mm"
+#include <Tempest/Application>
+
+using Tempest::Detail::GameControllerTestAccess;
+using Tempest::Detail::MacosControllerApi;
+
+namespace {
+using Pad = Tempest::GameController;
+using Event = Pad::Event;
+
+std::vector<Event> drain(const Pad& controller) {
+  std::vector<Event> result;
+  controller.pull([&](const Event& event) {
+    if(event.type != Event::Type::ButtonDown && event.type != Event::Type::ButtonUp)
+      EXPECT_EQ(event.button, Pad::Button::None);
+    result.push_back(event);
+    });
+  return result;
+  }
+
+// This scope ends before callbacks execute, checking weak_ptr capture lifetime.
+__attribute__((noinline))
+void connectFromReturnedFrame(MacosControllerApi& backend, GCController* controller) {
+  backend.impl->connect(controller);
+  }
+}
+
+TEST(MacOSController, NativeCallbacksCopiesDisconnectAndLifetime) {
+  @autoreleasepool {
+    ASSERT_TRUE([NSThread isMainThread]);
+    auto backend = std::make_unique<MacosControllerApi>();
+    const auto existing = backend->impl->devices;
+    for(const auto& device : existing)
+      backend->impl->disconnect(device->native);
+    backend->impl->setActive(true);
+    GCController* native = [GCController controllerWithExtendedGamepad];
+    connectFromReturnedFrame(*backend, native);
+    ASSERT_EQ(backend->controllers().size(), 1u);
+    auto state = backend->controllers().front();
+    auto controller = GameControllerTestAccess::make(state);
+    auto enumerated = GameControllerTestAccess::make(backend->controllers().front());
+    ASSERT_EQ(drain(controller).size(), 1u);
+    EXPECT_TRUE(drain(enumerated).empty());
+    EXPECT_EQ(controller, enumerated);
+    EXPECT_FALSE(controller != enumerated);
+    EXPECT_EQ(&controller.device(), &enumerated.device());
+    EXPECT_EQ(native.handlerQueue, dispatch_get_main_queue());
+
+    auto* pad = native.extendedGamepad;
+    auto* south = pad.buttonA;
+    struct NativeButton { Pad::Button button; GCControllerButtonInput* input; };
+    const NativeButton expected[] = {
+      {Pad::Button::South, pad.buttonA}, {Pad::Button::East, pad.buttonB},
+      {Pad::Button::West, pad.buttonX}, {Pad::Button::North, pad.buttonY},
+      {Pad::Button::DpadUp, pad.dpad.up}, {Pad::Button::DpadDown, pad.dpad.down},
+      {Pad::Button::DpadLeft, pad.dpad.left}, {Pad::Button::DpadRight, pad.dpad.right},
+      {Pad::Button::LeftShoulder, pad.leftShoulder}, {Pad::Button::RightShoulder, pad.rightShoulder},
+      {Pad::Button::LeftThumb, pad.leftThumbstickButton}, {Pad::Button::RightThumb, pad.rightThumbstickButton},
+      {Pad::Button::LeftTrigger, pad.leftTrigger}, {Pad::Button::RightTrigger, pad.rightTrigger},
+      {Pad::Button::Menu, pad.buttonMenu}, {Pad::Button::View, pad.buttonOptions},
+      {Pad::Button::Home, pad.buttonHome}
+      };
+    std::vector<Pad::Button> supported;
+    uint32_t supportedMask = 0;
+    for(const auto& control : expected) {
+      if(control.input == nil)
+        continue;
+      supported.push_back(control.button);
+      supportedMask |= uint32_t(1) << uint32_t(control.button);
+      auto handler = control.input.valueChangedHandler;
+      ASSERT_NE(handler, nil);
+      // Callback arguments deliberately differ from the unchanged profile.
+      handler(control.input, 1.f, YES);
+      EXPECT_EQ(controller.state().buttons, uint32_t(1) << uint32_t(control.button));
+      handler(control.input, 0.f, NO);
+      EXPECT_EQ(controller.state().buttons, 0u);
+      }
+    EXPECT_EQ(controller.device().supportedButtons, supportedMask);
+    EXPECT_EQ(controller.device().supportedButtons & uint32_t(1), 0u);
+    std::thread consumer([copy = controller, supported] {
+      const auto caller = std::this_thread::get_id();
+      size_t count = 0;
+      copy.pull([&](const Event& event) {
+        EXPECT_EQ(std::this_thread::get_id(), caller);
+        EXPECT_EQ(event.type, count % 2 == 0 ? Event::Type::ButtonDown : Event::Type::ButtonUp);
+        ASSERT_LT(count / 2, supported.size());
+        EXPECT_EQ(event.button, supported[count / 2]);
+        ++count;
+        });
+      EXPECT_EQ(count, supported.size() * 2);
+      EXPECT_EQ(copy.state().buttons, 0u);
+      });
+    consumer.join();
+
+    const auto analog = stickAxes(native.extendedGamepad);
+    for(size_t i = 0; i < analog.size(); ++i) {
+      ASSERT_NE(analog[i].valueChangedHandler, nil);
+      analog[i].valueChangedHandler(analog[i], i % 2 == 0 ? .75f : -.5f);
+      }
+    native.extendedGamepad.leftTrigger.valueChangedHandler(native.extendedGamepad.leftTrigger, .25f, NO);
+    native.extendedGamepad.rightTrigger.valueChangedHandler(native.extendedGamepad.rightTrigger, .8f, NO);
+    EXPECT_EQ(controller.state().axes, (std::array<float, 6>{{.75f, -.5f, .75f, -.5f, .25f, .8f}}));
+    EXPECT_TRUE(drain(controller).empty());
+
+    // App focus is independent of Tempest windows, and snapshots stay current.
+    [[NSNotificationCenter defaultCenter] postNotificationName:NSApplicationWillResignActiveNotification object:nil];
+    auto focus = drain(controller);
+    ASSERT_EQ(focus.size(), 1u);
+    EXPECT_EQ(focus[0].reason, Event::ResetReason::FocusLost);
+    south.valueChangedHandler(south, 1.f, YES);
+    EXPECT_EQ(controller.state().buttons, uint32_t(1) << uint32_t(Pad::Button::South));
+    EXPECT_TRUE(drain(controller).empty());
+    [[NSNotificationCenter defaultCenter] postNotificationName:NSApplicationDidBecomeActiveNotification object:nil];
+    // Regain samples the real profile (which remains neutral in this fixture).
+    EXPECT_EQ(controller.state().buttons, 0u);
+    const auto gained = drain(controller);
+    ASSERT_EQ(gained.size(), 1u);
+    EXPECT_EQ(gained[0].reason, Event::ResetReason::FocusGained);
+
+    for(size_t edge = 0; edge < 1024; ++edge)
+      south.valueChangedHandler(south, edge % 2 == 0 ? 1.f : 0.f, edge % 2 == 0);
+    native.extendedGamepad.leftTrigger.valueChangedHandler(native.extendedGamepad.leftTrigger, .9f, YES);
+    const auto overflow = drain(controller);
+    ASSERT_EQ(overflow.size(), 1u);
+    EXPECT_EQ(overflow[0].reason, Event::ResetReason::Overflow);
+    EXPECT_EQ(controller.state().axes[size_t(Pad::Axis::LeftTrigger)], .9f);
+    EXPECT_NE(controller.state().buttons & (uint32_t(1) << uint32_t(Pad::Button::LeftTrigger)), 0u);
+
+    // Already copied native callbacks must not resurrect a disconnected handle.
+    auto oldButton = Block_copy(south.valueChangedHandler);
+    auto oldAxis = Block_copy(analog[0].valueChangedHandler);
+    backend->impl->disconnect(native);
+    const auto disconnected = drain(controller);
+    ASSERT_EQ(disconnected.size(), 2u);
+    EXPECT_EQ(disconnected[0].reason, Event::ResetReason::Disconnected);
+    EXPECT_EQ(disconnected[1].type, Event::Type::Disconnected);
+    EXPECT_TRUE(backend->controllers().empty());
+    oldButton(south, 1.f, YES);
+    oldAxis(analog[0], 1.f);
+    EXPECT_EQ(controller.state().buttons, 0u);
+    EXPECT_EQ(controller.state().axes, Pad::State{}.axes);
+    EXPECT_TRUE(drain(controller).empty());
+    EXPECT_EQ(state->native, nil);
+    EXPECT_EQ(controller, enumerated);
+
+    connectFromReturnedFrame(*backend, native);
+    std::optional<Pad> live = GameControllerTestAccess::make(backend->controllers().front());
+    EXPECT_NE(*live, controller);
+    EXPECT_TRUE(*live != controller);
+    auto liveButton = Block_copy(south.valueChangedHandler);
+    auto liveAxis = Block_copy(analog[0].valueChangedHandler);
+    std::weak_ptr<MacosControllerApi::Impl> nativeLifetime = backend->impl;
+    std::weak_ptr<Tempest::Detail::MacosController> liveState = backend->controllers().front();
+    backend.reset();
+    EXPECT_TRUE(nativeLifetime.expired());
+    EXPECT_FALSE(liveState.expired());
+    EXPECT_EQ(liveState.lock()->native, nil);
+    EXPECT_EQ(south.valueChangedHandler, nil);
+    EXPECT_EQ(analog[0].valueChangedHandler, nil);
+    oldButton(south, 0.f, NO);
+    oldAxis(analog[0], 0.f);
+    liveButton(south, 1.f, YES);
+    liveAxis(analog[0], 1.f);
+    EXPECT_EQ(live->state().buttons, 0u);
+    EXPECT_EQ(live->state().axes, Pad::State{}.axes);
+    const auto terminal = drain(*live);
+    ASSERT_EQ(terminal.size(), 2u);
+    EXPECT_EQ(terminal[1].type, Event::Type::Disconnected);
+    std::thread releaseLastCopy([handle = std::move(live)]() mutable { handle.reset(); });
+    live.reset();
+    releaseLastCopy.join();
+    EXPECT_TRUE(liveState.expired());
+    Block_release(oldButton);
+    Block_release(oldAxis);
+    Block_release(liveButton);
+    Block_release(liveAxis);
+    }
+  }
+
+TEST(MacOSController, FocusGainRefreshPrecedesResetAfterEarlyWindowFocus) {
+  @autoreleasepool {
+    MacosControllerApi backend;
+    const auto existing = backend.impl->devices;
+    for(const auto& device : existing)
+      backend.impl->disconnect(device->native);
+    backend.impl->setActive(false);
+    GCController* native = [GCController controllerWithExtendedGamepad];
+    connectFromReturnedFrame(backend, native);
+    auto controller = GameControllerTestAccess::make(backend.controllers().front());
+    drain(controller);
+    auto* pad = native.extendedGamepad;
+    [pad.buttonA setValue:1.f];
+    [pad.leftThumbstick.xAxis setValue:.8f];
+    [pad.rightThumbstick.yAxis setValue:-.7f];
+    [pad.leftTrigger setValue:.65f];
+    ASSERT_TRUE(pad.buttonA.isPressed);
+    ASSERT_EQ(pad.leftThumbstick.xAxis.value, .8f);
+    ASSERT_EQ(pad.rightThumbstick.yAxis.value, -.7f);
+    ASSERT_EQ(pad.leftTrigger.value, .65f);
+
+    // Model a window-focus notification observing synthetic neutral input before
+    // the application-focus notification refreshes this held native profile.
+    pad.buttonA.valueChangedHandler(pad.buttonA, 0.f, NO);
+    pad.leftThumbstick.xAxis.valueChangedHandler(pad.leftThumbstick.xAxis, 0.f);
+    pad.rightThumbstick.yAxis.valueChangedHandler(pad.rightThumbstick.yAxis, 0.f);
+    pad.leftTrigger.valueChangedHandler(pad.leftTrigger, 0.f, NO);
+    EXPECT_EQ(controller.state().buttons, 0u);
+    EXPECT_EQ(controller.state().axes, Pad::State{}.axes);
+    EXPECT_TRUE(drain(controller).empty());
+
+    [[NSNotificationCenter defaultCenter] postNotificationName:NSApplicationDidBecomeActiveNotification object:nil];
+    size_t calls = 0;
+    controller.pull([&](const Event& event) {
+      EXPECT_EQ(event.type, Event::Type::Reset);
+      EXPECT_EQ(event.reason, Event::ResetReason::FocusGained);
+      EXPECT_EQ(event.button, Pad::Button::None);
+      const auto refreshed = controller.state();
+      EXPECT_NE(refreshed.buttons & (uint32_t(1) << uint32_t(Pad::Button::South)), 0u);
+      EXPECT_EQ(refreshed.axes[size_t(Pad::Axis::LeftX)], .8f);
+      EXPECT_EQ(refreshed.axes[size_t(Pad::Axis::RightY)], -.7f);
+      EXPECT_EQ(refreshed.axes[size_t(Pad::Axis::LeftTrigger)], .65f);
+      ++calls;
+      });
+    EXPECT_EQ(calls, 1u);
+    }
+  }
+
+TEST(MacOSController, PublicEnumerationNeedsMainThreadButNoTempestWindow) {
+  @autoreleasepool {
+    [NSApplication sharedApplication];
+    [NSApp finishLaunching];
+    // The target links no SystemApi, application.cpp, renderer or Window source.
+    EXPECT_NO_THROW(Tempest::Application::controllers());
+    std::thread worker([] {
+      EXPECT_THROW(Tempest::Application::controllers(), std::logic_error);
+      });
+    worker.join();
+    // Pump the host run loop, independently of Tempest window/event APIs.
+    [[NSRunLoop mainRunLoop] runUntilDate:[NSDate dateWithTimeIntervalSinceNow:.01]];
+    }
+  }
