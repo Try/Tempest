@@ -202,6 +202,9 @@ class Utf8Iterator {
 
       char32_t ch;
       switch(l){
+        case 0:
+          str+=1;
+          return '\0'; //error
         case 1:
           ch=Detail::getChar1(str);
           str+=1;
