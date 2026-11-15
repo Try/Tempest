@@ -42,10 +42,10 @@ bool Dir::scan(const char *name, std::function<void(const std::string&,FileType)
   std::string tmp;
   while( FindNextFileW(hFind, &ffd)!=0 ){
     const int len = WideCharToMultiByte(CP_UTF8,0,ffd.cFileName,-1,nullptr,0,nullptr,nullptr);
-    if(len<=0)
+    if(len<=1)
       continue;
 
-    tmp.resize(size_t(len));
+    tmp.resize(size_t(len-1));
     WideCharToMultiByte(CP_UTF8,0,ffd.cFileName,-1,&tmp[0],int(tmp.size()),nullptr,nullptr);
 
     if(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
