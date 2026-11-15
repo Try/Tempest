@@ -49,6 +49,10 @@ void Label::setText(std::string_view t) {
   update();
   }
 
+const TextModel& Label::text() const {
+  return textM;
+  }
+
 void Label::invalidateSizeHint() {
   auto sz = style().sizeHint(this,Style::E_Background,&textM,Style::Extra(*this));
   setSizeHint(sz,margins());
