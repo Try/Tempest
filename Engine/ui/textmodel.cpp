@@ -93,13 +93,15 @@ void TextModel::CommandErase::undo(TextModel& subj) {
 
 TextModel::TextModel(std::string_view str)
   :txt(str.size() + 1){
-  std::memcpy(txt.data(), str.data(), txt.size());
+  std::memcpy(txt.data(), str.data(), str.size());
+  txt.back() = '\0';
   buildIndex();
   }
 
 void TextModel::setText(std::string_view str) {
   txt.resize(str.size() + 1);
-  std::memcpy(txt.data(), str.data(), txt.size());
+  std::memcpy(txt.data(), str.data(), str.size());
+  txt.back() = '\0';
   buildIndex();
   sz.actual=false;
   }
