@@ -2,6 +2,7 @@
 
 #include <Tempest/Painter>
 #include <Tempest/Application>
+#include <Tempest/Utf8Iterator>
 
 using namespace Tempest;
 
@@ -42,9 +43,35 @@ const Color& Label::textColor() const {
   return textCl;
   }
 
-void Label::setText(std::string_view t) {
+void Label::setText(std::string_view text) {
+  Utf8Iterator i(text);
+  while(i.hasData()) {
+    char32_t ch = i.next();
+    if(ch=='\n' || ch=='\r')
+      return filterAndSetText(text);
+    }
   updateFont();
-  textM.setText(t);
+  textM.setText(text);
+  invalidateSizeHint();
+  update();
+  }
+
+void Label::filterAndSetText(std::string_view text) {
+  std::string str;
+
+  Utf8Iterator i(text);
+  while(i.hasData()) {
+    size_t i0 = i.pos();
+    char32_t ch = i.next();
+    if(ch=='\n' || ch=='\r')
+      continue;
+
+    size_t i1 = i.pos();
+    for(size_t r=i0;r<i1;++r)
+      str.push_back(text[r]);
+    }
+  updateFont();
+  textM.setText(text);
   invalidateSizeHint();
   update();
   }

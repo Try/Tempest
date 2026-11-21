@@ -25,6 +25,7 @@ class Label : public Widget {
   private:
     void          invalidateSizeHint();
     void          updateFont();
+    void          filterAndSetText(std::string_view src);
 
     Font          fnt;
     bool          fntInUse=false;
