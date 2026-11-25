@@ -81,7 +81,7 @@ void AbstractTextInput::setFont(const Font &f) {
   }
 
 const Font& AbstractTextInput::font() const {
-  return fnt;
+  return textM.font();
   }
 
 void AbstractTextInput::setTextColor(const Color& cl) {
