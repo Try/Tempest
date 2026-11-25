@@ -3,7 +3,9 @@
 #include <Tempest/Platform>
 #include <Tempest/TextCodec>
 
-#ifdef __WINDOWS__
+#include <memory>
+
+#if defined(__WINDOWS__) || defined(__WINDOWS_PHONE__)
 #include <windows.h>
 #else
 #include <errno.h>
@@ -38,6 +40,7 @@ bool Dir::scan(const char *name, std::function<void(const std::string&,FileType)
                             FindExSearchNameMatch, nullptr, 0);
   if(INVALID_HANDLE_VALUE==hFind)
     return false;
+  const std::unique_ptr<void, decltype(&FindClose)> searchHandle(hFind, &FindClose);
 
   std::string tmp;
   while( FindNextFileW(hFind, &ffd)!=0 ){
@@ -55,32 +58,21 @@ bool Dir::scan(const char *name, std::function<void(const std::string&,FileType)
   if( GetLastError() != ERROR_NO_MORE_FILES )
     return false;
 #else
-  DIR *dirp = opendir(name);
-  if(dirp==nullptr)
+  const std::unique_ptr<DIR, decltype(&closedir)> dirp(opendir(name), &closedir);
+  if(!dirp)
     return false;
 
-  try {
-    std::string tmp;
-    while (dirp) {
-      errno = 0;
-      if(dirent* dp = readdir(dirp)) {
-        tmp = dp->d_name;
-        if(dp->d_type==DT_DIR)
-          cb(tmp,FT_Dir); else
-          cb(tmp,FT_File);
-        } else {
-        if( errno == 0 ) {
-          closedir(dirp);
-          return true;
-          }
-        closedir(dirp);
-        return false;
-        }
-      }
-    }
-  catch(...) {
-    closedir(dirp);
-    throw;
+  std::string tmp;
+  for(;;) {
+    errno = 0;
+    const auto* dp = readdir(dirp.get());
+    if(dp==nullptr)
+      return errno==0;
+
+    tmp = dp->d_name;
+    if(dp->d_type==DT_DIR)
+      cb(tmp,FT_Dir); else
+      cb(tmp,FT_File);
     }
 #endif
   return true;
@@ -103,6 +95,7 @@ bool Dir::scan(const char16_t *path, std::function<void (const std::u16string &,
                             FindExSearchNameMatch, nullptr, 0);
   if(INVALID_HANDLE_VALUE==hFind)
     return false;
+  const std::unique_ptr<void, decltype(&FindClose)> searchHandle(hFind, &FindClose);
 
   while( FindNextFileW(hFind, &ffd)!=0 ){
     std::u16string path=reinterpret_cast<const char16_t*>(ffd.cFileName);
@@ -114,32 +107,21 @@ bool Dir::scan(const char16_t *path, std::function<void (const std::u16string &,
     return false;
 #else
   std::string name = TextCodec::toUtf8(path);
-  DIR *dirp = opendir(name.c_str());
-  if(dirp==nullptr)
+  const std::unique_ptr<DIR, decltype(&closedir)> dirp(opendir(name.c_str()), &closedir);
+  if(!dirp)
     return false;
 
-  try {
-    std::u16string tmp;
-    while (dirp) {
-      errno = 0;
-      if(dirent* dp = readdir(dirp)) {
-        tmp = TextCodec::toUtf16(dp->d_name);
-        if(dp->d_type==DT_DIR)
-          cb(tmp,FT_Dir); else
-          cb(tmp,FT_File);
-        } else {
-        if( errno == 0 ) {
-          closedir(dirp);
-          return true;
-          }
-        closedir(dirp);
-        return false;
-        }
-      }
-    }
-  catch(...) {
-    closedir(dirp);
-    throw;
+  std::u16string tmp;
+  for(;;) {
+    errno = 0;
+    const auto* dp = readdir(dirp.get());
+    if(dp==nullptr)
+      return errno==0;
+
+    tmp = TextCodec::toUtf16(dp->d_name);
+    if(dp->d_type==DT_DIR)
+      cb(tmp,FT_Dir); else
+      cb(tmp,FT_File);
     }
 #endif
   return true;
