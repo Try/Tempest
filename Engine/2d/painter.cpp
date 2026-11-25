@@ -603,8 +603,9 @@ static int calcLineWidth(Utf8Iterator i, Utf8Iterator eol, const Font& fnt, Text
   return x;
   }
 
-static int calcTextHeight(std::string_view txt, const int w, int& l0, const Font& fnt) {
-  int x = 0,  y=0, cnt = 0;
+static IVec2 calcTextHeight(std::string_view txt, const int w, const Font& fnt) {
+  int x = 0, y = 0;
+  int yMin = 0, yMax = 0, cnt = 0;
 
   Utf8Iterator i(txt);
   while(i.hasData()) {
@@ -613,27 +614,23 @@ static int calcTextHeight(std::string_view txt, const int w, int& l0, const Font
       break;
     cnt++;
     x = 0;
-    if(cnt>1) {
-      i = eol;
-      continue;
-      }
     while(i!=eol){
       auto c=i.next();
-      if(c=='\0'){
-        return y;
+      if(c=='\0') {
+        i = eol;
+        break;
         }
       if(c=='\n' || c=='\r') {
         continue;
         }
       auto l=fnt.letterGeometry(c);
-      y = std::max(l.size.h+l.dpos.y,y);
+      yMin = std::min(yMin, y + l.dpos.y);
+      yMax = std::max(yMax, y + l.size.h+l.dpos.y);
       }
+    y += fnt.pixelSize();
     }
 
-  l0 = y;
-  if(cnt>1)
-    y += (cnt-1)*int(std::ceil(fnt.pixelSize()));
-  return y;
+  return {yMin, yMax};
   }
 
 void Painter::drawText(int rx, int ry, int w, int h, std::string_view txt, AlignFlag flg) {
@@ -645,15 +642,15 @@ void Painter::drawText(int rx, int ry, int w, int h, std::string_view txt, Align
   const float kV = 1.f/s.tr.mat.scaleHintV();
   fx.setPixelSize(std::ceil(fx.pixelSize()*s.tr.mat.scaleHint()));
 
-  int  x = 0, y = 0, pSz = int(std::ceil(s.fnt.pixelSize()));
+  int x = 0, y = 0, pSz = int(std::ceil(s.fnt.pixelSize()));
 
-  if(flg!=0) {
-    int l0=0;
-    const int th = calcTextHeight(txt,w,l0,s.fnt);
+  if(flg & (AlignVCenter | AlignBottom)) {
+    const auto sz = calcTextHeight(txt,w,s.fnt);
+    const int th  = sz.y - sz.x;
     if(flg & AlignVCenter)
-      y = l0+(h-th)/2;
+      y = (h + th)/2 - sz.y;
     else if(flg & AlignBottom)
-      y = l0+(h-th);
+      y = h - sz.y;
     }
 
   Utf8Iterator i(txt);
