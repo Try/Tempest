@@ -10,16 +10,6 @@
 
 using namespace Tempest;
 
-static uint32_t mipCount(uint32_t w, uint32_t h) {
-  uint32_t s = std::max(w,h);
-  uint32_t n = 1;
-  while(s>1) {
-    ++n;
-    s = s/2;
-    }
-  return n;
-  }
-
 Encoder<Tempest::CommandBuffer>::Encoder(Tempest::CommandBuffer* ow)
   :impl(ow->impl.handler) {
   impl->begin();
@@ -322,7 +312,8 @@ void Encoder<CommandBuffer>::copy(const Texture2d& src, uint32_t mip, StorageBuf
   impl->copy(*dest.impl.impl.handler,offset,tx,w,h,mip);
   }
 
-void Encoder<CommandBuffer>::generateMipmaps(Attachment& tex) {
-  uint32_t w = tex.w(), h = tex.h();
-  impl->generateMipmap(*textureCast<Texture2d&>(tex).impl.handler,w,h,mipCount(w,h));
+void Encoder<CommandBuffer>::generateMipmaps(Attachment& img) {
+  auto&    tex = textureCast<Texture2d&>(img);
+  uint32_t w   = tex.w(), h = tex.h();
+  impl->generateMipmap(*tex.impl.handler,w,h,tex.mipCount());
   }
