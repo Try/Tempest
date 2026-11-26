@@ -422,8 +422,9 @@ VkResult VSwapchain::createSwapchain(VDevice& device, const SwapChainSupport& sw
   createInfo.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
   createInfo.imageUsage      &= swapChainSupport.capabilities.supportedUsageFlags;
 
+  const uint32_t qidx[] = {device.graphicsQueue->family, device.presentQueue->family};
+
   if(device.graphicsQueue!=device.presentQueue) {
-    const uint32_t qidx[]  = {device.graphicsQueue->family,device.presentQueue->family};
     createInfo.imageSharingMode      = VK_SHARING_MODE_CONCURRENT;
     createInfo.queueFamilyIndexCount = 2;
     createInfo.pQueueFamilyIndices   = qidx;
@@ -563,6 +564,8 @@ AbstractGraphicsApi::Texture* VSwapchain::currentBackBuffer() {
       throw SwapchainSuboptimal();
 #endif
     const VkResult code = implAcquireNextImage();
+    if(code==VK_ERROR_DEVICE_LOST || code==VK_ERROR_SURFACE_LOST_KHR)
+      vkAssert(code);
     if(isSwapchainLost(code))
       throw SwapchainSuboptimal();
     currentSyncState = SyncState::S_Aquired;
@@ -633,14 +636,14 @@ void VSwapchain::present() {
 
     VkSubmitInfo2KHR submitInfo = {};
     submitInfo.sType                    = VK_STRUCTURE_TYPE_SUBMIT_INFO_2_KHR;
-    submitInfo.signalSemaphoreInfoCount = 1;
+    submitInfo.signalSemaphoreInfoCount = (currentSyncState==S_Draw) ? 1 : 0;
     submitInfo.pSignalSemaphoreInfos    = &signal;
 
     device.graphicsQueue->submit(1, &submitInfo, pf, device.vkQueueSubmit2);
     } else {
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.signalSemaphoreCount = (currentSyncState==S_Draw) ? 1 : 0;
     submitInfo.pSignalSemaphores    = &ps;
     device.graphicsQueue->submit(1, &submitInfo, pf);
     }
