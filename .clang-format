@@ -1,0 +1,20 @@
+BasedOnStyle: LLVM
+IndentWidth: 2
+IndentAccessModifiers: false
+AccessModifierOffset: 0
+UseTab: Never
+ColumnLimit: 120
+
+BreakBeforeBraces: Whitesmiths
+AllowShortBlocksOnASingleLine: Never
+AllowShortFunctionsOnASingleLine: Empty
+SpaceBeforeParens: Never
+PointerAlignment: Left
+
+AlignConsecutiveDeclarations: Consecutive
+AlignConsecutiveAssignments: Consecutive
+SortIncludes: Never
+
+# Experimental. Requires clang-format 21 or newer. Skip formatting on lines
+# containing an opening brace to preserve its placement.
+OneLineFormatOffRegex: '^[{]$'
