@@ -737,10 +737,10 @@ void VDevice::deviceProps(VkInstance instance, const bool hasDeviceFeatures2, Vk
 void VDevice::deviceFormatProps(VkPhysicalDevice device, VkProps& props) {
   /*
    * formats support table: https://registry.khronos.org/vulkan/specs/latest/html/vkspec.html#features-required-format-support
-   *   sampled image must also have transfer bits by spec.
+   * Sampled formats support transfers. Vulkan 1.0 without maintenance1 may omit the transfer bits.
    *   mipmap generation, in engine, implemented by blit-shaders.
    */
-  VkFormatFeatureFlags imageRqFlags    = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT|VK_FORMAT_FEATURE_TRANSFER_SRC_BIT|VK_FORMAT_FEATURE_TRANSFER_DST_BIT;
+  VkFormatFeatureFlags imageRqFlags    = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
   VkFormatFeatureFlags mipmapsFlags    = VK_FORMAT_FEATURE_BLIT_DST_BIT|VK_FORMAT_FEATURE_BLIT_SRC_BIT;
   VkFormatFeatureFlags attachRqFlags   = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT; //|VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
   VkFormatFeatureFlags depthAttFlags   = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
