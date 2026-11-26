@@ -983,7 +983,9 @@ void VCommandBuffer::generateMipmap(AbstractGraphicsApi::Texture& img,
   VkFormatProperties formatProperties;
   vkGetPhysicalDeviceFormatProperties(device.physicalDevice, image.format, &formatProperties);
 
-  if(!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
+  const VkFormatFeatureFlags required = VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT |
+                                        VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT;
+  if((formatProperties.optimalTilingFeatures & required)!=required)
     throw std::runtime_error("texture image format does not support linear blitting!");
 
   int32_t w = int32_t(texWidth);
