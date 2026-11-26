@@ -234,7 +234,9 @@ void Encoder<Tempest::CommandBuffer>::dispatchThreads(Size sz) {
   }
 
 void Encoder<CommandBuffer>::dispatchIndirect(const StorageBuffer& indirect, size_t offset) {
-  if (offset % 4 != 0)
+  if(state.stage==Rendering)
+    throw std::system_error(Tempest::GraphicsErrc::ComputeCallInRenderPass);
+  if(offset % 4 != 0)
     throw std::system_error(Tempest::GraphicsErrc::InvalidStorageBuffer);
   impl->dispatchIndirect(*indirect.impl.impl.handler, offset);
   }
