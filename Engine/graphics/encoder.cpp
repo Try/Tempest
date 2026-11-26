@@ -262,8 +262,11 @@ void Encoder<CommandBuffer>::setFramebuffer(std::initializer_list<AttachmentDesc
 
 void Tempest::Encoder<Tempest::CommandBuffer>::implSetFramebuffer(const AttachmentDesc* rt, size_t rtSize,
                                                                   const AttachmentDesc* zd) {
-  if(state.stage==Rendering)
+  if(state.stage==Rendering) {
     impl->endRendering();
+    state.curPipeline = nullptr;
+    state.stage       = None;
+    }
 
   if((rtSize+(zd ? 1 : 0)) > MaxFramebufferAttachments)
     throw IncompleteFboException();
@@ -300,8 +303,7 @@ void Tempest::Encoder<Tempest::CommandBuffer>::implSetFramebuffer(const Attachme
     }
 
   impl->beginRendering(fbo, rtSize+(zd ? 1 : 0), w, h);
-  state.stage       = Rendering;
-  state.curPipeline = nullptr;
+  state.stage = Rendering;
   }
 
 void Encoder<CommandBuffer>::copy(const Attachment& src, uint32_t mip, StorageBuffer& dest, size_t offset) {
