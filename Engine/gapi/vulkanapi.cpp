@@ -134,12 +134,15 @@ struct Tempest::VulkanApi::Impl {
     createInfo.pApplicationInfo = &appInfo;
 
     std::vector<const char*> rqExt = {
-      VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
       VK_KHR_SURFACE_EXTENSION_NAME,
       surfaceExtensionName(),
       };
 
     auto ext = instExtensionsList();
+    if(extensionSupport(ext, VK_EXT_DEBUG_REPORT_EXTENSION_NAME)) {
+      rqExt.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+      }
+
     if(extensionSupport(ext, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)) {
       rqExt.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
       hasDeviceFeatures2 = true;
@@ -174,9 +177,13 @@ struct Tempest::VulkanApi::Impl {
       callbackCreateInfo.pUserData   = nullptr;
 
       /* Register the callback */
-      VkResult result = vkCreateDebugReportCallbackEXT(instance, &callbackCreateInfo, nullptr, &callback);
-      if(result!=VK_SUCCESS)
+      if(vkCreateDebugReportCallbackEXT!=nullptr) {
+        VkResult result = vkCreateDebugReportCallbackEXT(instance, &callbackCreateInfo, nullptr, &callback);
+        if(result!=VK_SUCCESS)
+          Log::e("VulkanApi: unable to setup validation callback");
+        } else {
         Log::e("VulkanApi: unable to setup validation callback");
+        }
       }
     }
 
