@@ -844,7 +844,7 @@ void DxCommandBuffer::copy(AbstractGraphicsApi::Buffer&  dstBuf, size_t offset,
     resState.flush(*this);
 
     copyNative(dstBuf,offset, srcTex,width,height,mip);
-    resState.setLayout(src, ResourceLayout::Default, 0);
+    resState.setLayout(src, ResourceLayout::Default, mip);
     return;
     }
 
