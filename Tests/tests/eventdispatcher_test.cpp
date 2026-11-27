@@ -325,3 +325,180 @@ TEST_F(PointerDispatch,DeletedDuringDown) {
   EXPECT_EQ(right.events[2].type(),Event::MouseUp);
   EXPECT_EQ(right.events[2].mouseID,1);
   }
+
+namespace {
+struct KeyCall {
+  Event::Type     type;
+  Event::KeyType  key      = Event::K_NoKey;
+  uint32_t        code     = 0;
+  Event::Modifier modifier = Event::M_NoModifier;
+  bool operator==(const KeyCall& other) const {
+    return type == other.type && key == other.key && code == other.code && modifier == other.modifier;
+    }
+  };
+
+struct KeyWidget : Widget {
+  std::vector<KeyCall> calls;
+
+  KeyWidget() {
+    setFocusPolicy(ClickFocus);
+    }
+
+  void keyDownEvent(KeyEvent& e) override { note(e); }
+  void keyRepeatEvent(KeyEvent& e) override { note(e); }
+  void keyUpEvent(KeyEvent& e) override { note(e); }
+  void mouseDownEvent(MouseEvent& e) override { e.accept(); }
+  void focusEvent(FocusEvent&) override { calls.push_back({Event::Focus}); }
+
+  void note(KeyEvent& e) {
+    calls.push_back({e.type(), e.key, e.code, e.modifier});
+    e.accept();
+    }
+  };
+
+struct KeyFocus : Test {
+  Widget root;
+  EventDispatcher dispatcher{root};
+  KeyWidget& a = root.addWidget(new KeyWidget());
+  KeyWidget& b = root.addWidget(new KeyWidget());
+
+  KeyFocus() {
+    root.resize(200, 100);
+    a.setGeometry(0, 0, 100, 100);
+    b.setGeometry(100, 0, 100, 100);
+    }
+
+  void down(Event::KeyType key, uint32_t scancode, uint32_t code = 0) {
+    KeyEvent e(key, code, Event::M_NoModifier, Event::KeyDown);
+    dispatcher.dispatchKeyDown(root, e, scancode);
+    }
+  void up(Event::KeyType key, uint32_t scancode, uint32_t code = 0) {
+    KeyEvent e(key, code, Event::M_NoModifier, Event::KeyUp);
+    dispatcher.dispatchKeyUp(root, e, scancode);
+    }
+  void focus(bool in) {
+    FocusEvent e(in, Event::UnknownReason);
+    dispatcher.dispatchFocus(root, e);
+    }
+  };
+}
+
+TEST_F(KeyFocus,HeldKeyReleasedBeforeFocusOut) {
+  a.setFocus(true);
+  down(Event::K_W, 17, 0x57);
+  a.calls.clear();
+  focus(false);
+  EXPECT_EQ(a.calls, (std::vector<KeyCall>{{Event::KeyUp, Event::K_W, 0x57}, {Event::Focus}}));
+
+  a.calls.clear();
+  up(Event::K_W, 17, 0x57);
+  EXPECT_TRUE(a.calls.empty());
+
+  a.setFocus(true);
+  down(Event::K_S, 31);
+  a.calls.clear();
+  focus(false);
+  EXPECT_EQ(a.calls, (std::vector<KeyCall>{{Event::KeyUp, Event::K_S}}));
+
+  focus(true);
+  a.calls.clear();
+  down(Event::K_S, 31);
+  EXPECT_EQ(a.calls, (std::vector<KeyCall>{{Event::KeyDown, Event::K_S}}));
+  }
+
+TEST_F(KeyFocus,HeldModifierCleared) {
+  struct Mod { Event::KeyType key; uint32_t scancode; };
+  a.setFocus(true);
+  for(Mod m : {Mod{Event::K_LAlt, 56}, Mod{Event::K_RAlt, 57}, Mod{Event::K_LShift, 42}, Mod{Event::K_RShift, 54},
+             Mod{Event::K_LControl, 29}, Mod{Event::K_RControl, 97}}) {
+    SCOPED_TRACE(int(m.key));
+    down(m.key, m.scancode);
+    down(Event::K_W, 17);
+    Event::Modifier held = a.calls.back().modifier;
+    EXPECT_NE(held, Event::M_NoModifier);
+
+    a.calls.clear();
+    focus(false);
+    ASSERT_EQ(a.calls.size(), 3u);
+    EXPECT_EQ(a.calls[0].modifier, held);
+    EXPECT_EQ(a.calls[1].modifier, held);
+
+    focus(true);
+    a.calls.clear();
+    down(Event::K_A, 30);
+    up(Event::K_A, 30);
+    EXPECT_EQ(a.calls, (std::vector<KeyCall>{{Event::KeyDown, Event::K_A}, {Event::KeyUp, Event::K_A}}));
+    }
+  }
+
+TEST_F(KeyFocus,HolderDeletesItself) {
+  struct ClosingWidget : KeyWidget {
+    int& ups;
+    ClosingWidget(int& ups):ups(ups) {}
+    void keyUpEvent(KeyEvent&) override {
+      ++ups;
+      delete this;
+      }
+    };
+  int ups = 0;
+  auto& closing = root.addWidget(new ClosingWidget(ups));
+  closing.setFocus(true);
+  down(Event::K_W, 17);
+  down(Event::K_S, 31);
+  focus(false);
+  EXPECT_EQ(ups, 1);
+  }
+
+TEST_F(KeyFocus,HolderDeletesWindow) {
+  struct ClosingWidget : KeyWidget {
+    void keyUpEvent(KeyEvent&) override { delete owner(); }
+    };
+  auto* window = new Widget();
+  window->addWidget(new ClosingWidget()).setFocus(true);
+  EventDispatcher windowDispatcher{*window};
+  KeyEvent   press(Event::K_W, 0, Event::M_NoModifier, Event::KeyDown);
+  FocusEvent out(false, Event::UnknownReason);
+  windowDispatcher.dispatchKeyDown(*window, press, 17);
+  windowDispatcher.dispatchFocus(*window, out);
+  }
+
+TEST_F(KeyFocus,DestroyedWindowReleasesNothing) {
+  a.setFocus(true);
+  down(Event::K_W, 17);
+  dispatcher.dispatchDestroyWindow(nullptr);
+  a.calls.clear();
+  focus(false);
+  for(auto& i : a.calls)
+    EXPECT_NE(i.type, Event::KeyUp);
+  }
+
+TEST_F(KeyFocus,OnlyFocusOutReleases) {
+  a.setFocus(true);
+  down(Event::K_W, 17);
+  a.calls.clear();
+
+  MouseEvent click(150, 20, Event::ButtonLeft, Event::M_NoModifier, 0, 0, Event::MouseDown);
+  dispatcher.dispatchMouseDown(root, click);
+  EXPECT_TRUE(b.hasFocus());
+  a.setFocus(true);
+  for(auto& i : a.calls)
+    EXPECT_NE(i.type, Event::KeyUp);
+
+  a.calls.clear();
+  down(Event::K_W, 17);
+  EXPECT_EQ(a.calls, (std::vector<KeyCall>{{Event::KeyRepeat, Event::K_W}}));
+  }
+
+TEST_F(KeyFocus,FocusOutInsideKeyDown) {
+  struct LeavingWidget : KeyWidget {
+    KeyFocus& test;
+    LeavingWidget(KeyFocus& test):test(test) {}
+    void keyDownEvent(KeyEvent& e) override { note(e); test.focus(false); }
+    };
+  auto& leaving = root.addWidget(new LeavingWidget(*this));
+  leaving.setFocus(true);
+  leaving.calls.clear();
+  down(Event::K_W, 17);
+  up(Event::K_W, 17);
+  EXPECT_EQ(leaving.calls, (std::vector<KeyCall>{{Event::KeyDown, Event::K_W}, {Event::Focus}}));
+  }
