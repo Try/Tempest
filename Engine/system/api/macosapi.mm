@@ -348,6 +348,7 @@ MacOSApi::MacOSApi() {
 
   setupKeyTranslate(k,20);
 
+  const bool ownsApplication = (NSApp == nil);
   [NSApplication sharedApplication];
 
   NSMenu*      bar     = [NSMenu new];
@@ -368,6 +369,9 @@ MacOSApi::MacOSApi() {
   [bar release];
 
   [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+  // The custom event loop bypasses NSApplication::run and its launch completion.
+  if(ownsApplication)
+    [NSApp finishLaunching];
   [NSApp activateIgnoringOtherApps:YES];
   }
 
@@ -462,13 +466,18 @@ bool MacOSApi::implIsRunning() {
 int MacOSApi::implExec(SystemApi::AppCallBack &cb) {
   while(::isRunning.load()) {
     implProcessEvents(cb);
-    if(!cb.onTimer())
-      std::this_thread::yield();
     }
   return 0;
   }
 
-void MacOSApi::implProcessEvents(SystemApi::AppCallBack&) {
+void MacOSApi::implProcessEvents(SystemApi::AppCallBack& app) {
+  if(!::isRunning.load())
+    return;
+  if(!app.onTimer())
+    std::this_thread::yield();
+  if(!::isRunning.load())
+    return;
+
   NSEvent* evt = [NSApp nextEventMatchingMask: NSEventMaskAny
                  untilDate: nil
                  inMode: NSDefaultRunLoopMode

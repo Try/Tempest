@@ -157,6 +157,18 @@ endif()
 
 target_link_libraries(${PROJECT_NAME} Tempest)
 
+if(APPLE AND NOT IOS)
+  enable_language(OBJCXX)
+  add_executable(TimerNativeTests ../fixtures/timer_native.mm)
+  set_target_properties(TimerNativeTests PROPERTIES OBJCXX_STANDARD 17)
+  target_include_directories(TimerNativeTests PRIVATE "${CMAKE_SOURCE_DIR}/../../Engine/include")
+  target_link_libraries(TimerNativeTests PRIVATE Tempest "-framework AppKit" "-framework CoreFoundation")
+  foreach(mode poll mutation nested reentry exception exit native-exit)
+    add_test(NAME timer-native-${mode} COMMAND TimerNativeTests ${mode})
+    set_tests_properties(timer-native-${mode} PROPERTIES TIMEOUT 20)
+  endforeach()
+endif()
+
 # copy data to binary directory
 add_custom_command(
     TARGET ${PROJECT_NAME} POST_BUILD

@@ -16,8 +16,26 @@ using namespace Tempest;
 using namespace Tempest::Detail;
 
 struct Application::Impl : SystemApi::AppCallBack {
+  struct TimerCursor {
+    explicit TimerCursor(TimerCursor*& active):active(active),previous(active) {
+      // A nested sweep replaces the suspended sweep, whose timestamp is stale.
+      if(previous!=nullptr)
+        previous->superseded = true;
+      active = this;
+      }
+
+    ~TimerCursor() {
+      active = previous;
+      }
+
+    TimerCursor*& active;
+    TimerCursor*  previous;
+    size_t        next=0;
+    bool          superseded=false;
+    };
+
   std::vector<Timer*> timer;
-  size_t              timerI=size_t(-1);
+  TimerCursor*        timerCursor=nullptr;
 
   const Style*        style=nullptr;
   Font                font;
@@ -49,17 +67,21 @@ struct Application::Impl : SystemApi::AppCallBack {
     for(size_t i=0;i<timer.size();++i)
       if(timer[i]==&t){
         timer.erase(timer.begin()+int(i));
-        if(timerI>=i)
-          timerI--;
+        for(auto* cursor=timerCursor;cursor!=nullptr;cursor=cursor->previous)
+          if(cursor->next>i)
+            --cursor->next;
         return;
         }
     }
 
   uint32_t onTimer() override {
+    if(!Application::isRunning())
+      return 0;
+    TimerCursor cursor(timerCursor);
     auto now = Application::tickCount();
     size_t count=0;
-    for(timerI=0;timerI<timer.size();++timerI){
-      Timer& t = *timer[timerI];
+    while(!cursor.superseded && cursor.next<timer.size() && Application::isRunning()) {
+      Timer& t = *timer[cursor.next++];
       if(t.process(now))
         count++;
       }
