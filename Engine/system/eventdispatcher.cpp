@@ -162,7 +162,7 @@ void EventDispatcher::dispatchMouseWheel(Widget& wnd, MouseEvent &e) {
   }
 
 void EventDispatcher::dispatchKeyDown(Widget &wnd, KeyEvent &e, uint32_t scancode) {
-  auto k = keyUp[scancode];
+  auto k = keyUp[scancode].ref;
   if(auto w = lock(k)) {
     KeyEvent e1(e.key,e.code,mkModifier(),Event::KeyRepeat);
     w->widget->keyRepeatEvent(e1);
@@ -172,13 +172,16 @@ void EventDispatcher::dispatchKeyDown(Widget &wnd, KeyEvent &e, uint32_t scancod
   KeyEvent e1(e.key,e.code,mkModifier(),e.type());
   handleModKey(e);
 
+  const uint64_t prevFocusOutCount = focusOutCount;
   for(auto i:overlays) {
     if(!i->bind(wnd))
       continue;
     if(implShortcut(*i,e1))
       return;
     k = implDispatch(*i,e1);
-    keyUp[scancode] = k;
+    if(prevFocusOutCount != focusOutCount)
+      return;
+    keyUp[scancode] = {k, e.key, e.code};
     if(!k.expired())
       return;
     }
@@ -186,7 +189,9 @@ void EventDispatcher::dispatchKeyDown(Widget &wnd, KeyEvent &e, uint32_t scancod
   if(implShortcut(wnd,e1))
     return;
   k = implDispatch(wnd,e1);
-  keyUp[scancode] = k;
+  if(prevFocusOutCount != focusOutCount)
+    return;
+  keyUp[scancode] = {k, e.key, e.code};
   }
 
 void EventDispatcher::dispatchKeyUp(Widget &/*wnd*/, KeyEvent &e, uint32_t scancode) {
@@ -196,7 +201,7 @@ void EventDispatcher::dispatchKeyUp(Widget &/*wnd*/, KeyEvent &e, uint32_t scanc
   KeyEvent e1(e.key,e.code,mkModifier(),e.type());
   handleModKey(e);
 
-  if(auto w = lock((*it).second)){
+  if(auto w = lock((*it).second.ref)){
     keyUp.erase(it);
     w->widget->keyUpEvent(e1);
     }
@@ -234,6 +239,12 @@ void EventDispatcher::dispatchFocus(Widget& wnd, FocusEvent& e) {
     focusLast.reset();
     return;
     }
+
+  ++focusOutCount;
+  std::weak_ptr<Widget::Ref> root = wnd.selfReference();
+  implReleaseKeys();
+  if(root.expired())
+    return;
 
   if(!focusLast.expired())
     return;
@@ -278,6 +289,22 @@ void EventDispatcher::takeOverlay(UiOverlay* ui) {
   }
 
 void EventDispatcher::dispatchDestroyWindow(SystemApi::Window* w) {
+  for(auto& i : keyUp) {
+    auto ref = i.second.ref.lock();
+    if(ref == nullptr)
+      continue;
+    Widget* root = ref->widget;
+    while(root->owner() != nullptr)
+      root = root->owner();
+
+    bool otherWindow = false;
+    if(auto wx = dynamic_cast<Window*>(root))
+      otherWindow = wx->hwnd() != w;
+    else if(auto ui = dynamic_cast<UiOverlay*>(root))
+      otherWindow = ui->owner != nullptr && ui->owner->hwnd() != w;
+    if(!otherWindow)
+      i.second.ref.reset();
+    }
   for(size_t i=0;i<overlays.size();++i)
     overlays[i]->dispatchDestroyWindow(w);
   }
@@ -345,6 +372,21 @@ std::shared_ptr<Widget::Ref> EventDispatcher::implDispatch(Widget& root, FocusEv
     return ptr;
     }
   return nullptr;
+  }
+
+void EventDispatcher::implReleaseKeys() {
+  const KeyEvent::Modifier modifier = mkModifier();
+  keyMod = Modify();
+
+  auto held = std::move(keyUp);
+  keyUp.clear();
+  for(auto& i : held) {
+    auto w = lock(i.second.ref);
+    if(w == nullptr)
+      continue;
+    KeyEvent e(i.second.key, i.second.code, modifier, Event::KeyUp);
+    w->widget->keyUpEvent(e);
+    }
   }
 
 void EventDispatcher::implMouseWheel(Widget& w,MouseEvent &event) {

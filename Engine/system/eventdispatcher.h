@@ -43,6 +43,7 @@ class EventDispatcher final {
 
     std::shared_ptr<Widget::Ref> implDispatch(Tempest::Widget &w, Tempest::MouseEvent& event);
     std::shared_ptr<Widget::Ref> implDispatch(Tempest::Widget &w, Tempest::FocusEvent& event);
+    void                         implReleaseKeys();
     void                         implMouseWheel(Widget &w, MouseEvent &event);
 
     bool                         implShortcut(Tempest::Widget &w, Tempest::KeyEvent& event);
@@ -89,7 +90,13 @@ class EventDispatcher final {
     Modify keyMod;
     KeyEvent::Modifier mkModifier() const;
 
-    std::unordered_map<uint32_t,std::weak_ptr<Widget::Ref>> keyUp;
+    struct KeyHold {
+      std::weak_ptr<Widget::Ref> ref;
+      Event::KeyType             key  = Event::K_NoKey;
+      uint32_t                   code = 0;
+      };
+    std::unordered_map<uint32_t, KeyHold> keyUp;
+    uint64_t                              focusOutCount = 0;
   };
 
 }

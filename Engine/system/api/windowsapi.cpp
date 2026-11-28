@@ -419,7 +419,7 @@ long long WindowsApi::windowProc(void *_hWnd, uint32_t msg, const unsigned long 
         }
 
       SetCursor(SystemApi::cursorShape(*cb));
-      if(wParam==WA_INACTIVE) {
+      if(LOWORD(wParam) == WA_INACTIVE) {
         FocusEvent e(false, Event::UnknownReason);
         SystemApi::dispatchFocus(*cb, e);
         } else {
